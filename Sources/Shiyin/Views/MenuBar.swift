@@ -1,0 +1,108 @@
+import SwiftUI
+
+/// 選單列圖示：閒置、錄音中、工作中三種狀態（R13.1）
+struct MenuBarLabel: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Image(systemName: model.menuBarSymbol)
+            .onAppear {
+                // 選單列圖示一直存在，用它提供「重新打開主視窗」的方法
+                let open = openWindow
+                if model.openMainWindow == nil {
+                    model.openMainWindow = {
+                        open(id: "main")
+                        NSApp.activate()
+                    }
+                }
+            }
+    }
+}
+
+/// 選單內容（R13.2）
+struct MenuBarContent: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            recording
+            Divider()
+            jobs
+            Divider()
+            VStack(alignment: .leading, spacing: 6) {
+                Button("打開拾音") { model.openMainWindow?() }
+                Button("使用說明") {
+                    openWindow(id: "guide")
+                    NSApp.activate()
+                }
+                Button("結束拾音") { NSApp.terminate(nil) }
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(width: 290, alignment: .leading)
+        .tint(.celadon)
+    }
+
+    @ViewBuilder
+    private var recording: some View {
+        let recorder = model.recorder
+        if recorder.isRecording {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Circle().fill(recorder.isPaused ? Color.secondary : .red).frame(width: 8, height: 8)
+                    Text(recorder.isPaused ? "已暫停" : "錄音中")
+                    Text(TimeFormat.string(recorder.elapsed)).monospacedDigit().foregroundStyle(.secondary)
+                    Spacer()
+                    Button(recorder.isPaused ? "繼續" : "暫停") { recorder.isPaused ? recorder.resume() : recorder.pause() }
+                    Button("停止") { recorder.stop() }
+                }
+                if recorder.hasMic { VUMeter(level: recorder.micLevel, segments: 24) }
+                if recorder.hasSystem { VUMeter(level: recorder.systemLevel, segments: 24) }
+                if !recorder.volatileText.isEmpty || !recorder.liveLines.isEmpty {
+                    Text(recorder.volatileText.isEmpty ? recorder.liveLines.last?.text ?? "" : recorder.volatileText)
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+        } else {
+            Button { model.startRecording() } label: {
+                Label("開始錄音", systemImage: "record.circle")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var jobs: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let t = model.runner.running[.transcribe] {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(t.job.kind == .compress ? "壓縮錄音" : t.stage.isEmpty ? "轉錄" : t.stage)中：\(title(t.job.meetingId))").lineLimit(1)
+                    if let p = t.progress {
+                        ProgressView(value: p).tint(.signal)
+                    } else {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+            }
+            if let l = model.runner.running[.llm] {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("整理中：\(title(l.job.meetingId))").lineLimit(1)
+                }
+            }
+            if model.queuedCount > 0 {
+                Text("排隊中 \(model.queuedCount) 項").foregroundStyle(.secondary)
+            }
+            if !model.runner.isBusy && model.queuedCount == 0 {
+                Text("目前沒有進行中的工作").foregroundStyle(.secondary)
+            }
+        }
+        .font(.callout)
+    }
+
+    private func title(_ meetingId: Int64) -> String {
+        model.meetings.first { $0.id == meetingId }?.meeting.displayTitle ?? "會議"
+    }
+}

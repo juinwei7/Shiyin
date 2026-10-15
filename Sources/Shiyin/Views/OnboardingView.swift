@@ -1,0 +1,200 @@
+import AVFoundation
+import SwiftUI
+import UserNotifications
+
+/// 首次使用引導（design §11、R10.2）：歡迎 → 權限 → 下載模型 → 整理工具 → 完成。每一步都可以略過。
+struct OnboardingView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("hasSeenGuide") private var hasSeenGuide = false
+    @AppStorage(AppSettings.providerKey) private var provider = LLMProvider.claude.rawValue
+    @State private var step = 0
+    @State private var micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    @State private var notificationsAllowed: Bool?
+    @State private var speechInstalled: Bool?
+    @State private var speechInstalling = false
+    @State private var apiKey = ""
+
+    private let titles = ["歡迎使用拾音", "權限", "下載模型", "整理工具", "準備好了"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                ForEach(titles.indices, id: \.self) { i in
+                    Capsule().fill(i <= step ? Color.celadon : Color.secondary.opacity(0.25)).frame(height: 4)
+                }
+            }
+            .padding(.bottom, 24)
+            Text(titles[step]).font(.songti(28))
+                .padding(.bottom, 12)
+            Group {
+                switch step {
+                case 0: welcome
+                case 1: permissions
+                case 2: downloads
+                case 3: providers
+                default: done
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            HStack {
+                if step > 0 && step < titles.count - 1 { Button("上一步") { step -= 1 } }
+                Spacer()
+                if step < titles.count - 1 {
+                    Button("略過") { step += 1 }.buttonStyle(.borderless)
+                    Button("下一步") { step += 1 }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                } else {
+                    Button("開始使用") { finish() }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .padding(32)
+        .frame(width: 600, height: 560)
+        .tint(.celadon)
+        .task { speechInstalled = await LiveTranscriber.isLocaleInstalled }
+    }
+
+    private var welcome: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上用 Breeze ASR 25 正式轉錄、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。")
+                .fixedSize(horizontal: false, vertical: true)
+            Label("錄音和轉錄都只在這台 Mac 上進行，不會上傳。", systemImage: "lock")
+            Label("整理會議紀錄時，只會把逐字稿文字送到你選的 AI 服務。", systemImage: "text.bubble")
+            Text("接下來三個步驟大約 3 分鐘（下載模型的時間另計）。").foregroundStyle(.secondary)
+        }
+        .lineSpacing(3)
+    }
+
+    private var permissions: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            permissionRow(icon: "mic", title: "麥克風", detail: "錄現場會議或你自己的聲音。",
+                          status: micStatus == .authorized ? "已允許" : micStatus == .denied ? "被拒絕" : nil) {
+                if micStatus == .notDetermined {
+                    AVCaptureDevice.requestAccess(for: .audio) { _ in
+                        Task { @MainActor in micStatus = AVCaptureDevice.authorizationStatus(for: .audio) }
+                    }
+                } else {
+                    Recorder.openPrivacySettings()
+                }
+            }
+            permissionRow(icon: "speaker.wave.2", title: "錄製系統音訊", detail: "錄線上會議（Zoom、Meet、Teams）對方的聲音。第一次選「麥克風＋電腦聲音」錄音時，macOS 會跳出詢問，請按允許。",
+                          status: nil, buttonTitle: "打開系統設定") {
+                Recorder.openPrivacySettings("Privacy_AudioCapture")
+            }
+            permissionRow(icon: "bell", title: "通知", detail: "轉錄完成、會議紀錄整理好時通知你。",
+                          status: notificationsAllowed.map { $0 ? "已允許" : "被拒絕" }) {
+                Task {
+                    let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
+                    notificationsAllowed = granted
+                }
+            }
+        }
+    }
+
+    private func permissionRow(icon: String, title: String, detail: String, status: String?,
+                               buttonTitle: String = "允許", action: @escaping () -> Void) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon).font(.title2).foregroundStyle(Color.celadon).frame(width: 30)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline)
+                Text(detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if let status, status == "已允許" {
+                Label(status, systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
+            } else {
+                Button(status == "被拒絕" ? "打開系統設定" : buttonTitle, action: action)
+            }
+        }
+    }
+
+    private var downloads: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。")
+                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            ModelRow(title: "\(ModelStore.breeze.name)：正式轉錄，1.66 GB", state: model.models.state,
+                     start: model.models.start, pause: model.models.pause, delete: nil)
+            ModelRow(title: "說話者辨識模型：分辨是誰在說話", state: model.models.diarizerState,
+                     start: model.models.prepareDiarizer, pause: nil, delete: nil)
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("即時逐字稿的語音模型（macOS 內建）")
+                    Text(speechInstalled == true ? "已安裝" : speechInstalling ? "下載中…" : "還沒安裝")
+                        .font(.caption).foregroundStyle(speechInstalled == true ? Color.celadon : .secondary)
+                }
+                Spacer()
+                if speechInstalled != true {
+                    Button("下載") {
+                        speechInstalling = true
+                        Task {
+                            try? await LiveTranscriber.ensureAssets()
+                            speechInstalled = await LiveTranscriber.isLocaleInstalled
+                            speechInstalling = false
+                        }
+                    }
+                    .disabled(speechInstalling)
+                }
+            }
+        }
+        .onAppear {
+            if model.models.state == .missing { model.models.start() }
+            if model.models.diarizerState == .missing { model.models.prepareDiarizer() }
+        }
+    }
+
+    private var providers: some View {
+        let current = LLMProvider(rawValue: provider) ?? .claude
+        let claude = Paths.findTool("claude"), codex = Paths.findTool("codex")
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。").foregroundStyle(.secondary)
+            Picker("整理工具", selection: $provider) {
+                Text("Claude（claude CLI）\(claude == nil ? "：找不到" : "")").tag(LLMProvider.claude.rawValue)
+                Text("Codex（codex CLI）\(codex == nil ? "：找不到" : "")").tag(LLMProvider.codex.rawValue)
+                Text("Anthropic API（填 API key）").tag(LLMProvider.anthropic.rawValue)
+                Text("OpenAI API（填 API key）").tag(LLMProvider.openai.rawValue)
+                Text("不整理，只要逐字稿").tag(LLMProvider.none.rawValue)
+            }
+            .pickerStyle(.radioGroup)
+            if current.usesAPIKey {
+                HStack {
+                    SecureField("貼上 API key", text: $apiKey).textFieldStyle(.roundedBorder)
+                    Button("儲存") {
+                        Keychain.set(current.keychainAccount, apiKey)
+                        apiKey = ""
+                        model.refreshEnvironment()
+                    }
+                    .disabled(apiKey.isEmpty)
+                }
+                if Keychain.get(current.keychainAccount) != nil {
+                    Label("已儲存在鑰匙圈", systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
+                }
+            }
+        }
+        .onAppear {
+            // 沒有 claude 但有 codex 時，預設改選 codex
+            if current == .claude && claude == nil && codex != nil { provider = LLMProvider.codex.rawValue }
+        }
+    }
+
+    private var done: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")
+                .fixedSize(horizontal: false, vertical: true)
+            if !model.canTranscribe {
+                Label("轉錄模型還在下載，下載完成前的錄音會先排隊，下載好就會自動轉錄。", systemImage: "arrow.down.circle")
+                    .foregroundStyle(Color.signal).fixedSize(horizontal: false, vertical: true)
+            }
+            Text("之後可以在「設定 → 進階」重新顯示這個引導。").foregroundStyle(.secondary)
+        }
+    }
+
+    private func finish() {
+        hasCompletedOnboarding = true
+        hasSeenGuide = true
+        model.refreshEnvironment()
+        openWindow(id: "guide")
+        dismiss()
+    }
+}

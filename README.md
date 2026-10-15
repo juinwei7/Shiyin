@@ -1,0 +1,195 @@
+<img src="docs/images/icon.png" width="96" alt="拾音圖示">
+
+# 拾音 Shiyin
+
+macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能看到即時逐字稿；錄完在本機轉錄、分出說話者，再交給 Claude、Codex 或 API 整理成會議紀錄。紀錄裡每一條都附上錄音時間點，點一下就能聽到原話。
+
+- 錄音、轉錄、說話者辨識都在本機完成，錄音不會上傳
+- 不需要安裝 Python、Homebrew 或 ffmpeg，下載 DMG 就能用
+- 介面是繁體中文，需要 Apple Silicon 和 macOS 26
+
+![會議紀錄](docs/images/summary.png)
+
+## 怎麼用
+
+1. **錄音或匯入**：按工具列的「錄音」（⌘R）。線上會議請把錄音來源選「麥克風＋電腦聲音」，對方的聲音也會錄進來。已經有錄音檔的話，拖進視窗就好。
+2. **邊錄邊看、邊記**：左邊是即時逐字稿，右邊「我的筆記」每換一行會自動記下錄音時間；重要的地方按「標記重點」（⌘B）。
+3. **停止並轉錄**：在本機正式轉錄並分出說話者，點「說話者 1」可以改成人名。
+4. **看會議紀錄**：轉錄完自動整理成摘要、決議、待辦、未決問題，每一條都能點時間點跳回錄音。不確定的人名和專有名詞會列在「待確認」，回答後 AI 會依答案修正。
+5. **匯出或分享**：會議紀錄存成 Markdown、PDF、Word，逐字稿存成字幕檔，或把整場會議打包成 .shiyin 傳給同事。
+
+## 功能
+
+- **錄音**
+  - 來源可以選「只錄麥克風」「麥克風＋電腦聲音（線上會議）」「只錄電腦聲音」。Zoom、Meet、Teams 對方的聲音也錄得到
+  - 錄音中顯示即時逐字稿、各來源的音量；可以暫停、標記重點、做筆記
+  - 關掉主視窗後錄音照常進行，選單列可以暫停、停止；在其他 app 裡按 ⌃⌥⌘R 也能開始或停止錄音
+  - app 當掉或電腦突然關機，下次開啟會自動復原錄音
+- **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」
+- **本機轉錄**：whisper.cpp + Breeze ASR 25，詞彙表會當成提示詞；也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）
+- **說話者辨識**：逐字稿每段標上說話者，每個人一個顏色；可以改名、只看某一位說話者
+- **會議紀錄**
+  - 範本：一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自訂
+  - 整理工具：Claude Code、Codex CLI、Anthropic API、OpenAI API，或「不整理」只要逐字稿
+  - 可以直接編輯；每次修改都留版本，可以復原
+- **匯出與分享**
+
+  | 項目 | 格式 |
+  |---|---|
+  | 會議紀錄 | Markdown、PDF、Word；也可以複製成富文字、Markdown、純文字 |
+  | 逐字稿 | txt、Markdown、srt、vtt、Word（可選要不要時間點和說話者） |
+  | 錄音 | m4a、wav |
+  | 整場會議 | .shiyin 封包（錄音、逐字稿、說話者、紀錄、筆記、重點），對方雙擊就能匯入 |
+
+  匯出時也可以直接用 AirDrop、Mail、訊息分享。
+- **管理**：資料夾（依專案或客戶分類）、全文搜尋所有會議、垃圾桶（30 天內可還原）
+- **其他**：倍速播放（0.75×～2×）、用詞修正（逐字稿和紀錄一起改）、轉錄完自動把錄音壓縮成 m4a、完成或失敗時發通知、app 內更新
+
+![逐字稿與說話者](docs/images/transcript.png)
+
+<sub>逐字稿截圖的示範錄音取自 [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/)（ES2004a，CC BY 4.0）。</sub>
+
+![錄音中](docs/images/recording.png)
+
+## 系統需求
+
+| 項目 | 需求 |
+|---|---|
+| 晶片 | Apple Silicon（M1 以上） |
+| 系統 | macOS 26 以上 |
+| 記憶體 | 8 GB 以上。轉錄加說話者辨識的峰值約 2.7 GB，4 小時的會議約 4.1 GB（M3 Pro 實測） |
+| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），加上錄音：m4a 約每小時 10～30 MB |
+| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`）、Anthropic API key、OpenAI API key。也可以選「不整理」 |
+| 網路 | 第一次下載模型、整理會議紀錄時需要；錄音、轉錄、說話者辨識都不需要 |
+
+## 安裝
+
+### 用 DMG 安裝
+
+1. 取得 `Shiyin-<版本>.dmg`（這個 repo 的 Releases，或向維護的人拿），打開後把「拾音」拖到「應用程式」。
+2. 拾音沒有經過 Apple 公證，第一次打開會被擋下：到「系統設定 → 隱私權與安全性」按「仍要打開」（只要做一次）。DMG 裡的「安裝說明.pdf」有完整步驟。
+3. 第一次打開會出現引導：允許麥克風、下載轉錄模型（約 1.7 GB）、選整理工具。每一步都可以略過，之後在設定裡補做。
+
+### 從原始碼建置
+
+需要 Xcode 26（Swift 6.2 以上）。第一次建置會用 Swift Package Manager 下載 GRDB、FluidAudio 和 whisper.cpp 的 XCFramework。
+
+```bash
+git clone https://github.com/juinwei7/Shiyin.git
+cd Shiyin
+scripts/make-signing-cert.sh --trust   # 只要做一次：建立並信任自簽憑證（要輸入登入密碼），之後更新 app 時權限不用重新允許
+scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applications
+```
+
+沒有執行 `make-signing-cert.sh --trust` 也能建置，會改用 ad-hoc 簽章，只是每次重新建置後系統可能會再問一次權限。
+
+## 發布新版
+
+1. 改 `Resources/Info.plist` 的 `CFBundleShortVersionString`。
+2. 產生 DMG，帶入更新網址和這版的更新內容：
+
+   ```bash
+   SHIYIN_UPDATE_URL=https://example.com/shiyin/shiyin-update.json \
+   SHIYIN_RELEASE_NOTES="這版改了什麼" scripts/make-dmg.sh
+   ```
+
+   `dist/` 裡會有 `Shiyin-<版本>.dmg` 和 `shiyin-update.json`（版本、DMG 檔名、SHA-256、更新內容）。
+3. 把這兩個檔案放到更新網址的位置（一定要 https）。已經安裝的拾音會在 24 小時內檢查到新版，詢問使用者後自動下載、驗證並重新開啟。
+
+用 GitHub Releases 發布的話，更新網址可以用 `https://github.com/juinwei7/Shiyin/releases/latest/download/shiyin-update.json`，每次發布時把兩個檔案都上傳：
+
+```bash
+gh release create v3.0.1 dist/Shiyin-3.0.1.dmg dist/shiyin-update.json --notes "這版改了什麼"
+```
+
+注意：私人 repo 的 Releases 檔案要登入才能下載，app 內更新會失敗；這種情況請把兩個檔案放在公開的 https 位置（公司內部網站、NAS 等）。
+
+app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-signing-cert.sh --trust` 之後，只有同一張憑證簽的版本才能透過更新安裝。
+
+## 資料與隱私
+
+| 項目 | 位置與去向 |
+|---|---|
+| 錄音、逐字稿、資料庫、模型 | `~/Library/Application Support/Shiyin`（權限 700，不會被 iCloud 同步） |
+| 錄音、轉錄、說話者辨識 | 完全在本機，不連網 |
+| 整理、校稿 | 逐字稿文字、你的筆記、詞彙表、會議基本資料會送到你選的服務（Anthropic 或 OpenAI）。錄音檔不會送出 |
+| API key | 存在 macOS 鑰匙圈，不寫進檔案或 log |
+| 整理工具選「不整理」 | 完全離線 |
+
+## 設定（⌘,）
+
+| 分頁 | 內容 |
+|---|---|
+| 整理工具 | Claude、Codex、Anthropic API、OpenAI API 或不整理；API key；模型；轉錄完是否自動整理 |
+| 範本 | 內建範本和自訂範本、預設範本 |
+| 詞彙表 | 人名、系統名、專有名詞的正確寫法，轉錄和整理都會參考 |
+| 錄音 | 錄音來源、麥克風、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze 或 macOS 內建）、全域快捷鍵、權限設定 |
+| 模型與儲存空間 | 下載、暫停、刪除模型；壓縮錄音；空間用量；刪除第二版留下的舊檔案 |
+| 進階 | 更新網址與檢查更新、環境檢查、重新顯示首次使用引導、重建搜尋索引 |
+
+## 開發
+
+本專案採用 SDD（規格驅動開發）：先寫需求、設計、任務，再寫程式，每項任務都要實際跑過才打勾。
+
+| 文件 | 內容 |
+|---|---|
+| [`docs/requirements.md`](docs/requirements.md) | 需求與驗收結果 |
+| [`docs/design.md`](docs/design.md) | 架構、資料模型、提示詞、介面、決策紀錄 |
+| [`docs/tasks.md`](docs/tasks.md) | 任務、驗證紀錄、變更紀錄 |
+| [`docs/spikes/asr-engines.md`](docs/spikes/asr-engines.md) | 轉錄引擎和說話者辨識的選型實驗 |
+| [`CLAUDE.md`](CLAUDE.md) | 開發與驗證時要注意的事 |
+
+### 專案結構
+
+```
+Sources/Shiyin/
+├── App/          app 進入點、選單、AppDelegate
+├── Capture/      錄音（麥克風、系統聲音）、寫檔、即時逐字稿
+├── Transcribe/   解碼、whisper.cpp、macOS 內建辨識、說話者辨識
+├── Notes/        整理工具（CLI、API）、提示詞、範本
+├── Model/        資料表與會議紀錄的資料結構
+├── Store/        資料庫（GRDB）、AppModel
+├── IO/           匯出、.shiyin 封包、匯入逐字稿
+├── Services/     工作佇列、模型下載、更新、鑰匙圈、全域快捷鍵、通知
+├── Views/        SwiftUI 畫面
+└── Debug/        DEBUG 版的控制通道（shiyinctl）
+scripts/          建置、DMG、自簽憑證、圖示、開發工具
+docs/             規格與實驗紀錄
+```
+
+### 常用指令
+
+```bash
+scripts/build-app.sh               # release 建置，產出 build/Shiyin.app（實際位置在 ~/Library/Caches/ShiyinBuild）
+scripts/build-app.sh --debug       # DEBUG 建置，含驗證用的控制通道
+scripts/make-dmg.sh                # release 建置並產生 DMG 和 shiyin-update.json
+swift scripts/make-icon.swift Resources/AppIcon.icns   # 重新產生圖示
+
+# DEBUG 版的控制通道：不用操作畫面就能觸發功能、讀取狀態、截圖
+swiftc scripts/dev/shiyinctl.swift -o ~/Library/Caches/ShiyinBuild/shiyinctl
+~/Library/Caches/ShiyinBuild/shiyinctl state /tmp/state.json
+~/Library/Caches/ShiyinBuild/shiyinctl snapshot /tmp/summary.png dark detail
+
+/usr/bin/log stream --predicate 'subsystem == "com.weiwei.shiyin"'      # 看 log
+sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資料
+```
+
+## 已知限制
+
+- 沒有 Apple 開發者帳號，app 沒有公證，第一次打開要手動放行。
+- 錄音中的即時逐字稿用的是系統內建的辨識，不吃詞彙表，英文專有名詞常常不準（例如 Redis 變成 readis）。錄完後的正式轉錄會用詞彙表修正。
+- 轉錄的準確度：在公開的真人中文會議（遠距收音、6 人）上，字錯誤率 Breeze 約 29%、macOS 內建約 25%，以漏掉搶話和語助詞為主；整理出來的會議紀錄仍然正確。筆電或耳機收音的會議應該會好很多，但還沒有用真實的台灣會議驗證過。
+- 說話者辨識：很短、而且大部分時間只有一個人在講的錄音，話少的人可能被併進別人。逐字稿的一段裡如果換人說話，整段只會標一個說話者。
+- Claude 整理通常要 30～70 秒，偶爾會到幾分鐘。
+- 還沒有：英文介面、行事曆整合、iPhone 版。
+
+## 使用的開源專案與模型
+
+| 名稱 | 用途 | 授權 |
+|---|---|---|
+| [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | 正式轉錄 | MIT |
+| [Breeze ASR 25](https://huggingface.co/MediaTek-Research/Breeze-ASR-25)（[GGML 轉檔](https://huggingface.co/shdennlin/breeze-asr-25-ggml)） | 轉錄模型（繁體中文、中英夾雜） | Apache-2.0 |
+| [FluidAudio](https://github.com/FluidInference/FluidAudio) | 說話者辨識 | Apache-2.0 |
+| [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
+
+轉錄模型和說話者辨識模型不放在這個 repo 裡，第一次使用時才下載。

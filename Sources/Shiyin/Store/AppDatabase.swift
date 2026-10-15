@@ -1,0 +1,586 @@
+import Foundation
+import GRDB
+
+/// 列表用：會議加上推算狀態所需的資料
+struct MeetingRow: Identifiable, Hashable {
+    var meeting: Meeting
+    var latestJob: Job?
+    var reviewCount: Int
+    var id: Int64 { meeting.id ?? 0 }
+}
+
+struct ReplaceResult {
+    var segmentsChanged: Int
+    var notesChanged: Bool
+}
+
+/// 全文搜尋的一筆結果（R9.1）
+struct SearchHit: Identifiable, Hashable {
+    enum Kind: String { case title, segment, notes, userNotes = "user_notes" }
+    var meetingId: Int64
+    var kind: Kind
+    var ref: Int64            // segment 的 id；其他種類是 0
+    var snippet: String
+    var id: String { "\(meetingId)-\(kind.rawValue)-\(ref)" }
+}
+
+final class AppDatabase: @unchecked Sendable {
+    let pool: DatabasePool
+
+    /// 開啟資料庫；有待執行的 migration 時，先把舊檔備份到 backups/（N3）
+    init(path: String) throws {
+        var config = Configuration()
+        config.foreignKeysEnabled = true
+        pool = try DatabasePool(path: path, configuration: config)
+        let migrator = Self.migrator
+        let applied = try pool.read { try migrator.appliedIdentifiers($0) }
+        let pending = migrator.migrations.filter { !applied.contains($0) }
+        if !applied.isEmpty && !pending.isEmpty {
+            _ = try pool.writeWithoutTransaction { try $0.checkpoint(.truncate) }
+            try FileManager.default.createDirectory(at: Paths.backupsDir, withIntermediateDirectories: true)
+            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
+            let backup = Paths.backupsDir.appendingPathComponent("shiyin-\(stamp)-before-\(pending[0]).sqlite")
+            try FileManager.default.copyItem(at: URL(fileURLWithPath: path), to: backup)
+            log.info("database backed up before migration \(pending[0])")
+        }
+        try migrator.migrate(pool)
+    }
+
+    private static var migrator: DatabaseMigrator {
+        var migrator = DatabaseMigrator()
+        migrator.registerMigration("v1") { db in
+            try db.execute(sql: """
+            CREATE TABLE meetings (
+              id               INTEGER PRIMARY KEY AUTOINCREMENT,
+              title            TEXT NOT NULL DEFAULT '',
+              title_locked     INTEGER NOT NULL DEFAULT 0,
+              meeting_date     TEXT NOT NULL,
+              participants     TEXT NOT NULL DEFAULT '',
+              source_filename  TEXT NOT NULL,
+              audio_file       TEXT NOT NULL,
+              duration_seconds INTEGER,
+              notes            TEXT,
+              notes_by         TEXT,
+              created_at       TEXT NOT NULL,
+              updated_at       TEXT NOT NULL
+            );
+            CREATE TABLE segments (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              meeting_id     INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+              seq            INTEGER NOT NULL,
+              start          REAL NOT NULL,
+              end            REAL NOT NULL,
+              text           TEXT NOT NULL,
+              low_confidence INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX segments_meeting ON segments(meeting_id, seq);
+            CREATE TABLE notes_versions (
+              id         INTEGER PRIMARY KEY AUTOINCREMENT,
+              meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+              notes      TEXT NOT NULL,
+              reason     TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            );
+            CREATE TABLE jobs (
+              id          INTEGER PRIMARY KEY AUTOINCREMENT,
+              meeting_id  INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+              kind        TEXT NOT NULL,
+              status      TEXT NOT NULL,
+              payload     TEXT,
+              error       TEXT,
+              created_at  TEXT NOT NULL,
+              started_at  TEXT,
+              finished_at TEXT
+            );
+            CREATE INDEX jobs_status ON jobs(status, id);
+            CREATE INDEX jobs_meeting ON jobs(meeting_id, id);
+            CREATE TABLE glossary (
+              id         INTEGER PRIMARY KEY AUTOINCREMENT,
+              term       TEXT NOT NULL UNIQUE,
+              created_at TEXT NOT NULL
+            );
+            """)
+        }
+        // 第三版（design §4）
+        migrator.registerMigration("v2") { db in
+            try db.execute(sql: """
+            ALTER TABLE meetings ADD COLUMN template_id TEXT NOT NULL DEFAULT 'general';
+            ALTER TABLE meetings ADD COLUMN user_notes  TEXT NOT NULL DEFAULT '';
+            ALTER TABLE meetings ADD COLUMN source      TEXT NOT NULL DEFAULT 'import';
+            ALTER TABLE meetings ADD COLUMN channels    TEXT NOT NULL DEFAULT 'mic';
+            ALTER TABLE meetings ADD COLUMN deleted_at  TEXT;
+            ALTER TABLE meetings ADD COLUMN folder      TEXT NOT NULL DEFAULT '';
+            ALTER TABLE segments ADD COLUMN speaker INTEGER;
+            ALTER TABLE segments ADD COLUMN kind TEXT NOT NULL DEFAULT 'final';
+            CREATE TABLE speakers (
+              meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+              idx        INTEGER NOT NULL,
+              name       TEXT NOT NULL,
+              PRIMARY KEY (meeting_id, idx)
+            );
+            CREATE TABLE bookmarks (
+              id         INTEGER PRIMARY KEY AUTOINCREMENT,
+              meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+              time       REAL NOT NULL,
+              label      TEXT NOT NULL DEFAULT ''
+            );
+            CREATE TABLE templates (
+              id         TEXT PRIMARY KEY,
+              name       TEXT NOT NULL,
+              builtin    INTEGER NOT NULL,
+              definition TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref UNINDEXED, text, tokenize = 'trigram');
+            """)
+            // 會議紀錄轉成 v2 格式（字串陣列 → 帶時間點的條目，時間點先留空）
+            for row in try Row.fetchAll(db, sql: "SELECT id, notes FROM meetings WHERE notes IS NOT NULL") {
+                let id: Int64 = row["id"]
+                guard let json: String = row["notes"], let notes = try? JSONDecoder().decode(MeetingNotes.self, from: Data(json.utf8))
+                else { continue }
+                try db.execute(sql: "UPDATE meetings SET notes = ? WHERE id = ?", arguments: [notes.jsonString(), id])
+            }
+            try Self.rebuildSearch(db)
+        }
+        return migrator
+    }
+
+    // MARK: 會議
+
+    func meetingRows(trash: Bool = false) throws -> [MeetingRow] {
+        try pool.read { db in
+            let meetings = try Meeting
+                .filter(trash ? Column("deleted_at") != nil : Column("deleted_at") == nil)
+                .order(sql: "meeting_date DESC, id DESC").fetchAll(db)
+            let latest = try Job.fetchAll(db, sql: "SELECT * FROM jobs WHERE id IN (SELECT MAX(id) FROM jobs WHERE kind <> 'compress' GROUP BY meeting_id)")
+            let byMeeting = Dictionary(uniqueKeysWithValues: latest.map { ($0.meetingId, $0) })
+            return meetings.map { m in
+                MeetingRow(meeting: m, latestJob: byMeeting[m.id ?? 0], reviewCount: m.decodedNotes?.reviewItems.count ?? 0)
+            }
+        }
+    }
+
+    func meeting(_ id: Int64) throws -> Meeting? {
+        try pool.read { db in try Meeting.fetchOne(db, key: id) }
+    }
+
+    func segments(_ meetingId: Int64, kind: String = "final") throws -> [Segment] {
+        try pool.read { db in
+            try Segment.filter(Column("meeting_id") == meetingId && Column("kind") == kind).order(Column("seq")).fetchAll(db)
+        }
+    }
+
+    func versionCount(_ meetingId: Int64) throws -> Int {
+        try pool.read { db in try NotesVersion.filter(Column("meeting_id") == meetingId).fetchCount(db) }
+    }
+
+    func latestJob(_ meetingId: Int64) throws -> Job? {
+        try pool.read { db in
+            try Job.filter(Column("meeting_id") == meetingId && Column("kind") != JobKind.compress.rawValue)
+                .order(Column("id").desc).fetchOne(db)
+        }
+    }
+
+    /// 建立會議並給定錄音檔名（需要先拿到 id 才能命名，所以在同一個交易裡做兩步）
+    func insertMeeting(_ meeting: Meeting, audioExtension: String?) throws -> Meeting {
+        try pool.write { db in
+            var m = meeting
+            try m.insert(db)
+            if let audioExtension { m.audioFile = "\(m.id!).\(audioExtension)" }
+            try m.update(db)
+            try Self.index(db, meetingId: m.id!, kind: .title, ref: 0, text: m.displayTitle)
+            return m
+        }
+    }
+
+    func updateMeeting(_ meeting: Meeting) throws {
+        try pool.write { db in
+            var m = meeting
+            m.updatedAt = Clock.now()
+            try m.update(db)
+            try Self.index(db, meetingId: m.id!, kind: .title, ref: 0, text: m.displayTitle)
+            try Self.index(db, meetingId: m.id!, kind: .userNotes, ref: 0, text: m.userNotes)
+        }
+    }
+
+    /// 資料夾（R9.2）：資料夾就是 meetings.folder 的值，空字串表示不在任何資料夾
+    func setFolder(_ ids: [Int64], folder: String) throws {
+        guard !ids.isEmpty else { return }
+        try pool.write { db in
+            for id in ids {
+                try db.execute(sql: "UPDATE meetings SET folder = ?, updated_at = ? WHERE id = ?", arguments: [folder, Clock.now(), id])
+            }
+        }
+    }
+
+    /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改
+    func renameFolder(_ old: String, to newName: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET folder = ?, updated_at = ? WHERE folder = ?", arguments: [newName, Clock.now(), old])
+        }
+    }
+
+    /// 永久刪除（垃圾桶清除或使用者確認）
+    func deleteMeeting(_ id: Int64) throws {
+        try pool.write { db in
+            _ = try Meeting.deleteOne(db, key: id)
+            try db.execute(sql: "DELETE FROM search WHERE meeting_id = ?", arguments: [id])
+        }
+    }
+
+    /// 移到垃圾桶或還原（R9.3）
+    func setTrashed(_ id: Int64, _ trashed: Bool) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET deleted_at = ? WHERE id = ?", arguments: [trashed ? Clock.now() : nil, id])
+        }
+    }
+
+    func expiredTrash(olderThan days: Int) throws -> [Meeting] {
+        let cutoff = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-Double(days) * 86_400))
+        return try pool.read { db in
+            try Meeting.filter(Column("deleted_at") != nil && Column("deleted_at") < cutoff).fetchAll(db)
+        }
+    }
+
+    func updateInfo(_ id: Int64, title: String, date: String, participants: String) throws {
+        try pool.write { db in
+            guard var m = try Meeting.fetchOne(db, key: id) else { return }
+            if m.title != title { m.titleLocked = true }
+            m.title = title
+            m.meetingDate = date
+            m.participants = participants
+            m.updatedAt = Clock.now()
+            try m.update(db)
+            try Self.index(db, meetingId: id, kind: .title, ref: 0, text: m.displayTitle)
+        }
+    }
+
+    // MARK: 逐字稿
+
+    /// 寫入正式逐字稿：取代舊的正式版，並刪掉即時預覽（design §5.3）
+    func saveTranscript(_ meetingId: Int64, segments: [Segment], duration: Int, speakerCount: Int) throws {
+        try pool.write { db in
+            let old = try Int64.fetchAll(db, sql: "SELECT id FROM segments WHERE meeting_id = ?", arguments: [meetingId])
+            for id in old { try db.execute(sql: "DELETE FROM search WHERE kind = 'segment' AND ref = ?", arguments: [id]) }
+            try Segment.filter(Column("meeting_id") == meetingId).deleteAll(db)
+            for var s in segments {
+                try s.insert(db)
+                try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) VALUES (?, 'segment', ?, ?)",
+                               arguments: [meetingId, s.id, s.text])
+            }
+            // 說話者：保留已改過的名字，新的編號補上預設名字
+            let existing = try SpeakerName.filter(Column("meeting_id") == meetingId).fetchAll(db)
+            let named = Dictionary(uniqueKeysWithValues: existing.map { ($0.idx, $0.name) })
+            try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
+            for idx in stride(from: 1, through: speakerCount, by: 1) {
+                var speaker = SpeakerName(meetingId: meetingId, idx: idx, name: named[idx] ?? "說話者 \(idx)")
+                try speaker.insert(db)
+            }
+            if var m = try Meeting.fetchOne(db, key: meetingId) {
+                m.durationSeconds = duration
+                m.updatedAt = Clock.now()
+                try m.update(db)
+            }
+        }
+    }
+
+    /// 錄音中的即時預覽段落（kind = live）
+    func appendLiveSegment(_ meetingId: Int64, start: Double, end: Double, text: String) throws {
+        try pool.write { db in
+            let seq = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(seq), -1) + 1 FROM segments WHERE meeting_id = ?",
+                                       arguments: [meetingId]) ?? 0
+            var segment = Segment(meetingId: meetingId, seq: seq, start: start, end: end, text: text, lowConfidence: false,
+                                  speaker: nil, kind: "live")
+            try segment.insert(db)
+        }
+    }
+
+    func updateSegmentText(_ id: Int64, text: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, id])
+            try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, id])
+        }
+    }
+
+    func speakers(_ meetingId: Int64) throws -> [SpeakerName] {
+        try pool.read { db in try SpeakerName.filter(Column("meeting_id") == meetingId).order(Column("idx")).fetchAll(db) }
+    }
+
+    func renameSpeaker(_ meetingId: Int64, idx: Int, name: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "INSERT OR REPLACE INTO speakers (meeting_id, idx, name) VALUES (?, ?, ?)",
+                           arguments: [meetingId, idx, name])
+        }
+    }
+
+    // MARK: 重點與筆記
+
+    func bookmarks(_ meetingId: Int64) throws -> [Bookmark] {
+        try pool.read { db in try Bookmark.filter(Column("meeting_id") == meetingId).order(Column("time")).fetchAll(db) }
+    }
+
+    func addBookmark(_ meetingId: Int64, time: Double, label: String = "") throws {
+        try pool.write { db in
+            var bookmark = Bookmark(meetingId: meetingId, time: time, label: label)
+            try bookmark.insert(db)
+        }
+    }
+
+    func deleteBookmark(_ id: Int64) throws {
+        _ = try pool.write { db in try Bookmark.deleteOne(db, key: id) }
+    }
+
+    func updateUserNotes(_ meetingId: Int64, _ text: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET user_notes = ?, updated_at = ? WHERE id = ?",
+                           arguments: [text, Clock.now(), meetingId])
+            try Self.index(db, meetingId: meetingId, kind: .userNotes, ref: 0, text: text)
+        }
+    }
+
+    // MARK: 會議紀錄
+
+    /// 寫入新的會議紀錄，舊的那一版存進 notes_versions（R6.7）
+    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String) throws {
+        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason) }
+    }
+
+    private static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String) throws {
+        guard var m = try Meeting.fetchOne(db, key: meetingId) else { return }
+        if let old = m.notes {
+            var version = NotesVersion(meetingId: meetingId, notes: old, reason: reason)
+            try version.insert(db)
+        }
+        m.notes = notes.jsonString()
+        if let provider { m.notesBy = provider }
+        if !m.titleLocked && !notes.title.trimmingCharacters(in: .whitespaces).isEmpty {
+            m.title = notes.title.trimmingCharacters(in: .whitespaces)
+        }
+        m.updatedAt = Clock.now()
+        try m.update(db)
+        try index(db, meetingId: meetingId, kind: .notes, ref: 0, text: notes.plainText)
+        try index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
+    }
+
+    /// 復原上一版：成功回傳 true
+    func undoNotes(_ meetingId: Int64) throws -> Bool {
+        try pool.write { db in
+            guard let version = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id").desc).fetchOne(db),
+                  var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
+            m.notes = version.notes
+            if !m.titleLocked, let title = m.decodedNotes?.title, !title.isEmpty { m.title = title }
+            m.updatedAt = Clock.now()
+            try m.update(db)
+            _ = try version.delete(db)
+            try Self.index(db, meetingId: meetingId, kind: .notes, ref: 0, text: m.decodedNotes?.plainText ?? "")
+            return true
+        }
+    }
+
+    /// 全文取代：逐字稿＋會議紀錄（沿用第二版）
+    func replace(_ meetingId: Int64, find: String, with replacement: String) throws -> ReplaceResult {
+        try pool.write { db in
+            var changed = 0
+            for var s in try Segment.filter(Column("meeting_id") == meetingId).fetchAll(db) where s.text.contains(find) {
+                s.text = s.text.replacingOccurrences(of: find, with: replacement)
+                try s.update(db)
+                try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [s.text, s.id])
+                changed += 1
+            }
+            var notesChanged = false
+            if let m = try Meeting.fetchOne(db, key: meetingId), let notes = m.decodedNotes {
+                let updated = notes.replacing(find, with: replacement)
+                if updated != notes {
+                    try Self.saveNotes(db, meetingId, notes: updated, by: nil, reason: "取代「\(find)」→「\(replacement)」")
+                    notesChanged = true
+                }
+            }
+            return ReplaceResult(segmentsChanged: changed, notesChanged: notesChanged)
+        }
+    }
+
+    /// 只略過、不需要 LLM 的待確認題目：直接從會議紀錄移除
+    func dismissReviewItems(_ meetingId: Int64, indexes: Set<Int>) throws {
+        try pool.write { db in
+            guard let m = try Meeting.fetchOne(db, key: meetingId), var notes = m.decodedNotes else { return }
+            notes.reviewItems = notes.reviewItems.enumerated().filter { !indexes.contains($0.offset) }.map(\.element)
+            try Self.saveNotes(db, meetingId, notes: notes, by: nil, reason: "略過待確認")
+        }
+    }
+
+    // MARK: 搜尋（R9.1）
+
+    private static func index(_ db: Database, meetingId: Int64, kind: SearchHit.Kind, ref: Int64, text: String) throws {
+        try db.execute(sql: "DELETE FROM search WHERE meeting_id = ? AND kind = ? AND ref = ?",
+                       arguments: [meetingId, kind.rawValue, ref])
+        guard !text.isEmpty else { return }
+        try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) VALUES (?, ?, ?, ?)",
+                       arguments: [meetingId, kind.rawValue, ref, text])
+    }
+
+    private static func rebuildSearch(_ db: Database) throws {
+        try db.execute(sql: "DELETE FROM search")
+        try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) SELECT meeting_id, 'segment', id, text FROM segments")
+        for m in try Meeting.fetchAll(db) {
+            try index(db, meetingId: m.id!, kind: .title, ref: 0, text: m.displayTitle)
+            try index(db, meetingId: m.id!, kind: .userNotes, ref: 0, text: m.userNotes)
+            if let notes = m.decodedNotes { try index(db, meetingId: m.id!, kind: .notes, ref: 0, text: notes.plainText) }
+        }
+    }
+
+    func rebuildSearchIndex() throws {
+        try pool.write { try Self.rebuildSearch($0) }
+    }
+
+    /// trigram 至少要 3 個字；1～2 個字改用 LIKE
+    func search(_ query: String, limit: Int = 200) throws -> [SearchHit] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+        return try pool.read { db in
+            let rows: [Row]
+            if q.count >= 3 {
+                let phrase = "\"" + q.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+                rows = try Row.fetchAll(db, sql: """
+                    SELECT s.meeting_id, s.kind, s.ref, s.text FROM search s
+                    JOIN meetings m ON m.id = s.meeting_id AND m.deleted_at IS NULL
+                    WHERE search MATCH ? ORDER BY m.meeting_date DESC, s.meeting_id DESC, s.ref LIMIT ?
+                    """, arguments: [phrase, limit])
+            } else {
+                rows = try Row.fetchAll(db, sql: """
+                    SELECT s.meeting_id, s.kind, s.ref, s.text FROM search s
+                    JOIN meetings m ON m.id = s.meeting_id AND m.deleted_at IS NULL
+                    WHERE s.text LIKE ? ESCAPE '\\' ORDER BY m.meeting_date DESC, s.meeting_id DESC, s.ref LIMIT ?
+                    """, arguments: ["%" + q.replacingOccurrences(of: "%", with: "\\%").replacingOccurrences(of: "_", with: "\\_") + "%", limit])
+            }
+            return rows.compactMap { row in
+                guard let kind = SearchHit.Kind(rawValue: row["kind"]) else { return nil }
+                let text: String = row["text"]
+                return SearchHit(meetingId: row["meeting_id"], kind: kind, ref: row["ref"], snippet: Self.snippet(text, around: q))
+            }
+        }
+    }
+
+    private static func snippet(_ text: String, around query: String) -> String {
+        guard let range = text.range(of: query, options: .caseInsensitive) else { return String(text.prefix(80)) }
+        let start = text.index(range.lowerBound, offsetBy: -30, limitedBy: text.startIndex) ?? text.startIndex
+        let end = text.index(range.upperBound, offsetBy: 50, limitedBy: text.endIndex) ?? text.endIndex
+        return (start > text.startIndex ? "…" : "") + text[start..<end].replacingOccurrences(of: "\n", with: " ")
+            + (end < text.endIndex ? "…" : "")
+    }
+
+    // MARK: 範本
+
+    /// 內建範本依固定順序（一般會議在最前面），自訂範本接在後面依名稱排序
+    func templates() throws -> [TemplateRecord] {
+        let order = BuiltinTemplates.all.map(\.id)
+        return try pool.read { db in try TemplateRecord.fetchAll(db) }.sorted { a, b in
+            switch (order.firstIndex(of: a.id), order.firstIndex(of: b.id)) {
+            case let (x?, y?): return x < y
+            case (_?, nil): return true
+            case (nil, _?): return false
+            default: return a.name < b.name
+            }
+        }
+    }
+
+    func saveTemplate(_ template: TemplateRecord) throws {
+        try pool.write { db in
+            var t = template
+            t.updatedAt = Clock.now()
+            try t.save(db)
+        }
+    }
+
+    func deleteTemplate(_ id: String) throws {
+        _ = try pool.write { db in try TemplateRecord.deleteOne(db, key: id) }
+    }
+
+    // MARK: 工作
+
+    @discardableResult
+    func enqueue(_ meetingId: Int64, kind: JobKind, payload: String? = nil) throws -> Job {
+        try pool.write { db in
+            var job = Job(meetingId: meetingId, kind: kind, payload: payload)
+            try job.insert(db)
+            return job
+        }
+    }
+
+    /// 領取該條線最舊的一筆排隊工作，改成 running。轉錄模型還沒下載好時，轉錄工作留在佇列等待
+    func claimNext(lane: JobLane, includeTranscribe: Bool = true) throws -> Job? {
+        let kinds = lane == .transcribe
+            ? (includeTranscribe ? [JobKind.transcribe.rawValue] : []) + [JobKind.compress.rawValue]
+            : [JobKind.summarize.rawValue, JobKind.revise.rawValue]
+        return try pool.write { db in
+            guard var job = try Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
+                .order(Column("id")).fetchOne(db) else { return nil }
+            job.status = .running
+            job.startedAt = Clock.now()
+            try job.update(db)
+            return job
+        }
+    }
+
+    func finish(_ jobId: Int64, status: JobStatus, error: String? = nil) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE jobs SET status = ?, error = ?, finished_at = ? WHERE id = ?",
+                           arguments: [status.rawValue, error, Clock.now(), jobId])
+        }
+    }
+
+    /// app 啟動時：上次沒跑完的工作改回排隊
+    func requeueRunning() throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'")
+        }
+    }
+
+    /// 取消這場會議所有排隊中、執行中的工作，回傳原本執行中的工作 id
+    func cancelJobs(_ meetingId: Int64) throws -> [Int64] {
+        try pool.write { db in
+            let running = try Int64.fetchAll(db, sql: "SELECT id FROM jobs WHERE meeting_id = ? AND status = 'running'",
+                                              arguments: [meetingId])
+            try db.execute(sql: """
+                UPDATE jobs SET status = 'cancelled', finished_at = ?
+                WHERE meeting_id = ? AND status IN ('queued', 'running')
+                """, arguments: [Clock.now(), meetingId])
+            return running
+        }
+    }
+
+    func jobStatus(_ jobId: Int64) throws -> JobStatus? {
+        try pool.read { db in try Job.fetchOne(db, key: jobId)?.status }
+    }
+
+    func activeJobs() throws -> [Job] {
+        try pool.read { db in
+            try Job.filter(["queued", "running"].contains(Column("status"))).order(Column("id")).fetchAll(db)
+        }
+    }
+
+    // MARK: 詞彙表
+
+    func glossary() throws -> [GlossaryTerm] {
+        try pool.read { db in try GlossaryTerm.order(Column("id")).fetchAll(db) }
+    }
+
+    func addTerm(_ term: String) throws {
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try pool.write { db in
+            try db.execute(sql: "INSERT OR IGNORE INTO glossary (term, created_at) VALUES (?, ?)", arguments: [trimmed, Clock.now()])
+        }
+    }
+
+    func deleteTerm(_ id: Int64) throws {
+        _ = try pool.write { db in try GlossaryTerm.deleteOne(db, key: id) }
+    }
+
+    // MARK: 儲存空間
+
+    func setAudioFile(_ meetingId: Int64, _ filename: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET audio_file = ? WHERE id = ?", arguments: [filename, meetingId])
+        }
+    }
+}

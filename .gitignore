@@ -1,0 +1,18 @@
+# 資料一律放 SHIYIN_HOME（~/Library/Application Support/Shiyin），這裡保險起見再擋一次
+data/
+venv/
+.venv/
+*.db
+*.m4a
+*.mp3
+*.wav
+*.mp4
+*.mov
+__pycache__/
+*.pyc
+.DS_Store
+build
+build/
+.build/
+.swiftpm/
+dist

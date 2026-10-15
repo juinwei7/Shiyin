@@ -1,0 +1,139 @@
+import AVFoundation
+import Foundation
+
+/// 把各音源的 16 kHz 音訊對齊後寫成 WAV（design §5.2），同時把混音後的單聲道交給即時轉錄。
+/// 兩個音源時：左聲道麥克風、右聲道系統聲音。暫停時丟掉收到的音訊，所以檔案裡沒有暫停的那一段。
+final class RecordingWriter: @unchecked Sendable {
+    let channels: Int
+    let url: URL
+    var onMix: (([Float]) -> Void)?
+
+    private let file: AVAudioFile
+    private let lock = NSLock()
+    private var pending: [[Float]]
+    private var levels: [Float]
+    private var silentSeconds: [Double]
+    private var paused = false
+    private var acceptedFrames: [Int] // 各聲道累計收到的音框（不含暫停）
+    private var timer: DispatchSourceTimer?
+    private var writtenFrames = 0          // 只在 queue 上讀寫
+    private let queue = DispatchQueue(label: "com.weiwei.shiyin.writer", qos: .userInitiated)
+    private var writeError: Error?
+
+    init(url: URL, channels: Int) throws {
+        self.url = url
+        self.channels = channels
+        pending = Array(repeating: [], count: channels)
+        levels = Array(repeating: 0, count: channels)
+        silentSeconds = Array(repeating: 0, count: channels)
+        acceptedFrames = Array(repeating: 0, count: channels)
+        file = try AVAudioFile(forWriting: url, settings: [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: CaptureFormat.sampleRate,
+            AVNumberOfChannelsKey: channels,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+        ], commonFormat: .pcmFormatFloat32, interleaved: false)
+    }
+
+    func start() {
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + 0.1, repeating: 0.1)
+        timer.setEventHandler { [weak self] in self?.drain(final: false) }
+        timer.resume()
+        self.timer = timer
+    }
+
+    /// 音訊執行緒呼叫
+    func append(channel: Int, _ samples: [Float]) {
+        guard channel < channels, !samples.isEmpty else { return }
+        var sum: Float = 0
+        for s in samples { sum += s * s }
+        let rms = (sum / Float(samples.count)).squareRoot()
+        lock.withLock {
+            levels[channel] = rms
+            silentSeconds[channel] = rms == 0 ? silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate : 0
+            guard !paused else { return }
+            pending[channel].append(contentsOf: samples)
+            acceptedFrames[channel] += samples.count
+        }
+    }
+
+    func setPaused(_ value: Bool) {
+        lock.withLock {
+            paused = value
+            if value { for i in 0..<channels { pending[i].removeAll() } }
+        }
+    }
+
+    /// 目前錄到的秒數（不含暫停），給計時、筆記和重點標記的時間點用
+    var recordedSeconds: Double {
+        lock.withLock { Double(acceptedFrames.max() ?? 0) / CaptureFormat.sampleRate }
+    }
+
+    /// 0～1 的音量（RMS 換成 dB 再正規化）
+    func level(_ channel: Int) -> Float {
+        let rms = lock.withLock { channel < channels ? levels[channel] : 0 }
+        guard rms > 0 else { return 0 }
+        return max(0, min(1, (20 * log10(rms) + 60) / 60))
+    }
+
+    func silence(_ channel: Int) -> Double { lock.withLock { channel < channels ? silentSeconds[channel] : 0 } }
+
+    /// 停止並關檔，回傳錄到的秒數。
+    /// 注意：AVAudioFile 關檔後 length 會變成 0，所以秒數要用自己累計的音框數算
+    func finish() throws -> Double {
+        timer?.cancel()
+        timer = nil
+        let frames = queue.sync { () -> Int in
+            drain(final: true)
+            return writtenFrames
+        }
+        file.close()
+        if let writeError { throw writeError }
+        return Double(frames) / CaptureFormat.sampleRate
+    }
+
+    private func drain(final: Bool) {
+        let frames: [[Float]] = lock.withLock {
+            if channels == 1 {
+                defer { pending[0].removeAll(keepingCapacity: true) }
+                return [pending[0]]
+            }
+            // 兩個音源：取兩邊都有的長度；一邊落後超過 0.5 秒（或收尾時），補靜音讓時間對齊
+            var count = pending.map(\.count).min() ?? 0
+            let longest = pending.map(\.count).max() ?? 0
+            if final || longest - count > Int(CaptureFormat.sampleRate / 2) {
+                for i in 0..<channels where pending[i].count < longest {
+                    pending[i].append(contentsOf: [Float](repeating: 0, count: longest - pending[i].count))
+                }
+                count = longest
+            }
+            let taken = pending.map { Array($0.prefix(count)) }
+            for i in 0..<channels { pending[i].removeFirst(count) }
+            return taken
+        }
+        let count = frames[0].count
+        guard count > 0, let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(count))
+        else { return }
+        buffer.frameLength = AVAudioFrameCount(count)
+        for (channel, samples) in frames.enumerated() {
+            samples.withUnsafeBufferPointer { buffer.floatChannelData![channel].update(from: $0.baseAddress!, count: count) }
+        }
+        do {
+            try file.write(from: buffer)
+            writtenFrames += count
+        } catch {
+            writeError = error
+        }
+        // 即時轉錄用的單聲道混音
+        if channels == 1 {
+            onMix?(frames[0])
+        } else {
+            var mix = [Float](repeating: 0, count: count)
+            for i in 0..<count { mix[i] = (frames[0][i] + frames[1][i]) * 0.5 }
+            onMix?(mix)
+        }
+    }
+}
