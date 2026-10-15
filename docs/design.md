@@ -329,6 +329,11 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   - 安裝流程：錄音中或有工作在跑時拒絕 → 下載 DMG 到 `tmp/` → 驗證 SHA-256 → `hdiutil attach` 唯讀掛載 → 把 Shiyin.app 複製出來 → 卸載 → 用 Security framework 檢查新 app 的簽章有效，而且符合目前這個 app 的 designated requirement（自簽憑證時等於鎖定同一張憑證）→ 寫一個固定內容的小腳本，用參數傳入 PID 和路徑：等 app 結束後把舊 app 改名備份、放進新 app、成功就刪掉備份、失敗就還原，最後重新開啟 → app 結束
   - app 所在的資料夾不能寫入時（一般使用者帳號裝在 /Applications），改成打開下載好的 DMG，請使用者手動拖進去
   - 從網路下載的檔案不會被加上 quarantine（app 沒有開 `LSFileQuarantineEnabled`），所以替換後打開不會再被 Gatekeeper 擋
+- CI 打包（GitHub Actions，`.github/workflows/release.yml`）：
+  - 推 `v*` 的 tag：在 `macos-26`（Apple Silicon、Xcode 26）上跑 `make-dmg.sh`，產出 DMG 和 `shiyin-update.json`，建立 GitHub Release 並上傳；tag 跟 `Info.plist` 的版本號不一致時直接失敗。tag 的說明文字當成更新內容
+  - 手動執行（workflow_dispatch）：只建置，DMG 放在 Actions 的 artifact
+  - 簽章：repo secrets 有 `SHIYIN_SIGNING_P12`、`SHIYIN_SIGNING_P12_PASSWORD` 時，`scripts/ci/import-signing-cert.sh` 把憑證放成 `build-app.sh` 認得的位置（`~/Library/Application Support/ShiyinSigning`），並用 sudo 設成系統信任（runner 的 sudo 不用密碼），簽出來跟作者電腦上的一致；沒有就用 ad-hoc。憑證用 `scripts/export-signing-cert.sh --to-github <repo>` 從作者的電腦匯出
+  - 更新網址從 repo 變數 `SHIYIN_UPDATE_URL` 帶入；有設定 `SHIYIN_RELEASES_REPO`（加上 `SHIYIN_RELEASES_TOKEN`）時，也發布到另一個公開的 repo（程式碼維持私人時用）
 - 全域快捷鍵（R11.3）：用 Carbon 的 `RegisterEventHotKey` 以獨佔模式（`kEventHotKeyExclusive`）註冊 ⌃⌥⌘R（不需要輔助使用權限）。不加獨佔的話，Carbon 允許不同的 app 註冊同一組按鍵，偵測不到衝突，按下時跟 ⌘R 一樣：沒在錄就開始，在錄就停止。設定 →「錄音」可以關掉；註冊失敗（例如被別的 app 佔用）時在設定裡顯示原因
 
 ## 13. 從第二版遷移（R10.5）

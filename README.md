@@ -85,6 +85,30 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 
 ## 發布新版
 
+### 用 GitHub Actions（推薦）
+
+1. 改 `Resources/Info.plist` 的 `CFBundleShortVersionString`，commit 並推上去。
+2. 打一個帶說明的 tag 並推上去，說明文字就是這版的更新內容：
+
+   ```bash
+   git tag -a v3.0.1 -m "這版改了什麼"
+   git push origin v3.0.1
+   ```
+
+3. [`.github/workflows/release.yml`](.github/workflows/release.yml) 會在 `macos-26` runner 上建置 DMG，建立 GitHub Release 並上傳 DMG 和 `shiyin-update.json`。tag 跟版本號不一致時會直接失敗。
+
+也可以在 Actions 頁面手動執行「打包」，只建置、不發布，DMG 放在那次執行的 artifact。
+
+設定（Settings → Secrets and variables → Actions，都是選填）：
+
+| 名稱 | 種類 | 用途 |
+|---|---|---|
+| `SHIYIN_SIGNING_P12`、`SHIYIN_SIGNING_P12_PASSWORD` | Secret | 自簽憑證。用 `scripts/export-signing-cert.sh --to-github <owner/repo>` 從自己的電腦設定，CI 簽出來的 app 才會跟你電腦上建的一致；沒有設定就用 ad-hoc 簽章 |
+| `SHIYIN_UPDATE_URL` | Variable | 寫進 app 的更新網址 |
+| `SHIYIN_RELEASES_REPO`、`SHIYIN_RELEASES_TOKEN` | Variable、Secret | 另外發布到一個公開的 repo（程式碼維持私人、又想讓 app 自動更新時用） |
+
+### 在自己的電腦上發布
+
 1. 改 `Resources/Info.plist` 的 `CFBundleShortVersionString`。
 2. 產生 DMG，帶入更新網址和這版的更新內容：
 
@@ -193,3 +217,7 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
 
 轉錄模型和說話者辨識模型不放在這個 repo 裡，第一次使用時才下載。
+
+## 授權
+
+[MIT](LICENSE)。使用的開源專案和模型各自依上表的授權條款。

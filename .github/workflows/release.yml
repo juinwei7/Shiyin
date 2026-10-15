@@ -1,0 +1,99 @@
+# 打包拾音（design §12）：
+# - 推 v* 的 tag（例如 v3.0.1）：建置 DMG、建立 GitHub Release
+# - 在 Actions 頁面手動執行：只建置，DMG 放在這次執行的 artifact
+#
+# 需要的設定（Settings → Secrets and variables → Actions），都是選填：
+#   secrets.SHIYIN_SIGNING_P12 / SHIYIN_SIGNING_P12_PASSWORD  自簽憑證（scripts/export-signing-cert.sh 匯出）；沒有就用 ad-hoc
+#   vars.SHIYIN_UPDATE_URL                                     寫進 app 的更新網址（https://…/shiyin-update.json）
+#   vars.SHIYIN_RELEASES_REPO + secrets.SHIYIN_RELEASES_TOKEN  另外發布到公開的 repo（程式碼維持私人時用）
+name: 打包
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 環境
+        run: |
+          xcodebuild -version
+          swift --version
+          sw_vers
+
+      - name: 確認 tag 跟版本號一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"
+          if [ "v${VERSION}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} 跟 Resources/Info.plist 的版本 ${VERSION} 不一致"
+            exit 1
+          fi
+
+      - name: 快取 Swift 套件
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/ShiyinBuild/repositories
+            ~/Library/Caches/ShiyinBuild/artifacts
+            ~/Library/Caches/ShiyinBuild/checkouts
+          key: spm-macos26-${{ hashFiles('Package.resolved') }}
+
+      - name: 匯入簽章憑證
+        env:
+          SHIYIN_SIGNING_P12: ${{ secrets.SHIYIN_SIGNING_P12 }}
+          SHIYIN_SIGNING_P12_PASSWORD: ${{ secrets.SHIYIN_SIGNING_P12_PASSWORD }}
+        run: scripts/ci/import-signing-cert.sh
+
+      - name: 更新內容（tag 的說明文字）
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          {
+            echo "SHIYIN_RELEASE_NOTES<<__NOTES__"
+            git tag -l --format='%(contents)' "${GITHUB_REF_NAME}"
+            echo "__NOTES__"
+          } >> "$GITHUB_ENV"
+
+      - name: 建置 DMG
+        env:
+          SHIYIN_UPDATE_URL: ${{ vars.SHIYIN_UPDATE_URL }}
+        run: |
+          scripts/make-dmg.sh
+          mkdir -p out
+          cp ~/Library/Caches/ShiyinBuild/dist/*.dmg ~/Library/Caches/ShiyinBuild/dist/shiyin-update.json out/
+          codesign -dr - ~/Library/Caches/ShiyinBuild/app/Shiyin.app 2>&1 | tail -1
+          ls -la out
+
+      - name: 上傳 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Shiyin-${{ github.ref_name }}
+          path: out/
+          if-no-files-found: error
+
+      - name: 建立 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" out/* \
+            --title "拾音 ${GITHUB_REF_NAME#v}" \
+            --notes "${SHIYIN_RELEASE_NOTES:-拾音 ${GITHUB_REF_NAME#v}}"
+
+      - name: 發布到公開的 releases repo
+        if: startsWith(github.ref, 'refs/tags/v') && vars.SHIYIN_RELEASES_REPO != ''
+        env:
+          GH_TOKEN: ${{ secrets.SHIYIN_RELEASES_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" out/* --repo "${{ vars.SHIYIN_RELEASES_REPO }}" \
+            --title "拾音 ${GITHUB_REF_NAME#v}" \
+            --notes "${SHIYIN_RELEASE_NOTES:-拾音 ${GITHUB_REF_NAME#v}}"

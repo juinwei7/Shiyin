@@ -21,7 +21,13 @@ ln -s /Applications "$STAGE/應用程式"
 swift scripts/html-to-pdf.swift scripts/install-guide.html "$STAGE/安裝說明.pdf"
 
 rm -f "$DMG"
-hdiutil create -volname "拾音 ${VERSION}" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+# CI 上 hdiutil 偶爾會回「資源忙碌」，最多試三次
+for attempt in 1 2 3; do
+  hdiutil create -volname "拾音 ${VERSION}" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null && break
+  [ "$attempt" = 3 ] && exit 1
+  echo "hdiutil 失敗，5 秒後重試（第 ${attempt} 次）"
+  sleep 5
+done
 rm -rf "$STAGE"
 [ -L "$ROOT/dist" ] || { rm -rf "$ROOT/dist"; ln -s "$OUT_DIR" "$ROOT/dist"; }
 
