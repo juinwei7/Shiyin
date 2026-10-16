@@ -78,6 +78,11 @@ final class ModelStore: NSObject {
         Paths.modelsDir.appendingPathComponent(".\(info(model).filename).resume")
     }
 
+    #if DEBUG
+    /// 只在 DEBUG：改從別的網址下載，測下載出錯（shiyinctl modelurl）
+    @ObservationIgnored var debugURLs: [Model: URL] = [:]
+    #endif
+
     private(set) var states: [Model: State] = [:]
     private(set) var diarizerState: State = .missing
     @ObservationIgnored private var session: URLSession!
@@ -122,7 +127,11 @@ final class ModelStore: NSObject {
         if let resume = try? Data(contentsOf: Self.resumeDataPath(model)) {
             task = session.downloadTask(withResumeData: resume)
         } else {
-            task = session.downloadTask(with: Self.info(model).url)
+            var url = Self.info(model).url
+            #if DEBUG
+            url = debugURLs[model] ?? url
+            #endif
+            task = session.downloadTask(with: url)
         }
         task.taskDescription = model.rawValue
         tasks[model] = task
@@ -233,6 +242,16 @@ extension ModelStore: URLSessionDownloadDelegate {
 
     nonisolated func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let model = Self.model(of: downloadTask)
+        // 伺服器回傳錯誤頁（404、500…）也會「下載完成」，不要拿去驗 SHA-256（會誤報成檔案損壞）
+        let code = (downloadTask.response as? HTTPURLResponse)?.statusCode ?? 200
+        guard code == 200 || code == 206 else {
+            MainActor.assumeIsolated {
+                try? FileManager.default.removeItem(at: Self.resumeDataPath(model))
+                tasks[model] = nil
+                states[model] = .failed(String(localized: "下載失敗：伺服器回傳 HTTP \(code)，請稍後再試"))
+            }
+            return
+        }
         // location 在這個方法結束後就會被刪掉，先搬到 tmp
         let kept = Paths.tmpDir.appendingPathComponent("model-\(UUID().uuidString).bin")
         do {
@@ -249,11 +268,14 @@ extension ModelStore: URLSessionDownloadDelegate {
         let resume = error.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
         MainActor.assumeIsolated {
             if error.code == NSURLErrorCancelled { return }  // 暫停或刪除
-            if let resume { try? resume.write(to: Self.resumeDataPath(model)) }
+            // 沒有新的續傳資料就丟掉舊的：舊的可能已經不能用，留著的話每次「繼續下載」都會一樣失敗
+            if let resume { try? resume.write(to: Self.resumeDataPath(model)) } else { try? FileManager.default.removeItem(at: Self.resumeDataPath(model)) }
             tasks[model] = nil
             // 系統的錯誤說明本身可能已經有句號
             let reason = error.localizedDescription.trimmingCharacters(in: CharacterSet(charactersIn: "。. "))  // l10n-skip
-            states[model] = .failed(String(localized: "下載中斷：\(reason)。按「繼續下載」會從中斷的地方接著下載"))
+            states[model] = .failed(resume != nil
+                ? String(localized: "下載中斷：\(reason)。按「繼續下載」會從中斷的地方接著下載")
+                : String(localized: "下載中斷：\(reason)。按「繼續下載」會重新下載"))
         }
     }
 }

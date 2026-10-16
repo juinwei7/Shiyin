@@ -34,6 +34,7 @@ enum DebugControl {
         case "trash": if let id { model.moveToTrash(id) }
         case "restore": if let id { model.restore(id) }
         case "purge": if let id { model.deletePermanently(id) }
+        case "confirmpurge": model.confirmPurge = id   // 等於在垃圾桶按右鍵「永久刪除…」
         case "review":
             // review <id> <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>
             model.selection = id
@@ -67,7 +68,7 @@ enum DebugControl {
         case "editnotes":
             // editnotes <id> <會議紀錄 JSON>
             model.selection = id
-            if let notes = try? JSONDecoder().decode(MeetingNotes.self, from: Data(args[2].utf8)) { model.saveEditedNotes(notes) }
+            if let notes = try? JSONDecoder().decode(MeetingNotes.self, from: Data(args[2].utf8)) { model.saveEditedNotes(notes, meetingId: id ?? 0) }
         case "usernotes": model.selection = id; model.updateUserNotes(args[2])
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerm(args[1])
@@ -112,6 +113,9 @@ enum DebugControl {
             let which = ModelStore.Model(rawValue: args.count > 2 ? args[2] : "") ?? .breeze
             args[1] == "start" ? model.models.start(which) : args[1] == "pause" ? model.models.pause(which) : model.models.delete(which)
         case "diarizer": model.models.prepareDiarizer()
+        case "modelurl":   // modelurl <模型> <網址>：改從別的網址下載；網址給 - 就改回原本的
+            if let which = ModelStore.Model(rawValue: args[1]) { model.models.debugURLs[which] = args[2] == "-" ? nil : URL(string: args[2]) }
+        case "refreshmodels": model.refreshEnvironment()
         case "verifymodel":
             // verifymodel <檔案> <結果.json>：用下載完成時同一個函式驗證 SHA-256
             let ok = (try? ModelStore.verify(URL(fileURLWithPath: args[1]))) ?? false

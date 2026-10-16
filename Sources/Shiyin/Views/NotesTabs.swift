@@ -88,16 +88,15 @@ struct SummaryTab: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
     @State private var editing: MeetingNotes?
+    @State private var base: MeetingNotes?
 
     var body: some View {
         if let draft = Binding($editing) {
-            NotesEditor(notes: draft, showTopics: false) { save in
-                if save, let editing { model.saveEditedNotes(editing) }
-                editing = nil
-            }
+            NotesEditor(notes: draft, showTopics: false) { finish($0) }
+                .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
-                EditBar { editing = notes }
+                EditBar(disabled: model.detailStatus?.isActive == true) { base = notes; editing = notes }
                 if !notes.summary.isEmpty { NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary) } }
                 if !notes.decisions.isEmpty { NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions) } }
                 if !notes.actionItems.isEmpty { NotesSection(title: String(localized: "待辦")) { ActionItemsTable(items: notes.actionItems) } }
@@ -116,6 +115,12 @@ struct SummaryTab: View {
         }
     }
 
+    private func finish(_ save: Bool, automatically: Bool = false) {
+        guard let draft = editing, let id = detail.meeting.id else { return }
+        editing = nil
+        if save { model.finishNotesEdit(draft, base: base, meetingId: id, automatically: automatically) }
+    }
+
     private var templateName: String {
         String(localized: "範本：") + (model.templates.first { $0.id == detail.meeting.templateId }?.displayName ?? String(localized: "一般會議"))
     }
@@ -123,6 +128,8 @@ struct SummaryTab: View {
 
 /// 右上角的「編輯」按鈕
 struct EditBar: View {
+    /// 轉錄或整理中不能編輯：工作完成時會整份寫回，手動改的會被蓋掉
+    var disabled = false
     let onEdit: () -> Void
 
     var body: some View {
@@ -130,8 +137,9 @@ struct EditBar: View {
             Spacer()
             Button("編輯", systemImage: "pencil", action: onEdit)
                 .buttonStyle(.borderless)
-                .foregroundStyle(Color.celadon)
-                .help("直接修改會議紀錄，存檔時會留一個版本")
+                .foregroundStyle(disabled ? Color.secondary : Color.celadon)
+                .disabled(disabled)
+                .help(disabled ? "正在處理這場會議，完成後才能編輯" : "直接修改會議紀錄，存檔時會留一個版本")
         }
         .padding(.bottom, -18)
     }
@@ -175,16 +183,15 @@ struct TopicsTab: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
     @State private var editing: MeetingNotes?
+    @State private var base: MeetingNotes?
 
     var body: some View {
         if let draft = Binding($editing) {
-            NotesEditor(notes: draft, showTopics: true) { save in
-                if save, let editing { model.saveEditedNotes(editing) }
-                editing = nil
-            }
+            NotesEditor(notes: draft, showTopics: true) { finish($0) }
+                .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
-                EditBar { editing = notes }
+                EditBar(disabled: model.detailStatus?.isActive == true) { base = notes; editing = notes }
                 if notes.topics.isEmpty {
                     Text("這場會議沒有分出議題（可能是範本沒有包含「議題詳細」）。").foregroundStyle(.secondary)
                 }
@@ -201,6 +208,12 @@ struct TopicsTab: View {
         } else {
             NotesPlaceholder(detail: detail)
         }
+    }
+
+    private func finish(_ save: Bool, automatically: Bool = false) {
+        guard let draft = editing, let id = detail.meeting.id else { return }
+        editing = nil
+        if save { model.finishNotesEdit(draft, base: base, meetingId: id, automatically: automatically) }
     }
 }
 
@@ -227,15 +240,16 @@ struct NotesEditor: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     if showTopics {
-                        ForEach($notes.topics.indices, id: \.self) { i in
+                        ForEach(notes.topics.indices, id: \.self) { i in
+                            let topic = $notes.topics.safe(i, fallback: .init(title: "", start: "", points: []))
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    TextField("時間", text: $notes.topics[i].start).frame(width: 70).monospacedDigit()
-                                    TextField("議題", text: $notes.topics[i].title).contentTitleFont(16)
-                                    Button { notes.topics.remove(at: i) } label: { Image(systemName: "trash") }
+                                    TextField("時間", text: topic.start).frame(width: 70).monospacedDigit()
+                                    TextField("議題", text: topic.title).contentTitleFont(16)
+                                    Button { if notes.topics.indices.contains(i) { notes.topics.remove(at: i) } } label: { Image(systemName: "trash") }
                                         .buttonStyle(.borderless).help("刪除這個議題")
                                 }
-                                ItemsEditor(items: $notes.topics[i].points)
+                                ItemsEditor(items: topic.points)
                             }
                         }
                         Button("新增議題", systemImage: "plus") {
@@ -247,8 +261,9 @@ struct NotesEditor: View {
                         EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
                         EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
                         EditorSection(title: String(localized: "未決問題")) { ItemsEditor(items: $notes.openQuestions) }
-                        ForEach($notes.custom.indices, id: \.self) { i in
-                            EditorSection(title: notes.custom[i].title) { ItemsEditor(items: $notes.custom[i].items) }
+                        ForEach(notes.custom.indices, id: \.self) { i in
+                            let section = $notes.custom.safe(i, fallback: .init(title: "", items: []))
+                            EditorSection(title: section.wrappedValue.title) { ItemsEditor(items: section.items) }
                         }
                         if !notes.reviewItems.isEmpty {
                             EditorSection(title: String(localized: "待確認")) {
@@ -257,7 +272,7 @@ struct NotesEditor: View {
                                         Text(item.time).monospacedDigit().foregroundStyle(.secondary)
                                         Text(item.question).meetingText()
                                         Spacer()
-                                        Button { notes.reviewItems.remove(at: index) } label: { Image(systemName: "trash") }
+                                        Button { if notes.reviewItems.indices.contains(index) { notes.reviewItems.remove(at: index) } } label: { Image(systemName: "trash") }
                                             .buttonStyle(.borderless).help("刪除這一題")
                                     }
                                 }
@@ -293,10 +308,11 @@ private struct ItemsEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(items.indices, id: \.self) { i in
+                let item = $items.safe(i, fallback: .init(text: ""))
                 HStack(spacing: 6) {
-                    TextField("內容", text: $items[i].text, axis: .vertical).meetingText()
-                    TextField("時間", text: $items[i].time).frame(width: 64).monospacedDigit()
-                    RowButtons(index: i, count: items.count, move: { items.swapAt(i, $0) }, delete: { items.remove(at: i) })
+                    TextField("內容", text: item.text, axis: .vertical).meetingText()
+                    TextField("時間", text: item.time).frame(width: 64).monospacedDigit()
+                    RowButtons(index: i, count: items.count, move: { $items.move(i, to: $0) }, delete: { $items.remove(i) })
                 }
             }
             Button("新增一條", systemImage: "plus") { items.append(.init(text: "")) }
@@ -312,12 +328,13 @@ private struct ActionItemsEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(items.indices, id: \.self) { i in
+                let item = $items.safe(i, fallback: .init(owner: "", task: "", due: ""))
                 HStack(spacing: 6) {
-                    TextField("負責人", text: $items[i].owner).frame(width: 90)
-                    TextField("事項", text: $items[i].task, axis: .vertical).meetingText()
-                    TextField("yyyy-MM-dd", text: $items[i].due).frame(width: 100).monospacedDigit()
-                    TextField("時間", text: $items[i].time).frame(width: 64).monospacedDigit()
-                    RowButtons(index: i, count: items.count, move: { items.swapAt(i, $0) }, delete: { items.remove(at: i) })
+                    TextField("負責人", text: item.owner).frame(width: 90)
+                    TextField("事項", text: item.task, axis: .vertical).meetingText()
+                    TextField("yyyy-MM-dd", text: item.due).frame(width: 100).monospacedDigit()
+                    TextField("時間", text: item.time).frame(width: 64).monospacedDigit()
+                    RowButtons(index: i, count: items.count, move: { $items.move(i, to: $0) }, delete: { $items.remove(i) })
                 }
             }
             Button("新增待辦", systemImage: "plus") { items.append(.init(owner: "", task: "", due: "")) }
@@ -340,5 +357,22 @@ private struct RowButtons: View {
             Button(action: delete) { Image(systemName: "trash") }.help("刪除")
         }
         .buttonStyle(.borderless)
+    }
+}
+
+/// 編輯清單用的陣列元素綁定：刪掉一條之後 SwiftUI 可能還會用舊的位置讀寫一次，越界時讀到空值、不寫入，不會閃退
+extension Binding where Value: MutableCollection & RangeReplaceableCollection, Value.Index == Int {
+    func safe(_ index: Int, fallback: Value.Element) -> Binding<Value.Element> {
+        Binding<Value.Element>(
+            get: { wrappedValue.indices.contains(index) ? wrappedValue[index] : fallback },
+            set: { if wrappedValue.indices.contains(index) { wrappedValue[index] = $0 } })
+    }
+
+    func remove(_ index: Int) {
+        if wrappedValue.indices.contains(index) { wrappedValue.remove(at: index) }
+    }
+
+    func move(_ index: Int, to target: Int) {
+        if wrappedValue.indices.contains(index) && wrappedValue.indices.contains(target) { wrappedValue.swapAt(index, target) }
     }
 }

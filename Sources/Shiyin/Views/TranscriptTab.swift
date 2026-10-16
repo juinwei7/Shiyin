@@ -13,7 +13,8 @@ struct TranscriptTab: View {
     @State private var editText = ""
     @State private var showReplace = false
     @State private var speakerFilter: Int?
-    @State private var renaming: Int?
+    /// 正在改名的說話者和點的那一段：改名視窗掛在點的那一段（逐字稿是延遲建立的，第一段可能還不存在）
+    @State private var renaming: (speaker: Int, segment: Int64)?
     @State private var renameText = ""
     @FocusState private var searchFocused: Bool
 
@@ -142,7 +143,7 @@ struct TranscriptTab: View {
                 Picker("說話者", selection: $speakerFilter) {
                     Text("所有說話者").tag(Int?.none)
                     ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
-                        Text(detail.speakers[idx] ?? String(localized: "說話者 \(idx)")).tag(Int?.some(idx))
+                        Text(detail.speakers[idx] ?? detail.meeting.meetingLanguage.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")).tag(Int?.some(idx))
                     }
                 }
                 .labelsHidden()
@@ -157,7 +158,8 @@ struct TranscriptTab: View {
                     .foregroundStyle(.secondary)
             }
             Button("用詞修正…") { showReplace = true }
-                .disabled(detail.segments.isEmpty)
+                // 轉錄或整理中不能改：工作完成時會整份寫回逐字稿或會議紀錄
+                .disabled(detail.segments.isEmpty || model.detailStatus?.isActive == true)
                 .help("把逐字稿和會議紀錄裡的同一個詞一起改掉")
         }
         .padding(.horizontal, 20)
@@ -214,7 +216,7 @@ struct TranscriptTab: View {
             if let idx = segment.speaker {
                 Button(detail.speakerName(idx) ?? "") {
                     renameText = detail.speakerName(idx) ?? ""
-                    renaming = idx
+                    if let id = segment.id { renaming = (idx, id) }
                 }
                 .buttonStyle(.plain)
                 .font(.callout.weight(.medium))
@@ -222,7 +224,7 @@ struct TranscriptTab: View {
                 .frame(width: 72, alignment: .leading)
                 .lineLimit(1)
                 .help("點一下幫這位說話者改名")
-                .popover(isPresented: Binding(get: { renaming == idx && segment.id == firstSegmentId(of: idx) },
+                .popover(isPresented: Binding(get: { renaming?.segment == segment.id && segment.id != nil },
                                               set: { if !$0 { renaming = nil } })) {
                     RenameSpeakerForm(name: $renameText) {
                         model.renameSpeaker(idx, to: renameText)
@@ -275,11 +277,6 @@ struct TranscriptTab: View {
         .help(segment.lowConfidence ? "辨識信心低，建議對照錄音確認" : "")
     }
 
-    /// 改名 popover 只掛在這位說話者的第一段，避免同時開好幾個
-    private func firstSegmentId(of speaker: Int) -> Int64? {
-        visibleSegments.first { $0.speaker == speaker }?.id
-    }
-
     private func highlighted(_ text: String, corrections: [Correction] = []) -> AttributedString {
         var attributed = AttributedString(text)
         // 待確認的校正建議：原文加底線和底色
@@ -300,6 +297,10 @@ struct TranscriptTab: View {
     }
 
     private func startEdit(_ segment: Segment) {
+        if model.detailStatus?.isActive == true {
+            model.noticeMessage = String(localized: "正在處理這場會議，完成後才能編輯逐字稿")
+            return
+        }
         editText = segment.text
         editingId = segment.id
     }

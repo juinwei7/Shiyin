@@ -20,11 +20,19 @@ struct EnvironmentStatus: Equatable {
         let codex = Paths.findTool("codex")
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
         return EnvironmentStatus(items: [
+            // 預設開日文會議的人不一定需要 Breeze（中文、英文用）
             Item(name: String(localized: "轉錄模型 Breeze ASR 25"), ok: models.isReady || AppSettings.useSystemTranscriber,
                  detail: models.isReady ? String(localized: "已下載（1.66 GB）") : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識") : String(localized: "還沒下載"),
-                 fix: String(localized: "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建"), required: true),
+                 fix: String(localized: "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建"),
+                 required: AppSettings.defaultMeetingLanguage != .ja),
             Item(name: String(localized: "日文轉錄模型"), ok: models.isInstalled(.japanese) || AppSettings.useSystemTranscriber,
-                 detail: models.isInstalled(.japanese) ? String(localized: "已下載（574 MB）") : String(localized: "還沒下載，第一次轉錄日文會議時會自動下載"),
+                 detail: models.isInstalled(.japanese) ? String(localized: "已下載（574 MB）")
+                     : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識")
+                     : String(localized: "還沒下載，第一次轉錄日文會議時會自動下載"),
+                 fix: String(localized: "到「模型與儲存空間」下載"), required: AppSettings.defaultMeetingLanguage == .ja && !AppSettings.useSystemTranscriber),
+            Item(name: String(localized: "語言偵測模型"), ok: models.isInstalled(.languageDetection) || !AppSettings.autoDetectLanguage,
+                 detail: models.isInstalled(.languageDetection) ? String(localized: "已下載（60 MB）")
+                     : AppSettings.autoDetectLanguage ? String(localized: "還沒下載，下載好之前錄音不會自動偵測語言") : String(localized: "沒有開自動偵測會議語言"),
                  fix: String(localized: "到「模型與儲存空間」下載"), required: false),
             Item(name: String(localized: "說話者辨識模型"), ok: models.diarizerState == .installed,
                  detail: models.diarizerState == .installed ? String(localized: "已下載") : String(localized: "還沒下載"), fix: String(localized: "到「模型與儲存空間」下載"), required: false),

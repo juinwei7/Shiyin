@@ -693,6 +693,28 @@
         }
       }
     },
+    "下載中斷：%@。按「繼續下載」會重新下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download interrupted: %@. Click “Resume Download” to download it again."
+          }
+        }
+      }
+    },
+    "下載失敗：伺服器回傳 HTTP %lld，請稍後再試": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download failed: the server returned HTTP %lld. Try again later"
+          }
+        }
+      }
+    },
     "下載模型": {
       "extractionState": "manual",
       "localizations": {
@@ -814,6 +836,39 @@
         }
       }
     },
+    "之後的錄音都用%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New recordings will use %@"
+          }
+        }
+      }
+    },
+    "之後的錄音：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New recordings: %@"
+          }
+        }
+      }
+    },
+    "之後要用的時候需要重新下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll need to download it again to use it."
+          }
+        }
+      }
+    },
     "之後隨時可以從「輔助說明」選單（⌘?）或選單列的拾音圖示，再打開這份說明。": {
       "extractionState": "manual",
       "localizations": {
@@ -909,6 +964,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "From each file's name or modification date"
+          }
+        }
+      }
+    },
+    "依回答修正中：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revising from answers: %@"
           }
         }
       }
@@ -1195,6 +1261,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete “%@”"
+          }
+        }
+      }
+    },
+    "刪除「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete “%@”?"
           }
         }
       }
@@ -1728,6 +1805,17 @@
         }
       }
     },
+    "垃圾桶裡的會議要先還原才能操作": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore this meeting from the Trash first"
+          }
+        }
+      }
+    },
     "垃圾桶（%lld）": {
       "extractionState": "manual",
       "localizations": {
@@ -1894,6 +1982,28 @@
         }
       }
     },
+    "已下載（60 MB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded (60 MB)"
+          }
+        }
+      }
+    },
+    "已儲存剛才編輯的會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved your edits to the meeting notes"
+          }
+        }
+      }
+    },
     "已儲存在鑰匙圈": {
       "extractionState": "manual",
       "localizations": {
@@ -1967,6 +2077,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cancelled"
+          }
+        }
+      }
+    },
+    "已取消更新，舊版沒有改動": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update cancelled. The current version was not changed"
           }
         }
       }
@@ -2654,13 +2775,13 @@
         }
       }
     },
-    "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上用 Breeze ASR 25 正式轉錄、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
+    "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上正式轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper）、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin turns meetings into transcripts and meeting notes. You see a live transcript while recording; afterwards, Shiyin transcribes on this Mac with Breeze ASR 25, identifies speakers, and uses Claude, Codex or an API to write the summary, decisions and action items."
+            "value": "Shiyin turns meetings into transcripts and meeting notes. You see a live transcript while recording; afterwards, Shiyin transcribes on this Mac (Breeze ASR 25 for Chinese and English, Whisper for Japanese), identifies speakers, and uses Claude, Codex or an API to write the summary, decisions and action items."
           }
         }
       }
@@ -2742,13 +2863,13 @@
         }
       }
     },
-    "按「停止並轉錄」後，拾音會在這台 Mac 上用 Breeze ASR 25 重新轉錄，並分辨不同的說話者。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改。": {
+    "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper large-v3-turbo），並分辨不同的說話者。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After you click “Stop & Transcribe”, Shiyin transcribes the recording again on this Mac with Breeze ASR 25 and identifies the different speakers. Click “Speaker 1” in the transcript to change it to a name; the whole meeting updates."
+            "value": "After you click “Stop & Transcribe”, Shiyin transcribes the recording again on this Mac (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for Japanese) and identifies the different speakers. Click “Speaker 1” in the transcript to change it to a name; the whole meeting updates."
           }
         }
       }
@@ -3689,6 +3810,17 @@
         }
       }
     },
+    "會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting notes, transcript and recording will be deleted. This can't be undone."
+          }
+        }
+      }
+    },
     "會議紀錄也一起改了（可以從「更多」復原上一版）": {
       "extractionState": "manual",
       "localizations": {
@@ -3751,6 +3883,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meeting language"
+          }
+        }
+      }
+    },
+    "會議語言改成 %@，即時逐字稿也跟著換了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting language changed to %@. The live transcript switched too"
           }
         }
       }
@@ -3998,6 +4141,17 @@
         }
       }
     },
+    "檢查可能聽錯的字：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking for misheard words: %@"
+          }
+        }
+      }
+    },
     "檢查更新": {
       "extractionState": "manual",
       "localizations": {
@@ -4086,6 +4240,17 @@
         }
       }
     },
+    "正在下載語言偵測模型…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the language detection model…"
+          }
+        }
+      }
+    },
     "正在檢查…": {
       "extractionState": "manual",
       "localizations": {
@@ -4148,6 +4313,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Checking for misheard words with %@…"
+          }
+        }
+      }
+    },
+    "正在處理這場會議，完成後才能編輯": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is being processed. You can edit it when that's done"
+          }
+        }
+      }
+    },
+    "正在處理這場會議，完成後才能編輯逐字稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is being processed. You can edit the transcript when that's done"
+          }
+        }
+      }
+    },
+    "正在轉錄，完成後才能刪除模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A transcription is running. You can delete the model when it's done"
           }
         }
       }
@@ -4251,6 +4449,17 @@
         }
       }
     },
+    "永久刪除…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Permanently…"
+          }
+        }
+      }
+    },
     "永久刪除這場會議？": {
       "extractionState": "manual",
       "localizations": {
@@ -4280,6 +4489,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Decisions"
+          }
+        }
+      }
+    },
+    "沒有上一版可以復原": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There's no earlier version to restore"
           }
         }
       }
@@ -4357,6 +4577,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No transcript."
+          }
+        }
+      }
+    },
+    "沒有開自動偵測會議語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic language detection is off"
           }
         }
       }
@@ -4791,6 +5022,17 @@
         }
       }
     },
+    "移出資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from Folder"
+          }
+        }
+      }
+    },
     "移到垃圾桶": {
       "extractionState": "manual",
       "localizations": {
@@ -5000,13 +5242,13 @@
         }
       }
     },
-    "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB": {
+    "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開日文會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 1.7 GB for models (transcription 1.66 GB, speaker recognition 21 MB), plus recordings: they're compressed to m4a after transcription, about 10–30 MB per hour"
+            "value": "About 1.7 GB for models (transcription 1.66 GB, speaker recognition 21 MB; another 574 MB for Japanese meetings and 60 MB for language detection), plus recordings: they're compressed to m4a after transcription, about 10–30 MB per hour"
           }
         }
       }
@@ -5084,6 +5326,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit Meeting Notes"
+          }
+        }
+      }
+    },
+    "編輯期間會議紀錄有更新，已用你改的版本存檔；從「更多 → 復原上一版會議紀錄」可以找回更新的內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting notes changed while you were editing. Your version was saved; use More → Revert to Previous Notes to get the other version back"
           }
         }
       }
@@ -5374,6 +5627,17 @@
         }
       }
     },
+    "語言偵測模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language detection model"
+          }
+        }
+      }
+    },
     "語言偵測模型 Whisper base（q5_1）": {
       "extractionState": "manual",
       "localizations": {
@@ -5385,6 +5649,17 @@
         }
       }
     },
+    "語言偵測模型還沒下載，下載好之前錄音不會自動偵測": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The language detection model isn't downloaded yet. Recordings won't detect the language until it is"
+          }
+        }
+      }
+    },
     "說話者": {
       "extractionState": "manual",
       "localizations": {
@@ -5392,17 +5667,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speaker"
-          }
-        }
-      }
-    },
-    "說話者 %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speaker %lld"
           }
         }
       }
@@ -5847,6 +6111,17 @@
         }
       }
     },
+    "轉錄模型還沒下載，錄音會先排隊。可以到「設定 → 模型與儲存空間」下載，或在「設定 → 錄音」改用 macOS 內建辨識。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcription model isn't downloaded yet, so recordings will wait in the queue. Download it in Settings → Models & Storage, or switch to macOS built-in recognition in Settings → Recording."
+          }
+        }
+      }
+    },
     "轉錄（macOS 內建）": {
       "extractionState": "manual",
       "localizations": {
@@ -6036,6 +6311,17 @@
         }
       }
     },
+    "這場會議已經在「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is already in “%@”"
+          }
+        }
+      }
+    },
     "這場會議所在的資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -6058,6 +6344,17 @@
         }
       }
     },
+    "這場會議沒有在任何資料夾裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting isn't in a folder"
+          }
+        }
+      }
+    },
     "這場會議沒有錄音檔": {
       "extractionState": "manual",
       "localizations": {
@@ -6065,6 +6362,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting has no recording"
+          }
+        }
+      }
+    },
+    "這場會議沒有錄音，沒辦法重新轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no recording, so it can't be transcribed again"
+          }
+        }
+      }
+    },
+    "這場會議還在處理中，完成後再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is still being processed. Try again when it's done"
+          }
+        }
+      }
+    },
+    "這場會議還在錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is still recording"
+          }
+        }
+      }
+    },
+    "這場會議還在錄音，請先停止錄音再移到垃圾桶": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is still recording. Stop the recording before moving it to the Trash"
           }
         }
       }
@@ -6223,6 +6564,17 @@
         }
       }
     },
+    "還沒下載，下載好之前錄音不會自動偵測語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not downloaded. Recordings won't detect the language until it is"
+          }
+        }
+      }
+    },
     "還沒下載，第一次轉錄日文會議時會自動下載": {
       "extractionState": "manual",
       "localizations": {
@@ -6289,6 +6641,17 @@
         }
       }
     },
+    "還沒有會議紀錄可以複製": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no meeting notes to copy yet"
+          }
+        }
+      }
+    },
     "還沒有設定更新網址": {
       "extractionState": "manual",
       "localizations": {
@@ -6318,6 +6681,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "No transcript yet."
+          }
+        }
+      }
+    },
+    "還沒有逐字稿可以檢查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There's no transcript to check yet"
+          }
+        }
+      }
+    },
+    "還沒有逐字稿或筆記可以整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There's no transcript or notes to summarize yet"
           }
         }
       }
@@ -6861,13 +7246,13 @@
         }
       }
     },
-    "開始錄音（⌘R）；點右邊的箭頭可以選錄音來源": {
+    "開始錄音（⌘R），用%@辨識；點右邊的箭頭可以改錄音來源和語言": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start recording (⌘R). Click the arrow on the right to choose the source."
+            "value": "Start recording (⌘R) in %@; click the arrow to change the recording source and language"
           }
         }
       }

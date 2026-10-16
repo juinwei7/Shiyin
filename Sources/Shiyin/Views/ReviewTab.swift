@@ -39,15 +39,22 @@ struct ReviewTab: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button(submitTitle) {
-                        model.submitReview(answers: answers, dismissed: dismissed)
-                        answers = [:]
-                        dismissed = []
+                        // 送出失敗（例如整理工具設成不整理）時保留回答
+                        if model.submitReview(answers: answers, dismissed: dismissed) {
+                            answers = [:]
+                            dismissed = []
+                        }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled((answeredCount == 0 && dismissed.isEmpty) || model.detailStatus?.isActive == true)
                 }
                 .padding(.horizontal, 32)
                 .padding(.vertical, 12)
+            }
+            // 回答是照題號存的：題目換了（依回答修正、重新整理、復原上一版）就清掉，不然會配到別的題目
+            .onChange(of: items.map(\.question)) { _, _ in
+                answers = [:]
+                dismissed = []
             }
         }
     }

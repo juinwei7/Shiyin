@@ -164,8 +164,14 @@ final class Updater {
                 state = .failed(String(localized: "沒有權限替換「\(target.deletingLastPathComponent().path)」裡的拾音，已經打開下載好的 DMG，請把拾音拖進「應用程式」取代舊版"))
                 return
             }
-            try Self.launchReplacement(staged: staged, target: target, work: work)
+            // 下載期間可能開始了錄音或轉錄：結束 app 時會跳確認，取消的話更新就停在一半，所以先擋下來
+            guard !model.recorder.isRecording, !model.runner.isBusy else { throw UpdateError.busy }
+            let replacement = try Self.launchReplacement(staged: staged, target: target, work: work)
             NSApp.terminate(nil)
+            // 走到這裡表示結束被取消了：停掉替換腳本、清掉下載的檔案，舊版不受影響，可以再按一次
+            replacement.terminate()
+            try? FileManager.default.removeItem(at: work)
+            state = .failed(String(localized: "已取消更新，舊版沒有改動"))
         } catch {
             // 失敗時把下載和解出來的檔案都刪掉，舊版完全不受影響
             if let workDir { try? FileManager.default.removeItem(at: workDir) }
@@ -219,7 +225,8 @@ final class Updater {
     }
 
     /// 寫一個固定內容的小腳本，路徑用參數傳入：等這個 app 結束 → 舊版改名備份 → 放進新版 → 成功刪備份、失敗還原 → 重新開啟
-    private static func launchReplacement(staged: URL, target: URL, work: URL) throws {
+    @discardableResult
+    private static func launchReplacement(staged: URL, target: URL, work: URL) throws -> Process {
         let script = work.appendingPathComponent("replace.sh")
         try """
         #!/bin/sh
@@ -246,5 +253,6 @@ final class Updater {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try process.run()
+        return process
     }
 }

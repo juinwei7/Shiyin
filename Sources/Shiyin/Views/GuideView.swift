@@ -16,7 +16,7 @@ struct GuideView: View {
         Step(symbol: "text.bubble", title: String(localized: "邊錄邊看、邊記"),
              body: String(localized: "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間。重要的地方按「標記重點」（⌘B）。需要中斷時按「暫停」（⇧⌘P），暫停的時間不會錄進去。")),
         Step(symbol: "waveform", title: String(localized: "正式轉錄、分辨說話者"),
-             body: String(localized: "按「停止並轉錄」後，拾音會在這台 Mac 上用 Breeze ASR 25 重新轉錄，並分辨不同的說話者。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改。")),
+             body: String(localized: "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper large-v3-turbo），並分辨不同的說話者。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改。")),
         Step(symbol: "doc.text", title: String(localized: "看會議紀錄"),
              body: String(localized: "轉錄完會自動整理。「摘要」有重點、決議、待辦和未決問題；「詳細」依議題分段；每一條後面的時間點點一下，就從錄音那裡開始播放。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多」選「重新整理會議紀錄」。")),
         Step(symbol: "questionmark.bubble", title: String(localized: "回答待確認、修改"),
@@ -92,7 +92,7 @@ struct GuideView: View {
                     requirement(String(localized: "晶片"), String(localized: "Apple Silicon（M1 以上）"))
                     requirement(String(localized: "系統"), String(localized: "macOS 26 以上"))
                     requirement(String(localized: "記憶體"), String(localized: "8 GB 以上。轉錄加說話者辨識時最高約 2.7 GB，4 小時的會議約 4.1 GB（M3 Pro 實測）"))
-                    requirement(String(localized: "磁碟空間"), String(localized: "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB"))
+                    requirement(String(localized: "磁碟空間"), String(localized: "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開日文會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB"))
                     requirement(String(localized: "先安裝"), String(localized: "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude 或 codex，或準備 Anthropic、OpenAI 的 API key"))
                     requirement(String(localized: "網路"), String(localized: "第一次使用下載模型時需要（約 1.7 GB）；整理會議紀錄時需要。錄音、轉錄不需要"))
                 }

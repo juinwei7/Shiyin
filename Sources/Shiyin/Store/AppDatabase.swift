@@ -267,6 +267,19 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    /// 只改一個欄位（範本、會議語言）。不要用 updateMeeting 整列寫回：畫面上的 Meeting 可能是舊的（例如筆記另外存過），會把別的欄位蓋回去
+    func setTemplate(_ id: Int64, templateId: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET template_id = ?, updated_at = ? WHERE id = ?", arguments: [templateId, Clock.now(), id])
+        }
+    }
+
+    func setLanguage(_ id: Int64, _ language: MeetingLanguage) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET language = ?, updated_at = ? WHERE id = ?", arguments: [language.rawValue, Clock.now(), id])
+        }
+    }
+
     func updateInfo(_ id: Int64, title: String, date: String, participants: String) throws {
         try pool.write { db in
             guard var m = try Meeting.fetchOne(db, key: id) else { return }
@@ -282,6 +295,11 @@ final class AppDatabase: @unchecked Sendable {
 
     // MARK: 逐字稿
 
+    /// 「說話者 1」「Speaker 1」「話者 1」這種預設名稱
+    static func isDefaultSpeakerName(_ name: String) -> Bool {
+        (try? #/^(說話者|Speaker|話者) \d+$/#.wholeMatch(in: name)) != nil
+    }
+
     /// 寫入正式逐字稿：取代舊的正式版，並刪掉即時預覽（design §5.3）
     func saveTranscript(_ meetingId: Int64, segments: [Segment], duration: Int, speakerCount: Int) throws {
         try pool.write { db in
@@ -296,7 +314,8 @@ final class AppDatabase: @unchecked Sendable {
             // 說話者：保留已改過的名字，新的編號補上預設名字（跟著會議語言）
             let language = try Meeting.fetchOne(db, key: meetingId)?.meetingLanguage ?? .zh
             let existing = try SpeakerName.filter(Column("meeting_id") == meetingId).fetchAll(db)
-            let named = Dictionary(uniqueKeysWithValues: existing.map { ($0.idx, $0.name) })
+            // 預設名稱（任何語言的「說話者 1」）不算改過，換了會議語言後要用新語言的預設名稱
+            let named = Dictionary(uniqueKeysWithValues: existing.filter { !Self.isDefaultSpeakerName($0.name) }.map { ($0.idx, $0.name) })
             try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
             for idx in stride(from: 1, through: speakerCount, by: 1) {
                 var speaker = SpeakerName(meetingId: meetingId, idx: idx,
@@ -583,8 +602,7 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
-    /// 領取該條線最舊的一筆排隊工作，改成 running。轉錄模型還沒下載好時，轉錄工作留在佇列等待
-    /// 取出下一個排隊的工作；轉錄工作只取會議語言在 transcribeLanguages 裡的（那個語言的模型已經下載，design §18.2）
+    /// 取出下一個排隊的工作，改成 running；轉錄工作只取會議語言在 transcribeLanguages 裡的（那個語言的模型已經下載，design §18.2）
     func claimNext(lane: JobLane, transcribeLanguages: Set<MeetingLanguage> = Set(MeetingLanguage.allCases)) throws -> Job? {
         let kinds = lane == .transcribe
             ? [JobKind.transcribe.rawValue, JobKind.compress.rawValue]
@@ -684,8 +702,7 @@ final class AppDatabase: @unchecked Sendable {
             let names = try String.fetchAll(db, sql: """
                 SELECT s.name FROM speakers s JOIN meetings m ON m.id = s.meeting_id WHERE m.deleted_at IS NULL
                 """)
-            let defaultName = #/^(說話者|Speaker|話者) \d+$/#
-            for name in names where (try? defaultName.wholeMatch(in: name)) == nil { add(name, .speaker) }
+            for name in names where !Self.isDefaultSpeakerName(name) { add(name, .speaker) }
             let accepted = try String.fetchAll(db, sql: "SELECT suggestion FROM corrections WHERE status = 'accepted'")
             for term in accepted where term.contains(where: { $0.isASCII && $0.isLetter }) { add(term, .correction) }
             // 中文、日文會議標題裡的英文詞通常是產品名、專案名；英文會議的標題就不拆了

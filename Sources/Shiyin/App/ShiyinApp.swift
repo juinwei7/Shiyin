@@ -59,7 +59,8 @@ struct AppCommands: Commands {
             Button("檢查更新…") { Task { await model.checkForUpdatesFromMenu() } }
         }
         CommandGroup(replacing: .newItem) {
-            Button("匯入…") { model.showFileImporter = true }
+            // 主視窗關著時先打開，不然對話框要等到下次打開主視窗才會跳出來
+            Button("匯入…") { model.openMainWindow?(); model.showFileImporter = true }
                 .keyboardShortcut("o")
             Button(model.recorder.isRecording ? "停止錄音" : "開始錄音") { model.toggleRecording() }
                 .keyboardShortcut("r")
@@ -70,11 +71,12 @@ struct AppCommands: Commands {
             .disabled(!model.recorder.isRecording)
             Button("標記重點") {
                 model.addBookmark(at: model.recorder.elapsed, meetingId: model.recorder.meetingId)
+                model.noticeMessage = String(localized: "已標記 \(TimeFormat.string(model.recorder.elapsed)) 為重點")
             }
             .keyboardShortcut("b")
             .disabled(!model.recorder.isRecording)
             Divider()
-            Button("匯出…") { model.showExportSheet = true }
+            Button("匯出…") { model.openMainWindow?(); model.showExportSheet = true }
                 .keyboardShortcut("e")
                 .disabled(model.detail == nil)
         }
@@ -92,17 +94,28 @@ struct AppCommands: Commands {
             Button("播放／暫停") { model.player.toggle() }
                 .disabled(!model.player.isLoaded)
             Divider()
+            // 條件跟「更多」選單一樣；按下時 AppModel 會再檢查一次
             Button("重新整理會議紀錄") { model.resummarize() }
-                .disabled(model.detail?.segments.isEmpty ?? true)
+                .disabled(model.detail.map { ($0.segments.isEmpty && $0.meeting.userNotes.isEmpty) || $0.meeting.deletedAt != nil } ?? true
+                          || model.detailStatus?.isActive == true)
             Button("復原上一版會議紀錄") { model.undoNotes() }
-                .disabled((model.detail?.versionCount ?? 0) == 0)
+                .disabled((model.detail?.versionCount ?? 0) == 0 || model.detail?.meeting.deletedAt != nil
+                          || model.detailStatus?.isActive == true)
             Divider()
             Button("複製會議紀錄（富文字）") { model.copyNotes(.rich) }
                 .disabled(model.detail == nil)
             Button("複製會議紀錄（Markdown）") { model.copyNotes(.markdown) }
                 .disabled(model.detail == nil)
             Divider()
-            Button("移到垃圾桶…") { model.confirmDelete = true }
+            Button("移到垃圾桶…") {
+                // ⌘⌫ 在輸入框裡是「刪到行首」，但選單的快捷鍵會比輸入框先收到，要交回給輸入框
+                if NSApp.currentEvent?.type == .keyDown, let text = NSApp.keyWindow?.firstResponder as? NSTextView {
+                    text.deleteToBeginningOfLine(nil)
+                    return
+                }
+                model.openMainWindow?()
+                model.requestDelete()
+            }
                 .keyboardShortcut(.delete)
                 .disabled(model.detail == nil || model.showTrash)
         }

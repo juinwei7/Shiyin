@@ -135,25 +135,34 @@ struct ProviderSettings: View {
         let prompt = language.text(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
                                    en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.",
                                    ja: "これは接続テストです。文字起こし：\n[00:00] 話者 1：皆さん、今日はテストだけです。")  // l10n-skip
+        let tested = current
+        let result: (Bool, String)
         do {
-            _ = try await LLMClient.generate(provider: current, model: modelName, system: NotesPrompt.system(language),
+            _ = try await LLMClient.generate(provider: tested, model: modelName, system: NotesPrompt.system(language),
                                              prompt: prompt, onStart: { _ in })
-            testResult = (true, String(localized: "可以使用（\(Int(Date().timeIntervalSince(started).rounded())) 秒）"))
+            result = (true, String(localized: "可以使用（\(Int(Date().timeIntervalSince(started).rounded())) 秒）"))
         } catch {
-            testResult = (false, error.localizedDescription)
+            result = (false, error.localizedDescription)
         }
+        // 測試期間換了整理工具：結果是舊工具的，不顯示（換工具時 load() 已經重設狀態）
+        guard tested == current else { return }
+        testResult = result
         testing = false
     }
 
     private func checkLogin() async {
         guard current == .claude || current == .codex else { login = nil; return }
         checkingLogin = true
-        login = await CLILogin.status(current)
+        let checked = current
+        let status = await CLILogin.status(checked)
+        guard checked == current else { return }   // 查的時候換了整理工具
+        login = status
         checkingLogin = false
     }
 
     private func load() {
         testResult = nil
+        testing = false
         login = nil
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
@@ -198,7 +207,8 @@ struct TemplateSettings: View {
                 HStack {
                     Button("新增", systemImage: "plus") { create(from: nil) }
                     Button("複製", systemImage: "plus.square.on.square") {
-                        create(from: model.templates.first { $0.id == selection })
+                        // 複製正在編輯的內容（包括還沒存的修改）
+                        create(from: model.templates.first { $0.id == selection }, definition: draft)
                     }
                     .disabled(selection == nil)
                 }
@@ -209,8 +219,13 @@ struct TemplateSettings: View {
             editor
                 .frame(minWidth: 380)
         }
-        .onChange(of: selection) { _, id in load(id) }
+        // 換範本或關掉設定時，沒按「儲存」的修改也存起來，不要無聲丟掉
+        .onChange(of: selection) { old, id in
+            saveIfChanged(old)
+            load(id)
+        }
         .onAppear { if selection == nil { selection = model.templates.first?.id } }
+        .onDisappear { saveIfChanged(selection) }
     }
 
     @ViewBuilder
@@ -231,13 +246,14 @@ struct TemplateSettings: View {
                 }
                 .disabled(template.builtin)
                 Section("自訂段落") {
-                    ForEach(binding.custom.indices, id: \.self) { i in
+                    ForEach(binding.wrappedValue.custom.indices, id: \.self) { i in
+                        let custom = binding.custom.safe(i, fallback: .init(title: "", instruction: ""))
                         HStack(alignment: .top) {
                             VStack {
-                                TextField("段落名稱", text: binding.custom[i].title)
-                                TextField("要寫什麼", text: binding.custom[i].instruction, axis: .vertical)
+                                TextField("段落名稱", text: custom.title)
+                                TextField("要寫什麼", text: custom.instruction, axis: .vertical)
                             }
-                            Button { binding.wrappedValue.custom.remove(at: i) } label: { Image(systemName: "trash") }
+                            Button { binding.custom.remove(i) } label: { Image(systemName: "trash") }
                                 .buttonStyle(.borderless)
                         }
                     }
@@ -253,6 +269,8 @@ struct TemplateSettings: View {
                     Button("設為預設範本") { defaultTemplate = template.id }.disabled(defaultTemplate == template.id)
                     if !template.builtin {
                         Button("刪除", role: .destructive) {
+                            // 刪掉的是預設範本的話，預設改回一般會議，不然新會議會指到不存在的範本
+                            if defaultTemplate == template.id { defaultTemplate = "general" }
                             model.deleteTemplate(template.id)
                             selection = model.templates.first?.id
                         }
@@ -276,9 +294,17 @@ struct TemplateSettings: View {
         draftName = template.displayName
     }
 
-    private func create(from source: TemplateRecord?) {
+    /// 自訂範本有改過就存檔
+    private func saveIfChanged(_ id: String?) {
+        guard let template = model.templates.first(where: { $0.id == id }), !template.builtin, let draft else { return }
+        let name = draftName.isEmpty ? String(localized: "未命名範本") : draftName
+        guard draft != template.definition(for: .interface) || name != template.displayName else { return }
+        model.saveTemplate(TemplateRecord(id: template.id, name: name, builtin: false, definition: draft.jsonString()))
+    }
+
+    private func create(from source: TemplateRecord?, definition edited: TemplateDefinition? = nil) {
         let id = "custom-\(UUID().uuidString.prefix(8))"
-        let definition = source.map { $0.definition(for: .interface) }
+        let definition = edited ?? source.map { $0.definition(for: .interface) }
             ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems"], custom: [], instruction: "")
         model.saveTemplate(TemplateRecord(id: id, name: source.map { String(localized: "\($0.displayName)（副本）") } ?? String(localized: "新範本"), builtin: false,
                                           definition: definition.jsonString()))
@@ -304,15 +330,22 @@ struct GlossarySettings: View {
             if !model.glossarySuggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("建議加入：從參加者、說話者名字、校正過的字、會議標題找到的").font(.caption).foregroundStyle(.secondary)
-                    ForEach(model.glossarySuggestions) { suggestion in
-                        HStack(spacing: 8) {
-                            Text(suggestion.term)
-                            Text(suggestion.sourceLabel).font(.caption).foregroundStyle(.secondary)
-                            Spacer()
-                            Button("忽略") { model.dismissGlossarySuggestion(suggestion.term) }.buttonStyle(.link)
-                            Button("加入") { model.addTerm(suggestion.term) }.buttonStyle(.link)
+                    // 設定視窗高度固定，建議最多 12 個：超過 5 個就在框裡捲動，不然下面的詞彙清單會被擠到看不見
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(model.glossarySuggestions) { suggestion in
+                                HStack(spacing: 8) {
+                                    Text(suggestion.term)
+                                    Text(suggestion.sourceLabel).font(.caption).foregroundStyle(.secondary)
+                                    Spacer()
+                                    Button("忽略") { model.dismissGlossarySuggestion(suggestion.term) }.buttonStyle(.link)
+                                    Button("加入") { model.addTerm(suggestion.term) }.buttonStyle(.link)
+                                }
+                                .frame(height: 22)
+                            }
                         }
                     }
+                    .frame(height: CGFloat(min(model.glossarySuggestions.count, 5)) * 28 - 6)
                 }
                 .padding(10)
                 .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
@@ -327,6 +360,7 @@ struct GlossarySettings: View {
                     }
                 }
             }
+            .frame(minHeight: 110)
             .overlay {
                 if model.glossary.isEmpty {
                     Text("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。").font(.callout).foregroundStyle(.secondary).padding()
@@ -379,6 +413,17 @@ struct RecordingSettings: View {
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("自動偵測會議語言", isOn: $autoDetect)
                 .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }
+            if autoDetect && !model.models.isInstalled(.languageDetection) {
+                // 模型沒下載好（下載失敗、暫停）就不會偵測，要讓人知道
+                HStack {
+                    Text(model.models.state(.languageDetection).isBusy ? "正在下載語言偵測模型…" : "語言偵測模型還沒下載，下載好之前錄音不會自動偵測")
+                        .font(.caption).foregroundStyle(Color.signal)
+                    Spacer()
+                    if !model.models.state(.languageDetection).isBusy {
+                        Button("下載") { model.models.start(.languageDetection) }.controlSize(.small)
+                    }
+                }
+            }
             Text("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("錄音中顯示即時逐字稿", isOn: $live)
@@ -434,13 +479,15 @@ struct StorageSettings: View {
         Form {
             Section("轉錄模型") {
                 ModelRow(title: ModelStore.breeze.name, state: model.models.state,
-                         start: { model.models.start() }, pause: { model.models.pause() }, delete: { model.models.delete() })
+                         start: { model.models.start() }, pause: { model.models.pause() },
+                         delete: { model.models.delete(); measure() }, deleteDisabled: transcribing)
                 ModelRow(title: ModelStore.japanese.name, state: model.models.state(.japanese),
-                         start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) }, delete: { model.models.delete(.japanese) })
+                         start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) },
+                         delete: { model.models.delete(.japanese); measure() }, deleteDisabled: transcribing)
                 Text("日文會議用，574 MB。第一次轉錄日文會議時會自動下載。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: ModelStore.languageDetection.name, state: model.models.state(.languageDetection),
                          start: { model.models.start(.languageDetection) }, pause: { model.models.pause(.languageDetection) },
-                         delete: { model.models.delete(.languageDetection) })
+                         delete: { model.models.delete(.languageDetection); measure() }, deleteDisabled: model.recorder.isRecording)
                 Text("自動偵測會議語言用，60 MB。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: String(localized: "說話者辨識模型（FluidAudio）"), state: model.models.diarizerState,
                          start: model.models.prepareDiarizer, pause: nil, delete: nil)
@@ -466,6 +513,8 @@ struct StorageSettings: View {
         .onAppear(perform: measure)
     }
 
+    private var transcribing: Bool { model.runner.running[.transcribe] != nil }
+
     private func measure() {
         model.refreshEnvironment()
         audioBytes = AppModel.directorySize(Paths.audioDir)
@@ -479,6 +528,9 @@ struct ModelRow: View {
     let start: () -> Void
     let pause: (() -> Void)?
     let delete: (() -> Void)?
+    /// 正在轉錄時不能刪：用到一半的模型被刪掉，那場轉錄會失敗
+    var deleteDisabled = false
+    @State private var confirmDelete = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -506,7 +558,17 @@ struct ModelRow: View {
             switch state {
             case .downloading: if let pause { Button("暫停", action: pause) }
             case .verifying: EmptyView()
-            case .installed: if let delete { Button("刪除", role: .destructive, action: delete) }
+            case .installed:
+                if let delete {
+                    Button("刪除", role: .destructive) { confirmDelete = true }
+                        .disabled(deleteDisabled)
+                        .help(deleteDisabled ? "正在轉錄，完成後才能刪除模型" : "")
+                        .confirmationDialog("刪除「\(title)」？", isPresented: $confirmDelete) {
+                            Button("刪除", role: .destructive, action: delete)
+                        } message: {
+                            Text("之後要用的時候需要重新下載。")
+                        }
+                }
             case .paused, .failed: Button("繼續下載", action: start)
             case .missing: Button("下載", action: start).buttonStyle(.borderedProminent)
             }

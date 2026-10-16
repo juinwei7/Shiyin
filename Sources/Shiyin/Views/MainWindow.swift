@@ -124,9 +124,16 @@ struct MainView: View {
             Text([model.updater.prompt?.notes ?? "", String(localized: "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。")]
                 .filter { !$0.isEmpty }.joined(separator: "\n\n"))
         }
+        .confirmationDialog("永久刪除這場會議？", isPresented: Binding(get: { model.confirmPurge != nil }, set: { if !$0 { model.confirmPurge = nil } })) {
+            Button("永久刪除", role: .destructive) {
+                if let id = model.confirmPurge { model.deletePermanently(id) }
+            }
+        } message: {
+            Text("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。")
+        }
         .confirmationDialog("把這場會議移到垃圾桶？", isPresented: $model.confirmDelete) {
             Button("移到垃圾桶", role: .destructive) {
-                if let id = model.selection { model.moveToTrash(id) }
+                if let id = model.deleteTarget { model.moveToTrash(id) }
             }
         } message: {
             Text("30 天內都可以從垃圾桶還原。")
@@ -205,7 +212,7 @@ struct SidebarView: View {
                         .contextMenu {
                             if model.showTrash {
                                 Button("還原") { model.restore(row.id) }
-                                Button("永久刪除", role: .destructive) { model.deletePermanently(row.id) }
+                                Button("永久刪除…", role: .destructive) { model.confirmPurge = row.id }
                             } else {
                                 FolderMenu(meetingId: row.id, current: row.meeting.folder)
                                 Divider()
@@ -250,18 +257,32 @@ struct FolderRow: View {
 /// 「移到資料夾」選單：既有的資料夾、新資料夾、移出資料夾（R9.2）
 struct FolderMenu: View {
     @Environment(AppModel.self) private var model
-    let meetingId: Int64
-    let current: String
+    /// nil：目前選取的會議。工具列的選單可能沿用之前建立的，按下時才決定是哪一場，不然會移到上一場會議
+    var meetingId: Int64? = nil
+    var current: String? = nil
+
+    private var target: Int64? { meetingId ?? model.selection }
+    private var folder: String { current ?? model.detail?.meeting.folder ?? "" }
 
     var body: some View {
         Menu("移到資料夾", systemImage: "folder") {
-            ForEach(model.folders.filter { $0.name != current }, id: \.name) { folder in
-                Button(folder.name) { model.moveToFolder(meetingId, folder: folder.name) }
-            }
-            if !model.folders.filter({ $0.name != current }).isEmpty { Divider() }
-            Button("新資料夾…") { model.folderPrompt = .create(meetingId) }
-            if !current.isEmpty {
-                Button("移出「\(current)」") { model.moveToFolder(meetingId, folder: "") }
+            if meetingId == nil {
+                // 工具列的選單內容不會更新，列出全部資料夾和固定的「移出資料夾」，選到原本的資料夾時 AppModel 會說明
+                ForEach(model.folders, id: \.name) { item in
+                    Button(item.name) { if let target { model.moveToFolder(target, folder: item.name) } }
+                }
+                if !model.folders.isEmpty { Divider() }
+                Button("新資料夾…") { if let target { model.folderPrompt = .create(target) } }
+                Button("移出資料夾") { if let target { model.moveToFolder(target, folder: "") } }
+            } else {
+                ForEach(model.folders.filter { $0.name != folder }, id: \.name) { item in
+                    Button(item.name) { if let target { model.moveToFolder(target, folder: item.name) } }
+                }
+                if !model.folders.filter({ $0.name != folder }).isEmpty { Divider() }
+                Button("新資料夾…") { if let target { model.folderPrompt = .create(target) } }
+                if !folder.isEmpty {
+                    Button("移出「\(folder)」") { if let target { model.moveToFolder(target, folder: "") } }
+                }
             }
         }
     }
@@ -384,6 +405,14 @@ struct MeetingRowView: View {
 
 /// 工具列的錄音按鈕（R1）：可以選錄音來源
 struct RecordingControls: View {
+    static func sourceLabel(_ source: String) -> String {
+        switch source {
+        case "both": return String(localized: "麥克風＋電腦聲音（線上會議）")
+        case "system": return String(localized: "只錄電腦聲音")
+        default: return String(localized: "只錄麥克風")
+        }
+    }
+
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.defaultMeetingLanguageKey) private var language: MeetingLanguage = .systemDefault
@@ -406,14 +435,19 @@ struct RecordingControls: View {
                     .help("停止錄音並開始轉錄（⌘R）")
             }
         } else {
+            // 這兩個選項是之後錄音的設定，選完畫面不會變，跳一個提示讓人知道選到了
             Menu {
-                Picker("錄音來源", selection: $source) {
-                    Text("只錄麥克風").tag("mic")
-                    Text("麥克風＋電腦聲音（線上會議）").tag("both")
-                    Text("只錄電腦聲音").tag("system")
+                Picker("錄音來源", selection: Binding(get: { source }, set: { value in
+                    source = value
+                    model.noticeMessage = String(localized: "之後的錄音：\(Self.sourceLabel(value))")
+                })) {
+                    ForEach(["mic", "both", "system"], id: \.self) { Text(Self.sourceLabel($0)).tag($0) }
                 }
                 .pickerStyle(.inline)
-                Picker("會議語言", selection: $language) {
+                Picker("會議語言", selection: Binding(get: { language }, set: { value in
+                    language = value
+                    model.noticeMessage = String(localized: "之後的錄音都用\(value.uiName)")
+                })) {
                     ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
                 }
                 .pickerStyle(.inline)
@@ -422,7 +456,9 @@ struct RecordingControls: View {
             } primaryAction: {
                 model.startRecording()
             }
-            .help("開始錄音（⌘R）；點右邊的箭頭可以選錄音來源")
+            .help("開始錄音（⌘R），用\(language.uiName)辨識；點右邊的箭頭可以改錄音來源和語言")
+            // 工具列的選單建立一次就不會更新勾選，選項變了就換一個新的選單
+            .id("\(source)-\(language.rawValue)")
         }
     }
 }

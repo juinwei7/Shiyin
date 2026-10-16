@@ -220,6 +220,13 @@ struct UserNotesEditor: View {
                 // 只有使用者改過才存，避免用舊內容蓋掉別處寫進去的筆記
                 if text != savedText { save() }
             }
+            // 別處改了筆記（例如匯入 Markdown 筆記）：換成新的內容，不然下一次存檔會蓋回舊的
+            .onChange(of: initial) { _, new in
+                guard new != savedText else { return }
+                saveTask?.cancel()
+                text = new
+                savedText = new
+            }
     }
 
     private func save() {

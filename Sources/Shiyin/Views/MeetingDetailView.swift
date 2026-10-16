@@ -55,8 +55,11 @@ struct MeetingDetailView: View {
                     .labelsHidden()
                     .frame(width: 380)
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    MoreMenu(detail: detail)
+                // 垃圾桶裡的會議不能操作
+                if !isTrashed {
+                    ToolbarItem(placement: .primaryAction) {
+                        MoreMenu(detail: detail)
+                    }
                 }
             }
         }
@@ -179,7 +182,9 @@ struct EditInfoForm: View {
                 Button("取消", role: .cancel, action: onDone)
                     .keyboardShortcut(.cancelAction)
                 Button("儲存") {
-                    model.updateInfo(title: title.trimmingCharacters(in: .whitespaces),
+                    // 標題欄預先填的是顯示用的標題（還沒命名時是檔名）；沒動過就照原樣存，不然會被當成自訂標題鎖住，整理時不會再取名
+                    let edited = title.trimmingCharacters(in: .whitespaces)
+                    model.updateInfo(title: edited == meeting.displayTitle ? meeting.title : edited,
                                      date: DateText.string(date), participants: participants)
                     onDone()
                 }
@@ -355,16 +360,14 @@ struct MoreMenu: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
 
+    // 工具列右上角的選單建立一次就不會更新（換會議、工作開始或結束都一樣，加 .id 也沒用），
+    // 所以這裡不預先停用：按下時由 AppModel 檢查目前的會議，不能做就說明原因
     var body: some View {
         Menu {
             Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
-                .disabled((detail.segments.isEmpty && detail.meeting.userNotes.isEmpty) || model.detailStatus?.isActive == true)
             Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
-                .disabled(detail.segments.isEmpty || model.detailStatus?.isActive == true)
             Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
-                .disabled(!detail.meeting.hasAudio || model.detailStatus?.isActive == true || !model.canTranscribe(detail.meeting.meetingLanguage))
             Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }
-                .disabled(detail.versionCount == 0)
             Divider()
             Button("匯出…", systemImage: "square.and.arrow.up") { model.showExportSheet = true }
             Menu("複製會議紀錄", systemImage: "doc.on.doc") {
@@ -373,8 +376,11 @@ struct MoreMenu: View {
                 Button("純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
             }
             Divider()
-            FolderMenu(meetingId: detail.meeting.id!, current: detail.meeting.folder)
-            Button("移到垃圾桶", systemImage: "trash", role: .destructive) { model.moveToTrash(detail.meeting.id!) }
+            // 工具列的選單建立一次就不會更新（停用狀態、按鈕記住的會議），動作一律在按下時才看目前選取的會議
+            FolderMenu()
+            Button("移到垃圾桶", systemImage: "trash", role: .destructive) {
+                if let id = model.selection { model.moveToTrash(id) }
+            }
         } label: {
             Label("更多", systemImage: "ellipsis.circle")
         }

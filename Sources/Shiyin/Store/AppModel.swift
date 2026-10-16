@@ -65,7 +65,7 @@ struct MeetingDetail: Equatable {
 
     func speakerName(_ idx: Int?) -> String? {
         guard let idx else { return nil }
-        return speakers[idx] ?? String(localized: "說話者 \(idx)")
+        return speakers[idx] ?? meeting.meetingLanguage.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
     }
 }
 
@@ -109,6 +109,10 @@ final class AppModel {
     var showFileImporter = false
     var showExportSheet = false
     var confirmDelete = false
+    /// 垃圾桶裡「永久刪除」要確認的會議
+    var confirmPurge: Int64?
+    /// 確認對話框要刪的會議：按下 ⌘⌫ 時就決定，不然確認前選取的會議變了（例如錄音停止後跳到那場）會刪到別場
+    var deleteTarget: Int64?
     var queuedCount = 0
     var errorMessage: String?
     var noticeMessage: String?
@@ -139,17 +143,19 @@ final class AppModel {
         runner.onFinished = { [weak self] job, error in self?.jobFinished(job, error: error) }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
+            // 錄音壓縮成 m4a 後換檔案：接著原本的位置，正在播的繼續播
+            let (time, playing) = (self.player.currentTime, self.player.isPlaying)
             self.player.unload()
             self.reloadDetail(forceAudio: true)
+            if time > 0 || playing { self.player.seek(to: time, play: playing) }
         }
         recorder.onFinished = { [weak self] result in self?.recordingFinished(result) }
         recorder.onLiveFinal = { [weak self] id, start, end, text in
             try? self?.db.appendLiveSegment(id, start: start, end: end, text: text)
         }
         recorder.onLanguageChange = { [weak self] id, language in
-            guard let self, var meeting = try? self.db.meeting(id) else { return }
-            meeting.language = language.rawValue
-            self.perform { try self.db.updateMeeting(meeting) }
+            guard let self else { return }
+            self.perform { try self.db.setLanguage(id, language) }
         }
         notifier.onOpen = { [weak self] id in self?.reveal(id) }
     }
@@ -235,6 +241,10 @@ final class AppModel {
 
     func moveToFolder(_ id: Int64, folder: String) {
         let name = folder.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let current = try? db.meeting(id)?.folder, current == name {
+            noticeMessage = name.isEmpty ? String(localized: "這場會議沒有在任何資料夾裡") : String(localized: "這場會議已經在「\(name)」")
+            return
+        }
         perform { try db.setFolder([id], folder: name) }
         noticeMessage = name.isEmpty ? String(localized: "已移出資料夾") : String(localized: "已移到「\(name)」")
     }
@@ -495,20 +505,37 @@ final class AppModel {
 
     /// 改會議語言（design §16.3）：之後的轉錄、整理、匯出都用新的語言，已經有的逐字稿和紀錄不會自動重做
     func setMeetingLanguage(_ language: MeetingLanguage) {
-        guard var meeting = detail?.meeting, meeting.meetingLanguage != language else { return }
-        meeting.language = language.rawValue
-        perform { try db.updateMeeting(meeting) }
+        guard let meeting = detail?.meeting, let id = meeting.id, meeting.meetingLanguage != language else { return }
+        if recorder.isRecording && recorder.meetingId == id {
+            // 錄音中：即時逐字稿也要換語言（跟自動偵測換語言同一條路，會一起更新資料庫）
+            recorder.switchLanguage(to: language)
+            noticeMessage = String(localized: "會議語言改成 \(language.name)，即時逐字稿也跟著換了")
+            return
+        }
+        perform { try db.setLanguage(id, language) }
         noticeMessage = String(localized: "會議語言改成 \(language.name)，要重新轉錄或整理的話，從「更多」選")
     }
 
     func setTemplate(_ templateId: String) {
-        guard var meeting = detail?.meeting else { return }
-        meeting.templateId = templateId
-        perform { try db.updateMeeting(meeting) }
+        guard let id = detail?.meeting.id else { return }
+        perform { try db.setTemplate(id, templateId: templateId) }
+    }
+
+    /// 「會議 → 移到垃圾桶…」：先記住是哪一場，再問要不要刪
+    func requestDelete() {
+        guard let id = selection else { return }
+        deleteTarget = id
+        confirmDelete = true
     }
 
     /// 移到垃圾桶（R9.3）
     func moveToTrash(_ id: Int64) {
+        if recorder.isRecording && recorder.meetingId == id {
+            errorMessage = String(localized: "這場會議還在錄音，請先停止錄音再移到垃圾桶")
+            return
+        }
+        // 已經在垃圾桶裡就不再處理，不然 30 天的期限會重新計算
+        if (try? db.meeting(id))?.deletedAt != nil { return }
         runner.cancel(meetingId: id)
         perform { try db.setTrashed(id, true) }
         noticeMessage = String(localized: "已移到垃圾桶，30 天內都可以還原")
@@ -522,7 +549,7 @@ final class AppModel {
 
     /// 永久刪除（垃圾桶裡的「立即刪除」）
     func deletePermanently(_ id: Int64) {
-        guard let meeting = try? db.meeting(id) else { return }
+        guard let meeting = try? db.meeting(id), !(recorder.isRecording && recorder.meetingId == id) else { return }
         runner.cancel(meetingId: id)
         if selection == id { player.unload() }
         perform {
@@ -549,14 +576,40 @@ final class AppModel {
         runner.wake()
     }
 
+    /// 重新轉錄、重新整理、檢查聽錯的字、復原上一版之前再擋一次：工具列和選單的停用狀態可能沒有更新，
+    /// 不擋的話會在處理中重複排工作（多花整理工具的額度），或替垃圾桶裡的會議跑
+    private func readyForAction(_ id: Int64) -> Bool {
+        if detail?.meeting.deletedAt != nil {
+            noticeMessage = String(localized: "垃圾桶裡的會議要先還原才能操作")
+            return false
+        }
+        if recorder.isRecording && recorder.meetingId == id {
+            noticeMessage = String(localized: "這場會議還在錄音")
+            return false
+        }
+        if detailStatus?.isActive == true {
+            noticeMessage = String(localized: "這場會議還在處理中，完成後再試一次")
+            return false
+        }
+        return true
+    }
+
     func retranscribe() {
-        guard let id = selection, detail?.meeting.hasAudio == true else { return }
+        guard let id = selection, readyForAction(id) else { return }
+        guard detail?.meeting.hasAudio == true else {
+            noticeMessage = String(localized: "這場會議沒有錄音，沒辦法重新轉錄")
+            return
+        }
         perform { try db.enqueue(id, kind: .transcribe) }
         runner.wake()
     }
 
     func resummarize() {
-        guard let id = selection else { return }
+        guard let id = selection, readyForAction(id) else { return }
+        if let detail, detail.segments.isEmpty && detail.meeting.userNotes.isEmpty {
+            noticeMessage = String(localized: "還沒有逐字稿或筆記可以整理")
+            return
+        }
         guard AppSettings.provider != .none else {
             errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
@@ -566,18 +619,34 @@ final class AppModel {
     }
 
     func undoNotes() {
-        guard let id = selection else { return }
-        perform { _ = try db.undoNotes(id) }
+        guard let id = selection, readyForAction(id) else { return }
+        perform {
+            if try !db.undoNotes(id) { noticeMessage = String(localized: "沒有上一版可以復原") }
+        }
     }
 
     /// 手動編輯會議紀錄（R6.6）
-    func saveEditedNotes(_ notes: MeetingNotes) {
-        guard let id = selection, notes != detail?.notes else { return }
-        perform { try db.saveNotes(id, notes: notes, by: nil, reason: String(localized: "手動編輯")) }
+    /// 編輯器按「完成」或關掉時存檔。編輯期間會議紀錄被別的工作改過的話提醒一下：舊的那一版還在版本紀錄裡
+    func finishNotesEdit(_ draft: MeetingNotes, base: MeetingNotes?, meetingId: Int64, automatically: Bool = false) {
+        guard draft != base else { return }
+        if let base, let current = try? db.meeting(meetingId)?.decodedNotes, current != base {
+            noticeMessage = String(localized: "編輯期間會議紀錄有更新，已用你改的版本存檔；從「更多 → 復原上一版會議紀錄」可以找回更新的內容")
+        } else if automatically {
+            noticeMessage = String(localized: "已儲存剛才編輯的會議紀錄")
+        }
+        saveEditedNotes(draft, meetingId: meetingId)
     }
 
-    func submitReview(answers: [Int: String], dismissed: Set<Int>) {
-        guard let id = selection, let notes = detail?.notes else { return }
+    /// meetingId 要明確給：編輯器關掉時（切到別場會議、錄音停止後自動跳到那場），selection 可能已經是別場
+    func saveEditedNotes(_ notes: MeetingNotes, meetingId: Int64) {
+        guard let current = try? db.meeting(meetingId)?.decodedNotes, notes != current else { return }
+        perform { try db.saveNotes(meetingId, notes: notes, by: nil, reason: String(localized: "手動編輯")) }
+    }
+
+    /// 回傳是否送出成功；失敗時畫面上的回答要留著
+    @discardableResult
+    func submitReview(answers: [Int: String], dismissed: Set<Int>) -> Bool {
+        guard let id = selection, let notes = detail?.notes, readyForAction(id) else { return false }
         let answered = answers.compactMap { index, text -> (Int, ReviewAnswer)? in
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, !dismissed.contains(index), notes.reviewItems.indices.contains(index) else { return nil }
@@ -586,7 +655,7 @@ final class AppModel {
         }.sorted { $0.0 < $1.0 }.map(\.1)
         if !answered.isEmpty && AppSettings.provider == .none {
             errorMessage = String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
-            return
+            return false
         }
         perform {
             if !dismissed.isEmpty { try db.dismissReviewItems(id, indexes: dismissed) }
@@ -596,6 +665,7 @@ final class AppModel {
             }
         }
         runner.wake()
+        return true
     }
 
     func updateSegment(_ segmentId: Int64, text: String) {
@@ -606,7 +676,11 @@ final class AppModel {
 
     /// 手動檢查可能聽錯的字（「更多」選單）
     func checkTranscript() {
-        guard let id = selection else { return }
+        guard let id = selection, readyForAction(id) else { return }
+        if detail?.segments.isEmpty != false {
+            noticeMessage = String(localized: "還沒有逐字稿可以檢查")
+            return
+        }
         guard AppSettings.provider != .none else {
             errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
@@ -651,7 +725,10 @@ final class AppModel {
     func renameSpeaker(_ idx: Int, to name: String) {
         guard let id = selection else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        perform { try db.renameSpeaker(id, idx: idx, name: trimmed.isEmpty ? String(localized: "說話者 \(idx)") : trimmed) }
+        // 清空就回到預設名稱，用會議語言（會帶進會議紀錄和匯出），不是介面語言
+        let language = detail?.meeting.meetingLanguage ?? .zh
+        let fallback = language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
+        perform { try db.renameSpeaker(id, idx: idx, name: trimmed.isEmpty ? fallback : trimmed) }
     }
 
     func updateUserNotes(_ text: String) {
@@ -793,6 +870,10 @@ final class AppModel {
 
     func copyNotes(_ style: CopyStyle) {
         guard let b = exportBundle() else { return }
+        guard b.notes != nil else {
+            noticeMessage = String(localized: "還沒有會議紀錄可以複製")
+            return
+        }
         switch style {
         case .plain:
             NSPasteboard.general.clearContents()
@@ -818,7 +899,13 @@ final class AppModel {
         switch hit.kind {
         case .segment:
             tab = .transcript
-            highlightSegment = hit.ref
+            // 先清掉再設，同一個結果點第二次也會捲過去；幾秒後拿掉底色，不要一直留著
+            highlightSegment = nil
+            Task { @MainActor in
+                highlightSegment = hit.ref
+                try? await Task.sleep(for: .seconds(6))
+                if highlightSegment == hit.ref { highlightSegment = nil }
+            }
             if let segment = detail?.segments.first(where: { $0.id == hit.ref }) { player.seek(to: segment.start, play: false) }
         case .notes, .title: tab = .summary
         case .userNotes: tab = .notes

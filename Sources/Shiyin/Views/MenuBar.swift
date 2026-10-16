@@ -89,7 +89,7 @@ struct MenuBarContent: View {
             if let l = model.runner.running[.llm] {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("整理中：\(title(l.job.meetingId))").lineLimit(1)
+                    Text(llmStatus(l.job.kind, title(l.job.meetingId))).lineLimit(1)
                 }
             }
             if model.queuedCount > 0 {
@@ -100,6 +100,15 @@ struct MenuBarContent: View {
             }
         }
         .font(.callout)
+    }
+
+    /// 整理那條線正在做什麼：整理、依回答修正、檢查可能聽錯的字
+    private func llmStatus(_ kind: JobKind, _ title: String) -> String {
+        switch kind {
+        case .revise: return String(localized: "依回答修正中：\(title)")
+        case .correct: return String(localized: "檢查可能聽錯的字：\(title)")
+        default: return String(localized: "整理中：\(title)")
+        }
     }
 
     private func title(_ meetingId: Int64) -> String {

@@ -181,7 +181,10 @@ enum TimeFormat {
     }
 
     static func seconds(_ text: String) -> Double? {
-        let parts = clean(text).split(separator: ":").map { Int($0) }
+        // 「03:15–05:20」這種範圍取開頭；全形冒號也接受
+        let first = clean(text).replacingOccurrences(of: "：", with: ":")  // l10n-skip
+            .split(whereSeparator: { "–—-~〜～ ".contains($0) }).first.map(String.init) ?? ""  // l10n-skip
+        let parts = first.split(separator: ":").map { Int($0) }
         guard !parts.isEmpty, parts.count <= 3, parts.allSatisfy({ $0 != nil }) else { return nil }
         return Double(parts.compactMap { $0 }.reduce(0) { $0 * 60 + $1 })
     }

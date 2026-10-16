@@ -53,12 +53,20 @@ struct OnboardingView: View {
         .padding(32)
         .frame(width: 600, height: 560)
         .tint(.celadon)
-        .task { speechInstalled = await LiveTranscriber.isLocaleInstalled(AppSettings.defaultMeetingLanguage) }
+        .task {
+            speechInstalled = await LiveTranscriber.isLocaleInstalled(AppSettings.defaultMeetingLanguage)
+            // 已經允許或拒絕過通知的話直接顯示，不要再顯示「允許」
+            switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
+            case .authorized, .provisional, .ephemeral: notificationsAllowed = true
+            case .denied: notificationsAllowed = false
+            default: break
+            }
+        }
     }
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上用 Breeze ASR 25 正式轉錄、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。")
+            Text("拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上正式轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper）、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。")
                 .fixedSize(horizontal: false, vertical: true)
             Label("錄音和轉錄都只在這台 Mac 上進行，不會上傳。", systemImage: "lock")
             Label("整理會議紀錄時，只會把逐字稿文字送到你選的 AI 服務。", systemImage: "text.bubble")
@@ -85,6 +93,11 @@ struct OnboardingView: View {
             }
             permissionRow(icon: "bell", title: String(localized: "通知"), detail: String(localized: "轉錄完成、會議紀錄整理好時通知你。"),
                           status: notificationsAllowed.map { $0 ? String(localized: "已允許") : String(localized: "被拒絕") }) {
+                if notificationsAllowed == false {
+                    // 被拒絕之後再要權限不會有反應，要到系統設定打開
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") { NSWorkspace.shared.open(url) }
+                    return
+                }
                 Task {
                     let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
                     notificationsAllowed = granted
@@ -147,7 +160,8 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
-            model.models.autoStart(primaryModel)
+            // 正式轉錄選了 macOS 內建就不用下載轉錄模型（從進階重新顯示引導時）
+            if !AppSettings.useSystemTranscriber { model.models.autoStart(primaryModel) }
             if AppSettings.autoDetectLanguage { model.models.autoStart(.languageDetection) }
             if model.models.diarizerState == .missing { model.models.prepareDiarizer() }
         }
@@ -192,7 +206,10 @@ struct OnboardingView: View {
             Text("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")
                 .fixedSize(horizontal: false, vertical: true)
             if !model.canTranscribe(AppSettings.defaultMeetingLanguage) {
-                Label("轉錄模型還在下載，下載完成前的錄音會先排隊，下載好就會自動轉錄。", systemImage: "arrow.down.circle")
+                Label(model.models.state(primaryModel).isBusy
+                      ? String(localized: "轉錄模型還在下載，下載完成前的錄音會先排隊，下載好就會自動轉錄。")
+                      : String(localized: "轉錄模型還沒下載，錄音會先排隊。可以到「設定 → 模型與儲存空間」下載，或在「設定 → 錄音」改用 macOS 內建辨識。"),
+                      systemImage: "arrow.down.circle")
                     .foregroundStyle(Color.signal).fixedSize(horizontal: false, vertical: true)
             }
             Text("之後可以在「設定 → 進階」重新顯示這個引導。").foregroundStyle(.secondary)

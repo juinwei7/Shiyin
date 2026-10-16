@@ -78,7 +78,8 @@ struct TimeButton: View {
     let time: String
 
     var body: some View {
-        if let seconds = TimeFormat.seconds(time) {
+        // 沒有錄音的會議（例如匯入逐字稿）點了也沒辦法播，顯示成一般文字
+        if let seconds = TimeFormat.seconds(time), model.player.isLoaded {
             Button(time) { model.player.seek(to: seconds) }
                 .buttonStyle(.plain)
                 .font(.callout.monospacedDigit())
