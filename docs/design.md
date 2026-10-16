@@ -336,6 +336,13 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   - 更新網址從 repo 變數 `SHIYIN_UPDATE_URL` 帶入；有設定 `SHIYIN_RELEASES_REPO`（加上 `SHIYIN_RELEASES_TOKEN`）時，也發布到另一個公開的 repo（程式碼維持私人時用）
 - 全域快捷鍵（R11.3）：用 Carbon 的 `RegisterEventHotKey` 以獨佔模式（`kEventHotKeyExclusive`）註冊 ⌃⌥⌘R（不需要輔助使用權限）。不加獨佔的話，Carbon 允許不同的 app 註冊同一組按鍵，偵測不到衝突，按下時跟 ⌘R 一樣：沒在錄就開始，在錄就停止。設定 →「錄音」可以關掉；註冊失敗（例如被別的 app 佔用）時在設定裡顯示原因
 
+### 12.1 第三方授權與更新網址（3.1.1，R13）
+
+- `scripts/dev/make-third-party-licenses.sh` 組出 `Resources/ThirdPartyLicenses.txt`：whisper.cpp 取 `Package.swift` 固定版本的 LICENSE，GRDB、FluidAudio 取 `Package.resolved` 版本的 checkout 裡的 LICENSE，FluidAudio 另外附的 `ThirdPartyLicenses/` 全部照貼（它把 TTS、文字正規化的程式也編進同一個 module）。原文不改、不合併重複的 Apache 條文。產生的檔案 commit 進 repo，建置時不需要網路；更新套件版本後要重跑。
+- `build-app.sh` 把它放進 `Contents/Resources/`，另外包成 `Credits.html`：系統標準的「關於拾音」視窗會自動顯示，可以捲動。
+- `make-dmg.sh` 在 DMG 放一份 `Third-Party Licenses.txt`。
+- 更新網址：GitHub 的 repository variable `SHIYIN_UPDATE_URL` 設成 `https://github.com/juinwei7/Shiyin/releases/latest/download/shiyin-update.json`，CI 建置時寫進 app。`releases/latest` 永遠指向最新的 Release，每次發布不用改網址。
+
 ## 13. 從第二版遷移（R10.5）
 
 - 資料庫：先備份，再執行 migration `v2`（§4）。會議紀錄轉成 v2 格式；錄音、逐字稿、詞彙表照舊。

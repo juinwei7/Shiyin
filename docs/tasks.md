@@ -294,6 +294,17 @@
   - 結果（2026-10-16）：版本改成 3.1.0（build 2）；`make-update-fixtures.sh` 改成依目前版本產生下一版，不再寫死 3.0.1
     - **待使用者**：確認後 commit、推上去；決定要不要推 `v3.1.0` tag 發布第一個 Release
 
+## 階段 H：開源準備（3.1.1，§12.1，R13；2026-10-16 使用者已確認）
+
+- [x] **T-H1 第三方授權**（R13.1）
+  - 產生 `ThirdPartyLicenses.txt`；app 的 `Credits.html`；DMG 附一份
+  - 驗證：「關於拾音」看得到授權條款；授權檔跟套件附的原文逐字一致；DMG 裡有授權檔
+  - 結果（2026-10-16）：`make-third-party-licenses.sh` 產生 1,361 行：whisper.cpp b5454、GRDB.swift 7.11.1、FluidAudio 0.17.7 的 LICENSE，以及 FluidAudio 附的 8 份 ThirdPartyLicenses。11 份逐一比對都跟原文一致。「關於拾音」顯示版本 3.1.1 (3) 和授權條款，可以捲動；本機用 `make-dmg.sh` 建置，DMG 裡的 `Third-Party Licenses.txt` 跟 repo 的檔案相同；帶入 `SHIYIN_UPDATE_URL` 時 app 的 `ShiyinUpdateURL` 正確
+- [ ] **T-H2 公開 repo、設定更新網址**（R13.2）
+  - 驗證：不登入可以看到 repo 和 Releases；repository variable 設好
+- [ ] **T-H3 發布 3.1.1**
+  - 驗證：CI 成功；不登入可以下載 DMG 和 `shiyin-update.json`，SHA-256 一致；app 帶有更新網址
+
 ## 變更紀錄
 
 - 2026-10-15：第三版開始。使用者要求回到第一性原理，做一個完整、可以上線的會議紀錄 app。轉錄引擎依實驗 `docs/spikes/asr-engines.md` 選型；需求、設計、任務全部重寫，第二版保留在 `docs/archive/v2/`。

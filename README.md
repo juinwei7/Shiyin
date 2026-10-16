@@ -73,6 +73,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 1. 取得 `Shiyin-<版本>.dmg`（這個 repo 的 Releases，或向維護的人拿），打開後把「拾音」拖到旁邊的 Applications（應用程式）。
 2. 拾音沒有經過 Apple 公證，第一次打開會被擋下：到「系統設定 → 隱私權與安全性」按「仍要打開」（只要做一次）。DMG 裡的「安裝說明.pdf」有完整步驟（英文版是「Install Guide.pdf」）。
 3. 第一次打開會出現引導：允許麥克風、下載轉錄模型（約 1.7 GB）、選整理工具。每一步都可以略過，之後在設定裡補做。
+4. 3.1.1 起，拾音會自動檢查這個 repo 的 Releases 有沒有新版，詢問你之後自動更新。
 
 ### 從原始碼建置
 
@@ -225,7 +226,7 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | 說話者辨識 | Apache-2.0 |
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
 
-轉錄模型和說話者辨識模型不放在這個 repo 裡，第一次使用時才下載。
+轉錄模型和說話者辨識模型不放在這個 repo 裡，第一次使用時才下載。app 和 DMG 都附有上面這些套件的完整授權條款：「關於拾音」視窗、DMG 裡的 `Third-Party Licenses.txt`（`scripts/dev/make-third-party-licenses.sh` 產生，更新套件後要重跑）。
 
 ## 授權
 

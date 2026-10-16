@@ -167,7 +167,7 @@
 ## 7. 待確認問題（使用者還沒回答，先照預設進行）
 
 預設處理方式：
-- Q1：還沒有發布位置。R10.6 的更新機制先做好，更新網址留空，決定位置後在建置時帶入或在設定裡填
+- Q1：~~還沒有發布位置~~ 已決定（2026-10-16）：GitHub Releases，見 R13.2
 - Q2：還沒有真實錄音。轉錄先用 `say` 合成的錄音驗證；說話者辨識用合成聲音測不出來（見 `docs/spikes/asr-engines.md`），改用公開的 AMI 真人會議錄音。中文真實錄音的驗證（T-A1）留給使用者
 - Q3：只做繁體中文介面
 
@@ -290,3 +290,20 @@
 | R12.6 內建範本英文版 | ✅ | 五個範本各整理一次，全部英文，自訂段落標題也是英文（T-G6） |
 | R12.7 匯出用會議語言 | ✅ | md、PDF、docx、srt、txt 的標題和欄位是英文；中文匯出和 3.0 完全相同（T-G6） |
 | R12.8 README、安裝說明英文版 | ✅ | `README.en.md`（英文介面截圖）、DMG 裡的「Install Guide.pdf」（T-G7） |
+
+## 10. 第 3.1.1 版：開源準備（2026-10-16，使用者已確認）
+
+### 為什麼
+
+專案要公開（使用者確認是私下做的個人專案）。發布的 app 編進了 whisper.cpp、GRDB（MIT）和 FluidAudio（Apache-2.0），這些授權要求散布時附上授權條款。repo 公開後，GitHub Releases 不用登入就能下載，可以當正式的更新網址，也就是 Q1 的答案。
+
+### R13 開源與發布（P0）
+
+- R13.1 「關於拾音」視窗列出使用的開源軟體和完整授權條款；DMG 裡也附一份（`Third-Party Licenses.txt`）。
+- R13.2 repo 公開；正式的更新網址是 GitHub Releases 的最新版（`https://github.com/juinwei7/Shiyin/releases/latest/download/shiyin-update.json`），從 3.1.1 起內建在 app 裡。3.1.0 沒有內建更新網址，裝了 3.1.0 的人要手動換一次。
+
+### 驗收
+
+- 「關於拾音」看得到授權條款；DMG 裡有授權檔，內容跟套件附的原文一致
+- 不登入也能下載 Release 的 DMG 和 `shiyin-update.json`；3.1.1 的 app 帶有更新網址
+

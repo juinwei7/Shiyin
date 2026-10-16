@@ -52,6 +52,12 @@ xcrun actool Resources/Assets.xcassets --compile "$APP/Contents/Resources" --pla
 xcrun xcstringstool compile Resources/Localizable.xcstrings --output-directory "$APP/Contents/Resources" >/dev/null
 for lproj in Resources/*.lproj; do ditto "$lproj" "$APP/Contents/Resources/$(basename "$lproj")"; done
 mkdir -p "$APP/Contents/Resources/en.lproj"
+# 第三方授權（design §12.1、R13.1）：原文放一份；另外包成 Credits.html，系統的「關於拾音」視窗會顯示
+cp Resources/ThirdPartyLicenses.txt "$APP/Contents/Resources/ThirdPartyLicenses.txt"
+/usr/bin/python3 -c 'import html, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+print("<!doctype html><html lang=\"zh-Hant\"><meta charset=\"utf-8\"><pre style=\"font: 10px Menlo; white-space: pre-wrap\">" + html.escape(text) + "</pre>")' \
+  Resources/ThirdPartyLicenses.txt > "$APP/Contents/Resources/Credits.html"
 
 xattr -cr "$APP"
 # 簽章（design §12、R10.7）：有已信任的自簽憑證就用它；沒有就用 ad-hoc，

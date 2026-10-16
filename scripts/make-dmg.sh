@@ -1,5 +1,5 @@
 #!/bin/bash
-# 產生發布用的 DMG（design §12、§16.7、R10.1）：拾音.app、Applications 捷徑、中英文安裝說明
+# 產生發布用的 DMG（design §12、§16.7、R10.1）：拾音.app、Applications 捷徑、中英文安裝說明、第三方授權
 # 用法：scripts/make-dmg.sh   （會先跑 release 建置）
 #   SHIYIN_UPDATE_URL=https://…/shiyin-update.json  寫進 app，之後可以 app 內更新
 #   SHIYIN_RELEASE_NOTES="這版改了什麼"               寫進更新資訊
@@ -21,6 +21,7 @@ ln -s /Applications "$STAGE/Applications"
 # 安裝說明：HTML 用系統的文字排版轉成 PDF
 swift scripts/html-to-pdf.swift scripts/install-guide.html "$STAGE/安裝說明.pdf"
 swift scripts/html-to-pdf.swift scripts/install-guide.en.html "$STAGE/Install Guide.pdf"
+cp Resources/ThirdPartyLicenses.txt "$STAGE/Third-Party Licenses.txt"   # 第三方授權（design §12.1、R13.1）
 
 rm -f "$DMG"
 # CI 上 hdiutil 偶爾會回「資源忙碌」，最多試三次
