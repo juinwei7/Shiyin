@@ -33,6 +33,13 @@ struct TranscriptTab: View {
         return visibleSegments.filter { $0.text.localizedCaseInsensitiveContains(q) }.compactMap(\.id)
     }
 
+    /// 每一段的校正建議（design §17.4）：待確認的標在文字上並列出，已接受的可以還原，已拒絕的不顯示
+    private var correctionsBySegment: [Int64: [Correction]] {
+        Dictionary(grouping: detail.corrections.filter { $0.status != "rejected" }, by: \.segmentId)
+    }
+
+    private var pendingCorrections: Int { detail.corrections.filter { $0.status == "pending" }.count }
+
     private var currentSegmentId: Int64? {
         let t = model.player.currentTime
         guard model.player.isPlaying || t > 0 else { return nil }
@@ -43,6 +50,10 @@ struct TranscriptTab: View {
         VStack(spacing: 0) {
             searchBar
             Divider()
+            if pendingCorrections > 0 && !snapshotMode {
+                correctionBar
+                Divider()
+            }
             if detail.segments.isEmpty {
                 Text(model.detailStatus?.isActive == true ? "轉錄完成後，逐字稿會出現在這裡。" : "沒有逐字稿。")
                     .foregroundStyle(.secondary)
@@ -153,6 +164,46 @@ struct TranscriptTab: View {
         .padding(.vertical, 10)
     }
 
+    /// 有待確認的校正建議時，顯示在搜尋列下方
+    private var correctionBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "text.magnifyingglass").foregroundStyle(Color.signal)
+            Text("\(pendingCorrections) 處可能聽錯的字，已標在逐字稿裡")
+            Spacer()
+            Button("全部忽略") { model.rejectAllCorrections() }
+            Button("全部接受") { model.acceptAllCorrections() }
+                .buttonStyle(.borderedProminent)
+                .help("把所有建議套用到逐字稿，之後還能逐條還原")
+        }
+        .font(.callout)
+        .controlSize(.small)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .background(Color.signal.opacity(0.08))
+    }
+
+    /// 一則校正建議：待確認的有接受、忽略；已接受的可以還原
+    @ViewBuilder
+    private func correctionLine(_ c: Correction) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if c.status == "accepted" {
+                Text("已改成「\(c.suggestion)」（原本是「\(c.original)」）")
+                    .foregroundStyle(.secondary)
+                Button("還原") { if let id = c.id { model.revertCorrection(id) } }
+                    .buttonStyle(.link)
+            } else {
+                Text("「\(c.original)」→「\(c.suggestion)」").fontWeight(.medium)
+                Text(c.reason).foregroundStyle(.secondary).lineLimit(2)
+                Spacer(minLength: 8)
+                Button("忽略") { if let id = c.id { model.rejectCorrection(id) } }
+                    .buttonStyle(.link)
+                Button("接受") { if let id = c.id { model.acceptCorrection(id) } }
+                    .buttonStyle(.link)
+            }
+        }
+        .font(.caption)
+    }
+
     @ViewBuilder
     private func row(_ segment: Segment) -> some View {
         let isCurrent = segment.id == currentSegmentId
@@ -193,11 +244,15 @@ struct TranscriptTab: View {
                     .controlSize(.small)
                 }
             } else {
-                Text(highlighted(segment.text))
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .onTapGesture(count: 2) { startEdit(segment) }
+                let corrections = segment.id.flatMap { correctionsBySegment[$0] } ?? []
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(highlighted(segment.text, corrections: corrections))
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onTapGesture(count: 2) { startEdit(segment) }
+                    ForEach(corrections) { correctionLine($0) }
+                }
             }
         }
         .padding(.vertical, 6)
@@ -225,8 +280,15 @@ struct TranscriptTab: View {
         visibleSegments.first { $0.speaker == speaker }?.id
     }
 
-    private func highlighted(_ text: String) -> AttributedString {
+    private func highlighted(_ text: String, corrections: [Correction] = []) -> AttributedString {
         var attributed = AttributedString(text)
+        // 待確認的校正建議：原文加底線和底色
+        for c in corrections where c.status == "pending" {
+            if let range = attributed.range(of: c.original) {
+                attributed[range].underlineStyle = .single
+                attributed[range].backgroundColor = Color.signal.opacity(0.2)
+            }
+        }
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return attributed }
         var searchRange = attributed.startIndex..<attributed.endIndex

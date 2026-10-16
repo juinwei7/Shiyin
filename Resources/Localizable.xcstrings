@@ -146,6 +146,29 @@
     "%lld": {
       "extractionState": "manual"
     },
+    "%lld 處可能聽錯的字，已標在逐字稿裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld possible mishearing, marked in the transcript"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld possible mishearings, marked in the transcript"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld%%": {
       "extractionState": "manual"
     },
@@ -468,6 +491,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "."
+          }
+        }
+      }
+    },
+    "「%@」→「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” → “%@”"
           }
         }
       }
@@ -868,6 +902,17 @@
         }
       }
     },
+    "依詞彙表和上下文找出可能聽錯的字，標在逐字稿裡，你決定要不要改。不會自動改掉原文。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finds words that were probably misheard, using the glossary and context, and marks them in the transcript for you to decide. The original text is never changed automatically."
+          }
+        }
+      }
+    },
     "停止": {
       "extractionState": "manual",
       "localizations": {
@@ -1044,6 +1089,28 @@
         }
       }
     },
+    "全部忽略": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore All"
+          }
+        }
+      }
+    },
+    "全部接受": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept All"
+          }
+        }
+      }
+    },
     "出了一點問題": {
       "extractionState": "manual",
       "localizations": {
@@ -1205,6 +1272,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download"
+          }
+        }
+      }
+    },
+    "加入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
           }
         }
       }
@@ -1426,6 +1504,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reason: %@\n\nYour data has not been changed. The backup made before the upgrade is in: %@\nPlease send a screenshot of this message to whoever maintains Shiyin."
+          }
+        }
+      }
+    },
+    "參加者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participant"
           }
         }
       }
@@ -1893,6 +1982,17 @@
         }
       }
     },
+    "已改成「%@」（原本是「%@」）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changed to “%@” (was “%@”)"
+          }
+        }
+      }
+    },
     "已是最新版本": {
       "extractionState": "manual",
       "localizations": {
@@ -2069,6 +2169,17 @@
         }
       }
     },
+    "建議加入：從參加者、說話者名字、校正過的字、會議標題找到的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested terms, from participants, speaker names, corrected words and meeting titles"
+          }
+        }
+      }
+    },
     "往上移": {
       "extractionState": "manual",
       "localizations": {
@@ -2220,6 +2331,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keyboard shortcuts"
+          }
+        }
+      }
+    },
+    "忽略": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore"
           }
         }
       }
@@ -2396,6 +2518,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Find meetings and play"
+          }
+        }
+      }
+    },
+    "把所有建議套用到逐字稿，之後還能逐條還原": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply every suggestion to the transcript. You can revert each one later."
           }
         }
       }
@@ -2694,6 +2827,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The next three steps take about 3 minutes (plus the model download)."
+          }
+        }
+      }
+    },
+    "接受": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept"
           }
         }
       }
@@ -3435,6 +3579,17 @@
         }
       }
     },
+    "會議標題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting title"
+          }
+        }
+      }
+    },
     "會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -3545,6 +3700,29 @@
         }
       }
     },
+    "有 %lld 則建議的段落已經改過，沒有套用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld suggestion wasn’t applied because its segment had already been edited"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld suggestions weren’t applied because their segments had already been edited"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "有一個音源沒辦法啟動，只錄到另一個：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -3633,6 +3811,17 @@
         }
       }
     },
+    "校正過的字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrected word"
+          }
+        }
+      }
+    },
     "校稿": {
       "extractionState": "manual",
       "localizations": {
@@ -3717,6 +3906,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Simulated recording"
+          }
+        }
+      }
+    },
+    "檢查可能聽錯的字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Misheard Words"
           }
         }
       }
@@ -3860,6 +4060,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Summarizing the meeting with %@…"
+          }
+        }
+      }
+    },
+    "正在用 %@ 檢查可能聽錯的字…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking for misheard words with %@…"
           }
         }
       }
@@ -5394,6 +5605,17 @@
         }
       }
     },
+    "轉錄完成後檢查可能聽錯的字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for misheard words after transcription"
+          }
+        }
+      }
+    },
     "轉錄完成後自動整理成會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -5612,6 +5834,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Amber segments in the transcript have lower recognition confidence and are worth listening to again. On the timeline, triangles are questions to confirm and dots are your bookmarks."
+          }
+        }
+      }
+    },
+    "這一段已經改過，找不到建議要改的文字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This segment was already edited; the suggested text is no longer there"
+          }
+        }
+      }
+    },
+    "這一段已經改過，沒辦法還原": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This segment was edited since; it can’t be reverted"
           }
         }
       }

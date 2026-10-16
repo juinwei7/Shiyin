@@ -60,6 +60,8 @@ struct MeetingDetail: Equatable {
     var latestJob: Job?
     var speakers: [Int: String]
     var bookmarks: [Bookmark]
+    /// 逐字稿校正建議（design §17.4）
+    var corrections: [Correction] = []
 
     func speakerName(_ idx: Int?) -> String? {
         guard let idx else { return nil }
@@ -94,6 +96,7 @@ final class AppModel {
     var folderPrompt: FolderPrompt?
     enum FolderPrompt: Equatable { case create(Int64), rename(String) }
     var glossary: [GlossaryTerm] = []
+    var glossarySuggestions: [GlossarySuggestion] = []
     var templates: [TemplateRecord] = []
 
     var searchQuery = "" { didSet { runSearch() } }
@@ -172,6 +175,7 @@ final class AppModel {
             meetings = try db.meetingRows()
             trash = try db.meetingRows(trash: true)
             glossary = try db.glossary()
+            glossarySuggestions = try db.glossarySuggestions()
             templates = try db.templates()
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
@@ -251,7 +255,7 @@ final class AppModel {
             meeting: meeting, segments: (try? db.segments(id)) ?? [], notes: meeting.decodedNotes,
             versionCount: (try? db.versionCount(id)) ?? 0, latestJob: try? db.latestJob(id),
             speakers: Dictionary(uniqueKeysWithValues: ((try? db.speakers(id)) ?? []).map { ($0.idx, $0.name) }),
-            bookmarks: (try? db.bookmarks(id)) ?? [])
+            bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL) } else { player.unload() }
         }
@@ -589,6 +593,52 @@ final class AppModel {
         perform { try db.updateSegmentText(segmentId, text: text) }
     }
 
+    // MARK: 逐字稿校正（design §17.4）
+
+    /// 手動檢查可能聽錯的字（「更多」選單）
+    func checkTranscript() {
+        guard let id = selection else { return }
+        guard AppSettings.provider != .none else {
+            errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        perform { try db.enqueue(id, kind: .correct) }
+        runner.wake()
+    }
+
+    func acceptCorrection(_ id: Int64) {
+        perform {
+            if try !db.acceptCorrection(id) {
+                noticeMessage = String(localized: "這一段已經改過，找不到建議要改的文字")
+            }
+        }
+    }
+
+    func rejectCorrection(_ id: Int64) {
+        perform { try db.rejectCorrection(id) }
+    }
+
+    func revertCorrection(_ id: Int64) {
+        perform {
+            if try !db.revertCorrection(id) {
+                noticeMessage = String(localized: "這一段已經改過，沒辦法還原")
+            }
+        }
+    }
+
+    func acceptAllCorrections() {
+        guard let pending = detail?.corrections.filter({ $0.status == "pending" }) else { return }
+        perform {
+            let failed = try pending.compactMap(\.id).filter { try !db.acceptCorrection($0) }.count
+            if failed > 0 { noticeMessage = String(localized: "有 \(failed) 則建議的段落已經改過，沒有套用") }
+        }
+    }
+
+    func rejectAllCorrections() {
+        guard let pending = detail?.corrections.filter({ $0.status == "pending" }) else { return }
+        perform { for id in pending.compactMap(\.id) { try db.rejectCorrection(id) } }
+    }
+
     func renameSpeaker(_ idx: Int, to name: String) {
         guard let id = selection else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -620,6 +670,7 @@ final class AppModel {
     }
 
     func addTerm(_ term: String) { perform { try db.addTerm(term) } }
+    func dismissGlossarySuggestion(_ term: String) { perform { try db.dismissGlossarySuggestion(term) } }
     func deleteTerm(_ id: Int64) { perform { try db.deleteTerm(id) } }
 
     func saveTemplate(_ template: TemplateRecord) { perform { try db.saveTemplate(template) } }

@@ -146,6 +146,27 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("v3") { db in
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN language TEXT NOT NULL DEFAULT 'zh'")
         }
+        // 3.2：分聲道轉錄記錄每段來自哪個聲道（design §17.3）
+        migrator.registerMigration("v4") { db in
+            try db.execute(sql: "ALTER TABLE segments ADD COLUMN channel INTEGER")
+        }
+        // 3.2：逐字稿校正建議（design §17.4），段落重新轉錄時一起刪掉；詞彙表建議被忽略的詞（§17.5）
+        migrator.registerMigration("v5") { db in
+            try db.execute(sql: """
+                CREATE TABLE corrections (
+                  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+                  segment_id INTEGER NOT NULL REFERENCES segments(id) ON DELETE CASCADE,
+                  original   TEXT NOT NULL,
+                  suggestion TEXT NOT NULL,
+                  reason     TEXT NOT NULL DEFAULT '',
+                  status     TEXT NOT NULL DEFAULT 'pending',
+                  created_at TEXT NOT NULL
+                );
+                CREATE INDEX corrections_meeting ON corrections(meeting_id);
+                CREATE TABLE glossary_dismissed (term TEXT PRIMARY KEY COLLATE NOCASE);
+                """)
+        }
         return migrator
     }
 
@@ -305,6 +326,56 @@ final class AppDatabase: @unchecked Sendable {
         try pool.write { db in
             try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, id])
             try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, id])
+        }
+    }
+
+    // MARK: 逐字稿校正（design §17.4）
+
+    func corrections(_ meetingId: Int64) throws -> [Correction] {
+        try pool.read { db in try Correction.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db) }
+    }
+
+    /// 存一次校正的結果：之前還沒處理的建議換成這次的，已接受、已拒絕的保留
+    func saveCorrections(_ meetingId: Int64, _ items: [Correction]) throws {
+        try pool.write { db in
+            try db.execute(sql: "DELETE FROM corrections WHERE meeting_id = ? AND status = 'pending'", arguments: [meetingId])
+            for var item in items { try item.insert(db) }
+        }
+    }
+
+    /// 接受：改段落文字（含搜尋索引）。段落之後被改過、找不到原文時回傳 false
+    @discardableResult
+    func acceptCorrection(_ id: Int64) throws -> Bool {
+        try pool.write { db in
+            guard var correction = try Correction.fetchOne(db, key: id), correction.status == "pending",
+                  let segment = try Segment.fetchOne(db, key: correction.segmentId),
+                  let text = TranscriptCorrection.apply(correction.suggestionValue, to: segment.text) else { return false }
+            try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, segment.id])
+            try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, segment.id])
+            correction.status = "accepted"
+            try correction.update(db)
+            return true
+        }
+    }
+
+    /// 還原已接受的建議：改回原文，回到待確認
+    @discardableResult
+    func revertCorrection(_ id: Int64) throws -> Bool {
+        try pool.write { db in
+            guard var correction = try Correction.fetchOne(db, key: id), correction.status == "accepted",
+                  let segment = try Segment.fetchOne(db, key: correction.segmentId),
+                  let text = TranscriptCorrection.revert(correction.suggestionValue, in: segment.text) else { return false }
+            try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, segment.id])
+            try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, segment.id])
+            correction.status = "pending"
+            try correction.update(db)
+            return true
+        }
+    }
+
+    func rejectCorrection(_ id: Int64) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE corrections SET status = 'rejected' WHERE id = ? AND status = 'pending'", arguments: [id])
         }
     }
 
@@ -516,7 +587,7 @@ final class AppDatabase: @unchecked Sendable {
     func claimNext(lane: JobLane, includeTranscribe: Bool = true) throws -> Job? {
         let kinds = lane == .transcribe
             ? (includeTranscribe ? [JobKind.transcribe.rawValue] : []) + [JobKind.compress.rawValue]
-            : [JobKind.summarize.rawValue, JobKind.revise.rawValue]
+            : [JobKind.summarize.rawValue, JobKind.revise.rawValue, JobKind.correct.rawValue]
         return try pool.write { db in
             guard var job = try Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
                 .order(Column("id")).fetchOne(db) else { return nil }
@@ -580,6 +651,45 @@ final class AppDatabase: @unchecked Sendable {
 
     func deleteTerm(_ id: Int64) throws {
         _ = try pool.write { db in try GlossaryTerm.deleteOne(db, key: id) }
+    }
+
+    /// 詞彙表建議（design §17.5、R14.5）：從參加者、改過名字的說話者、接受過的校正、中文會議標題裡的英文詞找。
+    /// 已經在詞彙表裡、被忽略過的不建議；出現越多次排越前面
+    func glossarySuggestions(limit: Int = 12) throws -> [GlossarySuggestion] {
+        try pool.read { db in
+            var found: [String: (term: String, source: GlossarySuggestion.Source, count: Int)] = [:]
+            func add(_ raw: String, _ source: GlossarySuggestion.Source) {
+                let term = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard (2...40).contains(term.count) else { return }
+                let key = term.lowercased()
+                if let existing = found[key] { found[key]?.count = existing.count + 1 } else { found[key] = (term, source, 1) }
+            }
+            let meetings = try Meeting.filter(Column("deleted_at") == nil).fetchAll(db)
+            for meeting in meetings { meeting.participantList.forEach { add($0, .participant) } }
+            let names = try String.fetchAll(db, sql: """
+                SELECT s.name FROM speakers s JOIN meetings m ON m.id = s.meeting_id WHERE m.deleted_at IS NULL
+                """)
+            let defaultName = #/^(說話者|Speaker) \d+$/#
+            for name in names where (try? defaultName.wholeMatch(in: name)) == nil { add(name, .speaker) }
+            let accepted = try String.fetchAll(db, sql: "SELECT suggestion FROM corrections WHERE status = 'accepted'")
+            for term in accepted where term.contains(where: { $0.isASCII && $0.isLetter }) { add(term, .correction) }
+            // 中文會議標題裡的英文詞通常是產品名、專案名；英文會議的標題就不拆了
+            let word = #/[A-Za-z][A-Za-z0-9.+\-]{2,}/#
+            for meeting in meetings where meeting.meetingLanguage == .zh {
+                for match in meeting.title.matches(of: word) { add(String(match.output), .title) }
+            }
+            let existing = Set(try String.fetchAll(db, sql: "SELECT term FROM glossary").map { $0.lowercased() })
+            let dismissed = Set(try String.fetchAll(db, sql: "SELECT term FROM glossary_dismissed").map { $0.lowercased() })
+            return found.filter { !existing.contains($0.key) && !dismissed.contains($0.key) }
+                .values.sorted { $0.count != $1.count ? $0.count > $1.count : $0.term < $1.term }
+                .prefix(limit).map { GlossarySuggestion(term: $0.term, source: $0.source) }
+        }
+    }
+
+    func dismissGlossarySuggestion(_ term: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "INSERT OR IGNORE INTO glossary_dismissed (term) VALUES (?)", arguments: [term])
+        }
     }
 
     // MARK: 儲存空間

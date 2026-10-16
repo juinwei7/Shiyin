@@ -21,9 +21,9 @@ SOURCES = ROOT / "Sources" / "Shiyin"
 SCRATCH = Path.home() / "Library" / "Caches" / "ShiyinBuild-l10n"
 CJK = re.compile("[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]")  # 中文字和全形標點
 
-# 不顯示在介面上的中文：DEBUG 控制通道、送給 LLM 的提示詞、各語言分開寫好的內容
+# 不顯示在介面上的中文：DEBUG 控制通道、送給 LLM 的提示詞（會議紀錄、逐字稿校正）、各語言分開寫好的內容
 # 範本：中文版是寫進資料庫的內容，英文版另外寫好，介面文字都用 language.text(zh:en:)
-SKIP_FILES = {"Debug/DebugControl.swift", "Notes/NotesPrompt.swift", "Notes/Templates.swift"}
+SKIP_FILES = {"Debug/DebugControl.swift", "Notes/NotesPrompt.swift", "Notes/Templates.swift", "Notes/TranscriptCorrection.swift"}
 
 
 def own_swift_files():

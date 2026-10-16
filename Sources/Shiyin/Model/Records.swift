@@ -71,6 +71,7 @@ struct Segment: SnakeCaseRecord, Identifiable, Hashable {
     var lowConfidence: Bool
     var speaker: Int?
     var kind: String = "final"           // live（即時預覽）/ final
+    var channel: Int? = nil              // 分聲道轉錄時：0 麥克風、1 電腦聲音（design §17.3）
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
@@ -92,6 +93,42 @@ struct Bookmark: SnakeCaseRecord, Identifiable, Hashable {
     var label: String = ""
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
+}
+
+/// 逐字稿校正建議（design §17.4、R14.4）：pending 待確認、accepted 已接受（段落文字已改）、rejected 已拒絕
+struct Correction: SnakeCaseRecord, Identifiable, Hashable {
+    static let databaseTableName = "corrections"
+    var id: Int64?
+    var meetingId: Int64
+    var segmentId: Int64
+    var original: String
+    var suggestion: String
+    var reason: String
+    var status: String = "pending"
+    var createdAt: String = Clock.now()
+
+    var suggestionValue: CorrectionSuggestion {
+        CorrectionSuggestion(segment: 0, original: original, suggestion: suggestion, reason: reason)
+    }
+
+    mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
+}
+
+/// 詞彙表建議（design §17.5）：使用者確認才加進詞彙表
+struct GlossarySuggestion: Hashable, Identifiable {
+    enum Source { case participant, speaker, correction, title }
+    var term: String
+    var source: Source
+    var id: String { term.lowercased() }
+
+    var sourceLabel: String {
+        switch source {
+        case .participant: String(localized: "參加者")
+        case .speaker: String(localized: "說話者名字")
+        case .correction: String(localized: "校正過的字")
+        case .title: String(localized: "會議標題")
+        }
+    }
 }
 
 /// 會議紀錄範本（R6.2、design §8.2）
@@ -117,6 +154,7 @@ struct NotesVersion: SnakeCaseRecord, Identifiable {
 
 enum JobKind: String, Codable {
     case transcribe, summarize, revise, compress
+    case correct   // 逐字稿校正（design §17.4）
 
     var lane: JobLane { self == .transcribe || self == .compress ? .transcribe : .llm }
 }

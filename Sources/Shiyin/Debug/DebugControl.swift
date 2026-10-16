@@ -49,6 +49,20 @@ enum DebugControl {
         case "speaker": model.selection = id; model.renameSpeaker(Int(args[2]) ?? 1, to: args[3])
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
+        case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
+        case "correct-eval": correctEval(input: args[1], options: args[2], output: args[3])          // design §17.4
+        case "checktranscript": model.selection = id; model.checkTranscript()
+        case "correction":   // correction accept|reject|revert <校正 id>
+            if let cid = Int64(args[2]) {
+                switch args[1] {
+                case "accept": model.acceptCorrection(cid)
+                case "reject": model.rejectCorrection(cid)
+                default: model.revertCorrection(cid)
+                }
+            }
+        case "corrections":  // corrections <會議 id> accept|reject：全部接受或全部忽略
+            model.selection = id
+            if args[2] == "accept" { model.acceptAllCorrections() } else { model.rejectAllCorrections() }
         case "editnotes":
             // editnotes <id> <會議紀錄 JSON>
             model.selection = id
@@ -56,6 +70,7 @@ enum DebugControl {
         case "usernotes": model.selection = id; model.updateUserNotes(args[2])
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerm(args[1])
+        case "dismissterm": model.dismissGlossarySuggestion(args[1])
         case "record":
             switch args[1] {
             case "start": model.startRecording()
@@ -132,6 +147,8 @@ enum DebugControl {
         var out: [String: Any] = [
             "selection": model.selection ?? -1,
             "tab": model.tab.rawValue,
+            "glossary": model.glossary.map(\.term),
+            "glossarySuggestions": model.glossarySuggestions.map { ["term": $0.term, "source": $0.sourceLabel] },
             "environment": model.environment.items.map { ["name": $0.name, "ok": $0.ok] },
             "meetings": model.meetings.map { ["id": $0.id, "title": $0.meeting.displayTitle, "date": $0.meeting.meetingDate,
                                                "status": model.status($0).label, "audio": $0.meeting.audioFile,
@@ -177,6 +194,76 @@ enum DebugControl {
         try? data.write(to: URL(fileURLWithPath: path))
     }
 
+    /// correct-eval <transcribe-eval 的輸出.json> <設定.json> <輸出.json>：用目前的整理工具跑逐字稿校正，
+    /// 輸出「全部接受」之後的逐字稿和所有建議（design §17.4），格式跟 transcribe-eval 一樣，可以直接評分。
+    /// 設定：{"language": "zh", "glossary": [...], "title": "…", "participants": [...]}
+    private static func correctEval(input: String, options: String, output: String) {
+        Task { @MainActor in
+            let started = Date()
+            var result: [String: Any] = ["input": input]
+            do {
+                guard let source = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: input))) as? [String: Any],
+                      var segments = source["segments"] as? [[String: Any]],
+                      let settings = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: options))) as? [String: Any]
+                else { throw LLMError.badOutput("bad input") }
+                let language = MeetingLanguage(rawValue: settings["language"] as? String ?? "zh") ?? .zh
+                let speakerName = { (s: [String: Any]) -> String? in
+                    (s["speaker"] as? Int).map { language.text(zh: "說話者 \($0)", en: "Speaker \($0)") }
+                }
+                let context = TranscriptCorrection.Context(
+                    language: language,
+                    title: settings["title"] as? String ?? "", participants: settings["participants"] as? [String] ?? [],
+                    speakerNames: [], glossary: settings["glossary"] as? [String] ?? [],
+                    segments: segments.map { ($0["text"] as? String ?? "", speakerName($0)) })
+                let suggestions = try await TranscriptCorrection.suggest(context, provider: AppSettings.provider, model: AppSettings.model,
+                                                                         onStart: { _ in }, onProgress: { _ in })
+                for s in suggestions {
+                    if let text = segments[s.segment]["text"] as? String, let fixed = TranscriptCorrection.apply(s, to: text) {
+                        segments[s.segment]["text"] = fixed
+                    }
+                }
+                result["segments"] = segments
+                result["duration"] = source["duration"]
+                result["options"] = source["options"]
+                result["suggestions"] = suggestions.map { ["segment": $0.segment, "original": $0.original,
+                                                           "suggestion": $0.suggestion, "reason": $0.reason] }
+            } catch {
+                result["error"] = error.localizedDescription
+            }
+            result["elapsed"] = Date().timeIntervalSince(started)
+            write(result, to: output + ".tmp")
+            try? FileManager.default.removeItem(atPath: output)
+            try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
+        }
+    }
+
+    /// transcribe-eval <錄音> <設定.json> <輸出.json>：用跟 app 一樣的轉錄流程跑一次，不建立會議、不寫資料庫（design §17.1）。
+    /// 輸出寫完才出現（先寫暫存檔再改名），評估腳本等這個檔案出現就能讀
+    private static func transcribeEval(audio: String, options: String, output: String) {
+        Task { @MainActor in
+            let started = Date()
+            var result: [String: Any] = ["audio": audio]
+            do {
+                let options = try JSONDecoder().decode(TranscriptionOptions.self, from: Data(contentsOf: URL(fileURLWithPath: options)))
+                result["options"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(options))
+                if let run = try await TranscriptionPipeline(options: options).run(URL(fileURLWithPath: audio)) {
+                    result["duration"] = run.duration
+                    result["segments"] = run.segments.enumerated().map { i, segment -> [String: Any] in
+                        ["start": segment.start, "end": segment.end, "text": segment.text,
+                         "speaker": run.speakers[i] ?? NSNull(), "channel": run.channels[i] ?? NSNull(),
+                         "lowConfidence": segment.lowConfidence]
+                    }
+                }
+            } catch {
+                result["error"] = error.localizedDescription
+            }
+            result["elapsed"] = Date().timeIntervalSince(started)
+            write(result, to: output + ".tmp")
+            try? FileManager.default.removeItem(atPath: output)
+            try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
+        }
+    }
+
     /// 螢幕鎖定時沒辦法截視窗，改用 ImageRenderer 把畫面畫成圖片（AppKit 元件會變成黃色佔位框）
     private static func snapshot(to path: String, scheme: String, target: String) {
         let model = AppModel.shared
@@ -194,6 +281,8 @@ enum DebugControl {
             content = AnyView(OnboardingView())
         case "export":
             content = AnyView(ExportSheet())
+        case "glossary":
+            content = AnyView(GlossarySettings().frame(width: 560, height: 420))
         case "recording":
             guard let detail = model.detail else { return }
             content = AnyView(RecordingPanel(detail: detail).frame(width: 900, height: 520))

@@ -31,6 +31,8 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - **Import**: audio and video (m4a, mp3, wav, aac, flac, caf, aiff, mp4, mov), transcripts (srt, vtt, txt), Markdown notes and whole-meeting packages (.shiyin). Drag into the window, press ⌘O, drop on the Dock icon, or use Open With in Finder
 - **Local transcription**: whisper.cpp + Breeze ASR 25, with your glossary as the prompt. Or use the transcriber built into macOS (no model download and much faster, but it ignores the glossary)
 - **Meeting language**: each meeting is English or Chinese, and the transcription, the notes and the export headings follow it. Set the default in Settings
+- **Transcript correction**: after transcription, the summarizer uses your glossary and the context to find words that were probably misheard (homophones, names) and marks them in the transcript. Nothing changes until you click Accept, and you can revert
+- **Glossary suggestions**: terms to add to the glossary, taken from participants, speaker names, corrected words and meeting titles
 - **Speaker identification**: every transcript segment is labeled with a speaker, each in its own color; rename speakers or show one speaker only
 - **Meeting notes**
   - Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own
@@ -149,9 +151,9 @@ The app checks that a new version is signed the same way as the running app. Aft
 
 | Tab | Contents |
 |---|---|
-| Summarizer | Claude, Codex, Anthropic API, OpenAI API or Don’t summarize; API keys; model; whether to summarize after transcription |
+| Summarizer | Claude, Codex, Anthropic API, OpenAI API or Don’t summarize; sign-in status and Test Summarizer; API keys; model; whether to summarize and check for misheard words after transcription |
 | Templates | Built-in and custom templates, default template |
-| Glossary | Correct spellings of names, systems and terms; used for transcription and summarizing |
+| Glossary | Correct spellings of names, systems and terms; used for transcription and summarizing; suggested terms |
 | Recording | Recording source, microphone, default meeting language, live transcript, speaker identification, transcription engine (Breeze or macOS), global shortcut, permissions |
 | Models & Storage | Download, pause or delete models; compress recordings; disk usage; delete files left by version 2 |
 | Advanced | Update URL and Check for Updates, environment check, show the welcome guide again, rebuild the search index |

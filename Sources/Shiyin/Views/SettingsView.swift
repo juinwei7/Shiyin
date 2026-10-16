@@ -22,6 +22,7 @@ struct ProviderSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.providerKey) private var provider = LLMProvider.claude.rawValue
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
+    @AppStorage(AppSettings.correctTranscriptKey) private var correctTranscript = true
     @State private var modelName = ""
     @State private var key = ""
     @State private var keySaved = false
@@ -109,6 +110,11 @@ struct ProviderSettings: View {
             }
             Toggle("轉錄完成後自動整理成會議紀錄", isOn: $autoSummarize)
                 .disabled(current == .none)
+            // 逐字稿校正（design §17.4）
+            Toggle("轉錄完成後檢查可能聽錯的字", isOn: $correctTranscript)
+                .disabled(current == .none)
+            Text("依詞彙表和上下文找出可能聽錯的字，標在逐字稿裡，你決定要不要改。不會自動改掉原文。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Section {
                 Text(privacyText)
                     .font(.callout)
@@ -292,6 +298,23 @@ struct GlossarySettings: View {
             HStack {
                 TextField("新增詞彙，例如產品名或人名", text: $newTerm).textFieldStyle(.roundedBorder).onSubmit(add)
                 Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            // 詞彙表建議（design §17.5）
+            if !model.glossarySuggestions.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("建議加入：從參加者、說話者名字、校正過的字、會議標題找到的").font(.caption).foregroundStyle(.secondary)
+                    ForEach(model.glossarySuggestions) { suggestion in
+                        HStack(spacing: 8) {
+                            Text(suggestion.term)
+                            Text(suggestion.sourceLabel).font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("忽略") { model.dismissGlossarySuggestion(suggestion.term) }.buttonStyle(.link)
+                            Button("加入") { model.addTerm(suggestion.term) }.buttonStyle(.link)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
             }
             List {
                 ForEach(model.glossary) { term in

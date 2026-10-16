@@ -11,6 +11,8 @@ enum AppSettings {
     static let autoSummarizeKey = "autoSummarize"
     static let compressAudioKey = "compressAudio"
     static let diarizeKey = "diarize"
+    static let splitChannelsKey = "splitChannels"
+    static let correctTranscriptKey = "correctTranscript"
     static let liveTranscriptionKey = "liveTranscription"
     static let recordSourceKey = "recordSource"          // mic / system / both
     static let inputDeviceKey = "inputDeviceUID"
@@ -26,6 +28,10 @@ enum AppSettings {
     static var autoSummarize: Bool { d.object(forKey: autoSummarizeKey) as? Bool ?? true }
     static var compressAudio: Bool { d.object(forKey: compressAudioKey) as? Bool ?? true }
     static var diarize: Bool { d.object(forKey: diarizeKey) as? Bool ?? true }
+    /// 線上會議的麥克風、電腦聲音分開轉錄（design §17.3）；還在評估，設定裡沒有開關，測試時用 defaults 打開
+    static var splitChannels: Bool { d.object(forKey: splitChannelsKey) as? Bool ?? false }
+    /// 轉錄完先找出可能聽錯的字（design §17.4）；評估後預設開啟（§17.6）
+    static var correctTranscript: Bool { d.object(forKey: correctTranscriptKey) as? Bool ?? true }
     static var liveTranscription: Bool { d.object(forKey: liveTranscriptionKey) as? Bool ?? true }
     static var recordSource: String { d.string(forKey: recordSourceKey) ?? "mic" }
     static var inputDeviceUID: String { d.string(forKey: inputDeviceKey) ?? "" }
@@ -142,6 +148,7 @@ final class JobRunner {
                 let payload = try JSONDecoder().decode(RevisePayload.self, from: Data((job.payload ?? "{}").utf8))
                 try await summarize(job, lane: lane, answers: payload.answers)
             case .compress: try await compress(job)
+            case .correct: await correct(job, lane: lane)
             }
         } catch {
             failure = error
@@ -162,7 +169,8 @@ final class JobRunner {
             } catch {
                 log.error("finish failed: \(error.localizedDescription)")
             }
-            if job.kind != .compress { onFinished?(job, failure) }
+            // 壓縮、逐字稿校正是背景的輔助工作，不發通知
+            if job.kind != .compress && job.kind != .correct { onFinished?(job, failure) }
         }
         onChange?()
     }
@@ -173,68 +181,68 @@ final class JobRunner {
 
     private func transcribe(_ job: Job, lane: JobLane) async throws {
         guard let meeting = try db.meeting(job.meetingId) else { return }
-        let useSystem = AppSettings.useSystemTranscriber
-        let language = meeting.meetingLanguage
-        guard useSystem || FileManager.default.fileExists(atPath: ModelStore.breezePath.path) else { throw WhisperError.modelMissing }
-        running[lane]?.stage = String(localized: "讀取錄音")
-        let samples = try await AudioDecoder.decode(meeting.audioURL)
-        guard isStillRunning(job) else { return }
-        let duration = Double(samples.count) / AudioDecoder.sampleRate
-        let diarize = AppSettings.diarize && duration > 5
-        let whisperShare = diarize ? 0.85 : 1.0
-
-        running[lane]?.stage = useSystem ? String(localized: "轉錄（macOS 內建）") : String(localized: "轉錄")
-        running[lane]?.progress = 0
-        let transcribed: [TranscribedSegment]
-        if useSystem {
-            let task = Task { [weak self] in
-                try await SystemTranscriber.transcribe(samples: samples, language: language) { value in
-                    Task { @MainActor in self?.running[lane]?.progress = value * whisperShare }
-                }
-            }
-            running[lane]?.cancelAction = { task.cancel() }
-            transcribed = try await task.value
-        } else {
-            let control = WhisperEngine.Control { [weak self] value in
-                Task { @MainActor in self?.running[lane]?.progress = value * whisperShare }
-            }
-            running[lane]?.cancelAction = { control.cancel() }
-            let prompt = WhisperEngine.prompt(glossary: try db.glossary().map(\.term), language: language)
-            let modelPath = ModelStore.breezePath.path
-            transcribed = try await Task.detached(priority: .userInitiated) {
-                try WhisperEngine.transcribe(samples: samples, modelPath: modelPath, prompt: prompt,
-                                             language: language.whisperCode, control: control)
-            }.value
-        }
-        guard isStillRunning(job) else { return }
-
-        var speakers: [Int?] = transcribed.map { _ in nil }
-        if diarize {
-            running[lane]?.stage = String(localized: "辨識說話者")
-            do {
-                let turns = try await Diarizer.diarize(samples: samples) { [weak self] value in
-                    Task { @MainActor in self?.running[lane]?.progress = whisperShare + value * (1 - whisperShare) }
-                }
-                speakers = Diarizer.assign(turns, to: transcribed)
-            } catch {
-                // 說話者辨識失敗不影響逐字稿
-                log.error("diarization failed: \(error.localizedDescription, privacy: .public)")
-            }
-        }
-        guard isStillRunning(job) else { return }
+        var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
+                                                                glossary: try db.glossary().map(\.term),
+                                                                channels: meeting.channels))
+        pipeline.stage = { [weak self] in self?.running[lane]?.stage = $0 }
+        pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
+        pipeline.setCancel = { [weak self] in self?.running[lane]?.cancelAction = $0 }
+        pipeline.shouldContinue = { [weak self] in self?.isStillRunning(job) ?? false }
+        guard let result = try await pipeline.run(meeting.audioURL) else { return }
+        let (transcribed, speakers, duration) = (result.segments, result.speakers, result.duration)
         let segments = transcribed.enumerated().map { i, s in
             Segment(meetingId: job.meetingId, seq: i, start: s.start, end: s.end, text: s.text,
-                    lowConfidence: s.lowConfidence, speaker: speakers[i], kind: "final")
+                    lowConfidence: s.lowConfidence, speaker: speakers[i], kind: "final", channel: result.channels[i])
         }
         try db.saveTranscript(job.meetingId, segments: segments, duration: Int(duration.rounded()),
                               speakerCount: speakers.compactMap { $0 }.max() ?? 0)
         if AppSettings.compressAudio && meeting.audioURL.pathExtension.lowercased() == "wav" {
             try db.enqueue(job.meetingId, kind: .compress)
         }
+        // 校正排在整理前面（同一條線，先排先做）
+        if AppSettings.correctTranscript && AppSettings.provider != .none {
+            try db.enqueue(job.meetingId, kind: .correct)
+        }
         if AppSettings.autoSummarize && AppSettings.provider != .none {
             try db.enqueue(job.meetingId, kind: .summarize)
         }
         wake()
+    }
+
+    // MARK: 逐字稿校正（design §17.4）
+
+    /// 找出可能聽錯的字，存成待確認的建議。這是輔助功能：失敗只記 log，不影響整理會議紀錄
+    private func correct(_ job: Job, lane: JobLane) async {
+        do {
+            guard let meeting = try db.meeting(job.meetingId) else { return }
+            let provider = AppSettings.provider
+            guard provider != .none else { return }
+            let segments = try db.segments(job.meetingId)
+            guard !segments.isEmpty else { return }
+            running[lane]?.provider = provider
+            running[lane]?.stage = String(localized: "檢查可能聽錯的字")
+            let language = meeting.meetingLanguage
+            let names = Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) })
+            let speakerName = { (idx: Int?) -> String? in
+                idx.map { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)") }
+            }
+            let context = TranscriptCorrection.Context(
+                language: language, title: meeting.title, participants: meeting.participantList,
+                speakerNames: Array(Set(names.values)).sorted(), glossary: try db.glossary().map(\.term),
+                segments: segments.map { ($0.text, speakerName($0.speaker)) })
+            let suggestions = try await TranscriptCorrection.suggest(
+                context, provider: provider, model: AppSettings.model,
+                onStart: { [weak self] process in self?.running[lane]?.cancelAction = { process.terminate() } },
+                onProgress: { [weak self] value in self?.running[lane]?.progress = value })
+            guard isStillRunning(job) else { return }
+            try db.saveCorrections(job.meetingId, suggestions.compactMap { s in
+                segments[s.segment].id.map {
+                    Correction(meetingId: job.meetingId, segmentId: $0, original: s.original, suggestion: s.suggestion, reason: s.reason)
+                }
+            })
+        } catch {
+            log.error("transcript correction failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: 壓縮（design §6.4）
