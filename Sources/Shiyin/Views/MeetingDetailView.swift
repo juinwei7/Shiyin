@@ -292,7 +292,13 @@ struct StatusBanner: View {
     private func actions(_ status: MeetingStatus) -> some View {
         switch status {
         case .queued, .transcribing, .summarizing: Button("取消") { model.cancelJobs() }
-        case .failed: Button("重試") { model.retry() }
+        case .failed(let kind, let message):
+            // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
+            if kind != .transcribe, LLMError.isLoginProblem(message),
+               AppSettings.provider == .claude || AppSettings.provider == .codex {
+                Button("重新登入 \(AppSettings.provider.shortLabel)") { CLILogin.openLogin(AppSettings.provider) }
+            }
+            Button("重試") { model.retry() }
         case .cancelled: Button("重新轉錄") { model.retry() }
         default: EmptyView()
         }

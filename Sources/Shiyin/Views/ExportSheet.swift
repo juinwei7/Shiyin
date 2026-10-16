@@ -34,7 +34,7 @@ struct ExportSheet: View {
             .formStyle(.columns)
             Text(hint)
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(item == .notes && !hasNotes ? Color.signal : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 ShareButton { await exportToTemp() }
@@ -50,11 +50,19 @@ struct ExportSheet: View {
         .padding(20)
         .frame(width: 460)
         .onChange(of: item) { _, newValue in format = newValue.formats[0] }
+        // 還沒有會議紀錄（整理中或整理失敗）時，預設改匯出逐字稿（使用者回報：匯出的會議紀錄只有標題）
+        .onAppear { if !hasNotes { item = .transcript } }
     }
+
+    private var hasNotes: Bool { model.detail?.notes != nil }
 
     private var hint: String {
         switch item {
-        case .notes: return String(localized: "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。")
+        case .notes:
+            if !hasNotes {
+                return String(localized: "這場會議還沒有會議紀錄（還在整理或整理失敗），匯出的會議紀錄只會有標題和基本資料。要留下內容，請改匯出逐字稿。")
+            }
+            return String(localized: "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。")
         case .transcript: return String(localized: "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。")
         case .audio: return String(localized: "m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。")
         case .package: return String(localized: "包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。")

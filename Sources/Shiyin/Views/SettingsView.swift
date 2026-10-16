@@ -26,6 +26,10 @@ struct ProviderSettings: View {
     @State private var key = ""
     @State private var keySaved = false
     @State private var availableModels: [String] = []
+    @State private var testing = false
+    @State private var testResult: (ok: Bool, message: String)?
+    @State private var login: CLILogin.Status?
+    @State private var checkingLogin = false
 
     private var current: LLMProvider { LLMProvider(rawValue: provider) ?? .claude }
 
@@ -36,8 +40,25 @@ struct ProviderSettings: View {
             }
             if current == .claude || current == .codex {
                 LabeledContent("狀態") {
-                    Text(Paths.findTool(current == .claude ? "claude" : "codex").map { "找到 \($0.path)" } ?? "找不到，請先安裝並登入")
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        if Paths.findTool(current == .claude ? "claude" : "codex") == nil {
+                            Text("找不到，請先安裝並登入").foregroundStyle(.secondary)
+                        } else if checkingLogin {
+                            Text("檢查登入狀態…").foregroundStyle(.secondary)
+                        } else if let login {
+                            Text(login.loggedIn ? String(localized: "已登入 \(login.detail)") : String(localized: "沒有登入"))
+                                .foregroundStyle(login.loggedIn ? Color.celadon : Color.red)
+                            if !login.loggedIn {
+                                Button("登入 \(current.shortLabel)") { CLILogin.openLogin(current) }
+                            }
+                        } else {
+                            Text("已安裝，看不出登入狀態").foregroundStyle(.secondary)
+                        }
+                        Button { Task { await checkLogin() } } label: { Image(systemName: "arrow.clockwise") }
+                            .buttonStyle(.borderless)
+                            .help("重新檢查登入狀態")
+                            .disabled(checkingLogin)
+                    }
                 }
             }
             if current.usesAPIKey {
@@ -72,6 +93,20 @@ struct ProviderSettings: View {
                 }
                 .onChange(of: modelName) { _, value in UserDefaults.standard.set(value, forKey: current.modelKey) }
             }
+            // 測試：送一個很短的請求，確認登入、key、模型都能用（使用者回報：開完會才發現登入過期）
+            if current != .none {
+                LabeledContent("測試") {
+                    HStack(spacing: 8) {
+                        if let testResult {
+                            Text(testResult.message)
+                                .foregroundStyle(testResult.ok ? Color.celadon : Color.red)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Button(testing ? "測試中…" : "測試整理工具") { Task { await test() } }
+                            .disabled(testing)
+                    }
+                }
+            }
             Toggle("轉錄完成後自動整理成會議紀錄", isOn: $autoSummarize)
                 .disabled(current == .none)
             Section {
@@ -86,7 +121,34 @@ struct ProviderSettings: View {
         .onChange(of: provider) { _, _ in load() }
     }
 
+    private func test() async {
+        testing = true
+        testResult = nil
+        let started = Date()
+        let language = AppSettings.defaultMeetingLanguage
+        let prompt = language.text(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
+                                   en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.")
+        do {
+            _ = try await LLMClient.generate(provider: current, model: modelName, system: NotesPrompt.system(language),
+                                             prompt: prompt, onStart: { _ in })
+            testResult = (true, String(localized: "可以使用（\(Int(Date().timeIntervalSince(started).rounded())) 秒）"))
+        } catch {
+            testResult = (false, error.localizedDescription)
+        }
+        testing = false
+    }
+
+    private func checkLogin() async {
+        guard current == .claude || current == .codex else { login = nil; return }
+        checkingLogin = true
+        login = await CLILogin.status(current)
+        checkingLogin = false
+    }
+
     private func load() {
+        testResult = nil
+        login = nil
+        Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
         keySaved = current.usesAPIKey && Keychain.get(current.keychainAccount) != nil
         availableModels = []

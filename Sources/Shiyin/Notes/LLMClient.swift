@@ -41,6 +41,8 @@ enum LLMProvider: String, CaseIterable, Identifiable {
 
 enum LLMError: LocalizedError {
     case notInstalled(String)
+    /// claude / codex 沒登入或登入過期（使用者回報：只看到英文的 OAuth 錯誤，不知道要做什麼）
+    case notLoggedIn(String)
     case missingKey(String)
     case failed(String)
     case badOutput(String)
@@ -48,10 +50,22 @@ enum LLMError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notInstalled(let name): return String(localized: "找不到 \(name) 指令，請先安裝並登入，或到設定 → 整理工具改用 API key")
+        case .notLoggedIn(let name):
+            return name == "codex"
+                ? String(localized: "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
+                : String(localized: "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。")
         case .missingKey(let name): return String(localized: "還沒有填 \(name) 的 API key，請到設定 → 整理工具填寫")
         case .failed(let detail): return detail
         case .badOutput(let detail): return String(localized: "回傳的會議紀錄格式不正確：\(detail)")
         }
+    }
+
+    /// CLI 的錯誤訊息是不是登入問題，例如「Not logged in · Please run /login」「Failed to authenticate: OAuth session expired」
+    static func isLoginProblem(_ text: String) -> Bool {
+        let t = text.lowercased()
+        // 自己的說明文字裡有「claude auth login」「codex login」，存在工作紀錄的失敗訊息也要認得
+        return ["not logged in", "/login", "auth login", "codex login", "failed to authenticate", "oauth", "login required",
+                "invalid api key", "unauthorized", "401"].contains { t.contains($0) }
     }
 }
 
@@ -95,10 +109,13 @@ enum LLMClient {
         guard let line = text.split(separator: "\n").last(where: { $0.hasPrefix("{") }),
               let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else {
             let detail = result.stderrTail(500)
+            if LLMError.isLoginProblem(detail + text) { throw LLMError.notLoggedIn("claude") }
             throw LLMError.failed(detail.isEmpty ? String(localized: "claude 沒有回傳結果（結束代碼 \(result.status)）") : detail)
         }
         if (object["is_error"] as? Bool) == true || object["structured_output"] == nil {
-            throw LLMError.failed(String(((object["result"] as? String) ?? result.stderrTail(500)).prefix(500)))
+            let message = (object["result"] as? String) ?? result.stderrTail(500)
+            if LLMError.isLoginProblem(message) { throw LLMError.notLoggedIn("claude") }
+            throw LLMError.failed(String(message.prefix(500)))
         }
         return try decode(JSONSerialization.data(withJSONObject: object["structured_output"]!))
     }
@@ -119,6 +136,7 @@ enum LLMClient {
         let result = try await process.run(input: Data((system + "\n\n" + prompt).utf8), timeout: timeout)
         guard result.succeeded, let data = try? Data(contentsOf: output), !data.isEmpty else {
             let detail = result.stderrTail(500)
+            if LLMError.isLoginProblem(detail) { throw LLMError.notLoggedIn("codex") }
             throw LLMError.failed(detail.isEmpty ? String(localized: "codex 沒有回傳結果（結束代碼 \(result.status)）") : detail)
         }
         return try decode(data)

@@ -251,6 +251,17 @@
         }
       }
     },
+    "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code isn’t signed in, or its sign-in has expired. Sign in again and try once more (Terminal command: claude auth login)."
+          }
+        }
+      }
+    },
     "Claude（claude CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -269,6 +280,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude (claude CLI)%@"
+          }
+        }
+      }
+    },
+    "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex isn’t signed in, or its sign-in has expired. Sign in again and try once more (Terminal command: codex login)."
           }
         }
       }
@@ -1474,6 +1496,17 @@
         }
       }
     },
+    "可以使用（%lld 秒）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Works (%lld s)"
+          }
+        }
+      }
+    },
     "名稱": {
       "extractionState": "manual",
       "localizations": {
@@ -1706,6 +1739,17 @@
         }
       }
     },
+    "完成後可以關掉這個視窗。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can close this window when you’re done."
+          }
+        }
+      }
+    },
     "富文字（貼到 Word、Notion、郵件）": {
       "extractionState": "manual",
       "localizations": {
@@ -1838,6 +1882,17 @@
         }
       }
     },
+    "已安裝，看不出登入狀態": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed; sign-in status unknown"
+          }
+        }
+      }
+    },
     "已是最新版本": {
       "extractionState": "manual",
       "localizations": {
@@ -1911,6 +1966,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bookmarked %@"
+          }
+        }
+      }
+    },
+    "已登入 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in: %@"
           }
         }
       }
@@ -2312,17 +2378,6 @@
         }
       }
     },
-    "找到 %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Found %@"
-          }
-        }
-      }
-    },
     "找到上次沒有正常結束的錄音，已經復原並開始轉錄。": {
       "extractionState": "manual",
       "localizations": {
@@ -2517,6 +2572,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shiyin System Audio"
+          }
+        }
+      }
+    },
+    "拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin: opening your browser to sign in to %@. When you’re done, go back to Shiyin and click “Retry” or “Test Summarizer”."
           }
         }
       }
@@ -3688,6 +3754,17 @@
         }
       }
     },
+    "檢查登入狀態…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking sign-in…"
+          }
+        }
+      }
+    },
     "權限": {
       "extractionState": "manual",
       "localizations": {
@@ -3974,6 +4051,17 @@
         }
       }
     },
+    "沒有登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not signed in"
+          }
+        }
+      }
+    },
     "沒有逐字稿。": {
       "extractionState": "manual",
       "localizations": {
@@ -4003,6 +4091,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't start recording: %@"
+          }
+        }
+      }
+    },
+    "測試": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test"
+          }
+        }
+      }
+    },
+    "測試中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testing…"
+          }
+        }
+      }
+    },
+    "測試整理工具": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test Summarizer"
           }
         }
       }
@@ -4246,6 +4367,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skipped review questions"
+          }
+        }
+      }
+    },
+    "登入 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In to %@"
           }
         }
       }
@@ -5572,6 +5704,17 @@
         }
       }
     },
+    "這場會議還沒有會議紀錄（還在整理或整理失敗），匯出的會議紀錄只會有標題和基本資料。要留下內容，請改匯出逐字稿。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no notes yet (still summarizing, or summarizing failed), so exported notes will only have the title and details. Export the transcript to keep the content."
+          }
+        }
+      }
+    },
     "通知": {
       "extractionState": "manual",
       "localizations": {
@@ -5898,6 +6041,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Check Again"
+          }
+        }
+      }
+    },
+    "重新檢查登入狀態": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check sign-in again"
+          }
+        }
+      }
+    },
+    "重新登入 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In to %@ Again"
           }
         }
       }
@@ -6470,6 +6635,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Click any time or the timeline at the bottom to play from there; Space plays or pauses. Choose a speed from 0.75× to 2× at the right of the player."
+          }
+        }
+      }
+    },
+    "（%@ 方案）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (%@ plan)"
           }
         }
       }
