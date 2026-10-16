@@ -1,12 +1,15 @@
 <img src="docs/images/icon.png" width="96" alt="拾音圖示">
 
+**繁體中文** | [English](README.en.md)
+
 # 拾音 Shiyin
 
 macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能看到即時逐字稿；錄完在本機轉錄、分出說話者，再交給 Claude、Codex 或 API 整理成會議紀錄。紀錄裡每一條都附上錄音時間點，點一下就能聽到原話。
 
 - 錄音、轉錄、說話者辨識都在本機完成，錄音不會上傳
 - 不需要安裝 Python、Homebrew 或 ffmpeg，下載 DMG 就能用
-- 介面是繁體中文，需要 Apple Silicon 和 macOS 26
+- 介面有繁體中文和英文（跟著 macOS 的語言），會議可以是中文或英文
+- 需要 Apple Silicon 和 macOS 26
 
 ![會議紀錄](docs/images/summary.png)
 
@@ -27,6 +30,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - app 當掉或電腦突然關機，下次開啟會自動復原錄音
 - **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」
 - **本機轉錄**：whisper.cpp + Breeze ASR 25，詞彙表會當成提示詞；也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）
+- **會議語言**：每場會議可以選中文或英文，轉錄、會議紀錄、匯出的標題都跟著這個語言；預設語言在設定裡改
 - **說話者辨識**：逐字稿每段標上說話者，每個人一個顏色；可以改名、只看某一位說話者
 - **會議紀錄**
   - 範本：一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自訂
@@ -66,8 +70,8 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 
 ### 用 DMG 安裝
 
-1. 取得 `Shiyin-<版本>.dmg`（這個 repo 的 Releases，或向維護的人拿），打開後把「拾音」拖到「應用程式」。
-2. 拾音沒有經過 Apple 公證，第一次打開會被擋下：到「系統設定 → 隱私權與安全性」按「仍要打開」（只要做一次）。DMG 裡的「安裝說明.pdf」有完整步驟。
+1. 取得 `Shiyin-<版本>.dmg`（這個 repo 的 Releases，或向維護的人拿），打開後把「拾音」拖到旁邊的 Applications（應用程式）。
+2. 拾音沒有經過 Apple 公證，第一次打開會被擋下：到「系統設定 → 隱私權與安全性」按「仍要打開」（只要做一次）。DMG 裡的「安裝說明.pdf」有完整步驟（英文版是「Install Guide.pdf」）。
 3. 第一次打開會出現引導：允許麥克風、下載轉錄模型（約 1.7 GB）、選整理工具。每一步都可以略過，之後在設定裡補做。
 
 ### 從原始碼建置
@@ -91,8 +95,8 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 2. 打一個帶說明的 tag 並推上去，說明文字就是這版的更新內容：
 
    ```bash
-   git tag -a v3.0.1 -m "這版改了什麼"
-   git push origin v3.0.1
+   git tag -a v3.1.1 -m "這版改了什麼"
+   git push origin v3.1.1
    ```
 
 3. [`.github/workflows/release.yml`](.github/workflows/release.yml) 會在 `macos-26` runner 上建置 DMG，建立 GitHub Release 並上傳 DMG 和 `shiyin-update.json`。tag 跟版本號不一致時會直接失敗。
@@ -123,7 +127,7 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 用 GitHub Releases 發布的話，更新網址可以用 `https://github.com/juinwei7/Shiyin/releases/latest/download/shiyin-update.json`，每次發布時把兩個檔案都上傳：
 
 ```bash
-gh release create v3.0.1 dist/Shiyin-3.0.1.dmg dist/shiyin-update.json --notes "這版改了什麼"
+gh release create v3.1.1 dist/Shiyin-3.1.1.dmg dist/shiyin-update.json --notes "這版改了什麼"
 ```
 
 注意：私人 repo 的 Releases 檔案要登入才能下載，app 內更新會失敗；這種情況請把兩個檔案放在公開的 https 位置（公司內部網站、NAS 等）。
@@ -147,7 +151,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 | 整理工具 | Claude、Codex、Anthropic API、OpenAI API 或不整理；API key；模型；轉錄完是否自動整理 |
 | 範本 | 內建範本和自訂範本、預設範本 |
 | 詞彙表 | 人名、系統名、專有名詞的正確寫法，轉錄和整理都會參考 |
-| 錄音 | 錄音來源、麥克風、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze 或 macOS 內建）、全域快捷鍵、權限設定 |
+| 錄音 | 錄音來源、麥克風、預設會議語言、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze 或 macOS 內建）、全域快捷鍵、權限設定 |
 | 模型與儲存空間 | 下載、暫停、刪除模型；壓縮錄音；空間用量；刪除第二版留下的舊檔案 |
 | 進階 | 更新網址與檢查更新、環境檢查、重新顯示首次使用引導、重建搜尋索引 |
 
@@ -177,6 +181,7 @@ Sources/Shiyin/
 ├── Services/     工作佇列、模型下載、更新、鑰匙圈、全域快捷鍵、通知
 ├── Views/        SwiftUI 畫面
 └── Debug/        DEBUG 版的控制通道（shiyinctl）
+Resources/        Info.plist、翻譯表（Localizable.xcstrings）、圖示
 scripts/          建置、DMG、自簽憑證、圖示、開發工具
 docs/             規格與實驗紀錄
 ```
@@ -194,6 +199,9 @@ swiftc scripts/dev/shiyinctl.swift -o ~/Library/Caches/ShiyinBuild/shiyinctl
 ~/Library/Caches/ShiyinBuild/shiyinctl state /tmp/state.json
 ~/Library/Caches/ShiyinBuild/shiyinctl snapshot /tmp/summary.png dark detail
 
+scripts/dev/l10n.py check         # 改過介面文字後：抽出字串、列出缺英文翻譯和沒查表的中文
+~/Library/Caches/ShiyinBuild/app/Shiyin.app/Contents/MacOS/Shiyin -AppleLanguages "(en)"   # 用英文介面開啟
+
 /usr/bin/log stream --predicate 'subsystem == "com.weiwei.shiyin"'      # 看 log
 sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資料
 ```
@@ -205,7 +213,8 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 - 轉錄的準確度：在公開的真人中文會議（遠距收音、6 人）上，字錯誤率 Breeze 約 29%、macOS 內建約 25%，以漏掉搶話和語助詞為主；整理出來的會議紀錄仍然正確。筆電或耳機收音的會議應該會好很多，但還沒有用真實的台灣會議驗證過。
 - 說話者辨識：很短、而且大部分時間只有一個人在講的錄音，話少的人可能被併進別人。逐字稿的一段裡如果換人說話，整段只會標一個說話者。
 - Claude 整理通常要 30～70 秒，偶爾會到幾分鐘。
-- 還沒有：英文介面、行事曆整合、iPhone 版。
+- 英文會議的轉錄：在公開的英文會議片段（AMI，4 人）上，字錯誤率 Breeze 約 27%、macOS 內建約 26%。
+- 還沒有：中文和英文以外的語言、行事曆整合、iPhone 版。
 
 ## 使用的開源專案與模型
 

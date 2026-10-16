@@ -48,9 +48,15 @@ struct RecordingPanel: View {
                     .help("電腦播放的聲音（線上會議的對方）")
             }
             Spacer(minLength: 0)
-            // 視窗窄的時候（側邊欄打開、視窗寬 960）按鈕只留圖示，說明放在滑鼠提示
+            // 視窗窄的時候（側邊欄打開、視窗寬 960）按鈕只留圖示，說明放在滑鼠提示。
+            // 英文的字比較長，中間多一層：暫停、標記只留圖示，「停止並轉錄」保留文字
             ViewThatFits(in: .horizontal) {
                 actionButtons(recorder).labelStyle(.titleAndIcon)
+                HStack(spacing: 14) {
+                    HStack(spacing: 14) { pauseButton(recorder); bookmarkButton(recorder) }.labelStyle(.iconOnly)
+                    stopButton(recorder).labelStyle(.titleAndIcon)
+                }
+                .fixedSize()
                 actionButtons(recorder).labelStyle(.iconOnly)
             }
         }
@@ -69,26 +75,38 @@ struct RecordingPanel: View {
 
     private func actionButtons(_ recorder: Recorder) -> some View {
         HStack(spacing: 14) {
-            Button(recorder.isPaused ? "繼續" : "暫停", systemImage: recorder.isPaused ? "play.fill" : "pause.fill") {
-                recorder.isPaused ? recorder.resume() : recorder.pause()
-            }
-            .help(recorder.isPaused ? "繼續錄音（⇧⌘P）" : "暫停錄音（⇧⌘P）")
-            Button("標記重點", systemImage: "star") {
-                model.addBookmark(at: recorder.elapsed, meetingId: detail.meeting.id)
-                model.noticeMessage = "已標記 \(TimeFormat.string(recorder.elapsed)) 為重點"
-            }
-            .help("標記這個時間點（⌘B），整理時會被當成重點")
-            Button("停止並轉錄", systemImage: "stop.fill") { recorder.stop() }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-                .help("停止錄音，開始正式轉錄")
+            pauseButton(recorder)
+            bookmarkButton(recorder)
+            stopButton(recorder)
         }
         .fixedSize()
     }
 
+    private func pauseButton(_ recorder: Recorder) -> some View {
+        Button(recorder.isPaused ? "繼續" : "暫停", systemImage: recorder.isPaused ? "play.fill" : "pause.fill") {
+            recorder.isPaused ? recorder.resume() : recorder.pause()
+        }
+        .help(recorder.isPaused ? "繼續錄音（⇧⌘P）" : "暫停錄音（⇧⌘P）")
+    }
+
+    private func bookmarkButton(_ recorder: Recorder) -> some View {
+        Button("標記重點", systemImage: "star") {
+            model.addBookmark(at: recorder.elapsed, meetingId: detail.meeting.id)
+            model.noticeMessage = String(localized: "已標記 \(TimeFormat.string(recorder.elapsed)) 為重點")
+        }
+        .help("標記這個時間點（⌘B），整理時會被當成重點")
+    }
+
+    private func stopButton(_ recorder: Recorder) -> some View {
+        Button("停止並轉錄", systemImage: "stop.fill") { recorder.stop() }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+            .help("停止錄音，開始正式轉錄")
+    }
+
     private func warning(_ recorder: Recorder) -> String? {
         if recorder.hasSystem && recorder.systemSilent {
-            return "超過 15 秒沒有收到系統聲音：請確認線上會議有聲音，並在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音"
+            return String(localized: "超過 15 秒沒有收到系統聲音：請確認線上會議有聲音，並在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音")
         }
         return recorder.liveStatus.isEmpty ? nil : recorder.liveStatus
     }

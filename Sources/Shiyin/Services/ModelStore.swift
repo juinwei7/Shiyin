@@ -32,7 +32,7 @@ final class ModelStore: NSObject {
 
     /// 社群轉檔的 Breeze ASR 25 GGML q8_0，固定 commit（design §7）
     nonisolated static let breeze = ModelInfo(
-        name: "Breeze ASR 25（q8_0）",
+        name: String(localized: "Breeze ASR 25（q8_0）"),
         filename: "breeze-asr-25-q8_0.bin",
         url: URL(string: "https://huggingface.co/shdennlin/breeze-asr-25-ggml/resolve/36c726093efe1760d1dd39c3cfe8b6a7282437d1/ggml-breeze-asr-25-q8_0.bin")!,
         size: 1_656_129_691,
@@ -133,14 +133,14 @@ final class ModelStore: NSObject {
                         log.info("model installed")
                         AppModel.shared.runner.wake()
                     } catch {
-                        self.state = .failed("無法存放模型：\(error.localizedDescription)")
+                        self.state = .failed(String(localized: "無法存放模型：\(error.localizedDescription)"))
                     }
                 case .success(false):
                     try? FileManager.default.removeItem(at: downloadedFile)
                     try? FileManager.default.removeItem(at: Self.resumeDataPath)
-                    self.state = .failed("下載的模型檔驗證失敗（SHA-256 不符），請重新下載")
+                    self.state = .failed(String(localized: "下載的模型檔驗證失敗（SHA-256 不符），請重新下載"))
                 case .failure(let error):
-                    self.state = .failed("驗證模型失敗：\(error.localizedDescription)")
+                    self.state = .failed(String(localized: "驗證模型失敗：\(error.localizedDescription)"))
                 }
             }
         }
@@ -180,7 +180,7 @@ extension ModelStore: URLSessionDownloadDelegate {
             try FileManager.default.moveItem(at: location, to: kept)
             MainActor.assumeIsolated { finish(downloadedFile: kept) }
         } catch {
-            MainActor.assumeIsolated { state = .failed("無法存放下載的檔案：\(error.localizedDescription)") }
+            MainActor.assumeIsolated { state = .failed(String(localized: "無法存放下載的檔案：\(error.localizedDescription)")) }
         }
     }
 
@@ -191,7 +191,7 @@ extension ModelStore: URLSessionDownloadDelegate {
             if error.code == NSURLErrorCancelled { return }  // 暫停或刪除
             if let resume { try? resume.write(to: Self.resumeDataPath) }
             self.task = nil
-            state = .failed("下載中斷：\(error.localizedDescription)。按「繼續下載」會從中斷的地方接著下載")
+            state = .failed(String(localized: "下載中斷：\(error.localizedDescription)。按「繼續下載」會從中斷的地方接著下載"))
         }
     }
 }

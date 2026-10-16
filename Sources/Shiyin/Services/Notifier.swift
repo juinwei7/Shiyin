@@ -18,15 +18,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         let title = meeting.displayTitle
         if let error {
-            content.title = job.kind == .transcribe ? "轉錄失敗" : "整理失敗"
-            content.body = "\(title)：\(String(error.localizedDescription.prefix(60)))"
+            content.title = job.kind == .transcribe ? String(localized: "轉錄失敗") : String(localized: "整理失敗")
+            content.body = String(localized: "\(title)：\(String(error.localizedDescription.prefix(60)))")
         } else if job.kind == .transcribe {
-            content.title = "轉錄完成"
+            content.title = String(localized: "轉錄完成")
             content.body = title
         } else {
             let count = meeting.decodedNotes?.reviewItems.count ?? 0
-            content.title = "會議紀錄整理好了"
-            content.body = count > 0 ? "\(title)，有 \(count) 題待確認" : title
+            content.title = String(localized: "會議紀錄整理好了")
+            content.body = count > 0 ? String(localized: "\(title)，有 \(count) 題待確認") : title
         }
         content.sound = .default
         content.userInfo = ["meetingId": NSNumber(value: meeting.id ?? 0)]

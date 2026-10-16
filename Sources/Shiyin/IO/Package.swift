@@ -23,6 +23,8 @@ enum MeetingPackage {
         var channels: String
         /// 資料夾名稱（R9.2）；舊封包沒有這個欄位
         var folder: String?
+        /// 會議語言（design §16.3）；舊封包沒有這個欄位，當成中文
+        var language: String?
         var notes: MeetingNotes?
         var notesBy: String?
         var speakers: [SpeakerJSON]
@@ -37,8 +39,8 @@ enum MeetingPackage {
         case invalid(String), tooNew(Int)
         var errorDescription: String? {
             switch self {
-            case .invalid(let reason): return "這不是有效的拾音封包：\(reason)"
-            case .tooNew(let v): return "這個封包是新版拾音匯出的（格式 \(v)），請先更新拾音再匯入"
+            case .invalid(let reason): return String(localized: "這不是有效的拾音封包：\(reason)")
+            case .tooNew(let v): return String(localized: "這個封包是新版拾音匯出的（格式 \(v)），請先更新拾音再匯入")
             }
         }
     }
@@ -60,7 +62,7 @@ enum MeetingPackage {
         try encoder.encode(MeetingJSON(
             title: m.title, titleLocked: m.titleLocked, meetingDate: m.meetingDate, participants: m.participants,
             sourceFilename: m.sourceFilename, durationSeconds: m.durationSeconds, templateId: m.templateId,
-            userNotes: m.userNotes, channels: m.channels, folder: m.folder, notes: b.notes, notesBy: m.notesBy,
+            userNotes: m.userNotes, channels: m.channels, folder: m.folder, language: m.language, notes: b.notes, notesBy: m.notesBy,
             speakers: b.speakers.map { SpeakerJSON(idx: $0.key, name: $0.value) }.sorted { $0.idx < $1.idx },
             bookmarks: b.bookmarks.map { BookmarkJSON(time: $0.time, label: $0.label) }))
             .write(to: dir.appendingPathComponent("meeting.json"))
@@ -80,10 +82,10 @@ enum MeetingPackage {
         try ditto(["-x", "-k", url.path, dir.path])
         let decoder = JSONDecoder()
         guard let manifestData = try? Data(contentsOf: dir.appendingPathComponent("manifest.json")),
-              let manifest = try? decoder.decode(Manifest.self, from: manifestData) else { throw PackageError.invalid("缺少 manifest.json") }
+              let manifest = try? decoder.decode(Manifest.self, from: manifestData) else { throw PackageError.invalid(String(localized: "缺少 manifest.json")) }
         guard manifest.format <= formatVersion else { throw PackageError.tooNew(manifest.format) }
         guard let meetingData = try? Data(contentsOf: dir.appendingPathComponent("meeting.json")),
-              let info = try? decoder.decode(MeetingJSON.self, from: meetingData) else { throw PackageError.invalid("缺少 meeting.json") }
+              let info = try? decoder.decode(MeetingJSON.self, from: meetingData) else { throw PackageError.invalid(String(localized: "缺少 meeting.json")) }
         let segments = (try? decoder.decode([SegmentJSON].self, from: Data(contentsOf: dir.appendingPathComponent("transcript.json")))) ?? []
 
         let audioExt = manifest.audio.map { ($0 as NSString).pathExtension }
@@ -91,7 +93,7 @@ enum MeetingPackage {
             title: info.title, titleLocked: info.titleLocked, meetingDate: info.meetingDate, participants: info.participants,
             sourceFilename: info.sourceFilename, durationSeconds: info.durationSeconds, notesBy: info.notesBy,
             templateId: info.templateId, userNotes: info.userNotes, source: "package", channels: info.channels,
-            folder: info.folder.flatMap { $0.isEmpty ? nil : $0 } ?? folder),
+            folder: info.folder.flatMap { $0.isEmpty ? nil : $0 } ?? folder, language: info.language ?? "zh"),
             audioExtension: audioExt)
         do {
             if let audio = manifest.audio {
@@ -104,7 +106,7 @@ enum MeetingPackage {
             }, duration: info.durationSeconds ?? 0, speakerCount: 0)
             for speaker in info.speakers { try db.renameSpeaker(id, idx: speaker.idx, name: speaker.name) }
             for bookmark in info.bookmarks { try db.addBookmark(id, time: bookmark.time, label: bookmark.label) }
-            if let notes = info.notes { try db.saveNotes(id, notes: notes, by: info.notesBy, reason: "匯入") }
+            if let notes = info.notes { try db.saveNotes(id, notes: notes, by: info.notesBy, reason: String(localized: "匯入")) }
             try db.updateUserNotes(id, info.userNotes)
             meeting = try db.meeting(id) ?? meeting
         } catch {
@@ -122,7 +124,7 @@ enum MeetingPackage {
         process.standardError = FileHandle.nullDevice
         try process.run()
         process.waitUntilExit()
-        guard process.terminationStatus == 0 else { throw PackageError.invalid("壓縮檔讀寫失敗") }
+        guard process.terminationStatus == 0 else { throw PackageError.invalid(String(localized: "壓縮檔讀寫失敗")) }
     }
 }
 

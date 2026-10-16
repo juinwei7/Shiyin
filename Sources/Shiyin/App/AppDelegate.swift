@@ -34,13 +34,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard recording || busy else { return .terminateNow }
 
         let alert = NSAlert()
-        alert.messageText = recording ? "正在錄音，要結束拾音嗎？" : "還有工作在進行，要結束拾音嗎？"
+        alert.messageText = recording ? String(localized: "正在錄音，要結束拾音嗎？") : String(localized: "還有工作在進行，要結束拾音嗎？")
         var info: [String] = []
-        if recording { info.append("錄音會先存好，下次開啟拾音時開始轉錄。") }
-        if busy { info.append("進行中的轉錄或整理會中斷，下次開啟時從頭重跑。") }
+        if recording { info.append(String(localized: "錄音會先存好，下次開啟拾音時開始轉錄。")) }
+        if busy { info.append(String(localized: "進行中的轉錄或整理會中斷，下次開啟時從頭重跑。")) }
         alert.informativeText = info.joined(separator: "\n")
-        alert.addButton(withTitle: "結束")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: String(localized: "結束"))
+        alert.addButton(withTitle: String(localized: "取消"))
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
 

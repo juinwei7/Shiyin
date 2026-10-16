@@ -20,7 +20,7 @@ enum SubprocessError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .timeout(let minutes): return "執行超過 \(minutes) 分鐘，已停止"
+        case .timeout(let minutes): return String(localized: "執行超過 \(minutes) 分鐘，已停止")
         }
     }
 }

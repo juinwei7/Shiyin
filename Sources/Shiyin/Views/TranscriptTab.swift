@@ -131,7 +131,7 @@ struct TranscriptTab: View {
                 Picker("說話者", selection: $speakerFilter) {
                     Text("所有說話者").tag(Int?.none)
                     ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
-                        Text(detail.speakers[idx] ?? "說話者 \(idx)").tag(Int?.some(idx))
+                        Text(detail.speakers[idx] ?? String(localized: "說話者 \(idx)")).tag(Int?.some(idx))
                     }
                 }
                 .labelsHidden()
@@ -327,10 +327,10 @@ struct ReplaceSheet: View {
     }
 
     private func resultText(_ r: ReplaceResult) -> String {
-        if r.segmentsChanged == 0 && !r.notesChanged { return "沒有找到「\(find)」。" }
+        if r.segmentsChanged == 0 && !r.notesChanged { return String(localized: "沒有找到「\(find)」。") }
         var parts: [String] = []
-        if r.segmentsChanged > 0 { parts.append("逐字稿改了 \(r.segmentsChanged) 段") }
-        if r.notesChanged { parts.append("會議紀錄也一起改了（可以從「更多」復原上一版）") }
-        return parts.joined(separator: "，") + "。"
+        if r.segmentsChanged > 0 { parts.append(String(localized: "逐字稿改了 \(r.segmentsChanged) 段")) }
+        if r.notesChanged { parts.append(String(localized: "會議紀錄也一起改了（可以從「更多」復原上一版）")) }
+        return parts.joined(separator: String(localized: "，")) + String(localized: "。")
     }
 }

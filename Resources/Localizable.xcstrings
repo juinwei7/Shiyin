@@ -1,0 +1,6568 @@
+{
+  "sourceLanguage": "zh-Hant",
+  "strings": {
+    "": {
+      "extractionState": "manual"
+    },
+    "%@ %@": {
+      "extractionState": "manual"
+    },
+    "%@ %lld": {
+      "extractionState": "manual"
+    },
+    "%@ 回傳 HTTP %lld%@：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ returned HTTP %lld%@: %@"
+          }
+        }
+      }
+    },
+    "%@中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        }
+      }
+    },
+    "%@中 %lld%%": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %lld%%"
+          }
+        }
+      }
+    },
+    "%@中：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@"
+          }
+        }
+      }
+    },
+    "%@失敗（錯誤代碼 %d）。請確認已允許拾音「錄製系統音訊」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed (error %d). Make sure Shiyin is allowed to record system audio."
+          }
+        }
+      }
+    },
+    "%@（副本）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (copy)"
+          }
+        }
+      }
+    },
+    "%@（逐字稿）.%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (transcript).%@"
+          }
+        }
+      }
+    },
+    "%@，有 %lld 題待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ — %lld question to confirm"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ — %lld questions to confirm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@／%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@"
+          }
+        }
+      }
+    },
+    "%@：正式轉錄，1.66 GB": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: transcription, 1.66 GB"
+          }
+        }
+      }
+    },
+    "%lld": {
+      "extractionState": "manual"
+    },
+    "%lld%%": {
+      "extractionState": "manual"
+    },
+    "%lld／%lld 段": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld"
+          }
+        }
+      }
+    },
+    ".shiyin 封包": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".shiyin package"
+          }
+        }
+      }
+    },
+    "30 天內都可以從垃圾桶還原。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can restore it from Trash within 30 days."
+          }
+        }
+      }
+    },
+    "8 GB 以上。轉錄加說話者辨識時最高約 2.7 GB，4 小時的會議約 4.1 GB（M3 Pro 實測）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8 GB or more. Transcription plus speaker recognition peaks at about 2.7 GB, about 4.1 GB for a 4-hour meeting (measured on M3 Pro)"
+          }
+        }
+      }
+    },
+    "API key": {
+      "extractionState": "manual"
+    },
+    "API key 存在 macOS 鑰匙圈，不會寫進任何檔案。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API keys are stored in the macOS Keychain, never in a file."
+          }
+        }
+      }
+    },
+    "Anthropic API（填 API key）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic API (enter an API key)"
+          }
+        }
+      }
+    },
+    "Apple Silicon（M1 以上）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Silicon (M1 or later)"
+          }
+        }
+      }
+    },
+    "Breeze ASR 25（q8_0）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breeze ASR 25 (q8_0)"
+          }
+        }
+      }
+    },
+    "Breeze ASR 25（建議）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breeze ASR 25 (recommended)"
+          }
+        }
+      }
+    },
+    "Claude（claude CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude (claude CLI)"
+          }
+        }
+      }
+    },
+    "Claude（claude CLI）%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude (claude CLI)%@"
+          }
+        }
+      }
+    },
+    "Codex（codex CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex (codex CLI)"
+          }
+        }
+      }
+    },
+    "Codex（codex CLI）%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex (codex CLI)%@"
+          }
+        }
+      }
+    },
+    "Markdown": {
+      "extractionState": "manual"
+    },
+    "OpenAI API（填 API key）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI API (enter an API key)"
+          }
+        }
+      }
+    },
+    "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF and docx use serif headings. Markdown works well in Notion and GitHub."
+          }
+        }
+      }
+    },
+    "PDF 產生失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't create the PDF"
+          }
+        }
+      }
+    },
+    "Word（docx）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word (docx)"
+          }
+        }
+      }
+    },
+    "claude 沒有回傳結果（結束代碼 %d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude returned no result (exit code %d)"
+          }
+        }
+      }
+    },
+    "codex 沒有回傳結果（結束代碼 %d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex returned no result (exit code %d)"
+          }
+        }
+      }
+    },
+    "m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "m4a is small and easy to share. wav is 16 kHz mono, suitable for other transcription tools."
+          }
+        }
+      }
+    },
+    "macOS 26 以上": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 26 or later"
+          }
+        }
+      }
+    },
+    "macOS 內建": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS"
+          }
+        }
+      }
+    },
+    "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "srt and vtt are subtitle formats you can show with the audio or video in a player."
+          }
+        }
+      }
+    },
+    "yyyy-MM-dd": {
+      "extractionState": "manual"
+    },
+    "•": {
+      "extractionState": "manual"
+    },
+    "…": {
+      "extractionState": "manual"
+    },
+    "⌘1～⌘5": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘1–⌘5"
+          }
+        }
+      }
+    },
+    "、": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", "
+          }
+        }
+      }
+    },
+    "。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "."
+          }
+        }
+      }
+    },
+    "「%@」裡沒有可以用的逐字稿內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” has no usable transcript content"
+          }
+        }
+      }
+    },
+    "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。在「你的回答」欄位直接回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的勾「略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“To confirm” lists names, terms, owners and deadlines the summarizer wasn't sure about. Type in “Your answer” and click “Submit”, and the notes are revised from your answers; check “Skip” for anything unclear or unimportant. You can also click “Edit” in “Summary” to change things directly. To undo a mistake, choose “Revert to previous notes” from “More”."
+          }
+        }
+      }
+    },
+    "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Summarizer”: choose Claude or Codex (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summaries are slow, enter a faster model in “Model”, such as sonnet."
+          }
+        }
+      }
+    },
+    "「模型與儲存空間」：下載或刪除模型、看錄音佔用的空間。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Models & Storage”: download or delete models and see how much space recordings use."
+          }
+        }
+      }
+    },
+    "「範本」：內建五種範本；也可以複製一份來改，或自己新增段落與指示。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Templates”: five built-in templates. You can duplicate one to change it, or add your own sections and instructions."
+          }
+        }
+      }
+    },
+    "「詞彙表」：加入系統名、產品名、人名的正確寫法。這對專有名詞的正確率影響很大。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Glossary”: add the correct spelling of system names, product names and people's names. This makes a big difference for proper nouns."
+          }
+        }
+      }
+    },
+    "「進階」：填更新網址、檢查更新；有新版時拾音會詢問，同意後自動下載、驗證並重新打開。也可以從「拾音」選單選「檢查更新…」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Advanced”: enter the update URL and check for updates. When a new version is available, Shiyin asks, then downloads, verifies and reopens. You can also choose “Check for Updates…” from the Shiyin menu."
+          }
+        }
+      }
+    },
+    "「錄音」：選錄音來源、麥克風，以及要不要即時逐字稿和說話者辨識。「正式轉錄」可以選 Breeze ASR 25（建議，會參考詞彙表）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Recording”: choose the source and microphone, and whether to use the live transcript and speaker recognition. For “Transcription”, choose Breeze ASR 25 (recommended; uses the glossary) or macOS (no model download and much faster, but more mistakes with proper nouns)."
+          }
+        }
+      }
+    },
+    "一般會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General meeting"
+          }
+        }
+      }
+    },
+    "上一步": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        }
+      }
+    },
+    "下一步": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        }
+      }
+    },
+    "下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        }
+      }
+    },
+    "下載並更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download and Update"
+          }
+        }
+      }
+    },
+    "下載並更新到 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download and Update to %@"
+          }
+        }
+      }
+    },
+    "下載中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading…"
+          }
+        }
+      }
+    },
+    "下載中斷：%@。按「繼續下載」會從中斷的地方接著下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download interrupted: %@. Click “Resume Download” to continue where it stopped."
+          }
+        }
+      }
+    },
+    "下載模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download Models"
+          }
+        }
+      }
+    },
+    "下載的模型檔驗證失敗（SHA-256 不符），請重新下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded model failed verification (SHA-256 mismatch). Please download it again."
+          }
+        }
+      }
+    },
+    "下載的檔案驗證失敗（SHA-256 不符），已刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download failed verification (SHA-256 mismatch) and was deleted"
+          }
+        }
+      }
+    },
+    "不支援這個音訊格式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This audio format isn't supported"
+          }
+        }
+      }
+    },
+    "不整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't summarize"
+          }
+        }
+      }
+    },
+    "不整理，只要逐字稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't summarize; transcripts only"
+          }
+        }
+      }
+    },
+    "不是 WAV 檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a WAV file"
+          }
+        }
+      }
+    },
+    "不用下載模型、速度快，但不參考詞彙表，英文專有名詞比較容易錯。之後可以在設定 → 錄音改回來": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No model download and much faster, but it doesn't use the glossary, so proper nouns are more often wrong. You can switch back in Settings → Recording."
+          }
+        }
+      }
+    },
+    "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No model download and much faster, but it doesn't use the glossary, so proper nouns and names are more often wrong."
+          }
+        }
+      }
+    },
+    "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude 或 codex，或準備 Anthropic、OpenAI 的 API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing else to install. To summarize meetings, install and sign in to claude or codex, or have an Anthropic or OpenAI API key"
+          }
+        }
+      }
+    },
+    "之後可以在「設定 → 進階」重新顯示這個引導。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can show this again from Settings → Advanced."
+          }
+        }
+      }
+    },
+    "之後隨時可以從「輔助說明」選單（⌘?）或選單列的拾音圖示，再打開這份說明。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can open this guide again any time from the Help menu (⌘?) or the Shiyin icon in the menu bar."
+          }
+        }
+      }
+    },
+    "也可以把新的錄音檔拖進來。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also drag in a new recording."
+          }
+        }
+      }
+    },
+    "事項": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item"
+          }
+        }
+      }
+    },
+    "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These are the points the summarizer wasn't sure about. Just answer them; skip anything unclear or unimportant."
+          }
+        }
+      }
+    },
+    "你的回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your answer"
+          }
+        }
+      }
+    },
+    "使用說明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide"
+          }
+        }
+      }
+    },
+    "例如專案名稱或客戶名稱。這場會議會移進新資料夾。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example, a project or client name. This meeting will be moved into the new folder."
+          }
+        }
+      }
+    },
+    "例如：小明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: Alex"
+          }
+        }
+      }
+    },
+    "依各檔案的檔名或修改日期": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From each file's name or modification date"
+          }
+        }
+      }
+    },
+    "停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        }
+      }
+    },
+    "停止並轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop & Transcribe"
+          }
+        }
+      }
+    },
+    "停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Recording"
+          }
+        }
+      }
+    },
+    "停止錄音並開始轉錄（⌘R）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop recording and transcribe (⌘R)"
+          }
+        }
+      }
+    },
+    "停止錄音，開始正式轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop recording and start transcription"
+          }
+        }
+      }
+    },
+    "側欄上方的「搜尋所有會議」會同時搜標題、逐字稿、會議紀錄和你的筆記，點結果就跳到那一段。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Search all meetings” at the top of the sidebar searches titles, transcripts, meeting notes and your notes. Click a result to jump to it."
+          }
+        }
+      }
+    },
+    "儲存": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "儲存 key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Key"
+          }
+        }
+      }
+    },
+    "儲存整理好的會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save the meeting notes"
+          }
+        }
+      }
+    },
+    "儲存空間": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage"
+          }
+        }
+      }
+    },
+    "允許": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow"
+          }
+        }
+      }
+    },
+    "先安裝": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prerequisites"
+          }
+        }
+      }
+    },
+    "內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content"
+          }
+        }
+      }
+    },
+    "內建範本不能修改，可以按「複製」做一份自己的。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in templates can't be changed. Click “Duplicate” to make your own copy."
+          }
+        }
+      }
+    },
+    "全域快捷鍵 %@：在其他 app 裡也能開始或停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global shortcut %@: start or stop recording from any app"
+          }
+        }
+      }
+    },
+    "全部取代": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace All"
+          }
+        }
+      }
+    },
+    "出了一點問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong"
+          }
+        }
+      }
+    },
+    "分享…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
+          }
+        }
+      }
+    },
+    "分頁": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
+          }
+        }
+      }
+    },
+    "切換摘要、詳細、逐字稿、待確認、筆記": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch between Summary, Details, Transcript, To confirm and Notes"
+          }
+        }
+      }
+    },
+    "刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "刪除 key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Key"
+          }
+        }
+      }
+    },
+    "刪除「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete “%@”"
+          }
+        }
+      }
+    },
+    "刪除的會議會先放進側欄最下面的「垃圾桶」，30 天內都可以還原。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted meetings go to “Trash” at the bottom of the sidebar, where you can restore them within 30 days."
+          }
+        }
+      }
+    },
+    "刪除第二版的 Python 環境和舊模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Version 2 Python Environment and Old Model"
+          }
+        }
+      }
+    },
+    "刪除資料夾（會議會保留）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Folder (keeps its meetings)"
+          }
+        }
+      }
+    },
+    "刪除這一題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this question"
+          }
+        }
+      }
+    },
+    "刪除這個議題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this topic"
+          }
+        }
+      }
+    },
+    "到「模型與儲存空間」下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download it in “Models & Storage”"
+          }
+        }
+      }
+    },
+    "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download it in “Models & Storage”, or set transcription to macOS in “Recording”"
+          }
+        }
+      }
+    },
+    "前往下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        }
+      }
+    },
+    "包含時間點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include times"
+          }
+        }
+      }
+    },
+    "包含說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include speakers"
+          }
+        }
+      }
+    },
+    "包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includes the recording, transcript, speakers, meeting notes, your notes and bookmarks. A colleague can double-click it to import into Shiyin."
+          }
+        }
+      }
+    },
+    "匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        }
+      }
+    },
+    "匯入 %lld 個錄音檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Import %lld recording"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Import %lld recordings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "匯入…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import…"
+          }
+        }
+      }
+    },
+    "匯入並開始轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import and Transcribe"
+          }
+        }
+      }
+    },
+    "匯入錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Recording"
+          }
+        }
+      }
+    },
+    "匯入錄音…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Recording…"
+          }
+        }
+      }
+    },
+    "匯入錄音、影片、逐字稿或 .shiyin 封包（⌘O）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import audio, video, transcripts or .shiyin packages (⌘O)"
+          }
+        }
+      }
+    },
+    "匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
+          }
+        }
+      }
+    },
+    "匯出…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export…"
+          }
+        }
+      }
+    },
+    "匯出、分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export and share"
+          }
+        }
+      }
+    },
+    "匯出失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export failed: %@"
+          }
+        }
+      }
+    },
+    "即時逐字稿、正式轉錄、說話者辨識都在本機進行，不需要網路。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The live transcript, transcription and speaker recognition all run on this Mac without the internet."
+          }
+        }
+      }
+    },
+    "即時逐字稿已在設定中關閉，錄音結束後會正式轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The live transcript is turned off in Settings. The recording will be transcribed when it ends."
+          }
+        }
+      }
+    },
+    "即時逐字稿沒辦法啟動（%@），錄音照常進行，錄完會正式轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The live transcript couldn't start (%@). Recording continues and will be transcribed afterwards."
+          }
+        }
+      }
+    },
+    "即時逐字稿的語音模型（macOS 內建）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech model for the live transcript (built into macOS)"
+          }
+        }
+      }
+    },
+    "原因：%@\n\n你的資料沒有被改動。升級前的備份在：%@\n請把這個訊息截圖給維護拾音的人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reason: %@\n\nYour data has not been changed. The backup made before the upgrade is in: %@\nPlease send a screenshot of this message to whoever maintains Shiyin."
+          }
+        }
+      }
+    },
+    "取代「%@」→「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace “%@” → “%@”"
+          }
+        }
+      }
+    },
+    "取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "只看某一位說話者的內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show only one speaker"
+          }
+        }
+      }
+    },
+    "只能匯入錄音、影片、逐字稿（srt、vtt、txt）、Markdown 或 .shiyin 檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can only import audio, video, transcripts (srt, vtt, txt), Markdown or .shiyin files"
+          }
+        }
+      }
+    },
+    "只錄電腦聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer audio only"
+          }
+        }
+      }
+    },
+    "只錄麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone only"
+          }
+        }
+      }
+    },
+    "名稱": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "回傳的會議紀錄格式不正確：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The returned meeting notes have the wrong format: %@"
+          }
+        }
+      }
+    },
+    "回到所有會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to All Meetings"
+          }
+        }
+      }
+    },
+    "回到最新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jump to Latest"
+          }
+        }
+      }
+    },
+    "回應裡沒有文字（status：%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response had no text (status: %@)"
+          }
+        }
+      }
+    },
+    "回應裡沒有會議紀錄（stop_reason：%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response had no meeting notes (stop_reason: %@)"
+          }
+        }
+      }
+    },
+    "回答待確認、修改": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answer questions and edit"
+          }
+        }
+      }
+    },
+    "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start or stop recording from any app (you can turn this off in Settings → Recording)"
+          }
+        }
+      }
+    },
+    "垃圾桶": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trash"
+          }
+        }
+      }
+    },
+    "垃圾桶是空的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trash is empty"
+          }
+        }
+      }
+    },
+    "垃圾桶裡的會議 30 天後會永久刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meetings in Trash are deleted permanently after 30 days"
+          }
+        }
+      }
+    },
+    "垃圾桶（%lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trash (%lld)"
+          }
+        }
+      }
+    },
+    "執行超過 %lld 分鐘，已停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Stopped after running for more than %lld minute"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Stopped after running for more than %lld minutes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "壓縮檔讀寫失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't read or write the archive"
+          }
+        }
+      }
+    },
+    "壓縮錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compressing audio"
+          }
+        }
+      }
+    },
+    "好": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "字幕（srt）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles (srt)"
+          }
+        }
+      }
+    },
+    "字幕（vtt）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles (vtt)"
+          }
+        }
+      }
+    },
+    "存檔…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save…"
+          }
+        }
+      }
+    },
+    "完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "富文字（貼到 Word、Notion、郵件）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rich text (for Word, Notion, email)"
+          }
+        }
+      }
+    },
+    "已下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded"
+          }
+        }
+      }
+    },
+    "已下載（1.66 GB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded (1.66 GB)"
+          }
+        }
+      }
+    },
+    "已儲存在鑰匙圈": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved in Keychain"
+          }
+        }
+      }
+    },
+    "已儲存在鑰匙圈（輸入新的會取代）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved in Keychain (entering a new one replaces it)"
+          }
+        }
+      }
+    },
+    "已允許": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allowed"
+          }
+        }
+      }
+    },
+    "已刪除第二版的 Python 環境和舊模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted the Python environment and old model from version 2"
+          }
+        }
+      }
+    },
+    "已匯入「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported “%@”"
+          }
+        }
+      }
+    },
+    "已匯出 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported %@"
+          }
+        }
+      }
+    },
+    "已取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelled"
+          }
+        }
+      }
+    },
+    "已取消轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription cancelled"
+          }
+        }
+      }
+    },
+    "已安裝": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed"
+          }
+        }
+      }
+    },
+    "已是最新版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're up to date"
+          }
+        }
+      }
+    },
+    "已是最新版本（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're up to date (%@)"
+          }
+        }
+      }
+    },
+    "已暫停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
+    "已暫停（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused (%@)"
+          }
+        }
+      }
+    },
+    "已暫停，可以接著下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused; you can resume the download"
+          }
+        }
+      }
+    },
+    "已暫停，點一下打開錄音中的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused. Click to open the meeting being recorded."
+          }
+        }
+      }
+    },
+    "已標記 %@ 為重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmarked %@"
+          }
+        }
+      }
+    },
+    "已移出資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed from folder"
+          }
+        }
+      }
+    },
+    "已移到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved to “%@”"
+          }
+        }
+      }
+    },
+    "已移到垃圾桶，30 天內都可以還原": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved to Trash. You can restore it within 30 days."
+          }
+        }
+      }
+    },
+    "已複製會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting notes copied"
+          }
+        }
+      }
+    },
+    "建立並移入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create and Move"
+          }
+        }
+      }
+    },
+    "建立系統聲音擷取": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating system audio capture"
+          }
+        }
+      }
+    },
+    "建立系統聲音的 IO": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating system audio I/O"
+          }
+        }
+      }
+    },
+    "建立聚合裝置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating the aggregate device"
+          }
+        }
+      }
+    },
+    "往上移": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Up"
+          }
+        }
+      }
+    },
+    "往下移": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Down"
+          }
+        }
+      }
+    },
+    "待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To confirm"
+          }
+        }
+      }
+    },
+    "待確認 %lld 題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld question to confirm"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld questions to confirm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action items"
+          }
+        }
+      }
+    },
+    "從 %@ 開始播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play from %@"
+          }
+        }
+      }
+    },
+    "從「更多」選「匯出…」（⌘E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入。「複製會議紀錄」可以直接貼到 Notion、Slack 或郵件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose “Export…” (⌘E) from “More”: save meeting notes as Markdown, PDF or Word; the transcript as txt, srt, vtt or Word; the recording as m4a or wav. Send “Whole meeting (.shiyin)” to a colleague, who can double-click it to import. “Copy meeting notes” pastes straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
+    "從左邊選一場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a meeting on the left"
+          }
+        }
+      }
+    },
+    "從這裡播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play from Here"
+          }
+        }
+      }
+    },
+    "復原上一版會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert to Previous Notes"
+          }
+        }
+      }
+    },
+    "復原的錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovered recording"
+          }
+        }
+      }
+    },
+    "復原的錄音.wav": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovered recording.wav"
+          }
+        }
+      }
+    },
+    "快捷鍵": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard shortcuts"
+          }
+        }
+      }
+    },
+    "我的筆記": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My notes"
+          }
+        }
+      }
+    },
+    "所有會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Meetings"
+          }
+        }
+      }
+    },
+    "所有說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All speakers"
+          }
+        }
+      }
+    },
+    "手動編輯": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual edit"
+          }
+        }
+      }
+    },
+    "打開拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Shiyin"
+          }
+        }
+      }
+    },
+    "打開系統設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "打開這份說明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open this guide"
+          }
+        }
+      }
+    },
+    "找不到": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not found"
+          }
+        }
+      }
+    },
+    "找不到 %@ 指令，請先安裝並登入，或到設定 → 整理工具改用 API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't find the %@ command. Install it and sign in, or switch to an API key in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "找不到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No results for “%@”"
+          }
+        }
+      }
+    },
+    "找不到可以用的麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No microphone available"
+          }
+        }
+      }
+    },
+    "找不到輸出裝置，沒辦法擷取系統聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No output device found, so system audio can't be captured"
+          }
+        }
+      }
+    },
+    "找不到音訊資料區段": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No audio data found"
+          }
+        }
+      }
+    },
+    "找不到，請先安裝並登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not found. Install it and sign in first."
+          }
+        }
+      }
+    },
+    "找到 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found %@"
+          }
+        }
+      }
+    },
+    "找到上次沒有正常結束的錄音，已經復原並開始轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found a recording that didn't finish properly last time. It has been recovered and is being transcribed."
+          }
+        }
+      }
+    },
+    "找會議、播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find meetings and play"
+          }
+        }
+      }
+    },
+    "把正確寫法加進詞彙表，之後轉錄比較容易一次轉對": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add the correct spelling to the glossary so future transcriptions get it right"
+          }
+        }
+      }
+    },
+    "把逐字稿和會議紀錄裡的同一個詞一起改掉": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fix a word in both the transcript and the meeting notes"
+          }
+        }
+      }
+    },
+    "把逐字稿裡的錯字換成正確寫法，會議紀錄裡同樣的字也會一起改。區分大小寫。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace a misheard word in the transcript with the correct spelling; the same word in the meeting notes changes too. Case-sensitive."
+          }
+        }
+      }
+    },
+    "把這場會議移到垃圾桶？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move this meeting to Trash?"
+          }
+        }
+      }
+    },
+    "拷貝": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
+    },
+    "拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin"
+          }
+        }
+      }
+    },
+    "拾音 %@ 可以更新了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin %@ is available"
+          }
+        }
+      }
+    },
+    "拾音 API key（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin API key (%@)"
+          }
+        }
+      }
+    },
+    "拾音使用說明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin Guide"
+          }
+        }
+      }
+    },
+    "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上用 Breeze ASR 25 正式轉錄、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin turns meetings into transcripts and meeting notes. You see a live transcript while recording; afterwards, Shiyin transcribes on this Mac with Breeze ASR 25, identifies speakers, and uses Claude, Codex or an API to write the summary, decisions and action items."
+          }
+        }
+      }
+    },
+    "拾音把會議變成逐字稿和會議紀錄。錄音、轉錄、說話者辨識都在這台 Mac 上完成。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin turns meetings into transcripts and meeting notes. Recording, transcription and speaker recognition all happen on this Mac."
+          }
+        }
+      }
+    },
+    "拾音正在轉錄或整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin is transcribing or summarizing meeting notes"
+          }
+        }
+      }
+    },
+    "拾音正在錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin is recording"
+          }
+        }
+      }
+    },
+    "拾音沒有麥克風權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin doesn't have microphone access"
+          }
+        }
+      }
+    },
+    "拾音沒辦法開啟資料庫": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't open its database"
+          }
+        }
+      }
+    },
+    "拾音系統聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin System Audio"
+          }
+        }
+      }
+    },
+    "按「停止並轉錄」後，拾音會在這台 Mac 上用 Breeze ASR 25 重新轉錄，並分辨不同的說話者。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After you click “Stop & Transcribe”, Shiyin transcribes the recording again on this Mac with Breeze ASR 25 and identifies the different speakers. Click “Speaker 1” in the transcript to change it to a name; the whole meeting updates."
+          }
+        }
+      }
+    },
+    "按「錄音」開始，或把錄音檔拖進來。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click “Record” to start, or drag in a recording."
+          }
+        }
+      }
+    },
+    "按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click “Get Started” to open the guide, which covers recording, the live transcript, meeting notes and exporting."
+          }
+        }
+      }
+    },
+    "按工具列的「錄音」（⌘R）開始錄；點按鈕旁的箭頭可以選錄音來源，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。已經有錄音檔的話，拖進視窗、按「匯入」（⌘O），或拖到 Dock 上的拾音圖示都可以。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click “Record” (⌘R) in the toolbar to start. Click the arrow next to it to choose the source; for online meetings choose “Microphone + computer audio (online meetings)” so the other side is recorded too. If you already have a recording, drag it into the window, click “Import” (⌘O), or drop it on the Shiyin icon in the Dock."
+          }
+        }
+      }
+    },
+    "排隊中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queued"
+          }
+        }
+      }
+    },
+    "排隊中 %lld 項": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld queued"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld queued"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "排隊等待整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting to summarize"
+          }
+        }
+      }
+    },
+    "排隊等待轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting to transcribe"
+          }
+        }
+      }
+    },
+    "接下來三個步驟大約 3 分鐘（下載模型的時間另計）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The next three steps take about 3 minutes (plus the model download)."
+          }
+        }
+      }
+    },
+    "搜尋": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    "搜尋所有會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search all meetings"
+          }
+        }
+      }
+    },
+    "搜尋索引已重建": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search index rebuilt"
+          }
+        }
+      }
+    },
+    "搜尋逐字稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search transcript"
+          }
+        }
+      }
+    },
+    "搜尋逐字稿（在「逐字稿」）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search the transcript (in “Transcript”)"
+          }
+        }
+      }
+    },
+    "摘要": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summary"
+          }
+        }
+      }
+    },
+    "播放或暫停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play or pause"
+          }
+        }
+      }
+    },
+    "播放速度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed"
+          }
+        }
+      }
+    },
+    "播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多」選「重新整理會議紀錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While the recording plays, each new line gets the current playback time. The AI uses these notes when summarizing; after editing, choose “Summarize Again” from “More”."
+          }
+        }
+      }
+    },
+    "播放（空白鍵）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play (Space)"
+          }
+        }
+      }
+    },
+    "播放／暫停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play/Pause"
+          }
+        }
+      }
+    },
+    "改用 macOS 內建辨識": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use macOS Recognition"
+          }
+        }
+      }
+    },
+    "整場會議（.shiyin）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole meeting (.shiyin)"
+          }
+        }
+      }
+    },
+    "整場逐字稿和之後的會議紀錄都會用這個名字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The whole transcript and future meeting notes will use this name."
+          }
+        }
+      }
+    },
+    "整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizing"
+          }
+        }
+      }
+    },
+    "整理中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizing"
+          }
+        }
+      }
+    },
+    "整理中：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizing: %@"
+          }
+        }
+      }
+    },
+    "整理和回答待確認時，會把逐字稿文字、你的筆記和詞彙表送到 Anthropic（Claude）或 OpenAI，錄音檔不會送出。選「不整理」就完全離線。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing or revising, the transcript text, your notes and the glossary are sent to Anthropic (Claude) or OpenAI. The recording is never sent. Choose “Don't summarize” to stay fully offline."
+          }
+        }
+      }
+    },
+    "整理失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summary failed"
+          }
+        }
+      }
+    },
+    "整理失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summary failed: %@"
+          }
+        }
+      }
+    },
+    "整理工具": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizer"
+          }
+        }
+      }
+    },
+    "整理工具目前設定為「不整理」。要產生會議紀錄，請到設定選擇 Claude、Codex 或 API。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer is set to “Don't summarize”. To create meeting notes, choose Claude, Codex or an API in Settings."
+          }
+        }
+      }
+    },
+    "整理工具設定為「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer is set to “Don't summarize”"
+          }
+        }
+      }
+    },
+    "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer is set to “Don't summarize”, so the notes can't be revised from your answers. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer is set to “Don't summarize”. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer is set to “Don't summarize”. Choose Claude, Codex or an API in Settings."
+          }
+        }
+      }
+    },
+    "整理工具選 Anthropic API 時需要": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the Anthropic API summarizer"
+          }
+        }
+      }
+    },
+    "整理工具選 Claude 時需要：安裝 Claude Code 並在終端機執行 claude 登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the Claude summarizer: install Claude Code and sign in by running claude in Terminal"
+          }
+        }
+      }
+    },
+    "整理工具選 Codex 時需要：安裝 Codex CLI 並執行 codex login": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the Codex summarizer: install Codex CLI and run codex login"
+          }
+        }
+      }
+    },
+    "整理工具選 OpenAI API 時需要": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the OpenAI API summarizer"
+          }
+        }
+      }
+    },
+    "整理成會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarize"
+          }
+        }
+      }
+    },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to Anthropic (Claude). The recording is never sent."
+          }
+        }
+      }
+    },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to OpenAI. The recording is never sent."
+          }
+        }
+      }
+    },
+    "整理會議紀錄時，只會把逐字稿文字送到你選的 AI 服務。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, only the transcript text is sent to the AI service you choose."
+          }
+        }
+      }
+    },
+    "新增": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "新增一條": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Item"
+          }
+        }
+      }
+    },
+    "新增待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Action Item"
+          }
+        }
+      }
+    },
+    "新增自訂段落": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Custom Section"
+          }
+        }
+      }
+    },
+    "新增詞彙，例如產品名或人名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a term, such as a product or person's name"
+          }
+        }
+      }
+    },
+    "新增議題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Topic"
+          }
+        }
+      }
+    },
+    "新版的簽章跟目前的拾音不符，拒絕安裝（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new version's signature doesn't match this Shiyin, so it wasn't installed (%@)"
+          }
+        }
+      }
+    },
+    "新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New recordings and imports use this language for transcription and meeting notes. You can change it in the record menu, when importing, and on the meeting page."
+          }
+        }
+      }
+    },
+    "新範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New template"
+          }
+        }
+      }
+    },
+    "新資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Folder"
+          }
+        }
+      }
+    },
+    "新資料夾…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Folder…"
+          }
+        }
+      }
+    },
+    "時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
+          }
+        }
+      }
+    },
+    "晶片": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chip"
+          }
+        }
+      }
+    },
+    "暫停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "暫停或繼續錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause or resume recording"
+          }
+        }
+      }
+    },
+    "暫停錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause Recording"
+          }
+        }
+      }
+    },
+    "暫停錄音（⇧⌘P）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause recording (⇧⌘P)"
+          }
+        }
+      }
+    },
+    "暫停（空白鍵）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause (Space)"
+          }
+        }
+      }
+    },
+    "更多": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        }
+      }
+    },
+    "更多動作": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More actions"
+          }
+        }
+      }
+    },
+    "更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        }
+      }
+    },
+    "更新失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update failed: %@"
+          }
+        }
+      }
+    },
+    "更新檔的版本沒有比較新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The update isn't a newer version"
+          }
+        }
+      }
+    },
+    "更新檔裡找不到拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin wasn't found in the update"
+          }
+        }
+      }
+    },
+    "更新網址": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update URL"
+          }
+        }
+      }
+    },
+    "更新網址回傳 HTTP %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The update URL returned HTTP %lld"
+          }
+        }
+      }
+    },
+    "更新網址必須是 https": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The update URL must use https"
+          }
+        }
+      }
+    },
+    "更新資訊的格式不對": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The update information has the wrong format"
+          }
+        }
+      }
+    },
+    "會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses the glossary and handles mixed Chinese–English and proper nouns better. Needs a 1.7 GB model download."
+          }
+        }
+      }
+    },
+    "會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting"
+          }
+        }
+      }
+    },
+    "會議.%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting.%@"
+          }
+        }
+      }
+    },
+    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄上方的「資料夾」可以切換只看某個資料夾；正在看某個資料夾時，新錄的和匯入的會議都會放進去。資料夾按右鍵可以重新命名或刪除（會議會保留）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organize meetings in folders: right-click a meeting (or use “More”) and choose “Move to Folder” → “New Folder…”. Use “Folders” at the top of the sidebar to show one folder; while you're in a folder, new recordings and imports go into it. Right-click a folder to rename or delete it (its meetings are kept)."
+          }
+        }
+      }
+    },
+    "會議日期": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting date"
+          }
+        }
+      }
+    },
+    "會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting notes"
+          }
+        }
+      }
+    },
+    "會議紀錄、逐字稿和錄音檔都會刪除，沒辦法復原。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting notes, transcript and recording will be deleted. This can't be undone."
+          }
+        }
+      }
+    },
+    "會議紀錄也一起改了（可以從「更多」復原上一版）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting notes were changed too (you can revert from “More”)"
+          }
+        }
+      }
+    },
+    "會議紀錄整理好了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting notes are ready"
+          }
+        }
+      }
+    },
+    "會議紀錄的範本。換了範本之後，從「更多」選「重新整理會議紀錄」就會照新範本整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The template for the meeting notes. After changing it, choose “Summarize Again” from “More” to use the new template."
+          }
+        }
+      }
+    },
+    "會議紀錄裡推測出來的人名、專有名詞、負責人和期限，都已經確認過了。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All inferred names, terms, owners and deadlines in the meeting notes have been confirmed."
+          }
+        }
+      }
+    },
+    "會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which AI should summarize your meetings? You can change this later in Settings."
+          }
+        }
+      }
+    },
+    "會議語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting language"
+          }
+        }
+      }
+    },
+    "會議語言改成 %@，要重新轉錄或整理的話，從「更多」選": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting language changed to %@. To transcribe or summarize again, use “More”."
+          }
+        }
+      }
+    },
+    "會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多」重新轉錄或重新整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting language: used for transcription and meeting notes. After changing it, transcribe or summarize again from “More”."
+          }
+        }
+      }
+    },
+    "有一個音源沒辦法啟動，只錄到另一個：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One source couldn't start, so only the other is being recorded: %@"
+          }
+        }
+      }
+    },
+    "有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answered questions go to %@ to revise the meeting notes; skipped ones are removed. To undo a mistake, revert to the previous version from “More”."
+          }
+        }
+      }
+    },
+    "有新版本 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@ is available"
+          }
+        }
+      }
+    },
+    "期限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due"
+          }
+        }
+      }
+    },
+    "未命名範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Untitled template"
+          }
+        }
+      }
+    },
+    "未指定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unassigned"
+          }
+        }
+      }
+    },
+    "未決問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open questions"
+          }
+        }
+      }
+    },
+    "未知": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unknown"
+          }
+        }
+      }
+    },
+    "校稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revising"
+          }
+        }
+      }
+    },
+    "格式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format"
+          }
+        }
+      }
+    },
+    "標記這個時間點（⌘B），整理時會被當成重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmark this moment (⌘B); it's treated as important when summarizing"
+          }
+        }
+      }
+    },
+    "標記重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmark"
+          }
+        }
+      }
+    },
+    "標題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title"
+          }
+        }
+      }
+    },
+    "模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        }
+      }
+    },
+    "模型與儲存空間": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models & Storage"
+          }
+        }
+      }
+    },
+    "模擬錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulated recording"
+          }
+        }
+      }
+    },
+    "檢查更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates"
+          }
+        }
+      }
+    },
+    "檢查更新…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates…"
+          }
+        }
+      }
+    },
+    "檢查更新失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check for updates: %@"
+          }
+        }
+      }
+    },
+    "權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions"
+          }
+        }
+      }
+    },
+    "歡迎使用拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Shiyin"
+          }
+        }
+      }
+    },
+    "正在下載更新…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the update…"
+          }
+        }
+      }
+    },
+    "正在下載更新，完成後拾音會自動重新打開": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the update. Shiyin will reopen when it's done."
+          }
+        }
+      }
+    },
+    "正在檢查…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
+          }
+        }
+      }
+    },
+    "正在準備即時逐字稿…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing the live transcript…"
+          }
+        }
+      }
+    },
+    "正在準備安裝…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing to install…"
+          }
+        }
+      }
+    },
+    "正在用 %@ 依你的回答修正會議紀錄…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revising the meeting notes from your answers with %@…"
+          }
+        }
+      }
+    },
+    "正在用 %@ 整理會議紀錄…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizing the meeting with %@…"
+          }
+        }
+      }
+    },
+    "正在錄音，要結束拾音嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording in progress. Quit Shiyin?"
+          }
+        }
+      }
+    },
+    "正在驗證檔案…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifying the file…"
+          }
+        }
+      }
+    },
+    "正式轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription"
+          }
+        }
+      }
+    },
+    "正式轉錄、分辨說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe and identify speakers"
+          }
+        }
+      }
+    },
+    "正確寫法": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct spelling"
+          }
+        }
+      }
+    },
+    "段落內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segment text"
+          }
+        }
+      }
+    },
+    "段落名稱": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Section name"
+          }
+        }
+      }
+    },
+    "每換一行會自動加上當下的錄音時間；整理時會優先納入這些內容。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each new line gets the current recording time. These notes are prioritized when summarizing."
+          }
+        }
+      }
+    },
+    "永久刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Permanently"
+          }
+        }
+      }
+    },
+    "永久刪除這場會議？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this meeting permanently?"
+          }
+        }
+      }
+    },
+    "決定轉錄和會議紀錄用的語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The language used for transcription and meeting notes"
+          }
+        }
+      }
+    },
+    "決議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decisions"
+          }
+        }
+      }
+    },
+    "沒有下載，正式轉錄使用 macOS 內建辨識": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not downloaded; transcription uses macOS speech recognition"
+          }
+        }
+      }
+    },
+    "沒有填": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not set"
+          }
+        }
+      }
+    },
+    "沒有待確認的項目": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to confirm"
+          }
+        }
+      }
+    },
+    "沒有找到「%@」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” wasn't found."
+          }
+        }
+      }
+    },
+    "沒有權限替換「%@」裡的拾音，已經打開下載好的 DMG，請把拾音拖進「應用程式」取代舊版": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't replace the app in “%@”. The downloaded DMG is open; drag Shiyin to Applications to replace the old version."
+          }
+        }
+      }
+    },
+    "沒有逐字稿。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No transcript."
+          }
+        }
+      }
+    },
+    "沒辦法註冊 %@，可能已經被其他 app 使用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't register %@. Another app may be using it."
+          }
+        }
+      }
+    },
+    "沒辦法開始錄音：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start recording: %@"
+          }
+        }
+      }
+    },
+    "準備好了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Set"
+          }
+        }
+      }
+    },
+    "準備轉錄…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing to transcribe…"
+          }
+        }
+      }
+    },
+    "無法匯入「%@」：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't import “%@”: %@"
+          }
+        }
+      }
+    },
+    "無法存放下載的檔案：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the downloaded file: %@"
+          }
+        }
+      }
+    },
+    "無法存放模型：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the model: %@"
+          }
+        }
+      }
+    },
+    "無法建立壓縮工作": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start compressing"
+          }
+        }
+      }
+    },
+    "無法建立轉檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start the conversion"
+          }
+        }
+      }
+    },
+    "無法產生文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't create the document"
+          }
+        }
+      }
+    },
+    "無法開始讀取": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start reading"
+          }
+        }
+      }
+    },
+    "狀態": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "琥珀色是辨識信心低的段落": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amber marks low-confidence segments"
+          }
+        }
+      }
+    },
+    "環境檢查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment check"
+          }
+        }
+      }
+    },
+    "用詞修正": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fix Wording"
+          }
+        }
+      }
+    },
+    "用詞修正…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fix Wording…"
+          }
+        }
+      }
+    },
+    "用途說明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "用逗號分隔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separated by commas"
+          }
+        }
+      }
+    },
+    "由 %@ 整理．%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarized by %@ · %@"
+          }
+        }
+      }
+    },
+    "留空使用預設模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave blank for the default model"
+          }
+        }
+      }
+    },
+    "略過": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        }
+      }
+    },
+    "略過 %lld 題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Skip %lld question"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Skip %lld questions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "略過待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped review questions"
+          }
+        }
+      }
+    },
+    "發布拾音的人會給你這個網址（shiyin-update.json）。留空就用安裝版本內建的網址；都沒有的話不會檢查更新。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whoever distributes Shiyin gives you this URL (shiyin-update.json). Leave it blank to use the one built into this version; if neither is set, Shiyin doesn't check for updates."
+          }
+        }
+      }
+    },
+    "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not summarizing: recordings, transcription and transcripts all stay on this Mac."
+          }
+        }
+      }
+    },
+    "目前是 %@。更新時拾音會結束並重新打開，會議資料都會保留。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You have %@. Shiyin will quit and reopen to update; your meetings are kept."
+          }
+        }
+      }
+    },
+    "目前沒有進行中的工作": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing in progress"
+          }
+        }
+      }
+    },
+    "目前版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current version"
+          }
+        }
+      }
+    },
+    "目前的轉錄提示：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current transcription hint: %@"
+          }
+        }
+      }
+    },
+    "直接修改會議紀錄，存檔時會留一個版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit the meeting notes directly; saving keeps a version"
+          }
+        }
+      }
+    },
+    "看使用說明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read the Guide"
+          }
+        }
+      }
+    },
+    "看會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read the meeting notes"
+          }
+        }
+      }
+    },
+    "磁碟空間": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disk space"
+          }
+        }
+      }
+    },
+    "移出「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from “%@”"
+          }
+        }
+      }
+    },
+    "移到垃圾桶": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Trash"
+          }
+        }
+      }
+    },
+    "移到垃圾桶…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Trash…"
+          }
+        }
+      }
+    },
+    "移到資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Folder"
+          }
+        }
+      }
+    },
+    "稍後": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        }
+      }
+    },
+    "空白鍵": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space"
+          }
+        }
+      }
+    },
+    "第一次使用下載模型時需要（約 1.7 GB）；整理會議紀錄時需要。錄音、轉錄不需要": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed to download models the first time (about 1.7 GB) and to summarize meetings. Not needed for recording or transcription"
+          }
+        }
+      }
+    },
+    "第一次錄音時會詢問；被拒絕的話到「系統設定 → 隱私權與安全性 → 麥克風」打開拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll be asked the first time you record. If denied, turn on Shiyin in System Settings → Privacy & Security → Microphone."
+          }
+        }
+      }
+    },
+    "第二版用的 Python 環境和舊模型已經用不到了，佔用 %@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Python environment and old model from version 2 are no longer used and take up %@."
+          }
+        }
+      }
+    },
+    "第二版留下的檔案": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files left from version 2"
+          }
+        }
+      }
+    },
+    "筆記": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
+          }
+        }
+      }
+    },
+    "等轉錄模型下載完成就會開始轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription will start once the model is downloaded"
+          }
+        }
+      }
+    },
+    "範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template"
+          }
+        }
+      }
+    },
+    "範本：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template: "
+          }
+        }
+      }
+    },
+    "系統": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        }
+      }
+    },
+    "系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct spellings of system, product and people's names. They're given to transcription as a hint (up to about 150 characters) and used when summarizing. In tests, the glossary made a big difference for proper nouns."
+          }
+        }
+      }
+    },
+    "系統錄音權限設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Audio Settings"
+          }
+        }
+      }
+    },
+    "系統需求": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System requirements"
+          }
+        }
+      }
+    },
+    "系統預設": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System default"
+          }
+        }
+      }
+    },
+    "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 1.7 GB for models (transcription 1.66 GB, speaker recognition 21 MB), plus recordings: they're compressed to m4a after transcription, about 10–30 MB per hour"
+          }
+        }
+      }
+    },
+    "純文字（txt）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plain text (txt)"
+          }
+        }
+      }
+    },
+    "純文字（貼到 Slack、訊息）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plain text (for Slack, Messages)"
+          }
+        }
+      }
+    },
+    "結束": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit"
+          }
+        }
+      }
+    },
+    "結束拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit Shiyin"
+          }
+        }
+      }
+    },
+    "網路": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Internet"
+          }
+        }
+      }
+    },
+    "編輯": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        }
+      }
+    },
+    "編輯會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Meeting Notes"
+          }
+        }
+      }
+    },
+    "編輯議題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Topics"
+          }
+        }
+      }
+    },
+    "編輯這一段": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit This Segment"
+          }
+        }
+      }
+    },
+    "繼續": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume"
+          }
+        }
+      }
+    },
+    "繼續下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume Download"
+          }
+        }
+      }
+    },
+    "繼續錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume Recording"
+          }
+        }
+      }
+    },
+    "繼續錄音（⇧⌘P）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume recording (⇧⌘P)"
+          }
+        }
+      }
+    },
+    "缺少 manifest.json": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "manifest.json is missing"
+          }
+        }
+      }
+    },
+    "缺少 meeting.json": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "meeting.json is missing"
+          }
+        }
+      }
+    },
+    "自訂段落": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom sections"
+          }
+        }
+      }
+    },
+    "與會者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participants"
+          }
+        }
+      }
+    },
+    "被拒絕": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denied"
+          }
+        }
+      }
+    },
+    "複製": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate"
+          }
+        }
+      }
+    },
+    "複製會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Meeting Notes"
+          }
+        }
+      }
+    },
+    "複製會議紀錄（Markdown）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Meeting Notes (Markdown)"
+          }
+        }
+      }
+    },
+    "複製會議紀錄（富文字）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Meeting Notes (Rich Text)"
+          }
+        }
+      }
+    },
+    "要寫什麼": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What to write"
+          }
+        }
+      }
+    },
+    "要產生的段落": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sections"
+          }
+        }
+      }
+    },
+    "記憶體": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory"
+          }
+        }
+      }
+    },
+    "設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "設定（⌘,）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings (⌘,)"
+          }
+        }
+      }
+    },
+    "設為預設範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set as Default"
+          }
+        }
+      }
+    },
+    "詞彙表": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glossary"
+          }
+        }
+      }
+    },
+    "詳細": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker"
+          }
+        }
+      }
+    },
+    "說話者 %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker %lld"
+          }
+        }
+      }
+    },
+    "說話者名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker name"
+          }
+        }
+      }
+    },
+    "說話者辨識模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker recognition model"
+          }
+        }
+      }
+    },
+    "說話者辨識模型（FluidAudio）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker recognition model (FluidAudio)"
+          }
+        }
+      }
+    },
+    "說話者辨識模型：分辨是誰在說話": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker recognition model: tells who is speaking"
+          }
+        }
+      }
+    },
+    "請到「系統設定 → 隱私權與安全性 → 麥克風」打開「拾音」，再重新開始錄音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on Shiyin in System Settings → Privacy & Security → Microphone, then start recording again."
+          }
+        }
+      }
+    },
+    "議題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topic"
+          }
+        }
+      }
+    },
+    "讀不到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read “%@”"
+          }
+        }
+      }
+    },
+    "讀不到新版的簽章": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read the new version's signature"
+          }
+        }
+      }
+    },
+    "讀不到目前 app 的簽章": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read this app's signature"
+          }
+        }
+      }
+    },
+    "讀不到這個錄音檔，可能檔案已損壞或不是支援的格式（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read this recording. The file may be damaged or in an unsupported format (%@)"
+          }
+        }
+      }
+    },
+    "讀取中斷": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading was interrupted"
+          }
+        }
+      }
+    },
+    "讀取系統聲音格式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the system audio format"
+          }
+        }
+      }
+    },
+    "讀取錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading audio"
+          }
+        }
+      }
+    },
+    "負責人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Owner"
+          }
+        }
+      }
+    },
+    "貼上 API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste API key"
+          }
+        }
+      }
+    },
+    "資料位置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data location"
+          }
+        }
+      }
+    },
+    "資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folders"
+          }
+        }
+      }
+    },
+    "資料夾名稱": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder name"
+          }
+        }
+      }
+    },
+    "資料夾裡的會議都會跟著改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All meetings in the folder will be updated."
+          }
+        }
+      }
+    },
+    "資料與隱私": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data and privacy"
+          }
+        }
+      }
+    },
+    "超過 15 秒沒有收到系統聲音：請確認線上會議有聲音，並在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No system audio for over 15 seconds. Check that the meeting is playing sound and that Shiyin is allowed in System Settings → Privacy & Security → Screen & System Audio Recording."
+          }
+        }
+      }
+    },
+    "轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing"
+          }
+        }
+      }
+    },
+    "轉錄中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing"
+          }
+        }
+      }
+    },
+    "轉錄和整理完成後，會議紀錄會出現在這裡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting notes will appear here after transcription and summarizing."
+          }
+        }
+      }
+    },
+    "轉錄失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription failed"
+          }
+        }
+      }
+    },
+    "轉錄失敗（whisper 錯誤代碼 %d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription failed (whisper error %d)"
+          }
+        }
+      }
+    },
+    "轉錄失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription failed: %@"
+          }
+        }
+      }
+    },
+    "轉錄完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription complete"
+          }
+        }
+      }
+    },
+    "轉錄完成、會議紀錄整理好時通知你。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get notified when a transcript or meeting notes are ready."
+          }
+        }
+      }
+    },
+    "轉錄完成後把錄音壓縮成 m4a（約每小時 10～30 MB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compress recordings to m4a after transcription (about 10–30 MB per hour)"
+          }
+        }
+      }
+    },
+    "轉錄完成後自動整理成會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarize automatically after transcription"
+          }
+        }
+      }
+    },
+    "轉錄完成後，逐字稿會出現在這裡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcript will appear here after transcription."
+          }
+        }
+      }
+    },
+    "轉錄完會自動整理。「摘要」有重點、決議、待辦和未決問題；「詳細」依議題分段；每一條後面的時間點點一下，就從錄音那裡開始播放。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多」選「重新整理會議紀錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After transcription, Shiyin summarizes automatically. “Summary” has the key points, decisions, action items and open questions; “Details” is organized by topic. Click the time after any item to play the recording from there. Use the template menu at the top right to switch to One-on-one, Interview, Lecture / talk, Brainstorm and more, then choose “Summarize again” from “More”."
+          }
+        }
+      }
+    },
+    "轉錄時辨識說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identify speakers when transcribing"
+          }
+        }
+      }
+    },
+    "轉錄模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription model"
+          }
+        }
+      }
+    },
+    "轉錄模型 Breeze ASR 25": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription model Breeze ASR 25"
+          }
+        }
+      }
+    },
+    "轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You only download the transcription model once; after that, transcription doesn't need the internet. You can click “Next” and let it download in the background. If you'd rather not download it, set transcription to macOS in Settings → Recording (it doesn't use the glossary)."
+          }
+        }
+      }
+    },
+    "轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load the transcription model. The file may be damaged; download it again in Settings."
+          }
+        }
+      }
+    },
+    "轉錄模型還在下載，下載完成前的錄音會先排隊，下載好就會自動轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcription model is still downloading. Recordings wait in the queue and are transcribed automatically once it's done."
+          }
+        }
+      }
+    },
+    "轉錄（macOS 內建）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing (macOS)"
+          }
+        }
+      }
+    },
+    "辨識信心低，建議對照錄音確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low recognition confidence; check against the recording"
+          }
+        }
+      }
+    },
+    "辨識說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifying speakers"
+          }
+        }
+      }
+    },
+    "送出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submit"
+          }
+        }
+      }
+    },
+    "送出 %lld 題回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Submit %lld answer"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Submit %lld answers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "送出 %lld 題回答、略過 %lld 題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submit: %lld answered, %lld skipped"
+          }
+        }
+      }
+    },
+    "逐字稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcript"
+          }
+        }
+      }
+    },
+    "逐字稿改了 %lld 段": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changed %lld transcript segment"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changed %lld transcript segments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "逐字稿裡琥珀色的段落辨識信心比較低，值得回頭聽；時間軸上的三角形是待確認題目、圓點是你標的重點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amber segments in the transcript have lower recognition confidence and are worth listening to again. On the timeline, triangles are questions to confirm and dots are your bookmarks."
+          }
+        }
+      }
+    },
+    "這不是有效的拾音封包：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This isn't a valid Shiyin package: %@"
+          }
+        }
+      }
+    },
+    "這個封包是新版拾音匯出的（格式 %lld），請先更新拾音再匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This package was exported by a newer Shiyin (format %lld). Update Shiyin first, then import it."
+          }
+        }
+      }
+    },
+    "這個檔案裡沒有聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file has no audio"
+          }
+        }
+      }
+    },
+    "這場會議在垃圾桶裡，30 天後會永久刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is in Trash and will be deleted permanently after 30 days"
+          }
+        }
+      }
+    },
+    "這場會議所在的資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The folder this meeting is in"
+          }
+        }
+      }
+    },
+    "這場會議沒有分出議題（可能是範本沒有包含「議題詳細」）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no topics (the template may not include “Topics”)."
+          }
+        }
+      }
+    },
+    "這場會議沒有錄音檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no recording"
+          }
+        }
+      }
+    },
+    "這場會議還沒整理成會議紀錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting hasn't been summarized yet."
+          }
+        }
+      }
+    },
+    "通知": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        }
+      }
+    },
+    "連不到 %@：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach %@: %@"
+          }
+        }
+      }
+    },
+    "進行中的轉錄或整理會中斷，下次開啟時從頭重跑。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription or summarizing in progress will stop and start over the next time you open Shiyin."
+          }
+        }
+      }
+    },
+    "進階": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced"
+          }
+        }
+      }
+    },
+    "選一個範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a template"
+          }
+        }
+      }
+    },
+    "選一場會議來還原或永久刪除。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a meeting to restore or delete permanently."
+          }
+        }
+      }
+    },
+    "選填，沒填就由整理時命名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional; named when summarized if left blank"
+          }
+        }
+      }
+    },
+    "選填，用逗號分隔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional, separated by commas"
+          }
+        }
+      }
+    },
+    "選擇": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose"
+          }
+        }
+      }
+    },
+    "還原": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
+          }
+        }
+      }
+    },
+    "還有工作在進行，要結束拾音嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work is still in progress. Quit Shiyin?"
+          }
+        }
+      }
+    },
+    "還沒下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not downloaded"
+          }
+        }
+      }
+    },
+    "還沒安裝": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not installed"
+          }
+        }
+      }
+    },
+    "還沒有下載轉錄模型，下載完成後才能轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcription model hasn't been downloaded yet. Transcription starts once it's downloaded."
+          }
+        }
+      }
+    },
+    "還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcription model hasn't been downloaded. Download it in Settings → Models & Storage."
+          }
+        }
+      }
+    },
+    "還沒有填 %@ 的 API key，請到設定 → 整理工具填寫": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No %@ API key yet. Enter it in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "還沒有會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meetings yet"
+          }
+        }
+      }
+    },
+    "還沒有設定更新網址": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No update URL is set"
+          }
+        }
+      }
+    },
+    "還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No terms yet. Terms are also added here when you choose “Add to glossary” in Fix Wording."
+          }
+        }
+      }
+    },
+    "還沒有逐字稿。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No transcript yet."
+          }
+        }
+      }
+    },
+    "還沒有逐字稿，請先完成轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There's no transcript yet. Transcribe the recording first."
+          }
+        }
+      }
+    },
+    "還沒詢問": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not asked yet"
+          }
+        }
+      }
+    },
+    "邊錄邊看、邊記": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow along and take notes"
+          }
+        }
+      }
+    },
+    "重建搜尋索引": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rebuild Search Index"
+          }
+        }
+      }
+    },
+    "重新命名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
+    "重新命名…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename…"
+          }
+        }
+      }
+    },
+    "重新命名資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Folder"
+          }
+        }
+      }
+    },
+    "重新整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarized again"
+          }
+        }
+      }
+    },
+    "重新整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarize Again"
+          }
+        }
+      }
+    },
+    "重新檢查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check Again"
+          }
+        }
+      }
+    },
+    "重新轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe Again"
+          }
+        }
+      }
+    },
+    "重新轉錄（含說話者辨識）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe Again (with speaker recognition)"
+          }
+        }
+      }
+    },
+    "重新顯示首次使用引導": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Welcome Guide Again"
+          }
+        }
+      }
+    },
+    "重試": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry"
+          }
+        }
+      }
+    },
+    "重點標記 %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmark %lld"
+          }
+        }
+      }
+    },
+    "錄現場會議或你自己的聲音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record in-person meetings or your own voice."
+          }
+        }
+      }
+    },
+    "錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。第一次錄電腦聲音時，macOS 會詢問「錄製系統音訊」的權限。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For online meetings, choose “Microphone + computer audio”: your voice and the other side are recorded on the left and right channels. The first time you record computer audio, macOS asks for System Audio Recording permission."
+          }
+        }
+      }
+    },
+    "錄線上會議（Zoom、Meet、Teams）對方的聲音。第一次選「麥克風＋電腦聲音」錄音時，macOS 會跳出詢問，請按允許。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record the other side of online meetings (Zoom, Meet, Teams). The first time you record with “Microphone + computer audio”, macOS will ask; click Allow."
+          }
+        }
+      }
+    },
+    "錄製系統音訊": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Audio Recording"
+          }
+        }
+      }
+    },
+    "錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording"
+          }
+        }
+      }
+    },
+    "錄音 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording %@"
+          }
+        }
+      }
+    },
+    "錄音、逐字稿和會議紀錄都只存在這台 Mac 上（~/Library/Application Support/Shiyin），不會被 iCloud 同步。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordings, transcripts and meeting notes are stored only on this Mac (~/Library/Application Support/Shiyin) and aren't synced to iCloud."
+          }
+        }
+      }
+    },
+    "錄音中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording"
+          }
+        }
+      }
+    },
+    "錄音中標記重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmark the moment while recording"
+          }
+        }
+      }
+    },
+    "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間。重要的地方按「標記重點」（⌘B）。需要中斷時按「暫停」（⇧⌘P），暫停的時間不會錄進去。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, the live transcript appears on the left within a few seconds of speech. In “My notes” on the right, each new line records the current recording time. Click “Bookmark” (⌘B) at important moments. To take a break, click “Pause” (⇧⌘P); the paused time isn't recorded."
+          }
+        }
+      }
+    },
+    "錄音中顯示即時逐字稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show live transcript while recording"
+          }
+        }
+      }
+    },
+    "錄音中，點一下打開這場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording. Click to open this meeting."
+          }
+        }
+      }
+    },
+    "錄音來源": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording source"
+          }
+        }
+      }
+    },
+    "錄音和轉錄都只在這台 Mac 上進行，不會上傳。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording and transcription happen only on this Mac. Nothing is uploaded."
+          }
+        }
+      }
+    },
+    "錄音存檔失敗：%@（檔案還在 %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the recording: %@ (the file is still at %@)"
+          }
+        }
+      }
+    },
+    "錄音寫檔發生錯誤：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error writing the recording: %@"
+          }
+        }
+      }
+    },
+    "錄音或匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record or import"
+          }
+        }
+      }
+    },
+    "錄音或轉錄、整理進行中，完成後再更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording, transcription or summarizing is in progress. Update when it's done."
+          }
+        }
+      }
+    },
+    "錄音時間軸": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording timeline"
+          }
+        }
+      }
+    },
+    "錄音會先存好，下次開啟拾音時開始轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recording will be saved and transcribed the next time you open Shiyin."
+          }
+        }
+      }
+    },
+    "錄音檔太小，沒有內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recording file is too small and has no content"
+          }
+        }
+      }
+    },
+    "錄音的提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording notice"
+          }
+        }
+      }
+    },
+    "錄音結束、轉錄完成後，會議紀錄會出現在這裡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting notes will appear here after recording and transcription."
+          }
+        }
+      }
+    },
+    "錄音裡沒有辨識到任何語音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No speech was found in the recording"
+          }
+        }
+      }
+    },
+    "錯誤代碼 %d": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "error %d"
+          }
+        }
+      }
+    },
+    "錯誤寫法": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrong spelling"
+          }
+        }
+      }
+    },
+    "開始使用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Started"
+          }
+        }
+      }
+    },
+    "開始或停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start or stop recording"
+          }
+        }
+      }
+    },
+    "開始擷取系統聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting system audio capture"
+          }
+        }
+      }
+    },
+    "開始說話後，逐字稿會即時出現在這裡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcript appears here as people speak."
+          }
+        }
+      }
+    },
+    "開始錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Recording"
+          }
+        }
+      }
+    },
+    "開始錄音（⌘R）；點右邊的箭頭可以選錄音來源": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start recording (⌘R). Click the arrow on the right to choose the source."
+          }
+        }
+      }
+    },
+    "電腦播放的聲音（線上會議的對方）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer audio (the other side of an online meeting)"
+          }
+        }
+      }
+    },
+    "音量": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level"
+          }
+        }
+      }
+    },
+    "項目": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item"
+          }
+        }
+      }
+    },
+    "預設": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
+          }
+        }
+      }
+    },
+    "預設會議語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default meeting language"
+          }
+        }
+      }
+    },
+    "預設：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default: %@"
+          }
+        }
+      }
+    },
+    "額外指示（選填）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Additional instructions (optional)"
+          }
+        }
+      }
+    },
+    "驗證模型失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't verify the model: %@"
+          }
+        }
+      }
+    },
+    "麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone"
+          }
+        }
+      }
+    },
+    "麥克風權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone access"
+          }
+        }
+      }
+    },
+    "麥克風權限設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone Settings"
+          }
+        }
+      }
+    },
+    "麥克風音量": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone level"
+          }
+        }
+      }
+    },
+    "麥克風＋電腦聲音（線上會議）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone + computer audio (online meetings)"
+          }
+        }
+      }
+    },
+    "點一下幫這位說話者改名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to rename this speaker"
+          }
+        }
+      }
+    },
+    "點任何時間點或視窗底部的時間軸就從那裡播放，空白鍵播放或暫停；播放列右邊可以選 0.75×～2× 的速度。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click any time or the timeline at the bottom to play from there; Space plays or pauses. Choose a speed from 0.75× to 2× at the right of the player."
+          }
+        }
+      }
+    },
+    "（API key 錯誤或已失效）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (the API key is wrong or expired)"
+          }
+        }
+      }
+    },
+    "（超過用量限制，請稍後再試）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (rate limit reached; try again later)"
+          }
+        }
+      }
+    },
+    "，": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", "
+          }
+        }
+      }
+    },
+    "，快好了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", almost done"
+          }
+        }
+      }
+    },
+    "，約剩 %lld 分鐘": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": ", about %lld min left"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": ", about %lld min left"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "：找不到": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ": not found"
+          }
+        }
+      }
+    },
+    "；": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "; "
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

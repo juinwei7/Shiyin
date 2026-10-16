@@ -78,7 +78,7 @@ struct MenuBarContent: View {
         VStack(alignment: .leading, spacing: 8) {
             if let t = model.runner.running[.transcribe] {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(t.job.kind == .compress ? "壓縮錄音" : t.stage.isEmpty ? "轉錄" : t.stage)中：\(title(t.job.meetingId))").lineLimit(1)
+                    Text(String(localized: "\(t.job.kind == .compress ? String(localized: "壓縮錄音") : t.stage.isEmpty ? String(localized: "轉錄") : t.stage)中：\(title(t.job.meetingId))")).lineLimit(1)
                     if let p = t.progress {
                         ProgressView(value: p).tint(.signal)
                     } else {
@@ -103,6 +103,6 @@ struct MenuBarContent: View {
     }
 
     private func title(_ meetingId: Int64) -> String {
-        model.meetings.first { $0.id == meetingId }?.meeting.displayTitle ?? "會議"
+        model.meetings.first { $0.id == meetingId }?.meeting.displayTitle ?? String(localized: "會議")
     }
 }

@@ -2,15 +2,20 @@
 import Foundation
 import Speech
 
-/// 錄音中的即時逐字稿（design §5.3）：SpeechAnalyzer zh_TW，暫定結果約 0 秒、定稿約 2 秒
+/// 錄音中的即時逐字稿（design §5.3）：SpeechAnalyzer，語言依會議語言（§16.4），暫定結果約 0 秒、定稿約 2 秒
 @MainActor
 final class LiveTranscriber {
+    let language: MeetingLanguage
     var onVolatile: ((String) -> Void)?
     var onFinal: ((Double, Double, String) -> Void)?
 
     private var analyzer: SpeechAnalyzer?
     private var resultsTask: Task<Void, Never>?
     private let feeder = Feeder()
+
+    init(language: MeetingLanguage) {
+        self.language = language
+    }
 
     /// 送音訊的部分，可以從寫檔的執行緒呼叫
     final class Feeder: @unchecked Sendable {
@@ -65,13 +70,12 @@ final class LiveTranscriber {
         return { feeder.feed($0) }
     }
 
-    static let locale = Locale(identifier: "zh_TW")
 
     /// 準備 SpeechAnalyzer；系統還沒有 zh_TW 模型時先下載（併入首次使用引導，design §11）
     func start() async throws {
-        let transcriber = SpeechTranscriber(locale: Self.locale, transcriptionOptions: [],
+        let transcriber = SpeechTranscriber(locale: language.speechLocale, transcriptionOptions: [],
                                             reportingOptions: [.volatileResults], attributeOptions: [.audioTimeRange])
-        try await Self.ensureAssets(for: transcriber)
+        try await Self.ensureAssets(language, for: transcriber)
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber]) else {
             throw CaptureError.unsupportedFormat
@@ -105,13 +109,14 @@ final class LiveTranscriber {
         resultsTask = nil
     }
 
-    static var isLocaleInstalled: Bool {
-        get async { await SpeechTranscriber.installedLocales.contains { $0.identifier == locale.identifier } }
+    static func isLocaleInstalled(_ language: MeetingLanguage) async -> Bool {
+        await SpeechTranscriber.installedLocales.contains { $0.identifier == language.speechLocale.identifier }
     }
 
-    static func ensureAssets(for transcriber: SpeechTranscriber? = nil) async throws {
-        let module = transcriber ?? SpeechTranscriber(locale: locale, preset: .transcription)
-        if await isLocaleInstalled { return }
+    /// 系統還沒有這個語言的辨識模型時先下載（即時逐字稿和 macOS 內建辨識共用）
+    static func ensureAssets(_ language: MeetingLanguage, for transcriber: SpeechTranscriber? = nil) async throws {
+        let module = transcriber ?? SpeechTranscriber(locale: language.speechLocale, preset: .transcription)
+        if await isLocaleInstalled(language) { return }
         if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
             try await request.downloadAndInstall()
         }

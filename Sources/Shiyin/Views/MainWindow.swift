@@ -110,18 +110,18 @@ struct MainView: View {
         }
         .modifier(FolderPromptModifier())
         // 有新版時詢問（R10.6）
-        .alert("拾音 \(model.updater.prompt?.version ?? "") 可以更新了", isPresented: Binding(
+        .alert(String(localized: "拾音 \(model.updater.prompt?.version ?? "") 可以更新了"), isPresented: Binding(
             get: { model.updater.prompt != nil }, set: { if !$0 { model.updater.prompt = nil } })) {
             Button("稍後", role: .cancel) { model.updater.prompt = nil }
             Button("下載並更新") {
                 if let manifest = model.updater.prompt {
                     model.updater.prompt = nil
-                    model.noticeMessage = "正在下載更新，完成後拾音會自動重新打開"
+                    model.noticeMessage = String(localized: "正在下載更新，完成後拾音會自動重新打開")
                     Task { await model.updater.install(manifest, model: model) }
                 }
             }
         } message: {
-            Text([model.updater.prompt?.notes ?? "", "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。"]
+            Text([model.updater.prompt?.notes ?? "", String(localized: "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。")]
                 .filter { !$0.isEmpty }.joined(separator: "\n\n"))
         }
         .confirmationDialog("把這場會議移到垃圾桶？", isPresented: $model.confirmDelete) {
@@ -184,7 +184,7 @@ struct SidebarView: View {
                 Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
             } else if !model.folders.isEmpty {
                 Section("資料夾") {
-                    FolderRow(name: "所有會議", count: model.meetings.count, symbol: "tray.full", selected: model.folderFilter == nil) {
+                    FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: model.folderFilter == nil) {
                         model.folderFilter = nil
                     }
                     ForEach(model.folders, id: \.name) { folder in
@@ -198,7 +198,7 @@ struct SidebarView: View {
                     }
                 }
             }
-            Section(model.showTrash || model.folders.isEmpty ? "" : (model.folderFilter ?? "所有會議")) {
+            Section(model.showTrash || model.folders.isEmpty ? "" : (model.folderFilter ?? String(localized: "所有會議"))) {
                 ForEach(model.filteredMeetings) { row in
                     MeetingRowView(row: row, status: model.status(row))
                         .tag(row.id)
@@ -294,16 +294,16 @@ struct FolderPromptModifier: ViewModifier {
     }
 
     private var title: String {
-        if case .rename? = model.folderPrompt { return "重新命名資料夾" }
-        return "新資料夾"
+        if case .rename? = model.folderPrompt { return String(localized: "重新命名資料夾") }
+        return String(localized: "新資料夾")
     }
     private var confirmTitle: String {
-        if case .rename? = model.folderPrompt { return "重新命名" }
-        return "建立並移入"
+        if case .rename? = model.folderPrompt { return String(localized: "重新命名") }
+        return String(localized: "建立並移入")
     }
     private var message: String {
-        if case .rename? = model.folderPrompt { return "資料夾裡的會議都會跟著改。" }
-        return "例如專案名稱或客戶名稱。這場會議會移進新資料夾。"
+        if case .rename? = model.folderPrompt { return String(localized: "資料夾裡的會議都會跟著改。") }
+        return String(localized: "例如專案名稱或客戶名稱。這場會議會移進新資料夾。")
     }
 }
 
@@ -319,7 +319,7 @@ struct SearchResultsList: View {
                 Text("找不到「\(model.searchQuery)」").foregroundStyle(.secondary)
             }
             ForEach(order, id: \.self) { meetingId in
-                Section(model.meetings.first { $0.id == meetingId }?.meeting.displayTitle ?? "會議") {
+                Section(model.meetings.first { $0.id == meetingId }?.meeting.displayTitle ?? String(localized: "會議")) {
                     ForEach(groups[meetingId] ?? []) { hit in
                         Button { model.openSearchHit(hit) } label: {
                             VStack(alignment: .leading, spacing: 2) {
@@ -338,10 +338,10 @@ struct SearchResultsList: View {
 
     private func kindLabel(_ kind: SearchHit.Kind) -> String {
         switch kind {
-        case .title: return "標題"
-        case .segment: return "逐字稿"
-        case .notes: return "會議紀錄"
-        case .userNotes: return "我的筆記"
+        case .title: return String(localized: "標題")
+        case .segment: return String(localized: "逐字稿")
+        case .notes: return String(localized: "會議紀錄")
+        case .userNotes: return String(localized: "我的筆記")
         }
     }
 }
@@ -385,6 +385,7 @@ struct MeetingRowView: View {
 struct RecordingControls: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
+    @AppStorage(AppSettings.defaultMeetingLanguageKey) private var language: MeetingLanguage = .interface
 
     var body: some View {
         if model.recorder.isRecording {
@@ -411,8 +412,12 @@ struct RecordingControls: View {
                     Text("只錄電腦聲音").tag("system")
                 }
                 .pickerStyle(.inline)
+                Picker("會議語言", selection: $language) {
+                    ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
+                }
+                .pickerStyle(.inline)
             } label: {
-                Label("錄音", systemImage: "record.circle")
+                Label(MeetingLanguage.ui(zh: "錄音", en: "Record"), systemImage: "record.circle")
             } primaryAction: {
                 model.startRecording()
             }
@@ -457,6 +462,7 @@ struct ImportSheet: View {
     @State private var date = Date()
     @State private var participants = ""
     @State private var templateId = AppSettings.defaultTemplate
+    @State private var language = AppSettings.defaultMeetingLanguage
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -472,12 +478,16 @@ struct ImportSheet: View {
                     TextField("標題", text: $title, prompt: Text("選填，沒填就由整理時命名"))
                     DatePicker("會議日期", selection: $date, displayedComponents: .date)
                 } else {
-                    LabeledContent("會議日期", value: "依各檔案的檔名或修改日期")
+                    LabeledContent(String(localized: "會議日期"), value: String(localized: "依各檔案的檔名或修改日期"))
                 }
                 TextField("與會者", text: $participants, prompt: Text("選填，用逗號分隔"))
                 Picker("範本", selection: $templateId) {
-                    ForEach(model.templates) { Text($0.name).tag($0.id) }
+                    ForEach(model.templates) { Text($0.displayName).tag($0.id) }
                 }
+                Picker("會議語言", selection: $language) {
+                    ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
+                }
+                .help("決定轉錄和會議紀錄用的語言")
             }
             .formStyle(.columns)
             HStack {
@@ -489,7 +499,7 @@ struct ImportSheet: View {
                 .keyboardShortcut(.cancelAction)
                 Button("匯入並開始轉錄") {
                     model.confirmImport(ImportOptions(title: title, date: urls.count == 1 ? DateText.string(date) : nil,
-                                                      participants: participants, templateId: templateId))
+                                                      participants: participants, templateId: templateId, language: language))
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)

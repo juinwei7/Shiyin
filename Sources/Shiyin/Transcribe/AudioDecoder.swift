@@ -6,8 +6,8 @@ enum AudioDecoderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noAudioTrack: return "這個檔案裡沒有聲音"
-        case .unreadable(let reason): return "讀不到這個錄音檔，可能檔案已損壞或不是支援的格式（\(reason)）"
+        case .noAudioTrack: return String(localized: "這個檔案裡沒有聲音")
+        case .unreadable(let reason): return String(localized: "讀不到這個錄音檔，可能檔案已損壞或不是支援的格式（\(reason)）")
         }
     }
 }
@@ -33,7 +33,7 @@ enum AudioDecoder {
         output.alwaysCopiesSampleData = false
         reader.add(output)
         guard reader.startReading() else {
-            throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? "無法開始讀取")
+            throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? String(localized: "無法開始讀取"))
         }
         var samples: [Float] = []
         if let duration = try? await asset.load(.duration).seconds, duration.isFinite {
@@ -51,7 +51,7 @@ enum AudioDecoder {
             if status == kCMBlockBufferNoErr { samples.append(contentsOf: chunk) }
         }
         if reader.status == .failed {
-            throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? "讀取中斷")
+            throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? String(localized: "讀取中斷"))
         }
         return samples
     }

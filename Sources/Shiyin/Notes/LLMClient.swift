@@ -6,11 +6,11 @@ enum LLMProvider: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .claude: return "Claude（claude CLI）"
-        case .codex: return "Codex（codex CLI）"
+        case .claude: return String(localized: "Claude（claude CLI）")
+        case .codex: return String(localized: "Codex（codex CLI）")
         case .anthropic: return "Anthropic API"
         case .openai: return "OpenAI API"
-        case .none: return "不整理"
+        case .none: return String(localized: "不整理")
         }
     }
 
@@ -21,7 +21,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         case .codex: return "Codex"
         case .anthropic: return "Anthropic API"
         case .openai: return "OpenAI API"
-        case .none: return "不整理"
+        case .none: return String(localized: "不整理")
         }
     }
 
@@ -47,10 +47,10 @@ enum LLMError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notInstalled(let name): return "找不到 \(name) 指令，請先安裝並登入，或到設定 → 整理工具改用 API key"
-        case .missingKey(let name): return "還沒有填 \(name) 的 API key，請到設定 → 整理工具填寫"
+        case .notInstalled(let name): return String(localized: "找不到 \(name) 指令，請先安裝並登入，或到設定 → 整理工具改用 API key")
+        case .missingKey(let name): return String(localized: "還沒有填 \(name) 的 API key，請到設定 → 整理工具填寫")
         case .failed(let detail): return detail
-        case .badOutput(let detail): return "回傳的會議紀錄格式不正確：\(detail)"
+        case .badOutput(let detail): return String(localized: "回傳的會議紀錄格式不正確：\(detail)")
         }
     }
 }
@@ -75,7 +75,7 @@ enum LLMClient {
         case .openai:
             return try await openai(model: model.isEmpty ? provider.defaultModel : model, system: system, prompt: prompt)
         case .none:
-            throw LLMError.failed("整理工具設定為「不整理」")
+            throw LLMError.failed(String(localized: "整理工具設定為「不整理」"))
         }
     }
 
@@ -95,7 +95,7 @@ enum LLMClient {
         guard let line = text.split(separator: "\n").last(where: { $0.hasPrefix("{") }),
               let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else {
             let detail = result.stderrTail(500)
-            throw LLMError.failed(detail.isEmpty ? "claude 沒有回傳結果（結束代碼 \(result.status)）" : detail)
+            throw LLMError.failed(detail.isEmpty ? String(localized: "claude 沒有回傳結果（結束代碼 \(result.status)）") : detail)
         }
         if (object["is_error"] as? Bool) == true || object["structured_output"] == nil {
             throw LLMError.failed(String(((object["result"] as? String) ?? result.stderrTail(500)).prefix(500)))
@@ -119,7 +119,7 @@ enum LLMClient {
         let result = try await process.run(input: Data((system + "\n\n" + prompt).utf8), timeout: timeout)
         guard result.succeeded, let data = try? Data(contentsOf: output), !data.isEmpty else {
             let detail = result.stderrTail(500)
-            throw LLMError.failed(detail.isEmpty ? "codex 沒有回傳結果（結束代碼 \(result.status)）" : detail)
+            throw LLMError.failed(detail.isEmpty ? String(localized: "codex 沒有回傳結果（結束代碼 \(result.status)）") : detail)
         }
         return try decode(data)
     }
@@ -134,7 +134,7 @@ enum LLMClient {
             "max_tokens": 16_000,
             "system": system,
             "messages": [["role": "user", "content": prompt]],
-            "tools": [["name": "save_meeting_notes", "description": "儲存整理好的會議紀錄", "input_schema": schema]],
+            "tools": [["name": "save_meeting_notes", "description": String(localized: "儲存整理好的會議紀錄"), "input_schema": schema]],
             "tool_choice": ["type": "tool", "name": "save_meeting_notes"],
         ]
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!, timeoutInterval: timeout)
@@ -146,7 +146,7 @@ enum LLMClient {
         let object = try await send(request, provider: "Anthropic")
         guard let content = object["content"] as? [[String: Any]],
               let input = content.first(where: { $0["type"] as? String == "tool_use" })?["input"] else {
-            throw LLMError.badOutput("回應裡沒有會議紀錄（stop_reason：\(object["stop_reason"] as? String ?? "未知")）")
+            throw LLMError.badOutput(String(localized: "回應裡沒有會議紀錄（stop_reason：\(object["stop_reason"] as? String ?? String(localized: "未知"))）"))
         }
         return try decode(JSONSerialization.data(withJSONObject: input))
     }
@@ -169,20 +169,20 @@ enum LLMClient {
         let outputs = object["output"] as? [[String: Any]] ?? []
         let text = outputs.flatMap { ($0["content"] as? [[String: Any]]) ?? [] }
             .first { $0["type"] as? String == "output_text" }?["text"] as? String
-        guard let text else { throw LLMError.badOutput("回應裡沒有文字（status：\(object["status"] as? String ?? "未知")）") }
+        guard let text else { throw LLMError.badOutput(String(localized: "回應裡沒有文字（status：\(object["status"] as? String ?? String(localized: "未知"))）")) }
         return try decode(Data(text.utf8))
     }
 
     private static func send(_ request: URLRequest, provider: String) async throws -> [String: Any] {
         let (data, response): (Data, URLResponse)
         do { (data, response) = try await URLSession.shared.data(for: request) }
-        catch { throw LLMError.failed("連不到 \(provider)：\(error.localizedDescription)") }
+        catch { throw LLMError.failed(String(localized: "連不到 \(provider)：\(error.localizedDescription)")) }
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else {
             let message = ((object["error"] as? [String: Any])?["message"] as? String) ?? String(decoding: data.prefix(300), as: UTF8.self)
-            let hint = status == 401 ? "（API key 錯誤或已失效）" : status == 429 ? "（超過用量限制，請稍後再試）" : ""
-            throw LLMError.failed("\(provider) 回傳 HTTP \(status)\(hint)：\(message)")
+            let hint = status == 401 ? String(localized: "（API key 錯誤或已失效）") : status == 429 ? String(localized: "（超過用量限制，請稍後再試）") : ""
+            throw LLMError.failed(String(localized: "\(provider) 回傳 HTTP \(status)\(hint)：\(message)"))
         }
         return object
     }

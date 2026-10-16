@@ -81,15 +81,15 @@ struct ReviewTab: View {
 
     private var submitTitle: String {
         switch (answeredCount, dismissed.count) {
-        case (0, 0): return "送出"
-        case (0, let d): return "略過 \(d) 題"
-        case (let a, 0): return "送出 \(a) 題回答"
-        case (let a, let d): return "送出 \(a) 題回答、略過 \(d) 題"
+        case (0, 0): return String(localized: "送出")
+        case (0, let d): return String(localized: "略過 \(d) 題")
+        case (let a, 0): return String(localized: "送出 \(a) 題回答")
+        case (let a, let d): return String(localized: "送出 \(a) 題回答、略過 \(d) 題")
         }
     }
 
     private var footnote: String {
         let provider = AppSettings.provider == .none ? "LLM" : AppSettings.provider.label
-        return "有回答的題目會交給 \(provider) 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。"
+        return String(localized: "有回答的題目會交給 \(provider) 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。")
     }
 }

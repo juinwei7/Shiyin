@@ -316,7 +316,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ## 12. 發布（R10）
 
 - `scripts/make-signing-cert.sh`：在登入鑰匙圈建立一張自簽的程式簽章憑證，名稱是「Shiyin Self-Signed」，只要做一次。之後 `build-app.sh` 都用這張憑證簽章，designated requirement 才會固定，TCC 權限在更新後也會保留（R10.7）。
-- `scripts/make-dmg.sh`：用 hdiutil 建立 DMG，裡面有 Shiyin.app、「應用程式」資料夾的捷徑、`安裝說明.pdf`。
+- `scripts/make-dmg.sh`：用 hdiutil 建立 DMG，裡面有 Shiyin.app、Applications 資料夾的捷徑、`安裝說明.pdf` 和 `Install Guide.pdf`（3.1 起，§16.7）。
 - 安裝說明的內容：
   - 拖進「應用程式」
   - 第一次打開時被擋的話，到「系統設定 → 隱私權與安全性」按「仍要打開」（macOS 15 之後已經不能按右鍵開啟）
@@ -342,6 +342,59 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 第二版已經轉錄好的會議不重新轉錄，也沒有說話者資訊。會議頁可以選「重新轉錄」，用新引擎重轉並辨識說話者。
 - 偵測到第二版的 `venv/`、`models/breeze-asr-25/` 時，提示「可以刪除，釋放約 4.2 GB」，使用者確認後才刪。
 
+## 16. 多語言（3.1，R12）
+
+### 16.1 字串
+
+- 用 String Catalog：`Resources/Localizable.xcstrings`，來源語言是繁體中文，**鍵就是程式裡的中文原文**，另外填英文翻譯，目前 594 條。好處是呼叫點不用改寫，程式讀起來跟原本一樣（D12）。
+- SwiftUI 的字串字面值（`Text("…")`、`Button("…")`、`.help("…")`）本來就會查表。不是 SwiftUI 的地方改用 `String(localized:)`：錯誤訊息（`LocalizedError`）、提示（`noticeMessage`、`errorMessage`）、狀態文字、通知、`NSAlert`、選單列。
+- 同一句中文在不同地方要翻成不同英文時（「範本」是 Template 也是設定分頁的 Templates；「錄音」是按鈕 Record、分頁 Recording、儲存空間的 Recordings），那個地方改用 `MeetingLanguage.ui(zh:en:)` 直接寫兩種語言，不查表。
+- 工具 `scripts/dev/l10n.py`（D14）：
+  - `extract`：用 Swift 編譯器的 `-emit-localized-strings` 抽字串（插值的型別正確，`%@`、`%lld` 跟執行時查的鍵一致），合併進 catalog，程式已經不用的條目直接刪掉。
+  - `check`：列出缺英文的條目；逐行比對原始碼裡的中文字串（含全形標點）和編譯器記錄的查表字串數量，找出沒查表的介面中文。略過：`log.`、`zh:`（各語言分開寫好的地方）、標了 `// l10n-skip` 的行，以及 DEBUG 控制通道、提示詞、範本三個檔案。
+  - `apply <翻譯.json>`：把英文寫進 catalog；複數寫成 `{"one": …, "other": …}`。
+- 建置：`build-app.sh` 用 `xcrun xcstringstool compile` 編出 `en.lproj`、`zh-Hant.lproj` 的 `Localizable.strings`／`.stringsdict`，放進 `Contents/Resources`。
+- Info.plist：`CFBundleDevelopmentRegion` 改成 `en`、`CFBundleLocalizations` 是 `en`、`zh-Hant`。系統語言不是中文時顯示英文；繁中的表裡沒有的鍵直接顯示中文原文，所以中文介面不受影響。app 名稱（英文 Shiyin、中文拾音，`LSHasLocalizedDisplayName`）、權限說明、檔案類型名稱放在 Info.plist（英文）和 `zh-Hant.lproj/InfoPlist.strings`。
+- 英文介面裡的中文內容（會議標題、逐字稿）要用繁體字形和全形標點：所有視窗套 `.chineseGlyphs()`（`typesettingLanguage(zh-Hant)`），不然系統會用簡體的字形和標點位置。
+
+### 16.2 格式
+
+- 日期、星期用 `Date.FormatStyle`（`DateText.weekday(_:language:)`）。
+- 會議長度用 `TimeFormat.duration(_:language:)`：中文「N 分鐘」「N 小時 M 分鐘」，英文「N min」「N hr M min」；介面用介面語言，匯出用會議語言。
+- 「3 題」這類數量在 catalog 裡用複數變化處理。
+
+### 16.3 會議語言
+
+- `MeetingLanguage`（`zh`／`en`）：轉錄的 locale 和 whisper 語言碼、提示詞、範本、匯出、預設說話者名稱（「說話者 N」／「Speaker N」，存逐字稿時依會議語言決定）都從這裡取。介面語言另外由 `MeetingLanguage.interface`（`Bundle.main.preferredLocalizations`）判斷。
+- migration `v3`：`meetings.language TEXT NOT NULL DEFAULT 'zh'`，舊會議都是中文。
+- 設定 →「錄音」加「預設會議語言」（`defaultMeetingLanguage`，沒設定時依介面語言）。錄音按鈕旁的選單、匯入對話框、會議頁（地球圖示的選單）都可以選。已經轉錄的會議改語言不會自動重做，提示使用者從「更多」重新轉錄或整理。
+- .shiyin 封包的 `meeting.json` 帶 `language`，舊封包沒有就當成 `zh`。
+- 會議頁的標題區：範本、會議語言兩個選單放在標題下方資訊列（日期、長度、說話者）的右邊，標題獨佔一整行。原本範本選單在標題右邊，多了語言選單後，英文標題（通常比中文長）在 960 寬的視窗裡兩行也放不下、被截斷。資訊列加選單放不下時（說話者多、英文），選單改到下一行（`ViewThatFits`），說話者名字不截斷。
+
+### 16.4 轉錄
+
+- Breeze（whisper.cpp）：`language` 用 `zh` 或 `en`；英文的提示詞是 "The following is a recording of a work meeting. Glossary: …"，詞彙表的長度上限中文 150 字、英文 400 個字元。英文的幻覺過濾多一句 "Subtitles by the Amara.org community"。
+- macOS 內建、即時逐字稿：locale 用 `zh_TW` 或 `en_US`；第一次用英文時下載 `en_US` 模型（沿用 `ensureAssets`，首次使用引導依預設會議語言下載）。
+- 說話者辨識跟語言無關。
+
+### 16.5 整理與範本
+
+- 提示詞依會議語言分成兩份：中文跟 3.0 一字不差；英文是同一套規則的英文版，輸出英文，自訂段落的標題也譯成英文。只在系統提示詞加一句「用英文輸出」，實測容易混進中文段落，所以分開寫。
+- 內建範本：名稱、說明、自訂段落的標題和指示都有英文版（`BuiltinTemplates.english`），依 id 取用（資料庫裡存的中文名稱只當作自訂範本的名稱）。介面顯示用介面語言（`displayName`），提示詞用會議語言（`definition(for:)`）。
+- 待確認、校稿、手動編輯照舊，只是內容跟著會議語言。
+
+### 16.6 匯出
+
+會議紀錄和逐字稿的標題、欄位名稱（摘要、決議、待辦、負責人、說話者…）用會議語言，跟介面語言無關：`ExportText(language)` 在程式裡直接寫好中英兩組文字，不查 catalog（D15）。HTML（PDF、Word 的來源）的 `lang` 和字型也跟著會議語言：英文用系統字和 New York 標題。中文匯出的內容跟 3.0 完全相同。
+
+### 16.7 文件
+
+`README.en.md`（README.md 最上面加語言連結）；`scripts/install-guide.en.html`，DMG 裡同時放「安裝說明.pdf」和「Install Guide.pdf」。中英文共用一個 DMG，所以磁碟名稱（Shiyin 3.1.0）和「應用程式」捷徑（Applications）改用不分語言的英文。
+
+### 16.8 驗證
+
+用 `-AppleLanguages "(en)"` 啟動 DEBUG 版，所有畫面截圖檢查；英文會議用 AMI 片段跑模擬錄音的全流程；中文用既有的測試流程回歸。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -355,6 +408,10 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | D7 | PDF、docx 用系統元件產生 | 第三方套件：多一個依賴，系統元件就夠用 |
 | D8 | 說話者辨識用 FluidAudio | pyannote（Python）：違反 D2；sherpa-onnx：要另外整合 C++ 和 ONNX Runtime |
 | D9 | 每一條紀錄都帶時間點，由 LLM 填 | 在 app 內用文字比對去找時間點：摘要是改寫過的文字，比對不準 |
+| D12 | 翻譯表的鍵用程式裡的中文原文 | 鍵改成英文代號（`settings.recording.title`）：650 個呼叫點全部要改，程式也比較難讀；改成英文原文：中文介面反而要另外翻，而且中文才是主要語言 |
+| D13 | 會議語言只分中文、英文，由使用者選 | 自動偵測語言：錄音開始時還沒有內容可以判斷，中英夾雜的會議也容易誤判 |
+| D14 | 自己寫 l10n.py 抽字串、合併 catalog | `xcstringstool extract`：看不出型別，插值變成 `%arg`，跟執行時 SwiftUI 查的鍵對不上；`sync` 又不接受編譯器產生的 stringsdata。Xcode 專案：專案是 Swift Package，用指令建置 |
+| D15 | 匯出的文字在程式裡寫中英兩組，不查 catalog | 指定 `en.lproj` 的 Bundle 查表：catalog 只有英文翻譯，中文要另外處理，而且匯出用的字串會跟介面字串混在一起，改介面時容易誤改匯出格式 |
 | D11 | 正式轉錄可以改用 macOS 內建辨識（預設仍是 Breeze） | 只用 Breeze：真人中文會議（AISHELL-4，遠距麥克風陣列、6 人、38 分鐘）上，Breeze 的 CER 29.1%、macOS 內建 25.2%，內建還快 160 倍、不用下載 1.7 GB 模型。只用內建：合成的中英夾雜會議上，內建的英文專有名詞幾乎都錯（關鍵詞 1/6，Breeze 加詞彙表 5/6），台灣公司的會議以這種情況為主，所以預設還是 Breeze |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 

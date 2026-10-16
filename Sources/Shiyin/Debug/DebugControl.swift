@@ -48,6 +48,7 @@ enum DebugControl {
         case "segment": model.updateSegment(id ?? 0, text: args[2])
         case "speaker": model.selection = id; model.renameSpeaker(Int(args[2]) ?? 1, to: args[3])
         case "template": model.selection = id; model.setTemplate(args[2])
+        case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "editnotes":
             // editnotes <id> <會議紀錄 JSON>
             model.selection = id

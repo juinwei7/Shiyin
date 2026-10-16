@@ -18,36 +18,40 @@ enum WhisperError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .modelMissing: return "還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載"
-        case .loadFailed: return "轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載"
-        case .failed(let code): return "轉錄失敗（whisper 錯誤代碼 \(code)）"
-        case .cancelled: return "已取消"
-        case .empty: return "錄音裡沒有辨識到任何語音"
+        case .modelMissing: return String(localized: "還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載")
+        case .loadFailed: return String(localized: "轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載")
+        case .failed(let code): return String(localized: "轉錄失敗（whisper 錯誤代碼 \(code)）")
+        case .cancelled: return String(localized: "已取消")
+        case .empty: return String(localized: "錄音裡沒有辨識到任何語音")
         }
     }
 }
 
 /// whisper.cpp 的包裝（design §6.2）。在呼叫端的背景 Task 執行，blocking。
 enum WhisperEngine {
-    static let basePrompt = "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。"
-    static let promptLimit = 150
 
     // Whisper 在靜音段常見的幻覺字串，出現在短句時直接丟掉（沿用第二版）
     static let hallucinationPhrases = [
-        "字幕由Amara.org社區提供", "字幕由Amara.org社群提供", "字幕由Amara.org社区提供",
-        "請不吝點贊", "請不吝點讚", "请不吝点赞", "訂閱轉發打賞", "订阅转发打赏",
-        "明鏡與點點欄目", "明镜与点点栏目", "優優獨播劇場", "优优独播剧场",
+        "字幕由Amara.org社區提供", "字幕由Amara.org社群提供", "字幕由Amara.org社区提供",  // l10n-skip
+        "請不吝點贊", "請不吝點讚", "请不吝点赞", "訂閱轉發打賞", "订阅转发打赏",  // l10n-skip
+        "明鏡與點點欄目", "明镜与点点栏目", "優優獨播劇場", "优优独播剧场",  // l10n-skip
+        "Subtitles by the Amara.org community",
     ]
 
-    /// 基本提示詞＋詞彙表，總長度不超過 150 字（R4.1）
-    static func prompt(glossary: [String]) -> String {
+    /// 基本提示詞＋詞彙表（R4.1）：依會議語言（design §16.4），中文 150 字、英文 400 個字元以內
+    static func prompt(glossary: [String], language: MeetingLanguage = .zh) -> String {
+        let base = language.text(zh: "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。", en: "The following is a recording of a work meeting.")
+        let limit = language == .en ? 400 : 150
+        func build(_ terms: [String]) -> String {
+            terms.isEmpty ? base : base + language.text(zh: "詞彙：" + terms.joined(separator: "、") + "。",
+                                                        en: " Glossary: " + terms.joined(separator: ", ") + ".")
+        }
         var picked: [String] = []
         for term in glossary {
-            let candidate = basePrompt + "詞彙：" + (picked + [term]).joined(separator: "、") + "。"
-            if candidate.count > promptLimit { break }
+            if build(picked + [term]).count > limit { break }
             picked.append(term)
         }
-        return picked.isEmpty ? basePrompt : basePrompt + "詞彙：" + picked.joined(separator: "、") + "。"
+        return build(picked)
     }
 
     /// 傳給 C callback 的狀態：進度與取消

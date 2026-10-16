@@ -16,16 +16,16 @@ enum MeetingStatus: Equatable {
 
     var label: String {
         switch self {
-        case .recording: return "錄音中"
-        case .queued: return "排隊中"
+        case .recording: return String(localized: "錄音中")
+        case .queued: return String(localized: "排隊中")
         case .transcribing(let p, let stage):
-            let name = stage.isEmpty || stage == "轉錄" ? "轉錄中" : "\(stage)中"
+            let name = stage.isEmpty || stage == String(localized: "轉錄") ? String(localized: "轉錄中") : String(localized: "\(stage)中")
             return p.map { "\(name) \(Int($0 * 100))%" } ?? name
-        case .summarizing: return "整理中"
-        case .failed(let kind, _): return kind == .transcribe ? "轉錄失敗" : "整理失敗"
-        case .cancelled: return "已取消"
-        case .review(let n): return "待確認 \(n) 題"
-        case .done: return "完成"
+        case .summarizing: return String(localized: "整理中")
+        case .failed(let kind, _): return kind == .transcribe ? String(localized: "轉錄失敗") : String(localized: "整理失敗")
+        case .cancelled: return String(localized: "已取消")
+        case .review(let n): return String(localized: "待確認 \(n) 題")
+        case .done: return String(localized: "完成")
         }
     }
 
@@ -42,11 +42,11 @@ enum DetailTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .summary: return "摘要"
-        case .topics: return "詳細"
-        case .transcript: return "逐字稿"
-        case .review: return "待確認"
-        case .notes: return "筆記"
+        case .summary: return String(localized: "摘要")
+        case .topics: return String(localized: "詳細")
+        case .transcript: return String(localized: "逐字稿")
+        case .review: return String(localized: "待確認")
+        case .notes: return String(localized: "筆記")
         }
     }
 }
@@ -63,7 +63,7 @@ struct MeetingDetail: Equatable {
 
     func speakerName(_ idx: Int?) -> String? {
         guard let idx else { return nil }
-        return speakers[idx] ?? "說話者 \(idx)"
+        return speakers[idx] ?? String(localized: "說話者 \(idx)")
     }
 }
 
@@ -123,10 +123,10 @@ final class AppModel {
             // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；說明清楚後結束，不要直接閃退
             let alert = NSAlert()
             alert.alertStyle = .critical
-            alert.messageText = "拾音沒辦法開啟資料庫"
+            alert.messageText = String(localized: "拾音沒辦法開啟資料庫")
             let reason = (error as? DatabaseError)?.message ?? error.localizedDescription
-            alert.informativeText = "原因：\(reason)\n\n你的資料沒有被改動。升級前的備份在：\(Paths.backupsDir.path)\n請把這個訊息截圖給維護拾音的人。"
-            alert.addButton(withTitle: "結束拾音")
+            alert.informativeText = String(localized: "原因：\(reason)\n\n你的資料沒有被改動。升級前的備份在：\(Paths.backupsDir.path)\n請把這個訊息截圖給維護拾音的人。")
+            alert.addButton(withTitle: String(localized: "結束拾音"))
             alert.runModal()
             exit(1)
         }
@@ -202,8 +202,8 @@ final class AppModel {
     func checkForUpdatesFromMenu() async {
         await updater.check(userInitiated: true)
         switch updater.state {
-        case .upToDate: noticeMessage = "已是最新版本（\(Updater.currentVersion)）"
-        case .failed(let reason): errorMessage = "檢查更新失敗：\(reason)"
+        case .upToDate: noticeMessage = String(localized: "已是最新版本（\(Updater.currentVersion)）")
+        case .failed(let reason): errorMessage = String(localized: "檢查更新失敗：\(reason)")
         case .available: openMainWindow?()
         default: break
         }
@@ -223,7 +223,7 @@ final class AppModel {
     func moveToFolder(_ id: Int64, folder: String) {
         let name = folder.trimmingCharacters(in: .whitespacesAndNewlines)
         perform { try db.setFolder([id], folder: name) }
-        noticeMessage = name.isEmpty ? "已移出資料夾" : "已移到「\(name)」"
+        noticeMessage = name.isEmpty ? String(localized: "已移出資料夾") : String(localized: "已移到「\(name)」")
     }
 
     func renameFolder(_ old: String, to newName: String) {
@@ -313,7 +313,7 @@ final class AppModel {
         if !markdown.isEmpty { importMarkdownNotes(markdown) }
         let media = urls.filter(Self.isMedia)
         guard !media.isEmpty else {
-            if packages.isEmpty && transcripts.isEmpty && markdown.isEmpty { errorMessage = "只能匯入錄音、影片、逐字稿（srt、vtt、txt）、Markdown 或 .shiyin 檔" }
+            if packages.isEmpty && transcripts.isEmpty && markdown.isEmpty { errorMessage = String(localized: "只能匯入錄音、影片、逐字稿（srt、vtt、txt）、Markdown 或 .shiyin 檔") }
             return
         }
         pendingImport = media
@@ -324,7 +324,8 @@ final class AppModel {
         let urls = pendingImport
         pendingImport = []
         showImportSheet = false
-        importFiles(urls, options: urls.count == 1 ? options : ImportOptions(participants: options.participants, templateId: options.templateId))
+        importFiles(urls, options: urls.count == 1 ? options : ImportOptions(participants: options.participants, templateId: options.templateId,
+                                                                              language: options.language))
     }
 
     /// 從 Dock 或 Finder 匯入：不跳對話框，直接用預設值
@@ -370,17 +371,17 @@ final class AppModel {
         let now = Date()
         do {
             let meeting = try db.insertMeeting(Meeting(
-                meetingDate: DateText.string(now), sourceFilename: "錄音 \(formatter.string(from: now))",
+                meetingDate: DateText.string(now), sourceFilename: String(localized: "錄音 \(formatter.string(from: now))"),
                 templateId: AppSettings.defaultTemplate, source: "recording", channels: AppSettings.recordSource,
-                folder: currentFolder),
+                folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil)
-            recorder.start(meetingId: meeting.id!)
+            recorder.start(meetingId: meeting.id!, language: meeting.meetingLanguage)
             reload()
             showTrash = false
             selection = meeting.id
             tab = .transcript
         } catch {
-            errorMessage = "沒辦法開始錄音：\(error.localizedDescription)"
+            errorMessage = String(localized: "沒辦法開始錄音：\(error.localizedDescription)")
         }
     }
 
@@ -388,9 +389,10 @@ final class AppModel {
     /// 只在 DEBUG：用音訊檔模擬錄音（shiyinctl record-sim）
     func startSimulatedRecording(file: URL, speed: Double, both: Bool) {
         guard !recorder.isRecording, let meeting = try? db.insertMeeting(Meeting(
-            meetingDate: DateText.string(Date()), sourceFilename: "模擬錄音", source: "recording",
-            channels: both ? "both" : "mic", folder: currentFolder), audioExtension: nil) else { return }
-        recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both)
+            meetingDate: DateText.string(Date()), sourceFilename: String(localized: "模擬錄音"), source: "recording",
+            channels: both ? "both" : "mic", folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
+            audioExtension: nil) else { return }
+        recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both, language: meeting.meetingLanguage)
         reload()
         selection = meeting.id
     }
@@ -423,7 +425,7 @@ final class AppModel {
             reload()
             selection = result.meetingId
         } catch {
-            errorMessage = "錄音存檔失敗：\(error.localizedDescription)（檔案還在 \(result.file?.path ?? "")）"
+            errorMessage = String(localized: "錄音存檔失敗：\(error.localizedDescription)（檔案還在 \(result.file?.path ?? "")）")
         }
     }
 
@@ -440,14 +442,14 @@ final class AppModel {
                     try? FileManager.default.removeItem(at: destination)
                     try FileManager.default.moveItem(at: file, to: destination)
                     meeting.audioFile = destination.lastPathComponent
-                    if meeting.title.isEmpty { meeting.title = "復原的錄音" }
+                    if meeting.title.isEmpty { meeting.title = String(localized: "復原的錄音") }
                     try db.updateMeeting(meeting)
                     try db.enqueue(id, kind: .transcribe)
                 } else {
-                    try Importer.importFile(file, options: ImportOptions(title: "復原的錄音", sourceName: "復原的錄音.wav"),
+                    try Importer.importFile(file, options: ImportOptions(title: String(localized: "復原的錄音"), sourceName: String(localized: "復原的錄音.wav")),
                                             db: db, move: true)
                 }
-                noticeMessage = "找到上次沒有正常結束的錄音，已經復原並開始轉錄。"
+                noticeMessage = String(localized: "找到上次沒有正常結束的錄音，已經復原並開始轉錄。")
             } catch {
                 log.error("recover recording failed: \(error.localizedDescription)")
             }
@@ -478,6 +480,14 @@ final class AppModel {
         perform { try db.updateInfo(id, title: title, date: date, participants: participants) }
     }
 
+    /// 改會議語言（design §16.3）：之後的轉錄、整理、匯出都用新的語言，已經有的逐字稿和紀錄不會自動重做
+    func setMeetingLanguage(_ language: MeetingLanguage) {
+        guard var meeting = detail?.meeting, meeting.meetingLanguage != language else { return }
+        meeting.language = language.rawValue
+        perform { try db.updateMeeting(meeting) }
+        noticeMessage = String(localized: "會議語言改成 \(language.name)，要重新轉錄或整理的話，從「更多」選")
+    }
+
     func setTemplate(_ templateId: String) {
         guard var meeting = detail?.meeting else { return }
         meeting.templateId = templateId
@@ -488,7 +498,7 @@ final class AppModel {
     func moveToTrash(_ id: Int64) {
         runner.cancel(meetingId: id)
         perform { try db.setTrashed(id, true) }
-        noticeMessage = "已移到垃圾桶，30 天內都可以還原"
+        noticeMessage = String(localized: "已移到垃圾桶，30 天內都可以還原")
     }
 
     func restore(_ id: Int64) {
@@ -535,7 +545,7 @@ final class AppModel {
     func resummarize() {
         guard let id = selection else { return }
         guard AppSettings.provider != .none else {
-            errorMessage = "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"
+            errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
         perform { try db.enqueue(id, kind: .summarize) }
@@ -550,7 +560,7 @@ final class AppModel {
     /// 手動編輯會議紀錄（R6.6）
     func saveEditedNotes(_ notes: MeetingNotes) {
         guard let id = selection, notes != detail?.notes else { return }
-        perform { try db.saveNotes(id, notes: notes, by: nil, reason: "手動編輯") }
+        perform { try db.saveNotes(id, notes: notes, by: nil, reason: String(localized: "手動編輯")) }
     }
 
     func submitReview(answers: [Int: String], dismissed: Set<Int>) {
@@ -562,7 +572,7 @@ final class AppModel {
             return (index, ReviewAnswer(time: item.time, question: item.question, answer: trimmed))
         }.sorted { $0.0 < $1.0 }.map(\.1)
         if !answered.isEmpty && AppSettings.provider == .none {
-            errorMessage = "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API"
+            errorMessage = String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
             return
         }
         perform {
@@ -582,7 +592,7 @@ final class AppModel {
     func renameSpeaker(_ idx: Int, to name: String) {
         guard let id = selection else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        perform { try db.renameSpeaker(id, idx: idx, name: trimmed.isEmpty ? "說話者 \(idx)" : trimmed) }
+        perform { try db.renameSpeaker(id, idx: idx, name: trimmed.isEmpty ? String(localized: "說話者 \(idx)") : trimmed) }
     }
 
     func updateUserNotes(_ text: String) {
@@ -623,7 +633,7 @@ final class AppModel {
             reload()
             showTrash = false
             selection = meeting.id
-            noticeMessage = "已匯入「\(meeting.displayTitle)」"
+            noticeMessage = String(localized: "已匯入「\(meeting.displayTitle)」")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -633,19 +643,19 @@ final class AppModel {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         guard let text = (try? String(contentsOf: url, encoding: .utf8)) ?? (try? String(contentsOf: url, encoding: .utf16)) else {
-            errorMessage = "讀不到「\(url.lastPathComponent)」"
+            errorMessage = String(localized: "讀不到「\(url.lastPathComponent)」")
             return
         }
         let parsed = TranscriptImporter.parse(text, ext: url.pathExtension.lowercased())
         guard !parsed.segments.isEmpty else {
-            errorMessage = "「\(url.lastPathComponent)」裡沒有可以用的逐字稿內容"
+            errorMessage = String(localized: "「\(url.lastPathComponent)」裡沒有可以用的逐字稿內容")
             return
         }
         do {
             let meeting = try db.insertMeeting(Meeting(
                 meetingDate: Importer.inferDate(filename: url.lastPathComponent, modified: Importer.modificationDate(url)),
                 sourceFilename: url.lastPathComponent, templateId: AppSettings.defaultTemplate, source: "transcript",
-                folder: currentFolder),
+                folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil)
             let id = meeting.id!
             try db.saveTranscript(id, segments: parsed.segments.enumerated().map { i, s in
@@ -673,7 +683,7 @@ final class AppModel {
                 tab = .notes
             } else if let meeting = try? db.insertMeeting(Meeting(
                 meetingDate: DateText.string(Date()), sourceFilename: url.lastPathComponent, userNotes: text, source: "transcript",
-                folder: currentFolder),
+                folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil) {
                 perform { try db.updateUserNotes(meeting.id!, text) }
                 selection = meeting.id
@@ -710,10 +720,10 @@ final class AppModel {
     }
 
     func suggestedFilename(_ item: ExportItem, format: String) -> String {
-        guard let m = detail?.meeting else { return "會議.\(format)" }
-        let base = "\(m.meetingDate) \(m.displayTitle)".replacingOccurrences(of: "/", with: "／").replacingOccurrences(of: ":", with: "：")
+        guard let m = detail?.meeting else { return String(localized: "會議.\(format)") }
+        let base = "\(m.meetingDate) \(m.displayTitle)".replacingOccurrences(of: "/", with: "／").replacingOccurrences(of: ":", with: "：")  // l10n-skip
         switch item {
-        case .transcript: return "\(base)（逐字稿）.\(format)"
+        case .transcript: return String(localized: "\(base)（逐字稿）.\(format)")
         case .audio: return "\(base).\(format)"
         default: return "\(base).\(format)"
         }
@@ -733,7 +743,7 @@ final class AppModel {
         case .rich:
             HTML.copy(plain: NotesExporter.plain(b), html: NotesExporter.html(b))
         }
-        noticeMessage = "已複製會議紀錄"
+        noticeMessage = String(localized: "已複製會議紀錄")
     }
 
     // MARK: 搜尋（R9.1）
@@ -760,7 +770,7 @@ final class AppModel {
     func deleteLegacyItems() {
         for url in Paths.legacyItems { try? FileManager.default.removeItem(at: url) }
         legacyBytes = 0
-        noticeMessage = "已刪除第二版的 Python 環境和舊模型"
+        noticeMessage = String(localized: "已刪除第二版的 Python 環境和舊模型")
     }
 
     static func directorySize(_ url: URL) -> Int64 {

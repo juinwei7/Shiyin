@@ -82,41 +82,77 @@ struct MeetingHeader: View {
                     .popover(isPresented: $editing, arrowEdge: .bottom) {
                         EditInfoForm(meeting: meeting) { editing = false }
                     }
-                Spacer()
-                Menu {
-                    ForEach(model.templates) { template in
-                        Button {
-                            model.setTemplate(template.id)
-                        } label: {
-                            if template.id == meeting.templateId { Label(template.name, systemImage: "checkmark") }
-                            else { Text(template.name) }
-                        }
-                    }
-                } label: {
-                    Label(model.templates.first { $0.id == meeting.templateId }?.name ?? "一般會議", systemImage: "doc.text")
-                }
-                .fixedSize()
-                .help("會議紀錄的範本。換了範本之後，從「更多」選「重新整理會議紀錄」就會照新範本整理")
+                Spacer(minLength: 0)
             }
-            HStack(spacing: 16) {
-                if !meeting.folder.isEmpty {
-                    Label(meeting.folder, systemImage: "folder").help("這場會議所在的資料夾")
+            // 範本和語言選單放在資訊列右邊，標題才能用整行的寬度（英文標題比較長，design §16.3）；
+            // 資訊列放不下時（說話者多、英文字比較長），選單改到下一行，說話者名字才不會被截斷
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    infoRow(meeting)
+                    Spacer(minLength: 0)
+                    menus(meeting)
                 }
-                Text("\(meeting.meetingDate) \(DateText.weekday(meeting.meetingDate))")
-                if meeting.durationSeconds != nil { Text(TimeFormat.duration(meeting.durationSeconds)) }
-                if !detail.speakers.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
-                            Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
-                        }
-                    }
-                } else if !meeting.participantList.isEmpty {
-                    Text(meeting.participantList.joined(separator: "、")).lineLimit(1)
+                VStack(alignment: .leading, spacing: 8) {
+                    infoRow(meeting)
+                    HStack(spacing: 12) { menus(meeting) }
                 }
             }
-            .font(.callout)
-            .foregroundStyle(.secondary)
         }
+    }
+
+    private func infoRow(_ meeting: Meeting) -> some View {
+        HStack(spacing: 16) {
+            if !meeting.folder.isEmpty {
+                Label(meeting.folder, systemImage: "folder").help("這場會議所在的資料夾")
+            }
+            Text("\(meeting.meetingDate) \(DateText.weekday(meeting.meetingDate))")
+            if meeting.durationSeconds != nil { Text(TimeFormat.duration(meeting.durationSeconds)) }
+            if !detail.speakers.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
+                        Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
+                    }
+                }
+            } else if !meeting.participantList.isEmpty {
+                Text(meeting.participantList.joined(separator: String(localized: "、")))
+            }
+        }
+        .lineLimit(1)
+        .font(.callout)
+        .foregroundStyle(.secondary)
+    }
+
+    @ViewBuilder
+    private func menus(_ meeting: Meeting) -> some View {
+        Menu {
+            ForEach(model.templates) { template in
+                Button {
+                    model.setTemplate(template.id)
+                } label: {
+                    if template.id == meeting.templateId { Label(template.displayName, systemImage: "checkmark") }
+                    else { Text(template.displayName) }
+                }
+            }
+        } label: {
+            Label(model.templates.first { $0.id == meeting.templateId }?.displayName ?? String(localized: "一般會議"), systemImage: "doc.text")
+        }
+        .fixedSize()
+        .help("會議紀錄的範本。換了範本之後，從「更多」選「重新整理會議紀錄」就會照新範本整理")
+        // 會議語言（design §16.3）
+        Menu {
+            ForEach(MeetingLanguage.allCases) { language in
+                Button {
+                    model.setMeetingLanguage(language)
+                } label: {
+                    if language == meeting.meetingLanguage { Label(language.name, systemImage: "checkmark") }
+                    else { Text(language.name) }
+                }
+            }
+        } label: {
+            Label(meeting.meetingLanguage.name, systemImage: "globe")
+        }
+        .fixedSize()
+        .help("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多」重新轉錄或重新整理會議紀錄")
     }
 }
 
@@ -241,7 +277,7 @@ struct StatusBanner: View {
             })
         case .failed(let kind, let message):
             return AnyView(Label {
-                Text("\(kind == .transcribe ? "轉錄" : "整理")失敗：\(message)").lineLimit(3).textSelection(.enabled)
+                Text(kind == .transcribe ? String(localized: "轉錄失敗：\(message)") : String(localized: "整理失敗：\(message)")).lineLimit(3).textSelection(.enabled)
             } icon: {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
             })
@@ -268,10 +304,10 @@ struct StatusBanner: View {
     }
 
     private func transcribingText(_ progress: Double?, stage: String, remaining: TimeInterval?) -> String {
-        guard let progress else { return stage.isEmpty ? "準備轉錄…" : "\(stage)…" }
-        var text = "\(stage.isEmpty ? "轉錄" : stage)中 \(Int(progress * 100))%"
+        guard let progress else { return stage.isEmpty ? String(localized: "準備轉錄…") : "\(stage)…" }
+        var text = String(localized: "\(stage.isEmpty ? String(localized: "轉錄") : stage)中 \(Int(progress * 100))%")
         if let remaining, remaining > 0 {
-            text += remaining < 60 ? "，快好了" : "，約剩 \(Int((remaining / 60).rounded(.up))) 分鐘"
+            text += remaining < 60 ? String(localized: "，快好了") : String(localized: "，約剩 \(Int((remaining / 60).rounded(.up))) 分鐘")
         }
         return text
     }

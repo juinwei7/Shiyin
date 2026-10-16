@@ -20,22 +20,22 @@ struct EnvironmentStatus: Equatable {
         let codex = Paths.findTool("codex")
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
         return EnvironmentStatus(items: [
-            Item(name: "轉錄模型 Breeze ASR 25", ok: models.isReady || AppSettings.useSystemTranscriber,
-                 detail: models.isReady ? "已下載（1.66 GB）" : AppSettings.useSystemTranscriber ? "沒有下載，正式轉錄使用 macOS 內建辨識" : "還沒下載",
-                 fix: "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建", required: true),
-            Item(name: "說話者辨識模型", ok: models.diarizerState == .installed,
-                 detail: models.diarizerState == .installed ? "已下載" : "還沒下載", fix: "到「模型與儲存空間」下載", required: false),
-            Item(name: "麥克風權限", ok: mic == .authorized,
-                 detail: mic == .authorized ? "已允許" : mic == .notDetermined ? "還沒詢問" : "被拒絕",
-                 fix: "第一次錄音時會詢問；被拒絕的話到「系統設定 → 隱私權與安全性 → 麥克風」打開拾音", required: false),
-            Item(name: "claude CLI", ok: claude != nil, detail: claude?.path ?? "找不到",
-                 fix: "整理工具選 Claude 時需要：安裝 Claude Code 並在終端機執行 claude 登入", required: false),
-            Item(name: "codex CLI", ok: codex != nil, detail: codex?.path ?? "找不到",
-                 fix: "整理工具選 Codex 時需要：安裝 Codex CLI 並執行 codex login", required: false),
+            Item(name: String(localized: "轉錄模型 Breeze ASR 25"), ok: models.isReady || AppSettings.useSystemTranscriber,
+                 detail: models.isReady ? String(localized: "已下載（1.66 GB）") : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識") : String(localized: "還沒下載"),
+                 fix: String(localized: "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建"), required: true),
+            Item(name: String(localized: "說話者辨識模型"), ok: models.diarizerState == .installed,
+                 detail: models.diarizerState == .installed ? String(localized: "已下載") : String(localized: "還沒下載"), fix: String(localized: "到「模型與儲存空間」下載"), required: false),
+            Item(name: String(localized: "麥克風權限"), ok: mic == .authorized,
+                 detail: mic == .authorized ? String(localized: "已允許") : mic == .notDetermined ? String(localized: "還沒詢問") : String(localized: "被拒絕"),
+                 fix: String(localized: "第一次錄音時會詢問；被拒絕的話到「系統設定 → 隱私權與安全性 → 麥克風」打開拾音"), required: false),
+            Item(name: "claude CLI", ok: claude != nil, detail: claude?.path ?? String(localized: "找不到"),
+                 fix: String(localized: "整理工具選 Claude 時需要：安裝 Claude Code 並在終端機執行 claude 登入"), required: false),
+            Item(name: "codex CLI", ok: codex != nil, detail: codex?.path ?? String(localized: "找不到"),
+                 fix: String(localized: "整理工具選 Codex 時需要：安裝 Codex CLI 並執行 codex login"), required: false),
             Item(name: "Anthropic API key", ok: Keychain.get("anthropic") != nil,
-                 detail: Keychain.get("anthropic") != nil ? "已儲存在鑰匙圈" : "沒有填", fix: "整理工具選 Anthropic API 時需要", required: false),
+                 detail: Keychain.get("anthropic") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Anthropic API 時需要"), required: false),
             Item(name: "OpenAI API key", ok: Keychain.get("openai") != nil,
-                 detail: Keychain.get("openai") != nil ? "已儲存在鑰匙圈" : "沒有填", fix: "整理工具選 OpenAI API 時需要", required: false),
+                 detail: Keychain.get("openai") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 OpenAI API 時需要"), required: false),
         ])
     }
 }

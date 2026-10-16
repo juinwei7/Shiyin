@@ -29,7 +29,7 @@ fi
 rm -rf "$APP"
 mkdir -p "$SCRATCH/app"
 [ -L "$ROOT/build" ] || { rm -rf "$ROOT/build"; ln -s "$SCRATCH/app" "$ROOT/build"; }
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources/zh-Hant.lproj"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
 cp "$BIN_DIR/Shiyin" "$APP/Contents/MacOS/Shiyin"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 # 更新網址（design §12、R10.6）：發布時用 SHIYIN_UPDATE_URL=https://…/shiyin-update.json 帶入
@@ -47,8 +47,11 @@ fi
 xcrun actool Resources/Assets.xcassets --compile "$APP/Contents/Resources" --platform macosx \
   --minimum-deployment-target 26.0 --accent-color AccentColor \
   --output-partial-info-plist "$SCRATCH/assets-partial.plist" >/dev/null
-# 宣告繁中在地化，系統選單（結束、隱藏…）才會顯示中文
-printf '"CFBundleDisplayName" = "拾音";\n"CFBundleName" = "拾音";\n' > "$APP/Contents/Resources/zh-Hant.lproj/InfoPlist.strings"
+# 介面翻譯（design §16.1）：翻譯表編成各語言的 Localizable.strings；
+# app 名稱、權限說明、檔案類型名稱的中文放在 Resources/zh-Hant.lproj/InfoPlist.strings（英文寫在 Info.plist）
+xcrun xcstringstool compile Resources/Localizable.xcstrings --output-directory "$APP/Contents/Resources" >/dev/null
+for lproj in Resources/*.lproj; do ditto "$lproj" "$APP/Contents/Resources/$(basename "$lproj")"; done
+mkdir -p "$APP/Contents/Resources/en.lproj"
 
 xattr -cr "$APP"
 # 簽章（design §12、R10.7）：有已信任的自簽憑證就用它；沒有就用 ad-hoc，

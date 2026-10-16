@@ -4,7 +4,8 @@ import Speech
 
 /// 正式轉錄改用 macOS 內建辨識（design §6.2.1、D11）：不需要 Breeze 模型，速度快很多，但沒有詞彙提示
 enum SystemTranscriber {
-    static func transcribe(samples: [Float], onProgress: @escaping @Sendable (Double) -> Void) async throws -> [TranscribedSegment] {
+    static func transcribe(samples: [Float], language: MeetingLanguage,
+                           onProgress: @escaping @Sendable (Double) -> Void) async throws -> [TranscribedSegment] {
         let duration = Double(samples.count) / AudioDecoder.sampleRate
         // 解碼後的 16 kHz 單聲道寫成暫存 WAV，格式轉換交給 SpeechAnalyzer 處理
         let dir = try Paths.makeTempDirectory()
@@ -12,9 +13,9 @@ enum SystemTranscriber {
         let url = dir.appendingPathComponent("audio.wav")
         try AudioDecoder.writeWAV(samples, to: url)
 
-        // 跟即時逐字稿共用系統的 zh_TW 模型，還沒有就先下載
-        try await LiveTranscriber.ensureAssets()
-        let transcriber = SpeechTranscriber(locale: Locale(identifier: "zh_TW"), transcriptionOptions: [],
+        // 跟即時逐字稿共用系統的辨識模型，還沒有就先下載
+        try await LiveTranscriber.ensureAssets(language)
+        let transcriber = SpeechTranscriber(locale: language.speechLocale, transcriptionOptions: [],
                                             reportingOptions: [], attributeOptions: [.audioTimeRange])
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         let collector = Task { () -> [TranscribedSegment] in

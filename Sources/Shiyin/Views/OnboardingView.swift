@@ -17,7 +17,7 @@ struct OnboardingView: View {
     @State private var speechInstalling = false
     @State private var apiKey = ""
 
-    private let titles = ["歡迎使用拾音", "權限", "下載模型", "整理工具", "準備好了"]
+    private let titles = [String(localized: "歡迎使用拾音"), String(localized: "權限"), String(localized: "下載模型"), String(localized: "整理工具"), String(localized: "準備好了")]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -53,7 +53,7 @@ struct OnboardingView: View {
         .padding(32)
         .frame(width: 600, height: 560)
         .tint(.celadon)
-        .task { speechInstalled = await LiveTranscriber.isLocaleInstalled }
+        .task { speechInstalled = await LiveTranscriber.isLocaleInstalled(AppSettings.defaultMeetingLanguage) }
     }
 
     private var welcome: some View {
@@ -69,8 +69,8 @@ struct OnboardingView: View {
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 18) {
-            permissionRow(icon: "mic", title: "麥克風", detail: "錄現場會議或你自己的聲音。",
-                          status: micStatus == .authorized ? "已允許" : micStatus == .denied ? "被拒絕" : nil) {
+            permissionRow(icon: "mic", title: String(localized: "麥克風"), detail: String(localized: "錄現場會議或你自己的聲音。"),
+                          status: micStatus == .authorized ? String(localized: "已允許") : micStatus == .denied ? String(localized: "被拒絕") : nil) {
                 if micStatus == .notDetermined {
                     AVCaptureDevice.requestAccess(for: .audio) { _ in
                         Task { @MainActor in micStatus = AVCaptureDevice.authorizationStatus(for: .audio) }
@@ -79,12 +79,12 @@ struct OnboardingView: View {
                     Recorder.openPrivacySettings()
                 }
             }
-            permissionRow(icon: "speaker.wave.2", title: "錄製系統音訊", detail: "錄線上會議（Zoom、Meet、Teams）對方的聲音。第一次選「麥克風＋電腦聲音」錄音時，macOS 會跳出詢問，請按允許。",
-                          status: nil, buttonTitle: "打開系統設定") {
+            permissionRow(icon: "speaker.wave.2", title: String(localized: "錄製系統音訊"), detail: String(localized: "錄線上會議（Zoom、Meet、Teams）對方的聲音。第一次選「麥克風＋電腦聲音」錄音時，macOS 會跳出詢問，請按允許。"),
+                          status: nil, buttonTitle: String(localized: "打開系統設定")) {
                 Recorder.openPrivacySettings("Privacy_AudioCapture")
             }
-            permissionRow(icon: "bell", title: "通知", detail: "轉錄完成、會議紀錄整理好時通知你。",
-                          status: notificationsAllowed.map { $0 ? "已允許" : "被拒絕" }) {
+            permissionRow(icon: "bell", title: String(localized: "通知"), detail: String(localized: "轉錄完成、會議紀錄整理好時通知你。"),
+                          status: notificationsAllowed.map { $0 ? String(localized: "已允許") : String(localized: "被拒絕") }) {
                 Task {
                     let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
                     notificationsAllowed = granted
@@ -94,7 +94,7 @@ struct OnboardingView: View {
     }
 
     private func permissionRow(icon: String, title: String, detail: String, status: String?,
-                               buttonTitle: String = "允許", action: @escaping () -> Void) -> some View {
+                               buttonTitle: String = String(localized: "允許"), action: @escaping () -> Void) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon).font(.title2).foregroundStyle(Color.celadon).frame(width: 30)
             VStack(alignment: .leading, spacing: 4) {
@@ -102,10 +102,10 @@ struct OnboardingView: View {
                 Text(detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            if let status, status == "已允許" {
+            if let status, status == String(localized: "已允許") {
                 Label(status, systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
             } else {
-                Button(status == "被拒絕" ? "打開系統設定" : buttonTitle, action: action)
+                Button(status == String(localized: "被拒絕") ? String(localized: "打開系統設定") : buttonTitle, action: action)
             }
         }
     }
@@ -114,9 +114,9 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ModelRow(title: "\(ModelStore.breeze.name)：正式轉錄，1.66 GB", state: model.models.state,
+            ModelRow(title: String(localized: "\(ModelStore.breeze.name)：正式轉錄，1.66 GB"), state: model.models.state,
                      start: model.models.start, pause: model.models.pause, delete: nil)
-            ModelRow(title: "說話者辨識模型：分辨是誰在說話", state: model.models.diarizerState,
+            ModelRow(title: String(localized: "說話者辨識模型：分辨是誰在說話"), state: model.models.diarizerState,
                      start: model.models.prepareDiarizer, pause: nil, delete: nil)
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -129,8 +129,8 @@ struct OnboardingView: View {
                     Button("下載") {
                         speechInstalling = true
                         Task {
-                            try? await LiveTranscriber.ensureAssets()
-                            speechInstalled = await LiveTranscriber.isLocaleInstalled
+                            try? await LiveTranscriber.ensureAssets(AppSettings.defaultMeetingLanguage)
+                            speechInstalled = await LiveTranscriber.isLocaleInstalled(AppSettings.defaultMeetingLanguage)
                             speechInstalling = false
                         }
                     }
@@ -150,8 +150,8 @@ struct OnboardingView: View {
         return VStack(alignment: .leading, spacing: 14) {
             Text("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。").foregroundStyle(.secondary)
             Picker("整理工具", selection: $provider) {
-                Text("Claude（claude CLI）\(claude == nil ? "：找不到" : "")").tag(LLMProvider.claude.rawValue)
-                Text("Codex（codex CLI）\(codex == nil ? "：找不到" : "")").tag(LLMProvider.codex.rawValue)
+                Text("Claude（claude CLI）\(claude == nil ? String(localized: "：找不到") : "")").tag(LLMProvider.claude.rawValue)
+                Text("Codex（codex CLI）\(codex == nil ? String(localized: "：找不到") : "")").tag(LLMProvider.codex.rawValue)
                 Text("Anthropic API（填 API key）").tag(LLMProvider.anthropic.rawValue)
                 Text("OpenAI API（填 API key）").tag(LLMProvider.openai.rawValue)
                 Text("不整理，只要逐字稿").tag(LLMProvider.none.rawValue)

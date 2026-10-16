@@ -54,16 +54,16 @@ struct ExportSheet: View {
 
     private var hint: String {
         switch item {
-        case .notes: return "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。"
-        case .transcript: return "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。"
-        case .audio: return "m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。"
-        case .package: return "包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。"
+        case .notes: return String(localized: "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。")
+        case .transcript: return String(localized: "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。")
+        case .audio: return String(localized: "m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。")
+        case .package: return String(localized: "包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。")
         }
     }
 
     private func formatLabel(_ format: String) -> String {
-        ["md": "Markdown", "pdf": "PDF", "docx": "Word（docx）", "txt": "純文字（txt）", "srt": "字幕（srt）",
-         "vtt": "字幕（vtt）", "m4a": "m4a", "wav": "wav", "shiyin": ".shiyin 封包"][format] ?? format
+        ["md": "Markdown", "pdf": "PDF", "docx": String(localized: "Word（docx）"), "txt": String(localized: "純文字（txt）"), "srt": String(localized: "字幕（srt）"),
+         "vtt": String(localized: "字幕（vtt）"), "m4a": "m4a", "wav": "wav", "shiyin": String(localized: ".shiyin 封包")][format] ?? format
     }
 
     private func save() async {
@@ -75,7 +75,7 @@ struct ExportSheet: View {
         defer { working = false }
         do {
             try await model.export(item, format: format, times: times, speakers: speakers, to: url)
-            model.noticeMessage = "已匯出 \(url.lastPathComponent)"
+            model.noticeMessage = String(localized: "已匯出 \(url.lastPathComponent)")
             dismiss()
         } catch {
             model.errorMessage = error.localizedDescription
@@ -100,7 +100,7 @@ struct ShareButton: NSViewRepresentable {
     let makeFile: () async -> URL?
 
     func makeNSView(context: Context) -> NSButton {
-        let button = NSButton(title: "分享…", target: context.coordinator, action: #selector(Coordinator.share(_:)))
+        let button = NSButton(title: String(localized: "分享…"), target: context.coordinator, action: #selector(Coordinator.share(_:)))
         button.bezelStyle = .push
         return button
     }

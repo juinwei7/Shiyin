@@ -11,6 +11,8 @@ struct ImportOptions {
     var templateId: String? = nil
     /// 放進哪個資料夾（R9.2）；空字串是不放
     var folder: String = ""
+    /// 會議語言（design §16.3）
+    var language: MeetingLanguage = AppSettings.defaultMeetingLanguage
 }
 
 enum ImportError: LocalizedError {
@@ -18,7 +20,7 @@ enum ImportError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .copyFailed(let name, let reason): return "無法匯入「\(name)」：\(reason)"
+        case .copyFailed(let name, let reason): return String(localized: "無法匯入「\(name)」：\(reason)")
         }
     }
 }
@@ -89,7 +91,8 @@ enum Importer {
             meetingDate: options.date ?? inferDate(filename: url.lastPathComponent, modified: modificationDate(url)),
             participants: options.participants.trimmingCharacters(in: .whitespacesAndNewlines),
             sourceFilename: options.sourceName ?? url.lastPathComponent,
-            templateId: options.templateId ?? AppSettings.defaultTemplate, source: "import", folder: options.folder)
+            templateId: options.templateId ?? AppSettings.defaultTemplate, source: "import", folder: options.folder,
+            language: options.language.rawValue)
         let meeting = try db.insertMeeting(draft, audioExtension: safeExtension(url))
         do {
             try Paths.ensureDirectories()

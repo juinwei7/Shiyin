@@ -1,0 +1,9 @@
+/* 繁體中文（design §16.1）：app 名稱、權限說明、檔案類型名稱。英文寫在 Info.plist 本身 */
+"CFBundleDisplayName" = "拾音";
+"CFBundleName" = "拾音";
+"NSMicrophoneUsageDescription" = "會議錄音需要使用麥克風。錄音只存在這台 Mac 上。";
+"NSAudioCaptureUsageDescription" = "錄線上會議（Zoom、Meet、Teams）時，需要錄下電腦播放的對方聲音。錄音只存在這台 Mac 上。";
+"NSSpeechRecognitionUsageDescription" = "錄音時在這台 Mac 上即時產生逐字稿，不會上傳。";
+"Shiyin Meeting" = "拾音會議";
+"Subtitles or Transcript" = "字幕或逐字稿";
+"Audio or Video" = "錄音或影片";

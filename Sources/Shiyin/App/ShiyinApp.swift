@@ -9,6 +9,7 @@ struct ShiyinApp: App {
             RootView()
                 .environment(AppModel.shared)
                 .frame(minWidth: 960, minHeight: 620)
+                .chineseGlyphs()
         }
         .defaultSize(width: 1180, height: 780)
         .defaultLaunchBehavior(.presented)
@@ -17,6 +18,7 @@ struct ShiyinApp: App {
         Window("歡迎使用拾音", id: "onboarding") {
             OnboardingView()
                 .environment(AppModel.shared)
+                .chineseGlyphs()
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
@@ -25,6 +27,7 @@ struct ShiyinApp: App {
             GuideView()
                 .tint(.celadon)
                 .frame(minWidth: 520, minHeight: 480)
+                .chineseGlyphs()
         }
         .defaultSize(width: 680, height: 780)
         .defaultLaunchBehavior(.suppressed)
@@ -32,11 +35,13 @@ struct ShiyinApp: App {
         Settings {
             SettingsView()
                 .environment(AppModel.shared)
+                .chineseGlyphs()
         }
 
         MenuBarExtra {
             MenuBarContent()
                 .environment(AppModel.shared)
+                .chineseGlyphs()
         } label: {
             MenuBarLabel()
                 .environment(AppModel.shared)
@@ -101,5 +106,13 @@ struct AppCommands: Commands {
                 .keyboardShortcut(.delete)
                 .disabled(model.detail == nil || model.showTrash)
         }
+    }
+}
+
+extension View {
+    /// 會議內容裡的中文一律用繁體中文的字形（design §16.2）：英文介面時系統會改用簡體的字型，
+    /// 全形逗號、問號的位置跟繁體不同。只影響中文字的字形，英文不受影響
+    func chineseGlyphs() -> some View {
+        typesettingLanguage(Locale.Language(identifier: "zh-Hant"))
     }
 }

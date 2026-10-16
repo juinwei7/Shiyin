@@ -17,9 +17,11 @@ struct NotesContext {
     var template: TemplateDefinition
 }
 
-/// 整理與校稿的提示詞（design §8.3），規則沿用第二版
+/// 整理與校稿的提示詞（design §8.3），規則沿用第二版；依會議語言分成中文、英文兩份（design §16.5）
 enum NotesPrompt {
-    static let system = """
+    static func system(_ language: MeetingLanguage) -> String { language == .en ? systemEnglish : systemChinese }
+
+    static let systemChinese = """
     你是會議紀錄整理者。根據使用者提供的會議逐字稿，整理成結構化的會議紀錄，一律使用繁體中文（台灣用語）。
 
     規則：
@@ -36,57 +38,117 @@ enum NotesPrompt {
     11. 時間點格式一律是 mm:ss，超過一小時用 h:mm:ss，與逐字稿相同。沒有時間資訊時填空字串。
     """
 
+    static let systemEnglish = """
+    You write meeting notes. Based on the meeting transcript the user provides, produce structured meeting notes, written entirely in English.
+
+    Rules:
+    1. Write only from the transcript and the user's notes. Do not add information that was not mentioned.
+    2. The transcript comes from speech recognition, so technical terms, names and abbreviations are often misheard (the same word may appear spelled several ways). Infer the correct spelling from context and the glossary, but every proper noun or name you inferred must be listed in reviewItems for the user to confirm.
+    3. Every item (summary, decisions, actionItems, openQuestions, the points in topics, the items in custom) must have a time: when that content appears in the transcript, written as mm:ss (for example 03:15; over an hour, 1:03:15), without brackets. If it combines several places, use the main one.
+    4. Each transcript line is labeled with a speaker. For actionItems, owner is only someone explicitly named as responsible, preferring the speaker's name; if it is unclear, leave an empty string and add it to reviewItems.
+    5. For actionItems, convert due to yyyy-MM-dd based on the "Meeting date" in the prompt (for example, "next Wednesday" must be worked out from the meeting date and its weekday, and the weekday must be right). If no deadline is mentioned, leave an empty string; if one is mentioned but unclear, leave it empty and add it to reviewItems.
+    6. At most 8 reviewItems; merge similar questions. Only ask about things that affect accuracy: proper nouns, names, owners, deadlines, details of a proposal. Each item's time is the related part of the transcript.
+    7. "User notes" and "Bookmarks" mark what the user considers important and must be included. Information in the notes that is not in the transcript may be included, without changing its meaning.
+    8. Produce only the sections specified by the "Template"; give empty arrays for the others. Produce custom in the order of the template's custom sections, with title as given by the template (translated into English if it is not in English).
+    9. Split topics by subject; start is the time the topic begins.
+    10. title: if the prompt gives an "Existing title", return it unchanged; otherwise write a title of at most 10 words.
+    11. Times are always mm:ss, or h:mm:ss over an hour, the same as the transcript. Use an empty string when there is no time information.
+    """
+
+    /// 提示詞裡的欄位名稱
+    private struct Labels {
+        var meetingDate, existingTitle, participants, notProvided, glossary, none, template, sections, custom, extra: String
+        var userNotes, bookmarks, transcript, currentNotes, answers, answer, reviseInstructions, listSeparator, colon: String
+        var speaker: (Int) -> String
+        var section: (String, String) -> String
+
+        static let zh = Labels(
+            meetingDate: "會議日期", existingTitle: "現有標題", participants: "與會者", notProvided: "未提供",
+            glossary: "詞彙表（正確寫法）", none: "無", template: "範本", sections: "要產生的段落",
+            custom: "自訂段落（放在 custom，依序）", extra: "額外指示",
+            userNotes: "使用者筆記（[時間] 是做筆記時的錄音時間）", bookmarks: "重點標記",
+            transcript: "逐字稿（[時間] 說話者：內容，標 (?) 的是辨識信心低的段落）",
+            currentNotes: "目前的會議紀錄（JSON）", answers: "使用者對待確認題目的回答", answer: "回答",
+            reviseInstructions: """
+
+            請依使用者的回答修正會議紀錄後，回傳完整的會議紀錄：
+            - 依回答修正所有相關內容（摘要、決議、待辦、未決問題、議題、自訂段落、標題都要一併檢查），時間點維持不變。
+            - 已回答的題目從 reviewItems 移除；目前會議紀錄裡沒被回答的題目原樣保留。
+            - 除非回答本身帶出新的疑點，否則不要新增題目。
+            """,
+            listSeparator: "、", colon: "：",
+            speaker: { "說話者 \($0)" },
+            section: { id, label in "\(id)（\(label)）" })
+
+        static let en = Labels(
+            meetingDate: "Meeting date", existingTitle: "Existing title", participants: "Participants", notProvided: "not provided",
+            glossary: "Glossary (correct spellings)", none: "none", template: "Template", sections: "Sections to produce",
+            custom: "Custom sections (in custom, in this order)", extra: "Additional instructions",
+            userNotes: "User notes ([time] is the recording time when the note was taken)", bookmarks: "Bookmarks",
+            transcript: "Transcript ([time] speaker: text; (?) marks low-confidence segments)",
+            currentNotes: "Current meeting notes (JSON)", answers: "The user's answers to the review questions", answer: "Answer",
+            reviseInstructions: """
+
+            Revise the meeting notes according to the user's answers and return the complete notes:
+            - Fix everything related to each answer (check the summary, decisions, action items, open questions, topics, custom sections and title), keeping the times unchanged.
+            - Remove answered questions from reviewItems; keep unanswered questions from the current notes as they are.
+            - Do not add new questions unless an answer raises a new doubt.
+            """,
+            listSeparator: ", ", colon: ": ",
+            speaker: { "Speaker \($0)" },
+            section: { id, label in "\(id) (\(label))" })
+    }
+
     static func summarize(_ c: NotesContext) -> String {
         let m = c.meeting
+        let language = m.meetingLanguage
+        let l = language == .en ? Labels.en : Labels.zh
         var lines: [String] = []
-        lines.append("會議日期：\(m.meetingDate)（\(DateText.weekday(m.meetingDate))）")
-        lines.append("現有標題：\(m.titleLocked ? m.title : "")")
+        lines.append("\(l.meetingDate)\(l.colon)\(m.meetingDate)" + (language == .en
+            ? " (\(DateText.weekday(m.meetingDate, language: .en)))" : "（\(DateText.weekday(m.meetingDate, language: .zh))）"))
+        lines.append("\(l.existingTitle)\(l.colon)\(m.titleLocked ? m.title : "")")
         let participants = m.participantList
-        lines.append("與會者：\(participants.isEmpty ? "未提供" : participants.joined(separator: "、"))")
-        lines.append("詞彙表（正確寫法）：\(c.glossary.isEmpty ? "無" : c.glossary.joined(separator: "、"))")
+        lines.append("\(l.participants)\(l.colon)\(participants.isEmpty ? l.notProvided : participants.joined(separator: l.listSeparator))")
+        lines.append("\(l.glossary)\(l.colon)\(c.glossary.isEmpty ? l.none : c.glossary.joined(separator: l.listSeparator))")
         lines.append("")
-        lines.append("範本：\(c.template.description)")
-        let sectionNames = TemplateDefinition.builtinSections.filter { c.template.includes($0.id) }.map { "\($0.id)（\($0.label)）" }
-        lines.append("要產生的段落：\(sectionNames.joined(separator: "、"))")
+        lines.append("\(l.template)\(l.colon)\(c.template.description)")
+        let sectionNames = TemplateDefinition.builtinSectionIDs.filter { c.template.includes($0) }
+            .map { l.section($0, TemplateDefinition.sectionLabel($0, language: language)) }
+        lines.append("\(l.sections)\(l.colon)\(sectionNames.joined(separator: l.listSeparator))")
         if !c.template.custom.isEmpty {
-            lines.append("自訂段落（放在 custom，依序）：")
-            for spec in c.template.custom { lines.append("- \(spec.title)：\(spec.instruction)") }
+            lines.append("\(l.custom)\(l.colon)")
+            for spec in c.template.custom { lines.append("- \(spec.title)\(l.colon)\(spec.instruction)") }
         }
-        if !c.template.instruction.isEmpty { lines.append("額外指示：\(c.template.instruction)") }
+        if !c.template.instruction.isEmpty { lines.append("\(l.extra)\(l.colon)\(c.template.instruction)") }
         let notes = m.userNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         if !notes.isEmpty {
             lines.append("")
-            lines.append("使用者筆記（[時間] 是做筆記時的錄音時間）：")
+            lines.append("\(l.userNotes)\(l.colon)")
             lines.append(notes)
         }
         if !c.bookmarks.isEmpty {
             lines.append("")
-            lines.append("重點標記：" + c.bookmarks.map { TimeFormat.string($0.time) + ($0.label.isEmpty ? "" : " \($0.label)") }
-                .joined(separator: "、"))
+            lines.append("\(l.bookmarks)\(l.colon)" + c.bookmarks.map { TimeFormat.string($0.time) + ($0.label.isEmpty ? "" : " \($0.label)") }
+                .joined(separator: l.listSeparator))
         }
         lines.append("")
-        lines.append("逐字稿（[時間] 說話者：內容，標 (?) 的是辨識信心低的段落）：")
+        lines.append("\(l.transcript)\(l.colon)")
         for s in c.segments {
-            let speaker = s.speaker.map { (c.speakers[$0] ?? "說話者 \($0)") + "：" } ?? ""
+            let speaker = s.speaker.map { (c.speakers[$0] ?? l.speaker($0)) + l.colon } ?? ""
             lines.append("[\(TimeFormat.string(s.start))] \(speaker)\(s.lowConfidence ? "(?) " : "")\(s.text)")
         }
         return lines.joined(separator: "\n")
     }
 
     static func revise(_ c: NotesContext, notes: MeetingNotes, answers: [ReviewAnswer]) -> String {
+        let l = c.meeting.meetingLanguage == .en ? Labels.en : Labels.zh
         var text = summarize(c)
-        text += "\n\n目前的會議紀錄（JSON）：\n" + notes.jsonString()
-        text += "\n\n使用者對待確認題目的回答：\n"
+        text += "\n\n\(l.currentNotes)\(l.colon)\n" + notes.jsonString()
+        text += "\n\n\(l.answers)\(l.colon)\n"
         for (i, a) in answers.enumerated() {
-            text += "\(i + 1). [\(a.time)] \(a.question)\n   回答：\(a.answer)\n"
+            text += "\(i + 1). [\(a.time)] \(a.question)\n   \(l.answer)\(l.colon)\(a.answer)\n"
         }
-        text += """
-
-        請依使用者的回答修正會議紀錄後，回傳完整的會議紀錄：
-        - 依回答修正所有相關內容（摘要、決議、待辦、未決問題、議題、自訂段落、標題都要一併檢查），時間點維持不變。
-        - 已回答的題目從 reviewItems 移除；目前會議紀錄裡沒被回答的題目原樣保留。
-        - 除非回答本身帶出新的疑點，否則不要新增題目。
-        """
+        text += l.reviseInstructions
         return text
     }
 }

@@ -177,7 +177,7 @@ enum TimeFormat {
 
     /// 模型偶爾會照抄逐字稿的寫法，把時間寫成「[03:15]」：去掉前後的括號和空白
     static func clean(_ text: String) -> String {
-        text.trimmingCharacters(in: CharacterSet(charactersIn: "[]()（）【】").union(.whitespacesAndNewlines))
+        text.trimmingCharacters(in: CharacterSet(charactersIn: "[]()（）【】").union(.whitespacesAndNewlines))  // l10n-skip
     }
 
     static func seconds(_ text: String) -> Double? {
@@ -186,12 +186,15 @@ enum TimeFormat {
         return Double(parts.compactMap { $0 }.reduce(0) { $0 * 60 + $1 })
     }
 
-    /// 會議長度的口語說法，例如「9 分鐘」「1 小時 5 分鐘」
-    static func duration(_ seconds: Int?) -> String {
+    /// 會議長度的口語說法，例如「9 分鐘」「1 小時 5 分鐘」；介面用介面語言，匯出用會議語言
+    static func duration(_ seconds: Int?, language: MeetingLanguage = .interface) -> String {
         guard let seconds else { return "" }
         let minutes = max(1, Int((Double(seconds) / 60).rounded()))
-        if minutes >= 60 { return minutes % 60 == 0 ? "\(minutes / 60) 小時" : "\(minutes / 60) 小時 \(minutes % 60) 分鐘" }
-        return "\(minutes) 分鐘"
+        let h = minutes / 60, m = minutes % 60
+        if minutes >= 60 {
+            return m == 0 ? language.text(zh: "\(h) 小時", en: "\(h) hr") : language.text(zh: "\(h) 小時 \(m) 分鐘", en: "\(h) hr \(m) min")
+        }
+        return language.text(zh: "\(minutes) 分鐘", en: "\(minutes) min")
     }
 
     /// srt 用 00:01:02,345；vtt 用 00:01:02.345
@@ -213,9 +216,9 @@ enum DateText {
     static func string(_ date: Date) -> String { formatter.string(from: date) }
     static func date(_ text: String) -> Date? { formatter.date(from: text) }
 
-    static func weekday(_ text: String) -> String {
+    /// 星期幾：中文「星期四」、英文「Thursday」
+    static func weekday(_ text: String, language: MeetingLanguage = .interface) -> String {
         guard let date = date(text) else { return "" }
-        let names = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
-        return names[Calendar(identifier: .gregorian).component(.weekday, from: date) - 1]
+        return date.formatted(Date.FormatStyle(locale: language.locale).weekday(.wide))
     }
 }

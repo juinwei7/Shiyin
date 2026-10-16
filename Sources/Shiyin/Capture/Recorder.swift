@@ -44,12 +44,16 @@ final class Recorder {
     @ObservationIgnored private var meterTimer: Timer?
     @ObservationIgnored private var activity: NSObjectProtocol?
 
+    /// 這場錄音的會議語言，決定即時逐字稿的辨識語言（design §16.4）
+    private(set) var language: MeetingLanguage = .zh
+
     var hasMic: Bool { source != "system" }
     var hasSystem: Bool { source != "mic" }
 
-    func start(meetingId: Int64, source: String = AppSettings.recordSource) {
+    func start(meetingId: Int64, source: String = AppSettings.recordSource, language: MeetingLanguage) {
         guard !isRecording else { return }
         self.source = source
+        self.language = language
         if source == "system" {
             begin(meetingId: meetingId, makeSources: makeDeviceSources)
             return
@@ -71,9 +75,10 @@ final class Recorder {
 
     #if DEBUG
     /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）
-    func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool) {
+    func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, language: MeetingLanguage) {
         guard !isRecording else { return }
         source = both ? "both" : "mic"
+        self.language = language
         begin(meetingId: meetingId) {
             let source = FileSource(url: file, speed: speed)
             var list: [(Int, AudioSource)] = [(0, source)]
@@ -105,7 +110,7 @@ final class Recorder {
         sources = []
         var duration = 0.0
         var errorText: String?
-        do { duration = try writer?.finish() ?? 0 } catch { errorText = "錄音寫檔發生錯誤：\(error.localizedDescription)" }
+        do { duration = try writer?.finish() ?? 0 } catch { errorText = String(localized: "錄音寫檔發生錯誤：\(error.localizedDescription)") }
         let file = writer?.url
         let live = live
         Task { await live?.finish() }
@@ -150,9 +155,9 @@ final class Recorder {
             }
             guard !started.isEmpty else {
                 try? FileManager.default.removeItem(at: url)
-                throw CaptureError.coreAudio(warnings.first ?? "開始錄音", -1)
+                throw CaptureError.coreAudio(warnings.first ?? String(localized: "開始錄音"), -1)
             }
-            if !warnings.isEmpty { failureMessage = "有一個音源沒辦法啟動，只錄到另一個：\(warnings.joined(separator: "；"))" }
+            if !warnings.isEmpty { failureMessage = String(localized: "有一個音源沒辦法啟動，只錄到另一個：\(warnings.joined(separator: String(localized: "；")))") }
             writer.start()
             self.writer = writer
             self.sources = started
@@ -165,7 +170,7 @@ final class Recorder {
             isPaused = false
             isRecording = true
             activity = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .userInitiated],
-                                                             reason: "拾音正在錄音")
+                                                             reason: String(localized: "拾音正在錄音"))
             let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.tick() }
             }
@@ -174,14 +179,14 @@ final class Recorder {
             if AppSettings.liveTranscription { startLive(writer: writer, meetingId: meetingId) }
             log.info("recording started (\(self.source, privacy: .public))")
         } catch {
-            abort(meetingId, message: "沒辦法開始錄音：\(error.localizedDescription)")
+            abort(meetingId, message: String(localized: "沒辦法開始錄音：\(error.localizedDescription)"))
         }
     }
 
     private func startLive(writer: RecordingWriter, meetingId: Int64) {
-        let live = LiveTranscriber()
+        let live = LiveTranscriber(language: language)
         self.live = live
-        liveStatus = "正在準備即時逐字稿…"
+        liveStatus = String(localized: "正在準備即時逐字稿…")
         live.onVolatile = { [weak self] text in self?.volatileText = text }
         live.onFinal = { [weak self] start, end, text in
             guard let self else { return }
@@ -194,7 +199,7 @@ final class Recorder {
                 writer.onMix = live.feedHandler
                 liveStatus = ""
             } catch {
-                liveStatus = "即時逐字稿沒辦法啟動（\(error.localizedDescription)），錄音照常進行，錄完會正式轉錄"
+                liveStatus = String(localized: "即時逐字稿沒辦法啟動（\(error.localizedDescription)），錄音照常進行，錄完會正式轉錄")
             }
         }
     }

@@ -8,9 +8,23 @@ struct TemplateDefinition: Codable, Hashable {
     }
 
     /// 內建段落：summary、decisions、actionItems、openQuestions、topics
-    static let builtinSections: [(id: String, label: String)] = [
-        ("summary", "摘要"), ("decisions", "決議"), ("actionItems", "待辦"), ("openQuestions", "未決問題"), ("topics", "議題詳細"),
-    ]
+    static let builtinSectionIDs = ["summary", "decisions", "actionItems", "openQuestions", "topics"]
+
+    /// 段落名稱：介面用介面語言，提示詞用會議語言（design §16.5）
+    static func sectionLabel(_ id: String, language: MeetingLanguage) -> String {
+        switch id {
+        case "summary": return language.text(zh: "摘要", en: "Summary")
+        case "decisions": return language.text(zh: "決議", en: "Decisions")
+        case "actionItems": return language.text(zh: "待辦", en: "Action items")
+        case "openQuestions": return language.text(zh: "未決問題", en: "Open questions")
+        default: return language.text(zh: "議題詳細", en: "Topics")
+        }
+    }
+
+    /// 設定畫面用的段落清單（介面語言）
+    static var builtinSections: [(id: String, label: String)] {
+        builtinSectionIDs.map { ($0, sectionLabel($0, language: .interface)) }
+    }
 
     var description: String
     var sections: [String]
@@ -21,7 +35,7 @@ struct TemplateDefinition: Codable, Hashable {
 
     static func decode(_ json: String) -> TemplateDefinition {
         (try? JSONDecoder().decode(TemplateDefinition.self, from: Data(json.utf8)))
-            ?? TemplateDefinition(description: "", sections: builtinSections.map(\.id), custom: [], instruction: "")
+            ?? TemplateDefinition(description: "", sections: builtinSectionIDs, custom: [], instruction: "")
     }
 
     func jsonString() -> String {
@@ -29,7 +43,7 @@ struct TemplateDefinition: Codable, Hashable {
     }
 }
 
-/// 內建範本（R6.2）。啟動時寫進資料庫，名稱或內容改了就覆蓋。
+/// 內建範本（R6.2）。中文版啟動時寫進資料庫，名稱或內容改了就覆蓋；英文版不存，依 id 取用（design §16.5）。
 enum BuiltinTemplates {
     static let all: [(id: String, name: String, definition: TemplateDefinition)] = [
         ("general", "一般會議", TemplateDefinition(
@@ -63,6 +77,39 @@ enum BuiltinTemplates {
             instruction: "這是腦力激盪，不要遺漏任何被提出的點子，即使沒有被採納。")),
     ]
 
+    /// 英文版：英文會議整理時用，英文介面也顯示這裡的名稱和說明
+    static let english: [String: (name: String, definition: TemplateDefinition)] = [
+        "general": ("General meeting", TemplateDefinition(
+            description: "Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics",
+            sections: ["summary", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: "")),
+        "one-on-one": ("One-on-one", TemplateDefinition(
+            description: "A one-on-one between a manager and a team member",
+            sections: ["summary", "actionItems", "openQuestions"],
+            custom: [.init(title: "Updates and progress", instruction: "What they have been working on, progress and blockers"),
+                     .init(title: "Feedback", instruction: "Feedback both ways, noting who gave it to whom"),
+                     .init(title: "Support needed", instruction: "Where they asked for help or resources")],
+            instruction: "This is a one-on-one. Keep a neutral tone and do not judge the person.")),
+        "interview": ("Interview", TemplateDefinition(
+            description: "User interviews, expert interviews, job interviews",
+            sections: ["summary", "topics"],
+            custom: [.init(title: "Interviewee background", instruction: "The interviewee's role, experience and context"),
+                     .init(title: "Key quotes", instruction: "Keep the interviewee's own words, one quote per item, with its time"),
+                     .init(title: "Insights and opportunities", instruction: "Needs, pain points and opportunities drawn from the interview")],
+            instruction: "This is an interview. Focus on what the interviewee said; do not present the interviewer's assumptions as the interviewee's opinions.")),
+        "lecture": ("Lecture / talk", TemplateDefinition(
+            description: "Courses, talks, sharing sessions, training",
+            sections: ["summary", "topics", "openQuestions"],
+            custom: [.init(title: "Key concepts", instruction: "Important concepts, terms and explanations that came up"),
+                     .init(title: "Q&A", instruction: "Questions from the audience and the speaker's answers")],
+            instruction: "This is a lecture or talk. Outline it following the speaker's sections.")),
+        "brainstorm": ("Brainstorm", TemplateDefinition(
+            description: "Ideation meetings, workshops",
+            sections: ["summary", "decisions", "actionItems"],
+            custom: [.init(title: "Ideas", instruction: "One idea per item, noting who proposed it where possible"),
+                     .init(title: "Evaluation and trade-offs", instruction: "Discussion of the ideas, pros and cons, and the reasons for each choice")],
+            instruction: "This is a brainstorm. Do not leave out any idea that was raised, even if it was not adopted.")),
+    ]
+
     static func seed(_ db: AppDatabase) {
         let existing = Dictionary(uniqueKeysWithValues: ((try? db.templates()) ?? []).map { ($0.id, $0) })
         for template in all {
@@ -70,5 +117,25 @@ enum BuiltinTemplates {
             if let current = existing[template.id], current.name == template.name, current.definition == json { continue }
             try? db.saveTemplate(TemplateRecord(id: template.id, name: template.name, builtin: true, definition: json))
         }
+    }
+}
+
+extension TemplateRecord {
+    /// 介面上顯示的名稱：內建範本跟著介面語言，自訂範本照使用者取的名字
+    var displayName: String {
+        guard builtin, MeetingLanguage.interface == .en, let english = BuiltinTemplates.english[id] else { return name }
+        return english.name
+    }
+
+    /// 介面上顯示的說明
+    var displayDescription: String {
+        if builtin, MeetingLanguage.interface == .en, let english = BuiltinTemplates.english[id] { return english.definition.description }
+        return TemplateDefinition.decode(definition).description
+    }
+
+    /// 整理時用的內容：內建範本跟著會議語言，自訂範本照使用者寫的
+    func definition(for language: MeetingLanguage) -> TemplateDefinition {
+        if builtin, language == .en, let english = BuiltinTemplates.english[id] { return english.definition }
+        return TemplateDefinition.decode(definition)
     }
 }

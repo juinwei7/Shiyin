@@ -13,11 +13,11 @@ enum WAVRepair {
         let handle = try FileHandle(forUpdating: url)
         defer { try? handle.close() }
         let size = try handle.seekToEnd()
-        guard size > 44 else { throw WAVRepairError.invalid("錄音檔太小，沒有內容") }
+        guard size > 44 else { throw WAVRepairError.invalid(String(localized: "錄音檔太小，沒有內容")) }
         try handle.seek(toOffset: 0)
         let header = try handle.read(upToCount: 12) ?? Data()
         guard header.count == 12, header.prefix(4) == Data("RIFF".utf8), header.suffix(4) == Data("WAVE".utf8) else {
-            throw WAVRepairError.invalid("不是 WAV 檔")
+            throw WAVRepairError.invalid(String(localized: "不是 WAV 檔"))
         }
         var offset: UInt64 = 12
         while offset + 8 <= size {
@@ -33,7 +33,7 @@ enum WAVRepair {
             }
             offset += 8 + chunkSize + (chunkSize % 2)
         }
-        throw WAVRepairError.invalid("找不到音訊資料區段")
+        throw WAVRepairError.invalid(String(localized: "找不到音訊資料區段"))
     }
 
     private static func write(_ value: UInt32, at offset: UInt64, _ handle: FileHandle) throws {

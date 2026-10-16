@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>拾音安裝說明</title>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>拾音安裝說明</title>
 <style>
 body { font-family: "PingFang TC", -apple-system, sans-serif; font-size: 12pt; line-height: 1.7; color: #1E2625; }
 h1, h2 { font-family: "Songti TC", serif; font-weight: 600; }
@@ -11,7 +11,7 @@ code { font-family: Menlo, monospace; font-size: 10.5pt; background: #EEF1EF; pa
 <p class="meta">macOS 會議紀錄 app：錄音、即時逐字稿、說話者辨識、AI 會議紀錄</p>
 
 <h2>1. 安裝</h2>
-<p>把 DMG 裡的「拾音」拖到旁邊的「應用程式」資料夾。</p>
+<p>把 DMG 裡的「拾音」拖到旁邊的 Applications（應用程式）資料夾。</p>
 
 <h2>2. 第一次打開</h2>
 <p>拾音沒有經過 Apple 公證，第一次打開時 macOS 會擋下來，顯示「無法驗證開發者」或「Apple 無法檢查是否包含惡意軟體」。請照下面的步驟放行（只要做一次）：</p>
@@ -26,6 +26,7 @@ code { font-family: Menlo, monospace; font-size: 10.5pt; background: #EEF1EF; pa
 <p>打開後會出現引導，依序：允許麥克風、下載轉錄模型（約 1.7 GB，只需要一次）、選擇整理會議紀錄的工具。</p>
 <ul>
 <li><b>整理工具</b>：已經安裝並登入 Claude Code（<code>claude</code>）或 Codex（<code>codex</code>）的話直接選；沒有的話可以填 Anthropic 或 OpenAI 的 API key，或先選「不整理」只要逐字稿。</li>
+<li><b>會議語言</b>：中文或英文。新的會議用設定裡的預設語言，錄音、匯入時或之後都可以個別改。</li>
 <li><b>全域快捷鍵</b>：在任何 app 裡按 <code>⌃⌥⌘R</code> 都能開始或停止錄音。</li>
 <li><b>錄線上會議</b>：錄音來源選「麥克風＋電腦聲音（線上會議）」。第一次錄的時候 macOS 會詢問「錄製系統音訊」，請按允許；如果不小心拒絕了，到「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」打開拾音。</li>
 </ul>

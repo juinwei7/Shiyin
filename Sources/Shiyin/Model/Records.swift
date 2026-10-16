@@ -34,6 +34,10 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var channels: String = "mic"         // mic / system / both
     var deletedAt: String?
     var folder: String = ""
+    // v3（design §16.3）
+    var language: String = "zh"
+
+    var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 
@@ -51,7 +55,7 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var hasAudio: Bool { !audioFile.isEmpty && FileManager.default.fileExists(atPath: audioURL.path) }
 
     var participantList: [String] {
-        participants.split(whereSeparator: { $0 == "," || $0 == "，" || $0 == "、" })
+        participants.split(whereSeparator: { $0 == "," || $0 == "，" || $0 == "、" })  // l10n-skip
             .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 }

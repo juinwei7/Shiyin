@@ -98,10 +98,10 @@ struct SummaryTab: View {
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
                 EditBar { editing = notes }
-                if !notes.summary.isEmpty { NotesSection(title: "摘要") { ItemList(items: notes.summary) } }
-                if !notes.decisions.isEmpty { NotesSection(title: "決議") { ItemList(items: notes.decisions) } }
-                if !notes.actionItems.isEmpty { NotesSection(title: "待辦") { ActionItemsTable(items: notes.actionItems) } }
-                if !notes.openQuestions.isEmpty { NotesSection(title: "未決問題") { ItemList(items: notes.openQuestions) } }
+                if !notes.summary.isEmpty { NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary) } }
+                if !notes.decisions.isEmpty { NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions) } }
+                if !notes.actionItems.isEmpty { NotesSection(title: String(localized: "待辦")) { ActionItemsTable(items: notes.actionItems) } }
+                if !notes.openQuestions.isEmpty { NotesSection(title: String(localized: "未決問題")) { ItemList(items: notes.openQuestions) } }
                 ForEach(Array(notes.custom.enumerated()), id: \.offset) { _, section in
                     if !section.items.isEmpty { NotesSection(title: section.title) { ItemList(items: section.items) } }
                 }
@@ -117,7 +117,7 @@ struct SummaryTab: View {
     }
 
     private var templateName: String {
-        "範本：" + (model.templates.first { $0.id == detail.meeting.templateId }?.name ?? "一般會議")
+        String(localized: "範本：") + (model.templates.first { $0.id == detail.meeting.templateId }?.displayName ?? String(localized: "一般會議"))
     }
 }
 
@@ -152,7 +152,7 @@ struct ActionItemsTable: View {
             Divider().gridCellUnsizedAxes(.horizontal)
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 GridRow {
-                    Text(item.owner.isEmpty ? "未指定" : item.owner)
+                    Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner)
                         .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(item.task)
@@ -243,15 +243,15 @@ struct NotesEditor: View {
                         }
                     } else {
                         TextField("標題", text: $notes.title).font(.songti(18))
-                        EditorSection(title: "摘要") { ItemsEditor(items: $notes.summary) }
-                        EditorSection(title: "決議") { ItemsEditor(items: $notes.decisions) }
-                        EditorSection(title: "待辦") { ActionItemsEditor(items: $notes.actionItems) }
-                        EditorSection(title: "未決問題") { ItemsEditor(items: $notes.openQuestions) }
+                        EditorSection(title: String(localized: "摘要")) { ItemsEditor(items: $notes.summary) }
+                        EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
+                        EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
+                        EditorSection(title: String(localized: "未決問題")) { ItemsEditor(items: $notes.openQuestions) }
                         ForEach($notes.custom.indices, id: \.self) { i in
                             EditorSection(title: notes.custom[i].title) { ItemsEditor(items: $notes.custom[i].items) }
                         }
                         if !notes.reviewItems.isEmpty {
-                            EditorSection(title: "待確認") {
+                            EditorSection(title: String(localized: "待確認")) {
                                 ForEach(Array(notes.reviewItems.enumerated()), id: \.offset) { index, item in
                                     HStack(alignment: .firstTextBaseline) {
                                         Text(item.time).monospacedDigit().foregroundStyle(.secondary)

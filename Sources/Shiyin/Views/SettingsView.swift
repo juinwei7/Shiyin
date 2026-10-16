@@ -5,7 +5,7 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }
-            TemplateSettings().tabItem { Label("範本", systemImage: "doc.text") }
+            TemplateSettings().tabItem { Label(MeetingLanguage.ui(zh: "範本", en: "Templates"), systemImage: "doc.text") }
             GlossarySettings().tabItem { Label("詞彙表", systemImage: "text.book.closed") }
             RecordingSettings().tabItem { Label("錄音", systemImage: "mic") }
             StorageSettings().tabItem { Label("模型與儲存空間", systemImage: "internaldrive") }
@@ -95,11 +95,11 @@ struct ProviderSettings: View {
 
     private var privacyText: String {
         switch current {
-        case .none: return "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。"
+        case .none: return String(localized: "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。")
         case .claude, .anthropic:
-            return "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。"
+            return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。")
         case .codex, .openai:
-            return "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。"
+            return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。")
         }
     }
 }
@@ -119,7 +119,7 @@ struct TemplateSettings: View {
                 List(selection: $selection) {
                     ForEach(model.templates) { template in
                         HStack {
-                            Text(template.name)
+                            Text(template.displayName)
                             Spacer()
                             if template.id == defaultTemplate { Text("預設").font(.caption).foregroundStyle(.secondary) }
                         }
@@ -188,7 +188,7 @@ struct TemplateSettings: View {
                             selection = model.templates.first?.id
                         }
                         Button("儲存") {
-                            model.saveTemplate(TemplateRecord(id: template.id, name: draftName.isEmpty ? "未命名範本" : draftName,
+                            model.saveTemplate(TemplateRecord(id: template.id, name: draftName.isEmpty ? String(localized: "未命名範本") : draftName,
                                                               builtin: false, definition: binding.wrappedValue.jsonString()))
                         }
                         .buttonStyle(.borderedProminent)
@@ -203,15 +203,15 @@ struct TemplateSettings: View {
 
     private func load(_ id: String?) {
         guard let template = model.templates.first(where: { $0.id == id }) else { draft = nil; return }
-        draft = TemplateDefinition.decode(template.definition)
-        draftName = template.name
+        draft = template.definition(for: .interface)
+        draftName = template.displayName
     }
 
     private func create(from source: TemplateRecord?) {
         let id = "custom-\(UUID().uuidString.prefix(8))"
-        let definition = source.map { TemplateDefinition.decode($0.definition) }
+        let definition = source.map { $0.definition(for: .interface) }
             ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems"], custom: [], instruction: "")
-        model.saveTemplate(TemplateRecord(id: id, name: source.map { "\($0.name)（副本）" } ?? "新範本", builtin: false,
+        model.saveTemplate(TemplateRecord(id: id, name: source.map { String(localized: "\($0.displayName)（副本）") } ?? String(localized: "新範本"), builtin: false,
                                           definition: definition.jsonString()))
         selection = id
     }
@@ -246,7 +246,7 @@ struct GlossarySettings: View {
                     Text("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。").font(.callout).foregroundStyle(.secondary).padding()
                 }
             }
-            Text("目前的轉錄提示：\(WhisperEngine.prompt(glossary: model.glossary.map(\.term)))")
+            Text(String(localized: "目前的轉錄提示：\(WhisperEngine.prompt(glossary: model.glossary.map(\.term), language: AppSettings.defaultMeetingLanguage))"))
                 .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
@@ -263,6 +263,7 @@ struct GlossarySettings: View {
 struct RecordingSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
+    @AppStorage(AppSettings.defaultMeetingLanguageKey) private var meetingLanguage: MeetingLanguage = .interface
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
     @AppStorage(AppSettings.liveTranscriptionKey) private var live = true
@@ -283,6 +284,12 @@ struct RecordingSettings: View {
                 ForEach(devices) { Text($0.name).tag($0.uid) }
             }
             .disabled(source == "system")
+            // 會議語言（R12.4、design §16.3）
+            Picker("預設會議語言", selection: $meetingLanguage) {
+                ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
+            }
+            Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("錄音中顯示即時逐字稿", isOn: $live)
             Toggle("轉錄時辨識說話者", isOn: $diarize)
             // 正式轉錄引擎（R4.1、design §6.2.1、D11）
@@ -337,11 +344,11 @@ struct StorageSettings: View {
             Section("轉錄模型") {
                 ModelRow(title: ModelStore.breeze.name, state: model.models.state,
                          start: model.models.start, pause: model.models.pause, delete: model.models.delete)
-                ModelRow(title: "說話者辨識模型（FluidAudio）", state: model.models.diarizerState,
+                ModelRow(title: String(localized: "說話者辨識模型（FluidAudio）"), state: model.models.diarizerState,
                          start: model.models.prepareDiarizer, pause: nil, delete: nil)
             }
             Section("儲存空間") {
-                LabeledContent("錄音", value: ByteCountFormatter.string(fromByteCount: audioBytes, countStyle: .file))
+                LabeledContent(MeetingLanguage.ui(zh: "錄音", en: "Recordings"), value: ByteCountFormatter.string(fromByteCount: audioBytes, countStyle: .file))
                 LabeledContent("模型", value: ByteCountFormatter.string(fromByteCount: modelBytes, countStyle: .file))
                 Toggle("轉錄完成後把錄音壓縮成 m4a（約每小時 10～30 MB）", isOn: $compress)
                 LabeledContent("資料位置") {
@@ -460,7 +467,7 @@ struct AdvancedSettings: View {
                 }
                 Button("重建搜尋索引") {
                     model.perform { try model.db.rebuildSearchIndex() }
-                    model.noticeMessage = "搜尋索引已重建"
+                    model.noticeMessage = String(localized: "搜尋索引已重建")
                 }
             }
         }

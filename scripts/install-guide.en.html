@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Shiyin Install Guide</title>
+<style>
+body { font-family: -apple-system, "PingFang TC", sans-serif; font-size: 12pt; line-height: 1.6; color: #1E2625; }
+h1, h2 { font-family: "New York", Georgia, serif; font-weight: 600; }
+h1 { font-size: 24pt; margin-bottom: 2pt; } h2 { font-size: 15pt; margin-top: 18pt; }
+.meta { color: #68726F; }
+code { font-family: Menlo, monospace; font-size: 10.5pt; background: #EEF1EF; padding: 1pt 4pt; }
+</style></head><body>
+<h1>Shiyin Install Guide</h1>
+<p class="meta">Meeting notes for macOS: recording, live transcript, speaker identification, AI meeting notes</p>
+
+<h2>1. Install</h2>
+<p>Drag Shiyin from the DMG into the Applications folder next to it.</p>
+
+<h2>2. First launch</h2>
+<p>Shiyin isn’t notarized by Apple, so macOS blocks it the first time you open it, saying the developer can’t be verified or that Apple can’t check it for malicious software. Allow it once:</p>
+<ol>
+<li>Double-click Shiyin in Applications. When the warning appears, click Done or OK.</li>
+<li>Open System Settings → Privacy &amp; Security and scroll down to Security.</li>
+<li>Next to “Shiyin was blocked”, click Open Anyway and enter your password.</li>
+</ol>
+<p>If you’re comfortable with Terminal, you can run this instead: <code>xattr -dr com.apple.quarantine /Applications/Shiyin.app</code></p>
+
+<h2>3. Welcome guide</h2>
+<p>On first launch, a short guide walks you through allowing the microphone, downloading the transcription model (about 1.7 GB, once) and choosing a summarizer.</p>
+<ul>
+<li><b>Summarizer</b>: if Claude Code (<code>claude</code>) or Codex (<code>codex</code>) is installed and signed in, just pick it. Otherwise enter an Anthropic or OpenAI API key, or choose “Don’t summarize” to get transcripts only.</li>
+<li><b>Meeting language</b>: Chinese or English. New meetings use the default from Settings; you can change it for each recording, import or meeting.</li>
+<li><b>Global shortcut</b>: press <code>⌃⌥⌘R</code> in any app to start or stop recording.</li>
+<li><b>Online meetings</b>: set the recording source to “Microphone + computer audio (online meetings)”. The first time you record, macOS asks to allow system audio recording; click Allow. If you denied it, turn Shiyin on in System Settings → Privacy &amp; Security → Screen &amp; System Audio Recording.</li>
+</ul>
+
+<h2>4. System requirements</h2>
+<ul>
+<li>A Mac with Apple Silicon (M1 or later) running macOS 26 or later</li>
+<li>8 GB of memory or more, and about 2 GB of disk space (plus recordings)</li>
+</ul>
+
+<h2>5. Privacy</h2>
+<p>Recording, transcription and speaker identification all happen on your Mac; recordings are never uploaded. When writing meeting notes, only the transcript text is sent to the AI service you choose.</p>
+
+<h2>6. Updates</h2>
+<p>If whoever published Shiyin set an update URL, Shiyin checks for new versions by itself and, after asking you, downloads, verifies and reopens. You can also choose Check for Updates… from the Shiyin menu.</p>
+<p>Without automatic updates, download the new DMG and drag the new Shiyin into Applications to replace the old one. Your meetings are kept either way.</p>
+</body></html>

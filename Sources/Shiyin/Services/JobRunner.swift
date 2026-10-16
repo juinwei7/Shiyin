@@ -17,6 +17,7 @@ enum AppSettings {
     static let defaultTemplateKey = "defaultTemplate"
     static let globalHotKeyKey = "globalHotKey"
     static let transcriptionEngineKey = "transcriptionEngine"   // breeze / system
+    static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en
 
     private static var d: UserDefaults { .standard }
 
@@ -32,6 +33,10 @@ enum AppSettings {
     static var globalHotKey: Bool { d.object(forKey: globalHotKeyKey) as? Bool ?? true }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
+    /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
+    static var defaultMeetingLanguage: MeetingLanguage {
+        MeetingLanguage(rawValue: d.string(forKey: defaultMeetingLanguageKey) ?? "") ?? .interface
+    }
 }
 
 struct RevisePayload: Codable {
@@ -125,7 +130,7 @@ final class JobRunner {
     private func execute(_ job: Job, lane: JobLane) async {
         running[lane] = Running(job: job)
         let activity = ProcessInfo.processInfo.beginActivity(
-            options: [.idleSystemSleepDisabled, .userInitiated], reason: "拾音正在轉錄或整理會議紀錄")
+            options: [.idleSystemSleepDisabled, .userInitiated], reason: String(localized: "拾音正在轉錄或整理會議紀錄"))
         onChange?()
         log.info("job \(job.id ?? 0) \(job.kind.rawValue) started")
         var failure: Error?
@@ -169,20 +174,21 @@ final class JobRunner {
     private func transcribe(_ job: Job, lane: JobLane) async throws {
         guard let meeting = try db.meeting(job.meetingId) else { return }
         let useSystem = AppSettings.useSystemTranscriber
+        let language = meeting.meetingLanguage
         guard useSystem || FileManager.default.fileExists(atPath: ModelStore.breezePath.path) else { throw WhisperError.modelMissing }
-        running[lane]?.stage = "讀取錄音"
+        running[lane]?.stage = String(localized: "讀取錄音")
         let samples = try await AudioDecoder.decode(meeting.audioURL)
         guard isStillRunning(job) else { return }
         let duration = Double(samples.count) / AudioDecoder.sampleRate
         let diarize = AppSettings.diarize && duration > 5
         let whisperShare = diarize ? 0.85 : 1.0
 
-        running[lane]?.stage = useSystem ? "轉錄（macOS 內建）" : "轉錄"
+        running[lane]?.stage = useSystem ? String(localized: "轉錄（macOS 內建）") : String(localized: "轉錄")
         running[lane]?.progress = 0
         let transcribed: [TranscribedSegment]
         if useSystem {
             let task = Task { [weak self] in
-                try await SystemTranscriber.transcribe(samples: samples) { value in
+                try await SystemTranscriber.transcribe(samples: samples, language: language) { value in
                     Task { @MainActor in self?.running[lane]?.progress = value * whisperShare }
                 }
             }
@@ -193,17 +199,18 @@ final class JobRunner {
                 Task { @MainActor in self?.running[lane]?.progress = value * whisperShare }
             }
             running[lane]?.cancelAction = { control.cancel() }
-            let prompt = WhisperEngine.prompt(glossary: try db.glossary().map(\.term))
+            let prompt = WhisperEngine.prompt(glossary: try db.glossary().map(\.term), language: language)
             let modelPath = ModelStore.breezePath.path
             transcribed = try await Task.detached(priority: .userInitiated) {
-                try WhisperEngine.transcribe(samples: samples, modelPath: modelPath, prompt: prompt, control: control)
+                try WhisperEngine.transcribe(samples: samples, modelPath: modelPath, prompt: prompt,
+                                             language: language.whisperCode, control: control)
             }.value
         }
         guard isStillRunning(job) else { return }
 
         var speakers: [Int?] = transcribed.map { _ in nil }
         if diarize {
-            running[lane]?.stage = "辨識說話者"
+            running[lane]?.stage = String(localized: "辨識說話者")
             do {
                 let turns = try await Diarizer.diarize(samples: samples) { [weak self] value in
                     Task { @MainActor in self?.running[lane]?.progress = whisperShare + value * (1 - whisperShare) }
@@ -238,7 +245,7 @@ final class JobRunner {
         let output = Paths.audioDir.appendingPathComponent("\(job.meetingId).m4a")
         try? FileManager.default.removeItem(at: output)
         guard let export = AVAssetExportSession(asset: AVURLAsset(url: meeting.audioURL), presetName: AVAssetExportPresetAppleM4A)
-        else { throw LLMError.failed("無法建立壓縮工作") }
+        else { throw LLMError.failed(String(localized: "無法建立壓縮工作")) }
         try await export.export(to: output, as: .m4a)
         try db.setAudioFile(job.meetingId, output.lastPathComponent)
         try? FileManager.default.removeItem(at: meeting.audioURL)
@@ -250,18 +257,18 @@ final class JobRunner {
     private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?) async throws {
         guard let meeting = try db.meeting(job.meetingId) else { return }
         let provider = AppSettings.provider
-        guard provider != .none else { throw LLMError.failed("整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API") }
+        guard provider != .none else { throw LLMError.failed(String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API")) }
         running[lane]?.provider = provider
-        running[lane]?.stage = answers == nil ? "整理" : "校稿"
+        running[lane]?.stage = answers == nil ? String(localized: "整理") : String(localized: "校稿")
         let segments = try db.segments(job.meetingId)
-        guard !segments.isEmpty || !meeting.userNotes.isEmpty else { throw LLMError.failed("還沒有逐字稿，請先完成轉錄") }
+        guard !segments.isEmpty || !meeting.userNotes.isEmpty else { throw LLMError.failed(String(localized: "還沒有逐字稿，請先完成轉錄")) }
         let templates = try db.templates()
         let template = templates.first { $0.id == meeting.templateId } ?? templates.first { $0.id == "general" }
         let context = NotesContext(
             meeting: meeting, segments: segments,
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
             bookmarks: try db.bookmarks(job.meetingId), glossary: try db.glossary().map(\.term),
-            template: TemplateDefinition.decode(template?.definition ?? "{}"))
+            template: template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}"))
         let prompt: String
         if let answers {
             guard let notes = meeting.decodedNotes else { return }
@@ -270,9 +277,9 @@ final class JobRunner {
             prompt = NotesPrompt.summarize(context)
         }
         let notes = try await LLMClient.generate(
-            provider: provider, model: AppSettings.model, system: NotesPrompt.system, prompt: prompt,
+            provider: provider, model: AppSettings.model, system: NotesPrompt.system(meeting.meetingLanguage), prompt: prompt,
             onStart: { [weak self] process in self?.running[lane]?.cancelAction = { process.terminate() } })
         guard isStillRunning(job) else { return }
-        try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: answers == nil ? "重新整理" : "校稿")
+        try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"))
     }
 }

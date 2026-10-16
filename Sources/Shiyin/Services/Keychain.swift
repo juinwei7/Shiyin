@@ -27,7 +27,7 @@ enum Keychain {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecAttrLabel as String: "拾音 API key（\(account)）",
+            kSecAttrLabel as String: String(localized: "拾音 API key（\(account)）"),
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
             kSecValueData as String: Data(trimmed.utf8),
         ]

@@ -142,6 +142,10 @@ final class AppDatabase: @unchecked Sendable {
             }
             try Self.rebuildSearch(db)
         }
+        // v3（design §16.3）：會議語言，舊會議都是中文
+        migrator.registerMigration("v3") { db in
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN language TEXT NOT NULL DEFAULT 'zh'")
+        }
         return migrator
     }
 
@@ -268,12 +272,14 @@ final class AppDatabase: @unchecked Sendable {
                 try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) VALUES (?, 'segment', ?, ?)",
                                arguments: [meetingId, s.id, s.text])
             }
-            // 說話者：保留已改過的名字，新的編號補上預設名字
+            // 說話者：保留已改過的名字，新的編號補上預設名字（跟著會議語言）
+            let language = try Meeting.fetchOne(db, key: meetingId)?.meetingLanguage ?? .zh
             let existing = try SpeakerName.filter(Column("meeting_id") == meetingId).fetchAll(db)
             let named = Dictionary(uniqueKeysWithValues: existing.map { ($0.idx, $0.name) })
             try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
             for idx in stride(from: 1, through: speakerCount, by: 1) {
-                var speaker = SpeakerName(meetingId: meetingId, idx: idx, name: named[idx] ?? "說話者 \(idx)")
+                var speaker = SpeakerName(meetingId: meetingId, idx: idx,
+                                          name: named[idx] ?? language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)"))
                 try speaker.insert(db)
             }
             if var m = try Meeting.fetchOne(db, key: meetingId) {
@@ -391,7 +397,7 @@ final class AppDatabase: @unchecked Sendable {
             if let m = try Meeting.fetchOne(db, key: meetingId), let notes = m.decodedNotes {
                 let updated = notes.replacing(find, with: replacement)
                 if updated != notes {
-                    try Self.saveNotes(db, meetingId, notes: updated, by: nil, reason: "取代「\(find)」→「\(replacement)」")
+                    try Self.saveNotes(db, meetingId, notes: updated, by: nil, reason: String(localized: "取代「\(find)」→「\(replacement)」"))
                     notesChanged = true
                 }
             }
@@ -404,7 +410,7 @@ final class AppDatabase: @unchecked Sendable {
         try pool.write { db in
             guard let m = try Meeting.fetchOne(db, key: meetingId), var notes = m.decodedNotes else { return }
             notes.reviewItems = notes.reviewItems.enumerated().filter { !indexes.contains($0.offset) }.map(\.element)
-            try Self.saveNotes(db, meetingId, notes: notes, by: nil, reason: "略過待確認")
+            try Self.saveNotes(db, meetingId, notes: notes, by: nil, reason: String(localized: "略過待確認"))
         }
     }
 

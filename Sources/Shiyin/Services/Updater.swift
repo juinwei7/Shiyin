@@ -22,11 +22,11 @@ final class Updater {
         var label: String {
             switch self {
             case .idle: return ""
-            case .checking: return "正在檢查…"
-            case .upToDate: return "已是最新版本"
-            case .available(let m): return "有新版本 \(m.version)"
-            case .downloading: return "正在下載更新…"
-            case .installing: return "正在準備安裝…"
+            case .checking: return String(localized: "正在檢查…")
+            case .upToDate: return String(localized: "已是最新版本")
+            case .available(let m): return String(localized: "有新版本 \(m.version)")
+            case .downloading: return String(localized: "正在下載更新…")
+            case .installing: return String(localized: "正在準備安裝…")
             case .failed(let reason): return reason
             }
         }
@@ -37,15 +37,15 @@ final class Updater {
 
         var errorDescription: String? {
             switch self {
-            case .noURL: return "還沒有設定更新網址"
-            case .insecureURL: return "更新網址必須是 https"
-            case .http(let code): return "更新網址回傳 HTTP \(code)"
-            case .badManifest: return "更新資訊的格式不對"
-            case .checksum: return "下載的檔案驗證失敗（SHA-256 不符），已刪除"
-            case .noApp: return "更新檔裡找不到拾音"
-            case .signature(let reason): return "新版的簽章跟目前的拾音不符，拒絕安裝（\(reason)）"
-            case .notNewer: return "更新檔的版本沒有比較新"
-            case .busy: return "錄音或轉錄、整理進行中，完成後再更新"
+            case .noURL: return String(localized: "還沒有設定更新網址")
+            case .insecureURL: return String(localized: "更新網址必須是 https")
+            case .http(let code): return String(localized: "更新網址回傳 HTTP \(code)")
+            case .badManifest: return String(localized: "更新資訊的格式不對")
+            case .checksum: return String(localized: "下載的檔案驗證失敗（SHA-256 不符），已刪除")
+            case .noApp: return String(localized: "更新檔裡找不到拾音")
+            case .signature(let reason): return String(localized: "新版的簽章跟目前的拾音不符，拒絕安裝（\(reason)）")
+            case .notNewer: return String(localized: "更新檔的版本沒有比較新")
+            case .busy: return String(localized: "錄音或轉錄、整理進行中，完成後再更新")
             }
         }
     }
@@ -161,7 +161,7 @@ final class Updater {
             guard FileManager.default.isWritableFile(atPath: target.deletingLastPathComponent().path) else {
                 // 一般使用者帳號不能改 /Applications：打開 DMG 讓使用者自己拖
                 NSWorkspace.shared.open(dmg)
-                state = .failed("沒有權限替換「\(target.deletingLastPathComponent().path)」裡的拾音，已經打開下載好的 DMG，請把拾音拖進「應用程式」取代舊版")
+                state = .failed(String(localized: "沒有權限替換「\(target.deletingLastPathComponent().path)」裡的拾音，已經打開下載好的 DMG，請把拾音拖進「應用程式」取代舊版"))
                 return
             }
             try Self.launchReplacement(staged: staged, target: target, work: work)
@@ -170,7 +170,7 @@ final class Updater {
             // 失敗時把下載和解出來的檔案都刪掉，舊版完全不受影響
             if let workDir { try? FileManager.default.removeItem(at: workDir) }
             state = .failed(error.localizedDescription)
-            model.errorMessage = "更新失敗：\(error.localizedDescription)"
+            model.errorMessage = String(localized: "更新失敗：\(error.localizedDescription)")
         }
     }
 
@@ -206,15 +206,15 @@ final class Updater {
         guard SecCodeCopySelf([], &selfCode) == errSecSuccess, let selfCode,
               SecCodeCopyStaticCode(selfCode, [], &selfStatic) == errSecSuccess, let selfStatic,
               SecCodeCopyDesignatedRequirement(selfStatic, [], &requirement) == errSecSuccess, let requirement
-        else { throw UpdateError.signature("讀不到目前 app 的簽章") }
+        else { throw UpdateError.signature(String(localized: "讀不到目前 app 的簽章")) }
         var newStatic: SecStaticCode?
         guard SecStaticCodeCreateWithPath(app as CFURL, [], &newStatic) == errSecSuccess, let newStatic else {
-            throw UpdateError.signature("讀不到新版的簽章")
+            throw UpdateError.signature(String(localized: "讀不到新版的簽章"))
         }
         let flags = SecCSFlags(rawValue: UInt32(kSecCSCheckAllArchitectures | kSecCSCheckNestedCode | kSecCSStrictValidate))
         let status = SecStaticCodeCheckValidity(newStatic, flags, requirement)
         guard status == errSecSuccess else {
-            throw UpdateError.signature(SecCopyErrorMessageString(status, nil) as String? ?? "錯誤代碼 \(status)")
+            throw UpdateError.signature(SecCopyErrorMessageString(status, nil) as String? ?? String(localized: "錯誤代碼 \(status)"))
         }
     }
 

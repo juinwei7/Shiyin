@@ -93,11 +93,11 @@ final class SystemAudioSource: AudioSource {
         description.uuid = UUID()
         description.muteBehavior = .unmuted
         description.isPrivate = true
-        try check(AudioHardwareCreateProcessTap(description, &tapID), "建立系統聲音擷取")
+        try check(AudioHardwareCreateProcessTap(description, &tapID), String(localized: "建立系統聲音擷取"))
 
         guard let outputUID = AudioDevices.defaultOutputUID() else { throw CaptureError.noOutputDevice }
         let aggregate: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "拾音系統聲音",
+            kAudioAggregateDeviceNameKey: String(localized: "拾音系統聲音"),
             kAudioAggregateDeviceUIDKey: UUID().uuidString,
             kAudioAggregateDeviceMainSubDeviceKey: outputUID,
             kAudioAggregateDeviceIsPrivateKey: true,
@@ -107,13 +107,13 @@ final class SystemAudioSource: AudioSource {
             kAudioAggregateDeviceTapListKey: [[kAudioSubTapDriftCompensationKey: true,
                                                kAudioSubTapUIDKey: description.uuid.uuidString]],
         ]
-        try check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), "建立聚合裝置")
+        try check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), String(localized: "建立聚合裝置"))
 
         var asbd = AudioStreamBasicDescription()
         var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
         var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat, mScope: kAudioObjectPropertyScopeGlobal,
                                                  mElement: kAudioObjectPropertyElementMain)
-        try check(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &asbd), "讀取系統聲音格式")
+        try check(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &asbd), String(localized: "讀取系統聲音格式"))
         guard let format = AVAudioFormat(streamDescription: &asbd), let converter = StreamConverter(from: format) else {
             throw CaptureError.unsupportedFormat
         }
@@ -121,8 +121,8 @@ final class SystemAudioSource: AudioSource {
             guard let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: input, deallocator: nil) else { return }
             let samples = converter.convert(buffer)
             if !samples.isEmpty { self?.onSamples?(samples) }
-        }, "建立系統聲音的 IO")
-        try check(AudioDeviceStart(aggregateID, procID), "開始擷取系統聲音")
+        }, String(localized: "建立系統聲音的 IO"))
+        try check(AudioDeviceStart(aggregateID, procID), String(localized: "開始擷取系統聲音"))
     }
 
     /// 一定要依序清乾淨，否則 HAL 可能卡住（design §5.1）
@@ -203,10 +203,10 @@ enum CaptureError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noInput: return "找不到可以用的麥克風"
-        case .noOutputDevice: return "找不到輸出裝置，沒辦法擷取系統聲音"
-        case .unsupportedFormat: return "不支援這個音訊格式"
-        case .coreAudio(let step, let status): return "\(step)失敗（錯誤代碼 \(status)）。請確認已允許拾音「錄製系統音訊」"
+        case .noInput: return String(localized: "找不到可以用的麥克風")
+        case .noOutputDevice: return String(localized: "找不到輸出裝置，沒辦法擷取系統聲音")
+        case .unsupportedFormat: return String(localized: "不支援這個音訊格式")
+        case .coreAudio(let step, let status): return String(localized: "\(step)失敗（錯誤代碼 \(status)）。請確認已允許拾音「錄製系統音訊」")
         }
     }
 }
