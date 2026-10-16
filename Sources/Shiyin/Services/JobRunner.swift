@@ -14,12 +14,13 @@ enum AppSettings {
     static let splitChannelsKey = "splitChannels"
     static let correctTranscriptKey = "correctTranscript"
     static let liveTranscriptionKey = "liveTranscription"
+    static let autoDetectLanguageKey = "autoDetectLanguage"
     static let recordSourceKey = "recordSource"          // mic / system / both
     static let inputDeviceKey = "inputDeviceUID"
     static let defaultTemplateKey = "defaultTemplate"
     static let globalHotKeyKey = "globalHotKey"
     static let transcriptionEngineKey = "transcriptionEngine"   // breeze / system
-    static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en
+    static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
 
     private static var d: UserDefaults { .standard }
 
@@ -33,6 +34,8 @@ enum AppSettings {
     /// 轉錄完先找出可能聽錯的字（design §17.4）；評估後預設開啟（§17.6）
     static var correctTranscript: Bool { d.object(forKey: correctTranscriptKey) as? Bool ?? true }
     static var liveTranscription: Bool { d.object(forKey: liveTranscriptionKey) as? Bool ?? true }
+    /// 錄音開始後自動偵測主要語言（design §18.8、R16）
+    static var autoDetectLanguage: Bool { d.object(forKey: autoDetectLanguageKey) as? Bool ?? true }
     static var recordSource: String { d.string(forKey: recordSourceKey) ?? "mic" }
     static var inputDeviceUID: String { d.string(forKey: inputDeviceKey) ?? "" }
     static var defaultTemplate: String { d.string(forKey: defaultTemplateKey) ?? "general" }
@@ -41,7 +44,7 @@ enum AppSettings {
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
     static var defaultMeetingLanguage: MeetingLanguage {
-        MeetingLanguage(rawValue: d.string(forKey: defaultMeetingLanguageKey) ?? "") ?? .interface
+        MeetingLanguage(rawValue: d.string(forKey: defaultMeetingLanguageKey) ?? "") ?? .systemDefault
     }
 }
 
@@ -117,8 +120,15 @@ final class JobRunner {
     private func loop(_ lane: JobLane) async {
         while !Task.isCancelled {
             let job: Job?
-            let modelReady = AppSettings.useSystemTranscriber || FileManager.default.fileExists(atPath: ModelStore.breezePath.path)
-            do { job = try db.claimNext(lane: lane, includeTranscribe: modelReady) } catch {
+            // 轉錄只取模型已經下載的語言；日文會議第一次要轉錄時才自動下載日文模型（design §18.2）
+            let ready = Set(MeetingLanguage.allCases.filter {
+                AppSettings.useSystemTranscriber
+                    || FileManager.default.fileExists(atPath: ModelStore.path(ModelStore.transcription(for: $0)).path)
+            })
+            if lane == .transcribe && !ready.contains(.ja) && (try? db.hasQueuedTranscribe(language: .ja)) == true {
+                AppModel.shared.models.autoStart(.japanese)
+            }
+            do { job = try db.claimNext(lane: lane, transcribeLanguages: ready) } catch {
                 log.error("claim failed: \(error.localizedDescription)")
                 job = nil
             }
@@ -224,7 +234,7 @@ final class JobRunner {
             let language = meeting.meetingLanguage
             let names = Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) })
             let speakerName = { (idx: Int?) -> String? in
-                idx.map { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)") }
+                idx.map { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") }
             }
             let context = TranscriptCorrection.Context(
                 language: language, title: meeting.title, participants: meeting.participantList,

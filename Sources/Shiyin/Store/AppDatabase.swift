@@ -300,7 +300,7 @@ final class AppDatabase: @unchecked Sendable {
             try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
             for idx in stride(from: 1, through: speakerCount, by: 1) {
                 var speaker = SpeakerName(meetingId: meetingId, idx: idx,
-                                          name: named[idx] ?? language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)"))
+                                          name: named[idx] ?? language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)"))
                 try speaker.insert(db)
             }
             if var m = try Meeting.fetchOne(db, key: meetingId) {
@@ -584,12 +584,17 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// 領取該條線最舊的一筆排隊工作，改成 running。轉錄模型還沒下載好時，轉錄工作留在佇列等待
-    func claimNext(lane: JobLane, includeTranscribe: Bool = true) throws -> Job? {
+    /// 取出下一個排隊的工作；轉錄工作只取會議語言在 transcribeLanguages 裡的（那個語言的模型已經下載，design §18.2）
+    func claimNext(lane: JobLane, transcribeLanguages: Set<MeetingLanguage> = Set(MeetingLanguage.allCases)) throws -> Job? {
         let kinds = lane == .transcribe
-            ? (includeTranscribe ? [JobKind.transcribe.rawValue] : []) + [JobKind.compress.rawValue]
+            ? [JobKind.transcribe.rawValue, JobKind.compress.rawValue]
             : [JobKind.summarize.rawValue, JobKind.revise.rawValue, JobKind.correct.rawValue]
+        let languages = transcribeLanguages.map(\.rawValue)
         return try pool.write { db in
+            // 不認得的語言當成中文（跟 Meeting.meetingLanguage 一樣）
+            let language = SQL(sql: "(SELECT CASE WHEN m.language IN ('en', 'ja') THEN m.language ELSE 'zh' END FROM meetings m WHERE m.id = jobs.meeting_id)")
             guard var job = try Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
+                .filter(Column("kind") != JobKind.transcribe.rawValue || languages.contains(language))
                 .order(Column("id")).fetchOne(db) else { return nil }
             job.status = .running
             job.startedAt = Clock.now()
@@ -622,6 +627,16 @@ final class AppDatabase: @unchecked Sendable {
                 WHERE meeting_id = ? AND status IN ('queued', 'running')
                 """, arguments: [Clock.now(), meetingId])
             return running
+        }
+    }
+
+    /// 有沒有某個語言的會議在排隊等轉錄
+    func hasQueuedTranscribe(language: MeetingLanguage) throws -> Bool {
+        try pool.read { db in
+            try Bool.fetchOne(db, sql: """
+                SELECT EXISTS (SELECT 1 FROM jobs j JOIN meetings m ON m.id = j.meeting_id
+                               WHERE j.status = 'queued' AND j.kind = 'transcribe' AND m.language = ?)
+                """, arguments: [language.rawValue]) ?? false
         }
     }
 
@@ -669,13 +684,13 @@ final class AppDatabase: @unchecked Sendable {
             let names = try String.fetchAll(db, sql: """
                 SELECT s.name FROM speakers s JOIN meetings m ON m.id = s.meeting_id WHERE m.deleted_at IS NULL
                 """)
-            let defaultName = #/^(說話者|Speaker) \d+$/#
+            let defaultName = #/^(說話者|Speaker|話者) \d+$/#
             for name in names where (try? defaultName.wholeMatch(in: name)) == nil { add(name, .speaker) }
             let accepted = try String.fetchAll(db, sql: "SELECT suggestion FROM corrections WHERE status = 'accepted'")
             for term in accepted where term.contains(where: { $0.isASCII && $0.isLetter }) { add(term, .correction) }
-            // 中文會議標題裡的英文詞通常是產品名、專案名；英文會議的標題就不拆了
+            // 中文、日文會議標題裡的英文詞通常是產品名、專案名；英文會議的標題就不拆了
             let word = #/[A-Za-z][A-Za-z0-9.+\-]{2,}/#
-            for meeting in meetings where meeting.meetingLanguage == .zh {
+            for meeting in meetings where meeting.meetingLanguage != .en {
                 for match in meeting.title.matches(of: word) { add(String(match.output), .title) }
             }
             let existing = Set(try String.fetchAll(db, sql: "SELECT term FROM glossary").map { $0.lowercased() })

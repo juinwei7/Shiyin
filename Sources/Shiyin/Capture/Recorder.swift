@@ -35,9 +35,14 @@ final class Recorder {
     private(set) var systemSilent = false
     var permissionDenied = false
     var failureMessage: String?
+    /// 自動偵測換了會議語言（design §18.8）：錄音畫面顯示「改回」
+    private(set) var languageSwitch: (from: MeetingLanguage, to: MeetingLanguage)?
 
     @ObservationIgnored var onFinished: ((Result) -> Void)?
     @ObservationIgnored var onLiveFinal: ((Int64, Double, Double, String) -> Void)?
+    /// 錄音中換了會議語言（自動偵測或改回），要更新資料庫
+    @ObservationIgnored var onLanguageChange: ((Int64, MeetingLanguage) -> Void)?
+    @ObservationIgnored private let tap = MixTap()
     @ObservationIgnored private var writer: RecordingWriter?
     @ObservationIgnored private var sources: [AudioSource] = []
     @ObservationIgnored private var live: LiveTranscriber?
@@ -158,6 +163,7 @@ final class Recorder {
                 throw CaptureError.coreAudio(warnings.first ?? String(localized: "開始錄音"), -1)
             }
             if !warnings.isEmpty { failureMessage = String(localized: "有一個音源沒辦法啟動，只錄到另一個：\(warnings.joined(separator: String(localized: "；")))") }
+            writer.onMix = tap.handler
             writer.start()
             self.writer = writer
             self.sources = started
@@ -177,31 +183,93 @@ final class Recorder {
             RunLoop.main.add(timer, forMode: .common)
             meterTimer = timer
             if AppSettings.liveTranscription { startLive(writer: writer, meetingId: meetingId) }
+            startLanguageDetection(meetingId: meetingId)
             log.info("recording started (\(self.source, privacy: .public))")
         } catch {
             abort(meetingId, message: String(localized: "沒辦法開始錄音：\(error.localizedDescription)"))
         }
     }
 
-    private func startLive(writer: RecordingWriter, meetingId: Int64) {
+    private func startLive(writer: RecordingWriter, meetingId: Int64, restarted: Bool = false) {
         let live = LiveTranscriber(language: language)
         self.live = live
         liveStatus = String(localized: "正在準備即時逐字稿…")
         live.onVolatile = { [weak self] text in self?.volatileText = text }
+        // 中途重新開始時，新的辨識從 0 秒算，要加上接上音訊時已經錄了多久
+        let offset = LiveOffset()
         live.onFinal = { [weak self] start, end, text in
             guard let self else { return }
+            let (start, end) = (start + offset.seconds, end + offset.seconds)
             self.liveLines.append(LiveLine(start: start, end: end, text: text))
             self.onLiveFinal?(meetingId, start, end, text)
         }
         Task {
             do {
                 try await live.start()
-                writer.onMix = live.feedHandler
+                guard self.live === live else { return }   // 準備期間又換了語言
+                if restarted { offset.seconds = writer.recordedSeconds }
+                tap.setLive(live.feedHandler)
                 liveStatus = ""
             } catch {
                 liveStatus = String(localized: "即時逐字稿沒辦法啟動（\(error.localizedDescription)），錄音照常進行，錄完會正式轉錄")
             }
         }
+    }
+
+    // MARK: 自動偵測主要語言（design §18.8、R16、D21）
+
+    /// 開始錄音後收集約 10 秒有聲音的片段，判斷是中文、英文還是日文；跟目前不同而且有把握才切換，只判斷一次
+    private func startLanguageDetection(meetingId: Int64) {
+        languageSwitch = nil
+        guard AppSettings.autoDetectLanguage else { return }
+        let path = ModelStore.path(.languageDetection).path
+        guard FileManager.default.fileExists(atPath: path) else {
+            AppModel.shared.models.autoStart(.languageDetection)   // 這次來不及，下次錄音就能用
+            return
+        }
+        tap.setDetector(LanguageDetector.Collector { [weak self] samples in
+            let recorder = self
+            Task.detached(priority: .utility) {
+                let result = Swift.Result { try LanguageDetector.detect(samples, modelPath: path) }
+                await recorder?.applyDetection(result, meetingId: meetingId)
+            }
+        })
+    }
+
+    private func applyDetection(_ result: Swift.Result<[MeetingLanguage: Double], Error>, meetingId: Int64) {
+        tap.setDetector(nil)
+        guard isRecording, self.meetingId == meetingId else { return }
+        switch result {
+        case .success(let probabilities):
+            let summary = probabilities.sorted { $0.key.rawValue < $1.key.rawValue }
+                .map { "\($0.key.rawValue) \(String(format: "%.2f", $0.value))" }.joined(separator: ", ")
+            log.info("language detection: \(summary, privacy: .public)")
+            guard let (best, p) = probabilities.max(by: { $0.value < $1.value }).map({ ($0.key, $0.value) }),
+                  best != language, p >= LanguageDetector.threshold else { return }
+            let from = language
+            switchLanguage(to: best)
+            languageSwitch = (from, best)
+        case .failure(let error):
+            log.error("language detection failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// 錄音中換會議語言：即時逐字稿用新的語言重新開始（之前的逐字稿保留，錄完會正式轉錄）
+    func switchLanguage(to newLanguage: MeetingLanguage) {
+        guard isRecording, let meetingId, let writer, newLanguage != language else { return }
+        language = newLanguage
+        languageSwitch = nil
+        tap.setDetector(nil)
+        onLanguageChange?(meetingId, newLanguage)
+        guard AppSettings.liveTranscription else { return }
+        tap.setLive(nil)
+        // 舊的辨識收尾送來的是用錯的語言聽的，不加進逐字稿
+        let old = live
+        old?.onFinal = nil
+        old?.onVolatile = nil
+        volatileText = ""
+        Task { await old?.finish() }
+        startLive(writer: writer, meetingId: meetingId, restarted: true)
     }
 
     private func tick() {
@@ -232,6 +300,9 @@ final class Recorder {
         activity = nil
         writer = nil
         live = nil
+        tap.setLive(nil)
+        tap.setDetector(nil)
+        languageSwitch = nil
         meetingId = nil
         startedAt = nil
         isRecording = false
@@ -241,4 +312,29 @@ final class Recorder {
         volatileText = ""
         liveStatus = ""
     }
+}
+
+/// 錄音的單聲道混音要同時送給即時逐字稿和語言偵測；寫檔的執行緒呼叫 handler，主執行緒換掉接收端
+final class MixTap: @unchecked Sendable {
+    private let lock = NSLock()
+    private var live: (([Float]) -> Void)?
+    private var detector: LanguageDetector.Collector?
+
+    func setLive(_ handler: (([Float]) -> Void)?) { lock.withLock { live = handler } }
+    func setDetector(_ collector: LanguageDetector.Collector?) { lock.withLock { detector = collector } }
+
+    var handler: ([Float]) -> Void {
+        { [weak self] samples in
+            guard let self else { return }
+            let (live, detector) = self.lock.withLock { (self.live, self.detector) }
+            live?(samples)
+            detector?.feed(samples)
+        }
+    }
+}
+
+/// 一個即時辨識的時間偏移（design §18.8）
+@MainActor
+private final class LiveOffset {
+    var seconds: Double = 0
 }

@@ -17,9 +17,11 @@ struct NotesContext {
     var template: TemplateDefinition
 }
 
-/// 整理與校稿的提示詞（design §8.3），規則沿用第二版；依會議語言分成中文、英文兩份（design §16.5）
+/// 整理與校稿的提示詞（design §8.3），規則沿用第二版；依會議語言分成中文、英文、日文三份（design §16.5、§18.4）
 enum NotesPrompt {
-    static func system(_ language: MeetingLanguage) -> String { language == .en ? systemEnglish : systemChinese }
+    static func system(_ language: MeetingLanguage) -> String {
+        language.text(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+    }
 
     static let systemChinese = """
     你是會議紀錄整理者。根據使用者提供的會議逐字稿，整理成結構化的會議紀錄，一律使用繁體中文（台灣用語）。
@@ -53,6 +55,24 @@ enum NotesPrompt {
     9. Split topics by subject; start is the time the topic begins.
     10. title: if the prompt gives an "Existing title", return it unchanged; otherwise write a title of at most 10 words.
     11. Times are always mm:ss, or h:mm:ss over an hour, the same as the transcript. Use an empty string when there is no time information.
+    """
+
+    static let systemJapanese = """
+    あなたは議事録の作成者です。ユーザーが提供する会議の文字起こしをもとに、構造化された議事録を作成します。すべて日本語で書いてください。
+
+    ルール：
+    1. 文字起こしとユーザーのメモだけをもとに書き、言及されていない情報を補わないこと。
+    2. 文字起こしは音声認識によるもので、専門用語、人名、略語がよく聞き間違えられている（同じ語が何通りもの表記で出てくることがある）。文脈と用語集から正しい表記を推測すること。ただし、推測した固有名詞や人名は必ず reviewItems に入れ、ユーザーに確認してもらうこと。
+    3. すべての項目（summary、decisions、actionItems、openQuestions、topics の points、custom の items）に time を入れること。その内容が文字起こしに出てくる時刻を mm:ss（例：03:15。1 時間を超える場合は 1:03:15）で書き、括弧は付けない。複数の箇所をまとめた内容は、主な箇所の時刻にする。
+    4. 文字起こしの各行には話者が付いている。actionItems の owner は担当者として明示された人だけを入れ、話者の名前を優先する。はっきりしない場合は空文字列にして reviewItems に入れる。
+    5. actionItems の due は、プロンプトの「会議日」をもとに yyyy-MM-dd に換算する（例：「来週の水曜」は会議日とその曜日から計算し、曜日を正しく数えること）。期限の言及がなければ空文字列、言及があっても曖昧なら空文字列にして reviewItems に入れる。
+    6. reviewItems は最大 8 問。似た質問はまとめる。記録の正確さに関わる点（固有名詞、人名、担当者、期限、案の内容）だけを質問する。各問の time は関連する箇所の時刻。
+    7. 「ユーザーのメモ」と「ブックマーク」はユーザーが重要だと考えた内容なので、必ず記録に含める。メモにあって文字起こしにない情報も書いてよいが、意味を変えないこと。
+    8. 「テンプレート」で指定されたセクションだけを作成し、指定のないセクションは空配列にする。custom はテンプレートのカスタムセクションの順に作成し、title はテンプレートのセクション名を使う（日本語でなければ日本語に訳す）。
+    9. topics は議題ごとに分け、start に議題が始まる時刻を入れる。
+    10. title：プロンプトに「既存のタイトル」があればそのまま返す。なければ内容から 30 文字以内のタイトルを付ける。
+    11. 時刻の形式は常に mm:ss、1 時間を超える場合は h:mm:ss で、文字起こしと同じにする。時刻の情報がない場合は空文字列にする。
+    12. 文体は簡潔な常体（である調）か体言止めにする。
     """
 
     /// 提示詞裡的欄位名稱
@@ -97,15 +117,41 @@ enum NotesPrompt {
             listSeparator: ", ", colon: ": ",
             speaker: { "Speaker \($0)" },
             section: { id, label in "\(id) (\(label))" })
+
+        static let ja = Labels(
+            meetingDate: "会議日", existingTitle: "既存のタイトル", participants: "参加者", notProvided: "未記入",
+            glossary: "用語集（正しい表記）", none: "なし", template: "テンプレート", sections: "作成するセクション",
+            custom: "カスタムセクション（custom に順番どおり）", extra: "追加の指示",
+            userNotes: "ユーザーのメモ（[時刻] はメモを取ったときの録音時刻）", bookmarks: "ブックマーク",
+            transcript: "文字起こし（[時刻] 話者：内容。(?) は認識の信頼度が低い部分）",
+            currentNotes: "現在の議事録（JSON）", answers: "確認事項へのユーザーの回答", answer: "回答",
+            reviseInstructions: """
+
+            ユーザーの回答にもとづいて議事録を修正し、議事録全体を返してください：
+            - 回答に関係する内容をすべて修正する（要約、決定事項、ToDo、未決事項、議題、カスタムセクション、タイトルをすべて確認する）。時刻は変えない。
+            - 回答済みの質問は reviewItems から削除し、現在の議事録にある未回答の質問はそのまま残す。
+            - 回答そのものが新しい疑問を生まない限り、質問を追加しない。
+            """,
+            listSeparator: "、", colon: "：",
+            speaker: { "話者 \($0)" },
+            section: { id, label in "\(id)（\(label)）" })
+
+        static func of(_ language: MeetingLanguage) -> Labels {
+            switch language {
+            case .zh: return zh
+            case .en: return en
+            case .ja: return ja
+            }
+        }
     }
 
     static func summarize(_ c: NotesContext) -> String {
         let m = c.meeting
         let language = m.meetingLanguage
-        let l = language == .en ? Labels.en : Labels.zh
+        let l = Labels.of(language)
         var lines: [String] = []
-        lines.append("\(l.meetingDate)\(l.colon)\(m.meetingDate)" + (language == .en
-            ? " (\(DateText.weekday(m.meetingDate, language: .en)))" : "（\(DateText.weekday(m.meetingDate, language: .zh))）"))
+        let weekday = DateText.weekday(m.meetingDate, language: language)
+        lines.append("\(l.meetingDate)\(l.colon)\(m.meetingDate)" + (language == .en ? " (\(weekday))" : "（\(weekday)）"))
         lines.append("\(l.existingTitle)\(l.colon)\(m.titleLocked ? m.title : "")")
         let participants = m.participantList
         lines.append("\(l.participants)\(l.colon)\(participants.isEmpty ? l.notProvided : participants.joined(separator: l.listSeparator))")
@@ -141,7 +187,7 @@ enum NotesPrompt {
     }
 
     static func revise(_ c: NotesContext, notes: MeetingNotes, answers: [ReviewAnswer]) -> String {
-        let l = c.meeting.meetingLanguage == .en ? Labels.en : Labels.zh
+        let l = Labels.of(c.meeting.meetingLanguage)
         var text = summarize(c)
         text += "\n\n\(l.currentNotes)\(l.colon)\n" + notes.jsonString()
         text += "\n\n\(l.answers)\(l.colon)\n"

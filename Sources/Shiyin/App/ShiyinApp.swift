@@ -115,4 +115,9 @@ extension View {
     func chineseGlyphs() -> some View {
         typesettingLanguage(Locale.Language(identifier: "zh-Hant"))
     }
+
+    /// 單獨一段會議內容（會議列表的標題、搜尋結果）的字形跟著會議語言（design §18.6）
+    func contentGlyphs(_ language: MeetingLanguage) -> some View {
+        environment(\.meetingLanguage, language).meetingText()
+    }
 }

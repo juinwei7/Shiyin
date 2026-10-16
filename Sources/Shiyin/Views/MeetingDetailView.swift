@@ -37,6 +37,7 @@ struct MeetingDetailView: View {
                 if detail.meeting.hasAudio { PlayerBar(detail: detail) }
             }
         }
+        .environment(\.meetingLanguage, detail.meeting.meetingLanguage)   // 內容的字形、標題字型（design §18.6）
         .navigationTitle(detail.meeting.displayTitle)
         .toolbar {
             if !isRecordingThis {
@@ -72,7 +73,7 @@ struct MeetingHeader: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(meeting.displayTitle)
-                    .font(.songti(26))
+                    .contentTitleFont(26)
                     .textSelection(.enabled)
                     .lineLimit(2)
                 Button("編輯") { editing = true }
@@ -236,10 +237,20 @@ struct StatusBanner: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(background(status), in: RoundedRectangle(cornerRadius: 8))
-        } else if !model.canTranscribe && detail.segments.isEmpty && detail.meeting.hasAudio {
+        } else if !model.canTranscribe(detail.meeting.meetingLanguage) && detail.segments.isEmpty && detail.meeting.hasAudio {
             HStack(spacing: 12) {
-                Label("還沒有下載轉錄模型，下載完成後才能轉錄", systemImage: "arrow.down.circle")
-                Spacer()
+                if detail.meeting.meetingLanguage == .ja {
+                    Label("日文會議要用日文轉錄模型（574 MB），下載完成後才能轉錄", systemImage: "arrow.down.circle")
+                    Spacer()
+                    if model.models.state(.japanese).isBusy {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Button("下載") { model.models.start(.japanese) }
+                    }
+                } else {
+                    Label("還沒有下載轉錄模型，下載完成後才能轉錄", systemImage: "arrow.down.circle")
+                    Spacer()
+                }
                 Button("改用 macOS 內建辨識") { model.useSystemTranscriber() }
                     .help("不用下載模型、速度快，但不參考詞彙表，英文專有名詞比較容易錯。之後可以在設定 → 錄音改回來")
                 SettingsLink { Text("前往下載") }
@@ -256,8 +267,25 @@ struct StatusBanner: View {
         switch status {
         case .queued:
             let kind = detail.latestJob?.kind
-            if kind == .transcribe && !model.canTranscribe {
-                return AnyView(Label("等轉錄模型下載完成就會開始轉錄", systemImage: "arrow.down.circle"))
+            let language = detail.meeting.meetingLanguage
+            if kind == .transcribe && !model.canTranscribe(language) {
+                // 顯示下載進度；暫停或失敗時可以直接在這裡繼續，不用到設定
+                let which = ModelStore.transcription(for: language)
+                return AnyView(HStack(spacing: 10) {
+                    Label(language == .ja ? "等日文轉錄模型下載完成就會開始轉錄" : "等轉錄模型下載完成就會開始轉錄", systemImage: "arrow.down.circle")
+                    switch model.models.state(which) {
+                    case .downloading(let received, let total) where total > 0:
+                        ProgressView(value: Double(received), total: Double(total)).frame(width: 140).tint(.signal)
+                    case .downloading, .verifying:
+                        ProgressView().controlSize(.small)
+                    case .missing:
+                        Button("下載") { model.models.start(which) }
+                    case .paused, .failed:
+                        Button("繼續下載") { model.models.start(which) }
+                    case .installed:
+                        EmptyView()
+                    }
+                })
             }
             return AnyView(Label(kind == .transcribe ? "排隊等待轉錄" : "排隊等待整理", systemImage: "clock"))
         case .transcribing(let progress, let stage):
@@ -334,7 +362,7 @@ struct MoreMenu: View {
             Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
                 .disabled(detail.segments.isEmpty || model.detailStatus?.isActive == true)
             Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
-                .disabled(!detail.meeting.hasAudio || model.detailStatus?.isActive == true || !model.canTranscribe)
+                .disabled(!detail.meeting.hasAudio || model.detailStatus?.isActive == true || !model.canTranscribe(detail.meeting.meetingLanguage))
             Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }
                 .disabled(detail.versionCount == 0)
             Divider()

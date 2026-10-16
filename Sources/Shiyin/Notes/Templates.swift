@@ -13,11 +13,11 @@ struct TemplateDefinition: Codable, Hashable {
     /// 段落名稱：介面用介面語言，提示詞用會議語言（design §16.5）
     static func sectionLabel(_ id: String, language: MeetingLanguage) -> String {
         switch id {
-        case "summary": return language.text(zh: "摘要", en: "Summary")
-        case "decisions": return language.text(zh: "決議", en: "Decisions")
-        case "actionItems": return language.text(zh: "待辦", en: "Action items")
-        case "openQuestions": return language.text(zh: "未決問題", en: "Open questions")
-        default: return language.text(zh: "議題詳細", en: "Topics")
+        case "summary": return language.text(zh: "摘要", en: "Summary", ja: "要約")
+        case "decisions": return language.text(zh: "決議", en: "Decisions", ja: "決定事項")
+        case "actionItems": return language.text(zh: "待辦", en: "Action items", ja: "ToDo")
+        case "openQuestions": return language.text(zh: "未決問題", en: "Open questions", ja: "未決事項")
+        default: return language.text(zh: "議題詳細", en: "Topics", ja: "議題ごとの詳細")
         }
     }
 
@@ -43,7 +43,7 @@ struct TemplateDefinition: Codable, Hashable {
     }
 }
 
-/// 內建範本（R6.2）。中文版啟動時寫進資料庫，名稱或內容改了就覆蓋；英文版不存，依 id 取用（design §16.5）。
+/// 內建範本（R6.2）。中文版啟動時寫進資料庫，名稱或內容改了就覆蓋；英文版、日文版不存，依 id 取用（design §16.5、§18.4）。
 enum BuiltinTemplates {
     static let all: [(id: String, name: String, definition: TemplateDefinition)] = [
         ("general", "一般會議", TemplateDefinition(
@@ -110,6 +110,39 @@ enum BuiltinTemplates {
             instruction: "This is a brainstorm. Do not leave out any idea that was raised, even if it was not adopted.")),
     ]
 
+    /// 日文版：日文會議整理時用（沒有日文介面，名稱不會顯示）
+    static let japanese: [String: TemplateDefinition] = [
+        "general": TemplateDefinition(
+            description: "定例会議、プロジェクト会議、打ち合わせ：要約、決定事項、ToDo、未決事項、議題",
+            sections: ["summary", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: ""),
+        "one-on-one": TemplateDefinition(
+            description: "上司とメンバーの1on1",
+            sections: ["summary", "actionItems", "openQuestions"],
+            custom: [.init(title: "近況と進捗", instruction: "相手が最近取り組んでいること、進捗、困っていること"),
+                     .init(title: "フィードバック", instruction: "双方からのフィードバック。誰から誰へのものかを明記する"),
+                     .init(title: "必要なサポート", instruction: "相手が求めた支援やリソース")],
+            instruction: "これは1on1です。中立的な書き方にし、個人を評価しないこと。"),
+        "interview": TemplateDefinition(
+            description: "ユーザーインタビュー、専門家インタビュー、面接",
+            sections: ["summary", "topics"],
+            custom: [.init(title: "回答者の背景", instruction: "回答者の役割、経歴、利用状況"),
+                     .init(title: "主な発言", instruction: "回答者の言葉をそのまま残す。1項目に1つの発言、時刻付き"),
+                     .init(title: "気づきと機会", instruction: "インタビューから読み取れるニーズ、課題、機会")],
+            instruction: "これはインタビューです。回答者が何を言ったかを中心にし、聞き手の推測を回答者の意見として書かないこと。"),
+        "lecture": TemplateDefinition(
+            description: "授業、講演、勉強会、研修",
+            sections: ["summary", "topics", "openQuestions"],
+            custom: [.init(title: "重要な概念", instruction: "出てきた重要な概念、用語とその説明"),
+                     .init(title: "質疑応答", instruction: "聴衆からの質問と講師の回答")],
+            instruction: "これは授業または講演です。講師の話の流れに沿って要点をまとめること。"),
+        "brainstorm": TemplateDefinition(
+            description: "アイデア出しの会議、ワークショップ",
+            sections: ["summary", "decisions", "actionItems"],
+            custom: [.init(title: "アイデア一覧", instruction: "1項目に1つのアイデア。できるだけ誰が出したかを書く"),
+                     .init(title: "評価と取捨選択", instruction: "アイデアについての議論、長所と短所、選んだ理由")],
+            instruction: "これはブレインストーミングです。採用されなかったものも含め、出たアイデアを漏らさないこと。"),
+    ]
+
     static func seed(_ db: AppDatabase) {
         let existing = Dictionary(uniqueKeysWithValues: ((try? db.templates()) ?? []).map { ($0.id, $0) })
         for template in all {
@@ -136,6 +169,7 @@ extension TemplateRecord {
     /// 整理時用的內容：內建範本跟著會議語言，自訂範本照使用者寫的
     func definition(for language: MeetingLanguage) -> TemplateDefinition {
         if builtin, language == .en, let english = BuiltinTemplates.english[id] { return english.definition }
+        if builtin, language == .ja, let japanese = BuiltinTemplates.japanese[id] { return japanese }
         return TemplateDefinition.decode(definition)
     }
 }

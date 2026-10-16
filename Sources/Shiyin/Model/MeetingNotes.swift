@@ -192,9 +192,10 @@ enum TimeFormat {
         let minutes = max(1, Int((Double(seconds) / 60).rounded()))
         let h = minutes / 60, m = minutes % 60
         if minutes >= 60 {
-            return m == 0 ? language.text(zh: "\(h) 小時", en: "\(h) hr") : language.text(zh: "\(h) 小時 \(m) 分鐘", en: "\(h) hr \(m) min")
+            return m == 0 ? language.text(zh: "\(h) 小時", en: "\(h) hr", ja: "\(h) 時間")
+            : language.text(zh: "\(h) 小時 \(m) 分鐘", en: "\(h) hr \(m) min", ja: "\(h) 時間 \(m) 分")
         }
-        return language.text(zh: "\(minutes) 分鐘", en: "\(minutes) min")
+        return language.text(zh: "\(minutes) 分鐘", en: "\(minutes) min", ja: "\(minutes) 分")
     }
 
     /// srt 用 00:01:02,345；vtt 用 00:01:02.345

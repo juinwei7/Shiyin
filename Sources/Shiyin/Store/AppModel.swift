@@ -146,6 +146,11 @@ final class AppModel {
         recorder.onLiveFinal = { [weak self] id, start, end, text in
             try? self?.db.appendLiveSegment(id, start: start, end: end, text: text)
         }
+        recorder.onLanguageChange = { [weak self] id, language in
+            guard let self, var meeting = try? self.db.meeting(id) else { return }
+            meeting.language = language.rawValue
+            self.perform { try self.db.updateMeeting(meeting) }
+        }
         notifier.onOpen = { [weak self] id in self?.reveal(id) }
     }
 
@@ -160,6 +165,8 @@ final class AppModel {
         purgeExpiredTrash()
         recoverRecordings()
         runner.start()
+        // 語言偵測模型很小（60 MB），開著自動偵測就先下載好
+        if AppSettings.autoDetectLanguage { models.autoStart(.languageDetection) }
         GlobalHotKey.shared.onPress = { [weak self] in self?.toggleRecording() }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
@@ -189,8 +196,10 @@ final class AppModel {
         reloadDetail()
     }
 
-    /// 能不能正式轉錄：Breeze 模型已下載，或改用 macOS 內建辨識（design §6.2.1）
-    var canTranscribe: Bool { models.isReady || AppSettings.useSystemTranscriber }
+    /// 能不能正式轉錄這個語言的會議：對應的模型已下載（中英文 Breeze、日文 large-v3-turbo），或改用 macOS 內建辨識（design §6.2.1、§18.2）
+    func canTranscribe(_ language: MeetingLanguage) -> Bool {
+        AppSettings.useSystemTranscriber || models.isInstalled(ModelStore.transcription(for: language))
+    }
 
     /// 改用 macOS 內建辨識，排隊中的轉錄馬上開始
     func useSystemTranscriber() {

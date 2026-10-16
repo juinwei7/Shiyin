@@ -192,7 +192,7 @@ struct TranscriptTab: View {
                 Button("還原") { if let id = c.id { model.revertCorrection(id) } }
                     .buttonStyle(.link)
             } else {
-                Text("「\(c.original)」→「\(c.suggestion)」").fontWeight(.medium)
+                Text("「\(c.original)」→「\(c.suggestion)」").fontWeight(.medium).meetingText()
                 Text(c.reason).foregroundStyle(.secondary).lineLimit(2)
                 Spacer(minLength: 8)
                 Button("忽略") { if let id = c.id { model.rejectCorrection(id) } }
@@ -232,7 +232,7 @@ struct TranscriptTab: View {
             }
             if editingId == segment.id {
                 VStack(alignment: .trailing, spacing: 6) {
-                    TextField("段落內容", text: $editText, axis: .vertical)
+                    TextField("段落內容", text: $editText, axis: .vertical).meetingText()
                         .textFieldStyle(.roundedBorder)
                         .onSubmit { saveEdit(segment) }
                     HStack {
@@ -246,7 +246,7 @@ struct TranscriptTab: View {
             } else {
                 let corrections = segment.id.flatMap { correctionsBySegment[$0] } ?? []
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(highlighted(segment.text, corrections: corrections))
+                    Text(highlighted(segment.text, corrections: corrections)).meetingText()
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)

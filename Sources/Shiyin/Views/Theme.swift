@@ -4,6 +4,8 @@ import SwiftUI
 extension EnvironmentValues {
     /// DEBUG 截圖（ImageRenderer）時為 true：不包 ScrollView，內容才畫得出來（design §13）
     @Entry var snapshotMode = false
+    /// 正在看的會議的語言：決定會議內容的字形和標題字型（design §18.6）
+    @Entry var meetingLanguage: MeetingLanguage = .zh
 }
 
 /// 視覺 token（design §9.3）
@@ -42,6 +44,32 @@ extension Font {
     static func songti(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
         .custom("Songti TC", size: size).weight(weight)
     }
+}
+
+/// 會議內容的文字（逐字稿、會議紀錄的條目、筆記）：字形跟著會議語言，日文會議用日文字形（design §18.6）。
+/// 只套在內容上，介面的說明文字、按鈕維持繁中字形
+private struct MeetingText: ViewModifier {
+    @Environment(\.meetingLanguage) private var language
+
+    func body(content: Content) -> some View {
+        content.typesettingLanguage(Locale.Language(identifier: language == .ja ? "ja" : "zh-Hant"))
+    }
+}
+
+/// 會議內容的標題（會議標題、段落、議題）：宋體-繁；日文會議改用ヒラギノ明朝，宋體的漢字是中文寫法（design §18.6）
+private struct ContentTitleFont: ViewModifier {
+    @Environment(\.meetingLanguage) private var language
+    let size: CGFloat
+
+    func body(content: Content) -> some View {
+        content.font(language == .ja ? .custom("Hiragino Mincho ProN", size: size).weight(.semibold) : .songti(size))
+            .meetingText()
+    }
+}
+
+extension View {
+    func meetingText() -> some View { modifier(MeetingText()) }
+    func contentTitleFont(_ size: CGFloat) -> some View { modifier(ContentTitleFont(size: size)) }
 }
 
 /// 可以點的時間點：跳到錄音的那個位置播放（R4.2、R5.2）

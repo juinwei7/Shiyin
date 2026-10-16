@@ -1,9 +1,10 @@
 // 轉錄評分（design §17.1、R14.1）：比較標準答案和 shiyinctl transcribe-eval 的輸出。
 // 用法：swift scripts/dev/asr-score.swift <標準答案.json> <辨識結果.json> [--window 開始秒 結束秒] [--keywords 詞1,詞2] [--json 輸出.json]
 //
-// 標準答案：{"lang": "zh" 或 "en", "segments": [{"start": 秒, "end": 秒, "speaker": "A", "text": "…"}]}
-// 中文一個字算一個單位、英文一個單字算一個單位，所以中文是 CER、英文是 WER、中英夾雜是兩者混合。
+// 標準答案：{"lang": "zh"、"en" 或 "ja", "segments": [{"start": 秒, "end": 秒, "speaker": "A", "text": "…"}]}
+// 中文、日文一個字（漢字、假名）算一個單位、英文一個單字算一個單位，所以中文、日文是 CER、英文是 WER、夾雜英文是兩者混合。
 // 中文兩邊都轉成簡體再比（AISHELL-4 的答案是簡體），去掉標點和空白。
+// 日文（design §18.7）：全形半形統一、漢字數字轉阿拉伯數字（國會會議錄寫「二〇二五年」，辨識結果多半寫「2025年」）。
 import Foundation
 
 struct Segment { var start: Double; var end: Double; var speaker: String?; var text: String }
@@ -56,11 +57,42 @@ let hypSegs = hyp.segments.filter(inWindow).sorted { $0.start < $1.start }
 func normalize(_ text: String) -> String {
     var t = text.lowercased()
     if lang == "zh" { t = t.applyingTransform(StringTransform("Hant-Hans"), reverse: false) ?? t }
+    if lang == "ja" {
+        t = t.precomposedStringWithCompatibilityMapping.lowercased()
+        for _ in 0..<2 { t = t.replacing(#/(\d),(\d{3})/#) { "\($0.output.1)\($0.output.2)" } }  // 1,000,000 要兩次
+        t = t.replacing(#/[0-9〇零一二三四五六七八九十百千万億兆]*[〇零一二三四五六七八九十百千万億兆][0-9〇零一二三四五六七八九十百千万億兆]*/#) {
+            kanjiNumber(String($0.output))
+        }
+    }
     return t
 }
 
+/// 漢字數字轉阿拉伯數字：有十百千萬的照位數算（「二十五」→ 25、「25億」→ 2500000000），沒有的一個字一個數字（「二〇二五」→ 2025）
+func kanjiNumber(_ run: String) -> String {
+    var digits: [Character: Int] = ["〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9]
+    for d in 0...9 { digits[Character(String(d))] = d }
+    let small: [Character: Int] = ["十": 10, "百": 100, "千": 1000]
+    let large: [Character: Int] = ["万": 10_000, "億": 100_000_000, "兆": 1_000_000_000_000]
+    guard run.contains(where: { small[$0] != nil || large[$0] != nil }) else {
+        return String(run.map { Character(String(digits[$0] ?? 0)) })
+    }
+    var total = 0, section = 0, current = 0
+    for c in run {
+        if let d = digits[c] { current = current * 10 + d }
+        else if let u = small[c] { section += (current == 0 ? 1 : current) * u; current = 0 }
+        else if let u = large[c] { total += max(section + current, 1) * u; section = 0; current = 0 }
+    }
+    return String(total + section + current)
+}
+
 func isCJK(_ c: Character) -> Bool {
-    c.unicodeScalars.contains { (0x3400...0x9FFF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) }
+    c.unicodeScalars.contains { (0x3400...0x9FFF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) || isKana($0.value) }
+}
+
+/// 平假名、片假名、長音符號、「々」（中黑點「・」不算）
+func isKana(_ v: UInt32) -> Bool {
+    (0x3041...0x3096).contains(v) || (0x309D...0x309F).contains(v) || (0x30A1...0x30FA).contains(v)
+        || (0x30FC...0x30FF).contains(v) || (0x31F0...0x31FF).contains(v) || v == 0x3005
 }
 
 /// 中文一個字一個單位，英文和數字連在一起的算一個單位（保留單字裡的 '）
@@ -80,6 +112,11 @@ func tokens(_ text: String) -> [String] {
 let fillers: Set<String> = lang == "zh"
     ? ["呃", "嗯", "啊", "哦", "唉", "诶", "哎", "呀", "嘛", "呢"]
     : ["um", "uh", "hmm", "mm", "mhm", "er", "erm", "ah", "huh"]
+
+/// 日文的語助詞是好幾個假名，不能一個字一個字比，先整段刪掉。單獨的「あの」「え」也可能是一般的詞，不刪
+func dropJapaneseFillers(_ text: String) -> String {
+    normalize(text).replacing(#/えー+っ?と?|ええっ?と|えっと|あのー+|あのう|そのー+|まあ|まー+|うーん+|んー+/#, with: "")
+}
 
 /// 編輯距離，同時數出替換、刪除（漏字）、插入（多字）各幾個。只留兩列，長文章也不會吃太多記憶體
 func align(_ r: [String], _ h: [String]) -> (sub: Int, del: Int, ins: Int) {
@@ -105,10 +142,16 @@ func align(_ r: [String], _ h: [String]) -> (sub: Int, del: Int, ins: Int) {
 let refText = refSegs.map(\.text).joined(separator: " ")
 let hypText = hypSegs.map(\.text).joined(separator: " ")
 var metrics: [String: Any] = ["lang": lang, "refSegments": refSegs.count, "hypSegments": hypSegs.count]
-let unit = lang == "zh" ? "CER" : "WER"
+let unit = lang == "en" ? "WER" : "CER"
 for dropFillers in [false, true] {
-    let r = tokens(refText).filter { !dropFillers || !fillers.contains($0) }
-    let h = tokens(hypText).filter { !dropFillers || !fillers.contains($0) }
+    let r: [String], h: [String]
+    if lang == "ja" {
+        r = tokens(dropFillers ? dropJapaneseFillers(refText) : refText)
+        h = tokens(dropFillers ? dropJapaneseFillers(hypText) : hypText)
+    } else {
+        r = tokens(refText).filter { !dropFillers || !fillers.contains($0) }
+        h = tokens(hypText).filter { !dropFillers || !fillers.contains($0) }
+    }
     let e = align(r, h)
     let rate = Double(e.sub + e.del + e.ins) / Double(max(r.count, 1)) * 100
     let key = dropFillers ? "noFillers" : "raw"

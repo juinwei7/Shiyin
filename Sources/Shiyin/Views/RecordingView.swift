@@ -11,6 +11,18 @@ struct RecordingPanel: View {
         let recorder = model.recorder
         VStack(spacing: 0) {
             controls(recorder)
+            if let change = recorder.languageSwitch {
+                // 自動偵測換了語言（design §18.8）：可以改回來
+                HStack(spacing: 12) {
+                    Label("聽起來是\(change.to.uiName)，即時逐字稿和會議語言已經改成\(change.to.uiName)", systemImage: "globe")
+                    Spacer()
+                    Button("改回\(change.from.uiName)") { recorder.switchLanguage(to: change.from) }
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
             Divider()
             // 不用 HSplitView：它在 NavigationSplitView 裡會把內容撐到視窗的預設寬度，視窗窄的時候左右被切掉
             HStack(spacing: 0) {
@@ -125,7 +137,7 @@ struct RecordingPanel: View {
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text(TimeFormat.string(line.start)).font(.callout.monospacedDigit()).foregroundStyle(Color.celadon)
                                 .frame(width: 52, alignment: .trailing)
-                            Text(line.text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                            Text(line.text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true).meetingText()
                             if starred.contains(line.id) {
                                 Image(systemName: "star.fill").foregroundStyle(Color.signal).font(.caption)
                             }
@@ -135,7 +147,7 @@ struct RecordingPanel: View {
                     if !recorder.volatileText.isEmpty {
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("…").frame(width: 52, alignment: .trailing).foregroundStyle(.tertiary)
-                            Text(recorder.volatileText).foregroundStyle(.secondary)
+                            Text(recorder.volatileText).foregroundStyle(.secondary).meetingText()
                         }
                         .id("volatile")
                     }
@@ -175,7 +187,7 @@ struct UserNotesEditor: View {
     @State private var saveTask: Task<Void, Never>?
 
     var body: some View {
-        TextEditor(text: $text)
+        TextEditor(text: $text).meetingText()
             .font(.body)
             .scrollContentBackground(.hidden)
             .padding(8)

@@ -110,12 +110,20 @@ struct OnboardingView: View {
         }
     }
 
+    private var primaryModel: ModelStore.Model { ModelStore.transcription(for: AppSettings.defaultMeetingLanguage) }
+
     private var downloads: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ModelRow(title: String(localized: "\(ModelStore.breeze.name)：正式轉錄，1.66 GB"), state: model.models.state,
-                     start: model.models.start, pause: model.models.pause, delete: nil)
+            // 預設會議語言是日文時，先下載日文轉錄模型（design §18.2）
+            if primaryModel == .japanese {
+                ModelRow(title: String(localized: "\(ModelStore.japanese.name)：日文會議的正式轉錄，574 MB"), state: model.models.state(.japanese),
+                         start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) }, delete: nil)
+            } else {
+                ModelRow(title: String(localized: "\(ModelStore.breeze.name)：正式轉錄，1.66 GB"), state: model.models.state,
+                         start: { model.models.start() }, pause: { model.models.pause() }, delete: nil)
+            }
             ModelRow(title: String(localized: "說話者辨識模型：分辨是誰在說話"), state: model.models.diarizerState,
                      start: model.models.prepareDiarizer, pause: nil, delete: nil)
             HStack {
@@ -139,7 +147,8 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
-            if model.models.state == .missing { model.models.start() }
+            model.models.autoStart(primaryModel)
+            if AppSettings.autoDetectLanguage { model.models.autoStart(.languageDetection) }
             if model.models.diarizerState == .missing { model.models.prepareDiarizer() }
         }
     }
@@ -182,7 +191,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")
                 .fixedSize(horizontal: false, vertical: true)
-            if !model.canTranscribe {
+            if !model.canTranscribe(AppSettings.defaultMeetingLanguage) {
                 Label("轉錄模型還在下載，下載完成前的錄音會先排隊，下載好就會自動轉錄。", systemImage: "arrow.down.circle")
                     .foregroundStyle(Color.signal).fixedSize(horizontal: false, vertical: true)
             }

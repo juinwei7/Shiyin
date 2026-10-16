@@ -21,25 +21,25 @@ struct ExportText {
     let language: MeetingLanguage
     init(_ language: MeetingLanguage) { self.language = language }
 
-    var transcriptSuffix: String { language.text(zh: "（逐字稿）", en: " (transcript)") }
-    var date: String { language.text(zh: "日期", en: "Date") }
-    var participants: String { language.text(zh: "與會者", en: "Participants") }
-    var speakers: String { language.text(zh: "說話者", en: "Speakers") }
-    var duration: String { language.text(zh: "長度", en: "Duration") }
-    var noNotes: String { language.text(zh: "（尚未整理成會議紀錄）", en: "(No meeting notes yet)") }
-    var details: String { language.text(zh: "詳細", en: "Details") }
-    var review: String { language.text(zh: "待確認", en: "To confirm") }
-    var owner: String { language.text(zh: "負責人", en: "Owner") }
-    var task: String { language.text(zh: "事項", en: "Item") }
-    var due: String { language.text(zh: "期限", en: "Due") }
-    var time: String { language.text(zh: "時間點", en: "Time") }
-    var unassigned: String { language.text(zh: "未指定", en: "Unassigned") }
-    var colon: String { language.text(zh: "：", en: ": ") }
-    var listSeparator: String { language.text(zh: "、", en: ", ") }
-    func speaker(_ idx: Int) -> String { language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)") }
+    var transcriptSuffix: String { language.text(zh: "（逐字稿）", en: " (transcript)", ja: "（文字起こし）") }
+    var date: String { language.text(zh: "日期", en: "Date", ja: "日付") }
+    var participants: String { language.text(zh: "與會者", en: "Participants", ja: "参加者") }
+    var speakers: String { language.text(zh: "說話者", en: "Speakers", ja: "話者") }
+    var duration: String { language.text(zh: "長度", en: "Duration", ja: "所要時間") }
+    var noNotes: String { language.text(zh: "（尚未整理成會議紀錄）", en: "(No meeting notes yet)", ja: "（議事録はまだありません）") }
+    var details: String { language.text(zh: "詳細", en: "Details", ja: "詳細") }
+    var review: String { language.text(zh: "待確認", en: "To confirm", ja: "要確認") }
+    var owner: String { language.text(zh: "負責人", en: "Owner", ja: "担当") }
+    var task: String { language.text(zh: "事項", en: "Item", ja: "内容") }
+    var due: String { language.text(zh: "期限", en: "Due", ja: "期限") }
+    var time: String { language.text(zh: "時間點", en: "Time", ja: "時刻") }
+    var unassigned: String { language.text(zh: "未指定", en: "Unassigned", ja: "未定") }
+    var colon: String { language.text(zh: "：", en: ": ", ja: "：") }
+    var listSeparator: String { language.text(zh: "、", en: ", ", ja: "、") }
+    func speaker(_ idx: Int) -> String { language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)") }
     func section(_ id: String) -> String { TemplateDefinition.sectionLabel(id, language: language) }
     /// 括號：中文用全形、英文用半形加空白
-    func paren(_ inner: String) -> String { language.text(zh: "（\(inner)）", en: " (\(inner))") }
+    func paren(_ inner: String) -> String { language.text(zh: "（\(inner)）", en: " (\(inner))", ja: "（\(inner)）") }
     func dateLine(_ meetingDate: String) -> String { meetingDate + paren(DateText.weekday(meetingDate, language: language)) }
 }
 
@@ -168,7 +168,7 @@ enum NotesExporter {
         let x = b.text
         var body = "<h1>\(HTML.escape(m.displayTitle))</h1>\n<p class=\"meta\">\(x.dateLine(m.meetingDate))"
         if !m.participantList.isEmpty {
-            body += x.language.text(zh: "　", en: " · ") + "\(x.participants)\(x.colon)\(HTML.escape(m.participantList.joined(separator: x.listSeparator)))"
+            body += x.language.text(zh: "　", en: " · ", ja: "　") + "\(x.participants)\(x.colon)\(HTML.escape(m.participantList.joined(separator: x.listSeparator)))"
         }
         body += "</p>\n"
         guard let notes = b.notes, !notes.isEmpty else {
@@ -182,8 +182,8 @@ enum NotesExporter {
         list(x.section("summary"), notes.summary)
         list(x.section("decisions"), notes.decisions)
         if !notes.actionItems.isEmpty {
-            body += "<h2>\(x.section("actionItems"))</h2>\n<table><tr><th>\(x.owner)</th><th>\(x.task)</th><th>\(x.due)</th></tr>"
-            body += notes.actionItems.map { "<tr><td>\(HTML.escape($0.owner.isEmpty ? x.unassigned : $0.owner))</td><td>\(HTML.escape($0.task))\(t($0.time))</td><td>\(HTML.escape($0.due.isEmpty ? "—" : $0.due))</td></tr>" }.joined()
+            body += "<h2>\(x.section("actionItems"))</h2>\n<table><tr><th class=\"nowrap\">\(x.owner)</th><th>\(x.task)</th><th class=\"nowrap\">\(x.due)</th></tr>"
+            body += notes.actionItems.map { "<tr><td class=\"nowrap\">\(HTML.escape($0.owner.isEmpty ? x.unassigned : $0.owner))</td><td>\(HTML.escape($0.task))\(t($0.time))</td><td class=\"nowrap\">\(HTML.escape($0.due.isEmpty ? "—" : $0.due))</td></tr>" }.joined()
             body += "</table>\n"
         }
         list(x.section("openQuestions"), notes.openQuestions)
@@ -214,12 +214,14 @@ enum HTML {
             .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
     }
 
-    /// 英文用系統字和襯線標題，中文用蘋方和宋體（design §16.6）
+    /// 英文用系統字和襯線標題，中文用蘋方和宋體，日文用ヒラギノ角ゴ和明朝（design §16.6、§18.5）
     static func document(title: String, body: String, language: MeetingLanguage = .zh) -> String {
-        let bodyFont = language == .en ? "-apple-system, \"PingFang TC\", sans-serif" : "\"PingFang TC\", -apple-system, sans-serif"
-        let headingFont = language == .en ? "\"New York\", Georgia, \"Songti TC\", serif" : "\"Songti TC\", serif"
+        let bodyFont = language.text(zh: "\"PingFang TC\", -apple-system, sans-serif", en: "-apple-system, \"PingFang TC\", sans-serif",
+                                     ja: "\"Hiragino Sans\", \"Hiragino Kaku Gothic ProN\", -apple-system, sans-serif")
+        let headingFont = language.text(zh: "\"Songti TC\", serif", en: "\"New York\", Georgia, \"Songti TC\", serif",
+                                        ja: "\"Hiragino Mincho ProN\", serif")
         return """
-        <!doctype html><html lang="\(language == .en ? "en" : "zh-Hant")"><head><meta charset="utf-8"><title>\(escape(title))</title><style>
+        <!doctype html><html lang="\(language.text(zh: "zh-Hant", en: "en", ja: "ja"))"><head><meta charset="utf-8"><title>\(escape(title))</title><style>
         body { font-family: \(bodyFont); font-size: 12pt; line-height: 1.6; color: #1E2625; }
         h1, h2, h3 { font-family: \(headingFont); font-weight: 600; }
         h1 { font-size: 22pt; margin-bottom: 4pt; } h2 { font-size: 15pt; margin-top: 18pt; } h3 { font-size: 13pt; }
@@ -227,6 +229,7 @@ enum HTML {
         .time { color: #2D6A5D; font-size: 9.5pt; }
         table { border-collapse: collapse; width: 100%; } th, td { border-bottom: 1px solid #DCE1DE; padding: 4pt 6pt; text-align: left; vertical-align: top; }
         th { color: #68726F; font-weight: normal; font-size: 10pt; }
+        .nowrap { white-space: nowrap; }  /* 負責人、期限不拆行，內容欄自己換行（中日文可以在任何字之間換行，表格會把短欄擠到一個字寬） */
         </style></head><body>\(body)</body></html>
         """
     }
@@ -237,8 +240,45 @@ enum HTML {
               let string = NSAttributedString(html: data, options: [.characterEncoding: String.Encoding.utf8.rawValue],
                                               documentAttributes: nil)
         else { throw ExportError.failed(String(localized: "無法產生文件")) }
+        return fitShortColumns(string)
+    }
+
+    /// 表格欄寬：中日文可以在任何字之間換行，HTML 轉換時算的欄寬又是照它自己假設的版面寬度，排進 A4 等比例縮小後，
+    /// 負責人、期限這種短欄會被擠成「小／田／切」「2026-1／0-15」。改成用百分比：內容最寬的那一欄自動換行，
+    /// 其他欄是內容加內距佔 PDF 版面的比例（最多三成）
+    private static func fitShortColumns(_ source: NSAttributedString) -> NSAttributedString {
+        let string = NSMutableAttributedString(attributedString: source)
+        let whole = NSRange(location: 0, length: string.length)
+        var widths: [ObjectIdentifier: [Int: CGFloat]] = [:]
+        string.enumerateAttribute(.paragraphStyle, in: whole) { value, range, _ in
+            guard let block = (value as? NSParagraphStyle)?.textBlocks.last as? NSTextTableBlock else { return }
+            // 量一行排開的寬度：去掉表格的段落樣式，不然會照儲存格的寬度排版
+            let text = NSMutableAttributedString(attributedString: string.attributedSubstring(from: range))
+            text.removeAttribute(.paragraphStyle, range: NSRange(location: 0, length: text.length))
+            let extra = [NSTextBlock.Layer.padding, .border, .margin].reduce(CGFloat(0)) {
+                $0 + block.width(for: $1, edge: .minX) + block.width(for: $1, edge: .maxX)
+            }
+            let width = text.boundingRect(with: NSSize(width: 10_000, height: 100), options: [.usesLineFragmentOrigin]).width + extra + 2
+            let table = ObjectIdentifier(block.table)
+            widths[table, default: [:]][block.startingColumn] = max(widths[table]?[block.startingColumn] ?? 0, width)
+        }
+        var percents: [ObjectIdentifier: [Int: CGFloat]] = [:]
+        for (table, columns) in widths {
+            guard let widest = columns.max(by: { $0.value < $1.value })?.key else { continue }
+            var result = columns.filter { $0.key != widest }.mapValues { min(30, ceil($0 / pageWidth * 100)) }
+            result[widest] = max(30, 100 - result.values.reduce(0, +))
+            percents[table] = result
+        }
+        string.enumerateAttribute(.paragraphStyle, in: whole) { value, _, _ in
+            guard let block = (value as? NSParagraphStyle)?.textBlocks.last as? NSTextTableBlock,
+                  let percent = percents[ObjectIdentifier(block.table)]?[block.startingColumn] else { return }
+            block.setValue(percent, type: .percentageValueType, for: .width)
+        }
         return string
     }
+
+    /// PDF 的版面寬度：A4 減掉左右邊界
+    private static let pageWidth: CGFloat = 595 - 56 * 2
 
     @MainActor
     static func docx(_ html: String) throws -> Data {

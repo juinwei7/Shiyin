@@ -51,6 +51,7 @@ enum DebugControl {
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
         case "correct-eval": correctEval(input: args[1], options: args[2], output: args[3])          // design §17.4
+        case "detect-eval": detectEval(audio: args[1], start: Double(args[2]) ?? 0, output: args[3])  // design §18.8
         case "checktranscript": model.selection = id; model.checkTranscript()
         case "correction":   // correction accept|reject|revert <校正 id>
             if let cid = Int64(args[2]) {
@@ -78,6 +79,9 @@ enum DebugControl {
             case "resume": model.recorder.resume()
             default: model.recorder.stop()
             }
+        case "importsheet": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) })   // 只打開匯入對話框
+        case "recordlang":   // recordlang <zh|en|ja>：錄音中換會議語言（等於按「改回」）
+            if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
         case "record-sim":
             // record-sim <音檔> <倍速> <both: 1/0>
             model.startSimulatedRecording(file: URL(fileURLWithPath: args[1]), speed: Double(args[2]) ?? 1, both: args.count > 3 && args[3] == "1")
@@ -93,11 +97,20 @@ enum DebugControl {
                                             speakers: args.count <= 5 || args[5] == "1", to: url) }
                 catch { try? "ERROR \(error.localizedDescription)".write(to: url.appendingPathExtension("error"), atomically: true, encoding: .utf8) }
             }
-        case "import": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) }); if model.showImportSheet { model.confirmImport(ImportOptions()) }
+        case "import":   // import [lang=ja] <檔案>…
+            var files = Array(args.dropFirst()), options = ImportOptions()
+            if let first = files.first, first.hasPrefix("lang=") {
+                options.language = MeetingLanguage(rawValue: String(first.dropFirst(5))) ?? .zh
+                files.removeFirst()
+            }
+            model.requestImport(files.map { URL(fileURLWithPath: $0) })
+            if model.showImportSheet { model.confirmImport(options) }
         case "copy": model.copyNotes(args.count > 1 && args[1] == "plain" ? .plain : args.count > 1 && args[1] == "md" ? .markdown : .rich)
         case "search": model.searchQuery = args.count > 1 ? args[1] : ""
         case "openhit": if let index = Int(args[1]), model.searchResults.indices.contains(index) { model.openSearchHit(model.searchResults[index]) }
-        case "model": args[1] == "start" ? model.models.start() : args[1] == "pause" ? model.models.pause() : model.models.delete()
+        case "model":   // model start|pause|delete [breeze|japanese|languageDetection]
+            let which = ModelStore.Model(rawValue: args.count > 2 ? args[2] : "") ?? .breeze
+            args[1] == "start" ? model.models.start(which) : args[1] == "pause" ? model.models.pause(which) : model.models.delete(which)
         case "diarizer": model.models.prepareDiarizer()
         case "verifymodel":
             // verifymodel <檔案> <結果.json>：用下載完成時同一個函式驗證 SHA-256
@@ -168,8 +181,12 @@ enum DebugControl {
                          "micLevel": model.recorder.micLevel, "systemLevel": model.recorder.systemLevel,
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,
                          "liveStatus": model.recorder.liveStatus, "permissionDenied": model.recorder.permissionDenied,
-                         "failure": model.recorder.failureMessage ?? ""],
-            "models": ["breeze": "\(model.models.state)", "diarizer": "\(model.models.diarizerState)"],
+                         "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
+                         "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? ""],
+            "languages": ["defaultMeeting": AppSettings.defaultMeetingLanguage.rawValue, "interface": MeetingLanguage.interface.rawValue,
+                          "preferred": Locale.preferredLanguages.first ?? ""],
+            "models": ["breeze": "\(model.models.state)", "japanese": "\(model.models.state(.japanese))",
+                       "languageDetection": "\(model.models.state(.languageDetection))", "diarizer": "\(model.models.diarizerState)"],
             "search": ["query": model.searchQuery, "results": model.searchResults.map { ["meeting": $0.meetingId, "kind": $0.kind.rawValue, "ref": $0.ref, "snippet": $0.snippet] }],
             "trash": model.trash.map { $0.id },
             "templates": model.templates.map { $0.id },
@@ -208,7 +225,7 @@ enum DebugControl {
                 else { throw LLMError.badOutput("bad input") }
                 let language = MeetingLanguage(rawValue: settings["language"] as? String ?? "zh") ?? .zh
                 let speakerName = { (s: [String: Any]) -> String? in
-                    (s["speaker"] as? Int).map { language.text(zh: "說話者 \($0)", en: "Speaker \($0)") }
+                    (s["speaker"] as? Int).map { language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") }
                 }
                 let context = TranscriptCorrection.Context(
                     language: language,
@@ -263,6 +280,36 @@ enum DebugControl {
             try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
         }
     }
+
+    /// detect-eval <音檔> <開始秒數> <輸出.json>：從開始秒數起，跟錄音時一樣收集 10 秒有聲音的片段做語言偵測（design §18.8）
+    private static func detectEval(audio: String, start: Double, output: String) {
+        Task { @MainActor in
+            var result: [String: Any] = ["audio": audio, "start": start]
+            do {
+                let samples = try await AudioDecoder.decode(URL(fileURLWithPath: audio))
+                let from = min(samples.count, Int(start * AudioDecoder.sampleRate))
+                let box = DetectBox()
+                let collector = LanguageDetector.Collector { box.samples = $0 }
+                var position = from
+                while box.samples == nil && position < samples.count {
+                    let end = min(samples.count, position + 1600)
+                    collector.feed(Array(samples[position..<end]))
+                    position = end
+                }
+                guard let voiced = box.samples else { throw WhisperError.empty }
+                result["used"] = Double(position - from) / AudioDecoder.sampleRate
+                let path = ModelStore.path(.languageDetection).path
+                let probabilities = try await Task.detached { try LanguageDetector.detect(voiced, modelPath: path) }.value
+                result["probabilities"] = Dictionary(uniqueKeysWithValues: probabilities.map { ($0.key.rawValue, $0.value) })
+                result["detected"] = probabilities.max { $0.value < $1.value }?.key.rawValue ?? ""
+            } catch {
+                result["error"] = error.localizedDescription
+            }
+            write(result, to: output)
+        }
+    }
+
+    private final class DetectBox: @unchecked Sendable { var samples: [Float]? }
 
     /// 螢幕鎖定時沒辦法截視窗，改用 ImageRenderer 把畫面畫成圖片（AppKit 元件會變成黃色佔位框）
     private static func snapshot(to path: String, scheme: String, target: String) {

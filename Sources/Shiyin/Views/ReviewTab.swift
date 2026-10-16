@@ -60,7 +60,7 @@ struct ReviewTab: View {
                     .font(.callout.monospacedDigit().weight(.semibold))
                     .foregroundStyle(Color.signal)
                 TimeButton(time: item.time)
-                Text(item.question)
+                Text(item.question).meetingText()
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(isDismissed ? .secondary : .primary)

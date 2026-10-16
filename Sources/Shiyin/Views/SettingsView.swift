@@ -133,7 +133,8 @@ struct ProviderSettings: View {
         let started = Date()
         let language = AppSettings.defaultMeetingLanguage
         let prompt = language.text(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
-                                   en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.")
+                                   en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.",
+                                   ja: "これは接続テストです。文字起こし：\n[00:00] 話者 1：皆さん、今日はテストだけです。")  // l10n-skip
         do {
             _ = try await LLMClient.generate(provider: current, model: modelName, system: NotesPrompt.system(language),
                                              prompt: prompt, onStart: { _ in })
@@ -348,10 +349,11 @@ struct GlossarySettings: View {
 struct RecordingSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
-    @AppStorage(AppSettings.defaultMeetingLanguageKey) private var meetingLanguage: MeetingLanguage = .interface
+    @AppStorage(AppSettings.defaultMeetingLanguageKey) private var meetingLanguage: MeetingLanguage = .systemDefault
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
     @AppStorage(AppSettings.liveTranscriptionKey) private var live = true
+    @AppStorage(AppSettings.autoDetectLanguageKey) private var autoDetect = true
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @State private var devices: [AudioDevices.Device] = []
@@ -375,6 +377,10 @@ struct RecordingSettings: View {
             }
             Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Toggle("自動偵測會議語言", isOn: $autoDetect)
+                .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }
+            Text("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("錄音中顯示即時逐字稿", isOn: $live)
             Toggle("轉錄時辨識說話者", isOn: $diarize)
             // 正式轉錄引擎（R4.1、design §6.2.1、D11）
@@ -388,7 +394,7 @@ struct RecordingSettings: View {
             }
             Text(engine == "system"
                  ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
-                 : "會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。")
+                 : "會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
                 .onChange(of: hotKey) { _, enabled in
@@ -428,7 +434,14 @@ struct StorageSettings: View {
         Form {
             Section("轉錄模型") {
                 ModelRow(title: ModelStore.breeze.name, state: model.models.state,
-                         start: model.models.start, pause: model.models.pause, delete: model.models.delete)
+                         start: { model.models.start() }, pause: { model.models.pause() }, delete: { model.models.delete() })
+                ModelRow(title: ModelStore.japanese.name, state: model.models.state(.japanese),
+                         start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) }, delete: { model.models.delete(.japanese) })
+                Text("日文會議用，574 MB。第一次轉錄日文會議時會自動下載。").font(.caption).foregroundStyle(.secondary)
+                ModelRow(title: ModelStore.languageDetection.name, state: model.models.state(.languageDetection),
+                         start: { model.models.start(.languageDetection) }, pause: { model.models.pause(.languageDetection) },
+                         delete: { model.models.delete(.languageDetection) })
+                Text("自動偵測會議語言用，60 MB。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: String(localized: "說話者辨識模型（FluidAudio）"), state: model.models.diarizerState,
                          start: model.models.prepareDiarizer, pause: nil, delete: nil)
             }

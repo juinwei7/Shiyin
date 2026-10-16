@@ -30,7 +30,7 @@ struct NotesSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.songti(18))
+            Text(title).contentTitleFont(18)
             content
         }
     }
@@ -45,7 +45,7 @@ struct ItemList: View {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("•").foregroundStyle(.secondary)
-                    (Text(item.text))
+                    (Text(item.text)).meetingText()
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                     if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
@@ -152,10 +152,10 @@ struct ActionItemsTable: View {
             Divider().gridCellUnsizedAxes(.horizontal)
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 GridRow {
-                    Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner)
+                    Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner).meetingText()
                         .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(item.task)
+                        Text(item.task).meetingText()
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                         if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
@@ -192,7 +192,7 @@ struct TopicsTab: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             TimeButton(time: topic.start)
-                            Text(topic.title).font(.songti(18))
+                            Text(topic.title).contentTitleFont(18)
                         }
                         ItemList(items: topic.points)
                     }
@@ -231,7 +231,7 @@ struct NotesEditor: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     TextField("時間", text: $notes.topics[i].start).frame(width: 70).monospacedDigit()
-                                    TextField("議題", text: $notes.topics[i].title).font(.songti(16))
+                                    TextField("議題", text: $notes.topics[i].title).contentTitleFont(16)
                                     Button { notes.topics.remove(at: i) } label: { Image(systemName: "trash") }
                                         .buttonStyle(.borderless).help("刪除這個議題")
                                 }
@@ -242,7 +242,7 @@ struct NotesEditor: View {
                             notes.topics.append(.init(title: "", start: "", points: []))
                         }
                     } else {
-                        TextField("標題", text: $notes.title).font(.songti(18))
+                        TextField("標題", text: $notes.title).contentTitleFont(18)
                         EditorSection(title: String(localized: "摘要")) { ItemsEditor(items: $notes.summary) }
                         EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
                         EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
@@ -255,7 +255,7 @@ struct NotesEditor: View {
                                 ForEach(Array(notes.reviewItems.enumerated()), id: \.offset) { index, item in
                                     HStack(alignment: .firstTextBaseline) {
                                         Text(item.time).monospacedDigit().foregroundStyle(.secondary)
-                                        Text(item.question)
+                                        Text(item.question).meetingText()
                                         Spacer()
                                         Button { notes.reviewItems.remove(at: index) } label: { Image(systemName: "trash") }
                                             .buttonStyle(.borderless).help("刪除這一題")
@@ -281,7 +281,7 @@ private struct EditorSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.songti(16))
+            Text(title).contentTitleFont(16)
             content
         }
     }
@@ -294,7 +294,7 @@ private struct ItemsEditor: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(items.indices, id: \.self) { i in
                 HStack(spacing: 6) {
-                    TextField("內容", text: $items[i].text, axis: .vertical)
+                    TextField("內容", text: $items[i].text, axis: .vertical).meetingText()
                     TextField("時間", text: $items[i].time).frame(width: 64).monospacedDigit()
                     RowButtons(index: i, count: items.count, move: { items.swapAt(i, $0) }, delete: { items.remove(at: i) })
                 }
@@ -314,7 +314,7 @@ private struct ActionItemsEditor: View {
             ForEach(items.indices, id: \.self) { i in
                 HStack(spacing: 6) {
                     TextField("負責人", text: $items[i].owner).frame(width: 90)
-                    TextField("事項", text: $items[i].task, axis: .vertical)
+                    TextField("事項", text: $items[i].task, axis: .vertical).meetingText()
                     TextField("yyyy-MM-dd", text: $items[i].due).frame(width: 100).monospacedDigit()
                     TextField("時間", text: $items[i].time).frame(width: 64).monospacedDigit()
                     RowButtons(index: i, count: items.count, move: { items.swapAt(i, $0) }, delete: { items.remove(at: i) })

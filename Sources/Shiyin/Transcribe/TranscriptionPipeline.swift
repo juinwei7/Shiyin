@@ -3,6 +3,7 @@ import Foundation
 /// 轉錄的設定（design §6、§17）。JobRunner 用目前的 app 設定產生；評估工具（shiyinctl transcribe-eval）從 JSON 讀，
 /// 同一段錄音可以換設定重跑比較（§17.1）
 struct TranscriptionOptions: Codable {
+    /// breeze：whisper.cpp，模型依會議語言（中文、英文 Breeze，日文 large-v3-turbo，design §18.2）；system：macOS 內建辨識
     enum Engine: String, Codable { case breeze, system }
     /// 分聲道時怎麼處理麥克風收到的回音（design §17.3）
     enum Echo: String, Codable {
@@ -17,6 +18,8 @@ struct TranscriptionOptions: Codable {
     /// 雙聲道錄音（麥克風、電腦聲音）分開轉錄（design §17.3）；還在評估，設定裡沒有開關
     var splitChannels = false
     var echo: Echo = .dedupe
+    /// 評估用：換一個 whisper 模型檔（design §18.2 比較日文引擎）；nil 依會議語言選
+    var model: String?
 
     init() {}
 
@@ -41,6 +44,7 @@ struct TranscriptionOptions: Codable {
         diarize = try c.decodeIfPresent(Bool.self, forKey: .diarize) ?? true
         splitChannels = try c.decodeIfPresent(Bool.self, forKey: .splitChannels) ?? false
         echo = try c.decodeIfPresent(Echo.self, forKey: .echo) ?? .dedupe
+        model = try c.decodeIfPresent(String.self, forKey: .model)
     }
 }
 
@@ -56,7 +60,8 @@ struct TranscriptionResult {
 @MainActor
 struct TranscriptionPipeline {
     var options: TranscriptionOptions
-    var modelPath = ModelStore.breezePath.path
+    /// whisper 模型檔：評估時可以指定，平常依會議語言選
+    var modelPath: String { options.model ?? ModelStore.path(ModelStore.transcription(for: options.language)).path }
     /// 目前在做哪一步（顯示在會議列表）
     var stage: (String) -> Void = { _ in }
     /// 整體進度 0～1，會從背景執行緒呼叫

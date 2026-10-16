@@ -325,6 +325,7 @@ struct SearchResultsList: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(kindLabel(hit.kind)).font(.caption2).foregroundStyle(.secondary)
                                 Text(hit.snippet).font(.callout).lineLimit(3)
+                                    .contentGlyphs(model.meetings.first { $0.id == meetingId }?.meeting.meetingLanguage ?? .zh)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
@@ -352,7 +353,7 @@ struct MeetingRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(row.meeting.displayTitle).lineLimit(1)
+            Text(row.meeting.displayTitle).lineLimit(1).contentGlyphs(row.meeting.meetingLanguage)
             HStack(spacing: 8) {
                 Text(shortDate).monospacedDigit().foregroundStyle(.secondary)
                 Text(status.label).foregroundStyle(color)
@@ -385,7 +386,7 @@ struct MeetingRowView: View {
 struct RecordingControls: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
-    @AppStorage(AppSettings.defaultMeetingLanguageKey) private var language: MeetingLanguage = .interface
+    @AppStorage(AppSettings.defaultMeetingLanguageKey) private var language: MeetingLanguage = .systemDefault
 
     var body: some View {
         if model.recorder.isRecording {
