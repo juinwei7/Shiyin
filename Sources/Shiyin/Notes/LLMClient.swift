@@ -55,25 +55,48 @@ enum LLMError: LocalizedError {
     }
 }
 
-/// 呼叫 claude / codex CLI 或 Anthropic / OpenAI API 產生會議紀錄（design §8.4）
+/// 呼叫 claude / codex CLI 或 Anthropic / OpenAI API 產生會議紀錄（design §8.4）。
+/// 輸出一律用 JSON schema 限制；逐字稿校正（design §17.4）用同一套呼叫方式，只是格式不同
 @MainActor
 enum LLMClient {
     static let timeout: TimeInterval = 20 * 60
 
+    /// 要模型輸出的格式：JSON schema，以及 Anthropic API 用的工具名稱和說明
+    struct OutputFormat {
+        let schema: String
+        let toolName: String
+        let toolDescription: String
+
+        static var meetingNotes: OutputFormat {
+            OutputFormat(schema: MeetingNotes.jsonSchema, toolName: "save_meeting_notes",
+                         toolDescription: String(localized: "儲存整理好的會議紀錄"))
+        }
+    }
+
     static func generate(provider: LLMProvider, model: String, system: String, prompt: String,
                          onStart: (Subprocess) -> Void) async throws -> MeetingNotes {
+        let data = try await generateJSON(provider: provider, model: model, system: system, prompt: prompt,
+                                          format: .meetingNotes, onStart: onStart)
+        do { return try JSONDecoder().decode(MeetingNotes.self, from: data) }
+        catch { throw LLMError.badOutput(error.localizedDescription) }
+    }
+
+    /// 回傳符合 format.schema 的 JSON
+    static func generateJSON(provider: LLMProvider, model: String, system: String, prompt: String,
+                             format: OutputFormat, onStart: (Subprocess) -> Void) async throws -> Data {
         switch provider {
         case .claude, .codex:
             // 工作目錄是一個空的暫存資料夾：不會讀到任何專案的 CLAUDE.md，用完就刪
             let dir = try Paths.makeTempDirectory()
             defer { try? FileManager.default.removeItem(at: dir) }
             return provider == .claude
-                ? try await claude(model: model, system: system, prompt: prompt, dir: dir, onStart: onStart)
-                : try await codex(model: model, system: system, prompt: prompt, dir: dir, onStart: onStart)
+                ? try await claude(model: model, system: system, prompt: prompt, schema: format.schema, dir: dir, onStart: onStart)
+                : try await codex(model: model, system: system, prompt: prompt, schema: format.schema, dir: dir, onStart: onStart)
         case .anthropic:
-            return try await anthropic(model: model.isEmpty ? provider.defaultModel : model, system: system, prompt: prompt)
+            return try await anthropic(model: model.isEmpty ? provider.defaultModel : model, system: system, prompt: prompt, format: format)
         case .openai:
-            return try await openai(model: model.isEmpty ? provider.defaultModel : model, system: system, prompt: prompt)
+            return try await openai(model: model.isEmpty ? provider.defaultModel : model, system: system, prompt: prompt,
+                                    schema: format.schema, name: format.toolName)
         case .none:
             throw LLMError.failed(String(localized: "整理工具設定為「不整理」"))
         }
@@ -81,12 +104,12 @@ enum LLMClient {
 
     // MARK: CLI（沿用第二版）
 
-    private static func claude(model: String, system: String, prompt: String, dir: URL,
-                               onStart: (Subprocess) -> Void) async throws -> MeetingNotes {
+    private static func claude(model: String, system: String, prompt: String, schema: String, dir: URL,
+                               onStart: (Subprocess) -> Void) async throws -> Data {
         guard let exe = Paths.findTool("claude") else { throw LLMError.notInstalled("claude") }
         // 不能加 --bare：--bare 不讀 OAuth 登入資訊
         var args = ["-p", "--output-format", "json", "--tools", "", "--no-session-persistence", "--strict-mcp-config",
-                    "--system-prompt", system, "--json-schema", MeetingNotes.jsonSchema]
+                    "--system-prompt", system, "--json-schema", schema]
         if !model.isEmpty { args += ["--model", model] }
         let process = Subprocess(exe, args, directory: dir)
         onStart(process)
@@ -100,17 +123,17 @@ enum LLMClient {
         if (object["is_error"] as? Bool) == true || object["structured_output"] == nil {
             throw LLMError.failed(String(((object["result"] as? String) ?? result.stderrTail(500)).prefix(500)))
         }
-        return try decode(JSONSerialization.data(withJSONObject: object["structured_output"]!))
+        return try JSONSerialization.data(withJSONObject: object["structured_output"]!)
     }
 
-    private static func codex(model: String, system: String, prompt: String, dir: URL,
-                              onStart: (Subprocess) -> Void) async throws -> MeetingNotes {
+    private static func codex(model: String, system: String, prompt: String, schema: String, dir: URL,
+                              onStart: (Subprocess) -> Void) async throws -> Data {
         guard let exe = Paths.findTool("codex") else { throw LLMError.notInstalled("codex") }
-        let schema = dir.appendingPathComponent("schema.json")
+        let schemaFile = dir.appendingPathComponent("schema.json")
         let output = dir.appendingPathComponent("out.json")
-        try MeetingNotes.jsonSchema.write(to: schema, atomically: true, encoding: .utf8)
+        try schema.write(to: schemaFile, atomically: true, encoding: .utf8)
         var args = ["exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only", "--color", "never",
-                    "--output-schema", schema.path, "-o", output.path]
+                    "--output-schema", schemaFile.path, "-o", output.path]
         if !model.isEmpty { args += ["-m", model] }
         args.append("-")
         let process = Subprocess(exe, args, directory: dir)
@@ -121,21 +144,21 @@ enum LLMClient {
             let detail = result.stderrTail(500)
             throw LLMError.failed(detail.isEmpty ? String(localized: "codex 沒有回傳結果（結束代碼 \(result.status)）") : detail)
         }
-        return try decode(data)
+        return data
     }
 
     // MARK: API（design §8.4）
 
-    private static func anthropic(model: String, system: String, prompt: String) async throws -> MeetingNotes {
+    private static func anthropic(model: String, system: String, prompt: String, format: OutputFormat) async throws -> Data {
         guard let key = Keychain.get("anthropic"), !key.isEmpty else { throw LLMError.missingKey("Anthropic") }
-        let schema = try JSONSerialization.jsonObject(with: Data(MeetingNotes.jsonSchema.utf8))
+        let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 16_000,
             "system": system,
             "messages": [["role": "user", "content": prompt]],
-            "tools": [["name": "save_meeting_notes", "description": String(localized: "儲存整理好的會議紀錄"), "input_schema": schema]],
-            "tool_choice": ["type": "tool", "name": "save_meeting_notes"],
+            "tools": [["name": format.toolName, "description": format.toolDescription, "input_schema": schema]],
+            "tool_choice": ["type": "tool", "name": format.toolName],
         ]
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!, timeoutInterval: timeout)
         request.httpMethod = "POST"
@@ -148,17 +171,17 @@ enum LLMClient {
               let input = content.first(where: { $0["type"] as? String == "tool_use" })?["input"] else {
             throw LLMError.badOutput(String(localized: "回應裡沒有會議紀錄（stop_reason：\(object["stop_reason"] as? String ?? String(localized: "未知"))）"))
         }
-        return try decode(JSONSerialization.data(withJSONObject: input))
+        return try JSONSerialization.data(withJSONObject: input)
     }
 
-    private static func openai(model: String, system: String, prompt: String) async throws -> MeetingNotes {
+    private static func openai(model: String, system: String, prompt: String, schema: String, name: String) async throws -> Data {
         guard let key = Keychain.get("openai"), !key.isEmpty else { throw LLMError.missingKey("OpenAI") }
-        let schema = try JSONSerialization.jsonObject(with: Data(MeetingNotes.jsonSchema.utf8))
+        let schemaObject = try JSONSerialization.jsonObject(with: Data(schema.utf8))
         let body: [String: Any] = [
             "model": model,
             "instructions": system,
             "input": prompt,
-            "text": ["format": ["type": "json_schema", "name": "meeting_notes", "schema": schema, "strict": true]],
+            "text": ["format": ["type": "json_schema", "name": name, "schema": schemaObject, "strict": true]],
         ]
         var request = URLRequest(url: URL(string: "https://api.openai.com/v1/responses")!, timeoutInterval: timeout)
         request.httpMethod = "POST"
@@ -170,7 +193,7 @@ enum LLMClient {
         let text = outputs.flatMap { ($0["content"] as? [[String: Any]]) ?? [] }
             .first { $0["type"] as? String == "output_text" }?["text"] as? String
         guard let text else { throw LLMError.badOutput(String(localized: "回應裡沒有文字（status：\(object["status"] as? String ?? String(localized: "未知"))）")) }
-        return try decode(Data(text.utf8))
+        return Data(text.utf8)
     }
 
     private static func send(_ request: URLRequest, provider: String) async throws -> [String: Any] {
@@ -203,10 +226,5 @@ enum LLMClient {
               let list = object["data"] as? [[String: Any]] else { return [] }
         let ids = list.compactMap { $0["id"] as? String }
         return provider == .openai ? ids.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.sorted(by: >) : ids
-    }
-
-    private static func decode(_ data: Data) throws -> MeetingNotes {
-        do { return try JSONDecoder().decode(MeetingNotes.self, from: data) }
-        catch { throw LLMError.badOutput(error.localizedDescription) }
     }
 }

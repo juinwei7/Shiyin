@@ -273,7 +273,11 @@ struct StatusBanner: View {
             let provider = running?.provider?.shortLabel ?? ""
             return AnyView(HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
-                Text(running?.job.kind == .revise ? "正在用 \(provider) 依你的回答修正會議紀錄…" : "正在用 \(provider) 整理會議紀錄…")
+                switch running?.job.kind {
+                case .revise: Text("正在用 \(provider) 依你的回答修正會議紀錄…")
+                case .correct: Text("正在用 \(provider) 檢查可能聽錯的字…")
+                default: Text("正在用 \(provider) 整理會議紀錄…")
+                }
             })
         case .failed(let kind, let message):
             return AnyView(Label {
@@ -321,6 +325,8 @@ struct MoreMenu: View {
         Menu {
             Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
                 .disabled((detail.segments.isEmpty && detail.meeting.userNotes.isEmpty) || model.detailStatus?.isActive == true)
+            Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
+                .disabled(detail.segments.isEmpty || model.detailStatus?.isActive == true)
             Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
                 .disabled(!detail.meeting.hasAudio || model.detailStatus?.isActive == true || !model.canTranscribe)
             Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }

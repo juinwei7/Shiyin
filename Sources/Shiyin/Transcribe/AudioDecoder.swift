@@ -17,6 +17,26 @@ enum AudioDecoder {
     static let sampleRate: Double = 16_000
 
     static func decode(_ url: URL) async throws -> [Float] {
+        try await read(url, channels: 1)
+    }
+
+    /// 保留聲道解碼（design §17.3）：雙聲道錄音的麥克風、電腦聲音分開轉錄用。每個聲道一個陣列；單聲道的檔案回傳一個
+    static func decodeChannels(_ url: URL) async throws -> [[Float]] {
+        let asset = AVURLAsset(url: url)
+        guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw AudioDecoderError.noAudioTrack }
+        let formats = try await track.load(.formatDescriptions)
+        let count = formats.first.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee.mChannelsPerFrame }
+            .map(Int.init) ?? 1
+        guard count > 1 else { return [try await decode(url)] }
+        let interleaved = try await read(url, channels: count)
+        var channels = [[Float]](repeating: [], count: count)
+        for c in 0..<count { channels[c].reserveCapacity(interleaved.count / count) }
+        for (i, sample) in interleaved.enumerated() { channels[i % count].append(sample) }
+        return channels
+    }
+
+    /// 解碼成 16 kHz Float32；channels 大於 1 時是交錯排列（左右左右…）
+    private static func read(_ url: URL, channels: Int) async throws -> [Float] {
         let asset = AVURLAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw AudioDecoderError.noAudioTrack }
         let reader: AVAssetReader
@@ -24,7 +44,7 @@ enum AudioDecoder {
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVSampleRateKey: sampleRate,
-            AVNumberOfChannelsKey: 1,
+            AVNumberOfChannelsKey: channels,
             AVLinearPCMBitDepthKey: 32,
             AVLinearPCMIsFloatKey: true,
             AVLinearPCMIsBigEndianKey: false,
@@ -37,7 +57,7 @@ enum AudioDecoder {
         }
         var samples: [Float] = []
         if let duration = try? await asset.load(.duration).seconds, duration.isFinite {
-            samples.reserveCapacity(Int(duration * sampleRate) + 16_000)
+            samples.reserveCapacity((Int(duration * sampleRate) + 16_000) * channels)
         }
         while let buffer = output.copyNextSampleBuffer() {
             guard let block = CMSampleBufferGetDataBuffer(buffer) else { continue }
