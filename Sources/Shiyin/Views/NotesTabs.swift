@@ -90,8 +90,8 @@ struct SummaryTab: View {
     @State private var editing: MeetingNotes?
 
     var body: some View {
-        if let draft = Binding($editing) {
-            NotesEditor(notes: draft, showTopics: false) { save in
+        if let current = editing {
+            NotesEditor(notes: Binding(draft: $editing, fallback: current), showTopics: false) { save in
                 if save, let editing { model.saveEditedNotes(editing) }
                 editing = nil
             }
@@ -177,8 +177,8 @@ struct TopicsTab: View {
     @State private var editing: MeetingNotes?
 
     var body: some View {
-        if let draft = Binding($editing) {
-            NotesEditor(notes: draft, showTopics: true) { save in
+        if let current = editing {
+            NotesEditor(notes: Binding(draft: $editing, fallback: current), showTopics: true) { save in
                 if save, let editing { model.saveEditedNotes(editing) }
                 editing = nil
             }
@@ -201,6 +201,16 @@ struct TopicsTab: View {
         } else {
             NotesPlaceholder(detail: detail)
         }
+    }
+}
+
+extension Binding {
+    /// 編輯中的草稿（可能是 nil）給編輯器用：草稿已經是 nil 時讀到 fallback，寫入不理會。
+    /// 不能用 `Binding($editing)`：按「完成」「取消」把草稿設成 nil 時，同一次更新裡編輯器的欄位還會再讀一次，
+    /// 它會強制解開 nil 而閃退（3.2.0 的錯誤，3.2.1 修正）
+    init(draft base: Binding<Value?>, fallback: Value) {
+        self.init(get: { base.wrappedValue ?? fallback },
+                  set: { if base.wrappedValue != nil { base.wrappedValue = $0 } })
     }
 }
 
