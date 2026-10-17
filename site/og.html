@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- 分享預覽圖的版型（1200×630），make-images.sh 用 Chrome 截成 site/public/og.png、og-en.png、og-ja.png。不會部署。 -->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #FFFFFF; }
+  body { position: relative; font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif; color: #1D1D1F; -webkit-font-smoothing: antialiased; }
+  .text { position: absolute; left: 80px; top: 0; bottom: 0; width: 520px; display: flex; flex-direction: column; justify-content: center; }
+  .name { display: flex; align-items: center; gap: 18px; font-size: 40px; font-weight: 700; }
+  .name img { width: 88px; height: 88px; }
+  h1 { margin: 36px 0 0; font-size: 50px; line-height: 1.25; font-weight: 700; }
+  p { margin: 20px 0 0; font-size: 26px; line-height: 1.6; color: #6E6E73; }
+  .shot { position: absolute; left: 650px; top: 95px; width: 860px; border-radius: 14px; box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .45), 0 0 0 1px rgba(0, 0, 0, .08); }
+</style>
+</head>
+<body>
+<div class="text">
+  <div class="name"><img src="../docs/images/icon.png" alt=""><span id="name">拾音</span></div>
+  <h1 id="title">Mac 上的會議紀錄 app</h1>
+  <p id="lead">錄音不出電腦，<br>每一條紀錄都點得回原話。</p>
+</div>
+<img class="shot" id="shot" src="../docs/images/summary.png" alt="">
+<script>
+  if (location.search === '?ja') {
+    document.documentElement.lang = 'ja';
+    document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif';
+    document.getElementById('title').textContent = 'Mac の議事録アプリ';
+    document.getElementById('lead').innerHTML = '録音は Mac の外に出ません。<br>各項目から実際の発言を聞き直せます。';
+    document.getElementById('shot').src = '../docs/images/en/summary.png';
+  }
+  if (location.search === '?en') {
+    document.documentElement.lang = 'en';
+    document.getElementById('name').textContent = 'Shiyin';
+    document.getElementById('title').textContent = 'A meeting-notes app for your Mac';
+    document.getElementById('lead').innerHTML = 'Recordings stay on your Mac.<br>Every note links back to what was said.';
+    document.getElementById('shot').src = '../docs/images/en/summary.png';
+  }
+</script>
+</body>
+</html>

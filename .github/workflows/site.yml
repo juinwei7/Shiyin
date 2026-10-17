@@ -1,0 +1,63 @@
+# 官網（docs/website/design.md §8）：產生 site/dist，部署到 Cloudflare Pages
+# - 推到 main，改到網站或截圖
+# - 「打包」流程推 tag 發布新版之後（版本說明和下載連結跟著更新）
+# - 在 Actions 頁面手動執行
+#
+# 需要的設定（Settings → Secrets and variables → Actions）：
+#   secrets.CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID  沒有就只建置、不部署
+#   vars.SHIYIN_SITE_URL                                  選填，網址不是 https://shiyin.pages.dev 時設定
+#   vars.CLOUDFLARE_PAGES_PROJECT                         選填，Pages 專案名稱，預設 shiyin
+name: 官網
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "docs/images/**"
+      - ".github/workflows/site.yml"
+  workflow_run:
+    workflows: ["打包"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # 打包流程只有推 tag（發布）成功才部署；手動只建置 DMG 的不算
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'shiyin' }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: 產生網站
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SITE_URL: ${{ vars.SHIYIN_SITE_URL }}
+        run: |
+          node --version
+          node site/build.mjs
+
+      - name: 部署到 Cloudflare Pages
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::還沒設定 CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID，只建置、不部署"
+            exit 0
+          fi
+          # 專案不存在就建立；已經存在時這行會失敗，忽略
+          npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main >/dev/null 2>&1 || true
+          npx --yes wrangler@4 pages deploy site/dist --project-name="$PAGES_PROJECT" --branch=main --commit-dirty=true
