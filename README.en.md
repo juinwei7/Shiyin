@@ -37,7 +37,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - **Speaker identification**: every transcript segment is labeled with a speaker, each in its own color; rename speakers or show one speaker only
 - **Meeting notes**
   - Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own
-  - Summarizers: Claude Code, Codex CLI, Anthropic API, OpenAI API, or “Don’t summarize” for transcripts only
+  - Summarizers: Claude Code, Codex CLI, Anthropic API, OpenAI API, Gemini API, an OpenAI-compatible API (Groq, OpenRouter, or Ollama and LM Studio on your Mac), or “Don’t summarize” for transcripts only
   - Edit the notes directly; every change is versioned and can be reverted
 - **Export and share**
 
@@ -66,7 +66,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 | System | macOS 26 or later |
 | Memory | 8 GB or more. Transcription plus speaker identification peaks at about 2.7 GB; a 4-hour meeting at about 4.1 GB (measured on M3 Pro) |
 | Disk space | About 1.7 GB of models (downloaded on first use; not needed with the macOS transcriber), another 574 MB for Japanese meetings and 60 MB for language detection, plus recordings: m4a is about 10–30 MB per hour |
-| Summarizer | One of: a signed-in [Claude Code](https://claude.com/claude-code) (`claude`), Codex CLI (`codex`), an Anthropic API key or an OpenAI API key. Or choose “Don’t summarize” |
+| Summarizer | One of: a signed-in [Claude Code](https://claude.com/claude-code) (`claude`), Codex CLI (`codex`), an Anthropic, OpenAI or Gemini API key, or an OpenAI-compatible API (Groq and OpenRouter need a key; Ollama and LM Studio on your Mac don’t). Or choose “Don’t summarize” |
 | Internet | Needed to download the models and to summarize; not needed for recording, transcription or speaker identification |
 
 ## Install
@@ -144,15 +144,16 @@ The app checks that a new version is signed the same way as the running app. Aft
 |---|---|
 | Recordings, transcripts, database, models | `~/Library/Application Support/Shiyin` (permissions 700, not synced by iCloud) |
 | Recording, transcription, speaker identification | Entirely on your Mac, offline |
-| Summarizing and revising | The transcript text, your notes, the glossary and the meeting details go to the service you chose (Anthropic or OpenAI). Recordings are never sent |
+| Summarizing and revising | The transcript text, your notes, the glossary and the meeting details go to the service you chose (Anthropic, OpenAI, Google, or the URL you entered for an OpenAI-compatible API). Recordings are never sent |
 | API keys | Stored in the macOS Keychain, never in files or logs |
 | “Don’t summarize” | Fully offline |
+| OpenAI-compatible API on your Mac (Ollama, LM Studio) | Summarizing happens on this Mac too; nothing leaves your computer |
 
 ## Settings (⌘,)
 
 | Tab | Contents |
 |---|---|
-| Summarizer | Claude, Codex, Anthropic API, OpenAI API or Don’t summarize; sign-in status and Test Summarizer; API keys; model; whether to summarize and check for misheard words after transcription |
+| Summarizer | Claude, Codex, Anthropic API, OpenAI API, Gemini API, OpenAI-compatible API or Don’t summarize; sign-in status and Test Summarizer; API keys; the OpenAI-compatible API’s URL (with presets); model; whether to summarize and check for misheard words after transcription |
 | Templates | Built-in and custom templates, default template |
 | Glossary | Correct spellings of names, systems and terms; used for transcription and summarizing; suggested terms |
 | Recording | Recording source, microphone, default meeting language, language detection, live transcript, speaker identification, transcription engine (Breeze or macOS), global shortcut, permissions |

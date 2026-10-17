@@ -37,7 +37,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 - **說話者辨識**：逐字稿每段標上說話者，每個人一個顏色；可以改名、只看某一位說話者
 - **會議紀錄**
   - 範本：一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自訂
-  - 整理工具：Claude Code、Codex CLI、Anthropic API、OpenAI API，或「不整理」只要逐字稿
+  - 整理工具：Claude Code、Codex CLI、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API（Groq、OpenRouter、本機的 Ollama、LM Studio），或「不整理」只要逐字稿
   - 可以直接編輯；每次修改都留版本，可以復原
 - **匯出與分享**
 
@@ -66,7 +66,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 | 系統 | macOS 26 以上 |
 | 記憶體 | 8 GB 以上。轉錄加說話者辨識的峰值約 2.7 GB，4 小時的會議約 4.1 GB（M3 Pro 實測） |
 | 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文會議另外 574 MB、自動偵測語言 60 MB，加上錄音：m4a 約每小時 10～30 MB |
-| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`）、Anthropic API key、OpenAI API key。也可以選「不整理」 |
+| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`）、Anthropic API key、OpenAI API key、Gemini API key，或 OpenAI 相容 API（Groq、OpenRouter 填 key；本機的 Ollama、LM Studio 不用 key）。也可以選「不整理」 |
 | 網路 | 第一次下載模型、整理會議紀錄時需要；錄音、轉錄、說話者辨識都不需要 |
 
 ## 安裝
@@ -144,15 +144,16 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 |---|---|
 | 錄音、逐字稿、資料庫、模型 | `~/Library/Application Support/Shiyin`（權限 700，不會被 iCloud 同步） |
 | 錄音、轉錄、說話者辨識 | 完全在本機，不連網 |
-| 整理、校稿 | 逐字稿文字、你的筆記、詞彙表、會議基本資料會送到你選的服務（Anthropic 或 OpenAI）。錄音檔不會送出 |
+| 整理、校稿 | 逐字稿文字、你的筆記、詞彙表、會議基本資料會送到你選的服務（Anthropic、OpenAI、Google，或 OpenAI 相容 API 填的網址）。錄音檔不會送出 |
 | API key | 存在 macOS 鑰匙圈，不寫進檔案或 log |
 | 整理工具選「不整理」 | 完全離線 |
+| OpenAI 相容 API 填本機網址（Ollama、LM Studio） | 整理也在這台 Mac 上完成，內容不會離開電腦 |
 
 ## 設定（⌘,）
 
 | 分頁 | 內容 |
 |---|---|
-| 整理工具 | Claude、Codex、Anthropic API、OpenAI API 或不整理；登入狀態、測試整理工具；API key；模型；轉錄完是否自動整理、是否檢查可能聽錯的字 |
+| 整理工具 | Claude、Codex、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API 或不整理；登入狀態、測試整理工具；API key；OpenAI 相容 API 的網址（有常用服務可選）；模型；轉錄完是否自動整理、是否檢查可能聽錯的字 |
 | 範本 | 內建範本和自訂範本、預設範本 |
 | 詞彙表 | 人名、系統名、專有名詞的正確寫法，轉錄和整理都會參考；建議加入的詞 |
 | 錄音 | 錄音來源、麥克風、預設會議語言、自動偵測會議語言、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze 或 macOS 內建）、全域快捷鍵、權限設定 |
