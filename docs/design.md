@@ -49,7 +49,7 @@ Sources/Shiyin/
 ├── Store/        AppDatabase（migration、FTS）、AppModel
 ├── Capture/      AudioCapture（引擎與 tap）、SystemAudioTap、RecordingWriter、WAVRepair、LiveTranscriber
 ├── Transcribe/   AudioDecoder、WhisperEngine（whisper.cpp 包裝）、Diarizer、TranscriptMerger
-├── Notes/        LLMProvider（Claude CLI、Codex CLI、Anthropic API、OpenAI API）、NotesPrompt、Templates
+├── Notes/        LLMClient（LLMProvider、LLMBackend）、Backends/（Claude CLI、Codex CLI、Anthropic、OpenAI、Gemini、OpenAI 相容）、NotesPrompt、Templates
 ├── IO/           Exporters（audio、transcript、notes、package）、Importers（package、srt/vtt/txt、markdown）
 ├── Services/     JobRunner、ModelStore、Keychain、Paths、Notifier、Player、Search、Subprocess
 ├── Views/        Main、Recording、Detail（摘要／詳細／逐字稿／待確認／筆記）、Onboarding、Guide、Settings、MenuBar
@@ -254,8 +254,11 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | Codex CLI | 沿用 v2 §6.2 | `--output-schema` |
 | Anthropic API | `POST /v1/messages`，`x-api-key` | 強制呼叫一個 tool（`tool_choice`），`input_schema` 就是會議紀錄的 schema |
 | OpenAI API | `POST /v1/responses`，`Authorization: Bearer` | `text.format = {type: json_schema, strict: true}` |
+| Gemini API（3.4） | `POST /v1beta/interactions`，`x-goog-api-key`，見 §19.2 | `response_format = {mime_type: application/json, schema}` |
+| OpenAI 相容 API（3.4） | `POST <網址>/chat/completions`，見 §19.3 | `response_format = {type: json_schema, strict: true}`，不支援時退回 `json_object` |
 
-- API key 存在鑰匙圈：service 是 `com.weiwei.shiyin.apikey`，account 是 `anthropic` 或 `openai`。
+- 3.4 起每種整理工具是一個 `LLMBackend` 實作，見 §19.1。
+- API key 存在鑰匙圈：service 是 `com.weiwei.shiyin.apikey`，account 是 `anthropic`、`openai`、`gemini` 或 `openaiCompatible`。
 - API 模型預設：Anthropic 用 `claude-sonnet-5-5`；OpenAI 的預設模型在實作時查證最新的模型名稱。兩者都可以在設定裡改。
 - 逾時 20 分鐘；只重試一次，而且只在網路錯誤時重試。
 
@@ -523,6 +526,72 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 錄音的混音同時送給即時逐字稿和偵測（`MixTap`）。即時逐字稿重新開始時：新的辨識從 0 秒算，時間點要加上接上音訊時已經錄了多久（每個辨識各自記）；被換掉的辨識收尾送來的是用錯的語言聽的，不加進逐字稿。之前已經出現的即時逐字稿保留，錄完會正式轉錄。
 - 只偵測一次；按「改回」之後不再自動切換。設定 → 錄音可以關掉。
 
+## 19. 更多整理工具（3.4，R17）
+
+### 19.1 共同介面（D22）
+
+```swift
+@MainActor protocol LLMBackend {
+    /// 回傳符合 format.schema 的 JSON
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+                      onStart: (Subprocess) -> Void) async throws -> Data
+    /// 可用的模型，給設定頁選；不支援或失敗回空陣列
+    func listModels() async -> [String]
+}
+```
+
+- `LLMProvider`（enum）保留：它是存在 UserDefaults（`llmProvider`）和資料庫（`notes_by`）的代號，也負責介面上的名稱、要不要 key、預設模型。`provider.backend(model:)` 產生對應的實作。
+- 每種整理工具一個型別、一個檔案，放在 `Notes/Backends/`：`ClaudeCLI`、`CodexCLI`、`AnthropicAPI`、`OpenAIAPI`、`GeminiAPI`、`OpenAICompatibleAPI`。送出 HTTP、讀錯誤訊息的共用部分放在 `APIRequest`。
+- `LLMClient.generate`、`generateJSON`、`listModels` 的呼叫方式不變，呼叫的地方（JobRunner、逐字稿校正、設定頁）不用改。
+- 原本四種的程式碼原封搬過去，只換位置（R17.7）。
+- 不做外掛或動態註冊：整理工具的清單還是 enum 的 case。加一種整理工具＝一個新檔案＋一個 case＋設定頁的欄位。
+
+### 19.2 Gemini API（R17.1、D23）
+
+| 項目 | 內容 |
+|---|---|
+| 端點 | `POST https://generativelanguage.googleapis.com/v1beta/interactions`，header `x-goog-api-key` |
+| 內容 | `model`、`system_instruction`、`input`（提示詞）、`response_format: {type: "text", mime_type: "application/json", schema}`、`store: false` |
+| 結果 | `status` 是 `completed`：把 `steps` 裡 `type == "model_output"` 的 `content[]`（`type == "text"`）的 `text` 接起來。`incomplete`：錯誤「回應不完整（可能超過長度上限）」。其他狀態：錯誤，附上狀態 |
+| 錯誤 | 錯誤回應可能包在陣列裡（`[{"error": …}]`，實測 Interactions 是這樣），兩種格式都要讀；key 錯誤是 HTTP 400 加上 `API key not valid`，要跟 401 一樣提示 key 錯誤 |
+| 模型清單 | `GET /v1beta/models?pageSize=1000`，取名稱是 `models/gemini-…` 的，去掉 `models/`；排除名稱有 embedding、tts、image、live、audio 的 |
+| 預設模型 | `gemini-3.8-flash`（2026-10 官方建議的一般用途模型） |
+| key | 鑰匙圈 account `gemini` |
+
+### 19.3 OpenAI 相容 API（R17.2、R17.4、D24）
+
+| 項目 | 內容 |
+|---|---|
+| 端點 | `POST <網址>/chat/completions`；有 key 才加 `Authorization: Bearer <key>` |
+| 內容 | `model`、`messages`（`system`、`user`）、`response_format: {type: "json_schema", json_schema: {name, schema, strict: true}}` |
+| 退回 | HTTP 400 或 422，而且錯誤訊息提到 `response_format`、`json_schema` 或 `schema`：改成 `response_format: {type: "json_object"}`，系統提示詞後面加上 schema 和「只輸出符合這個 JSON schema 的 JSON 物件」，再送一次 |
+| 結果 | `choices[0].message.content`；`finish_reason` 是 `length`：錯誤「回應不完整（可能超過長度上限）」。內容前後有 ```` ```json ```` 圍欄或其他文字時，取第一個 `{` 到最後一個 `}` |
+| 格式不對 | 解不開成會議紀錄時，錯誤訊息加上「這個模型可能不支援 JSON 輸出，可以換一個模型試試」 |
+| 模型清單 | `GET <網址>/models` 的 `data[].id` |
+| 設定 | 網址、模型存在 UserDefaults（`openaiCompatibleBaseURL`、`openaiCompatibleModel`）；key 存鑰匙圈 account `openaiCompatible`，可以不填 |
+| 常用網址 | Groq `https://api.groq.com/openai/v1`、OpenRouter `https://openrouter.ai/api/v1`、Ollama `http://localhost:11434/v1`、LM Studio `http://localhost:1234/v1` |
+
+- 網址只接受 http、https；去掉結尾的 `/`，使用者貼了完整的 `…/chat/completions` 也去掉那一段。
+- 模型必填，沒有預設：沒填時錯誤「還沒有填模型名稱」。
+- 逾時一樣 20 分鐘（本機模型可能很慢）。
+- 隱私說明（R17.5）：主機是 `localhost`、`127.0.0.1`、`::1` 時寫「送到這台 Mac 上的服務，不會離開電腦」；其他寫「送到 <主機>」。用 http 而且不是本機時，加上「用 http 傳送沒有加密」。
+
+### 19.4 設定頁、引導、環境檢查（R17.5、R17.6）
+
+- 整理工具選單多「Gemini API」「OpenAI 相容 API」。
+- Gemini：跟 Anthropic、OpenAI 一樣，有 API key、模型（可以從清單選）、測試。
+- OpenAI 相容 API：網址欄位，旁邊的「常用」選單可以填入常用網址；API key（說明本機服務可以不填）；模型（「選擇」列出 `/models`）；測試。
+- 首次使用引導：選單多這兩項。Gemini 跟其他 API 一樣在引導裡填 key；OpenAI 相容 API 要填的比較多，引導裡只提示「網址、模型到『設定 → 整理工具』填寫」。
+- 環境檢查多「Gemini API key」「OpenAI 相容 API」（有沒有填網址和模型，有的話顯示主機）。
+- 「由 xx 整理」顯示「Gemini API」「OpenAI 相容 API」。
+
+### 19.5 驗證（R17.7）
+
+- DEBUG 加 `shiyinctl llmurl <anthropic|openai|gemini> <網址>`：把 API 的網址改到本機的假伺服器（只在 DEBUG 建置，不存設定）。
+- 假伺服器 `scripts/dev/fake-llm-server.py`：記下每個請求（路徑、header、body，key 只記前幾個字），依路徑回固定的成功回應；可以設定讓 `json_schema` 回 400，測退回 JSON 模式。
+- 先在 3.3 的程式加上 `llmurl`，送一次 Anthropic、OpenAI 的整理和逐字稿校正，記下請求；改成共同介面後再送一次，比對網址、header 和解析後的 JSON。Swift 字典轉 JSON 的鍵順序每次執行可能不同，所以不比位元組。
+- Claude CLI、Codex CLI 各實際整理一次。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -547,6 +616,9 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | D20 | 會議內容依會議語言設定字形，介面維持繁中字形 | 全部改成日文字形：中文會議的漢字會變成日文寫法；不處理：日文會議的漢字顯示成繁中寫法，日本使用者會覺得不對 |
 | D21 | 自動偵測只在開頭偵測一次、只比中英日三種、要超過門檻才切換 | 一直偵測、每句切換：即時辨識同時只能用一種語言，頻繁重新開始會漏字；開頭寒暄很短容易判斷錯，所以要累積夠多說話內容 |
 | D11 | 正式轉錄可以改用 macOS 內建辨識（預設仍是 Breeze） | 只用 Breeze：真人中文會議（AISHELL-4，遠距麥克風陣列、6 人、38 分鐘）上，Breeze 的 CER 29.1%、macOS 內建 25.2%，內建還快 160 倍、不用下載 1.7 GB 模型。只用內建：合成的中英夾雜會議上，內建的英文專有名詞幾乎都錯（關鍵詞 1/6，Breeze 加詞彙表 5/6），台灣公司的會議以這種情況為主，所以預設還是 Breeze |
+| D22 | 整理工具做成共同介面（`LLMBackend`），enum 保留當代號 | 繼續在 enum 加 case、在 `LLMClient` 加 switch：到六種之後每個 switch 都要改，OpenAI 相容 API 還有網址這種只屬於它的設定，switch 會越來越長、各家的程式混在同一個檔案。做成外掛或動態註冊：整理工具只有六種，還要配合設定頁、引導、隱私說明，外掛的彈性用不到。代價：原本四種的程式碼要搬家，要確認請求沒變（§19.5） |
+| D23 | Gemini 用 Interactions API，一律 `store: false` | generateContent：官方 2026-06 起列為舊版（仍支援），新模型和新功能只在 Interactions 推出。Interactions 預設會在 Google 保存請求（付費 55 天、免費 1 天），會議內容不該留在那裡，所以關掉。Gemini 的 OpenAI 相容端點：使用者可以自己用「OpenAI 相容 API」接，但 issue 的回覆答應 Gemini 有自己的選項，填 key 就能用 |
+| D24 | OpenAI 相容 API 用 Chat Completions，JSON schema 不支援時退回 JSON 模式 | Responses API（OpenAI 官方那一種用的）：Groq、Ollama、LM Studio 等相容服務主要支援 Chat Completions。只用 JSON 模式：支援 JSON schema 的模型就少了格式保證。只用 JSON schema：Groq 只有少數模型支援，其他模型會回 400 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
