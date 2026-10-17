@@ -10,12 +10,15 @@ struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("hasSeenGuide") private var hasSeenGuide = false
     @AppStorage(AppSettings.providerKey) private var provider = LLMProvider.claude.rawValue
-    @State private var step = 0
+    @State private var step: Int
     @State private var micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @State private var notificationsAllowed: Bool?
     @State private var speechInstalled: Bool?
     @State private var speechInstalling = false
     @State private var apiKey = ""
+
+    /// startStep：DEBUG 的 preview 指令直接打開某一步（design §19.5）
+    init(startStep: Int = 0) { _step = State(initialValue: startStep) }
 
     private let titles = [String(localized: "歡迎使用拾音"), String(localized: "權限"), String(localized: "下載模型"), String(localized: "整理工具"), String(localized: "準備好了")]
 

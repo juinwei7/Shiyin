@@ -160,6 +160,20 @@ enum DebugControl {
         case "setkey": Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        case "preview":   // preview <settings|onboarding [步驟]>
+            // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
+            // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
+            let onboarding = args.count > 1 && args[1] == "onboarding"
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 560), styleMask: [.borderless],
+                                  backing: .buffered, defer: false)
+            window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
+            window.identifier = NSUserInterfaceItemIdentifier(onboarding ? "onboarding-preview" : "settings-preview")
+            window.title = window.identifier!.rawValue
+            window.isReleasedWhenClosed = false
+            window.contentView = onboarding
+                ? NSHostingView(rootView: AnyView(OnboardingView(startStep: args.count > 2 ? Int(args[2]) ?? 0 : 0).environment(model)))
+                : NSHostingView(rootView: AnyView(SettingsView().environment(model)))
+            window.orderFrontRegardless()
         case "notifystatus":
             Task {
                 let settings = await UNUserNotificationCenter.current().notificationSettings()

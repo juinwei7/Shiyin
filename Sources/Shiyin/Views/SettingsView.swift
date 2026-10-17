@@ -218,8 +218,9 @@ struct ProviderSettings: View {
             if OpenAICompatibleAPI.isLocal(url) {
                 return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台 Mac 上的服務（\(host)），不會離開電腦。錄音檔不會送出。")
             }
-            let text = String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。")
-            return url.scheme?.lowercased() == "http" ? text + " " + String(localized: "用 http 傳送沒有加密，建議改用 https。") : text
+            return url.scheme?.lowercased() == "http"
+                ? String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。用 http 傳送沒有加密，建議改用 https。")
+                : String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。")
         }
     }
 }

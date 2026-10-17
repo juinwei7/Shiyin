@@ -590,6 +590,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - DEBUG 加 `shiyinctl llmurl <anthropic|openai|gemini|openaiCompatible> <網址>`：把 API 的網址改到本機的假伺服器（只在 DEBUG 建置，不存設定；OpenAI 相容 API 是取代設定裡的網址）。
 - DEBUG 加 `shiyinctl llmkey <account> <key>`、`llmprovider <整理工具> [模型]`：測試用的 key、整理工具、模型只放在記憶體。不能用 `setkey` 和 `defaults write`：鑰匙圈的項目綁定建立它的 app 簽章，ad-hoc 重建或使用者自己的拾音去讀都會跳出系統的存取確認；整理工具的設定跟使用者的拾音共用。
 - `shiyinctl listmodels <整理工具> <結果.json>`：設定頁「選擇」用的模型清單。
+- `shiyinctl preview <settings|onboarding [步驟]>`：設定視窗要 app 在前景才打得開，會搶走使用者的畫面；這個指令把設定頁放進桌面層的無邊框視窗（被所有視窗蓋住；放在螢幕外的視窗截不到），用 `screencapture -l` 截圖，不切換前景。
 - 假伺服器 `scripts/dev/fake-llm-server.py`：記下每個請求（路徑、header、body，key 只記前幾個字），依路徑回固定的成功回應；可以設定讓 `json_schema` 回 400，測退回 JSON 模式。
 - 先在 3.3 的程式加上 `llmurl`，送一次 Anthropic、OpenAI 的整理和逐字稿校正，記下請求；改成共同介面後再送一次，比對網址、header 和解析後的 JSON。Swift 字典轉 JSON 的鍵順序每次執行可能不同，所以不比位元組。
 - Claude CLI、Codex CLI 各實際整理一次。

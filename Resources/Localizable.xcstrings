@@ -3480,6 +3480,17 @@
         }
       }
     },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 %@。錄音檔不會送出。用 http 傳送沒有加密，建議改用 https。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to %@. The recording is never sent. http isn't encrypted; use https if you can."
+          }
+        }
+      }
+    },
     "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。": {
       "extractionState": "manual",
       "localizations": {
@@ -4962,17 +4973,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Environment check"
-          }
-        }
-      }
-    },
-    "用 http 傳送沒有加密，建議改用 https。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "http isn't encrypted; use https if you can."
           }
         }
       }
