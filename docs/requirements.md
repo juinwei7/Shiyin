@@ -464,9 +464,9 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | 需求 | 結果 | 說明 |
 |---|---|---|
 | R17.1 Gemini API | ✅ | 真的 key（免費方案）：中文、日文會議的整理、逐字稿校正、校稿都成功，20 秒左右；請求帶 `store: false`；錯誤（陣列格式、key 錯誤、`incomplete`、沒有 key）在假伺服器上都看得懂（T-K2） |
-| R17.2 OpenAI 相容 API | 🟡 | 假伺服器上整理、校正成功；網址、常用服務、模型清單、可以不填 key。還沒用真的服務測（T-K3） |
-| R17.3 所有 AI 功能 | 🟡 | Gemini 用真的 key 跑過整理、逐字稿校正、校稿；OpenAI 相容 API 只在假伺服器上跑過（T-K5） |
-| R17.4 退回 JSON 模式 | ✅ | `json_schema` 回 400 時改用 `json_object` 成功；圍欄、前後文字讀得出來；格式不對時建議換模型（T-K3） |
+| R17.2 OpenAI 相容 API | ✅ | 用 Codex 回答的本機伺服器實際整理、校正、校稿成功；網址、常用服務、模型清單、可以不填 key。真的第三方服務只測到 OpenAI 的模型清單和錯誤（帳戶沒有額度），Groq、Ollama 沒有測（T-K3） |
+| R17.3 所有 AI 功能 | ✅ | Gemini（真的 key）、OpenAI 相容 API（Codex 回答）都跑過整理、逐字稿校正、校稿（T-K5） |
+| R17.4 退回 JSON 模式 | ✅ | `json_schema` 回 400 時改用 `json_object`，真的模型只靠提示詞也輸出正確格式（4 次全部成功）；圍欄、前後文字讀得出來；格式不對時建議換模型（T-K3） |
 | R17.5 隱私說明 | ✅ | Gemini 寫 Google；OpenAI 相容 API 依主機寫，本機寫不會離開電腦，http 遠端提醒沒有加密（T-K4） |
 | R17.6 首次使用引導 | ✅ | 7 個選項；OpenAI 相容 API 提示到設定填寫（T-K4） |
 | R17.7 原本四種不變 | ✅ | Anthropic、OpenAI 的 6 個請求跟 3.3 相同；Claude、Codex CLI 實際整理、校正成功（T-K1） |

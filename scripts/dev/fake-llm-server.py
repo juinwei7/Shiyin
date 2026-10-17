@@ -2,9 +2,12 @@
 """驗證用的假 LLM 伺服器（design §19.5）：記下 app 送出的請求，回固定的成功回應。
 
 用法：
-  python3 scripts/dev/fake-llm-server.py <記錄檔.jsonl> [埠，預設 18766]
+  python3 scripts/dev/fake-llm-server.py <記錄檔.jsonl> [埠，預設 18766] [--codex]
   shiyinctl llmurl anthropic http://127.0.0.1:18766       # Anthropic、OpenAI、Gemini 改送到這裡
   OpenAI 相容 API 的網址直接填 http://127.0.0.1:18766/v1
+
+加 --codex：OpenAI 相容 API（/chat/completions）改由已登入的 codex CLI 回答，用真的模型測。
+json_schema 時把 schema 交給 codex 的 --output-schema；退回 JSON 模式時不給 schema，只靠提示詞。
 
 只聽 127.0.0.1。記錄檔每行一個請求：方法、路徑、header（key 只留前 6 個字）、body（解析成 JSON）。
 改變行為：POST /__mode，body 是 JSON，例如
@@ -16,11 +19,17 @@
   {}                               改回預設
 """
 import json
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-LOG = sys.argv[1]
-PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 18766
+USE_CODEX = "--codex" in sys.argv
+ARGS = [a for a in sys.argv[1:] if a != "--codex"]
+LOG = ARGS[0]
+PORT = int(ARGS[1]) if len(ARGS) > 1 else 18766
 MODE = {}
 SECRET_HEADERS = {"authorization", "x-api-key", "x-goog-api-key"}
 
@@ -35,6 +44,24 @@ NOTES = {
     "reviewItems": [],
 }
 CORRECTIONS = {"corrections": []}
+
+
+def ask_codex(messages, schema):
+    """用 codex exec 回答（跟 app 的 CodexCLI 一樣：系統提示詞接在使用者提示詞前面）"""
+    prompt = "\n\n".join(m["content"] for m in messages)
+    with tempfile.TemporaryDirectory() as d:
+        out = os.path.join(d, "out.txt")
+        codex = "/opt/homebrew/bin/codex" if os.path.exists("/opt/homebrew/bin/codex") else shutil.which("codex")
+        args = [codex, "exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only",
+                "--color", "never", "-o", out]
+        if schema is not None:
+            path = os.path.join(d, "schema.json")
+            with open(path, "w") as f:
+                json.dump(schema, f)
+            args += ["--output-schema", path]
+        subprocess.run(args + ["-"], input=prompt.encode(), cwd=d, capture_output=True, timeout=600)
+        with open(out, encoding="utf-8") as f:
+            return f.read()
 
 
 def answer_for(text):
@@ -121,7 +148,11 @@ class Handler(BaseHTTPRequestHandler):
                                                   "type": "invalid_request_error"}})
             source = json.dumps(fmt.get("json_schema", {}).get("schema", {})) if fmt.get("type") == "json_schema" \
                 else body["messages"][0]["content"]
-            out = json.dumps(answer_for(source), ensure_ascii=False)
+            if USE_CODEX:
+                schema = fmt.get("json_schema", {}).get("schema") if fmt.get("type") == "json_schema" else None
+                out = ask_codex(body["messages"], schema)
+            else:
+                out = json.dumps(answer_for(source), ensure_ascii=False)
             if MODE.get("fence"):
                 out = "好的，以下是結果：\n```json\n" + out + "\n```"
             return self.reply(200, {"choices": [{"index": 0, "finish_reason": "stop",
