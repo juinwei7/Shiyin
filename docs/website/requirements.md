@@ -46,7 +46,7 @@
 
 ## 需要使用者做的事
 
-Cloudflare 的帳號設定只有你能做：建立 API token（權限 Cloudflare Pages：Edit）、找到 Account ID，加到 GitHub repo 的 Secrets。design §8 有步驟。
+Cloudflare 的帳號設定只有你能做：建立 API token（權限 Cloudflare Pages：Edit）、找到 Account ID，加到 GitHub repo 的 Secrets。design §8 有步驟。（2026-10-17 已完成）
 
 ## 驗收
 

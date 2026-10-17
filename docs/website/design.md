@@ -167,8 +167,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 
 實際的設定（2026-10-17）：
 
-- `shiyin.pages.dev` 已經被別人用了，Pages 專案 `shiyin` 拿到的是 `shiyin-biv.pages.dev`
-- 網址用使用者的網域 `shiyin.weibuilds.com`：Pages 專案加上這個自訂網域，weibuilds.com 的 DNS 加一筆 CNAME `shiyin` → `shiyin-biv.pages.dev`（通過 Proxy）；Variables 的 `SHIYIN_SITE_URL` 設成 `https://shiyin.weibuilds.com`，`build.mjs` 的預設也改成這個
+- `shiyin.pages.dev` 已經被別人用了，網址改用使用者的網域 `shiyin.weibuilds.com`：Pages 專案加上這個自訂網域；Variables 的 `SHIYIN_SITE_URL` 設成 `https://shiyin.weibuilds.com`，`build.mjs` 的預設也改成這個
 - token 只有「Cloudflare Pages：編輯」。這個權限沒辦法限定到單一專案，帳戶裡其他 Pages 專案也在範圍內
 
 ## 9. 品質
