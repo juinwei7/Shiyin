@@ -554,7 +554,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | 內容 | `model`、`system_instruction`、`input`（提示詞）、`response_format: {type: "text", mime_type: "application/json", schema}`、`store: false` |
 | 結果 | `status` 是 `completed`：把 `steps` 裡 `type == "model_output"` 的 `content[]`（`type == "text"`）的 `text` 接起來。`incomplete`：錯誤「回應不完整（可能超過長度上限）」。其他狀態：錯誤，附上狀態 |
 | 錯誤 | 錯誤回應可能包在陣列裡（`[{"error": …}]`，實測 Interactions 是這樣），兩種格式都要讀；key 錯誤是 HTTP 400 加上 `API key not valid`，要跟 401 一樣提示 key 錯誤 |
-| 模型清單 | `GET /v1beta/models?pageSize=1000`，取名稱是 `models/gemini-…` 的，去掉 `models/`；排除名稱有 embedding、tts、image、live、audio 的 |
+| 模型清單 | `GET /v1beta/models?pageSize=1000`，取名稱是 `models/gemini-…`、`supportedGenerationMethods` 有 `generateContent` 的，去掉 `models/`。圖片、語音、機器人等模型也有 `generateContent`，所以再排除名稱有 embedding、tts、image、live、audio、banana、robotics、computer-use、transcribe、customtools、omni 的（2026-10 實際清單 47 個，留下 16 個） |
 | 預設模型 | `gemini-3.8-flash`（2026-10 官方建議的一般用途模型） |
 | key | 鑰匙圈 account `gemini` |
 

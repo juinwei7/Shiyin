@@ -70,10 +70,14 @@ class Handler(BaseHTTPRequestHandler):
         if MODE.get("bad_key"):
             return self.reply(401, {"error": {"message": "Invalid API Key"}})
         if self.path.startswith("/v1beta/models"):
+            text = ["generateContent", "countTokens"]
             return self.reply(200, {"models": [
-                {"name": "models/gemini-3.8-flash"}, {"name": "models/gemini-4-argon"},
-                {"name": "models/gemini-embedding-001"}, {"name": "models/gemini-3.8-flash-tts"},
-                {"name": "models/imagen-4"}]})
+                {"name": "models/gemini-3.8-flash", "supportedGenerationMethods": text},
+                {"name": "models/gemini-4-argon", "supportedGenerationMethods": text},
+                {"name": "models/gemini-embedding-001", "supportedGenerationMethods": ["embedContent"]},
+                {"name": "models/gemini-3.8-flash-tts", "supportedGenerationMethods": text},
+                {"name": "models/gemini-3.8-live", "supportedGenerationMethods": ["bidiGenerateContent"]},
+                {"name": "models/imagen-4", "supportedGenerationMethods": ["predict"]}]})
         if self.path.endswith("/models") or "/models?" in self.path:
             return self.reply(200, {"data": [{"id": "fake-model-a"}, {"id": "fake-model-b"}]})
         self.reply(404, {"error": {"message": "not found"}})

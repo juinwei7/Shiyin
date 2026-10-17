@@ -47,9 +47,11 @@ struct GeminiAPI: LLMBackend {
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let list = object["models"] as? [[String: Any]] else { return [] }
-        // 只留產生文字的 Gemini 模型（design §19.2）
-        let excluded = ["embedding", "tts", "image", "live", "audio"]
-        return list.compactMap { $0["name"] as? String }
+        // 只留能整理文字的 Gemini 模型（design §19.2）：圖片、語音、機器人等模型也支援 generateContent，要再依名稱排除
+        let excluded = ["embedding", "tts", "image", "live", "audio", "banana", "robotics", "computer-use", "transcribe",
+                        "customtools", "omni"]
+        return list.filter { ($0["supportedGenerationMethods"] as? [String] ?? []).contains("generateContent") }
+            .compactMap { $0["name"] as? String }
             .filter { $0.hasPrefix("models/gemini-") }
             .map { String($0.dropFirst("models/".count)) }
             .filter { name in !excluded.contains { name.contains($0) } }
