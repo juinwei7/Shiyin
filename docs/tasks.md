@@ -413,9 +413,10 @@
 
 來源：GitHub issue #1，照使用者在 issue 裡的回覆做。順序：先記下 3.3 送出的請求，再改成共同介面、比對沒變，最後加新的整理工具。
 
-- [ ] **T-K0 假伺服器與 `llmurl`**（§19.5）
+- [x] **T-K0 假伺服器與 `llmurl`**（§19.5）
   - `scripts/dev/fake-llm-server.py`；在 3.3 的程式加 DEBUG 指令 `llmurl`
   - 驗證：用 3.3 的程式送 Anthropic、OpenAI 的整理和逐字稿校正，假伺服器記下請求，app 能讀回假伺服器的結果
+  - 結果（2026-10-17）：3.3 的程式加上 DEBUG 指令 `llmurl`、`llmkey`、`llmprovider`、`listmodels`。示範資料的複本（會議 2）用 Anthropic、OpenAI 各整理一次、逐字稿校正一次，app 讀回假伺服器的結果（標題變成「假伺服器的會議紀錄」、`notes_by` 是 anthropic／openai），模型清單各取一次，共 6 個請求，存成基準。中途出過問題：一開始用 `setkey` 把假 key 寫進鑰匙圈、用 `defaults write` 換整理工具，重建 DEBUG 版後讀 key 跳出系統的鑰匙圈存取確認；使用者剛好開著自己的拾音，共用的整理工具設定也被改成 openai。已改回 claude（跟測試前的 defaults 比對相同）、刪掉兩把假 key，改用只放記憶體的 `llmkey`、`llmprovider`（design §19.5）
 - [ ] **T-K1 共同介面**（§19.1，D22，R17.7）
   - `LLMBackend`、`Notes/Backends/`，原本四種搬過去
   - 驗證：Anthropic、OpenAI 的請求跟 T-K0 記下的相同（網址、header、解析後的 JSON）；Claude CLI、Codex CLI 各實際整理一次
@@ -478,3 +479,4 @@
 - 2026-10-17：使用者回報編輯會議紀錄按「完成」閃退，從 v3.2.0 出 3.2.1 只修這個問題（見「使用者回報的修正（3.2.1）」），同一個修正併回 3.3。順便補回 3.2.0 時誤刪的「變更紀錄」標題。
 - 2026-10-17：發布 3.3.0（T-J8）。官網（`website` 分支）照它的任務 S7，發布後合併到 main；Cloudflare 的設定和網址還要使用者處理（見 `docs/website/tasks.md` S7）。
 - 2026-10-17：開始 3.4（GitHub issue #1）：加 Gemini API、OpenAI 相容 API，整理工具改成共同介面（使用者提出，決策 D22）。先寫需求第 13 節、設計 §19，再寫程式。
+- 2026-10-17：T-K0 驗證時用 `setkey` 把假 API key 寫進使用者的鑰匙圈、用 `defaults write` 換整理工具。ad-hoc 重建後的 app 讀不到舊 app 建立的鑰匙圈項目，跳出系統的存取確認；使用者那時開著自己的拾音，共用的整理工具設定被改成 openai。已還原設定、刪掉假 key。之後測 API 一律用只放記憶體的 `llmkey`、`llmprovider`，不寫鑰匙圈、不改共用設定。

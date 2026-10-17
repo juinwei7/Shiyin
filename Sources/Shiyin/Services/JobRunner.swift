@@ -24,7 +24,17 @@ enum AppSettings {
 
     private static var d: UserDefaults { .standard }
 
-    static var provider: LLMProvider { LLMProvider(rawValue: d.string(forKey: providerKey) ?? "") ?? .claude }
+    #if DEBUG
+    /// shiyinctl llmprovider：只在記憶體換整理工具，不改跟使用者共用的設定（design §19.5）
+    nonisolated(unsafe) static var debugProvider: LLMProvider?
+    #endif
+
+    static var provider: LLMProvider {
+        #if DEBUG
+        if let debugProvider { return debugProvider }
+        #endif
+        return LLMProvider(rawValue: d.string(forKey: providerKey) ?? "") ?? .claude
+    }
     static var model: String { d.string(forKey: provider.modelKey) ?? "" }
     static var autoSummarize: Bool { d.object(forKey: autoSummarizeKey) as? Bool ?? true }
     static var compressAudio: Bool { d.object(forKey: compressAudioKey) as? Bool ?? true }

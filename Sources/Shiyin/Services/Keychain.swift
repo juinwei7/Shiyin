@@ -5,7 +5,15 @@ import Security
 enum Keychain {
     static let service = "com.weiwei.shiyin.apikey"
 
+    #if DEBUG
+    /// shiyinctl llmkey：測試用的 key 只放記憶體，不寫進鑰匙圈（design §19.5）
+    nonisolated(unsafe) static var debugKeys: [String: String] = [:]
+    #endif
+
     static func get(_ account: String) -> String? {
+        #if DEBUG
+        if let key = debugKeys[account] { return key }
+        #endif
         var item: CFTypeRef?
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

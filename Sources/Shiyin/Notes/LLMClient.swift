@@ -75,6 +75,19 @@ enum LLMError: LocalizedError {
 enum LLMClient {
     static let timeout: TimeInterval = 20 * 60
 
+    #if DEBUG
+    /// shiyinctl llmurl：把 API 的網址改到本機的假伺服器（design §19.5）
+    static var debugBaseURLs: [LLMProvider: String] = [:]
+    #endif
+
+    /// API 的網址（不含路徑）；DEBUG 建置可以用 llmurl 改掉
+    static func apiBase(_ provider: LLMProvider, _ standard: String) -> String {
+        #if DEBUG
+        if let url = debugBaseURLs[provider] { return url }
+        #endif
+        return standard
+    }
+
     /// 要模型輸出的格式：JSON schema，以及 Anthropic API 用的工具名稱和說明
     struct OutputFormat {
         let schema: String
@@ -178,7 +191,7 @@ enum LLMClient {
             "tools": [["name": format.toolName, "description": format.toolDescription, "input_schema": schema]],
             "tool_choice": ["type": "tool", "name": format.toolName],
         ]
-        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!, timeoutInterval: timeout)
+        var request = URLRequest(url: URL(string: apiBase(.anthropic, "https://api.anthropic.com") + "/v1/messages")!, timeoutInterval: timeout)
         request.httpMethod = "POST"
         request.setValue(key, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
@@ -201,7 +214,7 @@ enum LLMClient {
             "input": prompt,
             "text": ["format": ["type": "json_schema", "name": name, "schema": schemaObject, "strict": true]],
         ]
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/responses")!, timeoutInterval: timeout)
+        var request = URLRequest(url: URL(string: apiBase(.openai, "https://api.openai.com") + "/v1/responses")!, timeoutInterval: timeout)
         request.httpMethod = "POST"
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -231,8 +244,8 @@ enum LLMClient {
     /// 列出可用的模型，給設定頁選（失敗就回空陣列）
     static func listModels(_ provider: LLMProvider) async -> [String] {
         guard provider.usesAPIKey, let key = Keychain.get(provider.keychainAccount) else { return [] }
-        var request = URLRequest(url: URL(string: provider == .anthropic ? "https://api.anthropic.com/v1/models?limit=100"
-                                          : "https://api.openai.com/v1/models")!)
+        var request = URLRequest(url: URL(string: provider == .anthropic ? apiBase(.anthropic, "https://api.anthropic.com") + "/v1/models?limit=100"
+                                          : apiBase(.openai, "https://api.openai.com") + "/v1/models")!)
         if provider == .anthropic {
             request.setValue(key, forHTTPHeaderField: "x-api-key")
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
