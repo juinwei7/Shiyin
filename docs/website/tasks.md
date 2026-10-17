@@ -4,9 +4,9 @@
 
 ## 階段 S：網站
 
-- [~] **S0 設定（使用者）**
-  - 已定：首頁標題「Mac 上的會議紀錄 app」、網址先用 `shiyin.pages.dev`、視覺改第二版（design §3、§5）
-  - 待使用者：Cloudflare API token、Account ID 加到 GitHub Secrets（design §8）
+- [x] **S0 設定（使用者）**
+  - 已定：首頁標題「Mac 上的會議紀錄 app」、網址 `shiyin.weibuilds.com`（`shiyin.pages.dev` 被別人用了）、視覺改第二版（design §3、§5）
+  - 結果（2026-10-17）：使用者建立 API token（Cloudflare Pages：編輯），用 Cloudflare 的驗證 API 確認有效後設進 GitHub Secrets；Account ID、Variables 的 `SHIYIN_SITE_URL` 也設好（design §8）
 - [x] **S1 建立專案**（design §6）
   - `site/build.mjs`（不用框架、沒有相依套件）、`site/src/` 的文字、版本說明、頁面、樣式，`site/serve.mjs` 本機預覽
   - 驗證：Node 26 和 Node 20（GitHub ubuntu 機器上的版本）都能建置，產生的圖檔一樣
@@ -29,16 +29,20 @@
   - 分享預覽圖 `og.png`、`og-en.png`（1200×630，左邊圖示和標題，右邊會議紀錄截圖）、Open Graph、canonical、sitemap、robots、404 頁（noindex）
   - 驗證：Lighthouse（本機）首頁中英文手機版、版本說明手機版、首頁桌機版：效能、無障礙、最佳做法、SEO 都是 100
   - 待上線後：用 Facebook、Threads 的連結預覽看標題、說明和圖
-- [~] **S6 自動部署**（design §8）
+- [x] **S6 自動部署**（design §8）
   - `.github/workflows/site.yml`：推到 main 改到網站或截圖、「打包」流程推 tag 跑完、手動；沒有 Cloudflare secrets 時只建置不部署
   - CLAUDE.md 加上版本說明的格式規定和官網指令
   - 驗證：本機建置、YAML 解析通過。**還沒在 GitHub 上跑過**，要等合併到 main、設定好 secrets 之後：手動執行一次、推一個只改網站的 commit，確認 Cloudflare 自動部署
-- [~] **S7 上線**
+  - 結果（2026-10-17）：沒有 secrets 時推到 main 只建置、出現警告（run 39016565859）；設好之後手動執行，自動建立 Pages 專案 `shiyin` 並部署（run 39017983285）；推一個改到 `site/` 的 commit 也自動部署（run 39018468855）。發布新版觸發的部署，等下一次發布時確認
+- [x] **S7 上線**
   - 3.3.0 發布之後再合併到 main（首頁寫了日文會議，3.2.0 還沒有）
   - README 中英文加上官網連結；GitHub repo 的 About 加網址
   - 驗證：正式網址的首頁、版本說明、下載都正常；發布新版後版本說明自動更新
   - 結果（2026-10-17）：3.3.0 發布後合併到 main。3.3.0 的版本說明先用 `--releases` 拿假的 JSON 試建置，中文、英文版本說明各 6 條都正確。合併時把中文、英文的「磁碟空間」補上日文會議的約 570 MB（日文版本來就有）
-  - **待使用者**：（1）`shiyin.pages.dev` 已經被別人用了（打開是 nginx 的預設頁），Pages 專案名稱要換一個，或改用自己的網域，再設 `CLOUDFLARE_PAGES_PROJECT`、`SHIYIN_SITE_URL`；（2）GitHub Secrets 還沒有 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`，現在推到 main 只會建置、不會部署。網址定了、部署成功之後再加 README 連結和 repo 的 About
+  - 網址：Pages 專案加上自訂網域 `shiyin.weibuilds.com`，使用者在 weibuilds.com 的 DNS 加 CNAME `shiyin` → `shiyin-biv.pages.dev`（通過 Proxy），約一分鐘後生效、憑證核發好
+  - 正式網址實測：`/`、`/en/`、`/ja/`、`/changelog/`、`/en/changelog/`、`sitemap.xml`、`og.png` 都是 200，不存在的網址回 404；`/download`、`/ja/download` 轉到 `Shiyin-3.3.0.dmg`；canonical、分享預覽圖都是正式網址；版本說明有 3.3.0
+  - README 中英文的開頭和安裝步驟加上官網連結；repo 的 About 網址設成 `https://shiyin.weibuilds.com`
+  - 還沒做：用 Facebook、Threads 的連結預覽看標題、說明和圖（S5）
 
 ## 變更紀錄
 
@@ -46,3 +50,4 @@
 - 2026-10-17：不用 Astro，改成沒有相依套件的 Node 程式（design §6）：專案在 iCloud 同步的桌面，不放 `node_modules`。
 - 2026-10-17：加上日文版和語言下拉選單（S4b）。日文版的版本說明直接用英文，不要求每次發布多寫日文。
 - 2026-10-17：發布後重新部署改用 `workflow_run`（打包流程跑完）觸發，不用改 `release.yml`（design §8）。
+- 2026-10-17：`shiyin.pages.dev` 被別人用了（打開是 nginx 的預設頁），網址改用使用者的網域 `shiyin.weibuilds.com`（design §8、requirements「已決定」2）。
