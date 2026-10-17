@@ -1,6 +1,6 @@
 <img src="docs/images/icon.png" width="96" alt="拾音圖示">
 
-**繁體中文** | [English](README.en.md)
+**繁體中文** | [English](README.en.md) | 官網：[shiyin.weibuilds.com](https://shiyin.weibuilds.com)
 
 # 拾音 Shiyin
 
@@ -73,7 +73,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 
 ### 用 DMG 安裝
 
-1. 取得 `Shiyin-<版本>.dmg`（這個 repo 的 Releases，或向維護的人拿），打開後把「拾音」拖到旁邊的 Applications（應用程式）。
+1. 取得 `Shiyin-<版本>.dmg`（[官網](https://shiyin.weibuilds.com)、這個 repo 的 Releases，或向維護的人拿），打開後把「拾音」拖到旁邊的 Applications（應用程式）。
 2. 拾音沒有經過 Apple 公證，第一次打開會被擋下：到「系統設定 → 隱私權與安全性」按「仍要打開」（只要做一次）。DMG 裡的「安裝說明.pdf」有完整步驟（英文版是「Install Guide.pdf」）。
 3. 第一次打開會出現引導：允許麥克風、下載轉錄模型（約 1.7 GB）、選整理工具。每一步都可以略過，之後在設定裡補做。
 4. 3.1.1 起，拾音會自動檢查這個 repo 的 Releases 有沒有新版，詢問你之後自動更新。

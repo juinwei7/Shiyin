@@ -40,7 +40,7 @@
 ## 已決定
 
 1. 首頁標題：「Mac 上的會議紀錄 app」（design §5）。
-2. 網址：先用 Cloudflare 給的 `shiyin.pages.dev`；名稱被用走或之後接自己的網域時，設定 `SHIYIN_SITE_URL` 就好（design §8）。
+2. 網址：`https://shiyin.weibuilds.com`（使用者的網域，2026-10-17）。原本打算用的 `shiyin.pages.dev` 被別人用了（design §8）。
 3. 語言：中文、英文、日文，頁首下拉選單切換（2026-10-17 使用者要求）。日文版的版本說明用英文那一段，不要求每次發布多寫日文。
 4. 視覺：第一版的青瓷綠色塊、宋體大標、假的 app 視窗太像 AI 產生的頁面，改成白底、系統字體、真截圖（design §3）。
 

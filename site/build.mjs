@@ -3,7 +3,7 @@
 //   node site/build.mjs                       讀 GitHub Releases，產生網站
 //   node site/build.mjs --releases <檔案>      改讀這份 JSON（跟 API 同樣格式），不連網路
 //
-// 環境變數：SITE_URL（預設 https://shiyin.pages.dev）、GITHUB_TOKEN（選填，避免 API 次數限制）
+// 環境變數：SITE_URL（預設 https://shiyin.weibuilds.com）、GITHUB_TOKEN（選填，避免 API 次數限制）
 
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -18,7 +18,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
 const { values: args } = parseArgs({ options: { releases: { type: 'string' }, out: { type: 'string' } } });
 const out = path.resolve(args.out ?? path.join(here, 'dist'));
-const site = (process.env.SITE_URL || 'https://shiyin.pages.dev').replace(/\/+$/, '');
+const site = (process.env.SITE_URL || 'https://shiyin.weibuilds.com').replace(/\/+$/, '');
 const SHOTS = ['docs/images/summary.png', 'docs/images/recording.png', 'docs/images/transcript.png',
   'docs/images/en/summary.png', 'docs/images/en/recording.png', 'docs/images/en/transcript.png'];
 

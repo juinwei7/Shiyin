@@ -110,7 +110,7 @@
 - 截圖：只有一份來源，是 README 用的 `docs/images`（英文版用 `docs/images/en`）。建置時複製 PNG 當備援；網頁優先用 AVIF（1920 和 960 寬兩種，品質 60，大小約原本的四分之一，文字看不出差別）。缺 AVIF 時建置失敗，提醒先跑 `make-images.sh`。
 - 網址：`/`、`/changelog/`、`/en/`、`/en/changelog/`、`/ja/`、`/ja/changelog/`、`/download`、404 頁（`/404.html`、`/en/404.html`、`/ja/404.html`）。
 - 日文版：介面名稱照 app 的英文寫（「Record」「To confirm」），常見問題和下載區寫清楚 app 只有英文、繁體中文介面；截圖用英文版的；字體改用 Hiragino Sans（`:lang(ja)`），不然漢字會用蘋方的中文字形。
-- SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.pages.dev`。
+- SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.weibuilds.com`。
 - `_headers`：`nosniff`、Referrer-Policy、CSP（不允許任何 script）、圖片快取一天。
 
 ## 7. 版本說明自動更新
@@ -164,6 +164,12 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
    - Secrets 加上 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`
    - 第一次部署後看 Pages 給的網址；如果 `shiyin.pages.dev` 被用走（會變成 `shiyin-xxx.pages.dev`），或之後接自己的網域，在 Variables 加上 `SHIYIN_SITE_URL`（例如 `https://shiyin-xxx.pages.dev`），重新執行一次
 4. 有自己的網域的話，在 Pages 專案的 Custom domains 加上
+
+實際的設定（2026-10-17）：
+
+- `shiyin.pages.dev` 已經被別人用了，Pages 專案 `shiyin` 拿到的是 `shiyin-biv.pages.dev`
+- 網址用使用者的網域 `shiyin.weibuilds.com`：Pages 專案加上這個自訂網域，weibuilds.com 的 DNS 加一筆 CNAME `shiyin` → `shiyin-biv.pages.dev`（通過 Proxy）；Variables 的 `SHIYIN_SITE_URL` 設成 `https://shiyin.weibuilds.com`，`build.mjs` 的預設也改成這個
+- token 只有「Cloudflare Pages：編輯」。這個權限沒辦法限定到單一專案，帳戶裡其他 Pages 專案也在範圍內
 
 ## 9. 品質
 

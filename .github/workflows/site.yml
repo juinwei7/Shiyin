@@ -5,7 +5,7 @@
 #
 # 需要的設定（Settings → Secrets and variables → Actions）：
 #   secrets.CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID  沒有就只建置、不部署
-#   vars.SHIYIN_SITE_URL                                  選填，網址不是 https://shiyin.pages.dev 時設定
+#   vars.SHIYIN_SITE_URL                                  選填，網址不是 https://shiyin.weibuilds.com 時設定
 #   vars.CLOUDFLARE_PAGES_PROJECT                         選填，Pages 專案名稱，預設 shiyin
 name: 官網
 
