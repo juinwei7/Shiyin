@@ -24,6 +24,7 @@ struct ProviderSettings: View {
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
     @AppStorage(AppSettings.correctTranscriptKey) private var correctTranscript = true
     @State private var modelName = ""
+    @State private var baseURL = ""
     @State private var key = ""
     @State private var keySaved = false
     @State private var availableModels: [String] = []
@@ -62,14 +63,32 @@ struct ProviderSettings: View {
                     }
                 }
             }
+            // OpenAI 相容 API 的網址（design §19.3、§19.4）
+            if current == .openaiCompatible {
+                HStack {
+                    TextField("網址", text: $baseURL, prompt: Text(verbatim: "https://api.groq.com/openai/v1"))
+                        .onSubmit(refreshModels)
+                    Menu("常用") {
+                        ForEach(OpenAICompatibleAPI.presets, id: \.url) { preset in
+                            Button { baseURL = preset.url; refreshModels() } label: { Text(verbatim: "\(preset.name)  \(preset.url)") }
+                        }
+                    }
+                    .fixedSize()
+                }
+                .onChange(of: baseURL) { _, value in UserDefaults.standard.set(value, forKey: OpenAICompatibleAPI.baseURLKey) }
+                if !baseURL.trimmingCharacters(in: .whitespaces).isEmpty && OpenAICompatibleAPI.normalized(baseURL) == nil {
+                    Text("網址要以 http:// 或 https:// 開頭").font(.caption).foregroundStyle(.red)
+                }
+            }
             if current.usesAPIKey {
-                SecureField("API key", text: $key, prompt: Text(keySaved ? "已儲存在鑰匙圈（輸入新的會取代）" : "貼上 API key"))
+                SecureField("API key", text: $key, prompt: Text(keySaved ? "已儲存在鑰匙圈（輸入新的會取代）"
+                                                                 : current.keyOptional ? "可以不填（本機的 Ollama、LM Studio 不需要）" : "貼上 API key"))
                 HStack {
                     Button("儲存 key") {
                         Keychain.set(current.keychainAccount, key)
                         key = ""
                         keySaved = Keychain.get(current.keychainAccount) != nil
-                        Task { availableModels = await LLMClient.listModels(current) }
+                        refreshModels()
                         model.refreshEnvironment()
                     }
                     .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -84,7 +103,8 @@ struct ProviderSettings: View {
             }
             if current != .none {
                 HStack {
-                    TextField("模型", text: $modelName, prompt: Text(current.defaultModel.isEmpty ? "留空使用預設模型" : "預設：\(current.defaultModel)"))
+                    TextField("模型", text: $modelName, prompt: Text(current == .openaiCompatible ? "必填"
+                                                                    : current.defaultModel.isEmpty ? "留空使用預設模型" : "預設：\(current.defaultModel)"))
                     if !availableModels.isEmpty {
                         Menu("選擇") {
                             ForEach(availableModels, id: \.self) { name in Button(name) { modelName = name } }
@@ -166,9 +186,19 @@ struct ProviderSettings: View {
         login = nil
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
+        baseURL = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
         keySaved = current.usesAPIKey && Keychain.get(current.keychainAccount) != nil
         availableModels = []
-        if keySaved { Task { availableModels = await LLMClient.listModels(current) } }
+        if keySaved || (current == .openaiCompatible && !baseURL.isEmpty) { refreshModels() }
+    }
+
+    /// 「選擇」用的模型清單；取的時候換了整理工具就不用
+    private func refreshModels() {
+        let checked = current
+        Task {
+            let models = await LLMClient.listModels(checked)
+            if checked == current { availableModels = models }
+        }
     }
 
     private var privacyText: String {
@@ -178,6 +208,18 @@ struct ProviderSettings: View {
             return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。")
         case .codex, .openai:
             return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。")
+        case .gemini:
+            return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。")
+        case .openaiCompatible:
+            // 說清楚送到哪一台主機；本機的服務不會離開電腦（design §19.3、R17.5）
+            guard let url = OpenAICompatibleAPI.normalized(baseURL), let host = url.host(percentEncoded: false) else {
+                return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到你填的網址。錄音檔不會送出。")
+            }
+            if OpenAICompatibleAPI.isLocal(url) {
+                return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台 Mac 上的服務（\(host)），不會離開電腦。錄音檔不會送出。")
+            }
+            let text = String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。")
+            return url.scheme?.lowercased() == "http" ? text + " " + String(localized: "用 http 傳送沒有加密，建議改用 https。") : text
         }
     }
 }

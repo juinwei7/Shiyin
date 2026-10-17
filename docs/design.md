@@ -566,7 +566,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | 內容 | `model`、`messages`（`system`、`user`）、`response_format: {type: "json_schema", json_schema: {name, schema, strict: true}}` |
 | 退回 | HTTP 400 或 422，而且錯誤訊息提到 `response_format`、`json_schema` 或 `schema`：改成 `response_format: {type: "json_object"}`，系統提示詞後面加上 schema 和「只輸出符合這個 JSON schema 的 JSON 物件」，再送一次 |
 | 結果 | `choices[0].message.content`；`finish_reason` 是 `length`：錯誤「回應不完整（可能超過長度上限）」。內容前後有 ```` ```json ```` 圍欄或其他文字時，取第一個 `{` 到最後一個 `}` |
-| 格式不對 | 解不開成會議紀錄時，錯誤訊息加上「這個模型可能不支援 JSON 輸出，可以換一個模型試試」 |
+| 格式不對 | 回應不是 JSON，或解不開成會議紀錄、逐字稿校正的格式時，錯誤訊息加上「這個模型可能不支援 JSON 輸出，可以換一個模型試試」 |
 | 模型清單 | `GET <網址>/models` 的 `data[].id` |
 | 設定 | 網址、模型存在 UserDefaults（`openaiCompatibleBaseURL`、`openaiCompatibleModel`）；key 存鑰匙圈 account `openaiCompatible`，可以不填 |
 | 常用網址 | Groq `https://api.groq.com/openai/v1`、OpenRouter `https://openrouter.ai/api/v1`、Ollama `http://localhost:11434/v1`、LM Studio `http://localhost:1234/v1` |
@@ -587,8 +587,8 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 19.5 驗證（R17.7）
 
-- DEBUG 加 `shiyinctl llmurl <anthropic|openai|gemini> <網址>`：把 API 的網址改到本機的假伺服器（只在 DEBUG 建置，不存設定）。
-- DEBUG 加 `shiyinctl llmkey <account> <key>`、`llmprovider <整理工具>`：測試用的 key 和整理工具只放在記憶體。不能用 `setkey` 和 `defaults write`：鑰匙圈的項目綁定建立它的 app 簽章，ad-hoc 重建或使用者自己的拾音去讀都會跳出系統的存取確認；整理工具的設定跟使用者的拾音共用。
+- DEBUG 加 `shiyinctl llmurl <anthropic|openai|gemini|openaiCompatible> <網址>`：把 API 的網址改到本機的假伺服器（只在 DEBUG 建置，不存設定；OpenAI 相容 API 是取代設定裡的網址）。
+- DEBUG 加 `shiyinctl llmkey <account> <key>`、`llmprovider <整理工具> [模型]`：測試用的 key、整理工具、模型只放在記憶體。不能用 `setkey` 和 `defaults write`：鑰匙圈的項目綁定建立它的 app 簽章，ad-hoc 重建或使用者自己的拾音去讀都會跳出系統的存取確認；整理工具的設定跟使用者的拾音共用。
 - `shiyinctl listmodels <整理工具> <結果.json>`：設定頁「選擇」用的模型清單。
 - 假伺服器 `scripts/dev/fake-llm-server.py`：記下每個請求（路徑、header、body，key 只記前幾個字），依路徑回固定的成功回應；可以設定讓 `json_schema` 回 400，測退回 JSON 模式。
 - 先在 3.3 的程式加上 `llmurl`，送一次 Anthropic、OpenAI 的整理和逐字稿校正，記下請求；改成共同介面後再送一次，比對網址、header 和解析後的 JSON。Swift 字典轉 JSON 的鍵順序每次執行可能不同，所以不比位元組。

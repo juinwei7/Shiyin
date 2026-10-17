@@ -47,6 +47,20 @@ struct EnvironmentStatus: Equatable {
                  detail: Keychain.get("anthropic") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Anthropic API 時需要"), required: false),
             Item(name: "OpenAI API key", ok: Keychain.get("openai") != nil,
                  detail: Keychain.get("openai") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 OpenAI API 時需要"), required: false),
+            Item(name: "Gemini API key", ok: Keychain.get("gemini") != nil,
+                 detail: Keychain.get("gemini") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Gemini API 時需要"), required: false),
+            compatibleItem(),
         ])
+    }
+
+    /// OpenAI 相容 API：有沒有填網址和模型（design §19.4）
+    @MainActor
+    private static func compatibleItem() -> Item {
+        let url = OpenAICompatibleAPI.normalized(OpenAICompatibleAPI.savedBaseURL)
+        let model = UserDefaults.standard.string(forKey: LLMProvider.openaiCompatible.modelKey) ?? ""
+        let ok = url != nil && !model.isEmpty
+        return Item(name: String(localized: "OpenAI 相容 API"), ok: ok,
+                    detail: ok ? "\(url?.host(percentEncoded: false) ?? "")・\(model)" : String(localized: "沒有填網址或模型"),   // l10n-skip
+                    fix: String(localized: "整理工具選 OpenAI 相容 API 時需要：到「設定 → 整理工具」填網址和模型"), required: false)
     }
 }

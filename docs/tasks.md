@@ -417,13 +417,16 @@
   - `scripts/dev/fake-llm-server.py`；在 3.3 的程式加 DEBUG 指令 `llmurl`
   - 驗證：用 3.3 的程式送 Anthropic、OpenAI 的整理和逐字稿校正，假伺服器記下請求，app 能讀回假伺服器的結果
   - 結果（2026-10-17）：3.3 的程式加上 DEBUG 指令 `llmurl`、`llmkey`、`llmprovider`、`listmodels`。示範資料的複本（會議 2）用 Anthropic、OpenAI 各整理一次、逐字稿校正一次，app 讀回假伺服器的結果（標題變成「假伺服器的會議紀錄」、`notes_by` 是 anthropic／openai），模型清單各取一次，共 6 個請求，存成基準。中途出過問題：一開始用 `setkey` 把假 key 寫進鑰匙圈、用 `defaults write` 換整理工具，重建 DEBUG 版後讀 key 跳出系統的鑰匙圈存取確認；使用者剛好開著自己的拾音，共用的整理工具設定也被改成 openai。已改回 claude（跟測試前的 defaults 比對相同）、刪掉兩把假 key，改用只放記憶體的 `llmkey`、`llmprovider`（design §19.5）
-- [ ] **T-K1 共同介面**（§19.1，D22，R17.7）
+- [x] **T-K1 共同介面**（§19.1，D22，R17.7）
   - `LLMBackend`、`Notes/Backends/`，原本四種搬過去
   - 驗證：Anthropic、OpenAI 的請求跟 T-K0 記下的相同（網址、header、解析後的 JSON）；Claude CLI、Codex CLI 各實際整理一次
-- [ ] **T-K2 Gemini API**（§19.2，R17.1）
+  - 結果（2026-10-17）：`LLMClient.swift` 留 `LLMProvider`、`LLMError`、`LLMBackend` 和入口；四種實作原封搬到 `Notes/Backends/`（`CLIBackends`、`AnthropicAPI`、`OpenAIAPI`），HTTP 共用的部分放 `APIRequest`。假伺服器比對：模型清單 2 個、整理 2 個、逐字稿校正 2 個請求，跟 T-K0 的網址、header、JSON 全部相同；加完 Gemini、OpenAI 相容 API（`APIRequest` 改成可以不檢查狀態）之後再比一次，還是全部相同。CLI 實際跑（示範資料複本的會議 2）：Claude 整理 28 秒、校正 7 秒，Codex 整理 46 秒、校正 13～21 秒，都成功。Claude 的校正有一次卡住 13 分鐘沒有回應（程序閒置、連線還在，那時用手機熱點），取消後重跑 7 秒完成；CLI 的程式跟 3.3 相同，判斷是網路問題
+- [~] **T-K2 Gemini API**（§19.2，R17.1）
   - 驗證：假伺服器上整理成功；錯誤包在陣列裡、key 錯誤、`incomplete` 都顯示看得懂的訊息；用真的 key 整理一場會議（要使用者的 key）
-- [ ] **T-K3 OpenAI 相容 API**（§19.3，R17.2、R17.4）
+  - 結果（2026-10-17，假伺服器）：請求是 `POST /v1beta/interactions`，帶 `x-goog-api-key`、`store: false`、`system_instruction`、`response_format`（mime_type、schema）；整理、逐字稿校正都成功，略過思考步驟只取 `model_output`。模型清單只留 gemini-3.8-flash、gemini-4-argon（去掉 embedding、tts、imagen）。錯誤：`incomplete` →「回應不完整（可能超過長度上限）」；錯誤包在陣列裡的 key 錯誤 →「Gemini 回傳 HTTP 400（API key 錯誤或已失效）：API key not valid…」；沒有 key →「還沒有填 Gemini 的 API key…」。用假 key 打真的 Interactions 端點，回應格式跟假伺服器相同（錯誤包在陣列裡）。還沒用真的 key 測
+- [~] **T-K3 OpenAI 相容 API**（§19.3，R17.2、R17.4）
   - 驗證：假伺服器上整理成功；`json_schema` 回 400 時退回 JSON 模式並成功；結果有圍欄時讀得出來；網址、模型沒填的錯誤；用 Groq 的真 key 整理一場會議（要使用者的 key）
+  - 結果（2026-10-17，假伺服器）：整理、逐字稿校正用 strict `json_schema` 成功；假伺服器對 `json_schema` 回 400（訊息跟 Groq 一樣提到 response_format）時，第二次改送 `json_object`、系統提示詞後面接 schema，整理和校正都成功；內容前面有說明、包在 ```` ```json ```` 圍欄裡也讀得出來；網址貼成 `…/v1/chat/completions/` 也送到正確的路徑；沒填 key 時不送 `Authorization`。錯誤訊息：key 錯誤「127.0.0.1 回傳 HTTP 401（API key 錯誤或已失效）」、連不到「連不到 127.0.0.1：無法連接伺服器。」、沒填模型、沒填網址、`ftp://` 網址都有對應的說明。模型清單取 `/v1/models`。還沒用真的服務測
 - [ ] **T-K4 設定頁、引導、環境檢查**（§19.4，R17.5、R17.6）
   - 驗證：設定頁（中文、英文介面）截真的視窗看新欄位、常用網址選單、隱私說明（本機、遠端、http）；引導的選單；環境檢查；`l10n.py check` 沒有問題
 - [ ] **T-K5 驗收**（R17.3）

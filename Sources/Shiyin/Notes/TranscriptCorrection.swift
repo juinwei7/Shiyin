@@ -115,7 +115,7 @@ enum TranscriptCorrection {
             struct Output: Decodable { var corrections: [CorrectionSuggestion] }
             let output: Output
             do { output = try JSONDecoder().decode(Output.self, from: data) }
-            catch { throw LLMError.badOutput(error.localizedDescription) }
+            catch { throw LLMError.badOutput(error.localizedDescription + provider.badOutputHint) }
             result += validate(output.corrections, context: context, range: range)
             start = range.upperBound
             onProgress(Double(start) / Double(count))

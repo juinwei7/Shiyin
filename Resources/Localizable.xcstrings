@@ -351,6 +351,28 @@
         }
       }
     },
+    "Gemini API（填 API key）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemini API (enter an API key)"
+          }
+        }
+      }
+    },
+    "Gemini 沒有完成整理（status：%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemini didn't finish summarizing (status: %@)"
+          }
+        }
+      }
+    },
     "Markdown": {
       "extractionState": "manual"
     },
@@ -361,6 +383,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "OpenAI API (enter an API key)"
+          }
+        }
+      }
+    },
+    "OpenAI 相容 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI-compatible API"
+          }
+        }
+      }
+    },
+    "OpenAI 相容 API 的網址不對，要以 http:// 或 https:// 開頭": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The OpenAI-compatible API URL isn't valid. It must start with http:// or https://."
+          }
+        }
+      }
+    },
+    "OpenAI 相容 API（Groq、OpenRouter、Ollama、LM Studio）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI-compatible API (Groq, OpenRouter, Ollama, LM Studio)"
           }
         }
       }
@@ -1673,6 +1728,17 @@
         }
       }
     },
+    "可以不填（本機的 Ollama、LM Studio 不需要）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional (not needed for Ollama or LM Studio on this Mac)"
+          }
+        }
+      }
+    },
     "可以使用（%lld 秒）": {
       "extractionState": "manual",
       "localizations": {
@@ -1724,6 +1790,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jump to Latest"
+          }
+        }
+      }
+    },
+    "回應不完整（可能超過長度上限）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response was cut off (it may have hit the length limit)"
+          }
+        }
+      }
+    },
+    "回應不是 JSON。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response wasn't JSON."
           }
         }
       }
@@ -2268,6 +2356,17 @@
         }
       }
     },
+    "常用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presets"
+          }
+        }
+      }
+    },
     "建立並移入": {
       "extractionState": "manual",
       "localizations": {
@@ -2463,6 +2562,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recovered recording.wav"
+          }
+        }
+      }
+    },
+    "必填": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Required"
           }
         }
       }
@@ -3315,6 +3425,17 @@
         }
       }
     },
+    "整理工具選 Gemini API 時需要": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the Gemini API summarizer"
+          }
+        }
+      }
+    },
     "整理工具選 OpenAI API 時需要": {
       "extractionState": "manual",
       "localizations": {
@@ -3322,6 +3443,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Needed for the OpenAI API summarizer"
+          }
+        }
+      }
+    },
+    "整理工具選 OpenAI 相容 API 時需要：到「設定 → 整理工具」填網址和模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the OpenAI-compatible API summarizer: enter the URL and model in Settings → Summarizer"
           }
         }
       }
@@ -3337,6 +3469,17 @@
         }
       }
     },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 %@。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to %@. The recording is never sent."
+          }
+        }
+      }
+    },
     "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。": {
       "extractionState": "manual",
       "localizations": {
@@ -3348,6 +3491,17 @@
         }
       }
     },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to Google (Gemini). The recording is never sent."
+          }
+        }
+      }
+    },
     "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。": {
       "extractionState": "manual",
       "localizations": {
@@ -3355,6 +3509,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to OpenAI. The recording is never sent."
+          }
+        }
+      }
+    },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到你填的網址。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to the URL you enter. The recording is never sent."
+          }
+        }
+      }
+    },
+    "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台 Mac 上的服務（%@），不會離開電腦。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, the transcript text, your notes, the glossary and basic meeting details are sent to a service on this Mac (%@) and never leave your computer. The recording is never sent."
           }
         }
       }
@@ -4526,6 +4702,17 @@
         }
       }
     },
+    "沒有填網址或模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No URL or model entered"
+          }
+        }
+      }
+    },
     "沒有待確認的項目": {
       "extractionState": "manual",
       "localizations": {
@@ -4775,6 +4962,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Environment check"
+          }
+        }
+      }
+    },
+    "用 http 傳送沒有加密，建議改用 https。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "http isn't encrypted; use https if you can."
           }
         }
       }
@@ -5293,6 +5491,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quit Shiyin"
+          }
+        }
+      }
+    },
+    "網址": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL"
+          }
+        }
+      }
+    },
+    "網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After setup, enter the URL, API key and model in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "網址要以 http:// 或 https:// 開頭": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The URL must start with http:// or https://"
           }
         }
       }
@@ -6289,6 +6520,17 @@
         }
       }
     },
+    "這個模型可能不支援 JSON 輸出，可以換一個模型試試。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model may not support JSON output. Try a different model."
+          }
+        }
+      }
+    },
     "這個檔案裡沒有聲音": {
       "extractionState": "manual",
       "localizations": {
@@ -6626,6 +6868,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "No %@ API key yet. Enter it in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "還沒有填 OpenAI 相容 API 的模型名稱，請到設定 → 整理工具填寫": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No model entered for the OpenAI-compatible API. Enter it in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "還沒有填 OpenAI 相容 API 的網址，請到設定 → 整理工具填寫": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No URL entered for the OpenAI-compatible API. Enter it in Settings → Summarizer."
           }
         }
       }

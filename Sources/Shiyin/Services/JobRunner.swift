@@ -27,6 +27,7 @@ enum AppSettings {
     #if DEBUG
     /// shiyinctl llmprovider：只在記憶體換整理工具，不改跟使用者共用的設定（design §19.5）
     nonisolated(unsafe) static var debugProvider: LLMProvider?
+    nonisolated(unsafe) static var debugModel: String?
     #endif
 
     static var provider: LLMProvider {
@@ -35,7 +36,12 @@ enum AppSettings {
         #endif
         return LLMProvider(rawValue: d.string(forKey: providerKey) ?? "") ?? .claude
     }
-    static var model: String { d.string(forKey: provider.modelKey) ?? "" }
+    static var model: String {
+        #if DEBUG
+        if let debugModel { return debugModel }
+        #endif
+        return d.string(forKey: provider.modelKey) ?? ""
+    }
     static var autoSummarize: Bool { d.object(forKey: autoSummarizeKey) as? Bool ?? true }
     static var compressAudio: Bool { d.object(forKey: compressAudioKey) as? Bool ?? true }
     static var diarize: Bool { d.object(forKey: diarizeKey) as? Bool ?? true }

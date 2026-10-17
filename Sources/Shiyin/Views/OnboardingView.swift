@@ -177,10 +177,16 @@ struct OnboardingView: View {
                 Text("Codex（codex CLI）\(codex == nil ? String(localized: "：找不到") : "")").tag(LLMProvider.codex.rawValue)
                 Text("Anthropic API（填 API key）").tag(LLMProvider.anthropic.rawValue)
                 Text("OpenAI API（填 API key）").tag(LLMProvider.openai.rawValue)
+                Text("Gemini API（填 API key）").tag(LLMProvider.gemini.rawValue)
+                Text("OpenAI 相容 API（Groq、OpenRouter、Ollama、LM Studio）").tag(LLMProvider.openaiCompatible.rawValue)
                 Text("不整理，只要逐字稿").tag(LLMProvider.none.rawValue)
             }
             .pickerStyle(.radioGroup)
-            if current.usesAPIKey {
+            // OpenAI 相容 API 要填網址、模型，引導裡只提示（design §19.4）
+            if current == .openaiCompatible {
+                Text("網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。")
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            } else if current.usesAPIKey {
                 HStack {
                     SecureField("貼上 API key", text: $apiKey).textFieldStyle(.roundedBorder)
                     Button("儲存") {

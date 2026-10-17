@@ -115,10 +115,12 @@ enum DebugControl {
         case "diarizer": model.models.prepareDiarizer()
         case "modelurl":   // modelurl <模型> <網址>：改從別的網址下載；網址給 - 就改回原本的
             if let which = ModelStore.Model(rawValue: args[1]) { model.models.debugURLs[which] = args[2] == "-" ? nil : URL(string: args[2]) }
-        case "llmurl":     // llmurl <anthropic|openai|gemini> <網址>：API 改送到本機的假伺服器；網址給 - 就改回原本的
+        case "llmurl":     // llmurl <anthropic|openai|gemini|openaiCompatible> <網址>：API 改送到本機的假伺服器；網址給 - 就改回原本的
             if let provider = LLMProvider(rawValue: args[1]) { LLMClient.debugBaseURLs[provider] = args[2] == "-" ? nil : args[2] }
         case "llmkey": Keychain.debugKeys[args[1]] = args[2] == "-" ? nil : args[2]   // llmkey <account> <key>：只放記憶體
-        case "llmprovider": AppSettings.debugProvider = args[1] == "-" ? nil : LLMProvider(rawValue: args[1])
+        case "llmprovider":   // llmprovider <整理工具> [模型]：只放記憶體，不改共用的設定；給 - 改回設定
+            AppSettings.debugProvider = args[1] == "-" ? nil : LLMProvider(rawValue: args[1])
+            AppSettings.debugModel = args.count > 2 ? args[2] : nil
         case "listmodels":  // listmodels <整理工具> <結果.json>：設定頁「選擇」用的模型清單
             if let provider = LLMProvider(rawValue: args[1]) {
                 Task { write(["models": await LLMClient.listModels(provider)], to: args[2]) }
