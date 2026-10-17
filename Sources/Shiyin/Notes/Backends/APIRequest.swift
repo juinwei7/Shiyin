@@ -34,7 +34,12 @@ enum APIRequest {
         let status = response.status
         // Gemini 的 key 錯誤是 HTTP 400 加上「API key not valid」
         let keyProblem = status == 401 || (status == 400 && response.message.localizedCaseInsensitiveContains("API key"))
-        let hint = keyProblem ? String(localized: "（API key 錯誤或已失效）") : status == 429 ? String(localized: "（超過用量限制，請稍後再試）") : ""
+        // 429 有兩種：額度用完（等多久都不會好，要加值）、短時間內用太多
+        let message = response.message.lowercased()
+        let noCredit = status == 429 && ["credit", "quota", "billing"].contains { message.contains($0) }
+        let hint = keyProblem ? String(localized: "（API key 錯誤或已失效）")
+            : noCredit ? String(localized: "（帳戶沒有額度，要到服務的網站加值）")
+            : status == 429 ? String(localized: "（超過用量限制，請稍後再試）") : ""
         return LLMError.failed(String(localized: "\(provider) 回傳 HTTP \(status)\(hint)：\(response.message)"))
     }
 }

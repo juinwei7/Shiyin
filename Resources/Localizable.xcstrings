@@ -7708,6 +7708,17 @@
         }
       }
     },
+    "（帳戶沒有額度，要到服務的網站加值）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (the account has no credits; add credits on the service’s website)"
+          }
+        }
+      }
+    },
     "（超過用量限制，請稍後再試）": {
       "extractionState": "manual",
       "localizations": {

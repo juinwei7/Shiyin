@@ -542,6 +542,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - `LLMProvider`（enum）保留：它是存在 UserDefaults（`llmProvider`）和資料庫（`notes_by`）的代號，也負責介面上的名稱、要不要 key、預設模型。`provider.backend(model:)` 產生對應的實作。
 - 每種整理工具一個型別、一個檔案，放在 `Notes/Backends/`：`ClaudeCLI`、`CodexCLI`、`AnthropicAPI`、`OpenAIAPI`、`GeminiAPI`、`OpenAICompatibleAPI`。送出 HTTP、讀錯誤訊息的共用部分放在 `APIRequest`。
+- HTTP 429 的訊息提到 credit、quota、billing 時是帳戶沒有額度（OpenAI 實測：「You have no credits remaining」），提示「帳戶沒有額度，要到服務的網站加值」，不要寫「請稍後再試」；其他 429 才是用量限制。
 - `LLMClient.generate`、`generateJSON`、`listModels` 的呼叫方式不變，呼叫的地方（JobRunner、逐字稿校正、設定頁）不用改。
 - 原本四種的程式碼原封搬過去，只換位置（R17.7）。
 - 不做外掛或動態註冊：整理工具的清單還是 enum 的 case。加一種整理工具＝一個新檔案＋一個 case＋設定頁的欄位。
