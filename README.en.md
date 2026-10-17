@@ -8,7 +8,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 
 - Recording, transcription and speaker identification all run locally; recordings are never uploaded
 - No Python, Homebrew or ffmpeg to install: download the DMG and go
-- Interface in English and Traditional Chinese (follows your macOS language); meetings can be in English or Chinese
+- Interface in English and Traditional Chinese (follows your macOS language); meetings can be in English, Chinese or Japanese
 - Requires Apple Silicon and macOS 26
 
 ![Meeting notes](docs/images/en/summary.png)
@@ -29,8 +29,9 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
   - Recording continues with the main window closed; pause or stop from the menu bar, or press ⌃⌥⌘R in any app to start or stop
   - If the app crashes or the Mac shuts down, the recording is recovered on next launch
 - **Import**: audio and video (m4a, mp3, wav, aac, flac, caf, aiff, mp4, mov), transcripts (srt, vtt, txt), Markdown notes and whole-meeting packages (.shiyin). Drag into the window, press ⌘O, drop on the Dock icon, or use Open With in Finder
-- **Local transcription**: whisper.cpp + Breeze ASR 25, with your glossary as the prompt. Or use the transcriber built into macOS (no model download and much faster, but it ignores the glossary)
-- **Meeting language**: each meeting is English or Chinese, and the transcription, the notes and the export headings follow it. Set the default in Settings
+- **Local transcription**: whisper.cpp + Breeze ASR 25, with your glossary as the prompt; Japanese meetings use Whisper large-v3-turbo (downloaded the first time you transcribe a Japanese meeting). Or use the transcriber built into macOS (no model download and much faster, but it ignores the glossary)
+- **Meeting language**: each meeting is English, Chinese or Japanese, and the transcription, the notes and the export headings follow it. Japanese meetings are shown with Japanese glyphs, and PDF and Word exports use Japanese fonts. Set the default in Settings
+- **Language detection**: about 10 seconds into a recording, Shiyin works out whether people are speaking Chinese, English or Japanese. If it’s confident and that differs from the meeting language, it switches the live transcript and the meeting language, and you can switch back from the recording screen
 - **Transcript correction**: after transcription, the summarizer uses your glossary and the context to find words that were probably misheard (homophones, names) and marks them in the transcript. Nothing changes until you click Accept, and you can revert
 - **Glossary suggestions**: terms to add to the glossary, taken from participants, speaker names, corrected words and meeting titles
 - **Speaker identification**: every transcript segment is labeled with a speaker, each in its own color; rename speakers or show one speaker only
@@ -64,7 +65,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 | Chip | Apple Silicon (M1 or later) |
 | System | macOS 26 or later |
 | Memory | 8 GB or more. Transcription plus speaker identification peaks at about 2.7 GB; a 4-hour meeting at about 4.1 GB (measured on M3 Pro) |
-| Disk space | About 1.7 GB of models (downloaded on first use; not needed with the macOS transcriber), plus recordings: m4a is about 10–30 MB per hour |
+| Disk space | About 1.7 GB of models (downloaded on first use; not needed with the macOS transcriber), another 574 MB for Japanese meetings and 60 MB for language detection, plus recordings: m4a is about 10–30 MB per hour |
 | Summarizer | One of: a signed-in [Claude Code](https://claude.com/claude-code) (`claude`), Codex CLI (`codex`), an Anthropic API key or an OpenAI API key. Or choose “Don’t summarize” |
 | Internet | Needed to download the models and to summarize; not needed for recording, transcription or speaker identification |
 
@@ -154,7 +155,7 @@ The app checks that a new version is signed the same way as the running app. Aft
 | Summarizer | Claude, Codex, Anthropic API, OpenAI API or Don’t summarize; sign-in status and Test Summarizer; API keys; model; whether to summarize and check for misheard words after transcription |
 | Templates | Built-in and custom templates, default template |
 | Glossary | Correct spellings of names, systems and terms; used for transcription and summarizing; suggested terms |
-| Recording | Recording source, microphone, default meeting language, live transcript, speaker identification, transcription engine (Breeze or macOS), global shortcut, permissions |
+| Recording | Recording source, microphone, default meeting language, language detection, live transcript, speaker identification, transcription engine (Breeze or macOS), global shortcut, permissions |
 | Models & Storage | Download, pause or delete models; compress recordings; disk usage; delete files left by version 2 |
 | Advanced | Update URL and Check for Updates, environment check, show the welcome guide again, rebuild the search index |
 
@@ -168,6 +169,7 @@ The project follows spec-driven development: requirements, design and tasks come
 | [`docs/design.md`](docs/design.md) | Architecture, data model, prompts, interface, decision log |
 | [`docs/tasks.md`](docs/tasks.md) | Tasks, verification log, changelog |
 | [`docs/spikes/asr-engines.md`](docs/spikes/asr-engines.md) | Experiments behind the choice of transcription and speaker identification engines |
+| [`docs/spikes/asr-japanese-3.3.md`](docs/spikes/asr-japanese-3.3.md) | Experiments behind the Japanese transcription engine and language detection (in Chinese) |
 | [`CLAUDE.md`](CLAUDE.md) | Things to watch out for when developing and verifying |
 
 ### Project layout
@@ -218,7 +220,8 @@ Interface strings are written in Traditional Chinese in the code and looked up i
 - Accuracy: on a public English meeting excerpt (AMI, 4 speakers), the word error rate is about 27% with Breeze and 26% with the macOS transcriber. On a public Chinese meeting (far-field microphone, 6 speakers), the character error rate is about 29% with Breeze and 25% with macOS, mostly from missed overlapping speech and filler words; the resulting meeting notes are still accurate. Meetings recorded on a laptop or headset microphone should do much better.
 - Speaker identification: in short recordings where one person talks most of the time, people who speak little may be merged into someone else. If the speaker changes within a transcript segment, the whole segment gets one speaker.
 - Summarizing with Claude usually takes 30–70 seconds, occasionally a few minutes.
-- Not yet: languages other than English and Chinese, calendar integration, an iPhone version.
+- Japanese meetings: on a public expert hearing in the Japanese Diet (6 speakers), the character error rate with Whisper large-v3-turbo is about 8–9%. The reference is the official Diet record, which drops filler words, so the real error rate is lower.
+- Not yet: languages other than English, Chinese and Japanese, a Japanese interface, calendar integration, an iPhone version.
 
 ## Open-source projects and models
 
@@ -227,6 +230,7 @@ Interface strings are written in Traditional Chinese in the code and looked up i
 | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | Transcription | MIT |
 | [Breeze ASR 25](https://huggingface.co/MediaTek-Research/Breeze-ASR-25) ([GGML conversion](https://huggingface.co/shdennlin/breeze-asr-25-ggml)) | Transcription model (Traditional Chinese, Chinese–English code-switching) | Apache-2.0 |
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | Speaker identification | Apache-2.0 |
+| [Whisper](https://github.com/openai/whisper) large-v3-turbo, base ([GGML conversion](https://huggingface.co/ggerganov/whisper.cpp)) | Japanese transcription, language detection | MIT |
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite database, full-text search | MIT |
 
 The transcription and speaker identification models aren’t in this repo; they are downloaded on first use. The app and the DMG include the full license terms of these packages: see the About Shiyin window, or `Third-Party Licenses.txt` in the DMG (generated by `scripts/dev/make-third-party-licenses.sh`; rerun it after updating dependencies).

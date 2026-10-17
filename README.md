@@ -8,7 +8,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 
 - 錄音、轉錄、說話者辨識都在本機完成，錄音不會上傳
 - 不需要安裝 Python、Homebrew 或 ffmpeg，下載 DMG 就能用
-- 介面有繁體中文和英文（跟著 macOS 的語言），會議可以是中文或英文
+- 介面有繁體中文和英文（跟著 macOS 的語言），會議可以是中文、英文或日文
 - 需要 Apple Silicon 和 macOS 26
 
 ![會議紀錄](docs/images/summary.png)
@@ -29,8 +29,9 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - 關掉主視窗後錄音照常進行，選單列可以暫停、停止；在其他 app 裡按 ⌃⌥⌘R 也能開始或停止錄音
   - app 當掉或電腦突然關機，下次開啟會自動復原錄音
 - **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」
-- **本機轉錄**：whisper.cpp + Breeze ASR 25，詞彙表會當成提示詞；也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）
-- **會議語言**：每場會議可以選中文或英文，轉錄、會議紀錄、匯出的標題都跟著這個語言；預設語言在設定裡改
+- **本機轉錄**：whisper.cpp + Breeze ASR 25，詞彙表會當成提示詞；日文會議改用 Whisper large-v3-turbo（第一次轉錄日文會議時才下載）。也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）
+- **會議語言**：每場會議可以選中文、英文或日文，轉錄、會議紀錄、匯出的標題都跟著這個語言；日文會議的內容用日文字形，PDF、Word 用日文字型。預設語言在設定裡改
+- **自動偵測語言**：開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時，自動切換即時逐字稿和會議語言，錄音畫面可以改回來
 - **逐字稿校正**：轉錄完，整理工具依詞彙表和上下文找出可能聽錯的字（同音字、專有名詞），標在逐字稿裡，你按「接受」才改，可以還原
 - **詞彙表建議**：從參加者、說話者名字、校正過的字、會議標題建議要加進詞彙表的詞
 - **說話者辨識**：逐字稿每段標上說話者，每個人一個顏色；可以改名、只看某一位說話者
@@ -64,7 +65,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 | 晶片 | Apple Silicon（M1 以上） |
 | 系統 | macOS 26 以上 |
 | 記憶體 | 8 GB 以上。轉錄加說話者辨識的峰值約 2.7 GB，4 小時的會議約 4.1 GB（M3 Pro 實測） |
-| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），加上錄音：m4a 約每小時 10～30 MB |
+| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文會議另外 574 MB、自動偵測語言 60 MB，加上錄音：m4a 約每小時 10～30 MB |
 | 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`）、Anthropic API key、OpenAI API key。也可以選「不整理」 |
 | 網路 | 第一次下載模型、整理會議紀錄時需要；錄音、轉錄、說話者辨識都不需要 |
 
@@ -154,7 +155,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 | 整理工具 | Claude、Codex、Anthropic API、OpenAI API 或不整理；登入狀態、測試整理工具；API key；模型；轉錄完是否自動整理、是否檢查可能聽錯的字 |
 | 範本 | 內建範本和自訂範本、預設範本 |
 | 詞彙表 | 人名、系統名、專有名詞的正確寫法，轉錄和整理都會參考；建議加入的詞 |
-| 錄音 | 錄音來源、麥克風、預設會議語言、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze 或 macOS 內建）、全域快捷鍵、權限設定 |
+| 錄音 | 錄音來源、麥克風、預設會議語言、自動偵測會議語言、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze 或 macOS 內建）、全域快捷鍵、權限設定 |
 | 模型與儲存空間 | 下載、暫停、刪除模型；壓縮錄音；空間用量；刪除第二版留下的舊檔案 |
 | 進階 | 更新網址與檢查更新、環境檢查、重新顯示首次使用引導、重建搜尋索引 |
 
@@ -168,6 +169,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 | [`docs/design.md`](docs/design.md) | 架構、資料模型、提示詞、介面、決策紀錄 |
 | [`docs/tasks.md`](docs/tasks.md) | 任務、驗證紀錄、變更紀錄 |
 | [`docs/spikes/asr-engines.md`](docs/spikes/asr-engines.md) | 轉錄引擎和說話者辨識的選型實驗 |
+| [`docs/spikes/asr-japanese-3.3.md`](docs/spikes/asr-japanese-3.3.md) | 日文轉錄引擎和語言偵測的選型實驗 |
 | [`CLAUDE.md`](CLAUDE.md) | 開發與驗證時要注意的事 |
 
 ### 專案結構
@@ -217,7 +219,8 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 - 說話者辨識：很短、而且大部分時間只有一個人在講的錄音，話少的人可能被併進別人。逐字稿的一段裡如果換人說話，整段只會標一個說話者。
 - Claude 整理通常要 30～70 秒，偶爾會到幾分鐘。
 - 英文會議的轉錄：在公開的英文會議片段（AMI，4 人）上，字錯誤率 Breeze 約 27%、macOS 內建約 26%。
-- 還沒有：中文和英文以外的語言、行事曆整合、iPhone 版。
+- 日文會議的轉錄：在日本國會公開的專家聽證（6 人）上，字錯誤率 Whisper large-v3-turbo 約 8～9%。正確答案用的國會會議錄刪掉了語助詞，實際的錯誤率會比這個低。
+- 還沒有：中文、英文、日文以外的語言、日文介面、行事曆整合、iPhone 版。
 
 ## 使用的開源專案與模型
 
@@ -225,6 +228,7 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 |---|---|---|
 | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | 正式轉錄 | MIT |
 | [Breeze ASR 25](https://huggingface.co/MediaTek-Research/Breeze-ASR-25)（[GGML 轉檔](https://huggingface.co/shdennlin/breeze-asr-25-ggml)） | 轉錄模型（繁體中文、中英夾雜） | Apache-2.0 |
+| [Whisper](https://github.com/openai/whisper) large-v3-turbo、base（[GGML 轉檔](https://huggingface.co/ggerganov/whisper.cpp)） | 日文轉錄、自動偵測語言 | MIT |
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | 說話者辨識 | Apache-2.0 |
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
 
