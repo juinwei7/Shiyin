@@ -5,6 +5,8 @@ import UserNotifications
 @MainActor
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     var onOpen: ((Int64) -> Void)?
+    /// 偵測到會議的通知按鈕（design §21.7）：動作（start、mute、stop、continue）、哪個 app
+    var onMeetingAction: ((String, String) -> Void)?
     #if DEBUG
     /// 驗證用：最近要發的通知內容（沒有通知權限時也記錄）
     private(set) var recent: [[String: Any]] = []
@@ -12,6 +14,39 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func activate() {
         UNUserNotificationCenter.current().delegate = self
+        let start = UNNotificationCategory(identifier: "MEETING_START", actions: [
+            UNNotificationAction(identifier: "start", title: String(localized: "開始錄音"), options: []),
+            UNNotificationAction(identifier: "mute", title: String(localized: "不要再提醒這個 app"), options: []),
+        ], intentIdentifiers: [])
+        let stop = UNNotificationCategory(identifier: "MEETING_STOP", actions: [
+            UNNotificationAction(identifier: "stop", title: String(localized: "停止並轉錄"), options: []),
+            UNNotificationAction(identifier: "continue", title: String(localized: "繼續錄"), options: []),
+        ], intentIdentifiers: [])
+        UNUserNotificationCenter.current().setNotificationCategories([start, stop])
+    }
+
+    func isAuthorized() async -> Bool {
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        return status == .authorized || status == .provisional
+    }
+
+    /// 偵測到會議（design §21.7）
+    func meetingPrompt(_ prompt: MeetingDetector.Prompt) {
+        let content = UNMutableNotificationContent()
+        switch prompt {
+        case .start(let app):
+            content.title = String(localized: "\(app.name) 正在開會")
+            content.body = String(localized: "要開始錄音嗎？")
+            content.categoryIdentifier = "MEETING_START"
+            content.userInfo = ["bundle": app.bundleID]
+        case .stop(let app):
+            content.title = String(localized: "會議好像結束了")
+            content.body = String(localized: "要停止錄音並轉錄嗎？")
+            content.categoryIdentifier = "MEETING_STOP"
+            content.userInfo = ["bundle": app.bundleID]
+        }
+        content.sound = .default
+        post(content)
     }
 
     func jobFinished(_ job: Job, meeting: Meeting, error: Error?) {
@@ -57,8 +92,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
         let id = (response.notification.request.content.userInfo["meetingId"] as? NSNumber)?.int64Value
+        let bundle = response.notification.request.content.userInfo["bundle"] as? String
+        let action = response.actionIdentifier
         Task { @MainActor in
-            if let id, id > 0 { self.onOpen?(id) }
+            if let bundle, action != UNNotificationDefaultActionIdentifier, action != UNNotificationDismissActionIdentifier {
+                self.onMeetingAction?(action, bundle)
+            } else if let id, id > 0 { self.onOpen?(id) }
             completionHandler()
         }
     }

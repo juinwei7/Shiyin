@@ -66,6 +66,19 @@ enum DebugControl {
                                                                             "answer": (try? JSONSerialization.jsonObject(with: Data($0.answer.utf8))) ?? [:]] }],
                   to: args[2])
         case "cancelask": model.cancelAsk()
+        // 偵測會議（design §21.7）：meetingapp <bundleID> start|stop；meetingprompts <輸出.json>；meetingaction <按鈕>
+        case "meetingapp": model.meetingDetector.simulated[args[1]] = args[2] == "start"
+        case "meetingprompts":
+            let current = MeetingPromptPanel.shared.current
+            let text: String
+            switch current {
+            case .start(let app): text = "start:\(app.bundleID)"
+            case .stop(let app): text = "stop:\(app.bundleID)"
+            case nil: text = ""
+            }
+            write(["prompt": text, "actions": MeetingPromptPanel.shared.actions.keys.sorted(), "muted": MeetingDetector.muted,
+                   "recording": model.recorder.isRecording], to: args[1])
+        case "meetingaction": MeetingPromptPanel.shared.perform(args[1])
         case "namespeakers": if let id { try? model.db.enqueue(id, kind: .nameSpeakers); model.runner.wake() }
         case "applysuggestion": model.selection = id; model.applySpeakerSuggestion(Int(args[2]) ?? 1)
         case "dismisssuggestion": model.selection = id; model.dismissSpeakerSuggestion(Int(args[2]) ?? 1)

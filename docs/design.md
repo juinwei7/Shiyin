@@ -776,13 +776,13 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 
 ### 21.7 偵測會議（R19.4，D31）
 
-- `MeetingDetector`（`Services/`）：讀系統的 `kAudioHardwarePropertyProcessObjectList`，每個程序讀 `kAudioProcessPropertyBundleID`、`kAudioProcessPropertyIsRunningInput`。監聽程序列表和每個程序的 `IsRunningInput` 變化（`AudioObjectAddPropertyListenerBlock`）。不需要任何權限（2026-10-19 實測：從終端機讀得到，沒有跳出詢問）。
+- `MeetingDetector`（`Services/`）：每 2 秒讀一次系統的 `kAudioHardwarePropertyProcessObjectList`，每個程序讀 `kAudioProcessPropertyBundleID`、`kAudioProcessPropertyIsRunningInput`（35 個程序左右，開銷很小；比監聽每個程序的變化簡單，程序來來去去也不用管理監聽）。不需要任何權限（2026-10-19 實測：從終端機讀得到，沒有跳出詢問）。bundle ID 用前綴比對：瀏覽器、Teams 常由 helper 程序開麥克風（例如 `com.google.Chrome.helper`）。
 - 只看已知的會議 app：Zoom `us.zoom.xos`、Teams `com.microsoft.teams2`／`com.microsoft.teams`、Webex `Cisco-Systems.Spark`／`com.cisco.webexmeetingsapp`、FaceTime `com.apple.FaceTime`、Slack `com.tinyspeck.slackmacgap`、LINE `jp.naver.line.mac`、Discord `com.hnc.Discord`；瀏覽器（Chrome、Safari、Edge、Arc、Firefox、Brave）當成「可能在開 Google Meet」。系統程序（例如 `com.apple.CoreSpeech` 的語音喚醒）和拾音自己不算。
 - 開始：某個會議 app 持續用麥克風 5 秒，拾音沒在錄，而且這個 app 這次的通話還沒提醒過 → 提醒「Zoom 正在開會，要開始錄音嗎？」，按鈕「開始錄音」「這次不用」「不要再提醒 Zoom」。
 - 結束：拾音正在錄，而錄音期間用過麥克風的會議 app 都停止用麥克風 10 秒 → 提醒「會議好像結束了，要停止錄音嗎？」，按鈕「停止並轉錄」「繼續錄」。
 - 提醒的方式：通知權限是允許時用通知（帶按鈕，`UNNotificationCategory`）；沒有權限時用一個不搶焦點的小浮動視窗（`NSPanel`，`.nonactivatingPanel`，右上角，30 秒後自己收起）。
 - 設定（錄音分頁）：開關「偵測到線上會議時提醒錄音」（預設開）、不要再提醒的 app 列表（可以移除）。
-- DEBUG：`shiyinctl meetingapp <bundleID> start|stop` 模擬某個 app 開始、停止用麥克風。
+- DEBUG：`shiyinctl meetingapp <bundleID> start|stop` 模擬某個 app 開始、停止用麥克風；啟動參數 `-debugQuietPrompts YES` 時浮動視窗不顯示（驗證時不要跳到使用者的畫面上），提醒記在 `meetingprompts`，用 `meetingaction <start|later|mute|stop|continue>` 按按鈕。
 
 ### 21.8 對會議提問（R19.6，D32）
 

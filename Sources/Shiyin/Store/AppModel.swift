@@ -220,6 +220,11 @@ final class AppModel {
         guard !started else { return }
         started = true
         notifier.activate()
+        // 偵測線上會議、提醒錄音（design §21.7、R19.4）
+        meetingDetector.isRecording = { [weak self] in self?.recorder.isRecording ?? false }
+        meetingDetector.onPrompt = { [weak self] in self?.showMeetingPrompt($0) }
+        notifier.onMeetingAction = { [weak self] action, bundle in self?.handleMeetingAction(action, bundle: bundle) }
+        meetingDetector.start()
         BuiltinTemplates.seed(db)
         cleanUpPreviousRun()
         purgeExpiredTrash()
@@ -468,6 +473,14 @@ final class AppModel {
 
     func startRecording() {
         guard !recorder.isRecording else { return }
+        MeetingPromptPanel.shared.close()
+        #if DEBUG
+        // 啟動參數 -debugRecordFile <音檔>：開始錄音改用模擬錄音，驗證時不要真的用使用者的麥克風錄（design §21.7）
+        if let file = UserDefaults.standard.string(forKey: "debugRecordFile") {
+            startSimulatedRecording(file: URL(fileURLWithPath: file), speed: 1, both: false)
+            return
+        }
+        #endif
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         let now = Date()
@@ -502,6 +515,7 @@ final class AppModel {
 
     /// 錄音結束：把錄音檔接到會議上並排轉錄（R2.5）
     private func recordingFinished(_ result: Recorder.Result) {
+        MeetingPromptPanel.shared.close()   // 還開著的「要停止錄音嗎？」不用了
         do {
             if let error = result.error {
                 errorMessage = error
@@ -937,6 +951,47 @@ final class AppModel {
     func dismissSpeakerSuggestion(_ idx: Int) {
         guard let id = selection else { return }
         perform(.detail([.speakers])) { try db.clearSpeakerSuggestion(id, idx: idx) }
+    }
+
+    // MARK: 偵測線上會議（design §21.7、R19.4）
+
+    @ObservationIgnored let meetingDetector = MeetingDetector()
+
+    /// 有通知權限就發通知（帶按鈕），沒有就用不搶焦點的浮動視窗
+    func showMeetingPrompt(_ prompt: MeetingDetector.Prompt) {
+        Task {
+            if await notifier.isAuthorized() {
+                notifier.meetingPrompt(prompt)
+            } else {
+                showMeetingPanel(prompt)
+            }
+        }
+    }
+
+    private func showMeetingPanel(_ prompt: MeetingDetector.Prompt) {
+        switch prompt {
+        case .start(let app):
+            MeetingPromptPanel.shared.show(prompt, actions: [
+                ("later", String(localized: "這次不用"), {}),
+                ("mute", String(localized: "不要再提醒 \(app.name)"), { MeetingDetector.mute(app.bundleID) }),
+                ("start", String(localized: "開始錄音"), { [weak self] in self?.startRecording() }),
+            ], message: String(localized: "\(app.name) 正在開會，要開始錄音嗎？"))
+        case .stop:
+            MeetingPromptPanel.shared.show(prompt, actions: [
+                ("continue", String(localized: "繼續錄"), {}),
+                ("stop", String(localized: "停止並轉錄"), { [weak self] in self?.recorder.stop() }),
+            ], message: String(localized: "會議好像結束了，要停止錄音嗎？"))
+        }
+    }
+
+    /// 通知上的按鈕
+    func handleMeetingAction(_ action: String, bundle: String) {
+        switch action {
+        case "start": startRecording()
+        case "mute": MeetingDetector.mute(bundle)
+        case "stop": recorder.stop()
+        default: break
+        }
     }
 
     // MARK: 對會議提問的狀態（design §21.8；流程在 Asking.swift）

@@ -21,6 +21,28 @@
         }
       }
     },
+    "%@ 正在開會": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're in a meeting on %@"
+          }
+        }
+      }
+    },
+    "%@ 正在開會，要開始錄音嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're in a meeting on %@. Start recording?"
+          }
+        }
+      }
+    },
     "%@・最近：%@ %@": {
       "extractionState": "manual",
       "localizations": {
@@ -83,6 +105,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ (copy)"
+          }
+        }
+      }
+    },
+    "%@（可能是 Google Meet）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (possibly Google Meet)"
           }
         }
       }
@@ -521,6 +554,17 @@
         }
       }
     },
+    "Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Zoom, Teams, Webex, Google Meet (in a browser) or a similar app starts using the microphone and Shiyin isn't recording, Shiyin asks whether to record, and asks again when the meeting seems to end. It only asks; it never records on its own."
+          }
+        }
+      }
+    },
     "claude 沒有回傳結果（結束代碼 %d）": {
       "extractionState": "manual",
       "localizations": {
@@ -882,6 +926,17 @@
         }
       }
     },
+    "不提醒：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not asking for: %@"
+          }
+        }
+      }
+    },
     "不支援這個音訊格式": {
       "extractionState": "manual",
       "localizations": {
@@ -966,6 +1021,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "No model download and much faster, but it doesn't use the glossary, so proper nouns and names are more often wrong."
+          }
+        }
+      }
+    },
+    "不要再提醒 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't Ask for %@"
+          }
+        }
+      }
+    },
+    "不要再提醒這個 app": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't Ask for This App"
           }
         }
       }
@@ -1253,6 +1330,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "“Search all meetings” at the top of the sidebar searches titles, transcripts, meeting notes and your notes. Click a result to jump to it."
+          }
+        }
+      }
+    },
+    "偵測到線上會議時提醒錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask to record when an online meeting starts"
           }
         }
       }
@@ -3000,6 +3088,17 @@
         }
       }
     },
+    "恢復提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask Again"
+          }
+        }
+      }
+    },
     "我的筆記": {
       "extractionState": "manual",
       "localizations": {
@@ -4483,6 +4582,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Organize meetings in folders: right-click a meeting (or use “More”) and choose “Move to Folder” → “New Folder…”. Use “Folders” at the top of the sidebar to show one folder; while you're in a folder, new recordings and imports go into it. Right-click a folder to rename or delete it (its meetings are kept)."
+          }
+        }
+      }
+    },
+    "會議好像結束了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting seems to have ended"
+          }
+        }
+      }
+    },
+    "會議好像結束了，要停止錄音嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting seems to have ended. Stop recording?"
           }
         }
       }
@@ -6350,6 +6471,17 @@
         }
       }
     },
+    "繼續錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Recording"
+          }
+        }
+      }
+    },
     "繼續錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -6548,6 +6680,17 @@
         }
       }
     },
+    "要停止錄音並轉錄嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop recording and transcribe?"
+          }
+        }
+      }
+    },
     "要寫什麼": {
       "extractionState": "manual",
       "localizations": {
@@ -6566,6 +6709,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sections"
+          }
+        }
+      }
+    },
+    "要開始錄音嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start recording?"
           }
         }
       }
@@ -7514,6 +7668,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting has no notes yet (still summarizing, or summarizing failed), so exported notes will only have the title and details. Export the transcript to keep the content."
+          }
+        }
+      }
+    },
+    "這次不用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Now"
           }
         }
       }

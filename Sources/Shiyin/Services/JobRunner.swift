@@ -22,6 +22,7 @@ enum AppSettings {
     static let transcriptionEngineKey = "transcriptionEngine"   // breeze / system
     static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
     static let voiceprintsKey = "voiceprints"
+    static let meetingDetectionKey = "meetingDetection"
 
     private static var d: UserDefaults { .standard }
 
