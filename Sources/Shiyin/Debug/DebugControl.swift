@@ -150,6 +150,20 @@ enum DebugControl {
         // 點通知後的動作（系統的點擊沒辦法模擬，直接呼叫同一個處理函式）
         case "opennotification": if let id { model.notifier.onOpen?(id) }
         case "exportsheet": model.showExportSheet = args.count < 2 || args[1] == "1"
+        // benchsave <會議 id> <段數> <輸出.json>：存一份假的逐字稿，量 saveTranscript 花多久（design §20.11）
+        case "benchsave":
+            guard let meetingId = id, let count = Int(args[2]) else { return }
+            let segments = (0..<count).map { i in
+                Segment(meetingId: meetingId, seq: i, start: Double(i), end: Double(i + 1), text: "測試段落 \(i) Kubernetes 部署",
+                        lowConfidence: false, speaker: nil, kind: "final")
+            }
+            let start = Date()
+            do {
+                try model.db.saveTranscript(meetingId, segments: segments, duration: count, speakerCount: 0)
+                write(["seconds": Date().timeIntervalSince(start)], to: args[3])
+            } catch {
+                write(["error": "\(error)"], to: args[3])
+            }
         // epipe <輸出.json>：子程序沒讀完輸入就結束（design §20.1）。拾音不能被 SIGPIPE 結束
         case "epipe":
             let path = args[1]

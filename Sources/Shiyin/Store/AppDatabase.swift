@@ -167,6 +167,11 @@ final class AppDatabase: @unchecked Sendable {
                 CREATE TABLE glossary_dismissed (term TEXT PRIMARY KEY COLLATE NOCASE);
                 """)
         }
+        // 3.4.1：工作執行時拾音意外結束的次數（design §20.5）；搜尋表的 rowid 改成可以推算，重建索引（§20.11）
+        migrator.registerMigration("v6") { db in
+            try db.execute(sql: "ALTER TABLE jobs ADD COLUMN crashes INTEGER NOT NULL DEFAULT 0")
+            try Self.rebuildSearch(db)
+        }
         return migrator
     }
 
@@ -248,8 +253,10 @@ final class AppDatabase: @unchecked Sendable {
     /// 永久刪除（垃圾桶清除或使用者確認）
     func deleteMeeting(_ id: Int64) throws {
         try pool.write { db in
+            // 段落會跟著會議刪掉（ON DELETE CASCADE），所以先刪索引
+            try Self.unindexSegments(db, meetingId: id)
+            try Self.unindexMeeting(db, meetingId: id)
             _ = try Meeting.deleteOne(db, key: id)
-            try db.execute(sql: "DELETE FROM search WHERE meeting_id = ?", arguments: [id])
         }
     }
 
@@ -303,13 +310,11 @@ final class AppDatabase: @unchecked Sendable {
     /// 寫入正式逐字稿：取代舊的正式版，並刪掉即時預覽（design §5.3）
     func saveTranscript(_ meetingId: Int64, segments: [Segment], duration: Int, speakerCount: Int) throws {
         try pool.write { db in
-            let old = try Int64.fetchAll(db, sql: "SELECT id FROM segments WHERE meeting_id = ?", arguments: [meetingId])
-            for id in old { try db.execute(sql: "DELETE FROM search WHERE kind = 'segment' AND ref = ?", arguments: [id]) }
+            try Self.unindexSegments(db, meetingId: meetingId)
             try Segment.filter(Column("meeting_id") == meetingId).deleteAll(db)
             for var s in segments {
                 try s.insert(db)
-                try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) VALUES (?, 'segment', ?, ?)",
-                               arguments: [meetingId, s.id, s.text])
+                try Self.indexSegment(db, meetingId: meetingId, id: s.id!, text: s.text)
             }
             // 說話者：保留已改過的名字，新的編號補上預設名字（跟著會議語言）
             let language = try Meeting.fetchOne(db, key: meetingId)?.meetingLanguage ?? .zh
@@ -344,7 +349,7 @@ final class AppDatabase: @unchecked Sendable {
     func updateSegmentText(_ id: Int64, text: String) throws {
         try pool.write { db in
             try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, id])
-            try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, id])
+            try db.execute(sql: "UPDATE search SET text = ? WHERE rowid = ?", arguments: [text, id])
         }
     }
 
@@ -370,7 +375,7 @@ final class AppDatabase: @unchecked Sendable {
                   let segment = try Segment.fetchOne(db, key: correction.segmentId),
                   let text = TranscriptCorrection.apply(correction.suggestionValue, to: segment.text) else { return false }
             try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, segment.id])
-            try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, segment.id])
+            try db.execute(sql: "UPDATE search SET text = ? WHERE rowid = ?", arguments: [text, segment.id])
             correction.status = "accepted"
             try correction.update(db)
             return true
@@ -385,7 +390,7 @@ final class AppDatabase: @unchecked Sendable {
                   let segment = try Segment.fetchOne(db, key: correction.segmentId),
                   let text = TranscriptCorrection.revert(correction.suggestionValue, in: segment.text) else { return false }
             try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, segment.id])
-            try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [text, segment.id])
+            try db.execute(sql: "UPDATE search SET text = ? WHERE rowid = ?", arguments: [text, segment.id])
             correction.status = "pending"
             try correction.update(db)
             return true
@@ -469,6 +474,7 @@ final class AppDatabase: @unchecked Sendable {
             try m.update(db)
             _ = try version.delete(db)
             try Self.index(db, meetingId: meetingId, kind: .notes, ref: 0, text: m.decodedNotes?.plainText ?? "")
+            try Self.index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
             return true
         }
     }
@@ -480,7 +486,7 @@ final class AppDatabase: @unchecked Sendable {
             for var s in try Segment.filter(Column("meeting_id") == meetingId).fetchAll(db) where s.text.contains(find) {
                 s.text = s.text.replacingOccurrences(of: find, with: replacement)
                 try s.update(db)
-                try db.execute(sql: "UPDATE search SET text = ? WHERE kind = 'segment' AND ref = ?", arguments: [s.text, s.id])
+                try db.execute(sql: "UPDATE search SET text = ? WHERE rowid = ?", arguments: [s.text, s.id])
                 changed += 1
             }
             var notesChanged = false
@@ -506,17 +512,49 @@ final class AppDatabase: @unchecked Sendable {
 
     // MARK: 搜尋（R9.1）
 
+    /// 搜尋表的 rowid（design §20.11、D27）：段落用段落的 id；標題、會議紀錄、筆記用 2^50 + 會議 id × 4 + 種類，
+    /// 不會跟段落重疊。FTS5 只能用 MATCH 或 rowid 找列，用其他欄位刪改每次都要掃整張表，所以一律用 rowid。
+    /// 新增時一定要指定 rowid：自動編號會接在最大的 rowid 後面，之後可能跟推算出來的值撞在一起
+    private static let metaRowidBase: Int64 = 1 << 50
+
+    private static func searchRowid(meetingId: Int64, kind: SearchHit.Kind) -> Int64 {
+        let code: Int64 = switch kind {
+        case .title: 1
+        case .notes: 2
+        case .userNotes: 3
+        case .segment: preconditionFailure("段落的 rowid 就是段落的 id")
+        }
+        return metaRowidBase + meetingId * 4 + code
+    }
+
+    private static func indexSegment(_ db: Database, meetingId: Int64, id: Int64, text: String) throws {
+        try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) VALUES (?, ?, 'segment', ?, ?)",
+                       arguments: [id, meetingId, id, text])
+    }
+
+    /// 刪掉這場會議所有段落的索引（段落還在資料庫裡的時候呼叫）
+    private static func unindexSegments(_ db: Database, meetingId: Int64) throws {
+        try db.execute(sql: "DELETE FROM search WHERE rowid IN (SELECT id FROM segments WHERE meeting_id = ?)", arguments: [meetingId])
+    }
+
+    /// 刪掉這場會議的標題、會議紀錄、筆記的索引
+    private static func unindexMeeting(_ db: Database, meetingId: Int64) throws {
+        let ids = [SearchHit.Kind.title, .notes, .userNotes].map { searchRowid(meetingId: meetingId, kind: $0) }
+        try db.execute(sql: "DELETE FROM search WHERE rowid IN (?, ?, ?)", arguments: StatementArguments(ids))
+    }
+
+    /// 標題、會議紀錄、筆記（ref 是 0）
     private static func index(_ db: Database, meetingId: Int64, kind: SearchHit.Kind, ref: Int64, text: String) throws {
-        try db.execute(sql: "DELETE FROM search WHERE meeting_id = ? AND kind = ? AND ref = ?",
-                       arguments: [meetingId, kind.rawValue, ref])
+        let rowid = searchRowid(meetingId: meetingId, kind: kind)
+        try db.execute(sql: "DELETE FROM search WHERE rowid = ?", arguments: [rowid])
         guard !text.isEmpty else { return }
-        try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) VALUES (?, ?, ?, ?)",
-                       arguments: [meetingId, kind.rawValue, ref, text])
+        try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) VALUES (?, ?, ?, ?, ?)",
+                       arguments: [rowid, meetingId, kind.rawValue, ref, text])
     }
 
     private static func rebuildSearch(_ db: Database) throws {
         try db.execute(sql: "DELETE FROM search")
-        try db.execute(sql: "INSERT INTO search (meeting_id, kind, ref, text) SELECT meeting_id, 'segment', id, text FROM segments")
+        try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) SELECT id, meeting_id, 'segment', id, text FROM segments")
         for m in try Meeting.fetchAll(db) {
             try index(db, meetingId: m.id!, kind: .title, ref: 0, text: m.displayTitle)
             try index(db, meetingId: m.id!, kind: .userNotes, ref: 0, text: m.userNotes)
