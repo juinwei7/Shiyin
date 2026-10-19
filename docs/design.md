@@ -34,7 +34,7 @@ Shiyin.app（SwiftUI，單一程序，不依賴 Python、Homebrew、ffmpeg）
 | 匯出 PDF、docx | 先產生 HTML，再用 WKWebView 轉 PDF；docx 用 `NSAttributedString`（officeOpenXML） | 都是系統內建，所以 docx 從 P1 提前到 P0 |
 | 封包 | 資料夾加 `manifest.json`，用 `/usr/bin/ditto` 壓成 zip，副檔名 `.shiyin` | 系統內建工具 |
 | 簽章 | 固定的自簽憑證（`scripts/make-signing-cert.sh` 只要建一次） | 沒有開發者帳號；用固定身分簽章，更新後 TCC 權限才會保留（R10.7） |
-| 更新（P1） | Sparkle 2（EdDSA 簽章，不需要 Apple 帳號） | appcast 的網址等 Q1 決定 |
+| 更新（R10.6） | 自己做的更新器：JSON＋SHA-256＋簽章檢查（D10，§12） | 更新檔放在 GitHub Releases（Q1、R13.2） |
 
 不採用的方案寫在 §14 決策紀錄。
 
