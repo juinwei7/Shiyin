@@ -231,8 +231,8 @@ struct UserNotesEditor: View {
     }
 
     private func save() {
-        try? model.db.updateUserNotes(meetingId, text)
         savedText = text
+        model.saveUserNotes(meetingId, text)
     }
 }
 

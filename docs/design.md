@@ -624,6 +624,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ### 20.4 筆記存檔（R18.4）
 
 - 筆記編輯器（`RecordingView.swift` 的 `UserNotesEditor`，錄音畫面和筆記分頁共用）存檔改呼叫 `AppModel.saveUserNotes(id, text)`：寫資料庫後，目前顯示的是同一場會議時，只更新 `detail.meeting.userNotes`，不整份重新讀取。編輯器重新出現時讀到的 `initial` 就是最新的內容。
+- DEBUG：`shiyinctl notestype <文字>` 在畫面上的筆記輸入框（TextEditor 背後的 NSTextView）結尾用 `insertText` 打字，跟鍵盤打字一樣經過 SwiftUI 的綁定和自動存檔；`notesvalue <輸出.json>` 讀出輸入框目前顯示的內容。螢幕上鎖、視窗在別的桌面時也能用。
 
 ### 20.5 意外結束的工作（R18.5，D26）
 

@@ -758,6 +758,17 @@ final class AppModel {
         perform { try db.updateUserNotes(id, text) }
     }
 
+    /// 筆記編輯器存檔（design §20.4）：畫面上是同一場會議時只更新它的筆記，不整份重新讀取。
+    /// 編輯器切分頁後重新出現時，讀到的就是剛存的內容，不會用舊的蓋回去
+    func saveUserNotes(_ id: Int64, _ text: String) {
+        do {
+            try db.updateUserNotes(id, text)
+            if detail?.meeting.id == id { detail?.meeting.userNotes = text }
+        } catch {
+            log.error("save user notes failed: \(error.localizedDescription)")
+        }
+    }
+
     func addBookmark(at time: Double, meetingId: Int64? = nil, label: String = "") {
         guard let id = meetingId ?? selection else { return }
         perform { try db.addBookmark(id, time: time, label: label) }

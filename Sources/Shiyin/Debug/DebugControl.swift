@@ -72,6 +72,13 @@ enum DebugControl {
             model.selection = id
             if let notes = try? JSONDecoder().decode(MeetingNotes.self, from: Data(args[2].utf8)) { model.saveEditedNotes(notes, meetingId: id ?? 0) }
         case "usernotes": model.selection = id; model.updateUserNotes(args[2])
+        // notestype <文字>：在畫面上的筆記輸入框（TextEditor 背後的 NSTextView）結尾打字，跟鍵盤打字走同一條路，
+        // 螢幕上鎖、視窗在別的桌面時也能用；notesvalue <輸出.json>：輸入框目前顯示的內容（design §20.4）
+        case "notestype":
+            guard let textView = notesTextView() else { break }
+            textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
+            textView.insertText(args[1], replacementRange: textView.selectedRange())
+        case "notesvalue": write(["found": notesTextView() != nil, "text": notesTextView()?.string ?? ""], to: args[1])
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerm(args[1])
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
@@ -276,6 +283,16 @@ enum DebugControl {
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         return out
+    }
+
+    /// 主視窗裡可以編輯的 NSTextView（筆記分頁、錄音畫面的筆記輸入框）
+    private static func notesTextView() -> NSTextView? {
+        func find(_ view: NSView) -> NSTextView? {
+            if let textView = view as? NSTextView, textView.isEditable, !textView.isFieldEditor { return textView }
+            for subview in view.subviews { if let found = find(subview) { return found } }
+            return nil
+        }
+        return NSApp.windows.lazy.filter(\.isVisible).compactMap { $0.contentView.flatMap(find) }.first
     }
 
     private static func write(_ object: [String: Any], to path: String) {
