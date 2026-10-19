@@ -21,8 +21,9 @@ struct MeetingDetailView: View {
                     switch model.tab {
                     case .summary: SummaryTab(detail: detail)
                     case .topics: TopicsTab(detail: detail)
-                    case .transcript: TranscriptTab(detail: detail)
-                    case .review: ReviewTab(detail: detail)
+                    // 換會議時重新建立：編輯中的狀態、草稿是每場會議自己的（design §21.15）
+                    case .transcript: TranscriptTab(detail: detail).id(detail.meeting.id)
+                    case .review: ReviewTab(detail: detail).id(detail.meeting.id)
                     case .notes: UserNotesTab(detail: detail)
                     }
                 }

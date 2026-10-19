@@ -99,6 +99,23 @@ enum DebugControl {
         case "metrics":   // metrics <輸出.json> [reset]：效能計數（design §21.12）；加 reset 讀完歸零
             write(DebugMetrics.snapshot, to: args[1])
             if args.count > 2 && args[2] == "reset" { DebugMetrics.reset() }
+        // 輸入框（design §21.15 驗證用，螢幕上鎖、視窗在別的桌面時也能用）：用提示文字找 SwiftUI TextField 背後的 NSTextField
+        // typefield <提示文字> <文字> [第幾個]：在結尾打字；fieldvalue <提示文字> <輸出.json> [第幾個]；submitfield <提示文字> [第幾個]：按 Return
+        case "typefield":
+            guard let field = textField(placeholder: args[1], index: args.count > 3 ? Int(args[3]) ?? 0 : 0) else { break }
+            field.window?.makeFirstResponder(field)
+            if let editor = field.currentEditor() as? NSTextView {
+                editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+                editor.insertText(args[2], replacementRange: editor.selectedRange())
+            }
+        case "fieldvalue":
+            let field = textField(placeholder: args[1], index: args.count > 3 ? Int(args[3]) ?? 0 : 0)
+            write(["found": field != nil, "text": field?.stringValue ?? ""], to: args[2])
+        case "submitfield":
+            guard let field = textField(placeholder: args[1], index: args.count > 2 ? Int(args[2]) ?? 0 : 0) else { break }
+            field.window?.makeFirstResponder(field)
+            field.currentEditor()?.insertNewline(nil)
+        case "editsegment": model.debugEditSegment = id   // editsegment <段落 id>：等於點那一段開始編輯
         case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
             var lines: [String] = []
             func dump(_ element: NSAccessibilityProtocol, depth: Int) {
@@ -327,6 +344,20 @@ enum DebugControl {
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         return out
+    }
+
+    /// 提示文字是 placeholder 的輸入框（依畫面上的順序）
+    private static func textField(placeholder: String, index: Int) -> NSTextField? {
+        var found: [NSTextField] = []
+        func walk(_ view: NSView) {
+            if let field = view as? NSTextField, field.isEditable,
+               field.placeholderString == placeholder || field.placeholderAttributedString?.string == placeholder {
+                found.append(field)
+            }
+            view.subviews.forEach(walk)
+        }
+        for window in NSApp.windows where window.isVisible { window.contentView.map(walk) }
+        return found.indices.contains(index) ? found[index] : nil
     }
 
     /// 所有看得到的視窗裡，標籤或標題等於 label 的按鈕（依元件樹的順序）

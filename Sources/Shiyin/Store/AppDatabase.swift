@@ -420,6 +420,44 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    // MARK: 編輯中的草稿（design §21.15、R20.6）
+
+    /// key：review:<題目>、review-skip:<題目>、segment:<段落 id>
+    func drafts(_ meetingId: Int64) throws -> [String: String] {
+        try pool.read { db in
+            Dictionary(try Row.fetchAll(db, sql: "SELECT key, text FROM drafts WHERE meeting_id = ?", arguments: [meetingId])
+                .map { ($0["key"] as String, $0["text"] as String) }, uniquingKeysWith: { a, _ in a })
+        }
+    }
+
+    /// 最近改過、key 以 prefix 開頭的草稿
+    func latestDraft(_ meetingId: Int64, prefix: String) throws -> (key: String, text: String)? {
+        try pool.read { db in
+            try Row.fetchOne(db, sql: "SELECT key, text FROM drafts WHERE meeting_id = ? AND substr(key, 1, ?) = ? ORDER BY updated_at DESC LIMIT 1",
+                             arguments: [meetingId, prefix.count, prefix]).map { ($0["key"], $0["text"]) }
+        }
+    }
+
+    /// 存草稿；text 是空的就刪掉
+    func setDraft(_ meetingId: Int64, key: String, text: String) throws {
+        try pool.write { db in
+            if text.isEmpty {
+                try db.execute(sql: "DELETE FROM drafts WHERE meeting_id = ? AND key = ?", arguments: [meetingId, key])
+            } else {
+                try db.execute(sql: """
+                    INSERT INTO drafts (meeting_id, key, text, updated_at) VALUES (?, ?, ?, ?)
+                    ON CONFLICT (meeting_id, key) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at
+                    """, arguments: [meetingId, key, text, Clock.now()])
+            }
+        }
+    }
+
+    func deleteDrafts(_ meetingId: Int64, prefix: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "DELETE FROM drafts WHERE meeting_id = ? AND substr(key, 1, ?) = ?", arguments: [meetingId, prefix.count, prefix])
+        }
+    }
+
     // MARK: 逐字稿校正（design §17.4）
 
     func corrections(_ meetingId: Int64) throws -> [Correction] {

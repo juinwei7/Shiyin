@@ -27,6 +27,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 關掉主視窗 app 不結束，錄音和工作照常進行（R13.3）
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    /// 結束前讓還開著的編輯器存草稿（design §21.15、R20.6）
+    func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.post(name: .flushDrafts, object: nil)
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { AppModel.shared.openMainWindow?() }
         return true

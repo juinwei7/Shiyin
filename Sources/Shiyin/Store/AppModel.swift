@@ -844,6 +844,27 @@ final class AppModel {
         perform(.detail([.corrections])) { try db.rejectCorrections(ids) }
     }
 
+    // MARK: 編輯中的草稿（design §21.15、R20.6）：會議內容，存在資料庫，不放 UserDefaults
+
+    func drafts(_ meetingId: Int64) -> [String: String] { (try? db.drafts(meetingId)) ?? [:] }
+
+    func latestDraft(_ meetingId: Int64, prefix: String) -> (key: String, text: String)? {
+        try? db.latestDraft(meetingId, prefix: prefix)
+    }
+
+    func saveDraft(_ meetingId: Int64, key: String, text: String) {
+        do { try db.setDraft(meetingId, key: key, text: text) } catch { log.error("save draft failed: \(error.localizedDescription)") }
+    }
+
+    func deleteDrafts(_ meetingId: Int64, prefix: String) {
+        try? db.deleteDrafts(meetingId, prefix: prefix)
+    }
+
+    #if DEBUG
+    /// shiyinctl editsegment：等於點那一段開始編輯（逐字稿分頁看到就開始）
+    var debugEditSegment: Int64?
+    #endif
+
     /// 捲到這一段並暫時加底色。先清掉再設，同一段點第二次也會捲過去；幾秒後拿掉底色，不要一直留著
     func flashSegment(_ id: Int64) {
         highlightSegment = nil
@@ -1159,4 +1180,9 @@ final class AppModel {
         guard let meeting = try? db.meeting(job.meetingId) else { return }
         notifier.jobFinished(job, meeting: meeting, error: error)
     }
+}
+
+extension Notification.Name {
+    /// 拾音要結束了：畫面上還開著的編輯器馬上存草稿（design §21.15）
+    static let flushDrafts = Notification.Name("com.weiwei.shiyin.flushDrafts")
 }

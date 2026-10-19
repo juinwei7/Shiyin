@@ -11,6 +11,7 @@ struct TranscriptTab: View {
     @State private var matchCursor = 0
     @State private var editingId: Int64?
     @State private var editText = ""
+    @State private var draftTask: Task<Void, Never>?
     @State private var showReplace = false
     @State private var showCorrectionGroups = false
     /// 播放中的段落。由 PlaybackFollower 在換段時才更新，播放時間每次變動不會讓整份列表重算（design §21.12）
@@ -94,6 +95,23 @@ struct TranscriptTab: View {
                         matchCursor = 0
                         if let first = matches.first { proxy.scrollTo(first, anchor: .center) }
                     }
+                    // 單段編輯的草稿（design §21.15、R20.6）：換分頁、換會議、結束拾音都還在
+                    .onAppear(perform: restoreEditDraft)
+                    .onChange(of: editText) { _, _ in scheduleEditDraft() }
+                    .onDisappear {
+                        draftTask?.cancel()
+                        saveEditDraft()
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: .flushDrafts)) { _ in
+                        draftTask?.cancel()
+                        saveEditDraft()
+                    }
+                    #if DEBUG
+                    .onChange(of: model.debugEditSegment) { _, id in
+                        if let segment = detail.segments.first(where: { $0.id == id }) { startEdit(segment) }
+                        model.debugEditSegment = nil
+                    }
+                    #endif
                     .onChange(of: model.highlightSegment, initial: true) { _, id in
                         guard let id else { return }
                         // 要跳到的段落被說話者篩選藏起來時，先取消篩選
@@ -277,7 +295,7 @@ struct TranscriptTab: View {
                         .textFieldStyle(.roundedBorder)
                         .onSubmit { saveEdit(segment) }
                     HStack {
-                        Button("取消") { editingId = nil }
+                        Button("取消") { cancelEdit() }
                             .keyboardShortcut(.cancelAction)
                         Button("儲存") { saveEdit(segment) }
                             .buttonStyle(.borderedProminent)
@@ -341,6 +359,8 @@ struct TranscriptTab: View {
             model.noticeMessage = String(localized: "正在處理這場會議，完成後才能編輯逐字稿")
             return
         }
+        // 正在改別段的話，那一段的草稿不留（跟按取消一樣）
+        if editingId != nil && editingId != segment.id { cancelEdit() }
         editText = segment.text
         editingId = segment.id
     }
@@ -348,7 +368,46 @@ struct TranscriptTab: View {
     private func saveEdit(_ segment: Segment) {
         let text = editText.trimmingCharacters(in: .whitespacesAndNewlines)
         if let id = segment.id, !text.isEmpty, text != segment.text { model.updateSegment(id, text: text) }
+        clearEditDraft()
         editingId = nil
+    }
+
+    private func cancelEdit() {
+        clearEditDraft()
+        editingId = nil
+    }
+
+    private func clearEditDraft() {
+        draftTask?.cancel()
+        model.deleteDrafts(detail.meeting.id!, prefix: "segment:")
+    }
+
+    /// 打字停 0.8 秒存一次
+    private func scheduleEditDraft() {
+        guard editingId != nil else { return }
+        draftTask?.cancel()
+        draftTask = Task {
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
+            saveEditDraft()
+        }
+    }
+
+    /// 跟原本一樣（剛開始編輯、改回原樣）就不留草稿
+    private func saveEditDraft() {
+        guard let editingId else { return }
+        let original = detail.segments.first { $0.id == editingId }?.text
+        model.saveDraft(detail.meeting.id!, key: "segment:\(editingId)", text: editText == original ? "" : editText)
+    }
+
+    /// 上次沒存的編輯：回到編輯狀態，內容是草稿
+    private func restoreEditDraft() {
+        guard editingId == nil, let draft = model.latestDraft(detail.meeting.id!, prefix: "segment:"),
+              let id = Int64(draft.key.dropFirst("segment:".count)),
+              detail.segments.contains(where: { $0.id == id }) else { return }
+        editText = draft.text
+        editingId = id
+        model.flashSegment(id)
     }
 }
 

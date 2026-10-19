@@ -6,6 +6,7 @@ struct ReviewTab: View {
     let detail: MeetingDetail
     @State private var answers: [Int: String] = [:]
     @State private var dismissed: Set<Int> = []
+    @State private var saveTask: Task<Void, Never>?
 
     private var items: [MeetingNotes.ReviewItem] { detail.notes?.reviewItems ?? [] }
 
@@ -14,6 +15,23 @@ struct ReviewTab: View {
     }
 
     var body: some View {
+        content
+            // 回答的草稿（design §21.15、R20.6）：用題目的文字當 key，換分頁、換會議、結束拾音都還在
+            .onAppear(perform: loadDrafts)
+            .onChange(of: answers) { _, _ in scheduleSave() }
+            .onChange(of: dismissed) { _, _ in scheduleSave() }
+            .onDisappear {
+                saveTask?.cancel()
+                saveDrafts()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .flushDrafts)) { _ in
+                saveTask?.cancel()
+                saveDrafts()
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         if detail.notes == nil {
             NotesPlaceholder(detail: detail)
         } else if items.isEmpty {
@@ -41,6 +59,8 @@ struct ReviewTab: View {
                     Button(submitTitle) {
                         // 送出失敗（例如整理工具設成不整理）時保留回答
                         if model.submitReview(answers: answers, dismissed: dismissed) {
+                            saveTask?.cancel()
+                            model.deleteDrafts(detail.meeting.id!, prefix: "review")
                             answers = [:]
                             dismissed = []
                         }
@@ -53,9 +73,38 @@ struct ReviewTab: View {
             }
             // 回答是照題號存的：題目換了（依回答修正、重新整理、復原上一版）就清掉，不然會配到別的題目
             .onChange(of: items.map(\.question)) { _, _ in
+                saveTask?.cancel()
+                model.deleteDrafts(detail.meeting.id!, prefix: "review")
                 answers = [:]
                 dismissed = []
             }
+        }
+    }
+
+    private func loadDrafts() {
+        let drafts = model.drafts(detail.meeting.id!)
+        guard !drafts.isEmpty else { return }
+        for (index, item) in items.enumerated() {
+            if let answer = drafts["review:" + item.question] { answers[index] = answer }
+            if drafts["review-skip:" + item.question] != nil { dismissed.insert(index) }
+        }
+    }
+
+    /// 打字停 0.8 秒存一次
+    private func scheduleSave() {
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
+            saveDrafts()
+        }
+    }
+
+    private func saveDrafts() {
+        let id = detail.meeting.id!
+        for (index, item) in items.enumerated() {
+            model.saveDraft(id, key: "review:" + item.question, text: answers[index] ?? "")
+            model.saveDraft(id, key: "review-skip:" + item.question, text: dismissed.contains(index) ? "1" : "")
         }
     }
 
