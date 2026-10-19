@@ -318,7 +318,10 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ## 12. 發布（R10）
 
-- `scripts/make-signing-cert.sh`：在登入鑰匙圈建立一張自簽的程式簽章憑證，名稱是「Shiyin Self-Signed」，只要做一次。之後 `build-app.sh` 都用這張憑證簽章，designated requirement 才會固定，TCC 權限在更新後也會保留（R10.7）。
+- `scripts/make-signing-cert.sh`：建立一張自簽的程式簽章憑證「Shiyin Self-Signed」，只要做一次。放在獨立的鑰匙圈 `~/Library/Application Support/ShiyinSigning/shiyin-signing.keychain-db`（密碼在同一個資料夾），有效到 2036-10-12。codesign 只肯用受信任的憑證，本機要用的話加 `--trust`（要輸入登入密碼）；沒有信任時 `build-app.sh` 用 ad-hoc。用這張憑證簽章時 designated requirement 是 `identifier "com.weiwei.shiyin" and certificate leaf = H"75f7e2a8…"`，固定不變，TCC 權限在更新後才會保留（R10.7）。
+  - 使用者的 Mac 不信任這張憑證：Gatekeeper 照樣擋（第一次要按「仍要打開」），但簽章檢查（`codesign --verify`、app 內更新的 `SecStaticCodeCheckValidity`）不看信任，會通過。
+  - 從 ad-hoc 換成這張憑證（2026-10-19 起 CI 用它簽）：ad-hoc 版的 designated requirement 只看 identifier，所以舊版可以用 app 內更新升到憑證版；升級之後就鎖定這張憑證，之後每一版都要用它簽，ad-hoc 或別的憑證簽的會被擋下。
+  - 憑證到期：已經裝好的 app 照常打開、權限不受影響（使用者的 Mac 本來就不信任它），但到期後不能再用它簽新版，換新憑證會被舊版的 app 內更新擋下。到期前（2034 年左右）先出一版過渡版本，designated requirement 寫成 `identifier "com.weiwei.shiyin" and (certificate leaf = H"舊" or certificate leaf = H"新")`，大部分人升級後再改用新憑證。
 - `scripts/make-dmg.sh`：用 hdiutil 建立 DMG，裡面有 Shiyin.app、Applications 資料夾的捷徑、`安裝說明.pdf` 和 `Install Guide.pdf`（3.1 起，§16.7）。
 - 安裝說明的內容：
   - 拖進「應用程式」
@@ -335,7 +338,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - CI 打包（GitHub Actions，`.github/workflows/release.yml`）：
   - 推 `v*` 的 tag：在 `macos-26`（Apple Silicon、Xcode 26）上跑 `make-dmg.sh`，產出 DMG 和 `shiyin-update.json`，建立 GitHub Release 並上傳；tag 跟 `Info.plist` 的版本號不一致時直接失敗。tag 的說明文字當成更新內容
   - 手動執行（workflow_dispatch）：只建置，DMG 放在 Actions 的 artifact
-  - 簽章：repo secrets 有 `SHIYIN_SIGNING_P12`、`SHIYIN_SIGNING_P12_PASSWORD` 時，`scripts/ci/import-signing-cert.sh` 把憑證放成 `build-app.sh` 認得的位置（`~/Library/Application Support/ShiyinSigning`），並用 sudo 設成系統信任（runner 的 sudo 不用密碼），簽出來跟作者電腦上的一致；沒有就用 ad-hoc。憑證用 `scripts/export-signing-cert.sh --to-github <repo>` 從作者的電腦匯出
+  - 簽章：repo secrets 有 `SHIYIN_SIGNING_P12`、`SHIYIN_SIGNING_P12_PASSWORD` 時，`scripts/ci/import-signing-cert.sh` 把憑證放成 `build-app.sh` 認得的位置（`~/Library/Application Support/ShiyinSigning`），並用 sudo 設成系統信任（runner 的 sudo 不用密碼），簽出來跟作者電腦上的一致；沒有就用 ad-hoc。codesign 只在鑰匙圈搜尋清單裡找簽章身分（加了 `--keychain` 也一樣），`build-app.sh` 簽章期間暫時把這個鑰匙圈加進清單，簽完或失敗都還原。secrets 的值網頁和 API 都讀不出來，只有推 tag 和手動執行會用到（不接受 PR 觸發），私鑰只在 runner 上，不會進 artifact 和快取。憑證用 `scripts/export-signing-cert.sh --to-github <repo>` 從作者的電腦匯出
   - 更新網址從 repo 變數 `SHIYIN_UPDATE_URL` 帶入；有設定 `SHIYIN_RELEASES_REPO`（加上 `SHIYIN_RELEASES_TOKEN`）時，也發布到另一個公開的 repo（程式碼維持私人時用）
 - 全域快捷鍵（R11.3）：用 Carbon 的 `RegisterEventHotKey` 以獨佔模式（`kEventHotKeyExclusive`）註冊 ⌃⌥⌘R（不需要輔助使用權限）。不加獨佔的話，Carbon 允許不同的 app 註冊同一組按鍵，偵測不到衝突，按下時跟 ⌘R 一樣：沒在錄就開始，在錄就停止。設定 →「錄音」可以關掉；註冊失敗（例如被別的 app 佔用）時在設定裡顯示原因
 

@@ -31,8 +31,7 @@
 - [~] **分享**（R7.5；原 T-D6）：匯出對話框按「分享…」選 Mail，附件有帶過去
 - [~] **API 整理工具用真的 key**（R6.1、R17；原 T-C2、T-K3）：Anthropic API 整理和校稿；OpenAI API（目前的帳戶沒有額度，只測到錯誤訊息）；Groq 等 OpenAI 相容服務（只用 Codex 回答的本機伺服器測過）
 
-## 簽章（等使用者決定）
+## 簽章（下一次發布後驗證）
 
-- [~] **自簽憑證**（§12、R10.7、D5；原 T-A5、T-F5、T-F9）：發布的 DMG 和使用者自己的拾音都還是 ad-hoc 簽章，每次更新後可能要重新允許權限
-  - 使用者：`scripts/make-signing-cert.sh --trust`（要輸入登入密碼）；`scripts/export-signing-cert.sh --to-github juinwei7/Shiyin` 讓 CI 用同一張憑證（私鑰會上傳到 GitHub）
-  - 驗證：CI 簽出來的跟本機一致；在另一個 macOS 帳號照安裝說明安裝 DMG；更新一版後麥克風權限還在
+- [~] **自簽憑證**（§12、R10.7、D5；原 T-A5、T-F5、T-F9）：2026-10-19 起 CI 用「Shiyin Self-Signed」簽章（secrets 已設定），下一次發布的版本開始生效。已驗證：CI 簽出來的 app 在不信任這張憑證的 Mac 上簽章檢查通過；ad-hoc 的 3.4.0 可以更新到憑證版；憑證版會擋下 ad-hoc 版
+  - 驗證（下一次發布後，要使用者）：用 app 內更新從 3.4.0 升級，麥克風、錄電腦聲音的權限還在嗎；用 API key 的整理工具會不會跳出鑰匙圈的存取確認（從 ad-hoc 換過來可能會問一次，之後的更新不應該再問）；在另一個 macOS 帳號照安裝說明安裝 DMG
