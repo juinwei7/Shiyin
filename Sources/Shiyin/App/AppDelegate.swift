@@ -4,6 +4,12 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: Any?
 
+    /// 子程序還沒讀完 stdin 就結束時，寫入會收到 SIGPIPE，預設會結束整個拾音（design §20.1）。
+    /// 忽略之後寫入只會失敗，照常讀子程序的結束代碼和錯誤訊息
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        signal(SIGPIPE, SIG_IGN)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppModel.shared.start()
         installSpaceKey()

@@ -150,6 +150,20 @@ enum DebugControl {
         // 點通知後的動作（系統的點擊沒辦法模擬，直接呼叫同一個處理函式）
         case "opennotification": if let id { model.notifier.onOpen?(id) }
         case "exportsheet": model.showExportSheet = args.count < 2 || args[1] == "1"
+        // epipe <輸出.json>：子程序沒讀完輸入就結束（design §20.1）。拾音不能被 SIGPIPE 結束
+        case "epipe":
+            let path = args[1]
+            var current = sigaction()
+            sigaction(SIGPIPE, nil, &current)
+            let ignored = unsafeBitCast(current.__sigaction_u.__sa_handler, to: Int.self) == 1   // SIG_IGN
+            Task {
+                do {
+                    let result = try await Subprocess(URL(fileURLWithPath: "/usr/bin/true"), []).run(input: Data(count: 1 << 20))
+                    write(["status": Int(result.status), "survived": true, "sigpipeIgnored": ignored], to: path)
+                } catch {
+                    write(["error": error.localizedDescription, "survived": true, "sigpipeIgnored": ignored], to: path)
+                }
+            }
         // 麥克風權限被拒時的提醒（R1.8）：真的拒絕要使用者操作，這裡只看畫面
         case "permdenied": model.recorder.permissionDenied = args.count < 2 || args[1] == "1"
         case "info": model.selection = id; model.updateInfo(title: args[2], date: args[3], participants: args[4])

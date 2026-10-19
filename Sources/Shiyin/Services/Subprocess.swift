@@ -96,6 +96,8 @@ final class Subprocess: @unchecked Sendable {
                 return
             }
             if let input, let inPipe {
+                // 子程序先結束時寫入只回傳錯誤，不送 SIGPIPE（design §20.1）
+                _ = fcntl(inPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
                 DispatchQueue.global().async {
                     try? inPipe.fileHandleForWriting.write(contentsOf: input)
                     try? inPipe.fileHandleForWriting.close()
