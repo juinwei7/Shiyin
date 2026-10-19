@@ -27,6 +27,8 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
   - Sources: microphone only, microphone + computer audio (online meetings), or computer audio only. The other side of Zoom, Meet or Teams is recorded too
   - Live transcript and per-source level meters while recording; pause, bookmark and take notes
   - Recording continues with the main window closed; pause or stop from the menu bar, or press ⌃⌥⌘R in any app to start or stop
+  - Plugging in or unplugging headphones, or switching output devices, while recording reconnects automatically and keeps recording
+  - Shiyin warns you when disk space is low; if the disk fills up, recording stops and everything recorded so far is kept and transcribed
   - If the app crashes or the Mac shuts down, the recording is recovered on next launch
 - **Import**: audio and video (m4a, mp3, wav, aac, flac, caf, aiff, mp4, mov), transcripts (srt, vtt, txt), Markdown notes and whole-meeting packages (.shiyin). Drag into the window, press ⌘O, drop on the Dock icon, or use Open With in Finder
 - **Local transcription**: whisper.cpp + Breeze ASR 25, with your glossary as the prompt; Japanese meetings use Whisper large-v3-turbo (downloaded the first time you transcribe a Japanese meeting). Or use the transcriber built into macOS (no model download and much faster, but it ignores the glossary)

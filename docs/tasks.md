@@ -13,10 +13,39 @@
 
 - [~] **L10 錄音中換裝置、看門狗**（§20.2，R18.2，D25）：模擬錄音驗證過看門狗、重新連接、雙聲道補靜音
   - 待使用者：錄音中接上、拔掉耳機（麥克風重新接上、錄音不中斷），換輸出裝置（電腦聲音用新的裝置繼續錄）
-- [ ] **L12 驗收、準備發布 3.4.1**
-  - 版本 3.4.1；requirements 第 14 節寫驗收結果
-  - 驗證：`l10n.py check` 沒有問題；中文提示詞、匯出格式跟 3.4.0 相同（比對原始碼和示範資料的匯出結果）；release 版建置成功
-  - 發布（推 tag）要等使用者確認
+- [~] **L12 發布 3.4.1**：版本 3.4.1、requirements 第 14 節驗收結果、匯出比對、release 建置都完成
+  - 待使用者確認：`git push`（main 領先 origin），再推 tag：說明文字存成檔案，`git tag -a v3.4.1 -F <檔案>`、`git push origin v3.4.1`（已用 `node site/build.mjs --releases` 試建通過）
+  - 發布後：下面「簽章」那一項的驗證（第一個用自簽憑證簽的版本）
+
+```
+拾音 3.4.1：穩定性修正
+- 錄音中接上或拔掉耳機、換了輸出裝置，會自動接上繼續錄；有音源沒有送出聲音時，錄音畫面會提示並重新連接
+- 磁碟空間不夠時會提醒；錄音寫不進磁碟時馬上停止並說明，已經錄到的部分會保留、照常轉錄
+- 筆記自動存檔後切換分頁，不會再顯示舊的內容，接著打字也不會蓋掉之前的字
+- 轉錄中結束拾音不會再當掉
+- 用 Claude Code、Codex CLI 整理時，它們提早結束不會再讓拾音閃退
+- 同一個工作讓拾音意外結束 2 次後就不再自動重試，可以按「重試」再試一次
+- 復原上次沒正常結束的錄音時，出錯也不會刪掉錄音檔，下次開啟再試
+- 匯出對話框一定匯出打開時的那一場會議，標題會寫出會議名稱
+- 匯入 .shiyin 封包時會檢查錄音檔和逐字稿，有問題就不匯入
+- 會議多的時候，存逐字稿、取代文字、刪除會議快很多
+- 打開拾音時不再讀出 API key，更新後不會一開就跳出鑰匙圈的存取確認
+- log 不再寫進整理工具回傳的錯誤內容
+
+Shiyin 3.4.1: Stability fixes
+- Plugging in or unplugging headphones, or switching output devices, while recording now reconnects automatically; if a source stops sending audio, the recording screen tells you and reconnects
+- Shiyin warns you when disk space is low; if the recording can't be written to disk, recording stops right away with an explanation, and everything recorded so far is kept and transcribed
+- After notes are saved automatically, switching tabs no longer shows old content, and new typing no longer overwrites what you wrote
+- Quitting Shiyin while transcribing no longer crashes
+- Shiyin no longer crashes when Claude Code or Codex CLI exits early while summarizing
+- If a task makes Shiyin quit unexpectedly twice, it isn't retried automatically; click “Retry” to try again
+- Recovering an interrupted recording never deletes the audio file, even if something goes wrong; Shiyin tries again next launch
+- The export dialog always exports the meeting it was opened for, and its title shows the meeting name
+- Importing a .shiyin package checks the audio file and transcript, and rejects broken packages
+- Saving transcripts, replacing text and deleting meetings are much faster when you have many meetings
+- Shiyin no longer reads your API keys at launch, so updating doesn't bring up keychain prompts as soon as it opens
+- Logs no longer include error text returned by summarizers
+```
 
 ## 等真實會議錄音
 
