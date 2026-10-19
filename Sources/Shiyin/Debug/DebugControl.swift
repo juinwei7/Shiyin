@@ -79,6 +79,10 @@ enum DebugControl {
             write(["prompt": text, "actions": MeetingPromptPanel.shared.actions.keys.sorted(), "muted": MeetingDetector.muted,
                    "recording": model.recorder.isRecording], to: args[1])
         case "meetingaction": MeetingPromptPanel.shared.perform(args[1])
+        // reportinfo <輸出.json>：回報問題會附上的內容和網址（不打開瀏覽器、不動剪貼簿，design §21.9）
+        case "reportinfo":
+            let text = ProblemReport.text(db: model.db)
+            write(["text": text, "url": ProblemReport.url(body: text)?.absoluteString ?? "", "issuesURL": ProblemReport.issuesURL], to: args[1])
         case "namespeakers": if let id { try? model.db.enqueue(id, kind: .nameSpeakers); model.runner.wake() }
         case "applysuggestion": model.selection = id; model.applySpeakerSuggestion(Int(args[2]) ?? 1)
         case "dismisssuggestion": model.selection = id; model.dismissSpeakerSuggestion(Int(args[2]) ?? 1)

@@ -88,6 +88,8 @@
 	<string>Shiyin uses the microphone to record meetings. Recordings stay on this Mac.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Shiyin creates a live transcript on this Mac while recording. Nothing is uploaded.</string>
+	<key>ShiyinIssuesURL</key>
+	<string></string>
 	<key>ShiyinUpdateURL</key>
 	<string></string>
 	<key>UTExportedTypeDeclarations</key>

@@ -4,6 +4,39 @@
     "": {
       "extractionState": "manual"
     },
+    "## 問題描述": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## What happened"
+          }
+        }
+      }
+    },
+    "## 最近失敗的工作": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Recent failed jobs"
+          }
+        }
+      }
+    },
+    "## 環境": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Environment"
+          }
+        }
+      }
+    },
     "%@ %@": {
       "extractionState": "manual"
     },
@@ -291,6 +324,94 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld of %lld"
+          }
+        }
+      }
+    },
+    "- %@ %@：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- %1$@ %2$@: %3$@"
+          }
+        }
+      }
+    },
+    "- %@，記憶體 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- %1$@, %2$@ memory"
+          }
+        }
+      }
+    },
+    "- macOS %@（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- macOS %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "- 介面語言：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Interface language: %@"
+          }
+        }
+      }
+    },
+    "- 拾音 %@（build %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Shiyin %1$@ (build %2$@)"
+          }
+        }
+      }
+    },
+    "- 整理工具：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Summarizer: %@"
+          }
+        }
+      }
+    },
+    "- 沒有": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- None"
+          }
+        }
+      }
+    },
+    "- 轉錄：%@；說話者辨識：%@；聲紋：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Transcription: %1$@; speaker recognition: %2$@; remembered voices: %3$@"
           }
         }
       }
@@ -616,6 +737,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "macOS"
+          }
+        }
+      }
+    },
+    "macOS 內建辨識": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS built-in recognition"
           }
         }
       }
@@ -2205,6 +2337,28 @@
         }
       }
     },
+    "回報問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a Problem"
+          }
+        }
+      }
+    },
+    "回報問題…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a Problem…"
+          }
+        }
+      }
+    },
     "回應不完整（可能超過長度上限）": {
       "extractionState": "manual",
       "localizations": {
@@ -2256,6 +2410,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Answer questions and edit"
+          }
+        }
+      }
+    },
+    "在 GitHub 回報": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report on GitHub"
           }
         }
       }
@@ -2807,6 +2972,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Names already filled in stay, but future meetings won't fill them in automatically."
+          }
+        }
+      }
+    },
+    "已複製": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
           }
         }
       }
@@ -3513,6 +3689,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "After you click “Stop & Transcribe”, Shiyin transcribes the recording again on this Mac (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for Japanese) and identifies the different speakers. Click “Speaker 1” in the transcript to change it to a name; the whole meeting updates."
+          }
+        }
+      }
+    },
+    "按「在 GitHub 回報」會用瀏覽器打開新的 issue，並帶入下面的內容，你可以在瀏覽器裡修改後再送出。內容只有版本、環境和錯誤的種類，不包含會議內容、檔名或 API key。沒有 GitHub 帳號的話，可以按「複製」用其他方式寄給維護的人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Report on GitHub” opens a new issue in your browser with the text below filled in; you can edit it there before submitting. It only contains the version, your setup and the kinds of errors — no meeting content, file names or API keys. If you don’t have a GitHub account, click “Copy” and send it to the maintainer another way."
           }
         }
       }
@@ -8475,6 +8662,17 @@
         }
       }
     },
+    "開": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        }
+      }
+    },
     "開始使用": {
       "extractionState": "manual",
       "localizations": {
@@ -8548,6 +8746,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start recording (⌘R) in %@; click the arrow to change the recording source and language"
+          }
+        }
+      }
+    },
+    "關": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
+    "關閉": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
           }
         }
       }
@@ -8790,6 +9010,28 @@
           "stringUnit": {
             "state": "translated",
             "value": " (the account has no credits; add credits on the service’s website)"
+          }
+        }
+      }
+    },
+    "（沒有記錄種類）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(kind not recorded)"
+          }
+        }
+      }
+    },
+    "（請寫發生了什麼事、怎麼重現。不要貼會議內容）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(Describe what happened and how to reproduce it. Don’t paste meeting content.)"
           }
         }
       }

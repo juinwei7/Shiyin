@@ -32,6 +32,15 @@ struct ShiyinApp: App {
         .defaultSize(width: 680, height: 780)
         .defaultLaunchBehavior(.suppressed)
 
+        // 回報問題（design §21.9）
+        Window("回報問題", id: "report") {
+            ReportProblemView()
+                .environment(AppModel.shared)
+                .chineseGlyphs()
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
+
         // 問所有會議（design §21.8）
         Window("問所有會議", id: "ask") {
             AskAllView()
@@ -92,6 +101,7 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("拾音使用說明") { openWindow(id: "guide") }
                 .keyboardShortcut("?", modifiers: .command)
+            Button("回報問題…") { openWindow(id: "report") }
         }
         CommandMenu("會議") {
             ForEach(Array(DetailTab.allCases.enumerated()), id: \.element) { index, tab in
