@@ -414,6 +414,10 @@ enum DebugControl {
             "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible] },
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
+        if let detail = model.detail {
+            out["transcribedWith"] = detail.meeting.transcribedWith
+            out["canUpgradeTranscript"] = model.canUpgradeTranscript(detail.meeting)   // design §21.17
+        }
         return out
     }
 
@@ -512,11 +516,15 @@ enum DebugControl {
         Task { @MainActor in
             let started = Date()
             var result: [String: Any] = ["audio": audio]
+            let meter = MemoryMeter()
             do {
                 let options = try JSONDecoder().decode(TranscriptionOptions.self, from: Data(contentsOf: URL(fileURLWithPath: options)))
                 result["options"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(options))
-                if let run = try await TranscriptionPipeline(options: options).run(URL(fileURLWithPath: audio)) {
+                var pipeline = TranscriptionPipeline(options: options)
+                pipeline.stage = { meter.set(stage: $0) }
+                if let run = try await pipeline.run(URL(fileURLWithPath: audio)) {
                     result["duration"] = run.duration
+                    result["seams"] = run.seams
                     result["segments"] = run.segments.enumerated().map { i, segment -> [String: Any] in
                         ["start": segment.start, "end": segment.end, "text": segment.text,
                          "speaker": run.speakers[i] ?? NSNull(), "channel": run.channels[i] ?? NSNull(),
@@ -527,6 +535,7 @@ enum DebugControl {
                 result["error"] = error.localizedDescription
             }
             result["elapsed"] = Date().timeIntervalSince(started)
+            result["memory"] = meter.stop()
             write(result, to: output + ".tmp")
             try? FileManager.default.removeItem(atPath: output)
             try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)

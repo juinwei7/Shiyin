@@ -159,15 +159,15 @@ final class JobRunner {
     private func loop(_ lane: JobLane) async {
         while !Task.isCancelled {
             let job: Job?
-            // 轉錄只取模型已經下載的語言；日文會議第一次要轉錄時才自動下載日文模型（design §18.2）
-            let ready = Set(MeetingLanguage.allCases.filter {
-                AppSettings.useSystemTranscriber
-                    || FileManager.default.fileExists(atPath: ModelStore.path(ModelStore.transcription(for: $0)).path)
-            })
-            if lane == .transcribe && !ready.contains(.ja) && (try? db.hasQueuedTranscribe(language: .ja)) == true {
-                AppModel.shared.models.autoStart(.japanese)
+            // 模型還沒下載好的語言先用 macOS 內建辨識轉錄（design §21.17），模型在背景下載；
+            // 日文模型在日文會議第一次要轉錄時才下載（design §18.2）
+            if lane == .transcribe && !AppSettings.useSystemTranscriber {
+                for language in MeetingLanguage.allCases where !ModelStore.hasTranscriptionModel(for: language)
+                    && (try? db.hasQueuedTranscribe(language: language)) == true {
+                    AppModel.shared.models.autoStart(ModelStore.transcription(for: language))
+                }
             }
-            do { job = try db.claimNext(lane: lane, transcribeLanguages: ready) } catch {
+            do { job = try db.claimNext(lane: lane) } catch {
                 log.error("claim failed: \(error.localizedDescription)")
                 job = nil
             }
@@ -249,6 +249,9 @@ final class JobRunner {
         pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
         pipeline.setCancel = { [weak self] in self?.running[lane]?.cancelAction = $0 }
         pipeline.shouldContinue = { [weak self] in self?.isStillRunning(job) ?? false }
+        if pipeline.options.engine == .system && !AppSettings.useSystemTranscriber {
+            log.info("transcription model not ready, using the system recognizer")
+        }
         guard let result = try await pipeline.run(meeting.audioURL) else { return }
         let (transcribed, speakers, duration) = (result.segments, result.speakers, result.duration)
         let segments = transcribed.enumerated().map { i, s in
@@ -256,7 +259,8 @@ final class JobRunner {
                     lowConfidence: s.lowConfidence, speaker: speakers[i], kind: "final", channel: result.channels[i])
         }
         try db.saveTranscript(job.meetingId, segments: segments, duration: Int(duration.rounded()),
-                              speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices)
+                              speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices,
+                              transcribedWith: pipeline.options.transcribedWith)
         // 聲紋比對（design §21.4）：在整理之前，會議紀錄裡就會是名字
         if AppSettings.voiceprints {
             let matched = try db.matchVoiceprints(job.meetingId)

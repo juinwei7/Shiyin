@@ -37,43 +37,67 @@ enum AudioDecoder {
 
     /// 解碼成 16 kHz Float32；channels 大於 1 時是交錯排列（左右左右…）
     private static func read(_ url: URL, channels: Int) async throws -> [Float] {
-        let asset = AVURLAsset(url: url)
-        guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw AudioDecoderError.noAudioTrack }
-        let reader: AVAssetReader
-        do { reader = try AVAssetReader(asset: asset) } catch { throw AudioDecoderError.unreadable(error.localizedDescription) }
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
-            AVFormatIDKey: kAudioFormatLinearPCM,
-            AVSampleRateKey: sampleRate,
-            AVNumberOfChannelsKey: channels,
-            AVLinearPCMBitDepthKey: 32,
-            AVLinearPCMIsFloatKey: true,
-            AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsNonInterleaved: false,
-        ])
-        output.alwaysCopiesSampleData = false
-        reader.add(output)
-        guard reader.startReading() else {
-            throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? String(localized: "無法開始讀取"))
-        }
+        let stream = try await Stream(url, channels: channels)
         var samples: [Float] = []
-        if let duration = try? await asset.load(.duration).seconds, duration.isFinite {
-            samples.reserveCapacity((Int(duration * sampleRate) + 16_000) * channels)
-        }
-        while let buffer = output.copyNextSampleBuffer() {
-            guard let block = CMSampleBufferGetDataBuffer(buffer) else { continue }
-            let length = CMBlockBufferGetDataLength(block)
-            guard length >= 4 else { continue }
-            // block buffer 不一定連續，用複製的方式最保險
-            var chunk = [Float](repeating: 0, count: length / 4)
-            let status = chunk.withUnsafeMutableBytes {
-                CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: (length / 4) * 4, destination: $0.baseAddress!)
-            }
-            if status == kCMBlockBufferNoErr { samples.append(contentsOf: chunk) }
-        }
-        if reader.status == .failed {
-            throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? String(localized: "讀取中斷"))
-        }
+        samples.reserveCapacity((stream.estimatedCount + 16_000) * channels)
+        try stream.fill(&samples, upTo: .max)
         return samples
+    }
+
+    /// 依序讀出 16 kHz Float32，不用一次解碼整段（長錄音分段轉錄，design §21.16）。只能在同一個執行緒依序用
+    final class Stream {
+        private let reader: AVAssetReader
+        private let output: AVAssetReaderTrackOutput
+        /// 依檔案長度估計的取樣數（每個聲道），算進度用
+        let estimatedCount: Int
+        private(set) var finished = false
+
+        init(_ url: URL, channels: Int = 1) async throws {
+            let asset = AVURLAsset(url: url)
+            guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw AudioDecoderError.noAudioTrack }
+            do { reader = try AVAssetReader(asset: asset) } catch { throw AudioDecoderError.unreadable(error.localizedDescription) }
+            output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: sampleRate,
+                AVNumberOfChannelsKey: channels,
+                AVLinearPCMBitDepthKey: 32,
+                AVLinearPCMIsFloatKey: true,
+                AVLinearPCMIsBigEndianKey: false,
+                AVLinearPCMIsNonInterleaved: false,
+            ])
+            output.alwaysCopiesSampleData = false
+            reader.add(output)
+            guard reader.startReading() else {
+                throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? String(localized: "無法開始讀取"))
+            }
+            if let duration = try? await asset.load(.duration).seconds, duration.isFinite {
+                estimatedCount = Int(duration * sampleRate)
+            } else {
+                estimatedCount = 0
+            }
+        }
+
+        /// 接著讀，直到 samples 至少有 count 個取樣或讀完
+        func fill(_ samples: inout [Float], upTo count: Int) throws {
+            while samples.count < count, !finished {
+                guard let buffer = output.copyNextSampleBuffer() else {
+                    if reader.status == .failed {
+                        throw AudioDecoderError.unreadable(reader.error?.localizedDescription ?? String(localized: "讀取中斷"))
+                    }
+                    finished = true
+                    return
+                }
+                guard let block = CMSampleBufferGetDataBuffer(buffer) else { continue }
+                let length = CMBlockBufferGetDataLength(block)
+                guard length >= 4 else { continue }
+                // block buffer 不一定連續，用複製的方式最保險
+                var chunk = [Float](repeating: 0, count: length / 4)
+                let status = chunk.withUnsafeMutableBytes {
+                    CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: (length / 4) * 4, destination: $0.baseAddress!)
+                }
+                if status == kCMBlockBufferNoErr { samples.append(contentsOf: chunk) }
+            }
+        }
     }
 
     /// 寫成 16 kHz 單聲道 16-bit WAV（匯出 wav、macOS 內建辨識的暫存檔都用這個）

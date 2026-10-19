@@ -73,6 +73,11 @@ final class ModelStore: NSObject {
     }
 
     nonisolated static func path(_ model: Model) -> URL { Paths.modelsDir.appendingPathComponent(info(model).filename) }
+
+    /// 這個語言的轉錄模型下載好了沒（下載完、驗證過才會出現在這個路徑）
+    nonisolated static func hasTranscriptionModel(for language: MeetingLanguage) -> Bool {
+        FileManager.default.fileExists(atPath: path(transcription(for: language)).path)
+    }
     nonisolated static var breezePath: URL { path(.breeze) }
     nonisolated private static func resumeDataPath(_ model: Model) -> URL {
         Paths.modelsDir.appendingPathComponent(".\(info(model).filename).resume")

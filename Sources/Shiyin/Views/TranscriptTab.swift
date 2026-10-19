@@ -51,6 +51,10 @@ struct TranscriptTab: View {
             PlaybackFollower(detail: detail, current: $currentSegmentId)
             searchBar
             Divider()
+            if model.canUpgradeTranscript(detail.meeting) && model.detailStatus?.isActive != true {
+                upgradeBar
+                Divider()
+            }
             if pendingCorrections > 0 && !snapshotMode {
                 correctionBar
                 Divider()
@@ -184,6 +188,26 @@ struct TranscriptTab: View {
     }
 
     /// 有待確認的校正建議時，顯示在搜尋列下方；可以展開依詞處理（同一個詞的每一處一起接受或忽略）
+    /// 模型下載好之前用 macOS 內建辨識轉錄的會議（design §21.17）
+    private var upgradeBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "waveform.badge.magnifyingglass").foregroundStyle(Color.signal)
+            Text(detail.meeting.meetingLanguage == .ja
+                 ? "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用日文轉錄模型重新轉錄，通常比較準。"
+                 : "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。")
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            Button("重新轉錄") { model.retranscribe() }
+                .buttonStyle(.borderedProminent)
+                .help("逐字稿裡改過的文字會換成新的逐字稿，說話者的名字會留著")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .font(.callout)
+        .controlSize(.small)
+        .background(Color.signal.opacity(0.08))
+    }
+
     private var correctionBar: some View {
         let groups = detail.correctionGroups
         return VStack(alignment: .leading, spacing: 0) {

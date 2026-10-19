@@ -56,4 +56,51 @@ enum DebugMetrics {
         ["counts": counts, "timings": timings, "lastPerformMs": lastPerformMs, "maxPerformMs": maxPerformMs, "maxMainGapMs": maxMainGapMs]
     }
 }
+
+/// 只在 DEBUG：量轉錄各階段的記憶體（design §21.16）。背景執行緒每 50 毫秒讀一次 phys_footprint，記下每個階段的最大值
+final class MemoryMeter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stage = "開始"   // l10n-skip
+    private var order: [String] = []
+    private var peaks: [String: UInt64] = [:]
+    private var running = true
+    let baseline = MemoryMeter.footprint()
+
+    init() {
+        Thread.detachNewThread { [self] in
+            while lock.withLock({ running }) {
+                let value = Self.footprint()
+                lock.withLock {
+                    if peaks[stage] == nil { order.append(stage) }
+                    peaks[stage] = max(peaks[stage] ?? 0, value)
+                }
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+        }
+    }
+
+    func set(stage: String) { lock.withLock { self.stage = stage } }
+
+    /// 停止量測，回傳各階段的峰值（MB，依出現順序）和整個程序到目前為止的峰值
+    func stop() -> [String: Any] {
+        lock.withLock { running = false }
+        let mb = { (value: UInt64) in Double(value) / 1_048_576 }
+        return lock.withLock {
+            ["baselineMB": mb(baseline), "stages": order.map { ["stage": $0, "peakMB": mb(peaks[$0] ?? 0)] },
+             "peakMB": mb(peaks.values.max() ?? 0), "processPeakMB": mb(Self.lifetimePeak())]
+        }
+    }
+
+    static func footprint() -> UInt64 { vmInfo()?.phys_footprint ?? 0 }
+    static func lifetimePeak() -> UInt64 { UInt64(vmInfo()?.ledger_phys_footprint_peak ?? 0) }
+
+    private static func vmInfo() -> task_vm_info_data_t? {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        return result == KERN_SUCCESS ? info : nil
+    }
+}
 #endif

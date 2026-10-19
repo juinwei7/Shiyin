@@ -257,28 +257,6 @@ struct StatusBanner: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
-        } else if !model.canTranscribe(detail.meeting.meetingLanguage) && detail.segments.isEmpty && detail.meeting.hasAudio {
-            HStack(spacing: 12) {
-                if detail.meeting.meetingLanguage == .ja {
-                    Label("日文會議要用日文轉錄模型（574 MB），下載完成後才能轉錄", systemImage: "arrow.down.circle")
-                    Spacer()
-                    if model.models.state(.japanese).isBusy {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Button("下載") { model.models.start(.japanese) }
-                    }
-                } else {
-                    Label("還沒有下載轉錄模型，下載完成後才能轉錄", systemImage: "arrow.down.circle")
-                    Spacer()
-                }
-                Button("改用 macOS 內建辨識") { model.useSystemTranscriber() }
-                    .help("不用下載模型、速度快，但不參考詞彙表，英文專有名詞比較容易錯。之後可以在設定 → 錄音改回來")
-                SettingsLink { Text("前往下載") }
-            }
-            .font(.callout)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color.signal.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
         }
     }
 
@@ -287,26 +265,6 @@ struct StatusBanner: View {
         switch status {
         case .queued:
             let kind = detail.latestJob?.kind
-            let language = detail.meeting.meetingLanguage
-            if kind == .transcribe && !model.canTranscribe(language) {
-                // 顯示下載進度；暫停或失敗時可以直接在這裡繼續，不用到設定
-                let which = ModelStore.transcription(for: language)
-                return AnyView(HStack(spacing: 10) {
-                    Label(language == .ja ? "等日文轉錄模型下載完成就會開始轉錄" : "等轉錄模型下載完成就會開始轉錄", systemImage: "arrow.down.circle")
-                    switch model.models.state(which) {
-                    case .downloading(let received, let total) where total > 0:
-                        ProgressView(value: Double(received), total: Double(total)).frame(width: 140).tint(.signal)
-                    case .downloading, .verifying:
-                        ProgressView().controlSize(.small)
-                    case .missing:
-                        Button("下載") { model.models.start(which) }
-                    case .paused, .failed:
-                        Button("繼續下載") { model.models.start(which) }
-                    case .installed:
-                        EmptyView()
-                    }
-                })
-            }
             return AnyView(Label(kind == .transcribe ? "排隊等待轉錄" : "排隊等待整理", systemImage: "clock"))
         case .transcribing(let progress, let stage):
             return AnyView(HStack(spacing: 10) {

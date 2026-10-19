@@ -22,13 +22,19 @@ struct TranscriptionOptions: Codable {
     var model: String?
     /// 沒分聲道時聲紋記成哪種收音（design §21.4）：mic、system，雙聲道混在一起是 mix
     var audioSource = "mix"
+    /// whisper 每段幾秒（design §21.16、D34）；評估時設 0 不分段
+    var chunkSeconds: Double = 600
 
     init() {}
+
+    /// 寫進 meetings.transcribed_with（design §21.17）
+    var transcribedWith: String { engine == .system ? "system" : language == .ja ? "japanese" : "breeze" }
 
     @MainActor
     static func current(language: MeetingLanguage, glossary: [String], channels: String) -> TranscriptionOptions {
         var options = TranscriptionOptions()
-        options.engine = AppSettings.useSystemTranscriber ? .system : .breeze
+        // 這個語言的模型還沒下載好時，這一場先用 macOS 內建辨識（design §21.17、D35）
+        options.engine = AppSettings.useSystemTranscriber || !ModelStore.hasTranscriptionModel(for: language) ? .system : .breeze
         options.language = language
         options.glossary = glossary
         options.diarize = AppSettings.diarize
@@ -49,6 +55,7 @@ struct TranscriptionOptions: Codable {
         echo = try c.decodeIfPresent(Echo.self, forKey: .echo) ?? .dedupe
         model = try c.decodeIfPresent(String.self, forKey: .model)
         audioSource = try c.decodeIfPresent(String.self, forKey: .audioSource) ?? "mix"
+        chunkSeconds = try c.decodeIfPresent(Double.self, forKey: .chunkSeconds) ?? 600
     }
 }
 
@@ -60,6 +67,8 @@ struct TranscriptionResult {
     var duration: Double
     /// 每位說話者（逐字稿上的編號）的聲紋、說話秒數、收音（design §21.4）
     var voices: [Int: SpeakerVoice] = [:]
+    /// whisper 分段的位置（秒）；評估工具用來檢查接縫
+    var seams: [Double] = []
 }
 
 struct SpeakerVoice {
@@ -91,6 +100,7 @@ struct TranscriptionPipeline {
             let channels = try await AudioDecoder.decodeChannels(audio)
             if channels.count == 2 { return try await runSplit(microphone: channels[0], system: channels[1]) }
         }
+        if options.engine == .breeze { return try await runStreaming(audio) }
         let samples = try await AudioDecoder.decode(audio)
         guard shouldContinue() else { return nil }
         let duration = Double(samples.count) / AudioDecoder.sampleRate
@@ -98,7 +108,7 @@ struct TranscriptionPipeline {
         let share = diarize ? 0.85 : 1.0
         let report = progress
         progress(0)
-        guard let transcribed = try await transcribe(samples, from: 0, span: share) else { return nil }
+        guard let (transcribed, seams) = try await transcribe(samples, from: 0, span: share) else { return nil }
         var speakers: [Int?] = transcribed.map { _ in nil }
         var voices: [Int: SpeakerVoice] = [:]
         if diarize {
@@ -107,7 +117,42 @@ struct TranscriptionPipeline {
         }
         guard shouldContinue() else { return nil }
         return TranscriptionResult(segments: transcribed, speakers: speakers, channels: transcribed.map { _ in nil }, duration: duration,
-                                   voices: voices)
+                                   voices: voices, seams: seams)
+    }
+
+    // MARK: whisper 從檔案依序讀（design §21.16）
+
+    /// whisper 一段一段從檔案讀，說話者辨識時才解碼整段：轉錄時記憶體裡不用留整段錄音
+    private func runStreaming(_ audio: URL) async throws -> TranscriptionResult? {
+        guard shouldContinue() else { return nil }
+        stage(String(localized: "轉錄"))
+        // 還不知道長度（太短不辨識說話者），先照要辨識說話者算進度
+        let share = options.diarize ? 0.85 : 1.0
+        let report = progress
+        progress(0)
+        let control = WhisperEngine.Control { report($0 * share) }
+        setCancel { control.cancel() }
+        let prompt = WhisperEngine.prompt(glossary: options.glossary, language: options.language)
+        let (path, code, chunkSeconds) = (modelPath, options.language.whisperCode, options.chunkSeconds)
+        let result = try await Task.detached(priority: .userInitiated) {
+            try await WhisperEngine.transcribe(file: audio, chunkSeconds: chunkSeconds, modelPath: path, prompt: prompt, language: code,
+                                               control: control)
+        }.value
+        guard shouldContinue() else { return nil }
+        let duration = Double(result.sampleCount) / AudioDecoder.sampleRate
+        var speakers: [Int?] = result.segments.map { _ in nil }
+        var voices: [Int: SpeakerVoice] = [:]
+        if options.diarize && duration > 5 {
+            stage(String(localized: "辨識說話者"))
+            let samples = try await AudioDecoder.decode(audio)
+            guard shouldContinue() else { return nil }
+            (speakers, voices) = await self.speakers(of: result.segments, in: samples, source: options.audioSource) {
+                report(share + $0 * (1 - share))
+            }
+        }
+        guard shouldContinue() else { return nil }
+        return TranscriptionResult(segments: result.segments, speakers: speakers, channels: result.segments.map { _ in nil },
+                                   duration: duration, voices: voices, seams: result.seams.map { Double($0) / AudioDecoder.sampleRate })
     }
 
     // MARK: 分聲道（design §17.3）
@@ -125,7 +170,7 @@ struct TranscriptionPipeline {
         for (index, (channel, samples)) in inputs.enumerated() {
             let base = Double(index) / Double(inputs.count), width = 1 / Double(inputs.count)
             let share = diarize ? 0.85 : 1.0
-            guard let segments = try await transcribe(samples, from: base, span: width * share) else { return nil }
+            guard let (segments, _) = try await transcribe(samples, from: base, span: width * share) else { return nil }
             var speakers: [Int?] = segments.map { _ in nil }
             var voices: [Int: SpeakerVoice] = [:]
             if diarize && !segments.isEmpty {
@@ -188,6 +233,13 @@ struct TranscriptionPipeline {
         }
     }
 
+    /// 兩句幾乎一樣（最長共同子序列 ÷ 較長那句的長度 > 0.8）；whisper 分段的接縫去掉重複用
+    nonisolated static func similar(_ a: String, _ b: String) -> Bool {
+        let x = comparable(a), y = comparable(b)
+        guard min(x.count, y.count) >= 4 else { return false }
+        return similarity(x, y) * Double(min(x.count, y.count)) / Double(max(x.count, y.count)) > 0.8
+    }
+
     private nonisolated static func comparable(_ text: String) -> [Character] {
         text.lowercased().filter { $0.isLetter || $0.isNumber }.map { $0 }
     }
@@ -206,12 +258,14 @@ struct TranscriptionPipeline {
 
     // MARK: 共用步驟
 
-    /// 辨識一段聲音；進度換算到整體的 from…from+span。回傳 nil 表示被取消；沒有辨識出任何文字時回傳空陣列
-    private func transcribe(_ samples: [Float], from base: Double, span: Double) async throws -> [TranscribedSegment]? {
+    /// 辨識一段聲音；進度換算到整體的 from…from+span。回傳 nil 表示被取消；沒有辨識出任何文字時回傳空陣列。
+    /// 另外回傳 whisper 分段的位置（秒）
+    private func transcribe(_ samples: [Float], from base: Double, span: Double) async throws -> ([TranscribedSegment], [Double])? {
         let report = progress
         let useSystem = options.engine == .system
         stage(useSystem ? String(localized: "轉錄（macOS 內建）") : String(localized: "轉錄"))
         let segments: [TranscribedSegment]
+        var seams: [Double] = []
         do {
             if useSystem {
                 let language = options.language
@@ -224,16 +278,20 @@ struct TranscriptionPipeline {
                 let control = WhisperEngine.Control { report(base + $0 * span) }
                 setCancel { control.cancel() }
                 let prompt = WhisperEngine.prompt(glossary: options.glossary, language: options.language)
-                let (path, code) = (modelPath, options.language.whisperCode)
-                segments = try await Task.detached(priority: .userInitiated) {
-                    try WhisperEngine.transcribe(samples: samples, modelPath: path, prompt: prompt, language: code, control: control)
+                let (path, code, chunkSeconds) = (modelPath, options.language.whisperCode, options.chunkSeconds)
+                let chunks: [Range<Int>]
+                (segments, chunks) = try await Task.detached(priority: .userInitiated) {
+                    let chunks = WhisperEngine.chunks(samples, seconds: chunkSeconds)
+                    return (try WhisperEngine.transcribe(samples: samples, chunks: chunks, modelPath: path, prompt: prompt, language: code,
+                                                         control: control), chunks)
                 }.value
+                seams = chunks.dropFirst().map { Double($0.lowerBound) / AudioDecoder.sampleRate }
             }
         } catch WhisperError.empty where options.splitChannels {
             // 分聲道時某一邊沒人說話是正常的
             segments = []
         }
-        return shouldContinue() ? segments : nil
+        return shouldContinue() ? (segments, seams) : nil
     }
 
     /// 說話者辨識；失敗不影響逐字稿，回傳全部沒有說話者

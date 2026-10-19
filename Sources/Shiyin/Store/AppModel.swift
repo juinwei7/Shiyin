@@ -266,17 +266,10 @@ final class AppModel {
         reloadDetail()
     }
 
-    /// 能不能正式轉錄這個語言的會議：對應的模型已下載（中英文 Breeze、日文 large-v3-turbo），或改用 macOS 內建辨識（design §6.2.1、§18.2）
-    func canTranscribe(_ language: MeetingLanguage) -> Bool {
-        AppSettings.useSystemTranscriber || models.isInstalled(ModelStore.transcription(for: language))
-    }
-
-    /// 改用 macOS 內建辨識，排隊中的轉錄馬上開始
-    func useSystemTranscriber() {
-        UserDefaults.standard.set("system", forKey: AppSettings.transcriptionEngineKey)
-        runner.wake()
-        refreshEnvironment()
-        reload()
+    /// 這場會議是在模型下載好之前用 macOS 內建辨識轉錄的，現在可以用 Breeze 重新轉錄（design §21.17）
+    func canUpgradeTranscript(_ meeting: Meeting) -> Bool {
+        meeting.transcribedWith == "system" && !AppSettings.useSystemTranscriber && meeting.hasAudio && meeting.deletedAt == nil
+            && models.isInstalled(ModelStore.transcription(for: meeting.meetingLanguage))
     }
 
     // MARK: 更新（R10.6）

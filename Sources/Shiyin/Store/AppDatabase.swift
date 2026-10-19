@@ -372,8 +372,9 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 寫入正式逐字稿：取代舊的正式版，並刪掉即時預覽（design §5.3）
     /// voices：每位說話者的聲紋、說話秒數、收音（design §21.4），寫進 speakers
+    /// transcribedWith：用哪個引擎轉錄的（breeze、japanese、system，design §21.17）；匯入的逐字稿不寫
     func saveTranscript(_ meetingId: Int64, segments: [Segment], duration: Int, speakerCount: Int,
-                        voices: [Int: SpeakerVoice] = [:]) throws {
+                        voices: [Int: SpeakerVoice] = [:], transcribedWith: String? = nil) throws {
         try pool.write { db in
             try Self.unindexSegments(db, meetingId: meetingId)
             try Segment.filter(Column("meeting_id") == meetingId).deleteAll(db)
@@ -404,6 +405,7 @@ final class AppDatabase: @unchecked Sendable {
             }
             if var m = try Meeting.fetchOne(db, key: meetingId) {
                 m.durationSeconds = duration
+                if let transcribedWith { m.transcribedWith = transcribedWith }
                 m.updatedAt = Clock.now()
                 try m.update(db)
             }
@@ -807,15 +809,11 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
-    /// 取出下一個排隊的工作，改成 running；轉錄工作只取會議語言在 transcribeLanguages 裡的（那個語言的模型已經下載，design §18.2）
-    func claimNext(lane: JobLane, transcribeLanguages: Set<MeetingLanguage> = Set(MeetingLanguage.allCases)) throws -> Job? {
+    /// 取出下一個排隊的工作，改成 running。模型還沒下載好的語言也照樣轉錄（先用 macOS 內建辨識，design §21.17）
+    func claimNext(lane: JobLane) throws -> Job? {
         let kinds = JobKind.allCases.filter { $0.lane == lane }.map(\.rawValue)
-        let languages = transcribeLanguages.map(\.rawValue)
         return try pool.write { db in
-            // 不認得的語言當成中文（跟 Meeting.meetingLanguage 一樣）
-            let language = SQL(sql: "(SELECT CASE WHEN m.language IN ('en', 'ja') THEN m.language ELSE 'zh' END FROM meetings m WHERE m.id = jobs.meeting_id)")
             guard var job = try Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
-                .filter(Column("kind") != JobKind.transcribe.rawValue || languages.contains(language))
                 .order(Column("id")).fetchOne(db) else { return nil }
             job.status = .running
             job.startedAt = Clock.now()

@@ -130,7 +130,7 @@ struct OnboardingView: View {
 
     private var downloads: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。")
+            Text("轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載，下載完成前會先用 macOS 內建辨識。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             // 預設會議語言是日文時，先下載日文轉錄模型（design §18.2）
             if primaryModel == .japanese {
@@ -214,10 +214,10 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")
                 .fixedSize(horizontal: false, vertical: true)
-            if !model.canTranscribe(AppSettings.defaultMeetingLanguage) {
+            if !AppSettings.useSystemTranscriber && !model.models.isInstalled(primaryModel) {
                 Label(model.models.state(primaryModel).isBusy
-                      ? String(localized: "轉錄模型還在下載，下載完成前的錄音會先排隊，下載好就會自動轉錄。")
-                      : String(localized: "轉錄模型還沒下載，錄音會先排隊。可以到「設定 → 模型與儲存空間」下載，或在「設定 → 錄音」改用 macOS 內建辨識。"),
+                      ? String(localized: "轉錄模型還在下載，下載完成前會先用 macOS 內建辨識轉錄。下載好之後，可以在逐字稿分頁重新轉錄。")
+                      : String(localized: "轉錄模型還沒下載，會先用 macOS 內建辨識轉錄。可以到「設定 → 模型與儲存空間」下載，用模型轉錄比較準。"),
                       systemImage: "arrow.down.circle")
                     .foregroundStyle(Color.signal).fixedSize(horizontal: false, vertical: true)
             }
