@@ -1,4 +1,4 @@
-// 產生拾音官網到 site/dist/（docs/website/design.md §6）。只用 Node 內建功能，不用裝套件。
+// 產生拾音官網到 site/dist/（docs/website.md §6）。只用 Node 內建功能，不用裝套件。
 //
 //   node site/build.mjs                       讀 GitHub Releases，產生網站
 //   node site/build.mjs --releases <檔案>      改讀這份 JSON（跟 API 同樣格式），不連網路

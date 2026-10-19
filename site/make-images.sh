@@ -1,5 +1,5 @@
 #!/bin/bash
-# 官網用的圖（docs/website/design.md §6），只能在 macOS 上跑（用系統的 sips 和 Chrome）。
+# 官網用的圖（docs/website.md §6），只能在 macOS 上跑（用系統的 sips 和 Chrome）。
 # 截圖（docs/images）或圖示換過之後跑一次，連同 site/public 一起 commit。
 #   - 截圖轉成 AVIF：1920、960 寬，品質 60
 #   - favicon、apple-touch-icon

@@ -162,15 +162,13 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 
 ## 開發
 
-本專案採用 SDD（規格驅動開發）：先寫需求、設計、任務，再寫程式，每項任務都要實際跑過才打勾。
+本專案採用 SDD（規格驅動開發）：先寫需求、設計、任務，再寫程式，每項任務都要實際跑過才算完成。
 
 | 文件 | 內容 |
 |---|---|
 | [`docs/requirements.md`](docs/requirements.md) | 需求與驗收結果 |
 | [`docs/design.md`](docs/design.md) | 架構、資料模型、提示詞、介面、決策紀錄 |
-| [`docs/tasks.md`](docs/tasks.md) | 任務、驗證紀錄、變更紀錄 |
-| [`docs/spikes/asr-engines.md`](docs/spikes/asr-engines.md) | 轉錄引擎和說話者辨識的選型實驗 |
-| [`docs/spikes/asr-japanese-3.3.md`](docs/spikes/asr-japanese-3.3.md) | 日文轉錄引擎和語言偵測的選型實驗 |
+| [`docs/tasks.md`](docs/tasks.md) | 還沒完成的任務 |
 | [`CLAUDE.md`](CLAUDE.md) | 開發與驗證時要注意的事 |
 
 ### 專案結構

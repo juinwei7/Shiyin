@@ -1,4 +1,4 @@
-// 讀 GitHub Releases、檢查版本說明的格式（CLAUDE.md「版本說明」、docs/website/design.md §7）。
+// 讀 GitHub Releases、檢查版本說明的格式（CLAUDE.md「版本說明」、docs/website.md §7）。
 // 格式不對就丟錯，讓建置失敗，不會部署壞掉的頁面。
 
 import { readFile } from 'node:fs/promises';

@@ -1,4 +1,4 @@
-# 官網（docs/website/design.md §8）：產生 site/dist，部署到 Cloudflare Pages
+# 官網（docs/website.md §8）：產生 site/dist，部署到 Cloudflare Pages
 # - 推到 main，改到網站或截圖
 # - 「打包」流程推 tag 發布新版之後（版本說明和下載連結跟著更新）
 # - 在 Actions 頁面手動執行

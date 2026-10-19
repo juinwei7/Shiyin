@@ -162,15 +162,13 @@ The app checks that a new version is signed the same way as the running app. Aft
 
 ## Development
 
-The project follows spec-driven development: requirements, design and tasks come first, then code, and a task is checked off only after it has actually been run. The spec documents are written in Traditional Chinese.
+The project follows spec-driven development: requirements, design and tasks come first, then code, and a task is done only after it has actually been run. The spec documents are written in Traditional Chinese.
 
 | Document | Contents |
 |---|---|
 | [`docs/requirements.md`](docs/requirements.md) | Requirements and acceptance results |
 | [`docs/design.md`](docs/design.md) | Architecture, data model, prompts, interface, decision log |
-| [`docs/tasks.md`](docs/tasks.md) | Tasks, verification log, changelog |
-| [`docs/spikes/asr-engines.md`](docs/spikes/asr-engines.md) | Experiments behind the choice of transcription and speaker identification engines |
-| [`docs/spikes/asr-japanese-3.3.md`](docs/spikes/asr-japanese-3.3.md) | Experiments behind the Japanese transcription engine and language detection (in Chinese) |
+| [`docs/tasks.md`](docs/tasks.md) | Tasks still to do |
 | [`CLAUDE.md`](CLAUDE.md) | Things to watch out for when developing and verifying |
 
 ### Project layout

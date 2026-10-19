@@ -1,4 +1,4 @@
-/* 拾音官網（docs/website/design.md §4）：白底、系統字體，青瓷只用在下載按鈕和連結 */
+/* 拾音官網（docs/website.md §4）：白底、系統字體，青瓷只用在下載按鈕和連結 */
 :root {
   color-scheme: light dark;
   --bg: #FFFFFF;

@@ -1,4 +1,4 @@
-// 首頁、版本說明、404 的 HTML（docs/website/design.md §4）。沒有 script，深色模式跟著系統。
+// 首頁、版本說明、404 的 HTML（docs/website.md §4）。沒有 script，深色模式跟著系統。
 
 import { content, LANGS, GITHUB } from './content.mjs';
 

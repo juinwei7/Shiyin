@@ -2,7 +2,7 @@
 
 > 狀態：已確認（2026-10-15，第三版；使用者以「全部做好再找我」授權開工）
 > 對應 `requirements.md` 的需求編號（R#、N#）。實作中如果偏離本文件，要先改本文件再改程式。
-> 第二版的設計保留在 `docs/archive/v2/design.md`。沿用的部分會標「沿用 v2 §n」。
+> 沿用第二版的部分會標「沿用 v2 §n」，第二版的設計用 `git show b621ed6:docs/archive/v2/design.md` 看。文中的任務編號（T-…）的驗證紀錄用 `git show b621ed6:docs/tasks.md` 看。
 
 ## 1. 架構
 
@@ -411,7 +411,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - DEBUG 指令 `shiyinctl transcribe-eval <錄音> <設定.json> <輸出.json>`：用 app 真正的轉錄流程（不建立會議、不寫資料庫）跑一次，輸出每段的時間、聲道、說話者、文字。設定可以指定引擎、語言、詞彙表、分聲道、VAD、回音處理，方便同一段錄音換設定重跑。
 - `scripts/dev/asr-score.py <標準答案> <輸出.json>`：
-  - 正規化：去標點和空白；中文統一成繁體（AISHELL-4 的答案是簡體，用 ICU 轉換）；數字寫法、常見異體字統一（沿用 `docs/spikes/asr-engines.md` 的規則）
+  - 正規化：去標點和空白；中文統一成繁體（AISHELL-4 的答案是簡體，用 ICU 轉換）；數字寫法、常見異體字統一（規則在 `scripts/dev/asr-score.swift`）
   - 中文算 CER，英文算 WER；另外算插入、刪除、替換各多少，看錯誤是哪一種
   - 有關鍵詞清單時算辨識對幾個；有說話者標準答案（rttm）時算說話者標對的比例（沿用 `aishell-score.py` 的算法）
 - 測試資料：
@@ -424,11 +424,11 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | 模擬線上會議 | 分聲道、回音 | AMI ES2004a 的個人麥克風（Headset-0～3，CC BY 4.0）：一人放麥克風聲道、另外三人混成電腦聲音聲道；「有回音」版本再把電腦聲音延遲、衰減後加進麥克風聲道，模擬用喇叭開會 |
 | 合成的中英夾雜會議（91 秒） | 專有名詞（關鍵詞） | 已有 |
 
-- 結果記在 `docs/spikes/asr-accuracy-3.2.md`：每項改進前後的數字和耗時。
+- 每項改進前後的數字和耗時寫在 commit 訊息，結論寫進 requirements 的驗收結果。
 
 ### 17.2 偵測說話片段（VAD，R14.3）：評估後不採用
 
-試過 whisper.cpp 內建的 VAD（Silero v5.1.2），預設和寬鬆兩組參數：小聲、遠處的說話被當成安靜跳過，漏字大增（AISHELL 30.5% → 38.4%～47.8%）。只有乾淨的合成錄音變好。程式、模型、設定開關都已移除（D18）。數字見 `docs/spikes/asr-accuracy-3.2.md`。
+試過 whisper.cpp 內建的 VAD（Silero v5.1.2），預設和寬鬆兩組參數：小聲、遠處的說話被當成安靜跳過，漏字大增（AISHELL 30.5% → 38.4%～47.8%）。只有乾淨的合成錄音變好。程式、模型、設定開關都已移除（D18）。
 
 ### 17.3 分聲道轉錄（R14.2）
 
@@ -459,7 +459,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 17.6 預設值與設定
 
-- 只有評估後採用的改進才在設定裡放開關，預設值依評估結果決定（R14 驗收），寫進 `docs/spikes/asr-accuracy-3.2.md`。目前：偵測說話片段不採用；分聲道等真實會議；逐字稿校正的開關放在「整理工具」分頁（它用的是整理工具）。
+- 只有評估後採用的改進才在設定裡放開關，預設值依評估結果決定（R14 驗收），寫進 requirements 的驗收結果。目前：偵測說話片段不採用；分聲道等真實會議；逐字稿校正的開關放在「整理工具」分頁（它用的是整理工具）。
 - 開關全部關閉時，轉錄流程跟 3.1 完全一樣（R14.6）。
 
 ## 18. 日文（3.3，R15、R16）
@@ -474,7 +474,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ### 18.2 正式轉錄引擎（D19）
 
 - 中文、英文會議維持 Breeze（R15.6）。
-- 日文會議用 **Whisper large-v3-turbo q5_0**（574 MB，whisper.cpp 官方轉檔，MIT），加上詞彙表提示和逐字稿校正。評估比較了 Breeze、large-v3-turbo（q5_0、q8_0）、kotoba-whisper v2.0、macOS 內建，結果和理由見 `docs/spikes/asr-japanese-3.3.md`。設定裡選了「macOS 內建」的話，日文會議也用 macOS 內建。
+- 日文會議用 **Whisper large-v3-turbo q5_0**（574 MB，whisper.cpp 官方轉檔，MIT），加上詞彙表提示和逐字稿校正。評估比較了 Breeze、large-v3-turbo（q5_0、q8_0）、kotoba-whisper v2.0、macOS 內建，結果：large-v3-turbo q5_0 在會議資料的錯誤率最低（合成會議 4.5%、國會聽證 9.2%／7.7%，加上校正後 2.0%／8.8%／6.5%、關鍵詞全對）；Breeze 會把片假名外來語寫成英文；kotoba-whisper 在 whisper.cpp 上會亂輸出、整句漏掉；macOS 內建朗讀最好但會議資料最差。設定裡選了「macOS 內建」的話，日文會議也用 macOS 內建。
 - `TranscriptionOptions.engine` 的 `breeze` 意思改成「whisper.cpp」，模型依會議語言選（`ModelStore.transcription(for:)`）；評估時可以用 `model` 指定模型檔。
 - `ModelStore` 改成管多個模型（`breeze`、`japanese`、`languageDetection`），各自下載、暫停、刪除，固定 commit、SHA-256 驗證、可以續傳。
 - 只有第一次轉錄日文會議時才下載：`JobRunner` 只取模型已經下載的語言的轉錄工作；有日文會議在排隊、日文模型還沒下載過，就自動開始下載（使用者暫停過或下載失敗就不自動重來）。會議頁顯示「等日文轉錄模型下載完成就會開始轉錄」。
@@ -521,7 +521,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - 開始錄音後收集有聲音的片段（`LanguageDetector.Collector`）：每 0.1 秒一段，比背景噪音大 2.5 倍（至少 -54 dBFS）才算；背景噪音的估計遇到更小的就降、平常慢慢往上爬。湊滿 10 秒就偵測；錄了 45 秒還湊不滿（小聲、遠距收音）但有 5 秒以上也先偵測。一開始用固定的 -40 dBFS 門檻，遠距收音的會議要等兩三百秒，改成跟著噪音調整。
 - 用 whisper.cpp 的語言偵測（`whisper_lang_auto_detect`），只取中文、英文、日文三個機率、加總成 1。
-- 模型用 Whisper base q5_1（60 MB）。Breeze 會把英文判成中文，不能用（見 `docs/spikes/asr-japanese-3.3.md`）。設定開著自動偵測時，啟動 app、首次使用引導、打開開關時下載；還沒下載好的那次錄音不偵測。
+- 模型用 Whisper base q5_1（60 MB）。Breeze 會把英文判成中文，不能用。設定開著自動偵測時，啟動 app、首次使用引導、打開開關時下載；還沒下載好的那次錄音不偵測。
 - 機率最高的語言跟目前不同、而且 0.7 以上才切換：會議語言跟著改（資料庫）、即時逐字稿用新語言重新開始。錄音畫面顯示「聽起來是日文，即時逐字稿和會議語言已經改成日文」和「改回中文」。
 - 錄音的混音同時送給即時逐字稿和偵測（`MixTap`）。即時逐字稿重新開始時：新的辨識從 0 秒算，時間點要加上接上音訊時已經錄了多久（每個辨識各自記）；被換掉的辨識收尾送來的是用錯的語言聽的，不加進逐字稿。之前已經出現的即時逐字稿保留，錄完會正式轉錄。
 - 只偵測一次；按「改回」之後不再自動切換。設定 → 錄音可以關掉。
