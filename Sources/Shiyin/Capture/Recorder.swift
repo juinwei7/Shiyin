@@ -37,6 +37,8 @@ final class Recorder {
     var failureMessage: String?
     /// 自動偵測換了會議語言（design §18.8）：錄音畫面顯示「改回」
     private(set) var languageSwitch: (from: MeetingLanguage, to: MeetingLanguage)?
+    /// 有音源超過 3 秒沒送資料、正在重新連接（design §20.2）：錄音畫面的提示列顯示
+    private(set) var deviceWarning: String?
 
     @ObservationIgnored var onFinished: ((Result) -> Void)?
     @ObservationIgnored var onLiveFinal: ((Int64, Double, Double, String) -> Void)?
@@ -44,7 +46,15 @@ final class Recorder {
     @ObservationIgnored var onLanguageChange: ((Int64, MeetingLanguage) -> Void)?
     @ObservationIgnored private let tap = MixTap()
     @ObservationIgnored private var writer: RecordingWriter?
-    @ObservationIgnored private var sources: [AudioSource] = []
+    @ObservationIgnored private var sources: [Int: AudioSource] = [:]   // 聲道 → 音源
+    /// 看門狗：沒送資料的聲道 → 上次試著重新連接的時間；重新連接失敗的原因
+    @ObservationIgnored private var reconnecting: [Int: Date] = [:]
+    @ObservationIgnored private var reconnectErrors: [Int: String] = [:]
+    @ObservationIgnored private var pendingRestarts: [Int: DispatchWorkItem] = [:]
+    #if DEBUG
+    /// 模擬錄音的檔案送完了，之後沒有資料是正常的
+    @ObservationIgnored private var simulationEnded = false
+    #endif
     @ObservationIgnored private var live: LiveTranscriber?
     @ObservationIgnored private var meterTimer: Timer?
     @ObservationIgnored private var activity: NSObjectProtocol?
@@ -84,8 +94,10 @@ final class Recorder {
         guard !isRecording else { return }
         source = both ? "both" : "mic"
         self.language = language
+        simulationEnded = false
         begin(meetingId: meetingId) {
             let source = FileSource(url: file, speed: speed)
+            source.onEnded = { [weak self] in Task { @MainActor in self?.simulationEnded = true } }
             var list: [(Int, AudioSource)] = [(0, source)]
             if both {
                 let mirror = MirroredSource()
@@ -94,6 +106,16 @@ final class Recorder {
             }
             return list
         }
+    }
+
+    /// 只在 DEBUG：recordstall，某個聲道停止送資料幾秒，nil 是馬上恢復（design §20.2）
+    func simulateStall(channel: Int, seconds: Double?) {
+        (sources[0] as? FileSource)?.stall(channel: channel, seconds: seconds)
+    }
+
+    /// 只在 DEBUG：recordinterrupt，等於音源發現裝置變了。連續送幾次，驗證只會重新開始一次
+    func simulateInterruption(channel: Int, times: Int = 3) {
+        for _ in 0..<times { sources[channel]?.onInterruption?() }
     }
     #endif
 
@@ -111,8 +133,8 @@ final class Recorder {
 
     func stop() {
         guard isRecording, let meetingId else { return }
-        sources.forEach { $0.stop() }
-        sources = []
+        sources.values.forEach { $0.stop() }
+        sources = [:]
         var duration = 0.0
         var errorText: String?
         do { duration = try writer?.finish() ?? 0 } catch { errorText = String(localized: "錄音寫檔發生錯誤：\(error.localizedDescription)") }
@@ -147,13 +169,16 @@ final class Recorder {
             let url = Paths.recordingDir.appendingPathComponent("\(meetingId)-\(UUID().uuidString).wav")
             let channels = source == "both" ? 2 : 1
             let writer = try RecordingWriter(url: url, channels: channels)
-            var started: [AudioSource] = []
+            var started: [Int: AudioSource] = [:]
             var warnings: [String] = []
             for (channel, audioSource) in makeSources() {
                 audioSource.onSamples = { [weak writer] samples in writer?.append(channel: channel, samples) }
+                audioSource.onInterruption = { [weak self] in
+                    Task { @MainActor in self?.scheduleRestart(channel) }
+                }
                 do {
                     try audioSource.start()
-                    started.append(audioSource)
+                    started[channel] = audioSource
                 } catch {
                     warnings.append(error.localizedDescription)
                 }
@@ -285,6 +310,70 @@ final class Recorder {
         } else {
             micLevel = writer.level(0)
         }
+        watchdog(writer)
+    }
+
+    // MARK: 換裝置、看門狗（design §20.2、R18.2、D25）
+
+    /// 裝置切換時通知會連續來好幾次，等 0.3 秒沒有新的通知再重新開始
+    private func scheduleRestart(_ channel: Int) {
+        guard isRecording else { return }
+        pendingRestarts[channel]?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                self?.pendingRestarts[channel] = nil
+                self?.restartSource(channel)
+            }
+        }
+        pendingRestarts[channel] = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
+    }
+
+    private func restartSource(_ channel: Int) {
+        guard isRecording, let audioSource = sources[channel] else { return }
+        do {
+            try audioSource.restart()
+            reconnectErrors[channel] = nil
+            log.info("audio source \(channel) restarted")
+        } catch {
+            // 錄音不停：另一個音源照常錄，雙聲道時這段會補靜音；看門狗每 5 秒再試
+            reconnectErrors[channel] = error.localizedDescription
+            log.error("audio source \(channel) restart failed: \(error.localizedDescription, privacy: .public)")
+        }
+        updateDeviceWarning()
+    }
+
+    /// 音源超過 3 秒沒送資料：提示並每 5 秒試一次重新開始；收到資料後提示消失
+    private func watchdog(_ writer: RecordingWriter) {
+        #if DEBUG
+        if simulationEnded { return }
+        #endif
+        let now = Date()
+        for channel in sources.keys.sorted() {
+            if writer.secondsSinceSamples(channel) > 3 {
+                if let last = reconnecting[channel], now.timeIntervalSince(last) < 5 { continue }
+                if reconnecting[channel] == nil { log.info("audio source \(channel) stalled") }
+                reconnecting[channel] = now
+                restartSource(channel)
+            } else if reconnecting[channel] != nil {
+                reconnecting[channel] = nil
+                reconnectErrors[channel] = nil
+                log.info("audio source \(channel) recovered")
+                updateDeviceWarning()
+            }
+        }
+    }
+
+    private func updateDeviceWarning() {
+        let warning = reconnecting.keys.sorted().first.map { channel -> String in
+            let mic = source != "system" && channel == 0
+            if let reason = reconnectErrors[channel] {
+                return mic ? String(localized: "麥克風沒有送出聲音，重新連接失敗：\(reason)。會繼續重試，錄音沒有停")
+                    : String(localized: "電腦聲音的擷取中斷了，重新連接失敗：\(reason)。會繼續重試，錄音沒有停")
+            }
+            return mic ? String(localized: "麥克風沒有送出聲音，正在重新連接…") : String(localized: "電腦聲音的擷取中斷了，正在重新連接…")
+        }
+        if warning != deviceWarning { deviceWarning = warning }
     }
 
     private func abort(_ meetingId: Int64, permission: Bool = false, message: String? = nil) {
@@ -296,6 +385,11 @@ final class Recorder {
     private func cleanup() {
         meterTimer?.invalidate()
         meterTimer = nil
+        pendingRestarts.values.forEach { $0.cancel() }
+        pendingRestarts = [:]
+        reconnecting = [:]
+        reconnectErrors = [:]
+        deviceWarning = nil
         if let activity { ProcessInfo.processInfo.endActivity(activity) }
         activity = nil
         writer = nil

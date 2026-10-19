@@ -612,8 +612,8 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 麥克風：`start()` 時監聽這個 engine 的 `AVAudioEngineConfigurationChange`（接上或拔掉耳機、藍牙換協定、取樣率改變時，AVAudioEngine 會自己停下來）。重新開始時重讀輸入格式、建新的 `StreamConverter`；設定裡指定的輸入裝置不在了，就用系統預設。
 - 系統聲音：`start()` 時監聽系統的預設輸出裝置（`kAudioHardwarePropertyDefaultOutputDevice`），換了就依序清掉 tap 和聚合裝置，用新的輸出裝置重建。`stop()` 時移除監聽。
 - `Recorder` 收到 `onInterruption` 後，在主執行緒等 0.3 秒（裝置切換時通知會連續來好幾次）再 `restart()` 那個音源。
-- 看門狗：`RecordingWriter` 記錄每個聲道最後一次收到音訊的時間（暫停時音源照樣送資料，所以暫停不影響）。`tick` 發現某個音源超過 3 秒沒送資料：錄音畫面的提示列顯示「麥克風沒有送出聲音，正在重新連接…」（系統聲音同理），每 5 秒試一次 `restart()`；收到資料後提示消失。`restart()` 失敗就顯示原因，錄音不停：另一個音源照常錄，雙聲道時這段會補靜音。
-- DEBUG：`FileSource` 可以暫停送資料（模擬裝置停了），`restart()` 讓它繼續送；`shiyinctl recordstall <秒數|off>`、`recordinterrupt` 用來驗證看門狗和重新連接。真的裝置要使用者實測。
+- 看門狗：`RecordingWriter` 記錄每個聲道最後一次收到音訊的時間（暫停時音源照樣送資料，所以暫停不影響）。`tick` 發現某個音源超過 3 秒沒送資料：錄音畫面的提示列顯示「麥克風沒有送出聲音，正在重新連接…」（系統聲音是「電腦聲音的擷取中斷了，正在重新連接…」），每 5 秒試一次 `restart()`；收到資料後提示消失。`restart()` 失敗就顯示原因，錄音不停：另一個音源照常錄，雙聲道時這段會補靜音。
+- DEBUG：`FileSource` 可以讓某個聲道停止送資料幾秒（模擬裝置停了；時間照樣往前，那段資料丟掉），`restart()` 從停下的位置繼續送，不會提早結束停止。`shiyinctl recordstall <秒數|off> [聲道]`、`recordinterrupt [聲道]`（連續送 3 次通知，驗證只重新開始一次）用來驗證看門狗和重新連接。模擬的檔案送完後不再送資料是正常的，看門狗不檢查。真的裝置要使用者實測。
 
 ### 20.3 寫檔失敗、磁碟空間（R18.3）
 

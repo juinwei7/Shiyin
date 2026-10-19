@@ -117,6 +117,7 @@ struct RecordingPanel: View {
     }
 
     private func warning(_ recorder: Recorder) -> String? {
+        if let warning = recorder.deviceWarning { return warning }
         if recorder.hasSystem && recorder.systemSilent {
             return String(localized: "超過 15 秒沒有收到系統聲音：請確認線上會議有聲音，並在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音")
         }

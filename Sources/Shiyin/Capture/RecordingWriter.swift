@@ -15,6 +15,7 @@ final class RecordingWriter: @unchecked Sendable {
     private var silentSeconds: [Double]
     private var paused = false
     private var acceptedFrames: [Int] // 各聲道累計收到的音框（不含暫停）
+    private var lastReceived: [Double]  // 各聲道最後一次收到音訊的時間（systemUptime），看門狗用（design §20.2）
     private var timer: DispatchSourceTimer?
     private var writtenFrames = 0          // 只在 queue 上讀寫
     private let queue = DispatchQueue(label: "com.weiwei.shiyin.writer", qos: .userInitiated)
@@ -27,6 +28,7 @@ final class RecordingWriter: @unchecked Sendable {
         levels = Array(repeating: 0, count: channels)
         silentSeconds = Array(repeating: 0, count: channels)
         acceptedFrames = Array(repeating: 0, count: channels)
+        lastReceived = Array(repeating: ProcessInfo.processInfo.systemUptime, count: channels)
         file = try AVAudioFile(forWriting: url, settings: [
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVSampleRateKey: CaptureFormat.sampleRate,
@@ -38,6 +40,7 @@ final class RecordingWriter: @unchecked Sendable {
     }
 
     func start() {
+        lock.withLock { lastReceived = Array(repeating: ProcessInfo.processInfo.systemUptime, count: channels) }
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + 0.1, repeating: 0.1)
         timer.setEventHandler { [weak self] in self?.drain(final: false) }
@@ -51,7 +54,9 @@ final class RecordingWriter: @unchecked Sendable {
         var sum: Float = 0
         for s in samples { sum += s * s }
         let rms = (sum / Float(samples.count)).squareRoot()
+        let now = ProcessInfo.processInfo.systemUptime
         lock.withLock {
+            lastReceived[channel] = now
             levels[channel] = rms
             silentSeconds[channel] = rms == 0 ? silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate : 0
             guard !paused else { return }
@@ -80,6 +85,12 @@ final class RecordingWriter: @unchecked Sendable {
     }
 
     func silence(_ channel: Int) -> Double { lock.withLock { channel < channels ? silentSeconds[channel] : 0 } }
+
+    /// 這個聲道多久沒有送音訊來（秒）。暫停時音源照樣送資料，所以暫停不影響
+    func secondsSinceSamples(_ channel: Int) -> Double {
+        let now = ProcessInfo.processInfo.systemUptime
+        return lock.withLock { channel < channels ? now - lastReceived[channel] : 0 }
+    }
 
     /// 停止並關檔，回傳錄到的秒數。
     /// 注意：AVAudioFile 關檔後 length 會變成 0，所以秒數要用自己累計的音框數算

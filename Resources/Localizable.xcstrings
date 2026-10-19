@@ -519,6 +519,17 @@
         }
       }
     },
+    "transcript.json 讀不出來": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "transcript.json can't be read"
+          }
+        }
+      }
+    },
     "yyyy-MM-dd": {
       "extractionState": "manual"
     },
@@ -1585,6 +1596,17 @@
         }
       }
     },
+    "匯出「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export “%@”"
+          }
+        }
+      }
+    },
     "匯出失敗：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -1938,6 +1960,17 @@
         }
       }
     },
+    "執行這個工作時拾音意外結束了 2 次，已經停止自動重試。可以按「重試」再試一次。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin quit unexpectedly twice while running this task, so it won't retry automatically. Click “Retry” to try again."
+          }
+        }
+      }
+    },
     "壓縮檔讀寫失敗": {
       "extractionState": "manual",
       "localizations": {
@@ -2033,6 +2066,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rich text (for Word, Notion, email)"
+          }
+        }
+      }
+    },
+    "封包裡的錄音檔不正確": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The audio file in the package isn't valid"
           }
         }
       }
@@ -6564,6 +6608,17 @@
         }
       }
     },
+    "這場會議已經被刪除，沒辦法匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has been deleted and can't be exported"
+          }
+        }
+      }
+    },
     "這場會議所在的資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -7532,6 +7587,28 @@
         }
       }
     },
+    "電腦聲音的擷取中斷了，正在重新連接…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer audio capture stopped. Reconnecting…"
+          }
+        }
+      }
+    },
+    "電腦聲音的擷取中斷了，重新連接失敗：%@。會繼續重試，錄音沒有停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer audio capture stopped and couldn't reconnect: %@. Shiyin will keep trying; recording continues."
+          }
+        }
+      }
+    },
     "音量": {
       "extractionState": "manual",
       "localizations": {
@@ -7638,6 +7715,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Microphone Settings"
+          }
+        }
+      }
+    },
+    "麥克風沒有送出聲音，正在重新連接…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone stopped sending audio. Reconnecting…"
+          }
+        }
+      }
+    },
+    "麥克風沒有送出聲音，重新連接失敗：%@。會繼續重試，錄音沒有停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone stopped sending audio and couldn't reconnect: %@. Shiyin will keep trying; recording continues."
           }
         }
       }

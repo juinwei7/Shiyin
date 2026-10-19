@@ -83,6 +83,10 @@ enum DebugControl {
             default: model.recorder.stop()
             }
         case "importsheet": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) })   // 只打開匯入對話框
+        case "recordstall":   // recordstall <秒數|off> [聲道]：模擬錄音的音源停止送資料（design §20.2）
+            model.recorder.simulateStall(channel: args.count > 2 ? Int(args[2]) ?? 0 : 0, seconds: args[1] == "off" ? nil : Double(args[1]) ?? 5)
+        case "recordinterrupt":   // recordinterrupt [聲道]：等於音源發現裝置變了，Recorder 會重新開始這個音源
+            model.recorder.simulateInterruption(channel: args.count > 1 ? Int(args[1]) ?? 0 : 0)
         case "recordlang":   // recordlang <zh|en|ja>：錄音中換會議語言（等於按「改回」）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
         case "record-sim":
@@ -248,7 +252,8 @@ enum DebugControl {
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,
                          "liveStatus": model.recorder.liveStatus, "permissionDenied": model.recorder.permissionDenied,
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
-                         "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? ""],
+                         "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
+                         "deviceWarning": model.recorder.deviceWarning ?? ""],
             "languages": ["defaultMeeting": AppSettings.defaultMeetingLanguage.rawValue, "interface": MeetingLanguage.interface.rawValue,
                           "preferred": Locale.preferredLanguages.first ?? ""],
             "models": ["breeze": "\(model.models.state)", "japanese": "\(model.models.state(.japanese))",

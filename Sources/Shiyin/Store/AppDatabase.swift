@@ -529,7 +529,7 @@ final class AppDatabase: @unchecked Sendable {
         case .title: 1
         case .notes: 2
         case .userNotes: 3
-        case .segment: preconditionFailure("段落的 rowid 就是段落的 id")
+        case .segment: preconditionFailure("段落的 rowid 就是段落的 id")   // l10n-skip
         }
         return metaRowidBase + meetingId * 4 + code
     }
