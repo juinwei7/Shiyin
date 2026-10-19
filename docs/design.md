@@ -11,9 +11,10 @@ Shiyin.app（SwiftUI，單一程序，不依賴 Python、Homebrew、ffmpeg）
  ├─ Capture        AVAudioEngine（麥克風）＋ Core Audio process tap（系統聲音）
  │    ├─► RecordingWriter   16 kHz WAV，每個來源一個聲道，意外結束也能修復（沿用 v2 的 WAVRepair）
  │    └─► LiveTranscriber   SpeechAnalyzer zh_TW → 即時逐字稿（暫定＋定稿）
- ├─ JobRunner      兩條線（沿用 v2 §4）
- │    ├─ 轉錄線：解碼（AVFoundation）→ whisper.cpp + Breeze → 說話者辨識（FluidAudio）→ 壓縮成 m4a
- │    └─ 整理線：LLMProvider（Claude CLI／Codex CLI／Anthropic API／OpenAI API）
+ ├─ JobRunner      三條線（3.5 起，§21.2）
+ │    ├─ 轉錄線：解碼（AVFoundation）→ whisper.cpp + Breeze → 說話者辨識（FluidAudio）＋聲紋比對 → 壓縮成 m4a
+ │    ├─ 整理線：整理、校稿、草稿紀錄（LLMBackend，§19）
+ │    └─ 輔助線：逐字稿校正、猜說話者
  ├─ ModelStore     下載、續傳、驗證模型
  ├─ AppDatabase    GRDB / SQLite（WAL）＋ FTS5 全文索引
  ├─ Exporter / Importer   錄音、逐字稿、會議紀錄、.shiyin 封包
@@ -677,6 +678,170 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 不能用 MainActor 的 Task 等：從主佇列的工作裡呼叫 `NSApp.terminate`（例如 DEBUG 的 `quit`、選單列的按鈕）時，AppKit 在原地跑 run loop 等回覆，主佇列不會再執行別的工作，兩邊互相等。Timer 是 run loop 的來源，不受影響；whisper 的 context 在自己的執行緒上釋放，也不需要主佇列。
 - whisper 的取消是在計算中途由 `abort_callback` 檢查，實測停下來要多久寫在驗證結果。
 
+## 21. 錄完就有紀錄、認得說話者、可以提問（3.5，R19、R20）
+
+### 21.1 資料模型（migration `v7`）
+
+```sql
+ALTER TABLE meetings ADD COLUMN notes_draft INTEGER NOT NULL DEFAULT 0;        -- 1：會議紀錄是用即時逐字稿整理的草稿（§21.3）
+ALTER TABLE meetings ADD COLUMN transcribed_with TEXT NOT NULL DEFAULT '';     -- breeze / japanese / system，空字串是 3.5 以前（§21.18）
+ALTER TABLE jobs ADD COLUMN error_kind TEXT;                                    -- Error.logSummary，回報問題用（§21.9）
+
+ALTER TABLE speakers ADD COLUMN name_source TEXT NOT NULL DEFAULT 'default';    -- default / manual / voiceprint / suggestion
+ALTER TABLE speakers ADD COLUMN person_id INTEGER REFERENCES people(id) ON DELETE SET NULL;
+ALTER TABLE speakers ADD COLUMN embedding BLOB;                                 -- 這場會議裡這位說話者的聲紋（Float32×256）
+ALTER TABLE speakers ADD COLUMN speech_seconds REAL NOT NULL DEFAULT 0;         -- 說了多久，太短的不比對、不學
+ALTER TABLE speakers ADD COLUMN audio_source TEXT NOT NULL DEFAULT 'mix';       -- mic / system / mix（分聲道時是哪一聲道）
+ALTER TABLE speakers ADD COLUMN suggested_name TEXT;                            -- AI 猜的名字（§21.5）
+ALTER TABLE speakers ADD COLUMN suggestion_reason TEXT;
+ALTER TABLE speakers ADD COLUMN suggestion_time TEXT;
+
+CREATE TABLE people (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                     created_at TEXT NOT NULL);
+CREATE TABLE voiceprints (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+                          embedding BLOB NOT NULL, audio_source TEXT NOT NULL,
+                          meeting_id INTEGER REFERENCES meetings(id) ON DELETE SET NULL, speaker_idx INTEGER,
+                          created_at TEXT NOT NULL);
+CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        meeting_id INTEGER REFERENCES meetings(id) ON DELETE CASCADE,   -- NULL：跨會議
+                        scope TEXT NOT NULL DEFAULT '', question TEXT NOT NULL, answer TEXT NOT NULL,  -- answer 是 JSON（§21.8）
+                        provider TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+                     key TEXT NOT NULL, text TEXT NOT NULL, updated_at TEXT NOT NULL,
+                     PRIMARY KEY (meeting_id, key));                             -- §21.15
+```
+
+- `SpeakerName` 加上新欄位。`saveTranscript` 重建說話者時保留改過的名字（沿用），新的欄位跟著轉錄結果寫入。
+- 聲紋用 `Data` 存 Float32 little endian。`people.name` 不分大小寫唯一：同一個名字就是同一個人。
+- 匯出的 .shiyin 封包不帶 `embedding`、`person_id`、`suggested_*`（`MeetingJSON` 不變）。
+
+### 21.2 工作線（R20.1）
+
+- 工作線從兩條變三條：`transcribe`（轉錄、壓縮）、`llm`（整理、校稿、草稿）、`assist`（逐字稿校正、猜說話者）。`JobKind.lane` 對應，`claimNext` 依線挑工作，`JobRunner` 每條線一個迴圈。
+- 轉錄完排工作的順序不變（壓縮、校正、整理），但校正和整理在不同線上，會同時開始。整理讀的是 `final` 段落的原文（沿用），還沒接受的校正本來就不會進會議紀錄，所以內容跟以前一樣。
+- 畫面上的「執行中」取同一場會議的工作時，`llm` 線優先（使用者在等的是會議紀錄）。
+
+### 21.3 草稿紀錄（R19.1，D28）
+
+- `AppModel.recordingFinished` 排轉錄之後：錄音 ≥ 3 分鐘、有即時逐字稿（`segments` 裡 `kind = 'live'` 至少 5 段）、會自動整理、整理工具不是「不整理」時，另外排一個 `summarize`，payload `{"draft":true}`，在 `llm` 線上跟轉錄同時跑。
+- 草稿工作：開始時如果已經有 `final` 段落就不做（短會議轉錄比較快）。用 `kind = 'live'` 的段落組 `NotesContext`（沒有說話者），提示詞跟正式整理完全相同。存檔前再檢查一次：已經有 `final` 段落或會議紀錄不是空的就丟掉草稿。存成 `notes_draft = 1`，`saveNotes` 不留版本（原本是空的）。
+- 正式整理存檔時 `notes_draft = 0`。原本是草稿而且使用者沒改過：不留版本（草稿沒有保存價值）。改過（手動編輯會把 `notes_draft` 改成 2）：照舊把舊的存進版本紀錄，原因寫「草稿（改過）」，畫面提示「正式版已經更新，你改過的草稿在版本紀錄裡」。
+- 畫面：`notes_draft != 0` 時會議紀錄上方顯示「草稿：用錄音中的即時逐字稿整理，正式轉錄完成後會自動更新」。時間點照樣可以點（即時逐字稿的時間就是錄音檔的時間，暫停的部分本來就不在檔案裡）。
+- 通知：草稿完成發「會議紀錄草稿好了」；之後的正式版不再發通知（同一場會議發過草稿通知），失敗照樣發。
+- 校稿（回答待確認）在草稿上也可以做，送出的是草稿的內容；正式版完成後待確認會重新產生。
+
+### 21.4 聲紋（R19.3，D29）
+
+**取得**：`Diarizer.diarize` 回傳每段說話的編號，另外回傳每位說話者的聲紋：FluidAudio 離線辨識結果的 `speakerDatabase`（speakerId → 256 維），跟著 `Diarizer.assign` 的重新編號對應到最後的說話者編號；分聲道時每個聲道各自算，加上編號位移。同時算每位說話者說話的總秒數。`TranscriptionResult` 多 `voiceprints: [Int: [Float]]`、`speechSeconds: [Int: Double]`、`audioSources: [Int: String]`。
+
+**比對**（轉錄存檔時，在 `JobRunner.transcribe` 裡，本機運算）：
+- 功能打開（`AppSettings.voiceprints`，預設開）、說話者說話 ≥ 8 秒、有聲紋，才比對。
+- 相似度用 cosine。每位認識的人取跟他所有聲紋相似度的最大值。高於門檻 `T` 的才算候選；依相似度由高到低分配，一個人在一場會議只對到一位說話者（分聲道時，同一個人不會同時在兩個聲道）。
+- 對到的說話者：名字設成那個人，`name_source = 'voiceprint'`、`person_id`。已經手動改過名字的說話者（重新轉錄時保留的）不覆蓋。
+- `T` 用 AMI 語料決定（§21.4.1），寫進程式的常數，不開放設定。
+
+**學習**：
+- 說話者被取名（手動改名、套用建議），名字不是預設的「說話者 N」：找或建立同名的 `people`，`person_id` 指過去；說話 ≥ 8 秒而且有聲紋，就存一份 `voiceprints`（記下會議和說話者編號）。跟這個人已有的某份聲紋相似度 > 0.95 就不重複存。每人最多 30 份，超過刪最舊的。
+- 改正自動帶入的名字（改成別人）：刪掉這場會議這位說話者之前存的聲紋（如果有），再照上一條存到新的人。按「不是他」：名字回到預設，`person_id` 清掉，`name_source = 'manual'`（之後重新比對也不再自動帶入這場）。
+- 名字改回預設：刪掉這場會議這位說話者存的聲紋。
+
+**設定**（新的「說話者」分頁）：開關「記住說話者的聲音，之後的會議自動帶入名字」；認識的人列表（名字、幾份聲紋、最近出現的會議），可以改名（`people.name` 和所有對到的說話者一起改）、刪除某人（聲紋刪掉，已經帶入的名字留著）、全部刪除。說明文字：聲紋只存在這台 Mac。
+
+**畫面**：會議頁的說話者名字，自動帶入的後面有小小的「自動」；點名字的選單：改名、不是他（自動的才有）、只看他說的（沿用）。
+
+#### 21.4.1 門檻與驗證資料
+
+- AMI 的 ES2004a～d 是同一組 4 個人的 4 場會議（Mix-Headset，CC BY 4.0）。用 a 學（4 個人各取一次名字），b、c、d 比對；再用別組人的會議（例如 ES2005a、IS1000a）比對同一份名單，算誤認率。
+- 評估工具：DEBUG 指令 `voiceprint-eval <設定.json> <輸出.json>`，對每場會議跑說話者辨識、算聲紋，輸出每位說話者跟每個人的相似度和 AMI 標註的真實身分（用說話時間重疊對應），用 Python 算出各門檻的正確率和誤認率。
+- 標準：誤認（帶入錯的名字）≤ 2%，在這個前提下自動帶入的比例越高越好。
+
+### 21.5 AI 猜說話者（R19.2，D30）
+
+- 新的工作種類 `nameSpeakers`（`assist` 線）。轉錄完、有說話者、而且有預設名稱（沒手動改、沒被聲紋對到）的說話者時，排在校正後面。不擋整理。
+- 提示詞（新的，中英日各一份，`Notes/SpeakerNaming.swift`）：會議日期、參加者、認識的人的名字（名單，給模型參考寫法）、詞彙表、逐字稿（`[時間] 說話者 N：內容`）。要模型只在有明確根據時才猜（被叫名字後回應、自我介紹、主持人點名），沒把握就不列。輸出 `{"speakers":[{"speaker":3,"name":"藍心","reason":"…","time":"12:30"}]}`。
+- 存進 `speakers.suggested_name`、`suggestion_reason`、`suggestion_time`，只寫還是預設名稱的說話者。
+- 畫面：說話者列有建議時顯示「猜到 2 位說話者的名字」，點開列出「說話者 3 → 藍心？」、根據（時間可以點）、「套用」「忽略」，以及「全部套用」。
+- 套用 = 改名（`name_source = 'suggestion'`，會學聲紋）。忽略 = 清掉建議。
+
+### 21.6 改名帶到會議紀錄
+
+- 說話者改名（手動、套用建議、聲紋帶入以外的情況）後，會議紀錄裡的舊名字換成新名字：舊名字是預設名稱時用數字邊界（「說話者 1」不會換到「說話者 10」），否則整個字串取代。用 `MeetingNotes.replacing`，存成新版本，原因「說話者改名」。
+- 逐字稿存的是編號，顯示時查名字，不用改。
+
+### 21.7 偵測會議（R19.4，D31）
+
+- `MeetingDetector`（`Services/`）：讀系統的 `kAudioHardwarePropertyProcessObjectList`，每個程序讀 `kAudioProcessPropertyBundleID`、`kAudioProcessPropertyIsRunningInput`。監聽程序列表和每個程序的 `IsRunningInput` 變化（`AudioObjectAddPropertyListenerBlock`）。不需要任何權限（2026-10-19 實測：從終端機讀得到，沒有跳出詢問）。
+- 只看已知的會議 app：Zoom `us.zoom.xos`、Teams `com.microsoft.teams2`／`com.microsoft.teams`、Webex `Cisco-Systems.Spark`／`com.cisco.webexmeetingsapp`、FaceTime `com.apple.FaceTime`、Slack `com.tinyspeck.slackmacgap`、LINE `jp.naver.line.mac`、Discord `com.hnc.Discord`；瀏覽器（Chrome、Safari、Edge、Arc、Firefox、Brave）當成「可能在開 Google Meet」。系統程序（例如 `com.apple.CoreSpeech` 的語音喚醒）和拾音自己不算。
+- 開始：某個會議 app 持續用麥克風 5 秒，拾音沒在錄，而且這個 app 這次的通話還沒提醒過 → 提醒「Zoom 正在開會，要開始錄音嗎？」，按鈕「開始錄音」「這次不用」「不要再提醒 Zoom」。
+- 結束：拾音正在錄，而錄音期間用過麥克風的會議 app 都停止用麥克風 10 秒 → 提醒「會議好像結束了，要停止錄音嗎？」，按鈕「停止並轉錄」「繼續錄」。
+- 提醒的方式：通知權限是允許時用通知（帶按鈕，`UNNotificationCategory`）；沒有權限時用一個不搶焦點的小浮動視窗（`NSPanel`，`.nonactivatingPanel`，右上角，30 秒後自己收起）。
+- 設定（錄音分頁）：開關「偵測到線上會議時提醒錄音」（預設開）、不要再提醒的 app 列表（可以移除）。
+- DEBUG：`shiyinctl meetingapp <bundleID> start|stop` 模擬某個 app 開始、停止用麥克風。
+
+### 21.8 對會議提問（R19.6，D32）
+
+- 單場：會議頁新增「提問」分頁。送出的內容：會議基本資料、會議紀錄（JSON）、逐字稿（`[時間] 說話者：內容`）、這場會議最近 3 組問答（追問用）、問題。輸出 `{"answer":"…","citations":[{"time":"12:30","quote":"…"}]}`。回答用問題的語言。
+- 跨會議：工具列「提問」按鈕打開「問所有會議」視窗，範圍可選「所有會議／目前的資料夾／最近 30 天」。兩步：
+  1. 請整理工具從問題抽出 3～8 個搜尋關鍵詞（含同義詞、中英寫法），輸出 `{"keywords":[…]}`。
+  2. 每個關鍵詞用現有的全文搜尋找段落，依命中數和日期挑最多 8 場會議；每場帶會議紀錄的摘要和決議、命中段落和前後各一段，總長上限 40,000 字。請整理工具回答，輸出 `{"answer":"…","citations":[{"meetingId":12,"time":"12:30","quote":"…"}]}`。找不到相關會議就直接說找不到，不呼叫第二步。
+- 問答存在 `questions`；`answer` 存 JSON。回答裡的時間點、會議都可以點。
+- 用設定的整理工具（`LLMClient.generateJSON`，新的 `OutputFormat`）。CLI 可以結束子程序、API 可以取消 Task（§21.14）。不排進工作佇列（使用者在等），同時只問一題。
+- 提示詞新寫（`Notes/AskPrompt.swift`），要求只根據提供的內容回答、每個重點附時間點、找不到就說沒提到。
+
+### 21.9 回報問題（R19.7，D33）
+
+- 「說明」選單「回報問題…」打開對話框，上面是要附上的資訊（唯讀文字），下面三個按鈕：「在 GitHub 回報」「複製」「取消」。
+- 內容：版本和 build、macOS 版本、晶片、記憶體、介面語言、轉錄引擎、說話者辨識和聲紋開關、整理工具種類（不含模型、網址、key）、最近 5 個失敗的工作（種類、`error_kind`、日期）。`error_kind` 在工作失敗時寫入（`Error.logSummary`），不讀 `jobs.error`（可能含內容）。
+- 「在 GitHub 回報」打開 `<issues 網址>/new?title=&body=<內容>`。網址在 Info.plist `ShiyinIssuesURL`（預設 `https://github.com/juinwei7/Shiyin/issues`），fork 的人可以改。
+
+### 21.10 全域快捷鍵標記重點（R19.5）
+
+- `GlobalHotKey` 改成可以註冊多組：1 是錄音（⌃⌥⌘R，沿用），2 是標記重點（⌃⌥⌘B）。事件處理用 `GetEventParameter` 取出 `EventHotKeyID` 分派。
+- 標記重點只在錄音中註冊，停止就取消，不佔用按鍵。按下：在目前的錄音時間加重點，播放系統音效「Tink」，選單列圖示換成星號 1 秒。
+- 設定（錄音分頁）：開關「錄音中按 ⌃⌥⌘B 標記重點」（預設開）。DEBUG：`shiyinctl hotkey bookmark`。
+
+### 21.11 一次處理同一個詞的校正（R20.2）
+
+- 待確認的校正依（原文、建議）分組。逐字稿上方的校正列改成列出組：「把『A』改成『B』（5 處）」「全部接受」「全部忽略」，展開看每一處（沿用原本的單筆操作）。
+- `AppDatabase.acceptCorrections(ids)`、`rejectCorrections(ids)`：一個 transaction 裡改段落文字、更新搜尋索引。
+
+### 21.12 長會議的介面（R20.3）
+
+- 逐字稿分頁：`MeetingDetail` 載入時先算好每段的校正（字典）、段落開始時間的陣列。播放跟隨改用二分搜尋找目前的段落；跟播放時間有關的部分（目前段落的高亮、自動捲動）拆成獨立的小 view，播放時間更新時只重畫它，整份列表不重新計算。
+- 錄音畫面：即時逐字稿同理，只有新增的段落會更新。
+- `AppModel.perform` 依操作只重讀需要的部分：`reload(.detail(parts))` 只讀這場會議的說話者、重點、段落、校正其中幾樣，`reload(.list)` 只讀會議列表。改名、標記重點、改一段文字、接受校正不再重讀所有會議、詞彙表、範本。
+- 驗證用 DEBUG 計數：逐字稿列表每秒重算幾次、每個操作讀了哪些表。
+
+### 21.13 匯入匯出在背景（R20.4）
+
+- 匯入：複製或搬移檔案、讀時長、解壓封包（`ditto`）在背景的 Task 做，完成後回主執行緒寫資料庫、更新列表。側邊欄下方顯示「正在匯入 N 個檔案…」。
+- 匯出：寫錄音（本來就是 async）、打包封包、逐字稿的文字檔在背景；PDF（WKWebView）和 Word（NSAttributedString 讀 HTML）要在主執行緒，保留在主執行緒但先在背景組好 HTML。匯出對話框按下後顯示進行中，完成或失敗都有提示。
+
+### 21.14 API 可以取消、自動重試（R20.5）
+
+- API 的整理工具：`JobRunner` 把呼叫包在一個 Task 裡，`cancelAction` 取消這個 Task；`URLSession` 跟著取消。取消的工作照原本「已取消」處理，不算失敗、不發通知。
+- `APIRequest.send` 重試一次：`URLError` 的逾時、連線中斷、沒有網路、連不上主機、找不到主機，或 HTTP 429、500、502、503、504。等待時間：有 `Retry-After` 就照它（最多 30 秒），沒有就 5 秒。其他錯誤不重試。
+- DEBUG：假伺服器 `fake-llm-server.py` 加「第一次回 503、第二次正常」和「延遲 30 秒」兩種模式。
+
+### 21.15 草稿保留（R20.6）
+
+- `drafts` 表，key：`review:<待確認的編號>`、`segment:<段落 id>`。打字停 0.8 秒存一次，送出或取消時刪掉。
+- 待確認分頁、逐字稿單段編輯：出現時讀回草稿（逐字稿的話直接回到編輯狀態）；消失、換會議時立刻存。`applicationWillTerminate` 前送出通知讓畫面上的編輯器存檔。
+- 草稿是會議內容，跟會議一起存在資料庫，會議刪除時一起刪。
+
+### 21.16 長錄音分段轉錄（R20.7，D34）
+
+- 先量：DEBUG 指令量轉錄各階段的記憶體（`phys_footprint`）：解碼、whisper、說話者辨識。whisper.cpp 會先把整段音訊算成 mel 頻譜（large-v3 是 128×每秒 100 格的 Float32，4 小時約 740 MB），而且會議越長越大。
+- 分段：whisper 每 10 分鐘一段送進去，分段點選在預定位置前後 10 秒內最安靜的 0.5 秒；每段的提示詞是詞彙表加上前一段最後的文字（跟 whisper 自己連續轉錄時一樣）。時間點加上位移，接縫兩邊的段落去掉重複。說話者辨識仍用整段（要一致的說話者編號），但解碼後的音訊只留一份。
+- 驗證：評估工具在 AISHELL-4（38 分鐘，會切成 4 段）和合成會議上，錯字率跟不分段相差 ≤ 0.5 個百分點；4 小時的模擬錄音量記憶體峰值。
+
+### 21.17 第一次使用不用等下載（R20.8，D35）
+
+- `JobRunner` 挑轉錄工作時：轉錄引擎是 Breeze、但這個語言的模型還沒下載好，就用 macOS 內建辨識轉這一場（沿用 `SystemTranscriber`），`meetings.transcribed_with = 'system'`；模型照樣在背景下載。使用者在設定選了 macOS 內建辨識的不受影響。
+- 轉錄的時候寫入 `transcribed_with`（breeze、japanese、system）。逐字稿分頁：`transcribed_with = 'system'`、設定的引擎是 Breeze、模型已經下載好時，上方顯示「這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。」和「重新轉錄」按鈕。
+- 首次使用引導的下載步驟說明改成「下載完成前會先用 macOS 內建辨識」。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -707,6 +872,14 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | D25 | 錄音中裝置變了就自動重新接上，錄音不停 | 停止錄音並提示：會議還在進行，使用者可能沒注意到，後半場就沒錄到。只提示、不重接：使用者在開會中很難處理。代價：換裝置的那一兩秒沒錄到（雙聲道時補靜音） |
 | D26 | 同一個工作意外結束 2 次才標成失敗，正常結束不算 | 1 次就失敗：拾音意外結束可能跟這個工作無關（例如錄音當掉），重跑一次通常會成功。一直重跑：每次開 app 都會再當一次，還可能帶走正在錄的會議 |
 | D27 | 搜尋表的 rowid 用可推算的值，刪改都用 rowid | 只把 `saveTranscript` 改成一句 `DELETE … WHERE meeting_id = ? AND kind = 'segment'`：一次掃整張表還是會隨資料變多變慢，而且全文取代、全部接受校正仍是一段掃一次。另外建一張對照表：多一張表要維持同步，rowid 可以直接算出來就不需要 |
+| D28 | 停止後先用即時逐字稿整理一份草稿，正式版完成後取代 | 等正式轉錄（現在）：長會議要等 20 幾分鐘。邊錄邊正式轉錄：whisper 跟即時辨識搶 GPU（D1），而且要大改轉錄流程；草稿用現成的即時逐字稿和同一份提示詞，成本最低。代價：即時逐字稿的錯字比較多、沒有說話者，所以一定要標明是草稿 |
+| D29 | 聲紋對到就自動帶入名字，標「自動」可以改正 | 先列出來讓使用者確認：開會的人固定時每週都要按一次，跟沒做差不多。取捨：誤認的代價比沒認出來大，所以門檻要調到誤認 ≤ 2%（§21.4.1），寧可少帶入 |
+| D30 | AI 猜說話者只當建議，在整理之後跑 | 直接套用：模型猜錯的名字會進到會議紀錄。放進整理的提示詞一起做：要改整理的提示詞和輸出格式（中文提示詞不變的原則），也會拖慢整理。代價：多一次呼叫整理工具 |
+| D31 | 偵測會議用 Core Audio 的程序物件，只提醒不自動錄 | 看視窗標題或 Accessibility：要輔助使用權限，而且各家介面常改。自動開始錄音：沒經過與會者同意就錄音有禮儀和法律的問題 |
+| D32 | 跨會議提問先請整理工具抽關鍵詞，再用全文搜尋挑片段 | 把所有會議都送出去：會議一多就超過模型的上限，也送出太多不相關的內容。本機語意搜尋（embedding 模型）：要再下載模型、建向量索引；全文搜尋已經有了。代價：多一次呼叫，問法跟逐字稿用詞差很多時可能找不到 |
+| D33 | 回報問題只打開瀏覽器的 GitHub 頁面 | app 直接上傳：要有伺服器或 token，也違反「不回傳任何資料」；使用者在瀏覽器裡看得到、改得到要送出的內容 |
+| D34 | 長錄音的 whisper 每 10 分鐘一段，說話者辨識仍用整段 | 全部分段（含說話者辨識）：不同段的說話者編號對不起來。不分段：記憶體隨會議長度增加，4 小時要 4 GB 以上 |
+| D35 | 模型還沒下載好時，自動改用 macOS 內建辨識轉錄那一場 | 等下載完：第一場會議要等 1.7 GB 下載，新使用者的第一印象很差。直接把設定改成內建：使用者之後不會知道 Breeze 比較準 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
