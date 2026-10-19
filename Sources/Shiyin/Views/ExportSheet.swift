@@ -12,14 +12,20 @@ struct ExportSheet: View {
     @State private var speakers = true
     @State private var working = false
     @State private var shareAnchor: NSView?
+    /// 打開時那一場會議的資料（design §20.9）：對話框開著時選取的會議換了也不變
+    @State private var bundle: ExportBundle?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("匯出").font(.title3.weight(.semibold))
+            Group {
+                if let meeting = bundle?.meeting { Text("匯出「\(meeting.displayTitle)」") } else { Text("匯出") }
+            }
+            .font(.title3.weight(.semibold))
+            .lineLimit(2)
             Form {
                 Picker("項目", selection: $item) {
                     ForEach(ExportItem.allCases) { item in
-                        Text(item.label).tag(item).disabled(item == .audio && model.detail?.meeting.hasAudio != true)
+                        Text(item.label).tag(item).disabled(item == .audio && bundle?.meeting.hasAudio != true)
                     }
                 }
                 Picker("格式", selection: $format) {
@@ -51,10 +57,13 @@ struct ExportSheet: View {
         .frame(width: 460)
         .onChange(of: item) { _, newValue in format = newValue.formats[0] }
         // 還沒有會議紀錄（整理中或整理失敗）時，預設改匯出逐字稿（使用者回報：匯出的會議紀錄只有標題）
-        .onAppear { if !hasNotes { item = .transcript } }
+        .onAppear {
+            bundle = model.exportMeetingId.flatMap { try? model.exportBundle(meetingId: $0) }
+            if !hasNotes { item = .transcript }
+        }
     }
 
-    private var hasNotes: Bool { model.detail?.notes != nil }
+    private var hasNotes: Bool { bundle?.notes != nil }
 
     private var hint: String {
         switch item {
@@ -69,6 +78,11 @@ struct ExportSheet: View {
         }
     }
 
+    private func meetingId() throws -> Int64 {
+        guard let id = model.exportMeetingId else { throw AppModel.ExportError.meetingGone }
+        return id
+    }
+
     private func formatLabel(_ format: String) -> String {
         ["md": "Markdown", "pdf": "PDF", "docx": String(localized: "Word（docx）"), "txt": String(localized: "純文字（txt）"), "srt": String(localized: "字幕（srt）"),
          "vtt": String(localized: "字幕（vtt）"), "m4a": "m4a", "wav": "wav", "shiyin": String(localized: ".shiyin 封包")][format] ?? format
@@ -76,13 +90,13 @@ struct ExportSheet: View {
 
     private func save() async {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = model.suggestedFilename(item, format: format)
+        panel.nameFieldStringValue = model.suggestedFilename(item, format: format, meeting: bundle?.meeting)
         if let type = UTType(filenameExtension: format) { panel.allowedContentTypes = [type] }
         guard panel.runModal() == .OK, let url = panel.url else { return }
         working = true
         defer { working = false }
         do {
-            try await model.export(item, format: format, times: times, speakers: speakers, to: url)
+            try await model.export(item, format: format, times: times, speakers: speakers, meetingId: try meetingId(), to: url)
             model.noticeMessage = String(localized: "已匯出 \(url.lastPathComponent)")
             dismiss()
         } catch {
@@ -92,9 +106,9 @@ struct ExportSheet: View {
 
     private func exportToTemp() async -> URL? {
         guard let dir = try? Paths.makeTempDirectory() else { return nil }
-        let url = dir.appendingPathComponent(model.suggestedFilename(item, format: format))
+        let url = dir.appendingPathComponent(model.suggestedFilename(item, format: format, meeting: bundle?.meeting))
         do {
-            try await model.export(item, format: format, times: times, speakers: speakers, to: url)
+            try await model.export(item, format: format, times: times, speakers: speakers, meetingId: try meetingId(), to: url)
             return url
         } catch {
             model.errorMessage = error.localizedDescription

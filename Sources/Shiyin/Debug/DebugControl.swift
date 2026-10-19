@@ -92,12 +92,16 @@ enum DebugControl {
         case "rate": model.player.setRate(Float(args[1]) ?? 1)
         case "toggle": model.player.toggle()
         case "export":
-            // export <項目> <格式> <路徑> [times 1/0] [speakers 1/0]
+            // export <項目> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的]
             let item = ExportItem(rawValue: args[1]) ?? .notes
             let url = URL(fileURLWithPath: args[3])
+            let meetingId = args.count > 6 ? Int64(args[6]) : model.selection
             Task {
-                do { try await model.export(item, format: args[2], times: args.count <= 4 || args[4] == "1",
-                                            speakers: args.count <= 5 || args[5] == "1", to: url) }
+                do {
+                    guard let meetingId else { throw AppModel.ExportError.meetingGone }
+                    try await model.export(item, format: args[2], times: args.count <= 4 || args[4] == "1",
+                                           speakers: args.count <= 5 || args[5] == "1", meetingId: meetingId, to: url)
+                }
                 catch { try? "ERROR \(error.localizedDescription)".write(to: url.appendingPathExtension("error"), atomically: true, encoding: .utf8) }
             }
         case "import":   // import [lang=ja] <檔案>…
@@ -151,7 +155,7 @@ enum DebugControl {
         case "hotkeyenable": GlobalHotKey.shared.setEnabled(args[1] == "1")
         // 點通知後的動作（系統的點擊沒辦法模擬，直接呼叫同一個處理函式）
         case "opennotification": if let id { model.notifier.onOpen?(id) }
-        case "exportsheet": model.showExportSheet = args.count < 2 || args[1] == "1"
+        case "exportsheet": if args.count < 2 || args[1] == "1" { model.openExportSheet() } else { model.showExportSheet = false }
         // quit：照正常流程結束拾音（錄音中、有工作時等於在確認對話框按「結束」）
         case "quit":
             confirmQuit = true
@@ -249,6 +253,7 @@ enum DebugControl {
                           "preferred": Locale.preferredLanguages.first ?? ""],
             "models": ["breeze": "\(model.models.state)", "japanese": "\(model.models.state(.japanese))",
                        "languageDetection": "\(model.models.state(.languageDetection))", "diarizer": "\(model.models.diarizerState)"],
+            "exportMeeting": model.exportMeetingId as Any,
             "search": ["query": model.searchQuery, "results": model.searchResults.map { ["meeting": $0.meetingId, "kind": $0.kind.rawValue, "ref": $0.ref, "snippet": $0.snippet] }],
             "trash": model.trash.map { $0.id },
             "templates": model.templates.map { $0.id },

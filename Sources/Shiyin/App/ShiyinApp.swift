@@ -76,7 +76,7 @@ struct AppCommands: Commands {
             .keyboardShortcut("b")
             .disabled(!model.recorder.isRecording)
             Divider()
-            Button("匯出…") { model.openMainWindow?(); model.showExportSheet = true }
+            Button("匯出…") { model.openMainWindow?(); model.openExportSheet() }
                 .keyboardShortcut("e")
                 .disabled(model.detail == nil)
         }

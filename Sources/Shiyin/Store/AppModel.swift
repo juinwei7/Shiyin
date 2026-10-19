@@ -108,6 +108,8 @@ final class AppModel {
     var showImportSheet = false
     var showFileImporter = false
     var showExportSheet = false
+    /// 匯出對話框要匯出的會議：打開時記下，對話框開著時選取的會議換了也不變（design §20.9、R18.9）
+    var exportMeetingId: Int64?
     var confirmDelete = false
     /// 垃圾桶裡「永久刪除」要確認的會議
     var confirmPurge: Int64?
@@ -831,14 +833,27 @@ final class AppModel {
 
     // MARK: 匯出（R7）
 
+    func openExportSheet() {
+        exportMeetingId = selection
+        showExportSheet = true
+    }
+
+    /// 依會議 id 從資料庫讀要匯出的資料；會議已經被永久刪除時丟出錯誤（design §20.9）
+    func exportBundle(meetingId: Int64) throws -> ExportBundle {
+        guard let meeting = try db.meeting(meetingId) else { throw ExportError.meetingGone }
+        return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
+                            speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
+                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes)
+    }
+
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
         return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes)
     }
 
-    /// 寫出檔案；成功回傳檔案位置
-    func export(_ item: ExportItem, format: String, times: Bool, speakers: Bool, to url: URL) async throws {
-        guard let b = exportBundle() else { return }
+    /// 寫出檔案
+    func export(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL) async throws {
+        let b = try exportBundle(meetingId: meetingId)
         switch item {
         case .notes:
             switch format {
@@ -856,14 +871,19 @@ final class AppModel {
         }
     }
 
-    func suggestedFilename(_ item: ExportItem, format: String) -> String {
-        guard let m = detail?.meeting else { return String(localized: "會議.\(format)") }
+    func suggestedFilename(_ item: ExportItem, format: String, meeting: Meeting?) -> String {
+        guard let m = meeting else { return String(localized: "會議.\(format)") }
         let base = "\(m.meetingDate) \(m.displayTitle)".replacingOccurrences(of: "/", with: "／").replacingOccurrences(of: ":", with: "：")  // l10n-skip
         switch item {
         case .transcript: return String(localized: "\(base)（逐字稿）.\(format)")
         case .audio: return "\(base).\(format)"
         default: return "\(base).\(format)"
         }
+    }
+
+    enum ExportError: LocalizedError {
+        case meetingGone
+        var errorDescription: String? { String(localized: "這場會議已經被刪除，沒辦法匯出") }
     }
 
     enum CopyStyle { case plain, markdown, rich }

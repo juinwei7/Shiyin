@@ -369,7 +369,7 @@ struct MoreMenu: View {
             Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
             Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }
             Divider()
-            Button("匯出…", systemImage: "square.and.arrow.up") { model.showExportSheet = true }
+            Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }
             Menu("複製會議紀錄", systemImage: "doc.on.doc") {
                 Button("富文字（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
                 Button("Markdown") { model.copyNotes(.markdown) }
