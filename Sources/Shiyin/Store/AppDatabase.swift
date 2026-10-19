@@ -432,16 +432,23 @@ final class AppDatabase: @unchecked Sendable {
     /// 接受：改段落文字（含搜尋索引）。段落之後被改過、找不到原文時回傳 false
     @discardableResult
     func acceptCorrection(_ id: Int64) throws -> Bool {
-        try pool.write { db in
-            guard var correction = try Correction.fetchOne(db, key: id), correction.status == "pending",
-                  let segment = try Segment.fetchOne(db, key: correction.segmentId),
-                  let text = TranscriptCorrection.apply(correction.suggestionValue, to: segment.text) else { return false }
-            try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, segment.id])
-            try db.execute(sql: "UPDATE search SET text = ? WHERE rowid = ?", arguments: [text, segment.id])
-            correction.status = "accepted"
-            try correction.update(db)
-            return true
-        }
+        try pool.write { db in try Self.acceptCorrection(db, id) }
+    }
+
+    /// 一次接受多則（同一個詞的每一處，或全部，design §21.11）：同一個交易；回傳沒套用的數量（段落之後改過）
+    func acceptCorrections(_ ids: [Int64]) throws -> Int {
+        try pool.write { db in try ids.filter { try !Self.acceptCorrection(db, $0) }.count }
+    }
+
+    private static func acceptCorrection(_ db: Database, _ id: Int64) throws -> Bool {
+        guard var correction = try Correction.fetchOne(db, key: id), correction.status == "pending",
+              let segment = try Segment.fetchOne(db, key: correction.segmentId),
+              let text = TranscriptCorrection.apply(correction.suggestionValue, to: segment.text) else { return false }
+        try db.execute(sql: "UPDATE segments SET text = ? WHERE id = ?", arguments: [text, segment.id])
+        try db.execute(sql: "UPDATE search SET text = ? WHERE rowid = ?", arguments: [text, segment.id])
+        correction.status = "accepted"
+        try correction.update(db)
+        return true
     }
 
     /// 還原已接受的建議：改回原文，回到待確認
@@ -460,8 +467,14 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     func rejectCorrection(_ id: Int64) throws {
+        try rejectCorrections([id])
+    }
+
+    func rejectCorrections(_ ids: [Int64]) throws {
         try pool.write { db in
-            try db.execute(sql: "UPDATE corrections SET status = 'rejected' WHERE id = ? AND status = 'pending'", arguments: [id])
+            for id in ids {
+                try db.execute(sql: "UPDATE corrections SET status = 'rejected' WHERE id = ? AND status = 'pending'", arguments: [id])
+            }
         }
     }
 

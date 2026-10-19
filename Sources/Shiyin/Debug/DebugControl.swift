@@ -64,6 +64,20 @@ enum DebugControl {
                 default: model.revertCorrection(cid)
                 }
             }
+        // correctiongroups <會議 id> <輸出.json>：校正列「依詞處理」看到的組；
+        // correctiongroup <會議 id> accept|reject <第幾組>：等於按那一組的「接受 N 處」「忽略」（design §21.11）
+        case "correctiongroups":
+            model.selection = id
+            let groups = model.detail?.correctionGroups ?? []
+            write(["groups": groups.map { ["original": $0[0].original, "suggestion": $0[0].suggestion, "count": $0.count,
+                                           "segments": $0.map(\.segmentId)] }], to: args[2])
+        case "correctiongroup":
+            model.selection = id
+            let groups = model.detail?.correctionGroups ?? []
+            if let index = Int(args[3]), groups.indices.contains(index) {
+                let ids = groups[index].compactMap(\.id)
+                args[2] == "accept" ? model.acceptCorrections(ids) : model.rejectCorrections(ids)
+            }
         case "corrections":  // corrections <會議 id> accept|reject：全部接受或全部忽略
             model.selection = id
             if args[2] == "accept" { model.acceptAllCorrections() } else { model.rejectAllCorrections() }
@@ -79,6 +93,24 @@ enum DebugControl {
             textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
             textView.insertText(args[1], replacementRange: textView.selectedRange())
         case "notesvalue": write(["found": notesTextView() != nil, "text": notesTextView()?.string ?? ""], to: args[1])
+        // press <標籤> [第幾個，從 0 開始] [結果.json]：在 app 內走輔助使用的元件樹，按下標籤相符的按鈕。
+        // 跟從外面用 AX 按的是同一條路，螢幕上鎖、視窗在別的桌面時也能用
+        case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
+            var lines: [String] = []
+            func dump(_ element: NSAccessibilityProtocol, depth: Int) {
+                guard depth < 80 else { return }
+                lines.append(String(repeating: "  ", count: depth) + "\(element.accessibilityRole()?.rawValue ?? "?") label=\(element.accessibilityLabel() ?? "") title=\(element.accessibilityTitle() ?? "")")
+                for child in element.accessibilityChildren() ?? [] {
+                    if let child = child as? NSAccessibilityProtocol { dump(child, depth: depth + 1) }
+                }
+            }
+            for window in NSApp.windows where window.isVisible { dump(window, depth: 0) }
+            try? lines.joined(separator: "\n").write(toFile: args[1], atomically: true, encoding: .utf8)
+        case "press":
+            let matches = accessibilityButtons(label: args[1])
+            let index = args.count > 2 ? Int(args[2]) ?? 0 : 0
+            let pressed = matches.indices.contains(index) && matches[index].accessibilityPerformPress()
+            if args.count > 3 { write(["found": matches.count, "pressed": pressed], to: args[3]) }
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerm(args[1])
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
@@ -283,6 +315,23 @@ enum DebugControl {
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         return out
+    }
+
+    /// 所有看得到的視窗裡，標籤或標題等於 label 的按鈕（依元件樹的順序）
+    private static func accessibilityButtons(label: String) -> [NSAccessibilityProtocol] {
+        var found: [NSAccessibilityProtocol] = []
+        func walk(_ element: NSAccessibilityProtocol, depth: Int) {
+            guard depth < 80 else { return }
+            if element.accessibilityRole() == .button,
+               element.accessibilityLabel() == label || element.accessibilityTitle() == label {
+                found.append(element)
+            }
+            for child in element.accessibilityChildren() ?? [] {
+                if let child = child as? NSAccessibilityProtocol { walk(child, depth: depth + 1) }
+            }
+        }
+        for window in NSApp.windows where window.isVisible { walk(window, depth: 0) }
+        return found
     }
 
     /// 主視窗裡可以編輯的 NSTextView（筆記分頁、錄音畫面的筆記輸入框）

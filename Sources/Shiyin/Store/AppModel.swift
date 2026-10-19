@@ -63,6 +63,15 @@ struct MeetingDetail: Equatable {
     /// 逐字稿校正建議（design §17.4）
     var corrections: [Correction] = []
 
+    /// 待確認的校正依「原文 → 建議」分組，處數多的在前；組內依逐字稿的順序（design §21.11、R20.2）
+    var correctionGroups: [[Correction]] {
+        let pending = corrections.filter { $0.status == "pending" }
+        let order = Dictionary(segments.enumerated().compactMap { i, s in s.id.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
+        return Dictionary(grouping: pending) { "\($0.original)\u{1F}\($0.suggestion)" }.values
+            .map { $0.sorted { (order[$0.segmentId] ?? 0) < (order[$1.segmentId] ?? 0) } }
+            .sorted { $0.count != $1.count ? $0.count > $1.count : (order[$0[0].segmentId] ?? 0) < (order[$1[0].segmentId] ?? 0) }
+    }
+
     func speakerName(_ idx: Int?) -> String? {
         guard let idx else { return nil }
         return speakers[idx] ?? meeting.meetingLanguage.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
@@ -734,15 +743,34 @@ final class AppModel {
 
     func acceptAllCorrections() {
         guard let pending = detail?.corrections.filter({ $0.status == "pending" }) else { return }
-        perform {
-            let failed = try pending.compactMap(\.id).filter { try !db.acceptCorrection($0) }.count
-            if failed > 0 { noticeMessage = String(localized: "有 \(failed) 則建議的段落已經改過，沒有套用") }
-        }
+        acceptCorrections(pending.compactMap(\.id))
     }
 
     func rejectAllCorrections() {
         guard let pending = detail?.corrections.filter({ $0.status == "pending" }) else { return }
-        perform { for id in pending.compactMap(\.id) { try db.rejectCorrection(id) } }
+        rejectCorrections(pending.compactMap(\.id))
+    }
+
+    /// 同一個詞的每一處一起接受或忽略（design §21.11、R20.2）
+    func acceptCorrections(_ ids: [Int64]) {
+        perform {
+            let failed = try db.acceptCorrections(ids)
+            if failed > 0 { noticeMessage = String(localized: "有 \(failed) 則建議的段落已經改過，沒有套用") }
+        }
+    }
+
+    func rejectCorrections(_ ids: [Int64]) {
+        perform { try db.rejectCorrections(ids) }
+    }
+
+    /// 捲到這一段並暫時加底色。先清掉再設，同一段點第二次也會捲過去；幾秒後拿掉底色，不要一直留著
+    func flashSegment(_ id: Int64) {
+        highlightSegment = nil
+        Task { @MainActor in
+            highlightSegment = id
+            try? await Task.sleep(for: .seconds(6))
+            if highlightSegment == id { highlightSegment = nil }
+        }
     }
 
     func renameSpeaker(_ idx: Int, to name: String) {
@@ -951,13 +979,7 @@ final class AppModel {
         switch hit.kind {
         case .segment:
             tab = .transcript
-            // 先清掉再設，同一個結果點第二次也會捲過去；幾秒後拿掉底色，不要一直留著
-            highlightSegment = nil
-            Task { @MainActor in
-                highlightSegment = hit.ref
-                try? await Task.sleep(for: .seconds(6))
-                if highlightSegment == hit.ref { highlightSegment = nil }
-            }
+            flashSegment(hit.ref)
             if let segment = detail?.segments.first(where: { $0.id == hit.ref }) { player.seek(to: segment.start, play: false) }
         case .notes, .title: tab = .summary
         case .userNotes: tab = .notes

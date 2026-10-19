@@ -157,6 +157,29 @@
     "%lld": {
       "extractionState": "manual"
     },
+    "%lld 處": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld place"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld places"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld 處可能聽錯的字，已標在逐字稿裡": {
       "extractionState": "manual",
       "localizations": {
@@ -1056,6 +1079,29 @@
         }
       }
     },
+    "依詞處理（%lld 組）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Review by word (%lld group)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Review by word (%lld groups)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "停止": {
       "extractionState": "manual",
       "localizations": {
@@ -1768,6 +1814,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Works (%lld s)"
+          }
+        }
+      }
+    },
+    "同一個詞的每一處一起接受或忽略": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept or ignore every place a word appears at once"
           }
         }
       }
@@ -3139,6 +3196,29 @@
         }
       }
     },
+    "接受 %lld 處": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Accept %lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Accept all %lld"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "搜尋": {
       "extractionState": "manual",
       "localizations": {
@@ -3256,6 +3336,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Play/Pause"
+          }
+        }
+      }
+    },
+    "收起": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide"
           }
         }
       }
@@ -6196,6 +6287,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No system audio for over 15 seconds. Check that the meeting is playing sound and that Shiyin is allowed in System Settings → Privacy & Security → Screen & System Audio Recording."
+          }
+        }
+      }
+    },
+    "跳到第一處": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jump to the first place"
           }
         }
       }

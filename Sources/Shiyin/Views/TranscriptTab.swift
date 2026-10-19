@@ -12,6 +12,7 @@ struct TranscriptTab: View {
     @State private var editingId: Int64?
     @State private var editText = ""
     @State private var showReplace = false
+    @State private var showCorrectionGroups = false
     @State private var speakerFilter: Int?
     /// 正在改名的說話者和點的那一段：改名視窗掛在點的那一段（逐字稿是延遲建立的，第一段可能還不存在）
     @State private var renaming: (speaker: Int, segment: Int64)?
@@ -40,6 +41,7 @@ struct TranscriptTab: View {
     }
 
     private var pendingCorrections: Int { detail.corrections.filter { $0.status == "pending" }.count }
+
 
     private var currentSegmentId: Int64? {
         let t = model.player.currentTime
@@ -166,22 +168,62 @@ struct TranscriptTab: View {
         .padding(.vertical, 10)
     }
 
-    /// 有待確認的校正建議時，顯示在搜尋列下方
+    /// 有待確認的校正建議時，顯示在搜尋列下方；可以展開依詞處理（同一個詞的每一處一起接受或忽略）
     private var correctionBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "text.magnifyingglass").foregroundStyle(Color.signal)
-            Text("\(pendingCorrections) 處可能聽錯的字，已標在逐字稿裡")
-            Spacer()
-            Button("全部忽略") { model.rejectAllCorrections() }
-            Button("全部接受") { model.acceptAllCorrections() }
-                .buttonStyle(.borderedProminent)
-                .help("把所有建議套用到逐字稿，之後還能逐條還原")
+        let groups = detail.correctionGroups
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "text.magnifyingglass").foregroundStyle(Color.signal)
+                Text("\(pendingCorrections) 處可能聽錯的字，已標在逐字稿裡")
+                Button(showCorrectionGroups ? "收起" : "依詞處理（\(groups.count) 組）") { showCorrectionGroups.toggle() }
+                    .buttonStyle(.link)
+                    .help("同一個詞的每一處一起接受或忽略")
+                Spacer()
+                Button("全部忽略") { model.rejectAllCorrections() }
+                Button("全部接受") { model.acceptAllCorrections() }
+                    .buttonStyle(.borderedProminent)
+                    .help("把所有建議套用到逐字稿，之後還能逐條還原")
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            if showCorrectionGroups {
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(groups, id: \.first!.id) { group in correctionGroupRow(group) }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                }
+                .frame(maxHeight: 220)
+            }
         }
         .font(.callout)
         .controlSize(.small)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
         .background(Color.signal.opacity(0.08))
+    }
+
+    /// 一組「原文 → 建議」：點文字跳到第一處
+    private func correctionGroupRow(_ group: [Correction]) -> some View {
+        let first = group[0]
+        let ids = group.compactMap(\.id)
+        return HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Button {
+                model.flashSegment(first.segmentId)
+            } label: {
+                Text("「\(first.original)」→「\(first.suggestion)」").fontWeight(.medium).meetingText()
+            }
+            .buttonStyle(.plain)
+            .help("跳到第一處")
+            Text("\(group.count) 處").foregroundStyle(.secondary).monospacedDigit()
+            Text(first.reason).foregroundStyle(.secondary).lineLimit(1)
+            Spacer(minLength: 8)
+            Button("忽略") { model.rejectCorrections(ids) }
+                .buttonStyle(.link)
+            Button(group.count > 1 ? "接受 \(group.count) 處" : "接受") { model.acceptCorrections(ids) }
+                .buttonStyle(.link)
+        }
+        .font(.caption)
     }
 
     /// 一則校正建議：待確認的有接受、忽略；已接受的可以還原
