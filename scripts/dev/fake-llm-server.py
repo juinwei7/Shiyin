@@ -18,7 +18,8 @@ json_schema 時把 schema 交給 codex 的 --output-schema；退回 JSON 模式�
   {"bad_key": true}                全部回 key 錯誤
   {"error_message": "…"}           整理、校正回 400，錯誤訊息是這段文字（測 log 不寫錯誤內容，design §20.8）
   {"delay": 20}                    每個請求等 20 秒再回（測同時進行、取消，design §21.2、§21.14）
-  {"fail_once": 503, "retry_after": 2}   設定之後的第一個請求回這個狀態碼，之後正常（測自動重試）
+  {"fail_once": 503, "retry_after": 2}   設定之後的第一個請求回這個狀態碼，之後正常（測自動重試）；
+                                   可以加 "fail_message"（例如帳戶沒有額度的 429）
   {"responses": {"corrections": {…}}}    換掉某種回應的內容：notes、corrections、speakerNames、keywords、answer
   {}                               改回預設
 """
@@ -148,7 +149,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(status)
             if MODE.get("retry_after") is not None:
                 self.send_header("retry-after", str(MODE["retry_after"]))
-            data = json.dumps({"error": {"message": f"fake {status}"}}).encode()
+            data = json.dumps({"error": {"message": MODE.get("fail_message", f"fake {status}")}}).encode()
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(data)))
             self.end_headers()

@@ -206,6 +206,14 @@ final class JobRunner {
 
     private func isStillRunning(_ job: Job) -> Bool { (try? db.jobStatus(job.id!)) == .running }
 
+    /// 呼叫整理工具，按「取消」時 CLI 結束子程序、API 取消請求（design §21.14、R20.5）
+    private func callLLM<T>(_ lane: JobLane, _ work: @escaping @MainActor (_ onStart: @escaping (Subprocess) -> Void) async throws -> T) async throws -> T {
+        var process: Subprocess?
+        let task = Task { @MainActor in try await work { process = $0 } }
+        running[lane]?.cancelAction = { process?.terminate(); task.cancel() }
+        return try await task.value
+    }
+
     // MARK: 轉錄（design §6）
 
     private func transcribe(_ job: Job, lane: JobLane) async throws {
@@ -259,10 +267,11 @@ final class JobRunner {
                 language: language, title: meeting.title, participants: meeting.participantList,
                 speakerNames: Array(Set(names.values)).sorted(), glossary: try db.glossary().map(\.term),
                 segments: segments.map { ($0.text, speakerName($0.speaker)) })
-            let suggestions = try await TranscriptCorrection.suggest(
-                context, provider: provider, model: AppSettings.model,
-                onStart: { [weak self] process in self?.running[lane]?.cancelAction = { process.terminate() } },
-                onProgress: { [weak self] value in self?.running[lane]?.progress = value })
+            let suggestions = try await callLLM(lane) { onStart in
+                try await TranscriptCorrection.suggest(
+                    context, provider: provider, model: AppSettings.model, onStart: onStart,
+                    onProgress: { [weak self] value in self?.running[lane]?.progress = value })
+            }
             guard isStillRunning(job) else { return }
             try db.saveCorrections(job.meetingId, suggestions.compactMap { s in
                 segments[s.segment].id.map {
@@ -313,9 +322,10 @@ final class JobRunner {
         } else {
             prompt = NotesPrompt.summarize(context)
         }
-        let notes = try await LLMClient.generate(
-            provider: provider, model: AppSettings.model, system: NotesPrompt.system(meeting.meetingLanguage), prompt: prompt,
-            onStart: { [weak self] process in self?.running[lane]?.cancelAction = { process.terminate() } })
+        let system = NotesPrompt.system(meeting.meetingLanguage)
+        let notes = try await callLLM(lane) { onStart in
+            try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
+        }
         guard isStillRunning(job) else { return }
         try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"))
     }
