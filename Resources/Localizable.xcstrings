@@ -5242,6 +5242,29 @@
         }
       }
     },
+    "磁碟只剩 %@，大約只能錄 %lld 分鐘。空間用完時會自動停止錄音，已經錄到的部分會保留。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Only %@ of disk space is left, enough for about %lld minute of recording. If the disk fills up, recording stops automatically and what's been recorded is kept."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Only %@ of disk space is left, enough for about %lld minutes of recording. If the disk fills up, recording stops automatically and what's been recorded is kept."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "磁碟空間": {
       "extractionState": "manual",
       "localizations": {
@@ -7378,13 +7401,13 @@
         }
       }
     },
-    "錄音寫檔發生錯誤：%@": {
+    "錄音寫不進磁碟（可能是空間不足），已經停止錄音。停止前錄到的部分有保留，會照常轉錄。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Error writing the recording: %@"
+            "value": "Shiyin couldn't write the recording to disk (the disk may be full), so recording has stopped. Everything recorded before that is kept and will be transcribed as usual."
           }
         }
       }

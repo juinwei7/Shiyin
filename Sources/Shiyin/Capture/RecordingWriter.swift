@@ -19,7 +19,7 @@ final class RecordingWriter: @unchecked Sendable {
     private var timer: DispatchSourceTimer?
     private var writtenFrames = 0          // 只在 queue 上讀寫
     private let queue = DispatchQueue(label: "com.weiwei.shiyin.writer", qos: .userInitiated)
-    private var writeError: Error?
+    private var failed = false            // 寫檔失敗過，用 lock 保護
 
     init(url: URL, channels: Int) throws {
         self.url = url
@@ -84,6 +84,9 @@ final class RecordingWriter: @unchecked Sendable {
         return max(0, min(1, (20 * log10(rms) + 60) / 60))
     }
 
+    /// 寫檔失敗了（例如磁碟滿了）：Recorder 看到就停止錄音（design §20.3）
+    var writeFailed: Bool { lock.withLock { failed } }
+
     func silence(_ channel: Int) -> Double { lock.withLock { channel < channels ? silentSeconds[channel] : 0 } }
 
     /// 這個聲道多久沒有送音訊來（秒）。暫停時音源照樣送資料，所以暫停不影響
@@ -92,9 +95,9 @@ final class RecordingWriter: @unchecked Sendable {
         return lock.withLock { channel < channels ? now - lastReceived[channel] : 0 }
     }
 
-    /// 停止並關檔，回傳錄到的秒數。
+    /// 停止並關檔，回傳寫進檔案的秒數（寫檔失敗時是失敗前寫進去的部分，看 `writeFailed`）。
     /// 注意：AVAudioFile 關檔後 length 會變成 0，所以秒數要用自己累計的音框數算
-    func finish() throws -> Double {
+    func finish() -> Double {
         timer?.cancel()
         timer = nil
         let frames = queue.sync { () -> Int in
@@ -102,7 +105,6 @@ final class RecordingWriter: @unchecked Sendable {
             return writtenFrames
         }
         file.close()
-        if let writeError { throw writeError }
         return Double(frames) / CaptureFormat.sampleRate
     }
 
@@ -136,7 +138,8 @@ final class RecordingWriter: @unchecked Sendable {
             try file.write(from: buffer)
             writtenFrames += count
         } catch {
-            writeError = error
+            if !writeFailed { log.error("recording write failed: \(error.localizedDescription, privacy: .public)") }
+            lock.withLock { failed = true }
         }
         // 即時轉錄用的單聲道混音
         if channels == 1 {

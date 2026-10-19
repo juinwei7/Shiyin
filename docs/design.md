@@ -618,7 +618,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ### 20.3 寫檔失敗、磁碟空間（R18.3）
 
 - `RecordingWriter` 寫入失敗時記下錯誤（原本就有），另外提供 `writeFailed`。`tick` 看到就呼叫 `stop()`，並設定 `failureMessage`：「錄音寫不進磁碟（可能是空間不足），已經停止錄音。停止前錄到的部分有保留，會照常轉錄。」`stop()` 原本就會保留已經寫入的檔案並排轉錄。
-- 開始錄音時用 `volumeAvailableCapacityForImportantUsage` 看錄音資料夾所在的磁碟：不到 1 GB 就提醒「磁碟只剩 N，大約只能錄 M 分鐘」（雙聲道每小時約 230 MB、單聲道約 115 MB），照樣開始錄。錄音中每 30 秒看一次，不到 300 MB 提醒一次。
+- 開始錄音時看錄音資料夾所在的磁碟剩多少：`volumeAvailableCapacityForImportantUsage`（含可以清掉的空間）和 `volumeAvailableCapacity` 取大的（前者在磁碟映像、外接磁碟會回傳 0）。不到 1 GB 就提醒「磁碟只剩 N，大約只能錄 M 分鐘」（雙聲道每小時約 230 MB、單聲道約 115 MB），照樣開始錄。錄音中每 30 秒看一次，不到 300 MB 提醒一次。
 - 錄音結束後（`AppModel.recordingFinished`）資料庫寫入失敗（磁碟滿時常常一起發生）：把錄音檔搬回 `recording/`（檔名照舊，帶會議 id），下次開啟由復原流程接回這場會議（§20.6），不會留下找不到的檔案；會議改了一半也一樣改回去。
 
 ### 20.4 筆記存檔（R18.4）

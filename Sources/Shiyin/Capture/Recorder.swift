@@ -51,6 +51,9 @@ final class Recorder {
     @ObservationIgnored private var reconnecting: [Int: Date] = [:]
     @ObservationIgnored private var reconnectErrors: [Int: String] = [:]
     @ObservationIgnored private var pendingRestarts: [Int: DispatchWorkItem] = [:]
+    /// 磁碟空間（design §20.3）：上次檢查的時間；錄音中不到 300 MB 只提醒一次
+    @ObservationIgnored private var lastDiskCheck = Date.distantPast
+    @ObservationIgnored private var warnedLowDisk = false
     #if DEBUG
     /// 模擬錄音的檔案送完了，之後沒有資料是正常的
     @ObservationIgnored private var simulationEnded = false
@@ -135,15 +138,18 @@ final class Recorder {
         guard isRecording, let meetingId else { return }
         sources.values.forEach { $0.stop() }
         sources = [:]
-        var duration = 0.0
-        var errorText: String?
-        do { duration = try writer?.finish() ?? 0 } catch { errorText = String(localized: "錄音寫檔發生錯誤：\(error.localizedDescription)") }
+        let duration = writer?.finish() ?? 0
         let file = writer?.url
+        if writer?.writeFailed == true {
+            // 寫不進去時關檔可能也沒更新 WAV 標頭的大小，照實際的檔案大小補上（復原流程也是這樣修）
+            if let file { try? WAVRepair.repair(file) }
+            failureMessage = String(localized: "錄音寫不進磁碟（可能是空間不足），已經停止錄音。停止前錄到的部分有保留，會照常轉錄。")
+        }
         let live = live
         Task { await live?.finish() }
         cleanup()
         log.info("recording stopped, \(Int(duration))s")
-        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: errorText))
+        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil))
     }
 
     static func openPrivacySettings(_ pane: String = "Privacy_Microphone") {
@@ -192,6 +198,8 @@ final class Recorder {
             writer.start()
             self.writer = writer
             self.sources = started
+            warnedLowDisk = false
+            checkDiskSpace(writer, starting: true)
             self.meetingId = meetingId
             startedAt = Date()
             elapsed = 0
@@ -299,6 +307,10 @@ final class Recorder {
 
     private func tick() {
         guard let writer else { return }
+        if writer.writeFailed {
+            stop()
+            return
+        }
         elapsed = writer.recordedSeconds
         if source == "both" {
             micLevel = writer.level(0)
@@ -311,6 +323,25 @@ final class Recorder {
             micLevel = writer.level(0)
         }
         watchdog(writer)
+        if Date().timeIntervalSince(lastDiskCheck) >= 30 { checkDiskSpace(writer, starting: false) }
+    }
+
+    /// 開始錄音時剩不到 1 GB、錄音中剩不到 300 MB 就提醒（錄音照常進行；寫不進去時 tick 會停止錄音）
+    private func checkDiskSpace(_ writer: RecordingWriter, starting: Bool) {
+        lastDiskCheck = Date()
+        // ForImportantUsage 含可以清掉的空間，但磁碟映像、外接磁碟會回傳 0，所以跟一般的剩餘空間取大的
+        guard let values = try? Paths.recordingDir.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
+        else { return }
+        let available = max(values.volumeAvailableCapacityForImportantUsage ?? 0, Int64(values.volumeAvailableCapacity ?? 0))
+        guard available < (starting ? 1_000_000_000 : 300_000_000), starting || !warnedLowDisk else { return }
+        if !starting { warnedLowDisk = true }
+        // 16 kHz、16 位元：單聲道每小時約 115 MB，雙聲道約 230 MB
+        let bytesPerMinute = CaptureFormat.sampleRate * 2 * Double(writer.channels) * 60
+        let minutes = Int(Double(available) / bytesPerMinute)
+        let size = ByteCountFormatter.string(fromByteCount: available, countStyle: .file)
+        log.info("low disk space: \(available / 1_000_000) MB")
+        let message = String(localized: "磁碟只剩 \(size)，大約只能錄 \(minutes) 分鐘。空間用完時會自動停止錄音，已經錄到的部分會保留。")
+        failureMessage = failureMessage.map { $0 + "\n\n" + message } ?? message
     }
 
     // MARK: 換裝置、看門狗（design §20.2、R18.2、D25）
