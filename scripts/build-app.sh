@@ -69,6 +69,15 @@ if [ -f "$SIGN_KC" ] && [ -f "$SIGN_DIR/password" ]; then
   security unlock-keychain -p "$(cat "$SIGN_DIR/password")" "$SIGN_KC" 2>/dev/null || true
   IDENTITY="$(security find-identity -v -p codesigning "$SIGN_KC" 2>/dev/null | awk '/Shiyin Self-Signed/ {print $2; exit}')"
 fi
+# codesign 只在鑰匙圈搜尋清單裡找簽章身分（加了 --keychain 也一樣，不然會 no identity found），
+# 簽章期間暫時加進清單，簽完或失敗都還原
+ORIG_KCS=()
+if [ -n "$IDENTITY" ]; then
+  while IFS= read -r kc; do ORIG_KCS+=("$kc"); done < <(security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"$//')
+  restore_keychains() { security list-keychains -d user -s ${ORIG_KCS[@]+"${ORIG_KCS[@]}"}; }
+  trap restore_keychains EXIT
+  security list-keychains -d user -s "$SIGN_KC" ${ORIG_KCS[@]+"${ORIG_KCS[@]}"}
+fi
 sign() {
   if [ -n "$IDENTITY" ]; then
     codesign --force --sign "$IDENTITY" --keychain "$SIGN_KC" --timestamp=none "$@"
@@ -79,6 +88,8 @@ sign() {
 sign "$APP/Contents/Frameworks/whisper.framework"
 if [ -n "$IDENTITY" ]; then
   sign --identifier "$BUNDLE_ID" "$APP"
+  restore_keychains
+  trap - EXIT
   echo "簽章：Shiyin Self-Signed"
 else
   sign --identifier "$BUNDLE_ID" -r="designated => identifier \"$BUNDLE_ID\"" "$APP"
