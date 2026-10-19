@@ -10,6 +10,8 @@ import UserNotifications
 enum DebugControl {
     static let notificationName = Notification.Name("com.weiwei.shiyin.debug")
     static let separator: Character = "\u{1F}"
+    /// quit 指令：結束時不跳確認對話框，直接當成按了「結束」
+    static var confirmQuit = false
 
     static func install() {
         DistributedNotificationCenter.default().addObserver(forName: notificationName, object: nil, queue: .main) { note in
@@ -150,6 +152,10 @@ enum DebugControl {
         // 點通知後的動作（系統的點擊沒辦法模擬，直接呼叫同一個處理函式）
         case "opennotification": if let id { model.notifier.onOpen?(id) }
         case "exportsheet": model.showExportSheet = args.count < 2 || args[1] == "1"
+        // quit：照正常流程結束拾音（錄音中、有工作時等於在確認對話框按「結束」）
+        case "quit":
+            confirmQuit = true
+            NSApp.terminate(nil)
         // benchsave <會議 id> <段數> <輸出.json>：存一份假的逐字稿，量 saveTranscript 花多久（design §20.11）
         case "benchsave":
             guard let meetingId = id, let count = Int(args[2]) else { return }

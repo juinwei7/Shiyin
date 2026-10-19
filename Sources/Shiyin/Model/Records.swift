@@ -176,6 +176,8 @@ struct Job: SnakeCaseRecord, Identifiable, Hashable {
     var createdAt: String = Clock.now()
     var startedAt: String?
     var finishedAt: String?
+    /// 執行時拾音意外結束的次數（design §20.5）
+    var crashes = 0
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }

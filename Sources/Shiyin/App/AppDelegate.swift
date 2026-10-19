@@ -38,6 +38,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let recording = model.recorder.isRecording
         let busy = model.runner.isBusy
         guard recording || busy else { return .terminateNow }
+        #if DEBUG
+        // shiyinctl quit：等於在確認對話框按「結束」
+        if DebugControl.confirmQuit { return finishTermination(recording: recording) }
+        #endif
 
         let alert = NSAlert()
         alert.messageText = recording ? String(localized: "正在錄音，要結束拾音嗎？") : String(localized: "還有工作在進行，要結束拾音嗎？")
@@ -49,7 +53,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: String(localized: "取消"))
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
+        return finishTermination(recording: recording)
+    }
 
+    private func finishTermination(recording: Bool) -> NSApplication.TerminateReply {
+        let model = AppModel.shared
         if recording { model.recorder.stop() }
         model.runner.terminateAll()
         return .terminateNow

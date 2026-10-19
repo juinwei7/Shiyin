@@ -667,7 +667,19 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// app 啟動時：上次沒跑完的工作改回排隊
+    /// 啟動時：還是 running 的工作表示上次執行時拾音意外結束（design §20.5、D26）。
+    /// 意外結束累計 2 次就標成失敗，不再自動重跑；不到 2 次才改回排隊
     func requeueRunning() throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE jobs SET crashes = crashes + 1 WHERE status = 'running'")
+            try db.execute(sql: "UPDATE jobs SET status = 'failed', error = ?, finished_at = ? WHERE status = 'running' AND crashes >= 2",
+                           arguments: [String(localized: "執行這個工作時拾音意外結束了 2 次，已經停止自動重試。可以按「重試」再試一次。"), Clock.now()])
+            try db.execute(sql: "UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'")
+        }
+    }
+
+    /// 正常結束拾音時：執行中的工作改回排隊，下次開啟從頭重跑，不算意外結束（design §20.5）
+    func releaseRunning() throws {
         try pool.write { db in
             try db.execute(sql: "UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'")
         }

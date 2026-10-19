@@ -128,8 +128,9 @@ final class JobRunner {
         onChange?()
     }
 
-    /// 結束 app 時：只停止執行中的工作，不改資料庫狀態，下次開啟會從頭重跑
+    /// 結束 app 時：執行中的工作先改回排隊（不算意外結束，design §20.5），再停止，下次開啟會從頭重跑
     func terminateAll() {
+        do { try db.releaseRunning() } catch { log.error("release running jobs failed: \(error.localizedDescription)") }
         running.values.forEach { $0.cancelAction?() }
     }
 
