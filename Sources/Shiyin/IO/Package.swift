@@ -86,9 +86,27 @@ enum MeetingPackage {
         guard manifest.format <= formatVersion else { throw PackageError.tooNew(manifest.format) }
         guard let meetingData = try? Data(contentsOf: dir.appendingPathComponent("meeting.json")),
               let info = try? decoder.decode(MeetingJSON.self, from: meetingData) else { throw PackageError.invalid(String(localized: "缺少 meeting.json")) }
-        let segments = (try? decoder.decode([SegmentJSON].self, from: Data(contentsOf: dir.appendingPathComponent("transcript.json")))) ?? []
+        // transcript.json 存在卻讀不出來就報錯，不要當成沒有逐字稿（design §20.10、R18.10）
+        let transcriptURL = dir.appendingPathComponent("transcript.json")
+        var segments: [SegmentJSON] = []
+        if FileManager.default.fileExists(atPath: transcriptURL.path) {
+            guard let data = try? Data(contentsOf: transcriptURL), let decoded = try? decoder.decode([SegmentJSON].self, from: data) else {
+                throw PackageError.invalid(String(localized: "transcript.json 讀不出來"))
+            }
+            segments = decoded
+        }
+        // 錄音檔只接受封包裡的一般檔案：封包可能來自別人，路徑或符號連結可以指到這台電腦上的任何檔案
+        var audioName: String?
+        if let audio = manifest.audio {
+            let name = (audio as NSString).lastPathComponent
+            let values = try? dir.appendingPathComponent(name).resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard name == audio, !name.isEmpty, !name.hasPrefix("."), values?.isRegularFile == true, values?.isSymbolicLink != true else {
+                throw PackageError.invalid(String(localized: "封包裡的錄音檔不正確"))
+            }
+            audioName = name
+        }
 
-        let audioExt = manifest.audio.map { ($0 as NSString).pathExtension }
+        let audioExt = audioName.map { Importer.safeExtension(URL(fileURLWithPath: $0)) }
         var meeting = try db.insertMeeting(Meeting(
             title: info.title, titleLocked: info.titleLocked, meetingDate: info.meetingDate, participants: info.participants,
             sourceFilename: info.sourceFilename, durationSeconds: info.durationSeconds, notesBy: info.notesBy,
@@ -96,8 +114,8 @@ enum MeetingPackage {
             folder: info.folder.flatMap { $0.isEmpty ? nil : $0 } ?? folder, language: info.language ?? "zh"),
             audioExtension: audioExt)
         do {
-            if let audio = manifest.audio {
-                try FileManager.default.copyItem(at: dir.appendingPathComponent(audio), to: meeting.audioURL)
+            if let audioName {
+                try FileManager.default.copyItem(at: dir.appendingPathComponent(audioName), to: meeting.audioURL)
             }
             let id = meeting.id!
             try db.saveTranscript(id, segments: segments.enumerated().map { i, s in
