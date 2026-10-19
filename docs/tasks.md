@@ -346,8 +346,10 @@
 - [ ] **T-I5 真實會議驗證與預設值**（R14 驗收）
   - 用使用者提供的真實會議跑全部組合，決定三個開關的預設值
   - 待使用者：真實會議錄音和 5 分鐘標準答案
-- [ ] **T-I6 驗收與發布 3.2.0**
+- [x] **T-I6 驗收與發布 3.2.0**
   - 驗證：requirements 第 11 節的驗收；全部關閉時跟 3.1 結果相同；翻譯表完整；用 GitHub Actions 發布
+  - 結果（2026-10-16）：requirements 第 11 節寫了驗收結果，校正關掉時同一段錄音的輸出跟 3.1 完全相同（R14.6）；真實會議驗證拆到 T-I5（使用者決定之後再做）。推 tag `v3.2.0`，CI 成功（run 38867150725）
+  - 補記（2026-10-19，發布時沒有寫結果）：在 v3.2.0 的 worktree 跑 `l10n.py check`，630 條，沒有缺翻譯；不登入下載 Release 的 `shiyin-update.json` 是 3.2.0，SHA-256 跟 DMG 一致（a4f5994e…）；DMG 裡的 app 是 3.2.0（build 5），帶有更新網址，`codesign --verify --deep --strict` 通過（沒設定憑證 secrets，所以是 ad-hoc，見 T-F9）
 
 ## 使用者回報的修正（跟 3.2.0 一起發布，2026-10-16）
 
@@ -436,10 +438,12 @@
 - [x] **T-K5 驗收**（R17.3）
   - 新的兩種整理工具各跑整理、校稿、逐字稿校正、測試整理工具
   - 結果（2026-10-17）：Gemini 用真的 key 跑完整理、校稿、逐字稿校正（見 T-K2；測試整理工具走同一個 `LLMClient.generate`）。OpenAI 相容 API 用 Codex 回答的假伺服器跑完整理、校稿、逐字稿校正（json_schema 和退回 JSON 模式，見 T-K3）；真的第三方服務只測到 OpenAI 的模型清單和錯誤（帳戶沒有額度）
-- [~] **T-K6 準備發布 3.4.0**
+- [x] **T-K6 準備發布 3.4.0**
   - 版本 3.4.0；README 中英文補上新的整理工具；需求第 13 節寫驗收結果
   - 發布（推 tag）和回覆 issue #1 要等使用者確認
   - 結果（2026-10-17）：版本改成 3.4.0（build 8）；README 中英文的功能、系統需求、隱私、設定四處補上 Gemini API、OpenAI 相容 API；需求第 13 節先寫目前的驗收結果（真的 key 還沒測）。還沒發布、還沒回覆 issue
+  - 結果（2026-10-17，發布）：T-K2、T-K3 用真的 key 和模型測完之後，在 2984341 推 tag `v3.4.0`，CI 成功（run 39025035957），官網跟著部署（run 39025401813）
+  - 補記（2026-10-19，發布後檢查）：不登入從 `releases/latest/download/` 下載的 `shiyin-update.json` 是 3.4.0，SHA-256 跟 DMG 一致（903db13e…）；DMG 裡的 app 是 3.4.0（build 8），帶有更新網址，`codesign --verify --deep --strict` 通過（ad-hoc，見 T-F9）；官網的 `/download`、`/ja/download` 轉到 `Shiyin-3.4.0.dmg`，版本說明有 3.4.0。回覆 issue #1（Gemini、Groq 怎麼設定，OpenCode 暫不支援，Groq 沒有用真的 key 測過）並關閉
 
 ## 變更紀錄
 
@@ -489,3 +493,5 @@
 - 2026-10-17：發布 3.3.0（T-J8）。官網（`website` 分支）照它的任務 S7，發布後合併到 main；Cloudflare 的設定和網址還要使用者處理（見 `docs/website/tasks.md` S7）。
 - 2026-10-17：開始 3.4（GitHub issue #1）：加 Gemini API、OpenAI 相容 API，整理工具改成共同介面（使用者提出，決策 D22）。先寫需求第 13 節、設計 §19，再寫程式。
 - 2026-10-17：T-K0 驗證時用 `setkey` 把假 API key 寫進使用者的鑰匙圈、用 `defaults write` 換整理工具。ad-hoc 重建後的 app 讀不到舊 app 建立的鑰匙圈項目，跳出系統的存取確認；使用者那時開著自己的拾音，共用的整理工具設定被改成 openai。已還原設定、刪掉假 key。之後測 API 一律用只放記憶體的 `llmkey`、`llmprovider`，不寫鑰匙圈、不改共用設定。
+- 2026-10-17：發布 3.4.0（T-K6）。Groq 沒有 key，OpenAI 相容 API 改用 Codex 回答的本機伺服器實測（T-K3）。
+- 2026-10-19：文件補記：3.2.0、3.4.0 發布時沒有回頭更新任務和需求，T-I6、T-K6 補上發布結果和發布後檢查，需求第 13 節改成已發布、第 7 節 Q3 標成已決定；CLAUDE.md 改成 3.4.0。回覆並關閉 GitHub issue #1。
