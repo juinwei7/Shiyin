@@ -10,7 +10,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist');
 const port = Number(process.argv[2] || 4321);
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.png': 'image/png', '.avif': 'image/avif',
-  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
 };
 
 const redirects = new Map(

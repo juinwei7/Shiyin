@@ -1,6 +1,7 @@
-// 首頁、版本說明、404 的 HTML（docs/website.md §4）。沒有 script，深色模式跟著系統。
+// 首頁、版本說明、404 的 HTML（docs/website.md §4）。深色模式跟著系統；只有首頁的示範用 script（§10）。
 
 import { content, LANGS, GITHUB } from './content.mjs';
+import { demoSection } from './demo-markup.mjs';
 
 export const ROUTES = {
   home: (lang) => `${content[lang].prefix}/`,
@@ -31,7 +32,8 @@ function languageMenu(lang, route) {
 }
 
 // 共用的外框：head、頁首、頁尾。route 是 ROUTES 的鍵；404 頁沒有 route，不放 canonical，語言選單連到各語言首頁
-function layout({ lang, site, css, route, title, description, body }) {
+// head、scripts：只有首頁用（示範的 noscript 樣式和 script）
+function layout({ lang, site, css, route, title, description, body, head = '', scripts = '' }) {
   const c = content[lang];
   const others = LANGS.filter((l) => l !== lang);
   const target = route || 'home';
@@ -66,7 +68,7 @@ ${seo}
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
 ${css}</style>
-</head>
+${head}</head>
 <body>
 <header class="top">
   <a class="home" href="${ROUTES.home(lang)}"><img src="/favicon.png" alt="" width="26" height="26">${c.appName}</a>
@@ -88,7 +90,7 @@ ${body}
 ${others.map((l) => `    <a href="${ROUTES[target](l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
   </div>
 </footer>
-</body>
+${scripts}</body>
 </html>
 `;
 }
@@ -117,7 +119,8 @@ function releaseNotes(lang, release) {
   };
 }
 
-export function homePage({ lang, site, css, releases }) {
+// demo：示範的樣式和 script 網址（build.mjs 讀進來）
+export function homePage({ lang, site, css, releases, demo }) {
   const c = content[lang];
   const latest = releases[0];
   const notesHref = `${ROUTES.changelog(lang)}#${latest.tag}`;
@@ -127,16 +130,14 @@ export function homePage({ lang, site, css, releases }) {
 </div>`);
 
   const body = `<section class="intro">
-  <img src="/icon.png" alt="${c.intro.iconAlt}" width="112" height="112">
+  <img src="/icon.png" alt="${c.intro.iconAlt}" width="96" height="96">
   <h1>${c.intro.h1}</h1>
   <p>${c.intro.lead}</p>
   <a class="download" href="#download">${c.intro.download(latest.version)}</a>
   <small>${c.intro.small}</small>
 </section>
 
-<figure class="wide">
-${shot(lang, 'summary', c.shots.summary, { first: true })}
-</figure>
+${demoSection(lang, { fallback: shot(lang, 'summary', c.shots.summary, { first: true }) })}
 
 <section class="col part" id="how">
 <h2>${c.live.h2}</h2>
@@ -195,7 +196,12 @@ ${recent.join('\n')}
 ${c.faq.items.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
 </section>`;
 
-  return layout({ lang, site, css, route: 'home', title: c.meta.title, description: c.meta.description, body });
+  return layout({
+    lang, site, css: css + demo.css, route: 'home', title: c.meta.title, description: c.meta.description, body,
+    // 沒有 JavaScript 時藏起示範，改顯示 <noscript> 裡的截圖
+    head: '<noscript><style>.demo { display: none; }</style></noscript>\n',
+    scripts: `<script src="${demo.script}"></script>\n`,
+  });
 }
 
 export function changelogPage({ lang, site, css, releases }) {

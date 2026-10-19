@@ -26,6 +26,12 @@ try {
   const releases = await loadReleases({ file: args.releases });
   await checkImages();
   const css = await readFile(path.join(here, 'src/style.css'), 'utf8');
+  // 首頁的示範（docs/website.md §10）：樣式寫進首頁，script 另外放一個檔案（CSP 只允許自己網站的 script）
+  const demoJs = await readFile(path.join(here, 'src/demo.js'));
+  const demo = {
+    css: await readFile(path.join(here, 'src/demo.css'), 'utf8'),
+    script: `/demo.js?v=${createHash('sha256').update(demoJs).digest('hex').slice(0, 10)}`,
+  };
 
   await rm(out, { recursive: true, force: true });
   await cp(path.join(here, 'public'), out, { recursive: true });
@@ -33,10 +39,11 @@ try {
   // 截圖的 PNG 只有一份，在 docs/images（README 也用這份），當 AVIF 的備援
   for (const file of SHOTS) await cp(path.join(repo, file), path.join(out, file.replace('docs/', '')));
   await cp(path.join(repo, 'docs/images/icon.png'), path.join(out, 'icon.png'));
+  await writeFile(path.join(out, 'demo.js'), demoJs);
 
   const page = { site, css, releases };
   for (const lang of LANGS) {
-    await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page }));
+    await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page, demo }));
     await write(ROUTES.changelog(lang) + 'index.html', changelogPage({ lang, ...page }));
     await write(ROUTES.home(lang) + '404.html', notFoundPage({ lang, ...page }));
   }
