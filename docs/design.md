@@ -643,6 +643,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - `Keychain.exists(account)`：查詢帶 `kSecReturnAttributes`、不帶 `kSecReturnData`。只讀屬性不用解密，換了簽章也不會跳出存取確認。
 - 環境檢查、設定頁的「已儲存」、首次使用引導改用 `exists`；只有送出請求和列出模型時才 `get`。
+- DEBUG 版預設完全不讀真的鑰匙圈（`get`、`exists` 只看 `llmkey` 放在記憶體的 key）：每次重建簽章都不同，讀使用者存的 key 會跳出確認視窗，主執行緒會停在那裡等。要測鑰匙圈時加啟動參數 `-debugRealKeychain YES`。2026-10-19 驗證 3.4.1 時，DEBUG 版啟動時的環境檢查在使用者的畫面上跳出了 27 次確認。
 
 ### 20.8 log 不寫錯誤內容（R18.8）
 

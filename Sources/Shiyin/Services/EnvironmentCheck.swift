@@ -43,12 +43,12 @@ struct EnvironmentStatus: Equatable {
                  fix: String(localized: "整理工具選 Claude 時需要：安裝 Claude Code 並在終端機執行 claude 登入"), required: false),
             Item(name: "codex CLI", ok: codex != nil, detail: codex?.path ?? String(localized: "找不到"),
                  fix: String(localized: "整理工具選 Codex 時需要：安裝 Codex CLI 並執行 codex login"), required: false),
-            Item(name: "Anthropic API key", ok: Keychain.get("anthropic") != nil,
-                 detail: Keychain.get("anthropic") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Anthropic API 時需要"), required: false),
-            Item(name: "OpenAI API key", ok: Keychain.get("openai") != nil,
-                 detail: Keychain.get("openai") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 OpenAI API 時需要"), required: false),
-            Item(name: "Gemini API key", ok: Keychain.get("gemini") != nil,
-                 detail: Keychain.get("gemini") != nil ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Gemini API 時需要"), required: false),
+            Item(name: "Anthropic API key", ok: Keychain.exists("anthropic"),
+                 detail: Keychain.exists("anthropic") ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Anthropic API 時需要"), required: false),
+            Item(name: "OpenAI API key", ok: Keychain.exists("openai"),
+                 detail: Keychain.exists("openai") ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 OpenAI API 時需要"), required: false),
+            Item(name: "Gemini API key", ok: Keychain.exists("gemini"),
+                 detail: Keychain.exists("gemini") ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Gemini API 時需要"), required: false),
             compatibleItem(),
         ])
     }

@@ -87,7 +87,7 @@ struct ProviderSettings: View {
                     Button("儲存 key") {
                         Keychain.set(current.keychainAccount, key)
                         key = ""
-                        keySaved = Keychain.get(current.keychainAccount) != nil
+                        keySaved = Keychain.exists(current.keychainAccount)
                         refreshModels()
                         model.refreshEnvironment()
                     }
@@ -187,7 +187,7 @@ struct ProviderSettings: View {
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
         baseURL = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
-        keySaved = current.usesAPIKey && Keychain.get(current.keychainAccount) != nil
+        keySaved = current.usesAPIKey && Keychain.exists(current.keychainAccount)
         availableModels = []
         if keySaved || (current == .openaiCompatible && !baseURL.isEmpty) { refreshModels() }
     }

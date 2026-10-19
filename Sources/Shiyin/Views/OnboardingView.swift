@@ -199,7 +199,7 @@ struct OnboardingView: View {
                     }
                     .disabled(apiKey.isEmpty)
                 }
-                if Keychain.get(current.keychainAccount) != nil {
+                if Keychain.exists(current.keychainAccount) {
                     Label("已儲存在鑰匙圈", systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
                 }
             }
