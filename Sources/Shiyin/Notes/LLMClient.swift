@@ -82,6 +82,23 @@ enum LLMError: LocalizedError {
     }
 }
 
+extension Error {
+    /// 寫進 log 用的錯誤摘要：只有種類，不含訊息。整理工具回傳的錯誤訊息可能帶有逐字稿或會議紀錄（design §20.8、R18.8）
+    var logSummary: String {
+        if let error = self as? LLMError {
+            switch error {
+            case .notInstalled(let name): return "LLMError.notInstalled(\(name))"
+            case .notLoggedIn(let name): return "LLMError.notLoggedIn(\(name))"
+            case .missingKey(let name): return "LLMError.missingKey(\(name))"
+            case .failed: return "LLMError.failed"
+            case .badOutput: return "LLMError.badOutput"
+            }
+        }
+        let error = self as NSError
+        return "\(error.domain) \(error.code)"
+    }
+}
+
 /// 一種整理工具的呼叫方式（design §19.1、D22）。每種整理工具一個實作，放在 Notes/Backends/
 @MainActor
 protocol LLMBackend {

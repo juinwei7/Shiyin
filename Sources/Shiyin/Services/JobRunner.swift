@@ -188,7 +188,7 @@ final class JobRunner {
             do {
                 if let failure {
                     try db.finish(jobId, status: .failed, error: failure.localizedDescription)
-                    log.error("job \(jobId) failed: \(failure.localizedDescription, privacy: .public)")
+                    log.error("job \(jobId) failed: \(failure.logSummary, privacy: .public)")
                 } else {
                     try db.finish(jobId, status: .done)
                     log.info("job \(jobId) done")
@@ -268,7 +268,7 @@ final class JobRunner {
                 }
             })
         } catch {
-            log.error("transcript correction failed: \(error.localizedDescription, privacy: .public)")
+            log.error("transcript correction failed: \(error.logSummary, privacy: .public)")
         }
     }
 

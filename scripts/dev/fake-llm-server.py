@@ -16,6 +16,7 @@ json_schema 時把 schema 交給 codex 的 --output-schema；退回 JSON 模式�
   {"gemini_status": "incomplete"}  Gemini 回傳的狀態
   {"gemini_error_array": true}     Gemini 回 400，錯誤包在陣列裡（跟 Interactions 實際的格式一樣）
   {"bad_key": true}                全部回 key 錯誤
+  {"error_message": "…"}           整理、校正回 400，錯誤訊息是這段文字（測 log 不寫錯誤內容，design §20.8）
   {}                               改回預設
 """
 import json
@@ -123,6 +124,8 @@ class Handler(BaseHTTPRequestHandler):
         text = json.dumps(body, ensure_ascii=False)
         if MODE.get("bad_key"):
             return self.reply(401, {"error": {"message": "Invalid API Key"}})
+        if MODE.get("error_message"):
+            return self.reply(400, {"error": {"message": MODE["error_message"]}})
 
         if self.path == "/v1/messages":   # Anthropic
             tool = body["tool_choice"]["name"]
