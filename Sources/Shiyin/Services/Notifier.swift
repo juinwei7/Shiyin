@@ -23,6 +23,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         } else if job.kind == .transcribe {
             content.title = String(localized: "轉錄完成")
             content.body = title
+        } else if job.kind == .summarize, let payload = job.payload,
+                  (try? JSONDecoder().decode(SummarizePayload.self, from: Data(payload.utf8)))?.draft == true {
+            content.title = String(localized: "會議紀錄草稿好了")
+            content.body = String(localized: "\(title)（正式轉錄完成後會自動更新）")
         } else {
             let count = meeting.decodedNotes?.reviewItems.count ?? 0
             content.title = String(localized: "會議紀錄整理好了")

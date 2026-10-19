@@ -520,14 +520,40 @@ final class AppDatabase: @unchecked Sendable {
     // MARK: 會議紀錄
 
     /// 寫入新的會議紀錄，舊的那一版存進 notes_versions（R6.7）
-    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String) throws {
-        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason) }
+    /// 會議紀錄怎麼來的，決定草稿狀態和要不要留版本（design §21.3）
+    enum NotesSource {
+        case edit        // 手動編輯、取代、略過待確認、匯入：草稿被改過就標成 2（改過的草稿）
+        case draft       // 用即時逐字稿整理的草稿：notes_draft = 1，不留版本
+        case generated   // 正式整理：取代沒改過的草稿不留版本；取代改過的草稿留一版（原因「草稿（改過）」）
+        case revised     // 校稿：在草稿上校稿，結果仍然是草稿（2）
     }
 
-    private static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String) throws {
-        guard var m = try Meeting.fetchOne(db, key: meetingId) else { return }
-        if let old = m.notes {
-            var version = NotesVersion(meetingId: meetingId, notes: old, reason: reason)
+    /// 回傳是否取代了使用者改過的草稿（畫面要提示，design §21.3）
+    @discardableResult
+    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String, source: NotesSource = .edit) throws -> Bool {
+        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason, source: source) }
+    }
+
+    @discardableResult
+    private static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String,
+                                  source: NotesSource = .edit) throws -> Bool {
+        guard var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
+        let wasDraft = m.notesDraft
+        var keepVersion = true
+        var versionReason = reason
+        switch source {
+        case .edit: if wasDraft != 0 { m.notesDraft = 2 }
+        case .draft:
+            keepVersion = false
+            m.notesDraft = 1
+        case .generated:
+            if wasDraft == 1 { keepVersion = false }
+            if wasDraft == 2 { versionReason = String(localized: "草稿（改過）") }
+            m.notesDraft = 0
+        case .revised: if wasDraft != 0 { m.notesDraft = 2 }
+        }
+        if keepVersion, let old = m.notes {
+            var version = NotesVersion(meetingId: meetingId, notes: old, reason: versionReason)
             try version.insert(db)
         }
         m.notes = notes.jsonString()
@@ -539,6 +565,7 @@ final class AppDatabase: @unchecked Sendable {
         try m.update(db)
         try index(db, meetingId: meetingId, kind: .notes, ref: 0, text: notes.plainText)
         try index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
+        return source == .generated && wasDraft == 2
     }
 
     /// 復原上一版：成功回傳 true
@@ -547,6 +574,7 @@ final class AppDatabase: @unchecked Sendable {
             guard let version = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id").desc).fetchOne(db),
                   var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
             m.notes = version.notes
+            m.notesDraft = 0   // 復原的是之前的某一版，不再當草稿自動更新
             if !m.titleLocked, let title = m.decodedNotes?.title, !title.isEmpty { m.title = title }
             m.updatedAt = Clock.now()
             try m.update(db)

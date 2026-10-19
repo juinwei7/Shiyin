@@ -76,6 +76,17 @@
         }
       }
     },
+    "%@（正式轉錄完成後會自動更新）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (will update automatically when the full transcription is done)"
+          }
+        }
+      }
+    },
     "%@（逐字稿）.%@": {
       "extractionState": "manual",
       "localizations": {
@@ -3692,6 +3703,17 @@
         }
       }
     },
+    "整理草稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drafting notes"
+          }
+        }
+      }
+    },
     "新增": {
       "extractionState": "manual",
       "localizations": {
@@ -4172,6 +4194,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The template for the meeting notes. After changing it, choose “Summarize Again” from “More” to use the new template."
+          }
+        }
+      }
+    },
+    "會議紀錄草稿好了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft meeting notes are ready"
           }
         }
       }
@@ -4690,6 +4723,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verifying the file…"
+          }
+        }
+      }
+    },
+    "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，可以從「更多 → 復原上一版會議紀錄」找回": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The final meeting notes are ready. Your edited draft is kept in the version history; use More → Revert to Previous Notes to get it back."
           }
         }
       }
@@ -5869,6 +5913,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Participants"
+          }
+        }
+      }
+    },
+    "草稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft"
+          }
+        }
+      }
+    },
+    "草稿（改過）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft (edited)"
+          }
+        }
+      }
+    },
+    "草稿：用錄音中的即時逐字稿整理的，正式轉錄完成後會自動更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft: made from the live transcript during recording. It will update automatically when the full transcription is done."
           }
         }
       }

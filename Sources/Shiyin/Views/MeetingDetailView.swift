@@ -10,14 +10,7 @@ struct MeetingDetailView: View {
     var body: some View {
         @Bindable var model = model
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 14) {
-                MeetingHeader(detail: detail)
-                if isTrashed { TrashBanner(meetingId: detail.meeting.id!) } else { StatusBanner(detail: detail) }
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 22)
-            .padding(.bottom, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            MeetingTop(detail: detail, isRecording: isRecordingThis)
 
             Divider()
 
@@ -385,5 +378,39 @@ struct MoreMenu: View {
             Label("更多", systemImage: "ellipsis.circle")
         }
         .help("更多動作")
+    }
+}
+
+/// 會議頁上方：標題、狀態或垃圾桶提示、草稿提示。截圖（DEBUG 的 snapshot）也用這一份
+struct MeetingTop: View {
+    let detail: MeetingDetail
+    var isRecording = false
+
+    var body: some View {
+        let trashed = detail.meeting.deletedAt != nil
+        VStack(alignment: .leading, spacing: 14) {
+            MeetingHeader(detail: detail)
+            if trashed { TrashBanner(meetingId: detail.meeting.id!) } else { StatusBanner(detail: detail) }
+            if detail.meeting.notesDraft != 0 && detail.notes != nil && !isRecording && !trashed {
+                DraftNotesBanner()
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 22)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// 會議紀錄是用即時逐字稿整理的草稿（design §21.3、R19.1）
+struct DraftNotesBanner: View {
+    var body: some View {
+        Label("草稿：用錄音中的即時逐字稿整理的，正式轉錄完成後會自動更新", systemImage: "doc.badge.clock")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }

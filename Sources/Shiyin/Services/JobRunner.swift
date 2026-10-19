@@ -24,6 +24,12 @@ enum AppSettings {
 
     private static var d: UserDefaults { .standard }
 
+    /// 開關類的設定。不能用 `object(forKey:) as? Bool`：啟動參數（`-autoSummarize NO`）讀進來是字串 "NO"，
+    /// 轉不成 Bool 會落回預設值；`bool(forKey:)` 認得字串的 YES、NO
+    private static func flag(_ key: String, default value: Bool) -> Bool {
+        d.object(forKey: key) == nil ? value : d.bool(forKey: key)
+    }
+
     #if DEBUG
     /// shiyinctl llmprovider：只在記憶體換整理工具，不改跟使用者共用的設定（design §19.5）
     nonisolated(unsafe) static var debugProvider: LLMProvider?
@@ -42,20 +48,20 @@ enum AppSettings {
         #endif
         return d.string(forKey: provider.modelKey) ?? ""
     }
-    static var autoSummarize: Bool { d.object(forKey: autoSummarizeKey) as? Bool ?? true }
-    static var compressAudio: Bool { d.object(forKey: compressAudioKey) as? Bool ?? true }
-    static var diarize: Bool { d.object(forKey: diarizeKey) as? Bool ?? true }
+    static var autoSummarize: Bool { flag(autoSummarizeKey, default: true) }
+    static var compressAudio: Bool { flag(compressAudioKey, default: true) }
+    static var diarize: Bool { flag(diarizeKey, default: true) }
     /// 線上會議的麥克風、電腦聲音分開轉錄（design §17.3）；還在評估，設定裡沒有開關，測試時用 defaults 打開
-    static var splitChannels: Bool { d.object(forKey: splitChannelsKey) as? Bool ?? false }
+    static var splitChannels: Bool { flag(splitChannelsKey, default: false) }
     /// 轉錄完先找出可能聽錯的字（design §17.4）；評估後預設開啟（§17.6）
-    static var correctTranscript: Bool { d.object(forKey: correctTranscriptKey) as? Bool ?? true }
-    static var liveTranscription: Bool { d.object(forKey: liveTranscriptionKey) as? Bool ?? true }
+    static var correctTranscript: Bool { flag(correctTranscriptKey, default: true) }
+    static var liveTranscription: Bool { flag(liveTranscriptionKey, default: true) }
     /// 錄音開始後自動偵測主要語言（design §18.8、R16）
-    static var autoDetectLanguage: Bool { d.object(forKey: autoDetectLanguageKey) as? Bool ?? true }
+    static var autoDetectLanguage: Bool { flag(autoDetectLanguageKey, default: true) }
     static var recordSource: String { d.string(forKey: recordSourceKey) ?? "mic" }
     static var inputDeviceUID: String { d.string(forKey: inputDeviceKey) ?? "" }
     static var defaultTemplate: String { d.string(forKey: defaultTemplateKey) ?? "general" }
-    static var globalHotKey: Bool { d.object(forKey: globalHotKeyKey) as? Bool ?? true }
+    static var globalHotKey: Bool { flag(globalHotKeyKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
@@ -66,6 +72,11 @@ enum AppSettings {
 
 struct RevisePayload: Codable {
     var answers: [ReviewAnswer]
+}
+
+/// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）
+struct SummarizePayload: Codable {
+    var draft = false
 }
 
 /// 工作佇列：轉錄線、整理線各跑一個迴圈，互不等待（沿用 v2 §4）
@@ -94,6 +105,8 @@ final class JobRunner {
     @ObservationIgnored var onChange: (() -> Void)?
     @ObservationIgnored var onFinished: ((Job, Error?) -> Void)?
     @ObservationIgnored var onAudioReplaced: ((Int64) -> Void)?
+    /// 正式版取代了使用者改過的草稿（design §21.3）
+    @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
 
     init(db: AppDatabase) {
         self.db = db
@@ -169,13 +182,16 @@ final class JobRunner {
         onChange?()
         log.info("job \(job.id ?? 0) \(job.kind.rawValue) started")
         var failure: Error?
+        var notify = true
         do {
             switch job.kind {
             case .transcribe: try await transcribe(job, lane: lane)
-            case .summarize: try await summarize(job, lane: lane, answers: nil)
+            case .summarize:
+                let payload = (try? JSONDecoder().decode(SummarizePayload.self, from: Data((job.payload ?? "{}").utf8))) ?? SummarizePayload()
+                notify = try await summarize(job, lane: lane, answers: nil, draft: payload.draft)
             case .revise:
                 let payload = try JSONDecoder().decode(RevisePayload.self, from: Data((job.payload ?? "{}").utf8))
-                try await summarize(job, lane: lane, answers: payload.answers)
+                notify = try await summarize(job, lane: lane, answers: payload.answers)
             case .compress: try await compress(job)
             case .correct: await correct(job, lane: lane)
             }
@@ -198,8 +214,8 @@ final class JobRunner {
             } catch {
                 log.error("finish failed: \(error.localizedDescription)")
             }
-            // 壓縮、逐字稿校正是背景的輔助工作，不發通知
-            if job.kind != .compress && job.kind != .correct { onFinished?(job, failure) }
+            // 壓縮、逐字稿校正是背景的輔助工作，不發通知；有草稿時正式版不再發（design §21.3）
+            if job.kind != .compress && job.kind != .correct && (notify || failure != nil) { onFinished?(job, failure) }
         }
         onChange?()
     }
@@ -300,13 +316,16 @@ final class JobRunner {
 
     // MARK: 整理（design §8）
 
-    private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?) async throws {
-        guard let meeting = try db.meeting(job.meetingId) else { return }
+    /// 回傳要不要發通知：草稿沒做（正式逐字稿已經好了）、正式版取代了草稿時不發
+    private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?, draft: Bool = false) async throws -> Bool {
+        guard let meeting = try db.meeting(job.meetingId) else { return false }
+        // 草稿（design §21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
+        if try draft && !db.segments(job.meetingId).isEmpty { return false }
         let provider = AppSettings.provider
         guard provider != .none else { throw LLMError.failed(String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API")) }
         running[lane]?.provider = provider
-        running[lane]?.stage = answers == nil ? String(localized: "整理") : String(localized: "校稿")
-        let segments = try db.segments(job.meetingId)
+        running[lane]?.stage = draft ? String(localized: "整理草稿") : answers == nil ? String(localized: "整理") : String(localized: "校稿")
+        let segments = try db.segments(job.meetingId, kind: draft ? "live" : "final")
         guard !segments.isEmpty || !meeting.userNotes.isEmpty else { throw LLMError.failed(String(localized: "還沒有逐字稿，請先完成轉錄")) }
         let templates = try db.templates()
         let template = templates.first { $0.id == meeting.templateId } ?? templates.first { $0.id == "general" }
@@ -317,7 +336,7 @@ final class JobRunner {
             template: template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}"))
         let prompt: String
         if let answers {
-            guard let notes = meeting.decodedNotes else { return }
+            guard let notes = meeting.decodedNotes else { return false }
             prompt = NotesPrompt.revise(context, notes: notes, answers: answers)
         } else {
             prompt = NotesPrompt.summarize(context)
@@ -326,7 +345,18 @@ final class JobRunner {
         let notes = try await callLLM(lane) { onStart in
             try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
         }
-        guard isStillRunning(job) else { return }
-        try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"))
+        guard isStillRunning(job) else { return false }
+        if draft {
+            // 整理草稿的期間正式逐字稿好了、或已經有會議紀錄：丟掉草稿
+            guard try db.segments(job.meetingId).isEmpty, try db.meeting(job.meetingId)?.notes == nil else { return false }
+            try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: String(localized: "草稿"), source: .draft)
+            return true
+        }
+        let hadDraft = try db.meeting(job.meetingId)?.notesDraft ?? 0
+        let replacedEdited = try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue,
+                                              reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
+                                              source: answers == nil ? .generated : .revised)
+        if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
+        return answers != nil || hadDraft == 0
     }
 }

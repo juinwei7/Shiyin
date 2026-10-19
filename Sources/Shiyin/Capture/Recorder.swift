@@ -41,6 +41,8 @@ final class Recorder {
     private(set) var deviceWarning: String?
 
     @ObservationIgnored var onFinished: ((Result) -> Void)?
+    /// 停止後即時辨識收尾完（最後還沒定稿的文字已經存進去），給草稿紀錄用（design §21.3）：會議 id、錄到的秒數
+    @ObservationIgnored var onLiveFinished: ((Int64, Double) -> Void)?
     @ObservationIgnored var onLiveFinal: ((Int64, Double, Double, String) -> Void)?
     /// 錄音中換了會議語言（自動偵測或改回），要更新資料庫
     @ObservationIgnored var onLanguageChange: ((Int64, MeetingLanguage) -> Void)?
@@ -146,7 +148,10 @@ final class Recorder {
             failureMessage = String(localized: "錄音寫不進磁碟（可能是空間不足），已經停止錄音。停止前錄到的部分有保留，會照常轉錄。")
         }
         let live = live
-        Task { await live?.finish() }
+        Task {
+            await live?.finish()
+            self.onLiveFinished?(meetingId, duration)
+        }
         cleanup()
         log.info("recording stopped, \(Int(duration))s")
         onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil))

@@ -153,6 +153,11 @@ final class AppModel {
         environment = EnvironmentStatus(items: [])
         runner.onChange = { [weak self] in self?.reload() }
         runner.onFinished = { [weak self] job, error in self?.jobFinished(job, error: error) }
+        recorder.onLiveFinished = { [weak self] id, duration in self?.enqueueDraftNotes(meetingId: id, duration: duration) }
+        runner.onEditedDraftReplaced = { [weak self] id in
+            guard let self, self.selection == id else { return }
+            self.noticeMessage = String(localized: "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，可以從「更多 → 復原上一版會議紀錄」找回")
+        }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             // 錄音壓縮成 m4a 後換檔案：接著原本的位置，正在播的繼續播
@@ -471,6 +476,31 @@ final class AppModel {
         } catch {
             errorMessage = String(localized: "錄音存檔失敗：\(error.localizedDescription)（檔案還在 \(result.file?.path ?? "")）")
         }
+    }
+
+    /// 草稿紀錄（design §21.3、R19.1）：即時辨識收尾後，錄音夠長、即時逐字稿夠多、會自動整理時，
+    /// 轉錄的同時先用即時逐字稿整理一份草稿
+    private func enqueueDraftNotes(meetingId: Int64, duration: Double) {
+        guard duration >= Self.draftMinimumSeconds, AppSettings.autoSummarize, AppSettings.provider != .none,
+              let meeting = try? db.meeting(meetingId), meeting.hasAudio, meeting.notes == nil,
+              let live = try? db.segments(meetingId, kind: "live"),
+              live.reduce(0, { $0 + $1.text.count }) >= 100 else { return }
+        let payload = String(decoding: (try? JSONEncoder().encode(SummarizePayload(draft: true))) ?? Data(), as: UTF8.self)
+        do {
+            try db.enqueue(meetingId, kind: .summarize, payload: payload)
+            runner.wake()
+        } catch { log.error("enqueue draft notes failed: \(error.localizedDescription)") }
+    }
+
+    /// 錄音太短就不整理草稿：轉錄很快，等正式版就好
+    static var draftMinimumSeconds: Double {
+        #if DEBUG
+        // 啟動參數 -debugDraftMinimumSeconds 10：驗證時不用真的錄 3 分鐘
+        if UserDefaults.standard.object(forKey: "debugDraftMinimumSeconds") != nil {
+            return UserDefaults.standard.double(forKey: "debugDraftMinimumSeconds")
+        }
+        #endif
+        return 180
     }
 
     /// 啟動時處理上次沒正常結束的錄音（R1.5）

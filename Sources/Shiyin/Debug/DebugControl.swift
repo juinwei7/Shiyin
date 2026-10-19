@@ -522,14 +522,7 @@ private struct SnapshotView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 14) {
-                MeetingHeader(detail: detail)
-                StatusBanner(detail: detail)
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 22)
-            .padding(.bottom, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            MeetingTop(detail: detail)
             Divider()
             Group {
                 switch tab {
