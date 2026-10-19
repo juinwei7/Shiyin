@@ -69,6 +69,18 @@ struct MeetingDetail: Equatable {
     var timelineIds: [Int64] = []
     /// 說話者名字的來源（default / manual / voiceprint / suggestion），聲紋帶入的顯示「自動」（design §21.4）
     var speakerSources: [Int: String] = [:]
+    /// AI 猜的名字（design §21.5）：還是預設名稱的說話者才有
+    var speakerSuggestions: [Int: SpeakerNaming.Suggestion] = [:]
+
+    mutating func loadSpeakers(_ rows: [SpeakerName]) {
+        speakers = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.name) })
+        speakerSources = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.nameSource) })
+        speakerSuggestions = Dictionary(uniqueKeysWithValues: rows.compactMap { row in
+            guard row.nameSource == "default", let name = row.suggestedName else { return nil }
+            return (row.idx, SpeakerNaming.Suggestion(speaker: row.idx, name: name, reason: row.suggestionReason ?? "",
+                                                      time: row.suggestionTime ?? ""))
+        })
+    }
 
     mutating func buildIndexes() {
         correctionsBySegment = Dictionary(grouping: corrections.filter { $0.status != "rejected" }, by: \.segmentId)
@@ -325,7 +337,7 @@ final class AppModel {
             versionCount: (try? db.versionCount(id)) ?? 0, latestJob: try? db.latestJob(id),
             speakers: Dictionary(uniqueKeysWithValues: speakerRows.map { ($0.idx, $0.name) }),
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
-        loaded.speakerSources = Dictionary(uniqueKeysWithValues: speakerRows.map { ($0.idx, $0.nameSource) })
+        loaded.loadSpeakers(speakerRows)
         loaded.buildIndexes()
         detail = loaded
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
@@ -879,26 +891,51 @@ final class AppModel {
         }
     }
 
-    func renameSpeaker(_ idx: Int, to name: String) {
+    /// source：manual（使用者改名）或 suggestion（套用 AI 猜的名字，design §21.5）
+    func renameSpeaker(_ idx: Int, to name: String, source: String = "manual") {
         guard let id = selection else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         // 清空就回到預設名稱，用會議語言（會帶進會議紀錄和匯出），不是介面語言
         let language = detail?.meeting.meetingLanguage ?? .zh
         let fallback = language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
         let name = trimmed.isEmpty ? fallback : trimmed
-        perform(.detail([.speakers])) {
+        let old = detail?.speakers[idx]
+        perform(.detail([.speakers, .meeting])) {
             try db.renameSpeaker(id, idx: idx, name: name)
             // 記住這個人的聲音（design §21.4）；改回預設名稱就忘掉這場會議的這一份
-            if AppSettings.voiceprints { try db.learnVoiceprint(id, idx: idx, name: name) }
+            if AppSettings.voiceprints { try db.learnVoiceprint(id, idx: idx, name: name, source: source) }
+            try db.clearSpeakerSuggestion(id, idx: idx)
+            // 會議紀錄裡的舊名字換成新名字（design §21.6）
+            if let old { try db.replaceSpeakerNameInNotes(id, from: old, to: name) }
         }
     }
 
-    /// 「不是他」：聲紋自動帶入的名字不對，回到預設名稱（design §21.4）
+    /// 「不是他」：聲紋自動帶入的名字不對，回到預設名稱（design §21.4）；會議紀錄裡的名字也換回去
     func rejectVoiceprintMatch(_ idx: Int) {
         guard let id = selection else { return }
         let language = detail?.meeting.meetingLanguage ?? .zh
         let fallback = language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
-        perform(.detail([.speakers])) { try db.rejectVoiceprintMatch(id, idx: idx, defaultName: fallback) }
+        let old = detail?.speakers[idx]
+        perform(.detail([.speakers, .meeting])) {
+            try db.rejectVoiceprintMatch(id, idx: idx, defaultName: fallback)
+            if let old { try db.replaceSpeakerNameInNotes(id, from: old, to: fallback) }
+        }
+    }
+
+    // MARK: 猜說話者的建議（design §21.5、R19.2）
+
+    func applySpeakerSuggestion(_ idx: Int) {
+        guard let suggestion = detail?.speakerSuggestions[idx] else { return }
+        renameSpeaker(idx, to: suggestion.name, source: "suggestion")
+    }
+
+    func applyAllSpeakerSuggestions() {
+        for idx in (detail?.speakerSuggestions.keys.sorted() ?? []) { applySpeakerSuggestion(idx) }
+    }
+
+    func dismissSpeakerSuggestion(_ idx: Int) {
+        guard let id = selection else { return }
+        perform(.detail([.speakers])) { try db.clearSpeakerSuggestion(id, idx: idx) }
     }
 
     // MARK: 認識的人（設定頁，design §21.4）
@@ -1201,11 +1238,7 @@ final class AppModel {
         #if DEBUG
         DebugMetrics.bump("reloadDetailParts")
         #endif
-        if parts.contains(.speakers) {
-            let rows = (try? db.speakers(id)) ?? []
-            updated.speakers = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.name) })
-            updated.speakerSources = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.nameSource) })
-        }
+        if parts.contains(.speakers) { updated.loadSpeakers((try? db.speakers(id)) ?? []) }
         if parts.contains(.bookmarks) { updated.bookmarks = (try? db.bookmarks(id)) ?? [] }
         if parts.contains(.segments) { updated.segments = (try? db.segments(id)) ?? [] }
         if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }

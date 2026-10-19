@@ -240,6 +240,22 @@ struct StatusBanner: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(background(status), in: RoundedRectangle(cornerRadius: 8))
+        } else if let helper = model.runner.running.values.first(where: {
+            $0.job.meetingId == detail.meeting.id && ($0.job.kind == .correct || $0.job.kind == .nameSpeakers)
+        }) {
+            // 背景的輔助工作（design §21.2）：不算會議的狀態，但讓使用者知道還在跑
+            let provider = helper.provider?.shortLabel ?? ""
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text(helper.job.kind == .correct ? "正在用 \(provider) 檢查可能聽錯的字…" : "正在用 \(provider) 猜說話者的名字…")
+                Spacer(minLength: 12)
+                Button("取消") { model.cancelJobs() }
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
         } else if !model.canTranscribe(detail.meeting.meetingLanguage) && detail.segments.isEmpty && detail.meeting.hasAudio {
             HStack(spacing: 12) {
                 if detail.meeting.meetingLanguage == .ja {
@@ -306,7 +322,6 @@ struct StatusBanner: View {
                 ProgressView().controlSize(.small)
                 switch running?.job.kind {
                 case .revise: Text("正在用 \(provider) 依你的回答修正會議紀錄…")
-                case .correct: Text("正在用 \(provider) 檢查可能聽錯的字…")
                 default: Text("正在用 \(provider) 整理會議紀錄…")
                 }
             })
@@ -399,6 +414,9 @@ struct MeetingTop: View {
             if detail.meeting.notesDraft != 0 && detail.notes != nil && !isRecording && !trashed {
                 DraftNotesBanner()
             }
+            if !detail.speakerSuggestions.isEmpty && !isRecording && !trashed {
+                SpeakerSuggestionsBanner(detail: detail)
+            }
         }
         .padding(.horizontal, 32)
         .padding(.top, 22)
@@ -444,5 +462,56 @@ private struct AutoSpeakerName: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .help("拾音認出這個人的聲音，自動帶入名字。不對的話點一下")
+    }
+}
+
+/// AI 猜到的說話者名字（design §21.5、R19.2）：按「套用」才改名
+private struct SpeakerSuggestionsBanner: View {
+    @Environment(AppModel.self) private var model
+    let detail: MeetingDetail
+    @State private var showing = false
+
+    var body: some View {
+        let suggestions = detail.speakerSuggestions.sorted { $0.key < $1.key }
+        HStack(spacing: 10) {
+            Label("從對話內容猜到 \(suggestions.count) 位說話者的名字", systemImage: "person.crop.circle.badge.questionmark")
+            Spacer()
+            Button("查看") { showing = true }
+                .popover(isPresented: $showing, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("猜到的說話者名字").font(.headline)
+                        ForEach(suggestions, id: \.key) { idx, suggestion in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
+                                    Image(systemName: "arrow.right").foregroundStyle(.secondary)
+                                    Text(suggestion.name).fontWeight(.semibold)
+                                    Spacer()
+                                    Button("忽略") { model.dismissSpeakerSuggestion(idx) }.buttonStyle(.link)
+                                    Button("套用") { model.applySpeakerSuggestion(idx) }.buttonStyle(.link)
+                                }
+                                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                    if !suggestion.time.isEmpty { TimeButton(time: suggestion.time) }
+                                    Text(suggestion.reason).font(.caption).foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                        Divider()
+                        HStack {
+                            Text("套用後，逐字稿和會議紀錄都會換成名字。").font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("全部套用") { model.applyAllSpeakerSuggestions(); showing = false }
+                                .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding(16)
+                    .frame(width: 420)
+                }
+        }
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.celadon.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }

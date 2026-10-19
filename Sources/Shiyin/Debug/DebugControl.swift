@@ -54,6 +54,12 @@ enum DebugControl {
         // 聲紋（design §21.4）：notthis <會議 id> <說話者>（不是他）；people <輸出.json>；personrename <id> <名字>；
         // persondelete <id>；peopledeleteall
         case "notthis": model.selection = id; model.rejectVoiceprintMatch(Int(args[2]) ?? 1)
+        // 猜說話者（design §21.5）：namespeakers <會議 id>（排工作）；applysuggestion、dismisssuggestion <會議 id> <說話者>；
+        // applyallsuggestions <會議 id>
+        case "namespeakers": if let id { try? model.db.enqueue(id, kind: .nameSpeakers); model.runner.wake() }
+        case "applysuggestion": model.selection = id; model.applySpeakerSuggestion(Int(args[2]) ?? 1)
+        case "dismisssuggestion": model.selection = id; model.dismissSpeakerSuggestion(Int(args[2]) ?? 1)
+        case "applyallsuggestions": model.selection = id; model.applyAllSpeakerSuggestions()
         case "people":
             model.reloadPeople()
             write(["people": model.people.map { ["id": $0.id, "name": $0.name, "voiceprints": $0.voiceprintCount,

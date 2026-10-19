@@ -1367,6 +1367,17 @@
         }
       }
     },
+    "全部套用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply All"
+          }
+        }
+      }
+    },
     "全部忽略": {
       "extractionState": "manual",
       "localizations": {
@@ -2183,6 +2194,28 @@
         }
       }
     },
+    "套用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply"
+          }
+        }
+      }
+    },
+    "套用後，逐字稿和會議紀錄都會換成名字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once applied, the transcript and meeting notes use the names."
+          }
+        }
+      }
+    },
     "好": {
       "extractionState": "manual",
       "localizations": {
@@ -2752,6 +2785,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose “Export…” (⌘E) from “More”: save meeting notes as Markdown, PDF or Word; the transcript as txt, srt, vtt or Word; the recording as m4a or wav. Send “Whole meeting (.shiyin)” to a colleague, who can double-click it to import. “Copy meeting notes” pastes straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
+    "從對話內容猜到 %lld 位說話者的名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the name of %lld speaker from the conversation"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the names of %lld speakers from the conversation"
+                }
+              }
+            }
           }
         }
       }
@@ -4552,6 +4608,17 @@
         }
       }
     },
+    "查看": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        }
+      }
+    },
     "校正過的字": {
       "extractionState": "manual",
       "localizations": {
@@ -4868,6 +4935,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Checking for misheard words with %@…"
+          }
+        }
+      }
+    },
+    "正在用 %@ 猜說話者的名字…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using %@ to guess speaker names…"
           }
         }
       }
@@ -5330,6 +5408,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "猜到的說話者名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guessed Speaker Names"
+          }
+        }
+      }
+    },
+    "猜說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guessing speakers"
+          }
+        }
+      }
+    },
+    "猜說話者：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guessing speakers: %@"
           }
         }
       }
@@ -6377,6 +6488,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speaker name"
+          }
+        }
+      }
+    },
+    "說話者改名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker renamed"
           }
         }
       }

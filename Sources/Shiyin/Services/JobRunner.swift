@@ -128,10 +128,10 @@ final class JobRunner {
 
     var isBusy: Bool { !running.isEmpty }
 
-    /// 畫面上顯示的執行中工作：轉錄優先，其次是整理（使用者在等的），最後才是輔助線
+    /// 畫面上顯示的執行中工作：轉錄優先，其次是整理（使用者在等的）；背景的輔助工作（壓縮、校正、猜說話者）不算
     func runningJob(for meetingId: Int64) -> Running? {
         JobLane.allCases.lazy.compactMap { self.running[$0] }
-            .first { $0.job.meetingId == meetingId && $0.job.kind != .compress }
+            .first { $0.job.meetingId == meetingId && !$0.job.kind.isAuxiliary }
     }
 
     func cancel(meetingId: Int64) {
@@ -197,6 +197,7 @@ final class JobRunner {
                 notify = try await summarize(job, lane: lane, answers: payload.answers)
             case .compress: try await compress(job)
             case .correct: await correct(job, lane: lane)
+            case .nameSpeakers: await nameSpeakers(job, lane: lane)
             }
         } catch {
             failure = error
@@ -218,7 +219,7 @@ final class JobRunner {
                 log.error("finish failed: \(error.localizedDescription)")
             }
             // 壓縮、逐字稿校正是背景的輔助工作，不發通知；有草稿時正式版不再發（design §21.3）
-            if job.kind != .compress && job.kind != .correct && (notify || failure != nil) { onFinished?(job, failure) }
+            if !job.kind.isAuxiliary && (notify || failure != nil) { onFinished?(job, failure) }
         }
         onChange?()
     }
@@ -266,8 +267,44 @@ final class JobRunner {
         }
         if AppSettings.autoSummarize && AppSettings.provider != .none {
             try db.enqueue(job.meetingId, kind: .summarize)
+            // 還有預設名稱的說話者就猜名字（design §21.5）：在輔助線、校正後面，不擋整理
+            if try db.speakers(job.meetingId).contains(where: { $0.nameSource == "default" }) {
+                try db.enqueue(job.meetingId, kind: .nameSpeakers)
+            }
         }
         wake()
+    }
+
+    // MARK: 猜說話者（design §21.5、R19.2）
+
+    /// 從對話內容猜還沒有名字的說話者，存成建議。輔助功能：失敗只記 log
+    private func nameSpeakers(_ job: Job, lane: JobLane) async {
+        do {
+            guard let meeting = try db.meeting(job.meetingId) else { return }
+            let provider = AppSettings.provider
+            guard provider != .none else { return }
+            let speakers = try db.speakers(job.meetingId)
+            let unnamed = speakers.filter { $0.nameSource == "default" }.map(\.idx)
+            let segments = try db.segments(job.meetingId)
+            guard !unnamed.isEmpty, !segments.isEmpty else { return }
+            running[lane]?.provider = provider
+            running[lane]?.stage = String(localized: "猜說話者")
+            let names = Dictionary(uniqueKeysWithValues: speakers.map { ($0.idx, $0.name) })
+            let language = meeting.meetingLanguage
+            let context = SpeakerNaming.Context(
+                language: language, meetingDate: meeting.meetingDate, title: meeting.title, participants: meeting.participantList,
+                knownPeople: try db.peopleNames(), glossary: try db.glossary().map(\.term), unnamed: unnamed,
+                speakerName: { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") },
+                segments: segments.map { ($0.start, $0.speaker, $0.text) })
+            let suggestions = try await callLLM(lane) { onStart in
+                try await SpeakerNaming.suggest(context, provider: provider, model: AppSettings.model, onStart: onStart)
+            }
+            guard isStillRunning(job) else { return }
+            try db.saveSpeakerSuggestions(job.meetingId, suggestions)
+            log.info("speaker names suggested: \(suggestions.count)")
+        } catch {
+            log.error("speaker naming failed: \(error.logSummary, privacy: .public)")
+        }
     }
 
     // MARK: 逐字稿校正（design §17.4）

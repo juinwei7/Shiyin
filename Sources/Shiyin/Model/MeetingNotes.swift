@@ -129,7 +129,21 @@ struct MeetingNotes: Codable, Hashable {
 
     /// 全文取代：對每一個字串值做區分大小寫的單純取代
     func replacing(_ find: String, with replacement: String) -> MeetingNotes {
-        func r(_ s: String) -> String { s.replacingOccurrences(of: find, with: replacement) }
+        mappingText { $0.replacingOccurrences(of: find, with: replacement) }
+    }
+
+    /// 說話者改名後，會議紀錄裡的舊名字換成新名字（design §21.6）。
+    /// 舊名字是「說話者 1」這種預設名稱時，後面不能接數字，「說話者 1」不會換到「說話者 10」
+    func replacingSpeakerName(_ old: String, with new: String, isDefaultName: Bool) -> MeetingNotes {
+        guard isDefaultName, let regex = try? NSRegularExpression(pattern: NSRegularExpression.escapedPattern(for: old) + "(?![0-9])") else {
+            return replacing(old, with: new)
+        }
+        let template = NSRegularExpression.escapedTemplate(for: new)
+        return mappingText { regex.stringByReplacingMatches(in: $0, range: NSRange($0.startIndex..., in: $0), withTemplate: template) }
+    }
+
+    /// 每一個文字欄位都套用 transform（時間點不變）
+    private func mappingText(_ r: (String) -> String) -> MeetingNotes {
         func ri(_ i: Item) -> Item { Item(text: r(i.text), time: i.time) }
         return MeetingNotes(
             title: r(title),

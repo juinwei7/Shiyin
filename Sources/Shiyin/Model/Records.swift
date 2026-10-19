@@ -183,15 +183,19 @@ struct NotesVersion: SnakeCaseRecord, Identifiable {
 enum JobKind: String, Codable, CaseIterable {
     case transcribe, summarize, revise, compress
     case correct   // 逐字稿校正（design §17.4）
+    case nameSpeakers   // 猜說話者（design §21.5）
 
-    /// 轉錄線、整理線、輔助線（design §21.2）：校正在輔助線，跟整理同時跑
+    /// 轉錄線、整理線、輔助線（design §21.2）：校正、猜說話者在輔助線，跟整理同時跑
     var lane: JobLane {
         switch self {
         case .transcribe, .compress: return .transcribe
         case .summarize, .revise: return .llm
-        case .correct: return .assist
+        case .correct, .nameSpeakers: return .assist
         }
     }
+
+    /// 背景的輔助工作：不發通知、失敗只記 log
+    var isAuxiliary: Bool { self == .compress || self == .correct || self == .nameSpeakers }
 }
 
 enum JobLane: String, CaseIterable { case transcribe, llm, assist }

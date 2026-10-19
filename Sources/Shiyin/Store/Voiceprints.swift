@@ -132,6 +132,37 @@ extension AppDatabase {
             """)
     }
 
+    // MARK: 猜說話者（design §21.5）
+
+    /// 存 AI 猜的名字：只寫還是預設名稱的說話者
+    func saveSpeakerSuggestions(_ meetingId: Int64, _ suggestions: [SpeakerNaming.Suggestion]) throws {
+        try pool.write { db in
+            for s in suggestions {
+                try db.execute(sql: """
+                    UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = ?
+                    WHERE meeting_id = ? AND idx = ? AND name_source = 'default'
+                    """, arguments: [s.name, s.reason, s.time, meetingId, s.speaker])
+            }
+        }
+    }
+
+    func clearSpeakerSuggestion(_ meetingId: Int64, idx: Int) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE speakers SET suggested_name = NULL, suggestion_reason = NULL, suggestion_time = NULL WHERE meeting_id = ? AND idx = ?",
+                           arguments: [meetingId, idx])
+        }
+    }
+
+    /// 說話者改名後，會議紀錄裡的舊名字換成新名字（design §21.6）；有改到就存一版，回傳是否有改
+    @discardableResult
+    func replaceSpeakerNameInNotes(_ meetingId: Int64, from old: String, to new: String) throws -> Bool {
+        guard old != new, let meeting = try self.meeting(meetingId), let notes = meeting.decodedNotes else { return false }
+        let updated = notes.replacingSpeakerName(old, with: new, isDefaultName: Self.isDefaultSpeakerName(old))
+        guard updated != notes else { return false }
+        try saveNotes(meetingId, notes: updated, by: nil, reason: String(localized: "說話者改名"))
+        return true
+    }
+
     // MARK: 設定頁：認識的人
 
     func peopleSummaries() throws -> [PersonSummary] {
@@ -172,5 +203,10 @@ extension AppDatabase {
 
     func deleteAllPeople() throws {
         try pool.write { db in try db.execute(sql: "DELETE FROM people") }
+    }
+
+    /// 認識的人的名字，給猜說話者參考寫法
+    func peopleNames() throws -> [String] {
+        try pool.read { db in try String.fetchAll(db, sql: "SELECT name FROM people ORDER BY name COLLATE NOCASE") }
     }
 }
