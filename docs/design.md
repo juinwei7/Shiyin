@@ -599,6 +599,74 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 先在 3.3 的程式加上 `llmurl`，送一次 Anthropic、OpenAI 的整理和逐字稿校正，記下請求；改成共同介面後再送一次，比對網址、header 和解析後的 JSON。Swift 字典轉 JSON 的鍵順序每次執行可能不同，所以不比位元組。
 - Claude CLI、Codex CLI 各實際整理一次。
 
+## 20. 穩定性修正（3.4.1，R18）
+
+### 20.1 外部程式提早結束（R18.1）
+
+- `AppDelegate.applicationWillFinishLaunching` 一開始 `signal(SIGPIPE, SIG_IGN)`。整理時提示詞從 stdin 送給 claude、codex，一小時會議約 60～100 KB，超過 pipe 的緩衝，寫入會等子程序讀；子程序先結束時，寫入收到 SIGPIPE，預設是結束整個程序。忽略之後寫入只會失敗（EPIPE），`Subprocess` 原本就忽略寫入的錯誤，照常讀子程序的結束代碼和錯誤訊息。
+- `Subprocess` 的寫入端另外設 `F_SETNOSIGPIPE`，不靠全域設定也安全。
+
+### 20.2 錄音中換裝置（R18.2，D25）
+
+- `AudioSource` 多兩個成員：`onInterruption`（音源發現裝置變了，任何執行緒都可能呼叫）和 `restart()`（預設是 `stop()` 再 `start()`）。
+- 麥克風：`start()` 時監聽這個 engine 的 `AVAudioEngineConfigurationChange`（接上或拔掉耳機、藍牙換協定、取樣率改變時，AVAudioEngine 會自己停下來）。重新開始時重讀輸入格式、建新的 `StreamConverter`；設定裡指定的輸入裝置不在了，就用系統預設。
+- 系統聲音：`start()` 時監聽系統的預設輸出裝置（`kAudioHardwarePropertyDefaultOutputDevice`），換了就依序清掉 tap 和聚合裝置，用新的輸出裝置重建。`stop()` 時移除監聽。
+- `Recorder` 收到 `onInterruption` 後，在主執行緒等 0.3 秒（裝置切換時通知會連續來好幾次）再 `restart()` 那個音源。
+- 看門狗：`RecordingWriter` 記錄每個聲道最後一次收到音訊的時間（暫停時音源照樣送資料，所以暫停不影響）。`tick` 發現某個音源超過 3 秒沒送資料：錄音畫面的提示列顯示「麥克風沒有送出聲音，正在重新連接…」（系統聲音同理），每 5 秒試一次 `restart()`；收到資料後提示消失。`restart()` 失敗就顯示原因，錄音不停：另一個音源照常錄，雙聲道時這段會補靜音。
+- DEBUG：`FileSource` 可以暫停送資料（模擬裝置停了），`restart()` 讓它繼續送；`shiyinctl recordstall <秒數|off>`、`recordinterrupt` 用來驗證看門狗和重新連接。真的裝置要使用者實測。
+
+### 20.3 寫檔失敗、磁碟空間（R18.3）
+
+- `RecordingWriter` 寫入失敗時記下錯誤（原本就有），另外提供 `writeFailed`。`tick` 看到就呼叫 `stop()`，並設定 `failureMessage`：「錄音寫不進磁碟（可能是空間不足），已經停止錄音。停止前錄到的部分有保留，會照常轉錄。」`stop()` 原本就會保留已經寫入的檔案並排轉錄。
+- 開始錄音時用 `volumeAvailableCapacityForImportantUsage` 看錄音資料夾所在的磁碟：不到 1 GB 就提醒「磁碟只剩 N，大約只能錄 M 分鐘」（雙聲道每小時約 230 MB、單聲道約 115 MB），照樣開始錄。錄音中每 30 秒看一次，不到 300 MB 提醒一次。
+- 錄音結束後（`AppModel.recordingFinished`）資料庫寫入失敗（磁碟滿時常常一起發生）：把錄音檔搬回 `recording/`（檔名照舊，帶會議 id），下次開啟由復原流程接回這場會議（§20.6），不會留下找不到的檔案。
+
+### 20.4 筆記存檔（R18.4）
+
+- 筆記編輯器（`RecordingView.swift` 的 `UserNotesEditor`，錄音畫面和筆記分頁共用）存檔改呼叫 `AppModel.saveUserNotes(id, text)`：寫資料庫後，目前顯示的是同一場會議時，只更新 `detail.meeting.userNotes`，不整份重新讀取。編輯器重新出現時讀到的 `initial` 就是最新的內容。
+
+### 20.5 意外結束的工作（R18.5，D26）
+
+- migration `v6`：`jobs` 加 `crashes INTEGER NOT NULL DEFAULT 0`。
+- 啟動時（`requeueRunning`）：還是 `running` 的工作表示上次執行時拾音意外結束，`crashes + 1`；加完是 2 以上就標成 `failed`，錯誤寫「執行這個工作時拾音意外結束了 2 次，已經停止自動重試。可以按『重試』再試一次。」，不到 2 次才改回排隊。
+- 正常結束拾音（`AppDelegate` 確認後的 `terminateAll`）：先把執行中的工作改回排隊（不加 `crashes`），再停止它們。
+- 「重試」會排一個新的工作，`crashes` 從 0 開始。
+
+### 20.6 復原錄音（R18.6）
+
+- `Importer.importFile(move: true)`：搬過去之後任何一步失敗，就把檔案搬回原處再刪會議，不刪檔案。
+- `recoverRecordings` 接回原本的會議時也一樣：資料庫更新失敗就把檔案搬回 `recording/`，下次開啟再試。
+- 空會議的清理改成直接查資料庫：`source = 'recording'`、`audio_file = ''`、不在垃圾桶的會議，排除 `recording/` 裡還有錄音檔的會議 id（這次沒復原成功的）和正在錄的那一場。
+- DEBUG：啟動參數 `-debugFailEnqueue YES` 讓排工作失敗，用來驗證失敗時不會刪掉錄音。
+
+### 20.7 檢查 API key 有沒有存（R18.7）
+
+- `Keychain.exists(account)`：查詢帶 `kSecReturnAttributes`、不帶 `kSecReturnData`。只讀屬性不用解密，換了簽章也不會跳出存取確認。
+- 環境檢查、設定頁的「已儲存」、首次使用引導改用 `exists`；只有送出請求和列出模型時才 `get`。
+
+### 20.8 log 不寫錯誤內容（R18.8）
+
+- `Error.logSummary`：`LLMError` 只寫種類（`notInstalled(claude)`、`notLoggedIn(codex)`、`missingKey(Gemini)`、`failed`、`badOutput`），其他錯誤寫 domain 和代碼。
+- `JobRunner` 的「工作失敗」「逐字稿校正失敗」兩處改用 `logSummary`。完整的錯誤訊息照樣存在 `jobs.error`、顯示在畫面上（那是使用者自己的資料庫）。
+
+### 20.9 匯出的會議（R18.9）
+
+- `ExportSheet` 打開時記下會議 id；`AppModel.export(..., meetingId:)` 依 id 從資料庫重新讀這場會議的資料。會議不存在時丟出錯誤「這場會議已經被刪除，沒辦法匯出」。
+- 對話框的標題寫出會議名稱（「匯出「<標題>」」），使用者看得出要匯出的是哪一場；提示（有沒有會議紀錄、有沒有錄音）和建議的檔名也用這場會議的資料。
+
+### 20.10 封包匯入（R18.10）
+
+- `manifest.audio` 只接受單純的檔名（等於 `lastPathComponent`、不是空的、不以 `.` 開頭），而且解壓後是一般檔案、不是符號連結；不符合就丟出「封包裡的錄音檔不正確」。副檔名用 `Importer.safeExtension`。
+- `transcript.json` 存在但讀不出來：丟出「transcript.json 讀不出來」。檔案不存在才當成沒有逐字稿。
+
+### 20.11 搜尋索引（R18.11，D27）
+
+- 搜尋表的 rowid 改成可以推算：逐字稿的段落用段落的 id；標題、會議紀錄、筆記用 `2^50 + 會議 id × 4 + 種類`（標題 1、會議紀錄 2、筆記 3），不會跟段落的 id 重疊。新增時指定 rowid，修改、刪除都用 rowid，不再用 `kind`、`ref` 找（FTS5 只能用 MATCH 或 rowid 找列，用其他欄位每次都掃整張表）。
+- 實測（sqlite3 3.51，10 萬列）：用 `kind`、`ref` 刪一列 13 ms，用 rowid 不到 1 ms；一次刪掉 1,000 段 4 ms。
+- migration `v6` 重建搜尋索引（`rebuildSearch` 改成指定 rowid）。
+- `kind`、`ref` 欄位保留，搜尋結果照樣用它們。
+- `undoNotes` 復原上一版時，標題的索引也要更新。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -626,6 +694,9 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | D22 | 整理工具做成共同介面（`LLMBackend`），enum 保留當代號 | 繼續在 enum 加 case、在 `LLMClient` 加 switch：到六種之後每個 switch 都要改，OpenAI 相容 API 還有網址這種只屬於它的設定，switch 會越來越長、各家的程式混在同一個檔案。做成外掛或動態註冊：整理工具只有六種，還要配合設定頁、引導、隱私說明，外掛的彈性用不到。代價：原本四種的程式碼要搬家，要確認請求沒變（§19.5） |
 | D23 | Gemini 用 Interactions API，一律 `store: false` | generateContent：官方 2026-06 起列為舊版（仍支援），新模型和新功能只在 Interactions 推出。Interactions 預設會在 Google 保存請求（付費 55 天、免費 1 天），會議內容不該留在那裡，所以關掉。Gemini 的 OpenAI 相容端點：使用者可以自己用「OpenAI 相容 API」接，但 issue 的回覆答應 Gemini 有自己的選項，填 key 就能用 |
 | D24 | OpenAI 相容 API 用 Chat Completions，JSON schema 不支援時退回 JSON 模式 | Responses API（OpenAI 官方那一種用的）：Groq、Ollama、LM Studio 等相容服務主要支援 Chat Completions。只用 JSON 模式：支援 JSON schema 的模型就少了格式保證。只用 JSON schema：Groq 只有少數模型支援，其他模型會回 400 |
+| D25 | 錄音中裝置變了就自動重新接上，錄音不停 | 停止錄音並提示：會議還在進行，使用者可能沒注意到，後半場就沒錄到。只提示、不重接：使用者在開會中很難處理。代價：換裝置的那一兩秒沒錄到（雙聲道時補靜音） |
+| D26 | 同一個工作意外結束 2 次才標成失敗，正常結束不算 | 1 次就失敗：拾音意外結束可能跟這個工作無關（例如錄音當掉），重跑一次通常會成功。一直重跑：每次開 app 都會再當一次，還可能帶走正在錄的會議 |
+| D27 | 搜尋表的 rowid 用可推算的值，刪改都用 rowid | 只把 `saveTranscript` 改成一句 `DELETE … WHERE meeting_id = ? AND kind = 'segment'`：一次掃整張表還是會隨資料變多變慢，而且全文取代、全部接受校正仍是一段掃一次。另外建一張對照表：多一張表要維持同步，rowid 可以直接算出來就不需要 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
