@@ -7,7 +7,7 @@ struct SettingsView: View {
             ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }
             TemplateSettings().tabItem { Label(MeetingLanguage.ui(zh: "範本", en: "Templates"), systemImage: "doc.text") }
             GlossarySettings().tabItem { Label("詞彙表", systemImage: "text.book.closed") }
-            SpeakerSettings().tabItem { Label("說話者", systemImage: "person.wave.2") }
+            SpeakerSettings().tabItem { Label(MeetingLanguage.ui(zh: "說話者", en: "Speakers"), systemImage: "person.wave.2") }
             RecordingSettings().tabItem { Label("錄音", systemImage: "mic") }
             StorageSettings().tabItem { Label("模型與儲存空間", systemImage: "internaldrive") }
             AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }
@@ -206,22 +206,22 @@ struct ProviderSettings: View {
         switch current {
         case .none: return String(localized: "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。")
         case .claude, .anthropic:
-            return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。")
+            return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。")
         case .codex, .openai:
-            return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。")
+            return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。")
         case .gemini:
-            return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。")
+            return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。")
         case .openaiCompatible:
             // 說清楚送到哪一台主機；本機的服務不會離開電腦（design §19.3、R17.5）
             guard let url = OpenAICompatibleAPI.normalized(baseURL), let host = url.host(percentEncoded: false) else {
-                return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到你填的網址。錄音檔不會送出。")
+                return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到你填的網址。錄音檔不會送出。")
             }
             if OpenAICompatibleAPI.isLocal(url) {
-                return String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台 Mac 上的服務（\(host)），不會離開電腦。錄音檔不會送出。")
+                return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台 Mac 上的服務（\(host)），不會離開電腦。錄音檔不會送出。")
             }
             return url.scheme?.lowercased() == "http"
-                ? String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。用 http 傳送沒有加密，建議改用 https。")
-                : String(localized: "整理時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。")
+                ? String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。用 http 傳送沒有加密，建議改用 https。")
+                : String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)。錄音檔不會送出。")
         }
     }
 }

@@ -438,13 +438,13 @@
         }
       }
     },
-    "8 GB 以上。轉錄加說話者辨識時最高約 2.7 GB，4 小時的會議約 4.1 GB（M3 Pro 實測）": {
+    "8 GB 以上。轉錄加說話者辨識時最高約 2.9 GB，長錄音分段轉錄，會議長短影響不大（4 小時的會議 2.9 GB，M3 Pro 實測）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "8 GB or more. Transcription plus speaker recognition peaks at about 2.7 GB, about 4.1 GB for a 4-hour meeting (measured on M3 Pro)"
+            "value": "8 GB or more. Transcription plus speaker recognition peaks at about 2.9 GB. Long recordings are transcribed in parts, so meeting length makes little difference (a 4-hour meeting: 2.9 GB, measured on M3 Pro)"
           }
         }
       }

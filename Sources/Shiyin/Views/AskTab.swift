@@ -3,6 +3,7 @@ import SwiftUI
 /// 對這場會議提問（design §21.8、R19.6）：回答附上錄音時間點，點了跳過去；問答紀錄留在會議裡
 struct AskTab: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.snapshotMode) private var snapshotMode
     let detail: MeetingDetail
     @State private var question = ""
 
@@ -10,39 +11,16 @@ struct AskTab: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        if model.meetingQuestions.isEmpty && !asking {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("問這場會議").font(.songti(18))
-                                Text("例如：「誰負責寄信的部分？」「最後決定的上線日期是哪一天？」回答只根據這場會議的會議紀錄和逐字稿，每一點都附上時間，點了就能聽原話。")
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+            if snapshotMode {
+                // 截圖畫不出 ScrollView 的內容（DEBUG 的 snapshot），直接排出來
+                list
+                Spacer(minLength: 0)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView { list }
+                        .onChange(of: model.meetingQuestions.count) { _, _ in
+                            if let last = model.meetingQuestions.last?.id { withAnimation { proxy.scrollTo(last, anchor: .top) } }
                         }
-                        ForEach(model.meetingQuestions) { record in
-                            QuestionView(record: record) { time in
-                                if let seconds = TimeFormat.seconds(time) { model.player.seek(to: seconds) }
-                            }
-                            .id(record.id)
-                        }
-                        if asking {
-                            HStack(spacing: 10) {
-                                ProgressView().controlSize(.small)
-                                Text("正在用 \(AppSettings.provider.shortLabel) 回答…").foregroundStyle(.secondary)
-                                Button("取消") { model.cancelAsk() }.buttonStyle(.link)
-                            }
-                            .id("asking")
-                        }
-                    }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: 760, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .onChange(of: model.meetingQuestions.count) { _, _ in
-                    if let last = model.meetingQuestions.last?.id { withAnimation { proxy.scrollTo(last, anchor: .top) } }
                 }
             }
             Divider()
@@ -55,6 +33,37 @@ struct AskTab: View {
             }
         }
         .onAppear { model.loadMeetingQuestions(detail.meeting.id!) }
+    }
+
+    private var list: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if model.meetingQuestions.isEmpty && !asking {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("問這場會議").font(.songti(18))
+                    Text("例如：「誰負責寄信的部分？」「最後決定的上線日期是哪一天？」回答只根據這場會議的會議紀錄和逐字稿，每一點都附上時間，點了就能聽原話。")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            ForEach(model.meetingQuestions) { record in
+                QuestionView(record: record) { time in
+                    if let seconds = TimeFormat.seconds(time) { model.player.seek(to: seconds) }
+                }
+                .id(record.id)
+            }
+            if asking {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("正在用 \(AppSettings.provider.shortLabel) 回答…").foregroundStyle(.secondary)
+                    Button("取消") { model.cancelAsk() }.buttonStyle(.link)
+                }
+                .id("asking")
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 20)
+        .frame(maxWidth: 760, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

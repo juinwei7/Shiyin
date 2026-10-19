@@ -16,9 +16,9 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 ## How it works
 
 1. **Record or import**: click Record in the toolbar (⌘R). For online meetings, set the source to “Microphone + computer audio” so the other side is recorded too. Already have a recording? Drag it into the window.
-2. **Follow along and take notes**: the live transcript is on the left. In “My notes” on the right, each new line is stamped with the recording time; click “Bookmark” (⌘B) at important moments.
-3. **Stop and transcribe**: Shiyin transcribes the recording again on your Mac and identifies the speakers. Click “Speaker 1” to change it to a name.
-4. **Read the meeting notes**: the transcript is summarized into a summary, decisions, action items and open questions, each with a timestamp you can click to jump back into the recording. Names and terms the summarizer isn’t sure about are listed under “To confirm”; answer them and the notes are revised.
+2. **Follow along and take notes**: the live transcript is on the left. In “My notes” on the right, each new line is stamped with the recording time; click “Bookmark” (⌘B, or ⌃⌥⌘B from any app) at important moments.
+3. **Stop and transcribe**: right after you stop, Shiyin drafts notes from the live transcript while it transcribes the recording again on your Mac and identifies the speakers. Click “Speaker 1” to change it to a name; Shiyin remembers the voice and fills in the name next time.
+4. **Read the meeting notes**: the transcript is summarized into a summary, decisions, action items and open questions, each with a timestamp you can click to jump back into the recording. Names and terms the summarizer isn’t sure about are listed under “To confirm”; answer them and the notes are revised. To find out who said what, just ask in the Ask tab.
 5. **Export and share**: save the notes as Markdown, PDF or Word, the transcript as subtitles, or package the whole meeting as a .shiyin file for a colleague.
 
 ## Features
@@ -28,18 +28,23 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
   - Live transcript and per-source level meters while recording; pause, bookmark and take notes
   - Recording continues with the main window closed; pause or stop from the menu bar, or press ⌃⌥⌘R in any app to start or stop
   - Plugging in or unplugging headphones, or switching output devices, while recording reconnects automatically and keeps recording
+  - When Zoom, Teams, Google Meet or another online meeting starts using the microphone, Shiyin asks whether to record, and reminds you to stop when the meeting seems to be over. It only asks; it never records on its own
+  - Press ⌃⌥⌘B in any app while recording to bookmark the moment, with a sound and a menu bar cue
   - Shiyin warns you when disk space is low; if the disk fills up, recording stops and everything recorded so far is kept and transcribed
   - If the app crashes or the Mac shuts down, the recording is recovered on next launch
 - **Import**: audio and video (m4a, mp3, wav, aac, flac, caf, aiff, mp4, mov), transcripts (srt, vtt, txt), Markdown notes and whole-meeting packages (.shiyin). Drag into the window, press ⌘O, drop on the Dock icon, or use Open With in Finder
-- **Local transcription**: whisper.cpp + Breeze ASR 25, with your glossary as the prompt; Japanese meetings use Whisper large-v3-turbo (downloaded the first time you transcribe a Japanese meeting). Or use the transcriber built into macOS (no model download and much faster, but it ignores the glossary)
+- **Local transcription**: whisper.cpp + Breeze ASR 25, with your glossary as the prompt; Japanese meetings use Whisper large-v3-turbo (downloaded the first time you transcribe a Japanese meeting). Or use the transcriber built into macOS (no model download and much faster, but it ignores the glossary). Until the model has downloaded, meetings are transcribed with macOS built-in recognition, and you can transcribe them again with one click afterwards. Long recordings are transcribed in parts, so even a 4-hour meeting doesn’t take much memory
 - **Meeting language**: each meeting is English, Chinese or Japanese, and the transcription, the notes and the export headings follow it. Japanese meetings are shown with Japanese glyphs, and PDF and Word exports use Japanese fonts. Set the default in Settings
 - **Language detection**: about 10 seconds into a recording, Shiyin works out whether people are speaking Chinese, English or Japanese. If it’s confident and that differs from the meeting language, it switches the live transcript and the meeting language, and you can switch back from the recording screen
 - **Transcript correction**: after transcription, the summarizer uses your glossary and the context to find words that were probably misheard (homophones, names) and marks them in the transcript. Nothing changes until you click Accept, and you can revert
 - **Glossary suggestions**: terms to add to the glossary, taken from participants, speaker names, corrected words and meeting titles
 - **Speaker identification**: every transcript segment is labeled with a speaker, each in its own color; rename speakers or show one speaker only
+  - Voiceprints: once you name a speaker, Shiyin remembers that person’s voice and fills in the name in later meetings (marked “Auto”, easy to correct). Voiceprints stay on this Mac; view, delete or turn them off in Settings
+  - The summarizer guesses speaker names from the conversation (“thanks for the update, Anna”) and lists them as suggestions; nothing changes until you click Apply, and renaming a speaker also updates the notes
 - **Meeting notes**
   - Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own
   - Summarizers: Claude Code, Codex CLI, Anthropic API, OpenAI API, Gemini API, an OpenAI-compatible API (Groq, OpenRouter, or Ollama and LM Studio on your Mac), or “Don’t summarize” for transcripts only
+  - Right after you stop recording, Shiyin drafts notes from the live transcript (marked “Draft”) and replaces them when the final transcript is ready
   - Edit the notes directly; every change is versioned and can be reverted
 - **Export and share**
 
@@ -51,8 +56,9 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
   | Whole meeting | .shiyin package (recording, transcript, speakers, notes, your notes, bookmarks); double-click to import |
 
   You can also share straight to AirDrop, Mail or Messages when exporting.
+- **Ask your meetings**: ask a question in plain language in a meeting’s Ask tab (“What budget did we settle on?”) and get an answer with timestamps you can click. Ask in the toolbar searches all meetings, the current folder or the last 30 days, and tells you which meeting each answer came from
 - **Organize**: folders (by project or client), full-text search across all meetings, Trash (restore within 30 days)
-- **Also**: playback at 0.75×–2×, Fix Wording (corrects a term in the transcript and the notes at once), recordings compressed to m4a after transcription, notifications when a meeting is done or fails, in-app updates
+- **Also**: playback at 0.75×–2×, Fix Wording (corrects a term in the transcript and the notes at once), recordings compressed to m4a after transcription, notifications when a meeting is done or fails, in-app updates, Help → Report a Problem… (includes the version and setup, never meeting content)
 
 ![Transcript and speakers](docs/images/en/transcript.png)
 
@@ -66,7 +72,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 |---|---|
 | Chip | Apple Silicon (M1 or later) |
 | System | macOS 26 or later |
-| Memory | 8 GB or more. Transcription plus speaker identification peaks at about 2.7 GB; a 4-hour meeting at about 4.1 GB (measured on M3 Pro) |
+| Memory | 8 GB or more. Transcription plus speaker identification peaks at about 2.9 GB. Long recordings are transcribed in parts, so meeting length makes little difference (a 4-hour meeting: 2.9 GB, measured on M3 Pro) |
 | Disk space | About 1.7 GB of models (downloaded on first use; not needed with the macOS transcriber), another 574 MB for Japanese meetings and 60 MB for language detection, plus recordings: m4a is about 10–30 MB per hour |
 | Summarizer | One of: a signed-in [Claude Code](https://claude.com/claude-code) (`claude`), Codex CLI (`codex`), an Anthropic, OpenAI or Gemini API key, or an OpenAI-compatible API (Groq and OpenRouter need a key; Ollama and LM Studio on your Mac don’t). Or choose “Don’t summarize” |
 | Internet | Needed to download the models and to summarize; not needed for recording, transcription or speaker identification |
@@ -146,7 +152,9 @@ The app checks that a new version is signed the same way as the running app. Aft
 |---|---|
 | Recordings, transcripts, database, models | `~/Library/Application Support/Shiyin` (permissions 700, not synced by iCloud) |
 | Recording, transcription, speaker identification | Entirely on your Mac, offline |
-| Summarizing and revising | The transcript text, your notes, the glossary and the meeting details go to the service you chose (Anthropic, OpenAI, Google, or the URL you entered for an OpenAI-compatible API). Recordings are never sent |
+| Summarizing, revising, asking, guessing speaker names | The transcript text, your notes, the glossary and the meeting details go to the service you chose (Anthropic, OpenAI, Google, or the URL you entered for an OpenAI-compatible API). Asking all meetings only sends the relevant excerpts. Recordings are never sent |
+| Voiceprints | Speakers’ voice features (a list of numbers, not audio) are kept only in the local database: never uploaded, never included in exported .shiyin packages. Delete them or turn them off in Settings → Speakers |
+| Report a Problem | Only opens GitHub in your browser when you click “Report on GitHub”; you see the text and submit it yourself. It contains the version, your setup and the kinds of errors, never meeting content, file names or API keys |
 | API keys | Stored in the macOS Keychain, never in files or logs |
 | “Don’t summarize” | Fully offline |
 | OpenAI-compatible API on your Mac (Ollama, LM Studio) | Summarizing happens on this Mac too; nothing leaves your computer |
@@ -158,7 +166,8 @@ The app checks that a new version is signed the same way as the running app. Aft
 | Summarizer | Claude, Codex, Anthropic API, OpenAI API, Gemini API, OpenAI-compatible API or Don’t summarize; sign-in status and Test Summarizer; API keys; the OpenAI-compatible API’s URL (with presets); model; whether to summarize and check for misheard words after transcription |
 | Templates | Built-in and custom templates, default template |
 | Glossary | Correct spellings of names, systems and terms; used for transcription and summarizing; suggested terms |
-| Recording | Recording source, microphone, default meeting language, language detection, live transcript, speaker identification, transcription engine (Breeze or macOS), global shortcut, permissions |
+| Recording | Recording source, microphone, default meeting language, language detection, live transcript, speaker identification, transcription engine (Breeze or macOS), global shortcuts (start/stop recording, bookmark), online meeting detection and apps not to ask about, permissions |
+| Speakers | Remember speakers’ voices (voiceprints); People Shiyin Knows: rename, delete, delete all |
 | Models & Storage | Download, pause or delete models; compress recordings; disk usage; delete files left by version 2 |
 | Advanced | Update URL and Check for Updates, environment check, show the welcome guide again, rebuild the search index |
 
