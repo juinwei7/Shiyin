@@ -283,7 +283,8 @@ struct TranscriptTab: View {
                 .help("點一下幫這位說話者改名")
                 .popover(isPresented: Binding(get: { renaming?.segment == segment.id && segment.id != nil },
                                               set: { if !$0 { renaming = nil } })) {
-                    RenameSpeakerForm(name: $renameText) {
+                    RenameSpeakerForm(name: $renameText, automatic: detail.speakerSources[idx] == "voiceprint",
+                                      onReject: { model.rejectVoiceprintMatch(idx); renaming = nil }) {
                         model.renameSpeaker(idx, to: renameText)
                         renaming = nil
                     }
@@ -413,6 +414,9 @@ struct TranscriptTab: View {
 
 struct RenameSpeakerForm: View {
     @Binding var name: String
+    /// 名字是聲紋自動帶入的：多一個「不是他」（design §21.4）
+    var automatic = false
+    var onReject: (() -> Void)? = nil
     let onSave: () -> Void
 
     var body: some View {
@@ -421,16 +425,24 @@ struct RenameSpeakerForm: View {
             TextField("例如：小明", text: $name)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit(onSave)
-            Text("整場逐字稿和之後的會議紀錄都會用這個名字。")
+            if automatic {
+                Text("這個名字是拾音認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("整場逐字稿和之後的會議紀錄都會用這個名字；拾音也會記住這個人的聲音，之後的會議自動帶入。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             HStack {
+                if automatic, let onReject { Button("不是他", action: onReject) }
                 Spacer()
                 Button("儲存", action: onSave).keyboardShortcut(.defaultAction)
             }
         }
         .padding(14)
-        .frame(width: 260)
+        .frame(width: 280)
     }
 }
 

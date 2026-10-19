@@ -21,6 +21,7 @@ enum AppSettings {
     static let globalHotKeyKey = "globalHotKey"
     static let transcriptionEngineKey = "transcriptionEngine"   // breeze / system
     static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
+    static let voiceprintsKey = "voiceprints"
 
     private static var d: UserDefaults { .standard }
 
@@ -62,6 +63,8 @@ enum AppSettings {
     static var inputDeviceUID: String { d.string(forKey: inputDeviceKey) ?? "" }
     static var defaultTemplate: String { d.string(forKey: defaultTemplateKey) ?? "general" }
     static var globalHotKey: Bool { flag(globalHotKeyKey, default: true) }
+    /// 記住說話者的聲音，之後的會議自動帶入名字（design §21.4、R19.3）
+    static var voiceprints: Bool { flag(voiceprintsKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
@@ -248,7 +251,12 @@ final class JobRunner {
                     lowConfidence: s.lowConfidence, speaker: speakers[i], kind: "final", channel: result.channels[i])
         }
         try db.saveTranscript(job.meetingId, segments: segments, duration: Int(duration.rounded()),
-                              speakerCount: speakers.compactMap { $0 }.max() ?? 0)
+                              speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices)
+        // 聲紋比對（design §21.4）：在整理之前，會議紀錄裡就會是名字
+        if AppSettings.voiceprints {
+            let matched = try db.matchVoiceprints(job.meetingId)
+            if matched > 0 { log.info("voiceprints matched \(matched) speakers") }
+        }
         if AppSettings.compressAudio && meeting.audioURL.pathExtension.lowercased() == "wav" {
             try db.enqueue(job.meetingId, kind: .compress)
         }

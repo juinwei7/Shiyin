@@ -20,6 +20,8 @@ struct TranscriptionOptions: Codable {
     var echo: Echo = .dedupe
     /// 評估用：換一個 whisper 模型檔（design §18.2 比較日文引擎）；nil 依會議語言選
     var model: String?
+    /// 沒分聲道時聲紋記成哪種收音（design §21.4）：mic、system，雙聲道混在一起是 mix
+    var audioSource = "mix"
 
     init() {}
 
@@ -32,6 +34,7 @@ struct TranscriptionOptions: Codable {
         options.diarize = AppSettings.diarize
         // 只有錄音時選了「麥克風＋電腦聲音」的會議才分聲道；匯入的雙聲道檔案（音樂、影片）照舊混成一軌
         options.splitChannels = AppSettings.splitChannels && channels == "both"
+        options.audioSource = channels == "both" ? "mix" : channels
         return options
     }
 
@@ -45,6 +48,7 @@ struct TranscriptionOptions: Codable {
         splitChannels = try c.decodeIfPresent(Bool.self, forKey: .splitChannels) ?? false
         echo = try c.decodeIfPresent(Echo.self, forKey: .echo) ?? .dedupe
         model = try c.decodeIfPresent(String.self, forKey: .model)
+        audioSource = try c.decodeIfPresent(String.self, forKey: .audioSource) ?? "mix"
     }
 }
 
@@ -54,6 +58,14 @@ struct TranscriptionResult {
     /// 分聲道時每段來自哪個聲道（0 麥克風、1 電腦聲音）；沒分聲道時都是 nil
     var channels: [Int?]
     var duration: Double
+    /// 每位說話者（逐字稿上的編號）的聲紋、說話秒數、收音（design §21.4）
+    var voices: [Int: SpeakerVoice] = [:]
+}
+
+struct SpeakerVoice {
+    var embedding: [Float]
+    var seconds: Double
+    var source: String     // mic / system / mix
 }
 
 /// 轉錄流程：解碼 → 辨識 → 說話者辨識（design §6）；雙聲道錄音可以分開轉錄再合併（§17.3）
@@ -88,12 +100,14 @@ struct TranscriptionPipeline {
         progress(0)
         guard let transcribed = try await transcribe(samples, from: 0, span: share) else { return nil }
         var speakers: [Int?] = transcribed.map { _ in nil }
+        var voices: [Int: SpeakerVoice] = [:]
         if diarize {
             stage(String(localized: "辨識說話者"))
-            speakers = await self.speakers(of: transcribed, in: samples) { report(share + $0 * (1 - share)) }
+            (speakers, voices) = await self.speakers(of: transcribed, in: samples, source: options.audioSource) { report(share + $0 * (1 - share)) }
         }
         guard shouldContinue() else { return nil }
-        return TranscriptionResult(segments: transcribed, speakers: speakers, channels: transcribed.map { _ in nil }, duration: duration)
+        return TranscriptionResult(segments: transcribed, speakers: speakers, channels: transcribed.map { _ in nil }, duration: duration,
+                                   voices: voices)
     }
 
     // MARK: 分聲道（design §17.3）
@@ -106,26 +120,31 @@ struct TranscriptionPipeline {
         progress(0)
 
         // 兩個聲道各自轉錄、各自辨識說話者；沒有聲音的聲道（例如沒有播放任何聲音）直接跳過
-        var parts: [(channel: Int, segments: [TranscribedSegment], speakers: [Int?])] = []
+        var parts: [(channel: Int, segments: [TranscribedSegment], speakers: [Int?], voices: [Int: SpeakerVoice])] = []
         let inputs = [(0, microphone), (1, system)].filter { Self.hasSound($0.1) }
         for (index, (channel, samples)) in inputs.enumerated() {
             let base = Double(index) / Double(inputs.count), width = 1 / Double(inputs.count)
             let share = diarize ? 0.85 : 1.0
             guard let segments = try await transcribe(samples, from: base, span: width * share) else { return nil }
             var speakers: [Int?] = segments.map { _ in nil }
+            var voices: [Int: SpeakerVoice] = [:]
             if diarize && !segments.isEmpty {
                 stage(String(localized: "辨識說話者"))
-                speakers = await self.speakers(of: segments, in: samples) { report(base + width * (share + $0 * (1 - share))) }
+                (speakers, voices) = await self.speakers(of: segments, in: samples, source: channel == 0 ? "mic" : "system") {
+                    report(base + width * (share + $0 * (1 - share)))
+                }
             }
             guard shouldContinue() else { return nil }
-            parts.append((channel, segments, speakers))
+            parts.append((channel, segments, speakers, voices))
         }
 
         // 說話者編號：麥克風那一邊的人先編，電腦聲音那一邊接著編
         var merged: [(segment: TranscribedSegment, speaker: Int?, channel: Int)] = []
+        var offsetVoices: [Int: SpeakerVoice] = [:]
         var offset = 0
         for part in parts {
             merged += zip(part.segments, part.speakers).map { ($0, $1.map { $0 + offset }, part.channel) }
+            for (number, voice) in part.voices { offsetVoices[number + offset] = voice }
             offset += part.speakers.compactMap { $0 }.max() ?? 0
         }
         if options.echo == .dedupe {
@@ -143,7 +162,10 @@ struct TranscriptionPipeline {
             return numbering.count
         }
         if segments.isEmpty { throw WhisperError.empty }
-        return TranscriptionResult(segments: segments, speakers: speakers, channels: merged.map(\.channel), duration: duration)
+        var voices: [Int: SpeakerVoice] = [:]
+        for (old, new) in numbering { if let voice = offsetVoices[old] { voices[new] = voice } }
+        return TranscriptionResult(segments: segments, speakers: speakers, channels: merged.map(\.channel), duration: duration,
+                                   voices: voices)
     }
 
     /// 方均根低於 -70 dBFS 就當作沒有聲音
@@ -215,14 +237,22 @@ struct TranscriptionPipeline {
     }
 
     /// 說話者辨識；失敗不影響逐字稿，回傳全部沒有說話者
-    private func speakers(of segments: [TranscribedSegment], in samples: [Float],
-                          onProgress: @escaping @Sendable (Double) -> Void) async -> [Int?] {
+    /// 每段的說話者，以及每位說話者的聲紋（換成逐字稿上的編號）
+    private func speakers(of segments: [TranscribedSegment], in samples: [Float], source: String,
+                          onProgress: @escaping @Sendable (Double) -> Void) async -> ([Int?], [Int: SpeakerVoice]) {
         do {
-            let turns = try await Diarizer.diarize(samples: samples, onProgress: onProgress)
-            return Diarizer.assign(turns, to: segments)
+            let output = try await Diarizer.diarize(samples: samples, onProgress: onProgress)
+            let (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: segments)
+            var voices: [Int: SpeakerVoice] = [:]
+            for (raw, number) in numbering {
+                if let embedding = output.voiceprints[raw] {
+                    voices[number] = SpeakerVoice(embedding: embedding, seconds: output.speechSeconds[raw] ?? 0, source: source)
+                }
+            }
+            return (speakers, voices)
         } catch {
             log.error("diarization failed: \(error.localizedDescription, privacy: .public)")
-            return segments.map { _ in nil }
+            return (segments.map { _ in nil }, [:])
         }
     }
 }

@@ -108,7 +108,11 @@ struct MeetingHeader: View {
             if !detail.speakers.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
-                        Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
+                        if detail.speakerSources[idx] == "voiceprint" {
+                            AutoSpeakerName(idx: idx, name: detail.speakers[idx] ?? "")
+                        } else {
+                            Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
+                        }
                     }
                 }
             } else if !meeting.participantList.isEmpty {
@@ -413,5 +417,32 @@ struct DraftNotesBanner: View {
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// 聲紋自動帶入的說話者名字（design §21.4、R19.3）：名字後面標「自動」，點一下可以說不是他或到逐字稿改名
+private struct AutoSpeakerName: View {
+    @Environment(AppModel.self) private var model
+    let idx: Int
+    let name: String
+
+    var body: some View {
+        Menu {
+            Button("不是\(name)") { model.rejectVoiceprintMatch(idx) }
+            Button("到逐字稿改名") { model.tab = .transcript }
+        } label: {
+            HStack(spacing: 3) {
+                Text(name).foregroundStyle(Color.speaker(idx))
+                Text("自動")
+                    .font(.caption2)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.secondary.opacity(0.15), in: Capsule())
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("拾音認出這個人的聲音，自動帶入名字。不對的話點一下")
     }
 }

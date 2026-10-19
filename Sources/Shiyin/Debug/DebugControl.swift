@@ -51,6 +51,16 @@ enum DebugControl {
             write(["segmentsChanged": result?.segmentsChanged ?? -1, "notesChanged": result?.notesChanged ?? false], to: args[5])
         case "segment": model.updateSegment(id ?? 0, text: args[2])
         case "speaker": model.selection = id; model.renameSpeaker(Int(args[2]) ?? 1, to: args[3])
+        // 聲紋（design §21.4）：notthis <會議 id> <說話者>（不是他）；people <輸出.json>；personrename <id> <名字>；
+        // persondelete <id>；peopledeleteall
+        case "notthis": model.selection = id; model.rejectVoiceprintMatch(Int(args[2]) ?? 1)
+        case "people":
+            model.reloadPeople()
+            write(["people": model.people.map { ["id": $0.id, "name": $0.name, "voiceprints": $0.voiceprintCount,
+                                                 "lastTitle": $0.lastMeetingTitle ?? "", "lastDate": $0.lastMeetingDate ?? ""] }], to: args[1])
+        case "personrename": if let id { model.renamePerson(id, to: args[2]) }
+        case "persondelete": if let id { model.deletePerson(id) }
+        case "peopledeleteall": model.deleteAllPeople()
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
@@ -116,6 +126,32 @@ enum DebugControl {
             field.window?.makeFirstResponder(field)
             field.currentEditor()?.insertNewline(nil)
         case "editsegment": model.debugEditSegment = id   // editsegment <段落 id>：等於點那一段開始編輯
+        // voiceprint-eval <設定.json> <輸出.json>：設定是 [{"file": 音檔, "name": 名稱}]；每個檔案跑說話者辨識，
+        // 輸出每位說話者的聲紋、說話秒數、說話的時段，用來跟 AMI 標註比對、決定門檻（design §21.4.1）
+        case "voiceprint-eval":
+            let config = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: args[1])))) as? [[String: String]] ?? []
+            let output = args[2]
+            Task {
+                var results: [[String: Any]] = []
+                for item in config {
+                    guard let file = item["file"] else { continue }
+                    let started = Date()
+                    do {
+                        let samples = try await AudioDecoder.decode(URL(fileURLWithPath: file))
+                        let diarization = try await Diarizer.diarize(samples: samples) { _ in }
+                        let speakers: [[String: Any]] = diarization.voiceprints.keys.sorted().map { number in
+                            ["number": number, "seconds": diarization.speechSeconds[number] ?? 0,
+                             "embedding": diarization.voiceprints[number] ?? [],
+                             "turns": diarization.turns.filter { $0.speaker == number }.map { [$0.start, $0.end] }]
+                        }
+                        results.append(["name": item["name"] ?? file, "seconds": Double(samples.count) / AudioDecoder.sampleRate,
+                                        "elapsed": Date().timeIntervalSince(started), "speakers": speakers])
+                    } catch {
+                        results.append(["name": item["name"] ?? file, "error": error.localizedDescription])
+                    }
+                    write(["done": results.count, "total": config.count, "results": results], to: output)
+                }
+            }
         case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
             var lines: [String] = []
             func dump(_ element: NSAccessibilityProtocol, depth: Int) {

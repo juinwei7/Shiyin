@@ -370,7 +370,9 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// 寫入正式逐字稿：取代舊的正式版，並刪掉即時預覽（design §5.3）
-    func saveTranscript(_ meetingId: Int64, segments: [Segment], duration: Int, speakerCount: Int) throws {
+    /// voices：每位說話者的聲紋、說話秒數、收音（design §21.4），寫進 speakers
+    func saveTranscript(_ meetingId: Int64, segments: [Segment], duration: Int, speakerCount: Int,
+                        voices: [Int: SpeakerVoice] = [:]) throws {
         try pool.write { db in
             try Self.unindexSegments(db, meetingId: meetingId)
             try Segment.filter(Column("meeting_id") == meetingId).deleteAll(db)
@@ -391,6 +393,11 @@ final class AppDatabase: @unchecked Sendable {
                     speaker.name = old.name
                     speaker.nameSource = old.nameSource == "default" ? "manual" : old.nameSource
                     speaker.personId = old.personId
+                }
+                if let voice = voices[idx] {
+                    speaker.embedding = Voiceprint.data(voice.embedding)
+                    speaker.speechSeconds = voice.seconds
+                    speaker.audioSource = voice.source
                 }
                 try speaker.insert(db)
             }

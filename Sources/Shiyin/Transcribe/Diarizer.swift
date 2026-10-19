@@ -10,6 +10,13 @@ enum Diarizer {
         var end: Double
     }
 
+    /// 說話者辨識的結果：每段誰在講，加上每位說話者的聲紋（256 維）和說話的總秒數（design §21.4）
+    struct Output {
+        var turns: [Turn]
+        var voiceprints: [Int: [Float]]
+        var speechSeconds: [Int: Double]
+    }
+
     static var modelsDirectory: URL { Paths.modelsDir.appendingPathComponent("fluidaudio", isDirectory: true) }
 
     private static var manager: OfflineDiarizerManager?
@@ -29,13 +36,13 @@ enum Diarizer {
         return manager
     }
 
-    static func diarize(samples: [Float], onProgress: @escaping @Sendable (Double) -> Void) async throws -> [Turn] {
+    static func diarize(samples: [Float], onProgress: @escaping @Sendable (Double) -> Void) async throws -> Output {
         let manager = try await prepare()
         let result = try await manager.process(audio: samples) { done, total in
             if total > 0 { onProgress(Double(done) / Double(total)) }
         }
         var numbering: [String: Int] = [:]
-        return result.segments
+        let turns = result.segments
             .sorted { $0.startTimeSeconds < $1.startTimeSeconds }
             .map { segment in
                 let number = numbering[segment.speakerId] ?? {
@@ -45,12 +52,25 @@ enum Diarizer {
                 }()
                 return Turn(speaker: number, start: Double(segment.startTimeSeconds), end: Double(segment.endTimeSeconds))
             }
+        // 聲紋：離線辨識的 speakerDatabase（每位說話者一個），跟著上面的編號
+        var voiceprints: [Int: [Float]] = [:]
+        for (id, embedding) in result.speakerDatabase ?? [:] {
+            if let number = numbering[id], !embedding.isEmpty { voiceprints[number] = embedding }
+        }
+        var seconds: [Int: Double] = [:]
+        for turn in turns { seconds[turn.speaker, default: 0] += max(0, turn.end - turn.start) }
+        return Output(turns: turns, voiceprints: voiceprints, speechSeconds: seconds)
     }
 
     /// 每段逐字稿標上跟它重疊最多的說話者；完全沒重疊就用時間最接近的。
     /// 最後依逐字稿裡出現的順序重新編號，沒分到任何段落的說話者就不會留下空的編號
     nonisolated static func assign(_ turns: [Turn], to segments: [TranscribedSegment]) -> [Int?] {
-        guard !turns.isEmpty else { return segments.map { _ in nil } }
+        assignNumbering(turns, to: segments).speakers
+    }
+
+    /// 同 assign，另外回傳說話者辨識的編號 → 逐字稿上的編號（聲紋跟著換編號，design §21.4）
+    nonisolated static func assignNumbering(_ turns: [Turn], to segments: [TranscribedSegment]) -> (speakers: [Int?], numbering: [Int: Int]) {
+        guard !turns.isEmpty else { return (segments.map { _ in nil }, [:]) }
         let raw: [Int?] = segments.map { segment in
             var overlap: [Int: Double] = [:]
             for turn in turns where turn.end > segment.start && turn.start < segment.end {
@@ -61,11 +81,12 @@ enum Diarizer {
             return turns.min(by: { abs(($0.start + $0.end) / 2 - middle) < abs(($1.start + $1.end) / 2 - middle) })?.speaker
         }
         var numbering: [Int: Int] = [:]
-        return raw.map { speaker in
+        let speakers: [Int?] = raw.map { speaker in
             guard let speaker else { return nil }
             if let number = numbering[speaker] { return number }
             numbering[speaker] = numbering.count + 1
             return numbering.count
         }
+        return (speakers, numbering)
     }
 }

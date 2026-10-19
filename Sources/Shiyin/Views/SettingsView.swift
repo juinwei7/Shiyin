@@ -7,6 +7,7 @@ struct SettingsView: View {
             ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }
             TemplateSettings().tabItem { Label(MeetingLanguage.ui(zh: "範本", en: "Templates"), systemImage: "doc.text") }
             GlossarySettings().tabItem { Label("詞彙表", systemImage: "text.book.closed") }
+            SpeakerSettings().tabItem { Label("說話者", systemImage: "person.wave.2") }
             RecordingSettings().tabItem { Label("錄音", systemImage: "mic") }
             StorageSettings().tabItem { Label("模型與儲存空間", systemImage: "internaldrive") }
             AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }
@@ -356,6 +357,70 @@ struct TemplateSettings: View {
 }
 
 // MARK: 詞彙表（沿用第二版）
+
+/// 說話者（design §21.4、R19.3）：記住說話者的聲音，之後的會議自動帶入名字；認識的人可以改名、刪除
+struct SpeakerSettings: View {
+    @Environment(AppModel.self) private var model
+    @AppStorage(AppSettings.voiceprintsKey) private var voiceprints = true
+    @State private var renaming: Int64?
+    @State private var renameText = ""
+    @State private var confirmDeleteAll = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("記住說話者的聲音，之後的會議自動帶入名字", isOn: $voiceprints)
+            Text("替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台 Mac 的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。")
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Text("認識的人").font(.headline)
+                Spacer()
+                Button("全部刪除…") { confirmDeleteAll = true }
+                    .disabled(model.people.isEmpty)
+            }
+            List {
+                ForEach(model.people) { person in
+                    HStack(spacing: 10) {
+                        if renaming == person.id {
+                            TextField("名字", text: $renameText)
+                                .textFieldStyle(.roundedBorder)
+                                .onSubmit { model.renamePerson(person.id, to: renameText); renaming = nil }
+                            Button("取消") { renaming = nil }.buttonStyle(.link)
+                        } else {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(person.name)
+                                Text(detailLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            Spacer()
+                            Button("改名") { renameText = person.name; renaming = person.id }.buttonStyle(.link)
+                            Button { model.deletePerson(person.id) } label: { Image(systemName: "trash") }
+                                .buttonStyle(.borderless).help("刪除「\(person.name)」的聲音特徵（已經帶入的名字留著）")
+                        }
+                    }
+                }
+            }
+            .frame(minHeight: 160)
+            .overlay {
+                if model.people.isEmpty {
+                    Text("還沒有認識的人。在逐字稿點「說話者 1」改成名字，拾音就會記住這個人。")
+                        .font(.callout).foregroundStyle(.secondary).padding().multilineTextAlignment(.center)
+                }
+            }
+        }
+        .padding(20)
+        .onAppear { model.reloadPeople() }
+        .confirmationDialog("刪除所有認識的人的聲音特徵？", isPresented: $confirmDeleteAll) {
+            Button("全部刪除", role: .destructive) { model.deleteAllPeople() }
+        } message: {
+            Text("已經帶入的名字會留著，之後的會議不會再自動帶入。")
+        }
+    }
+
+    private func detailLine(_ person: PersonSummary) -> String {
+        let prints = String(localized: "\(person.voiceprintCount) 份聲音特徵")
+        guard let title = person.lastMeetingTitle, let date = person.lastMeetingDate else { return prints }
+        return String(localized: "\(prints)・最近：\(date) \(title)")
+    }
+}
 
 struct GlossarySettings: View {
     @Environment(AppModel.self) private var model

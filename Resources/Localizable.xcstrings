@@ -21,6 +21,17 @@
         }
       }
     },
+    "%@・最近：%@ %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Last seen: %@ %@"
+          }
+        }
+      }
+    },
     "%@中": {
       "extractionState": "manual",
       "localizations": {
@@ -167,6 +178,29 @@
     },
     "%lld": {
       "extractionState": "manual"
+    },
+    "%lld 份聲音特徵": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld voice sample"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld voice samples"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld 處": {
       "extractionState": "manual",
@@ -892,6 +926,28 @@
         }
       }
     },
+    "不是%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not %@"
+          }
+        }
+      }
+    },
+    "不是他": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not this person"
+          }
+        }
+      }
+    },
     "不用下載模型、速度快，但不參考詞彙表，英文專有名詞比較容易錯。之後可以在設定 → 錄音改回來": {
       "extractionState": "manual",
       "localizations": {
@@ -1278,6 +1334,28 @@
         }
       }
     },
+    "全部刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All"
+          }
+        }
+      }
+    },
+    "全部刪除…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All…"
+          }
+        }
+      }
+    },
     "全部取代": {
       "extractionState": "manual",
       "localizations": {
@@ -1388,6 +1466,17 @@
         }
       }
     },
+    "刪除「%@」的聲音特徵（已經帶入的名字留著）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the voice samples for “%@” (names already filled in stay)"
+          }
+        }
+      }
+    },
     "刪除「%@」？": {
       "extractionState": "manual",
       "localizations": {
@@ -1395,6 +1484,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete “%@”?"
+          }
+        }
+      }
+    },
+    "刪除所有認識的人的聲音特徵？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the voice samples of everyone Shiyin knows?"
           }
         }
       }
@@ -1472,6 +1572,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download it in “Models & Storage”, or set transcription to macOS in “Recording”"
+          }
+        }
+      }
+    },
+    "到逐字稿改名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename in Transcript"
           }
         }
       }
@@ -1836,6 +1947,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accept or ignore every place a word appears at once"
+          }
+        }
+      }
+    },
+    "名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
           }
         }
       }
@@ -2457,6 +2579,17 @@
         }
       }
     },
+    "已經帶入的名字會留著，之後的會議不會再自動帶入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Names already filled in stay, but future meetings won't fill them in automatically."
+          }
+        }
+      }
+    },
     "已複製會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -3074,6 +3207,17 @@
         }
       }
     },
+    "拾音認出這個人的聲音，自動帶入名字。不對的話點一下": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin recognized this person's voice and filled in the name. Click if it's wrong."
+          }
+        }
+      }
+    },
     "拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。": {
       "extractionState": "manual",
       "localizations": {
@@ -3362,6 +3506,17 @@
         }
       }
     },
+    "改名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
     "改回%@": {
       "extractionState": "manual",
       "localizations": {
@@ -3395,13 +3550,13 @@
         }
       }
     },
-    "整場逐字稿和之後的會議紀錄都會用這個名字。": {
+    "整場逐字稿和之後的會議紀錄都會用這個名字；拾音也會記住這個人的聲音，之後的會議自動帶入。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The whole transcript and future meeting notes will use this name."
+            "value": "The whole transcript and future meeting notes use this name. Shiyin also remembers this person's voice and fills in the name in future meetings."
           }
         }
       }
@@ -4062,6 +4217,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The update information has the wrong format"
+          }
+        }
+      }
+    },
+    "替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台 Mac 的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you name a speaker, Shiyin saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it “Auto”; you can change it if it's wrong. Voice features stay in the database on this Mac. They're never uploaded or included in exported .shiyin packages."
           }
         }
       }
@@ -5907,6 +6073,17 @@
         }
       }
     },
+    "自動": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto"
+          }
+        }
+      }
+    },
     "自動偵測會議語言": {
       "extractionState": "manual",
       "localizations": {
@@ -6061,6 +6238,17 @@
         }
       }
     },
+    "記住說話者的聲音，之後的會議自動帶入名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remember speakers' voices and fill in their names in future meetings"
+          }
+        }
+      }
+    },
     "記憶體": {
       "extractionState": "manual",
       "localizations": {
@@ -6123,6 +6311,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Details"
+          }
+        }
+      }
+    },
+    "認識的人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People Shiyin Knows"
           }
         }
       }
@@ -6789,6 +6988,17 @@
         }
       }
     },
+    "這個名字是拾音認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin filled in this name after recognizing the voice. If it's wrong, rename the speaker or click “Not this person”."
+          }
+        }
+      }
+    },
     "這個封包是新版拾音匯出的（格式 %lld），請先更新拾音再匯入": {
       "extractionState": "manual",
       "localizations": {
@@ -7225,6 +7435,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No terms yet. Terms are also added here when you choose “Add to glossary” in Fix Wording."
+          }
+        }
+      }
+    },
+    "還沒有認識的人。在逐字稿點「說話者 1」改成名字，拾音就會記住這個人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one yet. Click “Speaker 1” in a transcript and give them a name, and Shiyin will remember that person."
           }
         }
       }
