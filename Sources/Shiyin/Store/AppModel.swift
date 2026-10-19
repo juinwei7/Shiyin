@@ -233,6 +233,8 @@ final class AppModel {
         // 語言偵測模型很小（60 MB），開著自動偵測就先下載好
         if AppSettings.autoDetectLanguage { models.autoStart(.languageDetection) }
         GlobalHotKey.shared.onPress = { [weak self] in self?.toggleRecording() }
+        GlobalHotKey.shared.onBookmark = { [weak self] in self?.bookmarkFromHotKey() }
+        recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
         refreshEnvironment()
@@ -385,7 +387,23 @@ final class AppModel {
                       reviewCount: detail.notes?.reviewItems.count ?? 0)
     }
 
+    /// 用全域快捷鍵標記重點後，選單列圖示換成星號 1 秒（design §21.10）
+    var bookmarkFlash = false
+
+    /// ⌃⌥⌘B：在其他 app 裡標記重點，有音效和選單列圖示的回饋
+    func bookmarkFromHotKey() {
+        guard recorder.isRecording, let id = recorder.meetingId else { return }
+        addBookmark(at: recorder.elapsed, meetingId: id)
+        NSSound(named: "Tink")?.play()
+        bookmarkFlash = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            bookmarkFlash = false
+        }
+    }
+
     var menuBarSymbol: String {
+        if bookmarkFlash { return "star.circle.fill" }
         if recorder.isRecording { return "record.circle.fill" }
         if runner.isBusy || queuedCount > 0 { return "waveform.circle.fill" }
         return "waveform"
@@ -516,6 +534,7 @@ final class AppModel {
     /// 錄音結束：把錄音檔接到會議上並排轉錄（R2.5）
     private func recordingFinished(_ result: Recorder.Result) {
         MeetingPromptPanel.shared.close()   // 還開著的「要停止錄音嗎？」不用了
+        GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B
         do {
             if let error = result.error {
                 errorMessage = error

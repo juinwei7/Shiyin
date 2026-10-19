@@ -8266,6 +8266,17 @@
         }
       }
     },
+    "錄音中按 %@ 標記重點（在其他 app 裡也能用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, press %@ to mark a highlight (works in other apps too)"
+          }
+        }
+      }
+    },
     "錄音中標記重點": {
       "extractionState": "manual",
       "localizations": {

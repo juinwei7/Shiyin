@@ -23,6 +23,7 @@ enum AppSettings {
     static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
+    static let bookmarkHotKeyKey = "bookmarkHotKey"
 
     private static var d: UserDefaults { .standard }
 
@@ -66,6 +67,8 @@ enum AppSettings {
     static var globalHotKey: Bool { flag(globalHotKeyKey, default: true) }
     /// 記住說話者的聲音，之後的會議自動帶入名字（design §21.4、R19.3）
     static var voiceprints: Bool { flag(voiceprintsKey, default: true) }
+    /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）
+    static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言

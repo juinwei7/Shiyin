@@ -499,6 +499,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true
+    @AppStorage(AppSettings.bookmarkHotKeyKey) private var bookmarkHotKey = true
     @State private var mutedApps: [String] = []
     @State private var devices: [AudioDevices.Device] = []
     @State private var hotKeyFailed = false
@@ -560,6 +561,10 @@ struct RecordingSettings: View {
                 Text("沒辦法註冊 \(GlobalHotKey.display)，可能已經被其他 app 使用。")
                     .font(.caption).foregroundStyle(.red)
             }
+            Toggle("錄音中按 \(GlobalHotKey.bookmarkDisplay) 標記重點（在其他 app 裡也能用）", isOn: $bookmarkHotKey)
+                .onChange(of: bookmarkHotKey) { _, enabled in
+                    GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
+                }
             // 偵測線上會議（design §21.7、R19.4）
             Toggle("偵測到線上會議時提醒錄音", isOn: $meetingDetection)
             Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。")

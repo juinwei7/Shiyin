@@ -41,6 +41,8 @@ final class Recorder {
     private(set) var deviceWarning: String?
 
     @ObservationIgnored var onFinished: ((Result) -> Void)?
+    /// 錄音開始了（全域快捷鍵標記重點這時才註冊，design §21.10）
+    @ObservationIgnored var onStarted: (() -> Void)?
     /// 停止後即時辨識收尾完（最後還沒定稿的文字已經存進去），給草稿紀錄用（design §21.3）：會議 id、錄到的秒數
     @ObservationIgnored var onLiveFinished: ((Int64, Double) -> Void)?
     @ObservationIgnored var onLiveFinal: ((Int64, Double, Double, String) -> Void)?
@@ -223,6 +225,7 @@ final class Recorder {
             if AppSettings.liveTranscription { startLive(writer: writer, meetingId: meetingId) }
             startLanguageDetection(meetingId: meetingId)
             log.info("recording started (\(self.source, privacy: .public))")
+            onStarted?()
         } catch {
             abort(meetingId, message: String(localized: "沒辦法開始錄音：\(error.localizedDescription)"))
         }

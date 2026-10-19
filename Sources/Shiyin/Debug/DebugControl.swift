@@ -280,7 +280,8 @@ enum DebugControl {
             if case .available(let manifest) = model.updater.state { Task { await model.updater.install(manifest, model: model) } }
         case "dismissupdate": model.updater.prompt = nil
         // 全域快捷鍵（R11.3）：不能送按鍵，用這個模擬按下
-        case "hotkey": GlobalHotKey.shared.fire()
+        case "hotkey":   // hotkey [bookmark]：模擬按下 ⌃⌥⌘R（或 ⌃⌥⌘B）
+            if args.count > 1 && args[1] == "bookmark" { GlobalHotKey.shared.fireBookmark() } else { GlobalHotKey.shared.fire() }
         case "hotkeyenable": GlobalHotKey.shared.setEnabled(args[1] == "1")
         // 點通知後的動作（系統的點擊沒辦法模擬，直接呼叫同一個處理函式）
         case "opennotification": if let id { model.notifier.onOpen?(id) }
@@ -399,7 +400,8 @@ enum DebugControl {
             "folderFilter": model.folderFilter ?? "",
             "update": ["state": model.updater.state.label, "prompt": model.updater.prompt?.version ?? "",
                        "version": Updater.currentVersion, "feed": Updater.feedURLString],
-            "hotkey": ["registered": GlobalHotKey.shared.isRegistered, "status": Int(GlobalHotKey.shared.status)],
+            "hotkey": ["registered": GlobalHotKey.shared.isRegistered, "status": Int(GlobalHotKey.shared.status),
+                       "bookmarkRegistered": GlobalHotKey.shared.isBookmarkRegistered],
             "notifications": model.notifier.recent,
             "filteredIds": model.filteredMeetings.map(\.id),
             "highlightSegment": model.highlightSegment ?? -1,
