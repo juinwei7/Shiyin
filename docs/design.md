@@ -668,6 +668,12 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - `kind`、`ref` 欄位保留，搜尋結果照樣用它們。
 - `undoNotes` 復原上一版時，標題的索引也要更新。
 
+### 20.12 結束時等工作停下來（R18.12）
+
+- 轉錄中結束拾音時，`terminateAll` 送出取消後 app 馬上 `exit`，這時 whisper.cpp 還在 GPU 上算（context 在 `whisper_full` 回來後才釋放），`exit` 的靜態解構呼叫 `ggml_metal_device_free`，裡面 `ggml_abort`，app 以 SIGABRT 結束（2026-10-19 的當機報告）。
+- `applicationShouldTerminate` 確認之後：停止錄音、`terminateAll`；還有工作在跑就回 `.terminateLater`，每 0.1 秒看一次 `runner.isBusy`，停下來（最多 10 秒）再 `NSApp.reply(toApplicationShouldTerminate: true)`。
+- whisper 的取消是在計算中途由 `abort_callback` 檢查，實測停下來要多久寫在驗證結果。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
