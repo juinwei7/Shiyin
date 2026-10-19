@@ -170,13 +170,15 @@ extension AppDatabase {
             try Row.fetchAll(db, sql: """
                 SELECT p.id, p.name,
                   (SELECT count(*) FROM voiceprints v WHERE v.person_id = p.id) AS prints,
-                  (SELECT m.title FROM speakers s JOIN meetings m ON m.id = s.meeting_id
-                     WHERE s.person_id = p.id AND m.deleted_at IS NULL ORDER BY m.meeting_date DESC LIMIT 1) AS last_title,
-                  (SELECT m.meeting_date FROM speakers s JOIN meetings m ON m.id = s.meeting_id
-                     WHERE s.person_id = p.id AND m.deleted_at IS NULL ORDER BY m.meeting_date DESC LIMIT 1) AS last_date
+                  (SELECT m.id FROM speakers s JOIN meetings m ON m.id = s.meeting_id
+                     WHERE s.person_id = p.id AND m.deleted_at IS NULL ORDER BY m.meeting_date DESC LIMIT 1) AS last_id
                 FROM people p ORDER BY p.name COLLATE NOCASE
-                """).map { PersonSummary(id: $0["id"], name: $0["name"], voiceprintCount: $0["prints"],
-                                         lastMeetingTitle: $0["last_title"], lastMeetingDate: $0["last_date"]) }
+                """).map { row in
+                    // 沒有標題的會議跟會議列表一樣顯示檔名
+                    let last = try (row["last_id"] as Int64?).flatMap { try Meeting.fetchOne(db, key: $0) }
+                    return PersonSummary(id: row["id"], name: row["name"], voiceprintCount: row["prints"],
+                                         lastMeetingTitle: last?.displayTitle, lastMeetingDate: last?.meetingDate)
+                }
         }
     }
 

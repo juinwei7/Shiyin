@@ -1157,17 +1157,6 @@
         }
       }
     },
-    "不要再提醒 %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Don't Ask for %@"
-          }
-        }
-      }
-    },
     "不要再提醒這個 app": {
       "extractionState": "manual",
       "localizations": {
@@ -3649,13 +3638,13 @@
         }
       }
     },
-    "拾音認出這個人的聲音，自動帶入名字。不對的話點一下": {
+    "拾音認出這個人的聲音，自動帶入名字。不對的話點名字": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin recognized this person's voice and filled in the name. Click if it's wrong."
+            "value": "Shiyin recognized this person's voice and filled in the name. Click the name if it's wrong."
           }
         }
       }
@@ -8679,7 +8668,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When you join a Zoom, Teams, Google Meet or other online meeting, Shiyin asks whether to start recording, and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for …” on the reminder."
+            "value": "When you join a Zoom, Teams, Google Meet or other online meeting, Shiyin asks whether to start recording, and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for This App” on the reminder."
           }
         }
       }

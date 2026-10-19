@@ -985,7 +985,8 @@ final class AppModel {
         case .start(let app):
             MeetingPromptPanel.shared.show(prompt, actions: [
                 ("later", String(localized: "這次不用"), {}),
-                ("mute", String(localized: "不要再提醒 \(app.name)"), { MeetingDetector.mute(app.bundleID) }),
+                // 名稱長的 app（Microsoft Teams）放進按鈕會被截掉；訊息裡已經有 app 的名字
+                ("mute", String(localized: "不要再提醒這個 app"), { MeetingDetector.mute(app.bundleID) }),
                 ("start", String(localized: "開始錄音"), { [weak self] in self?.startRecording() }),
             ], message: String(localized: "\(app.name) 正在開會，要開始錄音嗎？"))
         case .stop:

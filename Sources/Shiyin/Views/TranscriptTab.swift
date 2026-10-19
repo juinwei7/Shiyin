@@ -187,7 +187,6 @@ struct TranscriptTab: View {
         .padding(.vertical, 10)
     }
 
-    /// 有待確認的校正建議時，顯示在搜尋列下方；可以展開依詞處理（同一個詞的每一處一起接受或忽略）
     /// 模型下載好之前用 macOS 內建辨識轉錄的會議（design §21.17）
     private var upgradeBar: some View {
         HStack(spacing: 10) {
@@ -195,7 +194,7 @@ struct TranscriptTab: View {
             Text(detail.meeting.meetingLanguage == .ja
                  ? "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用日文轉錄模型重新轉錄，通常比較準。"
                  : "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。")
-                .fixedSize(horizontal: false, vertical: true)
+            // 不能加 fixedSize：在 HStack 裡量最小高度時會用很窄的寬度，算出很高的高度，整個視窗的內容被往上推
             Spacer()
             Button("重新轉錄") { model.retranscribe() }
                 .buttonStyle(.borderedProminent)
@@ -208,6 +207,7 @@ struct TranscriptTab: View {
         .background(Color.signal.opacity(0.08))
     }
 
+    /// 有待確認的校正建議時，顯示在搜尋列下方；可以展開依詞處理（同一個詞的每一處一起接受或忽略）
     private var correctionBar: some View {
         let groups = detail.correctionGroups
         return VStack(alignment: .leading, spacing: 0) {
@@ -227,14 +227,17 @@ struct TranscriptTab: View {
             .padding(.vertical, 8)
             if showCorrectionGroups {
                 Divider()
+                // 組數少時照內容的高度，超過 220 才捲動（ScrollView 的理想高度是內容的高度，最多 220）
                 ScrollView {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(groups, id: \.first!.id) { group in correctionGroupRow(group) }
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: 220)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
         .font(.callout)

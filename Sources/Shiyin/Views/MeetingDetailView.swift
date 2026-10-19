@@ -404,23 +404,24 @@ private struct AutoSpeakerName: View {
     let name: String
 
     var body: some View {
-        Menu {
-            Button("不是\(name)") { model.rejectVoiceprintMatch(idx) }
-            Button("到逐字稿改名") { model.tab = .transcript }
-        } label: {
-            HStack(spacing: 3) {
+        HStack(spacing: 3) {
+            Menu {
+                Button("不是\(name)") { model.rejectVoiceprintMatch(idx) }
+                Button("到逐字稿改名") { model.tab = .transcript }
+            } label: {
                 Text(name).foregroundStyle(Color.speaker(idx))
-                Text("自動")
-                    .font(.caption2)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Color.secondary.opacity(0.15), in: Capsule())
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            // 選單按鈕在畫面上只畫標題的文字（標籤裡的背景會被拿掉），「自動」標記要放在選單外面
+            Text("自動")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.secondary.opacity(0.15), in: Capsule())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("拾音認出這個人的聲音，自動帶入名字。不對的話點一下")
+        .help("拾音認出這個人的聲音，自動帶入名字。不對的話點名字")
     }
 }
 

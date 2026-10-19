@@ -197,7 +197,10 @@ final class MeetingPromptPanel {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
-        panel.contentView = NSHostingView(rootView: content)
+        // 標題列是透明的（只為了圓角和陰影），內容不用避開它，不然上面會多一塊空白
+        let hosting = NSHostingView(rootView: content)
+        hosting.safeAreaRegions = []
+        panel.contentView = hosting
         panel.setContentSize(panel.contentView!.fittingSize)
         if let screen = NSScreen.main?.visibleFrame {
             panel.setFrameOrigin(NSPoint(x: screen.maxX - panel.frame.width - 16, y: screen.maxY - panel.frame.height - 16))
