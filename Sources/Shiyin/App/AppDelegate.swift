@@ -56,11 +56,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return finishTermination(recording: recording)
     }
 
+    /// 送出取消後要等 whisper 的 context 都釋放了再結束：還在 GPU 上算的時候 exit，
+    /// 靜態解構會在 ggml_metal_device_free 裡 abort（design §20.12）。最多等 10 秒。
+    /// 用 run loop 的 Timer 等，不用 MainActor 的 Task：從主佇列裡呼叫 terminate 時，主佇列不會再執行別的工作
     private func finishTermination(recording: Bool) -> NSApplication.TerminateReply {
         let model = AppModel.shared
         if recording { model.recorder.stop() }
         model.runner.terminateAll()
-        return .terminateNow
+        guard WhisperContexts.active > 0 else { return .terminateNow }
+        let started = Date()
+        let timer = Timer(timeInterval: 0.1, repeats: true) { timer in
+            let waited = Date().timeIntervalSince(started)
+            guard WhisperContexts.active == 0 || waited >= 10 else { return }
+            timer.invalidate()
+            log.info("terminate: whisper stopped after \(String(format: "%.1f", waited), privacy: .public)s")
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        return .terminateLater
     }
 
     /// 空白鍵播放／暫停；游標在輸入框時不攔截（design §9.4）

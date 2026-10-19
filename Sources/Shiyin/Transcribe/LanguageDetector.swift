@@ -15,7 +15,8 @@ enum LanguageDetector {
         var params = whisper_context_default_params()
         params.use_gpu = true
         guard let ctx = whisper_init_from_file_with_params(modelPath, params) else { throw WhisperError.loadFailed }
-        defer { whisper_free(ctx) }
+        WhisperContexts.opened()
+        defer { whisper_free(ctx); WhisperContexts.closed() }
         let threads = Int32(max(2, min(4, ProcessInfo.processInfo.activeProcessorCount - 2)))
         let mel = samples.withUnsafeBufferPointer { whisper_pcm_to_mel(ctx, $0.baseAddress, Int32($0.count), threads) }
         guard mel == 0 else { throw WhisperError.failed(Int32(mel)) }

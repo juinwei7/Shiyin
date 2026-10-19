@@ -79,7 +79,8 @@ enum WhisperEngine {
         contextParams.use_gpu = true
         contextParams.flash_attn = true
         guard let ctx = whisper_init_from_file_with_params(modelPath, contextParams) else { throw WhisperError.loadFailed }
-        defer { whisper_free(ctx) }
+        WhisperContexts.opened()
+        defer { whisper_free(ctx); WhisperContexts.closed() }
 
         var params = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH)
         params.beam_search.beam_size = 5
