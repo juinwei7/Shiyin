@@ -134,6 +134,7 @@ final class AppModel {
             alert.alertStyle = .critical
             alert.messageText = String(localized: "拾音沒辦法開啟資料庫")
             let reason = (error as? DatabaseError)?.message ?? error.localizedDescription
+            log.error("open database failed: \(reason, privacy: .public)")
             alert.informativeText = String(localized: "原因：\(reason)\n\n你的資料沒有被改動。升級前的備份在：\(Paths.backupsDir.path)\n請把這個訊息截圖給維護拾音的人。")
             alert.addButton(withTitle: String(localized: "結束拾音"))
             alert.runModal()

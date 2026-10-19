@@ -17,8 +17,13 @@ json_schema 時把 schema 交給 codex 的 --output-schema；退回 JSON 模式�
   {"gemini_error_array": true}     Gemini 回 400，錯誤包在陣列裡（跟 Interactions 實際的格式一樣）
   {"bad_key": true}                全部回 key 錯誤
   {"error_message": "…"}           整理、校正回 400，錯誤訊息是這段文字（測 log 不寫錯誤內容，design §20.8）
+  {"delay": 20}                    每個請求等 20 秒再回（測同時進行、取消，design §21.2、§21.14）
+  {"fail_once": 503, "retry_after": 2}   設定之後的第一個請求回這個狀態碼，之後正常（測自動重試）
+  {"responses": {"corrections": {…}}}    換掉某種回應的內容：notes、corrections、speakerNames、keywords、answer
   {}                               改回預設
 """
+import threading
+import time
 import json
 import os
 import shutil
@@ -45,6 +50,10 @@ NOTES = {
     "reviewItems": [],
 }
 CORRECTIONS = {"corrections": []}
+SPEAKER_NAMES = {"speakerNames": []}
+KEYWORDS = {"keywords": ["假伺服器"]}
+ANSWER = {"answer": "假伺服器的回答。", "found": True, "citations": [{"time": "00:05", "quote": "這是假伺服器回傳的摘要。"}]}
+FAILED_ONCE = threading.Lock()
 
 
 def ask_codex(messages, schema):
@@ -66,8 +75,15 @@ def ask_codex(messages, schema):
 
 
 def answer_for(text):
-    """依 schema 或提示詞判斷要回會議紀錄還是逐字稿校正"""
-    return CORRECTIONS if "corrections" in text else NOTES
+    """依工具名稱、schema 或提示詞判斷要回哪一種（會議紀錄、逐字稿校正、猜說話者、搜尋關鍵詞、回答）"""
+    custom = MODE.get("responses", {})
+    for key, default, marks in (("speakerNames", SPEAKER_NAMES, ("speaker_names", "speakerNames")),
+                                ("keywords", KEYWORDS, ("search_keywords", '"keywords"')),
+                                ("answer", ANSWER, ("save_answer", '"citations"')),
+                                ("corrections", CORRECTIONS, ("corrections",))):
+        if any(m in text for m in marks):
+            return custom.get(key, default)
+    return custom.get("notes", NOTES)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -90,8 +106,8 @@ class Handler(BaseHTTPRequestHandler):
                 continue
             headers[k] = (v[:13] + "…") if k in SECRET_HEADERS else v
         with open(LOG, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"method": self.command, "path": self.path, "headers": headers, "body": body},
-                               ensure_ascii=False, sort_keys=True) + "\n")
+            f.write(json.dumps({"method": self.command, "path": self.path, "headers": headers, "body": body,
+                                "t": round(time.time(), 3)}, ensure_ascii=False, sort_keys=True) + "\n")
 
     def do_GET(self):
         self.record(None)
@@ -126,6 +142,20 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(401, {"error": {"message": "Invalid API Key"}})
         if MODE.get("error_message"):
             return self.reply(400, {"error": {"message": MODE["error_message"]}})
+        with FAILED_ONCE:
+            status = MODE.pop("fail_once", None)
+        if status:
+            self.send_response(status)
+            if MODE.get("retry_after") is not None:
+                self.send_header("retry-after", str(MODE["retry_after"]))
+            data = json.dumps({"error": {"message": f"fake {status}"}}).encode()
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if MODE.get("delay"):
+            time.sleep(float(MODE["delay"]))
 
         if self.path == "/v1/messages":   # Anthropic
             tool = body["tool_choice"]["name"]

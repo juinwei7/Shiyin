@@ -172,6 +172,56 @@ final class AppDatabase: @unchecked Sendable {
             try db.execute(sql: "ALTER TABLE jobs ADD COLUMN crashes INTEGER NOT NULL DEFAULT 0")
             try Self.rebuildSearch(db)
         }
+        // 3.5（design §21.1）：草稿紀錄、聲紋、猜說話者、提問、編輯草稿、回報問題用的錯誤種類
+        migrator.registerMigration("v7") { db in
+            try db.execute(sql: """
+                ALTER TABLE meetings ADD COLUMN notes_draft INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE meetings ADD COLUMN transcribed_with TEXT NOT NULL DEFAULT '';
+                ALTER TABLE jobs ADD COLUMN error_kind TEXT;
+                CREATE TABLE people (
+                  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                  name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                  created_at TEXT NOT NULL
+                );
+                ALTER TABLE speakers ADD COLUMN name_source TEXT NOT NULL DEFAULT 'default';
+                ALTER TABLE speakers ADD COLUMN person_id INTEGER REFERENCES people(id) ON DELETE SET NULL;
+                ALTER TABLE speakers ADD COLUMN embedding BLOB;
+                ALTER TABLE speakers ADD COLUMN speech_seconds REAL NOT NULL DEFAULT 0;
+                ALTER TABLE speakers ADD COLUMN audio_source TEXT NOT NULL DEFAULT 'mix';
+                ALTER TABLE speakers ADD COLUMN suggested_name TEXT;
+                ALTER TABLE speakers ADD COLUMN suggestion_reason TEXT;
+                ALTER TABLE speakers ADD COLUMN suggestion_time TEXT;
+                UPDATE speakers SET name_source = 'manual'
+                  WHERE name NOT GLOB '說話者 [0-9]*' AND name NOT GLOB 'Speaker [0-9]*' AND name NOT GLOB '話者 [0-9]*';
+                CREATE TABLE voiceprints (
+                  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                  person_id    INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+                  embedding    BLOB NOT NULL,
+                  audio_source TEXT NOT NULL,
+                  meeting_id   INTEGER REFERENCES meetings(id) ON DELETE SET NULL,
+                  speaker_idx  INTEGER,
+                  created_at   TEXT NOT NULL
+                );
+                CREATE INDEX voiceprints_person ON voiceprints(person_id);
+                CREATE TABLE questions (
+                  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                  meeting_id INTEGER REFERENCES meetings(id) ON DELETE CASCADE,
+                  scope      TEXT NOT NULL DEFAULT '',
+                  question   TEXT NOT NULL,
+                  answer     TEXT NOT NULL,
+                  provider   TEXT NOT NULL,
+                  created_at TEXT NOT NULL
+                );
+                CREATE INDEX questions_meeting ON questions(meeting_id, id);
+                CREATE TABLE drafts (
+                  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+                  key        TEXT NOT NULL,
+                  text       TEXT NOT NULL,
+                  updated_at TEXT NOT NULL,
+                  PRIMARY KEY (meeting_id, key)
+                );
+                """)
+        }
         return migrator
     }
 
@@ -327,11 +377,16 @@ final class AppDatabase: @unchecked Sendable {
             let language = try Meeting.fetchOne(db, key: meetingId)?.meetingLanguage ?? .zh
             let existing = try SpeakerName.filter(Column("meeting_id") == meetingId).fetchAll(db)
             // 預設名稱（任何語言的「說話者 1」）不算改過，換了會議語言後要用新語言的預設名稱
-            let named = Dictionary(uniqueKeysWithValues: existing.filter { !Self.isDefaultSpeakerName($0.name) }.map { ($0.idx, $0.name) })
+            let named = Dictionary(uniqueKeysWithValues: existing.filter { !Self.isDefaultSpeakerName($0.name) }.map { ($0.idx, $0) })
             try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
             for idx in stride(from: 1, through: speakerCount, by: 1) {
                 var speaker = SpeakerName(meetingId: meetingId, idx: idx,
-                                          name: named[idx] ?? language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)"))
+                                          name: language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)"))
+                if let old = named[idx] {
+                    speaker.name = old.name
+                    speaker.nameSource = old.nameSource == "default" ? "manual" : old.nameSource
+                    speaker.personId = old.personId
+                }
                 try speaker.insert(db)
             }
             if var m = try Meeting.fetchOne(db, key: meetingId) {
@@ -414,10 +469,13 @@ final class AppDatabase: @unchecked Sendable {
         try pool.read { db in try SpeakerName.filter(Column("meeting_id") == meetingId).order(Column("idx")).fetchAll(db) }
     }
 
+    /// 只改名字和名字的來源，不動聲紋等其他欄位（design §21.1）
     func renameSpeaker(_ meetingId: Int64, idx: Int, name: String) throws {
         try pool.write { db in
-            try db.execute(sql: "INSERT OR REPLACE INTO speakers (meeting_id, idx, name) VALUES (?, ?, ?)",
-                           arguments: [meetingId, idx, name])
+            try db.execute(sql: """
+                INSERT INTO speakers (meeting_id, idx, name, name_source) VALUES (?, ?, ?, ?)
+                ON CONFLICT (meeting_id, idx) DO UPDATE SET name = excluded.name, name_source = excluded.name_source
+                """, arguments: [meetingId, idx, name, Self.isDefaultSpeakerName(name) ? "default" : "manual"])
         }
     }
 
@@ -562,7 +620,11 @@ final class AppDatabase: @unchecked Sendable {
     private static func rebuildSearch(_ db: Database) throws {
         try db.execute(sql: "DELETE FROM search")
         try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) SELECT id, meeting_id, 'segment', id, text FROM segments")
-        for m in try Meeting.fetchAll(db) {
+        // 只讀需要的欄位，不要整筆解碼成 Meeting：migration 裡呼叫時，後面版本才加的欄位還不存在（design §21.1）
+        let rows = try Row.fetchAll(db, sql: "SELECT id, title, source_filename, user_notes, notes FROM meetings")
+        for row in rows {
+            let m = Meeting(id: row["id"], title: row["title"], meetingDate: "", sourceFilename: row["source_filename"],
+                            notes: row["notes"], userNotes: row["user_notes"])
             try index(db, meetingId: m.id!, kind: .title, ref: 0, text: m.displayTitle)
             try index(db, meetingId: m.id!, kind: .userNotes, ref: 0, text: m.userNotes)
             if let notes = m.decodedNotes { try index(db, meetingId: m.id!, kind: .notes, ref: 0, text: notes.plainText) }
@@ -655,9 +717,7 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 取出下一個排隊的工作，改成 running；轉錄工作只取會議語言在 transcribeLanguages 裡的（那個語言的模型已經下載，design §18.2）
     func claimNext(lane: JobLane, transcribeLanguages: Set<MeetingLanguage> = Set(MeetingLanguage.allCases)) throws -> Job? {
-        let kinds = lane == .transcribe
-            ? [JobKind.transcribe.rawValue, JobKind.compress.rawValue]
-            : [JobKind.summarize.rawValue, JobKind.revise.rawValue, JobKind.correct.rawValue]
+        let kinds = JobKind.allCases.filter { $0.lane == lane }.map(\.rawValue)
         let languages = transcribeLanguages.map(\.rawValue)
         return try pool.write { db in
             // 不認得的語言當成中文（跟 Meeting.meetingLanguage 一樣）
@@ -672,10 +732,11 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
-    func finish(_ jobId: Int64, status: JobStatus, error: String? = nil) throws {
+    /// errorKind：錯誤的種類（Error.logSummary），回報問題時用，不含內容（design §21.9）
+    func finish(_ jobId: Int64, status: JobStatus, error: String? = nil, errorKind: String? = nil) throws {
         try pool.write { db in
-            try db.execute(sql: "UPDATE jobs SET status = ?, error = ?, finished_at = ? WHERE id = ?",
-                           arguments: [status.rawValue, error, Clock.now(), jobId])
+            try db.execute(sql: "UPDATE jobs SET status = ?, error = ?, error_kind = ?, finished_at = ? WHERE id = ?",
+                           arguments: [status.rawValue, error, errorKind, Clock.now(), jobId])
         }
     }
 

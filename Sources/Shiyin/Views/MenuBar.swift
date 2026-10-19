@@ -86,10 +86,13 @@ struct MenuBarContent: View {
                     }
                 }
             }
-            if let l = model.runner.running[.llm] {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text(llmStatus(l.job.kind, title(l.job.meetingId))).lineLimit(1)
+            // 整理線、輔助線（逐字稿校正）同時跑（design §21.2）
+            ForEach([JobLane.llm, .assist], id: \.self) { lane in
+                if let l = model.runner.running[lane] {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text(llmStatus(l.job.kind, title(l.job.meetingId))).lineLimit(1)
+                    }
                 }
             }
             if model.queuedCount > 0 {

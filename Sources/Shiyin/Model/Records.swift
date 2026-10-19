@@ -36,6 +36,9 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var folder: String = ""
     // v3（design §16.3）
     var language: String = "zh"
+    // v7（design §21.1）：1 是用即時逐字稿整理的草稿，2 是使用者改過的草稿；轉錄引擎（breeze / japanese / system）
+    var notesDraft: Int = 0
+    var transcribedWith: String = ""
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
 
@@ -82,6 +85,15 @@ struct SpeakerName: SnakeCaseRecord, Hashable {
     var meetingId: Int64
     var idx: Int
     var name: String
+    // v7（design §21.1）
+    var nameSource: String = "default"     // default / manual / voiceprint / suggestion
+    var personId: Int64?
+    var embedding: Data?                   // 聲紋，Float32×256
+    var speechSeconds: Double = 0
+    var audioSource: String = "mix"        // mic / system / mix
+    var suggestedName: String?
+    var suggestionReason: String?
+    var suggestionTime: String?
 }
 
 /// 錄音中按 ⌘B 標的重點（R2.4）
@@ -152,14 +164,21 @@ struct NotesVersion: SnakeCaseRecord, Identifiable {
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
 
-enum JobKind: String, Codable {
+enum JobKind: String, Codable, CaseIterable {
     case transcribe, summarize, revise, compress
     case correct   // 逐字稿校正（design §17.4）
 
-    var lane: JobLane { self == .transcribe || self == .compress ? .transcribe : .llm }
+    /// 轉錄線、整理線、輔助線（design §21.2）：校正在輔助線，跟整理同時跑
+    var lane: JobLane {
+        switch self {
+        case .transcribe, .compress: return .transcribe
+        case .summarize, .revise: return .llm
+        case .correct: return .assist
+        }
+    }
 }
 
-enum JobLane: String { case transcribe, llm }
+enum JobLane: String, CaseIterable { case transcribe, llm, assist }
 
 enum JobStatus: String, Codable {
     case queued, running, done, failed, cancelled
@@ -178,6 +197,8 @@ struct Job: SnakeCaseRecord, Identifiable, Hashable {
     var finishedAt: String?
     /// 執行時拾音意外結束的次數（design §20.5）
     var crashes = 0
+    /// 失敗的種類（Error.logSummary，design §21.9）
+    var errorKind: String?
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }

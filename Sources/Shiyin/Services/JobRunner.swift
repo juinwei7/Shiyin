@@ -101,7 +101,7 @@ final class JobRunner {
 
     func start() {
         do { try db.requeueRunning() } catch { log.error("requeue failed: \(error.localizedDescription)") }
-        for lane in [JobLane.transcribe, .llm] {
+        for lane in JobLane.allCases {
             Task { await loop(lane) }
         }
     }
@@ -112,8 +112,10 @@ final class JobRunner {
 
     var isBusy: Bool { !running.isEmpty }
 
+    /// 畫面上顯示的執行中工作：轉錄優先，其次是整理（使用者在等的），最後才是輔助線
     func runningJob(for meetingId: Int64) -> Running? {
-        running.values.first { $0.job.meetingId == meetingId && $0.job.kind != .compress }
+        JobLane.allCases.lazy.compactMap { self.running[$0] }
+            .first { $0.job.meetingId == meetingId && $0.job.kind != .compress }
     }
 
     func cancel(meetingId: Int64) {
@@ -187,7 +189,7 @@ final class JobRunner {
         if (try? db.jobStatus(jobId)) == .running {
             do {
                 if let failure {
-                    try db.finish(jobId, status: .failed, error: failure.localizedDescription)
+                    try db.finish(jobId, status: .failed, error: failure.localizedDescription, errorKind: failure.logSummary)
                     log.error("job \(jobId) failed: \(failure.logSummary, privacy: .public)")
                 } else {
                     try db.finish(jobId, status: .done)
@@ -226,7 +228,7 @@ final class JobRunner {
         if AppSettings.compressAudio && meeting.audioURL.pathExtension.lowercased() == "wav" {
             try db.enqueue(job.meetingId, kind: .compress)
         }
-        // 校正排在整理前面（同一條線，先排先做）
+        // 校正在輔助線、整理在整理線，兩個同時開始（design §21.2、R20.1）
         if AppSettings.correctTranscript && AppSettings.provider != .none {
             try db.enqueue(job.meetingId, kind: .correct)
         }
