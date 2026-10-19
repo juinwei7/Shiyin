@@ -184,6 +184,11 @@ struct SidebarView: View {
         .toolbar {
             ToolbarItemGroup {
                 RecordingControls()
+                // 問所有會議（design §21.8）
+                Button { model.openWindowById?("ask") } label: {
+                    Label("提問", systemImage: "questionmark.bubble")
+                }
+                .help("問所有會議，回答附上是哪一場會議、哪個時間點")
                 // 錄音中工具列放不下；要匯入還是可以用 ⌘O 或「檔案」選單
                 if !model.recorder.isRecording {
                     Button { model.showFileImporter = true } label: {

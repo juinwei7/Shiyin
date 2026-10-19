@@ -25,6 +25,7 @@ struct MeetingDetailView: View {
                     case .transcript: TranscriptTab(detail: detail).id(detail.meeting.id)
                     case .review: ReviewTab(detail: detail).id(detail.meeting.id)
                     case .notes: UserNotesTab(detail: detail)
+                    case .ask: AskTab(detail: detail).id(detail.meeting.id)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -47,7 +48,7 @@ struct MeetingDetailView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    .frame(width: 380)
+                    .frame(width: 440)
                 }
                 // 垃圾桶裡的會議不能操作
                 if !isTrashed {

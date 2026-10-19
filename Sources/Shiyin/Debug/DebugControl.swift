@@ -56,6 +56,16 @@ enum DebugControl {
         case "notthis": model.selection = id; model.rejectVoiceprintMatch(Int(args[2]) ?? 1)
         // 猜說話者（design §21.5）：namespeakers <會議 id>（排工作）；applysuggestion、dismisssuggestion <會議 id> <說話者>；
         // applyallsuggestions <會議 id>
+        // 對會議提問（design §21.8）：ask <會議 id> <問題>；askall <all|folder|recent> <問題>；
+        // questions <會議 id|all> <輸出.json>；cancelask
+        case "ask": model.selection = id; model.loadMeetingQuestions(id ?? 0); model.askMeeting(args[2])
+        case "askall": model.loadAllQuestions(); model.askAll(args[2], scope: AskScope(rawValue: args[1]) ?? .all)
+        case "questions":
+            let list = args[1] == "all" ? ((try? model.db.questions(meetingId: nil)) ?? []) : ((try? model.db.questions(meetingId: Int64(args[1]))) ?? [])
+            write(["asking": model.asking != nil, "questions": list.map { ["question": $0.question, "scope": $0.scope, "provider": $0.provider,
+                                                                            "answer": (try? JSONSerialization.jsonObject(with: Data($0.answer.utf8))) ?? [:]] }],
+                  to: args[2])
+        case "cancelask": model.cancelAsk()
         case "namespeakers": if let id { try? model.db.enqueue(id, kind: .nameSpeakers); model.runner.wake() }
         case "applysuggestion": model.selection = id; model.applySpeakerSuggestion(Int(args[2]) ?? 1)
         case "dismisssuggestion": model.selection = id; model.dismissSpeakerSuggestion(Int(args[2]) ?? 1)
@@ -624,6 +634,7 @@ private struct SnapshotView: View {
                 case .transcript: TranscriptTab(detail: detail, speakerFilter: speakerFilter)
                 case .review: ReviewTab(detail: detail)
                 case .notes: UserNotesTab(detail: detail)
+                case .ask: AskTab(detail: detail)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

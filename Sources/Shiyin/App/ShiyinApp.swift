@@ -32,6 +32,15 @@ struct ShiyinApp: App {
         .defaultSize(width: 680, height: 780)
         .defaultLaunchBehavior(.suppressed)
 
+        // 問所有會議（design §21.8）
+        Window("問所有會議", id: "ask") {
+            AskAllView()
+                .environment(AppModel.shared)
+                .chineseGlyphs()
+        }
+        .defaultSize(width: 680, height: 720)
+        .defaultLaunchBehavior(.suppressed)
+
         Settings {
             SettingsView()
                 .environment(AppModel.shared)

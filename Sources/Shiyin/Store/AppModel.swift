@@ -38,7 +38,7 @@ enum MeetingStatus: Equatable {
 }
 
 enum DetailTab: String, CaseIterable, Identifiable {
-    case summary, topics, transcript, review, notes
+    case summary, topics, transcript, review, notes, ask
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -47,6 +47,7 @@ enum DetailTab: String, CaseIterable, Identifiable {
         case .transcript: return String(localized: "逐字稿")
         case .review: return String(localized: "待確認")
         case .notes: return String(localized: "筆記")
+        case .ask: return String(localized: "提問")
         }
     }
 }
@@ -937,6 +938,16 @@ final class AppModel {
         guard let id = selection else { return }
         perform(.detail([.speakers])) { try db.clearSpeakerSuggestion(id, idx: idx) }
     }
+
+    // MARK: 對會議提問的狀態（design §21.8；流程在 Asking.swift）
+
+    /// 正在問哪裡：一場會議或所有會議
+    var asking: AskTarget?
+    /// 目前會議的問答紀錄、問所有會議的問答紀錄
+    var meetingQuestions: [QuestionRecord] = []
+    var allQuestions: [QuestionRecord] = []
+    @ObservationIgnored var askTask: Task<Void, Never>?
+    @ObservationIgnored var askProcess: Subprocess?
 
     // MARK: 認識的人（設定頁，design §21.4）
 

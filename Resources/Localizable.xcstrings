@@ -1102,6 +1102,28 @@
         }
       }
     },
+    "例如：「上個月跟客戶談過哪些價格？」「寄信的機制最後怎麼決定的？」拾音會先找出相關的會議片段，再請整理工具回答，回答附上是哪一場會議、哪個時間點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: “What prices did we discuss with clients last month?” or “What did we decide about sending email?” Shiyin first finds the relevant parts of your meetings, then asks the summarizer. Answers show which meeting and what time each point comes from."
+          }
+        }
+      }
+    },
+    "例如：「誰負責寄信的部分？」「最後決定的上線日期是哪一天？」回答只根據這場會議的會議紀錄和逐字稿，每一點都附上時間，點了就能聽原話。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: “Who's handling the email part?” or “What launch date did we settle on?” Answers use only this meeting's notes and transcript, and every point has a time you can click to hear what was said."
+          }
+        }
+      }
+    },
     "例如：小明": {
       "extractionState": "manual",
       "localizations": {
@@ -1863,6 +1885,29 @@
         }
       }
     },
+    "參考了 %lld 場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Based on %lld meeting"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Based on %lld meetings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "取代「%@」→「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -1980,6 +2025,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "Name"
+          }
+        }
+      }
+    },
+    "問所有會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask All Meetings"
+          }
+        }
+      }
+    },
+    "問所有會議，例如：寄信的機制最後怎麼決定的？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask all meetings, e.g. What did we decide about sending email?"
+          }
+        }
+      }
+    },
+    "問所有會議，回答附上是哪一場會議、哪個時間點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask all meetings; answers show which meeting and what time"
+          }
+        }
+      }
+    },
+    "問這場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask This Meeting"
+          }
+        }
+      }
+    },
+    "問這場會議，例如：誰負責寄信的部分？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask this meeting, e.g. Who's handling the email part?"
           }
         }
       }
@@ -2977,6 +3077,17 @@
         }
       }
     },
+    "打開這場會議，從 %@ 開始": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open this meeting at %@"
+          }
+        }
+      }
+    },
     "找不到": {
       "extractionState": "manual",
       "localizations": {
@@ -3017,6 +3128,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No microphone available"
+          }
+        }
+      }
+    },
+    "找不到跟這個問題有關的會議。可以換個說法，或用會議裡實際講的詞再問一次。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meetings seem related to this question. Try rephrasing it, or use words people actually said in the meeting."
           }
         }
       }
@@ -3430,6 +3552,17 @@
         }
       }
     },
+    "提問": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask"
+          }
+        }
+      }
+    },
     "搜尋": {
       "extractionState": "manual",
       "localizations": {
@@ -3723,6 +3856,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The summarizer is set to “Don't summarize”, so the notes can't be revised from your answers. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "整理工具設定為「不整理」，沒辦法提問；請到設定改成 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer is set to “Don't summarize”, so you can't ask questions. Choose Claude, Codex or an API in Settings."
           }
         }
       }
@@ -4284,6 +4428,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When you name a speaker, Shiyin saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it “Auto”; you can change it if it's wrong. Voice features stay in the database on this Mac. They're never uploaded or included in exported .shiyin packages."
+          }
+        }
+      }
+    },
+    "最近 30 天": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 Days"
           }
         }
       }
@@ -4873,6 +5028,17 @@
         }
       }
     },
+    "正在找相關的會議，再用 %@ 回答…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding related meetings, then answering with %@…"
+          }
+        }
+      }
+    },
     "正在檢查…": {
       "extractionState": "manual",
       "localizations": {
@@ -4913,6 +5079,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Revising the meeting notes from your answers with %@…"
+          }
+        }
+      }
+    },
+    "正在用 %@ 回答…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answering with %@…"
           }
         }
       }
@@ -5203,6 +5380,17 @@
         }
       }
     },
+    "沒有找到相關的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No related meetings found"
+          }
+        }
+      }
+    },
     "沒有權限替換「%@」裡的拾音，已經打開下載好的 DMG，請把拾音拖進「應用程式」取代舊版": {
       "extractionState": "manual",
       "localizations": {
@@ -5265,6 +5453,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't start recording: %@"
+          }
+        }
+      }
+    },
+    "清除問答紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Questions"
           }
         }
       }
@@ -5644,6 +5843,17 @@
         }
       }
     },
+    "目前的資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Folder"
+          }
+        }
+      }
+    },
     "目前的轉錄提示：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -5872,6 +6082,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcription will start once the model is downloaded"
+          }
+        }
+      }
+    },
+    "範圍": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scope"
           }
         }
       }
