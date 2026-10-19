@@ -13,6 +13,8 @@ struct TranscriptTab: View {
     @State private var editText = ""
     @State private var showReplace = false
     @State private var showCorrectionGroups = false
+    /// 播放中的段落。由 PlaybackFollower 在換段時才更新，播放時間每次變動不會讓整份列表重算（design §21.12）
+    @State private var currentSegmentId: Int64?
     @State private var speakerFilter: Int?
     /// 正在改名的說話者和點的那一段：改名視窗掛在點的那一段（逐字稿是延遲建立的，第一段可能還不存在）
     @State private var renaming: (speaker: Int, segment: Int64)?
@@ -35,22 +37,17 @@ struct TranscriptTab: View {
         return visibleSegments.filter { $0.text.localizedCaseInsensitiveContains(q) }.compactMap(\.id)
     }
 
-    /// 每一段的校正建議（design §17.4）：待確認的標在文字上並列出，已接受的可以還原，已拒絕的不顯示
-    private var correctionsBySegment: [Int64: [Correction]] {
-        Dictionary(grouping: detail.corrections.filter { $0.status != "rejected" }, by: \.segmentId)
-    }
 
     private var pendingCorrections: Int { detail.corrections.filter { $0.status == "pending" }.count }
 
 
-    private var currentSegmentId: Int64? {
-        let t = model.player.currentTime
-        guard model.player.isPlaying || t > 0 else { return nil }
-        return detail.segments.last(where: { $0.start <= t + 0.05 })?.id
-    }
 
     var body: some View {
+        #if DEBUG
+        let _ = DebugMetrics.bump("transcriptBody")
+        #endif
         VStack(spacing: 0) {
+            PlaybackFollower(detail: detail, current: $currentSegmentId)
             searchBar
             Divider()
             if pendingCorrections > 0 && !snapshotMode {
@@ -288,7 +285,8 @@ struct TranscriptTab: View {
                     .controlSize(.small)
                 }
             } else {
-                let corrections = segment.id.flatMap { correctionsBySegment[$0] } ?? []
+                // 每一段的校正建議（design §17.4）：待確認的標在文字上並列出，已接受的可以還原，已拒絕的不顯示
+                let corrections = segment.id.flatMap { detail.correctionsBySegment[$0] } ?? []
                 VStack(alignment: .leading, spacing: 4) {
                     Text(highlighted(segment.text, corrections: corrections)).meetingText()
                         .textSelection(.enabled)
@@ -437,5 +435,21 @@ struct ReplaceSheet: View {
         if r.segmentsChanged > 0 { parts.append(String(localized: "逐字稿改了 \(r.segmentsChanged) 段")) }
         if r.notesChanged { parts.append(String(localized: "會議紀錄也一起改了（可以從「更多」復原上一版）")) }
         return parts.joined(separator: String(localized: "，")) + String(localized: "。")
+    }
+}
+
+/// 播放跟隨（design §21.12）：只有這個 view 讀播放時間（每 0.1 秒變一次），算出目前的段落，換段時才更新外面的狀態
+private struct PlaybackFollower: View {
+    @Environment(AppModel.self) private var model
+    let detail: MeetingDetail
+    @Binding var current: Int64?
+
+    var body: some View {
+        let time = model.player.currentTime
+        let id = model.player.isPlaying || time > 0 ? detail.segmentId(at: time) : nil
+        Color.clear.frame(width: 0, height: 0)
+            .onChange(of: id, initial: true) { _, new in
+                if current != new { current = new }
+            }
     }
 }

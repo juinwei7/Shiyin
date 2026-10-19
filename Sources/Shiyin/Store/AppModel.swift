@@ -62,6 +62,28 @@ struct MeetingDetail: Equatable {
     var bookmarks: [Bookmark]
     /// 逐字稿校正建議（design §17.4）
     var corrections: [Correction] = []
+    /// 逐字稿分頁用的索引，載入時算一次，不要每次畫面更新都重算（design §21.12）：
+    /// 每段的校正（不含已忽略的）、依開始時間排好的段落
+    var correctionsBySegment: [Int64: [Correction]] = [:]
+    var timelineStarts: [Double] = []
+    var timelineIds: [Int64] = []
+
+    mutating func buildIndexes() {
+        correctionsBySegment = Dictionary(grouping: corrections.filter { $0.status != "rejected" }, by: \.segmentId)
+        let ordered = segments.compactMap { s in s.id.map { (start: s.start, id: $0) } }.sorted { $0.start < $1.start }
+        timelineStarts = ordered.map(\.start)
+        timelineIds = ordered.map(\.id)
+    }
+
+    /// 播放到 time 時的段落：開始時間不晚於 time + 0.05 的最後一段（二分搜尋）
+    func segmentId(at time: Double) -> Int64? {
+        var low = 0, high = timelineStarts.count
+        while low < high {
+            let mid = (low + high) / 2
+            if timelineStarts[mid] <= time + 0.05 { low = mid + 1 } else { high = mid }
+        }
+        return low > 0 ? timelineIds[low - 1] : nil
+    }
 
     /// 待確認的校正依「原文 → 建議」分組，處數多的在前；組內依逐字稿的順序（design §21.11、R20.2）
     var correctionGroups: [[Correction]] {
@@ -201,6 +223,9 @@ final class AppModel {
     // MARK: 讀取
 
     func reload() {
+        #if DEBUG
+        DebugMetrics.bump("reloadList")
+        #endif
         do {
             meetings = try db.meetingRows()
             trash = try db.meetingRows(trash: true)
@@ -281,17 +306,22 @@ final class AppModel {
     }
 
     func reloadDetail(forceAudio: Bool = false) {
+        #if DEBUG
+        DebugMetrics.bump("reloadDetail")
+        #endif
         guard let id = selection, let meeting = try? db.meeting(id) else {
             detail = nil
             player.unload()
             return
         }
         let previous = detail?.meeting
-        detail = MeetingDetail(
+        var loaded = MeetingDetail(
             meeting: meeting, segments: (try? db.segments(id)) ?? [], notes: meeting.decodedNotes,
             versionCount: (try? db.versionCount(id)) ?? 0, latestJob: try? db.latestJob(id),
             speakers: Dictionary(uniqueKeysWithValues: ((try? db.speakers(id)) ?? []).map { ($0.idx, $0.name) }),
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
+        loaded.buildIndexes()
+        detail = loaded
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL) } else { player.unload() }
         }
@@ -731,7 +761,7 @@ final class AppModel {
     }
 
     func updateSegment(_ segmentId: Int64, text: String) {
-        perform { try db.updateSegmentText(segmentId, text: text) }
+        perform(.segments([segmentId])) { try db.updateSegmentText(segmentId, text: text) }
     }
 
     // MARK: 逐字稿校正（design §17.4）
@@ -751,8 +781,14 @@ final class AppModel {
         runner.wake()
     }
 
+    /// 這幾則校正改到的段落（只重讀這幾段，design §21.12）
+    private func segmentIds(ofCorrections ids: [Int64]) -> [Int64] {
+        let wanted = Set(ids)
+        return Array(Set(detail?.corrections.filter { $0.id.map(wanted.contains) ?? false }.map(\.segmentId) ?? []))
+    }
+
     func acceptCorrection(_ id: Int64) {
-        perform {
+        perform(.segments(segmentIds(ofCorrections: [id]), [.corrections])) {
             if try !db.acceptCorrection(id) {
                 noticeMessage = String(localized: "這一段已經改過，找不到建議要改的文字")
             }
@@ -760,11 +796,11 @@ final class AppModel {
     }
 
     func rejectCorrection(_ id: Int64) {
-        perform { try db.rejectCorrection(id) }
+        perform(.detail([.corrections])) { try db.rejectCorrection(id) }
     }
 
     func revertCorrection(_ id: Int64) {
-        perform {
+        perform(.segments(segmentIds(ofCorrections: [id]), [.corrections])) {
             if try !db.revertCorrection(id) {
                 noticeMessage = String(localized: "這一段已經改過，沒辦法還原")
             }
@@ -783,14 +819,14 @@ final class AppModel {
 
     /// 同一個詞的每一處一起接受或忽略（design §21.11、R20.2）
     func acceptCorrections(_ ids: [Int64]) {
-        perform {
+        perform(.segments(segmentIds(ofCorrections: ids), [.corrections])) {
             let failed = try db.acceptCorrections(ids)
             if failed > 0 { noticeMessage = String(localized: "有 \(failed) 則建議的段落已經改過，沒有套用") }
         }
     }
 
     func rejectCorrections(_ ids: [Int64]) {
-        perform { try db.rejectCorrections(ids) }
+        perform(.detail([.corrections])) { try db.rejectCorrections(ids) }
     }
 
     /// 捲到這一段並暫時加底色。先清掉再設，同一段點第二次也會捲過去；幾秒後拿掉底色，不要一直留著
@@ -809,7 +845,7 @@ final class AppModel {
         // 清空就回到預設名稱，用會議語言（會帶進會議紀錄和匯出），不是介面語言
         let language = detail?.meeting.meetingLanguage ?? .zh
         let fallback = language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
-        perform { try db.renameSpeaker(id, idx: idx, name: trimmed.isEmpty ? fallback : trimmed) }
+        perform(.detail([.speakers])) { try db.renameSpeaker(id, idx: idx, name: trimmed.isEmpty ? fallback : trimmed) }
     }
 
     func updateUserNotes(_ text: String) {
@@ -830,11 +866,11 @@ final class AppModel {
 
     func addBookmark(at time: Double, meetingId: Int64? = nil, label: String = "") {
         guard let id = meetingId ?? selection else { return }
-        perform { try db.addBookmark(id, time: time, label: label) }
+        perform(.detail([.bookmarks])) { try db.addBookmark(id, time: time, label: label) }
     }
 
     func deleteBookmark(_ id: Int64) {
-        perform { try db.deleteBookmark(id) }
+        perform(.detail([.bookmarks])) { try db.deleteBookmark(id) }
     }
 
     func replace(find: String, with replacement: String, addToGlossary: Bool) -> ReplaceResult? {
@@ -1036,9 +1072,59 @@ final class AppModel {
 
     // MARK: 內部
 
-    func perform(_ work: () throws -> Void) {
+    /// 操作完要重讀什麼（design §21.12）：全部（會議列表和目前的會議），或只重讀目前這場會議的某幾樣
+    enum ReloadScope {
+        case all
+        case detail(DetailParts)
+        /// 只重讀改到的這幾段（長會議整份重讀要幾十毫秒），以及其他幾樣
+        case segments([Int64], DetailParts = [])
+    }
+
+    struct DetailParts: OptionSet {
+        let rawValue: Int
+        static let speakers = DetailParts(rawValue: 1 << 0)
+        static let bookmarks = DetailParts(rawValue: 1 << 1)
+        static let segments = DetailParts(rawValue: 1 << 2)
+        static let corrections = DetailParts(rawValue: 1 << 3)
+        static let meeting = DetailParts(rawValue: 1 << 4)   // 會議本身、會議紀錄、版本數
+    }
+
+    func perform(_ scope: ReloadScope = .all, _ work: () throws -> Void) {
+        #if DEBUG
+        let started = Date()
+        defer { DebugMetrics.recordPerform(Date().timeIntervalSince(started) * 1000) }
+        #endif
         do { try work() } catch { errorMessage = error.localizedDescription }
-        reload()
+        switch scope {
+        case .all: reload()
+        case .detail(let parts): reloadDetail(parts)
+        case .segments(let ids, let parts): reloadDetail(parts, segmentIds: ids)
+        }
+    }
+
+    /// 只重讀目前這場會議的某幾樣（segmentIds：只換掉這幾段）；目前沒有顯示這場會議時整個重讀
+    func reloadDetail(_ parts: DetailParts, segmentIds: [Int64] = []) {
+        guard let id = selection, var updated = detail, updated.meeting.id == id else { return reloadDetail() }
+        if !segmentIds.isEmpty, let fresh = try? db.segments(ids: segmentIds) {
+            let index = Dictionary(updated.segments.enumerated().compactMap { i, s in s.id.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
+            for segment in fresh { if let id = segment.id, let i = index[id] { updated.segments[i] = segment } }
+        }
+        #if DEBUG
+        DebugMetrics.bump("reloadDetailParts")
+        #endif
+        if parts.contains(.speakers) {
+            updated.speakers = Dictionary(uniqueKeysWithValues: ((try? db.speakers(id)) ?? []).map { ($0.idx, $0.name) })
+        }
+        if parts.contains(.bookmarks) { updated.bookmarks = (try? db.bookmarks(id)) ?? [] }
+        if parts.contains(.segments) { updated.segments = (try? db.segments(id)) ?? [] }
+        if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }
+        if parts.contains(.meeting), let meeting = try? db.meeting(id) {
+            updated.meeting = meeting
+            updated.notes = meeting.decodedNotes
+            updated.versionCount = (try? db.versionCount(id)) ?? 0
+        }
+        if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }
+        detail = updated
     }
 
     private func jobFinished(_ job: Job, error: Error?) {

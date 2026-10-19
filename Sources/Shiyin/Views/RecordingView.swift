@@ -8,9 +8,13 @@ struct RecordingPanel: View {
     @State private var followLatest = true
 
     var body: some View {
+        #if DEBUG
+        let _ = DebugMetrics.bump("recordingPanelBody")
+        #endif
         let recorder = model.recorder
         VStack(spacing: 0) {
-            controls(recorder)
+            // 計時、音量每 0.05 秒變一次，只讓這一塊重算（design §21.12）
+            Isolated { controls(recorder) }
             if let change = recorder.languageSwitch {
                 // 自動偵測換了語言（design §18.8）：可以改回來
                 HStack(spacing: 12) {
@@ -26,7 +30,7 @@ struct RecordingPanel: View {
             Divider()
             // 不用 HSplitView：它在 NavigationSplitView 裡會把內容撐到視窗的預設寬度，視窗窄的時候左右被切掉
             HStack(spacing: 0) {
-                liveTranscript(recorder)
+                Isolated { liveTranscript(recorder) }
                     .frame(minWidth: 300, maxWidth: .infinity)
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
@@ -125,6 +129,9 @@ struct RecordingPanel: View {
     }
 
     private func liveTranscript(_ recorder: Recorder) -> some View {
+        #if DEBUG
+        DebugMetrics.bump("liveTranscriptBuild")
+        #endif
         // 每個重點只標在一段上：開始時間不晚於它的最後一段
         let starred = Set(detail.bookmarks.compactMap { mark in recorder.liveLines.last(where: { $0.start <= mark.time })?.id })
         return ScrollViewReader { proxy in
@@ -145,12 +152,19 @@ struct RecordingPanel: View {
                         }
                         .id(line.id)
                     }
-                    if !recorder.volatileText.isEmpty {
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            Text("…").frame(width: 52, alignment: .trailing).foregroundStyle(.tertiary)
-                            Text(recorder.volatileText).foregroundStyle(.secondary).meetingText()
+                    // 還沒定稿的文字一直在變，只讓這一行重算，不拖著整份即時逐字稿（design §21.12）
+                    Isolated {
+                        if !recorder.volatileText.isEmpty {
+                            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                Text("…").frame(width: 52, alignment: .trailing).foregroundStyle(.tertiary)
+                                Text(recorder.volatileText).foregroundStyle(.secondary).meetingText()
+                            }
+                            .id("volatile")
+                            .onChange(of: recorder.volatileText.count) { _, _ in
+                                guard followLatest else { return }
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
                         }
-                        .id("volatile")
                     }
                     Color.clear.frame(height: 1).id("bottom")
                         .onAppear { followLatest = true }
@@ -160,7 +174,7 @@ struct RecordingPanel: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             // 使用者往回看時（底部不在畫面內）不要自動捲動（R2.2）
-            .onChange(of: recorder.liveLines.count + recorder.volatileText.count) { _, _ in
+            .onChange(of: recorder.liveLines.count) { _, _ in
                 guard followLatest else { return }
                 if reduceMotion { proxy.scrollTo("bottom", anchor: .bottom) }
                 else { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) } }
@@ -268,4 +282,11 @@ struct UserNotesTab: View {
         .frame(maxWidth: 760, alignment: .leading)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
+}
+
+/// 讓內容在自己的 body 裡算：裡面讀到、一直在變的資料（計時、音量、播放位置、還沒定稿的文字）
+/// 只會讓這一塊重算，不會拖著外面整個畫面一起重算（design §21.12）
+struct Isolated<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    var body: some View { content() }
 }

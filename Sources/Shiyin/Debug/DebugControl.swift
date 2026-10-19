@@ -18,6 +18,7 @@ enum DebugControl {
             guard let command = note.object as? String else { return }
             MainActor.assumeIsolated { handle(command.split(separator: separator, omittingEmptySubsequences: false).map(String.init)) }
         }
+        DebugMetrics.startMainThreadWatch()
         log.info("debug control installed")
     }
 
@@ -95,6 +96,9 @@ enum DebugControl {
         case "notesvalue": write(["found": notesTextView() != nil, "text": notesTextView()?.string ?? ""], to: args[1])
         // press <標籤> [第幾個，從 0 開始] [結果.json]：在 app 內走輔助使用的元件樹，按下標籤相符的按鈕。
         // 跟從外面用 AX 按的是同一條路，螢幕上鎖、視窗在別的桌面時也能用
+        case "metrics":   // metrics <輸出.json> [reset]：效能計數（design §21.12）；加 reset 讀完歸零
+            write(DebugMetrics.snapshot, to: args[1])
+            if args.count > 2 && args[2] == "reset" { DebugMetrics.reset() }
         case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
             var lines: [String] = []
             func dump(_ element: NSAccessibilityProtocol, depth: Int) {
@@ -244,16 +248,24 @@ enum DebugControl {
         case "preview":   // preview <settings|onboarding [步驟]>
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
+            // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
             let onboarding = args.count > 1 && args[1] == "onboarding"
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 560), styleMask: [.borderless],
+            let detailPage = args.count > 1 && args[1] == "detail"
+            let size = detailPage ? NSSize(width: 1100, height: 760) : NSSize(width: 640, height: 560)
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
                                   backing: .buffered, defer: false)
             window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
-            window.identifier = NSUserInterfaceItemIdentifier(onboarding ? "onboarding-preview" : "settings-preview")
+            window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+            window.identifier = NSUserInterfaceItemIdentifier(onboarding ? "onboarding-preview" : detailPage ? "detail-preview" : "settings-preview")
             window.title = window.identifier!.rawValue
             window.isReleasedWhenClosed = false
-            window.contentView = onboarding
-                ? NSHostingView(rootView: AnyView(OnboardingView(startStep: args.count > 2 ? Int(args[2]) ?? 0 : 0).environment(model)))
-                : NSHostingView(rootView: AnyView(SettingsView().environment(model)))
+            if detailPage {
+                window.contentView = NSHostingView(rootView: AnyView(DetailPreview().environment(model)))
+            } else {
+                window.contentView = onboarding
+                    ? NSHostingView(rootView: AnyView(OnboardingView(startStep: args.count > 2 ? Int(args[2]) ?? 0 : 0).environment(model)))
+                    : NSHostingView(rootView: AnyView(SettingsView().environment(model)))
+            }
             window.orderFrontRegardless()
         case "notifystatus":
             Task {
@@ -511,6 +523,14 @@ enum DebugControl {
         guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
               let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return }
         try? png.write(to: URL(fileURLWithPath: path))
+    }
+}
+
+/// preview detail：跟主視窗一樣的會議頁，跟著 selection 換
+private struct DetailPreview: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        if let detail = model.detail { MeetingDetailView(detail: detail) } else { Text("沒有選取會議") }  // l10n-skip
     }
 }
 

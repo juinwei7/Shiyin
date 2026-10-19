@@ -250,6 +250,11 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    /// 只讀這幾段（改一段文字、接受校正之後，design §21.12）
+    func segments(ids: [Int64]) throws -> [Segment] {
+        try pool.read { db in try Segment.filter(ids.contains(Column("id"))).fetchAll(db) }
+    }
+
     func versionCount(_ meetingId: Int64) throws -> Int {
         try pool.read { db in try NotesVersion.filter(Column("meeting_id") == meetingId).fetchCount(db) }
     }
