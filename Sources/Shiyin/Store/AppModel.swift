@@ -308,6 +308,8 @@ final class AppModel {
     func reloadDetail(forceAudio: Bool = false) {
         #if DEBUG
         DebugMetrics.bump("reloadDetail")
+        let started = Date()
+        defer { DebugMetrics.time("reloadDetail", since: started) }
         #endif
         guard let id = selection, let meeting = try? db.meeting(id) else {
             detail = nil
@@ -406,19 +408,32 @@ final class AppModel {
         openMainWindow?()
     }
 
+    /// 正在匯入的檔案數，側邊欄下方顯示（design §21.13、R20.4）
+    var importingCount = 0
+
+    /// 複製檔案在背景做，大檔案（或從外接硬碟複製）時不卡住畫面（design §21.13、R20.4）
     private func importFiles(_ urls: [URL], options: ImportOptions) {
+        guard !urls.isEmpty else { return }
         var options = options
         if options.folder.isEmpty { options.folder = currentFolder }
-        var last: Meeting?
-        var failures: [String] = []
-        for url in urls {
-            do { last = try Importer.importFile(url, options: options, db: db) }
-            catch { failures.append(error.localizedDescription) }
+        let db = db
+        importingCount += urls.count
+        Task {
+            var last: Meeting?
+            var failures: [String] = []
+            for url in urls {
+                do {
+                    last = try await Task.detached(priority: .userInitiated) { [options] in
+                        try Importer.importFile(url, options: options, db: db)
+                    }.value
+                    runner.wake()
+                    reload()
+                } catch { failures.append(error.localizedDescription) }
+                importingCount -= 1
+            }
+            if !failures.isEmpty { errorMessage = failures.joined(separator: "\n") }
+            if let last { showTrash = false; selection = last.id }
         }
-        if !failures.isEmpty { errorMessage = failures.joined(separator: "\n") }
-        runner.wake()
-        reload()
-        if let last { showTrash = false; selection = last.id }
     }
 
     static func isMedia(_ url: URL) -> Bool {
@@ -892,15 +907,23 @@ final class AppModel {
 
     // MARK: 匯入其他格式（R3.3～R3.5）
 
+    /// 解開封包、複製錄音在背景做（design §21.13、R20.4）
     func importPackage(_ url: URL) {
-        do {
-            let meeting = try MeetingPackage.importPackage(url, db: db, folder: currentFolder)
-            reload()
-            showTrash = false
-            selection = meeting.id
-            noticeMessage = String(localized: "已匯入「\(meeting.displayTitle)」")
-        } catch {
-            errorMessage = error.localizedDescription
+        let (db, folder) = (db, currentFolder)
+        importingCount += 1
+        Task {
+            defer { importingCount -= 1 }
+            do {
+                let meeting = try await Task.detached(priority: .userInitiated) {
+                    try MeetingPackage.importPackage(url, db: db, folder: folder)
+                }.value
+                reload()
+                showTrash = false
+                selection = meeting.id
+                noticeMessage = String(localized: "已匯入「\(meeting.displayTitle)」")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -983,17 +1006,22 @@ final class AppModel {
         switch item {
         case .notes:
             switch format {
-            case "pdf": try HTML.pdf(NotesExporter.html(b), to: url)
-            case "docx": try HTML.docx(NotesExporter.html(b)).write(to: url)
+            case "pdf": try await HTML.pdf(NotesExporter.html(b), to: url)
+            case "docx": try await HTML.docx(NotesExporter.html(b)).write(to: url)
             default: try NotesExporter.markdown(b).write(to: url, atomically: true, encoding: .utf8)
             }
         case .transcript:
-            if format == "docx" { try HTML.docx(TranscriptExporter.html(b, times: times, speakers: speakers)).write(to: url) }
-            else { try TranscriptExporter.text(b, format: format, times: times, speakers: speakers).write(to: url, atomically: true, encoding: .utf8) }
+            if format == "docx" { try await HTML.docx(TranscriptExporter.html(b, times: times, speakers: speakers)).write(to: url) }
+            else {
+                // 文字格式、封包在背景寫，長會議不卡住畫面（design §21.13）；Word、PDF 用非同步的 HTML 轉換
+                try await Task.detached(priority: .userInitiated) {
+                    try TranscriptExporter.text(b, format: format, times: times, speakers: speakers).write(to: url, atomically: true, encoding: .utf8)
+                }.value
+            }
         case .audio:
             try await AudioExporter.export(b, format: format, to: url)
         case .package:
-            try MeetingPackage.export(b, to: url)
+            try await Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url) }.value
         }
     }
 

@@ -153,6 +153,17 @@ struct SidebarView: View {
                 SearchResultsList()
             }
             Divider()
+            if model.importingCount > 0 {
+                // 大檔案在背景匯入（design §21.13、R20.4）
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("正在匯入 \(model.importingCount) 個檔案…").foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .font(.callout)
+                .padding(.horizontal, 14)
+                .padding(.top, 8)
+            }
             HStack {
                 Button {
                     model.showTrash.toggle()

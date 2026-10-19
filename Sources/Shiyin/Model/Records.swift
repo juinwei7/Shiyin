@@ -79,6 +79,22 @@ struct Segment: SnakeCaseRecord, Identifiable, Hashable {
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
 
+extension Segment {
+    /// 手寫的讀取：GRDB 用 Codable 逐筆解碼時每一筆都要重建欄位對照，2,000 段以上的會議光讀逐字稿就要上百毫秒（design §21.12）
+    init(row: Row) throws {
+        id = row["id"]
+        meetingId = row["meeting_id"]
+        seq = row["seq"]
+        start = row["start"]
+        end = row["end"]
+        text = row["text"]
+        lowConfidence = row["low_confidence"]
+        speaker = row["speaker"]
+        kind = row["kind"]
+        channel = row["channel"]
+    }
+}
+
 /// 說話者名字（R5.2），沒改過名字時顯示「說話者 n」
 struct SpeakerName: SnakeCaseRecord, Hashable {
     static let databaseTableName = "speakers"

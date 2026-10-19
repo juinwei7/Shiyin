@@ -817,7 +817,7 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 ### 21.13 匯入匯出在背景（R20.4）
 
 - 匯入：複製或搬移檔案、讀時長、解壓封包（`ditto`）在背景的 Task 做，完成後回主執行緒寫資料庫、更新列表。側邊欄下方顯示「正在匯入 N 個檔案…」。
-- 匯出：寫錄音（本來就是 async）、打包封包、逐字稿的文字檔在背景；PDF（WKWebView）和 Word（NSAttributedString 讀 HTML）要在主執行緒，保留在主執行緒但先在背景組好 HTML。匯出對話框按下後顯示進行中，完成或失敗都有提示。
+- 匯出：寫錄音（本來就是 async）、打包封包、逐字稿的文字檔在背景。PDF 和 Word 原本用 `NSAttributedString(html:)` 同步轉換 HTML，只能在主執行緒，長會議的逐字稿會卡住畫面；改用 WebKit 的 `NSAttributedString.loadFromHTML`（非同步，轉換在 WebKit 裡做）。實測 2,086 段的逐字稿：同步轉換卡 665 ms，非同步最長卡 102 ms，產生的 Word 檔解開後逐位元組相同。匯出對話框按下後顯示「正在匯出…」，完成或失敗都有提示。
 
 ### 21.14 API 可以取消、自動重試（R20.5）
 

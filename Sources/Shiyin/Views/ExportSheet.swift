@@ -44,6 +44,10 @@ struct ExportSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 ShareButton { await exportToTemp() }
+                if working {
+                    ProgressView().controlSize(.small)
+                    Text("正在匯出…").foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("取消", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)

@@ -72,8 +72,7 @@ enum MeetingPackage {
         try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path])
     }
 
-    @MainActor
-    /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）
+    /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）。在背景執行（design §21.13）
     static func importPackage(_ url: URL, db: AppDatabase, folder: String = "") throws -> Meeting {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }

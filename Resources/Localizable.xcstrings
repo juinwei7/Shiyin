@@ -4606,6 +4606,40 @@
         }
       }
     },
+    "正在匯入 %lld 個檔案…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Importing %lld file…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Importing %lld files…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "正在匯出…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting…"
+          }
+        }
+      }
+    },
     "正在檢查…": {
       "extractionState": "manual",
       "localizations": {

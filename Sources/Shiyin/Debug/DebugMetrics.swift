@@ -6,6 +6,8 @@ import Foundation
 enum DebugMetrics {
     /// 各種事件發生的次數，例如逐字稿列表重算、會議列表重讀
     static var counts: [String: Int] = [:]
+    /// 各種工作最近一次花的毫秒數，例如 reloadDetail
+    static var timings: [String: Double] = [:]
     /// 最近一次 AppModel.perform（含重讀）花的毫秒數，以及最慢的一次
     static var lastPerformMs = 0.0
     static var maxPerformMs = 0.0
@@ -23,8 +25,13 @@ enum DebugMetrics {
         maxPerformMs = max(maxPerformMs, ms)
     }
 
+    static func time(_ name: String, since start: Date) {
+        timings[name] = Date().timeIntervalSince(start) * 1000
+    }
+
     static func reset() {
         counts = [:]
+        timings = [:]
         lastPerformMs = 0
         maxPerformMs = 0
         maxMainGapMs = 0
@@ -46,7 +53,7 @@ enum DebugMetrics {
     }
 
     static var snapshot: [String: Any] {
-        ["counts": counts, "lastPerformMs": lastPerformMs, "maxPerformMs": maxPerformMs, "maxMainGapMs": maxMainGapMs]
+        ["counts": counts, "timings": timings, "lastPerformMs": lastPerformMs, "maxPerformMs": maxPerformMs, "maxMainGapMs": maxMainGapMs]
     }
 }
 #endif
