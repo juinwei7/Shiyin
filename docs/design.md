@@ -619,7 +619,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - `RecordingWriter` 寫入失敗時記下錯誤（原本就有），另外提供 `writeFailed`。`tick` 看到就呼叫 `stop()`，並設定 `failureMessage`：「錄音寫不進磁碟（可能是空間不足），已經停止錄音。停止前錄到的部分有保留，會照常轉錄。」`stop()` 原本就會保留已經寫入的檔案並排轉錄。
 - 開始錄音時用 `volumeAvailableCapacityForImportantUsage` 看錄音資料夾所在的磁碟：不到 1 GB 就提醒「磁碟只剩 N，大約只能錄 M 分鐘」（雙聲道每小時約 230 MB、單聲道約 115 MB），照樣開始錄。錄音中每 30 秒看一次，不到 300 MB 提醒一次。
-- 錄音結束後（`AppModel.recordingFinished`）資料庫寫入失敗（磁碟滿時常常一起發生）：把錄音檔搬回 `recording/`（檔名照舊，帶會議 id），下次開啟由復原流程接回這場會議（§20.6），不會留下找不到的檔案。
+- 錄音結束後（`AppModel.recordingFinished`）資料庫寫入失敗（磁碟滿時常常一起發生）：把錄音檔搬回 `recording/`（檔名照舊，帶會議 id），下次開啟由復原流程接回這場會議（§20.6），不會留下找不到的檔案；會議改了一半也一樣改回去。
 
 ### 20.4 筆記存檔（R18.4）
 
@@ -635,7 +635,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ### 20.6 復原錄音（R18.6）
 
 - `Importer.importFile(move: true)`：搬過去之後任何一步失敗，就把檔案搬回原處再刪會議，不刪檔案。
-- `recoverRecordings` 接回原本的會議時也一樣：資料庫更新失敗就把檔案搬回 `recording/`，下次開啟再試。
+- `recoverRecordings` 接回原本的會議時也一樣：資料庫更新失敗就把檔案搬回 `recording/`，下次開啟再試。會議已經改了一半（`audio_file` 寫進去、排工作失敗）就改回原本的內容，不要指向搬走的檔案。
 - 空會議的清理改成直接查資料庫：`source = 'recording'`、`audio_file = ''`、不在垃圾桶的會議，排除 `recording/` 裡還有錄音檔的會議 id（這次沒復原成功的）和正在錄的那一場。
 - DEBUG：啟動參數 `-debugFailEnqueue YES` 讓排工作失敗，用來驗證失敗時不會刪掉錄音。
 

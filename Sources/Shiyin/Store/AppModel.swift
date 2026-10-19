@@ -442,10 +442,19 @@ final class AppModel {
             let destination = Paths.audioDir.appendingPathComponent("\(result.meetingId).wav")
             try? FileManager.default.removeItem(at: destination)
             try FileManager.default.moveItem(at: file, to: destination)
-            meeting.audioFile = destination.lastPathComponent
-            if result.duration > 0 { meeting.durationSeconds = Int(result.duration.rounded()) }
-            try db.updateMeeting(meeting)
-            try db.enqueue(result.meetingId, kind: .transcribe)
+            let original = meeting
+            do {
+                meeting.audioFile = destination.lastPathComponent
+                if result.duration > 0 { meeting.durationSeconds = Int(result.duration.rounded()) }
+                try db.updateMeeting(meeting)
+                try db.enqueue(result.meetingId, kind: .transcribe)
+            } catch {
+                // 資料庫寫不進去（磁碟滿時常一起發生）：搬回 recording/，下次開啟由復原流程接回（design §20.3）。
+                // 會議已經改到一半的話改回去，不要指向搬走的檔案
+                try? FileManager.default.moveItem(at: destination, to: file)
+                try? db.updateMeeting(original)
+                throw error
+            }
             runner.wake()
             reload()
             selection = result.meetingId
@@ -466,10 +475,18 @@ final class AppModel {
                     let destination = Paths.audioDir.appendingPathComponent("\(id).wav")
                     try? FileManager.default.removeItem(at: destination)
                     try FileManager.default.moveItem(at: file, to: destination)
-                    meeting.audioFile = destination.lastPathComponent
-                    if meeting.title.isEmpty { meeting.title = String(localized: "復原的錄音") }
-                    try db.updateMeeting(meeting)
-                    try db.enqueue(id, kind: .transcribe)
+                    let original = meeting
+                    do {
+                        meeting.audioFile = destination.lastPathComponent
+                        if meeting.title.isEmpty { meeting.title = String(localized: "復原的錄音") }
+                        try db.updateMeeting(meeting)
+                        try db.enqueue(id, kind: .transcribe)
+                    } catch {
+                        // 搬回 recording/、會議改回去，下次開啟再試（design §20.6）
+                        try? FileManager.default.moveItem(at: destination, to: file)
+                        try? db.updateMeeting(original)
+                        throw error
+                    }
                 } else {
                     try Importer.importFile(file, options: ImportOptions(title: String(localized: "復原的錄音"), sourceName: String(localized: "復原的錄音.wav")),
                                             db: db, move: true)
@@ -479,9 +496,12 @@ final class AppModel {
                 log.error("recover recording failed: \(error.localizedDescription)")
             }
         }
-        // 錄音中途當掉、連錄音檔都沒有的空會議
-        for row in meetings where row.meeting.source == "recording" && row.meeting.audioFile.isEmpty && recorder.meetingId != row.id {
-            try? db.deleteMeeting(row.id)
+        // 錄音中途當掉、連錄音檔都沒有的空會議（design §20.6）。直接查資料庫（這時 meetings 還沒載入）；
+        // recording/ 裡還有錄音檔的會議是這次沒復原成功的，留著下次再試
+        let remaining = Set(((try? FileManager.default.contentsOfDirectory(at: Paths.recordingDir, includingPropertiesForKeys: nil)) ?? [])
+            .compactMap { Int64($0.deletingPathExtension().lastPathComponent.split(separator: "-").first ?? "") })
+        for id in (try? db.emptyRecordingMeetings()) ?? [] where !remaining.contains(id) && recorder.meetingId != id {
+            try? db.deleteMeeting(id)
         }
     }
 

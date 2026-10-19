@@ -250,6 +250,13 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    /// 錄音中途當掉、連錄音檔都沒有的會議（design §20.6）
+    func emptyRecordingMeetings() throws -> [Int64] {
+        try pool.read { db in
+            try Int64.fetchAll(db, sql: "SELECT id FROM meetings WHERE source = 'recording' AND audio_file = '' AND deleted_at IS NULL")
+        }
+    }
+
     /// 永久刪除（垃圾桶清除或使用者確認）
     func deleteMeeting(_ id: Int64) throws {
         try pool.write { db in
@@ -633,7 +640,13 @@ final class AppDatabase: @unchecked Sendable {
 
     @discardableResult
     func enqueue(_ meetingId: Int64, kind: JobKind, payload: String? = nil) throws -> Job {
-        try pool.write { db in
+        #if DEBUG
+        // 啟動參數 -debugFailEnqueue YES：排工作失敗，驗證失敗時不會刪掉錄音（design §20.6）
+        if UserDefaults.standard.bool(forKey: "debugFailEnqueue") {
+            throw DatabaseError(resultCode: .SQLITE_FULL, message: "debugFailEnqueue")
+        }
+        #endif
+        return try pool.write { db in
             var job = Job(meetingId: meetingId, kind: kind, payload: payload)
             try job.insert(db)
             return job

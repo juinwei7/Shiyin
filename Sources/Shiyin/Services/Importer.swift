@@ -94,18 +94,25 @@ enum Importer {
             templateId: options.templateId ?? AppSettings.defaultTemplate, source: "import", folder: options.folder,
             language: options.language.rawValue)
         let meeting = try db.insertMeeting(draft, audioExtension: safeExtension(url))
+        var moved = false
         do {
             try Paths.ensureDirectories()
             // 同一個 APFS 磁碟區時，copyItem 會自動用 clone，不佔額外空間
             if move {
                 try FileManager.default.moveItem(at: url, to: meeting.audioURL)
+                moved = true
             } else {
                 try FileManager.default.copyItem(at: url, to: meeting.audioURL)
             }
             try db.enqueue(meeting.id!, kind: .transcribe)
         } catch {
             try? db.deleteMeeting(meeting.id!)
-            try? FileManager.default.removeItem(at: meeting.audioURL)
+            if moved {
+                // 復原的錄音是唯一的一份：搬回原處，下次開啟再試（design §20.6、R18.6）
+                try? FileManager.default.moveItem(at: meeting.audioURL, to: url)
+            } else {
+                try? FileManager.default.removeItem(at: meeting.audioURL)
+            }
             throw ImportError.copyFailed(url.lastPathComponent, error.localizedDescription)
         }
         return meeting
