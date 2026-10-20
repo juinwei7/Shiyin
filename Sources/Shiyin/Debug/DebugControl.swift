@@ -398,7 +398,7 @@ enum DebugControl {
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        case "preview":   // preview <settings|onboarding [步驟]>
+        case "preview":   // preview <settings|onboarding [步驟]|import|rename>（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
@@ -412,7 +412,16 @@ enum DebugControl {
             window.identifier = NSUserInterfaceItemIdentifier(onboarding ? "onboarding-preview" : detailPage ? "detail-preview" : "settings-preview")
             window.title = window.identifier!.rawValue
             window.isReleasedWhenClosed = false
-            if detailPage {
+            if args.count > 1 && (args[1] == "import" || args[1] == "rename") {
+                window.identifier = NSUserInterfaceItemIdentifier("\(args[1])-preview")
+                window.title = window.identifier!.rawValue
+                let view = args[1] == "import"
+                    ? AnyView(ImportSheet(urls: [URL(fileURLWithPath: "/tmp/週會 0827.m4a")]).environment(model))   // l10n-skip
+                    : AnyView(RenameSpeakerForm(name: .constant("說話者 2"), mergeTargets: [(1, "小明"), (3, "說話者 3")],   // l10n-skip
+                                                onMerge: { _ in }, onSave: {}))
+                window.contentView = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)))
+                window.setContentSize(window.contentView!.fittingSize)
+            } else if detailPage {
                 window.contentView = NSHostingView(rootView: AnyView(DetailPreview().environment(model)))
             } else {
                 window.contentView = onboarding
