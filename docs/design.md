@@ -856,6 +856,25 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 - 原本「等轉錄模型下載完成就會開始轉錄」的排隊狀態、會議頁上方「還沒有下載轉錄模型」的提示列拿掉（不會再發生）。
 - 首次使用引導的下載步驟說明改成「下載完成前會先用 macOS 內建辨識」；完成步驟的提示改成「會先用 macOS 內建辨識轉錄」。
 
+## 22. 3.5 之後的修正：鑰匙圈、工具列（R21）
+
+### 22.1 讀 API key（R21.1～R21.4，D36）
+
+- `Keychain.read(account) throws -> String?`：沒有這個項目回傳 nil；`errSecAuthFailed`、`errSecUserCanceled`、`errSecInteractionNotAllowed`、`errSecNoAccessForItem`（使用者按「拒絕」、關掉確認視窗、不能跳視窗）丟出 `Keychain.AccessError.denied`，其他錯誤丟出 `.failed(OSStatus)`。錯誤訊息：
+  - denied：「macOS 沒有讓拾音讀取鑰匙圈裡的 API key。再試一次時，系統詢問就輸入這台 Mac 的登入密碼（不是 API key），按「永遠允許」；或到設定 → 整理工具重新貼上 key。」
+  - failed：「讀取鑰匙圈裡的 API key 失敗（錯誤 N）」
+- 讀到的 key 記在記憶體（`OSAllocatedUnfairLock` 保護的字典），之後同一個 account 不再查鑰匙圈。`set` 成功時換成新的，`delete` 時拿掉；被拒絕、失敗不記。DEBUG 的 `llmkey` 照舊優先。
+- DEBUG：沒加 `-debugRealKeychain` 時，`set`、`delete` 也只改記憶體裡的 key（以前會寫進、刪掉使用者真的鑰匙圈）。`shiyinctl keychainsim <account> denied|duplicate|-` 模擬鑰匙圈回「拒絕」「已經有舊的」，`keychainreads` 讀實際查鑰匙圈的次數，`settingsaction pickmodel|savekey <key>` 等於在設定頁按「選擇」「儲存 key」。
+- `Keychain.get` 保留（`try? read`），只給不需要分辨原因的地方用。送出請求的地方（四個 API 的 `generateJSON`、OpenAI 相容 API 的請求和模型清單）改用 `try read`：讀不到就丟出上面的錯誤，OpenAI 相容 API 不會改成不帶 key 送出。
+- `Keychain.set(account, value) throws`：先刪舊的再新增（照舊）。新增回傳 `errSecDuplicateItem`（舊的刪不掉，通常是舊版拾音存的、macOS 不讓這一版刪）丟出：「鑰匙圈裡已經有舊的 key，macOS 沒有讓拾音取代它。請打開「鑰匙圈存取」，刪除「拾音 API key（account）」後再存一次。」其他錯誤：「沒辦法把 API key 存進鑰匙圈（錯誤 N）」。設定頁、引導在輸入框下面用紅字顯示，輸入框的內容留著。
+- 設定頁：`load()` 不再取模型清單。模型欄旁邊一律有「選擇」按鈕（API 整理工具有存 key、OpenAI 相容 API 有網址時）；按下去打開彈出視窗，清單還沒取過就先取（「正在取得模型清單…」），取完列出來，點一個就填進模型欄。取之前先 `Keychain.read`：被拒絕就在彈出視窗裡顯示錯誤，不再呼叫 `listModels`（不然會再問一次）。取不到清單：「取得不到模型清單，可以直接輸入模型名稱。」存好 key、改了網址時清掉舊清單；存好 key 時先在背景取（記憶體裡已經有新的 key，不會查鑰匙圈）。
+
+### 22.2 工具列（R21.5）
+
+- 側邊欄的工具列只放：錄音（和旁邊的錄音選項箭頭）、提問（問所有會議）、側邊欄開關。「匯入」移到側邊欄最下面那一列：左邊是垃圾桶，右邊是「匯入」（`square.and.arrow.down`，文字按鈕、跟垃圾桶同樣的樣式），看垃圾桶時不顯示。
+- 錄音中側邊欄的工具列是「● 經過時間」、停止、提問、側邊欄開關；放不下時錄音中拿掉提問（跟原本拿掉匯入一樣）。
+- 驗證：DEBUG 版、視窗 960 和 1180 寬、沒在錄音和模擬錄音中，截圖確認工具列沒有「>>」，會議頁的「更多」看得到。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -894,6 +913,7 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 | D33 | 回報問題只打開瀏覽器的 GitHub 頁面 | app 直接上傳：要有伺服器或 token，也違反「不回傳任何資料」；使用者在瀏覽器裡看得到、改得到要送出的內容 |
 | D34 | 長錄音的 whisper 每 10 分鐘一段、從檔案依序讀，說話者辨識仍用整段（轉錄完才解碼整段） | 全部分段（含說話者辨識）：不同段的說話者編號對不起來。不分段：記憶體隨會議長度增加，4 小時要 4 GB 以上。分段但先解碼整段：整段聲音（4 小時 921 MB）在轉錄時一直佔著，只少 25%。代價：要辨識說話者時多解碼一次（4 小時的 WAV 約幾秒） |
 | D35 | 模型還沒下載好時，自動改用 macOS 內建辨識轉錄那一場 | 等下載完：第一場會議要等 1.7 GB 下載，新使用者的第一印象很差。直接把設定改成內建：使用者之後不會知道 Breeze 比較準 |
+| D36 | 讀到的 API key 在拾音開著時記在記憶體，不再查鑰匙圈 | 每次送出請求都查鑰匙圈（3.5 以前）：使用者只按「允許」時，一場會議的整理、校正、猜說話者、提問會各跳一次確認。改存到檔案或資料庫：違反 N6。取捨：key 在記憶體裡的時間變長（本來送出請求時就會在記憶體裡）；結束拾音就沒了 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

@@ -8,7 +8,7 @@ struct AnthropicAPI: LLMBackend {
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
                       onStart: (Subprocess) -> Void) async throws -> Data {
-        guard let key = Keychain.get("anthropic"), !key.isEmpty else { throw LLMError.missingKey("Anthropic") }
+        guard let key = try Keychain.read("anthropic"), !key.isEmpty else { throw LLMError.missingKey("Anthropic") }
         let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let body: [String: Any] = [
             "model": model,

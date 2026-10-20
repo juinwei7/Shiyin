@@ -906,6 +906,8 @@ final class AppModel {
     #if DEBUG
     /// shiyinctl editsegment：等於點那一段開始編輯（逐字稿分頁看到就開始）
     var debugEditSegment: Int64?
+    /// shiyinctl settingsaction：等於在設定的整理工具頁按「選擇」（pickmodel）或貼上 key 按「儲存 key」（savekey）
+    var debugSettingsAction: [String]?
     #endif
 
     /// 捲到這一段並暫時加底色。先清掉再設，同一段點第二次也會捲過去；幾秒後拿掉底色，不要一直留著

@@ -16,6 +16,7 @@ struct OnboardingView: View {
     @State private var speechInstalled: Bool?
     @State private var speechInstalling = false
     @State private var apiKey = ""
+    @State private var keyError: String?
 
     /// startStep：DEBUG 的 preview 指令直接打開某一步（design §19.5）
     init(startStep: Int = 0) { _step = State(initialValue: startStep) }
@@ -193,13 +194,20 @@ struct OnboardingView: View {
                 HStack {
                     SecureField("貼上 API key", text: $apiKey).textFieldStyle(.roundedBorder)
                     Button("儲存") {
-                        Keychain.set(current.keychainAccount, apiKey)
-                        apiKey = ""
+                        do {
+                            try Keychain.set(current.keychainAccount, apiKey)
+                            apiKey = ""
+                            keyError = nil
+                        } catch {
+                            keyError = error.localizedDescription
+                        }
                         model.refreshEnvironment()
                     }
                     .disabled(apiKey.isEmpty)
                 }
-                if Keychain.exists(current.keychainAccount) {
+                if let keyError {
+                    Text(keyError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+                } else if Keychain.exists(current.keychainAccount) {
                     Label("已儲存在鑰匙圈", systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
                 }
             }

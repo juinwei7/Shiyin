@@ -28,7 +28,12 @@ struct ProviderSettings: View {
     @State private var baseURL = ""
     @State private var key = ""
     @State private var keySaved = false
+    @State private var keyError: String?
     @State private var availableModels: [String] = []
+    // 「選擇」的模型清單：按了才取（取的時候要讀 key，可能跳出鑰匙圈的確認，design §22.1）
+    @State private var pickingModel = false
+    @State private var loadingModels = false
+    @State private var modelListError: String?
     @State private var testing = false
     @State private var testResult: (ok: Bool, message: String)?
     @State private var login: CLILogin.Status?
@@ -68,15 +73,18 @@ struct ProviderSettings: View {
             if current == .openaiCompatible {
                 HStack {
                     TextField("網址", text: $baseURL, prompt: Text(verbatim: "https://api.groq.com/openai/v1"))
-                        .onSubmit(refreshModels)
                     Menu("常用") {
                         ForEach(OpenAICompatibleAPI.presets, id: \.url) { preset in
-                            Button { baseURL = preset.url; refreshModels() } label: { Text(verbatim: "\(preset.name)  \(preset.url)") }
+                            Button { baseURL = preset.url } label: { Text(verbatim: "\(preset.name)  \(preset.url)") }
                         }
                     }
                     .fixedSize()
                 }
-                .onChange(of: baseURL) { _, value in UserDefaults.standard.set(value, forKey: OpenAICompatibleAPI.baseURLKey) }
+                .onChange(of: baseURL) { _, value in
+                    UserDefaults.standard.set(value, forKey: OpenAICompatibleAPI.baseURLKey)
+                    availableModels = []
+                    modelListError = nil
+                }
                 if !baseURL.trimmingCharacters(in: .whitespaces).isEmpty && OpenAICompatibleAPI.normalized(baseURL) == nil {
                     Text("網址要以 http:// 或 https:// 開頭").font(.caption).foregroundStyle(.red)
                 }
@@ -85,32 +93,28 @@ struct ProviderSettings: View {
                 SecureField("API key", text: $key, prompt: Text(keySaved ? "已儲存在鑰匙圈（輸入新的會取代）"
                                                                  : current.keyOptional ? "可以不填（本機的 Ollama、LM Studio 不需要）" : "貼上 API key"))
                 HStack {
-                    Button("儲存 key") {
-                        Keychain.set(current.keychainAccount, key)
-                        key = ""
-                        keySaved = Keychain.exists(current.keychainAccount)
-                        refreshModels()
-                        model.refreshEnvironment()
-                    }
-                    .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("儲存 key", action: saveKey)
+                        .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
                     if keySaved {
                         Button("刪除 key", role: .destructive) {
                             Keychain.delete(current.keychainAccount)
                             keySaved = false
+                            availableModels = []
                             model.refreshEnvironment()
                         }
                     }
+                }
+                if let keyError {
+                    Text(keyError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
                 }
             }
             if current != .none {
                 HStack {
                     TextField("模型", text: $modelName, prompt: Text(current == .openaiCompatible ? "必填"
                                                                     : current.defaultModel.isEmpty ? "留空使用預設模型" : "預設：\(current.defaultModel)"))
-                    if !availableModels.isEmpty {
-                        Menu("選擇") {
-                            ForEach(availableModels, id: \.self) { name in Button(name) { modelName = name } }
-                        }
-                        .fixedSize()
+                    if canListModels {
+                        Button("選擇", action: openModelPicker)
+                            .popover(isPresented: $pickingModel, arrowEdge: .bottom) { modelList }
                     }
                 }
                 .onChange(of: modelName) { _, value in UserDefaults.standard.set(value, forKey: current.modelKey) }
@@ -146,6 +150,33 @@ struct ProviderSettings: View {
         .formStyle(.grouped)
         .onAppear(perform: load)
         .onChange(of: provider) { _, _ in load() }
+        #if DEBUG
+        .onChange(of: model.debugSettingsAction) { _, action in
+            guard let action else { return }
+            model.debugSettingsAction = nil
+            if action.first == "pickmodel" { openModelPicker() }
+            if action.first == "savekey", action.count > 1 { key = action[1]; saveKey() }
+        }
+        #endif
+    }
+
+    private func saveKey() {
+        do {
+            try Keychain.set(current.keychainAccount, key)
+            key = ""
+            keyError = nil
+            // 剛存的 key 已經記在記憶體，取模型清單不會再問鑰匙圈
+            refreshModels()
+        } catch {
+            keyError = error.localizedDescription
+        }
+        keySaved = Keychain.exists(current.keychainAccount)
+        model.refreshEnvironment()
+    }
+
+    private func openModelPicker() {
+        pickingModel = true
+        if availableModels.isEmpty && !loadingModels { refreshModels() }
     }
 
     private func test() async {
@@ -188,17 +219,79 @@ struct ProviderSettings: View {
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
         baseURL = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
+        // 只看有沒有存，不讀出 key：打開設定頁不能跳出鑰匙圈的確認（R18.7、R21.1）
         keySaved = current.usesAPIKey && Keychain.exists(current.keychainAccount)
+        keyError = nil
         availableModels = []
-        if keySaved || (current == .openaiCompatible && !baseURL.isEmpty) { refreshModels() }
+        modelListError = nil
+        loadingModels = false
     }
 
-    /// 「選擇」用的模型清單；取的時候換了整理工具就不用
+    /// 可以從清單選模型：API 要有存 key，OpenAI 相容 API 要有網址
+    private var canListModels: Bool {
+        current == .openaiCompatible ? OpenAICompatibleAPI.normalized(baseURL) != nil : current.usesAPIKey && keySaved
+    }
+
+    /// 「選擇」用的模型清單；取的時候換了整理工具就不用。
+    /// 先讀 key：macOS 沒允許就顯示原因，不再呼叫 listModels（不然會再問一次，design §22.1）
     private func refreshModels() {
         let checked = current
+        loadingModels = true
+        modelListError = nil
         Task {
-            let models = await LLMClient.listModels(checked)
-            if checked == current { availableModels = models }
+            let result = await Task.detached { () -> Result<[String], Error> in
+                do {
+                    _ = try Keychain.read(checked.keychainAccount)
+                    return .success(await LLMClient.listModels(checked))
+                } catch {
+                    return .failure(error)
+                }
+            }.value
+            guard checked == current else { return }
+            loadingModels = false
+            switch result {
+            case .success(let models): availableModels = models
+            case .failure(let error): modelListError = error.localizedDescription
+            }
+        }
+    }
+
+    private var modelList: some View {
+        Group {
+            if loadingModels {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("正在取得模型清單…").foregroundStyle(.secondary)
+                }
+                .padding(14)
+            } else if availableModels.isEmpty {
+                Text(modelListError ?? String(localized: "取得不到模型清單，可以直接輸入模型名稱。"))
+                    .foregroundStyle(modelListError == nil ? Color.secondary : Color.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 300, alignment: .leading)
+                    .padding(14)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(availableModels, id: \.self) { name in
+                            Button {
+                                modelName = name
+                                pickingModel = false
+                            } label: {
+                                Text(name)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .background(name == modelName ? Color.celadon.opacity(0.15) : .clear, in: RoundedRectangle(cornerRadius: 5))
+                        }
+                    }
+                    .padding(6)
+                }
+                .frame(width: 300, height: min(320, CGFloat(availableModels.count) * 24 + 16))
+            }
         }
     }
 

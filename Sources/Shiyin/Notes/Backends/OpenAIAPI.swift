@@ -8,7 +8,7 @@ struct OpenAIAPI: LLMBackend {
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
                       onStart: (Subprocess) -> Void) async throws -> Data {
-        guard let key = Keychain.get("openai"), !key.isEmpty else { throw LLMError.missingKey("OpenAI") }
+        guard let key = try Keychain.read("openai"), !key.isEmpty else { throw LLMError.missingKey("OpenAI") }
         let schemaObject = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let body: [String: Any] = [
             "model": model,

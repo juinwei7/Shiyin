@@ -78,7 +78,10 @@ struct OpenAICompatibleAPI: LLMBackend {
     func listModels() async -> [String] {
         guard let base = Self.normalized(baseURL) else { return [] }
         var request = URLRequest(url: base.appendingPathComponent("models"), timeoutInterval: 15)
-        if let key = Keychain.get("openaiCompatible"), !key.isEmpty {
+        // 有存 key 卻讀不到（macOS 沒允許）時不送出：不帶 key 送出只會換來看不懂的錯誤（design §22.1）
+        let key: String?
+        do { key = try Keychain.read("openaiCompatible") } catch { return [] }
+        if let key, !key.isEmpty {
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         guard let (data, _) = try? await URLSession.shared.data(for: request),
@@ -96,7 +99,7 @@ struct OpenAICompatibleAPI: LLMBackend {
         ]
         var request = URLRequest(url: base.appendingPathComponent("chat/completions"), timeoutInterval: LLMClient.timeout)
         request.httpMethod = "POST"
-        if let key = Keychain.get("openaiCompatible"), !key.isEmpty {
+        if let key = try Keychain.read("openaiCompatible"), !key.isEmpty {
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.setValue("application/json", forHTTPHeaderField: "content-type")

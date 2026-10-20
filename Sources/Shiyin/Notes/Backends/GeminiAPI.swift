@@ -8,7 +8,7 @@ struct GeminiAPI: LLMBackend {
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
                       onStart: (Subprocess) -> Void) async throws -> Data {
-        guard let key = Keychain.get("gemini"), !key.isEmpty else { throw LLMError.missingKey("Gemini") }
+        guard let key = try Keychain.read("gemini"), !key.isEmpty else { throw LLMError.missingKey("Gemini") }
         let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let body: [String: Any] = [
             "model": model,

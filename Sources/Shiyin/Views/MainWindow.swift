@@ -175,6 +175,15 @@ struct SidebarView: View {
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
                 Spacer()
+                // 匯入放這裡：側邊欄的工具列放不下，會被收進「>>」（design §22.2、R21.5）
+                if !model.showTrash {
+                    Button { model.showFileImporter = true } label: {
+                        Label("匯入", systemImage: "square.and.arrow.down")
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .help("匯入錄音、影片、逐字稿或 .shiyin 封包（⌘O）")
+                }
             }
             .font(.callout)
             .padding(.horizontal, 14)
@@ -184,17 +193,12 @@ struct SidebarView: View {
         .toolbar {
             ToolbarItemGroup {
                 RecordingControls()
-                // 問所有會議（design §21.8）
-                Button { model.openWindowById?("ask") } label: {
-                    Label("提問", systemImage: "questionmark.bubble")
-                }
-                .help("問所有會議，回答附上是哪一場會議、哪個時間點")
-                // 錄音中工具列放不下；要匯入還是可以用 ⌘O 或「檔案」選單
+                // 問所有會議（design §21.8）；錄音中放不下，會被收進「>>」（design §22.2）
                 if !model.recorder.isRecording {
-                    Button { model.showFileImporter = true } label: {
-                        Label("匯入", systemImage: "square.and.arrow.down")
+                    Button { model.openWindowById?("ask") } label: {
+                        Label("提問", systemImage: "questionmark.bubble")
                     }
-                    .help("匯入錄音、影片、逐字稿或 .shiyin 封包（⌘O）")
+                    .help("問所有會議，回答附上是哪一場會議、哪個時間點")
                 }
             }
         }

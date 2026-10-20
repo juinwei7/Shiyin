@@ -752,6 +752,17 @@
         }
       }
     },
+    "macOS 沒有讓拾音讀取鑰匙圈裡的 API key。再試一次時，系統詢問就輸入這台 Mac 的登入密碼（不是 API key），按「永遠允許」；或到設定 → 整理工具重新貼上 key。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS didn’t let Shiyin read the API key from the keychain. Try again, and when macOS asks, enter this Mac’s login password (not the API key) and click “Always Allow”. Or paste the key again in Settings → Summarizer."
+          }
+        }
+      }
+    },
     "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。": {
       "extractionState": "manual",
       "localizations": {
@@ -2113,6 +2124,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Replace “%@” → “%@”"
+          }
+        }
+      }
+    },
+    "取得不到模型清單，可以直接輸入模型名稱。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t get the model list. You can type the model name instead."
           }
         }
       }
@@ -5292,6 +5314,17 @@
         }
       }
     },
+    "正在取得模型清單…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting the model list…"
+          }
+        }
+      }
+    },
     "正在找相關的會議，再用 %@ 回答…": {
       "extractionState": "manual",
       "localizations": {
@@ -5695,6 +5728,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Automatic language detection is off"
+          }
+        }
+      }
+    },
+    "沒辦法把 API key 存進鑰匙圈（錯誤 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save the API key to the keychain (error %lld)"
           }
         }
       }
@@ -7138,6 +7182,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reading audio"
+          }
+        }
+      }
+    },
+    "讀取鑰匙圈裡的 API key 失敗（錯誤 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read the API key from the keychain (error %lld)"
           }
         }
       }
@@ -8647,6 +8702,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wrong spelling"
+          }
+        }
+      }
+    },
+    "鑰匙圈裡已經有舊的 key，macOS 沒有讓拾音取代它。請打開「鑰匙圈存取」，刪除「拾音 API key（%@）」後再存一次。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The keychain already has an older key, and macOS didn’t let Shiyin replace it. Open Keychain Access, delete “Shiyin API key (%@)”, then save again."
           }
         }
       }

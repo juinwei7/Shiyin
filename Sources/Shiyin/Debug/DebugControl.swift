@@ -159,6 +159,7 @@ enum DebugControl {
             field.window?.makeFirstResponder(field)
             field.currentEditor()?.insertNewline(nil)
         case "editsegment": model.debugEditSegment = id   // editsegment <段落 id>：等於點那一段開始編輯
+        case "settingsaction": model.debugSettingsAction = Array(args.dropFirst())   // settingsaction pickmodel | savekey <key>（設定頁要開著）
         // voiceprint-eval <設定.json> <輸出.json>：設定是 [{"file": 音檔, "name": 名稱}]；每個檔案跑說話者辨識，
         // 輸出每位說話者的聲紋、說話秒數、說話的時段，用來跟 AMI 標註比對、決定門檻（design §21.4.1）
         case "voiceprint-eval":
@@ -256,7 +257,13 @@ enum DebugControl {
             if let which = ModelStore.Model(rawValue: args[1]) { model.models.debugURLs[which] = args[2] == "-" ? nil : URL(string: args[2]) }
         case "llmurl":     // llmurl <anthropic|openai|gemini|openaiCompatible> <網址>：API 改送到本機的假伺服器；網址給 - 就改回原本的
             if let provider = LLMProvider(rawValue: args[1]) { LLMClient.debugBaseURLs[provider] = args[2] == "-" ? nil : args[2] }
-        case "llmkey": Keychain.debugKeys[args[1]] = args[2] == "-" ? nil : args[2]   // llmkey <account> <key>：只放記憶體
+        case "llmkey":   // llmkey <account> <key>：只放記憶體
+            Keychain.debugKeys[args[1]] = args[2] == "-" ? nil : args[2]
+            Keychain.debugForget(args[1])
+        case "keychainsim":   // keychainsim <account> denied|duplicate|-：模擬鑰匙圈回「拒絕」「已經有舊的」（design §22.1）
+            Keychain.debugSimulated[args[1]] = args[2] == "-" ? nil : args[2]
+            Keychain.debugForget(args[1])
+        case "keychainreads": write(["reads": Keychain.debugReads], to: args[1])   // keychainreads <輸出.json>：查鑰匙圈的次數
         case "llmprovider":   // llmprovider <整理工具> [模型]：只放記憶體，不改共用的設定；給 - 改回設定
             AppSettings.debugProvider = args[1] == "-" ? nil : LLMProvider(rawValue: args[1])
             AppSettings.debugModel = args.count > 2 ? args[2] : nil
@@ -329,7 +336,7 @@ enum DebugControl {
             let prefix = args.count > 1 ? args[1] : "main"
             NSApp.windows.filter { $0.identifier?.rawValue.hasPrefix(prefix) == true }.forEach { $0.close() }
         case "openwindow": model.openWindowById?(args[1])
-        case "setkey": Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
+        case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         case "preview":   // preview <settings|onboarding [步驟]>
