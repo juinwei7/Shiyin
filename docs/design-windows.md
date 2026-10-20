@@ -64,7 +64,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | UI 自動化（驗證） | FlaUI 5（UI Automation）、Windows.Graphics.Capture | §15.3 |
 
 授權寫進第三方授權（R27 R13.1）：`scripts/windows/make-third-party-licenses.py` 依 app 實際用到的套件（`dotnet list package --include-transitive`）組出 `windows/src/Shiyin.App/ThirdPartyLicenses.txt`，「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt` 都是這份。做法同 Mac（M§12.1）：條文取套件附的檔案，或套件記的原始碼 commit 上的檔案，原文不改；套件清單多了腳本不認得的套件就停下來。要特別標示的（2026-10-21 查過）：
-- 快速辨識的模型是 sherpa-onnx 從 ASLP-lab 的 WSYue-ASR `sensevoice_small_yue`（標 Apache-2.0）轉的，它是 SenseVoice-Small（FunASR Model License，不是 OSI 授權）微調的，兩個都列，附 FunASR Model License 原文
+- 快速辨識的模型是原版 SenseVoice-Small（2024-07-17，sherpa-onnx 轉成 int8，D61），FunASR Model License 不是 OSI 授權，附原文
 - 3D-Speaker 的聲紋模型：ModelScope 的模型頁標 Apache License 2.0
 - Windows App SDK、WebView2 是 Microsoft 的授權條款（可以跟 app 一起散布，不是開源授權），照附
 - whisper 的 DLL 靜態連結 C/C++ 執行階段（§8），不用附 VC++ 可轉散發套件；OpenMP 關掉了，也不用 `libomp140.aarch64.dll`
@@ -171,11 +171,12 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 
 ## 7. 即時逐字稿（R2、R27 R2.1）
 
-- 混音（左右平均，同 Mac 的 MixTap）送進 Silero VAD；VAD 判定在說話時，約每 0.4 秒把這一句目前的聲音整句丟給 SenseVoice 重新辨識，結果當暫定文字；VAD 判定一句結束時（一句最長約 15 秒，超過就切），最後一次的結果當定稿，存成 `kind='live'` 的段落（同 M§5.3）。
+- 混音（左右平均，同 Mac 的 MixTap）先經過自動增益，再送進 Silero VAD（門檻 0.35，D61）；VAD 判定在說話時，約每 0.4 秒把這一句目前的聲音整句丟給 SenseVoice 重新辨識，結果當暫定文字；VAD 判定一句結束時（一句最長約 15 秒，超過就切），最後一次的結果當定稿，存成 `kind='live'` 的段落（同 M§5.3）。
 - SenseVoice 的語言跟著會議語言（zh、en、ja）；開 ITN（標點、數字）；拿掉情緒、事件標籤。
 - 中文輸出用 OpenccNetLib 的 s2twp 轉成台灣繁體（字典已內建）。
 - 在背景執行緒、低於一般的優先順序跑，不能拖到錄音寫檔（R25.2）。
-- T-W5（Mac 上，2026-10-21）：合成會議（91 秒）照錄音的速度餵，定稿延遲中位數 0.62 秒、第 90 百分位 0.79 秒，暫定文字更新 148 次；轉出來是台灣繁體。虛擬機的 CPU 用量待 W0.1。
+- **自動增益**（D61）：遠距收音的會議很小聲（AISHELL-4 的音量中位數 −46 dBFS），VAD 只抓到兩成的時間。看最近 30 秒的音量（每 0.1 秒一格，第 90 百分位當說話的音量），放大到約 −22 dBFS，最多 24 dB，不縮小，每秒更新；只影響送進 VAD 和辨識的聲音，錄音檔不變。快速辨識也一樣。
+- T-W5（Mac 上，2026-10-21）：合成會議（91 秒）照錄音的速度餵，定稿延遲中位數 0.62 秒、第 90 百分位 0.79 秒，暫定文字更新 148 次；轉出來是台灣繁體。換成 D61 的設定後，各語言的前 5 分鐘照錄音的速度餵：AISHELL-4（中文、遠距）錯字率 18.3%、延遲中位數 0.58 秒／第 90 百分位 0.83 秒；AMI（英文）WER 33.8%（原本 56.9%）、0.52／0.76 秒；日文國會聽證有假名了（原本只剩漢字）、0.50／0.68 秒。虛擬機的 CPU 用量待 W0.1。
 - 自動偵測語言（R16）：照 M§18.8，用 whisper base；切換語言時即時辨識換語言，時間偏移照舊。
 
 ## 8. 正式轉錄
@@ -187,9 +188,9 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **shim**（D56）：約 100 行的 C，匯出 `shiyin_whisper_full(ctx, const ShiyinParams*, 進度 callback, 取消 callback, …)`，在 C 這邊填好 `whisper_full_params`。不在 C# 複製這個 struct：它用傳值的方式傳、C 的 `bool` 是 1 byte、裡面有巢狀 struct 和 callback，很容易對錯而且不會報錯。其他簡單的函式（`whisper_full_n_segments`、`whisper_full_get_segment_*`、`whisper_full_get_token_p`、`whisper_pcm_to_mel`、`whisper_lang_auto_detect`、`whisper_lang_id`…）直接 P/Invoke，跟 `WhisperEngine.swift`、`LanguageDetector.swift` 用的一樣。
 - **參數**同 Mac：beam 5、best_of 5、執行緒數 clamp(核心數 − 2, 2, 8)、`suppress_blank`、有顯卡時用 GPU。只有 CPU 時要不要改（beam、執行緒）待 T-W3，改了寫進決策紀錄、設定頁顯示。
 - **分段、提示詞、接縫、過濾、低信心**：同 M§21.16、M§6.2，程式在 Core，用 §4 的 `pipeline/` 比對。
-- **快速辨識**（R4.1、R20.8）：SenseVoice＋VAD 讀整個檔案。Breeze 還沒下載好時自動用（同 D35），轉完提示「可以用 Breeze 重新轉錄」。合成會議的錯字率 8.8%（Mac 的內建辨識 9.2%、Breeze 6.0%），91 秒的錄音 4 秒轉完（M3 Pro）。快速辨識的模型還沒下載好時，轉錄線先不接工作、自動開始下載（Mac 的內建辨識不用下載）。
+- **快速辨識**（R4.1、R20.8）：SenseVoice＋VAD 讀整個檔案。Breeze 還沒下載好時自動用（同 D35），轉完提示「可以用 Breeze 重新轉錄」。錯字率（D61 的設定，2026-10-21）：合成會議 9.2%（Mac 的內建辨識 9.2%、Breeze 6.0%）、AISHELL-4 26.4%（Mac 的內建辨識約 25%）、AMI 英文 WER 39.0%（約 26%）、日文合成會議 16.8%、國會聽證 21.7%／28.1%、FLEURS 15.5%（日文的 Whisper large-v3-turbo 是 4.5%、9.2%／7.7%）。91 秒的錄音 2.4 秒、38 分鐘 14 秒轉完（M3 Pro）。快速辨識的模型還沒下載好時，轉錄線先不接工作、自動開始下載（Mac 的內建辨識不用下載）。
 - **T-W3 的 Mac 部分**（2026-10-21）：C# 經 shim 呼叫同一版 whisper.cpp（Mac 的 dylib、Metal），餵一樣的取樣時結果跟 Mac 逐段相同（國會聽證 190/190 段、AMI 198/198 段）；m4a 解碼器不同造成的取樣差異會讓少數段落不同（合成會議 27 段裡 2 段，錯字率 5.2% → 6.0%），Windows 用 Media Foundation 解碼後要再比一次。速度：AMI 17.5 分鐘 98 秒、國會聽證 15.3 分鐘 51 秒（M3 Pro、Metal）。虛擬機、CI 的 CPU 倍速待 W0.4。
-- **快速辨識的模型怎麼來**（R27 R20.8）：首次使用引導的「模型」步驟先下載快速辨識和 VAD（約 230 MB，數字 T-W5 確認，比 Breeze 小很多），下載好就能錄音，Breeze 接著在背景下載。要不要直接附在安裝檔，T-W7 量過安裝檔和差異更新的大小再決定。
+- **快速辨識的模型怎麼來**（R27 R20.8）：首次使用引導的「模型」步驟先下載快速辨識和 VAD（約 240 MB，比 Breeze 小很多），下載好就能錄音，Breeze 接著在背景下載。要不要直接附在安裝檔，T-W7 量過安裝檔和差異更新的大小再決定。
 - **解碼**：Media Foundation 的 SourceReader 依序讀、轉成 16 kHz 單聲道浮點（同 D34 的串流讀法）。Media Foundation 不支援 CAF、AIFF：AIFF 用 `AiffFileReader`，CAF 待 T-W9（解不開就從 R3.1 拿掉並說明）。Windows 的 N 版沒有 Media Foundation，要裝 Media Feature Pack（寫進系統需求）。
 - **結束拾音**時等 whisper 收尾最多 10 秒（R18.12）。
 
@@ -322,6 +323,9 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 - **docx**：DocumentFormat.OpenXml，把 Core 匯出的 HTML（標籤固定：h1～h3、p、ul/li、table、b、span.time）轉成 Word 原生的標題、項目符號、表格（`Services/Export/DocxWriter.cs`），字型見 §11.3；待辦表格的負責人、期限欄不拆行（同 Mac 的 `fitShortColumns`）。HTML 只是中間格式，Word 裡沒有 HTML（不用 altChunk）；用 OpenXml 的 schema 檢查零錯誤。
 - **PDF**：WebView2 打開標準答案裡同一份 HTML（字型換成 §11.3 的 Windows 字型），`PrintToPdfAsync`，A4、邊界 56 pt。
 - docx、PDF 不能跟 Mac 逐位元組比（Mac 是 NSAttributedString、NSTextView 排的，見 M§21.13）：比抽出來的文字、表格結構、頁數。Mac 上用 PDFKit 的小腳本抽 PDF 的文字。
+- **docx 跟 Mac 比過**（2026-10-21）：同一個 .shiyin（標準答案的中、英、日會議）分別匯入 Mac 3.6 的 DEBUG 版和 Windows 的程式，匯出會議紀錄、逐字稿的 Word，抽出每一段的文字比：逐字稿三種語言、日文會議紀錄完全相同；中文、英文會議紀錄的文字和順序相同，差在兩個地方，都是 Mac 的 NSAttributedString 的寫法，Windows 不跟：
+  - 待辦表格：Mac 的 Word 沒有表格（`w:tbl`），每一格變成一段；Windows 是真的表格
+  - 沒有內容的主題（`<ul></ul>`）：Mac 多一行只有項目符號的空白項目；Windows 不輸出
 - **m4a**：Media Foundation 的 AAC 編碼器只接受 44.1 或 48 kHz、96～192 kbps，16 kHz 的錄音要先升頻，每小時約 43 MB（Mac 約 10～30 MB）。寫進 R27 的 R9.4。
 - **wav**：16 kHz 單聲道。
 - **.shiyin**：`System.IO.Compression`，zip 根目錄放 manifest.json、meeting.json、transcript.json、audio.*（同 `IO/Package.swift`）。匯入時檢查路徑（不能有 `..`、絕對路徑、符號連結，R18.10）。
@@ -419,6 +423,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D57 | 介面語言在設定裡可以另外選 | 只跟著 Windows：Windows 沒有替不打包的桌面 app 個別設定語言的地方（Mac 有），英文 Windows 上想用中文介面的人就沒辦法 |
 | D58 | sherpa-onnx 只切段落（固定 30 群），每 3 秒的小段用 3D-Speaker 算聲紋，減掉整場平均後自己做凝聚式分群（§9） | sherpa-onnx 原本的門檻分群：中文會議（AISHELL-4）把 6 人併成 1～3 人，門檻怎麼調都不行（整場的聲紋太像）。WeSpeaker（英文 VoxCeleb）的聲紋：減掉平均後 AMI 還好，AISHELL-4 同一人、不同人的相似度重疊太多（第 10 百分位 0.03 對第 90 百分位 0.33；3D-Speaker 是 0.17 對 0.09）。VBx：要 PLDA 模型、參數多，這個做法在 AMI、AISHELL-4 已經跟 Mac 一樣好。取捨：聲紋模型比 WeSpeaker 大（40 MB 對 26 MB）；聲紋比對、分不準的門檻跟 Mac 不同（0.6、0.37） |
 | D59 | WinUI 的畫面全部用 C# 建，不用 XAML 檔 | XAML：排版看得比較清楚，但 XAML 編譯器（XamlCompiler.exe）只能在 Windows 跑，Mac 上連編譯檢查都不行，每改一次畫面都要進虛擬機。取捨：程式比較長、沒有設計工具的預覽；用 `Ui.cs` 的小工具把常用的寫法縮短，畫面一律在虛擬機截圖確認（W2） |
+| D61 | 快速辨識、即時逐字稿用原版 SenseVoice-Small（2024-07-17），VAD 門檻 0.35，送進 VAD 前自動增益（§7） | 2025-09-09 版（原本選的，比較新）是用粵語語料微調過的：日文的假名幾乎都不見（國會聽證、FLEURS 錯字率約 80%，原版 16～28%），英文 AMI WER 60%（原版 40%），只有中文合成會議稍好（8.8% 對 9.2%）。VAD 用預設門檻 0.5、不放大：遠距收音的 AISHELL-4 只抓到兩成的時間，錯字率 84%；門檻 0.35 加自動增益是 26%，其他錄音也沒有變差（門檻 0.35 單獨讓 FLEURS 從 19.9% 降到 15.8%）。固定放大 15～20 dB 對 AISHELL-4 也有用，但大聲的錄音（國會聽證的第 90 百分位已經 −20 dBFS）再放大會超過 0 dBFS 被削掉。取捨：自動增益在很安靜的房間會把背景放大（最多 24 dB），靠 VAD 擋；音量變化很大的會議，增益要幾秒才跟上 |
 | D60 | 不碰畫面的 app 邏輯放在 `Shiyin.Services`（net10.0），平台的部分是介面 | 寫在 App 的 ViewModel 裡：Mac 上測不了，錄音、工作佇列、匯入、更新這些最容易出錯的流程都要進虛擬機才能測。取捨：多一層介面（`IAudioDecoder`、`IAudioSource`、`IExportPlatform`、`IUpdatePlatform`…）；換來在 Mac 上用模擬的音源、假的引擎和本機伺服器跑完整的流程 |
 
 ## 17. 需要先做的實驗

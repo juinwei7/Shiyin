@@ -71,12 +71,21 @@ int Detect(string audio, double start, string output)
     var from = Math.Min(samples.Length, (int)(start * WhisperRules.SampleRate));
     float[]? ready = null;
     var collector = new LanguageCollector(r => ready = r);
-    for (var i = from; i < samples.Length && ready is null; i += 1600) collector.Feed(samples.AsSpan(i, Math.Min(1600, samples.Length - i)));
+    var position = from;
+    while (ready is null && position < samples.Length)
+    {
+        var end = Math.Min(samples.Length, position + 1600);
+        collector.Feed(samples.AsSpan(position, end - position));
+        position = end;
+    }
     var result = new JsonObject { ["audio"] = audio, ["start"] = start, ["ready"] = ready is not null };
     if (ready is not null)
     {
+        // 欄位同 Mac 的 shiyinctl detect-eval（used：從開始秒數起錄了多久才湊滿）
         var probabilities = WhisperEngine.DetectLanguage(ready, Path.Combine(models, "ggml-base-q5_1.bin"));
+        result["used"] = (position - from) / WhisperRules.SampleRate;
         result["probabilities"] = new JsonObject(probabilities.Select(p => KeyValuePair.Create(p.Key.Code(), (JsonNode?)p.Value)));
+        result["detected"] = probabilities.MaxBy(p => p.Value).Key.Code();
         result["voicedSeconds"] = ready.Length / WhisperRules.SampleRate;
     }
     File.WriteAllText(output, result.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
@@ -168,7 +177,8 @@ int Fast(string audio, string optionsPath, string output)
     var language = MeetingLanguages.Parse(options["language"]?.GetValue<string>()) ?? MeetingLanguage.Zh;
     var root = Environment.GetEnvironmentVariable("SHIYIN_SPEECH_MODELS") ?? models;
     using var stream = new WavStream(audio);
-    var segments = FastTranscriber.Transcribe(stream, SenseVoiceModels.In(root), language);
+    var vad = new VadOptions { Threshold = options["vadThreshold"]?.GetValue<float>() ?? new VadOptions().Threshold, GainDb = options["gainDb"]?.GetValue<float>() };
+    var segments = FastTranscriber.Transcribe(stream, SenseVoiceModels.In(root), language, options: vad);
     var json = new JsonObject
     {
         ["audio"] = audio, ["options"] = options.DeepClone(), ["engine"] = "sensevoice",
@@ -194,7 +204,8 @@ int Live(string audio, string optionsPath, string output)
     var clock = Stopwatch.StartNew();
     double Fed() => clock.Elapsed.TotalSeconds * speed;   // 目前送到錄音的第幾秒
     var volatileCount = 0;
-    using (var live = new LiveTranscriber(SenseVoiceModels.In(root), language))
+    var vad = new VadOptions { Threshold = options["vadThreshold"]?.GetValue<float>() ?? new VadOptions().Threshold, GainDb = options["gainDb"]?.GetValue<float>() };
+    using (var live = new LiveTranscriber(SenseVoiceModels.In(root), language, vad))
     {
         live.Volatile += text => { if (text.Length > 0) volatileCount++; };
         live.Final += (start, end, text) =>

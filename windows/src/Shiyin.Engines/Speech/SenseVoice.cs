@@ -9,8 +9,8 @@ namespace Shiyin.Speech;
 public sealed record SenseVoiceModels(string Model, string Tokens, string Vad)
 {
     public static SenseVoiceModels In(string dir) => new(
-        Path.Combine(dir, "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09", "model.int8.onnx"),
-        Path.Combine(dir, "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09", "tokens.txt"),
+        Path.Combine(dir, "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17", "model.int8.onnx"),
+        Path.Combine(dir, "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17", "tokens.txt"),
         Path.Combine(dir, "silero_vad.onnx"));
 
     public bool Installed => File.Exists(Model) && File.Exists(Tokens) && File.Exists(Vad);
@@ -63,14 +63,77 @@ public sealed class SenseVoiceRecognizer : IDisposable
     }
 }
 
+/// <summary>VAD 的門檻、送進 VAD 前放大多少（design-windows §7）。GainDb 是 null 時用自動增益；評估時可以給固定值</summary>
+public sealed record VadOptions
+{
+    public float Threshold { get; init; } = 0.35f;
+    public float? GainDb { get; init; }
+
+    internal AutoGain MakeGain() => GainDb is float db ? AutoGain.Fixed(db) : new AutoGain();
+}
+
+/// <summary>
+/// 自動增益（design-windows §7）：遠距收音的會議太小聲時 VAD 抓不到說話（AISHELL-4 只抓到兩成的時間），
+/// 看最近 30 秒的音量（每 0.1 秒一格，取第 90 百分位當說話的音量），放大到約 −22 dBFS、最多 24 dB，不縮小。每秒更新一次
+/// </summary>
+public sealed class AutoGain
+{
+    public const float TargetDb = -22, MaxGainDb = 24;
+    const int FrameSamples = 1600, Frames = 300;
+    readonly float[] levels = new float[Frames];
+    readonly bool adaptive = true;
+    int count, next, filled, sinceUpdate;
+    double energy;
+    float gain = 1;
+
+    public static AutoGain Fixed(float db) => new(MathF.Pow(10, db / 20));
+    public AutoGain() { }
+    AutoGain(float fixedGain) { gain = fixedGain; adaptive = false; }
+
+    public float GainDb => 20 * MathF.Log10(gain);
+
+    /// <summary>就地放大（先用原本的聲音算音量，再乘上目前的增益）</summary>
+    public void Apply(Span<float> samples)
+    {
+        for (var i = 0; i < samples.Length; i++)
+        {
+            var x = samples[i];
+            if (adaptive)
+            {
+                energy += x * x;
+                if (++filled == FrameSamples)
+                {
+                    var rms = Math.Sqrt(energy / FrameSamples);
+                    levels[next] = rms > 0 ? (float)(20 * Math.Log10(rms)) : -120;
+                    next = (next + 1) % Frames;
+                    count = Math.Min(count + 1, Frames);
+                    filled = 0;
+                    energy = 0;
+                    if (++sinceUpdate >= 10) { sinceUpdate = 0; Update(); }
+                }
+            }
+            samples[i] = Math.Clamp(x * gain, -1f, 1f);
+        }
+    }
+
+    void Update()
+    {
+        if (count < 20) return;   // 不到 2 秒先不放大
+        var sorted = levels.AsSpan(0, count).ToArray();
+        Array.Sort(sorted);
+        var speech = sorted[(int)((count - 1) * 0.9)];
+        gain = MathF.Pow(10, Math.Clamp(TargetDb - speech, 0, MaxGainDb) / 20);
+    }
+}
+
 /// <summary>VAD 的設定：一句最長 15 秒，停 0.5 秒算講完</summary>
 static class Vad
 {
-    public static VoiceActivityDetector Create(string model, float bufferSeconds = 60)
+    public static VoiceActivityDetector Create(string model, float bufferSeconds = 60, float threshold = 0.35f)
     {
         var config = new VadModelConfig();
         config.SileroVad.Model = model;
-        config.SileroVad.Threshold = 0.5f;
+        config.SileroVad.Threshold = threshold;
         config.SileroVad.MinSilenceDuration = 0.5f;
         config.SileroVad.MinSpeechDuration = 0.25f;
         config.SileroVad.MaxSpeechDuration = 15f;
@@ -88,10 +151,12 @@ static class Vad
 public static class FastTranscriber
 {
     public static List<TranscribedSegment> Transcribe(Whisper.IAudioStream audio, SenseVoiceModels models, MeetingLanguage language,
-                                                      Action<double>? progress = null, CancellationToken cancel = default)
+                                                      Action<double>? progress = null, CancellationToken cancel = default, VadOptions? options = null)
     {
+        options ??= new VadOptions();
+        var gain = options.MakeGain();
         using var recognizer = new SenseVoiceRecognizer(models, language, Math.Max(1, Math.Min(4, Environment.ProcessorCount - 2)));
-        using var vad = Vad.Create(models.Vad);
+        using var vad = Vad.Create(models.Vad, threshold: options.Threshold);
         var segments = new List<TranscribedSegment>();
         var buffer = new List<float>();
         var consumed = 0;
@@ -114,7 +179,12 @@ public static class FastTranscriber
             audio.Fill(buffer, 512 * 64);
             var whole = buffer.Count / 512 * 512;
             if (whole == 0 && audio.Finished) break;
-            for (var i = 0; i < whole; i += 512) vad.AcceptWaveform(buffer.GetRange(i, 512).ToArray());
+            for (var i = 0; i < whole; i += 512)
+            {
+                var window = buffer.GetRange(i, 512).ToArray();
+                gain.Apply(window);
+                vad.AcceptWaveform(window);
+            }
             buffer.RemoveRange(0, whole);
             consumed += whole;
             Drain();
@@ -149,6 +219,7 @@ public sealed class LiveTranscriber : ILiveTranscriber
 {
     readonly SenseVoiceRecognizer recognizer;
     readonly VoiceActivityDetector vad;
+    readonly AutoGain gain;
     readonly object gate = new();
     readonly List<float> pending = [];
     readonly List<float> current = [];
@@ -170,10 +241,12 @@ public sealed class LiveTranscriber : ILiveTranscriber
 
     public TimeSpan VolatileInterval { get; init; } = TimeSpan.FromMilliseconds(400);
 
-    public LiveTranscriber(SenseVoiceModels models, MeetingLanguage language)
+    public LiveTranscriber(SenseVoiceModels models, MeetingLanguage language, VadOptions? options = null)
     {
+        options ??= new VadOptions();
         recognizer = new SenseVoiceRecognizer(models, language, 2);
-        vad = Vad.Create(models.Vad);
+        vad = Vad.Create(models.Vad, threshold: options.Threshold);
+        gain = options.MakeGain();
         worker = new Thread(Loop) { IsBackground = true, Name = "live-transcriber", Priority = ThreadPriority.BelowNormal };
         worker.Start();
     }
@@ -214,6 +287,7 @@ public sealed class LiveTranscriber : ILiveTranscriber
             for (var i = 0; i < chunk.Length; i += 512)
             {
                 var window = chunk.AsSpan(i, 512).ToArray();
+                gain.Apply(window);
                 vad.AcceptWaveform(window);
                 position += 512;
                 history.AddRange(window);

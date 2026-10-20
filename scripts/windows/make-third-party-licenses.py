@@ -192,7 +192,7 @@ def main():
     models = [
         "Breeze ASR 25 (Apache-2.0) https://huggingface.co/MediaTek-Research/Breeze-ASR-25, GGML q8_0 conversion https://huggingface.co/shdennlin/breeze-asr-25-ggml",
         "Whisper large-v3-turbo, base (MIT) https://github.com/openai/whisper, GGML conversions https://huggingface.co/ggerganov/whisper.cpp",
-        "SenseVoice-Small (FunASR Model License, below) https://github.com/FunAudioLLM/SenseVoice, fine-tuned as WSYue-ASR sensevoice_small_yue (Apache-2.0) https://huggingface.co/ASLP-lab/WSYue-ASR, ONNX int8 conversion by sherpa-onnx",
+        "SenseVoice-Small (FunASR Model License, below) https://github.com/FunAudioLLM/SenseVoice, ONNX int8 conversion https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17",
         "Silero VAD (MIT) https://github.com/snakers4/silero-vad",
         "pyannote segmentation-3.0 (MIT) https://huggingface.co/pyannote/segmentation-3.0",
         "3D-Speaker ERes2Net base (Apache-2.0) https://www.modelscope.cn/models/iic/speech_eres2net_base_sv_zh-cn_3dspeaker_16k",

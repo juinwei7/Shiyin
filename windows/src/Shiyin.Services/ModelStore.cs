@@ -48,13 +48,13 @@ public sealed class ModelStore
         $"{HuggingFace}/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin",
         59_707_625, "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898")]);
 
-    /// <summary>快速辨識、即時逐字稿：SenseVoice-Small int8（FunASR Model License）＋ Silero VAD（MIT），design-windows §7、§8</summary>
+    /// <summary>快速辨識、即時逐字稿：SenseVoice-Small int8（FunASR Model License，原版 2024-07-17，D61）＋ Silero VAD（MIT），design-windows §7、§8</summary>
     public static readonly ModelInfo FastRecognition = new(L.T("快速辨識模型 SenseVoice"), [
         new("sensevoice/model.int8.onnx",
-            $"{HuggingFace}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09/resolve/355f4d4884d8afd08aef04b9007a8556d7b463b2/model.int8.onnx",
-            237_115_547, "12ca1a2ae7ecf3e0019ef2822307ee0b5cadc9196569e379b4c4026f8205276d"),
+            $"{HuggingFace}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/model.int8.onnx",
+            239_233_841, "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51"),
         new("sensevoice/tokens.txt",
-            $"{HuggingFace}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09/resolve/355f4d4884d8afd08aef04b9007a8556d7b463b2/tokens.txt",
+            $"{HuggingFace}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/tokens.txt",
             315_894, "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc"),
         new("vad/silero_vad.onnx", "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
             643_854, "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6"),
