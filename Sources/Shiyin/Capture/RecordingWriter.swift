@@ -20,6 +20,10 @@ final class RecordingWriter: @unchecked Sendable {
     private var writtenFrames = 0          // 只在 queue 上讀寫
     private let queue = DispatchQueue(label: "com.weiwei.shiyin.writer", qos: .userInitiated)
     private var failed = false            // 寫檔失敗過，用 lock 保護
+    /// 收音提醒（design §26.1）：各聲道每 100 毫秒以上一格的音量（dBFS），留最近 300 格（30 秒）
+    private var frameEnergy: [Float]
+    private var frameSamples: [Int]
+    private var recent: [[Float]]
 
     init(url: URL, channels: Int) throws {
         self.url = url
@@ -28,6 +32,9 @@ final class RecordingWriter: @unchecked Sendable {
         levels = Array(repeating: 0, count: channels)
         silentSeconds = Array(repeating: 0, count: channels)
         acceptedFrames = Array(repeating: 0, count: channels)
+        frameEnergy = Array(repeating: 0, count: channels)
+        frameSamples = Array(repeating: 0, count: channels)
+        recent = Array(repeating: [], count: channels)
         lastReceived = Array(repeating: ProcessInfo.processInfo.systemUptime, count: channels)
         file = try AVAudioFile(forWriting: url, settings: [
             AVFormatIDKey: kAudioFormatLinearPCM,
@@ -62,6 +69,15 @@ final class RecordingWriter: @unchecked Sendable {
             guard !paused else { return }
             pending[channel].append(contentsOf: samples)
             acceptedFrames[channel] += samples.count
+            frameEnergy[channel] += sum
+            frameSamples[channel] += samples.count
+            if frameSamples[channel] >= Int(CaptureFormat.sampleRate / 10) {
+                let rms = (frameEnergy[channel] / Float(frameSamples[channel])).squareRoot()
+                recent[channel].append(20 * log10(max(rms, 1e-6)))
+                if recent[channel].count > 300 { recent[channel].removeFirst(recent[channel].count - 300) }
+                frameEnergy[channel] = 0
+                frameSamples[channel] = 0
+            }
         }
     }
 
@@ -88,6 +104,12 @@ final class RecordingWriter: @unchecked Sendable {
     var writeFailed: Bool { lock.withLock { failed } }
 
     func silence(_ channel: Int) -> Double { lock.withLock { channel < channels ? silentSeconds[channel] : 0 } }
+
+    /// 最近 30 秒（不含暫停）每 100 毫秒的音量，dBFS（design §26.1）
+    func recentLevels(_ channel: Int) -> [Float] { lock.withLock { channel < channels ? recent[channel] : [] } }
+
+    /// 暫停後重新開始：之前的音量不算（暫停前後可能換了地方）
+    func resetRecentLevels() { lock.withLock { for i in 0..<channels { recent[i].removeAll(); frameEnergy[i] = 0; frameSamples[i] = 0 } } }
 
     /// 這個聲道多久沒有送音訊來（秒）。暫停時音源照樣送資料，所以暫停不影響
     func secondsSinceSamples(_ channel: Int) -> Double {

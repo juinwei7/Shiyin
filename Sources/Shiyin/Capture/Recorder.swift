@@ -45,6 +45,20 @@ final class Recorder {
     /// 有音源超過 3 秒沒送資料、正在重新連接（design §20.2）：錄音畫面的提示列顯示
     private(set) var deviceWarning: String?
 
+    /// 收音提醒（design §26.1、R24.1、R24.3）
+    enum LevelHint: String {
+        case silent   // 麥克風的聲音完全是 0
+        case quiet    // 有人在說話，但聲音很小
+        case noisy    // 背景一直很大聲
+    }
+    private(set) var levelHint: LevelHint?
+    @ObservationIgnored private var dismissedLevelHints: Set<LevelHint> = []
+    @ObservationIgnored private var noisySeconds = 0
+    @ObservationIgnored private var quietSeconds = 0
+    #if DEBUG
+    @ObservationIgnored private(set) var levelCheck: [String: Any] = [:]
+    #endif
+
     @ObservationIgnored var onFinished: ((Result) -> Void)?
     /// 錄音開始了（全域快捷鍵標記重點這時才註冊，design §21.10）
     @ObservationIgnored var onStarted: (() -> Void)?
@@ -139,8 +153,17 @@ final class Recorder {
 
     func resume() {
         guard isRecording, isPaused else { return }
+        writer?.resetRecentLevels()
+        (noisySeconds, quietSeconds) = (0, 0)
         writer?.setPaused(false)
         isPaused = false
+    }
+
+    /// 「知道了」：這一種提示這場錄音不再出現
+    func dismissLevelHint() {
+        guard let levelHint else { return }
+        dismissedLevelHints.insert(levelHint)
+        self.levelHint = nil
     }
 
     func stop() {
@@ -216,6 +239,9 @@ final class Recorder {
             startedAt = Date()
             elapsed = 0
             elapsedSeconds = 0
+            levelHint = nil
+            dismissedLevelHints = []
+            (noisySeconds, quietSeconds) = (0, 0)
             liveLines = []
             volatileText = ""
             systemSilent = false
@@ -333,7 +359,10 @@ final class Recorder {
         // 觀察的屬性只在值真的變了才設（@Observable 設成同樣的值也會讓畫面重算，design §25）
         elapsed = writer.recordedSeconds
         let seconds = Int(elapsed)
-        if seconds != elapsedSeconds { elapsedSeconds = seconds }
+        if seconds != elapsedSeconds {
+            elapsedSeconds = seconds
+            checkLevels(writer)
+        }
         var silent = systemSilent
         if source == "both" {
             micLevel = writer.level(0)
@@ -348,6 +377,28 @@ final class Recorder {
         if silent != systemSilent { systemSilent = silent }
         watchdog(writer)
         if Date().timeIntervalSince(lastDiskCheck) >= 30 { checkDiskSpace(writer, starting: false) }
+    }
+
+    /// 收音提醒（design §26.1）：每秒看麥克風最近 30 秒的音量。第 90 百分位是說話的音量、第 10 百分位是背景
+    private func checkLevels(_ writer: RecordingWriter) {
+        guard hasMic, !isPaused else { return }
+        let silent = writer.silence(0) > 10
+        let levels = writer.recentLevels(0).sorted()
+        var speech: Float = 0, background: Float = 0
+        if levels.count >= 300 {
+            speech = levels[Int(Double(levels.count - 1) * 0.9)]
+            background = levels[Int(Double(levels.count - 1) * 0.1)]
+            noisySeconds = background > -36 ? noisySeconds + 1 : 0
+            // 說話比背景大 4 dB 以上才算有人在說話（完全安靜時聲音很平），不是安靜的停頓
+            quietSeconds = speech < -50 && speech - background >= 4 ? quietSeconds + 1 : 0
+        }
+        let hint: LevelHint? = silent ? .silent : quietSeconds >= 60 ? .quiet : noisySeconds >= 45 ? .noisy : nil
+        let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
+        if shown != levelHint { levelHint = shown }
+        #if DEBUG
+        levelCheck = ["speech": speech, "background": background, "frames": levels.count, "silentSeconds": writer.silence(0),
+                      "noisySeconds": noisySeconds, "quietSeconds": quietSeconds, "hint": levelHint?.rawValue ?? ""]
+        #endif
     }
 
     /// 開始錄音時剩不到 1 GB、錄音中剩不到 300 MB 就提醒（錄音照常進行；寫不進去時 tick 會停止錄音）
@@ -452,6 +503,7 @@ final class Recorder {
         tap.setLive(nil)
         tap.setDetector(nil)
         languageSwitch = nil
+        levelHint = nil
         meetingId = nil
         startedAt = nil
         isRecording = false

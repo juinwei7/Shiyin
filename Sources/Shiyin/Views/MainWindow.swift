@@ -521,6 +521,7 @@ struct ImportSheet: View {
     @State private var participants = ""
     @State private var templateId = AppSettings.defaultTemplate
     @State private var language = AppSettings.defaultMeetingLanguage
+    @State private var speakerCount = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -546,6 +547,12 @@ struct ImportSheet: View {
                     ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
                 }
                 .help("決定轉錄和會議紀錄用的語言")
+                // 先填人數（design §26.2）
+                Picker("大約幾個人", selection: $speakerCount) {
+                    Text("自動判斷").tag(0)
+                    ForEach(2...12, id: \.self) { n in Text("\(n) 人").tag(n) }
+                }
+                .help("人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
             }
             .formStyle(.columns)
             HStack {
@@ -557,7 +564,8 @@ struct ImportSheet: View {
                 .keyboardShortcut(.cancelAction)
                 Button("匯入並開始轉錄") {
                     model.confirmImport(ImportOptions(title: title, date: urls.count == 1 ? DateText.string(date) : nil,
-                                                      participants: participants, templateId: templateId, language: language))
+                                                      participants: participants, templateId: templateId, language: language,
+                                                      minSpeakers: speakerCount == 0 ? nil : speakerCount))
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)

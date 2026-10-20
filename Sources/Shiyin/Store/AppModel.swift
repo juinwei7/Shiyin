@@ -696,6 +696,12 @@ final class AppModel {
         noticeMessage = String(localized: "會議語言改成 \(language.name)，要重新轉錄或整理的話，從「更多」選")
     }
 
+    /// 錄音中選「大約幾個人」（design §26.2）：錄完轉錄時用
+    func setMinSpeakers(_ count: Int?) {
+        guard let id = selection else { return }
+        perform(.detail([.meeting])) { try db.setMinSpeakers(id, count) }
+    }
+
     func setTemplate(_ templateId: String) {
         guard let id = detail?.meeting.id else { return }
         perform { try db.setTemplate(id, templateId: templateId) }

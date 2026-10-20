@@ -27,6 +27,19 @@ struct RecordingPanel: View {
                 .padding(.vertical, 8)
                 .background(Color.signal.opacity(0.12))
             }
+            if let hint = recorder.levelHint {
+                // 收音提醒（design §26.1）
+                HStack(spacing: 12) {
+                    Label(Self.levelHintText(hint), systemImage: hint == .noisy ? "waveform.badge.exclamationmark" : "mic.badge.xmark")
+                    Spacer()
+                    Button("知道了") { recorder.dismissLevelHint() }
+                        .help("這場錄音不再提示這件事")
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
             Divider()
             // 不用 HSplitView：它在 NavigationSplitView 裡會把內容撐到視窗的預設寬度，視窗窄的時候左右被切掉
             HStack(spacing: 0) {
@@ -44,6 +57,14 @@ struct RecordingPanel: View {
                 .padding(16)
                 .frame(width: 300)
             }
+        }
+    }
+
+    static func levelHintText(_ hint: Recorder.LevelHint) -> String {
+        switch hint {
+        case .silent: return String(localized: "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。")
+        case .quiet: return String(localized: "聲音有點小：手機或筆電放近說話的人一點。")
+        case .noisy: return String(localized: "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。")
         }
     }
 

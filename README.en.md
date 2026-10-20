@@ -26,6 +26,8 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - **Recording**
   - Sources: microphone only, microphone + computer audio (online meetings), or computer audio only. The other side of Zoom, Meet or Teams is recorded too
   - Live transcript and per-source level meters while recording; pause, bookmark and take notes
+  - Sound check: the recording screen tells you when the microphone isn’t picking up any sound, the sound is too quiet, or the room is too noisy
+  - In a crowded or noisy room, pick roughly how many people there are while recording or when importing, so speakers are told apart better
   - Recording continues with the main window closed; pause or stop from the menu bar, or press ⌃⌥⌘R in any app to start or stop
   - Plugging in or unplugging headphones, or switching output devices, while recording reconnects automatically and keeps recording
   - When Zoom, Teams, Google Meet or another online meeting starts using the microphone, Shiyin asks whether to record, and reminds you to stop when the meeting seems to be over. It only asks; it never records on its own

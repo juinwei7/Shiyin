@@ -156,6 +156,28 @@ struct MeetingHeader: View {
         }
         .fixedSize()
         .help("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多」重新轉錄或重新整理會議紀錄")
+        // 錄音中先填人數（design §26.2）：錄完轉錄時用
+        if model.recorder.isRecording && model.recorder.meetingId == meeting.id {
+            Menu {
+                Button {
+                    model.setMinSpeakers(nil)
+                } label: {
+                    if meeting.minSpeakers == nil { Label("自動判斷", systemImage: "checkmark") } else { Text("自動判斷") }
+                }
+                ForEach(2...12, id: \.self) { n in
+                    Button {
+                        model.setMinSpeakers(n)
+                    } label: {
+                        if meeting.minSpeakers == n { Label("\(n) 人", systemImage: "checkmark") } else { Text("\(n) 人") }
+                    }
+                }
+            } label: {
+                Label(meeting.minSpeakers.map { String(localized: "大約 \($0) 人") } ?? String(localized: "人數：自動判斷"),
+                      systemImage: "person.2")
+            }
+            .fixedSize()
+            .help("大約幾個人：人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
+        }
     }
 }
 

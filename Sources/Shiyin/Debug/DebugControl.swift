@@ -95,6 +95,8 @@ enum DebugControl {
             model.reassignSegments(args.dropFirst(3).compactMap { Int64($0) }, to: args[2] == "new" ? nil : Int(args[2]))
         case "undospeaker": model.selection = id; model.undoSpeakerEdit()
         case "speakerhint": model.selection = id; if args.count > 2, args[2] == "dismiss" { model.dismissSpeakerHint() }
+        case "minspeakers": model.selection = id; model.setMinSpeakers(args[2] == "auto" ? nil : Int(args[2]))   // 錄音中的「人數」選單（design §26.2）
+        case "levelhint": if args.count > 1, args[1] == "dismiss" { model.recorder.dismissLevelHint() }   // 收音提醒按「知道了」
         case "namespeakers": if let id { try? model.db.enqueue(id, kind: .nameSpeakers); model.runner.wake() }
         case "applysuggestion": model.selection = id; model.applySpeakerSuggestion(Int(args[2]) ?? 1)
         case "dismisssuggestion": model.selection = id; model.dismissSpeakerSuggestion(Int(args[2]) ?? 1)
@@ -294,10 +296,11 @@ enum DebugControl {
                 }
                 catch { try? "ERROR \(error.localizedDescription)".write(to: url.appendingPathExtension("error"), atomically: true, encoding: .utf8) }
             }
-        case "import":   // import [lang=ja] <檔案>…
+        case "import":   // import [lang=ja] [minSpeakers=6] <檔案>…（minSpeakers：匯入對話框的「大約幾個人」，design §26.2）
             var files = Array(args.dropFirst()), options = ImportOptions()
-            if let first = files.first, first.hasPrefix("lang=") {
-                options.language = MeetingLanguage(rawValue: String(first.dropFirst(5))) ?? .zh
+            while let first = files.first, first.hasPrefix("lang=") || first.hasPrefix("minSpeakers=") {
+                if first.hasPrefix("lang=") { options.language = MeetingLanguage(rawValue: String(first.dropFirst(5))) ?? .zh }
+                else { options.minSpeakers = Int(first.dropFirst(12)) }
                 files.removeFirst()
             }
             model.requestImport(files.map { URL(fileURLWithPath: $0) })
@@ -452,6 +455,7 @@ enum DebugControl {
                          "micLevel": model.recorder.micLevel, "systemLevel": model.recorder.systemLevel,
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,
                          "liveStatus": model.recorder.liveStatus, "permissionDenied": model.recorder.permissionDenied,
+                         "levelCheck": model.recorder.levelCheck,   // 收音提醒（design §26.1）
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? ""],

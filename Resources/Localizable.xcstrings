@@ -1301,6 +1301,28 @@
         }
       }
     },
+    "人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With many people, noise, or a phone on the table, telling Shiyin roughly how many people there are helps it tell speakers apart"
+          }
+        }
+      }
+    },
+    "人數：自動判斷": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People: Detect Automatically"
+          }
+        }
+      }
+    },
     "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。": {
       "extractionState": "manual",
       "localizations": {
@@ -2647,6 +2669,29 @@
         }
       }
     },
+    "大約 %lld 人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "About %lld Person"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "About %lld People"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "大約幾個人": {
       "extractionState": "manual",
       "localizations": {
@@ -2654,6 +2699,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Roughly how many people"
+          }
+        }
+      }
+    },
+    "大約幾個人：人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roughly how many people: with many people, noise, or a phone on the table, telling Shiyin ahead of time helps it tell speakers apart"
           }
         }
       }
@@ -6473,6 +6529,17 @@
         }
       }
     },
+    "知道了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got It"
+          }
+        }
+      }
+    },
     "磁碟只剩 %@，大約只能錄 %lld 分鐘。空間用完時會自動停止錄音，已經錄到的部分會保留。": {
       "extractionState": "manual",
       "localizations": {
@@ -6969,6 +7036,17 @@
         }
       }
     },
+    "聲音有點小：手機或筆電放近說話的人一點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sound is a bit quiet: move the phone or laptop closer to the people speaking."
+          }
+        }
+      }
+    },
     "聽起來是%@，即時逐字稿和會議語言已經改成%@": {
       "extractionState": "manual",
       "localizations": {
@@ -6976,6 +7054,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "This sounds like %@. The live transcript and meeting language are now %@"
+          }
+        }
+      }
+    },
+    "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s a bit noisy, so speakers may get mixed up. After recording, use “Identify Speakers Again” to tell Shiyin roughly how many people there were."
           }
         }
       }
@@ -7310,13 +7399,13 @@
         }
       }
     },
-    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。": {
+    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題右邊的「人數」）或匯入時也可以先選。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If too few speakers are found (many people, a noisy room, a phone recording from across the table), choose “Identify Speakers Again…” from “More” and tell Shiyin roughly how many people there are. Only who is speaking is worked out again; the transcript text doesn't change."
+            "value": "If too few speakers were found (many people, noise, or a phone on the table), choose “Identify Speakers Again…” from More and tell Shiyin roughly how many people there were. Only who is speaking is worked out again; the transcript text stays the same. You can also pick the number while recording (“People” next to the meeting title) or when importing."
           }
         }
       }
@@ -8243,6 +8332,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting has no notes yet (still summarizing, or summarizing failed), so exported notes will only have the title and details. Export the transcript to keep the content."
+          }
+        }
+      }
+    },
+    "這場錄音不再提示這件事": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don’t mention this again during this recording"
           }
         }
       }
@@ -9410,6 +9510,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Microphone Settings"
+          }
+        }
+      }
+    },
+    "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone isn’t picking up any sound. It may be muted, in use by another app, or the wrong microphone. You can choose another one in Settings → Recording."
           }
         }
       }
