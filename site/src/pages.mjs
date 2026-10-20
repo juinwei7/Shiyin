@@ -118,9 +118,13 @@ function starButton(lang, stats) {
 function windowsDownload(lang, win) {
   if (!win) return '';
   const w = content[lang].download.windows;
-  return `<h3>${w.h3}</h3>
-<p class="get"><a class="download" href="${escape(win.x64.url)}">${w.button(win.x64.name)}</a> <a href="${escape(win.arm64.url)}">${w.arm(win.arm64.name)}</a></p>
+  return `<div class="windows">
+<h3>${w.h3}</h3>
+<p class="get"><a class="download" href="${escape(win.x64.url)}" title="${escape(win.x64.name)}">${w.button}</a></p>
+<p class="arm"><a href="${escape(win.arm64.url)}" title="${escape(win.arm64.name)}">${w.arm}</a></p>
 <p class="note">${w.note(win.version)}</p>
+<p class="note">${w.sac}</p>
+</div>
 `;
 }
 

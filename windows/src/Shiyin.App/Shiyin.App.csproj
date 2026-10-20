@@ -37,6 +37,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets/Shiyin.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 第三方授權（R27 R13.1）：scripts/windows/make-third-party-licenses.py 產生，「關於拾音」讀它，安裝資料夾裡也有 -->
+    <Content Include="ThirdPartyLicenses.txt" Link="Third-Party Licenses.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <!-- 翻譯表：Mac 的 Localizable.xcstrings（鍵是中文原文，D43、§11.4），加上 Windows 才有的字串（l10n.py windows-check、windows-apply） -->

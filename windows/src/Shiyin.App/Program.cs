@@ -55,7 +55,7 @@ public sealed class App : Application
     AppHost? host;
     MainWindow? main;
     SettingsWindow? settings;
-    Window? onboarding, guide, report, askAll;
+    Window? onboarding, guide, report, about, askAll;
     MeetingPromptWindow? prompt;
     WinUIEx.TrayIcon? tray;
 
@@ -181,6 +181,14 @@ public sealed class App : Application
         Bring(report, 600, 520);
     }
 
+    public void ShowAbout()
+    {
+        if (host is null) return;
+        about ??= OtherWindows.About(host);
+        about.Closed += (_, _) => about = null;
+        Bring(about, 620, 560);
+    }
+
     public void ShowAskAll()
     {
         if (host is null || main is null) return;
@@ -264,6 +272,7 @@ public sealed class App : Application
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Ui.Item(L.T("打開拾音"), ShowMain));
         menu.Items.Add(Ui.Item(L.T("使用說明"), ShowGuide));
+        menu.Items.Add(Ui.Item(L.T("關於拾音"), ShowAbout));
         menu.Items.Add(Ui.Item(L.T("設定"), ShowSettings));
         menu.Items.Add(Ui.Item(L.T("結束拾音"), () => _ = Quit()));
         return menu;

@@ -94,7 +94,7 @@
 ### W1 Core（在 Mac 上測）
 
 - [~] **W1.2 方案骨架**（§1、§3）：方案、`global.json`、套件版本集中管理、建置輸出放在 repo 外都好了；`.github/workflows/windows.yml`（`windows-latest`、`windows-11-arm`、`macos-latest` 跑 `dotnet test`）寫好了
-  - 還差：推到 GitHub 讓 CI 跑一次（要使用者同意推 `windows` 分支）；套件清單和授權在加進 Engines、App 的套件時一起列
+  - 還差：推到 GitHub 讓 CI 跑一次（要使用者同意推 `windows` 分支）。套件的授權見 W7.6
 
 - [~] **W1.3 不碰畫面的 app 邏輯**（§1 的 `Shiyin.Services`）：設定（settings.json、`--set`）、模型下載（續傳、SHA-256、多個檔案的模型）、匯入、.shiyin 封包、轉錄流程（分段、分聲道、快速辨識、說話者辨識）、工作佇列（三條線、取消、模型還沒好時先等）、錄音（寫檔、暫停、看門狗、收音提醒、空間不足、麥克風權限、即時逐字稿、自動偵測語言、模擬錄音）、會議的操作（對應 Mac 的 `AppModel`）。`dotnet test` 用假的引擎、假的整理工具、本機伺服器測過（`ServicesTests`、`RecorderTests`、`ClusteringTests`）
   - 也做了：對會議提問、問所有會議（M§21.8）；更新檔的驗證（更新金鑰的簽章、版本、架構、SHA-256，§14.2）；偵測會議的時間規則（M§21.7）；回報問題的內容（M§21.9）；Word 匯出（§13，OpenXml 的 schema 檢查零錯誤）。`AppTests`、`DocxTests` 測過
@@ -206,7 +206,7 @@
 - [~] **W7.5 資料夾、垃圾桶、壓縮、儲存空間**（R9）：驗證：同 Mac 3.0 的驗收項目
   - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
 - [~] **W7.6 首次使用引導、使用說明、回報問題、關於**（R10.2、R10.4、R19.7、R27 R13.1）：驗證：全新的 `SHIYIN_HOME` 走完引導；回報的內容沒有會議內容、key；授權條款列出所有套件和模型
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+  - 做了：「關於拾音」（系統匣、設定的「進階」）：版本、用到的軟體和模型，「完整的授權條款」用預設的文字編輯器打開；`scripts/windows/make-third-party-licenses.py` 依 app 實際用到的套件產生授權檔（套件、.NET、ONNX Runtime、Windows App SDK、WebView2、whisper.cpp 原文，模型列來源和授權），Mac 上 `dotnet publish -r win-x64` 看過安裝資料夾裡有 `Third-Party Licenses.txt`、所有 DLL 都沒有匯入 VC++ 執行階段。還差：上面的驗證（要虛擬機）
 
 ### W8 打包、發布
 
@@ -222,13 +222,13 @@
   - 做了：`Updater`（簽章、版本、架構、SHA-256；`AppTests` 測過正常、金鑰不符、SHA 不符、版本不對、架構不對、忙碌中六種）、Velopack 那一邊、`scripts/windows/update-key.cs`（Mac 上測過 keygen、sign、verify）。還差：產生正式的更新金鑰（要使用者同意把私鑰放進 GitHub secrets）、本機伺服器的更新測試
 - [~] **W8.4 官網**（§14.4）：先改 `docs/website.md` §7
   - 驗證：`node site/build.mjs --releases <兩種混在一起的 JSON>` 建置成功，下載區有 Mac 和 Windows，`/download` 還是 DMG
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+  - 做了：真的 Releases 加一個假的 `win-v3.6.0` 建置成功，`/download` 還是 DMG、`/download/windows`、`/download/windows-arm64` 指到兩個安裝檔，下載區用 headless Chrome 看過（中文 1280 寬、日文 390 寬）；只有 Mac 的 Releases 時跟 main 的建置只差沒用到的樣式。還差：第一個 Windows 版發布時改常見問題「只有 Mac 版」、真的上線看一次
 - [~] **W8.5 發布的工作流程**（§14.3、D51）：`release-windows.yml`，Release 不設成 latest；W8.4 的官網要先上線
   - 驗證：手動執行只產生 artifact；推測試用的 tag 到 fork（不是正式 repo）確認不會變成 latest、Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的
   - 做了：`.github/workflows/release-windows.yml`（推 win-v* 才發布、不設成 latest、更新說明沒簽章就不發布）。還差：上面的驗證
 - [~] **W8.6 README、CLAUDE.md**：Windows 的系統需求、安裝、隱私（認證管理員、資料位置）；CLAUDE.md 補 Windows 的指令
   - 驗證：README 的系統需求跟 requirements R27 的 N4 一致、連結都打得開；CLAUDE.md 列的指令每個實際跑一次
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+  - 做了：README（中英）加〈Windows 版〉：系統需求（同 R27 N4）、安裝（SmartScreen、智慧型應用程式控制）、跟 Mac 不一樣的地方、資料位置和認證管理員、授權、從原始碼建置；寫明還沒有正式發布。CLAUDE.md 的 Windows 指令（Mac 上跑得到的都跑過）。還差：發布時把「還沒有正式發布」改成下載連結、記憶體和轉錄速度的數字（W0.4）、Windows 上的指令（`build-whisper.ps1`、`pack.ps1`）實際跑一次
 
 ### W9 驗收
 

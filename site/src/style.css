@@ -106,6 +106,12 @@ figcaption a { color: inherit; text-decoration: underline; }
 .steps { margin: 8px 0 0; padding-left: 1.4em; }
 .steps li { padding-left: 4px; }
 .steps li + li { margin-top: 8px; }
+/* Windows 版（docs/website.md §7）：有 Windows 版的 release 才出現 */
+.part .windows { margin-top: 40px; }
+.windows h3 { font-size: 20px; font-weight: 600; }
+.windows .get { margin-top: 16px; }
+.windows .arm { margin-top: 12px; font-size: 15px; }
+.windows .note { margin-top: 10px; }
 
 /* 最近更新 */
 .release { margin-top: 20px; padding: 18px 20px; border-radius: 12px; background: var(--soft); }

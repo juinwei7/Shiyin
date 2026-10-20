@@ -254,6 +254,17 @@
         }
       }
     },
+    "完整的授權條款": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full License Terms"
+          }
+        }
+      }
+    },
     "已儲存在認證管理員": {
       "extractionState": "manual",
       "localizations": {
@@ -364,6 +375,17 @@
         }
       }
     },
+    "找不到授權條款的檔案，請重新安裝拾音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The license file is missing. Please reinstall Shiyin."
+          }
+        }
+      }
+    },
     "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台電腦上正式轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper）、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
       "extractionState": "manual",
       "localizations": {
@@ -382,6 +404,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shiyin turns meetings into transcripts and meeting notes. Recording, transcription and speaker recognition all happen on this PC."
+          }
+        }
+      }
+    },
+    "拾音是 MIT 授權的開源軟體，用到下列軟體和模型：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin is open-source software under the MIT License. It uses the following software and models:"
           }
         }
       }
@@ -613,6 +646,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't read “%1$@” (Media Foundation error 0x%2$@)"
+          }
+        }
+      }
+    },
+    "版本 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
           }
         }
       }
@@ -998,6 +1042,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start recording (Ctrl+R), recognizing %@; click the arrow on the right to change the source and language"
+          }
+        }
+      }
+    },
+    "關於拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Shiyin"
           }
         }
       }

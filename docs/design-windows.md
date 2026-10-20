@@ -63,7 +63,12 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | 安裝、更新 | Velopack 1.2（MIT；1.2.158 被標為不要用）＋ 自己的更新金鑰（ECDSA P-256） | 不用系統管理員、有差異更新（D50），待 T-W7 |
 | UI 自動化（驗證） | FlaUI 5（UI Automation）、Windows.Graphics.Capture | §15.3 |
 
-授權寫進第三方授權（R27）。要特別標示的：SenseVoice 的權重是 FunASR Model License（不是 OSI 授權）、3D-Speaker 的聲紋模型（Apache-2.0，列授權時對照 ModelScope 的模型頁再確認一次）、ARM64 的 `libomp140.aarch64.dll` 要對照 Visual Studio 的可轉散發清單。
+授權寫進第三方授權（R27 R13.1）：`scripts/windows/make-third-party-licenses.py` 依 app 實際用到的套件（`dotnet list package --include-transitive`）組出 `windows/src/Shiyin.App/ThirdPartyLicenses.txt`，「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt` 都是這份。做法同 Mac（M§12.1）：條文取套件附的檔案，或套件記的原始碼 commit 上的檔案，原文不改；套件清單多了腳本不認得的套件就停下來。要特別標示的（2026-10-21 查過）：
+- 快速辨識的模型是 sherpa-onnx 從 ASLP-lab 的 WSYue-ASR `sensevoice_small_yue`（標 Apache-2.0）轉的，它是 SenseVoice-Small（FunASR Model License，不是 OSI 授權）微調的，兩個都列，附 FunASR Model License 原文
+- 3D-Speaker 的聲紋模型：ModelScope 的模型頁標 Apache License 2.0
+- Windows App SDK、WebView2 是 Microsoft 的授權條款（可以跟 app 一起散布，不是開源授權），照附
+- whisper 的 DLL 靜態連結 C/C++ 執行階段（§8），不用附 VC++ 可轉散發套件；OpenMP 關掉了，也不用 `libomp140.aarch64.dll`
+- 模型不在安裝檔裡（第一次用時從 Hugging Face、GitHub 下載），一樣列出來源和授權
 
 ## 3. 檔案配置
 
@@ -175,7 +180,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 
 ## 8. 正式轉錄
 
-- **whisper**：`native/whisper/` 的 CMake 腳本從 commit `d1be6fd` 建置，CI 建好、記下 SHA-256 放進安裝檔，不從別處下載。
+- **whisper**：`native/whisper/` 的 CMake 腳本從 commit `d1be6fd` 建置，CI 建好、記下 SHA-256 放進安裝檔，不從別處下載。C/C++ 執行階段靜態連結（`CMAKE_MSVC_RUNTIME_LIBRARY`），沒裝 VC++ 可轉散發套件的電腦也載得起來；`build-whisper.ps1` 檢查 DLL 沒有匯入 VC++ 的 DLL（sherpa-onnx、onnxruntime 的 DLL 本來就是靜態連結，2026-10-21 看過匯入表）。
   - x64：`GGML_BACKEND_DL`＋`GGML_CPU_ALL_VARIANTS`（執行時依 CPU 指令集選），加 `ggml-vulkan.dll`（官方的 Windows 檔案沒有 Vulkan，要自己建）。
   - ARM64：CPU 也建多個版本。只建一個新指令集（i8mm）的版本，舊的 Snapdragon 會碰到不支援的指令而當掉。GPU（OpenCL-Adreno）還是實驗性，先不用。
   - Mac 也建一份 dylib，`Shiyin.Engines` 的測試在 Mac 上就能跑。官方 zip 裡的 `whisper-cli.exe` 拿來交叉比對結果。

@@ -17,6 +17,8 @@ dotnet publish (Join-Path $root 'windows\src\Shiyin.App\Shiyin.App.csproj') -c R
     -p:Version=$Version -p:WindowsAppSDKSelfContained=true -o $publish
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish 失敗' }
 Copy-Item (Join-Path $Whisper '*.dll') $publish -Force
+# 第三方授權（R27 R13.1）跟著 app 一起裝
+if (-not (Test-Path (Join-Path $publish 'Third-Party Licenses.txt'))) { throw '安裝檔裡沒有 Third-Party Licenses.txt' }
 # 同名的 onnxruntime.dll 只能有一份（sherpa-onnx 的），Windows App SDK 的 Windows ML 不能帶進來（D42）
 $onnx = Get-ChildItem -Recurse $publish -Filter onnxruntime.dll
 if ($onnx.Count -ne 1) { throw "onnxruntime.dll 應該只有一份：$($onnx.FullName -join ', ')" }

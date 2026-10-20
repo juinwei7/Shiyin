@@ -578,7 +578,8 @@ public sealed class SettingsWindow : Window
         column.Children.Add(Section(L.T("其他"),
             Ui.Button(L.T("重新顯示首次使用引導"), () => { S.Set(AppSettings.OnboardingKey, false); App.Current.ShowOnboarding(); }),
             Ui.Button(L.T("重建搜尋索引"), () => { host.Db.RebuildSearchIndex(); App.Current.Notice(L.T("搜尋索引已重建")); }),
-            Ui.Button(L.T("回報問題…"), () => App.Current.ShowReport())));
+            Ui.Button(L.T("回報問題…"), () => App.Current.ShowReport()),
+            Ui.Button(L.T("關於拾音"), () => App.Current.ShowAbout())));
         return column;
     }
 }

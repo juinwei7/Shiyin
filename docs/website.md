@@ -187,8 +187,8 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 
 **Windows 版**（design-windows §14.3、§14.4，2026-10-21 加）：tag 是 `win-vX.Y.Z`，標題是「拾音 Windows X.Y.Z」「Shiyin for Windows X.Y.Z」（其他格式同上）；最新的 Windows 版一定要有 `Shiyin-<版本>-win-x64-Setup.exe` 和 `Shiyin-<版本>-win-arm64-Setup.exe`。
 
-- Mac 的版本、更新紀錄、`/download` 都不變（`win-v` 開頭的 release 不算 Mac 的版本）。還沒有 Windows 版時，網站跟現在一模一樣
-- 有 Windows 版時：下載區多一塊 Windows 的下載（x64、ARM 兩個按鈕和 SmartScreen 的說明），`/download/windows` 轉到最新的 x64 安裝檔、`/download/windows-arm64` 轉到 ARM64；下載次數加上兩個安裝檔
+- Mac 的版本、更新紀錄、`/download` 都不變（`win-v` 開頭的 release 不算 Mac 的版本）。還沒有 Windows 版時，網站跟現在一模一樣（2026-10-21 跟 main 的建置比過：只多了沒用到的 `.windows` 樣式）
+- 有 Windows 版時：下載區多一塊 Windows 的下載（「下載 Windows 版」按鈕是 x64，下面一行 ARM 的連結；SmartScreen 和智慧型應用程式控制的說明），`/download/windows` 轉到最新的 x64 安裝檔、`/download/windows-arm64` 轉到 ARM64；下載次數加上兩個安裝檔
 - Windows 版的更新紀錄先不列在網站上（只在 GitHub Release），之後跟 Mac 一起決定要不要分頁
 - 常見問題「只有 Mac 版」的文字，第一個 Windows 版發布時改（tasks W8.4）
 

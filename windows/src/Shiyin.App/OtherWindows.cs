@@ -274,6 +274,38 @@ public static class OtherWindows
         return window;
     }
 
+    // MARK: 關於拾音（R13.1、R27 R13.1）：版本、用到的軟體和模型；完整的授權條款很長（約 80 萬字元），用預設的文字編輯器打開
+
+    /// <summary>scripts/windows/make-third-party-licenses.py 產生，安裝資料夾裡也是這個檔名</summary>
+    public static string LicensesPath => Path.Combine(AppContext.BaseDirectory, "Third-Party Licenses.txt");
+
+    public static Window About(AppHost host)
+    {
+        var window = new Window { Title = L.T("關於拾音") };
+        var licenses = File.Exists(LicensesPath) ? File.ReadAllText(LicensesPath) : null;
+        // 開頭的清單到第一段條文前（「====」那一行）
+        var end = licenses?.IndexOf("\n" + new string('=', 80), StringComparison.Ordinal) ?? -1;
+        var summary = licenses is null ? L.T("找不到授權條款的檔案，請重新安裝拾音。") : end > 0 ? licenses[..end].TrimEnd() : licenses;
+        var full = Ui.Button(L.T("完整的授權條款"), () => Shell.OpenFile(LicensesPath));
+        full.IsEnabled = licenses is not null;
+        var grid = new Grid { Padding = new Thickness(24), RowSpacing = 14 };
+        foreach (var h in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
+            grid.RowDefinitions.Add(new RowDefinition { Height = h });
+        grid.Children.Add(Ui.Column(4,
+            Ui.Heading(L.T("拾音"), MeetingLanguage.Zh, 26),
+            Ui.Text(L.F("版本 %@", host.Version), 14, color: Ui.Secondary),
+            Ui.Text(L.T("拾音是 MIT 授權的開源軟體，用到下列軟體和模型："), 13, color: Ui.Secondary)));
+        var list = new ScrollViewer { Content = new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontSize = 12 } };
+        Grid.SetRow(list, 1);
+        grid.Children.Add(list);
+        var buttons = Ui.Bar(Ui.Row(8, Ui.Button("GitHub", () => Shell.OpenUrl(ProblemReport.RepositoryUrl)), full), null,  // l10n-skip
+            Ui.Button(L.T("關閉"), window.Close, accent: true));
+        Grid.SetRow(buttons, 2);
+        grid.Children.Add(buttons);
+        window.Content = grid;
+        return window;
+    }
+
     // MARK: 問所有會議（M§21.8）：可以一邊看會議一邊問；出處點了打開那場會議
 
     public static Window AskAll(AppHost host, MainWindow main)

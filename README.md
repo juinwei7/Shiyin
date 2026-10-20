@@ -104,6 +104,36 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 
 沒有執行 `make-signing-cert.sh --trust` 也能建置，會改用 ad-hoc 簽章，只是每次重新建置後系統可能會再問一次權限。
 
+## Windows 版
+
+Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能對齊 Mac 3.6。**還沒有正式發布**，發布後會放在這個 repo 的 Releases（tag 是 `win-vX.Y.Z`）和官網。
+
+| 項目 | 需求 |
+|---|---|
+| 系統 | Windows 11（x64 或 ARM64）。N 版要先裝「媒體功能套件」（Media Feature Pack） |
+| 記憶體 | 8 GB 以上 |
+| 磁碟空間 | 第一次使用時下載：快速辨識約 240 MB、說話者辨識約 45 MB、轉錄模型約 1.7 GB；日文會議另外 574 MB |
+| 顯示卡 | 不是必要的。x64 的電腦有支援 Vulkan 的顯示卡時，正式轉錄會用顯示卡 |
+| 整理工具 | 同 Mac |
+
+跟 Mac 版不一樣的地方：
+
+- **安裝**：執行 `Shiyin-<版本>-win-x64-Setup.exe`（ARM 的電腦用 `win-arm64` 那個），不用系統管理員權限，裝在 `%LOCALAPPDATA%\ShiyinApp`。安裝檔沒有程式碼簽章：出現「Windows 已保護您的電腦」時按「其他資訊」→「仍要執行」；開著「智慧型應用程式控制」時會被直接擋下，要先到「Windows 安全性 → 應用程式與瀏覽器控制」關掉它。之後有新版時，拾音會在 app 裡問你要不要更新。
+- **系統匣**取代選單列：關掉主視窗時拾音留在系統匣，錄音和轉錄不會中斷；Windows 11 預設把新圖示收在工作列的「^」裡。
+- **快捷鍵**：⌘ 換成 Ctrl；在其他 app 裡用 Ctrl+Alt+Shift+R 開始或停止錄音、Ctrl+Alt+Shift+B 標記重點。
+- **辨識**：即時逐字稿和「快速辨識」（取代 macOS 內建辨識，轉錄模型還沒下載好時先用）是 SenseVoice；說話者辨識是 sherpa-onnx，聲紋跟 Mac 版不通用。.shiyin 封包兩邊可以互相匯入。
+- **資料與隱私**：資料在 `%LOCALAPPDATA%\Shiyin`（只有這個 Windows 使用者讀得到），設定是裡面的 `settings.json`；API key 存在 Windows 的「認證管理員」，不寫進檔案或 log。解除安裝不會刪掉錄音和資料庫。其他同上面的〈資料與隱私〉。
+- **授權**：另外用了 sherpa-onnx、ONNX Runtime、SenseVoice、pyannote、3D-Speaker、NAudio、Velopack、WinUIEx、Windows App SDK 等，完整的清單和條文在「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt`（`scripts/windows/make-third-party-licenses.py` 產生，更新套件後要重跑）。
+
+從原始碼建置要在 Windows 上，需要 .NET 10 SDK、Visual Studio Build Tools（C++）、CMake：
+
+```powershell
+pwsh scripts/windows/build-whisper.ps1 -Arch x64 -Out build\whisper-x64
+pwsh scripts/windows/pack.ps1 -Version 3.6.0 -Arch x64 -Whisper build\whisper-x64   # 安裝檔在 dist\win-x64
+```
+
+不碰畫面的程式（資料庫、提示詞、整理工具、轉錄流程）在 Mac 上也能測：`cd windows && dotnet test --project tests/Shiyin.Tests`。
+
 ## 發布新版
 
 ### 用 GitHub Actions（推薦）

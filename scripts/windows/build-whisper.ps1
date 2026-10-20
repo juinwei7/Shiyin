@@ -33,6 +33,11 @@ New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $dlls = Get-ChildItem -Recurse -Path $build -Filter *.dll | Where-Object { $_.FullName -match '\\Release\\' }
 foreach ($dll in $dlls) { Copy-Item $dll.FullName -Destination $Out -Force }
 # ARM64 的 OpenMP（libomp140.aarch64.dll）沒用到：GGML_OPENMP 關掉了
+# 執行階段要靜態連結（CMakeLists 的 CMAKE_MSVC_RUNTIME_LIBRARY）：匯入表裡有 VC++ 的 DLL 就不能發布
+Get-ChildItem $Out -Filter *.dll | ForEach-Object {
+    $text = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($_.FullName))
+    if ($text -imatch '(vcruntime140(_1)?|msvcp140|vcomp140|libomp140[^.]*)\.dll') { throw "$($_.Name) 需要 $($Matches[0])，沒裝 VC++ 可轉散發套件的電腦會載入失敗" }
+}
 Get-ChildItem $Out -Filter *.dll | ForEach-Object {
     $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     Write-Host "$hash  $($_.Name)"

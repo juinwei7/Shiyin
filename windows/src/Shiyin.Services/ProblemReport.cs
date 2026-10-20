@@ -11,7 +11,8 @@ namespace Shiyin.Services;
 /// </summary>
 public static class ProblemReport
 {
-    public const string DefaultIssuesUrl = "https://github.com/juinwei7/Shiyin/issues";
+    public const string RepositoryUrl = "https://github.com/juinwei7/Shiyin";
+    public const string DefaultIssuesUrl = RepositoryUrl + "/issues";
 
     /// <summary>Windows 的環境（Platform 填）：版本和 build、CPU、記憶體、顯示卡、whisper 用的是 CPU 還是 Vulkan</summary>
     public sealed record Environment(string AppVersion, string Build, string Windows, string Cpu, long MemoryBytes, string Gpu, string WhisperBackend);
