@@ -81,7 +81,7 @@ public sealed class MainWindow : Window
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300), MinWidth = 240 });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var sidebar = new Grid { Background = (Brush)Application.Current.Resources["LayerFillColorDefaultBrush"], BorderBrush = Ui.Divider, BorderThickness = new Thickness(0, 0, 1, 0) };
+        var sidebar = new Grid { Background = Ui.CardBackground, BorderBrush = Ui.Divider, BorderThickness = new Thickness(0, 0, 1, 0) };
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             sidebar.RowDefinitions.Add(new RowDefinition { Height = h });
         Place(sidebar, toolbar, 0);

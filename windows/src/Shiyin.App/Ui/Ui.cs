@@ -26,11 +26,32 @@ public static class Ui
     public static SolidColorBrush Celadon => Brush(0x2D6A5D, 0x6DB2A1);
     public static SolidColorBrush Signal => Brush(0xB97F06, 0xE2AD3B);
     public static SolidColorBrush Danger => Brush(0xC0392B, 0xEE8E8E);
-    public static Brush Secondary => (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-    public static Brush Tertiary => (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"];
-    public static Brush CardBackground => (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-    public static Brush Subtle => (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
-    public static Brush Divider => (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"];
+    public static Brush Secondary => Resource("TextFillColorSecondaryBrush", 0x5F, 0x5F, 0x5F, 0xC5, 0xC5, 0xC5);
+    public static Brush Tertiary => Resource("TextFillColorTertiaryBrush", 0x8A, 0x8A, 0x8A, 0x9A, 0x9A, 0x9A);
+    public static Brush CardBackground => Resource("CardBackgroundFillColorDefaultBrush", 0xFB, 0xFB, 0xFB, 0x2B, 0x2B, 0x2B);
+    public static Brush Subtle => Resource("SubtleFillColorSecondaryBrush", 0xEE, 0xEE, 0xEE, 0x33, 0x33, 0x33);
+    public static Brush Divider => Resource("DividerStrokeColorDefaultBrush", 0xE5, 0xE5, 0xE5, 0x3A, 0x3A, 0x3A);
+
+    static object? Lookup(string key)
+    {
+        try { return Application.Current.Resources[key]; }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>WinUI 的主題資源（在 XamlControlsResources 的 ThemeDictionaries 裡）；找不到時用差不多的顏色，不要因為資源名稱改了就閃退</summary>
+    static Brush Resource(string key, byte lr, byte lg, byte lb, byte dr, byte dg, byte db)
+    {
+        var resources = Application.Current.Resources;
+        if (Lookup(key) is Brush b) return b;
+        var theme = dark ? "Dark" : "Light";
+        foreach (var merged in resources.MergedDictionaries)
+        {
+            if (merged.ThemeDictionaries.TryGetValue(theme, out var t) && t is ResourceDictionary dictionary && dictionary.TryGetValue(key, out var value) && value is Brush brush)
+                return brush;
+            if (merged.TryGetValue(key, out var plain) && plain is Brush p) return p;
+        }
+        return new SolidColorBrush(dark ? Color.FromArgb(255, dr, dg, db) : Color.FromArgb(255, lr, lg, lb));
+    }
     public static Color CeladonColor => Hex(0x2D6A5D);
 
     /// <summary>說話者的顏色（8 色循環；青瓷綠、琥珀排在最後，同 Mac）</summary>
@@ -79,7 +100,7 @@ public static class Ui
     public static Button Button(string text, Action click, bool accent = false, string? tooltip = null)
     {
         var b = new Button { Content = text };
-        if (accent) b.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
+        if (accent && Lookup("AccentButtonStyle") is Style style) b.Style = style;
         b.Click += (_, _) => click();
         if (tooltip is not null) ToolTipService.SetToolTip(b, tooltip);
         return b;

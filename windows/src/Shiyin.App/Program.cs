@@ -29,7 +29,9 @@ public static class Program
         var instance = AppInstance.FindOrRegisterForKey("ShiyinMain");
         if (!instance.IsCurrent)
         {
-            instance.RedirectActivationToAsync(AppInstance.GetCurrent().GetActivatedEventArgs()).AsTask().Wait();
+            // 在別的執行緒等轉送完成（直接在 STA 的主執行緒上 Wait 可能卡住）
+            var activation = AppInstance.GetCurrent().GetActivatedEventArgs();
+            Task.Run(() => instance.RedirectActivationToAsync(activation).AsTask()).Wait(TimeSpan.FromSeconds(10));
             return 0;
         }
         instance.Activated += (_, e) => App.Current?.Activated(e);
