@@ -40,14 +40,14 @@ export const content = {
     live: {
       h2: '開會時，邊錄邊看逐字稿',
       ps: [
-        '按「錄音」就開始，講完幾秒內逐字稿就會出現。線上會議把錄音來源選「麥克風＋電腦聲音」，Zoom、Meet、Teams 對方的聲音也會錄進來，不用派機器人加入會議。開線上會議時，拾音會提醒你要不要開始錄音。',
+        '按「錄音」就開始，講完幾秒內逐字稿就會出現。線上會議把錄音來源選「麥克風＋電腦聲音」，Zoom、Meet、Teams 對方的聲音也會錄進來，不用派機器人加入會議。開線上會議時，拾音會提醒你要不要開始錄音。麥克風沒收到聲音、聲音太小或背景太吵時，錄音畫面也會提醒你。',
         '右邊可以做筆記，每換一行會自動記下當時的錄音時間；重要的地方按「標記重點」，在其他 app 裡按 ⌃⌥⌘B 也可以。整理時這些都會被當成重點。',
       ],
     },
     transcribe: {
       h2: '停止後，在 Mac 上正式轉錄',
       ps: [
-        '停止錄音後，拾音會在你的 Mac 上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。',
+        '停止錄音後，拾音會在你的 Mac 上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。人多、吵雜時分錯了也好改：可以先告訴拾音大約幾個人，也可以把兩位說話者合併成一位，或直接改某一句是誰說的。',
         '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過，「deploy」「Redis」這種詞不會被聽成別的字；日文會議改用 Whisper。產品名、人名可以先加進詞彙表，轉錄時會參考。',
       ],
     },
@@ -151,14 +151,14 @@ export const content = {
     live: {
       h2: 'Read the transcript while you meet',
       ps: [
-        'Click Record and the transcript appears a few seconds after people speak. For online meetings, set the source to “Microphone + computer audio” and the other side of Zoom, Meet or Teams is recorded too, with no bot joining your call. When an online meeting starts, Shiyin asks whether to record.',
+        'Click Record and the transcript appears a few seconds after people speak. For online meetings, set the source to “Microphone + computer audio” and the other side of Zoom, Meet or Teams is recorded too, with no bot joining your call. When an online meeting starts, Shiyin asks whether to record. If the microphone isn’t picking up sound, the sound is too quiet or the room is too noisy, the recording screen tells you.',
         'Take notes on the right: each new line is stamped with the recording time. Click Bookmark at important moments, or press ⌃⌥⌘B from any other app. Both are treated as key points when the notes are written.',
       ],
     },
     transcribe: {
       h2: 'When you stop, your Mac transcribes it properly',
       ps: [
-        'After you stop, Shiyin transcribes the recording again on your Mac. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings.',
+        'After you stop, Shiyin transcribes the recording again on your Mac. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings. Crowded or noisy room? Tell Shiyin roughly how many people there are, merge two speakers into one, or change who said a line.',
         'English and Chinese meetings use Breeze ASR 25, which is tuned for Taiwanese Mandarin mixed with English; Japanese meetings use Whisper. Add product names and people to the glossary and transcription takes them into account.',
       ],
     },
@@ -263,14 +263,14 @@ export const content = {
     live: {
       h2: '会議中は、文字起こしを見ながら録音',
       ps: [
-        '「Record」を押すと録音が始まり、話してから数秒で文字起こしが表示されます。オンライン会議では録音ソースを「Microphone + computer audio」にすると、Zoom、Meet、Teams の相手の声も録音されます。会議にボットを参加させる必要はありません。オンライン会議が始まると、録音するかどうか拾音が確認します。',
+        '「Record」を押すと録音が始まり、話してから数秒で文字起こしが表示されます。オンライン会議では録音ソースを「Microphone + computer audio」にすると、Zoom、Meet、Teams の相手の声も録音されます。会議にボットを参加させる必要はありません。オンライン会議が始まると、録音するかどうか拾音が確認します。マイクに音が入っていない、声が小さすぎる、周りがうるさすぎるときも、録音画面でお知らせします。',
         '右側にはメモを書けます。改行するたびにその時点の録音時間が記録され、大事な場面では「Bookmark」を押します。ほかのアプリを使っていても ⌃⌥⌘B で記録できます。議事録をまとめるときは、これらが重要なポイントとして扱われます。',
       ],
     },
     transcribe: {
       h2: '録音を止めたら、Mac で正式に文字起こし',
       ps: [
-        '録音を止めると、拾音が Mac の中で録音をもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も聞き分けます。「Speaker 1」を名前に変えれば、会議全体に反映されます。拾音はその人の声を覚え、次の会議から自動で名前を入れます。',
+        '録音を止めると、拾音が Mac の中で録音をもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も聞き分けます。「Speaker 1」を名前に変えれば、会議全体に反映されます。拾音はその人の声を覚え、次の会議から自動で名前を入れます。人が多い会議や騒がしい場所で話者を間違えても、すぐに直せます。おおよその人数を拾音に伝えたり、2 人の話者を 1 人にまとめたり（Merge Into…）、ある発言の話者を変えたり（Who Said This Line?）できます。',
         '日本語の会議は Whisper large-v3-turbo で文字起こしします。英語と中国語の会議には、台湾華語と英語の混ざった会話に合わせて調整された Breeze ASR 25 を使います。製品名や人名を用語集に登録しておくと、文字起こしのときに参考にされます。',
       ],
     },
