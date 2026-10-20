@@ -236,8 +236,9 @@ final class AppDatabase: @unchecked Sendable {
             let meetings = try Meeting
                 .filter(trash ? Column("deleted_at") != nil : Column("deleted_at") == nil)
                 .order(sql: "meeting_date DESC, id DESC").fetchAll(db)
-            // 背景的輔助工作（壓縮、逐字稿校正、猜說話者）不算會議的狀態（design §21.2）
-            let latest = try Job.fetchAll(db, sql: "SELECT * FROM jobs WHERE id IN (SELECT MAX(id) FROM jobs WHERE kind NOT IN ('compress', 'correct', 'nameSpeakers') GROUP BY meeting_id)")
+            // 背景的輔助工作（壓縮、逐字稿校正、猜說話者、重新辨識說話者）不算會議的狀態（design §21.2、§23.3）
+            let auxiliary = JobKind.allCases.filter(\.isAuxiliary).map { "'\($0.rawValue)'" }.joined(separator: ", ")
+            let latest = try Job.fetchAll(db, sql: "SELECT * FROM jobs WHERE id IN (SELECT MAX(id) FROM jobs WHERE kind NOT IN (\(auxiliary)) GROUP BY meeting_id)")
             let byMeeting = Dictionary(uniqueKeysWithValues: latest.map { ($0.meetingId, $0) })
             return meetings.map { m in
                 MeetingRow(meeting: m, latestJob: byMeeting[m.id ?? 0], reviewCount: m.decodedNotes?.reviewItems.count ?? 0)

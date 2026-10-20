@@ -7144,6 +7144,17 @@
         }
       }
     },
+    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If too few speakers are found (many people, a noisy room, a phone recording from across the table), choose “Identify Speakers Again…” from “More” and tell Shiyin roughly how many people there are. Only who is speaking is worked out again; the transcript text doesn't change."
+          }
+        }
+      }
+    },
     "說話者名字": {
       "extractionState": "manual",
       "localizations": {

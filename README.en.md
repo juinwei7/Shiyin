@@ -41,6 +41,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - **Speaker identification**: every transcript segment is labeled with a speaker, each in its own color; rename speakers or show one speaker only
   - Voiceprints: once you name a speaker, Shiyin remembers that person’s voice and fills in the name in later meetings (marked “Auto”, easy to correct). Voiceprints stay on this Mac; view, delete or turn them off in Settings
   - The summarizer guesses speaker names from the conversation (“thanks for the update, Anna”) and lists them as suggestions; nothing changes until you click Apply, and renaming a speaker also updates the notes
+  - Too few speakers found in a crowded, noisy or phone-across-the-table recording? Choose More → Identify Speakers Again… and pick roughly how many people there are; only who is speaking is worked out again, the transcript text stays the same
 - **Meeting notes**
   - Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own
   - Summarizers: Claude Code, Codex CLI, Anthropic API, OpenAI API, Gemini API, an OpenAI-compatible API (Groq, OpenRouter, or Ollama and LM Studio on your Mac), or “Don’t summarize” for transcripts only
