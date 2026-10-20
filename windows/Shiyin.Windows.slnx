@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Shiyin.App/Shiyin.App.csproj" />
     <Project Path="src/Shiyin.Core/Shiyin.Core.csproj" />
+    <Project Path="src/Shiyin.Ctl/Shiyin.Ctl.csproj" />
     <Project Path="src/Shiyin.Data/Shiyin.Data.csproj" />
     <Project Path="src/Shiyin.Engines/Shiyin.Engines.csproj" />
     <Project Path="src/Shiyin.Eval/Shiyin.Eval.csproj" />

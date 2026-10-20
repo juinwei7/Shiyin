@@ -93,6 +93,9 @@ public sealed record MeetingNotes
     /// <summary>跟 Mac 的 <c>jsonString()</c> 逐字元相同：排序鍵、斜線不跳脫、緊湊</summary>
     public string JsonString() => SwiftJsonWriter.Write(ToJson(), sortKeys: true, escapeSlashes: false);
 
+    /// <summary>內容相同（同 Mac 的 Equatable；record 的 Equals 只比清單的參考）</summary>
+    public static bool Same(MeetingNotes? a, MeetingNotes? b) => a is null ? b is null : b is not null && a.JsonString() == b.JsonString();
+
     public JNode.Obj ToJson()
     {
         static JNode ItemNode(Item i) => new JNode.Obj().Add("text", i.Text).Add("time", i.Time);

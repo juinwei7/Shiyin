@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- shiyinctl.exe（design-windows §15.3）：送指令給 DEBUG 版拾音的控制通道（named pipe），印出回應 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>shiyinctl</AssemblyName>
+    <RootNamespace>Shiyin.Ctl</RootNamespace>
+  </PropertyGroup>
+</Project>

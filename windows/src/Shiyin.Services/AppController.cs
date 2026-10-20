@@ -732,8 +732,8 @@ public sealed class AppController
     /// <summary>編輯器按「完成」或關掉時存檔（R6.6）。編輯期間會議紀錄被別的工作改過的話提醒一下：舊的那一版還在版本紀錄裡</summary>
     public void FinishNotesEdit(MeetingNotes draft, MeetingNotes? baseline, long meetingId, bool automatically = false)
     {
-        if (draft.Equals(baseline)) return;
-        if (baseline is not null && Db.Meeting(meetingId)?.DecodedNotes is { } current && !current.Equals(baseline))
+        if (MeetingNotes.Same(draft, baseline)) return;
+        if (baseline is not null && Db.Meeting(meetingId)?.DecodedNotes is { } current && !MeetingNotes.Same(current, baseline))
             Notice?.Invoke(L.T("編輯期間會議紀錄有更新，已用你改的版本存檔；從「更多 → 復原上一版會議紀錄」可以找回更新的內容"));
         else if (automatically)
             Notice?.Invoke(L.T("已儲存剛才編輯的會議紀錄"));
@@ -743,7 +743,7 @@ public sealed class AppController
     /// <summary>meetingId 要明確給：編輯器關掉時（切到別場會議、錄音停止後自動跳到那場），選的會議可能已經是別場</summary>
     public void SaveEditedNotes(MeetingNotes notes, long meetingId)
     {
-        if (Db.Meeting(meetingId)?.DecodedNotes is not { } current || notes.Equals(current)) return;
+        if (Db.Meeting(meetingId)?.DecodedNotes is not { } current || MeetingNotes.Same(notes, current)) return;
         Perform(meetingId, () => Db.SaveNotes(meetingId, notes, null, L.T("手動編輯")));
     }
 

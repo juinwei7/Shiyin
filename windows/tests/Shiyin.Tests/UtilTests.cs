@@ -166,3 +166,25 @@ public class UtilTests
         }
     }
 }
+
+/// <summary>翻譯表（design-windows §11.4）：直接讀 Mac 的 Localizable.xcstrings</summary>
+public sealed class StringsTests
+{
+    [Fact]
+    public void ReadsMacTableWithPlurals()
+    {
+        var path = Path.Combine(Golden.Root, "..", "..", "Resources", "Localizable.xcstrings");
+        var (table, plurals) = Shiyin.Localization.L.ReadXcstrings(File.ReadAllText(path));
+        Assert.Equal("## What happened", table["## 問題描述"]);
+        Assert.Equal(("%lld person", "%lld people"), plurals["%lld 人"]);
+        try
+        {
+            Shiyin.Localization.L.Use(table, plurals);
+            Assert.Equal("1 person", Shiyin.Localization.L.F("%lld 人", 1));
+            Assert.Equal("3 people", Shiyin.Localization.L.F("%lld 人", 3));
+            Assert.Equal("找不到的鍵", Shiyin.Localization.L.T("找不到的鍵"));
+        }
+        finally { Shiyin.Localization.L.Use(null); }
+        Assert.Equal("3 人", Shiyin.Localization.L.F("%lld 人", 3));
+    }
+}
