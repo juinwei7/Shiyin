@@ -68,6 +68,8 @@ struct MeetingDetail: Equatable {
     var correctionsBySegment: [Int64: [Correction]] = [:]
     var timelineStarts: [Double] = []
     var timelineIds: [Int64] = []
+    /// 段落 id → 在 segments 裡的位置（找連續的同一位說話者，design §24.3）
+    var segmentIndex: [Int64: Int] = [:]
     /// 說話者名字的來源（default / manual / voiceprint / suggestion），聲紋帶入的顯示「自動」（design §21.4）
     var speakerSources: [Int: String] = [:]
     /// AI 猜的名字（design §21.5）：還是預設名稱的說話者才有
@@ -88,6 +90,22 @@ struct MeetingDetail: Equatable {
         let ordered = segments.compactMap { s in s.id.map { (start: s.start, id: $0) } }.sorted { $0.start < $1.start }
         timelineStarts = ordered.map(\.start)
         timelineIds = ordered.map(\.id)
+        segmentIndex = Dictionary(segments.enumerated().compactMap { i, s in s.id.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
+    }
+
+    /// 跟這段同一位說話者、在逐字稿裡前後連在一起的段落（「這段連續的話是誰說的」，design §24.3）
+    func speakerRun(around id: Int64) -> [Int64] {
+        guard let i = segmentIndex[id], let speaker = segments[i].speaker else { return [id] }
+        var low = i, high = i
+        while low > 0, segments[low - 1].speaker == speaker { low -= 1 }
+        while high + 1 < segments.count, segments[high + 1].speaker == speaker { high += 1 }
+        return segments[low...high].compactMap(\.id)
+    }
+
+    /// 說話者可能分得不夠的提示（design §24.5）：自我檢查覺得可能把人併在一起、使用者沒選過人數、沒按過「不用了」
+    var showsSpeakerHint: Bool {
+        meeting.mayHaveMergedSpeakers && meeting.minSpeakers == nil && !meeting.speakerHintDismissed
+            && segments.contains { $0.kind == "final" && $0.channel == nil }
     }
 
     /// 播放到 time 時的段落：開始時間不晚於 time + 0.05 的最後一段（二分搜尋）
@@ -790,6 +808,74 @@ final class AppModel {
     func rediarize(meetingId: Int64, minSpeakers: Int?) {
         perform { try db.setMinSpeakers(meetingId, minSpeakers); try db.enqueue(meetingId, kind: .rediarize) }
         runner.wake()
+    }
+
+    // MARK: 說話者的修正（design §24、R23）
+
+    /// 轉錄或重新辨識說話者時不能改：完成時會整份寫回段落的說話者
+    private func speakerEditProblem(_ id: Int64) -> String? {
+        if detail?.meeting.deletedAt != nil { return String(localized: "垃圾桶裡的會議要先還原才能操作") }
+        if detailStatus?.isActive == true || (try? db.hasActiveJob(id, kind: .rediarize)) == true {
+            return String(localized: "正在處理這場會議，完成後才能改說話者")
+        }
+        return nil
+    }
+
+    /// 「合併到…」（R23.1）：from 說的話全部算 into 的；會議紀錄裡的名字跟著換
+    func mergeSpeaker(_ from: Int, into: Int) {
+        guard let id = selection else { return }
+        if let problem = speakerEditProblem(id) {
+            noticeMessage = problem
+            return
+        }
+        guard let fromName = detail?.speakerName(from), let intoName = detail?.speakerName(into) else { return }
+        let source = detail?.speakerSources[into]
+        perform(.detail([.speakers, .segments, .meeting])) {
+            guard try db.mergeSpeakers(id, from: from, into: into,
+                                       label: String(localized: "把「\(fromName)」合併到「\(intoName)」")) != nil else { return }
+            // 使用者取的名字：用合併後的聲紋重新學（自動帶入的名字不學，design §21.4）
+            if AppSettings.voiceprints, source == "manual" || source == "suggestion" {
+                try db.learnVoiceprint(id, idx: into, name: intoName, source: source ?? "manual")
+            }
+            noticeMessage = String(localized: "已把「\(fromName)」合併到「\(intoName)」。要復原的話，從「更多 → 復原說話者的調整」。")
+        }
+    }
+
+    /// 「這句是誰說的」（R23.2）：to 是 nil 時新增一位說話者
+    func reassignSegments(_ ids: [Int64], to idx: Int?) {
+        guard let id = selection, !ids.isEmpty else { return }
+        if let problem = speakerEditProblem(id) {
+            noticeMessage = problem
+            return
+        }
+        let target = idx.flatMap { detail?.speakerName($0) } ?? String(localized: "新的說話者")
+        let label = ids.count == 1 ? String(localized: "把一句改成「\(target)」說的")
+                                   : String(localized: "把 \(ids.count) 句改成「\(target)」說的")
+        perform(.detail([.speakers, .segments])) {
+            try db.reassignSegments(id, ids: ids, to: idx, label: label)
+        }
+    }
+
+    /// 「更多 → 復原說話者的調整」：只復原最近一次合併或改句子
+    func undoSpeakerEdit() {
+        guard let id = selection else { return }
+        if let problem = speakerEditProblem(id) {
+            noticeMessage = problem
+            return
+        }
+        guard let label = try? db.speakerUndoLabel(id) else {
+            noticeMessage = String(localized: "沒有可以復原的說話者調整（改名、重新辨識說話者之後就不能復原之前的調整）")
+            return
+        }
+        perform(.detail([.speakers, .segments, .meeting])) {
+            if try db.undoSpeakerEdit(id) { noticeMessage = String(localized: "已復原：\(label)") }
+        }
+    }
+
+    /// 說話者可能分得不夠的提示（design §24.5）
+    func dismissSpeakerHint() {
+        guard let id = selection else { return }
+        perform(.detail([.meeting])) { try db.dismissSpeakerHint(id) }
     }
 
     func resummarize() {

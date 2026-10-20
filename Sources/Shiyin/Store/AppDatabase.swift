@@ -226,6 +226,20 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("v8") { db in
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN min_speakers INTEGER")
         }
+        // 說話者的修正、分不準的提示（design §24.1）
+        migrator.registerMigration("v9") { db in
+            try db.execute(sql: """
+                ALTER TABLE segments ADD COLUMN speaker_manual INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE meetings ADD COLUMN speaker_check REAL;
+                ALTER TABLE meetings ADD COLUMN speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0;
+                CREATE TABLE speaker_undo (
+                  meeting_id INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
+                  snapshot   TEXT NOT NULL,
+                  label      TEXT NOT NULL,
+                  created_at TEXT NOT NULL
+                );
+                """)
+        }
         return migrator
     }
 
@@ -383,6 +397,8 @@ final class AppDatabase: @unchecked Sendable {
         try pool.write { db in
             try Self.unindexSegments(db, meetingId: meetingId)
             try Segment.filter(Column("meeting_id") == meetingId).deleteAll(db)
+            // 逐字稿換掉了，說話者的復原資料對不上（design §24.2）
+            try db.execute(sql: "DELETE FROM speaker_undo WHERE meeting_id = ?", arguments: [meetingId])
             for var s in segments {
                 try s.insert(db)
                 try Self.indexSegment(db, meetingId: meetingId, id: s.id!, text: s.text)
@@ -547,6 +563,8 @@ final class AppDatabase: @unchecked Sendable {
                 INSERT INTO speakers (meeting_id, idx, name, name_source) VALUES (?, ?, ?, ?)
                 ON CONFLICT (meeting_id, idx) DO UPDATE SET name = excluded.name, name_source = excluded.name_source
                 """, arguments: [meetingId, idx, name, Self.isDefaultSpeakerName(name) ? "default" : "manual"])
+            // 改名之後不能再復原合併、改句子（復原會把名字一起換回去，跟會議紀錄對不上，design §24.4）
+            try db.execute(sql: "DELETE FROM speaker_undo WHERE meeting_id = ?", arguments: [meetingId])
         }
     }
 
@@ -593,7 +611,7 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     @discardableResult
-    private static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String,
+    static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String,
                                   source: NotesSource = .edit) throws -> Bool {
         guard var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
         let wasDraft = m.notesDraft
@@ -628,19 +646,21 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 復原上一版：成功回傳 true
     func undoNotes(_ meetingId: Int64) throws -> Bool {
-        try pool.write { db in
-            guard let version = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id").desc).fetchOne(db),
-                  var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
-            m.notes = version.notes
-            m.notesDraft = 0   // 復原的是之前的某一版，不再當草稿自動更新
-            if !m.titleLocked, let title = m.decodedNotes?.title, !title.isEmpty { m.title = title }
-            m.updatedAt = Clock.now()
-            try m.update(db)
-            _ = try version.delete(db)
-            try Self.index(db, meetingId: meetingId, kind: .notes, ref: 0, text: m.decodedNotes?.plainText ?? "")
-            try Self.index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
-            return true
-        }
+        try pool.write { db in try Self.undoNotes(db, meetingId) }
+    }
+
+    static func undoNotes(_ db: Database, _ meetingId: Int64) throws -> Bool {
+        guard let version = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id").desc).fetchOne(db),
+              var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
+        m.notes = version.notes
+        m.notesDraft = 0   // 復原的是之前的某一版，不再當草稿自動更新
+        if !m.titleLocked, let title = m.decodedNotes?.title, !title.isEmpty { m.title = title }
+        m.updatedAt = Clock.now()
+        try m.update(db)
+        _ = try version.delete(db)
+        try index(db, meetingId: meetingId, kind: .notes, ref: 0, text: m.decodedNotes?.plainText ?? "")
+        try index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
+        return true
     }
 
     /// 全文取代：逐字稿＋會議紀錄（沿用第二版）

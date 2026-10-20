@@ -1191,6 +1191,17 @@
         }
       }
     },
+    "不用了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Thanks"
+          }
+        }
+      }
+    },
     "不要再提醒這個 app": {
       "extractionState": "manual",
       "localizations": {
@@ -2206,6 +2217,17 @@
         }
       }
     },
+    "只重新分辨誰在說話，逐字稿的文字不會變": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only works out again who is speaking; the transcript text stays the same"
+          }
+        }
+      }
+    },
     "只重新分辨誰在說話，逐字稿的文字不會變。人多、吵雜或手機遠距收音時，告訴拾音大約幾個人會分得比較準。": {
       "extractionState": "manual",
       "localizations": {
@@ -2257,6 +2279,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Works (%lld s)"
+          }
+        }
+      }
+    },
+    "合併到…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Into…"
+          }
+        }
+      }
+    },
+    "合併說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge speakers"
+          }
+        }
+      }
+    },
+    "同一個人被分成兩位時，把這位說的話全部算到另一位": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If one person was split into two, move everything this speaker said to the other one"
           }
         }
       }
@@ -2889,6 +2944,28 @@
         }
       }
     },
+    "已復原：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undone: %@"
+          }
+        }
+      }
+    },
+    "已把「%@」合併到「%@」。要復原的話，從「更多 → 復原說話者的調整」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merged “%1$@” into “%2$@”. To undo, choose More → Undo Speaker Changes."
+          }
+        }
+      }
+    },
     "已改成「%@」（原本是「%@」）": {
       "extractionState": "manual",
       "localizations": {
@@ -3321,6 +3398,17 @@
         }
       }
     },
+    "復原說話者的調整": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo Speaker Changes"
+          }
+        }
+      }
+    },
     "必填": {
       "extractionState": "manual",
       "localizations": {
@@ -3559,6 +3647,51 @@
           "stringUnit": {
             "state": "translated",
             "value": "Find meetings and play"
+          }
+        }
+      }
+    },
+    "把 %lld 句改成「%@」說的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changed %lld line to “%@”"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changed %lld lines to “%@”"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "把「%@」合併到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge “%1$@” into “%2$@”"
+          }
+        }
+      }
+    },
+    "把一句改成「%@」說的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changed a line to “%@”"
           }
         }
       }
@@ -4507,6 +4640,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The new version's signature doesn't match this Shiyin, so it wasn't installed (%@)"
+          }
+        }
+      }
+    },
+    "新的說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Speaker"
           }
         }
       }
@@ -5514,6 +5658,17 @@
         }
       }
     },
+    "正在處理這場會議，完成後才能改說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is being processed. You can change speakers when it’s done"
+          }
+        }
+      }
+    },
     "正在處理這場會議，完成後才能編輯": {
       "extractionState": "manual",
       "localizations": {
@@ -5730,6 +5885,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not downloaded; transcription uses macOS speech recognition"
+          }
+        }
+      }
+    },
+    "沒有可以復原的說話者調整（改名、重新辨識說話者之後就不能復原之前的調整）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No speaker changes to undo (earlier changes can’t be undone after renaming or identifying speakers again)"
           }
         }
       }
@@ -7155,6 +7321,28 @@
         }
       }
     },
+    "說話者分錯了：同一個人被分成兩位，點說話者的名字選「合併到…」；某幾句分錯人，在逐字稿按右鍵選「這句是誰說的」。改錯了可以從「更多」選「復原說話者的調整」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers mixed up? If one person was split into two, click the speaker’s name and choose “Merge Into…”. If a few lines went to the wrong person, right-click the transcript and choose “Who Said This Line?”. To undo, choose “Undo Speaker Changes” from More."
+          }
+        }
+      }
+    },
+    "說話者可能分得不夠：有些不同的人可能被當成同一位。人多、吵雜或手機放在桌上錄音時常發生，告訴拾音大約幾個人會分得比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some speakers may be missing: different people may have been treated as one. This often happens with many people, noise, or a phone on the table. Telling Shiyin roughly how many people there were helps."
+          }
+        }
+      }
+    },
     "說話者名字": {
       "extractionState": "manual",
       "localizations": {
@@ -7850,6 +8038,28 @@
         }
       }
     },
+    "這句是誰說的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who Said This Line?"
+          }
+        }
+      }
+    },
+    "這場會議不再提示": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don’t show this again for this meeting"
+          }
+        }
+      }
+    },
     "這場會議在垃圾桶裡，30 天後會永久刪除": {
       "extractionState": "manual",
       "localizations": {
@@ -8044,6 +8254,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not Now"
+          }
+        }
+      }
+    },
+    "這段連續的話是誰說的（%lld 句）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Who Said These Lines? (%lld line)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Who Said These Lines? (%lld lines)"
+                }
+              }
+            }
           }
         }
       }

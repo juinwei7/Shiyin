@@ -344,6 +344,7 @@ struct MoreMenu: View {
             Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
             Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
             Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
+            Button("復原說話者的調整", systemImage: "arrow.uturn.backward.circle") { model.undoSpeakerEdit() }
             Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }
             Divider()
             Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }

@@ -55,6 +55,10 @@ struct TranscriptTab: View {
                 upgradeBar
                 Divider()
             }
+            if detail.showsSpeakerHint && model.detailStatus?.isActive != true {
+                speakerHintBar
+                Divider()
+            }
             if pendingCorrections > 0 && !snapshotMode {
                 correctionBar
                 Divider()
@@ -131,6 +135,10 @@ struct TranscriptTab: View {
         .sheet(isPresented: $showReplace) {
             ReplaceSheet(initialFind: query)
         }
+        // 合併、改說話者後篩選的那位不見了：回到所有說話者
+        .onChange(of: detail.speakers.keys.sorted()) { _, keys in
+            if let speakerFilter, !keys.contains(speakerFilter) { self.speakerFilter = nil }
+        }
     }
 
     private var searchBar: some View {
@@ -199,6 +207,26 @@ struct TranscriptTab: View {
             Button("重新轉錄") { model.retranscribe() }
                 .buttonStyle(.borderedProminent)
                 .help("逐字稿裡改過的文字會換成新的逐字稿，說話者的名字會留著")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .font(.callout)
+        .controlSize(.small)
+        .background(Color.signal.opacity(0.08))
+    }
+
+    /// 說話者可能分得不夠（design §24.5）：說話者辨識的自我檢查覺得可能把不同的人併在一起
+    private var speakerHintBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "person.2.badge.gearshape").foregroundStyle(Color.signal)
+            Text("說話者可能分得不夠：有些不同的人可能被當成同一位。人多、吵雜或手機放在桌上錄音時常發生，告訴拾音大約幾個人會分得比較準。")
+            // 不能加 fixedSize：理由同 upgradeBar
+            Spacer()
+            Button("不用了") { model.dismissSpeakerHint() }
+                .help("這場會議不再提示")
+            Button("重新辨識說話者…") { model.requestRediarize() }
+                .buttonStyle(.borderedProminent)
+                .help("只重新分辨誰在說話，逐字稿的文字不會變")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
@@ -311,7 +339,12 @@ struct TranscriptTab: View {
                 .popover(isPresented: Binding(get: { renaming?.segment == segment.id && segment.id != nil },
                                               set: { if !$0 { renaming = nil } })) {
                     RenameSpeakerForm(name: $renameText, automatic: detail.speakerSources[idx] == "voiceprint",
-                                      onReject: { model.rejectVoiceprintMatch(idx); renaming = nil }) {
+                                      onReject: { model.rejectVoiceprintMatch(idx); renaming = nil },
+                                      mergeTargets: otherSpeakers(than: idx),
+                                      onMerge: { into in
+                                          renaming = nil
+                                          model.mergeSpeaker(idx, into: into)
+                                      }) {
                         model.renameSpeaker(idx, to: renameText)
                         renaming = nil
                     }
@@ -359,8 +392,31 @@ struct TranscriptTab: View {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(segment.text, forType: .string)
             }
+            // 改這句的說話者（design §24.3、R23.2）
+            if let id = segment.id, segment.kind == "final", !detail.speakers.isEmpty {
+                Divider()
+                Menu("這句是誰說的") { speakerChoices(for: [id], current: segment.speaker) }
+                let run = detail.speakerRun(around: id)
+                if run.count > 1 {
+                    Menu("這段連續的話是誰說的（\(run.count) 句）") { speakerChoices(for: run, current: segment.speaker) }
+                }
+            }
         }
         .help(segment.lowConfidence ? "辨識信心低，建議對照錄音確認" : "")
+    }
+
+    /// 除了 idx 以外的說話者（合併、改說話者的選單）
+    private func otherSpeakers(than idx: Int?) -> [(idx: Int, name: String)] {
+        detail.speakers.keys.sorted().filter { $0 != idx }.map { ($0, detail.speakerName($0) ?? "") }
+    }
+
+    @ViewBuilder
+    private func speakerChoices(for ids: [Int64], current: Int?) -> some View {
+        ForEach(otherSpeakers(than: current), id: \.idx) { speaker in
+            Button(speaker.name) { model.reassignSegments(ids, to: speaker.idx) }
+        }
+        Divider()
+        Button("新的說話者") { model.reassignSegments(ids, to: nil) }
     }
 
     private func highlighted(_ text: String, corrections: [Correction] = []) -> AttributedString {
@@ -444,6 +500,9 @@ struct RenameSpeakerForm: View {
     /// 名字是聲紋自動帶入的：多一個「不是他」（design §21.4）
     var automatic = false
     var onReject: (() -> Void)? = nil
+    /// 「合併到…」（design §24.2）：其他說話者
+    var mergeTargets: [(idx: Int, name: String)] = []
+    var onMerge: ((Int) -> Void)? = nil
     let onSave: () -> Void
 
     var body: some View {
@@ -464,6 +523,15 @@ struct RenameSpeakerForm: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 if automatic, let onReject { Button("不是他", action: onReject) }
+                if !mergeTargets.isEmpty, let onMerge {
+                    Menu("合併到…") {
+                        ForEach(mergeTargets, id: \.idx) { target in
+                            Button(target.name) { onMerge(target.idx) }
+                        }
+                    }
+                    .fixedSize()
+                    .help("同一個人被分成兩位時，把這位說的話全部算到另一位")
+                }
                 Spacer()
                 Button("儲存", action: onSave).keyboardShortcut(.defaultAction)
             }

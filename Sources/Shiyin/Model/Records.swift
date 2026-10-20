@@ -41,8 +41,14 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var transcribedWith: String = ""
     // v8（design §23.2）：說話者辨識至少分出幾個人，nil 是自動判斷
     var minSpeakers: Int?
+    // v9（design §24.1）：說話者辨識的自我檢查分數（越大越可能把不同的人併在一起），nil 是沒算過；使用者按了「不用了」
+    var speakerCheck: Double?
+    var speakerHintDismissed: Bool = false
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
+
+    /// 說話者辨識的自我檢查覺得可能把不同的人併在一起（design §24.5）
+    var mayHaveMergedSpeakers: Bool { (speakerCheck ?? 0) >= Diarizer.Quality.hintThreshold }
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 
@@ -77,6 +83,7 @@ struct Segment: SnakeCaseRecord, Identifiable, Hashable {
     var speaker: Int?
     var kind: String = "final"           // live（即時預覽）/ final
     var channel: Int? = nil              // 分聲道轉錄時：0 麥克風、1 電腦聲音（design §17.3）
+    var speakerManual: Bool = false      // v9：使用者改過這句的說話者（design §24.2）
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
@@ -94,6 +101,7 @@ extension Segment {
         speaker = row["speaker"]
         kind = row["kind"]
         channel = row["channel"]
+        speakerManual = row["speaker_manual"]
     }
 }
 

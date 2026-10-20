@@ -70,6 +70,7 @@ struct GuideView: View {
                 GuideBullet(String(localized: "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄上方的「資料夾」可以切換只看某個資料夾；正在看某個資料夾時，新錄的和匯入的會議都會放進去。資料夾按右鍵可以重新命名或刪除（會議會保留）。"))
                 GuideBullet(String(localized: "刪除的會議會先放進側欄最下面的「垃圾桶」，30 天內都可以還原。"))
                 GuideBullet(String(localized: "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。"))
+                GuideBullet(String(localized: "說話者分錯了：同一個人被分成兩位，點說話者的名字選「合併到…」；某幾句分錯人，在逐字稿按右鍵選「這句是誰說的」。改錯了可以從「更多」選「復原說話者的調整」。"))
                 GuideBullet(String(localized: "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。"))
                 GuideBullet(String(localized: "遇到問題，可以從「輔助說明」選單選「回報問題…」，會附上版本和環境（不含會議內容）。"))
             }

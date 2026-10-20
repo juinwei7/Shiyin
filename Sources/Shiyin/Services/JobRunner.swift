@@ -264,6 +264,8 @@ final class JobRunner {
         try db.saveTranscript(job.meetingId, segments: segments, duration: Int(duration.rounded()),
                               speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices,
                               transcribedWith: pipeline.options.transcribedWith)
+        // 說話者辨識的碰撞率（design §24.3）：可能把人併在一起時，逐字稿分頁會提示
+        try db.setSpeakerCheck(job.meetingId, result.diarizationQuality?.mergeRisk)
         // 聲紋比對（design §21.4）：在整理之前，會議紀錄裡就會是名字
         if AppSettings.voiceprints {
             let matched = try db.matchVoiceprints(job.meetingId)
@@ -312,9 +314,33 @@ final class JobRunner {
                     voices[number] = SpeakerVoice(embedding: embedding, seconds: output.speechSeconds[raw] ?? 0, source: source)
                 }
             }
-            let inherited = Self.inheritNames(old: try db.speakers(job.meetingId), segments: segments, newSpeakers: speakers)
-            try db.reassignSpeakers(job.meetingId, segmentSpeakers: zip(segments, speakers).compactMap { s, n in s.id.map { ($0, n) } },
+            let old = try db.speakers(job.meetingId)
+            // 使用者改過說話者的句子（design §24.2）不照新的結果，跟著原本那位說話者對應到的新說話者
+            var assigned = speakers
+            var inherited = Self.inheritNames(old: old, segments: segments.filter { !$0.speakerManual },
+                                              newSpeakers: zip(segments, speakers).filter { !$0.0.speakerManual }.map(\.1))
+            let mapping = Self.oldToNew(segments: segments, newSpeakers: speakers)
+            var extra: [Int: Int] = [:]
+            var next = (speakers.compactMap { $0 }.max() ?? 0) + 1
+            for (i, segment) in segments.enumerated() where segment.speakerManual {
+                guard let o = segment.speaker else { continue }
+                if let n = mapping[o] {
+                    assigned[i] = n
+                } else {
+                    if extra[o] == nil {
+                        extra[o] = next
+                        // 預設名稱不沿用（編號變了，用新編號的預設名稱）
+                        if let speaker = old.first(where: { $0.idx == o }), speaker.nameSource != "default" {
+                            inherited[next] = (speaker.name, speaker.nameSource, speaker.personId)
+                        }
+                        next += 1
+                    }
+                    assigned[i] = extra[o]
+                }
+            }
+            try db.reassignSpeakers(job.meetingId, segmentSpeakers: zip(segments, assigned).compactMap { s, n in s.id.map { ($0, n) } },
                                     voices: voices, inherited: inherited)
+            try db.setSpeakerCheck(job.meetingId, output.quality?.mergeRisk)
             // 沿用使用者取的名字：用新的、比較乾淨的分群重新學聲紋（自動帶入的名字本來就不學）
             for (idx, item) in inherited where item.source != "voiceprint" {
                 try db.learnVoiceprint(job.meetingId, idx: idx, name: item.name, source: item.source)
@@ -323,7 +349,7 @@ final class JobRunner {
             if AppSettings.provider != .none, try db.speakers(job.meetingId).contains(where: { $0.nameSource == "default" }) {
                 try db.enqueue(job.meetingId, kind: .nameSpeakers)
             }
-            let count = Set(speakers.compactMap { $0 }).count
+            let count = Set(assigned.compactMap { $0 }).count
             log.info("rediarized meeting \(job.meetingId): \(count) speakers, \(inherited.count) names kept")
             onRediarized?(job.meetingId, .success(count))
             wake()
@@ -331,6 +357,16 @@ final class JobRunner {
             onRediarized?(job.meetingId, .failure(error))
             throw error
         }
+    }
+
+    /// 舊的說話者 → 新的說話者：舊的那位（沒被使用者改過的）段落分到最多的新說話者（design §24.2）
+    nonisolated static func oldToNew(segments: [Segment], newSpeakers: [Int?]) -> [Int: Int] {
+        var byOld: [Int: [Int: Double]] = [:]
+        for (segment, new) in zip(segments, newSpeakers) where !segment.speakerManual {
+            guard let new, let o = segment.speaker else { continue }
+            byOld[o, default: [:]][new, default: 0] += max(0, segment.end - segment.start)
+        }
+        return byOld.compactMapValues { $0.max(by: { $0.value < $1.value })?.key }
     }
 
     /// 名字沿用（design §23.3）：新的說話者 n 的段落（依秒數）有 60% 以上原本是同一位取過名字的 o，

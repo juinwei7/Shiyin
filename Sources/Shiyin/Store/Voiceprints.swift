@@ -149,6 +149,8 @@ extension AppDatabase {
                 try speaker.insert(db)
             }
             try Self.deleteOrphanPeople(db)
+            // 舊的復原資料對不上新的說話者了（design §24.2）
+            try db.execute(sql: "DELETE FROM speaker_undo WHERE meeting_id = ?", arguments: [meetingId])
             try db.execute(sql: "UPDATE meetings SET updated_at = ? WHERE id = ?", arguments: [Clock.now(), meetingId])
         }
     }
@@ -160,11 +162,12 @@ extension AppDatabase {
                            arguments: [defaultName, meetingId, idx])
             try db.execute(sql: "DELETE FROM voiceprints WHERE meeting_id = ? AND speaker_idx = ?", arguments: [meetingId, idx])
             try Self.deleteOrphanPeople(db)
+            try db.execute(sql: "DELETE FROM speaker_undo WHERE meeting_id = ?", arguments: [meetingId])
         }
     }
 
     /// 沒有聲紋、也沒有連到任何說話者的人（例如取名後又改回去），不留在認識的人裡
-    private static func deleteOrphanPeople(_ db: Database) throws {
+    static func deleteOrphanPeople(_ db: Database) throws {
         try db.execute(sql: """
             DELETE FROM people WHERE id NOT IN (SELECT person_id FROM voiceprints)
               AND id NOT IN (SELECT person_id FROM speakers WHERE person_id IS NOT NULL)
