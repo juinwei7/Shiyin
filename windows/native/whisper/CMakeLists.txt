@@ -25,7 +25,12 @@ else()
     set(GGML_METAL ON CACHE BOOL "" FORCE)
     set(GGML_METAL_EMBED_LIBRARY ON CACHE BOOL "" FORCE)
 endif()
-add_subdirectory(${WHISPER_SOURCE} whisper EXCLUDE_FROM_ALL)
+if(WIN32)
+    # 後端（ggml-cpu-*、ggml-vulkan）是執行時才載入的 DLL，沒有被 shiyin_whisper 連結，要跟著「全部」一起建
+    add_subdirectory(${WHISPER_SOURCE} whisper)
+else()
+    add_subdirectory(${WHISPER_SOURCE} whisper EXCLUDE_FROM_ALL)
+endif()
 
 add_library(shiyin_whisper SHARED shiyin_whisper.c)
 target_link_libraries(shiyin_whisper PRIVATE whisper)

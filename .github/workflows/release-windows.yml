@@ -1,0 +1,88 @@
+# Windows 版的發布（design-windows §14.3、D51）：推 win-v* 的 tag 時在 x64、ARM64 的 Windows 建置、測試、打包、簽更新說明，
+# 建立 GitHub Release（不設成 latest：Mac 的更新網址是 releases/latest/download/shiyin-update.json）。
+# 手動執行（workflow_dispatch）只產出 artifact，不發布（同 Mac 的 release.yml）
+name: Windows 版發布
+
+on:
+  push:
+    tags: ['win-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 版本號（只產出 artifact）
+        required: true
+        default: 0.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: x64
+            os: windows-latest
+          - arch: arm64
+            os: windows-11-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: windows/global.json
+      - name: 版本號
+        id: version
+        shell: pwsh
+        run: |
+          $v = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}'.Substring(5) } else { '${{ inputs.version }}' }
+          "version=$v" >> $env:GITHUB_OUTPUT
+      - name: 測試
+        working-directory: windows
+        run: dotnet test --project tests/Shiyin.Tests
+      - name: 建 whisper
+        shell: pwsh
+        run: scripts/windows/build-whisper.ps1 -Arch ${{ matrix.arch }} -Out build/whisper-${{ matrix.arch }}
+      - name: 打包
+        shell: pwsh
+        env:
+          SHIYIN_UPDATE_KEY: ${{ secrets.SHIYIN_UPDATE_KEY }}
+        run: scripts/windows/pack.ps1 -Version ${{ steps.version.outputs.version }} -Arch ${{ matrix.arch }} -Whisper build/whisper-${{ matrix.arch }} -Out dist/win-${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shiyin-win-${{ matrix.arch }}
+          path: dist/win-${{ matrix.arch }}
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: 更新說明一定要有簽章
+        run: |
+          for arch in x64 arm64; do
+            test -f dist/shiyin-win-$arch/shiyin-update-win-$arch.json.sig || { echo "沒有 shiyin-update-win-$arch.json.sig（GitHub secrets 的 SHIYIN_UPDATE_KEY）"; exit 1; }
+          done
+      - name: 建立 Release（不設成 latest）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # tag 的說明文字當成 Release 的內容（CLAUDE.md：中文一段、空一行、英文一段）
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" > notes.txt
+          version="${GITHUB_REF_NAME#win-v}"
+          gh release create "${GITHUB_REF_NAME}" dist/shiyin-win-x64/* dist/shiyin-win-arm64/* \
+            --title "拾音 Windows ${version}" --notes-file notes.txt --latest=false
+
+      - name: 發布到公開的 releases repo
+        if: vars.SHIYIN_RELEASES_REPO != ''
+        env:
+          GH_TOKEN: ${{ secrets.SHIYIN_RELEASES_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/shiyin-win-x64/* dist/shiyin-win-arm64/* --repo "${{ vars.SHIYIN_RELEASES_REPO }}" \
+            --title "拾音 Windows ${GITHUB_REF_NAME#win-v}" --notes-file notes.txt --latest=false

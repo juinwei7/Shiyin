@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Shiyin.Data;
 using Shiyin.LLM;
 using Shiyin.Localization;
@@ -11,12 +10,10 @@ using Shiyin.Whisper;
 namespace Shiyin.Services;
 
 /// <summary>校稿工作的 payload（JSON 跟 Mac 相同）</summary>
-public sealed record RevisePayload([property: JsonPropertyName("answers")] List<ReviewAnswerJson> Answers);
-public sealed record ReviewAnswerJson(
-    [property: JsonPropertyName("time")] string Time, [property: JsonPropertyName("question")] string Question,
-    [property: JsonPropertyName("answer")] string Answer);
+public sealed record RevisePayload(List<ReviewAnswerJson> Answers);
+public sealed record ReviewAnswerJson(string Time, string Question, string Answer);
 /// <summary>整理工作的 payload：draft 是用即時逐字稿整理草稿（M§21.3）</summary>
-public sealed record SummarizePayload([property: JsonPropertyName("draft")] bool Draft = false);
+public sealed record SummarizePayload(bool Draft = false);
 
 /// <summary>執行中的工作（顯示用）</summary>
 public sealed class RunningJob(Job job)
@@ -234,13 +231,32 @@ public sealed class JobRunner
 
     static string Message(Exception e) => e is OperationCanceledException ? L.T("已取消") : e.Message;
 
-    static T? Decode<T>(string? json)
+    /// <summary>payload 的 JSON（跟 Mac 的 Codable 相同的欄位）。不用反射的序列化，修剪過的 app 也能用</summary>
+    static T? Decode<T>(string? json) where T : class
     {
-        try { return JsonSerializer.Deserialize<T>(json ?? "{}"); }
-        catch (JsonException) { return default; }
+        try
+        {
+            using var doc = JsonDocument.Parse(json ?? "{}");
+            var root = doc.RootElement;
+            if (typeof(T) == typeof(SummarizePayload))
+                return new SummarizePayload(root.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True) as T;
+            if (typeof(T) == typeof(RevisePayload))
+                return new RevisePayload(root.GetProperty("answers").EnumerateArray().Select(a => new ReviewAnswerJson(
+                    a.GetProperty("time").GetString() ?? "", a.GetProperty("question").GetString() ?? "", a.GetProperty("answer").GetString() ?? "")).ToList()) as T;
+            return null;
+        }
+        catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException) { return null; }
     }
 
-    public static string Encode<T>(T payload) => JsonSerializer.Serialize(payload);
+    public static string Encode(SummarizePayload payload) => new System.Text.Json.Nodes.JsonObject { ["draft"] = payload.Draft }.ToJsonString();
+
+    public static string Encode(RevisePayload payload) => new System.Text.Json.Nodes.JsonObject
+    {
+        ["answers"] = new System.Text.Json.Nodes.JsonArray(payload.Answers.Select(a => (System.Text.Json.Nodes.JsonNode)new System.Text.Json.Nodes.JsonObject
+        {
+            ["time"] = a.Time, ["question"] = a.Question, ["answer"] = a.Answer,
+        }).ToArray()),
+    }.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
 
     bool IsStillRunning(Job job) => db.JobStatusOf(job.Id!.Value) == JobStatus.Running;
 

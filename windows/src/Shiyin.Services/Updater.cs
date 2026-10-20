@@ -33,12 +33,19 @@ public sealed record UpdateManifest(string Version, string Arch, IReadOnlyList<U
         }
     }
 
-    public string Json() => JsonSerializer.Serialize(new
+    public string Json()
     {
-        version = Version, arch = Arch,
-        files = Files.Select(f => new { name = f.Name, size = f.Size, sha256 = f.Sha256 }),
-        notes = Notes,
-    }, new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+        var o = new System.Text.Json.Nodes.JsonObject
+        {
+            ["version"] = Version, ["arch"] = Arch,
+            ["files"] = new System.Text.Json.Nodes.JsonArray(Files.Select(f => (System.Text.Json.Nodes.JsonNode)new System.Text.Json.Nodes.JsonObject
+            {
+                ["name"] = f.Name, ["size"] = f.Size, ["sha256"] = f.Sha256,
+            }).ToArray()),
+        };
+        if (Notes is not null) o["notes"] = Notes;
+        return o.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+    }
 }
 
 public static class UpdateSignature

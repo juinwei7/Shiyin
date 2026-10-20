@@ -37,7 +37,7 @@ public static class ControlPipe
                 using var writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, leaveOpen: true) { AutoFlush = true };
                 var line = reader.ReadLine();
                 if (line is null) continue;
-                var args = JsonSerializer.Deserialize<string[]>(line) ?? [];
+                var args = (JsonNode.Parse(line) as JsonArray)?.Select(x => x?.GetValue<string>() ?? "").ToArray() ?? [];
                 var done = new TaskCompletionSource<JsonNode>();
                 host.Post(() =>
                 {
@@ -142,7 +142,7 @@ public static class ControlPipe
                 ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
                 ["language"] = r.Language.Code(), ["liveLines"] = r.LiveLines.Count, ["volatile"] = r.VolatileText, ["liveStatus"] = r.LiveStatus,
                 ["deviceWarning"] = r.DeviceWarning, ["hint"] = r.Hint?.ToString(), ["systemSilent"] = r.SystemSilent,
-                ["levelCheck"] = JsonSerializer.SerializeToNode(r.LevelCheck),
+                ["levelCheck"] = new JsonObject(r.LevelCheck.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)JsonValue.Create(p.Value.ToString())))),
             },
             ["hotKeyError"] = host.HotKeyError,
             ["notifications"] = host.Notifier.Enabled,

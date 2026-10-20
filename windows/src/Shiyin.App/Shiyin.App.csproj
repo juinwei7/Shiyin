@@ -36,6 +36,9 @@
     <PackageReference Include="WinUIEx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets/Shiyin.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- 翻譯表：Mac 的 Localizable.xcstrings（鍵是中文原文，D43、§11.4），Windows 才有的字串之後由 l10n.py 的 Windows 模式加進來 -->
     <EmbeddedResource Include="../../../Resources/Localizable.xcstrings" LogicalName="Localizable.xcstrings" />
   </ItemGroup>

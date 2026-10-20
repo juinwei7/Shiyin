@@ -135,7 +135,8 @@ public sealed class RecorderTests : IDisposable
         Assert.True(recorder.IsPaused);
         var paused = recorder.Elapsed;
         await Task.Delay(500);       // 4 倍速：約 2 秒的音訊丟掉
-        Assert.Equal(paused, recorder.Elapsed, 1);
+        // Elapsed 每 0.05 秒才更新一次，暫停前最後一段（0.1 秒）可能晚一點才算進去
+        Assert.InRange(recorder.Elapsed, paused, paused + 0.15);
         recorder.Resume();
         await Task.Delay(1500);
         recorder.Stop();

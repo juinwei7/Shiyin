@@ -27,3 +27,7 @@ jobs:
           global-json-file: windows/global.json
       - name: 測試
         run: dotnet test --project tests/Shiyin.Tests
+      # 真的 Windows 上把 app 建一次（Mac 上只做編譯檢查，XAML 的資源、自帶 Windows App SDK 要在 Windows 才會跑到）
+      - name: 建置 app
+        if: runner.os == 'Windows'
+        run: dotnet build src/Shiyin.App/Shiyin.App.csproj -c Release -r win-${{ matrix.os == 'windows-11-arm' && 'arm64' || 'x64' }}
