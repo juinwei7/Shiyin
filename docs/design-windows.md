@@ -157,7 +157,8 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
   - 寫檔時電腦聲音那一聲道依時間（QPC）補靜音，不是等它送資料。
   - 3 秒 watchdog（M§20.2）只看麥克風；電腦聲音沒有資料不算中斷。
   - 「電腦聲音一直沒聲音」的提醒（M§26）把沒有資料當成靜音計時。
-- **轉成 16 kHz 單聲道**：每個來源一個重新取樣器，狀態跨 buffer 保留（對應 `StreamConverter`）。NAudio 的 `WdlResamplingSampleProvider` 下一版預設會改，版本釘死，升級時重跑標準答案。
+- **轉成 16 kHz 單聲道**：先請系統直接給 16 kHz 單聲道浮點（`AUTOCONVERTPCM`＋`SRC_DEFAULT_QUALITY`）；麥克風不接受時用裝置的格式，每個來源一個重新取樣器（NAudio 的 `WdlResampler`，純 C#，在 `Services/Capture/StreamResampler.cs`），狀態跨 buffer 保留（對應 `StreamConverter`）。NAudio 3.3 版本釘死，升級時重跑轉錄的比對。
+- **電腦聲音補靜音**：音源自己依時間（Stopwatch）補：100 毫秒沒有資料、而且送出的量落後時間超過 0.1 秒時，補到落後 50 毫秒。寫檔的對齊規則因此跟 Mac 完全相同（`RecordingWriter` 照搬）。
 - **寫檔**：自己寫 RIFF，格式、雙聲道對齊、補靜音的規則跟 `Capture/RecordingWriter.swift` 相同；每幾秒更新一次標頭，意外結束後用 WAVRepair（照搬）修。暫停時丟掉樣本。
 - **音量、收音提醒、磁碟空間**：算法和門檻同 M§26（`Recorder.checkLevels`、1 GB／300 MB），放在 Core，用標準答案比對。音量條的畫法見 §11.2。
 - **防止睡眠**（R1.9）：`PowerCreateRequest`＋`PowerSetRequest(PowerRequestSystemRequired)`，整個程序有效；錄音和工作結束時清掉。`powercfg /requests` 看得到。
@@ -310,7 +311,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 ## 13. 匯出與封包
 
 - md、txt、srt、vtt、HTML：翻 `IO/Exporters.swift` 的文字產生部分，跟標準答案逐位元組相同（§4）。
-- **docx**：DocumentFormat.OpenXml 直接用會議紀錄的資料產生（標題、項目符號、待辦表格、短欄位縮窄同 Mac 的 `fitShortColumns`），字型見 §11.3。不從 HTML 轉、不用 altChunk。
+- **docx**：DocumentFormat.OpenXml，把 Core 匯出的 HTML（標籤固定：h1～h3、p、ul/li、table、b、span.time）轉成 Word 原生的標題、項目符號、表格（`Services/Export/DocxWriter.cs`），字型見 §11.3；待辦表格的負責人、期限欄不拆行（同 Mac 的 `fitShortColumns`）。HTML 只是中間格式，Word 裡沒有 HTML（不用 altChunk）；用 OpenXml 的 schema 檢查零錯誤。
 - **PDF**：WebView2 打開標準答案裡同一份 HTML（字型換成 §11.3 的 Windows 字型），`PrintToPdfAsync`，A4、邊界 56 pt。
 - docx、PDF 不能跟 Mac 逐位元組比（Mac 是 NSAttributedString、NSTextView 排的，見 M§21.13）：比抽出來的文字、表格結構、頁數。Mac 上用 PDFKit 的小腳本抽 PDF 的文字。
 - **m4a**：Media Foundation 的 AAC 編碼器只接受 44.1 或 48 kHz、96～192 kbps，16 kHz 的錄音要先升頻，每小時約 43 MB（Mac 約 10～30 MB）。寫進 R27 的 R9.4。

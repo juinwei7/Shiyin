@@ -95,7 +95,10 @@
   - 還差：推到 GitHub 讓 CI 跑一次（要使用者同意推 `windows` 分支）；套件清單和授權在加進 Engines、App 的套件時一起列
 
 - [~] **W1.3 不碰畫面的 app 邏輯**（§1 的 `Shiyin.Services`）：設定（settings.json、`--set`）、模型下載（續傳、SHA-256、多個檔案的模型）、匯入、.shiyin 封包、轉錄流程（分段、分聲道、快速辨識、說話者辨識）、工作佇列（三條線、取消、模型還沒好時先等）、錄音（寫檔、暫停、看門狗、收音提醒、空間不足、麥克風權限、即時逐字稿、自動偵測語言、模擬錄音）、會議的操作（對應 Mac 的 `AppModel`）。`dotnet test` 用假的引擎、假的整理工具、本機伺服器測過（`ServicesTests`、`RecorderTests`、`ClusteringTests`）
-  - 還差：對會議提問、問所有會議的流程（M§21.8）；更新檔的驗證（§14.2）；偵測會議的時間規則（M§21.7）；回報問題的內容（M§21.9）；畫面接上之後在虛擬機的 app 裡各跑一次
+  - 也做了：對會議提問、問所有會議（M§21.8）；更新檔的驗證（更新金鑰的簽章、版本、架構、SHA-256，§14.2）；偵測會議的時間規則（M§21.7）；回報問題的內容（M§21.9）；Word 匯出（§13，OpenXml 的 schema 檢查零錯誤）。`AppTests`、`DocxTests` 測過
+  - 還差：畫面接上之後在虛擬機的 app 裡各跑一次
+- [~] **W1.4 Windows 平台層**（§1 的 `Shiyin.Platform.Windows`）：WASAPI 麥克風和 process loopback（排除拾音的程序樹、補靜音）、Media Foundation 解碼和 AAC 壓縮、認證管理員、找 claude/codex（不經過 .cmd）、防止睡眠、Job Object、偵測會議（ConsentStore）、全域快捷鍵、Velopack、回報問題的系統資訊。在 Mac 上用 `EnableWindowsTargeting` 編譯過
+  - 還差：全部要在 Windows 上跑過（W0.3 T-W2、W0.7 T-W6、W0.8 T-W7、W0.9 T-W8、W0.10 T-W9）
 
 ### W2 app 骨架
 

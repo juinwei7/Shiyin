@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows 才有的東西（design-windows §1）：WASAPI、Media Foundation、認證管理員、快捷鍵、偵測會議、防止睡眠、找 CLI、更新。
+       在 Mac 上用 EnableWindowsTargeting 編譯檢查，要在 Windows 上跑 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Shiyin.Platform</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Services/Shiyin.Services.csproj" />
+    <PackageReference Include="NAudio.Wasapi" />
+    <PackageReference Include="Velopack" />
+  </ItemGroup>
+</Project>

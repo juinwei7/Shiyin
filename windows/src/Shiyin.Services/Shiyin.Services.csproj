@@ -11,6 +11,9 @@
     <ProjectReference Include="../Shiyin.Data/Shiyin.Data.csproj" />
     <ProjectReference Include="../Shiyin.LLM/Shiyin.LLM.csproj" />
     <ProjectReference Include="../Shiyin.Engines/Shiyin.Engines.csproj" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <!-- 只用純 C# 的部分（重新取樣、格式換算），WASAPI、Media Foundation 在 Platform -->
+    <PackageReference Include="NAudio.Core" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Shiyin.Tests" />

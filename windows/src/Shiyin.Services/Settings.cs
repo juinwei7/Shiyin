@@ -121,6 +121,15 @@ public sealed class AppSettings
         _ => null,
     };
 
+    /// <summary>字串清單（例如不要再提醒的會議 app）</summary>
+    public List<string> StringList(string key)
+    {
+        lock (gate)
+            return values[key] is JsonArray array ? array.Select(x => x is JsonValue v && v.TryGetValue<string>(out var s) ? s : null).OfType<string>().ToList() : [];
+    }
+
+    public void Set(string key, IEnumerable<string> list) => Store(key, new JsonArray(list.Select(x => (JsonNode)JsonValue.Create(x)!).ToArray()));
+
     public bool Has(string key)
     {
         lock (gate) return overrides.ContainsKey(key) || values.ContainsKey(key);

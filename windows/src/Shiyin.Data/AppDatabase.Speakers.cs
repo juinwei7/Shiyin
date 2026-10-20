@@ -366,6 +366,12 @@ public sealed partial class AppDatabase
 
     // MARK: 問答（M§21.8）
 
+    /// <summary>回報問題用：最近失敗的工作的種類、錯誤種類、日期（不讀 error，那裡可能有逐字稿，M§21.9）</summary>
+    public List<(string Kind, string? ErrorKind, string Date)> RecentFailures(int limit) => Read(db =>
+        db.Query("SELECT kind, error_kind, finished_at FROM jobs WHERE status = 'failed' ORDER BY finished_at DESC, id DESC LIMIT ?", limit)
+            .Select(r => (r.Str("kind"), r.StrOrNull("error_kind"), (r.StrOrNull("finished_at") ?? "") is var d && d.Length > 10 ? d[..10] : d))
+            .ToList());
+
     public List<QuestionRecord> Questions(long? meetingId) => Read(db =>
         (meetingId is long id
             ? db.Query("SELECT * FROM questions WHERE meeting_id = ? ORDER BY id", id)
