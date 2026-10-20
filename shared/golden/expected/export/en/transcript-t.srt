@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:03,500
+Speaker 1: Hi everyone, let's review the Q4 roadmap.
+
+2
+00:00:03,500 --> 00:00:08,000
+Bob: I'll send the email via SendGrid by Friday.
+
+3
+00:00:08,000 --> 00:00:12,250
+Speaker 1: Speaker 1 here again: what about the "beta" users?
+
+4
+00:00:12,250 --> 00:00:13,000
+Okay.

@@ -1,0 +1,165 @@
+{
+  "search" : [
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 1,
+      "rowid" : 1,
+      "text" : "大家好，今天討論 v3.6 的上線時程。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 2,
+      "rowid" : 2,
+      "text" : "我這邊 Valkey 快取還在測，預計下週三完成。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 3,
+      "rowid" : 3,
+      "text" : "好，那 \"Kubernetes\" 的部署呢？"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 4,
+      "rowid" : 4,
+      "text" : "部署指令稿放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 5,
+      "rowid" : 5,
+      "text" : "（背景噪音）"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 6,
+      "rowid" : 6,
+      "text" : "說話者 1 剛剛說的我同意 😀，Valkey 的 TTL 設 100% 沒問題"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 7,
+      "rowid" : 7,
+      "text" : "最後確認：期限 10/21，負責人王小明。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 8,
+      "rowid" : 8,
+      "text" : "嗯"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 9,
+      "rowid" : 9,
+      "text" : "Hi everyone, let's review the Q4 roadmap."
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 10,
+      "rowid" : 10,
+      "text" : "I'll send the email via SendGrid by Friday."
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 11,
+      "rowid" : 11,
+      "text" : "Speaker 1 here again: what about the \"beta\" users?"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 12,
+      "rowid" : 12,
+      "text" : "Okay."
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 3,
+      "ref" : 13,
+      "rowid" : 13,
+      "text" : "皆さん、おはようございます。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 3,
+      "ref" : 14,
+      "rowid" : 14,
+      "text" : "新しいアイデアを三つ出します。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 3,
+      "ref" : 15,
+      "rowid" : 15,
+      "text" : "ありがとうございます、田中さん。"
+    },
+    {
+      "kind" : "title",
+      "meeting_id" : 1,
+      "ref" : 0,
+      "rowid" : 1125899906842629,
+      "text" : "v3.6 上線週會"
+    },
+    {
+      "kind" : "notes",
+      "meeting_id" : 1,
+      "ref" : 0,
+      "rowid" : 1125899906842630,
+      "text" : "v3.6 上線週會\n確認 v3.6 上線時程\nValkey 快取下週三完成\n部署腳本路徑維持 /deploy/k8s\nKubernetes 版本？\n王小明 確認 <admin> 權限 | 部署 2026-10-21\n Valkey 快取測試\n第二行 \n上線時程\n目標 10/21\n快取 & 部署\n近況與進展\n部署 \"腳本\" OK\n「Kubernetes」的寫法對嗎？"
+    },
+    {
+      "kind" : "user_notes",
+      "meeting_id" : 1,
+      "ref" : 0,
+      "rowid" : 1125899906842631,
+      "text" : "[00:30] 確認上線日期\n[02:10] Redis 快取要再測\n"
+    },
+    {
+      "kind" : "title",
+      "meeting_id" : 2,
+      "ref" : 0,
+      "rowid" : 1125899906842633,
+      "text" : "Weekly Sync"
+    },
+    {
+      "kind" : "notes",
+      "meeting_id" : 2,
+      "ref" : 0,
+      "rowid" : 1125899906842634,
+      "text" : "Q4 roadmap\nReviewed the Q4 roadmap\nBob Send the email via SendGrid 2026-10-23\nUpdates and progress\nRoadmap on track\nIs \"beta\" the right term?"
+    },
+    {
+      "kind" : "title",
+      "meeting_id" : 3,
+      "ref" : 0,
+      "rowid" : 1125899906842637,
+      "text" : "草稿"
+    },
+    {
+      "kind" : "notes",
+      "meeting_id" : 3,
+      "ref" : 0,
+      "rowid" : 1125899906842638,
+      "text" : "草稿\n下書き（編集）"
+    },
+    {
+      "kind" : "user_notes",
+      "meeting_id" : 3,
+      "ref" : 0,
+      "rowid" : 1125899906842639,
+      "text" : "アイデアを全部メモ"
+    }
+  ]
+}

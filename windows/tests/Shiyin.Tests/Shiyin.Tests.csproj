@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shiyin.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Shiyin.Core/Shiyin.Core.csproj" />
+    <ProjectReference Include="../../src/Shiyin.Data/Shiyin.Data.csproj" />
+    <ProjectReference Include="../../src/Shiyin.LLM/Shiyin.LLM.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 有測試會切換全域的介面語言（L.Use），不平行跑 -->
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 標準答案的位置：shared/golden（design-windows §4） -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GoldenRoot</_Parameter1>
+      <_Parameter2>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../shared/golden'))</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

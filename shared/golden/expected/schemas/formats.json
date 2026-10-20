@@ -1,0 +1,32 @@
+{
+  "askAll" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"answer\",\"found\",\"citations\"],\"properties\":{\"answer\":{\"type\":\"string\"},\"found\":{\"type\":\"boolean\"},\"citations\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"meetingId\",\"time\",\"quote\"],\"properties\":{\"meetingId\":{\"type\":\"integer\"},\"time\":{\"type\":\"string\"},\"quote\":{\"type\":\"string\"}}}}}}",
+    "toolDescription" : "Save the answer to the question",
+    "toolName" : "save_answer"
+  },
+  "askMeeting" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"answer\",\"found\",\"citations\"],\"properties\":{\"answer\":{\"type\":\"string\"},\"found\":{\"type\":\"boolean\"},\"citations\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"time\",\"quote\"],\"properties\":{\"time\":{\"type\":\"string\"},\"quote\":{\"type\":\"string\"}}}}}}",
+    "toolDescription" : "Save the answer to the question",
+    "toolName" : "save_answer"
+  },
+  "correction" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"corrections\"],\"properties\":{\"corrections\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"segment\",\"original\",\"suggestion\",\"reason\"],\"properties\":{\"segment\":{\"type\":\"integer\"},\"original\":{\"type\":\"string\"},\"suggestion\":{\"type\":\"string\"},\"reason\":{\"type\":\"string\"}}}}}}",
+    "toolDescription" : "Save transcript correction suggestions",
+    "toolName" : "save_corrections"
+  },
+  "keywords" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"keywords\"],\"properties\":{\"keywords\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}",
+    "toolDescription" : "Save the search keywords for the question",
+    "toolName" : "save_search_keywords"
+  },
+  "naming" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"speakerNames\"],\"properties\":{\"speakerNames\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"speaker\",\"name\",\"reason\",\"time\"],\"properties\":{\"speaker\":{\"type\":\"integer\"},\"name\":{\"type\":\"string\"},\"reason\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}}}}",
+    "toolDescription" : "Save the speaker names inferred from the transcript",
+    "toolName" : "save_speaker_names"
+  },
+  "notes" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"title\",\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\",\"custom\",\"reviewItems\"],\"properties\":{\"title\":{\"type\":\"string\"},\"summary\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"text\",\"time\"],\"properties\":{\"text\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}},\"decisions\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"text\",\"time\"],\"properties\":{\"text\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}},\"actionItems\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"owner\",\"task\",\"due\",\"time\"],\"properties\":{\"owner\":{\"type\":\"string\"},\"task\":{\"type\":\"string\"},\"due\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}},\"openQuestions\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"text\",\"time\"],\"properties\":{\"text\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}},\"topics\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"title\",\"start\",\"points\"],\"properties\":{\"title\":{\"type\":\"string\"},\"start\":{\"type\":\"string\"},\"points\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"text\",\"time\"],\"properties\":{\"text\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}}}}},\"custom\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"title\",\"items\"],\"properties\":{\"title\":{\"type\":\"string\"},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"text\",\"time\"],\"properties\":{\"text\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"}}}}}}},\"reviewItems\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"time\",\"question\"],\"properties\":{\"time\":{\"type\":\"string\"},\"question\":{\"type\":\"string\"}}}}}}",
+    "toolDescription" : "儲存整理好的會議紀錄",
+    "toolName" : "save_meeting_notes"
+  }
+}

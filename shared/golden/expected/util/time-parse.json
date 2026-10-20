@@ -1,0 +1,67 @@
+[
+  {
+    "clean" : "03:15",
+    "seconds" : 195,
+    "text" : "03:15"
+  },
+  {
+    "clean" : "03:15",
+    "seconds" : 195,
+    "text" : "[03:15]"
+  },
+  {
+    "clean" : "1:02:03",
+    "seconds" : 3723,
+    "text" : "1:02:03"
+  },
+  {
+    "clean" : "03：15",
+    "seconds" : 195,
+    "text" : "03：15"
+  },
+  {
+    "clean" : "03:15–05:20",
+    "seconds" : 195,
+    "text" : "03:15–05:20"
+  },
+  {
+    "clean" : "03:15-05:20",
+    "seconds" : 195,
+    "text" : "03:15-05:20"
+  },
+  {
+    "clean" : "03:15~05:20",
+    "seconds" : 195,
+    "text" : "03:15~05:20"
+  },
+  {
+    "clean" : "03:15 〜 05:20",
+    "seconds" : 195,
+    "text" : "03:15 〜 05:20"
+  },
+  {
+    "clean" : "abc",
+    "seconds" : null,
+    "text" : "abc"
+  },
+  {
+    "clean" : "",
+    "seconds" : null,
+    "text" : ""
+  },
+  {
+    "clean" : "1:2:3:4",
+    "seconds" : null,
+    "text" : "1:2:3:4"
+  },
+  {
+    "clean" : "12",
+    "seconds" : 12,
+    "text" : "12"
+  },
+  {
+    "clean" : "00:5x",
+    "seconds" : null,
+    "text" : "00:5x"
+  }
+]

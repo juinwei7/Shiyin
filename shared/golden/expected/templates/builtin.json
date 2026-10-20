@@ -1,0 +1,42 @@
+[
+  {
+    "englishJSON" : "{\"custom\":[],\"description\":\"Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
+    "englishName" : "General meeting",
+    "id" : "general",
+    "japaneseJSON" : "{\"custom\":[],\"description\":\"定例会議、プロジェクト会議、打ち合わせ：要約、決定事項、ToDo、未決事項、議題\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
+    "jsonString" : "{\"custom\":[],\"description\":\"週會、專案會議、討論會：摘要、決議、待辦、未決問題、議題\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
+    "name" : "一般會議"
+  },
+  {
+    "englishJSON" : "{\"custom\":[{\"instruction\":\"What they have been working on, progress and blockers\",\"title\":\"Updates and progress\"},{\"instruction\":\"Feedback both ways, noting who gave it to whom\",\"title\":\"Feedback\"},{\"instruction\":\"Where they asked for help or resources\",\"title\":\"Support needed\"}],\"description\":\"A one-on-one between a manager and a team member\",\"instruction\":\"This is a one-on-one. Keep a neutral tone and do not judge the person.\",\"sections\":[\"summary\",\"actionItems\",\"openQuestions\"]}",
+    "englishName" : "One-on-one",
+    "id" : "one-on-one",
+    "japaneseJSON" : "{\"custom\":[{\"instruction\":\"相手が最近取り組んでいること、進捗、困っていること\",\"title\":\"近況と進捗\"},{\"instruction\":\"双方からのフィードバック。誰から誰へのものかを明記する\",\"title\":\"フィードバック\"},{\"instruction\":\"相手が求めた支援やリソース\",\"title\":\"必要なサポート\"}],\"description\":\"上司とメンバーの1on1\",\"instruction\":\"これは1on1です。中立的な書き方にし、個人を評価しないこと。\",\"sections\":[\"summary\",\"actionItems\",\"openQuestions\"]}",
+    "jsonString" : "{\"custom\":[{\"instruction\":\"對方最近在做的事、進度與卡關的地方\",\"title\":\"近況與進展\"},{\"instruction\":\"雙方給彼此的回饋，標明是誰給誰\",\"title\":\"回饋\"},{\"instruction\":\"對方提出需要協助或資源的地方\",\"title\":\"需要的支持\"}],\"description\":\"主管與成員的一對一會談\",\"instruction\":\"這是一對一會談，語氣保持中性，不要評價個人。\",\"sections\":[\"summary\",\"actionItems\",\"openQuestions\"]}",
+    "name" : "一對一"
+  },
+  {
+    "englishJSON" : "{\"custom\":[{\"instruction\":\"The interviewee's role, experience and context\",\"title\":\"Interviewee background\"},{\"instruction\":\"Keep the interviewee's own words, one quote per item, with its time\",\"title\":\"Key quotes\"},{\"instruction\":\"Needs, pain points and opportunities drawn from the interview\",\"title\":\"Insights and opportunities\"}],\"description\":\"User interviews, expert interviews, job interviews\",\"instruction\":\"This is an interview. Focus on what the interviewee said; do not present the interviewer's assumptions as the interviewee's opinions.\",\"sections\":[\"summary\",\"topics\"]}",
+    "englishName" : "Interview",
+    "id" : "interview",
+    "japaneseJSON" : "{\"custom\":[{\"instruction\":\"回答者の役割、経歴、利用状況\",\"title\":\"回答者の背景\"},{\"instruction\":\"回答者の言葉をそのまま残す。1項目に1つの発言、時刻付き\",\"title\":\"主な発言\"},{\"instruction\":\"インタビューから読み取れるニーズ、課題、機会\",\"title\":\"気づきと機会\"}],\"description\":\"ユーザーインタビュー、専門家インタビュー、面接\",\"instruction\":\"これはインタビューです。回答者が何を言ったかを中心にし、聞き手の推測を回答者の意見として書かないこと。\",\"sections\":[\"summary\",\"topics\"]}",
+    "jsonString" : "{\"custom\":[{\"instruction\":\"受訪者的角色、經歷、使用情境\",\"title\":\"受訪者背景\"},{\"instruction\":\"保留受訪者的原話，每條一句，附時間點\",\"title\":\"重點引述\"},{\"instruction\":\"從訪談內容歸納出的需求、痛點與機會\",\"title\":\"洞察與機會\"}],\"description\":\"使用者訪談、專家訪談、面試\",\"instruction\":\"這是訪談，重點是受訪者說了什麼，不要把訪談者的推測寫成受訪者的意見。\",\"sections\":[\"summary\",\"topics\"]}",
+    "name" : "訪談"
+  },
+  {
+    "englishJSON" : "{\"custom\":[{\"instruction\":\"Important concepts, terms and explanations that came up\",\"title\":\"Key concepts\"},{\"instruction\":\"Questions from the audience and the speaker's answers\",\"title\":\"Q&A\"}],\"description\":\"Courses, talks, sharing sessions, training\",\"instruction\":\"This is a lecture or talk. Outline it following the speaker's sections.\",\"sections\":[\"summary\",\"topics\",\"openQuestions\"]}",
+    "englishName" : "Lecture / talk",
+    "id" : "lecture",
+    "japaneseJSON" : "{\"custom\":[{\"instruction\":\"出てきた重要な概念、用語とその説明\",\"title\":\"重要な概念\"},{\"instruction\":\"聴衆からの質問と講師の回答\",\"title\":\"質疑応答\"}],\"description\":\"授業、講演、勉強会、研修\",\"instruction\":\"これは授業または講演です。講師の話の流れに沿って要点をまとめること。\",\"sections\":[\"summary\",\"topics\",\"openQuestions\"]}",
+    "jsonString" : "{\"custom\":[{\"instruction\":\"提到的重要概念、名詞與解釋\",\"title\":\"重點概念\"},{\"instruction\":\"聽眾的提問與講者的回答\",\"title\":\"問答\"}],\"description\":\"課程、演講、分享會、教育訓練\",\"instruction\":\"這是課堂或演講，依講者的段落整理大綱。\",\"sections\":[\"summary\",\"topics\",\"openQuestions\"]}",
+    "name" : "課堂／演講"
+  },
+  {
+    "englishJSON" : "{\"custom\":[{\"instruction\":\"One idea per item, noting who proposed it where possible\",\"title\":\"Ideas\"},{\"instruction\":\"Discussion of the ideas, pros and cons, and the reasons for each choice\",\"title\":\"Evaluation and trade-offs\"}],\"description\":\"Ideation meetings, workshops\",\"instruction\":\"This is a brainstorm. Do not leave out any idea that was raised, even if it was not adopted.\",\"sections\":[\"summary\",\"decisions\",\"actionItems\"]}",
+    "englishName" : "Brainstorm",
+    "id" : "brainstorm",
+    "japaneseJSON" : "{\"custom\":[{\"instruction\":\"1項目に1つのアイデア。できるだけ誰が出したかを書く\",\"title\":\"アイデア一覧\"},{\"instruction\":\"アイデアについての議論、長所と短所、選んだ理由\",\"title\":\"評価と取捨選択\"}],\"description\":\"アイデア出しの会議、ワークショップ\",\"instruction\":\"これはブレインストーミングです。採用されなかったものも含め、出たアイデアを漏らさないこと。\",\"sections\":[\"summary\",\"decisions\",\"actionItems\"]}",
+    "jsonString" : "{\"custom\":[{\"instruction\":\"每個點子一條，盡量標出是誰提出的\",\"title\":\"點子清單\"},{\"instruction\":\"對點子的討論、優缺點與取捨理由\",\"title\":\"評估與取捨\"}],\"description\":\"發想會議、工作坊\",\"instruction\":\"這是腦力激盪，不要遺漏任何被提出的點子，即使沒有被採納。\",\"sections\":[\"summary\",\"decisions\",\"actionItems\"]}",
+    "name" : "腦力激盪"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "a" : "今天討論上線時程",
+    "b" : "今天討論上線時程。",
+    "similar" : true
+  },
+  {
+    "a" : "abc",
+    "b" : "abcd",
+    "similar" : false
+  },
+  {
+    "a" : "Hello world again",
+    "b" : "hello, world again!",
+    "similar" : true
+  },
+  {
+    "a" : "完全不同的句子",
+    "b" : "另外一段內容",
+    "similar" : false
+  },
+  {
+    "a" : "",
+    "b" : "",
+    "similar" : false
+  },
+  {
+    "a" : "我這邊 Redis 快取還在測",
+    "b" : "Redis 快取還在測試中",
+    "similar" : false
+  }
+]

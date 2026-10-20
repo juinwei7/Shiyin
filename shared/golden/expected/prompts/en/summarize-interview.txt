@@ -1,0 +1,18 @@
+Meeting date: 2026-10-18 (Sunday)
+Existing title: Weekly Sync
+Participants: Alice, Bob
+Glossary (correct spellings): none
+
+Template: User interviews, expert interviews, job interviews
+Sections to produce: summary (Summary), topics (Topics)
+Custom sections (in custom, in this order): 
+- Interviewee background: The interviewee's role, experience and context
+- Key quotes: Keep the interviewee's own words, one quote per item, with its time
+- Insights and opportunities: Needs, pain points and opportunities drawn from the interview
+Additional instructions: This is an interview. Focus on what the interviewee said; do not present the interviewer's assumptions as the interviewee's opinions.
+
+Transcript ([time] speaker: text; (?) marks low-confidence segments): 
+[00:00] Speaker 1: Hi everyone, let's review the Q4 roadmap.
+[00:03] Bob: I'll send the email via SendGrid by Friday.
+[00:08] Speaker 1: (?) Speaker 1 here again: what about the "beta" users?
+[00:12] Okay.

@@ -88,19 +88,8 @@
 
 ### W1 Core（在 Mac 上測）
 
-- [ ] **W1.1 Mac 產生標準答案**（§4.1、R26.5）：DEBUG 版的 `dump-golden`，輸出到 `shared/golden/`
-  - 驗證：跑兩次輸出完全相同；release 建置不含這個指令（`#if DEBUG`，release 的執行檔裡找不到指令字串）；Mac 的 release 建置跟 3.6.0 的行為相同
-- [ ] **W1.2 方案骨架**（§1、§3）：`windows/` 的方案（Core、Data、LLM、Engines、Eval、Platform.Windows、App、Ctl、Agent）、`global.json`、`Directory.Packages.props` 釘死版本、建置輸出放到 repo 外；CI（`windows-latest`、`windows-11-arm`）跑 `dotnet test`
-  - 驗證：Mac 上 `dotnet test`、CI 都通過；`git status` 沒有建置產物；套件清單、版本、授權列出來（design-windows §2 的版本再確認一次）
-- [ ] **W1.3 資料模型、會議紀錄解碼、時間格式**：驗證：`notes-decode/` 的標準答案逐位元組相同
-- [ ] **W1.4 資料庫**（§5、R28.5）：migration v1～v9、`grdb_migrations`、遷移前備份
-  - 驗證：`schema.sql` 相同；用使用者資料庫的複本（照 CLAUDE.md 的規則用 `.backup` 複製、刪掉錄音中的會議）在 Core 打開，各表筆數跟 Mac 相同、`PRAGMA integrity_check` 是 ok
-- [ ] **W1.5 搜尋**：驗證：`search/` 的標準答案相同（三個字以上、一兩個字）
-- [ ] **W1.6 提示詞、範本**（R28.1）：驗證：`prompts/`、`templates/`、`whisper/` 的標準答案逐字相同（三種語言）
-- [ ] **W1.7 整理工具**（§10）：六種後端、重試、取消、錯誤分類
-  - 驗證：假伺服器（`scripts/dev/fake-llm-server.py`）收到的請求跟 Mac 送的解析後相同；503 重試一次、401 不重試、取消 1 秒內停（同 M3）
-- [ ] **W1.8 匯出的文字格式、.shiyin**（§13、R28.2、R28.3）：驗證：`export/`、`package/` 相同；Mac 匯出的 .shiyin（三種語言的示範資料）讀進來內容完整
-- [ ] **W1.9 轉錄流程、收音判斷、語言偵測的邏輯**（§8、§6）：驗證：`pipeline/` 的標準答案相同
+- [~] **W1.2 方案骨架**（§1、§3）：方案、`global.json`、套件版本集中管理、建置輸出放在 repo 外都好了；`.github/workflows/windows.yml`（`windows-latest`、`windows-11-arm`、`macos-latest` 跑 `dotnet test`）寫好了
+  - 還差：推到 GitHub 讓 CI 跑一次（要使用者同意推 `windows` 分支）；套件清單和授權在加進 Engines、App 的套件時一起列
 
 ### W2 app 骨架
 

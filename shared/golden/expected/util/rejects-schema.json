@@ -1,0 +1,27 @@
+[
+  {
+    "message" : "response_format is not supported",
+    "rejects" : true,
+    "status" : 400
+  },
+  {
+    "message" : "json_schema invalid",
+    "rejects" : true,
+    "status" : 422
+  },
+  {
+    "message" : "bad request",
+    "rejects" : false,
+    "status" : 400
+  },
+  {
+    "message" : "schema",
+    "rejects" : false,
+    "status" : 500
+  },
+  {
+    "message" : "Schema mismatch",
+    "rejects" : true,
+    "status" : 400
+  }
+]

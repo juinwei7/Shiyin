@@ -1,0 +1,26 @@
+[
+  {
+    "isLogin" : true,
+    "text" : "Not logged in · Please run /login"
+  },
+  {
+    "isLogin" : true,
+    "text" : "Failed to authenticate: OAuth session expired"
+  },
+  {
+    "isLogin" : true,
+    "text" : "HTTP 401"
+  },
+  {
+    "isLogin" : false,
+    "text" : "rate limited"
+  },
+  {
+    "isLogin" : true,
+    "text" : "Invalid API key"
+  },
+  {
+    "isLogin" : false,
+    "text" : ""
+  }
+]

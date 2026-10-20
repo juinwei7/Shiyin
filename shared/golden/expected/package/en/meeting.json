@@ -1,0 +1,70 @@
+{
+  "bookmarks" : [
+
+  ],
+  "channels" : "mic",
+  "durationSeconds" : 125,
+  "folder" : "",
+  "language" : "en",
+  "meetingDate" : "2026-10-18",
+  "notes" : {
+    "actionItems" : [
+      {
+        "due" : "2026-10-23",
+        "owner" : "Bob",
+        "task" : "Send the email via SendGrid",
+        "time" : "00:03"
+      }
+    ],
+    "custom" : [
+      {
+        "items" : [
+          {
+            "text" : "Roadmap on track",
+            "time" : "00:00"
+          }
+        ],
+        "title" : "Updates and progress"
+      }
+    ],
+    "decisions" : [
+
+    ],
+    "openQuestions" : [
+
+    ],
+    "reviewItems" : [
+      {
+        "question" : "Is \"beta\" the right term?",
+        "time" : "00:08"
+      }
+    ],
+    "summary" : [
+      {
+        "text" : "Reviewed the Q4 roadmap",
+        "time" : "00:00"
+      }
+    ],
+    "title" : "Q4 roadmap",
+    "topics" : [
+
+    ]
+  },
+  "notesBy" : "claude",
+  "participants" : "Alice, Bob",
+  "sourceFilename" : "sync.wav",
+  "speakers" : [
+    {
+      "idx" : 1,
+      "name" : "Speaker 1"
+    },
+    {
+      "idx" : 2,
+      "name" : "Bob"
+    }
+  ],
+  "templateId" : "one-on-one",
+  "title" : "Weekly Sync",
+  "titleLocked" : true,
+  "userNotes" : ""
+}

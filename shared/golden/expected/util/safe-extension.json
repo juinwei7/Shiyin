@@ -1,0 +1,34 @@
+[
+  {
+    "ext" : "m4a",
+    "name" : "a.m4a"
+  },
+  {
+    "ext" : "m4a",
+    "name" : "b.M4A"
+  },
+  {
+    "ext" : "bin",
+    "name" : "c"
+  },
+  {
+    "ext" : "gz",
+    "name" : "d.tar.gz"
+  },
+  {
+    "ext" : "weirdext",
+    "name" : "e.weird-ext!"
+  },
+  {
+    "ext" : "verylong",
+    "name" : "f.verylongextension"
+  },
+  {
+    "ext" : "bin",
+    "name" : "g.中文"
+  },
+  {
+    "ext" : "bin",
+    "name" : ".hidden"
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "Redis" : [
+    {
+      "kind" : "user_notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "[00:30] 確認上線日期 [02:10] Redis 快取要再測 "
+    }
+  ],
+  "SendGrid" : [
+
+  ],
+  "Valkey" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "v3.6 上線週會 確認 v3.6 上線時程 Valkey 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確…"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 2,
+      "snippet" : "我這邊 Valkey 快取還在測，預計下週三完成。"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 6,
+      "snippet" : "說話者 1 剛剛說的我同意 😀，Valkey 的 TTL 設 100% 沒問題"
+    }
+  ]
+}

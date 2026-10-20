@@ -1,0 +1,47 @@
+[
+  {
+    "glossary" : 0,
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。"
+  },
+  {
+    "glossary" : 1,
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。"
+  },
+  {
+    "glossary" : 2,
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Alpha、Bravo、Charlie、Delta、Echo、Foxtrot、Golf、Hotel、India、Juliett、Kilo、Lima、Mike、November、Oscar、Papa、Quebec、Romeo、Sierra。"
+  },
+  {
+    "glossary" : 0,
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting."
+  },
+  {
+    "glossary" : 1,
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting. Glossary: Redis, Kubernetes, 拾音, SendGrid."
+  },
+  {
+    "glossary" : 2,
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting. Glossary: Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel, India, Juliett, Kilo, Lima, Mike, November, Oscar, Papa, Quebec, Romeo, Sierra, Tango, Uniform, Victor, Whiskey, X-ray, Yankee, Zulu, 零一二三四五六七八九, 甲乙丙丁戊己庚辛壬癸, 子丑寅卯辰巳午未申酉, Kubernetes, PostgreSQL, Elasticsearch, Terraform, Prometheus, Grafana, OpenTelemetry, WebAssembly, TypeScript."
+  },
+  {
+    "glossary" : 0,
+    "language" : "ja",
+    "prompt" : "以下は仕事の会議の録音です。"
+  },
+  {
+    "glossary" : 1,
+    "language" : "ja",
+    "prompt" : "以下は仕事の会議の録音です。用語：Redis、Kubernetes、拾音、SendGrid。"
+  },
+  {
+    "glossary" : 2,
+    "language" : "ja",
+    "prompt" : "以下は仕事の会議の録音です。用語：Alpha、Bravo、Charlie、Delta、Echo、Foxtrot、Golf、Hotel、India、Juliett、Kilo、Lima、Mike、November、Oscar、Papa、Quebec、Romeo、Sierra、Tango、Uniform。"
+  }
+]

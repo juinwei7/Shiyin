@@ -1,0 +1,29 @@
+# Windows 版的測試（design-windows §15.1）：推到 windows 分支、或 PR 改到 windows/、shared/ 時，
+# 在 x64、ARM64 的 Windows 和 macOS 跑 dotnet test（標準答案的比對、資料庫、整理工具）
+name: Windows 版測試
+
+on:
+  push:
+    branches: [windows]
+    paths: ['windows/**', 'shared/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['windows/**', 'shared/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-11-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: windows/global.json
+      - name: 測試
+        run: dotnet test --project tests/Shiyin.Tests

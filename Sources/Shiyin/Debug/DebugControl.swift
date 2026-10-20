@@ -111,6 +111,7 @@ enum DebugControl {
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
+        case "dump-golden": GoldenDump.run(fixtures: args[1], output: args[2])   // design-windows §4.1
         case "correct-eval": correctEval(input: args[1], options: args[2], output: args[3])          // design §17.4
         case "detect-eval": detectEval(audio: args[1], start: Double(args[2]) ?? 0, output: args[3])  // design §18.8
         case "checktranscript": model.selection = id; model.checkTranscript()

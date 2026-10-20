@@ -1,0 +1,1 @@
+{"type":"object","additionalProperties":false,"required":["speakerNames"],"properties":{"speakerNames":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["speaker","name","reason","time"],"properties":{"speaker":{"type":"integer"},"name":{"type":"string"},"reason":{"type":"string"},"time":{"type":"string"}}}}}}

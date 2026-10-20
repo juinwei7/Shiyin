@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Shiyin.Core/Shiyin.Core.csproj" />
+    <Project Path="src/Shiyin.Data/Shiyin.Data.csproj" />
+    <Project Path="src/Shiyin.LLM/Shiyin.LLM.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Shiyin.Tests/Shiyin.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -285,3 +285,12 @@ enum WhisperEngine {
         return size > 0 ? Double(input.count) / Double(size) : 1
     }
 }
+
+#if DEBUG
+extension WhisperEngine {
+    /// dump-golden 用（design-windows §4.1）：前一段最後的文字、下一段的提示詞
+    static func debugChunkPrompt(base: String, previous: [TranscribedSegment], language: String) -> String {
+        previous.isEmpty ? base : base + (language == "en" ? " " : "") + tail(of: previous, language: language)
+    }
+}
+#endif

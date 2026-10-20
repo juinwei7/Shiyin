@@ -106,20 +106,22 @@ backups\  tmp\  logs\
 
 ### 4.1 Mac 產生標準答案
 
-Mac 的 DEBUG 控制通道加 `shiyinctl dump-golden <輸出資料夾>`（只在 DEBUG 版，R26.5）。它在記憶體裡建立固定的測試會議（中文、英文、日文各一場：有說話者名字、低信心段落、重點標記、使用者筆記、詞彙表、完整的會議紀錄、待辦、自訂段落、待確認），不寫資料庫。時鐘、時區（Asia/Taipei）、語系固定，跑兩次結果相同。輸出：
+輸入是手寫的 `shared/golden/fixtures.json`：三場測試會議（中文、英文、日文：有說話者名字、低信心段落、重點標記、使用者筆記、詞彙表、完整的會議紀錄、待辦、自訂段落、待確認）、各種邊界的小案例（時間格式、檔名、匯入、模型回傳的檢查），以及一串資料庫操作（`db`：匯入、搜尋、聲紋、合併、復原、校正、工作佇列…，每一步後倒出資料表）。
+
+Mac 的 DEBUG 控制通道加 `shiyinctl dump-golden <fixtures.json> <輸出資料夾>`（`Debug/GoldenDump.swift`，只在 DEBUG 版，R26.5）。它用 Mac 的程式算出結果寫進 `shared/golden/expected/`；資料庫在暫存資料夾另開一個，不碰使用者的資料。跑兩次結果相同（W1.1 驗證時跑了三次）。輸出：
 
 | 檔案 | 內容 |
 |---|---|
-| `fixtures.json` | 測試會議本身（Windows 讀同一份當輸入） |
-| `prompts/<種類>-<語言>.json` | 組好的 system、user、JSON schema：整理、修訂、草稿、逐字稿校正（一批）、詞彙建議、猜說話者、提問、問所有會議（抽關鍵詞、回答） |
-| `templates/<語言>.json` | 內建範本的定義 |
-| `whisper/<語言>.txt` | whisper 的 initial prompt（詞彙表＋前一段結尾） |
-| `export/` | 會議紀錄的 md、HTML；逐字稿的 txt（四種選項）、md、srt、vtt；剪貼簿的純文字和 Markdown |
-| `package/` | .shiyin 裡的 manifest.json、meeting.json、transcript.json（內容，不比 zip 的位元組） |
-| `notes-decode/` | 新舊格式的會議紀錄 JSON → 解碼後再編碼的結果（M§8.1 的寬鬆解碼） |
-| `pipeline/` | 合成訊號的分段點、合成段落的過濾和低信心判斷、接縫去重、收音判斷、語言偵測的累積、說話者重新編號和名字沿用 |
-| `schema.sql` | 跑完 migration v1～v9 後 `sqlite_master` 的 SQL（排序） |
-| `search/` | 固定資料的搜尋結果（三個字以上、一兩個字的 LIKE） |
+| `prompts/<語言>/` | 組好的提示詞：整理（五個內建範本、自訂範本）、修訂、逐字稿校正（全部、一批）、猜說話者、對一場會議提問、問所有會議、抽關鍵詞的 system 和 user。草稿用的是整理同一份提示詞 |
+| `schemas/` | JSON schema、Anthropic 用的工具名稱和說明 |
+| `templates/` | 內建範本（中英日）、段落名稱、範本定義的寬鬆解碼 |
+| `whisper/` | whisper 的 initial prompt（詞彙表）、下一段的提示詞（前一段結尾）、幻覺字串、壓縮比 |
+| `export/<語言>/` | 會議紀錄的 md、純文字、HTML；逐字稿的 txt、md、HTML（時間、說話者四種組合）、srt、vtt |
+| `package/<語言>/` | .shiyin 裡的 manifest.json、meeting.json、transcript.json（內容，不比 zip 的位元組） |
+| `pipeline/` | 合成訊號的分段點、語言偵測收集的結果、接縫和回音的比對、說話者編號、分不準的判斷、重新辨識的名字沿用 |
+| `db/` | `schema.sql`（跑完 migration v1～v9 後 `sqlite_master` 的 SQL）、每一步資料庫操作後的資料表和回傳值（含搜尋、詞彙建議、聲紋比對） |
+| `util/` | 時間、日期、檔名、匯入、模型回傳的檢查等小工具的結果 |
+| `llm/mac-requests.jsonl` | Mac 的 DEBUG 版接假伺服器（`scripts/dev/fake-llm-server.py`）實際送出的四種 API 請求；Windows 送同樣的提示詞，body 要解析後相同 |
 
 ### 4.2 Windows 比對
 
@@ -127,7 +129,11 @@ Mac 的 DEBUG 控制通道加 `shiyinctl dump-golden <輸出資料夾>`（只在
 
 - **逐位元組**：提示詞、schema 的文字、範本、md、txt、srt、vtt、HTML、`schema.sql`。匯出一律 UTF-8 無 BOM、換行 `\n`，跟 Mac 相同。
 - **比解析後的內容**：JSON 檔（Mac 的 JSONEncoder 輸出 `"key" : value`、鍵有排序、不跳脫 `/`，System.Text.Json 不同）和送給整理工具的請求 body（M§19.5 本來就不比位元組）。
-- **容許誤差**：低信心的壓縮比（zlib）兩邊的壓縮器輸出大小不同，允許 ±0.05；測試資料避開門檻 2.4 附近。
+- **容許誤差**：低信心的壓縮比（zlib）兩邊的壓縮器輸出大小不同，允許 ±0.05；測試資料避開門檻 2.4 附近。說話者分得準不準的凝聚度是浮點數的加總，順序不同，比到小數 6 位。
+- **Mac 每次結果不同的地方**（W1.1 跑三次比對時發現，Mac 的行為不改，R26.5）：
+  - 沒有 `sortedKeys` 的 JSONEncoder 每次啟動鍵的順序不同：範本的定義（`TemplateDefinition.jsonString()`，所以 Mac 每次啟動都會覆寫內建範本，沒有害處）、說話者的復原資料。標準答案先重新排序；Windows 寫的時候用宣告的順序，讀的時候只看內容
+  - 字典的順序不固定：一段逐字稿跟兩位說話者重疊一樣多時，Mac 選哪一位不一定（`Diarizer.assignNumbering`、重新辨識的名字沿用）。Windows 一律選編號小的；測試資料避開剛好一樣的情況
+- **Swift 的字串規則**（不照做提示詞就會差一個字）：長度、截斷用字形叢集；排序用 Unicode 純量值（不是 UTF-16）；`rounded()` 是四捨五入；正規表示式的 `\d` 是 `Character.isNumber`，包括「一」「十」「兩」「萬」這些 Unihan 有數值的漢字（「說話者 一」也算預設名稱）。都放在 `Shiyin.Core/Text/SwiftText.cs`
 - **.shiyin 雙向匯入**：Mac 匯出的封包 Windows 匯入、Windows 匯出的 Mac 匯入，內容完整（R28.3）。這是最能抓到格式差異的測試。
 
 ### 4.3 以後 Mac 改了提示詞或匯出

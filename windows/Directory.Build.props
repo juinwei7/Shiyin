@@ -1,0 +1,14 @@
+<Project>
+  <!-- 共用設定（design-windows §3） -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <!-- 建置輸出放到 repo 外：Mac 的桌面有 iCloud 同步，大檔案不放進專案（CLAUDE.md） -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath Condition="'$(OS)' != 'Windows_NT'">$(HOME)/Library/Caches/ShiyinBuild-win</ArtifactsPath>
+    <ArtifactsPath Condition="'$(OS)' == 'Windows_NT'">$(LOCALAPPDATA)\ShiyinBuild</ArtifactsPath>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
