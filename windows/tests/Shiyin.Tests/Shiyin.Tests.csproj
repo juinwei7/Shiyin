@@ -4,6 +4,8 @@
     <RootNamespace>Shiyin.Tests</RootNamespace>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <!-- 測試裡的等待、假伺服器不需要跟著 xUnit 的取消（測試很短，逾時另外處理） -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

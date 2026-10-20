@@ -65,7 +65,7 @@ public class ExportTests
         Assert.Equal(b.Speakers.Count, read.Speakers.Count);
         var segments = IO.PackageJson.ReadSegments(Golden.Expected($"package/{key}/transcript.json"));
         Assert.Equal(fx.Segments.Select(s => s.Text), segments!.Select(s => s.Text));
-        Assert.Equal(fx.Segments.Select(s => s.Speaker), segments.Select(s => s.Speaker));
+        Assert.Equal(fx.Segments.Select(s => s.Speaker), segments!.Select(s => s.Speaker));
         Assert.NotNull(IO.PackageJson.ReadManifest(Golden.Expected($"package/{key}/manifest.json")));
     }
 }
