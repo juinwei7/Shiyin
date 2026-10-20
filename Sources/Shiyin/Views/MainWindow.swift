@@ -447,7 +447,7 @@ struct RecordingControls: View {
                 } label: {
                     HStack(spacing: 6) {
                         Circle().fill(model.recorder.isPaused ? Color.secondary : .red).frame(width: 8, height: 8)
-                        Text(TimeFormat.string(model.recorder.elapsed)).monospacedDigit()
+                        RecorderClock(recorder: model.recorder)
                     }
                 }
                 .help(model.recorder.isPaused ? "已暫停，點一下打開錄音中的會議" : "錄音中，點一下打開這場會議")

@@ -54,13 +54,13 @@ struct MenuBarContent: View {
                 HStack(spacing: 8) {
                     Circle().fill(recorder.isPaused ? Color.secondary : .red).frame(width: 8, height: 8)
                     Text(recorder.isPaused ? "已暫停" : "錄音中")
-                    Text(TimeFormat.string(recorder.elapsed)).monospacedDigit().foregroundStyle(.secondary)
+                    RecorderClock(recorder: recorder).foregroundStyle(.secondary)
                     Spacer()
                     Button(recorder.isPaused ? "繼續" : "暫停") { recorder.isPaused ? recorder.resume() : recorder.pause() }
                     Button("停止") { recorder.stop() }
                 }
-                if recorder.hasMic { VUMeter(level: recorder.micLevel, segments: 24) }
-                if recorder.hasSystem { VUMeter(level: recorder.systemLevel, segments: 24) }
+                if recorder.hasMic { RecorderMeter(recorder: recorder, system: false, segments: 24) }
+                if recorder.hasSystem { RecorderMeter(recorder: recorder, system: true, segments: 24) }
                 if !recorder.volatileText.isEmpty || !recorder.liveLines.isEmpty {
                     Text(recorder.volatileText.isEmpty ? recorder.liveLines.last?.text ?? "" : recorder.volatileText)
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)

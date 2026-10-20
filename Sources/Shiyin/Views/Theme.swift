@@ -116,6 +116,89 @@ struct VUMeter: View {
     }
 }
 
+/// 跟 VUMeter 長得一樣的音量條，但用 AppKit 的圖層畫、自己每 0.08 秒讀一次音量（design §25）：
+/// SwiftUI 的 view 每變一次，整個視窗都要重新排版、重算最小尺寸，錄音時音量一直在變，CPU 會多用三成
+struct LevelMeter: NSViewRepresentable {
+    var segments = 14
+    let level: @MainActor () -> Float
+
+    func makeNSView(context: Context) -> LevelMeterView { LevelMeterView(segments: segments, level: level) }
+
+    func updateNSView(_ view: LevelMeterView, context: Context) { view.level = level }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: LevelMeterView, context: Context) -> CGSize? {
+        nsView.intrinsicContentSize
+    }
+}
+
+final class LevelMeterView: NSView {
+    var level: @MainActor () -> Float
+    private let segments: Int
+    private var bars: [CALayer] = []
+    private var lit = -1
+    private var timer: Timer?
+
+    init(segments: Int, level: @escaping @MainActor () -> Float) {
+        self.segments = segments
+        self.level = level
+        super.init(frame: NSRect(origin: .zero, size: CGSize(width: segments * 6 - 2, height: 12)))
+        wantsLayer = true
+        for i in 0..<segments {
+            let bar = CALayer()
+            bar.frame = CGRect(x: i * 6, y: 0, width: 4, height: 12)
+            bar.cornerRadius = 1
+            layer?.addSublayer(bar)
+            bars.append(bar)
+        }
+        setAccessibilityElement(true)
+        setAccessibilityRole(.levelIndicator)
+        setAccessibilityLabel(String(localized: "音量"))
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var intrinsicContentSize: NSSize { NSSize(width: segments * 6 - 2, height: 12) }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        timer?.invalidate()
+        timer = nil
+        guard window != nil else { return }
+        let timer = Timer(timeInterval: 0.08, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+        refresh()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        lit = -1
+        refresh()
+    }
+
+    /// 亮的格數變了才改顏色（跟 VUMeter 同樣的規則：最後三格是琥珀色）
+    private func refresh() {
+        let value = level()
+        let count = (0..<segments).filter { Float($0) < value * Float(segments) }.count
+        guard count != lit else { return }
+        lit = count
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            let off = NSColor.secondaryLabelColor.withAlphaComponent(0.18).cgColor
+            let green = NSColor.dynamic(light: 0x2D6A5D, dark: 0x6DB2A1).cgColor
+            let amber = NSColor.dynamic(light: 0xB97F06, dark: 0xE2AD3B).cgColor
+            for (i, bar) in bars.enumerated() {
+                bar.backgroundColor = i < count ? (i >= segments - 3 ? amber : green) : off
+            }
+        }
+        CATransaction.commit()
+        setAccessibilityValue("\(Int(value * 100))%")
+    }
+}
+
 /// 錄音經過時間，每秒更新
 struct ElapsedText: View {
     let since: Date

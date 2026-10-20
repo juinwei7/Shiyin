@@ -24,9 +24,14 @@ final class Recorder {
     private(set) var isPaused = false
     private(set) var meetingId: Int64?
     private(set) var startedAt: Date?
-    private(set) var elapsed: Double = 0
-    private(set) var micLevel: Float = 0
-    private(set) var systemLevel: Float = 0
+    /// 精確的錄音秒數（筆記的時間點、標記重點用）。每 0.05 秒變一次，畫面不要讀這個，讀 elapsedSeconds（design §25）
+    @ObservationIgnored private(set) var elapsed: Double = 0
+    /// 畫面顯示的錄音秒數：整秒變了才更新
+    private(set) var elapsedSeconds = 0
+    /// 音量（0～1）。不讓 SwiftUI 觀察：音量條（LevelMeter）自己定時來讀，
+    /// 不然說話時每秒變十幾次，每次整個視窗都要重新排版（design §25）
+    @ObservationIgnored private(set) var micLevel: Float = 0
+    @ObservationIgnored private(set) var systemLevel: Float = 0
     private(set) var source = "mic"            // mic / system / both
     private(set) var liveLines: [LiveLine] = []
     private(set) var volatileText = ""
@@ -210,6 +215,7 @@ final class Recorder {
             self.meetingId = meetingId
             startedAt = Date()
             elapsed = 0
+            elapsedSeconds = 0
             liveLines = []
             volatileText = ""
             systemSilent = false
@@ -235,7 +241,12 @@ final class Recorder {
         let live = LiveTranscriber(language: language)
         self.live = live
         liveStatus = String(localized: "正在準備即時逐字稿…")
-        live.onVolatile = { [weak self] text in self?.volatileText = text }
+        live.onVolatile = { [weak self] text in
+            #if DEBUG
+            DebugMetrics.bump("volatileUpdate")
+            #endif
+            self?.volatileText = text
+        }
         // 中途重新開始時，新的辨識從 0 秒算，要加上接上音訊時已經錄了多久
         let offset = LiveOffset()
         live.onFinal = { [weak self] start, end, text in
@@ -319,17 +330,22 @@ final class Recorder {
             stop()
             return
         }
+        // 觀察的屬性只在值真的變了才設（@Observable 設成同樣的值也會讓畫面重算，design §25）
         elapsed = writer.recordedSeconds
+        let seconds = Int(elapsed)
+        if seconds != elapsedSeconds { elapsedSeconds = seconds }
+        var silent = systemSilent
         if source == "both" {
             micLevel = writer.level(0)
             systemLevel = writer.level(1)
-            systemSilent = writer.silence(1) > 15
+            silent = writer.silence(1) > 15
         } else if source == "system" {
             systemLevel = writer.level(0)
-            systemSilent = writer.silence(0) > 15
+            silent = writer.silence(0) > 15
         } else {
             micLevel = writer.level(0)
         }
+        if silent != systemSilent { systemSilent = silent }
         watchdog(writer)
         if Date().timeIntervalSince(lastDiskCheck) >= 30 { checkDiskSpace(writer, starting: false) }
     }

@@ -199,6 +199,21 @@ enum DebugControl {
                     write(["done": results.count, "total": config.count, "results": results], to: output)
                 }
             }
+        case "livescroll":   // livescroll <0～1>：把錄音畫面的即時逐字稿捲到這個位置（0 是最上面），等於拖捲軸（design §25）
+            let fraction = CGFloat(Double(args[1]) ?? 0)
+            func scrollViews(_ view: NSView) -> [NSScrollView] {
+                (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+            }
+            for window in NSApp.windows where window.isVisible {
+                for scroll in scrollViews(window.contentView ?? NSView())
+                where !(scroll.documentView is NSTextView) && !(scroll.documentView is NSTableView) {
+                    guard let document = scroll.documentView else { continue }
+                    let range = max(0, document.frame.height - scroll.contentView.bounds.height)
+                    let y = document.isFlipped ? range * fraction : range * (1 - fraction)
+                    scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+                    scroll.reflectScrolledClipView(scroll.contentView)
+                }
+            }
         case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
             var lines: [String] = []
             func dump(_ element: NSAccessibilityProtocol, depth: Int) {
@@ -431,7 +446,11 @@ enum DebugControl {
             "highlightSegment": model.highlightSegment ?? -1,
             "errorMessage": model.errorMessage ?? "",
             "noticeMessage": model.noticeMessage ?? "",
-            "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible] },
+            // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用
+            "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible,
+                                            "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,
+                                            "minSizeW": $0.minSize.width, "minSizeH": $0.minSize.height,
+                                            "width": $0.frame.width, "height": $0.frame.height] },
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         if let detail = model.detail {
