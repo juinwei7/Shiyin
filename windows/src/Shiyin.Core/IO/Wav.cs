@@ -23,12 +23,12 @@ public sealed class WavReader : IDisposable
         Span<byte> header = stackalloc byte[12];
         file.ReadExactly(header);
         if (header[..4].SequenceEqual("RIFF"u8) == false || header[8..12].SequenceEqual("WAVE"u8) == false)
-            throw new InvalidDataException("不是 WAV 檔");
+            throw new InvalidDataException(Localization.L.T("不是 WAV 檔"));
         Span<byte> chunk = stackalloc byte[8];
         var foundFormat = false;
         while (true)
         {
-            if (file.Read(chunk) < 8) throw new InvalidDataException("找不到音訊資料區段");
+            if (file.Read(chunk) < 8) throw new InvalidDataException(Localization.L.T("找不到音訊資料區段"));
             var id = System.Text.Encoding.ASCII.GetString(chunk[..4]);
             long size = BinaryPrimitives.ReadUInt32LittleEndian(chunk[4..]);
             if (id == "fmt ")
@@ -41,13 +41,13 @@ public sealed class WavReader : IDisposable
                 BitsPerSample = BinaryPrimitives.ReadUInt16LittleEndian(fmt.AsSpan(14));
                 if (format == 0xFFFE && fmt.Length >= 26) format = BinaryPrimitives.ReadUInt16LittleEndian(fmt.AsSpan(24));
                 IsFloat = format == 3;
-                if (format is not (1 or 3)) throw new InvalidDataException($"不支援的 WAV 格式 {format}");
+                if (format is not (1 or 3)) throw new InvalidDataException(Localization.L.F("不支援的 WAV 格式 %lld", format));
                 foundFormat = true;
                 if (size % 2 == 1) file.Seek(1, SeekOrigin.Current);
             }
             else if (id == "data")
             {
-                if (!foundFormat) throw new InvalidDataException("WAV 缺少格式區段");
+                if (!foundFormat) throw new InvalidDataException(Localization.L.T("WAV 缺少格式區段"));
                 dataStart = file.Position;
                 // 沒有正常結束的錄音：大小欄位是 0 或超過檔案，用實際的檔案大小（同 WAVRepair）
                 dataLength = size == 0 || dataStart + size > file.Length ? file.Length - dataStart : size;
@@ -85,7 +85,7 @@ public sealed class WavReader : IDisposable
                     (24, false) => (bytes[o] | bytes[o + 1] << 8 | (sbyte)bytes[o + 2] << 16) / 8388608f,
                     (32, false) => BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(o)) / 2147483648f,
                     (8, false) => (bytes[o] - 128) / 128f,
-                    _ => throw new InvalidDataException($"不支援 {BitsPerSample} 位元"),
+                    _ => throw new InvalidDataException(Localization.L.F("不支援 %lld 位元", BitsPerSample)),
                 };
             }
         }

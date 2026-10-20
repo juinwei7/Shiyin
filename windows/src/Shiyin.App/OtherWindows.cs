@@ -231,15 +231,15 @@ public static class OtherWindows
             L.T("聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。"),
             L.T("API key 存在 Windows 的認證管理員，不會寫進任何檔案。")));
         column.Children.Add(Section(L.T("快捷鍵"),
-            "Ctrl+R：" + L.T("開始或停止錄音"),
-            "Ctrl+Alt+Shift+R：" + L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）"),
-            "Ctrl+Shift+P：" + L.T("暫停或繼續錄音"),
-            "Ctrl+B：" + L.T("錄音中標記重點"),
-            "Ctrl+Alt+Shift+B：" + L.T("錄音中在其他 app 裡也能標記重點"),
-            "Ctrl+O：" + L.T("匯入"), "Ctrl+E：" + L.T("匯出"),
-            L.T("空白鍵") + "：" + L.T("播放或暫停"),
-            "Ctrl+1～Ctrl+6：" + L.T("切換摘要、詳細、逐字稿、待確認、筆記、提問"),
-            "Ctrl+F：" + L.T("搜尋逐字稿（在「逐字稿」）")));
+            L.F("%@：%@", "Ctrl+R", L.T("開始或停止錄音")),
+            L.F("%@：%@", "Ctrl+Alt+Shift+R", L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）")),
+            L.F("%@：%@", "Ctrl+Shift+P", L.T("暫停或繼續錄音")),
+            L.F("%@：%@", "Ctrl+B", L.T("錄音中標記重點")),
+            L.F("%@：%@", "Ctrl+Alt+Shift+B", L.T("錄音中在其他 app 裡也能標記重點")),
+            L.F("%@：%@", "Ctrl+O", L.T("匯入")), L.F("%@：%@", "Ctrl+E", L.T("匯出")),
+            L.F("%@：%@", L.T("空白鍵"), L.T("播放或暫停")),
+            L.F("%@：%@", "Ctrl+1～Ctrl+6", L.T("切換摘要、詳細、逐字稿、待確認、筆記、提問")),  // l10n-skip
+            L.F("%@：%@", "Ctrl+F", L.T("搜尋逐字稿（在「逐字稿」）"))));
         column.MaxWidth = 680;
         column.HorizontalAlignment = HorizontalAlignment.Left;
         window.Content = Ui.Scroll(column, 36);

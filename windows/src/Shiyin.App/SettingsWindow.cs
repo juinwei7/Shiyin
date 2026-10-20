@@ -513,7 +513,7 @@ public sealed class SettingsWindow : Window
         {
             case ModelStore.State.Downloading { Total: > 0 } d:
                 left.Children.Add(new ProgressBar { Maximum = d.Total, Value = d.Received });
-                left.Children.Add(Ui.Caption($"{Recorder.ByteCount(d.Received)}／{Recorder.ByteCount(d.Total)}"));
+                left.Children.Add(Ui.Caption(L.F("%@／%@", Recorder.ByteCount(d.Received), Recorder.ByteCount(d.Total))));
                 break;
             case ModelStore.State.Downloading: left.Children.Add(new ProgressBar { IsIndeterminate = true }); break;
             case ModelStore.State.Paused p:
@@ -558,7 +558,8 @@ public sealed class SettingsWindow : Window
     {
         var column = Ui.Column(16);
         // 介面語言（D57）：Windows 沒有替桌面 app 個別設定語言的地方
-        var language = Ui.Combo(new[] { ("", L.T("跟著 Windows")), ("zh", "中文"), ("en", "English") }, S.String(AppSettings.InterfaceLanguageKey) ?? "",
+        // 語言的名稱用各自的語言寫
+        var language = Ui.Combo(new[] { ("", L.T("跟著 Windows")), ("zh", "中文"), ("en", "English") }, S.String(AppSettings.InterfaceLanguageKey) ?? "",  // l10n-skip
             v => { S.Set(AppSettings.InterfaceLanguageKey, v.Length == 0 ? null : v); App.Current.Notice(L.T("重新打開拾音後換成新的介面語言")); }, L.T("介面語言"));
         column.Children.Add(Section(L.T("介面"), language));
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));

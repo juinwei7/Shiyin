@@ -15,11 +15,11 @@ public static class WhisperRules
     /// <summary>Whisper 在靜音段常見的幻覺字串，出現在短句時直接丟掉</summary>
     public static readonly string[] HallucinationPhrases =
     [
-        "字幕由Amara.org社區提供", "字幕由Amara.org社群提供", "字幕由Amara.org社区提供",
-        "請不吝點贊", "請不吝點讚", "请不吝点赞", "訂閱轉發打賞", "订阅转发打赏",
-        "明鏡與點點欄目", "明镜与点点栏目", "優優獨播劇場", "优优独播剧场",
+        "字幕由Amara.org社區提供", "字幕由Amara.org社群提供", "字幕由Amara.org社区提供",  // l10n-skip
+        "請不吝點贊", "請不吝點讚", "请不吝点赞", "訂閱轉發打賞", "订阅转发打赏",  // l10n-skip
+        "明鏡與點點欄目", "明镜与点点栏目", "優優獨播劇場", "优优独播剧场",  // l10n-skip
         "Subtitles by the Amara.org community",
-        "ご視聴ありがとうございました", "ご視聴いただきありがとうございました", "チャンネル登録",
+        "ご視聴ありがとうございました", "ご視聴いただきありがとうございました", "チャンネル登録",  // l10n-skip
     ];
 
     /// <summary>基本提示詞＋詞彙表：中文、日文 150 字、英文 400 個字元以內</summary>
@@ -28,7 +28,7 @@ public static class WhisperRules
         var baseText = language.Text("以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。", "The following is a recording of a work meeting.", "以下は仕事の会議の録音です。");
         var limit = language == MeetingLanguage.En ? 400 : 150;
         string Build(List<string> terms) => terms.Count == 0 ? baseText : baseText + language.Text(
-            "詞彙：" + string.Join("、", terms) + "。", " Glossary: " + string.Join(", ", terms) + ".", "用語：" + string.Join("、", terms) + "。");
+            "詞彙：" + string.Join("、", terms) + "。", " Glossary: " + string.Join(", ", terms) + ".", "用語：" + string.Join("、", terms) + "。");  // l10n-skip
         var picked = new List<string>();
         foreach (var term in glossary)
         {

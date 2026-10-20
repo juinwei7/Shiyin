@@ -62,7 +62,7 @@ public sealed partial class AppDatabase
         SearchKind.Title => 1,
         SearchKind.Notes => 2,
         SearchKind.UserNotes => 3,
-        _ => throw new ArgumentException("段落的 rowid 就是段落的 id"),
+        _ => throw new ArgumentException("段落的 rowid 就是段落的 id"),  // l10n-skip
     };
 
     static void IndexSegment(Db db, long meetingId, long id, string text) =>

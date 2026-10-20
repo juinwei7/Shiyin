@@ -61,7 +61,7 @@ public static partial class L
         return (result, plural);
     }
 
-    [GeneratedRegex(@"%(?:(\d+)\$)?(?:@|lld|ld|d|lf|f)")]
+    [GeneratedRegex(@"%%|%(?:(\d+)\$)?(?:@|lld|ld|d|lf|f)")]
     private static partial Regex Placeholder();
 
     public static string Format(string format, params object?[] args)
@@ -69,6 +69,7 @@ public static partial class L
         var next = 0;
         return Placeholder().Replace(format, m =>
         {
+            if (m.Value == "%%") return "%";
             var index = m.Groups[1].Success ? int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) - 1 : next++;
             return index >= 0 && index < args.Length ? Convert.ToString(args[index], CultureInfo.InvariantCulture) ?? "" : "";
         });

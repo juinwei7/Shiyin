@@ -1,0 +1,1018 @@
+{
+  "sourceLanguage": "zh-Hant",
+  "strings": {
+    "%@失敗（錯誤代碼 %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ failed (error %2$@)"
+          }
+        }
+      }
+    },
+    "- 顯示卡：%@；whisper：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Graphics: %1$@; whisper: %2$@"
+          }
+        }
+      }
+    },
+    "API key 存在 Windows 的認證管理員，不會寫進任何檔案。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API keys are stored in Windows Credential Manager and never written to any file."
+          }
+        }
+      }
+    },
+    "PDF 和 docx 的段落標題使用明體；Markdown 適合貼到 Notion、GitHub。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF and docx use a serif font for section headings; Markdown is good for pasting into Notion or GitHub."
+          }
+        }
+      }
+    },
+    "WAV 缺少格式區段": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The WAV file has no format chunk"
+          }
+        }
+      }
+    },
+    "claude 沒有回傳結果（結束代碼 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude returned no result (exit code %lld)"
+          }
+        }
+      }
+    },
+    "codex 沒有回傳結果（結束代碼 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex returned no result (exit code %lld)"
+          }
+        }
+      }
+    },
+    "・匯入：把錄音檔拖進視窗，或按「匯入」（Ctrl+O）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "• Import: drag a recording into the window, or click Import (Ctrl+O)"
+          }
+        }
+      }
+    },
+    "・拾音會常駐在工作列右下角的系統匣，關掉視窗也會繼續錄音和整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "• Shiyin stays in the system tray at the bottom right of the taskbar; closing the window keeps recording and processing."
+          }
+        }
+      }
+    },
+    "・錄音：側欄上方的「錄音」（Ctrl+R），或在其他 app 裡按 Ctrl+Alt+Shift+R": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "• Record: click Record at the top of the sidebar (Ctrl+R), or press Ctrl+Alt+Shift+R in any app"
+          }
+        }
+      }
+    },
+    "下載的檔案不完整": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download is incomplete"
+          }
+        }
+      }
+    },
+    "不支援 %lld 位元": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-bit audio is not supported"
+          }
+        }
+      }
+    },
+    "不支援的 WAV 格式 %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsupported WAV format %lld"
+          }
+        }
+      }
+    },
+    "之後隨時可以從系統匣或設定的「進階」再打開使用說明。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can open this guide again any time from the system tray or Settings → Advanced."
+          }
+        }
+      }
+    },
+    "介面": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface"
+          }
+        }
+      }
+    },
+    "介面語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface language"
+          }
+        }
+      }
+    },
+    "依回答修正": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revising with your answers"
+          }
+        }
+      }
+    },
+    "停止錄音並開始轉錄（Ctrl+R）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop recording and start transcribing (Ctrl+R)"
+          }
+        }
+      }
+    },
+    "全域快捷鍵 Ctrl+Alt+Shift+R：在其他 app 裡也能開始或停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global shortcut Ctrl+Alt+Shift+R: start or stop recording from any app"
+          }
+        }
+      }
+    },
+    "其他": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        }
+      }
+    },
+    "匯入錄音、影片、逐字稿或 .shiyin 封包（Ctrl+O）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a recording, video, transcript or .shiyin package (Ctrl+O)"
+          }
+        }
+      }
+    },
+    "匯出 PDF 失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't export the PDF"
+          }
+        }
+      }
+    },
+    "即時逐字稿和快速辨識用，約 240 MB。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used for the live transcript and Quick recognition, about 240 MB."
+          }
+        }
+      }
+    },
+    "已儲存在認證管理員": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved in Credential Manager"
+          }
+        }
+      }
+    },
+    "已儲存在認證管理員（輸入新的會取代）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved in Credential Manager (type a new one to replace it)"
+          }
+        }
+      }
+    },
+    "從「更多」選「匯出…」（Ctrl+E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入（Mac 版也可以）。「複製會議紀錄」可以直接貼到 Notion、Slack 或郵件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose More → Export… (Ctrl+E): notes can be saved as Markdown, PDF or Word; transcripts as txt, srt, vtt or Word; recordings as m4a or wav. Send a “Whole meeting (.shiyin)” to a colleague and they can import it with a double-click (on the Mac version too). “Copy meeting notes” pastes straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
+    "快捷鍵沒有回應": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The shortcut didn't respond"
+          }
+        }
+      }
+    },
+    "快速辨識": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick recognition"
+          }
+        }
+      }
+    },
+    "快速辨識模型 SenseVoice": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick recognition model SenseVoice"
+          }
+        }
+      }
+    },
+    "快速辨識模型 SenseVoice：即時逐字稿，約 240 MB": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick recognition model SenseVoice: live transcript, about 240 MB"
+          }
+        }
+      }
+    },
+    "快速辨識的模型還在下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The quick recognition model is still downloading"
+          }
+        }
+      }
+    },
+    "打開設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "找不到 %@ 指令": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't find the %@ command"
+          }
+        }
+      }
+    },
+    "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台電腦上正式轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper）、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin turns meetings into transcripts and meeting notes: you see a live transcript while recording, then it transcribes on this PC (Breeze ASR 25 for Chinese and English, Whisper for Japanese), tells speakers apart, and uses Claude, Codex or an API to write a summary, decisions and action items."
+          }
+        }
+      }
+    },
+    "拾音把會議變成逐字稿和會議紀錄。錄音、轉錄、說話者辨識都在這台電腦上完成。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin turns meetings into transcripts and meeting notes. Recording, transcription and speaker recognition all happen on this PC."
+          }
+        }
+      }
+    },
+    "拾音會議封包": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin meeting package"
+          }
+        }
+      }
+    },
+    "拾音沒有麥克風的使用權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin doesn't have permission to use the microphone"
+          }
+        }
+      }
+    },
+    "拾音：處理中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin: working"
+          }
+        }
+      }
+    },
+    "拾音：錄音中 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin: recording %@"
+          }
+        }
+      }
+    },
+    "按「停止並轉錄」後，拾音會在這台電腦上重新轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper large-v3-turbo），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After you click Stop and transcribe, Shiyin transcribes again on this PC (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for Japanese) and tells the speakers apart. While you wait, a draft of the notes is written from the live transcript and replaced automatically when the final version is ready. Click “Speaker 1” in the transcript to give a real name and the whole meeting updates; Shiyin remembers that voice and fills in the name in later meetings (marked Auto — click it if it's wrong)."
+          }
+        }
+      }
+    },
+    "按「開始使用」後就可以錄音或匯入了。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Get started, then record or import."
+          }
+        }
+      }
+    },
+    "按側欄上方的「錄音」（Ctrl+R）開始錄；點按鈕旁的箭頭可以選錄音來源，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。已經有錄音檔的話，拖進視窗、按「匯入」（Ctrl+O），或在檔案總管按右鍵用拾音開啟都可以。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Record at the top of the sidebar (Ctrl+R) to start. The arrow next to it chooses the source — for online meetings pick “Microphone + computer audio (online meeting)” so the other side is recorded too. If you already have a recording, drag it into the window, click Import (Ctrl+O), or right-click it in File Explorer and open it with Shiyin."
+          }
+        }
+      }
+    },
+    "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台電腦上的服務（%@），不會離開電腦。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When writing notes, answering questions and guessing speakers, the transcript text, your notes, the glossary and basic meeting info are sent to a service on this PC (%@) and never leave it. Recordings are never sent."
+          }
+        }
+      }
+    },
+    "暫停錄音（Ctrl+Shift+P）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause recording (Ctrl+Shift+P)"
+          }
+        }
+      }
+    },
+    "更新金鑰不符": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the update key doesn't match"
+          }
+        }
+      }
+    },
+    "替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台電腦的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you name a speaker, Shiyin saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it Auto; you can change it if it's wrong. Voice features stay in the database on this PC — never uploaded and never included in exported .shiyin packages."
+          }
+        }
+      }
+    },
+    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。正在看某個資料夾時，新錄的和匯入的會議都會放進去。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meetings can go in folders: right-click a meeting (or use More) and choose Move to folder → New folder…. While you're viewing a folder, new recordings and imports go into it."
+          }
+        }
+      }
+    },
+    "會議日期：依各檔案的檔名或修改日期": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting date: from each file's name or modification date"
+          }
+        }
+      }
+    },
+    "標記這個時間點（Ctrl+B），整理時會被當成重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark this moment (Ctrl+B); it's treated as a highlight when writing notes"
+          }
+        }
+      }
+    },
+    "模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載；快速辨識的模型下載好就能錄音，正式轉錄的模型下載好之前先用快速辨識。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models only need to be downloaded once; transcription works offline after that. You can click Next and let them download in the background. Once the quick recognition model is ready you can record, and Quick recognition is used until the transcription model is ready."
+          }
+        }
+      }
+    },
+    "正在下載%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading %@"
+          }
+        }
+      }
+    },
+    "沒辦法刪除認證管理員裡的 key（錯誤代碼 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't delete the key from Credential Manager (error %lld)"
+          }
+        }
+      }
+    },
+    "沒辦法把 key 存進認證管理員（錯誤代碼 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the key to Credential Manager (error %lld)"
+          }
+        }
+      }
+    },
+    "沒辦法註冊 Ctrl+Alt+Shift+R：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't register Ctrl+Alt+Shift+R: %@"
+          }
+        }
+      }
+    },
+    "沒辦法註冊快捷鍵（錯誤代碼 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't register the shortcut (error %lld)"
+          }
+        }
+      }
+    },
+    "沒辦法讀取「%@」（Media Foundation 錯誤代碼 0x%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't read “%1$@” (Media Foundation error 0x%2$@)"
+          }
+        }
+      }
+    },
+    "目前不整理：錄音、轉錄、逐字稿全部留在這台電腦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes are off: recordings, transcription and transcripts all stay on this PC."
+          }
+        }
+      }
+    },
+    "繼續錄音（Ctrl+Shift+P）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume recording (Ctrl+Shift+P)"
+          }
+        }
+      }
+    },
+    "聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voiceprints (a speaker's voice features: a list of numbers, not audio) stay on this PC and are never included in exported .shiyin packages."
+          }
+        }
+      }
+    },
+    "要先安裝並登入對應的 CLI。登入後可以在「設定 → 整理工具」按「測試整理工具」確認。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install and sign in to the CLI first. Then click Test in Settings → Notes engine to check it works."
+          }
+        }
+      }
+    },
+    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If too few speakers were found (many people, noise, a phone on the table), choose More → Re-identify speakers… and tell Shiyin roughly how many people there were."
+          }
+        }
+      }
+    },
+    "說話者分錯了：同一個人被分成兩位，點說話者的名字選「合併到…」；某幾句分錯人，在逐字稿按右鍵選「這句是誰說的」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If speakers are wrong: when one person was split into two, click the speaker's name and choose Merge into…; when a few lines have the wrong speaker, right-click them in the transcript and choose Who said this."
+          }
+        }
+      }
+    },
+    "說話者辨識模型：分辨是誰在說話，約 46 MB": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker recognition model: tells who is speaking, about 46 MB"
+          }
+        }
+      }
+    },
+    "說話者辨識用，約 46 MB。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used for speaker recognition, about 46 MB."
+          }
+        }
+      }
+    },
+    "說話者辨識的模型還在下載，下載好後再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The speaker recognition model is still downloading. Try again when it's ready"
+          }
+        }
+      }
+    },
+    "讀不到認證管理員裡的 key（錯誤代碼 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't read the key from Credential Manager (error %lld)"
+          }
+        }
+      }
+    },
+    "超過 15 秒沒有收到電腦的聲音：請確認線上會議有聲音在播": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No computer audio for over 15 seconds: check that the online meeting is playing sound"
+          }
+        }
+      }
+    },
+    "跟著 Windows": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as Windows"
+          }
+        }
+      }
+    },
+    "轉錄完成、會議紀錄整理好時通知你。已允許。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifies you when transcription and meeting notes are done. Allowed."
+          }
+        }
+      }
+    },
+    "轉錄完成、會議紀錄整理好時通知你。通知被關掉時，可以在 Windows 的「系統 → 通知」打開。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifies you when transcription and meeting notes are done. If notifications are off, turn them on in Windows Settings → System → Notifications."
+          }
+        }
+      }
+    },
+    "轉錄完成後把錄音壓縮成 m4a（約每小時 43 MB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compress recordings to m4a after transcription (about 43 MB per hour)"
+          }
+        }
+      }
+    },
+    "轉錄完會自動整理。「摘要」有重點、決議、待辦和未決問題；「詳細」依議題分段；每一條後面的時間點點一下，就從錄音那裡開始播放。範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，回答會附上時間點；側欄上方的提問按鈕可以一次問所有會議。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes are written automatically after transcription. Summary has key points, decisions, action items and open questions; Details is split by topic; click the time after any item to play the recording from there. The template menu switches to formats like one-on-one, interview, lecture or brainstorm — then choose More → Regenerate meeting notes. To find something, ask in the Ask tab and the answer comes with timestamps; the Ask button at the top of the sidebar asks all meetings at once."
+          }
+        }
+      }
+    },
+    "轉錄（快速辨識）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing (quick recognition)"
+          }
+        }
+      }
+    },
+    "這個格式在這裡不能匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This format can't be exported here"
+          }
+        }
+      }
+    },
+    "這個版本沒有更新金鑰（開發版），不會檢查更新。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build has no update key (development build), so it doesn't check for updates."
+          }
+        }
+      }
+    },
+    "這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting was transcribed with Quick recognition before the model finished downloading. Re-transcribing with Breeze is usually more accurate."
+          }
+        }
+      }
+    },
+    "這場會議是在模型下載好之前，用快速辨識轉錄的。可以用日文轉錄模型重新轉錄，通常比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting was transcribed with Quick recognition before the model finished downloading. Re-transcribing with the Japanese model is usually more accurate."
+          }
+        }
+      }
+    },
+    "這組快捷鍵已經被別的 app 用了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another app is already using this shortcut"
+          }
+        }
+      }
+    },
+    "速度快很多，下載也小；但不參考詞彙表，英文專有名詞、人名比較容易錯。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Much faster with a small download, but it ignores the glossary, so English terms and names are more often wrong."
+          }
+        }
+      }
+    },
+    "連線逾時": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The connection timed out"
+          }
+        }
+      }
+    },
+    "遇到問題，可以從設定的「進階」選「回報問題…」，會附上版本和環境（不含會議內容）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If something goes wrong, choose Report a problem… in Settings → Advanced; it includes the version and environment (no meeting content)."
+          }
+        }
+      }
+    },
+    "重新打開拾音後換成新的介面語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new interface language takes effect after you reopen Shiyin"
+          }
+        }
+      }
+    },
+    "錄現場會議或你自己的聲音。Windows 的「隱私權與安全性 → 麥克風」要允許桌面 app 使用麥克風。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records in-person meetings or your own voice. In Windows Settings → Privacy & security → Microphone, desktop apps must be allowed to use the microphone."
+          }
+        }
+      }
+    },
+    "錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For online meetings choose “Microphone + computer audio”: your voice and the other side are recorded on the left and right channels."
+          }
+        }
+      }
+    },
+    "錄線上會議（Zoom、Meet、Teams）對方的聲音。Windows 不用另外允許，錄音時選「麥克風＋電腦聲音」就好。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records the other side of online meetings (Zoom, Meet, Teams). Windows needs no extra permission — just choose “Microphone + computer audio” when recording."
+          }
+        }
+      }
+    },
+    "錄音、逐字稿和會議紀錄都只存在這台電腦上（%LOCALAPPDATA%\\Shiyin），不會跟著帳號漫遊。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordings, transcripts and meeting notes are stored only on this PC (%LOCALAPPDATA%\\Shiyin) and don't roam with your account."
+          }
+        }
+      }
+    },
+    "錄音中按 Ctrl+Alt+Shift+B 標記重點（在其他 app 裡也能用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, press Ctrl+Alt+Shift+B to mark a highlight (works in any app)"
+          }
+        }
+      }
+    },
+    "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間。重要的地方按「標記重點」（Ctrl+B），在其他 app 裡也可以按 Ctrl+Alt+Shift+B。需要中斷時按「暫停」（Ctrl+Shift+P），暫停的時間不會錄進去。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, the live transcript is on the left and appears a few seconds after each sentence; each new line in My notes on the right gets the recording time. Click Mark highlight (Ctrl+B) for important moments, or press Ctrl+Alt+Shift+B in any app. Click Pause (Ctrl+Shift+P) to stop for a while; paused time isn't recorded."
+          }
+        }
+      }
+    },
+    "錄音和轉錄都只在這台電腦上進行，不會上傳。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording and transcription happen only on this PC and are never uploaded."
+          }
+        }
+      }
+    },
+    "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音；會議好像結束時提醒停止。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When an online meeting starts in Zoom, Teams, Google Meet and so on, Shiyin reminds you to record, and reminds you to stop when it seems to have ended."
+          }
+        }
+      }
+    },
+    "開始錄音（Ctrl+R），用%@辨識；點右邊的箭頭可以改錄音來源和語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start recording (Ctrl+R), recognizing %@; click the arrow on the right to change the source and language"
+          }
+        }
+      }
+    },
+    "電腦聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer audio"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

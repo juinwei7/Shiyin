@@ -228,20 +228,23 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 |---|---|
 | 主視窗（NavigationSplitView：側欄、搜尋、會議內容） | 主視窗：左邊會議清單（含資料夾、搜尋框、垃圾桶、匯入），右邊會議內容 |
 | 會議頁的分頁（摘要、詳細、逐字稿、待確認、筆記、提問） | `SelectorBar`，Ctrl+1～6 |
-| 錄音中的畫面、播放列、時間軸 | 同樣的排版；時間軸用 Win2D 或 Composition 畫 |
-| Settings（7 個分頁） | 獨立的設定視窗，左邊 `NavigationView` 7 頁；「錄音」頁多一個介面語言（R26.4） |
+| 錄音中的畫面、播放列、時間軸 | 同樣的排版；時間軸用 Canvas 放矩形、三角形、圓點（段落數跟 Mac 一樣多，2,086 段時待 T-W10 量） |
+| Settings（7 個分頁） | 獨立的設定視窗，上方 `SelectorBar` 7 頁；「進階」頁多一個介面語言（R26.4、D57） |
 | 引導、使用說明、回報問題、問所有會議 | 各自的視窗 |
-| MenuBarExtra | 系統匣圖示＋無邊框、置頂、失焦就收起的小視窗，用 `Shell_NotifyIconGetRect` 定位。Windows 11 預設把新圖示收進「^」，第一次啟動時提示釘到工作列 |
+| MenuBarExtra | 系統匣圖示（WinUIEx 的 TrayIcon）：左鍵打開主視窗，右鍵選單有錄音狀態、暫停、停止、進行中的工作、打開、說明、設定、結束。Windows 11 預設把新圖示收進「^」，引導的最後一步說明 |
 | 偵測會議的浮動視窗（NSPanel） | 右下角、最上層、不搶焦點的小視窗（`WS_EX_NOACTIVATE`），30 秒收起 |
 | sheet、alert、popover | `ContentDialog`、`Flyout` |
 | 關掉主視窗 | 隱藏到系統匣，錄音和工作繼續（R1.7）；從系統匣或選單「結束」時，有工作在跑要確認（同 Mac） |
 
-快捷鍵：Mac 的 ⌘ 換成 Ctrl（Ctrl+O 匯入、Ctrl+R 錄音、Ctrl+Shift+P 暫停、Ctrl+B 標記重點、Ctrl+E 匯出、Ctrl+F 搜尋逐字稿、空白鍵播放、Delete 丟到垃圾桶、F1 使用說明）。
+快捷鍵：Mac 的 ⌘ 換成 Ctrl（Ctrl+O 匯入、Ctrl+R 錄音、Ctrl+Shift+P 暫停、Ctrl+B 標記重點、Ctrl+E 匯出、Ctrl+F 搜尋逐字稿、Ctrl+1～6 分頁、空白鍵播放、Ctrl+Delete 丟到垃圾桶）。
+
+**畫面全部用 C# 建，不用 XAML 檔**（D59）：`Shiyin.App/Ui/Ui.cs` 集中顏色、字型和常用元件的寫法；資源只加 `XamlControlsResources`，主題色設成青瓷綠。這樣 Mac 上也能編譯檢查（XAML 編譯器是 Windows 的程式）。
 
 ### 11.2 效能（同 R20.3、R25）
 
 - 一直在變的東西（音量條、計時、播放位置）不經過綁定通知整個畫面：音量條用 Composition 的 visual 自己定時讀音量（對應 D40）；計時只更新那一個 TextBlock。
-- 逐字稿列表用 `ItemsRepeater` 虛擬化，播放時只更新換段的那兩列。
+- 逐字稿列表用 `ListView` 的虛擬化，`ContainerContentChanging` 時才建出那一段的畫面（不用 DataTemplate 和綁定），播放、搜尋時只重畫看得到的幾段。
+- 服務的事件在背景執行緒觸發，`AppHost.Post` 切回 UI 執行緒；資料改了 0.15 秒內合併成一次重讀（`MainState`）。錄音中的變化（計時、即時文字、提示）只更新錄音的畫面，不重讀資料庫；工作的進度每秒更新一次列表和狀態列。
 - 量法同 Mac：DEBUG 的 `metrics` 回報 UI 執行緒最長卡住多久、即時文字更新幾次；2,086 段的會議捲動和跟著播放（T-W10）。
 
 ### 11.3 外觀、字型
@@ -253,10 +256,10 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 11.4 介面文字（R26.4）
 
-- 翻譯表 `src/Shiyin.App/Strings/Localizable.xcstrings`：跟 Mac 同樣的格式、同樣用中文當鍵（D12）。**不跟 Mac 共用同一個檔案**：Mac 的 `l10n.py extract` 會刪掉 Swift 沒用到的條目。
-- `scripts/dev/l10n.py` 加 Windows 的模式：從 .cs、.xaml 抽字串、`check`（缺英文、沒查表的中文）、`sync`（Mac 的表裡已經有的英文直接帶進來）。
-- C# 用 `L("中文")`、`L("已匯入 %lld 個檔案", n)`：鍵的寫法照 xcstrings（`%@`、`%lld`、`%1$@`、複數），才能沿用 Mac 的英文；XAML 用 markup extension `{l:Str Key=中文}`。
-- 介面語言：預設跟著 Windows 的顯示語言（zh-Hant／zh-TW／zh-HK 是中文，其他英文）；Windows 不能替不打包的桌面 app 個別設定語言，所以設定裡另外可以選（R26.4）。DEBUG 可以用啟動參數 `--lang en`。
+- 翻譯表兩份，app 都內嵌：**Mac 的 `Resources/Localizable.xcstrings` 直接拿來用**（同樣用中文當鍵，D12），再加上 Windows 才有的字串 `src/Shiyin.App/Strings/Windows.xcstrings`（同一個鍵以 Windows 的為準）。Mac 的檔案不動（R26.5）；Mac 的 `l10n.py extract` 刪掉 Swift 沒用到的條目時，Windows 用到的鍵會變成「缺英文」，`windows-check` 會抓到，補進 Windows 的表。
+- `scripts/dev/l10n.py windows-check`：抽出 `L.T("…")`、`L.F("…")` 的鍵，列出兩份表都沒有英文的條目和沒查表的介面中文（`// l10n-skip` 跳過）；`windows-apply <翻譯.json>` 寫進 Windows 的表。CI 的 macOS 那一台每次都跑。
+- C# 用 `L.T("中文")`、`L.F("已匯入 %lld 個檔案", n)`：鍵的寫法照 xcstrings（`%@`、`%lld`、`%1$@`、`%%`），英文的單複數照 xcstrings 的 variations（看第一個整數），才能沿用 Mac 的英文。
+- 介面語言：預設跟著 Windows 的顯示語言（中文是中文，其他英文）；Windows 不能替不打包的桌面 app 個別設定語言，所以設定的「進階」裡另外可以選，重開後生效（R26.4、D57）。DEBUG 可以用 `--set interfaceLanguage=en`。
 - 依會議語言的文字（匯出、預設說話者名稱）同 M§16（`MeetingLanguage.text`），在 Core。
 
 ## 12. 系統整合
@@ -410,6 +413,8 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D56 | whisper 外面包一層小的 C shim | 在 C# 宣告整個 `whisper_full_params`：傳值、1 byte 的 bool、巢狀 struct 和 callback，對錯了不會報錯、只會結果怪；每次升級 whisper.cpp 都要重新對一次 struct |
 | D57 | 介面語言在設定裡可以另外選 | 只跟著 Windows：Windows 沒有替不打包的桌面 app 個別設定語言的地方（Mac 有），英文 Windows 上想用中文介面的人就沒辦法 |
 | D58 | sherpa-onnx 只切段落（固定 30 群），每 3 秒的小段用 3D-Speaker 算聲紋，減掉整場平均後自己做凝聚式分群（§9） | sherpa-onnx 原本的門檻分群：中文會議（AISHELL-4）把 6 人併成 1～3 人，門檻怎麼調都不行（整場的聲紋太像）。WeSpeaker（英文 VoxCeleb）的聲紋：減掉平均後 AMI 還好，AISHELL-4 同一人、不同人的相似度重疊太多（第 10 百分位 0.03 對第 90 百分位 0.33；3D-Speaker 是 0.17 對 0.09）。VBx：要 PLDA 模型、參數多，這個做法在 AMI、AISHELL-4 已經跟 Mac 一樣好。取捨：聲紋模型比 WeSpeaker 大（40 MB 對 26 MB）；聲紋比對、分不準的門檻跟 Mac 不同（0.6、0.37） |
+| D59 | WinUI 的畫面全部用 C# 建，不用 XAML 檔 | XAML：排版看得比較清楚，但 XAML 編譯器（XamlCompiler.exe）只能在 Windows 跑，Mac 上連編譯檢查都不行，每改一次畫面都要進虛擬機。取捨：程式比較長、沒有設計工具的預覽；用 `Ui.cs` 的小工具把常用的寫法縮短，畫面一律在虛擬機截圖確認（W2） |
+| D60 | 不碰畫面的 app 邏輯放在 `Shiyin.Services`（net10.0），平台的部分是介面 | 寫在 App 的 ViewModel 裡：Mac 上測不了，錄音、工作佇列、匯入、更新這些最容易出錯的流程都要進虛擬機才能測。取捨：多一層介面（`IAudioDecoder`、`IAudioSource`、`IExportPlatform`、`IUpdatePlatform`…）；換來在 Mac 上用模擬的音源、假的引擎和本機伺服器跑完整的流程 |
 
 ## 17. 需要先做的實驗
 

@@ -19,7 +19,7 @@ public static class SystemInfo
         var name = int.TryParse(build, out var b) && b >= 22000 ? "Windows 11" : "Windows 10";
         var edition = key?.GetValue("EditionID") as string ?? "";
         var display = key?.GetValue("DisplayVersion") as string ?? "";
-        return $"{name} {edition} {display}（{build}{ubr}，{RuntimeInformation.OSArchitecture}）".Replace("  ", " ");
+        return $"{name} {edition} {display}（{build}{ubr}，{RuntimeInformation.OSArchitecture}）".Replace("  ", " ");  // l10n-skip
     }
 
     static string Cpu()
@@ -49,6 +49,6 @@ public static class SystemInfo
             }
             catch (System.Security.SecurityException) { }
         }
-        return names.Count == 0 ? "?" : string.Join("、", names);
+        return names.Count == 0 ? "?" : string.Join("、", names);  // l10n-skip
     }
 }

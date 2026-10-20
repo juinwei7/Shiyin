@@ -294,7 +294,7 @@ public sealed class DetailView
     static string TranscribingText(double? progress, string stage, TimeSpan? remaining)
     {
         if (progress is not double p) return stage.Length == 0 ? L.T("準備轉錄…") : stage + "…";
-        var text = L.F("%@中 %lld%", stage.Length == 0 ? L.T("轉錄") : stage, (long)(p * 100));
+        var text = L.F("%@中 %lld%%", stage.Length == 0 ? L.T("轉錄") : stage, (long)(p * 100));
         if (remaining is { TotalSeconds: > 0 } r)
             text += r.TotalSeconds < 60 ? L.T("，快好了") : L.F("，約剩 %lld 分鐘", (long)Math.Ceiling(r.TotalMinutes));
         return text;

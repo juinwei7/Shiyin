@@ -27,6 +27,10 @@ jobs:
           global-json-file: windows/global.json
       - name: 測試
         run: dotnet test --project tests/Shiyin.Tests
+      - name: 介面文字都有英文
+        if: runner.os == 'macOS'
+        working-directory: .
+        run: python3 scripts/dev/l10n.py windows-check
       # 真的 Windows 上把 app 建一次（Mac 上只做編譯檢查，XAML 的資源、自帶 Windows App SDK 要在 Windows 才會跑到）
       - name: 建置 app
         if: runner.os == 'Windows'

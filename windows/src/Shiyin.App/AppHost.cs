@@ -95,10 +95,18 @@ public sealed class AppHost
             _ => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "zh",
         };
         if (!english) { L.Use(null); return; }
-        using var stream = typeof(AppHost).Assembly.GetManifestResourceStream("Localizable.xcstrings");
-        if (stream is null) { L.Use(new Dictionary<string, string>()); return; }
-        using var reader = new StreamReader(stream);
-        var (table, plurals) = L.ReadXcstrings(reader.ReadToEnd());
+        var table = new Dictionary<string, string>();
+        var plurals = new Dictionary<string, (string, string)>();
+        // 先讀 Mac 的，再讀 Windows 才有的（同一個鍵以 Windows 的為準）
+        foreach (var name in new[] { "Localizable.xcstrings", "Windows.xcstrings" })
+        {
+            using var stream = typeof(AppHost).Assembly.GetManifestResourceStream(name);
+            if (stream is null) continue;
+            using var reader = new StreamReader(stream);
+            var (t, p) = L.ReadXcstrings(reader.ReadToEnd());
+            foreach (var (k, v) in t) table[k] = v;
+            foreach (var (k, v) in p) plurals[k] = v;
+        }
         L.Use(table, plurals);
     }
 

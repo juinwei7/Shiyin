@@ -15,7 +15,7 @@ public sealed class WhisperException(WhisperErrorKind kind, int code = 0) : Exce
     {
         WhisperErrorKind.ModelMissing => L.T("還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載"),
         WhisperErrorKind.LoadFailed => L.T("轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載"),
-        WhisperErrorKind.Failed => L.F("轉錄失敗（whisper 錯誤代碼 %lld）", (long)code),
+        WhisperErrorKind.Failed => L.F("轉錄失敗（whisper 錯誤代碼 %d）", (long)code),
         WhisperErrorKind.Cancelled => L.T("已取消"),
         _ => L.T("錄音裡沒有辨識到任何語音"),
     };
