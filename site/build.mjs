@@ -2,6 +2,7 @@
 //
 //   node site/build.mjs                       讀 GitHub Releases，產生網站
 //   node site/build.mjs --releases <檔案>      改讀這份 JSON（跟 API 同樣格式），不連網路
+//   node site/build.mjs --releases <檔案> --repo <檔案>   星星數也從檔案讀（repo API 的格式）
 //
 // 環境變數：SITE_URL（預設 https://shiyin.weibuilds.com）、GITHUB_TOKEN（選填，避免 API 次數限制）
 
@@ -10,13 +11,13 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { loadReleases } from './src/releases.mjs';
+import { loadReleases, loadStars } from './src/releases.mjs';
 import { ROUTES, homePage, changelogPage, notFoundPage } from './src/pages.mjs';
 import { content, LANGS } from './src/content.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
-const { values: args } = parseArgs({ options: { releases: { type: 'string' }, out: { type: 'string' } } });
+const { values: args } = parseArgs({ options: { releases: { type: 'string' }, repo: { type: 'string' }, out: { type: 'string' } } });
 const out = path.resolve(args.out ?? path.join(here, 'dist'));
 const site = (process.env.SITE_URL || 'https://shiyin.weibuilds.com').replace(/\/+$/, '');
 const SHOTS = ['docs/images/summary.png', 'docs/images/recording.png', 'docs/images/transcript.png',
@@ -24,6 +25,11 @@ const SHOTS = ['docs/images/summary.png', 'docs/images/recording.png', 'docs/ima
 
 try {
   const releases = await loadReleases({ file: args.releases });
+  // GitHub 數據（docs/website.md §11）：星星數、所有版本的 DMG 下載次數加總
+  const stats = {
+    stars: await loadStars({ file: args.repo, offline: Boolean(args.releases) }),
+    downloads: releases.reduce((sum, r) => sum + r.downloads, 0),
+  };
   await checkImages();
   const css = await readFile(path.join(here, 'src/style.css'), 'utf8');
   // 首頁的示範（docs/website.md §10）：樣式寫進首頁，script 另外放一個檔案（CSP 只允許自己網站的 script）
@@ -41,7 +47,7 @@ try {
   await cp(path.join(repo, 'docs/images/icon.png'), path.join(out, 'icon.png'));
   await writeFile(path.join(out, 'demo.js'), demoJs);
 
-  const page = { site, css, releases };
+  const page = { site, css, releases, stats };
   for (const lang of LANGS) {
     await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page, demo }));
     await write(ROUTES.changelog(lang) + 'index.html', changelogPage({ lang, ...page }));
@@ -56,6 +62,7 @@ try {
 
   console.log(`網站已產生：${path.relative(process.cwd(), out) || '.'}`);
   console.log(`網址 ${site}，共 ${releases.length} 個版本，最新 ${releases[0].version}（${releases[0].dmg.name}）`);
+  console.log(`GitHub：${stats.stars ?? '（讀不到）'} 顆星，已下載 ${stats.downloads} 次`);
 } catch (e) {
   console.error(e.message);
   process.exit(1);

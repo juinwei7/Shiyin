@@ -28,6 +28,8 @@ export const content = {
       lead: '錄音、轉錄、整理成會議紀錄，都在你的 Mac 上完成。<br>每一條紀錄都附時間點，點一下就聽得到原話。',
       download: (v) => `下載拾音 ${v}`,
       small: '免費、開源，需要 macOS 26 和 Apple Silicon',
+      stars: (n) => `GitHub ${n} 顆星`,
+      downloads: (n) => `已下載 ${n} 次`,
     },
     shots: {
       summary: '拾音的會議紀錄畫面：摘要、決議、待辦，每一條後面都有時間點',
@@ -135,6 +137,8 @@ export const content = {
       lead: 'Record, transcribe and write up meetings, all on your Mac. <br>Every note has a timestamp: click it to hear what was actually said.',
       download: (v) => `Download Shiyin ${v}`,
       small: 'Free and open source. Requires macOS 26 and Apple Silicon.',
+      stars: (n) => `${n} stars on GitHub`,
+      downloads: (n) => `${n} downloads`,
     },
     shots: {
       summary: 'Meeting notes in Shiyin: summary, decisions and action items, each with a timestamp',
@@ -243,6 +247,8 @@ export const content = {
       lead: '録音、文字起こし、議事録の作成まで、すべて Mac の中で。<br>各項目のタイムスタンプをクリックすれば、実際の発言を聞けます。',
       download: (v) => `拾音 ${v} をダウンロード`,
       small: '無料、オープンソース。macOS 26 と Apple シリコンが必要です',
+      stars: (n) => `GitHub スター ${n}`,
+      downloads: (n) => `ダウンロード ${n} 回`,
     },
     shots: {
       summary: '拾音の議事録画面：要約、決定事項、ToDo の各項目にタイムスタンプが付いている',

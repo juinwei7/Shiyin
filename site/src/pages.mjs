@@ -105,6 +105,17 @@ function shot(lang, name, alt, { first = false, caption = '' } = {}) {
 </picture>${caption ? `\n<figcaption>${caption}</figcaption>` : ''}`;
 }
 
+// GitHub 數據（docs/website.md §11）：星星數讀不到就只顯示下載次數，兩個都沒有就不顯示
+function statsLine(lang, stats) {
+  if (!stats) return '';
+  const c = content[lang];
+  const number = new Intl.NumberFormat({ zh: 'zh-TW', en: 'en-US', ja: 'ja-JP' }[lang]);
+  const parts = [];
+  if (stats.stars != null) parts.push(c.intro.stars(number.format(stats.stars)));
+  if (stats.downloads > 0) parts.push(c.intro.downloads(number.format(stats.downloads)));
+  return parts.length ? `<a class="stats" href="${GITHUB}">${parts.join(' · ')}</a>` : '';
+}
+
 const paragraphs = (ps) => ps.map((p) => `<p>${p}</p>`).join('\n');
 const list = (items) => `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`;
 
@@ -120,7 +131,7 @@ function releaseNotes(lang, release) {
 }
 
 // demo：示範的樣式和 script 網址（build.mjs 讀進來）
-export function homePage({ lang, site, css, releases, demo }) {
+export function homePage({ lang, site, css, releases, demo, stats }) {
   const c = content[lang];
   const latest = releases[0];
   const notesHref = `${ROUTES.changelog(lang)}#${latest.tag}`;
@@ -135,6 +146,7 @@ export function homePage({ lang, site, css, releases, demo }) {
   <p>${c.intro.lead}</p>
   <a class="download" href="#download">${c.intro.download(latest.version)}</a>
   <small>${c.intro.small}</small>
+  ${statsLine(lang, stats)}
 </section>
 
 ${demoSection(lang, { fallback: shot(lang, 'summary', c.shots.summary, { first: true }) })}

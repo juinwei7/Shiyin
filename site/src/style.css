@@ -66,6 +66,8 @@ h2 { font-size: 26px; line-height: 1.4; font-weight: 600; }
 .intro p { margin: 14px auto 0; max-width: 34em; color: var(--muted); font-size: 19px; }
 .intro .download { margin-top: 28px; }
 .intro small { display: block; margin-top: 12px; color: var(--muted); font-size: 14px; }
+.intro .stats { display: inline-block; margin-top: 6px; color: var(--muted); font-size: 14px; }
+.intro .stats:hover { color: var(--text); }
 .download { display: inline-block; padding: 11px 26px; border-radius: 980px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .download:hover { text-decoration: none; filter: brightness(1.08); }
 

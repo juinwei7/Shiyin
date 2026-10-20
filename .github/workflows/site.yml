@@ -20,6 +20,9 @@ on:
     workflows: ["打包"]
     types: [completed]
   workflow_dispatch:
+  # 每天台灣時間早上 9 點重新建置，首頁的 GitHub 數據（docs/website.md §11）才會更新
+  schedule:
+    - cron: "0 1 * * *"
 
 permissions:
   contents: read

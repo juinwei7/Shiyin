@@ -27,9 +27,31 @@ export async function loadReleases({ file } = {}) {
   return releases;
 }
 
-async function fetchReleases() {
+function apiHeaders() {
   const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'shiyin-site-build' };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  return headers;
+}
+
+/**
+ * GitHub 星星數（docs/website.md §11）。讀不到就回傳 null，不讓建置失敗；
+ * file 有給就讀這份 JSON（跟 API 同樣格式），offline 為 true（用 --releases 測試）而且沒給 file 時不連網路
+ */
+export async function loadStars({ file, offline = false } = {}) {
+  try {
+    if (file) return JSON.parse(await readFile(file, 'utf8')).stargazers_count ?? null;
+    if (offline) return null;
+    const res = await fetch(`https://api.github.com/repos/${REPO}`, { headers: apiHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).stargazers_count ?? null;
+  } catch (e) {
+    console.warn(`讀不到 GitHub 星星數（${e.message}），首頁只顯示下載次數`);
+    return null;
+  }
+}
+
+async function fetchReleases() {
+  const headers = apiHeaders();
   const all = [];
   for (let page = 1; ; page++) {
     const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100&page=${page}`, { headers });
@@ -59,6 +81,7 @@ function parseRelease(r) {
     date: r.published_at,
     url: r.html_url,
     dmg: dmg ? { name: dmg.name, url: dmg.browser_download_url } : null,
+    downloads: dmg?.download_count ?? 0,
     zh: parseBlock(blocks[0], '拾音', version, tag),
     en: parseBlock(blocks[1], 'Shiyin', version, tag),
   };

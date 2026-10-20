@@ -22,6 +22,7 @@
 - W8 分享出去好看：在 Threads、Facebook、LINE 貼連結時有標題、說明和預覽圖。
 - W9 基本品質：手機也能看、深色模式、鍵盤可以操作、開啟速度快、不用 cookie、不追蹤訪客。
 - W10 首屏的示範（2026-10-19 加）：第一屏不放靜態截圖，改成重刻的拾音視窗，自動播一場會議從錄音、轉錄、整理到點回原話、待確認的過程，播完可以自己點（§10）。看的人不用下載，就知道錄完會得到什麼、時間點和待確認怎麼用。
+- W11 GitHub 數據（2026-10-20 加）：首頁第一屏顯示 GitHub 星星數和累計下載次數，讓第一次來的人知道已經有人在用（§11）。
 
 | 頁面 | 網址 | 內容 |
 |---|---|---|
@@ -192,6 +193,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 | 推到 main，改到 `site/`、`docs/images/` 或這個 workflow | `push` |
 | 發布新版 | `workflow_run`：「打包」流程跑完、而且是推 tag 觸發的才部署（手動只建置 DMG 的不部署） |
 | 手動 | Actions 頁面按「Run workflow」 |
+| 每天一次 | `schedule`：台灣時間早上 9 點重新建置部署，讓 GitHub 數據（§11）保持最新 |
 
 - 不用改 `release.yml`。Release 是用 `GITHUB_TOKEN` 建立的，不會觸發 `release` 事件，所以改用「打包流程跑完」當觸發點。
 - 不用 Cloudflare 後台的「連接 GitHub」：那種方式只有推 commit 才會建置，發布新版不會觸發。
@@ -279,3 +281,14 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 - 三種語言、淺色深色、桌機和手機寬度（390px）都看過整段播放
 - 沒有 JavaScript 時顯示截圖；加上正式的 CSP 時示範可以播（`_headers` 的 CSP 用 `<meta>` 加在首頁的複本上測）
 - app 的介面改版時，對照 app 的截圖檢查重刻的視窗
+
+## 11. GitHub 數據（2026-10-20）
+
+使用者看到 Cloudflare 的流量後想在官網放上 GitHub 的數據（W11）。
+
+- 放在首頁第一屏，下載按鈕下面那行小字（「免費、開源…」）的下面，一行：
+  - 中文「GitHub 53 顆星 · 已下載 134 次」、英文「53 stars on GitHub · 134 downloads」、日文「GitHub スター 53 · ダウンロード 134 回」
+  - 整行連到 GitHub repo，數字依語言加千分位
+- 星星數讀 GitHub API 的 repo（`stargazers_count`）；下載次數是所有版本的 `Shiyin-<版本>.dmg` 下載次數加總（Releases API 本來就有，含 app 內更新下載的），不另外計數、不用 cookie、不載入任何 script。
+- 建置時讀，網頁本身是靜態的。數字靠每天一次的自動部署更新（§8），推 main、發布新版時也會更新。
+- 讀不到星星數（API 次數用完、網路問題）時只顯示下載次數，建置不失敗；兩個都沒有就整行不顯示。本機用 `--releases` 測試時，可以再給 `--repo <檔案>`（跟 API 同樣格式）。
