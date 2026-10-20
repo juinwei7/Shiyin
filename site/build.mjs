@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { loadReleases, loadStars } from './src/releases.mjs';
+import { loadAllReleases, loadStars } from './src/releases.mjs';
 import { ROUTES, homePage, changelogPage, notFoundPage } from './src/pages.mjs';
 import { content, LANGS } from './src/content.mjs';
 
@@ -24,11 +24,11 @@ const SHOTS = ['docs/images/summary.png', 'docs/images/recording.png', 'docs/ima
   'docs/images/en/summary.png', 'docs/images/en/recording.png', 'docs/images/en/transcript.png'];
 
 try {
-  const releases = await loadReleases({ file: args.releases });
-  // GitHub 數據（docs/website.md §11）：星星數、所有版本的 DMG 下載次數加總
+  const { mac: releases, windows } = await loadAllReleases({ file: args.releases });
+  // GitHub 數據（docs/website.md §11）：星星數、所有版本的 DMG（和 Windows 安裝檔）下載次數加總
   const stats = {
     stars: await loadStars({ file: args.repo, offline: Boolean(args.releases) }),
-    downloads: releases.reduce((sum, r) => sum + r.downloads, 0),
+    downloads: [...releases, ...windows].reduce((sum, r) => sum + r.downloads, 0),
   };
   await checkImages();
   const css = await readFile(path.join(here, 'src/style.css'), 'utf8');
@@ -47,7 +47,7 @@ try {
   await cp(path.join(repo, 'docs/images/icon.png'), path.join(out, 'icon.png'));
   await writeFile(path.join(out, 'demo.js'), demoJs);
 
-  const page = { site, css, releases, stats };
+  const page = { site, css, releases, windows: windows[0] ?? null, stats };
   for (const lang of LANGS) {
     await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page, demo }));
     await write(ROUTES.changelog(lang) + 'index.html', changelogPage({ lang, ...page }));
@@ -56,12 +56,16 @@ try {
 
   // /download 永遠轉到最新版的 DMG，給 README、社群貼文用
   const dmg = releases[0].dmg.url;
-  await write('/_redirects', LANGS.map((lang) => `${content[lang].prefix}/download ${dmg} 302\n`).join(''));
+  // Windows 版（docs/website.md §7）：/download/windows 是 x64、/download/windows-arm64 是 ARM64；還沒有 Windows 版時不加
+  const win = windows[0];
+  await write('/_redirects', LANGS.map((lang) => `${content[lang].prefix}/download ${dmg} 302\n`
+    + (win ? `${content[lang].prefix}/download/windows ${win.x64.url} 302\n${content[lang].prefix}/download/windows-arm64 ${win.arm64.url} 302\n` : '')).join(''));
   await write('/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
   await write('/sitemap.xml', sitemap());
 
   console.log(`網站已產生：${path.relative(process.cwd(), out) || '.'}`);
   console.log(`網址 ${site}，共 ${releases.length} 個版本，最新 ${releases[0].version}（${releases[0].dmg.name}）`);
+  if (win) console.log(`Windows 版：最新 ${win.version}（${win.x64.name}、${win.arm64.name}）`);
   console.log(`GitHub：${stats.stars ?? '（讀不到）'} 顆星，已下載 ${stats.downloads} 次`);
 } catch (e) {
   console.error(e.message);

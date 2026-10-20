@@ -86,6 +86,12 @@ export const content = {
         '到「系統設定 → 隱私權與安全性」，按「仍要打開」。',
       ],
       note: '之後有新版時，拾音會在 app 裡問你要不要更新。',
+      windows: {
+        h3: 'Windows 版',
+        button: (name) => `下載 Windows 版（${name}）`,
+        arm: (name) => `ARM 的電腦用這個（${name}）`,
+        note: (version) => `Windows ${version}，要 Windows 11（x64 或 ARM）。第一次執行時如果出現「Windows 已保護您的電腦」，按「其他資訊」→「仍要執行」。`,
+      },
     },
     updates: { h2: '最近更新', all: '所有版本' },
     faq: {
@@ -197,6 +203,12 @@ export const content = {
         'Go to System Settings → Privacy & Security and click Open Anyway.',
       ],
       note: 'When a new version is out, Shiyin asks you in the app whether to update.',
+      windows: {
+        h3: 'Windows',
+        button: (name) => `Download for Windows (${name})`,
+        arm: (name) => `For ARM PCs (${name})`,
+        note: (version) => `Windows ${version}, for Windows 11 (x64 or ARM). If “Windows protected your PC” appears the first time, click “More info” → “Run anyway”.`,
+      },
     },
     updates: { h2: 'What’s new', all: 'All versions' },
     faq: {
@@ -310,6 +322,12 @@ export const content = {
         '「システム設定」→「プライバシーとセキュリティ」で「このまま開く」をクリックします。',
       ],
       note: '新しいバージョンが出ると、アプリの中で更新するかどうか確認されます。',
+      windows: {
+        h3: 'Windows 版',
+        button: (name) => `Windows 版をダウンロード（${name}）`,
+        arm: (name) => `ARM の PC はこちら（${name}）`,
+        note: (version) => `Windows ${version}、Windows 11（x64 または ARM）が必要です。初回起動時に「Windows によって PC が保護されました」と表示されたら「詳細情報」→「実行」を押してください。`,
+      },
     },
     updates: { h2: '最近のアップデート', all: 'すべてのバージョン' },
     faq: {

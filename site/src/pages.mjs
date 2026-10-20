@@ -114,6 +114,16 @@ function starButton(lang, stats) {
   return `<a class="star" href="${GITHUB}">${ICON.star}${content[lang].intro.star}${count}</a>`;
 }
 
+// Windows 版的下載（docs/website.md §7）：還沒有 Windows 版時是空的
+function windowsDownload(lang, win) {
+  if (!win) return '';
+  const w = content[lang].download.windows;
+  return `<h3>${w.h3}</h3>
+<p class="get"><a class="download" href="${escape(win.x64.url)}">${w.button(win.x64.name)}</a> <a href="${escape(win.arm64.url)}">${w.arm(win.arm64.name)}</a></p>
+<p class="note">${w.note(win.version)}</p>
+`;
+}
+
 function downloadsLine(lang, stats) {
   return stats?.downloads > 0 ? `<small class="stats">${content[lang].intro.downloads(formatNumber(lang, stats.downloads))}</small>` : '';
 }
@@ -133,7 +143,7 @@ function releaseNotes(lang, release) {
 }
 
 // demo：示範的樣式和 script 網址（build.mjs 讀進來）
-export function homePage({ lang, site, css, releases, demo, stats }) {
+export function homePage({ lang, site, css, releases, windows, demo, stats }) {
   const c = content[lang];
   const latest = releases[0];
   const notesHref = `${ROUTES.changelog(lang)}#${latest.tag}`;
@@ -200,7 +210,7 @@ ${c.download.rows.map(([k, v]) => `  <div><dt>${k}</dt><dd>${v}</dd></div>`).joi
 ${c.download.steps.map((s) => `  <li>${s}</li>`).join('\n')}
 </ol>
 <p class="note">${c.download.note}</p>
-<div class="star-ask">
+${windowsDownload(lang, windows)}<div class="star-ask">
   <p>${c.download.starAsk}</p>
   ${starButton(lang, stats)}
 </div>
