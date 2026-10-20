@@ -28,7 +28,7 @@ export const content = {
       lead: '錄音、轉錄、整理成會議紀錄，都在你的 Mac 上完成。<br>每一條紀錄都附時間點，點一下就聽得到原話。',
       download: (v) => `下載拾音 ${v}`,
       small: '免費、開源，需要 macOS 26 和 Apple Silicon',
-      stars: (n) => `GitHub ${n} 顆星`,
+      star: '在 GitHub 點星',
       downloads: (n) => `已下載 ${n} 次`,
     },
     shots: {
@@ -79,6 +79,7 @@ export const content = {
       ],
       button: (file) => `下載 ${file}`,
       firstOpen: '第一次打開：',
+      starAsk: '拾音是個人的開源專案。覺得好用的話，到 GitHub 點一顆星，能讓更多人看到它。',
       steps: [
         '打開 DMG，把拾音拖進「應用程式」。',
         '第一次打開時 macOS 會擋下來，因為拾音沒有 Apple 開發者簽章。',
@@ -101,6 +102,7 @@ export const content = {
     changelog: {
       h1: '版本說明',
       lead: '每一版改了什麼。有新版時，拾音會在 app 裡問你要不要更新。',
+      follow: `想第一時間知道新版本，可以到 <a href="${GITHUB}">GitHub</a> 點星或按 Watch。`,
       name: '拾音',
       download: '下載',
       release: 'GitHub Release',
@@ -137,7 +139,7 @@ export const content = {
       lead: 'Record, transcribe and write up meetings, all on your Mac. <br>Every note has a timestamp: click it to hear what was actually said.',
       download: (v) => `Download Shiyin ${v}`,
       small: 'Free and open source. Requires macOS 26 and Apple Silicon.',
-      stars: (n) => `${n} stars on GitHub`,
+      star: 'Star on GitHub',
       downloads: (n) => `${n} downloads`,
     },
     shots: {
@@ -188,6 +190,7 @@ export const content = {
       ],
       button: (file) => `Download ${file}`,
       firstOpen: 'Opening it the first time:',
+      starAsk: 'Shiyin is a personal open-source project. If you find it useful, a star on GitHub helps more people find it.',
       steps: [
         'Open the DMG and drag Shiyin to Applications.',
         'macOS blocks Shiyin the first time you open it, because it isn’t notarized by Apple.',
@@ -210,6 +213,7 @@ export const content = {
     changelog: {
       h1: 'Release notes',
       lead: 'What changed in each version. When a new version is out, Shiyin asks you in the app whether to update.',
+      follow: `To hear about new versions first, star or watch Shiyin on <a href="${GITHUB}">GitHub</a>.`,
       name: 'Shiyin',
       download: 'Download',
       release: 'GitHub Release',
@@ -247,7 +251,7 @@ export const content = {
       lead: '録音、文字起こし、議事録の作成まで、すべて Mac の中で。<br>各項目のタイムスタンプをクリックすれば、実際の発言を聞けます。',
       download: (v) => `拾音 ${v} をダウンロード`,
       small: '無料、オープンソース。macOS 26 と Apple シリコンが必要です',
-      stars: (n) => `GitHub スター ${n}`,
+      star: 'GitHub でスター',
       downloads: (n) => `ダウンロード ${n} 回`,
     },
     shots: {
@@ -299,6 +303,7 @@ export const content = {
       ],
       button: (file) => `${file} をダウンロード`,
       firstOpen: '初めて開くとき：',
+      starAsk: '拾音は個人のオープンソースプロジェクトです。役に立ったら GitHub でスターを付けてください。もっと多くの人に届きます。',
       steps: [
         'DMG を開き、拾音を「アプリケーション」フォルダにドラッグします。',
         '拾音は Apple の公証を受けていないため、初めて開くときは macOS にブロックされます。',
@@ -321,6 +326,7 @@ export const content = {
     changelog: {
       h1: 'リリースノート',
       lead: '各バージョンの変更点です（英語で記載しています）。新しいバージョンが出ると、アプリの中で更新するかどうか確認されます。',
+      follow: `新しいバージョンをいち早く知りたい方は、<a href="${GITHUB}">GitHub</a> でスターまたは Watch してください。`,
       name: '拾音',
       download: 'ダウンロード',
       release: 'GitHub Release',

@@ -16,6 +16,7 @@ const ICON = {
   globe: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c1.8 1.9 2.7 4 2.7 6.5S9.8 12.6 8 14.5M8 1.5C6.2 3.4 5.3 5.5 5.3 8s.9 4.6 2.7 6.5"/></svg>',
   chevron: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3.5l3 3 3-3"/></svg>',
   check: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>',
+  star: '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .9l2.2 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.4 2.3.9-4.9L.9 6.1l4.9-.7z"/></svg>',
 };
 
 // 語言選單：跟 app 的語言選單一樣（地球、目前的語言、箭頭），目前的語言打勾。用 <details>，不需要 script
@@ -105,15 +106,16 @@ function shot(lang, name, alt, { first = false, caption = '' } = {}) {
 </picture>${caption ? `\n<figcaption>${caption}</figcaption>` : ''}`;
 }
 
-// GitHub 數據（docs/website.md §11）：星星數讀不到就只顯示下載次數，兩個都沒有就不顯示
-function statsLine(lang, stats) {
-  if (!stats) return '';
-  const c = content[lang];
-  const number = new Intl.NumberFormat({ zh: 'zh-TW', en: 'en-US', ja: 'ja-JP' }[lang]);
-  const parts = [];
-  if (stats.stars != null) parts.push(c.intro.stars(number.format(stats.stars)));
-  if (stats.downloads > 0) parts.push(c.intro.downloads(number.format(stats.downloads)));
-  return parts.length ? `<a class="stats" href="${GITHUB}">${parts.join(' · ')}</a>` : '';
+// GitHub 數據（docs/website.md §11、§12）：點星按鈕裡放星星數（讀不到就不放），下載次數另外一行（0 就不顯示）
+const formatNumber = (lang, n) => new Intl.NumberFormat({ zh: 'zh-TW', en: 'en-US', ja: 'ja-JP' }[lang]).format(n);
+
+function starButton(lang, stats) {
+  const count = stats?.stars != null ? `<span class="count">${formatNumber(lang, stats.stars)}</span>` : '';
+  return `<a class="star" href="${GITHUB}">${ICON.star}${content[lang].intro.star}${count}</a>`;
+}
+
+function downloadsLine(lang, stats) {
+  return stats?.downloads > 0 ? `<small class="stats">${content[lang].intro.downloads(formatNumber(lang, stats.downloads))}</small>` : '';
 }
 
 const paragraphs = (ps) => ps.map((p) => `<p>${p}</p>`).join('\n');
@@ -144,9 +146,12 @@ export function homePage({ lang, site, css, releases, demo, stats }) {
   <img src="/icon.png" alt="${c.intro.iconAlt}" width="96" height="96">
   <h1>${c.intro.h1}</h1>
   <p>${c.intro.lead}</p>
-  <a class="download" href="#download">${c.intro.download(latest.version)}</a>
+  <div class="actions">
+    <a class="download" href="#download">${c.intro.download(latest.version)}</a>
+    ${starButton(lang, stats)}
+  </div>
   <small>${c.intro.small}</small>
-  ${statsLine(lang, stats)}
+  ${downloadsLine(lang, stats)}
 </section>
 
 ${demoSection(lang, { fallback: shot(lang, 'summary', c.shots.summary, { first: true }) })}
@@ -195,6 +200,10 @@ ${c.download.rows.map(([k, v]) => `  <div><dt>${k}</dt><dd>${v}</dd></div>`).joi
 ${c.download.steps.map((s) => `  <li>${s}</li>`).join('\n')}
 </ol>
 <p class="note">${c.download.note}</p>
+<div class="star-ask">
+  <p>${c.download.starAsk}</p>
+  ${starButton(lang, stats)}
+</div>
 </section>
 
 <section class="col part">
@@ -234,6 +243,7 @@ export function changelogPage({ lang, site, css, releases }) {
   const body = `<div class="col page log">
 <h1>${c.changelog.h1}</h1>
 <p class="lead">${c.changelog.lead}</p>
+<p class="follow">${c.changelog.follow}</p>
 ${articles.join('\n')}
 </div>`;
   return layout({ lang, site, css, route: 'changelog', title: c.meta.changelogTitle, description: c.meta.changelogDescription, body });
