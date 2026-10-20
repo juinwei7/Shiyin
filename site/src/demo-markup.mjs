@@ -9,11 +9,12 @@ const esc = (text) => String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const I = {
   record: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4"/><circle cx="8" cy="8" r="2.7" class="f"/></svg>',
   chevron: '<svg viewBox="0 0 16 16"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg>',
-  // 問所有會議（questionmark.bubble）；3.5 起匯入按鈕在側邊欄的工具列放不下
+  // 問所有會議（questionmark.bubble）；匯入在側邊欄最下面（app 的 design §22.2）
   askAll: '<svg viewBox="0 0 16 16"><path d="M3.4 2.4h9.2a1.6 1.6 0 0 1 1.6 1.6v6.2a1.6 1.6 0 0 1-1.6 1.6H7.4L4.6 14v-2.2H3.4a1.6 1.6 0 0 1-1.6-1.6V4a1.6 1.6 0 0 1 1.6-1.6z"/><path d="M6.5 5.5a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.7.6-.7 1.1v.2"/><circle cx="8" cy="9.6" r=".6" class="f"/></svg>',
   stopSquare: '<svg viewBox="0 0 16 16"><rect x="3.4" y="3.4" width="9.2" height="9.2" rx="1.6" class="f"/></svg>',
   sidebar: '<svg viewBox="0 0 16 16"><rect x="1.6" y="2.6" width="12.8" height="10.8" rx="2.4"/><path d="M6 2.6v10.8M3.4 5.2h1M3.4 7.2h1M3.4 9.2h1"/></svg>',
   search: '<svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6"/><path d="m10.4 10.4 3.4 3.4"/></svg>',
+  importFile: '<svg viewBox="0 0 16 16"><path d="M8 1.8v8.4M5.2 7.6 8 10.4l2.8-2.8"/><path d="M5.3 5H4.4A1.6 1.6 0 0 0 2.8 6.6v5.8A1.6 1.6 0 0 0 4.4 14h7.2a1.6 1.6 0 0 0 1.6-1.6V6.6A1.6 1.6 0 0 0 11.6 5h-.9"/></svg>',
   trash: '<svg viewBox="0 0 16 16"><path d="M2.8 4.4h10.4M6.3 4.4V2.8h3.4v1.6M4.2 4.4l.7 9.2h6.2l.7-9.2M6.7 6.9v4.6M9.3 6.9v4.6"/></svg>',
   more: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4"/><circle cx="5.3" cy="8" r=".75" class="f"/><circle cx="8" cy="8" r=".75" class="f"/><circle cx="10.7" cy="8" r=".75" class="f"/></svg>',
   waveform: '<svg viewBox="0 0 40 40"><path d="M6 17v6M11 12v16M16 8v24M21 14v12M26 10v20M31 15v10M36 18v4"/></svg>',
@@ -71,7 +72,7 @@ function windowMarkup(d) {
       <li class="m m-new"><b data-k="rowtitle">${esc(u.recTitle)}</b><span><time>10/19</time><em data-k="rowst" class="st-rec">${esc(u.status.recording)}</em></span><i class="mini-bar" data-k="rowbar"><i></i></i></li>
 ${m.others.map(([title, date, status]) => `      <li class="m"><b${ml}>${esc(title)}</b><span><time>${date}</time><em>${esc(status)}</em></span></li>`).join('\n')}
     </ul>
-    <div class="trash">${I.trash}${esc(u.trash)}</div>
+    <div class="trash">${I.trash}${esc(u.trash)}<span class="import">${I.importFile}${esc(u.importFile)}</span></div>
   </aside>
 
   <section class="main">

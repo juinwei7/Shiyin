@@ -12,6 +12,7 @@ const ui = {
     appTitle: '拾音',
     search: '搜尋所有會議',
     trash: '垃圾桶 (0)',
+    importFile: '匯入',
     empty: ['從左邊選一場會議', '也可以把新的錄音檔拖進來。'],
     tabs: { summary: '摘要', detail: '詳細', transcript: '逐字稿', review: '待確認', notes: '筆記', ask: '提問' },
     // 分頁的寬度：最長的放得下時每一格一樣寬（中文），放不下時照文字寬度分（英文的 To confirm 2），跟 app 的分頁選單一樣
@@ -84,6 +85,7 @@ const ui = {
     appTitle: 'Shiyin',
     search: 'Search all meetings',
     trash: 'Trash (0)',
+    importFile: 'Import',
     empty: ['Select a meeting on the left', 'You can also drag in a new recording.'],
     tabs: { summary: 'Summary', detail: 'Details', transcript: 'Transcript', review: 'To confirm', notes: 'Notes', ask: 'Ask' },
     equalTabs: false,

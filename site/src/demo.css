@@ -55,11 +55,11 @@
 .lights i:nth-child(3) { background: #28C840; }
 .ib { position: absolute; top: 15px; display: grid; place-items: center; width: 24px; height: 22px; color: var(--w-icon); border-radius: 6px; }
 .ib svg { width: 19px; height: 19px; }
-.tb-rec { left: 107px; }
-.tb-sep { position: absolute; left: 134px; top: 19px; width: 1px; height: 15px; background: var(--w-line); }
-.tb-chev { left: 138px; } .tb-chev svg { width: 13px; height: 13px; }
-.tb-ask { left: 178px; }
-.tb-side { left: 224px; }
+.tb-rec { left: 116px; }
+.tb-sep { position: absolute; left: 145px; top: 19px; width: 1px; height: 15px; background: var(--w-line); }
+.tb-chev { left: 149px; } .tb-chev svg { width: 13px; height: 13px; }
+.tb-ask { left: 186px; }
+.tb-side { left: 232px; }
 .tb-live { display: none; }
 .tb-live .dot { position: absolute; left: 119px; top: 21px; width: 9px; height: 9px; border-radius: 50%; background: var(--red); }
 .tb-time { position: absolute; left: 134px; top: 16px; font-size: 13.5px; font-weight: 500; color: var(--w-2); font-variant-numeric: tabular-nums; }
@@ -85,6 +85,7 @@
 .mini-bar.on { display: block; }
 .trash { position: absolute; left: 8px; right: 0; bottom: 0; height: 40px; display: flex; align-items: center; gap: 8px; padding-left: 14px; border-top: 1px solid var(--w-line); color: var(--w-2); font-size: 13px; }
 .trash svg { width: 15px; height: 15px; }
+.trash .import { display: flex; align-items: center; gap: 7px; margin-left: auto; padding-right: 14px; }
 
 /* 主畫面 */
 .main { position: relative; display: flex; flex-direction: column; min-width: 0; }
