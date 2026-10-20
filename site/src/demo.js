@@ -1,4 +1,4 @@
-// 首屏示範（docs/website.md §10）：照劇本播一場會議，從錄音、轉錄、整理到點回原話、待確認。
+// 首屏示範（docs/website.md §10）：照劇本播一場會議，從錄音、草稿、正式版（說話者名字）到待確認、提問。
 // 文字都在頁面的 #demo-data（site/src/demo-content.mjs 產生），這裡只管播放。
 //
 // 每一章有 play（播動畫）和 jump（直接變成這一章結束的樣子）。跳到第 n 章＝重設畫面、依序 jump 前面幾章，再從第 n 章播。
@@ -99,6 +99,44 @@
     $('bantext').textContent = text;
     if (value != null) $('banbar').firstElementChild.style.width = `${value}%`;
   }
+  // 標題下面的提示列（草稿、背景工作、猜到的說話者）
+  function hint(key, on) { $(key).classList.toggle('on', on); }
+  // 轉錄進度：提示列和側邊欄一起動
+  const tx = { p: 0 };
+  function showTx(p) {
+    tx.p = p;
+    banner('prog', fill(T.banner.transcribing, { p }) + (p >= 10 ? T.banner.almost : ''), p);
+    rowStatus(fill(T.status.transcribing, { p }));
+    $('rowbar').firstElementChild.style.width = `${p}%`;
+  }
+  async function transcribeTo(r, to, ms) {
+    while (tx.p < to) { showTx(Math.min(to, tx.p + 2)); await r.wait(ms); }
+  }
+  // 「查看」的彈出視窗：在按鈕下面，箭頭對準按鈕；右邊超出視窗時往左移（跟 macOS 的 popover 一樣）
+  function popover(on) {
+    const pop = $('popv');
+    if (on) {
+      const main = win.querySelector('.main');
+      const mr = main.getBoundingClientRect();
+      const br = $('suggestbtn').getBoundingClientRect();
+      const center = (br.left - mr.left + br.width / 2) / k;
+      const left = Math.max(12, Math.min(main.clientWidth - pop.offsetWidth - 12, center - pop.offsetWidth / 2));
+      pop.style.left = `${left}px`;
+      pop.style.top = `${(br.bottom - mr.top) / k + 10}px`;
+      pop.style.setProperty('--ax', `${center - left}px`);
+    }
+    pop.classList.toggle('on', on);
+  }
+  // 一段一段出現（會議紀錄、換成正式版）
+  async function reveal(r, pane, ms) {
+    pane.classList.add('hidden-in');
+    for (const el of pane.querySelectorAll('.in')) {
+      el.classList.add('shown');
+      await r.wait(ms);
+    }
+    pane.classList.remove('hidden-in');
+    pane.querySelectorAll('.shown').forEach((el) => el.classList.remove('shown'));
+  }
   function toast(text) {
     const t = $('toast');
     t.textContent = text;
@@ -166,7 +204,7 @@
     }
   }
   // 摘要分頁放不下時（英文比較長），捲到看得到這一格
-  function reveal(el) {
+  function scrollInto(el) {
     const pane = el.closest('.pane');
     const over = (el.getBoundingClientRect().bottom - pane.getBoundingClientRect().bottom) / k + 24;
     if (over > 0) pane.scrollTo({ top: pane.scrollTop + over, behavior: reduce ? 'auto' : 'smooth' });
@@ -283,27 +321,28 @@
       },
       jump() {},
     },
-    { // 轉錄
-      dur: 4300,
+    { // 草稿：停止後馬上用即時逐字稿整理，正式轉錄同時在跑
+      dur: 4400,
       async play(r) {
-        this.jump();
+        this.stopped();
         camera(520);
         banner('spin', T.banner.preparing);
         rowStatus(fill(T.status.transcribing, { p: 0 }));
         await r.wait(700);
         $('rowbar').classList.add('on');
-        for (let p = 0; p <= 100; p += 2) {
-          banner('prog', fill(T.banner.transcribing, { p }) + (p >= 10 ? T.banner.almost : ''), p);
-          rowStatus(fill(T.status.transcribing, { p }));
-          $('rowbar').firstElementChild.style.width = `${p}%`;
-          await r.wait(46);
-        }
-        $('rowbar').classList.remove('on');
-        banner('spin', T.banner.identifying);
-        rowStatus(T.status.identifying);
-        await r.wait(1200);
+        showTx(0);
+        const bar = quiet(transcribeTo(r, 24, 150));
+        await r.wait(800);
+        $('mtitle').classList.add('out');
+        await r.wait(260);
+        this.drafted();
+        $('mtitle').classList.remove('out');
+        camera(560);
+        await reveal(r, showPane('summary'), 105);
+        await bar;
+        await r.wait(1100);
       },
-      jump() {
+      stopped() {
         setMode('busy');
         $('wintitle').textContent = T.recTitle;
         setTab('summary');
@@ -311,72 +350,79 @@
         $('toast').classList.remove('on');
         $('cursor').classList.remove('on');
       },
-    },
-    { // 整理
-      dur: 6000,
-      async play(r) {
-        banner('spin', T.banner.summarizing);
-        rowStatus(T.status.summarizing);
-        await r.wait(1700);
-        banner(null);
-        $('mtitle').classList.add('out');
-        await r.wait(260);
-        const pane = showPane('summary');
-        pane.classList.add('hidden-in');
-        camera(560);
-        this.jump();
-        $('mtitle').classList.remove('out');
-        for (const el of pane.querySelectorAll('.in')) {
-          el.classList.add('shown');
-          await r.wait(105);
-        }
-        pane.classList.remove('hidden-in');
-        pane.querySelectorAll('.shown').forEach((el) => el.classList.remove('shown'));
-        await r.wait(1500);
-      },
-      jump() {
-        banner(null);
-        setMode('done');
-        win.classList.add('named');
-        fitHeader();
+      drafted() {
+        win.classList.add('drafted');
         setTitle(M.title, D.meetingLang !== win.lang ? D.meetingLang : '');
-        rowStatus(T.status.review);
+        hint('draft', true);
         $('revlabel').textContent = T.reviewTab;
         setTab('summary');
         showPane('summary');
         setPlayer(0);
       },
+      jump() {
+        this.stopped();
+        this.drafted();
+        $('rowbar').classList.add('on');
+        showTx(24);
+      },
     },
-    { // 點回原話
-      dur: 7000,
+    { // 正式版：轉錄完帶入認得的名字，整理完換掉草稿，再猜其他人的名字
+      dur: 12600,
       async play(r) {
-        const ts = $('ts13');
-        await move(r, ts, { dur: 900, ox: 0.4 });
-        ts.classList.add('hover');
-        await r.wait(250);
-        await click(r, ts);
-        ts.classList.remove('hover');
-        setPlayer(secs(ts.textContent));
-        setPlaying(true);
-        const playing = quiet((async () => {
-          while (pl.playing) { await r.wait(100); if (pl.playing) setPlayer(pl.t + 0.1); }
-        })());
-        await r.wait(1200);
-        await move(r, tabEl('transcript'), { dur: 700 });
-        await click(r, tabEl('transcript'));
-        setTab('transcript');
-        showPane('transcript');
-        await r.wait(2400);
-        await move(r, $('plbtn'), { dur: 900 });
-        await click(r, $('plbtn'));
-        setPlaying(false);
-        await playing;
+        await transcribeTo(r, 100, 32);
+        $('rowbar').classList.remove('on');
+        banner('spin', T.banner.identifying);
+        rowStatus(T.status.identifying);
+        await r.wait(1000);
+        this.speakers();
+        banner('spin', T.banner.summarizing);
+        rowStatus(T.status.summarizing);
+        await r.wait(1700);
+        banner(null);
+        hint('draft', false);
+        this.final();
+        await reveal(r, showPane('summary'), 80);
+        await r.wait(400);
+        hint('helper', true);
+        await r.wait(1400);
+        hint('helper', false);
+        hint('suggest', true);
+        await r.wait(600);
+        const open = $('suggestbtn');
+        await move(r, open, { dur: 900 });
+        await click(r, open);
+        popover(true);
+        await r.wait(1900);
+        const apply = $('applybtn');
+        await move(r, apply, { dur: 700 });
+        await click(r, apply);
+        this.applied();
+        await r.wait(1100);
+      },
+      speakers() {
+        win.classList.add('named');
+        fitHeader();
+      },
+      final() {
+        setMode('done');
+        rowStatus(T.status.review);
+      },
+      applied() {
+        popover(false);
+        hint('suggest', false);
+        stage.querySelectorAll(`[data-spk="${M.guess.speaker}"]`).forEach((el) => { el.textContent = M.guess.name; });
+        fitHeader();
       },
       jump() {
-        setTab('transcript');
-        showPane('transcript');
-        setPlayer(18);
-        setPlaying(false);
+        banner(null);
+        $('rowbar').classList.remove('on');
+        hint('draft', false);
+        this.speakers();
+        this.final();
+        this.applied();
+        setTab('summary');
+        showPane('summary');
+        setPlayer(0);
       },
     },
     { // 待確認
@@ -416,12 +462,11 @@
         setTab('summary');
         showPane('summary');
         await r.wait(300);
-        reveal($('due1'));
+        scrollInto($('due1'));
         camera(560);
         await r.wait(400);
         this.fixDue(true);
         await r.wait(1400);
-        $('cursor').classList.remove('on');
       },
       reviewed() {
         win.querySelector('.p-review').classList.add('done');
@@ -445,6 +490,68 @@
         setTab('summary');
         showPane('summary');
         this.fixDue(false);
+      },
+    },
+    { // 提問：回答附時間點，點了從那裡播，逐字稿標出正在播的那段
+      dur: 13600,
+      async play(r) {
+        await move(r, tabEl('ask'), { dur: 800 });
+        await click(r, tabEl('ask'));
+        setTab('ask');
+        showPane('ask');
+        await r.wait(900);
+        const field = $('askfield');
+        await move(r, field, { dur: 800, ox: 0.2 });
+        await click(r, field);
+        field.classList.add('focus');
+        await r.wait(250);
+        field.classList.add('typed');
+        await type(r, $('askval'), M.question, D.meetingLang === 'en' ? 50 : 105);
+        $('askbtn').classList.remove('dis');
+        await r.wait(400);
+        await move(r, $('askbtn'), { dur: 600 });
+        await click(r, $('askbtn'));
+        $('askval').textContent = '';
+        field.classList.remove('typed', 'focus');
+        $('askbtn').classList.add('dis');
+        $('ask').classList.add('busy');
+        camera(480);
+        await r.wait(1700);
+        this.answered();
+        await r.wait(1300);
+        const cite = $('cite1');
+        await move(r, cite, { dur: 800, ox: 0.4 });
+        cite.classList.add('hover');
+        await r.wait(250);
+        await click(r, cite);
+        cite.classList.remove('hover');
+        setPlayer(secs(cite.textContent));
+        setPlaying(true);
+        const playing = quiet((async () => {
+          while (pl.playing) { await r.wait(100); if (pl.playing) setPlayer(pl.t + 0.1); }
+        })());
+        await r.wait(1200);
+        await move(r, tabEl('transcript'), { dur: 700 });
+        await click(r, tabEl('transcript'));
+        setTab('transcript');
+        showPane('transcript');
+        await r.wait(2200);
+        await move(r, $('plbtn'), { dur: 900 });
+        await click(r, $('plbtn'));
+        setPlaying(false);
+        await playing;
+        $('cursor').classList.remove('on');
+      },
+      answered() {
+        $('ask').classList.remove('busy');
+        $('ask').classList.add('answered');
+      },
+      jump() {
+        this.answered();
+        setTab('transcript');
+        showPane('transcript');
+        setPlayer(14);
+        setPlaying(false);
       },
     },
   ];

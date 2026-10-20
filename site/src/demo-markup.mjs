@@ -9,7 +9,8 @@ const esc = (text) => String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const I = {
   record: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4"/><circle cx="8" cy="8" r="2.7" class="f"/></svg>',
   chevron: '<svg viewBox="0 0 16 16"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg>',
-  export: '<svg viewBox="0 0 16 16"><path d="M8 1.8v8.4M5.2 7.6 8 10.4l2.8-2.8"/><path d="M5.3 5H4.4A1.6 1.6 0 0 0 2.8 6.6v5.8A1.6 1.6 0 0 0 4.4 14h7.2a1.6 1.6 0 0 0 1.6-1.6V6.6A1.6 1.6 0 0 0 11.6 5h-.9"/></svg>',
+  // 問所有會議（questionmark.bubble）；3.5 起匯入按鈕在側邊欄的工具列放不下
+  askAll: '<svg viewBox="0 0 16 16"><path d="M3.4 2.4h9.2a1.6 1.6 0 0 1 1.6 1.6v6.2a1.6 1.6 0 0 1-1.6 1.6H7.4L4.6 14v-2.2H3.4a1.6 1.6 0 0 1-1.6-1.6V4a1.6 1.6 0 0 1 1.6-1.6z"/><path d="M6.5 5.5a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.7.6-.7 1.1v.2"/><circle cx="8" cy="9.6" r=".6" class="f"/></svg>',
   stopSquare: '<svg viewBox="0 0 16 16"><rect x="3.4" y="3.4" width="9.2" height="9.2" rx="1.6" class="f"/></svg>',
   sidebar: '<svg viewBox="0 0 16 16"><rect x="1.6" y="2.6" width="12.8" height="10.8" rx="2.4"/><path d="M6 2.6v10.8M3.4 5.2h1M3.4 7.2h1M3.4 9.2h1"/></svg>',
   search: '<svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6"/><path d="m10.4 10.4 3.4 3.4"/></svg>',
@@ -27,6 +28,10 @@ const I = {
   updown: '<svg class="pc" viewBox="0 0 16 16"><path d="M5 6.2 8 3.4l3 2.8M5 9.8l3 2.8 3-2.8"/></svg>',
   ok: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" class="f"/><path d="m4.9 8.2 2.1 2.1 4.1-4.4" class="w"/></svg>',
   play: '<svg class="i-play" viewBox="0 0 16 16"><path d="M4.6 2.6v10.8L13.2 8z" class="f"/></svg>',
+  // doc.badge.clock、person.crop.circle.badge.questionmark、arrow.right
+  draft: '<svg viewBox="0 0 16 16"><path d="M8.4 14.2H3.6V1.8h5.2l3 3v2.4"/><path d="M8.6 1.8V5h3.2"/><circle cx="11.6" cy="11.6" r="3"/><path d="M11.6 10.2v1.5l.9.7"/></svg>',
+  guess: '<svg viewBox="0 0 16 16"><circle cx="7.2" cy="8" r="5.8"/><circle cx="7.2" cy="6.5" r="1.9"/><path d="M3.7 12.1c.8-1.4 2-2.1 3.5-2.1s2.7.7 3.5 2.1"/><circle cx="12.6" cy="11.4" r="3.1" class="f"/><path d="M11.7 10.6a.95.95 0 1 1 1.3.9c-.3.1-.4.3-.4.6M12.6 13.1v0" class="w"/></svg>',
+  arrow: '<svg viewBox="0 0 16 16"><path d="M2.8 8h10.4M9.4 4.4 13 8l-3.6 3.6"/></svg>',
   cursor: '<svg class="cursor" data-k="cursor" viewBox="0 0 20 26" width="20" height="26"><path d="M2 1.5v19.3l4.6-4.4 3 7 3.3-1.4-3-6.8h6.4z" fill="#000" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>',
 };
 const pop = (icon, label, chevron = true) => `<span class="pop">${icon}${esc(label)}${chevron ? I.chevron.replace('<svg', '<svg class="pc"') : ''}</span>`;
@@ -42,6 +47,9 @@ const seconds = (text) => { const [m, s] = text.split(':').map(Number); return m
 function windowMarkup(d) {
   const { ui: u, meeting: m } = d;
   const ml = ` lang="${d.meetingLang}"`;
+  // 說話者 1 的聲紋之前記過：轉錄完就帶入名字，後面標「自動」；說話者 2 是猜的，套用後才換（demo.js）
+  const speakerName = (n) => (n === m.auto.speaker ? m.auto.name : m.speakers[n - 1]);
+  const speaker = (n) => `<i class="s${n}" data-spk="${n}"${ml}>${esc(speakerName(n))}</i>${n === m.auto.speaker ? `<span class="auto">${esc(u.auto)}</span>` : ''}`;
   const t = u.tabs;
   const due = `<span class="due${m.due.pad ? ' pad' : ''}" data-k="due0">${esc(m.due.before)}</span>`;
   // 英文放不下時，「暫停」「標記重點」只留圖示，「停止並轉錄」保留文字（跟 app 的 ViewThatFits 一樣）
@@ -54,7 +62,7 @@ function windowMarkup(d) {
   <aside class="side">
     <div class="tb tb-left">
       <span class="lights"><i></i><i></i><i></i></span>
-      <span class="tb-idle"><span class="ib tb-rec" data-k="recbtn">${I.record}</span><span class="tb-sep"></span><span class="ib tb-chev">${I.chevron}</span><span class="ib tb-export">${I.export}</span></span>
+      <span class="tb-idle"><span class="ib tb-rec" data-k="recbtn">${I.record}</span><span class="tb-sep"></span><span class="ib tb-chev">${I.chevron}</span><span class="ib tb-ask">${I.askAll}</span></span>
       <span class="tb-live"><i class="dot"></i><span class="tb-time" data-k="tbtime">00:00</span><span class="ib tb-stop">${I.stopSquare}</span></span>
       <span class="ib tb-side">${I.sidebar}</span>
     </div>
@@ -69,7 +77,7 @@ ${m.others.map(([title, date, status]) => `      <li class="m"><b${ml}>${esc(tit
   <section class="main">
     <div class="tb tb-main">
       <span class="tb-title" data-k="wintitle">${esc(u.appTitle)}</span>
-      <div class="segs">${Object.entries(t).map(([key, label]) => `<span class="sg${key === 'summary' ? ' on' : ''}" data-tab="${key}"><span${key === 'review' ? ' data-k="revlabel"' : ''}>${esc(label)}</span></span>`).join('')}</div>
+      <div class="segs${u.equalTabs ? ' eq' : ''}">${Object.entries(t).map(([key, label]) => `<span class="sg${key === 'summary' ? ' on' : ''}" data-tab="${key}"><span${key === 'review' ? ' data-k="revlabel"' : ''}>${esc(label)}</span></span>`).join('')}</div>
       <span class="more">${I.more}${I.chevron.replace('<svg', '<svg class="mchev"')}</span>
     </div>
 
@@ -78,8 +86,12 @@ ${m.others.map(([title, date, status]) => `      <li class="m"><b${ml}>${esc(tit
     <div class="detail">
       <div class="head">
         <div class="h-row"><h3 class="mtitle" data-k="mtitle">${esc(u.recTitle)}</h3><span class="lnk">${esc(u.edit)}</span></div>
-        <div class="meta"><span>${esc(u.date)}</span><span class="m-dur">${esc(u.duration)}</span><span class="m-spk">${m.speakers.map((s, i) => `<i class="s${i + 1}"${ml}>${esc(s)}</i>`).join('')}</span></div>
+        <div class="meta"><span>${esc(u.date)}</span><span class="m-dur">${esc(u.duration)}</span><span class="m-spk">${m.speakers.map((_, i) => speaker(i + 1)).join('')}</span></div>
         <div class="pickers">${pop(I.doc, u.template)}${pop(I.globe, m.language)}</div>
+        <div class="hb hb-status" data-k="banner"><span class="spin"></span><span data-k="bantext"></span><span class="bar" data-k="banbar"><i></i></span><span class="bbtn">${esc(u.cancel)}</span></div>
+        <div class="hb hb-helper" data-k="helper"><span class="spin"></span><span>${esc(u.banner.naming)}</span><span class="bbtn">${esc(u.cancel)}</span></div>
+        <div class="hb hb-draft" data-k="draft">${I.draft}<span>${esc(u.draft)}</span></div>
+        <div class="hb hb-suggest" data-k="suggest">${I.guess}<span>${esc(u.suggest)}</span><span class="btn" data-k="suggestbtn">${esc(u.suggestOpen)}</span></div>
       </div>
 
       <div class="recbar">
@@ -97,8 +109,6 @@ ${m.others.map(([title, date, status]) => `      <li class="m"><b${ml}>${esc(tit
           <div class="nbox" data-k="nbox"${ml}><span data-k="ntext"></span><i class="caret"></i></div>
         </div>
       </div>
-
-      <div class="banner" data-k="banner"><span class="spin"></span><span data-k="bantext"></span><span class="bar" data-k="banbar"><i></i></span><span class="bbtn">${esc(u.cancel)}</span></div>
 
       <div class="panes">
         <div class="pane p-wait"><p class="dim">${esc(u.waiting)}</p></div>
@@ -127,7 +137,7 @@ ${m.details.map(([h, p, time]) => `          <h4>${esc(h)}</h4>\n          <p>${
         <div class="pane p-transcript">
           <div class="tx-tools"><span class="tfield">${I.search}${esc(u.txSearch)}</span>${pop('', u.allSpeakers, false).replace('</span>', `${I.updown}</span>`)}${pop('', u.fixWording, false)}</div>
           <div class="tx" data-k="tx">
-${m.transcript.map(([at, who, text]) => `            <div class="row" data-at="${at}">${ts(`00:${String(at).padStart(2, '0')}`)}<i class="s${who}"${ml}>${esc(m.speakers[who - 1])}</i><p${ml}>${esc(text)}</p></div>`).join('\n')}
+${m.transcript.map(([at, who, text]) => `            <div class="row" data-at="${at}">${ts(`00:${String(at).padStart(2, '0')}`)}<i class="s${who}" data-spk="${who}"${ml}>${esc(speakerName(who))}</i><p${ml}>${esc(text)}</p></div>`).join('\n')}
           </div>
         </div>
 
@@ -147,6 +157,19 @@ ${m.questions.map(([time, q], i) => `            <div class="q" data-k="q${i + 1
         </div>
 
         <div class="pane p-notes"${ml}><p data-k="notes">[00:06] ${esc(m.note)}</p></div>
+
+        <div class="pane p-ask" data-k="ask">
+          <div class="ask-list">
+            <div class="ask-empty"><h4>${esc(u.askTitle)}</h4><p class="dim">${esc(u.askIntro)}</p></div>
+            <div class="ask-busy"><span class="spin"></span><span class="dim">${esc(u.answering)}</span><span class="lk">${esc(u.cancel)}</span></div>
+            <div class="qa">
+              <b${ml}>${esc(m.ask.question)}</b>
+              <p${ml}>${esc(m.ask.answer)}</p>
+${m.ask.cites.map(([time, quote], i) => `              <div class="cite">${ts(time, i === 0 ? 'cite1' : '')}<span${ml}>${esc(quote)}</span></div>`).join('\n')}
+            </div>
+          </div>
+          <div class="ask-bar"><span class="field" data-k="askfield"><span class="ph">${esc(u.askPlaceholder)}</span><span class="val" data-k="askval"${ml}></span><i class="caret"></i></span><span class="btn prim dis" data-k="askbtn">${esc(u.askButton)}</span></div>
+        </div>
       </div>
 
       <div class="player">
@@ -159,6 +182,13 @@ ${m.questions.map(([time, q], i) => `            <div class="q" data-k="q${i + 1
     </div>
 
     <div class="toast" data-k="toast"></div>
+    <div class="popv" data-k="popv">
+      <i class="pv-arrow"></i>
+      <b class="pv-title">${esc(u.suggestTitle)}</b>
+      <div class="pv-row"><i class="s${m.guess.speaker}"${ml}>${esc(m.speakers[m.guess.speaker - 1])}</i>${I.arrow}<b${ml}>${esc(m.guess.name)}</b><span class="pv-links"><span class="lk">${esc(u.ignore)}</span><span class="lk" data-k="applybtn">${esc(u.apply)}</span></span></div>
+      <div class="pv-why">${ts(m.guess.time)}<small${ml}>${esc(m.guess.reason)}</small></div>
+      <div class="pv-foot"><small>${esc(u.applyHint)}</small><span class="btn prim">${esc(u.applyAll)}</span></div>
+    </div>
   </section>
 </div>
 ${I.cursor}`;
@@ -172,7 +202,8 @@ export function demoSection(lang, { fallback }) {
     length: LENGTH,
     speed: d.speed,
     text: { status: d.ui.status, banner: d.ui.banner, bookmarked: d.ui.bookmarked, reviewTab: d.ui.reviewTab, reviewLabel: d.ui.tabs.review, submit: d.ui.submit, recTitle: d.ui.recTitle },
-    meeting: { title: d.meeting.title, live: d.meeting.live, note: d.meeting.note, due: d.meeting.due, dueAfter: d.meeting.dueAfter, answer: d.meeting.answer },
+    meeting: { title: d.meeting.title, live: d.meeting.live, note: d.meeting.note, due: d.meeting.due, dueAfter: d.meeting.dueAfter, answer: d.meeting.answer,
+      guess: { speaker: d.meeting.guess.speaker, name: d.meeting.guess.name }, question: d.meeting.ask.question },
     captions: d.captions,
     endCaption: d.endCaption,
     controls: d.controls,
