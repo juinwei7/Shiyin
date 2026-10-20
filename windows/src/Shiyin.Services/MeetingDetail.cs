@@ -1,0 +1,150 @@
+using Shiyin.Data;
+using Shiyin.Localization;
+using Shiyin.Model;
+using Shiyin.Notes;
+using Shiyin.Transcribe;
+
+namespace Shiyin.Services;
+
+/// <summary>列表與標題列顯示的狀態（同 Mac 的 MeetingStatus）</summary>
+public abstract record MeetingStatus
+{
+    public sealed record Recording : MeetingStatus;
+    public sealed record Queued : MeetingStatus;
+    public sealed record Transcribing(double? Progress, string Stage) : MeetingStatus;
+    public sealed record Summarizing : MeetingStatus;
+    public sealed record Failed(JobKind Kind, string Error) : MeetingStatus;
+    public sealed record Cancelled : MeetingStatus;
+    public sealed record Review(int Count) : MeetingStatus;
+    public sealed record Done : MeetingStatus;
+
+    public string Label => this switch
+    {
+        Recording => L.T("錄音中"),
+        Queued => L.T("排隊中"),
+        Transcribing t => Name(t) + (t.Progress is double p ? $" {(int)(p * 100)}%" : ""),
+        Summarizing => L.T("整理中"),
+        Failed f => f.Kind == JobKind.Transcribe ? L.T("轉錄失敗") : L.T("整理失敗"),
+        Cancelled => L.T("已取消"),
+        Review r => L.F("待確認 %lld 題", r.Count),
+        _ => L.T("完成"),
+    };
+
+    static string Name(Transcribing t) =>
+        t.Stage.Length == 0 || t.Stage == L.T("轉錄") ? L.T("轉錄中") : L.F("%@中", t.Stage);
+
+    public bool IsActive => this is Queued or Transcribing or Summarizing or Recording;
+}
+
+public enum DetailTab { Summary, Topics, Transcript, Review, Notes, Ask }
+
+public static class DetailTabs
+{
+    public static string Label(this DetailTab tab) => tab switch
+    {
+        DetailTab.Summary => L.T("摘要"),
+        DetailTab.Topics => L.T("詳細"),
+        DetailTab.Transcript => L.T("逐字稿"),
+        DetailTab.Review => L.T("待確認"),
+        DetailTab.Notes => L.T("筆記"),
+        _ => L.T("提問"),
+    };
+}
+
+/// <summary>選取中的會議的完整資料（同 Mac 的 MeetingDetail）。逐字稿分頁用的索引載入時算一次（M§21.12）</summary>
+public sealed class MeetingDetail
+{
+    public required Meeting Meeting { get; set; }
+    public required List<Segment> Segments { get; set; }
+    public MeetingNotes? Notes { get; set; }
+    public int VersionCount { get; set; }
+    public Job? LatestJob { get; set; }
+    public Dictionary<int, string> Speakers { get; set; } = [];
+    public List<Bookmark> Bookmarks { get; set; } = [];
+    /// <summary>逐字稿校正建議（M§17.4）</summary>
+    public List<Correction> Corrections { get; set; } = [];
+    /// <summary>每段的校正（不含已忽略的）</summary>
+    public Dictionary<long, List<Correction>> CorrectionsBySegment { get; private set; } = [];
+    public double[] TimelineStarts { get; private set; } = [];
+    public long[] TimelineIds { get; private set; } = [];
+    /// <summary>段落 id → 在 Segments 裡的位置</summary>
+    public Dictionary<long, int> SegmentIndex { get; private set; } = [];
+    /// <summary>說話者名字的來源（default / manual / voiceprint / suggestion），聲紋帶入的顯示「自動」（M§21.4）</summary>
+    public Dictionary<int, string> SpeakerSources { get; private set; } = [];
+    /// <summary>AI 猜的名字（M§21.5）：還是預設名稱的說話者才有</summary>
+    public Dictionary<int, SpeakerNaming.Suggestion> SpeakerSuggestions { get; private set; } = [];
+
+    public static MeetingDetail? Load(AppDatabase db, long id)
+    {
+        if (db.Meeting(id) is not { } meeting) return null;
+        var detail = new MeetingDetail
+        {
+            Meeting = meeting, Segments = db.Segments(id), Notes = meeting.DecodedNotes, VersionCount = db.VersionCount(id),
+            LatestJob = db.LatestJob(id), Bookmarks = db.Bookmarks(id), Corrections = db.Corrections(id),
+        };
+        detail.LoadSpeakers(db.Speakers(id));
+        detail.BuildIndexes();
+        return detail;
+    }
+
+    public void LoadSpeakers(IReadOnlyList<SpeakerName> rows)
+    {
+        Speakers = rows.ToDictionary(r => r.Idx, r => r.Name);
+        SpeakerSources = rows.ToDictionary(r => r.Idx, r => r.NameSource);
+        SpeakerSuggestions = rows.Where(r => r.NameSource == "default" && r.SuggestedName is not null)
+            .ToDictionary(r => r.Idx, r => new SpeakerNaming.Suggestion(r.Idx, r.SuggestedName!, r.SuggestionReason ?? "", r.SuggestionTime ?? ""));
+    }
+
+    public void BuildIndexes()
+    {
+        CorrectionsBySegment = Corrections.Where(c => c.Status != "rejected").GroupBy(c => c.SegmentId).ToDictionary(g => g.Key, g => g.ToList());
+        var ordered = Segments.Where(s => s.Id is not null).Select(s => (s.Start, Id: s.Id!.Value)).OrderBy(x => x.Start).ToList();
+        TimelineStarts = ordered.Select(x => x.Start).ToArray();
+        TimelineIds = ordered.Select(x => x.Id).ToArray();
+        SegmentIndex = [];
+        for (var i = 0; i < Segments.Count; i++) if (Segments[i].Id is long id) SegmentIndex.TryAdd(id, i);
+    }
+
+    /// <summary>跟這段同一位說話者、在逐字稿裡前後連在一起的段落（「這段連續的話是誰說的」，M§24.3）</summary>
+    public List<long> SpeakerRun(long id)
+    {
+        if (!SegmentIndex.TryGetValue(id, out var i) || Segments[i].Speaker is not int speaker) return [id];
+        var (low, high) = (i, i);
+        while (low > 0 && Segments[low - 1].Speaker == speaker) low--;
+        while (high + 1 < Segments.Count && Segments[high + 1].Speaker == speaker) high++;
+        return Segments.GetRange(low, high - low + 1).Where(s => s.Id is not null).Select(s => s.Id!.Value).ToList();
+    }
+
+    /// <summary>說話者可能分得不夠的提示（M§24.5）：自我檢查覺得可能把人併在一起、使用者沒選過人數、沒按過「不用了」</summary>
+    public bool ShowsSpeakerHint =>
+        (Meeting.SpeakerCheck ?? 0) >= SpeakerRules.Quality.HintThreshold && Meeting.MinSpeakers is null && !Meeting.SpeakerHintDismissed
+        && Segments.Any(s => s.Kind == "final" && s.Channel is null);
+
+    /// <summary>播放到 time 時的段落：開始時間不晚於 time + 0.05 的最後一段（二分搜尋）</summary>
+    public long? SegmentId(double time)
+    {
+        var (low, high) = (0, TimelineStarts.Length);
+        while (low < high)
+        {
+            var mid = (low + high) / 2;
+            if (TimelineStarts[mid] <= time + 0.05) low = mid + 1; else high = mid;
+        }
+        return low > 0 ? TimelineIds[low - 1] : null;
+    }
+
+    /// <summary>待確認的校正依「原文 → 建議」分組，處數多的在前；組內依逐字稿的順序（M§21.11、R20.2）</summary>
+    public List<List<Correction>> CorrectionGroups
+    {
+        get
+        {
+            int Order(Correction c) => SegmentIndex.GetValueOrDefault(c.SegmentId);
+            return Corrections.Where(c => c.Status == "pending").GroupBy(c => (c.Original, c.Suggestion))
+                .Select(g => g.OrderBy(Order).ToList())
+                .OrderByDescending(g => g.Count).ThenBy(g => Order(g[0])).ToList();
+        }
+    }
+
+    public string? SpeakerName(int? idx) => idx is int i
+        ? Speakers.TryGetValue(i, out var name) ? name : Meeting.MeetingLanguage.Text($"說話者 {i}", $"Speaker {i}", $"話者 {i}")  // l10n-skip
+        : null;
+}

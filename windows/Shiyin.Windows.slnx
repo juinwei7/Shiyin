@@ -5,6 +5,7 @@
     <Project Path="src/Shiyin.Engines/Shiyin.Engines.csproj" />
     <Project Path="src/Shiyin.Eval/Shiyin.Eval.csproj" />
     <Project Path="src/Shiyin.LLM/Shiyin.LLM.csproj" />
+    <Project Path="src/Shiyin.Services/Shiyin.Services.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Shiyin.Tests/Shiyin.Tests.csproj" />

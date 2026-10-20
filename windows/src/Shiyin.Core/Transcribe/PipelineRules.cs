@@ -207,8 +207,9 @@ public static class SpeakerRules
     /// <summary>分得準不準的自我檢查（M§24.5）</summary>
     public sealed record Quality(double CollisionRate, int MultiSpeakerChunks, double Cohesion, int Clusters, int Chunks)
     {
-        /// <summary>超過這個分數就提示「說話者可能分得不夠」（Windows 的模型不同，門檻待 T-W4 重新調）</summary>
-        public static double HintThreshold { get; set; } = 0.4;
+        /// <summary>超過這個分數就提示「說話者可能分得不夠」。Mac 是 0.4；Windows 的聲紋模型不同：AMI 9 場正常分群 0.21～0.33、
+        /// 故意併成一人 0.34～0.48，取 0.37（design-windows §9、D58）</summary>
+        public static double HintThreshold { get; set; } = 0.37;
 
         public double MergeRisk
         {

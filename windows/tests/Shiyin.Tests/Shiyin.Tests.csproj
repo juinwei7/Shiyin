@@ -14,6 +14,7 @@
     <ProjectReference Include="../../src/Shiyin.Core/Shiyin.Core.csproj" />
     <ProjectReference Include="../../src/Shiyin.Data/Shiyin.Data.csproj" />
     <ProjectReference Include="../../src/Shiyin.LLM/Shiyin.LLM.csproj" />
+    <ProjectReference Include="../../src/Shiyin.Services/Shiyin.Services.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- 有測試會切換全域的介面語言（L.Use），不平行跑 -->

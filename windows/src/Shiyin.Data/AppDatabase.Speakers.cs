@@ -28,8 +28,9 @@ public sealed partial class AppDatabase
 {
     /// <summary>說話少於這個秒數不比對、不學：太短的聲紋不準</summary>
     public static double VoiceprintMinimumSeconds { get; set; } = 8.0;
-    /// <summary>相似度門檻（cosine）。Mac 是 0.65；Windows 的聲紋模型不同，待 T-W4 重新調（design-windows §9）</summary>
-    public static double VoiceprintThreshold { get; set; } = 0.65;
+    /// <summary>相似度門檻（cosine）。Mac 是 0.65；Windows 的聲紋模型（3D-Speaker）不同：AMI 9 場陌生人最高 0.535、
+    /// 同一人最低 0.632，取 0.6（design-windows §9、D58）</summary>
+    public static double VoiceprintThreshold { get; set; } = 0.6;
     /// <summary>同一個人的聲紋最多留幾份，超過刪最舊的</summary>
     public const int VoiceprintsPerPerson = 30;
 

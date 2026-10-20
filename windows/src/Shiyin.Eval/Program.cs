@@ -88,22 +88,34 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
     var watch = Stopwatch.StartNew();
     var options = JsonNode.Parse(File.ReadAllText(optionsPath))!.AsObject();
     var root = Environment.GetEnvironmentVariable("SHIYIN_DIARIZATION_MODELS") ?? models;
-    var transcript = JsonNode.Parse(File.ReadAllText(transcriptPath))!.AsObject();
-    var segments = transcript["segments"]!.AsArray().Select(s => new TranscribedSegment(s!["start"]!.GetValue<double>(), s["end"]!.GetValue<double>(),
-        s["text"]!.GetValue<string>(), s["lowConfidence"]?.GetValue<bool>() ?? false)).ToList();
+    // 逐字稿給 "-"：只看分出幾個人、每人的聲紋（AMI 9 場的人數、聲紋比對）
+    var segments = transcriptPath == "-" ? [] : JsonNode.Parse(File.ReadAllText(transcriptPath))!["segments"]!.AsArray()
+        .Select(s => new TranscribedSegment(s!["start"]!.GetValue<double>(), s["end"]!.GetValue<double>(),
+            s["text"]!.GetValue<string>(), s["lowConfidence"]?.GetValue<bool>() ?? false)).ToList();
     var samples = WavStream.ReadAll(audio);
+    var embedding = options["embedding"]?.GetValue<string>() ?? "3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx";
     var diarizerOptions = new Diarizer.Options(
         Path.Combine(root, options["segmentation"]?.GetValue<string>() ?? "sherpa-onnx-pyannote-segmentation-3-0/model.onnx"),
-        Path.Combine(root, options["embedding"]?.GetValue<string>() ?? "wespeaker_en_voxceleb_resnet34_LM.onnx"))
+        Path.Combine(root, embedding))
     {
-        Threshold = options["threshold"]?.GetValue<float>() ?? 0.5f,
+        SegmentationEmbeddingModel = options["segmentationEmbedding"]?.GetValue<string>() is { } se ? Path.Combine(root, se) : null,
+        SegmentClusters = options["segmentClusters"]?.GetValue<int>() ?? 30,
         NumSpeakers = options["numSpeakers"]?.GetValue<int>(),
-        TurnsOnly = options["turnsOnly"]?.GetValue<bool>() ?? false,
         Threads = options["threads"]?.GetValue<int>() ?? Math.Max(1, Math.Min(4, Environment.ProcessorCount - 2)),
+        WindowShiftRatio = options["windowShift"]?.GetValue<float>() ?? 0.5f,
+        PieceSeconds = options["pieceSeconds"]?.GetValue<double>() ?? 3,
+        Clustering = new SpeakerClustering.Options
+        {
+            Threshold = options["threshold"]?.GetValue<double>() ?? 0.25,
+            MinClusterSeconds = options["minClusterSeconds"]?.GetValue<double>() ?? 30,
+            Center = options["center"]?.GetValue<bool>() ?? true,
+        },
     };
     using var diarizer = new Diarizer(diarizerOptions);
+    if (options["pieces"]?.GetValue<bool>() == true) return DumpPieces(diarizer, samples, output, watch);
     var result = diarizer.Diarize(samples, options["minSpeakers"]?.GetValue<int>());
     var (speakers, numbering) = SpeakerRules.AssignNumbering(result.Turns, segments);
+    if (segments.Count == 0) numbering = result.Voiceprints.Keys.ToDictionary(k => k, k => k);
     var voices = new JsonObject();
     foreach (var (raw, number) in numbering)
         if (result.Voiceprints.TryGetValue(raw, out var v))
@@ -121,6 +133,7 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
         ["clusters"] = result.Turns.Select(t => t.Speaker).Distinct().Count(), ["dimension"] = diarizer.EmbeddingDimension,
         ["quality"] = q is null ? null : new JsonObject { ["cohesion"] = q.Cohesion, ["chunks"] = q.Chunks, ["clusters"] = q.Clusters, ["mergeRisk"] = q.MergeRisk },
         ["voices"] = voices,
+        ["turns"] = segments.Count > 0 ? null : new JsonArray(result.Turns.Select(t => (JsonNode)new JsonArray(t.Start, t.End, t.Speaker)).ToArray()),
         ["chunks"] = options["dump"]?.GetValue<bool>() == true ? new JsonArray(result.Chunks.Select(c => (JsonNode)new JsonObject
         {
             ["speakerId"] = c.SpeakerId, ["chunkIndex"] = c.ChunkIndex, ["embedding"] = new JsonArray(c.Embedding.Select(x => (JsonNode)x).ToArray()),
@@ -128,6 +141,23 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
         ["elapsed"] = watch.Elapsed.TotalSeconds,
     };
     File.WriteAllText(output, json.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+    return 0;
+}
+
+// 離線試分群用（T-W4）：sherpa-onnx 切的段落，以及每個小段的聲紋（Diarizer.Segment 的結果）
+int DumpPieces(Diarizer diarizer, float[] samples, string output, Stopwatch watch)
+{
+    var (turns, pieces) = diarizer.Segment(samples);
+    var json = new JsonObject
+    {
+        ["turns"] = new JsonArray(turns.Select(t => (JsonNode)new JsonArray(t.Start, t.End, t.Speaker)).ToArray()),
+        ["pieces"] = new JsonArray(pieces.Select(p => (JsonNode)new JsonObject
+        {
+            ["turn"] = p.Turn, ["start"] = p.Start, ["end"] = p.End, ["embedding"] = new JsonArray(p.Embedding.Select(x => (JsonNode)x).ToArray()),
+        }).ToArray()),
+        ["elapsed"] = watch.Elapsed.TotalSeconds,
+    };
+    File.WriteAllText(output, json.ToJsonString());
     return 0;
 }
 

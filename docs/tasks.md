@@ -77,9 +77,12 @@
   - 驗證：Mac 上 `ssh` 進虛擬機跑 `dotnet --info`、`git -C <repo> log -1`；Mac 上 `dotnet --info`
 - [ ] **W0.2 T-W1 自動化**（§15.3、D53）：WinUI 3 小 app、桌面代理、named pipe、截圖、UI Automation
 - [ ] **W0.3 T-W2 錄音**（§6）
-- [ ] **W0.4 T-W3 whisper.dll**（§8、D46）：結果寫進 N2、N4 的數字（requirements 第 22 節 R27）
-- [ ] **W0.5 T-W4 說話者辨識**（§9、D47）
-- [ ] **W0.6 T-W5 即時逐字稿**（§7、D44）
+- [~] **W0.4 T-W3 whisper.dll**（§8、D46）：Mac 的部分做完了（shim、P/Invoke、同樣的取樣結果跟 Mac 逐段相同，§8）
+  - 還差：建 x64（CPU 各版本＋Vulkan）、ARM64 的 dll（W8.1 的 CI）；虛擬機、CI x64、CI ARM64 的倍速和記憶體峰值，寫進 N2、N4 的數字（requirements 第 22 節 R27）；Media Foundation 解碼後再跟 Mac 比一次錯字率
+- [~] **W0.5 T-W4 說話者辨識**（§9、D47、D58）：分群改成自己做，AMI、AISHELL-4 跟 Mac 一樣好；聲紋門檻 0.6、分不準的提示 0.37（§9）
+  - 還差：使用者的麻將錄音給「至少 4 人」（要使用者給檔案的位置）；1 小時的錄音在 CI x64 3 分鐘內處理完
+- [~] **W0.6 T-W5 即時逐字稿**（§7、D44）：Mac 上定稿延遲中位數 0.62 秒、第 90 百分位 0.79 秒；快速辨識的錯字率 8.8%（Mac 的內建辨識 9.2%）
+  - 還差：虛擬機的 CPU 用量；英文、日文的錄音各跑一次
 - [ ] **W0.7 T-W6 claude、codex CLI**（§10）
 - [ ] **W0.8 T-W7 安裝和更新**（§14、D50）
 - [ ] **W0.9 T-W8 偵測會議**（§12.4）
@@ -90,6 +93,9 @@
 
 - [~] **W1.2 方案骨架**（§1、§3）：方案、`global.json`、套件版本集中管理、建置輸出放在 repo 外都好了；`.github/workflows/windows.yml`（`windows-latest`、`windows-11-arm`、`macos-latest` 跑 `dotnet test`）寫好了
   - 還差：推到 GitHub 讓 CI 跑一次（要使用者同意推 `windows` 分支）；套件清單和授權在加進 Engines、App 的套件時一起列
+
+- [~] **W1.3 不碰畫面的 app 邏輯**（§1 的 `Shiyin.Services`）：設定（settings.json、`--set`）、模型下載（續傳、SHA-256、多個檔案的模型）、匯入、.shiyin 封包、轉錄流程（分段、分聲道、快速辨識、說話者辨識）、工作佇列（三條線、取消、模型還沒好時先等）、錄音（寫檔、暫停、看門狗、收音提醒、空間不足、麥克風權限、即時逐字稿、自動偵測語言、模擬錄音）、會議的操作（對應 Mac 的 `AppModel`）。`dotnet test` 用假的引擎、假的整理工具、本機伺服器測過（`ServicesTests`、`RecorderTests`、`ClusteringTests`）
+  - 還差：對會議提問、問所有會議的流程（M§21.8）；更新檔的驗證（§14.2）；偵測會議的時間規則（M§21.7）；回報問題的內容（M§21.9）；畫面接上之後在虛擬機的 app 裡各跑一次
 
 ### W2 app 骨架
 

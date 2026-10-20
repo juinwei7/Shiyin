@@ -22,7 +22,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
  └─ 視窗           主視窗、首次使用引導、使用說明、回報問題、問所有會議、設定、系統匣小視窗、偵測會議的小視窗
 ```
 
-專案依「能不能在 Mac 上測」分開。上面五個是 `net10.0`，在這台 Mac 上就能 `dotnet test`，大部分邏輯、甚至轉錄和說話者辨識的評估都不用開虛擬機：
+專案依「能不能在 Mac 上測」分開。上面六個是 `net10.0`，在這台 Mac 上就能 `dotnet test`，大部分邏輯、甚至轉錄和說話者辨識的評估都不用開虛擬機：
 
 | 專案 | 目標 | 內容 | 在 Mac 上能跑 |
 |---|---|---|---|
@@ -30,6 +30,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | `Shiyin.Data` | net10.0 | migration v1～v9、FTS rowid、搜尋、工作佇列、校正、草稿 | 能 |
 | `Shiyin.LLM` | net10.0 | 六種整理工具、重試、退回 JSON 模式；「找外部程式」是介面，Windows 的實作在 Platform | 能 |
 | `Shiyin.Engines` | net10.0 | whisper（P/Invoke shim）、SenseVoice、VAD、說話者辨識、聲紋嵌入 | 能（osx-arm64 的原生檔） |
+| `Shiyin.Services` | net10.0 | 不碰畫面的 app 邏輯：設定、模型下載、匯入、封包、轉錄流程、工作佇列、錄音（寫檔、看門狗、收音提醒、即時逐字稿、自動偵測語言、模擬錄音）、會議的操作（對應 Mac 的 `AppModel`、`JobRunner`、`Recorder`）。平台的部分（WASAPI、Media Foundation、睡眠、docx、PDF）是介面 | 能（用 WAV、模擬的音源、假的引擎） |
 | `Shiyin.Eval` | net10.0 命令列 | 對應 Mac 的 `transcribe-eval`、`voiceprint-eval`、`detect-eval`，輸出格式相同 | 能 |
 | `Shiyin.Platform.Windows` | net10.0-windows10.0.22621 | WASAPI、Media Foundation、認證管理員、快捷鍵、偵測會議、防止睡眠、通知、找 CLI、檔案關聯、更新驗證 | 不能 |
 | `Shiyin.App` | WinUI 3（不打包、自帶 Windows App SDK） | 畫面、ViewModel、系統匣、PDF、DEBUG 控制通道 | 不能 |
@@ -49,7 +50,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | 快速辨識（R4.1、R20.8） | 同一個 SenseVoice 模型讀整個檔案 | 取代 macOS 內建（D45） |
 | 正式轉錄（R4） | whisper.cpp b5454（v1.9.5、commit `d1be6fd`，跟 `Package.swift` 同一版）自己建：x64 CPU 各種指令集＋Vulkan；ARM64 CPU 各種指令集。加一層小的 C shim，C# 用 P/Invoke | 結果要跟 Mac 一致（R28.4，D46、D56），待 T-W3 |
 | 語言偵測（R16） | 同上的 whisper ＋ Whisper base（同 M§18.8） | 同一個模型和門檻；要中英日三個機率，Whisper.net 拿不到 |
-| 說話者辨識、聲紋（R5、R19.3） | sherpa-onnx 的說話者分段（pyannote segmentation-3.0）＋聲紋嵌入（WeSpeaker ResNet34，256 維） | 有 .NET 套件、跑在 CPU（D47），待 T-W4 |
+| 說話者辨識、聲紋（R5、R19.3） | sherpa-onnx 的說話者分段（pyannote segmentation-3.0，6 MB）切段落＋聲紋嵌入（3D-Speaker ERes2Net base，512 維，40 MB），自己分群 | 有 .NET 套件、跑在 CPU（D47、D58） |
 | 解碼、壓縮 m4a | Media Foundation（NAudio 的 `MediaFoundationReader`、`MediaFoundationEncoder`）；AIFF 用 NAudio 的 `AiffFileReader` | 系統內建，不用 ffmpeg（R4.5），待 T-W9 |
 | 播放（R8.2） | `Windows.Media.Playback.MediaPlayer` 的 `PlaybackRate` | 變速時有沒有保持音高待 T-W9 |
 | 資料庫 | Microsoft.Data.Sqlite 10 ＋ SQLitePCLRaw 2.1（自帶 SQLite，含 FTS5、有 win-arm64），Dapper | trigram 要 SQLite 3.34 以上，不能用系統的 |
@@ -62,7 +63,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | 安裝、更新 | Velopack 1.2（MIT；1.2.158 被標為不要用）＋ 自己的更新金鑰（ECDSA P-256） | 不用系統管理員、有差異更新（D50），待 T-W7 |
 | UI 自動化（驗證） | FlaUI 5（UI Automation）、Windows.Graphics.Capture | §15.3 |
 
-授權寫進第三方授權（R27）。要特別標示的：SenseVoice 的權重是 FunASR Model License（不是 OSI 授權）、WeSpeaker 模型是 CC-BY-4.0、ARM64 的 `libomp140.aarch64.dll` 要對照 Visual Studio 的可轉散發清單。
+授權寫進第三方授權（R27）。要特別標示的：SenseVoice 的權重是 FunASR Model License（不是 OSI 授權）、3D-Speaker 的聲紋模型（Apache-2.0，列授權時對照 ModelScope 的模型頁再確認一次）、ARM64 的 `libomp140.aarch64.dll` 要對照 Visual Studio 的可轉散發清單。
 
 ## 3. 檔案配置
 
@@ -168,6 +169,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - SenseVoice 的語言跟著會議語言（zh、en、ja）；開 ITN（標點、數字）；拿掉情緒、事件標籤。
 - 中文輸出用 OpenccNetLib 的 s2twp 轉成台灣繁體（字典已內建）。
 - 在背景執行緒、低於一般的優先順序跑，不能拖到錄音寫檔（R25.2）。
+- T-W5（Mac 上，2026-10-21）：合成會議（91 秒）照錄音的速度餵，定稿延遲中位數 0.62 秒、第 90 百分位 0.79 秒，暫定文字更新 148 次；轉出來是台灣繁體。虛擬機的 CPU 用量待 W0.1。
 - 自動偵測語言（R16）：照 M§18.8，用 whisper base；切換語言時即時辨識換語言，時間偏移照舊。
 
 ## 8. 正式轉錄
@@ -179,21 +181,35 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **shim**（D56）：約 100 行的 C，匯出 `shiyin_whisper_full(ctx, const ShiyinParams*, 進度 callback, 取消 callback, …)`，在 C 這邊填好 `whisper_full_params`。不在 C# 複製這個 struct：它用傳值的方式傳、C 的 `bool` 是 1 byte、裡面有巢狀 struct 和 callback，很容易對錯而且不會報錯。其他簡單的函式（`whisper_full_n_segments`、`whisper_full_get_segment_*`、`whisper_full_get_token_p`、`whisper_pcm_to_mel`、`whisper_lang_auto_detect`、`whisper_lang_id`…）直接 P/Invoke，跟 `WhisperEngine.swift`、`LanguageDetector.swift` 用的一樣。
 - **參數**同 Mac：beam 5、best_of 5、執行緒數 clamp(核心數 − 2, 2, 8)、`suppress_blank`、有顯卡時用 GPU。只有 CPU 時要不要改（beam、執行緒）待 T-W3，改了寫進決策紀錄、設定頁顯示。
 - **分段、提示詞、接縫、過濾、低信心**：同 M§21.16、M§6.2，程式在 Core，用 §4 的 `pipeline/` 比對。
-- **快速辨識**（R4.1、R20.8）：SenseVoice＋VAD 讀整個檔案。Breeze 還沒下載好時自動用（同 D35），轉完提示「可以用 Breeze 重新轉錄」。
+- **快速辨識**（R4.1、R20.8）：SenseVoice＋VAD 讀整個檔案。Breeze 還沒下載好時自動用（同 D35），轉完提示「可以用 Breeze 重新轉錄」。合成會議的錯字率 8.8%（Mac 的內建辨識 9.2%、Breeze 6.0%），91 秒的錄音 4 秒轉完（M3 Pro）。快速辨識的模型還沒下載好時，轉錄線先不接工作、自動開始下載（Mac 的內建辨識不用下載）。
+- **T-W3 的 Mac 部分**（2026-10-21）：C# 經 shim 呼叫同一版 whisper.cpp（Mac 的 dylib、Metal），餵一樣的取樣時結果跟 Mac 逐段相同（國會聽證 190/190 段、AMI 198/198 段）；m4a 解碼器不同造成的取樣差異會讓少數段落不同（合成會議 27 段裡 2 段，錯字率 5.2% → 6.0%），Windows 用 Media Foundation 解碼後要再比一次。速度：AMI 17.5 分鐘 98 秒、國會聽證 15.3 分鐘 51 秒（M3 Pro、Metal）。虛擬機、CI 的 CPU 倍速待 W0.4。
 - **快速辨識的模型怎麼來**（R27 R20.8）：首次使用引導的「模型」步驟先下載快速辨識和 VAD（約 230 MB，數字 T-W5 確認，比 Breeze 小很多），下載好就能錄音，Breeze 接著在背景下載。要不要直接附在安裝檔，T-W7 量過安裝檔和差異更新的大小再決定。
 - **解碼**：Media Foundation 的 SourceReader 依序讀、轉成 16 kHz 單聲道浮點（同 D34 的串流讀法）。Media Foundation 不支援 CAF、AIFF：AIFF 用 `AiffFileReader`，CAF 待 T-W9（解不開就從 R3.1 拿掉並說明）。Windows 的 N 版沒有 Media Foundation，要裝 Media Feature Pack（寫進系統需求）。
 - **結束拾音**時等 whisper 收尾最多 10 秒（R18.12）。
 
 ## 9. 說話者辨識與聲紋
 
-sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有「剛好 N 群」或門檻），**沒有 PLDA、VBx、「至少 N 人」，也不回傳每個人的聲紋**。這些要自己補：
+sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有「剛好 N 群」或門檻），**沒有 PLDA、VBx、「至少 N 人」，也不回傳每個人的聲紋**。用它原本的門檻分群（D47 的 A 方案），中文會議（AISHELL-4）不管門檻怎麼調都會把 6 個人併成 1～3 人：整場錄音的聲紋都很像（同一個房間、同一支麥克風），同一人、不同人的相似度分不開。所以改成（D58）：
 
-- **「大約幾個人」**（`minSpeakers`，D37）：先用門檻分群；分出的人數少於 N 時，用 `SetConfig` 改成 N 群再分一次（不用重新載入模型）。
-- **每位說話者的聲紋**：取這個人最長的幾段，用 `SpeakerEmbeddingExtractor` 算嵌入再平均。
-- **分不準的提醒**（D39）：每 10 秒一窗算嵌入，跟所屬群中心的 cosine 算凝聚度，算法照 `Diarizer.quality`。
-- **兩個方案**（待 T-W4）：A 用 sherpa 原本的分群；DER 明顯比 Mac 差時做 B：參考 pyannote、FluidAudio 用 C# 寫 VBx。
-- **門檻重新調**：聲紋比對（Mac 0.65）、分不準（Mac 0.4）。用 AMI 9 場照 Mac M8 的方法（`scripts/dev/voiceprint-eval.py` 讀倒出來的嵌入）定，誤認 ≤ 2%（D29）。
-- 合併、改句子的說話者、復原、重新辨識的邏輯同 M§23、M§24（在 Core）。
+1. **sherpa-onnx 只用來切段落**：固定分成 30 群（分得很細，切出的段落才不會跨兩個人；錄音很短時不超過每 10 秒一群），pyannote 的窗每次移 0.5（sherpa-onnx 預設 0.1，快五倍、結果差不多）。
+2. **每段切成約 3 秒的小段**，各算一次聲紋（3D-Speaker ERes2Net base，中文 3D-Speaker 資料集訓練，512 維，40 MB）。不到 0.5 秒的不算。
+3. **重新分群**（`Core/Transcribe/SpeakerClustering.cs`）：先減掉整場的平均聲紋再比 cosine；凝聚式分群，群中心是依長度加權的和，最像的兩群低於 0.25 就停，有「至少 N 人」時合併到剩 N 群也停。說話總長不到 30 秒（而且不超過總長的 5%，短的會議不會把話少的人併掉）的群，每個小段各自併到最像的大群，但至少留 N 群。每段取它小段裡長度最多的群；沒有小段的短段落跟著 sherpa 的同一位最常被分到的群。
+4. **每位說話者的聲紋**：最長的幾段（加起來到 60 秒）的小段聲紋依長度加權平均（Mac 是最長的幾段各算一次）。
+5. **分不準的提醒**（D39）：每 10 秒一窗，窗裡每個 sherpa 的編號（分得很細）說了 1.5 秒以上的，用那幾個小段的聲紋平均當「片段的說話者」，算法照 `Diarizer.quality`（凝聚度、只分出一群時看碰撞率）。
+
+結果（Mac M3 Pro、5 個執行緒，2026-10-21；Mac 的 FluidAudio 在括號裡）：
+
+| 錄音 | 人數 | 單人說話的時間裡標對 | 處理時間 |
+|---|---|---|---|
+| AMI ES2004a（英文，17.5 分鐘） | 4／4（4） | 94.9%（94.6%） | 50 秒 |
+| AISHELL-4（中文，38 分鐘） | 6／6（6） | 96.6%（96.7%） | 104 秒 |
+| AMI 9 場（`ami-vp`） | 7 場剛好 4 人，ES2004b 多 1 人（多的那位 81 秒、一半是別人），ES2002a 少 1 人（只說 45 秒的那位） | 逐 0.1 秒跟標註比平均 88%（Mac 只看人數，9 場都對） | 12～144 秒 |
+
+- 門檻 0.2～0.35、最小群 20～45 秒在這三組資料上都差不多，取中間。sherpa 內部改用 CAM++ 只快 30%，AISHELL-4 會多分 1 人；兩段都用 CAM++ 時 AISHELL-4 掉到 87.6%。
+- **聲紋比對門檻 0.6**（Mac 0.65）：AMI ES2004a 學、b～d 和遠距麥克風比對，同一人最低 0.632（遠距麥克風）、最高 0.916；別組 4 場的陌生人跟名單裡任何人最高 0.535。`voiceprint-eval.py`：0.55～0.70 自動帶入 16/17（沒帶入的是一半是別人的那一群）、帶錯 0、陌生人被帶入 0。間距比 Mac 小（兩邊各約 0.03～0.07），使用者實際用了再看。
+- **分不準的提示門檻 0.37**（Mac 0.4）：AMI 9 場正常分群的分數 0.21～0.33、AISHELL-4 0.19；故意併成 1 人時 0.34～0.48（9 場有 8 場超過 0.37）、併成 2 人時 0.30～0.40。
+- 使用者的麻將錄音（手機遠距收音、洗牌聲）還沒試：在 Windows 版拿到使用者同意後跑（T-W4 的最後一項）。
+- 合併、改句子的說話者、復原、重新辨識的邏輯同 M§23、M§24（在 Core、Services）。
 
 ## 10. 整理工具
 
@@ -381,7 +397,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D44 | 即時逐字稿用 sherpa-onnx 的 SenseVoice＋VAD，一直重新辨識正在講的那句當暫定文字（待 T-W5） | Windows 內建的語音辨識：舊的 Windows.Media.SpeechRecognition 連續聽寫要連網或品質差；新的 Windows AI 語音辨識是實驗性、一定要打包成 MSIX、只有英文。串流的 zipformer、paraformer：輸出簡體、沒有日文。whisper 小模型邊錄邊辨識：延遲大、CPU 吃重，還會跟正式轉錄搶資源（同 D1）。雲端語音服務：違反第 4 節（轉錄不連網） |
 | D45 | 「macOS 內建」換成「快速辨識」（SenseVoice） | 拿掉這個選項：第一場會議要等 1.7 GB 下載（D35 的理由）；即時逐字稿本來就要這個模型，不用多下載 |
 | D46 | whisper.cpp 自己從 Mac 同一版建，P/Invoke | Whisper.net：包的 whisper.cpp 比較舊、同一段錄音結果會跟 Mac 不一樣（R28.4）；語言偵測只給最高的那一個，拿不到中英日三個機率（R16 的門檻要用）；Vulkan 版只有 x64。執行 whisper-cli 子程序：進度、取消、token 機率都要從文字輸出解析 |
-| D47 | 說話者辨識用 sherpa-onnx，先用它的分群，不夠再自己寫 VBx（待 T-W4） | 把 FluidAudio 的流程（pyannote community-1＋VBx）整個搬到 ONNX：community-1 沒有官方 ONNX 版，要自己轉模型。pyannote（Python）：違反 D2。取捨：模型和 Mac 不同，聲紋不能共用、門檻要重新調（R28.6）；「至少 N 人」、聲紋、分不準的判斷要自己補（§9） |
+| D47 | 說話者辨識用 sherpa-onnx（分群改成自己做，見 D58） | 把 FluidAudio 的流程（pyannote community-1＋VBx）整個搬到 ONNX：community-1 沒有官方 ONNX 版，要自己轉模型。pyannote（Python）：違反 D2。取捨：模型和 Mac 不同，聲紋不能共用、門檻要重新調（R28.6）；「至少 N 人」、聲紋、分不準的判斷要自己補（§9） |
 | D48 | 資料放 `%LOCALAPPDATA%\Shiyin`，設定放在裡面的 settings.json | 登錄（Registry）：換 `SHIYIN_HOME` 時設定還是同一份，測試會改到正式的設定（Mac 的 UserDefaults 就踩過，見 CLAUDE.md）。`%APPDATA%`（漫遊）：錄音和模型很大，不該跟著帳號漫遊 |
 | D49 | API key 存在認證管理員 | DPAPI 加密後存檔案：N6 規定 key 不寫進檔案。WinRT 的 PasswordVault：底層也是認證管理員，不打包的 app 用起來比較麻煩 |
 | D50 | 用 Velopack 安裝和更新，加上自己的更新金鑰（ECDSA）驗證發布者 | MSIX：自簽的 MSIX 要先用系統管理員把憑證裝進「受信任的人」，一般使用者裝不起來。Inno Setup 加自己寫更新器：要自己處理替換、重開、解除安裝，Velopack 都有，還有差異更新。只靠自簽的 Authenticode 比對簽署者：做得到（`CERT_E_UNTRUSTEDROOT` 表示簽章完整只是不受信任），但對 SmartScreen、Smart App Control 沒有幫助，還要多保管一張憑證；更新金鑰的驗證只要幾行標準的密碼學程式。Microsoft Store：要開發者帳號和審核，之後再說 |
@@ -392,6 +408,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D55 | 偵測會議讀隱私設定的麥克風使用紀錄（ConsentStore）（待 T-W8） | audio session 清單（IAudioSessionManager2）：要一個一個裝置列，瀏覽器和 WebView2 用另一個程序收音，容易漏。取捨：ConsentStore 沒有官方文件，Windows 改版時可能變；它是系統「麥克風使用中」指示的資料來源，改了也比較容易發現 |
 | D56 | whisper 外面包一層小的 C shim | 在 C# 宣告整個 `whisper_full_params`：傳值、1 byte 的 bool、巢狀 struct 和 callback，對錯了不會報錯、只會結果怪；每次升級 whisper.cpp 都要重新對一次 struct |
 | D57 | 介面語言在設定裡可以另外選 | 只跟著 Windows：Windows 沒有替不打包的桌面 app 個別設定語言的地方（Mac 有），英文 Windows 上想用中文介面的人就沒辦法 |
+| D58 | sherpa-onnx 只切段落（固定 30 群），每 3 秒的小段用 3D-Speaker 算聲紋，減掉整場平均後自己做凝聚式分群（§9） | sherpa-onnx 原本的門檻分群：中文會議（AISHELL-4）把 6 人併成 1～3 人，門檻怎麼調都不行（整場的聲紋太像）。WeSpeaker（英文 VoxCeleb）的聲紋：減掉平均後 AMI 還好，AISHELL-4 同一人、不同人的相似度重疊太多（第 10 百分位 0.03 對第 90 百分位 0.33；3D-Speaker 是 0.17 對 0.09）。VBx：要 PLDA 模型、參數多，這個做法在 AMI、AISHELL-4 已經跟 Mac 一樣好。取捨：聲紋模型比 WeSpeaker 大（40 MB 對 26 MB）；聲紋比對、分不準的門檻跟 Mac 不同（0.6、0.37） |
 
 ## 17. 需要先做的實驗
 

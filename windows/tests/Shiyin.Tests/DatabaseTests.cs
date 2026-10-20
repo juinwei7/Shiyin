@@ -72,6 +72,15 @@ public sealed class DatabaseTests : IDisposable
     [Fact]
     public void SameAsMac()
     {
+        // 標準答案是 Mac 的門檻算的（Windows 的聲紋模型不同，門檻也不同，D58）
+        var threshold = AppDatabase.VoiceprintThreshold;
+        AppDatabase.VoiceprintThreshold = 0.65;
+        try { ReplayMacOperations(); }
+        finally { AppDatabase.VoiceprintThreshold = threshold; }
+    }
+
+    void ReplayMacOperations()
+    {
         using var db = new AppDatabase(Path.Combine(dir, "golden.sqlite"), Path.Combine(dir, "backups"));
         var ids = new Dictionary<string, long>();
         long Id(JsonElement op) => ids[op.Str("key")!];

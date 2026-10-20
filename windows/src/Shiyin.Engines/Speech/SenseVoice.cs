@@ -131,7 +131,21 @@ public static class FastTranscriber
 /// 即時逐字稿（design-windows §7、D44）：VAD 判定在說話時，約每 0.4 秒把這一句目前的聲音整句重新辨識，當暫定文字；
 /// VAD 判定一句結束時，最後一次的結果當定稿。Feed 在寫檔的執行緒呼叫，辨識在背景執行緒
 /// </summary>
-public sealed class LiveTranscriber : IDisposable
+public interface ILiveTranscriber : IDisposable
+{
+    /// <summary>暫定文字（說話中一直更新；一句講完變成空的）</summary>
+    event Action<string>? Volatile;
+    /// <summary>定稿：開始、結束（秒，從錄音開始算，加上 Offset）、文字</summary>
+    event Action<double, double, string>? Final;
+    /// <summary>時間偏移：錄音中換語言重新開始時，從錄到的秒數接著算</summary>
+    double Offset { get; set; }
+    /// <summary>寫檔的執行緒呼叫，不能卡住</summary>
+    void Feed(ReadOnlySpan<float> samples);
+    /// <summary>錄音結束：把最後一句收尾（會等辨識做完）</summary>
+    void Finish();
+}
+
+public sealed class LiveTranscriber : ILiveTranscriber
 {
     readonly SenseVoiceRecognizer recognizer;
     readonly VoiceActivityDetector vad;
@@ -152,7 +166,7 @@ public sealed class LiveTranscriber : IDisposable
     public event Action<double, double, string>? Final;
 
     /// <summary>時間偏移：錄音中換語言重新開始時，從錄到的秒數接著算</summary>
-    public double Offset { get; init; }
+    public double Offset { get; set; }
 
     public TimeSpan VolatileInterval { get; init; } = TimeSpan.FromMilliseconds(400);
 
