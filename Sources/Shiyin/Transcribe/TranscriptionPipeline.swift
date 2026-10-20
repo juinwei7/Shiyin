@@ -24,6 +24,8 @@ struct TranscriptionOptions: Codable {
     var audioSource = "mix"
     /// whisper 每段幾秒（design §21.16、D34）；評估時設 0 不分段
     var chunkSeconds: Double = 600
+    /// 說話者辨識至少分出幾個人（design §23.2），nil 自動判斷
+    var minSpeakers: Int?
 
     init() {}
 
@@ -31,8 +33,9 @@ struct TranscriptionOptions: Codable {
     var transcribedWith: String { engine == .system ? "system" : language == .ja ? "japanese" : "breeze" }
 
     @MainActor
-    static func current(language: MeetingLanguage, glossary: [String], channels: String) -> TranscriptionOptions {
+    static func current(language: MeetingLanguage, glossary: [String], channels: String, minSpeakers: Int? = nil) -> TranscriptionOptions {
         var options = TranscriptionOptions()
+        options.minSpeakers = minSpeakers
         // 這個語言的模型還沒下載好時，這一場先用 macOS 內建辨識（design §21.17、D35）
         options.engine = AppSettings.useSystemTranscriber || !ModelStore.hasTranscriptionModel(for: language) ? .system : .breeze
         options.language = language
@@ -56,6 +59,7 @@ struct TranscriptionOptions: Codable {
         model = try c.decodeIfPresent(String.self, forKey: .model)
         audioSource = try c.decodeIfPresent(String.self, forKey: .audioSource) ?? "mix"
         chunkSeconds = try c.decodeIfPresent(Double.self, forKey: .chunkSeconds) ?? 600
+        minSpeakers = try c.decodeIfPresent(Int.self, forKey: .minSpeakers)
     }
 }
 
@@ -299,7 +303,7 @@ struct TranscriptionPipeline {
     private func speakers(of segments: [TranscribedSegment], in samples: [Float], source: String,
                           onProgress: @escaping @Sendable (Double) -> Void) async -> ([Int?], [Int: SpeakerVoice]) {
         do {
-            let output = try await Diarizer.diarize(samples: samples, onProgress: onProgress)
+            let output = try await Diarizer.diarize(samples: samples, minSpeakers: options.minSpeakers, onProgress: onProgress)
             let (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: segments)
             var voices: [Int: SpeakerVoice] = [:]
             for (raw, number) in numbering {

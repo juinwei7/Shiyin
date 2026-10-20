@@ -222,6 +222,10 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 說話者辨識至少分出幾個人（design §23.2、R22.3）
+        migrator.registerMigration("v8") { db in
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN min_speakers INTEGER")
+        }
         return migrator
     }
 
@@ -859,6 +863,14 @@ final class AppDatabase: @unchecked Sendable {
                 WHERE meeting_id = ? AND status IN ('queued', 'running')
                 """, arguments: [Clock.now(), meetingId])
             return running
+        }
+    }
+
+    /// 這場會議有沒有排隊中或執行中的某種工作
+    func hasActiveJob(_ meetingId: Int64, kind: JobKind) throws -> Bool {
+        try pool.read { db in
+            try Job.filter(Column("meeting_id") == meetingId && Column("kind") == kind.rawValue
+                           && [JobStatus.queued.rawValue, JobStatus.running.rawValue].contains(Column("status"))).fetchCount(db) > 0
         }
     }
 

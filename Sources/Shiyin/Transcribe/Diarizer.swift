@@ -36,8 +36,21 @@ enum Diarizer {
         return manager
     }
 
-    static func diarize(samples: [Float], onProgress: @escaping @Sendable (Double) -> Void) async throws -> Output {
-        let manager = try await prepare()
+    /// minSpeakers：至少分出幾個人（design §23.2），nil 自動判斷；clustering：評估時換分群的設定（門檻、人數）
+    static func diarize(samples: [Float], minSpeakers: Int? = nil, clustering: OfflineDiarizerConfig.Clustering? = nil,
+                        onProgress: @escaping @Sendable (Double) -> Void) async throws -> Output {
+        var clustering = clustering
+        if clustering == nil, let minSpeakers {
+            clustering = .community
+            clustering?.minSpeakers = minSpeakers
+        }
+        let manager: OfflineDiarizerManager
+        if let clustering {
+            manager = OfflineDiarizerManager(config: OfflineDiarizerConfig(clustering: clustering))
+            try await manager.prepareModels(directory: modelsDirectory)
+        } else {
+            manager = try await prepare()
+        }
         let result = try await manager.process(audio: samples) { done, total in
             if total > 0 { onProgress(Double(done) / Double(total)) }
         }

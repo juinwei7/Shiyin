@@ -114,6 +114,8 @@ final class JobRunner {
     @ObservationIgnored var onAudioReplaced: ((Int64) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
+    /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
+    @ObservationIgnored var onRediarized: ((Int64, Result<Int, Error>) -> Void)?
 
     init(db: AppDatabase) {
         self.db = db
@@ -202,6 +204,7 @@ final class JobRunner {
             case .compress: try await compress(job)
             case .correct: await correct(job, lane: lane)
             case .nameSpeakers: await nameSpeakers(job, lane: lane)
+            case .rediarize: try await rediarize(job, lane: lane)
             }
         } catch {
             failure = error
@@ -244,7 +247,7 @@ final class JobRunner {
         guard let meeting = try db.meeting(job.meetingId) else { return }
         var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
                                                                 glossary: try db.glossary().map(\.term),
-                                                                channels: meeting.channels))
+                                                                channels: meeting.channels, minSpeakers: meeting.minSpeakers))
         pipeline.stage = { [weak self] in self?.running[lane]?.stage = $0 }
         pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
         pipeline.setCancel = { [weak self] in self?.running[lane]?.cancelAction = $0 }
@@ -281,6 +284,77 @@ final class JobRunner {
             }
         }
         wake()
+    }
+
+    // MARK: 重新辨識說話者（design §23.3、R22）
+
+    /// 只重跑說話者辨識，用這場記住的人數；逐字稿文字、校正、重點、會議紀錄都不動
+    private func rediarize(_ job: Job, lane: JobLane) async throws {
+        guard let meeting = try db.meeting(job.meetingId) else { return }
+        do {
+            running[lane]?.stage = String(localized: "重新辨識說話者")
+            let samples = try await AudioDecoder.decode(meeting.audioURL)
+            guard isStillRunning(job) else { return }
+            let report: @Sendable (Double) -> Void = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
+            let minSpeakers = meeting.minSpeakers
+            let task = Task { try await Diarizer.diarize(samples: samples, minSpeakers: minSpeakers, onProgress: report) }
+            running[lane]?.cancelAction = { task.cancel() }
+            let output = try await task.value
+            guard isStillRunning(job) else { return }
+
+            let segments = try db.segments(job.meetingId)
+            let transcribed = segments.map { TranscribedSegment(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence) }
+            let (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: transcribed)
+            let source = meeting.channels == "both" ? "mix" : meeting.channels
+            var voices: [Int: SpeakerVoice] = [:]
+            for (raw, number) in numbering {
+                if let embedding = output.voiceprints[raw] {
+                    voices[number] = SpeakerVoice(embedding: embedding, seconds: output.speechSeconds[raw] ?? 0, source: source)
+                }
+            }
+            let inherited = Self.inheritNames(old: try db.speakers(job.meetingId), segments: segments, newSpeakers: speakers)
+            try db.reassignSpeakers(job.meetingId, segmentSpeakers: zip(segments, speakers).compactMap { s, n in s.id.map { ($0, n) } },
+                                    voices: voices, inherited: inherited)
+            // 沿用使用者取的名字：用新的、比較乾淨的分群重新學聲紋（自動帶入的名字本來就不學）
+            for (idx, item) in inherited where item.source != "voiceprint" {
+                try db.learnVoiceprint(job.meetingId, idx: idx, name: item.name, source: item.source)
+            }
+            if AppSettings.voiceprints { try db.matchVoiceprints(job.meetingId) }
+            if AppSettings.provider != .none, try db.speakers(job.meetingId).contains(where: { $0.nameSource == "default" }) {
+                try db.enqueue(job.meetingId, kind: .nameSpeakers)
+            }
+            let count = Set(speakers.compactMap { $0 }).count
+            log.info("rediarized meeting \(job.meetingId): \(count) speakers, \(inherited.count) names kept")
+            onRediarized?(job.meetingId, .success(count))
+            wake()
+        } catch {
+            onRediarized?(job.meetingId, .failure(error))
+            throw error
+        }
+    }
+
+    /// 名字沿用（design §23.3）：新的說話者 n 的段落（依秒數）有 60% 以上原本是同一位取過名字的 o，
+    /// 而且 o 原本的段落分到 n 最多，n 就沿用 o 的名字、名字來源、連到的人
+    nonisolated static func inheritNames(old: [SpeakerName], segments: [Segment], newSpeakers: [Int?])
+        -> [Int: (name: String, source: String, personId: Int64?)] {
+        let named = Dictionary(old.filter { $0.nameSource != "default" }.map { ($0.idx, $0) }, uniquingKeysWith: { a, _ in a })
+        var byNew: [Int: [Int: Double]] = [:]   // 新 → 舊 → 秒數
+        var byOld: [Int: [Int: Double]] = [:]   // 舊 → 新 → 秒數
+        for (segment, new) in zip(segments, newSpeakers) {
+            guard let new, let oldSpeaker = segment.speaker else { continue }
+            let seconds = max(0, segment.end - segment.start)
+            byNew[new, default: [:]][oldSpeaker, default: 0] += seconds
+            byOld[oldSpeaker, default: [:]][new, default: 0] += seconds
+        }
+        var result: [Int: (name: String, source: String, personId: Int64?)] = [:]
+        for (new, shares) in byNew {
+            let total = shares.values.reduce(0, +)
+            guard total > 0, let top = shares.max(by: { $0.value < $1.value }), top.value / total >= 0.6,
+                  let speaker = named[top.key],
+                  byOld[top.key]?.max(by: { $0.value < $1.value })?.key == new else { continue }
+            result[new] = (speaker.name, speaker.nameSource, speaker.personId)
+        }
+        return result
     }
 
     // MARK: 猜說話者（design §21.5、R19.2）

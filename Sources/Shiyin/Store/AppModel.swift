@@ -154,6 +154,9 @@ final class AppModel {
     var showImportSheet = false
     var showFileImporter = false
     var showExportSheet = false
+    /// 重新辨識說話者的小視窗（design §23.4）和它要處理的會議
+    var showRediarizeSheet = false
+    var rediarizeMeetingId: Int64?
     /// 匯出對話框要匯出的會議：打開時記下，對話框開著時選取的會議換了也不變（design §20.9、R18.9）
     var exportMeetingId: Int64?
     var confirmDelete = false
@@ -191,6 +194,15 @@ final class AppModel {
         runner.onChange = { [weak self] in self?.reload() }
         runner.onFinished = { [weak self] job, error in self?.jobFinished(job, error: error) }
         recorder.onLiveFinished = { [weak self] id, duration in self?.enqueueDraftNotes(meetingId: id, duration: duration) }
+        runner.onRediarized = { [weak self] id, result in
+            guard let self, self.selection == id else { return }
+            switch result {
+            case .success(let count):
+                self.noticeMessage = String(localized: "已重新辨識說話者：分出 \(count) 位。名字請再確認一下；會議紀錄要更新的話，請重新整理會議紀錄。")
+            case .failure(let error):
+                if !(error is CancellationError) { self.errorMessage = String(localized: "重新辨識說話者失敗：\(error.localizedDescription)") }
+            }
+        }
         runner.onEditedDraftReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             self.noticeMessage = String(localized: "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，可以從「更多 → 復原上一版會議紀錄」找回")
@@ -751,6 +763,32 @@ final class AppModel {
             return
         }
         perform { try db.enqueue(id, kind: .transcribe) }
+        runner.wake()
+    }
+
+    /// 「更多 → 重新辨識說話者…」（design §23.4）：按下時檢查能不能做（R22.4），可以才打開選人數的視窗
+    func requestRediarize() {
+        guard let id = selection, readyForAction(id) else { return }
+        if let problem = rediarizeProblem(id) {
+            noticeMessage = problem
+            return
+        }
+        rediarizeMeetingId = id
+        showRediarizeSheet = true
+    }
+
+    private func rediarizeProblem(_ id: Int64) -> String? {
+        guard let detail, detail.meeting.id == id else { return nil }
+        if !detail.meeting.hasAudio { return String(localized: "這場會議沒有錄音，沒辦法重新辨識說話者") }
+        if !detail.segments.contains(where: { $0.kind == "final" }) { return String(localized: "還沒有正式逐字稿，轉錄完成後再試一次") }
+        if detail.segments.contains(where: { $0.channel != nil }) { return String(localized: "這場會議是分聲道轉錄的，請用「重新轉錄」") }
+        if (try? db.hasActiveJob(id, kind: .rediarize)) == true { return String(localized: "已經在重新辨識說話者了") }
+        return nil
+    }
+
+    /// 選人數的視窗按「開始」（DEBUG 的 rediarize 也用這個）：記住人數（R22.3），排重新辨識的工作
+    func rediarize(meetingId: Int64, minSpeakers: Int?) {
+        perform { try db.setMinSpeakers(meetingId, minSpeakers); try db.enqueue(meetingId, kind: .rediarize) }
         runner.wake()
     }
 

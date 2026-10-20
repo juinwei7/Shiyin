@@ -1,4 +1,5 @@
 #if DEBUG
+import FluidAudio
 import AVFoundation
 import AppKit
 import SwiftUI
@@ -83,6 +84,9 @@ enum DebugControl {
         case "reportinfo":
             let text = ProblemReport.text(db: model.db)
             write(["text": text, "url": ProblemReport.url(body: text)?.absoluteString ?? "", "issuesURL": ProblemReport.issuesURL], to: args[1])
+        // rediarize <會議 id> <人數|auto>：等於在選人數的視窗按「開始」；rediarizerequest <會議 id>：等於按「更多 → 重新辨識說話者…」
+        case "rediarize": if let id { model.rediarize(meetingId: id, minSpeakers: args[2] == "auto" ? nil : Int(args[2])) }
+        case "rediarizerequest": model.selection = id; model.requestRediarize()
         case "namespeakers": if let id { try? model.db.enqueue(id, kind: .nameSpeakers); model.runner.wake() }
         case "applysuggestion": model.selection = id; model.applySpeakerSuggestion(Int(args[2]) ?? 1)
         case "dismisssuggestion": model.selection = id; model.dismissSpeakerSuggestion(Int(args[2]) ?? 1)
@@ -162,6 +166,7 @@ enum DebugControl {
         case "settingsaction": model.debugSettingsAction = Array(args.dropFirst())   // settingsaction pickmodel | savekey <key>（設定頁要開著）
         // voiceprint-eval <設定.json> <輸出.json>：設定是 [{"file": 音檔, "name": 名稱}]；每個檔案跑說話者辨識，
         // 輸出每位說話者的聲紋、說話秒數、說話的時段，用來跟 AMI 標註比對、決定門檻（design §21.4.1）
+        // 設定的每一項可以加 threshold、minSpeakers、numSpeakers（字串）換分群設定，比較分出幾個人
         case "voiceprint-eval":
             let config = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: args[1])))) as? [[String: String]] ?? []
             let output = args[2]
@@ -172,7 +177,15 @@ enum DebugControl {
                     let started = Date()
                     do {
                         let samples = try await AudioDecoder.decode(URL(fileURLWithPath: file))
-                        let diarization = try await Diarizer.diarize(samples: samples) { _ in }
+                        var clustering: OfflineDiarizerConfig.Clustering?
+                        if item["threshold"] != nil || item["minSpeakers"] != nil || item["numSpeakers"] != nil {
+                            var c = OfflineDiarizerConfig.Clustering.community
+                            if let t = item["threshold"].flatMap(Double.init) { c.threshold = t }
+                            c.minSpeakers = item["minSpeakers"].flatMap(Int.init)
+                            c.numSpeakers = item["numSpeakers"].flatMap(Int.init)
+                            clustering = c
+                        }
+                        let diarization = try await Diarizer.diarize(samples: samples, clustering: clustering) { _ in }
                         let speakers: [[String: Any]] = diarization.voiceprints.keys.sorted().map { number in
                             ["number": number, "seconds": diarization.speechSeconds[number] ?? 0,
                              "embedding": diarization.voiceprints[number] ?? [],
@@ -424,6 +437,8 @@ enum DebugControl {
         if let detail = model.detail {
             out["transcribedWith"] = detail.meeting.transcribedWith
             out["canUpgradeTranscript"] = model.canUpgradeTranscript(detail.meeting)   // design §21.17
+            out["minSpeakers"] = detail.meeting.minSpeakers ?? 0   // design §23
+            out["showRediarizeSheet"] = model.showRediarizeSheet
         }
         return out
     }

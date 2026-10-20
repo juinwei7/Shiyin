@@ -242,13 +242,17 @@ struct StatusBanner: View {
             .padding(.vertical, 10)
             .background(background(status), in: RoundedRectangle(cornerRadius: 8))
         } else if let helper = model.runner.running.values.first(where: {
-            $0.job.meetingId == detail.meeting.id && ($0.job.kind == .correct || $0.job.kind == .nameSpeakers)
+            $0.job.meetingId == detail.meeting.id && ($0.job.kind == .correct || $0.job.kind == .nameSpeakers || $0.job.kind == .rediarize)
         }) {
             // 背景的輔助工作（design §21.2）：不算會議的狀態，但讓使用者知道還在跑
             let provider = helper.provider?.shortLabel ?? ""
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
-                Text(helper.job.kind == .correct ? "正在用 \(provider) 檢查可能聽錯的字…" : "正在用 \(provider) 猜說話者的名字…")
+                switch helper.job.kind {
+                case .correct: Text("正在用 \(provider) 檢查可能聽錯的字…")
+                case .rediarize: Text("正在重新辨識說話者…")
+                default: Text("正在用 \(provider) 猜說話者的名字…")
+                }
                 Spacer(minLength: 12)
                 Button("取消") { model.cancelJobs() }
             }
@@ -339,6 +343,7 @@ struct MoreMenu: View {
             Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
             Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
             Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
+            Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
             Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }
             Divider()
             Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }

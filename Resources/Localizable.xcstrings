@@ -245,6 +245,29 @@
     "%lld": {
       "extractionState": "manual"
     },
+    "%lld 人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld person"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld people"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld 份聲音特徵": {
       "extractionState": "manual",
       "localizations": {
@@ -2083,6 +2106,17 @@
         }
       }
     },
+    "原本取過的名字會盡量保留，其他說話者會用聲紋比對、再用整理工具猜名字。會議紀錄不會自動更新。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Names you've given are kept where possible; other speakers are matched by voiceprint, then the summarizer guesses their names. The meeting notes aren't updated automatically."
+          }
+        }
+      }
+    },
     "參加者": {
       "extractionState": "manual",
       "localizations": {
@@ -2168,6 +2202,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "You can only import audio, video, transcripts (srt, vtt, txt), Markdown or .shiyin files"
+          }
+        }
+      }
+    },
+    "只重新分辨誰在說話，逐字稿的文字不會變。人多、吵雜或手機遠距收音時，告訴拾音大約幾個人會分得比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only works out again who is speaking; the transcript text doesn't change. With many people, a noisy room or a phone recording from across the table, telling Shiyin roughly how many people there are helps."
           }
         }
       }
@@ -2543,6 +2588,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Compressing audio"
+          }
+        }
+      }
+    },
+    "大約幾個人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roughly how many people"
           }
         }
       }
@@ -2965,6 +3021,17 @@
         }
       }
     },
+    "已經在重新辨識說話者了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers are already being identified again"
+          }
+        }
+      }
+    },
     "已經帶入的名字會留著，之後的會議不會再自動帶入。": {
       "extractionState": "manual",
       "localizations": {
@@ -2994,6 +3061,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meeting notes copied"
+          }
+        }
+      }
+    },
+    "已重新辨識說話者：分出 %lld 位。名字請再確認一下；會議紀錄要更新的話，請重新整理會議紀錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Speakers identified again: %lld speaker. Please check the name; to update the meeting notes, summarize them again."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Speakers identified again: %lld speakers. Please check the names; to update the meeting notes, summarize them again."
+                }
+              }
+            }
           }
         }
       }
@@ -5457,6 +5547,17 @@
         }
       }
     },
+    "正在重新辨識說話者…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifying speakers again…"
+          }
+        }
+      }
+    },
     "正在錄音，要結束拾音嗎？": {
       "extractionState": "manual",
       "localizations": {
@@ -6746,6 +6847,17 @@
         }
       }
     },
+    "自動判斷": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect automatically"
+          }
+        }
+      }
+    },
     "自訂段落": {
       "extractionState": "manual",
       "localizations": {
@@ -7771,6 +7883,17 @@
         }
       }
     },
+    "這場會議是分聲道轉錄的，請用「重新轉錄」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting was transcribed per channel; use Transcribe Again instead"
+          }
+        }
+      }
+    },
     "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。": {
       "extractionState": "manual",
       "localizations": {
@@ -7833,6 +7956,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting has no recording, so it can't be transcribed again"
+          }
+        }
+      }
+    },
+    "這場會議沒有錄音，沒辦法重新辨識說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no recording, so speakers can't be identified again"
           }
         }
       }
@@ -8145,6 +8279,17 @@
         }
       }
     },
+    "還沒有正式逐字稿，轉錄完成後再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There's no full transcript yet. Try again after transcription finishes"
+          }
+        }
+      }
+    },
     "還沒有設定更新網址": {
       "extractionState": "manual",
       "localizations": {
@@ -8361,6 +8506,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcribe Again (with speaker recognition)"
+          }
+        }
+      }
+    },
+    "重新辨識說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identify Speakers Again"
+          }
+        }
+      }
+    },
+    "重新辨識說話者…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identify Speakers Again…"
+          }
+        }
+      }
+    },
+    "重新辨識說話者失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't identify speakers again: %@"
           }
         }
       }
@@ -8735,6 +8913,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When you join a Zoom, Teams, Google Meet or other online meeting, Shiyin asks whether to start recording, and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for This App” on the reminder."
+          }
+        }
+      }
+    },
+    "開始": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
           }
         }
       }

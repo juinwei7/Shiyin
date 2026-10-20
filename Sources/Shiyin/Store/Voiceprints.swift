@@ -114,6 +114,45 @@ extension AppDatabase {
         }
     }
 
+    /// 這場會議說話者辨識至少分出幾個人（design §23.2），nil 自動判斷
+    func setMinSpeakers(_ meetingId: Int64, _ minSpeakers: Int?) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET min_speakers = ? WHERE id = ?", arguments: [minSpeakers, meetingId])
+        }
+    }
+
+    /// 重新辨識說話者（design §23.3）：段落換成新的說話者；刪掉這場存過的聲紋（舊的分群可能混了兩個人）；
+    /// 重建這場的說話者，inherited 的沿用名字，其他用預設名稱，聲紋、說話秒數照新的結果
+    func reassignSpeakers(_ meetingId: Int64, segmentSpeakers: [(id: Int64, speaker: Int?)], voices: [Int: SpeakerVoice],
+                          inherited: [Int: (name: String, source: String, personId: Int64?)]) throws {
+        try pool.write { db in
+            for item in segmentSpeakers {
+                try db.execute(sql: "UPDATE segments SET speaker = ? WHERE id = ?", arguments: [item.speaker, item.id])
+            }
+            try db.execute(sql: "DELETE FROM voiceprints WHERE meeting_id = ?", arguments: [meetingId])
+            let language = try Meeting.fetchOne(db, key: meetingId)?.meetingLanguage ?? .zh
+            try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
+            let count = segmentSpeakers.compactMap(\.speaker).max() ?? 0
+            for idx in stride(from: 1, through: count, by: 1) {
+                var speaker = SpeakerName(meetingId: meetingId, idx: idx,
+                                          name: language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)"))
+                if let old = inherited[idx] {
+                    speaker.name = old.name
+                    speaker.nameSource = old.source
+                    speaker.personId = old.personId
+                }
+                if let voice = voices[idx] {
+                    speaker.embedding = Voiceprint.data(voice.embedding)
+                    speaker.speechSeconds = voice.seconds
+                    speaker.audioSource = voice.source
+                }
+                try speaker.insert(db)
+            }
+            try Self.deleteOrphanPeople(db)
+            try db.execute(sql: "UPDATE meetings SET updated_at = ? WHERE id = ?", arguments: [Clock.now(), meetingId])
+        }
+    }
+
     /// 「不是他」：自動帶入的名字不對，回到預設名稱；之後重新比對也不再帶入這位（name_source = manual）
     func rejectVoiceprintMatch(_ meetingId: Int64, idx: Int, defaultName: String) throws {
         try pool.write { db in
