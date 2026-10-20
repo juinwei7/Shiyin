@@ -797,3 +797,80 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | 發布 | ✅ | 推 v3.6.0：CI 用 Shiyin Self-Signed 簽章，Release 有 DMG 和 shiyin-update.json；app 內更新的網址（latest）指到 3.6.0，SHA-256 跟下載的 DMG 一致，DMG 裡的 app 是 3.6.0、簽章檢查通過；官網重新部署，更新紀錄最上面是 3.6.0，首頁有新的功能介紹 |
 
 還沒做（要使用者）：用新版實際錄一場會議（R25）；真的鑰匙圈跳出確認時按「拒絕」「允許」（R21）。
+
+## 22. Windows 版（2026-10-20，使用者已確認方向）
+
+### 為什麼
+
+使用者要讓用 Windows 的人也能用拾音。Mac 版的介面（SwiftUI、AppKit）、錄音（Core Audio process tap）、即時辨識（SpeechAnalyzer）、說話者辨識（FluidAudio，CoreML）、鑰匙圈、DMG 和更新都是 Apple 專屬的，Windows 上沒有，要另外寫一份。
+
+使用者的決定（2026-10-20）：
+
+- 用 C# .NET＋WinUI 3 寫，Mac 版不動。兩邊不共用程式碼，共用規格、提示詞、資料格式、模型、翻譯表（design-windows.md）
+- 開發和驗證在這台 Mac 上的 Windows 11 ARM 虛擬機；虛擬機測不到的（x64 的顯卡、真的筆電麥克風、真的線上會議）由使用者在 Windows 電腦上試
+- 第一版就對齊 Mac 3.6.0 的全部功能
+
+### R26 範圍（P0）
+
+- R26.1 Windows 版第一版應具備 Mac 3.6.0 的全部功能：第 5～20 節的需求照樣適用，只有 R27 列出的地方改成 Windows 的做法。R10.5（從第二版升級）不適用。
+- R26.2 支援 Windows 11 的 x64 和 ARM64。
+- R26.3 介面用 Windows 原生元件（WinUI 3），跟著 Windows 的淺色、深色模式；常用操作都有鍵盤快捷鍵（Mac 的 ⌘ 換成 Ctrl）；朗讀程式能讀出主要元件。
+- R26.4 介面語言預設跟著 Windows 的顯示語言：繁體中文（台灣、香港）顯示中文，其他語言顯示英文（同 R12.1）。Windows 不能替一般的桌面 app 個別設定語言，所以拾音的設定裡可以另外選。介面文字跟 Mac 版用同樣的說法，只有 Windows 的名詞不同（Finder → 檔案總管、選單列 → 系統匣、⌘ → Ctrl）。
+- R26.5 Mac 版的行為不能因為 Windows 版而改變；為了比對兩邊而加的程式只能在 DEBUG 版。
+
+### R27 Windows 的做法（取代 Mac 專屬的需求，P0）
+
+| 原需求 | Windows 版 |
+|---|---|
+| R1.2 系統聲音 | 錄 Windows 播放的所有聲音，不包含拾音自己（和它開的程式）播放的聲音（跟 Mac 一樣） |
+| R1.7、R11.1 選單列 | 系統匣（通知區域）：關掉主視窗後拾音留在系統匣，圖示顯示錄音中、工作中；點圖示打開小視窗，內容跟 Mac 選單列的小視窗相同（錄音控制、音量、工作進度、打開主視窗、使用說明、結束）。Windows 11 預設把新的圖示收起來，第一次啟動時提示使用者釘到工作列 |
+| R1.8 權限 | Windows 錄電腦聲音不需要權限。麥克風被「設定 → 隱私權與安全性 → 麥克風」關掉時，說明原因，並且可以一鍵打開那一頁 |
+| R2.1 即時逐字稿 | Windows 沒有可以用的內建辨識，改用本機的快速辨識模型；講話後暫定文字在 1 秒內出現、定稿延遲在 5 秒以內，跟 Mac 相同 |
+| R3.1 匯入 | Windows 解得開的音訊和影片檔，至少 m4a、mp3、wav、aac、flac、mp4、wma、aiff；mov、caf 依實驗結果（解不開時要說明）。方式：拖進視窗、Ctrl+O、檔案總管的「開啟檔案 → 拾音」、雙擊 .shiyin |
+| R4.1 內建辨識 | 「macOS 內建」換成「快速辨識」（本機的快速模型）：速度快很多、不吃詞彙表 |
+| R4.5 不用另外安裝 | 除了不需要 Python、ffmpeg，也不需要另外裝 .NET、VC++ 執行環境（都包在安裝檔裡） |
+| R7.3 複製 | 複製成純文字、Markdown、富文字；富文字在 Windows 用 HTML（Word、Outlook、Notion 都吃），不用 RTF |
+| R7.5 分享 | Windows 的分享視窗 |
+| R9.4 壓縮 | 照樣轉成 m4a。Windows 內建的 AAC 編碼器位元率比較高，每小時約 45 MB（Mac 約 10～30 MB），設定頁的說明寫實際的數字 |
+| R10.1 安裝 | 下載一個安裝檔，裝在使用者自己的資料夾，不需要系統管理員權限；開始功能表有拾音，可以從「設定 → 應用程式」解除安裝（不刪錄音和資料庫）。安裝說明（中、英）教第一次執行時 SmartScreen 怎麼放行，以及「智慧型應用程式控制」（Smart App Control）開著時會被直接擋下、要怎麼處理 |
+| R10.6 更新 | 流程跟 Mac 相同。新版要用拾音自己的更新金鑰簽過（等於 Mac 的「簽章要跟目前的 app 相符」），否則拒絕安裝 |
+| R10.7 權限 | 更新後不用重新允許麥克風 |
+| R11.2 通知 | Windows 的通知，點了打開那場會議；偵測會議的通知有按鈕（R19.4） |
+| R11.3、R19.5 全域快捷鍵 | ⌃⌥⌘R、⌃⌥⌘B 換成 Windows 上的組合鍵（預設 Ctrl+Alt+Shift+R、Ctrl+Alt+Shift+B，design 確認不跟常見的 app 衝突）；註冊不到時要說明 |
+| R12.3 app 名稱 | 開始功能表、安裝程式、通知上的名稱：中文 Windows 是「拾音」，其他是「Shiyin」 |
+| R12.8、R13.1 安裝說明、授權 | 安裝說明有中英文；「關於拾音」和安裝的資料夾附第三方授權（加上 Windows 版用的套件和模型） |
+| R13.2 更新網址 | Windows 版有自己的更新網址，也放在 GitHub Releases。Windows 的 release 不能變成 GitHub 的「最新版」（latest），否則 Mac 版的更新網址會找不到檔案 |
+| R19.4 偵測會議 | app 清單換成 Windows 版：Zoom、Teams（新版、舊版）、Webex、Slack、LINE、Discord，以及可能在開 Google Meet 的瀏覽器（Chrome、Edge、Firefox、Brave、Arc）。FaceTime 不適用 |
+| R18.2 換裝置、watchdog | 沒有聲音在播時，Windows 不送電腦聲音的資料：這時補靜音，不算中斷、不重新連接。watchdog 只看麥克風 |
+| R19.7 回報問題 | 附上的資訊：版本、Windows 版本和 build、CPU 和架構、記憶體、顯示卡、轉錄用 CPU 還是顯示卡、轉錄引擎、說話者辨識開關、整理工具的種類、最近失敗的工作的錯誤種類 |
+| R20.8 不用等下載 | Breeze 還沒下載好時用快速辨識轉錄；快速辨識的模型比 Breeze 小很多，首次使用時先下載它（design-windows §8），不能讓使用者第一次錄音前還要等 Breeze 下載 |
+| R21 鑰匙圈 | API key 存在 Windows 的「認證管理員」（只有這個 Windows 使用者讀得到）。讀取時 Windows 不會跳出確認，所以 R21.2、R21.3 處理的情況不會發生；其他照樣：打開設定頁不讀出 key、存不進去要說明原因 |
+| 第 4 節 資料位置 | `%LOCALAPPDATA%\Shiyin`，只有這個 Windows 使用者讀得到 |
+| N2 效能 | 即時逐字稿、介面不卡住、app 本身的處理時間跟 Mac 相同。正式轉錄的速度看硬體：tasks W0 量過後，把「有顯示卡」「只用 CPU」各自的目標寫進這裡 |
+| N4 系統需求 | Windows 11（x64 或 ARM64）、記憶體 8 GB 以上（W0 量過後確認）、磁碟：轉錄模型約 1.7 GB，加上快速辨識和說話者辨識的模型；顯示卡不是必要的。Windows 的 N 版要先裝「媒體功能套件」（Media Feature Pack） |
+| N6 安全 | API key 存在認證管理員；DEBUG 版的控制通道只用本機的 named pipe，release 版沒有；外部程式不透過 cmd.exe 執行（參數會被改寫） |
+
+### R28 跟 Mac 版一致（P0）
+
+- R28.1 中文、英文、日文的提示詞（整理、修訂、草稿、逐字稿校正、詞彙建議、猜說話者、提問、問所有會議）、JSON schema、內建範本、whisper 的提示詞，跟 Mac 3.6.0 逐字相同：用 Mac 的 DEBUG 版產生標準答案，Windows 的自動測試逐字比對。
+- R28.2 匯出的 Markdown、txt、srt、vtt 跟 Mac 逐字相同；docx、PDF 的內容和結構相同（字型、版面可以不同）。
+- R28.3 .shiyin 封包兩邊都能匯入對方匯出的檔案，錄音、逐字稿、說話者名字、會議紀錄、筆記、重點標記、資料夾都在。
+- R28.4 正式轉錄用同一個模型檔（同一份網址和 SHA-256）、同樣的分段、接縫、過濾、低信心規則。同一段錄音，Windows 和 Mac 的錯字率差不超過 1 個百分點（評估資料：AISHELL-4、AMI、國會聽證、FLEURS 日文）。
+- R28.5 資料庫結構跟 Mac 3.6.0 相同（migration v1～v9）。
+- R28.6 說話者辨識的模型跟 Mac 不同，聲紋不能在兩邊之間共用。分人的準確度不能明顯比 Mac 差：AMI 9 場分出的人數、聲紋自動帶入的正確率跟 Mac 比（標準見 tasks）。
+
+### 不做（這一版）
+
+- Windows 10（Windows 10 已經停止支援；錄電腦聲音排除自己需要 Windows 11 的功能）、32 位元
+- Microsoft Store、付費的程式碼簽章憑證（SmartScreen 第一次會擋，安裝說明教怎麼放行）。免費的開源簽章（SignPath Foundation）要用使用者的名義申請，申請下來前的版本沒有簽章
+- 從第二版升級（Windows 沒有第二版）
+- Mac 和 Windows 之間同步會議、聲紋、設定（用 .shiyin 封包搬）
+- 兩邊共用一份程式碼
+
+### 驗收
+
+- 每項照 tasks 的驗證實際跑過；虛擬機做不到的標 🟡，寫明要使用者在 Windows 電腦上試什麼（x64 的轉錄速度、顯卡、真的筆電麥克風、真的 Teams 或 Zoom 會議、SmartScreen）
+- R28 的比對全部通過
+- 照第 8 節的驗收項目在 Windows 上走一次，加上 3.1～3.6 各節的驗收；英文介面、日文會議都走過
+- 介面文字的檢查沒有問題（缺英文、沒查表的中文）
+- Mac 版：`git diff` 只有 DEBUG 版的程式和 `shared/` 的標準答案；release 建置跟 3.6.0 相同
