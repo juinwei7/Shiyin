@@ -1,6 +1,6 @@
-<img src="docs/images/icon.png" width="96" alt="Shiyin icon">
+<img src="../docs/images/icon.png" width="96" alt="Shiyin icon">
 
-[繁體中文](README.md) | **English** | Website: [shiyin.weibuilds.com](https://shiyin.weibuilds.com/en/)
+[繁體中文](../README.md) | **English** | Website: [shiyin.weibuilds.com](https://shiyin.weibuilds.com/en/)
 
 # Shiyin 拾音
 
@@ -11,7 +11,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - Interface in English and Traditional Chinese (follows your macOS language); meetings can be in English, Chinese or Japanese
 - Requires Apple Silicon and macOS 26
 
-![Meeting notes](docs/images/en/summary.png)
+![Meeting notes](../docs/images/en/summary.png)
 
 ## How it works
 
@@ -65,11 +65,11 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - **Organize**: folders (by project or client), full-text search across all meetings, Trash (restore within 30 days)
 - **Also**: playback at 0.75×–2×, Fix Wording (corrects a term in the transcript and the notes at once), recordings compressed to m4a after transcription, notifications when a meeting is done or fails, in-app updates, Help → Report a Problem… (includes the version and setup, never meeting content)
 
-![Transcript and speakers](docs/images/en/transcript.png)
+![Transcript and speakers](../docs/images/en/transcript.png)
 
 <sub>The demo meetings in these screenshots are excerpts from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/) (ES2004a, CC BY 4.0).</sub>
 
-![Recording](docs/images/en/recording.png)
+![Recording](../docs/images/en/recording.png)
 
 ## System requirements
 
@@ -116,7 +116,7 @@ Without `make-signing-cert.sh --trust` the build still works with an ad-hoc sign
    git push origin v3.1.1
    ```
 
-3. [`.github/workflows/release.yml`](.github/workflows/release.yml) builds the DMG on a `macos-26` runner, creates a GitHub Release and uploads the DMG and `shiyin-update.json`. It fails if the tag doesn’t match the version.
+3. [`.github/workflows/release.yml`](workflows/release.yml) builds the DMG on a `macos-26` runner, creates a GitHub Release and uploads the DMG and `shiyin-update.json`. It fails if the tag doesn’t match the version.
 
 You can also run the workflow by hand from the Actions page: it only builds, and the DMG is attached to that run as an artifact.
 
@@ -182,10 +182,10 @@ The project follows spec-driven development: requirements, design and tasks come
 
 | Document | Contents |
 |---|---|
-| [`docs/requirements.md`](docs/requirements.md) | Requirements and acceptance results |
-| [`docs/design.md`](docs/design.md) | Architecture, data model, prompts, interface, decision log |
-| [`docs/tasks.md`](docs/tasks.md) | Tasks still to do |
-| [`CLAUDE.md`](CLAUDE.md) | Things to watch out for when developing and verifying |
+| [`docs/requirements.md`](../docs/requirements.md) | Requirements and acceptance results |
+| [`docs/design.md`](../docs/design.md) | Architecture, data model, prompts, interface, decision log |
+| [`docs/tasks.md`](../docs/tasks.md) | Tasks still to do |
+| [`CLAUDE.md`](../CLAUDE.md) | Things to watch out for when developing and verifying |
 
 ### Project layout
 
@@ -258,4 +258,4 @@ Shiyin is a free, personal open-source project. If you find it useful, you can b
 
 ## License
 
-[MIT](LICENSE). The open-source projects and models above are under their own licenses.
+[MIT](../LICENSE). The open-source projects and models above are under their own licenses.

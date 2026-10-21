@@ -157,7 +157,7 @@ Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later
 - [Release notes](${site}/en/changelog/): what changed in each version
 - [Download the latest DMG](${site}/download)
 - [Source code on GitHub](${GITHUB})
-- [README (English)](${GITHUB}/blob/main/README.en.md)
+- [README (English)](${GITHUB}/blob/main/.github/README.md)
 ${guideLinks.length || guideLinksZh.length ? `\n## Guides and comparisons\n\n${[...guideLinks, ...guideLinksZh].join('\n')}\n` : ''}
 ## 繁體中文摘要
 

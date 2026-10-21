@@ -1,6 +1,6 @@
 <img src="docs/images/icon.png" width="96" alt="拾音圖示">
 
-**繁體中文** | [English](README.en.md) | 官網：[shiyin.weibuilds.com](https://shiyin.weibuilds.com)
+**繁體中文** | [English](.github/README.md) | 官網：[shiyin.weibuilds.com](https://shiyin.weibuilds.com)
 
 # 拾音 Shiyin
 

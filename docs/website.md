@@ -393,7 +393,7 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 
 | 平台 | 收錄方式 | 備註 |
 |---|---|---|
-| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…），README.md 開頭加英文摘要 | open-source-mac-os-apps 不收 README 不是英文的專案 |
+| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 搬到 `.github/README.md`，GitHub 首頁改顯示英文（2026-10-21 已做） | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
 | AlternativeTo | 登錄 app，加到 Otter、Granola、MacWhisper、Meetily 的替代清單 | 要驗證 email |
 | OpenAlternative | 表單送出 | 要登入 |
 | awesome-mac | 發 PR（英中日韓四份 README 一起改） | |
