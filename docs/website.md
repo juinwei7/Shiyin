@@ -35,7 +35,7 @@
 | 找不到頁面 | 404 | 說明找不到，給回首頁和版本說明的連結 |
 
 不做：
-- 部落格、使用者帳號、留言、電子報訂閱
+- 部落格（2026-10-21 起有「指南」，§14.2：只寫回答具體問題的教學和比較，不寫動態、心得文）、使用者帳號、留言、電子報訂閱
 - 線上說明文件（使用說明在 app 裡已經有）
 - 付費、授權
 - 網站分析（可以之後加 Cloudflare Web Analytics，它不用 cookie）
@@ -349,4 +349,69 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - **sitemap**：每個網址加上 `lastmod`（首頁、版本說明用最新版的發布日期），跟 HTML 一樣加上 `x-default`。
 - **IndexNow**：Bing 的索引也供 ChatGPT 搜尋、Copilot 用。根目錄放金鑰檔（`/<金鑰>.txt`），部署後把 sitemap 裡的網址送給 `api.indexnow.org`；每天的自動重建不送（內容沒變，只有 GitHub 數字變）。送失敗只記警告，不讓部署失敗。
 - **爬蟲**：robots.txt 維持全部允許。搜尋用（OAI-SearchBot、PerplexityBot、Claude-SearchBot）和訓練用（GPTBot、ClaudeBot）都不擋：拾音是開源專案，被 AI 學到、推薦是好事。
+
+### 14.2 指南（教學、比較）
+
+競品研究（2026-10-21）：
+
+- 中文搜尋被雲端工具佔走（Subanana 寫了上百篇），媒體的比較文都沒有本機或 Mac 的工具。「拾音」單獨搜會跑出拾音燈、拾音器，內文一律寫「拾音 Shiyin」。
+- 幾乎沒有中文內容在搶的詞：Google Meet 中文逐字稿（Meet 內建的逐字稿、Gemini 筆記都不支援中文）、Mac 錄 Zoom 聲音、中英夾雜逐字稿、離線轉錄。
+- 英文：AI 回答「Otter、Granola 的開源替代品」時，大多照 AlternativeTo、OpenAlternative 的說法。開源的對手是 Meetily（說話者辨識要付費版）、Anarlog（自動辨識說話者要付費版）、Minutes。拾音的不同：說話者辨識免費、針對中英夾雜、紀錄附時間點和「待確認」、用自己的 Claude／ChatGPT 訂閱（Minutes 也能用 Claude 訂閱，不寫成只有拾音做得到）。
+- 日文：「文字起こし Mac ローカル」「議事録 AI 無料 オープンソース」沒有開源 app 佔位，但 app 介面沒有日文，先只寫一篇。
+
+| 網址（`/guides/<slug>/`） | 中文 | 英文 | 日文 | 回答的問題 |
+|---|---|---|---|---|
+| `google-meet-transcript` | ✓ | | | Meet 中文逐字稿怎麼做（英日文 Meet 內建就有，不寫） |
+| `record-online-meetings-mac` | ✓ | ✓ | | Mac 怎麼錄 Zoom、Teams、Meet，不用 BlackHole、不用機器人 |
+| `mandarin-english-transcription` | ✓ | | | 中英夾雜怎麼轉才準（Breeze ASR 25 的數字） |
+| `offline-transcription-mac` | ✓ | ✓ | ✓ | 錄音不上傳、離線轉錄，哪些步驟會連網 |
+| `chatgpt-claude-meeting-notes` | ✓ | ✓ | | 用自己的 ChatGPT、Claude 訂閱整理會議記錄 |
+| `meeting-notes-apps-compared` | ✓ | ✓ | | 中文比 Notta、Otter、Granola、雅婷、Meetily；英文比開源的 Meetily、Anarlog、Minutes 和 Granola、Otter |
+
+- 版型：麵包屑、標題、說明、最後更新日期、內文、常見問題、下載區塊、其他指南。表格可以比內文寬（桌機最多 960px），手機上在框裡左右滑，整頁不會左右晃。
+- 結構化資料：`Article`（作者、發布和更新日期）、`BreadcrumbList`，有常見問題時加 `FAQPage`。
+- 語言：每篇只有寫了的語言才有頁面；hreflang、語言選單只連到有的語言，沒有的語言連到那個語言的首頁。
+- 內部連結：首頁最後加「更多說明」列出該語言的指南；頁首（手機上隱藏）和頁尾加「指南」；指南之間互相連結。
+- 寫法：
+  - 跟 §5 一樣講清楚、不堆形容詞，跟 app 用同樣的詞（英文照翻譯表的英文介面名稱）；不用破折號、「在這個…的時代」這類 AI 腔。
+  - 每個數字、別人的功能和價格都附來源連結和查證日期（2026-10-21）。比較要公平：寫出別人的優點和拾音不適合的情況（沒有 Windows、要 macOS 26、不支援台語、語言少）。沒有用同一批錄音測過，就不排準確度名次。沒查證到的不寫（例如雅婷的價格各來源不一致，只連官網）。
+  - 不大量產生相似的頁面：每篇都要回答一個具體的問題。
+- 維護：app 的功能、價格、系統需求變了，或別人的價格變了，要改內容和 `updated`。比較頁每季重新查證一次。
+
+### 14.3 首頁的標題和說明
+
+§5 的 H1 不變，只改 `<title>` 和 description，放進大家會搜的詞（會議記錄、逐字稿、免費、錄音不上傳；英文 local、free、open source、no bot）：
+
+- 中文：「拾音 Shiyin｜Mac 會議記錄、逐字稿 app，免費開源、錄音不上傳」（標題用「記錄」，內文照 app 用「紀錄」，兩種寫法都搜得到）
+- 英文：「Shiyin: Free Meeting Notes App for Mac, Transcribed Locally」
+- 日文：「拾音 Shiyin｜Mac の議事録・文字起こしアプリ（無料、ローカル処理）」
+- 常見問題「有 Windows 版嗎」改成 Windows 版開發中。
+
+### 14.4 站外（每一個都要使用者同意才做）
+
+被 AI 引用最有效的是第三方的清單和目錄。這些都是用使用者的名義公開發布，**每一個做之前都要問過使用者**：
+
+| 平台 | 收錄方式 | 備註 |
+|---|---|---|
+| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…），README.md 開頭加英文摘要 | open-source-mac-os-apps 不收 README 不是英文的專案 |
+| AlternativeTo | 登錄 app，加到 Otter、Granola、MacWhisper、Meetily 的替代清單 | 要驗證 email |
+| OpenAlternative | 表單送出 | 要登入 |
+| awesome-mac | 發 PR（英中日韓四份 README 一起改） | |
+| open-source-mac-os-apps | 改 applications.json 發 PR | 要先有英文 README |
+| Product Hunt、Show HN | 本人發、本人回應 | 不能拉票 |
+| 台灣媒體、社群 | 寄給報導過 Breeze ASR 25 的 INSIDE、TechNews；PTT MAC 板 | |
+| awesome-whisper | 要 100 顆星以上 | 之後再說 |
+
+不做：awesome-selfhosted（只收網路服務）、Homebrew 官方 cask（要公證）、買連結、灌評論、用多個帳號推薦。
+
+### 14.5 量成效
+
+- **基準（2026-10-21）**：搜「拾音 app」「Shiyin meeting notes」都找不到官網；網站 6 個網址；GitHub 62 顆星、累計下載 202 次。
+- **Search Console**：每週看曝光、點擊、平均排名、已編入索引的網頁數。目標：4 週內 20 個網址都編入索引；8 週內指南頁開始有曝光。
+- **Bing**：使用者到 Bing Webmaster Tools 從 Search Console 匯入網站（ChatGPT 搜尋、Copilot 用 Bing 的索引）。
+- **AI 回答**：固定一組問題，每月各問 3 次（ChatGPT、Perplexity、Gemini、Google AI 摘要），記錄拾音被提到幾次（例如 2/3）、被引用的是哪一頁：
+  - 中文：「Mac 上推薦的會議記錄 app」「Google Meet 中文逐字稿怎麼做」「不上傳的會議逐字稿工具」「中英夾雜的逐字稿工具」
+  - 英文：「open source Granola alternative for Mac」「local meeting transcription app for Mac」「meeting notes app that uses my ChatGPT subscription」
+  - 日文：「Mac 議事録 アプリ 無料 ローカル」
+- **Cloudflare 流量**：參照來源主機（google、bing、chatgpt.com、perplexity.ai）。
 

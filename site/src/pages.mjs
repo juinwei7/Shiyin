@@ -2,12 +2,21 @@
 
 import { content, LANGS, GITHUB, KOFI } from './content.mjs';
 import { demoSection } from './demo-markup.mjs';
-import { homeSchema, pageSchema } from './seo.mjs';
+import { homeSchema, pageSchema, guideSchema } from './seo.mjs';
+import { GUIDES } from './guides.mjs';
 
 export const ROUTES = {
   home: (lang) => `${content[lang].prefix}/`,
   changelog: (lang) => `${content[lang].prefix}/changelog/`,
+  guides: (lang) => `${content[lang].prefix}/guides/`,
 };
+
+// 指南（§14.2）：每一篇只有寫了的語言才有頁面
+export const guidePath = (lang, slug) => `${content[lang].prefix}/guides/${slug}/`;
+export const guideLangs = (guide) => LANGS.filter((l) => guide[l]);
+export const guidePaths = (guide) => Object.fromEntries(guideLangs(guide).map((l) => [l, guidePath(l, guide.slug)]));
+// 指南列表：有至少一篇的語言才有
+export const guidesLangs = () => LANGS.filter((l) => GUIDES.some((g) => g[l]));
 
 export function escape(text) {
   return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -22,11 +31,11 @@ const ICON = {
 };
 
 // 語言選單：跟 app 的語言選單一樣（地球、目前的語言、箭頭），目前的語言打勾。用 <details>，不需要 script
-function languageMenu(lang, route) {
+function languageMenu(lang, href) {
   const c = content[lang];
   const items = LANGS.map((l) => {
     const current = l === lang;
-    return `<li><a href="${ROUTES[route](l)}" lang="${content[l].lang}" hreflang="${content[l].lang}"${current ? ' aria-current="page"' : ''}>${current ? ICON.check : ''}${content[l].label}</a></li>`;
+    return `<li><a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}"${current ? ' aria-current="page"' : ''}>${current ? ICON.check : ''}${content[l].label}</a></li>`;
   });
   return `<details class="lang">
     <summary aria-label="${c.nav.languages}：${c.label}">${ICON.globe}<span>${c.label}</span>${ICON.chevron}</summary>
@@ -35,26 +44,30 @@ function languageMenu(lang, route) {
 }
 
 // 共用的外框：head、頁首、頁尾。route 是 ROUTES 的鍵；404 頁沒有 route，不放 canonical，語言選單連到各語言首頁
-// head、scripts：只有首頁用（示範的 noscript 樣式和 script）
-function layout({ lang, site, css, route, title, description, body, head = '', scripts = '' }) {
+// paths：沒有 route 的頁面（教學、比較，§14.2）各語言的網址，只列有這一頁的語言；沒有的語言，語言選單連到那個語言的首頁
+// head：首頁的示範樣式、各頁的結構化資料；scripts：只有首頁用（示範）
+function layout({ lang, site, css, route, paths, title, description, body, head = '', scripts = '', ogType = 'website' }) {
   const c = content[lang];
   const others = LANGS.filter((l) => l !== lang);
   const target = route || 'home';
-  const seo = route
-    ? `<link rel="canonical" href="${site}${ROUTES[route](lang)}">
-${LANGS.map((l) => `<link rel="alternate" hreflang="${content[l].lang}" href="${site}${ROUTES[route](l)}">`).join('\n')}
-<link rel="alternate" hreflang="x-default" href="${site}${ROUTES[route]('zh')}">
-<meta property="og:type" content="website">
+  const href = (l) => (paths ? paths[l] ?? ROUTES.home(l) : ROUTES[target](l));
+  const alternates = paths ? LANGS.filter((l) => paths[l]) : LANGS;
+  const indexable = Boolean(route || paths);
+  const seo = indexable
+    ? `<link rel="canonical" href="${site}${href(lang)}">
+${alternates.map((l) => `<link rel="alternate" hreflang="${content[l].lang}" href="${site}${href(l)}">`).join('\n')}
+<link rel="alternate" hreflang="x-default" href="${site}${href(alternates.includes('zh') ? 'zh' : alternates[0])}">
+<meta property="og:type" content="${ogType}">
 <meta property="og:site_name" content="拾音 Shiyin">
 <meta property="og:title" content="${escape(title)}">
 <meta property="og:description" content="${escape(description)}">
-<meta property="og:url" content="${site}${ROUTES[route](lang)}">
+<meta property="og:url" content="${site}${href(lang)}">
 <meta property="og:image" content="${site}/${c.og}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${escape(c.intro.h1)}">
 <meta property="og:locale" content="${c.ogLocale}">
-${others.map((l) => `<meta property="og:locale:alternate" content="${content[l].ogLocale}">`).join('\n')}
+${alternates.filter((l) => l !== lang).map((l) => `<meta property="og:locale:alternate" content="${content[l].ogLocale}">`).join('\n')}
 <meta name="twitter:card" content="summary_large_image">`
     : '<meta name="robots" content="noindex">';
   return `<!doctype html>
@@ -79,8 +92,8 @@ ${head}</head>
     <a class="sub" href="${ROUTES.home(lang)}#how">${c.nav.features}</a>
     <a class="sub" href="${ROUTES.home(lang)}#privacy">${c.nav.privacy}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
-  </nav>
-  ${languageMenu(lang, target)}
+${guidesLangs().includes(lang) ? `    <a class="sub" href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}  </nav>
+  ${languageMenu(lang, href)}
 </header>
 <main>
 ${body}
@@ -91,7 +104,7 @@ ${body}
     <a href="${GITHUB}">GitHub</a>
     <a href="${KOFI}">${c.footer.sponsor}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
-${others.map((l) => `    <a href="${ROUTES[target](l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
+${guidesLangs().includes(lang) ? `    <a href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${others.map((l) => `    <a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
   </div>
 </footer>
 ${scripts}</body>
@@ -138,6 +151,16 @@ function releaseNotes(lang, release) {
     subtitle: notes.subtitle ? `<h3${attr}>${escape(notes.subtitle)}</h3>` : '',
     items: `<ul${attr}>${notes.items.map((i) => `<li>${escape(i)}</li>`).join('')}</ul>`,
   };
+}
+
+// 首頁最後連到各篇指南（§14.2），從首頁連過去，新頁面比較快被搜尋引擎找到
+function guidesSection(lang) {
+  const guides = GUIDES.filter((g) => g[lang]);
+  if (!guides.length) return '';
+  return `\n\n<section class="col part guides-home">
+<h2>${content[lang].guides.home}</h2>
+<ul>${guides.map((g) => `<li><a href="${guidePath(lang, g.slug)}">${g[lang].h1}</a></li>`).join('')}</ul>
+</section>`;
 }
 
 // demo：示範的樣式和 script 網址（build.mjs 讀進來）
@@ -226,7 +249,7 @@ ${recent.join('\n')}
 <section class="col part faq">
 <h2>${c.faq.h2}</h2>
 ${c.faq.items.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
-</section>`;
+</section>${guidesSection(lang)}`;
 
   return layout({
     lang, site, css: css + demo.css, route: 'home', title: c.meta.title, description: c.meta.description, body,
@@ -271,4 +294,59 @@ export function notFoundPage({ lang, site, css }) {
 <p class="links"><a href="${ROUTES.home(lang)}">${c.notFound.home}</a><a href="${ROUTES.changelog(lang)}">${c.notFound.changelog}</a></p>
 </div>`;
   return layout({ lang, site, css, title: c.meta.notFoundTitle, description: c.meta.description, body });
+}
+
+// 指南的一篇（§14.2）：麵包屑、標題、最後更新、內文、常見問題、下載、其他指南
+export function guidePage({ lang, site, css, guide }) {
+  const c = content[lang];
+  const g = guide[lang];
+  const L = c.guides;
+  const related = GUIDES.filter((x) => x !== guide && x[lang]).slice(0, 5);
+  const body = `<article class="col page guide">
+<nav class="crumbs" aria-label="${c.nav.label}"><a href="${ROUTES.home(lang)}">${c.appName}</a><span aria-hidden="true">›</span><a href="${ROUTES.guides(lang)}">${L.nav}</a></nav>
+<h1>${g.h1}</h1>
+<p class="lead">${g.lead}</p>
+<p class="updated"><time datetime="${guide.updated}">${L.updated(c.date(guide.updated))}</time></p>
+${g.body.trim()}
+${g.faq ? `<section class="faq">
+<h2>${L.faq}</h2>
+${g.faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
+</section>
+` : ''}<aside class="cta">
+<h2>${L.cta.h2}</h2>
+<p>${L.cta.p}</p>
+<p class="get"><a class="download" href="${ROUTES.home(lang)}#download">${L.cta.button}</a><a href="${ROUTES.home(lang)}">${L.cta.more}</a></p>
+</aside>
+${related.length ? `<section class="related">
+<h2>${L.related}</h2>
+<ul>${related.map((x) => `<li><a href="${guidePath(lang, x.slug)}">${x[lang].h1}</a></li>`).join('')}</ul>
+</section>
+` : ''}</article>`;
+  return layout({
+    lang, site, css, paths: guidePaths(guide), title: g.title, description: g.description, body, ogType: 'article',
+    head: guideSchema({ lang, site, guide, url: `${site}${guidePath(lang, guide.slug)}` }),
+  });
+}
+
+// 指南列表（§14.2）
+export function guidesIndexPage({ lang, site, css }) {
+  const c = content[lang];
+  const L = c.guides;
+  const items = GUIDES.filter((g) => g[lang]).map((g) => `<li>
+  <h2><a href="${guidePath(lang, g.slug)}">${g[lang].h1}</a></h2>
+  <p>${g[lang].description}</p>
+</li>`);
+  const body = `<div class="col page guides">
+<h1>${L.h1}</h1>
+<p class="lead">${L.lead}</p>
+<ul class="list">
+${items.join('\n')}
+</ul>
+</div>`;
+  const modified = GUIDES.filter((g) => g[lang]).map((g) => g.updated).sort().at(-1);
+  const paths = Object.fromEntries(guidesLangs().map((l) => [l, ROUTES.guides(l)]));
+  return layout({
+    lang, site, css, paths, title: L.title, description: L.description, body,
+    head: pageSchema({ lang, site, url: `${site}${ROUTES.guides(lang)}`, type: 'CollectionPage', title: L.title, description: L.description, modified }),
+  });
 }
