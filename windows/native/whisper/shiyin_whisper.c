@@ -1,6 +1,7 @@
 #include "shiyin_whisper.h"
 #include "whisper.h"
 #include "ggml-backend.h"
+#include <stdio.h>
 #include <string.h>
 
 #if defined(_WIN32)
@@ -53,6 +54,21 @@ int32_t shiyin_system_info(char * buffer, int32_t size) {
         buffer[copy] = 0;
     }
     return n;
+}
+
+// whisper 會用的顯示卡（use_gpu 時選第一個 GPU 裝置）：「名稱（說明）」，沒有時是空字串（design-windows §8，回報問題、log 用）
+int32_t shiyin_gpu_device(char * buffer, int32_t size) {
+    ensure_backends();
+    if (!buffer || size <= 0) return 0;
+    buffer[0] = 0;
+    for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
+        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+        enum ggml_backend_dev_type type = ggml_backend_dev_type(dev);
+        if (type != GGML_BACKEND_DEVICE_TYPE_GPU && type != GGML_BACKEND_DEVICE_TYPE_IGPU) continue;
+        int n = snprintf(buffer, (size_t)size, "%s (%s)", ggml_backend_dev_name(dev), ggml_backend_dev_description(dev));
+        return n < 0 ? 0 : (n < size ? n : size - 1);
+    }
+    return 0;
 }
 
 void * shiyin_init(const char * model_path, int32_t use_gpu, int32_t flash_attn) {

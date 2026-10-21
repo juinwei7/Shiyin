@@ -186,6 +186,11 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
   - x64：`GGML_BACKEND_DL`＋`GGML_CPU_ALL_VARIANTS`（執行時依 CPU 指令集選），加 `ggml-vulkan.dll`（官方的 Windows 檔案沒有 Vulkan，要自己建）。
   - ARM64：CPU 也建多個版本。只建一個新指令集（i8mm）的版本，舊的 Snapdragon 會碰到不支援的指令而當掉。GPU（OpenCL-Adreno）還是實驗性，先不用。
   - Mac 也建一份 dylib，`Shiyin.Engines` 的測試在 Mac 上就能跑。官方 zip 裡的 `whisper-cli.exe` 拿來交叉比對結果。
+- **NVIDIA 顯示卡加速**（R27 R4.6，D64）：x64 有 NVIDIA 顯示卡時（顯示卡驅動的登錄裡 `MatchingDeviceId` 有 `VEN_10DE`），第一次啟動自動下載 whisper.cpp 官方同一版（b5454）的 `whisper-bin-win-cuda-12.4.0-x64.zip`（685 MB，固定網址和 SHA-256，`ModelStore.Model.GpuCuda`），驗證後只解出 whisper、ggml、ggml-base、ggml-cpu-*、ggml-cuda、cudart、cublas、cublasLt（約 1.1 GB）到 `models\gpu-cuda12\`，刪掉壓縮檔。自動下載只做一次（設定的 `gpuPackOffered`），使用者刪掉後不再下載。
+  - 載入：整套 whisper 都用元件資料夾裡的（同一次建置的 ggml 才能搭配 ggml-cuda），不跟安裝資料夾的 CPU 版混用。第一次用到 whisper 之前，把安裝資料夾的 `shiyin_whisper.dll` 和 VC++ 執行階段（msvcp140、vcruntime140、vcruntime140_1、vcomp140）複製過去（不一樣才複製，app 更新後 shim 也跟著換），`SetDllDirectory` 加上元件資料夾，再從那裡載入 shim。ggml 用 `LoadLibraryW` 載入 `ggml-cuda.dll`，它要的 cudart、cublas 只會照一般的順序找（安裝資料夾、系統），所以一定要加 `SetDllDirectory`。
+  - whisper 已經從安裝資料夾載入（這次開啟已經轉錄過）時換不了，下載好時提示重新開啟拾音。驅動太舊、沒有 CUDA 裝置時 ggml-cuda 不會有裝置，whisper 自己用 CPU。
+  - shim 的 `shiyin_gpu_device` 回傳 whisper 會用的顯示卡（第一個 GPU 裝置的名稱和說明），寫進 log 和回報問題。
+  - 元件靠安裝檔裡的 VC++ 執行階段：CI 改成靜態連結執行階段的 whisper 之後，安裝檔還是要帶這四個 DLL（x64 約 0.9 MB）。
 - **shim**（D56）：約 100 行的 C，匯出 `shiyin_whisper_full(ctx, const ShiyinParams*, 進度 callback, 取消 callback, …)`，在 C 這邊填好 `whisper_full_params`。不在 C# 複製這個 struct：它用傳值的方式傳、C 的 `bool` 是 1 byte、裡面有巢狀 struct 和 callback，很容易對錯而且不會報錯。其他簡單的函式（`whisper_full_n_segments`、`whisper_full_get_segment_*`、`whisper_full_get_token_p`、`whisper_pcm_to_mel`、`whisper_lang_auto_detect`、`whisper_lang_id`…）直接 P/Invoke，跟 `WhisperEngine.swift`、`LanguageDetector.swift` 用的一樣。
 - **參數**同 Mac：beam 5、best_of 5、執行緒數 clamp(核心數 − 2, 2, 8)、`suppress_blank`、有顯卡時用 GPU。只有 CPU 時要不要改（beam、執行緒）待 T-W3，改了寫進決策紀錄、設定頁顯示。
 - **分段、提示詞、接縫、過濾、低信心**：同 M§21.16、M§6.2，程式在 Core，用 §4 的 `pipeline/` 比對。
@@ -468,6 +473,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D62 | 通知用 Windows 本身的 ToastNotificationManager＋登錄的 AppUserModelID，按鈕用 `shiyin:` 網址加權杖（§12.2） | Windows App SDK 的 AppNotification：自帶部署、沒打包的 app 不能用（依賴 Singleton 套件）。不自帶 Windows App SDK、改用框架套件：要另外裝執行階段，安裝檔要系統管理員或多一步。COM 啟動器（INotificationActivationCallback）：按按鈕時不用開第二個程序，但要登錄 CLSID、實作 COM 伺服器，程式多很多。取捨：每按一次按鈕會短暫多開一個程序（轉送完就結束）；網址可能被網頁觸發，所以會改變狀態的動作要權杖 |
 | D61 | 快速辨識、即時逐字稿用原版 SenseVoice-Small（2024-07-17），VAD 門檻 0.35，送進 VAD 前自動增益（§7） | 2025-09-09 版（原本選的，比較新）是用粵語語料微調過的：日文的假名幾乎都不見（國會聽證、FLEURS 錯字率約 80%，原版 16～28%），英文 AMI WER 60%（原版 40%），只有中文合成會議稍好（8.8% 對 9.2%）。VAD 用預設門檻 0.5、不放大：遠距收音的 AISHELL-4 只抓到兩成的時間，錯字率 84%；門檻 0.35 加自動增益是 26%，其他錄音也沒有變差（門檻 0.35 單獨讓 FLEURS 從 19.9% 降到 15.8%）。固定放大 15～20 dB 對 AISHELL-4 也有用，但大聲的錄音（國會聽證的第 90 百分位已經 −20 dBFS）再放大會超過 0 dBFS 被削掉。取捨：自動增益在很安靜的房間會把背景放大（最多 24 dB），靠 VAD 擋；音量變化很大的會議，增益要幾秒才跟上 |
 | D63 | 開始功能表、桌面的捷徑由 app 的安裝 hook 自己建，名稱依介面語言（§14.1） | 用 Velopack 建的捷徑：名稱是打包時固定的 `--packTitle`，英文 Windows 也是「拾音」。名稱寫成「拾音 Shiyin」：兩種語言都找得到，但「應用程式」清單、捷徑都多一串字。`desktop.ini` 的 LocalizedFileNames 依語言顯示：要在 exe 放多語言的字串資源（MUI），還要改開始功能表資料夾裡共用的 `desktop.ini`。取捨：建立、改名、刪除捷徑要自己處理（`Shortcuts.cs`）；安裝程式自己的視窗標題還是固定的「拾音」 |
+| D64 | NVIDIA 顯示卡加速由 app 另外下載 whisper.cpp 官方的 CUDA 版（R27 R4.6、§8） | 直接放進安裝檔：x64 的安裝檔從約 100 MB 變成約 750 MB（ggml-cuda 570 MB、cuBLASLt 474 MB），沒有 NVIDIA 顯示卡的人也要下載。官方的 CUDA 11.8 版：壓縮檔沒有附 cuBLAS，要另外從 NVIDIA 下載。自己建 Vulkan 版（設計原本的做法，所有顯示卡都能用）：官方沒有 Windows 的 Vulkan 檔案，要 CI 裝 Vulkan SDK 建，還沒做；做好之後 AMD、Intel 的顯示卡用 Vulkan，NVIDIA 再比較 CUDA 和 Vulkan 的速度決定要不要留這個下載。取捨：下載 685 MB、佔 1.1 GB；只支援 NVIDIA；CUDA 12.4 要 527 版以後的驅動（太舊時用 CPU）；要第一次用 whisper 之前下載好才用得上，不然要重新開啟 |
 | D60 | 不碰畫面的 app 邏輯放在 `Shiyin.Services`（net10.0），平台的部分是介面 | 寫在 App 的 ViewModel 裡：Mac 上測不了，錄音、工作佇列、匯入、更新這些最容易出錯的流程都要進虛擬機才能測。取捨：多一層介面（`IAudioDecoder`、`IAudioSource`、`IExportPlatform`、`IUpdatePlatform`…）；換來在 Mac 上用模擬的音源、假的引擎和本機伺服器跑完整的流程 |
 
 ## 17. 需要先做的實驗

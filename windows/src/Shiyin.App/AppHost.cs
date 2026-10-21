@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
 using Shiyin.Data;
 using Shiyin.LLM;
@@ -26,6 +27,7 @@ public sealed class AppHost
     public AppDatabase Db { get; }
     public HttpClient Http { get; } = new() { Timeout = TimeSpan.FromMinutes(20) };
     public ModelStore Models { get; }
+    public GpuAcceleration Gpu { get; }
     public IKeyStore Keys { get; }
     public LLMClient Llm { get; }
     public JobRunner Runner { get; }
@@ -70,6 +72,9 @@ public sealed class AppHost
         // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；App 顯示原因後結束
         Db = new AppDatabase(Paths.Database, Paths.Backups);
         Models = new ModelStore(Paths.Models, Http);
+        // NVIDIA 顯示卡加速（R27 R4.6）：官方的 CUDA 版只有 x64。DEBUG 的 --set debugNvidia=YES 當作有 NVIDIA（虛擬機測自動下載）
+        var nvidia = SystemInfo.HasNvidiaGpu() || (Debug && Settings.Flag("debugNvidia", false));
+        Gpu = new GpuAcceleration(Models, Settings, nvidia && RuntimeInformation.ProcessArchitecture == Architecture.X64, AppContext.BaseDirectory);
         // DEBUG 預設不讀真的認證管理員（同 Mac 3.4.1）：key 只放記憶體，要測時加 --set debugRealKeychain=YES
         Keys = Debug && !Settings.Flag("debugRealKeychain", false) ? new MemoryKeyStore() : new CredentialStore();
         var children = new ChildProcesses();
@@ -148,6 +153,9 @@ public sealed class AppHost
 
     public void Start()
     {
+        // 在任何轉錄之前（Controller.Start 會接著做當掉前沒做完的工作）：決定 whisper 從哪裡載入
+        Gpu.RestartNeeded += () => Post(() => Notifier.Notice(L.T("NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")));
+        Gpu.Start();
         Controller.Start();
         Detector.Prompted += p => Post(() => ShowMeetingPrompt?.Invoke(p));
         Detector.Start();

@@ -75,12 +75,29 @@ public sealed class SpeechEngines(ModelStore models) : ISpeechEngines
     }
 
     public (List<TranscribedSegment> Segments, List<int> Seams, int SampleCount) WhisperFile(
-        IAudioStream audio, double chunkSeconds, string model, string prompt, string language, WhisperControl control) =>
-        WhisperEngine.TranscribeFile(audio, chunkSeconds, model, prompt, language, control);
+        IAudioStream audio, double chunkSeconds, string model, string prompt, string language, WhisperControl control)
+    {
+        LogBackend();
+        return WhisperEngine.TranscribeFile(audio, chunkSeconds, model, prompt, language, control);
+    }
 
     public List<TranscribedSegment> WhisperSamples(float[] samples, IReadOnlyList<(int Start, int End)> chunks, string model, string prompt,
-                                                   string language, WhisperControl control) =>
-        WhisperEngine.Transcribe(samples, chunks, model, prompt, language, control);
+                                                   string language, WhisperControl control)
+    {
+        LogBackend();
+        return WhisperEngine.Transcribe(samples, chunks, model, prompt, language, control);
+    }
+
+    static int backendLogged;
+
+    /// <summary>第一次轉錄時記下 whisper 用的是哪張顯示卡、從哪裡載入（顯示卡加速，design-windows §8）</summary>
+    static void LogBackend()
+    {
+        if (Interlocked.Exchange(ref backendLogged, 1) == 1) return;
+        var gpu = WhisperEngine.GpuDevice;
+        var from = WhisperEngine.NativeDirectory is { } pack && WhisperEngine.LoadedDirectory == pack ? "gpu pack" : "app";
+        Log.Info($"whisper: {(gpu.Length > 0 ? gpu : "CPU")}, loaded from {from}");
+    }
 
     public List<TranscribedSegment> Fast(IAudioStream audio, MeetingLanguage language, Action<double> progress, CancellationToken cancel) =>
         FastTranscriber.Transcribe(audio, FastModels, language, progress, cancel);

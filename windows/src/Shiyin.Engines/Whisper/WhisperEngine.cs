@@ -56,6 +56,28 @@ public static class WhisperEngine
 
     public static string SystemInfo => WhisperNative.Info();
 
+    /// <summary>NVIDIA 顯示卡加速的元件資料夾（design-windows §8、D64）：第一次用 whisper 之前設才有用</summary>
+    public static string? NativeDirectory
+    {
+        get => WhisperNative.PreferredDirectory;
+        set => WhisperNative.PreferredDirectory = value;
+    }
+
+    /// <summary>whisper 已經載入（之後換不了元件，要重新開啟拾音）</summary>
+    public static bool IsLoaded => WhisperNative.LoadedDirectory is not null;
+
+    /// <summary>whisper 是從哪個資料夾載入的</summary>
+    public static string? LoadedDirectory => WhisperNative.LoadedDirectory;
+
+    static readonly Lazy<string> gpuDevice = new(() =>
+    {
+        try { return WhisperNative.Gpu(); }
+        catch (EntryPointNotFoundException) { return ""; }   // 舊的 shim 沒有這個函式
+    });
+
+    /// <summary>whisper 會用的顯示卡；只有 CPU 時是空字串。會載入 whisper（換元件要在這之前）</summary>
+    public static string GpuDevice => gpuDevice.Value;
+
     public static int Threads => Math.Max(2, Math.Min(8, Environment.ProcessorCount - 2));
 
     /// <summary>一次轉錄：模型只載入一次，一段一段送進去；每段用基本提示詞加上前一段最後的文字</summary>

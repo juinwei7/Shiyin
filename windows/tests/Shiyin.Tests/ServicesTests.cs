@@ -203,6 +203,111 @@ public sealed class ServicesTests : IDisposable
         Assert.False(File.Exists(Path.Combine(paths.Models, "norange.bin")));
     }
 
+    static byte[] Zip(params (string Name, byte[] Data)[] entries)
+    {
+        using var memory = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(memory, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            foreach (var (name, data) in entries)
+            {
+                using var stream = zip.CreateEntry(name).Open();
+                stream.Write(data);
+            }
+        return memory.ToArray();
+    }
+
+    [Fact]
+    public async Task ModelArchiveExtractsListedFiles()
+    {
+        var (a, b) = (Bytes(200_000, 5), Bytes(3_000, 6));
+        var zip = Zip(("Release/a.dll", a), ("Release/b.dll", b), ("Release/extra.exe", Bytes(500, 7)));
+        var broken = Zip(("Release/a.dll", a));
+        Serve(new() { ["/pack.zip"] = new(zip), ["/broken.zip"] = new(broken) });
+        ModelStore.ArchiveEntry[] entries = [new("Release/a.dll", "gpu/a.dll", a.Length), new("Release/b.dll", "gpu/b.dll", b.Length)];
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.GpuCuda] = new("gpu", [new("gpu/pack.zip", server.Url + "/pack.zip", zip.Length, Sha(zip), entries)], Folder: "gpu"),
+            [ModelStore.Model.Japanese] = new("broken", [new("broken/pack.zip", server.Url + "/broken.zip", broken.Length, Sha(broken),
+                [new("Release/a.dll", "broken/a.dll", a.Length), new("Release/b.dll", "broken/b.dll", b.Length)])], Folder: "broken"),
+        };
+        var store = new ModelStore(paths.Models, http, catalog);
+        store.Start(ModelStore.Model.GpuCuda);
+        var state = await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed);
+        Assert.True(state is ModelStore.State.Installed, state.ToString());
+        // 只解出列出來的檔案，壓縮檔刪掉
+        Assert.Equal(a, File.ReadAllBytes(Path.Combine(paths.Models, "gpu", "a.dll")));
+        Assert.Equal(b, File.ReadAllBytes(Path.Combine(paths.Models, "gpu", "b.dll")));
+        Assert.Equal(["a.dll", "b.dll"], Directory.GetFiles(Path.Combine(paths.Models, "gpu")).Select(Path.GetFileName).Order().ToArray());
+        Assert.True(new ModelStore(paths.Models, http, catalog).IsInstalled(ModelStore.Model.GpuCuda));
+        // 少了一個解出來的檔案就不算裝好
+        File.Delete(Path.Combine(paths.Models, "gpu", "b.dll"));
+        Assert.False(new ModelStore(paths.Models, http, catalog).IsInstalled(ModelStore.Model.GpuCuda));
+        store.Start(ModelStore.Model.GpuCuda);
+        Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+        // 刪除時整個資料夾刪掉（裡面有拾音另外放的 shim）
+        File.WriteAllBytes(Path.Combine(paths.Models, "gpu", "shiyin_whisper.dll"), [1]);
+        store.Delete(ModelStore.Model.GpuCuda);
+        Assert.False(Directory.Exists(Path.Combine(paths.Models, "gpu")));
+        Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.GpuCuda));
+
+        // 壓縮檔裡少了要的檔案：失敗、說明要重新下載
+        store.Start(ModelStore.Model.Japanese);
+        var failed = await WaitFor(store, ModelStore.Model.Japanese, s => s is ModelStore.State.Installed or ModelStore.State.Failed);
+        Assert.Contains("重新下載", Assert.IsType<ModelStore.State.Failed>(failed).Message);
+    }
+
+    [Fact]
+    public async Task GpuAccelerationDownloadsOnceAndPreparesPack()
+    {
+        var a = Bytes(1_000, 8);
+        var zip = Zip(("Release/whisper.dll", a));
+        Serve(new() { ["/pack.zip"] = new(zip) });
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.GpuCuda] = new("gpu", [new("gpu/pack.zip", server.Url + "/pack.zip", zip.Length, Sha(zip),
+                [new ModelStore.ArchiveEntry("Release/whisper.dll", "gpu/whisper.dll", a.Length)])], Folder: "gpu"),
+        };
+        var app = Path.Combine(home.Path, "app");
+        Directory.CreateDirectory(app);
+        File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [1, 2, 3]);
+        File.WriteAllBytes(Path.Combine(app, "msvcp140.dll"), [4]);
+        var settings = AppSettings.InMemory();
+        try
+        {
+            // 用不上（沒有 NVIDIA 或不是 x64）：不下載、不記成下載過
+            var store = new ModelStore(paths.Models, http, catalog);
+            new GpuAcceleration(store, settings, applies: false, app).Start();
+            Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.GpuCuda));
+            Assert.False(settings.GpuPackOffered);
+
+            // 用得上：自動下載一次；裝好時 whisper 還沒載入，就改從元件資料夾載入，shim 和 VC++ 執行階段複製過去
+            var gpu = new GpuAcceleration(store, settings, applies: true, app);
+            gpu.Start();
+            Assert.True(settings.GpuPackOffered);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            var dir = Path.Combine(paths.Models, "gpu");
+            for (var i = 0; i < 100 && Whisper.WhisperEngine.NativeDirectory != dir; i++) await Task.Delay(20);
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.Equal([1, 2, 3], File.ReadAllBytes(Path.Combine(dir, "shiyin_whisper.dll")));
+            Assert.Equal([4], File.ReadAllBytes(Path.Combine(dir, "msvcp140.dll")));
+
+            // app 更新後 shim 換了：下次啟動時複製新的
+            Whisper.WhisperEngine.NativeDirectory = null;
+            File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [9, 9]);
+            new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, applies: true, app).Start();
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.Equal([9, 9], File.ReadAllBytes(Path.Combine(dir, "shiyin_whisper.dll")));
+
+            // 使用者刪掉之後不再自動下載
+            Whisper.WhisperEngine.NativeDirectory = null;
+            store.Delete(ModelStore.Model.GpuCuda);
+            var after = new ModelStore(paths.Models, http, catalog);
+            new GpuAcceleration(after, settings, applies: true, app).Start();
+            Assert.IsType<ModelStore.State.Missing>(after.StateOf(ModelStore.Model.GpuCuda));
+            Assert.Null(Whisper.WhisperEngine.NativeDirectory);
+        }
+        finally { Whisper.WhisperEngine.NativeDirectory = null; }
+    }
+
     // MARK: 匯入、封包
 
     [Fact]

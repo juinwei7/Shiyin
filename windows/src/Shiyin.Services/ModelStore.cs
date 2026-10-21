@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
 using Shiyin.Localization;
@@ -12,11 +13,16 @@ namespace Shiyin.Services;
 /// </summary>
 public sealed class ModelStore
 {
-    public enum Model { Breeze, Japanese, LanguageDetection, FastRecognition, Diarization }
+    public enum Model { Breeze, Japanese, LanguageDetection, FastRecognition, Diarization, GpuCuda }
 
-    public sealed record ModelFile(string Path, string Url, long Size, string Sha256);
+    /// <summary>壓縮檔裡要解出來的檔案：壓縮檔裡的路徑、解到哪裡（models 底下）、大小</summary>
+    public sealed record ArchiveEntry(string Entry, string Path, long Size);
 
-    public sealed record ModelInfo(string Name, IReadOnlyList<ModelFile> Files)
+    /// <summary>Extract 不是 null 時是壓縮檔：驗證後解出這些檔案、刪掉壓縮檔，解出來的都在才算裝好</summary>
+    public sealed record ModelFile(string Path, string Url, long Size, string Sha256, IReadOnlyList<ArchiveEntry>? Extract = null);
+
+    /// <summary>Folder：這個模型自己的資料夾（models 底下），刪除時整個刪掉（裡面可能有拾音另外放的檔案）</summary>
+    public sealed record ModelInfo(string Name, IReadOnlyList<ModelFile> Files, string? Folder = null)
     {
         public long Size => Files.Sum(f => f.Size);
     }
@@ -71,9 +77,29 @@ public sealed class ModelStore
             39_593_761, "1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b"),
     ]);
 
+    // 要在 GpuCuda 之前宣告：靜態欄位照順序初始化
+    static readonly (string Name, long Size)[] CudaFiles =
+    [
+        ("whisper.dll", 1_312_256), ("ggml.dll", 60_928), ("ggml-base.dll", 677_376), ("ggml-cuda.dll", 569_981_440),
+        ("ggml-cpu-alderlake.dll", 1_004_544), ("ggml-cpu-cannonlake.dll", 1_047_040), ("ggml-cpu-cascadelake.dll", 1_045_504),
+        ("ggml-cpu-haswell.dll", 1_005_568), ("ggml-cpu-icelake.dll", 1_045_504), ("ggml-cpu-sandybridge.dll", 1_001_472),
+        ("ggml-cpu-skylakex.dll", 1_047_040), ("ggml-cpu-sse42.dll", 838_656), ("ggml-cpu-x64.dll", 839_168),
+        ("cudart64_12.dll", 553_984), ("cublas64_12.dll", 100_033_536), ("cublasLt64_12.dll", 473_551_360),
+    ];
+
+    /// <summary>
+    /// NVIDIA 顯示卡加速（R27 R4.6、design-windows §8、D64）：whisper.cpp 官方同一版（b5454）的 CUDA 12.4 版，只解出 whisper 要的 DLL（約 1.1 GB）。
+    /// 整套 whisper 都用這裡的（同一次建置的 ggml 才能搭配 ggml-cuda）
+    /// </summary>
+    public static readonly ModelInfo GpuCuda = new(L.T("NVIDIA 顯示卡加速（CUDA）"), [new("gpu-cuda12/whisper-cuda.zip",
+        "https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-win-cuda-12.4.0-x64.zip",
+        684_913_404, "afef0b881c500958921c3f5523b50e59ee2ec9b6f5cbd25b324c51ed308a957a",
+        [.. CudaFiles.Select(f => new ArchiveEntry("Release/" + f.Name, "gpu-cuda12/" + f.Name, f.Size))])], Folder: "gpu-cuda12");
+
     public static ModelInfo Info(Model model) => model switch
     {
         Model.Breeze => Breeze,
+        Model.GpuCuda => GpuCuda,
         Model.Japanese => Japanese,
         Model.LanguageDetection => LanguageDetection,
         Model.FastRecognition => FastRecognition,
@@ -112,7 +138,8 @@ public sealed class ModelStore
 
     public ModelInfo InfoOf(Model model) => catalog?.GetValueOrDefault(model) ?? Info(model);
 
-    public string PathOf(ModelFile file) => System.IO.Path.Combine(root, file.Path.Replace('/', System.IO.Path.DirectorySeparatorChar));
+    public string PathOf(ModelFile file) => PathIn(file.Path);
+    string PathIn(string relative) => System.IO.Path.Combine(root, relative.Replace('/', System.IO.Path.DirectorySeparatorChar));
     public string PathOf(Model model) => PathOf(InfoOf(model).Files[0]);
     public string Directory(Model model) => System.IO.Path.GetDirectoryName(PathOf(model))!;
     string PartPath(ModelFile file) => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(PathOf(file))!, "." + System.IO.Path.GetFileName(file.Path) + ".part");
@@ -131,7 +158,7 @@ public sealed class ModelStore
                 var current = states.GetValueOrDefault(model);
                 if (current?.IsBusy == true) continue;
                 var info = InfoOf(model);
-                if (info.Files.All(f => new FileInfo(PathOf(f)) is { Exists: true } fi && fi.Length == f.Size))
+                if (info.Files.All(IsDone))
                     states[model] = new State.Installed();
                 else if (info.Files.Any(f => File.Exists(PartPath(f))))
                     states[model] = new State.Paused(Received(info), info.Size);
@@ -141,9 +168,13 @@ public sealed class ModelStore
         }
     }
 
+    /// <summary>這個檔案裝好了：一般的檔案大小對；壓縮檔是解出來的檔案都在、大小對</summary>
+    bool IsDone(ModelFile file) => file.Extract is { } entries
+        ? entries.All(e => new FileInfo(PathIn(e.Path)) is { Exists: true } fi && fi.Length == e.Size)
+        : new FileInfo(PathOf(file)) is { Exists: true } done && done.Length == file.Size;
+
     long Received(ModelInfo info) => info.Files.Sum(f =>
-        new FileInfo(PathOf(f)) is { Exists: true } done && done.Length == f.Size ? f.Size
-        : new FileInfo(PartPath(f)) is { Exists: true } part ? part.Length : 0);
+        IsDone(f) ? f.Size : new FileInfo(PartPath(f)) is { Exists: true } part ? part.Length : 0);
 
     void Set(Model model, State state)
     {
@@ -203,10 +234,17 @@ public sealed class ModelStore
         CancellationTokenSource? cts;
         lock (gate) tasks.Remove(model, out cts);
         cts?.Cancel();
-        foreach (var file in InfoOf(model).Files)
+        var info = InfoOf(model);
+        foreach (var file in info.Files)
         {
             TryDelete(PathOf(file));
             TryDelete(PartPath(file));
+            foreach (var entry in file.Extract ?? []) TryDelete(PathIn(entry.Path));
+        }
+        if (info.Folder is { } folder)
+        {
+            try { System.IO.Directory.Delete(PathIn(folder), recursive: true); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Log.Error($"model folder delete failed: {e.GetType().Name}"); }
         }
         Set(model, new State.Missing());
     }
@@ -224,7 +262,7 @@ public sealed class ModelStore
             foreach (var file in info.Files)
             {
                 var path = PathOf(file);
-                if (new FileInfo(path) is { Exists: true } done && done.Length == file.Size)
+                if (IsDone(file))
                 {
                     before += file.Size;
                     continue;
@@ -243,7 +281,12 @@ public sealed class ModelStore
                     return;
                 }
                 cancel.ThrowIfCancellationRequested();
-                File.Move(part, path, overwrite: true);
+                if (file.Extract is { } entries)
+                {
+                    await Task.Run(() => Extract(part, entries, cancel), cancel);
+                    TryDelete(part);
+                }
+                else File.Move(part, path, overwrite: true);
                 before += file.Size;
                 Set(model, new State.Downloading(before, info.Size));
             }
@@ -268,6 +311,27 @@ public sealed class ModelStore
             Finish(model, new State.Failed(resumable
                 ? L.F("下載中斷：%@。按「繼續下載」會從中斷的地方接著下載", reason)
                 : L.F("下載中斷：%@。按「繼續下載」會重新下載", reason)));
+        }
+    }
+
+    /// <summary>從壓縮檔解出指定的檔案：先寫成 .part，大小對了才換上</summary>
+    void Extract(string archive, IReadOnlyList<ArchiveEntry> entries, CancellationToken cancel)
+    {
+        using var zip = ZipFile.OpenRead(archive);
+        foreach (var e in entries)
+        {
+            cancel.ThrowIfCancellationRequested();
+            var entry = zip.GetEntry(e.Entry) ?? throw new ModelDownloadException(L.T("下載的壓縮檔裡少了需要的檔案，請重新下載"));
+            var target = PathIn(e.Path);
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
+            var temp = target + ".part";
+            entry.ExtractToFile(temp, overwrite: true);
+            if (new FileInfo(temp).Length != e.Size)
+            {
+                TryDelete(temp);
+                throw new ModelDownloadException(L.T("下載的壓縮檔裡少了需要的檔案，請重新下載"));
+            }
+            File.Move(temp, target, overwrite: true);
         }
     }
 

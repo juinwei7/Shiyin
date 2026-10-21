@@ -33,6 +33,8 @@ SHIYIN_API int32_t shiyin_version(void);
 SHIYIN_API void shiyin_silence_logs(void);
 // 有哪些後端（CPU、Metal、Vulkan…），寫進 buffer，回傳長度
 SHIYIN_API int32_t shiyin_system_info(char * buffer, int32_t size);
+// whisper 會用的顯示卡：「名稱（說明）」寫進 buffer，回傳長度；只有 CPU 時是 0
+SHIYIN_API int32_t shiyin_gpu_device(char * buffer, int32_t size);
 
 SHIYIN_API void * shiyin_init(const char * model_path, int32_t use_gpu, int32_t flash_attn);
 SHIYIN_API void shiyin_free(void * ctx);

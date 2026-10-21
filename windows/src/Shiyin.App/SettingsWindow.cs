@@ -9,6 +9,7 @@ using Shiyin.Platform;
 using Shiyin.Services;
 using Shiyin.Services.Capture;
 using Shiyin.Transcribe;
+using Shiyin.Whisper;
 
 namespace Shiyin.App;
 
@@ -491,6 +492,15 @@ public sealed class SettingsWindow : Window
             models.Children.Add(ModelRow(model, model == ModelStore.Model.LanguageDetection ? host.Recorder.IsRecording : transcribing));
             if (note.Length > 0) models.Children.Add(Note(note));
         }
+        // NVIDIA 顯示卡加速（R27 R4.6）：只在有 NVIDIA 顯示卡的 x64 電腦（或已經下載過）顯示
+        if (host.Gpu.Applies || host.Models.StateOf(ModelStore.Model.GpuCuda) is not ModelStore.State.Missing)
+        {
+            // 元件已經載入時刪不掉（DLL 在用），重新開啟拾音之後才能刪
+            var inUse = WhisperEngine.NativeDirectory is { } pack && WhisperEngine.LoadedDirectory == pack;
+            models.Children.Add(ModelRow(ModelStore.Model.GpuCuda, transcribing || inUse,
+                inUse ? L.T("轉錄正在用這個元件，重新開啟拾音後才能刪除") : null));
+            models.Children.Add(Note(L.T("有 NVIDIA 顯示卡時自動下載，轉錄會快很多。685 MB，解開約 1.1 GB（whisper.cpp 官方的 CUDA 版）。刪除後不會再自動下載。")));
+        }
         var audio = Size(host.Paths.Audio);
         var modelBytes = Size(host.Paths.Models);
         var place = Ui.Link(host.Paths.Home, () => Shell.Reveal(host.Paths.Database));
@@ -509,7 +519,7 @@ public sealed class SettingsWindow : Window
         catch (IOException) { return 0; }
     }
 
-    FrameworkElement ModelRow(ModelStore.Model model, bool deleteDisabled)
+    FrameworkElement ModelRow(ModelStore.Model model, bool deleteDisabled, string? disabledReason = null)
     {
         var state = host.Models.StateOf(model);
         var info = ModelStore.Info(model);
@@ -533,18 +543,18 @@ public sealed class SettingsWindow : Window
         {
             ModelStore.State.Downloading => Ui.Button(L.T("暫停"), () => host.Models.Pause(model)),
             ModelStore.State.Verifying => null,
-            ModelStore.State.Installed => DeleteButton(model, info.Name, deleteDisabled),
+            ModelStore.State.Installed => DeleteButton(model, info.Name, deleteDisabled, disabledReason),
             ModelStore.State.Paused or ModelStore.State.Failed => Ui.Button(L.T("繼續下載"), () => host.Models.Start(model)),
             _ => Ui.Button(L.T("下載"), () => host.Models.Start(model), accent: true),
         };
         return Ui.Bar(null, left, right, 12);
     }
 
-    Button DeleteButton(ModelStore.Model model, string name, bool disabled)
+    Button DeleteButton(ModelStore.Model model, string name, bool disabled, string? reason = null)
     {
         var button = Ui.Button(L.T("刪除"), () => { });
         button.IsEnabled = !disabled;
-        if (disabled) ToolTipService.SetToolTip(button, L.T("正在轉錄，完成後才能刪除模型"));
+        if (disabled) ToolTipService.SetToolTip(button, reason ?? L.T("正在轉錄，完成後才能刪除模型"));
         button.Click += async (_, _) =>
         {
             var dialog = new ContentDialog

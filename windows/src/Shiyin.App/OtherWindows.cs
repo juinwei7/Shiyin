@@ -128,7 +128,9 @@ public static class OtherWindows
             primary == ModelStore.Model.Japanese
                 ? Row(ModelStore.Model.Japanese, L.F("%@：日文會議的正式轉錄，574 MB", ModelStore.Japanese.Name))
                 : Row(ModelStore.Model.Breeze, L.F("%@：正式轉錄，1.66 GB", ModelStore.Breeze.Name)),
-            Row(ModelStore.Model.Diarization, L.T("說話者辨識模型：分辨是誰在說話，約 46 MB")));
+            Row(ModelStore.Model.Diarization, L.T("說話者辨識模型：分辨是誰在說話，約 46 MB")),
+            // 有 NVIDIA 顯示卡時啟動就自動下載了（GpuAcceleration.Start）
+            host.Gpu.Applies ? Row(ModelStore.Model.GpuCuda, L.T("NVIDIA 顯示卡加速：轉錄會快很多，685 MB（解開約 1.1 GB）")) : null);
     }
 
     static FrameworkElement Providers(AppHost host, Action render)
@@ -253,7 +255,7 @@ public static class OtherWindows
     public static Window Report(AppHost host)
     {
         var window = new Window { Title = L.T("回報問題") };
-        var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, Whisper.WhisperEngine.SystemInfo));
+        var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, Whisper.WhisperEngine.GpuDevice));
         // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行
         var content = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = text, IsReadOnly = true, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas") };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(content, L.T("回報問題"));

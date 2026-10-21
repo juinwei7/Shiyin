@@ -829,6 +829,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | R3.1 匯入 | Windows 解得開的音訊和影片檔：m4a、mp3、wav、aac、flac、aiff、wma、mp4、mov、m4v、wmv、webm（2026-10-21 T-W9 實測）；ogg、opus 要裝「Web 媒體延伸模組」（一般的 Windows 11 有預裝），解不開時說明怎麼辦；caf 不支援（Media Foundation 沒有 CAF）。方式：拖進視窗、Ctrl+O、檔案總管的「開啟檔案 → 拾音」、雙擊 .shiyin |
 | R4.1 內建辨識 | 「macOS 內建」換成「快速辨識」（本機的快速模型）：速度快很多、不吃詞彙表 |
 | R4.5 不用另外安裝 | 除了不需要 Python、ffmpeg，也不需要另外裝 .NET、VC++ 執行環境（都包在安裝檔裡） |
+| R4.6 顯示卡加速（Windows 新增） | x64 的電腦有 NVIDIA 顯示卡時，拾音自動下載顯示卡加速的元件（約 650 MB，解開約 1.1 GB），下載好之後正式轉錄用顯示卡；沒有 NVIDIA 顯示卡的電腦不下載、安裝檔不變大。下載時顯示進度，可以暫停；設定的「模型與儲存空間」可以刪除，刪除後不再自動下載。下載好的時候拾音已經轉錄過（元件已經載入），提示重新開啟拾音才會用上。顯示卡的驅動太舊或用不了時，照樣用 CPU 轉錄。回報問題寫出轉錄用的是哪一張顯示卡（R19.7）。（2026-10-21：朋友的電腦有 RTX 3060，只用 CPU 時 40 分鐘的會議轉了 30 分鐘） |
 | R7.3 複製 | 複製成純文字、Markdown、富文字；富文字在 Windows 用 HTML（Word、Outlook、Notion 都吃），不用 RTF |
 | R7.5 分享 | Windows 的分享視窗 |
 | R9.4 壓縮 | 照樣轉成 m4a。Windows 內建的 AAC 編碼器位元率比較高，每小時約 45 MB（Mac 約 10～30 MB），設定頁的說明寫實際的數字 |
@@ -847,7 +848,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | R21 鑰匙圈 | API key 存在 Windows 的「認證管理員」（只有這個 Windows 使用者讀得到）。讀取時 Windows 不會跳出確認，所以 R21.2、R21.3 處理的情況不會發生；其他照樣：打開設定頁不讀出 key、存不進去要說明原因 |
 | 第 4 節 資料位置 | `%LOCALAPPDATA%\Shiyin`，只有這個 Windows 使用者讀得到 |
 | N2 效能 | 即時逐字稿、介面不卡住、app 本身的處理時間跟 Mac 相同。正式轉錄的速度看硬體：tasks W0 量過後，把「有顯示卡」「只用 CPU」各自的目標寫進這裡 |
-| N4 系統需求 | Windows 11（x64 或 ARM64）、記憶體 8 GB 以上（W0 量過後確認）、磁碟：轉錄模型約 1.7 GB，加上快速辨識和說話者辨識的模型；顯示卡不是必要的。Windows 的 N 版要先裝「媒體功能套件」（Media Feature Pack） |
+| N4 系統需求 | Windows 11（x64 或 ARM64）、記憶體 8 GB 以上（W0 量過後確認）、磁碟：轉錄模型約 1.7 GB，加上快速辨識和說話者辨識的模型；顯示卡不是必要的（有 NVIDIA 顯示卡時另外下載約 650 MB 的加速元件，解開約 1.1 GB，R4.6）。Windows 的 N 版要先裝「媒體功能套件」（Media Feature Pack） |
 | N6 安全 | API key 存在認證管理員；DEBUG 版的控制通道只用本機的 named pipe，release 版沒有；外部程式不透過 cmd.exe 執行（參數會被改寫） |
 
 ### R28 跟 Mac 版一致（P0）

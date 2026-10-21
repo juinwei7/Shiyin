@@ -34,6 +34,39 @@
         }
       }
     },
+    "NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA GPU acceleration is ready. Reopen Shiyin to transcribe on the GPU."
+          }
+        }
+      }
+    },
+    "NVIDIA 顯示卡加速（CUDA）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA GPU acceleration (CUDA)"
+          }
+        }
+      }
+    },
+    "NVIDIA 顯示卡加速：轉錄會快很多，685 MB（解開約 1.1 GB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA GPU acceleration: much faster transcription, 685 MB (about 1.1 GB unpacked)"
+          }
+        }
+      }
+    },
     "PDF 和 docx 的段落標題使用明體；Markdown 適合貼到 Notion、GitHub。": {
       "extractionState": "manual",
       "localizations": {
@@ -118,6 +151,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "• Record: click Record at the top of the sidebar (Ctrl+R), or press Ctrl+Alt+Shift+R in any app"
+          }
+        }
+      }
+    },
+    "下載的壓縮檔裡少了需要的檔案，請重新下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded archive is missing required files. Please download it again."
           }
         }
       }
@@ -595,6 +639,17 @@
         }
       }
     },
+    "有 NVIDIA 顯示卡時自動下載，轉錄會快很多。685 MB，解開約 1.1 GB（whisper.cpp 官方的 CUDA 版）。刪除後不會再自動下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded automatically when an NVIDIA GPU is present; transcription is much faster. 685 MB, about 1.1 GB unpacked (the official CUDA build of whisper.cpp). Once deleted, it won't be downloaded automatically again."
+          }
+        }
+      }
+    },
     "標記這個時間點（Ctrl+B），整理時會被當成重點": {
       "extractionState": "manual",
       "localizations": {
@@ -877,6 +932,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notes are written automatically after transcription. Summary has key points, decisions, action items and open questions; Details is split by topic; click the time after any item to play the recording from there. The template menu switches to formats like one-on-one, interview, lecture or brainstorm — then choose More → Regenerate meeting notes. To find something, ask in the Ask tab and the answer comes with timestamps; the Ask button at the top of the sidebar asks all meetings at once."
+          }
+        }
+      }
+    },
+    "轉錄正在用這個元件，重新開啟拾音後才能刪除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription is using this component. Reopen Shiyin to delete it."
           }
         }
       }
