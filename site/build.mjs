@@ -12,7 +12,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { loadReleases, loadStars } from './src/releases.mjs';
-import { ROUTES, homePage, changelogPage, notFoundPage } from './src/pages.mjs';
+import { ROUTES, homePage, changelogPage, notFoundPage, guidePage, guidesIndexPage, guidePath, guideLangs, guidesLangs } from './src/pages.mjs';
+import { GUIDES } from './src/guides.mjs';
 import { content, LANGS } from './src/content.mjs';
 import { llmsTxt, INDEXNOW_KEY } from './src/seo.mjs';
 
@@ -54,13 +55,18 @@ try {
     await write(ROUTES.changelog(lang) + 'index.html', changelogPage({ lang, ...page }));
     await write(ROUTES.home(lang) + '404.html', notFoundPage({ lang, ...page }));
   }
+  // 指南（docs/website.md §14.2）
+  for (const guide of GUIDES) {
+    for (const lang of guideLangs(guide)) await write(guidePath(lang, guide.slug) + 'index.html', guidePage({ lang, ...page, guide }));
+  }
+  for (const lang of guidesLangs()) await write(ROUTES.guides(lang) + 'index.html', guidesIndexPage({ lang, ...page }));
 
   // /download 永遠轉到最新版的 DMG，給 README、社群貼文用
   const dmg = releases[0].dmg.url;
   await write('/_redirects', LANGS.map((lang) => `${content[lang].prefix}/download ${dmg} 302\n`).join(''));
   await write('/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
   await write('/sitemap.xml', sitemap(releases[0].date));
-  await write('/llms.txt', llmsTxt({ site, latest: releases[0] }));
+  await write('/llms.txt', llmsTxt({ site, latest: releases[0], guides: GUIDES }));
   await write(`/${INDEXNOW_KEY}.txt`, INDEXNOW_KEY);
 
   console.log(`網站已產生：${path.relative(process.cwd(), out) || '.'}`);
@@ -91,15 +97,26 @@ async function checkImages() {
   }
 }
 
-// lastmod：首頁和版本說明都跟著最新版變（docs/website.md §14.1）
+// lastmod：首頁和版本說明跟著最新版變，指南用各篇的 updated（docs/website.md §14.1）
 function sitemap(updated) {
-  const lastmod = updated.slice(0, 10);
-  const urls = ['home', 'changelog'].flatMap((route) => LANGS.map((lang) => `  <url>
-    <loc>${site}${ROUTES[route](lang)}</loc>
+  // paths：各語言的網址（只列有的語言）
+  const entries = (paths, lastmod) => {
+    const langs = LANGS.filter((l) => paths[l]);
+    const fallback = paths.zh ?? paths[langs[0]];
+    return langs.map((lang) => `  <url>
+    <loc>${site}${paths[lang]}</loc>
     <lastmod>${lastmod}</lastmod>
-${LANGS.map((l) => `    <xhtml:link rel="alternate" hreflang="${content[l].lang}" href="${site}${ROUTES[route](l)}"/>`).join('\n')}
-    <xhtml:link rel="alternate" hreflang="x-default" href="${site}${ROUTES[route]('zh')}"/>
-  </url>`));
+${langs.map((l) => `    <xhtml:link rel="alternate" hreflang="${content[l].lang}" href="${site}${paths[l]}"/>`).join('\n')}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${site}${fallback}"/>
+  </url>`);
+  };
+  const all = (route, langs = LANGS) => Object.fromEntries(langs.map((l) => [l, ROUTES[route](l)]));
+  const urls = [
+    ...entries(all('home'), updated.slice(0, 10)),
+    ...entries(all('changelog'), updated.slice(0, 10)),
+    ...(GUIDES.length ? entries(all('guides', guidesLangs()), GUIDES.map((g) => g.updated).sort().at(-1)) : []),
+    ...GUIDES.flatMap((g) => entries(Object.fromEntries(guideLangs(g).map((l) => [l, guidePath(l, g.slug)])), g.updated)),
+  ];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls.join('\n')}
