@@ -123,14 +123,16 @@ function shot(lang, name, alt, { first = false, caption = '' } = {}) {
 </picture>${caption ? `\n<figcaption>${caption}</figcaption>` : ''}`;
 }
 
-// 介紹影片（docs/website.md §15）：不自動播放、不先下載，按了才載入
+// 介紹影片（docs/website.md §15）：不自動播放、不先下載，按了才載入。
+// versions：各影片的雜湊（build.mjs 算），接在網址後面，換了影片瀏覽器才不會用快取裡的舊檔
 export const videoPath = (lang) => `/videos/shiyin-promo-${content[lang].video.file}`;
-function videoSection(lang) {
+function videoSection(lang, versions = {}) {
   const v = content[lang].video;
+  const version = versions[v.file] ? `?v=${versions[v.file]}` : '';
   return `<section class="wide part video" id="video">
 <h2>${v.h2}</h2>
 <video controls preload="none" playsinline width="1920" height="1080" poster="${videoPath(lang)}.jpg" aria-label="${escape(v.name)}">
-  <source src="${videoPath(lang)}.mp4" type="video/mp4">
+  <source src="${videoPath(lang)}.mp4${version}" type="video/mp4">
 </video>
 </section>`;
 }
@@ -177,7 +179,7 @@ function guidesSection(lang) {
 }
 
 // demo：示範的樣式和 script 網址（build.mjs 讀進來）
-export function homePage({ lang, site, css, releases, demo, stats }) {
+export function homePage({ lang, site, css, releases, demo, stats, videos }) {
   const c = content[lang];
   const latest = releases[0];
   const notesHref = `${ROUTES.changelog(lang)}#${latest.tag}`;
@@ -201,7 +203,7 @@ export function homePage({ lang, site, css, releases, demo, stats }) {
 
 ${demoSection(lang, { fallback: shot(lang, 'summary', c.shots.summary, { first: true }) })}
 
-${videoSection(lang)}
+${videoSection(lang, videos)}
 
 <section class="col part" id="how">
 <h2>${c.live.h2}</h2>

@@ -49,7 +49,13 @@ try {
   await cp(path.join(repo, 'docs/images/icon.png'), path.join(out, 'icon.png'));
   await writeFile(path.join(out, 'demo.js'), demoJs);
 
-  const page = { site, css, releases, stats };
+  // 介紹影片的雜湊（docs/website.md §15）：網址加 ?v=，換影片後瀏覽器不會用快取裡的舊檔
+  const videos = {};
+  for (const lang of ['zh', 'en']) {
+    const file = path.join(here, `public/videos/shiyin-promo-${lang}.mp4`);
+    videos[lang] = createHash('sha256').update(await readFile(file)).digest('hex').slice(0, 10);
+  }
+  const page = { site, css, releases, stats, videos };
   for (const lang of LANGS) {
     await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page, demo }));
     await write(ROUTES.changelog(lang) + 'index.html', changelogPage({ lang, ...page }));
