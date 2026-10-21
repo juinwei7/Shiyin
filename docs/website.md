@@ -157,6 +157,7 @@
 - 網址：`/`、`/changelog/`、`/en/`、`/en/changelog/`、`/ja/`、`/ja/changelog/`、`/download`、404 頁（`/404.html`、`/en/404.html`、`/ja/404.html`）。
 - 日文版：介面名稱照 app 的英文寫（「Record」「To confirm」），常見問題和下載區寫清楚 app 只有英文、繁體中文介面；截圖用英文版的；字體改用 Hiragino Sans（`:lang(ja)`），不然漢字會用蘋方的中文字形。
 - SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.weibuilds.com`。
+- Google Search Console：用 HTML 檔驗證網站擁有權（`site/public/google<代碼>.html`，2026-10-21 加），驗證通過後也要一直留著，刪掉會失去驗證；sitemap 在 Search Console 送出 `/sitemap.xml`。
 - `_headers`：`nosniff`、Referrer-Policy、CSP（script 只允許自己網站的檔案，也就是 `/demo.js`；不允許 inline script）、圖片快取一天。
 
 ## 7. 版本說明自動更新
