@@ -26,6 +26,7 @@ const ICON = {
   globe: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c1.8 1.9 2.7 4 2.7 6.5S9.8 12.6 8 14.5M8 1.5C6.2 3.4 5.3 5.5 5.3 8s.9 4.6 2.7 6.5"/></svg>',
   chevron: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3.5l3 3 3-3"/></svg>',
   check: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>',
+  play: '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M3 1.8v8.4L10 6z"/></svg>',
   star: '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .9l2.2 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.4 2.3.9-4.9L.9 6.1l4.9-.7z"/></svg>',
   coffee: '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 6h9v3.5a3.5 3.5 0 0 1-3.5 3.5H6a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M11.5 7h1a1.75 1.75 0 0 1 0 3.5h-1.2M5.5 1.5v2.2M8.5 1.5v2.2"/></svg>',
 };
@@ -122,6 +123,18 @@ function shot(lang, name, alt, { first = false, caption = '' } = {}) {
 </picture>${caption ? `\n<figcaption>${caption}</figcaption>` : ''}`;
 }
 
+// 介紹影片（docs/website.md §15）：不自動播放、不先下載，按了才載入
+export const videoPath = (lang) => `/videos/shiyin-promo-${content[lang].video.file}`;
+function videoSection(lang) {
+  const v = content[lang].video;
+  return `<section class="wide part video" id="video">
+<h2>${v.h2}</h2>
+<video controls preload="none" playsinline width="1920" height="1080" poster="${videoPath(lang)}.jpg" aria-label="${escape(v.name)}">
+  <source src="${videoPath(lang)}.mp4" type="video/mp4">
+</video>
+</section>`;
+}
+
 // GitHub 數據（docs/website.md §11、§12）：點星按鈕裡放星星數（讀不到就不放），下載次數另外一行（0 就不顯示）
 const formatNumber = (lang, n) => new Intl.NumberFormat({ zh: 'zh-TW', en: 'en-US', ja: 'ja-JP' }[lang]).format(n);
 
@@ -183,9 +196,12 @@ export function homePage({ lang, site, css, releases, demo, stats }) {
   </div>
   <small>${c.intro.small}</small>
   ${downloadsLine(lang, stats)}
+  <a class="watch" href="#video">${ICON.play}${c.video.link}</a>
 </section>
 
 ${demoSection(lang, { fallback: shot(lang, 'summary', c.shots.summary, { first: true }) })}
+
+${videoSection(lang)}
 
 <section class="col part" id="how">
 <h2>${c.live.h2}</h2>

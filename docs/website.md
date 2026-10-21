@@ -25,6 +25,7 @@
 - W11 GitHub 數據（2026-10-20 加）：首頁第一屏顯示 GitHub 星星數和累計下載次數，讓第一次來的人知道已經有人在用（§11）。
 - W12 鼓勵點星（2026-10-20 加）：讓喜歡拾音的人容易到 GitHub 點星，增加星星數（§12）。不在官網代替使用者登入 GitHub 點星、不用「點星才能下載」「點星送東西」這類做法。
 - W13 贊助（2026-10-21 加，requirements R13.3）：放 Ko-fi 的贊助連結，覺得好用的人可以請作者喝杯咖啡（§13）。只放連結，不嵌入 Ko-fi 的面板或 script。
+- W15 介紹影片（2026-10-21 加）：首頁放 52 秒的介紹影片（中文版、英文版），沒時間玩示範的人看完就知道拾音在做什麼（§15）。
 - W14 搜尋和 AI 找得到（2026-10-21 加）：在 Google、Bing 搜「會議記錄 app」「逐字稿」「本機轉錄」這類詞，以及在 ChatGPT、Perplexity、Gemini 問「Mac 上推薦的會議記錄工具」時，拾音要出現、被引用（§14）。要量得到成效：Search Console 的曝光、點擊、收錄數，和固定一組問題問 AI 的被提到次數。不用買連結、不灌評論、不寫假的比較。
 
 | 頁面 | 網址 | 內容 |
@@ -414,4 +415,18 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
   - 英文：「open source Granola alternative for Mac」「local meeting transcription app for Mac」「meeting notes app that uses my ChatGPT subscription」
   - 日文：「Mac 議事録 アプリ 無料 ローカル」
 - **Cloudflare 流量**：參照來源主機（google、bing、chatgpt.com、perplexity.ai）。
+
+## 15. 介紹影片（2026-10-21）
+
+使用者做了兩支介紹影片（中文、英文各 52 秒、1080p），要放上官網（W15）。內容是示範會議（虛構的 Lumio 新品會議），沒有真實會議的資料。
+
+- **檔案**：原檔各約 25 MB（60fps、約 3.9 Mbps），快到 Cloudflare Pages 單檔 25 MiB 的上限，也不適合放進 git。重新壓成 H.264 1080p、30fps、CRF 28、AAC 128 kbps、`faststart`，各約 4.8 MB；跟原檔比對文字最多的畫面看不出差別。放在 `site/public/videos/shiyin-promo-<zh|en>.mp4`，封面是第 6.3 秒（圖示和標語完整出現）的 JPG（1280 寬，約 18 KB）。換影片時照同樣的參數重壓，檔名不變。
+  ```
+  ffmpeg -i 原檔.mp4 -c:v libx264 -preset slow -crf 28 -r 30 -pix_fmt yuv420p -profile:v high -c:a aac -b:a 128k -movflags +faststart shiyin-promo-zh.mp4
+  ffmpeg -ss 6.3 -i 原檔.mp4 -frames:v 1 -vf scale=1280:-2 -q:v 3 shiyin-promo-zh.jpg
+  ```
+- **位置**：首屏示範（§10）後面一個新區塊「看 52 秒的介紹影片」，跟截圖一樣寬（`.wide`）。第一屏「免費、開源…」那行下面加一個連結跳到影片。不放在第一屏：第一屏照 §10 是可以玩的示範。
+- **播放**：`<video controls preload="none" playsinline>` 加封面，不自動播放（影片有配樂）、不先下載，第一屏的速度不受影響。中文首頁放中文版；英文、日文首頁放英文版（日文版本來就寫明 app 介面是英文）。影片只有配樂，畫面上的字已經說明內容，不另外做字幕。
+- **CSP**：`_headers` 加 `media-src 'self'`，不然影片會被擋。`/videos/*` 快取一天，跟圖片一樣。
+- **結構化資料**：首頁的 JSON-LD 加 `VideoObject`（名稱、說明、封面、上傳日期、長度 PT52S、影片網址），讓 Google 的影片搜尋找得到。
 

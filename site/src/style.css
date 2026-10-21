@@ -136,6 +136,11 @@ figcaption a { color: inherit; text-decoration: underline; }
 .log ul { margin: 8px 0 0; padding-left: 1.2em; }
 .log li + li { margin-top: 4px; }
 
+/* 介紹影片（docs/website.md §15） */
+.intro .watch { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 15px; font-weight: 600; }
+.video h2 { max-width: 640px; margin: 0 auto; }
+.video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; margin-top: 20px; border-radius: 12px; background: #1C1C1E; box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .35), 0 0 0 1px var(--shot-ring); }
+
 /* 指南（docs/website.md §14.2） */
 .crumbs { display: flex; gap: 8px; color: var(--muted); font-size: 14px; }
 .crumbs a { color: var(--muted); }

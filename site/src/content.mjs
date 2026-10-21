@@ -37,6 +37,13 @@ export const content = {
       star: '在 GitHub 點星',
       downloads: (n) => `已下載 ${n} 次`,
     },
+    video: {
+      file: 'zh',
+      h2: '看 52 秒的介紹影片',
+      link: '看 52 秒的介紹影片',
+      name: '拾音 Shiyin 介紹影片',
+      description: '52 秒看懂拾音：按下錄音，邊講邊出逐字稿；停止後自動整理成會議紀錄、分出說話者，沒把握的地方先問你，還可以直接問會議，答案附時間點。',
+    },
     shots: {
       summary: '拾音的會議紀錄畫面：摘要、決議、待辦，每一條後面都有時間點',
       recording: '錄音中的畫面：左邊是即時逐字稿，右邊是我的筆記',
@@ -165,6 +172,13 @@ export const content = {
       small: 'Free and open source. Requires macOS 26 and Apple Silicon.',
       star: 'Star on GitHub',
       downloads: (n) => `${n} downloads`,
+    },
+    video: {
+      file: 'en',
+      h2: 'Watch the 52-second intro',
+      link: 'Watch the 52-second intro',
+      name: 'Shiyin intro video',
+      description: 'Shiyin in 52 seconds: press Record and read the live transcript, then get meeting notes with speakers and timestamps. Shiyin asks when it isn’t sure, and you can ask the meeting questions.',
     },
     shots: {
       summary: 'Meeting notes in Shiyin: summary, decisions and action items, each with a timestamp',
@@ -295,6 +309,13 @@ export const content = {
       small: '無料、オープンソース。macOS 26 と Apple シリコンが必要です',
       star: 'GitHub でスター',
       downloads: (n) => `ダウンロード ${n} 回`,
+    },
+    video: {
+      file: 'en',
+      h2: '52 秒の紹介動画（英語）',
+      link: '52 秒の紹介動画を見る',
+      name: '拾音 Shiyin 紹介動画',
+      description: '52 秒でわかる拾音：録音を押すと話しながら文字起こしが表示され、停止すると話者を分けた議事録が自動でまとまります。自信がないところは先に質問し、会議に直接質問することもできます。（英語版の動画です）',
     },
     shots: {
       summary: '拾音の議事録画面：要約、決定事項、ToDo の各項目にタイムスタンプが付いている',

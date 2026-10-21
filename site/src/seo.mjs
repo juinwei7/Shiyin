@@ -59,6 +59,18 @@ export function homeSchema({ lang, site, latest }) {
         sameAs: [GITHUB],
       },
       {
+        '@type': 'VideoObject',
+        '@id': `${url}#video`,
+        name: c.video.name,
+        description: c.video.description,
+        thumbnailUrl: `${site}/videos/shiyin-promo-${c.video.file}.jpg`,
+        contentUrl: `${site}/videos/shiyin-promo-${c.video.file}.mp4`,
+        uploadDate: '2026-10-21',
+        duration: 'PT52S',
+        inLanguage: c.video.file === 'zh' ? 'zh-Hant' : 'en',
+        about: { '@id': `${site}/#app` },
+      },
+      {
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
         inLanguage: c.lang,
