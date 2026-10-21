@@ -1,19 +1,25 @@
-using Microsoft.Windows.AppNotifications;
-using Microsoft.Windows.AppNotifications.Builder;
+using System.Security;
+using System.Text;
 using Shiyin.Localization;
 using Shiyin.Model;
+using Shiyin.Platform;
 using Shiyin.Services;
+using Windows.Data.Xml.Dom;
+using Windows.UI.Notifications;
 
 namespace Shiyin.App;
 
 /// <summary>
-/// 系統通知（R11.2、R19.4、design-windows §12.2）：完成、失敗、偵測會議（有按鈕）。點了用參數打開那場會議。
+/// 系統通知（R11.2、R19.4、design-windows §12.2、D62）：完成、失敗、偵測會議（有按鈕）。
+/// 用 Windows 本身的 ToastNotificationManager；點通知、按按鈕都是 shiyin: 網址，第二個拾音把網址轉過來（App.Activated）。
 /// 通知被關掉時，偵測會議改用不搶焦點的小視窗（App 決定）
 /// </summary>
 public sealed class Notifier
 {
     readonly AppHost host;
-    bool registered;
+    readonly ToastNotifier? notifier;
+
+    public NotificationLinks Links { get; } = new();
 
     /// <summary>短暫的提示（畫面下方，同 Mac 的 NoticeToast）</summary>
     public event Action<string>? Toast;
@@ -23,86 +29,103 @@ public sealed class Notifier
         this.host = host;
         try
         {
-            // 先掛事件再 Register（AppNotification 的規定）
-            AppNotificationManager.Default.NotificationInvoked += (_, args) => host.Post(() => Invoked(args.Arguments));
-            AppNotificationManager.Default.Register();
-            registered = true;
+            ToastRegistration.Register(L.T("拾音"), Path.Combine(AppContext.BaseDirectory, "Assets", "Shiyin.png"));
+            notifier = ToastNotificationManager.CreateToastNotifier(ToastRegistration.AppId);
         }
-        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or InvalidOperationException)
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException)
         {
             Log.Error($"notifications unavailable: 0x{e.HResult:X8}");
         }
     }
 
-    public bool Enabled => registered && AppNotificationManager.Default.Setting == AppNotificationSetting.Enabled;
+    public bool Enabled
+    {
+        get
+        {
+            try { return notifier?.Setting == NotificationSetting.Enabled; }
+            catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { return false; }
+        }
+    }
 
     public void Notice(string message) => Toast?.Invoke(message);
 
-    void Show(AppNotificationBuilder builder)
+    void Show(string launch, string title, string body, params (string Label, string Url)[] buttons)
     {
         if (!Enabled) return;
-        try { AppNotificationManager.Default.Show(builder.BuildNotification()); }
-        catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { Log.Error($"notification failed: 0x{e.HResult:X8}"); }
+        var xml = new StringBuilder();
+        xml.Append($"<toast launch=\"{SecurityElement.Escape(launch)}\" activationType=\"protocol\"><visual><binding template=\"ToastGeneric\">");
+        xml.Append($"<text>{SecurityElement.Escape(title)}</text><text>{SecurityElement.Escape(body)}</text></binding></visual>");
+        if (buttons.Length > 0)
+        {
+            xml.Append("<actions>");
+            foreach (var (label, url) in buttons)
+                xml.Append($"<action content=\"{SecurityElement.Escape(label)}\" activationType=\"protocol\" arguments=\"{SecurityElement.Escape(url)}\"/>");
+            xml.Append("</actions>");
+        }
+        xml.Append("</toast>");
+        try
+        {
+            var document = new XmlDocument();
+            document.LoadXml(xml.ToString());
+            notifier!.Show(new ToastNotification(document));
+        }
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or ArgumentException)
+        {
+            Log.Error($"notification failed: 0x{e.HResult:X8}");
+        }
     }
 
     public void JobFinished(Job job, Exception? error)
     {
         if (host.Db.Meeting(job.MeetingId) is not { } meeting) return;
         var title = meeting.DisplayTitle;
-        var builder = new AppNotificationBuilder().AddArgument("meeting", job.MeetingId.ToString());
+        var launch = NotificationLinks.OpenMeeting(job.MeetingId);
         if (error is not null)
         {
             var message = error.Message.Length > 60 ? error.Message[..60] : error.Message;
-            builder.AddText(job.Kind == JobKind.Transcribe ? L.T("轉錄失敗") : L.T("整理失敗")).AddText(L.F("%@：%@", title, message));
+            Show(launch, job.Kind == JobKind.Transcribe ? L.T("轉錄失敗") : L.T("整理失敗"), L.F("%@：%@", title, message));
         }
-        else if (job.Kind == JobKind.Transcribe) builder.AddText(L.T("轉錄完成")).AddText(title);
+        else if (job.Kind == JobKind.Transcribe) Show(launch, L.T("轉錄完成"), title);
         else if (job.Kind == JobKind.Summarize && job.Payload?.Contains("\"draft\":true") == true)
-            builder.AddText(L.T("會議紀錄草稿好了")).AddText(L.F("%@（正式轉錄完成後會自動更新）", title));
+            Show(launch, L.T("會議紀錄草稿好了"), L.F("%@（正式轉錄完成後會自動更新）", title));
         else
         {
             var count = meeting.DecodedNotes?.ReviewItems.Count ?? 0;
-            builder.AddText(L.T("會議紀錄整理好了")).AddText(count > 0 ? L.F("%@，有 %lld 題待確認", title, count) : title);
+            Show(launch, L.T("會議紀錄整理好了"), count > 0 ? L.F("%@，有 %lld 題待確認", title, count) : title);
         }
-        Show(builder);
     }
 
     /// <summary>偵測到會議（M§21.7）：開始錄音、不要再提醒這個 app；停止並轉錄、繼續錄</summary>
     public bool MeetingPrompt(MeetingDetector.Prompt prompt)
     {
         if (!Enabled) return false;
-        var builder = new AppNotificationBuilder().AddArgument("app", prompt.App.Id);
+        var app = prompt.App.Id;
         if (prompt is MeetingDetector.Prompt.Start)
-            builder.AddText(L.F("%@ 正在開會", prompt.App.Name)).AddText(L.T("要開始錄音嗎？"))
-                .AddButton(new AppNotificationButton(L.T("開始錄音")).AddArgument("action", "start").AddArgument("app", prompt.App.Id))
-                .AddButton(new AppNotificationButton(L.T("不要再提醒這個 app")).AddArgument("action", "mute").AddArgument("app", prompt.App.Id));
+            Show(NotificationLinks.Scheme + ":open", L.F("%@ 正在開會", prompt.App.Name), L.T("要開始錄音嗎？"),
+                (L.T("開始錄音"), Links.Prompt("start", app)), (L.T("不要再提醒這個 app"), Links.Prompt("mute", app)));
         else
-            builder.AddText(L.T("會議好像結束了")).AddText(L.T("要停止錄音並轉錄嗎？"))
-                .AddButton(new AppNotificationButton(L.T("停止並轉錄")).AddArgument("action", "stop").AddArgument("app", prompt.App.Id))
-                .AddButton(new AppNotificationButton(L.T("繼續錄")).AddArgument("action", "continue").AddArgument("app", prompt.App.Id));
-        Show(builder);
+            Show(NotificationLinks.Scheme + ":open", L.T("會議好像結束了"), L.T("要停止錄音並轉錄嗎？"),
+                (L.T("停止並轉錄"), Links.Prompt("stop", app)), (L.T("繼續錄"), Links.Prompt("continue", app)));
         return true;
     }
 
-    void Invoked(IDictionary<string, string> arguments)
+    /// <summary>點了通知或按鈕（第二個拾音轉過來的 shiyin: 網址，或拾音沒開時啟動參數裡的網址）</summary>
+    public void Open(string url)
     {
-        if (arguments.TryGetValue("action", out var action))
+        switch (Links.Parse(url))
         {
-            var app = arguments.TryGetValue("app", out var a) ? a : "";
-            switch (action)
-            {
-                case "start": host.Controller.StartRecording(""); break;
-                case "mute": host.Detector.Mute(app); break;
-                case "stop": host.Recorder.Stop(); break;
-            }
-            return;
+            case NotificationLinks.Link.Prompt { Action: "start" }: host.Controller.StartRecording(""); break;
+            case NotificationLinks.Link.Prompt { Action: "mute", App: var app }: host.Detector.Mute(app); break;
+            case NotificationLinks.Link.Prompt { Action: "stop" }: host.Recorder.Stop(); break;
+            case NotificationLinks.Link.Prompt: break;   // 繼續錄
+            case NotificationLinks.Link.Open { MeetingId: var id }: host.ShowMain?.Invoke(id); break;
         }
-        if (arguments.TryGetValue("meeting", out var id) && long.TryParse(id, out var meetingId)) host.ShowMain?.Invoke(meetingId);
-        else host.ShowMain?.Invoke(null);
     }
 
-    /// <summary>解除安裝時（Velopack 的 hook）清掉通知的登記</summary>
+    /// <summary>解除安裝時（Velopack 的 hook）清掉通知和登錄</summary>
     public static void Unregister()
     {
-        try { AppNotificationManager.Default.UnregisterAll(); } catch (Exception) { }
+        try { ToastNotificationManager.History.Clear(ToastRegistration.AppId); } catch (Exception) { }
+        ToastRegistration.Unregister();
     }
 }

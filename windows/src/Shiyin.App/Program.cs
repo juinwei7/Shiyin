@@ -17,6 +17,15 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+#if DEBUG
+        // 驗證用：啟動時丟出的例外都記下來（%TEMP%\shiyin-exceptions.log），WinUI 在啟動中當掉時只看得到 0xc000027b
+        var trace = Path.Combine(Path.GetTempPath(), "shiyin-exceptions.log");
+        AppDomain.CurrentDomain.FirstChanceException += (_, e) =>
+        {
+            try { File.AppendAllText(trace, $"{DateTime.Now:HH:mm:ss.fff} {e.Exception.GetType().FullName} 0x{e.Exception.HResult:X8}: {e.Exception.Message}\n{Environment.StackTrace}\n\n"); }
+            catch (IOException) { }
+        };
+#endif
         Velopack.VelopackApp.Build()
             .OnAfterInstallFastCallback(_ => FileAssociations.Register())
             .OnBeforeUninstallFastCallback(_ =>
@@ -47,9 +56,16 @@ public static class Program
 /// <summary>
 /// app（同 Mac 的 ShiyinApp、AppDelegate）：主視窗、設定、引導、說明、回報問題、問所有會議、系統匣、偵測會議的提醒、結束
 /// </summary>
-public sealed class App : Application
+public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataProvider
 {
     public static new App Current { get; private set; } = null!;
+
+    // 畫面全部用 C# 建（D59），沒有 XAML 編譯器產生的型別資訊：WinUI 讀控制項的主題（XamlControlsResources）時
+    // 要靠這個找到控制項程式庫的型別，不然讀到一半就失敗（「Cannot find a resource with the given key」，啟動就當掉）
+    readonly Microsoft.UI.Xaml.XamlTypeInfo.XamlControlsXamlMetaDataProvider xamlTypes = new();
+    public Microsoft.UI.Xaml.Markup.IXamlType GetXamlType(Type type) => xamlTypes.GetXamlType(type);
+    public Microsoft.UI.Xaml.Markup.IXamlType GetXamlType(string fullName) => xamlTypes.GetXamlType(fullName);
+    public Microsoft.UI.Xaml.Markup.XmlnsDefinition[] GetXmlnsDefinitions() => xamlTypes.GetXmlnsDefinitions();
 
     readonly string[] args;
     AppHost? host;
@@ -69,8 +85,8 @@ public sealed class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs launch)
     {
         // 畫面全部用 C# 建，WinUI 控制項的樣式要自己加進資源（沒有 App.xaml）
+        Ui.ApplyAccent(Resources);
         Resources.MergedDictionaries.Add(new XamlControlsResources());
-        Resources["SystemAccentColor"] = Ui.CeladonColor;
         try { host = new AppHost(DispatcherQueue.GetForCurrentThread(), args); }
         catch (Exception e) when (e is Microsoft.Data.Sqlite.SqliteException or IOException or InvalidOperationException or UnauthorizedAccessException)
         {
@@ -115,14 +131,29 @@ public sealed class App : Application
     {
         host?.Post(() =>
         {
+            IReadOnlyList<string> arguments = e.Data switch
+            {
+                Windows.ApplicationModel.Activation.IProtocolActivatedEventArgs protocol => [protocol.Uri.AbsoluteUri],
+                Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs launch => CommandLine.Split(launch.Arguments),
+                _ => [],
+            };
+            // 點通知、按通知的按鈕（shiyin: 網址，D62）：交給 Notifier，按「不要再提醒」時不用打開主視窗
+            if (arguments.Any(NotificationLinks.IsLink)) { OpenLinks(arguments); return; }
             ShowMain();
-            if (e.Data is Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs launch) OpenFiles(CommandLine.Split(launch.Arguments));
+            OpenFiles(arguments);
         });
+    }
+
+    void OpenLinks(IEnumerable<string> arguments)
+    {
+        if (host is null) return;
+        foreach (var link in arguments.Where(NotificationLinks.IsLink)) host.Notifier.Open(link);
     }
 
     void OpenFiles(IEnumerable<string> arguments)
     {
         if (host is null || main is null) return;
+        OpenLinks(arguments);
         var files = arguments.Where(a => !a.StartsWith("--") && File.Exists(a) && !a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)).ToList();
         if (files.Count > 0) _ = host.Controller.ImportDirectly(files, main.State.CurrentFolder, main.State.Selection);
     }

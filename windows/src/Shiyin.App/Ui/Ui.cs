@@ -54,6 +54,21 @@ public static class Ui
     }
     public static Color CeladonColor => Hex(0x2D6A5D);
 
+    /// <summary>
+    /// 強調色換成拾音的青瓷色（同 Mac 的 AccentColor：淺色 #2D6A5D、深色 #6DB2A1）。WinUI 的強調色筆刷在淺色主題用 Dark1、
+    /// 深色主題用 Light2，hover、按下用相鄰的，所以七個都要給；要在 XamlControlsResources 之前加進 app 的資源
+    /// </summary>
+    public static void ApplyAccent(ResourceDictionary resources)
+    {
+        resources["SystemAccentColor"] = Hex(0x2D6A5D);
+        resources["SystemAccentColorDark1"] = Hex(0x2D6A5D);
+        resources["SystemAccentColorDark2"] = Hex(0x245549);
+        resources["SystemAccentColorDark3"] = Hex(0x1B4037);
+        resources["SystemAccentColorLight1"] = Hex(0x4E8E7F);
+        resources["SystemAccentColorLight2"] = Hex(0x6DB2A1);
+        resources["SystemAccentColorLight3"] = Hex(0x8FC6B8);
+    }
+
     /// <summary>說話者的顏色（8 色循環；青瓷綠、琥珀排在最後，同 Mac）</summary>
     public static SolidColorBrush Speaker(int idx)
     {

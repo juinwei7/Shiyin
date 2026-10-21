@@ -36,7 +36,9 @@
     <PackageReference Include="WinUIEx" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assets/Shiyin.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Windows 上 WinUI 的 SDK 會自動把 Assets 下的圖檔加成 Content，再寫一次會在產生 .pri 時重複（PRI277）：先拿掉再加 -->
+    <Content Remove="Assets\Shiyin.ico;Assets\Shiyin.png" />
+    <Content Include="Assets\Shiyin.ico;Assets\Shiyin.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- 第三方授權（R27 R13.1）：scripts/windows/make-third-party-licenses.py 產生，「關於拾音」讀它，安裝資料夾裡也有 -->
     <Content Include="ThirdPartyLicenses.txt" Link="Third-Party Licenses.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
