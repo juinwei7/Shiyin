@@ -2,6 +2,7 @@
 // 用詞跟 app 一致：整理工具、待確認、逐字稿、標記重點、不整理。
 
 export const GITHUB = 'https://github.com/juinwei7/Shiyin';
+export const KOFI = 'https://ko-fi.com/weiwei_chang';
 const AMI = 'https://groups.inf.ed.ac.uk/ami/corpus/';
 
 export const content = {
@@ -79,7 +80,8 @@ export const content = {
       ],
       button: (file) => `下載 ${file}`,
       firstOpen: '第一次打開：',
-      starAsk: '拾音是個人的開源專案。覺得好用的話，到 GitHub 點一顆星，能讓更多人看到它。',
+      starAsk: '拾音是個人的開源專案。覺得好用的話，到 GitHub 點一顆星，能讓更多人看到它；也可以請我喝杯咖啡。',
+      coffee: '請我喝杯咖啡',
       steps: [
         '打開 DMG，把拾音拖進「應用程式」。',
         '第一次打開時 macOS 會擋下來，因為拾音沒有 Apple 開發者簽章。',
@@ -98,7 +100,7 @@ export const content = {
         ['有 Windows 版或手機版嗎？', '目前只有 Mac 版。'],
       ],
     },
-    footer: { tagline: '拾音 Shiyin，個人開源專案' },
+    footer: { tagline: '拾音 Shiyin，個人開源專案', sponsor: '贊助' },
     changelog: {
       h1: '版本說明',
       lead: '每一版改了什麼。有新版時，拾音會在 app 裡問你要不要更新。',
@@ -190,7 +192,8 @@ export const content = {
       ],
       button: (file) => `Download ${file}`,
       firstOpen: 'Opening it the first time:',
-      starAsk: 'Shiyin is a personal open-source project. If you find it useful, a star on GitHub helps more people find it.',
+      starAsk: 'Shiyin is a personal open-source project. If you find it useful, a star on GitHub helps more people find it, or you can buy me a coffee.',
+      coffee: 'Buy me a coffee',
       steps: [
         'Open the DMG and drag Shiyin to Applications.',
         'macOS blocks Shiyin the first time you open it, because it isn’t notarized by Apple.',
@@ -209,7 +212,7 @@ export const content = {
         ['Is there a Windows or phone version?', 'No, Shiyin is Mac only.'],
       ],
     },
-    footer: { tagline: 'Shiyin, a personal open-source project' },
+    footer: { tagline: 'Shiyin, a personal open-source project', sponsor: 'Sponsor' },
     changelog: {
       h1: 'Release notes',
       lead: 'What changed in each version. When a new version is out, Shiyin asks you in the app whether to update.',
@@ -303,7 +306,8 @@ export const content = {
       ],
       button: (file) => `${file} をダウンロード`,
       firstOpen: '初めて開くとき：',
-      starAsk: '拾音は個人のオープンソースプロジェクトです。役に立ったら GitHub でスターを付けてください。もっと多くの人に届きます。',
+      starAsk: '拾音は個人のオープンソースプロジェクトです。役に立ったら GitHub でスターを付けてください。もっと多くの人に届きます。コーヒーをおごっていただくこともできます。',
+      coffee: 'コーヒーをおごる',
       steps: [
         'DMG を開き、拾音を「アプリケーション」フォルダにドラッグします。',
         '拾音は Apple の公証を受けていないため、初めて開くときは macOS にブロックされます。',
@@ -322,7 +326,7 @@ export const content = {
         ['Windows 版やスマートフォン版はありますか？', '今のところ Mac 版だけです。'],
       ],
     },
-    footer: { tagline: '拾音 Shiyin、個人のオープンソースプロジェクト' },
+    footer: { tagline: '拾音 Shiyin、個人のオープンソースプロジェクト', sponsor: '支援する' },
     changelog: {
       h1: 'リリースノート',
       lead: '各バージョンの変更点です（英語で記載しています）。新しいバージョンが出ると、アプリの中で更新するかどうか確認されます。',

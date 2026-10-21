@@ -1,6 +1,6 @@
 // 首頁、版本說明、404 的 HTML（docs/website.md §4）。深色模式跟著系統；只有首頁的示範用 script（§10）。
 
-import { content, LANGS, GITHUB } from './content.mjs';
+import { content, LANGS, GITHUB, KOFI } from './content.mjs';
 import { demoSection } from './demo-markup.mjs';
 
 export const ROUTES = {
@@ -17,6 +17,7 @@ const ICON = {
   chevron: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3.5l3 3 3-3"/></svg>',
   check: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>',
   star: '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .9l2.2 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.4 2.3.9-4.9L.9 6.1l4.9-.7z"/></svg>',
+  coffee: '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 6h9v3.5a3.5 3.5 0 0 1-3.5 3.5H6a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M11.5 7h1a1.75 1.75 0 0 1 0 3.5h-1.2M5.5 1.5v2.2M8.5 1.5v2.2"/></svg>',
 };
 
 // 語言選單：跟 app 的語言選單一樣（地球、目前的語言、箭頭），目前的語言打勾。用 <details>，不需要 script
@@ -87,6 +88,7 @@ ${body}
   <div class="wide">
     <span>${c.footer.tagline}</span>
     <a href="${GITHUB}">GitHub</a>
+    <a href="${KOFI}">${c.footer.sponsor}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
 ${others.map((l) => `    <a href="${ROUTES[target](l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
   </div>
@@ -108,6 +110,11 @@ function shot(lang, name, alt, { first = false, caption = '' } = {}) {
 
 // GitHub 數據（docs/website.md §11、§12）：點星按鈕裡放星星數（讀不到就不放），下載次數另外一行（0 就不顯示）
 const formatNumber = (lang, n) => new Intl.NumberFormat({ zh: 'zh-TW', en: 'en-US', ja: 'ja-JP' }[lang]).format(n);
+
+// 贊助（§13）：連到 Ko-fi，不嵌入它的面板和 script（CSP 只允許自己的 script）
+function coffeeButton(lang) {
+  return `<a class="star coffee" href="${KOFI}">${ICON.coffee}${content[lang].download.coffee}</a>`;
+}
 
 function starButton(lang, stats) {
   const count = stats?.stars != null ? `<span class="count">${formatNumber(lang, stats.stars)}</span>` : '';
@@ -202,7 +209,10 @@ ${c.download.steps.map((s) => `  <li>${s}</li>`).join('\n')}
 <p class="note">${c.download.note}</p>
 <div class="star-ask">
   <p>${c.download.starAsk}</p>
-  ${starButton(lang, stats)}
+  <div class="asks">
+    ${starButton(lang, stats)}
+    ${coffeeButton(lang)}
+  </div>
 </div>
 </section>
 

@@ -52,12 +52,22 @@ xcrun actool Resources/Assets.xcassets --compile "$APP/Contents/Resources" --pla
 xcrun xcstringstool compile Resources/Localizable.xcstrings --output-directory "$APP/Contents/Resources" >/dev/null
 for lproj in Resources/*.lproj; do ditto "$lproj" "$APP/Contents/Resources/$(basename "$lproj")"; done
 mkdir -p "$APP/Contents/Resources/en.lproj"
-# 第三方授權（design §12.1、R13.1）：原文放一份；另外包成 Credits.html，系統的「關於拾音」視窗會顯示
+# 第三方授權（design §12.1、R13.1）：原文放一份；另外包成 Credits.html，系統的「關於拾音」視窗會顯示。
+# Credits.html 放在各語言的 lproj（最上面是贊助連結，R13.3），Resources 底下不能再有一份，不然系統會先拿那份
 cp Resources/ThirdPartyLicenses.txt "$APP/Contents/Resources/ThirdPartyLicenses.txt"
 /usr/bin/python3 -c 'import html, sys
-text = open(sys.argv[1], encoding="utf-8").read()
-print("<!doctype html><html lang=\"zh-Hant\"><meta charset=\"utf-8\"><pre style=\"font: 10px Menlo; white-space: pre-wrap\">" + html.escape(text) + "</pre>")' \
-  Resources/ThirdPartyLicenses.txt > "$APP/Contents/Resources/Credits.html"
+text = html.escape(open(sys.argv[1], encoding="utf-8").read())
+kofi = "https://ko-fi.com/weiwei_chang"
+sponsor = {
+    "zh-Hant": f"覺得拾音好用的話，可以<a href=\"{kofi}\">請我喝杯咖啡</a>。",
+    "en": f"Enjoying Shiyin? <a href=\"{kofi}\">Buy me a coffee</a>.",
+}
+for lang, line in sponsor.items():
+    with open(f"{sys.argv[2]}/{lang}.lproj/Credits.html", "w", encoding="utf-8") as f:
+        f.write(f"<!doctype html><html lang=\"{lang}\"><meta charset=\"utf-8\">"
+                f"<p style=\"font: 12px -apple-system; text-align: center\">{line}</p>"
+                f"<pre style=\"font: 10px Menlo; white-space: pre-wrap\">{text}</pre>")' \
+  Resources/ThirdPartyLicenses.txt "$APP/Contents/Resources"
 
 xattr -cr "$APP"
 # 簽章（design §12、R10.7）：有已信任的自簽憑證就用它；沒有就用 ad-hoc，

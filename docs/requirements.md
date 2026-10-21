@@ -297,11 +297,13 @@
 
 - R13.1 「關於拾音」視窗列出使用的開源軟體和完整授權條款；DMG 裡也附一份（`Third-Party Licenses.txt`）。
 - R13.2 repo 公開；正式的更新網址是 GitHub Releases 的最新版（`https://github.com/juinwei7/Shiyin/releases/latest/download/shiyin-update.json`），從 3.1.1 起內建在 app 裡。3.1.0 沒有內建更新網址，裝了 3.1.0 的人要手動換一次。
+- R13.3 贊助（2026-10-21 加，使用者想增加一點業外收入）：「關於拾音」、README、官網放 Ko-fi 的贊助連結（`https://ko-fi.com/weiwei_chang`），repo 加 `.github/FUNDING.yml`，GitHub 頁面上出現 Sponsor 按鈕。只放連結：不嵌入 Ko-fi 的面板或 script、不在 app 裡開付款網頁、不跳出提醒。GitHub Sponsors 沒有開放台灣，所以用 Ko-fi（PayPal 收款）。
 
 ### 驗收
 
 - 「關於拾音」看得到授權條款；DMG 裡有授權檔，內容跟套件附的原文一致
 - 不登入也能下載 Release 的 DMG 和 `shiyin-update.json`；3.1.1 的 app 帶有更新網址
+- 「關於拾音」最上面有贊助連結，跟著介面語言是中文或英文；README 中英文、官網三種語言的下載區和頁尾都有連結（R13.3）
 
 ### 驗收結果（2026-10-16）
 
@@ -309,6 +311,7 @@
 |---|---|---|
 | R13.1 第三方授權 | ✅ | 「關於拾音」和 DMG 都有，跟原文逐字一致（T-H1） |
 | R13.2 公開 repo、GitHub Releases 更新 | ✅ | 不登入可下載；測試 app 從 GitHub 自動更新到 3.1.1（T-H2、T-H3） |
+| R13.3 贊助連結（2026-10-21） | 🟡 | 「關於拾音」中英文介面都截圖確認；官網在本機建置、預覽過三種語言。GitHub 的 Sponsor 按鈕、正式官網要推上 main 之後才看得到 |
 
 ## 11. 第 3.2 版：轉錄準確度（2026-10-16，使用者已確認）
 

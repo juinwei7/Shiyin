@@ -71,9 +71,12 @@ h2 { font-size: 26px; line-height: 1.4; font-weight: 600; }
 .star { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 980px; background: var(--bg); color: var(--text); font-weight: 600; white-space: nowrap; }
 .star:hover { text-decoration: none; background: var(--hover); }
 .star svg { color: #E3B341; flex: none; }
+.coffee svg { color: #C2703D; }
 .star .count { margin-left: 2px; padding-left: 10px; border-left: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
 .star-ask { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 32px; padding: 18px 22px; border-radius: 14px; background: var(--soft); }
 .star-ask p { margin: 0; font-size: 16px; }
+.star-ask .asks { display: grid; gap: 10px; flex: none; }
+.star-ask .asks a { justify-content: center; }
 .follow { color: var(--muted); font-size: 16px; }
 .download { display: inline-block; padding: 11px 26px; border-radius: 980px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .download:hover { text-decoration: none; filter: brightness(1.08); }
