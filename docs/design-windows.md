@@ -267,6 +267,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 同一個元件不能放進第二個父元件（0x800F1000，UI 執行緒的例外會讓程式結束）：一直留著的元件（輸入框、音量條）重畫時先從舊的父元件拿下來，或一開始建好只切換顯示。
 - `TextBox` 要多行時，`AcceptsReturn` 一定要在 `Text` 之前設：單行的 TextBox 設 Text 時只留第一行（範本的說明、回報問題的內容曾經被截掉）。TextBox 把換行存成 `\r`，存進資料庫或提示詞前換成 `\n`。
 - `Ui.Bar` 的左欄寬度跟著內容、不會換行：會換行的長文字放中間那欄。
+- 閱讀的欄位（摘要、詳細、待確認、提問、筆記、編輯會議紀錄、使用說明）用 `ReadingColumn`（同 Mac：填滿可用的寬度、最寬 680 或 760、靠左）。不能用 StackPanel 設 `MaxWidth` 加靠左：靠左時寬度是內容要的寬度，會換行的文字算出來很窄，整欄擠成一半（2026-10-21 朋友的電腦上看到）。文字後面接時間點用 `Ui.Inline`（文字一欄、時間照內容寬），不能兩欄都給比例寬度（會各分一半）；放在橫的 StackPanel 裡的文字不會換行，長的會被切掉。
 - 可以選取的 `TextBlock` 有自己的右鍵選單（拷貝、全選），會蓋掉外層的 `ContextFlyout`：文字上也要設同一個選單。
 - 快捷鍵掛在整個視窗時設 `KeyboardAcceleratorPlacementMode = Hidden`，不然滑鼠停在視窗裡會跳出快捷鍵提示。
 - 無障礙名稱（螢幕閱讀器、UI Automation）：只有圖示的按鈕、沒有標題的輸入框和下拉選單、`ListViewItem`（內容是好幾個文字元件時，名稱會是空的或資料的型別名稱）都要設 `AutomationProperties.Name`。新的畫面用虛擬機的 `uia.sh dump` 檢查。
@@ -275,6 +276,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.3 外觀、字型
 
 - 顏色（celadon、signal、說話者 8 色）從 `Views/Theme.swift` 搬到 XAML 的 ThemeDictionaries（淺色、深色）。
+- 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase），每個視窗的最外層用 `Ui.WindowBackground` 設、跟著深淺色換。沒設時深色模式是純黑。主視窗的側欄淺色 #F7F7F7、深色 #2B2B2B（跟內容區分得出來，同 Mac 的側欄）。
 - 介面字型用系統預設（Segoe UI Variable、微軟正黑體）。會議標題的明體：Mac 用宋體，Windows 用新細明體（沒有時退回微軟正黑體粗體），W2 截圖比較後定。
 - 會議內容依會議語言設定 `Language`（ja-JP 時日文字形，對應 D20）。
 - 匯出（PDF、docx）的字型：中文 Microsoft JhengHei／PMingLiU、日文 Yu Gothic／Yu Mincho、英文 Segoe UI／Georgia（Mac 是 New York）。

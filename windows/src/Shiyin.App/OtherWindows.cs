@@ -73,7 +73,7 @@ public static class OtherWindows
         var buttons = Ui.Bar(back, null, Ui.Row(8, skip, next, start));
         Grid.SetRow(buttons, 3);
         root.Children.Add(buttons);
-        window.Content = root;
+        window.Content = Ui.WindowBackground(root);
         host.Models.Changed += _ => host.Post(() => { if (step == 2) Render(); });
         Render();
         return window;
@@ -244,9 +244,7 @@ public static class OtherWindows
             L.F("%@：%@", L.T("空白鍵"), L.T("播放或暫停")),
             L.F("%@：%@", "Ctrl+1～Ctrl+6", L.T("切換摘要、詳細、逐字稿、待確認、筆記、提問")),  // l10n-skip
             L.F("%@：%@", "Ctrl+F", L.T("搜尋逐字稿（在「逐字稿」）"))));
-        column.MaxWidth = 680;
-        column.HorizontalAlignment = HorizontalAlignment.Left;
-        window.Content = Ui.Scroll(column, 36);
+        window.Content = Ui.WindowBackground(Ui.Scroll(new ReadingColumn(column, 680), 36));
         return window;
     }
 
@@ -276,7 +274,7 @@ public static class OtherWindows
         var bar = Ui.Bar(copied, null, buttons);
         Grid.SetRow(bar, 3);
         grid.Children.Add(bar);
-        window.Content = grid;
+        window.Content = Ui.WindowBackground(grid);
         return window;
     }
 
@@ -308,7 +306,7 @@ public static class OtherWindows
             Ui.Button(L.T("關閉"), window.Close, accent: true));
         Grid.SetRow(buttons, 2);
         grid.Children.Add(buttons);
-        window.Content = grid;
+        window.Content = Ui.WindowBackground(grid);
         return window;
     }
 
@@ -377,7 +375,7 @@ public static class OtherWindows
         grid.Children.Add(scroll);
         Grid.SetRow(bar, 2);
         grid.Children.Add(bar);
-        window.Content = grid;
+        window.Content = Ui.WindowBackground(grid);
         Render();
         return window;
     }
@@ -412,7 +410,7 @@ public sealed class MeetingPromptWindow : Window
             buttons.Children.Add(Ui.Button(L.T("停止並轉錄"), () => Do(host.Recorder.Stop), accent: true));
         }
         buttons.HorizontalAlignment = HorizontalAlignment.Right;
-        Content = new Border { Padding = new Thickness(16), Child = Ui.Column(12, Ui.Text(message, 14), buttons) };
+        Content = Ui.WindowBackground(new Border { Padding = new Thickness(16), Child = Ui.Column(12, Ui.Text(message, 14), buttons) });
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsAlwaysOnTop = true;

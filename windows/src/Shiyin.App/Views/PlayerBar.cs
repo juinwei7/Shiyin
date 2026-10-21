@@ -33,7 +33,6 @@ public sealed class PlayerBar
         play.Click += (_, _) => host.Player.Toggle();
         current.Width = 52;
         current.TextAlignment = TextAlignment.Right;
-        total.Foreground = Ui.Secondary;
         var menu = new MenuFlyout();
         foreach (var rate in new[] { 0.75, 1, 1.25, 1.5, 2 })
             menu.Items.Add(Ui.Item(Label(rate), () => { host.Player.Rate = rate; speed.Content = Label(rate); }));
@@ -45,7 +44,6 @@ public sealed class PlayerBar
             Grid.SetColumn((FrameworkElement)items[i], i);
             root.Children.Add(items[i]);
         }
-        root.BorderBrush = Ui.Divider;
         root.BorderThickness = new Thickness(0, 1, 0, 0);
         timer.Tick += (_, _) => Ui.Guard(Update);
         host.Player.StateChanged += () => host.Post(Update);
@@ -56,6 +54,9 @@ public sealed class PlayerBar
     public FrameworkElement Show(MeetingDetail value)
     {
         detail = value;
+        // 主題的顏色每次顯示時重設：播放列只建一次，換深淺色時（主視窗會重畫）不重設的話還是舊主題的顏色，深色時總長看不見
+        total.Foreground = Ui.Secondary;
+        root.BorderBrush = Ui.Divider;
         timeline.Show(value.Segments, (value.Notes?.ReviewItems ?? []).Select(r => TimeFormat.Seconds(r.Time)).OfType<double>().ToList(),
             value.Bookmarks.Select(b => b.Time).ToList());
         speed.Content = Label(host.Player.Rate <= 0 ? 1 : host.Player.Rate);

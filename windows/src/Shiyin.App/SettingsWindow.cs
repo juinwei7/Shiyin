@@ -46,7 +46,7 @@ public sealed class SettingsWindow : Window
         root.Children.Add(bar);
         Grid.SetRow(page, 1);
         root.Children.Add(page);
-        Content = root;
+        Content = Ui.WindowBackground(root);
         host.Models.Changed += _ => host.Post(() => { if (current == "storage") Show(); });
         Show();
     }

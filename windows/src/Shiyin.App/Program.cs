@@ -134,7 +134,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         var window = new Window { Title = L.T("拾音沒辦法開啟資料庫") };
         var paths = ShiyinPaths.FromEnvironment();
         var text = Ui.Text(L.F("原因：%@\n\n你的資料沒有被改動。升級前的備份在：%@\n請把這個訊息截圖給維護拾音的人。", reason, paths.Backups), select: true);
-        window.Content = Ui.Scroll(Ui.Column(16, Ui.Text(L.T("拾音沒辦法開啟資料庫"), 20, bold: true), text, Ui.Button(L.T("結束拾音"), () => Exit(), accent: true)));
+        window.Content = Ui.WindowBackground(Ui.Scroll(Ui.Column(16, Ui.Text(L.T("拾音沒辦法開啟資料庫"), 20, bold: true), text, Ui.Button(L.T("結束拾音"), () => Exit(), accent: true))));
         window.Activate();
     }
 

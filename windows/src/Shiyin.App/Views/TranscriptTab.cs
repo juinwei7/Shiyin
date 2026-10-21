@@ -293,12 +293,15 @@ public sealed class TranscriptTab
         }
         var time = (FrameworkElement)Ui.Time(TimeFormat.String(segment.Start), host.Player.IsLoaded ? s => host.Player.Seek(s) : null);
         time.HorizontalAlignment = HorizontalAlignment.Right;
+        // 時間、說話者對齊第一行（同 Mac 的 firstTextBaseline）：預設是上下置中，長的段落、有校正建議時會對不齊
+        time.VerticalAlignment = VerticalAlignment.Top;
         grid.Children.Add(time);
         if (segment.Speaker is int idx)
         {
             var speaker = new HyperlinkButton
             {
                 Content = Ui.Text(d.SpeakerName(idx) ?? "", 13, bold: true, color: Ui.Speaker(idx), wrap: false), Padding = new Thickness(0),
+                VerticalAlignment = VerticalAlignment.Top,
             };
             ToolTipService.SetToolTip(speaker, L.T("點一下幫這位說話者改名"));
             speaker.Click += (_, _) => RenameFlyout(speaker, idx).ShowAt(speaker);

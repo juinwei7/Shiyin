@@ -56,6 +56,33 @@ public static class Ui
     public static Color CeladonColor => Hex(0x2D6A5D);
 
     /// <summary>
+    /// 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase）。WinUI 的視窗沒設底色時深色模式是純黑
+    ///（2026-10-21 朋友的電腦上看到）。每個視窗的最外層都要設，跟著深淺色換
+    /// </summary>
+    public static T WindowBackground<T>(T root) where T : FrameworkElement => Surface(root, 0xFFFFFF, 0x202020);
+
+    /// <summary>主視窗的側欄：淺色 #F7F7F7、深色 #2B2B2B，跟內容區分得出來（同 Mac 的側欄）</summary>
+    public static T SidebarBackground<T>(T root) where T : FrameworkElement => Surface(root, 0xF7F7F7, 0x2B2B2B);
+
+    /// <summary>不透明的底色，跟著元件的深淺色換（建好之後不會重建的元件用）</summary>
+    static T Surface<T>(T root, uint light, uint darkColor) where T : FrameworkElement
+    {
+        void Apply()
+        {
+            var brush = new SolidColorBrush(root.ActualTheme == ElementTheme.Dark ? Hex(darkColor) : Hex(light));
+            switch (root)
+            {
+                case Panel p: p.Background = brush; break;
+                case Border b: b.Background = brush; break;
+                case Control c: c.Background = brush; break;
+            }
+        }
+        Apply();
+        root.ActualThemeChanged += (_, _) => Apply();
+        return root;
+    }
+
+    /// <summary>
     /// 計時器、UI 執行緒回呼裡的例外：WinUI 不會走 UnhandledException，直接結束程式（CoreMessagingXP 0xc000027b）。
     /// 接住、寫進 log（同 AppHost.Post）
     /// </summary>
@@ -175,6 +202,23 @@ public static class Ui
         return g;
     }
 
+    /// <summary>
+    /// 文字後面接著時間點（同 Mac 的 HStack）：短的時候時間緊接在文字後面，長的時候文字換行、時間在欄位的右邊。
+    /// 不能用兩個比例欄（Split 的左欄給 Star）：兩欄會各分一半
+    /// </summary>
+    public static FrameworkElement Inline(FrameworkElement text, UIElement? time, double spacing = 8)
+    {
+        if (time is not FrameworkElement t) return text;
+        t.VerticalAlignment = VerticalAlignment.Top;   // 對齊第一行；時間是按鈕時預設上下置中，換行的條目會跑到中間
+        var g = new Grid { ColumnSpacing = spacing, HorizontalAlignment = HorizontalAlignment.Left };
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(t, 1);
+        g.Children.Add(text);
+        g.Children.Add(t);
+        return g;
+    }
+
     /// <summary>左、中（拿剩下的）、右。左欄的寬度跟著內容、不會換行：會換行的長文字放中間</summary>
     public static Grid Bar(FrameworkElement? left, FrameworkElement? middle, FrameworkElement? right, double spacing = 8)
     {
@@ -254,5 +298,41 @@ public static class Ui
         t.Toggled += (_, _) => changed(t.IsOn);
         if (description is not null) ToolTipService.SetToolTip(t, description);
         return t;
+    }
+}
+
+/// <summary>
+/// 閱讀的欄位（同 Mac 的 ReadingColumn）：填滿可用的寬度、最寬 maxWidth，靠左。不能用 StackPanel 設 MaxWidth 加靠左：
+/// 靠左時寬度是內容要的寬度，會換行的文字算出來很窄，摘要整欄擠成一半（2026-10-21 朋友的電腦上看到）
+/// </summary>
+public sealed partial class ReadingColumn : Panel
+{
+    readonly double maxWidth;
+
+    public ReadingColumn(UIElement child, double maxWidth)
+    {
+        this.maxWidth = maxWidth;
+        Children.Add(child);
+    }
+
+    double ColumnWidth(double available) => double.IsInfinity(available) ? maxWidth : Math.Min(available, maxWidth);
+
+    protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size available)
+    {
+        var width = ColumnWidth(available.Width);
+        double height = 0;
+        foreach (var child in Children)
+        {
+            child.Measure(new Windows.Foundation.Size(width, available.Height));
+            height = Math.Max(height, child.DesiredSize.Height);
+        }
+        return new Windows.Foundation.Size(width, height);
+    }
+
+    protected override Windows.Foundation.Size ArrangeOverride(Windows.Foundation.Size final)
+    {
+        var width = ColumnWidth(final.Width);
+        foreach (var child in Children) child.Arrange(new Windows.Foundation.Rect(0, 0, width, final.Height));
+        return final;
     }
 }
