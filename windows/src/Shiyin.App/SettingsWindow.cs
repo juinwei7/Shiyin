@@ -27,7 +27,7 @@ public sealed class SettingsWindow : Window
     {
         this.host = host;
         Title = L.T("設定");
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(760, 640));
+        WindowPlacement.Center(this, 760, 640);
         (string Id, string Label)[] pages =
         [
             ("provider", L.T("整理工具")), ("templates", MeetingLanguages.Ui("範本", "Templates")), ("glossary", L.T("詞彙表")),

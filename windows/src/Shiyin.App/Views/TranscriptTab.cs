@@ -37,6 +37,9 @@ public sealed class TranscriptTab
     bool showGroups;
     bool updating;
 
+    static readonly Lazy<DataTemplate> RowTemplate = new(() => (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
+        "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ContentControl HorizontalContentAlignment=\"Stretch\" HorizontalAlignment=\"Stretch\"/></DataTemplate>"));
+
     public TranscriptTab(AppHost host, MainWindow window)
     {
         this.host = host;
@@ -51,10 +54,13 @@ public sealed class TranscriptTab
         Grid.SetRow(list, 2);
         root.Children.Add(list);
         list.Padding = new Thickness(10, 4, 10, 14);
+        // 每一列放在範本根元素（ContentControl）裡：直接換掉 ListViewItem 的 Content 會被 WinUI 用預設的樣子蓋掉
+        //（只看到空白的列，2026-10-21 在虛擬機看到）；範本用 XamlReader 在執行時建，不用 XAML 編譯器（D59）
+        list.ItemTemplate = RowTemplate.Value;
         list.ContainerContentChanging += (_, e) =>
         {
-            if (e.InRecycleQueue) return;
-            e.ItemContainer.Content = Row((Segment)e.Item);
+            if (e.ItemContainer.ContentTemplateRoot is not ContentControl slot) return;
+            slot.Content = e.InRecycleQueue ? null : Row((Segment)e.Item);
             e.ItemContainer.HorizontalContentAlignment = HorizontalAlignment.Stretch;
             e.Handled = true;
         };
@@ -219,7 +225,7 @@ public sealed class TranscriptTab
     void RefreshRows()
     {
         for (var i = 0; i < list.Items.Count; i++)
-            if (list.ContainerFromIndex(i) is ListViewItem container && container.Content is not null) container.Content = Row(visible[i]);
+            if (list.ContainerFromIndex(i) is ListViewItem { ContentTemplateRoot: ContentControl { Content: not null } slot }) slot.Content = Row(visible[i]);
     }
 
     /// <summary>捲到這一段並暫時加底色；要跳到的段落被說話者篩選藏起來時，先取消篩選</summary>

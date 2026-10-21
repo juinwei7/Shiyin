@@ -41,8 +41,7 @@ public sealed class MainWindow : Window
         this.host = host;
         State = new MainState(host);
         Title = L.T("拾音");
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1180, 780));
-        if (File.Exists(Path.Combine(AppContext.BaseDirectory, "Assets", "Shiyin.ico"))) AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Shiyin.ico"));
+        WindowPlacement.Center(this, 1180, 780);
         detailView = new DetailView(host, this);
         Build();
         // 關掉主視窗只是藏起來（R13.3）

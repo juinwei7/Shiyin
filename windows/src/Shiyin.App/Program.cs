@@ -174,7 +174,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
 
     static void Bring(Window window, int width, int height)
     {
-        window.AppWindow.Resize(new Windows.Graphics.SizeInt32(width, height));
+        WindowPlacement.Center(window, width, height);
         window.Activate();
     }
 

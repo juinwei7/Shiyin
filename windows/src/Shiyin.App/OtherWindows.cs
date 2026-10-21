@@ -111,7 +111,9 @@ public static class OtherWindows
             var status = state switch
             {
                 ModelStore.State.Installed => Ui.Text(L.T("已下載"), 12, color: Ui.Celadon),
-                ModelStore.State.Downloading { Total: > 0 } d => (UIElement)new ProgressBar { Maximum = d.Total, Value = d.Received, Width = 200 },
+                ModelStore.State.Downloading { Total: > 0 } d => (UIElement)Ui.Column(2,
+                    new ProgressBar { Maximum = d.Total, Value = d.Received, Width = 240, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 6, 0, 0) },
+                    Ui.Caption(L.F("%@／%@", Services.Capture.Recorder.ByteCount(d.Received), Services.Capture.Recorder.ByteCount(d.Total)))),
                 ModelStore.State.Failed f => Ui.Text(f.Message, 12, color: Ui.Danger),
                 ModelStore.State.Verifying => Ui.Caption(L.T("正在驗證檔案…")),
                 _ => Ui.Caption(L.T("還沒下載")),
@@ -144,10 +146,12 @@ public static class OtherWindows
             (LLMProvider.None, L.T("不整理，只要逐字稿")),
         ];
         foreach (var (_, label) in options) group.Items.Add(label);
-        group.SelectedIndex = Array.FindIndex(options, o => o.Provider == current);
+        // RadioButtons 還沒載入前設 SelectedIndex 不會顯示（2026-10-21 在虛擬機看到），載入後再設
+        var index = Array.FindIndex(options, o => o.Provider == current);
+        group.Loaded += (_, _) => { if (group.SelectedIndex != index) group.SelectedIndex = index; };
         group.SelectionChanged += (_, _) =>
         {
-            if (group.SelectedIndex < 0) return;
+            if (group.SelectedIndex < 0 || group.SelectedIndex == index) return;
             host.Settings.Set(AppSettings.ProviderKey, options[group.SelectedIndex].Provider.Code());
             render();
         };
@@ -422,7 +426,9 @@ public sealed class MeetingPromptWindow : Window
     public void Show()
     {
         var area = DisplayArea.Primary.WorkArea;
-        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X + area.Width - 420, area.Y + area.Height - 180, 400, 160));
+        var scale = WindowPlacement.Scale(this);
+        int w = (int)(400 * scale), h = (int)(160 * scale), margin = (int)(20 * scale);
+        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X + area.Width - w - margin, area.Y + area.Height - h - margin, w, h));
         AppWindow.Show(activateWindow: false);
         timer.Start();
     }

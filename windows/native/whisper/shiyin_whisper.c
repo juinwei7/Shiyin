@@ -1,6 +1,41 @@
 #include "shiyin_whisper.h"
 #include "whisper.h"
+#include "ggml-backend.h"
 #include <string.h>
+
+#if defined(_WIN32)
+#include <windows.h>
+
+// Windows 的 ggml 後端（ggml-cpu-*、ggml-vulkan）是執行時才載入的 DLL（GGML_BACKEND_DL），whisper 本身不會載入，
+// 沒有後端時 whisper_init 會在 GGML_ASSERT(device) 結束程式（whisper-cli 是在 main 開頭自己呼叫 ggml_backend_load_all）。
+// 第一次用到時，從這個 DLL 所在的資料夾載入（路徑用 UTF-8，使用者名稱是中文也可以）
+static BOOL CALLBACK load_backends(PINIT_ONCE once, void * param, void ** context) {
+    (void)once; (void)param; (void)context;
+    if (ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU) != NULL) return TRUE;
+    HMODULE self = NULL;
+    wchar_t path[4096];
+    DWORD n = 0;
+    if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)(void *)&load_backends, &self))
+        n = GetModuleFileNameW(self, path, (DWORD)(sizeof(path) / sizeof(path[0])));
+    while (n > 0 && path[n - 1] != L'\\' && path[n - 1] != L'/') n--;
+    char dir[4096 * 3];
+    if (n > 1 && WideCharToMultiByte(CP_UTF8, 0, path, (int)(n - 1), dir, (int)sizeof(dir) - 1, NULL, NULL) > 0) {
+        dir[WideCharToMultiByte(CP_UTF8, 0, path, (int)(n - 1), NULL, 0, NULL, NULL)] = 0;
+        ggml_backend_load_all_from_path(dir);
+    } else {
+        ggml_backend_load_all();
+    }
+    return TRUE;
+}
+
+static void ensure_backends(void) {
+    static INIT_ONCE once = INIT_ONCE_STATIC_INIT;
+    InitOnceExecuteOnce(&once, load_backends, NULL, NULL);
+}
+#else
+// Mac：whisper、ggml 靜態連結，後端（CPU、Metal）一開始就註冊好了
+static void ensure_backends(void) {}
+#endif
 
 int32_t shiyin_version(void) { return 1; }
 
@@ -9,6 +44,7 @@ static void quiet(enum ggml_log_level level, const char * text, void * user) { (
 void shiyin_silence_logs(void) { whisper_log_set(quiet, NULL); }
 
 int32_t shiyin_system_info(char * buffer, int32_t size) {
+    ensure_backends();
     const char * info = whisper_print_system_info();
     int32_t n = (int32_t)strlen(info);
     if (buffer && size > 0) {
@@ -20,6 +56,7 @@ int32_t shiyin_system_info(char * buffer, int32_t size) {
 }
 
 void * shiyin_init(const char * model_path, int32_t use_gpu, int32_t flash_attn) {
+    ensure_backends();
     struct whisper_context_params params = whisper_context_default_params();
     params.use_gpu = use_gpu != 0;
     params.flash_attn = flash_attn != 0;

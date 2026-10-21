@@ -38,12 +38,17 @@ public sealed class Notifier
         }
     }
 
+    /// <summary>
+    /// 通知有沒有被關掉。用登錄的 AppUserModelID 時讀 ToastNotifier.Setting 會丟出例外（2026-10-21 在虛擬機看到），
+    /// 改看 Windows 存使用者設定的登錄：全部的通知關掉、或只關掉拾音
+    /// </summary>
     public bool Enabled
     {
         get
         {
-            try { return notifier?.Setting == NotificationSetting.Enabled; }
-            catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { return false; }
+            if (notifier is null) return false;
+            try { return notifier.Setting == NotificationSetting.Enabled; }
+            catch (Exception e) when (e is System.Runtime.InteropServices.COMException or ArgumentException) { return ToastRegistration.EnabledInSettings(); }
         }
     }
 

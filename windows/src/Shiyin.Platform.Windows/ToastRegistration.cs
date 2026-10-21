@@ -39,6 +39,20 @@ public static class ToastRegistration
         }
     }
 
+    /// <summary>使用者在「設定 → 系統 → 通知」的選擇：全部的通知、或拾音的通知被關掉時是 false</summary>
+    public static bool EnabledInSettings()
+    {
+        try
+        {
+            using (var all = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications"))
+                if (all?.GetValue("ToastEnabled") is int on && on == 0) return false;
+            using (var app = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\" + AppId))
+                if (app?.GetValue("Enabled") is int on && on == 0) return false;
+            return true;
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException or IOException or System.Security.SecurityException) { return true; }
+    }
+
     /// <summary>解除安裝時（Velopack 的 hook）</summary>
     public static void Unregister()
     {

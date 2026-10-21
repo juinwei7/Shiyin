@@ -282,7 +282,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 內容：完成、失敗、偵測會議（按鈕「開始錄音」「不要再提醒這個 app」；「停止並轉錄」「繼續錄」）。點通知、按按鈕都是 `shiyin:` 網址（`HKCU\Software\Classes\shiyin`，`URL Protocol`），Windows 會用網址當參數開拾音，第二個拾音把參數轉給已經開著的那個（§12.1）後結束；拾音沒開時就直接開起來處理。
   - `shiyin:open?meeting=<id>`：打開那場會議。
   - `shiyin:prompt?action=start|mute|stop|continue&app=<id>&token=<權杖>`：權杖是每次啟動隨機產生、只放記憶體，對不上時（網頁裡的連結、上次啟動留下的舊通知）只打開主視窗，不開始錄音、不停止錄音。
-- 用 `ToastNotifier.Setting` 看通知有沒有被關掉，關掉時偵測會議改用 §11.1 的小視窗（同 Mac 的退路）。
+- 看通知有沒有被關掉：用登錄的 AppUserModelID 時 `ToastNotifier.Setting` 會丟出例外，改看 Windows 存使用者設定的登錄（`PushNotifications` 的 `ToastEnabled`、`Notifications\Settings\Weiwei.Shiyin` 的 `Enabled`）。關掉時偵測會議改用 §11.1 的小視窗（同 Mac 的退路）。
 - 解除安裝時（Velopack 的 hook）刪掉 AppUserModelID、`shiyin:` 的登錄，清掉通知中心裡拾音的通知。
 - exe 的路徑要固定：Velopack 的 `current\` 資料夾每次更新都是同一個路徑。
 

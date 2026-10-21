@@ -1,0 +1,39 @@
+using System.Runtime.InteropServices;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+
+namespace Shiyin.App;
+
+/// <summary>
+/// 視窗的位置和大小（design-windows §11.1）：大小用邏輯像素（同 Mac 的 pt），依這個螢幕的縮放換算成實際像素；
+/// 比工作區（扣掉工作列）大時縮到放得下，放在工作區中間。1366×768 的筆電扣掉工作列只有約 720 高
+/// </summary>
+public static partial class WindowPlacement
+{
+    public static void Center(Window window, int width, int height)
+    {
+        SetIcon(window);
+        var area = DisplayArea.GetFromWindowId(window.AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        var scale = Scale(window);
+        var w = Math.Min((int)Math.Round(width * scale), area.Width - 16);
+        var h = Math.Min((int)Math.Round(height * scale), area.Height - 16);
+        window.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X + (area.Width - w) / 2, area.Y + (area.Height - h) / 2, w, h));
+    }
+
+    /// <summary>標題列、工作列用拾音的圖示（沒設時是空白的預設圖示）</summary>
+    public static void SetIcon(Window window)
+    {
+        var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Shiyin.ico");
+        if (File.Exists(icon)) window.AppWindow.SetIcon(icon);
+    }
+
+    /// <summary>這個視窗所在螢幕的縮放（100% 是 1）</summary>
+    public static double Scale(Window window)
+    {
+        var dpi = GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(window));
+        return dpi > 0 ? dpi / 96.0 : 1;
+    }
+
+    [LibraryImport("user32.dll")]
+    private static partial uint GetDpiForWindow(IntPtr hwnd);
+}

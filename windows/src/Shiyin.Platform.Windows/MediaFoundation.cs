@@ -127,7 +127,7 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
     public Task Compress(string wavPath, string m4aPath, CancellationToken cancel) => Task.Run(() =>
     {
         using var reader = new WaveFileReader(wavPath);
-        using var resampled = new MediaFoundationResampler(reader, new WaveFormat(48000, 16, reader.WaveFormat.Channels)) { ResamplerQuality = 60 };
+        using var resampled = new MediaFoundationResampler(new StandardFormat(reader), new WaveFormat(48000, 16, reader.WaveFormat.Channels)) { ResamplerQuality = 60 };
         var temp = m4aPath + ".tmp.mp4";
         try
         {
@@ -140,6 +140,22 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
             if (File.Exists(temp)) File.Delete(temp);
         }
     }, cancel);
+
+    /// <summary>
+    /// WAVE_FORMAT_EXTENSIBLE（很多錄音軟體、afconvert 寫的 WAV）換成一般的 PCM／浮點格式，資料本身不變：
+    /// MediaFoundationResampler 只認 PCM 和 IEEE float 的格式標記（2026-10-21 在虛擬機匯入這種 WAV，壓縮失敗）
+    /// </summary>
+    sealed class StandardFormat(IWaveProvider inner) : IWaveProvider
+    {
+        public WaveFormat WaveFormat { get; } = Standard(inner.WaveFormat);
+        public int Read(Span<byte> buffer) => inner.Read(buffer);
+
+        // NAudio 讀出來的不一定是 WaveFormatExtensible 型別（格式標記是 Extensible 的一般 WaveFormat）：32 位元當成浮點（同解碼的判斷）
+        static WaveFormat Standard(WaveFormat f) => f.Encoding != WaveFormatEncoding.Extensible ? f
+            : f is WaveFormatExtensible extensible ? extensible.ToStandardWaveFormat()
+            : f.BitsPerSample == 32 ? WaveFormat.CreateIeeeFloatWaveFormat(f.SampleRate, f.Channels)
+            : new WaveFormat(f.SampleRate, f.BitsPerSample, f.Channels);
+    }
 
     /// <summary>取消時讓編碼器讀到檔案結尾</summary>
     sealed class Cancellable(IWaveProvider inner, CancellationToken cancel) : IWaveProvider
