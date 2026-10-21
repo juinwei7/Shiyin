@@ -337,7 +337,7 @@ public sealed class ReviewTab
     {
         this.host = host;
         this.window = window;
-        save.Tick += (_, _) => { save.Stop(); SaveDrafts(); };
+        save.Tick += (_, _) => { save.Stop(); Ui.Guard(SaveDrafts); };
     }
 
     List<MeetingNotes.ReviewItem> Items => detail?.Notes?.ReviewItems ?? [];

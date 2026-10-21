@@ -40,7 +40,7 @@ public sealed class MainState
         coalesce = DispatcherQueue.GetForCurrentThread().CreateTimer();
         coalesce.Interval = TimeSpan.FromMilliseconds(150);
         coalesce.IsRepeating = false;
-        coalesce.Tick += (_, _) => Flush();
+        coalesce.Tick += (_, _) => Ui.Guard(Flush);
         host.Controller.Changed += id => host.Post(() => MarkDirty(id));
         host.Models.Changed += _ => host.Post(() => MarkDirty(null));
         // 錄音中的狀態（計時、即時文字、音量提示）變得很頻繁：只通知錄音的畫面，不重讀資料庫（M§25）

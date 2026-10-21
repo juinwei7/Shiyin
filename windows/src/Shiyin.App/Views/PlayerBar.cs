@@ -47,7 +47,7 @@ public sealed class PlayerBar
         }
         root.BorderBrush = Ui.Divider;
         root.BorderThickness = new Thickness(0, 1, 0, 0);
-        timer.Tick += (_, _) => Update();
+        timer.Tick += (_, _) => Ui.Guard(Update);
         host.Player.StateChanged += () => host.Post(Update);
     }
 
@@ -70,6 +70,7 @@ public sealed class PlayerBar
         var player = host.Player;
         var duration = Math.Max(player.Duration, detail.Meeting.DurationSeconds ?? 0);
         play.Content = new SymbolIcon(player.IsPlaying ? Symbol.Pause : Symbol.Play);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(play, player.IsPlaying ? L.T("暫停") : L.T("播放"));
         ToolTipService.SetToolTip(play, player.IsPlaying ? L.T("暫停（空白鍵）") : L.T("播放（空白鍵）"));
         current.Text = TimeFormat.String(player.CurrentTime);
         total.Text = TimeFormat.String(duration);

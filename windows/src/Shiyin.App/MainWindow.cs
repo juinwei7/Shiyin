@@ -54,13 +54,13 @@ public sealed class MainWindow : Window
         State.Changed += Refresh;
         State.RecorderChanged += () => { BuildToolbar(); detailView.UpdateRecording(); };
         // 工作進度不發事件：轉錄、整理中每秒更新一次列表的狀態和會議頁的進度
-        progressTimer.Tick += (_, _) =>
+        progressTimer.Tick += (_, _) => Ui.Guard(() =>
         {
             if (!host.Runner.IsBusy && !wasBusy) return;
             wasBusy = host.Runner.IsBusy;
             BuildList();
             detailView.UpdateStatus();
-        };
+        });
         progressTimer.Start();
         host.Notifier.Toast += ShowNotice;
         host.Controller.Notice += m => host.Post(() => ShowNotice(m));
@@ -187,6 +187,7 @@ public sealed class MainWindow : Window
         }
         var settings = host.Settings;
         var record = new SplitButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Microphone), Ui.Text(MeetingLanguages.Ui("錄音", "Record"), wrap: false)) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(record, MeetingLanguages.Ui("錄音", "Record"));
         ToolTipService.SetToolTip(record, L.F("開始錄音（Ctrl+R），用%@辨識；點右邊的箭頭可以改錄音來源和語言", settings.DefaultMeetingLanguage.UiName()));
         record.Click += (_, _) => host.Controller.StartRecording(State.CurrentFolder);
         var menu = new MenuFlyout();

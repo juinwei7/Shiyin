@@ -111,7 +111,15 @@ public sealed class AppHost
     }
 
     /// <summary>切回 UI 執行緒（服務的事件都在背景執行緒）</summary>
-    public void Post(Action action) => dispatcher.TryEnqueue(() => action());
+    /// <summary>
+    /// 丟到 UI 執行緒。DispatcherQueue 的回呼丟出例外時 WinUI 不會走 UnhandledException，直接結束程式（CoreMessagingXP 0xc000027b，
+    /// 2026-10-21 在虛擬機錄音時看到）：錄音中的 app 不能因為畫面更新的一個錯誤就消失，接住、寫進 log
+    /// </summary>
+    public void Post(Action action) => dispatcher.TryEnqueue(() =>
+    {
+        try { action(); }
+        catch (Exception e) { Log.Error($"ui callback failed: {e.GetType().Name} 0x{e.HResult:X8}"); }
+    });
 
     public void Start()
     {

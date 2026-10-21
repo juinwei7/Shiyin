@@ -443,6 +443,9 @@ public sealed class AppController
             catch (Exception e) when (e is IOException or WavRepair.RepairException or ImportException or Microsoft.Data.Sqlite.SqliteException)
             {
                 Log.Error($"recover recording failed: {e.GetType().Name}");
+                // 只有標頭、沒有聲音（錄音開始一兩秒內就當掉，資料還在緩衝區）：沒有東西可以復原，刪掉，空的會議在下面一起清掉。
+                // Mac 會一直留著、每次開啟都再失敗一次（design-windows §6）
+                try { if (new FileInfo(file).Length <= 44) File.Delete(file); } catch (IOException) { }
             }
         }
         // 錄音中途當掉、連錄音檔都沒有的空會議（M§20.6）；recording 裡還有錄音檔的會議是這次沒復原成功的，留著下次再試

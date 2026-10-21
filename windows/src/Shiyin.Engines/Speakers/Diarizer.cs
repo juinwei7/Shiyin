@@ -85,7 +85,7 @@ public sealed class Diarizer : IDisposable
         }
         var seconds = new Dictionary<int, double>();
         foreach (var t in numbered) seconds[t.Speaker] = seconds.GetValueOrDefault(t.Speaker) + Math.Max(0, t.End - t.Start);
-        var chunks = ChunkEmbeddings(numbered, raw, pieces);
+        var chunks = ChunkEmbeddings(numbered, raw, pieces, options.Clustering.SingleSpeaker);
         progress?.Invoke(1);
         return new Output([.. numbered], Voiceprints(numbered, pieces), seconds, SpeakerRules.Measure(chunks), chunks);
     }
@@ -184,21 +184,42 @@ public sealed class Diarizer : IDisposable
     }
 
     /// <summary>
-    /// 分不準的判斷用（M§24.5）：每 10 秒一窗，窗裡說了 1.5 秒以上的每位說話者，用那幾個小段的聲紋平均。
-    /// 窗裡的「本地說話者」是 sherpa-onnx 分得很細的編號：sherpa 分成兩個人、重新分群卻是同一人，就是碰撞
+    /// 分不準的判斷用（M§24.5）：每 10 秒一窗，窗裡說了 1.5 秒以上的每個聲音，用那幾個小段的聲紋平均。
+    /// 窗裡的「本地說話者」是 sherpa-onnx 分得很細的編號：sherpa 分成兩個人、重新分群卻是同一人，就是碰撞。
+    /// sherpa 固定切成 30 群，同一個人在同一窗裡常有好幾個編號：聲紋（不減平均）像到 sameSpeaker（SingleSpeaker 的門檻）以上的編號先當成同一個聲音，
+    /// 不然只有一個人說話的錄音碰撞率很高，會誤報「分不準」（2026-10-21）
     /// </summary>
     static List<SpeakerRules.ChunkEmbedding> ChunkEmbeddings(SpeakerRules.Turn[] turns, (double Start, double End, int Speaker)[] raw,
-                                                            List<SpeakerClustering.Piece> pieces)
+                                                            List<SpeakerClustering.Piece> pieces, double sameSpeaker)
     {
         const double window = 10;
         var chunks = new List<SpeakerRules.ChunkEmbedding>();
         foreach (var group in pieces.GroupBy(p => (int)(p.Start / window)).OrderBy(g => g.Key))
+        {
+            var voices = new List<(int Key, List<SpeakerClustering.Piece> Pieces, float[] Vector)>();
             foreach (var local in group.GroupBy(p => raw[p.Turn].Speaker).OrderBy(g => g.Key))
             {
                 if (local.Sum(p => p.Seconds) < 1.5) continue;
-                var speaker = turns[local.First().Turn].Speaker;
-                chunks.Add(new SpeakerRules.ChunkEmbedding($"S{speaker}", group.Key, local.Key, Average(local)));
+                var vector = Average(local);
+                var same = voices.FindIndex(v => Dot(v.Vector, vector) >= sameSpeaker);
+                if (same < 0) { voices.Add((local.Key, local.ToList(), vector)); continue; }
+                var merged = voices[same].Pieces.Concat(local).ToList();
+                voices[same] = (voices[same].Key, merged, Average(merged));
             }
+            foreach (var voice in voices)
+            {
+                // 這個聲音的小段最多被分到哪一位
+                var speaker = voice.Pieces.GroupBy(p => turns[p.Turn].Speaker).OrderByDescending(g => g.Sum(p => p.Seconds)).ThenBy(g => g.Key).First().Key;
+                chunks.Add(new SpeakerRules.ChunkEmbedding($"S{speaker}", group.Key, voice.Key, voice.Vector));
+            }
+        }
         return chunks;
+    }
+
+    static float Dot(float[] a, float[] b)
+    {
+        var s = 0f;
+        for (var i = 0; i < Math.Min(a.Length, b.Length); i++) s += a[i] * b[i];
+        return s;
     }
 }

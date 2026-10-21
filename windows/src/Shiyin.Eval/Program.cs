@@ -118,6 +118,8 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
             Threshold = options["threshold"]?.GetValue<double>() ?? 0.25,
             MinClusterSeconds = options["minClusterSeconds"]?.GetValue<double>() ?? 30,
             Center = options["center"]?.GetValue<bool>() ?? true,
+            SameSpeaker = options["sameSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SameSpeaker,
+            SingleSpeaker = options["singleSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SingleSpeaker,
         },
     };
     using var diarizer = new Diarizer(diarizerOptions);

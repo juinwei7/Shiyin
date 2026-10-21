@@ -51,13 +51,17 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
     {
         var cts = new CancellationTokenSource();
         cancel = cts;
-        _ = Task.Run(async () =>
+        // 專用的執行緒、照絕對時間排程（晚了就追上）：用執行緒池的 Task.Delay 時，轉錄把 CPU 吃滿會排不到，
+        // 停住 3 秒被看門狗當成裝置停了（2026-10-21 在 4 核的虛擬機看到）
+        var thread = new Thread(() =>
         {
             float[]? decoded;
             lock (gate) decoded = samples;
             decoded ??= decoder.Decode(path);
             lock (gate) samples = decoded;
             var chunk = 1600;   // 0.1 秒
+            var clock = Stopwatch.StartNew();
+            var sent = 0;
             while (!cts.IsCancellationRequested)
             {
                 int start;
@@ -80,9 +84,12 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
                 // 停住的聲道照樣往前走（時間在過），只是沒有送出資料，跟真的裝置停了一樣
                 if (!stalled.Contains(0)) OnSamples?.Invoke(piece);
                 if (!stalled.Contains(1)) Mirror?.OnSamples?.Invoke(piece);
-                try { await Task.Delay(TimeSpan.FromSeconds(0.1 / speed), cts.Token); } catch (OperationCanceledException) { return; }
+                sent += piece.Length;
+                var wait = sent / 16000.0 / speed - clock.Elapsed.TotalSeconds;
+                if (wait > 0 && cts.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(wait))) return;
             }
-        });
+        }) { IsBackground = true, Name = "file-source", Priority = ThreadPriority.AboveNormal };
+        thread.Start();
     }
 
     public void Stop()

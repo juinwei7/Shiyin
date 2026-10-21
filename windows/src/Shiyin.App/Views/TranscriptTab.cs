@@ -79,7 +79,7 @@ public sealed class TranscriptTab
             filter = speakerFilter.SelectedIndex <= 0 ? null : keys[speakerFilter.SelectedIndex - 1];
             Rebind();
         };
-        draftTimer.Tick += (_, _) => { draftTimer.Stop(); SaveDraft(); };
+        draftTimer.Tick += (_, _) => { draftTimer.Stop(); Ui.Guard(SaveDraft); };
         window.State.Changed += () => { };
     }
 
@@ -242,7 +242,7 @@ public sealed class TranscriptTab
         RefreshRows();
         ScrollTo(id);
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-        timer.Tick += (_, _) => { timer.Stop(); if (highlightId == id) { highlightId = null; RefreshRows(); } };
+        timer.Tick += (_, _) => { timer.Stop(); if (highlightId == id) { highlightId = null; Ui.Guard(RefreshRows); } };
         timer.Start();
     }
 

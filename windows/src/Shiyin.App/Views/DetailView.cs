@@ -345,6 +345,8 @@ public sealed class DetailView
         menu.Items.Add(window.FolderMenu(id, Detail.Meeting.Folder));
         menu.Items.Add(Ui.Item(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(id), icon: Symbol.Delete));
         var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.More), Ui.Text(L.T("更多"), wrap: false)), Flyout = menu };
+        // 內容是圖示加文字時，無障礙名稱不會自動帶出來（螢幕閱讀器、UI Automation 都讀不到）
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.T("更多"));
         ToolTipService.SetToolTip(button, L.T("更多動作"));
         return button;
     }
@@ -380,6 +382,9 @@ public sealed class RecordingPanel
     readonly Ellipse dot = new() { Width = 10, Height = 10 };
     readonly LevelMeter mic = new(), system = new();
     readonly StackPanel meters = new() { Orientation = Orientation.Horizontal, Spacing = 14 };
+    // 音量條各自一列，一開始就建好，之後只切換顯示：每次更新都重建 Row 的話，音量條還在舊的 Row 裡，
+    // 再放進新的 Row 會丟出「已經是別的元件的子元件」（0x800F1000，2026-10-21 在虛擬機錄音時當掉）
+    readonly StackPanel micRow, systemRow;
     readonly Button pause = new();
     readonly TextBlock warning = Ui.Text("", 12, maxLines: 2);
     readonly StackPanel hints = new();
@@ -398,6 +403,10 @@ public sealed class RecordingPanel
         this.host = host;
         this.window = window;
         notesBox = new UserNotesBox(host, userNotes, () => host.Recorder.Elapsed);
+        micRow = Ui.Row(4, new SymbolIcon(Symbol.Microphone), mic.Root);
+        systemRow = Ui.Row(4, new SymbolIcon(Symbol.Volume), system.Root);
+        meters.Children.Add(micRow);
+        meters.Children.Add(systemRow);
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star) })
             Root.RowDefinitions.Add(new RowDefinition { Height = h });
         pause.Click += (_, _) => { if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause(); };
@@ -470,9 +479,8 @@ public sealed class RecordingPanel
         clock.Foreground = Ui.Secondary;
         pause.Content = r.IsPaused ? L.T("繼續") : L.T("暫停");
         ToolTipService.SetToolTip(pause, r.IsPaused ? L.T("繼續錄音（Ctrl+Shift+P）") : L.T("暫停錄音（Ctrl+Shift+P）"));
-        meters.Children.Clear();
-        if (r.HasMic) meters.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Microphone), mic.Root));
-        if (r.HasSystem) meters.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Volume), system.Root));
+        micRow.Visibility = r.HasMic ? Visibility.Visible : Visibility.Collapsed;
+        systemRow.Visibility = r.HasSystem ? Visibility.Visible : Visibility.Collapsed;
         mic.Running = r.HasMic;
         system.Running = r.HasSystem;
         warning.Text = r.DeviceWarning
@@ -549,7 +557,7 @@ public sealed class LevelMeter
             Root.Children.Add(bars[i]);
         }
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(Root, L.T("音量"));
-        timer.Tick += (_, _) => Draw(Read());
+        timer.Tick += (_, _) => Ui.Guard(() => Draw(Read()));
     }
 
     void Draw(float level)

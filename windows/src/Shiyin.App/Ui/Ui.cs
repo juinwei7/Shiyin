@@ -55,6 +55,16 @@ public static class Ui
     public static Color CeladonColor => Hex(0x2D6A5D);
 
     /// <summary>
+    /// 計時器、UI 執行緒回呼裡的例外：WinUI 不會走 UnhandledException，直接結束程式（CoreMessagingXP 0xc000027b）。
+    /// 接住、寫進 log（同 AppHost.Post）
+    /// </summary>
+    public static void Guard(Action action)
+    {
+        try { action(); }
+        catch (Exception e) { Services.Log.Error($"ui callback failed: {e.GetType().Name} 0x{e.HResult:X8}"); }
+    }
+
+    /// <summary>
     /// 強調色換成拾音的青瓷色（同 Mac 的 AccentColor：淺色 #2D6A5D、深色 #6DB2A1）。WinUI 的強調色筆刷在淺色主題用 Dark1、
     /// 深色主題用 Light2，hover、按下用相鄰的，所以七個都要給；要在 XamlControlsResources 之前加進 app 的資源
     /// </summary>

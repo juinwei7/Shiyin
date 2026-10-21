@@ -6,8 +6,11 @@ namespace Shiyin.Tests;
 /// <summary>說話者分群（design-windows §9、D58）：用合成的聲紋測規則；真的錄音的結果用 Shiyin.Eval 在 AMI、AISHELL-4 上看</summary>
 public sealed class ClusteringTests
 {
-    /// <summary>每位說話者一個方向，加上整場共同的成分（同一個房間、麥克風）和雜訊</summary>
-    static (List<SpeakerRules.Turn> Turns, List<SpeakerClustering.Piece> Pieces, int[] Truth) Synthetic(int[] speakerOfTurn, double[] seconds, int seed = 1)
+    /// <summary>
+    /// 每位說話者一個方向，加上整場共同的成分（同一個房間、麥克風）和雜訊。共同成分的比例照真實的錄音：
+    /// 不同的人不減平均的相似度約 0.3（AMI、AISHELL-4 最高 0.47），減掉平均才分得開
+    /// </summary>
+    static (List<SpeakerRules.Turn> Turns, List<SpeakerClustering.Piece> Pieces, int[] Truth) Synthetic(int[] speakerOfTurn, double[] seconds, int seed = 1, float noise = 0.15f)
     {
         var random = new Random(seed);
         const int dim = 32;
@@ -23,7 +26,7 @@ public sealed class ClusteringTests
             for (var p = 0.0; p + 0.5 <= seconds[i]; p += 3)
             {
                 var d = Direction(s);
-                var v = Enumerable.Range(0, dim).Select(k => 3 * shared[k] + 0.6f * d[k] + 0.15f * (float)(random.NextDouble() - 0.5)).ToArray();
+                var v = Enumerable.Range(0, dim).Select(k => 0.12f * shared[k] + 0.6f * d[k] + noise * (float)(random.NextDouble() - 0.5)).ToArray();
                 pieces.Add(new SpeakerClustering.Piece(i, t + p, t + Math.Min(p + 3, seconds[i]), v));
             }
             t += seconds[i] + 0.5;
@@ -49,6 +52,16 @@ public sealed class ClusteringTests
         AssertMatches(truth, SpeakerClustering.Cluster(turns, pieces, new()));
         // 不減掉平均時整場都很像，會全部併成一人
         Assert.Equal(1, Groups(SpeakerClustering.Cluster(turns, pieces, new() { Center = false })));
+    }
+
+    /// <summary>只有一個人說話：減掉平均後剩下的是雜訊，會被拆成好幾群，最後要併回一位（2026-10-21 在虛擬機看到合成會議分出 6 人）</summary>
+    [Fact]
+    public void SingleSpeakerStaysOne()
+    {
+        var order = Enumerable.Repeat(0, 40).ToArray();
+        var (turns, pieces, _) = Synthetic(order, order.Select(_ => 6.0).ToArray(), noise: 0.6f);
+        Assert.True(Groups(SpeakerClustering.Cluster(turns, pieces, new() { SameSpeaker = 2, SingleSpeaker = 2 })) > 1);   // 不合併時會被拆開
+        Assert.Equal(1, Groups(SpeakerClustering.Cluster(turns, pieces, new())));
     }
 
     [Fact]

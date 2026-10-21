@@ -6,7 +6,9 @@ namespace Shiyin.Transcribe;
 /// 先減掉整場的平均聲紋（centering）再比 cosine，同一人、不同人才分得開。
 /// 1. 凝聚式分群：每次合併最像的兩群（群中心是依長度加權的和），最像的也低於門檻就停；有「至少 N 人」時合併到剩 N 群也停
 /// 2. 太小的群（說話總長不到 MinClusterSeconds）的小段各自併到最像的大群，但至少留 N 群
-/// 3. 每段取它小段裡長度最多的群
+/// 3. 看「不減平均」的群中心：只有一個人說話時，減掉平均後剩下的是雜訊，會被拆成好幾群。
+///    最像的兩群 ≥ SameSpeaker 就合併；剩下的每一對都 ≥ SingleSpeaker，就是只有一個人
+/// 4. 每段取它小段裡長度最多的群
 /// </summary>
 public static class SpeakerClustering
 {
@@ -24,6 +26,13 @@ public static class SpeakerClustering
         /// <summary>至少分出幾個人（M§23.2），null 自動</summary>
         public int? MinSpeakers { get; init; }
         public bool Center { get; init; } = true;
+        /// <summary>
+        /// 不減平均的群中心 cosine 在這以上，這兩群就是同一個人。分群後不同的人最高 0.58（AMI 陣列麥克風）、
+        /// 同一個人被拆開的群最低 0.63（design-windows §9，2026-10-21）
+        /// </summary>
+        public double SameSpeaker { get; init; } = 0.7;
+        /// <summary>剩下的群每一對都在這以上：只有一個人說話，全部合併</summary>
+        public double SingleSpeaker { get; init; } = 0.6;
     }
 
     /// <summary>
@@ -47,6 +56,7 @@ public static class SpeakerClustering
         var pieceLabels = Agglomerate(vectors, weights, options.Threshold, options.MinSpeakers ?? 1);
         var total = weights.Sum();
         AbsorbSmall(pieceLabels, vectors, weights, Math.Min(options.MinClusterSeconds, total * 0.05), options.MinSpeakers ?? 1);
+        if (options.Center) MergeSameSpeaker(pieceLabels, pieces.Select(p => Normalized(p.Embedding)).ToArray(), weights, options, options.MinSpeakers ?? 1);
 
         // 每段取它小段裡長度最多的群
         Array.Fill(labels, -1);
@@ -178,6 +188,44 @@ public static class SpeakerClustering
             return i;
         }
         return Enumerable.Range(0, n).Select(Root).ToArray();
+    }
+
+    /// <summary>
+    /// 不減平均的群中心（依長度加權）：最像的兩群在 SameSpeaker 以上就合併，重複到沒有為止；
+    /// 剩下的每一對都在 SingleSpeaker 以上就全部合併。至少留 minClusters 群
+    /// </summary>
+    static void MergeSameSpeaker(int[] labels, float[][] raw, float[] weights, Options options, int minClusters)
+    {
+        var dim = raw[0].Length;
+        while (true)
+        {
+            var sums = new Dictionary<int, float[]>();
+            for (var i = 0; i < labels.Length; i++)
+            {
+                var s = sums.TryGetValue(labels[i], out var x) ? x : sums[labels[i]] = new float[dim];
+                for (var k = 0; k < dim; k++) s[k] += raw[i][k] * weights[i];
+            }
+            if (sums.Count <= Math.Max(minClusters, 1)) return;
+            var clusters = sums.Keys.Order().ToArray();
+            var centers = clusters.Select(c => Normalized(sums[c])).ToArray();
+            var (a, b, best) = (-1, -1, double.NegativeInfinity);
+            for (var i = 0; i < clusters.Length; i++)
+                for (var j = i + 1; j < clusters.Length; j++)
+                {
+                    var sim = Dot(centers[i], centers[j]);
+                    if (sim > best) (a, b, best) = (i, j, sim);
+                }
+            if (best < options.SameSpeaker)
+            {
+                if (minClusters > 1) return;
+                var lowest = double.PositiveInfinity;
+                for (var i = 0; i < clusters.Length; i++)
+                    for (var j = i + 1; j < clusters.Length; j++) lowest = Math.Min(lowest, Dot(centers[i], centers[j]));
+                if (lowest >= options.SingleSpeaker) Array.Fill(labels, clusters[0]);
+                return;
+            }
+            for (var i = 0; i < labels.Length; i++) if (labels[i] == clusters[b]) labels[i] = clusters[a];
+        }
     }
 
     /// <summary>說話總長不到 minSeconds 的群併到最像的大群，至少留 minClusters 群（留最大的）</summary>
