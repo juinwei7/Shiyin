@@ -64,3 +64,15 @@ jobs:
           # 專案不存在就建立；已經存在時這行會失敗，忽略
           npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main >/dev/null 2>&1 || true
           npx --yes wrangler@4 pages deploy site/dist --project-name="$PAGES_PROJECT" --branch=main --commit-dirty=true
+
+      # 內容有變才通知搜尋引擎（docs/website.md §14.1）：每天的自動重建只有 GitHub 數字變，不送
+      - name: 通知搜尋引擎（IndexNow）
+        if: github.event_name != 'schedule'
+        env:
+          SITE_URL: ${{ vars.SHIYIN_SITE_URL }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "沒有部署，不通知"
+            exit 0
+          fi
+          node site/indexnow.mjs

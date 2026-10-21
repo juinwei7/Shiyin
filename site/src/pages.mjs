@@ -2,6 +2,7 @@
 
 import { content, LANGS, GITHUB, KOFI } from './content.mjs';
 import { demoSection } from './demo-markup.mjs';
+import { homeSchema, pageSchema } from './seo.mjs';
 
 export const ROUTES = {
   home: (lang) => `${content[lang].prefix}/`,
@@ -230,7 +231,7 @@ ${c.faq.items.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></deta
   return layout({
     lang, site, css: css + demo.css, route: 'home', title: c.meta.title, description: c.meta.description, body,
     // 沒有 JavaScript 時藏起示範，改顯示 <noscript> 裡的截圖
-    head: '<noscript><style>.demo { display: none; }</style></noscript>\n',
+    head: '<noscript><style>.demo { display: none; }</style></noscript>\n' + homeSchema({ lang, site, latest }),
     scripts: `<script src="${demo.script}"></script>\n`,
   });
 }
@@ -256,7 +257,10 @@ export function changelogPage({ lang, site, css, releases }) {
 <p class="follow">${c.changelog.follow}</p>
 ${articles.join('\n')}
 </div>`;
-  return layout({ lang, site, css, route: 'changelog', title: c.meta.changelogTitle, description: c.meta.changelogDescription, body });
+  const title = c.meta.changelogTitle;
+  const description = c.meta.changelogDescription;
+  const head = pageSchema({ lang, site, route: 'changelog', title, description, modified: releases[0].date });
+  return layout({ lang, site, css, route: 'changelog', title, description, body, head });
 }
 
 export function notFoundPage({ lang, site, css }) {

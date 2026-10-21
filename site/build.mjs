@@ -14,6 +14,7 @@ import { parseArgs } from 'node:util';
 import { loadReleases, loadStars } from './src/releases.mjs';
 import { ROUTES, homePage, changelogPage, notFoundPage } from './src/pages.mjs';
 import { content, LANGS } from './src/content.mjs';
+import { llmsTxt, INDEXNOW_KEY } from './src/seo.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
@@ -58,7 +59,9 @@ try {
   const dmg = releases[0].dmg.url;
   await write('/_redirects', LANGS.map((lang) => `${content[lang].prefix}/download ${dmg} 302\n`).join(''));
   await write('/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
-  await write('/sitemap.xml', sitemap());
+  await write('/sitemap.xml', sitemap(releases[0].date));
+  await write('/llms.txt', llmsTxt({ site, latest: releases[0] }));
+  await write(`/${INDEXNOW_KEY}.txt`, INDEXNOW_KEY);
 
   console.log(`網站已產生：${path.relative(process.cwd(), out) || '.'}`);
   console.log(`網址 ${site}，共 ${releases.length} 個版本，最新 ${releases[0].version}（${releases[0].dmg.name}）`);
@@ -88,10 +91,14 @@ async function checkImages() {
   }
 }
 
-function sitemap() {
+// lastmod：首頁和版本說明都跟著最新版變（docs/website.md §14.1）
+function sitemap(updated) {
+  const lastmod = updated.slice(0, 10);
   const urls = ['home', 'changelog'].flatMap((route) => LANGS.map((lang) => `  <url>
     <loc>${site}${ROUTES[route](lang)}</loc>
+    <lastmod>${lastmod}</lastmod>
 ${LANGS.map((l) => `    <xhtml:link rel="alternate" hreflang="${content[l].lang}" href="${site}${ROUTES[route](l)}"/>`).join('\n')}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${site}${ROUTES[route]('zh')}"/>
   </url>`));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">

@@ -22,6 +22,11 @@ export const content = {
       changelogDescription: '拾音每一版改了什麼，最新的在最上面。',
       notFoundTitle: '找不到這個頁面｜拾音 Shiyin',
     },
+    seo: {
+      appName: '拾音 Shiyin',
+      category: '會議記錄、逐字稿',
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
+    },
     nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站' },
     intro: {
       iconAlt: '拾音圖示',
@@ -133,6 +138,11 @@ export const content = {
       changelogTitle: 'Release notes | Shiyin',
       changelogDescription: 'What changed in each version of Shiyin, newest first.',
       notFoundTitle: 'Page not found | Shiyin',
+    },
+    seo: {
+      appName: 'Shiyin',
+      category: 'Meeting notes, transcription',
+      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese and Japanese meetings'],
     },
     nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site' },
     intro: {
@@ -246,6 +256,11 @@ export const content = {
       changelogTitle: 'リリースノート｜拾音 Shiyin',
       changelogDescription: '拾音の各バージョンの変更点です。新しいものが上にあります。',
       notFoundTitle: 'ページが見つかりません｜拾音 Shiyin',
+    },
+    seo: {
+      appName: '拾音 Shiyin',
+      category: '會議記錄、逐字稿',
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
     },
     nav: { features: '機能', privacy: 'プライバシー', changelog: 'リリースノート', languages: '言語', label: 'サイト' },
     intro: {
