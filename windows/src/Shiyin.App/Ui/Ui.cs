@@ -27,6 +27,7 @@ public static class Ui
     public static SolidColorBrush Celadon => Brush(0x2D6A5D, 0x6DB2A1);
     public static SolidColorBrush Signal => Brush(0xB97F06, 0xE2AD3B);
     public static SolidColorBrush Danger => Brush(0xC0392B, 0xEE8E8E);
+    public static Brush Primary => Resource("TextFillColorPrimaryBrush", 0x1A, 0x1A, 0x1A, 0xFF, 0xFF, 0xFF);
     public static Brush Secondary => Resource("TextFillColorSecondaryBrush", 0x5F, 0x5F, 0x5F, 0xC5, 0xC5, 0xC5);
     public static Brush Tertiary => Resource("TextFillColorTertiaryBrush", 0x8A, 0x8A, 0x8A, 0x9A, 0x9A, 0x9A);
     public static Brush CardBackground => Resource("CardBackgroundFillColorDefaultBrush", 0xFB, 0xFB, 0xFB, 0x2B, 0x2B, 0x2B);
@@ -134,13 +135,17 @@ public static class Ui
             Text = text, FontSize = size, TextWrapping = wrap ? TextWrapping.Wrap : TextWrapping.NoWrap,
             TextTrimming = wrap ? TextTrimming.None : TextTrimming.CharacterEllipsis, IsTextSelectionEnabled = select,
         };
-        if (bold) t.FontWeight = FontWeights.SemiBold;
+        // 用 Bold 不用 SemiBold：SemiBold 的中文、日文會被 Windows 換成明體的假粗體（2026-10-22 虛擬機的介面巡檢看到）
+        if (bold) t.FontWeight = FontWeights.Bold;
         if (color is not null) t.Foreground = color;
         if (maxLines > 0) { t.MaxLines = maxLines; t.TextTrimming = TextTrimming.CharacterEllipsis; }
         return t;
     }
 
     public static TextBlock Caption(string text) => Text(text, 12, color: Secondary);
+
+    /// <summary>ContentDialog 的標題：內建的標題是 SemiBold，中文會變成明體，自己給一個 Bold 的</summary>
+    public static TextBlock DialogTitle(string text) => Text(text, 20, bold: true);
 
     public static TextBlock Heading(string text, MeetingLanguage language, double size = 18)
     {
@@ -162,6 +167,16 @@ public static class Ui
     public static Button IconButton(Symbol symbol, string tooltip, Action click)
     {
         var b = new Button { Content = new SymbolIcon(symbol), Padding = new Thickness(8, 6, 8, 6) };
+        ToolTipService.SetToolTip(b, tooltip);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, tooltip);
+        b.Click += (_, _) => click();
+        return b;
+    }
+
+    /// <summary>Segoe Fluent Icons 的圖示按鈕（Symbol 沒有的圖示，例如往下的箭頭 E74B）</summary>
+    public static Button GlyphButton(string glyph, string tooltip, Action click)
+    {
+        var b = new Button { Content = new FontIcon { Glyph = glyph, FontSize = 16 }, Padding = new Thickness(8, 6, 8, 6) };
         ToolTipService.SetToolTip(b, tooltip);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, tooltip);
         b.Click += (_, _) => click();
@@ -206,10 +221,10 @@ public static class Ui
     /// 文字後面接著時間點（同 Mac 的 HStack）：短的時候時間緊接在文字後面，長的時候文字換行、時間在欄位的右邊。
     /// 不能用兩個比例欄（Split 的左欄給 Star）：兩欄會各分一半
     /// </summary>
-    public static FrameworkElement Inline(FrameworkElement text, UIElement? time, double spacing = 8)
+    public static FrameworkElement Inline(FrameworkElement text, UIElement? time, double spacing = 8, VerticalAlignment trailing = VerticalAlignment.Top)
     {
         if (time is not FrameworkElement t) return text;
-        t.VerticalAlignment = VerticalAlignment.Top;   // 對齊第一行；時間是按鈕時預設上下置中，換行的條目會跑到中間
+        t.VerticalAlignment = trailing;   // 預設對齊第一行：時間是按鈕時預設上下置中，換行的條目會跑到中間
         var g = new Grid { ColumnSpacing = spacing, HorizontalAlignment = HorizontalAlignment.Left };
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -298,6 +313,52 @@ public static class Ui
         t.Toggled += (_, _) => changed(t.IsOn);
         if (description is not null) ToolTipService.SetToolTip(t, description);
         return t;
+    }
+}
+
+/// <summary>
+/// 橫排，放不下的元件整個不顯示（不會被切一半）：錄音列的兩個音量條，視窗窄時只留麥克風的（2026-10-22 介面巡檢）
+/// </summary>
+public sealed partial class FitRow : Panel
+{
+    public double Spacing { get; set; }
+
+    protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size available)
+    {
+        double width = 0, height = 0;
+        var first = true;
+        foreach (var child in Children)
+        {
+            child.Measure(new Windows.Foundation.Size(double.PositiveInfinity, available.Height));
+            if (child.Visibility == Visibility.Collapsed) continue;
+            var add = child.DesiredSize.Width + (first ? 0 : Spacing);
+            if (width + add > available.Width) break;
+            width += add;
+            height = Math.Max(height, child.DesiredSize.Height);
+            first = false;
+        }
+        return new Windows.Foundation.Size(width, height);
+    }
+
+    protected override Windows.Foundation.Size ArrangeOverride(Windows.Foundation.Size final)
+    {
+        double x = 0;
+        var first = true;
+        var full = false;
+        foreach (var child in Children)
+        {
+            var size = child.DesiredSize;
+            if (child.Visibility == Visibility.Collapsed) continue;
+            var add = size.Width + (first ? 0 : Spacing);
+            // 放不下的放到看不見的地方（下面的 Clip 切掉），不要壓成 0：內容還是會畫出來
+            if (full || x + add > final.Width) { full = true; child.Arrange(new Windows.Foundation.Rect(final.Width + 10_000, 0, size.Width, size.Height)); continue; }
+            x += first ? 0 : Spacing;
+            child.Arrange(new Windows.Foundation.Rect(x, (final.Height - size.Height) / 2, size.Width, size.Height));
+            x += size.Width;
+            first = false;
+        }
+        Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, final.Width, final.Height) };
+        return final;
     }
 }
 

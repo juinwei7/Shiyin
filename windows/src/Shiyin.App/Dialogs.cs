@@ -17,7 +17,7 @@ public static class Dialogs
 {
     static ContentDialog Dialog(MainWindow window, string title, UIElement content, string primary, string? close = null) => new()
     {
-        XamlRoot = window.XamlRoot, Title = title, Content = content, PrimaryButtonText = primary, CloseButtonText = close ?? L.T("取消"),
+        XamlRoot = window.XamlRoot, Title = Ui.DialogTitle(title), Content = content, PrimaryButtonText = primary, CloseButtonText = close ?? L.T("取消"),
         DefaultButton = ContentDialogButton.Primary,
     };
 
@@ -26,7 +26,7 @@ public static class Dialogs
         if (window.XamlRoot is null) return;
         var dialog = new ContentDialog
         {
-            XamlRoot = window.XamlRoot, Title = title, Content = Ui.Text(message, select: true), CloseButtonText = L.T("好"), DefaultButton = ContentDialogButton.Close,
+            XamlRoot = window.XamlRoot, Title = Ui.DialogTitle(title), Content = Ui.Text(message, select: true), CloseButtonText = L.T("好"), DefaultButton = ContentDialogButton.Close,
         };
         await Show(dialog);
     }

@@ -29,6 +29,7 @@ public sealed class SettingsWindow : Window
         this.host = host;
         Title = L.T("設定");
         WindowPlacement.Center(this, 760, 640);
+        WindowPlacement.MinimumSize(this, 600, 480);
         (string Id, string Label)[] pages =
         [
             ("provider", L.T("整理工具")), ("templates", MeetingLanguages.Ui("範本", "Templates")), ("glossary", L.T("詞彙表")),
@@ -58,15 +59,16 @@ public sealed class SettingsWindow : Window
         foreach (var item in bar.Items) if ((string)item.Tag == id) bar.SelectedItem = item;
     }
 
+    // 每一頁都用卡片分組（同 Mac 設定的 Form）；範本是左右兩欄，不加
     void Show() => page.Child = Ui.Scroll(current switch
     {
         "templates" => Templates(),
-        "glossary" => Glossary(),
-        "speakers" => Speakers(),
-        "recording" => Recording(),
+        "glossary" => Ui.Card(Glossary()),
+        "speakers" => Ui.Card(Speakers()),
+        "recording" => Ui.Card(Recording()),
         "storage" => Storage(),
         "advanced" => Advanced(),
-        _ => Provider(),
+        _ => Ui.Card(Provider()),
     }, 24);
 
     AppSettings S => host.Settings;
@@ -323,8 +325,8 @@ public sealed class SettingsWindow : Window
                 Id = template.Id, Name = name.Text.Length == 0 ? L.T("未命名範本") : name.Text, Builtin = false, Definition = updated.JsonString(),
             });
         }
+        // 說明放中間那欄（長的會換行），按鈕照內容寬放右邊：都放在橫的 StackPanel 裡時，英文的按鈕會被擠出視窗（2026-10-22 介面巡檢）
         var actions = Ui.Row(8);
-        if (template.Builtin) actions.Children.Add(Note(L.T("內建範本不能修改，可以按「複製」做一份自己的。")));
         var setDefault = Ui.Button(L.T("設為預設範本"), () => { S.Set(AppSettings.DefaultTemplateKey, template.Id); Show(); });
         setDefault.IsEnabled = S.DefaultTemplate != template.Id;
         actions.Children.Add(setDefault);
@@ -340,7 +342,9 @@ public sealed class SettingsWindow : Window
             }));
             actions.Children.Add(Ui.Button(L.T("儲存"), () => { Save(); Show(); }, accent: true));
         }
-        column.Children.Add(actions);
+        var note = template.Builtin ? Note(L.T("內建範本不能修改，可以按「複製」做一份自己的。")) : null;
+        if (note is not null) note.VerticalAlignment = VerticalAlignment.Center;
+        column.Children.Add(Ui.Bar(null, note, actions, 12));
         return column;
     }
 
@@ -393,7 +397,7 @@ public sealed class SettingsWindow : Window
         {
             var dialog = new ContentDialog
             {
-                XamlRoot = Content.XamlRoot, Title = L.T("刪除所有認識的人的聲音特徵？"), Content = L.T("已經帶入的名字會留著，之後的會議不會再自動帶入。"),
+                XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("刪除所有認識的人的聲音特徵？")), Content = L.T("已經帶入的名字會留著，之後的會議不會再自動帶入。"),
                 PrimaryButtonText = L.T("全部刪除"), CloseButtonText = L.T("取消"),
             };
             if (await dialog.ShowAsync() == ContentDialogResult.Primary) { host.Controller.DeleteAllPeople(); Show(); }
@@ -408,7 +412,7 @@ public sealed class SettingsWindow : Window
             rename.Click += async (_, _) =>
             {
                 var box = new TextBox { Text = person.Name };
-                var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = L.T("改名"), Content = box, PrimaryButtonText = L.T("儲存"), CloseButtonText = L.T("取消") };
+                var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("改名")), Content = box, PrimaryButtonText = L.T("儲存"), CloseButtonText = L.T("取消") };
                 if (await dialog.ShowAsync() == ContentDialogResult.Primary && box.Text.Trim().Length > 0) { host.Controller.RenamePerson(person.Id, box.Text.Trim()); Show(); }
             };
             column.Children.Add(Ui.Bar(null, Ui.Column(2, Ui.Text(person.Name, 14), Ui.Caption(detail)),
@@ -559,7 +563,7 @@ public sealed class SettingsWindow : Window
         {
             var dialog = new ContentDialog
             {
-                XamlRoot = Content.XamlRoot, Title = L.F("刪除「%@」？", name), Content = L.T("之後要用的時候需要重新下載。"),
+                XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("刪除「%@」？", name)), Content = L.T("之後要用的時候需要重新下載。"),
                 PrimaryButtonText = L.T("刪除"), CloseButtonText = L.T("取消"),
             };
             if (await dialog.ShowAsync() == ContentDialogResult.Primary) { host.Models.Delete(model); Show(); }

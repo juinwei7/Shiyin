@@ -18,12 +18,13 @@ public sealed class TranscriptTab
     readonly AppHost host;
     readonly MainWindow window;
     readonly Grid root = new();
-    readonly TextBox search = new() { PlaceholderText = L.T("搜尋逐字稿"), Width = 300 };
+    readonly TextBox search = new() { PlaceholderText = L.T("搜尋逐字稿"), MinWidth = 120 };
     readonly TextBlock matchLabel = Ui.Text("", 12, color: null, wrap: false);
     readonly ComboBox speakerFilter = new() { Width = 160 };
     readonly StackPanel bars = new();
     readonly ListView list = new() { SelectionMode = ListViewSelectionMode.None, IsItemClickEnabled = false };
-    readonly StackPanel searchRow = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
+    // 搜尋框最寬 300、視窗窄時跟著縮，後面的篩選和「用詞修正…」照內容寬，不會被擠出畫面（2026-10-22 介面巡檢，760 寬的視窗）
+    readonly Grid searchRow = new() { ColumnSpacing = 10 };
     readonly DispatcherTimer draftTimer = new() { Interval = TimeSpan.FromMilliseconds(800) };
     MeetingDetail? detail;
     List<Segment> visible = [];
@@ -109,11 +110,20 @@ public sealed class TranscriptTab
     MeetingLanguage Language => detail?.Meeting.MeetingLanguage ?? MeetingLanguage.Zh;
     bool Busy => window.State.DetailStatus?.IsActive == true;
 
+    void AddToSearchRow(FrameworkElement element, GridLength width, double maxWidth = double.PositiveInfinity)
+    {
+        searchRow.ColumnDefinitions.Add(new ColumnDefinition { Width = width, MaxWidth = maxWidth });
+        Grid.SetColumn(element, searchRow.ColumnDefinitions.Count - 1);
+        element.VerticalAlignment = VerticalAlignment.Center;
+        searchRow.Children.Add(element);
+    }
+
     void BuildSearchRow()
     {
         searchRow.Children.Clear();
-        searchRow.Children.Add(search);
-        searchRow.Children.Add(matchLabel);
+        searchRow.ColumnDefinitions.Clear();
+        AddToSearchRow(search, new GridLength(1, GridUnitType.Star), 300);
+        AddToSearchRow(matchLabel, GridLength.Auto);
         if (detail!.Speakers.Count > 0)
         {
             updating = true;
@@ -126,13 +136,13 @@ public sealed class TranscriptTab
             speakerFilter.SelectedIndex = filter is int s ? keys.IndexOf(s) + 1 : 0;
             ToolTipService.SetToolTip(speakerFilter, L.T("只看某一位說話者的內容"));
             updating = false;
-            searchRow.Children.Add(speakerFilter);
+            AddToSearchRow(speakerFilter, GridLength.Auto);
         }
         var replace = Ui.Button(L.T("用詞修正…"), () => _ = Dialogs.Replace(window, detail.Meeting.Id!.Value, search.Text),
             tooltip: L.T("把逐字稿和會議紀錄裡的同一個詞一起改掉"));
         // 轉錄或整理中不能改：工作完成時會整份寫回逐字稿或會議紀錄
         replace.IsEnabled = detail.Segments.Count > 0 && !Busy;
-        searchRow.Children.Add(replace);
+        AddToSearchRow(replace, GridLength.Auto);
     }
 
     void BuildBars()
@@ -341,7 +351,8 @@ public sealed class TranscriptTab
 
     static TextHighlighter Highlighter(int start, int length, Windows.UI.Color color)
     {
-        var h = new TextHighlighter { Background = new SolidColorBrush(color) };
+        // 字的顏色要給：預設是黑色，深色模式下標起來的字幾乎看不見（2026-10-22 介面巡檢）
+        var h = new TextHighlighter { Background = new SolidColorBrush(color), Foreground = Ui.Primary };
         h.Ranges.Add(new TextRange(start, length));
         return h;
     }

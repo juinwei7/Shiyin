@@ -186,7 +186,9 @@ public sealed class DetailView
         title.MaxLines = 2;
         var edit = Ui.Link(L.T("編輯"), () => _ = Dialogs.EditInfo(window, meeting));
         var more = IsTrashed || IsRecordingThis ? null : MoreMenu();
-        top.Children.Add(Ui.Bar(null, Ui.Row(12, title, edit), more));
+        // 標題長的時候換行（最多兩行），「編輯」接在後面：放在橫的 StackPanel 裡不會換行，視窗窄時「編輯」會被切掉
+        edit.Margin = new Thickness(0, 9, 0, 0);   // 對齊標題的第一行（26 號字的行高約 35）
+        top.Children.Add(Ui.Bar(null, Ui.Inline(title, edit, 12), more));
         top.Children.Add(InfoRow());
         if (IsTrashed) top.Children.Add(TrashBanner());
         else
@@ -264,9 +266,12 @@ public sealed class DetailView
         return wrap;
     }
 
+    /// <summary>狀態列：左邊的說明放中間那欄（長的會換行），跟右邊的按鈕上下置中</summary>
     Border Banner(UIElement left, UIElement? right, Brush background)
     {
-        var bar = right is FrameworkElement r ? Ui.Bar(left as FrameworkElement, null, r, 12) : (FrameworkElement)left;
+        if (left is FrameworkElement l) l.VerticalAlignment = VerticalAlignment.Center;
+        if (right is FrameworkElement rr) rr.VerticalAlignment = VerticalAlignment.Center;
+        var bar = right is FrameworkElement r ? Ui.Bar(null, left as FrameworkElement, r, 12) : (FrameworkElement)left;
         return new Border { Child = bar, Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8), Background = background };
     }
 
@@ -307,7 +312,7 @@ public sealed class DetailView
                     actions.Children.Add(Ui.Button(L.F("重新登入 %@", host.Settings.Provider.ShortLabel()), () => CliLogin.Open(host, host.Settings.Provider)));
                 actions.Children.Add(Ui.Button(L.T("重試"), () => host.Controller.Retry(id)));
                 var message = Ui.Text(f.Kind == JobKind.Transcribe ? L.F("轉錄失敗：%@", f.Error) : L.F("整理失敗：%@", f.Error), 13, maxLines: 3, select: true);
-                return Banner(Ui.Row(8, new SymbolIcon(Symbol.Important) { Foreground = Ui.Danger }, message), actions,
+                return Banner(Ui.Split(new SymbolIcon(Symbol.Important) { Foreground = Ui.Danger, VerticalAlignment = VerticalAlignment.Top }, message, 8), actions,
                     new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 0xC0, 0x39, 0x2B)));
             case MeetingStatus.Cancelled:
                 return Banner(Ui.Text(L.T("已取消轉錄"), 13), Ui.Button(L.T("重新轉錄"), () => host.Controller.Retry(id)), warm);
@@ -418,7 +423,7 @@ public sealed class RecordingPanel
     readonly TextBlock clock = Ui.Text("", 18, color: null, wrap: false);
     readonly Ellipse dot = new() { Width = 10, Height = 10 };
     readonly LevelMeter mic = new(), system = new();
-    readonly StackPanel meters = new() { Orientation = Orientation.Horizontal, Spacing = 14 };
+    readonly FitRow meters = new() { Spacing = 14 };
     // 音量條各自一列，一開始就建好，之後只切換顯示：每次更新都重建 Row 的話，音量條還在舊的 Row 裡，
     // 再放進新的 Row 會丟出「已經是別的元件的子元件」（0x800F1000，2026-10-21 在虛擬機錄音時當掉）
     readonly StackPanel micRow, systemRow;
@@ -427,6 +432,8 @@ public sealed class RecordingPanel
     readonly StackPanel hints = new();
     readonly StackPanel lines = new() { Spacing = 8, Padding = new Thickness(20) };
     readonly TextBlock volatileText = Ui.Text("", 14);
+    // 正在講的那句：「…」放在時間那欄，文字跟定稿的句子對齊（同 Mac）
+    readonly Grid volatileRow;
     readonly ScrollViewer scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     readonly Button latest = new() { Content = L.T("回到最新"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(12), Visibility = Visibility.Collapsed };
     readonly TextBox userNotes = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap };
@@ -440,6 +447,10 @@ public sealed class RecordingPanel
         this.host = host;
         this.window = window;
         notesBox = new UserNotesBox(host, userNotes, () => host.Recorder.Elapsed);
+        var mark = Ui.Text("…", 13, color: Ui.Secondary, wrap: false);
+        mark.Width = 52;
+        mark.TextAlignment = TextAlignment.Right;
+        volatileRow = Ui.Split(mark, volatileText, 12);
         micRow = Ui.Row(4, new SymbolIcon(Symbol.Microphone), mic.Root);
         systemRow = Ui.Row(4, new SymbolIcon(Symbol.Volume), system.Root);
         meters.Children.Add(micRow);
@@ -452,7 +463,10 @@ public sealed class RecordingPanel
             if (host.Controller.BookmarkRecording()) window.ShowNotice(L.F("已標記 %@ 為重點", TimeFormat.String(host.Recorder.Elapsed)));
         }, tooltip: L.T("標記這個時間點（Ctrl+B），整理時會被當成重點"));
         var stop = Ui.Button(L.T("停止並轉錄"), () => host.Recorder.Stop(), accent: true, tooltip: L.T("停止錄音，開始正式轉錄"));
-        var controls = Ui.Bar(Ui.Row(14, Ui.Row(8, dot, state, clock), meters), null, Ui.Row(10, pause, bookmark, stop), 14);
+        // 音量條放中間那欄：視窗不夠寬時截掉音量條，按鈕一直看得到（英文的「Stop & Transcribe」比較寬，原本會被擠出視窗，2026-10-22 介面巡檢）
+        meters.HorizontalAlignment = HorizontalAlignment.Left;
+        meters.VerticalAlignment = VerticalAlignment.Center;
+        var controls = Ui.Bar(Ui.Row(8, dot, state, clock), meters, Ui.Row(10, pause, bookmark, stop), 14);
         warning.Foreground = Ui.Signal;
         var head = Ui.Column(4, controls, warning);
         head.Padding = new Thickness(20, 12, 20, 8);
@@ -545,7 +559,7 @@ public sealed class RecordingPanel
         if (lines.Children.Count == 0 && all.Count == 0 && r.VolatileText.Length == 0)
             lines.Children.Add(Ui.Text(host.Settings.LiveTranscription ? L.T("開始說話後，逐字稿會即時出現在這裡。") : L.T("即時逐字稿已在設定中關閉，錄音結束後會正式轉錄。"), color: Ui.Secondary));
         else if (shownLines == 0 && lines.Children.Count > 0 && all.Count > 0) lines.Children.Clear();
-        lines.Children.Remove(volatileText);
+        lines.Children.Remove(volatileRow);
         var language = window.State.Detail?.Meeting.MeetingLanguage ?? MeetingLanguage.Zh;
         for (; shownLines < all.Count; shownLines++)
         {
@@ -557,9 +571,9 @@ public sealed class RecordingPanel
             time.TextAlignment = TextAlignment.Right;
             lines.Children.Add(Ui.Split(time, text, 12));
         }
-        volatileText.Text = r.VolatileText.Length > 0 ? "…  " + r.VolatileText : "";
+        volatileText.Text = r.VolatileText;
         volatileText.Foreground = Ui.Secondary;
-        if (r.VolatileText.Length > 0) lines.Children.Add(volatileText);
+        if (r.VolatileText.Length > 0) lines.Children.Add(volatileRow);
         if (followLatest) scroll.ChangeView(null, double.MaxValue, null, disableAnimation: true);
     }
 

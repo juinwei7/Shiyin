@@ -262,7 +262,8 @@ public static class OtherWindows
         var copied = Ui.Text("", 13, color: Ui.Secondary);
         var buttons = Ui.Row(8,
             Ui.Button(L.T("關閉"), window.Close),
-            Ui.Button(L.T("複製"), () => { Copy.Text(text); copied.Text = L.T("已複製"); }),
+            // 「複製」在範本是 Duplicate，這裡是 Copy（說明文字也寫 "Copy"）
+            Ui.Button(MeetingLanguages.Ui("複製", "Copy"), () => { Copy.Text(text); copied.Text = L.T("已複製"); }),
             Ui.Button(L.T("在 GitHub 回報"), () => { Shell.OpenUrl(ProblemReport.Url(text)); window.Close(); }, accent: true));
         var grid = new Grid { Padding = new Thickness(20), RowSpacing = 12 };
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })

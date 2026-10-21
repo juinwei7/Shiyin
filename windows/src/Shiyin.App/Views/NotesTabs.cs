@@ -317,9 +317,9 @@ public sealed class NotesEditor
 
     FrameworkElement RowButtons<T>(List<T> items, int index)
     {
-        var up = Ui.IconButton(Symbol.Up, L.T("往上移"), () => { (items[index - 1], items[index]) = (items[index], items[index - 1]); Rebuild(); });
+        var up = Ui.GlyphButton("\uE74A", L.T("往上移"), () => { (items[index - 1], items[index]) = (items[index], items[index - 1]); Rebuild(); });
         up.IsEnabled = index > 0;
-        var down = Ui.IconButton(Symbol.Download, L.T("往下移"), () => { (items[index + 1], items[index]) = (items[index], items[index + 1]); Rebuild(); });
+        var down = Ui.GlyphButton("\uE74B", L.T("往下移"), () => { (items[index + 1], items[index]) = (items[index], items[index + 1]); Rebuild(); });
         down.IsEnabled = index < items.Count - 1;
         return Ui.Row(2, up, down, Ui.IconButton(Symbol.Delete, L.T("刪除"), () => { items.RemoveAt(index); Rebuild(); }));
     }
@@ -401,7 +401,9 @@ public sealed class ReviewTab
                 window.Refresh();
             };
             // 題目放中間那欄才會換行（放在橫的 StackPanel 裡不會換行，長的題目會被切掉）
-            var head = Ui.Bar(Ui.Row(10, Ui.Text($"{index + 1}", 14, bold: true, color: Ui.Signal, wrap: false), Ui.Time(item.Time, host.Player.IsLoaded ? s => host.Player.Seek(s) : null)), question, null, 10);
+            var lead = Ui.Row(10, Ui.Text($"{index + 1}", 14, bold: true, color: Ui.Signal, wrap: false), Ui.Time(item.Time, host.Player.IsLoaded ? s => host.Player.Seek(s) : null));
+            lead.VerticalAlignment = VerticalAlignment.Top;   // 題號、時間對齊題目的第一行
+            var head = Ui.Bar(lead, question, null, 10);
             var answerRow = Ui.Bar(null, answer, skip, 12);
             answerRow.Margin = new Thickness(22, 0, 0, 0);
             column.Children.Add(Ui.Column(8, head, answerRow));

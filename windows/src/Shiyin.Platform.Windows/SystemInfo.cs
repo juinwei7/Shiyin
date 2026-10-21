@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using Shiyin.Localization;
 using Shiyin.Services;
 
 namespace Shiyin.Platform;
@@ -20,7 +21,9 @@ public static class SystemInfo
         var name = int.TryParse(build, out var b) && b >= 22000 ? "Windows 11" : "Windows 10";
         var edition = key?.GetValue("EditionID") as string ?? "";
         var display = key?.GetValue("DisplayVersion") as string ?? "";
-        return $"{name} {edition} {display}（{build}{ubr}，{RuntimeInformation.OSArchitecture}）".Replace("  ", " ");  // l10n-skip
+        var detail = $"{build}{ubr}{L.T("，")}{RuntimeInformation.OSArchitecture}";
+        // 括號跟著介面語言：英文介面用半形（2026-10-22 介面巡檢看到全形的括號）
+        return $"{name} {edition} {display}" + (L.English ? $" ({detail})" : $"（{detail}）");  // l10n-skip
     }
 
     static string Cpu()
@@ -64,6 +67,6 @@ public static class SystemInfo
     static string Gpu()
     {
         var names = Adapters().Select(a => a.Name).Distinct().ToList();
-        return names.Count == 0 ? "?" : string.Join("、", names);  // l10n-skip
+        return names.Count == 0 ? "?" : string.Join(L.T("、"), names);
     }
 }

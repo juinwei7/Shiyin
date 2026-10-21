@@ -43,6 +43,7 @@ public sealed class MainWindow : Window
         State = new MainState(host);
         Title = L.T("拾音");
         WindowPlacement.Center(this, 1180, 780);
+        WindowPlacement.MinimumSize(this, 960, 620);
         detailView = new DetailView(host, this);
         Build();
         // 關掉主視窗只是藏起來（R13.3）

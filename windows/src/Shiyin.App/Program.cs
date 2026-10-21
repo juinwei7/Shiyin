@@ -187,6 +187,8 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     static void Bring(Window window, int width, int height)
     {
         WindowPlacement.Center(window, width, height);
+        // 同 Mac 的使用說明、回報問題、問所有會議（520～560 × 440～480）
+        WindowPlacement.MinimumSize(window, Math.Min(width, 520), Math.Min(height, 440));
         window.Activate();
     }
 
@@ -257,7 +259,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         var text = string.Join("\n\n", new[] { notes ?? "", L.F("目前是 %@。更新時拾音會結束並重新打開，會議資料都會保留。", host.Version) }.Where(t => t.Length > 0));
         var dialog = new ContentDialog
         {
-            XamlRoot = main.XamlRoot, Title = L.F("拾音 %@ 可以更新了", version), Content = Ui.Text(text), PrimaryButtonText = L.T("下載並更新"), CloseButtonText = L.T("稍後"),
+            XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(L.F("拾音 %@ 可以更新了", version)), Content = Ui.Text(text), PrimaryButtonText = L.T("下載並更新"), CloseButtonText = L.T("稍後"),
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
         main.ShowNotice(L.T("正在下載更新，完成後拾音會自動重新打開"));
@@ -335,7 +337,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             if (busy) info.Add(L.T("進行中的轉錄或整理會中斷，下次開啟時從頭重跑。"));
             var dialog = new ContentDialog
             {
-                XamlRoot = main.XamlRoot, Title = recording ? L.T("正在錄音，要結束拾音嗎？") : L.T("還有工作在進行，要結束拾音嗎？"),
+                XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(recording ? L.T("正在錄音，要結束拾音嗎？") : L.T("還有工作在進行，要結束拾音嗎？")),
                 Content = string.Join("\n", info), PrimaryButtonText = L.T("結束"), CloseButtonText = L.T("取消"),
             };
             if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
