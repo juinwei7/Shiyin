@@ -1,5 +1,6 @@
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -242,6 +243,7 @@ public sealed class MainWindow : Window
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0), Padding = new Thickness(8, 4, 8, 4),
         };
         button.Click += (_, _) => click();
+        AutomationProperties.SetName(button, name + MeetingLanguages.Ui("，", ", ") + count);
         if (folder is not null)
         {
             var menu = new MenuFlyout();
@@ -267,7 +269,9 @@ public sealed class MainWindow : Window
                 {
                     var snippet = Ui.Text(hit.Snippet, 13, maxLines: 3);
                     if (meeting is not null) snippet.Language = Ui.ContentLanguage(meeting.MeetingLanguage);
-                    list.Items.Add(new ListViewItem { Tag = hit, Content = Ui.Column(2, Ui.Caption(KindLabel(hit.Kind)), snippet) });
+                    var hitItem = new ListViewItem { Tag = hit, Content = Ui.Column(2, Ui.Caption(KindLabel(hit.Kind)), snippet) };
+                    AutomationProperties.SetName(hitItem, KindLabel(hit.Kind) + MeetingLanguages.Ui("：", ": ") + hit.Snippet);
+                    list.Items.Add(hitItem);
                 }
             }
         }
@@ -279,6 +283,9 @@ public sealed class MainWindow : Window
             foreach (var row in rows)
             {
                 var item = new ListViewItem { Tag = row.Id, Content = MeetingRow(row) };
+                // 螢幕閱讀器、UI Automation 讀的名稱（列裡是好幾個文字元件，ListViewItem 本身沒有名稱）
+                AutomationProperties.SetName(item, string.Join(MeetingLanguages.Ui("，", ", "),
+                    row.Meeting.DisplayTitle, ShortDate(row.Meeting.MeetingDate), host.Controller.Status(row).Label));
                 item.ContextFlyout = RowMenu(row);
                 list.Items.Add(item);
                 if (row.Id == State.Selection) list.SelectedItem = item;

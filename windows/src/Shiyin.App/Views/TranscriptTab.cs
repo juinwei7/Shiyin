@@ -48,6 +48,8 @@ public sealed class TranscriptTab
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         searchRow.Padding = new Thickness(20, 10, 20, 10);
+        // 篩選說話者的下拉選單沒有標題，螢幕閱讀器只會讀「下拉式方塊」
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(speakerFilter, L.T("說話者"));
         root.Children.Add(searchRow);
         Grid.SetRow(bars, 1);
         root.Children.Add(bars);
@@ -60,7 +62,8 @@ public sealed class TranscriptTab
         list.ContainerContentChanging += (_, e) =>
         {
             if (e.ItemContainer.ContentTemplateRoot is not ContentControl slot) return;
-            slot.Content = e.InRecycleQueue ? null : Row((Segment)e.Item);
+            if (e.InRecycleQueue) slot.Content = null;
+            else Bind(e.ItemContainer, slot, (Segment)e.Item);
             e.ItemContainer.HorizontalContentAlignment = HorizontalAlignment.Stretch;
             e.Handled = true;
         };
@@ -149,13 +152,13 @@ public sealed class TranscriptTab
             });
         // 模型下載好之前用快速辨識轉錄的會議（M§21.17）
         if (host.Controller.CanUpgradeTranscript(d.Meeting) && !Busy)
-            bars.Children.Add(Bar(Ui.Bar(Ui.Text(d.Meeting.MeetingLanguage == MeetingLanguage.Ja
+            bars.Children.Add(Bar(Ui.Bar(null, Ui.Text(d.Meeting.MeetingLanguage == MeetingLanguage.Ja
                     ? L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用日文轉錄模型重新轉錄，通常比較準。")
-                    : L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。"), 13), null,
+                    : L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。"), 13),
                 Ui.Button(L.T("重新轉錄"), () => host.Controller.Retranscribe(id), accent: true, tooltip: L.T("逐字稿裡改過的文字會換成新的逐字稿，說話者的名字會留著")))));
         // 說話者可能分得不夠（M§24.5）
         if (d.ShowsSpeakerHint && !Busy)
-            bars.Children.Add(Bar(Ui.Bar(Ui.Text(L.T("說話者可能分得不夠：有些不同的人可能被當成同一位。人多、吵雜或手機放在桌上錄音時常發生，告訴拾音大約幾個人會分得比較準。"), 13), null,
+            bars.Children.Add(Bar(Ui.Bar(null, Ui.Text(L.T("說話者可能分得不夠：有些不同的人可能被當成同一位。人多、吵雜或手機放在桌上錄音時常發生，告訴拾音大約幾個人會分得比較準。"), 13),
                 Ui.Row(8, Ui.Button(L.T("不用了"), () => host.Controller.DismissSpeakerHint(id), tooltip: L.T("這場會議不再提示")),
                     Ui.Button(L.T("重新辨識說話者…"), () => { if (host.Controller.RequestRediarize(id)) _ = Dialogs.Rediarize(window, id); }, accent: true)))));
         var pending = d.Corrections.Count(c => c.Status == "pending");
@@ -230,7 +233,16 @@ public sealed class TranscriptTab
     void RefreshRows()
     {
         for (var i = 0; i < list.Items.Count; i++)
-            if (list.ContainerFromIndex(i) is ListViewItem { ContentTemplateRoot: ContentControl { Content: not null } slot }) slot.Content = Row(visible[i]);
+            if (list.ContainerFromIndex(i) is ListViewItem { ContentTemplateRoot: ContentControl { Content: not null } slot } container) Bind(container, slot, visible[i]);
+    }
+
+    /// <summary>一列的內容，加上螢幕閱讀器、UI Automation 讀的名稱（沒設時是資料的型別名稱「Shiyin.Model.Segment」）</summary>
+    void Bind(Microsoft.UI.Xaml.Controls.Primitives.SelectorItem container, ContentControl slot, Segment segment)
+    {
+        slot.Content = Row(segment);
+        var speaker = segment.Speaker is int idx ? detail?.SpeakerName(idx) : null;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(container,
+            string.Join(" ", new[] { TimeFormat.String(segment.Start), speaker, segment.Text }.Where(t => !string.IsNullOrEmpty(t))));
     }
 
     /// <summary>捲到這一段並暫時加底色；要跳到的段落被說話者篩選藏起來時，先取消篩選</summary>
@@ -293,18 +305,21 @@ public sealed class TranscriptTab
             Grid.SetColumn(speaker, 1);
             grid.Children.Add(speaker);
         }
-        FrameworkElement body = segment.Id == editingId ? Editor(segment) : Text(segment);
+        var menu = Menu(segment);
+        FrameworkElement body = segment.Id == editingId ? Editor(segment) : Text(segment, menu);
         Grid.SetColumn(body, 2);
         grid.Children.Add(body);
-        grid.ContextFlyout = Menu(segment);
+        grid.ContextFlyout = menu;
         return grid;
     }
 
-    FrameworkElement Text(Segment segment)
+    FrameworkElement Text(Segment segment, MenuFlyout menu)
     {
         var corrections = segment.Id is long id && detail!.CorrectionsBySegment.TryGetValue(id, out var list) ? list : [];
         var text = Ui.Text(segment.Text, 14, select: true);
         text.Language = Ui.ContentLanguage(Language);
+        // 可以選取的文字有自己的右鍵選單（只有拷貝、全選），會蓋掉這一段的選單：文字上按右鍵也開這一段的（裡面有「拷貝」）
+        text.ContextFlyout = menu;
         // 待確認的校正建議：原文加底色；搜尋到的字也加底色
         foreach (var c in corrections.Where(c => c.Status == "pending"))
         {

@@ -56,6 +56,17 @@
         }
       }
     },
+    "Windows 解不開 .%@ 的檔案：請先轉成 m4a、mp3 或 wav 再匯入（ogg、opus 可以從 Microsoft Store 安裝「Web 媒體延伸模組」）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows can’t decode .%@ files. Convert it to m4a, mp3, or wav and import again (for ogg and opus, install “Web Media Extensions” from the Microsoft Store)."
+          }
+        }
+      }
+    },
     "claude 沒有回傳結果（結束代碼 %lld）": {
       "extractionState": "manual",
       "localizations": {

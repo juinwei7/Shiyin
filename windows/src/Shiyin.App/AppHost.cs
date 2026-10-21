@@ -138,9 +138,13 @@ public sealed class AppHost
     /// </summary>
     public void Post(Action action) => dispatcher.TryEnqueue(() =>
     {
+        // 結束中：服務一個一個關掉了，畫面不再跟著更新（不然會用到關掉的播放器、資料庫）
+        if (shuttingDown) return;
         try { action(); }
         catch (Exception e) { Log.Error($"ui callback failed: {e.GetType().Name} 0x{e.HResult:X8}"); }
     });
+
+    volatile bool shuttingDown;
 
     public void Start()
     {
@@ -192,13 +196,25 @@ public sealed class AppHost
         return WhisperEngine.DetectLanguage(samples, Models.PathOf(ModelStore.Model.LanguageDetection));
     }
 
-    /// <summary>結束拾音（M§20.12）：錄音先存好、工作改回排隊，等 whisper 收尾最多 10 秒</summary>
-    public void Shutdown()
+    /// <summary>
+    /// 結束拾音（M§20.12）的第一步，在背景執行緒：錄音先存好、工作改回排隊，等 whisper 收尾最多 10 秒。
+    /// 從這裡開始畫面不再更新（停止錄音會觸發選取那場會議、重畫播放列）
+    /// </summary>
+    public void StopWork()
     {
+        shuttingDown = true;
         if (Recorder.IsRecording) Recorder.Stop();
         Runner.TerminateAll(TimeSpan.FromSeconds(10));
         var waited = 0;
         while (WhisperEngine.OpenContexts > 0 && waited < 10_000) { Thread.Sleep(100); waited += 100; }
+    }
+
+    /// <summary>
+    /// 第二步，回到 UI 執行緒再關：播放器（MediaPlayer）、快捷鍵是在 UI 執行緒建的，在背景執行緒關會跟畫面互等
+    ///（2026-10-21 在虛擬機錄音中按「結束」，畫面讀播放速度、背景關播放器，兩邊卡住，程式結束不了）
+    /// </summary>
+    public void Close()
+    {
         Detector.Stop();
         HotKeys.Dispose();
         Player.Dispose();

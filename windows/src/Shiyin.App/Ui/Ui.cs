@@ -175,7 +175,7 @@ public static class Ui
         return g;
     }
 
-    /// <summary>左、中（拿剩下的）、右</summary>
+    /// <summary>左、中（拿剩下的）、右。左欄的寬度跟著內容、不會換行：會換行的長文字放中間</summary>
     public static Grid Bar(FrameworkElement? left, FrameworkElement? middle, FrameworkElement? right, double spacing = 8)
     {
         var g = new Grid { ColumnSpacing = spacing };

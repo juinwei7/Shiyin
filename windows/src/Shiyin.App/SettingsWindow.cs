@@ -256,6 +256,7 @@ public sealed class SettingsWindow : Window
         foreach (var t in templates)
         {
             var item = new ListViewItem { Tag = t.Id, Content = Ui.Bar(Ui.Text(t.DisplayName(), 14, wrap: false), null, t.Id == S.DefaultTemplate ? Ui.Caption(L.T("預設")) : null) };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, t.DisplayName());
             list.Items.Add(item);
             if (t.Id == templateId) list.SelectedItem = item;
         }
@@ -285,8 +286,9 @@ public sealed class SettingsWindow : Window
         var sections = definition.Sections.ToList();
         var custom = definition.Custom.ToList();
         var name = new TextBox { Header = L.T("名稱"), Text = template.DisplayName(), IsEnabled = !template.Builtin };
-        var description = new TextBox { Header = L.T("用途說明"), Text = definition.Description, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true, IsEnabled = !template.Builtin };
-        var instruction = new TextBox { Header = L.T("額外指示（選填）"), Text = definition.Instruction, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true, IsEnabled = !template.Builtin };
+        // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行（多行的說明會被截掉，存檔就不見了）
+        var description = new TextBox { Header = L.T("用途說明"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = definition.Description, IsEnabled = !template.Builtin };
+        var instruction = new TextBox { Header = L.T("額外指示（選填）"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = definition.Instruction, IsEnabled = !template.Builtin };
         var column = Ui.Column(12, name, description);
         var toggles = Ui.Column(4, Ui.Text(L.T("要產生的段落"), 14, bold: true));
         foreach (var id in TemplateDefinition.BuiltinSectionIds)
@@ -302,8 +304,8 @@ public sealed class SettingsWindow : Window
             var index = i;
             var title = new TextBox { PlaceholderText = L.T("段落名稱"), Text = custom[i].Title, IsEnabled = !template.Builtin };
             title.TextChanged += (_, _) => custom[index] = custom[index] with { Title = title.Text };
-            var what = new TextBox { PlaceholderText = L.T("要寫什麼"), Text = custom[i].Instruction, TextWrapping = TextWrapping.Wrap, IsEnabled = !template.Builtin };
-            what.TextChanged += (_, _) => custom[index] = custom[index] with { Instruction = what.Text };
+            var what = new TextBox { PlaceholderText = L.T("要寫什麼"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = custom[i].Instruction, IsEnabled = !template.Builtin };
+            what.TextChanged += (_, _) => custom[index] = custom[index] with { Instruction = Lines(what.Text) };
             var delete = Ui.IconButton(Symbol.Delete, L.T("刪除"), () => { custom.RemoveAt(index); Save(); Show(); });
             delete.IsEnabled = !template.Builtin;
             customs.Children.Add(Ui.Bar(null, Ui.Column(4, title, what), delete));
@@ -314,7 +316,7 @@ public sealed class SettingsWindow : Window
         void Save()
         {
             if (template.Builtin) return;
-            var updated = new TemplateDefinition(description.Text, sections, custom, instruction.Text);
+            var updated = new TemplateDefinition(Lines(description.Text), sections, custom, Lines(instruction.Text));
             host.Controller.SaveTemplate(new TemplateRecord
             {
                 Id = template.Id, Name = name.Text.Length == 0 ? L.T("未命名範本") : name.Text, Builtin = false, Definition = updated.JsonString(),
@@ -340,6 +342,9 @@ public sealed class SettingsWindow : Window
         column.Children.Add(actions);
         return column;
     }
+
+    /// <summary>WinUI 的 TextBox 把換行存成 \r：範本會放進提示詞，跟 Mac 一樣存成 \n</summary>
+    static string Lines(string text) => text.Replace("\r\n", "\n").Replace('\r', '\n');
 
     // MARK: 詞彙表
 
@@ -435,7 +440,7 @@ public sealed class SettingsWindow : Window
         if (S.AutoDetectLanguage && !host.Models.IsInstalled(ModelStore.Model.LanguageDetection))
         {
             var busy = host.Models.StateOf(ModelStore.Model.LanguageDetection).IsBusy;
-            column.Children.Add(Ui.Bar(Ui.Text(busy ? L.T("正在下載語言偵測模型…") : L.T("語言偵測模型還沒下載，下載好之前錄音不會自動偵測"), 12, color: Ui.Signal), null,
+            column.Children.Add(Ui.Bar(null, Ui.Text(busy ? L.T("正在下載語言偵測模型…") : L.T("語言偵測模型還沒下載，下載好之前錄音不會自動偵測"), 12, color: Ui.Signal),
                 busy ? null : Ui.Button(L.T("下載"), () => host.Models.Start(ModelStore.Model.LanguageDetection))));
         }
         column.Children.Add(Note(L.T("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")));
@@ -461,7 +466,7 @@ public sealed class SettingsWindow : Window
         column.Children.Add(Ui.Toggle(L.T("偵測到線上會議時提醒錄音"), S.MeetingDetection, on => S.Set(AppSettings.MeetingDetectionKey, on)));
         column.Children.Add(Note(L.T("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。")));
         foreach (var app in host.Detector.Muted)
-            column.Children.Add(Ui.Bar(Ui.Text(L.F("不提醒：%@", MeetingDetector.DisplayName(app)), 13), null, Ui.Link(L.T("恢復提醒"), () => { host.Detector.Unmute(app); Show(); })));
+            column.Children.Add(Ui.Bar(null, Ui.Text(L.F("不提醒：%@", MeetingDetector.DisplayName(app)), 13), Ui.Link(L.T("恢復提醒"), () => { host.Detector.Unmute(app); Show(); })));
         column.Children.Add(Ui.Card(Ui.Column(8,
             Ui.Text(L.T("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。"), 13, color: Ui.Secondary),
             Ui.Button(L.T("麥克風權限設定"), Shell.OpenMicrophonePrivacy))));

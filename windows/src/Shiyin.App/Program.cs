@@ -121,6 +121,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         OpenFiles(args);
 #if DEBUG
         Debug.ControlPipe.Start(host, this);
+        Debug.DebugMetrics.Start(DispatcherQueue.GetForCurrentThread());
 #endif
         if (host.Updater is { } updater) updater.Changed += () => host.Post(() =>
         {
@@ -340,7 +341,8 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
         }
         main?.Refresh();
-        await Task.Run(host.Shutdown);
+        await Task.Run(host.StopWork);
+        host.Close();
         tray?.Dispose();
         Exit();
     }

@@ -256,7 +256,9 @@ public static class OtherWindows
     {
         var window = new Window { Title = L.T("回報問題") };
         var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, Whisper.WhisperEngine.SystemInfo));
-        var content = new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas") };
+        // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行
+        var content = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = text, IsReadOnly = true, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas") };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(content, L.T("回報問題"));
         var copied = Ui.Text("", 13, color: Ui.Secondary);
         var buttons = Ui.Row(8,
             Ui.Button(L.T("關閉"), window.Close),

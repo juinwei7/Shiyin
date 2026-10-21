@@ -86,9 +86,21 @@ public static class ControlPipe
                 return Ok;
             case "recordinterrupt" when args.Length > 1 && int.TryParse(args[1], out var ch): host.Recorder.SimulateInterruption(ch); return Ok;
             case "recordlang" when args.Length > 1 && MeetingLanguages.Parse(args[1]) is { } language: host.Recorder.SwitchLanguage(language); return Ok;
+            // import [lang=zh|en|ja] <檔案…>：同 Mac 的 shiyinctl import。跟拖進來一樣分流：封包、逐字稿、Markdown 直接匯入，錄音不跳匯入選項
             case "import" when args.Length > 1:
-                _ = host.Controller.ImportFiles(args[1..], new ImportOptions(), main?.State.CurrentFolder ?? "");
+            {
+                var files = args[1..].ToList();
+                var options = new ImportOptions();
+                if (files[0].StartsWith("lang=") && MeetingLanguages.Parse(files[0][5..]) is { } importLanguage)
+                {
+                    options = options with { Language = importLanguage };
+                    files.RemoveAt(0);
+                }
+                var folder = main?.State.CurrentFolder ?? "";
+                var media = host.Controller.RequestImport(files, folder, main?.State.Selection);
+                _ = host.Controller.ImportFiles(media, options, folder);
                 return Ok;
+            }
             case "purge" when args.Length > 1 && long.TryParse(args[1], out var purge): host.Controller.DeletePermanently(purge); return Ok;
             // export <會議 id> <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0]：同 Mac 的 shiyinctl export。
             // 在 UI 執行緒上跑（PDF 要建 WebView2），所以不等它：失敗時寫 <路徑>.error（同 Mac）
@@ -102,6 +114,13 @@ public static class ControlPipe
                     catch (Exception e) { File.WriteAllText(path + ".error", $"ERROR {e.Message}"); }
                 }
                 return Ok;
+            }
+            // metrics [reset]：UI 執行緒最長卡住多久（同 Mac 的 metrics，M§21.12）；加 reset 讀完歸零
+            case "metrics":
+            {
+                var result = new JsonObject { ["maxMainGapMs"] = Math.Round(DebugMetrics.MaxMainGapMs, 1) };
+                if (args.Length > 1 && args[1] == "reset") DebugMetrics.Reset();
+                return result;
             }
             case "llmprovider" when args.Length > 1:
                 host.Settings.DebugProvider = LLMProviders.Parse(args[1]);

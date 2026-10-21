@@ -27,9 +27,18 @@ public sealed class MediaFoundationDecoder : IAudioDecoder
         }
         catch (System.Runtime.InteropServices.COMException e)
         {
-            throw new IOException(L.F("沒辦法讀取「%@」（Media Foundation 錯誤代碼 0x%@）", Path.GetFileName(path), e.HResult.ToString("X8")), e);
+            // 錯誤訊息不放檔名：這裡是複製進資料夾後的名字（41.ogg），不是使用者匯入的檔案
+            throw new IOException(UnsupportedFormats.Contains((uint)e.HResult)
+                ? L.F("Windows 解不開 .%@ 的檔案：請先轉成 m4a、mp3 或 wav 再匯入（ogg、opus 可以從 Microsoft Store 安裝「Web 媒體延伸模組」）", ext)
+                : L.F("讀不到這個錄音檔，可能檔案已損壞或不是支援的格式（%@）", $"Media Foundation 0x{e.HResult:X8}"), e);
         }
     }
+
+    /// <summary>
+    /// Windows 沒有這種容器或編碼的解碼器（T-W9：UUP 的映像檔沒有「Web 媒體延伸模組」時 ogg、opus 就是這樣）：
+    /// MF_E_UNSUPPORTED_BYTESTREAM_TYPE、MF_E_TOPO_CODEC_NOT_FOUND、MF_E_INVALIDMEDIATYPE
+    /// </summary>
+    static readonly uint[] UnsupportedFormats = [0xC00D36C4, 0xC00D5212, 0xC00D36B4];
 
     public IAudioStream Open(string path) => IsWav(path) ? Wav.Open(path) : new Stream(OpenReader(path));
 

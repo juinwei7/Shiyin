@@ -493,14 +493,14 @@ public sealed class RecordingPanel
             hints.Children.Add(new Border
             {
                 Background = warm, Padding = new Thickness(16, 8, 16, 8),
-                Child = Ui.Bar(Ui.Text(L.F("聽起來是%@，即時逐字稿和會議語言已經改成%@", to.UiName(), to.UiName()), 13), null,
+                Child = Ui.Bar(null, Ui.Text(L.F("聽起來是%@，即時逐字稿和會議語言已經改成%@", to.UiName(), to.UiName()), 13),
                     Ui.Button(L.F("改回%@", from.UiName()), () => r.SwitchLanguage(from))),
             });
         if (r.Hint is Recorder.LevelHint hint)
             hints.Children.Add(new Border
             {
                 Background = warm, Padding = new Thickness(16, 8, 16, 8),
-                Child = Ui.Bar(Ui.Text(HintText(hint), 13), null, Ui.Button(L.T("知道了"), r.DismissLevelHint, tooltip: L.T("這場錄音不再提示這件事"))),
+                Child = Ui.Bar(null, Ui.Text(HintText(hint), 13), Ui.Button(L.T("知道了"), r.DismissLevelHint, tooltip: L.T("這場錄音不再提示這件事"))),
             });
 
         var all = r.LiveLines;
@@ -589,6 +589,8 @@ public sealed class UserNotesBox
         this.host = host;
         this.box = box;
         this.now = now;
+        // 旁邊的標題是另一個元件，螢幕閱讀器、UI Automation 只會讀到「編輯」
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, L.T("我的筆記"));
         box.TextChanged += (_, _) => Changed();
         save.Tick += (_, _) => { save.Stop(); Save(); };
     }

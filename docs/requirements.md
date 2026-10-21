@@ -826,7 +826,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | R1.7、R11.1 選單列 | 系統匣（通知區域）：關掉主視窗後拾音留在系統匣，圖示顯示錄音中、工作中；點圖示打開小視窗，內容跟 Mac 選單列的小視窗相同（錄音控制、音量、工作進度、打開主視窗、使用說明、結束）。Windows 11 預設把新的圖示收起來，第一次啟動時提示使用者釘到工作列 |
 | R1.8 權限 | Windows 錄電腦聲音不需要權限。麥克風被「設定 → 隱私權與安全性 → 麥克風」關掉時，說明原因，並且可以一鍵打開那一頁 |
 | R2.1 即時逐字稿 | Windows 沒有可以用的內建辨識，改用本機的快速辨識模型；講話後暫定文字在 1 秒內出現、定稿延遲在 5 秒以內，跟 Mac 相同 |
-| R3.1 匯入 | Windows 解得開的音訊和影片檔，至少 m4a、mp3、wav、aac、flac、mp4、wma、aiff；mov、caf 依實驗結果（解不開時要說明）。方式：拖進視窗、Ctrl+O、檔案總管的「開啟檔案 → 拾音」、雙擊 .shiyin |
+| R3.1 匯入 | Windows 解得開的音訊和影片檔：m4a、mp3、wav、aac、flac、aiff、wma、mp4、mov、m4v、wmv、webm（2026-10-21 T-W9 實測）；ogg、opus 要裝「Web 媒體延伸模組」（一般的 Windows 11 有預裝），解不開時說明怎麼辦；caf 不支援（Media Foundation 沒有 CAF）。方式：拖進視窗、Ctrl+O、檔案總管的「開啟檔案 → 拾音」、雙擊 .shiyin |
 | R4.1 內建辨識 | 「macOS 內建」換成「快速辨識」（本機的快速模型）：速度快很多、不吃詞彙表 |
 | R4.5 不用另外安裝 | 除了不需要 Python、ffmpeg，也不需要另外裝 .NET、VC++ 執行環境（都包在安裝檔裡） |
 | R7.3 複製 | 複製成純文字、Markdown、富文字；富文字在 Windows 用 HTML（Word、Outlook、Notion 都吃），不用 RTF |

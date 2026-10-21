@@ -404,7 +404,7 @@ public sealed class ReviewTab
         }
         UpdateSubmit();
         var provider = host.Settings.Provider == LLMProvider.None ? "LLM" : host.Settings.Provider.Label();
-        var footer = Ui.Bar(Ui.Text(L.F("有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。", provider), 13, color: Ui.Secondary), null, submit, 12);
+        var footer = Ui.Bar(null, Ui.Text(L.F("有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。", provider), 13, color: Ui.Secondary), submit, 12);
         footer.Padding = new Thickness(32, 12, 32, 12);
         var grid = new Grid();
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
