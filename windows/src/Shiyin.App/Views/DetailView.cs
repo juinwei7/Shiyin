@@ -127,10 +127,43 @@ public sealed class DetailView
         if (IsRecordingThis) recording.Update();
     }
 
+    /// <summary>
+    /// 轉錄、整理中每秒呼叫一次。狀態列的樣子（狀態、階段、在跑的工作）沒變時只改文字和進度條：
+    /// 整塊換掉時會閃，滑鼠停在「取消」上也會一直被重設
+    /// </summary>
     public void UpdateStatus()
     {
         if (detail is null || IsTrashed) return;
+        if (StatusKey() == statusKey)
+        {
+            if (statusLiveText is not null && host.Controller.Status(Detail) is MeetingStatus.Transcribing t)
+            {
+                var text = TranscribingText(t.Progress, t.Stage, host.Runner.RunningJob(Detail.Meeting.Id!.Value)?.Remaining);
+                if (statusLiveText.Text != text) statusLiveText.Text = text;
+                if (statusLiveProgress is not null && t.Progress is double p) statusLiveProgress.Value = p * 100;
+            }
+            return;
+        }
         status.Child = StatusBanner();
+    }
+
+    string? statusKey;
+    TextBlock? statusLiveText;
+    ProgressBar? statusLiveProgress;
+
+    /// <summary>狀態列的樣子：一樣時不重建（轉錄的百分比、剩幾分鐘不算）</summary>
+    string StatusKey()
+    {
+        var id = Detail.Meeting.Id!.Value;
+        var state = host.Controller.Status(Detail);
+        var running = host.Runner.RunningJob(id);
+        var helpers = string.Join(",", Enum.GetValues<JobLane>().Select(l => host.Runner.Running(l)).Where(h => h is not null && h.Job.MeetingId == id).Select(h => h!.Job.Kind));
+        return state switch
+        {
+            MeetingStatus.Transcribing t => $"transcribing|{t.Stage}|{t.Progress is null}",
+            MeetingStatus.Failed f => $"failed|{f.Kind}|{f.Error}",
+            _ => $"{state.GetType().Name}|{running?.Job.Kind}|{running?.Provider}|{Detail.LatestJob?.Kind}",
+        } + "|" + helpers;
     }
 
     public void FocusSearch() => transcript.FocusSearch();
@@ -247,6 +280,9 @@ public sealed class DetailView
     /// <summary>工作進度、失敗原因；背景的輔助工作（校正、猜說話者、重新辨識說話者）也顯示一行</summary>
     UIElement? StatusBanner()
     {
+        statusKey = StatusKey();
+        statusLiveText = null;
+        statusLiveProgress = null;
         var id = Detail.Meeting.Id!.Value;
         var state = host.Controller.Status(Detail);
         var running = host.Runner.RunningJob(id);
@@ -257,8 +293,9 @@ public sealed class DetailView
             case MeetingStatus.Queued:
                 return Banner(Ui.Text(Detail.LatestJob?.Kind == JobKind.Transcribe ? L.T("排隊等待轉錄") : L.T("排隊等待整理"), 13), Cancel(), warm);
             case MeetingStatus.Transcribing t:
-                var progress = t.Progress is double p ? (UIElement)new ProgressBar { Value = p * 100, Width = 160, Foreground = Ui.Signal } : new ProgressRing { IsActive = true, Width = 16, Height = 16 };
-                return Banner(Ui.Row(10, Ui.Text(TranscribingText(t.Progress, t.Stage, running?.Remaining), 13), progress), Cancel(), warm);
+                statusLiveProgress = t.Progress is double p ? new ProgressBar { Value = p * 100, Width = 160, Foreground = Ui.Signal } : null;
+                statusLiveText = Ui.Text(TranscribingText(t.Progress, t.Stage, running?.Remaining), 13);
+                return Banner(Ui.Row(10, statusLiveText, (UIElement?)statusLiveProgress ?? new ProgressRing { IsActive = true, Width = 16, Height = 16 }), Cancel(), warm);
             case MeetingStatus.Summarizing:
                 var provider = running?.Provider?.ShortLabel() ?? "";
                 var text = running?.Job.Kind == JobKind.Revise ? L.F("正在用 %@ 依你的回答修正會議紀錄…", provider) : L.F("正在用 %@ 整理會議紀錄…", provider);

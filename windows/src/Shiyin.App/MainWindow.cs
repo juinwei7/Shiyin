@@ -69,7 +69,8 @@ public sealed class MainWindow : Window
         host.Controller.Reveal += id => host.Post(() => Reveal(id));
         host.Recorder.Changed += () => host.Post(ShowRecorderAlerts);
         toastTimer.Tick += (_, _) => { toast.IsOpen = false; toastTimer.Stop(); };
-        root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); Refresh(); };
+        // 換深淺色：列表的顏色是建列時給的，要重建
+        root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); listSignature = null; Refresh(); };
         Ui.SetTheme(root.ActualTheme);
         State.Reload();
     }
@@ -255,8 +256,32 @@ public sealed class MainWindow : Window
         return button;
     }
 
+    /// <summary>一列會議：狀態文字、進度條直接改，不用整個列表重建</summary>
+    sealed class RowView(ListViewItem item, StackPanel column, TextBlock status)
+    {
+        public ListViewItem Item { get; } = item;
+        public StackPanel Column { get; } = column;
+        public TextBlock Status { get; } = status;
+        public ProgressBar? Progress { get; set; }
+    }
+
+    readonly Dictionary<long, RowView> rowViews = [];
+    string? listSignature;
+
+    /// <summary>
+    /// 會議列表。哪幾場、順序、標題、日期、資料夾都沒變時，只更新每一列的狀態和進度（轉錄、整理中每秒一次）：
+    /// 整個清掉重建會一直閃（2026-10-21 使用者在虛擬機看到），捲動位置、滑鼠停留的效果也會重來
+    /// </summary>
     void BuildList()
     {
+        var signature = ListSignature();
+        if (signature is not null && signature == listSignature)
+        {
+            UpdateRows();
+            return;
+        }
+        listSignature = signature;
+        rowViews.Clear();
         updatingSelection = true;
         list.Items.Clear();
         if (State.SearchActive)
@@ -283,15 +308,37 @@ public sealed class MainWindow : Window
             if (rows.Count == 0 && State.ShowTrash) list.Items.Add(new ListViewItem { Content = Ui.Text(L.T("垃圾桶是空的"), color: Ui.Secondary), IsEnabled = false });
             foreach (var row in rows)
             {
-                var item = new ListViewItem { Tag = row.Id, Content = MeetingRow(row) };
-                // 螢幕閱讀器、UI Automation 讀的名稱（列裡是好幾個文字元件，ListViewItem 本身沒有名稱）
-                AutomationProperties.SetName(item, string.Join(MeetingLanguages.Ui("，", ", "),
-                    row.Meeting.DisplayTitle, ShortDate(row.Meeting.MeetingDate), host.Controller.Status(row).Label));
-                item.ContextFlyout = RowMenu(row);
-                list.Items.Add(item);
-                if (row.Id == State.Selection) list.SelectedItem = item;
+                var view = MeetingRow(row);
+                rowViews[row.Id] = view;
+                SetStatus(view, row);
+                view.Item.ContextFlyout = RowMenu(row);
+                list.Items.Add(view.Item);
+                if (row.Id == State.Selection) list.SelectedItem = view.Item;
             }
         }
+        updatingSelection = false;
+    }
+
+    /// <summary>列表的樣子；搜尋結果（不顯示狀態）每次重建，回傳 null</summary>
+    string? ListSignature()
+    {
+        if (State.SearchActive) return null;
+        var text = new System.Text.StringBuilder(State.ShowTrash ? "trash" : "meetings");
+        // 右鍵選單的「移到資料夾」列出所有資料夾：資料夾變了也要重建
+        foreach (var (name, _) in AppController.Folders(State.Meetings)) text.Append('\u001D').Append(name);
+        foreach (var row in State.FilteredMeetings)
+            text.Append('\u001E').Append(row.Id).Append('\u001F').Append(row.Meeting.DisplayTitle).Append('\u001F').Append(row.Meeting.MeetingDate)
+                .Append('\u001F').Append(row.Meeting.Folder).Append('\u001F').Append(row.Meeting.Language);
+        return text.ToString();
+    }
+
+    void UpdateRows()
+    {
+        updatingSelection = true;
+        foreach (var row in State.FilteredMeetings)
+            if (rowViews.TryGetValue(row.Id, out var view)) SetStatus(view, row);
+        var selected = State.Selection is long id && rowViews.TryGetValue(id, out var current) ? current.Item : null;
+        if (!ReferenceEquals(list.SelectedItem, selected)) list.SelectedItem = selected;
         updatingSelection = false;
     }
 
@@ -303,23 +350,48 @@ public sealed class MainWindow : Window
         _ => L.T("我的筆記"),
     };
 
-    UIElement MeetingRow(MeetingRow row)
+    RowView MeetingRow(MeetingRow row)
     {
-        var status = host.Controller.Status(row);
         var title = Ui.Text(row.Meeting.DisplayTitle, 14, wrap: false);
         title.Language = Ui.ContentLanguage(row.Meeting.MeetingLanguage);
-        var color = status switch
-        {
-            MeetingStatus.Recording or MeetingStatus.Failed => Ui.Danger,
-            MeetingStatus.Queued or MeetingStatus.Transcribing or MeetingStatus.Summarizing or MeetingStatus.Review => Ui.Signal,
-            _ => Ui.Secondary,
-        };
-        var info = Ui.Row(8, Ui.Text(ShortDate(row.Meeting.MeetingDate), 12, color: Ui.Secondary, wrap: false), Ui.Text(status.Label, 12, color: color, wrap: false));
+        var status = Ui.Text("", 12, wrap: false);
+        var info = Ui.Row(8, Ui.Text(ShortDate(row.Meeting.MeetingDate), 12, color: Ui.Secondary, wrap: false), status);
         var column = Ui.Column(3, title, info);
         column.Padding = new Thickness(0, 3, 0, 3);
+        return new RowView(new ListViewItem { Tag = row.Id, Content = column }, column, status);
+    }
+
+    /// <summary>狀態、顏色、轉錄的進度條，只在值變了才設（每秒呼叫一次）</summary>
+    void SetStatus(RowView view, MeetingRow row)
+    {
+        var status = host.Controller.Status(row);
+        if (view.Status.Text != status.Label)
+        {
+            view.Status.Text = status.Label;
+            view.Status.Foreground = status switch
+            {
+                MeetingStatus.Recording or MeetingStatus.Failed => Ui.Danger,
+                MeetingStatus.Queued or MeetingStatus.Transcribing or MeetingStatus.Summarizing or MeetingStatus.Review => Ui.Signal,
+                _ => Ui.Secondary,
+            };
+            // 螢幕閱讀器、UI Automation 讀的名稱（列裡是好幾個文字元件，ListViewItem 本身沒有名稱）
+            AutomationProperties.SetName(view.Item, string.Join(MeetingLanguages.Ui("，", ", "),
+                row.Meeting.DisplayTitle, ShortDate(row.Meeting.MeetingDate), status.Label));
+        }
         if (status is MeetingStatus.Transcribing { Progress: double p })
-            column.Children.Add(new ProgressBar { Value = p * 100, Maximum = 100, Foreground = Ui.Signal });
-        return column;
+        {
+            if (view.Progress is null)
+            {
+                view.Progress = new ProgressBar { Maximum = 100, Foreground = Ui.Signal };
+                view.Column.Children.Add(view.Progress);
+            }
+            view.Progress.Value = p * 100;
+        }
+        else if (view.Progress is not null)
+        {
+            view.Column.Children.Remove(view.Progress);
+            view.Progress = null;
+        }
     }
 
     static string ShortDate(string date)
