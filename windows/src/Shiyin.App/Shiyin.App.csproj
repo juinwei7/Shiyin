@@ -9,7 +9,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
-    <EnableMsixTooling>false</EnableMsixTooling>
+    <!-- Windows 上要開：不打包的 app 在 publish 時才會帶 Shiyin.pri（沒有它 XAML 一載入就當掉，2026-10-21 裝好的 3.6.0 開不起來） -->
+    <EnableMsixTooling Condition="'$(OS)' == 'Windows_NT'">true</EnableMsixTooling>
+    <EnableMsixTooling Condition="'$(OS)' != 'Windows_NT'">false</EnableMsixTooling>
     <RootNamespace>Shiyin.App</RootNamespace>
     <AssemblyName>Shiyin</AssemblyName>
     <Version>3.6.0</Version>
@@ -24,6 +26,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  </PropertyGroup>
+  <!-- 測試更新的建置（pack.ps1 -UpdateTest）：更新來源、公鑰改從環境變數讀（AppHost）。發布的版本不能加 -->
+  <PropertyGroup Condition="'$(ShiyinUpdateTest)' == 'true'">
+    <DefineConstants>$(DefineConstants);UPDATE_TEST</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Shiyin.Platform.Windows/Shiyin.Platform.Windows.csproj" />

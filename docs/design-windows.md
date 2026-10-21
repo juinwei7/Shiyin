@@ -35,7 +35,6 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | `Shiyin.Platform.Windows` | net10.0-windows10.0.22621 | WASAPI、Media Foundation、認證管理員、快捷鍵、偵測會議、防止睡眠、通知、找 CLI、檔案關聯、更新驗證 | 不能 |
 | `Shiyin.App` | WinUI 3（不打包、自帶 Windows App SDK） | 畫面、ViewModel、系統匣、PDF、DEBUG 控制通道 | 不能 |
 | `Shiyin.Ctl` | net10.0 | `shiyinctl.exe` | — |
-| `Shiyin.Agent` | net10.0-windows | 驗證用的桌面代理（§15.3），不放進安裝檔 | 不能 |
 
 `Shiyin.Core`、`Data`、`LLM` 照 Mac 的 Swift 檔案一個對一個翻（`Model/`、`Notes/`、`Store/`、`IO/`、`Transcribe/TranscriptionPipeline.swift`…），方便以後對照修改。用使用者的錄音評估時用 `Shiyin.Eval` 在 Mac 上跑，錄音不用複製進虛擬機。
 
@@ -61,7 +60,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | docx | DocumentFormat.OpenXml 3.5（MIT），直接從會議紀錄的資料產生 | Windows 沒有 NSAttributedString 的 docx 輸出 |
 | PDF | WebView2 把跟 Mac 同一份匯出的 HTML 印成 PDF | Windows 11 內建 WebView2 執行環境 |
 | 安裝、更新 | Velopack 1.2（MIT；1.2.158 被標為不要用）＋ 自己的更新金鑰（ECDSA P-256） | 不用系統管理員、有差異更新（D50），待 T-W7 |
-| UI 自動化（驗證） | FlaUI 5（UI Automation）、Windows.Graphics.Capture | §15.3 |
+| UI 自動化（驗證） | Windows 內建的 UIAutomationClient（PowerShell）；截圖在 Mac 上截 UTM 的視窗 | §15.4 |
 
 授權寫進第三方授權（R27 R13.1）：`scripts/windows/make-third-party-licenses.py` 依 app 實際用到的套件（`dotnet list package --include-transitive`）組出 `windows/src/Shiyin.App/ThirdPartyLicenses.txt`，「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt` 都是這份。做法同 Mac（M§12.1）：條文取套件附的檔案，或套件記的原始碼 commit 上的檔案，原文不改；套件清單多了腳本不認得的套件就停下來。要特別標示的（2026-10-21 查過）：
 - 快速辨識的模型是原版 SenseVoice-Small（2024-07-17，sherpa-onnx 轉成 int8，D61），FunASR Model License 不是 OSI 授權，附原文
@@ -81,11 +80,11 @@ windows/
 ├── Directory.Packages.props    所有套件的版本
 ├── Directory.Build.props       ArtifactsPath：建置輸出放到 repo 外（Mac 是 ~/Library/Caches/ShiyinBuild-win）
 ├── src/Shiyin.Core/  Shiyin.Data/  Shiyin.LLM/  Shiyin.Engines/  Shiyin.Eval/
-├── src/Shiyin.Platform.Windows/  Shiyin.App/  Shiyin.Ctl/  Shiyin.Agent/
-├── tests/                      xUnit：Core、Data、LLM、Engines（Mac、CI 都跑）；UITests（FlaUI，虛擬機的桌面跑）
+├── src/Shiyin.Platform.Windows/  Shiyin.App/  Shiyin.Ctl/  Shiyin.Services/
+├── tests/Shiyin.Tests/         xUnit：標準答案、資料庫、整理工具、服務（Mac、CI 都跑）；畫面用虛擬機的 UI Automation 驗（§15.4）
 └── native/whisper/             CMake 腳本、shim、各平台建出來的檔案的 SHA-256
 shared/golden/                  Mac 產生的標準答案（§4）
-scripts/windows/                build.ps1、pack.ps1、make-update-key.ps1
+scripts/windows/                build-whisper.ps1、pack.ps1、update-key.cs、make-third-party-licenses.py；vm/ 驗證用虛擬機的工具（§15.2）
 ```
 
 建置輸出不能放在專案裡（桌面有 iCloud 同步，同 CLAUDE.md）。
@@ -343,21 +342,29 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 ### 14.1 安裝檔（R27 R10.1）
 
-- Velopack（`vpk pack`）：`Shiyin-<版本>-win-x64-Setup.exe`、`Shiyin-<版本>-win-arm64-Setup.exe`，各自一個更新頻道（`win-x64`、`win-arm64`）。裝在 `%LOCALAPPDATA%\ShiyinApp`、不用系統管理員，自帶 .NET 和 Windows App SDK。開始功能表捷徑的名稱依 Windows 語言（R27 R12.3）。
+- Velopack（`vpk pack`，`scripts/windows/pack.ps1`）：`Shiyin-<版本>-win-x64-Setup.exe`、`Shiyin-<版本>-win-arm64-Setup.exe`，各自一個更新頻道（`win-x64`、`win-arm64`）。裝在 `%LOCALAPPDATA%\ShiyinApp`、不用系統管理員，自帶 .NET 和 Windows App SDK。發行者是 `juinwei7`（同 LICENSE）。
+- 名稱依介面語言（R27 R12.3，D63）：中文是「拾音」，其他是「Shiyin」（設定裡選的介面語言，沒選時跟著 Windows）。
+  - 開始功能表、桌面的捷徑由 app 的安裝 hook 自己建（`Shortcuts.cs`，打包時 `--shortcuts None`），帶 Velopack 的 AppUserModelID `velopack.ShiyinApp`；更新 hook 和每次啟動時，換了語言就把現有的捷徑改名（使用者刪掉的不建回來）；解除安裝時兩種名稱都刪。
+  - 「設定 → 應用程式」裡的名稱：Velopack 在安裝 hook 之後才寫登錄，所以在每次啟動時改（裝好後第一次打開就對）。檔案類型（.shiyin）的名稱也在啟動時跟著換。
+  - 安裝程式自己的視窗標題固定是「拾音」（Velopack 不能依語言換，只顯示幾秒）。
+- 打包要帶 `Shiyin.pri`（app 的資源表，少了它 XAML 一載入就當掉）：不打包的 WinUI app 要開 `EnableMsixTooling`，publish 才會帶它（只在 Windows 上開，Mac 的編譯檢查不產生 .pri）。`pack.ps1` 檢查 `Shiyin.pri`、`Third-Party Licenses.txt`、只有一份 `onnxruntime.dll`。
+- `scripts/windows/*.ps1` 存成有 BOM 的 UTF-8：Windows 內建的 PowerShell 5.1 把沒有 BOM 的檔案當成系統的編碼（中文 Windows 是 Big5），中文字串會壞掉、整個腳本解析失敗。
+- 解除安裝不刪 `%LOCALAPPDATA%\Shiyin`（錄音、資料庫、模型、設定），拿掉檔案關聯、`shiyin:` 網址、通知的登錄。Velopack 會在移除後幾秒才刪掉安裝資料夾，移除後馬上重裝的話，剛裝好的檔案可能被刪掉（測試時移除後等 20 秒）。
 - 安裝說明（中、英）放在官網和 Release 說明：
   - SmartScreen「Windows 已保護您的電腦」→「其他資訊」→「仍要執行」
   - **Smart App Control** 開著時沒有簽章的 app 會被直接擋下、沒有「仍要執行」可以按（多半是新安裝的 Windows 11 才開著）。說明要寫清楚：可以關掉 Smart App Control（2026-04 起關掉後可以再打開，逐步推出），或等有正式簽章的版本
 - 正式簽章：申請 SignPath Foundation（開源專案免費，repo 是 MIT）。申請要用使用者的名義送出，等使用者決定（tasks W8.2）。申請下來前發布的版本沒有 Authenticode 簽章。付費憑證、Azure Artifact Signing（個人帳號只限美國、加拿大）不做。
 
-### 14.2 更新（R27 R10.6、R10.7，D50，待 T-W7）
+### 14.2 更新（R27 R10.6、R10.7，D50）
 
 - Velopack 只檢查自己 feed 裡的 SHA-256，不驗是誰發的。所以另外加一把**更新金鑰**（ECDSA P-256）：
-  - `scripts/windows/make-update-key.ps1` 建一次，私鑰放 GitHub secrets（要使用者同意，同 Mac 的 `export-signing-cert.sh`）
+  - `scripts/windows/update-key.cs keygen` 建一次，私鑰放 GitHub secrets（要使用者同意，同 Mac 的 `export-signing-cert.sh`），公鑰貼進 `AppHost.cs` 的 `UpdateKey.Public`
   - CI 打包後簽「版本、架構、每個套件檔的 SHA-256」，簽章檔跟 Release 一起上傳
   - app 內建公鑰；下載新版後、套用前驗證簽章、版本比目前新、套件的 SHA-256 相符，不符就刪掉下載的檔案、拒絕更新
   - 等於 Mac 的「新版要跟目前的 app 同一個簽章身分」（M§12）
 - 有 Authenticode 簽章（SignPath）之後，加檢查「新版的簽署者跟目前的相同」。
-- 檢查時機、錄音或工作中不能更新、資料庫自動遷移同 M§12。Windows 的麥克風權限跟著「桌面 app」整體，不綁 app 的版本，更新後不用重新允許（R10.7，T-W7 確認）。沒有更新金鑰的 DEBUG 版不檢查（測試用的金鑰另外建）。
+- 檢查時機、錄音或工作中不能更新、資料庫自動遷移同 M§12。Windows 的麥克風權限跟著「桌面 app」整體，不綁 app 的版本，更新後不用重新允許（R10.7，要在有麥克風的電腦上確認）。沒有更新金鑰的 DEBUG 版不檢查。
+- 測試更新：`pack.ps1 -UpdateTest` 建的版本（編譯時加 `UPDATE_TEST`，發布的版本不會有）改從環境變數 `SHIYIN_UPDATE_SOURCE`（Velopack 的 SimpleWebSource，更新說明也從這裡讀）、`SHIYIN_UPDATE_PUBLIC_KEY` 讀更新來源和公鑰。用測試金鑰打包兩個版本，Mac 上開本機伺服器、`ssh -R` 讓虛擬機連進來。2026-10-21 在虛擬機驗過：另一把金鑰簽的更新說明被拒絕（「新版的簽章跟目前的拾音不符」）、下載的檔案刪掉；正確的簽章從 3.6.0 更新到 3.6.1、自己重開，資料、設定、捷徑的名稱都在。
 
 ### 14.3 GitHub Releases（D51）
 
@@ -388,27 +395,33 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 ### 15.2 虛擬機
 
-- **Parallels Desktop**（VMware Fusion 的 ARM 版 Windows 社群回報沒有音效驅動，錄音測不了）。Pro 版有 `prlctl exec <vm> --current-user`，可以直接在登入的桌面執行程式；Standard 版沒有，用 §15.4 的桌面代理（用哪一版由使用者決定）。
-- Windows 11 ARM64，6 核、8 GB；設定自動登入、不鎖定螢幕（鎖定時截不到圖）。
-- 裝 .NET 10 SDK、Visual Studio Build Tools（C++、ARM64 和 x64 的工具組）、Git、OpenSSH Server。從 Mac 用 `ssh` 建置、跑測試。repo 在虛擬機裡自己 clone（不用共用資料夾）；模型從 Mac 的 `models` 複製過去。
-- 不用 Coherence 模式（Windows 的視窗會混進 Mac 的桌面）。虛擬機的桌面不是使用者在用的桌面，必要時可以在虛擬機**裡面**送按鍵，但優先用 UI Automation。
-- Mac 只有 18 GB：虛擬機 8 GB 加上轉錄時約 3 GB。使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。
+工具在 `scripts/windows/vm/`；金鑰、IP、密碼、Windows 的 ISO 放在 `$SHIYIN_VM`（預設 `~/Library/Caches/ShiyinBuild-win/vm`），不進 repo。
+
+- **UTM**（免費，2026-10-21 使用者決定；原本規劃的 Parallels 要付費）。Windows 11 ARM64 專業版 zh-TW，4 核、4 GB（6 GB 時 Mac 的 swap 到 16 GB，調低），共用網路（192.168.64.x）。虛擬機的磁碟檔最多約 25 GB；`diskguard.sh` 在背景跑，Mac 剩不到 10 GB 就停掉虛擬機。
+- 建置環境：
+  - Windows 的 ISO：微軟下載頁擋自動下載，用 UUP dump 的 convert 腳本在 Mac 上做（26100.1、不含更新）。
+  - 全自動安裝：`make-payload.sh` 做第二張光碟（`payload/autounattend.xml`：略過 TPM 檢查、本機帳號 `shiyin`、自動登入；`payload/shiyin-setup.ps1`：virtio 驅動程式、OpenSSH Server 和金鑰、不睡眠不鎖定、關掉自動更新、長路徑、原始碼資料夾不即時掃毒）。UTM 用 AppleScript 建虛擬機（`make new virtual machine`，再逐項 `update configuration`）。
+  - 裝在虛擬機裡：.NET 10 SDK（`~\.dotnet`）、`dotnet-dump`、WebView2 執行階段（UUP 做的映像檔沒有）、VC++ 執行階段 ARM64（官方 whisper.cpp 的 DLL 要）。沒有 Visual Studio Build Tools：whisper 用官方 b5454 的 Windows ARM64 版（`GGML_BACKEND_DL`，§8）放在 `C:\xfer\whisper-arm64`，`shiyin_whisper.dll` 在 Mac 上用 zig 交叉編譯（`aarch64-windows-gnu`）。正式發布的 DLL 由 CI 用 `build-whisper.ps1` 建（靜態連結執行階段）。
+  - 當掉時：WER LocalDumps 把 `Shiyin.exe` 的 dump 寫到 `C:\dumps`，用 `dotnet-dump analyze` 看（`clrstack -all`、`pe`）。DEBUG 版另外把每個例外記在 `%TEMP%\shiyin-exceptions.log`（含呼叫堆疊）。
+- 從 Mac 操作：`sync.sh` 把工作目錄（git 追蹤和還沒加的檔案）同步到 `C:\src`（不用共用資料夾：桌面有 iCloud）；`ssh.sh`、`run.sh` 在 SSH 的工作階段跑 PowerShell（建置、測試）；`ps/rebuild.ps1` 重建 DEBUG 版；`ctl.sh` 送控制通道的指令。Mac 上的本機伺服器（假的整理工具、更新檔）用 `ssh -R <埠>:127.0.0.1:<埠>` 讓虛擬機從 127.0.0.1 連過來。
+- 虛擬機**沒有音效裝置**：WASAPI 的錄音、換裝置、播放的聲音都測不到，錄音用 `record-sim`；真的麥克風、電腦聲音要使用者的電腦（W0.3）。
+- 磁碟：虛擬機裡刪檔案不會讓 Mac 上的磁碟檔變小，刪完要 `Optimize-Volume -DriveLetter C -ReTrim`。
+- 使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。UTM 的視窗會出現在使用者的螢幕上（不會搶前景）。
 
 ### 15.3 控制通道
 
 - DEBUG 版開 named pipe `\\.\pipe\shiyin-debug`，只接受同一個使用者、拒絕遠端連線；`shiyinctl.exe <指令> <參數…>`，結果寫成 JSON 檔（同 Mac）。named pipe 不分工作階段，從 SSH 也連得到桌面上的拾音。
 - 指令名稱、輸出格式跟 Mac 的 `Debug/DebugControl.swift` 相同（`state`、`select`、`import`、`record-sim`、`transcribe-eval`、`voiceprint-eval`、`detect-eval`、`metrics`、`llmurl`、`llmkey`、`llmprovider`、`setupdateurl`、`hotkey`、`purge`、`quit`…），Mac 的測試方法和腳本可以直接用：例如 Windows 的 `transcribe-eval` 輸出拿回 Mac，用 `scripts/dev/asr-score.swift` 算錯字率（R28.4）。
 
-### 15.4 真的畫面：桌面代理
+### 15.4 真的畫面：排程工作和 UI Automation
 
-從 SSH 啟動的程式不會出現在登入的桌面，截圖、UI Automation 也碰不到桌面。所以另外做 `Shiyin.Agent`，用排程工作（「只在使用者登入時執行」）或 `prlctl exec --current-user` 在桌面啟動，開另一個 named pipe 收指令：
+從 SSH 啟動的程式不會出現在登入的桌面，UI Automation 也碰不到桌面。所以用排程工作在桌面的工作階段執行 PowerShell（`ps/in-session.ps1`：註冊「互動式登入」的工作、等它跑完、讀回輸出）。原本規劃的 `Shiyin.Agent` 不用做了。
 
-- `launch`：在桌面啟動 DEBUG 版拾音（等於 Mac 的 `open -g`）
-- `uia-dump`、`uia-press <視窗> <名稱>`、`uia-focus`、`uia-value`：用 FlaUI 列出元件、按按鈕、設焦點、設值（等於 Mac 用 AX 按按鈕）
-- `screenshot <視窗>`：Windows.Graphics.Capture（或 `PrintWindow(PW_RENDERFULLCONTENT)`）只截拾音的視窗
-- 測按鍵時用 `PostMessage` 只送給拾音的視窗
-
-可行性待 T-W1。
+- `insession.sh`：把標準輸入的 PowerShell 放到桌面跑，例如 `ps/start-app.ps1` 在桌面開 DEBUG 版（資料在 `C:\ShiyinTest`）。
+- `uia.sh <動作> <視窗> <名稱>`（`ps/uia.ps1`，Windows 內建的 UIAutomationClient）：`windows`、`dump`、`click`（Invoke／Toggle／選取／展開）、`open`（會打開選單的按鈕，交給另一個程序按，不然會等到選單關掉）、`menu`、`choose`（下拉選單）、`set`（輸入框）、`close`。同名的元件能按的排前面，`名稱#2` 指定第幾個。
+- `shot.sh <檔案>`：在 Mac 上用 `screencapture -l` 截 UTM 的視窗（整個虛擬機的畫面）。
+- UI Automation 做不到時（開著選單、存檔對話框時 UI Automation 會卡住）：用 UTM 的 AppleScript `input scan code` 送按鍵，只會送進虛擬機，不會到 Mac 前景的 app。
+- 系統的視窗（SmartScreen、系統匣）不屬於拾音：直接從桌面的根元件找（例如系統匣在 `Shell_TrayWnd`，隱藏的圖示先按「顯示隱藏的圖示」）。
 
 ## 16. 決策紀錄（接著 design.md 的 D41）
 
@@ -425,7 +438,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D50 | 用 Velopack 安裝和更新，加上自己的更新金鑰（ECDSA）驗證發布者 | MSIX：自簽的 MSIX 要先用系統管理員把憑證裝進「受信任的人」，一般使用者裝不起來。Inno Setup 加自己寫更新器：要自己處理替換、重開、解除安裝，Velopack 都有，還有差異更新。只靠自簽的 Authenticode 比對簽署者：做得到（`CERT_E_UNTRUSTEDROOT` 表示簽章完整只是不受信任），但對 SmartScreen、Smart App Control 沒有幫助，還要多保管一張憑證；更新金鑰的驗證只要幾行標準的密碼學程式。Microsoft Store：要開發者帳號和審核，之後再說 |
 | D51 | Windows 的 release 用 `win-v*` tag，不設成 latest | 同一個 release 放兩邊的檔案、版號一樣：兩邊一定要同時發布，但 Windows 修自己的問題、Mac 加新功能的時間不會一樣。Windows 的 release 標成 prerelease：官網、Velopack 預設都會略過它，使用者看不到也更新不到。另外開一個 repo：星星、issue、官網的資料來源都要分開。取捨：官網的 `releases.mjs` 要改成認兩種 tag，而且要在第一個 Windows release 之前改好 |
 | D52 | Windows 的版號對齊 Mac 的功能版本，第一版 3.6.0 | 從 1.0.0 開始：使用者看不出 Windows 版有哪些 Mac 的功能 |
-| D53 | 驗證用桌面代理＋named pipe＋UI Automation | 在使用者的電腦上送鍵盤事件：CLAUDE.md 禁止。WinAppDriver：微軟已經不維護。從 SSH 直接開 app：不會出現在桌面，截不到圖 |
+| D53 | 驗證用排程工作在桌面跑 PowerShell 的 UI Automation，加上 named pipe 的控制通道（§15.4；原本規劃的桌面代理 app 用不到） | 在使用者的電腦上送鍵盤事件：CLAUDE.md 禁止。WinAppDriver：微軟已經不維護。從 SSH 直接開 app：不會出現在桌面，截不到圖 |
 | D54 | 複製富文字只放純文字和 HTML | 再放 RTF：要自己從 HTML 產生 RTF；Windows 上常用的貼上目標都吃 HTML |
 | D55 | 偵測會議讀隱私設定的麥克風使用紀錄（ConsentStore）（待 T-W8） | audio session 清單（IAudioSessionManager2）：要一個一個裝置列，瀏覽器和 WebView2 用另一個程序收音，容易漏。取捨：ConsentStore 沒有官方文件，Windows 改版時可能變；它是系統「麥克風使用中」指示的資料來源，改了也比較容易發現 |
 | D56 | whisper 外面包一層小的 C shim | 在 C# 宣告整個 `whisper_full_params`：傳值、1 byte 的 bool、巢狀 struct 和 callback，對錯了不會報錯、只會結果怪；每次升級 whisper.cpp 都要重新對一次 struct |
@@ -434,6 +447,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D59 | WinUI 的畫面全部用 C# 建，不用 XAML 檔 | XAML：排版看得比較清楚，但 XAML 編譯器（XamlCompiler.exe）只能在 Windows 跑，Mac 上連編譯檢查都不行，每改一次畫面都要進虛擬機。取捨：程式比較長、沒有設計工具的預覽；用 `Ui.cs` 的小工具把常用的寫法縮短，畫面一律在虛擬機截圖確認（W2） |
 | D62 | 通知用 Windows 本身的 ToastNotificationManager＋登錄的 AppUserModelID，按鈕用 `shiyin:` 網址加權杖（§12.2） | Windows App SDK 的 AppNotification：自帶部署、沒打包的 app 不能用（依賴 Singleton 套件）。不自帶 Windows App SDK、改用框架套件：要另外裝執行階段，安裝檔要系統管理員或多一步。COM 啟動器（INotificationActivationCallback）：按按鈕時不用開第二個程序，但要登錄 CLSID、實作 COM 伺服器，程式多很多。取捨：每按一次按鈕會短暫多開一個程序（轉送完就結束）；網址可能被網頁觸發，所以會改變狀態的動作要權杖 |
 | D61 | 快速辨識、即時逐字稿用原版 SenseVoice-Small（2024-07-17），VAD 門檻 0.35，送進 VAD 前自動增益（§7） | 2025-09-09 版（原本選的，比較新）是用粵語語料微調過的：日文的假名幾乎都不見（國會聽證、FLEURS 錯字率約 80%，原版 16～28%），英文 AMI WER 60%（原版 40%），只有中文合成會議稍好（8.8% 對 9.2%）。VAD 用預設門檻 0.5、不放大：遠距收音的 AISHELL-4 只抓到兩成的時間，錯字率 84%；門檻 0.35 加自動增益是 26%，其他錄音也沒有變差（門檻 0.35 單獨讓 FLEURS 從 19.9% 降到 15.8%）。固定放大 15～20 dB 對 AISHELL-4 也有用，但大聲的錄音（國會聽證的第 90 百分位已經 −20 dBFS）再放大會超過 0 dBFS 被削掉。取捨：自動增益在很安靜的房間會把背景放大（最多 24 dB），靠 VAD 擋；音量變化很大的會議，增益要幾秒才跟上 |
+| D63 | 開始功能表、桌面的捷徑由 app 的安裝 hook 自己建，名稱依介面語言（§14.1） | 用 Velopack 建的捷徑：名稱是打包時固定的 `--packTitle`，英文 Windows 也是「拾音」。名稱寫成「拾音 Shiyin」：兩種語言都找得到，但「應用程式」清單、捷徑都多一串字。`desktop.ini` 的 LocalizedFileNames 依語言顯示：要在 exe 放多語言的字串資源（MUI），還要改開始功能表資料夾裡共用的 `desktop.ini`。取捨：建立、改名、刪除捷徑要自己處理（`Shortcuts.cs`）；安裝程式自己的視窗標題還是固定的「拾音」 |
 | D60 | 不碰畫面的 app 邏輯放在 `Shiyin.Services`（net10.0），平台的部分是介面 | 寫在 App 的 ViewModel 裡：Mac 上測不了，錄音、工作佇列、匯入、更新這些最容易出錯的流程都要進虛擬機才能測。取捨：多一層介面（`IAudioDecoder`、`IAudioSource`、`IExportPlatform`、`IUpdatePlatform`…）；換來在 Mac 上用模擬的音源、假的引擎和本機伺服器跑完整的流程 |
 
 ## 17. 需要先做的實驗
@@ -442,7 +456,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 | # | 內容 | 通過標準 |
 |---|---|---|
-| T-W1 | 虛擬機和自動化：從 Mac 用 SSH 建置一個 WinUI 3 的小 app；桌面代理（或 `prlctl exec --current-user`）在登入的桌面啟動它、截圖、用 FlaUI 按按鈕；named pipe 讀狀態 | 全部不碰虛擬機的鍵盤滑鼠就能做到；截圖看得到 WinUI 的內容（不是黑的）；輸出資料夾沒有兩份 `onnxruntime.dll` |
+| T-W1 | 虛擬機和自動化：從 Mac 用 SSH 建置一個 WinUI 3 的小 app；排程工作在登入的桌面啟動它、截圖、用 UI Automation 按按鈕；named pipe 讀狀態 | 全部不碰虛擬機的鍵盤滑鼠就能做到；截圖看得到 WinUI 的內容（不是黑的）；輸出資料夾沒有兩份 `onnxruntime.dll` |
 | T-W2 | 錄音：命令列原型同時錄麥克風和電腦聲音 5 分鐘（Edge 播 YouTube，中間停 30 秒；原型自己播一段正弦波） | 沒有斷音、停播的 30 秒補成靜音、兩個聲道時間差 100 ms 以內、正弦波沒錄進去；換預設裝置後自動接回；`powercfg /requests` 看得到 |
 | T-W3 | whisper：建 x64（CPU 各版本＋Vulkan）、ARM64（CPU 各版本）、Mac 的 dylib，跑 Breeze | 同一段錄音跟 Mac 的 `transcribe-eval` 錯字率差 ≤ 0.5 個百分點（R28.4 的上限是 1）；語言偵測跟 Mac 判斷相同；取消 1 秒內停；記憶體峰值 ≤ 3 GB；量出虛擬機、CI x64、CI ARM64 的倍速，決定只有 CPU 時的參數和 N2、N4 的數字 |
 | T-W4 | 說話者辨識：`Shiyin.Eval` 在 Mac 上跑 AMI 9 場、AISHELL-4、使用者的麻將錄音，A、B 兩個方案 | 說話者標錯的時間 ≤ 15%（同 T-A3）；AMI 自動判斷出 4 人、AISHELL-4 6 人、麻將給「至少 4 人」時分出 ≥ 4 位；選出門檻（聲紋誤認 ≤ 2%）；1 小時的錄音 3 分鐘內處理完（CI x64） |

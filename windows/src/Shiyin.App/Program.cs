@@ -27,11 +27,22 @@ public static class Program
         };
 #endif
         Velopack.VelopackApp.Build()
-            .OnAfterInstallFastCallback(_ => FileAssociations.Register())
+            .OnAfterInstallFastCallback(_ =>
+            {
+                AppHost.UseSavedInterfaceLanguage();
+                FileAssociations.Register();
+                Shortcuts.Create(L.T("拾音"));
+            })
+            .OnAfterUpdateFastCallback(_ =>
+            {
+                AppHost.UseSavedInterfaceLanguage();
+                Shortcuts.Rename(L.T("拾音"));
+            })
             .OnBeforeUninstallFastCallback(_ =>
             {
                 FileAssociations.Unregister();
                 Notifier.Unregister();
+                Shortcuts.Remove();
             })
             .Run();
         WinRT.ComWrappersSupport.InitializeComWrappers();

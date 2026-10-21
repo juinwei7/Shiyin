@@ -67,171 +67,126 @@
 
 ## Windows 版（R26～R28，design-windows.md；2026-10-20 使用者決定方向）
 
-進度（2026-10-21）：W1～W8 的程式都寫好了，不碰畫面的部分（`Shiyin.Core`、`Data`、`LLM`、`Engines`、`Services`）在 Mac 上用 `dotnet test` 測過（77 個）；畫面（`Shiyin.App`）、平台（`Shiyin.Platform.Windows`）在 Mac 上只編譯過，還沒在 Windows 上跑過。剩下的驗證要虛擬機（W0.1）和推到 GitHub 讓 CI 跑（W1.2）。
+進度（2026-10-21）：W1～W8 的程式都寫好了。在 UTM 的 Windows 11 ARM64 虛擬機（§15.2）上建置、跑測試（88 個）、用 UI Automation 走過主要的畫面，安裝檔、app 內更新、解除安裝也驗過。剩下三類：虛擬機還沒走過的畫面（各項的「還差」）；虛擬機做不到的（沒有音效裝置、x64、顯示卡、Teams／Zoom、Word）；要使用者決定的（推到 GitHub 讓 CI 跑、正式的更新金鑰放進 secrets、SignPath、用麻將錄音評估）。
 
-順序：先做實驗（結果會改設計），再做不依賴 Windows 的 `Shiyin.Core`（在 Mac 上 `dotnet test`），然後畫面、匯入和轉錄、錄音、說話者、AI 功能、系統整合、打包。實驗的通過標準在 design-windows §17；虛擬機做不到的標 `[~]`，寫明要使用者在 Windows 電腦上試什麼。使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。這一段的「§」指 `design-windows.md`，「M§」指 `design.md`。
+使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。這一段的「§」指 `design-windows.md`，「M§」指 `design.md`。
 
 ### W0 環境和實驗
 
-- [ ] **W0.1 開發環境**（§15.2）
-  - 要使用者：裝 Parallels Desktop（不用 VMware Fusion：ARM 版 Windows 沒有音效驅動）和 Windows 11 ARM64，安裝、授權要使用者操作；決定買 Pro 版（有 `prlctl exec --current-user`）或用 Standard 版加桌面代理；同意在 Mac 裝 .NET 10 SDK
-  - 做：虛擬機設定自動登入、不鎖定；裝 .NET 10 SDK、Visual Studio Build Tools（C++、ARM64 和 x64）、Git、OpenSSH Server，clone repo；把 Mac 的模型複製過去
-  - 驗證：Mac 上 `ssh` 進虛擬機跑 `dotnet --info`、`git -C <repo> log -1`；Mac 上 `dotnet --info`
-- [ ] **W0.2 T-W1 自動化**（§15.3、D53）：WinUI 3 小 app、桌面代理、named pipe、截圖、UI Automation
-- [ ] **W0.3 T-W2 錄音**（§6）
-- [~] **W0.4 T-W3 whisper.dll**（§8、D46）：Mac 的部分做完了（shim、P/Invoke、同樣的取樣結果跟 Mac 逐段相同，§8）
-  - 還差：建 x64（CPU 各版本＋Vulkan）、ARM64 的 dll（W8.1 的 CI）；虛擬機、CI x64、CI ARM64 的倍速和記憶體峰值，寫進 N2、N4 的數字（requirements 第 22 節 R27）；Media Foundation 解碼後再跟 Mac 比一次錯字率
+- [~] **W0.3 T-W2 錄音**（§6）：虛擬機沒有音效裝置，CI 的 runner 也沒有。`record-sim` 的錄音流程在虛擬機跑過（W4）
+  - 要使用者：在 Windows 電腦上照 T-W2 錄 5 分鐘（麥克風和電腦聲音、中間停播 30 秒、換預設裝置）
+- [~] **W0.4 T-W3 whisper.dll**（§8、D46）：shim、P/Invoke、同樣的取樣結果跟 Mac 逐段相同。虛擬機（4 核、2 個執行緒，官方 b5454 的 ARM64 DLL）轉 91 秒的中文合成會議約 2.5 分鐘（含說話者辨識），27 段跟 Mac 逐段相同、錯字率都是 8.4%
+  - 還差：CI 建 x64（CPU＋Vulkan）、ARM64 的 DLL（W8.1）；CI x64、ARM64 的倍速和記憶體峰值，寫進 N2、N4 的數字（R27）
 - [~] **W0.5 T-W4 說話者辨識**（§9、D47、D58）：分群改成自己做，AMI、AISHELL-4 跟 Mac 一樣好；聲紋門檻 0.6、分不準的提示 0.37（§9）
-  - 還差：使用者的麻將錄音給「至少 4 人」（要使用者給檔案的位置）；1 小時的錄音在 CI x64 3 分鐘內處理完
-- [~] **W0.6 T-W5 即時逐字稿**（§7、D44、D61）：Mac 上定稿延遲中位數 0.50～0.62 秒、第 90 百分位 0.68～0.83 秒（中英日）；發現原本的模型（粵語微調版）日文、英文很差、遠距收音的 VAD 漏掉八成，換成原版模型＋VAD 門檻 0.35＋自動增益（D61）：快速辨識中文合成 9.2%、AISHELL-4 26.4%、AMI 39.0%、日文 15.5～28.1%
-  - 還差：虛擬機的 CPU 用量
-- [ ] **W0.7 T-W6 claude、codex CLI**（§10）
-- [ ] **W0.8 T-W7 安裝和更新**（§14、D50）
-- [ ] **W0.9 T-W8 偵測會議**（§12.4）
-- [ ] **W0.10 T-W9 媒體**（§8、§13）：結果寫進 R27 的 R3.1、R9.4
-- [ ] **W0.11 T-W10 長會議畫面**（§11.2）
+  - 還差：使用者的麻將錄音給「至少 4 人」（要使用者同意用這個錄音）；1 小時的錄音在 CI x64 3 分鐘內處理完
+- [~] **W0.6 T-W5 即時逐字稿**（§7、D44、D61）：Mac 上定稿延遲中位數 0.50～0.62 秒、第 90 百分位 0.68～0.83 秒（中英日）；換成原版模型＋VAD 門檻 0.35＋自動增益（D61）：快速辨識中文合成 9.2%、AISHELL-4 26.4%、AMI 39.0%、日文 15.5～28.1%
+  - 還差：虛擬機 `record-sim` 1 倍速時的 CPU 用量
+- [ ] **W0.7 T-W6 claude、codex CLI**（§10）：虛擬機裝 Node 和 claude、codex（npm 版和原生版各一次），確認找得到真正的執行檔、10,000 字以上的中文參數不會被截斷、沒登入時的錯誤訊息
+  - 要使用者：真的整理一次要登入帳號
+- [~] **W0.8 T-W7 安裝和更新**（§14、D50）：虛擬機驗過安裝、從網路下載的安裝檔被 SmartScreen 擋下時「其他資訊」→「仍要執行」（發行者顯示「不明的發行者」）、更新（簽章不符被拒、正常的更新後自己重開）、解除安裝不刪資料
+  - 還差：Velopack 讀真的 GitHub Releases 時跳過 Mac 的 release（第一個 Windows release 時，或推到 fork 試）
+  - 要使用者：Smart App Control 開著時的畫面（虛擬機是評估模式，不會擋）；更新後麥克風權限還在（要有麥克風）
+- [ ] **W0.9 T-W8 偵測會議**（§12.4）：要有麥克風和 Teams、Zoom，虛擬機做不到
+  - 要使用者：在 Windows 電腦上開 Teams、Zoom、Chrome 的會議，看 5 秒內有沒有提醒
+- [ ] **W0.10 T-W9 媒體**（§8、§13）：m4a、mp3、wav、aac、flac、mp4、mov、wma、aiff、caf 各匯入一次，結果寫進 R27 的 R3.1；日文 PDF；1.5 倍速播放不變調（要有喇叭，使用者）；docx 用 Word 打開（使用者）
+- [ ] **W0.11 T-W10 長會議畫面**（§11.2）：2,000 段以上的會議捲動、跟著播放，UI 執行緒最長卡住多久（Windows 的控制通道還沒有 `metrics`，要先加）
 
 ### W1 Core（在 Mac 上測）
 
-- [~] **W1.2 方案骨架**（§1、§3）：方案、`global.json`、套件版本集中管理、建置輸出放在 repo 外都好了；`.github/workflows/windows.yml`（`windows-latest`、`windows-11-arm`、`macos-latest` 跑 `dotnet test`）寫好了
-  - 還差：推到 GitHub 讓 CI 跑一次（要使用者同意推 `windows` 分支）。套件的授權見 W7.6
-
-- [~] **W1.3 不碰畫面的 app 邏輯**（§1 的 `Shiyin.Services`）：設定（settings.json、`--set`）、模型下載（續傳、SHA-256、多個檔案的模型）、匯入、.shiyin 封包、轉錄流程（分段、分聲道、快速辨識、說話者辨識）、工作佇列（三條線、取消、模型還沒好時先等）、錄音（寫檔、暫停、看門狗、收音提醒、空間不足、麥克風權限、即時逐字稿、自動偵測語言、模擬錄音）、會議的操作（對應 Mac 的 `AppModel`）。`dotnet test` 用假的引擎、假的整理工具、本機伺服器測過（`ServicesTests`、`RecorderTests`、`ClusteringTests`）
-  - 也做了：對會議提問、問所有會議（M§21.8）；更新檔的驗證（更新金鑰的簽章、版本、架構、SHA-256，§14.2）；偵測會議的時間規則（M§21.7）；回報問題的內容（M§21.9）；Word 匯出（§13，OpenXml 的 schema 檢查零錯誤）。`AppTests`、`DocxTests` 測過
-  - 還差：畫面接上之後在虛擬機的 app 裡各跑一次
-- [~] **W1.4 Windows 平台層**（§1 的 `Shiyin.Platform.Windows`）：WASAPI 麥克風和 process loopback（排除拾音的程序樹、補靜音）、Media Foundation 解碼和 AAC 壓縮、認證管理員、找 claude/codex（不經過 .cmd）、防止睡眠、Job Object、偵測會議（ConsentStore）、全域快捷鍵、Velopack、回報問題的系統資訊。在 Mac 上用 `EnableWindowsTargeting` 編譯過
-  - 還差：全部要在 Windows 上跑過（W0.3 T-W2、W0.7 T-W6、W0.8 T-W7、W0.9 T-W8、W0.10 T-W9）
+- [~] **W1.2 方案骨架**（§1、§3）：`.github/workflows/windows.yml`（`windows-latest`、`windows-11-arm`、`macos-latest` 跑 `dotnet test`）寫好了；虛擬機裡 `dotnet test` 88 個通過
+  - 要使用者：同意推 `windows` 分支，讓 CI 跑一次
+- [~] **W1.4 Windows 平台層**（§1 的 `Shiyin.Platform.Windows`）：Media Foundation 解碼和 AAC 壓縮、認證管理員（DEBUG 版用記憶體）、防止睡眠、全域快捷鍵、Velopack、檔案關聯、捷徑、通知在虛擬機跑過
+  - 還差：WASAPI（W0.3）、ConsentStore（W0.9）、找 claude／codex（W0.7）
 
 ### W2 app 骨架
 
-- [~] **W2.1 主視窗**（§11.1）：側欄（資料夾、搜尋、垃圾桶、匯入）、會議內容六個分頁，讀示範資料的複本
-  - 驗證：虛擬機裡截圖；UI Automation 切換分頁、點搜尋結果跳到那一段
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W2.2 介面文字、英文介面**（§11.4、R26.4）：翻譯表、`L()`、XAML 的 markup extension、`l10n.py` 的 Windows 模式（抽字串、`check`、從 Mac 的表 `sync` 英文）、設定裡的介面語言
-  - 驗證：Windows 模式的 `check` 沒有問題；Mac 的 `l10n.py check` 結果不變；英文介面截圖沒有中文；設定改成中文、英文各重開一次
-  - 做了：翻譯表直接讀 Mac 的 Localizable.xcstrings，加上 Windows 才有的 `Strings/Windows.xcstrings`（92 條英文）；`l10n.py windows-check`、`windows-apply`，CI 的 macOS 每次跑；設定的「進階」可以選介面語言。還差：英文介面的截圖、改語言各重開一次（要虛擬機）
-- [~] **W2.3 DEBUG 控制通道**（§15.2）：named pipe、`shiyinctl.exe`、`state`、`select`、`tab`、`closewindow`、`quit`
-  - 驗證：從 Mac 經 SSH 執行，讀到的狀態跟畫面一致
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W2.4 設定視窗**（§12.8）：七頁、settings.json、啟動參數覆蓋設定
-  - 驗證：每頁截圖；改設定後重開還在；`--set` 只在這次有效、settings.json 沒被改
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W2.5 系統匣、關視窗、結束**（R27 R1.7）
-  - 驗證：關掉主視窗後程序還在、系統匣小視窗打得開；有工作在跑時「結束」會確認（UI Automation 按「取消」「結束」各一次）
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W2.6 單一執行個體、開檔**（§12.1）：驗證：已經開著時再用參數開一個檔案，原本的拾音收到並匯入、第二個程序結束
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+- [~] **W2.1 主視窗**（§11.1）：側欄、會議內容六個分頁在虛擬機截圖過、用 UI Automation 切換過
+  - 還差：點搜尋結果跳到那一段
+- [~] **W2.4 設定視窗**（§12.8）：七頁截圖過；改設定後重開還在
+  - 還差：`--set` 只在這次有效、settings.json 沒被改
+- [~] **W2.5 系統匣、關視窗、結束**（R27 R1.7）：關掉主視窗後程序還在、按系統匣圖示主視窗回來（UI Automation）
+  - 還差：系統匣的右鍵選單；有工作在跑時「結束」會確認（按「取消」「結束」各一次）
 
 ### W3 匯入和轉錄
 
-- [~] **W3.1 匯入**（R3、R27 R3.1）：解碼、拖放、Ctrl+O、檔案總管開啟、日期推算、srt/vtt/txt、Markdown 筆記
-  - 驗證：T-W9 的每種格式匯入一次；日期推算跟 Mac 的測試資料相同
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W3.2 模型下載**（M§7）：續傳、SHA-256、跟 Mac 同一份網址
-  - 驗證：用 `modelurl` 指到本機伺服器，下載中斷後續傳完成；SHA 不符時刪掉並報錯
-  - 做了：`ModelStore`（Range 續傳、SHA-256、多個檔案的模型、暫停後再開始會等上一次停下），`ServicesTests` 用本機伺服器測過續傳、SHA 不符、HTTP 404、伺服器不支援續傳。還差：設定頁、引導裡的下載在虛擬機跑一次
-- [~] **W3.3 正式轉錄**（§8、R4、R28.4）：whisper.dll、分段、過濾、低信心、進度、預估時間
-  - 驗證：`Shiyin.Eval transcribe-eval`（Mac 上）和 app 的 `transcribe-eval`（虛擬機）跑 AISHELL-4、AMI、國會聽證、FLEURS 日文（`~/Library/Caches/ShiyinSpike/`），用 `asr-score.swift` 算錯字率，跟 Mac 差 ≤ 1 個百分點；4 小時的錄音記憶體峰值
-  - 做了：Mac 上的評估見 W0.4；`TranscriptionPipeline`、`JobRunner` 用假的引擎測過。還差：虛擬機裡的 app 跑 `transcribe-eval`、4 小時的記憶體峰值
+- [~] **W3.1 匯入**（R3、R27 R3.1）：wav、.shiyin 匯入過；雙擊 .shiyin（檔案關聯）會交給開著的拾音匯入
+  - 還差：W0.10 的各種格式、拖放、Ctrl+O
+- [~] **W3.3 正式轉錄**（§8、R4、R28.4）：虛擬機裡轉錄、轉錄中結束程式再開會接著做完（W0.4）
+  - 還差：4 小時的錄音記憶體峰值（CI x64）
 - [~] **W3.4 快速辨識**（R27 R4.1、R20.8）：驗證：沒有 Breeze 時新會議用快速辨識轉完、模型開始下載；放進模型後出現「重新轉錄」提示
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W3.5 工作佇列**（M§21.2、R4.2、R4.3）：三條線、取消、重試、重開後續跑、當掉兩次標失敗
-  - 驗證：同 Mac 的方法（`cancel`、`retry`、轉錄中 kill 程序再開）
-  - 做了：`JobRunner`（三條線、取消、重開後續跑、模型還沒好時先等），`ServicesTests` 測過從轉錄到整理、壓縮、校正、猜說話者整串；當掉兩次標失敗用 Data 的 `RequeueRunning`。還差：虛擬機裡轉錄中 kill 程序再開
-- [~] **W3.6 播放器、時間軸**（R8）：倍速、點時間跳播、播放中高亮、時間軸的重點和待確認標記
-  - 驗證：UI Automation 點時間點、改倍速；2,000 段的會議播放時 `metrics` 的 UI 執行緒最長卡住時間跟 Mac 同一個標準（R20.3）
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W3.7 逐字稿分頁**（R8.1、R8.3、R20.6）：搜尋、篩選說話者、單段編輯、用詞修正、草稿保留
-  - 驗證：單段編輯的「完成」「取消」、用詞修正的「取代」都用 UI Automation 按過（CLAUDE.md：不能只用控制通道存資料）
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+- [~] **W3.6 播放器、時間軸**（R8）：點出處的時間會跳到那裡
+  - 還差：改倍速、播放中高亮、時間軸的重點和待確認標記；2,000 段的會議（W0.11）
+- [~] **W3.7 逐字稿分頁**（R8.1、R8.3、R20.6）：驗證：單段編輯的「完成」「取消」、用詞修正的「取代」都用 UI Automation 按過；搜尋、篩選說話者
 
 ### W4 錄音
 
-- [~] **W4.1 錄音**（§6、R1）：麥克風、電腦聲音、兩者、暫停、雙聲道 WAV
-  - 驗證：T-W2 的標準；`record-sim` 4 小時不中斷
-  - 做了：`Recorder`、`RecordingWriter`（對齊、補靜音、暫停、標頭每 2 秒更新）、WASAPI 的麥克風和 process loopback（Platform）。`RecorderTests` 用模擬錄音測過雙聲道、暫停、即時逐字稿。還差：WASAPI 在虛擬機錄一次（T-W2）
-- [~] **W4.2 復原、換裝置、watchdog、磁碟空間**（R1.5、R18.2、R18.3）
-  - 驗證：錄音中 kill 程序，重開後復原並轉錄；虛擬機切換音訊裝置後自動接回；模擬磁碟快滿的警告
-  - 做了：復原（`RecoverRecordings`，`AppTests` 測過標頭沒更新的錄音、找不到會議的錄音、空的會議）、看門狗和換裝置（`RecorderTests` 用停住的模擬音源測過）、空間不足的提醒。還差：虛擬機裡切換音訊裝置
-- [~] **W4.3 錄音畫面**（R1.4、R25）：音量條、計時、按鈕、窄視窗
-  - 驗證：`record-sim` 1 倍速時 CPU 跟 `metrics`（同 Mac U1 的量法），真的畫面截圖、UI Automation 按暫停、標記重點、停止
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W4.4 即時逐字稿、我的筆記、重點**（§7、R2）：驗證：模擬錄音時暫定文字 1 秒內、定稿 5 秒內；往回捲動不會被拉走、「回到最新」；筆記每行有時間
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W4.5 自動偵測語言**（R16）：驗證：`detect-eval` 跑 Mac 用過的同一批片段，結果跟 Mac 相同
-  - 做了：Mac 3.6 的 DEBUG 版 `shiyinctl detect-eval` 和 Windows 的 `shiyin-eval detect-eval` 跑同樣 36 個位置（AISHELL-4、中文合成、AMI、日文合成、國會聽證兩場、FLEURS）：36/36 判斷、用掉的秒數、三個語言的機率逐位元相同，36/36 判斷正確。還差：虛擬機裡錄音時真的切換一次（WASAPI 的聲音經過重新取樣）
-- [~] **W4.6 收音提醒**（R24）：驗證：Mac 用過的太小聲、太吵、沒聲音的錄音，`record-sim` 出現同樣的提醒
-  - 做了：Mac 用過的錄音是使用者的會議做的，改用 AMI 前 150 秒做四種：原本、調小 26 dB、加白雜訊（−28 dBFS）、60 秒後變 0。Mac 3.6 的 DEBUG 版 `record-sim` 2 倍速和 Windows 的 `Recorder.StartSimulated`（Mac 上跑）：原本都不提醒；調小 26 dB 都是「聲音小」（Mac 第 89 秒、Windows 第 89.5 秒）、加雜訊都是「吵」（74.6／74 秒）、變 0 都是「沒有聲音」（71.5／71.8 秒），差在讀狀態的間隔內；最後的說話、背景音量、計數完全相同。還差：畫面上的提示列（要虛擬機）；使用者的錄音要使用者同意才用
+- [~] **W4.1 錄音**（§6、R1）：`record-sim` 在虛擬機錄過（雙聲道 WAV、即時逐字稿、錄完轉錄和壓縮）
+  - 還差：`record-sim` 4 小時不中斷
+  - 要使用者：WASAPI 的麥克風、電腦聲音（W0.3）
+- [~] **W4.2 復原、換裝置、watchdog、磁碟空間**（R1.5、R18.2、R18.3）：錄音中結束程式，重開後復原並轉錄（虛擬機）
+  - 要使用者：錄音中換音訊裝置
+- [~] **W4.3 錄音畫面**（R1.4、R25）：截圖過；快捷鍵標記重點時顯示「已標記 00:06 為重點」
+  - 還差：UI Automation 按暫停、標記重點、停止；`record-sim` 1 倍速時的 CPU（W0.6）
+- [~] **W4.4 即時逐字稿、我的筆記、重點**（§7、R2）：模擬錄音時即時逐字稿有出現
+  - 還差：往回捲動不會被拉走、「回到最新」；筆記每行有時間
+- [~] **W4.5 自動偵測語言**（R16）：`detect-eval` 36 個位置跟 Mac 逐位元相同；虛擬機模擬錄音英文會議時自動換成英文、顯示「改回中文」
+  - 要使用者：真的麥克風錄一次（WASAPI 的聲音經過重新取樣）
+- [~] **W4.6 收音提醒**（R24）：太小聲、太吵、沒聲音的判斷跟 Mac 相同（Mac 上跑 Windows 的程式）
+  - 還差：虛擬機 `record-sim` 時畫面上的提示列
 - [~] **W4.7 防止睡眠**（R1.9）：驗證：錄音和轉錄中 `powercfg /requests` 列出拾音，結束後消失
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] 使用者：真的筆電麥克風、藍牙耳機、線上會議錄一場
 
 ### W5 說話者
 
-- [~] **W5.1 辨識、改名**（§9、R5、R28.6）：「至少 N 人」、每人的聲紋、分不準的判斷（sherpa-onnx 沒有，自己補）
-  - 驗證：`Shiyin.Eval` 在 Mac 上跑 AMI 9 場、AISHELL-4、麻將錄音，人數和標錯時間符合 T-W4 的標準；改名後逐字稿和會議紀錄一起改
-  - 做了：分群改成自己做（D58），AMI、AISHELL-4 跟 Mac 一樣好（W0.5）；改名、合併、復原在 `AppTests` 測過。2026-10-21 在虛擬機發現只有一個人的錄音被分成 3～7 人，加上「不減平均的群中心」的兩步合併（§9）：單人 6 段都是 1 位，其他結果不變；虛擬機裡「重新辨識說話者」後那段合成會議是 1 位。還差：麻將錄音（要使用者同意）
-- [~] **W5.2 聲紋**（R19.3）：驗證：AMI 上誤認 ≤ 2%、自動帶入的比例跟 Mac 比；「不是他」、設定的改名、刪除、關閉
-  - 做了：聲紋門檻 0.6（AMI 9 場：帶入 16/17、帶錯 0、陌生人 0）。還差：「不是他」、設定裡的改名、刪除在畫面上按一次
-- [~] **W5.3 猜說話者**（R19.2）：驗證：假伺服器和真的 Claude CLI 各跑一次，建議的「套用」「忽略」用 UI Automation 按過
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W5.4 合併、改句子的說話者、復原、重新辨識、分不準的提醒**（R22、R23）：驗證：同 Mac 3.6 的驗收項目（`mergespeaker`、`reassign`、`undospeaker`、`rediarize`、`speakerhint`）
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+- [~] **W5.1 辨識、改名**（§9、R5、R28.6）：見 W0.5；虛擬機裡「重新辨識說話者」後合成會議是 1 位
+  - 還差：麻將錄音（W0.5）
+- [~] **W5.2 聲紋**（R19.3）：聲紋門檻 0.6（AMI 9 場：帶入 16/17、帶錯 0、陌生人 0）
+  - 還差：「不是他」、設定裡的改名、刪除在畫面上按一次
+- [~] **W5.3 猜說話者**（R19.2）：驗證：假伺服器跑一次，建議的「套用」「忽略」用 UI Automation 按過；真的 Claude CLI 要使用者登入
+- [~] **W5.4 合併、改句子的說話者、復原、重新辨識、分不準的提醒**（R22、R23）：「重新辨識」在虛擬機跑過
+  - 還差：合併、改句子的說話者、復原、分不準的提醒在畫面上按一次
 
 ### W6 整理和 AI 功能
 
-- [~] **W6.1 整理、範本、待確認、修訂、版本、編輯器**（R6）：驗證：假伺服器和真的 Claude CLI；會議紀錄編輯器的「完成」「取消」、待確認的送出用 UI Automation 按過；復原回到上一版
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+- [~] **W6.1 整理、範本、待確認、修訂、版本、編輯器**（R6）：假伺服器整理過；會議紀錄編輯器的「完成」「取消」、會議資訊的「取消」用 UI Automation 按過
+  - 還差：待確認的送出、復原回到上一版；真的 Claude CLI（要使用者登入）
 - [~] **W6.2 草稿紀錄**（R19.1）：驗證：模擬錄音停止後出現草稿，正式版好了自動取代；改過的草稿留版本
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
 - [~] **W6.3 逐字稿校正、詞彙表建議**（R14.4、R14.5、R20.2）：驗證：依詞處理、一次接受、忽略、單筆還原
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W6.4 對會議提問、問所有會議**（R19.6）：驗證：假伺服器和真的 Claude CLI；點出處打開那場會議並跳到時間點；取消 1 秒內停
-  - 做了：`AskService`（一場會議、所有會議），`AppTests` 用假伺服器測過關鍵詞、挑會議、拿掉不在範圍的出處。還差：真的 Claude CLI、畫面上點出處
-- [~] **W6.5 CLI 登入**（§10）：驗證：沒登入時的錯誤訊息、按「登入」開出終端機
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
+- [~] **W6.4 對會議提問、問所有會議**（R19.6）：單場的提問用假伺服器問過兩題、點出處會跳到那個時間、清除問答紀錄
+  - 還差：問所有會議、點出處打開那場會議；取消 1 秒內停；真的 Claude CLI（要使用者登入）
+- [~] **W6.5 CLI 登入**（§10）：驗證：沒登入時的錯誤訊息、按「登入」開出終端機（W0.7）
 
 ### W7 系統整合、匯出
 
-- [~] **W7.1 通知**（§12.2）：驗證：完成、失敗、偵測會議的通知出現，點了打開那場會議；通知關掉時改用小視窗
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W7.2 全域快捷鍵**（§12.3）：驗證：用控制通道模擬按下（同 Mac 的 `hotkey`）；另一個程序先註冊同一組時顯示原因
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W7.3 偵測會議**（§12.4）：驗證：T-W8 的方法；「不要再提醒這個 app」、設定裡恢復
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] 使用者：真的 Teams、Zoom、Meet 會議
-- [~] **W7.4 匯出**（§13）：docx、PDF、m4a、wav、剪貼簿、分享
-  - 驗證：同一場會議 Mac 和 Windows 各匯出，docx、PDF 抽出文字比對相同；剪貼簿貼到 Word 有格式；分享視窗打得開（虛擬機裡）
-  - 做了：Word（`DocxWriter`，OpenXml 的 schema 檢查零錯誤）、PDF（WebView2 印 A4）、m4a、wav、剪貼簿（純文字＋HTML）、分享（DataTransferManager）。Word 跟 Mac 比過（同一個 .shiyin 匯入兩邊再匯出，抽每段文字）：逐字稿三種語言、日文會議紀錄相同，中英會議紀錄只差 Mac 把表格攤成一格一段、空的主題多一個項目符號（§13）。還差：PDF、分享、剪貼簿在虛擬機試；PDF 跟 Mac 比抽出來的文字和頁數
-- [~] **W7.5 資料夾、垃圾桶、壓縮、儲存空間**（R9）：驗證：同 Mac 3.0 的驗收項目
-  - 程式寫好了（Mac 上編譯過），還差上面的驗證（要虛擬機）
-- [~] **W7.6 首次使用引導、使用說明、回報問題、關於**（R10.2、R10.4、R19.7、R27 R13.1）：驗證：全新的 `SHIYIN_HOME` 走完引導；回報的內容沒有會議內容、key；授權條款列出所有套件和模型
-  - 做了：「關於拾音」（系統匣、設定的「進階」）：版本、用到的軟體和模型，「完整的授權條款」用預設的文字編輯器打開；`scripts/windows/make-third-party-licenses.py` 依 app 實際用到的套件產生授權檔（套件、.NET、ONNX Runtime、Windows App SDK、WebView2、whisper.cpp 原文，模型列來源和授權），Mac 上 `dotnet publish -r win-x64` 看過安裝資料夾裡有 `Third-Party Licenses.txt`、所有 DLL 都沒有匯入 VC++ 執行階段。還差：上面的驗證（要虛擬機）
+- [~] **W7.1 通知**（§12.2）：轉錄完成、整理完成、整理失敗的通知都出現在通知中心，點了用 `shiyin:` 網址打開那場會議
+  - 還差：偵測會議的通知按鈕（W0.9）；通知關掉時改用小視窗
+- [~] **W7.2 全域快捷鍵**（§12.3）：註冊成功；控制通道模擬按下：沒在錄就開始、在錄就停止，錄音中標記重點
+  - 還差：另一個程序先註冊同一組時顯示原因
+- [~] **W7.3 偵測會議**（§12.4）：見 W0.9
+- [~] **W7.4 匯出**（§13）：Word、PDF、m4a、wav、md、txt、srt、vtt、.shiyin 在虛擬機匯出過（PDF 用畫面上的存檔對話框）；Windows 的 .shiyin 匯入 Mac 後 md 匯出跟 Windows 相同；Word 跟 Mac 比過（§13）
+  - 還差：分享視窗、剪貼簿；PDF 跟 Mac 比抽出來的文字和頁數
+  - 要使用者：剪貼簿貼到 Word、docx 用 Word 打開
+- [~] **W7.5 資料夾、垃圾桶、壓縮、儲存空間**（R9）：壓縮成 m4a 在虛擬機跑過
+  - 還差：資料夾、垃圾桶、儲存空間（同 Mac 3.0 的驗收項目）
+- [~] **W7.6 首次使用引導、使用說明、回報問題、關於**（R10.2、R10.4、R19.7、R27 R13.1）：全新的資料夾走完引導五步、四個模型下載；「關於拾音」和安裝資料夾都有授權條款
+  - 還差：回報問題的內容沒有會議內容、key；使用說明
 
 ### W8 打包、發布
 
-- [~] **W8.1 whisper.dll 的 CI 建置**（§8）：驗證：CI 產生 x64、ARM64 的 dll，雜湊記在 log；跟虛擬機自己建的轉錄結果相同
-  - 做了：`scripts/windows/build-whisper.ps1`、`release-windows.yml` 的建置步驟。還差：推到 GitHub 讓 CI 跑（要使用者同意推分支）
-- [~] **W8.2 安裝檔、安裝說明**（§14.1）：Velopack、檔案關聯、開始功能表、安裝說明（中英，SmartScreen、Smart App Control）
-  - 驗證：在虛擬機另一個 Windows 帳號從 Edge 下載安裝，照安裝說明放行 SmartScreen；開始功能表的名稱依語言；雙擊 .shiyin 會匯入；解除安裝不刪資料
+- [~] **W8.1 whisper.dll 的 CI 建置**（§8）：`scripts/windows/build-whisper.ps1`、`release-windows.yml` 的建置步驟
+  - 要使用者：同意推到 GitHub 讓 CI 跑（虛擬機沒有 Visual Studio Build Tools）
+- [~] **W8.2 安裝檔、安裝說明**（§14.1、D63）：虛擬機驗過 `pack.ps1`、安裝、開始功能表和桌面的捷徑、名稱依介面語言（「拾音」「Shiyin」，換語言後重開會改名）、雙擊 .shiyin 匯入、SmartScreen 的畫面跟安裝說明一致、解除安裝不刪資料
   - 要使用者：決定要不要用自己的名義申請 SignPath Foundation 的免費簽章（申請下來前沒有 Authenticode 簽章）
-  - 做了：`scripts/windows/pack.ps1`（publish、vpk pack、安裝檔改名、檢查 onnxruntime.dll 只有一份）、檔案關聯（Velopack 的安裝、解除安裝 hook）。還差：上面的驗證全部（要虛擬機）
-- [~] **W8.3 app 內更新**（§14.2、R27 R10.6）：更新金鑰（`make-update-key.ps1`）、下載後套用前驗證
-  - 驗證：本機伺服器放正常、SHA 不符、更新金鑰不符、同版本四種更新檔（同 Mac 的 `make-update-fixtures.sh`）；錄音中不能更新；更新後麥克風權限、資料都在
-  - 要使用者：同意把更新金鑰的私鑰放進 GitHub secrets
-  - 做了：`Updater`（簽章、版本、架構、SHA-256；`AppTests` 測過正常、金鑰不符、SHA 不符、版本不對、架構不對、忙碌中六種）、Velopack 那一邊、`scripts/windows/update-key.cs`（Mac 上測過 keygen、sign、verify）。還差：產生正式的更新金鑰（要使用者同意把私鑰放進 GitHub secrets）、本機伺服器的更新測試
-- [~] **W8.4 官網**（§14.4）：先改 `docs/website.md` §7
-  - 驗證：`node site/build.mjs --releases <兩種混在一起的 JSON>` 建置成功，下載區有 Mac 和 Windows，`/download` 還是 DMG
-  - 做了：真的 Releases 加一個假的 `win-v3.6.0` 建置成功，`/download` 還是 DMG、`/download/windows`、`/download/windows-arm64` 指到兩個安裝檔，下載區用 headless Chrome 看過（中文 1280 寬、日文 390 寬）；只有 Mac 的 Releases 時跟 main 的建置只差沒用到的樣式。還差：第一個 Windows 版發布時改常見問題「只有 Mac 版」、真的上線看一次
-- [~] **W8.5 發布的工作流程**（§14.3、D51）：`release-windows.yml`，Release 不設成 latest；W8.4 的官網要先上線
-  - 驗證：手動執行只產生 artifact；推測試用的 tag 到 fork（不是正式 repo）確認不會變成 latest、Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的
-  - 做了：`.github/workflows/release-windows.yml`（推 win-v* 才發布、不設成 latest、更新說明沒簽章就不發布）。還差：上面的驗證
-- [~] **W8.6 README、CLAUDE.md**：Windows 的系統需求、安裝、隱私（認證管理員、資料位置）；CLAUDE.md 補 Windows 的指令
-  - 驗證：README 的系統需求跟 requirements R27 的 N4 一致、連結都打得開；CLAUDE.md 列的指令每個實際跑一次
-  - 做了：README（中英）加〈Windows 版〉：系統需求（同 R27 N4）、安裝（SmartScreen、智慧型應用程式控制）、跟 Mac 不一樣的地方、資料位置和認證管理員、授權、從原始碼建置；寫明還沒有正式發布。CLAUDE.md 的 Windows 指令（Mac 上跑得到的都跑過）。還差：發布時把「還沒有正式發布」改成下載連結、記憶體和轉錄速度的數字（W0.4）、Windows 上的指令（`build-whisper.ps1`、`pack.ps1`）實際跑一次
+- [~] **W8.3 app 內更新**（§14.2、R27 R10.6）：虛擬機用 `-UpdateTest` 的版本和本機伺服器驗過：簽章不符被拒、下載的檔案刪掉；正常的更新從 3.6.0 到 3.6.1、自己重開、資料和捷徑都在
+  - 要使用者：同意產生正式的更新金鑰、私鑰放進 GitHub secrets；更新後麥克風權限還在（W0.8）
+- [~] **W8.4 官網**（§14.4）：真的 Releases 加一個假的 `win-v3.6.0` 建置成功，`/download` 還是 DMG、`/download/windows`、`/download/windows-arm64` 指到兩個安裝檔，下載區用 headless Chrome 看過
+  - 還差：第一個 Windows 版發布時改常見問題「只有 Mac 版」、真的上線看一次
+- [~] **W8.5 發布的工作流程**（§14.3、D51）：`.github/workflows/release-windows.yml`（推 win-v* 才發布、不設成 latest、更新說明沒簽章就不發布）
+  - 還差：手動執行只產生 artifact；推測試用的 tag 到 fork（不是正式 repo）確認不會變成 latest、Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的
+- [~] **W8.6 README、CLAUDE.md**：README（中英）的〈Windows 版〉、CLAUDE.md 的 Windows 指令；`pack.ps1` 在虛擬機跑過
+  - 還差：發布時把「還沒有正式發布」改成下載連結、記憶體和轉錄速度的數字（W0.4）；`build-whisper.ps1` 在 CI 跑一次
 
 ### W9 驗收
 
 - [ ] **W9.1 驗收**（requirements 第 22 節）：照第 8 節和 3.1～3.6 各節的驗收項目在虛擬機走一次，英文介面、日文會議；R28 的比對全部通過
   - 驗證：第 22 節的驗收結果表每一條 R26～R28、R27 的每一列都有 ✅ 或 🟡（🟡 寫明還差什麼）；Mac 的 `git diff v3.6.0 -- Sources` 只有 DEBUG 的程式
-- [~] 使用者：x64 電腦（有顯卡、沒顯卡各一台最好）的轉錄速度、SmartScreen 的實際安裝體驗
+- [~] 使用者：x64 電腦（有顯卡、沒顯卡各一台最好）的轉錄速度；真的筆電麥克風、藍牙耳機、線上會議錄一場

@@ -50,6 +50,32 @@ public static partial class FileAssociations
         }
     }
 
+    /// <summary>每次啟動：換了介面語言時，檔案類型和「開啟檔案」清單裡的名稱跟著換（只改已經註冊的）</summary>
+    public static void UpdateNames()
+    {
+        try
+        {
+            var changed = false;
+            using (var prog = Registry.CurrentUser.OpenSubKey($@"Software\Classes\{ProgId}", true))
+                if (prog is not null && prog.GetValue("") as string != Localization.L.T("拾音會議封包"))
+                {
+                    prog.SetValue("", Localization.L.T("拾音會議封包"));
+                    changed = true;
+                }
+            using (var app = Registry.CurrentUser.OpenSubKey(AppKey, true))
+                if (app is not null && app.GetValue("FriendlyAppName") as string != Localization.L.T("拾音"))
+                {
+                    app.SetValue("FriendlyAppName", Localization.L.T("拾音"));
+                    changed = true;
+                }
+            if (changed) Notify();
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+        {
+            Log.Error($"file association names failed: {e.GetType().Name}");
+        }
+    }
+
     public static void Unregister()
     {
         try

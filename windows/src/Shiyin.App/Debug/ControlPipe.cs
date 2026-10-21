@@ -90,6 +90,19 @@ public static class ControlPipe
                 _ = host.Controller.ImportFiles(args[1..], new ImportOptions(), main?.State.CurrentFolder ?? "");
                 return Ok;
             case "purge" when args.Length > 1 && long.TryParse(args[1], out var purge): host.Controller.DeletePermanently(purge); return Ok;
+            // export <會議 id> <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0]：同 Mac 的 shiyinctl export。
+            // 在 UI 執行緒上跑（PDF 要建 WebView2），所以不等它：失敗時寫 <路徑>.error（同 Mac）
+            case "export" when args.Length > 4 && long.TryParse(args[1], out var exportId) && Enum.TryParse<ExportItem>(args[2], true, out var item):
+            {
+                var path = args[4];
+                _ = ExportAsync();
+                async Task ExportAsync()
+                {
+                    try { await host.Controller.Export(item, args[3], args.Length <= 5 || args[5] == "1", args.Length <= 6 || args[6] == "1", exportId, path); }
+                    catch (Exception e) { File.WriteAllText(path + ".error", $"ERROR {e.Message}"); }
+                }
+                return Ok;
+            }
             case "llmprovider" when args.Length > 1:
                 host.Settings.DebugProvider = LLMProviders.Parse(args[1]);
                 host.Settings.DebugModel = args.Length > 2 ? args[2] : null;

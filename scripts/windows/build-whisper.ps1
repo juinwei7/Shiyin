@@ -1,4 +1,4 @@
-# 建 Windows 的 whisper（design-windows §8、D46）：whisper.cpp 固定在 b5454（commit d1be6fd，跟 Mac 的 Package.swift 同一版），
+﻿# 建 Windows 的 whisper（design-windows §8、D46）：whisper.cpp 固定在 b5454（commit d1be6fd，跟 Mac 的 Package.swift 同一版），
 # 加上拾音的 shim（windows/native/whisper），輸出 shiyin_whisper.dll、whisper.dll、ggml*.dll，並印出每個檔案的 SHA-256
 #   pwsh scripts/windows/build-whisper.ps1 -Arch x64 -Out build\whisper-x64 [-Vulkan]
 #   pwsh scripts/windows/build-whisper.ps1 -Arch arm64 -Out build\whisper-arm64

@@ -16,12 +16,16 @@ public sealed class VelopackUpdates : IUpdatePlatform
 
     readonly UpdateManager manager;
     readonly HttpClient http;
+    readonly string? testSource;
     UpdateInfo? pending;
 
-    public VelopackUpdates(HttpClient http, string repository = Repository)
+    /// <param name="testSource">只有測試更新的建置（pack.ps1 -UpdateTest）會給：從這個網址讀 Velopack 的更新檔和更新說明，不讀 GitHub</param>
+    public VelopackUpdates(HttpClient http, string? testSource = null)
     {
         this.http = http;
-        manager = new UpdateManager(new GithubSource(repository, null, false, null), null, null);
+        this.testSource = testSource?.TrimEnd('/');
+        IUpdateSource source = this.testSource is null ? new GithubSource(Repository, null, false, null) : new SimpleWebSource(this.testSource);
+        manager = new UpdateManager(source, null, null);
     }
 
     public bool IsInstalled => manager.IsInstalled;
@@ -48,7 +52,7 @@ public sealed class VelopackUpdates : IUpdatePlatform
     /// <summary>同一個 Release 的 shiyin-update-win-&lt;架構&gt;.json 和 .sig（tag 是 win-v&lt;版本&gt;，D51）</summary>
     public async Task<(byte[] Manifest, string Signature)> FetchManifest(string version, CancellationToken cancel)
     {
-        var baseUrl = $"{Repository}/releases/download/win-v{version}/shiyin-update-win-{Arch}.json";
+        var baseUrl = testSource is null ? $"{Repository}/releases/download/win-v{version}/shiyin-update-win-{Arch}.json" : $"{testSource}/shiyin-update-win-{Arch}.json";
         var manifest = await http.GetByteArrayAsync(baseUrl, cancel);
         var signature = await http.GetStringAsync(baseUrl + ".sig", cancel);
         return (manifest, signature);

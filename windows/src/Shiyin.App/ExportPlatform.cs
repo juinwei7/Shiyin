@@ -1,4 +1,5 @@
 using Microsoft.Web.WebView2.Core;
+using Shiyin.Localization;
 using Shiyin.IO;
 using Shiyin.Services;
 using Shiyin.Services.Export;
@@ -32,6 +33,12 @@ public static class Pdf
 
     public static async Task Print(string html, string path, CancellationToken cancel)
     {
+        // Windows 11 本來就有 WebView2 執行階段，但 N 版、LTSC、被精簡過的系統可能沒有（2026-10-21 在虛擬機看到「系統找不到指定的檔案」）
+        string? runtime = null;
+        try { runtime = CoreWebView2Environment.GetAvailableBrowserVersionString(); }
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or FileNotFoundException) { }
+        if (string.IsNullOrEmpty(runtime))
+            throw new Services.AppController.ExportException(L.T("匯出 PDF 需要 Microsoft Edge WebView2 執行階段，這台電腦沒有安裝。可以到微軟的網站下載安裝（免費），或先匯出成 Word。"));
         var dir = AppHost.Current.Paths.MakeTempDirectory();
         try
         {

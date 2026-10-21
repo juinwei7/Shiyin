@@ -125,9 +125,6 @@ public sealed class TranscriptTab
             updating = false;
             searchRow.Children.Add(speakerFilter);
         }
-        if (detail.Segments.Any(s => s.LowConfidence))
-            searchRow.Children.Add(Ui.Row(5, new Microsoft.UI.Xaml.Shapes.Rectangle { Width = 3, Height = 12, Fill = Ui.Signal },
-                Ui.Text(L.T("琥珀色是辨識信心低的段落"), 12, color: Ui.Secondary, wrap: false)));
         var replace = Ui.Button(L.T("用詞修正…"), () => _ = Dialogs.Replace(window, detail.Meeting.Id!.Value, search.Text),
             tooltip: L.T("把逐字稿和會議紀錄裡的同一個詞一起改掉"));
         // 轉錄或整理中不能改：工作完成時會整份寫回逐字稿或會議紀錄
@@ -142,6 +139,14 @@ public sealed class TranscriptTab
         var warm = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(20, 0xB9, 0x7F, 0x06));
         Border Bar(FrameworkElement content) => new() { Child = content, Padding = new Thickness(20, 8, 20, 8), Background = warm };
         var id = d.Meeting.Id!.Value;
+        // 信心低的圖例自己一行（放在搜尋列裡，視窗窄時會把「用詞修正…」擠出畫面，2026-10-21 在虛擬機看到）
+        if (d.Segments.Any(s => s.LowConfidence))
+            bars.Children.Add(new Border
+            {
+                Padding = new Thickness(22, 0, 20, 6),
+                Child = Ui.Row(5, new Microsoft.UI.Xaml.Shapes.Rectangle { Width = 3, Height = 12, Fill = Ui.Signal },
+                    Ui.Text(L.T("琥珀色是辨識信心低的段落"), 12, color: Ui.Secondary, wrap: false)),
+            });
         // 模型下載好之前用快速辨識轉錄的會議（M§21.17）
         if (host.Controller.CanUpgradeTranscript(d.Meeting) && !Busy)
             bars.Children.Add(Bar(Ui.Bar(Ui.Text(d.Meeting.MeetingLanguage == MeetingLanguage.Ja

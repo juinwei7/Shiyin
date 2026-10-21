@@ -243,6 +243,17 @@
         }
       }
     },
+    "匯出 PDF 需要 Microsoft Edge WebView2 執行階段，這台電腦沒有安裝。可以到微軟的網站下載安裝（免費），或先匯出成 Word。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting PDF needs the Microsoft Edge WebView2 Runtime, which isn't installed on this PC. You can download it free from Microsoft, or export to Word instead."
+          }
+        }
+      }
+    },
     "即時逐字稿和快速辨識用，約 240 MB。": {
       "extractionState": "manual",
       "localizations": {

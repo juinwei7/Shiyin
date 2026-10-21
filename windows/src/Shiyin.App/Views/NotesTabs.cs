@@ -539,11 +539,15 @@ public sealed class AskTab
         if (clear is not null)
         {
             var more = new DropDownButton { Content = new SymbolIcon(Symbol.More) };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(more, L.T("更多"));
             var menu = new MenuFlyout();
             menu.Items.Add(Ui.Item(L.T("清除問答紀錄"), clear));
             more.Flyout = menu;
             right = Ui.Row(8, ask, more);
         }
+        // 輸入框一直用同一個（重畫時打到一半的字還在）：先從上一次的輸入列拿下來，同一個元件放進第二個地方 WinUI 會丟 0x800F1000
+        //（2026-10-21 在虛擬機按「提問」時，送出後重畫就當掉、問題沒送出去）
+        if (input.Parent is Panel old) old.Children.Remove(input);
         column.Children.Add(Ui.Bar(null, input, right, 10));
         return column;
     }

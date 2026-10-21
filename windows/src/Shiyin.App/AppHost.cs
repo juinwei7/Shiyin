@@ -61,6 +61,12 @@ public sealed class AppHost
         Log.Configure(Paths.Logs);
         Settings = AppSettings.Load(Paths.Settings, AppSettings.ParseOverrides(args));
         UseInterfaceLanguage(Settings.String(AppSettings.InterfaceLanguageKey));
+        // 換了介面語言時，開始功能表、桌面的捷徑和檔案類型的名稱跟著換（R27 R12.3）
+        if (Shortcuts.IsInstalledApp)
+        {
+            Shortcuts.Rename(L.T("拾音"));
+            FileAssociations.UpdateNames();
+        }
         // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；App 顯示原因後結束
         Db = new AppDatabase(Paths.Database, Paths.Backups);
         Models = new ModelStore(Paths.Models, Http);
@@ -78,23 +84,38 @@ public sealed class AppHost
         HotKeys = new GlobalHotKeys();
         Ask = new AskService(Db, Settings, Llm);
         Notifier = new Notifier(this);
-        if (!Debug && UpdateKey.Public.Length > 0)
+        string? updateSource = null;
+        var updateKey = UpdateKey.Public;
+#if UPDATE_TEST
+        // 測試更新的建置（pack.ps1 -UpdateTest，design-windows §14.2）：更新來源和公鑰從環境變數讀，正式版不會編進來
+        updateSource = Environment.GetEnvironmentVariable("SHIYIN_UPDATE_SOURCE");
+        updateKey = Environment.GetEnvironmentVariable("SHIYIN_UPDATE_PUBLIC_KEY") ?? updateKey;
+#endif
+        if (!Debug && updateKey.Length > 0)
         {
-            Updates = new VelopackUpdates(Http);
-            Updater = new Updater(Updates, UpdateKey.Public, Settings, () => Recorder.IsRecording || Runner.IsBusy);
+            Updates = new VelopackUpdates(Http, updateSource);
+            Updater = new Updater(Updates, updateKey, Settings, () => Recorder.IsRecording || Runner.IsBusy);
         }
     }
 
     /// <summary>介面語言（design-windows §11.4、D57）：設定的 zh、en，沒設定時跟著 Windows 的顯示語言（中文以外都用英文）</summary>
+    public static bool UsesEnglish(string? setting) => setting switch
+    {
+        "zh" => false,
+        "en" => true,
+        _ => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "zh",
+    };
+
+    /// <summary>Velopack 的安裝、更新 hook 用（這時還沒有 AppHost）：照設定的介面語言，捷徑、檔案類型的名稱才會對</summary>
+    public static void UseSavedInterfaceLanguage()
+    {
+        try { UseInterfaceLanguage(AppSettings.Load(ShiyinPaths.FromEnvironment().Settings).String(AppSettings.InterfaceLanguageKey)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException) { }
+    }
+
     static void UseInterfaceLanguage(string? setting)
     {
-        var english = setting switch
-        {
-            "zh" => false,
-            "en" => true,
-            _ => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "zh",
-        };
-        if (!english) { L.Use(null); return; }
+        if (!UsesEnglish(setting)) { L.Use(null); return; }
         var table = new Dictionary<string, string>();
         var plurals = new Dictionary<string, (string, string)>();
         // 先讀 Mac 的，再讀 Windows 才有的（同一個鍵以 Windows 的為準）

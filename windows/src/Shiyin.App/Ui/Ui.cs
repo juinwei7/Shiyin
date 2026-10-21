@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
+using Shiyin.Localization;
 using Shiyin.Model;
 using Windows.UI;
 
@@ -248,7 +249,8 @@ public static class Ui
 
     public static ToggleSwitch Toggle(string header, bool on, Action<bool> changed, string? description = null)
     {
-        var t = new ToggleSwitch { Header = header, IsOn = on };
+        // 開關旁的「開啟／關閉」是 WinUI 內建的文字，跟著 Windows 的顯示語言，不跟拾音的介面語言（PrimaryLanguageOverride 也改不到）：自己給
+        var t = new ToggleSwitch { Header = header, IsOn = on, OnContent = MeetingLanguages.Ui("開啟", "On"), OffContent = MeetingLanguages.Ui("關閉", "Off") };
         t.Toggled += (_, _) => changed(t.IsOn);
         if (description is not null) ToolTipService.SetToolTip(t, description);
         return t;

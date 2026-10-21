@@ -113,7 +113,9 @@ public sealed class MainWindow : Window
             RequestImport(items.OfType<StorageFile>().Select(f => f.Path).ToList());
         };
 
-        // 鍵盤快捷鍵（同 Mac 的選單，⌘ 換成 Ctrl）
+        // 鍵盤快捷鍵（同 Mac 的選單，⌘ 換成 Ctrl）。掛在整個視窗上，所以不顯示 WinUI 的快捷鍵提示：
+        // 不然滑鼠停在視窗裡任何地方，上方都會跳出「Ctrl+O」（2026-10-21 在虛擬機看到）
+        root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         Accelerator(VirtualKey.O, VirtualKeyModifiers.Control, () => _ = PickAndImport());
         Accelerator(VirtualKey.R, VirtualKeyModifiers.Control, () => host.Controller.ToggleRecording(State.CurrentFolder));
         Accelerator(VirtualKey.P, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () =>
@@ -443,5 +445,7 @@ public sealed class MainWindow : Window
         toastTimer.Start();
     }
 
-    public void ShowError(string message) => _ = Dialogs.Alert(this, L.T("出了一點問題"), message);
+    /// <summary>WinRT 的例外會把同一句錯誤描述再接在訊息後面一次：重複的行只留一行</summary>
+    public void ShowError(string message) => _ = Dialogs.Alert(this, L.T("出了一點問題"),
+        string.Join("\n", message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct()));
 }
