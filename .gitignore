@@ -8,6 +8,8 @@ venv/
 *.wav
 *.mp4
 *.mov
+# 官網的介紹影片要進 git（docs/website.md §15），只放這個資料夾
+!site/public/videos/*.mp4
 __pycache__/
 *.pyc
 .DS_Store
