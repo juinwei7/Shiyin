@@ -102,15 +102,20 @@ public static class ControlPipe
                 return Ok;
             }
             case "purge" when args.Length > 1 && long.TryParse(args[1], out var purge): host.Controller.DeletePermanently(purge); return Ok;
-            // export <會議 id> <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0]：同 Mac 的 shiyinctl export。
+            // export <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的]：同 Mac 的 shiyinctl export。
             // 在 UI 執行緒上跑（PDF 要建 WebView2），所以不等它：失敗時寫 <路徑>.error（同 Mac）
-            case "export" when args.Length > 4 && long.TryParse(args[1], out var exportId) && Enum.TryParse<ExportItem>(args[2], true, out var item):
+            case "export" when args.Length > 3 && Enum.TryParse<ExportItem>(args[1], true, out var item):
             {
-                var path = args[4];
+                var path = args[3];
+                var exportId = args.Length > 6 && long.TryParse(args[6], out var given) ? given : main?.State.Selection;
                 _ = ExportAsync();
                 async Task ExportAsync()
                 {
-                    try { await host.Controller.Export(item, args[3], args.Length <= 5 || args[5] == "1", args.Length <= 6 || args[6] == "1", exportId, path); }
+                    try
+                    {
+                        if (exportId is not long id) throw new InvalidOperationException("no meeting selected");  // l10n-skip
+                        await host.Controller.Export(item, args[2], args.Length <= 4 || args[4] == "1", args.Length <= 5 || args[5] == "1", id, path);
+                    }
                     catch (Exception e) { File.WriteAllText(path + ".error", $"ERROR {e.Message}"); }
                 }
                 return Ok;

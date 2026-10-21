@@ -793,6 +793,17 @@
         }
       }
     },
+    "請到「設定 → 隱私權與安全性 → 麥克風」打開「麥克風存取」和「讓傳統型應用程式存取您的麥克風」，再重新開始錄音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Settings → Privacy & security → Microphone, turn on “Microphone access” and “Let desktop apps access your microphone”, then start recording again."
+          }
+        }
+      }
+    },
     "讀不到認證管理員裡的 key（錯誤代碼 %lld）": {
       "extractionState": "manual",
       "localizations": {

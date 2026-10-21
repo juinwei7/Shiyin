@@ -13,6 +13,7 @@ public static partial class WindowPlacement
     public static void Center(Window window, int width, int height)
     {
         SetIcon(window);
+        FollowTheme(window);
         var area = DisplayArea.GetFromWindowId(window.AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
         var scale = Scale(window);
         var w = Math.Min((int)Math.Round(width * scale), area.Width - 16);
@@ -26,6 +27,12 @@ public static partial class WindowPlacement
         var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Shiyin.ico");
         if (File.Exists(icon)) window.AppWindow.SetIcon(icon);
     }
+
+    /// <summary>
+    /// 標題列跟著 Windows 的淺色、深色模式（R26.3）。沒設時標題列的顏色不一定跟內容一致：
+    /// 2026-10-21 在虛擬機看到深色模式下主視窗的內容是深色、標題列還是淺色
+    /// </summary>
+    public static void FollowTheme(Window window) => window.AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
 
     /// <summary>這個視窗所在螢幕的縮放（100% 是 1）</summary>
     public static double Scale(Window window)

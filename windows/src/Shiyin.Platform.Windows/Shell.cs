@@ -12,6 +12,9 @@ public static class Shell
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
+    /// <summary>「設定 → 隱私權與安全性 → 麥克風」（R27 R1.8）：固定的網址，不放任何使用者內容</summary>
+    public static void OpenMicrophoneSettings() => Process.Start(new ProcessStartInfo("ms-settings:privacy-microphone") { UseShellExecute = true });
+
     /// <summary>用預設的 app 打開檔案（授權條款）</summary>
     public static void OpenFile(string path) => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
 

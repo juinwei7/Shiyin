@@ -45,7 +45,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | 語言、介面（R26.3） | C# .NET 10（LTS，支援到 2028-11）＋ WinUI 3：Windows App SDK 2.5，**只參考用到的元件套件**（WinUI、Foundation、InteractiveExperiences） | 使用者決定（D42）。整包的 Windows App SDK 會帶進 Windows ML 的 `onnxruntime.dll`，跟 sherpa-onnx 的同名檔衝突 |
 | 麥克風（R1.1） | NAudio 3.3（MIT，`NAudio.Wasapi`）；不行就用 CsWin32 自己包 WASAPI | 3.x 是 2026-08 才出的新大版，版本釘死 |
 | 電腦聲音（R1.2） | WASAPI process loopback，`EXCLUDE_TARGET_PROCESS_TREE` 排除拾音自己（NAudio 3 的 `WithProcessLoopback`） | 對應 Mac 的「全域 tap 排除自己」；需要 build 20348 以上，Windows 11 都有 |
-| 即時逐字稿（R2） | sherpa-onnx 1.13（Apache-2.0）：Silero VAD ＋ SenseVoice-Small int8；中文用 OpenccNetLib（MIT，s2twp）轉台灣繁體 | Windows 沒有可用的內建離線中文辨識（D44），待 T-W5 |
+| 即時逐字稿（R2） | sherpa-onnx 1.13（Apache-2.0）：Silero VAD ＋ SenseVoice-Small int8；中文用 OpenccNetLib（MIT，s2twp）轉台灣繁體 | Windows 沒有可用的內建離線中文辨識（D44）；T-W5 的結果見 §7、D61 |
 | 快速辨識（R4.1、R20.8） | 同一個 SenseVoice 模型讀整個檔案 | 取代 macOS 內建（D45） |
 | 正式轉錄（R4） | whisper.cpp b5454（v1.9.5、commit `d1be6fd`，跟 `Package.swift` 同一版）自己建：x64 CPU 各種指令集＋Vulkan；ARM64 CPU 各種指令集。加一層小的 C shim，C# 用 P/Invoke | 結果要跟 Mac 一致（R28.4，D46、D56），待 T-W3 |
 | 語言偵測（R16） | 同上的 whisper ＋ Whisper base（同 M§18.8） | 同一個模型和門檻；要中英日三個機率，Whisper.net 拿不到 |
@@ -59,7 +59,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | 系統匣 | WinUIEx 2.9（MIT，TrayIcon；檔案總管重開後自動恢復）＋自己做的小視窗 | H.NotifyIcon 的新版還在 beta |
 | docx | DocumentFormat.OpenXml 3.5（MIT），直接從會議紀錄的資料產生 | Windows 沒有 NSAttributedString 的 docx 輸出 |
 | PDF | WebView2 把跟 Mac 同一份匯出的 HTML 印成 PDF | Windows 11 內建 WebView2 執行環境 |
-| 安裝、更新 | Velopack 1.2（MIT；1.2.158 被標為不要用）＋ 自己的更新金鑰（ECDSA P-256） | 不用系統管理員、有差異更新（D50），待 T-W7 |
+| 安裝、更新 | Velopack 1.2（MIT；1.2.158 被標為不要用）＋ 自己的更新金鑰（ECDSA P-256） | 不用系統管理員、有差異更新（D50）；虛擬機驗過安裝、更新、解除安裝（§14） |
 | UI 自動化（驗證） | Windows 內建的 UIAutomationClient（PowerShell）；截圖在 Mac 上截 UTM 的視窗 | §15.4 |
 
 授權寫進第三方授權（R27 R13.1）：`scripts/windows/make-third-party-licenses.py` 依 app 實際用到的套件（`dotnet list package --include-transitive`）組出 `windows/src/Shiyin.App/ThirdPartyLicenses.txt`，「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt` 都是這份。做法同 Mac（M§12.1）：條文取套件附的檔案，或套件記的原始碼 commit 上的檔案，原文不改；套件清單多了腳本不認得的套件就停下來。要特別標示的（2026-10-21 查過）：
@@ -167,7 +167,8 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
   - 跟 Mac 不同：復原時錄音檔只有 44 bytes 的標頭（錄音開始一兩秒內就當掉，資料還在緩衝區）就刪掉，空的會議一起清掉。Mac 會一直留著、每次開啟都再失敗一次（2026-10-21 在虛擬機看到；Mac 版之後再改）
 - **音量、收音提醒、磁碟空間**：算法和門檻同 M§26（`Recorder.checkLevels`、1 GB／300 MB），放在 Core，用標準答案比對。音量條的畫法見 §11.2。
 - **防止睡眠**（R1.9）：`PowerCreateRequest`＋`PowerSetRequest(PowerRequestSystemRequired)`，整個程序有效；錄音和工作結束時清掉。`powercfg /requests` 看得到。
-- **麥克風權限**（R27 R1.8）：開啟時回 `E_ACCESSDENIED` 就顯示說明，按鈕打開 `ms-settings:privacy-microphone`。Windows 之後如果對桌面 app 也個別詢問，照同樣的流程。
+- **麥克風權限**（R27 R1.8）：開啟時回 `E_ACCESSDENIED` 就顯示「拾音沒有麥克風權限」，按「打開設定」打開 `ms-settings:privacy-microphone`（固定的網址）。Windows 之後如果對桌面 app 也個別詢問，照同樣的流程。
+- **開始失敗、中途出問題**：同 Mac 的「錄音的提醒」，Recorder 記下原因（`FailureMessage`、`PermissionDenied`），主視窗顯示一次就清掉。原因要保留原本的說明（例如「找不到可以用的麥克風」），不要換成錯誤代碼。2026-10-21 在沒有音效裝置的虛擬機發現：按「錄音」畫面完全沒有反應（原因沒有顯示）。
 
 ## 7. 即時逐字稿（R2、R27 R2.1）
 
@@ -224,7 +225,11 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ## 10. 整理工具
 
 - 六種後端照 `Notes/Backends/` 翻成 C#（HttpClient），重試、取消、錯誤分類同 M§19、M§21。
-- **找 claude、codex**（待 T-W6）：claude 先找原生安裝的 `%USERPROFILE%\.local\bin\claude.exe`，再找 npm 的；codex 找 npm 套件裡真正的執行檔。**不能透過 `.cmd` 執行**：cmd.exe 的命令列只有 8191 個字元、跳脫規則不同，`--system-prompt`、`--json-schema` 會被截斷或解讀錯，還有參數注入的風險（BatBadBut 那一類）。找不到真正的執行檔時用 `node.exe` 加 js 的路徑。
+- **找 claude、codex**（T-W6）：claude 先找原生安裝的 `%USERPROFILE%\.local\bin\claude.exe`、PATH 裡的 `claude.exe`，再找 npm 的；codex 找 npm 套件裡真正的執行檔。**不能透過 `.cmd` 執行**：cmd.exe 的命令列只有 8191 個字元、跳脫規則不同，`--system-prompt`、`--json-schema` 會被截斷或解讀錯，還有參數注入的風險（BatBadBut 那一類）。找不到真正的執行檔時用 `node.exe` 加 js 的路徑。
+  - npm 的全域資料夾：官方安裝檔是 `%APPDATA%\npm`；zip 版的 Node、nvm、scoop、Volta 在別的地方，所以也找 PATH 裡有 `claude.cmd`、`codex.cmd` 的資料夾（只拿來定位套件，不執行 .cmd）。
+  - 套件的樣子（2026-10-21 虛擬機，claude-code 2.1.306、codex 最新版）：claude-code 的 npm 套件直接帶 `bin\claude.exe`（已經沒有 `cli.js`，舊版才用 node 跑 cli.js）；codex 的執行檔在平台子套件 `@openai/codex-win32-<arm64|x64>/vendor/<平台>/bin/codex.exe`，旁邊的 `codex-path`（有 rg.exe）加進子程序的 PATH（同 codex.js）。
+  - 長度：逐字稿和提示詞走標準輸入（claude 的 `-p`、codex 的 `exec -`），命令列只放系統提示詞和 JSON schema（標準答案裡最長的約 2,400 字和 1,800 字），遠低於 Windows 命令列 32,767 字元的上限。
+  - 虛擬機驗過：找到兩個 npm 版、沒登入時設定頁顯示「沒有登入」、「測試整理工具」的錯誤訊息（「…還沒登入或登入已過期…（終端機指令：claude auth login／codex login）」），「登入 Claude」開出終端機跑登入流程。真的整理一次要使用者登入。
 - 參數一律用 `ProcessStartInfo.ArgumentList`（同 CLAUDE.md 的規則）；子程序的 PATH 用 `;` 接上找到的資料夾；工作目錄是 `tmp` 下的空資料夾。
 - 子程序放進 Job Object（`KILL_ON_JOB_CLOSE`）：拾音當掉時子程序一起結束；逾時時整棵程序樹一起結束。
 - 登入：用固定參數開 Windows Terminal（沒有就用 `cmd.exe /k`）執行 `claude` 或 `codex login`，參數裡不放任何使用者內容。
@@ -296,7 +301,8 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 內容：完成、失敗、偵測會議（按鈕「開始錄音」「不要再提醒這個 app」；「停止並轉錄」「繼續錄」）。點通知、按按鈕都是 `shiyin:` 網址（`HKCU\Software\Classes\shiyin`，`URL Protocol`），Windows 會用網址當參數開拾音，第二個拾音把參數轉給已經開著的那個（§12.1）後結束；拾音沒開時就直接開起來處理。
   - `shiyin:open?meeting=<id>`：打開那場會議。
   - `shiyin:prompt?action=start|mute|stop|continue&app=<id>&token=<權杖>`：權杖是每次啟動隨機產生、只放記憶體，對不上時（網頁裡的連結、上次啟動留下的舊通知）只打開主視窗，不開始錄音、不停止錄音。
-- 看通知有沒有被關掉：用登錄的 AppUserModelID 時 `ToastNotifier.Setting` 會丟出例外，改看 Windows 存使用者設定的登錄（`PushNotifications` 的 `ToastEnabled`、`Notifications\Settings\Weiwei.Shiyin` 的 `Enabled`）。關掉時偵測會議改用 §11.1 的小視窗（同 Mac 的退路）。
+- 看通知有沒有被關掉：先讀 `ToastNotifier.Setting`；它丟出例外時（剛登錄 AppUserModelID 的那次啟動會）改看 Windows 存使用者設定的登錄（`PushNotifications` 的 `ToastEnabled`、`Notifications\Settings\Weiwei.Shiyin` 的 `Enabled`）。關掉時偵測會議改用 §11.1 的小視窗（同 Mac 的退路）。測試時要從「設定 → 系統 → 通知」關，直接改登錄不會馬上生效（通知平台有自己的狀態）。
+- 虛擬機驗過（2026-10-21）：轉錄完成、整理完成、整理失敗、偵測會議的通知都進通知中心；偵測會議通知的按鈕網址（從通知紀錄讀出來交給 Windows 開，跟按按鈕走同一條路）把 Zoom 設成不提醒；權杖不對的網址不會開始錄音；通知關掉時改跳小視窗（「這次不用」「不要再提醒這個 app」「開始錄音」，會議結束時「停止並轉錄」）。
 - 解除安裝時（Velopack 的 hook）刪掉 AppUserModelID、`shiyin:` 的登錄，清掉通知中心裡拾音的通知。
 - exe 的路徑要固定：Velopack 的 `current\` 資料夾每次更新都是同一個路徑。
 
@@ -382,7 +388,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 - Windows 用自己的 tag：`win-vX.Y.Z`（Mac 的工作流程只認 `v*`，不會被觸發）。
 - 版號跟 Mac 的功能版本對齊：第一版 3.6.0 表示功能跟 Mac 3.6 相同（D52）；之後只修 Windows 的問題時加第三碼。
 - **Windows 的 release 一律用 `--latest=false`**：Mac 的更新網址是 `releases/latest/download/shiyin-update.json`，Windows 的 release 變成 latest 時，Mac 的 app 內更新會找不到檔案（R27 R13.2）。之後 Mac 發新版時照樣變成 latest。
-- Windows 的更新來源（Velopack 讀 GitHub 的 release 清單）要能跳過沒有 Windows 檔案的 Mac release，待 T-W7；不行的話用固定網址的 feed（SimpleWebSource）。
+- Windows 的更新來源（Velopack 的 GithubSource 讀 GitHub 的 release 清單）要能跳過沒有 Windows 檔案的 Mac release：2026-10-21 用 `-UpdateTest` 的版本讀真的 repo（只有 Mac 的 release），顯示「已是最新版本」、沒有錯誤。Mac 和 Windows 的 release 混在一起時有沒有挑到 Windows 的，第一個 Windows release 時再確認；不行的話改用固定網址的 feed（SimpleWebSource）。
 - **官網要先改再發第一個 Windows release**（§14.4）：現在的 `releases.mjs` 遇到不是 `vX.Y.Z` 的 release 會建置失敗。
 - 新的工作流程 `.github/workflows/release-windows.yml`：推 `win-v*` 時在 `windows-latest`（x64）、`windows-11-arm`（ARM64）建置，跑測試、whisper 從固定 commit 建並比對 SHA、`vpk pack`、簽更新金鑰、建立 Release（不設成 latest）。手動執行只產出 artifact（同 Mac）。
 - Release 說明的格式同 CLAUDE.md 的規定，標題改成「拾音 Windows 3.6.0：…」「Shiyin for Windows 3.6.0: …」。
@@ -421,8 +427,9 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 ### 15.3 控制通道
 
-- DEBUG 版開 named pipe `\\.\pipe\shiyin-debug`，只接受同一個使用者、拒絕遠端連線；`shiyinctl.exe <指令> <參數…>`，結果寫成 JSON 檔（同 Mac）。named pipe 不分工作階段，從 SSH 也連得到桌面上的拾音。
-- 指令名稱、輸出格式跟 Mac 的 `Debug/DebugControl.swift` 相同（`state`、`select`、`import`、`record-sim`、`transcribe-eval`、`voiceprint-eval`、`detect-eval`、`metrics`、`llmurl`、`llmkey`、`llmprovider`、`setupdateurl`、`hotkey`、`purge`、`quit`…），Mac 的測試方法和腳本可以直接用：例如 Windows 的 `transcribe-eval` 輸出拿回 Mac，用 `scripts/dev/asr-score.swift` 算錯字率（R28.4）。
+- DEBUG 版開 named pipe `\\.\pipe\shiyin-debug`（`Debug/ControlPipe.cs`）；`shiyinctl.exe <指令> <參數…>`（`Shiyin.Ctl`）把結果的 JSON 印到標準輸出（Mac 是寫成檔案；從 SSH 用時直接讀輸出比較方便）。named pipe 不分工作階段，從 SSH 也連得到桌面上的拾音。
+- 指令：`state`、`select`、`tab`、`open`、`closewindow`、`quit`、`record-sim`、`recordstop`、`recordpause`、`recordstall`、`recordinterrupt`、`recordlang`、`import`、`export`、`purge`、`rediarize`、`language`、`llmprovider`、`llmkey`、`llmurl`、`modelurl`、`model`、`hotkey`、`meetingapp`、`metrics`。名稱和參數跟 Mac 的 `Debug/DebugControl.swift` 相同（例如 `export <項目> <格式> <路徑> [times] [speakers] [會議 id]`、`import [lang=ja] <檔案…>`），Mac 的測試方法可以直接照用。
+- 評估（`transcribe-eval`、`voiceprint-eval`、`detect-eval`、`diarize-eval`、`fast-eval`、`live-eval`）不在 app 裡，用 `Shiyin.Eval` 命令列在 Mac 或 Windows 上跑，輸出格式跟 Mac 相同，例如用 `scripts/dev/asr-score.swift` 算錯字率（R28.4）。
 
 ### 15.4 真的畫面：排程工作和 UI Automation
 

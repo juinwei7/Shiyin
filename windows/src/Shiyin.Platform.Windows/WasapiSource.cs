@@ -167,8 +167,11 @@ public sealed class WasapiSource : IAudioSource
         }
         catch (Exception e)
         {
-            var denied = e.HResult == AccessDenied || e.InnerException?.HResult == AccessDenied;
-            var message = denied ? L.T("拾音沒有麥克風的使用權限") : L.F("%@失敗（錯誤代碼 %@）", L.T("開始錄音"), $"0x{e.HResult:X8}");
+            var denied = e.HResult == AccessDenied || e.InnerException?.HResult == AccessDenied || e is CaptureException { AccessDenied: true };
+            // 自己丟的 CaptureException（例如「找不到可以用的麥克風」）已經寫好原因，不要換成錯誤代碼
+            var message = denied ? L.T("拾音沒有麥克風的使用權限")
+                : e is CaptureException capture ? capture.Message
+                : L.F("%@失敗（錯誤代碼 %@）", L.T("開始錄音"), $"0x{e.HResult:X8}");
             if (!ready.IsSet)
             {
                 fail(new CaptureException(message, denied && kind == Kind.Microphone));

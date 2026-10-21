@@ -429,6 +429,7 @@ public sealed class MeetingPromptWindow : Window
     {
         var area = DisplayArea.Primary.WorkArea;
         var scale = WindowPlacement.Scale(this);
+        WindowPlacement.FollowTheme(this);
         int w = (int)(400 * scale), h = (int)(160 * scale), margin = (int)(20 * scale);
         AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X + area.Width - w - margin, area.Y + area.Height - h - margin, w, h));
         AppWindow.Show(activateWindow: false);

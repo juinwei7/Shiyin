@@ -67,6 +67,7 @@ public sealed class MainWindow : Window
         host.Controller.Notice += m => host.Post(() => ShowNotice(m));
         host.Controller.Error += m => host.Post(() => ShowError(m));
         host.Controller.Reveal += id => host.Post(() => Reveal(id));
+        host.Recorder.Changed += () => host.Post(ShowRecorderAlerts);
         toastTimer.Tick += (_, _) => { toast.IsOpen = false; toastTimer.Stop(); };
         root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); Refresh(); };
         Ui.SetTheme(root.ActualTheme);
@@ -450,6 +451,36 @@ public sealed class MainWindow : Window
         toast.IsOpen = true;
         toastTimer.Stop();
         toastTimer.Start();
+    }
+
+    bool recorderAlertOpen;
+
+    /// <summary>
+    /// 錄音沒辦法開始、中途出問題（同 Mac 的「錄音的提醒」）、沒有麥克風權限（R27 R1.8，可以直接打開設定的那一頁）。
+    /// Recorder 只記下原因，這裡顯示一次就清掉；一次只開一個對話框
+    /// </summary>
+    async void ShowRecorderAlerts()
+    {
+        var r = host.Recorder;
+        if (recorderAlertOpen || XamlRoot is null) return;
+        if (r.PermissionDenied)
+        {
+            r.PermissionDenied = false;
+            recorderAlertOpen = true;
+            if (await Dialogs.Confirm(this, L.T("拾音沒有麥克風權限"),
+                    L.T("請到「設定 → 隱私權與安全性 → 麥克風」打開「麥克風存取」和「讓傳統型應用程式存取您的麥克風」，再重新開始錄音。"), L.T("打開設定")))
+                Platform.Shell.OpenMicrophoneSettings();
+            recorderAlertOpen = false;
+        }
+        else if (r.FailureMessage is { } message)
+        {
+            r.FailureMessage = null;
+            recorderAlertOpen = true;
+            await Dialogs.Alert(this, L.T("錄音的提醒"), message);
+            recorderAlertOpen = false;
+        }
+        else return;
+        ShowRecorderAlerts();
     }
 
     /// <summary>WinRT 的例外會把同一句錯誤描述再接在訊息後面一次：重複的行只留一行</summary>
