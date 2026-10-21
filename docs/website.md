@@ -393,11 +393,11 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 
 | 平台 | 收錄方式 | 備註 |
 |---|---|---|
-| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 搬到 `.github/README.md`，GitHub 首頁改顯示英文（2026-10-21 已做） | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
+| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 搬到 `.github/README.md`，GitHub 首頁改顯示英文；說明和 20 個 topics 已更新（2026-10-21 已做） | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
 | AlternativeTo | 登錄 app，加到 Otter、Granola、MacWhisper、Meetily 的替代清單 | 要驗證 email |
 | OpenAlternative | 表單送出 | 要登入 |
-| awesome-mac | 發 PR（英中日韓四份 README 一起改） | |
-| open-source-mac-os-apps | 改 applications.json 發 PR | 要先有英文 README |
+| awesome-mac | 發 PR（英中日韓四份 README 一起改） | 2026-10-21 發了 jaywcjlove/awesome-mac#3711，放在 Audio Record and Process |
+| open-source-mac-os-apps | 改 applications.json 發 PR | 要先有英文 README；2026-10-21 發了 serhii-londar/open-source-mac-os-apps#1730 |
 | Product Hunt、Show HN | 本人發、本人回應 | 不能拉票 |
 | 台灣媒體、社群 | 寄給報導過 Breeze ASR 25 的 INSIDE、TechNews；PTT MAC 板 | |
 | awesome-whisper | 要 100 顆星以上 | 之後再說 |
