@@ -829,7 +829,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
   - 關掉之後立刻停止送、清掉還沒送的資料
   - 使用說明的「資料與隱私」、README（中英）、官網的隱私說明、加入這個功能那一版的版本說明，照實寫出來
 - R40.5 不影響其他功能：送統計在背景進行，失敗不顯示錯誤、不影響錄音和轉錄；統計的檔案壞掉就重新開始，不讓 app 出錯。
-- R40.6 後台由使用者自己開發，送出的格式、回應見 design §30.4。
+- R40.6 後台（2026-10-22 使用者決定用 Cloudflare，不另外架主機）：Cloudflare Workers＋D1，程式放在 repo 的 `workers/usage/`，網址 `https://usage.weibuilds.com/v1/usage`。檢查格式、同一台同一天覆蓋不重複算、不存 IP；送出的格式、回應見 design §30.4、§30.10。
 - R40.7 Windows 版之後做一樣的功能（R28 跟 Mac 一致），在 Windows 版的任務另外排。
 
 ### 不做（這一版）
@@ -850,4 +850,5 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 - 設定頁的開關、「查看會送出的內容」、「重設匿名 ID」在真的畫面上用 AX 按過
 - 正式版（沒有在 shiyinctl 設網址）不會連到任何統計網址
 - 發布有統計網址的那一版時，使用說明、README、官網、版本說明一起改好
+- 後台：本機（wrangler dev）用 curl 和 DEBUG 版送真的資料，寫進 D1、重送覆蓋、格式不對回 400、IP 沒有存；部署後用正式網址再送一次
 

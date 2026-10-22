@@ -1148,6 +1148,39 @@ User-Agent: Shiyin/<版本>
 
 Windows 版做一樣的功能（R40.7）：同樣的格式（`app.os` 寫 `Windows 11 …`、`chip` 寫 CPU 名稱）、同樣的時機和保留規則，資料檔一樣放 `SHIYIN_HOME/usage.json`，設定放 `settings.json`。
 
+### 30.10 後台：Cloudflare Workers＋D1（D101）
+
+- 程式：`workers/usage/`（`worker.js` 純 JavaScript、不用套件；`schema.sql`；`wrangler.toml`）。網址 `https://usage.weibuilds.com/v1/usage`（Workers 的自訂網域，跟官網分開：官網維持純靜態，兩邊部署、出問題都不互相影響）。
+- `POST /v1/usage`：
+  - 只收 `Content-Type: application/json`、內容 8 KB 以內，其他回 400／413／415
+  - 檢查 §30.4 的格式：`schema` 是 1；`installId` 是 UUID；`date` 是今天前 7 天到明天（UTC）之間；`app` 的四個欄位是 64 字以內的字串；`usage`、`errors` 的數字是 0～1,000,000 的整數；字典只認得 §30.4 列的鍵（多的忽略、少的當 0）。不對就回 400（app 收到 4xx 會丟掉那一天，不再重送）
+  - 寫進 D1：`installId`＋`date` 是主鍵，重送就覆蓋（`INSERT … ON CONFLICT DO UPDATE`），所以同一台同一天只算一次
+  - 成功回 204
+- `GET /v1/health`：回 200，部署後檢查用。其他路徑 404。
+- 不存 IP、不存 User-Agent 以外的標頭（User-Agent 也不存，版本已經在內容裡）。Cloudflare 本身的請求紀錄不在我們的資料庫。
+- 防濫用：內容檢查加上 Workers 的頻率限制（同一個 IP 每分鐘 30 次，超過回 429；`wrangler.toml` 的 `ratelimits`）。程式開源、網址公開，沒辦法藏密鑰，只能這樣擋。
+- 資料表：
+
+  ```sql
+  CREATE TABLE usage_daily (
+    install_id TEXT NOT NULL, date TEXT NOT NULL,
+    app_version TEXT, os TEXT, chip TEXT, ui_language TEXT,
+    meetings_recorded INTEGER, recorded_seconds INTEGER, meetings_imported INTEGER, imported_seconds INTEGER,
+    transcribed_seconds INTEGER, transcribe_wall_seconds INTEGER,
+    engine_breeze INTEGER, engine_macos INTEGER, engine_whisper_ja INTEGER,
+    lang_zh INTEGER, lang_en INTEGER, lang_ja INTEGER, diarization_runs INTEGER,
+    summarizer_claude_code INTEGER, summarizer_codex INTEGER, summarizer_api INTEGER, summarizer_local INTEGER,
+    questions_asked INTEGER,
+    errors_recording INTEGER, errors_transcribe INTEGER, errors_diarize INTEGER, errors_summarize INTEGER,
+    received_at TEXT NOT NULL,
+    PRIMARY KEY (install_id, date)
+  );
+  ```
+
+  欄位攤平成一欄一個數字，用 SQL 直接加總。例如每日活躍 `SELECT date, COUNT(*) FROM usage_daily GROUP BY date`；總轉錄時數 `SELECT SUM(transcribed_seconds) / 3600.0 FROM usage_daily`。
+- 部署：`npx wrangler@4 d1 create shiyin-usage`、`d1 execute --remote --file schema.sql`、`deploy`。token 要有 Workers Scripts、D1 的編輯權限，自訂網域另外要 weibuilds.com 的 Workers Routes、DNS 編輯權限；token 只在部署時用環境變數帶，不寫進任何檔案。
+- 本機測試：`npx wrangler@4 dev --local`（本機的 D1，`--persist-to` 放暫存資料夾），DEBUG 版用 `shiyinctl usageurl http://127.0.0.1:8787/v1/usage` 指過去。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1193,6 +1226,7 @@ Windows 版做一樣的功能（R40.7）：同樣的格式（`app.os` 寫 `Windo
 | D40 | 錄音時的音量條用 AppKit 的 view 畫，自己定時讀音量 | SwiftUI 的音量條只在格數變的時候更新：說話時還是每秒十幾次，每次整個視窗重新排版（CPU 51%）。`TimelineView`、`Canvas`：一樣經過 SwiftUI 的更新。降低更新頻率：音量條看起來會頓。取捨：這一小塊不是 SwiftUI，截圖工具畫不出來（DEBUG 截圖時換回 SwiftUI 版） |
 | D41 | 收音提醒只看音量本身（背景多大聲、說話多小聲）持續多久，不看說話和背景差多少 | 用說話和背景的差（訊噪比）判斷吵：使用者正常的會議只差 8 dB，跟加了雜音的版本（6 dB）分不開，會一直誤報。用即時逐字稿的信心或字數：辨識不出來的原因很多（口音、語言），不一定是收音。取捨：麻將那種洗牌聲只在背景大聲的那一段抓得到，不吵的時候分錯人提醒不了（錄完的「說話者可能分得不夠」補這一塊） |
 | D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關＋看得到送出的內容）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
+| D101 | 匿名使用統計的後台用 Cloudflare Workers＋D1，網址是自己網域的子網域 | 自己租主機：要顧作業系統更新、備份、停機，一天幾百、幾千筆用不到。Supabase、Firebase：好用，但資料在第三方，隱私說明要多寫一家公司。PostHog 自架：很吃資源。放在官網的網域（Pages Functions）：官網現在是純靜態、CSP 很嚴，統計另外一個 Worker 互不影響，以後換後台只要換網址。取捨：Cloudflare 看得到請求的 IP（我們的資料庫不存）；D1 免費額度（每天 10 萬次寫入）以每台每天一筆來算夠用很久 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

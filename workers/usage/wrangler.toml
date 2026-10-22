@@ -1,0 +1,21 @@
+# 拾音匿名使用統計的後台（docs/design.md §30.10）。部署：
+#   npx wrangler@4 d1 create shiyin-usage            # 第一次：建資料庫，把 database_id 填到下面
+#   npx wrangler@4 d1 execute shiyin-usage --remote --file schema.sql
+#   npx wrangler@4 deploy
+# token 只用環境變數 CLOUDFLARE_API_TOKEN 帶，不寫進任何檔案。
+name = "shiyin-usage"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+routes = [{ pattern = "usage.weibuilds.com", custom_domain = true }]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shiyin-usage"
+database_id = "TO_BE_FILLED_AFTER_D1_CREATE"
+
+# 同一個 IP 每分鐘最多 30 次（防濫用；IP 不存）
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }
