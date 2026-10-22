@@ -410,7 +410,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 
 - 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。
 - 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
-- 分享預覽圖先沿用首頁的（`og.png`）。
+- 分享預覽圖全站共用一張（`og.png`、`og-en.png`、`og-ja.png`，`site/og.html` 截的）：標題「Mac 和 Windows 的會議紀錄 app」（英文 A meeting-notes app for Mac and Windows、日文 Mac と Windows の議事録アプリ），右邊 Mac 的截圖在後面露出紅黃綠、Windows 的截圖在前面露出視窗按鈕。首頁的標題、說明照樣以 Mac 為主（搜尋只看那些），預覽圖是貼到 Threads、LINE 時給人看的，兩個平台都要看得到。換圖時 `content.mjs` 的網址把 `?v=` 加一：Threads、Facebook 依圖片網址快取，同一個網址不會重抓。
 
 ### 16.2 首頁（有 Windows 版時）
 

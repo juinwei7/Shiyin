@@ -12,7 +12,8 @@ export const content = {
     ogLocale: 'zh_TW',
     prefix: '',
     images: '/images',
-    og: 'og.png',
+    og: 'og.png?v=2',
+    ogAlt: 'Mac 和 Windows 的會議紀錄 app',
     notesLang: 'zh',
     appName: '拾音',
     meta: {
@@ -248,7 +249,8 @@ export const content = {
     ogLocale: 'en_US',
     prefix: '/en',
     images: '/images/en',
-    og: 'og-en.png',
+    og: 'og-en.png?v=2',
+    ogAlt: 'A meeting-notes app for Mac and Windows',
     notesLang: 'en',
     appName: 'Shiyin',
     meta: {
@@ -481,7 +483,8 @@ export const content = {
     ogLocale: 'ja_JP',
     prefix: '/ja',
     images: '/images/en',
-    og: 'og-ja.png',
+    og: 'og-ja.png?v=2',
+    ogAlt: 'Mac と Windows の議事録アプリ',
     notesLang: 'en',
     appName: '拾音',
     meta: {

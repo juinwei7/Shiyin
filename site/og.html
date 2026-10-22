@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- 分享預覽圖的版型（1200×630），make-images.sh 用 Chrome 截成 site/public/og.png、og-en.png、og-ja.png。不會部署。 -->
+<!-- 分享預覽圖的版型（1200×630，Mac、Windows 兩個平台一張），make-images.sh 用 Chrome 截成 site/public/og.png、og-en.png、og-ja.png。不會部署。 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
@@ -11,30 +11,36 @@
   .name img { width: 88px; height: 88px; }
   h1 { margin: 36px 0 0; font-size: 50px; line-height: 1.25; font-weight: 700; }
   p { margin: 20px 0 0; font-size: 26px; line-height: 1.6; color: #6E6E73; }
-  .shot { position: absolute; left: 650px; top: 95px; width: 860px; border-radius: 14px; box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .45), 0 0 0 1px rgba(0, 0, 0, .08); }
+  .shot { position: absolute; box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .45), 0 0 0 1px rgba(0, 0, 0, .08); }
+  /* Mac 在後面露出左上角的紅黃綠，Windows 在前面露出右上角的視窗按鈕 */
+  .mac { left: 640px; top: 64px; width: 620px; border-radius: 10px; }
+  .win { left: 708px; top: 246px; width: 472px; border-radius: 6px; }
 </style>
 </head>
 <body>
 <div class="text">
   <div class="name"><img src="../docs/images/icon.png" alt=""><span id="name">拾音</span></div>
-  <h1 id="title">Mac 上的會議紀錄 app</h1>
+  <h1 id="title">Mac 和 Windows 的<br>會議紀錄 app</h1>
   <p id="lead">錄音不出電腦，<br>每一條紀錄都點得回原話。</p>
 </div>
-<img class="shot" id="shot" src="../docs/images/summary.png" alt="">
+<img class="shot mac" id="mac" src="../docs/images/summary.png" alt="">
+<img class="shot win" id="win" src="../docs/images/windows/summary.png" alt="">
 <script>
   if (location.search === '?ja') {
     document.documentElement.lang = 'ja';
     document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif';
-    document.getElementById('title').textContent = 'Mac の議事録アプリ';
-    document.getElementById('lead').innerHTML = '録音は Mac の外に出ません。<br>各項目から実際の発言を聞き直せます。';
-    document.getElementById('shot').src = '../docs/images/en/summary.png';
+    document.getElementById('title').innerHTML = 'Mac と Windows の<br>議事録アプリ';
+    document.getElementById('lead').innerHTML = '録音はパソコンの外に出ません。<br>各項目から実際の発言を聞き直せます。';
+    document.getElementById('mac').src = '../docs/images/en/summary.png';
+    document.getElementById('win').src = '../docs/images/en/windows/summary.png';
   }
   if (location.search === '?en') {
     document.documentElement.lang = 'en';
     document.getElementById('name').textContent = 'Shiyin';
-    document.getElementById('title').textContent = 'A meeting-notes app for your Mac';
-    document.getElementById('lead').innerHTML = 'Recordings stay on your Mac.<br>Every note links back to what was said.';
-    document.getElementById('shot').src = '../docs/images/en/summary.png';
+    document.getElementById('title').innerHTML = 'A meeting-notes app<br>for Mac and Windows';
+    document.getElementById('lead').innerHTML = 'Recordings stay on your computer.<br>Every note links back to what was said.';
+    document.getElementById('mac').src = '../docs/images/en/summary.png';
+    document.getElementById('win').src = '../docs/images/en/windows/summary.png';
   }
 </script>
 </body>

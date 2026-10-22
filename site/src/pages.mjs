@@ -71,7 +71,7 @@ ${alternates.map((l) => `<link rel="alternate" hreflang="${content[l].lang}" hre
 <meta property="og:image" content="${site}/${c.og}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="${escape(c.intro.h1)}">
+<meta property="og:image:alt" content="${escape(c.ogAlt)}">
 <meta property="og:locale" content="${c.ogLocale}">
 ${alternates.filter((l) => l !== lang).map((l) => `<meta property="og:locale:alternate" content="${content[l].ogLocale}">`).join('\n')}
 <meta name="twitter:card" content="summary_large_image">`
