@@ -1,6 +1,5 @@
-# 拾音 Shiyin 3.0：設計
+# 拾音 Shiyin：設計
 
-> 狀態：已確認（2026-10-15，第三版；使用者以「全部做好再找我」授權開工）
 > 對應 `requirements.md` 的需求編號（R#、N#）。實作中如果偏離本文件，要先改本文件再改程式。
 > 沿用第二版的部分會標「沿用 v2 §n」，第二版的設計用 `git show b621ed6:docs/archive/v2/design.md` 看。文中的任務編號（T-…）的驗證紀錄用 `git show b621ed6:docs/tasks.md` 看。
 
@@ -27,12 +26,12 @@ Shiyin.app（SwiftUI，單一程序，不依賴 Python、Homebrew、ffmpeg）
 |---|---|---|
 | 即時逐字稿（R2） | SpeechAnalyzer（macOS 26 內建）zh_TW | 實驗：暫定文字約 0 秒、定稿中位數 2.3 秒；系統內建不用下載；不佔 GPU |
 | 正式轉錄（R4） | whisper.cpp（官方 XCFramework，binaryTarget）＋ Breeze ASR 25 GGML q8_0（1.66 GB） | 實驗：9.5 倍速、峰值記憶體 2.8 GB、詞彙提示下 CER 3.2%、關鍵詞 5/6 |
-| 說話者辨識（R5） | FluidAudio（Swift，Apache-2.0，pyannote 模型在 ANE 上跑） | 需要實驗 T-A3 確認準確度 |
-| 系統聲音（R1.2） | Core Audio process tap（`AudioHardwareCreateProcessTap`）＋ aggregate device | macOS 14.4 以上的正式 API；需要實驗 T-A2 |
+| 說話者辨識（R5） | FluidAudio（Swift，Apache-2.0，pyannote 模型在 ANE 上跑） | 見 D8 |
+| 系統聲音（R1.2） | Core Audio process tap（`AudioHardwareCreateProcessTap`）＋ aggregate device | macOS 14.4 以上的正式 API |
 | 解碼匯入的檔案 | AVFoundation（AVAudioFile、AVAssetReader） | 取代 ffmpeg |
 | 整理（R6） | CLI（Process）＋ API（URLSession） | CLI 沿用 v2 §6.2；API 讓沒有 CLI 的人也能用 |
 | 資料庫 | GRDB 7，沿用 v2 的 schema 並遷移 | 加上 FTS5 trigram 做中文全文搜尋 |
-| 匯出 PDF、docx | 先產生 HTML，再用 WKWebView 轉 PDF；docx 用 `NSAttributedString`（officeOpenXML） | 都是系統內建，所以 docx 從 P1 提前到 P0 |
+| 匯出 PDF、docx | 先產生 HTML，再用 WKWebView 轉 PDF；docx 用 `NSAttributedString`（officeOpenXML） | 都是系統內建 |
 | 封包 | 資料夾加 `manifest.json`，用 `/usr/bin/ditto` 壓成 zip，副檔名 `.shiyin` | 系統內建工具 |
 | 簽章 | 固定的自簽憑證（`scripts/make-signing-cert.sh` 只要建一次） | 沒有開發者帳號；用固定身分簽章，更新後 TCC 權限才會保留（R10.7） |
 | 更新（R10.6） | 自己做的更新器：JSON＋SHA-256＋簽章檢查（D10，§12） | 更新檔放在 GitHub Releases（Q1、R13.2） |
@@ -58,8 +57,6 @@ Sources/Shiyin/
 Resources/        Info.plist、Assets.xcassets、AppIcon.icns、templates/*.json、export/notes.css
 scripts/          build-app.sh、make-dmg.sh、make-signing-cert.sh、make-icon.swift、dev/shiyinctl.swift
 ```
-
-第二版的 `Resources/python/` 整個移除。
 
 **資料**（`~/Library/Application Support/Shiyin`，權限 700）：
 
@@ -114,7 +111,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   3. 用 `AudioDeviceCreateIOProcIDWithBlock` 取得音訊
   4. 停止時一定要依序 destroy（沒有正確清理會讓 HAL 卡住）
 
-  Info.plist 加上 `NSAudioCaptureUsageDescription`。這部分要先做實驗 T-A2。
+  Info.plist 加上 `NSAudioCaptureUsageDescription`。
 - 兩個來源都轉成 16 kHz、單聲道 Float32，並且用同一個時鐘對齊時間。
 
 ### 5.2 寫檔
@@ -161,8 +158,8 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   - `progress_callback` 用來回報進度
   - `abort_callback` 用來取消
   - 其他使用預設值
-- 段落的平均 token 機率太低，或壓縮比太高時，標成低信心（沿用 v2 的門檻概念，數值在 T-A4 校準）。
-- 在程式內的背景 Task 執行，不另外開子程序：沒有 Python 之後，就沒有開子程序的必要。風險是 whisper.cpp 當掉會連 app 一起掛掉，但錄音另有 WAVRepair 保護、工作也會重跑，所以可以接受（D4）。
+- 段落的平均 token 機率太低，或壓縮比太高時，標成低信心（沿用 v2 的門檻概念）。
+- 在程式內的背景 Task 執行，不另外開子程序（D4）。
 
 ### 6.2.1 macOS 內建辨識（R4.1、D11）
 
@@ -176,7 +173,6 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 轉錄完成後，用 FluidAudio 的離線辨識（offline diarizer）處理同一份 16 kHz 音訊，得到「說話者、開始、結束」的時間區段。
 - 每段逐字稿標上跟它重疊最多的說話者，並在 `speakers` 建立「說話者 1…n」。
 - 有雙聲道時（P1）：如果某個說話者的聲音幾乎都在麥克風聲道，就預設命名為「我」。
-- 實驗 T-A3 的準確度不過關時，依 R5.4 處理。
 
 #### 6.3.2 很短的一句（R34、D92，2026-10-22）
 
@@ -185,21 +181,9 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 1. **說話者辨識的設定**（`Diarizer.config`）：FluidAudio 的離線辨識預設一個人在一個 10 秒窗裡說不到 1 秒就不算聲紋（`embedding.minSegmentDurationSeconds`），這種片段沒有人認領，重組時被判給第 0 群（FluidAudio 的說明：「整段話被默默併進旁邊那個人」）。改成 0.3 秒，並打開 `zeroVoteReembed`（沒人認領的片段重新算聲紋，判給最像的人）。
 2. **每句再比一次**（`SpeakerRecheck`）：分好說話者之後，0.5～4 秒的句子各自算一次聲紋（FluidAudio 的 wespeaker_v2，帶著前後文：中心對著這一句的 10 秒窗、遮罩只標這一句），跟每位說話者的聲音（他 3 秒以上、最長的 20 句的平均）比，比另一位像 0.15 以上就改成那一位。模型約 15 MB（wespeaker_v2 8 MB、FluidAudio 一起帶的 pyannote_segmentation 6 MB），跟說話者辨識的模型一起準備（`Diarizer.prepare`），放在同一個 `fluidaudio/speaker-diarization`（FluidAudio 下載到指定資料夾的上一層加上這個名稱），下載不了就略過這一步。使用者改過說話者的句子（R23.2）不動。模型的三個欄位共用第一個欄位的聲音，所以一次算一句（17 分鐘的錄音約 8 秒，M3 Pro）。
 
-評估（Mac DEBUG 版 `voiceprint-eval` 加上 `minSegment`、`zeroVote`、`step` 設定，`segment-embed` 算每句的聲紋，離線比對）。用標準答案的每一句，看說話者辨識判給誰；「沒重疊」是前後 0.2 秒內沒有別人在說話的句子（一個人講、另一個人插一句「嗯」的情況拾音一次只標一個人，R34.2）：
+評估（Mac DEBUG 版 `voiceprint-eval` 加上 `minSegment`、`zeroVote`、`step` 設定，`segment-embed` 算每句的聲紋，離線比對）。用標準答案的每一句，看說話者辨識判給誰；「沒重疊」是前後 0.2 秒內沒有別人在說話的句子（一個人講、另一個人插一句「嗯」的情況拾音一次只標一個人，R34.2）。兩步都做之後：沒重疊、2 秒內的句子標對 AMI 9 場 24.3% → 59.8%（改錯 0 句）、AISHELL-4 91.3% → 95.7%；含重疊的全部句子 AMI 37.2% → 47.3%、AISHELL-4 71.8% → 78.3%；日文合成會議（全部）90.0% → 100%。分出的人數、聲紋比對、分不準的提醒、說話者辨識的時間都不變。再比一次的門檻 0.1 改錯變多，0.2～0.3 改對的少一些。
 
-| 資料 | 原本 | 改設定（0.3 秒＋重新嵌入） | ＋每句再比一次（採用） |
-|---|---|---|---|
-| AMI 9 場：沒重疊、2 秒內 | 24.3% | 52.1% | **59.8%**（改錯 0 句） |
-| AMI 9 場：沒重疊、全部 | 54.5% | 70.2% | **74.9%** |
-| AMI 9 場：按時間 | 84.6% | 87.3% | — |
-| AISHELL-4：沒重疊、2 秒內 | 91.3% | 95.7% | 95.7% |
-| AMI 9 場：全部（含重疊） | 37.2% | 41.6% | **47.3%**（改對 227 句、改錯 23 句） |
-| AISHELL-4：全部（含重疊） | 71.8% | 73.2% | **78.3%**（改對 42 句、改錯 9 句） |
-| 日文合成會議：全部 | 90.0% | 95.0% | **100%** |
-
-其他試過的：只打開重新嵌入（沒變）、0.5 秒（AMI 短句 41.7%、AISHELL 95.7%）、視窗步距 0.2 → 0.1（變差、慢一倍）；再比一次的門檻 0.1（改錯變多）、0.2～0.3（改對的少一些）。分出的人數（AMI 9 場、AISHELL-4、日文）、聲紋比對（R33 的模擬：直接帶入 8、問 8、帶錯 0）、分不準的提醒（凝聚度）都不變；說話者辨識的時間不變。
-
-使用者的那段訪談（17 分鐘、404 段）：改設定後沒有變（這裡不是短片段沒有聲紋，是換人點放早了）；每句再比一次改了 6 段，「就只有這件事而已」改成蔡康永（相似度 0.61 比 0.32）；另外 5 段看前後文大多是插話的那一位（例如下一句是對方回「對」）。
+使用者的那段訪談（17 分鐘、404 段）：改設定後沒有變（這裡不是短片段沒有聲紋，是換人點放早了）；每句再比一次改了 6 段，「就只有這件事而已」改成蔡康永（相似度 0.61 比 0.32）。
 
 ### 6.4 壓縮
 
@@ -212,11 +196,10 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   | 模型 | 來源 | 大小 | 驗證方式 |
   |---|---|---|---|
   | Breeze ASR 25 q8_0 | HF `shdennlin/breeze-asr-25-ggml`，固定 commit | 1.66 GB | SHA-256 |
-  | FluidAudio 說話者辨識模型 | FluidAudio 指定的 HF repo | T-A3 確認 | SHA-256 |
+  | FluidAudio 說話者辨識模型 | FluidAudio 指定的 HF repo | — | SHA-256 |
 
 - 用 URLSession 下載：暫停時保存 resumeData，斷線後接續；完成後驗證 SHA-256，通過才搬到 `models/`。
 - 設定裡的「模型與儲存空間」頁可以看到每個模型的狀態，也可以重新下載或刪除。
-- 第二版留下的 `venv/` 和 `models/breeze-asr-25/`（mlx 格式）如果還在，就提示使用者可以刪除（R10.5）。
 
 ## 8. 會議紀錄（R6）
 
@@ -385,7 +368,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 16.1 字串
 
-- 用 String Catalog：`Resources/Localizable.xcstrings`，來源語言是繁體中文，**鍵就是程式裡的中文原文**，另外填英文翻譯，目前 594 條。好處是呼叫點不用改寫，程式讀起來跟原本一樣（D12）。
+- 用 String Catalog：`Resources/Localizable.xcstrings`，來源語言是繁體中文，**鍵就是程式裡的中文原文**，另外填英文翻譯。好處是呼叫點不用改寫，程式讀起來跟原本一樣（D12）。
 - SwiftUI 的字串字面值（`Text("…")`、`Button("…")`、`.help("…")`）本來就會查表。不是 SwiftUI 的地方改用 `String(localized:)`：錯誤訊息（`LocalizedError`）、提示（`noticeMessage`、`errorMessage`）、狀態文字、通知、`NSAlert`、選單列。
 - 同一句中文在不同地方要翻成不同英文時（「範本」是 Template 也是設定分頁的 Templates；「錄音」是按鈕 Record、分頁 Recording、儲存空間的 Recordings），那個地方改用 `MeetingLanguage.ui(zh:en:)` 直接寫兩種語言，不查表。
 - 工具 `scripts/dev/l10n.py`（D14）：
@@ -408,7 +391,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - migration `v3`：`meetings.language TEXT NOT NULL DEFAULT 'zh'`，舊會議都是中文。
 - 設定 →「錄音」加「預設會議語言」（`defaultMeetingLanguage`，沒設定時依介面語言）。錄音按鈕旁的選單、匯入對話框、會議頁（地球圖示的選單）都可以選。已經轉錄的會議改語言不會自動重做，提示使用者從「更多」重新轉錄或整理。
 - .shiyin 封包的 `meeting.json` 帶 `language`，舊封包沒有就當成 `zh`。
-- 會議頁的標題區：範本、會議語言兩個選單放在標題下方資訊列（日期、長度、說話者）的右邊，標題獨佔一整行。原本範本選單在標題右邊，多了語言選單後，英文標題（通常比中文長）在 960 寬的視窗裡兩行也放不下、被截斷。資訊列加選單放不下時（說話者多、英文），選單改到下一行（`ViewThatFits`），說話者名字不截斷。
+- 會議頁的標題區：範本、會議語言兩個選單放在標題下方資訊列（日期、長度、說話者）的右邊，標題獨佔一整行（範本選單放在標題右邊的話，英文標題在 960 寬的視窗裡兩行也放不下、被截斷）。資訊列加選單放不下時（說話者多、英文），選單改到下一行（`ViewThatFits`），說話者名字不截斷。
 
 ### 16.4 轉錄
 
@@ -428,7 +411,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 16.7 文件
 
-`.github/README.md`（2026-10-21 從 README.en.md 搬過去，讓 GitHub 首頁顯示英文；README.md 是中文，最上面有語言連結）；`scripts/install-guide.en.html`，DMG 裡同時放「安裝說明.pdf」和「Install Guide.pdf」。中英文共用一個 DMG，所以磁碟名稱（Shiyin 3.1.0）和「應用程式」捷徑（Applications）改用不分語言的英文。
+`.github/README.md`（英文，讓 GitHub 首頁顯示英文；README.md 是中文，最上面有語言連結）；`scripts/install-guide.en.html`，DMG 裡同時放「安裝說明.pdf」和「Install Guide.pdf」。中英文共用一個 DMG，所以磁碟名稱（Shiyin 3.1.0）和「應用程式」捷徑（Applications）改用不分語言的英文。
 
 ### 16.8 驗證
 
@@ -438,7 +421,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 17.1 評估工具（R14.1）
 
-- DEBUG 指令 `shiyinctl transcribe-eval <錄音> <設定.json> <輸出.json>`：用 app 真正的轉錄流程（不建立會議、不寫資料庫）跑一次，輸出每段的時間、聲道、說話者、文字。設定可以指定引擎、語言、詞彙表、分聲道、VAD、回音處理，方便同一段錄音換設定重跑。
+- DEBUG 指令 `shiyinctl transcribe-eval <錄音> <設定.json> <輸出.json>`：用 app 真正的轉錄流程（不建立會議、不寫資料庫）跑一次，輸出每段的時間、聲道、說話者、文字。設定可以指定引擎、語言、詞彙表、分聲道、回音處理，方便同一段錄音換設定重跑。
 - `scripts/dev/asr-score.py <標準答案> <輸出.json>`：
   - 正規化：去標點和空白；中文統一成繁體（AISHELL-4 的答案是簡體，用 ICU 轉換）；數字寫法、常見異體字統一（規則在 `scripts/dev/asr-score.swift`）
   - 中文算 CER，英文算 WER；另外算插入、刪除、替換各多少，看錯誤是哪一種
@@ -453,17 +436,17 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | 模擬線上會議 | 分聲道、回音 | AMI ES2004a 的個人麥克風（Headset-0～3，CC BY 4.0）：一人放麥克風聲道、另外三人混成電腦聲音聲道；「有回音」版本再把電腦聲音延遲、衰減後加進麥克風聲道，模擬用喇叭開會 |
 | 合成的中英夾雜會議（91 秒） | 專有名詞（關鍵詞） | 已有 |
 
-- 每項改進前後的數字和耗時寫在 commit 訊息，結論寫進 requirements 的驗收結果。
+- 每項改進前後的數字和耗時寫在 commit 訊息，結論寫進這裡對應的章節。
 
 ### 17.2 偵測說話片段（VAD，R14.3）：評估後不採用
 
-試過 whisper.cpp 內建的 VAD（Silero v5.1.2），預設和寬鬆兩組參數：小聲、遠處的說話被當成安靜跳過，漏字大增（AISHELL 30.5% → 38.4%～47.8%）。只有乾淨的合成錄音變好。程式、模型、設定開關都已移除（D18）。
+whisper.cpp 內建的 VAD 會把小聲、遠處的說話當成安靜跳過，漏字大增（D18）。程式、模型、設定開關都已移除。
 
 ### 17.3 分聲道轉錄（R14.2）
 
 - 只在會議是雙聲道（`meetings.channels = 'both'`）時啟用；匯入的檔案和單聲道錄音照舊。
 - `AudioDecoder.decodeChannels`：解碼時保留聲道（現在的 `decode` 會混成單聲道）。壓縮後的 m4a 也是雙聲道，重新轉錄時一樣能分開。
-- 回音處理：轉錄後比對，麥克風聲道的段落如果跟電腦聲音聲道的段落時間重疊一半以上、文字相似（最長共同子序列 ÷ 較短的長度 > 0.6），就刪掉。另外試過轉錄前用 FluidAudio 的 LocalVQE 消回音，只在有回音時比較好，但那種情況分聲道本身就沒有幫助，已移除。
+- 回音處理：轉錄後比對，麥克風聲道的段落如果跟電腦聲音聲道的段落時間重疊一半以上、文字相似（最長共同子序列 ÷ 較短的長度 > 0.6），就刪掉。
 - 兩個聲道各自轉錄、各自做說話者辨識。說話者編號：麥克風那一邊的人先編（說話者 1、2…），電腦聲音那一邊接著編。
 - 合併：依開始時間排序成一份逐字稿。`segments` 加 `channel` 欄位（migration v4，可以是空的），之後可以依聲道篩選或分析。
 - 代價：Breeze 要轉兩次、說話者辨識做兩次，速度從約 10 倍速降到約 5 倍速。
@@ -488,7 +471,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 17.6 預設值與設定
 
-- 只有評估後採用的改進才在設定裡放開關，預設值依評估結果決定（R14 驗收），寫進 requirements 的驗收結果。目前：偵測說話片段不採用；分聲道等真實會議；逐字稿校正的開關放在「整理工具」分頁（它用的是整理工具）。
+- 只有評估後採用的改進才在設定裡放開關，預設值依評估結果決定（R14 驗收），寫進這一節。目前：偵測說話片段不採用；分聲道等真實會議；逐字稿校正的開關放在「整理工具」分頁（它用的是整理工具）。
 - 開關全部關閉時，轉錄流程跟 3.1 完全一樣（R14.6）。
 
 ## 18. 日文（3.3，R15、R16）
@@ -496,14 +479,14 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ### 18.1 會議語言
 
 - `MeetingLanguage` 加 `ja`：`speechLocale` 是 ja_JP、`whisperCode` 是 ja、名稱「日本語」。
-- 依會議語言的文字，現在是 `text(zh:en:)`（約 31 處）。改成 `text(zh:en:ja:)`，日文必填，編譯器會抓出漏掉的地方。依介面語言的 `ui(zh:en:)` 維持兩種（沒有日文介面）。
+- 依會議語言的文字用 `text(zh:en:ja:)`，日文必填，編譯器會抓出漏掉的地方。依介面語言的 `ui(zh:en:)` 維持兩種（沒有日文介面）。
 - 預設會議語言（`systemDefault`）：跟著介面語言；macOS 的第一個語言是日文時（介面是英文）預設日文。
 - 封包：`meeting.json` 的 `language` 可以是 `ja`；舊版讀到不認得的語言，照現有的寫法當成 `zh`。
 
 ### 18.2 正式轉錄引擎（D19）
 
 - 中文、英文會議維持 Breeze（R15.6）。
-- 日文會議用 **Whisper large-v3-turbo q5_0**（574 MB，whisper.cpp 官方轉檔，MIT），加上詞彙表提示和逐字稿校正。評估比較了 Breeze、large-v3-turbo（q5_0、q8_0）、kotoba-whisper v2.0、macOS 內建，結果：large-v3-turbo q5_0 在會議資料的錯誤率最低（合成會議 4.5%、國會聽證 9.2%／7.7%，加上校正後 2.0%／8.8%／6.5%、關鍵詞全對）；Breeze 會把片假名外來語寫成英文；kotoba-whisper 在 whisper.cpp 上會亂輸出、整句漏掉；macOS 內建朗讀最好但會議資料最差。設定裡選了「macOS 內建」的話，日文會議也用 macOS 內建。
+- 日文會議用 **Whisper large-v3-turbo q5_0**（574 MB，whisper.cpp 官方轉檔，MIT），加上詞彙表提示和逐字稿校正：評估時在會議資料的錯誤率最低（合成會議 4.5%、國會聽證 9.2%／7.7%）；Breeze 會把片假名外來語寫成英文，kotoba-whisper v2.0 在 whisper.cpp 上會亂輸出、整句漏掉，macOS 內建在會議資料最差。設定裡選了「macOS 內建」的話，日文會議也用 macOS 內建。
 - `TranscriptionOptions.engine` 的 `breeze` 意思改成「whisper.cpp」，模型依會議語言選（`ModelStore.transcription(for:)`）；評估時可以用 `model` 指定模型檔。
 - `ModelStore` 改成管多個模型（`breeze`、`japanese`、`languageDetection`），各自下載、暫停、刪除，固定 commit、SHA-256 驗證、可以續傳。
 - 只有第一次轉錄日文會議時才下載：有日文會議在排隊、日文模型還沒下載過，就自動開始下載（使用者暫停過或下載失敗就不自動重來）。下載好之前的日文會議先用 macOS 內建辨識轉錄（3.5 起，§21.17）。
@@ -526,9 +509,9 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 18.6 字形（D20）
 
-現在整個 app 套 `.chineseGlyphs()`，漢字一律用繁體中文字形。改成：介面維持繁中字形；會議內容依會議語言設定 `typesettingLanguage`，日文會議用 `ja`。
+介面維持繁中字形（`.chineseGlyphs()`）；會議內容依會議語言設定 `typesettingLanguage`，日文會議用 `ja`。
 
-- 會議頁把會議語言放進環境值 `meetingLanguage`；只有內容本身套 `.meetingText()`：逐字稿每一段、校正建議、會議紀錄的條目和待辦、待確認的題目、筆記、錄音中的即時逐字稿、編輯時的輸入框。介面的說明文字、按鈕不套（一開始整個分頁都套，介面說明的逗號也變成日文的位置，改成只套內容）
+- 會議頁把會議語言放進環境值 `meetingLanguage`；只有內容本身套 `.meetingText()`：逐字稿每一段、校正建議、會議紀錄的條目和待辦、待確認的題目、筆記、錄音中的即時逐字稿、編輯時的輸入框。介面的說明文字、按鈕不套（整個分頁都套的話，介面說明的逗號也會變成日文的位置）
 - 會議列表的標題、搜尋結果的片段用 `.contentGlyphs(language)`
 - 會議標題、段落標題、議題標題原本用宋體-繁（漢字是中文寫法），日文會議改用ヒラギノ明朝（`.contentTitleFont`）
 
@@ -584,7 +567,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 | 內容 | `model`、`system_instruction`、`input`（提示詞）、`response_format: {type: "text", mime_type: "application/json", schema}`、`store: false` |
 | 結果 | `status` 是 `completed`：把 `steps` 裡 `type == "model_output"` 的 `content[]`（`type == "text"`）的 `text` 接起來。`incomplete`：錯誤「回應不完整（可能超過長度上限）」。其他狀態：錯誤，附上狀態 |
 | 錯誤 | 錯誤回應可能包在陣列裡（`[{"error": …}]`，實測 Interactions 是這樣），兩種格式都要讀；key 錯誤是 HTTP 400 加上 `API key not valid`，要跟 401 一樣提示 key 錯誤 |
-| 模型清單 | `GET /v1beta/models?pageSize=1000`，取名稱是 `models/gemini-…`、`supportedGenerationMethods` 有 `generateContent` 的，去掉 `models/`。圖片、語音、機器人等模型也有 `generateContent`，所以再排除名稱有 embedding、tts、image、live、audio、banana、robotics、computer-use、transcribe、customtools、omni 的（2026-10 實際清單 47 個，留下 16 個） |
+| 模型清單 | `GET /v1beta/models?pageSize=1000`，取名稱是 `models/gemini-…`、`supportedGenerationMethods` 有 `generateContent` 的，去掉 `models/`。圖片、語音、機器人等模型也有 `generateContent`，所以再排除名稱有 embedding、tts、image、live、audio、banana、robotics、computer-use、transcribe、customtools、omni 的 |
 | 預設模型 | `gemini-3.8-flash`（2026-10 官方建議的一般用途模型） |
 | key | 鑰匙圈 account `gemini` |
 
@@ -680,7 +663,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - `Keychain.exists(account)`：查詢帶 `kSecReturnAttributes`、不帶 `kSecReturnData`。只讀屬性不用解密，換了簽章也不會跳出存取確認。
 - 環境檢查、設定頁的「已儲存」、首次使用引導改用 `exists`；只有送出請求和列出模型時才 `get`。
-- DEBUG 版預設完全不讀真的鑰匙圈（`get`、`exists` 只看 `llmkey` 放在記憶體的 key）：每次重建簽章都不同，讀使用者存的 key 會跳出確認視窗，主執行緒會停在那裡等。要測鑰匙圈時加啟動參數 `-debugRealKeychain YES`。2026-10-19 驗證 3.4.1 時，DEBUG 版啟動時的環境檢查在使用者的畫面上跳出了 27 次確認。
+- DEBUG 版預設完全不讀真的鑰匙圈（`get`、`exists` 只看 `llmkey` 放在記憶體的 key）：每次重建簽章都不同，讀使用者存的 key 會跳出確認視窗，主執行緒會停在那裡等。要測鑰匙圈時加啟動參數 `-debugRealKeychain YES`。
 
 ### 20.8 log 不寫錯誤內容（R18.8）
 
@@ -711,7 +694,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - `WhisperContexts`：whisper context 建立時加一、`whisper_free` 後減一（轉錄、語言偵測都算），執行緒安全。
 - `applicationShouldTerminate` 確認之後：停止錄音、`terminateAll`（送出取消）；還有 whisper context 沒釋放就回 `.terminateLater`，用 run loop 的 Timer（common modes）每 0.1 秒看一次，都釋放了（最多 10 秒）再 `NSApp.reply(toApplicationShouldTerminate: true)`。
 - 不能用 MainActor 的 Task 等：從主佇列的工作裡呼叫 `NSApp.terminate`（例如 DEBUG 的 `quit`、選單列的按鈕）時，AppKit 在原地跑 run loop 等回覆，主佇列不會再執行別的工作，兩邊互相等。Timer 是 run loop 的來源，不受影響；whisper 的 context 在自己的執行緒上釋放，也不需要主佇列。
-- whisper 的取消是在計算中途由 `abort_callback` 檢查，實測停下來要多久寫在驗證結果。
+- whisper 的取消是在計算中途由 `abort_callback` 檢查。
 
 ## 21. 錄完就有紀錄、認得說話者、可以提問（3.5，R19、R20）
 
@@ -719,7 +702,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ```sql
 ALTER TABLE meetings ADD COLUMN notes_draft INTEGER NOT NULL DEFAULT 0;        -- 1：會議紀錄是用即時逐字稿整理的草稿（§21.3）
-ALTER TABLE meetings ADD COLUMN transcribed_with TEXT NOT NULL DEFAULT '';     -- breeze / japanese / system，空字串是 3.5 以前（§21.18）
+ALTER TABLE meetings ADD COLUMN transcribed_with TEXT NOT NULL DEFAULT '';     -- breeze / japanese / system，空字串是 3.5 以前（§21.17）
 ALTER TABLE jobs ADD COLUMN error_kind TEXT;                                    -- Error.logSummary，回報問題用（§21.9）
 
 ALTER TABLE speakers ADD COLUMN name_source TEXT NOT NULL DEFAULT 'default';    -- default / manual / voiceprint / suggestion
@@ -791,11 +774,8 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 - AMI 的 ES2004a～d 是同一組 4 個人的 4 場會議（Mix-Headset，CC BY 4.0）。用 a 學（4 個人各取一次名字），b、c、d 比對；再用別組人的會議（例如 ES2005a、IS1000a）比對同一份名單，算誤認率。
 - 評估工具：DEBUG 指令 `voiceprint-eval <設定.json> <輸出.json>`，對每場會議跑說話者辨識、算聲紋，輸出每位說話者跟每個人的相似度和 AMI 標註的真實身分（用說話時間重疊對應），用 Python 算出各門檻的正確率和誤認率。
 - 標準：誤認（帶入錯的名字）≤ 2%，在這個前提下自動帶入的比例越高越好。
-- 結果（2026-10-20，`scripts/dev/voiceprint-eval.py`）：ES2004a～d、ES2004c 的遠距麥克風（Array1-01）都分出 4 位、對到 4 個人；
-  同一個人跟第一場的自己相似度 0.81～0.97（遠距麥克風 0.81～0.84），同組不同人最高 0.416，別組 4 場 13 位陌生人跟名單裡任何人最高 0.384。
-  門檻 0.45～0.80 時，只用第一場學到的聲紋就能自動帶入 16/16、帶錯 0、陌生人被帶入 0；每場結束後把名字改對（聲紋越存越多）時，0.45～0.85 都一樣。
-  門檻取 **0.65**：離兩邊都有 0.16 以上的距離。語料是英文、耳麥和會議室麥克風；中文會議、筆電麥克風、線上會議壓縮過的聲音還沒測，使用者實際用了之後再看。
-- 2026-10-22（R33）：使用者回報聲紋帶錯人。用使用者的資料庫（6 個人、14 位說話者，只讀相似度）算：不同的人之間 0.63（同一支訪談的兩個人）、0.77（兩位同事），還有一位沒取名的說話者跟使用者自己像到 0.85（不知道是不是本人），都遠高於 AMI 的 0.42。所以改成兩段：≥ `A` 而且跟第二像的人差 ≥ `M` 才直接帶入，`T`～`A` 改成問。AMI 重跑（Mac DEBUG 版 `voiceprint-eval`，9 場）模擬：只用第一場學到的聲紋時 16 位裡直接帶入 8、問 8、帶錯 0；每場結束後把名字改對（聲紋越存越多）時直接帶入 15、問 1。`A` = 0.85 時第一次只問 6 位，但使用者資料裡 0.85 那位會直接帶入，取 0.88。`M` 擋住兩位同事那種兩個人都很像的情況，AMI 裡不影響（最像和第二像都差 0.4 以上）。
+- 結果（2026-10-20，`scripts/dev/voiceprint-eval.py`）：ES2004a～d、ES2004c 的遠距麥克風（Array1-01）都分出 4 位、對到 4 個人；同一個人跟第一場的自己相似度 0.81～0.97（遠距麥克風 0.81～0.84），同組不同人最高 0.416，別組 4 場 13 位陌生人跟名單裡任何人最高 0.384。門檻 0.45～0.80 時，只用第一場學到的聲紋就能自動帶入 16/16、帶錯 0、陌生人被帶入 0。門檻取 **0.65**：離兩邊都有 0.16 以上的距離。語料是英文、耳麥和會議室麥克風；中文會議、筆電麥克風、線上會議壓縮過的聲音還沒測。
+- 2026-10-22（R33）：使用者回報聲紋帶錯人。使用者的資料庫裡不同的人之間 0.63（同一支訪談的兩個人）、0.77（兩位同事），還有一位沒取名的說話者跟使用者自己像到 0.85，都遠高於 AMI 的 0.42，所以改成兩段：≥ `A` 而且跟第二像的人差 ≥ `M` 才直接帶入，`T`～`A` 改成問。AMI 9 場模擬：只用第一場學到的聲紋時 16 位裡直接帶入 8、問 8、帶錯 0；聲紋越存越多時直接帶入 15、問 1。`A` 取 0.88（0.85 會讓使用者資料裡 0.85 那位直接帶入）。`M` 擋住兩位同事那種兩個人都很像的情況，AMI 裡不影響（最像和第二像都差 0.4 以上）。
 
 ### 21.5 AI 猜說話者（R19.2，D30）
 
@@ -879,7 +859,7 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
   - 時間點加上這一段的起點，不超過這一段的結尾（最後一個 30 秒的窗會補零）。
   - 接縫：下一段開頭 3 秒內、跟前一段最後一句幾乎一樣的段落（最長共同子序列 ÷ 較長那句 > 0.8，至少 4 個字）去掉，是提示詞被念出來。
   - 錄音不先整段解碼：whisper 從檔案依序讀，每次讀到「一段＋2 分鐘」就決定這一段切在哪裡、送進去，記憶體裡最多只有約 12 分鐘的聲音（16 kHz Float32，約 46 MB）。說話者辨識仍用整段（要一致的說話者編號），轉錄完才解碼整段。切出來的位置跟整段解碼後再切完全相同。
-  - 實測（M3 Pro、4 小時模擬錄音、Breeze、含說話者辨識）：記憶體峰值不分段 4,878 MB；分段但先解碼整段 3,672 MB（少 25%，整段聲音 921 MB 還在）；分段、從檔案依序讀 2,852 MB（少 42%），說話者辨識那一步 2,215 MB。轉錄時間不變（約 25 分鐘）。
+  - 實測（M3 Pro、4 小時模擬錄音、Breeze、含說話者辨識）：記憶體峰值不分段 4,878 MB，分段、從檔案依序讀 2,852 MB（少 42%；分段但先解碼整段只少 25%）。轉錄時間不變（約 25 分鐘）。
   - 錯字率：分段後 whisper 每段各自依那一段最大聲的地方正規化頻譜，辨識結果整段都會有些不同（不只接縫）。AISHELL-4 30.5% → 29.4%、AMI 36.7% → 35.6%、國會聽證 9.2% → 9.0%、FLEURS 日文 10.9% → 11.4%、合成會議不變（短於 12 分鐘不分段）；接縫前後 60 秒的錯字率跟不分段差不多，沒有重複的段落。
   - 分聲道（還在評估）、macOS 內建辨識照舊先解碼整段：分聲道的 whisper 仍分段送進去；macOS 內建辨識本來就是串流處理。
   - 評估：`TranscriptionOptions.chunkSeconds`（預設 600，0 不分段）；`transcribe-eval` 的輸出多了 `seams`（分段的位置）和 `memory`（各階段的記憶體峰值）。
@@ -889,7 +869,6 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 
 - `JobRunner` 挑轉錄工作時不再等模型：轉錄引擎是 Breeze、但這個語言的模型還沒下載好，就用 macOS 內建辨識轉這一場（`TranscriptionOptions.current` 決定，沿用 `SystemTranscriber`），`meetings.transcribed_with = 'system'`。有這種會議在排隊、模型又還沒開始下載（狀態是「沒有」，不是暫停或失敗）時自動開始下載，跟日文模型一樣（§18.2）。使用者在設定選了 macOS 內建辨識的不受影響。
 - 轉錄的時候寫入 `transcribed_with`（breeze、japanese、system）；匯入的逐字稿不寫。逐字稿分頁：`transcribed_with = 'system'`、設定的引擎是 Breeze、這個語言的模型已經下載好、沒有在轉錄或整理時，上方顯示「這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。」（日文會議是「日文轉錄模型」）和「重新轉錄」按鈕（跟「更多 → 重新轉錄」相同）。
-- 原本「等轉錄模型下載完成就會開始轉錄」的排隊狀態、會議頁上方「還沒有下載轉錄模型」的提示列拿掉（不會再發生）。
 - 首次使用引導的下載步驟說明改成「下載完成前會先用 macOS 內建辨識」；完成步驟的提示改成「會先用 macOS 內建辨識轉錄」。
 
 ## 22. 3.5 之後的修正：鑰匙圈、工具列（R21）
@@ -915,7 +894,7 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 
 ### 23.1 為什麼不改預設門檻
 
-FluidAudio 離線辨識的分群門檻是 0.6（單位化後聲紋的歐氏距離，越大越容易併成同一人）。使用者的麻將錄音（手機遠距收音、洗牌聲）預設只分出 2 人；0.45、0.4 也只有 3 人；`minSpeakers = 4` 分出 4 人、說話秒數 433／364／304／289。AMI 9 場用預設值都分對，調低門檻反而會把一般會議的人拆開，所以改成讓使用者填人數。
+FluidAudio 離線辨識的分群門檻是 0.6（單位化後聲紋的歐氏距離，越大越容易併成同一人）。使用者的麻將錄音（手機遠距收音、洗牌聲）預設只分出 2 人，門檻調到 0.4 也只有 3 人，`minSpeakers = 4` 才分出 4 人；AMI 9 場用預設值都分對，調低門檻反而會把一般會議的人拆開，所以改成讓使用者填人數。
 
 ### 23.2 資料
 
@@ -991,20 +970,9 @@ FluidAudio 離線辨識的分群門檻是 0.6（單位化後聲紋的歐氏距�
 
 FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個），先在每個片段裡分出最多 3 位說話者、各算一個聲紋，再把所有片段的聲紋分群（`exposeChunkEmbeddings` 可以拿到每個片段的聲紋和它被分到哪一群）。
 
-- 先試了「碰撞率」：同一個片段裡分出兩位、卻被分到同一群的比例。麻將錄音（6～8 人只分出 2 群）碰撞率是 0%：分群時同一個片段的不同說話者會被強制分到不同群，只要群數 ≥ 2 就不會碰撞，所以只在只分出 1 群時有用。
-- 「凝聚度」（每個片段的聲紋跟它那一群平均聲紋的 cosine，所有片段平均）：不同的人被併在同一群時，群裡的聲紋散得開，凝聚度變低。15 段錄音（自動判斷）：
-
-  | 錄音 | 群 | 凝聚度 | 碰撞率 |
-  |---|---|---|---|
-  | AMI 6 場（含遠距陣列麥克風） | 4 | 0.80～0.87 | 0% |
-  | AISHELL-4（遠距收音） | 6 | 0.79 | 0% |
-  | 使用者的週會、研發週會（6 人） | 6 | 0.71、0.75 | 0% |
-  | 使用者的 FonTicket（4 人） | 3 | 0.79 | 0% |
-  | 使用者的排隊取號、幼貓認養（對話，只分出 1 群） | 1 | 0.78、0.75 | 100% |
-  | 麻將（6～8 人） | 2 | 0.48 | 0% |
-
-- 排隊取號、幼貓認養不是誤報：用「至少 2 人」重新辨識，多出來的那位（35、49 秒）說的是另一個人的話（例如認養的人說「我平常都在新竹上班」「你有開車嗎」），預設設定把兩個人併成一位。麻將用「至少 6 人」分出 6 位後凝聚度也只有 0.55：吵雜、遠距收音本來就散，靠「選過人數就不提示」處理。
-- 也試了把每一群用 2-means 拆開、看兩半的聲紋像不像：幼貓認養（0.52）和麻將（0.62）分不開，不用。
+- 「碰撞率」（同一個片段裡分出兩位、卻被分到同一群的比例）：分群時同一個片段的不同說話者會被強制分到不同群，只要群數 ≥ 2 就不會碰撞（麻將只分出 2 群也是 0%），所以只在只分出 1 群時有用。
+- 「凝聚度」（每個片段的聲紋跟它那一群平均聲紋的 cosine，所有片段平均）：不同的人被併在同一群時，群裡的聲紋散得開，凝聚度變低。15 段錄音（自動判斷）：AMI 6 場（含遠距陣列麥克風）0.80～0.87、AISHELL-4（遠距收音）0.79、使用者的週會、研發週會、FonTicket 0.71～0.79；麻將（6～8 人只分出 2 群）0.48。
+- 使用者的排隊取號、幼貓認養（對話）只分出 1 群、碰撞率 100%，不是誤報：用「至少 2 人」重新辨識，多出來的那位說的是另一個人的話，預設設定把兩個人併成一位。麻將用「至少 6 人」分出 6 位後凝聚度也只有 0.55：吵雜、遠距收音本來就散，靠「選過人數就不提示」處理。
 - 分數（`Diarizer.Quality.mergeRisk`，越大越可能把人併在一起）：
   - 片段不到 30 個（大約 1 分鐘的說話）：0，不判斷。
   - 只分出 1 群、至少 10 個片段分得出兩位、碰撞率 ≥ 50%：1。
@@ -1025,11 +993,9 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 
 ### 25.1 調查
 
-- 使用者用 3.5.0 錄 71 分鐘的會議，錄到 3:53 畫面就停了：主執行緒 100% CPU，一個多小時都沒恢復，錄音照常寫檔。卡住前兩分鐘，系統的 CPU 報告記到平均 58%，幾乎都在 SwiftUI 排版。
-- 用同一場錄音模擬錄音（DEBUG 版、同樣的視窗大小）9 分鐘，中途另外啟動一個拾音，都沒有重現。
-- 錄音時抓的程式狀態：主執行緒 78% 的時間在忙，幾乎都是整個視窗重新排版（`NSHostingView.layout` → 重算視窗的最小尺寸 → 把整個畫面量一遍）。SwiftUI 裡任何一個 view 變了，整個視窗都要走一次。
-- 對照實驗（同一段錄音，量 120 或 60 秒的 CPU 時間）：3.5.0 是 59%；關掉即時逐字稿 39%；再讓音量條不動 10%。音量條說話時每秒變十幾次，是最大的來源；即時文字每秒約 3 次。
-- 推測：主執行緒本來就接近滿載，其他程式搶 CPU（當時在背景跑說話者辨識的評估）或排版陷入循環時，就再也追不上。即時逐字稿用「最底下的標記出現、消失」改狀態，是在排版途中改，有讓排版一直重來的風險。
+- 使用者用 3.5.0 錄 71 分鐘的會議，錄到 3:53 畫面就停了：主執行緒 100% CPU，一個多小時都沒恢復，錄音照常寫檔。用同一場錄音模擬錄音重現不出來。
+- 主執行緒幾乎都在整個視窗重新排版（`NSHostingView.layout` → 重算視窗的最小尺寸 → 把整個畫面量一遍）：SwiftUI 裡任何一個 view 變了，整個視窗都要走一次。同一段錄音的 CPU：3.5.0 是 59%；關掉即時逐字稿 39%；再讓音量條不動 10%。音量條說話時每秒變十幾次，是最大的來源；即時文字每秒約 3 次。
+- 推測：主執行緒本來就接近滿載，其他程式搶 CPU 或排版陷入循環時，就再也追不上。即時逐字稿用「最底下的標記出現、消失」改狀態，是在排版途中改，有讓排版一直重來的風險。
 
 ### 25.2 改法
 
@@ -1037,7 +1003,6 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 - 計時：`elapsedSeconds` 整秒變了才更新；錄音畫面、工具列、選單列的計時用 `RecorderClock`，在自己的 body 裡讀。精確的 `elapsed`（筆記的時間點、標記重點）不讓 SwiftUI 觀察。
 - 其他每 0.05 秒設一次的觀察屬性（`systemSilent`）只在值變了才設：`@Observable` 設成同樣的值也會讓畫面重算。
 - 跟著最新（R2.2）：改看捲動的位置（`onScrollGeometryChange`）。往上捲（內容沒有變短，排除定稿時文字變短被往下推）就不跟；回到底部就跟。滾輪、觸控板、拖捲軸都一樣。按「回到最新」捲到底部並繼續跟。
-- 試過沒用的：視窗內容放進 `overlay`，讓最小尺寸只量一個空白的 view。SwiftUI 量 overlay 時還是會量裡面的內容，CPU 只少 2%，沒有採用。
 
 ### 25.3 結果
 
@@ -1049,23 +1014,11 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 ### 26.1 收音提醒（R24.1、R24.3，D41）
 
 - 量法：麥克風那一聲道，每 100 毫秒算一次音量（RMS，dBFS）。每秒看最近 30 秒：第 90 百分位當「說話的音量」，第 10 百分位當「背景」。在 `RecordingWriter` 寫檔的佇列上算（已經有每段的 RMS），Recorder 每秒讀一次結果。電腦聲音不看（它有自己的「超過 15 秒沒有收到系統聲音」）。
-- 評估（`afconvert` 轉成 16 kHz，Python 照同樣的算法，最多 30 分鐘；「持續」是條件連續成立的最長秒數）：
-
-  | 錄音 | 說話（中位數） | 背景（中位數） | 背景 > −36 持續 | 說話 < −50 持續 |
-  |---|---|---|---|---|
-  | 使用者的 8 場會議（筆電、手機） | −13～−37 | −40～−82 | 0 秒 | 0 秒 |
-  | AMI 頭戴、陣列，AISHELL-4 | −34～−41 | −51～−72 | 0 秒 | 最長 30 秒 |
-  | 麻將（洗牌聲） | −21 | −42 | 72 秒 | 0 秒 |
-  | 使用者的會議加粉紅雜音（−30、−25 dBFS） | −23～−27 | −28～−33 | 整段 | 0 秒 |
-  | 使用者的會議、AMI 調小 20、26 dB | −54～−63 | −65～−98 | 0 秒 | 490 秒以上 |
-  | FonTicket（1 分 50 秒後麥克風一直是 0） | | | 0 秒 | 395 秒 |
-
-  使用者的會議說話和背景只差 8 dB 左右，跟加雜音的版本（6 dB）很接近，所以不用「說話和背景差多少」判斷吵不吵，只看背景本身多大聲、持續多久。
-
+- 評估（`afconvert` 轉成 16 kHz，Python 照同樣的算法，最多 30 分鐘）：使用者的 8 場會議（筆電、手機）、AMI、AISHELL-4 的背景都不會持續超過 −36 dBFS，麻將（洗牌聲）持續 72 秒、加了粉紅雜音的整段都超過；說話 < −50 dBFS 一般錄音最長持續 30 秒，調小 20、26 dB 的版本 490 秒以上。使用者的會議說話和背景只差 8 dB 左右，跟加雜音的版本（6 dB）很接近，所以不用「說話和背景差多少」判斷吵不吵，只看背景本身多大聲、持續多久。
 - 規則（同一種提示一場錄音只出現一次；暫停時不判斷、重新計時）：
   - 沒有收到聲音：麥克風的聲音完全是 0 超過 10 秒 →「麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。」
   - 背景太吵：背景 > −36 dBFS 持續 45 秒 →「背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。」
-  - 聲音太小：說話的音量 < −50 dBFS、而且比背景大 4 dB 以上（有人在說話，不是完全安靜）持續 60 秒 →「聲音有點小：手機或筆電放近說話的人一點。」一般錄音最長 30 秒（AMI 一段安靜的時間），調小 20 dB 的版本 260 秒以上。先試過「即時逐字稿最近 30 秒有出現文字」：聲音小的時候即時逐字稿也常認不出字，條件一直被打斷，模擬錄音只累積到 28 秒。
+  - 聲音太小：說話的音量 < −50 dBFS、而且比背景大 4 dB 以上（有人在說話，不是完全安靜）持續 60 秒 →「聲音有點小：手機或筆電放近說話的人一點。」一般錄音最長 30 秒（AMI 一段安靜的時間），調小 20 dB 的版本 260 秒以上。
 - 顯示：錄音畫面控制列下方的提示列（跟自動偵測語言同樣的樣式），右邊「知道了」。關掉的那一種這場錄音不再出現。
 - DEBUG：state 的 `recorder.levelCheck`（說話、背景、各條件持續的秒數、目前的提示）；`levelhint dismiss` 等於按「知道了」。
 
@@ -1194,7 +1147,7 @@ User-Agent: Shiyin/<版本>
 
 - README（中文，「資料與隱私」表格加一列；「整理工具選『不整理』｜完全離線」改成「…，並關掉匿名使用統計」）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉。
 - README（英文；“Don’t summarize” 那一列同樣改成 “… with usage statistics turned off”）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. You can turn it off in Settings → Advanced.
-- 官網（website.md §14 的隱私區塊，中英日；Mac 首頁和 Windows 頁都加，`content.mjs` 的 `privacy.usage`）：整理工具那一段後面加一句：「另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.」日文：「また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。」（日文版的介面名稱照 app 的英文介面寫）
+- 官網（首頁的隱私區塊，中英日；Mac 首頁和 Windows 頁都加，`content.mjs` 的 `privacy.usage`）：整理工具那一段後面加一句：「另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.」日文：「また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。」（日文版的介面名稱照 app 的英文介面寫）
 - requirements 第 4 節已經改好（2026-10-22）。
 - 版本說明：不寫（2026-10-22 使用者決定；原本規劃 `v4.0.0`、`win-v4.0.0` 各加一條「新增匿名使用統計…」）。收什麼寫在使用說明、README、官網的隱私說明和設定的「詳細…」
 
@@ -1248,6 +1201,8 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D7 | PDF、docx 用系統元件產生 | 第三方套件：多一個依賴，系統元件就夠用 |
 | D8 | 說話者辨識用 FluidAudio | pyannote（Python）：違反 D2；sherpa-onnx：要另外整合 C++ 和 ONNX Runtime |
 | D9 | 每一條紀錄都帶時間點，由 LLM 填 | 在 app 內用文字比對去找時間點：摘要是改寫過的文字，比對不準 |
+| D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
+| D11 | 正式轉錄可以改用 macOS 內建辨識（預設仍是 Breeze） | 只用 Breeze：真人中文會議（AISHELL-4，遠距麥克風陣列、6 人、38 分鐘）上，Breeze 的 CER 29.1%、macOS 內建 25.2%，內建還快 160 倍、不用下載 1.7 GB 模型。只用內建：合成的中英夾雜會議上，內建的英文專有名詞幾乎都錯（關鍵詞 1/6，Breeze 加詞彙表 5/6），台灣公司的會議以這種情況為主，所以預設還是 Breeze |
 | D12 | 翻譯表的鍵用程式裡的中文原文 | 鍵改成英文代號（`settings.recording.title`）：650 個呼叫點全部要改，程式也比較難讀；改成英文原文：中文介面反而要另外翻，而且中文才是主要語言 |
 | D13 | 會議語言只分中文、英文，由使用者選 | 自動偵測語言：錄音開始時還沒有內容可以判斷，中英夾雜的會議也容易誤判 |
 | D14 | 自己寫 l10n.py 抽字串、合併 catalog | `xcstringstool extract`：看不出型別，插值變成 `%arg`，跟執行時 SwiftUI 查的鍵對不上；`sync` 又不接受編譯器產生的 stringsdata。Xcode 專案：專案是 Swift Package，用指令建置 |
@@ -1258,7 +1213,6 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D19 | 日文會議的正式轉錄引擎評估後決定，中英文維持 Breeze | 全部改用一個多語言模型：中文會議的專有名詞會變差（Breeze 針對台灣中文、中英夾雜調過）；直接選 kotoba-whisper：還沒在會議錄音上實測，macOS 內建加上逐字稿校正也可能就夠 |
 | D20 | 會議內容依會議語言設定字形，介面維持繁中字形 | 全部改成日文字形：中文會議的漢字會變成日文寫法；不處理：日文會議的漢字顯示成繁中寫法，日本使用者會覺得不對 |
 | D21 | 自動偵測只在開頭偵測一次、只比中英日三種、要超過門檻才切換 | 一直偵測、每句切換：即時辨識同時只能用一種語言，頻繁重新開始會漏字；開頭寒暄很短容易判斷錯，所以要累積夠多說話內容 |
-| D11 | 正式轉錄可以改用 macOS 內建辨識（預設仍是 Breeze） | 只用 Breeze：真人中文會議（AISHELL-4，遠距麥克風陣列、6 人、38 分鐘）上，Breeze 的 CER 29.1%、macOS 內建 25.2%，內建還快 160 倍、不用下載 1.7 GB 模型。只用內建：合成的中英夾雜會議上，內建的英文專有名詞幾乎都錯（關鍵詞 1/6，Breeze 加詞彙表 5/6），台灣公司的會議以這種情況為主，所以預設還是 Breeze |
 | D22 | 整理工具做成共同介面（`LLMBackend`），enum 保留當代號 | 繼續在 enum 加 case、在 `LLMClient` 加 switch：到六種之後每個 switch 都要改，OpenAI 相容 API 還有網址這種只屬於它的設定，switch 會越來越長、各家的程式混在同一個檔案。做成外掛或動態註冊：整理工具只有六種，還要配合設定頁、引導、隱私說明，外掛的彈性用不到。代價：原本四種的程式碼要搬家，要確認請求沒變（§19.5） |
 | D23 | Gemini 用 Interactions API，一律 `store: false` | generateContent：官方 2026-06 起列為舊版（仍支援），新模型和新功能只在 Interactions 推出。Interactions 預設會在 Google 保存請求（付費 55 天、免費 1 天），會議內容不該留在那裡，所以關掉。Gemini 的 OpenAI 相容端點：使用者可以自己用「OpenAI 相容 API」接，但 issue 的回覆答應 Gemini 有自己的選項，填 key 就能用 |
 | D24 | OpenAI 相容 API 用 Chat Completions，JSON schema 不支援時退回 JSON 模式 | Responses API（OpenAI 官方那一種用的）：Groq、Ollama、LM Studio 等相容服務主要支援 Chat Completions。只用 JSON 模式：支援 JSON schema 的模型就少了格式保證。只用 JSON schema：Groq 只有少數模型支援，其他模型會回 400 |
@@ -1279,22 +1233,11 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D39 | 用片段聲紋的凝聚度判斷可能把人併在一起，只提示、不自動重新辨識 | 碰撞率：分群時同一片段的說話者會被強制分開，群數 ≥ 2 時一直是 0%（麻將也是）。看分出的人數：拾音不知道實際幾個人。說話秒數不平均：一般會議也常常一人主講。自動用更多人重新辨識：一般會議會把一個人拆成兩個；提示讓使用者決定 |
 | D40 | 錄音時的音量條用 AppKit 的 view 畫，自己定時讀音量 | SwiftUI 的音量條只在格數變的時候更新：說話時還是每秒十幾次，每次整個視窗重新排版（CPU 51%）。`TimelineView`、`Canvas`：一樣經過 SwiftUI 的更新。降低更新頻率：音量條看起來會頓。取捨：這一小塊不是 SwiftUI，截圖工具畫不出來（DEBUG 截圖時換回 SwiftUI 版） |
 | D41 | 收音提醒只看音量本身（背景多大聲、說話多小聲）持續多久，不看說話和背景差多少 | 用說話和背景的差（訊噪比）判斷吵：使用者正常的會議只差 8 dB，跟加了雜音的版本（6 dB）分不開，會一直誤報。用即時逐字稿的信心或字數：辨識不出來的原因很多（口音、語言），不一定是收音。取捨：麻將那種洗牌聲只在背景大聲的那一段抓得到，不吵的時候分錯人提醒不了（錄完的「說話者可能分得不夠」補這一塊） |
-| D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關；2026-10-22 起開關收在設定 → 進階最下面的「詳細…」裡、不顯示送出的 JSON）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
-| D101 | 匿名使用統計的後台用 Cloudflare Workers＋D1，網址是自己網域的子網域 | 自己租主機：要顧作業系統更新、備份、停機，一天幾百、幾千筆用不到。Supabase、Firebase：好用，但資料在第三方，隱私說明要多寫一家公司。PostHog 自架：很吃資源。放在官網的網域（Pages Functions）：官網現在是純靜態、CSP 很嚴，統計另外一個 Worker 互不影響，以後換後台只要換網址。取捨：Cloudflare 看得到請求的 IP（我們的資料庫不存）；D1 免費額度（每天 10 萬次寫入）以每台每天一筆來算夠用很久 |
-| D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 | D90 | 是非題由整理工具在結構化輸出標出（`yesNo`），不由 app 從題目文字判斷（D42～D88 是 Windows 版、iPhone 版的編號，D89 是 R14.8） | app 看題目結尾（「嗎？」、「?」）判斷：中文、日文是非題的問法很多（「是不是」「有沒有」「でしょうか」），「負責人是誰？」又不是是非題，容易判錯；整理工具出題時就知道是不是在問「X 是不是 Y」。代價：結構化輸出多一個欄位，三個平台的標準答案要重新產生；以前整理的會議紀錄沒有這個標記，重新整理才有按鈕 |
 | D91 | 聲紋分兩段：很有把握才直接帶入，中間的改成待確認的說話者題目（取代 D29 的「對到就帶入」） | 照舊一個門檻、調高：沒那麼像的真的同一個人就認不出來，使用者每場都要自己取名。照舊直接帶入：使用者的資料裡不同的人可以像到 0.77，帶錯的名字會進到待辦的負責人。全部都問：D29 說的每週都要按一次。取捨：第一次遇到的人比較常被問（AMI 16 位問 8 位），回答「是」會存聲紋，之後越來越少問（16 位問 1 位） |
 | D92 | 很短的一句：說話者辨識的設定改成 0.3 秒就算聲紋、重新嵌入沒人認領的片段；再用另一個聲紋模型把 0.5～4 秒的句子跟每位說話者比一次，像另一位 0.15 以上才改 | 只改設定：使用者那段訪談沒有改善（換人點放早，不是短片段沒聲紋）。每句都重新分群：等於另做一次說話者辨識，人數、名字對應會變。改成「可能分錯人」的提示讓使用者改：短句很多，一句一句問很煩；評估裡門檻 0.15 時沒重疊的句子改錯 0 句。代價：多下載約 15 MB 的模型；一小時的會議多約 30 秒；兩個人同時講話的地方偶爾改錯（AISHELL-4 改對 42、改錯 9；AMI 改對 227、改錯 23） |
 | D95 | 沒選過整理工具時自動用找得到的 CLI，都沒有就先不整理、提示去設定（取代「預設 claude CLI」，§19.6） | 照舊預設 claude CLI、只把錯誤訊息寫清楚：沒有 CLI 的人每場會議都「整理失敗」。預設改成某個 API：還是要先申請 key，沒填之前一樣失敗。第一次使用時一定要選：多一個擋路的步驟，只要逐字稿的人也得選。取捨：沒設定的人要看到引導或會議頁的提示才會去設定 |
+| D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關；2026-10-22 起開關收在設定 → 進階最下面的「詳細…」裡、不顯示送出的 JSON）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
+| D101 | 匿名使用統計的後台用 Cloudflare Workers＋D1，網址是自己網域的子網域 | 自己租主機：要顧作業系統更新、備份、停機，一天幾百、幾千筆用不到。Supabase、Firebase：好用，但資料在第三方，隱私說明要多寫一家公司。PostHog 自架：很吃資源。放在官網的網域（Pages Functions）：官網現在是純靜態、CSP 很嚴，統計另外一個 Worker 互不影響，以後換後台只要換網址。取捨：Cloudflare 看得到請求的 IP（我們的資料庫不存）；D1 免費額度（每天 10 萬次寫入）以每台每天一筆來算夠用很久 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
-
-## 15. 需要先做的實驗
-
-| # | 內容 | 通過標準 |
-|---|---|---|
-| T-A1 | 用真實會議錄音驗證 SpeechAnalyzer 和 whisper.cpp + Breeze | whisper.cpp + Breeze 的正式逐字稿，人工抽查 5 分鐘不超過 10 處錯字；即時逐字稿讀得懂內容 |
-| T-A2 | 系統聲音擷取（process tap） | 錄 YouTube 或 Meet 播出的聲音 5 分鐘：沒有斷音、跟麥克風的時間差在 100 ms 以內；拒絕權限時有明確的錯誤 |
-| T-A3 | FluidAudio 說話者辨識 | 2～4 人的錄音，說話者標錯的時間不超過 15%；1 小時的錄音 3 分鐘內處理完 |
-| T-A4 | whisper.cpp XCFramework 嵌進 app | 在 app 內轉錄測試音檔，結果和 whisper-cli 一致；取消要在 1 秒內停下來；記憶體峰值在 3 GB 以內 |
-| T-A5 | 自簽憑證與 DMG | 在另一個使用者帳號下載 DMG 安裝：照安裝說明可以打開；更新版本後麥克風權限還在 |

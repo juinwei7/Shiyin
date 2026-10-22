@@ -215,7 +215,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 
 | 文件 | 內容 |
 |---|---|
-| [`docs/requirements.md`](docs/requirements.md) | 需求與驗收結果 |
+| [`docs/requirements.md`](docs/requirements.md) | 需求 |
 | [`docs/design.md`](docs/design.md) | 架構、資料模型、提示詞、介面、決策紀錄 |
 | [`docs/tasks.md`](docs/tasks.md) | 還沒完成的任務 |
 | [`CLAUDE.md`](CLAUDE.md) | 開發與驗證時要注意的事 |

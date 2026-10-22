@@ -215,7 +215,7 @@ The project follows spec-driven development: requirements, design and tasks come
 
 | Document | Contents |
 |---|---|
-| [`docs/requirements.md`](../docs/requirements.md) | Requirements and acceptance results |
+| [`docs/requirements.md`](../docs/requirements.md) | Requirements |
 | [`docs/design.md`](../docs/design.md) | Architecture, data model, prompts, interface, decision log |
 | [`docs/tasks.md`](../docs/tasks.md) | Tasks still to do |
 | [`CLAUDE.md`](../CLAUDE.md) | Things to watch out for when developing and verifying |

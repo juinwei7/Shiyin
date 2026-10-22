@@ -1,10 +1,8 @@
-# 拾音官網：需求與設計（2026-10-17，已上線 https://shiyin.weibuilds.com；2026-10-19 首屏改成可以播放的示範，§10）
-
-依 frontend-design skill 的流程：先列方案，對照「AI 產生的頁面常見的樣子」檢查，修掉落入通用模板的部分，再定版。第一版做出樣稿後，使用者覺得「底色是綠色，很 AI」，改成現在的第二版（§3）。
+# 拾音官網：需求與設計（已上線 https://shiyin.weibuilds.com）
 
 ## 需求
 
-使用者要讓拾音更產品化：有一個正式的官網介紹產品、提供下載、列出每次更新的內容，並且推上 GitHub 後自動部署到 Cloudflare。現在對外只有 GitHub 的 README 和 Releases 頁，對不寫程式的人來說不夠清楚，也不像一個產品。
+使用者要讓拾音更產品化：有一個正式的官網介紹產品、提供下載、列出每次更新的內容，並且推上 GitHub 後自動部署到 Cloudflare。
 
 給誰看：
 - **主要**：在 Mac 上工作、開會講台灣中文夾英文（或日文）、在意會議內容不外流的人。例如 PM、工程師、顧問、公司不允許雲端錄音機器人的人。
@@ -21,12 +19,12 @@
 - W7 自動部署：推到 main（改了網站）或發布新版時，自動部署到 Cloudflare Pages，不用手動上傳。
 - W8 分享出去好看：在 Threads、Facebook、LINE 貼連結時有標題、說明和預覽圖。
 - W9 基本品質：手機也能看、深色模式、鍵盤可以操作、開啟速度快、不用 cookie、不追蹤訪客。
-- W10 首屏的示範（2026-10-19 加，2026-10-20 補上 3.5 的功能）：第一屏不放靜態截圖，改成重刻的拾音視窗，自動播一場會議從錄音、草稿、正式版（說話者名字）、待確認到提問的過程，播完可以自己點（§10）。看的人不用下載，就知道錄完會得到什麼、時間點、待確認和提問怎麼用。**app 加了看得到的新功能，示範要跟著補**（§10.1）。
-- W11 GitHub 數據（2026-10-20 加）：首頁第一屏顯示 GitHub 星星數和累計下載次數，讓第一次來的人知道已經有人在用（§11）。
-- W12 鼓勵點星（2026-10-20 加）：讓喜歡拾音的人容易到 GitHub 點星，增加星星數（§12）。不在官網代替使用者登入 GitHub 點星、不用「點星才能下載」「點星送東西」這類做法。
-- W13 贊助（2026-10-21 加，requirements R13.3）：放 Ko-fi 的贊助連結，覺得好用的人可以請作者喝杯咖啡（§13）。只放連結，不嵌入 Ko-fi 的面板或 script。
-- W15 介紹影片（2026-10-21 加）：首頁放 52 秒的介紹影片（中文版、英文版），沒時間玩示範的人看完就知道拾音在做什麼（§15）。
-- W14 搜尋和 AI 找得到（2026-10-21 加）：在 Google、Bing 搜「會議記錄 app」「逐字稿」「本機轉錄」這類詞，以及在 ChatGPT、Perplexity、Gemini 問「Mac 上推薦的會議記錄工具」時，拾音要出現、被引用（§14）。要量得到成效：Search Console 的曝光、點擊、收錄數，和固定一組問題問 AI 的被提到次數。不用買連結、不灌評論、不寫假的比較。
+- W10 首屏的示範：第一屏不放靜態截圖，改成重刻的拾音視窗，自動播一場會議從錄音、草稿、正式版（說話者名字）、待確認到提問的過程，播完可以自己點（§10）。看的人不用下載，就知道錄完會得到什麼、時間點、待確認和提問怎麼用。**app 加了看得到的新功能，示範要跟著補**（§10.1）。
+- W11 GitHub 數據：首頁第一屏顯示 GitHub 星星數和累計下載次數，讓第一次來的人知道已經有人在用（§11）。
+- W12 鼓勵點星：讓喜歡拾音的人容易到 GitHub 點星，增加星星數（§12）。不在官網代替使用者登入 GitHub 點星、不用「點星才能下載」「點星送東西」這類做法。
+- W13 贊助（requirements R13.3）：放 Ko-fi 的贊助連結，覺得好用的人可以請作者喝杯咖啡（§13）。只放連結，不嵌入 Ko-fi 的面板或 script。
+- W14 搜尋和 AI 找得到：在 Google、Bing 搜「會議記錄 app」「逐字稿」「本機轉錄」這類詞，以及在 ChatGPT、Perplexity、Gemini 問「Mac 上推薦的會議記錄工具」時，拾音要出現、被引用（§14）。要量得到成效：Search Console 的曝光、點擊、收錄數，和固定一組問題問 AI 的被提到次數。不用買連結、不灌評論、不寫假的比較。
+- W15 介紹影片：首頁放 52 秒的介紹影片（中文版、英文版），沒時間玩示範的人看完就知道拾音在做什麼（§15）。
 
 | 頁面 | 網址 | 內容 |
 |---|---|---|
@@ -36,45 +34,24 @@
 | 找不到頁面 | 404 | 說明找不到，給回首頁和版本說明的連結 |
 
 不做：
-- 部落格（2026-10-21 起有「指南」，§14.2：只寫回答具體問題的教學和比較，不寫動態、心得文）、使用者帳號、留言、電子報訂閱
+- 部落格（有「指南」，§14.2：只寫回答具體問題的教學和比較，不寫動態、心得文）、使用者帳號、留言、電子報訂閱
 - 線上說明文件（使用說明在 app 裡已經有）
 - 付費、授權
 - 網站分析（可以之後加 Cloudflare Web Analytics，它不用 cookie）
 
-## 1. 題材從哪裡來
-
-- **圖示**：青瓷綠的方塊，白色聲波，中間一條琥珀色的播放線
-- **青瓷綠 #2D6A5D**：app 裡的時間點、按鈕、選取
-- **時間點**：每一條紀錄後面都有 `00:14` 這樣的時間點，點了就從那裡播
-
-產品最核心、別人沒有的是：**錄音不出電腦，每一條紀錄都點得回原話，AI 沒把握的地方會問你。**
-
-## 2. 第一版（已放棄）
-
-青瓷綠整片底色的第一屏、宋體大標題、仿造 app 視窗的可點示範、其他區塊用帶綠的灰白底。
-
-使用者看過樣稿的意見：底色是綠色，很 AI。問題出在「大號襯線標題＋整片色塊＋假的 app 視窗」這個組合，正是產生式頁面最常見的樣子，跟用了哪個顏色無關。
-
-## 3. 第二版：像開發者自己寫的 Mac app 產品頁
-
-| 第一版 | 第二版 |
-|---|---|
-| 青瓷綠整片底色 | 白底（深色模式深灰），青瓷綠**只**用在下載按鈕和連結 |
-| 宋體大標題 | 只用系統字體（Mac 上是蘋方、SF），標題粗體 |
-| 仿造的 app 視窗、可以點的示範 | **真的截圖**（README 用的那三張），不做假介面 |
-| 每個特色一種呈現方式 | 一欄由上往下讀的說明文，截圖比文字寬一點，跟著說明出現 |
-
-仍然避免：大寫英文小標籤、`A · B · C` 中黑點串接、按鈕後面加「→」、等寬字體排小標籤、接近黑的 #111、捲動時淡入或懸停浮起這類動畫。數字編號只用在真的有順序的「第一次打開」步驟。
-
-網站其他地方**沒有 JavaScript**：語言切換是連結，深色模式跟著系統，常見問題用 `<details>`。
-
-**2026-10-19 改了一項：第一屏改成重刻的 app 視窗、可以播放的示範（§10）。** 原因：使用者看了 Wisp（smw.ai/projects/wisp）的產品頁，覺得用 HTML 重刻 app、照劇本播放的示範比截圖更能說明產品；看過樣稿後同意這個方向。第一版被說「很 AI」的是「整片色塊＋宋體大標＋粗糙的假視窗」這個組合，所以這次的條件是：
-- 重刻要做到跟真的 app 分不出來：顏色、字體、尺寸照 app 的截圖和 `Theme.swift` 量，介面用詞照 app 的翻譯表；做不到這個程度就退回截圖
-- 示範的內容要具體（真的會發生的會議、會改字的即時逐字稿、會問「下週三是哪一天」的待確認），不寫形容詞
-- 只有第一屏的示範用 JavaScript，其他區塊照舊；沒有 JavaScript 時顯示原本的截圖
-- 「捲動時淡入、懸停浮起」仍然不做；示範裡的動畫都是 app 本身會發生的事（逐字稿出現、進度、切分頁）
-
 ## 4. 定版
+
+像開發者自己寫的 Mac app 產品頁：
+
+- 白底（深色模式深灰），青瓷綠**只**用在下載按鈕和連結
+- 只用系統字體（Mac 上是蘋方、SF），標題粗體
+- 一欄由上往下讀的說明文，**真的截圖**（README 用的那三張）比文字寬一點，跟著說明出現；第一屏是重刻的 app 視窗、可以播放的示範（§10）
+- 避免：大寫英文小標籤、`A · B · C` 中黑點串接、按鈕後面加「→」、等寬字體排小標籤、接近黑的 #111、捲動時淡入或懸停浮起這類動畫。數字編號只用在真的有順序的「第一次打開」步驟。
+- 除了首屏示範（§10），網站**沒有 JavaScript**：語言切換是連結，深色模式跟著系統，常見問題用 `<details>`。
+
+首頁標題：**Mac 上的會議紀錄 app**，英文 **A meeting-notes app for your Mac**。
+
+文案原則：講清楚做什麼，不堆形容詞；跟 app 用同樣的詞（「整理工具」「待確認」「逐字稿」「標記重點」）；不寫「革命性」「無縫」這種字。
 
 ### 4.1 色彩（接近 macOS 系統色，看起來像 Mac app 的說明頁）
 
@@ -135,16 +112,9 @@
 
 一欄，最新的在最上面。每一版：「拾音 3.2.0」、發布日期、（最新版）下載連結、GitHub Release 連結；有副標就放副標，再列每一條。每一版有自己的錨點（`#v3.2.0`），首頁和 app 都可以直接連過來。
 
-## 5. 首頁標題（已定）
-
-**Mac 上的會議紀錄 app**，英文 **A meeting-notes app for your Mac**。
-
-文案原則：講清楚做什麼，不堆形容詞；跟 app 用同樣的詞（「整理工具」「待確認」「逐字稿」「標記重點」）；不寫「革命性」「無縫」這種字。
-
 ## 6. 技術
 
-- **不用框架，一支沒有相依套件的 Node 程式**（`site/build.mjs`，只用 Node 內建功能）產生靜態網頁到 `site/dist/`。
-  - 原本打算用 Astro。改掉的原因：專案放在有 iCloud 同步的桌面，Astro 會帶進幾百 MB 的 `node_modules`；網站只有首頁和版本說明兩頁（各兩種語言），用不到框架；也不用追套件更新。
+- **不用框架，一支沒有相依套件的 Node 程式**（`site/build.mjs`，只用 Node 內建功能）產生靜態網頁到 `site/dist/`。專案放在有 iCloud 同步的桌面，不要帶進 `node_modules`。
   - 本機需要 Node 20 以上；CI 用 GitHub 的 ubuntu 機器內建的 Node。
 - 檔案：
   - `site/src/content.mjs`：中英文的所有文字
@@ -159,8 +129,8 @@
 - 網址：`/`、`/changelog/`、`/en/`、`/en/changelog/`、`/ja/`、`/ja/changelog/`、`/download`、404 頁（`/404.html`、`/en/404.html`、`/ja/404.html`）。
 - 日文版：介面名稱照 app 的英文寫（「Record」「To confirm」），常見問題和下載區寫清楚 app 只有英文、繁體中文介面；截圖用英文版的；字體改用 Hiragino Sans（`:lang(ja)`），不然漢字會用蘋方的中文字形。
 - SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.weibuilds.com`。
-- Google Search Console：用 HTML 檔驗證網站擁有權（2026-10-21 加），驗證通過後也要一直留著，刪掉會失去驗證。檔名要多一個 `.html`（`site/public/google<代碼>.html.html`）：Cloudflare Pages 會把 `.html` 結尾的網址 308 轉址到沒有副檔名的網址，而且不能關；多一個副檔名，`/google<代碼>.html` 才會直接回 200。sitemap 在 Search Console 送出 `/sitemap.xml`。
-- `_headers`：`nosniff`、Referrer-Policy、CSP（script 只允許自己網站的檔案，也就是 `/demo.js`；不允許 inline script）、圖片快取一天。
+- Google Search Console：用 HTML 檔驗證網站擁有權，驗證通過後也要一直留著，刪掉會失去驗證。檔名要多一個 `.html`（`site/public/google<代碼>.html.html`）：Cloudflare Pages 會把 `.html` 結尾的網址 308 轉址到沒有副檔名的網址，而且不能關；多一個副檔名，`/google<代碼>.html` 才會直接回 200。sitemap 在 Search Console 送出 `/sitemap.xml`。
+- `_headers`：`nosniff`、Referrer-Policy、CSP（script 只允許自己網站的檔案，也就是 `/demo.js`、`/platform.js`；不允許 inline script）、圖片快取一天。
 
 ## 7. 版本說明自動更新
 
@@ -169,7 +139,7 @@
 - 發布流程不用改，不會有兩份內容要對
 - 只有真的發布出去的版本才會出現（草稿和預先發布的版本不列）
 
-格式沿用現在的寫法（3.1.0～3.2.0 都是這樣），寫進 CLAUDE.md 當規定：
+格式（CLAUDE.md 也寫成規定）：
 
 ```
 拾音 3.3.0：日文會議、自動偵測會議語言
@@ -189,12 +159,11 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 
 本機測試可以用 `--releases <檔案>` 讀一份跟 API 同樣格式的 JSON，不連網路。
 
-**Windows 版**（design-windows §14.3、§14.4，2026-10-21 加）：tag 是 `win-vX.Y.Z`，標題是「拾音 Windows X.Y.Z」「Shiyin for Windows X.Y.Z」（其他格式同上）；最新的 Windows 版一定要有 `Shiyin-<版本>-win-x64-Setup.exe` 和 `Shiyin-<版本>-win-arm64-Setup.exe`。
+**Windows 版**（design-windows §14.3、§14.4）：tag 是 `win-vX.Y.Z`，標題是「拾音 Windows X.Y.Z」「Shiyin for Windows X.Y.Z」（其他格式同上）；最新的 Windows 版一定要有 `Shiyin-<版本>-win-x64-Setup.exe` 和 `Shiyin-<版本>-win-arm64-Setup.exe`。
 
-- Mac 的版本、更新紀錄、`/download` 都不變（`win-v` 開頭的 release 不算 Mac 的版本）。還沒有 Windows 版時，網站跟現在一模一樣（2026-10-21 跟 main 的建置比過：只多了沒用到的 `.windows` 樣式）
-- 有 Windows 版時：下載區多一塊 Windows 的下載（「下載 Windows 版」按鈕是 x64，下面一行 ARM 的連結；SmartScreen 和智慧型應用程式控制的說明），`/download/windows` 轉到最新的 x64 安裝檔、`/download/windows-arm64` 轉到 ARM64；下載次數加上兩個安裝檔
+- Mac 的版本、更新紀錄、`/download` 都不變（`win-v` 開頭的 release 不算 Mac 的版本）。還沒有 Windows 版時，網站跟現在一模一樣
+- 有 Windows 版時：`/download/windows` 轉到最新的 x64 安裝檔、`/download/windows-arm64` 轉到 ARM64；下載次數加上兩個安裝檔；首頁下載區和 Windows 版的頁面見 §16
 - Windows 版的更新紀錄先不列在網站上（只在 GitHub Release），之後跟 Mac 一起決定要不要分頁
-- 常見問題「只有 Mac 版」的文字，第一個 Windows 版發布時改（tasks W8.4）
 
 ## 8. 自動部署
 
@@ -213,31 +182,25 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 - Pages 專案不存在時自動建立（production branch 是 `main`）。
 - 還沒設定 Cloudflare 的 secrets 時，只建置、跳過部署，不會讓每次推 main 都失敗。
 
-**只有你能做的設定**（一次就好）：
+設定（2026-10-17 設好，只有使用者能改）：
 
-1. Cloudflare 後台 → 右上角頭像 → My Profile → API Tokens → Create Token，範本選「Edit Cloudflare Workers」，或自訂權限 Account → Cloudflare Pages → Edit。複製 token。
-2. Cloudflare 後台首頁右邊（或網址列）找到 Account ID。
-3. GitHub repo → Settings → Secrets and variables → Actions：
-   - Secrets 加上 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`
-   - 第一次部署後看 Pages 給的網址；如果 `shiyin.pages.dev` 被用走（會變成 `shiyin-xxx.pages.dev`），或之後接自己的網域，在 Variables 加上 `SHIYIN_SITE_URL`（例如 `https://shiyin-xxx.pages.dev`），重新執行一次
-4. 有自己的網域的話，在 Pages 專案的 Custom domains 加上
-
-實際的設定（2026-10-17）：
-
-- `shiyin.pages.dev` 已經被別人用了，網址改用使用者的網域 `shiyin.weibuilds.com`：Pages 專案加上這個自訂網域；Variables 的 `SHIYIN_SITE_URL` 設成 `https://shiyin.weibuilds.com`，`build.mjs` 的預設也改成這個
-- token 只有「Cloudflare Pages：編輯」。這個權限沒辦法限定到單一專案，帳戶裡其他 Pages 專案也在範圍內
+- GitHub repo → Settings → Secrets and variables → Actions 的 Secrets：`CLOUDFLARE_API_TOKEN`（Cloudflare 後台 → My Profile → API Tokens，權限只有「Cloudflare Pages：編輯」。這個權限沒辦法限定到單一專案，帳戶裡其他 Pages 專案也在範圍內）、`CLOUDFLARE_ACCOUNT_ID`
+- `shiyin.pages.dev` 已經被別人用了，網址用使用者的網域 `shiyin.weibuilds.com`：Pages 專案的 Custom domains 加上這個網域；Variables 的 `SHIYIN_SITE_URL` 設成 `https://shiyin.weibuilds.com`，`build.mjs` 的預設也是這個
 
 ## 9. 品質
 
 - 手機 390px、桌機 1440px、淺色深色都截圖檢查
 - 鍵盤可以操作所有連結，看得到焦點框；顏色對比符合 WCAG AA
-- 不載入追蹤程式、不用 cookie；script 只有首頁示範的 `/demo.js`
+- 不載入追蹤程式、不用 cookie；script 只有首頁示範的 `/demo.js` 和 Windows 訪客提示的 `/platform.js`（§16.2）
 - 示範照 §10.6 檢查
 - Lighthouse 效能、無障礙、SEO 都 95 分以上
 
-## 10. 首屏示範（2026-10-19）
+## 10. 首屏示範
 
-第一屏的截圖換成用 HTML 重刻的拾音視窗，自動播一場 52 秒的會議。理由和條件見 §3。
+第一屏是用 HTML 重刻的拾音視窗，自動播一場 52 秒的會議。條件：
+- 重刻要做到跟真的 app 分不出來：顏色、字體、尺寸照 app 的截圖和 `Theme.swift` 量，介面用詞照 app 的翻譯表；做不到這個程度就退回截圖
+- 示範的內容要具體（真的會發生的會議、會改字的即時逐字稿、會問「下週三是哪一天」的待確認），不寫形容詞
+- 「捲動時淡入、懸停浮起」仍然不做；示範裡的動畫都是 app 本身會發生的事（逐字稿出現、進度、切分頁）
 
 ### 10.1 示範的會議
 
@@ -251,7 +214,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 
 介面用詞照 app 的 `Resources/Localizable.xcstrings` 和 `Sources/Shiyin/Views`；**app 的介面或用詞改了，`site/src/demo-content.mjs` 要跟著改**（例如分頁名稱、按鈕、待確認的說明、狀態文字）。
 
-app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿、說話者名字、提問分頁到 2026-10-20 才補，中間官網的介紹文字和示範說法不一致）。不在主視窗裡的功能（偵測會議的浮動提醒、全域快捷鍵、回報問題）不放進示範，寫在下面的介紹文字。
+app 加了在主視窗看得到的功能時，示範也要補上，不然官網的介紹文字和示範說法會不一致。不在主視窗裡的功能（偵測會議的浮動提醒、全域快捷鍵、回報問題）不放進示範，寫在下面的介紹文字。
 
 說話者：說話者 1 是錄音的人自己，之前取過名字，聲紋自動帶入（後面標「自動」）；說話者 2 在 00:24 被說話者 1 叫名字（「謝謝家豪」），整理工具猜出名字、按「套用」；說話者 3 沒有線索，維持「說話者 3」（寧可少猜）。
 
@@ -302,28 +265,22 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 ### 10.6 檢查
 
 - 網址加 `?ch=n` 直接顯示第 n 段結束的樣子（`?ch=5` 是播完、可以自己點），截圖檢查用
-- 三種語言、淺色深色、桌機和手機寬度（390px）都看過整段播放
+- 三種語言、淺色深色、桌機和手機寬度（390px）都要看過整段播放
 - 沒有 JavaScript 時顯示截圖；加上正式的 CSP 時示範可以播（`_headers` 的 CSP 用 `<meta>` 加在首頁的複本上測）
 - app 的介面改版時，對照 app 的截圖檢查重刻的視窗
 
-## 11. GitHub 數據（2026-10-20）
-
-使用者看到 Cloudflare 的流量後想在官網放上 GitHub 的數據（W11）。
+## 11. GitHub 數據
 
 - 星星數放在首頁第一屏的「在 GitHub 點星」按鈕裡（§12）；下載次數放在「免費、開源…」那行小字下面：中文「已下載 134 次」、英文「134 downloads」、日文「ダウンロード 134 回」。數字依語言加千分位。
 - 星星數讀 GitHub API 的 repo（`stargazers_count`）；下載次數是所有版本的 `Shiyin-<版本>.dmg` 下載次數加總（Releases API 本來就有，含 app 內更新下載的），不另外計數、不用 cookie、不載入任何 script。
 - 建置時讀，網頁本身是靜態的。數字靠每天一次的自動部署更新（§8），推 main、發布新版時也會更新。
 - 讀不到星星數（API 次數用完、網路問題）時點星按鈕不顯示數字，建置不失敗；下載次數是 0 時那行不顯示。本機用 `--releases` 測試時，可以再給 `--repo <檔案>`（跟 API 同樣格式）。
 
-## 12. 鼓勵點星（2026-10-20）
+## 12. 鼓勵點星
 
-使用者想增加 GitHub 的星星數，問能不能在官網登入 GitHub 直接點星。不這樣做：
+不在官網登入 GitHub 直接點星：要對方授權 `public_repo`（可以寫入他所有的公開 repo），要另外架後端保管 OAuth 金鑰；GitHub 也不允許灌星（用條件或獎勵換星星）。
 
-- 代替使用者點星要對方授權 `public_repo`（可以寫入他所有的公開 repo），授權畫面很嚇人，多數人會取消
-- 要另外架後端保管 OAuth 金鑰、處理別人的登入憑證；官網現在是靜態的，不碰任何人的資料
-- GitHub 不允許灌星（用條件或獎勵換星星），會傷害 repo
-
-改成讓點星這件事在官網上很顯眼，點了直接到 repo 頁面（沒登入時 GitHub 會先請他登入，再按右上角的 Star）：
+讓點星這件事在官網上很顯眼，點了直接到 repo 頁面（沒登入時 GitHub 會先請他登入，再按右上角的 Star）：
 
 | 位置 | 內容 |
 |---|---|
@@ -332,11 +289,11 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 | 版本說明頁 | 開頭說明後面加一句：想第一時間知道新版本，可以到 GitHub 點星或按 Watch（連到 repo） |
 
 - 星星圖示用內嵌的 SVG（黃色），不載入 GitHub 官方的按鈕 script（CSP 只允許自己的 script，也不想讓訪客連到第三方）
-- app 裡要不要也提醒點星（例如「輔助說明」選單、用了一陣子之後問一次），之後再跟使用者確認，這次只改官網
+- 還沒決定：app 裡要不要也提醒點星（例如「輔助說明」選單、用了一陣子之後問一次），之後再跟使用者確認
 
-## 13. 贊助（2026-10-21）
+## 13. 贊助
 
-使用者想增加一點業外收入，開了 Ko-fi（`https://ko-fi.com/weiwei_chang`，PayPal 收款；GitHub Sponsors 沒有開放台灣）。
+Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒有開放台灣）。
 
 | 位置 | 內容 |
 |---|---|
@@ -346,9 +303,7 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - 只連到 Ko-fi 的頁面。Ko-fi 的浮動按鈕要在官網跑它的 script，贊助面板要開 iframe，都要放寬 CSP，也會讓訪客連到第三方，不用
 - 不寫要湊錢做什麼（例如開發者帳號的年費），語氣是「覺得好用的話」
 
-## 14. 搜尋和 AI 找得到（2026-10-21）
-
-使用者在 Search Console 驗證了網站，想讓拾音在搜尋引擎和 AI 的回答裡被找到（W14），要看得到成效。
+## 14. 搜尋和 AI 找得到
 
 ### 14.1 技術面
 
@@ -359,13 +314,6 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - **爬蟲**：robots.txt 維持全部允許。搜尋用（OAI-SearchBot、PerplexityBot、Claude-SearchBot）和訓練用（GPTBot、ClaudeBot）都不擋：拾音是開源專案，被 AI 學到、推薦是好事。
 
 ### 14.2 指南（教學、比較）
-
-競品研究（2026-10-21）：
-
-- 中文搜尋被雲端工具佔走（Subanana 寫了上百篇），媒體的比較文都沒有本機或 Mac 的工具。「拾音」單獨搜會跑出拾音燈、拾音器，內文一律寫「拾音 Shiyin」。
-- 幾乎沒有中文內容在搶的詞：Google Meet 中文逐字稿（Meet 內建的逐字稿、Gemini 筆記都不支援中文）、Mac 錄 Zoom 聲音、中英夾雜逐字稿、離線轉錄。
-- 英文：AI 回答「Otter、Granola 的開源替代品」時，大多照 AlternativeTo、OpenAlternative 的說法。開源的對手是 Meetily（說話者辨識要付費版）、Anarlog（自動辨識說話者要付費版）、Minutes。拾音的不同：說話者辨識免費、針對中英夾雜、紀錄附時間點和「待確認」、用自己的 Claude／ChatGPT 訂閱（Minutes 也能用 Claude 訂閱，不寫成只有拾音做得到）。
-- 日文：「文字起こし Mac ローカル」「議事録 AI 無料 オープンソース」沒有開源 app 佔位，但 app 介面沒有日文，先只寫一篇。
 
 | 網址（`/guides/<slug>/`） | 中文 | 英文 | 日文 | 回答的問題 |
 |---|---|---|---|---|
@@ -381,14 +329,14 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - 語言：每篇只有寫了的語言才有頁面；hreflang、語言選單只連到有的語言，沒有的語言連到那個語言的首頁。
 - 內部連結：首頁最後加「更多說明」列出該語言的指南；頁首（手機上隱藏）和頁尾加「指南」；指南之間互相連結。
 - 寫法：
-  - 跟 §5 一樣講清楚、不堆形容詞，跟 app 用同樣的詞（英文照翻譯表的英文介面名稱）；不用破折號、「在這個…的時代」這類 AI 腔。
-  - 每個數字、別人的功能和價格都附來源連結和查證日期（2026-10-21）。比較要公平：寫出別人的優點和拾音不適合的情況（沒有 Windows、要 macOS 26、不支援台語、語言少）。沒有用同一批錄音測過，就不排準確度名次。沒查證到的不寫（例如雅婷的價格各來源不一致，只連官網）。
+  - 跟 §4 的文案原則一樣講清楚、不堆形容詞，跟 app 用同樣的詞（英文照翻譯表的英文介面名稱）；不用破折號、「在這個…的時代」這類 AI 腔。內文一律寫「拾音 Shiyin」：「拾音」單獨搜會跑出拾音燈、拾音器。
+  - 每個數字、別人的功能和價格都附來源連結和查證日期（2026-10-21）。比較要公平：寫出別人的優點和拾音不適合的情況（沒有 Windows、要 macOS 26、不支援台語、語言少），別人也做得到的不寫成只有拾音做得到（例如 Minutes 也能用 Claude 訂閱）。沒有用同一批錄音測過，就不排準確度名次。沒查證到的不寫（例如雅婷的價格各來源不一致，只連官網）。
   - 不大量產生相似的頁面：每篇都要回答一個具體的問題。
 - 維護：app 的功能、價格、系統需求變了，或別人的價格變了，要改內容和 `updated`。比較頁每季重新查證一次。
 
 ### 14.3 首頁的標題和說明
 
-§5 的 H1 不變，只改 `<title>` 和 description，放進大家會搜的詞（會議記錄、逐字稿、免費、錄音不上傳；英文 local、free、open source、no bot）：
+§4 的首頁標題（H1）不變，只改 `<title>` 和 description，放進大家會搜的詞（會議記錄、逐字稿、免費、錄音不上傳；英文 local、free、open source、no bot）：
 
 - 中文：「拾音 Shiyin｜Mac 會議記錄、逐字稿 app，免費開源、錄音不上傳」（標題用「記錄」，內文照 app 用「紀錄」，兩種寫法都搜得到）
 - 英文：「Shiyin: Free Meeting Notes App for Mac, Transcribed Locally」
@@ -401,7 +349,7 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 
 | 平台 | 收錄方式 | 備註 |
 |---|---|---|
-| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 搬到 `.github/README.md`，GitHub 首頁改顯示英文；說明和 20 個 topics 已更新（2026-10-21 已做） | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
+| GitHub repo | 已做（2026-10-21）：說明和 20 個 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 放在 `.github/README.md`，GitHub 首頁顯示英文 | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
 | AlternativeTo | 登錄 app，加到 Otter、Granola、MacWhisper、Meetily 的替代清單 | 要驗證 email |
 | OpenAlternative | 表單送出 | 要登入 |
 | awesome-mac | 發 PR（英中日韓四份 README 一起改） | 2026-10-21 發了 jaywcjlove/awesome-mac#3711，放在 Audio Record and Process |
@@ -423,25 +371,25 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
   - 日文：「Mac 議事録 アプリ 無料 ローカル」
 - **Cloudflare 流量**：參照來源主機（google、bing、chatgpt.com、perplexity.ai）。
 
-## 15. 介紹影片（2026-10-21）
+## 15. 介紹影片
 
-使用者做了兩支介紹影片（中文、英文各 52 秒、1080p），要放上官網（W15）。內容是示範會議（虛構的 Lumio 新品會議），沒有真實會議的資料。
+兩支介紹影片（中文、英文各 52 秒、1080p），內容是示範會議（虛構的 Lumio 新品會議），沒有真實會議的資料。
 
-- **檔案**：原檔各約 25 MB（60fps、約 3.9 Mbps），快到 Cloudflare Pages 單檔 25 MiB 的上限，也不適合放進 git。重新壓成 H.264 1080p、30fps、CRF 28、AAC 128 kbps、`faststart`，各約 4.8 MB；跟原檔比對文字最多的畫面看不出差別。放在 `site/public/videos/shiyin-promo-<zh|en>.mp4`，封面是第 6.3 秒（圖示和標語完整出現）的 JPG（1280 寬，約 18 KB）。換影片時照同樣的參數重壓，檔名不變。
+- **檔案**：原檔各約 25 MB（60fps、約 3.9 Mbps），快到 Cloudflare Pages 單檔 25 MiB 的上限，也不適合放進 git。重新壓成 H.264 1080p、30fps、CRF 28、AAC 128 kbps、`faststart`，各約 4.8 MB。放在 `site/public/videos/shiyin-promo-<zh|en>.mp4`，封面是第 6.3 秒（圖示和標語完整出現）的 JPG（1280 寬，約 18 KB）。換影片時照同樣的參數重壓，檔名不變。
   ```
   ffmpeg -i 原檔.mp4 -c:v libx264 -preset slow -crf 28 -r 30 -pix_fmt yuv420p -profile:v high -c:a aac -b:a 128k -movflags +faststart shiyin-promo-zh.mp4
   ffmpeg -ss 6.3 -i 原檔.mp4 -frames:v 1 -vf scale=1280:-2 -q:v 3 shiyin-promo-zh.jpg
   ```
-- **配樂（2026-10-21 換）**：使用者覺得原本偏柔的配樂不夠吸引人，換成比較有推進感的電子配樂（D 大調、120 BPM，四拍大鼓、合成器主旋律）。每段畫面（8、16、20、26、32.5、44 秒）開始時旋律從頭開始並有重音，32.5 秒前鼓停半拍；拿掉一直響的沙鈴、hi-hat 和鈸改短，整體收高頻，減少雜音。一樣用 numpy 合成（`~/Library/Caches/ShiyinBuild/promo/music-b2.py`，接在原本宣傳片的流程後面），不用外部音樂，沒有授權問題。試過 AI 配音（macOS 內建、微軟的神經網路語音），聽起來太機械，而且授權不能公開散布，不用。
+- **配樂**：有推進感的電子配樂（D 大調、120 BPM，四拍大鼓、合成器主旋律）。每段畫面（8、16、20、26、32.5、44 秒）開始時旋律從頭開始並有重音，32.5 秒前鼓停半拍；沒有一直響的沙鈴、hi-hat，鈸短，整體收高頻，減少雜音。用 numpy 合成（`~/Library/Caches/ShiyinBuild/promo/music-b2.py`，接在原本宣傳片的流程後面），不用外部音樂，沒有授權問題。不用 AI 配音（macOS 內建、微軟的神經網路語音）：聽起來太機械，而且授權不能公開散布。
 - **快取**：影片換了檔名不變，網址加 `?v=<雜湊前 10 碼>`（`build.mjs` 算），瀏覽器才不會繼續用快取裡的舊影片。
 - **位置**：首屏示範（§10）後面一個新區塊「看 52 秒的介紹影片」，跟截圖一樣寬（`.wide`）。第一屏「免費、開源…」那行下面加一個連結跳到影片。不放在第一屏：第一屏照 §10 是可以玩的示範。
 - **播放**：`<video controls preload="none" playsinline>` 加封面，不自動播放（影片有配樂）、不先下載，第一屏的速度不受影響。中文首頁放中文版；英文、日文首頁放英文版（日文版本來就寫明 app 介面是英文）。影片只有配樂，畫面上的字已經說明內容，不另外做字幕。
 - **CSP**：`_headers` 加 `media-src 'self'`，不然影片會被擋。`/videos/*` 快取一天，跟圖片一樣。
 - **結構化資料**：首頁的 JSON-LD 加 `VideoObject`（名稱、說明、封面、上傳日期、長度 PT52S、影片網址），讓 Google 的影片搜尋找得到。
 
-## 16. Windows 版的頁面（2026-10-22）
+## 16. Windows 版的頁面
 
-使用者覺得官網整個是為 Mac 寫的（標題、說明、示範、常見問題都是 Mac），Windows 版只在下載區多一小段，Windows 的使用者會以為跟他無關，要設計 Windows 的畫面。決定（使用者同意的方向）：**首頁維持以 Mac 為主，另外做一頁 Windows 版**。首頁的標題、說明是照「Mac 會議記錄」優化過的（§14.3），改成兩個平台各半會影響 Mac 的搜尋，對現有使用者也比較亂。
+**首頁維持以 Mac 為主，另外做一頁 Windows 版**：首頁的標題、說明是照「Mac 會議記錄」優化過的（§14.3），改成兩個平台各半會影響 Mac 的搜尋，對現有使用者也比較亂。
 
 **還沒有 Windows 版的 release 時，網站跟現在一模一樣**（同 §7）：不產生 Windows 的頁面、首頁不出現 Windows 的連結、常見問題照舊寫「開發中」。不放「即將推出」。
 
@@ -456,11 +404,11 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 | 整理成會議紀錄 | 同首頁 |
 | 錄音不會離開你的電腦 | 同首頁的隱私，把「Mac」換成「電腦」 |
 | 下載 | 版本（連到 GitHub Release，Windows 版的更新紀錄不在網站上，§7）、系統、記憶體、磁碟空間（模型約 2 GB，NVIDIA 另外約 1.1 GB）、顯示卡、費用；x64 的下載按鈕、ARM 的連結；安裝三步；SmartScreen 的示意圖（§16.3）；智慧型應用程式控制的說明；點星和贊助 |
-| 電腦效能（2026-10-22 加，在下載區的需求表下面） | 只寫量過或確定的事：NVIDIA 顯示卡最快（RTX 3060 的實測、驅動 527 版以後、顯示記憶體建議 4 GB 以上，轉錄模型約 1.7 GB）；只用 CPU 比較慢（同一台桌機的實測，筆電可能比會議本身還久；轉錄最多用 8 個執行緒）；等不及時改用快速辨識（設定 → 錄音 → 正式轉錄，比較不準、不參考詞彙表）；錄音中的即時逐字稿約用一個核心的三分之一（R27 R2.1 的實測）；ARM 的電腦只用 CPU。不寫沒量過的 CPU 等級、顯示卡型號清單；有更多電腦的實測再補成表 |
+| 電腦效能（在下載區的需求表下面） | 只寫量過或確定的事：NVIDIA 顯示卡最快（RTX 3060 的實測、驅動 527 版以後、顯示記憶體建議 4 GB 以上，轉錄模型約 1.7 GB）；只用 CPU 比較慢（同一台桌機的實測，筆電可能比會議本身還久；轉錄最多用 8 個執行緒）；等不及時改用快速辨識（設定 → 錄音 → 正式轉錄，比較不準、不參考詞彙表）；錄音中的即時逐字稿約用一個核心的三分之一（R27 R2.1 的實測）；ARM 的電腦只用 CPU。不寫沒量過的 CPU 等級、顯示卡型號清單；有更多電腦的實測再補成表 |
 | 最近更新 | 最新的 Windows 版（版本說明從 GitHub Release 讀，§7） |
 | 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
 
-- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉（2026-10-22 使用者看到）。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白（2026-10-22 使用者看到）。`make-images.sh` 遇到奇數尺寸會停下來。
+- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。
 - 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
 - 分享預覽圖先沿用首頁的（`og.png`）。
 
@@ -469,7 +417,7 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - 第一屏的「免費、開源，需要 macOS 26 和 Apple Silicon」後面加「・也有 Windows 版」，連到 Windows 版的頁面。
 - 用 Windows 的訪客（`navigator.userAgent` 有 Windows），第一屏上面多一行「你用的是 Windows 電腦，Windows 版在這裡 →」。用 `/platform.js`（另一個小檔案，CSP 只允許自己網站的 script）把預設 `hidden` 的那一行打開；沒有 JavaScript 時不出現，不影響其他內容。
 - 下載區：Mac 的下載照舊；原本 Windows 的那一塊改成一張卡片：「Windows 版」、一句需求（Windows 11、x64 或 ARM、有 NVIDIA 顯示卡時轉錄更快）、「下載 Windows 版」按鈕（x64）、「系統需求和安裝步驟」連到 Windows 頁的下載區。SmartScreen、智慧型應用程式控制的說明移到 Windows 頁。
-- 頁首的導覽（手機上隱藏）、頁尾加平台的切換：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」（2026-10-22 使用者要求）。
+- 頁首的導覽（手機上隱藏）、頁尾加平台的切換：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」。
 - 常見問題「有 Windows 版或手機版嗎？」改成「有 Windows 版（Windows 11，x64 和 ARM），功能跟 Mac 版一樣」，連到 Windows 頁；沒有手機版。結構化資料的 FAQ 跟著。
 - `/llms.txt`：有 Windows 版時寫出 Windows 版的版本、需求和頁面連結，取代「Windows 版開發中」。
 
@@ -481,6 +429,6 @@ Windows 使用者最容易卡住的是第一次執行時的 SmartScreen（拾音
 
 - 示範資料：Mac 的 `~/Library/Caches/ShiyinDemo/home`（中文）、`ShiyinDemoEN/home`（英文）的資料庫用 `sqlite3 .backup` 複製，加上 `audio/`；中文的拿掉 Mac 截圖裡沒有的兩場（12、14）。兩邊的資料庫結構相同（requirements R28.5），直接放進虛擬機的 `C:\ShiyinDemo`、`C:\ShiyinDemoEN`，模型用硬連結。
 - 解析度和縮放：UTM 會把高度定在視窗的高度（1044），2560×1044 最多 150%。用 `DisplayConfigSetDeviceInfo`（設定 app 用的同一個）改縮放，app 不用重開。截圖用 DWM 的外框（`DWMWA_EXTENDED_FRAME_BOUNDS`）和 `CopyFromScreen`，截圖的程式要宣告支援高 DPI（`SetThreadDpiAwarenessContext`），不然座標會被換算。
-- 專案在有 iCloud 同步的桌面：`make-images.sh` 短時間內重寫同一個檔案時，iCloud 會留下「summary 2.avif」這種衝突副本（舊的內容），commit 前用 `git status` 看有沒有沒加進 git 的副本，刪掉（2026-10-22 遇到）。
+- 專案在有 iCloud 同步的桌面：`make-images.sh` 短時間內重寫同一個檔案時，iCloud 會留下「summary 2.avif」這種衝突副本（舊的內容），commit 前用 `git status` 看有沒有沒加進 git 的副本，刪掉。
 - 工具在 `scripts/windows/vm/ps/`：`display.ps1`（解析度）、`dpi.ps1`（縮放）、`snapwin.ps1`（放好視窗、截圖）、`clickname.ps1`（用虛擬機的滑鼠點元件）、`setnotes.ps1`（填輸入框），用 `insession.sh` 在桌面跑。截完把縮放改回 100%、解析度改回 1024×768。
 - 摘要：點「摘要」分頁讓焦點離開搜尋框；逐字稿：點 00:24（英文 00:22）那一段的時間；錄音：`record-sim` 用 Lumio 的錄音（英文用定價那場），筆記用 UI Automation 填兩行，再點側欄讓筆記框沒有焦點，約 30 秒時截。點擊用虛擬機裡的滑鼠（只送進虛擬機），點完滑鼠移到畫面外，等提示框消失再截。

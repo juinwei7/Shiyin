@@ -34,7 +34,7 @@
 
 ## Windows 版（R26～R28，design-windows.md；2026-10-20 使用者決定方向）
 
-進度（2026-10-22）：功能對齊 Mac 3.6.0，加上 R32～R34。Mac 上 `dotnet test` 95 個、CI（windows-latest、windows-11-arm、macos-latest）都通過；虛擬機（§15.2）用 UI Automation 走過幾乎所有畫面；`release-windows.yml` 手動執行（run 39739673918）建好兩個架構的安裝檔，更新說明用正式的更新金鑰簽好，ARM64 版在虛擬機裝起來轉錄、檢查更新都正常；使用者確認在 Windows 電腦上錄音沒問題、朋友的 RTX 3060 用上 CUDA。驗收結果表在 requirements 第 22 節。
+進度（2026-10-22）：功能對齊 Mac 3.6.0，加上 R32～R34。Mac 上 `dotnet test` 95 個、CI（windows-latest、windows-11-arm、macos-latest）都通過；虛擬機（§15.2）用 UI Automation 走過幾乎所有畫面；`release-windows.yml` 手動執行（run 39739673918）建好兩個架構的安裝檔，更新說明用正式的更新金鑰簽好，ARM64 版在虛擬機裝起來轉錄、檢查更新都正常；使用者確認在 Windows 電腦上錄音沒問題、朋友的 RTX 3060 用上 CUDA。需求在 requirements 第 22 節；虛擬機的驗收結果用 `git show 0e96276:docs/requirements.md` 看。
 
 使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。這一段的「§」指 `design-windows.md`，「M§」指 `design.md`。
 
