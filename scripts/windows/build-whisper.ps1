@@ -39,13 +39,14 @@ if ($Arch -eq 'arm64') {
     if (-not (Test-Path $clang)) { throw '找不到 clang（LLVM）' }
     $clangxx = Join-Path (Split-Path $clang) 'clang++.exe'
     Write-Host "clang: $clang"
-    cmake -S $native -B $build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$clang" -DCMAKE_CXX_COMPILER="$clangxx" `
+    cmake -S $native -B $build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_C_COMPILER=$clang" "-DCMAKE_CXX_COMPILER=$clangxx" `
         -DCMAKE_C_COMPILER_TARGET=arm64-pc-windows-msvc -DCMAKE_CXX_COMPILER_TARGET=arm64-pc-windows-msvc `
-        -DWHISPER_SOURCE="$Source" -DSHIYIN_ARM_ARCH='armv8.2-a+dotprod+fp16'
+        "-DWHISPER_SOURCE=$Source" "-DSHIYIN_ARM_ARCH=armv8.2-a+dotprod+fp16"
     if ($LASTEXITCODE -ne 0) { throw 'cmake 設定失敗' }
     cmake --build $build --parallel
 } else {
-    cmake -S $native -B $build -A x64 -DWHISPER_SOURCE="$Source" -DSHIYIN_VULKAN=$vulkanFlag
+    # -D名稱=$變數 要整串加雙引號：PowerShell 不會展開「-」開頭的參數裡的變數，cmake 拿到「$vulkanFlag」這串字當成開（2026-10-22 CI）
+    cmake -S $native -B $build -A x64 "-DWHISPER_SOURCE=$Source" "-DSHIYIN_VULKAN=$vulkanFlag"
     if ($LASTEXITCODE -ne 0) { throw 'cmake 設定失敗' }
     cmake --build $build --config Release --parallel
 }
