@@ -30,6 +30,15 @@
 - [~] **U1 驗收**：CPU 59% → 22%、30 分鐘模擬錄音一直有回應、畫面在真的螢幕上用 AX 按過（requirements 第 20 節）
   - 還差：使用者用新版實際錄一場會議
 
+## 匿名使用統計（R40，design §30；2026-10-22 使用者已確認）
+
+- [ ] **S1 累計和送出**（§30.1～30.4、§30.7）：`UsageStats`、各處的累計、shiyinctl 的 `usageurl`、`usage`、`usageage`、`usagesend`，假後台 `scripts/dev/fake-usage-server.py`。驗證：requirements 第 30 節驗收的假後台項目（數字、格式、一天一次、錯誤時保留、3 天丟掉、關掉不送並清空、重設 ID、沒網址不累計）
+- [ ] **S2 設定頁、使用說明**（§30.5）：進階的開關、說明、「查看會送出的內容…」、「重設匿名 ID」；使用說明加一條；沒有網址時都不顯示。驗證：真的畫面用 AX 按過；`l10n.py check` 通過
+- [ ] **S3 統計網址寫進 app**（§30.6）：`build-app.sh`、`make-dmg.sh`、`release.yml`、`.github/README.md` 的 variables 表。驗證：設了 `SHIYIN_USAGE_URL` 的建置 Info.plist 有網址，沒設的沒有
+- [ ] **S4 後台**（使用者自己開發）：照 §30.4 接收。好了之後把網址設成 GitHub 的 repository variable `SHIYIN_USAGE_URL`
+- [ ] **S5 發布時的隱私說明**（§30.8）：README（中英）、官網的隱私區塊（中英日）、版本說明。跟第一個有統計網址的 release 一起改，不能早於它
+- [ ] **S6 Windows 版**（R40.7、§30.9）：排進 Windows 版的任務
+
 ## 官網
 
 - [~] **首屏示範**（docs/website.md W10、§10）：2026-10-19 上線（f00de71）。已用 headless Chrome 看過三種語言的整段播放、淺色深色、桌機和 390px 寬、沒有 JavaScript；正式網址在真的 CSP 下會自動播

@@ -126,6 +126,7 @@ Settings (Settings → Secrets and variables → Actions, all optional):
 |---|---|---|
 | `SHIYIN_SIGNING_P12`, `SHIYIN_SIGNING_P12_PASSWORD` | Secret | Self-signed certificate. Set them from your Mac with `scripts/export-signing-cert.sh --to-github <owner/repo>` so CI signs the app the same way your Mac does; without them the app is signed ad hoc |
 | `SHIYIN_UPDATE_URL` | Variable | Update URL built into the app |
+| `SHIYIN_USAGE_URL` | Variable | Anonymous usage statistics URL built into the app (optional; no statistics are sent without it) |
 | `SHIYIN_RELEASES_REPO`, `SHIYIN_RELEASES_TOKEN` | Variable, Secret | Also publish to a separate public repo (for keeping the code private while updates still work) |
 
 ### From your Mac

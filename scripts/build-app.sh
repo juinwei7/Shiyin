@@ -36,6 +36,10 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [ -n "${SHIYIN_UPDATE_URL:-}" ]; then
   /usr/libexec/PlistBuddy -c "Set :ShiyinUpdateURL ${SHIYIN_UPDATE_URL}" "$APP/Contents/Info.plist"
 fi
+# 匿名使用統計的網址（design §30.6、R40）：SHIYIN_USAGE_URL=https://… 帶入；沒帶就是不送統計的版本
+if [ -n "${SHIYIN_USAGE_URL:-}" ]; then
+  /usr/libexec/PlistBuddy -c "Set :ShiyinUsageURL ${SHIYIN_USAGE_URL}" "$APP/Contents/Info.plist"
+fi
 # whisper.cpp 是動態 framework（design §6.2）；SwiftPM 的資源 bundle 放 Resources
 ditto "$BIN_DIR/whisper.framework" "$APP/Contents/Frameworks/whisper.framework"
 for bundle in "$BIN_DIR"/*.bundle; do ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"; done

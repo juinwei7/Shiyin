@@ -91,6 +91,10 @@ struct GuideView: View {
                 GuideBullet(String(localized: "整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記和詞彙表送到你選的整理工具，錄音檔不會送出。選「不整理」就完全離線。"))
                 GuideBullet(String(localized: "聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台 Mac，不會放進匯出的 .shiyin 封包。"))
                 GuideBullet(String(localized: "API key 存在 macOS 鑰匙圈，不會寫進任何檔案。"))
+                // 匿名使用統計（design §30.5）：有統計網址的版本才寫
+                if UsageStats.isOffered {
+                    GuideBullet(String(localized: "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉、看實際送出的內容。"))
+                }
             }
 
             GuideSection(title: String(localized: "系統需求")) {
