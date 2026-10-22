@@ -27,6 +27,9 @@ public static class AskScopes
 public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient llm)
 {
     /// <summary>跨會議時最多帶幾場會議、總共多少字</summary>
+    /// <summary>匿名使用統計（design-windows §12.10）；沒給（測試）就不累計</summary>
+    public UsageStats? Usage { get; init; }
+
     public const int MeetingLimit = 8;
     public const int CharacterLimit = 40_000;
 
@@ -64,6 +67,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
         };
         cancel.ThrowIfCancellationRequested();
         db.SaveQuestion(record);
+        Usage?.Asked();
         return record;
     }
 
@@ -91,6 +95,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
         var record = new QuestionRecord { MeetingId = null, Scope = scope.Code(), Question = question, Answer = answer.JsonString(), Provider = provider.Code() };
         cancel.ThrowIfCancellationRequested();
         db.SaveQuestion(record);
+        Usage?.Asked();
         return record;
     }
 

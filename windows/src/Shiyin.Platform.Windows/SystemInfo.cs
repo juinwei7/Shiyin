@@ -26,6 +26,20 @@ public static class SystemInfo
         return $"{name} {edition} {display}" + (L.English ? $" ({detail})" : $"（{detail}）");  // l10n-skip
     }
 
+    /// <summary>匿名使用統計的 app.os（design-windows §12.10）：「Windows 11 24H2 (26100.4652)」，不跟著介面語言</summary>
+    public static string UsageOs()
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+        var build = key?.GetValue("CurrentBuild") as string ?? Environment.OSVersion.Version.Build.ToString();
+        var ubr = key?.GetValue("UBR") is int u ? $".{u}" : "";
+        var name = int.TryParse(build, out var b) && b >= 22000 ? "Windows 11" : "Windows 10";
+        var display = key?.GetValue("DisplayVersion") as string ?? "";
+        return (display.Length > 0 ? $"{name} {display}" : name) + $" ({build}{ubr})";  // l10n-skip
+    }
+
+    /// <summary>CPU 名稱（回報問題、匿名使用統計的 app.chip）</summary>
+    public static string CpuName() => Cpu();
+
     static string Cpu()
     {
         using var key = Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0");

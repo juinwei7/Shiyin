@@ -38,6 +38,7 @@ public sealed class AppHost
     public Updater? Updater { get; }
     public VelopackUpdates? Updates { get; }
     public AskService Ask { get; }
+    public UsageStats Usage { get; }
     public Player Player { get; } = new();
     public Notifier Notifier { get; }
     public MediaFoundationDecoder Decoder { get; } = new();
@@ -84,14 +85,20 @@ public sealed class AppHost
         Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl };
         // 沒選過整理工具時用找得到的 CLI（R35.1）：要掃過 PATH 的每個資料夾，快取 30 秒
         Settings.DetectCli = CachedCliDetector(Tools);
+        // 匿名使用統計（design-windows §12.10）：正式版用打包時寫進 app 的網址；DEBUG 不讀，只用控制通道的 usageurl
+        Usage = new UsageStats(Paths.Usage, Settings, Http,
+            () => new UsageStats.AppInfo(Version, SystemInfo.UsageOs(), SystemInfo.CpuName(), L.English ? "en" : "zh-Hant"))
+        {
+            Url = Debug ? null : BuiltUsageUrl, AlwaysOffered = Debug,
+        };
         var engines = new SpeechEngines(Models);
         var power = new PowerRequests();
-        Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power);
+        Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage };
         Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes));
-        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version);
+        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage };
         Detector = new MeetingDetector(new ConsentStoreMicrophoneUsage(), Settings) { IsRecording = () => Recorder.IsRecording };
         HotKeys = new GlobalHotKeys();
-        Ask = new AskService(Db, Settings, Llm);
+        Ask = new AskService(Db, Settings, Llm) { Usage = Usage };
         Notifier = new Notifier(this);
         string? updateSource = null;
         var updateKey = UpdateKey.Public;
@@ -106,6 +113,10 @@ public sealed class AppHost
             Updater = new Updater(Updates, updateKey, Settings, () => Recorder.IsRecording || Runner.IsBusy);
         }
     }
+
+    /// <summary>打包時寫進 app 的統計網址（pack.ps1 的 SHIYIN_USAGE_URL → AssemblyMetadata）；沒有就是不送統計的版本</summary>
+    static string? BuiltUsageUrl => typeof(AppHost).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(a => a.Key == "ShiyinUsageURL")?.Value;
 
     /// <summary>介面語言（design-windows §11.4、D57）：設定的 zh、en，沒設定時跟著 Windows 的顯示語言（中文以外都用英文）</summary>
     public static bool UsesEnglish(string? setting) => setting switch
@@ -173,6 +184,9 @@ public sealed class AppHost
         HotKeyError = HotKeys.SetRecordEnabled(Settings.GlobalHotKey);
         Runner.Finished += (job, error) => Post(() => Notifier.JobFinished(job, error));
         if (Updater is not null) _ = Updater.RunAutomaticChecks(CancellationToken.None);
+        // 打開 app 就建立今天的空白匯總（沒有用量的日子也算活躍，M§30.3），60 秒後開始送
+        Usage.Touch();
+        _ = Usage.RunAutomaticSends(CancellationToken.None);
     }
 
     /// <summary>找 claude、codex（設定頁、引導、整理工具共用；DEBUG 的 debugNoCli 會換掉）</summary>

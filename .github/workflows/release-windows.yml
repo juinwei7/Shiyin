@@ -1,6 +1,7 @@
 # Windows 版的發布（design-windows §14.3、D51）：推 win-v* 的 tag 時在 x64、ARM64 的 Windows 建置、測試、打包、簽更新說明，
 # 建立 GitHub Release（不設成 latest：Mac 的更新網址是 releases/latest/download/shiyin-update.json）。
 # 手動執行（workflow_dispatch）只產出 artifact，不發布（同 Mac 的 release.yml）
+# vars.SHIYIN_USAGE_URL：寫進 app 的匿名使用統計網址（design-windows §12.10，跟 Mac 同一個）；沒設就是不送統計的版本
 name: Windows 版發布
 
 on:
@@ -48,6 +49,7 @@ jobs:
         shell: pwsh
         env:
           SHIYIN_UPDATE_KEY: ${{ secrets.SHIYIN_UPDATE_KEY }}
+          SHIYIN_USAGE_URL: ${{ vars.SHIYIN_USAGE_URL }}
         run: scripts/windows/pack.ps1 -Version ${{ steps.version.outputs.version }} -Arch ${{ matrix.arch }} -Whisper build/whisper-${{ matrix.arch }} -Out dist/win-${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:

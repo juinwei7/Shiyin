@@ -32,7 +32,6 @@
 - [ ] **S1 累計和送出**（§30.1～30.4、§30.7）：`UsageStats`、各處的累計、shiyinctl 的 `usageurl`、`usage`、`usageage`、`usagesend`，假後台 `scripts/dev/fake-usage-server.py`。驗證：requirements 第 30 節驗收的假後台項目（數字、格式、一天一次、錯誤時保留、3 天丟掉、關掉不送並清空、重設 ID、沒網址不累計）
 - [ ] **S2 設定頁、使用說明**（§30.5）：進階的開關、說明、「查看會送出的內容…」、「重設匿名 ID」；使用說明加一條；沒有網址時都不顯示。驗證：真的畫面用 AX 按過；`l10n.py check` 通過
 - [ ] **S5 發布時的隱私說明**（§30.8）：README（中英）、官網的隱私區塊（中英日）、版本說明。跟第一個有統計網址的 release 一起改，不能早於它
-- [ ] **S6 Windows 版**（R40.7、§30.9、design-windows §12.10；2026-10-22 使用者決定跟 4.0.0 一起發）：`UsageStats.cs`、各處的累計、設定頁、使用說明、控制通道的 `usageurl`／`usage`／`usageage`／`usagesend`、`pack.ps1`／`release-windows.yml` 帶 `SHIYIN_USAGE_URL`。驗證：服務的測試（假後台：數字、格式、一天一次、5xx 保留、4xx 丟掉、3 天丟掉、關掉清空、重設 ID、沒網址不累計）；虛擬機的 DEBUG 版匯入一段錄音後送到 Mac 上的假後台；設定頁用 UI Automation 按過；`windows-check` 通過；帶網址打包的 app 讀得到網址
 
 ## 官網
 

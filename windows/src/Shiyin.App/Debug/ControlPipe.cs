@@ -152,6 +152,14 @@ public static class ControlPipe
             case "language" when args.Length > 2 && long.TryParse(args[1], out var lm) && MeetingLanguages.Parse(args[2]) is { } l:
                 host.Controller.SetMeetingLanguage(lm, l);
                 return Ok;
+            // 匿名使用統計（design-windows §12.10、M§30.7）：DEBUG 版只在這裡設了網址才累計、送出
+            case "usageurl" when args.Length > 1:   // usageurl <網址|off>：只在記憶體設統計網址
+                host.Usage.Url = args[1] == "off" ? null : args[1];
+                host.Usage.Touch();
+                return Ok;
+            case "usage": return host.Usage.DebugSnapshot();   // 目前的檔案和下一份要送的
+            case "usageage" when args.Length > 1 && int.TryParse(args[1], out var days): host.Usage.DebugAge(days); return Ok;   // 把今天的匯總改成幾天前
+            case "usagesend": _ = host.Usage.SendPending(); return Ok;
             default: return new JsonObject { ["error"] = "unknown command" };
         }
     }

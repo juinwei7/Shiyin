@@ -622,7 +622,7 @@ public sealed class ServicesTests : IDisposable
         };
     }
 
-    (JobRunner Runner, FakeEngines Engines, ModelStore Models) Runner(AppSettings settings)
+    (JobRunner Runner, FakeEngines Engines, ModelStore Models) Runner(AppSettings settings, UsageStats? usage = null)
     {
         // 模型都「裝好了」：放跟目錄裡大小一樣的空檔案
         var catalog = Enum.GetValues<ModelStore.Model>().ToDictionary(m => m, m => new ModelStore.ModelInfo(m.ToString(), [new($"{m}.bin", "http://unused", 1, "")]));
@@ -633,7 +633,7 @@ public sealed class ServicesTests : IDisposable
         var engines = new FakeEngines();
         var runner = new JobRunner(db, settings, paths, models, llm, new WavDecoder(), engines, new CopyCompressor(), NoPower.Instance)
         {
-            IdleDelay = TimeSpan.FromMilliseconds(100),
+            IdleDelay = TimeSpan.FromMilliseconds(100), Usage = usage,
         };
         return (runner, engines, models);
     }
@@ -650,10 +650,12 @@ public sealed class ServicesTests : IDisposable
         var tools = new List<string>();
         ServeLLM(tools);
         var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic" });
-        var (runner, engines, _) = Runner(settings);
+        // 匿名使用統計（design-windows §12.10）：網址指到不會用到的地方，只看累計
+        var usage = new UsageStats(paths.Usage, settings, http, () => new UsageStats.AppInfo("4.0.0", "", "", "zh-Hant")) { Url = "http://127.0.0.1:9/v1/usage" };
+        var (runner, engines, _) = Runner(settings, usage);
         var source = Path.Combine(home.Path, "會議.wav");
         WriteWav(source, 1, 9);
-        var meeting = Importer.ImportFile(source, new ImportOptions(), db, paths, settings);
+        var meeting = Importer.ImportFile(source, new ImportOptions(), db, paths, settings, usage: usage);
         var id = meeting.Id!.Value;
         var finished = new List<JobKind>();
         runner.Finished += (job, error) => { lock (finished) finished.Add(job.Kind); Assert.Null(error); };
@@ -676,6 +678,12 @@ public sealed class ServicesTests : IDisposable
         Assert.True(File.Exists(Path.Combine(paths.Audio, $"{id}.m4a")));
         Assert.Equal(["save_corrections", "save_meeting_notes", "save_speaker_names"], tools.Order(StringComparer.Ordinal));
         Assert.Equal([JobKind.Transcribe, JobKind.Summarize], finished.Order());
+        // 匯入 1 場、轉錄 9 秒（Breeze、中文、有分說話者）、用 API 整理 1 次；校正、猜說話者、壓縮不算（M§30.1）
+        var counted = JsonNode.Parse(usage.PreviewJson())!["usage"]!.AsObject();
+        // 實際花的秒數看機器快慢，只確認有這一欄
+        Assert.True(counted.Remove("transcribeWallSeconds"));
+        Assert.Equal("""{"diarizationRuns":1,"engines":{"breeze":9,"builtin":0,"whisperJa":0},"importedSeconds":9,"meetingLanguages":{"en":0,"ja":0,"zh":1},"meetingsImported":1,"meetingsRecorded":0,"questionsAsked":0,"recordedSeconds":0,"summarizer":{"api":1,"claudeCode":0,"codex":0,"local":0},"transcribedSeconds":9}""",
+            counted.ToJsonString());
     }
 
     [Fact]

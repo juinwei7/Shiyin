@@ -225,10 +225,11 @@ public static class OtherWindows
             };
             column.Children.Add(Ui.Split(number, Ui.Column(6, Ui.Heading(steps[i].Title, MeetingLanguage.Zh), Ui.Text(steps[i].Body, select: true)), 14));
         }
-        FrameworkElement Section(string title, params string[] bullets)
+        // 沒有的項目給 null（例如沒有統計網址的版本不寫匿名使用統計）
+        FrameworkElement Section(string title, params string?[] bullets)
         {
             var s = Ui.Column(10, Ui.Heading(title, MeetingLanguage.Zh));
-            foreach (var b in bullets) s.Children.Add(Ui.Split(Ui.Text("•", color: Ui.Secondary), Ui.Text(b, select: true), 8));
+            foreach (var b in bullets.OfType<string>()) s.Children.Add(Ui.Split(Ui.Text("•", color: Ui.Secondary), Ui.Text(b, select: true), 8));
             return s;
         }
         column.Children.Add(Section(L.T("找會議、播放"),
@@ -246,7 +247,9 @@ public static class OtherWindows
             L.T("即時逐字稿、正式轉錄、說話者辨識都在本機進行，不需要網路。"),
             L.T("整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記和詞彙表送到你選的整理工具，錄音檔不會送出。選「不整理」就完全離線。"),
             L.T("聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。"),
-            L.T("API key 存在 Windows 的認證管理員，不會寫進任何檔案。")));
+            L.T("API key 存在 Windows 的認證管理員，不會寫進任何檔案。"),
+            // 匿名使用統計（M§30.5）：有統計網址的版本才寫
+            AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉、看實際送出的內容。") : null));
         column.Children.Add(Section(L.T("快捷鍵"),
             L.F("%@：%@", "Ctrl+R", L.T("開始或停止錄音")),
             L.F("%@：%@", "Ctrl+Alt+Shift+R", L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）")),

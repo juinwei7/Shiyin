@@ -2,6 +2,7 @@
 # → 安裝檔改名成 Shiyin-<版本>-win-<架構>-Setup.exe（官網認這個名字，docs/website.md §7）→ 寫更新說明並用更新金鑰簽章
 #   pwsh scripts/windows/pack.ps1 -Version 3.6.0 -Arch x64 -Whisper build\whisper-x64 -Out dist\win-x64
 # 簽章要環境變數 SHIYIN_UPDATE_KEY（更新金鑰的私鑰 PEM）；沒有時不簽（只能自己測，不能發布）
+# 匿名使用統計的網址：環境變數 SHIYIN_USAGE_URL（design-windows §12.10，CI 是 GitHub 的 repository variable）；沒有時建出不送統計的版本
 param(
     [Parameter(Mandatory)][string]$Version,
     [ValidateSet('x64', 'arm64')][string]$Arch = 'x64',
@@ -15,8 +16,11 @@ $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $publish = Join-Path ([System.IO.Path]::GetTempPath()) "shiyin-publish-$Arch"
 if (Test-Path $publish) { Remove-Item -Recurse -Force $publish }
 
+if ($env:SHIYIN_USAGE_URL) { Write-Host '匿名使用統計：有網址' } else { Write-Host '匿名使用統計：沒有網址（不送統計的版本）' }
+# 「-」開頭的參數裡的變數要整串加雙引號才會展開（CLAUDE.md）
 dotnet publish (Join-Path $root 'windows\src\Shiyin.App\Shiyin.App.csproj') -c Release -r "win-$Arch" --self-contained `
-    -p:Version=$Version -p:WindowsAppSDKSelfContained=true -p:ShiyinUpdateTest=$($UpdateTest.IsPresent.ToString().ToLowerInvariant()) -o $publish
+    -p:Version=$Version -p:WindowsAppSDKSelfContained=true -p:ShiyinUpdateTest=$($UpdateTest.IsPresent.ToString().ToLowerInvariant()) `
+    "-p:ShiyinUsageUrl=$env:SHIYIN_USAGE_URL" -o $publish
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish 失敗' }
 if ($UpdateTest) { Write-Warning '測試更新的建置：更新來源、公鑰從環境變數讀，不能拿去發布' }
 Copy-Item (Join-Path $Whisper '*.dll') $publish -Force

@@ -51,6 +51,8 @@ public sealed class AppController
     public ModelStore Models { get; }
     public JobRunner Runner { get; }
     public Recorder Recorder { get; }
+    /// <summary>匿名使用統計（design-windows §12.10）；沒給（測試）就不累計</summary>
+    public UsageStats? Usage { get; init; }
     readonly IAudioDecoder decoder;
     readonly IExportPlatform? exporter;
     readonly string appVersion;
@@ -209,7 +211,7 @@ public sealed class AppController
         {
             try
             {
-                last = await Task.Run(() => Importer.ImportFile(file, options, Db, Paths, Settings));
+                last = await Task.Run(() => Importer.ImportFile(file, options, Db, Paths, Settings, usage: Usage));
                 Runner.Wake();
             }
             catch (ImportException e) { failures.Add(e.Message); }
@@ -345,7 +347,11 @@ public sealed class AppController
     {
         try
         {
-            if (result.Error is not null) Error?.Invoke(result.Error);
+            if (result.Error is not null)
+            {
+                Error?.Invoke(result.Error);
+                Usage?.Failed(UsageStats.Failure.Recording);
+            }
             if (Db.Meeting(result.MeetingId) is not { } meeting) return;
             // 只有檔案本身確實幾乎是空的（不到 0.5 秒的音訊）才當作沒錄到東西；不能只看 duration，萬一計算出錯會把整場錄音刪掉
             var bytes = result.File is { } f && File.Exists(f) ? new FileInfo(f).Length : 0;
@@ -366,6 +372,7 @@ public sealed class AppController
                 if (result.Duration > 0) meeting.DurationSeconds = (int)Math.Round(result.Duration, MidpointRounding.AwayFromZero);
                 Db.UpdateMeeting(meeting);
                 Db.Enqueue(result.MeetingId, JobKind.Transcribe);
+                Usage?.Recorded(result.Duration);
             }
             catch
             {

@@ -36,6 +36,8 @@ public sealed class ShiyinPaths
     public string Tmp => Path.Combine(Home, "tmp");
     public string Logs => Path.Combine(Home, "logs");
     public string Settings => Path.Combine(Home, "settings.json");
+    /// <summary>匿名使用統計的匯總（design-windows §12.10、M§30.2）</summary>
+    public string Usage => Path.Combine(Home, "usage.json");
 
     public string AudioPath(Meeting meeting) => Path.Combine(Audio, meeting.AudioFile);
 

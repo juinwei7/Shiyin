@@ -41,7 +41,9 @@ public static class Importer
         File.Exists(path) ? DateOnly.FromDateTime(File.GetLastWriteTime(path)) : null;
 
     /// <summary>建立會議、複製錄音、排轉錄工作。複製失敗會刪掉剛建立的會議（M§7）</summary>
-    public static Meeting ImportFile(string path, ImportOptions options, AppDatabase db, ShiyinPaths paths, AppSettings settings, bool move = false)
+    /// <summary>usage：匿名使用統計（design-windows §12.10）；復原當掉的錄音（move）不算匯入</summary>
+    public static Meeting ImportFile(string path, ImportOptions options, AppDatabase db, ShiyinPaths paths, AppSettings settings, bool move = false,
+                                     UsageStats? usage = null)
     {
         var filename = Path.GetFileName(path);
         var title = options.Title.Trim();
@@ -68,6 +70,7 @@ public static class Importer
             }
             else File.Copy(path, destination, overwrite: true);
             db.Enqueue(meeting.Id!.Value, JobKind.Transcribe);
+            if (!move) usage?.Imported();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException)
         {

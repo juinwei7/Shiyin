@@ -68,6 +68,9 @@ public sealed class JobRunner
     /// <summary>重新辨識說話者做完（分出幾位）或失敗（M§23.3）</summary>
     public event Action<long, int?, Exception?>? Rediarized;
 
+    /// <summary>匿名使用統計（design-windows §12.10）；沒給（測試）就不累計</summary>
+    public UsageStats? Usage { get; init; }
+
     /// <summary>每一線找不到工作時等多久再找一次</summary>
     public TimeSpan IdleDelay { get; init; } = TimeSpan.FromSeconds(2);
 
@@ -221,6 +224,7 @@ public sealed class JobRunner
                     db.Finish(jobId, JobStatus.Done);
                     Log.Info($"job {jobId} done");
                 }
+                CountUsage(job.Kind, failure is not null);
             }
             catch (Exception e) { Log.Error($"finish failed: {e.GetType().Name}"); }
             // 壓縮、逐字稿校正是背景的輔助工作，不發通知；有草稿時正式版不再發（M§21.3）
@@ -230,6 +234,20 @@ public sealed class JobRunner
     }
 
     static string Message(Exception e) => e is OperationCanceledException ? L.T("已取消") : e.Message;
+
+    /// <summary>匿名使用統計（M§30.1）：只算真的跑完的工作（取消的不算）；轉錄成功在 Transcribe 裡算（要用到長度）</summary>
+    void CountUsage(JobKind kind, bool failed)
+    {
+        if (Usage is not { } usage) return;
+        switch (kind, failed)
+        {
+            case (JobKind.Transcribe, true): usage.Failed(UsageStats.Failure.Transcribe); break;
+            case (JobKind.Rediarize, false): usage.Rediarized(); break;
+            case (JobKind.Rediarize, true): usage.Failed(UsageStats.Failure.Diarize); break;
+            case (JobKind.Summarize or JobKind.Revise, false): usage.Summarized(settings.Provider); break;
+            case (JobKind.Summarize or JobKind.Revise, true): usage.Failed(UsageStats.Failure.Summarize); break;
+        }
+    }
 
     /// <summary>payload 的 JSON（跟 Mac 的 Codable 相同的欄位）。不用反射的序列化，修剪過的 app 也能用</summary>
     static T? Decode<T>(string? json) where T : class
@@ -265,6 +283,7 @@ public sealed class JobRunner
     void Transcribe(Job job, RunningJob state, CancellationToken cancel)
     {
         if (db.Meeting(job.MeetingId) is not { } meeting) return;
+        var startedAt = DateTime.UtcNow;
         var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, db.Glossary().Select(t => t.Term).ToList(),
             meeting.Channels, meeting.MinSpeakers);
         if (options.Engine == TranscriptionOptions.EngineKind.Fast && !settings.UseFastTranscriber)
@@ -283,6 +302,9 @@ public sealed class JobRunner
         }).ToList();
         db.SaveTranscript(job.MeetingId, segments, (int)Math.Round(result.Duration, MidpointRounding.AwayFromZero),
             result.Speakers.Max() ?? 0, result.Voices, options.TranscribedWith);
+        // 匿名使用統計（M§30.1）：語音長度、實際花的時間、引擎；說話者辨識跟 pipeline 的條件一樣
+        Usage?.Transcribed(result.Duration, (DateTime.UtcNow - startedAt).TotalSeconds, options.TranscribedWith, meeting.MeetingLanguage,
+            meeting.Source == "import", options.Diarize && result.Duration > 5);
         // 說話者辨識的碰撞率（M§24.3）：可能把人併在一起時，逐字稿分頁會提示
         db.SetSpeakerCheck(job.MeetingId, result.DiarizationQuality?.MergeRisk);
         // 聲紋比對（M§21.4）：在整理之前，會議紀錄裡就會是名字
