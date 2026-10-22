@@ -55,7 +55,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 
   | What | Formats |
   |---|---|
-  | Meeting notes | Markdown, PDF, Word; or copy as rich text, Markdown or plain text |
+  | Meeting notes | Markdown, PDF, Word; or copy as formatted text (for Word, Notion, email), Markdown or plain text |
   | Transcript | txt, Markdown, srt, vtt, Word (with or without timestamps and speakers) |
   | Recording | m4a, wav |
   | Whole meeting | .shiyin package (recording, transcript, speakers, notes, your notes, bookmarks); double-click to import |

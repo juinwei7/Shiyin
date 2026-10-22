@@ -115,7 +115,7 @@
 
 - R7.1 錄音可以匯出成 m4a（AAC）或 wav。
 - R7.2 逐字稿可以匯出成 txt、srt、vtt、Markdown；docx 是 P1。匯出時可以選擇要不要包含時間點和說話者。
-- R7.3 會議紀錄可以匯出成 Markdown、PDF；docx 是 P1。也可以複製成純文字、Markdown 或富文字，直接貼到 Notion、Slack、Word。
+- R7.3 會議紀錄可以匯出成 Markdown、PDF；docx 是 P1。也可以複製成純文字、Markdown 或富文字，直接貼到 Notion、Slack、Word。介面上的名稱是「保留格式」（英文 Formatted），不用「富文字」：一般人看不懂（2026-10-22 使用者要求，Mac、Windows 一起改）。
 - R7.4 整場會議可以打包成 .shiyin 檔，內容包含錄音、逐字稿、說話者名字、會議紀錄、筆記和重點標記，用來備份或傳給同事。
 - R7.5 匯出的檔案可以用 macOS 的分享選單（Mail、AirDrop、訊息）分享出去。
 

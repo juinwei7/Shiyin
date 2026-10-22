@@ -371,7 +371,7 @@ struct MoreMenu: View {
             Divider()
             Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }
             Menu("複製會議紀錄", systemImage: "doc.on.doc") {
-                Button("富文字（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
+                Button("保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
                 Button("Markdown") { model.copyNotes(.markdown) }
                 Button("純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
             }

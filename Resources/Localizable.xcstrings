@@ -1456,6 +1456,17 @@
         }
       }
     },
+    "保留格式（貼到 Word、Notion、郵件）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formatted text (for Word, Notion, email)"
+          }
+        }
+      }
+    },
     "停止": {
       "extractionState": "manual",
       "localizations": {
@@ -2798,17 +2809,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "You can close this window when you’re done."
-          }
-        }
-      }
-    },
-    "富文字（貼到 Word、Notion、郵件）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rich text (for Word, Notion, email)"
           }
         }
       }
@@ -7212,13 +7212,13 @@
         }
       }
     },
-    "複製會議紀錄（富文字）": {
+    "複製會議紀錄（保留格式）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copy Meeting Notes (Rich Text)"
+            "value": "Copy Meeting Notes (Formatted)"
           }
         }
       }

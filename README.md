@@ -55,7 +55,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 
   | 項目 | 格式 |
   |---|---|
-  | 會議紀錄 | Markdown、PDF、Word；也可以複製成富文字、Markdown、純文字 |
+  | 會議紀錄 | Markdown、PDF、Word；也可以複製成保留格式的文字（貼到 Word、Notion、郵件）、Markdown、純文字 |
   | 逐字稿 | txt、Markdown、srt、vtt、Word（可選要不要時間點和說話者） |
   | 錄音 | m4a、wav |
   | 整場會議 | .shiyin 封包（錄音、逐字稿、說話者、紀錄、筆記、重點），對方雙擊就能匯入 |

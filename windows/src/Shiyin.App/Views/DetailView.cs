@@ -394,7 +394,7 @@ public sealed class DetailView
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Ui.Item(L.T("匯出…"), () => _ = Dialogs.Export(window, id), icon: Symbol.Share));
         menu.Items.Add(Ui.Sub(L.T("複製會議紀錄"),
-            Ui.Item(L.T("富文字（貼到 Word、Notion、郵件）"), () => CopyNotes(id, "rich")),
+            Ui.Item(L.T("保留格式（貼到 Word、Notion、郵件）"), () => CopyNotes(id, "rich")),
             Ui.Item(L.T("Markdown"), () => CopyNotes(id, "markdown")),
             Ui.Item(L.T("純文字（貼到 Slack、訊息）"), () => CopyNotes(id, "plain"))));
         menu.Items.Add(new MenuFlyoutSeparator());
