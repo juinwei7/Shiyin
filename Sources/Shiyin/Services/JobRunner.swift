@@ -241,6 +241,7 @@ final class JobRunner {
                     try db.finish(jobId, status: .done)
                     log.info("job \(jobId) done")
                 }
+                countUsage(job.kind, failed: failure != nil)
             } catch {
                 log.error("finish failed: \(error.localizedDescription)")
             }
@@ -251,6 +252,18 @@ final class JobRunner {
     }
 
     private func isStillRunning(_ job: Job) -> Bool { (try? db.jobStatus(job.id!)) == .running }
+
+    /// 匿名使用統計（design §30.1）：只算真的跑完的工作（取消的不算）；轉錄成功在 transcribe 裡算（要用到長度）
+    private func countUsage(_ kind: JobKind, failed: Bool) {
+        switch (kind, failed) {
+        case (.transcribe, true): UsageStats.shared.failed(.transcribe)
+        case (.rediarize, false): UsageStats.shared.rediarized()
+        case (.rediarize, true): UsageStats.shared.failed(.diarize)
+        case (.summarize, false), (.revise, false): UsageStats.shared.summarized(with: AppSettings.provider)
+        case (.summarize, true), (.revise, true): UsageStats.shared.failed(.summarize)
+        default: break
+        }
+    }
 
     /// 呼叫整理工具，按「取消」時 CLI 結束子程序、API 取消請求（design §21.14、R20.5）
     private func callLLM<T>(_ lane: JobLane, _ work: @escaping @MainActor (_ onStart: @escaping (Subprocess) -> Void) async throws -> T) async throws -> T {
@@ -264,6 +277,7 @@ final class JobRunner {
 
     private func transcribe(_ job: Job, lane: JobLane) async throws {
         guard let meeting = try db.meeting(job.meetingId) else { return }
+        let startedAt = Date()
         var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
                                                                 glossary: try db.glossary().map(\.term),
                                                                 channels: meeting.channels, minSpeakers: meeting.minSpeakers))
@@ -283,6 +297,10 @@ final class JobRunner {
         try db.saveTranscript(job.meetingId, segments: segments, duration: Int(duration.rounded()),
                               speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices,
                               transcribedWith: pipeline.options.transcribedWith)
+        // 匿名使用統計（design §30.1）：語音長度、實際花的時間、引擎；說話者辨識跟 pipeline 的條件一樣
+        UsageStats.shared.transcribed(seconds: duration, wallSeconds: Date().timeIntervalSince(startedAt),
+                                      engine: pipeline.options.transcribedWith, language: meeting.meetingLanguage,
+                                      imported: meeting.source == "import", diarized: pipeline.options.diarize && duration > 5)
         // 說話者辨識的碰撞率（design §24.3）：可能把人併在一起時，逐字稿分頁會提示
         try db.setSpeakerCheck(job.meetingId, result.diarizationQuality?.mergeRisk)
         // 聲紋比對（design §21.4）：在整理之前，會議紀錄裡就會是名字

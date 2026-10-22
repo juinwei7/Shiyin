@@ -271,6 +271,8 @@ final class AppModel {
         recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
+        UsageStats.shared.touch()
+        UsageStats.shared.scheduleAutomaticSends()
         refreshEnvironment()
         legacyBytes = Paths.legacyItems.reduce(0) { $0 + Self.directorySize($1) }
         reload()
@@ -565,6 +567,7 @@ final class AppModel {
         do {
             if let error = result.error {
                 errorMessage = error
+                UsageStats.shared.failed(.recording)
             }
             guard var meeting = try db.meeting(result.meetingId) else { return }
             // 只有檔案本身確實幾乎是空的（不到 0.5 秒的音訊）才當作沒錄到東西；
@@ -585,6 +588,7 @@ final class AppModel {
                 if result.duration > 0 { meeting.durationSeconds = Int(result.duration.rounded()) }
                 try db.updateMeeting(meeting)
                 try db.enqueue(result.meetingId, kind: .transcribe)
+                UsageStats.shared.recorded(seconds: result.duration)
             } catch {
                 // 資料庫寫不進去（磁碟滿時常一起發生）：搬回 recording/，下次開啟由復原流程接回（design §20.3）。
                 // 會議已經改到一半的話改回去，不要指向搬走的檔案

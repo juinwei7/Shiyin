@@ -2,6 +2,7 @@
 # 產生發布用的 DMG（design §12、§16.7、R10.1）：拾音.app、Applications 捷徑、中英文安裝說明、第三方授權
 # 用法：scripts/make-dmg.sh   （會先跑 release 建置）
 #   SHIYIN_UPDATE_URL=https://…/shiyin-update.json  寫進 app，之後可以 app 內更新
+#   SHIYIN_USAGE_URL=https://…                      寫進 app 的匿名使用統計網址（design §30.6）；沒帶就不送統計
 #   SHIYIN_RELEASE_NOTES="這版改了什麼"               寫進更新資訊
 set -euo pipefail
 cd "$(dirname "$0")/.."

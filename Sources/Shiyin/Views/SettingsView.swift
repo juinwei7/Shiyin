@@ -820,6 +820,8 @@ struct AdvancedSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage(Updater.urlKey) private var updateURL = ""
+    @AppStorage(UsageStats.enabledKey) private var usageStats = true
+    @State private var usagePreview: String?
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -842,6 +844,24 @@ struct AdvancedSettings: View {
                         .font(.callout)
                         .foregroundStyle(isFailure ? .red : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            // 匿名使用統計（design §30.5、R40.4）：有統計網址的版本才有
+            if UsageStats.isOffered {
+                Section("匿名使用統計") {
+                    Toggle("分享匿名使用統計", isOn: $usageStats)
+                        .onChange(of: usageStats) { _, on in
+                            if on { UsageStats.shared.touch() } else { UsageStats.shared.clearPending() }
+                        }
+                    Text("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        Button("查看會送出的內容…") { usagePreview = UsageStats.shared.previewJSON() }
+                        Button("重設匿名 ID") {
+                            UsageStats.shared.resetInstallId()
+                            model.noticeMessage = String(localized: "已重設匿名 ID")
+                        }
+                    }
                 }
             }
             Section("環境檢查") {
@@ -871,10 +891,41 @@ struct AdvancedSettings: View {
         }
         .formStyle(.grouped)
         .onAppear { model.refreshEnvironment() }
+        .sheet(isPresented: Binding(get: { usagePreview != nil }, set: { if !$0 { usagePreview = nil } })) {
+            UsagePreviewSheet(json: usagePreview ?? "") { usagePreview = nil }
+        }
     }
 
     private var isFailure: Bool {
         if case .failed = model.updater.state { return true }
         return false
+    }
+}
+
+/// 「查看會送出的內容…」（design §30.5）：下一份要送的匿名使用統計，原樣顯示、可以選取複製
+private struct UsagePreviewSheet: View {
+    let json: String
+    let done: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("會送出的匿名使用統計").font(.headline)
+            Text("這是下一份要送給開發者的內容，每天最多一份。")
+                .font(.callout).foregroundStyle(.secondary)
+            ScrollView {
+                Text(json)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+            }
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+            HStack {
+                Spacer()
+                Button("完成", action: done).keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 520, height: 520)
     }
 }

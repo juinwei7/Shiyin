@@ -5,6 +5,7 @@
 # 需要的設定（Settings → Secrets and variables → Actions），都是選填：
 #   secrets.SHIYIN_SIGNING_P12 / SHIYIN_SIGNING_P12_PASSWORD  自簽憑證（scripts/export-signing-cert.sh 匯出）；沒有就用 ad-hoc
 #   vars.SHIYIN_UPDATE_URL                                     寫進 app 的更新網址（https://…/shiyin-update.json）
+#   vars.SHIYIN_USAGE_URL                                      寫進 app 的匿名使用統計網址（design §30.6）；沒設就不送統計
 #   vars.SHIYIN_RELEASES_REPO + secrets.SHIYIN_RELEASES_TOKEN  另外發布到公開的 repo（程式碼維持私人時用）
 name: 打包
 
@@ -66,6 +67,7 @@ jobs:
       - name: 建置 DMG
         env:
           SHIYIN_UPDATE_URL: ${{ vars.SHIYIN_UPDATE_URL }}
+          SHIYIN_USAGE_URL: ${{ vars.SHIYIN_USAGE_URL }}
         run: |
           scripts/make-dmg.sh
           mkdir -p out

@@ -368,6 +368,13 @@ enum DebugControl {
         case "installupdate":
             if case .available(let manifest) = model.updater.state { Task { await model.updater.install(manifest, model: model) } }
         case "dismissupdate": model.updater.prompt = nil
+        // 匿名使用統計（design §30.7）：DEBUG 版只在這裡設了網址才累計、送出
+        case "usageurl":   // usageurl <網址|off>：只在記憶體設統計網址
+            UsageStats.debugURL = args.count > 1 && args[1] != "off" ? args[1] : nil
+            UsageStats.shared.touch()
+        case "usage": write(UsageStats.shared.debugSnapshot(), to: args[1])   // usage <輸出.json>：目前的檔案和下一份要送的
+        case "usageage": UsageStats.shared.debugAge(days: Int(args[1]) ?? 1)   // usageage <天數>：把今天的匯總改成幾天前
+        case "usagesend": Task { await UsageStats.shared.sendPending() }
         // 全域快捷鍵（R11.3）：不能送按鍵，用這個模擬按下
         case "hotkey":   // hotkey [bookmark]：模擬按下 ⌃⌥⌘R（或 ⌃⌥⌘B）
             if args.count > 1 && args[1] == "bookmark" { GlobalHotKey.shared.fireBookmark() } else { GlobalHotKey.shared.fire() }

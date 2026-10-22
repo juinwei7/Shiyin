@@ -1094,6 +1094,147 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 
 **一步改正**（R33.4）：點「自動」的名字，選單是「是別人：」下面列這位說話者最像的 3 位認識的人（`voiceprintCandidates`：跟每個人所有聲紋的最高相似度，由高到低，不含目前的名字）、「其他人…（到逐字稿改名）」，以及「不是X（不知道是誰）」。選了某人 = `renameSpeaker`（`source = 'manual'`）：刪掉這位說話者在這場存的聲紋，存到選的人，會議紀錄裡的名字一起換。最像的名單在載入會議時跟說話者一起算（`MeetingDetail.speakerCandidates`），不在畫面更新時重算。
 
+## 30. 匿名使用統計（R40，D100）
+
+使用者想知道活躍度和處理了多少語音（requirements 第 30 節）。每天一份匯總，送到使用者自己開發的後台；不含任何會議內容。
+
+### 30.1 累計什麼、掛在哪裡
+
+`Services/UsageStats.swift` 的 `UsageStats.shared`（有鎖，任何執行緒都能呼叫）。累計到「今天」（本機時區的日期）那一份：
+
+| 欄位 | 什麼時候加 | 掛在哪裡 |
+|---|---|---|
+| `meetingsRecorded`、`recordedSeconds` | 錄音存檔成功（有聲音、進了轉錄佇列） | `AppModel` 錄音結束的流程 |
+| `meetingsImported` | 匯入音訊或影片成功 | `Importer.importFile` |
+| `importedSeconds` | 匯入的會議轉錄完成，加上它的長度 | `JobRunner.transcribe`（`meeting.source == "import"`） |
+| `transcribedSeconds`、`transcribeWallSeconds` | 轉錄完成：語音長度、從開始到完成的實際秒數（含說話者辨識） | `JobRunner.transcribe` |
+| `engines.breeze`／`builtin`／`whisperJa` | 轉錄完成，依 `transcribedWith`（breeze／system／japanese）加語音秒數。`builtin` 是系統內建或快速辨識：Mac 是 macOS 內建辨識，Windows 是快速辨識（SenseVoice），報表依平台顯示名稱 | 同上 |
+| `meetingLanguages.zh`／`en`／`ja` | 轉錄完成，依會議語言加一場 | 同上 |
+| `diarizationRuns` | 轉錄時有做說話者辨識、重新辨識說話者完成 | `JobRunner.transcribe`、`rediarize` |
+| `summarizer.claudeCode`／`codex`／`api`／`local` | 整理（含草稿、回答待確認後的修正）成功；Anthropic、OpenAI、Gemini、遠端的 OpenAI 相容 API 算 `api`，網址是 localhost、127.0.0.1 的 OpenAI 相容 API 算 `local` | `JobRunner.execute` |
+| `questionsAsked` | 提問（單場或所有會議）得到回答 | `Asking` |
+| `errors.recording`／`transcribe`／`diarize`／`summarize` | 錄音結束時有錯誤；轉錄、重新辨識、整理（含修正）的工作失敗 | `AppModel`、`JobRunner.execute` |
+
+校正、猜說話者、壓縮不算（是整理和轉錄的輔助工作）。
+
+### 30.2 存在哪裡
+
+`SHIYIN_HOME/usage.json`（不放 UserDefaults：DEBUG 版跟使用者的拾音共用 UserDefaults，換 `SHIYIN_HOME` 測試時數字才不會混在一起）：
+
+```json
+{ "installId": "隨機 UUID", "days": { "2026-10-22": { …30.1 的欄位… } }, "sent": ["2026-10-21"] }
+```
+
+- 安裝 ID 第一次累計時用 `UUID()` 產生；「重設匿名 ID」換一個新的。
+- 每次累計後寫檔（原子寫入）；檔案讀不懂就當作沒有、重新開始。
+- 關掉開關、或沒有統計網址時：不累計，`days` 清空。
+- `days` 只留最近 4 天；`sent` 只留最近 7 天，用來確保同一天不送兩次。
+
+### 30.3 什麼時候送
+
+- 啟動 60 秒後檢查一次，之後每小時檢查一次（跟 app 內更新一樣，`Updater.scheduleAutomaticChecks`）。
+- 要送的是**今天以前、最近 3 天內、還沒送過**的日子，一天一個請求，從舊到新。有開 app 但沒有用量的日子也有一份（打開 app 時就建立當天的空白匯總），才算得出活躍天數；沒開 app 的日子沒有資料。
+- 回 2xx：記進 `sent`、刪掉那一天。回 4xx（429 除外）：格式被拒，刪掉那一天、不再送，log 記一筆。網路錯誤、5xx、429：留著，下一小時再試；超過 3 天就刪掉。
+- 同時只有一個請求；逾時 20 秒；只用 https（localhost、127.0.0.1 例外給測試用，跟更新一樣）。
+- 送統計不在主執行緒做事、失敗不顯示任何訊息。
+
+### 30.4 送出的格式（給後台）
+
+```
+POST <統計網址>
+Content-Type: application/json
+User-Agent: Shiyin/<版本>
+
+{
+  "schema": 1,
+  "installId": "2f7c3a52-…",
+  "date": "2026-10-22",
+  "app": { "platform": "mac", "version": "3.7.0", "os": "macOS 26.1", "chip": "Apple M3 Pro", "uiLanguage": "zh-Hant" },
+  "usage": {
+    "meetingsRecorded": 2, "recordedSeconds": 4210,
+    "meetingsImported": 1, "importedSeconds": 1800,
+    "transcribedSeconds": 6010, "transcribeWallSeconds": 520,
+    "engines": { "breeze": 5800, "builtin": 210, "whisperJa": 0 },
+    "meetingLanguages": { "zh": 2, "en": 1, "ja": 0 },
+    "diarizationRuns": 3,
+    "summarizer": { "claudeCode": 3, "codex": 0, "api": 0, "local": 0 },
+    "questionsAsked": 2
+  },
+  "errors": { "recording": 0, "transcribe": 0, "diarize": 0, "summarize": 1 }
+}
+```
+
+- 秒數都是整數；沒有發生的欄位是 0（欄位一定都在）。`app` 是**送出當下**的環境（不是那一天的），一天之內換版本不另外分。
+- `platform` 是 `mac` 或 `windows`（2026-10-22 加，分平台看報表用，不用從 `os` 字串猜）。`os` 用 `ProcessInfo.operatingSystemVersion`（例如 `macOS 26.1`）；`chip` 用 `sysctl machdep.cpu.brand_string`；`uiLanguage` 是 app 實際用的介面語言（`Bundle.main.preferredLocalizations.first`）。
+- 後台收到回 `204`（或任何 2xx）。用 `installId` + `date` 去重：同一筆重送（例如回應在路上掉了）要覆蓋，不要重複算。
+- 後台不要存 IP（或只用來擋濫用、不跟 `installId` 一起存）。`schema` 以後改格式時加 1，後台可以依版本解析。
+
+### 30.5 設定頁、使用說明
+
+- 設定 → 進階加一段「匿名使用統計」：
+  - 開關「分享匿名使用統計」（`usageStats`，預設開）
+  - 說明：「每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。」
+  - 「查看會送出的內容…」：小視窗顯示下一份要送的 JSON（還沒有已過完的日子就顯示今天到目前為止的），可以選取複製
+  - 「重設匿名 ID」
+- 使用說明「資料與隱私」加一條：「每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉、看實際送出的內容。」
+- 這兩處只在 app 有統計網址時顯示（DEBUG 版一律顯示，方便驗證）：沒有網址的版本本來就不送，不寫會送。
+
+### 30.6 統計網址（建置時寫進 app）
+
+- 跟更新網址一樣（§12）：`SHIYIN_USAGE_URL=https://…` 讓 `build-app.sh` 寫進 Info.plist 的 `ShiyinUsageURL`；`make-dmg.sh`、`release.yml` 一起帶（GitHub 的 repository variable `SHIYIN_USAGE_URL`）。
+- 設定裡不能改（R40 不做）。沒有設 variable 的 release 就是不送統計的版本。
+
+### 30.7 DEBUG 版、驗證
+
+- DEBUG 版忽略 Info.plist 的統計網址；只在 `shiyinctl usageurl <網址>` 設在記憶體時累計和送（`usageurl off` 取消）。
+- `shiyinctl usage` 回傳目前的 `usage.json` 和下一份要送的內容；`usageage <天數>` 把今天的匯總改成幾天前（模擬時間過去）；`usagesend` 馬上跑一次送出的檢查。
+- 假後台：`scripts/dev/fake-usage-server.py <埠> <紀錄檔>`，把收到的每個請求（標頭、內容）寫進紀錄檔；可以指定回應碼（測 4xx、5xx）。
+
+### 30.8 隱私說明的新寫法（發布有統計網址的那一版時一起改）
+
+- README（中文，「資料與隱私」表格加一列）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉、看實際送出的內容。
+- README（英文）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. Turn it off, or see exactly what is sent, in Settings → Advanced.
+- 官網（website.md §14 的隱私區塊，中英日）：「送到你選的整理工具」旁邊加一句：「另外，每天會送一份匿名的使用統計給開發者（版本、用了幾分鐘，不含任何會議內容），在設定裡可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (version and minutes used, never any meeting content). You can turn it off in Settings.」日文：「また、匿名の利用統計（バージョンと利用時間のみ、会議の内容は含みません）を 1 日 1 回開発者に送ります。設定でオフにできます。」
+- requirements 第 4 節已經改好（2026-10-22）。
+- 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉、看送出的內容」。
+
+### 30.9 Windows 版
+
+Windows 版做一樣的功能（R40.7）：同樣的格式（`app.platform` 是 `windows`、`app.os` 寫 `Windows 11 …`、`chip` 寫 CPU 名稱；`engines.builtin` 是快速辨識 SenseVoice 轉錄的秒數）、同樣的時機和保留規則，資料檔一樣放 `SHIYIN_HOME/usage.json`，設定放 `settings.json`。
+
+### 30.10 後台：Cloudflare Workers＋D1（D101）
+
+- 程式：`workers/usage/`（`worker.js` 純 JavaScript、不用套件；`schema.sql`；`wrangler.toml`）。網址 `https://usage.weibuilds.com/v1/usage`（Workers 的自訂網域，跟官網分開：官網維持純靜態，兩邊部署、出問題都不互相影響）。
+- `POST /v1/usage`：
+  - 只收 `Content-Type: application/json`、內容 8 KB 以內，其他回 400／413／415
+  - 檢查 §30.4 的格式：`schema` 是 1；`installId` 是 UUID；`date` 是今天前 7 天到明天（UTC）之間；`app.platform` 是 `mac` 或 `windows`；`app` 的其他四個欄位是 64 字以內的字串；`usage`、`errors` 的數字是 0～1,000,000 的整數；字典只認得 §30.4 列的鍵（多的忽略、少的當 0）。不對就回 400（app 收到 4xx 會丟掉那一天，不再重送）
+  - 寫進 D1：`installId`＋`date` 是主鍵，重送就覆蓋（`INSERT … ON CONFLICT DO UPDATE`），所以同一台同一天只算一次
+  - 成功回 204
+- `GET /v1/health`：回 200，部署後檢查用。其他路徑 404。
+- 不存 IP、不存 User-Agent 以外的標頭（User-Agent 也不存，版本已經在內容裡）。Cloudflare 本身的請求紀錄不在我們的資料庫。
+- 防濫用：內容檢查加上 Workers 的頻率限制（同一個 IP 每分鐘 30 次，超過回 429；`wrangler.toml` 的 `ratelimits`）。程式開源、網址公開，沒辦法藏密鑰，只能這樣擋。
+- 資料表：
+
+  ```sql
+  CREATE TABLE usage_daily (
+    install_id TEXT NOT NULL, date TEXT NOT NULL,
+    platform TEXT NOT NULL, app_version TEXT, os TEXT, chip TEXT, ui_language TEXT,
+    meetings_recorded INTEGER, recorded_seconds INTEGER, meetings_imported INTEGER, imported_seconds INTEGER,
+    transcribed_seconds INTEGER, transcribe_wall_seconds INTEGER,
+    engine_breeze INTEGER, engine_builtin INTEGER, engine_whisper_ja INTEGER,
+    lang_zh INTEGER, lang_en INTEGER, lang_ja INTEGER, diarization_runs INTEGER,
+    summarizer_claude_code INTEGER, summarizer_codex INTEGER, summarizer_api INTEGER, summarizer_local INTEGER,
+    questions_asked INTEGER,
+    errors_recording INTEGER, errors_transcribe INTEGER, errors_diarize INTEGER, errors_summarize INTEGER,
+    received_at TEXT NOT NULL,
+    PRIMARY KEY (install_id, date)
+  );
+  ```
+
+  欄位攤平成一欄一個數字，用 SQL 直接加總。例如每日活躍 `SELECT date, COUNT(*) FROM usage_daily GROUP BY date`；總轉錄時數 `SELECT SUM(transcribed_seconds) / 3600.0 FROM usage_daily`。
+- 部署：`npx wrangler@4 d1 create shiyin-usage`、`d1 execute --remote --file schema.sql`、`deploy`。token 要有 Workers Scripts、D1 的編輯權限，自訂網域另外要 weibuilds.com 的 Workers Routes、DNS 編輯權限；token 只在部署時用環境變數帶，不寫進任何檔案。
+- 本機測試：`npx wrangler@4 dev --local`（本機的 D1，`--persist-to` 放暫存資料夾），DEBUG 版用 `shiyinctl usageurl http://127.0.0.1:8787/v1/usage` 指過去。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1138,6 +1279,8 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 | D39 | 用片段聲紋的凝聚度判斷可能把人併在一起，只提示、不自動重新辨識 | 碰撞率：分群時同一片段的說話者會被強制分開，群數 ≥ 2 時一直是 0%（麻將也是）。看分出的人數：拾音不知道實際幾個人。說話秒數不平均：一般會議也常常一人主講。自動用更多人重新辨識：一般會議會把一個人拆成兩個；提示讓使用者決定 |
 | D40 | 錄音時的音量條用 AppKit 的 view 畫，自己定時讀音量 | SwiftUI 的音量條只在格數變的時候更新：說話時還是每秒十幾次，每次整個視窗重新排版（CPU 51%）。`TimelineView`、`Canvas`：一樣經過 SwiftUI 的更新。降低更新頻率：音量條看起來會頓。取捨：這一小塊不是 SwiftUI，截圖工具畫不出來（DEBUG 截圖時換回 SwiftUI 版） |
 | D41 | 收音提醒只看音量本身（背景多大聲、說話多小聲）持續多久，不看說話和背景差多少 | 用說話和背景的差（訊噪比）判斷吵：使用者正常的會議只差 8 dB，跟加了雜音的版本（6 dB）分不開，會一直誤報。用即時逐字稿的信心或字數：辨識不出來的原因很多（口音、語言），不一定是收音。取捨：麻將那種洗牌聲只在背景大聲的那一段抓得到，不吵的時候分錯人提醒不了（錄完的「說話者可能分得不夠」補這一塊） |
+| D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關＋看得到送出的內容）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
+| D101 | 匿名使用統計的後台用 Cloudflare Workers＋D1，網址是自己網域的子網域 | 自己租主機：要顧作業系統更新、備份、停機，一天幾百、幾千筆用不到。Supabase、Firebase：好用，但資料在第三方，隱私說明要多寫一家公司。PostHog 自架：很吃資源。放在官網的網域（Pages Functions）：官網現在是純靜態、CSP 很嚴，統計另外一個 Worker 互不影響，以後換後台只要換網址。取捨：Cloudflare 看得到請求的 IP（我們的資料庫不存）；D1 免費額度（每天 10 萬次寫入）以每台每天一筆來算夠用很久 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 | D90 | 是非題由整理工具在結構化輸出標出（`yesNo`），不由 app 從題目文字判斷（D42～D88 是 Windows 版、iPhone 版的編號，D89 是 R14.8） | app 看題目結尾（「嗎？」、「?」）判斷：中文、日文是非題的問法很多（「是不是」「有沒有」「でしょうか」），「負責人是誰？」又不是是非題，容易判錯；整理工具出題時就知道是不是在問「X 是不是 Y」。代價：結構化輸出多一個欄位，三個平台的標準答案要重新產生；以前整理的會議紀錄沒有這個標記，重新整理才有按鈕 |
 | D91 | 聲紋分兩段：很有把握才直接帶入，中間的改成待確認的說話者題目（取代 D29 的「對到就帶入」） | 照舊一個門檻、調高：沒那麼像的真的同一個人就認不出來，使用者每場都要自己取名。照舊直接帶入：使用者的資料裡不同的人可以像到 0.77，帶錯的名字會進到待辦的負責人。全部都問：D29 說的每週都要按一次。取捨：第一次遇到的人比較常被問（AMI 16 位問 8 位），回答「是」會存聲紋，之後越來越少問（16 位問 1 位） |

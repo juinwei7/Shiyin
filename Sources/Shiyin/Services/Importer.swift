@@ -108,6 +108,8 @@ enum Importer {
                 try FileManager.default.copyItem(at: url, to: meeting.audioURL)
             }
             try db.enqueue(meeting.id!, kind: .transcribe)
+            // 匿名使用統計（design §30.1）：復原當掉的錄音（move）不算匯入
+            if !move { UsageStats.shared.imported() }
         } catch {
             try? db.deleteMeeting(meeting.id!)
             if moved {
