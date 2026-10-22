@@ -34,14 +34,9 @@
 
 ## Windows 版（R26～R28，design-windows.md；2026-10-20 使用者決定方向）
 
-進度（2026-10-22）：功能對齊 Mac 3.6.0，加上 R32～R34。Mac 上 `dotnet test` 95 個、CI（windows-latest、windows-11-arm、macos-latest）都通過；虛擬機（§15.2）用 UI Automation 走過幾乎所有畫面；`release-windows.yml` 手動執行（run 39739673918）建好兩個架構的安裝檔，更新說明用正式的更新金鑰簽好，ARM64 版在虛擬機裝起來轉錄、檢查更新都正常；使用者確認在 Windows 電腦上錄音沒問題、朋友的 RTX 3060 用上 CUDA。需求在 requirements 第 22 節；虛擬機的驗收結果用 `git show 0e96276:docs/requirements.md` 看。
+進度（2026-10-22）：4.0.0 跟 Mac 一起發布（`win-v4.0.0`），功能對齊 Mac 4.0.0。Mac 上 `dotnet test` 95 個、CI（windows-latest、windows-11-arm、macos-latest）都通過；虛擬機（§15.2）用 UI Automation 走過幾乎所有畫面；`release-windows.yml` 手動執行（run 39739673918）建好兩個架構的安裝檔，更新說明用正式的更新金鑰簽好，ARM64 版在虛擬機裝起來轉錄、檢查更新都正常；使用者確認在 Windows 電腦上錄音沒問題、朋友的 RTX 3060 用上 CUDA。需求在 requirements 第 22 節；虛擬機的驗收結果用 `git show 0e96276:docs/requirements.md` 看。
 
 使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。這一段的「§」指 `design-windows.md`，「M§」指 `design.md`。
-
-### 第一個 Windows 版發布時
-
-- [ ] **發布 win-v3.6.x**（§14.3、§14.4、D51、D52）：使用者決定版本號（已經給朋友 3.6.0 的話正式版用 3.6.1，他的 app 才收得到更新）、同意後把 `windows` 合進 main（官網的 Windows 頁跟著上線；main 先放了一份 `release-windows.yml`，合併時兩邊的版本要一樣）、寫好版本說明（CLAUDE.md 的格式，標題「拾音 Windows …」）、推 `win-v*` 的 tag
-  - 驗證：Release 不是 latest，Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的（W8.5）；官網的 `/download/windows`、`/download/windows-arm64`、Windows 頁真的上線看一次（W8.4、W8.7）；README 的「還沒有正式發布」改成下載連結，加上轉錄速度、記憶體的數字（W8.6）；裝著的舊版用真的 repo 找得到新版（W0.8、D94）
 
 ### 要使用者的 Windows 電腦
 
@@ -63,4 +58,4 @@
 
 ### CI 上量
 
-- [ ] **速度和記憶體**（T-W3、R27 N2、N4；W0.4、W3.3、W4.1）：CI x64、ARM64 的轉錄倍速和記憶體峰值（含 4 小時的錄音），寫進 N2、N4；只有 CPU 時 beam、執行緒要不要改（§8）；1 小時的錄音說話者辨識 3 分鐘內；`record-sim` 4 小時不中斷
+- [ ] **速度和記憶體**（T-W3、R27 N2、N4；W0.4、W3.3、W4.1）：CI x64、ARM64 的轉錄倍速和記憶體峰值（含 4 小時的錄音），寫進 N2、N4 和 README 的〈Windows 版〉；只有 CPU 時 beam、執行緒要不要改（§8）；1 小時的錄音說話者辨識 3 分鐘內；`record-sim` 4 小時不中斷

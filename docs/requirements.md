@@ -512,7 +512,14 @@
 | Mac 的 DMG | ✅ | CI 的 Shiyin-4.0.0.dmg：app 4.0.0（build 13）、Authority=Shiyin Self-Signed（3.6.0 可以在 app 內更新上來）、`codesign --verify --deep --strict` 通過；`shiyin-update.json` 的 SHA-256 跟 DMG 相同；DMG 有中英文安裝說明、授權條款 |
 | Windows 的安裝檔 | ✅ | x64、ARM64 的更新說明用正式公鑰驗過（`update-key.cs verify` OK），版本 4.0.0、套件的 SHA-256 相符；ARM64 的安裝檔在虛擬機靜默安裝（4.0.0+03cf7a5），開 12 秒的合成會議，whisper 用安裝檔裡的 DLL、轉錄完成；解除安裝乾淨 |
 
-檢查完先不發布：使用者說另一個代理還要加追蹤數據的功能。發布時：把 `windows`（或之後的分支）再合進 main、推 main（官網部署 Windows 頁）、照上面的發布說明推 `v4.0.0`、`win-v4.0.0` 的 tag（CI 會重新建置；Windows 的 Release 不設成 latest）。
+### 發布（2026-10-22）
+
+使用者同意後推 main（63cb963）、`v4.0.0`、`win-v4.0.0` 的 tag：Mac 打包（run 39772788905）、Windows 版發布（run 39772792282）、官網（推 main、Mac 發布後各部署一次，Windows 發布後手動再部署一次）都成功。
+- GitHub：`拾音 4.0.0` 是 Latest（DMG、shiyin-update.json）；`拾音 Windows 4.0.0` 不是 Latest，有兩個安裝檔、套件、Velopack 的更新說明和簽好的 shiyin-update-win-*.json
+- Mac 的 app 內更新：`releases/latest/download/shiyin-update.json` 是 4.0.0，SHA-256 跟 Release 上的 DMG 相同；DMG 是 Shiyin Self-Signed、有統計網址
+- Windows 的 app 內更新：Release 上的更新說明用正式公鑰驗過；`WindowsReleaseSource` 讀真的 repo 找到 win-x64、win-arm64 的 4.0.0
+- 官網：`/download` 是 4.0.0 的 DMG，`/download/windows`、`/download/windows-arm64` 是兩個安裝檔；Windows 頁（中英日）、更新紀錄、隱私說明都上線
+- 版本說明照使用者的決定沒有寫匿名使用統計（R40.4）
 
 2026-10-22 使用者決定：匿名使用統計（第 30 節）Mac、Windows 都放進 4.0.0（R40.7）。加了之後上面的「Mac 的 DMG」「Windows 的安裝檔」「CI」要用新的建置重新檢查一次。
 
