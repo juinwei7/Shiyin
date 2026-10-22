@@ -141,9 +141,9 @@ final class UsageStats: @unchecked Sendable {
         saveLocked(store)
     }
 
-    // MARK: 設定頁
+    // MARK: 設定頁、DEBUG
 
-    /// 「查看會送出的內容」：下一份要送的；還沒有已過完的日子就顯示今天到目前為止的
+    /// 下一份要送的內容（shiyinctl usage 用；設定頁不顯示）；還沒有已過完的日子就是今天到目前為止的
     func previewJSON() -> String {
         lock.lock()
         let store = loadLocked()

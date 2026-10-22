@@ -166,9 +166,9 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         }
     }
 
-    // MARK: 設定頁
+    // MARK: 設定頁、DEBUG
 
-    /// <summary>「查看會送出的內容」：下一份要送的；還沒有已過完的日子就顯示今天到目前為止的</summary>
+    /// <summary>下一份要送的內容（控制通道的 usage、測試用；設定頁不顯示）；還沒有已過完的日子就是今天到目前為止的</summary>
     public string PreviewJson()
     {
         string installId, date;

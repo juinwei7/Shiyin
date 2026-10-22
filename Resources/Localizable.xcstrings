@@ -5315,17 +5315,6 @@
         }
       }
     },
-    "會送出的匿名使用統計": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anonymous Usage Statistics to Be Sent"
-          }
-        }
-      }
-    },
     "有 %lld 則建議的段落已經改過，沒有套用": {
       "extractionState": "manual",
       "localizations": {
@@ -5444,17 +5433,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Review"
-          }
-        }
-      }
-    },
-    "查看會送出的內容…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "See What’s Sent…"
           }
         }
       }
@@ -5988,13 +5966,13 @@
         }
       }
     },
-    "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉、看實際送出的內容。": {
+    "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed) that never includes meeting content. Turn it off, or see exactly what is sent, in Settings → Advanced."
+            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed) that never includes meeting content. You can turn it off in Settings → Advanced."
           }
         }
       }
@@ -7520,6 +7498,17 @@
         }
       }
     },
+    "詳細…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details…"
+          }
+        }
+      }
+    },
     "認識的人": {
       "extractionState": "manual",
       "localizations": {
@@ -8585,17 +8574,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Don’t mention this again during this recording"
-          }
-        }
-      }
-    },
-    "這是下一份要送給開發者的內容，每天最多一份。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This is the next summary that will be sent to the developer. At most one is sent per day."
           }
         }
       }

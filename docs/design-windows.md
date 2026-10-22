@@ -387,7 +387,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 - 統計網址：打包時寫進 app。`pack.ps1` 讀環境變數 `SHIYIN_USAGE_URL`，用 `"-p:ShiyinUsageUrl=…"` 傳給 `dotnet publish`，`Shiyin.App.csproj` 把它寫成組件的 `AssemblyMetadata("ShiyinUsageURL", …)`；`release-windows.yml` 的打包步驟帶 GitHub 的 repository variable（跟 Mac 同一個）。沒帶就是不送統計的版本。DEBUG 版不讀組件裡的網址，只在控制通道的 `usageurl` 設在記憶體時累計和送（同 M§30.7）。
 - `app.os`：`Windows 11 24H2 (26100.4652)`（名稱、DisplayVersion、build.UBR，不跟著介面語言）；`app.chip`：登錄的 ProcessorNameString（同 §12.7）；`app.uiLanguage`：拾音實際用的介面語言，`zh-Hant` 或 `en`（同 Mac 的寫法）。`app` 的字串超過 64 字就截斷（後台只收 64 字以內，被拒的那一天就丟了；Snapdragon 的 CPU 名稱接近這個長度）。
 - 送出：用 AppHost 的 HttpClient，每個請求 20 秒逾時；啟動 60 秒後、之後每小時（同 M§30.3）。
-- 設定 → 進階加一段「匿名使用統計」（開關、說明、「查看會送出的內容…」用對話框顯示可以選取的 JSON、「重設匿名 ID」）；使用說明「資料與隱私」加一條。文字同 M§30.5，只在有統計網址時顯示（DEBUG 一律顯示）。
+- 設定 → 進階的最下面（「其他」之後）一張卡片：「匿名使用統計」和「詳細…」；按下去是對話框（ContentDialog）：開關、說明、「重設匿名 ID」、「完成」（不顯示 JSON）。使用說明「資料與隱私」加一條。文字和行為同 M§30.5，只在有統計網址時顯示（DEBUG 一律顯示）。
 - DEBUG 控制通道：`usageurl <網址|off>`、`usage <輸出.json>`、`usageage <天數>`、`usagesend`，同 Mac 的 shiyinctl。虛擬機裡驗證時，假後台（`scripts/dev/fake-usage-server.py`）開在 Mac 上，用 `ssh -R` 讓虛擬機連 `http://127.0.0.1:<埠>`（同 §14.2 測更新）。
 
 ## 13. 匯出與封包

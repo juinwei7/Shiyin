@@ -603,50 +603,37 @@ public sealed class SettingsWindow : Window
         }
         else update.Children.Add(Note(L.T("這個版本沒有更新金鑰（開發版），不會檢查更新。")));
         column.Children.Add(Section(L.T("更新"), update));
-        // 匿名使用統計（M§30.5、R40.4）：有統計網址的版本才有
-        if (host.Usage.IsOffered) column.Children.Add(Section(L.T("匿名使用統計"), UsageStats()));
         column.Children.Add(Section(L.T("其他"),
             Ui.Button(L.T("重新顯示首次使用引導"), () => { S.Set(AppSettings.OnboardingKey, false); App.Current.ShowOnboarding(); }),
             Ui.Button(L.T("重建搜尋索引"), () => { host.Db.RebuildSearchIndex(); App.Current.Notice(L.T("搜尋索引已重建")); }),
             Ui.Button(L.T("回報問題…"), () => App.Current.ShowReport()),
             Ui.Button(L.T("關於拾音"), () => App.Current.ShowAbout())));
+        // 匿名使用統計（M§30.5、R40.4）：有統計網址的版本才有。放在最下面、只留一行，開關收在「詳細…」裡
+        if (host.Usage.IsOffered)
+            column.Children.Add(Ui.Card(Ui.Bar(Ui.Text(L.T("匿名使用統計"), 14), null, Ui.Button(L.T("詳細…"), ShowUsageStats))));
         return column;
     }
 
-    UIElement UsageStats()
+    /// <summary>「匿名使用統計」的「詳細…」（M§30.5、R40.4）：開關、說明、重設匿名 ID。不顯示送出的 JSON（使用者決定）</summary>
+    async void ShowUsageStats()
     {
         var usage = host.Usage;
         var toggle = Ui.Toggle(L.T("分享匿名使用統計"), usage.IsEnabled, on =>
         {
             S.Set(Services.UsageStats.EnabledKey, on);
-            // 關掉時立刻清掉還沒送的資料（R40.4）
+            // 關掉時立刻清掉還沒送的資料（R40.4），打開時建立今天的匯總
             if (on) usage.Touch(); else usage.ClearPending();
         });
-        var buttons = Ui.Row(8,
-            Ui.Button(L.T("查看會送出的內容…"), ShowUsagePreview),
-            Ui.Button(L.T("重設匿名 ID"), () => { usage.ResetInstallId(); App.Current.Notice(L.T("已重設匿名 ID")); }));
-        return Ui.Column(10, toggle,
-            Note(L.T("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。")),
-            buttons);
-    }
-
-    /// <summary>「查看會送出的內容…」（M§30.5）：下一份要送的 JSON，原樣顯示、可以選取複製</summary>
-    async void ShowUsagePreview()
-    {
-        // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行
-        var json = new TextBox
-        {
-            AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = host.Usage.PreviewJson(), IsReadOnly = true,
-            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"), MaxHeight = 360,
-        };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(json, L.T("會送出的匿名使用統計"));
+        var reset = Ui.Text("", 13, color: Ui.Secondary);
         var dialog = new ContentDialog
         {
-            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("會送出的匿名使用統計")),
-            Content = Ui.Column(12, Ui.Text(L.T("這是下一份要送給開發者的內容，每天最多一份。"), 13, color: Ui.Secondary), json),
+            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("匿名使用統計")),
+            Content = Ui.Column(12, toggle,
+                Ui.Text(L.T("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。"), 13, color: Ui.Secondary),
+                Ui.Row(10, Ui.Button(L.T("重設匿名 ID"), () => { usage.ResetInstallId(); reset.Text = L.T("已重設匿名 ID"); }), reset)),
             CloseButtonText = L.T("完成"), DefaultButton = ContentDialogButton.Close,
         };
         try { await dialog.ShowAsync(); }
-        catch (Exception e) { Log.Error($"usage preview failed: {e.GetType().Name}"); }
+        catch (Exception e) { Log.Error($"usage dialog failed: {e.GetType().Name}"); }
     }
 }

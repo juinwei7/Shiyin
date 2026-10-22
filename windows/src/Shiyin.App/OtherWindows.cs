@@ -249,7 +249,7 @@ public static class OtherWindows
             L.T("聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。"),
             L.T("API key 存在 Windows 的認證管理員，不會寫進任何檔案。"),
             // 匿名使用統計（M§30.5）：有統計網址的版本才寫
-            AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉、看實際送出的內容。") : null));
+            AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉。") : null));
         column.Children.Add(Section(L.T("快捷鍵"),
             L.F("%@：%@", "Ctrl+R", L.T("開始或停止錄音")),
             L.F("%@：%@", "Ctrl+Alt+Shift+R", L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）")),

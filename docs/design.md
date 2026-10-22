@@ -1171,12 +1171,12 @@ User-Agent: Shiyin/<版本>
 
 ### 30.5 設定頁、使用說明
 
-- 設定 → 進階加一段「匿名使用統計」：
-  - 開關「分享匿名使用統計」（`usageStats`，預設開）
+- 設定 → 進階的**最下面**（環境檢查、其他按鈕之後）只放一行：「匿名使用統計」和「詳細…」按鈕（2026-10-22 使用者要求藏深一點，原本是一整段開關和說明）。按「詳細…」打開小視窗「匿名使用統計」：
+  - 開關「分享匿名使用統計」（`usageStats`，預設開）；關掉時清掉還沒送的資料、打開時建立今天的匯總（同之前）
   - 說明：「每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。」
-  - 「查看會送出的內容…」：小視窗顯示下一份要送的 JSON（還沒有已過完的日子就顯示今天到目前為止的），可以選取複製
-  - 「重設匿名 ID」
-- 使用說明「資料與隱私」加一條：「每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉、看實際送出的內容。」
+  - 不顯示送出的 JSON（2026-10-22 使用者決定拿掉原本的「查看會送出的內容…」；收什麼寫在說明和 README，DEBUG 用 `shiyinctl usage` 看）
+  - 底部左邊「重設匿名 ID」（按了在旁邊顯示「已重設匿名 ID」），右邊「完成」
+- 使用說明「資料與隱私」加一條：「每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉。」
 - 這兩處只在 app 有統計網址時顯示（DEBUG 版一律顯示，方便驗證）：沒有網址的版本本來就不送，不寫會送。
 
 ### 30.6 統計網址（建置時寫進 app）
@@ -1192,11 +1192,11 @@ User-Agent: Shiyin/<版本>
 
 ### 30.8 隱私說明的新寫法（發布有統計網址的那一版時一起改）
 
-- README（中文，「資料與隱私」表格加一列；「整理工具選『不整理』｜完全離線」改成「…，並關掉匿名使用統計」）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉、看實際送出的內容。
-- README（英文；“Don’t summarize” 那一列同樣改成 “… with usage statistics turned off”）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. Turn it off, or see exactly what is sent, in Settings → Advanced.
+- README（中文，「資料與隱私」表格加一列；「整理工具選『不整理』｜完全離線」改成「…，並關掉匿名使用統計」）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉。
+- README（英文；“Don’t summarize” 那一列同樣改成 “… with usage statistics turned off”）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. You can turn it off in Settings → Advanced.
 - 官網（website.md §14 的隱私區塊，中英日；Mac 首頁和 Windows 頁都加，`content.mjs` 的 `privacy.usage`）：整理工具那一段後面加一句：「另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.」日文：「また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。」（日文版的介面名稱照 app 的英文介面寫）
 - requirements 第 4 節已經改好（2026-10-22）。
-- 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉、看送出的內容」。Mac（`v4.0.0`）和 Windows（`win-v4.0.0`）的版本說明都寫。
+- 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉」。Mac（`v4.0.0`）和 Windows（`win-v4.0.0`）的版本說明都寫。
 
 ### 30.9 Windows 版
 
@@ -1279,7 +1279,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D39 | 用片段聲紋的凝聚度判斷可能把人併在一起，只提示、不自動重新辨識 | 碰撞率：分群時同一片段的說話者會被強制分開，群數 ≥ 2 時一直是 0%（麻將也是）。看分出的人數：拾音不知道實際幾個人。說話秒數不平均：一般會議也常常一人主講。自動用更多人重新辨識：一般會議會把一個人拆成兩個；提示讓使用者決定 |
 | D40 | 錄音時的音量條用 AppKit 的 view 畫，自己定時讀音量 | SwiftUI 的音量條只在格數變的時候更新：說話時還是每秒十幾次，每次整個視窗重新排版（CPU 51%）。`TimelineView`、`Canvas`：一樣經過 SwiftUI 的更新。降低更新頻率：音量條看起來會頓。取捨：這一小塊不是 SwiftUI，截圖工具畫不出來（DEBUG 截圖時換回 SwiftUI 版） |
 | D41 | 收音提醒只看音量本身（背景多大聲、說話多小聲）持續多久，不看說話和背景差多少 | 用說話和背景的差（訊噪比）判斷吵：使用者正常的會議只差 8 dB，跟加了雜音的版本（6 dB）分不開，會一直誤報。用即時逐字稿的信心或字數：辨識不出來的原因很多（口音、語言），不一定是收音。取捨：麻將那種洗牌聲只在背景大聲的那一段抓得到，不吵的時候分錯人提醒不了（錄完的「說話者可能分得不夠」補這一塊） |
-| D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關＋看得到送出的內容）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
+| D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關；2026-10-22 起開關收在設定 → 進階最下面的「詳細…」裡、不顯示送出的 JSON）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
 | D101 | 匿名使用統計的後台用 Cloudflare Workers＋D1，網址是自己網域的子網域 | 自己租主機：要顧作業系統更新、備份、停機，一天幾百、幾千筆用不到。Supabase、Firebase：好用，但資料在第三方，隱私說明要多寫一家公司。PostHog 自架：很吃資源。放在官網的網域（Pages Functions）：官網現在是純靜態、CSP 很嚴，統計另外一個 Worker 互不影響，以後換後台只要換網址。取捨：Cloudflare 看得到請求的 IP（我們的資料庫不存）；D1 免費額度（每天 10 萬次寫入）以每台每天一筆來算夠用很久 |
 | D10 | 自己做簡單的更新器（JSON＋SHA-256＋designated requirement 檢查） | Sparkle 2：要在鑰匙圈產生並保管 EdDSA 私鑰、用 generate_appcast 產生 appcast，對只在公司內部發布的 app 來說太重。取捨：還沒改用自簽憑證（ad-hoc）時，designated requirement 只檢查 identifier，安全性靠 https 和更新網址的主機；改用自簽憑證後，新版必須是同一張憑證簽的 |
 | D90 | 是非題由整理工具在結構化輸出標出（`yesNo`），不由 app 從題目文字判斷（D42～D88 是 Windows 版、iPhone 版的編號，D89 是 R14.8） | app 看題目結尾（「嗎？」、「?」）判斷：中文、日文是非題的問法很多（「是不是」「有沒有」「でしょうか」），「負責人是誰？」又不是是非題，容易判錯；整理工具出題時就知道是不是在問「X 是不是 Y」。代價：結構化輸出多一個欄位，三個平台的標準答案要重新產生；以前整理的會議紀錄沒有這個標記，重新整理才有按鈕 |

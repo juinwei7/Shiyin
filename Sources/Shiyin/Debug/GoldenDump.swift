@@ -177,7 +177,7 @@ enum GoldenDump {
             }
             if let custom = f["customTemplate"], let data = try? JSONSerialization.data(withJSONObject: custom),
                let json = String(data: data, encoding: .utf8) {
-                let record = TemplateRecord(id: "custom-1", name: "客戶會議", builtin: false, definition: json)
+                let record = TemplateRecord(id: "custom-1", name: "客戶會議", builtin: false, definition: json)  // l10n-skip
                 w.text(dir + "summarize-custom.txt", NotesPrompt.summarize(context(record.definition(for: l))))
             }
             let general = TemplateRecord(id: "general", name: "", builtin: true, definition: BuiltinTemplates.all[0].definition.jsonString())
@@ -260,14 +260,14 @@ enum GoldenDump {
                               "prompt": WhisperEngine.debugChunkPrompt(base: base, previous: Array(transcribed.prefix(count)), language: fx.language.whisperCode)])
             }
             // 很長的前一段：超過 120 字（英文 400 字）要截斷
-            let long = (0..<40).map { TranscribedSegment(start: Double($0), end: Double($0) + 1, text: "第\($0)句 sentence number \($0)", lowConfidence: false) }
+            let long = (0..<40).map { TranscribedSegment(start: Double($0), end: Double($0) + 1, text: "第\($0)句 sentence number \($0)", lowConfidence: false) }  // l10n-skip
             chunk.append(["key": fx.key, "previous": "long",
                           "prompt": WhisperEngine.debugChunkPrompt(base: "P", previous: long, language: fx.language.whisperCode)])
         }
         w.json("whisper/chunk-prompts.json", chunk)
         w.json("whisper/hallucinations.json", WhisperEngine.hallucinationPhrases)
-        let ratios = ["短", "this is a normal sentence without much repetition at all",
-                      String(repeating: "重複", count: 40), String(repeating: "ha ", count: 30), "一二三四五六七八九十一二三四五六七八九十"]
+        let ratios = ["短", "this is a normal sentence without much repetition at all",  // l10n-skip
+                      String(repeating: "重複", count: 40), String(repeating: "ha ", count: 30), "一二三四五六七八九十一二三四五六七八九十"]  // l10n-skip
         w.json("whisper/compression.json", ratios.map { ["text": $0, "ratio": WhisperEngine.compressionRatio($0)] })
     }
 
@@ -620,7 +620,7 @@ enum GoldenDump {
                                       speakerCount: segments.compactMap(\.speaker).max() ?? 0, voices: fx.voices, transcribedWith: "breeze")
                 for (idx, name) in fx.speakers.sorted(by: { $0.key < $1.key }) { try db.renameSpeaker(mid, idx: idx, name: name) }
                 for b in fx.bookmarks { try db.addBookmark(mid, time: b.time, label: b.label) }
-                if let notes = fx.notes { try db.saveNotes(mid, notes: notes, by: "claude", reason: "整理", source: .generated) }
+                if let notes = fx.notes { try db.saveNotes(mid, notes: notes, by: "claude", reason: "整理", source: .generated) }  // l10n-skip
                 try db.updateUserNotes(mid, fx.meeting.userNotes)
                 for term in fx.glossary { try db.addTerm(term) }
             case "dumpTables":
