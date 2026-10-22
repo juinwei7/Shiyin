@@ -1041,6 +1041,17 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 
 2026-10-22 使用者決定：匿名使用統計（第 30 節）Mac、Windows 都放進 4.0.0（R40.7）。加了之後上面的「Mac 的 DMG」「Windows 的安裝檔」「CI」要用新的建置重新檢查一次。
 
+### 加了匿名使用統計之後重新檢查（2026-10-22，main 2e9ade1）
+
+| 項目 | 結果 | 說明 |
+|---|---|---|
+| 標準答案、資料庫 | ✅ | Mac DEBUG 版的 `dump-golden` 206 個檔案還是相同；資料庫沒有改（上面的升級檢查仍然有效） |
+| 介面文字、測試 | ✅ | `l10n.py check`、`windows-check` 通過；`dotnet build` 0 警告 0 錯誤，`dotnet test` 103 個通過 |
+| 官網 | ✅ | 版本說明各加一條匿名使用統計（§30.8）後試建置成功；首頁、Windows 頁有統計的隱私說明 |
+| CI | ✅ | `windows` 快轉到 main（2e9ade1）推上去：Windows 版測試、Mac 打包（run 39766794271）、Windows 版發布（run 39766798788）都通過，官網的部署被跳過 |
+| Mac 的 DMG | ✅ | 4.0.0（build 13）、Authority=Shiyin Self-Signed、簽章檢查通過；Info.plist 的 `ShiyinUsageURL` 是 `https://usage.weibuilds.com/v1/usage`；`shiyin-update.json` 的 SHA-256 相同 |
+| Windows 的安裝檔 | ✅ | 兩個架構的更新說明用正式公鑰驗過、SHA-256 相符；`Shiyin.dll` 裡有統計網址；ARM64 裝進虛擬機（4.0.0+2e9ade1），加 `--set usageStats=NO` 開 12 秒的合成會議：轉錄完成，`usage.json` 只有匿名 ID、沒有累計（測完刪掉，跟測試前一樣沒有這個檔案）；解除安裝乾淨 |
+
 ## 30. 匿名使用統計（2026-10-22，使用者已確認）
 
 ### 為什麼
