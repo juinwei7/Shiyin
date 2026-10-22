@@ -1,7 +1,7 @@
 ﻿# 官網截圖用（docs/website.md §16.4）：截拾音的某個視窗（DWM 的外框，不含陰影），或把視窗放到左上角
 #   snapwin.ps1 snap <視窗標題> <輸出.png>
-#   snapwin.ps1 place <視窗標題> -Width <寬> -Height <高>（邏輯像素）
-param([string]$Action, [string]$Title, [string]$Out, [int]$Width = 960, [int]$Height = 640)
+#   snapwin.ps1 place <視窗標題> -Width <寬> -Height <高> [-Top <上緣>]（邏輯像素；上緣是實際像素，整個視窗要在工作列上面，不然底部會被蓋住）
+param([string]$Action, [string]$Title, [string]$Out, [int]$Width = 960, [int]$Height = 640, [int]$Top = 6)
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
@@ -37,7 +37,7 @@ $scale = [Win]::GetDpiForWindow($h) / 96.0
 if ($Action -eq 'place') {
   [Win]::SetForegroundWindow($h) | Out-Null
   Start-Sleep -Milliseconds 500
-  $ok = [Win]::SetWindowPos($h, [IntPtr]::Zero, 30, 30, [int]($Width * $scale), [int]($Height * $scale), 0x0014)
+  $ok = [Win]::SetWindowPos($h, [IntPtr]::Zero, 30, $Top, [int]($Width * $scale), [int]($Height * $scale), 0x0014)
   Start-Sleep -Milliseconds 500
   $r = New-Object Win+RECT; [Win]::GetWindowRect($h, [ref]$r) | Out-Null
   "placed ok=$ok at scale $scale -> $($r.L),$($r.T) $($r.R - $r.L)x$($r.B - $r.T)"

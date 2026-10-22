@@ -27,7 +27,7 @@ export const content = {
       category: '會議記錄、逐字稿',
       features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
     },
-    nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站', windows: 'Windows' },
+    nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站', windows: 'Windows', mac: 'Mac' },
     intro: {
       iconAlt: '拾音圖示',
       h1: 'Mac 上的會議紀錄 app',
@@ -125,7 +125,7 @@ export const content = {
         available: (href) => `有 Windows 版，Windows 11（x64 和 ARM）都能用，功能跟 Mac 版一樣，<a href="${href}">看 Windows 版</a>。沒有手機版。`,
       },
     },
-    footer: { tagline: '拾音 Shiyin，個人開源專案', sponsor: '贊助', windows: 'Windows 版' },
+    footer: { tagline: '拾音 Shiyin，個人開源專案', sponsor: '贊助', windows: 'Windows 版', mac: 'Mac 版' },
     // Windows 版的頁面（docs/website.md §16）：有 Windows 版的 release 才產生
     windowsPage: {
       title: '拾音 Shiyin for Windows｜Windows 會議記錄、逐字稿 app，免費開源、錄音不上傳',
@@ -251,7 +251,7 @@ export const content = {
       category: 'Meeting notes, transcription',
       features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese and Japanese meetings'],
     },
-    nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site', windows: 'Windows' },
+    nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site', windows: 'Windows', mac: 'Mac' },
     intro: {
       iconAlt: 'Shiyin icon',
       h1: 'A meeting-notes app for your Mac',
@@ -348,7 +348,7 @@ export const content = {
         available: (href) => `There’s a Windows version for Windows 11 (x64 and ARM) with the same features: <a href="${href}">Shiyin for Windows</a>. There’s no phone version.`,
       },
     },
-    footer: { tagline: 'Shiyin, a personal open-source project', sponsor: 'Sponsor', windows: 'Windows' },
+    footer: { tagline: 'Shiyin, a personal open-source project', sponsor: 'Sponsor', windows: 'Windows', mac: 'Mac' },
     windowsPage: {
       title: 'Shiyin for Windows: Free Meeting Notes App, Transcribed Locally',
       description: 'Record Zoom, Meet and Teams without a bot, transcribe on your Windows 11 PC, and get meeting notes where every item has a timestamp that plays what was said. Faster with an NVIDIA graphics card. Recordings are never uploaded. Free and open source.',
@@ -474,7 +474,7 @@ export const content = {
       category: '會議記錄、逐字稿',
       features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
     },
-    nav: { features: '機能', privacy: 'プライバシー', changelog: 'リリースノート', languages: '言語', label: 'サイト', windows: 'Windows' },
+    nav: { features: '機能', privacy: 'プライバシー', changelog: 'リリースノート', languages: '言語', label: 'サイト', windows: 'Windows', mac: 'Mac' },
     intro: {
       iconAlt: '拾音のアイコン',
       h1: 'Mac の議事録アプリ',
@@ -572,7 +572,7 @@ export const content = {
         available: (href) => `Windows 版があります。Windows 11（x64 と ARM）で、Mac 版と同じ機能を使えます（<a href="${href}">Windows 版</a>）。スマートフォン版はありません。`,
       },
     },
-    footer: { tagline: '拾音 Shiyin、個人のオープンソースプロジェクト', sponsor: '支援する', windows: 'Windows 版' },
+    footer: { tagline: '拾音 Shiyin、個人のオープンソースプロジェクト', sponsor: '支援する', windows: 'Windows 版', mac: 'Mac 版' },
     windowsPage: {
       title: '拾音 Shiyin for Windows｜Windows の議事録・文字起こしアプリ（無料、ローカル処理）',
       description: 'Windows 11 で録音して文字起こしし、議事録にまとめます。Zoom、Meet、Teams もボットなしで録音でき、録音はアップロードされません。NVIDIA のグラフィックスカードがあると文字起こしが速くなります。無料、オープンソース。',

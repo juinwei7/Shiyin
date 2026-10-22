@@ -459,7 +459,7 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 | 最近更新 | 最新的 Windows 版（版本說明從 GitHub Release 讀，§7） |
 | 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
 
-- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框和底部壓到的工作列，成為 1418×940，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**長寬要是偶數（960 寬的版本也是，1418×940 → 960×636）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白（2026-10-22 使用者看到）。`make-images.sh` 遇到奇數尺寸會停下來。
+- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉（2026-10-22 使用者看到）。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白（2026-10-22 使用者看到）。`make-images.sh` 遇到奇數尺寸會停下來。
 - 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
 - 分享預覽圖先沿用首頁的（`og.png`）。
 
@@ -468,7 +468,7 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - 第一屏的「免費、開源，需要 macOS 26 和 Apple Silicon」後面加「・也有 Windows 版」，連到 Windows 版的頁面。
 - 用 Windows 的訪客（`navigator.userAgent` 有 Windows），第一屏上面多一行「你用的是 Windows 電腦，Windows 版在這裡 →」。用 `/platform.js`（另一個小檔案，CSP 只允許自己網站的 script）把預設 `hidden` 的那一行打開；沒有 JavaScript 時不出現，不影響其他內容。
 - 下載區：Mac 的下載照舊；原本 Windows 的那一塊改成一張卡片：「Windows 版」、一句需求（Windows 11、x64 或 ARM、有 NVIDIA 顯示卡時轉錄更快）、「下載 Windows 版」按鈕（x64）、「系統需求和安裝步驟」連到 Windows 頁的下載區。SmartScreen、智慧型應用程式控制的說明移到 Windows 頁。
-- 頁首的導覽（手機上隱藏）、頁尾加「Windows」。
+- 頁首的導覽（手機上隱藏）、頁尾加平台的切換：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」（2026-10-22 使用者要求）。
 - 常見問題「有 Windows 版或手機版嗎？」改成「有 Windows 版（Windows 11，x64 和 ARM），功能跟 Mac 版一樣」，連到 Windows 頁；沒有手機版。結構化資料的 FAQ 跟著。
 - `/llms.txt`：有 Windows 版時寫出 Windows 版的版本、需求和頁面連結，取代「Windows 版開發中」。
 

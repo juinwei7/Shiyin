@@ -56,6 +56,9 @@ function layout({ lang, site, css, route, paths, title, description, body, head 
   const href = (l) => (paths ? paths[l] ?? ROUTES.home(l) : ROUTES[target](l));
   const alternates = paths ? LANGS.filter((l) => paths[l]) : LANGS;
   const indexable = Boolean(route || paths);
+  // 切換平台（§16.2）：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」
+  const platformHref = route === 'windows' ? ROUTES.home(lang) : ROUTES.windows(lang);
+  const platformLabel = route === 'windows' ? c.nav.mac : c.nav.windows;
   const seo = indexable
     ? `<link rel="canonical" href="${site}${href(lang)}">
 ${alternates.map((l) => `<link rel="alternate" hreflang="${content[l].lang}" href="${site}${href(l)}">`).join('\n')}
@@ -95,7 +98,7 @@ ${head}</head>
     <a class="sub" href="${ROUTES.home(lang)}#how">${c.nav.features}</a>
     <a class="sub" href="${ROUTES.home(lang)}#privacy">${c.nav.privacy}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
-${guidesLangs().includes(lang) ? `    <a class="sub" href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${windows ? `    <a class="sub" href="${ROUTES.windows(lang)}"${route === 'windows' ? ' aria-current="page"' : ''}>${c.nav.windows}</a>\n` : ''}  </nav>
+${guidesLangs().includes(lang) ? `    <a class="sub" href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${windows ? `    <a class="sub" href="${platformHref}">${platformLabel}</a>\n` : ''}  </nav>
   ${languageMenu(lang, href)}
 </header>
 <main>
@@ -107,7 +110,7 @@ ${body}
     <a href="${GITHUB}">GitHub</a>
     <a href="${KOFI}">${c.footer.sponsor}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
-${windows ? `    <a href="${ROUTES.windows(lang)}">${c.footer.windows}</a>\n` : ''}${guidesLangs().includes(lang) ? `    <a href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${others.map((l) => `    <a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
+${windows ? `    <a href="${platformHref}">${route === 'windows' ? c.footer.mac : c.footer.windows}</a>\n` : ''}${guidesLangs().includes(lang) ? `    <a href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${others.map((l) => `    <a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
   </div>
 </footer>
 ${scripts}</body>
@@ -116,10 +119,10 @@ ${scripts}</body>
 }
 
 // 截圖：優先用 AVIF（960、1920 寬），PNG 當備援。first 是第一屏那張，不延後載入
-// win：Windows 版的截圖（docs/images/windows，1418×940，§16.1）
+// win：Windows 版的截圖（docs/images/windows，1418×946，§16.1）
 function shot(lang, name, alt, { first = false, caption = '', win = false } = {}) {
   const dir = content[lang].images + (win ? '/windows' : '');
-  const [width, height] = win ? [1418, 940] : [1920, 1344];
+  const [width, height] = win ? [1418, 946] : [1920, 1344];
   const loading = first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
   return `<picture>
   <source type="image/avif" srcset="${dir}/${name}-960.avif 960w, ${dir}/${name}.avif ${width}w" sizes="(max-width: 1000px) calc(100vw - 40px), 960px">
