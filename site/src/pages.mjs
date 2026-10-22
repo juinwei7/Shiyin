@@ -116,10 +116,10 @@ ${scripts}</body>
 }
 
 // 截圖：優先用 AVIF（960、1920 寬），PNG 當備援。first 是第一屏那張，不延後載入
-// win：Windows 版的截圖（docs/images/windows，1422×951，§16.1）
+// win：Windows 版的截圖（docs/images/windows，1422×948，§16.1）
 function shot(lang, name, alt, { first = false, caption = '', win = false } = {}) {
   const dir = content[lang].images + (win ? '/windows' : '');
-  const [width, height] = win ? [1422, 951] : [1920, 1344];
+  const [width, height] = win ? [1422, 948] : [1920, 1344];
   const loading = first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
   return `<picture>
   <source type="image/avif" srcset="${dir}/${name}-960.avif 960w, ${dir}/${name}.avif ${width}w" sizes="(max-width: 1000px) calc(100vw - 40px), 960px">
