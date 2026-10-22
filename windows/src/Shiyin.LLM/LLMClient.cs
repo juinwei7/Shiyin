@@ -45,6 +45,14 @@ public static class LLMProviders
     };
 
     public static bool UsesApiKey(this LLMProvider p) => p is LLMProvider.Anthropic or LLMProvider.OpenAI or LLMProvider.Gemini or LLMProvider.OpenAICompatible;
+    /// <summary>「取得 API key」的網頁（R35.3）；OpenAI 相容 API 各家不同，沒有</summary>
+    public static string? ApiKeyUrl(this LLMProvider p) => p switch
+    {
+        LLMProvider.Anthropic => "https://console.anthropic.com/settings/keys",
+        LLMProvider.OpenAI => "https://platform.openai.com/api-keys",
+        LLMProvider.Gemini => "https://aistudio.google.com/apikey",
+        _ => null,
+    };
     /// <summary>OpenAI 相容 API 的 key 可以不填：本機的 Ollama、LM Studio 不需要（M§19.3）</summary>
     public static bool KeyOptional(this LLMProvider p) => p == LLMProvider.OpenAICompatible;
     /// <summary>認證管理員裡的帳號名稱（Mac 是鑰匙圈的 account）</summary>
@@ -75,7 +83,10 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
 
     static string Describe(LLMErrorKind kind, string detail) => kind switch
     {
-        LLMErrorKind.NotInstalled => L.F("找不到 %@ 指令，請先安裝並登入，或到設定 → 整理工具改用 API key", detail),
+        // 一般使用者不知道什麼是指令：說清楚是給已經在用 Claude Code（Codex）的人，沒有的話改用 API（R35.4）
+        LLMErrorKind.NotInstalled => detail == "codex"
+            ? L.T("這台電腦找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
+            : L.T("這台電腦找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」"),
         LLMErrorKind.NotLoggedIn => detail == "codex"
             ? L.T("Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
             : L.T("Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。"),

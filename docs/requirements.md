@@ -1007,3 +1007,13 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 - 沒有 CLI、沒選過整理工具：引導預設「之後再設定」；匯入一場會議，轉錄完成、沒有排整理、沒有失敗的通知，會議頁顯示「還沒設定整理工具」和按鈕（Mac 的 DEBUG 版、Windows 的虛擬機，在真的畫面上按過）
 - 有 claude、沒選過：照舊用 claude
 - 選了 claude 但找不到：錯誤訊息是 R35.4 的說法
+
+### 驗收結果（2026-10-22）
+
+| 項目 | 結果 | 說明 |
+|---|---|---|
+| R35.1 沒有 CLI 先不整理 | ✅ | Mac DEBUG 版（`-debugNoCLI`、`-llmProvider ""`）匯入 91 秒的會議、Windows 虛擬機（`debugNoCli`、設定裡沒有 `llmProvider`）匯入 12 秒的會議：都只有轉錄、壓縮，沒有整理、校正、猜說話者，沒有失敗；有 claude、沒選過時照舊用 claude（Mac 的設定頁顯示 Claude、已登入）；Windows 的測試 `ProviderFallsBackToInstalledCli`、`NoSummarizerSetUpOnlyTranscribes` |
+| R35.2 還沒設定的提示 | 🟡 | 兩邊的會議頁都顯示「還沒設定整理工具…」和「設定整理工具」按鈕；Windows 在虛擬機用 UI Automation 按了，打開設定的整理工具頁；Mac 的按鈕還沒在真的畫面上按（視窗在別的桌面） |
+| R35.3 引導、設定頁 | ✅ | 兩邊的引導都預設「之後再設定（先不整理）」、CLI 寫「沒有安裝（給已經在用…的人）」；選 Gemini 有「取得 API key」；設定頁顯示「之後再設定」和說明 |
+| R35.4 找不到 CLI 的訊息 | ✅ | 選了 claude、找不到：Mac 的整理工作、Windows 的會議頁都是新的說法；Windows 設定頁的狀態寫「這台電腦沒有安裝 claude…」 |
+| R35.5 iPhone | 🟡 | 還沒接（`ios` 分支） |

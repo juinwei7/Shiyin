@@ -11,7 +11,7 @@ public static class CliLogin
     public sealed record Status(bool LoggedIn, string Detail);
 
     static ToolCommand? Tool(LLMProvider provider) =>
-        new WindowsToolLocator().Find(provider == LLMProvider.Codex ? "codex" : "claude");
+        AppHost.Current.Tools.Find(provider == LLMProvider.Codex ? "codex" : "claude");
 
     /// <summary>查登入狀態，不會送出請求、不消耗額度。找不到指令或看不懂輸出時回傳 null</summary>
     public static async Task<Status?> Check(LLMProvider provider)
@@ -48,7 +48,7 @@ public static class CliLogin
     {
         if (Tool(provider) is not { } tool)
         {
-            host.Notifier.Notice(L.F("找不到 %@ 指令，請先安裝並登入，或到設定 → 整理工具改用 API key", provider == LLMProvider.Codex ? "codex" : "claude"));
+            host.Notifier.Notice(LLMException.NotInstalled(provider == LLMProvider.Codex ? "codex" : "claude").Message);
             return;
         }
         Shell.OpenLoginTerminal(tool, provider == LLMProvider.Codex ? ["login"] : ["auth", "login"]);

@@ -504,7 +504,9 @@ public sealed class JobRunner
         // 草稿（M§21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
         if (draft && db.Segments(job.MeetingId).Count > 0) return false;
         var provider = settings.Provider;
-        if (provider == LLMProvider.None) throw LLMException.Failed(L.T("整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"));
+        if (provider == LLMProvider.None)
+            throw LLMException.Failed(settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"));
         state.Provider = provider;
         state.Stage = draft ? L.T("整理草稿") : answers is null ? L.T("整理") : L.T("校稿");
         var segments = db.Segments(job.MeetingId, draft ? "live" : "final");

@@ -739,7 +739,8 @@ public sealed class AppController
         }
         if (Settings.Provider == LLMProvider.None)
         {
-            Error?.Invoke(L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
             return;
         }
         Perform(id, () => Db.Enqueue(id, JobKind.Summarize));
@@ -780,7 +781,8 @@ public sealed class AppController
             .Select(a => new ReviewAnswerJson(notes.ReviewItems[a.Index].Time, notes.ReviewItems[a.Index].Question, a.Text)).ToList();
         if (answered.Count > 0 && Settings.Provider == LLMProvider.None)
         {
-            Error?.Invoke(L.T("整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API"));
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，沒辦法依回答修正。請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API"));
             return false;
         }
         Perform(id, () =>
@@ -803,7 +805,8 @@ public sealed class AppController
         if (Db.Segments(id).Count == 0) { Notice?.Invoke(L.T("還沒有逐字稿可以檢查")); return; }
         if (Settings.Provider == LLMProvider.None)
         {
-            Error?.Invoke(L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
             return;
         }
         Perform(id, () => Db.Enqueue(id, JobKind.Correct));

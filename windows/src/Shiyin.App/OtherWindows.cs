@@ -135,29 +135,38 @@ public static class OtherWindows
 
     static FrameworkElement Providers(AppHost host, Action render)
     {
-        var current = host.Settings.Provider;
-        var tools = new WindowsToolLocator();
-        var claude = tools.Find("claude") is null ? L.T("：找不到") : "";
-        var codex = tools.Find("codex") is null ? L.T("：找不到") : "";
+        var settings = host.Settings;
+        var hasClaude = host.Tools.Find("claude") is not null;
+        var hasCodex = host.Tools.Find("codex") is not null;
+        var noCli = !hasClaude && !hasCodex;
+        // 沒選過時顯示自動選到的那一個；找不到 claude、codex 時是「之後再設定」（null，R35.3、M§19.6）。改了才寫進設定
+        LLMProvider? selected = settings.DebugProvider ?? settings.ChosenProvider ?? (hasClaude ? LLMProvider.Claude : hasCodex ? LLMProvider.Codex : null);
+        var current = selected ?? LLMProvider.None;
         var group = new RadioButtons();
-        (LLMProvider Provider, string Label)[] options =
+        List<(LLMProvider? Provider, string Label)> options =
         [
-            (LLMProvider.Claude, L.T("Claude（claude CLI）") + claude), (LLMProvider.Codex, L.T("Codex（codex CLI）") + codex),
+            (LLMProvider.Claude, L.T("Claude（claude CLI）") + (hasClaude ? "" : L.T("：沒有安裝（給已經在用 Claude Code 的人）"))),
+            (LLMProvider.Codex, L.T("Codex（codex CLI）") + (hasCodex ? "" : L.T("：沒有安裝（給已經在用 Codex 的人）"))),
             (LLMProvider.Anthropic, L.T("Anthropic API（填 API key）")), (LLMProvider.OpenAI, L.T("OpenAI API（填 API key）")),
             (LLMProvider.Gemini, L.T("Gemini API（填 API key）")), (LLMProvider.OpenAICompatible, L.T("OpenAI 相容 API（Groq、OpenRouter、Ollama、LM Studio）")),
             (LLMProvider.None, L.T("不整理，只要逐字稿")),
         ];
+        if (noCli) options.Insert(0, (null, L.T("之後再設定（先不整理）")));
         foreach (var (_, label) in options) group.Items.Add(label);
         // RadioButtons 還沒載入前設 SelectedIndex 不會顯示（2026-10-21 在虛擬機看到），載入後再設
-        var index = Array.FindIndex(options, o => o.Provider == current);
+        var index = options.FindIndex(o => o.Provider == selected);
         group.Loaded += (_, _) => { if (group.SelectedIndex != index) group.SelectedIndex = index; };
         group.SelectionChanged += (_, _) =>
         {
             if (group.SelectedIndex < 0 || group.SelectedIndex == index) return;
-            host.Settings.Set(AppSettings.ProviderKey, options[group.SelectedIndex].Provider.Code());
+            if (options[group.SelectedIndex].Provider is { } chosen) settings.Set(AppSettings.ProviderKey, chosen.Code());
+            else settings.Remove(AppSettings.ProviderKey);
             render();
         };
-        var column = Ui.Column(14, Ui.Text(L.T("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。"), color: Ui.Secondary), group);
+        var column = Ui.Column(14, Ui.Text(L.T("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。"), color: Ui.Secondary));
+        if (noCli)
+            column.Children.Add(Ui.Text(L.T("這台電腦沒有 Claude Code 或 Codex。要用 AI 整理會議紀錄，選一個 API 並貼上 API key（有取得 key 的連結）；也可以之後再設定，錄音和逐字稿照常能用。"), color: Ui.Secondary));
+        column.Children.Add(group);
         if (current == LLMProvider.OpenAICompatible)
             column.Children.Add(Ui.Text(L.T("網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。"), color: Ui.Secondary));
         else if (current.UsesApiKey())
@@ -176,6 +185,8 @@ public static class OtherWindows
                 catch (InvalidOperationException e) { status.Text = e.Message; status.Foreground = Ui.Danger; }
             })));
             column.Children.Add(status);
+            if (current.ApiKeyUrl() is { } url)
+                column.Children.Add(Ui.Link(L.T("取得 API key"), () => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url))));
         }
         else if (current is LLMProvider.Claude or LLMProvider.Codex)
             column.Children.Add(Ui.Text(L.T("要先安裝並登入對應的 CLI。登入後可以在「設定 → 整理工具」按「測試整理工具」確認。"), 13, color: Ui.Secondary));

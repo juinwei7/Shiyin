@@ -181,7 +181,15 @@ public sealed class AppSettings
     public LLMProvider? DebugProvider { get; set; }
     public string? DebugModel { get; set; }
 
-    public LLMProvider Provider => DebugProvider ?? LLMProviders.Parse(String(ProviderKey)) ?? LLMProvider.Claude;
+    /// <summary>使用者選過的整理工具；沒選過（或不是認得的值）是 null（R35）</summary>
+    public LLMProvider? ChosenProvider => LLMProviders.Parse(String(ProviderKey));
+    /// <summary>找這台電腦上的 CLI（先 claude 再 codex）：App 用 WindowsToolLocator 給（快取 30 秒，design-windows §10）；沒給就是找不到</summary>
+    public Func<LLMProvider?> DetectCli { get; set; } = () => null;
+    /// <summary>沒選過時自動用找得到的 CLI，都沒有就先不整理（R35.1、M§19.6）</summary>
+    public LLMProvider DetectedProvider => DetectCli() ?? LLMProvider.None;
+    public LLMProvider Provider => DebugProvider ?? ChosenProvider ?? DetectedProvider;
+    /// <summary>還沒選過整理工具、也找不到 CLI：介面說「還沒設定整理工具」，不說「不整理」（R35.2）</summary>
+    public bool NeedsProviderSetup => DebugProvider is null && ChosenProvider is null && Provider == LLMProvider.None;
     public string Model => DebugModel ?? String(Provider.ModelKey()) ?? "";
     public bool AutoSummarize => Flag(AutoSummarizeKey, true);
     public bool CompressAudio => Flag(CompressAudioKey, true);

@@ -79,7 +79,11 @@ public sealed class AppHost
         Keys = Debug && !Settings.Flag("debugRealKeychain", false) ? new MemoryKeyStore() : new CredentialStore();
         var children = new ChildProcesses();
         var runner = new ProcessRunner { OnStarted = children.Add };
-        Llm = new LLMClient(Keys, new WindowsToolLocator(), runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl };
+        // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）
+        Tools = Debug && Settings.Flag("debugNoCli", false) ? new NoCliTools(new WindowsToolLocator()) : new WindowsToolLocator();
+        Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl };
+        // 沒選過整理工具時用找得到的 CLI（R35.1）：要掃過 PATH 的每個資料夾，快取 30 秒
+        Settings.DetectCli = CachedCliDetector(Tools);
         var engines = new SpeechEngines(Models);
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power);
@@ -171,6 +175,29 @@ public sealed class AppHost
         if (Updater is not null) _ = Updater.RunAutomaticChecks(CancellationToken.None);
     }
 
+    /// <summary>找 claude、codex（設定頁、引導、整理工具共用；DEBUG 的 debugNoCli 會換掉）</summary>
+    public IToolLocator Tools { get; }
+
+    /// <summary>找這台電腦上的 CLI，先 claude 再 codex（R35.1）；30 秒內不重找</summary>
+    static Func<LLMProvider?> CachedCliDetector(IToolLocator tools)
+    {
+        var gate = new object();
+        LLMProvider? found = null;
+        var checkedAt = DateTime.MinValue;
+        return () =>
+        {
+            lock (gate)
+            {
+                if (DateTime.UtcNow - checkedAt > TimeSpan.FromSeconds(30))
+                {
+                    found = tools.Find("claude") is not null ? LLMProvider.Claude : tools.Find("codex") is not null ? LLMProvider.Codex : null;
+                    checkedAt = DateTime.UtcNow;
+                }
+                return found;
+            }
+        };
+    }
+
     /// <summary>快捷鍵被別的 app 佔走的原因（設定頁顯示）</summary>
     public string? HotKeyError { get; set; }
 
@@ -228,6 +255,12 @@ public sealed class AppHost
         Player.Dispose();
         Db.Dispose();
     }
+}
+
+/// <summary>當成沒有安裝 claude、codex（DEBUG 的 debugNoCli，M§19.6）</summary>
+sealed class NoCliTools(IToolLocator inner) : IToolLocator
+{
+    public ToolCommand? Find(string name) => name is "claude" or "codex" ? null : inner.Find(name);
 }
 
 /// <summary>更新金鑰的公鑰（design-windows §14.2）：scripts/windows/update-key.cs keygen 產生（2026-10-22）；空的時候不檢查更新。

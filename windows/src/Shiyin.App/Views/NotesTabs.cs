@@ -101,6 +101,12 @@ public sealed class NotesTabs
         if (status is MeetingStatus.Recording) panel.Children.Add(Ui.Text(L.T("錄音結束、轉錄完成後，會議紀錄會出現在這裡。"), color: Ui.Secondary));
         else if (status?.IsActive == true) panel.Children.Add(Ui.Text(L.T("轉錄和整理完成後，會議紀錄會出現在這裡。"), color: Ui.Secondary));
         else if (detail.Segments.Count == 0 && detail.Meeting.UserNotes.Length == 0) panel.Children.Add(Ui.Text(L.T("還沒有逐字稿。"), color: Ui.Secondary));
+        else if (host.Settings.NeedsProviderSetup)
+        {
+            // 沒選過整理工具、也沒有 claude、codex（R35.2）：說還沒設定，給打開設定的按鈕（設定一打開就是整理工具）
+            panel.Children.Add(Ui.Text(L.T("還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。"), color: Ui.Secondary));
+            panel.Children.Add(Ui.Button(L.T("設定整理工具"), () => App.Current.ShowSettings()));
+        }
         else
         {
             var none = host.Settings.Provider == LLMProvider.None;

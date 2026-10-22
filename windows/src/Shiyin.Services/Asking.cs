@@ -31,8 +31,9 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
     public const int CharacterLimit = 40_000;
 
     /// <summary>不能問時的原因</summary>
-    public string? UnavailableReason => settings.Provider == LLMProvider.None
-        ? L.T("整理工具設定為「不整理」，沒辦法提問；請到設定改成 Claude、Codex 或 API") : null;
+    public string? UnavailableReason => settings.Provider != LLMProvider.None ? null
+        : settings.NeedsProviderSetup ? L.T("還沒設定整理工具，沒辦法提問；請到設定選擇 Claude、Codex 或 API")
+        : L.T("整理工具設定為「不整理」，沒辦法提問；請到設定改成 Claude、Codex 或 API");
 
     static string Line(Segment s, IReadOnlyDictionary<int, string> names, MeetingLanguage language)
     {

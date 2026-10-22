@@ -1058,6 +1058,61 @@
         }
       }
     },
+    "這台電腦找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude isn't installed on this PC. If you don't use Claude Code, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台電腦找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex isn't installed on this PC. If you don't use Codex, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台電腦沒有 Claude Code 或 Codex。要用 AI 整理會議紀錄，選一個 API 並貼上 API key（有取得 key 的連結）；也可以之後再設定，錄音和逐字稿照常能用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This PC doesn't have Claude Code or Codex. To have AI write your meeting notes, choose an API and paste an API key (there's a link to get one). You can also set this up later; recording and transcripts work either way."
+          }
+        }
+      }
+    },
+    "這台電腦沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude isn't installed on this PC. If you don't use Claude Code, choose an API instead"
+          }
+        }
+      }
+    },
+    "這台電腦沒有安裝 codex：沒有在用 Codex 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex isn't installed on this PC. If you don't use Codex, choose an API instead"
+          }
+        }
+      }
+    },
     "這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。": {
       "extractionState": "manual",
       "localizations": {
@@ -1120,6 +1175,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "If something goes wrong, choose Report a problem… in Settings → Advanced; it includes the version and environment (no meeting content)."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具：錄音、轉錄、逐字稿全部留在這台電腦。選好整理工具之後，才會整理成會議紀錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet: recordings, transcription and transcripts all stay on this PC. Meeting notes are created once you choose a summarizer."
           }
         }
       }

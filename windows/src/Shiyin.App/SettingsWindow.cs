@@ -88,9 +88,13 @@ public sealed class SettingsWindow : Window
     {
         var provider = S.Provider;
         var column = Ui.Column(14);
-        column.Children.Add(Ui.Combo(LLMProviders.All.Select(p => (p, p.Label())), provider, p =>
+        // 選單顯示實際用的整理工具；這台電腦沒有 claude、codex 時多「之後再設定」，選它等於清掉設定（R35.3、M§19.6）
+        var options = LLMProviders.All.Select(p => ((LLMProvider?)p, p.Label())).ToList();
+        if (S.DetectedProvider == LLMProvider.None) options.Insert(0, (null, L.T("之後再設定（先不整理）")));
+        column.Children.Add(Ui.Combo(options, S.NeedsProviderSetup ? null : provider, p =>
         {
-            S.Set(AppSettings.ProviderKey, p.Code());
+            if (p is { } chosen) S.Set(AppSettings.ProviderKey, chosen.Code());
+            else S.Remove(AppSettings.ProviderKey);
             Show();
         }, L.T("整理工具")));
 
@@ -101,9 +105,10 @@ public sealed class SettingsWindow : Window
             login.Visibility = Visibility.Collapsed;
             async void Check()
             {
-                if (new WindowsToolLocator().Find(provider == LLMProvider.Claude ? "claude" : "codex") is null)
+                if (host.Tools.Find(provider == LLMProvider.Claude ? "claude" : "codex") is null)
                 {
-                    status.Text = L.T("找不到，請先安裝並登入");
+                    status.Text = provider == LLMProvider.Codex ? L.T("這台電腦沒有安裝 codex：沒有在用 Codex 的話，請改選 API")
+                        : L.T("這台電腦沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API");
                     return;
                 }
                 var result = await CliLogin.Check(provider);
@@ -164,6 +169,8 @@ public sealed class SettingsWindow : Window
                     Show();
                 }));
             column.Children.Add(Ui.Column(6, key, buttons, error));
+            if (provider.ApiKeyUrl() is { } url)
+                column.Children.Add(Ui.Link(L.T("取得 API key"), () => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url))));
         }
 
         if (provider != LLMProvider.None)
@@ -234,7 +241,9 @@ public sealed class SettingsWindow : Window
 
     string Privacy(LLMProvider provider) => provider switch
     {
-        LLMProvider.None => L.T("目前不整理：錄音、轉錄、逐字稿全部留在這台電腦。"),
+        LLMProvider.None => S.NeedsProviderSetup
+            ? L.T("還沒設定整理工具：錄音、轉錄、逐字稿全部留在這台電腦。選好整理工具之後，才會整理成會議紀錄。")
+            : L.T("目前不整理：錄音、轉錄、逐字稿全部留在這台電腦。"),
         LLMProvider.Claude or LLMProvider.Anthropic => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。"),
         LLMProvider.Codex or LLMProvider.OpenAI => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。"),
         LLMProvider.Gemini => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。"),

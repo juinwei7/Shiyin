@@ -64,12 +64,36 @@ public sealed class ServicesTests : IDisposable
         var again = AppSettings.Load(file);
         Assert.False(again.CompressAudio);
         Assert.Equal("both", again.RecordSource);
-        Assert.Equal(LLMProvider.Claude, again.Provider);
+        // 沒選過整理工具、也沒有 claude、codex（測試裡沒給找 CLI 的方法）：先不整理（R35.1）
+        Assert.Null(again.ChosenProvider);
+        Assert.Equal(LLMProvider.None, again.Provider);
+        Assert.True(again.NeedsProviderSetup);
         Assert.True(again.AutoSummarize);
         Assert.Equal(LLMProvider.Gemini, settings.Provider);
         // 壞掉的檔案當成沒有設定
         File.WriteAllText(file, "{not json");
         Assert.Equal("mic", AppSettings.Load(file).RecordSource);
+    }
+
+    [Fact]
+    public void ProviderFallsBackToInstalledCli()
+    {
+        // 沒選過：找得到的 CLI（R35.1）；找不到是「還沒設定」，跟使用者選的「不整理」分開（R35.2）
+        var settings = AppSettings.InMemory();
+        LLMProvider? installed = LLMProvider.Codex;
+        settings.DetectCli = () => installed;
+        Assert.Equal((LLMProvider.Codex, false), (settings.Provider, settings.NeedsProviderSetup));
+        installed = null;
+        Assert.Equal((LLMProvider.None, true), (settings.Provider, settings.NeedsProviderSetup));
+        settings.Set(AppSettings.ProviderKey, "none");
+        Assert.Equal((LLMProvider.None, false), (settings.Provider, settings.NeedsProviderSetup));
+        settings.Set(AppSettings.ProviderKey, "gemini");
+        Assert.Equal((LLMProvider.Gemini, false), (settings.Provider, settings.NeedsProviderSetup));
+        // 清掉設定（選「之後再設定」）就回到沒選過
+        settings.Remove(AppSettings.ProviderKey);
+        Assert.Equal((LLMProvider.None, true), (settings.Provider, settings.NeedsProviderSetup));
+        settings.DebugProvider = LLMProvider.Anthropic;
+        Assert.Equal((LLMProvider.Anthropic, false), (settings.Provider, settings.NeedsProviderSetup));
     }
 
     [Fact]
@@ -759,5 +783,28 @@ public sealed class ServicesTests : IDisposable
         var original = await new Velopack.Sources.GithubSource(repo, null, false, new FakeGitHub(list.ToJsonString(), feed))
             .GetReleaseFeed(Velopack.Logging.NullVelopackLogger.Instance, "ShiyinApp", "win-x64");
         Assert.Empty(original.Assets);
+    }
+
+    [Fact]
+    public async Task NoSummarizerSetUpOnlyTranscribes()
+    {
+        // 沒選過整理工具、也沒有 claude、codex（R35.1）：轉錄照常，不排整理、校正、猜說話者，也不會失敗
+        var settings = AppSettings.InMemory();
+        var (runner, _, _) = Runner(settings);
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var id = Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+        var finished = new List<(JobKind Kind, Exception? Error)>();
+        runner.Finished += (job, error) => { lock (finished) finished.Add((job.Kind, error)); };
+        runner.Start();
+        try
+        {
+            await Until(() => db.Segments(id).Count == 3 && db.ActiveJobs().Count == 0);
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.DoesNotContain(finished, f => f.Kind is JobKind.Summarize or JobKind.Correct or JobKind.NameSpeakers);
+        Assert.All(finished, f => Assert.Null(f.Error));
+        Assert.Contains(finished, f => f.Kind == JobKind.Transcribe);
+        Assert.Null(db.Meeting(id)!.Notes);
     }
 }
