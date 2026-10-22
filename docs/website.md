@@ -480,5 +480,6 @@ Windows 使用者最容易卡住的是第一次執行時的 SmartScreen（拾音
 
 - 示範資料：Mac 的 `~/Library/Caches/ShiyinDemo/home`（中文）、`ShiyinDemoEN/home`（英文）的資料庫用 `sqlite3 .backup` 複製，加上 `audio/`；中文的拿掉 Mac 截圖裡沒有的兩場（12、14）。兩邊的資料庫結構相同（requirements R28.5），直接放進虛擬機的 `C:\ShiyinDemo`、`C:\ShiyinDemoEN`，模型用硬連結。
 - 解析度和縮放：UTM 會把高度定在視窗的高度（1044），2560×1044 最多 150%。用 `DisplayConfigSetDeviceInfo`（設定 app 用的同一個）改縮放，app 不用重開。截圖用 DWM 的外框（`DWMWA_EXTENDED_FRAME_BOUNDS`）和 `CopyFromScreen`，截圖的程式要宣告支援高 DPI（`SetThreadDpiAwarenessContext`），不然座標會被換算。
+- 專案在有 iCloud 同步的桌面：`make-images.sh` 短時間內重寫同一個檔案時，iCloud 會留下「summary 2.avif」這種衝突副本（舊的內容），commit 前用 `git status` 看有沒有沒加進 git 的副本，刪掉（2026-10-22 遇到）。
 - 工具在 `scripts/windows/vm/ps/`：`display.ps1`（解析度）、`dpi.ps1`（縮放）、`snapwin.ps1`（放好視窗、截圖）、`clickname.ps1`（用虛擬機的滑鼠點元件）、`setnotes.ps1`（填輸入框），用 `insession.sh` 在桌面跑。截完把縮放改回 100%、解析度改回 1024×768。
 - 摘要：點「摘要」分頁讓焦點離開搜尋框；逐字稿：點 00:24（英文 00:22）那一段的時間；錄音：`record-sim` 用 Lumio 的錄音（英文用定價那場），筆記用 UI Automation 填兩行，再點側欄讓筆記框沒有焦點，約 30 秒時截。點擊用虛擬機裡的滑鼠（只送進虛擬機），點完滑鼠移到畫面外，等提示框消失再截。

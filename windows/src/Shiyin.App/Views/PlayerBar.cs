@@ -14,7 +14,8 @@ public sealed class PlayerBar
 {
     readonly AppHost host;
     readonly Grid root = new() { ColumnSpacing = 14, Padding = new Thickness(18, 10, 18, 10) };
-    readonly Button play = new() { Width = 40 };
+    // 不固定寬度：固定 40 時按鈕預設的左右內距（各 11）只剩 18 放 20 寬的圖示，三角形右邊被切掉（2026-10-22 使用者看到）
+    readonly Button play = new() { Padding = new Thickness(10, 6, 10, 6) };
     readonly TextBlock current = Ui.Text("0:00", 13, wrap: false);
     readonly TextBlock total = Ui.Text("0:00", 13, wrap: false);
     readonly DropDownButton speed = new();
