@@ -104,7 +104,7 @@ public sealed class DetailView
         foreach (var item in tabs.Items)
         {
             var tab = (DetailTab)item.Tag;
-            var count = value.Notes?.ReviewItems.Count ?? 0;
+            var count = value.ReviewCount;   // 會議紀錄的待確認＋說話者的建議（R33.3）
             item.Text = tab == DetailTab.Review && count > 0 ? $"{tab.Label()} {count}" : tab.Label();
             if (tab == window.State.Tab) tabs.SelectedItem = item;
         }
@@ -218,10 +218,18 @@ public sealed class DetailView
                 if (Detail.SpeakerSources.GetValueOrDefault(idx) == "voiceprint")
                 {
                     // 聲紋自動帶入的名字（M§21.4，同 Mac 的 AutoSpeakerName）：名字本身可以點（沒有框和箭頭），
-                    // 後面接一個小膠囊「自動」。點名字可以說不是他、到逐字稿改名
+                    // 後面接一個小膠囊「自動」。點名字直接選是別人（最像的幾位認識的人，一次改名、記住聲音、改會議紀錄，R33.4），或說不是他
                     var menu = new MenuFlyout();
-                    menu.Items.Add(Ui.Item(L.F("不是%@", Detail.Speakers[idx]), () => host.Controller.RejectVoiceprintMatch(meeting.Id!.Value, idx)));
-                    menu.Items.Add(Ui.Item(L.T("到逐字稿改名"), () => window.State.SetTab(DetailTab.Transcript)));
+                    var others = Detail.SpeakerCandidates.GetValueOrDefault(idx) ?? [];
+                    if (others.Count > 0)
+                    {
+                        menu.Items.Add(Ui.Item(L.T("是別人："), () => { }, enabled: false));
+                        foreach (var other in others)
+                            menu.Items.Add(Ui.Item(other, () => host.Controller.RenameSpeaker(meeting.Id!.Value, idx, other)));
+                    }
+                    menu.Items.Add(Ui.Item(L.T("其他人…（到逐字稿改名）"), () => window.State.SetTab(DetailTab.Transcript)));
+                    menu.Items.Add(new MenuFlyoutSeparator());
+                    menu.Items.Add(Ui.Item(L.F("不是%@（不知道是誰）", Detail.Speakers[idx]), () => host.Controller.RejectVoiceprintMatch(meeting.Id!.Value, idx)));
                     var button = new HyperlinkButton { Content = name, Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
                     button.Click += (_, _) => menu.ShowAt(button);
                     Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.F("%@（自動）", Detail.Speakers[idx]));
@@ -373,7 +381,7 @@ public sealed class DetailView
             Ui.Button(L.T("全部套用"), () => host.Controller.ApplyAllSpeakerSuggestions(id), accent: true)));
         panel.Width = 420;
         view.Flyout = new Flyout { Content = panel };
-        return Banner(Ui.Text(L.F("從對話內容猜到 %lld 位說話者的名字", suggestions.Count), 13), view,
+        return Banner(Ui.Text(L.F("猜到 %lld 位說話者的名字", suggestions.Count), 13), view,
             new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(20, 0x2D, 0x6A, 0x5D)));
     }
 

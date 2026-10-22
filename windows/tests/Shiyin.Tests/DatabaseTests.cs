@@ -72,11 +72,11 @@ public sealed class DatabaseTests : IDisposable
     [Fact]
     public void SameAsMac()
     {
-        // 標準答案是 Mac 的門檻算的（Windows 的聲紋模型不同，門檻也不同，D58）
-        var threshold = AppDatabase.VoiceprintThreshold;
-        AppDatabase.VoiceprintThreshold = 0.65;
+        // 標準答案是 Mac 的門檻算的（Windows 的聲紋模型不同，門檻也不同，D58、M§21.4）
+        var (threshold, auto, margin) = (AppDatabase.VoiceprintThreshold, AppDatabase.VoiceprintAutoThreshold, AppDatabase.VoiceprintAutoMargin);
+        (AppDatabase.VoiceprintThreshold, AppDatabase.VoiceprintAutoThreshold, AppDatabase.VoiceprintAutoMargin) = (0.65, 0.88, 0.15);
         try { ReplayMacOperations(); }
-        finally { AppDatabase.VoiceprintThreshold = threshold; }
+        finally { (AppDatabase.VoiceprintThreshold, AppDatabase.VoiceprintAutoThreshold, AppDatabase.VoiceprintAutoMargin) = (threshold, auto, margin); }
     }
 
     void ReplayMacOperations()

@@ -29,13 +29,17 @@ public sealed partial class AppDatabase
     /// <summary>說話少於這個秒數不比對、不學：太短的聲紋不準</summary>
     public static double VoiceprintMinimumSeconds { get; set; } = 8.0;
     /// <summary>相似度門檻（cosine）。Mac 是 0.65；Windows 的聲紋模型（3D-Speaker）不同：AMI 9 場陌生人最高 0.535、
-    /// 同一人最低 0.632，取 0.6（design-windows §9、D58）</summary>
+    /// 同一人最低 0.632，取 0.6（design-windows §9、D58）。到這裡算候選，沒到直接帶入的門檻就在待確認問（R33）</summary>
     public static double VoiceprintThreshold { get; set; } = 0.6;
+    /// <summary>直接帶入：很像，而且比第二像的人高出一截（M§21.4、D91）。Mac 是 0.88、0.15；Windows 的模型分數比較低，
+    /// AMI 同一人 0.61～0.92，取 0.78：第一次 17 位直接帶入 10、問 7，聲紋存多了直接帶入 16、問 1（design-windows §9）</summary>
+    public static double VoiceprintAutoThreshold { get; set; } = 0.78;
+    public static double VoiceprintAutoMargin { get; set; } = 0.15;
     /// <summary>同一個人的聲紋最多留幾份，超過刪最舊的</summary>
     public const int VoiceprintsPerPerson = 30;
 
-    /// <summary>轉錄完：還是預設名稱的說話者跟認識的人比對，夠像的自動帶入名字。一個人在一場會議只對到一位說話者，
-    /// 依相似度由高到低分配。回傳帶入了幾位</summary>
+    /// <summary>轉錄完：還是預設名稱的說話者跟認識的人比對。很有把握的自動帶入名字，夠像但沒把握的存成說話者的建議，
+    /// 在待確認問（R33、M§21.4）。一個人在一場會議只對到一位說話者，依相似度由高到低分配。回傳帶入了幾位</summary>
     public int MatchVoiceprints(long meetingId) => Write(db =>
     {
         var speakers = db.Query("SELECT * FROM speakers WHERE meeting_id = ?", meetingId).Select(ToSpeaker)
@@ -44,15 +48,19 @@ public sealed partial class AppDatabase
         var library = Library(db);
         if (library.Count == 0) return 0;
         var candidates = new List<(double Score, int Idx, long Person)>();
+        var scores = new Dictionary<int, Dictionary<long, double>>();
         foreach (var speaker in speakers)
         {
             var vector = Voiceprint.Vector(speaker.Embedding!);
+            scores[speaker.Idx] = [];
             foreach (var (person, prints) in library)
             {
                 var score = prints.Select(p => Voiceprint.Similarity(vector, p)).DefaultIfEmpty(0).Max();
+                scores[speaker.Idx][person] = score;
                 if (score >= VoiceprintThreshold) candidates.Add((score, speaker.Idx, person));
             }
         }
+        var language = FetchMeeting(db, meetingId)?.MeetingLanguage ?? MeetingLanguage.Zh;
         var usedSpeakers = new HashSet<int>();
         var usedPeople = db.Query("SELECT person_id FROM speakers WHERE meeting_id = ? AND person_id IS NOT NULL", meetingId)
             .Select(r => r.Long("person_id")).ToHashSet();
@@ -63,10 +71,44 @@ public sealed partial class AppDatabase
             if (db.Scalar("SELECT name FROM people WHERE id = ?", c.Person) is not string name) continue;
             usedSpeakers.Add(c.Idx);
             usedPeople.Add(c.Person);
-            db.Execute("UPDATE speakers SET name = ?, name_source = 'voiceprint', person_id = ? WHERE meeting_id = ? AND idx = ?", name, c.Person, meetingId, c.Idx);
-            matched++;
+            var second = scores[c.Idx].Where(p => p.Key != c.Person).Select(p => p.Value).DefaultIfEmpty(0).Max();
+            if (c.Score >= VoiceprintAutoThreshold && c.Score - second >= VoiceprintAutoMargin)
+            {
+                db.Execute("UPDATE speakers SET name = ?, name_source = 'voiceprint', person_id = ? WHERE meeting_id = ? AND idx = ?", name, c.Person, meetingId, c.Idx);
+                matched++;
+            }
+            else
+            {
+                // 沒把握：不帶入，存成建議，在待確認問「說話者 N 是 X 嗎？」（M§27）
+                var reason = language.Text($"聲音跟之前的{name}很像", $"Sounds like {name} from earlier meetings", $"以前の{name}の声に似ています");  // l10n-skip：會議語言的原因
+                db.Execute("""
+                    UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = NULL
+                    WHERE meeting_id = ? AND idx = ? AND name_source = 'default'
+                    """, name, reason, meetingId, c.Idx);
+            }
         }
         return matched;
+    });
+
+    /// <summary>每位說話者最像的幾位認識的人（不含目前的名字），由高到低：「是別人」的選單、待確認的「不是」用（R33）</summary>
+    public Dictionary<int, List<string>> VoiceprintCandidates(long meetingId, int limit = 3) => Read(db =>
+    {
+        var result = new Dictionary<int, List<string>>();
+        var speakers = db.Query("SELECT * FROM speakers WHERE meeting_id = ?", meetingId).Select(ToSpeaker)
+            .Where(s => s.Embedding is not null && s.SpeechSeconds >= VoiceprintMinimumSeconds).ToList();
+        if (speakers.Count == 0) return result;
+        var library = Library(db);
+        if (library.Count == 0) return result;
+        var names = db.Query("SELECT id, name FROM people").ToDictionary(r => r.Long("id"), r => r.Str("name"));
+        foreach (var speaker in speakers)
+        {
+            var vector = Voiceprint.Vector(speaker.Embedding!);
+            result[speaker.Idx] = library
+                .Where(p => names.ContainsKey(p.Key) && !string.Equals(names[p.Key], speaker.Name, StringComparison.OrdinalIgnoreCase))
+                .Select(p => (Name: names[p.Key], Score: p.Value.Select(e => Voiceprint.Similarity(vector, e)).DefaultIfEmpty(0).Max()))
+                .OrderByDescending(p => p.Score).Take(limit).Select(p => p.Name).ToList();
+        }
+        return result;
     });
 
     static Dictionary<long, List<float[]>> Library(Db db)
@@ -164,13 +206,13 @@ public sealed partial class AppDatabase
           AND id NOT IN (SELECT person_id FROM speakers WHERE person_id IS NOT NULL)
         """);
 
-    /// <summary>存 AI 猜的名字：只寫還是預設名稱的說話者</summary>
+    /// <summary>存 AI 猜的名字：只寫還是預設名稱、還沒有建議的說話者（聲紋的建議優先：有聲音當根據，M§27）</summary>
     public void SaveSpeakerSuggestions(long meetingId, IReadOnlyList<SpeakerNaming.Suggestion> suggestions) => Write(db =>
     {
         foreach (var s in suggestions)
             db.Execute("""
                 UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = ?
-                WHERE meeting_id = ? AND idx = ? AND name_source = 'default'
+                WHERE meeting_id = ? AND idx = ? AND name_source = 'default' AND suggested_name IS NULL
                 """, s.Name, s.Reason, s.Time, meetingId, s.Speaker);
     });
 

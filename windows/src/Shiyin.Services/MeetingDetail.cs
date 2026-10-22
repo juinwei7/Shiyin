@@ -71,8 +71,12 @@ public sealed class MeetingDetail
     public Dictionary<long, int> SegmentIndex { get; private set; } = [];
     /// <summary>說話者名字的來源（default / manual / voiceprint / suggestion），聲紋帶入的顯示「自動」（M§21.4）</summary>
     public Dictionary<int, string> SpeakerSources { get; private set; } = [];
-    /// <summary>AI 猜的名字（M§21.5）：還是預設名稱的說話者才有</summary>
+    /// <summary>AI 猜的名字（M§21.5）、聲紋沒把握的（M§21.4、R33）：還是預設名稱的說話者才有</summary>
     public Dictionary<int, SpeakerNaming.Suggestion> SpeakerSuggestions { get; private set; } = [];
+    /// <summary>每位說話者最像的幾位認識的人（R33）：「是別人」的選單、待確認的「不是」</summary>
+    public Dictionary<int, List<string>> SpeakerCandidates { get; set; } = [];
+    /// <summary>待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）</summary>
+    public int ReviewCount => (Notes?.ReviewItems.Count ?? 0) + SpeakerSuggestions.Count;
 
     public static MeetingDetail? Load(AppDatabase db, long id)
     {
@@ -83,6 +87,7 @@ public sealed class MeetingDetail
             LatestJob = db.LatestJob(id), Bookmarks = db.Bookmarks(id), Corrections = db.Corrections(id),
         };
         detail.LoadSpeakers(db.Speakers(id));
+        detail.SpeakerCandidates = db.VoiceprintCandidates(id);
         detail.BuildIndexes();
         return detail;
     }

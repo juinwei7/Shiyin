@@ -61,6 +61,10 @@
     {
       "idx" : 2,
       "name" : "Bob"
+    },
+    {
+      "idx" : 3,
+      "name" : "Speaker 3"
     }
   ],
   "templateId" : "one-on-one",

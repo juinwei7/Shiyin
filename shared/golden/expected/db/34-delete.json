@@ -169,6 +169,13 @@
       "text" : "Okay."
     },
     {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 13,
+      "rowid" : 13,
+      "text" : "The beta list is ready."
+    },
+    {
       "kind" : "title",
       "meeting_id" : 1,
       "ref" : 0,
@@ -360,6 +367,19 @@
       "speaker_manual" : 0,
       "start" : 12.25,
       "text" : "Okay."
+    },
+    {
+      "channel" : null,
+      "end" : 16.5,
+      "id" : 13,
+      "kind" : "final",
+      "low_confidence" : 0,
+      "meeting_id" : 2,
+      "seq" : 4,
+      "speaker" : 3,
+      "speaker_manual" : 0,
+      "start" : 13,
+      "text" : "The beta list is ready."
     }
   ],
   "speakers" : [
@@ -390,6 +410,19 @@
       "suggestion_time" : null
     },
     {
+      "audio_source" : "mic",
+      "embedding" : "zczMPZqZGT/NzEw+AAAAAAAAAD8AAAAAmpmZPs3MzD0=",
+      "idx" : 3,
+      "meeting_id" : 2,
+      "name" : "Speaker 3",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 15,
+      "suggested_name" : "李大華",
+      "suggestion_reason" : "Sounds like 李大華 from earlier meetings",
+      "suggestion_time" : null
+    },
+    {
       "audio_source" : "mix",
       "embedding" : "ZmZmP83MzD0AAAAAzcxMPgAAAADNzMw9AAAAAJqZmT4=",
       "idx" : 1,
@@ -408,8 +441,8 @@
       "idx" : 2,
       "meeting_id" : 1,
       "name" : "說話者 2",
-      "name_source" : "default",
-      "person_id" : null,
+      "name_source" : "manual",
+      "person_id" : 2,
       "speech_seconds" : 31,
       "suggested_name" : null,
       "suggestion_reason" : null,

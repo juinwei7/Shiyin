@@ -4,6 +4,11 @@
       "created_at" : "<time>",
       "id" : 1,
       "name" : "王小明"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 2,
+      "name" : "李大華"
     }
   ],
   "speakers" : [
@@ -26,8 +31,8 @@
       "idx" : 2,
       "meeting_id" : 1,
       "name" : "說話者 2",
-      "name_source" : "default",
-      "person_id" : null,
+      "name_source" : "manual",
+      "person_id" : 2,
       "speech_seconds" : 31,
       "suggested_name" : null,
       "suggestion_reason" : null,
@@ -73,6 +78,19 @@
       "suggestion_time" : null
     },
     {
+      "audio_source" : "mic",
+      "embedding" : "zczMPZqZGT/NzEw+AAAAAAAAAD8AAAAAmpmZPs3MzD0=",
+      "idx" : 3,
+      "meeting_id" : 2,
+      "name" : "Speaker 3",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 15,
+      "suggested_name" : "李大華",
+      "suggestion_reason" : "Sounds like 李大華 from earlier meetings",
+      "suggestion_time" : null
+    },
+    {
       "audio_source" : "mix",
       "embedding" : null,
       "idx" : 1,
@@ -108,6 +126,15 @@
       "meeting_id" : 1,
       "person_id" : 1,
       "speaker_idx" : 1
+    },
+    {
+      "audio_source" : "mix",
+      "created_at" : "<time>",
+      "embedding" : "AAAAAM3MTD8AAAA/AAAAAM3MzD0AAAAAzcxMPgAAAAA=",
+      "id" : 2,
+      "meeting_id" : 1,
+      "person_id" : 2,
+      "speaker_idx" : 2
     }
   ]
 }

@@ -201,6 +201,81 @@ public sealed class AppTests : IDisposable
         Assert.Equal([1, 2, 3], db.Segments(id).Select(s => s.Speaker ?? 0));
     }
 
+    /// <summary>是非題的回答（R32、M§27）：依會議語言的文字，認得回來；認不出來的是 null</summary>
+    [Fact]
+    public void YesNoAnswerText()
+    {
+        Assert.Equal("是", new YesNoAnswer(true).Text(MeetingLanguage.Zh));
+        Assert.Equal("不是，Lumio Cache", new YesNoAnswer(false, "Lumio Cache").Text(MeetingLanguage.Zh));
+        Assert.Equal("No, Alice", new YesNoAnswer(false, "Alice").Text(MeetingLanguage.En));
+        Assert.Equal("いいえ、森", new YesNoAnswer(false, "森").Text(MeetingLanguage.Ja));
+        Assert.Equal("", new YesNoAnswer((bool?)null).Text(MeetingLanguage.En));
+        Assert.Equal(new YesNoAnswer(false, "Lumio Cache"), YesNoAnswer.Parse("不是，Lumio Cache", MeetingLanguage.Zh));
+        Assert.Equal(new YesNoAnswer(true), YesNoAnswer.Parse("はい", MeetingLanguage.Ja));
+        Assert.Equal(new YesNoAnswer((bool?)null), YesNoAnswer.Parse("", MeetingLanguage.Zh));
+        Assert.Null(YesNoAnswer.Parse("對", MeetingLanguage.Zh));
+    }
+
+    /// <summary>聲紋分兩段（R33、M§21.4）：很像而且跟第二像的人差得夠遠才帶入，其他夠像的存成建議；
+    /// 待確認的說話者題目送出：是、不是加名字、不是沒填、略過；「是別人」的名單</summary>
+    [Fact]
+    public void VoiceprintQuestions()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var controller = Controller(settings, out _);
+        static float[] V(params float[] v) => v;
+        long Meeting(string name, params (int Idx, float[] Vector)[] voices)
+        {
+            var id = db.InsertMeeting(new Meeting { SourceFilename = name }, null).Id!.Value;
+            db.SaveTranscript(id, voices.Select((v, i) => new Segment { MeetingId = id, Seq = i, Start = i, End = i + 1, Text = $"{i}", Speaker = v.Idx }).ToList(),
+                voices.Length, voices.Length, voices.ToDictionary(v => v.Idx, v => new SpeakerVoice(v.Vector, 20, "mic")));
+            return id;
+        }
+        // 兩個認識的人：甲 [1,0,0,0]、乙 [0.6,0.8,0,0]（兩人有點像，0.6）
+        var first = Meeting("first", (1, V(1, 0, 0, 0)), (2, V(0.6f, 0.8f, 0, 0)));
+        db.LearnVoiceprint(first, 1, "甲");
+        db.LearnVoiceprint(first, 2, "乙");
+        // 說話者 1 幾乎就是甲 → 帶入；說話者 2 跟乙 0.71（≥ 0.6、< 0.78）→ 建議；說話者 3 跟誰都不像 → 不動
+        var second = Meeting("second", (1, V(1, 0.05f, 0, 0)), (2, V(0.6f, 0.8f, 1, 0)), (3, V(0, 0, 0, 1)));
+        Assert.Equal(1, db.MatchVoiceprints(second));
+        var speakers = db.Speakers(second).ToDictionary(s => s.Idx);
+        Assert.Equal(("甲", "voiceprint"), (speakers[1].Name, speakers[1].NameSource));
+        Assert.Equal(("說話者 2", "default", "乙", "聲音跟之前的乙很像"), (speakers[2].Name, speakers[2].NameSource, speakers[2].SuggestedName, speakers[2].SuggestionReason));
+        Assert.Null(speakers[3].SuggestedName);
+        // 很像甲（0.93）但也很像乙（0.85），差不到 0.15 → 問，不直接帶入
+        var close = Meeting("close", (1, V(1, 0.4f, 0, 0)));
+        Assert.Equal(0, db.MatchVoiceprints(close));
+        Assert.Equal("甲", db.Speakers(close).Single().SuggestedName);
+        // AI 猜的名字不蓋過聲紋的建議
+        db.SaveSpeakerSuggestions(close, [new SpeakerNaming.Suggestion(1, "丙", "自我介紹", "00:01")]);
+        Assert.Equal("甲", db.Speakers(close).Single().SuggestedName);
+        // 「是別人」：不含目前的名字，由像到不像
+        var candidates = MeetingDetail.Load(db, second)!.SpeakerCandidates;
+        Assert.Equal(["乙"], candidates[1]);
+        Assert.Equal(["乙", "甲"], candidates[2]);
+        Assert.Equal(1, MeetingDetail.Load(db, second)!.ReviewCount);
+        Assert.Equal(1, MeetingDetail.Load(db, close)!.ReviewCount);
+        // 送出：是 → 帶入並記住聲音
+        controller.AnswerSpeakerQuestions(second, new Dictionary<int, string> { [2] = "是" }, new HashSet<int>());
+        var answered = db.Speakers(second).Single(s => s.Idx == 2);
+        Assert.Equal(("乙", "suggestion", (string?)null), (answered.Name, answered.NameSource, answered.SuggestedName));
+        Assert.Equal(2, db.PeopleSummaries().Single(p => p.Name == "乙").VoiceprintCount);
+        Assert.Equal(1, db.MeetingRows().Single(r => r.Id == close).ReviewCount);
+        Assert.Equal(0, db.MeetingRows().Single(r => r.Id == second).ReviewCount);
+        // 不是加名字 → 改成那個名字；不是沒填、略過 → 清掉建議
+        controller.AnswerSpeakerQuestions(close, new Dictionary<int, string> { [1] = "不是，丁" }, new HashSet<int>());
+        Assert.Equal(("丁", "manual"), (db.Speakers(close).Single().Name, db.Speakers(close).Single().NameSource));
+        // 回答「是」之後乙多了一份聲紋：同樣的聲音下次直接帶入，不用再問（越用越少問）
+        var again = Meeting("again", (1, V(0.6f, 0.8f, 1, 0)));
+        Assert.Equal(1, db.MatchVoiceprints(again));
+        Assert.Equal("乙", db.Speakers(again).Single().Name);
+        var third = Meeting("third", (1, V(0.6f, 0.8f, 0, 1)), (2, V(1, 0, 0, 1)));
+        db.MatchVoiceprints(third);
+        Assert.Equal(["乙", "甲"], db.Speakers(third).OrderBy(s => s.Idx).Select(s => s.SuggestedName));
+        controller.AnswerSpeakerQuestions(third, new Dictionary<int, string> { [1] = "不是" }, new HashSet<int> { 2 });
+        Assert.All(db.Speakers(third), s => Assert.Equal((null, "default"), (s.SuggestedName, s.NameSource)));
+    }
+
     [Fact]
     public void SuggestedFilenamesAreSafeOnWindows()
     {

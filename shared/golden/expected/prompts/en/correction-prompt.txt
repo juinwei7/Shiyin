@@ -1,6 +1,6 @@
 Meeting title: Weekly Sync
 Participants: Alice, Bob
-Speakers: Bob, Speaker 1
+Speakers: Bob, Speaker 1, Speaker 3
 Glossary (correct spellings): (none)
 
 Transcript (the number at the start of each line is the segment number; put it in the "segment" field):
@@ -8,3 +8,4 @@ Transcript (the number at the start of each line is the segment number; put it i
 [1] Bob: I'll send the email via SendGrid by Friday.
 [2] Speaker 1: Speaker 1 here again: what about the "beta" users?
 [3] Okay.
+[4] Speaker 3: The beta list is ready.

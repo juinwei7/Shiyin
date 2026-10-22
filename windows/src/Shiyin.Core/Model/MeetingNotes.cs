@@ -14,7 +14,8 @@ public sealed record MeetingNotes
     public sealed record Topic(string Title, string Start, List<Item> Points);
     public sealed record ActionItem(string Owner, string Task, string Due, string Time = "");
     public sealed record CustomSection(string Title, List<Item> Items);
-    public sealed record ReviewItem(string Time, string Question);
+    /// <summary>YesNo：能用是或否回答（R32、M§27），畫面上給「是」「不是」的按鈕</summary>
+    public sealed record ReviewItem(string Time, string Question, bool YesNo = false);
 
     public string Title { get; init; } = "";
     public List<Item> Summary { get; init; } = [];
@@ -86,7 +87,7 @@ public sealed record MeetingNotes
     }
 
     static ReviewItem? DecodeReview(JsonElement e) => e.ValueKind != JsonValueKind.Object ? null
-        : new ReviewItem(TimeFormat.Clean(e.Str("time") ?? ""), e.Str("question") ?? "");
+        : new ReviewItem(TimeFormat.Clean(e.Str("time") ?? ""), e.Str("question") ?? "", e.Bool("yesNo") ?? false);
 
     // MARK: 寫出
 
@@ -111,8 +112,12 @@ public sealed record MeetingNotes
                 (JNode)new JNode.Obj().Add("title", t.Title).Add("start", t.Start).Add("points", Items(t.Points)))))
             .Add("custom", new JNode.Arr(Custom.Select(c =>
                 (JNode)new JNode.Obj().Add("title", c.Title).Add("items", Items(c.Items)))))
+            // yesNo 是 false 時不寫（同 Mac）：以前的會議紀錄、沒有是非題的會議紀錄存起來跟以前一字不差
             .Add("reviewItems", new JNode.Arr(ReviewItems.Select(r =>
-                (JNode)new JNode.Obj().Add("time", r.Time).Add("question", r.Question))));
+            {
+                var item = new JNode.Obj().Add("time", r.Time).Add("question", r.Question);
+                return (JNode)(r.YesNo ? item.Add("yesNo", JNode.Of(true)) : item);
+            })));
     }
 
     // MARK: 修改
@@ -141,7 +146,7 @@ public sealed record MeetingNotes
             OpenQuestions = OpenQuestions.Select(Ri).ToList(),
             Topics = Topics.Select(t => new Topic(r(t.Title), t.Start, t.Points.Select(Ri).ToList())).ToList(),
             Custom = Custom.Select(c => new CustomSection(r(c.Title), c.Items.Select(Ri).ToList())).ToList(),
-            ReviewItems = ReviewItems.Select(x => new ReviewItem(x.Time, r(x.Question))).ToList(),
+            ReviewItems = ReviewItems.Select(x => new ReviewItem(x.Time, r(x.Question), x.YesNo)).ToList(),
         };
     }
 
@@ -175,5 +180,5 @@ public sealed record MeetingNotes
         + ""","openQuestions":""" + ItemsSchema
         + ""","topics":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["title","start","points"],"properties":{"title":{"type":"string"},"start":{"type":"string"},"points":""" + ItemsSchema + "}}}"
         + ""","custom":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["title","items"],"properties":{"title":{"type":"string"},"items":""" + ItemsSchema + "}}}"
-        + ""","reviewItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["time","question"],"properties":{"time":{"type":"string"},"question":{"type":"string"}}}}}}""";
+        + ""","reviewItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["time","question","yesNo"],"properties":{"time":{"type":"string"},"question":{"type":"string"},"yesNo":{"type":"boolean"}}}}}}""";
 }

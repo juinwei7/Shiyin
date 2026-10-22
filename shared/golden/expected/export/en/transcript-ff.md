@@ -9,3 +9,5 @@ I'll send the email via SendGrid by Friday.
 Speaker 1 here again: what about the "beta" users?
 
 Okay.
+
+The beta list is ready.

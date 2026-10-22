@@ -61,12 +61,14 @@
         {"start": 0.0, "end": 3.5, "text": "Hi everyone, let's review the Q4 roadmap.", "lowConfidence": false, "speaker": 1},
         {"start": 3.5, "end": 8.0, "text": "I'll send the email via SendGrid by Friday.", "lowConfidence": false, "speaker": 2},
         {"start": 8.0, "end": 12.25, "text": "Speaker 1 here again: what about the \"beta\" users?", "lowConfidence": true, "speaker": 1},
-        {"start": 12.25, "end": 13.0, "text": "Okay.", "lowConfidence": false, "speaker": null}
+        {"start": 12.25, "end": 13.0, "text": "Okay.", "lowConfidence": false, "speaker": null},
+        {"start": 13.0, "end": 16.5, "text": "The beta list is ready.", "lowConfidence": false, "speaker": 3}
       ],
       "speakers": {"2": "Bob"},
       "voices": {
         "1": {"embedding": [0.85, 0.15, 0.05, 0.25, 0.0, 0.1, 0.0, 0.25], "seconds": 40.0, "source": "mic"},
-        "2": {"embedding": [0.0, 0.0, 0.1, 0.0, 0.9, 0.4, 0.0, 0.0], "seconds": 12.0, "source": "mic"}
+        "2": {"embedding": [0.0, 0.0, 0.1, 0.0, 0.9, 0.4, 0.0, 0.0], "seconds": 12.0, "source": "mic"},
+        "3": {"embedding": [0.1, 0.6, 0.2, 0.0, 0.5, 0.0, 0.3, 0.1], "seconds": 15.0, "source": "mic"}
       },
       "bookmarks": [],
       "glossary": [],
@@ -231,6 +233,7 @@
     {"op": "search", "file": "db/02-search.json", "queries": ["Redis", "redis", "快取", "部署腳本", "Ku", "嗯", "a", "100%", "\"Kubernetes\"", "不存在的詞", "  SendGrid  ", "", "TTL 設 100% 沒問題"]},
     {"op": "glossarySuggestions", "file": "db/03-glossary-suggestions.json"},
     {"op": "learnVoiceprint", "key": "zh", "idx": 1, "name": "王小明"},
+    {"op": "learnVoiceprint", "key": "zh", "idx": 2, "name": "李大華", "comment": "英文會議的說話者 3 跟他像 0.82：不直接帶入，存成建議（R33、M§21.4）"},
     {"op": "matchVoiceprints", "key": "en", "file": "db/04-match.json"},
     {"op": "dumpTables", "file": "db/05-voiceprints.json", "tables": ["speakers", "people", "voiceprints"]},
     {"op": "mergeSpeakers", "key": "zh", "from": 3, "into": 2, "label": "合併說話者 3 到說話者 2", "file": "db/06-merge-result.json"},

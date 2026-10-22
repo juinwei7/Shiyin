@@ -11,6 +11,7 @@ Transcript ([time] speaker: text; (?) marks low-confidence segments):
 [00:03] Bob: I'll send the email via SendGrid by Friday.
 [00:08] Speaker 1: (?) Speaker 1 here again: what about the "beta" users?
 [00:12] Okay.
+[00:13] Speaker 3: The beta list is ready.
 
 Current meeting notes (JSON): 
 {"actionItems":[{"due":"2026-10-23","owner":"Bob","task":"Send the email via SendGrid","time":"00:03"}],"custom":[{"items":[{"text":"Roadmap on track","time":"00:00"}],"title":"Updates and progress"}],"decisions":[],"openQuestions":[],"reviewItems":[{"question":"Is \"beta\" the right term?","time":"00:08"}],"summary":[{"text":"Reviewed the Q4 roadmap","time":"00:00"}],"title":"Q4 roadmap","topics":[]}

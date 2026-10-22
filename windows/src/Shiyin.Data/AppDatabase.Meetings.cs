@@ -40,7 +40,11 @@ public sealed partial class AppDatabase
         // 背景的輔助工作不算會議的狀態（M§21.2、§23.3）
         var latest = db.Query($"SELECT * FROM jobs WHERE id IN (SELECT MAX(id) FROM jobs WHERE kind NOT IN ({AuxiliaryKinds}) GROUP BY meeting_id)")
             .Select(ToJob).ToDictionary(j => j.MeetingId);
-        return meetings.Select(m => new MeetingRow(m, latest.GetValueOrDefault(m.Id ?? 0), m.DecodedNotes?.ReviewItems.Count ?? 0)).ToList();
+        // 待確認的題數也算說話者的建議（R33.3）
+        var speakerQuestions = db.Query("SELECT meeting_id, COUNT(*) AS n FROM speakers WHERE name_source = 'default' AND suggested_name IS NOT NULL GROUP BY meeting_id")
+            .ToDictionary(r => r.Long("meeting_id"), r => r.Int("n"));
+        return meetings.Select(m => new MeetingRow(m, latest.GetValueOrDefault(m.Id ?? 0),
+            (m.DecodedNotes?.ReviewItems.Count ?? 0) + speakerQuestions.GetValueOrDefault(m.Id ?? 0))).ToList();
     });
 
     public Meeting? Meeting(long id) => Read(db => FetchMeeting(db, id));

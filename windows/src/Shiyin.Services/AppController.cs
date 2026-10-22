@@ -127,7 +127,7 @@ public sealed class AppController
         return reviewCount > 0 ? new MeetingStatus.Review(reviewCount) : new MeetingStatus.Done();
     }
 
-    public MeetingStatus Status(MeetingDetail detail) => Status(detail.Meeting.Id!.Value, detail.LatestJob, detail.Notes?.ReviewItems.Count ?? 0);
+    public MeetingStatus Status(MeetingDetail detail) => Status(detail.Meeting.Id!.Value, detail.LatestJob, detail.ReviewCount);
 
     /// <summary>這場會議是在模型下載好之前用快速辨識轉錄的，現在可以用 Breeze 重新轉錄（M§21.17）</summary>
     public bool CanUpgradeTranscript(Meeting meeting) =>
@@ -706,6 +706,26 @@ public sealed class AppController
     }
 
     public void DismissSpeakerSuggestion(long id, int idx) => Perform(id, () => Db.ClearSpeakerSuggestion(id, idx));
+
+    /// <summary>待確認的說話者題目送出（R33.2、M§27）：回答是 YesNoAnswer 的文字（依會議語言）。
+    /// 是 = 套用建議；不是而且有名字 = 改成那個名字；不是沒填、略過 = 清掉建議；還沒選的不動</summary>
+    public void AnswerSpeakerQuestions(long id, IReadOnlyDictionary<int, string> answers, IReadOnlySet<int> skipped)
+    {
+        if (Db.Meeting(id) is not { } meeting) return;
+        foreach (var s in Db.Speakers(id).Where(s => s.NameSource == "default" && s.SuggestedName is not null).OrderBy(s => s.Idx))
+        {
+            if (skipped.Contains(s.Idx))
+            {
+                DismissSpeakerSuggestion(id, s.Idx);
+                continue;
+            }
+            if (YesNoAnswer.Parse(answers.GetValueOrDefault(s.Idx) ?? "", meeting.MeetingLanguage) is not { IsYes: { } yes } choice) continue;
+            var name = choice.Correction.Trim();
+            if (yes) ApplySpeakerSuggestion(id, s.Idx);
+            else if (name.Length > 0) RenameSpeaker(id, s.Idx, name);
+            else DismissSpeakerSuggestion(id, s.Idx);
+        }
+    }
 
     // MARK: 整理（R6）
 

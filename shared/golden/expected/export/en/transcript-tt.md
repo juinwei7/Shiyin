@@ -9,3 +9,5 @@
 `00:08` **Speaker 1**: Speaker 1 here again: what about the "beta" users?
 
 `00:12` Okay.
+
+`00:13` **Speaker 3**: The beta list is ready.

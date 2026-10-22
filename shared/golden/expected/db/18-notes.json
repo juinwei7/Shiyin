@@ -189,23 +189,30 @@
     },
     {
       "kind" : "segment",
-      "meeting_id" : 3,
+      "meeting_id" : 2,
       "ref" : 13,
       "rowid" : 13,
-      "text" : "皆さん、おはようございます。"
+      "text" : "The beta list is ready."
     },
     {
       "kind" : "segment",
       "meeting_id" : 3,
       "ref" : 14,
       "rowid" : 14,
-      "text" : "新しいアイデアを三つ出します。"
+      "text" : "皆さん、おはようございます。"
     },
     {
       "kind" : "segment",
       "meeting_id" : 3,
       "ref" : 15,
       "rowid" : 15,
+      "text" : "新しいアイデアを三つ出します。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 3,
+      "ref" : 16,
+      "rowid" : 16,
       "text" : "ありがとうございます、田中さん。"
     },
     {

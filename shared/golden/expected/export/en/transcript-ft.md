@@ -9,3 +9,5 @@
 **Speaker 1**: Speaker 1 here again: what about the "beta" users?
 
 Okay.
+
+**Speaker 3**: The beta list is ready.

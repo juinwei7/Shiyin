@@ -64,6 +64,12 @@
       "snippet" : "Okay."
     },
     {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 13,
+      "snippet" : "The beta list is ready."
+    },
+    {
       "kind" : "notes",
       "meetingId" : 1,
       "ref" : 0,

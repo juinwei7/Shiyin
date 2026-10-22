@@ -31,8 +31,8 @@
   },
   {
     "key" : "en",
-    "previous" : 4,
-    "prompt" : "The following is a recording of a work meeting. Hi everyone, let's review the Q4 roadmap. I'll send the email via SendGrid by Friday. Speaker 1 here again: what about the \"beta\" users? Okay."
+    "previous" : 5,
+    "prompt" : "The following is a recording of a work meeting. Hi everyone, let's review the Q4 roadmap. I'll send the email via SendGrid by Friday. Speaker 1 here again: what about the \"beta\" users? Okay. The beta list is ready."
   },
   {
     "key" : "en",
