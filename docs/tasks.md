@@ -35,6 +35,11 @@
 - [~] **首屏示範**（docs/website.md W10、§10）：2026-10-19 上線（f00de71）。已用 headless Chrome 看過三種語言的整段播放、淺色深色、桌機和 390px 寬、沒有 JavaScript；正式網址在真的 CSP 下會自動播
   - 還差：使用者用真的 iPhone 看手機版
 
+## Mac 的小問題（2026-10-22 做 Windows 版時發現）
+
+- [ ] **逐字稿的時間點跳到段落真正的開始**：逐字稿每一段的時間按鈕照顯示的時間跳（`TimeButton(time: TimeFormat.string(segment.start))`），24.4 秒的段落顯示 00:24、跳到 24.0 秒，播放位置的高亮會落在上一段。改成跳到 `segment.start`（Windows 版已經改了，design-windows §11.2.1）
+  - 驗證：開始時間有小數的段落，點時間後高亮的是那一段
+
 ## 等真實會議錄音
 
 目前只用公開語料（AISHELL-4、AMI）和合成會議驗證過。使用者已經用拾音錄過 3 場會議（2026-10-19，最長 109 分鐘），還沒有校正好的標準答案。
@@ -147,7 +152,9 @@
 - [~] **W8.3 app 內更新**（§14.2、R27 R10.6）：虛擬機用 `-UpdateTest` 的版本和本機伺服器驗過：簽章不符被拒、下載的檔案刪掉；正常的更新從 3.6.0 到 3.6.1、自己重開、資料和捷徑都在
   - 要使用者：同意產生正式的更新金鑰、私鑰放進 GitHub secrets；更新後麥克風權限還在（W0.8）
 - [~] **W8.4 官網**（§14.4）：真的 Releases 加一個假的 `win-v3.6.0` 建置成功，`/download` 還是 DMG、`/download/windows`、`/download/windows-arm64` 指到兩個安裝檔，下載區用 headless Chrome 看過
-  - 還差：第一個 Windows 版發布時改常見問題「只有 Mac 版」、真的上線看一次
+  - 還差：真的上線看一次（第一個 Windows 版發布時）
+- [~] **W8.7 官網的 Windows 版頁面**（website.md §16）：`/windows/` 三種語言、首頁的連結和下載卡片、用 Windows 的訪客提示、常見問題和 llms.txt、SmartScreen 示意圖、Windows 版的截圖（虛擬機 150%，§16.4）都做好了。只有 Mac 的假 release 清單建出來，跟 main 用同一份清單建的比，除了內嵌的樣式完全一樣（多出沒被引用的圖和 platform.js）；加上假的 win-v3.6.0：headless Chrome 看過三種語言的 Windows 頁（桌機深色、淺色、390 寬的 iframe）、首頁的卡片、Windows 的 User-Agent 才出現提示；sitemap 有三個 Windows 網址、JSON-LD 的 SoftwareApplication 是 Windows 11、FAQ 換成有 Windows 版、llms.txt 有版本和連結
+  - 還差：真的上線看一次（第一個 Windows 版發布時）
 - [~] **W8.5 發布的工作流程**（§14.3、D51）：`.github/workflows/release-windows.yml`（推 win-v* 才發布、不設成 latest、更新說明沒簽章就不發布）
   - 還差：手動執行只產生 artifact；推測試用的 tag 到 fork（不是正式 repo）確認不會變成 latest、Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的
 - [~] **W8.6 README、CLAUDE.md**：README（中英）的〈Windows 版〉、CLAUDE.md 的 Windows 指令；`pack.ps1` 在虛擬機跑過

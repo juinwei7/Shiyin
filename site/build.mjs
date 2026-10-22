@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { loadAllReleases, loadStars } from './src/releases.mjs';
-import { ROUTES, homePage, changelogPage, notFoundPage, guidePage, guidesIndexPage, guidePath, guideLangs, guidesLangs } from './src/pages.mjs';
+import { ROUTES, homePage, changelogPage, notFoundPage, guidePage, guidesIndexPage, guidePath, guideLangs, guidesLangs, windowsPage } from './src/pages.mjs';
 import { GUIDES } from './src/guides.mjs';
 import { content, LANGS } from './src/content.mjs';
 import { llmsTxt, INDEXNOW_KEY } from './src/seo.mjs';
@@ -22,8 +22,8 @@ const repo = path.resolve(here, '..');
 const { values: args } = parseArgs({ options: { releases: { type: 'string' }, repo: { type: 'string' }, out: { type: 'string' } } });
 const out = path.resolve(args.out ?? path.join(here, 'dist'));
 const site = (process.env.SITE_URL || 'https://shiyin.weibuilds.com').replace(/\/+$/, '');
-const SHOTS = ['docs/images/summary.png', 'docs/images/recording.png', 'docs/images/transcript.png',
-  'docs/images/en/summary.png', 'docs/images/en/recording.png', 'docs/images/en/transcript.png'];
+// Windows 版的截圖（docs/website.md §16.1）在 windows/ 底下
+const SHOTS = ['', 'en/', 'windows/', 'en/windows/'].flatMap((dir) => ['summary', 'recording', 'transcript'].map((name) => `docs/images/${dir}${name}.png`));
 
 try {
   const { mac: releases, windows } = await loadAllReleases({ file: args.releases });
@@ -48,6 +48,10 @@ try {
   for (const file of SHOTS) await cp(path.join(repo, file), path.join(out, file.replace('docs/', '')));
   await cp(path.join(repo, 'docs/images/icon.png'), path.join(out, 'icon.png'));
   await writeFile(path.join(out, 'demo.js'), demoJs);
+  // 用 Windows 的訪客提示（docs/website.md §16.2）：另一個小 script，跟示範分開
+  const platformJs = await readFile(path.join(here, 'src/platform.js'));
+  await writeFile(path.join(out, 'platform.js'), platformJs);
+  const platform = `/platform.js?v=${createHash('sha256').update(platformJs).digest('hex').slice(0, 10)}`;
 
   // 介紹影片的雜湊（docs/website.md §15）：網址加 ?v=，換影片後瀏覽器不會用快取裡的舊檔
   const videos = {};
@@ -57,7 +61,9 @@ try {
   }
   const page = { site, css, releases, windows: windows[0] ?? null, stats, videos };
   for (const lang of LANGS) {
-    await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page, demo }));
+    await write(ROUTES.home(lang) + 'index.html', homePage({ lang, ...page, demo, platform }));
+    // Windows 版的頁面（docs/website.md §16）：有 Windows 版的 release 才產生
+    if (page.windows) await write(ROUTES.windows(lang) + 'index.html', windowsPage({ lang, ...page }));
     await write(ROUTES.changelog(lang) + 'index.html', changelogPage({ lang, ...page }));
     await write(ROUTES.home(lang) + '404.html', notFoundPage({ lang, ...page }));
   }
@@ -74,8 +80,8 @@ try {
   await write('/_redirects', LANGS.map((lang) => `${content[lang].prefix}/download ${dmg} 302\n`
     + (win ? `${content[lang].prefix}/download/windows ${win.x64.url} 302\n${content[lang].prefix}/download/windows-arm64 ${win.arm64.url} 302\n` : '')).join(''));
   await write('/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
-  await write('/sitemap.xml', sitemap(releases[0].date));
-  await write('/llms.txt', llmsTxt({ site, latest: releases[0], guides: GUIDES }));
+  await write('/sitemap.xml', sitemap(releases[0].date, win?.date));
+  await write('/llms.txt', llmsTxt({ site, latest: releases[0], windows: win ?? null, guides: GUIDES }));
   await write(`/${INDEXNOW_KEY}.txt`, INDEXNOW_KEY);
 
   console.log(`網站已產生：${path.relative(process.cwd(), out) || '.'}`);
@@ -108,7 +114,7 @@ async function checkImages() {
 }
 
 // lastmod：首頁和版本說明跟著最新版變，指南用各篇的 updated（docs/website.md §14.1）
-function sitemap(updated) {
+function sitemap(updated, windowsUpdated) {
   // paths：各語言的網址（只列有的語言）
   const entries = (paths, lastmod) => {
     const langs = LANGS.filter((l) => paths[l]);
@@ -124,6 +130,7 @@ ${langs.map((l) => `    <xhtml:link rel="alternate" hreflang="${content[l].lang}
   const urls = [
     ...entries(all('home'), updated.slice(0, 10)),
     ...entries(all('changelog'), updated.slice(0, 10)),
+    ...(windowsUpdated ? entries(all('windows'), windowsUpdated.slice(0, 10)) : []),
     ...(GUIDES.length ? entries(all('guides', guidesLangs()), GUIDES.map((g) => g.updated).sort().at(-1)) : []),
     ...GUIDES.flatMap((g) => entries(Object.fromEntries(guideLangs(g).map((l) => [l, guidePath(l, g.slug)])), g.updated)),
   ];

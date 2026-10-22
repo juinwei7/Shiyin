@@ -113,7 +113,7 @@ The Windows version lives in [`windows/`](windows/) (C#, .NET 10, WinUI 3) and m
 | System | Windows 11 (x64 or ARM64). N editions need the Media Feature Pack first |
 | Memory | 8 GB or more |
 | Disk space | Downloaded on first use: about 240 MB for fast recognition, 45 MB for speaker identification, 1.7 GB for the transcription model; plus 574 MB for Japanese meetings |
-| Graphics | Not required. On x64 PCs with a Vulkan-capable GPU, full transcription runs on the GPU |
+| Graphics | Not required. On x64 PCs with an NVIDIA graphics card, Shiyin downloads GPU acceleration automatically (about 685 MB) and full transcription runs on the GPU (a 40-minute meeting took about 8 minutes on an RTX 3060, about 30 minutes on the CPU alone) |
 | Summarizer | Same as on the Mac |
 
 What’s different from the Mac version:
