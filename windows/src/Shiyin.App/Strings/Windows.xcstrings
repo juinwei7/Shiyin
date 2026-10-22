@@ -12,6 +12,17 @@
         }
       }
     },
+    "%@（自動）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (Auto)"
+          }
+        }
+      }
+    },
     "- 顯示卡：%@；whisper：%@": {
       "extractionState": "manual",
       "localizations": {

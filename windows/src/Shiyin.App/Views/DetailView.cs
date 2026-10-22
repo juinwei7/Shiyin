@@ -204,6 +204,7 @@ public sealed class DetailView
     FrameworkElement InfoRow()
     {
         var meeting = Detail.Meeting;
+        // 每一項上下置中（名字是按鈕時比一般的文字高一點）
         var info = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
         if (meeting.Folder.Length > 0) info.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Folder) { Foreground = Ui.Secondary }, Ui.Text(meeting.Folder, 13, color: Ui.Secondary, wrap: false)));
         info.Children.Add(Ui.Text($"{meeting.MeetingDate} {DateText.Weekday(meeting.MeetingDate, MeetingLanguages.Interface)}", 13, color: Ui.Secondary, wrap: false));
@@ -216,16 +217,28 @@ public sealed class DetailView
                 var name = Ui.Text(Detail.Speakers[idx], 13, color: Ui.Speaker(idx), wrap: false);
                 if (Detail.SpeakerSources.GetValueOrDefault(idx) == "voiceprint")
                 {
-                    // 聲紋自動帶入的名字（M§21.4）：點了可以說不是他
-                    var button = new DropDownButton { Content = Ui.Row(4, name, Ui.Text(L.T("自動"), 10, color: Ui.Secondary)), Padding = new Thickness(4, 0, 4, 0) };
+                    // 聲紋自動帶入的名字（M§21.4，同 Mac 的 AutoSpeakerName）：名字本身可以點（沒有框和箭頭），
+                    // 後面接一個小膠囊「自動」。點名字可以說不是他、到逐字稿改名
                     var menu = new MenuFlyout();
                     menu.Items.Add(Ui.Item(L.F("不是%@", Detail.Speakers[idx]), () => host.Controller.RejectVoiceprintMatch(meeting.Id!.Value, idx)));
                     menu.Items.Add(Ui.Item(L.T("到逐字稿改名"), () => window.State.SetTab(DetailTab.Transcript)));
-                    button.Flyout = menu;
-                    ToolTipService.SetToolTip(button, L.T("拾音認出這個人的聲音，自動帶入名字。不對的話點名字"));
-                    speakers.Children.Add(button);
+                    var button = new HyperlinkButton { Content = name, Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
+                    button.Click += (_, _) => menu.ShowAt(button);
+                    Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.F("%@（自動）", Detail.Speakers[idx]));
+                    var badge = new Border
+                    {
+                        Child = Ui.Text(L.T("自動"), 10, color: Ui.Secondary, wrap: false), Background = Ui.Subtle,
+                        CornerRadius = new CornerRadius(7), Padding = new Thickness(5, 0, 5, 1), VerticalAlignment = VerticalAlignment.Center,
+                    };
+                    var auto = Ui.Row(4, button, badge);
+                    ToolTipService.SetToolTip(auto, L.T("拾音認出這個人的聲音，自動帶入名字。不對的話點名字"));
+                    speakers.Children.Add(auto);
                 }
-                else speakers.Children.Add(name);
+                else
+                {
+                    name.VerticalAlignment = VerticalAlignment.Center;
+                    speakers.Children.Add(name);
+                }
             }
             info.Children.Add(speakers);
         }
@@ -260,6 +273,7 @@ public sealed class DetailView
             ToolTipService.SetToolTip(count, L.T("大約幾個人：人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準"));
             menus.Children.Add(count);
         }
+        foreach (var child in info.Children.OfType<FrameworkElement>()) child.VerticalAlignment = VerticalAlignment.Center;
         var wrap = new StackPanel { Spacing = 8 };
         wrap.Children.Add(info);
         wrap.Children.Add(menus);
