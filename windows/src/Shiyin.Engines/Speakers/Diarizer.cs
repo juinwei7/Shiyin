@@ -34,7 +34,7 @@ public sealed class Diarizer : IDisposable
 
     readonly Options options;
     readonly OfflineSpeakerDiarization diarization;
-    readonly SpeakerEmbeddingExtractor extractor;
+    readonly SpeakerEmbedder embedder;
     OfflineSpeakerDiarizationConfig config;
 
     public Diarizer(Options options)
@@ -52,17 +52,16 @@ public sealed class Diarizer : IDisposable
         config.MinDurationOn = options.MinDurationOn;
         config.MinDurationOff = options.MinDurationOff;
         diarization = new OfflineSpeakerDiarization(config);
-        var e = new SpeakerEmbeddingExtractorConfig { Model = options.EmbeddingModel, NumThreads = options.Threads, Provider = "cpu" };
-        extractor = new SpeakerEmbeddingExtractor(e);
+        embedder = new SpeakerEmbedder(options.EmbeddingModel, options.Threads);
     }
 
     public void Dispose()
     {
         diarization.Dispose();
-        extractor.Dispose();
+        embedder.Dispose();
     }
 
-    public int EmbeddingDimension => extractor.Dim;
+    public int EmbeddingDimension => embedder.Dimension;
 
     /// <summary>minSpeakers：至少分出幾個人（M§23.2），null 自動判斷。進度：切段落 0～0.6、算聲紋 0.6～1</summary>
     public Output Diarize(float[] samples, int? minSpeakers, Action<double>? progress = null, CancellationToken cancel = default)
@@ -138,17 +137,7 @@ public sealed class Diarizer : IDisposable
         return result.Select(s => ((double)s.Start, (double)s.End, s.Speaker)).OrderBy(s => s.Item1).ToArray();
     }
 
-    public float[]? Embed(float[] samples, double start, double end)
-    {
-        var from = Math.Clamp((int)(start * WhisperRules.SampleRate), 0, samples.Length);
-        var to = Math.Clamp((int)(end * WhisperRules.SampleRate), from, samples.Length);
-        if (to - from < (int)(0.5 * WhisperRules.SampleRate)) return null;
-        using var stream = extractor.CreateStream();
-        stream.AcceptWaveform((int)WhisperRules.SampleRate, samples[from..to]);
-        stream.InputFinished();
-        if (!extractor.IsReady(stream)) return null;
-        return SpeakerClustering.Normalized(extractor.Compute(stream));
-    }
+    public float[]? Embed(float[] samples, double start, double end) => embedder.Embed(samples, start, end);
 
     static float[] Average(IEnumerable<SpeakerClustering.Piece> pieces)
     {

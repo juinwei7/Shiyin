@@ -325,6 +325,9 @@ public sealed class JobRunner
             foreach (var (raw, number) in numbering)
                 if (output.Voiceprints.TryGetValue(raw, out var embedding))
                     voices[number] = new SpeakerVoice(embedding, output.SpeechSeconds.GetValueOrDefault(raw), source);
+            // 短句再跟每位說話者比一次（R34）；使用者改過的句子下面另外處理，不用查
+            var locked = Enumerable.Range(0, segments.Count).Where(i => segments[i].SpeakerManual).ToHashSet();
+            speakers = TranscriptionPipeline.Recheck(engines, transcribed, speakers, voices, samples, locked, cancel);
             var old = db.Speakers(job.MeetingId);
             // 使用者改過說話者的句子（M§24.2）不照新的結果，跟著原本那位說話者對應到的新說話者
             var assigned = speakers.ToList();

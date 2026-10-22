@@ -439,6 +439,9 @@ public sealed class ServicesTests : IDisposable
         public List<SpeakerRules.Turn> Turns { get; set; } = [new(1, 0, 6), new(2, 6, 9)];
         public int? LastMinSpeakers { get; private set; }
         public bool FailDiarize { get; set; }
+        /// <summary>短句再確認用的每句聲紋（null：都算不出來，說話者不變）</summary>
+        public Func<double, double, float[]?>? Embedding { get; set; }
+        public List<(double Start, double End)> Embedded { get; } = [];
         public List<string> Calls { get; } = [];
 
         public (List<TranscribedSegment> Segments, List<int> Seams, int SampleCount) WhisperFile(IAudioStream audio, double chunkSeconds, string model,
@@ -477,6 +480,12 @@ public sealed class ServicesTests : IDisposable
             return new Diarizer.Output(Turns, speakers.ToDictionary(s => s, s => new float[] { s, 1, 0 }),
                 speakers.ToDictionary(s => s, s => Turns.Where(t => t.Speaker == s).Sum(t => t.End - t.Start)), null, []);
         }
+
+        public List<float[]?> Embed(float[] samples, IReadOnlyList<(double Start, double End)> spans, CancellationToken cancel)
+        {
+            Embedded.AddRange(spans);
+            return spans.Select(s => Embedding?.Invoke(s.Start, s.End)).ToList();
+        }
     }
 
     [Fact]
@@ -512,6 +521,12 @@ public sealed class ServicesTests : IDisposable
         Assert.Equal([1, 1, 2], new TranscriptionPipeline(fast, new WavDecoder(), engines, "").Run(audio, default)!.Speakers);
         Assert.Contains("fast ja", engines.Calls);
         Assert.Null(new TranscriptionPipeline(fast, new WavDecoder(), engines, "") { ShouldContinue = () => false }.Run(audio, default));
+
+        // 短句再確認（R34）：第二句的聲音比較像說話者 2（假的聲紋 1 是 [1,1,0]、2 是 [2,1,0]）；算聲紋失敗照原本的結果
+        engines.Embedding = (start, _) => start == 3 ? [1, 0, 0] : [0, 1, 0];
+        Assert.Equal([1, 2, 2], new TranscriptionPipeline(options, new WavDecoder(), engines, model).Run(audio, default)!.Speakers);
+        engines.Embedding = (_, _) => throw new InvalidOperationException("boom");
+        Assert.Equal([1, 1, 2], new TranscriptionPipeline(options, new WavDecoder(), engines, model).Run(audio, default)!.Speakers);
     }
 
     [Fact]
@@ -657,6 +672,35 @@ public sealed class ServicesTests : IDisposable
             Assert.Equal("system", db.Meeting(meeting.Id!.Value)!.TranscribedWith);
             Assert.Contains("fast en", engines.Calls);
             Assert.IsNotType<ModelStore.State.Missing>(models.StateOf(ModelStore.Model.Breeze));
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+    }
+
+    [Fact]
+    public async Task RediarizeRechecksShortSentencesExceptManualOnes()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var (runner, engines, _) = Runner(settings);
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var id = Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+        var rediarized = new TaskCompletionSource<int?>();
+        runner.Rediarized += (_, count, error) => { if (error is null) rediarized.TrySetResult(count); else rediarized.TrySetException(error); };
+        runner.Start();
+        try
+        {
+            await Until(() => db.Segments(id).Count == 3 && db.ActiveJobs().Count == 0);
+            Assert.Equal([1, 1, 2], db.Segments(id).Select(s => s.Speaker ?? 0));
+            // 使用者把第一句改成說話者 2；重新辨識時前兩句的聲音都比較像說話者 2
+            db.ReassignSegments(id, [db.Segments(id)[0].Id!.Value], 2, "x");
+            engines.Embedded.Clear();
+            engines.Embedding = (start, _) => start < 6 ? [1, 0, 0] : [0, 1, 0];
+            db.Enqueue(id, JobKind.Rediarize);
+            runner.Wake();
+            await rediarized.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            // 改過的那句不查（跟著原本的說話者 2）；第二句改成說話者 2（沒有再確認的話是 [2, 1, 2]）
+            Assert.Equal([(3.0, 6.0), (6.0, 9.0)], engines.Embedded);
+            Assert.Equal([2, 2, 2], db.Segments(id).Select(s => s.Speaker ?? 0));
         }
         finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
     }

@@ -127,6 +127,21 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
     var result = diarizer.Diarize(samples, options["minSpeakers"]?.GetValue<int>());
     var (speakers, numbering) = SpeakerRules.AssignNumbering(result.Turns, segments);
     if (segments.Count == 0) numbering = result.Voiceprints.Keys.ToDictionary(k => k, k => k);
+    // 短句再確認（R34、§9）：照 app 的規則改說話者；margin 換門檻
+    JsonObject? recheck = null;
+    if (options["recheck"]?.GetValue<bool>() == true && segments.Count > 0)
+    {
+        if (options["margin"]?.GetValue<double>() is double margin) SpeakerRecheck.Margin = margin;
+        var started = watch.Elapsed.TotalSeconds;
+        var voiceprints = numbering.Where(p => result.Voiceprints.ContainsKey(p.Key)).ToDictionary(p => p.Value, p => result.Voiceprints[p.Key]);
+        var refined = SpeakerRecheck.Refine(segments, speakers, voiceprints, spans => spans.Select(s => diarizer.Embed(samples, s.Start, s.End)).ToList());
+        recheck = new JsonObject
+        {
+            ["checked"] = refined.Checked, ["changed"] = refined.Changed, ["seconds"] = watch.Elapsed.TotalSeconds - started,
+            ["before"] = new JsonArray(speakers.Select(x => (JsonNode?)x).ToArray()),
+        };
+        speakers = refined.Speakers;
+    }
     var voices = new JsonObject();
     foreach (var (raw, number) in numbering)
         if (result.Voiceprints.TryGetValue(raw, out var v))
@@ -144,6 +159,7 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
         ["clusters"] = result.Turns.Select(t => t.Speaker).Distinct().Count(), ["dimension"] = diarizer.EmbeddingDimension,
         ["quality"] = q is null ? null : new JsonObject { ["cohesion"] = q.Cohesion, ["chunks"] = q.Chunks, ["clusters"] = q.Clusters, ["mergeRisk"] = q.MergeRisk },
         ["voices"] = voices,
+        ["recheck"] = recheck,
         // 短句的實驗（M§6.3.2、R34）：每一段用說話者辨識的聲紋模型各算一次聲紋（太短的是 null）
         ["embeddings"] = options["embedSegments"]?.GetValue<bool>() == true
             ? new JsonArray(segments.Select(s => diarizer.Embed(samples, s.Start, s.End) is { } e ? (JsonNode)new JsonArray(e.Select(x => (JsonNode)x).ToArray()) : null).ToArray())

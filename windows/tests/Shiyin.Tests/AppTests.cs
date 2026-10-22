@@ -81,6 +81,8 @@ public sealed class AppTests : IDisposable
             throw new NotSupportedException();
         public Speakers.Diarizer.Output Diarize(float[] samples, int? minSpeakers, Action<double> progress, CancellationToken cancel) =>
             throw new NotSupportedException();
+        public List<float[]?> Embed(float[] samples, IReadOnlyList<(double Start, double End)> spans, CancellationToken cancel) =>
+            throw new NotSupportedException();
     }
 
     sealed class NoCompressor : IAudioCompressor

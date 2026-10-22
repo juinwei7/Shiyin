@@ -51,6 +51,8 @@ public interface ISpeechEngines
                                             string language, WhisperControl control);
     List<TranscribedSegment> Fast(IAudioStream audio, MeetingLanguage language, Action<double> progress, CancellationToken cancel);
     Diarizer.Output Diarize(float[] samples, int? minSpeakers, Action<double> progress, CancellationToken cancel);
+    /// <summary>每一段用說話者辨識的聲紋模型各算一次聲紋（短句再確認，R34）；不到 0.5 秒的是 null</summary>
+    List<float[]?> Embed(float[] samples, IReadOnlyList<(double Start, double End)> spans, CancellationToken cancel);
 }
 
 /// <summary>真的引擎：whisper.cpp、SenseVoice、sherpa-onnx，模型從 ModelStore 的位置讀</summary>
@@ -106,6 +108,19 @@ public sealed class SpeechEngines(ModelStore models) : ISpeechEngines
     {
         using var diarizer = new Diarizer(DiarizerOptions);
         return diarizer.Diarize(samples, minSpeakers, progress, cancel);
+    }
+
+    public List<float[]?> Embed(float[] samples, IReadOnlyList<(double Start, double End)> spans, CancellationToken cancel)
+    {
+        var options = DiarizerOptions;
+        using var embedder = new SpeakerEmbedder(options.EmbeddingModel, options.Threads);
+        var result = new List<float[]?>(spans.Count);
+        foreach (var (start, end) in spans)
+        {
+            cancel.ThrowIfCancellationRequested();
+            result.Add(embedder.Embed(samples, start, end));
+        }
+        return result;
     }
 }
 
@@ -324,12 +339,31 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
             foreach (var (raw, number) in numbering)
                 if (output.Voiceprints.TryGetValue(raw, out var embedding))
                     voices[number] = new SpeakerVoice(embedding, output.SpeechSeconds.GetValueOrDefault(raw), source);
+            speakers = Recheck(engines, segments, speakers, voices, samples, null, cancel);
             return (speakers, voices, output.Quality);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             Log.Error($"diarization failed: {e.GetType().Name}");
             return (segments.Select(_ => (int?)null).ToList(), [], null);
+        }
+    }
+
+    /// <summary>短句再跟每位說話者比一次（R34、design-windows §9）；算不出來就照說話者辨識的結果。locked：使用者改過說話者的句子</summary>
+    public static List<int?> Recheck(ISpeechEngines engines, IReadOnlyList<TranscribedSegment> segments, List<int?> speakers,
+                                     IReadOnlyDictionary<int, SpeakerVoice> voices, float[] samples, IReadOnlySet<int>? locked, CancellationToken cancel)
+    {
+        try
+        {
+            var result = SpeakerRecheck.Refine(segments, speakers, voices.ToDictionary(p => p.Key, p => p.Value.Embedding),
+                spans => engines.Embed(samples, spans, cancel), locked);
+            Log.Info($"speaker recheck: {result.Checked} checked, {result.Changed} changed");
+            return result.Speakers;
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Log.Error($"speaker recheck failed: {e.GetType().Name}");
+            return speakers;
         }
     }
 }

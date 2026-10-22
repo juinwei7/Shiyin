@@ -101,6 +101,38 @@ public class PipelineTests
     }
 
     [Fact]
+    public void SpeakerRecheckRules()
+    {
+        // 說話者 1、2 的聲紋；每句的聲紋依開始時間給
+        var voices = new Dictionary<int, float[]> { [1] = [1, 0], [2] = [0, 1] };
+        List<TranscribedSegment> segments = [new(0, 1, "", false), new(1, 2, "", false), new(2, 2.4, "", false), new(3, 8, "", false),
+                                             new(8, 9, "", false), new(9, 10, "", false), new(10, 11, "", false), new(11, 12, "", false)];
+        List<int?> speakers = [1, 1, 1, 1, 2, null, 1, 3];
+        var vectors = new Dictionary<double, float[]>
+        {
+            [0] = [0.6f, 0.8f],    // 像 2 多 0.2：不到 0.25，不改
+            [1] = [0.5f, 0.866f],  // 像 2 多 0.37：改
+            [2] = [0, 1], [3] = [0, 1],  // 0.4 秒、5 秒：不查
+            [8] = [1, 0],          // 使用者改過：不查
+        };
+        var asked = new List<(double Start, double End)>();
+        IReadOnlyList<float[]?> Embed(IReadOnlyList<(double Start, double End)> spans)
+        {
+            asked.AddRange(spans);
+            return spans.Select(s => vectors.GetValueOrDefault(s.Start)).ToList();
+        }
+        var result = SpeakerRecheck.Refine(segments, speakers, voices, Embed, new HashSet<int> { 4 });
+        Assert.Equal([1, 2, 1, 1, 2, null, 1, 3], result.Speakers);
+        // 沒有說話者、說話者沒有聲紋（3）的不查；算不出聲紋（10 秒那句）的不改
+        Assert.Equal([(0.0, 1.0), (1.0, 2.0), (10.0, 11.0)], asked);
+        Assert.Equal((3, 1), (result.Checked, result.Changed));
+        // 只有一位說話者有聲紋：不查
+        asked.Clear();
+        Assert.Equal(speakers, SpeakerRecheck.Refine(segments, speakers, new Dictionary<int, float[]> { [1] = [1, 0] }, Embed).Speakers);
+        Assert.Empty(asked);
+    }
+
+    [Fact]
     public void DiarizationQuality()
     {
         var cases = Golden.Fixtures.GetProperty("qualityCases").EnumerateArray().ToList();
