@@ -1196,7 +1196,7 @@ User-Agent: Shiyin/<版本>
 - README（英文；“Don’t summarize” 那一列同樣改成 “… with usage statistics turned off”）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. You can turn it off in Settings → Advanced.
 - 官網（website.md §14 的隱私區塊，中英日；Mac 首頁和 Windows 頁都加，`content.mjs` 的 `privacy.usage`）：整理工具那一段後面加一句：「另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.」日文：「また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。」（日文版的介面名稱照 app 的英文介面寫）
 - requirements 第 4 節已經改好（2026-10-22）。
-- 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉」。Mac（`v4.0.0`）和 Windows（`win-v4.0.0`）的版本說明都寫。
+- 版本說明：不寫（2026-10-22 使用者決定；原本規劃 `v4.0.0`、`win-v4.0.0` 各加一條「新增匿名使用統計…」）。收什麼寫在使用說明、README、官網的隱私說明和設定的「詳細…」
 
 ### 30.9 Windows 版
 
