@@ -704,4 +704,60 @@ public sealed class ServicesTests : IDisposable
         }
         finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
     }
+
+    // MARK: 找新版（design-windows §14.3、D94）
+
+    /// <summary>假的 GitHub：release 清單照 per_page 給前幾筆，下載說明檔給 Velopack 的更新說明</summary>
+    sealed class FakeGitHub(string releases, string feed) : Velopack.Sources.IFileDownloader
+    {
+        public List<string> Requests { get; } = [];
+
+        public Task<string> DownloadString(string url, IDictionary<string, string>? headers = null, double timeout = 30)
+        {
+            Requests.Add(url);
+            if (url.Contains("/releases?"))
+            {
+                var perPage = int.Parse(System.Web.HttpUtility.ParseQueryString(new Uri(url).Query)["per_page"]!);
+                return Task.FromResult(new JsonArray(JsonNode.Parse(releases)!.AsArray().Take(perPage).Select(n => n!.DeepClone()).ToArray()).ToJsonString());
+            }
+            return Task.FromResult(feed);
+        }
+
+        public Task<byte[]> DownloadBytes(string url, IDictionary<string, string>? headers = null, double timeout = 30) =>
+            DownloadString(url, headers, timeout).ContinueWith(t => Encoding.UTF8.GetBytes(t.Result));
+
+        public Task DownloadFile(string url, string targetFile, Action<int> progress, IDictionary<string, string>? headers = null, double timeout = 30,
+                                 CancellationToken cancelToken = default) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task ReleaseSourceFindsWindowsBehindManyMacReleases()
+    {
+        // 最新的 12 個是 Mac 的 release（只有 DMG），後面才是 Windows 的
+        var list = new JsonArray();
+        for (var i = 0; i < 12; i++)
+            list.Add(new JsonObject
+            {
+                ["name"] = $"拾音 3.{20 - i}.0", ["prerelease"] = false, ["published_at"] = $"2026-11-{30 - i:00}T00:00:00Z",
+                ["assets"] = new JsonArray(new JsonObject { ["name"] = "Shiyin.dmg", ["browser_download_url"] = "https://example.invalid/Shiyin.dmg" }),
+            });
+        list.Add(new JsonObject
+        {
+            ["name"] = "拾音 Windows 3.6.1", ["prerelease"] = false, ["published_at"] = "2026-11-01T00:00:00Z",
+            ["assets"] = new JsonArray(
+                new JsonObject { ["name"] = "releases.win-x64.json", ["browser_download_url"] = "https://example.invalid/win/releases.win-x64.json" },
+                new JsonObject { ["name"] = "ShiyinApp-3.6.1-win-x64-full.nupkg", ["browser_download_url"] = "https://example.invalid/win/full.nupkg" }),
+        });
+        var feed = """{"Assets":[{"PackageId":"ShiyinApp","Version":"3.6.1","Type":"Full","FileName":"ShiyinApp-3.6.1-win-x64-full.nupkg","SHA1":"00","SHA256":"00","Size":1}]}""";
+        const string repo = "https://github.com/juinwei7/Shiyin";
+
+        var github = new FakeGitHub(list.ToJsonString(), feed);
+        var found = await new WindowsReleaseSource(repo, github).GetReleaseFeed(Velopack.Logging.NullVelopackLogger.Instance, "ShiyinApp", "win-x64");
+        Assert.Equal(["3.6.1"], found.Assets.Select(a => a.Version.ToString()));
+        Assert.Equal("https://api.github.com/repos/juinwei7/Shiyin/releases?per_page=100&page=1", github.Requests[0]);
+        // Velopack 原本的只讀 10 筆：Windows 的那個不在裡面
+        var original = await new Velopack.Sources.GithubSource(repo, null, false, new FakeGitHub(list.ToJsonString(), feed))
+            .GetReleaseFeed(Velopack.Logging.NullVelopackLogger.Instance, "ShiyinApp", "win-x64");
+        Assert.Empty(original.Assets);
+    }
 }

@@ -24,7 +24,8 @@ public sealed class VelopackUpdates : IUpdatePlatform
     {
         this.http = http;
         this.testSource = testSource?.TrimEnd('/');
-        IUpdateSource source = this.testSource is null ? new GithubSource(Repository, null, false, null) : new SimpleWebSource(this.testSource);
+        // GitHub 的 release 清單讀 100 筆（Velopack 原本只讀 10 筆，Mac 的 release 多時會找不到 Windows 的，§14.3、D94）
+        IUpdateSource source = this.testSource is null ? new WindowsReleaseSource(Repository) : new SimpleWebSource(this.testSource);
         manager = new UpdateManager(source, null, null);
     }
 

@@ -14,6 +14,8 @@
     <PackageReference Include="DocumentFormat.OpenXml" />
     <!-- 只用純 C# 的部分（重新取樣、格式換算），WASAPI、Media Foundation 在 Platform -->
     <PackageReference Include="NAudio.Core" />
+    <!-- 只用讀 GitHub release 清單的部分（WindowsReleaseSource）；安裝、更新在 Platform -->
+    <PackageReference Include="Velopack" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Shiyin.Tests" />
