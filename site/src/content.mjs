@@ -170,6 +170,16 @@ export const content = {
           ['顯示卡', '不需要；有 NVIDIA 顯示卡時自動用它加速轉錄'],
           ['費用', '免費，MIT 授權開源'],
         ],
+        // 電腦效能（docs/website.md §16.1）：只寫量過或確定的事
+        perf: {
+          h3: '電腦效能',
+          items: [
+            '<b>有 NVIDIA 顯示卡最快</b>：40 分鐘的會議用 RTX 3060 約 8 分鐘轉完。顯示記憶體建議 4 GB 以上（轉錄模型約 1.7 GB），NVIDIA 的驅動要 527 版以後，太舊時會改用 CPU 轉錄。',
+            '<b>只用 CPU 比較慢</b>：同一場會議在同一台桌機只用 CPU 約 30 分鐘；筆電或比較舊的 CPU 會更久，可能比會議本身還長。轉錄最多用 8 個執行緒，核心越多越快。Snapdragon 等 ARM 的電腦只用 CPU。',
+            '<b>等不及的話</b>：到「設定 → 錄音」把「正式轉錄」改成「快速辨識」，轉錄快很多，但比較不準、不會參考詞彙表。',
+            '<b>錄音時很輕</b>：即時逐字稿大約只用一個 CPU 核心的三分之一；正式轉錄在背景進行，轉錄時可以繼續用電腦。',
+          ],
+        },
         button: (file) => `下載 ${file}`,
         arm: 'ARM 的電腦（例如 Snapdragon）下載這個',
         firstOpen: '安裝：',
@@ -194,7 +204,7 @@ export const content = {
       updates: { h2: '最近更新', release: 'GitHub Release' },
       faq: [
         ['要付費嗎？', '拾音免費。整理會議紀錄用的是你自己的 Claude、ChatGPT 訂閱或 API 額度；選「不整理」就只有逐字稿，不會有任何費用。'],
-        ['沒有 NVIDIA 顯示卡可以用嗎？', '可以，轉錄改用 CPU，比較慢：40 分鐘的會議大約要 30 分鐘（依電腦而定）。AMD、Intel 的顯示卡目前也只用 CPU。'],
+        ['沒有 NVIDIA 顯示卡可以用嗎？', '可以，轉錄改用 CPU，比較慢：40 分鐘的會議在一台桌機約 30 分鐘，筆電會更久。AMD、Intel 的顯示卡目前也只用 CPU。等不及的話，可以在「設定 → 錄音」把「正式轉錄」改成「快速辨識」，快很多但比較不準。'],
         ['為什麼 Windows 會擋下來？', '拾音還沒有程式碼簽章，SmartScreen 對新的、沒有簽章的程式都會先擋一次，按「其他資訊」→「仍要執行」就能安裝。開著「智慧型應用程式控制」時沒有「仍要執行」可以按，要先關掉它，或等有正式簽章的版本。'],
         ['Mac 和 Windows 的會議可以互通嗎？', '可以。在一邊匯出 .shiyin 封包，另一邊匯入，錄音、逐字稿、說話者的名字、會議紀錄和筆記都會帶過去。記住的說話者聲音不會帶過去，兩邊用的辨識模型不一樣。'],
         ['需要網路嗎？', '錄音、轉錄、說話者辨識都不需要。第一次下載模型、整理會議紀錄和對會議提問時需要。'],
@@ -392,6 +402,15 @@ export const content = {
           ['Graphics', 'Not required; an NVIDIA card is used automatically to speed up transcription'],
           ['Price', 'Free, open source under the MIT License'],
         ],
+        perf: {
+          h3: 'Performance',
+          items: [
+            '<b>Fastest with an NVIDIA graphics card</b>: a 40-minute meeting took about 8 minutes on an RTX 3060. 4 GB of video memory or more is recommended (the transcription model is about 1.7 GB), and the NVIDIA driver needs to be version 527 or later; with an older driver Shiyin transcribes on the CPU.',
+            '<b>Slower on the CPU alone</b>: the same meeting took about 30 minutes on the same desktop without the GPU; laptops and older CPUs take longer, possibly longer than the meeting itself. Transcription uses up to 8 threads, so more cores help. ARM PCs such as Snapdragon use the CPU only.',
+            '<b>In a hurry?</b> In Settings → Recording, set “Transcription” to “Quick recognition”. It’s much faster, but less accurate and doesn’t use the glossary.',
+            '<b>Light while recording</b>: the live transcript uses about a third of one CPU core; full transcription runs in the background and you can keep using the PC.',
+          ],
+        },
         button: (file) => `Download ${file}`,
         arm: 'For ARM PCs (such as Snapdragon), download this one',
         firstOpen: 'Installing:',
@@ -416,7 +435,7 @@ export const content = {
       updates: { h2: 'What’s new', release: 'GitHub Release' },
       faq: [
         ['Does it cost anything?', 'Shiyin is free. Meeting notes are written with your own Claude or ChatGPT subscription or API credit. Choose “Don’t summarize” and you get just the transcript, at no cost.'],
-        ['Does it work without an NVIDIA graphics card?', 'Yes. Transcription runs on the CPU, which is slower: a 40-minute meeting takes around 30 minutes, depending on the PC. AMD and Intel graphics also use the CPU for now.'],
+        ['Does it work without an NVIDIA graphics card?', 'Yes. Transcription runs on the CPU, which is slower: a 40-minute meeting took about 30 minutes on a desktop, and laptops take longer. AMD and Intel graphics also use the CPU for now. In a hurry? Set “Transcription” to “Quick recognition” in Settings → Recording: much faster, but less accurate.'],
         ['Why does Windows block it?', 'Shiyin isn’t code-signed yet, and SmartScreen holds back new, unsigned apps. Click “More info” → “Run anyway” to install. With Smart App Control on there’s no “Run anyway”; turn it off first, or wait for a signed release.'],
         ['Can I move meetings between Mac and Windows?', 'Yes. Export a .shiyin package on one and import it on the other: the recording, transcript, speaker names, meeting notes and your notes all come along. Remembered voices don’t, because the two versions use different recognition models.'],
         ['Does it need the internet?', 'Recording, transcription and speaker identification don’t. Downloading the models the first time, writing the notes and asking your meetings questions do.'],
@@ -617,6 +636,15 @@ export const content = {
           ['表示言語', '英語、繁体字中国語（日本語表示には対応していません）'],
           ['価格', '無料、MIT ライセンスのオープンソース'],
         ],
+        perf: {
+          h3: 'PC の性能',
+          items: [
+            '<b>NVIDIA のグラフィックスカードがあれば最速</b>：40 分の会議が RTX 3060 で約 8 分でした。ビデオメモリは 4 GB 以上を推奨します（文字起こしモデルは約 1.7 GB）。NVIDIA のドライバーは 527 以降が必要で、古い場合は CPU で文字起こしします。',
+            '<b>CPU だけだと時間がかかります</b>：同じ会議が同じデスクトップの CPU だけで約 30 分でした。ノート PC や古い CPU ではさらに長く、会議そのものより長くなることもあります。文字起こしは最大 8 スレッドを使うので、コアが多いほど速くなります。Snapdragon などの ARM の PC は CPU だけを使います。',
+            '<b>急ぐときは</b>：「Settings → Recording」で「Transcription」を「Quick recognition」にすると、ずっと速くなりますが、精度が下がり、用語集も使いません。',
+            '<b>録音中は軽い</b>：リアルタイムの文字起こしは CPU コア 1 つの約 3 分の 1 しか使いません。正式な文字起こしはバックグラウンドで行うので、その間も PC を使えます。',
+          ],
+        },
         button: (file) => `${file} をダウンロード`,
         arm: 'ARM の PC（Snapdragon など）はこちら',
         firstOpen: 'インストール：',
@@ -641,7 +669,7 @@ export const content = {
       updates: { h2: '最近のアップデート', release: 'GitHub Release' },
       faq: [
         ['料金はかかりますか？', '拾音は無料です。議事録のまとめには、ご自身の Claude、ChatGPT のサブスクリプションか API の利用枠を使います。「Don’t summarize」を選べば文字起こしだけになり、費用はかかりません。'],
-        ['NVIDIA のグラフィックスカードがなくても使えますか？', '使えます。文字起こしは CPU で行うので時間がかかり、40 分の会議でおよそ 30 分です（PC によって異なります）。AMD、Intel のグラフィックスも今のところ CPU を使います。'],
+        ['NVIDIA のグラフィックスカードがなくても使えますか？', '使えます。文字起こしは CPU で行うので時間がかかり、40 分の会議がデスクトップで約 30 分、ノート PC ではさらにかかります。AMD、Intel のグラフィックスも今のところ CPU を使います。急ぐときは「Settings → Recording」で「Transcription」を「Quick recognition」にすると、ずっと速くなりますが精度は下がります。'],
         ['Windows にブロックされるのはなぜですか？', '拾音にはまだコード署名がなく、SmartScreen は署名のない新しいアプリを一度止めます。「詳細情報」→「実行」でインストールできます。「スマート アプリ コントロール」がオンのときは「実行」が出ないので、先にオフにするか、署名付きのバージョンをお待ちください。'],
         ['Mac と Windows で会議を移せますか？', 'はい。片方で .shiyin パッケージを書き出し、もう片方で読み込むと、録音、文字起こし、話者の名前、議事録、メモがそのまま移ります。覚えた話者の声は移りません。両者で認識モデルが違うためです。'],
         ['インターネット接続は必要ですか？', '録音、文字起こし、話者の識別には不要です。モデルの初回ダウンロード、議事録のまとめ、会議への質問には必要です。'],

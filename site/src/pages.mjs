@@ -384,6 +384,10 @@ ${paragraphs(c.notes.ps)}
   <div><dt>${c.download.version}</dt><dd>${win.version}<a href="${escape(win.url)}">${d.notes}</a></dd></div>
 ${d.rows.map(([k, v]) => `  <div><dt>${k}</dt><dd>${v}</dd></div>`).join('\n')}
 </dl>
+<div class="perf">
+<h3>${d.perf.h3}</h3>
+${list(d.perf.items)}
+</div>
 <p class="get"><a class="download" href="${escape(win.x64.url)}">${d.button(win.x64.name)}</a></p>
 <p class="arm"><a href="${escape(win.arm64.url)}" title="${escape(win.arm64.name)}">${d.arm}</a></p>
 <p class="first">${d.firstOpen}</p>

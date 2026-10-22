@@ -120,6 +120,11 @@ figcaption a { color: inherit; text-decoration: underline; }
 .part .windows-card p { margin-top: 4px; font-size: 15px; color: var(--muted); }
 .part .windows-card .links { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: none; margin: 0; font-size: 15px; }
 .part .arm { margin-top: 12px; font-size: 15px; }
+/* Windows 頁：電腦效能（需求表下面） */
+.part .perf { margin-top: 24px; }
+.perf h3 { font-size: 17px; font-weight: 600; }
+.part .perf ul { margin-top: 8px; font-size: 16px; }
+.part .perf li + li { margin-top: 8px; }
 /* Windows 頁：顯示卡加速那段 */
 .part .gpu { margin-top: 16px; padding: 14px 18px; border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; background: var(--soft); font-size: 16px; }
 /* SmartScreen 的示意圖（§16.3）：兩格簡化的藍色視窗，黃色框標出要按的地方 */

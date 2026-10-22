@@ -114,6 +114,7 @@ The Windows version lives in [`windows/`](windows/) (C#, .NET 10, WinUI 3) and m
 | Memory | 8 GB or more |
 | Disk space | Downloaded on first use: about 240 MB for fast recognition, 45 MB for speaker identification, 1.7 GB for the transcription model; plus 574 MB for Japanese meetings |
 | Graphics | Not required. On x64 PCs with an NVIDIA graphics card, Shiyin downloads GPU acceleration automatically (about 685 MB) and full transcription runs on the GPU (a 40-minute meeting took about 8 minutes on an RTX 3060, about 30 minutes on the CPU alone) |
+| Performance | Fastest with an NVIDIA card: 4 GB of video memory or more recommended, driver 527 or later. On the CPU alone it's slower, and on a laptop it may take longer than the meeting itself; transcription uses up to 8 threads. In a hurry, set Settings → Recording → Transcription to Quick recognition (much faster, less accurate). The live transcript while recording uses about a third of one CPU core |
 | Summarizer | Same as on the Mac |
 
 What’s different from the Mac version:
