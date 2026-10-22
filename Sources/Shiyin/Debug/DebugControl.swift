@@ -55,6 +55,12 @@ enum DebugControl {
         // 聲紋（design §21.4）：notthis <會議 id> <說話者>（不是他）；people <輸出.json>；personrename <id> <名字>；
         // persondelete <id>；peopledeleteall
         case "notthis": model.selection = id; model.rejectVoiceprintMatch(Int(args[2]) ?? 1)
+        // speakerreview <會議 id> <回答 JSON：{"說話者編號":"是"|"不是，名字"}> <略過的說話者，逐號分隔>：等於在待確認送出說話者的題目（R33.2）
+        case "speakerreview":
+            model.selection = id
+            let answers = (try? JSONDecoder().decode([String: String].self, from: Data(args[2].utf8))) ?? [:]
+            model.answerSpeakerQuestions(Dictionary(uniqueKeysWithValues: answers.compactMap { k, v in Int(k).map { ($0, v) } }),
+                                         skipped: Set(args[3].split(separator: ",").compactMap { Int($0) }))
         // 猜說話者（design §21.5）：namespeakers <會議 id>（排工作）；applysuggestion、dismisssuggestion <會議 id> <說話者>；
         // applyallsuggestions <會議 id>
         // 對會議提問（design §21.8）：ask <會議 id> <問題>；askall <all|folder|recent> <問題>；
@@ -444,6 +450,11 @@ enum DebugControl {
         var out: [String: Any] = [
             "selection": model.selection ?? -1,
             "tab": model.tab.rawValue,
+            // 選中的會議：說話者的名字、來源、建議、最像的幾位認識的人（R33，「自動」名字的選單）
+            "speakers": (model.detail?.speakers ?? [:]).keys.sorted().map { idx -> [String: Any] in
+                ["idx": idx, "name": model.detail?.speakers[idx] ?? "", "source": model.detail?.speakerSources[idx] ?? "",
+                 "suggestion": model.detail?.speakerSuggestions[idx]?.name ?? "", "candidates": model.detail?.speakerCandidates[idx] ?? []]
+            },
             "glossary": model.glossary.map(\.term),
             "glossarySuggestions": model.glossarySuggestions.map { ["term": $0.term, "source": $0.sourceLabel] },
             "environment": model.environment.items.map { ["name": $0.name, "ok": $0.ok] },

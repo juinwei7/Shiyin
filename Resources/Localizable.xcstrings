@@ -1169,13 +1169,13 @@
         }
       }
     },
-    "不是%@": {
+    "不是%@（不知道是誰）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not %@"
+            "value": "Not %@ (don't know who)"
           }
         }
       }
@@ -1731,6 +1731,17 @@
         }
       }
     },
+    "其他人…（到逐字稿改名）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone Else… (Rename in Transcript)"
+          }
+        }
+      }
+    },
     "出了一點問題": {
       "extractionState": "manual",
       "localizations": {
@@ -1914,17 +1925,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download it in “Models & Storage”, or set transcription to macOS in “Recording”"
-          }
-        }
-      }
-    },
-    "到逐字稿改名": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rename in Transcript"
           }
         }
       }
@@ -3409,29 +3409,6 @@
         }
       }
     },
-    "從對話內容猜到 %lld 位說話者的名字": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Guessed the name of %lld speaker from the conversation"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Guessed the names of %lld speakers from the conversation"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "從左邊選一場會議": {
       "extractionState": "manual",
       "localizations": {
@@ -4828,6 +4805,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yes"
+          }
+        }
+      }
+    },
+    "是…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's…"
+          }
+        }
+      }
+    },
+    "是別人：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's someone else:"
+          }
+        }
+      }
+    },
+    "是誰？（可以不填）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who is it? (optional)"
           }
         }
       }
@@ -6297,6 +6307,29 @@
         }
       }
     },
+    "猜到 %lld 位說話者的名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the name of %lld speaker"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the names of %lld speakers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "猜到的說話者名字": {
       "extractionState": "manual",
       "localizations": {
@@ -7505,6 +7538,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speaker renamed"
+          }
+        }
+      }
+    },
+    "說話者的題目不會送給整理工具，送出後直接換名字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker questions aren't sent to the summarizer; the names change as soon as you submit."
           }
         }
       }
