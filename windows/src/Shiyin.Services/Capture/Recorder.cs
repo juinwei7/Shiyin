@@ -243,11 +243,17 @@ public sealed class Recorder
             var started = new Dictionary<int, IAudioSource>();
             var warnings = new List<string>();
             var denied = false;
-            foreach (var (channel, source) in makeSources())
+            // 先接好每個聲道的接收，再開始：模擬錄音的第二個聲道是第一個的鏡像（MirroredSource），第一個一開始就送資料，
+            // 第二個還沒接上的話開頭那幾段會丟掉，兩個聲道對不齊（2026-10-22 CI 的 macOS 機器比較慢時看到）
+            var made = makeSources();
+            foreach (var (channel, source) in made)
             {
                 var c = channel;
                 source.OnSamples = samples => newWriter.Append(c, samples);
                 source.OnInterruption = () => ScheduleRestart(c);
+            }
+            foreach (var (channel, source) in made)
+            {
                 try
                 {
                     source.Start();

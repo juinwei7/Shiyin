@@ -133,6 +133,7 @@ Mac 的 DEBUG 控制通道加 `shiyinctl dump-golden <fixtures.json> <輸出資�
 `tests/` 讀 `fixtures.json`，用 C# 產生同樣的東西，跟 `shared/golden/` 比對：
 
 - **逐位元組**：提示詞、schema 的文字、範本、md、txt、srt、vtt、HTML、`schema.sql`。匯出一律 UTF-8 無 BOM、換行 `\n`，跟 Mac 相同。
+  - `shared/golden/**` 在 `.gitattributes` 設成 `-text`：Windows 上的 git（`core.autocrlf`）取出時會把換行改成 CRLF，逐位元組比對全部失敗（2026-10-22 第一次跑 CI 時，x64、ARM64 各 13 個失敗）。
 - **比解析後的內容**：JSON 檔（Mac 的 JSONEncoder 輸出 `"key" : value`、鍵有排序、不跳脫 `/`，System.Text.Json 不同）和送給整理工具的請求 body（M§19.5 本來就不比位元組）。
 - **容許誤差**：低信心的壓縮比（zlib）兩邊的壓縮器輸出大小不同，允許 ±0.05；測試資料避開門檻 2.4 附近。說話者分得準不準的凝聚度是浮點數的加總，順序不同，比到小數 6 位。
 - **Mac 每次結果不同的地方**（W1.1 跑三次比對時發現，Mac 的行為不改，R26.5）：
@@ -283,6 +284,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 可以選取的 `TextBlock` 有自己的右鍵選單（拷貝、全選），會蓋掉外層的 `ContextFlyout`：文字上也要設同一個選單。
 - 快捷鍵掛在整個視窗時設 `KeyboardAcceleratorPlacementMode = Hidden`，不然滑鼠停在視窗裡會跳出快捷鍵提示。
 - 無障礙名稱（螢幕閱讀器、UI Automation）：只有圖示的按鈕、沒有標題的輸入框和下拉選單、`ListViewItem`（內容是好幾個文字元件時，名稱會是空的或資料的型別名稱）都要設 `AutomationProperties.Name`。新的畫面用虛擬機的 `uia.sh dump` 檢查。
+- 錄音開始時先接好每個聲道的 `OnSamples`，全部接好再 `Start()`：模擬錄音的第二個聲道是第一個的鏡像，第一個一開始就送資料，第二個還沒接上的話開頭那幾段會丟掉、兩個聲道對不齊（CI 的 macOS 機器比較慢時 `RecorderTests` 失敗）。真的錄音（WASAPI）順序沒有差別。
 - 服務要在 UI 執行緒建、在 UI 執行緒關（MediaPlayer、全域快捷鍵）；結束時背景只做停止錄音和工作，`AppHost.Post` 不再更新畫面，回到 UI 執行緒再關播放器和資料庫（錄音中按「結束」曾經卡死）。
 
 ### 11.3 外觀、字型
