@@ -246,6 +246,10 @@
 .field.typed .ph { display: none; }
 .field.focus { box-shadow: inset 0 0 0 1px var(--w-line), 0 0 0 3px color-mix(in srgb, var(--cel) 45%, transparent); }
 .q.skipped .field { opacity: .5; }
+/* 是非題（R32）：按「是」「不是」 */
+.yn { flex: 1; display: flex; gap: 6px; }
+.yb { height: 24px; padding: 0 14px; display: flex; align-items: center; border-radius: 6px; background: var(--w-bg); box-shadow: inset 0 0 0 1px var(--w-line); font-size: 13px; }
+.yb.on { background: var(--cel); box-shadow: none; color: #fff; font-weight: 600; }
 .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .chk i { width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--w-3); display: grid; place-items: center; }
 .chk.on i { background: var(--cel); box-shadow: none; }

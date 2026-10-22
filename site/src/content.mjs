@@ -43,10 +43,10 @@ export const content = {
     },
     video: {
       file: 'zh',
-      h2: '看 52 秒的介紹影片',
-      link: '看 52 秒的介紹影片',
+      h2: '看 50 秒的介紹影片',
+      link: '看 50 秒的介紹影片',
       name: '拾音 Shiyin 介紹影片',
-      description: '52 秒看懂拾音：按下錄音，邊講邊出逐字稿；停止後自動整理成會議紀錄、分出說話者，沒把握的地方先問你，還可以直接問會議，答案附時間點。',
+      description: '50 秒看懂拾音：按下錄音，每一句都依說話者記下來；會議紀錄的每一點都連回錄音的時間點，沒把握的地方先問你，還可以直接問會議，點時間點就聽到原話。',
     },
     shots: {
       summary: '拾音的會議紀錄畫面：摘要、決議、待辦，每一條後面都有時間點',
@@ -279,10 +279,10 @@ export const content = {
     },
     video: {
       file: 'en',
-      h2: 'Watch the 52-second intro',
-      link: 'Watch the 52-second intro',
+      h2: 'Watch the 50-second intro',
+      link: 'Watch the 50-second intro',
       name: 'Shiyin intro video',
-      description: 'Shiyin in 52 seconds: press Record and read the live transcript, then get meeting notes with speakers and timestamps. Shiyin asks when it isn’t sure, and you can ask the meeting questions.',
+      description: 'Shiyin in 50 seconds: press Record and every word is captured by speaker. Every point in the notes links back to the moment it was said, Shiyin asks when it isn’t sure, and you can ask the meeting questions.',
     },
     shots: {
       summary: 'Meeting notes in Shiyin: summary, decisions and action items, each with a timestamp',
@@ -513,10 +513,10 @@ export const content = {
     },
     video: {
       file: 'en',
-      h2: '52 秒の紹介動画（英語）',
-      link: '52 秒の紹介動画を見る',
+      h2: '50 秒の紹介動画（英語）',
+      link: '50 秒の紹介動画を見る',
       name: '拾音 Shiyin 紹介動画',
-      description: '52 秒でわかる拾音：録音を押すと話しながら文字起こしが表示され、停止すると話者を分けた議事録が自動でまとまります。自信がないところは先に質問し、会議に直接質問することもできます。（英語版の動画です）',
+      description: '50 秒でわかる拾音：録音を押すと、発言が話者ごとに記録されます。議事録の各項目は録音のタイムスタンプにつながり、自信がないところは先に質問し、会議に直接質問することもできます。（英語版の動画です）',
     },
     shots: {
       summary: '拾音の議事録画面：要約、決定事項、ToDo の各項目にタイムスタンプが付いている',
