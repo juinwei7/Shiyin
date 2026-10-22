@@ -44,7 +44,9 @@ struct ReviewTab: View {
         } else {
             VStack(spacing: 0) {
                 ReadingColumn {
-                    Text("以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
+                    Text(items.contains(where: \.yesNo)
+                         ? "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。"
+                         : "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
                         .foregroundStyle(.secondary)
                     ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                         reviewRow(index, item)
@@ -122,17 +124,50 @@ struct ReviewTab: View {
                     .foregroundStyle(isDismissed ? .secondary : .primary)
                     .strikethrough(isDismissed)
             }
-            HStack(spacing: 12) {
-                TextField("你的回答", text: Binding(get: { answers[index] ?? "" }, set: { answers[index] = $0 }))
+            // 是非題（R32、design §27）：「是」「不是」，選了「不是」才要填正確的答案；舊的草稿認不出來時照舊用輸入框
+            if item.yesNo, let choice = YesNoAnswer(answers[index] ?? "", language: language) {
+                HStack(spacing: 12) {
+                    Picker("回答", selection: Binding(get: { choice.isYes }, set: { yes in
+                        answers[index] = YesNoAnswer(isYes: yes, correction: yes == false ? choice.correction : "").text(language)
+                    })) {
+                        Text("是").tag(Bool?.some(true))
+                        Text("不是").tag(Bool?.some(false))
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(isDismissed)
+                    Spacer()
+                    skipToggle(index, isDismissed)
+                }
+                .padding(.leading, 22)
+                if choice.isYes == false {
+                    TextField("正確的是…（可以不填）", text: Binding(get: { choice.correction }, set: { text in
+                        answers[index] = YesNoAnswer(isYes: false, correction: text).text(language)
+                    }))
                     .textFieldStyle(.roundedBorder)
                     .disabled(isDismissed)
-                Toggle("略過", isOn: Binding(get: { isDismissed }, set: { on in
-                    if on { dismissed.insert(index) } else { dismissed.remove(index) }
-                }))
-                .toggleStyle(.checkbox)
+                    .padding(.leading, 22)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    TextField("你的回答", text: Binding(get: { answers[index] ?? "" }, set: { answers[index] = $0 }))
+                        .textFieldStyle(.roundedBorder)
+                        .disabled(isDismissed)
+                    skipToggle(index, isDismissed)
+                }
+                .padding(.leading, 22)
             }
-            .padding(.leading, 22)
         }
+    }
+
+    private var language: MeetingLanguage { detail.meeting.meetingLanguage }
+
+    private func skipToggle(_ index: Int, _ isDismissed: Bool) -> some View {
+        Toggle("略過", isOn: Binding(get: { isDismissed }, set: { on in
+            if on { dismissed.insert(index) } else { dismissed.remove(index) }
+        }))
+        .toggleStyle(.checkbox)
     }
 
     private var submitTitle: String {
@@ -148,4 +183,45 @@ struct ReviewTab: View {
         let provider = AppSettings.provider == .none ? "LLM" : AppSettings.provider.label
         return String(localized: "有回答的題目會交給 \(provider) 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。")
     }
+}
+
+/// 是非題的回答（design §27）：存成會議語言的文字，就是草稿和送給校稿的回答。
+/// 「是」→ 是／Yes／はい；「不是」→ 不是／No／いいえ；不是而且填了答案 →「不是，答案」「No, 答案」「いいえ、答案」
+struct YesNoAnswer: Equatable {
+    /// nil：還沒選
+    var isYes: Bool?
+    var correction = ""
+
+    init(isYes: Bool?, correction: String = "") {
+        self.isYes = isYes
+        self.correction = correction
+    }
+
+    /// 從存起來的文字認回來；空字串是還沒選，認不出來的（例如舊的草稿）回傳 nil
+    init?(_ text: String, language: MeetingLanguage) {
+        let yes = Self.yes(language), no = Self.no(language), separator = Self.separator(language)
+        if text.isEmpty {
+            self.init(isYes: nil)
+        } else if text == yes {
+            self.init(isYes: true)
+        } else if text == no {
+            self.init(isYes: false)
+        } else if text.hasPrefix(no + separator) {
+            self.init(isYes: false, correction: String(text.dropFirst(no.count + separator.count)))
+        } else {
+            return nil
+        }
+    }
+
+    func text(_ language: MeetingLanguage) -> String {
+        switch isYes {
+        case nil: return ""
+        case true?: return Self.yes(language)
+        case false?: return correction.isEmpty ? Self.no(language) : Self.no(language) + Self.separator(language) + correction
+        }
+    }
+
+    private static func yes(_ l: MeetingLanguage) -> String { l.text(zh: "是", en: "Yes", ja: "はい") }
+    private static func no(_ l: MeetingLanguage) -> String { l.text(zh: "不是", en: "No", ja: "いいえ") }
+    private static func separator(_ l: MeetingLanguage) -> String { l.text(zh: "，", en: ", ", ja: "、") }
 }

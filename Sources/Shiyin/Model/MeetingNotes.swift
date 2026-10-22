@@ -71,16 +71,30 @@ struct MeetingNotes: Codable, Hashable {
     struct ReviewItem: Codable, Hashable {
         var time: String
         var question: String
+        /// 能用是或否回答（R32、design §27）：畫面上給「是」「不是」的按鈕
+        var yesNo: Bool
 
-        init(time: String, question: String) {
+        init(time: String, question: String, yesNo: Bool = false) {
             self.time = time
             self.question = question
+            self.yesNo = yesNo
         }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             time = TimeFormat.clean((try? c.decode(String.self, forKey: .time)) ?? "")
             question = (try? c.decode(String.self, forKey: .question)) ?? ""
+            yesNo = (try? c.decode(Bool.self, forKey: .yesNo)) ?? false
+        }
+
+        private enum CodingKeys: String, CodingKey { case time, question, yesNo }
+
+        /// yesNo 是 false 時不寫：以前的會議紀錄、沒有是非題的會議紀錄存起來跟以前一字不差
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(time, forKey: .time)
+            try c.encode(question, forKey: .question)
+            if yesNo { try c.encode(true, forKey: .yesNo) }
         }
     }
 
@@ -153,7 +167,7 @@ struct MeetingNotes: Codable, Hashable {
             openQuestions: openQuestions.map(ri),
             topics: topics.map { Topic(title: r($0.title), start: $0.start, points: $0.points.map(ri)) },
             custom: custom.map { CustomSection(title: r($0.title), items: $0.items.map(ri)) },
-            reviewItems: reviewItems.map { ReviewItem(time: $0.time, question: r($0.question)) })
+            reviewItems: reviewItems.map { ReviewItem(time: $0.time, question: r($0.question), yesNo: $0.yesNo) })
     }
 
     /// 給搜尋索引用的純文字
@@ -177,7 +191,7 @@ struct MeetingNotes: Codable, Hashable {
             + #","openQuestions":"# + items
             + #","topics":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["title","start","points"],"properties":{"title":{"type":"string"},"start":{"type":"string"},"points":"# + items + #"}}}"#
             + #","custom":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["title","items"],"properties":{"title":{"type":"string"},"items":"# + items + #"}}}"#
-            + #","reviewItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["time","question"],"properties":{"time":{"type":"string"},"question":{"type":"string"}}}}}}"#
+            + #","reviewItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["time","question","yesNo"],"properties":{"time":{"type":"string"},"question":{"type":"string"},"yesNo":{"type":"boolean"}}}}}}"#
     }()
 }
 
