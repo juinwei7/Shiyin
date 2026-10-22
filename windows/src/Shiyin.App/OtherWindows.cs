@@ -301,6 +301,8 @@ public static class OtherWindows
         grid.Children.Add(Ui.Column(4,
             Ui.Heading(L.T("拾音"), MeetingLanguage.Zh, 26),
             Ui.Text(L.F("版本 %@", host.Version), 14, color: Ui.Secondary),
+            // 贊助（R13.3，同 Mac 的 Credits.html 第一行）：只放連結，用預設瀏覽器打開
+            Ui.Link(L.T("覺得拾音好用的話，可以請我喝杯咖啡。"), () => Shell.OpenUrl(ProblemReport.SponsorUrl)),
             Ui.Text(L.T("拾音是 MIT 授權的開源軟體，用到下列軟體和模型："), 13, color: Ui.Secondary)));
         var list = new ScrollViewer { Content = new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontSize = 12 } };
         Grid.SetRow(list, 1);

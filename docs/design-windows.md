@@ -273,6 +273,8 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `TextBox` 要多行時，`AcceptsReturn` 一定要在 `Text` 之前設：單行的 TextBox 設 Text 時只留第一行（範本的說明、回報問題的內容曾經被截掉）。TextBox 把換行存成 `\r`，存進資料庫或提示詞前換成 `\n`。
 - `Ui.Bar` 的左欄寬度跟著內容、不會換行：會換行的長文字放中間那欄。
 - 閱讀的欄位（摘要、詳細、待確認、提問、筆記、編輯會議紀錄、使用說明）用 `ReadingColumn`（同 Mac：填滿可用的寬度、最寬 680 或 760、靠左）。不能用 StackPanel 設 `MaxWidth` 加靠左：靠左時寬度是內容要的寬度，會換行的文字算出來很窄，整欄擠成一半（2026-10-21 朋友的電腦上看到）。文字後面接時間點用 `Ui.Inline`（文字一欄、時間照內容寬），不能兩欄都給比例寬度（會各分一半）；放在橫的 StackPanel 裡的文字不會換行，長的會被切掉。
+- **要宣告支援高 DPI**（`src/Shiyin.App/app.manifest` 的 PerMonitorV2，csproj 的 `ApplicationManifest`）：WinUI 的專案範本會帶這個檔案，純 C# 建的專案沒有，app 會是 DPI unaware，縮放不是 100% 時 Windows 把整個視窗的點陣圖拉大、字會糊（大部分筆電預設 125%～150%；2026-10-22 在虛擬機 150% 時看到，`GetWindowDpiAwarenessContext` 是 0）。Windows App SDK 建置時會把元件註冊合併進這個 manifest。視窗大小的程式本來就是照 `GetDpiForWindow` 換算的邏輯像素。
+- 逐字稿每一段的時間點跳到段落真正的開始（`Ui.Time` 的 `at`）：顯示的時間去掉了小數，24.4 秒的段落顯示 00:24，照顯示的時間跳到 24.0 秒，播放位置的高亮會落在上一段。會議紀錄裡的時間點（整理工具寫的字串）照舊。Mac 也是照顯示的時間跳（tasks 的「Mac 的小問題」）。
 - 粗體用 `FontWeights.Bold`（`Ui.Text(bold: true)`），不要用 SemiBold：中文、日文沒有 SemiBold 的字重，Windows 會換成明體的假粗體，跟其他文字不一樣。ContentDialog 內建的標題也是 SemiBold，標題要用 `Ui.DialogTitle`（2026-10-22 介面巡檢）。
 - 文字加按鈕的一列（狀態列、範本的說明、錄音列）用 `Ui.Bar`：長的文字或會被截的東西放中間那欄，按鈕放右邊照內容寬。全部放在橫的 StackPanel 裡時，英文的按鈕比較寬，會被擠出視窗。放不下時整個藏起來、不要切一半的（錄音列的兩個音量條）用 `FitRow`。逐字稿的搜尋列是 Grid：搜尋框最寬 300、可以縮。
 - `TextHighlighter` 要給 `Foreground`：預設是黑色，深色模式下標起來的字看不見。

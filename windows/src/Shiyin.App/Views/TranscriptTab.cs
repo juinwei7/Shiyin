@@ -301,7 +301,7 @@ public sealed class TranscriptTab
             grid.BorderThickness = new Thickness(3, 0, 0, 0);
             ToolTipService.SetToolTip(grid, L.T("辨識信心低，建議對照錄音確認"));
         }
-        var time = (FrameworkElement)Ui.Time(TimeFormat.String(segment.Start), host.Player.IsLoaded ? s => host.Player.Seek(s) : null);
+        var time = (FrameworkElement)Ui.Time(TimeFormat.String(segment.Start), host.Player.IsLoaded ? s => host.Player.Seek(s) : null, segment.Start);
         time.HorizontalAlignment = HorizontalAlignment.Right;
         // 時間、說話者對齊第一行（同 Mac 的 firstTextBaseline）：預設是上下置中，長的段落、有校正建議時會對不齊
         time.VerticalAlignment = VerticalAlignment.Top;

@@ -16,6 +16,8 @@
     <AssemblyName>Shiyin</AssemblyName>
     <Version>3.6.0</Version>
     <ApplicationIcon Condition="Exists('Assets/Shiyin.ico')">Assets/Shiyin.ico</ApplicationIcon>
+    <!-- 支援高 DPI（PerMonitorV2）：沒有時縮放 125%、150% 的螢幕上整個視窗會糊（app.manifest） -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- 正式建置（Windows 上）自帶 Windows App SDK。在 Mac 上只做編譯檢查：mt.exe、MakePri.exe 是 Windows 的程式跑不了，
          改成不自帶、不產生資源索引（.pri）。這樣建出來的東西不能拿去用 -->
     <WindowsAppSDKSelfContained Condition="'$(WindowsAppSDKSelfContained)' == '' and '$(OS)' == 'Windows_NT'">true</WindowsAppSDKSelfContained>

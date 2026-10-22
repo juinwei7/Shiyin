@@ -13,6 +13,8 @@ public static class ProblemReport
 {
     public const string RepositoryUrl = "https://github.com/juinwei7/Shiyin";
     public const string DefaultIssuesUrl = RepositoryUrl + "/issues";
+    /// <summary>贊助（R13.3）：「關於拾音」最上面的連結，用預設瀏覽器打開</summary>
+    public const string SponsorUrl = "https://ko-fi.com/weiwei_chang";
 
     /// <summary>Windows 的環境（Platform 填）：版本和 build、CPU、記憶體、顯示卡、whisper 用哪張顯示卡（或 CPU）</summary>
     public sealed record Environment(string AppVersion, string Build, string Windows, string Cpu, long MemoryBytes, string Gpu, string WhisperBackend);

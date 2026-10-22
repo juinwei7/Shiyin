@@ -793,6 +793,17 @@
         }
       }
     },
+    "覺得拾音好用的話，可以請我喝杯咖啡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enjoying Shiyin? Buy me a coffee."
+          }
+        }
+      }
+    },
     "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。": {
       "extractionState": "manual",
       "localizations": {

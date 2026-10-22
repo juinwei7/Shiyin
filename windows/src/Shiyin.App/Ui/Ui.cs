@@ -282,11 +282,14 @@ public static class Ui
         return item;
     }
 
-    /// <summary>時間點：可以點的時候跳到錄音的那個位置播放（R4.2、R5.2）</summary>
-    public static UIElement Time(string time, Action<double>? seek)
+    /// <summary>
+    /// 時間點：可以點的時候跳到錄音的那個位置播放（R4.2、R5.2）。at：實際的秒數（逐字稿的段落），
+    /// 不給時照顯示的時間跳（顯示的時間去掉了小數，24.4 秒的段落顯示 00:24，跳到 24.0 會落在上一段）
+    /// </summary>
+    public static UIElement Time(string time, Action<double>? seek, double? at = null)
     {
         if (time.Length == 0) return new TextBlock();
-        if (seek is not null && TimeFormat.Seconds(time) is double seconds)
+        if (seek is not null && (at ?? TimeFormat.Seconds(time)) is double seconds)
         {
             var b = new HyperlinkButton { Content = time, Padding = new Thickness(0), FontSize = 13, Foreground = Celadon };
             ToolTipService.SetToolTip(b, Localization.L.F("從 %@ 開始播放", time));
