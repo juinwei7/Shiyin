@@ -4,6 +4,9 @@
   scripts/dev/l10n.py extract   用 Swift 編譯器抽出介面字串（型別正確的 %@、%lld），合併進 Resources/Localizable.xcstrings
   scripts/dev/l10n.py check     列出缺英文翻譯的條目、程式碼裡沒查表的介面中文；有問題時 exit 1
   scripts/dev/l10n.py apply <翻譯.json>  把英文翻譯寫進翻譯表
+  scripts/dev/l10n.py windows-check     Windows 版（windows/src 的 C#）：列出 L.T、L.F 用到但兩份翻譯表都沒有英文的條目、沒查表的介面中文
+  scripts/dev/l10n.py windows-apply <翻譯.json>  把 Windows 才有的英文翻譯寫進 windows/src/Shiyin.App/Strings/Windows.xcstrings
+                                     （Mac 的 Localizable.xcstrings 不動，R26.5；app 先讀 Mac 的再讀 Windows 的）
 
 為什麼不用 xcstringstool：它的 extract 看不出型別，插值會變成 %arg，跟執行時 SwiftUI 查的鍵對不上；
 sync 又不接受編譯器產生的 stringsdata，所以自己合併（xcstrings 就是 JSON）。
@@ -193,9 +196,104 @@ def apply(path):
             print(f"  {k}")
 
 
+# MARK: Windows 版（design-windows §11.4）
+
+WINDOWS_SOURCES = ROOT / "windows" / "src"
+WINDOWS_CATALOG = WINDOWS_SOURCES / "Shiyin.App" / "Strings" / "Windows.xcstrings"
+# 不顯示在介面上的中文：提示詞、範本、資料庫的 SQL、評估工具、DEBUG 控制通道
+WINDOWS_SKIP = {"Shiyin.Core/Notes/NotesPrompt.cs", "Shiyin.Core/Notes/Templates.cs", "Shiyin.Core/Notes/TranscriptCorrection.cs",
+                "Shiyin.Core/Notes/SpeakerNaming.cs", "Shiyin.Core/Notes/AskPrompt.cs", "Shiyin.Data/MigrationSql.cs",
+                "Shiyin.App/Debug/ControlPipe.cs", "Shiyin.Core/IO/Exporters.cs", "Shiyin.Core/Model/TimeFormat.cs"}
+WINDOWS_SKIP_DIRS = ("Shiyin.Eval/", "Shiyin.Ctl/", "/obj/", "/bin/")
+CALL = re.compile(r'\bL\.(T|F)\(\s*"((?:[^"\\]|\\.)*)"')
+CS_STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
+
+def windows_files():
+    for p in sorted(WINDOWS_SOURCES.rglob("*.cs")):
+        rel = str(p.relative_to(WINDOWS_SOURCES))
+        if rel in WINDOWS_SKIP or any(d in "/" + rel for d in WINDOWS_SKIP_DIRS):
+            continue
+        yield rel, p
+
+
+def unescape(text):
+    return text.replace('\\"', '"').replace("\\n", "\n").replace("\\\\", "\\")
+
+
+def load_windows_catalog():
+    if WINDOWS_CATALOG.exists():
+        return json.loads(WINDOWS_CATALOG.read_text())
+    return {"sourceLanguage": "zh-Hant", "strings": {}, "version": "1.0"}
+
+
+def windows_keys():
+    """{鍵: [位置]}：L.T、L.F 的第一個參數"""
+    keys = {}
+    for rel, path in windows_files():
+        for no, line in enumerate(path.read_text().split("\n"), 1):
+            for m in CALL.finditer(line):
+                keys.setdefault(unescape(m.group(2)), []).append(f"{rel}:{no}")
+    return keys
+
+
+def windows_check():
+    mac = load_catalog()["strings"]
+    win = load_windows_catalog()["strings"]
+    keys = windows_keys()
+    missing = [k for k in sorted(keys) if CJK.search(k) and not has_english(win.get(k, {})) and not has_english(mac.get(k, {}))]
+    problems = 0
+    if missing:
+        problems += len(missing)
+        print(f"缺英文翻譯（{len(missing)} 條）：")
+        for k in missing:
+            print(f"  {k}    ← {keys[k][0]}")
+    # 一行裡的中文字串比 L.T、L.F 用到的多：有沒查表的中文
+    loose = []
+    for rel, path in windows_files():
+        for no, line in enumerate(path.read_text().split("\n"), 1):
+            stripped = line.strip()
+            if stripped.startswith("//") or stripped.startswith("///") or "Log." in line or "l10n-skip" in line:
+                continue
+            if ".Text(" in line or "Ui(\"" in line:   # MeetingLanguage.Text(zh, en, ja)、MeetingLanguages.Ui(zh, en)：各語言自己寫好
+                continue
+            literals = [t for t in CS_STRING.findall(line.split("//")[0]) if CJK.search(t)]
+            looked_up = [m.group(2) for m in CALL.finditer(line) if CJK.search(m.group(2))]
+            if len(literals) > len(looked_up):
+                loose.append(f"{rel}:{no}: {stripped[:100]}")
+    if loose:
+        problems += len(loose)
+        print(f"程式碼裡沒查表的中文（{len(loose)} 行）：")
+        for item in loose:
+            print(f"  {item}")
+    if problems:
+        sys.exit(1)
+    print("Windows 版的翻譯完整，沒有漏掉的介面中文")
+
+
+def windows_apply(path):
+    """Windows 才有的英文翻譯：{鍵: 英文} 或 {鍵: {"one": …, "other": …}}，寫進 Windows.xcstrings"""
+    cat = load_windows_catalog()
+    translations = json.loads(Path(path).read_text())
+    for key, value in translations.items():
+        entry = cat["strings"].setdefault(key, {"extractionState": "manual"})
+        locs = entry.setdefault("localizations", {})
+        if isinstance(value, dict):
+            locs["en"] = {"variations": {"plural": {form: {"stringUnit": {"state": "translated", "value": text}}
+                                                    for form, text in value.items()}}}
+        else:
+            locs["en"] = {"stringUnit": {"state": "translated", "value": value}}
+    cat["strings"] = dict(sorted(cat["strings"].items()))
+    WINDOWS_CATALOG.parent.mkdir(parents=True, exist_ok=True)
+    WINDOWS_CATALOG.write_text(json.dumps(cat, ensure_ascii=False, indent=2) + "\n")
+    print(f"寫入 {len(translations)} 條")
+
+
 if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else "check"
     if command == "apply":
         apply(sys.argv[2])
+    elif command == "windows-apply":
+        windows_apply(sys.argv[2])
     else:
-        {"extract": extract, "check": check}[command]()
+        {"extract": extract, "check": check, "windows-check": windows_check}[command]()

@@ -1,0 +1,18 @@
+[
+  {
+    "hint" : true,
+    "mergeRisk" : 1
+  },
+  {
+    "hint" : true,
+    "mergeRisk" : 0.52000000000000002
+  },
+  {
+    "hint" : false,
+    "mergeRisk" : 0
+  },
+  {
+    "hint" : false,
+    "mergeRisk" : 0
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "ratio" : 1,
+    "text" : "短"
+  },
+  {
+    "ratio" : 1.1200000000000001,
+    "text" : "this is a normal sentence without much repetition at all"
+  },
+  {
+    "ratio" : 20,
+    "text" : "重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複重複"
+  },
+  {
+    "ratio" : 11.25,
+    "text" : "ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha "
+  },
+  {
+    "ratio" : 1.5789473684210527,
+    "text" : "一二三四五六七八九十一二三四五六七八九十"
+  }
+]

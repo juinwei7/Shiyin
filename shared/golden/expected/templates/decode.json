@@ -1,0 +1,18 @@
+[
+  {
+    "input" : "{}",
+    "output" : "{\"custom\":[],\"description\":\"\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}"
+  },
+  {
+    "input" : "{\"description\":\"d\"}",
+    "output" : "{\"custom\":[],\"description\":\"\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}"
+  },
+  {
+    "input" : "not json",
+    "output" : "{\"custom\":[],\"description\":\"\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}"
+  },
+  {
+    "input" : "{\"description\":\"d\",\"sections\":[\"summary\"],\"custom\":[],\"instruction\":\"i\"}",
+    "output" : "{\"custom\":[],\"description\":\"d\",\"instruction\":\"i\",\"sections\":[\"summary\"]}"
+  }
+]

@@ -21,7 +21,7 @@ struct SettingsView: View {
 
 struct ProviderSettings: View {
     @Environment(AppModel.self) private var model
-    @AppStorage(AppSettings.providerKey) private var provider = LLMProvider.claude.rawValue
+    @AppStorage(AppSettings.providerKey) private var storedProvider = ""
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
     @AppStorage(AppSettings.correctTranscriptKey) private var correctTranscript = true
     @State private var modelName = ""
@@ -39,18 +39,28 @@ struct ProviderSettings: View {
     @State private var login: CLILogin.Status?
     @State private var checkingLogin = false
 
-    private var current: LLMProvider { LLMProvider(rawValue: provider) ?? .claude }
+    /// 選單顯示的值：沒選過時顯示自動選到的那一個，找不到 CLI 時是「之後再設定」（空字串）；改了才寫進設定（R35.3）
+    private var provider: String {
+        if LLMProvider(rawValue: storedProvider) != nil { return storedProvider }
+        let detected = AppSettings.detectedProvider
+        return detected == .none ? "" : detected.rawValue
+    }
+    private var current: LLMProvider { LLMProvider(rawValue: provider) ?? .none }
 
     var body: some View {
         Form {
-            Picker("整理工具", selection: $provider) {
+            Picker("整理工具", selection: Binding(get: { provider }, set: { storedProvider = $0 })) {
+                // 這台 Mac 沒有 claude、codex 時才有：選它等於清掉設定，回到「還沒設定」
+                if AppSettings.detectedProvider == .none { Text("之後再設定（先不整理）").tag("") }
                 ForEach(LLMProvider.allCases) { Text($0.label).tag($0.rawValue) }
             }
             if current == .claude || current == .codex {
                 LabeledContent("狀態") {
                     HStack(spacing: 8) {
                         if Paths.findTool(current == .claude ? "claude" : "codex") == nil {
-                            Text("找不到，請先安裝並登入").foregroundStyle(.secondary)
+                            Text(current == .codex ? "這台 Mac 沒有安裝 codex：沒有在用 Codex 的話，請改選 API"
+                                                   : "這台 Mac 沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API")
+                                .foregroundStyle(.secondary)
                         } else if checkingLogin {
                             Text("檢查登入狀態…").foregroundStyle(.secondary)
                         } else if let login {
@@ -107,6 +117,7 @@ struct ProviderSettings: View {
                 if let keyError {
                     Text(keyError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
                 }
+                if let url = current.apiKeyURL { Link("取得 API key", destination: url) }
             }
             if current != .none {
                 HStack {
@@ -149,7 +160,7 @@ struct ProviderSettings: View {
         }
         .formStyle(.grouped)
         .onAppear(perform: load)
-        .onChange(of: provider) { _, _ in load() }
+        .onChange(of: storedProvider) { _, _ in load() }
         #if DEBUG
         .onChange(of: model.debugSettingsAction) { _, action in
             guard let action else { return }
@@ -297,7 +308,10 @@ struct ProviderSettings: View {
 
     private var privacyText: String {
         switch current {
-        case .none: return String(localized: "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。")
+        case .none:
+            return provider.isEmpty
+                ? String(localized: "還沒設定整理工具：錄音、轉錄、逐字稿全部留在這台 Mac。選好整理工具之後，才會整理成會議紀錄。")
+                : String(localized: "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。")
         case .claude, .anthropic:
             return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。")
         case .codex, .openai:

@@ -1,0 +1,140 @@
+{
+  "people" : [
+    {
+      "created_at" : "<time>",
+      "id" : 1,
+      "name" : "王小明"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 2,
+      "name" : "李大華"
+    }
+  ],
+  "speakers" : [
+    {
+      "audio_source" : "mix",
+      "embedding" : "ZmZmP83MzD0AAAAAzcxMPgAAAADNzMw9AAAAAJqZmT4=",
+      "idx" : 1,
+      "meeting_id" : 1,
+      "name" : "王小明",
+      "name_source" : "manual",
+      "person_id" : 1,
+      "speech_seconds" : 20.5,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mix",
+      "embedding" : "AAAAAM3MTD8AAAA/AAAAAM3MzD0AAAAAzcxMPgAAAAA=",
+      "idx" : 2,
+      "meeting_id" : 1,
+      "name" : "說話者 2",
+      "name_source" : "manual",
+      "person_id" : 2,
+      "speech_seconds" : 31,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mix",
+      "embedding" : "zczMPQAAAABmZmY/zczMPgAAAAAAAAAAAAAAAM3MzD0=",
+      "idx" : 3,
+      "meeting_id" : 1,
+      "name" : "說話者 3",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 4.9000000000000004,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mic",
+      "embedding" : "mplZP5qZGT7NzEw9AACAPgAAAADNzMw9AAAAAAAAgD4=",
+      "idx" : 1,
+      "meeting_id" : 2,
+      "name" : "王小明",
+      "name_source" : "voiceprint",
+      "person_id" : 1,
+      "speech_seconds" : 40,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mic",
+      "embedding" : "AAAAAAAAAADNzMw9AAAAAGZmZj/NzMw+AAAAAAAAAAA=",
+      "idx" : 2,
+      "meeting_id" : 2,
+      "name" : "Bob",
+      "name_source" : "manual",
+      "person_id" : null,
+      "speech_seconds" : 12,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mic",
+      "embedding" : "zczMPZqZGT/NzEw+AAAAAAAAAD8AAAAAmpmZPs3MzD0=",
+      "idx" : 3,
+      "meeting_id" : 2,
+      "name" : "Speaker 3",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 15,
+      "suggested_name" : "李大華",
+      "suggestion_reason" : "Sounds like 李大華 from earlier meetings",
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mix",
+      "embedding" : null,
+      "idx" : 1,
+      "meeting_id" : 3,
+      "name" : "話者 1",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 0,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mix",
+      "embedding" : null,
+      "idx" : 2,
+      "meeting_id" : 3,
+      "name" : "話者 2",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 0,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    }
+  ],
+  "voiceprints" : [
+    {
+      "audio_source" : "mix",
+      "created_at" : "<time>",
+      "embedding" : "ZmZmP83MzD0AAAAAzcxMPgAAAADNzMw9AAAAAJqZmT4=",
+      "id" : 1,
+      "meeting_id" : 1,
+      "person_id" : 1,
+      "speaker_idx" : 1
+    },
+    {
+      "audio_source" : "mix",
+      "created_at" : "<time>",
+      "embedding" : "AAAAAM3MTD8AAAA/AAAAAM3MzD0AAAAAzcxMPgAAAAA=",
+      "id" : 2,
+      "meeting_id" : 1,
+      "person_id" : 2,
+      "speaker_idx" : 2
+    }
+  ]
+}

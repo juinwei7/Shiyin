@@ -39,11 +39,30 @@ enum AppSettings {
     nonisolated(unsafe) static var debugModel: String?
     #endif
 
+    /// 使用者選過的整理工具；沒選過（或不是認得的值）是 nil（R35）
+    static var chosenProvider: LLMProvider? { LLMProvider(rawValue: d.string(forKey: providerKey) ?? "") }
+
+    /// 沒選過時自動用這台 Mac 上有的 CLI（先 claude 再 codex），都沒有就先不整理（R35.1、design §19.6）。
+    /// 每次都重新找：之後裝了 CLI 就自動用上
+    static var detectedProvider: LLMProvider {
+        if Paths.findTool("claude") != nil { return .claude }
+        if Paths.findTool("codex") != nil { return .codex }
+        return .none
+    }
+
     static var provider: LLMProvider {
         #if DEBUG
         if let debugProvider { return debugProvider }
         #endif
-        return LLMProvider(rawValue: d.string(forKey: providerKey) ?? "") ?? .claude
+        return chosenProvider ?? detectedProvider
+    }
+
+    /// 還沒選過整理工具、也找不到 CLI：介面說「還沒設定整理工具」，不說「不整理」（R35.2）
+    static var needsProviderSetup: Bool {
+        #if DEBUG
+        if debugProvider != nil { return false }
+        #endif
+        return chosenProvider == nil && provider == .none
     }
     static var model: String {
         #if DEBUG
@@ -306,7 +325,10 @@ final class JobRunner {
 
             let segments = try db.segments(job.meetingId)
             let transcribed = segments.map { TranscribedSegment(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence) }
-            let (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: transcribed)
+            var (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: transcribed)
+            // 短句再跟每位說話者比一次（R34、design §6.3.2）；使用者改過的句子下面另外處理，不用查
+            let locked = Set(segments.indices.filter { segments[$0].speakerManual })
+            if let refined = try? await SpeakerRecheck.refine(transcribed, speakers: speakers, samples: samples, locked: locked) { speakers = refined }
             let source = meeting.channels == "both" ? "mix" : meeting.channels
             var voices: [Int: SpeakerVoice] = [:]
             for (raw, number) in numbering {
@@ -485,7 +507,11 @@ final class JobRunner {
         // 草稿（design §21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
         if try draft && !db.segments(job.meetingId).isEmpty { return false }
         let provider = AppSettings.provider
-        guard provider != .none else { throw LLMError.failed(String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API")) }
+        guard provider != .none else {
+            throw LLMError.failed(AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"))
+        }
         running[lane]?.provider = provider
         running[lane]?.stage = draft ? String(localized: "整理草稿") : answers == nil ? String(localized: "整理") : String(localized: "校稿")
         let segments = try db.segments(job.meetingId, kind: draft ? "live" : "final")

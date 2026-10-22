@@ -15,8 +15,8 @@ export function jsonLd(data) {
 
 const plain = (html) => String(html).replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
-/** 首頁：網站、app、常見問題 */
-export function homeSchema({ lang, site, latest }) {
+/** 首頁：網站、app、常見問題（faq：頁面上的常見問題，有 Windows 版時答案不一樣，§16.2） */
+export function homeSchema({ lang, site, latest, faq = content[lang].faq.items }) {
   const c = content[lang];
   const url = `${site}${ROUTES.home(lang)}`;
   return jsonLd({
@@ -74,11 +74,55 @@ export function homeSchema({ lang, site, latest }) {
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
         inLanguage: c.lang,
-        mainEntity: c.faq.items.map(([q, a]) => ({
+        mainEntity: faq.map(([q, a]) => ({
           '@type': 'Question',
           name: plain(q),
           acceptedAnswer: { '@type': 'Answer', text: plain(a) },
         })),
+      },
+    ],
+  });
+}
+
+/** Windows 版的頁面（docs/website.md §16.1）：Windows 版的 app、常見問題 */
+export function windowsSchema({ lang, site, win }) {
+  const c = content[lang];
+  const w = c.windowsPage;
+  const url = `${site}${ROUTES.windows(lang)}`;
+  return jsonLd({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `${site}/#app-windows`,
+        name: `${c.seo.appName} for Windows`,
+        alternateName: ['Shiyin for Windows', '拾音 Windows 版'],
+        description: w.description,
+        url,
+        image: `${site}/icon.png`,
+        screenshot: `${site}${c.images}/windows/summary.png`,
+        applicationCategory: 'BusinessApplication',
+        applicationSubCategory: c.seo.category,
+        operatingSystem: 'Windows 11 (x64, ARM64)',
+        softwareVersion: win.version,
+        datePublished: win.date.slice(0, 10),
+        downloadUrl: win.x64.url,
+        installUrl: `${site}${c.prefix}/download/windows`,
+        softwareRequirements: 'Windows 11 (x64 or ARM64), 8 GB RAM; an NVIDIA graphics card is optional and speeds up transcription',
+        featureList: c.seo.features,
+        inLanguage: ['zh-Hant', 'en'],
+        isAccessibleForFree: true,
+        license: 'https://opensource.org/licenses/MIT',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        author: AUTHOR,
+        codeRepository: GITHUB,
+        sameAs: [GITHUB],
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        inLanguage: c.lang,
+        mainEntity: w.faq.map(([q, a]) => ({ '@type': 'Question', name: plain(q), acceptedAnswer: { '@type': 'Answer', text: plain(a) } })),
       },
     ],
   });
@@ -140,15 +184,21 @@ export function guideSchema({ lang, site, guide, url }) {
 }
 
 /** /llms.txt（llmstxt.org）：英文為主，附繁中摘要。功能有變要跟著改（docs/website.md §14.1） */
-export function llmsTxt({ site, latest, guides = [] }) {
+export function llmsTxt({ site, latest, windows = null, guides = [] }) {
   const guideLinks = guides.filter((g) => g.en).map((g) => `- [${g.en.h1}](${site}/en/guides/${g.slug}/): ${plain(g.en.description)}`);
   const guideLinksZh = guides.filter((g) => g.zh && !g.en).map((g) => `- [${g.zh.h1}](${site}/guides/${g.slug}/): ${plain(g.zh.description)}`);
   const date = latest.date.slice(0, 10);
+  // Windows 版（docs/website.md §16.2）：有 release 才寫出版本和頁面，不然寫開發中
+  const windowsLine = windows
+    ? `Also available for Windows 11 (x64 and ARM64): Shiyin for Windows ${windows.version} (released ${windows.date.slice(0, 10)}), with the same features; transcription uses an NVIDIA graphics card automatically when there is one. See ${site}/en/windows/.`
+    : 'A Windows version is in development.';
+  const windowsPage = windows ? `- [Shiyin for Windows](${site}/en/windows/): requirements, download and install steps for Windows 11\n- [Download the latest Windows installer (x64)](${site}/download/windows)\n` : '';
+  const windowsZh = windows ? `也有 Windows 版（Windows 11，x64 和 ARM）：${site}/windows/。` : 'Windows 版開發中。';
   return `# Shiyin (拾音)
 
 > Shiyin is a free, open-source (MIT) meeting-notes app for macOS. It records in-person and online meetings (Zoom, Google Meet, Microsoft Teams) without a bot joining the call, shows a live transcript, transcribes the recording locally on the Mac, identifies speakers, and writes meeting notes where every item has a timestamp that plays the original audio. Recordings never leave the Mac.
 
-Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later on Apple Silicon (M1 or later) and 8 GB of RAM. A Windows version is in development. Made by an independent developer in Taiwan.
+Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later on Apple Silicon (M1 or later) and 8 GB of RAM. ${windowsLine} Made by an independent developer in Taiwan.
 
 ## What makes it different
 
@@ -168,11 +218,11 @@ Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later
 - [Home (Japanese)](${site}/ja/)
 - [Release notes](${site}/en/changelog/): what changed in each version
 - [Download the latest DMG](${site}/download)
-- [Source code on GitHub](${GITHUB})
+${windowsPage}- [Source code on GitHub](${GITHUB})
 - [README (English)](${GITHUB}/blob/main/.github/README.md)
 ${guideLinks.length || guideLinksZh.length ? `\n## Guides and comparisons\n\n${[...guideLinks, ...guideLinksZh].join('\n')}\n` : ''}
 ## 繁體中文摘要
 
-拾音是 Mac 上免費、開源（MIT）的會議記錄 app：錄現場或線上會議（Zoom、Google Meet、Teams，不用派機器人進會議），錄音中有即時逐字稿，錄完在 Mac 本機轉錄（錄音不上傳、可離線），分出說話者，再用你自己的 Claude、ChatGPT 訂閱、API，或本機的 Ollama、LM Studio（完全不連網）整理成會議紀錄（摘要、決議、待辦），每一條都附時間點，點了就聽到原話。中文轉錄用 Breeze ASR 25，針對台灣中文夾英文；也支援英文、日文會議。需要 macOS 26 和 Apple Silicon，Windows 版開發中。
+拾音是 Mac 上免費、開源（MIT）的會議記錄 app：錄現場或線上會議（Zoom、Google Meet、Teams，不用派機器人進會議），錄音中有即時逐字稿，錄完在 Mac 本機轉錄（錄音不上傳、可離線），分出說話者，再用你自己的 Claude、ChatGPT 訂閱、API，或本機的 Ollama、LM Studio（完全不連網）整理成會議紀錄（摘要、決議、待辦），每一條都附時間點，點了就聽到原話。中文轉錄用 Breeze ASR 25，針對台灣中文夾英文；也支援英文、日文會議。需要 macOS 26 和 Apple Silicon，${windowsZh}
 `;
 }

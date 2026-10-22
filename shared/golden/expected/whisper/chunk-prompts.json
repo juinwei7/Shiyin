@@ -1,0 +1,62 @@
+[
+  {
+    "key" : "zh",
+    "previous" : 0,
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。"
+  },
+  {
+    "key" : "zh",
+    "previous" : 1,
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。大家好，今天討論 v3.6 的上線時程。"
+  },
+  {
+    "key" : "zh",
+    "previous" : 8,
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。rnetes\" 的部署呢？部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。（背景噪音）說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題最後確認：期限 10/21，負責人小明。嗯"
+  },
+  {
+    "key" : "zh",
+    "previous" : "long",
+    "prompt" : "Per 34第35句 sentence number 35第36句 sentence number 36第37句 sentence number 37第38句 sentence number 38第39句 sentence number 39"
+  },
+  {
+    "key" : "en",
+    "previous" : 0,
+    "prompt" : "The following is a recording of a work meeting."
+  },
+  {
+    "key" : "en",
+    "previous" : 1,
+    "prompt" : "The following is a recording of a work meeting. Hi everyone, let's review the Q4 roadmap."
+  },
+  {
+    "key" : "en",
+    "previous" : 5,
+    "prompt" : "The following is a recording of a work meeting. Hi everyone, let's review the Q4 roadmap. I'll send the email via SendGrid by Friday. Speaker 1 here again: what about the \"beta\" users? Okay. The beta list is ready."
+  },
+  {
+    "key" : "en",
+    "previous" : "long",
+    "prompt" : "P ntence number 23 第24句 sentence number 24 第25句 sentence number 25 第26句 sentence number 26 第27句 sentence number 27 第28句 sentence number 28 第29句 sentence number 29 第30句 sentence number 30 第31句 sentence number 31 第32句 sentence number 32 第33句 sentence number 33 第34句 sentence number 34 第35句 sentence number 35 第36句 sentence number 36 第37句 sentence number 37 第38句 sentence number 38 第39句 sentence number 39"
+  },
+  {
+    "key" : "ja",
+    "previous" : 0,
+    "prompt" : "以下は仕事の会議の録音です。用語：拾音。"
+  },
+  {
+    "key" : "ja",
+    "previous" : 1,
+    "prompt" : "以下は仕事の会議の録音です。用語：拾音。皆さん、おはようございます。"
+  },
+  {
+    "key" : "ja",
+    "previous" : 3,
+    "prompt" : "以下は仕事の会議の録音です。用語：拾音。皆さん、おはようございます。新しいアイデアを三つ出します。ありがとうございます、田中さん。"
+  },
+  {
+    "key" : "ja",
+    "previous" : "long",
+    "prompt" : "Per 34第35句 sentence number 35第36句 sentence number 36第37句 sentence number 37第38句 sentence number 38第39句 sentence number 39"
+  }
+]

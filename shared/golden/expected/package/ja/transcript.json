@@ -1,0 +1,23 @@
+[
+  {
+    "end" : 5,
+    "lowConfidence" : false,
+    "speaker" : 1,
+    "start" : 0,
+    "text" : "皆さん、おはようございます。"
+  },
+  {
+    "end" : 9.5,
+    "lowConfidence" : false,
+    "speaker" : 2,
+    "start" : 5,
+    "text" : "新しいアイデアを三つ出します。"
+  },
+  {
+    "end" : 12,
+    "lowConfidence" : true,
+    "speaker" : 1,
+    "start" : 9.5,
+    "text" : "ありがとうございます、田中さん。"
+  }
+]

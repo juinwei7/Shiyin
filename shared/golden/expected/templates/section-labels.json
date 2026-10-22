@@ -1,0 +1,32 @@
+[
+  {
+    "labels" : [
+      "摘要",
+      "決議",
+      "待辦",
+      "未決問題",
+      "議題詳細"
+    ],
+    "language" : "zh"
+  },
+  {
+    "labels" : [
+      "Summary",
+      "Decisions",
+      "Action items",
+      "Open questions",
+      "Topics"
+    ],
+    "language" : "en"
+  },
+  {
+    "labels" : [
+      "要約",
+      "決定事項",
+      "ToDo",
+      "未決事項",
+      "議題ごとの詳細"
+    ],
+    "language" : "ja"
+  }
+]

@@ -1,0 +1,204 @@
+{
+  "" : [
+
+  ],
+  "  SendGrid  " : [
+    {
+      "kind" : "notes",
+      "meetingId" : 2,
+      "ref" : 0,
+      "snippet" : "…oadmap Bob Send the email via SendGrid 2026-10-23 Updates and progress Roadmap on track …"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 10,
+      "snippet" : "I'll send the email via SendGrid by Friday."
+    }
+  ],
+  "\"Kubernetes\"" : [
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 3,
+      "snippet" : "好，那 \"Kubernetes\" 的部署呢？"
+    }
+  ],
+  "100%" : [
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 6,
+      "snippet" : "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題"
+    }
+  ],
+  "a" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 2,
+      "ref" : 0,
+      "snippet" : "Q4 roadmap Reviewed the Q4 roadmap Bob Send the email vi…"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 9,
+      "snippet" : "…eryone, let's review the Q4 roadmap."
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 10,
+      "snippet" : "I'll send the email via SendGrid by Friday."
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 11,
+      "snippet" : "Speaker 1 here again: what about the \"beta\" users?"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 12,
+      "snippet" : "Okay."
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 2,
+      "ref" : 13,
+      "snippet" : "The beta list is ready."
+    },
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "…oy/k8s Kubernetes 版本？ 王小明 確認 <admin> 權限 | 部署 2026-10-21  Redis 快取測試 第二行  上線時程 目標 …"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 4,
+      "snippet" : "部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。"
+    }
+  ],
+  "Ku" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "… 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確認 <admin> 權限 | 部署 2026-10-21  Re…"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 3,
+      "snippet" : "好，那 \"Kubernetes\" 的部署呢？"
+    }
+  ],
+  "redis" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "v3.6 上線週會 確認 v3.6 上線時程 Redis 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確…"
+    },
+    {
+      "kind" : "user_notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "[00:30] 確認上線日期 [02:10] Redis 快取要再測 "
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 2,
+      "snippet" : "我這邊 Redis 快取還在測，預計下週三完成。"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 6,
+      "snippet" : "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題"
+    }
+  ],
+  "Redis" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "v3.6 上線週會 確認 v3.6 上線時程 Redis 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確…"
+    },
+    {
+      "kind" : "user_notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "[00:30] 確認上線日期 [02:10] Redis 快取要再測 "
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 2,
+      "snippet" : "我這邊 Redis 快取還在測，預計下週三完成。"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 6,
+      "snippet" : "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題"
+    }
+  ],
+  "TTL 設 100% 沒問題" : [
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 6,
+      "snippet" : "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題"
+    }
+  ],
+  "不存在的詞" : [
+
+  ],
+  "嗯" : [
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 8,
+      "snippet" : "嗯"
+    }
+  ],
+  "快取" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "v3.6 上線週會 確認 v3.6 上線時程 Redis 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確認 <…"
+    },
+    {
+      "kind" : "user_notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "[00:30] 確認上線日期 [02:10] Redis 快取要再測 "
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 2,
+      "snippet" : "我這邊 Redis 快取還在測，預計下週三完成。"
+    }
+  ],
+  "部署腳本" : [
+    {
+      "kind" : "notes",
+      "meetingId" : 1,
+      "ref" : 0,
+      "snippet" : "…週會 確認 v3.6 上線時程 Redis 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確認 <admin> 權限 …"
+    },
+    {
+      "kind" : "segment",
+      "meetingId" : 1,
+      "ref" : 4,
+      "snippet" : "部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。"
+    }
+  ]
+}

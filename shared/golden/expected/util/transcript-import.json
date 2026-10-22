@@ -1,0 +1,52 @@
+[
+  {
+    "ext" : "srt",
+    "segments" : [
+      {
+        "end" : 3.5,
+        "start" : 1,
+        "text" : "第一句"
+      },
+      {
+        "end" : 6,
+        "start" : 4,
+        "text" : "第二句 換行"
+      }
+    ]
+  },
+  {
+    "ext" : "vtt",
+    "segments" : [
+      {
+        "end" : 2.5,
+        "start" : 1,
+        "text" : "Hello"
+      },
+      {
+        "end" : 4,
+        "start" : 3,
+        "text" : "<v Bob>Hi</v>"
+      }
+    ]
+  },
+  {
+    "ext" : "txt",
+    "segments" : [
+      {
+        "end" : 0,
+        "start" : 0,
+        "text" : "第一行"
+      },
+      {
+        "end" : 0,
+        "start" : 0,
+        "text" : "第二行"
+      },
+      {
+        "end" : 0,
+        "start" : 0,
+        "text" : "第三行"
+      }
+    ]
+  }
+]

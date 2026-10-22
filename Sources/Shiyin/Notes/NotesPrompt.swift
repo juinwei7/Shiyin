@@ -32,7 +32,7 @@ enum NotesPrompt {
     3. 每一條紀錄（summary、decisions、actionItems、openQuestions、topics 的 points、custom 的 items）都要填 time：該內容在逐字稿中出現的時間點，寫成 mm:ss（例如 03:15，超過一小時寫 1:03:15），不要加括號。綜合多處的內容，填最主要的那一處。
     4. 逐字稿每行標有說話者。actionItems 的 owner 只填明確提到的負責人，優先使用說話者的名字；不明確就留空字串並列進 reviewItems。
     5. actionItems 的 due 依提示中的「會議日期」換算成 yyyy-MM-dd（例如「下週三」要依會議日期和星期幾推算，星期幾要算對）；沒提到期限就留空字串，提到但不明確就留空並列進 reviewItems。
-    6. reviewItems 最多 8 題，相近的問題要合併；只問會影響紀錄正確性的地方：專有名詞、人名、負責人、期限、方案內容。每題的 time 填相關段落的時間點。
+    6. reviewItems 最多 8 題，相近的問題要合併；只問會影響紀錄正確性的地方：專有名詞、人名、負責人、期限、方案內容。每題的 time 填相關段落的時間點。能用「是」或「不是」回答的題目（例如「負責人是小田切嗎？」）寫成是非題，yesNo 填 true；要使用者說出答案的（例如「這個系統的正確名稱是什麼？」）yesNo 填 false。
     7. 「使用者筆記」與「重點標記」代表使用者自己認為重要的內容，必須納入紀錄；筆記裡逐字稿沒有的資訊也可以寫入，但不要改變原意。
     8. 依「範本」只產生指定的段落，沒指定的段落給空陣列。custom 依範本的自訂段落順序產生，title 用範本給的段落名稱。
     9. topics 依議題分段，start 填該議題開始的時間點。
@@ -49,7 +49,7 @@ enum NotesPrompt {
     3. Every item (summary, decisions, actionItems, openQuestions, the points in topics, the items in custom) must have a time: when that content appears in the transcript, written as mm:ss (for example 03:15; over an hour, 1:03:15), without brackets. If it combines several places, use the main one.
     4. Each transcript line is labeled with a speaker. For actionItems, owner is only someone explicitly named as responsible, preferring the speaker's name; if it is unclear, leave an empty string and add it to reviewItems.
     5. For actionItems, convert due to yyyy-MM-dd based on the "Meeting date" in the prompt (for example, "next Wednesday" must be worked out from the meeting date and its weekday, and the weekday must be right). If no deadline is mentioned, leave an empty string; if one is mentioned but unclear, leave it empty and add it to reviewItems.
-    6. At most 8 reviewItems; merge similar questions. Only ask about things that affect accuracy: proper nouns, names, owners, deadlines, details of a proposal. Each item's time is the related part of the transcript.
+    6. At most 8 reviewItems; merge similar questions. Only ask about things that affect accuracy: proper nouns, names, owners, deadlines, details of a proposal. Each item's time is the related part of the transcript. If a question can be answered with yes or no (for example, "Is Odagiri the owner?"), write it as a yes/no question and set yesNo to true; if the user has to supply the answer (for example, "What is the correct name of this system?"), set yesNo to false.
     7. "User notes" and "Bookmarks" mark what the user considers important and must be included. Information in the notes that is not in the transcript may be included, without changing its meaning.
     8. Produce only the sections specified by the "Template"; give empty arrays for the others. Produce custom in the order of the template's custom sections, with title as given by the template (translated into English if it is not in English).
     9. Split topics by subject; start is the time the topic begins.
@@ -66,7 +66,7 @@ enum NotesPrompt {
     3. すべての項目（summary、decisions、actionItems、openQuestions、topics の points、custom の items）に time を入れること。その内容が文字起こしに出てくる時刻を mm:ss（例：03:15。1 時間を超える場合は 1:03:15）で書き、括弧は付けない。複数の箇所をまとめた内容は、主な箇所の時刻にする。
     4. 文字起こしの各行には話者が付いている。actionItems の owner は担当者として明示された人だけを入れ、話者の名前を優先する。はっきりしない場合は空文字列にして reviewItems に入れる。
     5. actionItems の due は、プロンプトの「会議日」をもとに yyyy-MM-dd に換算する（例：「来週の水曜」は会議日とその曜日から計算し、曜日を正しく数えること）。期限の言及がなければ空文字列、言及があっても曖昧なら空文字列にして reviewItems に入れる。
-    6. reviewItems は最大 8 問。似た質問はまとめる。記録の正確さに関わる点（固有名詞、人名、担当者、期限、案の内容）だけを質問する。各問の time は関連する箇所の時刻。
+    6. reviewItems は最大 8 問。似た質問はまとめる。記録の正確さに関わる点（固有名詞、人名、担当者、期限、案の内容）だけを質問する。各問の time は関連する箇所の時刻。「はい」か「いいえ」で答えられる質問（例：「担当者は小田切さんですか？」）はその形で書いて yesNo を true にする。答えを書いてもらう必要がある質問（例：「このシステムの正しい名前は？」）は yesNo を false にする。
     7. 「ユーザーのメモ」と「ブックマーク」はユーザーが重要だと考えた内容なので、必ず記録に含める。メモにあって文字起こしにない情報も書いてよいが、意味を変えないこと。
     8. 「テンプレート」で指定されたセクションだけを作成し、指定のないセクションは空配列にする。custom はテンプレートのカスタムセクションの順に作成し、title はテンプレートのセクション名を使う（日本語でなければ日本語に訳す）。
     9. topics は議題ごとに分け、start に議題が始まる時刻を入れる。

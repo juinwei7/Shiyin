@@ -1,0 +1,23 @@
+<Project>
+  <!-- 所有套件的版本集中在這裡，升級要排成任務（design-windows §2） -->
+  <ItemGroup>
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.Base" Version="2.0.4" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageVersion Include="NAudio.Core" Version="3.3.0" />
+    <PackageVersion Include="NAudio.Wasapi" Version="3.3.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="org.k2fsa.sherpa.onnx" Version="1.13.8" />
+    <PackageVersion Include="OpenccNetLib" Version="1.7.0" />
+    <PackageVersion Include="Velopack" Version="1.2.161" />
+    <PackageVersion Include="WinUIEx" Version="2.9.3" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+</Project>

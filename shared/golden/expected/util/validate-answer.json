@@ -1,0 +1,4 @@
+{
+  "all" : "{\"answer\":\"答案\",\"citations\":[{\"meetingId\":1,\"quote\":\"Redis\",\"time\":\"00:04\"},{\"meetingId\":2,\"quote\":\"z\",\"time\":\"1:02:03\"}],\"found\":true}",
+  "single" : "{\"answer\":\"答案\",\"citations\":[{\"quote\":\"Redis\",\"time\":\"00:04\"},{\"quote\":\"x\",\"time\":\"00:05\"},{\"quote\":\"z\",\"time\":\"1:02:03\"}],\"found\":true}"
+}

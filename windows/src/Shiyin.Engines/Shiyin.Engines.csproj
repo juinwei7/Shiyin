@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 轉錄、即時辨識、說話者辨識（design-windows §7～§9）：在 Mac 上也能跑，評估用 Shiyin.Eval -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shiyin</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Core/Shiyin.Core.csproj" />
+    <PackageReference Include="org.k2fsa.sherpa.onnx" />
+    <PackageReference Include="OpenccNetLib" />
+  </ItemGroup>
+</Project>

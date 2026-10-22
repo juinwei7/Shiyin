@@ -5,26 +5,76 @@ import { readFile } from 'node:fs/promises';
 
 const REPO = 'juinwei7/Shiyin';
 
-/** 回傳正式發布的版本，版本號由新到舊；file 有給就讀這份 JSON（跟 API 同樣格式），不連網路 */
+/** 回傳正式發布的 Mac 版，版本號由新到舊；file 有給就讀這份 JSON（跟 API 同樣格式），不連網路 */
 export async function loadReleases({ file } = {}) {
+  return (await loadAllReleases({ file })).mac;
+}
+
+/**
+ * Mac 版和 Windows 版（docs/website.md §7）：tag 是 win-v 開頭的是 Windows 版，其他都是 Mac 版。
+ * 沒有 Windows 版時 windows 是空陣列，網站跟以前一樣
+ */
+export async function loadAllReleases({ file } = {}) {
   const raw = file ? JSON.parse(await readFile(file, 'utf8')) : await fetchReleases();
   const errors = [];
-  const releases = [];
+  const mac = [];
+  const windows = [];
   for (const r of raw) {
     if (r.draft || r.prerelease) continue;
     try {
-      releases.push(parseRelease(r));
+      if (r.tag_name.startsWith('win-v')) windows.push(parseWindowsRelease(r));
+      else mac.push(parseRelease(r));
     } catch (e) {
       errors.push(e.message);
     }
   }
-  releases.sort((a, b) => compareVersions(b.version, a.version));
-  if (releases.length === 0 && errors.length === 0) errors.push('沒有任何正式發布的版本');
-  if (releases[0] && !releases[0].dmg) {
-    errors.push(`${releases[0].tag}：最新版沒有 Shiyin-${releases[0].version}.dmg，下載按鈕會壞掉`);
+  mac.sort((a, b) => compareVersions(b.version, a.version));
+  windows.sort((a, b) => compareVersions(b.version, a.version));
+  if (mac.length === 0 && errors.length === 0) errors.push('沒有任何正式發布的版本');
+  if (mac[0] && !mac[0].dmg) {
+    errors.push(`${mac[0].tag}：最新版沒有 Shiyin-${mac[0].version}.dmg，下載按鈕會壞掉`);
+  }
+  if (windows[0] && (!windows[0].x64 || !windows[0].arm64)) {
+    errors.push(`${windows[0].tag}：最新的 Windows 版要有 Shiyin-${windows[0].version}-win-x64-Setup.exe 和 -win-arm64-Setup.exe`);
   }
   if (errors.length) throw new Error(`版本說明有問題：\n- ${errors.join('\n- ')}`);
-  return releases;
+  return { mac, windows };
+}
+
+/** Windows 版：tag 是 win-vX.Y.Z，標題是「拾音 Windows X.Y.Z」「Shiyin for Windows X.Y.Z」 */
+function parseWindowsRelease(r) {
+  const tag = r.tag_name;
+  const version = tag.replace(/^win-v/, '');
+  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`${tag}：Windows 版的 tag 要是 win-vX.Y.Z`);
+  const blocks = splitBlocks(r.body);
+  if (blocks.length !== 2) {
+    throw new Error(`${tag}：說明要是中文一段、空一行、英文一段，現在有 ${blocks.length} 段`);
+  }
+  const asset = (arch) => {
+    const a = (r.assets || []).find((x) => x.name === `Shiyin-${version}-win-${arch}-Setup.exe`);
+    return a ? { name: a.name, url: a.browser_download_url, downloads: a.download_count ?? 0 } : null;
+  };
+  const x64 = asset('x64');
+  const arm64 = asset('arm64');
+  return {
+    version,
+    tag,
+    date: r.published_at,
+    url: r.html_url,
+    x64,
+    arm64,
+    downloads: (x64?.downloads ?? 0) + (arm64?.downloads ?? 0),
+    zh: parseBlock(blocks[0], '拾音 Windows', version, tag),
+    en: parseBlock(blocks[1], 'Shiyin for Windows', version, tag),
+  };
+}
+
+function splitBlocks(body) {
+  return (body || '')
+    .replace(/\r\n?/g, '\n')
+    .split(/\n[ \t]*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
 }
 
 function apiHeaders() {
@@ -66,11 +116,7 @@ function parseRelease(r) {
   const tag = r.tag_name;
   const version = tag.replace(/^v/, '');
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`${tag}：tag 要是 vX.Y.Z`);
-  const blocks = (r.body || '')
-    .replace(/\r\n?/g, '\n')
-    .split(/\n[ \t]*\n/)
-    .map((b) => b.trim())
-    .filter(Boolean);
+  const blocks = splitBlocks(r.body);
   if (blocks.length !== 2) {
     throw new Error(`${tag}：說明要是中文一段、空一行、英文一段，現在有 ${blocks.length} 段`);
   }
@@ -90,7 +136,7 @@ function parseRelease(r) {
 // 第一行「拾音 3.1.0」或「拾音 3.1.0：副標」（英文「Shiyin 3.1.0: subtitle」），後面每行「- 一條」
 function parseBlock(text, name, version, tag) {
   const [head, ...lines] = text.split('\n').map((l) => l.trim());
-  const m = head.match(/^(\S+) (\d+\.\d+\.\d+)(?:\s*[：:]\s*(.+))?$/);
+  const m = head.match(/^(\S+(?: Windows| for Windows)?) (\d+\.\d+\.\d+)(?:\s*[：:]\s*(.+))?$/);
   if (!m || m[1] !== name) {
     throw new Error(`${tag}：第一行要是「${name} ${version}」（可以加「：副標」），現在是「${head}」`);
   }

@@ -189,6 +189,13 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 
 本機測試可以用 `--releases <檔案>` 讀一份跟 API 同樣格式的 JSON，不連網路。
 
+**Windows 版**（design-windows §14.3、§14.4，2026-10-21 加）：tag 是 `win-vX.Y.Z`，標題是「拾音 Windows X.Y.Z」「Shiyin for Windows X.Y.Z」（其他格式同上）；最新的 Windows 版一定要有 `Shiyin-<版本>-win-x64-Setup.exe` 和 `Shiyin-<版本>-win-arm64-Setup.exe`。
+
+- Mac 的版本、更新紀錄、`/download` 都不變（`win-v` 開頭的 release 不算 Mac 的版本）。還沒有 Windows 版時，網站跟現在一模一樣（2026-10-21 跟 main 的建置比過：只多了沒用到的 `.windows` 樣式）
+- 有 Windows 版時：下載區多一塊 Windows 的下載（「下載 Windows 版」按鈕是 x64，下面一行 ARM 的連結；SmartScreen 和智慧型應用程式控制的說明），`/download/windows` 轉到最新的 x64 安裝檔、`/download/windows-arm64` 轉到 ARM64；下載次數加上兩個安裝檔
+- Windows 版的更新紀錄先不列在網站上（只在 GitHub Release），之後跟 Mac 一起決定要不要分頁
+- 常見問題「只有 Mac 版」的文字，第一個 Windows 版發布時改（tasks W8.4）
+
 ## 8. 自動部署
 
 `.github/workflows/site.yml`，用 GitHub Actions 加 Cloudflare 的 wrangler 部署到 Cloudflare Pages：
@@ -432,3 +439,48 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 - **CSP**：`_headers` 加 `media-src 'self'`，不然影片會被擋。`/videos/*` 快取一天，跟圖片一樣。
 - **結構化資料**：首頁的 JSON-LD 加 `VideoObject`（名稱、說明、封面、上傳日期、長度 PT52S、影片網址），讓 Google 的影片搜尋找得到。
 
+## 16. Windows 版的頁面（2026-10-22）
+
+使用者覺得官網整個是為 Mac 寫的（標題、說明、示範、常見問題都是 Mac），Windows 版只在下載區多一小段，Windows 的使用者會以為跟他無關，要設計 Windows 的畫面。決定（使用者同意的方向）：**首頁維持以 Mac 為主，另外做一頁 Windows 版**。首頁的標題、說明是照「Mac 會議記錄」優化過的（§14.3），改成兩個平台各半會影響 Mac 的搜尋，對現有使用者也比較亂。
+
+**還沒有 Windows 版的 release 時，網站跟現在一模一樣**（同 §7）：不產生 Windows 的頁面、首頁不出現 Windows 的連結、常見問題照舊寫「開發中」。不放「即將推出」。
+
+### 16.1 Windows 版的頁面（`/windows/`、`/en/windows/`、`/ja/windows/`）
+
+| 區塊 | 內容 |
+|---|---|
+| 第一屏 | 「Windows 上的會議紀錄 app」（英文 A meeting-notes app for Windows、日文 Windows の議事録アプリ），說明同首頁但「在你的電腦上」；「下載 Windows 版 X.Y.Z」（捲到下載區）、點星；「免費、開源，需要 Windows 11（x64 或 ARM）・也有 Mac 版」 |
+| 截圖 | 會議紀錄（摘要），Windows 版真的畫面 |
+| 開會時，邊錄邊看逐字稿 | 同首頁，快捷鍵寫 Windows 的（Ctrl+R、Ctrl+Alt+Shift+B）；錄音中的截圖 |
+| 停止後，在電腦上正式轉錄 | 同首頁，加一段 NVIDIA 顯示卡加速（自動下載、40 分鐘的會議 RTX 3060 約 8 分鐘、只用 CPU 約 30 分鐘，requirements R27 R4.6、N2 的實測）；逐字稿的截圖 |
+| 整理成會議紀錄 | 同首頁 |
+| 錄音不會離開你的電腦 | 同首頁的隱私，把「Mac」換成「電腦」 |
+| 下載 | 版本（連到 GitHub Release，Windows 版的更新紀錄不在網站上，§7）、系統、記憶體、磁碟空間（模型約 2 GB，NVIDIA 另外約 1.1 GB）、顯示卡、費用；x64 的下載按鈕、ARM 的連結；安裝三步；SmartScreen 的示意圖（§16.3）；智慧型應用程式控制的說明；點星和贊助 |
+| 電腦效能（2026-10-22 加，在下載區的需求表下面） | 只寫量過或確定的事：NVIDIA 顯示卡最快（RTX 3060 的實測、驅動 527 版以後、顯示記憶體建議 4 GB 以上，轉錄模型約 1.7 GB）；只用 CPU 比較慢（同一台桌機的實測，筆電可能比會議本身還久；轉錄最多用 8 個執行緒）；等不及時改用快速辨識（設定 → 錄音 → 正式轉錄，比較不準、不參考詞彙表）；錄音中的即時逐字稿約用一個核心的三分之一（R27 R2.1 的實測）；ARM 的電腦只用 CPU。不寫沒量過的 CPU 等級、顯示卡型號清單；有更多電腦的實測再補成表 |
+| 最近更新 | 最新的 Windows 版（版本說明從 GitHub Release 讀，§7） |
+| 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
+
+- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉（2026-10-22 使用者看到）。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白（2026-10-22 使用者看到）。`make-images.sh` 遇到奇數尺寸會停下來。
+- 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
+- 分享預覽圖先沿用首頁的（`og.png`）。
+
+### 16.2 首頁（有 Windows 版時）
+
+- 第一屏的「免費、開源，需要 macOS 26 和 Apple Silicon」後面加「・也有 Windows 版」，連到 Windows 版的頁面。
+- 用 Windows 的訪客（`navigator.userAgent` 有 Windows），第一屏上面多一行「你用的是 Windows 電腦，Windows 版在這裡 →」。用 `/platform.js`（另一個小檔案，CSP 只允許自己網站的 script）把預設 `hidden` 的那一行打開；沒有 JavaScript 時不出現，不影響其他內容。
+- 下載區：Mac 的下載照舊；原本 Windows 的那一塊改成一張卡片：「Windows 版」、一句需求（Windows 11、x64 或 ARM、有 NVIDIA 顯示卡時轉錄更快）、「下載 Windows 版」按鈕（x64）、「系統需求和安裝步驟」連到 Windows 頁的下載區。SmartScreen、智慧型應用程式控制的說明移到 Windows 頁。
+- 頁首的導覽（手機上隱藏）、頁尾加平台的切換：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」（2026-10-22 使用者要求）。
+- 常見問題「有 Windows 版或手機版嗎？」改成「有 Windows 版（Windows 11，x64 和 ARM），功能跟 Mac 版一樣」，連到 Windows 頁；沒有手機版。結構化資料的 FAQ 跟著。
+- `/llms.txt`：有 Windows 版時寫出 Windows 版的版本、需求和頁面連結，取代「Windows 版開發中」。
+
+### 16.3 SmartScreen 的示意圖
+
+Windows 使用者最容易卡住的是第一次執行時的 SmartScreen（拾音還沒有程式碼簽章，§14.1 of design-windows）。用 CSS 畫兩格簡化的示意圖，不用截圖（截圖只有虛擬機的中文畫面，英文、日文版也要能用）：左邊是藍色的「Windows 已保護您的電腦」框，標出「其他資訊」；右邊是展開後的框，標出「仍要執行」按鈕。文字照 Windows 各語言的介面（中文「其他資訊」「仍要執行」、英文 More info、Run anyway、日文 詳細情報、実行）。手機上上下排。
+
+### 16.4 截圖怎麼拍（虛擬機）
+
+- 示範資料：Mac 的 `~/Library/Caches/ShiyinDemo/home`（中文）、`ShiyinDemoEN/home`（英文）的資料庫用 `sqlite3 .backup` 複製，加上 `audio/`；中文的拿掉 Mac 截圖裡沒有的兩場（12、14）。兩邊的資料庫結構相同（requirements R28.5），直接放進虛擬機的 `C:\ShiyinDemo`、`C:\ShiyinDemoEN`，模型用硬連結。
+- 解析度和縮放：UTM 會把高度定在視窗的高度（1044），2560×1044 最多 150%。用 `DisplayConfigSetDeviceInfo`（設定 app 用的同一個）改縮放，app 不用重開。截圖用 DWM 的外框（`DWMWA_EXTENDED_FRAME_BOUNDS`）和 `CopyFromScreen`，截圖的程式要宣告支援高 DPI（`SetThreadDpiAwarenessContext`），不然座標會被換算。
+- 專案在有 iCloud 同步的桌面：`make-images.sh` 短時間內重寫同一個檔案時，iCloud 會留下「summary 2.avif」這種衝突副本（舊的內容），commit 前用 `git status` 看有沒有沒加進 git 的副本，刪掉（2026-10-22 遇到）。
+- 工具在 `scripts/windows/vm/ps/`：`display.ps1`（解析度）、`dpi.ps1`（縮放）、`snapwin.ps1`（放好視窗、截圖）、`clickname.ps1`（用虛擬機的滑鼠點元件）、`setnotes.ps1`（填輸入框），用 `insession.sh` 在桌面跑。截完把縮放改回 100%、解析度改回 1024×768。
+- 摘要：點「摘要」分頁讓焦點離開搜尋框；逐字稿：點 00:24（英文 00:22）那一段的時間；錄音：`record-sim` 用 Lumio 的錄音（英文用定價那場），筆記用 UI Automation 填兩行，再點側欄讓筆記框沒有焦點，約 30 秒時截。點擊用虛擬機裡的滑鼠（只送進虛擬機），點完滑鼠移到畫面外，等提示框消失再截。

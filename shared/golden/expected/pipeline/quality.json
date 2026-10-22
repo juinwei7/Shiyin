@@ -1,0 +1,18 @@
+[
+  {
+    "chunks" : 4,
+    "clusters" : 2,
+    "cohesion" : 0.97357654571533203,
+    "collisionRate" : 1,
+    "mergeRisk" : 0,
+    "multiSpeakerChunks" : 1
+  },
+  {
+    "chunks" : 2,
+    "clusters" : 1,
+    "cohesion" : 0.70710676908493042,
+    "collisionRate" : 0,
+    "mergeRisk" : 0,
+    "multiSpeakerChunks" : 0
+  }
+]

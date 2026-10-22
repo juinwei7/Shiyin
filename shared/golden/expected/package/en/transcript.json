@@ -1,0 +1,36 @@
+[
+  {
+    "end" : 3.5,
+    "lowConfidence" : false,
+    "speaker" : 1,
+    "start" : 0,
+    "text" : "Hi everyone, let's review the Q4 roadmap."
+  },
+  {
+    "end" : 8,
+    "lowConfidence" : false,
+    "speaker" : 2,
+    "start" : 3.5,
+    "text" : "I'll send the email via SendGrid by Friday."
+  },
+  {
+    "end" : 12.25,
+    "lowConfidence" : true,
+    "speaker" : 1,
+    "start" : 8,
+    "text" : "Speaker 1 here again: what about the \"beta\" users?"
+  },
+  {
+    "end" : 13,
+    "lowConfidence" : false,
+    "start" : 12.25,
+    "text" : "Okay."
+  },
+  {
+    "end" : 16.5,
+    "lowConfidence" : false,
+    "speaker" : 3,
+    "start" : 13,
+    "text" : "The beta list is ready."
+  }
+]

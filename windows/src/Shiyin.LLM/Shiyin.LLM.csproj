@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 整理工具：六種後端、重試、退回 JSON 模式（design-windows §10） -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shiyin</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Core/Shiyin.Core.csproj" />
+  </ItemGroup>
+</Project>

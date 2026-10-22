@@ -1,0 +1,57 @@
+[
+  {
+    "end" : 4.2,
+    "lowConfidence" : false,
+    "speaker" : 1,
+    "start" : 0,
+    "text" : "大家好，今天討論 v3.6 的上線時程。"
+  },
+  {
+    "end" : 9.8,
+    "lowConfidence" : false,
+    "speaker" : 2,
+    "start" : 4.2,
+    "text" : "我這邊 Redis 快取還在測，預計下週三完成。"
+  },
+  {
+    "end" : 15.1,
+    "lowConfidence" : true,
+    "speaker" : 1,
+    "start" : 9.8,
+    "text" : "好，那 \"Kubernetes\" 的部署呢？"
+  },
+  {
+    "end" : 20,
+    "lowConfidence" : false,
+    "speaker" : 3,
+    "start" : 15.1,
+    "text" : "部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。"
+  },
+  {
+    "end" : 24.5,
+    "lowConfidence" : true,
+    "start" : 20,
+    "text" : "（背景噪音）"
+  },
+  {
+    "end" : 70.3,
+    "lowConfidence" : false,
+    "speaker" : 2,
+    "start" : 65,
+    "text" : "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題"
+  },
+  {
+    "end" : 3731,
+    "lowConfidence" : false,
+    "speaker" : 1,
+    "start" : 3725.4,
+    "text" : "最後確認：期限 10/21，負責人小明。"
+  },
+  {
+    "end" : 3731.2,
+    "lowConfidence" : false,
+    "speaker" : 2,
+    "start" : 3731,
+    "text" : "嗯"
+  }
+]

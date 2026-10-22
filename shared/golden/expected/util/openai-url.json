@@ -1,0 +1,42 @@
+[
+  {
+    "isLocal" : false,
+    "normalized" : "https://api.groq.com/openai/v1",
+    "text" : "https://api.groq.com/openai/v1/"
+  },
+  {
+    "isLocal" : true,
+    "normalized" : "http://localhost:11434/v1",
+    "text" : "http://localhost:11434/v1/chat/completions"
+  },
+  {
+    "isLocal" : false,
+    "normalized" : "https://x.com/v1",
+    "text" : "  https://x.com/v1//  "
+  },
+  {
+    "isLocal" : null,
+    "normalized" : null,
+    "text" : "ftp://x.com"
+  },
+  {
+    "isLocal" : null,
+    "normalized" : null,
+    "text" : "localhost:1234"
+  },
+  {
+    "isLocal" : true,
+    "normalized" : "http://[::1]:8080/v1",
+    "text" : "http://[::1]:8080/v1"
+  },
+  {
+    "isLocal" : null,
+    "normalized" : null,
+    "text" : "https://"
+  },
+  {
+    "isLocal" : null,
+    "normalized" : null,
+    "text" : ""
+  }
+]
