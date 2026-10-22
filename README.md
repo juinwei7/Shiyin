@@ -106,7 +106,7 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 
 ## Windows 版
 
-Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能對齊 Mac 3.6。**還沒有正式發布**，發布後會放在這個 repo 的 Releases（tag 是 `win-vX.Y.Z`）和官網。
+Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Mac 4.0 相同。到[官網](https://shiyin.weibuilds.com/windows/)或這個 repo 的 Releases 下載（tag 是 `win-vX.Y.Z`）。
 
 | 項目 | 需求 |
 |---|---|
@@ -130,7 +130,7 @@ Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能對齊
 
 ```powershell
 pwsh scripts/windows/build-whisper.ps1 -Arch x64 -Out build\whisper-x64
-pwsh scripts/windows/pack.ps1 -Version 3.6.0 -Arch x64 -Whisper build\whisper-x64   # 安裝檔在 dist\win-x64
+pwsh scripts/windows/pack.ps1 -Version 4.0.0 -Arch x64 -Whisper build\whisper-x64   # 安裝檔在 dist\win-x64
 ```
 
 不碰畫面的程式（資料庫、提示詞、整理工具、轉錄流程）在 Mac 上也能測：`cd windows && dotnet test --project tests/Shiyin.Tests`。

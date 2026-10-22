@@ -106,7 +106,7 @@ Without `make-signing-cert.sh --trust` the build still works with an ad-hoc sign
 
 ## Windows
 
-The Windows version lives in [`windows/`](windows/) (C#, .NET 10, WinUI 3) and matches the features of Mac 3.6. **It hasn’t been released yet.** Once it is, it will be on this repo's Releases (tagged `win-vX.Y.Z`) and the website.
+The Windows version lives in [`windows/`](windows/) (C#, .NET 10, WinUI 3) and has the same features as Mac 4.0. Download it from the [website](https://shiyin.weibuilds.com/en/windows/) or this repo's Releases (tagged `win-vX.Y.Z`).
 
 | Item | Requirement |
 |---|---|
@@ -130,7 +130,7 @@ Building from source has to happen on Windows, with the .NET 10 SDK, Visual Stud
 
 ```powershell
 pwsh scripts/windows/build-whisper.ps1 -Arch x64 -Out build\whisper-x64
-pwsh scripts/windows/pack.ps1 -Version 3.6.0 -Arch x64 -Whisper build\whisper-x64   # installer goes to dist\win-x64
+pwsh scripts/windows/pack.ps1 -Version 4.0.0 -Arch x64 -Whisper build\whisper-x64   # installer goes to dist\win-x64
 ```
 
 The code that doesn’t touch the UI (database, prompts, note-writing tools, transcription pipeline) can be tested on a Mac too: `cd windows && dotnet test --project tests/Shiyin.Tests`.
