@@ -10,6 +10,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // §30.4 的欄位 → 資料表的欄位（schema.sql）
 const APP = { version: 'app_version', os: 'os', chip: 'chip', uiLanguage: 'ui_language' };
+const PLATFORMS = ['mac', 'windows'];
 const USAGE = {
   meetingsRecorded: 'meetings_recorded', recordedSeconds: 'recorded_seconds',
   meetingsImported: 'meetings_imported', importedSeconds: 'imported_seconds',
@@ -17,7 +18,7 @@ const USAGE = {
   diarizationRuns: 'diarization_runs', questionsAsked: 'questions_asked',
 };
 const USAGE_DICTS = {
-  engines: { breeze: 'engine_breeze', macos: 'engine_macos', whisperJa: 'engine_whisper_ja' },
+  engines: { breeze: 'engine_breeze', builtin: 'engine_builtin', whisperJa: 'engine_whisper_ja' },
   meetingLanguages: { zh: 'lang_zh', en: 'lang_en', ja: 'lang_ja' },
   summarizer: { claudeCode: 'summarizer_claude_code', codex: 'summarizer_codex', api: 'summarizer_api', local: 'summarizer_local' },
 };
@@ -70,6 +71,8 @@ export function toRow(body, now) {
   const row = { install_id: body.installId, date: body.date, received_at: now.toISOString() };
   const app = body.app;
   if (!app || typeof app !== 'object') return 'bad app';
+  if (!PLATFORMS.includes(app.platform)) return 'bad app.platform';
+  row.platform = app.platform;
   for (const [key, column] of Object.entries(APP)) {
     const value = app[key];
     if (typeof value !== 'string' || value.length > MAX_TEXT) return `bad app.${key}`;

@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS usage_daily (
   install_id TEXT NOT NULL,
   date TEXT NOT NULL,
+  platform TEXT NOT NULL,          -- mac、windows
   app_version TEXT,
   os TEXT,
   chip TEXT,
@@ -14,7 +15,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   transcribed_seconds INTEGER NOT NULL DEFAULT 0,
   transcribe_wall_seconds INTEGER NOT NULL DEFAULT 0,
   engine_breeze INTEGER NOT NULL DEFAULT 0,
-  engine_macos INTEGER NOT NULL DEFAULT 0,
+  engine_builtin INTEGER NOT NULL DEFAULT 0,   -- Mac：macOS 內建辨識；Windows：快速辨識（SenseVoice）
   engine_whisper_ja INTEGER NOT NULL DEFAULT 0,
   lang_zh INTEGER NOT NULL DEFAULT 0,
   lang_en INTEGER NOT NULL DEFAULT 0,
@@ -33,3 +34,4 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   PRIMARY KEY (install_id, date)
 );
 CREATE INDEX IF NOT EXISTS usage_daily_date ON usage_daily (date);
+CREATE INDEX IF NOT EXISTS usage_daily_platform_date ON usage_daily (platform, date);

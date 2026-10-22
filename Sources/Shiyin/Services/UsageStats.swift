@@ -11,7 +11,7 @@ final class UsageStats: @unchecked Sendable {
         var meetingsRecorded = 0, recordedSeconds = 0
         var meetingsImported = 0, importedSeconds = 0
         var transcribedSeconds = 0, transcribeWallSeconds = 0
-        var engines = ["breeze": 0, "macos": 0, "whisperJa": 0]
+        var engines = ["breeze": 0, "builtin": 0, "whisperJa": 0]
         var meetingLanguages = ["zh": 0, "en": 0, "ja": 0]
         var diarizationRuns = 0
         var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0]
@@ -80,11 +80,11 @@ final class UsageStats: @unchecked Sendable {
         add { $0.meetingsImported += 1 }
     }
 
-    /// 轉錄完成。engine 是 Meeting.transcribedWith（breeze、system、japanese）
+    /// 轉錄完成。engine 是 Meeting.transcribedWith（breeze、system、japanese）；system 記成 builtin（跨平台的名稱，§30.1）
     func transcribed(seconds: Double, wallSeconds: Double, engine: String, language: MeetingLanguage,
                      imported: Bool, diarized: Bool) {
         let audio = Self.whole(seconds)
-        let key = ["system": "macos", "japanese": "whisperJa"][engine] ?? "breeze"
+        let key = ["system": "builtin", "japanese": "whisperJa"][engine] ?? "breeze"
         add {
             $0.transcribedSeconds += audio
             $0.transcribeWallSeconds += Self.whole(wallSeconds)
@@ -238,7 +238,7 @@ final class UsageStats: @unchecked Sendable {
     // MARK: 格式（§30.4）
 
     struct Payload: Encodable {
-        struct App: Encodable { var version: String; var os: String; var chip: String; var uiLanguage: String }
+        struct App: Encodable { var platform = "mac"; var version: String; var os: String; var chip: String; var uiLanguage: String }
         var schema = 1
         var installId: String
         var date: String

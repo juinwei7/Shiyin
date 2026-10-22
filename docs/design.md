@@ -1054,7 +1054,7 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 | `meetingsImported` | 匯入音訊或影片成功 | `Importer.importFile` |
 | `importedSeconds` | 匯入的會議轉錄完成，加上它的長度 | `JobRunner.transcribe`（`meeting.source == "import"`） |
 | `transcribedSeconds`、`transcribeWallSeconds` | 轉錄完成：語音長度、從開始到完成的實際秒數（含說話者辨識） | `JobRunner.transcribe` |
-| `engines.breeze`／`macos`／`whisperJa` | 轉錄完成，依 `transcribedWith`（breeze／system／japanese）加語音秒數 | 同上 |
+| `engines.breeze`／`builtin`／`whisperJa` | 轉錄完成，依 `transcribedWith`（breeze／system／japanese）加語音秒數。`builtin` 是系統內建或快速辨識：Mac 是 macOS 內建辨識，Windows 是快速辨識（SenseVoice），報表依平台顯示名稱 | 同上 |
 | `meetingLanguages.zh`／`en`／`ja` | 轉錄完成，依會議語言加一場 | 同上 |
 | `diarizationRuns` | 轉錄時有做說話者辨識、重新辨識說話者完成 | `JobRunner.transcribe`、`rediarize` |
 | `summarizer.claudeCode`／`codex`／`api`／`local` | 整理（含草稿、回答待確認後的修正）成功；Anthropic、OpenAI、Gemini、遠端的 OpenAI 相容 API 算 `api`，網址是 localhost、127.0.0.1 的 OpenAI 相容 API 算 `local` | `JobRunner.execute` |
@@ -1095,12 +1095,12 @@ User-Agent: Shiyin/<版本>
   "schema": 1,
   "installId": "2f7c3a52-…",
   "date": "2026-10-22",
-  "app": { "version": "3.7.0", "os": "macOS 26.1", "chip": "Apple M3 Pro", "uiLanguage": "zh-Hant" },
+  "app": { "platform": "mac", "version": "3.7.0", "os": "macOS 26.1", "chip": "Apple M3 Pro", "uiLanguage": "zh-Hant" },
   "usage": {
     "meetingsRecorded": 2, "recordedSeconds": 4210,
     "meetingsImported": 1, "importedSeconds": 1800,
     "transcribedSeconds": 6010, "transcribeWallSeconds": 520,
-    "engines": { "breeze": 5800, "macos": 210, "whisperJa": 0 },
+    "engines": { "breeze": 5800, "builtin": 210, "whisperJa": 0 },
     "meetingLanguages": { "zh": 2, "en": 1, "ja": 0 },
     "diarizationRuns": 3,
     "summarizer": { "claudeCode": 3, "codex": 0, "api": 0, "local": 0 },
@@ -1111,7 +1111,7 @@ User-Agent: Shiyin/<版本>
 ```
 
 - 秒數都是整數；沒有發生的欄位是 0（欄位一定都在）。`app` 是**送出當下**的環境（不是那一天的），一天之內換版本不另外分。
-- `os` 用 `ProcessInfo.operatingSystemVersion`（例如 `macOS 26.1`）；`chip` 用 `sysctl machdep.cpu.brand_string`；`uiLanguage` 是 app 實際用的介面語言（`Bundle.main.preferredLocalizations.first`）。
+- `platform` 是 `mac` 或 `windows`（2026-10-22 加，分平台看報表用，不用從 `os` 字串猜）。`os` 用 `ProcessInfo.operatingSystemVersion`（例如 `macOS 26.1`）；`chip` 用 `sysctl machdep.cpu.brand_string`；`uiLanguage` 是 app 實際用的介面語言（`Bundle.main.preferredLocalizations.first`）。
 - 後台收到回 `204`（或任何 2xx）。用 `installId` + `date` 去重：同一筆重送（例如回應在路上掉了）要覆蓋，不要重複算。
 - 後台不要存 IP（或只用來擋濫用、不跟 `installId` 一起存）。`schema` 以後改格式時加 1，後台可以依版本解析。
 
@@ -1146,14 +1146,14 @@ User-Agent: Shiyin/<版本>
 
 ### 30.9 Windows 版
 
-Windows 版做一樣的功能（R40.7）：同樣的格式（`app.os` 寫 `Windows 11 …`、`chip` 寫 CPU 名稱）、同樣的時機和保留規則，資料檔一樣放 `SHIYIN_HOME/usage.json`，設定放 `settings.json`。
+Windows 版做一樣的功能（R40.7）：同樣的格式（`app.platform` 是 `windows`、`app.os` 寫 `Windows 11 …`、`chip` 寫 CPU 名稱；`engines.builtin` 是快速辨識 SenseVoice 轉錄的秒數）、同樣的時機和保留規則，資料檔一樣放 `SHIYIN_HOME/usage.json`，設定放 `settings.json`。
 
 ### 30.10 後台：Cloudflare Workers＋D1（D101）
 
 - 程式：`workers/usage/`（`worker.js` 純 JavaScript、不用套件；`schema.sql`；`wrangler.toml`）。網址 `https://usage.weibuilds.com/v1/usage`（Workers 的自訂網域，跟官網分開：官網維持純靜態，兩邊部署、出問題都不互相影響）。
 - `POST /v1/usage`：
   - 只收 `Content-Type: application/json`、內容 8 KB 以內，其他回 400／413／415
-  - 檢查 §30.4 的格式：`schema` 是 1；`installId` 是 UUID；`date` 是今天前 7 天到明天（UTC）之間；`app` 的四個欄位是 64 字以內的字串；`usage`、`errors` 的數字是 0～1,000,000 的整數；字典只認得 §30.4 列的鍵（多的忽略、少的當 0）。不對就回 400（app 收到 4xx 會丟掉那一天，不再重送）
+  - 檢查 §30.4 的格式：`schema` 是 1；`installId` 是 UUID；`date` 是今天前 7 天到明天（UTC）之間；`app.platform` 是 `mac` 或 `windows`；`app` 的其他四個欄位是 64 字以內的字串；`usage`、`errors` 的數字是 0～1,000,000 的整數；字典只認得 §30.4 列的鍵（多的忽略、少的當 0）。不對就回 400（app 收到 4xx 會丟掉那一天，不再重送）
   - 寫進 D1：`installId`＋`date` 是主鍵，重送就覆蓋（`INSERT … ON CONFLICT DO UPDATE`），所以同一台同一天只算一次
   - 成功回 204
 - `GET /v1/health`：回 200，部署後檢查用。其他路徑 404。
@@ -1164,10 +1164,10 @@ Windows 版做一樣的功能（R40.7）：同樣的格式（`app.os` 寫 `Windo
   ```sql
   CREATE TABLE usage_daily (
     install_id TEXT NOT NULL, date TEXT NOT NULL,
-    app_version TEXT, os TEXT, chip TEXT, ui_language TEXT,
+    platform TEXT NOT NULL, app_version TEXT, os TEXT, chip TEXT, ui_language TEXT,
     meetings_recorded INTEGER, recorded_seconds INTEGER, meetings_imported INTEGER, imported_seconds INTEGER,
     transcribed_seconds INTEGER, transcribe_wall_seconds INTEGER,
-    engine_breeze INTEGER, engine_macos INTEGER, engine_whisper_ja INTEGER,
+    engine_breeze INTEGER, engine_builtin INTEGER, engine_whisper_ja INTEGER,
     lang_zh INTEGER, lang_en INTEGER, lang_ja INTEGER, diarization_runs INTEGER,
     summarizer_claude_code INTEGER, summarizer_codex INTEGER, summarizer_api INTEGER, summarizer_local INTEGER,
     questions_asked INTEGER,
