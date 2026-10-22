@@ -3,7 +3,7 @@
 > 狀態：草稿（2026-10-20）。對應 `requirements.md` 第 22 節（R26～R28）。
 > Mac 版的設計在 `design.md`，本文件以「M§n」指那邊的章節。行為跟 Mac 相同的部分只寫「同 M§n」，這裡只寫 Windows 不同的地方。
 > 標「待 T-W#」的選擇要等 §17 的實驗做完才定案；做完後把結果寫進對應的章節和決策紀錄，拿掉標記。
-> 套件版本是 2026-10-20 查到的最新版，W1.2 釘死前再確認一次。
+> 套件版本在 `windows/Directory.Packages.props` 釘死。
 
 ## 1. 架構
 
@@ -47,7 +47,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 | 電腦聲音（R1.2） | WASAPI process loopback，`EXCLUDE_TARGET_PROCESS_TREE` 排除拾音自己（NAudio 3 的 `WithProcessLoopback`） | 對應 Mac 的「全域 tap 排除自己」；需要 build 20348 以上，Windows 11 都有 |
 | 即時逐字稿（R2） | sherpa-onnx 1.13（Apache-2.0）：Silero VAD ＋ SenseVoice-Small int8；中文用 OpenccNetLib（MIT，s2twp）轉台灣繁體 | Windows 沒有可用的內建離線中文辨識（D44）；T-W5 的結果見 §7、D61 |
 | 快速辨識（R4.1、R20.8） | 同一個 SenseVoice 模型讀整個檔案 | 取代 macOS 內建（D45） |
-| 正式轉錄（R4） | whisper.cpp b5454（v1.9.5、commit `d1be6fd`，跟 `Package.swift` 同一版）自己建：x64 CPU 各種指令集＋Vulkan；ARM64 CPU 各種指令集。加一層小的 C shim，C# 用 P/Invoke | 結果要跟 Mac 一致（R28.4，D46、D56），待 T-W3 |
+| 正式轉錄（R4） | whisper.cpp b5454（v1.9.5、commit `d1be6fd`，跟 `Package.swift` 同一版）自己建：x64 CPU 各種指令集（Vulkan 還沒做，D64）；ARM64 一個 CPU 版本（clang，§8）。加一層小的 C shim，C# 用 P/Invoke | 結果跟 Mac 一致（R28.4，D46、D56），T-W3 的結果見 §8 |
 | 語言偵測（R16） | 同上的 whisper ＋ Whisper base（同 M§18.8） | 同一個模型和門檻；要中英日三個機率，Whisper.net 拿不到 |
 | 說話者辨識、聲紋（R5、R19.3） | sherpa-onnx 的說話者分段（pyannote segmentation-3.0，6 MB）切段落＋聲紋嵌入（3D-Speaker ERes2Net base，512 維，40 MB），自己分群 | 有 .NET 套件、跑在 CPU（D47、D58） |
 | 解碼、壓縮 m4a | Media Foundation（NAudio 的 `MediaFoundationReader`、`MediaFoundationEncoder`）；AIFF 用 NAudio 的 `AiffFileReader` | 系統內建，不用 ffmpeg（R4.5）；解得開的格式見 §8 |
@@ -178,7 +178,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - 中文輸出用 OpenccNetLib 的 s2twp 轉成台灣繁體（字典已內建）。
 - 在背景執行緒、低於一般的優先順序跑，不能拖到錄音寫檔（R25.2）。
 - **自動增益**（D61）：遠距收音的會議很小聲（AISHELL-4 的音量中位數 −46 dBFS），VAD 只抓到兩成的時間。看最近 30 秒的音量（每 0.1 秒一格，第 90 百分位當說話的音量），放大到約 −22 dBFS，最多 24 dB，不縮小，每秒更新；只影響送進 VAD 和辨識的聲音，錄音檔不變。快速辨識也一樣。
-- T-W5（Mac 上，2026-10-21）：合成會議（91 秒）照錄音的速度餵，定稿延遲中位數 0.62 秒、第 90 百分位 0.79 秒，暫定文字更新 148 次；轉出來是台灣繁體。換成 D61 的設定後，各語言的前 5 分鐘照錄音的速度餵：AISHELL-4（中文、遠距）錯字率 18.3%、延遲中位數 0.58 秒／第 90 百分位 0.83 秒；AMI（英文）WER 33.8%（原本 56.9%）、0.52／0.76 秒；日文國會聽證有假名了（原本只剩漢字）、0.50／0.68 秒。虛擬機的 CPU 用量待 W0.1。
+- T-W5（Mac 上，2026-10-21）：合成會議（91 秒）照錄音的速度餵，定稿延遲中位數 0.62 秒、第 90 百分位 0.79 秒，暫定文字更新 148 次；轉出來是台灣繁體。換成 D61 的設定後，各語言的前 5 分鐘照錄音的速度餵：AISHELL-4（中文、遠距）錯字率 18.3%、延遲中位數 0.58 秒／第 90 百分位 0.83 秒；AMI（英文）WER 33.8%（原本 56.9%）、0.52／0.76 秒；日文國會聽證有假名了（原本只剩漢字）、0.50／0.68 秒。虛擬機的 CPU 用量還沒量。
 - 自動偵測語言（R16）：照 M§18.8，用 whisper base；切換語言時即時辨識換語言，時間偏移照舊。
 
 ## 8. 正式轉錄
@@ -197,6 +197,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **分段、提示詞、接縫、過濾、低信心**：同 M§21.16、M§6.2，程式在 Core，用 §4 的 `pipeline/` 比對。
 - **快速辨識**（R4.1、R20.8）：SenseVoice＋VAD 讀整個檔案。Breeze 還沒下載好時自動用（同 D35），轉完提示「可以用 Breeze 重新轉錄」。錯字率（D61 的設定，2026-10-21）：合成會議 9.2%（Mac 的內建辨識 9.2%、Breeze 6.0%）、AISHELL-4 26.4%（Mac 的內建辨識約 25%）、AMI 英文 WER 39.0%（約 26%）、日文合成會議 16.8%、國會聽證 21.7%／28.1%、FLEURS 15.5%（日文的 Whisper large-v3-turbo 是 4.5%、9.2%／7.7%）。91 秒的錄音 2.4 秒、38 分鐘 14 秒轉完（M3 Pro）。快速辨識的模型還沒下載好時，轉錄線先不接工作、自動開始下載（Mac 的內建辨識不用下載）。
 - **T-W3 的 Mac 部分**（2026-10-21）：C# 經 shim 呼叫同一版 whisper.cpp（Mac 的 dylib、Metal），餵一樣的取樣時結果跟 Mac 逐段相同（國會聽證 190/190 段、AMI 198/198 段）；m4a 解碼器不同造成的取樣差異會讓少數段落不同（合成會議 27 段裡 2 段，錯字率 5.2% → 6.0%），Windows 用 Media Foundation 解碼後要再比一次。速度：AMI 17.5 分鐘 98 秒、國會聽證 15.3 分鐘 51 秒（M3 Pro、Metal）。虛擬機、CI 的 CPU 倍速待 W0.4。
+- **CI 建的 DLL**（2026-10-22，run 39739673918）：x64 是 9 個 CPU 版本、ARM64 一個（clang），都沒有匯入 VC++ 的執行階段。ARM64 的安裝版在虛擬機轉 91 秒的中文合成會議，28 段文字跟官方 b5454 的 DLL 相同（10 段的時間差 0.02～0.04 秒）。
 - **快速辨識的模型怎麼來**（R27 R20.8）：首次使用引導的「模型」步驟先下載快速辨識和 VAD（約 240 MB，比 Breeze 小很多），下載好就能錄音，Breeze 接著在背景下載。要不要直接附在安裝檔，T-W7 量過安裝檔和差異更新的大小再決定。
 - **解碼**：Media Foundation 的 SourceReader 依序讀、轉成 16 kHz 單聲道浮點（同 D34 的串流讀法）。Media Foundation 不支援 CAF、AIFF：AIFF 用 `AiffFileReader`，CAF 不支援（不在匯入的格式清單裡）。T-W9（2026-10-21，UUP 做的 Windows 11 映像檔）：m4a、mp3、aac、flac、aiff、aif、wma、mp4、mov、m4v、wmv、webm 都解得開，同一段 91 秒的錄音每種都轉出同樣的 10 段；ogg、opus 是 Ogg 容器，要「Web 媒體延伸模組」（一般的 Windows 11 有預裝），沒有時錯誤是 `MF_E_UNSUPPORTED_BYTESTREAM_TYPE`，畫面說明可以先轉檔或去 Microsoft Store 裝（不顯示內部的檔名）。日文、中文的 PDF（WebView2）字型正常。Windows 的 N 版沒有 Media Foundation，要裝 Media Feature Pack（寫進系統需求）。
 - **結束拾音**時等 whisper 收尾最多 10 秒（R18.12）。
@@ -482,7 +483,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 |---|---|---|
 | D42 | Windows 版用 C# .NET＋WinUI 3 另外寫，Mac 版不動 | Swift on Windows：可以搬 Model、Store、Notes 的程式，但沒有 SwiftUI，介面要用 swift-winrt 接 WinUI，工具鏈和 GRDB 在 Windows 都不成熟。Tauri、Electron 兩邊共用：等於 Mac 3.6 整個重寫，原生的體驗和已經驗收的東西都要重來。WPF：成熟但外觀是舊的 Windows；WinUI 3 是現在的原生元件。取捨：兩份程式要各自維護，靠 §4 的標準答案保持一致（使用者 2026-10-20 決定） |
 | D43 | 兩邊一致靠 Mac 產生的標準答案比對，不共用提示詞檔案 | 把提示詞搬到共用的文字檔：要改 Mac 3.6 讀提示詞的方式，而且組合提示詞的邏輯兩邊還是各寫一份，終究要比對組出來的結果。從 Swift 原始碼自動轉成 C#：插值和條件太多，轉不穩 |
-| D44 | 即時逐字稿用 sherpa-onnx 的 SenseVoice＋VAD，一直重新辨識正在講的那句當暫定文字（待 T-W5） | Windows 內建的語音辨識：舊的 Windows.Media.SpeechRecognition 連續聽寫要連網或品質差；新的 Windows AI 語音辨識是實驗性、一定要打包成 MSIX、只有英文。串流的 zipformer、paraformer：輸出簡體、沒有日文。whisper 小模型邊錄邊辨識：延遲大、CPU 吃重，還會跟正式轉錄搶資源（同 D1）。雲端語音服務：違反第 4 節（轉錄不連網） |
+| D44 | 即時逐字稿用 sherpa-onnx 的 SenseVoice＋VAD，一直重新辨識正在講的那句當暫定文字（T-W5 的結果見 §7） | Windows 內建的語音辨識：舊的 Windows.Media.SpeechRecognition 連續聽寫要連網或品質差；新的 Windows AI 語音辨識是實驗性、一定要打包成 MSIX、只有英文。串流的 zipformer、paraformer：輸出簡體、沒有日文。whisper 小模型邊錄邊辨識：延遲大、CPU 吃重，還會跟正式轉錄搶資源（同 D1）。雲端語音服務：違反第 4 節（轉錄不連網） |
 | D45 | 「macOS 內建」換成「快速辨識」（SenseVoice） | 拿掉這個選項：第一場會議要等 1.7 GB 下載（D35 的理由）；即時逐字稿本來就要這個模型，不用多下載 |
 | D46 | whisper.cpp 自己從 Mac 同一版建，P/Invoke | Whisper.net：包的 whisper.cpp 比較舊、同一段錄音結果會跟 Mac 不一樣（R28.4）；語言偵測只給最高的那一個，拿不到中英日三個機率（R16 的門檻要用）；Vulkan 版只有 x64。執行 whisper-cli 子程序：進度、取消、token 機率都要從文字輸出解析 |
 | D47 | 說話者辨識用 sherpa-onnx（分群改成自己做，見 D58） | 把 FluidAudio 的流程（pyannote community-1＋VBx）整個搬到 ONNX：community-1 沒有官方 ONNX 版，要自己轉模型。pyannote（Python）：違反 D2。取捨：模型和 Mac 不同，聲紋不能共用、門檻要重新調（R28.6）；「至少 N 人」、聲紋、分不準的判斷要自己補（§9） |
@@ -508,15 +509,13 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 ## 17. 需要先做的實驗
 
-結果寫在對應的 commit 訊息，選擇定了就改上面的章節和決策紀錄。
+結果寫在對應的 commit 訊息，選擇定了就改上面的章節和決策紀錄。做完的實驗從表裡拿掉（T-W1 見 §15、T-W5 見 §7），只留還有部分沒做的。
 
 | # | 內容 | 通過標準 |
 |---|---|---|
-| T-W1 | 虛擬機和自動化：從 Mac 用 SSH 建置一個 WinUI 3 的小 app；排程工作在登入的桌面啟動它、截圖、用 UI Automation 按按鈕；named pipe 讀狀態 | 全部不碰虛擬機的鍵盤滑鼠就能做到；截圖看得到 WinUI 的內容（不是黑的）；輸出資料夾沒有兩份 `onnxruntime.dll` |
 | T-W2 | 錄音：命令列原型同時錄麥克風和電腦聲音 5 分鐘（Edge 播 YouTube，中間停 30 秒；原型自己播一段正弦波） | 沒有斷音、停播的 30 秒補成靜音、兩個聲道時間差 100 ms 以內、正弦波沒錄進去；換預設裝置後自動接回；`powercfg /requests` 看得到 |
 | T-W3 | whisper：建 x64（CPU 各版本＋Vulkan）、ARM64（CPU 各版本）、Mac 的 dylib，跑 Breeze | 同一段錄音跟 Mac 的 `transcribe-eval` 錯字率差 ≤ 0.5 個百分點（R28.4 的上限是 1）；語言偵測跟 Mac 判斷相同；取消 1 秒內停；記憶體峰值 ≤ 3 GB；量出虛擬機、CI x64、CI ARM64 的倍速，決定只有 CPU 時的參數和 N2、N4 的數字 |
 | T-W4 | 說話者辨識：`Shiyin.Eval` 在 Mac 上跑 AMI 9 場、AISHELL-4、使用者的麻將錄音，A、B 兩個方案 | 說話者標錯的時間 ≤ 15%（同 T-A3）；AMI 自動判斷出 4 人、AISHELL-4 6 人、麻將給「至少 4 人」時分出 ≥ 4 位；選出門檻（聲紋誤認 ≤ 2%）；1 小時的錄音 3 分鐘內處理完（CI x64） |
-| T-W5 | 即時逐字稿：`record-sim` 跑中、英、日的評估錄音 | 暫定文字 1 秒內、定稿 5 秒內；錯字率跟 Mac 的 SpeechAnalyzer 比；轉出來是台灣繁體；虛擬機的 CPU 用量 |
 | T-W6 | claude、codex CLI：原生安裝和 npm 安裝各試一次 | 找得到真正的執行檔（不經過 cmd.exe）；10,000 字以上的中文 `--system-prompt` 和 JSON schema 傳進去不會被截斷；能判斷登入狀態、開終端機登入（登入要使用者同意） |
 | T-W7 | 安裝和更新：本機伺服器模擬 GitHub Releases（Mac 和 Windows 的 release 混在一起） | 從 Edge 下載的 Setup.exe（有網路來源標記）被 SmartScreen 擋下時照說明可以裝、不用系統管理員；Smart App Control 開著時的畫面記下來寫進安裝說明；正常、SHA 不符、更新金鑰不符、同版本四種更新檔的結果都對；更新後麥克風權限還在；解除安裝不刪資料；更新來源跳過 Mac 的 release |
 | T-W8 | 偵測會議：新版 Teams、Zoom、Chrome 打開麥克風 | 5 秒內偵測到是哪個 app；停用 10 秒內偵測到；ConsentStore 跟 audio session 清單比對 |
