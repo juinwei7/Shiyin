@@ -1194,13 +1194,13 @@ User-Agent: Shiyin/<版本>
 
 - README（中文，「資料與隱私」表格加一列）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉、看實際送出的內容。
 - README（英文）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. Turn it off, or see exactly what is sent, in Settings → Advanced.
-- 官網（website.md §14 的隱私區塊，中英日）：「送到你選的整理工具」旁邊加一句：「另外，每天會送一份匿名的使用統計給開發者（版本、用了幾分鐘，不含任何會議內容），在設定裡可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (version and minutes used, never any meeting content). You can turn it off in Settings.」日文：「また、匿名の利用統計（バージョンと利用時間のみ、会議の内容は含みません）を 1 日 1 回開発者に送ります。設定でオフにできます。」
+- 官網（website.md §14 的隱私區塊，中英日；Mac 首頁和 Windows 頁都加）：「送到你選的整理工具」旁邊加一句：「另外，每天會送一份匿名的使用統計給開發者（版本、用了幾分鐘，不含任何會議內容），在設定裡可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (version and minutes used, never any meeting content). You can turn it off in Settings.」日文：「また、匿名の利用統計（バージョンと利用時間のみ、会議の内容は含みません）を 1 日 1 回開発者に送ります。設定でオフにできます。」
 - requirements 第 4 節已經改好（2026-10-22）。
-- 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉、看送出的內容」。
+- 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉、看送出的內容」。Mac（`v4.0.0`）和 Windows（`win-v4.0.0`）的版本說明都寫。
 
 ### 30.9 Windows 版
 
-Windows 版做一樣的功能（R40.7）：同樣的格式（`app.platform` 是 `windows`、`app.os` 寫 `Windows 11 …`、`chip` 寫 CPU 名稱；`engines.builtin` 是快速辨識 SenseVoice 轉錄的秒數）、同樣的時機和保留規則，資料檔一樣放 `SHIYIN_HOME/usage.json`，設定放 `settings.json`。
+Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式（`app.platform` 是 `windows`、`app.os` 寫 `Windows 11 …`、`chip` 寫 CPU 名稱；`engines.builtin` 是快速辨識 SenseVoice 轉錄的秒數）、同樣的時機和保留規則，資料檔一樣放 `SHIYIN_HOME/usage.json`，設定放 `settings.json`。跟 Mac 不同的地方（統計網址怎麼寫進 app、程式放哪裡）見 design-windows §12.10。
 
 ### 30.10 後台：Cloudflare Workers＋D1（D101）
 

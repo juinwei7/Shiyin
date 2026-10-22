@@ -1039,6 +1039,8 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 
 檢查完先不發布：使用者說另一個代理還要加追蹤數據的功能。發布時：把 `windows`（或之後的分支）再合進 main、推 main（官網部署 Windows 頁）、照上面的發布說明推 `v4.0.0`、`win-v4.0.0` 的 tag（CI 會重新建置；Windows 的 Release 不設成 latest）。
 
+2026-10-22 使用者決定：匿名使用統計（第 30 節）Mac、Windows 都放進 4.0.0（R40.7）。加了之後上面的「Mac 的 DMG」「Windows 的安裝檔」「CI」要用新的建置重新檢查一次。
+
 ## 30. 匿名使用統計（2026-10-22，使用者已確認）
 
 ### 為什麼
@@ -1068,7 +1070,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
   - 使用說明的「資料與隱私」、README（中英）、官網的隱私說明、加入這個功能那一版的版本說明，照實寫出來
 - R40.5 不影響其他功能：送統計在背景進行，失敗不顯示錯誤、不影響錄音和轉錄；統計的檔案壞掉就重新開始，不讓 app 出錯。
 - R40.6 後台（2026-10-22 使用者決定用 Cloudflare，不另外架主機）：Cloudflare Workers＋D1，程式放在 repo 的 `workers/usage/`，網址 `https://usage.weibuilds.com/v1/usage`。檢查格式、同一台同一天覆蓋不重複算、不存 IP；送出的格式、回應見 design §30.4、§30.10。
-- R40.7 Windows 版之後做一樣的功能（R28 跟 Mac 一致），送一樣的格式（`platform` 是 windows），在 Windows 版的任務另外排。報表可以分平台看。
+- R40.7 Windows 版做一樣的功能（R28 跟 Mac 一致），送一樣的格式（`platform` 是 windows），報表可以分平台看。2026-10-22 使用者決定跟 4.0.0 一起發（原本排在之後）：Mac、Windows 的 4.0.0 都帶統計。
 
 ### 不做（這一版）
 
@@ -1086,6 +1088,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
   - 關掉開關後不送，而且還沒送的資料被清掉；重設 ID 之後 ID 改變
   - 沒有網址時不送也不累計
 - 設定頁的開關、「查看會送出的內容」、「重設匿名 ID」在真的畫面上用 AX 按過
+- Windows 版：同上面的假伺服器項目（服務的測試＋虛擬機的 DEBUG 版、shiyinctl 設網址）；設定頁在虛擬機裡用 UI Automation 按過；打包時帶了統計網址的安裝檔，app 裡有網址，沒帶的沒有
 - 正式版（沒有在 shiyinctl 設網址）不會連到任何統計網址
 - 發布有統計網址的那一版時，使用說明、README、官網、版本說明一起改好
 - 後台：本機（wrangler dev）用 curl 和 DEBUG 版送真的資料，寫進 D1、重送覆蓋、格式不對回 400、IP 沒有存；部署後用正式網址再送一次
