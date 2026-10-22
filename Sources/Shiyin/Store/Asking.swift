@@ -220,6 +220,7 @@ extension AppModel {
                 let record = try await work()
                 guard !Task.isCancelled else { return }
                 try db.saveQuestion(record)
+                UsageStats.shared.asked()
                 if case .meeting(let id) = target { loadMeetingQuestions(id) } else { loadAllQuestions() }
             } catch is CancellationError {
             } catch {

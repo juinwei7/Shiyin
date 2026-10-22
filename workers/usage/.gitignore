@@ -1,0 +1,2 @@
+# wrangler 本機執行時的暫存（含 Cloudflare 推出來的請求資訊，不進 git）
+.wrangler/

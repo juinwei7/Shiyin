@@ -92,6 +92,8 @@
 	<string></string>
 	<key>ShiyinUpdateURL</key>
 	<string></string>
+	<key>ShiyinUsageURL</key>
+	<string></string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

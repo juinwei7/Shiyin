@@ -157,6 +157,7 @@ pwsh scripts/windows/pack.ps1 -Version 4.0.0 -Arch x64 -Whisper build\whisper-x6
 |---|---|---|
 | `SHIYIN_SIGNING_P12`、`SHIYIN_SIGNING_P12_PASSWORD` | Secret | 自簽憑證。用 `scripts/export-signing-cert.sh --to-github <owner/repo>` 從自己的電腦設定，CI 簽出來的 app 才會跟你電腦上建的一致；沒有設定就用 ad-hoc 簽章 |
 | `SHIYIN_UPDATE_URL` | Variable | 寫進 app 的更新網址 |
+| `SHIYIN_USAGE_URL` | Variable | 寫進 app 的匿名使用統計網址（選填；沒設就不送統計） |
 | `SHIYIN_RELEASES_REPO`、`SHIYIN_RELEASES_TOKEN` | Variable、Secret | 另外發布到一個公開的 repo（程式碼維持私人、又想讓 app 自動更新時用） |
 
 ### 在自己的電腦上發布
