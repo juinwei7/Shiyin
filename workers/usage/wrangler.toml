@@ -12,7 +12,7 @@ routes = [{ pattern = "usage.weibuilds.com", custom_domain = true }]
 [[d1_databases]]
 binding = "DB"
 database_name = "shiyin-usage"
-database_id = "TO_BE_FILLED_AFTER_D1_CREATE"
+database_id = "fb35bb1b-1e61-4910-a07d-093466b64d39"
 
 # 同一個 IP 每分鐘最多 30 次（防濫用；IP 不存）
 [[ratelimits]]
