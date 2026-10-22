@@ -306,7 +306,10 @@ final class JobRunner {
 
             let segments = try db.segments(job.meetingId)
             let transcribed = segments.map { TranscribedSegment(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence) }
-            let (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: transcribed)
+            var (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: transcribed)
+            // 短句再跟每位說話者比一次（R34、design §6.3.2）；使用者改過的句子下面另外處理，不用查
+            let locked = Set(segments.indices.filter { segments[$0].speakerManual })
+            if let refined = try? await SpeakerRecheck.refine(transcribed, speakers: speakers, samples: samples, locked: locked) { speakers = refined }
             let source = meeting.channels == "both" ? "mix" : meeting.channels
             var voices: [Int: SpeakerVoice] = [:]
             for (raw, number) in numbering {

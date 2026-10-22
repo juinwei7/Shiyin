@@ -309,7 +309,13 @@ struct TranscriptionPipeline {
                           onProgress: @escaping @Sendable (Double) -> Void) async -> ([Int?], [Int: SpeakerVoice], Diarizer.Quality?) {
         do {
             let output = try await Diarizer.diarize(samples: samples, minSpeakers: options.minSpeakers, onProgress: onProgress)
-            let (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: segments)
+            var (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: segments)
+            // 短句再跟每位說話者比一次（R34、design §6.3.2）；模型下載不了或算不出來就照說話者辨識的結果
+            do {
+                speakers = try await SpeakerRecheck.refine(segments, speakers: speakers, samples: samples)
+            } catch {
+                log.error("speaker recheck failed: \(error.localizedDescription, privacy: .public)")
+            }
             var voices: [Int: SpeakerVoice] = [:]
             for (raw, number) in numbering {
                 if let embedding = output.voiceprints[raw] {

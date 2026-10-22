@@ -144,6 +144,10 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
         ["clusters"] = result.Turns.Select(t => t.Speaker).Distinct().Count(), ["dimension"] = diarizer.EmbeddingDimension,
         ["quality"] = q is null ? null : new JsonObject { ["cohesion"] = q.Cohesion, ["chunks"] = q.Chunks, ["clusters"] = q.Clusters, ["mergeRisk"] = q.MergeRisk },
         ["voices"] = voices,
+        // 短句的實驗（M§6.3.2、R34）：每一段用說話者辨識的聲紋模型各算一次聲紋（太短的是 null）
+        ["embeddings"] = options["embedSegments"]?.GetValue<bool>() == true
+            ? new JsonArray(segments.Select(s => diarizer.Embed(samples, s.Start, s.End) is { } e ? (JsonNode)new JsonArray(e.Select(x => (JsonNode)x).ToArray()) : null).ToArray())
+            : null,
         ["turns"] = segments.Count > 0 ? null : new JsonArray(result.Turns.Select(t => (JsonNode)new JsonArray(t.Start, t.End, t.Speaker)).ToArray()),
         ["chunks"] = options["dump"]?.GetValue<bool>() == true ? new JsonArray(result.Chunks.Select(c => (JsonNode)new JsonObject
         {

@@ -55,19 +55,37 @@ enum Diarizer {
         return !items.isEmpty
     }
 
+    /// 拾音用的設定（design §6.3.2、R34、D92）：
+    /// - 每個片段的聲紋也拿回來，用來算分得準不準（design §24.3），不影響分群的結果
+    /// - 一個人在一個視窗裡說 0.3 秒以上就算聲紋（預設 1 秒），沒人認領的片段重新算聲紋、判給最像的人：
+    ///   很短的一句不會因為沒有聲紋，被併進旁邊那個人（AMI 2 秒內的句子標對 24% → 52%）
+    static func config(clustering: OfflineDiarizerConfig.Clustering = .community) -> OfflineDiarizerConfig {
+        var config = OfflineDiarizerConfig(clustering: clustering, exposeChunkEmbeddings: true)
+        #if DEBUG
+        // -debugDiarizerLegacy YES：改之前的設定（FluidAudio 的預設），用同一段錄音比較
+        if UserDefaults.standard.bool(forKey: "debugDiarizerLegacy") { return config }
+        #endif
+        config.embedding.minSegmentDurationSeconds = 0.3
+        config.zeroVoteReembed = .init(enabled: true, minDurationSeconds: 0.4)
+        return config
+    }
+
     /// 模型不在就下載並編譯（第一次約數十 MB）
     static func prepare() async throws -> OfflineDiarizerManager {
         if let manager { return manager }
         try FileManager.default.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
-        // 每個片段的聲紋也拿回來，用來算分得準不準（design §24.3），不影響分群的結果
-        let manager = OfflineDiarizerManager(config: OfflineDiarizerConfig(exposeChunkEmbeddings: true))
+        let manager = OfflineDiarizerManager(config: config())
         try await manager.prepareModels(directory: modelsDirectory)
+        // 短句再確認的聲紋模型（R34）一起準備好；下載不了不擋說話者辨識
+        _ = try? await SpeakerRecheck.prepare()
         self.manager = manager
         return manager
     }
 
     /// minSpeakers：至少分出幾個人（design §23.2），nil 自動判斷；clustering：評估時換分群的設定（門檻、人數）
+    /// config：評估時整份換掉（DEBUG 的 voiceprint-eval，短句的實驗 design §6.3.2）
     static func diarize(samples: [Float], minSpeakers: Int? = nil, clustering: OfflineDiarizerConfig.Clustering? = nil,
+                        config: OfflineDiarizerConfig? = nil,
                         onProgress: @escaping @Sendable (Double) -> Void) async throws -> Output {
         var clustering = clustering
         if clustering == nil, let minSpeakers {
@@ -75,8 +93,11 @@ enum Diarizer {
             clustering?.minSpeakers = minSpeakers
         }
         let manager: OfflineDiarizerManager
-        if let clustering {
-            manager = OfflineDiarizerManager(config: OfflineDiarizerConfig(clustering: clustering, exposeChunkEmbeddings: true))
+        if let config {
+            manager = OfflineDiarizerManager(config: config)
+            try await manager.prepareModels(directory: modelsDirectory)
+        } else if let clustering {
+            manager = OfflineDiarizerManager(config: Self.config(clustering: clustering))
             try await manager.prepareModels(directory: modelsDirectory)
         } else {
             manager = try await prepare()
