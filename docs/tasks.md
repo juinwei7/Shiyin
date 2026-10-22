@@ -82,7 +82,8 @@
   - 2026-10-22 使用者確認在 Windows 電腦上錄音沒問題
   - 還差：換預設裝置（R18.2）
 - [~] **W0.4 T-W3 whisper.dll**（§8、D46）：shim、P/Invoke、同樣的取樣結果跟 Mac 逐段相同。虛擬機（4 核、2 個執行緒，官方 b5454 的 ARM64 DLL）轉 91 秒的中文合成會議約 2.5 分鐘（含說話者辨識），27 段跟 Mac 逐段相同、錯字率都是 8.4%
-  - 還差：CI 建 x64（CPU＋Vulkan）、ARM64 的 DLL（W8.1）；CI x64、ARM64 的倍速和記憶體峰值，寫進 N2、N4 的數字（R27）
+  - CI 建好 x64（9 個 CPU 版本，Vulkan 照 D64 還沒做）、ARM64（clang、armv8.2-a+dotprod+fp16）的 DLL（W8.1）；ARM64 安裝版在虛擬機轉 91 秒的中文合成會議，28 段文字跟官方 DLL 的結果完全相同
+  - 還差：CI x64、ARM64 的倍速和記憶體峰值，寫進 N2、N4 的數字（R27）
 - [~] **W0.5 T-W4 說話者辨識**（§9、D47、D58）：分群改成自己做，AMI、AISHELL-4 跟 Mac 一樣好；聲紋門檻 0.6、分不準的提示 0.37（§9）
   - 還差：使用者的麻將錄音給「至少 4 人」（要使用者同意用這個錄音）；1 小時的錄音在 CI x64 3 分鐘內處理完
 - [~] **W0.7 T-W6 claude、codex CLI**（§10）：虛擬機裝了 zip 版的 Node 和 npm 版的 claude-code 2.1.306、codex，修好找執行檔的方法（新版的套件結構不一樣、npm 的全域資料夾不一定在 %APPDATA%\npm）；沒登入時的狀態和錯誤訊息、「登入」開出終端機都對；逐字稿走標準輸入，命令列遠低於長度上限
@@ -145,11 +146,10 @@
 
 ### W8 打包、發布
 
-- [~] **W8.1 whisper.dll 的 CI 建置**（§8）：`scripts/windows/build-whisper.ps1`、`release-windows.yml` 的建置步驟
-  - 要使用者：同意推到 GitHub 讓 CI 跑（虛擬機沒有 Visual Studio Build Tools）
 - [~] **W8.2 安裝檔、安裝說明**（§14.1、D63）：虛擬機驗過 `pack.ps1`、安裝、開始功能表和桌面的捷徑、名稱依介面語言（「拾音」「Shiyin」，換語言後重開會改名）、雙擊 .shiyin 匯入、SmartScreen 的畫面跟安裝說明一致、解除安裝不刪資料
   - 要使用者：決定要不要用自己的名義申請 SignPath Foundation 的免費簽章（申請下來前沒有 Authenticode 簽章）
 - [~] **W8.3 app 內更新**（§14.2、R27 R10.6）：虛擬機用 `-UpdateTest` 的版本和本機伺服器驗過：簽章不符被拒、下載的檔案刪掉；正常的更新從 3.6.0 到 3.6.1、自己重開、資料和捷徑都在
+  - CI 建的正式版（run 39739673918）：更新說明的簽章用正式公鑰驗過、SHA-256 相符；裝進虛擬機後 30 秒讀真的 GitHub，「已是最新版本」、沒有錯誤
   - 正式的更新金鑰：2026-10-22 使用者建好，公鑰在 `AppHost.cs`，私鑰在 GitHub secrets（備份在鑰匙圈，§14.2）
   - 要使用者：更新後麥克風權限還在（W0.8）
 - [~] **W8.4 官網**（§14.4）：真的 Releases 加一個假的 `win-v3.6.0` 建置成功，`/download` 還是 DMG、`/download/windows`、`/download/windows-arm64` 指到兩個安裝檔，下載區用 headless Chrome 看過
@@ -157,9 +157,10 @@
 - [~] **W8.7 官網的 Windows 版頁面**（website.md §16）：`/windows/` 三種語言、首頁的連結和下載卡片、用 Windows 的訪客提示、常見問題和 llms.txt、SmartScreen 示意圖、Windows 版的截圖（虛擬機 150%，§16.4）都做好了。只有 Mac 的假 release 清單建出來，跟 main 用同一份清單建的比，除了內嵌的樣式完全一樣（多出沒被引用的圖和 platform.js）；加上假的 win-v3.6.0：headless Chrome 看過三種語言的 Windows 頁（桌機深色、淺色、390 寬的 iframe）、首頁的卡片、Windows 的 User-Agent 才出現提示；sitemap 有三個 Windows 網址、JSON-LD 的 SoftwareApplication 是 Windows 11、FAQ 換成有 Windows 版、llms.txt 有版本和連結
   - 還差：真的上線看一次（第一個 Windows 版發布時）
 - [~] **W8.5 發布的工作流程**（§14.3、D51）：`.github/workflows/release-windows.yml`（推 win-v* 才發布、不設成 latest、更新說明沒簽章就不發布）
-  - 還差：手動執行只產生 artifact；推測試用的 tag 到 fork（不是正式 repo）確認不會變成 latest、Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的
+  - 手動執行只產生 artifact（run 39739673918：兩個架構建置、測試、打包、簽章都過，release 那一步跳過）；手動執行要工作流程在預設分支上，main 先放了同一份 `release-windows.yml`
+  - 還差：推測試用的 tag 到 fork（不是正式 repo）確認不會變成 latest、Mac 的 `releases/latest/download/shiyin-update.json` 還是 Mac 的
 - [~] **W8.6 README、CLAUDE.md**：README（中英）的〈Windows 版〉、CLAUDE.md 的 Windows 指令；`pack.ps1` 在虛擬機跑過
-  - 還差：發布時把「還沒有正式發布」改成下載連結、記憶體和轉錄速度的數字（W0.4）；`build-whisper.ps1` 在 CI 跑一次
+  - 還差：發布時把「還沒有正式發布」改成下載連結、記憶體和轉錄速度的數字（W0.4）
 
 ### W9 驗收
 
