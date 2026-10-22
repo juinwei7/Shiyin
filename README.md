@@ -1,6 +1,6 @@
 <img src="docs/images/icon.png" width="96" alt="拾音圖示">
 
-**繁體中文** | [English](README.en.md) | 官網：[shiyin.weibuilds.com](https://shiyin.weibuilds.com)
+**繁體中文** | [English](.github/README.md) | 官網：[shiyin.weibuilds.com](https://shiyin.weibuilds.com)
 
 # 拾音 Shiyin
 
@@ -278,6 +278,12 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
 
 轉錄模型和說話者辨識模型不放在這個 repo 裡，第一次使用時才下載。app 和 DMG 都附有上面這些套件的完整授權條款：「關於拾音」視窗、DMG 裡的 `Third-Party Licenses.txt`（`scripts/dev/make-third-party-licenses.sh` 產生，更新套件後要重跑）。
+
+## 贊助
+
+拾音是個人的開源專案，免費使用。覺得好用的話，可以在 Ko-fi 請我喝杯咖啡。
+
+[![在 Ko-fi 請我喝杯咖啡](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/weiwei_chang)
 
 ## 授權
 

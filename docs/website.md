@@ -24,6 +24,9 @@
 - W10 首屏的示範（2026-10-19 加，2026-10-20 補上 3.5 的功能）：第一屏不放靜態截圖，改成重刻的拾音視窗，自動播一場會議從錄音、草稿、正式版（說話者名字）、待確認到提問的過程，播完可以自己點（§10）。看的人不用下載，就知道錄完會得到什麼、時間點、待確認和提問怎麼用。**app 加了看得到的新功能，示範要跟著補**（§10.1）。
 - W11 GitHub 數據（2026-10-20 加）：首頁第一屏顯示 GitHub 星星數和累計下載次數，讓第一次來的人知道已經有人在用（§11）。
 - W12 鼓勵點星（2026-10-20 加）：讓喜歡拾音的人容易到 GitHub 點星，增加星星數（§12）。不在官網代替使用者登入 GitHub 點星、不用「點星才能下載」「點星送東西」這類做法。
+- W13 贊助（2026-10-21 加，requirements R13.3）：放 Ko-fi 的贊助連結，覺得好用的人可以請作者喝杯咖啡（§13）。只放連結，不嵌入 Ko-fi 的面板或 script。
+- W15 介紹影片（2026-10-21 加）：首頁放 52 秒的介紹影片（中文版、英文版），沒時間玩示範的人看完就知道拾音在做什麼（§15）。
+- W14 搜尋和 AI 找得到（2026-10-21 加）：在 Google、Bing 搜「會議記錄 app」「逐字稿」「本機轉錄」這類詞，以及在 ChatGPT、Perplexity、Gemini 問「Mac 上推薦的會議記錄工具」時，拾音要出現、被引用（§14）。要量得到成效：Search Console 的曝光、點擊、收錄數，和固定一組問題問 AI 的被提到次數。不用買連結、不灌評論、不寫假的比較。
 
 | 頁面 | 網址 | 內容 |
 |---|---|---|
@@ -33,7 +36,7 @@
 | 找不到頁面 | 404 | 說明找不到，給回首頁和版本說明的連結 |
 
 不做：
-- 部落格、使用者帳號、留言、電子報訂閱
+- 部落格（2026-10-21 起有「指南」，§14.2：只寫回答具體問題的教學和比較，不寫動態、心得文）、使用者帳號、留言、電子報訂閱
 - 線上說明文件（使用說明在 app 裡已經有）
 - 付費、授權
 - 網站分析（可以之後加 Cloudflare Web Analytics，它不用 cookie）
@@ -118,7 +121,7 @@
 │   最近更新（最新兩版，連到版本說明）                     │
 │   常見問題（點開收合）                                  │
 │ ──────────────────────────────────────────────────── │
-│ 拾音 Shiyin，個人開源專案   GitHub  版本說明  English    │
+│ 拾音 Shiyin，個人開源專案  GitHub  贊助  版本說明  English │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -156,6 +159,7 @@
 - 網址：`/`、`/changelog/`、`/en/`、`/en/changelog/`、`/ja/`、`/ja/changelog/`、`/download`、404 頁（`/404.html`、`/en/404.html`、`/ja/404.html`）。
 - 日文版：介面名稱照 app 的英文寫（「Record」「To confirm」），常見問題和下載區寫清楚 app 只有英文、繁體中文介面；截圖用英文版的；字體改用 Hiragino Sans（`:lang(ja)`），不然漢字會用蘋方的中文字形。
 - SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.weibuilds.com`。
+- Google Search Console：用 HTML 檔驗證網站擁有權（2026-10-21 加），驗證通過後也要一直留著，刪掉會失去驗證。檔名要多一個 `.html`（`site/public/google<代碼>.html.html`）：Cloudflare Pages 會把 `.html` 結尾的網址 308 轉址到沒有副檔名的網址，而且不能關；多一個副檔名，`/google<代碼>.html` 才會直接回 200。sitemap 在 Search Console 送出 `/sitemap.xml`。
 - `_headers`：`nosniff`、Referrer-Policy、CSP（script 只允許自己網站的檔案，也就是 `/demo.js`；不允許 inline script）、圖片快取一天。
 
 ## 7. 版本說明自動更新
@@ -329,3 +333,109 @@ app 加了在主視窗看得到的功能時，示範也要補上（3.5 的草稿
 
 - 星星圖示用內嵌的 SVG（黃色），不載入 GitHub 官方的按鈕 script（CSP 只允許自己的 script，也不想讓訪客連到第三方）
 - app 裡要不要也提醒點星（例如「輔助說明」選單、用了一陣子之後問一次），之後再跟使用者確認，這次只改官網
+
+## 13. 贊助（2026-10-21）
+
+使用者想增加一點業外收入，開了 Ko-fi（`https://ko-fi.com/weiwei_chang`，PayPal 收款；GitHub Sponsors 沒有開放台灣）。
+
+| 位置 | 內容 |
+|---|---|
+| 下載區最後的點星區塊 | 說明後面加一句「也可以請我喝杯咖啡」（英文 or you can buy me a coffee、日文 コーヒーをおごっていただくこともできます）；點星按鈕下面加一顆一樣寬的「請我喝杯咖啡」（Buy me a coffee、コーヒーをおごる），咖啡杯圖示用內嵌的 SVG |
+| 頁尾 | GitHub 後面加「贊助」（Sponsor、支援する） |
+
+- 只連到 Ko-fi 的頁面。Ko-fi 的浮動按鈕要在官網跑它的 script，贊助面板要開 iframe，都要放寬 CSP，也會讓訪客連到第三方，不用
+- 不寫要湊錢做什麼（例如開發者帳號的年費），語氣是「覺得好用的話」
+
+## 14. 搜尋和 AI 找得到（2026-10-21）
+
+使用者在 Search Console 驗證了網站，想讓拾音在搜尋引擎和 AI 的回答裡被找到（W14），要看得到成效。
+
+### 14.1 技術面
+
+- **結構化資料（JSON-LD）**：首頁放 `WebSite`、`SoftwareApplication`（名稱、作業系統、類別、免費、版本、下載網址、授權、作者、GitHub）、`FAQPage`（照首頁的常見問題）；版本說明放 `WebPage`。不放評分（`aggregateRating`）：沒有真的評分就不寫。JSON-LD 是資料區塊，不會執行，CSP 不用改；`<` 寫成 `\u003c`，避免內容提前關掉 `<script>`。
+- **`/llms.txt`**：給 AI 讀的 Markdown（llmstxt.org 的格式）：拾音是什麼、跟其他工具不同的地方、系統需求、價格、最新版本，和各頁的連結。英文為主，附繁中摘要。版本號、日期從 GitHub Releases 帶入；**app 加了重要功能時要跟著補**（跟首屏示範 §10.1 一樣）。
+- **sitemap**：每個網址加上 `lastmod`（首頁、版本說明用最新版的發布日期），跟 HTML 一樣加上 `x-default`。
+- **IndexNow**：Bing 的索引也供 ChatGPT 搜尋、Copilot 用。根目錄放金鑰檔（`/<金鑰>.txt`），部署後把 sitemap 裡的網址送給 `api.indexnow.org`；每天的自動重建不送（內容沒變，只有 GitHub 數字變）。送失敗只記警告，不讓部署失敗。
+- **爬蟲**：robots.txt 維持全部允許。搜尋用（OAI-SearchBot、PerplexityBot、Claude-SearchBot）和訓練用（GPTBot、ClaudeBot）都不擋：拾音是開源專案，被 AI 學到、推薦是好事。
+
+### 14.2 指南（教學、比較）
+
+競品研究（2026-10-21）：
+
+- 中文搜尋被雲端工具佔走（Subanana 寫了上百篇），媒體的比較文都沒有本機或 Mac 的工具。「拾音」單獨搜會跑出拾音燈、拾音器，內文一律寫「拾音 Shiyin」。
+- 幾乎沒有中文內容在搶的詞：Google Meet 中文逐字稿（Meet 內建的逐字稿、Gemini 筆記都不支援中文）、Mac 錄 Zoom 聲音、中英夾雜逐字稿、離線轉錄。
+- 英文：AI 回答「Otter、Granola 的開源替代品」時，大多照 AlternativeTo、OpenAlternative 的說法。開源的對手是 Meetily（說話者辨識要付費版）、Anarlog（自動辨識說話者要付費版）、Minutes。拾音的不同：說話者辨識免費、針對中英夾雜、紀錄附時間點和「待確認」、用自己的 Claude／ChatGPT 訂閱（Minutes 也能用 Claude 訂閱，不寫成只有拾音做得到）。
+- 日文：「文字起こし Mac ローカル」「議事録 AI 無料 オープンソース」沒有開源 app 佔位，但 app 介面沒有日文，先只寫一篇。
+
+| 網址（`/guides/<slug>/`） | 中文 | 英文 | 日文 | 回答的問題 |
+|---|---|---|---|---|
+| `google-meet-transcript` | ✓ | | | Meet 中文逐字稿怎麼做（英日文 Meet 內建就有，不寫） |
+| `record-online-meetings-mac` | ✓ | ✓ | | Mac 怎麼錄 Zoom、Teams、Meet，不用 BlackHole、不用機器人 |
+| `mandarin-english-transcription` | ✓ | | | 中英夾雜怎麼轉才準（Breeze ASR 25 的數字） |
+| `offline-transcription-mac` | ✓ | ✓ | ✓ | 錄音不上傳、離線轉錄，哪些步驟會連網 |
+| `chatgpt-claude-meeting-notes` | ✓ | ✓ | | 用自己的 ChatGPT、Claude 訂閱整理會議記錄 |
+| `meeting-notes-apps-compared` | ✓ | ✓ | | 中文比 Notta、Otter、Granola、雅婷、Meetily；英文比開源的 Meetily、Anarlog、Minutes 和 Granola、Otter |
+
+- 版型：麵包屑、標題、說明、最後更新日期、內文、常見問題、下載區塊、其他指南。表格可以比內文寬（桌機最多 960px），手機上在框裡左右滑，整頁不會左右晃。
+- 結構化資料：`Article`（作者、發布和更新日期）、`BreadcrumbList`，有常見問題時加 `FAQPage`。
+- 語言：每篇只有寫了的語言才有頁面；hreflang、語言選單只連到有的語言，沒有的語言連到那個語言的首頁。
+- 內部連結：首頁最後加「更多說明」列出該語言的指南；頁首（手機上隱藏）和頁尾加「指南」；指南之間互相連結。
+- 寫法：
+  - 跟 §5 一樣講清楚、不堆形容詞，跟 app 用同樣的詞（英文照翻譯表的英文介面名稱）；不用破折號、「在這個…的時代」這類 AI 腔。
+  - 每個數字、別人的功能和價格都附來源連結和查證日期（2026-10-21）。比較要公平：寫出別人的優點和拾音不適合的情況（沒有 Windows、要 macOS 26、不支援台語、語言少）。沒有用同一批錄音測過，就不排準確度名次。沒查證到的不寫（例如雅婷的價格各來源不一致，只連官網）。
+  - 不大量產生相似的頁面：每篇都要回答一個具體的問題。
+- 維護：app 的功能、價格、系統需求變了，或別人的價格變了，要改內容和 `updated`。比較頁每季重新查證一次。
+
+### 14.3 首頁的標題和說明
+
+§5 的 H1 不變，只改 `<title>` 和 description，放進大家會搜的詞（會議記錄、逐字稿、免費、錄音不上傳；英文 local、free、open source、no bot）：
+
+- 中文：「拾音 Shiyin｜Mac 會議記錄、逐字稿 app，免費開源、錄音不上傳」（標題用「記錄」，內文照 app 用「紀錄」，兩種寫法都搜得到）
+- 英文：「Shiyin: Free Meeting Notes App for Mac, Transcribed Locally」
+- 日文：「拾音 Shiyin｜Mac の議事録・文字起こしアプリ（無料、ローカル処理）」
+- 常見問題「有 Windows 版嗎」改成 Windows 版開發中。
+
+### 14.4 站外（每一個都要使用者同意才做）
+
+被 AI 引用最有效的是第三方的清單和目錄。這些都是用使用者的名義公開發布，**每一個做之前都要問過使用者**：
+
+| 平台 | 收錄方式 | 備註 |
+|---|---|---|
+| GitHub repo | 補 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 搬到 `.github/README.md`，GitHub 首頁改顯示英文；說明和 20 個 topics 已更新（2026-10-21 已做） | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
+| AlternativeTo | 登錄 app，加到 Otter、Granola、MacWhisper、Meetily 的替代清單 | 要驗證 email |
+| OpenAlternative | 表單送出 | 要登入 |
+| awesome-mac | 發 PR（英中日韓四份 README 一起改） | 2026-10-21 發了 jaywcjlove/awesome-mac#3711，放在 Audio Record and Process |
+| open-source-mac-os-apps | 改 applications.json 發 PR | 要先有英文 README；2026-10-21 發了 serhii-londar/open-source-mac-os-apps#1730 |
+| Product Hunt、Show HN | 本人發、本人回應 | 不能拉票 |
+| 台灣媒體、社群 | 寄給報導過 Breeze ASR 25 的 INSIDE、TechNews；PTT MAC 板 | |
+| awesome-whisper | 要 100 顆星以上 | 之後再說 |
+
+不做：awesome-selfhosted（只收網路服務）、Homebrew 官方 cask（要公證）、買連結、灌評論、用多個帳號推薦。
+
+### 14.5 量成效
+
+- **基準（2026-10-21）**：搜「拾音 app」「Shiyin meeting notes」都找不到官網；網站 6 個網址；GitHub 62 顆星、累計下載 202 次。
+- **Search Console**：每週看曝光、點擊、平均排名、已編入索引的網頁數。目標：4 週內 20 個網址都編入索引；8 週內指南頁開始有曝光。
+- **Bing**：使用者到 Bing Webmaster Tools 從 Search Console 匯入網站（ChatGPT 搜尋、Copilot 用 Bing 的索引）。
+- **AI 回答**：固定一組問題，每月各問 3 次（ChatGPT、Perplexity、Gemini、Google AI 摘要），記錄拾音被提到幾次（例如 2/3）、被引用的是哪一頁：
+  - 中文：「Mac 上推薦的會議記錄 app」「Google Meet 中文逐字稿怎麼做」「不上傳的會議逐字稿工具」「中英夾雜的逐字稿工具」
+  - 英文：「open source Granola alternative for Mac」「local meeting transcription app for Mac」「meeting notes app that uses my ChatGPT subscription」
+  - 日文：「Mac 議事録 アプリ 無料 ローカル」
+- **Cloudflare 流量**：參照來源主機（google、bing、chatgpt.com、perplexity.ai）。
+
+## 15. 介紹影片（2026-10-21）
+
+使用者做了兩支介紹影片（中文、英文各 52 秒、1080p），要放上官網（W15）。內容是示範會議（虛構的 Lumio 新品會議），沒有真實會議的資料。
+
+- **檔案**：原檔各約 25 MB（60fps、約 3.9 Mbps），快到 Cloudflare Pages 單檔 25 MiB 的上限，也不適合放進 git。重新壓成 H.264 1080p、30fps、CRF 28、AAC 128 kbps、`faststart`，各約 4.8 MB；跟原檔比對文字最多的畫面看不出差別。放在 `site/public/videos/shiyin-promo-<zh|en>.mp4`，封面是第 6.3 秒（圖示和標語完整出現）的 JPG（1280 寬，約 18 KB）。換影片時照同樣的參數重壓，檔名不變。
+  ```
+  ffmpeg -i 原檔.mp4 -c:v libx264 -preset slow -crf 28 -r 30 -pix_fmt yuv420p -profile:v high -c:a aac -b:a 128k -movflags +faststart shiyin-promo-zh.mp4
+  ffmpeg -ss 6.3 -i 原檔.mp4 -frames:v 1 -vf scale=1280:-2 -q:v 3 shiyin-promo-zh.jpg
+  ```
+- **配樂（2026-10-21 換）**：使用者覺得原本偏柔的配樂不夠吸引人，換成比較有推進感的電子配樂（D 大調、120 BPM，四拍大鼓、合成器主旋律）。每段畫面（8、16、20、26、32.5、44 秒）開始時旋律從頭開始並有重音，32.5 秒前鼓停半拍；拿掉一直響的沙鈴、hi-hat 和鈸改短，整體收高頻，減少雜音。一樣用 numpy 合成（`~/Library/Caches/ShiyinBuild/promo/music-b2.py`，接在原本宣傳片的流程後面），不用外部音樂，沒有授權問題。試過 AI 配音（macOS 內建、微軟的神經網路語音），聽起來太機械，而且授權不能公開散布，不用。
+- **快取**：影片換了檔名不變，網址加 `?v=<雜湊前 10 碼>`（`build.mjs` 算），瀏覽器才不會繼續用快取裡的舊影片。
+- **位置**：首屏示範（§10）後面一個新區塊「看 52 秒的介紹影片」，跟截圖一樣寬（`.wide`）。第一屏「免費、開源…」那行下面加一個連結跳到影片。不放在第一屏：第一屏照 §10 是可以玩的示範。
+- **播放**：`<video controls preload="none" playsinline>` 加封面，不自動播放（影片有配樂）、不先下載，第一屏的速度不受影響。中文首頁放中文版；英文、日文首頁放英文版（日文版本來就寫明 app 介面是英文）。影片只有配樂，畫面上的字已經說明內容，不另外做字幕。
+- **CSP**：`_headers` 加 `media-src 'self'`，不然影片會被擋。`/videos/*` 快取一天，跟圖片一樣。
+- **結構化資料**：首頁的 JSON-LD 加 `VideoObject`（名稱、說明、封面、上傳日期、長度 PT52S、影片網址），讓 Google 的影片搜尋找得到。
+

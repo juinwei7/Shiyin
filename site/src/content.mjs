@@ -2,6 +2,7 @@
 // 用詞跟 app 一致：整理工具、待確認、逐字稿、標記重點、不整理。
 
 export const GITHUB = 'https://github.com/juinwei7/Shiyin';
+export const KOFI = 'https://ko-fi.com/weiwei_chang';
 const AMI = 'https://groups.inf.ed.ac.uk/ami/corpus/';
 
 export const content = {
@@ -15,11 +16,16 @@ export const content = {
     notesLang: 'zh',
     appName: '拾音',
     meta: {
-      title: '拾音 Shiyin｜Mac 上的會議紀錄 app',
-      description: '在 Mac 上錄音、轉錄、整理成會議紀錄。錄音不會上傳，每一條紀錄都附時間點，點一下就聽得到原話。免費、開源。',
+      title: '拾音 Shiyin｜Mac 會議記錄、逐字稿 app，免費開源、錄音不上傳',
+      description: '在 Mac 上錄音、轉逐字稿、整理成會議紀錄。Zoom、Meet、Teams 不用機器人也錄得到，中文夾英文也轉得準，錄音不會上傳。每一條紀錄都附時間點，點一下就聽得到原話。免費、開源。',
       changelogTitle: '版本說明｜拾音 Shiyin',
       changelogDescription: '拾音每一版改了什麼，最新的在最上面。',
       notFoundTitle: '找不到這個頁面｜拾音 Shiyin',
+    },
+    seo: {
+      appName: '拾音 Shiyin',
+      category: '會議記錄、逐字稿',
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
     },
     nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站' },
     intro: {
@@ -30,6 +36,13 @@ export const content = {
       small: '免費、開源，需要 macOS 26 和 Apple Silicon',
       star: '在 GitHub 點星',
       downloads: (n) => `已下載 ${n} 次`,
+    },
+    video: {
+      file: 'zh',
+      h2: '看 52 秒的介紹影片',
+      link: '看 52 秒的介紹影片',
+      name: '拾音 Shiyin 介紹影片',
+      description: '52 秒看懂拾音：按下錄音，邊講邊出逐字稿；停止後自動整理成會議紀錄、分出說話者，沒把握的地方先問你，還可以直接問會議，答案附時間點。',
     },
     shots: {
       summary: '拾音的會議紀錄畫面：摘要、決議、待辦，每一條後面都有時間點',
@@ -79,7 +92,8 @@ export const content = {
       ],
       button: (file) => `下載 ${file}`,
       firstOpen: '第一次打開：',
-      starAsk: '拾音是個人的開源專案。覺得好用的話，到 GitHub 點一顆星，能讓更多人看到它。',
+      starAsk: '拾音是個人的開源專案。覺得好用的話，到 GitHub 點一顆星，能讓更多人看到它；也可以請我喝杯咖啡。',
+      coffee: '請我喝杯咖啡',
       steps: [
         '打開 DMG，把拾音拖進「應用程式」。',
         '第一次打開時 macOS 會擋下來，因為拾音沒有 Apple 開發者簽章。',
@@ -102,10 +116,22 @@ export const content = {
         ['需要網路嗎？', '錄音、轉錄、說話者辨識都不需要。第一次下載轉錄模型、整理會議紀錄和對會議提問時需要。'],
         ['支援哪些語言？', '介面有繁體中文和英文；會議可以是中文、英文或日文，開始錄音後會自動判斷。'],
         ['可以轉錄已經錄好的檔案嗎？', '可以。把錄音或影片拖進視窗就會轉錄，也可以匯入 srt、vtt、txt 逐字稿。'],
-        ['有 Windows 版或手機版嗎？', '目前只有 Mac 版。'],
+        ['有 Windows 版或手機版嗎？', '目前只有 Mac 版。Windows 版正在開發，功能會跟 Mac 版一樣。'],
       ],
     },
-    footer: { tagline: '拾音 Shiyin，個人開源專案' },
+    footer: { tagline: '拾音 Shiyin，個人開源專案', sponsor: '贊助' },
+    guides: {
+      nav: '指南',
+      title: '指南｜拾音 Shiyin',
+      description: '用 Mac 做會議記錄、逐字稿的教學，以及拾音和其他會議記錄工具的比較。',
+      h1: '指南',
+      lead: '用 Mac 做會議記錄和逐字稿的方法，以及拾音跟其他工具的差別。',
+      updated: (d) => `最後更新：${d}`,
+      related: '其他指南',
+      home: '更多說明',
+      faq: '常見問題',
+      cta: { h2: '試試拾音', p: '免費、開源，錄音不會離開你的 Mac。需要 macOS 26 和 Apple Silicon。', button: '下載拾音', more: '看所有功能' },
+    },
     changelog: {
       h1: '版本說明',
       lead: '每一版改了什麼。有新版時，拾音會在 app 裡問你要不要更新。',
@@ -133,11 +159,16 @@ export const content = {
     notesLang: 'en',
     appName: 'Shiyin',
     meta: {
-      title: 'Shiyin: a meeting-notes app for your Mac',
-      description: 'Record, transcribe and write up meetings on your Mac. Recordings are never uploaded, and every note has a timestamp you can click to hear what was said. Free and open source.',
+      title: 'Shiyin: Free Meeting Notes App for Mac, Transcribed Locally',
+      description: 'Record Zoom, Meet and Teams without a bot, transcribe on your Mac, and get meeting notes where every item has a timestamp that plays what was said. Recordings are never uploaded. Free and open source.',
       changelogTitle: 'Release notes | Shiyin',
       changelogDescription: 'What changed in each version of Shiyin, newest first.',
       notFoundTitle: 'Page not found | Shiyin',
+    },
+    seo: {
+      appName: 'Shiyin',
+      category: 'Meeting notes, transcription',
+      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese and Japanese meetings'],
     },
     nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site' },
     intro: {
@@ -148,6 +179,13 @@ export const content = {
       small: 'Free and open source. Requires macOS 26 and Apple Silicon.',
       star: 'Star on GitHub',
       downloads: (n) => `${n} downloads`,
+    },
+    video: {
+      file: 'en',
+      h2: 'Watch the 52-second intro',
+      link: 'Watch the 52-second intro',
+      name: 'Shiyin intro video',
+      description: 'Shiyin in 52 seconds: press Record and read the live transcript, then get meeting notes with speakers and timestamps. Shiyin asks when it isn’t sure, and you can ask the meeting questions.',
     },
     shots: {
       summary: 'Meeting notes in Shiyin: summary, decisions and action items, each with a timestamp',
@@ -197,7 +235,8 @@ export const content = {
       ],
       button: (file) => `Download ${file}`,
       firstOpen: 'Opening it the first time:',
-      starAsk: 'Shiyin is a personal open-source project. If you find it useful, a star on GitHub helps more people find it.',
+      starAsk: 'Shiyin is a personal open-source project. If you find it useful, a star on GitHub helps more people find it, or you can buy me a coffee.',
+      coffee: 'Buy me a coffee',
       steps: [
         'Open the DMG and drag Shiyin to Applications.',
         'macOS blocks Shiyin the first time you open it, because it isn’t notarized by Apple.',
@@ -220,10 +259,22 @@ export const content = {
         ['Does it need the internet?', 'Recording, transcription and speaker identification don’t. Downloading the transcription models the first time, writing the notes and asking your meetings questions do.'],
         ['Which languages does it support?', 'The interface is in English and Traditional Chinese. Meetings can be in English, Chinese or Japanese, and Shiyin detects which after you start recording.'],
         ['Can it transcribe a recording I already have?', 'Yes. Drag the audio or video file into the window and it’s transcribed. You can also import srt, vtt or txt transcripts.'],
-        ['Is there a Windows or phone version?', 'No, Shiyin is Mac only.'],
+        ['Is there a Windows or phone version?', 'Not yet. Shiyin is Mac only for now; a Windows version with the same features is in development.'],
       ],
     },
-    footer: { tagline: 'Shiyin, a personal open-source project' },
+    footer: { tagline: 'Shiyin, a personal open-source project', sponsor: 'Sponsor' },
+    guides: {
+      nav: 'Guides',
+      title: 'Guides | Shiyin',
+      description: 'How to take meeting notes and transcribe meetings on a Mac, and how Shiyin compares with other meeting-notes tools.',
+      h1: 'Guides',
+      lead: 'How to take meeting notes and transcripts on a Mac, and how Shiyin differs from other tools.',
+      updated: (d) => `Last updated: ${d}`,
+      related: 'More guides',
+      home: 'Guides',
+      faq: 'Questions',
+      cta: { h2: 'Try Shiyin', p: 'Free and open source. Your recordings never leave your Mac. Requires macOS 26 and Apple Silicon.', button: 'Download Shiyin', more: 'See all features' },
+    },
     changelog: {
       h1: 'Release notes',
       lead: 'What changed in each version. When a new version is out, Shiyin asks you in the app whether to update.',
@@ -252,11 +303,16 @@ export const content = {
     notesLang: 'en',
     appName: '拾音',
     meta: {
-      title: '拾音 Shiyin｜Mac の議事録アプリ',
-      description: 'Mac で録音して文字起こしし、議事録にまとめます。録音はアップロードされず、議事録の各項目のタイムスタンプをクリックすれば実際の発言を聞けます。無料、オープンソース。',
+      title: '拾音 Shiyin｜Mac の議事録・文字起こしアプリ（無料、ローカル処理）',
+      description: 'Mac で録音して文字起こしし、議事録にまとめます。Zoom、Meet、Teams もボットなしで録音でき、録音はアップロードされません。議事録の各項目のタイムスタンプをクリックすれば実際の発言を聞けます。無料、オープンソース。',
       changelogTitle: 'リリースノート｜拾音 Shiyin',
       changelogDescription: '拾音の各バージョンの変更点です。新しいものが上にあります。',
       notFoundTitle: 'ページが見つかりません｜拾音 Shiyin',
+    },
+    seo: {
+      appName: '拾音 Shiyin',
+      category: '會議記錄、逐字稿',
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
     },
     nav: { features: '機能', privacy: 'プライバシー', changelog: 'リリースノート', languages: '言語', label: 'サイト' },
     intro: {
@@ -267,6 +323,13 @@ export const content = {
       small: '無料、オープンソース。macOS 26 と Apple シリコンが必要です',
       star: 'GitHub でスター',
       downloads: (n) => `ダウンロード ${n} 回`,
+    },
+    video: {
+      file: 'en',
+      h2: '52 秒の紹介動画（英語）',
+      link: '52 秒の紹介動画を見る',
+      name: '拾音 Shiyin 紹介動画',
+      description: '52 秒でわかる拾音：録音を押すと話しながら文字起こしが表示され、停止すると話者を分けた議事録が自動でまとまります。自信がないところは先に質問し、会議に直接質問することもできます。（英語版の動画です）',
     },
     shots: {
       summary: '拾音の議事録画面：要約、決定事項、ToDo の各項目にタイムスタンプが付いている',
@@ -317,7 +380,8 @@ export const content = {
       ],
       button: (file) => `${file} をダウンロード`,
       firstOpen: '初めて開くとき：',
-      starAsk: '拾音は個人のオープンソースプロジェクトです。役に立ったら GitHub でスターを付けてください。もっと多くの人に届きます。',
+      starAsk: '拾音は個人のオープンソースプロジェクトです。役に立ったら GitHub でスターを付けてください。もっと多くの人に届きます。コーヒーをおごっていただくこともできます。',
+      coffee: 'コーヒーをおごる',
       steps: [
         'DMG を開き、拾音を「アプリケーション」フォルダにドラッグします。',
         '拾音は Apple の公証を受けていないため、初めて開くときは macOS にブロックされます。',
@@ -340,10 +404,22 @@ export const content = {
         ['インターネット接続は必要ですか？', '録音、文字起こし、話者の識別には不要です。文字起こしモデルの初回ダウンロード、議事録のまとめ、会議への質問には必要です。'],
         ['どの言語に対応していますか？', '会議は日本語、英語、中国語に対応し、録音を始めると自動で判別します。アプリの表示は英語と繁体字中国語で、日本語表示には対応していません。'],
         ['録音済みのファイルも文字起こしできますか？', 'できます。音声や動画のファイルをウインドウにドラッグすると文字起こしされます。srt、vtt、txt の文字起こしも読み込めます。'],
-        ['Windows 版やスマートフォン版はありますか？', '今のところ Mac 版だけです。'],
+        ['Windows 版やスマートフォン版はありますか？', '今のところ Mac 版だけです。Mac 版と同じ機能の Windows 版を開発中です。'],
       ],
     },
-    footer: { tagline: '拾音 Shiyin、個人のオープンソースプロジェクト' },
+    footer: { tagline: '拾音 Shiyin、個人のオープンソースプロジェクト', sponsor: '支援する' },
+    guides: {
+      nav: 'ガイド',
+      title: 'ガイド｜拾音 Shiyin',
+      description: 'Mac で議事録と文字起こしを作る方法と、拾音とほかの議事録ツールの比較。',
+      h1: 'ガイド',
+      lead: 'Mac で議事録と文字起こしを作る方法と、拾音とほかのツールの違い。',
+      updated: (d) => `最終更新：${d}`,
+      related: 'ほかのガイド',
+      home: 'ガイド',
+      faq: 'よくある質問',
+      cta: { h2: '拾音を試す', p: '無料、オープンソース。録音は Mac から出ません。macOS 26 と Apple シリコンが必要です。', button: '拾音をダウンロード', more: 'すべての機能を見る' },
+    },
     changelog: {
       h1: 'リリースノート',
       lead: '各バージョンの変更点です（英語で記載しています）。新しいバージョンが出ると、アプリの中で更新するかどうか確認されます。',

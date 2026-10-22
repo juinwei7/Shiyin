@@ -71,9 +71,12 @@ h2 { font-size: 26px; line-height: 1.4; font-weight: 600; }
 .star { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 980px; background: var(--bg); color: var(--text); font-weight: 600; white-space: nowrap; }
 .star:hover { text-decoration: none; background: var(--hover); }
 .star svg { color: #E3B341; flex: none; }
+.coffee svg { color: #C2703D; }
 .star .count { margin-left: 2px; padding-left: 10px; border-left: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
 .star-ask { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 32px; padding: 18px 22px; border-radius: 14px; background: var(--soft); }
 .star-ask p { margin: 0; font-size: 16px; }
+.star-ask .asks { display: grid; gap: 10px; flex: none; }
+.star-ask .asks a { justify-content: center; }
 .follow { color: var(--muted); font-size: 16px; }
 .download { display: inline-block; padding: 11px 26px; border-radius: 980px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .download:hover { text-decoration: none; filter: brightness(1.08); }
@@ -138,6 +141,40 @@ figcaption a { color: inherit; text-decoration: underline; }
 .log h3 { margin-top: 14px; font-size: 17px; font-weight: 600; }
 .log ul { margin: 8px 0 0; padding-left: 1.2em; }
 .log li + li { margin-top: 4px; }
+
+/* 介紹影片（docs/website.md §15） */
+.intro .watch { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 15px; font-weight: 600; }
+.video h2 { max-width: 640px; margin: 0 auto; }
+.video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; margin-top: 20px; border-radius: 12px; background: #1C1C1E; box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .35), 0 0 0 1px var(--shot-ring); }
+
+/* 指南（docs/website.md §14.2） */
+.crumbs { display: flex; gap: 8px; color: var(--muted); font-size: 14px; }
+.crumbs a { color: var(--muted); }
+.guide h1 { margin-top: 10px; }
+.guide .lead { font-size: 18px; }
+.guide .updated { margin-top: 10px; color: var(--muted); font-size: 14px; }
+.guide h2 { margin-top: 44px; font-size: 24px; }
+.guide h3 { margin-top: 24px; font-size: 18px; font-weight: 600; }
+.guide p { margin-top: 12px; }
+.guide ul, .guide ol { margin: 12px 0 0; padding-left: 1.4em; }
+.guide li + li { margin-top: 6px; }
+/* 表格可以比內文寬：桌機最多 960px、置中；手機上左右滑 */
+.guide .table { position: relative; left: 50%; transform: translateX(-50%); width: min(960px, calc(100vw - 40px)); margin-top: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.guide table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px; }
+.guide th, .guide td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.guide thead th { border-bottom-color: var(--text); font-weight: 600; }
+.guide tbody th { min-width: 5.5em; font-weight: 600; }
+.guide td.us, .guide th.us { background: var(--soft); }
+.guide .faq { margin-top: 8px; }
+.guide .cta { margin-top: 48px; padding: 22px 24px; border-radius: 14px; background: var(--soft); }
+.guide .cta h2 { margin-top: 0; font-size: 20px; }
+.guide .cta p { margin-top: 6px; }
+.guide .cta .get { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 16px; }
+.guide .related h2 { font-size: 20px; }
+.guides .list { margin: 28px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.guides .list li { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.guides .list h2 { font-size: 20px; }
+.guides .list p { margin-top: 6px; color: var(--muted); font-size: 16px; }
 
 /* 找不到頁面 */
 .missing { padding: 96px 20px 0; text-align: center; }

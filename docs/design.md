@@ -347,6 +347,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 - `scripts/dev/make-third-party-licenses.sh` 組出 `Resources/ThirdPartyLicenses.txt`：whisper.cpp 取 `Package.swift` 固定版本的 LICENSE，GRDB、FluidAudio 取 `Package.resolved` 版本的 checkout 裡的 LICENSE，FluidAudio 另外附的 `ThirdPartyLicenses/` 全部照貼（它把 TTS、文字正規化的程式也編進同一個 module）。原文不改、不合併重複的 Apache 條文。產生的檔案 commit 進 repo，建置時不需要網路；更新套件版本後要重跑。
 - `build-app.sh` 把它放進 `Contents/Resources/`，另外包成 `Credits.html`：系統標準的「關於拾音」視窗會自動顯示，可以捲動。
+- 贊助連結（R13.3）：`Credits.html` 最上面一行是 Ko-fi 的連結（中文「覺得拾音好用的話，可以請我喝杯咖啡。」、英文「Enjoying Shiyin? Buy me a coffee.」），所以分成兩份放在 `zh-Hant.lproj`、`en.lproj`，系統依介面語言挑。`Resources/` 底下不能再放一份：系統找資源時先找沒有分語言的那份。連結用系統的文字元件，點了用預設瀏覽器打開，不在 app 裡開網頁。
 - `make-dmg.sh` 在 DMG 放一份 `Third-Party Licenses.txt`。
 - 更新網址：GitHub 的 repository variable `SHIYIN_UPDATE_URL` 設成 `https://github.com/juinwei7/Shiyin/releases/latest/download/shiyin-update.json`，CI 建置時寫進 app。`releases/latest` 永遠指向最新的 Release，每次發布不用改網址。
 
@@ -403,7 +404,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 
 ### 16.7 文件
 
-`README.en.md`（README.md 最上面加語言連結）；`scripts/install-guide.en.html`，DMG 裡同時放「安裝說明.pdf」和「Install Guide.pdf」。中英文共用一個 DMG，所以磁碟名稱（Shiyin 3.1.0）和「應用程式」捷徑（Applications）改用不分語言的英文。
+`.github/README.md`（2026-10-21 從 README.en.md 搬過去，讓 GitHub 首頁顯示英文；README.md 是中文，最上面有語言連結）；`scripts/install-guide.en.html`，DMG 裡同時放「安裝說明.pdf」和「Install Guide.pdf」。中英文共用一個 DMG，所以磁碟名稱（Shiyin 3.1.0）和「應用程式」捷徑（Applications）改用不分語言的英文。
 
 ### 16.8 驗證
 
