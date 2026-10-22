@@ -98,8 +98,6 @@
 
 ### W1 Core（在 Mac 上測）
 
-- [~] **W1.2 方案骨架**（§1、§3）：`.github/workflows/windows.yml`（`windows-latest`、`windows-11-arm`、`macos-latest` 跑 `dotnet test`）寫好了；虛擬機裡 `dotnet test` 88 個通過
-  - 要使用者：同意推 `windows` 分支，讓 CI 跑一次
 - [~] **W1.4 Windows 平台層**（§1 的 `Shiyin.Platform.Windows`）：Media Foundation 解碼和 AAC 壓縮、認證管理員（DEBUG 版用記憶體）、防止睡眠、全域快捷鍵、Velopack、檔案關聯、捷徑、通知、找 claude／codex 在虛擬機跑過
   - 還差：WASAPI（W0.3）、ConsentStore（W0.9）
 
