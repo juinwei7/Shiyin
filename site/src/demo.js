@@ -242,7 +242,7 @@
   }
 
   function submitLabel() {
-    const answered = $('yes1').classList.contains('on');
+    const answered = $('ans1v').textContent.trim() !== '';
     const skipped = $('skip2').classList.contains('on');
     const b = $('submit');
     b.textContent = answered && skipped ? T.submit.both : answered ? T.submit.answered : skipped ? T.submit.skipped : T.submit.none;
@@ -433,13 +433,17 @@
         setTab('review');
         showPane('review');
         await r.wait(1000);
-        const yes = $('yes1');
-        await move(r, yes, { dur: 800 });
-        await click(r, yes);
-        yes.classList.add('on');
+        const field = $('ans1');
+        await move(r, field, { dur: 800, ox: 0.25 });
+        await click(r, field);
+        field.classList.add('focus');
+        await r.wait(250);
+        field.classList.add('typed');
+        await type(r, $('ans1v'), M.answer, 130);
         submitLabel();
-        await r.wait(700);
+        await r.wait(500);
         await move(r, $('skip2'), { dur: 700, ox: 0.15 });
+        field.classList.remove('focus');
         await click(r, $('skip2'));
         $('skip2').classList.add('on');
         $('q2').classList.add('skipped');
@@ -477,7 +481,8 @@
         }
       },
       jump() {
-        $('yes1').classList.add('on');
+        $('ans1').classList.add('typed');
+        $('ans1v').textContent = M.answer;
         $('skip2').classList.add('on');
         $('q2').classList.add('skipped');
         submitLabel();

@@ -147,7 +147,7 @@ ${m.transcript.map(([at, who, text]) => `            <div class="row" data-at="$
             <p class="dim">${esc(u.reviewIntro)}</p>
 ${m.questions.map(([time, q], i) => `            <div class="q" data-k="q${i + 1}">
               <div class="q-line"><b>${i + 1}</b>${ts(time)}<span class="qt"${ml}>${esc(q)}</span></div>
-              <div class="q-ans">${i === 0 ? `<span class="yn"><span class="yb" data-k="yes1">${esc(u.yes)}</span><span class="yb">${esc(u.no)}</span></span>` : `<span class="field"><span class="ph">${esc(u.answer)}</span><span class="val"></span><i class="caret"></i></span>`}<span class="chk"${i === 1 ? ' data-k="skip2"' : ''}><i></i>${esc(u.skip)}</span></div>
+              <div class="q-ans"><span class="field"${i === 0 ? ' data-k="ans1"' : ''}><span class="ph">${esc(u.answer)}</span><span class="val"${i === 0 ? ` data-k="ans1v"${ml}` : ''}></span><i class="caret"></i></span><span class="chk"${i === 1 ? ' data-k="skip2"' : ''}><i></i>${esc(u.skip)}</span></div>
             </div>`).join('\n')}
           </div>
           <div class="rv-done">
@@ -203,7 +203,7 @@ export function demoSection(lang, { fallback }) {
     length: LENGTH,
     speed: d.speed,
     text: { status: d.ui.status, banner: d.ui.banner, bookmarked: d.ui.bookmarked, reviewTab: d.ui.reviewTab, reviewLabel: d.ui.tabs.review, submit: d.ui.submit, recTitle: d.ui.recTitle },
-    meeting: { title: d.meeting.title, live: d.meeting.live, note: d.meeting.note, due: d.meeting.due, dueAfter: d.meeting.dueAfter,
+    meeting: { title: d.meeting.title, live: d.meeting.live, note: d.meeting.note, due: d.meeting.due, dueAfter: d.meeting.dueAfter, answer: d.meeting.answer,
       guess: { speaker: d.meeting.guess.speaker, name: d.meeting.guess.name }, question: d.meeting.ask.question },
     captions: d.captions,
     endCaption: d.endCaption,
