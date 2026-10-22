@@ -142,8 +142,9 @@ public sealed class RecorderTests : IDisposable
         Assert.True(recorder.IsPaused);
         var paused = recorder.Elapsed;
         await Task.Delay(500);       // 4 倍速：約 2 秒的音訊丟掉
-        // Elapsed 每 0.05 秒才更新一次，暫停前最後一段（0.1 秒）可能晚一點才算進去
-        Assert.InRange(recorder.Elapsed, paused, paused + 0.15);
+        // 暫停前收進來、還在排隊寫入的幾段（每段 0.1 秒）會晚一點才算進去：慢的機器（CI 的 ARM）會到 0.2 秒；
+        // 沒有丟掉的話會多出約 2 秒，0.5 秒以內就分得出來
+        Assert.InRange(recorder.Elapsed, paused, paused + 0.5);
         recorder.Resume();
         await Task.Delay(1500);
         recorder.Stop();
