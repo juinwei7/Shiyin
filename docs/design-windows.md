@@ -409,6 +409,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 - Velopack 只檢查自己 feed 裡的 SHA-256，不驗是誰發的。所以另外加一把**更新金鑰**（ECDSA P-256）：
   - `scripts/windows/update-key.cs keygen` 建一次，私鑰放 GitHub secrets（要使用者同意，同 Mac 的 `export-signing-cert.sh`），公鑰貼進 `AppHost.cs` 的 `UpdateKey.Public`
+  - 2026-10-22 使用者建好了：私鑰在 GitHub secrets 的 `SHIYIN_UPDATE_KEY`，備份在使用者的登入鑰匙圈（服務 `com.weiwei.shiyin.update-key`、帳號 `SHIYIN_UPDATE_KEY`，內容是 PEM 的 base64）。兩邊都弄丟就簽不了新版，已經安裝的人只能自己下載安裝檔
   - CI 打包後簽「版本、架構、每個套件檔的 SHA-256」，簽章檔跟 Release 一起上傳
   - app 內建公鑰；下載新版後、套用前驗證簽章、版本比目前新、套件的 SHA-256 相符，不符就刪掉下載的檔案、拒絕更新
   - 等於 Mac 的「新版要跟目前的 app 同一個簽章身分」（M§12）

@@ -230,8 +230,14 @@ public sealed class AppHost
     }
 }
 
-/// <summary>更新金鑰的公鑰（design-windows §14.2）：scripts/windows/update-key.cs keygen 產生後貼進來；空的時候不檢查更新</summary>
+/// <summary>更新金鑰的公鑰（design-windows §14.2）：scripts/windows/update-key.cs keygen 產生（2026-10-22）；空的時候不檢查更新。
+/// 私鑰在 GitHub secrets 的 SHIYIN_UPDATE_KEY，備份在使用者的登入鑰匙圈（com.weiwei.shiyin.update-key）</summary>
 public static class UpdateKey
 {
-    public const string Public = "";
+    public const string Public = """
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEg37C581Do8y5IvsVofw2YXfoH0Hi
+        UxR3xgLs84CLNcSjvALzm4wXVClOMZ4Y2lwFhwPDYSu21mwNIpyYC6Euog==
+        -----END PUBLIC KEY-----
+        """;
 }

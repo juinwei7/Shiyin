@@ -150,7 +150,8 @@
 - [~] **W8.2 安裝檔、安裝說明**（§14.1、D63）：虛擬機驗過 `pack.ps1`、安裝、開始功能表和桌面的捷徑、名稱依介面語言（「拾音」「Shiyin」，換語言後重開會改名）、雙擊 .shiyin 匯入、SmartScreen 的畫面跟安裝說明一致、解除安裝不刪資料
   - 要使用者：決定要不要用自己的名義申請 SignPath Foundation 的免費簽章（申請下來前沒有 Authenticode 簽章）
 - [~] **W8.3 app 內更新**（§14.2、R27 R10.6）：虛擬機用 `-UpdateTest` 的版本和本機伺服器驗過：簽章不符被拒、下載的檔案刪掉；正常的更新從 3.6.0 到 3.6.1、自己重開、資料和捷徑都在
-  - 要使用者：同意產生正式的更新金鑰、私鑰放進 GitHub secrets；更新後麥克風權限還在（W0.8）
+  - 正式的更新金鑰：2026-10-22 使用者建好，公鑰在 `AppHost.cs`，私鑰在 GitHub secrets（備份在鑰匙圈，§14.2）
+  - 要使用者：更新後麥克風權限還在（W0.8）
 - [~] **W8.4 官網**（§14.4）：真的 Releases 加一個假的 `win-v3.6.0` 建置成功，`/download` 還是 DMG、`/download/windows`、`/download/windows-arm64` 指到兩個安裝檔，下載區用 headless Chrome 看過
   - 還差：真的上線看一次（第一個 Windows 版發布時）
 - [~] **W8.7 官網的 Windows 版頁面**（website.md §16）：`/windows/` 三種語言、首頁的連結和下載卡片、用 Windows 的訪客提示、常見問題和 llms.txt、SmartScreen 示意圖、Windows 版的截圖（虛擬機 150%，§16.4）都做好了。只有 Mac 的假 release 清單建出來，跟 main 用同一份清單建的比，除了內嵌的樣式完全一樣（多出沒被引用的圖和 platform.js）；加上假的 win-v3.6.0：headless Chrome 看過三種語言的 Windows 頁（桌機深色、淺色、390 寬的 iframe）、首頁的卡片、Windows 的 User-Agent 才出現提示；sitemap 有三個 Windows 網址、JSON-LD 的 SoftwareApplication 是 Windows 11、FAQ 換成有 Windows 版、llms.txt 有版本和連結
