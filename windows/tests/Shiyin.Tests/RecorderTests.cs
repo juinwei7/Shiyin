@@ -8,7 +8,12 @@ using Xunit;
 
 namespace Shiyin.Tests;
 
+/// <summary>錄音的測試不跟其他測試同時跑：看時間的測試在忙的 CI 機器上會被拖慢（2026-10-22 CI 的 macOS 失敗過）</summary>
+[CollectionDefinition(nameof(RecorderTests), DisableParallelization = true)]
+public sealed class RecorderCollection;
+
 /// <summary>錄音（M§5、§20.2、§26；design-windows §6）：用模擬錄音（同 Mac 的 record-sim）在 Mac 上測</summary>
+[Collection(nameof(RecorderTests))]
 public sealed class RecorderTests : IDisposable
 {
     readonly TempHome home = new();
@@ -103,22 +108,24 @@ public sealed class RecorderTests : IDisposable
         recorder.LiveFinal += (_, _, _, text) => { lock (finals) finals.Add(text); };
         recorder.Finished += r => result = r;
         recorder.LiveFinished += (_, d) => liveDone.TrySetResult(d);
-        recorder.StartSimulated(7, Wav(4), 8, both: true, MeetingLanguage.Zh, new WavDecoder());
+        // 12 秒的錄音（8 倍速約 1.5 秒）：即時逐字稿是在背景建好才開始收音，機器忙的時候會晚一點接上，
+        // 錄音太短的話收到的不夠 3 秒、等不到 3 句（4 秒的錄音在 CI 的 macOS 上失敗過）
+        recorder.StartSimulated(7, Wav(12), 8, both: true, MeetingLanguage.Zh, new WavDecoder());
         Assert.True(recorder.IsRecording);
         Assert.Equal("both", recorder.Source);
-        await Until(() => recorder.Elapsed >= 3.95);
+        await Until(() => recorder.Elapsed >= 11.95);
         await Until(() => recorder.LiveLines.Count >= 3);
         recorder.Stop();
         Assert.False(recorder.IsRecording);
         Assert.NotNull(result);
         Assert.Equal(7, result!.MeetingId);
         Assert.StartsWith(Path.Combine(paths.Recording, "7-"), result.File);
-        Assert.Equal(4, result.Duration, 1);
+        Assert.Equal(12, result.Duration, 1);
         var (channels, frames, data) = Read(result.File!);
         Assert.Equal(2, channels);
-        Assert.Equal(64000, frames);
+        Assert.Equal(192000, frames);
         Assert.Equal(data[0], data[1]);
-        Assert.Equal(4, await liveDone.Task.WaitAsync(TimeSpan.FromSeconds(5)), 1);
+        Assert.Equal(12, await liveDone.Task.WaitAsync(TimeSpan.FromSeconds(5)), 1);
         Assert.True(lives.Single().Finished);
         Assert.Contains("第 1 句", finals);
     }
