@@ -1,3 +1,6 @@
 # 標準答案（design-windows §4）要逐字元比對：Windows 上的 git（core.autocrlf）取出時會把換行改成 CRLF，
 # 比對就全部失敗（2026-10-22 第一次跑 CI 時看到）。照原樣存、照原樣取出，不轉換換行
 shared/golden/** -text
+# C# 的多行字串（提示詞、範本、匯出的格式）寫在原始碼裡：檔案被轉成 CRLF 時字串也會帶 \r，
+# 跟 Mac 的標準答案對不上。一律用 LF 取出
+*.cs text eol=lf

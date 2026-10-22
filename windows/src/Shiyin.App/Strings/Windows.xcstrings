@@ -133,6 +133,17 @@
         }
       }
     },
+    "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。在「你的回答」欄位直接回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的勾「略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“To confirm” lists names, terms, owners and deadlines the summarizer wasn't sure about. Type in “Your answer” and click “Submit”, and the notes are revised from your answers; check “Skip” for anything unclear or unimportant. You can also click “Edit” in “Summary” to change things directly. To undo a mistake, choose “Revert to previous notes” from “More”."
+          }
+        }
+      }
+    },
     "・匯入：把錄音檔拖進視窗，或按「匯入」（Ctrl+O）": {
       "extractionState": "manual",
       "localizations": {
@@ -210,6 +221,17 @@
         }
       }
     },
+    "不是%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not %@"
+          }
+        }
+      }
+    },
     "之後隨時可以從系統匣或設定的「進階」再打開使用說明。": {
       "extractionState": "manual",
       "localizations": {
@@ -283,6 +305,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Other"
+          }
+        }
+      }
+    },
+    "到逐字稿改名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename in Transcript"
           }
         }
       }
@@ -371,6 +404,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose More → Export… (Ctrl+E): notes can be saved as Markdown, PDF or Word; transcripts as txt, srt, vtt or Word; recordings as m4a or wav. Send a “Whole meeting (.shiyin)” to a colleague and they can import it with a double-click (on the Mac version too). “Copy meeting notes” pastes straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
+    "從對話內容猜到 %lld 位說話者的名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the name of %lld speaker from the conversation"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the names of %lld speakers from the conversation"
+                }
+              }
+            }
           }
         }
       }
