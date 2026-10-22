@@ -1192,9 +1192,9 @@ User-Agent: Shiyin/<版本>
 
 ### 30.8 隱私說明的新寫法（發布有統計網址的那一版時一起改）
 
-- README（中文，「資料與隱私」表格加一列）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉、看實際送出的內容。
-- README（英文）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. Turn it off, or see exactly what is sent, in Settings → Advanced.
-- 官網（website.md §14 的隱私區塊，中英日；Mac 首頁和 Windows 頁都加）：「送到你選的整理工具」旁邊加一句：「另外，每天會送一份匿名的使用統計給開發者（版本、用了幾分鐘，不含任何會議內容），在設定裡可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (version and minutes used, never any meeting content). You can turn it off in Settings.」日文：「また、匿名の利用統計（バージョンと利用時間のみ、会議の内容は含みません）を 1 日 1 回開発者に送ります。設定でオフにできます。」
+- README（中文，「資料與隱私」表格加一列；「整理工具選『不整理』｜完全離線」改成「…，並關掉匿名使用統計」）：`匿名使用統計`｜每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數，加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。設定 → 進階可以關掉、看實際送出的內容。
+- README（英文；“Don’t summarize” 那一列同樣改成 “… with usage statistics turned off”）：`Anonymous usage statistics` | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. Turn it off, or see exactly what is sent, in Settings → Advanced.
+- 官網（website.md §14 的隱私區塊，中英日；Mac 首頁和 Windows 頁都加，`content.mjs` 的 `privacy.usage`）：整理工具那一段後面加一句：「另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。」英文：「Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.」日文：「また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。」（日文版的介面名稱照 app 的英文介面寫）
 - requirements 第 4 節已經改好（2026-10-22）。
 - 版本說明：「新增匿名使用統計：每天送一份不含會議內容的使用量給開發者，設定 → 進階可以關掉、看送出的內容」。Mac（`v4.0.0`）和 Windows（`win-v4.0.0`）的版本說明都寫。
 

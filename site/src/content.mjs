@@ -82,6 +82,8 @@ export const content = {
       local: { h3: '留在你的 Mac', items: ['錄音檔', '轉錄、說話者辨識', '記住的說話者聲音', '所有會議和紀錄'] },
       sent: { h3: '送到你選的整理工具', items: ['逐字稿文字', '你的筆記、詞彙表', '會議標題、日期'] },
       tools: '整理工具可以選 Claude Code 或 Codex，直接用你已經有的 Claude、ChatGPT 訂閱；也可以用 Anthropic、OpenAI 的 API，或選「不整理」只留逐字稿。',
+      // 匿名使用統計（design §30.8、R40.4）：Mac 首頁和 Windows 頁的隱私區塊都顯示
+      usage: '另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。',
     },
     download: {
       h2: '下載',
@@ -315,6 +317,7 @@ export const content = {
       local: { h3: 'Stays on your Mac', items: ['Recordings', 'Transcription and speaker identification', 'The voices of speakers Shiyin remembers', 'All your meetings and notes'] },
       sent: { h3: 'Sent to the summarizer you choose', items: ['The transcript text', 'Your notes and glossary', 'Meeting title and date'] },
       tools: 'The summarizer can be Claude Code or Codex, using the Claude or ChatGPT subscription you already have, or the Anthropic or OpenAI API. Or choose “Don’t summarize” and keep just the transcript.',
+      usage: 'Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.',
     },
     download: {
       h2: 'Download',
@@ -547,6 +550,7 @@ export const content = {
       local: { h3: 'Mac に残るもの', items: ['録音ファイル', '文字起こし、話者の識別', '覚えた話者の声', 'すべての会議と議事録'] },
       sent: { h3: '選んだまとめツールに送られるもの', items: ['文字起こしのテキスト', '自分のメモ、用語集', '会議のタイトル、日付'] },
       tools: 'まとめツールに Claude Code か Codex を選べば、お使いの Claude や ChatGPT のサブスクリプションをそのまま使えます。Anthropic や OpenAI の API も使えます。「Don’t summarize」を選べば文字起こしだけを残します。',
+      usage: 'また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。',
     },
     download: {
       h2: 'ダウンロード',

@@ -281,6 +281,7 @@ ${paragraphs(c.notes.ps)}
   <div><h3>${c.privacy.sent.h3}</h3>${list(c.privacy.sent.items)}</div>
 </div>
 <p>${c.privacy.tools}</p>
+<p>${c.privacy.usage}</p>
 </section>
 
 <section class="col part" id="download">
@@ -376,6 +377,7 @@ ${paragraphs(c.notes.ps)}
   <div><h3>${c.privacy.sent.h3}</h3>${list(c.privacy.sent.items)}</div>
 </div>
 <p>${c.privacy.tools}</p>
+<p>${c.privacy.usage}</p>
 </section>
 
 <section class="col part" id="download">

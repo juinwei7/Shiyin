@@ -192,8 +192,9 @@ The app checks that a new version is signed the same way as the running app. Aft
 | Summarizing, revising, asking, guessing speaker names | The transcript text, your notes, the glossary and the meeting details go to the service you chose (Anthropic, OpenAI, Google, or the URL you entered for an OpenAI-compatible API). Asking all meetings only sends the relevant excerpts. Recordings are never sent |
 | Voiceprints | Speakers’ voice features (a list of numbers, not audio) are kept only in the local database: never uploaded, never included in exported .shiyin packages. Delete them or turn them off in Settings → Speakers |
 | Report a Problem | Only opens GitHub in your browser when you click “Report on GitHub”; you see the text and submit it yourself. It contains the version, your setup and the kinds of errors, never meeting content, file names or API keys |
+| Anonymous usage statistics | Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed, with a random anonymous ID. It never includes meeting titles, transcripts, notes, names, voiceprints or files. Turn it off, or see exactly what is sent, in Settings → Advanced |
 | API keys | Stored in the macOS Keychain, never in files or logs |
-| “Don’t summarize” | Fully offline |
+| “Don’t summarize” with usage statistics turned off | Fully offline |
 | OpenAI-compatible API on your Mac (Ollama, LM Studio) | Summarizing happens on this Mac too; nothing leaves your computer |
 
 ## Settings (⌘,)
