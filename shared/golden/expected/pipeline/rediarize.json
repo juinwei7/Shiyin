@@ -1,0 +1,21 @@
+[
+  {
+    "inherited" : {
+      "2" : {
+        "name" : "王小明",
+        "personId" : 7,
+        "source" : "manual"
+      },
+      "3" : {
+        "name" : "Amy",
+        "personId" : 9,
+        "source" : "voiceprint"
+      }
+    },
+    "oldToNew" : {
+      "1" : 2,
+      "2" : 1,
+      "3" : 3
+    }
+  }
+]

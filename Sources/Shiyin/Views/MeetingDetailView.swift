@@ -39,7 +39,7 @@ struct MeetingDetailView: View {
                 ToolbarItem(placement: .principal) {
                     Picker("分頁", selection: $model.tab) {
                         ForEach(DetailTab.allCases) { tab in
-                            if tab == .review, let count = detail.notes?.reviewItems.count, count > 0 {
+                            if tab == .review, case let count = detail.reviewCount, count > 0 {
                                 Text("\(tab.label) \(count)").tag(tab)
                             } else {
                                 Text(tab.label).tag(tab)
@@ -110,7 +110,7 @@ struct MeetingHeader: View {
                 HStack(spacing: 6) {
                     ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
                         if detail.speakerSources[idx] == "voiceprint" {
-                            AutoSpeakerName(idx: idx, name: detail.speakers[idx] ?? "")
+                            AutoSpeakerName(idx: idx, name: detail.speakers[idx] ?? "", others: detail.speakerCandidates[idx] ?? [])
                         } else {
                             Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
                         }
@@ -371,7 +371,7 @@ struct MoreMenu: View {
             Divider()
             Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }
             Menu("複製會議紀錄", systemImage: "doc.on.doc") {
-                Button("富文字（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
+                Button("保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
                 Button("Markdown") { model.copyNotes(.markdown) }
                 Button("純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
             }
@@ -425,17 +425,27 @@ struct DraftNotesBanner: View {
     }
 }
 
-/// 聲紋自動帶入的說話者名字（design §21.4、R19.3）：名字後面標「自動」，點一下可以說不是他或到逐字稿改名
+/// 聲紋自動帶入的說話者名字（design §21.4、R19.3）：名字後面標「自動」。
+/// 點一下直接選是別人（最像的幾位認識的人，一次改名、記住聲音、改會議紀錄，R33.4），或說不是他
 private struct AutoSpeakerName: View {
     @Environment(AppModel.self) private var model
     let idx: Int
     let name: String
+    let others: [String]
 
     var body: some View {
         HStack(spacing: 3) {
             Menu {
-                Button("不是\(name)") { model.rejectVoiceprintMatch(idx) }
-                Button("到逐字稿改名") { model.tab = .transcript }
+                if !others.isEmpty {
+                    Section("是別人：") {
+                        ForEach(others, id: \.self) { other in
+                            Button(other) { model.renameSpeaker(idx, to: other) }
+                        }
+                    }
+                }
+                Button("其他人…（到逐字稿改名）") { model.tab = .transcript }
+                Divider()
+                Button("不是\(name)（不知道是誰）") { model.rejectVoiceprintMatch(idx) }
             } label: {
                 Text(name).foregroundStyle(Color.speaker(idx))
             }
@@ -462,7 +472,7 @@ private struct SpeakerSuggestionsBanner: View {
     var body: some View {
         let suggestions = detail.speakerSuggestions.sorted { $0.key < $1.key }
         HStack(spacing: 10) {
-            Label("從對話內容猜到 \(suggestions.count) 位說話者的名字", systemImage: "person.crop.circle.badge.questionmark")
+            Label("猜到 \(suggestions.count) 位說話者的名字", systemImage: "person.crop.circle.badge.questionmark")
             Spacer()
             Button("查看") { showing = true }
                 .popover(isPresented: $showing, arrowEdge: .bottom) {

@@ -55,6 +55,12 @@ enum DebugControl {
         // 聲紋（design §21.4）：notthis <會議 id> <說話者>（不是他）；people <輸出.json>；personrename <id> <名字>；
         // persondelete <id>；peopledeleteall
         case "notthis": model.selection = id; model.rejectVoiceprintMatch(Int(args[2]) ?? 1)
+        // speakerreview <會議 id> <回答 JSON：{"說話者編號":"是"|"不是，名字"}> <略過的說話者，逐號分隔>：等於在待確認送出說話者的題目（R33.2）
+        case "speakerreview":
+            model.selection = id
+            let answers = (try? JSONDecoder().decode([String: String].self, from: Data(args[2].utf8))) ?? [:]
+            model.answerSpeakerQuestions(Dictionary(uniqueKeysWithValues: answers.compactMap { k, v in Int(k).map { ($0, v) } }),
+                                         skipped: Set(args[3].split(separator: ",").compactMap { Int($0) }))
         // 猜說話者（design §21.5）：namespeakers <會議 id>（排工作）；applysuggestion、dismisssuggestion <會議 id> <說話者>；
         // applyallsuggestions <會議 id>
         // 對會議提問（design §21.8）：ask <會議 id> <問題>；askall <all|folder|recent> <問題>；
@@ -111,6 +117,8 @@ enum DebugControl {
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
+        case "dump-golden": GoldenDump.run(fixtures: args[1], output: args[2])   // design-windows §4.1
+        case "segment-embed": segmentEmbed(audio: args[1], spans: args[2], output: args[3], batched: args.count > 4 ? Int(args[4]) : nil)   // design §6.3.2
         case "correct-eval": correctEval(input: args[1], options: args[2], output: args[3])          // design §17.4
         case "detect-eval": detectEval(audio: args[1], start: Double(args[2]) ?? 0, output: args[3])  // design §18.8
         case "checktranscript": model.selection = id; model.checkTranscript()
@@ -195,7 +203,18 @@ enum DebugControl {
                             c.numSpeakers = item["numSpeakers"].flatMap(Int.init)
                             clustering = c
                         }
-                        let diarization = try await Diarizer.diarize(samples: samples, clustering: clustering) { _ in }
+                        // 短句的實驗：zeroVote（重新嵌入沒人認領的片段，最短秒數）、minSegment（算聲紋的最短秒數）、step（視窗步距比例）
+                        var config: OfflineDiarizerConfig?
+                        if item["zeroVote"] != nil || item["minSegment"] != nil || item["step"] != nil || item["legacy"] != nil {
+                            // legacy：改之前的設定（FluidAudio 的預設），跟現在比
+                            var c = item["legacy"] != nil ? OfflineDiarizerConfig(clustering: clustering ?? .community, exposeChunkEmbeddings: true)
+                                : Diarizer.config(clustering: clustering ?? .community)
+                            if let v = item["zeroVote"].flatMap(Double.init) { c.zeroVoteReembed = .init(enabled: true, minDurationSeconds: v) }
+                            if let v = item["minSegment"].flatMap(Double.init) { c.embedding.minSegmentDurationSeconds = v }
+                            if let v = item["step"].flatMap(Double.init) { c.segmentation.stepRatio = v }
+                            config = c
+                        }
+                        let diarization = try await Diarizer.diarize(samples: samples, clustering: clustering, config: config) { _ in }
                         // dump：<路徑>.f32 是每個片段的聲紋（256 個 Float32 一筆），<路徑>.json 是對應的群、片段、片段裡的說話者
                         if let dump = item["dump"] {
                             var floats: [Float] = []
@@ -443,6 +462,11 @@ enum DebugControl {
         var out: [String: Any] = [
             "selection": model.selection ?? -1,
             "tab": model.tab.rawValue,
+            // 選中的會議：說話者的名字、來源、建議、最像的幾位認識的人（R33，「自動」名字的選單）
+            "speakers": (model.detail?.speakers ?? [:]).keys.sorted().map { idx -> [String: Any] in
+                ["idx": idx, "name": model.detail?.speakers[idx] ?? "", "source": model.detail?.speakerSources[idx] ?? "",
+                 "suggestion": model.detail?.speakerSuggestions[idx]?.name ?? "", "candidates": model.detail?.speakerCandidates[idx] ?? []]
+            },
             "glossary": model.glossary.map(\.term),
             "glossarySuggestions": model.glossarySuggestions.map { ["term": $0.term, "source": $0.sourceLabel] },
             "environment": model.environment.items.map { ["name": $0.name, "ok": $0.ok] },
@@ -588,6 +612,56 @@ enum DebugControl {
                                                            "suggestion": $0.suggestion, "reason": $0.reason] }
             } catch {
                 result["error"] = error.localizedDescription
+            }
+            result["elapsed"] = Date().timeIntervalSince(started)
+            write(result, to: output + ".tmp")
+            try? FileManager.default.removeItem(atPath: output)
+            try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
+        }
+    }
+
+    /// segment-embed <錄音> <時段.json：[[開始, 結束], …]> <輸出.json>：每一段帶著前後文（10 秒的窗、遮罩只標這一段）
+    /// 用 FluidAudio 的 wespeaker_v2 算聲紋，給短句的實驗離線比對（design §6.3.2）。模型放在快取資料夾，不放進拾音的模型資料夾
+    private static func segmentEmbed(audio: String, spans: String, output: String, batched: Int? = nil) {
+        Task { @MainActor in
+            let started = Date()
+            var result: [String: Any] = ["audio": audio]
+            do {
+                let samples = try await AudioDecoder.decode(URL(fileURLWithPath: audio))
+                let list = (try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: spans))) as? [[Double]]) ?? []
+                // batched：用 app 的做法（SpeakerRecheck，一次三句），跟 FluidAudio 的 extractor 比
+                if let batched {
+                    let model = try await SpeakerRecheck.prepare()
+                    result["embeddings"] = try SpeakerRecheck.embed(list.map { ($0[0], $0[1]) }, samples: samples, model: model, perCall: batched)
+                    result["elapsed"] = Date().timeIntervalSince(started)
+                    write(result, to: output + ".tmp")
+                    try? FileManager.default.removeItem(atPath: output)
+                    try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
+                    return
+                }
+                let dir = URL.cachesDirectory.appending(path: "ShiyinEval/wespeaker", directoryHint: .isDirectory)
+                let models = try await DiarizerModels.downloadIfNeeded(to: dir)
+                let extractor = EmbeddingExtractor(embeddingModel: models.embeddingModel)
+                let shape = models.segmentationModel.modelDescription.outputDescriptionsByName["segments"]?.multiArrayConstraint?.shape
+                let frames = shape.map { $0[1].intValue } ?? 589
+                let window = 160_000, rate = AudioDecoder.sampleRate
+                var embeddings: [Any] = []
+                for span in list where span.count == 2 {
+                    let center = (span[0] + span[1]) / 2
+                    let start = max(0, min(Int((center - 5) * rate), samples.count - window))
+                    var clip = Array(samples[start..<min(samples.count, start + window)])
+                    if clip.count < window { clip += [Float](repeating: 0, count: window - clip.count) }
+                    let from = Double(start) / rate
+                    let mask = (0..<frames).map { i -> Float in
+                        let t = from + (Double(i) + 0.5) * 10 / Double(frames)
+                        return t >= span[0] && t <= span[1] ? 1 : 0
+                    }
+                    guard mask.reduce(0, +) >= 1 else { embeddings.append(NSNull()); continue }
+                    embeddings.append(try extractor.getEmbeddings(audio: clip, masks: [mask], minActivityThreshold: 0).first ?? [])
+                }
+                result["embeddings"] = embeddings
+            } catch {
+                result["error"] = "\(error)"
             }
             result["elapsed"] = Date().timeIntervalSince(started)
             write(result, to: output + ".tmp")

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 評估工具（design-windows §1）：跟 Mac 的 shiyinctl transcribe-eval、detect-eval 輸出同樣的 JSON，用 scripts/dev/asr-score.swift 評分 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shiyin.Eval</RootNamespace>
+    <AssemblyName>shiyin-eval</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Core/Shiyin.Core.csproj" />
+    <ProjectReference Include="../Shiyin.Engines/Shiyin.Engines.csproj" />
+  </ItemGroup>
+</Project>

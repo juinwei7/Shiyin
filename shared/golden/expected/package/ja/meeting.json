@@ -1,0 +1,29 @@
+{
+  "bookmarks" : [
+    {
+      "label" : "",
+      "time" : 7.5
+    }
+  ],
+  "channels" : "mic",
+  "folder" : "",
+  "language" : "ja",
+  "meetingDate" : "2026-10-19",
+  "notesBy" : "claude",
+  "participants" : "田中, 佐藤",
+  "sourceFilename" : "teirei.m4a",
+  "speakers" : [
+    {
+      "idx" : 1,
+      "name" : "話者 1"
+    },
+    {
+      "idx" : 2,
+      "name" : "話者 2"
+    }
+  ],
+  "templateId" : "brainstorm",
+  "title" : "定例会議",
+  "titleLocked" : false,
+  "userNotes" : "アイデアを全部メモ"
+}

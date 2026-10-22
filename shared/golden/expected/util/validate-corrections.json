@@ -1,0 +1,18 @@
+[
+  {
+    "applied" : "我這邊 Redis 快取層還在測，預計下週三完成。",
+    "original" : "快取",
+    "reason" : "r",
+    "reverted" : "我這邊 Redis 快取還在測，預計下週三完成。",
+    "segment" : 1,
+    "suggestion" : "快取層"
+  },
+  {
+    "applied" : "好，那 Kubernetes 的部署呢？",
+    "original" : "\"Kubernetes\"",
+    "reason" : "quote",
+    "reverted" : "好，那 \"Kubernetes\" 的部署呢？",
+    "segment" : 2,
+    "suggestion" : "Kubernetes"
+  }
+]

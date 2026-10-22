@@ -1,0 +1,38 @@
+[
+  {
+    "isDefault" : true,
+    "name" : "說話者 1"
+  },
+  {
+    "isDefault" : true,
+    "name" : "說話者 12"
+  },
+  {
+    "isDefault" : true,
+    "name" : "Speaker 3"
+  },
+  {
+    "isDefault" : true,
+    "name" : "話者 4"
+  },
+  {
+    "isDefault" : false,
+    "name" : "說話者1"
+  },
+  {
+    "isDefault" : true,
+    "name" : "說話者 一"
+  },
+  {
+    "isDefault" : false,
+    "name" : "Speaker 3 "
+  },
+  {
+    "isDefault" : false,
+    "name" : "speaker 3"
+  },
+  {
+    "isDefault" : false,
+    "name" : "王小明"
+  }
+]

@@ -1,0 +1,20 @@
+Weekly Sync
+
+- Date: 2026-10-18 (Sunday)
+- Participants: Alice, Bob
+- Speakers: Speaker 1, Bob, Speaker 3
+- Duration: 2 min
+
+Summary
+- Reviewed the Q4 roadmap (00:00)
+
+Action items
+| Owner | Item | Due | Time |
+|---|---|---|---|
+| Bob | Send the email via SendGrid | 2026-10-23 | 00:03 |
+
+Updates and progress
+- Roadmap on track (00:00)
+
+To confirm
+- [00:08] Is "beta" the right term?

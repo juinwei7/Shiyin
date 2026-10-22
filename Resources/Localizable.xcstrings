@@ -872,13 +872,13 @@
         }
       }
     },
-    "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。在「你的回答」欄位直接回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的勾「略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
+    "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。能用是或否回答的直接按「是」「不是」，其他的在「你的回答」欄位回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的勾「略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“To confirm” lists names, terms, owners and deadlines the summarizer wasn't sure about. Type in “Your answer” and click “Submit”, and the notes are revised from your answers; check “Skip” for anything unclear or unimportant. You can also click “Edit” in “Summary” to change things directly. To undo a mistake, choose “Revert to previous notes” from “More”."
+            "value": "“To confirm” lists names, terms, owners and deadlines the summarizer wasn't sure about. Click “Yes” or “No” for yes-or-no questions and type in “Your answer” for the others, then click “Submit”, and the notes are revised from your answers; check “Skip” for anything unclear or unimportant. You can also click “Edit” in “Summary” to change things directly. To undo a mistake, choose “Revert to previous notes” from “More”."
           }
         }
       }
@@ -1147,6 +1147,17 @@
         }
       }
     },
+    "不是": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
     "不是 WAV 檔": {
       "extractionState": "manual",
       "localizations": {
@@ -1158,13 +1169,13 @@
         }
       }
     },
-    "不是%@": {
+    "不是%@（不知道是誰）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not %@"
+            "value": "Not %@ (don't know who)"
           }
         }
       }
@@ -1220,6 +1231,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing else to install. To summarize meetings, install and sign in to claude or codex, or have an Anthropic or OpenAI API key"
+          }
+        }
+      }
+    },
+    "之後再設定（先不整理）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set up later (don't summarize for now)"
           }
         }
       }
@@ -1319,6 +1341,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "People: Detect Automatically"
+          }
+        }
+      }
+    },
+    "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These are the points the summarizer wasn't sure about. Click “Yes” or “No”, or just answer them; skip anything unclear or unimportant."
           }
         }
       }
@@ -1452,6 +1485,17 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "保留格式（貼到 Word、Notion、郵件）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formatted text (for Word, Notion, email)"
           }
         }
       }
@@ -1698,6 +1742,17 @@
         }
       }
     },
+    "其他人…（到逐字稿改名）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone Else… (Rename in Transcript)"
+          }
+        }
+      }
+    },
     "出了一點問題": {
       "extractionState": "manual",
       "localizations": {
@@ -1881,17 +1936,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download it in “Models & Storage”, or set transcription to macOS in “Recording”"
-          }
-        }
-      }
-    },
-    "到逐字稿改名": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rename in Transcript"
           }
         }
       }
@@ -2191,6 +2235,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Replace “%@” → “%@”"
+          }
+        }
+      }
+    },
+    "取得 API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get an API key"
           }
         }
       }
@@ -2525,6 +2580,17 @@
         }
       }
     },
+    "回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answer"
+          }
+        }
+      }
+    },
     "回答待確認、修改": {
       "extractionState": "manual",
       "localizations": {
@@ -2798,17 +2864,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "You can close this window when you’re done."
-          }
-        }
-      }
-    },
-    "富文字（貼到 Word、Notion、郵件）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rich text (for Word, Notion, email)"
           }
         }
       }
@@ -3376,29 +3431,6 @@
         }
       }
     },
-    "從對話內容猜到 %lld 位說話者的名字": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Guessed the name of %lld speaker from the conversation"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Guessed the names of %lld speakers from the conversation"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "從左邊選一場會議": {
       "extractionState": "manual",
       "localizations": {
@@ -3608,17 +3640,6 @@
         }
       }
     },
-    "找不到 %@ 指令，請先安裝並登入，或到設定 → 整理工具改用 API key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can't find the %@ command. Install it and sign in, or switch to an API key in Settings → Summarizer."
-          }
-        }
-      }
-    },
     "找不到「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -3670,17 +3691,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No audio data found"
-          }
-        }
-      }
-    },
-    "找不到，請先安裝並登入": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not found. Install it and sign in first."
           }
         }
       }
@@ -4788,6 +4798,50 @@
         }
       }
     },
+    "是": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        }
+      }
+    },
+    "是…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's…"
+          }
+        }
+      }
+    },
+    "是別人：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's someone else:"
+          }
+        }
+      }
+    },
+    "是誰？（可以不填）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who is it? (optional)"
+          }
+        }
+      }
+    },
     "時間": {
       "extractionState": "manual",
       "localizations": {
@@ -5835,6 +5889,17 @@
         }
       }
     },
+    "正確的是…（可以不填）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's correct… (optional)"
+          }
+        }
+      }
+    },
     "段落內容": {
       "extractionState": "manual",
       "localizations": {
@@ -6238,6 +6303,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "猜到 %lld 位說話者的名字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the name of %lld speaker"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Guessed the names of %lld speakers"
+                }
+              }
+            }
           }
         }
       }
@@ -7212,13 +7300,13 @@
         }
       }
     },
-    "複製會議紀錄（富文字）": {
+    "複製會議紀錄（保留格式）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copy Meeting Notes (Rich Text)"
+            "value": "Copy Meeting Notes (Formatted)"
           }
         }
       }
@@ -7296,6 +7384,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Settings"
+          }
+        }
+      }
+    },
+    "設定整理工具": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up Summarizer"
           }
         }
       }
@@ -7450,6 +7549,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speaker renamed"
+          }
+        }
+      }
+    },
+    "說話者的題目不會送給整理工具，送出後直接換名字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker questions aren't sent to the summarizer; the names change as soon as you submit."
           }
         }
       }
@@ -8138,6 +8248,61 @@
         }
       }
     },
+    "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude isn't installed on this Mac. If you don't use Claude Code, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台 Mac 找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex isn't installed on this Mac. If you don't use Codex, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有 Claude Code 或 Codex。要用 AI 整理會議紀錄，選一個 API 並貼上 API key（有取得 key 的連結）；也可以之後再設定，錄音和逐字稿照常能用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac doesn't have Claude Code or Codex. To have AI write your meeting notes, choose an API and paste an API key (there's a link to get one). You can also set this up later; recording and transcripts work either way."
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude isn't installed on this Mac. If you don't use Claude Code, choose an API instead"
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有安裝 codex：沒有在用 Codex 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex isn't installed on this Mac. If you don't use Codex, choose an API instead"
+          }
+        }
+      }
+    },
     "這場會議不再提示": {
       "extractionState": "manual",
       "localizations": {
@@ -8707,6 +8872,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "There's no transcript yet. Transcribe the recording first."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet. Once you choose one, transcripts can be turned into a summary, decisions and action items, and future meetings are summarized automatically after transcription."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，沒辦法依回答修正。請先到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet, so the notes can't be revised from your answers. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，沒辦法提問；請到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet, so you can't ask questions. Choose Claude, Codex or an API in Settings."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，請到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet. Choose Claude, Codex or an API in Settings."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具：錄音、轉錄、逐字稿全部留在這台 Mac。選好整理工具之後，才會整理成會議紀錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet: recordings, transcription and transcripts all stay on this Mac. Meeting notes are created once you choose a summarizer."
           }
         }
       }
@@ -9702,13 +9933,24 @@
         }
       }
     },
-    "：找不到": {
+    "：沒有安裝（給已經在用 Claude Code 的人）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": ": not found"
+            "value": ": not installed (for people who already use Claude Code)"
+          }
+        }
+      }
+    },
+    "：沒有安裝（給已經在用 Codex 的人）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ": not installed (for people who already use Codex)"
           }
         }
       }

@@ -121,7 +121,7 @@ struct AppCommands: Commands {
                 .disabled((model.detail?.versionCount ?? 0) == 0 || model.detail?.meeting.deletedAt != nil
                           || model.detailStatus?.isActive == true)
             Divider()
-            Button("複製會議紀錄（富文字）") { model.copyNotes(.rich) }
+            Button("複製會議紀錄（保留格式）") { model.copyNotes(.rich) }
                 .disabled(model.detail == nil)
             Button("複製會議紀錄（Markdown）") { model.copyNotes(.markdown) }
                 .disabled(model.detail == nil)

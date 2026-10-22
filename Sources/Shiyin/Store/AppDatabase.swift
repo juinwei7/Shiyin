@@ -254,8 +254,13 @@ final class AppDatabase: @unchecked Sendable {
             let auxiliary = JobKind.allCases.filter(\.isAuxiliary).map { "'\($0.rawValue)'" }.joined(separator: ", ")
             let latest = try Job.fetchAll(db, sql: "SELECT * FROM jobs WHERE id IN (SELECT MAX(id) FROM jobs WHERE kind NOT IN (\(auxiliary)) GROUP BY meeting_id)")
             let byMeeting = Dictionary(uniqueKeysWithValues: latest.map { ($0.meetingId, $0) })
+            // 待確認的題數也算說話者的建議（R33.3）
+            let speakerQuestions = Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: """
+                SELECT meeting_id, COUNT(*) AS n FROM speakers WHERE name_source = 'default' AND suggested_name IS NOT NULL GROUP BY meeting_id
+                """).map { (Int64($0["meeting_id"] as Int64), Int($0["n"] as Int64)) })
             return meetings.map { m in
-                MeetingRow(meeting: m, latestJob: byMeeting[m.id ?? 0], reviewCount: m.decodedNotes?.reviewItems.count ?? 0)
+                MeetingRow(meeting: m, latestJob: byMeeting[m.id ?? 0],
+                           reviewCount: (m.decodedNotes?.reviewItems.count ?? 0) + (speakerQuestions[m.id ?? 0] ?? 0))
             }
         }
     }

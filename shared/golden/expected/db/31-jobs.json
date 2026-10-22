@@ -1,0 +1,56 @@
+{
+  "jobs" : [
+    {
+      "crashes" : 2,
+      "created_at" : "<time>",
+      "error" : "執行這個工作時拾音意外結束了 2 次，已經停止自動重試。可以按「重試」再試一次。",
+      "error_kind" : null,
+      "finished_at" : "<time>",
+      "id" : 1,
+      "kind" : "transcribe",
+      "meeting_id" : 1,
+      "payload" : null,
+      "started_at" : "<time>",
+      "status" : "failed"
+    },
+    {
+      "crashes" : 1,
+      "created_at" : "<time>",
+      "error" : null,
+      "error_kind" : null,
+      "finished_at" : null,
+      "id" : 2,
+      "kind" : "summarize",
+      "meeting_id" : 1,
+      "payload" : "{\"draft\":true}",
+      "started_at" : null,
+      "status" : "queued"
+    },
+    {
+      "crashes" : 1,
+      "created_at" : "<time>",
+      "error" : null,
+      "error_kind" : null,
+      "finished_at" : "<time>",
+      "id" : 3,
+      "kind" : "correct",
+      "meeting_id" : 2,
+      "payload" : null,
+      "started_at" : null,
+      "status" : "cancelled"
+    },
+    {
+      "crashes" : 0,
+      "created_at" : "<time>",
+      "error" : null,
+      "error_kind" : null,
+      "finished_at" : "<time>",
+      "id" : 4,
+      "kind" : "compress",
+      "meeting_id" : 2,
+      "payload" : null,
+      "started_at" : null,
+      "status" : "cancelled"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 不碰 Windows API 的邏輯：資料模型、提示詞、匯出、轉錄流程的規則（design-windows §1） -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shiyin</RootNamespace>
+  </PropertyGroup>
+</Project>

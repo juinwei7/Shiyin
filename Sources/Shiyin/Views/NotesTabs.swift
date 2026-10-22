@@ -59,6 +59,7 @@ struct ItemList: View {
 /// 沒有會議紀錄時的說明與動作
 struct NotesPlaceholder: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
     let detail: MeetingDetail
 
     var body: some View {
@@ -70,6 +71,11 @@ struct NotesPlaceholder: View {
                 Text("轉錄和整理完成後，會議紀錄會出現在這裡。").foregroundStyle(.secondary)
             } else if detail.segments.isEmpty && detail.meeting.userNotes.isEmpty {
                 Text("還沒有逐字稿。").foregroundStyle(.secondary)
+            } else if AppSettings.needsProviderSetup {
+                // 沒選過整理工具、也沒有 claude、codex（R35.2）：說還沒設定，給打開設定的按鈕（整理工具是第一個分頁）
+                Text("還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。")
+                    .foregroundStyle(.secondary)
+                Button("設定整理工具") { openSettings() }
             } else {
                 Text(AppSettings.provider == .none
                      ? "整理工具目前設定為「不整理」。要產生會議紀錄，請到設定選擇 Claude、Codex 或 API。"

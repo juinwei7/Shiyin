@@ -25,12 +25,16 @@ extension AppDatabase {
     /// 說話少於這個秒數不比對、不學：太短的聲紋不準
     static let voiceprintMinimumSeconds = 8.0
     /// 相似度門檻（cosine）：AMI 評估（design §21.4.1）同一個人最低 0.81、不同的人最高 0.42，
-    /// 取中間偏高，寧可少帶入、不要帶錯
+    /// 取中間偏高，寧可少帶入、不要帶錯。到這裡算候選，沒到直接帶入的門檻就在待確認問（R33）
     static let voiceprintThreshold = 0.65
+    /// 直接帶入：很像（使用者的資料裡不同的人可以像到 0.77、0.85），而且比第二像的人高出一截（design §21.4.1、D91）
+    static let voiceprintAutoThreshold = 0.88
+    static let voiceprintAutoMargin = 0.15
     /// 同一個人的聲紋最多留幾份，超過刪最舊的
     static let voiceprintsPerPerson = 30
 
-    /// 轉錄完：還是預設名稱的說話者跟認識的人比對，夠像的自動帶入名字（name_source = voiceprint）。
+    /// 轉錄完：還是預設名稱的說話者跟認識的人比對。很有把握的自動帶入名字（name_source = voiceprint），
+    /// 夠像但沒把握的存成說話者的建議，在待確認問（R33、D91）。
     /// 一個人在一場會議只對到一位說話者，依相似度由高到低分配。回傳帶入了幾位
     @discardableResult
     func matchVoiceprints(_ meetingId: Int64) throws -> Int {
@@ -41,13 +45,16 @@ extension AppDatabase {
             let library = try Self.library(db)
             guard !library.isEmpty else { return 0 }
             var candidates: [(score: Double, idx: Int, person: Int64)] = []
+            var scores: [Int: [Int64: Double]] = [:]
             for speaker in speakers {
                 let vector = Voiceprint.vector(speaker.embedding!)
                 for (person, prints) in library {
                     let score = prints.map { Voiceprint.similarity(vector, $0) }.max() ?? 0
+                    scores[speaker.idx, default: [:]][person] = score
                     if score >= Self.voiceprintThreshold { candidates.append((score, speaker.idx, person)) }
                 }
             }
+            let language = try Meeting.fetchOne(db, key: meetingId)?.meetingLanguage ?? .zh
             var usedSpeakers = Set<Int>(), usedPeople = Set<Int64>()
             // 已經手動取名、對到某人的說話者，那個人就不再帶給別人
             for row in try SpeakerName.filter(Column("meeting_id") == meetingId && Column("person_id") != nil).fetchAll(db) {
@@ -59,11 +66,44 @@ extension AppDatabase {
                       let name = try String.fetchOne(db, sql: "SELECT name FROM people WHERE id = ?", arguments: [candidate.person]) else { continue }
                 usedSpeakers.insert(candidate.idx)
                 usedPeople.insert(candidate.person)
-                try db.execute(sql: "UPDATE speakers SET name = ?, name_source = 'voiceprint', person_id = ? WHERE meeting_id = ? AND idx = ?",
-                               arguments: [name, candidate.person, meetingId, candidate.idx])
-                matched += 1
+                let second = scores[candidate.idx]?.filter { $0.key != candidate.person }.values.max() ?? 0
+                if candidate.score >= Self.voiceprintAutoThreshold && candidate.score - second >= Self.voiceprintAutoMargin {
+                    try db.execute(sql: "UPDATE speakers SET name = ?, name_source = 'voiceprint', person_id = ? WHERE meeting_id = ? AND idx = ?",
+                                   arguments: [name, candidate.person, meetingId, candidate.idx])
+                    matched += 1
+                } else {
+                    // 沒把握：不帶入，存成建議，在待確認問「說話者 N 是 X 嗎？」（design §27）
+                    let reason = language.text(zh: "聲音跟之前的\(name)很像", en: "Sounds like \(name) from earlier meetings",
+                                               ja: "以前の\(name)の声に似ています")  // l10n-skip：會議語言的原因
+                    try db.execute(sql: """
+                        UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = NULL
+                        WHERE meeting_id = ? AND idx = ? AND name_source = 'default'
+                        """, arguments: [name, reason, meetingId, candidate.idx])
+                }
             }
             return matched
+        }
+    }
+
+    /// 每位說話者最像的幾位認識的人（不含目前的名字），由高到低：「是別人」的選單、待確認的「不是」用（R33）
+    func voiceprintCandidates(_ meetingId: Int64, limit: Int = 3) throws -> [Int: [String]] {
+        try pool.read { db in
+            let speakers = try SpeakerName.filter(Column("meeting_id") == meetingId).fetchAll(db)
+                .filter { $0.embedding != nil && $0.speechSeconds >= Self.voiceprintMinimumSeconds }
+            guard !speakers.isEmpty else { return [:] }
+            let library = try Self.library(db)
+            guard !library.isEmpty else { return [:] }
+            let names = Dictionary(try Person.fetchAll(db).compactMap { p in p.id.map { ($0, p.name) } }, uniquingKeysWith: { a, _ in a })
+            var result: [Int: [String]] = [:]
+            for speaker in speakers {
+                let vector = Voiceprint.vector(speaker.embedding!)
+                let ranked = library.compactMap { person, prints -> (name: String, score: Double)? in
+                    guard let name = names[person], name.caseInsensitiveCompare(speaker.name) != .orderedSame else { return nil }
+                    return (name, prints.map { Voiceprint.similarity(vector, $0) }.max() ?? 0)
+                }
+                result[speaker.idx] = ranked.sorted { $0.score > $1.score }.prefix(limit).map(\.name)
+            }
+            return result
         }
     }
 
@@ -176,13 +216,13 @@ extension AppDatabase {
 
     // MARK: 猜說話者（design §21.5）
 
-    /// 存 AI 猜的名字：只寫還是預設名稱的說話者
+    /// 存 AI 猜的名字：只寫還是預設名稱、還沒有建議的說話者（聲紋的建議優先：有聲音當根據，design §27）
     func saveSpeakerSuggestions(_ meetingId: Int64, _ suggestions: [SpeakerNaming.Suggestion]) throws {
         try pool.write { db in
             for s in suggestions {
                 try db.execute(sql: """
                     UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = ?
-                    WHERE meeting_id = ? AND idx = ? AND name_source = 'default'
+                    WHERE meeting_id = ? AND idx = ? AND name_source = 'default' AND suggested_name IS NULL
                     """, arguments: [s.name, s.reason, s.time, meetingId, s.speaker])
             }
         }

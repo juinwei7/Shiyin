@@ -72,8 +72,12 @@ struct MeetingDetail: Equatable {
     var segmentIndex: [Int64: Int] = [:]
     /// 說話者名字的來源（default / manual / voiceprint / suggestion），聲紋帶入的顯示「自動」（design §21.4）
     var speakerSources: [Int: String] = [:]
-    /// AI 猜的名字（design §21.5）：還是預設名稱的說話者才有
+    /// AI 猜的名字（design §21.5）、聲紋沒把握的（§21.4、R33）：還是預設名稱的說話者才有
     var speakerSuggestions: [Int: SpeakerNaming.Suggestion] = [:]
+    /// 每位說話者最像的幾位認識的人（R33）：「是別人」的選單、待確認的「不是」
+    var speakerCandidates: [Int: [String]] = [:]
+    /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
+    var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
 
     mutating func loadSpeakers(_ rows: [SpeakerName]) {
         speakers = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.name) })
@@ -369,6 +373,7 @@ final class AppModel {
             speakers: Dictionary(uniqueKeysWithValues: speakerRows.map { ($0.idx, $0.name) }),
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
         loaded.loadSpeakers(speakerRows)
+        loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.buildIndexes()
         detail = loaded
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
@@ -406,8 +411,7 @@ final class AppModel {
 
     var detailStatus: MeetingStatus? {
         guard let detail else { return nil }
-        return status(meetingId: detail.meeting.id!, latestJob: detail.latestJob,
-                      reviewCount: detail.notes?.reviewItems.count ?? 0)
+        return status(meetingId: detail.meeting.id!, latestJob: detail.latestJob, reviewCount: detail.reviewCount)
     }
 
     /// 用全域快捷鍵標記重點後，選單列圖示換成星號 1 秒（design §21.10）
@@ -891,7 +895,9 @@ final class AppModel {
             return
         }
         guard AppSettings.provider != .none else {
-            errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
         perform { try db.enqueue(id, kind: .summarize) }
@@ -934,7 +940,9 @@ final class AppModel {
             return (index, ReviewAnswer(time: item.time, question: item.question, answer: trimmed))
         }.sorted { $0.0 < $1.0 }.map(\.1)
         if !answered.isEmpty && AppSettings.provider == .none {
-            errorMessage = String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，沒辦法依回答修正。請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
             return false
         }
         perform {
@@ -962,7 +970,9 @@ final class AppModel {
             return
         }
         guard AppSettings.provider != .none else {
-            errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
         perform { try db.enqueue(id, kind: .correct) }
@@ -1095,6 +1105,28 @@ final class AppModel {
     func dismissSpeakerSuggestion(_ idx: Int) {
         guard let id = selection else { return }
         perform(.detail([.speakers])) { try db.clearSpeakerSuggestion(id, idx: idx) }
+    }
+
+    /// 待確認的說話者題目送出（R33.2、design §27）：回答是 YesNoAnswer 的文字（依會議語言）。
+    /// 是 = 套用建議；不是而且有名字 = 改成那個名字；不是沒填、略過 = 清掉建議；還沒選的不動
+    func answerSpeakerQuestions(_ answers: [Int: String], skipped: Set<Int>) {
+        guard let detail else { return }
+        let language = detail.meeting.meetingLanguage
+        for idx in detail.speakerSuggestions.keys.sorted() {
+            if skipped.contains(idx) {
+                dismissSpeakerSuggestion(idx)
+                continue
+            }
+            guard let choice = YesNoAnswer(answers[idx] ?? "", language: language), let yes = choice.isYes else { continue }
+            let name = choice.correction.trimmingCharacters(in: .whitespacesAndNewlines)
+            if yes {
+                applySpeakerSuggestion(idx)
+            } else if !name.isEmpty {
+                renameSpeaker(idx, to: name)
+            } else {
+                dismissSpeakerSuggestion(idx)
+            }
+        }
     }
 
     // MARK: 偵測線上會議（design §21.7、R19.4）
@@ -1449,7 +1481,10 @@ final class AppModel {
         #if DEBUG
         DebugMetrics.bump("reloadDetailParts")
         #endif
-        if parts.contains(.speakers) { updated.loadSpeakers((try? db.speakers(id)) ?? []) }
+        if parts.contains(.speakers) {
+            updated.loadSpeakers((try? db.speakers(id)) ?? [])
+            updated.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
+        }
         if parts.contains(.bookmarks) { updated.bookmarks = (try? db.bookmarks(id)) ?? [] }
         if parts.contains(.segments) { updated.segments = (try? db.segments(id)) ?? [] }
         if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }

@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 拾音 Windows 版的 app（design-windows §11）：WinUI 3、不打包、畫面全部用 C# 建（不用 XAML 檔：XAML 編譯器只能在 Windows 上跑，
+       這樣在 Mac 上也能編譯檢查）。只參考用到的 Windows App SDK 元件套件（D42：整包會帶進跟 sherpa-onnx 衝突的 onnxruntime.dll） -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!-- Windows 上要開：不打包的 app 在 publish 時才會帶 Shiyin.pri（沒有它 XAML 一載入就當掉，2026-10-21 裝好的 3.6.0 開不起來） -->
+    <EnableMsixTooling Condition="'$(OS)' == 'Windows_NT'">true</EnableMsixTooling>
+    <EnableMsixTooling Condition="'$(OS)' != 'Windows_NT'">false</EnableMsixTooling>
+    <RootNamespace>Shiyin.App</RootNamespace>
+    <AssemblyName>Shiyin</AssemblyName>
+    <Version>4.0.0</Version>
+    <ApplicationIcon Condition="Exists('Assets/Shiyin.ico')">Assets/Shiyin.ico</ApplicationIcon>
+    <!-- 支援高 DPI（PerMonitorV2）：沒有時縮放 125%、150% 的螢幕上整個視窗會糊（app.manifest） -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 正式建置（Windows 上）自帶 Windows App SDK。在 Mac 上只做編譯檢查：mt.exe、MakePri.exe 是 Windows 的程式跑不了，
+         改成不自帶、不產生資源索引（.pri）。這樣建出來的東西不能拿去用 -->
+    <WindowsAppSDKSelfContained Condition="'$(WindowsAppSDKSelfContained)' == '' and '$(OS)' == 'Windows_NT'">true</WindowsAppSDKSelfContained>
+    <WindowsAppSDKSelfContained Condition="'$(WindowsAppSDKSelfContained)' == ''">false</WindowsAppSDKSelfContained>
+    <EnableCoreMrtTooling Condition="'$(OS)' != 'Windows_NT'">false</EnableCoreMrtTooling>
+    <AppxGeneratePriEnabled Condition="'$(OS)' != 'Windows_NT'">false</AppxGeneratePriEnabled>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  </PropertyGroup>
+  <!-- 測試更新的建置（pack.ps1 -UpdateTest）：更新來源、公鑰改從環境變數讀（AppHost）。發布的版本不能加 -->
+  <PropertyGroup Condition="'$(ShiyinUpdateTest)' == 'true'">
+    <DefineConstants>$(DefineConstants);UPDATE_TEST</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Platform.Windows/Shiyin.Platform.Windows.csproj" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Base" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Condition="'$(WindowsAppSDKSelfContained)' != 'true'" />
+    <PackageReference Include="Microsoft.Web.WebView2" />
+    <PackageReference Include="WinUIEx" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Windows 上 WinUI 的 SDK 會自動把 Assets 下的圖檔加成 Content，再寫一次會在產生 .pri 時重複（PRI277）：先拿掉再加 -->
+    <Content Remove="Assets\Shiyin.ico;Assets\Shiyin.png" />
+    <Content Include="Assets\Shiyin.ico;Assets\Shiyin.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 第三方授權（R27 R13.1）：scripts/windows/make-third-party-licenses.py 產生，「關於拾音」讀它，安裝資料夾裡也有 -->
+    <Content Include="ThirdPartyLicenses.txt" Link="Third-Party Licenses.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 翻譯表：Mac 的 Localizable.xcstrings（鍵是中文原文，D43、§11.4），加上 Windows 才有的字串（l10n.py windows-check、windows-apply） -->
+    <EmbeddedResource Include="../../../Resources/Localizable.xcstrings" LogicalName="Localizable.xcstrings" />
+    <EmbeddedResource Include="Strings/Windows.xcstrings" LogicalName="Windows.xcstrings" />
+  </ItemGroup>
+</Project>

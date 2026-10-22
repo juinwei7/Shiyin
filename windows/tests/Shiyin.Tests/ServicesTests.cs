@@ -1,0 +1,810 @@
+using System.IO.Compression;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
+using Shiyin.Data;
+using Shiyin.IO;
+using Shiyin.LLM;
+using Shiyin.Model;
+using Shiyin.Services;
+using Shiyin.Speakers;
+using Shiyin.Transcribe;
+using Shiyin.Whisper;
+using Xunit;
+
+namespace Shiyin.Tests;
+
+/// <summary>不碰畫面的 app 邏輯（design-windows §1）：設定、模型下載、匯入、封包、轉錄流程、工作佇列</summary>
+public sealed class ServicesTests : IDisposable
+{
+    readonly TempHome home = new();
+    readonly ShiyinPaths paths;
+    readonly AppDatabase db;
+    readonly HttpClient http = new();
+    readonly TestServer server = new();
+
+    public ServicesTests()
+    {
+        paths = new ShiyinPaths(home.Path);
+        paths.EnsureDirectories();
+        db = new AppDatabase(paths.Database, paths.Backups);
+        db.SeedTemplates();
+    }
+
+    public void Dispose()
+    {
+        server.Dispose();
+        http.Dispose();
+        db.Dispose();
+        home.Dispose();
+    }
+
+    static void WriteWav(string path, int channels, double seconds, float amplitude = 0.1f)
+    {
+        var count = (int)(seconds * 16000);
+        var data = Enumerable.Range(0, channels).Select(c => Enumerable.Range(0, count).Select(i => amplitude * MathF.Sin(i * 0.05f * (c + 1))).ToArray()).ToList();
+        using var writer = new WavWriter(path, channels);
+        writer.Write(data, count);
+    }
+
+    // MARK: 設定
+
+    [Fact]
+    public void SettingsPersistAndOverridesStayInMemory()
+    {
+        var file = Path.Combine(home.Path, "settings.json");
+        var settings = AppSettings.Load(file, AppSettings.ParseOverrides(["--set", "llmProvider=none", "--set", "autoSummarize=NO", "other"]));
+        Assert.Equal(LLMProvider.None, settings.Provider);
+        Assert.False(settings.AutoSummarize);
+        Assert.True(settings.CompressAudio);
+        settings.Set(AppSettings.CompressAudioKey, false);
+        settings.Set(AppSettings.ProviderKey, "gemini");          // 被啟動參數覆蓋的設定：只在記憶體
+        settings.Set(AppSettings.RecordSourceKey, "both");
+        var again = AppSettings.Load(file);
+        Assert.False(again.CompressAudio);
+        Assert.Equal("both", again.RecordSource);
+        // 沒選過整理工具、也沒有 claude、codex（測試裡沒給找 CLI 的方法）：先不整理（R35.1）
+        Assert.Null(again.ChosenProvider);
+        Assert.Equal(LLMProvider.None, again.Provider);
+        Assert.True(again.NeedsProviderSetup);
+        Assert.True(again.AutoSummarize);
+        Assert.Equal(LLMProvider.Gemini, settings.Provider);
+        // 壞掉的檔案當成沒有設定
+        File.WriteAllText(file, "{not json");
+        Assert.Equal("mic", AppSettings.Load(file).RecordSource);
+    }
+
+    [Fact]
+    public void ProviderFallsBackToInstalledCli()
+    {
+        // 沒選過：找得到的 CLI（R35.1）；找不到是「還沒設定」，跟使用者選的「不整理」分開（R35.2）
+        var settings = AppSettings.InMemory();
+        LLMProvider? installed = LLMProvider.Codex;
+        settings.DetectCli = () => installed;
+        Assert.Equal((LLMProvider.Codex, false), (settings.Provider, settings.NeedsProviderSetup));
+        installed = null;
+        Assert.Equal((LLMProvider.None, true), (settings.Provider, settings.NeedsProviderSetup));
+        settings.Set(AppSettings.ProviderKey, "none");
+        Assert.Equal((LLMProvider.None, false), (settings.Provider, settings.NeedsProviderSetup));
+        settings.Set(AppSettings.ProviderKey, "gemini");
+        Assert.Equal((LLMProvider.Gemini, false), (settings.Provider, settings.NeedsProviderSetup));
+        // 清掉設定（選「之後再設定」）就回到沒選過
+        settings.Remove(AppSettings.ProviderKey);
+        Assert.Equal((LLMProvider.None, true), (settings.Provider, settings.NeedsProviderSetup));
+        settings.DebugProvider = LLMProvider.Anthropic;
+        Assert.Equal((LLMProvider.Anthropic, false), (settings.Provider, settings.NeedsProviderSetup));
+    }
+
+    [Fact]
+    public void PathsRequireHomeOutsideWindows()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var saved = Environment.GetEnvironmentVariable("SHIYIN_HOME");
+        try
+        {
+            Environment.SetEnvironmentVariable("SHIYIN_HOME", null);
+            Assert.Throws<InvalidOperationException>(ShiyinPaths.FromEnvironment);
+            Environment.SetEnvironmentVariable("SHIYIN_HOME", home.Path);
+            Assert.Equal(home.Path, ShiyinPaths.FromEnvironment().Home);
+        }
+        finally { Environment.SetEnvironmentVariable("SHIYIN_HOME", saved); }
+    }
+
+    // MARK: 模型下載
+
+    sealed record Served(byte[] Data, bool SupportsRange = true, int Status = 200, int DelayPerChunkMs = 0);
+
+    void Serve(Dictionary<string, Served> files, List<string>? ranges = null)
+    {
+        server.Handle = async c =>
+        {
+            var path = c.Request.Url!.AbsolutePath;
+            if (!files.TryGetValue(path, out var file)) { c.Response.StatusCode = 404; c.Response.Close(); return; }
+            if (file.Status != 200) { c.Response.StatusCode = file.Status; c.Response.Close(); return; }
+            var start = 0;
+            var range = c.Request.Headers["Range"];
+            lock (files) ranges?.Add(range ?? "");
+            if (range is not null && file.SupportsRange)
+            {
+                start = int.Parse(range["bytes=".Length..].TrimEnd('-'));
+                if (start >= file.Data.Length) { c.Response.StatusCode = 416; c.Response.Close(); return; }
+                c.Response.StatusCode = 206;
+                c.Response.Headers["Content-Range"] = $"bytes {start}-{file.Data.Length - 1}/{file.Data.Length}";
+            }
+            c.Response.ContentLength64 = file.Data.Length - start;
+            for (var i = start; i < file.Data.Length; i += 4096)
+            {
+                await c.Response.OutputStream.WriteAsync(file.Data.AsMemory(i, Math.Min(4096, file.Data.Length - i)));
+                if (file.DelayPerChunkMs > 0) await Task.Delay(file.DelayPerChunkMs);
+            }
+            c.Response.Close();
+        };
+    }
+
+    static byte[] Bytes(int n, int seed) { var b = new byte[n]; new Random(seed).NextBytes(b); return b; }
+    static string Sha(byte[] b) => Convert.ToHexStringLower(SHA256.HashData(b));
+
+    static async Task<ModelStore.State> WaitFor(ModelStore store, ModelStore.Model model, Func<ModelStore.State, bool> done, int seconds = 20)
+    {
+        for (var i = 0; i < seconds * 20; i++)
+        {
+            var s = store.StateOf(model);
+            if (done(s)) return s;
+            await Task.Delay(50);
+        }
+        return store.StateOf(model);
+    }
+
+    [Fact]
+    public async Task ModelDownloadResumesAndVerifies()
+    {
+        var a = Bytes(1_000_000, 1);
+        var b = Bytes(5_000, 2);
+        var ranges = new List<string>();
+        Serve(new() { ["/a.bin"] = new(a, DelayPerChunkMs: 5), ["/b.txt"] = new(b) }, ranges);
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.FastRecognition] = new("fast", [new("sensevoice/a.bin", server.Url + "/a.bin", a.Length, Sha(a)),
+                                                              new("sensevoice/b.txt", server.Url + "/b.txt", b.Length, Sha(b))]),
+        };
+        var store = new ModelStore(paths.Models, http, catalog);
+        var installed = new TaskCompletionSource();
+        store.Installed += _ => installed.TrySetResult();
+        store.Start(ModelStore.Model.FastRecognition);
+        await WaitFor(store, ModelStore.Model.FastRecognition, s => s is ModelStore.State.Downloading { Received: > 20_000 });
+        store.Pause(ModelStore.Model.FastRecognition);
+        Assert.IsType<ModelStore.State.Paused>(store.StateOf(ModelStore.Model.FastRecognition));
+        await store.Pending(ModelStore.Model.FastRecognition);
+        // 重開 app：從 .part 判斷是暫停的
+        var reopened = new ModelStore(paths.Models, http, catalog);
+        reopened.Installed += _ => installed.TrySetResult();
+        Assert.IsType<ModelStore.State.Paused>(reopened.StateOf(ModelStore.Model.FastRecognition));
+        reopened.Start(ModelStore.Model.FastRecognition);
+        var state = await WaitFor(reopened, ModelStore.Model.FastRecognition, s => s is ModelStore.State.Installed or ModelStore.State.Failed);
+        Assert.True(state is ModelStore.State.Installed, state.ToString());
+        await installed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(a, File.ReadAllBytes(Path.Combine(paths.Models, "sensevoice", "a.bin")));
+        Assert.Equal(b, File.ReadAllBytes(Path.Combine(paths.Models, "sensevoice", "b.txt")));
+        Assert.Empty(Directory.GetFiles(paths.Models, "*.part", SearchOption.AllDirectories));
+        Assert.Contains(ranges, r => r.StartsWith("bytes=") && r != "bytes=0-");
+        Assert.True(new ModelStore(paths.Models, http, catalog).IsInstalled(ModelStore.Model.FastRecognition));
+    }
+
+    [Fact]
+    public async Task ModelDownloadFailures()
+    {
+        var a = Bytes(10_000, 3);
+        Serve(new() { ["/bad.bin"] = new(a), ["/missing.bin"] = new(a, Status: 404), ["/norange.bin"] = new(a, SupportsRange: false) });
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.Breeze] = new("bad", [new("bad.bin", server.Url + "/bad.bin", a.Length, new string('0', 64))]),
+            [ModelStore.Model.Japanese] = new("missing", [new("missing.bin", server.Url + "/missing.bin", a.Length, Sha(a))]),
+            [ModelStore.Model.LanguageDetection] = new("norange", [new("norange.bin", server.Url + "/norange.bin", a.Length, Sha(a))]),
+        };
+        var store = new ModelStore(paths.Models, http, catalog);
+        store.Start(ModelStore.Model.Breeze);
+        var bad = await WaitFor(store, ModelStore.Model.Breeze, s => s is ModelStore.State.Failed or ModelStore.State.Installed);
+        Assert.Contains("SHA-256", Assert.IsType<ModelStore.State.Failed>(bad).Message);
+        Assert.False(File.Exists(Path.Combine(paths.Models, ".bad.bin.part")));
+
+        store.Start(ModelStore.Model.Japanese);
+        var missing = await WaitFor(store, ModelStore.Model.Japanese, s => s is ModelStore.State.Failed or ModelStore.State.Installed);
+        Assert.Contains("HTTP 404", Assert.IsType<ModelStore.State.Failed>(missing).Message);
+        // 自動下載不會重試失敗過的
+        store.AutoStart(ModelStore.Model.Japanese);
+        Assert.IsType<ModelStore.State.Failed>(store.StateOf(ModelStore.Model.Japanese));
+
+        // 伺服器不支援續傳：留下的一半從頭寫
+        File.WriteAllBytes(Path.Combine(paths.Models, ".norange.bin.part"), a[..4000]);
+        store.Refresh();
+        Assert.IsType<ModelStore.State.Paused>(store.StateOf(ModelStore.Model.LanguageDetection));
+        store.Start(ModelStore.Model.LanguageDetection);
+        var norange = await WaitFor(store, ModelStore.Model.LanguageDetection, s => s is ModelStore.State.Failed or ModelStore.State.Installed);
+        Assert.IsType<ModelStore.State.Installed>(norange);
+        Assert.Equal(a, File.ReadAllBytes(Path.Combine(paths.Models, "norange.bin")));
+        store.Delete(ModelStore.Model.LanguageDetection);
+        Assert.False(File.Exists(Path.Combine(paths.Models, "norange.bin")));
+    }
+
+    static byte[] Zip(params (string Name, byte[] Data)[] entries)
+    {
+        using var memory = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(memory, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            foreach (var (name, data) in entries)
+            {
+                using var stream = zip.CreateEntry(name).Open();
+                stream.Write(data);
+            }
+        return memory.ToArray();
+    }
+
+    [Fact]
+    public async Task ModelArchiveExtractsListedFiles()
+    {
+        var (a, b) = (Bytes(200_000, 5), Bytes(3_000, 6));
+        var zip = Zip(("Release/a.dll", a), ("Release/b.dll", b), ("Release/extra.exe", Bytes(500, 7)));
+        var broken = Zip(("Release/a.dll", a));
+        Serve(new() { ["/pack.zip"] = new(zip), ["/broken.zip"] = new(broken) });
+        ModelStore.ArchiveEntry[] entries = [new("Release/a.dll", "gpu/a.dll", a.Length), new("Release/b.dll", "gpu/b.dll", b.Length)];
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.GpuCuda] = new("gpu", [new("gpu/pack.zip", server.Url + "/pack.zip", zip.Length, Sha(zip), entries)], Folder: "gpu"),
+            [ModelStore.Model.Japanese] = new("broken", [new("broken/pack.zip", server.Url + "/broken.zip", broken.Length, Sha(broken),
+                [new("Release/a.dll", "broken/a.dll", a.Length), new("Release/b.dll", "broken/b.dll", b.Length)])], Folder: "broken"),
+        };
+        var store = new ModelStore(paths.Models, http, catalog);
+        store.Start(ModelStore.Model.GpuCuda);
+        var state = await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed);
+        Assert.True(state is ModelStore.State.Installed, state.ToString());
+        // 只解出列出來的檔案，壓縮檔刪掉
+        Assert.Equal(a, File.ReadAllBytes(Path.Combine(paths.Models, "gpu", "a.dll")));
+        Assert.Equal(b, File.ReadAllBytes(Path.Combine(paths.Models, "gpu", "b.dll")));
+        Assert.Equal(["a.dll", "b.dll"], Directory.GetFiles(Path.Combine(paths.Models, "gpu")).Select(Path.GetFileName).Order().ToArray());
+        Assert.True(new ModelStore(paths.Models, http, catalog).IsInstalled(ModelStore.Model.GpuCuda));
+        // 少了一個解出來的檔案就不算裝好
+        File.Delete(Path.Combine(paths.Models, "gpu", "b.dll"));
+        Assert.False(new ModelStore(paths.Models, http, catalog).IsInstalled(ModelStore.Model.GpuCuda));
+        store.Start(ModelStore.Model.GpuCuda);
+        Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+        // 刪除時整個資料夾刪掉（裡面有拾音另外放的 shim）
+        File.WriteAllBytes(Path.Combine(paths.Models, "gpu", "shiyin_whisper.dll"), [1]);
+        store.Delete(ModelStore.Model.GpuCuda);
+        Assert.False(Directory.Exists(Path.Combine(paths.Models, "gpu")));
+        Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.GpuCuda));
+
+        // 壓縮檔裡少了要的檔案：失敗、說明要重新下載
+        store.Start(ModelStore.Model.Japanese);
+        var failed = await WaitFor(store, ModelStore.Model.Japanese, s => s is ModelStore.State.Installed or ModelStore.State.Failed);
+        Assert.Contains("重新下載", Assert.IsType<ModelStore.State.Failed>(failed).Message);
+    }
+
+    [Fact]
+    public async Task GpuAccelerationDownloadsOnceAndPreparesPack()
+    {
+        var a = Bytes(1_000, 8);
+        var zip = Zip(("Release/whisper.dll", a));
+        Serve(new() { ["/pack.zip"] = new(zip) });
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.GpuCuda] = new("gpu", [new("gpu/pack.zip", server.Url + "/pack.zip", zip.Length, Sha(zip),
+                [new ModelStore.ArchiveEntry("Release/whisper.dll", "gpu/whisper.dll", a.Length)])], Folder: "gpu"),
+        };
+        var app = Path.Combine(home.Path, "app");
+        Directory.CreateDirectory(app);
+        File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [1, 2, 3]);
+        File.WriteAllBytes(Path.Combine(app, "msvcp140.dll"), [4]);
+        var settings = AppSettings.InMemory();
+        try
+        {
+            // 用不上（沒有 NVIDIA 或不是 x64）：不下載、不記成下載過
+            var store = new ModelStore(paths.Models, http, catalog);
+            new GpuAcceleration(store, settings, applies: false, app).Start();
+            Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.GpuCuda));
+            Assert.False(settings.GpuPackOffered);
+
+            // 用得上：自動下載一次；裝好時 whisper 還沒載入，就改從元件資料夾載入，shim 和 VC++ 執行階段複製過去
+            var gpu = new GpuAcceleration(store, settings, applies: true, app);
+            gpu.Start();
+            Assert.True(settings.GpuPackOffered);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            var dir = Path.Combine(paths.Models, "gpu");
+            for (var i = 0; i < 100 && Whisper.WhisperEngine.NativeDirectory != dir; i++) await Task.Delay(20);
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.Equal([1, 2, 3], File.ReadAllBytes(Path.Combine(dir, "shiyin_whisper.dll")));
+            Assert.Equal([4], File.ReadAllBytes(Path.Combine(dir, "msvcp140.dll")));
+
+            // app 更新後 shim 換了：下次啟動時複製新的
+            Whisper.WhisperEngine.NativeDirectory = null;
+            File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [9, 9]);
+            new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, applies: true, app).Start();
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.Equal([9, 9], File.ReadAllBytes(Path.Combine(dir, "shiyin_whisper.dll")));
+
+            // 使用者刪掉之後不再自動下載
+            Whisper.WhisperEngine.NativeDirectory = null;
+            store.Delete(ModelStore.Model.GpuCuda);
+            var after = new ModelStore(paths.Models, http, catalog);
+            new GpuAcceleration(after, settings, applies: true, app).Start();
+            Assert.IsType<ModelStore.State.Missing>(after.StateOf(ModelStore.Model.GpuCuda));
+            Assert.Null(Whisper.WhisperEngine.NativeDirectory);
+        }
+        finally { Whisper.WhisperEngine.NativeDirectory = null; }
+    }
+
+    // MARK: 匯入、封包
+
+    [Fact]
+    public void ImportCopiesAndQueues()
+    {
+        var settings = AppSettings.InMemory();
+        var source = Path.Combine(home.Path, "週會 2026-08-27.wav");
+        WriteWav(source, 1, 2);
+        var meeting = Importer.ImportFile(source, new ImportOptions { Title = "  週會  ", Folder = "專案", Language = MeetingLanguage.En, MinSpeakers = 3 },
+            db, paths, settings);
+        Assert.Equal("週會", meeting.Title);
+        Assert.True(meeting.TitleLocked);
+        Assert.Equal("2026-08-27", meeting.MeetingDate);
+        Assert.Equal("en", meeting.Language);
+        Assert.Equal(3, meeting.MinSpeakers);
+        Assert.Equal($"{meeting.Id}.wav", meeting.AudioFile);
+        Assert.True(paths.HasAudio(meeting));
+        Assert.True(File.Exists(source));
+        Assert.Equal(JobKind.Transcribe, db.LatestJob(meeting.Id!.Value)!.Kind);
+
+        // 搬不過去時刪掉剛建立的會議
+        var before = db.MeetingRows().Count;
+        Assert.Throws<ImportException>(() => Importer.ImportFile(Path.Combine(home.Path, "nothing.wav"), new ImportOptions(), db, paths, settings, move: true));
+        Assert.Equal(before, db.MeetingRows().Count);
+    }
+
+    [Fact]
+    public void ImportTranscriptFile()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var file = Path.Combine(home.Path, "0827.srt");
+        File.WriteAllText(file, "1\n00:00:01,000 --> 00:00:03,500\n大家好\n\n2\n00:00:04,000 --> 00:00:06,000\n開始吧\n");
+        var meeting = Importer.ImportTranscript(file, "", db, settings);
+        var segments = db.Segments(meeting.Id!.Value);
+        Assert.Equal(["大家好", "開始吧"], segments.Select(s => s.Text));
+        Assert.Equal(6, meeting.DurationSeconds);
+        Assert.Null(db.LatestJob(meeting.Id!.Value));
+        File.WriteAllText(file, "\n\n");
+        Assert.Throws<ImportException>(() => Importer.ImportTranscript(file, "", db, settings));
+    }
+
+    Meeting SampleMeeting(bool audio = true)
+    {
+        var meeting = db.InsertMeeting(new Meeting
+        {
+            Title = "預算會議", TitleLocked = true, MeetingDate = "2026-10-01", Participants = "小明、小華", SourceFilename = "a.wav",
+            Folder = "財務", Language = "zh", UserNotes = "記得帶發票", Channels = "both",
+        }, audio ? "wav" : null);
+        var id = meeting.Id!.Value;
+        if (audio) WriteWav(paths.AudioPath(meeting), 2, 1);
+        db.SaveTranscript(id, [
+            new Segment { MeetingId = id, Seq = 0, Start = 0, End = 2.5, Text = "第一句", Speaker = 1 },
+            new Segment { MeetingId = id, Seq = 1, Start = 2.5, End = 4, Text = "第二句", Speaker = 2, LowConfidence = true },
+        ], 4, 2);
+        db.RenameSpeaker(id, 1, "小明");
+        db.AddBookmark(id, 1.5, "重點");
+        db.SaveNotes(id, MeetingNotes.Decode("""{"title":"預算","summary":[{"text":"要省錢","time":"00:01"}],"decisions":[],"actionItems":[],"openQuestions":[],"topics":[],"custom":[],"reviewItems":[]}""")!,
+            "claude", "重新整理", NotesSource.Generated);
+        return db.Meeting(id)!;
+    }
+
+    ExportBundle Bundle(Meeting m) => new(m, db.Segments(m.Id!.Value), db.Speakers(m.Id!.Value).ToDictionary(s => s.Idx, s => s.Name),
+        db.Bookmarks(m.Id!.Value), m.DecodedNotes);
+
+    [Fact]
+    public void PackageRoundTrip()
+    {
+        var original = SampleMeeting();
+        var file = Path.Combine(home.Path, "會議.shiyin");
+        MeetingPackage.Export(Bundle(original), file, paths, "3.6.0");
+        using (var zip = ZipFile.OpenRead(file))
+            Assert.Equal(["audio.wav", "manifest.json", "meeting.json", "transcript.json"], zip.Entries.Select(e => e.FullName).Order(StringComparer.Ordinal));
+        var imported = MeetingPackage.Import(file, db, paths, "別的資料夾");
+        Assert.NotEqual(original.Id, imported.Id);
+        Assert.Equal(("預算會議", true, "2026-10-01", "小明、小華", "財務", "package", "both", "記得帶發票", "claude"),
+            (imported.Title, imported.TitleLocked, imported.MeetingDate, imported.Participants, imported.Folder, imported.Source, imported.Channels,
+             imported.UserNotes, imported.NotesBy));
+        Assert.Equal(File.ReadAllBytes(paths.AudioPath(original)), File.ReadAllBytes(paths.AudioPath(imported)));
+        var segments = db.Segments(imported.Id!.Value);
+        Assert.Equal([("第一句", 1, false), ("第二句", 2, true)], segments.Select(s => (s.Text, s.Speaker ?? 0, s.LowConfidence)));
+        Assert.Equal("小明", db.Speakers(imported.Id!.Value).Single(s => s.Idx == 1).Name);
+        Assert.Equal([(1.5, "重點")], db.Bookmarks(imported.Id!.Value).Select(b => (b.Time, b.Label)));
+        Assert.Equal("要省錢", imported.DecodedNotes!.Summary[0].Text);
+    }
+
+    static void WriteZip(string file, Dictionary<string, string> entries)
+    {
+        File.Delete(file);
+        using var zip = ZipFile.Open(file, ZipArchiveMode.Create);
+        foreach (var (name, text) in entries)
+        {
+            using var s = zip.CreateEntry(name).Open();
+            s.Write(Encoding.UTF8.GetBytes(text));
+        }
+    }
+
+    [Fact]
+    public void PackageRejectsBadInput()
+    {
+        var file = Path.Combine(home.Path, "bad.shiyin");
+        const string meeting = """{"title":"t","titleLocked":false,"meetingDate":"2026-01-01","participants":"","sourceFilename":"x","templateId":"general","userNotes":"","channels":"mic","speakers":[],"bookmarks":[]}""";
+        var before = db.MeetingRows().Count;
+        void Rejects(Dictionary<string, string> entries, string message)
+        {
+            WriteZip(file, entries);
+            var e = Assert.Throws<MeetingPackage.PackageException>(() => MeetingPackage.Import(file, db, paths));
+            Assert.Contains(message, e.Message);
+        }
+        Rejects(new() { ["meeting.json"] = meeting }, "manifest.json");
+        Rejects(new() { ["manifest.json"] = """{"format":2,"app":"9","exportedAt":"x"}""", ["meeting.json"] = meeting }, "格式 2");
+        Rejects(new() { ["manifest.json"] = """{"format":1,"app":"9","exportedAt":"x"}""" }, "meeting.json");
+        Rejects(new() { ["manifest.json"] = """{"format":1,"app":"9","exportedAt":"x"}""", ["meeting.json"] = meeting, ["transcript.json"] = "[{" }, "transcript.json");
+        // 錄音的檔名不能是路徑；子資料夾裡的同名檔案不算
+        Rejects(new() { ["manifest.json"] = """{"format":1,"app":"9","exportedAt":"x","audio":"../../evil.wav"}""", ["meeting.json"] = meeting, ["../../evil.wav"] = "x" }, "錄音檔");
+        Rejects(new() { ["manifest.json"] = """{"format":1,"app":"9","exportedAt":"x","audio":"audio.wav"}""", ["meeting.json"] = meeting, ["sub/audio.wav"] = "x" }, "錄音檔");
+        Assert.Equal(before, db.MeetingRows().Count);
+        // 只有逐字稿的舊封包（沒有 language、folder）
+        WriteZip(file, new() { ["manifest.json"] = """{"format":1,"app":"3.0.0","exportedAt":"x"}""", ["meeting.json"] = meeting });
+        var imported = MeetingPackage.Import(file, db, paths, "目前的資料夾");
+        Assert.Equal(("zh", "目前的資料夾", ""), (imported.Language, imported.Folder, imported.AudioFile));
+    }
+
+    // MARK: 轉錄流程
+
+    sealed class FakeEngines : ISpeechEngines
+    {
+        public List<TranscribedSegment> Segments { get; set; } = [new(0, 3, "大家好", false), new(3, 6, "今天討論預算", false), new(6, 9, "好的", true)];
+        public Func<float[], List<TranscribedSegment>>? PerChannel { get; set; }
+        public List<SpeakerRules.Turn> Turns { get; set; } = [new(1, 0, 6), new(2, 6, 9)];
+        public int? LastMinSpeakers { get; private set; }
+        public bool FailDiarize { get; set; }
+        /// <summary>短句再確認用的每句聲紋（null：都算不出來，說話者不變）</summary>
+        public Func<double, double, float[]?>? Embedding { get; set; }
+        public List<(double Start, double End)> Embedded { get; } = [];
+        public List<string> Calls { get; } = [];
+
+        public (List<TranscribedSegment> Segments, List<int> Seams, int SampleCount) WhisperFile(IAudioStream audio, double chunkSeconds, string model,
+            string prompt, string language, WhisperControl control)
+        {
+            Calls.Add($"whisper-file {language} {prompt}");
+            var buffer = new List<float>();
+            audio.Fill(buffer, int.MaxValue);
+            control.OnProgress(1);
+            return (Segments, [], buffer.Count);
+        }
+
+        public List<TranscribedSegment> WhisperSamples(float[] samples, IReadOnlyList<(int Start, int End)> chunks, string model, string prompt,
+            string language, WhisperControl control)
+        {
+            Calls.Add("whisper-samples");
+            var result = PerChannel?.Invoke(samples) ?? Segments;
+            if (result.Count == 0) throw new WhisperException(WhisperErrorKind.Empty);
+            return result;
+        }
+
+        public List<TranscribedSegment> Fast(IAudioStream audio, MeetingLanguage language, Action<double> progress, CancellationToken cancel)
+        {
+            Calls.Add($"fast {language.Code()}");
+            var buffer = new List<float>();
+            audio.Fill(buffer, int.MaxValue);
+            return Segments;
+        }
+
+        public Diarizer.Output Diarize(float[] samples, int? minSpeakers, Action<double> progress, CancellationToken cancel)
+        {
+            Calls.Add($"diarize {samples.Length}");
+            LastMinSpeakers = minSpeakers;
+            if (FailDiarize) throw new InvalidOperationException("boom");
+            var speakers = Turns.Select(t => t.Speaker).Distinct().ToList();
+            return new Diarizer.Output(Turns, speakers.ToDictionary(s => s, s => new float[] { s, 1, 0 }),
+                speakers.ToDictionary(s => s, s => Turns.Where(t => t.Speaker == s).Sum(t => t.End - t.Start)), null, []);
+        }
+
+        public List<float[]?> Embed(float[] samples, IReadOnlyList<(double Start, double End)> spans, CancellationToken cancel)
+        {
+            Embedded.AddRange(spans);
+            return spans.Select(s => Embedding?.Invoke(s.Start, s.End)).ToList();
+        }
+    }
+
+    [Fact]
+    public void PipelineTranscribesAndAssignsSpeakers()
+    {
+        var audio = Path.Combine(home.Path, "a.wav");
+        WriteWav(audio, 1, 9);
+        var model = Path.Combine(home.Path, "model.bin");
+        File.WriteAllText(model, "x");
+        var engines = new FakeEngines();
+        var stages = new List<string>();
+        var options = new TranscriptionOptions { Glossary = ["拾音"], MinSpeakers = 2, AudioSource = "mic" };
+        var result = new TranscriptionPipeline(options, new WavDecoder(), engines, model) { Stage = stages.Add }.Run(audio, default)!;
+        Assert.Equal([1, 1, 2], result.Speakers);
+        Assert.Equal(9, result.Duration, 3);
+        Assert.Equal("mic", result.Voices[1].Source);
+        Assert.Equal(2, engines.LastMinSpeakers);
+        Assert.StartsWith("whisper-file zh ", engines.Calls[0]);
+        Assert.Contains("拾音", engines.Calls[0]);
+        Assert.Contains("辨識說話者", stages);
+        Assert.Equal("breeze", options.TranscribedWith);
+
+        // 說話者辨識失敗不影響逐字稿
+        engines.FailDiarize = true;
+        result = new TranscriptionPipeline(options, new WavDecoder(), engines, model).Run(audio, default)!;
+        Assert.Equal([null, null, null], result.Speakers);
+        // 模型檔不在
+        Assert.Throws<WhisperException>(() => new TranscriptionPipeline(options, new WavDecoder(), engines, model + "x").Run(audio, default));
+        // 快速辨識不用模型檔；取消（ShouldContinue 回 false）回傳 null
+        var fast = options with { Engine = TranscriptionOptions.EngineKind.Fast, Language = MeetingLanguage.Ja };
+        Assert.Equal("system", fast.TranscribedWith);
+        engines.FailDiarize = false;
+        Assert.Equal([1, 1, 2], new TranscriptionPipeline(fast, new WavDecoder(), engines, "").Run(audio, default)!.Speakers);
+        Assert.Contains("fast ja", engines.Calls);
+        Assert.Null(new TranscriptionPipeline(fast, new WavDecoder(), engines, "") { ShouldContinue = () => false }.Run(audio, default));
+
+        // 短句再確認（R34）：第二句的聲音比較像說話者 2（假的聲紋 1 是 [1,1,0]、2 是 [2,1,0]）；算聲紋失敗照原本的結果
+        engines.Embedding = (start, _) => start == 3 ? [1, 0, 0] : [0, 1, 0];
+        Assert.Equal([1, 2, 2], new TranscriptionPipeline(options, new WavDecoder(), engines, model).Run(audio, default)!.Speakers);
+        engines.Embedding = (_, _) => throw new InvalidOperationException("boom");
+        Assert.Equal([1, 1, 2], new TranscriptionPipeline(options, new WavDecoder(), engines, model).Run(audio, default)!.Speakers);
+    }
+
+    [Fact]
+    public void PipelineSplitsChannelsAndRemovesEcho()
+    {
+        var audio = Path.Combine(home.Path, "both.wav");
+        WriteWav(audio, 2, 9);
+        var model = Path.Combine(home.Path, "model.bin");
+        File.WriteAllText(model, "x");
+        var engines = new FakeEngines();
+        var call = 0;
+        // 麥克風：自己說的話＋喇叭的回音；電腦聲音：對方說的話
+        engines.PerChannel = _ => call++ == 0
+            ? [new(0, 2, "我先報告", false), new(4, 6, "對方說的這一句話", false)]
+            : [new(4, 6, "對方說的這一句話", false), new(7, 8, "了解", false)];
+        engines.Turns = [new(1, 0, 9)];
+        var options = new TranscriptionOptions { SplitChannels = true };
+        var result = new TranscriptionPipeline(options, new WavDecoder(), engines, model).Run(audio, default)!;
+        Assert.Equal(["我先報告", "對方說的這一句話", "了解"], result.Segments.Select(s => s.Text));
+        Assert.Equal([0, 1, 1], result.Channels);
+        Assert.Equal([1, 2, 2], result.Speakers);
+        Assert.Equal(["mic", "system"], result.Voices.OrderBy(v => v.Key).Select(v => v.Value.Source));
+    }
+
+    // MARK: 工作佇列
+
+    sealed class CopyCompressor : IAudioCompressor
+    {
+        public Task Compress(string wavPath, string m4aPath, CancellationToken cancel)
+        {
+            File.Copy(wavPath, m4aPath);
+            return Task.CompletedTask;
+        }
+    }
+
+    sealed class MemoryKeys : IKeyStore
+    {
+        public string? Read(string account) => "sk-test";
+        public bool Exists(string account) => true;
+    }
+
+    sealed class NoTools : IToolLocator
+    {
+        public ToolCommand? Find(string name) => null;
+    }
+
+    const string NotesJson = """{"title":"預算","summary":[{"text":"決定省錢","time":"00:03"}],"decisions":[],"actionItems":[],"openQuestions":[],"topics":[],"custom":[],"reviewItems":[]}""";
+
+    /// <summary>假的 Anthropic API：依工具名稱回會議紀錄、校正、猜說話者</summary>
+    void ServeLLM(List<string> tools)
+    {
+        server.Handle = async c =>
+        {
+            using var reader = new StreamReader(c.Request.InputStream);
+            var body = JsonNode.Parse(await reader.ReadToEndAsync())!;
+            var tool = body["tool_choice"]?["name"]?.GetValue<string>() ?? body["tools"]![0]!["name"]!.GetValue<string>();
+            lock (tools) tools.Add(tool);
+            var input = tool switch
+            {
+                "save_corrections" => JsonNode.Parse("""{"corrections":[{"segment":1,"original":"預算","suggestion":"豫算","reason":"測試"},{"segment":9,"original":"x","suggestion":"y","reason":"不在範圍"}]}"""),
+                "save_speaker_names" => JsonNode.Parse("""{"speakerNames":[{"speaker":2,"name":"小華","reason":"被叫名字","time":"00:06"}]}"""),
+                _ => JsonNode.Parse(NotesJson),
+            };
+            var reply = new JsonObject { ["content"] = new JsonArray(new JsonObject { ["type"] = "tool_use", ["name"] = tool, ["input"] = input }) };
+            var bytes = Encoding.UTF8.GetBytes(reply.ToJsonString());
+            c.Response.ContentType = "application/json";
+            await c.Response.OutputStream.WriteAsync(bytes);
+            c.Response.Close();
+        };
+    }
+
+    (JobRunner Runner, FakeEngines Engines, ModelStore Models) Runner(AppSettings settings)
+    {
+        // 模型都「裝好了」：放跟目錄裡大小一樣的空檔案
+        var catalog = Enum.GetValues<ModelStore.Model>().ToDictionary(m => m, m => new ModelStore.ModelInfo(m.ToString(), [new($"{m}.bin", "http://unused", 1, "")]));
+        foreach (var m in catalog.Keys) File.WriteAllText(Path.Combine(paths.Models, $"{m}.bin"), "x");
+        var models = new ModelStore(paths.Models, http, catalog);
+        var llm = new LLMClient(new MemoryKeys(), new NoTools(), new ProcessRunner(), http);
+        llm.BaseUrlOverrides[LLMProvider.Anthropic] = server.Url;
+        var engines = new FakeEngines();
+        var runner = new JobRunner(db, settings, paths, models, llm, new WavDecoder(), engines, new CopyCompressor(), NoPower.Instance)
+        {
+            IdleDelay = TimeSpan.FromMilliseconds(100),
+        };
+        return (runner, engines, models);
+    }
+
+    static async Task Until(Func<bool> condition, int seconds = 20)
+    {
+        for (var i = 0; i < seconds * 20 && !condition(); i++) await Task.Delay(50);
+        Assert.True(condition());
+    }
+
+    [Fact]
+    public async Task JobsRunFromTranscriptionToNotes()
+    {
+        var tools = new List<string>();
+        ServeLLM(tools);
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic" });
+        var (runner, engines, _) = Runner(settings);
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var meeting = Importer.ImportFile(source, new ImportOptions(), db, paths, settings);
+        var id = meeting.Id!.Value;
+        var finished = new List<JobKind>();
+        runner.Finished += (job, error) => { lock (finished) finished.Add(job.Kind); Assert.Null(error); };
+        runner.Start();
+        try
+        {
+            await Until(() => db.Meeting(id)?.Notes is not null && db.Corrections(id).Count > 0
+                              && db.Speakers(id).Any(s => s.SuggestedName == "小華") && db.Meeting(id)!.AudioFile.EndsWith(".m4a")
+                              && db.ActiveJobs().Count == 0);
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        var m = db.Meeting(id)!;
+        Assert.Equal("breeze", m.TranscribedWith);
+        Assert.Equal(9, m.DurationSeconds);
+        Assert.Equal("anthropic", m.NotesBy);
+        Assert.Equal("決定省錢", m.DecodedNotes!.Summary[0].Text);
+        Assert.Equal([1, 1, 2], db.Segments(id).Select(s => s.Speaker ?? 0));
+        Assert.Equal(["豫算"], db.Corrections(id).Select(c => c.Suggestion));
+        Assert.False(File.Exists(Path.Combine(paths.Audio, $"{id}.wav")));
+        Assert.True(File.Exists(Path.Combine(paths.Audio, $"{id}.m4a")));
+        Assert.Equal(["save_corrections", "save_meeting_notes", "save_speaker_names"], tools.Order(StringComparer.Ordinal));
+        Assert.Equal([JobKind.Transcribe, JobKind.Summarize], finished.Order());
+    }
+
+    [Fact]
+    public async Task FastRecognitionWhenModelMissingAndCancel()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var (runner, engines, models) = Runner(settings);
+        // Breeze 還沒下載：這一場用快速辨識，Breeze 在背景開始下載（網址指到不存在的地方，會失敗）
+        File.Delete(Path.Combine(paths.Models, "Breeze.bin"));
+        models.Refresh();
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var meeting = Importer.ImportFile(source, new ImportOptions { Language = MeetingLanguage.En }, db, paths, settings);
+        runner.Start();
+        try
+        {
+            await Until(() => db.LatestJob(meeting.Id!.Value)?.Status == JobStatus.Done);
+            Assert.Equal("system", db.Meeting(meeting.Id!.Value)!.TranscribedWith);
+            Assert.Contains("fast en", engines.Calls);
+            Assert.IsNotType<ModelStore.State.Missing>(models.StateOf(ModelStore.Model.Breeze));
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+    }
+
+    [Fact]
+    public async Task RediarizeRechecksShortSentencesExceptManualOnes()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var (runner, engines, _) = Runner(settings);
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var id = Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+        var rediarized = new TaskCompletionSource<int?>();
+        runner.Rediarized += (_, count, error) => { if (error is null) rediarized.TrySetResult(count); else rediarized.TrySetException(error); };
+        runner.Start();
+        try
+        {
+            await Until(() => db.Segments(id).Count == 3 && db.ActiveJobs().Count == 0);
+            Assert.Equal([1, 1, 2], db.Segments(id).Select(s => s.Speaker ?? 0));
+            // 使用者把第一句改成說話者 2；重新辨識時前兩句的聲音都比較像說話者 2
+            db.ReassignSegments(id, [db.Segments(id)[0].Id!.Value], 2, "x");
+            engines.Embedded.Clear();
+            engines.Embedding = (start, _) => start < 6 ? [1, 0, 0] : [0, 1, 0];
+            db.Enqueue(id, JobKind.Rediarize);
+            runner.Wake();
+            await rediarized.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            // 改過的那句不查（跟著原本的說話者 2）；第二句改成說話者 2（沒有再確認的話是 [2, 1, 2]）
+            Assert.Equal([(3.0, 6.0), (6.0, 9.0)], engines.Embedded);
+            Assert.Equal([2, 2, 2], db.Segments(id).Select(s => s.Speaker ?? 0));
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+    }
+
+    // MARK: 找新版（design-windows §14.3、D94）
+
+    /// <summary>假的 GitHub：release 清單照 per_page 給前幾筆，下載說明檔給 Velopack 的更新說明</summary>
+    sealed class FakeGitHub(string releases, string feed) : Velopack.Sources.IFileDownloader
+    {
+        public List<string> Requests { get; } = [];
+
+        public Task<string> DownloadString(string url, IDictionary<string, string>? headers = null, double timeout = 30)
+        {
+            Requests.Add(url);
+            if (url.Contains("/releases?"))
+            {
+                var perPage = int.Parse(System.Web.HttpUtility.ParseQueryString(new Uri(url).Query)["per_page"]!);
+                return Task.FromResult(new JsonArray(JsonNode.Parse(releases)!.AsArray().Take(perPage).Select(n => n!.DeepClone()).ToArray()).ToJsonString());
+            }
+            return Task.FromResult(feed);
+        }
+
+        public Task<byte[]> DownloadBytes(string url, IDictionary<string, string>? headers = null, double timeout = 30) =>
+            DownloadString(url, headers, timeout).ContinueWith(t => Encoding.UTF8.GetBytes(t.Result));
+
+        public Task DownloadFile(string url, string targetFile, Action<int> progress, IDictionary<string, string>? headers = null, double timeout = 30,
+                                 CancellationToken cancelToken = default) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task ReleaseSourceFindsWindowsBehindManyMacReleases()
+    {
+        // 最新的 12 個是 Mac 的 release（只有 DMG），後面才是 Windows 的
+        var list = new JsonArray();
+        for (var i = 0; i < 12; i++)
+            list.Add(new JsonObject
+            {
+                ["name"] = $"拾音 3.{20 - i}.0", ["prerelease"] = false, ["published_at"] = $"2026-11-{30 - i:00}T00:00:00Z",
+                ["assets"] = new JsonArray(new JsonObject { ["name"] = "Shiyin.dmg", ["browser_download_url"] = "https://example.invalid/Shiyin.dmg" }),
+            });
+        list.Add(new JsonObject
+        {
+            ["name"] = "拾音 Windows 3.6.1", ["prerelease"] = false, ["published_at"] = "2026-11-01T00:00:00Z",
+            ["assets"] = new JsonArray(
+                new JsonObject { ["name"] = "releases.win-x64.json", ["browser_download_url"] = "https://example.invalid/win/releases.win-x64.json" },
+                new JsonObject { ["name"] = "ShiyinApp-3.6.1-win-x64-full.nupkg", ["browser_download_url"] = "https://example.invalid/win/full.nupkg" }),
+        });
+        var feed = """{"Assets":[{"PackageId":"ShiyinApp","Version":"3.6.1","Type":"Full","FileName":"ShiyinApp-3.6.1-win-x64-full.nupkg","SHA1":"00","SHA256":"00","Size":1}]}""";
+        const string repo = "https://github.com/juinwei7/Shiyin";
+
+        var github = new FakeGitHub(list.ToJsonString(), feed);
+        var found = await new WindowsReleaseSource(repo, github).GetReleaseFeed(Velopack.Logging.NullVelopackLogger.Instance, "ShiyinApp", "win-x64");
+        Assert.Equal(["3.6.1"], found.Assets.Select(a => a.Version.ToString()));
+        Assert.Equal("https://api.github.com/repos/juinwei7/Shiyin/releases?per_page=100&page=1", github.Requests[0]);
+        // Velopack 原本的只讀 10 筆：Windows 的那個不在裡面
+        var original = await new Velopack.Sources.GithubSource(repo, null, false, new FakeGitHub(list.ToJsonString(), feed))
+            .GetReleaseFeed(Velopack.Logging.NullVelopackLogger.Instance, "ShiyinApp", "win-x64");
+        Assert.Empty(original.Assets);
+    }
+
+    [Fact]
+    public async Task NoSummarizerSetUpOnlyTranscribes()
+    {
+        // 沒選過整理工具、也沒有 claude、codex（R35.1）：轉錄照常，不排整理、校正、猜說話者，也不會失敗
+        var settings = AppSettings.InMemory();
+        var (runner, _, _) = Runner(settings);
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var id = Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+        var finished = new List<(JobKind Kind, Exception? Error)>();
+        runner.Finished += (job, error) => { lock (finished) finished.Add((job.Kind, error)); };
+        runner.Start();
+        try
+        {
+            await Until(() => db.Segments(id).Count == 3 && db.ActiveJobs().Count == 0);
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.DoesNotContain(finished, f => f.Kind is JobKind.Summarize or JobKind.Correct or JobKind.NameSpeakers);
+        Assert.All(finished, f => Assert.Null(f.Error));
+        Assert.Contains(finished, f => f.Kind == JobKind.Transcribe);
+        Assert.Null(db.Meeting(id)!.Notes);
+    }
+}

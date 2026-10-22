@@ -1,0 +1,18 @@
+Meeting date: 2026-10-18 (Sunday)
+Existing title: Weekly Sync
+Participants: Alice, Bob
+Glossary (correct spellings): none
+
+Template: Courses, talks, sharing sessions, training
+Sections to produce: summary (Summary), openQuestions (Open questions), topics (Topics)
+Custom sections (in custom, in this order): 
+- Key concepts: Important concepts, terms and explanations that came up
+- Q&A: Questions from the audience and the speaker's answers
+Additional instructions: This is a lecture or talk. Outline it following the speaker's sections.
+
+Transcript ([time] speaker: text; (?) marks low-confidence segments): 
+[00:00] Speaker 1: Hi everyone, let's review the Q4 roadmap.
+[00:03] Bob: I'll send the email via SendGrid by Friday.
+[00:08] Speaker 1: (?) Speaker 1 here again: what about the "beta" users?
+[00:12] Okay.
+[00:13] Speaker 3: The beta list is ready.

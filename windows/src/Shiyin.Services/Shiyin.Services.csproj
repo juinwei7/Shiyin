@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 不碰畫面的 app 邏輯（design-windows §1）：設定、模型下載、匯入、封包、轉錄流程、工作佇列、錄音、會議的操作。
+       對應 Mac 的 Store/AppModel、Services/JobRunner、Capture/Recorder…；平台的部分（WASAPI、Media Foundation）是介面，
+       在 Mac 上用 WAV 和模擬的音源測 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shiyin</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Core/Shiyin.Core.csproj" />
+    <ProjectReference Include="../Shiyin.Data/Shiyin.Data.csproj" />
+    <ProjectReference Include="../Shiyin.LLM/Shiyin.LLM.csproj" />
+    <ProjectReference Include="../Shiyin.Engines/Shiyin.Engines.csproj" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <!-- 只用純 C# 的部分（重新取樣、格式換算），WASAPI、Media Foundation 在 Platform -->
+    <PackageReference Include="NAudio.Core" />
+    <!-- 只用讀 GitHub release 清單的部分（WindowsReleaseSource）；安裝、更新在 Platform -->
+    <PackageReference Include="Velopack" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shiyin.Tests" />
+  </ItemGroup>
+</Project>

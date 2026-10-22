@@ -2,13 +2,15 @@
 
 import { content, LANGS, GITHUB, KOFI } from './content.mjs';
 import { demoSection } from './demo-markup.mjs';
-import { homeSchema, pageSchema, guideSchema } from './seo.mjs';
+import { homeSchema, pageSchema, guideSchema, windowsSchema } from './seo.mjs';
 import { GUIDES } from './guides.mjs';
 
 export const ROUTES = {
   home: (lang) => `${content[lang].prefix}/`,
   changelog: (lang) => `${content[lang].prefix}/changelog/`,
   guides: (lang) => `${content[lang].prefix}/guides/`,
+  // 有 Windows 版的 release 才產生（docs/website.md §16）
+  windows: (lang) => `${content[lang].prefix}/windows/`,
 };
 
 // 指南（§14.2）：每一篇只有寫了的語言才有頁面
@@ -47,13 +49,16 @@ function languageMenu(lang, href) {
 // 共用的外框：head、頁首、頁尾。route 是 ROUTES 的鍵；404 頁沒有 route，不放 canonical，語言選單連到各語言首頁
 // paths：沒有 route 的頁面（教學、比較，§14.2）各語言的網址，只列有這一頁的語言；沒有的語言，語言選單連到那個語言的首頁
 // head：首頁的示範樣式、各頁的結構化資料；scripts：只有首頁用（示範）
-function layout({ lang, site, css, route, paths, title, description, body, head = '', scripts = '', ogType = 'website' }) {
+function layout({ lang, site, css, route, paths, title, description, body, head = '', scripts = '', ogType = 'website', windows = null }) {
   const c = content[lang];
   const others = LANGS.filter((l) => l !== lang);
   const target = route || 'home';
   const href = (l) => (paths ? paths[l] ?? ROUTES.home(l) : ROUTES[target](l));
   const alternates = paths ? LANGS.filter((l) => paths[l]) : LANGS;
   const indexable = Boolean(route || paths);
+  // 切換平台（§16.2）：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」
+  const platformHref = route === 'windows' ? ROUTES.home(lang) : ROUTES.windows(lang);
+  const platformLabel = route === 'windows' ? c.nav.mac : c.nav.windows;
   const seo = indexable
     ? `<link rel="canonical" href="${site}${href(lang)}">
 ${alternates.map((l) => `<link rel="alternate" hreflang="${content[l].lang}" href="${site}${href(l)}">`).join('\n')}
@@ -93,7 +98,7 @@ ${head}</head>
     <a class="sub" href="${ROUTES.home(lang)}#how">${c.nav.features}</a>
     <a class="sub" href="${ROUTES.home(lang)}#privacy">${c.nav.privacy}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
-${guidesLangs().includes(lang) ? `    <a class="sub" href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}  </nav>
+${guidesLangs().includes(lang) ? `    <a class="sub" href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${windows ? `    <a class="sub" href="${platformHref}">${platformLabel}</a>\n` : ''}  </nav>
   ${languageMenu(lang, href)}
 </header>
 <main>
@@ -105,7 +110,7 @@ ${body}
     <a href="${GITHUB}">GitHub</a>
     <a href="${KOFI}">${c.footer.sponsor}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
-${guidesLangs().includes(lang) ? `    <a href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${others.map((l) => `    <a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
+${windows ? `    <a href="${platformHref}">${route === 'windows' ? c.footer.mac : c.footer.windows}</a>\n` : ''}${guidesLangs().includes(lang) ? `    <a href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${others.map((l) => `    <a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}
   </div>
 </footer>
 ${scripts}</body>
@@ -114,12 +119,14 @@ ${scripts}</body>
 }
 
 // 截圖：優先用 AVIF（960、1920 寬），PNG 當備援。first 是第一屏那張，不延後載入
-function shot(lang, name, alt, { first = false, caption = '' } = {}) {
-  const dir = content[lang].images;
+// win：Windows 版的截圖（docs/images/windows，1418×946，§16.1）
+function shot(lang, name, alt, { first = false, caption = '', win = false } = {}) {
+  const dir = content[lang].images + (win ? '/windows' : '');
+  const [width, height] = win ? [1418, 946] : [1920, 1344];
   const loading = first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
   return `<picture>
-  <source type="image/avif" srcset="${dir}/${name}-960.avif 960w, ${dir}/${name}.avif 1920w" sizes="(max-width: 1000px) calc(100vw - 40px), 960px">
-  <img class="shot" src="${dir}/${name}.png" width="1920" height="1344" alt="${escape(alt)}" ${loading}>
+  <source type="image/avif" srcset="${dir}/${name}-960.avif 960w, ${dir}/${name}.avif ${width}w" sizes="(max-width: 1000px) calc(100vw - 40px), 960px">
+  <img class="shot" src="${dir}/${name}.png" width="${width}" height="${height}" alt="${escape(alt)}" ${loading}>
 </picture>${caption ? `\n<figcaption>${caption}</figcaption>` : ''}`;
 }
 
@@ -150,6 +157,41 @@ function starButton(lang, stats) {
   return `<a class="star" href="${GITHUB}">${ICON.star}${content[lang].intro.star}${count}</a>`;
 }
 
+// 首頁下載區的 Windows 版（docs/website.md §16.2）：一張卡片，需求和安裝步驟在 Windows 版的頁面。還沒有 Windows 版時是空的
+function windowsDownload(lang, win) {
+  if (!win) return '';
+  const w = content[lang].download.windows;
+  return `<div class="windows-card">
+<div><h3>${w.h3}</h3><p>${w.p(win.version)}</p></div>
+<p class="links"><a class="download" href="${escape(win.x64.url)}" title="${escape(win.x64.name)}">${w.button}</a><a href="${ROUTES.windows(lang)}#download">${w.more}</a></p>
+</div>
+`;
+}
+
+// 常見問題：「有 Windows 版嗎」的答案看有沒有 Windows 版（§16.2）
+export function faqItems(lang, win) {
+  const f = content[lang].faq;
+  return [...f.items, [f.windows.q, win ? f.windows.available(ROUTES.windows(lang)) : f.windows.dev]];
+}
+
+// SmartScreen 的示意圖（§16.3）：兩格，左邊標出「其他資訊」，右邊標出「仍要執行」。純 CSS，不用截圖（三種語言都能用）
+function smartScreen(lang, win) {
+  const t = content[lang].windowsPage.download_.smartscreen;
+  const box = (expanded) => `<div class="ss-box${expanded ? ' expanded' : ''}" aria-hidden="true">
+  <p class="ss-title">${t.title}</p>
+  <p class="ss-body">${t.body}</p>
+  ${expanded
+    ? `<p class="ss-info">${t.app}${escape(win.x64.name)}<br>${t.publisher}</p>
+  <p class="ss-buttons"><span class="ss-run mark">${t.run}</span><span>${t.dont}</span></p>`
+    : `<p class="ss-more"><span class="mark">${t.more}</span></p>
+  <p class="ss-buttons"><span>${t.dont}</span></p>`}
+</div>`;
+  return `<figure class="smartscreen">
+<div class="ss-pair">${box(false)}<span class="ss-arrow" aria-hidden="true">→</span>${box(true)}</div>
+<figcaption>${t.caption}</figcaption>
+</figure>`;
+}
+
 function downloadsLine(lang, stats) {
   return stats?.downloads > 0 ? `<small class="stats">${content[lang].intro.downloads(formatNumber(lang, stats.downloads))}</small>` : '';
 }
@@ -178,8 +220,8 @@ function guidesSection(lang) {
 </section>`;
 }
 
-// demo：示範的樣式和 script 網址（build.mjs 讀進來）
-export function homePage({ lang, site, css, releases, demo, stats, videos }) {
+// demo：示範的樣式和 script 網址（build.mjs 讀進來）；platform：用 Windows 的訪客提示（§16.2）的 script 網址
+export function homePage({ lang, site, css, releases, windows, demo, platform, stats, videos }) {
   const c = content[lang];
   const latest = releases[0];
   const notesHref = `${ROUTES.changelog(lang)}#${latest.tag}`;
@@ -188,7 +230,11 @@ export function homePage({ lang, site, css, releases, demo, stats, videos }) {
   ${releaseNotes(lang, r).items}
 </div>`);
 
-  const body = `<section class="intro">
+  // 有 Windows 版時（§16.2）：第一屏多一個連結；用 Windows 的訪客多一行提示（/platform.js 打開，預設藏起來）
+  const alsoWindows = windows ? `<span class="also">・<a href="${ROUTES.windows(lang)}">${c.intro.alsoWindows}</a></span>` : '';
+  const onWindows = windows ? `<p class="on-windows" data-on-windows hidden><a href="${ROUTES.windows(lang)}">${c.intro.onWindows} →</a></p>\n` : '';
+  const faq = faqItems(lang, windows);
+  const body = `${onWindows}<section class="intro">
   <img src="/icon.png" alt="${c.intro.iconAlt}" width="96" height="96">
   <h1>${c.intro.h1}</h1>
   <p>${c.intro.lead}</p>
@@ -196,7 +242,7 @@ export function homePage({ lang, site, css, releases, demo, stats, videos }) {
     <a class="download" href="#download">${c.intro.download(latest.version)}</a>
     ${starButton(lang, stats)}
   </div>
-  <small>${c.intro.small}</small>
+  <small>${c.intro.small}${alsoWindows}</small>
   ${downloadsLine(lang, stats)}
   <a class="watch" href="#video">${ICON.play}${c.video.link}</a>
 </section>
@@ -249,7 +295,7 @@ ${c.download.rows.map(([k, v]) => `  <div><dt>${k}</dt><dd>${v}</dd></div>`).joi
 ${c.download.steps.map((s) => `  <li>${s}</li>`).join('\n')}
 </ol>
 <p class="note">${c.download.note}</p>
-<div class="star-ask">
+${windowsDownload(lang, windows)}<div class="star-ask">
   <p>${c.download.starAsk}</p>
   <div class="asks">
     ${starButton(lang, stats)}
@@ -266,18 +312,119 @@ ${recent.join('\n')}
 
 <section class="col part faq">
 <h2>${c.faq.h2}</h2>
-${c.faq.items.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
+${faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
 </section>${guidesSection(lang)}`;
 
   return layout({
-    lang, site, css: css + demo.css, route: 'home', title: c.meta.title, description: c.meta.description, body,
+    lang, site, css: css + demo.css, route: 'home', title: c.meta.title, description: c.meta.description, body, windows,
     // 沒有 JavaScript 時藏起示範，改顯示 <noscript> 裡的截圖
-    head: '<noscript><style>.demo { display: none; }</style></noscript>\n' + homeSchema({ lang, site, latest }),
-    scripts: `<script src="${demo.script}"></script>\n`,
+    head: '<noscript><style>.demo { display: none; }</style></noscript>\n' + homeSchema({ lang, site, latest, faq }),
+    scripts: `<script src="${demo.script}"></script>\n` + (windows ? `<script src="${platform}"></script>\n` : ''),
   });
 }
 
-export function changelogPage({ lang, site, css, releases }) {
+// Windows 版的頁面（docs/website.md §16.1）：有 Windows 版的 release 才產生
+export function windowsPage({ lang, site, css, windows: win, stats }) {
+  const c = content[lang];
+  const w = c.windowsPage;
+  const d = w.download_;
+  const notes = releaseNotes(lang, win);
+  const body = `<section class="intro">
+  <img src="/icon.png" alt="${c.intro.iconAlt}" width="96" height="96">
+  <h1>${w.h1}</h1>
+  <p>${w.lead}</p>
+  <div class="actions">
+    <a class="download" href="#download">${w.download(win.version)}</a>
+    ${starButton(lang, stats)}
+  </div>
+  <small>${w.small}<span class="also">・<a href="${ROUTES.home(lang)}">${w.alsoMac}</a></span></small>
+  ${downloadsLine(lang, stats)}
+</section>
+
+<figure class="wide">
+${shot(lang, 'summary', w.shots.summary, { first: true, win: true })}
+</figure>
+
+<section class="col part" id="how">
+<h2>${w.live.h2}</h2>
+${paragraphs(w.live.ps)}
+</section>
+<figure class="wide part">
+${shot(lang, 'recording', w.shots.recording, { win: true })}
+</figure>
+
+<section class="col part">
+<h2>${w.transcribe.h2}</h2>
+${paragraphs(w.transcribe.ps)}
+<p class="gpu">${w.transcribe.gpu}</p>
+</section>
+<figure class="wide part">
+${shot(lang, 'transcript', w.shots.transcript, { win: true, caption: c.shots.credit })}
+</figure>
+
+<section class="col part">
+<h2>${c.notes.h2}</h2>
+${paragraphs(c.notes.ps)}
+<p class="note">${c.notes.note}</p>
+</section>
+
+<section class="col part" id="privacy">
+<h2>${w.privacy.h2}</h2>
+<p>${w.privacy.lead}</p>
+<div class="two">
+  <div><h3>${w.privacy.local}</h3>${list(c.privacy.local.items)}</div>
+  <div><h3>${c.privacy.sent.h3}</h3>${list(c.privacy.sent.items)}</div>
+</div>
+<p>${c.privacy.tools}</p>
+</section>
+
+<section class="col part" id="download">
+<h2>${d.h2}</h2>
+<dl class="req">
+  <div><dt>${c.download.version}</dt><dd>${win.version}<a href="${escape(win.url)}">${d.notes}</a></dd></div>
+${d.rows.map(([k, v]) => `  <div><dt>${k}</dt><dd>${v}</dd></div>`).join('\n')}
+</dl>
+<div class="perf">
+<h3>${d.perf.h3}</h3>
+${list(d.perf.items)}
+</div>
+<p class="get"><a class="download" href="${escape(win.x64.url)}">${d.button(win.x64.name)}</a></p>
+<p class="arm"><a href="${escape(win.arm64.url)}" title="${escape(win.arm64.name)}">${d.arm}</a></p>
+<p class="first">${d.firstOpen}</p>
+<ol class="steps">
+${d.steps.map((step) => `  <li>${step}</li>`).join('\n')}
+</ol>
+${smartScreen(lang, win)}
+<p class="note">${d.sac}</p>
+<p class="note">${d.note}</p>
+<div class="star-ask">
+  <p>${c.download.starAsk}</p>
+  <div class="asks">
+    ${starButton(lang, stats)}
+    ${coffeeButton(lang)}
+  </div>
+</div>
+</section>
+
+<section class="col part">
+<h2>${w.updates.h2}</h2>
+<div class="release">
+  <h3><a href="${escape(win.url)}">${win.version}</a><span>${escape(c.date(win.date))}</span></h3>
+  ${notes.items}
+</div>
+</section>
+
+<section class="col part faq">
+<h2>${c.faq.h2}</h2>
+${w.faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
+</section>`;
+  return layout({
+    lang, site, css, route: 'windows', title: w.title, description: w.description, body, windows: win,
+    head: windowsSchema({ lang, site, win }),
+  });
+}
+
+export function changelogPage({ lang, site, css, releases, windows }) {
   const c = content[lang];
   const articles = releases.map((r, i) => {
     const notes = releaseNotes(lang, r);
@@ -301,21 +448,21 @@ ${articles.join('\n')}
   const title = c.meta.changelogTitle;
   const description = c.meta.changelogDescription;
   const head = pageSchema({ lang, site, route: 'changelog', title, description, modified: releases[0].date });
-  return layout({ lang, site, css, route: 'changelog', title, description, body, head });
+  return layout({ lang, site, css, route: 'changelog', title, description, body, head, windows });
 }
 
-export function notFoundPage({ lang, site, css }) {
+export function notFoundPage({ lang, site, css, windows }) {
   const c = content[lang];
   const body = `<div class="missing">
 <h1>${c.notFound.h1}</h1>
 <p>${c.notFound.p}</p>
 <p class="links"><a href="${ROUTES.home(lang)}">${c.notFound.home}</a><a href="${ROUTES.changelog(lang)}">${c.notFound.changelog}</a></p>
 </div>`;
-  return layout({ lang, site, css, title: c.meta.notFoundTitle, description: c.meta.description, body });
+  return layout({ lang, site, css, title: c.meta.notFoundTitle, description: c.meta.description, body, windows });
 }
 
 // 指南的一篇（§14.2）：麵包屑、標題、最後更新、內文、常見問題、下載、其他指南
-export function guidePage({ lang, site, css, guide }) {
+export function guidePage({ lang, site, css, guide, windows }) {
   const c = content[lang];
   const g = guide[lang];
   const L = c.guides;
@@ -341,13 +488,13 @@ ${related.length ? `<section class="related">
 </section>
 ` : ''}</article>`;
   return layout({
-    lang, site, css, paths: guidePaths(guide), title: g.title, description: g.description, body, ogType: 'article',
+    lang, site, css, paths: guidePaths(guide), title: g.title, description: g.description, body, ogType: 'article', windows,
     head: guideSchema({ lang, site, guide, url: `${site}${guidePath(lang, guide.slug)}` }),
   });
 }
 
 // 指南列表（§14.2）
-export function guidesIndexPage({ lang, site, css }) {
+export function guidesIndexPage({ lang, site, css, windows }) {
   const c = content[lang];
   const L = c.guides;
   const items = GUIDES.filter((g) => g[lang]).map((g) => `<li>
@@ -364,7 +511,7 @@ ${items.join('\n')}
   const modified = GUIDES.filter((g) => g[lang]).map((g) => g.updated).sort().at(-1);
   const paths = Object.fromEntries(guidesLangs().map((l) => [l, ROUTES.guides(l)]));
   return layout({
-    lang, site, css, paths, title: L.title, description: L.description, body,
+    lang, site, css, paths, title: L.title, description: L.description, body, windows,
     head: pageSchema({ lang, site, url: `${site}${ROUTES.guides(lang)}`, type: 'CollectionPage', title: L.title, description: L.description, modified }),
   });
 }
