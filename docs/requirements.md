@@ -1034,3 +1034,7 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | 各項功能 | ✅ | 見第 22 節（Windows）、第 24～26 節的驗收結果（R32～R35） |
 | 官網 | ✅ | 用 v4.0.0、win-v4.0.0 的發布說明試建置（`--releases`）：三種語言的 `/download` 是 4.0.0 的 DMG、`/download/windows`、`/download/windows-arm64` 是兩個安裝檔；更新紀錄最上面是 4.0.0 的 7 條 |
 | CI | ✅ | 手動執行（`windows`）：Windows 版測試、Mac 打包（run 39753860540）、Windows 版發布（run 39753864641）都通過；官網的部署被跳過（不是推 tag） |
+| Mac 的 DMG | ✅ | CI 的 Shiyin-4.0.0.dmg：app 4.0.0（build 13）、Authority=Shiyin Self-Signed（3.6.0 可以在 app 內更新上來）、`codesign --verify --deep --strict` 通過；`shiyin-update.json` 的 SHA-256 跟 DMG 相同；DMG 有中英文安裝說明、授權條款 |
+| Windows 的安裝檔 | ✅ | x64、ARM64 的更新說明用正式公鑰驗過（`update-key.cs verify` OK），版本 4.0.0、套件的 SHA-256 相符；ARM64 的安裝檔在虛擬機靜默安裝（4.0.0+03cf7a5），開 12 秒的合成會議，whisper 用安裝檔裡的 DLL、轉錄完成；解除安裝乾淨 |
+
+檢查完先不發布：使用者說另一個代理還要加追蹤數據的功能。發布時：把 `windows`（或之後的分支）再合進 main、推 main（官網部署 Windows 頁）、照上面的發布說明推 `v4.0.0`、`win-v4.0.0` 的 tag（CI 會重新建置；Windows 的 Release 不設成 latest）。
