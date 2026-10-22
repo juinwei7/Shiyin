@@ -1017,3 +1017,20 @@ GitHub issue #1 請求加上 Gemini、OpenCode、Groq。使用者在 issue 裡�
 | R35.3 引導、設定頁 | ✅ | 兩邊的引導都預設「之後再設定（先不整理）」、CLI 寫「沒有安裝（給已經在用…的人）」；選 Gemini 有「取得 API key」；設定頁顯示「之後再設定」和說明 |
 | R35.4 找不到 CLI 的訊息 | ✅ | 選了 claude、找不到：Mac 的整理工作、Windows 的會議頁都是新的說法；Windows 設定頁的狀態寫「這台電腦沒有安裝 claude…」 |
 | R35.5 iPhone | 🟡 | 還沒接（`ios` 分支） |
+
+## 27. 4.0.0 發布（2026-10-22，使用者決定 Mac、Windows 一起發布成 4.0.0）
+
+使用者決定：Windows 版（第 22 節）、R32～R35 一起發布成 4.0.0，Windows 同步（`win-v4.0.0`）；R14.7、R14.8（`mac-sentences`）這次不放，iPhone 另外發。`windows` 先合回 main，發布前先檢查。
+
+### 發布前檢查（2026-10-22）
+
+| 項目 | 結果 | 說明 |
+|---|---|---|
+| 合回 main | ✅ | 本機的 main 合併 `windows`（沒有衝突，跟 `windows` 的內容完全相同）；main 推上去官網就會部署 Windows 頁，發布時再推 |
+| 版本 | ✅ | Mac 4.0.0（build 13）、Windows 4.0.0（`Shiyin.App.csproj`）；README 的 Windows 版改成下載連結 |
+| 標準答案 | ✅ | Mac DEBUG 版的 `dump-golden` 206 個檔案跟 `shared/golden/expected` 完全相同（`llm/` 是假伺服器錄的，R32 時重錄過，之後提示詞沒改） |
+| 升級 | ✅ | 3.6.0 之後沒有新的 migration（還是 v9）；使用者資料庫的複本（14 場會議、7221 段、13 份會議紀錄）用新版打開：13 份舊的會議紀錄（沒有 `yesNo`）都匯出得出來，資料前後相同、`integrity_check` ok；複本測完刪掉 |
+| 介面文字 | ✅ | `l10n.py check`、`windows-check` 都沒有問題 |
+| 各項功能 | ✅ | 見第 22 節（Windows）、第 24～26 節的驗收結果（R32～R35） |
+| 官網 | ✅ | 用 v4.0.0、win-v4.0.0 的發布說明試建置（`--releases`）：三種語言的 `/download` 是 4.0.0 的 DMG、`/download/windows`、`/download/windows-arm64` 是兩個安裝檔；更新紀錄最上面是 4.0.0 的 7 條 |
+| CI | ✅ | 手動執行（`windows`）：Windows 版測試、Mac 打包（run 39753860540）、Windows 版發布（run 39753864641）都通過；官網的部署被跳過（不是推 tag） |
