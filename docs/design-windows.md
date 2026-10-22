@@ -258,6 +258,8 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 子程序放進 Job Object（`KILL_ON_JOB_CLOSE`）：拾音當掉時子程序一起結束；逾時時整棵程序樹一起結束。
 - 登入：用固定參數開 Windows Terminal（沒有就用 `cmd.exe /k`）執行 `claude` 或 `codex login`，參數裡不放任何使用者內容。
 
+- **還沒設定整理工具**（R35、M§19.6、D95）：同 Mac。`AppSettings.DetectCli` 由 App 用 `WindowsToolLocator` 找 claude、codex（要掃過 PATH 的每個資料夾，快取 30 秒）；Services、測試裡沒給就是找不到。DEBUG 加 `--set debugNoCli=YES` 當成找不到。
+
 ## 11. 介面
 
 ### 11.1 視窗對照

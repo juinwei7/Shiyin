@@ -895,7 +895,9 @@ final class AppModel {
             return
         }
         guard AppSettings.provider != .none else {
-            errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
         perform { try db.enqueue(id, kind: .summarize) }
@@ -938,7 +940,9 @@ final class AppModel {
             return (index, ReviewAnswer(time: item.time, question: item.question, answer: trimmed))
         }.sorted { $0.0 < $1.0 }.map(\.1)
         if !answered.isEmpty && AppSettings.provider == .none {
-            errorMessage = String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，沒辦法依回答修正。請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
             return false
         }
         perform {
@@ -966,7 +970,9 @@ final class AppModel {
             return
         }
         guard AppSettings.provider != .none else {
-            errorMessage = String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
         perform { try db.enqueue(id, kind: .correct) }

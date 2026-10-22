@@ -9,7 +9,7 @@ struct OnboardingView: View {
     @Environment(\.openWindow) private var openWindow
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("hasSeenGuide") private var hasSeenGuide = false
-    @AppStorage(AppSettings.providerKey) private var provider = LLMProvider.claude.rawValue
+    @AppStorage(AppSettings.providerKey) private var storedProvider = ""
     @State private var step: Int
     @State private var micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @State private var notificationsAllowed: Bool?
@@ -172,13 +172,22 @@ struct OnboardingView: View {
     }
 
     private var providers: some View {
-        let current = LLMProvider(rawValue: provider) ?? .claude
         let claude = Paths.findTool("claude"), codex = Paths.findTool("codex")
+        // 沒選過時顯示自動選到的那一個；找不到 claude、codex 時是「之後再設定」（R35.3、design §19.6）。改了才寫進設定
+        let selected = LLMProvider(rawValue: storedProvider) != nil ? storedProvider
+            : claude != nil ? LLMProvider.claude.rawValue : codex != nil ? LLMProvider.codex.rawValue : ""
+        let current = LLMProvider(rawValue: selected) ?? .none
+        let noCLI = claude == nil && codex == nil
         return VStack(alignment: .leading, spacing: 14) {
             Text("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。").foregroundStyle(.secondary)
-            Picker("整理工具", selection: $provider) {
-                Text("Claude（claude CLI）\(claude == nil ? String(localized: "：找不到") : "")").tag(LLMProvider.claude.rawValue)
-                Text("Codex（codex CLI）\(codex == nil ? String(localized: "：找不到") : "")").tag(LLMProvider.codex.rawValue)
+            if noCLI {
+                Text("這台 Mac 沒有 Claude Code 或 Codex。要用 AI 整理會議紀錄，選一個 API 並貼上 API key（有取得 key 的連結）；也可以之後再設定，錄音和逐字稿照常能用。")
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Picker("整理工具", selection: Binding(get: { selected }, set: { storedProvider = $0 })) {
+                if noCLI { Text("之後再設定（先不整理）").tag("") }
+                Text("Claude（claude CLI）\(claude == nil ? String(localized: "：沒有安裝（給已經在用 Claude Code 的人）") : "")").tag(LLMProvider.claude.rawValue)
+                Text("Codex（codex CLI）\(codex == nil ? String(localized: "：沒有安裝（給已經在用 Codex 的人）") : "")").tag(LLMProvider.codex.rawValue)
                 Text("Anthropic API（填 API key）").tag(LLMProvider.anthropic.rawValue)
                 Text("OpenAI API（填 API key）").tag(LLMProvider.openai.rawValue)
                 Text("Gemini API（填 API key）").tag(LLMProvider.gemini.rawValue)
@@ -210,11 +219,8 @@ struct OnboardingView: View {
                 } else if Keychain.exists(current.keychainAccount) {
                     Label("已儲存在鑰匙圈", systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
                 }
+                if let url = current.apiKeyURL { Link("取得 API key", destination: url) }
             }
-        }
-        .onAppear {
-            // 沒有 claude 但有 codex 時，預設改選 codex
-            if current == .claude && claude == nil && codex != nil { provider = LLMProvider.codex.rawValue }
         }
     }
 

@@ -30,6 +30,10 @@ enum Paths {
     ]
 
     static func findTool(_ name: String) -> URL? {
+        #if DEBUG
+        // -debugNoCLI YES：當成沒有安裝 claude、codex，在裝了 CLI 的電腦上測（design §19.6）
+        if ["claude", "codex"].contains(name) && UserDefaults.standard.bool(forKey: "debugNoCLI") { return nil }
+        #endif
         for dir in toolDirectories {
             let path = (dir as NSString).appendingPathComponent(name)
             if FileManager.default.isExecutableFile(atPath: path) { return URL(fileURLWithPath: path) }

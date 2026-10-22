@@ -30,6 +30,15 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     }
 
     var usesAPIKey: Bool { [.anthropic, .openai, .gemini, .openaiCompatible].contains(self) }
+    /// 「取得 API key」的網頁（R35.3）；OpenAI 相容 API 各家不同，沒有
+    var apiKeyURL: URL? {
+        switch self {
+        case .anthropic: return URL(string: "https://console.anthropic.com/settings/keys")
+        case .openai: return URL(string: "https://platform.openai.com/api-keys")
+        case .gemini: return URL(string: "https://aistudio.google.com/apikey")
+        default: return nil
+        }
+    }
     /// OpenAI 相容 API 的 key 可以不填：本機的 Ollama、LM Studio 不需要（design §19.3）
     var keyOptional: Bool { self == .openaiCompatible }
     /// 鑰匙圈的 account（design §8.4）
@@ -62,7 +71,11 @@ enum LLMError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notInstalled(let name): return String(localized: "找不到 \(name) 指令，請先安裝並登入，或到設定 → 整理工具改用 API key")
+        case .notInstalled(let name):
+            // 一般使用者不知道什麼是指令：說清楚是給已經在用 Claude Code（Codex）的人，沒有的話改用 API（R35.4）
+            return name == "codex"
+                ? String(localized: "這台 Mac 找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
+                : String(localized: "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
         case .notLoggedIn(let name):
             return name == "codex"
                 ? String(localized: "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")

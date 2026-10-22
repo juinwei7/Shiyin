@@ -1235,6 +1235,17 @@
         }
       }
     },
+    "之後再設定（先不整理）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set up later (don't summarize for now)"
+          }
+        }
+      }
+    },
     "之後可以在「設定 → 進階」重新顯示這個引導。": {
       "extractionState": "manual",
       "localizations": {
@@ -2224,6 +2235,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Replace “%@” → “%@”"
+          }
+        }
+      }
+    },
+    "取得 API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get an API key"
           }
         }
       }
@@ -3618,17 +3640,6 @@
         }
       }
     },
-    "找不到 %@ 指令，請先安裝並登入，或到設定 → 整理工具改用 API key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can't find the %@ command. Install it and sign in, or switch to an API key in Settings → Summarizer."
-          }
-        }
-      }
-    },
     "找不到「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -3680,17 +3691,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No audio data found"
-          }
-        }
-      }
-    },
-    "找不到，請先安裝並登入": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not found. Install it and sign in first."
           }
         }
       }
@@ -7388,6 +7388,17 @@
         }
       }
     },
+    "設定整理工具": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up Summarizer"
+          }
+        }
+      }
+    },
     "設定（⌘,）": {
       "extractionState": "manual",
       "localizations": {
@@ -8237,6 +8248,61 @@
         }
       }
     },
+    "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude isn't installed on this Mac. If you don't use Claude Code, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台 Mac 找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex isn't installed on this Mac. If you don't use Codex, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有 Claude Code 或 Codex。要用 AI 整理會議紀錄，選一個 API 並貼上 API key（有取得 key 的連結）；也可以之後再設定，錄音和逐字稿照常能用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac doesn't have Claude Code or Codex. To have AI write your meeting notes, choose an API and paste an API key (there's a link to get one). You can also set this up later; recording and transcripts work either way."
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "claude isn't installed on this Mac. If you don't use Claude Code, choose an API instead"
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有安裝 codex：沒有在用 Codex 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex isn't installed on this Mac. If you don't use Codex, choose an API instead"
+          }
+        }
+      }
+    },
     "這場會議不再提示": {
       "extractionState": "manual",
       "localizations": {
@@ -8806,6 +8872,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "There's no transcript yet. Transcribe the recording first."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet. Once you choose one, transcripts can be turned into a summary, decisions and action items, and future meetings are summarized automatically after transcription."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，沒辦法依回答修正。請先到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet, so the notes can't be revised from your answers. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，沒辦法提問；請到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet, so you can't ask questions. Choose Claude, Codex or an API in Settings."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet. Choose Claude, Codex or an API in Settings first."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具，請到設定選擇 Claude、Codex 或 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet. Choose Claude, Codex or an API in Settings."
+          }
+        }
+      }
+    },
+    "還沒設定整理工具：錄音、轉錄、逐字稿全部留在這台 Mac。選好整理工具之後，才會整理成會議紀錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No summarizer is set up yet: recordings, transcription and transcripts all stay on this Mac. Meeting notes are created once you choose a summarizer."
           }
         }
       }
@@ -9801,13 +9933,24 @@
         }
       }
     },
-    "：找不到": {
+    "：沒有安裝（給已經在用 Claude Code 的人）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": ": not found"
+            "value": ": not installed (for people who already use Claude Code)"
+          }
+        }
+      }
+    },
+    "：沒有安裝（給已經在用 Codex 的人）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ": not installed (for people who already use Codex)"
           }
         }
       }
