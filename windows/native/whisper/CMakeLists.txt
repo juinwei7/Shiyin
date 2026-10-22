@@ -1,11 +1,12 @@
 # 建 shiyin_whisper（design-windows §8）：whisper.cpp 固定在 b5454（commit d1be6fd，跟 Mac 的 Package.swift 同一版）
-#   cmake -S windows/native/whisper -B <建置資料夾> -DWHISPER_SOURCE=<whisper.cpp 的原始碼> [-DSHIYIN_VULKAN=ON]
+#   cmake -S windows/native/whisper -B <建置資料夾> -DWHISPER_SOURCE=<whisper.cpp 的原始碼> [-DSHIYIN_VULKAN=ON] [-DSHIYIN_ARM_ARCH=<-march>]
 # Mac：靜態連結 whisper、ggml，一個 dylib（Metal 內嵌）。Windows：ggml 的後端分開成 DLL，執行時依 CPU 選（GGML_BACKEND_DL）
 cmake_minimum_required(VERSION 3.21)
 project(shiyin_whisper C CXX)
 
 set(WHISPER_SOURCE "" CACHE PATH "whisper.cpp 的原始碼（b5454）")
 option(SHIYIN_VULKAN "x64 加上 Vulkan" OFF)
+set(SHIYIN_ARM_ARCH "" CACHE STRING "ARM64：ggml-cpu 的最低 CPU 等級（clang 的 -march），空的時候建 x64 的所有 CPU 版本")
 if(NOT WHISPER_SOURCE)
     message(FATAL_ERROR "要給 -DWHISPER_SOURCE")
 endif()
@@ -19,7 +20,13 @@ if(WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
     set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
     set(GGML_BACKEND_DL ON CACHE BOOL "" FORCE)
-    set(GGML_CPU_ALL_VARIANTS ON CACHE BOOL "" FORCE)
+    if(SHIYIN_ARM_ARCH)
+        # ARM64 只建一個 CPU 版本（ggml 在 Windows ARM 不支援 GGML_CPU_ALL_VARIANTS，design-windows §8）
+        set(GGML_CPU_ALL_VARIANTS OFF CACHE BOOL "" FORCE)
+        set(GGML_CPU_ARM_ARCH ${SHIYIN_ARM_ARCH} CACHE STRING "" FORCE)
+    else()
+        set(GGML_CPU_ALL_VARIANTS ON CACHE BOOL "" FORCE)
+    endif()
     set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
     set(GGML_VULKAN ${SHIYIN_VULKAN} CACHE BOOL "" FORCE)
 else()
