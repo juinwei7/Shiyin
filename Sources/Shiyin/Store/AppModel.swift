@@ -165,6 +165,8 @@ final class AppModel {
     var showTrash = false
     var selection: Int64? { didSet { if oldValue != selection { reloadDetail() } } }
     var detail: MeetingDetail?
+    /// 待確認的回答（design §31.2）：待確認分頁和紀錄旁的就地回答共用；換會議就換一份（`syncReviewDraft`）
+    var reviewDraft: ReviewDraft?
     var tab: DetailTab = .summary
     var filter = ""
     /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
@@ -373,6 +375,7 @@ final class AppModel {
         #endif
         guard let id = selection, let meeting = try? db.meeting(id) else {
             detail = nil
+            syncReviewDraft()
             player.unload()
             return
         }
@@ -388,6 +391,7 @@ final class AppModel {
         loaded.buildIndexes()
         loaded.linkReviewItems()
         detail = loaded
+        syncReviewDraft()
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL) } else { player.unload() }
         }
@@ -1510,6 +1514,32 @@ final class AppModel {
         }
         if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }
         detail = updated
+        syncReviewDraft()
+    }
+
+    /// 待確認的回答跟著目前的會議（design §31.2）：換會議就換一份（舊的先存），題目或說話者的建議變了就同步
+    private func syncReviewDraft() {
+        guard let detail, let id = detail.meeting.id else {
+            reviewDraft?.flush()
+            reviewDraft = nil
+            return
+        }
+        if reviewDraft?.meetingId != id {
+            reviewDraft?.flush()
+            reviewDraft = ReviewDraft(meetingId: id, model: self)
+        }
+        reviewDraft?.sync(items: detail.notes?.reviewItems ?? [], suggestions: detail.speakerSuggestions)
+    }
+
+    /// 送出待確認的回答（待確認分頁和就地回答共用，R41.2）：先送整理工具要處理的題目（題目文字可能有說話者的名字，
+    /// 改名後會變），失敗時全部留著；再處理說話者的題目（design §27）
+    func submitReviewDraft() {
+        guard let draft = reviewDraft, detail?.meeting.id == draft.meetingId else { return }
+        if draft.answeredCount > 0 || !draft.dismissed.isEmpty {
+            guard submitReview(answers: draft.answers, dismissed: draft.dismissed) else { return }
+        }
+        answerSpeakerQuestions(draft.speakerAnswers, skipped: draft.speakerSkipped)
+        draft.clear()
     }
 
     private func jobFinished(_ job: Job, error: Error?) {

@@ -4292,6 +4292,17 @@
         }
       }
     },
+    "收合": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse"
+          }
+        }
+      }
+    },
     "收起": {
       "extractionState": "manual",
       "localizations": {
@@ -5378,6 +5389,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Answered questions go to %@ to revise the meeting notes; skipped ones are removed. To undo a mistake, revert to the previous version from “More”."
+          }
+        }
+      }
+    },
+    "有回答的題目會交給整理工具依答案修正；略過的直接移除。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answered questions go to the summarizer to revise the notes; skipped ones are removed."
           }
         }
       }

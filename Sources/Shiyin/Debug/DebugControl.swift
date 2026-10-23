@@ -39,6 +39,24 @@ enum DebugControl {
         case "restore": if let id { model.restore(id) }
         case "purge": if let id { model.deletePermanently(id) }
         case "confirmpurge": model.confirmPurge = id   // 等於在垃圾桶按右鍵「永久刪除…」
+        case "reviewexpand":
+            // reviewexpand <會議 id> <summary|decisions|actionItems|openQuestions|topic|custom> <位置> [第二個位置]：
+            // 等於點那一條紀錄旁的待確認標記（R41.2）；位置給 - 就收合。視窗不在目前的桌面時 press 按不到標記，用這個
+            model.selection = id
+            let a = Int(args.count > 3 ? args[3] : "") ?? 0, b = Int(args.count > 4 ? args[4] : "") ?? 0
+            let ref: NoteItemRef? = switch args[2] {
+            case "summary": .summary(a)
+            case "decisions": .decisions(a)
+            case "actionItems": .actionItems(a)
+            case "openQuestions": .openQuestions(a)
+            case "topic": .topicPoint(a, b)
+            case "custom": .custom(a, b)
+            default: nil
+            }
+            model.reviewDraft?.expanded = ref
+        case "reviewsubmit":   // reviewsubmit <會議 id>：等於按待確認分頁或就地回答的「送出」（送目前的草稿）
+            model.selection = id
+            model.submitReviewDraft()
         case "review":
             // review <id> <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>
             model.selection = id

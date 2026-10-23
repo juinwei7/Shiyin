@@ -11,8 +11,8 @@
 
 順序：V1 → V2 → V3 → V4（Mac），再 V5（Windows）；V6、V7 可以穿插。下面「Mac 的小問題」的逐字稿時間點這一版一起修。驗證用示範資料：把 `~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`，DEBUG 版加 `-ApplePersistenceIgnoreState YES -autoSummarize NO -correctTranscript NO` 啟動。
 
-- [ ] **V2 就地回答（Mac）**（R41.2、R41.3、§31.2）：`ReviewDraft`、`ReviewQuestionRow`、`InlineReviewCard`
-  - 驗證：在真的畫面上用 AX 按標記、「是」、打字、「送出」（視窗要在目前的桌面）；就地回答一題後切到待確認分頁看到同一個回答，反過來也是；結束拾音再開草稿還在；編輯模式、匯出的 Markdown 沒有標記
+- [~] **V2 就地回答（Mac）**（R41.2、R41.3、§31.2）：程式完成（`ReviewDraft`、`ReviewQuestionRow`、`InlineReviewCard`），草稿兩邊一致、重開還在、送出經假伺服器修正都用 `reviewexpand`、`typefield`、`reviewsubmit` 驗過
+  - 還差：在真的畫面上用 AX 按標記、「是」、「送出」一次（視窗要在目前的桌面，`summon` 會出現在使用者畫面上，要先問）；V3 改完待確認分頁再一起按
 - [ ] **V3 是＝確認、全部略過、略過按鈕（Mac）**（R41.4、R41.5、§31.3、§31.4）
   - 驗證：全部按「是」送出：`sqlite3` 看 `jobs` 沒有 `revise`、`notes_versions` 多一版原因「確認待確認」、題目消失；一題打字一題「是」：只有打字的在 `revise` 的 payload；`-llmProvider none` 啟動，全部略過能送、有打字的擋下並說明；「全部略過」後送出鈕是「略過 N 題」；`dump-golden` 跟 `shared/golden/expected` 相同（提示詞沒改）
 - [ ] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：`UsageStats.review`、`workers/usage` 的 schema 和 worker
