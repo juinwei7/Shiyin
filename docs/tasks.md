@@ -23,11 +23,6 @@
   - 還差：官網首屏示範補待確認的標記（website §10.1：`site/src/demo-markup.mjs` 的紀錄條目加「？」、demo.js 的待確認章節可以就地回答）
 - [ ] **V9 iPhone 接 R41、R42**（`ios` 分支，之後）：標記與就地回答共用 Mac 的 view；收音提醒走即時動態
 
-## Mac 的小問題（2026-10-22 做 Windows 版時發現）
-
-- [ ] **逐字稿的時間點跳到段落真正的開始**：逐字稿每一段的時間按鈕照顯示的時間跳（`TimeButton(time: TimeFormat.string(segment.start))`），24.4 秒的段落顯示 00:24、跳到 24.0 秒，播放位置的高亮會落在上一段。改成跳到 `segment.start`（Windows 版已經改了，design-windows §11.2.1）
-  - 驗證：開始時間有小數的段落，點時間後高亮的是那一段
-
 ## 還沒設定整理工具（R35，design §19.6；2026-10-22 使用者回饋）
 
 - [ ] **iPhone 接 R35**（R35.5）：`ios` 分支接 Mac 的 commit；iPhone 沒有 CLI，沒選過時一律「還沒設定」，引導、設定頁只列 API 和「不整理」

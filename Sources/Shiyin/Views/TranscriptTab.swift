@@ -323,7 +323,7 @@ struct TranscriptTab: View {
         let isCurrent = segment.id == currentSegmentId
         let isHighlighted = segment.id == model.highlightSegment
         HStack(alignment: .firstTextBaseline, spacing: 14) {
-            TimeButton(time: TimeFormat.string(segment.start))
+            TimeButton(time: TimeFormat.string(segment.start), seek: segment.start)
                 .frame(width: 58, alignment: .trailing)
             if let idx = segment.speaker {
                 Button(detail.speakerName(idx) ?? "") {

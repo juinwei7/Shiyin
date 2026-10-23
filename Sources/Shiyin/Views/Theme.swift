@@ -76,10 +76,12 @@ extension View {
 struct TimeButton: View {
     @Environment(AppModel.self) private var model
     let time: String
+    /// 要跳到的秒數；沒給就照顯示的時間。逐字稿的段落給真正的開始時間（24.4 秒的段落顯示 00:24，跳到 24.0 高亮會落在上一段）
+    var seek: Double? = nil
 
     var body: some View {
         // 沒有錄音的會議（例如匯入逐字稿）點了也沒辦法播，顯示成一般文字
-        if let seconds = TimeFormat.seconds(time), model.player.isLoaded {
+        if let seconds = seek ?? TimeFormat.seconds(time), model.player.isLoaded {
             Button(time) { model.player.seek(to: seconds) }
                 .buttonStyle(.plain)
                 .font(.callout.monospacedDigit())
