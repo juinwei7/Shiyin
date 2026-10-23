@@ -144,6 +144,17 @@
         }
       }
     },
+    "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。紀錄裡有疑問的那一條旁邊會有「？」，點了就能當場回答；也可以到「待確認」分頁一次看完。能用是或否回答的直接按「是」「不是」（按「是」不用等整理工具），其他的在「你的回答」欄位回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的按「略過」，或一次「全部略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“To confirm” lists the names, terms, owners and deadlines the summarizer wasn’t sure about. The note in question gets a “?” next to it: click it to answer right there, or open the “To confirm” tab to go through them all. Questions that take yes or no have “Yes” and “No” buttons (“Yes” confirms on the spot, no waiting for the summarizer); answer the others in “Your answer”, then click “Submit” and the notes are revised to match. Click “Skip” on anything unclear or unimportant, or “Skip all”. You can also edit the notes directly with “Edit” on the Summary tab. If something goes wrong, choose “Restore previous notes” from “More”."
+          }
+        }
+      }
+    },
     "・匯入：把錄音檔拖進視窗，或按「匯入」（Ctrl+O）": {
       "extractionState": "manual",
       "localizations": {

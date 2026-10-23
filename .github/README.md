@@ -18,7 +18,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 1. **Record or import**: click Record in the toolbar (⌘R). For online meetings, set the source to “Microphone + computer audio” so the other side is recorded too. Already have a recording? Drag it into the window.
 2. **Follow along and take notes**: the live transcript is on the left. In “My notes” on the right, each new line is stamped with the recording time; click “Bookmark” (⌘B, or ⌃⌥⌘B from any app) at important moments.
 3. **Stop and transcribe**: right after you stop, Shiyin drafts notes from the live transcript while it transcribes the recording again on your Mac and identifies the speakers. Click “Speaker 1” to change it to a name; Shiyin remembers the voice and fills in the name next time.
-4. **Read the meeting notes**: the transcript is summarized into a summary, decisions, action items and open questions, each with a timestamp you can click to jump back into the recording. Names and terms the summarizer isn’t sure about are listed under “To confirm”; answer them and the notes are revised. To find out who said what, just ask in the Ask tab.
+4. **Read the meeting notes**: the transcript is summarized into a summary, decisions, action items and open questions, each with a timestamp you can click to jump back into the recording. Names and terms the summarizer isn’t sure about are listed under “To confirm”, and the note in question gets a “?” next to it: click it to answer right there, and the notes are revised (a “Yes” confirms on the spot, no waiting). To find out who said what, just ask in the Ask tab.
 5. **Export and share**: save the notes as Markdown, PDF or Word, the transcript as subtitles, or package the whole meeting as a .shiyin file for a colleague.
 
 ## Features
@@ -26,7 +26,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 - **Recording**
   - Sources: microphone only, microphone + computer audio (online meetings), or computer audio only. The other side of Zoom, Meet or Teams is recorded too
   - Live transcript and per-source level meters while recording; pause, bookmark and take notes
-  - Sound check: the recording screen tells you when the microphone isn’t picking up any sound, the sound is too quiet, or the room is too noisy
+  - Sound check: the recording screen tells you when the microphone isn’t picking up any sound, the sound is too quiet, or the room is too noisy; when you are in another app you get a notification and the menu bar icon turns into a warning
   - In a crowded or noisy room, pick roughly how many people there are while recording or when importing, so speakers are told apart better
   - Recording continues with the main window closed; pause or stop from the menu bar, or press ⌃⌥⌘R in any app to start or stop
   - Plugging in or unplugging headphones, or switching output devices, while recording reconnects automatically and keeps recording

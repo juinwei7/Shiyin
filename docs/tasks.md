@@ -19,7 +19,8 @@
   - 還差：虛擬機上 `ctl.sh select/tab/reviewexpand` 加 UI Automation 按標記、「是」、送出，`shot.sh` 截圖跟 Mac 對照
 - [~] **V7 Windows 收音提醒**（R42.3、design-windows §11.5）：程式完成（`Recorder.HintAppeared`、`Notifier.LevelHint`、系統匣的提示文字和右鍵選單的「知道了」、`state` 的 `lastToast`），Mac 上建置 0 警告 0 錯誤
   - 還差：虛擬機 `record-sim` 同一個「說話後靜音」的 WAV（Mac 的 scratchpad 做法：afconvert 轉 16 kHz 再接 90 秒靜音），`ctl.sh state` 的 `recorder.hint` 變 silent、`lastToast` 是「收音提醒」，通知中心有通知、系統匣右鍵有提示和「知道了」
-- [ ] **V8 文件與示範**：使用說明的「回答待確認」那段、README（中英）、官網首屏示範（website §10.1：待確認的標記）、`l10n.py check` 和 `windows-check` 加英文
+- [~] **V8 文件與示範**：使用說明（Mac、Windows）的「回答待確認」那段、README（中英）的待確認和收音提醒都改了，英文已加
+  - 還差：官網首屏示範補待確認的標記（website §10.1：`site/src/demo-markup.mjs` 的紀錄條目加「？」、demo.js 的待確認章節可以就地回答）
 - [ ] **V9 iPhone 接 R41、R42**（`ios` 分支，之後）：標記與就地回答共用 Mac 的 view；收音提醒走即時動態
 
 ## Mac 的小問題（2026-10-22 做 Windows 版時發現）
