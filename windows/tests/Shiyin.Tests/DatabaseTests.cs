@@ -84,6 +84,8 @@ public sealed class DatabaseTests : IDisposable
         using var db = new AppDatabase(Path.Combine(dir, "golden.sqlite"), Path.Combine(dir, "backups"));
         var ids = new Dictionary<string, long>();
         long Id(JsonElement op) => ids[op.Str("key")!];
+        static HashSet<int> Ints(JsonElement op, string name) =>
+            op.TryGetProperty(name, out var array) ? array.EnumerateArray().Select(x => x.GetInt32()).ToHashSet() : [];
         long SegmentId(long meetingId, int seq) => db.Segments(meetingId).First(s => s.Seq == seq).Id!.Value;
         void Result(JsonElement op, JNode node) => Golden.Json(op.Str("file")!, SwiftJsonWriter.Write(node, true, false));
 
@@ -165,6 +167,17 @@ public sealed class DatabaseTests : IDisposable
                 }
                 case "undoNotes": Result(op, new JNode.Obj().Add("undone", JNode.Of(db.UndoNotes(Id(op))))); break;
                 case "dismissReviewItems": db.DismissReviewItems(Id(op), op.GetProperty("indexes").EnumerateArray().Select(x => x.GetInt32()).ToHashSet()); break;
+                case "resolveReviewItems": db.ResolveReviewItems(Id(op), Ints(op, "confirmed"), Ints(op, "dismissed")); break;
+                case "reviewLinks":
+                {
+                    // 待確認的題目對應到哪一條紀錄（R41.1、M§31.1）：跟 Mac 的 reviewLinks() 逐字比對
+                    var notes = db.Meeting(Id(op))?.DecodedNotes ?? new MeetingNotes();
+                    var links = ReviewLinks.Compute(notes).OrderBy(p => p.Key.Section).ThenBy(p => p.Key.Index).ThenBy(p => p.Key.Sub)
+                        .Select(p => (JNode)new JNode.Obj().Add("section", p.Key.SectionName).Add("index", new JNode.Int(p.Key.Index)).Add("sub", new JNode.Int(p.Key.Sub))
+                            .Add("questions", new JNode.Arr(p.Value.OrderBy(q => q).Select(q => (JNode)new JNode.Int(q)))));
+                    Result(op, new JNode.Arr(links));
+                    break;
+                }
                 case "saveCorrections":
                 {
                     var mid = Id(op);

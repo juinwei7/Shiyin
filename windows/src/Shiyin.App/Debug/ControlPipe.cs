@@ -75,6 +75,33 @@ public static class ControlPipe
                 }
                 return Ok;
             case "quit": _ = app.Quit(confirmed: true); return Ok;
+            // 待確認就地回答（R41，M§31.2）：reviewexpand <summary|decisions|actionItems|openQuestions|topic|custom> <位置> [第二個位置]（- 收合）；
+            // reviewsubmit（送目前的草稿）；reviewskipall（全部略過）；review <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>（直接送 SubmitReview）
+            case "reviewexpand" when args.Length > 1 && main is not null:
+            {
+                var a = args.Length > 2 && int.TryParse(args[2], out var x) ? x : 0;
+                var b = args.Length > 3 && int.TryParse(args[3], out var y) ? y : 0;
+                main.ReviewDraft.Expanded = args[1] switch
+                {
+                    "summary" => NoteItemRef.Summary(a), "decisions" => NoteItemRef.Decisions(a), "actionItems" => NoteItemRef.ActionItems(a),
+                    "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b), _ => null,
+                };
+                main.Refresh();
+                return Ok;
+            }
+            case "reviewsubmit" when main is not null: main.ReviewDraft.Submit(); main.Refresh(); return Ok;
+            case "reviewskipall" when main?.State.Detail is { } skipDetail:
+                main.ReviewDraft.SkipAllUnanswered(skipDetail);
+                main.ReviewDraft.Flush();
+                main.Refresh();
+                return Ok;
+            case "review" when args.Length > 2 && main?.State.Detail is { } reviewDetail:
+            {
+                var answers = (JsonNode.Parse(args[2]) as JsonObject)?.Where(p => int.TryParse(p.Key, out _))
+                    .ToDictionary(p => int.Parse(p.Key), p => p.Value?.GetValue<string>() ?? "") ?? [];
+                var dismissed = (args.Length > 3 ? args[3] : "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToHashSet();
+                return new JsonObject { ["ok"] = host.Controller.SubmitReview(reviewDetail.Meeting.Id!.Value, answers, dismissed) };
+            }
             case "record-sim" when args.Length > 1:
                 var speed = args.Length > 2 && double.TryParse(args[2], out var s) ? s : 1;
                 var both = args.Length > 3 && args[3] == "1";
@@ -179,6 +206,7 @@ public static class ControlPipe
             ["home"] = host.Paths.Home,
             ["selection"] = main?.State.Selection,
             ["tab"] = main?.State.Tab.ToString(),
+            ["reviewExpanded"] = main?.ReviewDraft.Expanded?.ToString(),
             ["meetings"] = main?.State.Meetings.Count,
             ["running"] = running,
             ["models"] = models,

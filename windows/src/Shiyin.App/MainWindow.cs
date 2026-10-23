@@ -35,6 +35,8 @@ public sealed class MainWindow : Window
     readonly DispatcherTimer progressTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     bool wasBusy;
     readonly DetailView detailView;
+    /// <summary>待確認的回答（M§31.2）：DEBUG 的控制通道用</summary>
+    public Views.ReviewDraft ReviewDraft => detailView.ReviewDraft;
     bool updatingSelection;
 
     public MainWindow(AppHost host)

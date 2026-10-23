@@ -202,6 +202,29 @@ enum NoteItemRef: Hashable {
     case topicPoint(Int, Int)
     /// 第幾個自訂段落的第幾條
     case custom(Int, Int)
+
+    /// 標準答案用的名稱和排序（design-windows §4：Windows 的 ReviewLinks 跟這裡比對）
+    var sectionName: String {
+        switch self {
+        case .summary: return "summary"
+        case .decisions: return "decisions"
+        case .actionItems: return "actionItems"
+        case .openQuestions: return "openQuestions"
+        case .topicPoint: return "topicPoint"
+        case .custom: return "custom"
+        }
+    }
+
+    var sortKey: (Int, Int, Int) {
+        switch self {
+        case .summary(let i): return (0, i, 0)
+        case .decisions(let i): return (1, i, 0)
+        case .actionItems(let i): return (2, i, 0)
+        case .openQuestions(let i): return (3, i, 0)
+        case .topicPoint(let t, let i): return (4, t, i)
+        case .custom(let c, let i): return (5, c, i)
+        }
+    }
 }
 
 extension MeetingNotes {

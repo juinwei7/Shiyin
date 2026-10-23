@@ -25,7 +25,7 @@
       "language" : "zh",
       "meeting_date" : "2026-10-15",
       "min_speakers" : null,
-      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"reviewItems\":[{\"question\":\"「Kubernetes」的寫法對嗎？\",\"time\":\"00:09\"}],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
+      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"reviewItems\":[],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
       "notes_by" : "claude",
       "notes_draft" : 0,
       "participants" : "王小明, 李大華、Amy，陳美玲",
@@ -51,7 +51,7 @@
       "language" : "en",
       "meeting_date" : "2026-10-18",
       "min_speakers" : null,
-      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-23\",\"owner\":\"Bob\",\"task\":\"Send the email via SendGrid\",\"time\":\"00:03\"}],\"custom\":[{\"items\":[{\"text\":\"Roadmap on track\",\"time\":\"00:00\"}],\"title\":\"Updates and progress\"}],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[{\"question\":\"Is \\\"beta\\\" the right term?\",\"time\":\"00:08\"}],\"summary\":[{\"text\":\"Reviewed the Q4 roadmap\",\"time\":\"00:00\"}],\"title\":\"Q4 roadmap\",\"topics\":[]}",
+      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-23\",\"owner\":\"Bob\",\"task\":\"Send the email via SendGrid\",\"time\":\"00:03\"}],\"custom\":[{\"items\":[{\"text\":\"Roadmap on track\",\"time\":\"00:00\"}],\"title\":\"Updates and progress\"}],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[{\"text\":\"Reviewed the Q4 roadmap\",\"time\":\"00:00\"}],\"title\":\"Q4 roadmap\",\"topics\":[]}",
       "notes_by" : "claude",
       "notes_draft" : 0,
       "participants" : "Alice, Bob",
@@ -81,6 +81,20 @@
       "meeting_id" : 1,
       "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"reviewItems\":[{\"question\":\"「Kubernetes」的寫法對嗎？\",\"time\":\"00:09\"},{\"question\":\"負責人是誰？\",\"time\":\"\"}],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
       "reason" : "略過待確認"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 5,
+      "meeting_id" : 1,
+      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"reviewItems\":[{\"question\":\"「Kubernetes」的寫法對嗎？\",\"time\":\"00:09\"}],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
+      "reason" : "確認待確認"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 6,
+      "meeting_id" : 2,
+      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-23\",\"owner\":\"Bob\",\"task\":\"Send the email via SendGrid\",\"time\":\"00:03\"}],\"custom\":[{\"items\":[{\"text\":\"Roadmap on track\",\"time\":\"00:00\"}],\"title\":\"Updates and progress\"}],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[{\"question\":\"Is \\\"beta\\\" the right term?\",\"time\":\"00:08\"}],\"summary\":[{\"text\":\"Reviewed the Q4 roadmap\",\"time\":\"00:00\"}],\"title\":\"Q4 roadmap\",\"topics\":[]}",
+      "reason" : "確認、略過待確認"
     }
   ],
   "search" : [
@@ -187,7 +201,7 @@
       "meeting_id" : 1,
       "ref" : 0,
       "rowid" : 1125899906842630,
-      "text" : "v3.6 上線週會\n確認 v3.6 上線時程\nValkey 快取下週三完成\n部署腳本路徑維持 /deploy/k8s\nKubernetes 版本？\n王小明 確認 <admin> 權限 | 部署 2026-10-21\n Valkey 快取測試\n第二行 \n上線時程\n目標 10/21\n快取 & 部署\n近況與進展\n部署 \"腳本\" OK\n「Kubernetes」的寫法對嗎？"
+      "text" : "v3.6 上線週會\n確認 v3.6 上線時程\nValkey 快取下週三完成\n部署腳本路徑維持 /deploy/k8s\nKubernetes 版本？\n王小明 確認 <admin> 權限 | 部署 2026-10-21\n Valkey 快取測試\n第二行 \n上線時程\n目標 10/21\n快取 & 部署\n近況與進展\n部署 \"腳本\" OK"
     },
     {
       "kind" : "user_notes",
@@ -208,7 +222,7 @@
       "meeting_id" : 2,
       "ref" : 0,
       "rowid" : 1125899906842634,
-      "text" : "Q4 roadmap\nReviewed the Q4 roadmap\nBob Send the email via SendGrid 2026-10-23\nUpdates and progress\nRoadmap on track\nIs \"beta\" the right term?"
+      "text" : "Q4 roadmap\nReviewed the Q4 roadmap\nBob Send the email via SendGrid 2026-10-23\nUpdates and progress\nRoadmap on track"
     }
   ],
   "segments" : [

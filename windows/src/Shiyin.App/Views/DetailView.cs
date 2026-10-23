@@ -32,17 +32,20 @@ public sealed class DetailView
     readonly NotesTabs notes;
     readonly ReviewTab review;
     readonly AskTab ask;
+    /// <summary>待確認的回答（M§31.2）：待確認分頁和紀錄旁的就地回答共用；跟著目前的會議（Show 時同步）</summary>
+    public ReviewDraft ReviewDraft { get; }
     bool switchingTabs;
 
     public DetailView(AppHost host, MainWindow window)
     {
         this.host = host;
         this.window = window;
+        ReviewDraft = new ReviewDraft(host);
         transcript = new TranscriptTab(host, window);
         recording = new RecordingPanel(host, window);
         playerBar = new PlayerBar(host);
-        notes = new NotesTabs(host, window);
-        review = new ReviewTab(host, window);
+        notes = new NotesTabs(host, window, ReviewDraft);
+        review = new ReviewTab(host, window, ReviewDraft);
         ask = new AskTab(host, window);
         playerBar.Tick += t => { if (window.State.Tab == DetailTab.Transcript) transcript.Follow(t); };
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
@@ -80,7 +83,7 @@ public sealed class DetailView
     public void FlushDrafts()
     {
         transcript.FlushDraft();
-        review.FlushDraft();
+        ReviewDraft.Flush();
         notes.FlushEditor();
         if (detail is not null) notes.SaveUserNotes();
     }
@@ -90,6 +93,7 @@ public sealed class DetailView
         var changed = detail?.Meeting.Id != value.Meeting.Id;
         if (changed) FlushDrafts();
         detail = value;
+        ReviewDraft.Sync(value);
         BuildTop();
         if (IsRecordingThis)
         {
@@ -114,7 +118,7 @@ public sealed class DetailView
             DetailTab.Summary => notes.Summary(value),
             DetailTab.Topics => notes.Topics(value),
             DetailTab.Transcript => transcript.Show(value, changed),
-            DetailTab.Review => review.Show(value, changed),
+            DetailTab.Review => review.Show(value),
             DetailTab.Notes => notes.UserNotes(value),
             _ => ask.Show(value, changed),
         };

@@ -77,6 +77,13 @@ public sealed class MeetingDetail
     public Dictionary<int, List<string>> SpeakerCandidates { get; set; } = [];
     /// <summary>待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）</summary>
     public int ReviewCount => (Notes?.ReviewItems.Count ?? 0) + SpeakerSuggestions.Count;
+    /// <summary>待確認的題目對應到哪一條紀錄（R41.1、M§31.1）：載入時算一次（Windows 每次都整份重讀）</summary>
+    public Dictionary<NoteItemRef, List<int>> ReviewLinks { get; private set; } = [];
+
+    /// <summary>這一條紀錄對到幾題待確認</summary>
+    public int ReviewCountOf(NoteItemRef r) => ReviewLinks.TryGetValue(r, out var list) ? list.Count : 0;
+
+    public void LinkReviewItems() => ReviewLinks = Notes is null ? [] : Model.ReviewLinks.Compute(Notes);
 
     public static MeetingDetail? Load(AppDatabase db, long id)
     {
@@ -89,6 +96,7 @@ public sealed class MeetingDetail
         detail.LoadSpeakers(db.Speakers(id));
         detail.SpeakerCandidates = db.VoiceprintCandidates(id);
         detail.BuildIndexes();
+        detail.LinkReviewItems();
         return detail;
     }
 

@@ -33,6 +33,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         ("engines", ["breeze", "builtin", "whisperJa"]),
         ("meetingLanguages", ["zh", "en", "ja"]),
         ("summarizer", ["claudeCode", "codex", "api", "local"]),
+        ("review", ["answered", "confirmed", "skipped"]),   // 待確認送出的題數（R41.7、M§31.3）
         ("errors", ["recording", "transcribe", "diarize", "summarize"]),
     ];
 
@@ -147,6 +148,13 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
     }
 
     public void Asked() => Add(c => c.Add("questionsAsked", 1));
+
+    /// <summary>待確認送出成功（R41.7）：只記題數，不記題目和答案</summary>
+    public void Reviewed(int answered, int confirmed, int skipped)
+    {
+        if (answered + confirmed + skipped <= 0) return;
+        Add(c => { c.Add("review", "answered", answered); c.Add("review", "confirmed", confirmed); c.Add("review", "skipped", skipped); });
+    }
 
     public void Failed(Failure kind) => Add(c => c.Add("errors", kind.ToString().ToLowerInvariant(), 1));
 

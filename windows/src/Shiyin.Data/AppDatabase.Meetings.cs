@@ -398,10 +398,19 @@ public sealed partial class AppDatabase
     });
 
     /// <summary>只略過、不需要 LLM 的待確認題目：直接從會議紀錄移除</summary>
-    public void DismissReviewItems(long meetingId, IReadOnlySet<int> indexes) => Write(db =>
+    public void DismissReviewItems(long meetingId, IReadOnlySet<int> indexes) => ResolveReviewItems(meetingId, new HashSet<int>(), indexes);
+
+    /// <summary>確認（是非題回答「是」）和略過的題目直接從紀錄移除（R41.4、M§31.3），留一個版本；兩種都沒有就不動</summary>
+    public void ResolveReviewItems(long meetingId, IReadOnlySet<int> confirmed, IReadOnlySet<int> dismissed)
     {
-        if (FetchMeeting(db, meetingId)?.DecodedNotes is not { } notes) return;
-        var kept = notes.ReviewItems.Where((_, i) => !indexes.Contains(i)).ToList();
-        SaveNotes(db, meetingId, notes with { ReviewItems = kept }, null, L.T("略過待確認"));
-    });
+        var indexes = confirmed.Union(dismissed).ToHashSet();
+        if (indexes.Count == 0) return;
+        var reason = dismissed.Count == 0 ? L.T("確認待確認") : confirmed.Count == 0 ? L.T("略過待確認") : L.T("確認、略過待確認");
+        Write(db =>
+        {
+            if (FetchMeeting(db, meetingId)?.DecodedNotes is not { } notes) return;
+            var kept = notes.ReviewItems.Where((_, i) => !indexes.Contains(i)).ToList();
+            SaveNotes(db, meetingId, notes with { ReviewItems = kept }, null, reason);
+        });
+    }
 }

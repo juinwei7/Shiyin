@@ -781,10 +781,19 @@ public sealed class AppController
     /// <summary>回傳是否送出成功；失敗時畫面上的回答要留著</summary>
     public bool SubmitReview(long id, IReadOnlyDictionary<int, string> answers, IReadOnlySet<int> dismissed)
     {
-        if (Db.Meeting(id)?.DecodedNotes is not { } notes || !ReadyForAction(id)) return false;
-        var answered = answers.Select(p => (Index: p.Key, Text: p.Value.Trim()))
-            .Where(a => a.Text.Length > 0 && !dismissed.Contains(a.Index) && a.Index >= 0 && a.Index < notes.ReviewItems.Count)
-            .OrderBy(a => a.Index)
+        if (Db.Meeting(id) is not { DecodedNotes: { } notes } meeting || !ReadyForAction(id)) return false;
+        // 回答分三類（M§31.3）：確認（是非題回答「是」、沒填答案）和略過直接從紀錄移除，不送整理工具（R41.4、D103）；
+        // 只有要改內容的回答（打字的、「不是」）才送整理工具依回答修正
+        var confirmed = new HashSet<int>();
+        var modified = new List<(int Index, string Text)>();
+        foreach (var (index, raw) in answers)
+        {
+            var text = raw.Trim();
+            if (text.Length == 0 || dismissed.Contains(index) || index < 0 || index >= notes.ReviewItems.Count) continue;
+            if (YesNoAnswer.Parse(text, meeting.MeetingLanguage) is { IsYes: true, Correction.Length: 0 }) confirmed.Add(index);
+            else modified.Add((index, text));
+        }
+        var answered = modified.OrderBy(a => a.Index)
             .Select(a => new ReviewAnswerJson(notes.ReviewItems[a.Index].Time, notes.ReviewItems[a.Index].Question, a.Text)).ToList();
         if (answered.Count > 0 && Settings.Provider == LLMProvider.None)
         {
@@ -792,12 +801,14 @@ public sealed class AppController
                 : L.T("整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API"));
             return false;
         }
+        var skipped = dismissed.Count(i => i >= 0 && i < notes.ReviewItems.Count);
         Perform(id, () =>
         {
-            if (dismissed.Count > 0) Db.DismissReviewItems(id, dismissed);
+            if (confirmed.Count > 0 || dismissed.Count > 0) Db.ResolveReviewItems(id, confirmed, dismissed);
             if (answered.Count > 0) Db.Enqueue(id, JobKind.Revise, JobRunner.Encode(new RevisePayload(answered)));
         });
         Runner.Wake();
+        Usage?.Reviewed(answered.Count, confirmed.Count, skipped);   // 匿名統計（R41.7）：只記題數
         return true;
     }
 

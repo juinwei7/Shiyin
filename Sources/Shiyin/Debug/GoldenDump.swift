@@ -677,6 +677,14 @@ enum GoldenDump {
                 w.json(file!, ["undone": try db.undoNotes(id(op))])
             case "dismissReviewItems":
                 try db.dismissReviewItems(id(op), indexes: Set(op["indexes"] as? [Int] ?? []))
+            case "resolveReviewItems":   // 確認（是）和略過一起移除（R41.4，design §31.3）
+                try db.resolveReviewItems(id(op), confirmed: Set(op["confirmed"] as? [Int] ?? []), dismissed: Set(op["dismissed"] as? [Int] ?? []))
+            case "reviewLinks":   // 待確認的題目對應到哪一條紀錄（R41.1，design §31.1）：段落、位置、對到的題號
+                let notes = try db.meeting(id(op))?.decodedNotes ?? MeetingNotes()
+                let links = notes.reviewLinks().map { ref, questions -> (key: (Int, Int, Int), object: Object) in
+                    (ref.sortKey, ["section": ref.sectionName, "index": ref.sortKey.1, "sub": ref.sortKey.2, "questions": questions.sorted()])
+                }.sorted { $0.key < $1.key }.map(\.object)
+                w.json(file!, links)
             case "saveCorrections":
                 let mid = id(op)
                 let items = try (op["items"] as? [Object] ?? []).map {
