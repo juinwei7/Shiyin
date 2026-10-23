@@ -11,8 +11,6 @@
 
 順序：V1 → V2 → V3 → V4（Mac），再 V5（Windows）；V6、V7 可以穿插。下面「Mac 的小問題」的逐字稿時間點這一版一起修。驗證用示範資料：把 `~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`，DEBUG 版加 `-ApplePersistenceIgnoreState YES -autoSummarize NO -correctTranscript NO` 啟動。
 
-- [~] **V2 就地回答（Mac）**（R41.2、R41.3、§31.2）：程式完成（`ReviewDraft`、`ReviewQuestionRow`、`InlineReviewCard`），草稿兩邊一致、重開還在、送出經假伺服器修正都用 `reviewexpand`、`typefield`、`reviewsubmit` 驗過
-  - 還差：在真的畫面上用 AX 按標記、「是」、「送出」一次（視窗要在目前的桌面，`summon` 會出現在使用者畫面上，要先問）；V3 改完待確認分頁再一起按
 - [~] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：程式完成，app 的累計和送出、worker 收新舊格式都驗過
   - 還差（要使用者跑，token 在鑰匙圈）：在 `workers/usage` 跑 `npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql` 加三欄，再 `npx wrangler@4 deploy`；部署前後台收到帶 `review` 的資料會忽略那一組，不會失敗
 - [~] **V5 Windows 跟上**（R41.6、design-windows §11.5）：程式完成（`ReviewLinks.cs`、`ReviewDraft.cs`、`ReviewTab.cs`、`NotesTabs.cs`、`AppController.SubmitReview`、`UsageStats`、控制通道 `reviewexpand`／`reviewsubmit`／`reviewskipall`／`review`），fixtures 加了 `reviewLinks`、`resolveReviewItems` 步驟，Mac 重產標準答案後 `dotnet test` 103 個通過
