@@ -28,12 +28,21 @@ struct ReviewTab: View {
     }
 
     private func content(_ draft: ReviewDraft) -> some View {
-        VStack(spacing: 0) {
+        let speakerIdxs = speakerItems.map(\.idx)
+        return VStack(spacing: 0) {
             ReadingColumn {
-                Text(items.contains(where: \.yesNo) || !speakerItems.isEmpty
-                     ? "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。"
-                     : "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(items.contains(where: \.yesNo) || !speakerItems.isEmpty
+                         ? "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。"
+                         : "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    // 全部略過（R41.5）：還沒回答的都標成略過，已經有回答的不動
+                    Button("全部略過") { draft.skipAllUnanswered(questionCount: items.count, speakers: speakerIdxs) }
+                        .disabled(!draft.hasUnanswered(questionCount: items.count, speakers: speakerIdxs))
+                        .help("還沒回答的題目都標成略過，送出後直接移除")
+                }
                 ForEach(speakerItems, id: \.idx) { item in
                     speakerRow(item.idx, item.suggestion, draft: draft)
                 }
@@ -74,44 +83,46 @@ struct ReviewTab: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(skipped ? .secondary : .primary)
                     .strikethrough(skipped)
-            }
-            if !suggestion.reason.isEmpty || !suggestion.time.isEmpty {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    if !suggestion.time.isEmpty { TimeButton(time: suggestion.time) }
-                    Text(suggestion.reason).meetingText()
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                // 略過的題目收成一行（R41.5）：只留題目和「取消略過」
+                if skipped {
+                    Spacer(minLength: 0)
+                    SkipButton(skipped: true) { draft.speakerSkipped.remove(idx) }
                 }
-                .padding(.leading, 22)
             }
-            HStack(spacing: 12) {
-                YesNoPicker(choice: choice, language: language, disabled: skipped) { draft.speakerAnswers[idx] = $0 }
-                Spacer()
-                Toggle("略過", isOn: Binding(get: { skipped }, set: { on in
-                    if on { draft.speakerSkipped.insert(idx) } else { draft.speakerSkipped.remove(idx) }
-                }))
-                .toggleStyle(.checkbox)
-            }
-            .padding(.leading, 22)
-            if choice.isYes == false {
-                HStack(spacing: 10) {
-                    if !others.isEmpty {
-                        Menu("是…") {
-                            ForEach(others, id: \.self) { name in
-                                Button(name) { draft.speakerAnswers[idx] = YesNoAnswer(isYes: false, correction: name).text(language) }
-                            }
-                        }
-                        .fixedSize()
-                        .disabled(skipped)
+            if !skipped {
+                if !suggestion.reason.isEmpty || !suggestion.time.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        if !suggestion.time.isEmpty { TimeButton(time: suggestion.time) }
+                        Text(suggestion.reason).meetingText()
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    TextField("是誰？（可以不填）", text: Binding(get: { choice.correction }, set: { text in
-                        draft.speakerAnswers[idx] = YesNoAnswer(isYes: false, correction: text).text(language)
-                    }))
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(skipped)
+                    .padding(.leading, 22)
+                }
+                HStack(spacing: 12) {
+                    YesNoPicker(choice: choice, language: language, disabled: false) { draft.speakerAnswers[idx] = $0 }
+                    Spacer()
+                    SkipButton(skipped: false) { draft.speakerSkipped.insert(idx) }
                 }
                 .padding(.leading, 22)
+                if choice.isYes == false {
+                    HStack(spacing: 10) {
+                        if !others.isEmpty {
+                            Menu("是…") {
+                                ForEach(others, id: \.self) { name in
+                                    Button(name) { draft.speakerAnswers[idx] = YesNoAnswer(isYes: false, correction: name).text(language) }
+                                }
+                            }
+                            .fixedSize()
+                        }
+                        TextField("是誰？（可以不填）", text: Binding(get: { choice.correction }, set: { text in
+                            draft.speakerAnswers[idx] = YesNoAnswer(isYes: false, correction: text).text(language)
+                        }))
+                        .textFieldStyle(.roundedBorder)
+                    }
+                    .padding(.leading, 22)
+                }
             }
         }
     }
@@ -148,12 +159,19 @@ struct ReviewQuestionRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(isDismissed ? .secondary : .primary)
                     .strikethrough(isDismissed)
+                // 略過的題目收成一行（R41.5）：只留題號、時間點、題目和「取消略過」
+                if isDismissed {
+                    Spacer(minLength: 0)
+                    SkipButton(skipped: true) { draft.dismissed.remove(index) }
+                }
             }
-            if item.yesNo, let choice = YesNoAnswer(draft.answers[index] ?? "", language: language) {
+            if isDismissed {
+                EmptyView()
+            } else if item.yesNo, let choice = YesNoAnswer(draft.answers[index] ?? "", language: language) {
                 HStack(spacing: 12) {
-                    YesNoPicker(choice: choice, language: language, disabled: isDismissed) { draft.answers[index] = $0 }
+                    YesNoPicker(choice: choice, language: language, disabled: false) { draft.answers[index] = $0 }
                     Spacer()
-                    skipToggle(isDismissed)
+                    SkipButton(skipped: false) { draft.dismissed.insert(index) }
                 }
                 .padding(.leading, 22)
                 if choice.isYes == false {
@@ -161,26 +179,30 @@ struct ReviewQuestionRow: View {
                         draft.answers[index] = YesNoAnswer(isYes: false, correction: text).text(language)
                     }))
                     .textFieldStyle(.roundedBorder)
-                    .disabled(isDismissed)
                     .padding(.leading, 22)
                 }
             } else {
                 HStack(spacing: 12) {
                     TextField("你的回答", text: Binding(get: { draft.answers[index] ?? "" }, set: { draft.answers[index] = $0 }))
                         .textFieldStyle(.roundedBorder)
-                        .disabled(isDismissed)
-                    skipToggle(isDismissed)
+                    SkipButton(skipped: false) { draft.dismissed.insert(index) }
                 }
                 .padding(.leading, 22)
             }
         }
     }
+}
 
-    private func skipToggle(_ isDismissed: Bool) -> some View {
-        Toggle("略過", isOn: Binding(get: { isDismissed }, set: { on in
-            if on { draft.dismissed.insert(index) } else { draft.dismissed.remove(index) }
-        }))
-        .toggleStyle(.checkbox)
+/// 「略過」「取消略過」（R41.5）：不用勾選框，按了那題收成一行
+struct SkipButton: View {
+    let skipped: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(skipped ? "取消略過" : "略過", action: action)
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .fixedSize()
     }
 }
 

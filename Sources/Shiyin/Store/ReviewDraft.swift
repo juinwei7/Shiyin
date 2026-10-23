@@ -78,6 +78,24 @@ final class ReviewDraft {
         }
     }
 
+    /// 「全部略過」（R41.5）：還沒回答的題目都標成略過，已經有回答的不動
+    func skipAllUnanswered(questionCount: Int, speakers: [Int]) {
+        var skipQuestions = dismissed
+        for index in 0..<max(0, questionCount) where (answers[index] ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+            skipQuestions.insert(index)
+        }
+        dismissed = skipQuestions
+        var skipSpeakers = speakerSkipped
+        for idx in speakers where (speakerAnswers[idx] ?? "").isEmpty { skipSpeakers.insert(idx) }
+        speakerSkipped = skipSpeakers
+    }
+
+    /// 還有沒回答也沒略過的題目（「全部略過」才有東西可以略）
+    func hasUnanswered(questionCount: Int, speakers: [Int]) -> Bool {
+        (0..<max(0, questionCount)).contains { !dismissed.contains($0) && (answers[$0] ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
+            || speakers.contains { !speakerSkipped.contains($0) && (speakerAnswers[$0] ?? "").isEmpty }
+    }
+
     /// 送出後：草稿刪掉、回答清空
     func clear() {
         saveTask?.cancel()

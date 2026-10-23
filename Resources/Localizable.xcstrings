@@ -1742,6 +1742,17 @@
         }
       }
     },
+    "全部略過": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip all"
+          }
+        }
+      }
+    },
     "其他人…（到逐字稿改名）": {
       "extractionState": "manual",
       "localizations": {
@@ -2290,6 +2301,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cancel"
+          }
+        }
+      }
+    },
+    "取消略過": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo skip"
           }
         }
       }
@@ -6727,6 +6749,28 @@
         }
       }
     },
+    "確認、略過待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmed and skipped review items"
+          }
+        }
+      }
+    },
+    "確認待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmed review items"
+          }
+        }
+      }
+    },
     "磁碟只剩 %@，大約只能錄 %lld 分鐘。空間用完時會自動停止錄音，已經錄到的部分會保留。": {
       "extractionState": "manual",
       "localizations": {
@@ -8817,6 +8861,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not downloaded. Downloads automatically the first time a Japanese meeting is transcribed"
+          }
+        }
+      }
+    },
+    "還沒回答的題目都標成略過，送出後直接移除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark every unanswered question as skipped; they are removed when you submit"
           }
         }
       }

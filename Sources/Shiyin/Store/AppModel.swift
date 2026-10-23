@@ -950,13 +950,23 @@ final class AppModel {
     /// 回傳是否送出成功；失敗時畫面上的回答要留著
     @discardableResult
     func submitReview(answers: [Int: String], dismissed: Set<Int>) -> Bool {
-        guard let id = selection, let notes = detail?.notes, readyForAction(id) else { return false }
-        let answered = answers.compactMap { index, text -> (Int, ReviewAnswer)? in
+        guard let id = selection, let detail, let notes = detail.notes, readyForAction(id) else { return false }
+        let language = detail.meeting.meetingLanguage
+        // 回答分三類（design §31.3）：確認（是非題回答「是」、沒填答案）和略過直接從紀錄移除，不送整理工具（R41.4、D103）；
+        // 只有要改內容的回答（打字的、「不是」）才送整理工具依回答修正
+        var confirmed: Set<Int> = []
+        var modified: [(Int, ReviewAnswer)] = []
+        for (index, text) in answers {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, !dismissed.contains(index), notes.reviewItems.indices.contains(index) else { return nil }
+            guard !trimmed.isEmpty, !dismissed.contains(index), notes.reviewItems.indices.contains(index) else { continue }
             let item = notes.reviewItems[index]
-            return (index, ReviewAnswer(time: item.time, question: item.question, answer: trimmed))
-        }.sorted { $0.0 < $1.0 }.map(\.1)
+            if let choice = YesNoAnswer(trimmed, language: language), choice.isYes == true {
+                confirmed.insert(index)
+            } else {
+                modified.append((index, ReviewAnswer(time: item.time, question: item.question, answer: trimmed)))
+            }
+        }
+        let answered = modified.sorted { $0.0 < $1.0 }.map(\.1)
         if !answered.isEmpty && AppSettings.provider == .none {
             errorMessage = AppSettings.needsProviderSetup
                 ? String(localized: "還沒設定整理工具，沒辦法依回答修正。請先到設定選擇 Claude、Codex 或 API")
@@ -964,7 +974,7 @@ final class AppModel {
             return false
         }
         perform {
-            if !dismissed.isEmpty { try db.dismissReviewItems(id, indexes: dismissed) }
+            if !confirmed.isEmpty || !dismissed.isEmpty { try db.resolveReviewItems(id, confirmed: confirmed, dismissed: dismissed) }
             if !answered.isEmpty {
                 let payload = String(decoding: try JSONEncoder().encode(RevisePayload(answers: answered)), as: UTF8.self)
                 try db.enqueue(id, kind: .revise, payload: payload)

@@ -57,6 +57,10 @@ enum DebugControl {
         case "reviewsubmit":   // reviewsubmit <會議 id>：等於按待確認分頁或就地回答的「送出」（送目前的草稿）
             model.selection = id
             model.submitReviewDraft()
+        case "reviewskipall":   // reviewskipall <會議 id>：等於按待確認分頁的「全部略過」（R41.5）
+            model.selection = id
+            model.reviewDraft?.skipAllUnanswered(questionCount: model.detail?.notes?.reviewItems.count ?? 0,
+                                                 speakers: model.detail.map { Array($0.speakerSuggestions.keys) } ?? [])
         case "review":
             // review <id> <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>
             model.selection = id

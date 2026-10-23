@@ -13,8 +13,6 @@
 
 - [~] **V2 就地回答（Mac）**（R41.2、R41.3、§31.2）：程式完成（`ReviewDraft`、`ReviewQuestionRow`、`InlineReviewCard`），草稿兩邊一致、重開還在、送出經假伺服器修正都用 `reviewexpand`、`typefield`、`reviewsubmit` 驗過
   - 還差：在真的畫面上用 AX 按標記、「是」、「送出」一次（視窗要在目前的桌面，`summon` 會出現在使用者畫面上，要先問）；V3 改完待確認分頁再一起按
-- [ ] **V3 是＝確認、全部略過、略過按鈕（Mac）**（R41.4、R41.5、§31.3、§31.4）
-  - 驗證：全部按「是」送出：`sqlite3` 看 `jobs` 沒有 `revise`、`notes_versions` 多一版原因「確認待確認」、題目消失；一題打字一題「是」：只有打字的在 `revise` 的 payload；`-llmProvider none` 啟動，全部略過能送、有打字的擋下並說明；「全部略過」後送出鈕是「略過 N 題」；`dump-golden` 跟 `shared/golden/expected` 相同（提示詞沒改）
 - [ ] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：`UsageStats.review`、`workers/usage` 的 schema 和 worker
   - 驗證：`shiyinctl usage` 看累計有 `review` 三個數字；`usagesend` 對假伺服器收到的 payload 正確；worker 用 `wrangler dev` 收一筆新格式和一筆舊格式（沒有 `review`）都 204；部署和 `ALTER TABLE` 要使用者跑指令（token 在鑰匙圈）
 - [ ] **V5 Windows 跟上**（R41.6、design-windows §11.5）：`NotesTabs.cs`、`ReviewTab`、`AppController.SubmitReview`、`UsageStats`

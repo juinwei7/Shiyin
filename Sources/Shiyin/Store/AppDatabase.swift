@@ -692,10 +692,19 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 只略過、不需要 LLM 的待確認題目：直接從會議紀錄移除
     func dismissReviewItems(_ meetingId: Int64, indexes: Set<Int>) throws {
+        try resolveReviewItems(meetingId, confirmed: [], dismissed: indexes)
+    }
+
+    /// 確認（是非題回答「是」）和略過的題目直接從紀錄移除（R41.4、design §31.3），留一個版本；兩種都沒有就不動
+    func resolveReviewItems(_ meetingId: Int64, confirmed: Set<Int>, dismissed: Set<Int>) throws {
+        let indexes = confirmed.union(dismissed)
+        guard !indexes.isEmpty else { return }
+        let reason = dismissed.isEmpty ? String(localized: "確認待確認")
+            : confirmed.isEmpty ? String(localized: "略過待確認") : String(localized: "確認、略過待確認")
         try pool.write { db in
             guard let m = try Meeting.fetchOne(db, key: meetingId), var notes = m.decodedNotes else { return }
             notes.reviewItems = notes.reviewItems.enumerated().filter { !indexes.contains($0.offset) }.map(\.element)
-            try Self.saveNotes(db, meetingId, notes: notes, by: nil, reason: String(localized: "略過待確認"))
+            try Self.saveNotes(db, meetingId, notes: notes, by: nil, reason: reason)
         }
     }
 
