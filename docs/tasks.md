@@ -7,6 +7,25 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 待確認就地回答、收音提醒送通知（R41、R42，design §31；2026-10-23 使用者決定先做使用者體驗）
+
+順序：V1 → V2 → V3 → V4（Mac），再 V5（Windows）；V6、V7 可以穿插。下面「Mac 的小問題」的逐字稿時間點這一版一起修。驗證用示範資料：把 `~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`，DEBUG 版加 `-ApplePersistenceIgnoreState YES -autoSummarize NO -correctTranscript NO` 啟動。
+
+- [ ] **V2 就地回答（Mac）**（R41.2、R41.3、§31.2）：`ReviewDraft`、`ReviewQuestionRow`、`InlineReviewCard`
+  - 驗證：在真的畫面上用 AX 按標記、「是」、打字、「送出」（視窗要在目前的桌面）；就地回答一題後切到待確認分頁看到同一個回答，反過來也是；結束拾音再開草稿還在；編輯模式、匯出的 Markdown 沒有標記
+- [ ] **V3 是＝確認、全部略過、略過按鈕（Mac）**（R41.4、R41.5、§31.3、§31.4）
+  - 驗證：全部按「是」送出：`sqlite3` 看 `jobs` 沒有 `revise`、`notes_versions` 多一版原因「確認待確認」、題目消失；一題打字一題「是」：只有打字的在 `revise` 的 payload；`-llmProvider none` 啟動，全部略過能送、有打字的擋下並說明；「全部略過」後送出鈕是「略過 N 題」；`dump-golden` 跟 `shared/golden/expected` 相同（提示詞沒改）
+- [ ] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：`UsageStats.review`、`workers/usage` 的 schema 和 worker
+  - 驗證：`shiyinctl usage` 看累計有 `review` 三個數字；`usagesend` 對假伺服器收到的 payload 正確；worker 用 `wrangler dev` 收一筆新格式和一筆舊格式（沒有 `review`）都 204；部署和 `ALTER TABLE` 要使用者跑指令（token 在鑰匙圈）
+- [ ] **V5 Windows 跟上**（R41.6、design-windows §11.5）：`NotesTabs.cs`、`ReviewTab`、`AppController.SubmitReview`、`UsageStats`
+  - 驗證：fixtures 加「確認、略過」的 `db` 步驟，Mac 重跑 `dump-golden` 後 `dotnet test` 通過；虛擬機 UI Automation 按標記、「是」、送出，`shot.sh` 截圖跟 Mac 對照
+- [ ] **V6 收音提醒送通知（Mac）**（R42.1、R42.2、§31.5）
+  - 驗證：用 `afconvert` 把示範的 1.m4a 轉成 16 kHz 單聲道 WAV，python 的 `wave` 接上 90 秒靜音；`record-sim` 1 倍速、拾音不在前景：靜音約 10 秒後收到通知（`notifystatus` 先確認權限）、`snapshot menubar` 看到提示和「知道了」、`state` 的 `menuBarSymbol` 是警示圖示；按「知道了」後換回；同一場再靜音不再通知；拾音在前景時只有畫面和圖示、沒有通知
+- [ ] **V7 Windows 收音提醒**（R42.3）
+  - 驗證：虛擬機 `record-sim` 同一個檔，通知中心有通知、系統匣圖示變化、`ctl.sh state` 的 `levelHint`
+- [ ] **V8 文件與示範**：使用說明的「回答待確認」那段、README（中英）、官網首屏示範（website §10.1：待確認的標記）、`l10n.py check` 和 `windows-check` 加英文
+- [ ] **V9 iPhone 接 R41、R42**（`ios` 分支，之後）：標記與就地回答共用 Mac 的 view；收音提醒走即時動態
+
 ## Mac 的小問題（2026-10-22 做 Windows 版時發現）
 
 - [ ] **逐字稿的時間點跳到段落真正的開始**：逐字稿每一段的時間按鈕照顯示的時間跳（`TimeButton(time: TimeFormat.string(segment.start))`），24.4 秒的段落顯示 00:24、跳到 24.0 秒，播放位置的高亮會落在上一段。改成跳到 `segment.start`（Windows 版已經改了，design-windows §11.2.1）

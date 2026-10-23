@@ -1067,6 +1067,7 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 | `summarizer.claudeCode`／`codex`／`api`／`local` | 整理（含草稿、回答待確認後的修正）成功；Anthropic、OpenAI、Gemini、遠端的 OpenAI 相容 API 算 `api`，網址是 localhost、127.0.0.1 的 OpenAI 相容 API 算 `local` | `JobRunner.execute` |
 | `questionsAsked` | 提問（單場或所有會議）得到回答 | `Asking` |
 | `errors.recording`／`transcribe`／`diarize`／`summarize` | 錄音結束時有錯誤；轉錄、重新辨識、整理（含修正）的工作失敗 | `AppModel`、`JobRunner.execute` |
+| `review.answered`／`confirmed`／`skipped` | 待確認送出成功（R41.7，§31.3）：打字或「不是」的題數、「是」的題數、略過的題數 | `AppModel.submitReview` |
 
 校正、猜說話者、壓縮不算（是整理和轉錄的輔助工作）。
 
@@ -1111,7 +1112,8 @@ User-Agent: Shiyin/<版本>
     "meetingLanguages": { "zh": 2, "en": 1, "ja": 0 },
     "diarizationRuns": 3,
     "summarizer": { "claudeCode": 3, "codex": 0, "api": 0, "local": 0 },
-    "questionsAsked": 2
+    "questionsAsked": 2,
+    "review": { "answered": 1, "confirmed": 3, "skipped": 1 }
   },
   "errors": { "recording": 0, "transcribe": 0, "diarize": 0, "summarize": 1 }
 }
@@ -1121,6 +1123,7 @@ User-Agent: Shiyin/<版本>
 - `platform` 是 `mac` 或 `windows`（2026-10-22 加，分平台看報表用，不用從 `os` 字串猜）。`os` 用 `ProcessInfo.operatingSystemVersion`（例如 `macOS 26.1`）；`chip` 用 `sysctl machdep.cpu.brand_string`；`uiLanguage` 是 app 實際用的介面語言（`Bundle.main.preferredLocalizations.first`）。
 - 後台收到回 `204`（或任何 2xx）。用 `installId` + `date` 去重：同一筆重送（例如回應在路上掉了）要覆蓋，不要重複算。
 - 後台不要存 IP（或只用來擋濫用、不跟 `installId` 一起存）。`schema` 以後改格式時加 1，後台可以依版本解析。
+- `review`（2026-10-23 加，R41.7）：待確認的回答、確認、略過的題數。只加字典不改 `schema`：後台對不認得的字典忽略、少的鍵當 0，所以舊 app 和舊後台互相都能收。
 
 ### 30.5 設定頁、使用說明
 
@@ -1188,6 +1191,44 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 - 部署：`npx wrangler@4 d1 create shiyin-usage`、`d1 execute --remote --file schema.sql`、`deploy`。token 要有 Workers Scripts、D1 的編輯權限，自訂網域另外要 weibuilds.com 的 Workers Routes、DNS 編輯權限；token 只在部署時用環境變數帶，不寫進任何檔案。
 - 本機測試：`npx wrangler@4 dev --local`（本機的 D1，`--persist-to` 放暫存資料夾），DEBUG 版用 `shiyinctl usageurl http://127.0.0.1:8787/v1/usage` 指過去。
 
+## 31. 待確認就地回答、收音提醒送通知（R41、R42，D102～D104）
+
+### 31.1 題目對應到紀錄（R41.1，D102）
+
+- 載入會議時算一次（跟 `MeetingDetail.speakerCandidates` 一樣，不在畫面更新時重算）：`MeetingDetail.reviewLinks: [NoteItemRef: [Int]]`。`NoteItemRef` 指一條紀錄：段落（summary、decisions、actionItems、openQuestions、某個 topic 的 point、某個 custom 段落的 item）加位置。值是題號（`reviewItems` 的 index，也就是畫面上的順序）。
+- 規則：題目的 `time` 和條目的 `time` 都用 `TimeFormat.seconds` 轉成秒，空的或轉不出來的不對應。先找同一秒的條目，有幾條標幾條（同一個時間點的條目通常在講同一件事，例如摘要和決議各一條）；沒有的話找時間差最小、差距 ≤ 20 秒的一條。議題的標題（`topics[].start`）不算條目，只有要點算。
+- 一條可以對到多題。對不到的題目只在待確認分頁。
+- 題目的 index 在送出、重新整理、復原後都會變（§21.15 說過），`reviewLinks` 跟著 `MeetingDetail` 重新載入就重算。
+
+### 31.2 畫面（R41.2、R41.3）
+
+- `ItemList`、`ActionItemsTable`、`TopicsTab` 的每一條，在時間點之後加 `ReviewMarker`：圓形琥珀色（`Color.signal`，跟側欄的「待確認 N 題」同色）的「？」，對到多題時顯示「？2」。`.help` 寫「整理時有 N 題不確定的地方，點了就能回答」。
+- 點了在那一條下面展開 `InlineReviewCard`：列出對應的題目，每題用 `ReviewQuestionRow`（從 `ReviewTab.reviewRow` 抽出來，兩邊共用：題號、時間點、題目、是非或輸入框、略過），右下「送出」（文字同待確認分頁的 `submitTitle`）和「收合」。同時只展開一條，點別條就收合前一條。
+- 回答的狀態從 `ReviewTab` 的 `@State` 搬到 `ReviewDraft`（`@Observable`，掛在 `MeetingDetail` 上，換會議就換一份）：`answers`、`dismissed`、`speakerAnswers`、`speakerSkipped`、存草稿的 debounce 都在這裡。`ReviewTab` 和 `InlineReviewCard` 觀察同一份，兩邊看到的回答一致（R41.2），存草稿的 key 不變（§21.15）。
+- 送出：兩邊都呼叫 `submitReview`（§31.3）。送出後題目從紀錄移除，`MeetingDetail` 重新載入，標記跟著消失。
+- 編輯模式（`NotesEditor`）、匯出（`Exporters`）不畫標記；DEBUG 的 snapshot 要畫（驗證排版用）。草稿紀錄（`notesDraft`）照樣標；垃圾桶裡的會議不標。
+
+### 31.3 「是」不送整理工具（R41.4，D103）
+
+- `submitReview` 把回答分三類：**確認**（`YesNoAnswer` 認出 `isYes == true` 而且沒有 correction）、**略過**（dismissed）、**修改**（其他）。確認和略過一起從 `reviewItems` 移除：`dismissReviewItems` 擴充成 `resolveReviewItems(id, confirmed:, dismissed:)`，版本原因分別寫「確認待確認」「略過待確認」，兩種都有時一個版本、原因「確認、略過待確認」。只有修改的題目進 `revise` 工作，payload 格式不變。
+- 校稿的提示詞不變，送出去的 answers 不再包含「是」。以前「是」也會送去校稿，校稿收到「是」只會原樣保留，結果相同。
+- 整理工具是 `.none` 或還沒設定時，只擋修改類（現在的 guard 改成看修改的題數）；確認和略過照樣能送。
+- 統計（R41.7）：`UsageStats.Counters` 加 `review = ["answered": 0, "confirmed": 0, "skipped": 0]`，`submitReview` 成功後依三類加。§30.1、§30.4 跟著補。後台（§30.10）`usage_daily` 加 `review_answered`、`review_confirmed`、`review_skipped` 三欄（`ALTER TABLE … ADD COLUMN … NOT NULL DEFAULT 0`），worker 的 `USAGE_DICTS` 加 `review`；舊的 worker 遇到不認得的字典會忽略（§30.4「多的鍵忽略」），`schema` 維持 1。
+
+### 31.4 待確認分頁（R41.5）
+
+- 「略過」改成 `.borderless` 的按鈕；按了那題收成一行（灰字、劃掉，題號和時間點留著）加「取消略過」。
+- 頁首說明的右邊加「全部略過」：把沒有回答的題目（含說話者題目）都標成略過，已經有回答的不動；送出鈕的文字變成「略過 N 題」。
+- 送出鈕本來就固定在底部（`ReadingColumn` 是 ScrollView，footer 在它外面），不用改。
+
+### 31.5 收音提醒送通知（R42，D104）
+
+- `Recorder.levelHint` 從 nil 變成某個值時（§26.1 的規則不變），`AppModel` 觀察到就：
+  - `NSApp.isActive == false` 或主視窗沒開時，`Notifier.levelHint(hint, meetingId:)` 送通知：標題「收音提醒」，內文同 `RecordingView.levelHintText`，類別 `LEVEL_HINT`，點了 `reveal(meetingId)`。`Recorder` 記 `notifiedLevelHints: Set<LevelHint>`，每場每種一次，錄音開始時清掉。
+  - 不管前景與否，`AppModel.menuBarSymbol` 在 `levelHint != nil` 時用 `mic.badge.exclamationmark`，提示消失就換回錄音中的圖示。`MenuBarContent` 在錄音控制下面顯示同一句提示（琥珀色）和「知道了」（`dismissLevelHint`）。
+- 通知權限沒給時只有選單列的變化（跟其他通知一樣，R11.2）。
+- Windows：design-windows §11.5。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1239,5 +1280,8 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D95 | 沒選過整理工具時自動用找得到的 CLI，都沒有就先不整理、提示去設定（取代「預設 claude CLI」，§19.6） | 照舊預設 claude CLI、只把錯誤訊息寫清楚：沒有 CLI 的人每場會議都「整理失敗」。預設改成某個 API：還是要先申請 key，沒填之前一樣失敗。第一次使用時一定要選：多一個擋路的步驟，只要逐字稿的人也得選。取捨：沒設定的人要看到引導或會議頁的提示才會去設定 |
 | D100 | 匿名使用統計：每天一份匯總、預設開啟（告知＋可以關；2026-10-22 起開關收在設定 → 進階最下面的「詳細…」裡、不顯示送出的 JSON）、送到使用者自己的後台、沒有統計網址就完全不送 | 完全選擇加入：多數人不會去開，數字太少看不出活躍度。預設開啟但不說：違反之前「不收集」的公開承諾，程式開源也藏不住。逐筆事件（每次點擊）：資料多、比較像追蹤，用量的匯總就夠回答「有多少人在用、處理多少語音」。第三方服務（TelemetryDeck、Aptabase）：資料在別人那裡、要多一個套件；使用者想自己做後台。不用安裝 ID：算不出活躍天數和留存。取捨：歐盟的規定要求在裝置上存識別碼前先取得同意，目前是「告知＋可關」的常見做法，歐洲使用者變多時再改成先問；編號跳到 D100，避開 windows 分支正在用的 D42 起 |
 | D101 | 匿名使用統計的後台用 Cloudflare Workers＋D1，網址是自己網域的子網域 | 自己租主機：要顧作業系統更新、備份、停機，一天幾百、幾千筆用不到。Supabase、Firebase：好用，但資料在第三方，隱私說明要多寫一家公司。PostHog 自架：很吃資源。放在官網的網域（Pages Functions）：官網現在是純靜態、CSP 很嚴，統計另外一個 Worker 互不影響，以後換後台只要換網址。取捨：Cloudflare 看得到請求的 IP（我們的資料庫不存）；D1 免費額度（每天 10 萬次寫入）以每台每天一筆來算夠用很久 |
+| D102 | 待確認的題目靠時間點對應到紀錄的條目，不改提示詞（§31.1） | 讓整理工具多輸出「對應到哪一條」：三個平台的 schema、提示詞、標準答案都要重產，模型填的對應也不一定準。app 用文字比對：紀錄是改寫過的文字（D9 同樣的理由）。代價：時間填錯的題目對不到，只在待確認分頁 |
+| D103 | 是非題回答「是」當成確認，跟略過一樣直接移除，不送整理工具（§31.3） | 照舊全部送校稿：校稿收到「是」只會原樣保留，使用者白等一次、多一次費用。由 app 改紀錄：「不是＋答案」要改文字，還是要模型。代價：「是」不再經過模型，模型也不會順便改別的地方（本來就不該改） |
+| D104 | 收音提醒用通知和選單列圖示提醒，不自動停止錄音或換麥克風（§31.5） | 自動換麥克風：R18.2 已經處理裝置消失的情況；靜音、選錯麥克風是使用者的設定，app 猜不準。只在錄音畫面提示（3.7）：R24.3 的那次人在 Zoom 的視窗，沒看到。每次提示都通知：每場每種一次就夠，多了會煩 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
