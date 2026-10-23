@@ -78,6 +78,15 @@ struct MeetingDetail: Equatable {
     var speakerCandidates: [Int: [String]] = [:]
     /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
     var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
+    /// 待確認的題目對應到哪一條紀錄（R41.1，design §31.1）：載入時算一次，會議紀錄換了就重算（`linkReviewItems`）
+    var reviewLinks: [NoteItemRef: [Int]] = [:]
+
+    /// 這一條紀錄對到幾題待確認
+    func reviewCount(_ ref: NoteItemRef) -> Int { reviewLinks[ref]?.count ?? 0 }
+
+    mutating func linkReviewItems() {
+        reviewLinks = notes?.reviewLinks() ?? [:]
+    }
 
     mutating func loadSpeakers(_ rows: [SpeakerName]) {
         speakers = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.name) })
@@ -377,6 +386,7 @@ final class AppModel {
         loaded.loadSpeakers(speakerRows)
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.buildIndexes()
+        loaded.linkReviewItems()
         detail = loaded
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL) } else { player.unload() }
@@ -1496,6 +1506,7 @@ final class AppModel {
             updated.meeting = meeting
             updated.notes = meeting.decodedNotes
             updated.versionCount = (try? db.versionCount(id)) ?? 0
+            updated.linkReviewItems()
         }
         if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }
         detail = updated

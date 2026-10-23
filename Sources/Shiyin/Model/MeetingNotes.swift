@@ -195,6 +195,50 @@ struct MeetingNotes: Codable, Hashable {
     }()
 }
 
+/// 一條紀錄的位置（design §31.1）：待確認的題目對應到哪一條
+enum NoteItemRef: Hashable {
+    case summary(Int), decisions(Int), actionItems(Int), openQuestions(Int)
+    /// 第幾個議題的第幾個要點
+    case topicPoint(Int, Int)
+    /// 第幾個自訂段落的第幾條
+    case custom(Int, Int)
+}
+
+extension MeetingNotes {
+    /// 待確認的題目對應到紀錄的條目（R41.1，design §31.1）：題目和條目的時間點同一秒的全標；
+    /// 沒有同一秒的，標時間最接近、差距 20 秒以內的一條。對不到的題目不在結果裡（只在待確認分頁）。
+    /// 議題的標題不算條目，只有要點算。載入會議時算一次（`MeetingDetail.reviewLinks`）
+    func reviewLinks() -> [NoteItemRef: [Int]] {
+        var entries: [(ref: NoteItemRef, seconds: Double)] = []
+        func add(_ items: [Item], _ make: (Int) -> NoteItemRef) {
+            for (i, item) in items.enumerated() {
+                if let seconds = TimeFormat.seconds(item.time) { entries.append((make(i), seconds)) }
+            }
+        }
+        add(summary) { .summary($0) }
+        add(decisions) { .decisions($0) }
+        for (i, item) in actionItems.enumerated() {
+            if let seconds = TimeFormat.seconds(item.time) { entries.append((.actionItems(i), seconds)) }
+        }
+        add(openQuestions) { .openQuestions($0) }
+        for (t, topic) in topics.enumerated() { add(topic.points) { .topicPoint(t, $0) } }
+        for (c, section) in custom.enumerated() { add(section.items) { .custom(c, $0) } }
+
+        var links: [NoteItemRef: [Int]] = [:]
+        for (index, item) in reviewItems.enumerated() {
+            guard let seconds = TimeFormat.seconds(item.time) else { continue }
+            let exact = entries.filter { $0.seconds == seconds }
+            if !exact.isEmpty {
+                for entry in exact { links[entry.ref, default: []].append(index) }
+            } else if let nearest = entries.min(by: { abs($0.seconds - seconds) < abs($1.seconds - seconds) }),
+                      abs(nearest.seconds - seconds) <= 20 {
+                links[nearest.ref, default: []].append(index)
+            }
+        }
+        return links
+    }
+}
+
 /// 時間點格式：mm:ss，超過一小時用 h:mm:ss（與逐字稿一致）
 enum TimeFormat {
     static func string(_ seconds: Double) -> String {

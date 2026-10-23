@@ -4644,6 +4644,28 @@
         }
       }
     },
+    "整理時有 %lld 題不確定的地方，點了就能回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld things the summary wasn't sure about; click to answer"
+          }
+        }
+      }
+    },
+    "整理時有一題不確定的地方，點了就能回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One thing the summary wasn't sure about; click to answer"
+          }
+        }
+      }
+    },
     "整理會議紀錄時，只會把逐字稿文字送到你選的 AI 服務。": {
       "extractionState": "manual",
       "localizations": {

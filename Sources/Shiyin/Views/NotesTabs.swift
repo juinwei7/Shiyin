@@ -36,23 +36,51 @@ struct NotesSection<Content: View>: View {
     }
 }
 
-/// 一條紀錄：內容加上時間點（R6.4：點時間點就跳到錄音那裡）
+/// 一條紀錄：內容加上時間點（R6.4：點時間點就跳到錄音那裡）。
+/// `mark` 給每一條對到幾題待確認（R41.1），有的話時間點後面顯示標記
 struct ItemList: View {
     let items: [MeetingNotes.Item]
+    var mark: (Int) -> Int = { _ in 0 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("•").foregroundStyle(.secondary)
                     (Text(item.text)).meetingText()
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                     if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
+                    ReviewMarker(count: mark(index))
                 }
             }
         }
         .lineSpacing(3)
+    }
+}
+
+/// 待確認的標記（R41.1，design §31.2）：這一條紀錄有幾題整理時不確定的地方，琥珀色跟側欄的「待確認 N 題」一樣。
+/// 點了先切到待確認分頁；就地回答（R41.2）接在這裡展開
+struct ReviewMarker: View {
+    @Environment(AppModel.self) private var model
+    let count: Int
+
+    var body: some View {
+        if count > 0 {
+            Button {
+                model.tab = .review
+            } label: {
+                Text(count > 1 ? "\(MeetingLanguage.ui(zh: "？", en: "?"))\(count)" : MeetingLanguage.ui(zh: "？", en: "?"))
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Color.signal)
+                    .padding(.horizontal, count > 1 ? 5 : 0)
+                    .frame(minWidth: 17, minHeight: 17)
+                    .background(Color.signal.opacity(0.16), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .help(count > 1 ? String(localized: "整理時有 \(count) 題不確定的地方，點了就能回答") : String(localized: "整理時有一題不確定的地方，點了就能回答"))
+            .accessibilityLabel(String(localized: "待確認 \(count) 題"))
+        }
     }
 }
 
@@ -103,12 +131,22 @@ struct SummaryTab: View {
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
                 EditBar(disabled: model.detailStatus?.isActive == true) { base = notes; editing = notes }
-                if !notes.summary.isEmpty { NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary) } }
-                if !notes.decisions.isEmpty { NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions) } }
-                if !notes.actionItems.isEmpty { NotesSection(title: String(localized: "待辦")) { ActionItemsTable(items: notes.actionItems) } }
-                if !notes.openQuestions.isEmpty { NotesSection(title: String(localized: "未決問題")) { ItemList(items: notes.openQuestions) } }
-                ForEach(Array(notes.custom.enumerated()), id: \.offset) { _, section in
-                    if !section.items.isEmpty { NotesSection(title: section.title) { ItemList(items: section.items) } }
+                if !notes.summary.isEmpty {
+                    NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary) { detail.reviewCount(.summary($0)) } }
+                }
+                if !notes.decisions.isEmpty {
+                    NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions) { detail.reviewCount(.decisions($0)) } }
+                }
+                if !notes.actionItems.isEmpty {
+                    NotesSection(title: String(localized: "待辦")) { ActionItemsTable(items: notes.actionItems) { detail.reviewCount(.actionItems($0)) } }
+                }
+                if !notes.openQuestions.isEmpty {
+                    NotesSection(title: String(localized: "未決問題")) { ItemList(items: notes.openQuestions) { detail.reviewCount(.openQuestions($0)) } }
+                }
+                ForEach(Array(notes.custom.enumerated()), id: \.offset) { c, section in
+                    if !section.items.isEmpty {
+                        NotesSection(title: section.title) { ItemList(items: section.items) { detail.reviewCount(.custom(c, $0)) } }
+                    }
                 }
                 if let by = detail.meeting.notesBy {
                     Text("由 \(LLMProvider(rawValue: by)?.shortLabel ?? by) 整理．\(templateName)")
@@ -153,6 +191,7 @@ struct EditBar: View {
 
 struct ActionItemsTable: View {
     let items: [MeetingNotes.ActionItem]
+    var mark: (Int) -> Int = { _ in 0 }
 
     var body: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 18, verticalSpacing: 9) {
@@ -164,7 +203,7 @@ struct ActionItemsTable: View {
             .font(.caption)
             .foregroundStyle(.secondary)
             Divider().gridCellUnsizedAxes(.horizontal)
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 GridRow {
                     Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner).meetingText()
                         .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
@@ -173,6 +212,7 @@ struct ActionItemsTable: View {
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                         if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
+                        ReviewMarker(count: mark(index))
                     }
                     .gridColumnAlignment(.leading)
                     Text(item.due.isEmpty ? "—" : item.due)
@@ -201,13 +241,13 @@ struct TopicsTab: View {
                 if notes.topics.isEmpty {
                     Text("這場會議沒有分出議題（可能是範本沒有包含「議題詳細」）。").foregroundStyle(.secondary)
                 }
-                ForEach(Array(notes.topics.enumerated()), id: \.offset) { _, topic in
+                ForEach(Array(notes.topics.enumerated()), id: \.offset) { t, topic in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             TimeButton(time: topic.start)
                             Text(topic.title).contentTitleFont(18)
                         }
-                        ItemList(items: topic.points)
+                        ItemList(items: topic.points) { detail.reviewCount(.topicPoint(t, $0)) }
                     }
                 }
             }
