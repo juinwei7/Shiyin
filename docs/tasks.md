@@ -17,8 +17,8 @@
   - 還差（要使用者跑，token 在鑰匙圈）：在 `workers/usage` 跑 `npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql` 加三欄，再 `npx wrangler@4 deploy`；部署前後台收到帶 `review` 的資料會忽略那一組，不會失敗
 - [~] **V5 Windows 跟上**（R41.6、design-windows §11.5）：程式完成（`ReviewLinks.cs`、`ReviewDraft.cs`、`ReviewTab.cs`、`NotesTabs.cs`、`AppController.SubmitReview`、`UsageStats`、控制通道 `reviewexpand`／`reviewsubmit`／`reviewskipall`／`review`），fixtures 加了 `reviewLinks`、`resolveReviewItems` 步驟，Mac 重產標準答案後 `dotnet test` 103 個通過
   - 還差：虛擬機上 `ctl.sh select/tab/reviewexpand` 加 UI Automation 按標記、「是」、送出，`shot.sh` 截圖跟 Mac 對照
-- [ ] **V7 Windows 收音提醒**（R42.3）
-  - 驗證：虛擬機 `record-sim` 同一個檔，通知中心有通知、系統匣圖示變化、`ctl.sh state` 的 `levelHint`
+- [~] **V7 Windows 收音提醒**（R42.3、design-windows §11.5）：程式完成（`Recorder.HintAppeared`、`Notifier.LevelHint`、系統匣的提示文字和右鍵選單的「知道了」、`state` 的 `lastToast`），Mac 上建置 0 警告 0 錯誤
+  - 還差：虛擬機 `record-sim` 同一個「說話後靜音」的 WAV（Mac 的 scratchpad 做法：afconvert 轉 16 kHz 再接 90 秒靜音），`ctl.sh state` 的 `recorder.hint` 變 silent、`lastToast` 是「收音提醒」，通知中心有通知、系統匣右鍵有提示和「知道了」
 - [ ] **V8 文件與示範**：使用說明的「回答待確認」那段、README（中英）、官網首屏示範（website §10.1：待確認的標記）、`l10n.py check` 和 `windows-check` 加英文
 - [ ] **V9 iPhone 接 R41、R42**（`ios` 分支，之後）：標記與就地回答共用 Mac 的 view；收音提醒走即時動態
 

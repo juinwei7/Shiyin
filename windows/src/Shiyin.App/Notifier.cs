@@ -6,6 +6,7 @@ using Shiyin.Platform;
 using Shiyin.Services;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
+using Shiyin.Services.Capture;
 
 namespace Shiyin.App;
 
@@ -54,8 +55,15 @@ public sealed class Notifier
 
     public void Notice(string message) => Toast?.Invoke(message);
 
+    /// <summary>驗證用：最近一次要發的通知（通知被關掉時也記）</summary>
+    public (string Title, string Body)? LastShown { get; private set; }
+
+    /// <summary>收音提醒（R42.3、M§31.5）：內容跟錄音畫面同一句，點了打開錄音中的會議</summary>
+    public void LevelHint(Recorder.LevelHint hint, long meetingId) => Show(NotificationLinks.OpenMeeting(meetingId), L.T("收音提醒"), hint.Text());
+
     void Show(string launch, string title, string body, params (string Label, string Url)[] buttons)
     {
+        LastShown = (title, body);
         if (!Enabled) return;
         var xml = new StringBuilder();
         xml.Append($"<toast launch=\"{SecurityElement.Escape(launch)}\" activationType=\"protocol\"><visual><binding template=\"ToastGeneric\">");

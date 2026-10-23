@@ -6,6 +6,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Platform;
 using Shiyin.Services;
+using Shiyin.Services.Capture;
 
 namespace Shiyin.App;
 
@@ -277,12 +278,25 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         tray.Selected += (_, _) => ShowMain();
         tray.ContextMenu += (_, e) => e.Flyout = TrayMenu();
         host.Recorder.Changed += () => host.Post(UpdateTray);
+        host.Recorder.HintAppeared += hint => host.Post(() => HintAppeared(hint));
     }
 
     void UpdateTray()
     {
         if (tray is null || host is null) return;
-        tray.Tooltip = host.Recorder.IsRecording ? L.F("拾音：錄音中 %@", TimeFormat.String(host.Recorder.ElapsedSeconds)) : host.Runner.IsBusy ? L.T("拾音：處理中") : L.T("拾音");
+        var recorder = host.Recorder;
+        // 收音提醒還在時系統匣的提示文字跟著變（R42.2；系統匣只有一個圖示，錄音中也只改提示文字）
+        tray.Tooltip = recorder.IsRecording
+            ? recorder.Hint is not null ? L.F("拾音：錄音中 %@，%@", TimeFormat.String(recorder.ElapsedSeconds), L.T("收音提醒")) : L.F("拾音：錄音中 %@", TimeFormat.String(recorder.ElapsedSeconds))
+            : host.Runner.IsBusy ? L.T("拾音：處理中") : L.T("拾音");
+    }
+
+    /// <summary>收音提醒第一次出現（R42.3、M§31.5）：拾音的視窗不是前景時送通知，點了打開那場會議；每場每種一次由 Recorder 管</summary>
+    void HintAppeared(Recorder.LevelHint hint)
+    {
+        if (host is null || host.Recorder.MeetingId is not long id) return;
+        if (main is { IsForeground: true } && main.AppWindow.IsVisible) return;
+        host.Notifier.LevelHint(hint, id);
     }
 
     MenuFlyout TrayMenu()
@@ -294,6 +308,12 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             menu.Items.Add(new MenuFlyoutItem { Text = (recorder.IsPaused ? L.T("已暫停") : L.T("錄音中")) + " " + TimeFormat.String(recorder.ElapsedSeconds), IsEnabled = false });
             menu.Items.Add(Ui.Item(recorder.IsPaused ? L.T("繼續") : L.T("暫停"), () => { if (recorder.IsPaused) recorder.Resume(); else recorder.Pause(); }));
             menu.Items.Add(Ui.Item(L.T("停止"), recorder.Stop));
+            if (recorder.Hint is { } hint)
+            {
+                // 收音提醒（R42.2）：跟錄音畫面同一句，「知道了」這場不再提示
+                menu.Items.Add(new MenuFlyoutItem { Text = hint.Text(), IsEnabled = false });
+                menu.Items.Add(Ui.Item(L.T("知道了"), recorder.DismissLevelHint));
+            }
         }
         else menu.Items.Add(Ui.Item(L.T("開始錄音"), () => host.Controller.StartRecording(main?.State.CurrentFolder ?? "")));
         menu.Items.Add(new MenuFlyoutSeparator());

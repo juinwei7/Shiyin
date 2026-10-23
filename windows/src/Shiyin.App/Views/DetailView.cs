@@ -603,12 +603,8 @@ public sealed class RecordingPanel
         if (followLatest) scroll.ChangeView(null, double.MaxValue, null, disableAnimation: true);
     }
 
-    public static string HintText(Recorder.LevelHint hint) => hint switch
-    {
-        Recorder.LevelHint.Silent => L.T("麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。"),
-        Recorder.LevelHint.Quiet => L.T("聲音有點小：手機或筆電放近說話的人一點。"),
-        _ => L.T("背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。"),
-    };
+    /// <summary>提示的文字在 LevelHints.Text（錄音畫面、系統匣、通知共用，R42）</summary>
+    public static string HintText(Recorder.LevelHint hint) => hint.Text();
 }
 
 /// <summary>

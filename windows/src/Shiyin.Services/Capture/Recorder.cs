@@ -90,6 +90,10 @@ public sealed class Recorder
 
     readonly List<LiveLine> liveLines = [];
     readonly HashSet<LevelHint> dismissedHints = [];
+    /// <summary>這場錄音已經通知過的提示（R42.1：每種每場最多一次）</summary>
+    readonly HashSet<LevelHint> notifiedHints = [];
+    /// <summary>提示第一次出現（M§31.5）：App 決定要不要送通知。跟 Changed 一樣在背景執行緒發</summary>
+    public event Action<LevelHint>? HintAppeared;
     int noisySeconds, quietSeconds;
     RecordingWriter? writer;
     Dictionary<int, IAudioSource> sources = [];
@@ -289,6 +293,7 @@ public sealed class Recorder
             ElapsedSeconds = 0;
             Hint = null;
             dismissedHints.Clear();
+            notifiedHints.Clear();
             (noisySeconds, quietSeconds) = (0, 0);
             liveLines.Clear();
             VolatileText = "";
@@ -488,6 +493,8 @@ public sealed class Recorder
         };
         if (shown == Hint) return false;
         Hint = shown;
+        // 第一次出現才通知（R42.1）；提示消失又出現不再通知
+        if (shown is LevelHint appeared && notifiedHints.Add(appeared)) HintAppeared?.Invoke(appeared);
         return true;
     }
 
@@ -660,4 +667,15 @@ public sealed class Recorder
             d?.Feed(samples);
         }
     }
+}
+
+/// <summary>收音提醒的文字（R42）：錄音畫面、系統匣、通知共用（同 Mac 的 Recorder.LevelHint.text）</summary>
+public static class LevelHints
+{
+    public static string Text(this Recorder.LevelHint hint) => hint switch
+    {
+        Recorder.LevelHint.Silent => L.T("麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。"),
+        Recorder.LevelHint.Quiet => L.T("聲音有點小：手機或筆電放近說話的人一點。"),
+        _ => L.T("背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。"),
+    };
 }

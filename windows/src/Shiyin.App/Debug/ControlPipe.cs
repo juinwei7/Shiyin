@@ -219,6 +219,7 @@ public static class ControlPipe
             },
             ["hotKeyError"] = host.HotKeyError,
             ["notifications"] = host.Notifier.Enabled,
+            ["lastToast"] = host.Notifier.LastShown is { } toast ? new JsonObject { ["title"] = toast.Title, ["body"] = toast.Body } : null,
         };
     }
 }

@@ -37,6 +37,8 @@ public sealed class MainWindow : Window
     readonly DetailView detailView;
     /// <summary>待確認的回答（M§31.2）：DEBUG 的控制通道用</summary>
     public Views.ReviewDraft ReviewDraft => detailView.ReviewDraft;
+    /// <summary>主視窗目前是前景（Activated 事件）</summary>
+    public bool IsForeground { get; private set; }
     bool updatingSelection;
 
     public MainWindow(AppHost host)
@@ -57,6 +59,8 @@ public sealed class MainWindow : Window
         };
         State.Changed += Refresh;
         State.RecorderChanged += () => { BuildToolbar(); detailView.UpdateRecording(); };
+        // 主視窗是不是前景（R42.1：在前景時收音提醒不送通知，只有畫面和系統匣的提示）
+        Activated += (_, e) => IsForeground = e.WindowActivationState != WindowActivationState.Deactivated;
         // 工作進度不發事件：轉錄、整理中每秒更新一次列表的狀態和會議頁的進度
         progressTimer.Tick += (_, _) => Ui.Guard(() =>
         {
