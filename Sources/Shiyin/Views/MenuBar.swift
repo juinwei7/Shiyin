@@ -61,6 +61,17 @@ struct MenuBarContent: View {
                 }
                 if recorder.hasMic { RecorderMeter(recorder: recorder, system: false, segments: 24) }
                 if recorder.hasSystem { RecorderMeter(recorder: recorder, system: true, segments: 24) }
+                if let hint = recorder.levelHint {
+                    // 收音提醒（R42.2）：跟錄音畫面同一句，「知道了」這場不再提示
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(hint.text, systemImage: hint == .noisy ? "waveform.badge.exclamationmark" : "mic.badge.xmark")
+                            .font(.caption)
+                            .foregroundStyle(Color.signal)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("知道了") { recorder.dismissLevelHint() }
+                            .font(.caption)
+                    }
+                }
                 if !recorder.volatileText.isEmpty || !recorder.liveLines.isEmpty {
                     Text(recorder.volatileText.isEmpty ? recorder.liveLines.last?.text ?? "" : recorder.volatileText)
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)

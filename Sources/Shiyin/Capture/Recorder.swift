@@ -50,9 +50,22 @@ final class Recorder {
         case silent   // 麥克風的聲音完全是 0
         case quiet    // 有人在說話，但聲音很小
         case noisy    // 背景一直很大聲
+
+        /// 錄音畫面、選單列、通知都用同一句（R42）
+        var text: String {
+            switch self {
+            case .silent: return String(localized: "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。")
+            case .quiet: return String(localized: "聲音有點小：手機或筆電放近說話的人一點。")
+            case .noisy: return String(localized: "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。")
+            }
+        }
     }
     private(set) var levelHint: LevelHint?
     @ObservationIgnored private var dismissedLevelHints: Set<LevelHint> = []
+    /// 這場錄音已經通知過的提示（R42.1：每種每場最多一次）
+    @ObservationIgnored private var notifiedLevelHints: Set<LevelHint> = []
+    /// 提示第一次出現（design §31.5）：AppModel 決定要不要送通知
+    @ObservationIgnored var onLevelHint: ((LevelHint) -> Void)?
     @ObservationIgnored private var noisySeconds = 0
     @ObservationIgnored private var quietSeconds = 0
     #if DEBUG
@@ -241,6 +254,7 @@ final class Recorder {
             elapsedSeconds = 0
             levelHint = nil
             dismissedLevelHints = []
+            notifiedLevelHints = []
             (noisySeconds, quietSeconds) = (0, 0)
             liveLines = []
             volatileText = ""
@@ -394,7 +408,11 @@ final class Recorder {
         }
         let hint: LevelHint? = silent ? .silent : quietSeconds >= 60 ? .quiet : noisySeconds >= 45 ? .noisy : nil
         let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
-        if shown != levelHint { levelHint = shown }
+        if shown != levelHint {
+            levelHint = shown
+            // 第一次出現才通知（R42.1）；提示消失又出現不再通知
+            if let shown, notifiedLevelHints.insert(shown).inserted { onLevelHint?(shown) }
+        }
         #if DEBUG
         levelCheck = ["speech": speech, "background": background, "frames": levels.count, "silentSeconds": writer.silence(0),
                       "noisySeconds": noisySeconds, "quietSeconds": quietSeconds, "hint": levelHint?.rawValue ?? ""]

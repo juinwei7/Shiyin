@@ -280,6 +280,7 @@ final class AppModel {
         GlobalHotKey.shared.onPress = { [weak self] in self?.toggleRecording() }
         GlobalHotKey.shared.onBookmark = { [weak self] in self?.bookmarkFromHotKey() }
         recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
+        recorder.onLevelHint = { [weak self] hint in self?.levelHintAppeared(hint) }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
         UsageStats.shared.touch()
@@ -447,9 +448,19 @@ final class AppModel {
 
     var menuBarSymbol: String {
         if bookmarkFlash { return "star.circle.fill" }
-        if recorder.isRecording { return "record.circle.fill" }
+        // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來
+        if recorder.isRecording { return recorder.levelHint != nil ? "mic.badge.exclamationmark" : "record.circle.fill" }
         if runner.isBusy || queuedCount > 0 { return "waveform.circle.fill" }
         return "waveform"
+    }
+
+    /// 收音提醒第一次出現（R42.1、design §31.5）：拾音不是最前面的 app、或主視窗沒開時送通知，點了打開錄音中的會議。
+    /// 每場每種最多一次由 Recorder 管；拾音在前面時只有錄音畫面和選單列的提示
+    private func levelHintAppeared(_ hint: Recorder.LevelHint) {
+        guard let id = recorder.meetingId else { return }
+        let mainVisible = NSApp.windows.contains { $0.isVisible && $0.identifier?.rawValue.hasPrefix("main") == true }
+        guard !(NSApp.isActive && mainVisible) else { return }
+        notifier.levelHint(hint, meetingId: id)
     }
 
     func refreshEnvironment() {

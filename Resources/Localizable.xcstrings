@@ -4336,6 +4336,17 @@
         }
       }
     },
+    "收音提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio warning"
+          }
+        }
+      }
+    },
     "改名": {
       "extractionState": "manual",
       "localizations": {

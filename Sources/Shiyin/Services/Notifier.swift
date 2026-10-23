@@ -49,6 +49,20 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(content)
     }
 
+    /// 收音提醒（R42.1、design §31.5）：內容跟錄音畫面同一句，點了打開錄音中的會議
+    func levelHint(_ hint: Recorder.LevelHint, meetingId: Int64) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "收音提醒")
+        content.body = hint.text
+        content.categoryIdentifier = "LEVEL_HINT"
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meetingId)]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "hint": hint.rawValue]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
     func jobFinished(_ job: Job, meeting: Meeting, error: Error?) {
         let content = UNMutableNotificationContent()
         let title = meeting.displayTitle

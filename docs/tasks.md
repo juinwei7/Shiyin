@@ -17,8 +17,6 @@
   - 還差（要使用者跑，token 在鑰匙圈）：在 `workers/usage` 跑 `npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql` 加三欄，再 `npx wrangler@4 deploy`；部署前後台收到帶 `review` 的資料會忽略那一組，不會失敗
 - [~] **V5 Windows 跟上**（R41.6、design-windows §11.5）：程式完成（`ReviewLinks.cs`、`ReviewDraft.cs`、`ReviewTab.cs`、`NotesTabs.cs`、`AppController.SubmitReview`、`UsageStats`、控制通道 `reviewexpand`／`reviewsubmit`／`reviewskipall`／`review`），fixtures 加了 `reviewLinks`、`resolveReviewItems` 步驟，Mac 重產標準答案後 `dotnet test` 103 個通過
   - 還差：虛擬機上 `ctl.sh select/tab/reviewexpand` 加 UI Automation 按標記、「是」、送出，`shot.sh` 截圖跟 Mac 對照
-- [ ] **V6 收音提醒送通知（Mac）**（R42.1、R42.2、§31.5）
-  - 驗證：用 `afconvert` 把示範的 1.m4a 轉成 16 kHz 單聲道 WAV，python 的 `wave` 接上 90 秒靜音；`record-sim` 1 倍速、拾音不在前景：靜音約 10 秒後收到通知（`notifystatus` 先確認權限）、`snapshot menubar` 看到提示和「知道了」、`state` 的 `menuBarSymbol` 是警示圖示；按「知道了」後換回；同一場再靜音不再通知；拾音在前景時只有畫面和圖示、沒有通知
 - [ ] **V7 Windows 收音提醒**（R42.3）
   - 驗證：虛擬機 `record-sim` 同一個檔，通知中心有通知、系統匣圖示變化、`ctl.sh state` 的 `levelHint`
 - [ ] **V8 文件與示範**：使用說明的「回答待確認」那段、README（中英）、官網首屏示範（website §10.1：待確認的標記）、`l10n.py check` 和 `windows-check` 加英文
