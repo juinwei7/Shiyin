@@ -89,7 +89,24 @@ public static class ControlPipe
                 main.Refresh();
                 return Ok;
             }
-            case "reviewsubmit" when main is not null: main.ReviewDraft.Submit(); main.Refresh(); return Ok;
+            case "reviewsubmit" when main is not null:   // reviewsubmit [段落 位置 [第二個位置]]：給了段落就是按那一條卡片的「送出」（只送那幾題）
+            {
+                IReadOnlySet<int>? only = null;
+                if (args.Length > 2 && main.State.Detail is { } submitDetail)
+                {
+                    var a = args.Length > 2 && int.TryParse(args[2], out var x) ? x : 0;
+                    var b = args.Length > 3 && int.TryParse(args[3], out var y) ? y : 0;
+                    NoteItemRef? r = args[1] switch
+                    {
+                        "summary" => NoteItemRef.Summary(a), "decisions" => NoteItemRef.Decisions(a), "actionItems" => NoteItemRef.ActionItems(a),
+                        "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b), _ => null,
+                    };
+                    only = r is { } rr && submitDetail.ReviewLinks.TryGetValue(rr, out var list) ? list.ToHashSet() : new HashSet<int>();
+                }
+                main.ReviewDraft.Submit(only);
+                main.Refresh();
+                return Ok;
+            }
             case "reviewskipall" when main?.State.Detail is { } skipDetail:
                 main.ReviewDraft.SkipAllUnanswered(skipDetail);
                 main.ReviewDraft.Flush();

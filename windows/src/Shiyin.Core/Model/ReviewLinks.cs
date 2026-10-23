@@ -26,11 +26,11 @@ public readonly record struct NoteItemRef(NoteSection Section, int Index, int Su
 }
 
 /// <summary>待確認的題目對應到紀錄的條目（R41.1、M§31.1，同 Mac 的 MeetingNotes.reviewLinks）：
-/// 題目和條目的時間點同一秒的全標；沒有同一秒的，標時間最接近、差距 20 秒以內的一條。對不到的題目不在結果裡。
+/// 題目和條目的時間點同一秒的全標；沒有同一秒的，標時間最接近、差距 10 秒以內的一條。對不到的題目不在結果裡。
 /// 議題的標題不算條目，只有要點算。載入會議時算一次（MeetingDetail.ReviewLinks）</summary>
 public static class ReviewLinks
 {
-    public const double MaxGap = 20;
+    public const double MaxGap = 10;
 
     public static Dictionary<NoteItemRef, List<int>> Compute(MeetingNotes notes)
     {

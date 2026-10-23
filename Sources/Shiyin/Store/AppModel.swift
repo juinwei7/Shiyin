@@ -966,6 +966,7 @@ final class AppModel {
         // 回答分三類（design §31.3）：確認（是非題回答「是」、沒填答案）和略過直接從紀錄移除，不送整理工具（R41.4、D103）；
         // 只有要改內容的回答（打字的、「不是」）才送整理工具依回答修正
         var confirmed: Set<Int> = []
+        var dismissed = dismissed
         var modified: [(Int, ReviewAnswer)] = []
         for (index, text) in answers {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -973,6 +974,8 @@ final class AppModel {
             let item = notes.reviewItems[index]
             if let choice = YesNoAnswer(trimmed, language: language), choice.isYes == true {
                 confirmed.insert(index)
+            } else if let choice = YesNoAnswer(trimmed, language: language), choice.isYes == false, choice.correction.isEmpty {
+                dismissed.insert(index)   // 「不是」沒填答案：有問題但不知道對的是什麼，跟略過一樣（R41.4）
             } else {
                 modified.append((index, ReviewAnswer(time: item.time, question: item.question, answer: trimmed)))
             }
@@ -1557,8 +1560,16 @@ final class AppModel {
 
     /// 送出待確認的回答（待確認分頁和就地回答共用，R41.2）：先送整理工具要處理的題目（題目文字可能有說話者的名字，
     /// 改名後會變），失敗時全部留著；再處理說話者的題目（design §27）
-    func submitReviewDraft() {
+    func submitReviewDraft(only indexes: Set<Int>? = nil) {
         guard let draft = reviewDraft, detail?.meeting.id == draft.meetingId else { return }
+        if let indexes {
+            // 卡片只送這一條對到的題目（R41.2），說話者題目不算，其他題目的回答留著
+            let answers = draft.answers.filter { indexes.contains($0.key) }
+            let dismissed = draft.dismissed.intersection(indexes)
+            guard !answers.isEmpty || !dismissed.isEmpty, submitReview(answers: answers, dismissed: dismissed) else { return }
+            draft.clear(indexes: indexes)
+            return
+        }
         if draft.answeredCount > 0 || !draft.dismissed.isEmpty {
             guard submitReview(answers: draft.answers, dismissed: draft.dismissed) else { return }
         }

@@ -190,17 +190,19 @@ public static class ReviewRows
     public static FrameworkElement Card(MeetingDetail detail, IReadOnlyList<int> indexes, ReviewDraft draft, AppHost host, MainWindow window)
     {
         var items = detail.Notes?.ReviewItems ?? [];
+        var shown = indexes.Where(i => i >= 0 && i < items.Count).ToHashSet();
         var column = Ui.Column(12);
-        var submit = Ui.Button("", () => { draft.Submit(); window.Refresh(); }, accent: true);
+        // 只送這一條對到的題目（R41.2），題數也只算這幾題
+        var submit = Ui.Button("", () => { draft.Submit(shown); window.Refresh(); }, accent: true);
         void UpdateSubmit()
         {
-            submit.Content = draft.SubmitTitle();
-            submit.IsEnabled = draft.HasSomethingToSubmit && window.State.DetailStatus?.IsActive != true;
+            submit.Content = draft.SubmitTitle(shown);
+            submit.IsEnabled = draft.CanSubmit(shown) && window.State.DetailStatus?.IsActive != true;
         }
-        foreach (var index in indexes.Where(i => i >= 0 && i < items.Count))
+        foreach (var index in shown.Order())
             column.Children.Add(Question(index, items[index], detail.Meeting.MeetingLanguage, draft, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, window.Refresh, UpdateSubmit));
         UpdateSubmit();
-        var footer = Ui.Bar(null, Ui.Text(L.T("有回答的題目會交給整理工具依答案修正；略過的直接移除。"), 12, color: Ui.Secondary),
+        var footer = Ui.Bar(null, Ui.Text(L.T("只送這一條的題目；有回答的交給整理工具依答案修正，略過的直接移除。"), 12, color: Ui.Secondary),
             Ui.Row(8, Ui.Button(L.T("收合"), () => { draft.Expanded = null; window.Refresh(); }), submit), 12);
         column.Children.Add(footer);
         var tint = new Microsoft.UI.Xaml.Media.SolidColorBrush(Ui.Signal.Color) { Opacity = 0.07 };

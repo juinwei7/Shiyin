@@ -54,9 +54,23 @@ enum DebugControl {
             default: nil
             }
             model.reviewDraft?.expanded = ref
-        case "reviewsubmit":   // reviewsubmit <會議 id>：等於按待確認分頁或就地回答的「送出」（送目前的草稿）
+        case "reviewsubmit":   // reviewsubmit <會議 id> [段落 位置 [第二個位置]]：等於按待確認分頁的「送出」；給了段落就是按那一條卡片的「送出」（只送那幾題）
             model.selection = id
-            model.submitReviewDraft()
+            if args.count > 3 {
+                let a = Int(args[3]) ?? 0, b = Int(args.count > 4 ? args[4] : "") ?? 0
+                let ref: NoteItemRef? = switch args[2] {
+                case "summary": .summary(a)
+                case "decisions": .decisions(a)
+                case "actionItems": .actionItems(a)
+                case "openQuestions": .openQuestions(a)
+                case "topic": .topicPoint(a, b)
+                case "custom": .custom(a, b)
+                default: nil
+                }
+                model.submitReviewDraft(only: Set(ref.flatMap { model.detail?.reviewLinks[$0] } ?? []))
+            } else {
+                model.submitReviewDraft()
+            }
         case "reviewskipall":   // reviewskipall <會議 id>：等於按待確認分頁的「全部略過」（R41.5）
             model.selection = id
             model.reviewDraft?.skipAllUnanswered(questionCount: model.detail?.notes?.reviewItems.count ?? 0,

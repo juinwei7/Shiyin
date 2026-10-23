@@ -106,20 +106,22 @@ struct InlineReviewCard: View {
 
     var body: some View {
         if let draft = model.reviewDraft, draft.meetingId == detail.meeting.id, let items = detail.notes?.reviewItems {
+            let shown = Set(indexes.filter { items.indices.contains($0) })
             VStack(alignment: .leading, spacing: 12) {
-                ForEach(indexes.filter { items.indices.contains($0) }, id: \.self) { index in
+                ForEach(shown.sorted(), id: \.self) { index in
                     ReviewQuestionRow(index: index, item: items[index], language: detail.meeting.meetingLanguage, draft: draft)
                 }
                 HStack(spacing: 12) {
-                    Text("有回答的題目會交給整理工具依答案修正；略過的直接移除。")
+                    Text("只送這一條的題目；有回答的交給整理工具依答案修正，略過的直接移除。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     Button("收合") { draft.expanded = nil }
-                    Button(draft.submitTitle) { model.submitReviewDraft() }
+                    // 只送這一條對到的題目（R41.2），題數也只算這幾題
+                    Button(draft.submitTitle(only: shown)) { model.submitReviewDraft(only: shown) }
                         .buttonStyle(.borderedProminent)
-                        .disabled(!draft.hasSomethingToSubmit || model.detailStatus?.isActive == true)
+                        .disabled(!draft.hasSomethingToSubmit(only: shown) || model.detailStatus?.isActive == true)
                 }
             }
             .padding(14)

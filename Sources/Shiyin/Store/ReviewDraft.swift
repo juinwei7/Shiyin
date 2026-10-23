@@ -63,10 +63,28 @@ final class ReviewDraft {
             return
         }
         if newQuestions != questions {
-            questions = newQuestions
+            // 題目換了（送出一部分、依回答修正、重新整理、復原上一版）：草稿是照題目文字存的，
+            // 還在的題目把回答照文字接回來，不在的刪掉草稿（design §31.2）
             saveTask?.cancel()
-            model.deleteDrafts(meetingId, prefix: "review")
-            withoutSaving { answers = [:]; dismissed = [] }
+            var answerByText: [String: String] = [:], skippedTexts: Set<String> = []
+            for (index, question) in questions.enumerated() {
+                if let answer = answers[index] { answerByText[question] = answer }
+                if dismissed.contains(index) { skippedTexts.insert(question) }
+            }
+            let surviving = Set(newQuestions)
+            for question in questions where !surviving.contains(question) {
+                model.saveDraft(meetingId, key: "review:" + question, text: "")
+                model.saveDraft(meetingId, key: "review-skip:" + question, text: "")
+            }
+            questions = newQuestions
+            withoutSaving {
+                answers = [:]
+                dismissed = []
+                for (index, question) in newQuestions.enumerated() {
+                    if let answer = answerByText[question] { answers[index] = answer }
+                    if skippedTexts.contains(question) { dismissed.insert(index) }
+                }
+            }
             expanded = nil
         }
         if newKeys != speakerKeys {
@@ -105,6 +123,15 @@ final class ReviewDraft {
         expanded = nil
     }
 
+    /// 卡片只送了這幾題（R41.2）：只清這幾題的回答，其他留著；題目消失後 `sync` 會把它們的草稿刪掉
+    func clear(indexes: Set<Int>) {
+        withoutSaving {
+            for index in indexes { answers[index] = nil }
+            dismissed.subtract(indexes)
+        }
+        expanded = nil
+    }
+
     /// 馬上存（結束拾音、換會議）
     func flush() {
         saveTask?.cancel()
@@ -113,26 +140,41 @@ final class ReviewDraft {
 
     // MARK: 題數、送出鈕（待確認分頁和就地回答共用）
 
-    var answeredCount: Int {
-        answers.filter { !dismissed.contains($0.key) && !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }.count
+    /// 已回答的題數；`only` 給了就只算這幾題（卡片）
+    func answeredCount(only: Set<Int>? = nil) -> Int {
+        answers.filter { (only?.contains($0.key) ?? true) && !dismissed.contains($0.key) && !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }.count
     }
+
+    func dismissedCount(only: Set<Int>? = nil) -> Int {
+        only.map { dismissed.intersection($0).count } ?? dismissed.count
+    }
+
+    var answeredCount: Int { answeredCount() }
 
     var speakerAnsweredCount: Int {
         speakerAnswers.filter { !speakerSkipped.contains($0.key) && !$0.value.isEmpty }.count
     }
 
-    var hasSomethingToSubmit: Bool {
-        answeredCount + speakerAnsweredCount > 0 || !dismissed.isEmpty || !speakerSkipped.isEmpty
+    /// 待確認分頁：全部的題目（含說話者題目）；卡片（`only`）：只有這幾題
+    func hasSomethingToSubmit(only: Set<Int>? = nil) -> Bool {
+        if let only { return answeredCount(only: only) + dismissedCount(only: only) > 0 }
+        return answeredCount + speakerAnsweredCount > 0 || !dismissed.isEmpty || !speakerSkipped.isEmpty
     }
 
-    var submitTitle: String {
-        switch (answeredCount + speakerAnsweredCount, dismissed.count + speakerSkipped.count) {
+    var hasSomethingToSubmit: Bool { hasSomethingToSubmit() }
+
+    func submitTitle(only: Set<Int>? = nil) -> String {
+        let answered = answeredCount(only: only) + (only == nil ? speakerAnsweredCount : 0)
+        let skipped = dismissedCount(only: only) + (only == nil ? speakerSkipped.count : 0)
+        switch (answered, skipped) {
         case (0, 0): return String(localized: "送出")
         case (0, let d): return String(localized: "略過 \(d) 題")
         case (let a, 0): return String(localized: "送出 \(a) 題回答")
         case (let a, let d): return String(localized: "送出 \(a) 題回答、略過 \(d) 題")
         }
     }
+
+    var submitTitle: String { submitTitle() }
 
     // MARK: 存草稿
 

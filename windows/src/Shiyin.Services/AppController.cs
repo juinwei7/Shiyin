@@ -785,14 +785,18 @@ public sealed class AppController
         // 回答分三類（M§31.3）：確認（是非題回答「是」、沒填答案）和略過直接從紀錄移除，不送整理工具（R41.4、D103）；
         // 只有要改內容的回答（打字的、「不是」）才送整理工具依回答修正
         var confirmed = new HashSet<int>();
+        var dismissedAll = dismissed.ToHashSet();
         var modified = new List<(int Index, string Text)>();
         foreach (var (index, raw) in answers)
         {
             var text = raw.Trim();
             if (text.Length == 0 || dismissed.Contains(index) || index < 0 || index >= notes.ReviewItems.Count) continue;
-            if (YesNoAnswer.Parse(text, meeting.MeetingLanguage) is { IsYes: true, Correction.Length: 0 }) confirmed.Add(index);
+            var choice = YesNoAnswer.Parse(text, meeting.MeetingLanguage);
+            if (choice is { IsYes: true, Correction.Length: 0 }) confirmed.Add(index);
+            else if (choice is { IsYes: false, Correction.Length: 0 }) dismissedAll.Add(index);   // 「不是」沒填答案：跟略過一樣（R41.4）
             else modified.Add((index, text));
         }
+        dismissed = dismissedAll;
         var answered = modified.OrderBy(a => a.Index)
             .Select(a => new ReviewAnswerJson(notes.ReviewItems[a.Index].Time, notes.ReviewItems[a.Index].Question, a.Text)).ToList();
         if (answered.Count > 0 && Settings.Provider == LLMProvider.None)

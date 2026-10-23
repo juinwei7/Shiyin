@@ -229,7 +229,7 @@ enum NoteItemRef: Hashable {
 
 extension MeetingNotes {
     /// 待確認的題目對應到紀錄的條目（R41.1，design §31.1）：題目和條目的時間點同一秒的全標；
-    /// 沒有同一秒的，標時間最接近、差距 20 秒以內的一條。對不到的題目不在結果裡（只在待確認分頁）。
+    /// 沒有同一秒的，標時間最接近、差距 10 秒以內的一條。對不到的題目不在結果裡（只在待確認分頁）。
     /// 議題的標題不算條目，只有要點算。載入會議時算一次（`MeetingDetail.reviewLinks`）
     func reviewLinks() -> [NoteItemRef: [Int]] {
         var entries: [(ref: NoteItemRef, seconds: Double)] = []
@@ -254,7 +254,7 @@ extension MeetingNotes {
             if !exact.isEmpty {
                 for entry in exact { links[entry.ref, default: []].append(index) }
             } else if let nearest = entries.min(by: { abs($0.seconds - seconds) < abs($1.seconds - seconds) }),
-                      abs(nearest.seconds - seconds) <= 20 {
+                      abs(nearest.seconds - seconds) <= 10 {
                 links[nearest.ref, default: []].append(index)
             }
         }

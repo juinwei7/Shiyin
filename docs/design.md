@@ -1199,7 +1199,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 ### 31.1 題目對應到紀錄（R41.1，D102）
 
 - 載入會議時算一次（跟 `MeetingDetail.speakerCandidates` 一樣，不在畫面更新時重算）：`MeetingDetail.reviewLinks: [NoteItemRef: [Int]]`。`NoteItemRef` 指一條紀錄：段落（summary、decisions、actionItems、openQuestions、某個 topic 的 point、某個 custom 段落的 item）加位置。值是題號（`reviewItems` 的 index，也就是畫面上的順序）。
-- 規則：題目的 `time` 和條目的 `time` 都用 `TimeFormat.seconds` 轉成秒，空的或轉不出來的不對應。先找同一秒的條目，有幾條標幾條（同一個時間點的條目通常在講同一件事，例如摘要和決議各一條）；沒有的話找時間差最小、差距 ≤ 20 秒的一條。議題的標題（`topics[].start`）不算條目，只有要點算。
+- 規則：題目的 `time` 和條目的 `time` 都用 `TimeFormat.seconds` 轉成秒，空的或轉不出來的不對應。先找同一秒的條目，有幾條標幾條（同一個時間點的條目通常在講同一件事，例如摘要和決議各一條）；沒有的話找時間差最小、差距 ≤ 10 秒的一條（2026-10-24 從 20 秒收緊：示範和標準答案裡對得對的都在 5 秒內，差 4 秒就已經有對錯的例子，再遠只會更不準）。議題的標題（`topics[].start`）不算條目，只有要點算。
 - 一條可以對到多題。對不到的題目只在待確認分頁。
 - 題目的 index 在送出、重新整理、復原後都會變（§21.15 說過），`reviewLinks` 跟著 `MeetingDetail` 重新載入就重算。
 
@@ -1207,13 +1207,14 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 
 - `ItemList`、`ActionItemsTable`、`TopicsTab` 的每一條，在時間點之後加 `ReviewMarker`：圓形琥珀色（`Color.signal`，跟側欄的「待確認 N 題」同色）的「？」，對到多題時顯示「？2」。`.help` 寫「整理時有 N 題不確定的地方，點了就能回答」。
 - 點了在那一條下面展開 `InlineReviewCard`：列出對應的題目，每題用 `ReviewQuestionRow`（從 `ReviewTab.reviewRow` 抽出來，兩邊共用：題號、時間點、題目、是非或輸入框、略過），右下「送出」（文字同待確認分頁的 `submitTitle`）和「收合」。同時只展開一條，點別條就收合前一條。
-- 回答的狀態從 `ReviewTab` 的 `@State` 搬到 `ReviewDraft`（`@Observable`，掛在 `MeetingDetail` 上，換會議就換一份）：`answers`、`dismissed`、`speakerAnswers`、`speakerSkipped`、存草稿的 debounce 都在這裡。`ReviewTab` 和 `InlineReviewCard` 觀察同一份，兩邊看到的回答一致（R41.2），存草稿的 key 不變（§21.15）。
-- 送出：兩邊都呼叫 `submitReview`（§31.3）。送出後題目從紀錄移除，`MeetingDetail` 重新載入，標記跟著消失。
+- 回答的狀態從 `ReviewTab` 的 `@State` 搬到 `ReviewDraft`（`@Observable`，掛在 `AppModel` 上，換會議就換一份）：`answers`、`dismissed`、`speakerAnswers`、`speakerSkipped`、存草稿的 debounce 都在這裡。`ReviewTab` 和 `InlineReviewCard` 觀察同一份，兩邊看到的回答一致（R41.2），存草稿的 key 不變（§21.15）。
+- 題目換了（送出一部分、依回答修正、重新整理、復原上一版）時，不再整份清掉：草稿本來就是照題目文字存的，還在的題目把回答照文字接回來，不在的題目刪掉草稿（2026-10-24 改，配合卡片只送一部分）。
+- 送出：待確認分頁的「送出」送全部；卡片的「送出」只送這一條對到的題目（`submitReviewDraft(only:)`，說話者題目不算），按鈕的題數也只算這幾題。送出後題目從紀錄移除，`MeetingDetail` 重新載入，標記跟著消失，其他題目的回答留著。
 - 編輯模式（`NotesEditor`）、匯出（`Exporters`）不畫標記；DEBUG 的 snapshot 要畫（驗證排版用）。草稿紀錄（`notesDraft`）照樣標；垃圾桶裡的會議不標。
 
 ### 31.3 「是」不送整理工具（R41.4，D103）
 
-- `submitReview` 把回答分三類：**確認**（`YesNoAnswer` 認出 `isYes == true` 而且沒有 correction）、**略過**（dismissed）、**修改**（其他）。確認和略過一起從 `reviewItems` 移除：`dismissReviewItems` 擴充成 `resolveReviewItems(id, confirmed:, dismissed:)`，版本原因分別寫「確認待確認」「略過待確認」，兩種都有時一個版本、原因「確認、略過待確認」。只有修改的題目進 `revise` 工作，payload 格式不變。
+- `submitReview` 把回答分三類：**確認**（`YesNoAnswer` 認出 `isYes == true` 而且沒有 correction）、**略過**（dismissed，加上「不是」沒填答案的：有問題但不知道對的是什麼，模型拿到也只能刪掉或留著，2026-10-24 加）、**修改**（其他）。確認和略過一起從 `reviewItems` 移除：`dismissReviewItems` 擴充成 `resolveReviewItems(id, confirmed:, dismissed:)`，版本原因分別寫「確認待確認」「略過待確認」，兩種都有時一個版本、原因「確認、略過待確認」。只有修改的題目進 `revise` 工作，payload 格式不變。
 - 校稿的提示詞不變，送出去的 answers 不再包含「是」。以前「是」也會送去校稿，校稿收到「是」只會原樣保留，結果相同。
 - 整理工具是 `.none` 或還沒設定時，只擋修改類（現在的 guard 改成看修改的題數）；確認和略過照樣能送。
 - 統計（R41.7）：`UsageStats.Counters` 加 `review = ["answered": 0, "confirmed": 0, "skipped": 0]`，`submitReview` 成功後依三類加。§30.1、§30.4 跟著補。後台（§30.10）`usage_daily` 加 `review_answered`、`review_confirmed`、`review_skipped` 三欄（`ALTER TABLE … ADD COLUMN … NOT NULL DEFAULT 0`），worker 的 `USAGE_DICTS` 加 `review`；舊的 worker 遇到不認得的字典會忽略（§30.4「多的鍵忽略」），`schema` 維持 1。

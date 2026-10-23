@@ -64,11 +64,30 @@ public sealed class ReviewDraft
         }
         if (!questions.SequenceEqual(newQuestions))
         {
+            // 題目換了（送出一部分、依回答修正、重新整理、復原上一版）：草稿是照題目文字存的，
+            // 還在的題目把回答照文字接回來，不在的刪掉草稿（M§31.2）
             save.Stop();
-            host.Controller.DeleteDrafts(id, "review");
+            var answerByText = new Dictionary<string, string>();
+            var skippedTexts = new HashSet<string>();
+            for (var i = 0; i < questions.Count; i++)
+            {
+                if (Answers.TryGetValue(i, out var answer)) answerByText[questions[i]] = answer;
+                if (Dismissed.Contains(i)) skippedTexts.Add(questions[i]);
+            }
+            var surviving = newQuestions.ToHashSet();
+            foreach (var gone in questions.Where(q => !surviving.Contains(q)))
+            {
+                host.Controller.SaveDraft(id, "review:" + gone, "");
+                host.Controller.SaveDraft(id, "review-skip:" + gone, "");
+            }
+            questions = newQuestions;
             Answers.Clear();
             Dismissed.Clear();
-            questions = newQuestions;
+            for (var i = 0; i < questions.Count; i++)
+            {
+                if (answerByText.TryGetValue(questions[i], out var answer)) Answers[i] = answer;
+                if (skippedTexts.Contains(questions[i])) Dismissed.Add(i);
+            }
             Expanded = null;
         }
         if (newKeys.Count != speakerKeys.Count || newKeys.Any(p => speakerKeys.GetValueOrDefault(p.Key) != p.Value))
@@ -125,23 +144,48 @@ public sealed class ReviewDraft
             || detail.SpeakerSuggestions.Keys.Any(idx => !SpeakerSkipped.Contains(idx) && (SpeakerAnswers.GetValueOrDefault(idx) ?? "").Length == 0);
     }
 
-    public int Answered => Answers.Count(p => !Dismissed.Contains(p.Key) && p.Value.Trim().Length > 0);
+    /// <summary>已回答的題數；only 給了就只算這幾題（卡片）</summary>
+    public int AnsweredCount(IReadOnlySet<int>? only = null) =>
+        Answers.Count(p => (only?.Contains(p.Key) ?? true) && !Dismissed.Contains(p.Key) && p.Value.Trim().Length > 0);
+    public int DismissedCount(IReadOnlySet<int>? only = null) => only is null ? Dismissed.Count : Dismissed.Count(only.Contains);
+    public int Answered => AnsweredCount();
     public int SpeakerAnswered => SpeakerAnswers.Count(p => !SpeakerSkipped.Contains(p.Key) && p.Value.Length > 0);
-    public bool HasSomethingToSubmit => Answered + SpeakerAnswered > 0 || Dismissed.Count + SpeakerSkipped.Count > 0;
 
-    public string SubmitTitle() => (Answered + SpeakerAnswered, Dismissed.Count + SpeakerSkipped.Count) switch
+    /// <summary>待確認分頁：全部的題目（含說話者題目）；卡片（only）：只有這幾題</summary>
+    public bool CanSubmit(IReadOnlySet<int>? only = null) => only is null
+        ? Answered + SpeakerAnswered > 0 || Dismissed.Count + SpeakerSkipped.Count > 0
+        : AnsweredCount(only) + DismissedCount(only) > 0;
+    public bool HasSomethingToSubmit => CanSubmit();
+
+    public string SubmitTitle(IReadOnlySet<int>? only = null)
     {
-        (0, 0) => L.T("送出"),
-        (0, var d) => L.F("略過 %lld 題", d),
-        (var a, 0) => L.F("送出 %lld 題回答", a),
-        var (a, d) => L.F("送出 %lld 題回答、略過 %lld 題", a, d),
-    };
+        var answered = AnsweredCount(only) + (only is null ? SpeakerAnswered : 0);
+        var skipped = DismissedCount(only) + (only is null ? SpeakerSkipped.Count : 0);
+        return (answered, skipped) switch
+        {
+            (0, 0) => L.T("送出"),
+            (0, var d) => L.F("略過 %lld 題", d),
+            (var a, 0) => L.F("送出 %lld 題回答", a),
+            var (a, d) => L.F("送出 %lld 題回答、略過 %lld 題", a, d),
+        };
+    }
 
-    /// <summary>送出（待確認分頁和就地回答共用，同 Mac 的 submitReviewDraft）：先送整理工具要處理的題目（題目文字可能有說話者的名字，
-    /// 改名後會變），失敗時全部留著；再處理說話者的題目（M§27）</summary>
-    public void Submit()
+    /// <summary>送出（同 Mac 的 submitReviewDraft）：待確認分頁送全部（先送整理工具要處理的題目，題目文字可能有說話者的名字，
+    /// 改名後會變，失敗時全部留著；再處理說話者的題目，M§27）。卡片（only）只送這一條對到的題目，其他題目的回答留著（R41.2）</summary>
+    public void Submit(IReadOnlySet<int>? only = null)
     {
         if (MeetingId is not long id) return;
+        if (only is not null)
+        {
+            var answers = Answers.Where(p => only.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value);
+            var dismissed = Dismissed.Where(only.Contains).ToHashSet();
+            if (answers.Count == 0 && dismissed.Count == 0) return;
+            if (!host.Controller.SubmitReview(id, answers, dismissed)) return;
+            foreach (var index in only) Answers.Remove(index);
+            Dismissed.ExceptWith(only);
+            Expanded = null;   // 題目消失後 Sync 會把它們的草稿刪掉
+            return;
+        }
         if ((Answered > 0 || Dismissed.Count > 0) && !host.Controller.SubmitReview(id, new Dictionary<int, string>(Answers), new HashSet<int>(Dismissed))) return;
         host.Controller.AnswerSpeakerQuestions(id, new Dictionary<int, string>(SpeakerAnswers), new HashSet<int>(SpeakerSkipped));
         Clear();
