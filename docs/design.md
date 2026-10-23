@@ -1181,11 +1181,14 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
     lang_zh INTEGER, lang_en INTEGER, lang_ja INTEGER, diarization_runs INTEGER,
     summarizer_claude_code INTEGER, summarizer_codex INTEGER, summarizer_api INTEGER, summarizer_local INTEGER,
     questions_asked INTEGER,
+    review_answered INTEGER, review_confirmed INTEGER, review_skipped INTEGER,   -- 2026-10-23 加（R41.7）
     errors_recording INTEGER, errors_transcribe INTEGER, errors_diarize INTEGER, errors_summarize INTEGER,
     received_at TEXT NOT NULL,
     PRIMARY KEY (install_id, date)
   );
   ```
+
+  已經建好的資料庫要加欄位時，另外放一個 `migrate-<名稱>.sql`（`ALTER TABLE … ADD COLUMN … NOT NULL DEFAULT 0`）用 `d1 execute --remote` 跑一次；`schema.sql` 同時改，新建的資料庫才一致。
 
   欄位攤平成一欄一個數字，用 SQL 直接加總。例如每日活躍 `SELECT date, COUNT(*) FROM usage_daily GROUP BY date`；總轉錄時數 `SELECT SUM(transcribed_seconds) / 3600.0 FROM usage_daily`。
 - 部署：`npx wrangler@4 d1 create shiyin-usage`、`d1 execute --remote --file schema.sql`、`deploy`。token 要有 Workers Scripts、D1 的編輯權限，自訂網域另外要 weibuilds.com 的 Workers Routes、DNS 編輯權限；token 只在部署時用環境變數帶，不寫進任何檔案。

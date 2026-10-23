@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarizer_api INTEGER NOT NULL DEFAULT 0,
   summarizer_local INTEGER NOT NULL DEFAULT 0,
   questions_asked INTEGER NOT NULL DEFAULT 0,
+  review_answered INTEGER NOT NULL DEFAULT 0,   -- 2026-10-23 加（R41.7）：待確認送出的題數；已經建好的資料庫跑 migrate-review.sql
+  review_confirmed INTEGER NOT NULL DEFAULT 0,
+  review_skipped INTEGER NOT NULL DEFAULT 0,
   errors_recording INTEGER NOT NULL DEFAULT 0,
   errors_transcribe INTEGER NOT NULL DEFAULT 0,
   errors_diarize INTEGER NOT NULL DEFAULT 0,

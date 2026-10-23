@@ -13,8 +13,8 @@
 
 - [~] **V2 就地回答（Mac）**（R41.2、R41.3、§31.2）：程式完成（`ReviewDraft`、`ReviewQuestionRow`、`InlineReviewCard`），草稿兩邊一致、重開還在、送出經假伺服器修正都用 `reviewexpand`、`typefield`、`reviewsubmit` 驗過
   - 還差：在真的畫面上用 AX 按標記、「是」、「送出」一次（視窗要在目前的桌面，`summon` 會出現在使用者畫面上，要先問）；V3 改完待確認分頁再一起按
-- [ ] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：`UsageStats.review`、`workers/usage` 的 schema 和 worker
-  - 驗證：`shiyinctl usage` 看累計有 `review` 三個數字；`usagesend` 對假伺服器收到的 payload 正確；worker 用 `wrangler dev` 收一筆新格式和一筆舊格式（沒有 `review`）都 204；部署和 `ALTER TABLE` 要使用者跑指令（token 在鑰匙圈）
+- [~] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：程式完成，app 的累計和送出、worker 收新舊格式都驗過
+  - 還差（要使用者跑，token 在鑰匙圈）：在 `workers/usage` 跑 `npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql` 加三欄，再 `npx wrangler@4 deploy`；部署前後台收到帶 `review` 的資料會忽略那一組，不會失敗
 - [ ] **V5 Windows 跟上**（R41.6、design-windows §11.5）：`NotesTabs.cs`、`ReviewTab`、`AppController.SubmitReview`、`UsageStats`
   - 驗證：fixtures 加「確認、略過」的 `db` 步驟，Mac 重跑 `dump-golden` 後 `dotnet test` 通過；虛擬機 UI Automation 按標記、「是」、送出，`shot.sh` 截圖跟 Mac 對照
 - [ ] **V6 收音提醒送通知（Mac）**（R42.1、R42.2、§31.5）

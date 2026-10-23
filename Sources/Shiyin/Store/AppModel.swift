@@ -981,6 +981,9 @@ final class AppModel {
             }
         }
         runner.wake()
+        // 匿名統計（R41.7）：只記題數
+        UsageStats.shared.reviewed(answered: answered.count, confirmed: confirmed.count,
+                                   skipped: dismissed.filter { notes.reviewItems.indices.contains($0) }.count)
         return true
     }
 

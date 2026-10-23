@@ -21,6 +21,8 @@ const USAGE_DICTS = {
   engines: { breeze: 'engine_breeze', builtin: 'engine_builtin', whisperJa: 'engine_whisper_ja' },
   meetingLanguages: { zh: 'lang_zh', en: 'lang_en', ja: 'lang_ja' },
   summarizer: { claudeCode: 'summarizer_claude_code', codex: 'summarizer_codex', api: 'summarizer_api', local: 'summarizer_local' },
+  // 2026-10-23 加（R41.7、§31.3）：舊版 app 沒有這組就全部當 0
+  review: { answered: 'review_answered', confirmed: 'review_confirmed', skipped: 'review_skipped' },
 };
 const ERRORS = { recording: 'errors_recording', transcribe: 'errors_transcribe', diarize: 'errors_diarize', summarize: 'errors_summarize' };
 

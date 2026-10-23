@@ -16,7 +16,30 @@ final class UsageStats: @unchecked Sendable {
         var diarizationRuns = 0
         var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0]
         var questionsAsked = 0
+        /// 待確認送出的題數（R41.7、§31.3）：回答（打字或「不是」）、確認（「是」）、略過
+        var review = ["answered": 0, "confirmed": 0, "skipped": 0]
         var errors = ["recording": 0, "transcribe": 0, "diarize": 0, "summarize": 0]
+
+        init() {}
+
+        /// 舊版存的檔案沒有後來加的欄位（例如 review）：少的當 0，不要整份重來
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let base = Counters()
+            meetingsRecorded = try c.decodeIfPresent(Int.self, forKey: .meetingsRecorded) ?? 0
+            recordedSeconds = try c.decodeIfPresent(Int.self, forKey: .recordedSeconds) ?? 0
+            meetingsImported = try c.decodeIfPresent(Int.self, forKey: .meetingsImported) ?? 0
+            importedSeconds = try c.decodeIfPresent(Int.self, forKey: .importedSeconds) ?? 0
+            transcribedSeconds = try c.decodeIfPresent(Int.self, forKey: .transcribedSeconds) ?? 0
+            transcribeWallSeconds = try c.decodeIfPresent(Int.self, forKey: .transcribeWallSeconds) ?? 0
+            engines = try c.decodeIfPresent([String: Int].self, forKey: .engines) ?? base.engines
+            meetingLanguages = try c.decodeIfPresent([String: Int].self, forKey: .meetingLanguages) ?? base.meetingLanguages
+            diarizationRuns = try c.decodeIfPresent(Int.self, forKey: .diarizationRuns) ?? 0
+            summarizer = try c.decodeIfPresent([String: Int].self, forKey: .summarizer) ?? base.summarizer
+            questionsAsked = try c.decodeIfPresent(Int.self, forKey: .questionsAsked) ?? 0
+            review = try c.decodeIfPresent([String: Int].self, forKey: .review) ?? base.review
+            errors = try c.decodeIfPresent([String: Int].self, forKey: .errors) ?? base.errors
+        }
     }
 
     struct Store: Codable {
@@ -118,6 +141,16 @@ final class UsageStats: @unchecked Sendable {
 
     func asked() {
         add { $0.questionsAsked += 1 }
+    }
+
+    /// 待確認送出成功（R41.7）：只記題數，不記題目和答案
+    func reviewed(answered: Int, confirmed: Int, skipped: Int) {
+        guard answered + confirmed + skipped > 0 else { return }
+        add {
+            $0.review["answered", default: 0] += answered
+            $0.review["confirmed", default: 0] += confirmed
+            $0.review["skipped", default: 0] += skipped
+        }
     }
 
     func failed(_ kind: Failure) {
@@ -256,6 +289,7 @@ final class UsageStats: @unchecked Sendable {
         var diarizationRuns: Int
         var summarizer: [String: Int]
         var questionsAsked: Int
+        var review: [String: Int]
     }
 
     static func payload(installId: String, date: String, counters c: Counters) -> Payload {
@@ -267,7 +301,7 @@ final class UsageStats: @unchecked Sendable {
                          meetingsImported: c.meetingsImported, importedSeconds: c.importedSeconds,
                          transcribedSeconds: c.transcribedSeconds, transcribeWallSeconds: c.transcribeWallSeconds,
                          engines: c.engines, meetingLanguages: c.meetingLanguages, diarizationRuns: c.diarizationRuns,
-                         summarizer: c.summarizer, questionsAsked: c.questionsAsked),
+                         summarizer: c.summarizer, questionsAsked: c.questionsAsked, review: c.review),
             errors: c.errors)
     }
 
