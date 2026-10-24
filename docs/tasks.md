@@ -9,10 +9,8 @@
 
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
-M1、M2 已完成（2026-10-24）。順序：M3 → M4 → M5（Mac），再 M6（Windows）；M7 iPhone 之後。驗證用示範資料（`~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`），DEBUG 版加 `-ApplePersistenceIgnoreState YES -llmProvider none -autoSummarize NO -correctTranscript NO`。畫面要用 `screencapture -l` 截真的視窗（§33 全是排版），按鈕要用 `scripts/dev/axpress.swift` 真的按過。
+M1～M3 已完成（2026-10-24）。順序：M4 → M5（Mac），再 M6（Windows）；M7 iPhone 之後。驗證用示範資料（`~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`），DEBUG 版加 `-ApplePersistenceIgnoreState YES -llmProvider none -autoSummarize NO -correctTranscript NO`。畫面要用 `screencapture -l` 截真的視窗（§33 全是排版），按鈕要用 `scripts/dev/axpress.swift` 真的按過。
 
-- [ ] **M3 設定四個分頁**（R44.5、§33.3）：`SettingsView` 四個 tab、`RecordingTranscriptionSettings` 四組、`NamesSettings`、範本進整理工具、儲存空間進進階；`preview settings` 編號；CLAUDE.md 的 AX 名稱
-  - 驗證：四個分頁各截一張（`preview settings 0～3`）；`defaults read com.weiwei.shiyin` 改前改後一樣（搬位置不會寫回設定）；每個開關切一次再切回來，`defaults` 的鍵跟 4.0.0 相同；Windows 不在這一項
 - [ ] **M4 引導三步**（R44.6、§33.4）：`titles` 三個、權限頁的開頭三行和系統錄音的一句話、整理工具兩段式、開始頁的模型狀態、打開引導就背景下載
   - 驗證：`preview onboarding 0～2` 截圖；第二段依第一段的答案列對的選項（有 claude CLI 的 Mac：Claude → 兩個選項；沒有：一個）；選 API 貼 key 存進鑰匙圈（DEBUG 用 `llmkey`）；選「先不用」存成 none；開始頁顯示下載中的百分比；`hasCompletedOnboarding` 照舊
 - [ ] **M5 文件與示範**（R44.8）：使用說明的分頁名稱和設定位置、README 的設定表格、官網示範（`demo-content.mjs` 的 tabs／reviewTab、demo.js 的待確認章節改成頂部的條）、CLAUDE.md；`l10n.py check`

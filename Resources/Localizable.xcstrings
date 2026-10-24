@@ -217,28 +217,6 @@
         }
       }
     },
-    "%@：日文會議的正式轉錄，574 MB": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@: transcribes Japanese meetings, 574 MB"
-          }
-        }
-      }
-    },
-    "%@：正式轉錄，1.66 GB": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@: transcription, 1.66 GB"
-          }
-        }
-      }
-    },
     "%lld": {
       "extractionState": "manual"
     },
@@ -483,16 +461,8 @@
         }
       }
     },
-    "Anthropic API（填 API key）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anthropic API (enter an API key)"
-          }
-        }
-      }
+    "Anthropic API": {
+      "extractionState": "manual"
     },
     "Apple Silicon（M1 以上）": {
       "extractionState": "manual",
@@ -527,6 +497,12 @@
         }
       }
     },
+    "ChatGPT": {
+      "extractionState": "manual"
+    },
+    "Claude": {
+      "extractionState": "manual"
+    },
     "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。": {
       "extractionState": "manual",
       "localizations": {
@@ -538,6 +514,17 @@
         }
       }
     },
+    "Claude Code（這台 Mac 已經裝了 claude CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code (claude CLI is installed on this Mac)"
+          }
+        }
+      }
+    },
     "Claude（claude CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -545,17 +532,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude (claude CLI)"
-          }
-        }
-      }
-    },
-    "Claude（claude CLI）%@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude (claude CLI)%@"
           }
         }
       }
@@ -582,27 +558,22 @@
         }
       }
     },
-    "Codex（codex CLI）%@": {
+    "Codex（這台 Mac 已經裝了 codex CLI）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Codex (codex CLI)%@"
+            "value": "Codex (codex CLI is installed on this Mac)"
           }
         }
       }
     },
-    "Gemini API（填 API key）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gemini API (enter an API key)"
-          }
-        }
-      }
+    "Gemini": {
+      "extractionState": "manual"
+    },
+    "Gemini API": {
+      "extractionState": "manual"
     },
     "Gemini 沒有完成整理（status：%@）": {
       "extractionState": "manual",
@@ -615,19 +586,22 @@
         }
       }
     },
-    "Markdown": {
-      "extractionState": "manual"
-    },
-    "OpenAI API（填 API key）": {
+    "Groq、OpenRouter、Ollama、LM Studio；網址和 key 到設定填": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "OpenAI API (enter an API key)"
+            "value": "Groq, OpenRouter, Ollama, LM Studio; enter the URL and key in Settings"
           }
         }
       }
+    },
+    "Markdown": {
+      "extractionState": "manual"
+    },
+    "OpenAI API": {
+      "extractionState": "manual"
     },
     "OpenAI 相容 API": {
       "extractionState": "manual",
@@ -647,17 +621,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The OpenAI-compatible API URL isn't valid. It must start with http:// or https://."
-          }
-        }
-      }
-    },
-    "OpenAI 相容 API（Groq、OpenRouter、Ollama、LM Studio）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OpenAI-compatible API (Groq, OpenRouter, Ollama, LM Studio)"
           }
         }
       }
@@ -713,17 +676,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qwen3-ASR 1.7B (Alibaba)"
-          }
-        }
-      }
-    },
-    "Qwen3-ASR 1.7B：正式轉錄，2.5 GB": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qwen3-ASR 1.7B: final transcription, 2.5 GB"
           }
         }
       }
@@ -1078,17 +1030,6 @@
         }
       }
     },
-    "下載中…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Downloading…"
-          }
-        }
-      }
-    },
     "下載中斷：%@。按「繼續下載」會從中斷的地方接著下載": {
       "extractionState": "manual",
       "localizations": {
@@ -1118,17 +1059,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download failed: the server returned HTTP %lld. Try again later"
-          }
-        }
-      }
-    },
-    "下載模型": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download Models"
           }
         }
       }
@@ -1430,6 +1360,17 @@
         }
       }
     },
+    "你平常用哪個 AI？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which AI do you usually use?"
+          }
+        }
+      }
+    },
     "你的回答": {
       "extractionState": "manual",
       "localizations": {
@@ -1695,6 +1636,17 @@
         }
       }
     },
+    "先不用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not now"
+          }
+        }
+      }
+    },
     "先安裝": {
       "extractionState": "manual",
       "localizations": {
@@ -1812,6 +1764,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skip all"
+          }
+        }
+      }
+    },
+    "其他": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
           }
         }
       }
@@ -2253,17 +2216,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The live transcript couldn't start (%@). Recording continues and will be transcribed afterwards."
-          }
-        }
-      }
-    },
-    "即時逐字稿的語音模型（macOS 內建）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speech model for the live transcript (built into macOS)"
           }
         }
       }
@@ -3184,17 +3136,6 @@
         }
       }
     },
-    "已安裝": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installed"
-          }
-        }
-      }
-    },
     "已安裝，看不出登入狀態": {
       "extractionState": "manual",
       "localizations": {
@@ -4079,17 +4020,6 @@
         }
       }
     },
-    "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台 Mac 上正式轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper）、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shiyin turns meetings into transcripts and meeting notes. You see a live transcript while recording; afterwards, Shiyin transcribes on this Mac (Breeze ASR 25 for Chinese and English, Whisper for Japanese), identifies speakers, and uses Claude, Codex or an API to write the summary, decisions and action items."
-          }
-        }
-      }
-    },
     "拾音把會議變成逐字稿和會議紀錄。錄音、轉錄、說話者辨識都在這台 Mac 上完成。": {
       "extractionState": "manual",
       "localizations": {
@@ -4289,17 +4219,6 @@
         }
       }
     },
-    "接下來三個步驟大約 3 分鐘（下載模型的時間另計）。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The next three steps take about 3 minutes (plus the model download)."
-          }
-        }
-      }
-    },
     "接受": {
       "extractionState": "manual",
       "localizations": {
@@ -4341,6 +4260,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ask"
+          }
+        }
+      }
+    },
+    "提醒與快捷鍵": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerts & Shortcuts"
           }
         }
       }
@@ -4851,6 +4781,17 @@
         }
       }
     },
+    "整理成紀錄：用你選的 AI 整理成摘要、決議和待辦，只送逐字稿文字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: the AI you choose turns it into a summary, decisions and action items; only the transcript text is sent."
+          }
+        }
+      }
+    },
     "整理時有 %lld 題不確定的地方，點了就能回答": {
       "extractionState": "manual",
       "localizations": {
@@ -4869,17 +4810,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "One thing the summary wasn't sure about; click to answer"
-          }
-        }
-      }
-    },
-    "整理會議紀錄時，只會把逐字稿文字送到你選的 AI 服務。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When summarizing, only the transcript text is sent to the AI service you choose."
           }
         }
       }
@@ -5754,17 +5684,6 @@
         }
       }
     },
-    "模型與儲存空間": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Models & Storage"
-          }
-        }
-      }
-    },
     "模擬錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -5838,17 +5757,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Checking sign-in…"
-          }
-        }
-      }
-    },
-    "權限": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Permissions"
           }
         }
       }
@@ -6687,6 +6595,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Environment check"
+          }
+        }
+      }
+    },
+    "用你的訂閱，不另外收費": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your subscription, no extra charge"
           }
         }
       }
@@ -7628,6 +7547,17 @@
         }
       }
     },
+    "要 API key，依用量計費，一小時的會議通常不到台幣 10 元（2026-10 估）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs an API key, billed by usage; an hour-long meeting usually costs under NT$10 (estimated 2026-10)"
+          }
+        }
+      }
+    },
     "要停止錄音並轉錄嗎？": {
       "extractionState": "manual",
       "localizations": {
@@ -7771,6 +7701,17 @@
         }
       }
     },
+    "語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
     "語言偵測模型": {
       "extractionState": "manual",
       "localizations": {
@@ -7881,6 +7822,17 @@
         }
       }
     },
+    "說話者與詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers & Glossary"
+          }
+        }
+      }
+    },
     "說話者辨識模型": {
       "extractionState": "manual",
       "localizations": {
@@ -7899,17 +7851,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speaker recognition model (FluidAudio)"
-          }
-        }
-      }
-    },
-    "說話者辨識模型：分辨是誰在說話": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speaker recognition model: tells who is speaking"
           }
         }
       }
@@ -8123,6 +8064,17 @@
         }
       }
     },
+    "轉成逐字稿：在這台 Mac 上轉錄、分辨說話者，不會上傳。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcript: transcribed on this Mac with speakers identified; nothing is uploaded."
+          }
+        }
+      }
+    },
     "轉錄": {
       "extractionState": "manual",
       "localizations": {
@@ -8277,17 +8229,6 @@
         }
       }
     },
-    "轉錄模型": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transcription model"
-          }
-        }
-      }
-    },
     "轉錄模型 Breeze ASR 25": {
       "extractionState": "manual",
       "localizations": {
@@ -8310,13 +8251,24 @@
         }
       }
     },
-    "轉錄模型只需要下載一次，之後轉錄都不需要網路。可以先按「下一步」，在背景繼續下載，下載完成前會先用 macOS 內建辨識。不想下載的話，可以到「設定 → 錄音」把正式轉錄改成 macOS 內建（不參考詞彙表）。": {
+    "轉錄模型下載中 %lld%%，下載好之前先用 macOS 內建辨識轉錄。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You only download the transcription model once; after that, transcription doesn't need the internet. You can click “Next” and let it download in the background — until it's done, Shiyin uses macOS built-in recognition. If you'd rather not download it, set transcription to macOS in Settings → Recording (it doesn't use the glossary)."
+            "value": "Transcription model downloading, %lld%%. Until it is ready, the macOS built-in recognizer is used."
+          }
+        }
+      }
+    },
+    "轉錄模型已經就緒。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcription model is ready."
           }
         }
       }
@@ -8332,24 +8284,13 @@
         }
       }
     },
-    "轉錄模型還在下載，下載完成前會先用 macOS 內建辨識轉錄。下載好之後，可以在逐字稿分頁重新轉錄。": {
+    "轉錄模型還沒下載好，會先用 macOS 內建辨識轉錄；可以到「設定 → 錄音與轉錄」下載，用模型轉錄比較準。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The transcription model is still downloading. Until it's done, recordings are transcribed with macOS built-in recognition; afterwards you can transcribe them again from the Transcript tab."
-          }
-        }
-      }
-    },
-    "轉錄模型還沒下載，會先用 macOS 內建辨識轉錄。可以到「設定 → 模型與儲存空間」下載，用模型轉錄比較準。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The transcription model isn't downloaded yet, so recordings will be transcribed with macOS built-in recognition. Download it in Settings → Models & Storage for more accurate transcripts."
+            "value": "The transcription model is not downloaded yet, so the macOS built-in recognizer is used for now. Download it in Settings → Recording & Transcription for better accuracy."
           }
         }
       }
@@ -8594,17 +8535,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "codex isn't installed on this Mac. If you don't use Codex, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
-          }
-        }
-      }
-    },
-    "這台 Mac 沒有 Claude Code 或 Codex。要用 AI 整理會議紀錄，選一個 API 並貼上 API key（有取得 key 的連結）；也可以之後再設定，錄音和逐字稿照常能用。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Mac doesn't have Claude Code or Codex. To have AI write your meeting notes, choose an API and paste an API key (there's a link to get one). You can also set this up later; recording and transcripts work either way."
           }
         }
       }
@@ -9062,17 +8992,6 @@
         }
       }
     },
-    "還沒安裝": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not installed"
-          }
-        }
-      }
-    },
     "還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載": {
       "extractionState": "manual",
       "localizations": {
@@ -9524,6 +9443,17 @@
         }
       }
     },
+    "錄下來：現場會議或線上會議，錄音時就有即時逐字稿。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record: in-person or online meetings, with a live transcript while recording."
+          }
+        }
+      }
+    },
     "錄現場會議或你自己的聲音。": {
       "extractionState": "manual",
       "localizations": {
@@ -9535,6 +9465,17 @@
         }
       }
     },
+    "錄線上會議對方的聲音用。第一次選「麥克風＋電腦聲音」錄音時 macOS 會詢問，按允許就好。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captures the other side of online meetings. The first time you record with “Microphone + computer audio”, macOS will ask; just allow it."
+          }
+        }
+      }
+    },
     "錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。第一次錄電腦聲音時，macOS 會詢問「錄製系統音訊」的權限。": {
       "extractionState": "manual",
       "localizations": {
@@ -9542,17 +9483,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "For online meetings, choose “Microphone + computer audio”: your voice and the other side are recorded on the left and right channels. The first time you record computer audio, macOS asks for System Audio Recording permission."
-          }
-        }
-      }
-    },
-    "錄線上會議（Zoom、Meet、Teams）對方的聲音。第一次選「麥克風＋電腦聲音」錄音時，macOS 會跳出詢問，請按允許。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Record the other side of online meetings (Zoom, Meet, Teams). The first time you record with “Microphone + computer audio”, macOS will ask; click Allow."
           }
         }
       }
@@ -9689,17 +9619,6 @@
         }
       }
     },
-    "錄音和轉錄都只在這台 Mac 上進行，不會上傳。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recording and transcription happen only on this Mac. Nothing is uploaded."
-          }
-        }
-      }
-    },
     "錄音存檔失敗：%@（檔案還在 %@）": {
       "extractionState": "manual",
       "localizations": {
@@ -9795,6 +9714,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meeting notes will appear here after recording and transcription."
+          }
+        }
+      }
+    },
+    "錄音與轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording & Transcription"
           }
         }
       }
@@ -9971,6 +9901,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Close"
+          }
+        }
+      }
+    },
+    "隨時可以到設定選": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can choose one in Settings any time"
           }
         }
       }
@@ -10302,28 +10243,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "：沒有安裝（給已經在用 Claude Code 的人）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": ": not installed (for people who already use Claude Code)"
-          }
-        }
-      }
-    },
-    "：沒有安裝（給已經在用 Codex 的人）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": ": not installed (for people who already use Codex)"
           }
         }
       }

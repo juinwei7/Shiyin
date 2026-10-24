@@ -3,7 +3,7 @@ import SwiftUI
 /// 設定視窗（T-F2）：整理工具與金鑰、範本、詞彙表、錄音、模型與儲存空間、進階
 struct SettingsView: View {
     #if DEBUG
-    /// shiyinctl preview settings <分頁>：預覽視窗一開始停在哪個分頁（0 整理工具 … 4 錄音、5 模型與儲存空間）
+    /// shiyinctl preview settings <分頁>：預覽視窗一開始停在哪個分頁（0 整理工具、1 錄音與轉錄、2 說話者與詞彙、3 進階）
     nonisolated(unsafe) static var previewTab = 0
     #endif
     @State private var tab: Int = {
@@ -15,14 +15,12 @@ struct SettingsView: View {
     }()
 
     var body: some View {
+        // 四個分頁（R44.5，design §33.3、D110）：只搬位置、加分組，每個項目和存的鍵都沒變
         TabView(selection: $tab) {
             ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }.tag(0)
-            TemplateSettings().tabItem { Label(MeetingLanguage.ui(zh: "範本", en: "Templates"), systemImage: "doc.text") }.tag(1)
-            GlossarySettings().tabItem { Label("詞彙表", systemImage: "text.book.closed") }.tag(2)
-            SpeakerSettings().tabItem { Label(MeetingLanguage.ui(zh: "說話者", en: "Speakers"), systemImage: "person.wave.2") }.tag(3)
-            RecordingSettings().tabItem { Label("錄音", systemImage: "mic") }.tag(4)
-            StorageSettings().tabItem { Label("模型與儲存空間", systemImage: "internaldrive") }.tag(5)
-            AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }.tag(6)
+            RecordingSettings().tabItem { Label("錄音與轉錄", systemImage: "mic") }.tag(1)
+            NamesSettings().tabItem { Label("說話者與詞彙", systemImage: "person.text.rectangle") }.tag(2)
+            AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }.tag(3)
         }
         .frame(width: 640, height: 520)
         .tint(.celadon)
@@ -168,6 +166,10 @@ struct ProviderSettings: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            // 範本是整理的一部分（R44.5、D110）：原本自己一個分頁
+            Section(MeetingLanguage.ui(zh: "範本", en: "Templates")) {
+                TemplateSettings().frame(height: 420)
             }
         }
         .formStyle(.grouped)
@@ -477,7 +479,19 @@ struct TemplateSettings: View {
 
 // MARK: 詞彙表（沿用第二版）
 
-/// 說話者（design §21.4、R19.3）：記住說話者的聲音，之後的會議自動帶入名字；認識的人可以改名、刪除
+/// 說話者與詞彙（R44.5，design §33.3）：原本的「說話者」和「詞彙表」兩個分頁合成一頁，各一個 Section
+struct NamesSettings: View {
+    var body: some View {
+        Form {
+            Section(MeetingLanguage.ui(zh: "說話者", en: "Speakers")) { SpeakerSettings() }
+            Section("詞彙表") { GlossarySettings() }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// 說話者（design §21.4、R19.3）：記住說話者的聲音，之後的會議自動帶入名字；認識的人可以改名、刪除。
+/// 是 Form 的一個 Section 的內容（R44.5）：認識的人一人一列，不用 List
 struct SpeakerSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.voiceprintsKey) private var voiceprints = true
@@ -486,46 +500,38 @@ struct SpeakerSettings: View {
     @State private var confirmDeleteAll = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle("記住說話者的聲音，之後的會議自動帶入名字", isOn: $voiceprints)
-            Text("替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台 Mac 的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。")
+        Toggle("記住說話者的聲音，之後的會議自動帶入名字", isOn: $voiceprints)
+        Text("替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台 Mac 的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。")
+            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        HStack {
+            Text("認識的人").font(.headline)
+            Spacer()
+            Button("全部刪除…") { confirmDeleteAll = true }
+                .disabled(model.people.isEmpty)
+        }
+        if model.people.isEmpty {
+            Text("還沒有認識的人。在逐字稿點「說話者 1」改成名字，拾音就會記住這個人。")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Text("認識的人").font(.headline)
-                Spacer()
-                Button("全部刪除…") { confirmDeleteAll = true }
-                    .disabled(model.people.isEmpty)
-            }
-            List {
-                ForEach(model.people) { person in
-                    HStack(spacing: 10) {
-                        if renaming == person.id {
-                            TextField("名字", text: $renameText)
-                                .textFieldStyle(.roundedBorder)
-                                .onSubmit { model.renamePerson(person.id, to: renameText); renaming = nil }
-                            Button("取消") { renaming = nil }.buttonStyle(.link)
-                        } else {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(person.name)
-                                Text(detailLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                            }
-                            Spacer()
-                            Button("改名") { renameText = person.name; renaming = person.id }.buttonStyle(.link)
-                            Button { model.deletePerson(person.id) } label: { Image(systemName: "trash") }
-                                .buttonStyle(.borderless).help("刪除「\(person.name)」的聲音特徵（已經帶入的名字留著）")
-                        }
+        }
+        ForEach(model.people) { person in
+            HStack(spacing: 10) {
+                if renaming == person.id {
+                    TextField("名字", text: $renameText)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { model.renamePerson(person.id, to: renameText); renaming = nil }
+                    Button("取消") { renaming = nil }.buttonStyle(.link)
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(person.name)
+                        Text(detailLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
-                }
-            }
-            .frame(minHeight: 160)
-            .overlay {
-                if model.people.isEmpty {
-                    Text("還沒有認識的人。在逐字稿點「說話者 1」改成名字，拾音就會記住這個人。")
-                        .font(.callout).foregroundStyle(.secondary).padding().multilineTextAlignment(.center)
+                    Spacer()
+                    Button("改名") { renameText = person.name; renaming = person.id }.buttonStyle(.link)
+                    Button { model.deletePerson(person.id) } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless).help("刪除「\(person.name)」的聲音特徵（已經帶入的名字留著）")
                 }
             }
         }
-        .padding(20)
         .onAppear { model.reloadPeople() }
         .confirmationDialog("刪除所有認識的人的聲音特徵？", isPresented: $confirmDeleteAll) {
             Button("全部刪除", role: .destructive) { model.deleteAllPeople() }
@@ -541,62 +547,48 @@ struct SpeakerSettings: View {
     }
 }
 
+/// 詞彙表（沿用第二版）。是 Form 的一個 Section 的內容（R44.5）：詞彙一條一列，不用 List
 struct GlossarySettings: View {
     @Environment(AppModel.self) private var model
     @State private var newTerm = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。")
-                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                TextField("新增詞彙，例如產品名或人名", text: $newTerm).textFieldStyle(.roundedBorder).onSubmit(add)
-                Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            // 詞彙表建議（design §17.5）
-            if !model.glossarySuggestions.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("建議加入：從參加者、說話者名字、校正過的字、會議標題找到的").font(.caption).foregroundStyle(.secondary)
-                    // 設定視窗高度固定，建議最多 12 個：超過 5 個就在框裡捲動，不然下面的詞彙清單會被擠到看不見
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(model.glossarySuggestions) { suggestion in
-                                HStack(spacing: 8) {
-                                    Text(suggestion.term)
-                                    Text(suggestion.sourceLabel).font(.caption).foregroundStyle(.secondary)
-                                    Spacer()
-                                    Button("忽略") { model.dismissGlossarySuggestion(suggestion.term) }.buttonStyle(.link)
-                                    Button("加入") { model.addTerm(suggestion.term) }.buttonStyle(.link)
-                                }
-                                .frame(height: 22)
-                            }
-                        }
-                    }
-                    .frame(height: CGFloat(min(model.glossarySuggestions.count, 5)) * 28 - 6)
-                }
-                .padding(10)
-                .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-            }
-            List {
-                ForEach(model.glossary) { term in
-                    HStack {
-                        Text(term.term)
-                        Spacer()
-                        Button { model.deleteTerm(term.id!) } label: { Image(systemName: "trash") }
-                            .buttonStyle(.borderless).help("刪除「\(term.term)」")
-                    }
-                }
-            }
-            .frame(minHeight: 110)
-            .overlay {
-                if model.glossary.isEmpty {
-                    Text("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。").font(.callout).foregroundStyle(.secondary).padding()
-                }
-            }
-            Text(String(localized: "目前的轉錄提示：\(WhisperEngine.prompt(glossary: model.glossary.map(\.term), language: AppSettings.defaultMeetingLanguage))"))
-                .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+        Text("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。")
+            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        HStack {
+            TextField("新增詞彙，例如產品名或人名", text: $newTerm).textFieldStyle(.roundedBorder).onSubmit(add)
+            Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
         }
-        .padding(20)
+        // 詞彙表建議（design §17.5）：最多 12 個
+        if !model.glossarySuggestions.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("建議加入：從參加者、說話者名字、校正過的字、會議標題找到的").font(.caption).foregroundStyle(.secondary)
+                ForEach(model.glossarySuggestions) { suggestion in
+                    HStack(spacing: 8) {
+                        Text(suggestion.term)
+                        Text(suggestion.sourceLabel).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("忽略") { model.dismissGlossarySuggestion(suggestion.term) }.buttonStyle(.link)
+                        Button("加入") { model.addTerm(suggestion.term) }.buttonStyle(.link)
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        }
+        if model.glossary.isEmpty {
+            Text("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。").font(.callout).foregroundStyle(.secondary)
+        }
+        ForEach(model.glossary) { term in
+            HStack {
+                Text(term.term)
+                Spacer()
+                Button { model.deleteTerm(term.id!) } label: { Image(systemName: "trash") }
+                    .buttonStyle(.borderless).help("刪除「\(term.term)」")
+            }
+        }
+        Text(String(localized: "目前的轉錄提示：\(WhisperEngine.prompt(glossary: model.glossary.map(\.term), language: AppSettings.defaultMeetingLanguage))"))
+            .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
     }
 
     private func add() {
@@ -605,7 +597,7 @@ struct GlossarySettings: View {
     }
 }
 
-// MARK: 錄音（R1）
+// MARK: 錄音與轉錄（R1、R4、R10.3；R44.5 分成四組）
 
 struct RecordingSettings: View {
     @Environment(AppModel.self) private var model
@@ -625,90 +617,98 @@ struct RecordingSettings: View {
 
     var body: some View {
         Form {
-            Picker("錄音來源", selection: $source) {
-                Text("只錄麥克風").tag("mic")
-                Text("麥克風＋電腦聲音（線上會議）").tag("both")
-                Text("只錄電腦聲音").tag("system")
-            }
-            Picker("麥克風", selection: $device) {
-                Text("系統預設").tag("")
-                ForEach(devices) { Text($0.name).tag($0.uid) }
-            }
-            .disabled(source == "system")
-            // 會議語言（R12.4、design §16.3）
-            Picker("預設會議語言", selection: $meetingLanguage) {
-                ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
-            }
-            Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Toggle("自動偵測會議語言", isOn: $autoDetect)
-                .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }
-            if autoDetect && !model.models.isInstalled(.languageDetection) {
-                // 模型沒下載好（下載失敗、暫停）就不會偵測，要讓人知道
-                HStack {
-                    Text(model.models.state(.languageDetection).isBusy ? "正在下載語言偵測模型…" : "語言偵測模型還沒下載，下載好之前錄音不會自動偵測")
-                        .font(.caption).foregroundStyle(Color.signal)
-                    Spacer()
-                    if !model.models.state(.languageDetection).isBusy {
-                        Button("下載") { model.models.start(.languageDetection) }.controlSize(.small)
-                    }
+            Section("錄音來源") {
+                Picker("錄音來源", selection: $source) {
+                    Text("只錄麥克風").tag("mic")
+                    Text("麥克風＋電腦聲音（線上會議）").tag("both")
+                    Text("只錄電腦聲音").tag("system")
                 }
-            }
-            Text("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Toggle("錄音中顯示即時逐字稿", isOn: $live)
-            Toggle("轉錄時辨識說話者", isOn: $diarize)
-            // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
-            Picker("正式轉錄", selection: $engine) {
-                Text("Breeze ASR 25（聯發科，建議）").tag("breeze")
-                Text("Qwen3-ASR 1.7B（阿里巴巴）").tag("qwen")
-                Text("macOS 內建").tag("system")
-            }
-            .onChange(of: engine) { _, _ in
-                model.runner.wake()
-                model.refreshEnvironment()
-            }
-            Text(engine == "system"
-                 ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
-                 : engine == "qwen"
-                 ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。"
-                 : "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。日文會議改用 Whisper large-v3-turbo（574 MB）。")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
-                .onChange(of: hotKey) { _, enabled in
-                    GlobalHotKey.shared.setEnabled(enabled)
-                    hotKeyFailed = enabled && !GlobalHotKey.shared.isRegistered
+                Picker("麥克風", selection: $device) {
+                    Text("系統預設").tag("")
+                    ForEach(devices) { Text($0.name).tag($0.uid) }
                 }
-            if hotKeyFailed {
-                Text("沒辦法註冊 \(GlobalHotKey.display)，可能已經被其他 app 使用。")
-                    .font(.caption).foregroundStyle(.red)
-            }
-            Toggle("錄音中按 \(GlobalHotKey.bookmarkDisplay) 標記重點（在其他 app 裡也能用）", isOn: $bookmarkHotKey)
-                .onChange(of: bookmarkHotKey) { _, enabled in
-                    GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
-                }
-            // 偵測線上會議（design §21.7、R19.4）
-            Toggle("偵測到線上會議時提醒錄音", isOn: $meetingDetection)
-            Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ForEach(mutedApps, id: \.self) { bundle in
-                HStack {
-                    Text("不提醒：\(MeetingDetector.displayName(bundle))").font(.callout)
-                    Spacer()
-                    Button("恢復提醒") {
-                        MeetingDetector.unmute(bundle)
-                        mutedApps = MeetingDetector.muted
-                    }
-                    .buttonStyle(.link)
-                }
-            }
-            Section {
+                .disabled(source == "system")
                 Text("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。第一次錄電腦聲音時，macOS 會詢問「錄製系統音訊」的權限。")
-                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button("麥克風權限設定") { Recorder.openPrivacySettings() }
                     Button("系統錄音權限設定") { Recorder.openPrivacySettings("Privacy_AudioCapture") }
                 }
+            }
+            Section("語言") {
+                // 會議語言（R12.4、design §16.3）
+                Picker("預設會議語言", selection: $meetingLanguage) {
+                    ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
+                }
+                Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Toggle("自動偵測會議語言", isOn: $autoDetect)
+                    .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }
+                if autoDetect && !model.models.isInstalled(.languageDetection) {
+                    // 模型沒下載好（下載失敗、暫停）就不會偵測，要讓人知道
+                    HStack {
+                        Text(model.models.state(.languageDetection).isBusy ? "正在下載語言偵測模型…" : "語言偵測模型還沒下載，下載好之前錄音不會自動偵測")
+                            .font(.caption).foregroundStyle(Color.signal)
+                        Spacer()
+                        if !model.models.state(.languageDetection).isBusy {
+                            Button("下載") { model.models.start(.languageDetection) }.controlSize(.small)
+                        }
+                    }
+                }
+                Text("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Section("轉錄") {
+                // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
+                Picker("正式轉錄", selection: $engine) {
+                    Text("Breeze ASR 25（聯發科，建議）").tag("breeze")
+                    Text("Qwen3-ASR 1.7B（阿里巴巴）").tag("qwen")
+                    Text("macOS 內建").tag("system")
+                }
+                .onChange(of: engine) { _, _ in
+                    model.runner.wake()
+                    model.refreshEnvironment()
+                }
+                Text(engine == "system"
+                     ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
+                     : engine == "qwen"
+                     ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。"
+                     : "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。日文會議改用 Whisper large-v3-turbo（574 MB）。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Toggle("轉錄時辨識說話者", isOn: $diarize)
+                Toggle("錄音中顯示即時逐字稿", isOn: $live)
+                // 模型清單（原「模型與儲存空間」分頁，R44.5）
+                ModelRows()
+            }
+            Section("提醒與快捷鍵") {
+                // 偵測線上會議（design §21.7、R19.4）
+                Toggle("偵測到線上會議時提醒錄音", isOn: $meetingDetection)
+                Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                ForEach(mutedApps, id: \.self) { bundle in
+                    HStack {
+                        Text("不提醒：\(MeetingDetector.displayName(bundle))").font(.callout)
+                        Spacer()
+                        Button("恢復提醒") {
+                            MeetingDetector.unmute(bundle)
+                            mutedApps = MeetingDetector.muted
+                        }
+                        .buttonStyle(.link)
+                    }
+                }
+                Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
+                    .onChange(of: hotKey) { _, enabled in
+                        GlobalHotKey.shared.setEnabled(enabled)
+                        hotKeyFailed = enabled && !GlobalHotKey.shared.isRegistered
+                    }
+                if hotKeyFailed {
+                    Text("沒辦法註冊 \(GlobalHotKey.display)，可能已經被其他 app 使用。")
+                        .font(.caption).foregroundStyle(.red)
+                }
+                Toggle("錄音中按 \(GlobalHotKey.bookmarkDisplay) 標記重點（在其他 app 裡也能用）", isOn: $bookmarkHotKey)
+                    .onChange(of: bookmarkHotKey) { _, enabled in
+                        GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
+                    }
             }
         }
         .formStyle(.grouped)
@@ -720,61 +720,53 @@ struct RecordingSettings: View {
     }
 }
 
-// MARK: 模型與儲存空間（R9.4、R10.3）
+/// 模型清單（R10.3；R44.5 從「模型與儲存空間」搬到「錄音與轉錄 → 轉錄」）
+struct ModelRows: View {
+    @Environment(AppModel.self) private var model
 
-struct StorageSettings: View {
+    private var transcribing: Bool { model.runner.running[.transcribe] != nil }
+
+    var body: some View {
+        ModelRow(title: ModelStore.breeze.name, state: model.models.state,
+                 start: { model.models.start() }, pause: { model.models.pause() },
+                 delete: { model.models.delete(); model.refreshEnvironment() }, deleteDisabled: transcribing)
+        Text("中文、英文會議用，1.66 GB。").font(.caption).foregroundStyle(.secondary)
+        ModelRow(title: String(localized: "Qwen3-ASR 1.7B（q8_0，含音訊編碼器）"), state: model.models.combinedState(.qwen),
+                 start: { model.models.startAll(.qwen) }, pause: { model.models.pauseAll(.qwen) },
+                 delete: { model.models.deleteAll(.qwen); model.refreshEnvironment() }, deleteDisabled: transcribing)
+        Text("正式轉錄選「Qwen3-ASR」時用，2.5 GB。").font(.caption).foregroundStyle(.secondary)
+        ModelRow(title: ModelStore.japanese.name, state: model.models.state(.japanese),
+                 start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) },
+                 delete: { model.models.delete(.japanese); model.refreshEnvironment() }, deleteDisabled: transcribing)
+        Text("日文會議用，574 MB。第一次轉錄日文會議時會自動下載。").font(.caption).foregroundStyle(.secondary)
+        ModelRow(title: ModelStore.languageDetection.name, state: model.models.state(.languageDetection),
+                 start: { model.models.start(.languageDetection) }, pause: { model.models.pause(.languageDetection) },
+                 delete: { model.models.delete(.languageDetection); model.refreshEnvironment() }, deleteDisabled: model.recorder.isRecording)
+        Text("自動偵測會議語言用，60 MB。").font(.caption).foregroundStyle(.secondary)
+        ModelRow(title: String(localized: "說話者辨識模型（FluidAudio）"), state: model.models.diarizerState,
+                 start: model.models.prepareDiarizer, pause: nil, delete: nil)
+    }
+}
+
+/// 儲存空間（R9.4；R44.5 從「模型與儲存空間」搬到「進階」）：是 Form 的 Section 的內容
+struct StorageSection: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.compressAudioKey) private var compress = true
     @State private var audioBytes: Int64 = 0
     @State private var modelBytes: Int64 = 0
 
     var body: some View {
-        Form {
-            Section("轉錄模型") {
-                ModelRow(title: ModelStore.breeze.name, state: model.models.state,
-                         start: { model.models.start() }, pause: { model.models.pause() },
-                         delete: { model.models.delete(); measure() }, deleteDisabled: transcribing)
-                Text("中文、英文會議用，1.66 GB。").font(.caption).foregroundStyle(.secondary)
-                ModelRow(title: String(localized: "Qwen3-ASR 1.7B（q8_0，含音訊編碼器）"), state: model.models.combinedState(.qwen),
-                         start: { model.models.startAll(.qwen) }, pause: { model.models.pauseAll(.qwen) },
-                         delete: { model.models.deleteAll(.qwen); measure() }, deleteDisabled: transcribing)
-                Text("正式轉錄選「Qwen3-ASR」時用，2.5 GB。").font(.caption).foregroundStyle(.secondary)
-                ModelRow(title: ModelStore.japanese.name, state: model.models.state(.japanese),
-                         start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) },
-                         delete: { model.models.delete(.japanese); measure() }, deleteDisabled: transcribing)
-                Text("日文會議用，574 MB。第一次轉錄日文會議時會自動下載。").font(.caption).foregroundStyle(.secondary)
-                ModelRow(title: ModelStore.languageDetection.name, state: model.models.state(.languageDetection),
-                         start: { model.models.start(.languageDetection) }, pause: { model.models.pause(.languageDetection) },
-                         delete: { model.models.delete(.languageDetection); measure() }, deleteDisabled: model.recorder.isRecording)
-                Text("自動偵測會議語言用，60 MB。").font(.caption).foregroundStyle(.secondary)
-                ModelRow(title: String(localized: "說話者辨識模型（FluidAudio）"), state: model.models.diarizerState,
-                         start: model.models.prepareDiarizer, pause: nil, delete: nil)
-            }
-            Section("儲存空間") {
-                LabeledContent(MeetingLanguage.ui(zh: "錄音", en: "Recordings"), value: ByteCountFormatter.string(fromByteCount: audioBytes, countStyle: .file))
-                LabeledContent("模型", value: ByteCountFormatter.string(fromByteCount: modelBytes, countStyle: .file))
-                Toggle("轉錄完成後把錄音壓縮成 m4a（約每小時 10～30 MB）", isOn: $compress)
-                LabeledContent("資料位置") {
-                    Button(Paths.home.path) { NSWorkspace.shared.activateFileViewerSelecting([Paths.home]) }
-                        .buttonStyle(.link)
-                }
-            }
-            if model.legacyBytes > 0 {
-                Section("第二版留下的檔案") {
-                    Text("第二版用的 Python 環境和舊模型已經用不到了，佔用 \(ByteCountFormatter.string(fromByteCount: model.legacyBytes, countStyle: .file))。")
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("刪除第二版的 Python 環境和舊模型", role: .destructive) { model.deleteLegacyItems() }
-                }
-            }
+        LabeledContent(MeetingLanguage.ui(zh: "錄音", en: "Recordings"), value: ByteCountFormatter.string(fromByteCount: audioBytes, countStyle: .file))
+        LabeledContent("模型", value: ByteCountFormatter.string(fromByteCount: modelBytes, countStyle: .file))
+        Toggle("轉錄完成後把錄音壓縮成 m4a（約每小時 10～30 MB）", isOn: $compress)
+        LabeledContent("資料位置") {
+            Button(Paths.home.path) { NSWorkspace.shared.activateFileViewerSelecting([Paths.home]) }
+                .buttonStyle(.link)
         }
-        .formStyle(.grouped)
         .onAppear(perform: measure)
     }
 
-    private var transcribing: Bool { model.runner.running[.transcribe] != nil }
-
     private func measure() {
-        model.refreshEnvironment()
         audioBytes = AppModel.directorySize(Paths.audioDir)
         modelBytes = AppModel.directorySize(Paths.modelsDir)
     }
@@ -878,6 +870,14 @@ struct AdvancedSettings: View {
                     }
                 }
                 Button("重新檢查") { model.refreshEnvironment() }
+            }
+            Section("儲存空間") { StorageSection() }
+            if model.legacyBytes > 0 {
+                Section("第二版留下的檔案") {
+                    Text("第二版用的 Python 環境和舊模型已經用不到了，佔用 \(ByteCountFormatter.string(fromByteCount: model.legacyBytes, countStyle: .file))。")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("刪除第二版的 Python 環境和舊模型", role: .destructive) { model.deleteLegacyItems() }
+                }
             }
             Section {
                 Button("重新顯示首次使用引導") {
