@@ -35,7 +35,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - 磁碟空間不夠時會提醒；寫不進磁碟時自動停止，已經錄到的部分會保留、照常轉錄
   - app 當掉或電腦突然關機，下次開啟會自動復原錄音
 - **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」
-- **本機轉錄**：llama.cpp + Qwen3-ASR 1.7B（輸出轉成台灣繁體），詞彙表會當成提示詞；也可以選 whisper.cpp + Breeze ASR 25；日文會議用 Whisper large-v3-turbo（第一次轉錄日文會議時才下載）。也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）。模型還沒下載好時，先用 macOS 內建辨識轉錄，下載好之後可以一鍵重新轉錄。長錄音分段轉錄，4 小時的會議也不會吃掉太多記憶體
+- **本機轉錄**：whisper.cpp + Breeze ASR 25（聯發科），詞彙表會當成提示詞；設定裡可以改選 llama.cpp + Qwen3-ASR 1.7B（阿里巴巴開源，多人會議漏字少，輸出轉成台灣繁體，全程本機）；日文會議用 Whisper large-v3-turbo（第一次轉錄日文會議時才下載）。也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）。模型還沒下載好時，先用 macOS 內建辨識轉錄，下載好之後可以一鍵重新轉錄。長錄音分段轉錄，4 小時的會議也不會吃掉太多記憶體
 - **會議語言**：每場會議可以選中文、英文或日文，轉錄、會議紀錄、匯出的標題都跟著這個語言；日文會議的內容用日文字形，PDF、Word 用日文字型。預設語言在設定裡改
 - **自動偵測語言**：開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時，自動切換即時逐字稿和會議語言，錄音畫面可以改回來
 - **逐字稿校正**：轉錄完，整理工具依詞彙表和上下文找出可能聽錯的字（同音字、專有名詞），標在逐字稿裡，你按「接受」才改，可以還原
@@ -204,7 +204,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 | 整理工具 | Claude、Codex、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API 或不整理；登入狀態、測試整理工具；API key；OpenAI 相容 API 的網址（有常用服務可選）；模型；轉錄完是否自動整理、是否檢查可能聽錯的字 |
 | 範本 | 內建範本和自訂範本、預設範本 |
 | 詞彙表 | 人名、系統名、專有名詞的正確寫法，轉錄和整理都會參考；建議加入的詞 |
-| 錄音 | 錄音來源、麥克風、預設會議語言、自動偵測會議語言、即時逐字稿、說話者辨識、正式轉錄引擎（Qwen3-ASR、Breeze 或 macOS 內建）、全域快捷鍵（開始停止錄音、標記重點）、偵測線上會議和不提醒的 app、權限設定 |
+| 錄音 | 錄音來源、麥克風、預設會議語言、自動偵測會議語言、即時逐字稿、說話者辨識、正式轉錄引擎（Breeze、Qwen3-ASR 或 macOS 內建）、全域快捷鍵（開始停止錄音、標記重點）、偵測線上會議和不提醒的 app、權限設定 |
 | 說話者 | 記住說話者的聲音（聲紋）、認識的人：改名、刪除、全部刪除 |
 | 模型與儲存空間 | 下載、暫停、刪除模型；壓縮錄音；空間用量；刪除第二版留下的舊檔案 |
 | 進階 | 更新網址與檢查更新、環境檢查、重新顯示首次使用引導、重建搜尋索引 |
@@ -263,10 +263,10 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 
 - 沒有 Apple 開發者帳號，app 沒有公證，第一次打開要手動放行。
 - 錄音中的即時逐字稿用的是系統內建的辨識，不吃詞彙表，英文專有名詞常常不準（例如 Redis 變成 readis）。錄完後的正式轉錄會用詞彙表修正。
-- 轉錄的準確度：在公開的真人中文會議（遠距收音、6 人）上，字錯誤率 Qwen3-ASR 約 18%、Breeze 約 29%、macOS 內建約 25%，以漏掉搶話和語助詞為主；整理出來的會議紀錄仍然正確。台灣國語的朗讀句子（中英夾雜）約 2%。筆電或耳機收音的會議應該會好很多。
+- 轉錄的準確度：在公開的真人中文會議（遠距收音、6 人）上，字錯誤率 Breeze 約 29%、macOS 內建約 25%、可選的 Qwen3-ASR 約 18%，以漏掉搶話和語助詞為主；整理出來的會議紀錄仍然正確。台灣國語的朗讀句子（中英夾雜）兩個模型都約 2%。筆電或耳機收音的會議應該會好很多。
 - 說話者辨識：很短、而且大部分時間只有一個人在講的錄音，話少的人可能被併進別人。逐字稿的一段裡如果換人說話，整段只會標一個說話者；Qwen3-ASR 的段落（最長 15 秒）比 Breeze 的粗，搶話多的會議標錯的比例高一些。
 - Claude 整理通常要 30～70 秒，偶爾會到幾分鐘。
-- 英文會議的轉錄：在公開的英文會議片段（AMI，4 人）上，字錯誤率 Qwen3-ASR 約 34%、Breeze 約 36%、macOS 內建約 37%（去掉語助詞後約 31%、33%、34%），大多是同時說話的漏字。
+- 英文會議的轉錄：在公開的英文會議片段（AMI，4 人）上，字錯誤率 Breeze 約 36%、Qwen3-ASR 約 34%、macOS 內建約 37%（去掉語助詞後約 33%、31%、34%），大多是同時說話的漏字。
 - 日文會議的轉錄：在日本國會公開的專家聽證（6 人）上，字錯誤率 Whisper large-v3-turbo 約 8～9%。正確答案用的國會會議錄刪掉了語助詞，實際的錯誤率會比這個低。
 - 還沒有：中文、英文、日文以外的語言、日文介面、行事曆整合、iPhone 版。
 
@@ -275,10 +275,10 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 | 名稱 | 用途 | 授權 |
 |---|---|---|
 | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | 正式轉錄（Breeze、日文）、語言偵測 | MIT |
-| [Qwen3-ASR 1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)（[GGUF 轉檔](https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF)） | 轉錄模型（中文、英文；輸出用 [OpenCC](https://github.com/BYVoid/OpenCC) 的字表轉成台灣繁體） | Apache-2.0 |
-| [llama.cpp](https://github.com/ggml-org/llama.cpp) | 跑 Qwen3-ASR | MIT |
 | [Breeze ASR 25](https://huggingface.co/MediaTek-Research/Breeze-ASR-25)（[GGML 轉檔](https://huggingface.co/shdennlin/breeze-asr-25-ggml)） | 轉錄模型（繁體中文、中英夾雜） | Apache-2.0 |
 | [Whisper](https://github.com/openai/whisper) large-v3-turbo、base（[GGML 轉檔](https://huggingface.co/ggerganov/whisper.cpp)） | 日文轉錄、自動偵測語言 | MIT |
+| [Qwen3-ASR 1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)（[GGUF 轉檔](https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF)） | 可選的轉錄模型（中文、英文；輸出用 [OpenCC](https://github.com/BYVoid/OpenCC) 的字表轉成台灣繁體） | Apache-2.0 |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) | 跑 Qwen3-ASR | MIT |
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | 說話者辨識 | Apache-2.0 |
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
 

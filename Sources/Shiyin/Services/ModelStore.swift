@@ -84,10 +84,10 @@ final class ModelStore: NSObject {
         }
     }
 
-    /// 正式轉錄用哪個模型：日文會議用 large-v3-turbo；中文、英文依設定用 Qwen3-ASR（預設）或 Breeze（design §32.3）
+    /// 正式轉錄用哪個模型：日文會議用 large-v3-turbo；中文、英文依設定用 Breeze（預設）或 Qwen3-ASR（design §32.3）
     nonisolated static func transcription(for language: MeetingLanguage) -> Model {
         if language == .ja { return .japanese }
-        return AppSettings.transcriptionEngine == "breeze" ? .breeze : .qwen
+        return AppSettings.transcriptionEngine == "qwen" ? .qwen : .breeze
     }
 
     /// 這個模型要的檔案：Qwen3-ASR 是語言模型加音訊編碼器兩個檔，一起下載、一起算裝好

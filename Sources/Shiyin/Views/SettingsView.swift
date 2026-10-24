@@ -609,7 +609,7 @@ struct GlossarySettings: View {
 
 struct RecordingSettings: View {
     @Environment(AppModel.self) private var model
-    @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "qwen"
+    @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
     @AppStorage(AppSettings.defaultMeetingLanguageKey) private var meetingLanguage: MeetingLanguage = .systemDefault
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
@@ -660,8 +660,8 @@ struct RecordingSettings: View {
             Toggle("轉錄時辨識說話者", isOn: $diarize)
             // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
             Picker("正式轉錄", selection: $engine) {
-                Text("Qwen3-ASR 1.7B（建議）").tag("qwen")
-                Text("Breeze ASR 25").tag("breeze")
+                Text("Breeze ASR 25（聯發科，建議）").tag("breeze")
+                Text("Qwen3-ASR 1.7B（阿里巴巴）").tag("qwen")
                 Text("macOS 內建").tag("system")
             }
             .onChange(of: engine) { _, _ in
@@ -671,8 +671,8 @@ struct RecordingSettings: View {
             Text(engine == "system"
                  ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
                  : engine == "qwen"
-                 ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度也快一倍；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。"
-                 : "會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。")
+                 ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。"
+                 : "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。日文會議改用 Whisper large-v3-turbo（574 MB）。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
                 .onChange(of: hotKey) { _, enabled in
@@ -731,14 +731,14 @@ struct StorageSettings: View {
     var body: some View {
         Form {
             Section("轉錄模型") {
-                ModelRow(title: String(localized: "Qwen3-ASR 1.7B（q8_0，含音訊編碼器）"), state: model.models.combinedState(.qwen),
-                         start: { model.models.startAll(.qwen) }, pause: { model.models.pauseAll(.qwen) },
-                         delete: { model.models.deleteAll(.qwen); measure() }, deleteDisabled: transcribing)
-                Text("中文、英文會議用，2.5 GB。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: ModelStore.breeze.name, state: model.models.state,
                          start: { model.models.start() }, pause: { model.models.pause() },
                          delete: { model.models.delete(); measure() }, deleteDisabled: transcribing)
-                Text("正式轉錄選「Breeze ASR 25」時用，1.66 GB。").font(.caption).foregroundStyle(.secondary)
+                Text("中文、英文會議用，1.66 GB。").font(.caption).foregroundStyle(.secondary)
+                ModelRow(title: String(localized: "Qwen3-ASR 1.7B（q8_0，含音訊編碼器）"), state: model.models.combinedState(.qwen),
+                         start: { model.models.startAll(.qwen) }, pause: { model.models.pauseAll(.qwen) },
+                         delete: { model.models.deleteAll(.qwen); measure() }, deleteDisabled: transcribing)
+                Text("正式轉錄選「Qwen3-ASR」時用，2.5 GB。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: ModelStore.japanese.name, state: model.models.state(.japanese),
                          start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) },
                          delete: { model.models.delete(.japanese); measure() }, deleteDisabled: transcribing)

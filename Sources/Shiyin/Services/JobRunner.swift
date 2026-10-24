@@ -19,7 +19,7 @@ enum AppSettings {
     static let inputDeviceKey = "inputDeviceUID"
     static let defaultTemplateKey = "defaultTemplate"
     static let globalHotKeyKey = "globalHotKey"
-    static let transcriptionEngineKey = "transcriptionEngine"   // qwen / breeze / system（沒有值 = qwen，design §32.6）
+    static let transcriptionEngineKey = "transcriptionEngine"   // breeze / qwen / system（沒有值 = breeze，design §32.6）
     static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
@@ -90,10 +90,10 @@ enum AppSettings {
     static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
-    /// 正式轉錄引擎（design §32.6）：qwen（預設）、breeze、system；不認得的值當 qwen
+    /// 正式轉錄引擎（design §32.6）：breeze（預設，聯發科）、qwen（阿里巴巴，可選）、system；不認得的值當 breeze
     static var transcriptionEngine: String {
         let value = d.string(forKey: transcriptionEngineKey) ?? ""
-        return ["qwen", "breeze", "system"].contains(value) ? value : "qwen"
+        return ["breeze", "qwen", "system"].contains(value) ? value : "breeze"
     }
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
     static var defaultMeetingLanguage: MeetingLanguage {
