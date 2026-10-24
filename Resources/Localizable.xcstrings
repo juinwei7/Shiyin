@@ -40,9 +40,6 @@
     "%@ %@": {
       "extractionState": "manual"
     },
-    "%@ %lld": {
-      "extractionState": "manual"
-    },
     "%@ 回傳 HTTP %lld%@：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -2989,6 +2986,17 @@
         }
       }
     },
+    "寫筆記": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write notes"
+          }
+        }
+      }
+    },
     "封包裡的錄音檔不正確": {
       "extractionState": "manual",
       "localizations": {
@@ -2996,6 +3004,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The audio file in the package isn't valid"
+          }
+        }
+      }
+    },
+    "展開": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand"
           }
         }
       }
@@ -3691,6 +3710,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "My notes"
+          }
+        }
+      }
+    },
+    "我的筆記（%lld 行）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "My notes (%lld line)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "My notes (%lld lines)"
+                }
+              }
+            }
           }
         }
       }
@@ -7036,17 +7078,6 @@
         }
       }
     },
-    "筆記": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notes"
-          }
-        }
-      }
-    },
     "範圍": {
       "extractionState": "manual",
       "localizations": {
@@ -7131,6 +7162,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "System default"
+          }
+        }
+      }
+    },
+    "紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
           }
         }
       }
@@ -7263,17 +7305,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The meeting notes changed while you were editing. Your version was saved; use More → Revert to Previous Notes to get the other version back"
-          }
-        }
-      }
-    },
-    "編輯議題": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit Topics"
           }
         }
       }
@@ -7681,17 +7712,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glossary"
-          }
-        }
-      }
-    },
-    "詳細": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Details"
           }
         }
       }
@@ -8666,17 +8686,6 @@
         }
       }
     },
-    "這場會議沒有分出議題（可能是範本沒有包含「議題詳細」）。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This meeting has no topics (the template may not include “Topics”)."
-          }
-        }
-      }
-    },
     "這場會議沒有在任何資料夾裡": {
       "extractionState": "manual",
       "localizations": {
@@ -8938,6 +8947,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restore"
+          }
+        }
+      }
+    },
+    "還有 %lld 題待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item to confirm"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items to confirm"
+                }
+              }
+            }
           }
         }
       }

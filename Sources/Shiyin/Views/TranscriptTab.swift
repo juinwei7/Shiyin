@@ -51,6 +51,9 @@ struct TranscriptTab: View {
             PlaybackFollower(detail: detail, current: $currentSegmentId)
             searchBar
             Divider()
+            // 我的筆記收在逐字稿頂部（R44.3，design §33.1）
+            UserNotesDisclosure(detail: detail)
+            Divider()
             if model.canUpgradeTranscript(detail.meeting) && model.detailStatus?.isActive != true {
                 upgradeBar
                 Divider()

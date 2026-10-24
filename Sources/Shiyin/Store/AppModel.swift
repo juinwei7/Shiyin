@@ -37,17 +37,25 @@ enum MeetingStatus: Equatable {
     }
 }
 
+/// 會議頁的三個分頁（R44.1，design §33.1）：紀錄（摘要、決議、待辦、未決問題、議題、自訂段落，頂部一條待確認）、逐字稿（頂部可收合的我的筆記）、提問
 enum DetailTab: String, CaseIterable, Identifiable {
-    case summary, topics, transcript, review, notes, ask
+    case summary, transcript, ask
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .summary: return String(localized: "摘要")
-        case .topics: return String(localized: "詳細")
+        case .summary: return String(localized: "紀錄")
         case .transcript: return String(localized: "逐字稿")
-        case .review: return String(localized: "待確認")
-        case .notes: return String(localized: "筆記")
         case .ask: return String(localized: "提問")
+        }
+    }
+
+    /// 4.0 以前的分頁名稱（topics、review、notes）當別名：DEBUG 的 tab 指令、舊腳本。回傳分頁，和要不要順便展開待確認、我的筆記
+    static func resolve(_ name: String) -> (tab: DetailTab, expandReview: Bool, expandNotes: Bool)? {
+        switch name {
+        case "topics": return (.summary, false, false)
+        case "review": return (.summary, true, false)
+        case "notes": return (.transcript, false, true)
+        default: return DetailTab(rawValue: name).map { ($0, false, false) }
         }
     }
 }
@@ -163,11 +171,22 @@ final class AppModel {
     var meetings: [MeetingRow] = []
     var trash: [MeetingRow] = []
     var showTrash = false
-    var selection: Int64? { didSet { if oldValue != selection { reloadDetail() } } }
+    var selection: Int64? {
+        didSet {
+            if oldValue != selection {
+                reviewExpanded = false
+                userNotesExpanded = false
+                reloadDetail()
+            }
+        }
+    }
     var detail: MeetingDetail?
     /// 待確認的回答（design §31.2）：待確認分頁和紀錄旁的就地回答共用；換會議就換一份（`syncReviewDraft`）
     var reviewDraft: ReviewDraft?
     var tab: DetailTab = .summary
+    /// 紀錄頂部「還有 N 題待確認」、逐字稿頂部「我的筆記」展開了沒（design §33.1）：只記這次選取期間，換會議就收起
+    var reviewExpanded = false
+    var userNotesExpanded = false
     var filter = ""
     /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
     var folderFilter: String?
@@ -1356,14 +1375,16 @@ final class AppModel {
             if let id = selection, let meeting = try? db.meeting(id) {
                 let merged = meeting.userNotes.isEmpty ? text : meeting.userNotes + "\n\n" + text
                 perform { try db.updateUserNotes(id, merged) }
-                tab = .notes
+                tab = .transcript
+                userNotesExpanded = true
             } else if let meeting = try? db.insertMeeting(Meeting(
                 meetingDate: DateText.string(Date()), sourceFilename: url.lastPathComponent, userNotes: text, source: "transcript",
                 folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil) {
                 perform { try db.updateUserNotes(meeting.id!, text) }
                 selection = meeting.id
-                tab = .notes
+                tab = .transcript
+                userNotesExpanded = true
             }
         }
     }
@@ -1464,7 +1485,7 @@ final class AppModel {
             flashSegment(hit.ref)
             if let segment = detail?.segments.first(where: { $0.id == hit.ref }) { player.seek(to: segment.start, play: false) }
         case .notes, .title: tab = .summary
-        case .userNotes: tab = .notes
+        case .userNotes: tab = .transcript; userNotesExpanded = true
         }
     }
 

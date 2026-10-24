@@ -80,7 +80,8 @@ struct ReviewMarker: View {
                 if let draft = model.reviewDraft {
                     draft.expanded = draft.expanded == ref ? nil : ref
                 } else {
-                    model.tab = .review
+                    model.tab = .summary
+                    model.reviewExpanded = true
                 }
             } label: {
                 Text(count > 1 ? "\(MeetingLanguage.ui(zh: "？", en: "?"))\(count)" : MeetingLanguage.ui(zh: "？", en: "?"))
@@ -164,8 +165,9 @@ struct NotesPlaceholder: View {
     }
 }
 
-/// 摘要分頁：摘要、決議、待辦、未決問題、自訂段落（R6.3）。可以切換成編輯模式（R6.6）。
-struct SummaryTab: View {
+/// 紀錄分頁（R44.1，design §33.1）：待確認的條、摘要、決議、待辦、未決問題、議題、自訂段落，一頁捲到底（順序同匯出）。
+/// 可以切換成編輯模式（R6.6），一份編輯器編全部
+struct NotesPage: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
     @State private var editing: MeetingNotes?
@@ -173,10 +175,11 @@ struct SummaryTab: View {
 
     var body: some View {
         if let current = editing {
-            NotesEditor(notes: Binding(draft: $editing, fallback: current), showTopics: false) { finish($0) }
+            NotesEditor(notes: Binding(draft: $editing, fallback: current)) { finish($0) }
                 .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
+                if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
                 EditBar(disabled: model.detailStatus?.isActive == true) { base = notes; editing = notes }
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
@@ -189,6 +192,21 @@ struct SummaryTab: View {
                 }
                 if !notes.openQuestions.isEmpty {
                     NotesSection(title: String(localized: "未決問題")) { ItemList(items: notes.openQuestions, detail: detail) { .openQuestions($0) } }
+                }
+                if !notes.topics.isEmpty {
+                    NotesSection(title: String(localized: "議題")) {
+                        VStack(alignment: .leading, spacing: 22) {
+                            ForEach(Array(notes.topics.enumerated()), id: \.offset) { t, topic in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                        TimeButton(time: topic.start)
+                                        Text(topic.title).contentTitleFont(16)
+                                    }
+                                    ItemList(items: topic.points, detail: detail) { .topicPoint(t, $0) }
+                                }
+                            }
+                        }
+                    }
                 }
                 ForEach(Array(notes.custom.enumerated()), id: \.offset) { c, section in
                     if !section.items.isEmpty {
@@ -214,6 +232,41 @@ struct SummaryTab: View {
 
     private var templateName: String {
         String(localized: "範本：") + (model.templates.first { $0.id == detail.meeting.templateId }?.displayName ?? String(localized: "一般會議"))
+    }
+}
+
+/// 紀錄頂部「還有 N 題待確認」（R44.2，design §33.1）：點了在原地展開待確認的內容（同一份 ReviewTab），回答跟就地回答共用草稿；
+/// 展開狀態只記這次選取期間（AppModel.reviewExpanded，換會議收起）
+struct ReviewBanner: View {
+    @Environment(AppModel.self) private var model
+    let detail: MeetingDetail
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { model.reviewExpanded.toggle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "questionmark.circle.fill").foregroundStyle(Color.signal)
+                    Text("還有 \(detail.reviewCount) 題待確認").font(.callout.weight(.medium))
+                    Spacer()
+                    Text(model.reviewExpanded ? "收起" : "展開").font(.callout).foregroundStyle(.secondary)
+                    Image(systemName: model.reviewExpanded ? "chevron.up" : "chevron.down").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "待確認 \(detail.reviewCount) 題"))
+            if model.reviewExpanded {
+                Divider()
+                ReviewTab(detail: detail, embedded: true)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+            }
+        }
+        .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -280,45 +333,6 @@ struct ActionItemsTable: View {
     }
 }
 
-/// 詳細分頁：依議題分段（R6.3）
-struct TopicsTab: View {
-    @Environment(AppModel.self) private var model
-    let detail: MeetingDetail
-    @State private var editing: MeetingNotes?
-    @State private var base: MeetingNotes?
-
-    var body: some View {
-        if let current = editing {
-            NotesEditor(notes: Binding(draft: $editing, fallback: current), showTopics: true) { finish($0) }
-                .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
-        } else if let notes = detail.notes, !notes.isEmpty {
-            ReadingColumn {
-                EditBar(disabled: model.detailStatus?.isActive == true) { base = notes; editing = notes }
-                if notes.topics.isEmpty {
-                    Text("這場會議沒有分出議題（可能是範本沒有包含「議題詳細」）。").foregroundStyle(.secondary)
-                }
-                ForEach(Array(notes.topics.enumerated()), id: \.offset) { t, topic in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            TimeButton(time: topic.start)
-                            Text(topic.title).contentTitleFont(18)
-                        }
-                        ItemList(items: topic.points, detail: detail) { .topicPoint(t, $0) }
-                    }
-                }
-            }
-        } else {
-            NotesPlaceholder(detail: detail)
-        }
-    }
-
-    private func finish(_ save: Bool, automatically: Bool = false) {
-        guard let draft = editing, let id = detail.meeting.id else { return }
-        editing = nil
-        if save { model.finishNotesEdit(draft, base: base, meetingId: id, automatically: automatically) }
-    }
-}
-
 extension Binding {
     /// 編輯中的草稿（可能是 nil）給編輯器用：草稿已經是 nil 時讀到 fallback，寫入不理會。
     /// 不能用 `Binding($editing)`：按「完成」「取消」把草稿設成 nil 時，同一次更新裡編輯器的欄位還會再讀一次，
@@ -332,13 +346,12 @@ extension Binding {
 /// 手動編輯會議紀錄（R6.6）：每一條都是可以改的欄位，可以新增、刪除、上下移動；按「完成」才存成新版本
 struct NotesEditor: View {
     @Binding var notes: MeetingNotes
-    let showTopics: Bool
     let onFinish: (Bool) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(showTopics ? "編輯議題" : "編輯會議紀錄").font(.headline)
+                Text("編輯會議紀錄").font(.headline)
                 Spacer()
                 Button("取消") { onFinish(false) }
                     .keyboardShortcut(.cancelAction)
@@ -351,7 +364,13 @@ struct NotesEditor: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    if showTopics {
+                    TextField("標題", text: $notes.title).contentTitleFont(18)
+                    EditorSection(title: String(localized: "摘要")) { ItemsEditor(items: $notes.summary) }
+                    EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
+                    EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
+                    EditorSection(title: String(localized: "未決問題")) { ItemsEditor(items: $notes.openQuestions) }
+                    // 議題（原「詳細」分頁的編輯器，R44.1 合併成一份）
+                    EditorSection(title: String(localized: "議題")) {
                         ForEach(notes.topics.indices, id: \.self) { i in
                             let topic = $notes.topics.safe(i, fallback: .init(title: "", start: "", points: []))
                             VStack(alignment: .leading, spacing: 8) {
@@ -367,26 +386,22 @@ struct NotesEditor: View {
                         Button("新增議題", systemImage: "plus") {
                             notes.topics.append(.init(title: "", start: "", points: []))
                         }
-                    } else {
-                        TextField("標題", text: $notes.title).contentTitleFont(18)
-                        EditorSection(title: String(localized: "摘要")) { ItemsEditor(items: $notes.summary) }
-                        EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
-                        EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
-                        EditorSection(title: String(localized: "未決問題")) { ItemsEditor(items: $notes.openQuestions) }
-                        ForEach(notes.custom.indices, id: \.self) { i in
-                            let section = $notes.custom.safe(i, fallback: .init(title: "", items: []))
-                            EditorSection(title: section.wrappedValue.title) { ItemsEditor(items: section.items) }
-                        }
-                        if !notes.reviewItems.isEmpty {
-                            EditorSection(title: String(localized: "待確認")) {
-                                ForEach(Array(notes.reviewItems.enumerated()), id: \.offset) { index, item in
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Text(item.time).monospacedDigit().foregroundStyle(.secondary)
-                                        Text(item.question).meetingText()
-                                        Spacer()
-                                        Button { if notes.reviewItems.indices.contains(index) { notes.reviewItems.remove(at: index) } } label: { Image(systemName: "trash") }
-                                            .buttonStyle(.borderless).help("刪除這一題")
-                                    }
+                        .buttonStyle(.borderless)
+                        .font(.callout)
+                    }
+                    ForEach(notes.custom.indices, id: \.self) { i in
+                        let section = $notes.custom.safe(i, fallback: .init(title: "", items: []))
+                        EditorSection(title: section.wrappedValue.title) { ItemsEditor(items: section.items) }
+                    }
+                    if !notes.reviewItems.isEmpty {
+                        EditorSection(title: String(localized: "待確認")) {
+                            ForEach(Array(notes.reviewItems.enumerated()), id: \.offset) { index, item in
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(item.time).monospacedDigit().foregroundStyle(.secondary)
+                                    Text(item.question).meetingText()
+                                    Spacer()
+                                    Button { if notes.reviewItems.indices.contains(index) { notes.reviewItems.remove(at: index) } } label: { Image(systemName: "trash") }
+                                        .buttonStyle(.borderless).help("刪除這一題")
                                 }
                             }
                         }

@@ -19,12 +19,9 @@ struct MeetingDetailView: View {
             } else {
                 Group {
                     switch model.tab {
-                    case .summary: SummaryTab(detail: detail)
-                    case .topics: TopicsTab(detail: detail)
+                    case .summary: NotesPage(detail: detail)
                     // 換會議時重新建立：編輯中的狀態、草稿是每場會議自己的（design §21.15）
                     case .transcript: TranscriptTab(detail: detail).id(detail.meeting.id)
-                    case .review: ReviewTab(detail: detail).id(detail.meeting.id)
-                    case .notes: UserNotesTab(detail: detail)
                     case .ask: AskTab(detail: detail).id(detail.meeting.id)
                     }
                 }
@@ -38,17 +35,11 @@ struct MeetingDetailView: View {
             if !isRecordingThis {
                 ToolbarItem(placement: .principal) {
                     Picker("分頁", selection: $model.tab) {
-                        ForEach(DetailTab.allCases) { tab in
-                            if tab == .review, case let count = detail.reviewCount, count > 0 {
-                                Text("\(tab.label) \(count)").tag(tab)
-                            } else {
-                                Text(tab.label).tag(tab)
-                            }
-                        }
+                        ForEach(DetailTab.allCases) { tab in Text(tab.label).tag(tab) }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    .frame(width: 440)
+                    .frame(width: 300)
                 }
                 // 垃圾桶裡的會議不能操作
                 if !isTrashed {

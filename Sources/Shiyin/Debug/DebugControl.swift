@@ -29,7 +29,12 @@ enum DebugControl {
         let id = args.count > 1 ? Int64(args[1]) : nil
         switch name {
         case "select": model.showTrash = false; model.selection = id
-        case "tab": model.tab = DetailTab(rawValue: args[1]) ?? .summary
+        case "tab":   // tab <summary|transcript|ask>；舊名稱 topics、review、notes 當別名（review 順便展開待確認、notes 展開我的筆記，design §33.1）
+            if let r = DetailTab.resolve(args[1]) {
+                model.tab = r.tab
+                if r.expandReview { model.reviewExpanded = true }
+                if r.expandNotes { model.userNotesExpanded = true }
+            }
         case "cancel": model.selection = id; model.cancelJobs()
         case "retry": model.selection = id; model.retry()
         case "retranscribe": model.selection = id; model.retranscribe()
@@ -513,7 +518,7 @@ enum DebugControl {
         let model = AppModel.shared
         var out: [String: Any] = [
             "selection": model.selection ?? -1,
-            "tab": model.tab.rawValue,
+            "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             // 選中的會議：說話者的名字、來源、建議、最像的幾位認識的人（R33，「自動」名字的選單）
             "speakers": (model.detail?.speakers ?? [:]).keys.sorted().map { idx -> [String: Any] in
                 ["idx": idx, "name": model.detail?.speakers[idx] ?? "", "source": model.detail?.speakerSources[idx] ?? "",
@@ -889,11 +894,8 @@ private struct SnapshotView: View {
             Divider()
             Group {
                 switch tab {
-                case .summary: SummaryTab(detail: detail)
-                case .topics: TopicsTab(detail: detail)
+                case .summary: NotesPage(detail: detail)
                 case .transcript: TranscriptTab(detail: detail, speakerFilter: speakerFilter)
-                case .review: ReviewTab(detail: detail)
-                case .notes: UserNotesTab(detail: detail)
                 case .ask: AskTab(detail: detail)
                 }
             }

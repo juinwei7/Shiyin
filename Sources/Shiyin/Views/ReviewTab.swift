@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// 待確認分頁（R6）：每題可以回答或略過，送出後由 LLM 依回答修正。
+/// 待確認（R6）：每題可以回答或略過，送出後由 LLM 依回答修正。
 /// 最上面是說話者的題目（聲紋沒把握的、AI 猜的，R33、design §27）：送出時直接改名字，不經過整理工具。
-/// 回答存在 `ReviewDraft`（design §31.2），跟紀錄旁的就地回答（R41.2）共用同一份
+/// 回答存在 `ReviewDraft`（design §31.2），跟紀錄旁的就地回答（R41.2）共用同一份。
+/// 4.1 起嵌在紀錄頂部的「還有 N 題待確認」裡（`embedded`，R44.2）：不自己捲動、不另外留邊
 struct ReviewTab: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
+    var embedded = false
 
     private var items: [MeetingNotes.ReviewItem] { detail.notes?.reviewItems ?? [] }
     private var speakerItems: [(idx: Int, suggestion: SpeakerNaming.Suggestion)] {
@@ -28,40 +30,48 @@ struct ReviewTab: View {
     }
 
     private func content(_ draft: ReviewDraft) -> some View {
-        let speakerIdxs = speakerItems.map(\.idx)
-        return VStack(spacing: 0) {
-            ReadingColumn {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text(items.contains(where: \.yesNo) || !speakerItems.isEmpty
-                         ? "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。"
-                         : "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    // 全部略過（R41.5）：還沒回答的都標成略過，已經有回答的不動
-                    Button("全部略過") { draft.skipAllUnanswered(questionCount: items.count, speakers: speakerIdxs) }
-                        .disabled(!draft.hasUnanswered(questionCount: items.count, speakers: speakerIdxs))
-                        .help("還沒回答的題目都標成略過，送出後直接移除")
-                }
-                ForEach(speakerItems, id: \.idx) { item in
-                    speakerRow(item.idx, item.suggestion, draft: draft)
-                }
-                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                    ReviewQuestionRow(index: index, item: item, language: language, draft: draft)
-                }
+        VStack(spacing: 0) {
+            if embedded {
+                VStack(alignment: .leading, spacing: 18) { rows(draft) }
+            } else {
+                ReadingColumn { rows(draft) }
             }
-            Divider()
+            Divider().padding(.vertical, embedded ? 8 : 0)
             HStack(spacing: 12) {
                 Text(footnote)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 Button(draft.submitTitle) { model.submitReviewDraft() }
                     .buttonStyle(.borderedProminent)
                     .disabled(!draft.hasSomethingToSubmit || model.detailStatus?.isActive == true)
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 12)
+            .padding(.horizontal, embedded ? 0 : 32)
+            .padding(.vertical, embedded ? 0 : 12)
+        }
+    }
+
+    /// 說明、全部略過、說話者的題目、紀錄的題目
+    @ViewBuilder private func rows(_ draft: ReviewDraft) -> some View {
+        let speakerIdxs = speakerItems.map(\.idx)
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(items.contains(where: \.yesNo) || !speakerItems.isEmpty
+                 ? "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。"
+                 : "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            // 全部略過（R41.5）：還沒回答的都標成略過，已經有回答的不動
+            Button("全部略過") { draft.skipAllUnanswered(questionCount: items.count, speakers: speakerIdxs) }
+                .disabled(!draft.hasUnanswered(questionCount: items.count, speakers: speakerIdxs))
+                .help("還沒回答的題目都標成略過，送出後直接移除")
+        }
+        ForEach(speakerItems, id: \.idx) { item in
+            speakerRow(item.idx, item.suggestion, draft: draft)
+        }
+        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+            ReviewQuestionRow(index: index, item: item, language: language, draft: draft)
         }
     }
 
