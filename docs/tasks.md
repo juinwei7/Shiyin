@@ -9,10 +9,8 @@
 
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
-M1～M3 已完成（2026-10-24）。順序：M4 → M5（Mac），再 M6（Windows）；M7 iPhone 之後。驗證用示範資料（`~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`），DEBUG 版加 `-ApplePersistenceIgnoreState YES -llmProvider none -autoSummarize NO -correctTranscript NO`。畫面要用 `screencapture -l` 截真的視窗（§33 全是排版），按鈕要用 `scripts/dev/axpress.swift` 真的按過。
+M1～M4 已完成（2026-10-24）。順序：M5（Mac 文件與示範），再 M6（Windows）；M7 iPhone 之後。驗證用示範資料（`~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`），DEBUG 版加 `-ApplePersistenceIgnoreState YES -llmProvider none -autoSummarize NO -correctTranscript NO`。畫面要用 `screencapture -l` 截真的視窗（§33 全是排版），按鈕要用 `scripts/dev/axpress.swift` 真的按過。
 
-- [ ] **M4 引導三步**（R44.6、§33.4）：`titles` 三個、權限頁的開頭三行和系統錄音的一句話、整理工具兩段式、開始頁的模型狀態、打開引導就背景下載
-  - 驗證：`preview onboarding 0～2` 截圖；第二段依第一段的答案列對的選項（有 claude CLI 的 Mac：Claude → 兩個選項；沒有：一個）；選 API 貼 key 存進鑰匙圈（DEBUG 用 `llmkey`）；選「先不用」存成 none；開始頁顯示下載中的百分比；`hasCompletedOnboarding` 照舊
 - [ ] **M5 文件與示範**（R44.8）：使用說明的分頁名稱和設定位置、README 的設定表格、官網示範（`demo-content.mjs` 的 tabs／reviewTab、demo.js 的待確認章節改成頂部的條）、CLAUDE.md；`l10n.py check`
   - 驗證：`node site/build.mjs` 成功、本機預覽看示範；`l10n.py check` 完整
 - [ ] **M6 Windows 跟上**（R44.7、design-windows §11.6）：DetailView 三分頁、ReviewBanner、筆記 Expander、MoreMenu、設定四頁、引導三步；`windows-check`

@@ -472,7 +472,7 @@ enum DebugControl {
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        case "preview":   // preview <settings|onboarding [步驟]|import|rename>（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
+        case "preview":   // preview <settings|onboarding [步驟]|import|rename> [front]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
@@ -483,8 +483,10 @@ enum DebugControl {
             let size = detailPage ? NSSize(width: 1100, height: 760) : NSSize(width: 640, height: 560)
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
                                   backing: .buffered, defer: false)
-            window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
-            window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+            // 加 front：放在一般視窗層（會出現在使用者畫面上），輔助使用才看得到、按得到裡面的按鈕
+            let front = args.contains("front")
+            window.level = front ? .normal : NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
+            window.collectionBehavior = front ? [.canJoinAllSpaces] : [.canJoinAllSpaces, .stationary]
             window.identifier = NSUserInterfaceItemIdentifier(onboarding ? "onboarding-preview" : detailPage ? "detail-preview" : "settings-preview")
             window.title = window.identifier!.rawValue
             window.isReleasedWhenClosed = false
