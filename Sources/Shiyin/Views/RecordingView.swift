@@ -315,7 +315,7 @@ struct UserNotesDisclosure: View {
             .padding(.vertical, 8)
             if model.userNotesExpanded {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多」選「重新整理會議紀錄」。")
+                    Text("播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多 → 重新處理」選「重新整理會議紀錄」。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

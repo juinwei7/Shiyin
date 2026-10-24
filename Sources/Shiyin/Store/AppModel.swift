@@ -86,6 +86,10 @@ struct MeetingDetail: Equatable {
     var speakerCandidates: [Int: [String]] = [:]
     /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
     var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
+    /// 可以復原的說話者調整（合併、改句子）的說明，沒有就是 nil；顯示在改名小視窗和逐字稿右鍵選單（R44.4）
+    var speakerUndoLabel: String? = nil
+    /// 有上一版會議紀錄可以復原（R44.4）：紀錄分頁的編輯列才顯示「復原上一版」
+    var canUndoNotes: Bool { versionCount > 0 }
     /// 待確認的題目對應到哪一條紀錄（R41.1，design §31.1）：載入時算一次，會議紀錄換了就重算（`linkReviewItems`）
     var reviewLinks: [NoteItemRef: [Int]] = [:]
 
@@ -257,7 +261,7 @@ final class AppModel {
         }
         runner.onEditedDraftReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
-            self.noticeMessage = String(localized: "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，可以從「更多 → 復原上一版會議紀錄」找回")
+            self.noticeMessage = String(localized: "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回")
         }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
@@ -410,6 +414,7 @@ final class AppModel {
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
         loaded.loadSpeakers(speakerRows)
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
+        loaded.speakerUndoLabel = try? db.speakerUndoLabel(id)
         loaded.buildIndexes()
         loaded.linkReviewItems()
         detail = loaded
@@ -747,7 +752,7 @@ final class AppModel {
             return
         }
         perform { try db.setLanguage(id, language) }
-        noticeMessage = String(localized: "會議語言改成 \(language.name)，要重新轉錄或整理的話，從「更多」選")
+        noticeMessage = String(localized: "會議語言改成 \(language.name)，要重新轉錄或整理的話，從「更多 → 重新處理」選")
     }
 
     /// 錄音中選「大約幾個人」（design §26.2）：錄完轉錄時用
@@ -897,7 +902,7 @@ final class AppModel {
             if AppSettings.voiceprints, source == "manual" || source == "suggestion" {
                 try db.learnVoiceprint(id, idx: into, name: intoName, source: source ?? "manual")
             }
-            noticeMessage = String(localized: "已把「\(fromName)」合併到「\(intoName)」。要復原的話，從「更多 → 復原說話者的調整」。")
+            noticeMessage = String(localized: "已把「\(fromName)」合併到「\(intoName)」。要復原的話，點說話者的名字選「復原」。")
         }
     }
 
@@ -916,7 +921,7 @@ final class AppModel {
         }
     }
 
-    /// 「更多 → 復原說話者的調整」：只復原最近一次合併或改句子
+    /// 「復原說話者的調整」（改名小視窗、逐字稿右鍵選單）：只復原最近一次合併或改句子
     func undoSpeakerEdit() {
         guard let id = selection else { return }
         if let problem = speakerEditProblem(id) {
@@ -966,7 +971,7 @@ final class AppModel {
     func finishNotesEdit(_ draft: MeetingNotes, base: MeetingNotes?, meetingId: Int64, automatically: Bool = false) {
         guard draft != base else { return }
         if let base, let current = try? db.meeting(meetingId)?.decodedNotes, current != base {
-            noticeMessage = String(localized: "編輯期間會議紀錄有更新，已用你改的版本存檔；從「更多 → 復原上一版會議紀錄」可以找回更新的內容")
+            noticeMessage = String(localized: "編輯期間會議紀錄有更新，已用你改的版本存檔；按「編輯」旁的「復原上一版」可以找回更新的內容")
         } else if automatically {
             noticeMessage = String(localized: "已儲存剛才編輯的會議紀錄")
         }
@@ -1552,6 +1557,7 @@ final class AppModel {
         if parts.contains(.speakers) {
             updated.loadSpeakers((try? db.speakers(id)) ?? [])
             updated.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
+            updated.speakerUndoLabel = try? db.speakerUndoLabel(id)
         }
         if parts.contains(.bookmarks) { updated.bookmarks = (try? db.bookmarks(id)) ?? [] }
         if parts.contains(.segments) { updated.segments = (try? db.segments(id)) ?? [] }

@@ -143,7 +143,7 @@ struct ReviewTab: View {
         let provider = AppSettings.provider == .none ? "LLM" : AppSettings.provider.label
         let speakers = String(localized: "說話者的題目不會送給整理工具，送出後直接換名字。")
         guard !items.isEmpty else { return speakers }
-        let notes = String(localized: "有回答的題目會交給 \(provider) 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。")
+        let notes = String(localized: "有回答的題目會交給 \(provider) 依答案修正會議紀錄；略過的題目直接移除。改錯了可以按「編輯」旁的「復原上一版」。")
         return speakerItems.isEmpty ? notes : notes + " " + speakers
     }
 }

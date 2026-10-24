@@ -180,7 +180,9 @@ struct NotesPage: View {
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
                 if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
-                EditBar(disabled: model.detailStatus?.isActive == true) { base = notes; editing = notes }
+                EditBar(disabled: model.detailStatus?.isActive == true, onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
+                    base = notes; editing = notes
+                }
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
                 }
@@ -270,15 +272,24 @@ struct ReviewBanner: View {
     }
 }
 
-/// 右上角的「編輯」按鈕
+/// 右上角的「編輯」按鈕；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）
 struct EditBar: View {
     /// 轉錄或整理中不能編輯：工作完成時會整份寫回，手動改的會被蓋掉
     var disabled = false
+    /// nil：沒有上一版，不顯示
+    var onUndo: (() -> Void)? = nil
     let onEdit: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: 14) {
             Spacer()
+            if let onUndo {
+                Button("復原上一版", systemImage: "arrow.uturn.backward", action: onUndo)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(disabled ? Color.secondary : Color.celadon)
+                    .disabled(disabled)
+                    .help("換回上一版會議紀錄（再按一次換回更早的）")
+            }
             Button("編輯", systemImage: "pencil", action: onEdit)
                 .buttonStyle(.borderless)
                 .foregroundStyle(disabled ? Color.secondary : Color.celadon)

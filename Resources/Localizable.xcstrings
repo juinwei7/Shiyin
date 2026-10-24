@@ -3217,13 +3217,13 @@
         }
       }
     },
-    "已把「%@」合併到「%@」。要復原的話，從「更多 → 復原說話者的調整」。": {
+    "已把「%@」合併到「%@」。要復原的話，點說話者的名字選「復原」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Merged “%1$@” into “%2$@”. To undo, choose More → Undo Speaker Changes."
+            "value": "Merged “%1$@” into “%2$@”. To undo, click the speaker's name and choose Undo."
           }
         }
       }
@@ -3615,6 +3615,17 @@
         }
       }
     },
+    "復原上一版": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore previous version"
+          }
+        }
+      }
+    },
     "復原上一版會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -3622,6 +3633,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Revert to Previous Notes"
+          }
+        }
+      }
+    },
+    "復原最近一次合併或改句子的說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo the most recent speaker merge or reassignment"
           }
         }
       }
@@ -3648,13 +3670,13 @@
         }
       }
     },
-    "復原說話者的調整": {
+    "復原：%@": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Undo Speaker Changes"
+            "value": "Undo: %@"
           }
         }
       }
@@ -4323,6 +4345,17 @@
         }
       }
     },
+    "換回上一版會議紀錄（再按一次換回更早的）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch back to the previous version of the notes (press again for earlier ones)"
+          }
+        }
+      }
+    },
     "搜尋": {
       "extractionState": "manual",
       "localizations": {
@@ -4411,13 +4444,13 @@
         }
       }
     },
-    "播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多」選「重新整理會議紀錄」。": {
+    "播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多 → 重新處理」選「重新整理會議紀錄」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While the recording plays, each new line gets the current playback time. The AI uses these notes when summarizing; after editing, choose “Summarize Again” from “More”."
+            "value": "When you press Return while the recording is playing, the current playback time is inserted. The AI reads these notes when writing the meeting notes; after editing, choose More → Reprocess → Regenerate Notes."
           }
         }
       }
@@ -5412,13 +5445,13 @@
         }
       }
     },
-    "會議紀錄也一起改了（可以從「更多」復原上一版）": {
+    "會議紀錄也一起改了（按「編輯」旁的「復原上一版」可以還原）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The meeting notes were changed too (you can revert from “More”)"
+            "value": "The meeting notes were updated too (use Restore previous version next to Edit to undo)"
           }
         }
       }
@@ -5434,13 +5467,13 @@
         }
       }
     },
-    "會議紀錄的範本。換了範本之後，從「更多」選「重新整理會議紀錄」就會照新範本整理": {
+    "會議紀錄的範本。換了範本之後，從「更多 → 重新處理」選「重新整理會議紀錄」就會照新範本整理": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The template for the meeting notes. After changing it, choose “Summarize Again” from “More” to use the new template."
+            "value": "Template for the meeting notes. After changing it, choose More → Reprocess → Regenerate Notes to rewrite the notes with the new template"
           }
         }
       }
@@ -5500,24 +5533,24 @@
         }
       }
     },
-    "會議語言改成 %@，要重新轉錄或整理的話，從「更多」選": {
+    "會議語言改成 %@，要重新轉錄或整理的話，從「更多 → 重新處理」選": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meeting language changed to %@. To transcribe or summarize again, use “More”."
+            "value": "Meeting language changed to %@. To re-transcribe or regenerate the notes, use More → Reprocess"
           }
         }
       }
     },
-    "會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多」重新轉錄或重新整理會議紀錄": {
+    "會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meeting language: used for transcription and meeting notes. After changing it, transcribe or summarize again from “More”."
+            "value": "Meeting language: the language used for transcription and notes. After changing it, re-transcribe or regenerate the notes from More → Reprocess"
           }
         }
       }
@@ -5556,13 +5589,13 @@
         }
       }
     },
-    "有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。": {
+    "有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以按「編輯」旁的「復原上一版」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Answered questions go to %@ to revise the meeting notes; skipped ones are removed. To undo a mistake, revert to the previous version from “More”."
+            "value": "Answered items are sent to %@ to revise the notes; skipped items are simply removed. If something goes wrong, use Restore previous version next to Edit."
           }
         }
       }
@@ -6085,13 +6118,13 @@
         }
       }
     },
-    "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，可以從「更多 → 復原上一版會議紀錄」找回": {
+    "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The final meeting notes are ready. Your edited draft is kept in the version history; use More → Revert to Previous Notes to get it back."
+            "value": "The final meeting notes are ready. The draft you edited is kept in the version history; use Restore previous version next to Edit on the Notes tab to get it back"
           }
         }
       }
@@ -7298,13 +7331,13 @@
         }
       }
     },
-    "編輯期間會議紀錄有更新，已用你改的版本存檔；從「更多 → 復原上一版會議紀錄」可以找回更新的內容": {
+    "編輯期間會議紀錄有更新，已用你改的版本存檔；按「編輯」旁的「復原上一版」可以找回更新的內容": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The meeting notes changed while you were editing. Your version was saved; use More → Revert to Previous Notes to get the other version back"
+            "value": "The notes were updated while you were editing. Your edited version was saved; use Restore previous version next to Edit to see the update"
           }
         }
       }
@@ -9377,6 +9410,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sign In to %@ Again"
+          }
+        }
+      }
+    },
+    "重新處理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprocess"
           }
         }
       }

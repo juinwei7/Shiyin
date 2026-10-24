@@ -131,7 +131,7 @@ struct MeetingHeader: View {
             Label(model.templates.first { $0.id == meeting.templateId }?.displayName ?? String(localized: "一般會議"), systemImage: "doc.text")
         }
         .fixedSize()
-        .help("會議紀錄的範本。換了範本之後，從「更多」選「重新整理會議紀錄」就會照新範本整理")
+        .help("會議紀錄的範本。換了範本之後，從「更多 → 重新處理」選「重新整理會議紀錄」就會照新範本整理")
         // 會議語言（design §16.3）
         Menu {
             ForEach(MeetingLanguage.allCases) { language in
@@ -146,7 +146,7 @@ struct MeetingHeader: View {
             Label(meeting.meetingLanguage.name, systemImage: "globe")
         }
         .fixedSize()
-        .help("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多」重新轉錄或重新整理會議紀錄")
+        .help("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄")
         // 錄音中先填人數（design §26.2）：錄完轉錄時用
         if model.recorder.isRecording && model.recorder.meetingId == meeting.id {
             Menu {
@@ -352,14 +352,14 @@ struct MoreMenu: View {
     // 工具列右上角的選單建立一次就不會更新（換會議、工作開始或結束都一樣，加 .id 也沒用），
     // 所以這裡不預先停用：按下時由 AppModel 檢查目前的會議，不能做就說明原因
     var body: some View {
+        // 五項（R44.4，design §33.2）：重新處理的四個動作收成子選單；兩個「復原」回到紀錄的編輯列和說話者的改名處
         Menu {
-            Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
-            Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
-            Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
-            Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
-            Button("復原說話者的調整", systemImage: "arrow.uturn.backward.circle") { model.undoSpeakerEdit() }
-            Button("復原上一版會議紀錄", systemImage: "arrow.uturn.backward") { model.undoNotes() }
-            Divider()
+            Menu("重新處理", systemImage: "arrow.clockwise") {
+                Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
+                Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
+                Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
+                Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
+            }
             Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }
             Menu("複製會議紀錄", systemImage: "doc.on.doc") {
                 Button("保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
