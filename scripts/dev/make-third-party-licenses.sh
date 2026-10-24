@@ -29,6 +29,8 @@ FLUID_VERSION="$(resolved_version fluidaudio)"
 GRDB_DIR="$(checkout GRDB.swift "$GRDB_VERSION")"
 FLUID_DIR="$(checkout FluidAudio "$FLUID_VERSION")"
 WHISPER_LICENSE="$(curl -fsSL "https://raw.githubusercontent.com/ggml-org/whisper.cpp/${WHISPER_TAG}/LICENSE")"
+LLAMA_TAG="$(sed -n 's#.*llama.cpp/releases/download/\([^/]*\)/.*#\1#p' Package.swift | head -1)"
+LLAMA_LICENSE="$(curl -fsSL "https://raw.githubusercontent.com/ggml-org/llama.cpp/${LLAMA_TAG}/LICENSE")"
 
 section() {
   printf '\n\n%s\n%s\n%s\n\n' "================================================================================" "$1" "================================================================================"
@@ -39,11 +41,17 @@ section() {
   echo "Shiyin uses the following open-source software. Their license terms follow, verbatim."
   echo
   echo "- whisper.cpp ${WHISPER_TAG} (MIT) https://github.com/ggml-org/whisper.cpp"
+  echo "- llama.cpp ${LLAMA_TAG} (MIT) https://github.com/ggml-org/llama.cpp"
+  echo "- OpenCC dictionaries (Apache-2.0) https://github.com/BYVoid/OpenCC"
   echo "- GRDB.swift ${GRDB_VERSION} (MIT) https://github.com/groue/GRDB.swift"
   echo "- FluidAudio ${FLUID_VERSION} (Apache-2.0) https://github.com/FluidInference/FluidAudio"
   echo "  and the third-party components it includes (FluidAudio ThirdPartyLicenses/)"
   section "whisper.cpp ${WHISPER_TAG}: LICENSE"
   printf '%s\n' "$WHISPER_LICENSE"
+  section "llama.cpp ${LLAMA_TAG}: LICENSE"
+  printf '%s\n' "$LLAMA_LICENSE"
+  section "OpenCC dictionaries: LICENSE"
+  cat Resources/opencc/LICENSE
   section "GRDB.swift ${GRDB_VERSION}: LICENSE"
   cat "$GRDB_DIR/LICENSE"
   section "FluidAudio ${FLUID_VERSION}: LICENSE"

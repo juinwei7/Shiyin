@@ -363,9 +363,16 @@ enum DebugControl {
         case "copy": model.copyNotes(args.count > 1 && args[1] == "plain" ? .plain : args.count > 1 && args[1] == "md" ? .markdown : .rich)
         case "search": model.searchQuery = args.count > 1 ? args[1] : ""
         case "openhit": if let index = Int(args[1]), model.searchResults.indices.contains(index) { model.openSearchHit(model.searchResults[index]) }
-        case "model":   // model start|pause|delete [breeze|japanese|languageDetection]
+        case "model":   // model start|pause|delete [breeze|japanese|languageDetection|qwen]（qwen 是兩個檔一起）
             let which = ModelStore.Model(rawValue: args.count > 2 ? args[2] : "") ?? .breeze
-            args[1] == "start" ? model.models.start(which) : args[1] == "pause" ? model.models.pause(which) : model.models.delete(which)
+            args[1] == "start" ? model.models.startAll(which) : args[1] == "pause" ? model.models.pauseAll(which) : model.models.deleteAll(which)
+        case "qwenchunks":   // qwenchunks <錄音> <輸出.json> [最長秒數] [any] [mixed]：先辨識說話者再照 §32.4 分段，倒出片段、切點、能量中位數（驗證分段規則）
+            qwenChunks(audio: args[1], output: args[2], maxSeconds: args.count > 3 ? Double(args[3]) ?? QwenEngine.maxChunkSeconds : QwenEngine.maxChunkSeconds,
+                       anyChange: args.contains("any"), splitMixed: args.contains("mixed"))
+        case "s2tw":    // s2tw <輸入.txt> <輸出.txt>：簡體轉台灣繁體（design §32.5），驗證跟原型工具的結果相同
+            if let text = try? String(contentsOfFile: args[1], encoding: .utf8) {
+                try? ChineseScript.toTaiwan(text).write(toFile: args[2], atomically: true, encoding: .utf8)
+            }
         case "diarizer": model.models.prepareDiarizer()
         case "modelurl":   // modelurl <模型> <網址>：改從別的網址下載；網址給 - 就改回原本的
             if let which = ModelStore.Model(rawValue: args[1]) { model.models.debugURLs[which] = args[2] == "-" ? nil : URL(string: args[2]) }
@@ -466,6 +473,8 @@ enum DebugControl {
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
             let onboarding = args.count > 1 && args[1] == "onboarding"
             let detailPage = args.count > 1 && args[1] == "detail"
+            // preview settings <分頁編號>：預覽視窗一開始停在那個分頁（0 整理工具 … 4 錄音、5 模型與儲存空間）
+            SettingsView.previewTab = args.count > 2 && args[1] == "settings" ? Int(args[2]) ?? 0 : 0
             let size = detailPage ? NSSize(width: 1100, height: 760) : NSSize(width: 640, height: 560)
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
                                   backing: .buffered, defer: false)
@@ -538,6 +547,7 @@ enum DebugControl {
             "languages": ["defaultMeeting": AppSettings.defaultMeetingLanguage.rawValue, "interface": MeetingLanguage.interface.rawValue,
                           "preferred": Locale.preferredLanguages.first ?? ""],
             "models": ["breeze": "\(model.models.state)", "japanese": "\(model.models.state(.japanese))",
+                       "qwen": "\(model.models.combinedState(.qwen))",
                        "languageDetection": "\(model.models.state(.languageDetection))", "diarizer": "\(model.models.diarizerState)"],
             "exportMeeting": model.exportMeetingId as Any,
             "search": ["query": model.searchQuery, "results": model.searchResults.map { ["meeting": $0.meetingId, "kind": $0.kind.rawValue, "ref": $0.ref, "snippet": $0.snippet] }],
@@ -723,6 +733,7 @@ enum DebugControl {
             do {
                 let options = try JSONDecoder().decode(TranscriptionOptions.self, from: Data(contentsOf: URL(fileURLWithPath: options)))
                 result["options"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(options))
+                result["whisperDefaults"] = WhisperEngine.defaultParameters()   // whisper.cpp 的預設值（實驗時對照用，design §17.1）
                 var pipeline = TranscriptionPipeline(options: options)
                 pipeline.stage = { meter.set(stage: $0) }
                 if let run = try await pipeline.run(URL(fileURLWithPath: audio)) {
@@ -742,6 +753,24 @@ enum DebugControl {
             write(result, to: output + ".tmp")
             try? FileManager.default.removeItem(atPath: output)
             try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
+        }
+    }
+
+    private static func qwenChunks(audio: String, output: String, maxSeconds: Double, anyChange: Bool, splitMixed: Bool) {
+        Task { @MainActor in
+            var result: [String: Any] = ["audio": audio, "maxSeconds": maxSeconds]
+            do {
+                let samples = try await AudioDecoder.decode(URL(fileURLWithPath: audio))
+                let diarization = try await Diarizer.diarize(samples: samples, minSpeakers: nil) { _ in }
+                let chunks = QwenEngine.chunks(samples, turns: diarization.turns, maxSeconds: maxSeconds, anyChange: anyChange, splitMixed: splitMixed)
+                let rate = AudioDecoder.sampleRate
+                result["turns"] = diarization.turns.map { ["speaker": $0.speaker, "start": $0.start, "end": $0.end] }
+                result["chunks"] = chunks.map { ["start": Double($0.range.lowerBound) / rate, "end": Double($0.range.upperBound) / rate] }
+                result["median"] = samples.withUnsafeBufferPointer { QwenEngine.medianFrameEnergy($0) }
+            } catch {
+                result["error"] = error.localizedDescription
+            }
+            write(result, to: output)
         }
     }
 

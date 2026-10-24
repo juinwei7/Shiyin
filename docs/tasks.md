@@ -7,6 +7,15 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## Qwen3-ASR 轉錄引擎（R43，design §32；2026-10-24 使用者要求打磨辨識準確度）
+
+Q1～Q5 已完成（2026-10-24，驗證在 commit 訊息）。Q6 使用者看過對照、點頭才發布；Q7 Windows 另外排。評估資料在 `~/Library/Caches/ShiyinSpike/eval32/`（`datasets.json` 已加 `tw-taimecs`、`tw-ntuml`），原型工具在 `~/Library/Caches/ShiyinSpike/qwen3asr/`（`qwen-eval.py`、`linktest/` 的 C 薄層）。
+
+- [~] **Q6 真實會議對照**（§32.7）：使用者 2026-10-19 的週會（46 分鐘、6 人、遠距收音）已用兩個引擎各轉一次，並列在 `~/Desktop/拾音-引擎對照-週會.html`（左 Breeze、右 Qwen；黃底是低信心）
+  - 還差：使用者看過、覺得新引擎比較接近實際說的話，才發布 4.1；覺得不行就把預設改回 Breeze（設定 `transcriptionEngine` 的預設值）
+- [ ] **Q7 Windows 版接 R43**（§32.8、R43.9）：llama.cpp 預建 DLL（cpu／cuda／vulkan）、shim、模型下載、分段、重試、簡轉繁；標準答案比對
+  - 驗證：`dotnet test` 通過；虛擬機上 `transcribe-eval` 跑 synth 的錯誤率跟 Mac 一樣
+
 ## 待確認就地回答、收音提醒送通知（R41、R42，design §31；2026-10-23 使用者決定先做使用者體驗）
 
 順序：V1 → V2 → V3 → V4（Mac），再 V5（Windows）；V6、V7 可以穿插。下面「Mac 的小問題」的逐字稿時間點這一版一起修。驗證用示範資料：把 `~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`，DEBUG 版加 `-ApplePersistenceIgnoreState YES -autoSummarize NO -correctTranscript NO` 啟動。

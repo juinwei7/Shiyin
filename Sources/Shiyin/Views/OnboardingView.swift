@@ -137,6 +137,9 @@ struct OnboardingView: View {
             if primaryModel == .japanese {
                 ModelRow(title: String(localized: "\(ModelStore.japanese.name)：日文會議的正式轉錄，574 MB"), state: model.models.state(.japanese),
                          start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) }, delete: nil)
+            } else if primaryModel == .qwen {
+                ModelRow(title: String(localized: "Qwen3-ASR 1.7B：正式轉錄，2.5 GB"), state: model.models.combinedState(.qwen),
+                         start: { model.models.startAll(.qwen) }, pause: { model.models.pauseAll(.qwen) }, delete: nil)
             } else {
                 ModelRow(title: String(localized: "\(ModelStore.breeze.name)：正式轉錄，1.66 GB"), state: model.models.state,
                          start: { model.models.start() }, pause: { model.models.pause() }, delete: nil)
@@ -165,7 +168,7 @@ struct OnboardingView: View {
         }
         .onAppear {
             // 正式轉錄選了 macOS 內建就不用下載轉錄模型（從進階重新顯示引導時）
-            if !AppSettings.useSystemTranscriber { model.models.autoStart(primaryModel) }
+            if !AppSettings.useSystemTranscriber { model.models.autoStartTranscription(for: AppSettings.defaultMeetingLanguage) }
             if AppSettings.autoDetectLanguage { model.models.autoStart(.languageDetection) }
             if model.models.diarizerState == .missing { model.models.prepareDiarizer() }
         }
@@ -228,8 +231,8 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")
                 .fixedSize(horizontal: false, vertical: true)
-            if !AppSettings.useSystemTranscriber && !model.models.isInstalled(primaryModel) {
-                Label(model.models.state(primaryModel).isBusy
+            if !AppSettings.useSystemTranscriber && !model.models.isInstalled(transcriptionFor: AppSettings.defaultMeetingLanguage) {
+                Label(model.models.combinedState(primaryModel).isBusy
                       ? String(localized: "轉錄模型還在下載，下載完成前會先用 macOS 內建辨識轉錄。下載好之後，可以在逐字稿分頁重新轉錄。")
                       : String(localized: "轉錄模型還沒下載，會先用 macOS 內建辨識轉錄。可以到「設定 → 模型與儲存空間」下載，用模型轉錄比較準。"),
                       systemImage: "arrow.down.circle")

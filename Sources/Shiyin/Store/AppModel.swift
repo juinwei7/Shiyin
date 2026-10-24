@@ -314,10 +314,12 @@ final class AppModel {
         reloadDetail()
     }
 
-    /// 這場會議是在模型下載好之前用 macOS 內建辨識轉錄的，現在可以用 Breeze 重新轉錄（design §21.17）
+    /// 這場會議是用 macOS 內建辨識（模型下載好之前）或 Breeze 轉的，現在目前引擎的模型下載好了，可以重新轉錄（design §21.17、§32.6）
     func canUpgradeTranscript(_ meeting: Meeting) -> Bool {
-        meeting.transcribedWith == "system" && !AppSettings.useSystemTranscriber && meeting.hasAudio && meeting.deletedAt == nil
-            && models.isInstalled(ModelStore.transcription(for: meeting.meetingLanguage))
+        guard !AppSettings.useSystemTranscriber, meeting.hasAudio, meeting.deletedAt == nil,
+              models.isInstalled(transcriptionFor: meeting.meetingLanguage) else { return false }
+        let older = ModelStore.transcription(for: meeting.meetingLanguage) == .qwen ? ["system", "breeze"] : ["system"]
+        return older.contains(meeting.transcribedWith)
     }
 
     // MARK: 更新（R10.6）

@@ -1,5 +1,5 @@
 // 轉錄評分（design §17.1、R14.1）：比較標準答案和 shiyinctl transcribe-eval 的輸出。
-// 用法：swift scripts/dev/asr-score.swift <標準答案.json> <辨識結果.json> [--window 開始秒 結束秒] [--keywords 詞1,詞2] [--json 輸出.json]
+// 用法：swift scripts/dev/asr-score.swift <標準答案.json> <辨識結果.json> [--window 開始秒 結束秒] [--keywords 詞1,詞2] [--json 輸出.json] [--confusions N] [--keep-script]
 //
 // 標準答案：{"lang": "zh"、"en" 或 "ja", "segments": [{"start": 秒, "end": 秒, "speaker": "A", "text": "…"}]}
 // 中文、日文一個字（漢字、假名）算一個單位、英文一個單字算一個單位，所以中文、日文是 CER、英文是 WER、夾雜英文是兩者混合。
@@ -27,6 +27,8 @@ var args = Array(CommandLine.arguments.dropFirst())
 var window: (Double, Double)?
 var keywords: [String] = []
 var jsonOut: String?
+var confusions = 0
+var keepScript = false   // --keep-script：中文不轉簡體，繁簡寫錯也算錯（檢查簡轉繁的品質）
 var positional: [String] = []
 while !args.isEmpty {
     let a = args.removeFirst()
@@ -34,6 +36,8 @@ while !args.isEmpty {
     case "--window": window = (Double(args.removeFirst())!, Double(args.removeFirst())!)
     case "--keywords": keywords = args.removeFirst().split(separator: ",").map { String($0) }
     case "--json": jsonOut = args.removeFirst()
+    case "--confusions": confusions = Int(args.removeFirst()) ?? 20
+    case "--keep-script": keepScript = true
     default: positional.append(a)
     }
 }
@@ -56,7 +60,7 @@ let hypSegs = hyp.segments.filter(inWindow).sorted { $0.start < $1.start }
 
 func normalize(_ text: String) -> String {
     var t = text.lowercased()
-    if lang == "zh" { t = t.applyingTransform(StringTransform("Hant-Hans"), reverse: false) ?? t }
+    if lang == "zh" && !keepScript { t = t.applyingTransform(StringTransform("Hant-Hans"), reverse: false) ?? t }
     if lang == "ja" {
         t = t.precomposedStringWithCompatibilityMapping.lowercased()
         for _ in 0..<2 { t = t.replacing(#/(\d),(\d{3})/#) { "\($0.output.1)\($0.output.2)" } }  // 1,000,000 要兩次
@@ -139,6 +143,80 @@ func align(_ r: [String], _ h: [String]) -> (sub: Int, del: Int, ins: Int) {
     return (last.sub, last.del, last.ins)
 }
 
+/// 跟 align 一樣的編輯距離，但留下整條對齊路徑（每格一個位元組，38 分鐘的會議約 60 MB），用來列出錯在哪裡（--confusions）
+enum Op: UInt8 { case same = 0, sub = 1, del = 2, ins = 3 }
+func alignOps(_ r: [String], _ h: [String]) -> [(op: Op, ref: String?, hyp: String?)] {
+    let w = h.count + 1
+    var cost = [Int](repeating: 0, count: w), back = [UInt8](repeating: 0, count: (r.count + 1) * w)
+    for j in 0...h.count { cost[j] = j; back[j] = Op.ins.rawValue }
+    for i in 1...max(r.count, 1) where i <= r.count {
+        var diagCost = cost[0]
+        cost[0] = i; back[i * w] = Op.del.rawValue
+        for j in 1...max(h.count, 1) where j <= h.count {
+            let same = r[i - 1] == h[j - 1]
+            var best = diagCost + (same ? 0 : 1), op = same ? Op.same : Op.sub
+            if cost[j] + 1 < best { best = cost[j] + 1; op = .del }
+            if cost[j - 1] + 1 < best { best = cost[j - 1] + 1; op = .ins }
+            diagCost = cost[j]; cost[j] = best; back[i * w + j] = op.rawValue
+        }
+    }
+    var ops: [(op: Op, ref: String?, hyp: String?)] = []
+    var i = r.count, j = h.count
+    while i > 0 || j > 0 {
+        let op = Op(rawValue: back[i * w + j])!
+        switch op {
+        case .same, .sub: ops.append((op, r[i - 1], h[j - 1])); i -= 1; j -= 1
+        case .del: ops.append((op, r[i - 1], nil)); i -= 1
+        case .ins: ops.append((op, nil, h[j - 1])); j -= 1
+        }
+    }
+    return ops.reversed()
+}
+
+/// 錯誤對照（--confusions N）：去掉語助詞後對齊，列出最常見的替換對、漏字、多字，和錯得最多的片段（前後各帶幾個字的上下文）
+func dumpConfusions(_ r: [String], _ h: [String], top: Int) -> [String: Any] {
+    let ops = alignOps(r, h)
+    var subs: [String: Int] = [:], dels: [String: Int] = [:], inss: [String: Int] = [:]
+    for o in ops {
+        switch o.op {
+        case .sub: subs[o.ref! + "→" + o.hyp!, default: 0] += 1
+        case .del: dels[o.ref!, default: 0] += 1
+        case .ins: inss[o.hyp!, default: 0] += 1
+        case .same: break
+        }
+    }
+    func topList(_ d: [String: Int]) -> [[String: Any]] {
+        d.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(top).map { ["token": $0.key, "count": $0.value] }
+    }
+    // 連續的錯誤合成一個片段（中間最多隔 1 個對的字），依錯誤數排序
+    var clusters: [(errors: Int, start: Int, end: Int)] = []
+    var start: Int? = nil, errors = 0, lastError = -10
+    for (k, o) in ops.enumerated() {
+        if o.op != .same {
+            if start == nil || k - lastError > 2 {
+                if let s = start { clusters.append((errors, s, lastError)) }
+                start = k; errors = 0
+            }
+            errors += 1; lastError = k
+        }
+    }
+    if let s = start { clusters.append((errors, s, lastError)) }
+    let sep = lang == "en" ? " " : ""
+    let worst = clusters.sorted { $0.errors > $1.errors }.prefix(top).map { c -> [String: Any] in
+        let lo = max(0, c.start - 6), hi = min(ops.count - 1, c.end + 6)
+        let slice = ops[lo...hi]
+        return ["errors": c.errors,
+                "ref": slice.compactMap { $0.op == .ins ? nil : $0.ref }.joined(separator: sep),
+                "hyp": slice.compactMap { $0.op == .del ? nil : $0.hyp }.joined(separator: sep)]
+    }
+    print("最常見的替換 ref→hyp：" + topList(subs).prefix(15).map { "\($0["token"]!)×\($0["count"]!)" }.joined(separator: "、"))
+    print("最常漏的字：" + topList(dels).prefix(15).map { "\($0["token"]!)×\($0["count"]!)" }.joined(separator: "、"))
+    print("最常多出的字：" + topList(inss).prefix(15).map { "\($0["token"]!)×\($0["count"]!)" }.joined(separator: "、"))
+    print("錯最多的片段：")
+    for c in worst.prefix(top) { print("  [\(c["errors"]!)] 參考：\(c["ref"]!)\n       辨識：\(c["hyp"]!)") }
+    return ["substitutions": topList(subs), "deletions": topList(dels), "insertions": topList(inss), "worst": worst]
+}
+
 let refText = refSegs.map(\.text).joined(separator: " ")
 let hypText = hypSegs.map(\.text).joined(separator: " ")
 var metrics: [String: Any] = ["lang": lang, "refSegments": refSegs.count, "hypSegments": hypSegs.count]
@@ -158,6 +236,7 @@ for dropFillers in [false, true] {
     metrics[key] = ["ref": r.count, "hyp": h.count, "sub": e.sub, "del": e.del, "ins": e.ins, "rate": rate]
     print(String(format: "%@%@ %.1f%%（參考 %d、辨識 %d；替換 %d、漏 %d、多 %d）",
                  unit, dropFillers ? "（去掉語助詞）" : "", rate, r.count, h.count, e.sub, e.del, e.ins))
+    if dropFillers && confusions > 0 { metrics["confusions"] = dumpConfusions(r, h, top: confusions) }
 }
 
 // MARK: 關鍵詞

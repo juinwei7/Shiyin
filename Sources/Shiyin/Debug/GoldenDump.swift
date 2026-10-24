@@ -532,6 +532,9 @@ enum GoldenDump {
         }
         w.json("pipeline/collector.json", collectors)
 
+        // 簡體轉台灣繁體（design §32.5）：Windows 讀同一份字表、同一套最長匹配，要逐字相同
+        w.json("util/s2tw.json", (f["s2twCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toTaiwan($0)] as Object })
+
         w.json("pipeline/similar.json", (f["similarPairs"] as? [[String]] ?? []).map {
             ["a": $0[0], "b": $0[1], "similar": TranscriptionPipeline.similar($0[0], $0[1])] as Object
         })

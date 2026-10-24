@@ -2,15 +2,27 @@ import SwiftUI
 
 /// 設定視窗（T-F2）：整理工具與金鑰、範本、詞彙表、錄音、模型與儲存空間、進階
 struct SettingsView: View {
+    #if DEBUG
+    /// shiyinctl preview settings <分頁>：預覽視窗一開始停在哪個分頁（0 整理工具 … 4 錄音、5 模型與儲存空間）
+    nonisolated(unsafe) static var previewTab = 0
+    #endif
+    @State private var tab: Int = {
+        #if DEBUG
+        return SettingsView.previewTab
+        #else
+        return 0
+        #endif
+    }()
+
     var body: some View {
-        TabView {
-            ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }
-            TemplateSettings().tabItem { Label(MeetingLanguage.ui(zh: "範本", en: "Templates"), systemImage: "doc.text") }
-            GlossarySettings().tabItem { Label("詞彙表", systemImage: "text.book.closed") }
-            SpeakerSettings().tabItem { Label(MeetingLanguage.ui(zh: "說話者", en: "Speakers"), systemImage: "person.wave.2") }
-            RecordingSettings().tabItem { Label("錄音", systemImage: "mic") }
-            StorageSettings().tabItem { Label("模型與儲存空間", systemImage: "internaldrive") }
-            AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }
+        TabView(selection: $tab) {
+            ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }.tag(0)
+            TemplateSettings().tabItem { Label(MeetingLanguage.ui(zh: "範本", en: "Templates"), systemImage: "doc.text") }.tag(1)
+            GlossarySettings().tabItem { Label("詞彙表", systemImage: "text.book.closed") }.tag(2)
+            SpeakerSettings().tabItem { Label(MeetingLanguage.ui(zh: "說話者", en: "Speakers"), systemImage: "person.wave.2") }.tag(3)
+            RecordingSettings().tabItem { Label("錄音", systemImage: "mic") }.tag(4)
+            StorageSettings().tabItem { Label("模型與儲存空間", systemImage: "internaldrive") }.tag(5)
+            AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }.tag(6)
         }
         .frame(width: 640, height: 520)
         .tint(.celadon)
@@ -597,7 +609,7 @@ struct GlossarySettings: View {
 
 struct RecordingSettings: View {
     @Environment(AppModel.self) private var model
-    @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
+    @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "qwen"
     @AppStorage(AppSettings.defaultMeetingLanguageKey) private var meetingLanguage: MeetingLanguage = .systemDefault
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
@@ -646,9 +658,10 @@ struct RecordingSettings: View {
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("錄音中顯示即時逐字稿", isOn: $live)
             Toggle("轉錄時辨識說話者", isOn: $diarize)
-            // 正式轉錄引擎（R4.1、design §6.2.1、D11）
+            // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
             Picker("正式轉錄", selection: $engine) {
-                Text("Breeze ASR 25（建議）").tag("breeze")
+                Text("Qwen3-ASR 1.7B（建議）").tag("qwen")
+                Text("Breeze ASR 25").tag("breeze")
                 Text("macOS 內建").tag("system")
             }
             .onChange(of: engine) { _, _ in
@@ -657,6 +670,8 @@ struct RecordingSettings: View {
             }
             Text(engine == "system"
                  ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
+                 : engine == "qwen"
+                 ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度也快一倍；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。"
                  : "會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
@@ -716,9 +731,14 @@ struct StorageSettings: View {
     var body: some View {
         Form {
             Section("轉錄模型") {
+                ModelRow(title: String(localized: "Qwen3-ASR 1.7B（q8_0，含音訊編碼器）"), state: model.models.combinedState(.qwen),
+                         start: { model.models.startAll(.qwen) }, pause: { model.models.pauseAll(.qwen) },
+                         delete: { model.models.deleteAll(.qwen); measure() }, deleteDisabled: transcribing)
+                Text("中文、英文會議用，2.5 GB。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: ModelStore.breeze.name, state: model.models.state,
                          start: { model.models.start() }, pause: { model.models.pause() },
                          delete: { model.models.delete(); measure() }, deleteDisabled: transcribing)
+                Text("正式轉錄選「Breeze ASR 25」時用，1.66 GB。").font(.caption).foregroundStyle(.secondary)
                 ModelRow(title: ModelStore.japanese.name, state: model.models.state(.japanese),
                          start: { model.models.start(.japanese) }, pause: { model.models.pause(.japanese) },
                          delete: { model.models.delete(.japanese); measure() }, deleteDisabled: transcribing)

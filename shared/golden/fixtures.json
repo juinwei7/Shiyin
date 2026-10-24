@@ -1,290 +1,1702 @@
 {
-  "comment": "拾音標準答案的輸入（design-windows §4）。Mac 的 DEBUG 版 `shiyinctl dump-golden <這個檔案> <輸出資料夾>` 讀這份產生標準答案，Windows 的測試讀同一份重算後比對。改了這份要重跑 Mac 的 dump-golden。",
-  "today": "2026-10-20",
-  "meetings": [
+ "comment": "拾音標準答案的輸入（design-windows §4）。Mac 的 DEBUG 版 `shiyinctl dump-golden <這個檔案> <輸出資料夾>` 讀這份產生標準答案，Windows 的測試讀同一份重算後比對。改了這份要重跑 Mac 的 dump-golden。",
+ "today": "2026-10-20",
+ "meetings": [
+  {
+   "key": "zh",
+   "meeting": {
+    "title": "",
+    "titleLocked": false,
+    "meetingDate": "2026-10-15",
+    "participants": "王小明, 李大華、Amy，陳美玲",
+    "sourceFilename": "2026-10-15 產品週會.m4a",
+    "durationSeconds": 3912,
+    "templateId": "general",
+    "userNotes": "[00:30] 確認上線日期\n[02:10] Redis 快取要再測\n",
+    "language": "zh",
+    "folder": "專案 A",
+    "channels": "both"
+   },
+   "segments": [
     {
-      "key": "zh",
-      "meeting": {
-        "title": "", "titleLocked": false, "meetingDate": "2026-10-15",
-        "participants": "王小明, 李大華、Amy，陳美玲", "sourceFilename": "2026-10-15 產品週會.m4a",
-        "durationSeconds": 3912, "templateId": "general", "userNotes": "[00:30] 確認上線日期\n[02:10] Redis 快取要再測\n",
-        "language": "zh", "folder": "專案 A", "channels": "both"
-      },
-      "segments": [
-        {"start": 0.0, "end": 4.2, "text": "大家好，今天討論 v3.6 的上線時程。", "lowConfidence": false, "speaker": 1},
-        {"start": 4.2, "end": 9.8, "text": "我這邊 Redis 快取還在測，預計下週三完成。", "lowConfidence": false, "speaker": 2},
-        {"start": 9.8, "end": 15.1, "text": "好，那 \"Kubernetes\" 的部署呢？", "lowConfidence": true, "speaker": 1},
-        {"start": 15.1, "end": 20.0, "text": "部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。", "lowConfidence": false, "speaker": 3},
-        {"start": 20.0, "end": 24.5, "text": "（背景噪音）", "lowConfidence": true, "speaker": null},
-        {"start": 65.0, "end": 70.3, "text": "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題", "lowConfidence": false, "speaker": 2},
-        {"start": 3725.4, "end": 3731.0, "text": "最後確認：期限 10/21，負責人小明。", "lowConfidence": false, "speaker": 1},
-        {"start": 3731.0, "end": 3731.2, "text": "嗯", "lowConfidence": false, "speaker": 2}
-      ],
-      "speakers": {"1": "王小明", "2": "說話者 2"},
-      "voices": {
-        "1": {"embedding": [0.9, 0.1, 0.0, 0.2, 0.0, 0.1, 0.0, 0.3], "seconds": 20.5, "source": "mix"},
-        "2": {"embedding": [0.0, 0.8, 0.5, 0.0, 0.1, 0.0, 0.2, 0.0], "seconds": 31.0, "source": "mix"},
-        "3": {"embedding": [0.1, 0.0, 0.9, 0.4, 0.0, 0.0, 0.0, 0.1], "seconds": 4.9, "source": "mix"}
-      },
-      "bookmarks": [{"time": 65.2, "label": ""}, {"time": 130.0, "label": "重點"}],
-      "glossary": ["Redis", "Kubernetes", "拾音", "SendGrid"],
-      "notes": {
-        "title": "v3.6 上線週會",
-        "summary": [{"text": "確認 v3.6 上線時程", "time": "00:00"}, {"text": "Redis 快取下週三完成", "time": ""}],
-        "decisions": [{"text": "部署腳本路徑維持 /deploy/k8s", "time": "00:15"}],
-        "actionItems": [
-          {"owner": "王小明", "task": "確認 <admin> 權限 | 部署", "due": "2026-10-21", "time": "1:02:05"},
-          {"owner": "", "task": "Redis 快取測試\n第二行", "due": "", "time": ""}
-        ],
-        "openQuestions": [{"text": "Kubernetes 版本？", "time": "00:09"}],
-        "topics": [
-          {"title": "上線時程", "start": "00:00", "points": [{"text": "目標 10/21", "time": "1:02:05"}]},
-          {"title": "快取 & 部署", "start": "00:04", "points": []}
-        ],
-        "custom": [{"title": "近況與進展", "items": [{"text": "部署 \"腳本\" OK", "time": "00:15"}]}],
-        "reviewItems": [{"time": "00:09", "question": "「Kubernetes」的寫法對嗎？"}, {"time": "", "question": "負責人是誰？"}]
-      },
-      "answers": [{"time": "00:09", "question": "「Kubernetes」的寫法對嗎？", "answer": "對，K8s 也可以"}],
-      "history": [{"question": "上線日期？", "answer": "10/21"}, {"question": "誰負責？", "answer": "王小明"}],
-      "question": "Redis 什麼時候測完？",
-      "knownPeople": ["王小明", "Amy"]
+     "start": 0.0,
+     "end": 4.2,
+     "text": "大家好，今天討論 v3.6 的上線時程。",
+     "lowConfidence": false,
+     "speaker": 1
     },
     {
-      "key": "en",
-      "meeting": {
-        "title": "Weekly Sync", "titleLocked": true, "meetingDate": "2026-10-18",
-        "participants": "Alice, Bob", "sourceFilename": "sync.wav",
-        "durationSeconds": 125, "templateId": "one-on-one", "userNotes": "",
-        "language": "en", "folder": "", "channels": "mic"
-      },
-      "segments": [
-        {"start": 0.0, "end": 3.5, "text": "Hi everyone, let's review the Q4 roadmap.", "lowConfidence": false, "speaker": 1},
-        {"start": 3.5, "end": 8.0, "text": "I'll send the email via SendGrid by Friday.", "lowConfidence": false, "speaker": 2},
-        {"start": 8.0, "end": 12.25, "text": "Speaker 1 here again: what about the \"beta\" users?", "lowConfidence": true, "speaker": 1},
-        {"start": 12.25, "end": 13.0, "text": "Okay.", "lowConfidence": false, "speaker": null},
-        {"start": 13.0, "end": 16.5, "text": "The beta list is ready.", "lowConfidence": false, "speaker": 3}
-      ],
-      "speakers": {"2": "Bob"},
-      "voices": {
-        "1": {"embedding": [0.85, 0.15, 0.05, 0.25, 0.0, 0.1, 0.0, 0.25], "seconds": 40.0, "source": "mic"},
-        "2": {"embedding": [0.0, 0.0, 0.1, 0.0, 0.9, 0.4, 0.0, 0.0], "seconds": 12.0, "source": "mic"},
-        "3": {"embedding": [0.1, 0.6, 0.2, 0.0, 0.5, 0.0, 0.3, 0.1], "seconds": 15.0, "source": "mic"}
-      },
-      "bookmarks": [],
-      "glossary": [],
-      "notes": {
-        "title": "Q4 roadmap",
-        "summary": [{"text": "Reviewed the Q4 roadmap", "time": "00:00"}],
-        "decisions": [],
-        "actionItems": [{"owner": "Bob", "task": "Send the email via SendGrid", "due": "2026-10-23", "time": "00:03"}],
-        "openQuestions": [],
-        "topics": [],
-        "custom": [{"title": "Updates and progress", "items": [{"text": "Roadmap on track", "time": "00:00"}]}],
-        "reviewItems": [{"time": "00:08", "question": "Is \"beta\" the right term?"}]
-      },
-      "answers": [{"time": "00:08", "question": "Is \"beta\" the right term?", "answer": "Yes"}],
-      "history": [],
-      "question": "When is the email due?",
-      "knownPeople": []
+     "start": 4.2,
+     "end": 9.8,
+     "text": "我這邊 Redis 快取還在測，預計下週三完成。",
+     "lowConfidence": false,
+     "speaker": 2
     },
     {
-      "key": "ja",
-      "meeting": {
-        "title": "定例会議", "titleLocked": false, "meetingDate": "2026-10-19",
-        "participants": "田中, 佐藤", "sourceFilename": "teirei.m4a",
-        "durationSeconds": null, "templateId": "brainstorm", "userNotes": "アイデアを全部メモ",
-        "language": "ja", "folder": "", "channels": "mic"
-      },
-      "segments": [
-        {"start": 0.0, "end": 5.0, "text": "皆さん、おはようございます。", "lowConfidence": false, "speaker": 1},
-        {"start": 5.0, "end": 9.5, "text": "新しいアイデアを三つ出します。", "lowConfidence": false, "speaker": 2},
-        {"start": 9.5, "end": 12.0, "text": "ありがとうございます、田中さん。", "lowConfidence": true, "speaker": 1}
-      ],
-      "speakers": {},
-      "voices": {},
-      "bookmarks": [{"time": 7.5, "label": ""}],
-      "glossary": ["拾音"],
-      "notes": null,
-      "answers": [],
-      "history": [{"question": "参加者は？", "answer": "田中さんと佐藤さん"}],
-      "question": "アイデアはいくつ？",
-      "knownPeople": ["田中"]
+     "start": 9.8,
+     "end": 15.1,
+     "text": "好，那 \"Kubernetes\" 的部署呢？",
+     "lowConfidence": true,
+     "speaker": 1
+    },
+    {
+     "start": 15.1,
+     "end": 20.0,
+     "text": "部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。",
+     "lowConfidence": false,
+     "speaker": 3
+    },
+    {
+     "start": 20.0,
+     "end": 24.5,
+     "text": "（背景噪音）",
+     "lowConfidence": true,
+     "speaker": null
+    },
+    {
+     "start": 65.0,
+     "end": 70.3,
+     "text": "說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題",
+     "lowConfidence": false,
+     "speaker": 2
+    },
+    {
+     "start": 3725.4,
+     "end": 3731.0,
+     "text": "最後確認：期限 10/21，負責人小明。",
+     "lowConfidence": false,
+     "speaker": 1
+    },
+    {
+     "start": 3731.0,
+     "end": 3731.2,
+     "text": "嗯",
+     "lowConfidence": false,
+     "speaker": 2
     }
-  ],
-  "customTemplate": {"description": "自訂：客戶會議", "sections": ["summary", "actionItems"], "custom": [{"title": "客戶需求", "instruction": "列出客戶提出的需求"}], "instruction": "語氣正式"},
-  "askAllBlocks": [
-    {"id": 1, "title": "2026-10-15 產品週會", "date": "2026-10-15", "summary": ["[00:00] 確認 v3.6 上線時程", "Redis 快取下週三完成"], "lines": ["[00:04] 說話者 2：我這邊 Redis 快取還在測，預計下週三完成。"]},
-    {"id": 2, "title": "Weekly Sync", "date": "2026-10-18", "summary": [], "lines": ["[00:03] Bob: I'll send the email via SendGrid by Friday."]},
-    {"id": 3, "title": "定例会議", "date": "2026-10-19", "summary": [], "lines": []}
-  ],
-  "askAllQuestion": "Redis 和 SendGrid 誰負責？",
-  "whisperGlossaries": [
-    [],
-    ["Redis", "Kubernetes", "拾音", "SendGrid"],
-    ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu", "零一二三四五六七八九", "甲乙丙丁戊己庚辛壬癸", "子丑寅卯辰巳午未申酉", "Kubernetes", "PostgreSQL", "Elasticsearch", "Terraform", "Prometheus", "Grafana", "OpenTelemetry", "WebAssembly", "TypeScript", "JavaScript", "Objective-C", "SwiftUI", "WinUI"]
-  ],
-  "notesDecode": [
-    "{\"title\":\"v1\",\"summary\":[\"一\",\"二\"],\"decisions\":[\"決定\"],\"actionItems\":[{\"owner\":\"A\",\"task\":\"T\",\"due\":\"\"}],\"openQuestions\":[],\"topics\":[{\"title\":\"議題\",\"start\":\"[03:15]\",\"points\":[\"點\"]}]}",
-    "{\"title\":\"times\",\"summary\":[{\"text\":\"a\",\"time\":\"[03:15]\"},{\"text\":\"b\",\"time\":\"（1:02:03）\"},{\"text\":\"c\",\"time\":\" 【00:01】 \"},{\"text\":\"d\"}]}",
-    "{\"summary\":\"not an array\",\"decisions\":[{\"text\":\"ok\",\"time\":\"00:01\"}],\"extra\":123}",
-    "{\"reviewItems\":[{\"question\":\"Q?\"},{\"time\":\"(00:05)\",\"question\":\"R?\"}],\"custom\":[{\"title\":\"C\",\"items\":[\"x\",{\"text\":\"y\",\"time\":\"00:02\"}]}]}",
-    "{\"title\":\"escape \\\" \\\\ / \\n \\t \\u0001 😀 \\u2028\",\"summary\":[{\"text\":\"<&>\",\"time\":\"\"}]}",
-    "{}"
-  ],
-  "timeStrings": [0, 0.4, 9.99, 59.5, 60, 61.7, 599.2, 3599.9, 3600, 3725.4, 36000, -5],
-  "timeParse": ["03:15", "[03:15]", "1:02:03", "03：15", "03:15–05:20", "03:15-05:20", "03:15~05:20", "03:15 〜 05:20", "abc", "", "1:2:3:4", "12", "00:5x"],
-  "durations": [null, 0, 29, 30, 89, 90, 540, 3540, 3600, 3629, 3630, 3912, 7200],
-  "subtitleTimes": [0, 1.0005, 62.345, 3725.4, 3600.9999, -1],
-  "weekdayDates": ["2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "bad"],
-  "inferDates": [
-    {"filename": "2026-08-27 會議.m4a", "modified": "2026-09-01"},
-    {"filename": "會議_2026_08_27.wav", "modified": "2026-09-01"},
-    {"filename": "20260827.m4a", "modified": "2026-09-01"},
-    {"filename": "rec 8_27.m4a", "modified": "2026-09-01"},
-    {"filename": "rec 12.31.m4a", "modified": "2026-09-01"},
-    {"filename": "會議0827.mp3", "modified": "2026-09-01"},
-    {"filename": "會議1231.mp3", "modified": "2026-09-01"},
-    {"filename": "2026-02-30.m4a", "modified": "2026-09-01"},
-    {"filename": "13-45.m4a", "modified": "2026-09-01"},
-    {"filename": "voice memo.m4a", "modified": "2026-09-01"},
-    {"filename": "voice memo.m4a", "modified": null},
-    {"filename": "123456789.m4a", "modified": "2026-09-01"},
-    {"filename": "v2026.10.20-final.mov", "modified": "2026-09-01"}
-  ],
-  "safeExtensions": ["a.m4a", "b.M4A", "c", "d.tar.gz", "e.weird-ext!", "f.verylongextension", "g.中文", ".hidden"],
-  "displayTitles": [["", "2026-10-15 產品週會.m4a"], ["標題", "x.m4a"], ["", "no-extension"], ["", ".hidden"], ["", "a.b.c.wav"]],
-  "participants": ["", "王小明, 李大華、Amy，陳美玲", " a ,, b ,", "單一"],
-  "defaultSpeakerNames": ["說話者 1", "說話者 12", "Speaker 3", "話者 4", "說話者1", "說話者 一", "Speaker 3 ", "speaker 3", "王小明"],
-  "speakerRenames": [
-    {"old": "說話者 1", "new": "王小明", "notesKey": "zh"},
-    {"old": "Bob", "new": "Robert", "notesKey": "en"},
-    {"old": "王小明", "new": "王大明", "notesKey": "zh"}
-  ],
-  "transcriptImports": [
-    {"ext": "srt", "text": "1\r\n00:00:01,000 --> 00:00:03,500\r\n第一句\r\n\r\n2\r\n00:00:04,000 --> 00:00:06,000\r\n第二句\r\n換行\r\n\r\n3\r\nbad --> time\r\nx\r\n"},
-    {"ext": "vtt", "text": "WEBVTT\n\n00:01.000 --> 00:02.500 align:start\nHello\n\n00:00:03.000 --> 00:00:04.000\n<v Bob>Hi</v>\n\nNOTE comment\n"},
-    {"ext": "txt", "text": "第一行\n\n  第二行  \r\n\t\n第三行"}
-  ],
-  "openaiURLs": ["https://api.groq.com/openai/v1/", "http://localhost:11434/v1/chat/completions", "  https://x.com/v1//  ", "ftp://x.com", "localhost:1234", "http://[::1]:8080/v1", "https://", ""],
-  "extractJSON": ["{\"a\":1}", "```json\n{\"a\":1}\n```", "說明 {\"a\":{\"b\":2}} 完", "no json", "} {"],
-  "loginProblems": ["Not logged in · Please run /login", "Failed to authenticate: OAuth session expired", "HTTP 401", "rate limited", "Invalid API key", ""],
-  "similarPairs": [["今天討論上線時程", "今天討論上線時程。"], ["abc", "abcd"], ["Hello world again", "hello, world again!"], ["完全不同的句子", "另外一段內容"], ["", ""], ["我這邊 Redis 快取還在測", "Redis 快取還在測試中"]],
-  "echoCases": [
-    {"segment": {"start": 10, "end": 14, "text": "我這邊 Redis 快取還在測"}, "system": [{"start": 10.5, "end": 14.5, "text": "我這邊 Redis 快取還在測試"}]},
-    {"segment": {"start": 10, "end": 14, "text": "我這邊 Redis 快取還在測"}, "system": [{"start": 13, "end": 18, "text": "我這邊 Redis 快取還在測試"}]},
-    {"segment": {"start": 10, "end": 14, "text": "完全不同"}, "system": [{"start": 10, "end": 14, "text": "另外一段"}]},
-    {"segment": {"start": 10, "end": 10, "text": "a"}, "system": [{"start": 9, "end": 11, "text": "a"}]}
-  ],
-  "assignCases": [
-    {"turns": [{"speaker": 1, "start": 0, "end": 5}, {"speaker": 2, "start": 5, "end": 9}, {"speaker": 3, "start": 20, "end": 25}],
-     "segments": [{"start": 0, "end": 4}, {"start": 4, "end": 8}, {"start": 12, "end": 13}, {"start": 21, "end": 24}, {"start": 30, "end": 31}]},
-    {"turns": [{"speaker": 2, "start": 0, "end": 10}, {"speaker": 1, "start": 10, "end": 20}],
-     "segments": [{"start": 11, "end": 12}, {"start": 1, "end": 2}, {"start": 9, "end": 11.5}]},
-    {"turns": [], "segments": [{"start": 0, "end": 1}]}
-  ],
-  "qualityCases": [
-    {"chunks": [
-      {"speakerId": "S1", "chunkIndex": 0, "speakerIndex": 0, "embedding": [1, 0, 0]},
-      {"speakerId": "S1", "chunkIndex": 0, "speakerIndex": 1, "embedding": [0.9, 0.1, 0]},
-      {"speakerId": "S2", "chunkIndex": 1, "speakerIndex": 0, "embedding": [0, 1, 0]},
-      {"speakerId": "S2", "chunkIndex": 2, "speakerIndex": 0, "embedding": [0, 0.8, 0.6]}
-    ]},
-    {"chunks": [
-      {"speakerId": "S1", "chunkIndex": 0, "speakerIndex": 0, "embedding": [1, 0]},
-      {"speakerId": "S1", "chunkIndex": 1, "speakerIndex": 0, "embedding": [0, 1]}
-    ]}
-  ],
-  "rediarizeCases": [
-    {"old": [{"idx": 1, "name": "王小明", "nameSource": "manual", "personId": 7}, {"idx": 2, "name": "說話者 2", "nameSource": "default", "personId": null}, {"idx": 3, "name": "Amy", "nameSource": "voiceprint", "personId": 9}],
-     "segments": [{"start": 0, "end": 10, "speaker": 1, "manual": false}, {"start": 10, "end": 14, "speaker": 2, "manual": false}, {"start": 14, "end": 20, "speaker": 1, "manual": false}, {"start": 20, "end": 30, "speaker": 3, "manual": false}, {"start": 30, "end": 31, "speaker": 3, "manual": true}],
-     "newSpeakers": [2, 1, 2, 3, 3]}
-  ],
-  "collectorSeeds": [{"seed": 12345, "seconds": 30, "voicedFrom": 2.0, "voicedTo": 14.0, "loud": 0.2, "quiet": 0.001}, {"seed": 777, "seconds": 60, "voicedFrom": 50.0, "voicedTo": 56.0, "loud": 0.05, "quiet": 0.002}],
-  "chunkSignal": {"seed": 42, "seconds": 400, "chunkSeconds": 60, "quietAt": [57.3, 124.1, 175.0, 251.6], "loud": 0.3, "quiet": 0.0005},
-  "validateAnswers": {
-    "answer": {"answer": "  答案\n", "found": true, "citations": [
-      {"meetingId": 1, "time": "[00:04]", "quote": "  Redis  "}, {"meetingId": 99, "time": "00:05", "quote": "x"}, {"meetingId": null, "time": "bad", "quote": "y"}, {"meetingId": 2, "time": "1:02:03", "quote": "z"}]},
-    "meetingIds": [1, 2]
+   ],
+   "speakers": {
+    "1": "王小明",
+    "2": "說話者 2"
+   },
+   "voices": {
+    "1": {
+     "embedding": [
+      0.9,
+      0.1,
+      0.0,
+      0.2,
+      0.0,
+      0.1,
+      0.0,
+      0.3
+     ],
+     "seconds": 20.5,
+     "source": "mix"
+    },
+    "2": {
+     "embedding": [
+      0.0,
+      0.8,
+      0.5,
+      0.0,
+      0.1,
+      0.0,
+      0.2,
+      0.0
+     ],
+     "seconds": 31.0,
+     "source": "mix"
+    },
+    "3": {
+     "embedding": [
+      0.1,
+      0.0,
+      0.9,
+      0.4,
+      0.0,
+      0.0,
+      0.0,
+      0.1
+     ],
+     "seconds": 4.9,
+     "source": "mix"
+    }
+   },
+   "bookmarks": [
+    {
+     "time": 65.2,
+     "label": ""
+    },
+    {
+     "time": 130.0,
+     "label": "重點"
+    }
+   ],
+   "glossary": [
+    "Redis",
+    "Kubernetes",
+    "拾音",
+    "SendGrid"
+   ],
+   "notes": {
+    "title": "v3.6 上線週會",
+    "summary": [
+     {
+      "text": "確認 v3.6 上線時程",
+      "time": "00:00"
+     },
+     {
+      "text": "Redis 快取下週三完成",
+      "time": ""
+     }
+    ],
+    "decisions": [
+     {
+      "text": "部署腳本路徑維持 /deploy/k8s",
+      "time": "00:15"
+     }
+    ],
+    "actionItems": [
+     {
+      "owner": "王小明",
+      "task": "確認 <admin> 權限 | 部署",
+      "due": "2026-10-21",
+      "time": "1:02:05"
+     },
+     {
+      "owner": "",
+      "task": "Redis 快取測試\n第二行",
+      "due": "",
+      "time": ""
+     }
+    ],
+    "openQuestions": [
+     {
+      "text": "Kubernetes 版本？",
+      "time": "00:09"
+     }
+    ],
+    "topics": [
+     {
+      "title": "上線時程",
+      "start": "00:00",
+      "points": [
+       {
+        "text": "目標 10/21",
+        "time": "1:02:05"
+       }
+      ]
+     },
+     {
+      "title": "快取 & 部署",
+      "start": "00:04",
+      "points": []
+     }
+    ],
+    "custom": [
+     {
+      "title": "近況與進展",
+      "items": [
+       {
+        "text": "部署 \"腳本\" OK",
+        "time": "00:15"
+       }
+      ]
+     }
+    ],
+    "reviewItems": [
+     {
+      "time": "00:09",
+      "question": "「Kubernetes」的寫法對嗎？"
+     },
+     {
+      "time": "",
+      "question": "負責人是誰？"
+     }
+    ]
+   },
+   "answers": [
+    {
+     "time": "00:09",
+     "question": "「Kubernetes」的寫法對嗎？",
+     "answer": "對，K8s 也可以"
+    }
+   ],
+   "history": [
+    {
+     "question": "上線日期？",
+     "answer": "10/21"
+    },
+    {
+     "question": "誰負責？",
+     "answer": "王小明"
+    }
+   ],
+   "question": "Redis 什麼時候測完？",
+   "knownPeople": [
+    "王小明",
+    "Amy"
+   ]
   },
-  "validateNames": [
-    {"speaker": 2, "name": " 李大華 ", "reason": " 自我介紹 ", "time": "[00:04]"},
-    {"speaker": 2, "name": "重複", "reason": "", "time": ""},
-    {"speaker": 3, "name": "說話者 5", "reason": "", "time": ""},
-    {"speaker": 1, "name": "已經有名字", "reason": "", "time": ""},
-    {"speaker": 3, "name": "李大華", "reason": "同名", "time": ""},
-    {"speaker": 3, "name": "", "reason": "", "time": ""},
-    {"speaker": 3, "name": "一二三四五六七八九十一二三四五六七八九十一二三四五六七八九十一", "reason": "", "time": ""}
+  {
+   "key": "en",
+   "meeting": {
+    "title": "Weekly Sync",
+    "titleLocked": true,
+    "meetingDate": "2026-10-18",
+    "participants": "Alice, Bob",
+    "sourceFilename": "sync.wav",
+    "durationSeconds": 125,
+    "templateId": "one-on-one",
+    "userNotes": "",
+    "language": "en",
+    "folder": "",
+    "channels": "mic"
+   },
+   "segments": [
+    {
+     "start": 0.0,
+     "end": 3.5,
+     "text": "Hi everyone, let's review the Q4 roadmap.",
+     "lowConfidence": false,
+     "speaker": 1
+    },
+    {
+     "start": 3.5,
+     "end": 8.0,
+     "text": "I'll send the email via SendGrid by Friday.",
+     "lowConfidence": false,
+     "speaker": 2
+    },
+    {
+     "start": 8.0,
+     "end": 12.25,
+     "text": "Speaker 1 here again: what about the \"beta\" users?",
+     "lowConfidence": true,
+     "speaker": 1
+    },
+    {
+     "start": 12.25,
+     "end": 13.0,
+     "text": "Okay.",
+     "lowConfidence": false,
+     "speaker": null
+    },
+    {
+     "start": 13.0,
+     "end": 16.5,
+     "text": "The beta list is ready.",
+     "lowConfidence": false,
+     "speaker": 3
+    }
+   ],
+   "speakers": {
+    "2": "Bob"
+   },
+   "voices": {
+    "1": {
+     "embedding": [
+      0.85,
+      0.15,
+      0.05,
+      0.25,
+      0.0,
+      0.1,
+      0.0,
+      0.25
+     ],
+     "seconds": 40.0,
+     "source": "mic"
+    },
+    "2": {
+     "embedding": [
+      0.0,
+      0.0,
+      0.1,
+      0.0,
+      0.9,
+      0.4,
+      0.0,
+      0.0
+     ],
+     "seconds": 12.0,
+     "source": "mic"
+    },
+    "3": {
+     "embedding": [
+      0.1,
+      0.6,
+      0.2,
+      0.0,
+      0.5,
+      0.0,
+      0.3,
+      0.1
+     ],
+     "seconds": 15.0,
+     "source": "mic"
+    }
+   },
+   "bookmarks": [],
+   "glossary": [],
+   "notes": {
+    "title": "Q4 roadmap",
+    "summary": [
+     {
+      "text": "Reviewed the Q4 roadmap",
+      "time": "00:00"
+     }
+    ],
+    "decisions": [],
+    "actionItems": [
+     {
+      "owner": "Bob",
+      "task": "Send the email via SendGrid",
+      "due": "2026-10-23",
+      "time": "00:03"
+     }
+    ],
+    "openQuestions": [],
+    "topics": [],
+    "custom": [
+     {
+      "title": "Updates and progress",
+      "items": [
+       {
+        "text": "Roadmap on track",
+        "time": "00:00"
+       }
+      ]
+     }
+    ],
+    "reviewItems": [
+     {
+      "time": "00:08",
+      "question": "Is \"beta\" the right term?"
+     }
+    ]
+   },
+   "answers": [
+    {
+     "time": "00:08",
+     "question": "Is \"beta\" the right term?",
+     "answer": "Yes"
+    }
+   ],
+   "history": [],
+   "question": "When is the email due?",
+   "knownPeople": []
+  },
+  {
+   "key": "ja",
+   "meeting": {
+    "title": "定例会議",
+    "titleLocked": false,
+    "meetingDate": "2026-10-19",
+    "participants": "田中, 佐藤",
+    "sourceFilename": "teirei.m4a",
+    "durationSeconds": null,
+    "templateId": "brainstorm",
+    "userNotes": "アイデアを全部メモ",
+    "language": "ja",
+    "folder": "",
+    "channels": "mic"
+   },
+   "segments": [
+    {
+     "start": 0.0,
+     "end": 5.0,
+     "text": "皆さん、おはようございます。",
+     "lowConfidence": false,
+     "speaker": 1
+    },
+    {
+     "start": 5.0,
+     "end": 9.5,
+     "text": "新しいアイデアを三つ出します。",
+     "lowConfidence": false,
+     "speaker": 2
+    },
+    {
+     "start": 9.5,
+     "end": 12.0,
+     "text": "ありがとうございます、田中さん。",
+     "lowConfidence": true,
+     "speaker": 1
+    }
+   ],
+   "speakers": {},
+   "voices": {},
+   "bookmarks": [
+    {
+     "time": 7.5,
+     "label": ""
+    }
+   ],
+   "glossary": [
+    "拾音"
+   ],
+   "notes": null,
+   "answers": [],
+   "history": [
+    {
+     "question": "参加者は？",
+     "answer": "田中さんと佐藤さん"
+    }
+   ],
+   "question": "アイデアはいくつ？",
+   "knownPeople": [
+    "田中"
+   ]
+  }
+ ],
+ "customTemplate": {
+  "description": "自訂：客戶會議",
+  "sections": [
+   "summary",
+   "actionItems"
   ],
-  "validateCorrections": [
-    {"segment": 1, "original": " Redis ", "suggestion": "Redis", "reason": "same"},
-    {"segment": 1, "original": "快取", "suggestion": "快取層", "reason": "r"},
-    {"segment": 1, "original": "快取", "suggestion": "另一個", "reason": "dup"},
-    {"segment": 0, "original": "不存在", "suggestion": "x", "reason": "missing"},
-    {"segment": 9, "original": "x", "suggestion": "y", "reason": "out of range"},
-    {"segment": 2, "original": "\"Kubernetes\"", "suggestion": "Kubernetes", "reason": "quote"}
+  "custom": [
+   {
+    "title": "客戶需求",
+    "instruction": "列出客戶提出的需求"
+   }
   ],
-  "correctionRange": [1, 4],
-  "db": [
-    {"op": "dumpSchema", "file": "db/schema.sql"},
-    {"op": "importFixture", "key": "zh"},
-    {"op": "importFixture", "key": "en"},
-    {"op": "importFixture", "key": "ja"},
-    {"op": "dumpTables", "file": "db/01-import.json", "tables": ["meetings", "segments", "speakers", "bookmarks", "notes_versions", "glossary", "search"]},
-    {"op": "search", "file": "db/02-search.json", "queries": ["Redis", "redis", "快取", "部署腳本", "Ku", "嗯", "a", "100%", "\"Kubernetes\"", "不存在的詞", "  SendGrid  ", "", "TTL 設 100% 沒問題"]},
-    {"op": "glossarySuggestions", "file": "db/03-glossary-suggestions.json"},
-    {"op": "learnVoiceprint", "key": "zh", "idx": 1, "name": "王小明"},
-    {"op": "learnVoiceprint", "key": "zh", "idx": 2, "name": "李大華", "comment": "英文會議的說話者 3 跟他像 0.82：不直接帶入，存成建議（R33、M§21.4）"},
-    {"op": "matchVoiceprints", "key": "en", "file": "db/04-match.json"},
-    {"op": "dumpTables", "file": "db/05-voiceprints.json", "tables": ["speakers", "people", "voiceprints"]},
-    {"op": "mergeSpeakers", "key": "zh", "from": 3, "into": 2, "label": "合併說話者 3 到說話者 2", "file": "db/06-merge-result.json"},
-    {"op": "dumpTables", "file": "db/07-merge.json", "tables": ["meetings", "segments", "speakers", "notes_versions", "speaker_undo", "voiceprints"]},
-    {"op": "undoSpeakerEdit", "key": "zh", "file": "db/08-undo-result.json"},
-    {"op": "dumpTables", "file": "db/09-undo.json", "tables": ["meetings", "segments", "speakers", "notes_versions", "speaker_undo"]},
-    {"op": "reassignSegments", "key": "zh", "seqs": [0, 2], "to": null, "label": "改成新的說話者", "file": "db/10-reassign-result.json"},
-    {"op": "reassignSegments", "key": "zh", "seqs": [7], "to": 1, "label": "改成王小明", "file": "db/11-reassign-result.json"},
-    {"op": "dumpTables", "file": "db/12-reassign.json", "tables": ["segments", "speakers", "speaker_undo"]},
-    {"op": "replace", "key": "zh", "find": "Redis", "with": "Valkey", "file": "db/13-replace-result.json"},
-    {"op": "dumpTables", "file": "db/14-replace.json", "tables": ["meetings", "segments", "notes_versions", "search"]},
-    {"op": "saveNotes", "key": "ja", "notes": {"title": "草稿", "summary": [{"text": "下書き", "time": "00:01"}]}, "source": "draft", "reason": "草稿", "file": "db/15-notes.json"},
-    {"op": "saveNotes", "key": "ja", "notes": {"title": "草稿", "summary": [{"text": "下書き（編集）", "time": "00:01"}]}, "source": "edit", "reason": "手動編輯", "file": "db/16-notes.json"},
-    {"op": "saveNotes", "key": "ja", "notes": {"title": "正式", "summary": [{"text": "正式版", "time": "00:01"}], "reviewItems": [{"time": "00:05", "question": "田中さん？"}]}, "source": "generated", "reason": "重新整理", "file": "db/17-notes.json"},
-    {"op": "dumpTables", "file": "db/18-notes.json", "tables": ["meetings", "notes_versions", "search"]},
-    {"op": "undoNotes", "key": "ja", "file": "db/19-undo-notes.json"},
-    {"op": "dismissReviewItems", "key": "zh", "indexes": [1]},
-    {"op": "dumpTables", "file": "db/20-notes.json", "tables": ["meetings", "notes_versions"]},
-    {"op": "reviewLinks", "key": "zh", "file": "db/20a-review-links.json"},
-    {"op": "reviewLinks", "key": "en", "file": "db/20b-review-links.json"},
-    {"op": "resolveReviewItems", "key": "zh", "confirmed": [0], "dismissed": []},
-    {"op": "resolveReviewItems", "key": "en", "confirmed": [0], "dismissed": [0]},
-    {"op": "dumpTables", "file": "db/20c-notes.json", "tables": ["meetings", "notes_versions"]},
-    {"op": "saveCorrections", "key": "zh", "items": [{"seq": 1, "original": "下週三", "suggestion": "下週四", "reason": "r1"}, {"seq": 3, "original": "腳本", "suggestion": "指令稿", "reason": "r2"}, {"seq": 6, "original": "小明", "suggestion": "王小明", "reason": "r3"}]},
-    {"op": "acceptCorrection", "key": "zh", "index": 0, "file": "db/21-accept.json"},
-    {"op": "acceptCorrections", "key": "zh", "indexes": [1, 2], "file": "db/22-accept.json"},
-    {"op": "revertCorrection", "key": "zh", "index": 0, "file": "db/23-revert.json"},
-    {"op": "rejectCorrections", "key": "zh", "indexes": [0]},
-    {"op": "dumpTables", "file": "db/24-corrections.json", "tables": ["corrections", "segments", "search"]},
-    {"op": "addTerm", "term": "  Valkey  "},
-    {"op": "addTerm", "term": "Redis"},
-    {"op": "addTerm", "term": ""},
-    {"op": "dismissGlossary", "term": "amy"},
-    {"op": "glossarySuggestions", "file": "db/25-glossary-suggestions.json"},
-    {"op": "enqueue", "key": "zh", "kind": "transcribe"},
-    {"op": "enqueue", "key": "zh", "kind": "summarize", "payload": "{\"draft\":true}"},
-    {"op": "enqueue", "key": "en", "kind": "correct"},
-    {"op": "enqueue", "key": "en", "kind": "compress"},
-    {"op": "claimNext", "lane": "transcribe", "file": "db/26-claim.json"},
-    {"op": "claimNext", "lane": "llm", "file": "db/27-claim.json"},
-    {"op": "claimNext", "lane": "assist", "file": "db/28-claim.json"},
-    {"op": "requeueRunning"},
-    {"op": "claimNext", "lane": "transcribe", "file": "db/29-claim.json"},
-    {"op": "requeueRunning"},
-    {"op": "cancelJobs", "key": "en", "file": "db/30-cancel.json"},
-    {"op": "dumpTables", "file": "db/31-jobs.json", "tables": ["jobs"]},
-    {"op": "setTrashed", "key": "en", "trashed": true},
-    {"op": "search", "file": "db/32-search-trash.json", "queries": ["SendGrid", "Redis", "Valkey"]},
-    {"op": "rebuildSearchIndex"},
-    {"op": "dumpTables", "file": "db/33-rebuild.json", "tables": ["search"]},
-    {"op": "deleteMeeting", "key": "ja"},
-    {"op": "dumpTables", "file": "db/34-delete.json", "tables": ["meetings", "segments", "speakers", "bookmarks", "notes_versions", "search"]}
+  "instruction": "語氣正式"
+ },
+ "askAllBlocks": [
+  {
+   "id": 1,
+   "title": "2026-10-15 產品週會",
+   "date": "2026-10-15",
+   "summary": [
+    "[00:00] 確認 v3.6 上線時程",
+    "Redis 快取下週三完成"
+   ],
+   "lines": [
+    "[00:04] 說話者 2：我這邊 Redis 快取還在測，預計下週三完成。"
+   ]
+  },
+  {
+   "id": 2,
+   "title": "Weekly Sync",
+   "date": "2026-10-18",
+   "summary": [],
+   "lines": [
+    "[00:03] Bob: I'll send the email via SendGrid by Friday."
+   ]
+  },
+  {
+   "id": 3,
+   "title": "定例会議",
+   "date": "2026-10-19",
+   "summary": [],
+   "lines": []
+  }
+ ],
+ "askAllQuestion": "Redis 和 SendGrid 誰負責？",
+ "whisperGlossaries": [
+  [],
+  [
+   "Redis",
+   "Kubernetes",
+   "拾音",
+   "SendGrid"
+  ],
+  [
+   "Alpha",
+   "Bravo",
+   "Charlie",
+   "Delta",
+   "Echo",
+   "Foxtrot",
+   "Golf",
+   "Hotel",
+   "India",
+   "Juliett",
+   "Kilo",
+   "Lima",
+   "Mike",
+   "November",
+   "Oscar",
+   "Papa",
+   "Quebec",
+   "Romeo",
+   "Sierra",
+   "Tango",
+   "Uniform",
+   "Victor",
+   "Whiskey",
+   "X-ray",
+   "Yankee",
+   "Zulu",
+   "零一二三四五六七八九",
+   "甲乙丙丁戊己庚辛壬癸",
+   "子丑寅卯辰巳午未申酉",
+   "Kubernetes",
+   "PostgreSQL",
+   "Elasticsearch",
+   "Terraform",
+   "Prometheus",
+   "Grafana",
+   "OpenTelemetry",
+   "WebAssembly",
+   "TypeScript",
+   "JavaScript",
+   "Objective-C",
+   "SwiftUI",
+   "WinUI"
   ]
+ ],
+ "notesDecode": [
+  "{\"title\":\"v1\",\"summary\":[\"一\",\"二\"],\"decisions\":[\"決定\"],\"actionItems\":[{\"owner\":\"A\",\"task\":\"T\",\"due\":\"\"}],\"openQuestions\":[],\"topics\":[{\"title\":\"議題\",\"start\":\"[03:15]\",\"points\":[\"點\"]}]}",
+  "{\"title\":\"times\",\"summary\":[{\"text\":\"a\",\"time\":\"[03:15]\"},{\"text\":\"b\",\"time\":\"（1:02:03）\"},{\"text\":\"c\",\"time\":\" 【00:01】 \"},{\"text\":\"d\"}]}",
+  "{\"summary\":\"not an array\",\"decisions\":[{\"text\":\"ok\",\"time\":\"00:01\"}],\"extra\":123}",
+  "{\"reviewItems\":[{\"question\":\"Q?\"},{\"time\":\"(00:05)\",\"question\":\"R?\"}],\"custom\":[{\"title\":\"C\",\"items\":[\"x\",{\"text\":\"y\",\"time\":\"00:02\"}]}]}",
+  "{\"title\":\"escape \\\" \\\\ / \\n \\t \\u0001 😀 \\u2028\",\"summary\":[{\"text\":\"<&>\",\"time\":\"\"}]}",
+  "{}"
+ ],
+ "timeStrings": [
+  0,
+  0.4,
+  9.99,
+  59.5,
+  60,
+  61.7,
+  599.2,
+  3599.9,
+  3600,
+  3725.4,
+  36000,
+  -5
+ ],
+ "timeParse": [
+  "03:15",
+  "[03:15]",
+  "1:02:03",
+  "03：15",
+  "03:15–05:20",
+  "03:15-05:20",
+  "03:15~05:20",
+  "03:15 〜 05:20",
+  "abc",
+  "",
+  "1:2:3:4",
+  "12",
+  "00:5x"
+ ],
+ "durations": [
+  null,
+  0,
+  29,
+  30,
+  89,
+  90,
+  540,
+  3540,
+  3600,
+  3629,
+  3630,
+  3912,
+  7200
+ ],
+ "subtitleTimes": [
+  0,
+  1.0005,
+  62.345,
+  3725.4,
+  3600.9999,
+  -1
+ ],
+ "weekdayDates": [
+  "2026-10-15",
+  "2026-10-16",
+  "2026-10-17",
+  "2026-10-18",
+  "2026-10-19",
+  "2026-10-20",
+  "2026-10-21",
+  "bad"
+ ],
+ "inferDates": [
+  {
+   "filename": "2026-08-27 會議.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "會議_2026_08_27.wav",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "20260827.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "rec 8_27.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "rec 12.31.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "會議0827.mp3",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "會議1231.mp3",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "2026-02-30.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "13-45.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "voice memo.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "voice memo.m4a",
+   "modified": null
+  },
+  {
+   "filename": "123456789.m4a",
+   "modified": "2026-09-01"
+  },
+  {
+   "filename": "v2026.10.20-final.mov",
+   "modified": "2026-09-01"
+  }
+ ],
+ "safeExtensions": [
+  "a.m4a",
+  "b.M4A",
+  "c",
+  "d.tar.gz",
+  "e.weird-ext!",
+  "f.verylongextension",
+  "g.中文",
+  ".hidden"
+ ],
+ "displayTitles": [
+  [
+   "",
+   "2026-10-15 產品週會.m4a"
+  ],
+  [
+   "標題",
+   "x.m4a"
+  ],
+  [
+   "",
+   "no-extension"
+  ],
+  [
+   "",
+   ".hidden"
+  ],
+  [
+   "",
+   "a.b.c.wav"
+  ]
+ ],
+ "participants": [
+  "",
+  "王小明, 李大華、Amy，陳美玲",
+  " a ,, b ,",
+  "單一"
+ ],
+ "defaultSpeakerNames": [
+  "說話者 1",
+  "說話者 12",
+  "Speaker 3",
+  "話者 4",
+  "說話者1",
+  "說話者 一",
+  "Speaker 3 ",
+  "speaker 3",
+  "王小明"
+ ],
+ "speakerRenames": [
+  {
+   "old": "說話者 1",
+   "new": "王小明",
+   "notesKey": "zh"
+  },
+  {
+   "old": "Bob",
+   "new": "Robert",
+   "notesKey": "en"
+  },
+  {
+   "old": "王小明",
+   "new": "王大明",
+   "notesKey": "zh"
+  }
+ ],
+ "transcriptImports": [
+  {
+   "ext": "srt",
+   "text": "1\r\n00:00:01,000 --> 00:00:03,500\r\n第一句\r\n\r\n2\r\n00:00:04,000 --> 00:00:06,000\r\n第二句\r\n換行\r\n\r\n3\r\nbad --> time\r\nx\r\n"
+  },
+  {
+   "ext": "vtt",
+   "text": "WEBVTT\n\n00:01.000 --> 00:02.500 align:start\nHello\n\n00:00:03.000 --> 00:00:04.000\n<v Bob>Hi</v>\n\nNOTE comment\n"
+  },
+  {
+   "ext": "txt",
+   "text": "第一行\n\n  第二行  \r\n\t\n第三行"
+  }
+ ],
+ "openaiURLs": [
+  "https://api.groq.com/openai/v1/",
+  "http://localhost:11434/v1/chat/completions",
+  "  https://x.com/v1//  ",
+  "ftp://x.com",
+  "localhost:1234",
+  "http://[::1]:8080/v1",
+  "https://",
+  ""
+ ],
+ "extractJSON": [
+  "{\"a\":1}",
+  "```json\n{\"a\":1}\n```",
+  "說明 {\"a\":{\"b\":2}} 完",
+  "no json",
+  "} {"
+ ],
+ "loginProblems": [
+  "Not logged in · Please run /login",
+  "Failed to authenticate: OAuth session expired",
+  "HTTP 401",
+  "rate limited",
+  "Invalid API key",
+  ""
+ ],
+ "similarPairs": [
+  [
+   "今天討論上線時程",
+   "今天討論上線時程。"
+  ],
+  [
+   "abc",
+   "abcd"
+  ],
+  [
+   "Hello world again",
+   "hello, world again!"
+  ],
+  [
+   "完全不同的句子",
+   "另外一段內容"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "我這邊 Redis 快取還在測",
+   "Redis 快取還在測試中"
+  ]
+ ],
+ "echoCases": [
+  {
+   "segment": {
+    "start": 10,
+    "end": 14,
+    "text": "我這邊 Redis 快取還在測"
+   },
+   "system": [
+    {
+     "start": 10.5,
+     "end": 14.5,
+     "text": "我這邊 Redis 快取還在測試"
+    }
+   ]
+  },
+  {
+   "segment": {
+    "start": 10,
+    "end": 14,
+    "text": "我這邊 Redis 快取還在測"
+   },
+   "system": [
+    {
+     "start": 13,
+     "end": 18,
+     "text": "我這邊 Redis 快取還在測試"
+    }
+   ]
+  },
+  {
+   "segment": {
+    "start": 10,
+    "end": 14,
+    "text": "完全不同"
+   },
+   "system": [
+    {
+     "start": 10,
+     "end": 14,
+     "text": "另外一段"
+    }
+   ]
+  },
+  {
+   "segment": {
+    "start": 10,
+    "end": 10,
+    "text": "a"
+   },
+   "system": [
+    {
+     "start": 9,
+     "end": 11,
+     "text": "a"
+    }
+   ]
+  }
+ ],
+ "assignCases": [
+  {
+   "turns": [
+    {
+     "speaker": 1,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "speaker": 2,
+     "start": 5,
+     "end": 9
+    },
+    {
+     "speaker": 3,
+     "start": 20,
+     "end": 25
+    }
+   ],
+   "segments": [
+    {
+     "start": 0,
+     "end": 4
+    },
+    {
+     "start": 4,
+     "end": 8
+    },
+    {
+     "start": 12,
+     "end": 13
+    },
+    {
+     "start": 21,
+     "end": 24
+    },
+    {
+     "start": 30,
+     "end": 31
+    }
+   ]
+  },
+  {
+   "turns": [
+    {
+     "speaker": 2,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "speaker": 1,
+     "start": 10,
+     "end": 20
+    }
+   ],
+   "segments": [
+    {
+     "start": 11,
+     "end": 12
+    },
+    {
+     "start": 1,
+     "end": 2
+    },
+    {
+     "start": 9,
+     "end": 11.5
+    }
+   ]
+  },
+  {
+   "turns": [],
+   "segments": [
+    {
+     "start": 0,
+     "end": 1
+    }
+   ]
+  }
+ ],
+ "qualityCases": [
+  {
+   "chunks": [
+    {
+     "speakerId": "S1",
+     "chunkIndex": 0,
+     "speakerIndex": 0,
+     "embedding": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "speakerId": "S1",
+     "chunkIndex": 0,
+     "speakerIndex": 1,
+     "embedding": [
+      0.9,
+      0.1,
+      0
+     ]
+    },
+    {
+     "speakerId": "S2",
+     "chunkIndex": 1,
+     "speakerIndex": 0,
+     "embedding": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "speakerId": "S2",
+     "chunkIndex": 2,
+     "speakerIndex": 0,
+     "embedding": [
+      0,
+      0.8,
+      0.6
+     ]
+    }
+   ]
+  },
+  {
+   "chunks": [
+    {
+     "speakerId": "S1",
+     "chunkIndex": 0,
+     "speakerIndex": 0,
+     "embedding": [
+      1,
+      0
+     ]
+    },
+    {
+     "speakerId": "S1",
+     "chunkIndex": 1,
+     "speakerIndex": 0,
+     "embedding": [
+      0,
+      1
+     ]
+    }
+   ]
+  }
+ ],
+ "rediarizeCases": [
+  {
+   "old": [
+    {
+     "idx": 1,
+     "name": "王小明",
+     "nameSource": "manual",
+     "personId": 7
+    },
+    {
+     "idx": 2,
+     "name": "說話者 2",
+     "nameSource": "default",
+     "personId": null
+    },
+    {
+     "idx": 3,
+     "name": "Amy",
+     "nameSource": "voiceprint",
+     "personId": 9
+    }
+   ],
+   "segments": [
+    {
+     "start": 0,
+     "end": 10,
+     "speaker": 1,
+     "manual": false
+    },
+    {
+     "start": 10,
+     "end": 14,
+     "speaker": 2,
+     "manual": false
+    },
+    {
+     "start": 14,
+     "end": 20,
+     "speaker": 1,
+     "manual": false
+    },
+    {
+     "start": 20,
+     "end": 30,
+     "speaker": 3,
+     "manual": false
+    },
+    {
+     "start": 30,
+     "end": 31,
+     "speaker": 3,
+     "manual": true
+    }
+   ],
+   "newSpeakers": [
+    2,
+    1,
+    2,
+    3,
+    3
+   ]
+  }
+ ],
+ "collectorSeeds": [
+  {
+   "seed": 12345,
+   "seconds": 30,
+   "voicedFrom": 2.0,
+   "voicedTo": 14.0,
+   "loud": 0.2,
+   "quiet": 0.001
+  },
+  {
+   "seed": 777,
+   "seconds": 60,
+   "voicedFrom": 50.0,
+   "voicedTo": 56.0,
+   "loud": 0.05,
+   "quiet": 0.002
+  }
+ ],
+ "chunkSignal": {
+  "seed": 42,
+  "seconds": 400,
+  "chunkSeconds": 60,
+  "quietAt": [
+   57.3,
+   124.1,
+   175.0,
+   251.6
+  ],
+  "loud": 0.3,
+  "quiet": 0.0005
+ },
+ "validateAnswers": {
+  "answer": {
+   "answer": "  答案\n",
+   "found": true,
+   "citations": [
+    {
+     "meetingId": 1,
+     "time": "[00:04]",
+     "quote": "  Redis  "
+    },
+    {
+     "meetingId": 99,
+     "time": "00:05",
+     "quote": "x"
+    },
+    {
+     "meetingId": null,
+     "time": "bad",
+     "quote": "y"
+    },
+    {
+     "meetingId": 2,
+     "time": "1:02:03",
+     "quote": "z"
+    }
+   ]
+  },
+  "meetingIds": [
+   1,
+   2
+  ]
+ },
+ "validateNames": [
+  {
+   "speaker": 2,
+   "name": " 李大華 ",
+   "reason": " 自我介紹 ",
+   "time": "[00:04]"
+  },
+  {
+   "speaker": 2,
+   "name": "重複",
+   "reason": "",
+   "time": ""
+  },
+  {
+   "speaker": 3,
+   "name": "說話者 5",
+   "reason": "",
+   "time": ""
+  },
+  {
+   "speaker": 1,
+   "name": "已經有名字",
+   "reason": "",
+   "time": ""
+  },
+  {
+   "speaker": 3,
+   "name": "李大華",
+   "reason": "同名",
+   "time": ""
+  },
+  {
+   "speaker": 3,
+   "name": "",
+   "reason": "",
+   "time": ""
+  },
+  {
+   "speaker": 3,
+   "name": "一二三四五六七八九十一二三四五六七八九十一二三四五六七八九十一",
+   "reason": "",
+   "time": ""
+  }
+ ],
+ "validateCorrections": [
+  {
+   "segment": 1,
+   "original": " Redis ",
+   "suggestion": "Redis",
+   "reason": "same"
+  },
+  {
+   "segment": 1,
+   "original": "快取",
+   "suggestion": "快取層",
+   "reason": "r"
+  },
+  {
+   "segment": 1,
+   "original": "快取",
+   "suggestion": "另一個",
+   "reason": "dup"
+  },
+  {
+   "segment": 0,
+   "original": "不存在",
+   "suggestion": "x",
+   "reason": "missing"
+  },
+  {
+   "segment": 9,
+   "original": "x",
+   "suggestion": "y",
+   "reason": "out of range"
+  },
+  {
+   "segment": 2,
+   "original": "\"Kubernetes\"",
+   "suggestion": "Kubernetes",
+   "reason": "quote"
+  }
+ ],
+ "correctionRange": [
+  1,
+  4
+ ],
+ "db": [
+  {
+   "op": "dumpSchema",
+   "file": "db/schema.sql"
+  },
+  {
+   "op": "importFixture",
+   "key": "zh"
+  },
+  {
+   "op": "importFixture",
+   "key": "en"
+  },
+  {
+   "op": "importFixture",
+   "key": "ja"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/01-import.json",
+   "tables": [
+    "meetings",
+    "segments",
+    "speakers",
+    "bookmarks",
+    "notes_versions",
+    "glossary",
+    "search"
+   ]
+  },
+  {
+   "op": "search",
+   "file": "db/02-search.json",
+   "queries": [
+    "Redis",
+    "redis",
+    "快取",
+    "部署腳本",
+    "Ku",
+    "嗯",
+    "a",
+    "100%",
+    "\"Kubernetes\"",
+    "不存在的詞",
+    "  SendGrid  ",
+    "",
+    "TTL 設 100% 沒問題"
+   ]
+  },
+  {
+   "op": "glossarySuggestions",
+   "file": "db/03-glossary-suggestions.json"
+  },
+  {
+   "op": "learnVoiceprint",
+   "key": "zh",
+   "idx": 1,
+   "name": "王小明"
+  },
+  {
+   "op": "learnVoiceprint",
+   "key": "zh",
+   "idx": 2,
+   "name": "李大華",
+   "comment": "英文會議的說話者 3 跟他像 0.82：不直接帶入，存成建議（R33、M§21.4）"
+  },
+  {
+   "op": "matchVoiceprints",
+   "key": "en",
+   "file": "db/04-match.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/05-voiceprints.json",
+   "tables": [
+    "speakers",
+    "people",
+    "voiceprints"
+   ]
+  },
+  {
+   "op": "mergeSpeakers",
+   "key": "zh",
+   "from": 3,
+   "into": 2,
+   "label": "合併說話者 3 到說話者 2",
+   "file": "db/06-merge-result.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/07-merge.json",
+   "tables": [
+    "meetings",
+    "segments",
+    "speakers",
+    "notes_versions",
+    "speaker_undo",
+    "voiceprints"
+   ]
+  },
+  {
+   "op": "undoSpeakerEdit",
+   "key": "zh",
+   "file": "db/08-undo-result.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/09-undo.json",
+   "tables": [
+    "meetings",
+    "segments",
+    "speakers",
+    "notes_versions",
+    "speaker_undo"
+   ]
+  },
+  {
+   "op": "reassignSegments",
+   "key": "zh",
+   "seqs": [
+    0,
+    2
+   ],
+   "to": null,
+   "label": "改成新的說話者",
+   "file": "db/10-reassign-result.json"
+  },
+  {
+   "op": "reassignSegments",
+   "key": "zh",
+   "seqs": [
+    7
+   ],
+   "to": 1,
+   "label": "改成王小明",
+   "file": "db/11-reassign-result.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/12-reassign.json",
+   "tables": [
+    "segments",
+    "speakers",
+    "speaker_undo"
+   ]
+  },
+  {
+   "op": "replace",
+   "key": "zh",
+   "find": "Redis",
+   "with": "Valkey",
+   "file": "db/13-replace-result.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/14-replace.json",
+   "tables": [
+    "meetings",
+    "segments",
+    "notes_versions",
+    "search"
+   ]
+  },
+  {
+   "op": "saveNotes",
+   "key": "ja",
+   "notes": {
+    "title": "草稿",
+    "summary": [
+     {
+      "text": "下書き",
+      "time": "00:01"
+     }
+    ]
+   },
+   "source": "draft",
+   "reason": "草稿",
+   "file": "db/15-notes.json"
+  },
+  {
+   "op": "saveNotes",
+   "key": "ja",
+   "notes": {
+    "title": "草稿",
+    "summary": [
+     {
+      "text": "下書き（編集）",
+      "time": "00:01"
+     }
+    ]
+   },
+   "source": "edit",
+   "reason": "手動編輯",
+   "file": "db/16-notes.json"
+  },
+  {
+   "op": "saveNotes",
+   "key": "ja",
+   "notes": {
+    "title": "正式",
+    "summary": [
+     {
+      "text": "正式版",
+      "time": "00:01"
+     }
+    ],
+    "reviewItems": [
+     {
+      "time": "00:05",
+      "question": "田中さん？"
+     }
+    ]
+   },
+   "source": "generated",
+   "reason": "重新整理",
+   "file": "db/17-notes.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/18-notes.json",
+   "tables": [
+    "meetings",
+    "notes_versions",
+    "search"
+   ]
+  },
+  {
+   "op": "undoNotes",
+   "key": "ja",
+   "file": "db/19-undo-notes.json"
+  },
+  {
+   "op": "dismissReviewItems",
+   "key": "zh",
+   "indexes": [
+    1
+   ]
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/20-notes.json",
+   "tables": [
+    "meetings",
+    "notes_versions"
+   ]
+  },
+  {
+   "op": "reviewLinks",
+   "key": "zh",
+   "file": "db/20a-review-links.json"
+  },
+  {
+   "op": "reviewLinks",
+   "key": "en",
+   "file": "db/20b-review-links.json"
+  },
+  {
+   "op": "resolveReviewItems",
+   "key": "zh",
+   "confirmed": [
+    0
+   ],
+   "dismissed": []
+  },
+  {
+   "op": "resolveReviewItems",
+   "key": "en",
+   "confirmed": [
+    0
+   ],
+   "dismissed": [
+    0
+   ]
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/20c-notes.json",
+   "tables": [
+    "meetings",
+    "notes_versions"
+   ]
+  },
+  {
+   "op": "saveCorrections",
+   "key": "zh",
+   "items": [
+    {
+     "seq": 1,
+     "original": "下週三",
+     "suggestion": "下週四",
+     "reason": "r1"
+    },
+    {
+     "seq": 3,
+     "original": "腳本",
+     "suggestion": "指令稿",
+     "reason": "r2"
+    },
+    {
+     "seq": 6,
+     "original": "小明",
+     "suggestion": "王小明",
+     "reason": "r3"
+    }
+   ]
+  },
+  {
+   "op": "acceptCorrection",
+   "key": "zh",
+   "index": 0,
+   "file": "db/21-accept.json"
+  },
+  {
+   "op": "acceptCorrections",
+   "key": "zh",
+   "indexes": [
+    1,
+    2
+   ],
+   "file": "db/22-accept.json"
+  },
+  {
+   "op": "revertCorrection",
+   "key": "zh",
+   "index": 0,
+   "file": "db/23-revert.json"
+  },
+  {
+   "op": "rejectCorrections",
+   "key": "zh",
+   "indexes": [
+    0
+   ]
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/24-corrections.json",
+   "tables": [
+    "corrections",
+    "segments",
+    "search"
+   ]
+  },
+  {
+   "op": "addTerm",
+   "term": "  Valkey  "
+  },
+  {
+   "op": "addTerm",
+   "term": "Redis"
+  },
+  {
+   "op": "addTerm",
+   "term": ""
+  },
+  {
+   "op": "dismissGlossary",
+   "term": "amy"
+  },
+  {
+   "op": "glossarySuggestions",
+   "file": "db/25-glossary-suggestions.json"
+  },
+  {
+   "op": "enqueue",
+   "key": "zh",
+   "kind": "transcribe"
+  },
+  {
+   "op": "enqueue",
+   "key": "zh",
+   "kind": "summarize",
+   "payload": "{\"draft\":true}"
+  },
+  {
+   "op": "enqueue",
+   "key": "en",
+   "kind": "correct"
+  },
+  {
+   "op": "enqueue",
+   "key": "en",
+   "kind": "compress"
+  },
+  {
+   "op": "claimNext",
+   "lane": "transcribe",
+   "file": "db/26-claim.json"
+  },
+  {
+   "op": "claimNext",
+   "lane": "llm",
+   "file": "db/27-claim.json"
+  },
+  {
+   "op": "claimNext",
+   "lane": "assist",
+   "file": "db/28-claim.json"
+  },
+  {
+   "op": "requeueRunning"
+  },
+  {
+   "op": "claimNext",
+   "lane": "transcribe",
+   "file": "db/29-claim.json"
+  },
+  {
+   "op": "requeueRunning"
+  },
+  {
+   "op": "cancelJobs",
+   "key": "en",
+   "file": "db/30-cancel.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/31-jobs.json",
+   "tables": [
+    "jobs"
+   ]
+  },
+  {
+   "op": "setTrashed",
+   "key": "en",
+   "trashed": true
+  },
+  {
+   "op": "search",
+   "file": "db/32-search-trash.json",
+   "queries": [
+    "SendGrid",
+    "Redis",
+    "Valkey"
+   ]
+  },
+  {
+   "op": "rebuildSearchIndex"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/33-rebuild.json",
+   "tables": [
+    "search"
+   ]
+  },
+  {
+   "op": "deleteMeeting",
+   "key": "ja"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/34-delete.json",
+   "tables": [
+    "meetings",
+    "segments",
+    "speakers",
+    "bookmarks",
+    "notes_versions",
+    "search"
+   ]
+  }
+ ],
+ "s2twCases": [
+  "头发很长，皇后在后面。",
+  "台湾的面条很干净，里面复杂。",
+  "开车三百公里要三个小时",
+  "系统软件、服务器、数据库都要更新",
+  "一只猫，几个人，干部，制作，历史，钟表",
+  "今天的周会由小明负责，Redis 的快取时间改成两分钟",
+  "着急、这里、为什么、尽量",
+  "他发现自己的头发白了，后来去了皇后大道",
+  "干净 干部 干燥 饼干 干活",
+  "Queue Gate 第一期先做商品级排队，IP 节流先设十秒三十次。",
+  "English only, 123 numbers.",
+  ""
+ ]
 }

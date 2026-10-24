@@ -42,6 +42,10 @@ if [ -n "${SHIYIN_USAGE_URL:-}" ]; then
 fi
 # whisper.cpp 是動態 framework（design §6.2）；SwiftPM 的資源 bundle 放 Resources
 ditto "$BIN_DIR/whisper.framework" "$APP/Contents/Frameworks/whisper.framework"
+# llama.cpp（Qwen3-ASR，design §32.2）也是動態 framework
+ditto "$BIN_DIR/llama.framework" "$APP/Contents/Frameworks/llama.framework"
+# 簡轉繁的字表（design §32.5）
+ditto Resources/opencc "$APP/Contents/Resources/opencc"
 for bundle in "$BIN_DIR"/*.bundle; do ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"; done
 chmod -R u+w "$APP"
 if [ -f Resources/AppIcon.icns ]; then
@@ -100,6 +104,7 @@ sign() {
   fi
 }
 sign "$APP/Contents/Frameworks/whisper.framework"
+sign "$APP/Contents/Frameworks/llama.framework"
 if [ -n "$IDENTITY" ]; then
   sign --identifier "$BUNDLE_ID" "$APP"
   restore_keychains

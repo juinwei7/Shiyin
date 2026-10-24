@@ -183,6 +183,8 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 
 ## 8. 正式轉錄
 
+> 4.1 起 Mac 的中文、英文預設引擎換成 Qwen3-ASR（M§32、R43）。Windows 版另開任務（tasks Q7）：llama.cpp 預建的 Windows DLL（cpu／cuda／vulkan 都有 `mtmd.dll`）、shim 加 `shiyin_qwen_*`、模型兩個檔、分段／重試／防線照 M§32.4、簡轉繁 `Shiyin.Core/Text/ChineseScript.cs` 已完成（標準答案 `util/s2tw.json`）。做完之前 Windows 繼續用 Breeze。
+
 - **whisper**：`native/whisper/` 的 CMake 腳本從 commit `d1be6fd` 建置，CI 建好、記下 SHA-256 放進安裝檔，不從別處下載。C/C++ 執行階段靜態連結（`CMAKE_MSVC_RUNTIME_LIBRARY`），沒裝 VC++ 可轉散發套件的電腦也載得起來；`build-whisper.ps1` 檢查 DLL 沒有匯入 VC++ 的 DLL（sherpa-onnx、onnxruntime 的 DLL 本來就是靜態連結）。
   - x64：`GGML_BACKEND_DL`＋`GGML_CPU_ALL_VARIANTS`（執行時依 CPU 指令集選），加 `ggml-vulkan.dll`（官方的 Windows 檔案沒有 Vulkan，要自己建）。
   - ARM64：只建一個 CPU 版本，指定最低等級 `armv8.2-a+dotprod+fp16`（Snapdragon 7c、8cx、X 都有；`GGML_CPU_ARM_ARCH`），用 clang 建（同 whisper.cpp 官方的 Windows ARM64 版）。ggml 在 Windows ARM 不支援建多個版本（`GGML_CPU_ALL_VARIANTS`：「Unsupported ARM target OS: Windows」）；用 MSVC 建 ARM64 一定要依建置的機器偵測 CPU 功能（`GGML_NATIVE`），GitHub 的 ARM 機器是伺服器 CPU，偵測出的指令（SVE 等）一般的 Snapdragon 筆電沒有。官方用 armv8.7-a，舊的 Snapdragon 可能碰到不支援的指令；只建新指令集（i8mm）的版本也一樣。取捨：Snapdragon X 用不到 i8mm，稍慢。GPU（OpenCL-Adreno）還是實驗性，先不用。

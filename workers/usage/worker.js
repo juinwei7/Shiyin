@@ -18,7 +18,7 @@ const USAGE = {
   diarizationRuns: 'diarization_runs', questionsAsked: 'questions_asked',
 };
 const USAGE_DICTS = {
-  engines: { breeze: 'engine_breeze', builtin: 'engine_builtin', whisperJa: 'engine_whisper_ja' },
+  engines: { breeze: 'engine_breeze', builtin: 'engine_builtin', whisperJa: 'engine_whisper_ja', qwen: 'engine_qwen' },
   meetingLanguages: { zh: 'lang_zh', en: 'lang_en', ja: 'lang_ja' },
   summarizer: { claudeCode: 'summarizer_claude_code', codex: 'summarizer_codex', api: 'summarizer_api', local: 'summarizer_local' },
   // 2026-10-23 加（R41.7、§31.3）：舊版 app 沒有這組就全部當 0

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   transcribed_seconds INTEGER NOT NULL DEFAULT 0,
   transcribe_wall_seconds INTEGER NOT NULL DEFAULT 0,
   engine_breeze INTEGER NOT NULL DEFAULT 0,
+  engine_qwen INTEGER NOT NULL DEFAULT 0,
   engine_builtin INTEGER NOT NULL DEFAULT 0,   -- Mac：macOS 內建辨識；Windows：快速辨識（SenseVoice）
   engine_whisper_ja INTEGER NOT NULL DEFAULT 0,
   lang_zh INTEGER NOT NULL DEFAULT 0,

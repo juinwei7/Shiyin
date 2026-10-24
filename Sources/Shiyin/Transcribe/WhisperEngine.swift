@@ -40,10 +40,28 @@ enum WhisperEngine {
     ]
 
     /// 基本提示詞＋詞彙表（R4.1）：依會議語言（design §16.4、§18.2），中文、日文 150 字、英文 400 個字元以內
-    static func prompt(glossary: [String], language: MeetingLanguage = .zh) -> String {
+    static func prompt(glossary: [String], language: MeetingLanguage = .zh, style: String? = nil) -> String {
+        let limit = language == .en ? 400 : 150
+        // 評估用的另一種寫法（design §17.1）：Whisper 的提示詞是「前面已經講過的話」，寫成像逐字稿的一句話，
+        // 詞彙放在句子裡，順便帶出繁體和標點的風格
+        if style == "natural" {
+            func natural(_ terms: [String]) -> String {
+                let list = terms.joined(separator: language == .en ? ", " : "、")   // l10n-skip
+                return terms.isEmpty
+                    ? language.text(zh: "好，那我們開始今天的會議。", en: "Okay, let's get started with today's meeting.", ja: "はい、では今日の会議を始めます。")  // l10n-skip
+                    : language.text(zh: "好，那我們開始今天的會議，先看一下 \(list) 這幾個部分的進度。",
+                                    en: "Okay, let's get started with today's meeting. First, a quick update on \(list).",
+                                    ja: "はい、では今日の会議を始めます。まず \(list) の進捗を確認しましょう。")  // l10n-skip
+            }
+            var picked: [String] = []
+            for term in glossary {
+                if natural(picked + [term]).count > limit { break }
+                picked.append(term)
+            }
+            return natural(picked)
+        }
         let base = language.text(zh: "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。", en: "The following is a recording of a work meeting.",
                                  ja: "以下は仕事の会議の録音です。")  // l10n-skip
-        let limit = language == .en ? 400 : 150
         func build(_ terms: [String]) -> String {
             terms.isEmpty ? base : base + language.text(zh: "詞彙：" + terms.joined(separator: "、") + "。",
                                                         en: " Glossary: " + terms.joined(separator: ", ") + ".",
@@ -117,9 +135,11 @@ enum WhisperEngine {
         private let ctx: OpaquePointer
         private let prompt: String, language: String
         let control: Control
+        private let tuning: TranscriptionOptions.DecoderTuning?
         private(set) var segments: [TranscribedSegment] = []
 
-        init(modelPath: String, prompt: String, language: String, control: Control) throws {
+        init(modelPath: String, prompt: String, language: String, control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) throws {
+            self.tuning = tuning
             _ = silenceLogs
             guard FileManager.default.fileExists(atPath: modelPath) else { throw WhisperError.modelMissing }
             var contextParams = whisper_context_default_params()
@@ -141,7 +161,7 @@ enum WhisperEngine {
             // 前一段最後的文字接在提示詞後面，跟 whisper 自己連續轉錄時一樣（whisper 只取最後 224 個 token）
             let chunkPrompt = segments.isEmpty ? prompt : prompt + (language == "en" ? " " : "") + WhisperEngine.tail(of: segments, language: language)
             let progress = ChunkProgress(control: control, base: progressBase, span: progressSpan)
-            var part = try WhisperEngine.run(ctx, samples: samples, offset: offset, prompt: chunkPrompt, language: language, progress: progress)
+            var part = try WhisperEngine.run(ctx, samples: samples, offset: offset, prompt: chunkPrompt, language: language, progress: progress, tuning: tuning)
             if offset > 0, let last = segments.last {
                 // 接縫：開頭幾秒跟前一段最後一句重複的（提示詞被念出來）去掉
                 let seam = Double(offset) / AudioDecoder.sampleRate
@@ -153,8 +173,8 @@ enum WhisperEngine {
 
     /// 辨識已經解碼的整段錄音（分聲道時用）。chunks 是分段的範圍（`chunks(_:seconds:)`）
     static func transcribe(samples: [Float], chunks: [Range<Int>]? = nil, modelPath: String, prompt: String, language: String = "zh",
-                           control: Control) throws -> [TranscribedSegment] {
-        let session = try Session(modelPath: modelPath, prompt: prompt, language: language, control: control)
+                           control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) throws -> [TranscribedSegment] {
+        let session = try Session(modelPath: modelPath, prompt: prompt, language: language, control: control, tuning: tuning)
         let total = Double(max(samples.count, 1))
         try samples.withUnsafeBufferPointer { buffer in
             for range in chunks ?? [0..<samples.count] {
@@ -169,9 +189,9 @@ enum WhisperEngine {
     /// 從檔案依序讀、一段一段轉錄，不先解碼整段（design §21.16）。切的位置跟 `chunks(_:seconds:)` 相同。
     /// 回傳逐字稿、分段的位置（第幾個取樣）、總取樣數
     static func transcribe(file url: URL, chunkSeconds: Double, modelPath: String, prompt: String, language: String,
-                           control: Control) async throws -> (segments: [TranscribedSegment], seams: [Int], sampleCount: Int) {
+                           control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) async throws -> (segments: [TranscribedSegment], seams: [Int], sampleCount: Int) {
         let stream = try await AudioDecoder.Stream(url)
-        let session = try Session(modelPath: modelPath, prompt: prompt, language: language, control: control)
+        let session = try Session(modelPath: modelPath, prompt: prompt, language: language, control: control, tuning: tuning)
         let rate = Int(AudioDecoder.sampleRate)
         let chunk = Int(chunkSeconds * Double(rate))
         // 剩下超過「一段＋2 分鐘」才切，所以要讀到這麼多才能決定；不分段時讀完整段
@@ -212,7 +232,7 @@ enum WhisperEngine {
 
     /// 辨識一段；時間點換成整段錄音的時間
     private static func run(_ ctx: OpaquePointer, samples: UnsafeBufferPointer<Float>, offset start: Int, prompt: String, language: String,
-                            progress: ChunkProgress) throws -> [TranscribedSegment] {
+                            progress: ChunkProgress, tuning: TranscriptionOptions.DecoderTuning? = nil) throws -> [TranscribedSegment] {
         let control = progress.control
         var params = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH)
         params.beam_search.beam_size = 5
@@ -223,6 +243,17 @@ enum WhisperEngine {
         params.print_timestamps = false
         params.print_special = false
         params.suppress_blank = true
+        // 評估用的實驗開關（design §17.1）：正式轉錄都是 nil
+        if let tuning {
+            if let v = tuning.noContext { params.no_context = v }
+            if let v = tuning.beamSize { params.beam_search.beam_size = Int32(v); params.greedy.best_of = Int32(v) }
+            if let v = tuning.temperatureInc { params.temperature_inc = v }
+            if let v = tuning.entropyThold { params.entropy_thold = v }
+            if let v = tuning.logprobThold { params.logprob_thold = v }
+            if let v = tuning.noSpeechThold { params.no_speech_thold = v }
+            if let v = tuning.suppressNst { params.suppress_nst = v }
+            if let v = tuning.maxLen, v > 0 { params.max_len = Int32(v); params.split_on_word = true; params.token_timestamps = true }
+        }
 
         let progressPointer = Unmanaged.passUnretained(progress).toOpaque()
         params.progress_callback = { _, _, value, userData in
@@ -264,8 +295,9 @@ enum WhisperEngine {
             let avgLogProb = count > 0 ? logSum / Double(count) : -10
             let noSpeech = Double(whisper_full_get_segment_no_speech_prob(ctx, i))
             // 幾乎確定沒人講話、信心又低：Whisper 對靜音的幻覺
-            if noSpeech > 0.6 && avgLogProb < -1.0 { continue }
-            if text.count < 40 && hallucinationPhrases.contains(where: { text.contains($0) }) { continue }
+            let keepAll = tuning?.keepAll == true
+            if !keepAll && noSpeech > 0.6 && avgLogProb < -1.0 { continue }
+            if !keepAll && text.count < 40 && hallucinationPhrases.contains(where: { text.contains($0) }) { continue }
             // 最後一個 30 秒的窗會補零，時間點可能超過這一段的結尾
             segments.append(TranscribedSegment(
                 start: min(offset + Double(whisper_full_get_segment_t0(ctx, i)) / 100, limit),
@@ -288,6 +320,14 @@ enum WhisperEngine {
 
 #if DEBUG
 extension WhisperEngine {
+    /// whisper.cpp 的預設解碼參數（transcribe-eval 的輸出附上，實驗時對照用）
+    static func defaultParameters() -> [String: Any] {
+        let d = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH)
+        return ["noContext": d.no_context, "temperatureInc": d.temperature_inc, "entropyThold": d.entropy_thold, "logprobThold": d.logprob_thold,
+                "noSpeechThold": d.no_speech_thold, "suppressNst": d.suppress_nst, "maxInitialTs": d.max_initial_ts,
+                "lengthPenalty": d.length_penalty, "nMaxTextCtx": d.n_max_text_ctx]
+    }
+
     /// dump-golden 用（design-windows §4.1）：前一段最後的文字、下一段的提示詞
     static func debugChunkPrompt(base: String, previous: [TranscribedSegment], language: String) -> String {
         previous.isEmpty ? base : base + (language == "en" ? " " : "") + tail(of: previous, language: language)

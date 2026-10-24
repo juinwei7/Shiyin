@@ -1233,6 +1233,96 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 - 通知權限沒給時只有選單列的變化（跟其他通知一樣，R11.2）。
 - Windows：design-windows §11.5。
 
+## 32. Qwen3-ASR 轉錄引擎（R43，D105～D108）
+
+### 32.1 為什麼換模型（評估，2026-10-24）
+
+- 先量 Breeze 的錯誤是哪一種（`asr-score.swift --confusions`）：AISHELL-4 漏掉的字裡 35% 在多人同時說話處、另一大塊是語助詞和兒化（Whisper 會「整理」口語）；真正的替換多是同音字。解碼參數掃描（`transcribe-eval` 的 `tuning`：no_context、不降溫重試、beam 8、自然句提示詞）差距都在 1% 內，不降溫重試還讓日文變差（12.6% vs 9.0%）。瓶頸在模型本身。
+- 候選：Qwen3-ASR 1.7B（AuT 音訊編碼器＋Qwen3 解碼器，Apache-2.0，llama.cpp b8769 起支援，`ggml-org/Qwen3-ASR-1.7B-GGUF`）、台灣微調版 TEA-ASR 1.1（MIT，tokenizer 烙上繁體對應）。評估用 `~/Library/Caches/ShiyinSpike/qwen3asr/qwen-eval.py`（llama-server 的 chat completions，system＝詞彙表、user＝音訊、assistant 先填「language Chinese<asr_text>」），結果：
+
+  | 去語助詞錯誤率 | 合成中英夾雜 | TaiMECS | 台大課程 | AISHELL-4 | AMI 英文 | 日文聽證 | 倍速 |
+  |---|---|---|---|---|---|---|---|
+  | Breeze ASR 25 q8_0（4.0.0；說話者標對 97.2%／96.1%） | 5.2 | 2.0 | 3.8 | 25.7 | 32.6 | 9.0（turbo） | 9 |
+  | Qwen3-ASR 1.7B q8_0，30 秒一段 | 2.0 | 1.8 | | 16.2 | 31.6 | 17.1 | 17 |
+  | TEA-ASR 1.1 q8_0，30 秒一段＋重試 | 2.8 | 2.4 | 3.4 | 34.8 | 36.3 | 22.2 | 15 |
+  | Qwen3-ASR 0.6B q8_0，30 秒一段 | 2.0 | 2.5 | 6.7 | 17.0 | 32.4 | | 36 |
+  | Qwen3-ASR 1.7B，換人處切＋最長 15 秒 | | | | 17.7 | 40.0 | | |
+  | 同上＋幻覺防線（§32.4 第 4 步） | | | | 17.7 | 32.7 | | |
+  | **app 的實作**（`transcribe-eval` engine qwen，真的說話者辨識；說話者標對 92.6%／89.1%） | 2.0 | 1.8 | 6.6 | 16.7 | 31.3 | | 12 |
+  | 換人處一律在最安靜點切（理想辨識；說話者 97.7%／94.4%） | | | | 17.9 | 33.1 | | |
+  | 混到第二個人的段照片段再切（理想辨識；說話者 98.2%／97.5%） | | | | 18.0 | 33.7 | | |
+  | **app 的實作＋混合段再切（預設）**（真的說話者辨識；說話者 96.3%／93.8%） | 2.0 | 1.8 | 6.6 | 17.5 | 31.3 | | 12 |
+
+  台大課程 Breeze 比較好（3.8% vs 6.6%）：那是 Breeze 的訓練資料（NTUML2021），而 Qwen 的「錯」多半是向量名稱的寫法（標準答案 a1、a4，Qwen 寫 a one、a 四；替換 136 裡約 40 個、多出的 90 個字裡 44 個是 a、b），不是聽錯；會議的評估以 AISHELL、AMI、TaiMECS 為準。
+
+  照標準答案的說話者片段分段（模擬先辨識說話者再逐段轉錄）：TEA 的 AISHELL 從 34.8% 進步到 23.3%，但 Qwen 原版反而退步（AISHELL 22.2%、AMI 45.9%：重疊處的話被切掉）。固定長度：10／15／30／60 秒一段的 AISHELL 是 17.1／16.3／16.2／15.7%，AMI 15 秒掉到 39.6%（30 秒 31.6%）。在換人處的安靜點切（§32.4）、最長 15 秒：AISHELL 17.7%、說話者標對 95.5%（理想的說話者辨識），但 AMI 40.0%，多出的 228 個字是短而吵的段落編出來的整段話（天氣預報、影評）；加上幻覺防線後 AMI 32.7%（多出 18 個字），跟 Breeze 的 32.6% 一樣；最長 30 秒時 17.3%／32.6%、說話者標對率低 1～2 點，所以取 15 秒。
+    TEA 乾淨錄音更好、原生繁體，但吵雜多人錄音會跳針（「那那那…」到截斷）和整段漏，日文會把漢字改成繁體（国→國）；Q4_K_M 量化整段漏字（TaiMECS 31%）。Qwen3-ASR 原版完全沒跳針，但輸出簡體、用 context 也導不成繁體。
+- 新增的台灣語料（`eval32/datasets.json` 的 `tw-*`）：TaiMECS（100 句台灣國語中英夾雜，20 句真人、80 句聲音複製，CC BY 4.0）、台大機器學習 2021 課程前 15 分鐘（Breeze 和 TEA 都訓練過）；Formosa Speech 的文字跟音訊對不齊，不用。
+- 決定（D105）：Qwen3-ASR 1.7B 原版 + app 自己轉台灣繁體。繁簡也算錯時 TaiMECS 2.0%、合成會議 2.0%，仍優於 TEA（2.8%、3.2%）。
+
+### 32.2 連結 llama.cpp（D106）
+
+- `Package.swift` 加第二個 binaryTarget `llama`：llama.cpp 官方的 `llama-b11840-xcframework.zip`（含 llama、ggml、mtmd；checksum 寫在 manifest），跟 whisper 一樣版本固定。
+- whisper 和 llama 兩個 XCFramework 都把 `ggml.h` 放在 umbrella header，版本不同（`ggml_op` 102 vs 103 個），Swift 同時 import 會編譯失敗。所以 Swift 不直接 import llama：加一個 C 的 target `QwenShim`（`Sources/QwenShim/`，依賴 `llama`），只對 Swift 露出自己的標頭：
+  - `qwen_load(model, mmproj, n_ctx, n_threads, use_gpu)`／`qwen_free`
+  - `qwen_transcribe(engine, samples, n, params, abort_cb, user, out, out_len, &n_tokens)`：params 有 context（system 訊息）、language（"Chinese"／"English"）、repeat_penalty、repeat_last_n、temperature、seed、max_tokens；回傳 0 成功、1 到達 max_tokens、-1 取消
+  - 內部：ChatML 提示詞（GGUF 裡的樣板）`<|im_start|>system\n{context}<|im_end|>\n<|im_start|>user\n<__media__><|im_end|>\n<|im_start|>assistant\nlanguage {Language}<asr_text>`，`mtmd_bitmap_init_from_audio` → `mtmd_tokenize` → `mtmd_helper_eval_chunks` → greedy（或 temperature＋penalties）逐 token 取樣到 EOG；每段開始前 `llama_memory_clear`。
+  - 跟 Windows 的 shim（D56）同一個思路；兩邊的 shim 行為一致，用標準答案比對。
+- `build-app.sh` 把 `llama.framework` 一併放進 `Contents/Frameworks` 並簽章；`make-third-party-licenses.sh` 加 llama.cpp（MIT）、Qwen3-ASR（Apache-2.0）、OpenCC 字表（Apache-2.0）。
+- 記憶體：模型 q8_0 2.2 GB＋音訊編碼器 0.36 GB，n_ctx 4096 時全部約 2.6 GB；轉錄工作結束就 `qwen_free`（R43.8）。whisper 的 context 也只在轉錄時存在，兩者不會同時載入（日文用 whisper、中英用 Qwen）。
+
+### 32.3 模型（§7 的清單加兩項）
+
+| 模型 | 來源 | 大小 | 驗證 |
+|---|---|---|---|
+| Qwen3-ASR 1.7B q8_0 | HF `ggml-org/Qwen3-ASR-1.7B-GGUF`，commit `36a67868` | 2,165,034,944 | SHA-256 `58e22d05…1fc57` |
+| Qwen3-ASR 音訊編碼器 q8_0（mmproj） | 同上 | 355,709,344 | SHA-256 `46c1d533…164c0d` |
+
+- `ModelStore.Model` 加 `qwen`、`qwenEncoder`；`transcription(for:)` 中文、英文回 `.qwen`（設定選 Breeze 時回 `.breeze`），`hasTranscriptionModel` 要兩個檔都在。設定頁、引導的模型列把兩個檔合成一列「Qwen3-ASR 1.7B（2.5 GB）」，一起開始、暫停、刪除。
+- 升級的使用者：設定沒有值時引擎預設 `qwen`；排到中文、英文的轉錄工作而模型還沒下載時 `autoStart`（同日文模型），這一場先用已經有的 Breeze，兩個都沒有才用 macOS 內建（D35）。
+
+### 32.4 轉錄流程（`QwenEngine`，D107）
+
+- 順序跟 whisper 相反：先解碼整段、先辨識說話者（有開且超過 5 秒），再依說話者片段分段轉錄。原因：Qwen3-ASR 不輸出時間點，段落的時間和說話者只能來自 app 自己的分段（R43.6）。
+- 分段規則：
+  - 同一個說話者連續的片段（間隔 < 1 秒）併成一段，到 30 秒為止；超過 30 秒的在預定位置前後 5 秒內最安靜的 0.5 秒切開（跟 §21.16 的 `quietestCut` 同一套）。
+  - 片段之間的空白併進後一段（每一段從上一段結束的地方開始，不漏音）；重疊的片段後一段從前一段結束處開始，同一段音訊不轉錄兩次。
+  - 短於 0.5 秒的併進前一段（模型的最短輸入是 0.5 秒）。
+  - 混到第二個人的段再切（說話者才標得準）：一段裡第二多的說話者 ≥ 1.5 秒而且 ≥ 這段的 25% 時，照說話者片段的起點再切一次（太短的併進前一段）。評估（理想的說話者辨識）：AISHELL 說話者標對 95.5% → 98.2%、AMI 92.4% → 97.5%（跟 whisper 的段落一樣準），錯誤率 17.7 → 18.0%、32.7 → 33.7%。真的說話者辨識（FluidAudio）的片段比標準答案粗（AISHELL 38 分鐘只有 88 次換人），所以換人處的安靜點很少切到，主要靠這一步。
+  - 沒有說話者辨識（關掉、太短、模型沒下載、失敗）時：從頭每 30 秒在最安靜處切，段落沒有說話者。
+- 每一段：`qwen_transcribe`，context＝詞彙表（「、」隔開，中文 150 字、英文 400 字元以內，跟 whisper 的提示詞同樣的上限）、language 依會議語言、max_tokens＝秒數×12＋64、greedy。
+- 跳針的對策（R43.5）：結果符合任一項就算壞掉：到達 max_tokens、壓縮比 > 2.4（§6.2 同一個算法）、同一個 1～6 字的片段連續出現 5 次以上。壞掉就：
+  1. 同一段加 repeat_penalty 1.3（last_n 128）、temperature 0.2、seed 1 重試；
+  2. 還是壞、而且這段 ≥ 6 秒：在最安靜處切成兩半各自再來（最多三層）；
+  3. 還是壞：留壓縮比較低的那次，連續重複的片段縮成 3 次，段落標成低信心。
+  4. 幻覺防線（沒跳針也要過）：這一段「有聲音的秒數」（能量超過整段中位數一半的 0.1 秒格數）能講的字數有上限（英文 5 字／秒＋3、中日文 8 字／秒＋4），輸出超過就是短而吵的段落在編話（評估時 AMI 一段 19 秒冒出一整段天氣預報）。超過就用 temperature 0.3、seed 7 再解一次：兩次相似度（difflib 的 ratio）< 0.6 就是編的，這段不留；差不多就留短的那次，標成低信心。
+- 輸出：每段一個 `TranscribedSegment`（start、end＝分段的時間，text＝轉繁體後的文字，lowConfidence＝經過第 3 步），說話者＝那一段的說話者；空字串的段落不留。接著照舊：短句再確認（R34）、聲紋、合併。
+- 取消：abort callback 每個 token 檢查；進度依已處理的秒數。
+- 英文會議的空白、標點照模型輸出；中文會議的文字過 §32.5 轉繁體。模型常把縮寫一個字母一個字母拆開（「A P P」「O T P」，使用者的週會裡就有），兩個以上單獨的大寫字母用空白隔開時併成一個字（`QwenEngine.joinSpelledAcronyms`；英文的「plan A B」這種極少見的寫法也會被併，接受）。
+
+### 32.5 簡轉繁（D108）
+
+- OpenCC 的 s2tw 做法，不帶 OpenCC 程式庫：字表 `Resources/opencc/`（`STPhrases.tsv` 49,238 條、`STCharacters.tsv` 4,012 條、`TWVariants.tsv` 40 條；只留每個鍵的第一個候選、去掉註解，共約 1 MB，Apache-2.0）。鍵和值相同的詞組（「公里」「皇后」）要保留：它們擋住逐字轉換（沒有它們「公里」會變「公裡」）。Windows 的 `Shiyin.Core` 把同一份檔案當內嵌資源（csproj 指到 `Resources/opencc`），不另外複製。
+- 演算法 `ChineseScript.toTaiwan(_:)`：從左到右，先在詞組表找最長的匹配（最長鍵 16 字），沒有就查單字表，查不到原樣保留；全部轉完套 `TWVariants`（着→著、裏→裡、麪→麵…），最後「臺」寫成「台」（台灣日常用法，app 的文字和評估資料都用「台」）。
+- 只用在中文會議的 Qwen 輸出；英文、數字、標點、詞彙表裡的英文不受影響（字表沒有這些鍵）。TWPhrases（軟件→軟體這類用語替換）不用：辨識結果寫的是說話者說出口的詞，不需要改詞。
+- 標準答案（design-windows §4）加 `s2tw` 這個 op：fixtures 放幾段簡體（含「頭發／頭髮」「後面／皇后」「台灣」這類一對多的字），Windows 的實作要逐字相同。
+
+### 32.6 設定、引導、環境檢查
+
+- 設定 →「錄音」的「正式轉錄」：「Qwen3-ASR 1.7B（建議）」「Breeze ASR 25」「macOS 內建」，存 `transcriptionEngine`（`qwen`／`breeze`／`system`；沒有值＝`qwen`）。選 Breeze 時整個流程跟 4.0.0 相同（R43.10）。4.0.0 以前只有使用者自己從 macOS 內建改回 Breeze 時才會存 `breeze`（預設值不寫入），這些人升級後照舊用 Breeze，不做自動搬移；設定頁的「建議」字樣提示可以換。
+- 引導的「模型」步驟：預設會議語言是中文、英文時下載 Qwen3-ASR（2.5 GB），日文照舊 large-v3-turbo；說明文字改成「Qwen3-ASR：正式轉錄，2.5 GB」。
+- 環境檢查的「轉錄模型」列看目前引擎用的模型。
+- 會議列表的「可以用 Breeze 重新轉錄」提示（§21.17）改成看「目前引擎的模型下載好了、而這場是用內建或 Breeze 轉的」。
+
+### 32.7 評估與驗證
+
+- `transcribe-eval` 的 `engine` 加 `qwen`；`tuning` 加 `qwenChunkSeconds`（預設 30）、`qwenRetry`（預設 true）、`qwenTurns`（預設 true：照說話者分段）。R43.4 的門檻用 `scripts/dev/asr-eval.py` 跑 synth、tw-taimecs、aishell、ami-mix；`--keep-script` 看繁簡。
+- 真實會議：拿使用者自己的一場週會（遠距收音、多人）用兩個引擎各轉一次，逐段並列給使用者看（沒有標準答案，由使用者判斷）。
+
+### 32.8 Windows 版
+
+- 另開任務：llama.cpp 預建的 Windows DLL（`llama-bXXXX-bin-win-cpu|cuda|vulkan-*.zip` 都有 `mtmd.dll`），shim 加 `shiyin_qwen_*`，`ShiyinPaths` 的模型資料夾多兩個檔；分段、重試、簡轉繁的規則照 §32.4、§32.5，標準答案比對。可以比 Mac 晚一版（R43.9）。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1287,5 +1377,9 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D102 | 待確認的題目靠時間點對應到紀錄的條目，不改提示詞（§31.1） | 讓整理工具多輸出「對應到哪一條」：三個平台的 schema、提示詞、標準答案都要重產，模型填的對應也不一定準。app 用文字比對：紀錄是改寫過的文字（D9 同樣的理由）。代價：時間填錯的題目對不到，只在待確認分頁 |
 | D103 | 是非題回答「是」當成確認，跟略過一樣直接移除，不送整理工具（§31.3） | 照舊全部送校稿：校稿收到「是」只會原樣保留，使用者白等一次、多一次費用。由 app 改紀錄：「不是＋答案」要改文字，還是要模型。代價：「是」不再經過模型，模型也不會順便改別的地方（本來就不該改） |
 | D104 | 收音提醒用通知和選單列圖示提醒，不自動停止錄音或換麥克風（§31.5） | 自動換麥克風：R18.2 已經處理裝置消失的情況；靜音、選錯麥克風是使用者的設定，app 猜不準。只在錄音畫面提示（3.7）：R24.3 的那次人在 Zoom 的視窗，沒看到。每次提示都通知：每場每種一次就夠，多了會煩 |
+| D105 | 正式轉錄換成 Qwen3-ASR 1.7B 原版，app 自己轉台灣繁體（§32.1、§32.5） | 繼續用 Breeze：解碼參數怎麼調都差不到 1%，模型是瓶頸。TEA-ASR 台灣微調版：原生繁體、乾淨錄音最好（TaiMECS 2.4%），但多人吵雜錄音跳針、整段漏（AISHELL 34.8% vs 原版 16.2%），日文漢字被改成繁體，Q4 量化就壞；使用者的會議多半是會議室裡多人收音，不能賭。Qwen3-ASR 0.6B：準確度差一截（見 R43 不做）。macOS 內建：合成會議 9.2%、關鍵詞 1/6 |
+| D106 | llama.cpp 用官方 XCFramework，經 C 薄層 `QwenShim` 進 Swift（§32.2） | 直接 import 兩個框架：ggml.h 版本不同，Swift 編譯失敗。自己建 llama.cpp 讓 ggml 版本一致：每次升級都要同步兩邊，還是會再分叉。換掉 whisper：日文、語言偵測還要 whisper。用 Python／MLX：D2 |
+| D107 | 先辨識說話者，在換人處的安靜點切、每段最長 15 秒、混到第二個人的段照片段再切；跳針用「重試→切半→修剪」、幻覺用「有聲音的秒數限制字數、不一致就丟」處理（§32.4） | 固定 30 秒一段再用重疊量標說話者：一段裡換人就標錯，而 Qwen3-ASR 沒有時間點可以切。整段一次轉（官方最長 20 分鐘）：沒有時間點，說話者標不了；固定 30 秒一段（AISHELL 16.2%、AMI 31.6%）準一點，但一段裡換人就標錯。照說話者片段切：重疊處的話被切掉（AISHELL 22.2%、AMI 45.9%）。短段不加防線：AMI 40%。Qwen3-ForcedAligner 對齊時間：llama.cpp 不支援、要再一個 0.6B 模型。一律加重複懲罰：會傷到真的重複（「對對對」） |
+| D108 | 簡轉繁用 OpenCC 的字表＋自己寫的最長匹配，不帶 OpenCC 程式庫（§32.5） | ICU 的 Hans-Hant：逐字轉，「頭發」「皇後」這類一對多的字會錯。OpenCC 的 C++ 程式庫：還要為 Mac、Windows 各包一次，字表加 100 行程式就夠。TWPhrases 用語替換：辨識結果本來就是說話者的用詞 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

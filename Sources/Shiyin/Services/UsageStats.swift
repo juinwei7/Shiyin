@@ -11,7 +11,7 @@ final class UsageStats: @unchecked Sendable {
         var meetingsRecorded = 0, recordedSeconds = 0
         var meetingsImported = 0, importedSeconds = 0
         var transcribedSeconds = 0, transcribeWallSeconds = 0
-        var engines = ["breeze": 0, "builtin": 0, "whisperJa": 0]
+        var engines = ["breeze": 0, "builtin": 0, "whisperJa": 0, "qwen": 0]
         var meetingLanguages = ["zh": 0, "en": 0, "ja": 0]
         var diarizationRuns = 0
         var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0]
@@ -107,7 +107,7 @@ final class UsageStats: @unchecked Sendable {
     func transcribed(seconds: Double, wallSeconds: Double, engine: String, language: MeetingLanguage,
                      imported: Bool, diarized: Bool) {
         let audio = Self.whole(seconds)
-        let key = ["system": "builtin", "japanese": "whisperJa"][engine] ?? "breeze"
+        let key = ["system": "builtin", "japanese": "whisperJa", "qwen": "qwen"][engine] ?? "breeze"
         add {
             $0.transcribedSeconds += audio
             $0.transcribeWallSeconds += Self.whole(wallSeconds)

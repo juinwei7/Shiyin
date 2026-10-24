@@ -4,4 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Shiyin</RootNamespace>
   </PropertyGroup>
+  <!-- 簡轉繁的字表（M§32.5、D108）：跟 Mac 共用 Resources/opencc 的同一份檔案，內嵌在組件裡 -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../../Resources/opencc/*.tsv" LogicalName="opencc/%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

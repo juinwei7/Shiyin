@@ -8,7 +8,7 @@ import Observation
 @Observable
 final class ModelStore: NSObject {
     enum Model: String, CaseIterable, Sendable {
-        case breeze, japanese, languageDetection
+        case breeze, japanese, languageDetection, qwen, qwenEncoder
     }
 
     struct ModelInfo: Sendable {
@@ -59,25 +59,49 @@ final class ModelStore: NSObject {
         size: 59_707_625,
         sha256: "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898")
 
+    /// llama.cpp 官方轉檔的 Qwen3-ASR 1.7B q8_0 和它的音訊編碼器（mmproj），固定 commit（design §32.3、D105）
+    nonisolated static let qwen = ModelInfo(
+        name: String(localized: "Qwen3-ASR 1.7B（q8_0）"),
+        filename: "qwen3-asr-1.7b-q8_0.gguf",
+        url: URL(string: "https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF/resolve/36a678687ba7d07a74ca70ccb0e36902e005fb80/Qwen3-ASR-1.7B-Q8_0.gguf")!,
+        size: 2_165_034_944,
+        sha256: "58e22d0532d4eacaf034cfac17a6fed159f37c41390c710186783be439d1fc57")
+
+    nonisolated static let qwenEncoder = ModelInfo(
+        name: String(localized: "Qwen3-ASR 音訊編碼器（q8_0）"),
+        filename: "qwen3-asr-1.7b-mmproj-q8_0.gguf",
+        url: URL(string: "https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF/resolve/36a678687ba7d07a74ca70ccb0e36902e005fb80/mmproj-Qwen3-ASR-1.7B-Q8_0.gguf")!,
+        size: 355_709_344,
+        sha256: "46c1d533af3f354ceb37ce855dbceff7da7fa7cf1e6a523df3b13440bd164c0d")
+
     nonisolated static func info(_ model: Model) -> ModelInfo {
         switch model {
         case .breeze: return breeze
         case .japanese: return japanese
         case .languageDetection: return languageDetection
+        case .qwen: return qwen
+        case .qwenEncoder: return qwenEncoder
         }
     }
 
-    /// 正式轉錄用哪個模型：日文會議用 large-v3-turbo，中文、英文用 Breeze
+    /// 正式轉錄用哪個模型：日文會議用 large-v3-turbo；中文、英文依設定用 Qwen3-ASR（預設）或 Breeze（design §32.3）
     nonisolated static func transcription(for language: MeetingLanguage) -> Model {
-        language == .ja ? .japanese : .breeze
+        if language == .ja { return .japanese }
+        return AppSettings.transcriptionEngine == "breeze" ? .breeze : .qwen
     }
+
+    /// 這個模型要的檔案：Qwen3-ASR 是語言模型加音訊編碼器兩個檔，一起下載、一起算裝好
+    nonisolated static func files(of model: Model) -> [Model] { model == .qwen ? [.qwen, .qwenEncoder] : [model] }
 
     nonisolated static func path(_ model: Model) -> URL { Paths.modelsDir.appendingPathComponent(info(model).filename) }
 
-    /// 這個語言的轉錄模型下載好了沒（下載完、驗證過才會出現在這個路徑）
-    nonisolated static func hasTranscriptionModel(for language: MeetingLanguage) -> Bool {
-        FileManager.default.fileExists(atPath: path(transcription(for: language)).path)
+    /// 這個模型的檔案都下載好了（下載完、驗證過才會出現在這個路徑）
+    nonisolated static func isDownloaded(_ model: Model) -> Bool {
+        files(of: model).allSatisfy { FileManager.default.fileExists(atPath: path($0).path) }
     }
+
+    /// 這個語言的轉錄模型下載好了沒
+    nonisolated static func hasTranscriptionModel(for language: MeetingLanguage) -> Bool { isDownloaded(transcription(for: language)) }
     nonisolated static var breezePath: URL { path(.breeze) }
     nonisolated private static func resumeDataPath(_ model: Model) -> URL {
         Paths.modelsDir.appendingPathComponent(".\(info(model).filename).resume")
@@ -105,6 +129,41 @@ final class ModelStore: NSObject {
 
     func state(_ model: Model) -> State { states[model] ?? .missing }
     func isInstalled(_ model: Model) -> Bool { state(model) == .installed }
+    /// 這個語言的轉錄模型（Qwen3-ASR 的兩個檔都要）裝好了
+    func isInstalled(transcriptionFor language: MeetingLanguage) -> Bool {
+        Self.files(of: Self.transcription(for: language)).allSatisfy { isInstalled($0) }
+    }
+
+    /// 多個檔的模型合成一列顯示（設定頁、引導）：都裝好才算裝好；有一個失敗就顯示失敗；任一個在下載就顯示下載中（位元組加總）
+    func combinedState(_ model: Model) -> State {
+        let files = Self.files(of: model)
+        if files.count == 1 { return state(model) }
+        let states = files.map { state($0) }
+        if states.allSatisfy({ $0 == .installed }) { return .installed }
+        if let failed = states.first(where: { if case .failed = $0 { return true } else { return false } }) { return failed }
+        if states.contains(.verifying) { return .verifying }
+        var received: Int64 = 0, total: Int64 = 0, downloading = false, paused = false
+        for (file, s) in zip(files, states) {
+            let size = Self.info(file).size
+            switch s {
+            case .downloading(let r, let t): received += r; total += t > 0 ? t : size; downloading = true
+            case .paused(let r, let t): received += r; total += t > 0 ? t : size; paused = true
+            case .installed: received += size; total += size
+            default: total += size
+            }
+        }
+        if downloading { return .downloading(received: received, total: total) }
+        if paused { return .paused(received: received, total: total) }
+        return .missing
+    }
+
+    func startAll(_ model: Model) { for file in Self.files(of: model) { start(file) } }
+    func pauseAll(_ model: Model) { for file in Self.files(of: model) { pause(file) } }
+    func deleteAll(_ model: Model) { for file in Self.files(of: model) { delete(file) } }
+    /// 這個語言的轉錄模型還沒下載過就開始下載（Qwen3-ASR 兩個檔一起）
+    func autoStartTranscription(for language: MeetingLanguage) {
+        for file in Self.files(of: Self.transcription(for: language)) { autoStart(file) }
+    }
 
     func refresh() {
         let fm = FileManager.default

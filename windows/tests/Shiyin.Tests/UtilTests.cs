@@ -13,6 +13,14 @@ public class UtilTests
     static IEnumerable<JsonElement> Items(string path) => Golden.ExpectedJson(path).EnumerateArray();
 
     [Fact]
+    public void SimplifiedToTaiwan()
+    {
+        // 簡體轉台灣繁體（M§32.5）：跟 Mac 的 ChineseScript.toTaiwan 逐字相同
+        foreach (var item in Items("util/s2tw.json"))
+            Assert.Equal(item.Str("out"), ChineseScript.ToTaiwan(item.Str("in")!));
+    }
+
+    [Fact]
     public void NotesDecode()
     {
         foreach (var item in Items("util/notes-decode.json"))

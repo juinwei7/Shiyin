@@ -508,6 +508,9 @@
         }
       }
     },
+    "Breeze ASR 25": {
+      "extractionState": "manual"
+    },
     "Breeze ASR 25（q8_0）": {
       "extractionState": "manual",
       "localizations": {
@@ -515,17 +518,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Breeze ASR 25 (q8_0)"
-          }
-        }
-      }
-    },
-    "Breeze ASR 25（建議）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Breeze ASR 25 (recommended)"
           }
         }
       }
@@ -683,6 +675,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't create the PDF"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 1.7B（q8_0）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-ASR 1.7B (q8_0)"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 1.7B（q8_0，含音訊編碼器）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-ASR 1.7B (q8_0, with audio encoder)"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 1.7B（建議）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-ASR 1.7B (recommended)"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 1.7B：正式轉錄，2.5 GB": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-ASR 1.7B: final transcription, 2.5 GB"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 音訊編碼器（q8_0）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-ASR audio encoder (q8_0)"
           }
         }
       }
@@ -949,13 +996,13 @@
         }
       }
     },
-    "「錄音」：選錄音來源、麥克風，以及要不要即時逐字稿和說話者辨識。「正式轉錄」可以選 Breeze ASR 25（建議，會參考詞彙表）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。": {
+    "「錄音」：選錄音來源、麥克風，以及要不要即時逐字稿和說話者辨識。「正式轉錄」可以選 Qwen3-ASR（建議，會參考詞彙表，多人會議漏字少）、Breeze ASR 25 或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Recording”: choose the source and microphone, and whether to use the live transcript and speaker recognition. For “Transcription”, choose Breeze ASR 25 (recommended; uses the glossary) or macOS (no model download and much faster, but more mistakes with proper nouns)."
+            "value": "Recording: choose the audio source and microphone, and whether to show the live transcript and identify speakers. Final transcription can use Qwen3-ASR (recommended; uses your glossary and drops fewer words in multi-speaker meetings), Breeze ASR 25, or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong)."
           }
         }
       }
@@ -1231,6 +1278,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing else to install. To summarize meetings, install and sign in to claude or codex, or have an Anthropic or OpenAI API key"
+          }
+        }
+      }
+    },
+    "中文、英文會議用，2.5 GB。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For Chinese and English meetings, 2.5 GB."
           }
         }
       }
@@ -2956,6 +3014,17 @@
         }
       }
     },
+    "已下載（2.5 GB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded (2.5 GB)"
+          }
+        }
+      }
+    },
     "已下載（574 MB）": {
       "extractionState": "manual",
       "localizations": {
@@ -4037,13 +4106,13 @@
         }
       }
     },
-    "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper large-v3-turbo），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。": {
+    "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Qwen3-ASR，日文用 Whisper large-v3-turbo），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After you click “Stop & Transcribe”, Shiyin transcribes the recording again on this Mac (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for Japanese) and identifies the different speakers. While you wait, draft notes are written from the live transcript and replaced automatically when the final version is ready. Click “Speaker 1” in the transcript to change it to a name; the whole meeting updates, and Shiyin remembers the voice and fills in the name in later meetings (marked “Auto”; if it's wrong, one click fixes it)."
+            "value": "After you press Stop & Transcribe, Shiyin re-transcribes the recording on this Mac (Qwen3-ASR for Chinese and English, Whisper large-v3-turbo for Japanese) and tells the speakers apart. While you wait, the notes are drafted from the live transcript and replaced automatically once the final version is ready. Click \"Speaker 1\" in the transcript to give them a name and it changes throughout the meeting; Shiyin remembers their voice and fills in the name in later meetings (marked \"auto\"; one click fixes a wrong guess)."
           }
         }
       }
@@ -5172,6 +5241,17 @@
         }
       }
     },
+    "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度也快一倍；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your glossary; drops fewer words in multi-speaker meetings and confuses fewer homophones than Breeze, and runs twice as fast. Requires a 2.5 GB model download. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
+          }
+        }
+      }
+    },
     "會議": {
       "extractionState": "manual",
       "localizations": {
@@ -5984,6 +6064,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcribe and identify speakers"
+          }
+        }
+      }
+    },
+    "正式轉錄選「Breeze ASR 25」時用，1.66 GB。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used when final transcription is set to Breeze ASR 25, 1.66 GB."
           }
         }
       }
@@ -8143,6 +8234,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcription model Breeze ASR 25"
+          }
+        }
+      }
+    },
+    "轉錄模型 Qwen3-ASR 1.7B": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription model Qwen3-ASR 1.7B"
           }
         }
       }

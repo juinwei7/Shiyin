@@ -20,9 +20,11 @@ struct EnvironmentStatus: Equatable {
         let codex = Paths.findTool("codex")
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
         return EnvironmentStatus(items: [
-            // 預設開日文會議的人不一定需要 Breeze（中文、英文用）
-            Item(name: String(localized: "轉錄模型 Breeze ASR 25"), ok: models.isReady || AppSettings.useSystemTranscriber,
-                 detail: models.isReady ? String(localized: "已下載（1.66 GB）") : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識") : String(localized: "還沒下載"),
+            // 預設開日文會議的人不一定需要中文、英文的模型（目前引擎用的：Qwen3-ASR 或 Breeze，design §32.6）
+            Item(name: AppSettings.transcriptionEngine == "breeze" ? String(localized: "轉錄模型 Breeze ASR 25") : String(localized: "轉錄模型 Qwen3-ASR 1.7B"),
+                 ok: models.isInstalled(transcriptionFor: .zh) || AppSettings.useSystemTranscriber,
+                 detail: models.isInstalled(transcriptionFor: .zh)
+                     ? (AppSettings.transcriptionEngine == "breeze" ? String(localized: "已下載（1.66 GB）") : String(localized: "已下載（2.5 GB）")) : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識") : String(localized: "還沒下載"),
                  fix: String(localized: "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建"),
                  required: AppSettings.defaultMeetingLanguage != .ja),
             Item(name: String(localized: "日文轉錄模型"), ok: models.isInstalled(.japanese) || AppSettings.useSystemTranscriber,
