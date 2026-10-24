@@ -90,6 +90,8 @@
     return shown;
   }
   const tabEl = (name) => win.querySelector(`.sg[data-tab="${name}"]`);
+  // 紀錄頂部「還有 N 題待確認」（app 的 ReviewBanner）：展開／收起
+  function openReview(on) { $('rv').classList.toggle('open', on); $('rvbt').textContent = on ? T.collapse : T.expand; }
   function rowStatus(text, cls = '') { const el = $('rowst'); el.textContent = text; el.className = cls; }
   function banner(kind, text, value) {
     const b = $('banner');
@@ -428,10 +430,11 @@
     { // 待確認
       dur: 12500,
       async play(r) {
-        await move(r, tabEl('review'), { dur: 800 });
-        await click(r, tabEl('review'));
-        setTab('review');
-        showPane('review');
+        setTab('summary');
+        showPane('summary').scrollTo({ top: 0 });
+        await move(r, $('rvb'), { dur: 800 });
+        await click(r, $('rvb'));
+        openReview(true);
         await r.wait(1000);
         const field = $('ans1');
         await move(r, field, { dur: 800, ox: 0.25 });
@@ -457,11 +460,6 @@
         banner(null);
         this.reviewed();
         await r.wait(900);
-        await move(r, tabEl('summary'), { dur: 800 });
-        await click(r, tabEl('summary'));
-        setTab('summary');
-        showPane('summary');
-        await r.wait(300);
         scrollInto($('due1'));
         camera(560);
         await r.wait(400);
@@ -469,7 +467,9 @@
         await r.wait(1400);
       },
       reviewed() {
-        win.querySelector('.p-review').classList.add('done');
+        // 送出後題目歸零：條消失（app 的 ReviewBanner 在 reviewCount 0 時不顯示）
+        $('rvb').classList.add('gone');
+        $('rv').classList.remove('open');
         $('revlabel').textContent = T.reviewLabel;
         rowStatus('');
         win.querySelectorAll('.marks i').forEach((m) => m.remove());

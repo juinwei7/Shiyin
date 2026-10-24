@@ -876,90 +876,46 @@
         }
       }
     },
-    "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。紀錄裡有疑問的那一條旁邊會有「？」，點了就能當場回答；也可以到「待確認」分頁一次看完。能用是或否回答的直接按「是」「不是」（按「是」不用等整理工具），其他的在「你的回答」欄位回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的按「略過」，或一次「全部略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
+    "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。最下面的「範本」內建五種；也可以複製一份來改，或自己新增段落與指示。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“To confirm” lists the names, terms, owners and deadlines the summarizer wasn’t sure about. The note in question gets a “?” next to it: click it to answer right there, or open the “To confirm” tab to go through them all. Questions that take yes or no have “Yes” and “No” buttons (“Yes” confirms on the spot, no waiting for the summarizer); answer the others in “Your answer”, then click “Submit” and the notes are revised to match. Click “Skip” on anything unclear or unimportant, or “Skip all”. You can also edit the notes directly with “Edit” on the Summary tab. If something goes wrong, choose “Restore previous notes” from “More”."
+            "value": "Summarizer: choose Claude or Codex (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summarizing feels slow, enter a faster model under Model, such as sonnet. Templates are at the bottom: five built in; copy one to customize it, or add your own sections and instructions."
           }
         }
       }
     },
-    "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。": {
+    "「說話者與詞彙」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Summarizer”: choose Claude or Codex (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summaries are slow, enter a faster model in “Model”, such as sonnet."
+            "value": "Speakers & Glossary: the people Shiyin recognizes and their voiceprints, which you can rename or delete, or turn off remembering voices; the glossary holds the correct spelling of system names, product names and people's names, which greatly improves proper-noun accuracy."
           }
         }
       }
     },
-    "「模型與儲存空間」：下載或刪除模型、看錄音佔用的空間。": {
+    "「進階」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查、錄音和模型佔用的空間。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Models & Storage”: download or delete models and see how much space recordings use."
+            "value": "Advanced: check for updates (when a new version is available Shiyin asks, then downloads, verifies and relaunches; also available from the Shiyin menu → Check for Updates…), environment check, and the space used by recordings and models."
           }
         }
       }
     },
-    "「範本」：內建五種範本；也可以複製一份來改，或自己新增段落與指示。": {
+    "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Templates”: five built-in templates. You can duplicate one to change it, or add your own sections and instructions."
-          }
-        }
-      }
-    },
-    "「詞彙表」：加入系統名、產品名、人名的正確寫法。這對專有名詞的正確率影響很大。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Glossary”: add the correct spelling of system names, product names and people's names. This makes a big difference for proper nouns."
-          }
-        }
-      }
-    },
-    "「說話者」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Speakers”: the people Shiyin knows and their voiceprints. Rename or delete them, or turn off remembering voices."
-          }
-        }
-      }
-    },
-    "「進階」：填更新網址、檢查更新；有新版時拾音會詢問，同意後自動下載、驗證並重新打開。也可以從「拾音」選單選「檢查更新…」。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Advanced”: enter the update URL and check for updates. When a new version is available, Shiyin asks, then downloads, verifies and reopens. You can also choose “Check for Updates…” from the Shiyin menu."
-          }
-        }
-      }
-    },
-    "「錄音」：選錄音來源、麥克風，以及要不要即時逐字稿和說話者辨識。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recording: choose the audio source and microphone, and whether to show the live transcript and identify speakers. Final transcription can use Breeze ASR 25 (recommended; MediaTek's Taiwanese model, uses your glossary), Qwen3-ASR (open-sourced by Alibaba; drops fewer words in multi-speaker meetings, runs entirely on this Mac), or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong)."
+            "value": "Recording & Transcription: audio source and microphone, meeting language, the final-transcription engine and models, live transcript and speaker identification, online-meeting alerts and shortcuts. Final transcription can use Breeze ASR 25 (recommended; MediaTek's Taiwanese model, uses your glossary), Qwen3-ASR (open-sourced by Alibaba; drops fewer words in multi-speaker meetings, runs entirely on this Mac), or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong)."
           }
         }
       }
@@ -4814,6 +4770,17 @@
         }
       }
     },
+    "整理時沒把握的人名、專有名詞、負責人和期限會列成待確認的題目。紀錄裡有疑問的那一條旁邊會有「？」，點了就能當場回答；紀錄頂部的「還有 N 題待確認」點開可以一次看完。能用是或否回答的直接按「是」「不是」（按「是」不用等整理工具），其他的在「你的回答」欄位回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的按「略過」，或一次「全部略過」。也可以按「編輯」直接改。改錯了按「編輯」旁的「復原上一版」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Names, terms, owners and due dates the AI was unsure about become items to confirm. The affected line in the notes shows a “?”; click it to answer right there, or open “N items to confirm” at the top of the notes to go through them all. Yes/no questions have Yes and No buttons (Yes needs no AI call); type other answers in the answer field, then press Submit and the notes are revised accordingly. Skip anything unclear or unimportant, or Skip all at once. You can also press Edit to change the notes directly. If something goes wrong, use Restore previous version next to Edit."
+          }
+        }
+      }
+    },
     "整理草稿": {
       "extractionState": "manual",
       "localizations": {
@@ -7756,24 +7723,24 @@
         }
       }
     },
-    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題右邊的「人數」）或匯入時也可以先選。": {
+    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多 → 重新處理」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題右邊的「人數」）或匯入時也可以先選。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If too few speakers were found (many people, noise, or a phone on the table), choose “Identify Speakers Again…” from More and tell Shiyin roughly how many people there were. Only who is speaking is worked out again; the transcript text stays the same. You can also pick the number while recording (“People” next to the meeting title) or when importing."
+            "value": "Too few speakers detected (many people, noise, or a phone on the table far from everyone)? Choose More → Reprocess → Re-identify speakers… and tell Shiyin roughly how many people there were. Only the speaker labels change; the transcript text stays. You can also set the count while recording (the People control next to the meeting title) or when importing."
           }
         }
       }
     },
-    "說話者分錯了：同一個人被分成兩位，點說話者的名字選「合併到…」；某幾句分錯人，在逐字稿按右鍵選「這句是誰說的」。改錯了可以從「更多」選「復原說話者的調整」。": {
+    "說話者分錯了：同一個人被分成兩位，點說話者的名字選「合併到…」；某幾句分錯人，在逐字稿按右鍵選「這句是誰說的」。改錯了，點說話者的名字或按右鍵選「復原」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Speakers mixed up? If one person was split into two, click the speaker’s name and choose “Merge Into…”. If a few lines went to the wrong person, right-click the transcript and choose “Who Said This Line?”. To undo, choose “Undo Speaker Changes” from More."
+            "value": "Speakers mixed up? If one person was split into two, click the speaker's name and choose Merge into…; if a few lines went to the wrong person, right-click them in the transcript and choose Who said this. To undo, click the speaker's name or right-click and choose Undo."
           }
         }
       }
@@ -8207,13 +8174,13 @@
         }
       }
     },
-    "轉錄完會自動整理。「摘要」有重點、決議、待辦和未決問題；「詳細」依議題分段；每一條後面的時間點點一下，就從錄音那裡開始播放。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。": {
+    "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After transcription, Shiyin summarizes automatically. “Summary” has the key points, decisions, action items and open questions; “Details” is organized by topic. Click the time after any item to play the recording from there. Use the template menu at the top right to switch to One-on-one, Interview, Lecture / talk, Brainstorm and more, then choose “Summarize again” from “More”. Looking for something? Ask in the “Ask” tab, for example “What budget did we settle on?”, and the answer comes with timestamps; “Ask” in the toolbar asks all your meetings at once."
+            "value": "Notes are generated automatically after transcription. The Notes tab runs top to bottom: summary, decisions, action items, open questions, then the discussion by topic; click the timestamp after any line to play the recording from there. The template menu at the top right switches to formats such as one-on-one, interview, lecture or brainstorming; after changing it, choose More → Reprocess → Regenerate Notes. To find something, ask directly on the Ask tab, for example “What was the final budget?”; answers include timestamps. The Ask button in the toolbar searches every meeting at once."
           }
         }
       }
@@ -9575,13 +9542,13 @@
         }
       }
     },
-    "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間。重要的地方按「標記重點」（⌘B），在其他 app 裡也可以按 ⌃⌥⌘B。需要中斷時按「暫停」（⇧⌘P），暫停的時間不會錄進去。": {
+    "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間（錄完在逐字稿分頁頂部的「我的筆記」還能改）。重要的地方按「標記重點」（⌘B），在其他 app 裡也可以按 ⌃⌥⌘B。需要中斷時按「暫停」（⇧⌘P），暫停的時間不會錄進去。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While recording, the live transcript appears on the left within a few seconds of speech. In “My notes” on the right, each new line records the current recording time. Click “Bookmark” (⌘B) at important moments, or press ⌃⌥⌘B from any other app. To take a break, click “Pause” (⇧⌘P); the paused time isn't recorded."
+            "value": "While recording, the live transcript appears on the left within seconds of speech; My notes on the right stamps the recording time on every new line (you can still edit them later under My notes at the top of the Transcript tab). Press Bookmark (⌘B) at important moments, or ⌃⌥⌘B from any app. Press Pause (⇧⌘P) to take a break; paused time is not recorded."
           }
         }
       }

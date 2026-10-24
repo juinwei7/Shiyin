@@ -78,7 +78,7 @@ ${m.others.map(([title, date, status]) => `      <li class="m"><b${ml}>${esc(tit
   <section class="main">
     <div class="tb tb-main">
       <span class="tb-title" data-k="wintitle">${esc(u.appTitle)}</span>
-      <div class="segs${u.equalTabs ? ' eq' : ''}">${Object.entries(t).map(([key, label]) => `<span class="sg${key === 'summary' ? ' on' : ''}" data-tab="${key}"><span${key === 'review' ? ' data-k="revlabel"' : ''}>${esc(label)}</span></span>`).join('')}</div>
+      <div class="segs${u.equalTabs ? ' eq' : ''}">${Object.entries(t).map(([key, label]) => `<span class="sg${key === 'summary' ? ' on' : ''}" data-tab="${key}"><span>${esc(label)}</span></span>`).join('')}</div>
       <span class="more">${I.more}${I.chevron.replace('<svg', '<svg class="mchev"')}</span>
     </div>
 
@@ -115,6 +115,21 @@ ${m.others.map(([title, date, status]) => `      <li class="m"><b${ml}>${esc(tit
         <div class="pane p-wait"><p class="dim">${esc(u.waiting)}</p></div>
 
         <div class="pane p-summary">
+          <div class="rvb" data-k="rvb"><span class="rvb-q">?</span><span class="rvb-l" data-k="revlabel">${esc(u.reviewTab)}</span><span class="rvb-t" data-k="rvbt">${esc(u.expand)}</span></div>
+          <div class="rv" data-k="rv">
+          <div class="rv-open">
+            <p class="dim">${esc(u.reviewIntro)}</p>
+${m.questions.map(([time, q], i) => `            <div class="q" data-k="q${i + 1}">
+              <div class="q-line"><b>${i + 1}</b>${ts(time)}<span class="qt"${ml}>${esc(q)}</span></div>
+              <div class="q-ans"><span class="field"${i === 0 ? ' data-k="ans1"' : ''}><span class="ph">${esc(u.answer)}</span><span class="val"${i === 0 ? ` data-k="ans1v"${ml}` : ''}></span><i class="caret"></i></span><span class="chk"${i === 1 ? ' data-k="skip2"' : ''}><i></i>${esc(u.skip)}</span></div>
+            </div>`).join('\n')}
+          </div>
+          <div class="rv-done">
+            <span class="ok">${I.ok}${esc(u.doneTitle)}</span>
+            <p class="dim">${esc(u.doneText)}</p>
+          </div>
+          <div class="rv-foot"><span class="dim">${esc(u.footnote)}</span><span class="btn prim dis" data-k="submit">${esc(u.submit.none)}</span></div>
+          </div>
           <span class="lnk edit-r">${I.pencil}${esc(u.edit)}</span>
           <h4 class="in">${esc(u.headings[0])}</h4>
           <ul>
@@ -129,35 +144,19 @@ ${m.decisions.map(([text, time]) => `            <li class="in"${ml}>${esc(text)
             <tr><th>${u.tableHead.map(esc).join('</th><th>')}</th></tr>
 ${m.actions.map(([owner, item, time, dueText], i) => `            <tr><td${ml}>${esc(owner)}</td><td${ml}>${esc(item)}${ts(time)}</td><td>${i === 0 ? `<span class="due" data-k="due1">${esc(dueText)}</span>` : esc(dueText)}</td></tr>`).join('\n')}
           </table>
-        </div>
-
-        <div class="pane p-detail"${ml}>
+          <h4 class="in">${esc(u.headings[3])}</h4>
+          <div class="topics in">
 ${m.details.map(([h, p, time]) => `          <h4>${esc(h)}</h4>\n          <p>${esc(p)}${ts(time)}</p>`).join('\n')}
+          </div>
         </div>
 
         <div class="pane p-transcript">
           <div class="tx-tools"><span class="tfield">${I.search}${esc(u.txSearch)}</span>${pop('', u.allSpeakers, false).replace('</span>', `${I.updown}</span>`)}${pop('', u.fixWording, false)}</div>
+          <div class="nt-row"><span class="nt-l">${esc(u.notesRow)}</span>${I.chevron}<p data-k="notes" class="nt-body"${ml}>[00:06] ${esc(m.note)}</p></div>
           <div class="tx" data-k="tx">
 ${m.transcript.map(([at, who, text]) => `            <div class="row" data-at="${at}">${ts(`00:${String(at).padStart(2, '0')}`)}<i class="s${who}" data-spk="${who}"${ml}>${esc(speakerName(who))}</i><p${ml}>${esc(text)}</p></div>`).join('\n')}
           </div>
         </div>
-
-        <div class="pane p-review">
-          <div class="rv-open">
-            <p class="dim">${esc(u.reviewIntro)}</p>
-${m.questions.map(([time, q], i) => `            <div class="q" data-k="q${i + 1}">
-              <div class="q-line"><b>${i + 1}</b>${ts(time)}<span class="qt"${ml}>${esc(q)}</span></div>
-              <div class="q-ans"><span class="field"${i === 0 ? ' data-k="ans1"' : ''}><span class="ph">${esc(u.answer)}</span><span class="val"${i === 0 ? ` data-k="ans1v"${ml}` : ''}></span><i class="caret"></i></span><span class="chk"${i === 1 ? ' data-k="skip2"' : ''}><i></i>${esc(u.skip)}</span></div>
-            </div>`).join('\n')}
-          </div>
-          <div class="rv-done">
-            <span class="ok">${I.ok}${esc(u.doneTitle)}</span>
-            <p class="dim">${esc(u.doneText)}</p>
-          </div>
-          <div class="rv-foot"><span class="dim">${esc(u.footnote)}</span><span class="btn prim dis" data-k="submit">${esc(u.submit.none)}</span></div>
-        </div>
-
-        <div class="pane p-notes"${ml}><p data-k="notes">[00:06] ${esc(m.note)}</p></div>
 
         <div class="pane p-ask" data-k="ask">
           <div class="ask-list">
