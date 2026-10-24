@@ -309,6 +309,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `AppController.SubmitReview` 把「是」跟略過一起移除（版本原因同 Mac），只有修改的題目排 `revise`。標準答案的 `db` 操作加「確認、略過」一步，`DatabaseTests` 比對移除後的紀錄和版本原因要跟 Mac 相同。
 - 收音提醒（R42）：`Recorder.HintAppeared`（提示第一次出現，每場每種一次）→ 主視窗不是前景或沒開時送 Windows 通知（§12.2 的 `Notifier.LevelHint`，點了打開那場會議）。系統匣只有一個圖示（錄音中也只改提示文字），所以警示狀態是提示文字加「收音提醒」、右鍵選單多一行提示和「知道了」（R42.2 的「圖示變警示」在 Windows 是這樣對應）。提示的文字在 `LevelHints.Text`，錄音畫面、系統匣、通知共用。驗證：`ctl.sh state` 的 `lastToast`（通知被關掉時也記）、`recorder.hint`。
 
+### 11.6 減法：三個分頁、五個動作、四頁設定、三步引導（R44，M§33）
+
+- `DetailTab` 剩 Summary（「紀錄」）、Transcript、Ask；`NotesTabs` 的摘要和議題合成一頁；`ReviewTab` 的內容變成紀錄頂部可展開的一條（`ReviewBanner`，有待確認才顯示）；我的筆記收進逐字稿頂部的 Expander。控制通道 `tab` 接受舊名稱當別名。
+- `MoreMenu` 分組同 M§33.2；復原上一版放編輯列、復原說話者的調整放改名視窗和右鍵選單（有東西可復原才顯示）。
+- 設定頁四頁、引導三步，分法同 M§33.3、§33.4（Windows 沒有 CLI 時「你平常用哪個 AI？」的第二段只列 API）。
+- 標準答案不變；介面文字跑 `l10n.py windows-check`。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

@@ -1324,6 +1324,56 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 
 - 另開任務：llama.cpp 預建的 Windows DLL（`llama-bXXXX-bin-win-cpu|cuda|vulkan-*.zip` 都有 `mtmd.dll`），shim 加 `shiyin_qwen_*`，`ShiyinPaths` 的模型資料夾多兩個檔；分段、重試、簡轉繁的規則照 §32.4、§32.5，標準答案比對。可以比 Mac 晚一版（R43.9）。
 
+## 33. 減法：三個分頁、五個動作、四頁設定、三步引導（R44，D109～D111）
+
+原則：只搬位置、合併、收起，不改任何資料、匯出、提示詞、標準答案；每個開關和動作都還在，只是從「平鋪」變成「在它該在的地方」。
+
+### 33.1 會議頁三個分頁（R44.1～R44.3，D109）
+
+- `DetailTab` 剩 `summary`（標籤「紀錄」）、`transcript`、`ask`。舊的 `topics`、`review`、`notes` 刪掉；DEBUG 的 `tab` 指令接受舊名稱當別名：`topics`、`review` → 紀錄（`review` 同時展開待確認那一條），`notes` → 逐字稿（展開我的筆記）。狀態 JSON 的 `tab` 照新名稱。
+- 紀錄分頁（`NotesPage`，原 `SummaryTab`＋`TopicsTab` 合併）：由上而下 `ReviewBanner`、摘要、決議、待辦、未決問題、議題（每個議題一個小標，要點照舊可以就地回答）、自訂段落、「由 X 整理．範本」一行。`EditBar` 照舊，編輯模式的 `NotesEditor` 把議題也納進去（現在只有 TopicsTab 那一份編輯器有議題，合併後一份編輯器編全部）。
+- `ReviewBanner`：有待確認（`detail.reviewCount > 0`，含說話者的建議）才顯示，一列：「？」圖示、「還有 N 題待確認」、右邊「展開／收起」。展開後直接放 `ReviewTab` 現在的內容（題目、略過、全部略過、固定在底部的送出；R41.5），寬度跟紀錄一樣，不另開視窗。展開狀態只在這次選取期間記著（換會議收起）。就地回答的 `ReviewMarker`／`InlineReviewCard` 不動，草稿共用（`ReviewDraft`）。送出後題目歸零，條消失。
+- 逐字稿分頁頂部 `UserNotesDisclosure`：`DisclosureGroup`，標籤「我的筆記（N 行）」（N 是非空白的行數），沒有筆記時標籤「寫筆記」；內容是現在的 `UserNotesEditor`（換行加播放時間、0.8 秒後存檔的行為不變）。預設收起，展開狀態同上只記這次。`UserNotesTab` 刪掉。錄音中的畫面不變（`RecordingView` 本來就有筆記）。
+- 搜尋結果跳到筆記的位置（R9.1）：原本切到筆記分頁，改成切到逐字稿並展開筆記。
+
+### 33.2 「更多」五項、復原回到原位（R44.4）
+
+- `MoreMenu`：`Menu("重新處理")`｛重新整理會議紀錄、檢查可能聽錯的字、重新轉錄（含說話者辨識）、重新辨識說話者…｝、匯出…、複製會議紀錄（子選單不變）、`FolderMenu`、移到垃圾桶。工具列的選單建立一次就不更新的限制不變（§24.2 的註解），動作照舊按下時才檢查。
+- 「復原上一版會議紀錄」：`EditBar` 右邊多一顆 `arrow.uturn.backward` 的按鈕，`detail.canUndoNotes`（`notes_versions` 這場有超過一筆）才顯示；按了同 `AppModel.undoNotes()`。
+- 「復原說話者的調整」：改名小視窗（`SpeakerRenamePopover`）底部和逐字稿右鍵選單各加一項，文字用 `db.speakerUndoLabel(id)`（例如「復原：把說話者 2 併進怡君」），nil 就不顯示；按了同 `AppModel.undoSpeakerEdit()`。`MeetingDetail` 加 `speakerUndoLabel: String?`、`canUndoNotes: Bool`，載入會議時一起查。
+
+### 33.3 設定四個分頁（R44.5，D110）
+
+| 分頁 | 內容（全部是現有的 view 或區塊搬過去） |
+|---|---|
+| 整理工具 | `ProviderSettings` 照舊；最下面加 `Section("範本")` 放 `TemplateSettings` 的內容 |
+| 錄音與轉錄 | `RecordingTranscriptionSettings`，四個 `Section`：**錄音來源**（錄音來源、麥克風、權限設定的兩顆按鈕、線上會議的那段說明）、**語言**（預設會議語言、自動偵測）、**轉錄**（正式轉錄引擎、轉錄時辨識說話者、錄音中顯示即時逐字稿，接著 `StorageSettings` 的「轉錄模型」清單和說話者辨識模型）、**提醒與快捷鍵**（偵測線上會議、不提醒的 app、兩個快捷鍵） |
+| 說話者與詞彙 | `NamesSettings`，兩個 `Section`：說話者（`SpeakerSettings` 的內容）、詞彙表（`GlossarySettings` 的內容） |
+| 進階 | `AdvancedSettings` 照舊（更新、環境檢查、重新顯示引導、重建索引、匿名統計），加 `Section("儲存空間")`（錄音大小、模型大小、壓縮開關、資料位置）和「第二版留下的檔案」 |
+
+- 存的鍵、說明文字、DEBUG 的 `preview settings <分頁>` 編號改成 0 整理工具、1 錄音與轉錄、2 說話者與詞彙、3 進階；AX 的 toolbar 按鈕名稱跟著變（CLAUDE.md 要改）。
+- 視窗維持 640×520，每頁可捲動。
+
+### 33.4 引導三步（R44.6，D111）
+
+- `titles` 剩「權限」「整理工具」「開始」。
+- 權限：頂部先放原歡迎頁的三行重點（錄下來、轉成逐字稿、整理成紀錄；每一行一句），接著麥克風、通知；「錄製系統音訊」改成一行說明「第一次選『麥克風＋電腦聲音』錄音時 macOS 會詢問，按允許就好」，不放按鈕（§畫面檢視 O-2）。引導打開時就 `autoStartTranscription(for: 預設語言)`（引擎不是 macOS 內建時）和語言偵測、說話者辨識模型，不再有「下載模型」這一步。
+- 整理工具：兩段式。第一段 `Picker`「你平常用哪個 AI？」：Claude、ChatGPT、Gemini、其他、先不用。第二段依答案列選項（radio），每個一行費用說明：
+  - Claude → Claude Code（這台 Mac 有裝 claude CLI 時；「用你的訂閱，不另外收費」）、Anthropic API（「要 API key，依用量計費，一小時的會議通常不到台幣 10 元（2026-10 估）」）
+  - ChatGPT → Codex（有裝 codex CLI 時；同上）、OpenAI API（同上）
+  - Gemini → Gemini API（同上）
+  - 其他 → OpenAI 相容 API（「Groq、OpenRouter、Ollama、LM Studio；網址和 key 到設定填」）
+  - 先不用 → 不整理，只要逐字稿（「隨時可以到設定選」）
+  選了 API 的，API key 欄位照舊在這一步。存的仍是 `providerKey`，第一段的答案不存。費用的估法寫在 D111。
+- 開始：「按『開始使用』後會打開使用說明…」照舊；下面一行模型狀態（「轉錄模型下載中 35%，下載好之前先用 macOS 內建辨識」或「轉錄模型已經就緒」），用 `combinedState`；匿名統計那一句不加（R40.4 的決定不變）。
+- `hasCompletedOnboarding`、`hasSeenGuide` 不變；DEBUG 的 `preview onboarding <步驟>` 編號變成 0～2。
+
+### 33.5 Windows、iPhone、文件
+
+- Windows（design-windows §11.6）：`DetailView` 的分頁、`ReviewTab` 變成紀錄頂部的條、筆記收合、`MoreMenu` 分組、設定頁四頁、引導三步，照同一份規則；標準答案不變。
+- iPhone：`ios` 分支之後接，手機版本來就只有三個分頁，主要是待確認的條和設定的分組。
+- 使用說明（`GuideView`）、README、官網示範（`site/src/demo-content.mjs` 的 `tabs`、`reviewTab`，demo.js 的待確認章節）、CLAUDE.md 的 AX 名稱和 `preview` 編號跟著改。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1382,5 +1432,8 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D106 | llama.cpp 用官方 XCFramework，經 C 薄層 `QwenShim` 進 Swift（§32.2） | 直接 import 兩個框架：ggml.h 版本不同，Swift 編譯失敗。自己建 llama.cpp 讓 ggml 版本一致：每次升級都要同步兩邊，還是會再分叉。換掉 whisper：日文、語言偵測還要 whisper。用 Python／MLX：D2 |
 | D107 | 先辨識說話者，在換人處的安靜點切、每段最長 15 秒、混到第二個人的段照片段再切；跳針用「重試→切半→修剪」、幻覺用「有聲音的秒數限制字數、不一致就丟」處理（§32.4） | 固定 30 秒一段再用重疊量標說話者：一段裡換人就標錯，而 Qwen3-ASR 沒有時間點可以切。整段一次轉（官方最長 20 分鐘）：沒有時間點，說話者標不了；固定 30 秒一段（AISHELL 16.2%、AMI 31.6%）準一點，但一段裡換人就標錯。照說話者片段切：重疊處的話被切掉（AISHELL 22.2%、AMI 45.9%）。短段不加防線：AMI 40%。Qwen3-ForcedAligner 對齊時間：llama.cpp 不支援、要再一個 0.6B 模型。一律加重複懲罰：會傷到真的重複（「對對對」） |
 | D108 | 簡轉繁用 OpenCC 的字表＋自己寫的最長匹配，不帶 OpenCC 程式庫（§32.5） | ICU 的 Hans-Hant：逐字轉，「頭發」「皇後」這類一對多的字會錯。OpenCC 的 C++ 程式庫：還要為 Mac、Windows 各包一次，字表加 100 行程式就夠。TWPhrases 用語替換：辨識結果本來就是說話者的用詞 |
+| D109 | 會議頁六個分頁減成三個：摘要和詳細合成「紀錄」，待確認收成紀錄頂部一條，筆記收進逐字稿（§33.1） | 維持六個：使用者 11 場「筆記」分頁 0 次、「詳細」要切過去才看得到議題，待確認已經能就地回答，獨立分頁變成「要處理的事離內容太遠」。只把筆記拿掉：摘要／詳細分開沒有理由，匯出本來就是一份。待確認改成側邊欄：寬度不夠，而且題目就在它問的紀錄旁邊才對 |
+| D110 | 設定四頁：範本歸整理工具、模型歸轉錄、說話者和詞彙合一頁、儲存空間歸進階（§33.3） | 維持七頁：一般人只會碰整理工具和錄音，七個分頁讓設定看起來很難。減少設定項目：每個開關都有人用（分聲道等本來就沒有開關），只搬不刪。模型清單留在「儲存空間」：使用者找「要不要下載模型」會去找「轉錄」，不會去找「儲存空間」 |
+| D111 | 引導三步，整理工具先問「你平常用哪個 AI？」再列選項，費用寫成一句話（§33.4） | 五步：歡迎頁沒有資訊、下載模型不需要人做決定。七個選項平鋪：一般人不知道 CLI 和 API 的差別、也不知道要不要錢（畫面檢視 O-3）。精確的費用數字：價格會變，寫區間就夠；估法：一小時中文會議約 1.2 萬字≈1.5 萬 token 輸入、3 千 token 輸出，Claude Sonnet（$3／$15 per M）約 US$0.09≈NT$3，Gemini、OpenAI 更低，所以寫「通常不到台幣 10 元（2026-10 估）」 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

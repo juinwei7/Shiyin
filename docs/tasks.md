@@ -7,6 +7,24 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
+
+順序：M1 → M2 → M3 → M4 → M5（Mac），再 M6（Windows）；M7 iPhone 之後。驗證用示範資料（`~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`），DEBUG 版加 `-ApplePersistenceIgnoreState YES -llmProvider none -autoSummarize NO -correctTranscript NO`。畫面要用 `screencapture -l` 截真的視窗（§33 全是排版），按鈕要用 `scripts/dev/axpress.swift` 真的按過。
+
+- [ ] **M1 會議頁三個分頁**（R44.1～R44.3、§33.1）：`DetailTab` 剩三個、`NotesPage` 合併摘要和議題、`NotesEditor` 一份編全部、`ReviewBanner` 展開成待確認的內容、`UserNotesDisclosure`、搜尋跳到筆記改成逐字稿、DEBUG `tab` 的別名
+  - 驗證：示範會議的紀錄分頁由上而下看到摘要到議題，捲到底；頂部「還有 N 題待確認」展開後逐題回答、「全部略過」、送出，標記跟著消失；沒有待確認的會議不顯示那一條；逐字稿頂部「我的筆記（N 行）」展開是編輯器、打字會存（DB 的 user_notes）；編輯模式改一條議題的要點按「完成」存成版本；`shiyinctl tab review` 切到紀錄並展開；截圖三個分頁
+- [ ] **M2 更多選單與復原的位置**（R44.4、§33.2）：`MoreMenu` 五項、`EditBar` 的復原上一版（`canUndoNotes`）、改名小視窗和右鍵選單的復原說話者調整（`speakerUndoLabel`）
+  - 驗證：選單截圖五項、「重新處理」子選單四項；改過紀錄後編輯列出現復原、按了回到上一版、再按消失；合併兩位說話者後改名小視窗出現「復原：…」、按了分回來、消失；什麼都沒改時兩個復原都不出現
+- [ ] **M3 設定四個分頁**（R44.5、§33.3）：`SettingsView` 四個 tab、`RecordingTranscriptionSettings` 四組、`NamesSettings`、範本進整理工具、儲存空間進進階；`preview settings` 編號；CLAUDE.md 的 AX 名稱
+  - 驗證：四個分頁各截一張（`preview settings 0～3`）；`defaults read com.weiwei.shiyin` 改前改後一樣（搬位置不會寫回設定）；每個開關切一次再切回來，`defaults` 的鍵跟 4.0.0 相同；Windows 不在這一項
+- [ ] **M4 引導三步**（R44.6、§33.4）：`titles` 三個、權限頁的開頭三行和系統錄音的一句話、整理工具兩段式、開始頁的模型狀態、打開引導就背景下載
+  - 驗證：`preview onboarding 0～2` 截圖；第二段依第一段的答案列對的選項（有 claude CLI 的 Mac：Claude → 兩個選項；沒有：一個）；選 API 貼 key 存進鑰匙圈（DEBUG 用 `llmkey`）；選「先不用」存成 none；開始頁顯示下載中的百分比；`hasCompletedOnboarding` 照舊
+- [ ] **M5 文件與示範**（R44.8）：使用說明的分頁名稱和設定位置、README 的設定表格、官網示範（`demo-content.mjs` 的 tabs／reviewTab、demo.js 的待確認章節改成頂部的條）、CLAUDE.md；`l10n.py check`
+  - 驗證：`node site/build.mjs` 成功、本機預覽看示範；`l10n.py check` 完整
+- [ ] **M6 Windows 跟上**（R44.7、design-windows §11.6）：DetailView 三分頁、ReviewBanner、筆記 Expander、MoreMenu、設定四頁、引導三步；`windows-check`
+  - 驗證：虛擬機 `uia.sh` 截三個分頁、設定四頁、引導三步；`dotnet test` 通過
+- [ ] **M7 iPhone 接 R44**（`ios` 分支，之後）：待確認的條、設定分組
+
 ## Qwen3-ASR 轉錄引擎（R43，design §32；2026-10-24 使用者要求打磨辨識準確度）
 
 Q1～Q6 已完成（2026-10-24，驗證在 commit 訊息；使用者決定預設維持 Breeze、Qwen 可選）。Q7 Windows 另外排。評估資料在 `~/Library/Caches/ShiyinSpike/eval32/`（`datasets.json` 已加 `tw-taimecs`、`tw-ntuml`），原型工具在 `~/Library/Caches/ShiyinSpike/qwen3asr/`（`qwen-eval.py`、`linktest/` 的 C 薄層）。
