@@ -138,9 +138,9 @@ public sealed class MainWindow : Window
         });
         Accelerator(VirtualKey.E, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d) _ = Dialogs.Export(this, d.Meeting.Id!.Value); });
         Accelerator(VirtualKey.F, VirtualKeyModifiers.Control, () => detailView.FocusSearch());
-        for (var i = 0; i < 6; i++)
+        foreach (var tab in Enum.GetValues<DetailTab>())
         {
-            var tab = (DetailTab)i;
+            var i = (int)tab;
             Accelerator(VirtualKey.Number1 + i, VirtualKeyModifiers.Control, () => { if (State.Detail is not null) State.SetTab(tab); });
         }
         Accelerator(VirtualKey.Delete, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d && !State.ShowTrash) _ = ConfirmTrash(d.Meeting.Id!.Value); });
@@ -488,7 +488,7 @@ public sealed class MainWindow : Window
                 State.SetTab(DetailTab.Transcript);
                 detailView.Flash(hit.Ref, seek: true);
                 break;
-            case SearchKind.UserNotes: State.SetTab(DetailTab.Notes); break;
+            case SearchKind.UserNotes: State.OpenTab(DetailTab.Transcript, expandNotes: true); break;
             default: State.SetTab(DetailTab.Summary); break;
         }
     }

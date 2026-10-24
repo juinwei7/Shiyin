@@ -9,8 +9,8 @@ using Shiyin.Services;
 namespace Shiyin.App.Views;
 
 /// <summary>
-/// 摘要、詳細、我的筆記三個分頁（同 Mac 的 NotesTabs）：閱讀的欄位寬度上限約 680；可以切換成編輯模式（R6.6），
-/// 按「完成」存成新的版本，切到別的分頁、別場會議時自動存
+/// 「紀錄」分頁和逐字稿頂部的「我的筆記」（同 Mac 的 NotesPage、ReviewBanner、UserNotesDisclosure，R44.1～R44.3）：
+/// 閱讀的欄位寬度上限約 680；可以切換成編輯模式（R6.6），按「完成」存成新的版本，切到別的分頁、別場會議時自動存
 /// </summary>
 public sealed class NotesTabs
 {
@@ -136,12 +136,21 @@ public sealed class NotesTabs
         return panel;
     }
 
-    FrameworkElement EditBar(MeetingDetail detail, bool topics)
+    /// <summary>右上角的「編輯」；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）</summary>
+    FrameworkElement EditBar(MeetingDetail detail)
     {
         var busy = window.State.DetailStatus?.IsActive == true;
-        var button = Ui.Button(L.T("編輯"), () =>
+        var row = Ui.Row(8);
+        row.HorizontalAlignment = HorizontalAlignment.Right;
+        if (detail.CanUndoNotes)
         {
-            editor = new NotesEditor(detail.Notes!, detail.Meeting.Id!.Value, topics, detail.Meeting.MeetingLanguage);
+            var undo = Ui.Button(L.T("復原上一版"), () => host.Controller.UndoNotes(detail.Meeting.Id!.Value), tooltip: L.T("換回上一版會議紀錄（再按一次換回更早的）"));
+            undo.IsEnabled = !busy;
+            row.Children.Add(undo);
+        }
+        var edit = Ui.Button(L.T("編輯"), () =>
+        {
+            editor = new NotesEditor(detail.Notes!, detail.Meeting.Id!.Value, detail.Meeting.MeetingLanguage);
             editor.Finished += save =>
             {
                 var e = editor;
@@ -151,22 +160,36 @@ public sealed class NotesTabs
             };
             window.Refresh();
         }, tooltip: busy ? L.T("正在處理這場會議，完成後才能編輯") : L.T("直接修改會議紀錄，存檔時會留一個版本"));
-        button.IsEnabled = !busy;
-        button.HorizontalAlignment = HorizontalAlignment.Right;
-        return button;
+        edit.IsEnabled = !busy;
+        row.Children.Add(edit);
+        return row;
     }
 
-    public FrameworkElement Summary(MeetingDetail detail)
+    /// <summary>紀錄（R44.1）：摘要、決議、待辦、未決問題、議題、自訂段落由上而下一頁；有待確認時頂部一條可以展開（R44.2）</summary>
+    public FrameworkElement Page(MeetingDetail detail, ReviewTab review)
     {
-        if (editor is { Topics: false } e && e.MeetingId == detail.Meeting.Id) return e.Root;
+        if (editor is { } e && e.MeetingId == detail.Meeting.Id) return e.Root;
         if (detail.Notes is not { IsEmpty: false } notes) return Placeholder(detail);
         var language = detail.Meeting.MeetingLanguage;
         var column = Column();
-        column.Children.Add(EditBar(detail, topics: false));
+        if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
+        column.Children.Add(EditBar(detail));
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
         if (notes.Decisions.Count > 0) column.Children.Add(Section(L.T("決議"), language, Items(notes.Decisions, language, detail, NoteItemRef.Decisions)));
         if (notes.ActionItems.Count > 0) column.Children.Add(Section(L.T("待辦"), language, ActionItems(notes.ActionItems, language, detail)));
         if (notes.OpenQuestions.Count > 0) column.Children.Add(Section(L.T("未決問題"), language, Items(notes.OpenQuestions, language, detail, NoteItemRef.OpenQuestions)));
+        if (notes.Topics.Count > 0)
+        {
+            var topics = new StackPanel { Spacing = 22 };
+            for (var t = 0; t < notes.Topics.Count; t++)
+            {
+                var topic = notes.Topics[t];
+                var index = t;
+                topics.Children.Add(Ui.Column(10, Ui.Bar(Ui.Time(topic.Start, SeekIfLoaded) as FrameworkElement, Ui.Heading(topic.Title, language, 16), null, 10),
+                    Items(topic.Points, language, detail, i => NoteItemRef.TopicPoint(index, i))));
+            }
+            column.Children.Add(Section(L.T("議題"), language, topics));
+        }
         for (var c = 0; c < notes.Custom.Count; c++)
         {
             var section = notes.Custom[c];
@@ -181,62 +204,72 @@ public sealed class NotesTabs
         return Reading(column);
     }
 
-    public FrameworkElement Topics(MeetingDetail detail)
+    /// <summary>紀錄頂部的「還有 N 題待確認」（R44.2，同 Mac 的 ReviewBanner）：點了在下面展開待確認的題目，再點收起；展開的狀態換會議就重設</summary>
+    FrameworkElement ReviewBanner(MeetingDetail detail, ReviewTab review)
     {
-        if (editor is { Topics: true } e && e.MeetingId == detail.Meeting.Id) return e.Root;
-        if (detail.Notes is not { IsEmpty: false } notes) return Placeholder(detail);
-        var language = detail.Meeting.MeetingLanguage;
-        var column = Column();
-        column.Children.Add(EditBar(detail, topics: true));
-        if (notes.Topics.Count == 0) column.Children.Add(Ui.Text(L.T("這場會議沒有分出議題（可能是範本沒有包含「議題詳細」）。"), color: Ui.Secondary));
-        for (var t = 0; t < notes.Topics.Count; t++)
+        var state = window.State;
+        var icon = new FontIcon { Glyph = "\uE9CE", FontSize = 14, Foreground = Ui.Signal, VerticalAlignment = VerticalAlignment.Center };
+        var header = Ui.Row(10, icon, Ui.Text(L.F("還有 %lld 題待確認", detail.ReviewCount), 14, bold: true, wrap: false));
+        var expander = new Expander
         {
-            var topic = notes.Topics[t];
-            var index = t;
-            column.Children.Add(Ui.Column(10, Ui.Bar(Ui.Time(topic.Start, SeekIfLoaded) as FrameworkElement, Ui.Heading(topic.Title, language), null, 10),
-                Items(topic.Points, language, detail, i => NoteItemRef.TopicPoint(index, i))));
-        }
-        return Reading(column);
+            Header = header, IsExpanded = state.ReviewExpanded,
+            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(expander, L.F("待確認 %lld 題", detail.ReviewCount));
+        if (state.ReviewExpanded) expander.Content = review.Embedded(detail);
+        // 展開時才建內容（題目可能很多）；只記狀態、不整頁重畫，題目裡的按鈕會自己重畫
+        expander.Expanding += (_, _) => { state.ReviewExpanded = true; expander.Content ??= review.Embedded(detail); };
+        expander.Collapsed += (_, _) => state.ReviewExpanded = false;
+        return expander;
     }
 
-    /// <summary>我的筆記（R2.4）：播放錄音時換行，會自動加上當下的播放時間</summary>
-    public FrameworkElement UserNotes(MeetingDetail detail)
+    /// <summary>逐字稿頂部的「我的筆記」（R44.3，同 Mac 的 UserNotesDisclosure）：收起時一行（幾行筆記、重點標記），展開是輸入框；
+    /// 播放錄音時換行，會自動加上當下的播放時間（R2.4）</summary>
+    public FrameworkElement UserNotesDisclosure(MeetingDetail detail)
     {
+        var state = window.State;
         notesBox.Load(detail.Meeting.Id!.Value, detail.Meeting.UserNotes);
         userNotes.Language = Ui.ContentLanguage(detail.Meeting.MeetingLanguage);
-        var title = Ui.Heading(L.T("我的筆記"), MeetingLanguage.Zh);
+        var lines = detail.Meeting.UserNotes.Split('\n').Count(l => l.Trim().Length > 0);
+        var icon = new FontIcon { Glyph = "\uE70B", FontSize = 14, Foreground = Ui.Secondary, VerticalAlignment = VerticalAlignment.Center };
+        var label = lines > 0 ? L.F("我的筆記（%lld 行）", lines) : L.T("寫筆記");
+        var expander = new Expander
+        {
+            Header = Ui.Row(8, icon, Ui.Text(label, 14, wrap: false)), IsExpanded = state.UserNotesExpanded,
+            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(expander, label);
+        FrameworkElement Body()
+        {
+            if (userNotes.Parent is Panel old) old.Children.Remove(userNotes);
+            userNotes.Height = 180;
+            return Ui.Column(8,
+                Ui.Caption(L.T("播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多 → 重新處理」選「重新整理會議紀錄」。")),
+                userNotes);
+        }
+        if (state.UserNotesExpanded) expander.Content = Body();
+        expander.Expanding += (_, _) => { state.UserNotesExpanded = true; expander.Content ??= Body(); };
+        expander.Collapsed += (_, _) => state.UserNotesExpanded = false;
         FrameworkElement? marks = null;
         if (detail.Bookmarks.Count > 0)
         {
             var menu = new MenuFlyout();
             foreach (var b in detail.Bookmarks) menu.Items.Add(Ui.Item($"{TimeFormat.String(b.Time)} {b.Label}", () => Seek(b.Time)));
-            marks = new DropDownButton { Content = L.F("重點標記 %lld", detail.Bookmarks.Count), Flyout = menu };
+            marks = new DropDownButton { Content = L.F("重點標記 %lld", detail.Bookmarks.Count), Flyout = menu, VerticalAlignment = VerticalAlignment.Top };
         }
-        var grid = new Grid { RowSpacing = 10, Padding = new Thickness(32, 20, 32, 20) };
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var head = Ui.Bar(title, null, marks);
-        grid.Children.Add(head);
-        var caption = Ui.Caption(L.T("播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多」選「重新整理會議紀錄」。"));
-        Grid.SetRow(caption, 1);
-        grid.Children.Add(caption);
-        if (userNotes.Parent is Panel old) old.Children.Remove(userNotes);
-        Grid.SetRow(userNotes, 2);
-        grid.Children.Add(userNotes);
-        return new ReadingColumn(grid, 760);
+        var bar = Ui.Bar(null, expander, marks, 8);
+        return new Border { Child = new ReadingColumn(bar, 760), Padding = new Thickness(20, 8, 20, 0) };
     }
 }
 
 /// <summary>
-/// 手動編輯會議紀錄（同 Mac 的 NotesEditor，R6.6）：每一條都是可以改的欄位，可以新增、刪除、上下移動；按「完成」才存成新版本
+/// 手動編輯會議紀錄（同 Mac 的 NotesEditor，R6.6）：每一條都是可以改的欄位，可以新增、刪除、上下移動；議題也在同一份（R44.1）；按「完成」才存成新版本
 /// </summary>
 public sealed class NotesEditor
 {
     public Grid Root { get; } = new();
     public MeetingNotes Base { get; }
     public long MeetingId { get; }
-    public bool Topics { get; }
     readonly MeetingLanguage language;
     readonly StackPanel body = new() { Spacing = 22 };
     MeetingNotes notes;
@@ -244,16 +277,15 @@ public sealed class NotesEditor
 
     public MeetingNotes Notes => notes;
 
-    public NotesEditor(MeetingNotes notes, long meetingId, bool topics, MeetingLanguage language)
+    public NotesEditor(MeetingNotes notes, long meetingId, MeetingLanguage language)
     {
         Base = notes;
         this.notes = Copy(notes);
         MeetingId = meetingId;
-        Topics = topics;
         this.language = language;
         Root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         Root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var bar = Ui.Bar(Ui.Text(topics ? L.T("編輯議題") : L.T("編輯會議紀錄"), 15, bold: true), null,
+        var bar = Ui.Bar(Ui.Text(L.T("編輯會議紀錄"), 15, bold: true), null,
             Ui.Row(8, Ui.Button(L.T("取消"), () => Finished?.Invoke(false)), Ui.Button(L.T("完成"), () => Finished?.Invoke(true), accent: true)));
         bar.Padding = new Thickness(32, 10, 32, 10);
         Root.Children.Add(bar);
@@ -273,22 +305,6 @@ public sealed class NotesEditor
     void Rebuild()
     {
         body.Children.Clear();
-        if (Topics)
-        {
-            for (var i = 0; i < notes.Topics.Count; i++)
-            {
-                var index = i;
-                var topic = notes.Topics[i];
-                var start = new TextBox { Text = topic.Start, Width = 70, PlaceholderText = L.T("時間") };
-                start.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Start = start.Text };
-                var title = new TextBox { Text = topic.Title, PlaceholderText = L.T("議題"), FontFamily = Ui.TitleFont(language) };
-                title.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Title = title.Text };
-                var delete = Ui.IconButton(Symbol.Delete, L.T("刪除這個議題"), () => { notes.Topics.RemoveAt(index); Rebuild(); });
-                body.Children.Add(Ui.Column(8, Ui.Bar(start, title, delete), ItemsEditor(notes.Topics[index].Points)));
-            }
-            body.Children.Add(Ui.Button(L.T("新增議題"), () => { notes.Topics.Add(new MeetingNotes.Topic("", "", [])); Rebuild(); }));
-            return;
-        }
         var titleBox = new TextBox { Text = notes.Title, PlaceholderText = L.T("標題"), FontFamily = Ui.TitleFont(language), FontSize = 18 };
         titleBox.TextChanged += (_, _) => notes = notes with { Title = titleBox.Text };
         body.Children.Add(titleBox);
@@ -296,6 +312,7 @@ public sealed class NotesEditor
         body.Children.Add(Section(L.T("決議"), ItemsEditor(notes.Decisions)));
         body.Children.Add(Section(L.T("待辦"), ActionsEditor(notes.ActionItems)));
         body.Children.Add(Section(L.T("未決問題"), ItemsEditor(notes.OpenQuestions)));
+        body.Children.Add(Section(L.T("議題"), TopicsEditor()));
         foreach (var section in notes.Custom) body.Children.Add(Section(section.Title, ItemsEditor(section.Items)));
         if (notes.ReviewItems.Count > 0)
         {
@@ -312,6 +329,25 @@ public sealed class NotesEditor
     }
 
     UIElement Section(string title, UIElement content) => Ui.Column(8, Ui.Heading(title, language, 16), content);
+
+    /// <summary>議題（原本自己一個「詳細」分頁，R44.1）：每個議題有時間、標題和幾條重點</summary>
+    UIElement TopicsEditor()
+    {
+        var panel = Ui.Column(14);
+        for (var i = 0; i < notes.Topics.Count; i++)
+        {
+            var index = i;
+            var topic = notes.Topics[i];
+            var start = new TextBox { Text = topic.Start, Width = 70, PlaceholderText = L.T("時間") };
+            start.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Start = start.Text };
+            var title = new TextBox { Text = topic.Title, PlaceholderText = L.T("議題"), FontFamily = Ui.TitleFont(language) };
+            title.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Title = title.Text };
+            var delete = Ui.IconButton(Symbol.Delete, L.T("刪除這個議題"), () => { notes.Topics.RemoveAt(index); Rebuild(); });
+            panel.Children.Add(Ui.Column(8, Ui.Bar(start, title, delete), ItemsEditor(notes.Topics[index].Points)));
+        }
+        panel.Children.Add(Ui.Link(L.T("新增議題"), () => { notes.Topics.Add(new MeetingNotes.Topic("", "", [])); Rebuild(); }));
+        return panel;
+    }
 
     UIElement ItemsEditor(List<MeetingNotes.Item> items)
     {

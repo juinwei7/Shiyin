@@ -259,7 +259,7 @@ public static class Dialogs
             if (r.SegmentsChanged == 0 && !r.NotesChanged) { result.Text = L.F("沒有找到「%@」。", find.Text); return; }
             var parts = new List<string>();
             if (r.SegmentsChanged > 0) parts.Add(L.F("逐字稿改了 %lld 段", r.SegmentsChanged));
-            if (r.NotesChanged) parts.Add(L.T("會議紀錄也一起改了（可以從「更多」復原上一版）"));
+            if (r.NotesChanged) parts.Add(L.T("會議紀錄也一起改了（按「編輯」旁的「復原上一版」可以還原）"));
             result.Text = string.Join(L.T("，"), parts) + L.T("。");
         };
         await Show(dialog);

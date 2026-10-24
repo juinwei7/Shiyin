@@ -45,6 +45,39 @@
         }
       }
     },
+    "Breeze ASR 25（建議）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breeze ASR 25 (recommended)"
+          }
+        }
+      }
+    },
+    "Claude Code（這台電腦已經裝了 claude CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code (the claude CLI is installed on this PC)"
+          }
+        }
+      }
+    },
+    "Codex（這台電腦已經裝了 codex CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex (the codex CLI is installed on this PC)"
+          }
+        }
+      }
+    },
     "NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡": {
       "extractionState": "manual",
       "localizations": {
@@ -320,6 +353,17 @@
         }
       }
     },
+    "切換紀錄、逐字稿、提問": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch between Notes, Transcript, and Ask"
+          }
+        }
+      }
+    },
     "到逐字稿改名": {
       "extractionState": "manual",
       "localizations": {
@@ -563,6 +607,17 @@
         }
       }
     },
+    "拾音會常駐在工作列右下角的系統匣，關掉視窗也會繼續錄音和整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin stays in the system tray at the bottom right of the taskbar; recording and processing continue after you close the window."
+          }
+        }
+      }
+    },
     "拾音會議封包": {
       "extractionState": "manual",
       "localizations": {
@@ -702,6 +757,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When you name a speaker, Shiyin saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it Auto; you can change it if it's wrong. Voice features stay in the database on this PC — never uploaded and never included in exported .shiyin packages."
+          }
+        }
+      }
+    },
+    "會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your glossary and handles mixed Chinese and English and proper nouns better; downloads a model of about 1.7 GB. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
           }
         }
       }
@@ -893,6 +959,17 @@
         }
       }
     },
+    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多 → 重新處理」選「重新辨識說話者…」，告訴拾音大約幾個人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If too few speakers were found (many people, noisy room, a phone on the table far from the speakers), choose More → Reprocess → Re-identify Speakers… and tell Shiyin roughly how many people there were."
+          }
+        }
+      }
+    },
     "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多」選「重新辨識說話者…」，告訴拾音大約幾個人。": {
       "extractionState": "manual",
       "localizations": {
@@ -992,6 +1069,17 @@
         }
       }
     },
+    "轉成逐字稿：在這台電腦上轉錄、分辨說話者，不會上傳。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe: transcription and speaker identification run on this PC; nothing is uploaded."
+          }
+        }
+      }
+    },
     "轉錄完成、會議紀錄整理好時通知你。已允許。": {
       "extractionState": "manual",
       "localizations": {
@@ -1032,6 +1120,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notes are written automatically after transcription. Summary has key points, decisions, action items and open questions; Details is split by topic; click the time after any item to play the recording from there. The template menu switches to formats like one-on-one, interview, lecture or brainstorm — then choose More → Regenerate meeting notes. To find something, ask in the Ask tab and the answer comes with timestamps; the Ask button at the top of the sidebar asks all meetings at once."
+          }
+        }
+      }
+    },
+    "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，回答會附上時間點；側欄上方的提問按鈕可以一次問所有會議。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes are generated automatically after transcription. The Notes tab shows, from top to bottom, the summary, decisions, action items, open questions, and the discussion by topic; click the timestamp after any item to play the recording from there. The template menu switches to formats such as one-on-one, interview, lecture, or brainstorming; afterwards choose More → Reprocess → Regenerate Notes. To find something, ask in the Ask tab and the answer comes with timestamps; the Ask button above the sidebar asks across all meetings."
+          }
+        }
+      }
+    },
+    "轉錄模型下載中 %lld%%，下載好之前先用快速辨識轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription model %lld%% downloaded; fast recognition is used until it finishes."
+          }
+        }
+      }
+    },
+    "轉錄模型還沒下載好，會先用快速辨識轉錄；可以到「設定 → 錄音與轉錄」下載，用模型轉錄比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transcription model is not downloaded yet, so fast recognition is used for now. You can download it in Settings → Recording & Transcription; the model is more accurate."
           }
         }
       }
@@ -1285,6 +1406,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "While recording, the live transcript is on the left and appears a few seconds after each sentence; each new line in My notes on the right gets the recording time. Click Mark highlight (Ctrl+B) for important moments, or press Ctrl+Alt+Shift+B in any app. Click Pause (Ctrl+Shift+P) to stop for a while; paused time isn't recorded."
+          }
+        }
+      }
+    },
+    "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間（錄完在逐字稿分頁頂部的「我的筆記」還能改）。重要的地方按「標記重點」（Ctrl+B），在其他 app 裡也可以按 Ctrl+Alt+Shift+B。需要中斷時按「暫停」（Ctrl+Shift+P），暫停的時間不會錄進去。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, the live transcript appears on the left within seconds of each sentence; My Notes on the right stamps the recording time whenever you start a new line (after recording you can still edit them under My Notes at the top of the Transcript tab). Press Bookmark (Ctrl+B) at important moments, or Ctrl+Alt+Shift+B from any other app. Press Pause (Ctrl+Shift+P) when you need a break; paused time is not recorded."
           }
         }
       }

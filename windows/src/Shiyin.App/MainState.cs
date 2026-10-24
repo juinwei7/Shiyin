@@ -23,6 +23,10 @@ public sealed class MainState
     public long? Selection { get; private set; }
     public MeetingDetail? Detail { get; private set; }
     public DetailTab Tab { get; private set; } = DetailTab.Summary;
+    /// <summary>紀錄頂部「還有 N 題待確認」有沒有展開（R44.2）；換會議就收起</summary>
+    public bool ReviewExpanded { get; set; }
+    /// <summary>逐字稿頂部「我的筆記」有沒有展開（R44.3）；換會議就收起</summary>
+    public bool UserNotesExpanded { get; set; }
     public bool ShowTrash { get; private set; }
     public string? FolderFilter { get; private set; }
     public string SearchQuery { get; private set; } = "";
@@ -132,6 +136,8 @@ public sealed class MainState
     {
         if (Selection == id) return;
         Selection = id;
+        ReviewExpanded = false;
+        UserNotesExpanded = false;
         ReloadDetail();
         Changed?.Invoke();
     }
@@ -148,6 +154,15 @@ public sealed class MainState
     {
         if (Tab == tab) return;
         Tab = tab;
+        Changed?.Invoke();
+    }
+
+    /// <summary>切到分頁並展開頂部的那一條（搜尋結果跳到筆記、控制通道的 tab review|notes）</summary>
+    public void OpenTab(DetailTab tab, bool expandReview = false, bool expandNotes = false)
+    {
+        Tab = tab;
+        if (expandReview) ReviewExpanded = true;
+        if (expandNotes) UserNotesExpanded = true;
         Changed?.Invoke();
     }
 

@@ -106,20 +106,13 @@ public sealed class DetailView
         tabs.Visibility = Visibility.Visible;
         switchingTabs = true;
         foreach (var item in tabs.Items)
-        {
-            var tab = (DetailTab)item.Tag;
-            var count = value.ReviewCount;   // 會議紀錄的待確認＋說話者的建議（R33.3）
-            item.Text = tab == DetailTab.Review && count > 0 ? $"{tab.Label()} {count}" : tab.Label();
-            if (tab == window.State.Tab) tabs.SelectedItem = item;
-        }
+            if ((DetailTab)item.Tag == window.State.Tab) tabs.SelectedItem = item;
         switchingTabs = false;
+        // 三個分頁（R44.1）：待確認的題數顯示在紀錄頂部的那一條，不放分頁名稱；我的筆記在逐字稿頂部
         content.Child = window.State.Tab switch
         {
-            DetailTab.Summary => notes.Summary(value),
-            DetailTab.Topics => notes.Topics(value),
-            DetailTab.Transcript => transcript.Show(value, changed),
-            DetailTab.Review => review.Show(value),
-            DetailTab.Notes => notes.UserNotes(value),
+            DetailTab.Summary => notes.Page(value, review),
+            DetailTab.Transcript => transcript.Show(value, changed, notes.UserNotesDisclosure(value)),
             _ => ask.Show(value, changed),
         };
         player.Child = host.Paths.HasAudio(value.Meeting) ? playerBar.Show(value) : null;
@@ -259,13 +252,13 @@ public sealed class DetailView
         var menus = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var templates = window.State.Templates;
         var template = new DropDownButton { Content = templates.FirstOrDefault(t => t.Id == meeting.TemplateId)?.DisplayName() ?? L.T("一般會議") };
-        ToolTipService.SetToolTip(template, L.T("會議紀錄的範本。換了範本之後，從「更多」選「重新整理會議紀錄」就會照新範本整理"));
+        ToolTipService.SetToolTip(template, L.T("會議紀錄的範本。換了範本之後，從「更多 → 重新處理」選「重新整理會議紀錄」就會照新範本整理"));
         var templateMenu = new MenuFlyout();
         foreach (var t in templates) templateMenu.Items.Add(Ui.Check(t.DisplayName(), t.Id == meeting.TemplateId, () => host.Controller.SetTemplate(meeting.Id!.Value, t.Id)));
         template.Flyout = templateMenu;
         menus.Children.Add(template);
         var language = new DropDownButton { Content = meeting.MeetingLanguage.Name() };
-        ToolTipService.SetToolTip(language, L.T("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多」重新轉錄或重新整理會議紀錄"));
+        ToolTipService.SetToolTip(language, L.T("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄"));
         var languageMenu = new MenuFlyout();
         foreach (var l in MeetingLanguages.All) languageMenu.Items.Add(Ui.Check(l.Name(), l == meeting.MeetingLanguage, () => host.Controller.SetMeetingLanguage(meeting.Id!.Value, l)));
         language.Flyout = languageMenu;
@@ -391,19 +384,20 @@ public sealed class DetailView
 
     void Seek(double seconds) => host.Player.Seek(seconds);
 
-    /// <summary>「更多」選單（同 Mac 的 MoreMenu）：按下時由 AppController 檢查目前的會議，不能做就說明原因</summary>
+    /// <summary>「更多」選單（同 Mac 的 MoreMenu）：按下時由 AppController 檢查目前的會議，不能做就說明原因。
+    /// 五項（R44.4，M§33.2）：重新處理的四個動作收成子選單；兩個「復原」回到紀錄的編輯列和說話者的改名處</summary>
     FrameworkElement MoreMenu()
     {
         var id = Detail.Meeting.Id!.Value;
         var c = host.Controller;
         var menu = new MenuFlyout();
-        menu.Items.Add(Ui.Item(L.T("重新整理會議紀錄"), () => c.Resummarize(id), icon: Symbol.Refresh));
-        menu.Items.Add(Ui.Item(L.T("檢查可能聽錯的字"), () => c.CheckTranscript(id), icon: Symbol.Find));
-        menu.Items.Add(Ui.Item(L.T("重新轉錄（含說話者辨識）"), () => c.Retranscribe(id), icon: Symbol.Microphone));
-        menu.Items.Add(Ui.Item(L.T("重新辨識說話者…"), () => { if (c.RequestRediarize(id)) _ = Dialogs.Rediarize(window, id); }, icon: Symbol.People));
-        menu.Items.Add(Ui.Item(L.T("復原說話者的調整"), () => c.UndoSpeakerEdit(id), icon: Symbol.Undo));
-        menu.Items.Add(Ui.Item(L.T("復原上一版會議紀錄"), () => c.UndoNotes(id), icon: Symbol.Undo));
-        menu.Items.Add(new MenuFlyoutSeparator());
+        var redo = Ui.Sub(L.T("重新處理"),
+            Ui.Item(L.T("重新整理會議紀錄"), () => c.Resummarize(id), icon: Symbol.Refresh),
+            Ui.Item(L.T("檢查可能聽錯的字"), () => c.CheckTranscript(id), icon: Symbol.Find),
+            Ui.Item(L.T("重新轉錄（含說話者辨識）"), () => c.Retranscribe(id), icon: Symbol.Microphone),
+            Ui.Item(L.T("重新辨識說話者…"), () => { if (c.RequestRediarize(id)) _ = Dialogs.Rediarize(window, id); }, icon: Symbol.People));
+        redo.Icon = new SymbolIcon(Symbol.Sync);
+        menu.Items.Add(redo);
         menu.Items.Add(Ui.Item(L.T("匯出…"), () => _ = Dialogs.Export(window, id), icon: Symbol.Share));
         menu.Items.Add(Ui.Sub(L.T("複製會議紀錄"),
             Ui.Item(L.T("保留格式（貼到 Word、Notion、郵件）"), () => CopyNotes(id, "rich")),

@@ -87,7 +87,7 @@ public sealed class AppController
             else if (error is not null and not OperationCanceledException) Error?.Invoke(L.F("重新辨識說話者失敗：%@", error.Message));
         };
         runner.EditedDraftReplaced += _ =>
-            Notice?.Invoke(L.T("正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，可以從「更多 → 復原上一版會議紀錄」找回"));
+            Notice?.Invoke(L.T("正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回"));
         runner.Changed += () => Changed?.Invoke(null);
     }
 
@@ -493,7 +493,7 @@ public sealed class AppController
             return;
         }
         Perform(id, () => Db.SetLanguage(id, language));
-        Notice?.Invoke(L.F("會議語言改成 %@，要重新轉錄或整理的話，從「更多」選", language.Name()));
+        Notice?.Invoke(L.F("會議語言改成 %@，要重新轉錄或整理的話，從「更多 → 重新處理」選", language.Name()));
     }
 
     /// <summary>錄音中選「大約幾個人」（M§26.2）：錄完轉錄時用</summary>
@@ -577,7 +577,7 @@ public sealed class AppController
         Runner.Wake();
     }
 
-    /// <summary>「更多 → 重新辨識說話者…」（M§23.4）：能做的話回傳 true，畫面打開選人數的視窗（R22.4）</summary>
+    /// <summary>「更多 → 重新處理 → 重新辨識說話者…」（M§23.4）：能做的話回傳 true，畫面打開選人數的視窗（R22.4）</summary>
     public bool RequestRediarize(long id)
     {
         if (!ReadyForAction(id)) return false;
@@ -638,7 +638,7 @@ public sealed class AppController
             if (Db.MergeSpeakers(id, from, into, L.F("把「%@」合併到「%@」", fromName, intoName)) is null) return;
             // 使用者取的名字：用合併後的聲紋重新學（自動帶入的名字不學，M§21.4）
             if (Settings.Voiceprints && source is "manual" or "suggestion") Db.LearnVoiceprint(id, into, intoName, source);
-            Notice?.Invoke(L.F("已把「%@」合併到「%@」。要復原的話，從「更多 → 復原說話者的調整」。", fromName, intoName));
+            Notice?.Invoke(L.F("已把「%@」合併到「%@」。要復原的話，點說話者的名字選「復原」。", fromName, intoName));
         });
     }
 
@@ -652,7 +652,7 @@ public sealed class AppController
         Perform(id, () => Db.ReassignSegments(id, ids, to, label));
     }
 
-    /// <summary>「更多 → 復原說話者的調整」：只復原最近一次合併或改句子</summary>
+    /// <summary>說話者改名視窗、右鍵選單的「復原：…」（R44.4）：只復原最近一次合併或改句子</summary>
     public void UndoSpeakerEdit(long id)
     {
         if (MeetingDetail.Load(Db, id) is not { } detail) return;
@@ -765,7 +765,7 @@ public sealed class AppController
     {
         if (MeetingNotes.Same(draft, baseline)) return;
         if (baseline is not null && Db.Meeting(meetingId)?.DecodedNotes is { } current && !MeetingNotes.Same(current, baseline))
-            Notice?.Invoke(L.T("編輯期間會議紀錄有更新，已用你改的版本存檔；從「更多 → 復原上一版會議紀錄」可以找回更新的內容"));
+            Notice?.Invoke(L.T("編輯期間會議紀錄有更新，已用你改的版本存檔；按「編輯」旁的「復原上一版」可以找回更新的內容"));
         else if (automatically)
             Notice?.Invoke(L.T("已儲存剛才編輯的會議紀錄"));
         SaveEditedNotes(draft, meetingId);
@@ -820,7 +820,7 @@ public sealed class AppController
 
     // MARK: 逐字稿校正（M§17.4）
 
-    /// <summary>手動檢查可能聽錯的字（「更多」選單）</summary>
+    /// <summary>手動檢查可能聽錯的字（「更多 → 重新處理」）</summary>
     public void CheckTranscript(long id)
     {
         if (!ReadyForAction(id)) return;

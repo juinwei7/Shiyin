@@ -248,16 +248,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 | Mac | Windows |
 |---|---|
 | 主視窗（NavigationSplitView：側欄、搜尋、會議內容） | 主視窗：左邊會議清單（含資料夾、搜尋框、垃圾桶、匯入），右邊會議內容 |
-| 會議頁的分頁（摘要、詳細、逐字稿、待確認、筆記、提問） | `SelectorBar`，Ctrl+1～6 |
+| 會議頁的分頁（紀錄、逐字稿、提問，R44.1） | `SelectorBar`，Ctrl+1～3；待確認是紀錄頂部的 `Expander`、我的筆記是逐字稿頂部的 `Expander`（§11.6） |
 | 錄音中的畫面、播放列、時間軸 | 同樣的排版；時間軸用 Canvas 放矩形、三角形、圓點 |
-| Settings（7 個分頁） | 獨立的設定視窗，上方 `SelectorBar` 7 頁；「進階」頁多一個介面語言（R26.4、D57） |
+| Settings（4 個分頁，R44.5） | 獨立的設定視窗，上方 `SelectorBar` 4 頁（整理工具、錄音與轉錄、說話者與詞彙、進階）；「進階」頁多一個介面語言（R26.4、D57） |
 | 引導、使用說明、回報問題、問所有會議 | 各自的視窗 |
 | MenuBarExtra | 系統匣圖示（WinUIEx 的 TrayIcon）：左鍵打開主視窗，右鍵選單有錄音狀態、暫停、停止、進行中的工作、打開、說明、設定、結束。Windows 11 預設把新圖示收進「^」，引導的最後一步說明 |
 | 偵測會議的浮動視窗（NSPanel） | 右下角、最上層、不搶焦點的小視窗（`WS_EX_NOACTIVATE`），30 秒收起 |
 | sheet、alert、popover | `ContentDialog`、`Flyout` |
 | 關掉主視窗 | 隱藏到系統匣，錄音和工作繼續（R1.7）；從系統匣或選單「結束」時，有工作在跑要確認（同 Mac） |
 
-快捷鍵：Mac 的 ⌘ 換成 Ctrl（Ctrl+O 匯入、Ctrl+R 錄音、Ctrl+Shift+P 暫停、Ctrl+B 標記重點、Ctrl+E 匯出、Ctrl+F 搜尋逐字稿、Ctrl+1～6 分頁、空白鍵播放、Ctrl+Delete 丟到垃圾桶）。
+快捷鍵：Mac 的 ⌘ 換成 Ctrl（Ctrl+O 匯入、Ctrl+R 錄音、Ctrl+Shift+P 暫停、Ctrl+B 標記重點、Ctrl+E 匯出、Ctrl+F 搜尋逐字稿、Ctrl+1～3 分頁、空白鍵播放、Ctrl+Delete 丟到垃圾桶）。
 
 **畫面全部用 C# 建，不用 XAML 檔**（D59）：`Shiyin.App/Ui/Ui.cs` 集中顏色、字型和常用元件的寫法；資源只加 `XamlControlsResources`，主題色設成青瓷綠。這樣 Mac 上也能編譯檢查（XAML 編譯器是 Windows 的程式）。
 
@@ -273,7 +273,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - 同一個元件不能放進第二個父元件（0x800F1000，UI 執行緒的例外會讓程式結束）：一直留著的元件（輸入框、音量條）重畫時先從舊的父元件拿下來，或一開始建好只切換顯示。
 - `TextBox` 要多行時，`AcceptsReturn` 一定要在 `Text` 之前設：單行的 TextBox 設 Text 時只留第一行（範本的說明、回報問題的內容曾經被截掉）。TextBox 把換行存成 `\r`，存進資料庫或提示詞前換成 `\n`。
-- 閱讀的欄位（摘要、詳細、待確認、提問、筆記、編輯會議紀錄、使用說明）用 `ReadingColumn`（同 Mac：填滿可用的寬度、最寬 680 或 760、靠左）。不能用 StackPanel 設 `MaxWidth` 加靠左：靠左時寬度是內容要的寬度，會換行的文字算出來很窄，整欄擠成一半。文字後面接時間點用 `Ui.Inline`（文字一欄、時間照內容寬），不能兩欄都給比例寬度（會各分一半）；放在橫的 StackPanel 裡的文字不會換行，長的會被切掉。
+- 閱讀的欄位（紀錄、提問、編輯會議紀錄、使用說明）用 `ReadingColumn`（同 Mac：填滿可用的寬度、最寬 680 或 760、靠左）。不能用 StackPanel 設 `MaxWidth` 加靠左：靠左時寬度是內容要的寬度，會換行的文字算出來很窄，整欄擠成一半。文字後面接時間點用 `Ui.Inline`（文字一欄、時間照內容寬），不能兩欄都給比例寬度（會各分一半）；放在橫的 StackPanel 裡的文字不會換行，長的會被切掉。
 - **要宣告支援高 DPI**（`src/Shiyin.App/app.manifest` 的 PerMonitorV2，csproj 的 `ApplicationManifest`）：WinUI 的專案範本會帶這個檔案，純 C# 建的專案沒有，app 會是 DPI unaware，縮放不是 100% 時 Windows 把整個視窗的點陣圖拉大、字會糊（大部分筆電預設 125%～150%）。Windows App SDK 建置時會把元件註冊合併進這個 manifest。視窗大小的程式本來就是照 `GetDpiForWindow` 換算的邏輯像素。
 - 逐字稿每一段的時間點跳到段落真正的開始（`Ui.Time` 的 `at`）：顯示的時間去掉了小數，24.4 秒的段落顯示 00:24，照顯示的時間跳到 24.0 秒，播放位置的高亮會落在上一段。會議紀錄裡的時間點（整理工具寫的字串）照舊。Mac 也是照顯示的時間跳（tasks 的「Mac 的小問題」）。
 - 粗體用 `FontWeights.Bold`（`Ui.Text(bold: true)`），不要用 SemiBold：中文、日文沒有 SemiBold 的字重，Windows 會換成明體的假粗體，跟其他文字不一樣。ContentDialog 內建的標題也是 SemiBold，標題要用 `Ui.DialogTitle`。

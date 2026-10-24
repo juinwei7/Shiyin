@@ -29,16 +29,13 @@ public sealed class ReviewTab
     List<SpeakerNaming.Suggestion> SpeakerItems => detail?.SpeakerSuggestions.OrderBy(p => p.Key).Select(p => p.Value).ToList() ?? [];
     MeetingLanguage Language => detail?.Meeting.MeetingLanguage ?? MeetingLanguage.Zh;
 
-    public FrameworkElement Show(MeetingDetail value)
+    /// <summary>待確認的題目（R41.5、R44.2）：放在紀錄頂部「還有 N 題待確認」展開的地方（沒有待確認時那一條不會出現），
+    /// 說明和「全部略過」在上面、題目在中間、註腳和「送出」在下面；沒有自己的捲動，跟著紀錄捲</summary>
+    public FrameworkElement Embedded(MeetingDetail value)
     {
         detail = value;
         var speakerItems = SpeakerItems;
-        if (value.Notes is null && speakerItems.Count == 0)
-            return new Border { Padding = new Thickness(32), Child = Ui.Text(L.T("轉錄和整理完成後，會議紀錄會出現在這裡。"), color: Ui.Secondary) };
-        if (Items.Count == 0 && speakerItems.Count == 0)
-            return Ui.Scroll(Ui.Column(8, Ui.Text(L.T("沒有待確認的項目"), 15, color: Ui.Celadon),
-                Ui.Text(L.T("會議紀錄裡推測出來的人名、專有名詞、負責人和期限，都已經確認過了。"), color: Ui.Secondary)), 32);
-        var column = new StackPanel { Spacing = 22 };
+        var column = new StackPanel { Spacing = 22, Margin = new Thickness(0, 6, 0, 6) };
         var submit = Ui.Button("", () => { draft.Submit(); window.Refresh(); }, accent: true);
         void UpdateSubmit()
         {
@@ -58,15 +55,8 @@ public sealed class ReviewTab
         for (var i = 0; i < Items.Count; i++)
             column.Children.Add(ReviewRows.Question(i, Items[i], Language, draft, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, window.Refresh, UpdateSubmit));
         UpdateSubmit();
-        var footer = Ui.Bar(null, Ui.Text(Footnote(speakerItems.Count > 0), 13, color: Ui.Secondary), submit, 12);
-        footer.Padding = new Thickness(32, 12, 32, 12);
-        var grid = new Grid();
-        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.Children.Add(Ui.Scroll(new ReadingColumn(column, 680), 32));
-        Grid.SetRow(footer, 1);
-        grid.Children.Add(footer);
-        return grid;
+        column.Children.Add(Ui.Bar(null, Ui.Text(Footnote(speakerItems.Count > 0), 13, color: Ui.Secondary), submit, 12));
+        return column;
     }
 
     /// <summary>說話者的題目（R33.2）：「『說話者 3』是 weiwei 嗎？」，下面是原因；選「不是」可以挑最像的人或打名字，也可以不填。
@@ -121,12 +111,12 @@ public sealed class ReviewTab
         var speakers = L.T("說話者的題目不會送給整理工具，送出後直接換名字。");
         if (Items.Count == 0) return speakers;
         var provider = host.Settings.Provider == LLMProvider.None ? "LLM" : host.Settings.Provider.Label();
-        var notes = L.F("有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以從「更多」復原上一版。", provider);
+        var notes = L.F("有回答的題目會交給 %@ 依答案修正會議紀錄；略過的題目直接移除。改錯了可以按「編輯」旁的「復原上一版」。", provider);
         return hasSpeakers ? notes + " " + speakers : notes;
     }
 }
 
-/// <summary>一題待確認和就地回答的卡片（M§31.2）：待確認分頁和紀錄旁共用（同 Mac 的 ReviewQuestionRow、InlineReviewCard）</summary>
+/// <summary>一題待確認和就地回答的卡片（M§31.2）：紀錄頂部展開的待確認和紀錄旁共用（同 Mac 的 ReviewQuestionRow、InlineReviewCard）</summary>
 public static class ReviewRows
 {
     /// <summary>一題：題號、時間點、題目；是非題（R32）給「是」「不是」，選了「不是」才要填正確的答案；舊的草稿認不出來時照舊用輸入框。

@@ -36,18 +36,29 @@ public abstract record MeetingStatus
     public bool IsActive => this is Queued or Transcribing or Summarizing or Recording;
 }
 
-public enum DetailTab { Summary, Topics, Transcript, Review, Notes, Ask }
+/// <summary>會議頁的三個分頁（R44.1、M§33.1）：紀錄（摘要＋議題，待確認在頂部展開）、逐字稿（我的筆記在頂部展開）、提問</summary>
+public enum DetailTab { Summary, Transcript, Ask }
 
 public static class DetailTabs
 {
     public static string Label(this DetailTab tab) => tab switch
     {
-        DetailTab.Summary => L.T("摘要"),
-        DetailTab.Topics => L.T("詳細"),
+        DetailTab.Summary => L.T("紀錄"),
         DetailTab.Transcript => L.T("逐字稿"),
-        DetailTab.Review => L.T("待確認"),
-        DetailTab.Notes => L.T("筆記"),
         _ => L.T("提問"),
+    };
+
+    /// <summary>控制通道、搜尋結果用的名稱（同 Mac 的 DetailTab.resolve）：舊的分頁名稱當別名，
+    /// topics → 紀錄，review → 紀錄並展開待確認，notes → 逐字稿並展開我的筆記</summary>
+    public static (DetailTab Tab, bool ExpandReview, bool ExpandNotes)? Resolve(string name) => name.ToLowerInvariant() switch
+    {
+        "summary" => (DetailTab.Summary, false, false),
+        "topics" => (DetailTab.Summary, false, false),
+        "review" => (DetailTab.Summary, true, false),
+        "transcript" => (DetailTab.Transcript, false, false),
+        "notes" => (DetailTab.Transcript, false, true),
+        "ask" => (DetailTab.Ask, false, false),
+        _ => null,
     };
 }
 
@@ -58,6 +69,10 @@ public sealed class MeetingDetail
     public required List<Segment> Segments { get; set; }
     public MeetingNotes? Notes { get; set; }
     public int VersionCount { get; set; }
+    /// <summary>有上一版會議紀錄可以復原（R44.4）：紀錄的「編輯」旁顯示「復原上一版」</summary>
+    public bool CanUndoNotes => VersionCount > 0;
+    /// <summary>最近一次可以復原的說話者調整（合併、改句子）的說明（R44.4）；null 表示沒有，改名視窗和右鍵選單不顯示「復原」</summary>
+    public string? SpeakerUndoLabel { get; set; }
     public Job? LatestJob { get; set; }
     public Dictionary<int, string> Speakers { get; set; } = [];
     public List<Bookmark> Bookmarks { get; set; } = [];
@@ -92,6 +107,7 @@ public sealed class MeetingDetail
         {
             Meeting = meeting, Segments = db.Segments(id), Notes = meeting.DecodedNotes, VersionCount = db.VersionCount(id),
             LatestJob = db.LatestJob(id), Bookmarks = db.Bookmarks(id), Corrections = db.Corrections(id),
+            SpeakerUndoLabel = db.SpeakerUndoLabel(id),
         };
         detail.LoadSpeakers(db.Speakers(id));
         detail.SpeakerCandidates = db.VoiceprintCandidates(id);

@@ -9,10 +9,10 @@
 
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
-M1～M5 已完成（2026-10-24）。剩 M6（Windows）；M7 iPhone 之後。驗證用示範資料（`~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`），DEBUG 版加 `-ApplePersistenceIgnoreState YES -llmProvider none -autoSummarize NO -correctTranscript NO`。畫面要用 `screencapture -l` 截真的視窗（§33 全是排版），按鈕要用 `scripts/dev/axpress.swift` 真的按過。
+M1～M6 已完成（2026-10-24，Mac 和 Windows）。剩 M8 截圖、M7 iPhone 之後。
 
-- [ ] **M6 Windows 跟上**（R44.7、design-windows §11.6）：DetailView 三分頁、ReviewBanner、筆記 Expander、MoreMenu、設定四頁、引導三步；`windows-check`
-  - 驗證：虛擬機 `uia.sh` 截三個分頁、設定四頁、引導三步；`dotnet test` 通過
+- [ ] **M8 官網截圖重拍**（R44.8、website.md §16）：`docs/images/` 的 summary、transcript（Mac、Windows、英文；錄音中的不用）還是六個分頁的畫面，照 §16.4 用同一份示範資料重拍，再跑 `site/make-images.sh`
+  - 驗證：`node site/build.mjs` 成功；三種語言的首頁和 Windows 頁的截圖看得到「紀錄／逐字稿／提問」三個分頁
 - [ ] **M7 iPhone 接 R44**（`ios` 分支，之後）：待確認的條、設定分組
 
 ## Qwen3-ASR 轉錄引擎（R43，design §32；2026-10-24 使用者要求打磨辨識準確度）

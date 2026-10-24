@@ -25,6 +25,8 @@ public sealed class TranscriptTab
     readonly ListView list = new() { SelectionMode = ListViewSelectionMode.None, IsItemClickEnabled = false };
     // 搜尋框最寬 300、視窗窄時跟著縮，後面的篩選和「用詞修正…」照內容寬，不會被擠出畫面（2026-10-22 介面巡檢，760 寬的視窗）
     readonly Grid searchRow = new() { ColumnSpacing = 10 };
+    /// <summary>頂部的「我的筆記」（R44.3）：DetailView 每次 Show 給一份新的</summary>
+    readonly Border top = new();
     readonly DispatcherTimer draftTimer = new() { Interval = TimeSpan.FromMilliseconds(800) };
     MeetingDetail? detail;
     List<Segment> visible = [];
@@ -45,16 +47,17 @@ public sealed class TranscriptTab
     {
         this.host = host;
         this.window = window;
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star) })
+            root.RowDefinitions.Add(new RowDefinition { Height = h });
         searchRow.Padding = new Thickness(20, 10, 20, 10);
         // 篩選說話者的下拉選單沒有標題，螢幕閱讀器只會讀「下拉式方塊」
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(speakerFilter, L.T("說話者"));
+        root.Children.Add(top);
+        Grid.SetRow(searchRow, 1);
         root.Children.Add(searchRow);
-        Grid.SetRow(bars, 1);
+        Grid.SetRow(bars, 2);
         root.Children.Add(bars);
-        Grid.SetRow(list, 2);
+        Grid.SetRow(list, 3);
         root.Children.Add(list);
         list.Padding = new Thickness(10, 4, 10, 14);
         // 每一列放在範本根元素（ContentControl）裡：直接換掉 ListViewItem 的 Content 會被 WinUI 用預設的樣子蓋掉
@@ -89,7 +92,7 @@ public sealed class TranscriptTab
 
     public void FocusSearch() => search.Focus(FocusState.Programmatic);
 
-    public FrameworkElement Show(MeetingDetail value, bool changed)
+    public FrameworkElement Show(MeetingDetail value, bool changed, FrameworkElement? notes = null)
     {
         if (changed)
         {
@@ -100,6 +103,7 @@ public sealed class TranscriptTab
             currentId = null;
         }
         detail = value;
+        top.Child = notes;
         BuildSearchRow();
         BuildBars();
         Rebind();
@@ -381,6 +385,9 @@ public sealed class TranscriptTab
             menu.Items.Add(SpeakerChoices(L.T("這句是誰說的"), [id], segment.Speaker));
             var run = detail.SpeakerRun(id);
             if (run.Count > 1) menu.Items.Add(SpeakerChoices(L.F("這段連續的話是誰說的（%lld 句）", run.Count), run, segment.Speaker));
+            // 復原最近一次說話者的調整（R44.4，原本在「更多」）：有東西可復原才出現
+            if (detail.SpeakerUndoLabel is { } label)
+                menu.Items.Add(Ui.Item(L.F("復原：%@", label), () => host.Controller.UndoSpeakerEdit(detail.Meeting.Id!.Value), icon: Symbol.Undo));
         }
         return menu;
     }
@@ -396,7 +403,8 @@ public sealed class TranscriptTab
         return sub;
     }
 
-    /// <summary>改名（同 Mac 的 RenameSpeakerForm）：聲紋自動帶入的多一個「不是他」；「合併到…」把這位說的話全部算到另一位</summary>
+    /// <summary>改名（同 Mac 的 RenameSpeakerForm）：聲紋自動帶入的多一個「不是他」；「合併到…」把這位說的話全部算到另一位；
+    /// 有可以復原的調整時多一個「復原：…」（R44.4，原本在「更多」）</summary>
     Flyout RenameFlyout(FrameworkElement anchor, int idx)
     {
         var d = detail!;
@@ -425,6 +433,9 @@ public sealed class TranscriptTab
             ToolTipService.SetToolTip(merge, L.T("同一個人被分成兩位時，把這位說的話全部算到另一位"));
             buttons.Children.Add(merge);
         }
+        if (d.SpeakerUndoLabel is { } undo)
+            buttons.Children.Add(Ui.Button(L.F("復原：%@", undo), () => { flyout.Hide(); host.Controller.UndoSpeakerEdit(meeting); },
+                tooltip: L.T("復原最近一次合併或改句子的說話者")));
         panel.Children.Add(Ui.Bar(buttons, null, Ui.Button(L.T("儲存"), Save, accent: true)));
         panel.Width = 300;
         flyout.Content = panel;

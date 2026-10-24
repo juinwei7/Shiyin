@@ -26,7 +26,7 @@ public static class ChineseScript
         foreach (var (name, target) in new[] { ("STPhrases.tsv", tables.Phrases), ("STCharacters.tsv", tables.Characters), ("TWVariants.tsv", tables.Variants) })
         {
             using var stream = typeof(ChineseScript).Assembly.GetManifestResourceStream("opencc/" + name)
-                ?? throw new InvalidOperationException($"找不到內嵌的字表 {name}");
+                ?? throw new InvalidOperationException($"找不到內嵌的字表 {name}");   // l10n-skip
             using var reader = new StreamReader(stream, Encoding.UTF8);
             while (reader.ReadLine() is { } line)
             {
@@ -80,7 +80,7 @@ public static class ChineseScript
         foreach (var g in SwiftText.Characters(converted.ToString()))
         {
             var v = tables.Variants.TryGetValue(g, out var variant) ? variant : g;
-            result.Append(v == "臺" ? "台" : v);
+            result.Append(v == "臺" ? "台" : v);   // l10n-skip
         }
         return result.ToString();
     }

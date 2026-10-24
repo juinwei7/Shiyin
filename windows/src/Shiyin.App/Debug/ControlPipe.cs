@@ -59,7 +59,10 @@ public static class ControlPipe
         {
             case "state": return State(host, main);
             case "select" when args.Length > 1 && long.TryParse(args[1], out var id): main?.Reveal(id); return Ok;
-            case "tab" when args.Length > 1 && Enum.TryParse<DetailTab>(args[1], true, out var tab): main?.State.SetTab(tab); return Ok;
+            // tab <summary|transcript|ask>；舊名稱當別名：topics → 紀錄、review → 紀錄並展開待確認、notes → 逐字稿並展開我的筆記（R44.1）
+            case "tab" when args.Length > 1 && DetailTabs.Resolve(args[1]) is { } resolved:
+                main?.State.OpenTab(resolved.Tab, resolved.ExpandReview, resolved.ExpandNotes);
+                return Ok;
             case "closewindow" when args.Length > 1:
                 if (args[1] == "main") main?.AppWindow.Hide();
                 return Ok;
@@ -222,8 +225,10 @@ public static class ControlPipe
             ["version"] = host.Version,
             ["home"] = host.Paths.Home,
             ["selection"] = main?.State.Selection,
-            ["tab"] = main?.State.Tab.ToString(),
-            ["reviewExpanded"] = main?.ReviewDraft.Expanded?.ToString(),
+            ["tab"] = main?.State.Tab.ToString().ToLowerInvariant(),
+            ["reviewExpanded"] = main?.State.ReviewExpanded,
+            ["userNotesExpanded"] = main?.State.UserNotesExpanded,
+            ["reviewInline"] = main?.ReviewDraft.Expanded?.ToString(),
             ["meetings"] = main?.State.Meetings.Count,
             ["running"] = running,
             ["models"] = models,
