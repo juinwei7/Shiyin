@@ -339,7 +339,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   - 更新資訊是一個 JSON 檔（`shiyin-update.json`）：`{"version": "3.0.1", "url": "Shiyin-3.0.1.dmg", "sha256": "…", "notes": "…"}`，`url` 可以是相對於這個 JSON 的路徑。`make-dmg.sh` 會跟 DMG 一起產生，發布時兩個檔案放在同一個位置
   - 更新網址：建置時用環境變數 `SHIYIN_UPDATE_URL` 寫進 Info.plist 的 `ShiyinUpdateURL`；設定 →「進階」可以改。只接受 https（`localhost`、`127.0.0.1` 例外，給測試用）
   - 檢查：有設定網址時，啟動 30 秒後檢查一次，之後每 24 小時一次；設定裡和「拾音」選單的「檢查更新…」可以手動檢查。版本號依數字逐段比較
-  - 有新版時跳出對話框（版本、更新內容），使用者按「下載並更新」才開始
+  - 有新版時跳出對話框（版本、更新內容），使用者按「下載並更新」才開始。更新內容只列前幾項（`ReleaseNotes.brief`，4.1 起）：tag 的說明是「中文一段、空一行、英文一段」，取介面語言那一段（英文找「Shiyin」開頭的段，中文找「拾音」開頭的）裡「- 」開頭的條目，最多 4 項，其餘寫「……還有 N 項，完整說明在官網。」；沒有條目的說明就列標題以外的行。Windows 同一套（標準答案 `util/release-notes.json`）
   - 安裝流程：錄音中或有工作在跑時拒絕 → 下載 DMG 到 `tmp/` → 驗證 SHA-256 → `hdiutil attach` 唯讀掛載 → 把 Shiyin.app 複製出來 → 卸載 → 用 Security framework 檢查新 app 的簽章有效，而且符合目前這個 app 的 designated requirement（自簽憑證時等於鎖定同一張憑證）→ 寫一個固定內容的小腳本，用參數傳入 PID 和路徑：等 app 結束後把舊 app 改名備份、放進新 app、成功就刪掉備份、失敗就還原，最後重新開啟 → app 結束
   - app 所在的資料夾不能寫入時（一般使用者帳號裝在 /Applications），改成打開下載好的 DMG，請使用者手動拖進去
   - 從網路下載的檔案不會被加上 quarantine（app 沒有開 `LSFileQuarantineEnabled`），所以替換後打開不會再被 Gatekeeper 擋

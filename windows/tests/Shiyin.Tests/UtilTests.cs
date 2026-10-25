@@ -21,6 +21,18 @@ public class UtilTests
     }
 
     [Fact]
+    public void ReleaseNotesBrief()
+    {
+        // 更新說明只列前幾項（R10.6）：取段落、取條目跟 Mac 的 ReleaseNotes.brief 相同
+        foreach (var item in Items("util/release-notes.json"))
+        {
+            var (items, more) = ReleaseNotes.Brief(item.Str("notes")!, item.GetProperty("english").GetBoolean());
+            Assert.Equal(item.GetProperty("items").EnumerateArray().Select(x => x.GetString()), items);
+            Assert.Equal(item.GetProperty("more").GetInt32(), more);
+        }
+    }
+
+    [Fact]
     public void NotesDecode()
     {
         foreach (var item in Items("util/notes-decode.json"))

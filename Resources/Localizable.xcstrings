@@ -821,6 +821,17 @@
     "…": {
       "extractionState": "manual"
     },
+    "……還有 %lld 項，完整說明在官網。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…and %lld more. The full notes are on the website."
+          }
+        }
+      }
+    },
     "⌘1～⌘6": {
       "extractionState": "manual",
       "localizations": {

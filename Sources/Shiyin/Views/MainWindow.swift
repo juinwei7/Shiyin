@@ -122,7 +122,9 @@ struct MainView: View {
                 }
             }
         } message: {
-            Text([model.updater.prompt?.notes ?? "", String(localized: "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。")]
+            // 更新內容只列前幾項（R10.6、design §12）：tag 的說明中英各一段、每段好幾條，整段放進對話框太長
+            Text([ReleaseNotes.text(model.updater.prompt?.notes, english: MeetingLanguage.interface == .en),
+                  String(localized: "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。")]
                 .filter { !$0.isEmpty }.joined(separator: "\n\n"))
         }
         .confirmationDialog("永久刪除這場會議？", isPresented: Binding(get: { model.confirmPurge != nil }, set: { if !$0 { model.confirmPurge = nil } })) {

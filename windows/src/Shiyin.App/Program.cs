@@ -6,6 +6,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Platform;
 using Shiyin.Services;
+using Shiyin.Text;
 using Shiyin.Services.Capture;
 
 namespace Shiyin.App;
@@ -257,7 +258,10 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     async Task AskToUpdate(string version, string? notes)
     {
         if (main?.XamlRoot is null || host?.Updater is not { } updater) return;
-        var text = string.Join("\n\n", new[] { notes ?? "", L.F("目前是 %@。更新時拾音會結束並重新打開，會議資料都會保留。", host.Version) }.Where(t => t.Length > 0));
+        // 更新內容只列前幾項（R10.6、M§12）：tag 的說明中英各一段、每段好幾條，整段放進對話框太長
+        var (items, more) = ReleaseNotes.Brief(notes ?? "", L.English);
+        var brief = string.Join("\n", items.Select(i => "• " + i).Concat(more > 0 ? [L.F("……還有 %lld 項，完整說明在官網。", more)] : []));
+        var text = string.Join("\n\n", new[] { brief, L.F("目前是 %@。更新時拾音會結束並重新打開，會議資料都會保留。", host.Version) }.Where(t => t.Length > 0));
         var dialog = new ContentDialog
         {
             XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(L.F("拾音 %@ 可以更新了", version)), Content = Ui.Text(text), PrimaryButtonText = L.T("下載並更新"), CloseButtonText = L.T("稍後"),

@@ -535,6 +535,12 @@ enum GoldenDump {
         // 簡體轉台灣繁體（design §32.5）：Windows 讀同一份字表、同一套最長匹配，要逐字相同
         w.json("util/s2tw.json", (f["s2twCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toTaiwan($0)] as Object })
 
+        // 更新說明的摘要（R10.6、design §12）：詢問更新的視窗只列前幾項，取段落、取條目的規則兩邊相同
+        w.json("util/release-notes.json", (f["releaseNotesCases"] as? [Object] ?? []).map { c -> Object in
+            let r = ReleaseNotes.brief(c["notes"] as? String ?? "", english: c["english"] as? Bool ?? false)
+            return ["notes": c["notes"] as? String ?? "", "english": c["english"] as? Bool ?? false, "items": r.items, "more": r.more] as Object
+        })
+
         w.json("pipeline/similar.json", (f["similarPairs"] as? [[String]] ?? []).map {
             ["a": $0[0], "b": $0[1], "similar": TranscriptionPipeline.similar($0[0], $0[1])] as Object
         })

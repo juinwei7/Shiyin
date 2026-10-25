@@ -1685,6 +1685,32 @@
    ]
   }
  ],
+ "releaseNotesCases": [
+  {
+   "notes": "拾音 4.1.0：介面更簡單、待確認更好答、可選的 Qwen3-ASR 引擎\n- 會議頁只剩三個分頁：紀錄、逐字稿、提問。摘要和議題合在「紀錄」一頁，待確認變成頂部一條「還有 N 題待確認」，我的筆記收進逐字稿頂部\n- 紀錄裡有疑問的那一條旁邊直接標「？」，點了當場回答；是非題直接按「是」「不是」，「全部略過」一鍵清掉不重要的題目\n- 收音提醒會送通知：麥克風沒聲音、太小聲、太吵時，拾音不在前面也會提醒你\n- 正式轉錄多一個選項 Qwen3-ASR 1.7B（阿里巴巴開源，全程在本機跑）：多人會議的漏字和同音字比 Breeze 少，輸出轉成台灣繁體；預設維持 Breeze\n- 「更多」只剩五項：重新處理、匯出、複製會議紀錄、移到資料夾、移到垃圾桶。「復原上一版」在「編輯」旁邊，「復原」說話者的調整在說話者名字旁邊\n- 設定從七頁減成四頁：整理工具、錄音與轉錄、說話者與詞彙、進階\n- 首次引導從五步減成三步，先問你平常用哪個 AI，再列對應的選項和費用；模型在背景下載，不佔一步\n- 逐字稿的時間點改跳到段落真正的開始\n- Windows 版同步以上全部，含 Qwen3-ASR（有 NVIDIA 顯示卡會自動用 CUDA 加速）\n\nShiyin 4.1.0: a simpler interface, easier confirmations, and an optional Qwen3-ASR engine\n- The meeting page has three tabs: Notes, Transcript, and Ask. Summary and topics share the Notes tab, items to confirm sit in a bar at the top, and My Notes lives at the top of the Transcript tab\n- Items the summarizer was unsure about are marked with \"?\" right in the notes; answer them in place, tap Yes or No for yes/no questions, or skip all unimportant ones at once\n- Audio warnings now arrive as notifications when the microphone picks up nothing, too little, or too much noise while Shiyin is in the background\n- New optional transcription engine, Qwen3-ASR 1.7B (open-sourced by Alibaba, runs entirely on your computer): fewer dropped words and homophone errors in multi-speaker meetings, with output converted to Taiwanese Traditional Chinese; Breeze stays the default\n- The More menu is down to five actions: Reprocess, Export, Copy Notes, Move to Folder, and Move to Trash. Undo for notes sits next to Edit; undo for speaker changes sits next to the speaker's name\n- Settings went from seven pages to four: Summarizer, Recording & Transcription, Speakers & Glossary, and Advanced\n- Onboarding went from five steps to three: it asks which AI you usually use, then lists the matching options and what they cost; models download in the background\n- Transcript timestamps now jump to the true start of each segment\n- Windows gets all of the above, including Qwen3-ASR (with CUDA acceleration on NVIDIA GPUs)",
+   "english": false
+  },
+  {
+   "notes": "拾音 4.1.0：介面更簡單、待確認更好答、可選的 Qwen3-ASR 引擎\n- 會議頁只剩三個分頁：紀錄、逐字稿、提問。摘要和議題合在「紀錄」一頁，待確認變成頂部一條「還有 N 題待確認」，我的筆記收進逐字稿頂部\n- 紀錄裡有疑問的那一條旁邊直接標「？」，點了當場回答；是非題直接按「是」「不是」，「全部略過」一鍵清掉不重要的題目\n- 收音提醒會送通知：麥克風沒聲音、太小聲、太吵時，拾音不在前面也會提醒你\n- 正式轉錄多一個選項 Qwen3-ASR 1.7B（阿里巴巴開源，全程在本機跑）：多人會議的漏字和同音字比 Breeze 少，輸出轉成台灣繁體；預設維持 Breeze\n- 「更多」只剩五項：重新處理、匯出、複製會議紀錄、移到資料夾、移到垃圾桶。「復原上一版」在「編輯」旁邊，「復原」說話者的調整在說話者名字旁邊\n- 設定從七頁減成四頁：整理工具、錄音與轉錄、說話者與詞彙、進階\n- 首次引導從五步減成三步，先問你平常用哪個 AI，再列對應的選項和費用；模型在背景下載，不佔一步\n- 逐字稿的時間點改跳到段落真正的開始\n- Windows 版同步以上全部，含 Qwen3-ASR（有 NVIDIA 顯示卡會自動用 CUDA 加速）\n\nShiyin 4.1.0: a simpler interface, easier confirmations, and an optional Qwen3-ASR engine\n- The meeting page has three tabs: Notes, Transcript, and Ask. Summary and topics share the Notes tab, items to confirm sit in a bar at the top, and My Notes lives at the top of the Transcript tab\n- Items the summarizer was unsure about are marked with \"?\" right in the notes; answer them in place, tap Yes or No for yes/no questions, or skip all unimportant ones at once\n- Audio warnings now arrive as notifications when the microphone picks up nothing, too little, or too much noise while Shiyin is in the background\n- New optional transcription engine, Qwen3-ASR 1.7B (open-sourced by Alibaba, runs entirely on your computer): fewer dropped words and homophone errors in multi-speaker meetings, with output converted to Taiwanese Traditional Chinese; Breeze stays the default\n- The More menu is down to five actions: Reprocess, Export, Copy Notes, Move to Folder, and Move to Trash. Undo for notes sits next to Edit; undo for speaker changes sits next to the speaker's name\n- Settings went from seven pages to four: Summarizer, Recording & Transcription, Speakers & Glossary, and Advanced\n- Onboarding went from five steps to three: it asks which AI you usually use, then lists the matching options and what they cost; models download in the background\n- Transcript timestamps now jump to the true start of each segment\n- Windows gets all of the above, including Qwen3-ASR (with CUDA acceleration on NVIDIA GPUs)",
+   "english": true
+  },
+  {
+   "notes": "拾音 4.0.1\n- 修正匯入 .shiyin 封包失敗\n- 修正匯出 PDF 的標題字型\n\nShiyin 4.0.1\n- Fixed importing .shiyin packages\n- Fixed the title font in PDF export",
+   "english": true
+  },
+  {
+   "notes": "拾音 4.0.2\n匯入失敗的修正。",
+   "english": false
+  },
+  {
+   "notes": "拾音 4.0.3：只有中文\n- 一\n- 二\n- 三",
+   "english": true
+  },
+  {
+   "notes": "",
+   "english": false
+  }
+ ],
  "s2twCases": [
   "头发很长，皇后在后面。",
   "台湾的面条很干净，里面复杂。",

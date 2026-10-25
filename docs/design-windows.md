@@ -426,6 +426,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 
 ### 14.2 更新（R27 R10.6、R10.7，D50）
 
+- 詢問更新的視窗只列更新內容的前 4 項、其餘寫「還有 N 項」（4.1 起）：`Shiyin.Core/Text/ReleaseNotes.cs` 跟 Mac 的 `ReleaseNotes.swift` 同一套取段落、取條目的規則，標準答案 `util/release-notes.json`。
 - Velopack 只檢查自己 feed 裡的 SHA-256，不驗是誰發的。所以另外加一把**更新金鑰**（ECDSA P-256）：
   - `scripts/windows/update-key.cs keygen` 建一次，私鑰放 GitHub secrets（要使用者同意，同 Mac 的 `export-signing-cert.sh`），公鑰貼進 `AppHost.cs` 的 `UpdateKey.Public`
   - 2026-10-22 使用者建好了：私鑰在 GitHub secrets 的 `SHIYIN_UPDATE_KEY`，備份在使用者的登入鑰匙圈（服務 `com.weiwei.shiyin.update-key`、帳號 `SHIYIN_UPDATE_KEY`，內容是 PEM 的 base64）。兩邊都弄丟就簽不了新版，已經安裝的人只能自己下載安裝檔
