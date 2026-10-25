@@ -19,6 +19,14 @@ struct OnboardingView: View {
     @State private var keyError: String?
     /// 整理工具那一步的第一段「你平常用哪個 AI？」（R44.6、design §33.4）：claude、chatgpt、gemini、other、none；不存，只用來列第二段的選項
     @State private var usual: String?
+    /// 第二段選的整理工具（R45.2、design §34.3）：選了不等於設定好，準備好（登入了、存了 key）才寫進設定
+    @State private var pending: LLMProvider?
+    @State private var setup: ProviderSetup = .idle
+
+    private enum ProviderSetup: Equatable {
+        case idle, checkingLogin, notLoggedIn, needsKey, needsCompat, testing
+        case tested(ok: Bool, message: String)
+    }
 
     /// startStep：DEBUG 的 preview 指令直接打開某一步（design §19.5）
     init(startStep: Int = 0) { _step = State(initialValue: startStep) }
@@ -137,13 +145,16 @@ struct OnboardingView: View {
 
     private var primaryModel: ModelStore.Model { ModelStore.transcription(for: AppSettings.defaultMeetingLanguage) }
 
-    /// 整理工具（R44.6、D111）：先問「你平常用哪個 AI？」，選了才列對應的一到兩個選項，每個一行寫要不要錢
+    /// 整理工具（R44.6、D111）：先問「你平常用哪個 AI？」，選了才列對應的一到兩個選項，每個一行寫要不要錢。
+    /// 選了不等於設定好（R45.2）：準備好才寫進設定，寫進去時測一次
     private var providers: some View {
         let claude = Paths.findTool("claude"), codex = Paths.findTool("codex")
-        let current = LLMProvider(rawValue: storedProvider) ?? .none
+        let usualValue = usual ?? guessedUsual(claude: claude, codex: codex)
+        let list = options(for: usualValue, claude: claude, codex: codex)
+        let shown = pending ?? shownProvider(in: list)
         return VStack(alignment: .leading, spacing: 14) {
             Text("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。").foregroundStyle(.secondary)
-            Picker("你平常用哪個 AI？", selection: Binding(get: { usual ?? guessedUsual(claude: claude, codex: codex) }, set: { pick($0, claude: claude, codex: codex) })) {
+            Picker("你平常用哪個 AI？", selection: Binding(get: { usualValue }, set: { pick($0, claude: claude, codex: codex) })) {
                 Text("Claude").tag("claude")
                 Text("ChatGPT").tag("chatgpt")
                 Text("Gemini").tag("gemini")
@@ -152,8 +163,8 @@ struct OnboardingView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            Picker("整理工具", selection: Binding(get: { storedProvider }, set: { storedProvider = $0 })) {
-                ForEach(options(for: usual ?? guessedUsual(claude: claude, codex: codex), claude: claude, codex: codex), id: \.provider) { option in
+            Picker("整理工具", selection: Binding(get: { shown?.rawValue ?? "" }, set: { choose(LLMProvider(rawValue: $0)) })) {
+                ForEach(list, id: \.provider) { option in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(option.title)
                         Text(option.cost).font(.caption).foregroundStyle(.secondary)
@@ -163,32 +174,56 @@ struct OnboardingView: View {
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
+            if let shown { setupStatus(shown) }
+        }
+    }
+
+    /// 選了第二段的選項之後的狀態：登入、API key、測試結果
+    @ViewBuilder
+    private func setupStatus(_ provider: LLMProvider) -> some View {
+        let state = pending == provider ? setup : .idle
+        if provider == .openaiCompatible {
             // OpenAI 相容 API 要填網址、模型，引導裡只提示（design §19.4）
-            if current == .openaiCompatible {
-                Text("網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。")
-                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            } else if current.usesAPIKey {
-                HStack {
-                    SecureField("貼上 API key", text: $apiKey).textFieldStyle(.roundedBorder)
-                    Button("儲存") {
-                        do {
-                            try Keychain.set(current.keychainAccount, apiKey)
-                            apiKey = ""
-                            keyError = nil
-                        } catch {
-                            keyError = error.localizedDescription
-                        }
-                        model.refreshEnvironment()
-                    }
+            Text("網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。填好之前不會整理。")
+                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        } else if provider.usesAPIKey {
+            HStack {
+                SecureField("貼上 API key", text: $apiKey).textFieldStyle(.roundedBorder)
+                Button("儲存") { saveKey(provider) }
                     .disabled(apiKey.isEmpty)
-                }
-                if let keyError {
-                    Text(keyError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
-                } else if Keychain.exists(current.keychainAccount) {
-                    Label("已儲存在鑰匙圈", systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
-                }
-                if let url = current.apiKeyURL { Link("取得 API key", destination: url) }
             }
+            if let keyError {
+                Text(keyError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+            } else if Keychain.exists(provider.keychainAccount) {
+                Label("已儲存在鑰匙圈", systemImage: "checkmark.circle.fill").foregroundStyle(Color.celadon)
+            } else if state == .needsKey {
+                Text("貼上 API key 並按「儲存」後才會用 \(provider.shortLabel) 整理；沒有 key 的話可以選「先不用」。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            if let url = provider.apiKeyURL { Link("取得 API key", destination: url) }
+        } else if provider == .claude || provider == .codex {
+            let name = provider == .codex ? "Codex" : "Claude Code"
+            if state == .checkingLogin {
+                Text("檢查登入狀態…").foregroundStyle(.secondary)
+            } else if state == .notLoggedIn {
+                Text("\(name) 還沒登入，登入之後才會用它整理。").foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button("登入 \(name)") { CLILogin.openLogin(provider) }
+                    Button("重新檢查") { choose(provider) }
+                }
+            }
+        }
+        switch state {
+        case .testing:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("測試中…").foregroundStyle(.secondary)
+            }
+        case .tested(let ok, let message):
+            Label(message, systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(ok ? Color.celadon : Color.red).fixedSize(horizontal: false, vertical: true)
+        default:
+            EmptyView()
         }
     }
 
@@ -205,10 +240,76 @@ struct OnboardingView: View {
         }
     }
 
-    /// 選了第一段：第二段的第一個選項直接當作整理工具（只有一個選項時就是它）
+    /// 還沒選第二段時顯示的選項：設定裡的整理工具（沒選過就是自動選到的 CLI）；沒選過也沒有 CLI 時不選（不是「不整理」）
+    private func shownProvider(in list: [ProviderOption]) -> LLMProvider? {
+        guard let current = LLMProvider(rawValue: storedProvider) ?? Optional(AppSettings.detectedProvider),
+              current != .none || !storedProvider.isEmpty else { return nil }
+        return list.contains { $0.provider == current } ? current : nil
+    }
+
+    /// 選了第一段：只篩第二段的選項，第一個選項當作選了（不直接寫設定，R45.2）
     private func pick(_ value: String, claude: URL?, codex: URL?) {
         usual = value
-        if let first = options(for: value, claude: claude, codex: codex).first { storedProvider = first.provider.rawValue }
+        choose(options(for: value, claude: claude, codex: codex).first?.provider)
+    }
+
+    private func choose(_ provider: LLMProvider?) {
+        guard let provider else { return }
+        pending = provider
+        setup = .idle
+        keyError = nil
+        Task { await evaluate(provider) }
+    }
+
+    /// 準備好了才寫進設定（R45.2、design §34.3）
+    private func evaluate(_ provider: LLMProvider) async {
+        switch provider {
+        case .none:
+            storedProvider = LLMProvider.none.rawValue
+        case .claude, .codex:
+            setup = .checkingLogin
+            let status = await CLILogin.refresh(provider)
+            guard pending == provider else { return }
+            if status?.loggedIn == false { setup = .notLoggedIn } else { await commit(provider) }
+        case .anthropic, .openai, .gemini:
+            if Keychain.exists(provider.keychainAccount) { await commit(provider) } else { setup = .needsKey }
+        case .openaiCompatible:
+            let url = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
+            let model = UserDefaults.standard.string(forKey: provider.modelKey) ?? ""
+            if OpenAICompatibleAPI.normalized(url) != nil && !model.isEmpty { await commit(provider) } else { setup = .needsCompat }
+        }
+    }
+
+    /// 寫進設定並測一次；失敗是設定問題（key 錯誤、沒登入…）就改回原本的設定（R45.2）
+    private func commit(_ provider: LLMProvider) async {
+        let previous = storedProvider
+        storedProvider = provider.rawValue
+        setup = .testing
+        do {
+            let seconds = try await SummarizerTest.run(provider: provider, model: SummarizerTest.model(for: provider))
+            guard pending == provider else { return }
+            setup = .tested(ok: true, message: String(localized: "可以使用（\(seconds) 秒）"))
+        } catch {
+            let setupProblem = (error as? LLMError)?.isSetupProblem == true
+            if setupProblem && storedProvider == provider.rawValue { storedProvider = previous }
+            guard pending == provider else { return }
+            setup = .tested(ok: false, message: setupProblem
+                ? String(localized: "\(error.localizedDescription)（還沒改用 \(provider.shortLabel)）")
+                : String(localized: "\(error.localizedDescription)（之後可以在設定 → 整理工具重新測試）"))
+        }
+    }
+
+    private func saveKey(_ provider: LLMProvider) {
+        do {
+            try Keychain.set(provider.keychainAccount, apiKey)
+            apiKey = ""
+            keyError = nil
+        } catch {
+            keyError = error.localizedDescription
+        }
+        model.refreshEnvironment()
+        if keyError == nil && pending == provider { Task { await commit(provider) } }
+        else if keyError == nil && pending == nil { choose(provider) }
     }
 
     private func options(for usual: String, claude: URL?, codex: URL?) -> [ProviderOption] {

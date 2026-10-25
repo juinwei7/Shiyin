@@ -534,7 +534,7 @@ final class JobRunner {
         if try draft && !db.segments(job.meetingId).isEmpty { return false }
         let provider = AppSettings.provider
         guard provider != .none else {
-            throw LLMError.failed(AppSettings.needsProviderSetup
+            throw LLMError.notConfigured(AppSettings.needsProviderSetup
                 ? String(localized: "還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
                 : String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"))
         }

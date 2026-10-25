@@ -127,3 +127,25 @@ enum SummarizerPause {
         return [provider.rawValue, AppSettings.model, url, String(Keychain.generation)].joined(separator: "|")
     }
 }
+
+/// 設定好整理工具時送一次的測試（design §34.3）：引導和設定頁的「測試整理工具」共用
+@MainActor
+enum SummarizerTest {
+    /// 成功回傳花了幾秒，失敗丟出整理工具的錯誤；成功時解除暫停（R46.3）
+    static func run(provider: LLMProvider, model: String) async throws -> Int {
+        let started = Date()
+        let language = AppSettings.defaultMeetingLanguage
+        let prompt = language.text(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
+                                   en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.",
+                                   ja: "これは接続テストです。文字起こし：\n[00:00] 話者 1：皆さん、今日はテストだけです。")  // l10n-skip
+        _ = try await LLMClient.generate(provider: provider, model: model, system: NotesPrompt.system(language),
+                                         prompt: prompt, onStart: { _ in })
+        SummarizerPause.clear()
+        return Int(Date().timeIntervalSince(started).rounded())
+    }
+
+    /// 這個整理工具在設定裡的模型（引導裡選的不一定是目前的整理工具）
+    static func model(for provider: LLMProvider) -> String {
+        provider == AppSettings.provider ? AppSettings.model : UserDefaults.standard.string(forKey: provider.modelKey) ?? ""
+    }
+}

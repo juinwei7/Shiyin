@@ -111,7 +111,7 @@ enum Keychain {
     /// 存 key（空字串等於刪除）；存不進去丟出 AccessError
     static func set(_ account: String, _ value: String) throws {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        generation += 1
+        defer { generation += 1 }   // 存好之後才通知（通知裡會查 exists）
         #if DEBUG
         if debugSimulated[account] == "duplicate" { throw AccessError.duplicate(account) }
         // 沒加 -debugRealKeychain 時只存在記憶體：不能寫進、刪掉使用者真的鑰匙圈（design §20.7）
@@ -140,7 +140,7 @@ enum Keychain {
     }
 
     static func delete(_ account: String) {
-        generation += 1
+        defer { generation += 1 }
         cache.withLock { $0[account] = nil }
         #if DEBUG
         if !usesRealKeychain { debugKeys[account] = nil; return }

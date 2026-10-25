@@ -32,7 +32,7 @@ enum APIRequest {
                     try await Task.sleep(for: .seconds(5))
                     continue
                 }
-                throw LLMError.failed(String(localized: "連不到 \(provider)：\(error.localizedDescription)"))
+                throw LLMError.unreachable(String(localized: "連不到 \(provider)：\(error.localizedDescription)"))
             }
             let http = response as? HTTPURLResponse
             let result = parse(data, status: http?.statusCode ?? 0)
@@ -75,6 +75,10 @@ enum APIRequest {
         let hint = keyProblem ? String(localized: "（API key 錯誤或已失效）")
             : noCredit ? String(localized: "（帳戶沒有額度，要到服務的網站加值）")
             : status == 429 ? String(localized: "（超過用量限制，請稍後再試）") : ""
-        return LLMError.failed(String(localized: "\(provider) 回傳 HTTP \(status)\(hint)：\(response.message)"))
+        let message = String(localized: "\(provider) 回傳 HTTP \(status)\(hint)：\(response.message)")
+        // 設定問題和用量上限分開（design §34.4）：key 錯誤或沒權限要改設定，429 等一下或加值
+        if keyProblem || status == 403 { return LLMError.rejected(message) }
+        if status == 429 { return LLMError.limited(message) }
+        return LLMError.failed(message)
     }
 }

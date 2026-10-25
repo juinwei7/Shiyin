@@ -11,8 +11,6 @@
 
 驗證用 DEBUG 版、暫存的 `SHIYIN_HOME`（示範資料複製一份），`-llmProvider` 等啟動參數只在這次執行有效；整理工具、key 用 `llmprovider`、`llmkey`（只在記憶體）。測完 `defaults read com.weiwei.shiyin` 確認沒有留下 `llmProvider`。
 
-- [ ] **S2 Mac：引導和設定頁**（R45.2、R45.3，§34.3）
-  - 驗證：`preview onboarding 1` 截圖；在真的畫面上用 AX：點「Gemini」不寫設定、存 key 後才寫並自動測試（假伺服器）、假伺服器回 401 時改回原本的設定；設定頁沒安裝的 CLI 不能選、沒 key 時紅字、存 key 後自動測試
 - [ ] **S3 Mac：設定問題的失敗換按鈕、暫停**（R46，§34.4）
   - 驗證：假伺服器回 401：第一場失敗、橫幅是「打開設定」沒有「重試」，第二場不排整理；存新的 key（`llmkey`）後橫幅變回「重試」、新的會議照常整理；429、500 照舊有「重試」、不暫停
 - [ ] **S4 Mac：統計的失敗種類**（R47，§34.5）：`errorDetail`、後台欄位和 migration

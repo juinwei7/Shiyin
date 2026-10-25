@@ -41,13 +41,13 @@ struct OpenAICompatibleAPI: LLMBackend {
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
                       onStart: (Subprocess) -> Void) async throws -> Data {
         guard !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw LLMError.failed(String(localized: "還沒有填 OpenAI 相容 API 的網址，請到設定 → 整理工具填寫"))
+            throw LLMError.notConfigured(String(localized: "還沒有填 OpenAI 相容 API 的網址，請到設定 → 整理工具填寫"))
         }
         guard let base = Self.normalized(baseURL) else {
-            throw LLMError.failed(String(localized: "OpenAI 相容 API 的網址不對，要以 http:// 或 https:// 開頭"))
+            throw LLMError.notConfigured(String(localized: "OpenAI 相容 API 的網址不對，要以 http:// 或 https:// 開頭"))
         }
         guard !model.isEmpty else {
-            throw LLMError.failed(String(localized: "還沒有填 OpenAI 相容 API 的模型名稱，請到設定 → 整理工具填寫"))
+            throw LLMError.notConfigured(String(localized: "還沒有填 OpenAI 相容 API 的模型名稱，請到設定 → 整理工具填寫"))
         }
         let provider = base.host(percentEncoded: false) ?? "OpenAI 相容 API"   // l10n-skip
         let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))

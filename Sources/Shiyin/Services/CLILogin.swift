@@ -13,6 +13,12 @@ enum CLILogin {
     /// 查登入狀態，不會送出請求、不消耗額度。找不到指令或看不懂輸出時回傳 nil。
     /// 注意：「登入過期、刷新失敗」時這裡可能還是顯示已登入，要實際送出請求才知道（設定裡的「測試整理工具」）
     static func status(_ provider: LLMProvider) async -> Status? {
+        #if DEBUG
+        // -debugCLILogin no：當成沒登入，不執行 CLI（design §34.6）
+        if UserDefaults.standard.string(forKey: "debugCLILogin") == "no", provider == .claude || provider == .codex {
+            return Status(loggedIn: false, detail: "")
+        }
+        #endif
         switch provider {
         case .claude:
             guard let exe = Paths.findTool("claude"),

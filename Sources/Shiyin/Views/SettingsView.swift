@@ -62,7 +62,16 @@ struct ProviderSettings: View {
             Picker("整理工具", selection: Binding(get: { provider }, set: { storedProvider = $0 })) {
                 // 這台 Mac 沒有 claude、codex 時才有：選它等於清掉設定，回到「還沒設定」
                 if AppSettings.detectedProvider == .none { Text("之後再設定（先不整理）").tag("") }
-                ForEach(LLMProvider.allCases) { Text($0.label).tag($0.rawValue) }
+                // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
+                ForEach(LLMProvider.allCases) { item in
+                    let missing = (item == .claude || item == .codex) && Paths.findTool(item == .claude ? "claude" : "codex") == nil
+                    Text(missing ? String(localized: "\(item.label)（沒有安裝）") : item.label).tag(item.rawValue)
+                        .selectionDisabled(missing && item != current)
+                }
+            }
+            // 還沒準備好：說原因，設定好之前不會自動整理（R45.3、design §34.3）
+            if current != .none, let notice = problemNotice {
+                Text(notice).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
             }
             if current == .claude || current == .codex {
                 LabeledContent("狀態") {
@@ -82,7 +91,7 @@ struct ProviderSettings: View {
                         } else {
                             Text("已安裝，看不出登入狀態").foregroundStyle(.secondary)
                         }
-                        Button { Task { await checkLogin() } } label: { Image(systemName: "arrow.clockwise") }
+                        Button { Task { await checkLogin(userInitiated: true) } } label: { Image(systemName: "arrow.clockwise") }
                             .buttonStyle(.borderless)
                             .help("重新檢查登入狀態")
                             .disabled(checkingLogin)
@@ -197,6 +206,8 @@ struct ProviderSettings: View {
         }
         keySaved = Keychain.exists(current.keychainAccount)
         model.refreshEnvironment()
+        // 存好 key 就測一次（R45.3）
+        if keyError == nil && AppSettings.summarizerReady { Task { await test() } }
     }
 
     private func openModelPicker() {
@@ -207,17 +218,11 @@ struct ProviderSettings: View {
     private func test() async {
         testing = true
         testResult = nil
-        let started = Date()
-        let language = AppSettings.defaultMeetingLanguage
-        let prompt = language.text(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
-                                   en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.",
-                                   ja: "これは接続テストです。文字起こし：\n[00:00] 話者 1：皆さん、今日はテストだけです。")  // l10n-skip
         let tested = current
         let result: (Bool, String)
         do {
-            _ = try await LLMClient.generate(provider: tested, model: modelName, system: NotesPrompt.system(language),
-                                             prompt: prompt, onStart: { _ in })
-            result = (true, String(localized: "可以使用（\(Int(Date().timeIntervalSince(started).rounded())) 秒）"))
+            let seconds = try await SummarizerTest.run(provider: tested, model: modelName)
+            result = (true, String(localized: "可以使用（\(seconds) 秒）"))
         } catch {
             result = (false, error.localizedDescription)
         }
@@ -227,14 +232,29 @@ struct ProviderSettings: View {
         testing = false
     }
 
-    private func checkLogin() async {
+    /// userInitiated：使用者按了「重新檢查」，查到已登入就測一次（R45.3）；打開設定頁時的自動檢查不測（不花額度）
+    private func checkLogin(userInitiated: Bool = false) async {
         guard current == .claude || current == .codex else { login = nil; return }
         checkingLogin = true
         let checked = current
-        let status = await CLILogin.status(checked)
+        let status = await CLILogin.refresh(checked)
         guard checked == current else { return }   // 查的時候換了整理工具
         login = status
         checkingLogin = false
+        if userInitiated && status?.loggedIn == true { await test() }
+    }
+
+    /// 選單下面的紅字（design §34.3）：沒安裝、沒登入在「狀態」那一列已經寫了原因
+    private var problemNotice: String? {
+        switch model.summarizerProblem {
+        case nil, .notChosen?, .off?: return nil
+        case .notInstalled?, .notLoggedIn?: return String(localized: "設定好之前不會自動整理。")
+        case .missingKey?: return String(localized: "還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。")
+        case .incomplete?: return String(localized: "還沒有填網址或模型。設定好之前不會自動整理。")
+        case .paused(_, let detail)?:
+            let reason = detail.trimmingCharacters(in: CharacterSet(charactersIn: "。. "))   // l10n-skip
+            return String(localized: "上次整理失敗：\(reason)。改好設定，或按「測試整理工具」成功之後，才會再自動整理。")
+        }
     }
 
     private func load() {

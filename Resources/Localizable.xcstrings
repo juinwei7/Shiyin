@@ -73,6 +73,17 @@
         }
       }
     },
+    "%@ 還沒登入，登入之後才會用它整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ isn’t signed in. Shiyin will use it once you sign in."
+          }
+        }
+      }
+    },
     "%@・最近：%@ %@": {
       "extractionState": "manual",
       "localizations": {
@@ -128,6 +139,17 @@
         }
       }
     },
+    "%@（之後可以在設定 → 整理工具重新測試）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (You can test again later in Settings → Summarizer.)"
+          }
+        }
+      }
+    },
     "%@（副本）": {
       "extractionState": "manual",
       "localizations": {
@@ -161,6 +183,17 @@
         }
       }
     },
+    "%@（沒有安裝）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (not installed)"
+          }
+        }
+      }
+    },
     "%@（逐字稿）.%@": {
       "extractionState": "manual",
       "localizations": {
@@ -168,6 +201,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ (transcript).%@"
+          }
+        }
+      }
+    },
+    "%@（還沒改用 %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (Still not using %2$@.)"
           }
         }
       }
@@ -971,6 +1015,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Back"
+          }
+        }
+      }
+    },
+    "上次整理失敗：%@。改好設定，或按「測試整理工具」成功之後，才會再自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The last summary failed: %@. Automatic summaries resume after you fix the settings or “Test Summarizer” succeeds."
           }
         }
       }
@@ -7217,13 +7272,13 @@
         }
       }
     },
-    "網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。": {
+    "網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。填好之前不會整理。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After setup, enter the URL, API key and model in Settings → Summarizer."
+            "value": "Enter the URL, API key and model in Settings → Summarizer after setup. Nothing is summarized until they’re filled in."
           }
         }
       }
@@ -7657,6 +7712,17 @@
         }
       }
     },
+    "設定好之前不會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is summarized automatically until this is set up."
+          }
+        }
+      }
+    },
     "設定整理工具": {
       "extractionState": "manual",
       "localizations": {
@@ -8005,6 +8071,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Paste API key"
+          }
+        }
+      }
+    },
+    "貼上 API key 並按「儲存」後才會用 %@ 整理；沒有 key 的話可以選「先不用」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin uses %@ after you paste an API key and click “Save”. No key? Choose “Not now”."
           }
         }
       }
@@ -9065,6 +9142,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "No URL entered for the OpenAI-compatible API. Enter it in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "還沒有填網址或模型。設定好之前不會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No URL or model yet. Nothing is summarized automatically until this is set up."
+          }
+        }
+      }
+    },
+    "還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No API key saved. Paste one and click “Save Key”. Nothing is summarized automatically until this is set up."
           }
         }
       }

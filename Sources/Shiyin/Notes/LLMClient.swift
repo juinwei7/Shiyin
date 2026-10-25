@@ -66,6 +66,14 @@ enum LLMError: LocalizedError {
     /// claude / codex 沒登入或登入過期（使用者回報：只看到英文的 OAuth 錯誤，不知道要做什麼）
     case notLoggedIn(String)
     case missingKey(String)
+    /// key 錯誤或沒有權限：HTTP 401、403、Gemini 的「API key not valid」400（design §34.4）
+    case rejected(String)
+    /// 額度或用量上限：HTTP 429、claude／codex 的 usage limit
+    case limited(String)
+    /// 連不到服務（網路）
+    case unreachable(String)
+    /// OpenAI 相容 API 沒填網址或模型、網址不對；整理工具是「不整理」
+    case notConfigured(String)
     case failed(String)
     case badOutput(String)
 
@@ -81,9 +89,30 @@ enum LLMError: LocalizedError {
                 ? String(localized: "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
                 : String(localized: "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。")
         case .missingKey(let name): return String(localized: "還沒有填 \(name) 的 API key，請到設定 → 整理工具填寫")
-        case .failed(let detail): return detail
+        case .rejected(let detail), .limited(let detail), .unreachable(let detail), .notConfigured(let detail), .failed(let detail): return detail
         case .badOutput(let detail): return String(localized: "回傳的會議紀錄格式不正確：\(detail)")
         }
+    }
+
+    /// 設定問題（R46.1）：重試也不會好，要改設定或登入
+    var isSetupProblem: Bool {
+        switch self {
+        case .notInstalled, .notLoggedIn, .missingKey, .rejected, .notConfigured: return true
+        case .limited, .unreachable, .failed, .badOutput: return false
+        }
+    }
+
+    /// 工作紀錄的 error_kind（`logSummary`）是不是設定問題（design §34.4）
+    static func isSetupProblem(errorKind: String?) -> Bool {
+        guard let errorKind else { return false }
+        return ["LLMError.notInstalled", "LLMError.notLoggedIn", "LLMError.missingKey", "LLMError.rejected", "LLMError.notConfigured"]
+            .contains { errorKind.hasPrefix($0) }
+    }
+
+    /// claude、codex 的輸出是不是用量上限（「Claude AI usage limit reached」「You've hit your usage limit」）
+    static func isLimitProblem(_ text: String) -> Bool {
+        let t = text.lowercased()
+        return ["usage limit", "rate limit", "limit reached", "rate_limit"].contains { t.contains($0) }
     }
 
     /// CLI 的錯誤訊息是不是登入問題，例如「Not logged in · Please run /login」「Failed to authenticate: OAuth session expired」
@@ -103,6 +132,10 @@ extension Error {
             case .notInstalled(let name): return "LLMError.notInstalled(\(name))"
             case .notLoggedIn(let name): return "LLMError.notLoggedIn(\(name))"
             case .missingKey(let name): return "LLMError.missingKey(\(name))"
+            case .rejected: return "LLMError.rejected"
+            case .limited: return "LLMError.limited"
+            case .unreachable: return "LLMError.unreachable"
+            case .notConfigured: return "LLMError.notConfigured"
             case .failed: return "LLMError.failed"
             case .badOutput: return "LLMError.badOutput"
             }
