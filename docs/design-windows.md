@@ -253,6 +253,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 登入：用固定參數開 Windows Terminal（沒有就用 `cmd.exe /k`）執行 `claude` 或 `codex login`，參數裡不放任何使用者內容。
 - **還沒設定整理工具**（R35、M§19.6、D95）：同 Mac。`AppSettings.DetectCli` 由 App 用 `WindowsToolLocator` 找 claude、codex（要掃過 PATH 的每個資料夾，快取 30 秒）；Services、測試裡沒給就是找不到。DEBUG 加 `--set debugNoCli=YES` 當成找不到。
 
+### 10.1 整理工具設定好才用、失敗說清楚怎麼修（R45～R47、M§34）
+
+- 同 Mac：`AppSettings.SummarizerProblem`（`NotChosen`、`Off`、`NotInstalled`、`NotLoggedIn`、`MissingKey`、`Incomplete`、`Paused`），自動排程改判斷 `SummarizerReady`；登入狀態用 `CliLogin` 的快取（app 啟動、視窗回到前景超過 60 秒、設定頁、引導時查），查不到當作準備好；key 用認證管理員有沒有這一筆（不讀出來）。
+- 引導的整理工具這一步、設定視窗的整理工具頁、會議頁的提示和失敗橫幅照 M§34.3、M§34.4；沒安裝的 CLI 在下拉選單裡 `IsEnabled = false`。
+- `LLMError` 多 `Rejected`、`Limited`、`Unreachable`、`NotConfigured`；暫停只在記憶體，指紋是 provider、模型、OpenAI 相容 API 的網址、認證管理員的寫入次數。
+- 統計的 `errorDetail` 同 M§34.5（`UsageStats.cs`），測試比對 Mac 產生的 JSON 鍵。
+
 ## 11. 介面
 
 ### 11.1 視窗對照

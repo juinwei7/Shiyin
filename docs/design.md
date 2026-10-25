@@ -1374,6 +1374,66 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 - iPhone：`ios` 分支之後接，手機版本來就只有三個分頁，主要是待確認的條和設定的分組。
 - 使用說明（`GuideView`）、README、官網示範（`site/src/demo-content.mjs` 的 `tabs`、`reviewTab`，demo.js 的待確認章節）、CLAUDE.md 的 AX 名稱和 `preview` 編號跟著改。
 
+## 34. 整理工具設定好才用、失敗說清楚怎麼修（R45～R47，D112～D114）
+
+### 34.1 準備好了沒（R45.1、D112）
+
+- `SummarizerProblem`（`Services/SummarizerReadiness.swift`）：`notChosen`（R35 的還沒設定）、`off`（設定為不整理）、`notInstalled(provider)`、`notLoggedIn(provider)`、`missingKey(provider)`、`incomplete`（OpenAI 相容 API 沒填網址或模型）、`paused(provider, kind)`（§34.4）。`AppSettings.summarizerProblem` 同步算出來，`nil` 就是準備好；`summarizerReady` = 沒有問題。每個問題有 `message`（原因和怎麼修，一句）和 `action`（`openSettings` 或 `login(provider)`）。
+- 判斷都不花額度、不讀鑰匙圈：CLI 用 `Paths.findTool`；登入用 `CLILogin` 的快取（`CLILogin.cached[provider]`，`claude auth status --json`、`codex login status` 的結果）；key 用 `Keychain.exists`；OpenAI 相容 API 看 `OpenAICompatibleAPI.normalized(baseURL)` 和模型。
+- 登入狀態的快取：app 啟動、app 回到前景（`NSApplication.didBecomeActiveNotification`，距離上次超過 60 秒才查）、設定頁打開和按「重新檢查」、引導選了 CLI 時更新。查不到（找不到指令、看不懂輸出）是 `nil`，當作準備好（D112：寧可讓它試，不要誤擋）。只有明確 `loggedIn: false` 才算沒登入。
+
+### 34.2 用到的地方（R45.4）
+
+- 自動排程原本判斷 `provider != .none` 的地方改成 `summarizerReady`：轉錄完的逐字稿校正、自動整理（`JobRunner` 的 finishTranscribe）、猜說話者（rediarize 之後）、草稿紀錄（`AppModel.scheduleDraft`）、匯入文字逐字稿後的整理。
+- 手動的整理（`resummarize`）、依回答修正（`submitReview`、就地回答）、提問（`Asking`）：有問題就不排，`errorMessage` 用 `summarizerProblem.message`（`notChosen`、`off` 照 R35.2 原本的兩句）。
+- 會議頁放紀錄的地方（`NotesPlaceholder`）：`notChosen` 照舊；`off` 照舊；其他問題顯示「整理工具還沒設定好：\(message)」和按鈕（「打開設定」或「登入 Claude Code／Codex」）。
+- 已經在排隊的工作照常執行（快取可能過期，讓它真的試）；`summarize` 遇到 `provider == .none` 丟 `LLMError.notConfigured`。
+
+### 34.3 引導和設定頁（R45.2、R45.3）
+
+- 引導的整理工具這一步（§33.4）：第二段改成綁 `@State pending: LLMProvider?`，不直接綁 `providerKey`。第一段改 `usual` 時 `pending` 設成第一個選項，不寫設定（4.1 的 `pick` 直接寫 `storedProvider`，拿掉）。`pending` 變了就 `evaluate()`：
+  - `.none`（先不用）：直接寫「不整理」
+  - CLI：`CLILogin.status`；`loggedIn == false` 顯示「還沒登入」、「登入 \(name)」（`CLILogin.openLogin`）、「重新檢查」；不是 false 就 `commit()`
+  - API：`Keychain.exists` 才 `commit()`；沒有時在 key 欄位下面寫「貼上 API key 並按『儲存』後才會用 \(name) 整理；沒有 key 的話可以選『先不用』」。按「儲存」存好就 `commit()`
+  - OpenAI 相容 API：網址和模型都有才 `commit()`；沒有時照舊提示到設定填，並寫「填好之前不會整理」
+- `commit()`：記下原本的 `providerKey`，寫入 `pending`，接著跑一次測試（設定頁 `test()` 的同一段，抽成 `SummarizerTest.run(provider:model:)`），顯示「測試中…」→「可以使用（N 秒）」或失敗原因。失敗是設定問題（§34.5 的 `isSetupProblem`）就把 `providerKey` 改回原本的值、顯示原因；其他失敗保留設定，顯示原因和「之後可以在設定重新測試」。測試中按「下一步」不取消測試，結果照樣決定要不要改回。
+- 設定頁（`ProviderSettings`）：
+  - 選單裡沒安裝的 CLI：`.selectionDisabled(true)`、文字加「（沒有安裝）」；目前選的就是它時照樣顯示（不能選的是「換成它」）
+  - 選單下面：`summarizerProblem` 是這個工具的問題時，紅字 `message` 加「設定好之前不會自動整理」
+  - 存好 key 之後、按「重新檢查」得到已登入之後（從沒登入變成已登入，或使用者自己按的）自動 `test()`；打開設定頁時的自動檢查不測試（不要每次打開都花額度）
+
+### 34.4 設定問題的失敗：換按鈕、暫停（R46，D113）
+
+- `LLMError` 多四種：`rejected`（key 錯誤或沒權限：HTTP 401、403、Gemini 的「API key not valid」400）、`limited`（HTTP 429；claude、codex 的輸出有「usage limit」「rate limit」「limit reached」）、`unreachable`（連不到，`APIRequest.fetch` 的網路錯誤）、`notConfigured`（OpenAI 相容 API 沒填網址或模型、網址不對；provider 是 none）。說明文字跟原本一樣（從 `failed(...)` 搬過來），`logSummary` 加這四個名字。
+- `isSetupProblem(errorKind)`：`notInstalled`、`notLoggedIn`、`missingKey`、`rejected`、`notConfigured`。用 `jobs.error_kind`（`logSummary`）判斷，`MeetingStatus.failed` 多帶 `errorKind`。
+- 失敗橫幅：`kind != .transcribe` 而且 `isSetupProblem` 而且現在 `summarizerProblem != nil`：按鈕是 `problem.action`（「打開設定」或「登入 …」），不放「重試」；準備好了就是「重試」。其他失敗照舊（登入問題的「重新登入」保留）。通知內容不變（原因本來就在裡面）。
+- 暫停：`JobRunner` 遇到設定問題的失敗（summarize、revise，草稿也算），在記憶體記 `AppSettings.pause = (provider, kind, signature)`；`signature` 是整理工具設定的指紋：provider、模型、OpenAI 相容 API 的網址、`Keychain.generation`（存或刪 key 時加一，只在記憶體）。`summarizerProblem` 在 `pause.provider == provider && pause.signature == 現在的指紋` 時回傳 `.paused`，`message` 用那次失敗的說明。解除：指紋變了（換工具、改模型或網址、存或刪 key）、`CLILogin` 查到已登入、測試成功、任何一次整理成功、重新打開拾音。
+
+### 34.5 統計的失敗種類（R47，D114）
+
+- `UsageStats.Counters` 多三個欄位（舊檔案沒有就當 0，同 review 的寫法）：
+  - `summarizeErrors`：`notInstalled`、`notLoggedIn`、`missingKey`、`notConfigured`、`keyRejected`、`limited`、`timeout`、`unreachable`、`badOutput`、`other`
+  - `summarizeErrorProviders`：`claudeCode`、`codex`、`api`、`local`（同 `summarizer` 的分法；provider 是 none 時不記）
+  - `summarizeDraftErrors`：其中幾次是草稿
+- 種類的對應（`summarizeFailureKind(error)`）：`LLMError` 的同名種類（`rejected` → `keyRejected`、`failed` → `other`）；`SubprocessError.timeout`、`URLError.timedOut` → `timeout`；其他 → `other`。`failed(.summarize)` 照舊加一（R47.2），同時記種類、整理工具、草稿。
+- 送出的格式（§30.4）多一個上層的鍵，`schema` 仍是 1（舊後台忽略多的鍵）：
+
+  ```
+  "errorDetail": {
+    "summarize": { "notInstalled": 0, "notLoggedIn": 0, "missingKey": 0, "notConfigured": 0, "keyRejected": 0,
+                   "limited": 0, "timeout": 0, "unreachable": 0, "badOutput": 0, "other": 0 },
+    "summarizeProvider": { "claudeCode": 0, "codex": 0, "api": 0, "local": 0 },
+    "summarizeDraft": 0
+  }
+  ```
+- 後台（§30.10）：`worker.js` 的 `ERROR_DETAIL` 對應 15 個新欄位（`summarize_err_not_installed`…`summarize_err_other`、`summarize_err_claude_code`…`summarize_err_local`、`summarize_err_draft`），沒有 `errorDetail` 時都是 0；`schema.sql` 加欄位，已經建好的資料庫跑 `migrate-summarize-errors.sql`（使用者自己跑 migration 和 deploy）。
+
+### 34.6 Windows、驗證
+
+- Windows（design-windows §10.1）照同一份規則：`Settings.SummarizerProblem`、引導、設定視窗、`JobRunner` 的暫停、`LLMError` 的四種、統計的 `errorDetail`。
+- DEBUG：`shiyinctl summarizer <state.json>` 寫出 `summarizerProblem`、`pause`、登入快取；`-debugNoCLI YES` 和 `llmprovider`、`llmkey`（只在記憶體）組合出各種沒準備好的狀態；`-debugCLILogin no` 讓登入快取當成沒登入。
+- 驗證：沒選過、沒裝 CLI、選了 API 沒存 key、OpenAI 相容沒填模型、CLI 沒登入（`-debugCLILogin no`）、假伺服器回 401 各匯入一場，都不出現「整理失敗」或只失敗一次後暫停；引導和設定頁在真的畫面上用 AX 按過（CLAUDE.md：對話框的按鈕要真的按）；統計用 `shiyinctl usage` 看 `errorDetail`，後台用 `wrangler dev --local` 收一份。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1435,5 +1495,8 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 | D109 | 會議頁六個分頁減成三個：摘要和詳細合成「紀錄」，待確認收成紀錄頂部一條，筆記收進逐字稿（§33.1） | 維持六個：使用者 11 場「筆記」分頁 0 次、「詳細」要切過去才看得到議題，待確認已經能就地回答，獨立分頁變成「要處理的事離內容太遠」。只把筆記拿掉：摘要／詳細分開沒有理由，匯出本來就是一份。待確認改成側邊欄：寬度不夠，而且題目就在它問的紀錄旁邊才對 |
 | D110 | 設定四頁：範本歸整理工具、模型歸轉錄、說話者和詞彙合一頁、儲存空間歸進階（§33.3） | 維持七頁：一般人只會碰整理工具和錄音，七個分頁讓設定看起來很難。減少設定項目：每個開關都有人用（分聲道等本來就沒有開關），只搬不刪。模型清單留在「儲存空間」：使用者找「要不要下載模型」會去找「轉錄」，不會去找「儲存空間」 |
 | D111 | 引導三步，整理工具先問「你平常用哪個 AI？」再列選項，費用寫成一句話（§33.4） | 五步：歡迎頁沒有資訊、下載模型不需要人做決定。七個選項平鋪：一般人不知道 CLI 和 API 的差別、也不知道要不要錢（畫面檢視 O-3）。精確的費用數字：價格會變，寫區間就夠；估法：一小時中文會議約 1.2 萬字≈1.5 萬 token 輸入、3 千 token 輸出，Claude Sonnet（$3／$15 per M）約 US$0.09≈NT$3，Gemini、OpenAI 更低，所以寫「通常不到台幣 10 元（2026-10 估）」 |
+| D112 | 整理工具「準備好了沒」只用不花額度的檢查（找得到 CLI 和登入狀態、鑰匙圈有沒有 key、網址和模型），看不出登入狀態時當作準備好；測試請求只在引導和設定頁設定好的時候送一次（§34.1） | 每次整理前送一個測試請求：多花額度和十幾秒，而且失敗的原因跟真的整理一樣，不如直接整理。不檢查、失敗再說（4.0 的做法）：第一場會議就失敗，統計看到 6 台一次都沒成功。看不出登入狀態時當作沒準備好：舊版 CLI 沒有 `auth status` 的人會被擋住，卻其實能用。引導裡沒設定好就不能按下一步：不想現在設定的人卡住，R35 本來就允許「之後再設定」 |
+| D113 | 設定問題的失敗之後暫停自動整理，只記在記憶體，用整理工具設定的指紋判斷要不要解除（§34.4） | 存進 UserDefaults：設定跟使用者的拾音、DEBUG 版共用，測試會留下殘值；重開 app 才多失敗一次可以接受。每次改設定的地方都呼叫解除：入口太多（設定頁、引導、DEBUG、Windows 的設定檔），漏一個就一直暫停。自動重試：設定問題重試也不會好 |
+| D114 | 統計的失敗種類放新的上層鍵 `errorDetail`，原本的 `errors.summarize` 不動，`schema` 仍是 1（§34.5） | `schema` 改 2：舊後台會回 400，app 收到 4xx 就丟掉那一天。種類塞進 `errors`：`errors` 每一鍵都是「某件事失敗幾次」，混進種類後加總會重複算。記錯誤訊息的前幾個字：可能帶到 stderr 或模型回傳的會議內容（R40.2） |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

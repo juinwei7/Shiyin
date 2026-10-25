@@ -7,6 +7,22 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 整理工具設定好才用、失敗說清楚怎麼修（R45～R47，design §34；2026-10-25 使用者決定三項都做，先做第 1 項）
+
+驗證用 DEBUG 版、暫存的 `SHIYIN_HOME`（示範資料複製一份），`-llmProvider` 等啟動參數只在這次執行有效；整理工具、key 用 `llmprovider`、`llmkey`（只在記憶體）。測完 `defaults read com.weiwei.shiyin` 確認沒有留下 `llmProvider`。
+
+- [ ] **S1 Mac：準備好了沒、不排工作**（R45.1、R45.4，§34.1、§34.2）：`SummarizerProblem`、登入快取、自動排程和手動動作的判斷、會議頁的提示
+  - 驗證：`-debugNoCLI YES` 加 `llmprovider claude`、`llmprovider gemini`（沒有 key）、`llmprovider openaiCompatible`（沒有模型）、`-debugCLILogin no` 各匯入一場短錄音：沒有整理、校正、猜說話者的工作，沒有「整理失敗」，會議頁顯示對應的原因和按鈕；有 key 的假伺服器照常整理
+- [ ] **S2 Mac：引導和設定頁**（R45.2、R45.3，§34.3）
+  - 驗證：`preview onboarding 1` 截圖；在真的畫面上用 AX：點「Gemini」不寫設定、存 key 後才寫並自動測試（假伺服器）、假伺服器回 401 時改回原本的設定；設定頁沒安裝的 CLI 不能選、沒 key 時紅字、存 key 後自動測試
+- [ ] **S3 Mac：設定問題的失敗換按鈕、暫停**（R46，§34.4）
+  - 驗證：假伺服器回 401：第一場失敗、橫幅是「打開設定」沒有「重試」，第二場不排整理；存新的 key（`llmkey`）後橫幅變回「重試」、新的會議照常整理；429、500 照舊有「重試」、不暫停
+- [ ] **S4 Mac：統計的失敗種類**（R47，§34.5）：`errorDetail`、後台欄位和 migration
+  - 驗證：S3 的情境後 `shiyinctl usage` 看到 `keyRejected`、`api`；`wrangler dev --local` 收一份、D1 的新欄位有值；舊格式（沒有 `errorDetail`）照樣收
+- [ ] **S5 Windows：S1～S4 同一份規則**（R45.5、R46.4、R47.3，design-windows §10.1）
+  - 驗證：`dotnet test`（準備好了沒、暫停、統計的鍵）；虛擬機用 UI Automation 走引導、設定頁、會議頁的提示和橫幅
+- [ ] **S6 後台上線**（使用者自己跑）：`migrate-summarize-errors.sql`、`wrangler deploy`
+
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
 M1～M6、M8（官網截圖）已完成（2026-10-25，Mac 和 Windows）。剩 M7 iPhone 之後。
