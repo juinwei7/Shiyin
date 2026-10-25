@@ -106,7 +106,7 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 
 ## Windows 版
 
-Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Mac 4.0 相同。到[官網](https://shiyin.weibuilds.com/windows/)或這個 repo 的 Releases 下載（tag 是 `win-vX.Y.Z`）。
+Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Mac 4.1 相同。到[官網](https://shiyin.weibuilds.com/windows/)或這個 repo 的 Releases 下載（tag 是 `win-vX.Y.Z`）。
 
 | 項目 | 需求 |
 |---|---|
