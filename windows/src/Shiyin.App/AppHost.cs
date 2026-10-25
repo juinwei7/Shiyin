@@ -85,6 +85,10 @@ public sealed class AppHost
         Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl };
         // 沒選過整理工具時用找得到的 CLI（R35.1）：要掃過 PATH 的每個資料夾，快取 30 秒
         Settings.DetectCli = CachedCliDetector(Tools);
+        // 整理工具準備好了沒（R45.1、M§34.1）：有沒有 CLI（快取 30 秒）、有沒有 key（只看有沒有）、登入狀態的快取
+        Settings.HasTool = CachedToolCheck(Tools);
+        Settings.HasKey = account => Keys.Exists(account);
+        Settings.CliLoggedIn = CliLogin.Cached;
         // 匿名使用統計（design-windows §12.10）：正式版用打包時寫進 app 的網址；DEBUG 不讀，只用控制通道的 usageurl
         Usage = new UsageStats(Paths.Usage, Settings, Http,
             () => new UsageStats.AppInfo(Version, SystemInfo.UsageOs(), SystemInfo.CpuName(), L.English ? "en" : "zh-Hant"))
@@ -183,6 +187,8 @@ public sealed class AppHost
         Recorder.Finished += _ => Post(() => HotKeys.SetBookmarkEnabled(false));
         HotKeyError = HotKeys.SetRecordEnabled(Settings.GlobalHotKey);
         Runner.Finished += (job, error) => Post(() => Notifier.JobFinished(job, error));
+        // claude、codex 的登入狀態（M§34.1）：沒登入時不自動整理
+        Post(() => _ = CliLogin.RefreshIfStale());
         if (Updater is not null) _ = Updater.RunAutomaticChecks(CancellationToken.None);
         // 打開 app 就建立今天的空白匯總（沒有用量的日子也算活躍，M§30.3），60 秒後開始送
         Usage.Touch();
@@ -208,6 +214,22 @@ public sealed class AppHost
                     checkedAt = DateTime.UtcNow;
                 }
                 return found;
+            }
+        };
+    }
+
+    /// <summary>某個 CLI 在不在（claude、codex）；30 秒內不重找</summary>
+    static Func<string, bool> CachedToolCheck(IToolLocator tools)
+    {
+        var gate = new object();
+        var found = new Dictionary<string, (bool Found, DateTime At)>();
+        return name =>
+        {
+            lock (gate)
+            {
+                if (!found.TryGetValue(name, out var v) || DateTime.UtcNow - v.At > TimeSpan.FromSeconds(30))
+                    found[name] = v = (tools.Find(name) is not null, DateTime.UtcNow);
+                return v.Found;
             }
         };
     }

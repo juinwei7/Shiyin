@@ -326,10 +326,21 @@ public sealed class DetailView
                 return Banner(Ui.Row(10, new ProgressRing { IsActive = true, Width = 16, Height = 16 }, Ui.Text(text, 13)), Cancel(), warm);
             case MeetingStatus.Failed f:
                 var actions = Ui.Row(8);
-                // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
-                if (f.Kind != JobKind.Transcribe && LLMException.IsLoginProblem(f.Error) && host.Settings.Provider is LLMProvider.Claude or LLMProvider.Codex)
-                    actions.Children.Add(Ui.Button(L.F("重新登入 %@", host.Settings.Provider.ShortLabel()), () => CliLogin.Open(host, host.Settings.Provider)));
-                actions.Children.Add(Ui.Button(L.T("重試"), () => host.Controller.Retry(id)));
+                if (f.Kind != JobKind.Transcribe && LLMException.IsSetupProblemKind(Detail.LatestJob?.ErrorKind) && host.Settings.SummarizerProblem is { } problem)
+                {
+                    // 設定問題（沒登入、key 錯誤…）而且還沒修好（R46.2、M§34.4）：給修的按鈕，不放「重試」（重試也一樣會失敗）
+                    actions.Children.Add(Ui.Button(problem.ActionTitle, () =>
+                    {
+                        if (problem.OffersLogin) CliLogin.Open(host, problem.Provider); else App.Current.ShowSettings();
+                    }));
+                }
+                else
+                {
+                    // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
+                    if (f.Kind != JobKind.Transcribe && LLMException.IsLoginProblem(f.Error) && host.Settings.Provider is LLMProvider.Claude or LLMProvider.Codex)
+                        actions.Children.Add(Ui.Button(L.F("重新登入 %@", host.Settings.Provider.ShortLabel()), () => CliLogin.Open(host, host.Settings.Provider)));
+                    actions.Children.Add(Ui.Button(L.T("重試"), () => host.Controller.Retry(id)));
+                }
                 var message = Ui.Text(f.Kind == JobKind.Transcribe ? L.F("轉錄失敗：%@", f.Error) : L.F("整理失敗：%@", f.Error), 13, maxLines: 3, select: true);
                 return Banner(Ui.Split(new SymbolIcon(Symbol.Important) { Foreground = Ui.Danger, VerticalAlignment = VerticalAlignment.Top }, message, 8), actions,
                     new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 0xC0, 0x39, 0x2B)));

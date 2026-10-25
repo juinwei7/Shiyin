@@ -13,9 +13,49 @@ public static class CliLogin
     static ToolCommand? Tool(LLMProvider provider) =>
         AppHost.Current.Tools.Find(provider == LLMProvider.Codex ? "codex" : "claude");
 
+    /// <summary>DEBUG 的 --set debugCliLogin=NO：當成沒登入、不執行 CLI（M§34.6）</summary>
+    static bool DebugLoggedOut => AppHost.Current.Debug && !AppHost.Current.Settings.Flag("debugCliLogin", true);
+
+    static readonly object gate = new();
+    static readonly Dictionary<LLMProvider, (bool? LoggedIn, DateTime CheckedAt)> cache = [];
+
+    /// <summary>登入狀態的快取（M§34.1）：null 是還沒查或看不出來（當作準備好）</summary>
+    public static bool? Cached(LLMProvider provider)
+    {
+        if (DebugLoggedOut) return false;
+        lock (gate) return cache.TryGetValue(provider, out var v) ? v.LoggedIn : null;
+    }
+
+    /// <summary>查登入狀態並記進快取；查到已登入就解除暫停，值變了才通知</summary>
+    public static async Task<Status?> Refresh(LLMProvider provider)
+    {
+        var status = await Check(provider);
+        bool changed;
+        lock (gate)
+        {
+            changed = !cache.TryGetValue(provider, out var old) || old.LoggedIn != status?.LoggedIn;
+            cache[provider] = (status?.LoggedIn, DateTime.UtcNow);
+        }
+        var settings = AppHost.Current.Settings;
+        if (status?.LoggedIn == true) settings.ClearSummarizerPause();
+        if (changed) settings.NotifySummarizerChanged();
+        return status;
+    }
+
+    /// <summary>目前的整理工具是 claude、codex 時，距離上次查超過 60 秒才再查（app 啟動、視窗回到前景）</summary>
+    public static async Task RefreshIfStale()
+    {
+        var provider = AppHost.Current.Settings.Provider;
+        if (provider is not (LLMProvider.Claude or LLMProvider.Codex)) return;
+        lock (gate)
+            if (cache.TryGetValue(provider, out var v) && DateTime.UtcNow - v.CheckedAt < TimeSpan.FromSeconds(60)) return;
+        await Refresh(provider);
+    }
+
     /// <summary>查登入狀態，不會送出請求、不消耗額度。找不到指令或看不懂輸出時回傳 null</summary>
     public static async Task<Status?> Check(LLMProvider provider)
     {
+        if (provider is (LLMProvider.Claude or LLMProvider.Codex) && DebugLoggedOut) return new Status(false, "");
         if (provider is not (LLMProvider.Claude or LLMProvider.Codex) || Tool(provider) is not { } tool) return null;
         var runner = new ProcessRunner();
         try

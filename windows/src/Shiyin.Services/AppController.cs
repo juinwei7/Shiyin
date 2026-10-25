@@ -399,7 +399,7 @@ public sealed class AppController
     /// </summary>
     void EnqueueDraftNotes(long meetingId, double duration)
     {
-        if (duration < DraftMinimumSeconds || !Settings.AutoSummarize || Settings.Provider == LLMProvider.None) return;
+        if (duration < DraftMinimumSeconds || !Settings.AutoSummarize || !Settings.SummarizerReady) return;
         if (Db.Meeting(meetingId) is not { } meeting || !Paths.HasAudio(meeting) || meeting.Notes is not null) return;
         if (Db.Segments(meetingId, "live").Sum(s => Shiyin.Text.SwiftText.Count(s.Text)) < 100) return;
         try
@@ -548,6 +548,8 @@ public sealed class AppController
     public void Retry(long id)
     {
         if (Db.LatestJob(id) is not { Status: JobStatus.Failed or JobStatus.Cancelled } job) return;
+        // 整理工具還沒準備好時重試也一樣會失敗（R46.2）：說原因
+        if (job.Kind.UsesSummarizer() && Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
         Perform(id, () => Db.Enqueue(id, job.Kind, job.Payload));
         Runner.Wake();
     }
@@ -750,6 +752,8 @@ public sealed class AppController
                 : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
             return;
         }
+        // 沒登入、沒有 key…：不排，說原因（R45.4、M§34.2）
+        if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
         Perform(id, () => Db.Enqueue(id, JobKind.Summarize));
         Runner.Wake();
     }
@@ -805,6 +809,11 @@ public sealed class AppController
                 : L.T("整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API"));
             return false;
         }
+        if (answered.Count > 0 && Settings.SummarizerProblem is { } problem)
+        {
+            Error?.Invoke(problem.Message);
+            return false;
+        }
         var skipped = dismissed.Count(i => i >= 0 && i < notes.ReviewItems.Count);
         Perform(id, () =>
         {
@@ -831,6 +840,7 @@ public sealed class AppController
                 : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
             return;
         }
+        if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
         Perform(id, () => Db.Enqueue(id, JobKind.Correct));
         Runner.Wake();
     }

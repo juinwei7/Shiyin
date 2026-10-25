@@ -177,8 +177,30 @@ public static class ControlPipe
             case "llmprovider" when args.Length > 1:
                 host.Settings.DebugProvider = LLMProviders.Parse(args[1]);
                 host.Settings.DebugModel = args.Length > 2 ? args[2] : null;
+                host.Settings.NotifySummarizerChanged();
                 return Ok;
-            case "llmkey" when args.Length > 2 && host.Keys is MemoryKeyStore memory: memory.Keys[args[1]] = args[2]; return Ok;
+            case "llmkey" when args.Length > 2 && host.Keys is MemoryKeyStore memory:
+                memory.Keys[args[1]] = args[2];
+                host.Settings.NotifyKeysChanged();   // 等於存了新的 key：解除暫停（M§34.4）
+                return Ok;
+            case "summarizer":   // 整理工具準備好了沒、登入快取（M§34.6）
+            {
+                var problem = host.Settings.SummarizerProblem;
+                return new JsonObject
+                {
+                    ["provider"] = host.Settings.Provider.Code(), ["ready"] = problem is null,
+                    ["problem"] = problem is null ? "" : problem.Kind.ToString(), ["message"] = problem?.Message ?? "",
+                    ["action"] = problem?.ActionTitle ?? "",
+                    ["loggedIn"] = new JsonObject
+                    {
+                        ["claude"] = CliLogin.Cached(LLMProvider.Claude) is { } c ? (c ? "yes" : "no") : "unknown",
+                        ["codex"] = CliLogin.Cached(LLMProvider.Codex) is { } x ? (x ? "yes" : "no") : "unknown",
+                    },
+                };
+            }
+            case "loginrefresh":   // 重新查 claude、codex 的登入狀態
+                host.Post(async () => { await CliLogin.Refresh(LLMProvider.Claude); await CliLogin.Refresh(LLMProvider.Codex); });
+                return Ok;
             case "llmurl" when args.Length > 2 && LLMProviders.Parse(args[1]) is { } provider: host.Llm.BaseUrlOverrides[provider] = args[2]; return Ok;
             case "modelurl" when args.Length > 2 && Enum.TryParse<ModelStore.Model>(args[1], true, out var model): host.Models.DebugUrls[model] = args[2]; return Ok;
             case "model" when args.Length > 2 && Enum.TryParse<ModelStore.Model>(args[2], true, out var m):

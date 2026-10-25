@@ -221,13 +221,21 @@ public sealed class JobRunner
                 {
                     db.Finish(jobId, JobStatus.Failed, Message(failure), failure.LogSummary());
                     Log.Error($"job {jobId} failed: {failure.LogSummary()}");
+                    // 設定問題（沒登入、key 錯誤…）：暫停自動整理，設定改了、登入了、測試成功才再排（R46.3、M§34.4）
+                    if (job.Kind is JobKind.Summarize or JobKind.Revise && failure is LLMException { IsSetupProblem: true }
+                        && settings.Provider != LLMProvider.None)
+                    {
+                        settings.PauseSummarizer(settings.Provider, failure.Message);
+                        Log.Info("summarizer paused after setup problem");
+                    }
                 }
                 else
                 {
                     db.Finish(jobId, JobStatus.Done);
                     Log.Info($"job {jobId} done");
+                    if (job.Kind is JobKind.Summarize or JobKind.Revise) settings.ClearSummarizerPause();
                 }
-                CountUsage(job.Kind, failure is not null);
+                CountUsage(job, failure);
             }
             catch (Exception e) { Log.Error($"finish failed: {e.GetType().Name}"); }
             // 壓縮、逐字稿校正是背景的輔助工作，不發通知；有草稿時正式版不再發（M§21.3）
@@ -239,16 +247,20 @@ public sealed class JobRunner
     static string Message(Exception e) => e is OperationCanceledException ? L.T("已取消") : e.Message;
 
     /// <summary>匿名使用統計（M§30.1）：只算真的跑完的工作（取消的不算）；轉錄成功在 Transcribe 裡算（要用到長度）</summary>
-    void CountUsage(JobKind kind, bool failed)
+    void CountUsage(Job job, Exception? failure)
     {
         if (Usage is not { } usage) return;
-        switch (kind, failed)
+        switch (job.Kind, failure is not null)
         {
             case (JobKind.Transcribe, true): usage.Failed(UsageStats.Failure.Transcribe); break;
             case (JobKind.Rediarize, false): usage.Rediarized(); break;
             case (JobKind.Rediarize, true): usage.Failed(UsageStats.Failure.Diarize); break;
             case (JobKind.Summarize or JobKind.Revise, false): usage.Summarized(settings.Provider); break;
-            case (JobKind.Summarize or JobKind.Revise, true): usage.Failed(UsageStats.Failure.Summarize); break;
+            case (JobKind.Summarize or JobKind.Revise, true):
+                // 種類、整理工具、是不是草稿另外記（R47、M§34.5）
+                var draft = job.Kind == JobKind.Summarize && (Decode<SummarizePayload>(job.Payload)?.Draft ?? false);
+                usage.SummarizeFailed(failure!, settings.Provider, draft);
+                break;
         }
     }
 
@@ -317,9 +329,12 @@ public sealed class JobRunner
             if (matched > 0) Log.Info($"voiceprints matched {matched} speakers");
         }
         if (settings.CompressAudio && Importer.Extension(meeting.AudioFile) == "wav") db.Enqueue(job.MeetingId, JobKind.Compress);
-        // 校正在輔助線、整理在整理線，兩個同時開始（M§21.2、R20.1）
-        if (settings.CorrectTranscript && settings.Provider != LLMProvider.None) db.Enqueue(job.MeetingId, JobKind.Correct);
-        if (settings.AutoSummarize && settings.Provider != LLMProvider.None)
+        // 校正在輔助線、整理在整理線，兩個同時開始（M§21.2、R20.1）。
+        // 整理工具還沒準備好（沒登入、沒有 key…）就都不排，不會「整理失敗」（R45.4、M§34.2）
+        var summarizerReady = settings.SummarizerReady;
+        if (!summarizerReady) Log.Info("summarizer not ready, skip auto jobs");
+        if (settings.CorrectTranscript && summarizerReady) db.Enqueue(job.MeetingId, JobKind.Correct);
+        if (settings.AutoSummarize && summarizerReady)
         {
             db.Enqueue(job.MeetingId, JobKind.Summarize);
             // 還有預設名稱的說話者就猜名字（M§21.5）：在輔助線、校正後面，不擋整理
@@ -381,7 +396,7 @@ public sealed class JobRunner
             foreach (var (idx, item) in inherited.Where(p => p.Value.Source != "voiceprint"))
                 db.LearnVoiceprint(job.MeetingId, idx, item.Name, item.Source);
             if (settings.Voiceprints) db.MatchVoiceprints(job.MeetingId);
-            if (settings.Provider != LLMProvider.None && db.Speakers(job.MeetingId).Any(s => s.NameSource == "default"))
+            if (settings.SummarizerReady && db.Speakers(job.MeetingId).Any(s => s.NameSource == "default"))
                 db.Enqueue(job.MeetingId, JobKind.NameSpeakers);
             var count = assigned.Where(a => a is not null).Distinct().Count();
             Log.Info($"rediarized meeting {job.MeetingId}: {count} speakers, {inherited.Count} names kept");
@@ -530,7 +545,7 @@ public sealed class JobRunner
         if (draft && db.Segments(job.MeetingId).Count > 0) return false;
         var provider = settings.Provider;
         if (provider == LLMProvider.None)
-            throw LLMException.Failed(settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
+            throw LLMException.NotConfigured(settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
                 : L.T("整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"));
         state.Provider = provider;
         state.Stage = draft ? L.T("整理草稿") : answers is null ? L.T("整理") : L.T("校稿");

@@ -64,11 +64,15 @@ public sealed class UsageStatsTests : IDisposable
         usage.Reviewed(0, 0, 0);   // 沒有題目不算
         usage.Failed(UsageStats.Failure.Recording);
         usage.Failed(UsageStats.Failure.Summarize);
+        // 整理失敗的種類、整理工具、草稿（R47、M§34.5）
+        usage.SummarizeFailed(LLMException.Rejected("x"), LLMProvider.Gemini, draft: false);
+        usage.SummarizeFailed(new TimeoutException(), LLMProvider.Claude, draft: true);
+        usage.SummarizeFailed(LLMException.NotLoggedIn("codex"), LLMProvider.Codex, draft: false);
 
         var json = usage.PreviewJson();
         var payload = JsonNode.Parse(json)!.AsObject();
         // 鍵跟 Mac 送的一樣，依字母排序（M§30.4），沒有其他欄位（R40.2）
-        Assert.Equal(["app", "date", "errors", "installId", "schema", "usage"], payload.Select(p => p.Key));
+        Assert.Equal(["app", "date", "errorDetail", "errors", "installId", "schema", "usage"], payload.Select(p => p.Key));
         Assert.Equal(1, (int)payload["schema"]!);
         Assert.Equal("2026-10-22", (string)payload["date"]!);
         Assert.Matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", (string)payload["installId"]!);
@@ -76,7 +80,9 @@ public sealed class UsageStatsTests : IDisposable
             payload["app"]!.ToJsonString());
         Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":1},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"api":1,"claudeCode":1,"codex":1,"local":1},"transcribeWallSeconds":39,"transcribedSeconds":750}""",
             payload["usage"]!.ToJsonString());
-        Assert.Equal("""{"diarize":0,"recording":1,"summarize":1,"transcribe":0}""", payload["errors"]!.ToJsonString());
+        Assert.Equal("""{"diarize":0,"recording":1,"summarize":4,"transcribe":0}""", payload["errors"]!.ToJsonString());
+        Assert.Equal("""{"summarize":{"badOutput":0,"keyRejected":1,"limited":0,"missingKey":0,"notConfigured":0,"notInstalled":0,"notLoggedIn":1,"other":0,"timeout":1,"unreachable":0},"summarizeDraft":1,"summarizeProvider":{"api":1,"claudeCode":1,"codex":1,"local":0}}""",
+            payload["errorDetail"]!.ToJsonString());
 
         // 存檔再讀回來：數字、安裝 ID 都在（同 Mac 的 usage.json 格式）
         var reloaded = Make(settings);

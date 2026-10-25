@@ -106,7 +106,7 @@ public static class Importer
         {
             MeetingId = id, Seq = i, Start = s.Start, End = s.End, Text = s.Text, Kind = "final",
         }).ToList(), (int)parsed[^1].End, 0);
-        if (settings.AutoSummarize && settings.Provider != LLM.LLMProvider.None) db.Enqueue(id, JobKind.Summarize);
+        if (settings.AutoSummarize && settings.SummarizerReady) db.Enqueue(id, JobKind.Summarize);
         return db.Meeting(id) ?? meeting;
     }
 

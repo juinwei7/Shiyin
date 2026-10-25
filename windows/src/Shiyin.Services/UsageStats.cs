@@ -24,10 +24,15 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
 
     public enum Failure { Recording, Transcribe, Diarize, Summarize }
 
+    // 整理失敗的種類（R47、M§34.5）：要在 Groups 前面（靜態欄位照順序初始化）
+    public static readonly string[] SummarizeErrorKinds =
+        ["notInstalled", "notLoggedIn", "missingKey", "notConfigured", "keyRejected", "limited", "timeout", "unreachable", "badOutput", "other"];
+    static readonly string[] DetailFields = ["summarizeErrors", "summarizeErrorProviders", "summarizeDraftErrors"];
+
     // 欄位和鍵名同 Mac 的 Counters（usage.json、送出的格式都跟 Mac 一樣）
     static readonly string[] Numbers =
         ["meetingsRecorded", "recordedSeconds", "meetingsImported", "importedSeconds", "transcribedSeconds", "transcribeWallSeconds",
-         "diarizationRuns", "questionsAsked"];
+         "diarizationRuns", "questionsAsked", "summarizeDraftErrors"];
     static readonly (string Name, string[] Keys)[] Groups =
     [
         ("engines", ["breeze", "builtin", "whisperJa", "qwen"]),
@@ -35,7 +40,11 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         ("summarizer", ["claudeCode", "codex", "api", "local"]),
         ("review", ["answered", "confirmed", "skipped"]),   // 待確認送出的題數（R41.7、M§31.3）
         ("errors", ["recording", "transcribe", "diarize", "summarize"]),
+        // 整理失敗的種類、當時的整理工具（R47、M§34.5）；summarizeDraftErrors 在 Numbers
+        ("summarizeErrors", SummarizeErrorKinds),
+        ("summarizeErrorProviders", ["claudeCode", "codex", "api", "local"]),
     ];
+
 
     /// <summary>一天的匯總：數字和四組字典，鍵一定都在</summary>
     sealed class Counters
@@ -135,17 +144,47 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
     /// <summary>整理（含草稿、修正）成功。只記整理工具的種類，不記網址、模型</summary>
     public void Summarized(LLMProvider provider)
     {
-        var key = provider switch
-        {
-            LLMProvider.Claude => "claudeCode",
-            LLMProvider.Codex => "codex",
-            LLMProvider.OpenAICompatible =>
-                OpenAICompatibleApi.Normalized(settings.CompatibleBaseUrl) is { } url && OpenAICompatibleApi.IsLocal(url) ? "local" : "api",
-            LLMProvider.Anthropic or LLMProvider.OpenAI or LLMProvider.Gemini => "api",
-            _ => null,
-        };
-        if (key is not null) Add(c => c.Add("summarizer", key, 1));
+        if (ProviderKind(provider) is { } key) Add(c => c.Add("summarizer", key, 1));
     }
+
+    /// <summary>整理（含草稿、修正）失敗（R47、M§34.5）：原本的次數照舊，另外記種類、整理工具、是不是草稿；不記錯誤訊息</summary>
+    public void SummarizeFailed(Exception error, LLMProvider provider, bool draft)
+    {
+        var kind = SummarizeFailureKind(error);
+        var providerKey = ProviderKind(provider);
+        Add(c =>
+        {
+            c.Add("errors", "summarize", 1);
+            c.Add("summarizeErrors", kind, 1);
+            if (providerKey is not null) c.Add("summarizeErrorProviders", providerKey, 1);
+            if (draft) c.Add("summarizeDraftErrors", 1);
+        });
+    }
+
+    string? ProviderKind(LLMProvider provider) => provider switch
+    {
+        LLMProvider.Claude => "claudeCode",
+        LLMProvider.Codex => "codex",
+        LLMProvider.OpenAICompatible =>
+            OpenAICompatibleApi.Normalized(settings.CompatibleBaseUrl) is { } url && OpenAICompatibleApi.IsLocal(url) ? "local" : "api",
+        LLMProvider.Anthropic or LLMProvider.OpenAI or LLMProvider.Gemini => "api",
+        _ => null,
+    };
+
+    /// <summary>失敗的種類（M§34.5）：LLM 的錯誤照種類；CLI 逾時是 timeout；其他是 other</summary>
+    public static string SummarizeFailureKind(Exception error) => error switch
+    {
+        LLMException { Kind: LLMErrorKind.NotInstalled } => "notInstalled",
+        LLMException { Kind: LLMErrorKind.NotLoggedIn } => "notLoggedIn",
+        LLMException { Kind: LLMErrorKind.MissingKey } => "missingKey",
+        LLMException { Kind: LLMErrorKind.NotConfigured } => "notConfigured",
+        LLMException { Kind: LLMErrorKind.Rejected } => "keyRejected",
+        LLMException { Kind: LLMErrorKind.Limited } => "limited",
+        LLMException { Kind: LLMErrorKind.Unreachable } => "unreachable",
+        LLMException { Kind: LLMErrorKind.BadOutput } => "badOutput",
+        TimeoutException => "timeout",
+        _ => "other",
+    };
 
     public void Asked() => Add(c => c.Add("questionsAsked", 1));
 
@@ -325,8 +364,15 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
                 ["platform"] = "windows", ["version"] = Text(info.Version), ["os"] = Text(info.Os), ["chip"] = Text(info.Chip),
                 ["uiLanguage"] = Text(info.UiLanguage),
             }),
-            ["usage"] = counters.Json("errors"),
+            ["usage"] = counters.Json(["errors", .. DetailFields]),
             ["errors"] = Sorted(counters.Dicts["errors"].ToDictionary(p => p.Key, p => (JsonNode?)p.Value)),
+            // 2026-10-25 加（R47、M§34.5）：舊後台忽略這個鍵，schema 仍是 1
+            ["errorDetail"] = Sorted(new Dictionary<string, JsonNode?>
+            {
+                ["summarize"] = Sorted(counters.Dicts["summarizeErrors"].ToDictionary(p => p.Key, p => (JsonNode?)p.Value)),
+                ["summarizeProvider"] = Sorted(counters.Dicts["summarizeErrorProviders"].ToDictionary(p => p.Key, p => (JsonNode?)p.Value)),
+                ["summarizeDraft"] = counters.Values["summarizeDraftErrors"],
+            }),
         });
     }
 

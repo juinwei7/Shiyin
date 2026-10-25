@@ -97,6 +97,82 @@ public sealed class ServicesTests : IDisposable
     }
 
     [Fact]
+    public void SummarizerReadinessFollowsSettings()
+    {
+        // 準備好了沒（R45.1、M§34.1）：不送請求，只看有沒有 CLI、登入狀態、key、網址和模型
+        var settings = AppSettings.InMemory();
+        var tools = new HashSet<string>();
+        var keys = new HashSet<string>();
+        bool? loggedIn = null;
+        settings.HasTool = tools.Contains;
+        settings.HasKey = keys.Contains;
+        settings.CliLoggedIn = _ => loggedIn;
+        SummarizerProblemKind? Kind() => settings.SummarizerProblem?.Kind;
+        Assert.Equal(SummarizerProblemKind.NotChosen, Kind());
+        settings.Set(AppSettings.ProviderKey, "none");
+        Assert.Equal(SummarizerProblemKind.Off, Kind());
+        settings.Set(AppSettings.ProviderKey, "claude");
+        Assert.Equal(SummarizerProblemKind.NotInstalled, Kind());
+        tools.Add("claude");
+        Assert.True(settings.SummarizerReady);   // 看不出登入狀態：當作準備好（D112）
+        loggedIn = false;
+        Assert.Equal(SummarizerProblemKind.NotLoggedIn, Kind());
+        Assert.True(settings.SummarizerProblem!.OffersLogin);
+        Assert.Equal("登入 Claude Code", settings.SummarizerProblem!.ActionTitle);
+        loggedIn = true;
+        Assert.True(settings.SummarizerReady);
+        settings.Set(AppSettings.ProviderKey, "gemini");
+        Assert.Equal(SummarizerProblemKind.MissingKey, Kind());
+        Assert.Equal("打開設定", settings.SummarizerProblem!.ActionTitle);
+        keys.Add("gemini");
+        Assert.True(settings.SummarizerReady);
+        settings.Set(AppSettings.ProviderKey, "openaiCompatible");
+        Assert.Equal(SummarizerProblemKind.Incomplete, Kind());
+        settings.Set(AppSettings.CompatibleBaseUrlKey, "http://localhost:11434/v1");
+        Assert.Equal(SummarizerProblemKind.Incomplete, Kind());   // 還沒有模型
+        settings.Set(LLMProvider.OpenAICompatible.ModelKey(), "llama3");
+        Assert.True(settings.SummarizerReady);
+
+        // 暫停（R46.3、M§34.4）：指紋（工具、模型、網址、key）變了就解除
+        settings.Set(AppSettings.ProviderKey, "gemini");
+        var changes = 0;
+        settings.SummarizerChanged += () => changes++;
+        settings.PauseSummarizer(LLMProvider.Gemini, "Gemini 回傳 HTTP 401（API key 錯誤或已失效）：Invalid API Key");
+        Assert.Equal(SummarizerProblemKind.Paused, Kind());
+        Assert.StartsWith("Gemini 回傳 HTTP 401", settings.SummarizerProblem!.Message);
+        settings.NotifyKeysChanged();
+        Assert.True(settings.SummarizerReady);
+        settings.PauseSummarizer(LLMProvider.Gemini, "x");
+        settings.Set(LLMProvider.Gemini.ModelKey(), "gemini-pro");
+        Assert.True(settings.SummarizerReady);
+        settings.PauseSummarizer(LLMProvider.Gemini, "x");
+        settings.Set(AppSettings.ProviderKey, "anthropic");
+        keys.Add("anthropic");
+        Assert.True(settings.SummarizerReady);   // 換了工具
+        settings.Set(AppSettings.ProviderKey, "gemini");
+        Assert.Equal(SummarizerProblemKind.Paused, Kind());   // 換回來、設定都沒變：還是暫停
+        settings.ClearSummarizerPause();
+        Assert.True(settings.SummarizerReady);
+        Assert.True(changes >= 5);
+    }
+
+    [Fact]
+    public void LLMErrorKindsSeparateSetupProblems()
+    {
+        // 設定問題（R46.1）：重試也不會好；error_kind 的字串同 Mac 的 logSummary
+        Assert.True(LLMException.Rejected("x").IsSetupProblem);
+        Assert.True(LLMException.NotConfigured("x").IsSetupProblem);
+        Assert.False(LLMException.Limited("x").IsSetupProblem);
+        Assert.False(LLMException.Unreachable("x").IsSetupProblem);
+        Assert.Equal("LLMError.rejected", LLMException.Rejected("x").LogSummary);
+        Assert.True(LLMException.IsSetupProblemKind("LLMError.missingKey(Gemini)"));
+        Assert.True(LLMException.IsSetupProblemKind("LLMError.rejected"));
+        Assert.False(LLMException.IsSetupProblemKind("LLMError.limited"));
+        Assert.False(LLMException.IsSetupProblemKind(null));
+        Assert.True(LLMException.IsLimitProblem("Claude AI usage limit reached|1700000000"));
+    }
+
+    [Fact]
     public void PathsRequireHomeOutsideWindows()
     {
         if (OperatingSystem.IsWindows()) return;
@@ -793,6 +869,53 @@ public sealed class ServicesTests : IDisposable
         var original = await new Velopack.Sources.GithubSource(repo, null, false, new FakeGitHub(list.ToJsonString(), feed))
             .GetReleaseFeed(Velopack.Logging.NullVelopackLogger.Instance, "ShiyinApp", "win-x64");
         Assert.Empty(original.Assets);
+    }
+
+    [Fact]
+    public async Task SetupFailurePausesAutoSummarize()
+    {
+        // key 被拒（401，設定問題）：第一場整理失敗後暫停，下一場不排整理（R46.3）；存了新的 key 就恢復
+        var calls = 0;
+        server.Handle = async c =>
+        {
+            Interlocked.Increment(ref calls);
+            c.Response.StatusCode = 401;
+            var bytes = Encoding.UTF8.GetBytes("""{"error":{"message":"invalid x-api-key"}}""");
+            c.Response.ContentType = "application/json";
+            await c.Response.OutputStream.WriteAsync(bytes);
+            c.Response.Close();
+        };
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic", ["correctTranscript"] = "NO" });
+        var usage = new UsageStats(paths.Usage, settings, http, () => new UsageStats.AppInfo("4.1.0", "", "", "zh-Hant")) { Url = "http://127.0.0.1:9/v1/usage" };
+        var (runner, _, _) = Runner(settings, usage);
+        var finished = new List<(JobKind Kind, Exception? Error)>();
+        runner.Finished += (job, error) => { lock (finished) finished.Add((job.Kind, error)); };
+        runner.Start();
+        try
+        {
+            long Import(string name)
+            {
+                var source = Path.Combine(home.Path, name);
+                WriteWav(source, 1, 9);
+                return Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+            }
+            var first = Import("一.wav");
+            await Until(() => db.LatestJob(first) is { Kind: JobKind.Summarize, Status: JobStatus.Failed } && db.ActiveJobs().Count == 0);
+            Assert.Equal("LLMError.rejected", db.LatestJob(first)!.ErrorKind);
+            Assert.Equal(SummarizerProblemKind.Paused, settings.SummarizerProblem?.Kind);
+            var second = Import("二.wav");
+            await Until(() => db.Segments(second).Count == 3 && db.ActiveJobs().Count == 0);
+            Assert.NotEqual(JobKind.Summarize, db.LatestJob(second)!.Kind);
+            settings.NotifyKeysChanged();
+            Assert.True(settings.SummarizerReady);
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.Single(finished, f => f.Kind == JobKind.Summarize);
+        // 統計：原本的失敗次數照舊，另外記種類和整理工具（R47）
+        var preview = JsonNode.Parse(usage.PreviewJson())!;
+        Assert.Equal(1, (int)preview["errors"]!["summarize"]!);
+        Assert.Equal(1, (int)preview["errorDetail"]!["summarize"]!["keyRejected"]!);
+        Assert.Equal(1, (int)preview["errorDetail"]!["summarizeProvider"]!["api"]!);
     }
 
     [Fact]

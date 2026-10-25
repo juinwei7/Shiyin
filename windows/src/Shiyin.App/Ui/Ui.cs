@@ -299,11 +299,13 @@ public static class Ui
         return Text(time, 13, color: Secondary, wrap: false);
     }
 
-    public static ComboBox Combo<T>(IEnumerable<(T Value, string Label)> options, T selected, Action<T> changed, string? header = null)
+    /// <summary>enabled：哪些選項能選（例如沒安裝的 CLI 不能選，R45.3）；沒給就全部能選</summary>
+    public static ComboBox Combo<T>(IEnumerable<(T Value, string Label)> options, T selected, Action<T> changed, string? header = null, Func<T, bool>? enabled = null)
     {
         var list = options.ToList();
         var box = new ComboBox { Header = header, MinWidth = 200 };
-        foreach (var (_, label) in list) box.Items.Add(label);
+        foreach (var (value, label) in list)
+            box.Items.Add(enabled is null ? label : new ComboBoxItem { Content = label, IsEnabled = enabled(value) });
         box.SelectedIndex = Math.Max(0, list.FindIndex(o => EqualityComparer<T>.Default.Equals(o.Value, selected)));
         box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) changed(list[box.SelectedIndex].Value); };
         return box;

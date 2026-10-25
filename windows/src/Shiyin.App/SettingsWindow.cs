@@ -88,21 +88,26 @@ public sealed class SettingsWindow : Window
         var provider = S.Provider;
         var column = Ui.Column(14);
         // 選單顯示實際用的整理工具；這台電腦沒有 claude、codex 時多「之後再設定」，選它等於清掉設定（R35.3、M§19.6）
-        var options = LLMProviders.All.Select(p => ((LLMProvider?)p, p.Label())).ToList();
+        // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
+        bool Missing(LLMProvider p) => p is LLMProvider.Claude or LLMProvider.Codex && !S.HasTool(p == LLMProvider.Claude ? "claude" : "codex");
+        var options = LLMProviders.All.Select(p => ((LLMProvider?)p, Missing(p) ? L.F("%@（沒有安裝）", p.Label()) : p.Label())).ToList();
         if (S.DetectedProvider == LLMProvider.None) options.Insert(0, (null, L.T("之後再設定（先不整理）")));
         column.Children.Add(Ui.Combo(options, S.NeedsProviderSetup ? null : provider, p =>
         {
             if (p is { } chosen) S.Set(AppSettings.ProviderKey, chosen.Code());
             else S.Remove(AppSettings.ProviderKey);
             Show();
-        }, L.T("整理工具")));
+        }, L.T("整理工具"), p => p is not { } item || !Missing(item) || item == provider));
+        // 還沒準備好：說原因，設定好之前不會自動整理（R45.3、M§34.3）
+        if (provider != LLMProvider.None && ProblemNotice(S.SummarizerProblem) is { } notice)
+            column.Children.Add(Ui.Text(notice, 12, color: Ui.Danger));
 
         if (provider is LLMProvider.Claude or LLMProvider.Codex)
         {
             var status = Ui.Text(L.T("檢查登入狀態…"), 13, color: Ui.Secondary);
             var login = Ui.Button(L.F("登入 %@", provider.ShortLabel()), () => CliLogin.Open(host, provider));
             login.Visibility = Visibility.Collapsed;
-            async void Check()
+            async void Check(bool userInitiated)
             {
                 if (host.Tools.Find(provider == LLMProvider.Claude ? "claude" : "codex") is null)
                 {
@@ -110,14 +115,16 @@ public sealed class SettingsWindow : Window
                         : L.T("這台電腦沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API");
                     return;
                 }
-                var result = await CliLogin.Check(provider);
+                var result = await CliLogin.Refresh(provider);
                 if (S.Provider != provider) return;   // 查的時候換了整理工具
+                // 使用者按了「重新檢查」、查到已登入就測一次（R45.3）；打開設定頁時的自動檢查不測（不花額度）
+                if (userInitiated && result is { LoggedIn: true }) { autoTest = true; Show(); return; }
                 status.Text = result is null ? L.T("已安裝，看不出登入狀態") : result.LoggedIn ? L.F("已登入 %@", result.Detail) : L.T("沒有登入");
                 status.Foreground = result is null ? Ui.Secondary : result.LoggedIn ? Ui.Celadon : Ui.Danger;
                 login.Visibility = result is { LoggedIn: false } ? Visibility.Visible : Visibility.Collapsed;
             }
-            Check();
-            column.Children.Add(Ui.Row(8, Ui.Text(L.T("狀態"), 13), status, login, Ui.IconButton(Symbol.Refresh, L.T("重新檢查登入狀態"), Check)));
+            Check(false);
+            column.Children.Add(Ui.Row(8, Ui.Text(L.T("狀態"), 13), status, login, Ui.IconButton(Symbol.Refresh, L.T("重新檢查登入狀態"), () => Check(true))));
         }
 
         // OpenAI 相容 API 的網址（M§19.3）
@@ -150,8 +157,8 @@ public sealed class SettingsWindow : Window
                 if (key.Password.Trim().Length == 0) return;
                 try
                 {
-                    if (host.Keys is CredentialStore store) store.Save(provider.KeyAccount(), key.Password.Trim());
-                    else if (host.Keys is MemoryKeyStore memory) memory.Keys[provider.KeyAccount()] = key.Password.Trim();
+                    SummarizerSetup.SaveKey(host, provider.KeyAccount(), key.Password.Trim());
+                    autoTest = S.SummarizerReady;   // 存好 key 就測一次（R45.3）
                     Show();
                 }
                 catch (InvalidOperationException e) { error.Text = e.Message; }
@@ -161,8 +168,7 @@ public sealed class SettingsWindow : Window
                 {
                     try
                     {
-                        if (host.Keys is CredentialStore store) store.Delete(provider.KeyAccount());
-                        else if (host.Keys is MemoryKeyStore memory) memory.Keys.Remove(provider.KeyAccount());
+                        SummarizerSetup.DeleteKey(host, provider.KeyAccount());
                     }
                     catch (InvalidOperationException e) { error.Text = e.Message; }
                     Show();
@@ -202,30 +208,27 @@ public sealed class SettingsWindow : Window
             // 測試：送一個很短的請求，確認登入、key、模型都能用
             var result = Ui.Text("", 13);
             var test = Ui.Button(L.T("測試整理工具"), () => { });
-            test.Click += async (_, _) =>
+            async void RunTest()
             {
                 test.IsEnabled = false;
                 test.Content = L.T("測試中…");
-                var started = DateTime.UtcNow;
-                var language = S.DefaultMeetingLanguage;
-                var prompt = language.Text("這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
-                    "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.",
-                    "これは接続テストです。文字起こし：\n[00:00] 話者 1：皆さん、今日はテストだけです。");  // l10n-skip
                 try
                 {
-                    await host.Llm.Generate(provider, S.Model, NotesPrompt.System(language), prompt, CancellationToken.None);
-                    result.Text = L.F("可以使用（%lld 秒）", (long)Math.Round((DateTime.UtcNow - started).TotalSeconds));
+                    var seconds = await SummarizerSetup.Test(host, provider, S.Model);
+                    result.Text = L.F("可以使用（%lld 秒）", seconds);
                     result.Foreground = Ui.Celadon;
                 }
-                catch (Exception e) when (e is LLMException or HttpRequestException or IOException or TimeoutException or TaskCanceledException)
+                catch (Exception e) when (SummarizerSetup.IsTestFailure(e))
                 {
                     result.Text = e.Message;
                     result.Foreground = Ui.Danger;
                 }
                 test.IsEnabled = true;
                 test.Content = L.T("測試整理工具");
-            };
+            }
+            test.Click += (_, _) => RunTest();
             column.Children.Add(Ui.Row(10, test, result));
+            if (autoTest) { autoTest = false; RunTest(); }
         }
         var auto = Ui.Toggle(L.T("轉錄完成後自動整理成會議紀錄"), S.AutoSummarize, on => S.Set(AppSettings.AutoSummarizeKey, on));
         auto.IsEnabled = provider != LLMProvider.None;
@@ -237,6 +240,19 @@ public sealed class SettingsWindow : Window
         column.Children.Add(Ui.Card(Ui.Text(Privacy(provider), 13, color: Ui.Secondary)));
         return column;
     }
+
+    /// <summary>存好 key、按「重新檢查」查到已登入之後，重畫時自動測一次（R45.3）</summary>
+    bool autoTest;
+
+    /// <summary>選單下面的紅字（M§34.3）：沒安裝、沒登入在「狀態」那一列已經寫了原因</summary>
+    static string? ProblemNotice(SummarizerProblem? problem) => problem?.Kind switch
+    {
+        null or SummarizerProblemKind.NotChosen or SummarizerProblemKind.Off => null,
+        SummarizerProblemKind.NotInstalled or SummarizerProblemKind.NotLoggedIn => L.T("設定好之前不會自動整理。"),
+        SummarizerProblemKind.MissingKey => L.T("還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。"),
+        SummarizerProblemKind.Incomplete => L.T("還沒有填網址或模型。設定好之前不會自動整理。"),
+        _ => L.F("上次整理失敗：%@。改好設定，或按「測試整理工具」成功之後，才會再自動整理。", problem!.Detail.TrimEnd('。', '.', ' ')),
+    };
 
     string Privacy(LLMProvider provider) => provider switch
     {
@@ -661,7 +677,7 @@ public sealed class SettingsWindow : Window
         {
             XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("匿名使用統計")),
             Content = Ui.Column(12, toggle,
-                Ui.Text(L.T("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。"), 13, color: Ui.Secondary),
+                Ui.Text(L.T("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次和哪一種失敗。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。"), 13, color: Ui.Secondary),
                 Ui.Row(10, Ui.Button(L.T("重設匿名 ID"), () => { usage.ResetInstallId(); reset.Text = L.T("已重設匿名 ID"); }), reset)),
             CloseButtonText = L.T("完成"), DefaultButton = ContentDialogButton.Close,
         };

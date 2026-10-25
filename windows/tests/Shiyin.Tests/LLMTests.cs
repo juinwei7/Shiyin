@@ -262,13 +262,14 @@ public sealed class LLMTests : IDisposable
             Assert.Equal(1, calls);
             Assert.Contains("HTTP 401", e.Message);
             Assert.Contains("（API key 錯誤或已失效）", e.Message);
+            Assert.Equal("LLMError.rejected", e.LogSummary);   // 設定問題（M§34.4）
 
             calls = 0;
             server.Respond = _ => { Interlocked.Increment(ref calls); return (429, """{"error":{"message":"Your credit balance is too low"}}""", null); };
             e = await Assert.ThrowsAsync<LLMException>(() => Client().Generate(LLMProvider.Anthropic, "", "S", "P", CancellationToken.None));
             Assert.Equal(1, calls);
             Assert.Contains("（帳戶沒有額度，要到服務的網站加值）", e.Message);
-            Assert.Equal("LLMError.failed", e.LogSummary);
+            Assert.Equal("LLMError.limited", e.LogSummary);   // 用量上限不是設定問題（M§34.4）
         }
         finally { ApiRequest.MaxRetryAfterSeconds = 30; }
     }

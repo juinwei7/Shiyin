@@ -55,7 +55,7 @@ public static class ApiRequest
                     await Task.Delay(NetworkRetryDelay, cancel);
                     continue;
                 }
-                throw LLMException.Failed(L.F("連不到 %@：%@", provider, e.Message));
+                throw LLMException.Unreachable(L.F("連不到 %@：%@", provider, e.Message));
             }
             using (message)
             {
@@ -112,7 +112,11 @@ public static class ApiRequest
         var hint = keyProblem ? L.T("（API key 錯誤或已失效）")
             : noCredit ? L.T("（帳戶沒有額度，要到服務的網站加值）")
             : status == 429 ? L.T("（超過用量限制，請稍後再試）") : "";
-        return LLMException.Failed(L.F("%@ 回傳 HTTP %lld%@：%@", provider, (long)status, hint, r.Message));
+        var text = L.F("%@ 回傳 HTTP %lld%@：%@", provider, (long)status, hint, r.Message);
+        // 設定問題和用量上限分開（M§34.4）：key 錯誤或沒權限要改設定，429 等一下或加值
+        if (keyProblem || status == 403) return LLMException.Rejected(text);
+        if (status == 429) return LLMException.Limited(text);
+        return LLMException.Failed(text);
     }
 
     public static StringContent Json(JsonNode body) => new(body.ToJsonString(), Encoding.UTF8, "application/json");

@@ -60,7 +60,18 @@ public sealed class MainWindow : Window
         State.Changed += Refresh;
         State.RecorderChanged += () => { BuildToolbar(); detailView.UpdateRecording(); };
         // 主視窗是不是前景（R42.1：在前景時收音提醒不送通知，只有畫面和系統匣的提示）
-        Activated += (_, e) => IsForeground = e.WindowActivationState != WindowActivationState.Deactivated;
+        Activated += (_, e) =>
+        {
+            IsForeground = e.WindowActivationState != WindowActivationState.Deactivated;
+            // 回到前景時更新 claude、codex 的登入狀態（使用者可能剛在終端機登入，M§34.1）
+            if (IsForeground) _ = CliLogin.RefreshIfStale();
+        };
+        // 整理工具準備好了沒變了（登入狀態、key、暫停、設定）：會議頁的提示和失敗橫幅跟著變（M§34.2）
+        host.Settings.SummarizerChanged += () => host.Post(Refresh);
+        host.Settings.Changed += key =>
+        {
+            if (key is AppSettings.ProviderKey or AppSettings.CompatibleBaseUrlKey || key.EndsWith("Model", StringComparison.Ordinal)) host.Post(Refresh);
+        };
         // 工作進度不發事件：轉錄、整理中每秒更新一次列表的狀態和會議頁的進度
         progressTimer.Tick += (_, _) => Ui.Guard(() =>
         {

@@ -162,6 +162,8 @@ public static class JobKinds
     };
 
     /// <summary>背景的輔助工作：不發通知、不改會議的狀態</summary>
+    /// <summary>要用整理工具的工作（M§34）</summary>
+    public static bool UsesSummarizer(this JobKind k) => k is JobKind.Summarize or JobKind.Revise or JobKind.Correct or JobKind.NameSpeakers;
     public static bool IsAuxiliary(this JobKind k) => k is JobKind.Compress or JobKind.Correct or JobKind.NameSpeakers or JobKind.Rediarize;
 
     public static string Code(this JobLane l) => l switch { JobLane.Llm => "llm", JobLane.Assist => "assist", _ => "transcribe" };

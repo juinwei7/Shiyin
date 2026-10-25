@@ -11,8 +11,6 @@
 
 驗證用 DEBUG 版、暫存的 `SHIYIN_HOME`（示範資料複製一份），`-llmProvider` 等啟動參數只在這次執行有效；整理工具、key 用 `llmprovider`、`llmkey`（只在記憶體）。測完 `defaults read com.weiwei.shiyin` 確認沒有留下 `llmProvider`。
 
-- [ ] **S5 Windows：S1～S4 同一份規則**（R45.5、R46.4、R47.3，design-windows §10.1）
-  - 驗證：`dotnet test`（準備好了沒、暫停、統計的鍵）；虛擬機用 UI Automation 走引導、設定頁、會議頁的提示和橫幅
 - [ ] **S6 後台上線**（使用者自己跑）：`migrate-summarize-errors.sql`、`wrangler deploy`
 
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）

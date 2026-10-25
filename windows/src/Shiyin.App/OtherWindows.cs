@@ -20,7 +20,7 @@ public static class OtherWindows
         var window = new Window { Title = L.T("歡迎使用拾音") };
         string[] titles = [L.T("歡迎使用拾音"), L.T("整理工具"), L.T("準備好了")];
         var step = 0;
-        var usual = new System.Runtime.CompilerServices.StrongBox<string?>(null);
+        var providerStep = new ProviderStep();
         var body = new Border();
         var progress = new Grid { ColumnSpacing = 6, Margin = new Thickness(0, 0, 0, 24) };
         var title = Ui.Heading("", MeetingLanguage.Zh, 28);
@@ -58,7 +58,7 @@ public static class OtherWindows
             body.Child = step switch
             {
                 0 => Permissions(host),
-                1 => Providers(host, usual, Render),
+                1 => Providers(host, providerStep, Render),
                 _ => Done(host),
             };
             back.Visibility = step > 0 && step < titles.Length - 1 ? Visibility.Visible : Visibility.Collapsed;
@@ -146,17 +146,40 @@ public static class OtherWindows
         }
     }
 
-    /// <summary>整理工具（R44.6、D111）：先問「你平常用哪個 AI？」，選了才列對應的一到兩個選項；選了第一段，第二段的第一個選項直接當作整理工具</summary>
-    static FrameworkElement Providers(AppHost host, System.Runtime.CompilerServices.StrongBox<string?> usual, Action render)
+    /// <summary>整理工具那一步的狀態（R45.2、M§34.3）：第一段的答案（不存）、第二段選的、登入／key／測試的進度</summary>
+    sealed class ProviderStep
+    {
+        public string? Usual;
+        public LLMProvider? Pending;
+        public ProviderSetup State;
+        public string Message = "";
+    }
+
+    enum ProviderSetup { Idle, CheckingLogin, NotLoggedIn, NeedsKey, NeedsCompat, Testing, TestedOk, TestedFailed }
+
+    /// <summary>整理工具（R44.6、D111）：先問「你平常用哪個 AI？」，選了才列對應的一到兩個選項。
+    /// 選了不等於設定好（R45.2）：準備好（登入了、存了 key）才寫進設定，寫進去時測一次</summary>
+    static FrameworkElement Providers(AppHost host, ProviderStep step, Action render)
     {
         var settings = host.Settings;
         var hasClaude = host.Tools.Find("claude") is not null;
         var hasCodex = host.Tools.Find("codex") is not null;
         var stored = settings.DebugProvider ?? settings.ChosenProvider;
-        var chosenUsual = usual.Value ?? GuessedUsual(stored, hasClaude, hasCodex);
-        var current = stored ?? (hasClaude ? LLMProvider.Claude : hasCodex ? LLMProvider.Codex : LLMProvider.None);
+        var chosenUsual = step.Usual ?? GuessedUsual(stored, hasClaude, hasCodex);
+        var options = ProviderOptions(chosenUsual, hasClaude, hasCodex);
+        // 還沒選第二段時顯示設定裡的（沒選過就是自動選到的 CLI）；沒選過也沒有 CLI 時不選（不是「不整理」）
+        var current = step.Pending ?? stored ?? (hasClaude ? LLMProvider.Claude : hasCodex ? LLMProvider.Codex : null);
+        if (current is { } shown && options.All(o => o.Provider != shown)) current = null;
+        void Choose(LLMProvider provider)
+        {
+            step.Pending = provider;
+            step.State = ProviderSetup.Idle;
+            step.Message = "";
+            render();
+            _ = Evaluate(host, step, provider, render);
+        }
         var column = Ui.Column(14, Ui.Text(L.T("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。"), color: Ui.Secondary));
-        // 第一段：平常用的 AI
+        // 第一段：平常用的 AI，只篩第二段的選項（不直接寫設定，R45.2）
         var segments = new SelectorBar();
         foreach (var (code, label) in new[] { ("claude", "Claude"), ("chatgpt", "ChatGPT"), ("gemini", "Gemini"), ("other", L.T("其他")), ("none", L.T("先不用")) })  // l10n-skip
         {
@@ -168,14 +191,11 @@ public static class OtherWindows
         segments.SelectionChanged += (_, _) =>
         {
             if (segments.SelectedItem?.Tag is not string code || code == chosenUsual) return;
-            usual.Value = code;
-            var first = ProviderOptions(code, hasClaude, hasCodex)[0].Provider;
-            settings.Set(AppSettings.ProviderKey, first.Code());
-            render();
+            step.Usual = code;
+            Choose(ProviderOptions(code, hasClaude, hasCodex)[0].Provider);
         };
         column.Children.Add(segments);
         // 第二段：對應的整理工具，每個一行寫要不要錢
-        var options = ProviderOptions(chosenUsual, hasClaude, hasCodex);
         var radios = Ui.Column(6);
         foreach (var option in options)
         {
@@ -185,34 +205,113 @@ public static class OtherWindows
                 Content = Ui.Column(2, Ui.Text(option.Title, 14), Ui.Caption(option.Cost)),
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(radio, option.Title);
-            radio.Checked += (_, _) => { if (option.Provider != current) { settings.Set(AppSettings.ProviderKey, option.Provider.Code()); render(); } };
+            radio.Checked += (_, _) => { if (option.Provider != current) Choose(option.Provider); };
             radios.Children.Add(radio);
         }
         column.Children.Add(radios);
+        var state = current is { } c && step.Pending == c ? step.State : ProviderSetup.Idle;
         if (current == LLMProvider.OpenAICompatible)
-            column.Children.Add(Ui.Text(L.T("網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。"), color: Ui.Secondary));
-        else if (current.UsesApiKey())
+            column.Children.Add(Ui.Text(L.T("網址、API key 和模型請在完成引導後，到「設定 → 整理工具」填寫。填好之前不會整理。"), color: Ui.Secondary));
+        else if (current is { } api && api.UsesApiKey())
         {
             var key = new PasswordBox { PlaceholderText = L.T("貼上 API key") };
-            var status = Ui.Text(host.Keys.Exists(current.KeyAccount()) ? L.T("已儲存在認證管理員") : "", 12, color: Ui.Celadon);
+            var saved = host.Keys.Exists(api.KeyAccount());
+            var status = Ui.Text(saved ? L.T("已儲存在認證管理員") : state == ProviderSetup.NeedsKey
+                ? L.F("貼上 API key 並按「儲存」後才會用 %@ 整理；沒有 key 的話可以選「先不用」。", api.ShortLabel()) : "", 12,
+                color: saved ? Ui.Celadon : Ui.Secondary);
             column.Children.Add(Ui.Bar(null, key, Ui.Button(L.T("儲存"), () =>
             {
+                if (key.Password.Trim().Length == 0) return;
                 try
                 {
-                    if (host.Keys is CredentialStore store) store.Save(current.KeyAccount(), key.Password.Trim());
-                    else if (host.Keys is MemoryKeyStore memory) memory.Keys[current.KeyAccount()] = key.Password.Trim();
-                    status.Text = L.T("已儲存在認證管理員");
-                    status.Foreground = Ui.Celadon;
+                    SummarizerSetup.SaveKey(host, api.KeyAccount(), key.Password.Trim());
+                    if (step.Pending == api) _ = Commit(host, step, api, render); else Choose(api);
                 }
                 catch (InvalidOperationException e) { status.Text = e.Message; status.Foreground = Ui.Danger; }
             })));
             column.Children.Add(status);
-            if (current.ApiKeyUrl() is { } url)
+            if (api.ApiKeyUrl() is { } url)
                 column.Children.Add(Ui.Link(L.T("取得 API key"), () => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url))));
         }
         else if (current is LLMProvider.Claude or LLMProvider.Codex)
-            column.Children.Add(Ui.Text(L.T("要先安裝並登入對應的 CLI。登入後可以在「設定 → 整理工具」按「測試整理工具」確認。"), 13, color: Ui.Secondary));
+        {
+            var cli = current.Value;
+            var name = cli == LLMProvider.Codex ? "Codex" : "Claude Code";
+            if (state == ProviderSetup.CheckingLogin) column.Children.Add(Ui.Text(L.T("檢查登入狀態…"), 13, color: Ui.Secondary));
+            else if (state == ProviderSetup.NotLoggedIn)
+            {
+                column.Children.Add(Ui.Text(L.F("%@ 還沒登入，登入之後才會用它整理。", name), 13, color: Ui.Danger));
+                column.Children.Add(Ui.Row(8, Ui.Button(L.F("登入 %@", name), () => CliLogin.Open(host, cli)), Ui.Button(L.T("重新檢查"), () => Choose(cli))));
+            }
+        }
+        if (state == ProviderSetup.Testing)
+            column.Children.Add(Ui.Row(8, new ProgressRing { IsActive = true, Width = 16, Height = 16 }, Ui.Text(L.T("測試中…"), 13, color: Ui.Secondary)));
+        else if (state is ProviderSetup.TestedOk or ProviderSetup.TestedFailed)
+        {
+            var ok = state == ProviderSetup.TestedOk;
+            column.Children.Add(Ui.Split(new FontIcon { Glyph = ok ? "\uE73E" : "\uE7BA", FontSize = 14, Foreground = ok ? Ui.Celadon : Ui.Danger, Margin = new Thickness(0, 2, 0, 0) },
+                Ui.Text(step.Message, 13, color: ok ? Ui.Celadon : Ui.Danger), 8));
+        }
         return column;
+    }
+
+    /// <summary>準備好了才寫進設定（R45.2、M§34.3）</summary>
+    static async Task Evaluate(AppHost host, ProviderStep step, LLMProvider provider, Action render)
+    {
+        var settings = host.Settings;
+        switch (provider)
+        {
+            case LLMProvider.None:
+                settings.Set(AppSettings.ProviderKey, provider.Code());
+                render();
+                break;
+            case LLMProvider.Claude or LLMProvider.Codex:
+                step.State = ProviderSetup.CheckingLogin;
+                render();
+                var status = await CliLogin.Refresh(provider);
+                if (step.Pending != provider) return;
+                if (status is { LoggedIn: false }) { step.State = ProviderSetup.NotLoggedIn; render(); }
+                else await Commit(host, step, provider, render);
+                break;
+            case LLMProvider.Anthropic or LLMProvider.OpenAI or LLMProvider.Gemini:
+                if (host.Keys.Exists(provider.KeyAccount())) await Commit(host, step, provider, render);
+                else { step.State = ProviderSetup.NeedsKey; render(); }
+                break;
+            case LLMProvider.OpenAICompatible:
+                if (OpenAICompatibleApi.Normalized(settings.CompatibleBaseUrl) is not null && (settings.String(provider.ModelKey()) ?? "").Length > 0)
+                    await Commit(host, step, provider, render);
+                else { step.State = ProviderSetup.NeedsCompat; render(); }
+                break;
+        }
+    }
+
+    /// <summary>寫進設定並測一次；失敗是設定問題（key 錯誤、沒登入…）就改回原本的設定（R45.2）</summary>
+    static async Task Commit(AppHost host, ProviderStep step, LLMProvider provider, Action render)
+    {
+        var settings = host.Settings;
+        var previous = settings.String(AppSettings.ProviderKey);
+        settings.Set(AppSettings.ProviderKey, provider.Code());
+        step.State = ProviderSetup.Testing;
+        render();
+        try
+        {
+            var seconds = await SummarizerSetup.Test(host, provider, SummarizerSetup.ModelFor(host, provider));
+            if (step.Pending != provider) return;
+            step.State = ProviderSetup.TestedOk;
+            step.Message = L.F("可以使用（%lld 秒）", seconds);
+        }
+        catch (Exception e) when (SummarizerSetup.IsTestFailure(e))
+        {
+            var setupProblem = e is LLMException { IsSetupProblem: true };
+            if (setupProblem && settings.String(AppSettings.ProviderKey) == provider.Code())
+            {
+                if (previous is null) settings.Remove(AppSettings.ProviderKey); else settings.Set(AppSettings.ProviderKey, previous);
+            }
+            if (step.Pending != provider) return;
+            step.State = ProviderSetup.TestedFailed;
+            step.Message = setupProblem ? L.F("%@（還沒改用 %@）", e.Message, provider.ShortLabel()) : L.F("%@（之後可以在設定 → 整理工具重新測試）", e.Message);
+        }
+        render();
     }
 
     /// <summary>最後一步（R44.6）：使用說明會接著打開；模型在背景下載的狀態一行；系統匣</summary>
@@ -284,7 +383,7 @@ public static class OtherWindows
             L.T("聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。"),
             L.T("API key 存在 Windows 的認證管理員，不會寫進任何檔案。"),
             // 匿名使用統計（M§30.5）：有統計網址的版本才寫
-            AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉。") : null));
+            AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。") : null));
         column.Children.Add(Section(L.T("快捷鍵"),
             L.F("%@：%@", "Ctrl+R", L.T("開始或停止錄音")),
             L.F("%@：%@", "Ctrl+Alt+Shift+R", L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）")),

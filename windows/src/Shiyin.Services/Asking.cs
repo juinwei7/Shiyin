@@ -34,7 +34,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
     public const int CharacterLimit = 40_000;
 
     /// <summary>不能問時的原因</summary>
-    public string? UnavailableReason => settings.Provider != LLMProvider.None ? null
+    public string? UnavailableReason => settings.Provider != LLMProvider.None ? settings.SummarizerProblem?.Message   // 沒登入、沒有 key…（R45.4）
         : settings.NeedsProviderSetup ? L.T("還沒設定整理工具，沒辦法提問；請到設定選擇 Claude、Codex 或 API")
         : L.T("整理工具設定為「不整理」，沒辦法提問；請到設定改成 Claude、Codex 或 API");
 

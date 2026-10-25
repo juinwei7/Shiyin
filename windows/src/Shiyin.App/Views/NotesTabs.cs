@@ -125,6 +125,15 @@ public sealed class NotesTabs
             panel.Children.Add(Ui.Text(L.T("還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。"), color: Ui.Secondary));
             panel.Children.Add(Ui.Button(L.T("設定整理工具"), () => App.Current.ShowSettings()));
         }
+        else if (host.Settings.Provider != LLMProvider.None && host.Settings.SummarizerProblem is { } problem)
+        {
+            // 選了整理工具但還沒準備好（沒登入、沒有 key…，R45.4）：說原因，給修的按鈕
+            panel.Children.Add(Ui.Text(L.F("整理工具還沒設定好：%@", problem.Message), color: Ui.Secondary));
+            panel.Children.Add(Ui.Button(problem.ActionTitle, () =>
+            {
+                if (problem.OffersLogin) CliLogin.Open(host, problem.Provider); else App.Current.ShowSettings();
+            }));
+        }
         else
         {
             var none = host.Settings.Provider == LLMProvider.None;

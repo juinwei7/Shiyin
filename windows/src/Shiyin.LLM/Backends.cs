@@ -207,10 +207,10 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
 
     public async Task<string> GenerateJson(string system, string prompt, OutputFormat format, CancellationToken cancel)
     {
-        if (baseUrl.Trim().Length == 0) throw LLMException.Failed(L.T("還沒有填 OpenAI 相容 API 的網址，請到設定 → 整理工具填寫"));
+        if (baseUrl.Trim().Length == 0) throw LLMException.NotConfigured(L.T("還沒有填 OpenAI 相容 API 的網址，請到設定 → 整理工具填寫"));
         if (NormalizedText(baseUrl) is not { } baseText || Normalized(baseUrl) is not { } url)
-            throw LLMException.Failed(L.T("OpenAI 相容 API 的網址不對，要以 http:// 或 https:// 開頭"));
-        if (model.Length == 0) throw LLMException.Failed(L.T("還沒有填 OpenAI 相容 API 的模型名稱，請到設定 → 整理工具填寫"));
+            throw LLMException.NotConfigured(L.T("OpenAI 相容 API 的網址不對，要以 http:// 或 https:// 開頭"));
+        if (model.Length == 0) throw LLMException.NotConfigured(L.T("還沒有填 OpenAI 相容 API 的模型名稱，請到設定 → 整理工具填寫"));
         var provider = url.Host.Length > 0 ? url.Host : L.T("OpenAI 相容 API");
         var strict = new JsonObject
         {
@@ -313,12 +313,14 @@ sealed class ClaudeCli(LLMClient client, string model) : ILLMBackend
             {
                 var detail = result.StderrTail(500);
                 if (LLMException.IsLoginProblem(detail + result.Stdout)) throw LLMException.NotLoggedIn("claude");
+                if (LLMException.IsLimitProblem(detail + result.Stdout)) throw LLMException.Limited(detail.Length == 0 ? result.Stdout[..Math.Min(500, result.Stdout.Length)] : detail);
                 throw LLMException.Failed(detail.Length == 0 ? L.F("claude 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail);
             }
             if (obj["is_error"]?.GetValueKind() == JsonValueKind.True || obj["structured_output"] is null)
             {
                 var message = obj["result"]?.GetValueKind() == JsonValueKind.String ? obj["result"]!.GetValue<string>() : result.StderrTail(500);
                 if (LLMException.IsLoginProblem(message)) throw LLMException.NotLoggedIn("claude");
+                if (LLMException.IsLimitProblem(message)) throw LLMException.Limited(message.Length > 500 ? message[..500] : message);
                 throw LLMException.Failed(message.Length > 500 ? message[..500] : message);
             }
             return obj["structured_output"]!.ToJsonString();
@@ -351,6 +353,7 @@ sealed class CodexCli(LLMClient client, string model) : ILLMBackend
             {
                 var detail = result.StderrTail(500);
                 if (LLMException.IsLoginProblem(detail)) throw LLMException.NotLoggedIn("codex");
+                if (LLMException.IsLimitProblem(detail)) throw LLMException.Limited(detail);
                 throw LLMException.Failed(detail.Length == 0 ? L.F("codex 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail);
             }
             return data;
