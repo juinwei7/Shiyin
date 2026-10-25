@@ -5,7 +5,7 @@ using Shiyin.Transcribe;
 
 namespace Shiyin.Whisper;
 
-public enum WhisperErrorKind { ModelMissing, LoadFailed, Failed, Cancelled, Empty }
+public enum WhisperErrorKind { ModelMissing, LoadFailed, Failed, Cancelled, Empty, QwenFailed }
 
 public sealed class WhisperException(WhisperErrorKind kind, int code = 0) : Exception(Describe(kind, code))
 {
@@ -17,6 +17,7 @@ public sealed class WhisperException(WhisperErrorKind kind, int code = 0) : Exce
         WhisperErrorKind.LoadFailed => L.T("轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載"),
         WhisperErrorKind.Failed => L.F("轉錄失敗（whisper 錯誤代碼 %d）", (long)code),
         WhisperErrorKind.Cancelled => L.T("已取消"),
+        WhisperErrorKind.QwenFailed => L.T("Qwen3-ASR 的轉錄程式（llama-server）出錯，請再試一次；一直失敗的話到設定改回 Breeze"),
         _ => L.T("錄音裡沒有辨識到任何語音"),
     };
 }

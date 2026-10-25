@@ -32,6 +32,8 @@ public sealed class AppSettings
     public const string BookmarkHotKeyKey = "bookmarkHotKey";
     /// <summary>NVIDIA 顯示卡加速已經自動下載過（R27 R4.6）：只自動一次，使用者刪掉後不再下載</summary>
     public const string GpuPackOfferedKey = "gpuPackOffered";
+    /// <summary>Qwen3-ASR 的 CUDA 版已經自動下載過（design-windows §8.4）</summary>
+    public const string QwenCudaOfferedKey = "qwenCudaOffered";
     public const string CompatibleBaseUrlKey = "openaiCompatibleBaseURL";
     public const string OnboardingKey = "hasCompletedOnboarding";
     public const string GuideKey = "hasSeenGuide";
@@ -200,6 +202,7 @@ public sealed class AppSettings
     public bool LiveTranscription => Flag(LiveTranscriptionKey, true);
     public bool AutoDetectLanguage => Flag(AutoDetectLanguageKey, true);
     public bool GpuPackOffered => Flag(GpuPackOfferedKey, false);
+    public bool QwenCudaOffered => Flag(QwenCudaOfferedKey, false);
     /// <summary>mic / system / both</summary>
     public string RecordSource => String(RecordSourceKey) ?? "mic";
     /// <summary>麥克風的端點 ID；空的是系統預設</summary>
@@ -211,6 +214,9 @@ public sealed class AppSettings
     public bool BookmarkHotKey => Flag(BookmarkHotKeyKey, true);
     /// <summary>正式轉錄用快速辨識（Mac 的「macOS 內建」，D45）：設定值同 Mac 是 system</summary>
     public bool UseFastTranscriber => String(TranscriptionEngineKey) == "system";
+    /// <summary>正式轉錄的引擎：breeze（預設）、qwen、system（同 Mac 的 transcriptionEngine，M§32.3）</summary>
+    public string TranscriptionEngine => String(TranscriptionEngineKey) ?? "breeze";
+    public bool UseQwen => TranscriptionEngine == "qwen";
     public string CompatibleBaseUrl => String(CompatibleBaseUrlKey) ?? "";
 
     /// <summary>新會議的會議語言（M§16.3）；沒設定時跟著介面語言</summary>

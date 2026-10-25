@@ -608,7 +608,7 @@
 - R43.6 段落有時間點和說話者：引擎本身不給時間點，app 自己分段（在換人說話處的安靜點切，每段最長 15 秒），每段的時間就是段落的時間；說話者辨識、聲紋、短句再確認（R34）照舊可以用。段落比 whisper 的粗，混到第二個人的段要照說話者片段再切，說話者標對的比例不低於 Breeze（評估：理想的說話者辨識下 AISHELL 98.2%、AMI 97.5%；whisper 的段落 96～97%）。
 - R43.7 模型下載：選了 Qwen3-ASR 才下載，模型（約 2.2 GB）和音訊編碼器（約 0.36 GB）兩個檔案一起下載、各自驗證 SHA-256，流程同 R10.3；還沒下載好時，已經有 Breeze 的用 Breeze，沒有的照 D35 先用 macOS 內建。沒選的人完全不受影響。
 - R43.8 記憶體 8 GB 的 Mac 也要能跑（模型載入約 2.6 GB）；轉錄完就釋放。
-- R43.9 Windows 版用同一個引擎（llama.cpp 預建的 Windows 版 DLL：CPU、CUDA、Vulkan）、同一套轉繁體和分段規則，用標準答案比對（design-windows §4）；可以比 Mac 晚一版發布，使用者決定。
+- R43.9 Windows 版用同一個引擎（llama.cpp 官方預建的 Windows 版：CPU x64／ARM64、CUDA；用它的 llama-server 當子程序，design-windows §8.4、D95；Vulkan 之後跟 whisper 一起）、同一套轉繁體和分段規則，分段用同一份說話者片段比對（design-windows §8.4）；可以比 Mac 晚一版發布，使用者決定。
 - R43.10 可以關掉（R14.6）：預設（Breeze）的轉錄流程跟 4.0.0 完全一樣；選過 Qwen 再選回 Breeze 也一樣，Breeze 的模型檔不會被刪掉。
 
 ### 不做（這一版）

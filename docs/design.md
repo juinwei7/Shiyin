@@ -1322,7 +1322,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 
 ### 32.8 Windows 版
 
-- 另開任務：llama.cpp 預建的 Windows DLL（`llama-bXXXX-bin-win-cpu|cuda|vulkan-*.zip` 都有 `mtmd.dll`），shim 加 `shiyin_qwen_*`，`ShiyinPaths` 的模型資料夾多兩個檔；分段、重試、簡轉繁的規則照 §32.4、§32.5，標準答案比對。可以比 Mac 晚一版（R43.9）。
+- 2026-10-25 完成（design-windows §8.4、D95）：Windows 不做 shim DLL，改用 llama.cpp 官方 Windows 版自帶的 `llama-server.exe` 當子程序（跟 whisper 同名的 ggml DLL 在同一個程序裡不能並存），HTTP 送同樣結構的提示詞；模型兩個檔同 Mac，執行檔跟模型一起下載（CPU x64／ARM64，NVIDIA 另有 CUDA 版）；分段、重試、防線、簡轉繁照 §32.4、§32.5，合成會議的結果跟 Mac 逐段相同。
 
 ## 33. 減法：三個分頁、五個動作、四頁設定、三步引導（R44，D109～D111）
 

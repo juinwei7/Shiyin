@@ -91,7 +91,7 @@ public sealed class AppHost
         {
             Url = Debug ? null : BuiltUsageUrl, AlwaysOffered = Debug,
         };
-        var engines = new SpeechEngines(Models);
+        var engines = new SpeechEngines(Models, () => Gpu.QwenCudaReady);
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage };
         Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes));

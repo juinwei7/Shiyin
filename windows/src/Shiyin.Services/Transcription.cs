@@ -2,6 +2,7 @@ using Shiyin.Audio;
 using Shiyin.IO;
 using Shiyin.Localization;
 using Shiyin.Model;
+using Shiyin.Qwen;
 using Shiyin.Speakers;
 using Shiyin.Speech;
 using Shiyin.Transcribe;
@@ -53,11 +54,32 @@ public interface ISpeechEngines
     Diarizer.Output Diarize(float[] samples, int? minSpeakers, Action<double> progress, CancellationToken cancel);
     /// <summary>每一段用說話者辨識的聲紋模型各算一次聲紋（短句再確認，R34）；不到 0.5 秒的是 null</summary>
     List<float[]?> Embed(float[] samples, IReadOnlyList<(double Start, double End)> spans, CancellationToken cancel);
+    /// <summary>Qwen3-ASR（design-windows §8.4）：已經分好段的取樣逐段轉錄，段落的時間就是分段的時間；中文已轉成台灣繁體</summary>
+    List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
+                                  IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control);
 }
 
-/// <summary>真的引擎：whisper.cpp、SenseVoice、sherpa-onnx，模型從 ModelStore 的位置讀</summary>
-public sealed class SpeechEngines(ModelStore models) : ISpeechEngines
+/// <summary>真的引擎：whisper.cpp、SenseVoice、sherpa-onnx、llama-server，模型從 ModelStore 的位置讀。qwenCuda：Qwen 要不要用 CUDA 版</summary>
+public sealed class SpeechEngines(ModelStore models, Func<bool>? qwenCuda = null) : ISpeechEngines
 {
+    public List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
+                                         IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control)
+    {
+        using var server = QwenServer.Start(QwenOptions(), Log.Error, control.Cancel);
+        return QwenTranscriber.Transcribe(samples, chunks, server, language, glossary, control, retry, guard);
+    }
+
+    /// <summary>llama-server 的位置：SHIYIN_QWEN_SERVER（Mac 上評估用）、CUDA 版（有 NVIDIA 而且裝好）、CPU 版</summary>
+    public QwenServer.Options QwenOptions()
+    {
+        var cuda = qwenCuda?.Invoke() == true;
+        var custom = Environment.GetEnvironmentVariable("SHIYIN_QWEN_SERVER");
+        var files = models.InfoOf(ModelStore.Model.Qwen).Files;
+        return new QwenServer.Options(custom ?? models.PathIn(cuda ? ModelStore.QwenCudaServerPath : ModelStore.QwenServerPath),
+            models.PathOf(files[0]), models.PathOf(files[1]), QwenServer.DefaultThreads, cuda || custom is not null,
+            cuda ? models.PathIn(ModelStore.CudaRuntimePath) : null);
+    }
+
     public SenseVoiceModels FastModels
     {
         get
@@ -127,8 +149,8 @@ public sealed class SpeechEngines(ModelStore models) : ISpeechEngines
 /// <summary>轉錄的設定（M§6、§17）。工作佇列用目前的 app 設定產生；評估工具從 JSON 讀</summary>
 public sealed record TranscriptionOptions
 {
-    /// <summary>Breeze：whisper.cpp，模型依會議語言；Fast：快速辨識（SenseVoice，Mac 的「macOS 內建」，D45）</summary>
-    public enum EngineKind { Breeze, Fast }
+    /// <summary>Breeze：whisper.cpp，模型依會議語言；Fast：快速辨識（SenseVoice，Mac 的「macOS 內建」，D45）；Qwen：Qwen3-ASR（llama-server，design-windows §8.4）</summary>
+    public enum EngineKind { Breeze, Fast, Qwen }
     /// <summary>分聲道時怎麼處理麥克風收到的回音（M§17.3）</summary>
     public enum EchoKind { None, Dedupe }
 
@@ -146,16 +168,23 @@ public sealed record TranscriptionOptions
     public double ChunkSeconds { get; init; } = 600;
     /// <summary>說話者辨識至少分出幾個人（M§23.2），null 自動判斷</summary>
     public int? MinSpeakers { get; init; }
+    /// <summary>Qwen3-ASR 的評估開關（同 Mac 的 DecoderTuning，M§32.4）：每段最長幾秒、跳針要不要重試、要不要先辨識說話者再分段、幻覺防線、換人處一律切、混到第二個人的段再切</summary>
+    public double? QwenChunkSeconds { get; init; }
+    public bool? QwenRetry { get; init; }
+    public bool? QwenTurns { get; init; }
+    public bool? QwenGuard { get; init; }
+    public bool? QwenCutsAny { get; init; }
+    public bool? QwenSplitMixed { get; init; }
 
     /// <summary>寫進 meetings.transcribed_with（M§21.17）：快速辨識跟 Mac 的內建一樣寫 system</summary>
-    public string TranscribedWith => Engine == EngineKind.Fast ? "system" : Language == MeetingLanguage.Ja ? "japanese" : "breeze";
+    public string TranscribedWith => Engine == EngineKind.Fast ? "system" : Engine == EngineKind.Qwen ? "qwen" : Language == MeetingLanguage.Ja ? "japanese" : "breeze";
 
-    /// <summary>這個語言的模型還沒下載好時，這一場先用快速辨識（M§21.17、D35）</summary>
+    /// <summary>這個語言的模型還沒下載好時，這一場先用快速辨識（M§21.17、D35）；選了 Qwen 還沒下載好、Breeze 在時先用 Breeze（R43.7）</summary>
     public static TranscriptionOptions Current(AppSettings settings, ModelStore models, MeetingLanguage language, IReadOnlyList<string> glossary,
                                                string channels, int? minSpeakers) => new()
     {
         MinSpeakers = minSpeakers,
-        Engine = settings.UseFastTranscriber || !models.HasTranscriptionModel(language) ? EngineKind.Fast : EngineKind.Breeze,
+        Engine = Pick(settings, models, language),
         Language = language,
         Glossary = glossary,
         Diarize = settings.Diarize && models.IsInstalled(ModelStore.Model.Diarization),
@@ -163,6 +192,14 @@ public sealed record TranscriptionOptions
         SplitChannels = settings.SplitChannels && channels == "both",
         AudioSource = channels == "both" ? "mix" : channels,
     };
+
+    static EngineKind Pick(AppSettings settings, ModelStore models, MeetingLanguage language)
+    {
+        if (settings.UseFastTranscriber) return EngineKind.Fast;
+        var wanted = ModelStore.Transcription(language, settings.TranscriptionEngine);
+        if (models.IsInstalled(wanted)) return wanted == ModelStore.Model.Qwen ? EngineKind.Qwen : EngineKind.Breeze;
+        return wanted == ModelStore.Model.Qwen && models.IsInstalled(ModelStore.Model.Breeze) ? EngineKind.Breeze : EngineKind.Fast;
+    }
 }
 
 public sealed record TranscriptionResult(
@@ -185,6 +222,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
 
     public TranscriptionResult? Run(string audio, CancellationToken cancel)
     {
+        if (options.Engine == TranscriptionOptions.EngineKind.Qwen) return RunQwen(audio, cancel);
         if (options.Engine == TranscriptionOptions.EngineKind.Breeze && !File.Exists(modelPath)) throw new WhisperException(WhisperErrorKind.ModelMissing);
         Stage(L.T("讀取錄音"));
         if (options.SplitChannels)
@@ -233,6 +271,53 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
         }
         if (!ShouldContinue()) return null;
         return new TranscriptionResult(segments, speakers, segments.Select(_ => (int?)null).ToList(), duration, voices, seams, quality);
+    }
+
+    // MARK: Qwen3-ASR（M§32.4、design-windows §8.4）
+
+    /// <summary>先解碼整段、先辨識說話者，再依說話者片段和安靜處分段轉錄；段落的時間就是分段的時間，說話者是那一段重疊最多的人（同 Mac 的 runQwen）</summary>
+    TranscriptionResult? RunQwen(string audio, CancellationToken cancel)
+    {
+        Stage(L.T("讀取錄音"));
+        var samples = decoder.Decode(audio, cancel);
+        if (!ShouldContinue()) return null;
+        var duration = samples.Length / WhisperRules.SampleRate;
+        var diarize = options.Diarize && duration > 5 && options.QwenTurns != false;
+        Progress(0);
+        Diarizer.Output? output = null;
+        var share = diarize ? 0.15 : 0.0;
+        if (diarize)
+        {
+            Stage(L.T("辨識說話者"));
+            try { output = engines.Diarize(samples, options.MinSpeakers, p => Progress(p * share), cancel); }
+            catch (Exception e) when (e is not OperationCanceledException) { Log.Error($"diarization failed: {e.GetType().Name}"); }
+        }
+        if (!ShouldContinue()) return null;
+        Stage(L.T("轉錄"));
+        var control = new WhisperControl(p => Progress(share + p * (1 - share)), cancel);
+        var chunks = QwenRules.Chunks(samples, output?.Turns ?? [], options.QwenChunkSeconds ?? QwenRules.MaxChunkSeconds,
+            options.QwenCutsAny ?? false, options.QwenSplitMixed ?? true);
+        var segments = engines.Qwen(samples, chunks, options.Language, options.Glossary, options.QwenRetry ?? true, options.QwenGuard ?? true, control);
+        cancel.ThrowIfCancellationRequested();
+        if (!ShouldContinue()) return null;
+        List<int?> speakers = segments.Select(_ => (int?)null).ToList();
+        var voices = new Dictionary<int, SpeakerVoice>();
+        if (output is not null) (speakers, voices) = Assign(output, segments, samples, options.AudioSource, cancel);
+        var seams = chunks.Skip(1).Select(c => c.Start / WhisperRules.SampleRate).ToList();
+        return new TranscriptionResult(segments, speakers, segments.Select(_ => (int?)null).ToList(), duration, voices, seams, output?.Quality);
+    }
+
+    /// <summary>已經辨識好說話者：段落依重疊量標說話者、短句再確認（R34）、每位說話者的聲紋（跟 Speakers 後半一樣）</summary>
+    (List<int?>, Dictionary<int, SpeakerVoice>) Assign(Diarizer.Output output, List<TranscribedSegment> segments, float[] samples, string source,
+                                                       CancellationToken cancel)
+    {
+        var (speakers, numbering) = SpeakerRules.AssignNumbering(output.Turns, segments);
+        var voices = new Dictionary<int, SpeakerVoice>();
+        foreach (var (raw, number) in numbering)
+            if (output.Voiceprints.TryGetValue(raw, out var embedding))
+                voices[number] = new SpeakerVoice(embedding, output.SpeechSeconds.GetValueOrDefault(raw), source);
+        speakers = Recheck(engines, segments, speakers, voices, samples, null, cancel);
+        return (speakers, voices);
     }
 
     // MARK: 分聲道（M§17.3）
@@ -334,12 +419,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
         try
         {
             var output = engines.Diarize(samples, options.MinSpeakers, progress, cancel);
-            var (speakers, numbering) = SpeakerRules.AssignNumbering(output.Turns, segments);
-            var voices = new Dictionary<int, SpeakerVoice>();
-            foreach (var (raw, number) in numbering)
-                if (output.Voiceprints.TryGetValue(raw, out var embedding))
-                    voices[number] = new SpeakerVoice(embedding, output.SpeechSeconds.GetValueOrDefault(raw), source);
-            speakers = Recheck(engines, segments, speakers, voices, samples, null, cancel);
+            var (speakers, voices) = Assign(output, segments, samples, source, cancel);
             return (speakers, voices, output.Quality);
         }
         catch (Exception e) when (e is not OperationCanceledException)

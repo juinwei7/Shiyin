@@ -42,7 +42,7 @@ public static class OtherWindows
         var models = host.Models;
         models.AutoStart(ModelStore.Model.FastRecognition);
         models.AutoStart(ModelStore.Model.Diarization);
-        if (!host.Settings.UseFastTranscriber) models.AutoStart(ModelStore.Transcription(host.Settings.DefaultMeetingLanguage));
+        if (!host.Settings.UseFastTranscriber) models.AutoStart(ModelStore.Transcription(host.Settings.DefaultMeetingLanguage, host.Settings.TranscriptionEngine));
         if (host.Settings.AutoDetectLanguage) models.AutoStart(ModelStore.Model.LanguageDetection);
         for (var i = 0; i < titles.Length; i++) progress.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         void Render()
@@ -221,7 +221,7 @@ public static class OtherWindows
         var column = Ui.Column(14, Ui.Text(L.T("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")));
         if (!host.Settings.UseFastTranscriber)
         {
-            var state = host.Models.StateOf(ModelStore.Transcription(host.Settings.DefaultMeetingLanguage));
+            var state = host.Models.StateOf(ModelStore.Transcription(host.Settings.DefaultMeetingLanguage, host.Settings.TranscriptionEngine));
             var (glyph, text, color) = state switch
             {
                 ModelStore.State.Installed => ("\uE73E", L.T("轉錄模型已經就緒。"), Ui.Celadon),

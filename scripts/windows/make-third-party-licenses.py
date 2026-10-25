@@ -123,6 +123,9 @@ def main():
     commit = whisper_commit()
     groups.append((f"whisper.cpp b5454 ({commit[:7]}) (MIT) https://github.com/ggml-org/whisper.cpp",
                    [(f"whisper.cpp {commit[:7]}: LICENSE", partial(raw, "ggml-org/whisper.cpp", commit, "LICENSE"))]))
+    # Qwen3-ASR 用 llama.cpp 官方的 Windows 版（llama-server），選了 Qwen 才跟模型一起下載（design-windows §8.4）
+    groups.append(("llama.cpp b11840 (MIT) https://github.com/ggml-org/llama.cpp (downloaded with Qwen3-ASR, not in the installer)",
+                   [("llama.cpp b11840: LICENSE", partial(raw, "ggml-org/llama.cpp", "b11840", "LICENSE"))]))
 
     pid, version = take(r"org\.k2fsa\.sherpa\.onnx(\.runtime\.win-(x64|arm64))?")
     repo, sherpa = repository(pid, version)
@@ -191,6 +194,7 @@ def main():
 
     models = [
         "Breeze ASR 25 (Apache-2.0) https://huggingface.co/MediaTek-Research/Breeze-ASR-25, GGML q8_0 conversion https://huggingface.co/shdennlin/breeze-asr-25-ggml",
+        "Qwen3-ASR 1.7B (Apache-2.0) https://huggingface.co/Qwen/Qwen3-ASR-1.7B, GGUF q8_0 conversion https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF",
         "Whisper large-v3-turbo, base (MIT) https://github.com/openai/whisper, GGML conversions https://huggingface.co/ggerganov/whisper.cpp",
         "SenseVoice-Small (FunASR Model License, below) https://github.com/FunAudioLLM/SenseVoice, ONNX int8 conversion https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17",
         "Silero VAD (MIT) https://github.com/snakers4/silero-vad",

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
@@ -13,7 +14,8 @@ namespace Shiyin.Services;
 /// </summary>
 public sealed class ModelStore
 {
-    public enum Model { Breeze, Japanese, LanguageDetection, FastRecognition, Diarization, GpuCuda }
+    /// <summary>Qwen：Qwen3-ASR 的兩個模型檔加 llama.cpp 的執行檔（design-windows §8.4）；QwenCuda：NVIDIA 用的 llama.cpp CUDA 版</summary>
+    public enum Model { Breeze, Japanese, LanguageDetection, FastRecognition, Diarization, GpuCuda, Qwen, QwenCuda }
 
     /// <summary>壓縮檔裡要解出來的檔案：壓縮檔裡的路徑、解到哪裡（models 底下）、大小</summary>
     public sealed record ArchiveEntry(string Entry, string Path, long Size);
@@ -96,10 +98,70 @@ public sealed class ModelStore
         684_913_404, "afef0b881c500958921c3f5523b50e59ee2ec9b6f5cbd25b324c51ed308a957a",
         [.. CudaFiles.Select(f => new ArchiveEntry("Release/" + f.Name, "gpu-cuda12/" + f.Name, f.Size))])], Folder: "gpu-cuda12");
 
+    // MARK: Qwen3-ASR（R43.9、design-windows §8.4、D95）：模型同 Mac，執行檔是 llama.cpp 官方 b11840 的 Windows 版
+
+    const string LlamaRelease = "https://github.com/ggml-org/llama.cpp/releases/download/b11840";
+    const string QwenRepo = $"{HuggingFace}/ggml-org/Qwen3-ASR-1.7B-GGUF/resolve/36a678687ba7d07a74ca70ccb0e36902e005fb80";
+
+    /// <summary>x64 CPU 版 zip 裡 llama-server 要的檔案（ggml-cpu-* 執行時依 CPU 指令集選一個）</summary>
+    static readonly (string Name, long Size)[] LlamaX64 =
+    [
+        ("llama-server.exe", 9_216), ("llama-server-impl.dll", 9_679_360), ("llama-common.dll", 8_222_208), ("llama.dll", 3_609_600),
+        ("mtmd.dll", 1_932_288), ("ggml.dll", 78_848), ("ggml-base.dll", 805_888), ("libomp.dll", 768_000),
+        ("ggml-cpu-alderlake.dll", 1_419_264), ("ggml-cpu-cannonlake.dll", 1_613_824), ("ggml-cpu-cascadelake.dll", 1_587_200),
+        ("ggml-cpu-cooperlake.dll", 1_596_416), ("ggml-cpu-haswell.dll", 1_424_384), ("ggml-cpu-icelake.dll", 1_593_344),
+        ("ggml-cpu-ivybridge.dll", 1_305_600), ("ggml-cpu-piledriver.dll", 1_298_432), ("ggml-cpu-sandybridge.dll", 1_294_848),
+        ("ggml-cpu-sapphirerapids.dll", 1_873_408), ("ggml-cpu-skylakex.dll", 1_607_168), ("ggml-cpu-sse42.dll", 920_576),
+        ("ggml-cpu-x64.dll", 913_920), ("ggml-cpu-zen4.dll", 1_603_072),
+    ];
+
+    static readonly (string Name, long Size)[] LlamaArm64 =
+    [
+        ("llama-server.exe", 9_728), ("llama-server-impl.dll", 8_848_384), ("llama-common.dll", 7_265_280), ("llama.dll", 3_159_040),
+        ("mtmd.dll", 1_596_416), ("ggml.dll", 69_120), ("ggml-base.dll", 668_672), ("ggml-cpu.dll", 823_296), ("libomp.dll", 764_928),
+    ];
+
+    /// <summary>CUDA 12.4 版：整套 ggml 用同一次建置的；cudart、cublas 用 whisper 的 gpu-cuda12 那一份（子程序的 PATH）</summary>
+    static readonly (string Name, long Size)[] LlamaCuda =
+    [
+        ("ggml-cuda.dll", 577_741_824), .. LlamaX64,
+    ];
+
+    static IReadOnlyList<ArchiveEntry> Entries((string Name, long Size)[] files, string folder) =>
+        [.. files.Select(f => new ArchiveEntry(f.Name, folder + "/" + f.Name, f.Size))];
+
+    static readonly bool Arm64 = RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
+
+    /// <summary>Qwen3-ASR 1.7B q8_0 和它的音訊編碼器（llama.cpp 官方轉檔，固定 commit，同 Mac 的 ModelStore.qwen／qwenEncoder），
+    /// 加 llama.cpp 的執行檔（依架構）；三個一起下載、一起算裝好、一起刪</summary>
+    public static readonly ModelInfo Qwen = new(L.T("Qwen3-ASR 1.7B（q8_0）"), [
+        new("qwen3-asr-1.7b-q8_0.gguf", $"{QwenRepo}/Qwen3-ASR-1.7B-Q8_0.gguf",
+            2_165_034_944, "58e22d0532d4eacaf034cfac17a6fed159f37c41390c710186783be439d1fc57"),
+        new("qwen3-asr-1.7b-mmproj-q8_0.gguf", $"{QwenRepo}/mmproj-Qwen3-ASR-1.7B-Q8_0.gguf",
+            355_709_344, "46c1d533af3f354ceb37ce855dbceff7da7fa7cf1e6a523df3b13440bd164c0d"),
+        Arm64
+            ? new("qwen-runtime/llama-cpu.zip", $"{LlamaRelease}/llama-b11840-bin-win-cpu-arm64.zip",
+                12_781_980, "9bfdb90329cd190c8286e5e53ed74391f8455c7cf7a6370725817440dd7ff085", Entries(LlamaArm64, "qwen-runtime"))
+            : new("qwen-runtime/llama-cpu.zip", $"{LlamaRelease}/llama-b11840-bin-win-cpu-x64.zip",
+                24_156_518, "f805935dec8a6f527bf3d587419865c1cf486ba6a430dc0381ca97aedf0da034", Entries(LlamaX64, "qwen-runtime")),
+    ], Folder: "qwen-runtime");
+
+    public static readonly ModelInfo QwenCuda = new(L.T("Qwen3-ASR 的 NVIDIA 顯示卡加速（CUDA）"), [
+        new("qwen-runtime-cuda/llama-cuda.zip", $"{LlamaRelease}/llama-b11840-bin-win-cuda-12.4-x64.zip",
+            272_406_409, "519357996dfae171eee635cfbe9b4ca0c21bdfd85a59356b593578b41c1a2d0f", Entries(LlamaCuda, "qwen-runtime-cuda")),
+    ], Folder: "qwen-runtime-cuda");
+
+    /// <summary>llama-server 在哪：CUDA 版（有裝、有 NVIDIA）或 CPU 版</summary>
+    public const string QwenServerPath = "qwen-runtime/llama-server.exe";
+    public const string QwenCudaServerPath = "qwen-runtime-cuda/llama-server.exe";
+    public const string CudaRuntimePath = "gpu-cuda12";
+
     public static ModelInfo Info(Model model) => model switch
     {
         Model.Breeze => Breeze,
         Model.GpuCuda => GpuCuda,
+        Model.Qwen => Qwen,
+        Model.QwenCuda => QwenCuda,
         Model.Japanese => Japanese,
         Model.LanguageDetection => LanguageDetection,
         Model.FastRecognition => FastRecognition,
@@ -108,6 +170,10 @@ public sealed class ModelStore
 
     /// <summary>正式轉錄用哪個模型：日文會議用 large-v3-turbo，中文、英文用 Breeze</summary>
     public static Model Transcription(MeetingLanguage language) => language == MeetingLanguage.Ja ? Model.Japanese : Model.Breeze;
+
+    /// <summary>依設定的引擎（transcriptionEngine：breeze、qwen、system）：日文一律 large-v3-turbo，中文、英文選了 Qwen 就是 Qwen（M§32.3）</summary>
+    public static Model Transcription(MeetingLanguage language, string engine) =>
+        language == MeetingLanguage.Ja ? Model.Japanese : engine == "qwen" ? Model.Qwen : Model.Breeze;
 
     readonly string root;
     readonly HttpClient http;
@@ -139,7 +205,8 @@ public sealed class ModelStore
     public ModelInfo InfoOf(Model model) => catalog?.GetValueOrDefault(model) ?? Info(model);
 
     public string PathOf(ModelFile file) => PathIn(file.Path);
-    string PathIn(string relative) => System.IO.Path.Combine(root, relative.Replace('/', System.IO.Path.DirectorySeparatorChar));
+    /// <summary>models 資料夾裡的路徑（用 / 分隔）</summary>
+    public string PathIn(string relative) => System.IO.Path.Combine(root, relative.Replace('/', System.IO.Path.DirectorySeparatorChar));
     public string PathOf(Model model) => PathOf(InfoOf(model).Files[0]);
     public string Directory(Model model) => System.IO.Path.GetDirectoryName(PathOf(model))!;
     string PartPath(ModelFile file) => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(PathOf(file))!, "." + System.IO.Path.GetFileName(file.Path) + ".part");
@@ -147,6 +214,7 @@ public sealed class ModelStore
     public State StateOf(Model model) { lock (gate) return states.GetValueOrDefault(model) ?? new State.Missing(); }
     public bool IsInstalled(Model model) => StateOf(model) is State.Installed;
     public bool HasTranscriptionModel(MeetingLanguage language) => IsInstalled(Transcription(language));
+    public bool HasTranscriptionModel(MeetingLanguage language, string engine) => IsInstalled(Transcription(language, engine));
 
     /// <summary>從檔案重新判斷每個模型的狀態（下載中、驗證中的不動；失敗的保留訊息，使用者按「繼續下載」才重來）</summary>
     public void Refresh()

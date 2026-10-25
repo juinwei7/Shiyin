@@ -74,7 +74,7 @@ public sealed class UsageStatsTests : IDisposable
         Assert.Matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", (string)payload["installId"]!);
         Assert.Equal("""{"chip":"Intel(R) Core(TM) i7-12700H","os":"Windows 11 24H2 (26100.4652)","platform":"windows","uiLanguage":"zh-Hant","version":"4.0.0"}""",
             payload["app"]!.ToJsonString());
-        Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":1},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"api":1,"claudeCode":1,"codex":1,"local":1},"transcribeWallSeconds":39,"transcribedSeconds":750}""",
+        Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":1},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"api":1,"claudeCode":1,"codex":1,"local":1},"transcribeWallSeconds":39,"transcribedSeconds":750}""",
             payload["usage"]!.ToJsonString());
         Assert.Equal("""{"diarize":0,"recording":1,"summarize":1,"transcribe":0}""", payload["errors"]!.ToJsonString());
 

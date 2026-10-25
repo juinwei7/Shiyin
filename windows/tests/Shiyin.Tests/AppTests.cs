@@ -8,6 +8,8 @@ using Shiyin.Notes;
 using Shiyin.Services;
 using Shiyin.Services.Capture;
 using Shiyin.Speech;
+using Shiyin.Transcribe;
+using Shiyin.Whisper;
 using Xunit;
 
 namespace Shiyin.Tests;
@@ -73,6 +75,8 @@ public sealed class AppTests : IDisposable
 
     sealed class NoEngines : ISpeechEngines
     {
+        public List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
+                                             IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control) => throw new NotSupportedException();
         public (List<Transcribe.TranscribedSegment> Segments, List<int> Seams, int SampleCount) WhisperFile(Whisper.IAudioStream audio, double chunkSeconds,
             string model, string prompt, string language, Whisper.WhisperControl control) => throw new NotSupportedException();
         public List<Transcribe.TranscribedSegment> WhisperSamples(float[] samples, IReadOnlyList<(int Start, int End)> chunks, string model, string prompt,

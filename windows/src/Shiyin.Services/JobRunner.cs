@@ -156,11 +156,14 @@ public sealed class JobRunner
         var waiting = false;
         if (!settings.UseFastTranscriber)
             foreach (var language in Enum.GetValues<MeetingLanguage>())
-                if (!models.HasTranscriptionModel(language) && db.HasQueuedTranscribe(language))
-                {
-                    models.AutoStart(ModelStore.Transcription(language));
-                    if (!models.IsInstalled(ModelStore.Model.FastRecognition)) waiting = true;
-                }
+            {
+                var wanted = ModelStore.Transcription(language, settings.TranscriptionEngine);
+                if (models.IsInstalled(wanted) || !db.HasQueuedTranscribe(language)) continue;
+                models.AutoStart(wanted);
+                // Qwen 還沒下載好、Breeze 在時先用 Breeze（R43.7）；都沒有才等快速辨識
+                if (wanted == ModelStore.Model.Qwen && models.IsInstalled(ModelStore.Model.Breeze)) continue;
+                if (!models.IsInstalled(ModelStore.Model.FastRecognition)) waiting = true;
+            }
         if (settings.UseFastTranscriber && !models.IsInstalled(ModelStore.Model.FastRecognition)) waiting = true;
         if (waiting) models.AutoStart(ModelStore.Model.FastRecognition);
         if (settings.Diarize && !models.IsInstalled(ModelStore.Model.Diarization))

@@ -122,6 +122,28 @@
         }
       }
     },
+    "Qwen3-ASR 的 NVIDIA 顯示卡加速（CUDA）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA GPU acceleration for Qwen3-ASR (CUDA)"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 的轉錄程式（llama-server）出錯，請再試一次；一直失敗的話到設定改回 Breeze": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Qwen3-ASR transcription program (llama-server) failed. Try again; if it keeps failing, switch back to Breeze in Settings."
+          }
+        }
+      }
+    },
     "WAV 缺少格式區段": {
       "extractionState": "manual",
       "localizations": {
@@ -272,6 +294,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not %@"
+          }
+        }
+      }
+    },
+    "中文、英文可選的引擎（阿里巴巴開源），約 2.5 GB，含 llama.cpp 的執行檔；「正式轉錄」選了它才會用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional engine for Chinese and English (open-sourced by Alibaba), about 2.5 GB including the llama.cpp program; used only when selected under Final transcription."
           }
         }
       }
@@ -772,6 +805,17 @@
         }
       }
     },
+    "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少；阿里巴巴開源的模型，全程在這台電腦上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型和 llama.cpp 的執行檔。日文會議改用 Whisper large-v3-turbo（574 MB）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your glossary; fewer dropped words and homophone errors than Breeze in multi-speaker meetings. An open-source model from Alibaba that runs entirely on this PC without network access; output is converted to Taiwanese Traditional Chinese. Downloads about 2.5 GB of model files plus the llama.cpp program. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
+          }
+        }
+      }
+    },
     "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。正在看某個資料夾時，新錄的和匯入的會議都會放進去。": {
       "extractionState": "manual",
       "localizations": {
@@ -790,6 +834,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meeting date: from each file's name or modification date"
+          }
+        }
+      }
+    },
+    "有 NVIDIA 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 的轉錄會快很多。272 MB，解開約 610 MB（llama.cpp 官方的 CUDA 版，要先有上面的 NVIDIA 顯示卡加速）。刪除後不會再自動下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded automatically when you have an NVIDIA GPU and choose Qwen3-ASR; makes Qwen transcription much faster. 272 MB, about 610 MB unpacked (the official llama.cpp CUDA build; requires the NVIDIA GPU acceleration above). It is not downloaded again after you delete it."
           }
         }
       }

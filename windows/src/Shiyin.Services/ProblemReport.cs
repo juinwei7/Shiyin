@@ -33,7 +33,7 @@ public static class ProblemReport
             L.F("- %@，記憶體 %@", env.Cpu, Memory(env.MemoryBytes)),
             L.F("- 顯示卡：%@；whisper：%@", env.Gpu, env.WhisperBackend),
             L.F("- 介面語言：%@", MeetingLanguages.Interface.UiName()),
-            L.F("- 轉錄：%@；說話者辨識：%@；聲紋：%@", settings.UseFastTranscriber ? L.T("快速辨識") : "Breeze ASR 25",
+            L.F("- 轉錄：%@；說話者辨識：%@；聲紋：%@", settings.UseFastTranscriber ? L.T("快速辨識") : settings.UseQwen ? "Qwen3-ASR 1.7B" : "Breeze ASR 25",
                 settings.Diarize ? on : off, settings.Voiceprints ? on : off),
             L.F("- 整理工具：%@", settings.Provider.Label()),
             "",

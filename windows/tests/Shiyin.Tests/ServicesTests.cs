@@ -458,6 +458,8 @@ public sealed class ServicesTests : IDisposable
 
     sealed class FakeEngines : ISpeechEngines
     {
+        public List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
+                                             IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control) => throw new NotSupportedException();
         public List<TranscribedSegment> Segments { get; set; } = [new(0, 3, "大家好", false), new(3, 6, "今天討論預算", false), new(6, 9, "好的", true)];
         public Func<float[], List<TranscribedSegment>>? PerChannel { get; set; }
         public List<SpeakerRules.Turn> Turns { get; set; } = [new(1, 0, 6), new(2, 6, 9)];
@@ -682,7 +684,7 @@ public sealed class ServicesTests : IDisposable
         var counted = JsonNode.Parse(usage.PreviewJson())!["usage"]!.AsObject();
         // 實際花的秒數看機器快慢，只確認有這一欄
         Assert.True(counted.Remove("transcribeWallSeconds"));
-        Assert.Equal("""{"diarizationRuns":1,"engines":{"breeze":9,"builtin":0,"whisperJa":0},"importedSeconds":9,"meetingLanguages":{"en":0,"ja":0,"zh":1},"meetingsImported":1,"meetingsRecorded":0,"questionsAsked":0,"recordedSeconds":0,"review":{"answered":0,"confirmed":0,"skipped":0},"summarizer":{"api":1,"claudeCode":0,"codex":0,"local":0},"transcribedSeconds":9}""",
+        Assert.Equal("""{"diarizationRuns":1,"engines":{"breeze":9,"builtin":0,"qwen":0,"whisperJa":0},"importedSeconds":9,"meetingLanguages":{"en":0,"ja":0,"zh":1},"meetingsImported":1,"meetingsRecorded":0,"questionsAsked":0,"recordedSeconds":0,"review":{"answered":0,"confirmed":0,"skipped":0},"summarizer":{"api":1,"claudeCode":0,"codex":0,"local":0},"transcribedSeconds":9}""",
             counted.ToJsonString());
     }
 

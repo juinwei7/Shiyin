@@ -2,6 +2,7 @@
 Shiyin for Windows uses the following software. Their license terms follow, verbatim.
 
 - whisper.cpp b5454 (d1be6fd) (MIT) https://github.com/ggml-org/whisper.cpp
+- llama.cpp b11840 (MIT) https://github.com/ggml-org/llama.cpp (downloaded with Qwen3-ASR, not in the installer)
 - sherpa-onnx 1.13.8 (Apache-2.0) https://github.com/k2-fsa/sherpa-onnx
 - ONNX Runtime 1.28.2 (MIT), included in sherpa-onnx https://github.com/microsoft/onnxruntime
 - .NET 10.0.13 (MIT) https://github.com/dotnet/runtime
@@ -20,6 +21,7 @@ Shiyin for Windows uses the following software. Their license terms follow, verb
 Shiyin downloads the following models when first needed (not included in the installer):
 
 - Breeze ASR 25 (Apache-2.0) https://huggingface.co/MediaTek-Research/Breeze-ASR-25, GGML q8_0 conversion https://huggingface.co/shdennlin/breeze-asr-25-ggml
+- Qwen3-ASR 1.7B (Apache-2.0) https://huggingface.co/Qwen/Qwen3-ASR-1.7B, GGUF q8_0 conversion https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF
 - Whisper large-v3-turbo, base (MIT) https://github.com/openai/whisper, GGML conversions https://huggingface.co/ggerganov/whisper.cpp
 - SenseVoice-Small (FunASR Model License, below) https://github.com/FunAudioLLM/SenseVoice, ONNX int8 conversion https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17
 - Silero VAD (MIT) https://github.com/snakers4/silero-vad
@@ -29,6 +31,33 @@ Shiyin downloads the following models when first needed (not included in the ins
 
 ================================================================================
 whisper.cpp d1be6fd: LICENSE
+================================================================================
+
+MIT License
+
+Copyright (c) 2023-2026 The ggml authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+llama.cpp b11840: LICENSE
 ================================================================================
 
 MIT License

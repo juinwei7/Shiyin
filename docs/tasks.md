@@ -15,10 +15,7 @@ M1～M6、M8（官網截圖）已完成（2026-10-25，Mac 和 Windows）。剩 
 
 ## Qwen3-ASR 轉錄引擎（R43，design §32；2026-10-24 使用者要求打磨辨識準確度）
 
-Q1～Q6 已完成（2026-10-24，驗證在 commit 訊息；使用者決定預設維持 Breeze、Qwen 可選）。Q7 Windows 另外排。評估資料在 `~/Library/Caches/ShiyinSpike/eval32/`（`datasets.json` 已加 `tw-taimecs`、`tw-ntuml`），原型工具在 `~/Library/Caches/ShiyinSpike/qwen3asr/`（`qwen-eval.py`、`linktest/` 的 C 薄層）。
-
-- [ ] **Q7 Windows 版接 R43**（§32.8、R43.9）：llama.cpp 預建 DLL（cpu／cuda／vulkan）、shim、模型下載、分段、重試、簡轉繁；標準答案比對
-  - 驗證：`dotnet test` 通過；虛擬機上 `transcribe-eval` 跑 synth 的錯誤率跟 Mac 一樣
+Q1～Q7 已完成（2026-10-25；Windows 用 llama-server 子程序，design-windows §8.4、D95）。評估資料在 `~/Library/Caches/ShiyinSpike/eval32/`（`datasets.json` 已加 `tw-taimecs`、`tw-ntuml`），原型工具在 `~/Library/Caches/ShiyinSpike/qwen3asr/`（`qwen-eval.py`、`linktest/` 的 C 薄層、`llama/llama-b11840/llama-server` 是 Mac 上跑 Windows 評估工具用的）。
 
 ## 待確認就地回答、收音提醒送通知（R41、R42，design §31；2026-10-23 使用者決定先做使用者體驗）
 
@@ -51,8 +48,6 @@ V1～V8 已完成（2026-10-25 使用者跑了後台的 migration 和 deploy）�
 進度（2026-10-22）：4.0.0 跟 Mac 一起發布（`win-v4.0.0`），功能對齊 Mac 4.0.0。Mac 上 `dotnet test` 95 個、CI（windows-latest、windows-11-arm、macos-latest）都通過；虛擬機（§15.2）用 UI Automation 走過幾乎所有畫面；`release-windows.yml` 手動執行（run 39739673918）建好兩個架構的安裝檔，更新說明用正式的更新金鑰簽好，ARM64 版在虛擬機裝起來轉錄、檢查更新都正常；使用者確認在 Windows 電腦上錄音沒問題、朋友的 RTX 3060 用上 CUDA。需求在 requirements 第 22 節；虛擬機的驗收結果用 `git show 0e96276:docs/requirements.md` 看。
 
 使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。這一段的「§」指 `design-windows.md`，「M§」指 `design.md`。
-
-雜務：虛擬機裡 `C:\ShiyinV5`、`C:\xfer\m8` 是 2026-10-25 驗 V5、V7 留下的測試資料（關機前 SSH 連不上，沒刪成），下次開虛擬機時刪掉。
 
 ### 要使用者的 Windows 電腦
 

@@ -30,7 +30,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
          "diarizationRuns", "questionsAsked"];
     static readonly (string Name, string[] Keys)[] Groups =
     [
-        ("engines", ["breeze", "builtin", "whisperJa"]),
+        ("engines", ["breeze", "builtin", "whisperJa", "qwen"]),
         ("meetingLanguages", ["zh", "en", "ja"]),
         ("summarizer", ["claudeCode", "codex", "api", "local"]),
         ("review", ["answered", "confirmed", "skipped"]),   // 待確認送出的題數（R41.7、M§31.3）
@@ -117,7 +117,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
     public void Transcribed(double seconds, double wallSeconds, string engine, MeetingLanguage language, bool imported, bool diarized)
     {
         var audio = Whole(seconds);
-        var key = engine switch { "system" => "builtin", "japanese" => "whisperJa", _ => "breeze" };
+        var key = engine switch { "system" => "builtin", "japanese" => "whisperJa", "qwen" => "qwen", _ => "breeze" };
         Add(c =>
         {
             c.Add("transcribedSeconds", audio);

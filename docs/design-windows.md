@@ -183,7 +183,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 
 ## 8. 正式轉錄
 
-> 4.1 起 Mac 的中文、英文預設引擎換成 Qwen3-ASR（M§32、R43）。Windows 版另開任務（tasks Q7）：llama.cpp 預建的 Windows DLL（cpu／cuda／vulkan 都有 `mtmd.dll`）、shim 加 `shiyin_qwen_*`、模型兩個檔、分段／重試／防線照 M§32.4、簡轉繁 `Shiyin.Core/Text/ChineseScript.cs` 已完成（標準答案 `util/s2tw.json`）。做完之前 Windows 繼續用 Breeze。
+> Mac 4.1 起設定裡可選 Qwen3-ASR，預設維持 Breeze（M§32、R43；使用者 2026-10-24 決定）。Windows 4.1 同樣可選（§8.4、D95）：llama.cpp 官方預建的 `llama-server.exe` 當子程序跑，分段、重試、防線照 M§32.4，簡轉繁 `Shiyin.Core/Text/ChineseScript.cs`（標準答案 `util/s2tw.json`）。
 
 - **whisper**：`native/whisper/` 的 CMake 腳本從 commit `d1be6fd` 建置，CI 建好、記下 SHA-256 放進安裝檔，不從別處下載。C/C++ 執行階段靜態連結（`CMAKE_MSVC_RUNTIME_LIBRARY`），沒裝 VC++ 可轉散發套件的電腦也載得起來；`build-whisper.ps1` 檢查 DLL 沒有匯入 VC++ 的 DLL（sherpa-onnx、onnxruntime 的 DLL 本來就是靜態連結）。
   - x64：`GGML_BACKEND_DL`＋`GGML_CPU_ALL_VARIANTS`（執行時依 CPU 指令集選），加 `ggml-vulkan.dll`（官方的 Windows 檔案沒有 Vulkan，要自己建）。
@@ -202,6 +202,18 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **快速辨識的模型怎麼來**（R27 R20.8）：首次使用引導的「模型」步驟先下載快速辨識和 VAD（約 240 MB，比 Breeze 小很多），下載好就能錄音，Breeze 接著在背景下載。要不要直接附在安裝檔，T-W7 量過安裝檔和差異更新的大小再決定。
 - **解碼**：Media Foundation 的 SourceReader 依序讀、轉成 16 kHz 單聲道浮點（同 D34 的串流讀法）。Media Foundation 不支援 CAF、AIFF：AIFF 用 `AiffFileReader`，CAF 不支援（不在匯入的格式清單裡）。T-W9：m4a、mp3、aac、flac、aiff、aif、wma、mp4、mov、m4v、wmv、webm 都解得開；ogg、opus 是 Ogg 容器，要「Web 媒體延伸模組」（一般的 Windows 11 有預裝），沒有時錯誤是 `MF_E_UNSUPPORTED_BYTESTREAM_TYPE`，畫面說明可以先轉檔或去 Microsoft Store 裝（不顯示內部的檔名）。Windows 的 N 版沒有 Media Foundation，要裝 Media Feature Pack（寫進系統需求）。
 - **結束拾音**時等 whisper 收尾最多 10 秒（R18.12）。
+
+
+### 8.4 Qwen3-ASR（R43.9，D95）
+
+- **為什麼是子程序**：whisper（b5454）和 llama.cpp（b11840）各帶一套 `ggml.dll`、`ggml-base.dll`、`ggml-cpu*.dll`。Windows 的載入器處理隱含匯入時只認模組名稱——同名的 DLL 已經載入就直接用它，不看路徑——兩個版本的 ggml 沒辦法在同一個程序裡並存（Mac 的問題是 Swift 不能同時 import 兩份 `ggml.h`，用 C 薄層解；Windows 的問題在載入器，薄層解不了）。所以 Qwen 用 llama.cpp 官方 Windows 版自帶的 `llama-server.exe`：獨立程序、HTTP 在 127.0.0.1 的隨機埠；原生程式當掉不會拖垮拾音，也不用自己建 C 程式（官方有 cpu x64／arm64、cuda 12.4 x64）。
+- **模型和執行檔**（`ModelStore.Model.Qwen`，三個檔一起下載、一起算裝好、一起刪）：`qwen3-asr-1.7b-q8_0.gguf`（2.17 GB）、`qwen3-asr-1.7b-mmproj-q8_0.gguf`（356 MB）同 Mac（固定 commit、SHA-256，檔名相同，模型檔可以直接從 Mac 複製）；`llama-b11840-bin-win-cpu-<x64|arm64>.zip`（24／13 MB，固定 SHA-256）只解出 `llama-server.exe`、`llama-server-impl.dll`、`llama-common.dll`、`llama.dll`、`mtmd.dll`、`ggml*.dll`、`libomp.dll` 到 `models\qwen-runtime\`。
+- **NVIDIA**（x64）：`Model.QwenCuda`：`llama-b11840-bin-win-cuda-12.4-x64.zip`（272 MB）解到 `qwen-runtime-cuda\`（含 `ggml-cuda.dll` 578 MB，整套 ggml 用同一次建置的）；cudart、cublas 用 whisper 的 `gpu-cuda12\` 那一份（子程序的 `PATH` 加上那個資料夾），所以 GpuCuda 也裝好才用 CUDA 版，不然用 CPU 版。有 NVIDIA 顯示卡而且選了 Qwen（或 Qwen 已經裝好）時自動下載一次（設定 `qwenCudaOffered`），使用者刪掉後不再下載。Vulkan（AMD、Intel）同 whisper 還沒做（D64）。
+- **每次轉錄**（`Shiyin.Engines/Qwen/QwenServer.cs`）：啟動 llama-server（`-m`、`--mmproj`、`-c 4096 -b 2048 -ub 512`、`-t` 同 whisper 的執行緒數、`-ngl 0`（CPU）或 `999`（CUDA）、`--host 127.0.0.1 --port <先找到的空埠> -np 1 --no-webui --no-warmup --jinja`），等 `/health` 回 200（最多 5 分鐘，程序先結束就把 stderr 的最後幾行寫進 log），逐段 `POST /v1/chat/completions`：system = 詞彙表（空的也送，跟 Mac 的薄層一樣）、user = `input_audio`（這一段 16 kHz 16-bit WAV 的 base64）、assistant 先填 `language <Chinese|English|Japanese><asr_text>`（llama-server 預設接著寫下去）；`temperature`、`seed`、`repeat_penalty`、`repeat_last_n`、`max_tokens` 同 Mac 的薄層，`top_k 0`、`top_p 1`、`min_p 0` 讓取樣鏈只剩懲罰和溫度；回應的 `finish_reason` 是 `length` 就是到達 max_tokens。轉完結束子程序（同 Mac 每次載入、釋放）。Windows 用 Job Object（`KILL_ON_JOB_CLOSE`）綁住子程序，拾音當掉子程序也跟著結束；取消是取消 HTTP 請求、結束程序。Mac 原型（`qwen-eval.py`）走的就是這條 HTTP 路，評估結果跟 Mac app 的薄層一致。
+- **規則**：分段、重試、幻覺防線、縮寫併回去在 `Shiyin.Core/Transcribe/QwenRules.cs`，流程在 `Shiyin.Engines/Qwen/QwenTranscriber.cs`，照 M§32.4 一字不差（能量用 float 相乘再加進 double，跟 Swift 一樣）；說話者先辨識再分段，段落的說話者用 `SpeakerRules.AssignNumbering` 加短句再確認（§9）。分段用 Mac `shiyinctl qwenchunks` 倒出的 turns 餵 `shiyin-eval qwen-chunks` 比對切點（§4 的標準答案沒有這一項：要真的錄音和說話者片段）。
+- **設定**：「正式轉錄」三選一（Breeze、Qwen3-ASR、快速辨識），存 `transcriptionEngine=qwen`（同 Mac）；Qwen 沒下載好、Breeze 在時先用 Breeze（R43.7），兩個都沒有才用快速辨識；日文一律 large-v3-turbo。設定的模型清單多 Qwen（和 NVIDIA 的 QwenCuda）。匿名統計 `engines.qwen`（後台 2026-10-25 已加欄）。
+- **驗證**（2026-10-25）：合成中英夾雜會議（91 秒，詞彙表 5 個）Mac app 的 Qwen 引擎和 Windows 的 C# 流程（Mac 上接 macOS 版 llama-server、Metal）7 段文字、6 個切點逐字相同，CER 都是 2.0%、關鍵詞 4/6；虛擬機（ARM64、4 核 CPU）同一套跑出一樣的 7 段（55 秒，含說話者辨識 5.5 秒，1.7 倍速），app 裡匯入同一個檔 `transcribed_with=qwen`、7 段；設定頁「正式轉錄」三選一、模型清單有 Qwen；`dotnet test` 114 個（QwenTests 9 個：分段、整理輸出、防線、重試流程）。
+- **評估**：`shiyin-eval transcribe-eval` 的設定 `"engine": "qwen"`（tuning 同 Mac：`qwenChunkSeconds`、`qwenRetry`、`qwenTurns`、`qwenGuard`、`qwenCutsAny`、`qwenSplitMixed`），說話者辨識用 `SHIYIN_DIARIZATION_MODELS`；Mac 上 `SHIYIN_QWEN_SERVER` 指到 macOS 版的 llama-server（原型工具 `~/Library/Caches/ShiyinSpike/qwen3asr/llama/llama-b11840/llama-server`）、`SHIYIN_MODELS` 指到有兩個 GGUF 的資料夾，同一套 C# 流程就能在 Mac 上跑、跟 Mac app 比。`shiyin-eval qwen-chunks <錄音.wav> <turns.json|-> <輸出.json>` 只做分段。
 
 ## 9. 說話者辨識與聲紋
 
@@ -511,6 +523,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D64 | NVIDIA 顯示卡加速由 app 另外下載 whisper.cpp 官方的 CUDA 版（R27 R4.6、§8） | 直接放進安裝檔：x64 的安裝檔從約 100 MB 變成約 750 MB（ggml-cuda 570 MB、cuBLASLt 474 MB），沒有 NVIDIA 顯示卡的人也要下載。官方的 CUDA 11.8 版：壓縮檔沒有附 cuBLAS，要另外從 NVIDIA 下載。自己建 Vulkan 版（設計原本的做法，所有顯示卡都能用）：官方沒有 Windows 的 Vulkan 檔案，要 CI 裝 Vulkan SDK 建，還沒做；做好之後 AMD、Intel 的顯示卡用 Vulkan，NVIDIA 再比較 CUDA 和 Vulkan 的速度決定要不要留這個下載。取捨：下載 685 MB、佔 1.1 GB；只支援 NVIDIA；CUDA 12.4 要 527 版以後的驅動（太舊時用 CPU）；要第一次用 whisper 之前下載好才用得上，不然要重新開啟 |
 | D93 | Windows 的短句再確認用說話者辨識的同一個聲紋模型，跟每位說話者的聲紋比，像另一位 0.25 以上才改（§9；Mac 用另一個帶前後文的模型、跟長句的平均比、0.15，D92） | 照搬 Mac 的長句平均、0.15：Windows 的模型只聽得到這一句，AMI 沒重疊的句子改錯 5 句，使用者的訪談有 4 句改得跟 Mac 相反。像 Mac 帶前後文算：sherpa-onnx 的聲紋模型沒有遮罩的輸入（Mac 的 wespeaker_v2 有），只能把前後的聲音一起算，會混進別人的聲音（沒有試）。不做：完整逐字稿還是有進步（AMI 94.9% → 95.5%、AISHELL-4 96.6% → 97.1%），也沒有變差。取捨：使用者回報的那一句在 Windows 改不回來（兩位的分數只差 0.09）；說話者辨識多約 10～20% 的時間 |
 | D94 | Windows 找新版時自己讀 GitHub 的 release 清單（100 筆），其他照 Velopack 的 GithubSource（§14.3） | 照用 GithubSource：只讀最新的 10 筆，Mac 連發 10 版後 Windows 使用者看不到新版。固定網址的 feed（SimpleWebSource）：每次發布要另外更新一個固定的 release 或網站上的檔案，官網的 release 清單也要跳過它，多一個會出錯的地方。分 Mac、Windows 兩個 repo：星星、issue、下載數分散（D51）。取捨：Mac 在一次 Windows 發布之間發了 100 版以上才會再漏，到時候改成往下翻頁 |
+| D95 | Windows 的 Qwen3-ASR 用 llama.cpp 官方的 `llama-server.exe` 當子程序（HTTP），不做 shim DLL（§8.4） | 同程序載入 llama 的 DLL：跟 whisper 同名的 ggml DLL，載入器只認名稱，兩個版本不能並存；side-by-side manifest 可以但複雜、出錯時只會靜默用錯版本。自己建 llama.cpp 把 DLL 改名：每次升級要重建 cpu／cuda 兩種後端兩種架構，CI 時間和出錯的地方都多。用跟 llama 同版的 ggml 重建 whisper：whisper 固定在 d1be6fd 才跟 Mac 結果一致（R28.4）。取捨：多一個程序、每次轉錄多幾秒啟動（Mac 也是每次載入模型）、音訊要 base64 走 localhost（15 秒一段約 0.6 MB，可忽略）、要自己管子程序的生命週期（Job Object） |
 
 ## 17. 需要先做的實驗
 

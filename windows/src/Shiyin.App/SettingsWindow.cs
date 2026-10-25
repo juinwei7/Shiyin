@@ -463,11 +463,25 @@ public sealed class SettingsWindow : Window
         language.Children.Add(Note(L.T("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")));
 
         var transcription = Ui.Column(12);
-        transcription.Children.Add(Ui.Combo(new[] { ("breeze", L.T("Breeze ASR 25（建議）")), ("system", L.T("快速辨識")) }, S.UseFastTranscriber ? "system" : "breeze",
-            e => { S.Set(AppSettings.TranscriptionEngineKey, e); host.Runner.Wake(); Show(); }, L.T("正式轉錄")));
-        transcription.Children.Add(Note(S.UseFastTranscriber
-            ? L.T("速度快很多，下載也小；但不參考詞彙表，英文專有名詞、人名比較容易錯。")
-            : L.T("會參考詞彙表，中英夾雜、專有名詞比較準；需要下載約 1.7 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。")));
+        // 正式轉錄引擎（R4.1、M§32.3；Qwen3-ASR 見 design-windows §8.4）
+        var engine = S.TranscriptionEngine;
+        transcription.Children.Add(Ui.Combo(new[]
+        {
+            ("breeze", L.T("Breeze ASR 25（聯發科，建議）")), ("qwen", L.T("Qwen3-ASR 1.7B（阿里巴巴）")), ("system", L.T("快速辨識")),
+        }, engine is "qwen" or "system" ? engine : "breeze", e =>
+        {
+            S.Set(AppSettings.TranscriptionEngineKey, e);
+            if (e == "qwen") host.Models.AutoStart(ModelStore.Model.Qwen);
+            host.Gpu.OfferQwenCuda();
+            host.Runner.Wake();
+            Show();
+        }, L.T("正式轉錄")));
+        transcription.Children.Add(Note(engine switch
+        {
+            "system" => L.T("速度快很多，下載也小；但不參考詞彙表，英文專有名詞、人名比較容易錯。"),
+            "qwen" => L.T("會參考詞彙表，多人會議的漏字和同音字比 Breeze 少；阿里巴巴開源的模型，全程在這台電腦上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型和 llama.cpp 的執行檔。日文會議改用 Whisper large-v3-turbo（574 MB）。"),
+            _ => L.T("會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。日文會議改用 Whisper large-v3-turbo（574 MB）。"),
+        }));
         transcription.Children.Add(Ui.Toggle(L.T("轉錄時辨識說話者"), S.Diarize, on => S.Set(AppSettings.DiarizeKey, on)));
         transcription.Children.Add(Ui.Toggle(L.T("錄音中顯示即時逐字稿"), S.LiveTranscription, on => S.Set(AppSettings.LiveTranscriptionKey, on)));
         // 模型清單（原「模型與儲存空間」頁，R44.5）
@@ -502,6 +516,7 @@ public sealed class SettingsWindow : Window
         foreach (var (model, note) in new[]
                  {
                      (ModelStore.Model.Breeze, ""),
+                     (ModelStore.Model.Qwen, L.T("中文、英文可選的引擎（阿里巴巴開源），約 2.5 GB，含 llama.cpp 的執行檔；「正式轉錄」選了它才會用。")),
                      (ModelStore.Model.Japanese, L.T("日文會議用，574 MB。第一次轉錄日文會議時會自動下載。")),
                      (ModelStore.Model.FastRecognition, L.T("即時逐字稿和快速辨識用，約 240 MB。")),
                      (ModelStore.Model.Diarization, L.T("說話者辨識用，約 46 MB。")),
@@ -510,6 +525,12 @@ public sealed class SettingsWindow : Window
         {
             models.Children.Add(ModelRow(model, model == ModelStore.Model.LanguageDetection ? host.Recorder.IsRecording : transcribing));
             if (note.Length > 0) models.Children.Add(Note(note));
+        }
+        // Qwen 的 CUDA 版（design-windows §8.4）：有 NVIDIA 顯示卡或已經下載過才顯示
+        if (host.Gpu.Applies || host.Models.StateOf(ModelStore.Model.QwenCuda) is not ModelStore.State.Missing)
+        {
+            models.Children.Add(ModelRow(ModelStore.Model.QwenCuda, transcribing));
+            models.Children.Add(Note(L.T("有 NVIDIA 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 的轉錄會快很多。272 MB，解開約 610 MB（llama.cpp 官方的 CUDA 版，要先有上面的 NVIDIA 顯示卡加速）。刪除後不會再自動下載。")));
         }
         // NVIDIA 顯示卡加速（R27 R4.6）：只在有 NVIDIA 顯示卡的 x64 電腦（或已經下載過）顯示
         if (host.Gpu.Applies || host.Models.StateOf(ModelStore.Model.GpuCuda) is not ModelStore.State.Missing)

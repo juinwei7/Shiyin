@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Shiyin.Audio;
 using Shiyin.Model;
+using Shiyin.Qwen;
 using Shiyin.Speakers;
 using Shiyin.Speech;
 using Shiyin.Transcribe;
@@ -18,6 +19,7 @@ var models = Environment.GetEnvironmentVariable("SHIYIN_MODELS")
 switch (args.FirstOrDefault())
 {
     case "transcribe-eval": return Transcribe(args[1], args[2], args[3]);
+    case "qwen-chunks": return QwenChunks(args[1], args[2], args[3], args[4..]);
     case "detect-eval": return Detect(args[1], double.Parse(args[2]), args[3]);
     // diarize-eval <錄音.wav> <逐字稿.json（transcribe-eval 的輸出）> <設定.json> <輸出.json>：只重跑說話者辨識，標到逐字稿上（T-W4）
     case "diarize-eval": return Diarize(args[1], args[2], args[3], args[4]);
@@ -37,6 +39,7 @@ int Transcribe(string audio, string optionsPath, string output)
 {
     var watch = Stopwatch.StartNew();
     var options = JsonNode.Parse(File.ReadAllText(optionsPath))!.AsObject();
+    if (options["engine"]?.GetValue<string>() == "qwen") return TranscribeQwen(audio, options, output, watch);
     var language = MeetingLanguages.Parse(options["language"]?.GetValue<string>()) ?? MeetingLanguage.Zh;
     var glossary = options["glossary"]?.AsArray().Select(x => x!.GetValue<string>()).ToList() ?? [];
     var chunkSeconds = options["chunkSeconds"]?.GetValue<double>() ?? 600;
@@ -63,6 +66,118 @@ int Transcribe(string audio, string optionsPath, string output)
     File.WriteAllText(output + ".tmp", result.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
     File.Move(output + ".tmp", output, overwrite: true);
     return result["error"] is null ? 0 : 1;
+}
+
+// transcribe-eval 的設定 "engine": "qwen"（design-windows §8.4）：先辨識說話者（SHIYIN_DIARIZATION_MODELS）再分段，llama-server 逐段轉錄。
+// tuning 同 Mac：qwenChunkSeconds、qwenRetry、qwenTurns、qwenGuard、qwenCutsAny、qwenSplitMixed；
+// llama-server 在 SHIYIN_QWEN_SERVER（Mac 上評估用 macOS 版）或 models/qwen-runtime/llama-server.exe；模型檔 qwenModel、qwenEncoder（預設在 models）
+int TranscribeQwen(string audio, JsonObject options, string output, Stopwatch watch)
+{
+    var language = MeetingLanguages.Parse(options["language"]?.GetValue<string>()) ?? MeetingLanguage.Zh;
+    var glossary = options["glossary"]?.AsArray().Select(x => x!.GetValue<string>()).ToList() ?? [];
+    var tuning = options["tuning"]?.AsObject() ?? [];
+    var result = new JsonObject { ["audio"] = audio, ["options"] = options.DeepClone(), ["engine"] = "windows-qwen" };
+    try
+    {
+        var samples = WavStream.ReadAll(audio);
+        var duration = samples.Length / WhisperRules.SampleRate;
+        var turnsStarted = watch.Elapsed.TotalSeconds;
+        Diarizer.Output? turns = null;
+        if (tuning["qwenTurns"]?.GetValue<bool>() != false && options["diarize"]?.GetValue<bool>() != false && duration > 5)
+        {
+            using var diarizer = new Diarizer(DiarizerOptionsFrom(options));
+            turns = diarizer.Diarize(samples, options["minSpeakers"]?.GetValue<int>());
+        }
+        result["diarizeSeconds"] = watch.Elapsed.TotalSeconds - turnsStarted;
+        var chunks = QwenRules.Chunks(samples, turns?.Turns ?? [], tuning["qwenChunkSeconds"]?.GetValue<double>() ?? QwenRules.MaxChunkSeconds,
+            tuning["qwenCutsAny"]?.GetValue<bool>() ?? false, tuning["qwenSplitMixed"]?.GetValue<bool>() ?? true);
+        var serverOptions = QwenOptionsFrom(options);
+        result["server"] = serverOptions.Executable;
+        List<TranscribedSegment> segments;
+        using (var server = QwenServer.Start(serverOptions, Console.Error.WriteLine))
+            segments = QwenTranscriber.Transcribe(samples, chunks, server, language, glossary, new WhisperControl(),
+                tuning["qwenRetry"]?.GetValue<bool>() ?? true, tuning["qwenGuard"]?.GetValue<bool>() ?? true);
+        var speakers = segments.Select(_ => (int?)null).ToList();
+        if (turns is not null) (speakers, _) = SpeakerRules.AssignNumbering(turns.Turns, segments);
+        result["duration"] = duration;
+        result["seams"] = new JsonArray(chunks.Skip(1).Select(c => (JsonNode)(c.Start / WhisperRules.SampleRate)).ToArray());
+        result["chunks"] = chunks.Count;
+        result["segments"] = new JsonArray(segments.Select((s, i) => (JsonNode)new JsonObject
+        {
+            ["start"] = s.Start, ["end"] = s.End, ["text"] = s.Text, ["speaker"] = speakers[i], ["channel"] = null, ["lowConfidence"] = s.LowConfidence,
+        }).ToArray());
+    }
+    catch (Exception e)
+    {
+        result["error"] = e.Message;
+    }
+    result["elapsed"] = watch.Elapsed.TotalSeconds;
+    File.WriteAllText(output + ".tmp", result.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+    File.Move(output + ".tmp", output, overwrite: true);
+    return result["error"] is null ? 0 : 1;
+}
+
+QwenServer.Options QwenOptionsFrom(JsonObject options)
+{
+    var custom = Environment.GetEnvironmentVariable("SHIYIN_QWEN_SERVER");
+    var exe = custom ?? Path.Combine(models, "qwen-runtime", "llama-server.exe");
+    return new QwenServer.Options(exe,
+        options["qwenModel"]?.GetValue<string>() ?? Path.Combine(models, "qwen3-asr-1.7b-q8_0.gguf"),
+        options["qwenEncoder"]?.GetValue<string>() ?? Path.Combine(models, "qwen3-asr-1.7b-mmproj-q8_0.gguf"),
+        options["threads"]?.GetValue<int>() ?? QwenServer.DefaultThreads, options["gpu"]?.GetValue<bool>() ?? custom is not null);
+}
+
+// qwen-chunks <錄音.wav> <turns.json|-> <輸出.json> [最長秒數] [any] [nomixed]：只做 Qwen 的分段（M§32.4），
+// turns.json 是 Mac shiyinctl qwenchunks 的輸出（用同一份說話者片段比切點）；給 - 就自己辨識說話者
+int QwenChunks(string audio, string turnsPath, string output, string[] rest)
+{
+    var samples = WavStream.ReadAll(audio);
+    List<SpeakerRules.Turn> turns;
+    if (turnsPath == "-")
+    {
+        using var diarizer = new Diarizer(DiarizerOptionsFrom([]));
+        turns = diarizer.Diarize(samples, null).Turns;
+    }
+    else
+        turns = JsonNode.Parse(File.ReadAllText(turnsPath))!["turns"]!.AsArray()
+            .Select(t => new SpeakerRules.Turn(t!["speaker"]!.GetValue<int>(), t["start"]!.GetValue<double>(), t["end"]!.GetValue<double>())).ToList();
+    var maxSeconds = rest.Length > 0 && double.TryParse(rest[0], out var m) ? m : QwenRules.MaxChunkSeconds;
+    var chunks = QwenRules.Chunks(samples, turns, maxSeconds, rest.Contains("any"), !rest.Contains("nomixed"));
+    var result = new JsonObject
+    {
+        ["audio"] = audio, ["maxSeconds"] = maxSeconds,
+        ["turns"] = new JsonArray(turns.Select(t => (JsonNode)new JsonObject { ["speaker"] = t.Speaker, ["start"] = t.Start, ["end"] = t.End }).ToArray()),
+        ["chunks"] = new JsonArray(chunks.Select(c => (JsonNode)new JsonObject { ["start"] = c.Start / WhisperRules.SampleRate, ["end"] = c.End / WhisperRules.SampleRate }).ToArray()),
+        ["median"] = QwenRules.MedianFrameEnergy(samples),
+    };
+    File.WriteAllText(output, result.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    return 0;
+}
+
+/// <summary>說話者辨識的設定（diarize-eval、qwen）：模型在 SHIYIN_DIARIZATION_MODELS，其他照 app 的預設</summary>
+Diarizer.Options DiarizerOptionsFrom(JsonObject options)
+{
+    var root = Environment.GetEnvironmentVariable("SHIYIN_DIARIZATION_MODELS") ?? models;
+    var embedding = options["embedding"]?.GetValue<string>() ?? "3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx";
+    return new Diarizer.Options(
+        Path.Combine(root, options["segmentation"]?.GetValue<string>() ?? "sherpa-onnx-pyannote-segmentation-3-0/model.onnx"),
+        Path.Combine(root, embedding))
+    {
+        SegmentationEmbeddingModel = options["segmentationEmbedding"]?.GetValue<string>() is { } se ? Path.Combine(root, se) : null,
+        SegmentClusters = options["segmentClusters"]?.GetValue<int>() ?? 30,
+        NumSpeakers = options["numSpeakers"]?.GetValue<int>(),
+        Threads = options["threads"]?.GetValue<int>() ?? Math.Max(1, Math.Min(4, Environment.ProcessorCount - 2)),
+        WindowShiftRatio = options["windowShift"]?.GetValue<float>() ?? 0.5f,
+        PieceSeconds = options["pieceSeconds"]?.GetValue<double>() ?? 3,
+        Clustering = new SpeakerClustering.Options
+        {
+            Threshold = options["threshold"]?.GetValue<double>() ?? 0.25,
+            MinClusterSeconds = options["minClusterSeconds"]?.GetValue<double>() ?? 30,
+            Center = options["center"]?.GetValue<bool>() ?? true,
+            SameSpeaker = options["sameSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SameSpeaker,
+            SingleSpeaker = options["singleSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SingleSpeaker,
+        },
+    };
 }
 
 int Detect(string audio, double start, string output)
@@ -96,33 +211,12 @@ int Diarize(string audio, string transcriptPath, string optionsPath, string outp
 {
     var watch = Stopwatch.StartNew();
     var options = JsonNode.Parse(File.ReadAllText(optionsPath))!.AsObject();
-    var root = Environment.GetEnvironmentVariable("SHIYIN_DIARIZATION_MODELS") ?? models;
     // 逐字稿給 "-"：只看分出幾個人、每人的聲紋（AMI 9 場的人數、聲紋比對）
     var segments = transcriptPath == "-" ? [] : JsonNode.Parse(File.ReadAllText(transcriptPath))!["segments"]!.AsArray()
         .Select(s => new TranscribedSegment(s!["start"]!.GetValue<double>(), s["end"]!.GetValue<double>(),
             s["text"]!.GetValue<string>(), s["lowConfidence"]?.GetValue<bool>() ?? false)).ToList();
     var samples = WavStream.ReadAll(audio);
-    var embedding = options["embedding"]?.GetValue<string>() ?? "3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx";
-    var diarizerOptions = new Diarizer.Options(
-        Path.Combine(root, options["segmentation"]?.GetValue<string>() ?? "sherpa-onnx-pyannote-segmentation-3-0/model.onnx"),
-        Path.Combine(root, embedding))
-    {
-        SegmentationEmbeddingModel = options["segmentationEmbedding"]?.GetValue<string>() is { } se ? Path.Combine(root, se) : null,
-        SegmentClusters = options["segmentClusters"]?.GetValue<int>() ?? 30,
-        NumSpeakers = options["numSpeakers"]?.GetValue<int>(),
-        Threads = options["threads"]?.GetValue<int>() ?? Math.Max(1, Math.Min(4, Environment.ProcessorCount - 2)),
-        WindowShiftRatio = options["windowShift"]?.GetValue<float>() ?? 0.5f,
-        PieceSeconds = options["pieceSeconds"]?.GetValue<double>() ?? 3,
-        Clustering = new SpeakerClustering.Options
-        {
-            Threshold = options["threshold"]?.GetValue<double>() ?? 0.25,
-            MinClusterSeconds = options["minClusterSeconds"]?.GetValue<double>() ?? 30,
-            Center = options["center"]?.GetValue<bool>() ?? true,
-            SameSpeaker = options["sameSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SameSpeaker,
-            SingleSpeaker = options["singleSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SingleSpeaker,
-        },
-    };
-    using var diarizer = new Diarizer(diarizerOptions);
+    using var diarizer = new Diarizer(DiarizerOptionsFrom(options));
     if (options["pieces"]?.GetValue<bool>() == true) return DumpPieces(diarizer, samples, output, watch);
     var result = diarizer.Diarize(samples, options["minSpeakers"]?.GetValue<int>());
     var (speakers, numbering) = SpeakerRules.AssignNumbering(result.Turns, segments);

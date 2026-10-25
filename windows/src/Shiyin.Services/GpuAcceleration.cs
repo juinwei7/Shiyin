@@ -29,15 +29,30 @@ public sealed class GpuAcceleration
         Applies = applies;
         models.Installed += model =>
         {
+            if (model is ModelStore.Model.Qwen or ModelStore.Model.GpuCuda) OfferQwenCuda();
             if (model != ModelStore.Model.GpuCuda) return;
             if (WhisperEngine.IsLoaded) RestartNeeded?.Invoke();
             else Use();
         };
     }
 
+    /// <summary>Qwen 用 CUDA 版的條件（design-windows §8.4）：有 NVIDIA、CUDA 版裝好、whisper 的 CUDA 元件也在（cudart、cublas 用它的）</summary>
+    public bool QwenCudaReady => Applies && models.IsInstalled(ModelStore.Model.QwenCuda) && models.IsInstalled(ModelStore.Model.GpuCuda);
+
+    /// <summary>選了 Qwen（或 Qwen 已經裝好）而且有 NVIDIA 顯示卡：自動下載一次 llama.cpp 的 CUDA 版；使用者刪掉後不再下載</summary>
+    public void OfferQwenCuda()
+    {
+        if (!Applies || settings.QwenCudaOffered || !models.IsInstalled(ModelStore.Model.GpuCuda)) return;
+        if (!settings.UseQwen && !models.IsInstalled(ModelStore.Model.Qwen)) return;
+        settings.Set(AppSettings.QwenCudaOfferedKey, true);
+        Log.Info("gpu pack: downloading llama.cpp cuda for qwen");
+        models.AutoStart(ModelStore.Model.QwenCuda);
+    }
+
     /// <summary>啟動時：裝好了就讓 whisper 從元件資料夾載入；用得上又還沒自動下載過就下載（只自動一次，使用者刪掉後不再下載）</summary>
     public void Start()
     {
+        OfferQwenCuda();
         if (models.IsInstalled(ModelStore.Model.GpuCuda))
         {
             Use();
