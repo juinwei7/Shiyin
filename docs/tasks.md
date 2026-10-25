@@ -11,8 +11,6 @@
 
 驗證用 DEBUG 版、暫存的 `SHIYIN_HOME`（示範資料複製一份），`-llmProvider` 等啟動參數只在這次執行有效；整理工具、key 用 `llmprovider`、`llmkey`（只在記憶體）。測完 `defaults read com.weiwei.shiyin` 確認沒有留下 `llmProvider`。
 
-- [ ] **S3 Mac：設定問題的失敗換按鈕、暫停**（R46，§34.4）
-  - 驗證：假伺服器回 401：第一場失敗、橫幅是「打開設定」沒有「重試」，第二場不排整理；存新的 key（`llmkey`）後橫幅變回「重試」、新的會議照常整理；429、500 照舊有「重試」、不暫停
 - [ ] **S4 Mac：統計的失敗種類**（R47，§34.5）：`errorDetail`、後台欄位和 migration
   - 驗證：S3 的情境後 `shiyinctl usage` 看到 `keyRejected`、`api`；`wrangler dev --local` 收一份、D1 的新欄位有值；舊格式（沒有 `errorDetail`）照樣收
 - [ ] **S5 Windows：S1～S4 同一份規則**（R45.5、R46.4、R47.3，design-windows §10.1）

@@ -241,6 +241,7 @@ struct TrashBanner: View {
 /// 工作進度、失敗原因
 struct StatusBanner: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
     let detail: MeetingDetail
 
     var body: some View {
@@ -319,12 +320,23 @@ struct StatusBanner: View {
         switch status {
         case .queued, .transcribing, .summarizing: Button("取消") { model.cancelJobs() }
         case .failed(let kind, let message):
-            // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
-            if kind != .transcribe, LLMError.isLoginProblem(message),
-               AppSettings.provider == .claude || AppSettings.provider == .codex {
-                Button("重新登入 \(AppSettings.provider.shortLabel)") { CLILogin.openLogin(AppSettings.provider) }
+            // 設定問題（沒登入、key 錯誤…）而且還沒修好（R46.2、design §34.4）：給修的按鈕，不放「重試」（重試也一樣會失敗）
+            if kind != .transcribe, LLMError.isSetupProblem(errorKind: detail.latestJob?.errorKind),
+               let problem = model.summarizerProblem {
+                Button(problem.actionTitle) {
+                    switch problem.action {
+                    case .openSettings: openSettings()
+                    case .login(let provider): CLILogin.openLogin(provider)
+                    }
+                }
+            } else {
+                // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
+                if kind != .transcribe, LLMError.isLoginProblem(message),
+                   AppSettings.provider == .claude || AppSettings.provider == .codex {
+                    Button("重新登入 \(AppSettings.provider.shortLabel)") { CLILogin.openLogin(AppSettings.provider) }
+                }
+                Button("重試") { model.retry() }
             }
-            Button("重試") { model.retry() }
         case .cancelled: Button("重新轉錄") { model.retry() }
         default: EmptyView()
         }

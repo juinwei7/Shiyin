@@ -242,9 +242,16 @@ final class JobRunner {
                 if let failure {
                     try db.finish(jobId, status: .failed, error: failure.localizedDescription, errorKind: failure.logSummary)
                     log.error("job \(jobId) failed: \(failure.logSummary, privacy: .public)")
+                    // 設定問題（沒登入、key 錯誤…）：暫停自動整理，設定改了、登入了、測試成功才再排（R46.3、design §34.4）
+                    if job.kind == .summarize || job.kind == .revise, (failure as? LLMError)?.isSetupProblem == true,
+                       AppSettings.provider != .none {
+                        SummarizerPause.pause(AppSettings.provider, message: failure.localizedDescription)
+                        log.info("summarizer paused after setup problem")
+                    }
                 } else {
                     try db.finish(jobId, status: .done)
                     log.info("job \(jobId) done")
+                    if job.kind == .summarize || job.kind == .revise { SummarizerPause.clear() }
                 }
                 countUsage(job.kind, failed: failure != nil)
             } catch {
