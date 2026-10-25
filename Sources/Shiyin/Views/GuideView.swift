@@ -90,7 +90,7 @@ struct GuideView: View {
                 GuideBullet(String(localized: "API key 存在 macOS 鑰匙圈，不會寫進任何檔案。"))
                 // 匿名使用統計（design §30.5）：有統計網址的版本才寫
                 if UsageStats.isOffered {
-                    GuideBullet(String(localized: "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉。"))
+                    GuideBullet(String(localized: "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。"))
                 }
             }
 

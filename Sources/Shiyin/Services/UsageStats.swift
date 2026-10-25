@@ -19,6 +19,13 @@ final class UsageStats: @unchecked Sendable {
         /// 待確認送出的題數（R41.7、§31.3）：回答（打字或「不是」）、確認（「是」）、略過
         var review = ["answered": 0, "confirmed": 0, "skipped": 0]
         var errors = ["recording": 0, "transcribe": 0, "diarize": 0, "summarize": 0]
+        /// 整理失敗的種類、當時的整理工具、其中幾次是草稿（R47、§34.5）：只有次數
+        var summarizeErrors = Counters.summarizeErrorKinds.reduce(into: [String: Int]()) { $0[$1] = 0 }
+        var summarizeErrorProviders = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0]
+        var summarizeDraftErrors = 0
+
+        static let summarizeErrorKinds = ["notInstalled", "notLoggedIn", "missingKey", "notConfigured", "keyRejected",
+                                          "limited", "timeout", "unreachable", "badOutput", "other"]
 
         init() {}
 
@@ -39,6 +46,9 @@ final class UsageStats: @unchecked Sendable {
             questionsAsked = try c.decodeIfPresent(Int.self, forKey: .questionsAsked) ?? 0
             review = try c.decodeIfPresent([String: Int].self, forKey: .review) ?? base.review
             errors = try c.decodeIfPresent([String: Int].self, forKey: .errors) ?? base.errors
+            summarizeErrors = try c.decodeIfPresent([String: Int].self, forKey: .summarizeErrors) ?? base.summarizeErrors
+            summarizeErrorProviders = try c.decodeIfPresent([String: Int].self, forKey: .summarizeErrorProviders) ?? base.summarizeErrorProviders
+            summarizeDraftErrors = try c.decodeIfPresent(Int.self, forKey: .summarizeDraftErrors) ?? 0
         }
     }
 
@@ -126,17 +136,55 @@ final class UsageStats: @unchecked Sendable {
     /// 整理（含草稿、修正）成功。只記整理工具的種類，不記網址、模型
     @MainActor
     func summarized(with provider: LLMProvider) {
-        let key: String
+        guard let key = Self.providerKind(provider) else { return }
+        add { $0.summarizer[key, default: 0] += 1 }
+    }
+
+    /// 整理（含草稿、修正）失敗（R47、§34.5）：原本的次數照舊，另外記種類、整理工具、是不是草稿；不記錯誤訊息
+    @MainActor
+    func summarizeFailed(_ error: Error, provider: LLMProvider, draft: Bool) {
+        let kind = Self.summarizeFailureKind(error)
+        let providerKey = Self.providerKind(provider)
+        add {
+            $0.errors["summarize", default: 0] += 1
+            $0.summarizeErrors[kind, default: 0] += 1
+            if let providerKey { $0.summarizeErrorProviders[providerKey, default: 0] += 1 }
+            if draft { $0.summarizeDraftErrors += 1 }
+        }
+    }
+
+    /// 整理工具的種類：claudeCode、codex、api、local（本機的 OpenAI 相容服務）；none 是 nil
+    @MainActor
+    static func providerKind(_ provider: LLMProvider) -> String? {
         switch provider {
-        case .claude: key = "claudeCode"
-        case .codex: key = "codex"
+        case .claude: return "claudeCode"
+        case .codex: return "codex"
         case .openaiCompatible:
             let local = URL(string: OpenAICompatibleAPI.savedBaseURL).map(OpenAICompatibleAPI.isLocal) ?? false
-            key = local ? "local" : "api"
-        case .anthropic, .openai, .gemini: key = "api"
-        case .none: return
+            return local ? "local" : "api"
+        case .anthropic, .openai, .gemini: return "api"
+        case .none: return nil
         }
-        add { $0.summarizer[key, default: 0] += 1 }
+    }
+
+    /// 失敗的種類（§34.5）
+    static func summarizeFailureKind(_ error: Error) -> String {
+        if let llm = error as? LLMError {
+            switch llm {
+            case .notInstalled: return "notInstalled"
+            case .notLoggedIn: return "notLoggedIn"
+            case .missingKey: return "missingKey"
+            case .notConfigured: return "notConfigured"
+            case .rejected: return "keyRejected"
+            case .limited: return "limited"
+            case .unreachable: return "unreachable"
+            case .badOutput: return "badOutput"
+            case .failed: return "other"
+            }
+        }
+        if case SubprocessError.timeout = error { return "timeout" }
+        if (error as? URLError)?.code == .timedOut { return "timeout" }
+        return "other"
     }
 
     func asked() {
@@ -278,6 +326,14 @@ final class UsageStats: @unchecked Sendable {
         var app: App
         var usage: Usage
         var errors: [String: Int]
+        var errorDetail: ErrorDetail
+    }
+
+    /// 2026-10-25 加（R47、§34.5）：舊後台忽略這個鍵，schema 仍是 1
+    struct ErrorDetail: Encodable {
+        var summarize: [String: Int]
+        var summarizeProvider: [String: Int]
+        var summarizeDraft: Int
     }
 
     struct Usage: Encodable {
@@ -302,7 +358,9 @@ final class UsageStats: @unchecked Sendable {
                          transcribedSeconds: c.transcribedSeconds, transcribeWallSeconds: c.transcribeWallSeconds,
                          engines: c.engines, meetingLanguages: c.meetingLanguages, diarizationRuns: c.diarizationRuns,
                          summarizer: c.summarizer, questionsAsked: c.questionsAsked, review: c.review),
-            errors: c.errors)
+            errors: c.errors,
+            errorDetail: ErrorDetail(summarize: c.summarizeErrors, summarizeProvider: c.summarizeErrorProviders,
+                                     summarizeDraft: c.summarizeDraftErrors))
     }
 
     static func encode(_ payload: Payload, pretty: Bool) -> Data {

@@ -945,7 +945,7 @@ private struct UsageStatsSheet: View {
                     // 關掉時清掉還沒送的資料（R40.4），打開時建立今天的匯總
                     if on { UsageStats.shared.touch() } else { UsageStats.shared.clearPending() }
                 }
-            Text("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。")
+            Text("每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次和哪一種失敗。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button("重設匿名 ID") {

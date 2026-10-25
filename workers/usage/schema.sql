@@ -34,6 +34,22 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   errors_transcribe INTEGER NOT NULL DEFAULT 0,
   errors_diarize INTEGER NOT NULL DEFAULT 0,
   errors_summarize INTEGER NOT NULL DEFAULT 0,
+  -- 2026-10-25 加（R47、docs/design.md §34.5）：整理失敗的種類、整理工具、草稿；已經建好的資料庫跑 migrate-summarize-errors.sql
+  summarize_err_not_installed INTEGER NOT NULL DEFAULT 0,
+  summarize_err_not_logged_in INTEGER NOT NULL DEFAULT 0,
+  summarize_err_missing_key INTEGER NOT NULL DEFAULT 0,
+  summarize_err_not_configured INTEGER NOT NULL DEFAULT 0,
+  summarize_err_key_rejected INTEGER NOT NULL DEFAULT 0,
+  summarize_err_limited INTEGER NOT NULL DEFAULT 0,
+  summarize_err_timeout INTEGER NOT NULL DEFAULT 0,
+  summarize_err_unreachable INTEGER NOT NULL DEFAULT 0,
+  summarize_err_bad_output INTEGER NOT NULL DEFAULT 0,
+  summarize_err_other INTEGER NOT NULL DEFAULT 0,
+  summarize_err_claude_code INTEGER NOT NULL DEFAULT 0,
+  summarize_err_codex INTEGER NOT NULL DEFAULT 0,
+  summarize_err_api INTEGER NOT NULL DEFAULT 0,
+  summarize_err_local INTEGER NOT NULL DEFAULT 0,
+  summarize_err_draft INTEGER NOT NULL DEFAULT 0,
   received_at TEXT NOT NULL,
   PRIMARY KEY (install_id, date)
 );

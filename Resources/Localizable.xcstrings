@@ -6191,24 +6191,24 @@
         }
       }
     },
-    "每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。": {
+    "每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次和哪一種失敗。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed. It never sends meeting titles, transcripts, notes, names, voiceprints or any files."
+            "value": "Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind. It never sends meeting titles, transcripts, notes, names, voiceprints or any files."
           }
         }
       }
     },
-    "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗次數），不含任何會議內容。在設定 → 進階可以關掉。": {
+    "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed) that never includes meeting content. You can turn it off in Settings → Advanced."
+            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind) that never includes meeting content. You can turn it off in Settings → Advanced."
           }
         }
       }

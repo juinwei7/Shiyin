@@ -1119,6 +1119,7 @@ User-Agent: Shiyin/<版本>
 }
 ```
 
+- 2026-10-25 起多一個上層的 `errorDetail`（整理失敗的種類、整理工具、草稿，§34.5、R47），`schema` 仍是 1。
 - 秒數都是整數；沒有發生的欄位是 0（欄位一定都在）。`app` 是**送出當下**的環境（不是那一天的），一天之內換版本不另外分。
 - `platform` 是 `mac` 或 `windows`（2026-10-22 加，分平台看報表用，不用從 `os` 字串猜）。`os` 用 `ProcessInfo.operatingSystemVersion`（例如 `macOS 26.1`）；`chip` 用 `sysctl machdep.cpu.brand_string`；`uiLanguage` 是 app 實際用的介面語言（`Bundle.main.preferredLocalizations.first`）。
 - 後台收到回 `204`（或任何 2xx）。用 `installId` + `date` 去重：同一筆重送（例如回應在路上掉了）要覆蓋，不要重複算。

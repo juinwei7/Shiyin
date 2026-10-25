@@ -253,7 +253,7 @@ final class JobRunner {
                     log.info("job \(jobId) done")
                     if job.kind == .summarize || job.kind == .revise { SummarizerPause.clear() }
                 }
-                countUsage(job.kind, failed: failure != nil)
+                countUsage(job, failure: failure)
             } catch {
                 log.error("finish failed: \(error.localizedDescription)")
             }
@@ -266,13 +266,17 @@ final class JobRunner {
     private func isStillRunning(_ job: Job) -> Bool { (try? db.jobStatus(job.id!)) == .running }
 
     /// 匿名使用統計（design §30.1）：只算真的跑完的工作（取消的不算）；轉錄成功在 transcribe 裡算（要用到長度）
-    private func countUsage(_ kind: JobKind, failed: Bool) {
-        switch (kind, failed) {
-        case (.transcribe, true): UsageStats.shared.failed(.transcribe)
-        case (.rediarize, false): UsageStats.shared.rediarized()
-        case (.rediarize, true): UsageStats.shared.failed(.diarize)
-        case (.summarize, false), (.revise, false): UsageStats.shared.summarized(with: AppSettings.provider)
-        case (.summarize, true), (.revise, true): UsageStats.shared.failed(.summarize)
+    private func countUsage(_ job: Job, failure: Error?) {
+        switch (job.kind, failure) {
+        case (.transcribe, .some): UsageStats.shared.failed(.transcribe)
+        case (.rediarize, .none): UsageStats.shared.rediarized()
+        case (.rediarize, .some): UsageStats.shared.failed(.diarize)
+        case (.summarize, .none), (.revise, .none): UsageStats.shared.summarized(with: AppSettings.provider)
+        case (.summarize, .some(let error)), (.revise, .some(let error)):
+            // 種類、整理工具、是不是草稿另外記（R47、design §34.5）
+            let draft = job.kind == .summarize
+                && ((try? JSONDecoder().decode(SummarizePayload.self, from: Data((job.payload ?? "{}").utf8)))?.draft ?? false)
+            UsageStats.shared.summarizeFailed(error, provider: AppSettings.provider, draft: draft)
         default: break
         }
     }

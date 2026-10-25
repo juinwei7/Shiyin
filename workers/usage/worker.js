@@ -25,6 +25,19 @@ const USAGE_DICTS = {
   review: { answered: 'review_answered', confirmed: 'review_confirmed', skipped: 'review_skipped' },
 };
 const ERRORS = { recording: 'errors_recording', transcribe: 'errors_transcribe', diarize: 'errors_diarize', summarize: 'errors_summarize' };
+// 2026-10-25 加（R47、design §34.5）：整理失敗的種類、當時的整理工具、其中幾次是草稿；舊版 app 沒有 errorDetail 就全部當 0
+const ERROR_DETAIL_DICTS = {
+  summarize: {
+    notInstalled: 'summarize_err_not_installed', notLoggedIn: 'summarize_err_not_logged_in', missingKey: 'summarize_err_missing_key',
+    notConfigured: 'summarize_err_not_configured', keyRejected: 'summarize_err_key_rejected', limited: 'summarize_err_limited',
+    timeout: 'summarize_err_timeout', unreachable: 'summarize_err_unreachable', badOutput: 'summarize_err_bad_output',
+    other: 'summarize_err_other',
+  },
+  summarizeProvider: {
+    claudeCode: 'summarize_err_claude_code', codex: 'summarize_err_codex', api: 'summarize_err_api', local: 'summarize_err_local',
+  },
+};
+const ERROR_DETAIL_NUMBERS = { summarizeDraft: 'summarize_err_draft' };
 
 const text = (status, body) => new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
@@ -102,6 +115,22 @@ export function toRow(body, now) {
   for (const [key, column] of Object.entries(ERRORS)) {
     const value = number(errors[key] ?? 0);
     if (value === null) return `bad errors.${key}`;
+    row[column] = value;
+  }
+  const detail = body.errorDetail ?? {};
+  if (typeof detail !== 'object' || Array.isArray(detail)) return 'bad errorDetail';
+  for (const [dict, columns] of Object.entries(ERROR_DETAIL_DICTS)) {
+    const values = detail[dict] ?? {};
+    if (typeof values !== 'object' || Array.isArray(values)) return `bad errorDetail.${dict}`;
+    for (const [key, column] of Object.entries(columns)) {
+      const value = number(values[key] ?? 0);
+      if (value === null) return `bad errorDetail.${dict}.${key}`;
+      row[column] = value;
+    }
+  }
+  for (const [key, column] of Object.entries(ERROR_DETAIL_NUMBERS)) {
+    const value = number(detail[key] ?? 0);
+    if (value === null) return `bad errorDetail.${key}`;
     row[column] = value;
   }
   return row;
