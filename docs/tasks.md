@@ -9,10 +9,8 @@
 
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
-M1～M6 已完成（2026-10-24，Mac 和 Windows）。剩 M8 截圖、M7 iPhone 之後。
+M1～M6、M8（官網截圖）已完成（2026-10-25，Mac 和 Windows）。剩 M7 iPhone 之後。
 
-- [ ] **M8 官網截圖重拍**（R44.8、website.md §16）：`docs/images/` 的 summary、transcript（Mac、Windows、英文；錄音中的不用）還是六個分頁的畫面，照 §16.4 用同一份示範資料重拍，再跑 `site/make-images.sh`
-  - 驗證：`node site/build.mjs` 成功；三種語言的首頁和 Windows 頁的截圖看得到「紀錄／逐字稿／提問」三個分頁
 - [ ] **M7 iPhone 接 R44**（`ios` 分支，之後）：待確認的條、設定分組
 
 ## Qwen3-ASR 轉錄引擎（R43，design §32；2026-10-24 使用者要求打磨辨識準確度）
@@ -24,16 +22,10 @@ Q1～Q6 已完成（2026-10-24，驗證在 commit 訊息；使用者決定預設
 
 ## 待確認就地回答、收音提醒送通知（R41、R42，design §31；2026-10-23 使用者決定先做使用者體驗）
 
-順序：V1 → V2 → V3 → V4（Mac），再 V5（Windows）；V6、V7 可以穿插。下面「Mac 的小問題」的逐字稿時間點這一版一起修。驗證用示範資料：把 `~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`，DEBUG 版加 `-ApplePersistenceIgnoreState YES -autoSummarize NO -correctTranscript NO` 啟動。
+V1～V3、V5～V8 已完成（2026-10-25 在虛擬機驗完 V5、V7）；剩 V4 的後台要使用者跑、V9 iPhone 之後。驗證用示範資料：把 `~/Library/Caches/ShiyinDemo/home` 複製到暫存的 `SHIYIN_HOME`，DEBUG 版加 `-ApplePersistenceIgnoreState YES -autoSummarize NO -correctTranscript NO` 啟動。
 
 - [~] **V4 統計（Mac 加後台）**（R41.7、§31.3、§30.4）：程式完成，app 的累計和送出、worker 收新舊格式都驗過
   - 還差（要使用者跑，token 在鑰匙圈）：在 `workers/usage` 跑 `npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql` 加三欄，再 `npx wrangler@4 deploy`；部署前後台收到帶 `review` 的資料會忽略那一組，不會失敗
-- [~] **V5 Windows 跟上**（R41.6、design-windows §11.5）：程式完成（`ReviewLinks.cs`、`ReviewDraft.cs`、`ReviewTab.cs`、`NotesTabs.cs`、`AppController.SubmitReview`、`UsageStats`、控制通道 `reviewexpand`／`reviewsubmit`／`reviewskipall`／`review`），fixtures 加了 `reviewLinks`、`resolveReviewItems` 步驟，Mac 重產標準答案後 `dotnet test` 103 個通過
-  - 還差：虛擬機上 `ctl.sh select/tab/reviewexpand` 加 UI Automation 按標記、「是」、送出，`shot.sh` 截圖跟 Mac 對照
-- [~] **V7 Windows 收音提醒**（R42.3、design-windows §11.5）：程式完成（`Recorder.HintAppeared`、`Notifier.LevelHint`、系統匣的提示文字和右鍵選單的「知道了」、`state` 的 `lastToast`），Mac 上建置 0 警告 0 錯誤
-  - 還差：虛擬機 `record-sim` 同一個「說話後靜音」的 WAV（Mac 的 scratchpad 做法：afconvert 轉 16 kHz 再接 90 秒靜音），`ctl.sh state` 的 `recorder.hint` 變 silent、`lastToast` 是「收音提醒」，通知中心有通知、系統匣右鍵有提示和「知道了」
-- [~] **V8 文件與示範**：使用說明（Mac、Windows）的「回答待確認」那段、README（中英）的待確認和收音提醒都改了，英文已加
-  - 還差：官網首屏示範補待確認的標記（website §10.1：`site/src/demo-markup.mjs` 的紀錄條目加「？」、demo.js 的待確認章節可以就地回答）
 - [ ] **V9 iPhone 接 R41、R42**（`ios` 分支，之後）：標記與就地回答共用 Mac 的 view；收音提醒走即時動態
 
 ## 還沒設定整理工具（R35，design §19.6；2026-10-22 使用者回饋）

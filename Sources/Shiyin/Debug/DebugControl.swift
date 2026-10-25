@@ -282,6 +282,11 @@ enum DebugControl {
                     write(["done": results.count, "total": config.count, "results": results], to: output)
                 }
             }
+        case "windowsize":   // windowsize <寬> <高>：把主視窗的內容區設成這個大小（點）。官網截圖用（website.md §16）：視窗在別的桌面時 AX 改不了大小，screencapture -l 照樣截得到
+            if let w = Double(args[1]), let h = Double(args[2]),
+               let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue == "main" }) ?? NSApp.windows.first(where: { $0.isVisible && $0.frame.width > 400 }) {
+                window.setContentSize(NSSize(width: w, height: h))
+            }
         case "summon":   // summon：把拾音的視窗移到目前的桌面、放到最前面（真的畫面上用輔助使用測試時，視窗在別的桌面會按不到）
             for window in NSApp.windows where window.isVisible && window.frame.width > 400 {
                 window.collectionBehavior.insert(.moveToActiveSpace)
