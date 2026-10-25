@@ -1,7 +1,8 @@
 # 拾音匿名使用統計的後台（docs/design.md §30.10）。部署：
 #   npx wrangler@4 d1 create shiyin-usage            # 第一次：建資料庫，把 database_id 填到下面
 #   npx wrangler@4 d1 execute shiyin-usage --remote --file schema.sql
-#   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql   # 2026-10-23 以前建的資料庫：加 review 三欄
+#   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-review.sql   # 2026-10-23 以前建的資料庫：加 review 三欄（正式的資料庫 2026-10-25 已跑）
+#   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-qwen.sql     # 4.1 以前建的資料庫：加 engine_qwen（正式的資料庫 2026-10-25 已跑）
 #   npx wrangler@4 deploy
 # token 只用環境變數 CLOUDFLARE_API_TOKEN 帶，不寫進任何檔案。
 name = "shiyin-usage"
