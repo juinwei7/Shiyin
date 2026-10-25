@@ -89,6 +89,8 @@ extension AppModel {
                 ? String(localized: "還沒設定整理工具，沒辦法提問；請到設定選擇 Claude、Codex 或 API")
                 : String(localized: "整理工具設定為「不整理」，沒辦法提問；請到設定改成 Claude、Codex 或 API")
         }
+        // 沒登入、沒有 key…（R45.4）
+        if let problem = AppSettings.summarizerProblem { return problem.message }
         return nil
     }
 

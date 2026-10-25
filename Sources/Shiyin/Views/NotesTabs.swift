@@ -152,6 +152,16 @@ struct NotesPlaceholder: View {
                 Text("還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。")
                     .foregroundStyle(.secondary)
                 Button("設定整理工具") { openSettings() }
+            } else if AppSettings.provider != .none, let problem = model.summarizerProblem {
+                // 選了整理工具但還沒準備好（沒登入、沒有 key…，R45.4）：說原因，給修的按鈕
+                Text("整理工具還沒設定好：\(problem.message)")
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Button(problem.actionTitle) {
+                    switch problem.action {
+                    case .openSettings: openSettings()
+                    case .login(let provider): CLILogin.openLogin(provider)
+                    }
+                }
             } else {
                 Text(AppSettings.provider == .none
                      ? "整理工具目前設定為「不整理」。要產生會議紀錄，請到設定選擇 Claude、Codex 或 API。"

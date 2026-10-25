@@ -391,6 +391,8 @@ enum DebugControl {
         case "llmkey":   // llmkey <account> <key>：只放記憶體
             Keychain.debugKeys[args[1]] = args[2] == "-" ? nil : args[2]
             Keychain.debugForget(args[1])
+            Keychain.generation += 1   // 等於存了新的 key：解除暫停（design §34.4）
+            model.refreshSummarizerProblem()
         case "keychainsim":   // keychainsim <account> denied|duplicate|-：模擬鑰匙圈回「拒絕」「已經有舊的」（design §22.1）
             Keychain.debugSimulated[args[1]] = args[2] == "-" ? nil : args[2]
             Keychain.debugForget(args[1])
@@ -398,6 +400,22 @@ enum DebugControl {
         case "llmprovider":   // llmprovider <整理工具> [模型]：只放記憶體，不改共用的設定；給 - 改回設定
             AppSettings.debugProvider = args[1] == "-" ? nil : LLMProvider(rawValue: args[1])
             AppSettings.debugModel = args.count > 2 ? args[2] : nil
+            model.refreshSummarizerProblem()
+        case "summarizer":   // summarizer <輸出.json>：整理工具準備好了沒、登入快取、暫停（design §34.6）
+            let problem = AppSettings.summarizerProblem
+            write(["provider": AppSettings.provider.rawValue,
+                   "ready": problem == nil,
+                   "problem": problem.map { String(describing: $0) } ?? "",
+                   "message": problem?.message ?? "",
+                   "action": problem?.actionTitle ?? "",
+                   "shown": model.summarizerProblem.map { String(describing: $0) } ?? "",
+                   "loggedIn": ["claude": CLILoginCache.loggedIn(.claude).map { $0 ? "yes" : "no" } ?? "unknown",
+                                "codex": CLILoginCache.loggedIn(.codex).map { $0 ? "yes" : "no" } ?? "unknown"]], to: args[1])
+        case "loginrefresh":   // loginrefresh：重新查 claude、codex 的登入狀態
+            Task {
+                await CLILogin.refresh(.claude)
+                await CLILogin.refresh(.codex)
+            }
         case "listmodels":  // listmodels <整理工具> <結果.json>：設定頁「選擇」用的模型清單
             if let provider = LLMProvider(rawValue: args[1]) {
                 Task { write(["models": await LLMClient.listModels(provider)], to: args[2]) }

@@ -205,6 +205,9 @@ enum JobKind: String, Codable, CaseIterable {
         }
     }
 
+    /// 要用整理工具的工作（design §34）
+    var usesSummarizer: Bool { self == .summarize || self == .revise || self == .correct || self == .nameSpeakers }
+
     /// 背景的輔助工作：不發通知、不改會議的狀態
     var isAuxiliary: Bool { self == .compress || self == .correct || self == .nameSpeakers || self == .rediarize }
 }

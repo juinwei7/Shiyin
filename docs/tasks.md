@@ -11,8 +11,6 @@
 
 驗證用 DEBUG 版、暫存的 `SHIYIN_HOME`（示範資料複製一份），`-llmProvider` 等啟動參數只在這次執行有效；整理工具、key 用 `llmprovider`、`llmkey`（只在記憶體）。測完 `defaults read com.weiwei.shiyin` 確認沒有留下 `llmProvider`。
 
-- [ ] **S1 Mac：準備好了沒、不排工作**（R45.1、R45.4，§34.1、§34.2）：`SummarizerProblem`、登入快取、自動排程和手動動作的判斷、會議頁的提示
-  - 驗證：`-debugNoCLI YES` 加 `llmprovider claude`、`llmprovider gemini`（沒有 key）、`llmprovider openaiCompatible`（沒有模型）、`-debugCLILogin no` 各匯入一場短錄音：沒有整理、校正、猜說話者的工作，沒有「整理失敗」，會議頁顯示對應的原因和按鈕；有 key 的假伺服器照常整理
 - [ ] **S2 Mac：引導和設定頁**（R45.2、R45.3，§34.3）
   - 驗證：`preview onboarding 1` 截圖；在真的畫面上用 AX：點「Gemini」不寫設定、存 key 後才寫並自動測試（假伺服器）、假伺服器回 401 時改回原本的設定；設定頁沒安裝的 CLI 不能選、沒 key 時紅字、存 key 後自動測試
 - [ ] **S3 Mac：設定問題的失敗換按鈕、暫停**（R46，§34.4）

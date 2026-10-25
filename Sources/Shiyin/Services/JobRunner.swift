@@ -316,11 +316,14 @@ final class JobRunner {
         if AppSettings.compressAudio && meeting.audioURL.pathExtension.lowercased() == "wav" {
             try db.enqueue(job.meetingId, kind: .compress)
         }
-        // 校正在輔助線、整理在整理線，兩個同時開始（design §21.2、R20.1）
-        if AppSettings.correctTranscript && AppSettings.provider != .none {
+        // 校正在輔助線、整理在整理線，兩個同時開始（design §21.2、R20.1）。
+        // 整理工具還沒準備好（沒登入、沒有 key…）就都不排，不會「整理失敗」（R45.4、§34.2）
+        let summarizerReady = AppSettings.summarizerReady
+        if !summarizerReady { log.info("summarizer not ready, skip auto jobs") }
+        if AppSettings.correctTranscript && summarizerReady {
             try db.enqueue(job.meetingId, kind: .correct)
         }
-        if AppSettings.autoSummarize && AppSettings.provider != .none {
+        if AppSettings.autoSummarize && summarizerReady {
             try db.enqueue(job.meetingId, kind: .summarize)
             // 還有預設名稱的說話者就猜名字（design §21.5）：在輔助線、校正後面，不擋整理
             if try db.speakers(job.meetingId).contains(where: { $0.nameSource == "default" }) {
@@ -391,7 +394,7 @@ final class JobRunner {
                 try db.learnVoiceprint(job.meetingId, idx: idx, name: item.name, source: item.source)
             }
             if AppSettings.voiceprints { try db.matchVoiceprints(job.meetingId) }
-            if AppSettings.provider != .none, try db.speakers(job.meetingId).contains(where: { $0.nameSource == "default" }) {
+            if AppSettings.summarizerReady, try db.speakers(job.meetingId).contains(where: { $0.nameSource == "default" }) {
                 try db.enqueue(job.meetingId, kind: .nameSpeakers)
             }
             let count = Set(assigned.compactMap { $0 }).count

@@ -18,6 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
     }
 
+    /// 回到前景時更新 claude、codex 的登入狀態（使用者可能剛在終端機登入，design §34.1）
+    func applicationDidBecomeActive(_ notification: Notification) {
+        Task { await CLILogin.refreshIfStale() }
+    }
+
     /// 拖到 Dock 圖示、Finder 的「打開方式」（R1.3）
     func application(_ application: NSApplication, open urls: [URL]) {
         AppModel.shared.start()

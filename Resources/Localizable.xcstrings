@@ -514,6 +514,17 @@
         }
       }
     },
+    "Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code isn’t signed in. Sign in to summarize (Terminal command: claude auth login)."
+          }
+        }
+      }
+    },
     "Claude Code（這台 Mac 已經裝了 claude CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -543,6 +554,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Codex isn’t signed in, or its sign-in has expired. Sign in again and try once more (Terminal command: codex login)."
+          }
+        }
+      }
+    },
+    "Codex 還沒登入，登入之後才能整理（終端機指令：codex login）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex isn’t signed in. Sign in to summarize (Terminal command: codex login)."
           }
         }
       }
@@ -3722,6 +3744,17 @@
         }
       }
     },
+    "打開設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
     "打開這份說明": {
       "extractionState": "manual",
       "localizations": {
@@ -4733,6 +4766,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Needed for the OpenAI-compatible API summarizer: enter the URL and model in Settings → Summarizer"
+          }
+        }
+      }
+    },
+    "整理工具還沒設定好：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The summarizer isn’t ready: %@"
           }
         }
       }
@@ -8999,6 +9043,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No model entered for the OpenAI-compatible API. Enter it in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "還沒有填 OpenAI 相容 API 的網址或模型，請到設定 → 整理工具填寫": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No URL or model entered for the OpenAI-compatible API. Enter them in Settings → Summarizer."
           }
         }
       }

@@ -36,6 +36,21 @@ enum CLILogin {
         }
     }
 
+    /// 查登入狀態並記進快取（design §34.1）；看不出來時快取是 nil，當作準備好
+    @discardableResult
+    static func refresh(_ provider: LLMProvider) async -> Status? {
+        let status = await status(provider)
+        CLILoginCache.store(provider, status?.loggedIn)
+        return status
+    }
+
+    /// 目前的整理工具是 claude、codex 時，距離上次查超過 60 秒才再查（app 啟動、回到前景）
+    static func refreshIfStale() async {
+        let provider = AppSettings.provider
+        guard provider == .claude || provider == .codex, CLILoginCache.isStale(provider, after: 60) else { return }
+        await refresh(provider)
+    }
+
     /// 打開「終端機」執行登入指令（會開瀏覽器登入頁）。用 .command 檔案打開，不需要自動化權限
     static func openLogin(_ provider: LLMProvider) {
         let tool = provider == .codex ? "codex" : "claude"

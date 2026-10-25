@@ -82,6 +82,11 @@ enum Keychain {
     }
 
     /// 不需要分辨原因的地方用：讀不到就是 nil
+    /// 存或刪 key 的次數（只在記憶體）：整理工具設定的指紋用，換了 key 就解除暫停（design §34.4）
+    nonisolated(unsafe) static var generation = 0 {
+        didSet { NotificationCenter.default.post(name: .summarizerStateChanged, object: nil) }
+    }
+
     static func get(_ account: String) -> String? {
         try? read(account)
     }
@@ -106,6 +111,7 @@ enum Keychain {
     /// 存 key（空字串等於刪除）；存不進去丟出 AccessError
     static func set(_ account: String, _ value: String) throws {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        generation += 1
         #if DEBUG
         if debugSimulated[account] == "duplicate" { throw AccessError.duplicate(account) }
         // 沒加 -debugRealKeychain 時只存在記憶體：不能寫進、刪掉使用者真的鑰匙圈（design §20.7）
@@ -134,6 +140,7 @@ enum Keychain {
     }
 
     static func delete(_ account: String) {
+        generation += 1
         cache.withLock { $0[account] = nil }
         #if DEBUG
         if !usesRealKeychain { debugKeys[account] = nil; return }

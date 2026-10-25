@@ -172,6 +172,9 @@ final class AppModel {
     let updater = Updater()
 
     var environment: EnvironmentStatus
+    /// 整理工具準備好了沒（design §34.1）：會議頁的提示、失敗橫幅跟著變。只在值真的變了才設（重排整個視窗很貴，§21.12）
+    private(set) var summarizerProblem: SummarizerProblem?
+    @ObservationIgnored private var summarizerObservers: [NSObjectProtocol] = []
     var meetings: [MeetingRow] = []
     var trash: [MeetingRow] = []
     var showTrash = false
@@ -294,6 +297,15 @@ final class AppModel {
         notifier.onMeetingAction = { [weak self] action, bundle in self?.handleMeetingAction(action, bundle: bundle) }
         meetingDetector.start()
         BuiltinTemplates.seed(db)
+        // claude、codex 的登入狀態（design §34.1）：沒登入時不自動整理
+        Task { await CLILogin.refreshIfStale() }
+        refreshSummarizerProblem()
+        // 設定（整理工具、模型、網址）、key、登入狀態、暫停變了就重算
+        for name in [UserDefaults.didChangeNotification, .summarizerStateChanged] {
+            summarizerObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { AppModel.shared.refreshSummarizerProblem() }
+            })
+        }
         cleanUpPreviousRun()
         purgeExpiredTrash()
         recoverRecordings()
@@ -658,7 +670,7 @@ final class AppModel {
     /// 草稿紀錄（design §21.3、R19.1）：即時辨識收尾後，錄音夠長、即時逐字稿夠多、會自動整理時，
     /// 轉錄的同時先用即時逐字稿整理一份草稿
     private func enqueueDraftNotes(meetingId: Int64, duration: Double) {
-        guard duration >= Self.draftMinimumSeconds, AppSettings.autoSummarize, AppSettings.provider != .none,
+        guard duration >= Self.draftMinimumSeconds, AppSettings.autoSummarize, AppSettings.summarizerReady,
               let meeting = try? db.meeting(meetingId), meeting.hasAudio, meeting.notes == nil,
               let live = try? db.segments(meetingId, kind: "live"),
               live.reduce(0, { $0 + $1.text.count }) >= 100 else { return }
@@ -817,6 +829,8 @@ final class AppModel {
 
     func retry() {
         guard let id = selection, let job = detail?.latestJob, job.status == .failed || job.status == .cancelled else { return }
+        // 整理工具還沒準備好時重試也一樣會失敗（R46.2）：說原因
+        if job.kind.usesSummarizer, let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
         perform { try db.enqueue(id, kind: job.kind, payload: job.payload) }
         runner.wake()
     }
@@ -955,6 +969,8 @@ final class AppModel {
                 : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
+        // 沒登入、沒有 key…：不排，說原因（R45.4、design §34.2）
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
         perform { try db.enqueue(id, kind: .summarize) }
         runner.wake()
     }
@@ -1013,6 +1029,10 @@ final class AppModel {
                 : String(localized: "整理工具設定為「不整理」，沒辦法依回答修正。請先到設定改成 Claude、Codex 或 API")
             return false
         }
+        if !answered.isEmpty, let problem = AppSettings.summarizerProblem {
+            errorMessage = problem.message
+            return false
+        }
         perform {
             if !confirmed.isEmpty || !dismissed.isEmpty { try db.resolveReviewItems(id, confirmed: confirmed, dismissed: dismissed) }
             if !answered.isEmpty {
@@ -1046,6 +1066,7 @@ final class AppModel {
                 : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
             return
         }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
         perform { try db.enqueue(id, kind: .correct) }
         runner.wake()
     }
@@ -1361,7 +1382,7 @@ final class AppModel {
             try db.saveTranscript(id, segments: parsed.segments.enumerated().map { i, s in
                 Segment(meetingId: id, seq: i, start: s.start, end: s.end, text: s.text, lowConfidence: false, speaker: nil, kind: "final")
             }, duration: Int(parsed.segments.last?.end ?? 0), speakerCount: 0)
-            if AppSettings.autoSummarize && AppSettings.provider != .none { try db.enqueue(id, kind: .summarize) }
+            if AppSettings.autoSummarize && AppSettings.summarizerReady { try db.enqueue(id, kind: .summarize) }
             runner.wake()
             reload()
             showTrash = false
@@ -1612,7 +1633,16 @@ final class AppModel {
     }
 }
 
+extension AppModel {
+    func refreshSummarizerProblem() {
+        let problem = AppSettings.summarizerProblem
+        if problem != summarizerProblem { summarizerProblem = problem }
+    }
+}
+
 extension Notification.Name {
     /// 拾音要結束了：畫面上還開著的編輯器馬上存草稿（design §21.15）
     static let flushDrafts = Notification.Name("com.weiwei.shiyin.flushDrafts")
+    /// 整理工具的登入狀態、key、暫停變了（design §34.1）
+    static let summarizerStateChanged = Notification.Name("com.weiwei.shiyin.summarizerStateChanged")
 }
