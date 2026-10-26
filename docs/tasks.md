@@ -7,12 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 整理工具設定好才用、失敗說清楚怎麼修（R45～R47，design §34；2026-10-25 使用者決定三項都做，先做第 1 項）
-
-驗證用 DEBUG 版、暫存的 `SHIYIN_HOME`（示範資料複製一份），`-llmProvider` 等啟動參數只在這次執行有效；整理工具、key 用 `llmprovider`、`llmkey`（只在記憶體）。測完 `defaults read com.weiwei.shiyin` 確認沒有留下 `llmProvider`。
-
-- [ ] **S6 後台上線**（使用者自己跑）：`migrate-summarize-errors.sql`、`wrangler deploy`
-
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
 M1～M6、M8（官網截圖）已完成（2026-10-25，Mac 和 Windows）。剩 M7 iPhone 之後。
