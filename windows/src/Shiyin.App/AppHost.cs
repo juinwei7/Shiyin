@@ -99,6 +99,12 @@ public sealed class AppHost
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage };
         Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes));
+        // 忘了停止錄音（M§35.2）：DEBUG 用 --set idleRemindSeconds=60 --set idleStopSeconds=180 縮短
+        if (Debug)
+        {
+            if (double.TryParse(Settings.String("idleRemindSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var remind) && remind > 0) Recorder.IdleRemindSeconds = remind;
+            if (double.TryParse(Settings.String("idleStopSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var stop) && stop > 0) Recorder.IdleStopSeconds = stop;
+        }
         Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage };
         Detector = new MeetingDetector(new ConsentStoreMicrophoneUsage(), Settings) { IsRecording = () => Recorder.IsRecording };
         HotKeys = new GlobalHotKeys();

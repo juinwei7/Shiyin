@@ -30,6 +30,8 @@ public sealed class AppSettings
     public const string VoiceprintsKey = "voiceprints";
     public const string MeetingDetectionKey = "meetingDetection";
     public const string BookmarkHotKeyKey = "bookmarkHotKey";
+    /// <summary>很久沒人說話時提醒，30 分鐘後自動停止（M§35、R48.5）</summary>
+    public const string IdleStopKey = "idleStop";
     /// <summary>NVIDIA 顯示卡加速已經自動下載過（R27 R4.6）：只自動一次，使用者刪掉後不再下載</summary>
     public const string GpuPackOfferedKey = "gpuPackOffered";
     /// <summary>Qwen3-ASR 的 CUDA 版已經自動下載過（design-windows §8.4）</summary>
@@ -289,6 +291,7 @@ public sealed class AppSettings
     public bool Voiceprints => Flag(VoiceprintsKey, true);
     public bool MeetingDetection => Flag(MeetingDetectionKey, true);
     public bool BookmarkHotKey => Flag(BookmarkHotKeyKey, true);
+    public bool IdleStop => Flag(IdleStopKey, true);
     /// <summary>正式轉錄用快速辨識（Mac 的「macOS 內建」，D45）：設定值同 Mac 是 system</summary>
     public bool UseFastTranscriber => String(TranscriptionEngineKey) == "system";
     /// <summary>正式轉錄的引擎：breeze（預設）、qwen、system（同 Mac 的 transcriptionEngine，M§32.3）</summary>

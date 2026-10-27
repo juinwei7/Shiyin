@@ -229,13 +229,14 @@ final class Recorder {
         }
     }
 
-    /// 最近 1 秒有 30% 以上的音框比背景（最近 30 秒的第 10 百分位）大 12 dB、而且高於 -50 dBFS（design §35.1）
+    /// 最近 1 秒有 30% 以上的音框像說話（design §35.1）：比背景（最近 30 秒的第 10 百分位）大 12 dB 而且高於 -50 dBFS，
+    /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）
     private func soundsLikeSpeech(_ writer: RecordingWriter) -> Bool {
         for channel in 0..<(source == "both" ? 2 : 1) {
             let levels = writer.recentLevels(channel)
             guard levels.count >= 20 else { continue }
             let background = levels.sorted()[Int(Double(levels.count - 1) * 0.1)]
-            let threshold = max(background + 12, -50)
+            let threshold = min(max(background + 12, -50), -40)
             let last = levels.suffix(10)
             if Double(last.filter { $0 > threshold }.count) >= Double(last.count) * 0.3 { return true }
         }

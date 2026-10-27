@@ -11,7 +11,8 @@ namespace Shiyin.Services.Capture;
 /// </summary>
 public sealed class Recorder
 {
-    public sealed record Result(long MeetingId, string? File, double Duration, string? Error);
+    /// <summary>IdleSince：沒人說話太久而自動停止（R48.2）時，最後有人說話的秒數</summary>
+    public sealed record Result(long MeetingId, string? File, double Duration, string? Error, double? IdleSince = null);
     public sealed record LiveLine(double Start, double End, string Text);
 
     /// <summary>收音提醒（M§26.1、R24.1、R24.3）</summary>
@@ -73,6 +74,15 @@ public sealed class Recorder
     public LevelHint? Hint { get; private set; }
     /// <summary>DEBUG 的 state：收音提醒的數字（M§26.1）</summary>
     public Dictionary<string, object> LevelCheck { get; private set; } = [];
+    /// <summary>好像沒人在說話了，要停止錄音嗎？（R48.1、M§35.2）</summary>
+    public bool IdlePrompt { get; private set; }
+    /// <summary>15 分鐘提醒、30 分鐘自動停止；DEBUG 用 --set idleRemindSeconds=…、idleStopSeconds=… 縮短（AppHost 設）</summary>
+    public double IdleRemindSeconds { get; set; } = 900;
+    public double IdleStopSeconds { get; set; } = 1800;
+    /// <summary>沒人說話多久（DEBUG 的 state）</summary>
+    public double IdleSeconds { get { lock (gate) return IsRecording ? Elapsed - lastSpeechAt : 0; } }
+    public double LastSpeechAt { get { lock (gate) return lastSpeechAt; } }
+    public bool LiveActive { get { lock (gate) return liveActive; } }
 
     public bool HasMic => Source != "system";
     public bool HasSystem => Source != "mic";
@@ -94,7 +104,12 @@ public sealed class Recorder
     readonly HashSet<LevelHint> notifiedHints = [];
     /// <summary>提示第一次出現（M§31.5）：App 決定要不要送通知。跟 Changed 一樣在背景執行緒發</summary>
     public event Action<LevelHint>? HintAppeared;
+    /// <summary>沒人說話的提醒出現（App 送通知）。跟 Changed 一樣在背景執行緒發</summary>
+    public event Action? IdlePromptAppeared;
     int noisySeconds, quietSeconds;
+    /// <summary>忘了停止錄音（M§35.1）：最後有人說話的錄音秒數；即時逐字稿有沒有接上音訊</summary>
+    double lastSpeechAt;
+    bool liveActive;
     RecordingWriter? writer;
     Dictionary<int, IAudioSource> sources = [];
     readonly Dictionary<int, DateTime> reconnecting = [];
@@ -184,8 +199,61 @@ public sealed class Recorder
             (noisySeconds, quietSeconds) = (0, 0);
             writer?.SetPaused(false);
             IsPaused = false;
+            MarkSpeechLocked();   // 按了繼續表示人還在，重新計時（M§35.1）
         }
         Notify();
+    }
+
+    /// <summary>「繼續錄」：人還在，重新計時（R48.1）</summary>
+    public void ContinueAfterIdle()
+    {
+        lock (gate)
+        {
+            if (!IsRecording) return;
+            MarkSpeechLocked();
+        }
+        Notify();
+    }
+
+    /// <summary>有人在說話：重新計時、提醒收掉。回傳提醒有沒有收掉（畫面要重畫）</summary>
+    bool MarkSpeechLocked()
+    {
+        lastSpeechAt = Elapsed;
+        if (!IdlePrompt) return false;
+        IdlePrompt = false;
+        return true;
+    }
+
+    /// <summary>每秒檢查沒人說話多久（M§35）：回傳畫面要不要重畫、要不要自動停止</summary>
+    (bool Changed, bool Stop) CheckIdle(RecordingWriter w)
+    {
+        if (!settings.IdleStop || IsPaused) return (false, false);
+        // 即時逐字稿沒在跑時才看聲音（打字、關門也會算，只當備用，D115）
+        var changed = !liveActive && SoundsLikeSpeech(w) && MarkSpeechLocked();
+        var idle = Elapsed - lastSpeechAt;
+        if (idle >= IdleStopSeconds) return (changed, true);
+        var prompt = idle >= IdleRemindSeconds;
+        if (prompt == IdlePrompt) return (changed, false);
+        IdlePrompt = prompt;
+        if (prompt) IdlePromptAppeared?.Invoke();
+        return (true, false);
+    }
+
+    /// <summary>最近 1 秒有 30% 以上的音框像說話（M§35.1）：比背景（最近 30 秒的第 10 百分位）大 12 dB 而且高於 -50 dBFS，
+    /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）</summary>
+    bool SoundsLikeSpeech(RecordingWriter w)
+    {
+        for (var channel = 0; channel < (Source == "both" ? 2 : 1); channel++)
+        {
+            var levels = w.RecentLevels(channel);
+            if (levels.Length < 20) continue;
+            var sorted = (float[])levels.Clone();
+            Array.Sort(sorted);
+            var threshold = Math.Min(Math.Max(sorted[(int)((sorted.Length - 1) * 0.1)] + 12, -50), -40);
+            var last = levels[^10..];
+            if (last.Count(l => l > threshold) >= last.Length * 0.3) return true;
+        }
+        return false;
     }
 
     /// <summary>「知道了」：這一種提示這場錄音不再出現</summary>
@@ -200,7 +268,10 @@ public sealed class Recorder
         Notify();
     }
 
-    public void Stop()
+    public void Stop() => Stop(null);
+
+    /// <summary>idleSince：沒人說話太久而自動停止（R48.2），最後有人說話的秒數</summary>
+    public void Stop(double? idleSince)
     {
         Result result;
         ILiveTranscriber? finishing;
@@ -222,7 +293,7 @@ public sealed class Recorder
             }
             finishing = live;
             Cleanup();
-            result = new Result(meetingId, file, duration, null);
+            result = new Result(meetingId, file, duration, null, idleSince);
         }
         Log.Info($"recording stopped, {(int)duration}s");
         _ = Task.Run(() =>
@@ -295,6 +366,9 @@ public sealed class Recorder
             dismissedHints.Clear();
             notifiedHints.Clear();
             (noisySeconds, quietSeconds) = (0, 0);
+            lastSpeechAt = 0;
+            liveActive = false;
+            IdlePrompt = false;
             liveLines.Clear();
             VolatileText = "";
             SystemSilent = false;
@@ -322,6 +396,7 @@ public sealed class Recorder
         var language = Language;
         var current = generation;
         LiveStatus = L.T("正在準備即時逐字稿…");
+        liveActive = false;
         _ = Task.Run(() =>
         {
             ILiveTranscriber? created;
@@ -352,17 +427,29 @@ public sealed class Recorder
                 if (restarted) created.Offset = w.RecordedSeconds;
                 created.Volatile += text =>
                 {
-                    lock (gate) { if (live != created) return; VolatileText = text; }
+                    lock (gate)
+                    {
+                        if (live != created) return;
+                        // 有新的字就是有人在說話（M§35.1）
+                        if (text.Length > 0 && text != VolatileText) MarkSpeechLocked();
+                        VolatileText = text;
+                    }
                     Notify();
                 };
                 created.Final += (start, end, text) =>
                 {
-                    lock (gate) { if (live != created) return; liveLines.Add(new LiveLine(start, end, text)); }
+                    lock (gate)
+                    {
+                        if (live != created) return;
+                        liveLines.Add(new LiveLine(start, end, text));
+                        if (text.Length > 0) MarkSpeechLocked();
+                    }
                     LiveFinal?.Invoke(meetingId, start, end, text);
                     Notify();
                 };
                 tap.SetLive(created);
                 LiveStatus = "";
+                liveActive = true;
             }
             Notify();
         });
@@ -421,6 +508,7 @@ public sealed class Recorder
         // 舊的辨識收尾送來的是用錯的語言聽的，不加進逐字稿（live 換掉後它的事件會被略過）
         var old = live;
         live = null;
+        liveActive = false;
         VolatileText = "";
         if (old is not null) _ = Task.Run(() => { old.Finish(); old.Dispose(); });
         StartLive(writer, id, restarted: true);
@@ -432,6 +520,7 @@ public sealed class Recorder
     {
         var changed = false;
         var stop = false;
+        double? idleSince = null;
         lock (gate)
         {
             if (generation != current || writer is not { } w) return;
@@ -445,6 +534,13 @@ public sealed class Recorder
                     ElapsedSeconds = seconds;
                     changed = true;
                     changed |= CheckLevels(w);
+                    var idle = CheckIdle(w);
+                    changed |= idle.Changed;
+                    if (idle.Stop)
+                    {
+                        Log.Info($"recording auto-stopped after {(int)(Elapsed - lastSpeechAt)}s without speech");
+                        (stop, idleSince) = (true, lastSpeechAt);
+                    }
                 }
                 var silent = SystemSilent;
                 if (Source == "both")
@@ -464,7 +560,7 @@ public sealed class Recorder
                 if (DateTime.UtcNow - lastDiskCheck >= TimeSpan.FromSeconds(30)) changed |= CheckDiskSpace(w, starting: false);
             }
         }
-        if (stop) Stop();
+        if (stop) Stop(idleSince);
         else if (changed) Notify();
     }
 
@@ -633,6 +729,8 @@ public sealed class Recorder
         keepAwake = null;
         writer = null;
         live = null;
+        liveActive = false;
+        IdlePrompt = false;
         simulation = null;
         tap.SetLive(null);
         tap.SetDetector(null);

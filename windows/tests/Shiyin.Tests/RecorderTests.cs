@@ -241,4 +241,92 @@ public sealed class RecorderTests : IDisposable
         Assert.Equal("1.23 GB", Recorder.ByteCount(1_234_567_890));
         Assert.Equal("999 bytes", Recorder.ByteCount(999));
     }
+
+    /// <summary>前 speechSeconds 秒是大聲的音（像說話），後面是很小的底噪（約 −66 dBFS）</summary>
+    string SpeechThenQuiet(double speechSeconds, double seconds)
+    {
+        var path = Path.Combine(home.Path, Guid.NewGuid() + ".wav");
+        var count = (int)(seconds * 16000);
+        var data = new float[count];
+        var random = new Random(1);
+        for (var i = 0; i < count; i++)
+            data[i] = i < speechSeconds * 16000 ? 0.2f * MathF.Sin(i * 0.07f) : 0.0005f * (float)(random.NextDouble() * 2 - 1);
+        using var writer = new WavWriter(path, 1);
+        writer.Write([data], count);
+        return path;
+    }
+
+    [Fact]
+    public async Task IdlePromptsThenStopsWithoutSpeech()
+    {
+        // 忘了停止錄音（R48.1、R48.2、M§35）：沒有即時逐字稿時看聲音；4 秒提醒、8 秒自動停止（正式是 15、30 分鐘）
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        recorder.IdleRemindSeconds = 4;
+        recorder.IdleStopSeconds = 8;
+        var prompts = 0;
+        Recorder.Result? result = null;
+        recorder.IdlePromptAppeared += () => Interlocked.Increment(ref prompts);
+        recorder.Finished += r => result = r;
+        recorder.StartSimulated(5, SpeechThenQuiet(2, 30), 4, both: false, MeetingLanguage.Zh, new WavDecoder());
+        await Until(() => recorder.IdlePrompt);
+        Assert.InRange(recorder.LastSpeechAt, 1, 3);
+        Assert.Equal(1, prompts);
+        await Until(() => result is not null);
+        Assert.False(recorder.IsRecording);
+        Assert.InRange(result!.IdleSince!.Value, 1, 3);
+        Assert.InRange(result.Duration, result.IdleSince.Value + 7.5, result.IdleSince.Value + 9.5);
+    }
+
+    [Fact]
+    public async Task ContinueAfterIdleRestartsTheTimer()
+    {
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        recorder.IdleRemindSeconds = 3;
+        recorder.IdleStopSeconds = 60;
+        recorder.StartSimulated(6, SpeechThenQuiet(1, 30), 4, both: false, MeetingLanguage.Zh, new WavDecoder());
+        await Until(() => recorder.IdlePrompt);
+        recorder.ContinueAfterIdle();
+        Assert.False(recorder.IdlePrompt);
+        Assert.InRange(recorder.IdleSeconds, 0, 1);
+        recorder.Stop();
+    }
+
+    [Fact]
+    public async Task IdleOffOrSpeechNeverPrompts()
+    {
+        // 設定關掉：不提醒、不停止
+        var off = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO", ["idleStop"] = "NO" }));
+        off.IdleRemindSeconds = 2;
+        off.IdleStopSeconds = 4;
+        off.StartSimulated(7, SpeechThenQuiet(1, 40), 8, both: false, MeetingLanguage.Zh, new WavDecoder());
+        await Until(() => off.Elapsed >= 10);
+        Assert.False(off.IdlePrompt);
+        Assert.True(off.IsRecording);
+        off.Stop();
+        // 即時逐字稿一直有新的字（FakeLive 每秒一句）：打字之類的聲音沒有也算有人說話，不提醒
+        var talking = Make(AppSettings.InMemory(new Dictionary<string, string> { ["autoDetectLanguage"] = "NO" }), []);
+        talking.IdleRemindSeconds = 3;
+        talking.IdleStopSeconds = 6;
+        talking.StartSimulated(8, SpeechThenQuiet(0, 40), 4, both: false, MeetingLanguage.Zh, new WavDecoder());
+        await Until(() => talking.LiveActive);
+        await Until(() => talking.Elapsed >= 10);
+        Assert.False(talking.IdlePrompt);
+        Assert.True(talking.IsRecording);
+        talking.Stop();
+    }
+
+    [Fact]
+    public void TrimsTheTailForIdleStoppedRecordings()
+    {
+        // 只轉錄到最後說話（M§35.3）：前段複製成暫存 WAV，錄音不動；payload 存 until
+        var source = SpeechThenQuiet(2, 10);
+        var trimmed = AudioTrim.Prefix(source, 4, paths.Tmp);
+        Assert.NotNull(trimmed);
+        Assert.Equal(64000, Read(trimmed!).Frames);
+        Assert.Equal(160000, Read(source).Frames);
+        Assert.Null(AudioTrim.Prefix(source, 12, paths.Tmp));   // 錄音沒有比 until 長
+        Assert.Equal(19.5, JobRunner.TranscribedUntil(JobRunner.Encode(new TranscribePayload(19.5))));
+        Assert.Null(JobRunner.TranscribedUntil(null));
+        Assert.Null(JobRunner.TranscribedUntil("{}"));
+    }
 }

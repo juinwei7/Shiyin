@@ -74,6 +74,8 @@ public sealed class MeetingDetail
     /// <summary>最近一次可以復原的說話者調整（合併、改句子）的說明（R44.4）；null 表示沒有，改名視窗和右鍵選單不顯示「復原」</summary>
     public string? SpeakerUndoLabel { get; set; }
     public Job? LatestJob { get; set; }
+    /// <summary>最後幾分鐘沒人說話、沒有轉錄（M§35.3、R48.3）：自動停止的錄音，錄音比轉錄的範圍長 1 分鐘以上才有</summary>
+    public int? UntranscribedMinutes { get; set; }
     public Dictionary<int, string> Speakers { get; set; } = [];
     public List<Bookmark> Bookmarks { get; set; } = [];
     /// <summary>逐字稿校正建議（M§17.4）</summary>
@@ -111,6 +113,8 @@ public sealed class MeetingDetail
         };
         detail.LoadSpeakers(db.Speakers(id));
         detail.SpeakerCandidates = db.VoiceprintCandidates(id);
+        if (JobRunner.TranscribedUntil(db.LastTranscribePayload(id)) is double until && meeting.DurationSeconds is int duration && duration - until >= 60)
+            detail.UntranscribedMinutes = (int)Math.Round((duration - until) / 60, MidpointRounding.AwayFromZero);
         detail.BuildIndexes();
         detail.LinkReviewItems();
         return detail;

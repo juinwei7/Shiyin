@@ -206,6 +206,13 @@ public sealed class DetailView
         if (meeting.Folder.Length > 0) info.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Folder) { Foreground = Ui.Secondary }, Ui.Text(meeting.Folder, 13, color: Ui.Secondary, wrap: false)));
         info.Children.Add(Ui.Text($"{meeting.MeetingDate} {DateText.Weekday(meeting.MeetingDate, MeetingLanguages.Interface)}", 13, color: Ui.Secondary, wrap: false));
         if (meeting.DurationSeconds is not null) info.Children.Add(Ui.Text(TimeFormat.Duration(meeting.DurationSeconds, MeetingLanguages.Interface), 13, color: Ui.Secondary, wrap: false));
+        if (Detail.UntranscribedMinutes is int minutes)
+        {
+            // 自動停止的錄音（M§35.3、R48.3）：後面沒人說話的部分沒有轉錄
+            var note = Ui.Text(L.F("最後 %lld 分鐘沒有人說話，沒有轉錄", minutes), 13, color: Ui.Secondary, wrap: false);
+            ToolTipService.SetToolTip(note, L.T("錄音中很久沒人說話，拾音自動停止了錄音。要轉錄全部的話，用「更多 → 重新處理 → 重新轉錄」。"));
+            info.Children.Add(note);
+        }
         if (Detail.Speakers.Count > 0)
         {
             var speakers = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -577,6 +584,14 @@ public sealed class RecordingPanel
                 Background = warm, Padding = new Thickness(16, 8, 16, 8),
                 Child = Ui.Bar(null, Ui.Text(L.F("聽起來是%@，即時逐字稿和會議語言已經改成%@", to.UiName(), to.UiName()), 13),
                     Ui.Button(L.F("改回%@", from.UiName()), () => r.SwitchLanguage(from))),
+            });
+        if (r.IdlePrompt)
+            // 忘了停止錄音（M§35.2、R48.1）
+            hints.Children.Add(new Border
+            {
+                Background = warm, Padding = new Thickness(16, 8, 16, 8),
+                Child = Ui.Bar(null, Ui.Text(L.T("好像沒人在說話了，要停止錄音嗎？再 15 分鐘沒人說話會自動停止。"), 13),
+                    Ui.Row(8, Ui.Button(L.T("繼續錄"), r.ContinueAfterIdle), Ui.Button(L.T("停止錄音"), r.Stop))),
             });
         if (r.Hint is Recorder.LevelHint hint)
             hints.Children.Add(new Border

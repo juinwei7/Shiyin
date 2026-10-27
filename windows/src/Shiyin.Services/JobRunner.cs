@@ -14,6 +14,8 @@ public sealed record RevisePayload(List<ReviewAnswerJson> Answers);
 public sealed record ReviewAnswerJson(string Time, string Question, string Answer);
 /// <summary>整理工作的 payload：draft 是用即時逐字稿整理草稿（M§21.3）</summary>
 public sealed record SummarizePayload(bool Draft = false);
+/// <summary>轉錄工作的 payload（M§35.3）：Until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）</summary>
+public sealed record TranscribePayload(double? Until);
 
 /// <summary>執行中的工作（顯示用）</summary>
 public sealed class RunningJob(Job job)
@@ -271,6 +273,8 @@ public sealed class JobRunner
         {
             using var doc = JsonDocument.Parse(json ?? "{}");
             var root = doc.RootElement;
+            if (typeof(T) == typeof(TranscribePayload))
+                return new TranscribePayload(root.TryGetProperty("until", out var u) && u.ValueKind == JsonValueKind.Number ? u.GetDouble() : null) as T;
             if (typeof(T) == typeof(SummarizePayload))
                 return new SummarizePayload(root.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True) as T;
             if (typeof(T) == typeof(RevisePayload))
@@ -282,6 +286,11 @@ public sealed class JobRunner
     }
 
     public static string Encode(SummarizePayload payload) => new System.Text.Json.Nodes.JsonObject { ["draft"] = payload.Draft }.ToJsonString();
+
+    public static string Encode(TranscribePayload payload) => new System.Text.Json.Nodes.JsonObject { ["until"] = payload.Until }.ToJsonString();
+
+    /// <summary>最後一次完成的轉錄只做到第幾秒（M§35.3）；轉錄了全部是 null</summary>
+    public static double? TranscribedUntil(string? payload) => Decode<TranscribePayload>(payload)?.Until;
 
     public static string Encode(RevisePayload payload) => new System.Text.Json.Nodes.JsonObject
     {
@@ -309,13 +318,22 @@ public sealed class JobRunner
             Progress = p => state.Progress = p,
             ShouldContinue = () => IsStillRunning(job),
         };
-        if (pipeline.Run(paths.AudioPath(meeting), cancel) is not { } result) return;
+        // 沒人說話太久而自動停止的錄音：只轉錄到最後說話後 15 秒，錄音檔不動（M§35.3、R48.3）
+        var until = Decode<TranscribePayload>(job.Payload)?.Until;
+        var trimmed = until is double u ? AudioTrim.Prefix(paths.AudioPath(meeting), u, paths.Tmp) : null;
+        if (trimmed is not null) Log.Info($"transcribing only the first {(int)until!.Value}s (idle auto-stop)");
+        TranscriptionResult? ran;
+        try { ran = pipeline.Run(trimmed ?? paths.AudioPath(meeting), cancel); }
+        finally { if (trimmed is not null) try { Directory.Delete(Path.GetDirectoryName(trimmed)!, true); } catch (IOException) { } }
+        if (ran is not { } result) return;
+        // 只轉錄前段時，會議長度維持整個錄音（播放、資訊列用）
+        var savedDuration = trimmed is not null ? Math.Max(meeting.DurationSeconds ?? 0, result.Duration) : result.Duration;
         var segments = result.Segments.Select((s, i) => new Segment
         {
             MeetingId = job.MeetingId, Seq = i, Start = s.Start, End = s.End, Text = s.Text, LowConfidence = s.LowConfidence,
             Speaker = result.Speakers[i], Kind = "final", Channel = result.Channels[i],
         }).ToList();
-        db.SaveTranscript(job.MeetingId, segments, (int)Math.Round(result.Duration, MidpointRounding.AwayFromZero),
+        db.SaveTranscript(job.MeetingId, segments, (int)Math.Round(savedDuration, MidpointRounding.AwayFromZero),
             result.Speakers.Max() ?? 0, result.Voices, options.TranscribedWith);
         // 匿名使用統計（M§30.1）：語音長度、實際花的時間、引擎；說話者辨識跟 pipeline 的條件一樣
         Usage?.Transcribed(result.Duration, (DateTime.UtcNow - startedAt).TotalSeconds, options.TranscribedWith, meeting.MeetingLanguage,

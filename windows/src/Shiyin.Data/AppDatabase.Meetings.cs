@@ -61,6 +61,10 @@ public sealed partial class AppDatabase
     public Job? LatestJob(long meetingId) => Read(db =>
         db.QueryOne($"SELECT * FROM jobs WHERE meeting_id = ? AND kind NOT IN ({AuxiliaryKinds}) ORDER BY id DESC LIMIT 1", meetingId) is { } r ? ToJob(r) : null);
 
+    /// <summary>最後一次完成的轉錄的 payload（M§35.3：until 是只轉錄到第幾秒）；沒有就是 null</summary>
+    public string? LastTranscribePayload(long meetingId) => Read(db =>
+        db.Scalar("SELECT payload FROM jobs WHERE meeting_id = ? AND kind = 'transcribe' AND status = 'done' ORDER BY id DESC LIMIT 1", meetingId) as string);
+
     /// <summary>建立會議並給定錄音檔名（需要先拿到 id 才能命名，所以在同一個交易裡做兩步）</summary>
     public Meeting InsertMeeting(Meeting meeting, string? audioExtension) => Write(db =>
     {

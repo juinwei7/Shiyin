@@ -108,6 +108,19 @@ public sealed class Notifier
         }
     }
 
+    /// <summary>錄音中很久沒人說話（R48.1）：停止錄音、繼續錄；點通知本身打開錄音中的會議</summary>
+    public bool IdlePrompt(long meetingId)
+    {
+        if (!Enabled) return false;
+        Show(NotificationLinks.OpenMeeting(meetingId), L.T("好像沒人在說話了"), L.T("要停止錄音嗎？再 15 分鐘沒人說話會自動停止。"),
+            (L.T("停止錄音"), Links.Prompt("stop", "idle")), (L.T("繼續錄"), Links.Prompt("continue", "idle")));
+        return true;
+    }
+
+    /// <summary>沒人說話太久，自動停止了（R48.2）：點了打開那場會議</summary>
+    public void IdleStopped(long meetingId, string title) =>
+        Show(NotificationLinks.OpenMeeting(meetingId), L.T("已自動停止錄音"), L.F("%@：30 分鐘沒有人說話", title));
+
     /// <summary>偵測到會議（M§21.7）：開始錄音、不要再提醒這個 app；停止並轉錄、繼續錄</summary>
     public bool MeetingPrompt(MeetingDetector.Prompt prompt)
     {
@@ -130,6 +143,7 @@ public sealed class Notifier
             case NotificationLinks.Link.Prompt { Action: "start" }: host.Controller.StartRecording(""); break;
             case NotificationLinks.Link.Prompt { Action: "mute", App: var app }: host.Detector.Mute(app); break;
             case NotificationLinks.Link.Prompt { Action: "stop" }: host.Recorder.Stop(); break;
+            case NotificationLinks.Link.Prompt { Action: "continue", App: "idle" }: host.Recorder.ContinueAfterIdle(); break;   // 忘了停止錄音（R48.1）
             case NotificationLinks.Link.Prompt: break;   // 繼續錄
             case NotificationLinks.Link.Open { MeetingId: var id }: host.ShowMain?.Invoke(id); break;
         }

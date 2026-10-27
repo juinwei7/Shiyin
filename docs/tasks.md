@@ -7,11 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 忘了停止錄音（R48，design §35；2026-10-27 使用者新需求）
-
-- [ ] **I3 Windows：I1、I2 同一份規則**（R48.7，design-windows §6.3）
-  - 驗證：`dotnet test`（計時、提醒、自動停止、until）；虛擬機 `record-sim` 走一次提醒和自動停止
-
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
 M1～M6、M8（官網截圖）已完成（2026-10-25，Mac 和 Windows）。剩 M7 iPhone 之後。

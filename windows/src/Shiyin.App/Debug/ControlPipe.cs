@@ -260,6 +260,12 @@ public static class ControlPipe
                 ["language"] = r.Language.Code(), ["liveLines"] = r.LiveLines.Count, ["volatile"] = r.VolatileText, ["liveStatus"] = r.LiveStatus,
                 ["deviceWarning"] = r.DeviceWarning, ["hint"] = r.Hint?.ToString(), ["systemSilent"] = r.SystemSilent,
                 ["levelCheck"] = new JsonObject(r.LevelCheck.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)JsonValue.Create(p.Value.ToString())))),
+                // 忘了停止錄音（M§35）
+                ["idle"] = new JsonObject
+                {
+                    ["idleSeconds"] = r.IdleSeconds, ["lastSpeechAt"] = r.LastSpeechAt, ["prompt"] = r.IdlePrompt, ["liveActive"] = r.LiveActive,
+                    ["remindAfter"] = r.IdleRemindSeconds, ["stopAfter"] = r.IdleStopSeconds,
+                },
             },
             ["hotKeyError"] = host.HotKeyError,
             ["notifications"] = host.Notifier.Enabled,
