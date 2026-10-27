@@ -37,6 +37,8 @@ SHIYIN_API int32_t shiyin_system_info(char * buffer, int32_t size);
 SHIYIN_API int32_t shiyin_gpu_device(char * buffer, int32_t size);
 
 SHIYIN_API void * shiyin_init(const char * model_path, int32_t use_gpu, int32_t flash_attn);
+// 用第幾張顯示卡（ggml 的 GPU 裝置順序）；shiyin_init 等於 gpu_device 0
+SHIYIN_API void * shiyin_init_device(const char * model_path, int32_t use_gpu, int32_t flash_attn, int32_t gpu_device);
 SHIYIN_API void shiyin_free(void * ctx);
 SHIYIN_API int32_t shiyin_full(void * ctx, const shiyin_full_params * params, const float * samples, int32_t n_samples);
 

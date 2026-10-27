@@ -16,8 +16,11 @@ namespace Shiyin.Qwen;
 /// </summary>
 public sealed class QwenServer : IQwenDecoder, IDisposable
 {
-    /// <summary>啟動 llama-server 的參數：執行檔、兩個模型檔、執行緒數、要不要把模型放進 GPU、子程序 PATH 要多加的資料夾（cudart、cublas 所在）</summary>
-    public sealed record Options(string Executable, string ModelPath, string EncoderPath, int Threads, bool Gpu, string? ExtraPath = null);
+    /// <summary>
+    /// 啟動 llama-server 的參數：執行檔、兩個模型檔、執行緒數、要不要把模型放進 GPU、子程序 PATH 要多加的資料夾（cudart、cublas 所在）、
+    /// 用第幾張 NVIDIA 顯示卡（nvidia-smi 的編號，企業伺服器分配，M§36.6、D125；null 不限制）
+    /// </summary>
+    public sealed record Options(string Executable, string ModelPath, string EncoderPath, int Threads, bool Gpu, string? ExtraPath = null, int? Device = null);
 
     public static int DefaultThreads => Math.Clamp(Environment.ProcessorCount - 2, 2, 8);
 
@@ -56,6 +59,12 @@ public sealed class QwenServer : IQwenDecoder, IDisposable
             info.ArgumentList.Add(a);
         if (options.ExtraPath is { } extra)
             info.Environment["PATH"] = extra + Path.PathSeparator + (Environment.GetEnvironmentVariable("PATH") ?? "");
+        // 只看得到分到的那一張；CUDA 預設把最快的卡排第一，照 PCI 匯流排排才跟 nvidia-smi 的編號一樣
+        if (options.Device is { } device)
+        {
+            info.Environment["CUDA_VISIBLE_DEVICES"] = device.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            info.Environment["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
+        }
         var process = new Process { StartInfo = info };
         var url = $"http://127.0.0.1:{port}";
         var http = new HttpClient { BaseAddress = new Uri(url), Timeout = TimeSpan.FromMinutes(30) };

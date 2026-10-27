@@ -24,6 +24,27 @@ public class QwenTests
         return samples;
     }
 
+    /// <summary>企業伺服器分到的顯示卡（M§36.6、D125）：llama-server 只看得到那一張，照 PCI 匯流排的順序（跟 nvidia-smi 一樣）</summary>
+    [Fact]
+    public void ServerSeesOnlyTheAssignedGpu()
+    {
+        if (OperatingSystem.IsWindows()) return;   // 假的 llama-server 是 shell 腳本
+        using var home = new TempHome();
+        string Run(int? device)
+        {
+            var script = Path.Combine(home.Path, "llama-server");
+            File.WriteAllText(script, "#!/bin/sh\necho \"[$CUDA_VISIBLE_DEVICES][$CUDA_DEVICE_ORDER]\" > \"$(dirname \"$0\")/env.txt\"\nexit 1\n");
+            File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            foreach (var model in new[] { "m.gguf", "mmproj.gguf" }) File.WriteAllText(Path.Combine(home.Path, model), "x");
+            var options = new QwenServer.Options(script, Path.Combine(home.Path, "m.gguf"), Path.Combine(home.Path, "mmproj.gguf"), 2, true, Device: device);
+            var error = Assert.Throws<WhisperException>(() => QwenServer.Start(options));
+            Assert.Equal(WhisperErrorKind.LoadFailed, error.Kind);
+            return File.ReadAllText(Path.Combine(home.Path, "env.txt")).Trim();
+        }
+        Assert.Equal("[1][PCI_BUS_ID]", Run(1));
+        Assert.Equal("[][]", Run(null));
+    }
+
     [Fact]
     public void ChunksCutAtSpeakerChangesWhenQuiet()
     {

@@ -1600,6 +1600,7 @@ app                                              企業伺服器
 
 - 轉錄用這個 repo `windows/src` 的 `Shiyin.Core`、`Shiyin.Engines`、`Shiyin.Services` 同一份流程（分段、接縫、過濾、低信心、Qwen 的分段和防線、說話者辨識、短句再確認、分不準的提醒），伺服器專案用 git submodule 固定這個 repo 的某個 commit。這個 repo 改了轉錄流程的規則，伺服器跟著升 submodule。
 - 模型檔跟 app 同一份網址和 SHA-256（`ModelStore`）。
+- **指定顯示卡**（D125）：伺服器有多張 NVIDIA 顯示卡時自己分配每場用哪一張（伺服器的 design），核心只負責照著用：`TranscriptionOptions.GpuDevice`（null 是第一張，app 一律 null）傳給 `WhisperControl.GpuDevice`；whisper 用 shim 的 `shiyin_init_device`（`whisper_context_params.gpu_device`，ggml 的 GPU 裝置裡的第幾個；超出範圍時 whisper 自己用 CPU），Qwen 的 llama-server 子程序設 `CUDA_VISIBLE_DEVICES=<編號>`、`CUDA_DEVICE_ORDER=PCI_BUS_ID`（只看得到那一張）。編號是 nvidia-smi 的 index：CUDA 預設把最快的卡排第一，跟 nvidia-smi（PCI 匯流排順序）不一定一樣，伺服器整個程序要設 `CUDA_DEVICE_ORDER=PCI_BUS_ID`，whisper（同一個程序）的順序才對得上。舊的 shim 沒有 `shiyin_init_device` 時用第一張。
 - 同一個 16-bit WAV，伺服器的結果跟 Windows 版同一個引擎的結果逐段相同。2026-10-27 驗證：91 秒的合成會議，Mac（Metal）和 Linux 容器（CPU）的伺服器轉出的 27 段文字完全相同。
 - 錄音、結果、提示詞、整理的內容不寫 log；轉完就刪錄音，結果在 `DELETE` 或 24 小時內刪掉。
 - 這個 repo 不能依賴伺服器專案；這一節的 API 改了要升 `apiVersion`，舊版的 app 至少再支援一個大版本。
@@ -1685,5 +1686,6 @@ app                                              企業伺服器
 | D122 | 聲紋只存在使用者的電腦：Mac 在本機辨識說話者、算聲紋（跟伺服器轉錄同時做），伺服器只轉錄；Windows 的說話者也交給伺服器辨識，伺服器把同一個模型（ERes2Net）的聲紋跟結果一起回傳、不存（R50.6、§36.3） | Mac 用伺服器的段落在本機另外算聲紋：FluidAudio 離線辨識的聲紋算法不同，門檻要重新驗證，分人也會變成 Windows 那一套（AMI 9 場人數對 7 場，Mac 本機 9 場）。Windows 也在本機辨識說話者：沒有 NVIDIA 的電腦本來就慢，38 分鐘的錄音 CPU 要一兩分鐘以上。伺服器建全公司的聲紋庫：要每個人同意，第一版不做 |
 | D123 | 整理只轉送 OpenAI 相容格式，提示詞留在 app（R51） | 伺服器組提示詞、自己整理：提示詞要在 Swift、C#、伺服器三個地方一樣，標準答案管不到伺服器；app 還要再把結果拿回來，流程變複雜 |
 | D124 | 整理工具的選單叫「公司（<公司名稱>）」，登入了、公司有提供整理才出現；登入只在進階；選了只顯示公司設定的模型，不填 key、模型（R51.1，2026-10-27 使用者要求） | 選單一直有「公司」、沒登入就在整理工具頁直接登入（同一天做過一版）：使用者說登入應該都在進階，這裡只選模型。app 照舊讓使用者自己輸入模型名稱：公司的模型由管理者決定，打錯名稱只會失敗 |
+| D125 | 多張顯示卡由伺服器分配，核心只加「用第幾張」（§36.6） | 每張卡開一個伺服器程序（或容器）、前面再擋一層分流：管理者要自己設好幾份、登入和工作佇列要共用，部署變複雜。whisper 也用 `CUDA_VISIBLE_DEVICES`：whisper 跟伺服器在同一個程序，環境變數只能設一次，同時跑的兩場沒辦法用不同的卡 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

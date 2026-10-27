@@ -28,6 +28,8 @@ public sealed class WhisperControl(Action<double>? onProgress = null, Cancellati
     public Action<double> OnProgress { get; } = onProgress ?? (_ => { });
     public CancellationToken Cancel { get; } = cancel;
     public bool IsCancelled => Cancel.IsCancellationRequested;
+    /// <summary>用第幾張顯示卡（企業伺服器分配，M§36.6、D125）；null 用第一張</summary>
+    public int? GpuDevice { get; init; }
 }
 
 /// <summary>依序讀出 16 kHz 單聲道 float（長錄音分段轉錄，M§21.16）</summary>
@@ -81,6 +83,15 @@ public static class WhisperEngine
 
     public static int Threads => Math.Max(2, Math.Min(8, Environment.ProcessorCount - 2));
 
+    /// <summary>載入模型；指定顯示卡時用 shiyin_init_device（M§36.6、D125），舊的 shim 沒有這個函式就用第一張</summary>
+    static IntPtr Load(string modelPath, int? gpuDevice)
+    {
+        if (UseGpu && gpuDevice is { } device)
+            try { return WhisperNative.InitDevice(modelPath, 1, 1, device); }
+            catch (EntryPointNotFoundException) { }
+        return WhisperNative.Init(modelPath, UseGpu ? 1 : 0, 1);
+    }
+
     /// <summary>一次轉錄：模型只載入一次，一段一段送進去；每段用基本提示詞加上前一段最後的文字</summary>
     public sealed class Session : IDisposable
     {
@@ -94,7 +105,7 @@ public static class WhisperEngine
         {
             _ = Silenced.Value;
             if (!File.Exists(modelPath)) throw new WhisperException(WhisperErrorKind.ModelMissing);
-            ctx = WhisperNative.Init(modelPath, UseGpu ? 1 : 0, 1);
+            ctx = Load(modelPath, control.GpuDevice);
             if (ctx == IntPtr.Zero) throw new WhisperException(WhisperErrorKind.LoadFailed);
             Interlocked.Increment(ref contexts);
             (this.prompt, this.language, Control) = (prompt, language, control);

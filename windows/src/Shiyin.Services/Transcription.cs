@@ -65,7 +65,7 @@ public sealed class SpeechEngines(ModelStore models, Func<bool>? qwenCuda = null
     public List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
                                          IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control)
     {
-        using var server = QwenServer.Start(QwenOptions(), Log.Error, control.Cancel);
+        using var server = QwenServer.Start(QwenOptions() with { Device = control.GpuDevice }, Log.Error, control.Cancel);
         return QwenTranscriber.Transcribe(samples, chunks, server, language, glossary, control, retry, guard);
     }
 
@@ -175,6 +175,8 @@ public sealed record TranscriptionOptions
     public bool? QwenGuard { get; init; }
     public bool? QwenCutsAny { get; init; }
     public bool? QwenSplitMixed { get; init; }
+    /// <summary>用第幾張 NVIDIA 顯示卡（企業伺服器分配，M§36.6、D125）；null 用第一張（app 一律 null）</summary>
+    public int? GpuDevice { get; init; }
 
     /// <summary>寫進 meetings.transcribed_with（M§21.17）：快速辨識跟 Mac 的內建一樣寫 system</summary>
     public string TranscribedWith => Engine == EngineKind.Fast ? "system" : Engine == EngineKind.Qwen ? "qwen" : Language == MeetingLanguage.Ja ? "japanese" : "breeze";
@@ -249,7 +251,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
             }
             else
             {
-                var control = new WhisperControl(p => Progress(p * share), cancel);
+                var control = new WhisperControl(p => Progress(p * share), cancel) { GpuDevice = options.GpuDevice };
                 var prompt = WhisperRules.Prompt(options.Glossary, options.Language);
                 var result = engines.WhisperFile(stream, options.ChunkSeconds, modelPath, prompt, options.Language.WhisperCode(), control);
                 segments = result.Segments;
@@ -294,7 +296,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
         }
         if (!ShouldContinue()) return null;
         Stage(L.T("轉錄"));
-        var control = new WhisperControl(p => Progress(share + p * (1 - share)), cancel);
+        var control = new WhisperControl(p => Progress(share + p * (1 - share)), cancel) { GpuDevice = options.GpuDevice };
         var chunks = QwenRules.Chunks(samples, output?.Turns ?? [], options.QwenChunkSeconds ?? QwenRules.MaxChunkSeconds,
             options.QwenCutsAny ?? false, options.QwenSplitMixed ?? true);
         var segments = engines.Qwen(samples, chunks, options.Language, options.Glossary, options.QwenRetry ?? true, options.QwenGuard ?? true, control);
@@ -397,7 +399,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
             }
             else
             {
-                var control = new WhisperControl(p => Progress(from + p * span), cancel);
+                var control = new WhisperControl(p => Progress(from + p * span), cancel) { GpuDevice = options.GpuDevice };
                 var prompt = WhisperRules.Prompt(options.Glossary, options.Language);
                 segments = engines.WhisperSamples(samples, WhisperRules.Chunks(samples, options.ChunkSeconds), modelPath, prompt,
                     options.Language.WhisperCode(), control);

@@ -38,7 +38,7 @@ static void ensure_backends(void) {
 static void ensure_backends(void) {}
 #endif
 
-int32_t shiyin_version(void) { return 1; }
+int32_t shiyin_version(void) { return 2; }   // 2：shiyin_init_device
 
 static void quiet(enum ggml_log_level level, const char * text, void * user) { (void)level; (void)text; (void)user; }
 
@@ -72,10 +72,16 @@ int32_t shiyin_gpu_device(char * buffer, int32_t size) {
 }
 
 void * shiyin_init(const char * model_path, int32_t use_gpu, int32_t flash_attn) {
+    return shiyin_init_device(model_path, use_gpu, flash_attn, 0);
+}
+
+// 指定第幾張顯示卡（企業伺服器，M§36.6、D125）：ggml 的 GPU 裝置裡的第幾個，超出範圍時 whisper 用 CPU
+void * shiyin_init_device(const char * model_path, int32_t use_gpu, int32_t flash_attn, int32_t gpu_device) {
     ensure_backends();
     struct whisper_context_params params = whisper_context_default_params();
     params.use_gpu = use_gpu != 0;
     params.flash_attn = flash_attn != 0;
+    params.gpu_device = gpu_device;
     return whisper_init_from_file_with_params(model_path, params);
 }
 

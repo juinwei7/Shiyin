@@ -67,6 +67,7 @@ static unsafe partial class WhisperNative
     [LibraryImport(Lib, EntryPoint = "shiyin_system_info")] public static partial int SystemInfo(byte* buffer, int size);
     [LibraryImport(Lib, EntryPoint = "shiyin_gpu_device")] public static partial int GpuDevice(byte* buffer, int size);
     [LibraryImport(Lib, EntryPoint = "shiyin_init", StringMarshalling = StringMarshalling.Utf8)] public static partial IntPtr Init(string path, int useGpu, int flashAttn);
+    [LibraryImport(Lib, EntryPoint = "shiyin_init_device", StringMarshalling = StringMarshalling.Utf8)] public static partial IntPtr InitDevice(string path, int useGpu, int flashAttn, int gpuDevice);
     [LibraryImport(Lib, EntryPoint = "shiyin_free")] public static partial void Free(IntPtr ctx);
     [LibraryImport(Lib, EntryPoint = "shiyin_full")] public static partial int Full(IntPtr ctx, FullParams* p, float* samples, int n);
     [LibraryImport(Lib, EntryPoint = "shiyin_n_segments")] public static partial int NSegments(IntPtr ctx);
