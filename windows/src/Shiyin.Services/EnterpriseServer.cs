@@ -222,10 +222,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         }, cancel);
         secrets.Save(CredentialAccount, tokens.Refresh);
         settings.Set(UrlKey, attempt.Base.ToString().TrimEnd('/'));
-        settings.Set(AccountKey, new JsonObject
-        {
-            ["email"] = tokens.Email, ["name"] = tokens.Name, ["serverName"] = attempt.Info.Name, ["engine"] = attempt.Info.Engine, ["llm"] = attempt.Info.Llm,
-        }.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+        SaveAccount(tokens.Email, tokens.Name, attempt.Info);
         lock (gate)
         {
             accessToken = tokens.Access;
@@ -235,6 +232,27 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         Log.Info("enterprise server signed in");
         Changed?.Invoke();
     }
+
+    /// <summary>重新讀伺服器的資訊（R51.5、M§36.3）：公司在後台加了模型、改了名稱或轉錄引擎；連不上就保留舊的。不讀認證管理員</summary>
+    public async Task RefreshInfo(CancellationToken cancel = default)
+    {
+        if (SavedUrl is not { } url || Account is not { } before) return;
+        EnterpriseInfo info;
+        try { info = await FetchInfo(url, cancel); }
+        catch (Exception e) when (e is EnterpriseException or HttpRequestException or OperationCanceledException) { return; }
+        // 讀的時候登出、換了帳號：不要蓋掉
+        if (Account is not { } current || current.Email != before.Email) return;
+        if (current.ServerName == info.Name && current.Engine == info.Engine && current.Llm == info.Llm) return;
+        SaveAccount(current.Email, current.Name, info);
+        Changed?.Invoke();
+        settings.NotifySummarizerChanged();
+    }
+
+    void SaveAccount(string email, string name, EnterpriseInfo info) =>
+        settings.Set(AccountKey, new JsonObject
+        {
+            ["email"] = email, ["name"] = name, ["serverName"] = info.Name, ["engine"] = info.Engine, ["llm"] = info.Llm,
+        }.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
 
     /// <summary>shiyin://auth 的網址是不是登入的回呼（App 判斷要不要交給 CompleteSignIn）</summary>
     public static bool IsCallback(string url) =>

@@ -400,13 +400,13 @@ public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
 {
     OpenAICompatibleApi Inner(IEnterpriseAccess access) => new(client, model, (access.BaseUrl ?? "").TrimEnd('/') + "/api/v1/llm")
     {
-        Key = async cancel => await access.AccessToken(cancel), RequiresModel = false, Name = L.T("企業伺服器"), Language = access.Language,
+        Key = async cancel => await access.AccessToken(cancel), RequiresModel = false, Name = L.T("公司的伺服器"), Language = access.Language,
     };
 
     public async Task<string> GenerateJson(string system, string prompt, OutputFormat format, CancellationToken cancel)
     {
         if (client.Enterprise is not { BaseUrl: not null } access)
-            throw LLMException.NotConfigured(L.T("企業伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入"));
+            throw LLMException.NotConfigured(L.T("公司的伺服器還沒登入或登入已失效，請到設定 → 整理工具登入"));
         try
         {
             return await Inner(access).GenerateJson(system, prompt, format, cancel);
@@ -423,9 +423,12 @@ public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
     }
 
     /// <summary>伺服器提供的模型（GET /api/v1/llm/models）</summary>
-    public async Task<List<string>> ListModels(CancellationToken cancel)
+    public async Task<List<string>> ListModels(CancellationToken cancel) => (await Models(cancel))?.Select(m => m.Id).ToList() ?? [];
+
+    /// <summary>公司在後台設定的模型（R51.1）：id 給伺服器、name 給人看；取不到是 null</summary>
+    public async Task<List<EnterpriseModel>?> Models(CancellationToken cancel)
     {
-        if (client.Enterprise is not { BaseUrl: not null } access) return [];
+        if (client.Enterprise is not { BaseUrl: not null } access) return null;
         try
         {
             using var r = new HttpRequestMessage(HttpMethod.Get, access.BaseUrl.TrimEnd('/') + "/api/v1/llm/models");
@@ -433,9 +436,19 @@ public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, timeout.Token);
             using var response = await client.Http.SendAsync(r, linked.Token);
+            if (!response.IsSuccessStatusCode) return null;
             var obj = JsonNode.Parse(await response.Content.ReadAsStringAsync(linked.Token)) as JsonObject;
-            return (obj?["data"] as JsonArray)?.OfType<JsonObject>().Select(m => m["id"]?.GetValue<string>()).OfType<string>().ToList() ?? [];
+            if (obj?["data"] is not JsonArray list) return null;
+            return [.. list.OfType<JsonObject>().Where(m => m["id"]?.GetValue<string>() is { Length: > 0 }).Select(m =>
+            {
+                var id = m["id"]!.GetValue<string>();
+                var name = m["name"]?.GetValue<string>() is { Length: > 0 } n ? n : id;
+                return new EnterpriseModel(id, name, m["default"]?.GetValue<bool>() ?? false);
+            })];
         }
-        catch (Exception e) when (e is HttpRequestException or JsonException or OperationCanceledException or LLMException) { return []; }
+        catch (Exception e) when (e is HttpRequestException or JsonException or OperationCanceledException or LLMException or InvalidOperationException) { return null; }
     }
 }
+
+/// <summary>公司在後台設定的一個整理模型（R51.1）</summary>
+public sealed record EnterpriseModel(string Id, string Name, bool IsDefault);

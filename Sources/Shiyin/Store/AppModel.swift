@@ -308,6 +308,11 @@ final class AppModel {
         BuiltinTemplates.seed(db)
         // claude、codex 的登入狀態（design §34.1）：沒登入時不自動整理
         Task { await CLILogin.refreshIfStale() }
+        // 企業伺服器：公司在後台加了模型、改了設定，不用重新登入（R51.5）
+        Task {
+            await EnterpriseServer.shared.refreshInfo()
+            refreshSummarizerProblem()
+        }
         refreshSummarizerProblem()
         // 設定（整理工具、模型、網址）、key、登入狀態、暫停變了就重算
         for name in [UserDefaults.didChangeNotification, .summarizerStateChanged] {

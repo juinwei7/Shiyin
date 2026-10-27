@@ -1558,28 +1558,6 @@
         }
       }
     },
-    "企業伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You're not signed in to the enterprise server, or your sign-in expired. Sign in under Settings → Advanced → Enterprise Server."
-          }
-        }
-      }
-    },
-    "企業伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You're not signed in to the enterprise server, or your sign-in expired: sign in under Advanced → Enterprise Server. Meetings won't be summarized automatically until then."
-          }
-        }
-      }
-    },
     "企業伺服器（%@）": {
       "extractionState": "manual",
       "localizations": {
@@ -2021,6 +1999,17 @@
         }
       }
     },
+    "公司": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Company"
+          }
+        }
+      }
+    },
     "公司提供，不用自己的 key": {
       "extractionState": "manual",
       "localizations": {
@@ -2039,6 +2028,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "If your company runs a Shiyin enterprise server, enter the URL they gave you, click Sign In, and sign in with your company account on the page that opens. Recordings are then transcribed on the company's server — fast even without an NVIDIA graphics card — and summaries can use the company's model."
+          }
+        }
+      }
+    },
+    "公司的伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Company server"
+          }
+        }
+      }
+    },
+    "公司的伺服器登入已失效：按「重新登入」。設定好之前不會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your sign-in to the company server has expired. Press Sign In Again. Meetings won't be summarized automatically until this is fixed."
+          }
+        }
+      }
+    },
+    "公司的伺服器還沒有提供整理用的模型，請通知管理者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The company server doesn't offer a summary model yet. Please contact your administrator."
+          }
+        }
+      }
+    },
+    "公司的伺服器還沒有提供整理用的模型：請管理者在伺服器後台的「整理模型」加上模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The company server doesn't offer a summary model yet. Ask your administrator to add one under Models in the server's admin console."
+          }
+        }
+      }
+    },
+    "公司的伺服器還沒登入或登入已失效，請到設定 → 整理工具登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "公司的模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the company's model"
+          }
+        }
+      }
+    },
+    "公司的預設": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Company default"
+          }
+        }
+      }
+    },
+    "公司的預設（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Company default (%@)"
+          }
+        }
+      }
+    },
+    "公司（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Company (%@)"
+          }
+        }
+      }
+    },
+    "公司（企業伺服器）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Company (enterprise server)"
           }
         }
       }
@@ -3077,6 +3176,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shiyin quit unexpectedly twice while running this task, so it won't retry automatically. Click “Retry” to try again."
+          }
+        }
+      }
+    },
+    "填入公司給的企業伺服器網址、按「登入」，在打開的網頁用公司帳號登入。登入後用公司在伺服器設定的模型整理，不用自己的 key；錄音也會交給公司的伺服器轉錄（可以到「進階」改回這台 Mac）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the enterprise server address from your company, press Sign In, and sign in with your company account on the page that opens. Meetings are then summarized with the models your company set up on the server, with no key of your own. Recordings are also transcribed on the company server (you can switch back to this Mac under Advanced)."
           }
         }
       }
@@ -5002,6 +5112,17 @@
         }
       }
     },
+    "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到公司的伺服器，再由公司設定的模型整理。錄音檔不會因為整理而送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, asking questions, or guessing speakers, the transcript text, your notes, the glossary, and basic meeting details are sent to your company's server and summarized by the model your company chose. Recordings are not sent for summaries."
+          }
+        }
+      }
+    },
     "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到這台 Mac 上的服務（%@），不會離開電腦。錄音檔不會送出。": {
       "extractionState": "manual",
       "localizations": {
@@ -6147,6 +6268,17 @@
         }
       }
     },
+    "模型和 API key 由公司在伺服器的後台設定。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models and API keys are set up by your company in the server's admin console."
+          }
+        }
+      }
+    },
     "模擬錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -6298,6 +6430,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exporting…"
+          }
+        }
+      }
+    },
+    "正在取得公司的模型…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting the company's models…"
           }
         }
       }

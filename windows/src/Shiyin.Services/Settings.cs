@@ -237,8 +237,10 @@ public sealed class AppSettings
         SummarizerChanged?.Invoke();
     }
 
-    /// <summary>企業伺服器登入了、有提供整理（R51.3）；App 接上 EnterpriseServer</summary>
-    public Func<bool> EnterpriseLlmReady { get; set; } = () => false;
+    /// <summary>企業伺服器登入了（R51.3）；App 接上 EnterpriseServer</summary>
+    public Func<bool> EnterpriseSignedIn { get; set; } = () => false;
+    /// <summary>企業伺服器有提供整理用的模型（R51.3）</summary>
+    public Func<bool> EnterpriseHasModels { get; set; } = () => false;
 
     /// <summary>整理工具設定的指紋：換工具、改模型或網址、存或刪 key 都會變</summary>
     string Signature(LLMProvider provider) =>
@@ -265,7 +267,8 @@ public sealed class AppSettings
                     if (OpenAICompatibleApi.Normalized(CompatibleBaseUrl) is null || Model.Length == 0) return new(SummarizerProblemKind.Incomplete, provider);
                     break;
                 case LLMProvider.Enterprise:
-                    if (!EnterpriseLlmReady()) return new(SummarizerProblemKind.EnterpriseSignedOut, provider);
+                    if (!EnterpriseSignedIn()) return new(SummarizerProblemKind.EnterpriseSignedOut, provider);
+                    if (!EnterpriseHasModels()) return new(SummarizerProblemKind.EnterpriseNoModels, provider);
                     break;
             }
             PauseState? paused;

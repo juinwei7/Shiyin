@@ -14,7 +14,7 @@
 2026-10-27 完成（程式和驗證寫在 commit 訊息）：Mac 的設定、登入、用企業伺服器轉錄（本機辨識說話者）、整理工具，對本機跑的拾音伺服器走過登入、轉錄、續傳、等伺服器、改在這台電腦轉錄、整理、token 過期、帳號停用；Windows 的 Services、LLM、設定頁、會議頁、`shiyin://auth`、控制通道，`dotnet test` 136 個通過（`EnterpriseTests` 15 個），Windows 版的程式對真的伺服器走過登入、建工作、上傳。
 
 - [~] **E2 Mac 真的按「登入」**：設定 → 進階 → 企業伺服器填網址、按「登入」，`ASWebAuthenticationSession` 打開伺服器的登入頁、登入後回到拾音（登入視窗會出現在使用者畫面上，要使用者在電腦前）
-- [~] **E5 Windows 的畫面**（design-windows §12.11）：虛擬機裡用 UI Automation 走設定的「企業伺服器」、登入（瀏覽器 → `shiyin://auth` 回到開著的拾音）、轉錄（伺服器開在 Mac 上，`ssh -R`）、會議頁的「改在這台電腦轉錄」、整理、登出。2026-10-27 已經用控制通道在虛擬機走過：`enterprise login` 登入（設定改成企業伺服器轉錄、企業伺服器整理）、匯入 45 秒的錄音、伺服器轉錄並辨識說話者（狀態列有「企業伺服器辨識說話者」）、伺服器在 app 拿到結果後刪掉工作；接著 Mac 的磁碟剩 8 GB，diskguard 停掉虛擬機，存進資料庫的結果和設定頁的畫面還沒看到
+- [~] **E5 Windows 的畫面**（design-windows §12.11）：虛擬機裡用 UI Automation 走設定的「企業伺服器」、整理工具選「公司」（沒登入時同一頁有網址和登入、登入後是公司的模型選單，D124）、登入（瀏覽器 → `shiyin://auth` 回到開著的拾音）、轉錄（伺服器開在 Mac 上，`ssh -R`）、會議頁的「改在這台電腦轉錄」、整理、登出。2026-10-27 已經用控制通道在虛擬機走過：`enterprise login` 登入（設定改成企業伺服器轉錄、企業伺服器整理）、匯入 45 秒的錄音、伺服器轉錄並辨識說話者（狀態列有「企業伺服器辨識說話者」）、伺服器在 app 拿到結果後刪掉工作；接著 Mac 的磁碟剩 8 GB，diskguard 停掉虛擬機，存進資料庫的結果和設定頁的畫面還沒看到
 - [ ] **E1 標準答案 `server/`**（§36.7）：`dump-golden` 加 app 送給伺服器的 `settings`、結果轉成段落和說話者，Windows 比對；Windows 的 `EnterpriseTests` 已經用同一份格式的假伺服器
   - 驗證：`dump-golden` 跑兩次完全相同，其他標準答案沒變；Windows 比對通過
 - [ ] **E6 文件、統計**（R52.1～R52.3）：使用說明、官網的隱私段落（中英）、README；回報問題寫「企業伺服器：已登入（版本）」；`workers/usage` 加 `engine_server`、`summarizer_enterprise` 欄（要使用者跑 migration 和 deploy）

@@ -8,7 +8,7 @@ struct EnterpriseAPI: LLMBackend {
     private var inner: OpenAICompatibleAPI {
         OpenAICompatibleAPI(model: model, baseURL: EnterpriseServer.shared.savedURL?.appending(path: "api/v1/llm").absoluteString ?? "",
                             key: { try await EnterpriseServer.shared.validAccessToken() }, requiresModel: false,
-                            name: String(localized: "企業伺服器"))
+                            name: String(localized: "公司的伺服器"))
     }
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
@@ -33,9 +33,24 @@ struct EnterpriseAPI: LLMBackend {
 
     /// 伺服器提供的模型（GET /api/v1/llm/models）
     func listModels() async -> [String] {
+        await Self.models()?.map(\.id) ?? []
+    }
+
+    /// 公司在後台設定的模型（R51.1）：id 給伺服器、name 給人看；取不到是 nil
+    struct Model: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let isDefault: Bool
+    }
+
+    static func models() async -> [Model]? {
         guard let (data, response) = try? await EnterpriseServer.shared.call("GET", "api/v1/llm/models", timeout: 15), response.statusCode == 200,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let list = object["data"] as? [[String: Any]] else { return [] }
-        return list.compactMap { $0["id"] as? String }
+              let list = object["data"] as? [[String: Any]] else { return nil }
+        return list.compactMap { item in
+            guard let id = item["id"] as? String else { return nil }
+            let name = (item["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? id
+            return Model(id: id, name: name, isDefault: item["default"] as? Bool ?? false)
+        }
     }
 }

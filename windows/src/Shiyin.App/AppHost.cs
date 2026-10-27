@@ -87,7 +87,8 @@ public sealed class AppHost
         // 企業伺服器：refresh token 跟 API key 存在同一個地方（認證管理員；DEBUG 只放記憶體）；DEBUG 可以連本機的 http
         Enterprise = new EnterpriseServer(Settings, Http, new KeySecrets(Keys), Version, Environment.MachineName) { AllowLocalHttp = Debug };
         Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl, Enterprise = Enterprise };
-        Settings.EnterpriseLlmReady = () => Enterprise.LlmReady;
+        Settings.EnterpriseSignedIn = () => Enterprise.IsSignedIn;
+        Settings.EnterpriseHasModels = () => Enterprise.Account?.Llm == true;
         // 沒選過整理工具時用找得到的 CLI（R35.1）：要掃過 PATH 的每個資料夾，快取 30 秒
         Settings.DetectCli = CachedCliDetector(Tools);
         // 整理工具準備好了沒（R45.1、M§34.1）：有沒有 CLI（快取 30 秒）、有沒有 key（只看有沒有）、登入狀態的快取
@@ -244,6 +245,8 @@ public sealed class AppHost
         Runner.Finished += (job, error) => Post(() => Notifier.JobFinished(job, error));
         // claude、codex 的登入狀態（M§34.1）：沒登入時不自動整理
         Post(() => _ = CliLogin.RefreshIfStale());
+        // 企業伺服器：公司在後台加了模型、改了設定，不用重新登入（R51.5）
+        _ = Enterprise.RefreshInfo();
         if (Updater is not null) _ = Updater.RunAutomaticChecks(CancellationToken.None);
         // 打開 app 就建立今天的空白匯總（沒有用量的日子也算活躍，M§30.3），60 秒後開始送
         Usage.Touch();

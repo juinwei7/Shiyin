@@ -48,6 +48,8 @@ struct ProviderSettings: View {
     @State private var testResult: (ok: Bool, message: String)?
     @State private var login: CLILogin.Status?
     @State private var checkingLogin = false
+    /// 公司提供的模型（R51.1）：nil 是還沒取到或取不到
+    @State private var companyModels: [EnterpriseAPI.Model]?
 
     /// 選單顯示的值：沒選過時顯示自動選到的那一個，找不到 CLI 時是「之後再設定」（空字串）；改了才寫進設定（R35.3）
     private var provider: String {
@@ -63,10 +65,10 @@ struct ProviderSettings: View {
                 // 這台 Mac 沒有 claude、codex 時才有：選它等於清掉設定，回到「還沒設定」
                 if AppSettings.detectedProvider == .none { Text("之後再設定（先不整理）").tag("") }
                 // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
-                // 企業伺服器：登入了、伺服器有提供整理才出現（R51.1）
-                ForEach(LLMProvider.allCases.filter { $0 != .enterprise || EnterpriseServer.shared.account?.llm == true || $0 == current }) { item in
+                // 公司（企業伺服器）一直都在，沒登入就在這頁登入（R51.1、D124）
+                ForEach(LLMProvider.allCases) { item in
                     let missing = (item == .claude || item == .codex) && Paths.findTool(item == .claude ? "claude" : "codex") == nil
-                    Text(missing ? String(localized: "\(item.label)（沒有安裝）") : item.label).tag(item.rawValue)
+                    Text(missing ? String(localized: "\(item.label)（沒有安裝）") : item == .enterprise ? companyLabel : item.label).tag(item.rawValue)
                         .selectionDisabled(missing && item != current)
                 }
             }
@@ -119,6 +121,11 @@ struct ProviderSettings: View {
                     Text("網址要以 http:// 或 https:// 開頭").font(.caption).foregroundStyle(.red)
                 }
             }
+            // 公司：沒登入就在這裡登入；登入後模型由公司的後台決定（R51.1）
+            if current == .enterprise {
+                EnterpriseServerSettings(compact: true)
+                if EnterpriseServer.shared.isSignedIn && EnterpriseServer.shared.account?.llm == true { companyModelRow }
+            }
             if current.usesAPIKey {
                 SecureField("API key", text: $key, prompt: Text(keySaved ? "已儲存在鑰匙圈（輸入新的會取代）"
                                                                  : current.keyOptional ? "可以不填（本機的 Ollama、LM Studio 不需要）" : "貼上 API key"))
@@ -139,7 +146,7 @@ struct ProviderSettings: View {
                 }
                 if let url = current.apiKeyURL { Link("取得 API key", destination: url) }
             }
-            if current != .none {
+            if current != .none && current != .enterprise {
                 HStack {
                     TextField("模型", text: $modelName, prompt: Text(current == .openaiCompatible ? "必填"
                                                                     : current == .enterprise ? "留空使用公司設定的預設模型"
@@ -152,7 +159,7 @@ struct ProviderSettings: View {
                 .onChange(of: modelName) { _, value in UserDefaults.standard.set(value, forKey: current.modelKey) }
             }
             // 測試：送一個很短的請求，確認登入、key、模型都能用（使用者回報：開完會才發現登入過期）
-            if current != .none {
+            if current != .none && (current != .enterprise || EnterpriseServer.shared.isSignedIn) {
                 LabeledContent("測試") {
                     HStack(spacing: 8) {
                         if let testResult {
@@ -186,6 +193,14 @@ struct ProviderSettings: View {
         .formStyle(.grouped)
         .onAppear(perform: load)
         .onChange(of: storedProvider) { _, _ in load() }
+        // 在這頁登入、重新登入之後取公司的模型
+        .onChange(of: EnterpriseServer.shared.account) { _, account in
+            guard current == .enterprise, account != nil else { return }
+            Task {
+                let models = await EnterpriseAPI.models()
+                if current == .enterprise { companyModels = models }
+            }
+        }
         #if DEBUG
         .onChange(of: model.debugSettingsAction) { _, action in
             guard let action else { return }
@@ -253,7 +268,8 @@ struct ProviderSettings: View {
         case .notInstalled?, .notLoggedIn?: return String(localized: "設定好之前不會自動整理。")
         case .missingKey?: return String(localized: "還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。")
         case .incomplete?: return String(localized: "還沒有填網址或模型。設定好之前不會自動整理。")
-        case .enterpriseSignedOut?: return String(localized: "企業伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。")
+        case .enterpriseSignedOut?: return EnterpriseServer.shared.hasAccount ? String(localized: "公司的伺服器登入已失效：按「重新登入」。設定好之前不會自動整理。") : nil
+        case .enterpriseNoModels?: return String(localized: "公司的伺服器還沒有提供整理用的模型：請管理者在伺服器後台的「整理模型」加上模型。")
         case .paused(_, let detail)?:
             let reason = detail.trimmingCharacters(in: CharacterSet(charactersIn: "。. "))   // l10n-skip
             return String(localized: "上次整理失敗：\(reason)。改好設定，或按「測試整理工具」成功之後，才會再自動整理。")
@@ -266,6 +282,8 @@ struct ProviderSettings: View {
         login = nil
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
+        companyModels = nil
+        if current == .enterprise { Task { await refreshCompany() } }
         baseURL = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
         // 只看有沒有存，不讀出 key：打開設定頁不能跳出鑰匙圈的確認（R18.7、R21.1）
         keySaved = current.usesAPIKey && Keychain.exists(current.keychainAccount)
@@ -273,6 +291,43 @@ struct ProviderSettings: View {
         availableModels = []
         modelListError = nil
         loadingModels = false
+    }
+
+    /// 選單上的「公司（範例公司）」；沒登入時「公司（企業伺服器）」
+    private var companyLabel: String {
+        let name = EnterpriseServer.shared.account?.serverName ?? ""
+        return name.isEmpty ? String(localized: "公司（企業伺服器）") : String(localized: "公司（\(name)）")
+    }
+
+    /// 重新讀伺服器的資訊和模型清單（R51.5）：公司後來才在後台加的模型也看得到
+    private func refreshCompany() async {
+        guard EnterpriseServer.shared.isSignedIn else { return }
+        await EnterpriseServer.shared.refreshInfo()
+        let models = await EnterpriseAPI.models()
+        guard current == .enterprise else { return }
+        companyModels = models
+    }
+
+    /// 公司提供的模型（R51.1、design §36.3）：「公司的預設」存空字串；選過的不在清單裡了就當成預設，設定不清掉
+    @ViewBuilder private var companyModelRow: some View {
+        if let models = companyModels, !models.isEmpty {
+            let fallback = models.first { $0.isDefault } ?? models[0]
+            if models.count == 1 {
+                LabeledContent("模型") { Text(fallback.name) }
+            } else {
+                Picker("模型", selection: Binding(
+                    get: { models.contains { $0.id == modelName } ? modelName : "" },
+                    set: { modelName = $0; UserDefaults.standard.set($0, forKey: current.modelKey) })) {
+                    Text("公司的預設（\(fallback.name)）").tag("")
+                    ForEach(models) { item in Text(item.name).tag(item.id) }
+                }
+            }
+        } else {
+            LabeledContent("模型") {
+                Text(companyModels == nil ? "正在取得公司的模型…" : "公司的預設").foregroundStyle(.secondary)
+            }
+        }
+        Text("模型和 API key 由公司在伺服器的後台設定。").font(.caption).foregroundStyle(.secondary)
     }
 
     /// 可以從清單選模型：API 要有存 key，OpenAI 相容 API 要有網址
@@ -358,7 +413,10 @@ struct ProviderSettings: View {
             return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。")
         case .enterprise:
             // 送到公司的伺服器，再由公司設定的模型整理（R51.4、design §36.5）
-            return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(EnterpriseServer.shared.host)（公司的伺服器），再由公司設定的模型整理。錄音檔不會因為整理而送出。")
+            let host = EnterpriseServer.shared.host
+            return host.isEmpty
+                ? String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到公司的伺服器，再由公司設定的模型整理。錄音檔不會因為整理而送出。")
+                : String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(host)（公司的伺服器），再由公司設定的模型整理。錄音檔不會因為整理而送出。")
         case .openaiCompatible:
             // 說清楚送到哪一台主機；本機的服務不會離開電腦（design §19.3、R17.5）
             guard let url = OpenAICompatibleAPI.normalized(baseURL), let host = url.host(percentEncoded: false) else {

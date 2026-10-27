@@ -95,9 +95,9 @@ public sealed class SettingsWindow : Window
         // 選單顯示實際用的整理工具；這台電腦沒有 claude、codex 時多「之後再設定」，選它等於清掉設定（R35.3、M§19.6）
         // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
         bool Missing(LLMProvider p) => p is LLMProvider.Claude or LLMProvider.Codex && !S.HasTool(p == LLMProvider.Claude ? "claude" : "codex");
-        // 企業伺服器：登入了、伺服器有提供整理才出現（R51.1）
-        var options = LLMProviders.All.Where(p => p != LLMProvider.Enterprise || host.Enterprise.Account?.Llm == true || p == provider)
-            .Select(p => ((LLMProvider?)p, Missing(p) ? L.F("%@（沒有安裝）", p.Label()) : p.Label())).ToList();
+        // 公司（企業伺服器）一直都在，沒登入就在這頁登入（R51.1、M D124）
+        var options = LLMProviders.All
+            .Select(p => ((LLMProvider?)p, Missing(p) ? L.F("%@（沒有安裝）", p.Label()) : p == LLMProvider.Enterprise ? CompanyLabel() : p.Label())).ToList();
         if (S.DetectedProvider == LLMProvider.None) options.Insert(0, (null, L.T("之後再設定（先不整理）")));
         column.Children.Add(Ui.Combo(options, S.NeedsProviderSetup ? null : provider, p =>
         {
@@ -108,6 +108,14 @@ public sealed class SettingsWindow : Window
         // 還沒準備好：說原因，設定好之前不會自動整理（R45.3、M§34.3）
         if (provider != LLMProvider.None && ProblemNotice(S.SummarizerProblem) is { } notice)
             column.Children.Add(Ui.Text(notice, 12, color: Ui.Danger));
+
+        // 公司：沒登入就在這裡登入；登入後模型由公司的後台決定（R51.1、R51.5）
+        if (provider == LLMProvider.Enterprise)
+        {
+            column.Children.Add(Enterprise(compact: true));
+            if (host.Enterprise.IsSignedIn && host.Enterprise.Account?.Llm == true) column.Children.Add(CompanyModels());
+            _ = host.Enterprise.RefreshInfo();
+        }
 
         if (provider is LLMProvider.Claude or LLMProvider.Codex)
         {
@@ -185,7 +193,7 @@ public sealed class SettingsWindow : Window
                 column.Children.Add(Ui.Link(L.T("取得 API key"), () => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url))));
         }
 
-        if (provider != LLMProvider.None)
+        if (provider != LLMProvider.None && provider != LLMProvider.Enterprise)
         {
             var model = new TextBox
             {
@@ -213,7 +221,9 @@ public sealed class SettingsWindow : Window
                 column.Children.Add(Ui.Bar(null, model, pick));
             }
             else column.Children.Add(model);
-
+        }
+        if (provider != LLMProvider.None && (provider != LLMProvider.Enterprise || host.Enterprise.IsSignedIn))
+        {
             // 測試：送一個很短的請求，確認登入、key、模型都能用
             var result = Ui.Text("", 13);
             var test = Ui.Button(L.T("測試整理工具"), () => { });
@@ -253,14 +263,54 @@ public sealed class SettingsWindow : Window
     /// <summary>存好 key、按「重新檢查」查到已登入之後，重畫時自動測一次（R45.3）</summary>
     bool autoTest;
 
+    /// <summary>選單上的「公司（範例公司）」；沒登入時「公司（企業伺服器）」</summary>
+    string CompanyLabel() => host.Enterprise.Account?.ServerName is { Length: > 0 } name ? L.F("公司（%@）", name) : L.T("公司（企業伺服器）");
+
+    /// <summary>
+    /// 公司提供的模型（R51.1、M§36.3）：「公司的預設」存空字串；只有一個時只顯示名稱。
+    /// 選過的不在清單裡了就當成預設，設定不清掉（伺服器恢復後照舊）
+    /// </summary>
+    FrameworkElement CompanyModels()
+    {
+        var slot = Ui.Column(6);
+        slot.Children.Add(Ui.Bar(Ui.Text(L.T("模型"), 14), null, Ui.Text(L.T("正在取得公司的模型…"), 14, color: Ui.Secondary)));
+        slot.Children.Add(Note(L.T("模型和 API key 由公司在伺服器的後台設定。")));
+        async void Load()
+        {
+            var models = await host.Llm.EnterpriseModels(CancellationToken.None);
+            if (S.Provider != LLMProvider.Enterprise) return;
+            slot.Children.RemoveAt(0);
+            FrameworkElement row;
+            if (models is not { Count: > 0 })
+                row = Ui.Bar(Ui.Text(L.T("模型"), 14), null, Ui.Text(L.T("公司的預設"), 14, color: Ui.Secondary));
+            else
+            {
+                var fallback = models.FirstOrDefault(m => m.IsDefault) ?? models[0];
+                if (models.Count == 1) row = Ui.Bar(Ui.Text(L.T("模型"), 14), null, Ui.Text(fallback.Name, 14, color: Ui.Secondary));
+                else
+                {
+                    var options = new List<(string, string)> { ("", L.F("公司的預設（%@）", fallback.Name)) };
+                    options.AddRange(models.Select(m => (m.Id, m.Name)));
+                    var chosen = S.String(LLMProvider.Enterprise.ModelKey()) ?? "";
+                    row = Ui.Combo(options, models.Any(m => m.Id == chosen) ? chosen : "", id => S.Set(LLMProvider.Enterprise.ModelKey(), id), L.T("模型"));
+                }
+            }
+            slot.Children.Insert(0, row);
+        }
+        Load();
+        return slot;
+    }
+
     /// <summary>選單下面的紅字（M§34.3）：沒安裝、沒登入在「狀態」那一列已經寫了原因</summary>
-    static string? ProblemNotice(SummarizerProblem? problem) => problem?.Kind switch
+    string? ProblemNotice(SummarizerProblem? problem) => problem?.Kind switch
     {
         null or SummarizerProblemKind.NotChosen or SummarizerProblemKind.Off => null,
         SummarizerProblemKind.NotInstalled or SummarizerProblemKind.NotLoggedIn => L.T("設定好之前不會自動整理。"),
         SummarizerProblemKind.MissingKey => L.T("還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。"),
         SummarizerProblemKind.Incomplete => L.T("還沒有填網址或模型。設定好之前不會自動整理。"),
-        SummarizerProblemKind.EnterpriseSignedOut => L.T("企業伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。"),
+        // 還沒登入時同一頁就有網址和「登入」，不用再說一次
+        SummarizerProblemKind.EnterpriseSignedOut => host.Enterprise.HasAccount ? L.T("公司的伺服器登入已失效：按「重新登入」。設定好之前不會自動整理。") : null,
+        SummarizerProblemKind.EnterpriseNoModels => L.T("公司的伺服器還沒有提供整理用的模型：請管理者在伺服器後台的「整理模型」加上模型。"),
         _ => L.F("上次整理失敗：%@。改好設定，或按「測試整理工具」成功之後，才會再自動整理。", problem!.Detail.TrimEnd('。', '.', ' ')),
     };
 
@@ -273,7 +323,9 @@ public sealed class SettingsWindow : Window
         LLMProvider.Codex or LLMProvider.OpenAI => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。"),
         LLMProvider.Gemini => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。"),
         // 送到公司的伺服器，再由公司設定的模型整理（R51.4、M§36.5）
-        LLMProvider.Enterprise => L.F("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 %@（公司的伺服器），再由公司設定的模型整理。錄音檔不會因為整理而送出。", host.Enterprise.Host),
+        LLMProvider.Enterprise => host.Enterprise.Host.Length == 0
+            ? L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到公司的伺服器，再由公司設定的模型整理。錄音檔不會因為整理而送出。")
+            : L.F("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 %@（公司的伺服器），再由公司設定的模型整理。錄音檔不會因為整理而送出。", host.Enterprise.Host),
         _ => OpenAICompatibleApi.Normalized(S.CompatibleBaseUrl) is not { } url
             ? L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到你填的網址。錄音檔不會送出。")
             : OpenAICompatibleApi.IsLocal(url)
@@ -685,12 +737,28 @@ public sealed class SettingsWindow : Window
 
     // MARK: 企業伺服器（R49、design-windows §12.11）
 
-    /// <summary>登入前：網址、登入（用預設瀏覽器打開伺服器的登入頁，登入完走 shiyin://auth 回來）；登入後：帳號、轉錄和整理要不要用、登出</summary>
-    FrameworkElement Enterprise()
+    /// <summary>
+    /// 登入前：網址、登入（用預設瀏覽器打開伺服器的登入頁，登入完走 shiyin://auth 回來）；登入後：帳號、轉錄和整理要不要用、登出。
+    /// compact：整理工具頁選了「公司」時（R51.1）：沒登入時一樣，登入後只有一列伺服器和帳號
+    /// </summary>
+    FrameworkElement Enterprise(bool compact = false)
     {
         var server = host.Enterprise;
         var column = Ui.Column(10);
-        if (server.Account is { } account)
+        if (compact && server.Account is { } signedIn)
+        {
+            column.Children.Add(Ui.Bar(Ui.Text(L.T("公司的伺服器"), 14), null, Ui.Column(2,
+                Ui.Text(L.F("%@（%@）", signedIn.ServerName, server.Host), 14, color: Ui.Secondary, select: true),
+                Ui.Row(6, Ui.Text(signedIn.Email, 13, color: Ui.Secondary, select: true),
+                    Ui.Text(server.IsSignedIn ? L.T("已登入") : L.T("登入已失效"), 13, color: server.IsSignedIn ? Ui.Celadon : Ui.Danger)))));
+            if (server.ExpiredMessage is { } expired)
+            {
+                var error = Ui.Text("", 12, color: Ui.Danger);
+                column.Children.Add(Ui.Text(expired, 12, color: Ui.Danger));
+                column.Children.Add(Ui.Row(10, Ui.Button(L.T("重新登入"), () => SignIn(server.SavedUrl?.ToString() ?? "", error)), error));
+            }
+        }
+        else if (server.Account is { } account)
         {
             column.Children.Add(Ui.Bar(Ui.Text(L.T("伺服器"), 14), null, Ui.Text(L.F("%@（%@）", account.ServerName, server.Host), 14, color: Ui.Secondary, select: true)));
             column.Children.Add(Ui.Bar(Ui.Text(L.T("帳號"), 14), null, Ui.Row(8, Ui.Text(account.Email, 14, color: Ui.Secondary, select: true),
@@ -723,7 +791,9 @@ public sealed class SettingsWindow : Window
             url.KeyDown += (_, e) => { if (e.Key == Windows.System.VirtualKey.Enter) SignIn(url.Text, error); };
             column.Children.Add(url);
             column.Children.Add(Ui.Row(10, Ui.Button(L.T("登入"), () => SignIn(url.Text, error), accent: true), error));
-            column.Children.Add(Note(L.T("公司有拾音的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。")));
+            column.Children.Add(Note(compact
+                ? L.T("填入公司給的企業伺服器網址、按「登入」，在打開的網頁用公司帳號登入。登入後用公司在伺服器設定的模型整理，不用自己的 key；錄音也會交給公司的伺服器轉錄（可以到「進階」改回這台電腦）。")
+                : L.T("公司有拾音的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。")));
         }
         return column;
     }

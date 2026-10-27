@@ -108,6 +108,11 @@ public sealed class EnterpriseTests : IDisposable
             }
             if (!Authorized()) { await Error(c, Disabled ? 403 : 401, Disabled ? "forbidden" : "unauthorized"); return; }
             if (Busy) { await Error(c, 503, "busy", "伺服器忙"); return; }
+            if (method == "GET" && path == "/api/v1/llm/models")
+            {
+                await Json(c, 200, JsonNode.Parse("""{"object":"list","data":[{"id":"gemma-3-27b","name":"機房的 Gemma 3","default":true},{"id":"claude-sonnet-5-5","name":"Claude"}]}""")!.AsObject());
+                return;
+            }
             if (method == "POST" && path == "/api/v1/llm/chat/completions")
             {
                 LastLlmAuth = auth;
@@ -538,12 +543,40 @@ public sealed class EnterpriseTests : IDisposable
     [Fact]
     public async Task SummarizerReadinessFollowsTheLogin()
     {
+        // 登入時伺服器還沒有模型：已登入但不能整理（R51.3）
+        fake.Llm = false;
         var server = await SignedIn();
-        settings.EnterpriseLlmReady = () => server.LlmReady;
+        settings.EnterpriseSignedIn = () => server.IsSignedIn;
+        settings.EnterpriseHasModels = () => server.Account?.Llm == true;
         settings.Set(AppSettings.ProviderKey, "enterprise");
+        Assert.Equal(SummarizerProblemKind.EnterpriseNoModels, settings.SummarizerProblem?.Kind);
+        // 管理者在後台加了模型：重新讀伺服器的資訊就好，不用重新登入（R51.5）
+        fake.Llm = true;
+        var changed = 0;
+        server.Changed += () => changed++;
+        await server.RefreshInfo();
+        Assert.Equal(1, changed);
         Assert.Null(settings.SummarizerProblem);
+        await server.RefreshInfo();
+        Assert.Equal(1, changed);     // 沒變就不通知
         await server.SignOut();
         settings.Set(AppSettings.ProviderKey, "enterprise");
         Assert.Equal(SummarizerProblemKind.EnterpriseSignedOut, settings.SummarizerProblem?.Kind);
+    }
+
+    /// <summary>公司在後台設定的模型（R51.1）：名稱給人看、id 給伺服器、哪個是預設</summary>
+    [Fact]
+    public async Task CompanyModelsComeFromTheServer()
+    {
+        var server = await SignedIn();
+        var llm = new LLMClient(new MemoryKeys(), new NoTools(), new ProcessRunner(), http) { Enterprise = server };
+        var models = await llm.EnterpriseModels(CancellationToken.None);
+        Assert.NotNull(models);
+        Assert.Equal(["機房的 Gemma 3", "Claude"], models!.Select(m => m.Name));
+        Assert.Equal("gemma-3-27b", models.Single(m => m.IsDefault).Id);
+        Assert.Equal(["gemma-3-27b", "claude-sonnet-5-5"], await llm.ListModels(LLMProvider.Enterprise, CancellationToken.None));
+        Assert.Equal("公司", LLMProvider.Enterprise.Label());
+        await server.SignOut();
+        Assert.Null(await llm.EnterpriseModels(CancellationToken.None));
     }
 }

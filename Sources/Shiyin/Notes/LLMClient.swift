@@ -1,7 +1,7 @@
 import Foundation
 
 enum LLMProvider: String, CaseIterable, Identifiable {
-    /// enterprise：企業伺服器（R51、design §36.3），登入企業伺服器、伺服器有提供整理才出現在選單
+    /// enterprise：公司的企業伺服器（R51、design §36.3），選單一直有（D124），模型由公司的後台設定
     case claude, codex, anthropic, openai, gemini, openaiCompatible, enterprise, none
     var id: String { rawValue }
 
@@ -13,7 +13,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         case .openai: return "OpenAI API"
         case .gemini: return "Gemini API"
         case .openaiCompatible: return String(localized: "OpenAI 相容 API")
-        case .enterprise: return String(localized: "企業伺服器")
+        case .enterprise: return String(localized: "公司")
         case .none: return String(localized: "不整理")
         }
     }
@@ -27,7 +27,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         case .openai: return "OpenAI API"
         case .gemini: return "Gemini API"
         case .openaiCompatible: return String(localized: "OpenAI 相容 API")
-        case .enterprise: return String(localized: "企業伺服器")
+        case .enterprise: return String(localized: "公司的模型")
         case .none: return String(localized: "不整理")
         }
     }

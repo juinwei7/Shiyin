@@ -11,8 +11,10 @@ enum SummarizerProblem: Equatable {
     case missingKey(LLMProvider)
     /// OpenAI 相容 API 沒填網址或模型
     case incomplete
-    /// 整理工具選企業伺服器，但還沒登入、登入失效，或伺服器沒有提供整理（R51.3）
+    /// 整理工具選「公司」，但還沒登入企業伺服器或登入失效（R51.3）
     case enterpriseSignedOut
+    /// 整理工具選「公司」，已登入但伺服器還沒有整理用的模型（R51.3）
+    case enterpriseNoModels
     /// 設定問題的失敗之後暫停自動整理（R46.3、§34.4）；String 是那次失敗的說明
     case paused(LLMProvider, String)
 
@@ -30,7 +32,8 @@ enum SummarizerProblem: Equatable {
                 : String(localized: "Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。")
         case .missingKey(let provider): return String(localized: "還沒有填 \(provider.shortLabel) 的 API key，請到設定 → 整理工具填寫")
         case .incomplete: return String(localized: "還沒有填 OpenAI 相容 API 的網址或模型，請到設定 → 整理工具填寫")
-        case .enterpriseSignedOut: return String(localized: "企業伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入")
+        case .enterpriseSignedOut: return String(localized: "公司的伺服器還沒登入或登入已失效，請到設定 → 整理工具登入")
+        case .enterpriseNoModels: return String(localized: "公司的伺服器還沒有提供整理用的模型，請通知管理者")
         case .paused(_, let detail): return detail
         }
     }
@@ -67,7 +70,8 @@ extension AppSettings {
         case .openaiCompatible:
             if OpenAICompatibleAPI.normalized(OpenAICompatibleAPI.savedBaseURL) == nil || model.isEmpty { return .incomplete }
         case .enterprise:
-            if !EnterpriseServer.shared.isSignedIn || EnterpriseServer.shared.account?.llm != true { return .enterpriseSignedOut }
+            if !EnterpriseServer.shared.isSignedIn { return .enterpriseSignedOut }
+            if EnterpriseServer.shared.account?.llm != true { return .enterpriseNoModels }
         }
         if let pause = SummarizerPause.current(for: provider) { return .paused(provider, pause.message) }
         return nil

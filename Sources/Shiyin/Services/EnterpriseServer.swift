@@ -50,7 +50,10 @@ final class EnterpriseServer {
     }
 
     private(set) var account: Account?
-    private(set) var status: Status = .signedOut
+    private(set) var status: Status = .signedOut {
+        // 登入、失效、重新登入：整理工具「準備好了沒」要重算（R51.3；只看帳號的話，登入完成前算的會留著「登入已失效」）
+        didSet { if status != oldValue { NotificationCenter.default.post(name: .summarizerStateChanged, object: nil) } }
+    }
 
     @ObservationIgnored private var accessToken: String?
     @ObservationIgnored private var accessExpires = Date.distantPast
@@ -145,6 +148,21 @@ final class EnterpriseServer {
         if info.apiVersion < Self.apiVersion { throw Failure.serverTooOld }
         if info.minAppApi > Self.apiVersion { throw Failure.appTooOld }
         return info
+    }
+
+    /// 重新讀伺服器的資訊（R51.5、design §36.3）：公司在後台加了模型、改了名稱或轉錄引擎；連不上就保留舊的。不讀鑰匙圈
+    func refreshInfo() async {
+        guard let url = savedURL, let before = account, let info = try? await fetchInfo(url) else { return }
+        // 讀的時候登出、換了帳號：不要蓋掉
+        guard let current = account, current.email == before.email else { return }
+        var updated = current
+        updated.serverName = info.name
+        updated.engine = info.transcription.engine
+        updated.llm = info.llm
+        if updated != current {
+            save(updated)
+            NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
+        }
     }
 
     // MARK: 登入（M§36.2）

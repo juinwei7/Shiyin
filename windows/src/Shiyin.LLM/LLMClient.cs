@@ -4,7 +4,7 @@ using Shiyin.Notes;
 
 namespace Shiyin.LLM;
 
-/// <summary>Enterprise：企業伺服器（R51、M§36.3），登入企業伺服器、伺服器有提供整理才出現在選單</summary>
+/// <summary>Enterprise：公司的企業伺服器（R51、M§36.3），選單一直有（D124），模型由公司的後台設定</summary>
 public enum LLMProvider { Claude, Codex, Anthropic, OpenAI, Gemini, OpenAICompatible, Enterprise, None }
 
 public static class LLMProviders
@@ -34,7 +34,7 @@ public static class LLMProviders
         LLMProvider.OpenAI => "OpenAI API",
         LLMProvider.Gemini => "Gemini API",
         LLMProvider.OpenAICompatible => L.T("OpenAI 相容 API"),
-        LLMProvider.Enterprise => L.T("企業伺服器"),
+        LLMProvider.Enterprise => L.T("公司"),
         _ => L.T("不整理"),
     };
 
@@ -44,6 +44,7 @@ public static class LLMProviders
         LLMProvider.Claude => "Claude",
         LLMProvider.Codex => "Codex",
         LLMProvider.OpenAICompatible or LLMProvider.None => p.Label(),
+        LLMProvider.Enterprise => L.T("公司的模型"),
         _ => p.Label(),
     };
 
@@ -246,4 +247,7 @@ public sealed class LLMClient(IKeyStore keys, IToolLocator tools, ProcessRunner 
 
     public Task<List<string>> ListModels(LLMProvider provider, CancellationToken cancel) =>
         Backend(provider, "")?.ListModels(cancel) ?? Task.FromResult(new List<string>());
+
+    /// <summary>公司在後台設定的模型（R51.1）；取不到是 null</summary>
+    public Task<List<EnterpriseModel>?> EnterpriseModels(CancellationToken cancel) => new EnterpriseApi(this, "").Models(cancel);
 }
