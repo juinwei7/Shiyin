@@ -4,7 +4,8 @@ using Shiyin.Notes;
 
 namespace Shiyin.LLM;
 
-public enum LLMProvider { Claude, Codex, Anthropic, OpenAI, Gemini, OpenAICompatible, None }
+/// <summary>Enterprise：企業伺服器（R51、M§36.3），登入企業伺服器、伺服器有提供整理才出現在選單</summary>
+public enum LLMProvider { Claude, Codex, Anthropic, OpenAI, Gemini, OpenAICompatible, Enterprise, None }
 
 public static class LLMProviders
 {
@@ -19,6 +20,7 @@ public static class LLMProviders
         LLMProvider.OpenAI => "openai",
         LLMProvider.Gemini => "gemini",
         LLMProvider.OpenAICompatible => "openaiCompatible",
+        LLMProvider.Enterprise => "enterprise",
         _ => "none",
     };
 
@@ -32,6 +34,7 @@ public static class LLMProviders
         LLMProvider.OpenAI => "OpenAI API",
         LLMProvider.Gemini => "Gemini API",
         LLMProvider.OpenAICompatible => L.T("OpenAI 相容 API"),
+        LLMProvider.Enterprise => L.T("企業伺服器"),
         _ => L.T("不整理"),
     };
 
@@ -70,7 +73,7 @@ public static class LLMProviders
 
     /// <summary>結果格式不對時附加的說明：OpenAI 相容 API 的模型不一定支援 JSON 輸出</summary>
     public static string BadOutputHint(this LLMProvider p) =>
-        p == LLMProvider.OpenAICompatible ? " " + L.T("這個模型可能不支援 JSON 輸出，可以換一個模型試試。") : "";
+        p is LLMProvider.OpenAICompatible or LLMProvider.Enterprise ? " " + L.T("這個模型可能不支援 JSON 輸出，可以換一個模型試試。") : "";
 }
 
 /// <summary>Rejected：key 錯誤或沒權限（401、403、key 不對的 400）；Limited：429、CLI 的 usage limit；
@@ -162,6 +165,21 @@ public interface IKeyStore
     bool Exists(string account);
 }
 
+/// <summary>企業伺服器的登入（M§36.3）：Services 的 EnterpriseServer 實作，整理工具用它拿 access token</summary>
+public interface IEnterpriseAccess
+{
+    /// <summary>伺服器的網址；沒有登入過是 null</summary>
+    string? BaseUrl { get; }
+    /// <summary>登入了、伺服器有提供整理</summary>
+    bool LlmReady { get; }
+    /// <summary>還有效的 access token；登入失效時丟 <see cref="LLMException"/>（NotConfigured）</summary>
+    Task<string> AccessToken(CancellationToken cancel);
+    /// <summary>伺服器說 access token 不能用了：下次用 refresh token 換新的</summary>
+    void InvalidateAccess();
+    /// <summary>伺服器給的訊息用 app 的介面語言（Accept-Language）</summary>
+    string Language { get; }
+}
+
 /// <summary>找外部程式（claude、codex），找不到回傳 null（design-windows §10）</summary>
 public interface IToolLocator
 {
@@ -192,6 +210,9 @@ public sealed class LLMClient(IKeyStore keys, IToolLocator tools, ProcessRunner 
     /// <summary>OpenAI 相容 API 的網址（設定裡的 openaiCompatibleBaseURL）</summary>
     public Func<string> CompatibleBaseUrl { get; set; } = () => "";
 
+    /// <summary>企業伺服器（M§36.3）；沒有就是 null</summary>
+    public IEnterpriseAccess? Enterprise { get; set; }
+
     internal IKeyStore Keys => keys;
     internal IToolLocator Tools => tools;
     internal ProcessRunner Runner => runner;
@@ -207,6 +228,7 @@ public sealed class LLMClient(IKeyStore keys, IToolLocator tools, ProcessRunner 
         LLMProvider.OpenAI => new OpenAIApi(this, model.Length == 0 ? provider.DefaultModel() : model),
         LLMProvider.Gemini => new GeminiApi(this, model.Length == 0 ? provider.DefaultModel() : model),
         LLMProvider.OpenAICompatible => new OpenAICompatibleApi(this, model, Base(provider, CompatibleBaseUrl())),
+        LLMProvider.Enterprise => new EnterpriseApi(this, model),
         _ => null,
     };
 

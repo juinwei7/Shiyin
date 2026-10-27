@@ -15,7 +15,8 @@ public sealed record ReviewAnswerJson(string Time, string Question, string Answe
 /// <summary>整理工作的 payload：draft 是用即時逐字稿整理草稿（M§21.3）</summary>
 public sealed record SummarizePayload(bool Draft = false);
 /// <summary>轉錄工作的 payload（M§35.3）：Until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）</summary>
-public sealed record TranscribePayload(double? Until);
+/// <summary>until：只轉錄到第幾秒（M§35.3）；remoteId：企業伺服器上還沒拿到結果的工作（M§36.3），app 重開時接著傳、接著等</summary>
+public sealed record TranscribePayload(double? Until, string? RemoteId = null);
 
 /// <summary>執行中的工作（顯示用）</summary>
 public sealed class RunningJob(Job job)
@@ -26,6 +27,8 @@ public sealed class RunningJob(Job job)
     public string Stage { get; internal set; } = "";
     public double? Progress { get; internal set; }
     public LLMProvider? Provider { get; internal set; }
+    /// <summary>轉錄交給企業伺服器時的狀態：有值就顯示「改在這台電腦轉錄」（R50.3、R50.5）</summary>
+    public ServerNote? Server { get; internal set; }
     internal CancellationTokenSource Cancel { get; } = new();
 
     /// <summary>預估剩餘秒數：已經過時間 ÷ 目前進度</summary>
@@ -155,6 +158,8 @@ public sealed class JobRunner
     /// </summary>
     bool PrepareTranscription()
     {
+        // 轉錄用企業伺服器：這台電腦不用模型（R50.7），說話者也在伺服器辨識
+        if (UsesEnterprise) return true;
         var waiting = false;
         if (!settings.UseFastTranscriber)
             foreach (var language in Enum.GetValues<MeetingLanguage>())
@@ -274,7 +279,8 @@ public sealed class JobRunner
             using var doc = JsonDocument.Parse(json ?? "{}");
             var root = doc.RootElement;
             if (typeof(T) == typeof(TranscribePayload))
-                return new TranscribePayload(root.TryGetProperty("until", out var u) && u.ValueKind == JsonValueKind.Number ? u.GetDouble() : null) as T;
+                return new TranscribePayload(root.TryGetProperty("until", out var u) && u.ValueKind == JsonValueKind.Number ? u.GetDouble() : null,
+                    root.TryGetProperty("remoteId", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null) as T;
             if (typeof(T) == typeof(SummarizePayload))
                 return new SummarizePayload(root.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True) as T;
             if (typeof(T) == typeof(RevisePayload))
@@ -287,7 +293,12 @@ public sealed class JobRunner
 
     public static string Encode(SummarizePayload payload) => new System.Text.Json.Nodes.JsonObject { ["draft"] = payload.Draft }.ToJsonString();
 
-    public static string Encode(TranscribePayload payload) => new System.Text.Json.Nodes.JsonObject { ["until"] = payload.Until }.ToJsonString();
+    public static string Encode(TranscribePayload payload)
+    {
+        var o = new System.Text.Json.Nodes.JsonObject { ["until"] = payload.Until };
+        if (payload.RemoteId is not null) o["remoteId"] = payload.RemoteId;
+        return o.ToJsonString();
+    }
 
     /// <summary>最後一次完成的轉錄只做到第幾秒（M§35.3）；轉錄了全部是 null</summary>
     public static double? TranscribedUntil(string? payload) => Decode<TranscribePayload>(payload)?.Until;
@@ -304,27 +315,77 @@ public sealed class JobRunner
 
     // MARK: 轉錄（M§6）
 
+    /// <summary>企業伺服器（M§36.3）；沒有就是 null</summary>
+    public EnterpriseServer? Enterprise { get; init; }
+
+    /// <summary>正式轉錄用企業伺服器（R50.1）：選了而且登入過（登入失效也算，工作停著等重新登入）</summary>
+    public bool UsesEnterprise => Enterprise is { HasAccount: true } && settings.TranscriptionEngine == "server";
+
+    /// <summary>使用者按了「改在這台電腦轉錄」的工作（R50.5）：只在記憶體，app 重開後照設定</summary>
+    readonly HashSet<long> localJobs = [];
+
+    /// <summary>這場會議正在等企業伺服器的轉錄改在這台電腦轉（R50.5）</summary>
+    public void TranscribeLocally(long meetingId)
+    {
+        lock (gate)
+        {
+            if (!running.TryGetValue(JobLane.Transcribe, out var state) || state.Job.MeetingId != meetingId || state.Job.Id is not long id) return;
+            localJobs.Add(id);
+        }
+        Log.Info("transcription switched to this computer");
+    }
+
+    bool IsLocal(Job job) { lock (gate) return job.Id is long id && localJobs.Contains(id); }
+
     void Transcribe(Job job, RunningJob state, CancellationToken cancel)
     {
         if (db.Meeting(job.MeetingId) is not { } meeting) return;
         var startedAt = DateTime.UtcNow;
+        var payload = Decode<TranscribePayload>(job.Payload) ?? new TranscribePayload(null);
         var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, db.Glossary().Select(t => t.Term).ToList(),
             meeting.Channels, meeting.MinSpeakers);
-        if (options.Engine == TranscriptionOptions.EngineKind.Fast && !settings.UseFastTranscriber)
-            Log.Info("transcription model not ready, using the fast recognizer");
-        var pipeline = new TranscriptionPipeline(options, decoder, engines, options.Model ?? models.PathOf(ModelStore.Transcription(options.Language)))
-        {
-            Stage = s => state.Stage = s,
-            Progress = p => state.Progress = p,
-            ShouldContinue = () => IsStillRunning(job),
-        };
         // 沒人說話太久而自動停止的錄音：只轉錄到最後說話後 15 秒，錄音檔不動（M§35.3、R48.3）
-        var until = Decode<TranscribePayload>(job.Payload)?.Until;
+        var until = payload.Until;
         var trimmed = until is double u ? AudioTrim.Prefix(paths.AudioPath(meeting), u, paths.Tmp) : null;
         if (trimmed is not null) Log.Info($"transcribing only the first {(int)until!.Value}s (idle auto-stop)");
-        TranscriptionResult? ran;
-        try { ran = pipeline.Run(trimmed ?? paths.AudioPath(meeting), cancel); }
-        finally { if (trimmed is not null) try { Directory.Delete(Path.GetDirectoryName(trimmed)!, true); } catch (IOException) { } }
+        TranscriptionResult? ran = null;
+        var transcribedWith = options.TranscribedWith;
+        var onServer = false;
+        try
+        {
+            if (UsesEnterprise && !IsLocal(job))
+            {
+                try
+                {
+                    if (TranscribeOnServer(job, state, trimmed ?? paths.AudioPath(meeting), options, payload, cancel) is not { } remote) return;
+                    (ran, transcribedWith, onServer) = (remote.Transcription, remote.TranscribedWith, true);
+                }
+                catch (ServerTranscriber.SwitchToLocalException)
+                {
+                    // 改在這台電腦轉（R50.5）：用本機的引擎，模型還沒下載好就先下載、先用快速辨識（同 D35）
+                    state.Server = null;
+                    if (!settings.UseFastTranscriber) models.AutoStart(ModelStore.Model.Breeze);
+                    models.AutoStart(ModelStore.Model.Diarization);
+                }
+            }
+            if (ran is null)
+            {
+                if (options.Engine == TranscriptionOptions.EngineKind.Fast && !settings.UseFastTranscriber)
+                    Log.Info("transcription model not ready, using the fast recognizer");
+                var pipeline = new TranscriptionPipeline(options, decoder, engines, options.Model ?? models.PathOf(ModelStore.Transcription(options.Language)))
+                {
+                    Stage = s => state.Stage = s,
+                    Progress = p => state.Progress = p,
+                    ShouldContinue = () => IsStillRunning(job),
+                };
+                ran = pipeline.Run(trimmed ?? paths.AudioPath(meeting), cancel);
+            }
+        }
+        finally
+        {
+            if (trimmed is not null) try { Directory.Delete(Path.GetDirectoryName(trimmed)!, true); } catch (IOException) { }
+            if (job.Id is long jobId) lock (gate) localJobs.Remove(jobId);
+        }
         if (ran is not { } result) return;
         // 只轉錄前段時，會議長度維持整個錄音（播放、資訊列用）
         var savedDuration = trimmed is not null ? Math.Max(meeting.DurationSeconds ?? 0, result.Duration) : result.Duration;
@@ -334,9 +395,9 @@ public sealed class JobRunner
             Speaker = result.Speakers[i], Kind = "final", Channel = result.Channels[i],
         }).ToList();
         db.SaveTranscript(job.MeetingId, segments, (int)Math.Round(savedDuration, MidpointRounding.AwayFromZero),
-            result.Speakers.Max() ?? 0, result.Voices, options.TranscribedWith);
+            result.Speakers.Max() ?? 0, result.Voices, transcribedWith);
         // 匿名使用統計（M§30.1）：語音長度、實際花的時間、引擎；說話者辨識跟 pipeline 的條件一樣
-        Usage?.Transcribed(result.Duration, (DateTime.UtcNow - startedAt).TotalSeconds, options.TranscribedWith, meeting.MeetingLanguage,
+        Usage?.Transcribed(result.Duration, (DateTime.UtcNow - startedAt).TotalSeconds, onServer ? "server" : transcribedWith, meeting.MeetingLanguage,
             meeting.Source == "import", options.Diarize && result.Duration > 5);
         // 說話者辨識的碰撞率（M§24.3）：可能把人併在一起時，逐字稿分頁會提示
         db.SetSpeakerCheck(job.MeetingId, result.DiarizationQuality?.MergeRisk);
@@ -359,6 +420,39 @@ public sealed class JobRunner
             if (db.Speakers(job.MeetingId).Any(s => s.NameSource == "default")) db.Enqueue(job.MeetingId, JobKind.NameSpeakers);
         }
         Wake();
+    }
+
+    /// <summary>
+    /// 交給企業伺服器（M§36.3、design-windows §12.11）：解碼成 16 kHz 單聲道、寫成 16-bit WAV 上傳；說話者也在伺服器辨識（聲紋是同一個模型）。
+    /// 回傳 null 表示被取消
+    /// </summary>
+    ServerTranscriber.Result? TranscribeOnServer(Job job, RunningJob state, string audio, TranscriptionOptions options, TranscribePayload payload,
+                                                 CancellationToken cancel)
+    {
+        state.Stage = L.T("讀取錄音");
+        var folder = Path.Combine(paths.Tmp, "enterprise-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var wav = Path.Combine(folder, "upload.wav");
+            var (bytes, sha256) = ServerTranscriber.WriteWav(decoder.Decode(audio, cancel), wav);
+            if (!IsStillRunning(job)) return null;
+            var transcriber = new ServerTranscriber(Enterprise!)
+            {
+                Stage = s => state.Stage = s,
+                Progress = p => state.Progress = p,
+                ShouldContinue = () => IsStillRunning(job),
+                SwitchToLocal = () => IsLocal(job),
+                OnServer = note => { state.Server = note; Changed?.Invoke(); },
+                OnRemoteId = remoteId => { if (job.Id is long id) db.SetJobPayload(id, Encode(payload with { RemoteId = remoteId })); },
+            };
+            // 說話者在伺服器辨識：不看這台電腦有沒有說話者辨識的模型
+            return transcriber.Transcribe(wav, bytes, sha256, options with { Diarize = settings.Diarize }, payload.RemoteId, cancel).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            try { Directory.Delete(folder, true); } catch (IOException) { }
+        }
     }
 
     // MARK: 重新辨識說話者（M§23.3、R22）

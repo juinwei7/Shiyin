@@ -135,7 +135,8 @@ public sealed class DetailView
         {
             if (statusLiveText is not null && host.Controller.Status(Detail) is MeetingStatus.Transcribing t)
             {
-                var text = TranscribingText(t.Progress, t.Stage, host.Runner.RunningJob(Detail.Meeting.Id!.Value)?.Remaining);
+                var running = host.Runner.RunningJob(Detail.Meeting.Id!.Value);
+                var text = ServerText(running) ?? TranscribingText(t.Progress, t.Stage, running?.Remaining) + NoteSuffix(running);
                 if (statusLiveText.Text != text) statusLiveText.Text = text;
                 if (statusLiveProgress is not null && t.Progress is double p) statusLiveProgress.Value = p * 100;
             }
@@ -157,7 +158,7 @@ public sealed class DetailView
         var helpers = string.Join(",", Enum.GetValues<JobLane>().Select(l => host.Runner.Running(l)).Where(h => h is not null && h.Job.MeetingId == id).Select(h => h!.Job.Kind));
         return state switch
         {
-            MeetingStatus.Transcribing t => $"transcribing|{t.Stage}|{t.Progress is null}",
+            MeetingStatus.Transcribing t => $"transcribing|{t.Stage}|{t.Progress is null}|{running?.Server is not null}|{running?.Server?.Waiting}",
             MeetingStatus.Failed f => $"failed|{f.Kind}|{f.Error}",
             _ => $"{state.GetType().Name}|{running?.Job.Kind}|{running?.Provider}|{Detail.LatestJob?.Kind}",
         } + "|" + helpers;
@@ -318,15 +319,22 @@ public sealed class DetailView
         var state = host.Controller.Status(Detail);
         var running = host.Runner.RunningJob(id);
         Button Cancel() => Ui.Button(L.T("取消"), () => host.Controller.CancelJobs(id));
+        // 企業伺服器在排隊、連不上時，可以改在這台電腦轉錄（R50.5）
+        Button Local() => Ui.Button(L.T("改在這台電腦轉錄"), () => host.Runner.TranscribeLocally(id));
         var warm = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 0xB9, 0x7F, 0x06));
         switch (state)
         {
             case MeetingStatus.Queued:
                 return Banner(Ui.Text(Detail.LatestJob?.Kind == JobKind.Transcribe ? L.T("排隊等待轉錄") : L.T("排隊等待整理"), 13), Cancel(), warm);
+            case MeetingStatus.Transcribing when running?.Server is { Waiting: true } waiting:
+                // 在等企業伺服器（連不上、登入失效，R50.5）：不顯示百分比，可以改在這台電腦轉錄
+                statusLiveText = Ui.Text(waiting.Text, 13, maxLines: 2);
+                return Banner(Ui.Row(10, new SymbolIcon(Symbol.Clock), statusLiveText), Ui.Row(8, Local(), Cancel()), warm);
             case MeetingStatus.Transcribing t:
                 statusLiveProgress = t.Progress is double p ? new ProgressBar { Value = p * 100, Width = 160, Foreground = Ui.Signal } : null;
-                statusLiveText = Ui.Text(TranscribingText(t.Progress, t.Stage, running?.Remaining), 13);
-                return Banner(Ui.Row(10, statusLiveText, (UIElement?)statusLiveProgress ?? new ProgressRing { IsActive = true, Width = 16, Height = 16 }), Cancel(), warm);
+                statusLiveText = Ui.Text(TranscribingText(t.Progress, t.Stage, running?.Remaining) + NoteSuffix(running), 13);
+                return Banner(Ui.Row(10, statusLiveText, (UIElement?)statusLiveProgress ?? new ProgressRing { IsActive = true, Width = 16, Height = 16 }),
+                    running?.Server is not null ? Ui.Row(8, Local(), Cancel()) : Cancel(), warm);
             case MeetingStatus.Summarizing:
                 var provider = running?.Provider?.ShortLabel() ?? "";
                 var text = running?.Job.Kind == JobKind.Revise ? L.F("正在用 %@ 依你的回答修正會議紀錄…", provider) : L.F("正在用 %@ 整理會議紀錄…", provider);
@@ -369,6 +377,12 @@ public sealed class DetailView
         }
         return null;
     }
+
+    /// <summary>在等企業伺服器時的說明（不顯示百分比）；沒在等是 null</summary>
+    static string? ServerText(RunningJob? running) => running?.Server is { Waiting: true } s ? s.Text : null;
+
+    /// <summary>企業伺服器的說明（排隊第幾）接在百分比後面</summary>
+    static string NoteSuffix(RunningJob? running) => running?.Server is { Text.Length: > 0, Waiting: false } s ? L.F("，%@", s.Text) : "";
 
     static string TranscribingText(double? progress, string stage, TimeSpan? remaining)
     {

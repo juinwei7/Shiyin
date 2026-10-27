@@ -237,6 +237,9 @@ public sealed class AppSettings
         SummarizerChanged?.Invoke();
     }
 
+    /// <summary>企業伺服器登入了、有提供整理（R51.3）；App 接上 EnterpriseServer</summary>
+    public Func<bool> EnterpriseLlmReady { get; set; } = () => false;
+
     /// <summary>整理工具設定的指紋：換工具、改模型或網址、存或刪 key 都會變</summary>
     string Signature(LLMProvider provider) =>
         string.Join("|", provider.Code(), Model, provider == LLMProvider.OpenAICompatible ? CompatibleBaseUrl : "", KeyGeneration);
@@ -260,6 +263,9 @@ public sealed class AppSettings
                     break;
                 case LLMProvider.OpenAICompatible:
                     if (OpenAICompatibleApi.Normalized(CompatibleBaseUrl) is null || Model.Length == 0) return new(SummarizerProblemKind.Incomplete, provider);
+                    break;
+                case LLMProvider.Enterprise:
+                    if (!EnterpriseLlmReady()) return new(SummarizerProblemKind.EnterpriseSignedOut, provider);
                     break;
             }
             PauseState? paused;

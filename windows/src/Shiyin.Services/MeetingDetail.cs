@@ -22,6 +22,7 @@ public abstract record MeetingStatus
     {
         Recording => L.T("錄音中"),
         Queued => L.T("排隊中"),
+        Transcribing t when IsWaitingForServer(t.Stage) => t.Stage,
         Transcribing t => Name(t) + (t.Progress is double p ? $" {(int)(p * 100)}%" : ""),
         Summarizing => L.T("整理中"),
         Failed f => f.Kind == JobKind.Transcribe ? L.T("轉錄失敗") : L.T("整理失敗"),
@@ -32,6 +33,9 @@ public abstract record MeetingStatus
 
     static string Name(Transcribing t) =>
         t.Stage.Length == 0 || t.Stage == L.T("轉錄") ? L.T("轉錄中") : L.F("%@中", t.Stage);
+
+    /// <summary>在等企業伺服器（R50.5）：不接「中」、不顯示百分比</summary>
+    public static bool IsWaitingForServer(string stage) => stage == L.T("等企業伺服器");
 
     public bool IsActive => this is Queued or Transcribing or Summarizing or Recording;
 }

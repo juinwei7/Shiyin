@@ -29,6 +29,8 @@ public sealed class AppHost
     public ModelStore Models { get; }
     public GpuAcceleration Gpu { get; }
     public IKeyStore Keys { get; }
+    /// <summary>企業伺服器（M§36、design-windows §12.11）</summary>
+    public EnterpriseServer Enterprise { get; }
     public LLMClient Llm { get; }
     public JobRunner Runner { get; }
     public Recorder Recorder { get; }
@@ -82,7 +84,10 @@ public sealed class AppHost
         var runner = new ProcessRunner { OnStarted = children.Add };
         // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）
         Tools = Debug && Settings.Flag("debugNoCli", false) ? new NoCliTools(new WindowsToolLocator()) : new WindowsToolLocator();
-        Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl };
+        // 企業伺服器：refresh token 跟 API key 存在同一個地方（認證管理員；DEBUG 只放記憶體）；DEBUG 可以連本機的 http
+        Enterprise = new EnterpriseServer(Settings, Http, new KeySecrets(Keys), Version, Environment.MachineName) { AllowLocalHttp = Debug };
+        Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl, Enterprise = Enterprise };
+        Settings.EnterpriseLlmReady = () => Enterprise.LlmReady;
         // 沒選過整理工具時用找得到的 CLI（R35.1）：要掃過 PATH 的每個資料夾，快取 30 秒
         Settings.DetectCli = CachedCliDetector(Tools);
         // 整理工具準備好了沒（R45.1、M§34.1）：有沒有 CLI（快取 30 秒）、有沒有 key（只看有沒有）、登入狀態的快取
@@ -97,7 +102,7 @@ public sealed class AppHost
         };
         var engines = new SpeechEngines(Models, () => Gpu.QwenCudaReady);
         var power = new PowerRequests();
-        Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage };
+        Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage, Enterprise = Enterprise };
         Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes));
         // 忘了停止錄音（M§35.2）：DEBUG 用 --set idleRemindSeconds=60 --set idleStopSeconds=180 縮短
         if (Debug)
@@ -121,6 +126,50 @@ public sealed class AppHost
         {
             Updates = new VelopackUpdates(Http, updateSource);
             Updater = new Updater(Updates, updateKey, Settings, () => Recorder.IsRecording || Runner.IsBusy);
+        }
+    }
+
+    /// <summary>
+    /// 瀏覽器登入完回到拾音（shiyin://auth?code=…&amp;state=…，design-windows §12.11）：換 token；登入後預設轉錄、整理都用企業伺服器（R49.3），
+    /// 設定頁可以再取消。state 對不上（網頁裡的連結、舊的登入）就忽略
+    /// </summary>
+    public async Task CompleteEnterpriseSignIn(string url)
+    {
+        try
+        {
+            await Enterprise.CompleteSignIn(new Uri(url));
+            ApplyEnterpriseDefaults();
+            Post(() => App.Current.EnterpriseSignedIn(null));
+        }
+        catch (EnterpriseException e) when (e.Kind == EnterpriseFailure.Cancelled) { Log.Info("enterprise callback ignored"); }
+        catch (Exception e) when (e is EnterpriseException or UriFormatException)
+        {
+            Post(() => App.Current.EnterpriseSignedIn(e.Message));
+        }
+    }
+
+    /// <summary>登入後預設轉錄、整理都用企業伺服器（R49.3），設定頁可以再取消</summary>
+    public void ApplyEnterpriseDefaults()
+    {
+        Settings.Set(AppSettings.TranscriptionEngineKey, "server");
+        if (Enterprise.Account?.Llm == true) Settings.Set(AppSettings.ProviderKey, LLMProvider.Enterprise.Code());
+        Settings.NotifySummarizerChanged();
+        Runner.Wake();
+    }
+
+    /// <summary>EnterpriseServer 存 refresh token 的地方：跟 API key 一樣（SummarizerSetup.SaveKey 的規則）</summary>
+    sealed class KeySecrets(IKeyStore keys) : ISecretStore
+    {
+        public string? Read(string account) => keys.Read(account);
+        public void Save(string account, string value)
+        {
+            if (keys is CredentialStore store) store.Save(account, value);
+            else if (keys is MemoryKeyStore memory) memory.Keys[account] = value;
+        }
+        public void Delete(string account)
+        {
+            if (keys is CredentialStore store) store.Delete(account);
+            else if (keys is MemoryKeyStore memory) memory.Keys.Remove(account);
         }
     }
 

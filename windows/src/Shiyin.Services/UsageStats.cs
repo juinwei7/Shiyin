@@ -126,7 +126,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
     public void Transcribed(double seconds, double wallSeconds, string engine, MeetingLanguage language, bool imported, bool diarized)
     {
         var audio = Whole(seconds);
-        var key = engine switch { "system" => "builtin", "japanese" => "whisperJa", "qwen" => "qwen", _ => "breeze" };
+        var key = engine switch { "system" => "builtin", "japanese" => "whisperJa", "qwen" => "qwen", "server" => "server", _ => "breeze" };
         Add(c =>
         {
             c.Add("transcribedSeconds", audio);

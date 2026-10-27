@@ -7614,6 +7614,28 @@
         }
       }
     },
+    "等企業伺服器：伺服器出錯，%lld 秒後再試": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the enterprise server: server error, retrying in %lld s"
+          }
+        }
+      }
+    },
+    "等企業伺服器：伺服器忙，%lld 秒後再試": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the enterprise server: busy, retrying in %lld s"
+          }
+        }
+      }
+    },
     "等企業伺服器：連不上，%lld 秒後再試": {
       "extractionState": "manual",
       "localizations": {

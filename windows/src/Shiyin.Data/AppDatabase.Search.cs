@@ -202,6 +202,9 @@ public sealed partial class AppDatabase
         return job;
     });
 
+    /// <summary>工作的 payload 換掉（企業伺服器的工作 id，M§36.3）</summary>
+    public void SetJobPayload(long jobId, string? payload) => Write(db => db.Execute("UPDATE jobs SET payload = ? WHERE id = ?", payload, jobId));
+
     /// <summary>取出下一個排隊的工作，改成 running</summary>
     public Job? ClaimNext(JobLane lane)
     {

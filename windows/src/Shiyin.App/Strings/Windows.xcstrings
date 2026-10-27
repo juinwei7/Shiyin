@@ -342,6 +342,28 @@
         }
       }
     },
+    "企業伺服器的憑證不受這台電腦信任，請公司的管理者協助安裝憑證": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This computer doesn't trust the enterprise server's certificate. Ask your company's administrator to install it."
+          }
+        }
+      }
+    },
+    "企業伺服器辨識說話者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifying speakers on the enterprise server"
+          }
+        }
+      }
+    },
     "依回答修正": {
       "extractionState": "manual",
       "localizations": {
@@ -452,6 +474,17 @@
         }
       }
     },
+    "在打開的網頁登入，登入完會回到拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in on the page that opened; you'll come back to Shiyin afterwards"
+          }
+        }
+      }
+    },
     "完整的授權條款": {
       "extractionState": "manual",
       "localizations": {
@@ -481,6 +514,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saved in Credential Manager (type a new one to replace it)"
+          }
+        }
+      }
+    },
+    "已登入企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in to the enterprise server"
           }
         }
       }
@@ -1234,6 +1278,17 @@
         }
       }
     },
+    "轉錄：錄音會送到 %@（公司的伺服器），轉完就刪。說話者辨識也在伺服器上做，聲紋只存在這台電腦；筆記、會議紀錄不會因為轉錄送出。伺服器用的轉錄引擎：%@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription: recordings are sent to %1$@ (your company's server) and deleted after transcription. Speakers are also identified on the server; voiceprints stay on this computer, and notes and meeting notes are not sent for transcription. Transcription engine on the server: %2$@."
+          }
+        }
+      }
+    },
     "這個格式在這裡不能匯出": {
       "extractionState": "manual",
       "localizations": {
@@ -1366,6 +1421,17 @@
         }
       }
     },
+    "逾時": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "timed out"
+          }
+        }
+      }
+    },
     "遇到問題，可以從設定的「進階」選「回報問題…」，會附上版本和環境（不含會議內容）。": {
       "extractionState": "manual",
       "localizations": {
@@ -1483,6 +1549,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recording and transcription happen only on this PC and are never uploaded."
+          }
+        }
+      }
+    },
+    "錄音會送到 %@（公司的伺服器）轉錄，轉完就刪；說話者辨識也在伺服器上做，聲紋只存在這台電腦。會參考詞彙表。連不上時會等，也可以改在這台電腦轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordings are sent to %@ (your company's server) for transcription and deleted afterwards; speakers are identified on the server too, and voiceprints stay on this computer. Uses the glossary. If the server can't be reached, Shiyin waits, or you can transcribe on this computer instead."
           }
         }
       }

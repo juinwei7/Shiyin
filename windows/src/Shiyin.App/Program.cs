@@ -161,7 +161,21 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     void OpenLinks(IEnumerable<string> arguments)
     {
         if (host is null) return;
-        foreach (var link in arguments.Where(NotificationLinks.IsLink)) host.Notifier.Open(link);
+        foreach (var link in arguments.Where(NotificationLinks.IsLink))
+        {
+            // 企業伺服器的登入回呼（shiyin://auth，design-windows §12.11）
+            if (EnterpriseServer.IsCallback(link)) _ = host.CompleteEnterpriseSignIn(link);
+            else host.Notifier.Open(link);
+        }
+    }
+
+    /// <summary>瀏覽器登入完回到拾音：拉到前面、打開設定的「進階」，失敗時說明原因</summary>
+    public void EnterpriseSignedIn(string? error)
+    {
+        ShowSettings();
+        settings?.Open("advanced");
+        settings?.Refresh();
+        Notice(error ?? L.T("已登入企業伺服器"));
     }
 
     void OpenFiles(IEnumerable<string> arguments)

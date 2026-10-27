@@ -59,6 +59,8 @@ public sealed class GpuAcceleration
             return;
         }
         if (!Applies || settings.GpuPackOffered) return;
+        // 轉錄用企業伺服器時不下載（R50.7）；換回本機的引擎後，下次開啟拾音再判斷
+        if (settings.TranscriptionEngine == "server") return;
         settings.Set(AppSettings.GpuPackOfferedKey, true);
         Log.Info("gpu pack: nvidia found, downloading");
         models.AutoStart(ModelStore.Model.GpuCuda);

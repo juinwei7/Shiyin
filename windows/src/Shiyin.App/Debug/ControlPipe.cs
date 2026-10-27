@@ -179,6 +179,24 @@ public static class ControlPipe
                 host.Settings.DebugModel = args.Length > 2 ? args[2] : null;
                 host.Settings.NotifySummarizerChanged();
                 return Ok;
+            // 企業伺服器（design-windows §12.11）：login <網址> <信箱>（伺服器開發用的登入，不經過瀏覽器，登入後套用預設）、logout、
+            // expire（access token 立刻過期）、local <會議 id>（等於按「改在這台電腦轉錄」）。結果看 state 的 enterprise
+            case "enterprise" when args.Length > 1:
+                switch (args[1])
+                {
+                    case "login" when args.Length > 3:
+                        enterpriseError = null;
+                        _ = Task.Run(async () =>
+                        {
+                            try { await host.Enterprise.DebugDevSignIn(args[2], args[3]); host.ApplyEnterpriseDefaults(); }
+                            catch (Exception e) { enterpriseError = e.Message; }
+                        });
+                        break;
+                    case "logout": _ = Task.Run(() => host.Enterprise.SignOut()); break;
+                    case "expire": host.Enterprise.InvalidateAccess(); break;
+                    case "local" when args.Length > 2 && long.TryParse(args[2], out var meeting): host.Runner.TranscribeLocally(meeting); break;
+                }
+                return Ok;
             case "llmkey" when args.Length > 2 && host.Keys is MemoryKeyStore memory:
                 memory.Keys[args[1]] = args[2];
                 host.Settings.NotifyKeysChanged();   // 等於存了新的 key：解除暫停（M§34.4）
@@ -233,13 +251,19 @@ public static class ControlPipe
         }
     }
 
+    static string? enterpriseError;
+
     static JsonNode State(AppHost host, MainWindow? main)
     {
         var r = host.Recorder;
         var running = new JsonArray();
         foreach (var lane in Enum.GetValues<JobLane>())
             if (host.Runner.Running(lane) is { } job)
-                running.Add(new JsonObject { ["lane"] = lane.Code(), ["meetingId"] = job.Job.MeetingId, ["kind"] = job.Job.Kind.Code(), ["stage"] = job.Stage, ["progress"] = job.Progress });
+                running.Add(new JsonObject
+                {
+                    ["lane"] = lane.Code(), ["meetingId"] = job.Job.MeetingId, ["kind"] = job.Job.Kind.Code(), ["stage"] = job.Stage, ["progress"] = job.Progress,
+                    ["server"] = job.Server is { } note ? new JsonObject { ["text"] = note.Text, ["waiting"] = note.Waiting } : null,
+                });
         var models = new JsonObject();
         foreach (var model in Enum.GetValues<ModelStore.Model>()) models[model.ToString()] = host.Models.StateOf(model).ToString();
         return new JsonObject
@@ -254,6 +278,14 @@ public static class ControlPipe
             ["meetings"] = main?.State.Meetings.Count,
             ["running"] = running,
             ["models"] = models,
+            ["transcriptionEngine"] = host.Settings.TranscriptionEngine,
+            ["provider"] = host.Settings.Provider.Code(),
+            ["enterprise"] = new JsonObject
+            {
+                ["url"] = host.Enterprise.SavedUrl?.ToString(), ["hasAccount"] = host.Enterprise.HasAccount, ["signedIn"] = host.Enterprise.IsSignedIn,
+                ["email"] = host.Enterprise.Account?.Email, ["serverName"] = host.Enterprise.Account?.ServerName,
+                ["expired"] = host.Enterprise.ExpiredMessage, ["error"] = enterpriseError,
+            },
             ["recorder"] = new JsonObject
             {
                 ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,

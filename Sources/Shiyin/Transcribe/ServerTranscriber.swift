@@ -150,8 +150,12 @@ struct ServerTranscriber {
     private func waitForServer(_ failure: EnterpriseServer.Failure, attempt: Int) async throws {
         let setup = failure.isSetupProblem
         let seconds = setup ? 5 : min(300, 30 * (1 << min(attempt - 1, 4)))
-        onServer(ServerNote(text: setup ? (failure.errorDescription ?? "") : String(localized: "等企業伺服器：連不上，\(seconds) 秒後再試"),
-                            waiting: true))
+        let text: String
+        if setup { text = failure.errorDescription ?? "" }
+        else if case .server(let kind, _) = failure { text = kind == "busy" ? String(localized: "等企業伺服器：伺服器忙，\(seconds) 秒後再試")
+                                                                            : String(localized: "等企業伺服器：伺服器出錯，\(seconds) 秒後再試") }
+        else { text = String(localized: "等企業伺服器：連不上，\(seconds) 秒後再試") }
+        onServer(ServerNote(text: text, waiting: true))
         stage(String(localized: "等企業伺服器"))
         log.info("waiting for enterprise server: \(failure.isSetupProblem ? "login" : "unreachable", privacy: .public)")
         for _ in 0..<seconds {
