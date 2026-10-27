@@ -171,6 +171,11 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **麥克風權限**（R27 R1.8）：開啟時回 `E_ACCESSDENIED` 就顯示「拾音沒有麥克風權限」，按「打開設定」打開 `ms-settings:privacy-microphone`（固定的網址）。Windows 之後如果對桌面 app 也個別詢問，照同樣的流程。
 - **開始失敗、中途出問題**：同 Mac 的「錄音的提醒」，Recorder 記下原因（`FailureMessage`、`PermissionDenied`），主視窗顯示一次就清掉。原因要保留原本的說明（例如「找不到可以用的麥克風」），不要換成錯誤代碼。
 
+### 6.3 忘了停止錄音（R48，M§35）
+
+- `Recorder` 記 `LastSpeechAt`，每秒算沒人說話多久：即時逐字稿在跑時，VAD 偵測到說話或出現新的字就算有人說話；沒有即時逐字稿時照 M§35.1 看聲音。暫停時不計時。
+- 15 分鐘提醒（錄音列、系統匣的小視窗、Windows 通知，按鈕「停止錄音」「繼續錄」）、30 分鐘自動停止，自動停止的轉錄工作帶 `until`，照 M§35.2、M§35.3。設定 `idleStop` 同 Mac；DEBUG 用 `--set idleRemindSeconds=…`、`--set idleStopSeconds=…`。
+
 ## 7. 即時逐字稿（R2、R27 R2.1）
 
 - 混音（左右平均，同 Mac 的 MixTap）先經過自動增益，再送進 Silero VAD（門檻 0.35，D61）；VAD 判定在說話時，約每 0.4 秒把這一句目前的聲音整句丟給 SenseVoice 重新辨識，結果當暫定文字；VAD 判定一句結束時（一句最長約 15 秒，超過就切），最後一次的結果當定稿，存成 `kind='live'` 的段落（同 M§5.3）。
