@@ -27,6 +27,19 @@ struct RecordingPanel: View {
                 .padding(.vertical, 8)
                 .background(Color.signal.opacity(0.12))
             }
+            if recorder.idlePrompt {
+                // 忘了停止錄音（design §35.2、R48.1）
+                HStack(spacing: 12) {
+                    Label("好像沒人在說話了，要停止錄音嗎？再 15 分鐘沒人說話會自動停止。", systemImage: "moon.zzz")
+                    Spacer()
+                    Button("繼續錄") { recorder.continueAfterIdle() }
+                    Button("停止錄音") { recorder.stop() }
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
             if let hint = recorder.levelHint {
                 // 收音提醒（design §26.1）
                 HStack(spacing: 12) {

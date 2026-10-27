@@ -90,6 +90,8 @@ struct MeetingDetail: Equatable {
     var speakerUndoLabel: String? = nil
     /// 有上一版會議紀錄可以復原（R44.4）：紀錄分頁的編輯列才顯示「復原上一版」
     var canUndoNotes: Bool { versionCount > 0 }
+    /// 最後幾分鐘沒人說話、沒有轉錄（design §35.3、R48.3）：自動停止的錄音，錄音比轉錄的範圍長 1 分鐘以上才有
+    var untranscribedMinutes: Int? = nil
     /// 待確認的題目對應到哪一條紀錄（R41.1，design §31.1）：載入時算一次，會議紀錄換了就重算（`linkReviewItems`）
     var reviewLinks: [NoteItemRef: [Int]] = [:]
 
@@ -295,6 +297,10 @@ final class AppModel {
         meetingDetector.isRecording = { [weak self] in self?.recorder.isRecording ?? false }
         meetingDetector.onPrompt = { [weak self] in self?.showMeetingPrompt($0) }
         notifier.onMeetingAction = { [weak self] action, bundle in self?.handleMeetingAction(action, bundle: bundle) }
+        notifier.onIdleAction = { [weak self] action in
+            guard let self else { return }
+            if action == "stop" { self.recorder.stop() } else if action == "continue" { self.recorder.continueAfterIdle() }
+        }
         meetingDetector.start()
         BuiltinTemplates.seed(db)
         // claude、codex 的登入狀態（design §34.1）：沒登入時不自動整理
@@ -316,6 +322,11 @@ final class AppModel {
         GlobalHotKey.shared.onBookmark = { [weak self] in self?.bookmarkFromHotKey() }
         recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
         recorder.onLevelHint = { [weak self] hint in self?.levelHintAppeared(hint) }
+        // 忘了停止錄音（design §35、R48）：提醒一出現就送通知（人多半不在電腦前）
+        recorder.onIdlePrompt = { [weak self] in
+            guard let self, let id = self.recorder.meetingId else { return }
+            self.notifier.idlePrompt(meetingId: id)
+        }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
         UsageStats.shared.touch()
@@ -427,6 +438,9 @@ final class AppModel {
         loaded.loadSpeakers(speakerRows)
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.speakerUndoLabel = try? db.speakerUndoLabel(id)
+        if let until = try? db.transcribedUntil(id), let duration = meeting.durationSeconds, Double(duration) - until >= 60 {
+            loaded.untranscribedMinutes = Int(((Double(duration) - until) / 60).rounded())
+        }
         loaded.buildIndexes()
         loaded.linkReviewItems()
         detail = loaded
@@ -487,7 +501,7 @@ final class AppModel {
     var menuBarSymbol: String {
         if bookmarkFlash { return "star.circle.fill" }
         // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來
-        if recorder.isRecording { return recorder.levelHint != nil ? "mic.badge.exclamationmark" : "record.circle.fill" }
+        if recorder.isRecording { return recorder.levelHint != nil || recorder.idlePrompt ? "mic.badge.exclamationmark" : "record.circle.fill" }
         if runner.isBusy || queuedCount > 0 { return "waveform.circle.fill" }
         return "waveform"
     }
@@ -650,7 +664,11 @@ final class AppModel {
                 meeting.audioFile = destination.lastPathComponent
                 if result.duration > 0 { meeting.durationSeconds = Int(result.duration.rounded()) }
                 try db.updateMeeting(meeting)
-                try db.enqueue(result.meetingId, kind: .transcribe)
+                // 沒人說話太久而自動停止：只轉錄到最後說話後 15 秒（design §35.3、R48.3）
+                let until = result.idleSince.map { $0 + 15 }.flatMap { $0 < result.duration ? $0 : nil }
+                let payload = until.flatMap { try? JSONEncoder().encode(TranscribePayload(until: $0)) }.map { String(decoding: $0, as: UTF8.self) }
+                try db.enqueue(result.meetingId, kind: .transcribe, payload: payload)
+                if result.idleSince != nil { notifier.idleStopped(meetingId: result.meetingId, title: meeting.displayTitle) }
                 UsageStats.shared.recorded(seconds: result.duration)
             } catch {
                 // 資料庫寫不進去（磁碟滿時常一起發生）：搬回 recording/，下次開啟由復原流程接回（design §20.3）。

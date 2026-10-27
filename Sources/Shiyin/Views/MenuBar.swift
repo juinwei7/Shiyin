@@ -61,6 +61,20 @@ struct MenuBarContent: View {
                 }
                 if recorder.hasMic { RecorderMeter(recorder: recorder, system: false, segments: 24) }
                 if recorder.hasSystem { RecorderMeter(recorder: recorder, system: true, segments: 24) }
+                if recorder.idlePrompt {
+                    // 忘了停止錄音（R48.1）：同錄音畫面
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("好像沒人在說話了，要停止錄音嗎？", systemImage: "moon.zzz")
+                            .font(.caption)
+                            .foregroundStyle(Color.signal)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Button("繼續錄") { recorder.continueAfterIdle() }
+                            Button("停止錄音") { recorder.stop() }
+                        }
+                        .font(.caption)
+                    }
+                }
                 if let hint = recorder.levelHint {
                     // 收音提醒（R42.2）：跟錄音畫面同一句，「知道了」這場不再提示
                     VStack(alignment: .leading, spacing: 6) {

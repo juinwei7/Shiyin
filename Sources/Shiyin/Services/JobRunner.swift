@@ -24,6 +24,7 @@ enum AppSettings {
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
     static let bookmarkHotKeyKey = "bookmarkHotKey"
+    static let idleStopKey = "idleStop"
 
     private static var d: UserDefaults { .standard }
 
@@ -88,6 +89,8 @@ enum AppSettings {
     static var voiceprints: Bool { flag(voiceprintsKey, default: true) }
     /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）
     static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
+    /// 很久沒人說話時提醒，30 分鐘後自動停止（design §35、R48.5）
+    static var idleStop: Bool { flag(idleStopKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
     static var useSystemTranscriber: Bool { d.string(forKey: transcriptionEngineKey) == "system" }
     /// 正式轉錄引擎（design §32.6）：breeze（預設，聯發科）、qwen（阿里巴巴，可選）、system；不認得的值當 breeze
@@ -108,6 +111,11 @@ struct RevisePayload: Codable {
 /// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）
 struct SummarizePayload: Codable {
     var draft = false
+}
+
+/// 轉錄工作的 payload（design §35.3）：until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）
+struct TranscribePayload: Codable {
+    var until: Double?
 }
 
 /// 工作佇列：轉錄線、整理線各跑一個迴圈，互不等待（沿用 v2 §4）
@@ -304,13 +312,20 @@ final class JobRunner {
         if pipeline.options.engine == .system && !AppSettings.useSystemTranscriber {
             log.info("transcription model not ready, using the system recognizer")
         }
-        guard let result = try await pipeline.run(meeting.audioURL) else { return }
+        // 沒人說話太久而自動停止的錄音：只轉錄到最後說話後 15 秒，錄音檔不動（design §35.3、R48.3）
+        let until = (try? JSONDecoder().decode(TranscribePayload.self, from: Data((job.payload ?? "{}").utf8)))?.until
+        let trimmed = try until.flatMap { try AudioTrim.prefix(of: meeting.audioURL, seconds: $0) }
+        defer { if let trimmed { try? FileManager.default.removeItem(at: trimmed.deletingLastPathComponent()) } }
+        if let until, trimmed != nil { log.info("transcribing only the first \(Int(until))s (idle auto-stop)") }
+        guard let result = try await pipeline.run(trimmed ?? meeting.audioURL) else { return }
         let (transcribed, speakers, duration) = (result.segments, result.speakers, result.duration)
+        // 只轉錄前段時，會議長度維持整個錄音（播放、資訊列用）
+        let savedDuration = trimmed != nil ? max(Double(meeting.durationSeconds ?? 0), duration) : duration
         let segments = transcribed.enumerated().map { i, s in
             Segment(meetingId: job.meetingId, seq: i, start: s.start, end: s.end, text: s.text,
                     lowConfidence: s.lowConfidence, speaker: speakers[i], kind: "final", channel: result.channels[i])
         }
-        try db.saveTranscript(job.meetingId, segments: segments, duration: Int(duration.rounded()),
+        try db.saveTranscript(job.meetingId, segments: segments, duration: Int(savedDuration.rounded()),
                               speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices,
                               transcribedWith: pipeline.options.transcribedWith)
         // 匿名使用統計（design §30.1）：語音長度、實際花的時間、引擎；說話者辨識跟 pipeline 的條件一樣

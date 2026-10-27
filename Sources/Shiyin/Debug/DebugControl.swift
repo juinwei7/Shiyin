@@ -571,6 +571,7 @@ enum DebugControl {
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,
                          "liveStatus": model.recorder.liveStatus, "permissionDenied": model.recorder.permissionDenied,
                          "levelCheck": model.recorder.levelCheck,   // 收音提醒（design §26.1）
+                         "idle": model.recorder.idleInfo,   // 忘了停止錄音（design §35）
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? ""],

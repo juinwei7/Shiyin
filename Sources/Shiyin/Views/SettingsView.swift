@@ -630,6 +630,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true
+    @AppStorage(AppSettings.idleStopKey) private var idleStop = true
     @AppStorage(AppSettings.bookmarkHotKeyKey) private var bookmarkHotKey = true
     @State private var mutedApps: [String] = []
     @State private var devices: [AudioDevices.Device] = []
@@ -716,6 +717,10 @@ struct RecordingSettings: View {
                         .buttonStyle(.link)
                     }
                 }
+                // 忘了停止錄音（design §35、R48.5）
+                Toggle("很久沒人說話時提醒，30 分鐘後自動停止", isOn: $idleStop)
+                Text("錄音中 15 分鐘沒人說話時提醒你；再 15 分鐘還是沒人說話就自動停止，只轉錄到最後有人說話的地方，錄音檔完整保留。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
                     .onChange(of: hotKey) { _, enabled in
                         GlobalHotKey.shared.setEnabled(enabled)

@@ -7,6 +7,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     var onOpen: ((Int64) -> Void)?
     /// 偵測到會議的通知按鈕（design §21.7）：動作（start、mute、stop、continue）、哪個 app
     var onMeetingAction: ((String, String) -> Void)?
+    /// 忘了停止錄音的通知按鈕（design §35.2）：stop、continue
+    var onIdleAction: ((String) -> Void)?
     #if DEBUG
     /// 驗證用：最近要發的通知內容（沒有通知權限時也記錄）
     private(set) var recent: [[String: Any]] = []
@@ -22,7 +24,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             UNNotificationAction(identifier: "stop", title: String(localized: "停止並轉錄"), options: []),
             UNNotificationAction(identifier: "continue", title: String(localized: "繼續錄"), options: []),
         ], intentIdentifiers: [])
-        UNUserNotificationCenter.current().setNotificationCategories([start, stop])
+        let idle = UNNotificationCategory(identifier: "IDLE_PROMPT", actions: [
+            UNNotificationAction(identifier: "stop", title: String(localized: "停止錄音"), options: []),
+            UNNotificationAction(identifier: "continue", title: String(localized: "繼續錄"), options: []),
+        ], intentIdentifiers: [])
+        UNUserNotificationCenter.current().setNotificationCategories([start, stop, idle])
     }
 
     func isAuthorized() async -> Bool {
@@ -59,6 +65,33 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.userInfo = ["meetingId": NSNumber(value: meetingId)]
         #if DEBUG
         recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "hint": hint.rawValue]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
+    /// 錄音中很久沒人說話（R48.1）：按鈕「停止錄音」「繼續錄」，點通知本身打開錄音中的會議
+    func idlePrompt(meetingId: Int64) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "好像沒人在說話了")
+        content.body = String(localized: "要停止錄音嗎？再 15 分鐘沒人說話會自動停止。")
+        content.categoryIdentifier = "IDLE_PROMPT"
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meetingId), "idle": true]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "idle": "prompt"]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
+    /// 沒人說話太久，自動停止了（R48.2）：點了打開那場會議
+    func idleStopped(meetingId: Int64, title: String) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "已自動停止錄音")
+        content.body = String(localized: "\(title)：30 分鐘沒有人說話")
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meetingId)]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "idle": "stopped"]] + recent).prefix(10))
         #endif
         post(content)
     }
@@ -107,10 +140,14 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
         let id = (response.notification.request.content.userInfo["meetingId"] as? NSNumber)?.int64Value
         let bundle = response.notification.request.content.userInfo["bundle"] as? String
+        let idle = response.notification.request.content.userInfo["idle"] as? Bool ?? false
         let action = response.actionIdentifier
         Task { @MainActor in
-            if let bundle, action != UNNotificationDefaultActionIdentifier, action != UNNotificationDismissActionIdentifier {
+            let button = action != UNNotificationDefaultActionIdentifier && action != UNNotificationDismissActionIdentifier
+            if let bundle, button {
                 self.onMeetingAction?(action, bundle)
+            } else if idle, button {
+                self.onIdleAction?(action)
             } else if let id, id > 0 { self.onOpen?(id) }
             completionHandler()
         }

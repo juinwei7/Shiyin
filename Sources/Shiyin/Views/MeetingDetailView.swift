@@ -97,6 +97,11 @@ struct MeetingHeader: View {
             }
             Text("\(meeting.meetingDate) \(DateText.weekday(meeting.meetingDate))")
             if meeting.durationSeconds != nil { Text(TimeFormat.duration(meeting.durationSeconds)) }
+            if let minutes = detail.untranscribedMinutes {
+                // 自動停止的錄音（design §35.3、R48.3）：後面沒人說話的部分沒有轉錄
+                Label("最後 \(minutes) 分鐘沒有人說話，沒有轉錄", systemImage: "moon.zzz")
+                    .help("錄音中很久沒人說話，拾音自動停止了錄音。要轉錄全部的話，用「更多 → 重新處理 → 重新轉錄」。")
+            }
             if !detail.speakers.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in

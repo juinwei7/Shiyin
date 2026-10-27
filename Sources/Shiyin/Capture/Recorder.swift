@@ -11,6 +11,8 @@ final class Recorder {
         var file: URL?
         var duration: Double
         var error: String?
+        /// 沒人說話太久而自動停止（R48.2）：最後有人說話的秒數
+        var idleSince: Double? = nil
     }
 
     struct LiveLine: Identifiable, Hashable {
@@ -68,8 +70,32 @@ final class Recorder {
     @ObservationIgnored var onLevelHint: ((LevelHint) -> Void)?
     @ObservationIgnored private var noisySeconds = 0
     @ObservationIgnored private var quietSeconds = 0
+
+    /// 忘了停止錄音（design §35、R48）：最後有人說話的錄音秒數；即時逐字稿有沒有接上音訊
+    @ObservationIgnored private var lastSpeechAt: Double = 0
+    @ObservationIgnored private var liveActive = false
+    /// 好像沒人在說話了，要停止錄音嗎？（錄音畫面、選單列顯示）
+    private(set) var idlePrompt = false
+    /// 提醒出現（AppModel 送通知）
+    @ObservationIgnored var onIdlePrompt: (() -> Void)?
+    /// 15 分鐘提醒、30 分鐘自動停止；DEBUG 可以用啟動參數縮短（design §35.2）
+    static var idleRemindSeconds: Double { debugSeconds("idleRemindSeconds") ?? 900 }
+    static var idleStopSeconds: Double { debugSeconds("idleStopSeconds") ?? 1800 }
+    private static func debugSeconds(_ key: String) -> Double? {
+        #if DEBUG
+        let value = UserDefaults.standard.double(forKey: key)
+        return value > 0 ? value : nil
+        #else
+        return nil
+        #endif
+    }
     #if DEBUG
     @ObservationIgnored private(set) var levelCheck: [String: Any] = [:]
+    /// 忘了停止錄音的狀態（design §35.2）：shiyinctl state 的 recorder.idle
+    var idleInfo: [String: Any] {
+        ["idleSeconds": isRecording ? elapsed - lastSpeechAt : 0, "lastSpeechAt": lastSpeechAt, "prompt": idlePrompt,
+         "liveActive": liveActive, "remindAfter": Self.idleRemindSeconds, "stopAfter": Self.idleStopSeconds]
+    }
     #endif
 
     @ObservationIgnored var onFinished: ((Result) -> Void)?
@@ -168,8 +194,52 @@ final class Recorder {
         guard isRecording, isPaused else { return }
         writer?.resetRecentLevels()
         (noisySeconds, quietSeconds) = (0, 0)
+        markSpeech()   // 按了繼續表示人還在，重新計時（design §35.1）
         writer?.setPaused(false)
         isPaused = false
+    }
+
+    /// 「繼續錄」：人還在，重新計時（R48.1）
+    func continueAfterIdle() {
+        guard isRecording else { return }
+        markSpeech()
+    }
+
+    /// 有人在說話：重新計時，提醒收掉
+    private func markSpeech() {
+        lastSpeechAt = elapsed
+        if idlePrompt { idlePrompt = false }
+    }
+
+    /// 每秒檢查沒人說話多久（design §35）：15 分鐘提醒、30 分鐘自動停止
+    private func checkIdle(_ writer: RecordingWriter) {
+        guard AppSettings.idleStop, !isPaused else { return }
+        // 即時逐字稿沒在跑時才看聲音（打字、關門也會算，只當備用，D115）
+        if !liveActive && soundsLikeSpeech(writer) { markSpeech() }
+        let idle = elapsed - lastSpeechAt
+        if idle >= Self.idleStopSeconds {
+            log.info("recording auto-stopped after \(Int(idle))s without speech")
+            stop(idleSince: lastSpeechAt)
+            return
+        }
+        let prompt = idle >= Self.idleRemindSeconds
+        if prompt != idlePrompt {
+            idlePrompt = prompt
+            if prompt { onIdlePrompt?() }
+        }
+    }
+
+    /// 最近 1 秒有 30% 以上的音框比背景（最近 30 秒的第 10 百分位）大 12 dB、而且高於 -50 dBFS（design §35.1）
+    private func soundsLikeSpeech(_ writer: RecordingWriter) -> Bool {
+        for channel in 0..<(source == "both" ? 2 : 1) {
+            let levels = writer.recentLevels(channel)
+            guard levels.count >= 20 else { continue }
+            let background = levels.sorted()[Int(Double(levels.count - 1) * 0.1)]
+            let threshold = max(background + 12, -50)
+            let last = levels.suffix(10)
+            if Double(last.filter { $0 > threshold }.count) >= Double(last.count) * 0.3 { return true }
+        }
+        return false
     }
 
     /// 「知道了」：這一種提示這場錄音不再出現
@@ -179,7 +249,7 @@ final class Recorder {
         self.levelHint = nil
     }
 
-    func stop() {
+    func stop(idleSince: Double? = nil) {
         guard isRecording, let meetingId else { return }
         sources.values.forEach { $0.stop() }
         sources = [:]
@@ -197,7 +267,7 @@ final class Recorder {
         }
         cleanup()
         log.info("recording stopped, \(Int(duration))s")
-        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil))
+        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil, idleSince: idleSince))
     }
 
     static func openPrivacySettings(_ pane: String = "Privacy_Microphone") {
@@ -256,6 +326,9 @@ final class Recorder {
             dismissedLevelHints = []
             notifiedLevelHints = []
             (noisySeconds, quietSeconds) = (0, 0)
+            lastSpeechAt = 0
+            liveActive = false
+            idlePrompt = false
             liveLines = []
             volatileText = ""
             systemSilent = false
@@ -281,11 +354,15 @@ final class Recorder {
         let live = LiveTranscriber(language: language)
         self.live = live
         liveStatus = String(localized: "正在準備即時逐字稿…")
+        liveActive = false
         live.onVolatile = { [weak self] text in
             #if DEBUG
             DebugMetrics.bump("volatileUpdate")
             #endif
-            self?.volatileText = text
+            guard let self else { return }
+            // 有新的字就是有人在說話（design §35.1）
+            if !text.isEmpty && text != self.volatileText { self.markSpeech() }
+            self.volatileText = text
         }
         // 中途重新開始時，新的辨識從 0 秒算，要加上接上音訊時已經錄了多久
         let offset = LiveOffset()
@@ -293,6 +370,7 @@ final class Recorder {
             guard let self else { return }
             let (start, end) = (start + offset.seconds, end + offset.seconds)
             self.liveLines.append(LiveLine(start: start, end: end, text: text))
+            if !text.isEmpty { self.markSpeech() }
             self.onLiveFinal?(meetingId, start, end, text)
         }
         Task {
@@ -302,6 +380,7 @@ final class Recorder {
                 if restarted { offset.seconds = writer.recordedSeconds }
                 tap.setLive(live.feedHandler)
                 liveStatus = ""
+                liveActive = true
             } catch {
                 liveStatus = String(localized: "即時逐字稿沒辦法啟動（\(error.localizedDescription)），錄音照常進行，錄完會正式轉錄")
             }
@@ -376,6 +455,8 @@ final class Recorder {
         if seconds != elapsedSeconds {
             elapsedSeconds = seconds
             checkLevels(writer)
+            checkIdle(writer)
+            guard isRecording else { return }   // 沒人說話太久，剛自動停止
         }
         var silent = systemSilent
         if source == "both" {
@@ -522,6 +603,8 @@ final class Recorder {
         tap.setDetector(nil)
         languageSwitch = nil
         levelHint = nil
+        idlePrompt = false
+        liveActive = false
         meetingId = nil
         startedAt = nil
         isRecording = false

@@ -261,6 +261,17 @@
         }
       }
     },
+    "%@：30 分鐘沒有人說話": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: nobody spoke for 30 minutes"
+          }
+        }
+      }
+    },
     "%lld": {
       "extractionState": "manual"
     },
@@ -2927,6 +2938,39 @@
         }
       }
     },
+    "好像沒人在說話了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody seems to be talking"
+          }
+        }
+      }
+    },
+    "好像沒人在說話了，要停止錄音嗎？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody seems to be talking. Stop recording?"
+          }
+        }
+      }
+    },
+    "好像沒人在說話了，要停止錄音嗎？再 15 分鐘沒人說話會自動停止。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody seems to be talking. Stop recording? It stops automatically after 15 more minutes of silence."
+          }
+        }
+      }
+    },
     "字幕（srt）": {
       "extractionState": "manual",
       "localizations": {
@@ -3367,6 +3411,17 @@
         }
       }
     },
+    "已自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stopped automatically"
+          }
+        }
+      }
+    },
     "已複製": {
       "extractionState": "manual",
       "localizations": {
@@ -3552,6 +3607,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Action items"
+          }
+        }
+      }
+    },
+    "很久沒人說話時提醒，30 分鐘後自動停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind me when nobody's talking, and stop after 30 minutes"
           }
         }
       }
@@ -5305,6 +5371,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When you name a speaker, Shiyin saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it “Auto”; you can change it if it's wrong. Voice features stay in the database on this Mac. They're never uploaded or included in exported .shiyin packages."
+          }
+        }
+      }
+    },
+    "最後 %lld 分鐘沒有人說話，沒有轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last %lld min had no speech and wasn't transcribed"
           }
         }
       }
@@ -7646,6 +7723,17 @@
         }
       }
     },
+    "要停止錄音嗎？再 15 分鐘沒人說話會自動停止。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop recording? It stops automatically after 15 more minutes of silence."
+          }
+        }
+      }
+    },
     "要寫什麼": {
       "extractionState": "manual",
       "localizations": {
@@ -9674,6 +9762,17 @@
         }
       }
     },
+    "錄音中 15 分鐘沒人說話時提醒你；再 15 分鐘還是沒人說話就自動停止，只轉錄到最後有人說話的地方，錄音檔完整保留。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin reminds you after 15 minutes with nobody talking. After 15 more minutes of silence it stops recording and transcribes only up to the last speech; the full recording is kept."
+          }
+        }
+      }
+    },
     "錄音中在其他 app 裡也能標記重點": {
       "extractionState": "manual",
       "localizations": {
@@ -9681,6 +9780,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bookmark while recording, even from another app"
+          }
+        }
+      }
+    },
+    "錄音中很久沒人說話，拾音自動停止了錄音。要轉錄全部的話，用「更多 → 重新處理 → 重新轉錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody spoke for a long time, so Shiyin stopped recording. To transcribe everything, use More → Reprocess → Transcribe Again."
           }
         }
       }

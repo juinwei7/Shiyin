@@ -291,6 +291,16 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    /// 最後一次完成的轉錄只做到第幾秒（沒人說話太久而自動停止，design §35.3）；轉錄了全部是 nil
+    func transcribedUntil(_ meetingId: Int64) throws -> Double? {
+        try pool.read { db in
+            let payload = try String.fetchOne(db, sql: """
+                SELECT payload FROM jobs WHERE meeting_id = ? AND kind = 'transcribe' AND status = 'done' ORDER BY id DESC LIMIT 1
+                """, arguments: [meetingId])
+            return payload.flatMap { try? JSONDecoder().decode(TranscribePayload.self, from: Data($0.utf8)) }?.until
+        }
+    }
+
     /// 建立會議並給定錄音檔名（需要先拿到 id 才能命名，所以在同一個交易裡做兩步）
     func insertMeeting(_ meeting: Meeting, audioExtension: String?) throws -> Meeting {
         try pool.write { db in
