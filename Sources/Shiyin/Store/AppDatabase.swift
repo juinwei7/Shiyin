@@ -879,6 +879,13 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    /// 工作的 payload 換掉（企業伺服器的工作 id，design §36.3）
+    func setJobPayload(_ jobId: Int64, _ payload: String?) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE jobs SET payload = ? WHERE id = ?", arguments: [payload, jobId])
+        }
+    }
+
     /// app 啟動時：上次沒跑完的工作改回排隊
     /// 啟動時：還是 running 的工作表示上次執行時拾音意外結束（design §20.5、D26）。
     /// 意外結束累計 2 次就標成失敗，不再自動重跑；不到 2 次才改回排隊

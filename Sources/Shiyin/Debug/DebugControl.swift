@@ -388,6 +388,26 @@ enum DebugControl {
             if let which = ModelStore.Model(rawValue: args[1]) { model.models.debugURLs[which] = args[2] == "-" ? nil : URL(string: args[2]) }
         case "llmurl":     // llmurl <anthropic|openai|gemini|openaiCompatible> <網址>：API 改送到本機的假伺服器；網址給 - 就改回原本的
             if let provider = LLMProvider(rawValue: args[1]) { LLMClient.debugBaseURLs[provider] = args[2] == "-" ? nil : args[2] }
+        case "enterprise":
+            // 企業伺服器（design §36.7）：login <網址> <信箱> <輸出.json>（伺服器開發用的登入，不經過瀏覽器）、logout、expire（access token 立刻過期）、
+            // local <會議 id>（等於按「改在這台電腦轉錄」）。登入會寫進共用的設定（網址、帳號），測完用 defaults delete 清掉
+            switch args[1] {
+            case "login":
+                let output = args[4]
+                Task {
+                    do {
+                        try await EnterpriseServer.shared.debugDevSignIn(args[2], email: args[3])
+                        write(["ok": true, "state": EnterpriseServer.shared.debugState], to: output)
+                    } catch {
+                        write(["ok": false, "error": error.localizedDescription], to: output)
+                    }
+                    model.refreshEnvironment()
+                }
+            case "logout": Task { await EnterpriseServer.shared.signOut(); model.refreshEnvironment() }
+            case "expire": EnterpriseServer.shared.debugExpireAccess()
+            case "local": model.runner.transcribeLocally(meetingId: Int64(args[2]) ?? -1)
+            default: break
+            }
         case "llmkey":   // llmkey <account> <key>：只放記憶體
             Keychain.debugKeys[args[1]] = args[2] == "-" ? nil : args[2]
             Keychain.debugForget(args[1])
@@ -562,7 +582,9 @@ enum DebugControl {
             "openMainWindowReady": model.openMainWindow != nil,
             "running": model.runner.running.map { lane, r in
                 ["lane": lane.rawValue, "job": r.job.id ?? 0, "kind": r.job.kind.rawValue, "stage": r.stage, "progress": r.progress ?? -1,
-                 "remaining": r.remaining ?? -1] },
+                 "remaining": r.remaining ?? -1, "server": r.server.map { ["text": $0.text, "waiting": $0.waiting] } as Any] },
+            "enterprise": EnterpriseServer.shared.debugState,
+            "transcriptionEngine": AppSettings.transcriptionEngine,
             "player": ["loaded": model.player.isLoaded, "playing": model.player.isPlaying,
                        "time": model.player.currentTime, "duration": model.player.duration, "rate": model.player.rate],
             "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused,

@@ -63,7 +63,8 @@ struct ProviderSettings: View {
                 // 這台 Mac 沒有 claude、codex 時才有：選它等於清掉設定，回到「還沒設定」
                 if AppSettings.detectedProvider == .none { Text("之後再設定（先不整理）").tag("") }
                 // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
-                ForEach(LLMProvider.allCases) { item in
+                // 企業伺服器：登入了、伺服器有提供整理才出現（R51.1）
+                ForEach(LLMProvider.allCases.filter { $0 != .enterprise || EnterpriseServer.shared.account?.llm == true || $0 == current }) { item in
                     let missing = (item == .claude || item == .codex) && Paths.findTool(item == .claude ? "claude" : "codex") == nil
                     Text(missing ? String(localized: "\(item.label)（沒有安裝）") : item.label).tag(item.rawValue)
                         .selectionDisabled(missing && item != current)
@@ -141,6 +142,7 @@ struct ProviderSettings: View {
             if current != .none {
                 HStack {
                     TextField("模型", text: $modelName, prompt: Text(current == .openaiCompatible ? "必填"
+                                                                    : current == .enterprise ? "留空使用公司設定的預設模型"
                                                                     : current.defaultModel.isEmpty ? "留空使用預設模型" : "預設：\(current.defaultModel)"))
                     if canListModels {
                         Button("選擇", action: openModelPicker)
@@ -251,6 +253,7 @@ struct ProviderSettings: View {
         case .notInstalled?, .notLoggedIn?: return String(localized: "設定好之前不會自動整理。")
         case .missingKey?: return String(localized: "還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。")
         case .incomplete?: return String(localized: "還沒有填網址或模型。設定好之前不會自動整理。")
+        case .enterpriseSignedOut?: return String(localized: "企業伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。")
         case .paused(_, let detail)?:
             let reason = detail.trimmingCharacters(in: CharacterSet(charactersIn: "。. "))   // l10n-skip
             return String(localized: "上次整理失敗：\(reason)。改好設定，或按「測試整理工具」成功之後，才會再自動整理。")
@@ -274,7 +277,8 @@ struct ProviderSettings: View {
 
     /// 可以從清單選模型：API 要有存 key，OpenAI 相容 API 要有網址
     private var canListModels: Bool {
-        current == .openaiCompatible ? OpenAICompatibleAPI.normalized(baseURL) != nil : current.usesAPIKey && keySaved
+        current == .openaiCompatible ? OpenAICompatibleAPI.normalized(baseURL) != nil
+            : current == .enterprise ? EnterpriseServer.shared.isSignedIn : current.usesAPIKey && keySaved
     }
 
     /// 「選擇」用的模型清單；取的時候換了整理工具就不用。
@@ -352,6 +356,9 @@ struct ProviderSettings: View {
             return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。")
         case .gemini:
             return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。")
+        case .enterprise:
+            // 送到公司的伺服器，再由公司設定的模型整理（R51.4、design §36.5）
+            return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 \(EnterpriseServer.shared.host)（公司的伺服器），再由公司設定的模型整理。錄音檔不會因為整理而送出。")
         case .openaiCompatible:
             // 說清楚送到哪一台主機；本機的服務不會離開電腦（design §19.3、R17.5）
             guard let url = OpenAICompatibleAPI.normalized(baseURL), let host = url.host(percentEncoded: false) else {
@@ -682,6 +689,10 @@ struct RecordingSettings: View {
             Section("轉錄") {
                 // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
                 Picker("正式轉錄", selection: $engine) {
+                    // 企業伺服器（R50.1）：登入過才有
+                    if let account = EnterpriseServer.shared.account {
+                        Text("企業伺服器（\(account.serverName)）").tag("server")
+                    }
                     Text("Breeze ASR 25（聯發科，建議）").tag("breeze")
                     Text("Qwen3-ASR 1.7B（阿里巴巴）").tag("qwen")
                     Text("macOS 內建").tag("system")
@@ -690,7 +701,9 @@ struct RecordingSettings: View {
                     model.runner.wake()
                     model.refreshEnvironment()
                 }
-                Text(engine == "system"
+                Text(engine == "server"
+                     ? "錄音會送到 \(EnterpriseServer.shared.host)（公司的伺服器）轉錄，轉完就刪；說話者辨識和聲紋在這台 Mac 上做，聲紋不會送出。會參考詞彙表。連不上時會等，也可以改在這台 Mac 轉錄。"
+                     : engine == "system"
                      ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
                      : engine == "qwen"
                      ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。"
@@ -862,6 +875,8 @@ struct AdvancedSettings: View {
 
     var body: some View {
         Form {
+            // 企業伺服器（R49、design §36.3）：放在最上面，公司的人照「進階 → 企業伺服器」找得到
+            Section("企業伺服器") { EnterpriseServerSettings() }
             // app 內更新（R10.6）
             Section("更新") {
                 LabeledContent("目前版本", value: Updater.currentVersion)

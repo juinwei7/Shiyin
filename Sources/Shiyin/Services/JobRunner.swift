@@ -96,7 +96,11 @@ enum AppSettings {
     /// 正式轉錄引擎（design §32.6）：breeze（預設，聯發科）、qwen（阿里巴巴，可選）、system；不認得的值當 breeze
     static var transcriptionEngine: String {
         let value = d.string(forKey: transcriptionEngineKey) ?? ""
-        return ["breeze", "qwen", "system"].contains(value) ? value : "breeze"
+        return ["breeze", "qwen", "system", "server"].contains(value) ? value : "breeze"
+    }
+    /// 正式轉錄用企業伺服器（design §36.3、R50.1）：選了而且登入過（登入失效也算，工作停著等重新登入）
+    @MainActor static var usesEnterpriseTranscription: Bool {
+        transcriptionEngine == "server" && EnterpriseServer.shared.hasAccount
     }
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
     static var defaultMeetingLanguage: MeetingLanguage {
@@ -113,9 +117,11 @@ struct SummarizePayload: Codable {
     var draft = false
 }
 
-/// 轉錄工作的 payload（design §35.3）：until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）
+/// 轉錄工作的 payload（design §35.3）：until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）；
+/// remoteId 是企業伺服器上還沒拿到結果的工作（design §36.3），app 重開時接著傳、接著等
 struct TranscribePayload: Codable {
     var until: Double?
+    var remoteId: String?
 }
 
 /// 工作佇列：轉錄線、整理線各跑一個迴圈，互不等待（沿用 v2 §4）
@@ -127,6 +133,8 @@ final class JobRunner {
         var startedAt = Date()
         var stage = ""                 // 目前階段，顯示用
         var progress: Double?
+        /// 轉錄交給企業伺服器時的狀態：有值就顯示「改在這台電腦轉錄」（R50.3、R50.5）
+        var server: ServerNote?
         var provider: LLMProvider?
         @ObservationIgnored var cancelAction: (() -> Void)?
 
@@ -149,8 +157,18 @@ final class JobRunner {
     /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
     @ObservationIgnored var onRediarized: ((Int64, Result<Int, Error>) -> Void)?
 
+    /// 使用者按了「改在這台電腦轉錄」的工作（R50.5）：只在記憶體，app 重開後照設定
+    @ObservationIgnored private var localJobs: Set<Int64> = []
+
     init(db: AppDatabase) {
         self.db = db
+    }
+
+    /// 這場會議正在等企業伺服器的轉錄改在這台 Mac 轉（R50.5）
+    func transcribeLocally(meetingId: Int64) {
+        guard let job = running[.transcribe]?.job, job.meetingId == meetingId, let id = job.id else { return }
+        localJobs.insert(id)
+        log.info("job \(id) switched to local transcription")
     }
 
     func start() {
@@ -195,7 +213,7 @@ final class JobRunner {
             let job: Job?
             // 模型還沒下載好的語言先用 macOS 內建辨識轉錄（design §21.17），模型在背景下載；
             // 日文模型在日文會議第一次要轉錄時才下載（design §18.2）
-            if lane == .transcribe && !AppSettings.useSystemTranscriber {
+            if lane == .transcribe && !AppSettings.useSystemTranscriber && !AppSettings.usesEnterpriseTranscription {
                 for language in MeetingLanguage.allCases where !ModelStore.hasTranscriptionModel(for: language)
                     && (try? db.hasQueuedTranscribe(language: language)) == true {
                     AppModel.shared.models.autoStartTranscription(for: language)
@@ -302,22 +320,53 @@ final class JobRunner {
     private func transcribe(_ job: Job, lane: JobLane) async throws {
         guard let meeting = try db.meeting(job.meetingId) else { return }
         let startedAt = Date()
-        var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
-                                                                glossary: try db.glossary().map(\.term),
-                                                                channels: meeting.channels, minSpeakers: meeting.minSpeakers))
-        pipeline.stage = { [weak self] in self?.running[lane]?.stage = $0 }
-        pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
-        pipeline.setCancel = { [weak self] in self?.running[lane]?.cancelAction = $0 }
-        pipeline.shouldContinue = { [weak self] in self?.isStillRunning(job) ?? false }
+        let payload = (try? JSONDecoder().decode(TranscribePayload.self, from: Data((job.payload ?? "{}").utf8))) ?? TranscribePayload()
+        func makePipeline(local: Bool) throws -> TranscriptionPipeline {
+            var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
+                                                                    glossary: try db.glossary().map(\.term),
+                                                                    channels: meeting.channels, minSpeakers: meeting.minSpeakers, local: local))
+            pipeline.stage = { [weak self] in self?.running[lane]?.stage = $0 }
+            pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
+            pipeline.setCancel = { [weak self] in self?.running[lane]?.cancelAction = $0 }
+            pipeline.shouldContinue = { [weak self] in self?.isStillRunning(job) ?? false }
+            // 企業伺服器（design §36.3）：記下伺服器上的工作，app 重開時接著傳；等伺服器時畫面可以改在這台 Mac 轉
+            pipeline.remoteId = payload.remoteId
+            pipeline.onRemoteId = { [weak self] remoteId in
+                var updated = payload
+                updated.remoteId = remoteId
+                if let id = job.id, let data = try? JSONEncoder().encode(updated) {
+                    try? self?.db.setJobPayload(id, String(decoding: data, as: UTF8.self))
+                }
+            }
+            pipeline.onServer = { [weak self] note in
+                if self?.running[lane]?.server != note { self?.running[lane]?.server = note }
+            }
+            pipeline.switchToLocal = { [weak self] in job.id.map { self?.localJobs.contains($0) ?? false } ?? false }
+            return pipeline
+        }
+        var pipeline = try makePipeline(local: false)
         if pipeline.options.engine == .system && !AppSettings.useSystemTranscriber {
             log.info("transcription model not ready, using the system recognizer")
         }
         // 沒人說話太久而自動停止的錄音：只轉錄到最後說話後 15 秒，錄音檔不動（design §35.3、R48.3）
-        let until = (try? JSONDecoder().decode(TranscribePayload.self, from: Data((job.payload ?? "{}").utf8)))?.until
+        let until = payload.until
         let trimmed = try until.flatMap { try AudioTrim.prefix(of: meeting.audioURL, seconds: $0) }
         defer { if let trimmed { try? FileManager.default.removeItem(at: trimmed.deletingLastPathComponent()) } }
         if let until, trimmed != nil { log.info("transcribing only the first \(Int(until))s (idle auto-stop)") }
-        guard let result = try await pipeline.run(trimmed ?? meeting.audioURL) else { return }
+        let result: TranscriptionResult
+        do {
+            guard let value = try await pipeline.run(trimmed ?? meeting.audioURL) else { return }
+            result = value
+        } catch is ServerTranscriber.SwitchToLocal {
+            // 改在這台 Mac 轉（R50.5）：用本機的引擎，模型還沒下載好就先下載、先用 macOS 內建（同 D35）
+            running[lane]?.server = nil
+            pipeline = try makePipeline(local: true)
+            if !AppSettings.useSystemTranscriber { AppModel.shared.models.autoStartTranscription(for: meeting.meetingLanguage) }
+            guard let value = try await pipeline.run(trimmed ?? meeting.audioURL) else { return }
+            result = value
+        }
+        if let id = job.id { localJobs.remove(id) }
+        let transcribedWith = result.transcribedWith ?? pipeline.options.transcribedWith
         let (transcribed, speakers, duration) = (result.segments, result.speakers, result.duration)
         // 只轉錄前段時，會議長度維持整個錄音（播放、資訊列用）
         let savedDuration = trimmed != nil ? max(Double(meeting.durationSeconds ?? 0), duration) : duration
@@ -327,10 +376,10 @@ final class JobRunner {
         }
         try db.saveTranscript(job.meetingId, segments: segments, duration: Int(savedDuration.rounded()),
                               speakerCount: speakers.compactMap { $0 }.max() ?? 0, voices: result.voices,
-                              transcribedWith: pipeline.options.transcribedWith)
+                              transcribedWith: transcribedWith)
         // 匿名使用統計（design §30.1）：語音長度、實際花的時間、引擎；說話者辨識跟 pipeline 的條件一樣
         UsageStats.shared.transcribed(seconds: duration, wallSeconds: Date().timeIntervalSince(startedAt),
-                                      engine: pipeline.options.transcribedWith, language: meeting.meetingLanguage,
+                                      engine: pipeline.options.engine == .server ? "server" : transcribedWith, language: meeting.meetingLanguage,
                                       imported: meeting.source == "import", diarized: pipeline.options.diarize && duration > 5)
         // 說話者辨識的碰撞率（design §24.3）：可能把人併在一起時，逐字稿分頁會提示
         try db.setSpeakerCheck(job.meetingId, result.diarizationQuality?.mergeRisk)

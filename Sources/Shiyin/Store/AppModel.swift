@@ -18,6 +18,9 @@ enum MeetingStatus: Equatable {
         switch self {
         case .recording: return String(localized: "錄音中")
         case .queued: return String(localized: "排隊中")
+        case .transcribing(_, let stage) where stage == String(localized: "等企業伺服器"):
+            // 在等企業伺服器（R50.5）：不接「中」、不顯示百分比
+            return stage
         case .transcribing(let p, let stage):
             let name = stage.isEmpty || stage == String(localized: "轉錄") ? String(localized: "轉錄中") : String(localized: "\(stage)中")
             return p.map { "\(name) \(Int($0 * 100))%" } ?? name
@@ -362,7 +365,7 @@ final class AppModel {
 
     /// 這場會議是用 macOS 內建辨識（模型下載好之前）或 Breeze 轉的，現在目前引擎的模型下載好了，可以重新轉錄（design §21.17、§32.6）
     func canUpgradeTranscript(_ meeting: Meeting) -> Bool {
-        guard !AppSettings.useSystemTranscriber, meeting.hasAudio, meeting.deletedAt == nil,
+        guard !AppSettings.useSystemTranscriber, !AppSettings.usesEnterpriseTranscription, meeting.hasAudio, meeting.deletedAt == nil,
               models.isInstalled(transcriptionFor: meeting.meetingLanguage) else { return false }
         let older = ModelStore.transcription(for: meeting.meetingLanguage) == .qwen ? ["system", "breeze"] : ["system"]
         return older.contains(meeting.transcribedWith)

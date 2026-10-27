@@ -1,7 +1,8 @@
 import Foundation
 
 enum LLMProvider: String, CaseIterable, Identifiable {
-    case claude, codex, anthropic, openai, gemini, openaiCompatible, none
+    /// enterprise：企業伺服器（R51、design §36.3），登入企業伺服器、伺服器有提供整理才出現在選單
+    case claude, codex, anthropic, openai, gemini, openaiCompatible, enterprise, none
     var id: String { rawValue }
 
     var label: String {
@@ -12,6 +13,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         case .openai: return "OpenAI API"
         case .gemini: return "Gemini API"
         case .openaiCompatible: return String(localized: "OpenAI 相容 API")
+        case .enterprise: return String(localized: "企業伺服器")
         case .none: return String(localized: "不整理")
         }
     }
@@ -25,6 +27,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         case .openai: return "OpenAI API"
         case .gemini: return "Gemini API"
         case .openaiCompatible: return String(localized: "OpenAI 相容 API")
+        case .enterprise: return String(localized: "企業伺服器")
         case .none: return String(localized: "不整理")
         }
     }
@@ -57,7 +60,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
 
     /// 結果格式不對時附加的說明：OpenAI 相容 API 的模型不一定支援 JSON 輸出（design §19.3）
     var badOutputHint: String {
-        self == .openaiCompatible ? " " + String(localized: "這個模型可能不支援 JSON 輸出，可以換一個模型試試。") : ""
+        self == .openaiCompatible || self == .enterprise ? " " + String(localized: "這個模型可能不支援 JSON 輸出，可以換一個模型試試。") : ""
     }
 }
 
@@ -166,6 +169,7 @@ extension LLMProvider {
         case .openai: return OpenAIAPI(model: model.isEmpty ? defaultModel : model)
         case .gemini: return GeminiAPI(model: model.isEmpty ? defaultModel : model)
         case .openaiCompatible: return OpenAICompatibleAPI(model: model, baseURL: OpenAICompatibleAPI.savedBaseURL)
+        case .enterprise: return EnterpriseAPI(model: model)
         case .none: return nil
         }
     }

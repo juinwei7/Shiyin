@@ -68,7 +68,10 @@ struct OnboardingView: View {
         .tint(.celadon)
         .onAppear {
             // 模型從引導打開就在背景下載，不佔一步（R44.6）；正式轉錄選了 macOS 內建就不用
-            if !AppSettings.useSystemTranscriber { model.models.autoStartTranscription(for: AppSettings.defaultMeetingLanguage) }
+            // 轉錄用企業伺服器時不用下載（R50.7）
+            if !AppSettings.useSystemTranscriber && !AppSettings.usesEnterpriseTranscription {
+                model.models.autoStartTranscription(for: AppSettings.defaultMeetingLanguage)
+            }
             if AppSettings.autoDetectLanguage { model.models.autoStart(.languageDetection) }
             if model.models.diarizerState == .missing { model.models.prepareDiarizer() }
         }
@@ -235,7 +238,7 @@ struct OnboardingView: View {
         case .claude, .anthropic: return "claude"
         case .codex, .openai: return "chatgpt"
         case .gemini: return "gemini"
-        case .openaiCompatible: return "other"
+        case .openaiCompatible, .enterprise: return "other"
         case .none: return "none"
         }
     }
@@ -277,6 +280,8 @@ struct OnboardingView: View {
             let url = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
             let model = UserDefaults.standard.string(forKey: provider.modelKey) ?? ""
             if OpenAICompatibleAPI.normalized(url) != nil && !model.isEmpty { await commit(provider) } else { setup = .needsCompat }
+        case .enterprise:
+            await commit(provider)
         }
     }
 
@@ -329,7 +334,11 @@ struct OnboardingView: View {
         case "gemini":
             return [.init(provider: .gemini, title: String(localized: "Gemini API"), cost: api)]
         case "other":
-            return [.init(provider: .openaiCompatible, title: String(localized: "OpenAI 相容 API"), cost: String(localized: "Groq、OpenRouter、Ollama、LM Studio；網址和 key 到設定填"))]
+            // 登入了企業伺服器、伺服器有提供整理：排第一個（R51.1）
+            let enterprise: [ProviderOption] = EnterpriseServer.shared.account?.llm == true
+                ? [.init(provider: .enterprise, title: String(localized: "企業伺服器（\(EnterpriseServer.shared.account?.serverName ?? "")）"),
+                         cost: String(localized: "公司提供，不用自己的 key"))] : []
+            return enterprise + [.init(provider: .openaiCompatible, title: String(localized: "OpenAI 相容 API"), cost: String(localized: "Groq、OpenRouter、Ollama、LM Studio；網址和 key 到設定填"))]
         default:
             return [.init(provider: .none, title: String(localized: "不整理，只要逐字稿"), cost: String(localized: "隨時可以到設定選"))]
         }
@@ -340,7 +349,10 @@ struct OnboardingView: View {
             Text("按「開始使用」後會打開使用說明，介紹錄音、即時逐字稿、會議紀錄和匯出的用法。")
                 .fixedSize(horizontal: false, vertical: true)
             // 模型在背景下載的狀態，一行（R44.6）
-            if !AppSettings.useSystemTranscriber {
+            if AppSettings.usesEnterpriseTranscription {
+                Label("正式轉錄用企業伺服器（\(EnterpriseServer.shared.account?.serverName ?? "")），這台 Mac 不用下載轉錄模型。", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(Color.celadon).fixedSize(horizontal: false, vertical: true)
+            } else if !AppSettings.useSystemTranscriber {
                 let state = model.models.combinedState(primaryModel)
                 switch state {
                 case .installed:

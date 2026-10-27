@@ -4,8 +4,8 @@ import Foundation
 /// 同一段錄音可以換設定重跑比較（§17.1）
 struct TranscriptionOptions: Codable {
     /// breeze：whisper.cpp，模型依會議語言（中文、英文 Breeze，日文 large-v3-turbo，design §18.2）；system：macOS 內建辨識；
-    /// qwen：Qwen3-ASR（llama.cpp，中文、英文，design §32）
-    enum Engine: String, Codable { case breeze, system, qwen }
+    /// qwen：Qwen3-ASR（llama.cpp，中文、英文，design §32）；server：企業伺服器（design §36.3，說話者照樣在本機辨識）
+    enum Engine: String, Codable { case breeze, system, qwen, server }
     /// 分聲道時怎麼處理麥克風收到的回音（design §17.3）
     enum Echo: String, Codable {
         case none
@@ -62,14 +62,18 @@ struct TranscriptionOptions: Codable {
     /// 寫進 meetings.transcribed_with（design §21.17）
     var transcribedWith: String { engine == .system ? "system" : engine == .qwen ? "qwen" : language == .ja ? "japanese" : "breeze" }
 
+    /// local：使用者在這一場按了「改在這台電腦轉錄」（R50.5），不用企業伺服器
     @MainActor
-    static func current(language: MeetingLanguage, glossary: [String], channels: String, minSpeakers: Int? = nil) -> TranscriptionOptions {
+    static func current(language: MeetingLanguage, glossary: [String], channels: String, minSpeakers: Int? = nil,
+                        local: Bool = false) -> TranscriptionOptions {
         var options = TranscriptionOptions()
         options.minSpeakers = minSpeakers
         // 這個語言的模型還沒下載好時，這一場先用 macOS 內建辨識（design §21.17、D35）；
         // 中文、英文選了 Qwen3-ASR（design §32.3）而還沒下載好、已經有 Breeze 時先用 Breeze（R43.7）
         let wanted = ModelStore.transcription(for: language)
-        if AppSettings.useSystemTranscriber { options.engine = .system }
+        // 企業伺服器（R50.1）：登入失效時也照樣選它，工作停著等重新登入（R49.4）
+        if AppSettings.usesEnterpriseTranscription && !local { options.engine = .server }
+        else if AppSettings.useSystemTranscriber { options.engine = .system }
         else if ModelStore.isDownloaded(wanted) { options.engine = wanted == .qwen ? .qwen : .breeze }
         else if wanted == .qwen && ModelStore.isDownloaded(.breeze) { options.engine = .breeze }
         else { options.engine = .system }
@@ -111,6 +115,8 @@ struct TranscriptionResult {
     var seams: [Double] = []
     /// 說話者辨識分得準不準的線索（design §24.3）；分聲道、沒辨識時是 nil
     var diarizationQuality: Diarizer.Quality? = nil
+    /// 企業伺服器用的引擎（breeze、qwen、japanese）：寫進 transcribed_with，取代 options.transcribedWith（design §36.3）
+    var transcribedWith: String? = nil
 }
 
 struct SpeakerVoice {
@@ -134,9 +140,17 @@ struct TranscriptionPipeline {
     var setCancel: (@escaping () -> Void) -> Void = { _ in }
     /// 每一步之間檢查工作是否還要繼續
     var shouldContinue: () -> Bool = { true }
+    /// 企業伺服器（design §36.3）：上次傳到一半、還沒拿到結果的工作 id；換了就告訴 JobRunner 記下來
+    var remoteId: String?
+    var onRemoteId: (String?) -> Void = { _ in }
+    /// 企業伺服器的狀態（排隊第幾、為什麼在等）；nil 是伺服器的部分做完了
+    var onServer: (ServerNote?) -> Void = { _ in }
+    /// 使用者按了「改在這台電腦轉錄」（R50.5）
+    var switchToLocal: () -> Bool = { false }
 
     /// 回傳 nil 表示中途被取消
     func run(_ audio: URL) async throws -> TranscriptionResult? {
+        if options.engine == .server { return try await runServer(audio) }
         if options.engine == .qwen {
             guard ModelStore.isDownloaded(.qwen) else { throw WhisperError.modelMissing }
             return try await runQwen(audio)
@@ -166,6 +180,51 @@ struct TranscriptionPipeline {
         guard shouldContinue() else { return nil }
         return TranscriptionResult(segments: transcribed, speakers: speakers, channels: transcribed.map { _ in nil }, duration: duration,
                                    voices: voices, seams: seams, diarizationQuality: quality)
+    }
+
+    // MARK: 企業伺服器（design §36.3、R50）
+
+    /// 錄音解成 16 kHz 單聲道、寫成 16-bit WAV 上傳；伺服器轉錄的同時，Mac 在本機辨識說話者（聲紋跟本機一樣，D122）
+    private func runServer(_ audio: URL) async throws -> TranscriptionResult? {
+        stage(String(localized: "讀取錄音"))
+        let samples = try await AudioDecoder.decode(audio)
+        guard shouldContinue() else { return nil }
+        let duration = Double(samples.count) / AudioDecoder.sampleRate
+        let folder = try Paths.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let wav = folder.appendingPathComponent("upload.wav")
+        let samplesForWAV = samples
+        let (bytes, sha256) = try await Task.detached(priority: .userInitiated) { try ServerTranscriber.writeWAV(samplesForWAV, to: wav) }.value
+        guard shouldContinue() else { return nil }
+        progress(0)
+
+        // 說話者辨識不用等逐字稿，跟伺服器同時做
+        let diarize = options.diarize && duration > 5
+        let minSpeakers = options.minSpeakers
+        let diarization: Task<Diarizer.Output?, Never>? = diarize ? Task {
+            do { return try await Diarizer.diarize(samples: samples, minSpeakers: minSpeakers) { _ in } }
+            catch { log.error("diarization failed: \(error.localizedDescription, privacy: .public)"); return nil }
+        } : nil
+        defer { diarization?.cancel() }
+
+        let transcriber = ServerTranscriber(options: options, stage: stage, progress: progress, shouldContinue: shouldContinue,
+                                            switchToLocal: switchToLocal, onServer: onServer, onRemoteId: onRemoteId)
+        guard let remote = try await transcriber.transcribe(wav: wav, bytes: bytes, sha256: sha256, remoteId: remoteId) else { return nil }
+        var speakers: [Int?] = remote.segments.map { _ in nil }
+        var voices: [Int: SpeakerVoice] = [:]
+        var quality: Diarizer.Quality?
+        if let diarization {
+            stage(String(localized: "辨識說話者"))
+            if let output = await diarization.value {
+                guard shouldContinue() else { return nil }
+                (speakers, voices) = await assignSpeakers(output, to: remote.segments, in: samples, source: options.audioSource)
+                quality = output.quality
+            }
+        }
+        progress(1)
+        guard shouldContinue() else { return nil }
+        return TranscriptionResult(segments: remote.segments, speakers: speakers, channels: remote.segments.map { _ in nil }, duration: duration,
+                                   voices: voices, seams: remote.seams, diarizationQuality: quality, transcribedWith: remote.engine)
     }
 
     // MARK: whisper 從檔案依序讀（design §21.16）

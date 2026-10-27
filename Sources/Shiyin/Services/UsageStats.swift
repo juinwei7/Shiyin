@@ -117,7 +117,7 @@ final class UsageStats: @unchecked Sendable {
     func transcribed(seconds: Double, wallSeconds: Double, engine: String, language: MeetingLanguage,
                      imported: Bool, diarized: Bool) {
         let audio = Self.whole(seconds)
-        let key = ["system": "builtin", "japanese": "whisperJa", "qwen": "qwen"][engine] ?? "breeze"
+        let key = ["system": "builtin", "japanese": "whisperJa", "qwen": "qwen", "server": "server"][engine] ?? "breeze"
         add {
             $0.transcribedSeconds += audio
             $0.transcribeWallSeconds += Self.whole(wallSeconds)
@@ -163,6 +163,7 @@ final class UsageStats: @unchecked Sendable {
             let local = URL(string: OpenAICompatibleAPI.savedBaseURL).map(OpenAICompatibleAPI.isLocal) ?? false
             return local ? "local" : "api"
         case .anthropic, .openai, .gemini: return "api"
+        case .enterprise: return "enterprise"
         case .none: return nil
         }
     }

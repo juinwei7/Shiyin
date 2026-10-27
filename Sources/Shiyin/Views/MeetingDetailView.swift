@@ -289,9 +289,14 @@ struct StatusBanner: View {
         case .queued:
             let kind = detail.latestJob?.kind
             return AnyView(Label(kind == .transcribe ? "排隊等待轉錄" : "排隊等待整理", systemImage: "clock"))
+        case .transcribing(_, _) where running?.server?.waiting == true:
+            // 在等企業伺服器（連不上、登入失效，R50.5）：不顯示百分比
+            return AnyView(Label(running?.server?.text ?? "", systemImage: "clock").lineLimit(2))
         case .transcribing(let progress, let stage):
+            let note = running?.server?.text ?? ""
             return AnyView(HStack(spacing: 10) {
-                Text(transcribingText(progress, stage: stage, remaining: running?.remaining)).monospacedDigit()
+                Text(transcribingText(progress, stage: stage, remaining: running?.remaining) + (note.isEmpty ? "" : String(localized: "，\(note)")))
+                    .monospacedDigit()
                 if let progress {
                     ProgressView(value: progress).frame(width: 160).tint(.signal)
                 } else {
@@ -323,6 +328,10 @@ struct StatusBanner: View {
     @ViewBuilder
     private func actions(_ status: MeetingStatus) -> some View {
         switch status {
+        case .transcribing where model.runner.runningJob(for: detail.meeting.id!)?.server != nil:
+            // 企業伺服器在排隊、連不上時，可以改在這台 Mac 轉錄（R50.5）
+            Button("改在這台電腦轉錄") { model.runner.transcribeLocally(meetingId: detail.meeting.id!) }
+            Button("取消") { model.cancelJobs() }
         case .queued, .transcribing, .summarizing: Button("取消") { model.cancelJobs() }
         case .failed(let kind, let message):
             // 設定問題（沒登入、key 錯誤…）而且還沒修好（R46.2、design §34.4）：給修的按鈕，不放「重試」（重試也一樣會失敗）

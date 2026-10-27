@@ -139,6 +139,17 @@
         }
       }
     },
+    "%@（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
     "%@（之後可以在設定 → 整理工具重新測試）": {
       "extractionState": "manual",
       "localizations": {
@@ -541,6 +552,17 @@
         }
       }
     },
+    "Breeze ASR 25（聯發科）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breeze ASR 25 (MediaTek)"
+          }
+        }
+      }
+    },
     "Breeze ASR 25（聯發科，建議）": {
       "extractionState": "manual",
       "localizations": {
@@ -764,6 +786,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qwen3-ASR audio encoder (q8_0)"
+          }
+        }
+      }
+    },
+    "Qwen3-ASR（阿里巴巴開源）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-ASR (open model by Alibaba)"
           }
         }
       }
@@ -1026,6 +1059,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Back"
+          }
+        }
+      }
+    },
+    "上傳錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uploading audio"
           }
         }
       }
@@ -1411,6 +1455,160 @@
           "stringUnit": {
             "state": "translated",
             "value": "These are the points the summarizer wasn't sure about. Just answer them; skip anything unclear or unimportant."
+          }
+        }
+      }
+    },
+    "企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enterprise server"
+          }
+        }
+      }
+    },
+    "企業伺服器回傳錯誤（HTTP %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The enterprise server returned an error (HTTP %lld)"
+          }
+        }
+      }
+    },
+    "企業伺服器拒絕了這次登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The enterprise server declined this sign-in"
+          }
+        }
+      }
+    },
+    "企業伺服器排隊": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queued on the enterprise server"
+          }
+        }
+      }
+    },
+    "企業伺服器的憑證不受這台 Mac 信任，請公司的管理者協助安裝憑證": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac doesn't trust the enterprise server's certificate. Ask your company's administrator to install it."
+          }
+        }
+      }
+    },
+    "企業伺服器的版本太舊，請通知公司的管理者更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The enterprise server is too old. Ask your company's administrator to update it."
+          }
+        }
+      }
+    },
+    "企業伺服器的登入已失效，請重新登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your sign-in to the enterprise server has expired. Please sign in again."
+          }
+        }
+      }
+    },
+    "企業伺服器轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing on the enterprise server"
+          }
+        }
+      }
+    },
+    "企業伺服器轉錄失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The enterprise server failed to transcribe this recording"
+          }
+        }
+      }
+    },
+    "企業伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're not signed in to the enterprise server, or your sign-in expired. Sign in under Settings → Advanced → Enterprise Server."
+          }
+        }
+      }
+    },
+    "企業伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're not signed in to the enterprise server, or your sign-in expired: sign in under Advanced → Enterprise Server. Meetings won't be summarized automatically until then."
+          }
+        }
+      }
+    },
+    "企業伺服器（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enterprise server (%@)"
+          }
+        }
+      }
+    },
+    "伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server"
+          }
+        }
+      }
+    },
+    "伺服器正在準備模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the server is preparing its models"
           }
         }
       }
@@ -1823,6 +2021,28 @@
         }
       }
     },
+    "公司提供，不用自己的 key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provided by your company, no key needed"
+          }
+        }
+      }
+    },
+    "公司有拾音的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If your company runs a Shiyin enterprise server, enter the URL they gave you, click Sign In, and sign in with your company account on the page that opens. Recordings are then transcribed on the company's server — fast even without an NVIDIA graphics card — and summaries can use the company's model."
+          }
+        }
+      }
+    },
     "其他": {
       "extractionState": "manual",
       "localizations": {
@@ -2039,6 +2259,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download it in “Models & Storage”, or set transcription to macOS in “Recording”"
+          }
+        }
+      }
+    },
+    "前面還有 %lld 場": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recording ahead"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recordings ahead"
+                }
+              }
+            }
           }
         }
       }
@@ -3345,6 +3588,17 @@
         }
       }
     },
+    "已登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in"
+          }
+        }
+      }
+    },
     "已登入 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -3352,6 +3606,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Signed in: %@"
+          }
+        }
+      }
+    },
+    "已登入 %@（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in as %1$@ (%2$@)"
           }
         }
       }
@@ -3474,6 +3739,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anonymous ID reset"
+          }
+        }
+      }
+    },
+    "帳號": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
           }
         }
       }
@@ -4196,6 +4472,17 @@
         }
       }
     },
+    "拾音的版本太舊，請先更新拾音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This version of Shiyin is too old. Please update Shiyin first."
+          }
+        }
+      }
+    },
     "拾音系統聲音": {
       "extractionState": "manual",
       "localizations": {
@@ -4583,6 +4870,17 @@
         }
       }
     },
+    "改在這台電腦轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe on This Computer"
+          }
+        }
+      }
+    },
     "整場會議（.shiyin）": {
       "extractionState": "manual",
       "localizations": {
@@ -4645,6 +4943,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When summarizing, answering questions or guessing speaker names, the transcript text, your notes, the glossary and basic meeting details are sent to %@. The recording is never sent. http isn't encrypted; use https if you can."
+          }
+        }
+      }
+    },
+    "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 %@（公司的伺服器），再由公司設定的模型整理。錄音檔不會因為整理而送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, answering questions, or guessing speakers, the transcript text, your notes, the glossary and basic meeting details are sent to %@ (your company's server) and processed by the model your company set up. Recordings are not sent for summarizing."
           }
         }
       }
@@ -6213,6 +6522,17 @@
         }
       }
     },
+    "正式轉錄用企業伺服器（%@），這台 Mac 不用下載轉錄模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription uses the enterprise server (%@), so this Mac doesn't need to download a transcription model."
+          }
+        }
+      }
+    },
     "正式轉錄選「Qwen3-ASR」時用，2.5 GB。": {
       "extractionState": "manual",
       "localizations": {
@@ -6374,6 +6694,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not downloaded; transcription uses macOS speech recognition"
+          }
+        }
+      }
+    },
+    "沒有下載，正式轉錄用企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not downloaded; transcription uses the enterprise server"
           }
         }
       }
@@ -6753,6 +7084,28 @@
         }
       }
     },
+    "用企業伺服器整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarize with the enterprise server"
+          }
+        }
+      }
+    },
+    "用企業伺服器轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe with the enterprise server"
+          }
+        }
+      }
+    },
     "用你的訂閱，不另外收費": {
       "extractionState": "manual",
       "localizations": {
@@ -6819,6 +7172,17 @@
         }
       }
     },
+    "留空使用公司設定的預設模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave empty to use your company's default model"
+          }
+        }
+      }
+    },
     "留空使用預設模型": {
       "extractionState": "manual",
       "localizations": {
@@ -6875,6 +7239,17 @@
         }
       }
     },
+    "登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In"
+          }
+        }
+      }
+    },
     "登入 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -6882,6 +7257,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sign In to %@"
+          }
+        }
+      }
+    },
+    "登入中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signing In…"
+          }
+        }
+      }
+    },
+    "登入已失效": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-in expired"
+          }
+        }
+      }
+    },
+    "登入已失效：到「進階 → 企業伺服器」重新登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-in expired: sign in again under Advanced → Enterprise Server"
+          }
+        }
+      }
+    },
+    "登出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign Out"
           }
         }
       }
@@ -7184,6 +7603,28 @@
         }
       }
     },
+    "等企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the enterprise server"
+          }
+        }
+      }
+    },
+    "等企業伺服器：連不上，%lld 秒後再試": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the enterprise server: can't connect, retrying in %lld s"
+          }
+        }
+      }
+    },
     "範圍": {
       "extractionState": "manual",
       "localizations": {
@@ -7356,6 +7797,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter the URL, API key and model in Settings → Summarizer after setup. Nothing is summarized until they’re filled in."
+          }
+        }
+      }
+    },
+    "網址不對：要以 https:// 開頭，例如 https://shiyin.example.com": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid URL: it must start with https://, for example https://shiyin.example.com"
           }
         }
       }
@@ -8493,6 +8945,17 @@
         }
       }
     },
+    "轉錄：錄音會送到 %@（公司的伺服器），轉完就刪。說話者辨識和聲紋在這台 Mac 上做，聲紋、筆記、會議紀錄不會因為轉錄送出。伺服器用的轉錄引擎：%@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription: recordings are sent to %1$@ (your company's server) and deleted after transcription. Speaker identification and voiceprints stay on this Mac; voiceprints, notes and meeting notes are not sent for transcription. Transcription engine on the server: %2$@."
+          }
+        }
+      }
+    },
     "辨識信心低，建議對照錄音確認": {
       "extractionState": "manual",
       "localizations": {
@@ -8689,6 +9152,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "This file has no audio"
+          }
+        }
+      }
+    },
+    "這個網址不是拾音的企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This URL is not a Shiyin enterprise server"
           }
         }
       }
@@ -8998,6 +9472,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Can't reach %@: %@"
+          }
+        }
+      }
+    },
+    "連不到企業伺服器（%@）。請確認網址，在公司外面要先連 VPN。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach the enterprise server (%@). Check the URL; outside the office, connect to the VPN first."
           }
         }
       }
@@ -9542,6 +10027,17 @@
         }
       }
     },
+    "重新登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In Again"
+          }
+        }
+      }
+    },
     "重新登入 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -9751,6 +10247,17 @@
         }
       }
     },
+    "錄音一直沒辦法完整傳到企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recording couldn't be uploaded to the enterprise server completely"
+          }
+        }
+      }
+    },
     "錄音中": {
       "extractionState": "manual",
       "localizations": {
@@ -9923,6 +10430,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The recording will be saved and transcribed the next time you open Shiyin."
+          }
+        }
+      }
+    },
+    "錄音會送到 %@（公司的伺服器）轉錄，轉完就刪；說話者辨識和聲紋在這台 Mac 上做，聲紋不會送出。會參考詞彙表。連不上時會等，也可以改在這台 Mac 轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordings are sent to %@ (your company's server) for transcription and deleted afterwards; speaker identification and voiceprints stay on this Mac. Uses the glossary. If the server can't be reached, Shiyin waits, or you can transcribe on this Mac instead."
           }
         }
       }
@@ -10451,6 +10969,17 @@
           "stringUnit": {
             "state": "translated",
             "value": ", "
+          }
+        }
+      }
+    },
+    "，%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", %@"
           }
         }
       }
