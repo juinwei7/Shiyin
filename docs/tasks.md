@@ -7,6 +7,27 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 公司伺服器（R49～R52，design §36；2026-10-27 使用者新需求）
+
+伺服器是另外的私人專案，它的任務寫在伺服器專案自己的 tasks。這裡只有 app 這邊；API 照 design §36.2，先對假伺服器做，伺服器做好再接起來（E7）。
+
+- [ ] **E0 Mac 本機算聲紋**（D122、§36.3 第 3 步）：用 Windows 版說話者辨識的段落（`shiyin-eval diarize-eval` 倒出），Mac DEBUG 版用 FluidAudio 在本機算每位說話者的聲紋（`voiceprint-eval` 的設定加 `segments`），AMI 9 場模擬 R33
+  - 驗證：帶錯 0，直接帶入、問的比例跟本機辨識的差不多（只用第一場學：直接帶入 8、問 8）；不行就照 D122 改成 Mac 本機也跑說話者辨識，先改 design
+- [ ] **E1 假伺服器、標準答案**（§36.7）：`scripts/dev/fake-company-server.py`；`dump-golden` 加 `server/`（`settings` 的 JSON、結果轉成段落和說話者）
+  - 驗證：`curl` 走完 info → 登入 → 建工作 → 分兩次上傳（中間斷一次）→ 結果 → 刪除；`dump-golden` 跑兩次完全相同，其他標準答案沒變
+- [ ] **E2 Mac 登入、設定頁、引導**（R49、§36.3）：`CompanyServer.swift`、`ASWebAuthenticationSession`、鑰匙圈、進階的「公司伺服器」、登入完成的 sheet、引導的連結；介面文字跑 `l10n.py check`
+  - 驗證（假伺服器）：不是拾音的網址、版本太舊、拾音太舊、http 被擋各自的訊息；在真的畫面上用 AX 按「登入」（登入視窗會出現在使用者畫面上，先說一聲）→ 回到拾音顯示信箱；`state` 不對的回呼被忽略；401 自動換 token；403 顯示登入失效；登出後設定改回本機、鑰匙圈的項目刪掉；`defaults read com.weiwei.shiyin` 沒留下測試的值
+- [ ] **E3 Mac 用公司伺服器轉錄**（R50、§36.3）：`ServerTranscriber`、續傳、`remoteId`、等公司伺服器、改在這台電腦轉錄、本機算聲紋、統計
+  - 驗證（假伺服器）：`record-sim` 錄一場 → 上傳、排隊位置、進度、結果跟標準答案一樣；上傳到一半 `pkill` 再開 → 從 `HEAD` 的位置接著傳；`not_found` → 重建；伺服器關掉 → 「等公司伺服器」→ 按「改在這台電腦轉錄」用本機轉完；取消送 `DELETE`；`too_large` 的提示；認得的人照樣帶入名字；沒登入時跟 4.1.2 一樣
+- [ ] **E4 Mac 公司伺服器的整理工具**（R51）：`CompanyServerAPI`、模型清單、準備好了沒、錯誤分類、隱私說明
+  - 驗證（假伺服器）：整理、校稿、提問、猜說話者各一次；access token 過期時自動換新再送；登入失效時整理暫停、出現「重新登入」（R46）
+- [ ] **E5 Windows**（R52.4、design-windows §12.11）：同 E2～E4
+  - 驗證：Mac 上 `dotnet test`（假伺服器、標準答案 `server/`）；虛擬機裡用 UI Automation 走登入（`shiyin:` 網址回到開著的拾音）、轉錄、整理、登出
+- [ ] **E6 文件、統計**（R52.1～R52.3）：使用說明、官網的隱私段落（中英）、README；`workers/usage` 加欄（要使用者跑 migration 和 deploy）
+  - 驗證：`l10n.py check`、`node site/build.mjs`；`shiyinctl usage` 看得到新的欄位、假後台收到一份
+- [ ] **E7 接上真的伺服器**（等伺服器專案的第一版裝好）：Mac、Windows 各錄一場真的會議（要使用者）
+  - 驗證：結果跟同一段錄音在本機用同一個引擎轉的一樣（R50.4）；一小時的錄音上傳、轉錄各花多久寫進 design §36
+
 ## 減法：三個分頁、五個動作、四頁設定、三步引導（R44，design §33；2026-10-24 使用者決定先做減法）
 
 M1～M6、M8（官網截圖）已完成（2026-10-25，Mac 和 Windows）。剩 M7 iPhone 之後。

@@ -406,6 +406,15 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 - 設定 → 進階的最下面（「其他」之後）一張卡片：「匿名使用統計」和「詳細…」；按下去是對話框（ContentDialog）：開關、說明、「重設匿名 ID」、「完成」（不顯示 JSON）。使用說明「資料與隱私」加一條。文字和行為同 M§30.5，只在有統計網址時顯示（DEBUG 一律顯示）。
 - DEBUG 控制通道：`usageurl <網址|off>`、`usage <輸出.json>`、`usageage <天數>`、`usagesend`，同 Mac 的 shiyinctl。虛擬機裡驗證時，假後台（`scripts/dev/fake-usage-server.py`）開在 Mac 上，用 `ssh -R` 讓虛擬機連 `http://127.0.0.1:<埠>`（同 §14.2 測更新）。
 
+### 12.11 公司伺服器（R49～R52，M§36）
+
+- API、流程、錯誤分類、隱私說明同 M§36。程式：`Shiyin.Services/CompanyServer/`（`CompanyServerClient`：info、登入、換 token、HTTP；`ServerTranscriber`：寫 16-bit WAV、建工作、續傳、等結果）、`Shiyin.LLM` 的 `CompanyServerApi`（包 OpenAI 相容那一個，key 換成 access token）。都在 net10.0，Mac 上用假伺服器（`scripts/dev/fake-company-server.py`）就能 `dotnet test`。
+- 登入：`Launcher.LaunchUriAsync` 用預設瀏覽器打開 `/login`，`redirect_uri` 是 `shiyin://auth`。回來的網址走已經登錄的 `shiyin:` 網址（§12.2）：第二個拾音把網址轉給開著的那個（§12.1）後結束。`state` 只放記憶體、10 分鐘有效，對不上就忽略（同 §12.2 的權杖）。瀏覽器登入完之後，把拾音的主視窗拉到前面（`SetForegroundWindow` 不一定成功，至少讓工作列閃一下）。
+- token：認證管理員 `com.weiwei.shiyin.apikey/companyServer`（同 §12.5），內容同 Mac。網址存 `settings.json` 的 `companyServerURL`。
+- 聲紋：每位說話者用伺服器的段落，照 §9 第 4 點在本機算（最長的幾段切成約 3 秒的小段、ERes2Net、依長度加權平均），門檻照 §9。說話者辨識的模型照樣要下載（約 40 MB，比轉錄模型小很多）。
+- 選公司伺服器時：首次使用引導、設定不要求下載 Breeze、Qwen3-ASR；有 NVIDIA 顯示卡也不自動下載加速元件（`gpuPackOffered` 不設，之後換回本機引擎時照 §8 再判斷）。快速辨識的模型照樣下載（即時逐字稿要用）。
+- DEBUG 控制通道：`companyserver <網址|off>`、`companylogin <code>`、`state` 的 `companyServer`，同 Mac 的 shiyinctl。虛擬機裡驗證時，假伺服器開在 Mac 上，用 `ssh -R` 讓虛擬機連 `http://127.0.0.1:<埠>`（同 §14.2）。
+
 ## 13. 匯出與封包
 
 - md、txt、srt、vtt、HTML：翻 `IO/Exporters.swift` 的文字產生部分，跟標準答案逐位元組相同（§4）。
