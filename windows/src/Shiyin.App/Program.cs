@@ -158,15 +158,28 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         });
     }
 
+    /// <summary>DEBUG 控制通道：等於點了這個 shiyin: 網址</summary>
+    public void OpenLink(string link) => OpenLinks([link]);
+
     void OpenLinks(IEnumerable<string> arguments)
     {
         if (host is null) return;
         foreach (var link in arguments.Where(NotificationLinks.IsLink))
         {
-            // 企業伺服器的登入回呼（shiyin://auth，design-windows §12.11）
+            // 企業伺服器的登入回呼（shiyin://auth，design-windows §12.11）、加入連結（shiyin://join，R49.7）
             if (EnterpriseServer.IsCallback(link)) _ = host.CompleteEnterpriseSignIn(link);
+            else if (EnterpriseServer.IsJoin(link)) Join(EnterpriseServer.JoinServer(link));
             else host.Notifier.Open(link);
         }
+    }
+
+    /// <summary>加入連結（R49.7）：打開設定的「進階」，等畫面好了再問要不要加入</summary>
+    void Join(string server)
+    {
+        ShowSettings();
+        settings?.Open("advanced");
+        var window = settings;
+        window?.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => window.ConfirmJoin(server));
     }
 
     /// <summary>瀏覽器登入完回到拾音：拉到前面、打開設定的「進階」，失敗時說明原因</summary>

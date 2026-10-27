@@ -318,6 +318,13 @@ public sealed class JobRunner
     /// <summary>企業伺服器（M§36.3）；沒有就是 null</summary>
     public EnterpriseServer? Enterprise { get; init; }
 
+    /// <summary>自己的詞＋公司的詞（R53.2）：轉錄、猜說話者、校正、整理共用</summary>
+    List<string> GlossaryTerms()
+    {
+        var own = db.Glossary().Select(t => t.Term);
+        return Enterprise is { } enterprise ? enterprise.Glossary.Merged(own) : [.. own];
+    }
+
     /// <summary>正式轉錄用企業伺服器（R50.1）：選了而且登入過（登入失效也算，工作停著等重新登入）</summary>
     public bool UsesEnterprise => Enterprise is { HasAccount: true } && settings.TranscriptionEngine == "server";
 
@@ -342,7 +349,7 @@ public sealed class JobRunner
         if (db.Meeting(job.MeetingId) is not { } meeting) return;
         var startedAt = DateTime.UtcNow;
         var payload = Decode<TranscribePayload>(job.Payload) ?? new TranscribePayload(null);
-        var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, db.Glossary().Select(t => t.Term).ToList(),
+        var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, GlossaryTerms(),
             meeting.Channels, meeting.MinSpeakers);
         // 沒人說話太久而自動停止的錄音：只轉錄到最後說話後 15 秒，錄音檔不動（M§35.3、R48.3）
         var until = payload.Until;
@@ -541,7 +548,7 @@ public sealed class JobRunner
             var names = speakers.ToDictionary(s => s.Idx, s => s.Name);
             var language = meeting.MeetingLanguage;
             var context = new SpeakerNaming.Context(language, meeting.MeetingDate, meeting.Title, meeting.ParticipantList, db.PeopleNames(),
-                db.Glossary().Select(t => t.Term).ToList(), unnamed,
+                GlossaryTerms(), unnamed,
                 idx => names.TryGetValue(idx, out var n) ? n : language.Text($"說話者 {idx}", $"Speaker {idx}", $"話者 {idx}"),
                 segments.Select(s => (s.Start, s.Speaker, s.Text)).ToList());
             var json = await llm.GenerateJson(provider, settings.Model, SpeakerNaming.System(language), SpeakerNaming.Prompt(context),
@@ -590,7 +597,7 @@ public sealed class JobRunner
             var names = db.Speakers(job.MeetingId).ToDictionary(s => s.Idx, s => s.Name);
             string? SpeakerName(int? idx) => idx is int i ? names.TryGetValue(i, out var n) ? n : language.Text($"說話者 {i}", $"Speaker {i}", $"話者 {i}") : null;
             var context = new TranscriptCorrection.Context(language, meeting.Title, meeting.ParticipantList,
-                names.Values.Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList(), db.Glossary().Select(t => t.Term).ToList(),
+                names.Values.Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList(), GlossaryTerms(),
                 segments.Select(s => (s.Text, SpeakerName(s.Speaker))).ToList());
             var result = new List<CorrectionSuggestion>();
             for (var start = 0; start < segments.Count; start += TranscriptCorrection.ChunkSize)
@@ -666,7 +673,7 @@ public sealed class JobRunner
         var templates = db.Templates();
         var template = templates.FirstOrDefault(t => t.Id == meeting.TemplateId) ?? templates.FirstOrDefault(t => t.Id == "general");
         var context = new NotesContext(meeting, segments, db.Speakers(job.MeetingId).ToDictionary(s => s.Idx, s => s.Name),
-            db.Bookmarks(job.MeetingId), db.Glossary().Select(t => t.Term).ToList(),
+            db.Bookmarks(job.MeetingId), GlossaryTerms(),
             template?.DefinitionFor(meeting.MeetingLanguage) ?? TemplateDefinition.Decode("{}"));
         string prompt;
         if (answers is not null)

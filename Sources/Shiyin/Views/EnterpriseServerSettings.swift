@@ -105,16 +105,8 @@ struct EnterpriseServerSettings: View {
 
     /// 登入後預設轉錄、整理都用企業伺服器（R49.3），可以再取消勾選改回原本的
     private func applyDefaults(llm: Bool) {
-        if engine != "server" {
-            previousEngine = engine
-            engine = "server"
-        }
-        if llm && storedProvider != LLMProvider.enterprise.rawValue {
-            previousProvider = storedProvider
-            storedProvider = LLMProvider.enterprise.rawValue
-        }
-        model.runner.wake()
-        model.refreshEnvironment()
-        NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
+        if engine != "server" { previousEngine = engine }
+        if llm && storedProvider != LLMProvider.enterprise.rawValue { previousProvider = storedProvider }
+        model.applyEnterpriseDefaults(llm: llm)
     }
 }

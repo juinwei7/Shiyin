@@ -2098,6 +2098,29 @@
         }
       }
     },
+    "公司的詞彙（%lld 個）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Company terms (%lld)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Company terms (%lld)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "公司的預設": {
       "extractionState": "manual",
       "localizations": {
@@ -2381,6 +2404,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add"
+          }
+        }
+      }
+    },
+    "加入「%@」的企業伺服器？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the %@ enterprise server?"
           }
         }
       }
@@ -3500,6 +3534,17 @@
         }
       }
     },
+    "已加入「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined %@"
+          }
+        }
+      }
+    },
     "已匯入「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -3738,6 +3783,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Moved to Trash. You can restore it within 30 days."
+          }
+        }
+      }
+    },
+    "已經加入「%@」了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already joined %@"
           }
         }
       }
@@ -5827,6 +5883,17 @@
         }
       }
     },
+    "會打開 %@ 的登入頁，用公司帳號登入。登入後錄音交給公司的伺服器轉錄，整理也用公司設定的模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This opens the sign-in page at %@. Sign in with your company account; recordings are then transcribed on your company's server and summarized with your company's model."
+          }
+        }
+      }
+    },
     "會議": {
       "extractionState": "manual",
       "localizations": {
@@ -6940,6 +7007,17 @@
         }
       }
     },
+    "沒辦法加入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't join"
+          }
+        }
+      }
+    },
     "沒辦法把 API key 存進鑰匙圈（錯誤 %lld）": {
       "extractionState": "manual",
       "localizations": {
@@ -6947,6 +7025,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t save the API key to the keychain (error %lld)"
+          }
+        }
+      }
+    },
+    "沒辦法登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't sign in"
           }
         }
       }
@@ -7293,6 +7382,17 @@
         }
       }
     },
+    "由%@的管理者維護，接在你的詞後面一起用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maintained by %@'s administrators and used after your own terms."
+          }
+        }
+      }
+    },
     "留空使用公司設定的預設模型": {
       "extractionState": "manual",
       "localizations": {
@@ -7477,6 +7577,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Current version"
+          }
+        }
+      }
+    },
+    "目前登入的「%@」會先登出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll be signed out of %@ first."
           }
         }
       }
@@ -9321,6 +9432,17 @@
         }
       }
     },
+    "這台 Mac 已經用 %@ 登入 %@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac is signed in as %@ on %@."
+          }
+        }
+      }
+    },
     "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
       "extractionState": "manual",
       "localizations": {
@@ -10562,6 +10684,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recording timeline"
+          }
+        }
+      }
+    },
+    "錄音會交給公司的伺服器轉錄。要改回這台 Mac，到「設定 → 進階 → 企業伺服器」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordings will be transcribed on your company's server. To switch back to this Mac, go to Settings → Advanced → Enterprise Server."
           }
         }
       }

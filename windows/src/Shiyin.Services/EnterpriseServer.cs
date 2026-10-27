@@ -89,6 +89,9 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     /// <summary>DEBUG 可以用本機的 http（R49.2）</summary>
     public bool AllowLocalHttp { get; init; }
 
+    /// <summary>公司詞彙表（R53）；App 給 SHIYIN_HOME 裡的檔案</summary>
+    public CompanyGlossary Glossary { get; init; } = new(null);
+
     public EnterpriseServer(AppSettings settings, HttpClient http, ISecretStore secrets, string appVersion, string device)
     {
         this.settings = settings;
@@ -231,6 +234,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         }
         Log.Info("enterprise server signed in");
         Changed?.Invoke();
+        await RefreshGlossary(cancel);
     }
 
     /// <summary>重新讀伺服器的資訊（R51.5、M§36.3）：公司在後台加了模型、改了名稱或轉錄引擎；連不上就保留舊的。不讀認證管理員</summary>
@@ -242,10 +246,38 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         catch (Exception e) when (e is EnterpriseException or HttpRequestException or OperationCanceledException) { return; }
         // 讀的時候登出、換了帳號：不要蓋掉
         if (Account is not { } current || current.Email != before.Email) return;
-        if (current.ServerName == info.Name && current.Engine == info.Engine && current.Llm == info.Llm) return;
-        SaveAccount(current.Email, current.Name, info);
-        Changed?.Invoke();
-        settings.NotifySummarizerChanged();
+        if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm)
+        {
+            SaveAccount(current.Email, current.Name, info);
+            Changed?.Invoke();
+            settings.NotifySummarizerChanged();
+        }
+        await RefreshGlossary(cancel);
+    }
+
+    /// <summary>公司詞彙表（R53.1）：舊的伺服器回 404 就是沒有；連不上、登入失效保留上次的</summary>
+    public async Task RefreshGlossary(CancellationToken cancel = default)
+    {
+        if (!IsSignedIn) return;
+        try
+        {
+            var (status, body, _) = await Call(HttpMethod.Get, "api/v1/glossary", timeout: TimeSpan.FromSeconds(15), cancel: cancel);
+            if (status == 404) { Glossary.Save([], null); return; }
+            if (status != 200 || JsonNode.Parse(body) is not JsonObject o || o["terms"] is not JsonArray terms) return;
+            Glossary.Save(terms.Select(t => t?.GetValue<string>()).OfType<string>(), o["updatedAt"]?.GetValue<string>());
+        }
+        catch (Exception e) when (e is EnterpriseException or HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException) { }
+    }
+
+    /// <summary>shiyin://join?server=… 是不是加入連結（R49.7）</summary>
+    public static bool IsJoin(string url) =>
+        url.StartsWith("shiyin://join", StringComparison.OrdinalIgnoreCase) || url.StartsWith("shiyin:join", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>加入連結裡的伺服器網址（還沒檢查）</summary>
+    public static string JoinServer(string url)
+    {
+        var query = url.IndexOf('?') is var i and >= 0 ? url[(i + 1)..] : "";
+        return ParseQuery(query).GetValueOrDefault("server") ?? "";
     }
 
     void SaveAccount(string email, string name, EnterpriseInfo info) =>
@@ -278,6 +310,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             catch (EnterpriseException) { }
         }
         ForgetLogin();
+        Glossary.Clear();
         settings.Remove(AccountKey);
         lock (gate) expiredMessage = null;
         if (settings.TranscriptionEngine == "server") settings.Remove(AppSettings.TranscriptionEngineKey);

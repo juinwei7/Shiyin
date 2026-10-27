@@ -194,6 +194,10 @@ public static class ControlPipe
                         break;
                     case "logout": _ = Task.Run(() => host.Enterprise.SignOut()); break;
                     case "expire": host.Enterprise.InvalidateAccess(); break;
+                    case "glossary": _ = Task.Run(() => host.Enterprise.RefreshGlossary()); break;   // 重新拿公司詞彙表（R53）
+                    case "join" when args.Length > 2:   // join <shiyin://join?server=…>：等於點了加入連結（R49.7）
+                        { var link = args[2]; host.Post(() => App.Current.OpenLink(link)); }
+                        break;
                     case "local" when args.Length > 2 && long.TryParse(args[2], out var meeting): host.Runner.TranscribeLocally(meeting); break;
                 }
                 return Ok;
@@ -285,6 +289,7 @@ public static class ControlPipe
                 ["url"] = host.Enterprise.SavedUrl?.ToString(), ["hasAccount"] = host.Enterprise.HasAccount, ["signedIn"] = host.Enterprise.IsSignedIn,
                 ["email"] = host.Enterprise.Account?.Email, ["serverName"] = host.Enterprise.Account?.ServerName,
                 ["expired"] = host.Enterprise.ExpiredMessage, ["error"] = enterpriseError,
+                ["glossary"] = new JsonArray([.. host.Enterprise.Glossary.Terms.Select(t => (JsonNode)t)]),
             },
             ["recorder"] = new JsonObject
             {

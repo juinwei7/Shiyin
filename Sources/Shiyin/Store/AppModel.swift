@@ -207,6 +207,8 @@ final class AppModel {
     enum FolderPrompt: Equatable { case create(Int64), rename(String) }
     var glossary: [GlossaryTerm] = []
     var glossarySuggestions: [GlossarySuggestion] = []
+    /// 公司詞彙表（R53）：設定頁顯示、建議的新詞要排除
+    var companyGlossary: [String] = CompanyGlossary.terms
     var templates: [TemplateRecord] = []
 
     var searchQuery = "" { didSet { runSearch() } }
@@ -320,6 +322,12 @@ final class AppModel {
                 MainActor.assumeIsolated { AppModel.shared.refreshSummarizerProblem() }
             })
         }
+        summarizerObservers.append(NotificationCenter.default.addObserver(forName: .companyGlossaryChanged, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                AppModel.shared.companyGlossary = CompanyGlossary.terms
+                AppModel.shared.reload()
+            }
+        })
         cleanUpPreviousRun()
         purgeExpiredTrash()
         recoverRecordings()
@@ -354,7 +362,8 @@ final class AppModel {
             meetings = try db.meetingRows()
             trash = try db.meetingRows(trash: true)
             glossary = try db.glossary()
-            glossarySuggestions = try db.glossarySuggestions()
+            // 公司已經有的詞不再建議（R53.3）
+            glossarySuggestions = try db.glossarySuggestions().filter { !CompanyGlossary.contains($0.term) }
             templates = try db.templates()
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
@@ -1660,6 +1669,15 @@ final class AppModel {
 }
 
 extension AppModel {
+    /// 登入企業伺服器後預設轉錄、整理都用它（R49.3）：設定頁的登入、加入連結共用
+    func applyEnterpriseDefaults(llm: Bool) {
+        UserDefaults.standard.set("server", forKey: AppSettings.transcriptionEngineKey)
+        if llm { UserDefaults.standard.set(LLMProvider.enterprise.rawValue, forKey: AppSettings.providerKey) }
+        runner.wake()
+        refreshEnvironment()
+        NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
+    }
+
     func refreshSummarizerProblem() {
         let problem = AppSettings.summarizerProblem
         if problem != summarizerProblem { summarizerProblem = problem }

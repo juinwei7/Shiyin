@@ -163,6 +163,16 @@ final class EnterpriseServer {
             save(updated)
             NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
         }
+        await refreshGlossary()
+    }
+
+    /// 公司詞彙表（R53.1）：舊的伺服器回 404 就是沒有；連不上保留上次的
+    func refreshGlossary() async {
+        guard isSignedIn, let (data, response) = try? await call("GET", "api/v1/glossary", timeout: 15) else { return }
+        if response.statusCode == 404 { CompanyGlossary.save([], updatedAt: nil); return }
+        guard response.statusCode == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let terms = object["terms"] as? [String] else { return }
+        CompanyGlossary.save(terms, updatedAt: object["updatedAt"] as? String)
     }
 
     // MARK: 登入（M§36.2）
@@ -229,6 +239,7 @@ final class EnterpriseServer {
         accessExpires = Date().addingTimeInterval(TimeInterval(tokens.expiresIn) - 60)
         status = .signedIn
         log.info("enterprise server signed in")
+        await refreshGlossary()
     }
 
     /// 登出（R49.5）：伺服器那邊撤銷這台電腦（送不出去也照樣清掉本機的），轉錄、整理改回本機的
@@ -241,6 +252,7 @@ final class EnterpriseServer {
             _ = try? await Self.send(request)
         }
         forgetLogin()
+        CompanyGlossary.clear()
         UserDefaults.standard.removeObject(forKey: Self.accountKey)
         account = nil
         status = .signedOut
@@ -441,6 +453,7 @@ final class EnterpriseServer {
         case .expired(let message): state["status"] = "expired"; state["message"] = message
         }
         if let account { state["email"] = account.email; state["serverName"] = account.serverName; state["engine"] = account.engine }
+        state["glossary"] = CompanyGlossary.terms
         return state
     }
     #endif

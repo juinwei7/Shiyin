@@ -414,6 +414,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 - 說話者辨識也交給伺服器（D122）：建工作時 `diarize` 照設定；結果的 `speakers`、`voices`（伺服器跟 Windows 同一個 ERes2Net 模型）、`diarizationQuality` 直接存進資料庫、比對聲紋，跟本機轉錄一樣。這台電腦不用說話者辨識的模型。
 - 選企業伺服器時：`JobRunner.PrepareTranscription` 不等模型、不自動下載（R50.7）；有 NVIDIA 顯示卡也不自動下載加速元件（`GpuAcceleration.Start` 看到 `transcriptionEngine=server` 就跳過，`gpuPackOffered` 不設，之後換回本機引擎時下次開啟再判斷）。快速辨識的模型照樣下載（即時逐字稿要用）。按「改在這台電腦轉錄」時才開始下載 Breeze、說話者辨識的模型，還沒好就先用快速辨識（D35）。
 - 畫面：設定的「進階」最上面一組「企業伺服器」（同 M§36.3）；「錄音與轉錄」的正式轉錄多「企業伺服器（公司名稱）」；整理工具的選單在登入了、公司有提供整理時多「公司（<公司名稱>）」（M§36.3、D124），登入只在進階；選了沒有模型欄、key 欄，只顯示公司設定的模型（不只一個時是下拉選單「公司的預設」＋後台設定的名稱）。啟動、打開整理工具頁時 `EnterpriseServer.RefreshInfo` 重新讀伺服器的資訊。會議頁的狀態列：伺服器負責的那段時間有「改在這台電腦轉錄」，在等伺服器時只顯示原因（不顯示百分比）。
+- 加入連結（R49.7）：`shiyin://join?server=…` 跟 `shiyin://auth` 一樣從 `App.OpenLinks` 進來（`EnterpriseServer.IsJoin`），打開設定的「進階」，`SettingsWindow.ConfirmJoin` 讀 info 後用對話框問「加入「<名稱>」的企業伺服器？」，加入就照設定頁的「登入」（瀏覽器 → `shiyin://auth`）。公司詞彙表（R53）：`CompanyGlossary` 存在 `SHIYIN_HOME\enterprise-glossary.json`，`EnterpriseServer.RefreshInfo` 和登入完成時一起更新、登出時刪；`JobRunner` 的四個地方用合併後的詞；「說話者與詞彙」頁多一段「公司的詞彙」。
 - DEBUG 控制通道：`enterprise login <網址> <信箱>`（伺服器開發用的登入，不經過瀏覽器，登入後套用預設）、`enterprise logout`、`enterprise expire`、`enterprise local <會議 id>`；`state` 的 `enterprise`、`transcriptionEngine`、`provider` 和轉錄的 `server`。虛擬機裡驗證時，伺服器開在 Mac 上，用 `ssh -R` 讓虛擬機連 `http://127.0.0.1:<埠>`（同 §14.2）。
 
 ## 13. 匯出與封包

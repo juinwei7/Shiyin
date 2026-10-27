@@ -31,6 +31,8 @@ public sealed class EnterpriseTests : IDisposable
         public bool Disabled;
         public bool Down;
         public bool Llm = true;
+        /// <summary>公司詞彙表（R53）；null 是舊的伺服器（404）</summary>
+        public List<string>? GlossaryTerms = [];
         // 工作
         public byte[] Received = [];
         public long Expected;
@@ -108,6 +110,12 @@ public sealed class EnterpriseTests : IDisposable
             }
             if (!Authorized()) { await Error(c, Disabled ? 403 : 401, Disabled ? "forbidden" : "unauthorized"); return; }
             if (Busy) { await Error(c, 503, "busy", "伺服器忙"); return; }
+            if (method == "GET" && path == "/api/v1/glossary")
+            {
+                if (GlossaryTerms is null) { await Error(c, 404, "not_found"); return; }
+                await Json(c, 200, new JsonObject { ["terms"] = new JsonArray([.. GlossaryTerms.Select(t => (JsonNode)t)]), ["updatedAt"] = "2026-10-27T12:00:00Z" });
+                return;
+            }
             if (method == "GET" && path == "/api/v1/llm/models")
             {
                 await Json(c, 200, JsonNode.Parse("""{"object":"list","data":[{"id":"gemma-3-27b","name":"機房的 Gemma 3","default":true},{"id":"claude-sonnet-5-5","name":"Claude"}]}""")!.AsObject());
@@ -487,6 +495,7 @@ public sealed class EnterpriseTests : IDisposable
     [Fact]
     public async Task JobRunnerTranscribesOnTheServer()
     {
+        fake.GlossaryTerms = ["拾音", "自己的詞"];
         var server = await SignedIn();
         var paths = new ShiyinPaths(home.Path);
         paths.EnsureDirectories();
@@ -504,6 +513,7 @@ public sealed class EnterpriseTests : IDisposable
         File.Copy(Wav(4).Wav, source);
         var meeting = Importer.ImportFile(source, new ImportOptions(), db, paths, settings);
         var id = meeting.Id!.Value;
+        db.AddTerm("自己的詞");
         runner.Start();
         try
         {
@@ -516,6 +526,53 @@ public sealed class EnterpriseTests : IDisposable
         Assert.Equal(2, db.Speakers(id).Count);
         // 伺服器的工作 id 用完就從 payload 清掉
         Assert.DoesNotContain("remoteId", db.LastTranscribePayload(id) ?? "");
+        // 自己的詞在前、公司的接在後面，重複的去掉（R53.2）
+        Assert.Equal(["自己的詞", "拾音"], JsonNode.Parse(fake.LastSettings!)!["glossary"]!.AsArray().Select(t => t!.GetValue<string>()));
+    }
+
+    /// <summary>公司詞彙表（R53）：登入就拿、存在檔案（連不上時用）、建議的新詞排除、登出刪掉；舊的伺服器沒有就是空的</summary>
+    [Fact]
+    public async Task CompanyGlossaryIsFetchedCachedAndClearedOnSignOut()
+    {
+        fake.GlossaryTerms = ["拾音", "Breeze ASR", "拾音"];
+        var file = Path.Combine(home.Path, "enterprise-glossary.json");
+        var server = new EnterpriseServer(settings, http, secrets, "4.2.0", "測試的筆電") { AllowLocalHttp = true, Glossary = new CompanyGlossary(file) };
+        var changed = 0;
+        server.Glossary.Changed += () => changed++;
+        await server.DebugDevSignIn(fake.Server.Url, "amy@example.com");
+        Assert.Equal(["拾音", "Breeze ASR"], server.Glossary.Terms);
+        Assert.Equal(1, changed);
+        Assert.True(server.Glossary.Contains("breeze asr"));
+        Assert.Equal(["自己的", "breeze asr", "拾音"], server.Glossary.Merged(["自己的", "breeze asr"]));
+        // 沒變就不通知；重開之後從檔案讀（連不上時照樣用）
+        await server.RefreshGlossary();
+        Assert.Equal(1, changed);
+        Assert.Equal(["拾音", "Breeze ASR"], new CompanyGlossary(file).Terms);
+        // 管理者改了：重新讀伺服器的資訊時一起更新
+        fake.GlossaryTerms = ["星光專案"];
+        await server.RefreshInfo();
+        Assert.Equal(["星光專案"], server.Glossary.Terms);
+        // 舊的伺服器（404）：沒有
+        fake.GlossaryTerms = null;
+        await server.RefreshGlossary();
+        Assert.Empty(server.Glossary.Terms);
+        fake.GlossaryTerms = ["拾音"];
+        await server.RefreshGlossary();
+        await server.SignOut();
+        Assert.Empty(server.Glossary.Terms);
+        Assert.False(File.Exists(file));
+    }
+
+    [Fact]
+    public void JoinLinks()
+    {
+        const string link = "shiyin://join?server=https%3A%2F%2Fshiyin.example.com%2Fbase";
+        Assert.True(EnterpriseServer.IsJoin(link));
+        Assert.False(EnterpriseServer.IsJoin("shiyin://auth?code=1"));
+        Assert.False(EnterpriseServer.IsCallback(link));
+        Assert.Equal("https://shiyin.example.com/base", EnterpriseServer.JoinServer(link));
+        Assert.Equal("", EnterpriseServer.JoinServer("shiyin://join"));
+        Assert.Null(EnterpriseServer.Normalized(EnterpriseServer.JoinServer("shiyin://join?server=http%3A%2F%2Fevil.example.com")));
     }
 
     [Fact]

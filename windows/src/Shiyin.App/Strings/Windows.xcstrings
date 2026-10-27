@@ -1333,6 +1333,17 @@
         }
       }
     },
+    "這台電腦已經用 %@ 登入 %@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This PC is signed in as %@ on %@."
+          }
+        }
+      }
+    },
     "這台電腦找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
       "extractionState": "manual",
       "localizations": {

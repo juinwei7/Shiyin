@@ -1549,6 +1549,12 @@ app                                              企業伺服器
   欄位就是 `TranscriptionResult`。`voices` 是伺服器的說話者辨識算的聲紋（Windows 版同一個模型，ERes2Net），只有 `diarize` 是 true 時才有；Windows 直接存進本機的資料庫比對，Mac 不用（D122）。`transcribedWith` 寫進 `meetings.transcribed_with`（跟本機一樣是 breeze、qwen、japanese），在哪裡轉的不另外存（統計另外記 `engines.server`）。
 - `DELETE …/<id>`：還在跑的話停下，刪錄音和結果。app 把結果寫進資料庫後送一次；取消工作、改在本機轉錄時也送。送不出去不管（伺服器 24 小時內自己刪）。
 
+**加入連結、公司詞彙表**（R49.7、R53）
+
+- 加入連結：伺服器的 `GET /join`（不用登入的網頁）上的按鈕是 `shiyin://join?server=<伺服器網址，URL encode>`。app 收到後照 R49.7 處理；`server` 照 `EnterpriseServer.normalized` 檢查（https，DEBUG 本機 http）。舊版的 app 不認得這個網址，網頁另外寫手動加入的步驟。
+- `GET /api/v1/glossary` → `{"terms": ["…"], "updatedAt": "…"}`（要登入）：公司的詞，照管理者加的順序。舊的伺服器回 404：當成沒有。
+- 伺服器轉錄時也會把公司的詞接在 app 送來的 `glossary` 後面（去掉重複），舊版的 app 也有用；新版 app 送的已經含公司的詞，結果一樣。
+
 **整理**
 
 - `GET /api/v1/llm/models` → `{"data": [{"id": "…", "name": "…", "default": true}]}`。
@@ -1574,6 +1580,8 @@ app                                              企業伺服器
   - 登入失效、登出了：選單下的紅字說「到「進階 → 企業伺服器」重新登入」。
   - `EnterpriseServer.refreshInfo()`：重新讀 `/api/v1/info`，更新帳號上的 `serverName`、`engine`、`llm`（只在值變了時存、通知畫面）。app 啟動時（不讀鑰匙圈）和打開整理工具頁時（不管選的是哪個整理工具）呼叫，公司後來才提供整理時選單就會多「公司」；連不上就保留舊的值。
 - **設定頁**（`Views/EnterpriseServerSettings.swift`，進階最上面一組「企業伺服器」）：登入前是網址欄和「登入」；登入後是伺服器名稱（主機）、信箱和「已登入／登入已失效」、「重新登入」（失效時）、「用企業伺服器轉錄」「用企業伺服器整理會議紀錄」兩個開關（R49.3，登入後預設都打開）、隱私說明、「登出」。錄音與轉錄頁的「正式轉錄」在登入後多「企業伺服器」；整理工具頁的選單在公司有提供整理時多「公司」（上面）。
+- **加入連結**（R49.7）：`Info.plist` 登記 `shiyin` 網址（`CFBundleURLTypes`）；`AppDelegate.application(_:open:)` 收到 `shiyin://join` 交給 `EnterpriseJoin.handle`：`beginSignIn`（檢查網址、讀 info）→ `NSAlert`「加入「<名稱>」的企業伺服器？」（主機、登入別台時寫出會先登出）→ 加入：別台先 `signOut`，用 AppKit 的 `ASWebAuthenticationSession`（錨點是目前的視窗，沒有就開一個小視窗）打開登入頁 → `completeSignIn` → `AppModel.applyEnterpriseDefaults(llm:)`（跟設定頁共用：轉錄改企業伺服器、伺服器有提供整理時整理工具改「公司」）→ 提示「已加入」。不經過設定視窗（SwiftUI 的設定視窗在 app 外面打不開）。
+- **公司詞彙表**（R53）：`CompanyGlossary`（不綁 MainActor，鎖住的 `[String]`）：`SHIYIN_HOME/enterprise-glossary.json` 存上次拿到的；`EnterpriseServer.refreshInfo()` 和登入完成時一起 `GET /api/v1/glossary`（舊伺服器 404 就是空的），登出時刪檔。`JobRunner` 的四個地方（轉錄、猜說話者、校正、整理）改用 `glossaryTerms()`：自己的詞（`db.glossary()`，照 id）＋公司的詞（不分大小寫去掉重複）。`WhisperEngine.prompt`、`QwenEngine.context` 的 150／400 字上限照舊。「說話者與詞彙」頁的詞彙表下面多一段可以展開的「公司的詞彙（N 個）」；提示詞的預覽也用合併後的；建議的新詞去掉公司已經有的。
 - **登出**：只清掉存下來的值是企業伺服器的設定（`persistentDomain` 裡的；啟動參數帶的值不算，測試時曾經因此刪掉使用者自己選的整理工具）。
 - **引導**（§33.4）：整理工具那一步「其他」裡，登入了企業伺服器時多「企業伺服器」一項；轉錄用企業伺服器時最後一步寫「這台 Mac 不用下載轉錄模型」。引導裡不放登入（使用者說「設定多一個企業伺服器設定即可」）。
 - 統計（R52.2）：轉錄的引擎記 `server`、整理工具記 `enterprise`；後台（`workers/usage`）還沒加欄（任務 E6）。回報問題（R52.3）還沒加（任務 E6）。

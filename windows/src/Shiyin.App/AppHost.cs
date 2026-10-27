@@ -85,7 +85,12 @@ public sealed class AppHost
         // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）
         Tools = Debug && Settings.Flag("debugNoCli", false) ? new NoCliTools(new WindowsToolLocator()) : new WindowsToolLocator();
         // 企業伺服器：refresh token 跟 API key 存在同一個地方（認證管理員；DEBUG 只放記憶體）；DEBUG 可以連本機的 http
-        Enterprise = new EnterpriseServer(Settings, Http, new KeySecrets(Keys), Version, Environment.MachineName) { AllowLocalHttp = Debug };
+        Enterprise = new EnterpriseServer(Settings, Http, new KeySecrets(Keys), Version, Environment.MachineName)
+        {
+            AllowLocalHttp = Debug,
+            // 公司詞彙表（R53）存在 SHIYIN_HOME
+            Glossary = new CompanyGlossary(Path.Combine(Paths.Home, "enterprise-glossary.json")),
+        };
         Llm = new LLMClient(Keys, Tools, runner, Http) { CompatibleBaseUrl = () => Settings.CompatibleBaseUrl, Enterprise = Enterprise };
         Settings.EnterpriseSignedIn = () => Enterprise.IsSignedIn;
         Settings.EnterpriseHasModels = () => Enterprise.Account?.Llm == true;

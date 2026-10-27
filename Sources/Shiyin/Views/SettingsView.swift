@@ -672,8 +672,23 @@ struct GlossarySettings: View {
                     .buttonStyle(.borderless).help("刪除「\(term.term)」")
             }
         }
-        Text(String(localized: "目前的轉錄提示：\(WhisperEngine.prompt(glossary: model.glossary.map(\.term), language: AppSettings.defaultMeetingLanguage))"))
+        // 公司詞彙表（R53.3）：唯讀，接在自己的詞後面
+        if !model.companyGlossary.isEmpty {
+            DisclosureGroup {
+                Text(model.companyGlossary.joined(separator: MeetingLanguage.ui(zh: "、", en: ", ")))
+                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("公司的詞彙（\(model.companyGlossary.count) 個）")
+                    Text("由\(EnterpriseServer.shared.account?.serverName ?? String(localized: "公司"))的管理者維護，接在你的詞後面一起用。")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        Text(String(localized: "目前的轉錄提示：\(WhisperEngine.prompt(glossary: CompanyGlossary.merge(model.glossary.map(\.term), model.companyGlossary), language: AppSettings.defaultMeetingLanguage))"))
             .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            // 打開這頁時更新公司詞彙表（R53.1）
+            .task { await EnterpriseServer.shared.refreshGlossary() }
     }
 
     private func add() {

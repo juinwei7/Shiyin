@@ -92,7 +92,8 @@ public sealed class MainState
             Trash = host.Db.MeetingRows(trash: true);
             Templates = host.Db.Templates();
             Glossary = host.Db.Glossary();
-            GlossarySuggestions = host.Db.GlossarySuggestions();
+            // 公司已經有的詞不再建議（R53.3）
+            GlossarySuggestions = [.. host.Db.GlossarySuggestions().Where(s => !host.Enterprise.Glossary.Contains(s.Term))];
         }
         catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"reload failed: {e.SqliteErrorCode}"); }
         if (Selection is long id && !Meetings.Any(m => m.Id == id) && !Trash.Any(m => m.Id == id)) Selection = null;

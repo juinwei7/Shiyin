@@ -405,6 +405,9 @@ enum DebugControl {
                 }
             case "logout": Task { await EnterpriseServer.shared.signOut(); model.refreshEnvironment() }
             case "expire": EnterpriseServer.shared.debugExpireAccess()
+            case "glossary": Task { await EnterpriseServer.shared.refreshGlossary() }   // 重新拿公司詞彙表（R53）
+            case "join":   // join <shiyin://join?server=…>：等於點了加入連結（會跳出確認，出現在使用者畫面上）
+                if let url = URL(string: args[2]) { Task { await EnterpriseJoin.handle(url) } }
             case "local": model.runner.transcribeLocally(meetingId: Int64(args[2]) ?? -1)
             default: break
             }

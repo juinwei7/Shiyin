@@ -315,6 +315,9 @@ final class JobRunner {
         return try await task.value
     }
 
+    /// 自己的詞＋公司的詞（R53.2）：轉錄、猜說話者、校正、整理共用
+    private func glossaryTerms() throws -> [String] { CompanyGlossary.merged(try db.glossary().map(\.term)) }
+
     // MARK: 轉錄（design §6）
 
     private func transcribe(_ job: Job, lane: JobLane) async throws {
@@ -323,7 +326,7 @@ final class JobRunner {
         let payload = (try? JSONDecoder().decode(TranscribePayload.self, from: Data((job.payload ?? "{}").utf8))) ?? TranscribePayload()
         func makePipeline(local: Bool) throws -> TranscriptionPipeline {
             var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
-                                                                    glossary: try db.glossary().map(\.term),
+                                                                    glossary: try glossaryTerms(),
                                                                     channels: meeting.channels, minSpeakers: meeting.minSpeakers, local: local))
             pipeline.stage = { [weak self] in self?.running[lane]?.stage = $0 }
             pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }
@@ -534,7 +537,7 @@ final class JobRunner {
             let language = meeting.meetingLanguage
             let context = SpeakerNaming.Context(
                 language: language, meetingDate: meeting.meetingDate, title: meeting.title, participants: meeting.participantList,
-                knownPeople: try db.peopleNames(), glossary: try db.glossary().map(\.term), unnamed: unnamed,
+                knownPeople: try db.peopleNames(), glossary: try glossaryTerms(), unnamed: unnamed,
                 speakerName: { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") },
                 segments: segments.map { ($0.start, $0.speaker, $0.text) })
             let suggestions = try await callLLM(lane) { onStart in
@@ -567,7 +570,7 @@ final class JobRunner {
             }
             let context = TranscriptCorrection.Context(
                 language: language, title: meeting.title, participants: meeting.participantList,
-                speakerNames: Array(Set(names.values)).sorted(), glossary: try db.glossary().map(\.term),
+                speakerNames: Array(Set(names.values)).sorted(), glossary: try glossaryTerms(),
                 segments: segments.map { ($0.text, speakerName($0.speaker)) })
             let suggestions = try await callLLM(lane) { onStart in
                 try await TranscriptCorrection.suggest(
@@ -622,7 +625,7 @@ final class JobRunner {
         let context = NotesContext(
             meeting: meeting, segments: segments,
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
-            bookmarks: try db.bookmarks(job.meetingId), glossary: try db.glossary().map(\.term),
+            bookmarks: try db.bookmarks(job.meetingId), glossary: try glossaryTerms(),
             template: template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}"))
         let prompt: String
         if let answers {

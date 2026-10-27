@@ -52,6 +52,7 @@ public sealed class SettingsWindow : Window
         host.Models.Changed += _ => host.Post(() => { if (current == "recording") Show(); });
         // 企業伺服器的登入狀態變了（登入、失效、登出）
         host.Enterprise.Changed += () => host.Post(() => { if (current is "advanced" or "provider" or "recording") Show(); });
+        host.Enterprise.Glossary.Changed += () => host.Post(() => { if (current is "names") Show(); });
         Show();
     }
 
@@ -462,7 +463,21 @@ public sealed class SettingsWindow : Window
         if (terms.Count == 0) column.Children.Add(Ui.Text(L.T("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。"), 13, color: Ui.Secondary));
         foreach (var term in terms)
             column.Children.Add(Ui.Bar(null, Ui.Text(term.Term, 14), Ui.IconButton(Symbol.Delete, L.F("刪除「%@」", term.Term), () => { host.Controller.DeleteTerm(term.Id!.Value); Show(); })));
-        var prompt = Ui.Text(L.F("目前的轉錄提示：%@", WhisperRules.Prompt(terms.Select(t => t.Term).ToList(), S.DefaultMeetingLanguage)), 12, color: Ui.Tertiary, select: true);
+        // 公司詞彙表（R53.3）：唯讀，接在自己的詞後面；打開這頁時更新
+        var company = host.Enterprise.Glossary.Terms;
+        if (company.Count > 0)
+        {
+            var server = host.Enterprise.Account?.ServerName is { Length: > 0 } name ? name : L.T("公司");
+            column.Children.Add(new Expander
+            {
+                Header = Ui.Column(2, Ui.Text(L.F("公司的詞彙（%lld 個）", company.Count), 14),
+                    Ui.Caption(L.F("由%@的管理者維護，接在你的詞後面一起用。", server))),
+                Content = Ui.Text(string.Join(L.English ? ", " : "、", company), 13, select: true), // l10n-skip
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
+            });
+        }
+        _ = host.Enterprise.RefreshGlossary();
+        var prompt = Ui.Text(L.F("目前的轉錄提示：%@", WhisperRules.Prompt(CompanyGlossary.Merge(terms.Select(t => t.Term), company), S.DefaultMeetingLanguage)), 12, color: Ui.Tertiary, select: true);
         column.Children.Add(prompt);
         return column;
     }
@@ -774,6 +789,62 @@ public sealed class SettingsWindow : Window
             column.Children.Add(Note(L.T("公司有拾音的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。")));
         }
         return column;
+    }
+
+    /// <summary>
+    /// 加入連結（R49.7）：讀伺服器的 info，問「加入「名稱」的企業伺服器？」，加入就照「登入」（瀏覽器 → shiyin://auth）。
+    /// 已經登入同一台：說已經加入；登入的是別台：先登出
+    /// </summary>
+    public async void ConfirmJoin(string text)
+    {
+        var server = host.Enterprise;
+        if (EnterpriseServer.Normalized(text, server.AllowLocalHttp) is not { } url)
+        {
+            await Message(L.T("沒辦法加入"), EnterpriseException.Of(EnterpriseFailure.InvalidUrl).Message);
+            return;
+        }
+        if (server.IsSignedIn && server.SavedUrl == url && server.Account is { } account)
+        {
+            await Message(L.F("已經加入「%@」了", account.ServerName), L.F("這台電腦已經用 %@ 登入 %@。", account.Email, url.Host));
+            return;
+        }
+        EnterpriseInfo info;
+        try { info = await server.FetchInfo(url); }
+        catch (EnterpriseException e)
+        {
+            await Message(L.T("沒辦法加入"), e.Message);
+            return;
+        }
+        var detail = L.F("會打開 %@ 的登入頁，用公司帳號登入。登入後錄音交給公司的伺服器轉錄，整理也用公司設定的模型。", url.Host);
+        if (server.Account is { } current) detail += "\n\n" + L.F("目前登入的「%@」會先登出。", current.ServerName);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("加入「%@」的企業伺服器？", info.Name)),
+            Content = Ui.Text(detail, 14), PrimaryButtonText = L.T("加入"), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Primary,
+        };
+        ContentDialogResult answer;
+        try { answer = await dialog.ShowAsync(); }
+        catch (Exception e) { Log.Error($"join dialog failed: {e.GetType().Name}"); return; }
+        if (answer != ContentDialogResult.Primary) return;
+        if (server.HasAccount) await server.SignOut();
+        Show();
+        try
+        {
+            var attempt = await server.BeginSignIn(url.ToString());
+            await Windows.System.Launcher.LaunchUriAsync(attempt.LoginUrl);
+        }
+        catch (EnterpriseException e) { await Message(L.T("沒辦法登入"), e.Message); }
+    }
+
+    async Task Message(string title, string text)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(title), Content = Ui.Text(text, 14),
+            CloseButtonText = L.T("好"), DefaultButton = ContentDialogButton.Close,
+        };
+        try { await dialog.ShowAsync(); }
+        catch (Exception e) { Log.Error($"message dialog failed: {e.GetType().Name}"); }
     }
 
     /// <summary>檢查網址 → 用預設瀏覽器打開伺服器的登入頁；登入完瀏覽器轉到 shiyin://auth，App 交給 AppHost.CompleteEnterpriseSignIn</summary>
