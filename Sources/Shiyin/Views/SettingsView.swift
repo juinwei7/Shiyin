@@ -65,8 +65,8 @@ struct ProviderSettings: View {
                 // 這台 Mac 沒有 claude、codex 時才有：選它等於清掉設定，回到「還沒設定」
                 if AppSettings.detectedProvider == .none { Text("之後再設定（先不整理）").tag("") }
                 // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
-                // 公司（企業伺服器）一直都在，沒登入就在這頁登入（R51.1、D124）
-                ForEach(LLMProvider.allCases) { item in
+                // 公司：登入了企業伺服器、公司有提供整理才出現（R51.1、D124；登入在進階）
+                ForEach(LLMProvider.allCases.filter { $0 != .enterprise || EnterpriseServer.shared.account?.llm == true || $0 == current }) { item in
                     let missing = (item == .claude || item == .codex) && Paths.findTool(item == .claude ? "claude" : "codex") == nil
                     Text(missing ? String(localized: "\(item.label)（沒有安裝）") : item == .enterprise ? companyLabel : item.label).tag(item.rawValue)
                         .selectionDisabled(missing && item != current)
@@ -121,10 +121,9 @@ struct ProviderSettings: View {
                     Text("網址要以 http:// 或 https:// 開頭").font(.caption).foregroundStyle(.red)
                 }
             }
-            // 公司：沒登入就在這裡登入；登入後模型由公司的後台決定（R51.1）
-            if current == .enterprise {
-                EnterpriseServerSettings(compact: true)
-                if EnterpriseServer.shared.isSignedIn && EnterpriseServer.shared.account?.llm == true { companyModelRow }
+            // 公司：模型由公司的後台決定，這裡只顯示（R51.1）
+            if current == .enterprise && EnterpriseServer.shared.isSignedIn && EnterpriseServer.shared.account?.llm == true {
+                companyModelRow
             }
             if current.usesAPIKey {
                 SecureField("API key", text: $key, prompt: Text(keySaved ? "已儲存在鑰匙圈（輸入新的會取代）"
@@ -268,7 +267,7 @@ struct ProviderSettings: View {
         case .notInstalled?, .notLoggedIn?: return String(localized: "設定好之前不會自動整理。")
         case .missingKey?: return String(localized: "還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。")
         case .incomplete?: return String(localized: "還沒有填網址或模型。設定好之前不會自動整理。")
-        case .enterpriseSignedOut?: return EnterpriseServer.shared.hasAccount ? String(localized: "公司的伺服器登入已失效：按「重新登入」。設定好之前不會自動整理。") : nil
+        case .enterpriseSignedOut?: return String(localized: "公司的伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。")
         case .enterpriseNoModels?: return String(localized: "公司的伺服器還沒有提供整理用的模型：請管理者在伺服器後台的「整理模型」加上模型。")
         case .paused(_, let detail)?:
             let reason = detail.trimmingCharacters(in: CharacterSet(charactersIn: "。. "))   // l10n-skip
@@ -283,7 +282,7 @@ struct ProviderSettings: View {
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
         companyModels = nil
-        if current == .enterprise { Task { await refreshCompany() } }
+        Task { await refreshCompany() }
         baseURL = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""
         // 只看有沒有存，不讀出 key：打開設定頁不能跳出鑰匙圈的確認（R18.7、R21.1）
         keySaved = current.usesAPIKey && Keychain.exists(current.keychainAccount)
@@ -293,16 +292,17 @@ struct ProviderSettings: View {
         loadingModels = false
     }
 
-    /// 選單上的「公司（範例公司）」；沒登入時「公司（企業伺服器）」
+    /// 選單上的「公司（範例公司）」
     private var companyLabel: String {
         let name = EnterpriseServer.shared.account?.serverName ?? ""
-        return name.isEmpty ? String(localized: "公司（企業伺服器）") : String(localized: "公司（\(name)）")
+        return name.isEmpty ? LLMProvider.enterprise.label : String(localized: "公司（\(name)）")
     }
 
-    /// 重新讀伺服器的資訊和模型清單（R51.5）：公司後來才在後台加的模型也看得到
+    /// 重新讀伺服器的資訊（R51.5）：公司後來才提供整理，選單就多「公司」；選的是公司時再取模型
     private func refreshCompany() async {
         guard EnterpriseServer.shared.isSignedIn else { return }
         await EnterpriseServer.shared.refreshInfo()
+        guard current == .enterprise else { return }
         let models = await EnterpriseAPI.models()
         guard current == .enterprise else { return }
         companyModels = models

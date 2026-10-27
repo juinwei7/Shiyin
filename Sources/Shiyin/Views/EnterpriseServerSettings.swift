@@ -2,10 +2,8 @@ import AuthenticationServices
 import SwiftUI
 
 /// 設定 → 進階 → 企業伺服器（R49、design §36.3）：輸入網址、到伺服器的登入頁用公司帳號登入；
-/// 登入後顯示帳號、轉錄和整理要不要用企業伺服器（R49.3）、登出。
-/// compact：整理工具頁選了「公司」時（R51.1、D124）：沒登入時一樣是網址和「登入」，登入後只有一列伺服器和帳號
+/// 登入後顯示帳號、轉錄和整理要不要用企業伺服器（R49.3）、登出
 struct EnterpriseServerSettings: View {
-    var compact = false
     @Environment(AppModel.self) private var model
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
@@ -20,26 +18,7 @@ struct EnterpriseServerSettings: View {
     private var server: EnterpriseServer { .shared }
 
     var body: some View {
-        if compact, let account = server.account {
-            LabeledContent("公司的伺服器") {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(account.serverName)（\(server.host)）").textSelection(.enabled)
-                    HStack(spacing: 6) {
-                        Text(account.email).foregroundStyle(.secondary)
-                        if server.isSignedIn {
-                            Text("已登入").foregroundStyle(Color.celadon)
-                        } else {
-                            Text("登入已失效").foregroundStyle(.red)
-                        }
-                    }
-                }
-            }
-            if case .expired(let message) = server.status {
-                Text(message).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
-                Button(busy ? "登入中…" : "重新登入") { Task { await signIn(server.savedURL?.absoluteString ?? "") } }
-                    .disabled(busy)
-            }
-        } else if let account = server.account {
+        if let account = server.account {
             LabeledContent("伺服器") {
                 Text("\(account.serverName)（\(server.host)）").textSelection(.enabled)
             }
@@ -95,9 +74,7 @@ struct EnterpriseServerSettings: View {
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
             }
-            Text(compact
-                 ? "填入公司給的企業伺服器網址、按「登入」，在打開的網頁用公司帳號登入。登入後用公司在伺服器設定的模型整理，不用自己的 key；錄音也會交給公司的伺服器轉錄（可以到「進階」改回這台 Mac）。"
-                 : "公司有拾音的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。")
+            Text("公司有拾音的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }

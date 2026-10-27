@@ -413,7 +413,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 - token：認證管理員 `com.weiwei.shiyin.apikey/enterpriseServer`（同 §12.5，DEBUG 沒加 debugRealKeychain 時只放記憶體），網址、帳號存 `settings.json` 的 `enterpriseServerURL`、`enterpriseServerAccount`。啟動參數 `--set` 覆蓋的值登出時只清記憶體（`AppSettings` 本來就這樣）。
 - 說話者辨識也交給伺服器（D122）：建工作時 `diarize` 照設定；結果的 `speakers`、`voices`（伺服器跟 Windows 同一個 ERes2Net 模型）、`diarizationQuality` 直接存進資料庫、比對聲紋，跟本機轉錄一樣。這台電腦不用說話者辨識的模型。
 - 選企業伺服器時：`JobRunner.PrepareTranscription` 不等模型、不自動下載（R50.7）；有 NVIDIA 顯示卡也不自動下載加速元件（`GpuAcceleration.Start` 看到 `transcriptionEngine=server` 就跳過，`gpuPackOffered` 不設，之後換回本機引擎時下次開啟再判斷）。快速辨識的模型照樣下載（即時逐字稿要用）。按「改在這台電腦轉錄」時才開始下載 Breeze、說話者辨識的模型，還沒好就先用快速辨識（D35）。
-- 畫面：設定的「進階」最上面一組「企業伺服器」（同 M§36.3）；「錄音與轉錄」的正式轉錄多「企業伺服器（公司名稱）」；整理工具的選單一直有「公司（<公司名稱>）」（沒登入時「公司（企業伺服器）」，M§36.3、D124）：選了還沒登入就在整理工具頁出現網址欄和「登入」；登入後沒有模型欄，改成公司提供的模型下拉選單（「公司的預設」＋後台設定的名稱）。啟動、打開整理工具頁時 `EnterpriseServer.RefreshInfo` 重新讀伺服器的資訊。會議頁的狀態列：伺服器負責的那段時間有「改在這台電腦轉錄」，在等伺服器時只顯示原因（不顯示百分比）。
+- 畫面：設定的「進階」最上面一組「企業伺服器」（同 M§36.3）；「錄音與轉錄」的正式轉錄多「企業伺服器（公司名稱）」；整理工具的選單在登入了、公司有提供整理時多「公司（<公司名稱>）」（M§36.3、D124），登入只在進階；選了沒有模型欄、key 欄，只顯示公司設定的模型（不只一個時是下拉選單「公司的預設」＋後台設定的名稱）。啟動、打開整理工具頁時 `EnterpriseServer.RefreshInfo` 重新讀伺服器的資訊。會議頁的狀態列：伺服器負責的那段時間有「改在這台電腦轉錄」，在等伺服器時只顯示原因（不顯示百分比）。
 - DEBUG 控制通道：`enterprise login <網址> <信箱>`（伺服器開發用的登入，不經過瀏覽器，登入後套用預設）、`enterprise logout`、`enterprise expire`、`enterprise local <會議 id>`；`state` 的 `enterprise`、`transcriptionEngine`、`provider` 和轉錄的 `server`。虛擬機裡驗證時，伺服器開在 Mac 上，用 `ssh -R` 讓虛擬機連 `http://127.0.0.1:<埠>`（同 §14.2）。
 
 ## 13. 匯出與封包

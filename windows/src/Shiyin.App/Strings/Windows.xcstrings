@@ -397,6 +397,28 @@
         }
       }
     },
+    "公司的伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Settings → Advanced → Enterprise Server."
+          }
+        }
+      }
+    },
+    "公司的伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Advanced → Enterprise Server. Meetings won't be summarized automatically until this is fixed."
+          }
+        }
+      }
+    },
     "其他": {
       "extractionState": "manual",
       "localizations": {
@@ -481,17 +503,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sign in on the page that opened; you'll come back to Shiyin afterwards"
-          }
-        }
-      }
-    },
-    "填入公司給的企業伺服器網址、按「登入」，在打開的網頁用公司帳號登入。登入後用公司在伺服器設定的模型整理，不用自己的 key；錄音也會交給公司的伺服器轉錄（可以到「進階」改回這台電腦）。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter the enterprise server address from your company, press Sign In, and sign in with your company account on the page that opens. Meetings are then summarized with the models your company set up on the server, with no key of your own. Recordings are also transcribed on the company server (you can switch back to this PC under Advanced)."
           }
         }
       }

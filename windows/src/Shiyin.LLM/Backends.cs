@@ -406,7 +406,7 @@ public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
     public async Task<string> GenerateJson(string system, string prompt, OutputFormat format, CancellationToken cancel)
     {
         if (client.Enterprise is not { BaseUrl: not null } access)
-            throw LLMException.NotConfigured(L.T("公司的伺服器還沒登入或登入已失效，請到設定 → 整理工具登入"));
+            throw LLMException.NotConfigured(L.T("公司的伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入"));
         try
         {
             return await Inner(access).GenerateJson(system, prompt, format, cancel);
