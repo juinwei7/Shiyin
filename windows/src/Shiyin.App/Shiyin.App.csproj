@@ -14,7 +14,7 @@
     <EnableMsixTooling Condition="'$(OS)' != 'Windows_NT'">false</EnableMsixTooling>
     <RootNamespace>Shiyin.App</RootNamespace>
     <AssemblyName>Shiyin</AssemblyName>
-    <Version>4.1.1</Version>
+    <Version>4.1.2</Version>
     <ApplicationIcon Condition="Exists('Assets/Shiyin.ico')">Assets/Shiyin.ico</ApplicationIcon>
     <!-- 支援高 DPI（PerMonitorV2）：沒有時縮放 125%、150% 的螢幕上整個視窗會糊（app.manifest） -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
