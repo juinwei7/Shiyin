@@ -173,6 +173,23 @@ public sealed class ServicesTests : IDisposable
     }
 
     [Fact]
+    public void ErrorKindsSayWhichTranscriptionFailure()
+    {
+        // 回報問題、log 寫出轉錄失敗是哪一種（R54.4、design-windows §12.7）：原本只看得到「WhisperException」
+        Assert.Equal("WhisperError.modelMissing", new WhisperException(WhisperErrorKind.ModelMissing).LogSummary());
+        Assert.Equal("WhisperError.loadFailed", new WhisperException(WhisperErrorKind.LoadFailed).LogSummary());
+        Assert.Equal("WhisperError.failed(-6)", new WhisperException(WhisperErrorKind.Failed, -6).LogSummary());
+        Assert.Equal("WhisperError.cancelled", new WhisperException(WhisperErrorKind.Cancelled).LogSummary());
+        Assert.Equal("WhisperError.empty", new WhisperException(WhisperErrorKind.Empty).LogSummary());
+        Assert.Equal("WhisperError.qwenFailed", new WhisperException(WhisperErrorKind.QwenFailed).LogSummary());
+        Assert.Equal("WhisperError.qwenFailed(500)", new WhisperException(WhisperErrorKind.QwenFailed, 500).LogSummary());
+        // Windows 系統元件（COM、Media Foundation）的錯誤寫 HRESULT，不寫訊息
+        Assert.Equal("COMException 0xC00D36C4", new System.Runtime.InteropServices.COMException("機密", unchecked((int)0xC00D36C4)).LogSummary());
+        Assert.Equal("LLMError.rejected", ((Exception)LLMException.Rejected("x")).LogSummary());
+        Assert.Equal("InvalidOperationException", new InvalidOperationException("機密").LogSummary());
+    }
+
+    [Fact]
     public void PathsRequireHomeOutsideWindows()
     {
         if (OperatingSystem.IsWindows()) return;
@@ -538,6 +555,8 @@ public sealed class ServicesTests : IDisposable
                                              IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control) => throw new NotSupportedException();
         public List<TranscribedSegment> Segments { get; set; } = [new(0, 3, "大家好", false), new(3, 6, "今天討論預算", false), new(6, 9, "好的", true)];
         public Func<float[], List<TranscribedSegment>>? PerChannel { get; set; }
+        /// <summary>whisper 失敗（例如顯示卡放不下模型）</summary>
+        public WhisperException? WhisperFailure { get; set; }
         public List<SpeakerRules.Turn> Turns { get; set; } = [new(1, 0, 6), new(2, 6, 9)];
         public int? LastMinSpeakers { get; private set; }
         public bool FailDiarize { get; set; }
@@ -553,6 +572,7 @@ public sealed class ServicesTests : IDisposable
         {
             Calls.Add($"whisper-file {language} {prompt}");
             Devices.Add(control.GpuDevice);
+            if (WhisperFailure is { } failure) throw failure;
             var buffer = new List<float>();
             audio.Fill(buffer, int.MaxValue);
             control.OnProgress(1);
@@ -730,6 +750,23 @@ public sealed class ServicesTests : IDisposable
     {
         for (var i = 0; i < seconds * 20 && !condition(); i++) await Task.Delay(50);
         Assert.True(condition());
+    }
+
+    [Fact]
+    public async Task TranscriptionFailureKindReachesProblemReport()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var (runner, engines, _) = Runner(settings);
+        engines.WhisperFailure = new WhisperException(WhisperErrorKind.LoadFailed);
+        var source = Path.Combine(home.Path, "會議.wav");
+        WriteWav(source, 1, 9);
+        var id = Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+        runner.Start();
+        try { await Until(() => db.LatestJob(id) is { Kind: JobKind.Transcribe, Status: JobStatus.Failed }); }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.Equal("WhisperError.loadFailed", db.LatestJob(id)!.ErrorKind);
+        var report = ProblemReport.Text(db, settings, new ProblemReport.Environment("4.2.1", "4.2.1", "Windows", "CPU", 16L << 30, "MX330", "CUDA0"));
+        Assert.Contains("transcribe：WhisperError.loadFailed", report);
     }
 
     [Fact]
