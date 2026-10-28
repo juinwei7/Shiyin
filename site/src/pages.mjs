@@ -282,6 +282,7 @@ ${paragraphs(c.notes.ps)}
 </div>
 <p>${c.privacy.tools}</p>
 <p>${c.privacy.usage}</p>
+<p>${c.privacy.enterprise}</p>
 </section>
 
 <section class="col part" id="download">
@@ -378,6 +379,7 @@ ${paragraphs(c.notes.ps)}
 </div>
 <p>${c.privacy.tools}</p>
 <p>${c.privacy.usage}</p>
+<p>${c.privacy.enterprise}</p>
 </section>
 
 <section class="col part" id="download">

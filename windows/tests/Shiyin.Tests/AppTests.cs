@@ -447,6 +447,20 @@ public sealed class AppTests : IDisposable
         Assert.Contains("summarize：LLMError.failed", text);
         Assert.Contains("記憶體 16 GB", text);
         Assert.DoesNotContain("機密", text);
+        Assert.DoesNotContain("企業伺服器", text);
         Assert.StartsWith("https://github.com/juinwei7/Shiyin/issues/new?title=&body=", ProblemReport.Url(text));
+
+        // 登入企業伺服器時：只寫有沒有連、伺服器的版本，不寫網址和帳號（R52.3）
+        var account = new EnterpriseAccount("amy@example.com", "Amy", "範例公司", "breeze", true, "1.0.0");
+        text = ProblemReport.Text(db, AppSettings.InMemory(), new ProblemReport.Environment("3.6.0", "12", "Windows", "CPU", 16L << 30, "GPU", "CPU"), account, true);
+        Assert.Contains("- 企業伺服器：已登入（伺服器 1.0.0）", text);
+        Assert.Contains("- 轉錄：Breeze ASR 25；", text);
+        var server = AppSettings.InMemory(new Dictionary<string, string> { ["transcriptionEngine"] = "server" });
+        text = ProblemReport.Text(db, server, new ProblemReport.Environment("3.6.0", "12", "Windows", "CPU", 16L << 30, "GPU", "CPU"), account, true);
+        Assert.Contains("- 轉錄：企業伺服器；", text);
+        Assert.DoesNotContain("amy@example.com", text);
+        Assert.DoesNotContain("範例公司", text);
+        text = ProblemReport.Text(db, AppSettings.InMemory(), new ProblemReport.Environment("3.6.0", "12", "Windows", "CPU", 16L << 30, "GPU", "CPU"), account with { ServerVersion = null }, false);
+        Assert.Contains("- 企業伺服器：登入已失效（伺服器 ?）", text);
     }
 }

@@ -173,6 +173,8 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
     public bool RequiresModel { get; init; } = true;
     public string? Name { get; init; }
     public string? Language { get; init; }
+    /// <summary>企業伺服器自己擋下的（額度、暫停、格式）只顯示伺服器的訊息（R51.6）</summary>
+    public bool PlainServerErrors { get; init; }
 
     public const string BaseUrlKey = "openaiCompatibleBaseURL";
 
@@ -230,7 +232,7 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
             var fallback = system + "\n\nRespond with only a JSON object that matches this JSON schema, with no other text:\n" + format.Schema;
             response = await Complete(baseText, provider, fallback, prompt, new JsonObject { ["type"] = "json_object" }, cancel);
         }
-        if (response.Status != 200) throw ApiRequest.Error(response, provider);
+        if (response.Status != 200) throw (PlainServerErrors ? ApiRequest.ServerError(response) : null) ?? ApiRequest.Error(response, provider);
         var choice = (response.Object["choices"] as JsonArray)?.FirstOrDefault() as JsonObject;
         var finish = choice?["finish_reason"]?.GetValue<string>();
         if (finish == "length") throw LLMException.Failed(L.T("回應不完整（可能超過長度上限）"));
@@ -401,6 +403,7 @@ public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
     OpenAICompatibleApi Inner(IEnterpriseAccess access) => new(client, model, (access.BaseUrl ?? "").TrimEnd('/') + "/api/v1/llm")
     {
         Key = async cancel => await access.AccessToken(cancel), RequiresModel = false, Name = L.T("公司的伺服器"), Language = access.Language,
+        PlainServerErrors = true,
     };
 
     public async Task<string> GenerateJson(string system, string prompt, OutputFormat format, CancellationToken cancel)

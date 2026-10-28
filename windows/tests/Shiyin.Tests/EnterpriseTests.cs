@@ -47,6 +47,8 @@ public sealed class EnterpriseTests : IDisposable
         public bool Busy;
         public string? LastLlmAuth;
         public int LlmRejectsLeft;
+        /// <summary>整理要回的錯誤（R51.6）：伺服器自己的（有 kind）或轉送的模型的</summary>
+        public (int Status, JsonObject Body)? LlmReply;
 
         public FakeEnterprise() => Server.Handle = Handle;
 
@@ -125,6 +127,7 @@ public sealed class EnterpriseTests : IDisposable
             {
                 LastLlmAuth = auth;
                 if (LlmRejectsLeft-- > 0) { await Error(c, 401, "unauthorized"); return; }
+                if (LlmReply is { } reply) { await Json(c, reply.Status, reply.Body); return; }
                 await Json(c, 200, JsonNode.Parse("""{"choices":[{"message":{"content":"{\"answer\":\"好\"}"},"finish_reason":"stop"}]}""")!.AsObject());
                 return;
             }
@@ -297,7 +300,7 @@ public sealed class EnterpriseTests : IDisposable
     {
         var server = await SignedIn();
         Assert.True(server.IsSignedIn);
-        Assert.Equal(new EnterpriseAccount("amy@example.com", "Amy", "測試公司", "breeze", true), server.Account);
+        Assert.Equal(new EnterpriseAccount("amy@example.com", "Amy", "測試公司", "breeze", true, "1.0.0"), server.Account);   // 伺服器的版本給回報問題用（R52.3）
         Assert.Equal(fake.Refresh, secrets.Values[EnterpriseServer.CredentialAccount]);
         Assert.Equal(fake.Access, await server.AccessToken());
         // 換了一個 EnterpriseServer（等於 app 重開）：帳號在設定、refresh token 在認證管理員，換新的 access token
@@ -595,6 +598,77 @@ public sealed class EnterpriseTests : IDisposable
         var signedOut = new LLMClient(new MemoryKeys(), new NoTools(), new ProcessRunner(), http) { Enterprise = Server() };
         await server.SignOut();
         Assert.True((await Assert.ThrowsAsync<LLMException>(() => signedOut.GenerateJson(LLMProvider.Enterprise, "", "s", "p", format, CancellationToken.None))).IsSetupProblem);
+    }
+
+    /// <summary>標準答案（M§36.7、E1）：送給伺服器的 settings、伺服器的結果換成段落跟 Mac 一樣（Mac 的說話者在本機辨識，所以比的時候 diarize 用 false）</summary>
+    [Fact]
+    public void ServerSettingsAndResultsMatchMac()
+    {
+        var settings = Golden.ExpectedJson("server/settings.json").EnumerateArray().ToList();
+        Assert.Equal(3, settings.Count);
+        foreach (var item in settings)
+        {
+            var input = item.GetProperty("input");
+            var options = new TranscriptionOptions
+            {
+                Language = MeetingLanguages.Parse(input.GetProperty("language").GetString()) ?? MeetingLanguage.Zh,
+                Glossary = [.. input.GetProperty("glossary").EnumerateArray().Select(x => x.GetString()!)],
+                AudioSource = input.GetProperty("audioSource").GetString()!,
+                MinSpeakers = input.TryGetProperty("minSpeakers", out var min) ? min.GetInt32() : null,
+                Diarize = false,
+            };
+            Golden.SameJson(item.GetProperty("settings"), System.Text.Json.JsonDocument.Parse(ServerTranscriber.Settings(options).ToJsonString()).RootElement, "server/settings.json");
+        }
+        var results = Golden.ExpectedJson("server/result.json").EnumerateArray().ToList();
+        var inputs = Golden.Fixtures.GetProperty("serverResults").EnumerateArray().ToList();
+        Assert.Equal(inputs.Count, results.Count);
+        for (var i = 0; i < inputs.Count; i++)
+        {
+            var o = JsonNode.Parse(inputs[i].GetRawText())!.AsObject();
+            string actual;
+            try
+            {
+                var r = ServerTranscriber.Parse(o);
+                actual = new JsonObject
+                {
+                    ["segments"] = new JsonArray([.. r.Transcription.Segments.Select(s => (JsonNode)new JsonObject
+                    {
+                        ["start"] = s.Start, ["end"] = s.End, ["text"] = s.Text, ["lowConfidence"] = s.LowConfidence,
+                    })]),
+                    ["seams"] = new JsonArray([.. r.Transcription.Seams.Select(x => (JsonNode)x)]),
+                    ["engine"] = r.TranscribedWith,
+                }.ToJsonString();
+            }
+            catch (Shiyin.Whisper.WhisperException e) when (e.Kind == Shiyin.Whisper.WhisperErrorKind.Empty) { actual = "{\"error\":\"empty\"}"; }
+            Golden.SameJson(results[i], System.Text.Json.JsonDocument.Parse(actual).RootElement, $"server/result.json[{i}]");
+        }
+        // Windows 另外用到的：說話者跟著段落（略過的段落不留說話者）
+        var first = ServerTranscriber.Parse(JsonNode.Parse(inputs[0].GetRawText())!.AsObject());
+        Assert.Equal([1, 2], first.Transcription.Speakers);
+        var skipped = ServerTranscriber.Parse(JsonNode.Parse(inputs[3].GetRawText())!.AsObject());
+        Assert.Equal((1, 1), (skipped.Transcription.Segments.Count, skipped.Transcription.Speakers.Count));
+    }
+
+    /// <summary>伺服器自己擋下的只顯示伺服器的訊息；模型回的錯誤照舊加前綴（R51.6、M§36.3）</summary>
+    [Fact]
+    public async Task ServerErrorsShowOnlyTheServersMessage()
+    {
+        var server = await SignedIn();
+        var llm = new LLMClient(new MemoryKeys(), new NoTools(), new ProcessRunner(), http) { Enterprise = server };
+        var format = new OutputFormat("""{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"]}""", "answer", "answer");
+        fake.LlmReply = (400, new JsonObject { ["error"] = new JsonObject { ["kind"] = "bad_request", ["message"] = "不是拾音的整理請求，企業伺服器不轉送" } });
+        var blocked = await Assert.ThrowsAsync<LLMException>(() => llm.GenerateJson(LLMProvider.Enterprise, "", "s", "p", format, CancellationToken.None));
+        Assert.Equal("不是拾音的整理請求，企業伺服器不轉送", blocked.Message);
+        // 轉送的模型回的錯誤（沒有 kind）：前綴說明是公司的伺服器轉回來的
+        fake.LlmReply = (400, new JsonObject { ["error"] = new JsonObject { ["message"] = "model overloaded", ["type"] = "invalid_request_error" } });
+        var upstream = await Assert.ThrowsAsync<LLMException>(() => llm.GenerateJson(LLMProvider.Enterprise, "", "s", "p", format, CancellationToken.None));
+        Assert.Contains("HTTP 400", upstream.Message);
+        Assert.Contains("model overloaded", upstream.Message);
+        // 額度用完（429）是用量上限，暫停（429）一樣；只有訊息
+        var limited = ApiRequest.ServerError(new ApiRequest.Response(429, JsonNode.Parse("""{"error":{"kind":"busy","message":"今天的整理額度用完了"}}"""), "今天的整理額度用完了"))!;
+        Assert.Equal((LLMErrorKind.Limited, "今天的整理額度用完了"), (limited.Kind, limited.Message));
+        Assert.Null(ApiRequest.ServerError(new ApiRequest.Response(429, JsonNode.Parse("""{"error":{"message":"Rate limit"}}"""), "Rate limit")));
+        fake.LlmReply = null;
     }
 
     [Fact]

@@ -11,17 +11,17 @@ final class UsageStats: @unchecked Sendable {
         var meetingsRecorded = 0, recordedSeconds = 0
         var meetingsImported = 0, importedSeconds = 0
         var transcribedSeconds = 0, transcribeWallSeconds = 0
-        var engines = ["breeze": 0, "builtin": 0, "whisperJa": 0, "qwen": 0]
+        var engines = ["breeze": 0, "builtin": 0, "whisperJa": 0, "qwen": 0, "server": 0]
         var meetingLanguages = ["zh": 0, "en": 0, "ja": 0]
         var diarizationRuns = 0
-        var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0]
+        var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0, "enterprise": 0]
         var questionsAsked = 0
         /// 待確認送出的題數（R41.7、§31.3）：回答（打字或「不是」）、確認（「是」）、略過
         var review = ["answered": 0, "confirmed": 0, "skipped": 0]
         var errors = ["recording": 0, "transcribe": 0, "diarize": 0, "summarize": 0]
         /// 整理失敗的種類、當時的整理工具、其中幾次是草稿（R47、§34.5）：只有次數
         var summarizeErrors = Counters.summarizeErrorKinds.reduce(into: [String: Int]()) { $0[$1] = 0 }
-        var summarizeErrorProviders = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0]
+        var summarizeErrorProviders = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0, "enterprise": 0]
         var summarizeDraftErrors = 0
 
         static let summarizeErrorKinds = ["notInstalled", "notLoggedIn", "missingKey", "notConfigured", "keyRejected",
@@ -113,7 +113,7 @@ final class UsageStats: @unchecked Sendable {
         add { $0.meetingsImported += 1 }
     }
 
-    /// 轉錄完成。engine 是 Meeting.transcribedWith（breeze、system、japanese）；system 記成 builtin（跨平台的名稱，§30.1）
+    /// 轉錄完成。engine 是 Meeting.transcribedWith（breeze、system、japanese、qwen），企業伺服器轉的是 server（R52.2）；system 記成 builtin（跨平台的名稱，§30.1）
     func transcribed(seconds: Double, wallSeconds: Double, engine: String, language: MeetingLanguage,
                      imported: Bool, diarized: Bool) {
         let audio = Self.whole(seconds)
@@ -153,7 +153,7 @@ final class UsageStats: @unchecked Sendable {
         }
     }
 
-    /// 整理工具的種類：claudeCode、codex、api、local（本機的 OpenAI 相容服務）；none 是 nil
+    /// 整理工具的種類：claudeCode、codex、api、local（本機的 OpenAI 相容服務）、enterprise（公司，R52.2）；none 是 nil
     @MainActor
     static func providerKind(_ provider: LLMProvider) -> String? {
         switch provider {

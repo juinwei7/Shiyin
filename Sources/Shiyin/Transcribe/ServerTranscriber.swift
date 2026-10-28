@@ -193,11 +193,17 @@ struct ServerTranscriber {
         var errorMessage: String?
     }
 
+    /// 建工作時送的 settings（M§36.2；標準答案 server/settings.json）：說話者在本機辨識（D122），分聲道不送（伺服器收的是混好的單聲道）
+    nonisolated static func settings(language: MeetingLanguage, glossary: [String], audioSource: String, minSpeakers: Int?) -> [String: Any] {
+        var settings: [String: Any] = ["language": language.rawValue, "glossary": glossary, "diarize": false,
+                                       "splitChannels": false, "audioSource": audioSource]
+        if let minSpeakers { settings["minSpeakers"] = minSpeakers }
+        return settings
+    }
+
     private func create(bytes: Int64, sha256: String) async throws -> String {
-        // 說話者在本機辨識（D122）；分聲道不送（伺服器收的是混好的單聲道）
-        var settings: [String: Any] = ["language": options.language.rawValue, "glossary": options.glossary, "diarize": false,
-                                       "splitChannels": false, "audioSource": options.audioSource]
-        if let minSpeakers = options.minSpeakers { settings["minSpeakers"] = minSpeakers }
+        let settings = Self.settings(language: options.language, glossary: options.glossary, audioSource: options.audioSource,
+                                     minSpeakers: options.minSpeakers)
         let (data, response) = try await server.call("POST", "api/v1/transcriptions", json: [
             "settings": settings,
             "audio": ["format": "wav", "sampleRate": 16000, "channels": 1, "bytes": bytes, "sha256": sha256],
@@ -252,7 +258,14 @@ struct ServerTranscriber {
     private func result(_ id: String) async throws -> Remote {
         let (data, response) = try await server.call("GET", "api/v1/transcriptions/\(id)/result", timeout: 120)
         guard response.statusCode == 200, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let items = json["segments"] as? [[String: Any]] else { throw EnterpriseServer.failure(data, response) }
+              json["segments"] is [[String: Any]] else { throw EnterpriseServer.failure(data, response) }
+        return try Self.parse(json)
+    }
+
+    /// 伺服器的結果換成段落（M§36.2；標準答案 server/result.json）：少了開始、結束、文字的段落略過；一段都沒有是「沒有辨識出文字」。
+    /// 說話者在本機辨識，結果裡的 speaker、voices 不用
+    nonisolated static func parse(_ json: [String: Any]) throws -> Remote {
+        let items = json["segments"] as? [[String: Any]] ?? []
         let segments = items.compactMap { item -> TranscribedSegment? in
             guard let start = item["start"] as? Double, let end = item["end"] as? Double, let text = item["text"] as? String else { return nil }
             return TranscribedSegment(start: start, end: end, text: text, lowConfidence: item["lowConfidence"] as? Bool ?? false)

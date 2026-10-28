@@ -1125,6 +1125,7 @@ User-Agent: Shiyin/<版本>
 - 後台收到回 `204`（或任何 2xx）。用 `installId` + `date` 去重：同一筆重送（例如回應在路上掉了）要覆蓋，不要重複算。
 - 後台不要存 IP（或只用來擋濫用、不跟 `installId` 一起存）。`schema` 以後改格式時加 1，後台可以依版本解析。
 - `review`（2026-10-23 加，R41.7）：待確認的回答、確認、略過的題數。只加字典不改 `schema`：後台對不認得的字典忽略、少的鍵當 0，所以舊 app 和舊後台互相都能收。
+- 企業伺服器（4.2 加，R52.2、§36）：`engines.server` 是在企業伺服器轉錄的秒數（不分 Breeze、Qwen），`summarizer.enterprise`、`errorDetail.summarizeProvider.enterprise` 是整理工具是「公司」的次數；不記伺服器的網址、公司名稱、帳號。後台的欄是 `engine_server`、`summarizer_enterprise`、`summarize_err_enterprise`（`workers/usage/migrate-enterprise.sql`）。
 
 ### 30.5 設定頁、使用說明
 
@@ -1574,7 +1575,7 @@ app                                              企業伺服器
 - 轉錄線照舊一次一場（R4.3），等伺服器時也佔著。取捨：一次匯入很多場時比較慢；下一版看要不要同時送。
 - **等企業伺服器**（R50.5）：連不上、伺服器忙、伺服器出錯時工作照舊是執行中，階段「等企業伺服器」（列表不接百分比），說明寫原因和幾秒後再試（30 秒、1 分鐘、2 分鐘…最長 5 分鐘）；登入失效時每 5 秒看一次，重新登入就馬上接著做。伺服器負責的那段時間（上傳、排隊、轉錄、等）會議頁都有「改在這台電腦轉錄」：只改這一場（`JobRunner.transcribeLocally`，只在記憶體），用本機的引擎重來，模型沒下載就先下載、先用 macOS 內建（同 D35）。
 - 轉錄用企業伺服器時，`JobRunner` 不自動下載轉錄模型、引導不下載（R50.7）；環境檢查把模型當成不需要，多一項「企業伺服器：已登入 <信箱>」。
-- **整理工具**（R51）：`LLMProvider.enterprise`，`Notes/Backends/EnterpriseAPI.swift` 包一個 `OpenAICompatibleAPI`（網址 `<伺服器>/api/v1/llm`、key 換成 access token、模型可以留空用公司的預設）；被拒絕（401、403）時換一次 token 再送，換不到就是設定問題「企業伺服器的登入已失效」（暫停自動整理，R46）。`notes_by` 存 `enterprise`。準備好了沒（§34.1）：已登入（`SummarizerProblem.enterpriseSignedOut`）、伺服器有提供整理（`.enterpriseNoModels`）。
+- **整理工具**（R51）：`LLMProvider.enterprise`，`Notes/Backends/EnterpriseAPI.swift` 包一個 `OpenAICompatibleAPI`（網址 `<伺服器>/api/v1/llm`、key 換成 access token、模型可以留空用公司的預設）；被拒絕（401、403）時換一次 token 再送，換不到就是設定問題「企業伺服器的登入已失效」（暫停自動整理，R46）。伺服器自己的錯誤（回應是 §36.2 的 `{"error": {"kind", "message"}}`，有 `kind`）只顯示 `message`（R51.6，`OpenAICompatibleAPI.plainServerErrors`）：401、403 照舊是被拒絕，429 是用量上限，其他是失敗；轉送的模型回的錯誤（沒有 `kind`）照舊加「公司的伺服器 回傳 HTTP …」。`notes_by` 存 `enterprise`。準備好了沒（§34.1）：已登入（`SummarizerProblem.enterpriseSignedOut`）、伺服器有提供整理（`.enterpriseNoModels`）。
 - **整理工具頁的「公司」**（R51.1、R51.5、D124）：選單在 `account.llm` 是 true 時（或目前選的就是它）多 `enterprise`，標籤「公司（<`account.serverName`>）」（`LLMProvider.label` 是「公司」，選單另外接名稱）。整理工具頁不放網址和登入（都在進階）。選了之後：
   - 沒有模型欄、key 欄，改成「模型」：伺服器 `llm/models` 只有一個時只顯示它的名稱；不只一個時是選單「公司的預設（<預設的名稱>）」（存空字串）＋每一個（顯示 `name`、存 `id`），之前選的 id 不在清單裡了就當成預設（不清掉設定）。下面一行「模型和 API key 由公司在伺服器的後台設定」。
   - 登入失效、登出了：選單下的紅字說「到「進階 → 企業伺服器」重新登入」。
@@ -1584,7 +1585,8 @@ app                                              企業伺服器
 - **公司詞彙表**（R53）：`CompanyGlossary`（不綁 MainActor，鎖住的 `[String]`）：`SHIYIN_HOME/enterprise-glossary.json` 存上次拿到的；`EnterpriseServer.refreshInfo()` 和登入完成時一起 `GET /api/v1/glossary`（舊伺服器 404 就是空的），登出時刪檔。`JobRunner` 的四個地方（轉錄、猜說話者、校正、整理）改用 `glossaryTerms()`：自己的詞（`db.glossary()`，照 id）＋公司的詞（不分大小寫去掉重複）。`WhisperEngine.prompt`、`QwenEngine.context` 的 150／400 字上限照舊。「說話者與詞彙」頁的詞彙表下面多一段可以展開的「公司的詞彙（N 個）」；提示詞的預覽也用合併後的；建議的新詞去掉公司已經有的。
 - **登出**：只清掉存下來的值是企業伺服器的設定（`persistentDomain` 裡的；啟動參數帶的值不算，測試時曾經因此刪掉使用者自己選的整理工具）。
 - **引導**（§33.4）：整理工具那一步「其他」裡，登入了企業伺服器時多「企業伺服器」一項；轉錄用企業伺服器時最後一步寫「這台 Mac 不用下載轉錄模型」。引導裡不放登入（使用者說「設定多一個企業伺服器設定即可」）。
-- 統計（R52.2）：轉錄的引擎記 `server`、整理工具記 `enterprise`；後台（`workers/usage`）還沒加欄（任務 E6）。回報問題（R52.3）還沒加（任務 E6）。
+- 統計（R52.2、§30.4）：轉錄的引擎記 `server`、整理工具記 `enterprise`，後台的欄在 `workers/usage/migrate-enterprise.sql`。
+- 回報問題（R52.3）：登入過企業伺服器時多一行「企業伺服器：已登入（伺服器 1.0.0）」，登入失效寫「登入已失效」；伺服器的版本在登入、每次讀 `/api/v1/info` 時存進帳號（`serverVersion`），不寫網址、公司名稱、帳號。
 
 ### 36.4 Windows
 

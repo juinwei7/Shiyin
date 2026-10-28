@@ -1,0 +1,70 @@
+[
+  {
+    "engine" : "qwen",
+    "seams" : [
+      600
+    ],
+    "segments" : [
+      {
+        "end" : 2.5,
+        "lowConfidence" : false,
+        "start" : 0,
+        "text" : "大家好"
+      },
+      {
+        "end" : 5,
+        "lowConfidence" : true,
+        "start" : 2.5,
+        "text" : "今天討論預算"
+      }
+    ]
+  },
+  {
+    "engine" : "japanese",
+    "seams" : [
+
+    ],
+    "segments" : [
+      {
+        "end" : 3,
+        "lowConfidence" : false,
+        "start" : 1,
+        "text" : "Hello"
+      }
+    ]
+  },
+  {
+    "engine" : "breeze",
+    "seams" : [
+
+    ],
+    "segments" : [
+      {
+        "end" : 1.5,
+        "lowConfidence" : false,
+        "start" : 0.5,
+        "text" : "只有一段"
+      }
+    ]
+  },
+  {
+    "engine" : "breeze",
+    "seams" : [
+
+    ],
+    "segments" : [
+      {
+        "end" : 3,
+        "lowConfidence" : false,
+        "start" : 2,
+        "text" : "留下這段"
+      }
+    ]
+  },
+  {
+    "error" : "empty"
+  },
+  {
+    "error" : "empty"
+  }
+]

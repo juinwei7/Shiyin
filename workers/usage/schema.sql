@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   engine_qwen INTEGER NOT NULL DEFAULT 0,
   engine_builtin INTEGER NOT NULL DEFAULT 0,   -- Mac：macOS 內建辨識；Windows：快速辨識（SenseVoice）
   engine_whisper_ja INTEGER NOT NULL DEFAULT 0,
+  engine_server INTEGER NOT NULL DEFAULT 0,    -- 4.2（R52.2）：企業伺服器轉錄；已經建好的資料庫跑 migrate-enterprise.sql
   lang_zh INTEGER NOT NULL DEFAULT 0,
   lang_en INTEGER NOT NULL DEFAULT 0,
   lang_ja INTEGER NOT NULL DEFAULT 0,
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarizer_codex INTEGER NOT NULL DEFAULT 0,
   summarizer_api INTEGER NOT NULL DEFAULT 0,
   summarizer_local INTEGER NOT NULL DEFAULT 0,
+  summarizer_enterprise INTEGER NOT NULL DEFAULT 0,   -- 4.2（R52.2）：整理工具是「公司」
   questions_asked INTEGER NOT NULL DEFAULT 0,
   review_answered INTEGER NOT NULL DEFAULT 0,   -- 2026-10-23 加（R41.7）：待確認送出的題數；已經建好的資料庫跑 migrate-review.sql
   review_confirmed INTEGER NOT NULL DEFAULT 0,
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarize_err_codex INTEGER NOT NULL DEFAULT 0,
   summarize_err_api INTEGER NOT NULL DEFAULT 0,
   summarize_err_local INTEGER NOT NULL DEFAULT 0,
+  summarize_err_enterprise INTEGER NOT NULL DEFAULT 0,   -- 4.2（R52.2）
   summarize_err_draft INTEGER NOT NULL DEFAULT 0,
   received_at TEXT NOT NULL,
   PRIMARY KEY (install_id, date)

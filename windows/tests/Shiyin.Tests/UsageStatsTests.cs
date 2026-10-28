@@ -57,8 +57,9 @@ public sealed class UsageStatsTests : IDisposable
         usage.Transcribed(600, 30.2, "system", MeetingLanguage.En, imported: true, diarized: true);
         usage.Transcribed(100, 5, "japanese", MeetingLanguage.Ja, imported: false, diarized: false);
         usage.Transcribed(50, 4, "breeze", MeetingLanguage.Zh, imported: false, diarized: true);
+        usage.Transcribed(70, 6, "server", MeetingLanguage.Zh, imported: false, diarized: false);   // 企業伺服器（R52.2）
         usage.Rediarized();
-        foreach (var p in new[] { LLMProvider.Claude, LLMProvider.Codex, LLMProvider.Gemini, LLMProvider.OpenAICompatible, LLMProvider.None }) usage.Summarized(p);
+        foreach (var p in new[] { LLMProvider.Claude, LLMProvider.Codex, LLMProvider.Gemini, LLMProvider.OpenAICompatible, LLMProvider.Enterprise, LLMProvider.None }) usage.Summarized(p);
         usage.Asked();
         usage.Reviewed(answered: 1, confirmed: 3, skipped: 1);   // 待確認的題數（R41.7）
         usage.Reviewed(0, 0, 0);   // 沒有題目不算
@@ -68,6 +69,7 @@ public sealed class UsageStatsTests : IDisposable
         usage.SummarizeFailed(LLMException.Rejected("x"), LLMProvider.Gemini, draft: false);
         usage.SummarizeFailed(new TimeoutException(), LLMProvider.Claude, draft: true);
         usage.SummarizeFailed(LLMException.NotLoggedIn("codex"), LLMProvider.Codex, draft: false);
+        usage.SummarizeFailed(LLMException.Limited("本月的整理額度已用完"), LLMProvider.Enterprise, draft: false);
 
         var json = usage.PreviewJson();
         var payload = JsonNode.Parse(json)!.AsObject();
@@ -78,10 +80,10 @@ public sealed class UsageStatsTests : IDisposable
         Assert.Matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", (string)payload["installId"]!);
         Assert.Equal("""{"chip":"Intel(R) Core(TM) i7-12700H","os":"Windows 11 24H2 (26100.4652)","platform":"windows","uiLanguage":"zh-Hant","version":"4.0.0"}""",
             payload["app"]!.ToJsonString());
-        Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":1},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"api":1,"claudeCode":1,"codex":1,"local":1},"transcribeWallSeconds":39,"transcribedSeconds":750}""",
+        Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"server":70,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":2},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":1},"transcribeWallSeconds":45,"transcribedSeconds":820}""",
             payload["usage"]!.ToJsonString());
-        Assert.Equal("""{"diarize":0,"recording":1,"summarize":4,"transcribe":0}""", payload["errors"]!.ToJsonString());
-        Assert.Equal("""{"summarize":{"badOutput":0,"keyRejected":1,"limited":0,"missingKey":0,"notConfigured":0,"notInstalled":0,"notLoggedIn":1,"other":0,"timeout":1,"unreachable":0},"summarizeDraft":1,"summarizeProvider":{"api":1,"claudeCode":1,"codex":1,"local":0}}""",
+        Assert.Equal("""{"diarize":0,"recording":1,"summarize":5,"transcribe":0}""", payload["errors"]!.ToJsonString());
+        Assert.Equal("""{"summarize":{"badOutput":0,"keyRejected":1,"limited":1,"missingKey":0,"notConfigured":0,"notInstalled":0,"notLoggedIn":1,"other":0,"timeout":1,"unreachable":0},"summarizeDraft":1,"summarizeProvider":{"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":0}}""",
             payload["errorDetail"]!.ToJsonString());
 
         // 存檔再讀回來：數字、安裝 ID 都在（同 Mac 的 usage.json 格式）

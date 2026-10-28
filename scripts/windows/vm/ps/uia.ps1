@@ -7,6 +7,7 @@
 #   uia.ps1 choose <視窗> <下拉選單> <選項>  下拉選單選一項（展開、選取、收起）
 #   uia.ps1 set <視窗> <名稱> <文字>        填輸入框（ValuePattern）
 #   uia.ps1 close <視窗>                   關視窗（WindowPattern）
+#   uia.ps1 show <視窗> <名稱> [第幾個]     捲到看得到那個元件（ScrollItemPattern，截圖前用）
 param([string]$Action, [string]$Window, [string]$Target, [string]$Extra)
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 $A = [System.Windows.Automation.AutomationElement]
@@ -96,6 +97,12 @@ switch ($Action) {
         $p = Try-Pattern $e ([System.Windows.Automation.ValuePattern]::Pattern)
         if (-not $p) { throw "「$Target」不能輸入：$(Describe $e)" }
         $p.SetValue($Extra); "set $(Describe $e)"
+    }
+    'show' {
+        $e = Find-Element (Find-Window $Window) $Target ([int]$(if ($Extra) { $Extra } else { 0 }))
+        $p = Try-Pattern $e ([System.Windows.Automation.ScrollItemPattern]::Pattern)
+        if (-not $p) { throw "「$Target」不能捲到：$(Describe $e)" }
+        $p.ScrollIntoView(); "shown $(Describe $e)"
     }
     'close' { $p = Try-Pattern (Find-Window $Window) ([System.Windows.Automation.WindowPattern]::Pattern); $p.Close(); "closed '$Window'" }
     default { throw "不認得的動作：$Action" }

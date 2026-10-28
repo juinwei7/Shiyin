@@ -103,6 +103,22 @@ public static class ApiRequest
         return r.Status == 429 && new[] { "credit", "quota", "billing" }.Any(message.Contains);
     }
 
+    /// <summary>
+    /// 企業伺服器自己的錯誤（M§36.2 的 {"error": {"kind", "message"}}）：只用伺服器的訊息（R51.6）；
+    /// 轉送的模型回的錯誤沒有 kind，回傳 null 照一般的寫法
+    /// </summary>
+    public static LLMException? ServerError(Response r)
+    {
+        if (r.Object["error"] is not JsonObject error || error["kind"] is not JsonValue kind || !kind.TryGetValue<string>(out _)
+            || error["message"] is not JsonValue m || !m.TryGetValue<string>(out var message) || message.Length == 0) return null;
+        return r.Status switch
+        {
+            401 or 403 => LLMException.Rejected(message),
+            429 => LLMException.Limited(message),
+            _ => LLMException.Failed(message),
+        };
+    }
+
     public static LLMException Error(Response r, string provider)
     {
         var status = r.Status;

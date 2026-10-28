@@ -19,7 +19,8 @@ public static class ProblemReport
     /// <summary>Windows 的環境（Platform 填）：版本和 build、CPU、記憶體、顯示卡、whisper 用哪張顯示卡（或 CPU）</summary>
     public sealed record Environment(string AppVersion, string Build, string Windows, string Cpu, long MemoryBytes, string Gpu, string WhisperBackend);
 
-    public static string Text(AppDatabase db, AppSettings settings, Environment env)
+    /// <param name="enterprise">企業伺服器的帳號（R52.3）：有沒有連、伺服器的版本，不寫網址和帳號；沒登入是 null</param>
+    public static string Text(AppDatabase db, AppSettings settings, Environment env, EnterpriseAccount? enterprise = null, bool enterpriseSignedIn = false)
     {
         var (on, off) = (L.T("開"), L.T("關"));
         var lines = new List<string>
@@ -33,12 +34,18 @@ public static class ProblemReport
             L.F("- %@，記憶體 %@", env.Cpu, Memory(env.MemoryBytes)),
             L.F("- 顯示卡：%@；whisper：%@", env.Gpu, env.WhisperBackend),
             L.F("- 介面語言：%@", MeetingLanguages.Interface.UiName()),
-            L.F("- 轉錄：%@；說話者辨識：%@；聲紋：%@", settings.UseFastTranscriber ? L.T("快速辨識") : settings.UseQwen ? "Qwen3-ASR 1.7B" : "Breeze ASR 25",
+            L.F("- 轉錄：%@；說話者辨識：%@；聲紋：%@", settings.TranscriptionEngine == "server" && enterprise is not null ? L.T("企業伺服器")
+                : settings.UseFastTranscriber ? L.T("快速辨識") : settings.UseQwen ? "Qwen3-ASR 1.7B" : "Breeze ASR 25",
                 settings.Diarize ? on : off, settings.Voiceprints ? on : off),
             L.F("- 整理工具：%@", settings.Provider.Label()),
+        };
+        if (enterprise is not null)
+            lines.Add(L.F("- 企業伺服器：%@（伺服器 %@）", enterpriseSignedIn ? L.T("已登入") : L.T("登入已失效"), enterprise.ServerVersion ?? "?"));
+        lines.AddRange(new[]
+        {
             "",
             L.T("## 最近失敗的工作"),
-        };
+        });
         var failures = db.RecentFailures(5);
         if (failures.Count == 0) lines.Add(L.T("- 沒有"));
         foreach (var f in failures) lines.Add(L.F("- %@ %@：%@", f.Date, f.Kind, f.ErrorKind ?? L.T("（沒有記錄種類）")));

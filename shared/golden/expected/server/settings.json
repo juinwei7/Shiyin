@@ -1,0 +1,62 @@
+[
+  {
+    "input" : {
+      "audioSource" : "mix",
+      "glossary" : [
+        "拾音",
+        "Breeze ASR"
+      ],
+      "language" : "zh"
+    },
+    "settings" : {
+      "audioSource" : "mix",
+      "diarize" : false,
+      "glossary" : [
+        "拾音",
+        "Breeze ASR"
+      ],
+      "language" : "zh",
+      "splitChannels" : false
+    }
+  },
+  {
+    "input" : {
+      "audioSource" : "mic",
+      "glossary" : [
+
+      ],
+      "language" : "en",
+      "minSpeakers" : 3
+    },
+    "settings" : {
+      "audioSource" : "mic",
+      "diarize" : false,
+      "glossary" : [
+
+      ],
+      "language" : "en",
+      "minSpeakers" : 3,
+      "splitChannels" : false
+    }
+  },
+  {
+    "input" : {
+      "audioSource" : "system",
+      "glossary" : [
+        "東京"
+      ],
+      "language" : "ja",
+      "minSpeakers" : 1
+    },
+    "settings" : {
+      "audioSource" : "system",
+      "diarize" : false,
+      "glossary" : [
+        "東京"
+      ],
+      "language" : "ja",
+      "minSpeakers" : 1,
+      "splitChannels" : false
+    }
+  }
+]

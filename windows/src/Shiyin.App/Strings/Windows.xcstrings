@@ -23,6 +23,17 @@
         }
       }
     },
+    "- 企業伺服器：%@（伺服器 %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Enterprise server: %@ (server %@)"
+          }
+        }
+      }
+    },
     "- 顯示卡：%@；whisper：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -1021,6 +1032,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Version %@"
+          }
+        }
+      }
+    },
+    "登入公司的企業伺服器時：錄音會上傳到公司自己的伺服器轉錄和辨識說話者，不經過其他雲端服務，轉完就刪，聲紋不存在伺服器；選「公司」整理時，逐字稿送到公司的伺服器，由公司選的模型整理（公司機房裡的模型，或公司接的 AI 服務）。公司的後台只看得到用量的數字（幾分鐘、幾次），看不到會議內容。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you’re signed in to your company’s enterprise server: recordings are uploaded to your company’s own server for transcription and speaker identification, without passing through any other cloud service, and deleted once transcribed; voiceprints aren’t kept on the server. With the “Company” summarizer, the transcript goes to your company’s server and is summarized by the model your company chose (one in its own data center, or an AI service it uses). The company’s admin console shows only usage numbers (minutes, counts), never meeting content."
           }
         }
       }

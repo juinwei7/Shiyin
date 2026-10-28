@@ -40,6 +40,8 @@ final class EnterpriseServer {
         var serverName: String
         var engine: String
         var llm: Bool
+        /// 伺服器的版本（回報問題用，R52.3）；4.2 以前存的帳號沒有
+        var serverVersion: String?
     }
 
     enum Status: Equatable {
@@ -159,6 +161,7 @@ final class EnterpriseServer {
         updated.serverName = info.name
         updated.engine = info.transcription.engine
         updated.llm = info.llm
+        updated.serverVersion = info.version
         if updated != current {
             save(updated)
             NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
@@ -233,7 +236,7 @@ final class EnterpriseServer {
         try Keychain.set(Self.keychainAccount, tokens.refreshToken)
         UserDefaults.standard.set(attempt.base.absoluteString, forKey: Self.urlKey)
         let account = Account(email: tokens.email, name: tokens.name, serverName: attempt.info.name,
-                              engine: attempt.info.transcription.engine, llm: attempt.info.llm)
+                              engine: attempt.info.transcription.engine, llm: attempt.info.llm, serverVersion: attempt.info.version)
         save(account)
         accessToken = tokens.accessToken
         accessExpires = Date().addingTimeInterval(TimeInterval(tokens.expiresIn) - 60)

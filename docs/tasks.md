@@ -14,12 +14,8 @@
 2026-10-27 完成（程式和驗證寫在 commit 訊息）：Mac 的設定、登入、用企業伺服器轉錄（本機辨識說話者）、整理工具，對本機跑的拾音伺服器走過登入、轉錄、續傳、等伺服器、改在這台電腦轉錄、整理、token 過期、帳號停用；Windows 的 Services、LLM、設定頁、會議頁、`shiyin://auth`、控制通道，`dotnet test` 136 個通過（`EnterpriseTests` 15 個），Windows 版的程式對真的伺服器走過登入、建工作、上傳。
 
 - [~] **E2 Mac 真的按「登入」**：設定 → 進階 → 企業伺服器填網址、按「登入」，`ASWebAuthenticationSession` 打開伺服器的登入頁、登入後回到拾音（登入視窗會出現在使用者畫面上，要使用者在電腦前）
-- [~] **E5 Windows 的畫面**（design-windows §12.11）：虛擬機裡用 UI Automation 走設定的「企業伺服器」、整理工具的「公司」（登入了、公司有提供整理才出現，只顯示公司的模型，D124）、登入（瀏覽器 → `shiyin://auth` 回到開著的拾音）、轉錄（伺服器開在 Mac 上，`ssh -R`）、會議頁的「改在這台電腦轉錄」、整理、登出。2026-10-27 已經用控制通道在虛擬機走過：`enterprise login` 登入（設定改成企業伺服器轉錄、企業伺服器整理）、匯入 45 秒的錄音、伺服器轉錄並辨識說話者（狀態列有「企業伺服器辨識說話者」）、伺服器在 app 拿到結果後刪掉工作；接著 Mac 的磁碟剩 8 GB，diskguard 停掉虛擬機，存進資料庫的結果和設定頁的畫面還沒看到
-- [~] **E8 加入連結、公司詞彙表**（R49.7、R53）：程式完成。還差：Mac 按下確認視窗的「加入」走完登入（登入頁會出現在使用者畫面上）；Windows 的畫面在虛擬機走一次（併進 E5：點 `/join` 的按鈕 → 確認對話框 → 瀏覽器登入；「說話者與詞彙」的公司詞彙）
-- [ ] **E1 標準答案 `server/`**（§36.7）：`dump-golden` 加 app 送給伺服器的 `settings`、結果轉成段落和說話者，Windows 比對；Windows 的 `EnterpriseTests` 已經用同一份格式的假伺服器
-  - 驗證：`dump-golden` 跑兩次完全相同，其他標準答案沒變；Windows 比對通過
-- [ ] **E6 文件、統計**（R52.1～R52.3）：使用說明、官網的隱私段落（中英）、README；回報問題寫「企業伺服器：已登入（版本）」；`workers/usage` 加 `engine_server`、`summarizer_enterprise` 欄（要使用者跑 migration 和 deploy）
-  - 驗證：`l10n.py check`、`node site/build.mjs`；`shiyinctl usage` 看得到新的欄位、假後台收到一份
+- [~] **E5、E8 Windows 的畫面、加入連結**（design-windows §12.11、R49.7、R53）：2026-10-28 在虛擬機走過：點加入連結（`shiyin://join`）→ 確認對話框「加入「開發測試」的企業伺服器？」→ 按「加入」→ app 打開登入頁（虛擬機沒有瀏覽器，用 `ctl enterprise pending` 拿登入頁網址、在 Mac 走開發用登入，再 `Start-Process` 交回 `shiyin://auth`）→ 開著的拾音收到、登入成功；「說話者與詞彙」有「公司的詞彙（8 個）由開發測試的管理者維護」，轉錄提示自己的詞在前、公司的接在後；「進階」的企業伺服器（伺服器、帳號、兩個開關、隱私說明、登出）、整理工具「公司（開發測試）」；回報問題有「企業伺服器：登入已失效（伺服器 1.0.0）」「轉錄：企業伺服器」。還差：會議頁的「改在這台電腦轉錄」、伺服器轉錄的結果在會議頁、使用說明的隱私段落、按「登出」、真的瀏覽器登入（在有瀏覽器的 Windows 上）；Mac 按下確認視窗的「加入」走完登入（登入頁會出現在使用者畫面上）。**虛擬機開著約 5 分鐘 UTM 就被 macOS 的自動結束關掉**（launchd 回報 SIGTERM，之前標了「would be terminated by TAL」，2026-10-28 兩次），要先讓 UTM 不被自動結束（使用者決定怎麼做）
+- [~] **E6 統計的後台**（R52.2）：app（Mac、Windows）已經送 `engines.server`、`summarizer.enterprise`、`errorDetail.summarizeProvider.enterprise`，`workers/usage` 的 worker 和 `schema.sql` 加好了。還差：使用者跑 `migrate-enterprise.sql`、部署 worker（`cd workers/usage && npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-enterprise.sql && npx wrangler@4 deploy`）；**先跑 migration 再部署**，不然新的 worker 寫不存在的欄會失敗
 - [ ] **E7 接上機房的伺服器**（等伺服器專案裝好）：Mac、Windows 各錄一場真的會議（要使用者）
   - 驗證：結果跟同一段錄音在本機用同一個引擎轉的一樣（R50.4）；一小時的錄音上傳、轉錄各花多久寫進 design §36
 

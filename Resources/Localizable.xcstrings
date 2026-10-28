@@ -436,6 +436,17 @@
         }
       }
     },
+    "- 企業伺服器：%@（伺服器 %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Enterprise server: %@ (server %@)"
+          }
+        }
+      }
+    },
     "- 拾音 %@（build %@）": {
       "extractionState": "manual",
       "localizations": {
@@ -1015,6 +1026,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speakers & Glossary: the people Shiyin recognizes and their voiceprints, which you can rename or delete, or turn off remembering voices; the glossary holds the correct spelling of system names, product names and people's names, which greatly improves proper-noun accuracy."
+          }
+        }
+      }
+    },
+    "「進階 → 企業伺服器」：公司的伺服器、你的帳號，可以選要不要用它轉錄、整理，或登出。整理工具選「公司」就用公司設定的模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Advanced → Enterprise server”: your company’s server and your account. Choose whether to use it for transcription and summaries, or sign out. With the “Company” summarizer, notes are written by the model your company set up."
           }
         }
       }
@@ -7489,6 +7511,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Signing In…"
+          }
+        }
+      }
+    },
+    "登入公司的企業伺服器時：錄音會上傳到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；選「公司」整理時，逐字稿送到公司的伺服器，由公司選的模型整理（公司機房裡的模型，或公司接的 AI 服務）。說話者在這台 Mac 辨識，聲紋不會上傳。公司的後台只看得到用量的數字（幾分鐘、幾次），看不到會議內容。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you’re signed in to your company’s enterprise server: recordings are uploaded to your company’s own server for transcription, without passing through any other cloud service, and deleted once transcribed. With the “Company” summarizer, the transcript goes to your company’s server and is summarized by the model your company chose (one in its own data center, or an AI service it uses). Speakers are identified on this Mac, and voiceprints are never uploaded. The company’s admin console shows only usage numbers (minutes, counts), never meeting content."
           }
         }
       }

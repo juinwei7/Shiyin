@@ -15,7 +15,8 @@ namespace Shiyin.Services;
 public sealed record EnterpriseInfo(string Name, string Version, int ApiVersion, int MinAppApi, int? MaxAudioSeconds, string Engine, bool Llm);
 
 /// <summary>登入的帳號（不含密鑰），存在 settings.json</summary>
-public sealed record EnterpriseAccount(string Email, string Name, string ServerName, string Engine, bool Llm);
+/// <summary>登入的帳號（不含密鑰）；ServerVersion 是伺服器的版本（回報問題用，R52.3），4.2 以前存的帳號沒有</summary>
+public sealed record EnterpriseAccount(string Email, string Name, string ServerName, string Engine, bool Llm, string? ServerVersion = null);
 
 /// <summary>轉錄交給企業伺服器時，畫面上進度後面的說明（排隊第幾、為什麼在等）；有值就顯示「改在這台電腦轉錄」（R50.3、R50.5）</summary>
 public sealed record ServerNote(string Text, bool Waiting = false);
@@ -110,7 +111,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             {
                 var o = JsonNode.Parse(json) as JsonObject;
                 return o is null ? null : new EnterpriseAccount(Str(o, "email"), Str(o, "name"), Str(o, "serverName"), Str(o, "engine"),
-                    o["llm"]?.GetValue<bool>() ?? false);
+                    o["llm"]?.GetValue<bool>() ?? false, o["serverVersion"]?.GetValue<string>());
             }
             catch (JsonException) { return null; }
         }
@@ -195,6 +196,8 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     static string Random32() => Base64Url(RandomNumberGenerator.GetBytes(32));
 
     Attempt? pending;
+    /// <summary>還在等瀏覽器登入的登入頁網址（DEBUG 的控制通道用：虛擬機沒有瀏覽器時，從外面走登入頁，再把 shiyin://auth 交回來）</summary>
+    public Uri? PendingLoginUrl { get { lock (gate) return pending?.LoginUrl; } }
 
     /// <summary>第一步：檢查網址，準備好登入頁的網址（App 用預設瀏覽器打開）</summary>
     public async Task<Attempt> BeginSignIn(string text, CancellationToken cancel = default)
@@ -246,7 +249,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         catch (Exception e) when (e is EnterpriseException or HttpRequestException or OperationCanceledException) { return; }
         // 讀的時候登出、換了帳號：不要蓋掉
         if (Account is not { } current || current.Email != before.Email) return;
-        if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm)
+        if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm || current.ServerVersion != info.Version)
         {
             SaveAccount(current.Email, current.Name, info);
             Changed?.Invoke();
@@ -284,6 +287,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         settings.Set(AccountKey, new JsonObject
         {
             ["email"] = email, ["name"] = name, ["serverName"] = info.Name, ["engine"] = info.Engine, ["llm"] = info.Llm,
+            ["serverVersion"] = info.Version,
         }.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
 
     /// <summary>shiyin://auth 的網址是不是登入的回呼（App 判斷要不要交給 CompleteSignIn）</summary>

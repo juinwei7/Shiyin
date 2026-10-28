@@ -192,7 +192,8 @@ public sealed class ServerTranscriber(EnterpriseServer server)
 
     sealed record JobState(string Status, int? QueueAhead, string? Stage, double? Progress, string? ErrorKind, string? ErrorMessage);
 
-    async Task<string> Create(long bytes, string sha256, TranscriptionOptions options, CancellationToken cancel)
+    /// <summary>建工作時送的 settings（M§36.2；標準答案 server/settings.json）：Windows 的說話者也交給伺服器（D122），分聲道不送</summary>
+    public static JsonObject Settings(TranscriptionOptions options)
     {
         var settings = new JsonObject
         {
@@ -200,9 +201,14 @@ public sealed class ServerTranscriber(EnterpriseServer server)
             ["diarize"] = options.Diarize, ["splitChannels"] = false, ["audioSource"] = options.AudioSource,
         };
         if (options.MinSpeakers is int min) settings["minSpeakers"] = min;
+        return settings;
+    }
+
+    async Task<string> Create(long bytes, string sha256, TranscriptionOptions options, CancellationToken cancel)
+    {
         var body = new JsonObject
         {
-            ["settings"] = settings,
+            ["settings"] = Settings(options),
             ["audio"] = new JsonObject { ["format"] = "wav", ["sampleRate"] = 16000, ["channels"] = 1, ["bytes"] = bytes, ["sha256"] = sha256 },
         };
         var (status, text, _) = await server.Call(HttpMethod.Post, "api/v1/transcriptions",
@@ -264,15 +270,19 @@ public sealed class ServerTranscriber(EnterpriseServer server)
         return Parse(o);
     }
 
-    /// <summary>伺服器的結果（M§36.2）換成本機的 TranscriptionResult：段落、說話者、聲紋（Windows 同一個模型）、分不準的分數</summary>
+    /// <summary>
+    /// 伺服器的結果（M§36.2）換成本機的 TranscriptionResult：段落、說話者、聲紋（Windows 同一個模型）、分不準的分數。
+    /// 少了開始、結束、文字的段落略過（同 Mac，標準答案 server/result.json）
+    /// </summary>
     public static Result Parse(JsonObject o)
     {
         var segments = new List<TranscribedSegment>();
         var speakers = new List<int?>();
         foreach (var s in (o["segments"] as JsonArray ?? []).OfType<JsonObject>())
         {
-            segments.Add(new TranscribedSegment(s["start"]!.GetValue<double>(), s["end"]!.GetValue<double>(), s["text"]?.GetValue<string>() ?? "",
-                s["lowConfidence"]?.GetValue<bool>() ?? false));
+            if (s["start"] is not JsonValue start || !start.TryGetValue<double>(out var from) || s["end"] is not JsonValue end || !end.TryGetValue<double>(out var to)
+                || s["text"] is not JsonValue t || !t.TryGetValue<string>(out var text)) continue;
+            segments.Add(new TranscribedSegment(from, to, text, s["lowConfidence"] is JsonValue low && low.TryGetValue<bool>(out var l) && l));
             speakers.Add(s["speaker"] is JsonValue v && v.TryGetValue<int>(out var n) ? n : null);
         }
         if (segments.Count == 0) throw new WhisperException(WhisperErrorKind.Empty);

@@ -1724,5 +1724,19 @@
   "Queue Gate 第一期先做商品级排队，IP 节流先设十秒三十次。",
   "English only, 123 numbers.",
   ""
- ]
+ ],
+  "serverSettings": [
+    {"language": "zh", "glossary": ["拾音", "Breeze ASR"], "audioSource": "mix"},
+    {"language": "en", "glossary": [], "audioSource": "mic", "minSpeakers": 3},
+    {"language": "ja", "glossary": ["東京"], "audioSource": "system", "minSpeakers": 1}
+  ],
+  "serverResults": [
+    {"segments": [{"start": 0, "end": 2.5, "text": "大家好", "speaker": 1, "lowConfidence": false}, {"start": 2.5, "end": 5, "text": "今天討論預算", "speaker": 2, "lowConfidence": true}],
+     "seams": [600], "transcribedWith": "qwen", "engine": "breeze", "duration": 5, "voices": {"1": {"embedding": [0.1, 0.2], "seconds": 2.5, "source": "mix"}}},
+    {"segments": [{"start": 1, "end": 3, "text": "Hello"}], "engine": "japanese"},
+    {"segments": [{"start": 0.5, "end": 1.5, "text": "只有一段"}]},
+    {"segments": [{"start": 0, "end": 1}, {"end": 2, "text": "沒有開始"}, {"start": 2, "end": 3, "text": "留下這段"}]},
+    {"segments": []},
+    {}
+  ]
 }

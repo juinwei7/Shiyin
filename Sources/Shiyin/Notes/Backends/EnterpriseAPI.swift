@@ -8,7 +8,7 @@ struct EnterpriseAPI: LLMBackend {
     private var inner: OpenAICompatibleAPI {
         OpenAICompatibleAPI(model: model, baseURL: EnterpriseServer.shared.savedURL?.appending(path: "api/v1/llm").absoluteString ?? "",
                             key: { try await EnterpriseServer.shared.validAccessToken() }, requiresModel: false,
-                            name: String(localized: "公司的伺服器"))
+                            name: String(localized: "公司的伺服器"), plainServerErrors: true)
     }
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,

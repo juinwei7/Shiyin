@@ -80,6 +80,9 @@ struct GuideView: View {
                 GuideBullet(String(localized: "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。"))
                 GuideBullet(String(localized: "「說話者與詞彙」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。"))
                 GuideBullet(String(localized: "「進階」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查、錄音和模型佔用的空間。"))
+                if EnterpriseServer.shared.hasAccount {
+                    GuideBullet(String(localized: "「進階 → 企業伺服器」：公司的伺服器、你的帳號，可以選要不要用它轉錄、整理，或登出。整理工具選「公司」就用公司設定的模型。"))
+                }
             }
 
             GuideSection(title: String(localized: "資料與隱私")) {
@@ -88,6 +91,10 @@ struct GuideView: View {
                 GuideBullet(String(localized: "整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記和詞彙表送到你選的整理工具，錄音檔不會送出。選「不整理」就完全離線。"))
                 GuideBullet(String(localized: "聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台 Mac，不會放進匯出的 .shiyin 封包。"))
                 GuideBullet(String(localized: "API key 存在 macOS 鑰匙圈，不會寫進任何檔案。"))
+                // 企業伺服器（R52.1）：登入了才寫，沒登入的人照原本的說明
+                if EnterpriseServer.shared.hasAccount {
+                    GuideBullet(String(localized: "登入公司的企業伺服器時：錄音會上傳到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；選「公司」整理時，逐字稿送到公司的伺服器，由公司選的模型整理（公司機房裡的模型，或公司接的 AI 服務）。說話者在這台 Mac 辨識，聲紋不會上傳。公司的後台只看得到用量的數字（幾分鐘、幾次），看不到會議內容。"))
+                }
                 // 匿名使用統計（design §30.5）：有統計網址的版本才寫
                 if UsageStats.isOffered {
                     GuideBullet(String(localized: "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。"))

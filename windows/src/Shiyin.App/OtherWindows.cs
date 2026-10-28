@@ -382,6 +382,8 @@ public static class OtherWindows
             L.T("整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記和詞彙表送到你選的整理工具，錄音檔不會送出。選「不整理」就完全離線。"),
             L.T("聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。"),
             L.T("API key 存在 Windows 的認證管理員，不會寫進任何檔案。"),
+            // 企業伺服器（R52.1）：登入了才寫，沒登入的人照原本的說明
+            AppHost.Current.Enterprise.HasAccount ? L.T("登入公司的企業伺服器時：錄音會上傳到公司自己的伺服器轉錄和辨識說話者，不經過其他雲端服務，轉完就刪，聲紋不存在伺服器；選「公司」整理時，逐字稿送到公司的伺服器，由公司選的模型整理（公司機房裡的模型，或公司接的 AI 服務）。公司的後台只看得到用量的數字（幾分鐘、幾次），看不到會議內容。") : null,
             // 匿名使用統計（M§30.5）：有統計網址的版本才寫
             AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。") : null));
         column.Children.Add(Section(L.T("快捷鍵"),
@@ -403,7 +405,8 @@ public static class OtherWindows
     public static Window Report(AppHost host)
     {
         var window = new Window { Title = L.T("回報問題") };
-        var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, Whisper.WhisperEngine.GpuDevice));
+        var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, Whisper.WhisperEngine.GpuDevice),
+            host.Enterprise.Account, host.Enterprise.IsSignedIn);
         // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行
         var content = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = text, IsReadOnly = true, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas") };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(content, L.T("回報問題"));

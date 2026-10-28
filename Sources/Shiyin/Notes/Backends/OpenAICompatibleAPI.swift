@@ -18,6 +18,8 @@ struct OpenAICompatibleAPI: LLMBackend {
     var key: (@MainActor () async throws -> String?)? = nil
     var requiresModel = true
     var name: String? = nil
+    /// 企業伺服器自己擋下的（額度、暫停、格式）只顯示伺服器的訊息（R51.6）
+    var plainServerErrors = false
 
     /// 設定裡的網址；DEBUG 建置可以用 llmurl 取代
     @MainActor
@@ -65,7 +67,10 @@ struct OpenAICompatibleAPI: LLMBackend {
             response = try await complete(base, provider: provider, system: fallback, prompt: prompt,
                                           responseFormat: ["type": "json_object"])
         }
-        guard response.status == 200 else { throw APIRequest.error(response, provider: provider) }
+        guard response.status == 200 else {
+            if plainServerErrors, let error = APIRequest.serverError(response) { throw error }
+            throw APIRequest.error(response, provider: provider)
+        }
         let choice = (response.object["choices"] as? [[String: Any]])?.first
         let finish = choice?["finish_reason"] as? String
         if finish == "length" { throw LLMError.failed(String(localized: "回應不完整（可能超過長度上限）")) }

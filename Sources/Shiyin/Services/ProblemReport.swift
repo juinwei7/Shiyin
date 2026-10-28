@@ -31,8 +31,16 @@ enum ProblemReport {
         lines.append(String(localized: "- macOS \(osVersion)（\(sysctl("kern.osversion") ?? "?")）"))
         lines.append(String(localized: "- \(sysctl("machdep.cpu.brand_string") ?? "Apple Silicon")，記憶體 \(memory)"))
         lines.append(String(localized: "- 介面語言：\(MeetingLanguage.interface.uiName)"))
-        lines.append(String(localized: "- 轉錄：\(AppSettings.useSystemTranscriber ? String(localized: "macOS 內建辨識") : "Breeze ASR 25")；說話者辨識：\(AppSettings.diarize ? on : off)；聲紋：\(AppSettings.voiceprints ? on : off)"))
+        let engine = AppSettings.usesEnterpriseTranscription ? String(localized: "企業伺服器")
+            : ["system": String(localized: "macOS 內建辨識"), "qwen": "Qwen3-ASR 1.7B"][AppSettings.transcriptionEngine] ?? "Breeze ASR 25"
+        lines.append(String(localized: "- 轉錄：\(engine)；說話者辨識：\(AppSettings.diarize ? on : off)；聲紋：\(AppSettings.voiceprints ? on : off)"))
         lines.append(String(localized: "- 整理工具：\(AppSettings.provider.label)"))
+        // 企業伺服器（R52.3）：有沒有連、伺服器的版本；不寫網址和帳號
+        let enterprise = EnterpriseServer.shared
+        if let account = enterprise.account {
+            let state = enterprise.isSignedIn ? String(localized: "已登入") : String(localized: "登入已失效")
+            lines.append(String(localized: "- 企業伺服器：\(state)（伺服器 \(account.serverVersion ?? "?")）"))
+        }
         lines.append("")
         lines.append(String(localized: "## 最近失敗的工作"))
         let failures = (try? db.recentFailures(limit: 5)) ?? []

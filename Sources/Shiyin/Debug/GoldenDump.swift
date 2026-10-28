@@ -25,6 +25,7 @@ enum GoldenDump {
             exports(fixtures, &dump)
             utilities(fixtures, &dump)
             pipeline(fixtures, &dump)
+            server(fixtures, &dump)
             try database(fixtures, &dump)
             result["ok"] = true
             result["files"] = dump.count
@@ -478,6 +479,25 @@ enum GoldenDump {
             state = state &* 1_664_525 &+ 1_013_904_223
             return Float(Int16(truncatingIfNeeded: state >> 16)) / 32768
         }
+    }
+
+    /// 企業伺服器（design §36.7、E1）：建工作送的 settings、伺服器的結果換成段落（說話者 Mac 在本機辨識，Windows 另外比）
+    private static func server(_ f: Fixtures, _ w: inout Writer) {
+        w.json("server/settings.json", (f["serverSettings"] as? [Object] ?? []).map { item -> Object in
+            let language = MeetingLanguage(rawValue: item["language"] as? String ?? "zh") ?? .zh
+            return ["input": item, "settings": ServerTranscriber.settings(language: language, glossary: item["glossary"] as? [String] ?? [],
+                                                                          audioSource: item["audioSource"] as? String ?? "mix",
+                                                                          minSpeakers: item["minSpeakers"] as? Int)]
+        })
+        w.json("server/result.json", (f["serverResults"] as? [Object] ?? []).map { item -> Object in
+            do {
+                let remote = try ServerTranscriber.parse(item)
+                return ["segments": remote.segments.map { ["start": $0.start, "end": $0.end, "text": $0.text, "lowConfidence": $0.lowConfidence] as Object },
+                        "seams": remote.seams, "engine": remote.engine]
+            } catch {
+                return ["error": error is WhisperError ? "empty" : "\(error)"]
+            }
+        })
     }
 
     private static func pipeline(_ f: Fixtures, _ w: inout Writer) {

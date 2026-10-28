@@ -195,6 +195,8 @@ public static class ControlPipe
                     case "logout": _ = Task.Run(() => host.Enterprise.SignOut()); break;
                     case "expire": host.Enterprise.InvalidateAccess(); break;
                     case "glossary": _ = Task.Run(() => host.Enterprise.RefreshGlossary()); break;   // 重新拿公司詞彙表（R53）
+                    // pending：還在等瀏覽器的登入頁網址（虛擬機沒有瀏覽器時，從外面登入、再用 Start-Process 交回 shiyin://auth）
+                    case "pending": return new JsonObject { ["url"] = host.Enterprise.PendingLoginUrl?.ToString() ?? "" };
                     case "join" when args.Length > 2:   // join <shiyin://join?server=…>：等於點了加入連結（R49.7）
                         { var link = args[2]; host.Post(() => App.Current.OpenLink(link)); }
                         break;

@@ -66,6 +66,18 @@ enum APIRequest {
         return response.status == 429 && ["credit", "quota", "billing"].contains { message.contains($0) }
     }
 
+    /// 企業伺服器自己的錯誤（design §36.2 的 `{"error": {"kind", "message"}}`）：只用伺服器的訊息（R51.6）；
+    /// 轉送的模型回的錯誤沒有 kind，回傳 nil 照一般的寫法
+    static func serverError(_ response: Response) -> LLMError? {
+        guard let error = response.object["error"] as? [String: Any], error["kind"] is String,
+              let message = error["message"] as? String, !message.isEmpty else { return nil }
+        switch response.status {
+        case 401, 403: return LLMError.rejected(message)
+        case 429: return LLMError.limited(message)
+        default: return LLMError.failed(message)
+        }
+    }
+
     static func error(_ response: Response, provider: String) -> LLMError {
         let status = response.status
         // Gemini 的 key 錯誤是 HTTP 400 加上「API key not valid」
