@@ -49,6 +49,17 @@ public sealed class EnterpriseTests : IDisposable
         public int LlmRejectsLeft;
         /// <summary>整理要回的錯誤（R51.6）：伺服器自己的（有 kind）或轉送的模型的</summary>
         public (int Status, JsonObject Body)? LlmReply;
+        public string Name = "測試公司";
+        /// <summary>info、換 token 回這段原文（型別不對的回應）</summary>
+        public string? InfoBody;
+        public string? TokenBody;
+        /// <summary>這個路徑回 307 轉到 RedirectTo（同一個路徑）</summary>
+        public string? RedirectPath;
+        public string? RedirectTo;
+        /// <summary>HEAD、PATCH 回這個 Upload-Offset（PATCH 不收）：不合理的位置</summary>
+        public string? HeadOffset;
+        public string? PatchOffset;
+        public string? LastLogoutAuth;
 
         public FakeEnterprise() => Server.Handle = Handle;
 
@@ -63,12 +74,22 @@ public sealed class EnterpriseTests : IDisposable
             var body = reader.ToArray();
             var auth = c.Request.Headers["Authorization"];
             bool Authorized() => auth == "Bearer " + Access && !Disabled;
+            if (path == RedirectPath)
+            {
+                c.Response.StatusCode = 307;
+                c.Response.RedirectLocation = RedirectTo + path;
+                c.Response.Close();
+                return;
+            }
             switch (method, path)
             {
+                case ("GET", "/api/v1/info") when InfoBody is not null:
+                    await Text(c, 200, InfoBody);
+                    return;
                 case ("GET", "/api/v1/info"):
                     await Json(c, 200, new JsonObject
                     {
-                        ["server"] = "shiyin", ["apiVersion"] = 1, ["minAppApi"] = 1, ["name"] = "測試公司", ["version"] = "1.0.0",
+                        ["server"] = "shiyin", ["apiVersion"] = 1, ["minAppApi"] = 1, ["name"] = Name, ["version"] = "1.0.0",
                         ["maxAudioSeconds"] = 28800, ["transcription"] = new JsonObject { ["engine"] = "breeze" }, ["llm"] = Llm,
                     });
                     return;
@@ -96,6 +117,7 @@ public sealed class EnterpriseTests : IDisposable
                     }
                     else if (RejectRefresh || o["refresh_token"]!.GetValue<string>() != Refresh) { await Error(c, 401, "unauthorized"); return; }
                     else if (Disabled) { await Error(c, 403, "forbidden", "這個帳號已經被管理者停用"); return; }
+                    if (TokenBody is not null) { await Text(c, 200, TokenBody); return; }
                     Refresh = "refresh-" + Guid.NewGuid().ToString("N");
                     Access = "access-" + Guid.NewGuid().ToString("N");
                     await Json(c, 200, new JsonObject
@@ -106,6 +128,7 @@ public sealed class EnterpriseTests : IDisposable
                     return;
                 }
                 case ("POST", "/api/v1/auth/logout"):
+                    LastLogoutAuth = auth;
                     c.Response.StatusCode = 204;
                     c.Response.Close();
                     return;
@@ -148,13 +171,20 @@ public sealed class EnterpriseTests : IDisposable
             switch (method, path)
             {
                 case ("HEAD", "/api/v1/transcriptions/job1/audio"):
-                    c.Response.Headers["Upload-Offset"] = Received.Length.ToString();
+                    c.Response.Headers["Upload-Offset"] = HeadOffset ?? Received.Length.ToString();
                     c.Response.StatusCode = 200;
                     c.Response.Close();
                     return;
                 case ("PATCH", "/api/v1/transcriptions/job1/audio"):
                 {
                     var offset = long.Parse(c.Request.Headers["Upload-Offset"]!);
+                    if (PatchOffset is not null)
+                    {
+                        c.Response.Headers["Upload-Offset"] = PatchOffset;
+                        c.Response.StatusCode = 204;
+                        c.Response.Close();
+                        return;
+                    }
                     if (offset != Received.Length)
                     {
                         c.Response.Headers["Upload-Offset"] = Received.Length.ToString();
@@ -262,7 +292,8 @@ public sealed class EnterpriseTests : IDisposable
     }
 
     readonly FakeEnterprise fake = new();
-    readonly HttpClient http = new();
+    // 跟 app 一樣用不跟著轉址的 HttpClient（M§36.2、D126）
+    readonly HttpClient http = EnterpriseServer.NoRedirectClient();
     readonly MemorySecrets secrets = new();
     readonly AppSettings settings = AppSettings.InMemory();
     readonly TempHome home = new();
@@ -293,6 +324,178 @@ public sealed class EnterpriseTests : IDisposable
         Assert.NotNull(EnterpriseServer.Normalized("http://127.0.0.1:8787", allowLocalHttp: true));
         Assert.Null(EnterpriseServer.Normalized("http://10.0.0.5:8787", allowLocalHttp: true));
         Assert.Null(EnterpriseServer.Normalized(""));
+        // 有帳號密碼的不接受（加入連結用 good.com@evil.com 假裝成別的網站，M§36.2）
+        Assert.Null(EnterpriseServer.Normalized("https://user:pass@shiyin.example.com"));
+        Assert.Null(EnterpriseServer.Normalized("https://shiyin.example.com@evil.example.com"));
+        // 國際化網域給人看的是 punycode：長得像別的網站的字元騙不了人
+        Assert.Equal("xn--pple-43d.com", EnterpriseServer.DisplayHost(EnterpriseServer.Normalized("https://\u0430pple.com")!));
+        Assert.True(EnterpriseServer.Normalized("https://%D0%B0pple.com") is not { } encoded || EnterpriseServer.DisplayHost(encoded).All(char.IsAscii));
+        Assert.True(EnterpriseServer.SameServer(new Uri("https://Shiyin.example.com/"), new Uri("https://shiyin.example.com")));
+        Assert.False(EnterpriseServer.SameServer(new Uri("https://a.example.com/"), new Uri("https://b.example.com/")));
+    }
+
+    /// <summary>加入連結可以指到任何網站：info、換 token 的型別不對都是「不是拾音的企業伺服器」，不能丟出別的例外讓 app 當掉</summary>
+    [Fact]
+    public async Task MalformedServerRepliesAreNotShiyin()
+    {
+        var server = Server();
+        foreach (var body in new[]
+        {
+            """{"server":"shiyin","apiVersion":"1","minAppApi":1}""",
+            """{"server":"shiyin","apiVersion":1e10,"minAppApi":1}""",
+            """{"server":"shiyin","apiVersion":1,"minAppApi":1,"name":5}""",
+            """{"server":"shiyin","apiVersion":1,"minAppApi":1,"transcription":"breeze"}""",
+            """{"server":"shiyin","apiVersion":1,"minAppApi":1,"llm":"yes"}""",
+            """{"server":"shiyin","server":"shiyin","apiVersion":1,"minAppApi":1}""",
+            """{"server":["shiyin"]}""",
+            """["shiyin"]""",
+            "not json",
+        })
+        {
+            fake.InfoBody = body;
+            var failure = await Assert.ThrowsAsync<EnterpriseException>(() => server.FetchInfo(new Uri(fake.Server.Url + "/")));
+            Assert.Equal(EnterpriseFailure.NotShiyin, failure.Kind);
+        }
+        fake.InfoBody = null;
+        // 換 token 的回應型別不對、少了 token：不登入
+        foreach (var body in new[] { """{"access_token":1,"refresh_token":"r"}""", """{"access_token":"a"}""", """{"access_token":"a","refresh_token":"r","user":"amy"}""" })
+        {
+            fake.TokenBody = body;
+            var failure = await Assert.ThrowsAsync<EnterpriseException>(() => server.DebugDevSignIn(fake.Server.Url, "amy@example.com"));
+            Assert.Equal(EnterpriseFailure.NotShiyin, failure.Kind);
+            Assert.False(server.HasAccount);
+        }
+        // 錯誤的 kind、message 不是字串：當成沒有
+        var odd = EnterpriseServer.Failure(500, """{"error":{"kind":5,"message":["x"]}}""");
+        Assert.Equal(("server_error", EnterpriseFailure.Server), (odd.ServerKind, odd.Kind));
+    }
+
+    /// <summary>不跟著轉址（M§36.2、D126）：307 轉到別的主機時，body（refresh token、錄音、逐字稿）不能送過去</summary>
+    [Fact]
+    public async Task RedirectsAreNotFollowed()
+    {
+        using var other = new TestServer();
+        var elsewhere = new List<string>();
+        other.Handle = c => { lock (elsewhere) elsewhere.Add($"{c.Request.HttpMethod} {c.Request.Url!.AbsolutePath}"); c.Response.StatusCode = 404; c.Response.Close(); return Task.CompletedTask; };
+        var server = await SignedIn();
+        fake.RedirectTo = other.Url;
+        fake.RedirectPath = "/api/v1/transcriptions";
+        var content = new StringContent("""{"settings":{},"audio":{}}""", Encoding.UTF8, "application/json");
+        var redirected = await Assert.ThrowsAsync<EnterpriseException>(() => server.Call(HttpMethod.Post, "api/v1/transcriptions", content));
+        Assert.Equal("redirect", redirected.ServerKind);
+        Assert.Contains("307", redirected.Message);
+        Assert.False(redirected.IsTemporary || redirected.IsSetupProblem);   // 轉錄的工作算失敗，不會一直等
+        // 換 token（body 是 refresh token）
+        fake.RedirectPath = "/api/v1/auth/token";
+        server.InvalidateAccess();
+        Assert.Equal("redirect", (await Assert.ThrowsAsync<EnterpriseException>(() => server.AccessToken())).ServerKind);
+        // 整理（body 是逐字稿）：LLMClient 共用的 HttpClient 會跟著轉址，企業伺服器用自己的
+        fake.RedirectPath = null;
+        using var shared = new HttpClient();
+        var llm = new LLMClient(new MemoryKeys(), new NoTools(), new ProcessRunner(), shared) { Enterprise = await SignedIn() };
+        var format = new OutputFormat("""{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"]}""", "answer", "answer");
+        fake.RedirectPath = "/api/v1/llm/chat/completions";
+        var failed = await Assert.ThrowsAsync<LLMException>(() => llm.GenerateJson(LLMProvider.Enterprise, "", "s", "逐字稿", format, CancellationToken.None));
+        Assert.Contains("307", failed.Message);
+        // 加入連結、登入：info 轉到別的地方也不跟
+        fake.RedirectPath = "/api/v1/info";
+        Assert.Equal("redirect", (await Assert.ThrowsAsync<EnterpriseException>(() => Server().BeginSignIn(fake.Server.Url))).ServerKind);
+        Assert.Empty(elsewhere);
+        // 給錯 HttpClient（會跟著轉址）時也當成錯誤（body 已經送出去了，所以 app 一定要用 NoRedirectClient）
+        fake.RedirectPath = "/api/v1/glossary";
+        using var following = new HttpClient();
+        var careless = new EnterpriseServer(settings, following, secrets, "4.2.0", "測試的筆電") { AllowLocalHttp = true };
+        Assert.Equal("redirect", (await Assert.ThrowsAsync<EnterpriseException>(() => careless.Call(HttpMethod.Get, "api/v1/glossary"))).ServerKind);
+        fake.RedirectPath = null;
+    }
+
+    /// <summary>
+    /// 加入連結換到另一台（R49.7、M§36.2）：新的登入完成之前，舊的帳號、refresh token 都還在；
+    /// 完成之後才換掉、撤銷舊伺服器上的登入（用舊伺服器自己的 token）、換掉公司詞彙表
+    /// </summary>
+    [Fact]
+    public async Task JoiningAnotherServerKeepsTheOldLoginUntilTheNewOneCompletes()
+    {
+        fake.GlossaryTerms = ["舊公司的詞"];
+        var server = await SignedIn();
+        settings.Set(AppSettings.TranscriptionEngineKey, "server");
+        settings.Set(AppSettings.ProviderKey, "enterprise");
+        var oldRefresh = fake.Refresh;
+        var oldAccess = await server.AccessToken();
+        using var other = new FakeEnterprise { Name = "新公司", Llm = false, GlossaryTerms = ["新公司的詞"] };
+        // 按了「加入」、瀏覽器還在登入：什麼都沒換
+        var attempt = await server.BeginSignIn(other.Server.Url);
+        Assert.Equal("新公司", attempt.Info.Name);
+        Assert.True(server.IsSignedIn);
+        Assert.Equal("測試公司", server.Account!.ServerName);
+        Assert.Equal(oldRefresh, secrets.Values[EnterpriseServer.CredentialAccount]);
+        // 新的伺服器拒絕：維持原本的登入
+        await Assert.ThrowsAsync<EnterpriseException>(() => server.CompleteSignIn(
+            new Uri($"shiyin://auth?error=access_denied&error_description=no&state={attempt.State}")));
+        Assert.True(server.IsSignedIn);
+        Assert.True(EnterpriseServer.SameServer(new Uri(fake.Server.Url), server.SavedUrl!));
+        Assert.DoesNotContain("POST /api/v1/auth/logout", fake.Requests);
+        Assert.Equal(["舊公司的詞"], server.Glossary.Terms);
+        // 登入完成：換成新的，舊的伺服器用自己的 token 撤銷
+        await server.DebugDevSignIn(other.Server.Url, "amy@example.com");
+        Assert.Equal("新公司", server.Account!.ServerName);
+        Assert.True(EnterpriseServer.SameServer(new Uri(other.Server.Url), server.SavedUrl!));
+        Assert.Equal(other.Refresh, secrets.Values[EnterpriseServer.CredentialAccount]);
+        Assert.Equal("Bearer " + oldAccess, fake.LastLogoutAuth);
+        Assert.DoesNotContain("POST /api/v1/auth/logout", other.Requests);
+        Assert.Equal(["新公司的詞"], server.Glossary.Terms);
+        Assert.Equal(other.Access, await server.AccessToken());
+        // 新的伺服器沒有提供整理：「公司」改成還沒設定；轉錄照舊用企業伺服器
+        Assert.Null(settings.ChosenProvider);
+        Assert.Equal("server", settings.TranscriptionEngine);
+    }
+
+    /// <summary>伺服器的結果（M§36.2）：時間、說話者、聲紋、長度不合理的不收（說話者的數字太大會讓資料庫建一大堆說話者）</summary>
+    [Fact]
+    public void ServerResultsAreChecked()
+    {
+        var r = ServerTranscriber.Parse(JsonNode.Parse("""
+            {"segments":[{"start":0,"end":1,"text":"太大","speaker":2147483647},{"start":1,"end":2,"text":"0","speaker":0},
+                         {"start":2,"end":3,"text":"64","speaker":64},{"start":3,"end":4,"text":"65","speaker":65},
+                         {"start":4,"end":5,"text":"負的","speaker":-1},{"start":5,"end":6,"text":"小數","speaker":1.5},
+                         {"start":-1,"end":2,"text":"開始是負的","speaker":1},{"start":3,"end":2,"text":"倒過來","speaker":1},
+                         {"start":0,"end":1e300,"text":"太長","speaker":1}],
+             "voices":{"0":{"embedding":[0.1],"seconds":1,"source":"mix"},"64":{"embedding":[0.5],"seconds":1,"source":"mix"},
+                       "65":{"embedding":[0.6],"seconds":1,"source":"mix"},"99999999999":{"embedding":[0.7],"seconds":1,"source":"mix"}},
+             "seams":[-1,600,1e300,"x"],"duration":1e300}
+            """)!.AsObject()).Transcription;
+        Assert.Equal(["太大", "0", "64", "65", "負的", "小數"], r.Segments.Select(s => s.Text));
+        Assert.Equal([null, null, 64, null, null, null], r.Speakers);
+        Assert.Equal([64], r.Voices.Keys);
+        Assert.Equal([600.0], r.Seams);
+        Assert.Equal(6, r.Duration);
+        Assert.Equal(91.5, ServerTranscriber.Parse(JsonNode.Parse("""{"segments":[{"start":0,"end":1,"text":"好"}],"duration":91.5}""")!.AsObject()).Transcription.Duration);
+    }
+
+    /// <summary>伺服器給的 Upload-Offset 不合理：負的、比檔案大就從頭傳；一直不往前就算失敗，不會一直重送（M§36.2）</summary>
+    [Fact]
+    public async Task UploadOffsetsFromTheServerAreChecked()
+    {
+        var server = await SignedIn();
+        var (wav, bytes, sha) = Wav(5);
+        // HEAD 說收到 -5、比檔案還多：從頭傳，照樣傳完
+        fake.HeadOffset = "-5";
+        Assert.NotNull(await Transcriber(server, [], []).Transcribe(wav, bytes, sha, new TranscriptionOptions(), null, CancellationToken.None));
+        Assert.Equal(File.ReadAllBytes(wav), fake.Received);
+        fake.HeadOffset = (bytes + 100).ToString();
+        Assert.NotNull(await Transcriber(server, [], []).Transcribe(wav, bytes, sha, new TranscriptionOptions(), null, CancellationToken.None));
+        fake.HeadOffset = null;
+        // PATCH 之後位置一直不往前（負的、比檔案大、0）：失敗，不會一直送
+        foreach (var offset in new[] { "-1", (bytes * 10).ToString(), "0" })
+        {
+            fake.PatchOffset = offset;
+            lock (fake.Requests) fake.Requests.Clear();
+            var failure = await Assert.ThrowsAsync<ServerTranscriber.FailedException>(() =>
+                Transcriber(server, [], []).Transcribe(wav, bytes, sha, new TranscriptionOptions(), null, CancellationToken.None));
+            Assert.Equal("錄音一直沒辦法完整傳到企業伺服器", failure.Message);
+            Assert.Equal(3, fake.Requests.Count(r => r.StartsWith("PATCH", StringComparison.Ordinal)));
+        }
+        fake.PatchOffset = null;
     }
 
     [Fact]
@@ -566,6 +769,23 @@ public sealed class EnterpriseTests : IDisposable
         await server.SignOut();
         Assert.Empty(server.Glossary.Terms);
         Assert.False(File.Exists(file));
+    }
+
+    /// <summary>公司詞彙表的上限（M§36.2，同 Mac）：最多 500 個、每個最多 100 字，太長的略過</summary>
+    [Fact]
+    public async Task CompanyGlossaryIsCapped()
+    {
+        var many = Enumerable.Range(0, 700).Select(i => $"詞{i}").ToList();
+        many.Insert(3, new string('長', 101));
+        many.Insert(5, new string('剛', 100));
+        var limited = CompanyGlossary.Limited(many);
+        Assert.Equal(CompanyGlossary.MaxTerms, limited.Count);
+        Assert.DoesNotContain(new string('長', 101), limited);
+        Assert.Equal(new string('剛', 100), limited[4]);
+        Assert.Equal(["詞0", "詞1", "詞2"], limited.Take(3));
+        fake.GlossaryTerms = many;
+        var server = await SignedIn();
+        Assert.Equal(limited, server.Glossary.Terms);
     }
 
     [Fact]

@@ -1500,6 +1500,7 @@ app                                              企業伺服器
 | `server_error` | 500 | 自動重試一次，再失敗算失敗 |
 
 - 網路錯誤、逾時、5xx 跟 `busy` 一樣當成「等企業伺服器」。
+- 不跟著轉址（4.2.1，D126）：app 送給企業伺服器的請求（info、換 token、登出、轉錄、詞彙表、整理）一律不跟著 3xx 轉址，收到 3xx 當成錯誤「企業伺服器要求轉到別的網址（HTTP N），拾音不會跟著轉…」（`kind` 當成 `redirect`：不是暫時的問題，轉錄的工作算失敗）。Mac 用專用的 `EnterpriseServer.session`（delegate 擋掉轉址），Windows 用 `EnterpriseServer.NoRedirectClient()`（`AllowAutoRedirect = false`；下載模型、更新用的共用 HttpClient 照舊跟著轉址）。
 
 **`GET /api/v1/info`**（不用登入）
 
@@ -1537,7 +1538,8 @@ app                                              企業伺服器
 
   → `{"id": "…", "status": "uploading", "engine": "breeze"}`。`settings` 就是 `TranscriptionOptions`（`windows/src/Shiyin.Services/Transcription.cs`）裡跟引擎無關的欄位，app 照本機會用的值填；引擎由伺服器決定。app 一律送混好的單聲道（`splitChannels` 是 false）。`diarize`：Mac 送 false（說話者在本機辨識，D122），Windows 照設定。
 - 上傳：`HEAD …/<id>/audio` 回 `Upload-Offset`（已經收到幾個位元組）；`PATCH …/<id>/audio`，標頭 `Upload-Offset: <從哪裡開始>`、`Content-Type: application/offset+octet-stream`，一次 8 MB。offset 對不上回 409，app 先 `HEAD` 再接著傳。收滿 `bytes`、SHA-256 對了就排隊；SHA-256 不對回 `bad_request`，app 從頭傳一次。
-- `GET …/<id>` → `{"status": "uploading|queued|running|done|failed|cancelled|expired", "queueAhead": 2, "stage": "waiting_models|decode|diarize|transcribe", "progress": 0.42, "engine": "breeze", "duration": 91.0, "error": {"kind", "message"}}`。失敗的 `kind` 是 `empty`（沒有辨識出文字，app 當成 WhisperError.empty）或 `transcription_failed`。
+  - 伺服器回的 `Upload-Offset`（`HEAD`、`PATCH` 的回應）不是數字、小於 0、大於 `bytes` 時當成 0，從頭傳（4.2.1）。一次上傳裡 `PATCH` 之後的位置連續 3 次沒有往前，或 `PATCH` 超過「塊數 × 2 + 3」次，就算失敗「錄音一直沒辦法完整傳到企業伺服器」，不會一直重送。
+- `GET …/<id>` → `{"status": "uploading|queued|running|done|failed|cancelled|expired", "queueAhead": 2, "stage": "waiting_models|decode|diarize|transcribe", "progress": 0.42, "engine": "breeze", "duration": 91.0, "error": {"kind", "message"}}`。失敗的 `kind` 是 `empty`（沒有辨識出文字，app 當成 WhisperError.empty）或 `transcription_failed`。`progress` 限在 0～1（畫面拿來算百分比）。
 - `GET …/<id>/result`：
 
 ```json
@@ -1548,12 +1550,15 @@ app                                              企業伺服器
 ```
 
   欄位就是 `TranscriptionResult`。`voices` 是伺服器的說話者辨識算的聲紋（Windows 版同一個模型，ERes2Net），只有 `diarize` 是 true 時才有；Windows 直接存進本機的資料庫比對，Mac 不用（D122）。`transcribedWith` 寫進 `meetings.transcribed_with`（跟本機一樣是 breeze、qwen、japanese），在哪裡轉的不另外存（統計另外記 `engines.server`）。
+  - app 先檢查伺服器給的值（4.2.1，兩邊同一個規則，標準答案 `server/result.json`）：`start`、`end` 不是有限的數字、`start` < 0、`end` < `start`、`end` 超過 95040 秒（`ServerTranscriber.maxSeconds`，一天的錄音再多一成）的段落略過；`seams` 只留 0～95040 秒的數字。Windows 另外：`speaker` 只接受 1～64（其他當成沒有，資料庫照最大的編號建說話者），`voices` 也只留編號 1～64 的；`duration` 不是 0～95040 秒時用最後一段的結束時間。
 - `DELETE …/<id>`：還在跑的話停下，刪錄音和結果。app 把結果寫進資料庫後送一次；取消工作、改在本機轉錄時也送。送不出去不管（伺服器 24 小時內自己刪）。
 
 **加入連結、公司詞彙表**（R49.7、R53）
 
-- 加入連結：伺服器的 `GET /join`（不用登入的網頁）上的按鈕是 `shiyin://join?server=<伺服器網址，URL encode>`。app 收到後照 R49.7 處理；`server` 照 `EnterpriseServer.normalized` 檢查（https，DEBUG 本機 http）。舊版的 app 不認得這個網址，網頁另外寫手動加入的步驟。
-- `GET /api/v1/glossary` → `{"terms": ["…"], "updatedAt": "…"}`（要登入）：公司的詞，照管理者加的順序。舊的伺服器回 404：當成沒有。
+- 加入連結：伺服器的 `GET /join`（不用登入的網頁）上的按鈕是 `shiyin://join?server=<伺服器網址，URL encode>`。app 收到後照 R49.7 處理；`server` 照 `EnterpriseServer.normalized` 檢查（https，DEBUG 本機 http；有帳號密碼 `user:pass@` 的不接受，設定頁填的網址也一樣）。舊版的 app 不認得這個網址，網頁另外寫手動加入的步驟。
+  - 問的時候（4.2.1）：標題寫主機「加入 <主機> 的企業伺服器？」（國際化網域顯示成 punycode `xn--…`，長得像別的網站的字元騙不了人），伺服器自己給的名稱只放在內文「這台伺服器自稱「<名稱>」。」：名稱是伺服器自己填的，不能當成可信的身分。
+  - 登入的是別台時不先登出（4.2.1）：`completeSignIn` 換到新的 token 之後才換掉帳號（先拿舊伺服器的 access token、存好新的登入，再送舊伺服器的 `auth/logout`，送不出去也照樣換），刪掉舊的公司詞彙表再拿新的；新的伺服器沒有提供整理、整理工具原本是「公司」時改成還沒設定（同登出）。登入沒完成（取消、被拒、連不上）就維持原本的登入。
+- `GET /api/v1/glossary` → `{"terms": ["…"], "updatedAt": "…"}`（要登入）：公司的詞，照管理者加的順序。舊的伺服器回 404：當成沒有。app 只留前 500 個、每個 100 字以內的（UTF-16 單位，中文、英文都是一個字算一個；太長的略過），兩邊同一個規則（`CompanyGlossary` 存檔前，4.2.1）。
 - 伺服器轉錄時也會把公司的詞接在 app 送來的 `glossary` 後面（去掉重複），舊版的 app 也有用；新版 app 送的已經含公司的詞，結果一樣。
 
 **整理**
@@ -1563,7 +1568,7 @@ app                                              企業伺服器
 
 ### 36.3 Mac
 
-- `Services/EnterpriseServer.swift`：網址、登入、換 token、API 呼叫（URLSession）、錯誤分類（§36.2 的表）。給畫面的 `@Observable` 狀態只有 `account` 和 `status`（已登入、登入失效）。
+- `Services/EnterpriseServer.swift`：網址、登入、換 token、API 呼叫（專用的 `URLSession`，不跟著轉址，§36.2）、錯誤分類（§36.2 的表）。給畫面的 `@Observable` 狀態只有 `account` 和 `status`（已登入、登入失效）。`state`、`code_verifier` 用 `SecRandomCopyBytes`，失敗就不登入。
 - **登入**：設定頁用 SwiftUI 的 `webAuthenticationSession`（`ASWebAuthenticationSession`，`callbackURLScheme: "shiyin"`、用預設瀏覽器的登入狀態）打開登入頁，拿到 `shiyin://auth` 的網址交給 `completeSignIn`；`state` 對不上就忽略。
 - **轉錄**（`transcriptionEngine = "server"`，登入過才用，`AppSettings.usesEnterpriseTranscription`）：`TranscriptionPipeline.runServer`：
   1. 解碼同 §6.1（匯入的檔案也一樣），混成單聲道、寫成 `tmp/` 的 16-bit WAV（`ServerTranscriber.writeWAV`，邊換算邊寫、同時算 SHA-256）。R48.3 的 `until` 照 §35.3 先複製前段。
@@ -1581,7 +1586,7 @@ app                                              企業伺服器
   - 登入失效、登出了：選單下的紅字說「到「進階 → 企業伺服器」重新登入」。
   - `EnterpriseServer.refreshInfo()`：重新讀 `/api/v1/info`，更新帳號上的 `serverName`、`engine`、`llm`（只在值變了時存、通知畫面）。app 啟動時（不讀鑰匙圈）和打開整理工具頁時（不管選的是哪個整理工具）呼叫，公司後來才提供整理時選單就會多「公司」；連不上就保留舊的值。
 - **設定頁**（`Views/EnterpriseServerSettings.swift`，進階最上面一組「企業伺服器」）：登入前是網址欄和「登入」；登入後是伺服器名稱（主機）、信箱和「已登入／登入已失效」、「重新登入」（失效時）、「用企業伺服器轉錄」「用企業伺服器整理會議紀錄」兩個開關（R49.3，登入後預設都打開）、隱私說明、「登出」。錄音與轉錄頁的「正式轉錄」在登入後多「企業伺服器」；整理工具頁的選單在公司有提供整理時多「公司」（上面）。
-- **加入連結**（R49.7）：`Info.plist` 登記 `shiyin` 網址（`CFBundleURLTypes`）；`AppDelegate.application(_:open:)` 收到 `shiyin://join` 交給 `EnterpriseJoin.handle`：`beginSignIn`（檢查網址、讀 info）→ `NSAlert`「加入「<名稱>」的企業伺服器？」（主機、登入別台時寫出會先登出）→ 加入：別台先 `signOut`，用 AppKit 的 `ASWebAuthenticationSession`（錨點是目前的視窗，沒有就開一個小視窗）打開登入頁 → `completeSignIn` → `AppModel.applyEnterpriseDefaults(llm:)`（跟設定頁共用：轉錄改企業伺服器、伺服器有提供整理時整理工具改「公司」）→ 提示「已加入」。不經過設定視窗（SwiftUI 的設定視窗在 app 外面打不開）。
+- **加入連結**（R49.7）：`Info.plist` 登記 `shiyin` 網址（`CFBundleURLTypes`）；`AppDelegate.application(_:open:)` 收到 `shiyin://join` 交給 `EnterpriseJoin.handle`：`beginSignIn`（檢查網址、讀 info）→ `NSAlert`「加入 <主機> 的企業伺服器？」（內文寫伺服器自稱的名稱；登入別台時寫出登入成功之後才登出目前那台，§36.2）→ 加入：用 AppKit 的 `ASWebAuthenticationSession`（錨點是目前的視窗，沒有就開一個小視窗）打開登入頁 → `completeSignIn`（換到別台時在這裡登出舊的）→ `AppModel.applyEnterpriseDefaults(llm:)`（跟設定頁共用：轉錄改企業伺服器、伺服器有提供整理時整理工具改「公司」）→ 提示「已加入」。不經過設定視窗（SwiftUI 的設定視窗在 app 外面打不開）。
 - **公司詞彙表**（R53）：`CompanyGlossary`（不綁 MainActor，鎖住的 `[String]`）：`SHIYIN_HOME/enterprise-glossary.json` 存上次拿到的；`EnterpriseServer.refreshInfo()` 和登入完成時一起 `GET /api/v1/glossary`（舊伺服器 404 就是空的），登出時刪檔。`JobRunner` 的四個地方（轉錄、猜說話者、校正、整理）改用 `glossaryTerms()`：自己的詞（`db.glossary()`，照 id）＋公司的詞（不分大小寫去掉重複）；沒有公司的詞時直接用自己的詞、一個字都不動（沒登入的人跟 4.1.2 一樣，R52.5：自己存了「API」和「api」兩個都留著）。`WhisperEngine.prompt`、`QwenEngine.context` 的 150／400 字上限照舊。「說話者與詞彙」頁的詞彙表下面多一段可以展開的「公司的詞彙（N 個）」；提示詞的預覽也用合併後的；建議的新詞去掉公司已經有的。
 - **登出**：只清掉存下來的值是企業伺服器的設定（`persistentDomain` 裡的；啟動參數帶的值不算，測試時曾經因此刪掉使用者自己選的整理工具）。
 - **引導**（§33.4）：整理工具那一步「其他」裡，登入了企業伺服器時多「企業伺服器」一項；轉錄用企業伺服器時最後一步寫「這台 Mac 不用下載轉錄模型」。引導裡不放登入（使用者說「設定多一個企業伺服器設定即可」）。
@@ -1611,7 +1616,7 @@ app                                              企業伺服器
 
 - 伺服器開發用的登入（伺服器的 design §11.1）：不經過瀏覽器，直接送信箱。Mac：`shiyinctl enterprise login <網址> <信箱> <輸出.json>`、`enterprise logout`、`enterprise expire`（access token 立刻過期）、`enterprise local <會議 id>`（等於按「改在這台電腦轉錄」）；`state` 的 `enterprise`、`transcriptionEngine` 和轉錄的 `server`。登入會寫進共用的設定（網址、帳號），測完 `defaults delete com.weiwei.shiyin enterpriseServerURL enterpriseServerAccount`。Windows 的控制通道同名（design-windows §12.11）。
 - 要測 app 對真的伺服器：在私人的伺服器專案開發用的設定下跑（Mac 上 `dotnet run`，用 Metal），DEBUG 版用 `http://127.0.0.1:<埠>` 連（DEBUG 才接受本機的 http）。
-- Windows 的 `dotnet test`（`EnterpriseTests`）用測試裡的假伺服器照 §36.2 回應：登入、PKCE、換 token、失效、停用、登出、上傳續傳、伺服器忙之後接著傳、重開後接著做、改在這台電腦轉錄、JobRunner 整段、整理換 token 再送。
+- Windows 的 `dotnet test`（`EnterpriseTests`）用測試裡的假伺服器照 §36.2 回應：登入、PKCE、換 token、失效、停用、登出、上傳續傳、伺服器忙之後接著傳、重開後接著做、改在這台電腦轉錄、JobRunner 整段、整理換 token 再送；4.2.1 加上不跟著轉址、回應型別不對、加入別台時保留舊的登入、不合理的結果和 `Upload-Offset`、詞彙表上限。
 - 2026-10-27 的驗證寫在 tasks 和 commit 訊息；還沒做的：Windows 的畫面在虛擬機走一次、真的按 Mac 的「登入」（`ASWebAuthenticationSession` 的視窗會出現在使用者的畫面上）、真的 Google 登入、機房的 NVIDIA 主機。
 
 ## 14. 決策紀錄
@@ -1689,5 +1694,6 @@ app                                              企業伺服器
 | D123 | 整理只轉送 OpenAI 相容格式，提示詞留在 app（R51） | 伺服器組提示詞、自己整理：提示詞要在 Swift、C#、伺服器三個地方一樣，標準答案管不到伺服器；app 還要再把結果拿回來，流程變複雜 |
 | D124 | 整理工具的選單叫「公司（<公司名稱>）」，登入了、公司有提供整理才出現；登入只在進階；選了只顯示公司設定的模型，不填 key、模型（R51.1，2026-10-27 使用者要求） | 選單一直有「公司」、沒登入就在整理工具頁直接登入（同一天做過一版）：使用者說登入應該都在進階，這裡只選模型。app 照舊讓使用者自己輸入模型名稱：公司的模型由管理者決定，打錯名稱只會失敗 |
 | D125 | 多張顯示卡由伺服器分配，核心只加「用第幾張」（§36.6） | 每張卡開一個伺服器程序（或容器）、前面再擋一層分流：管理者要自己設好幾份、登入和工作佇列要共用，部署變複雜。whisper 也用 `CUDA_VISIBLE_DEVICES`：whisper 跟伺服器在同一個程序，環境變數只能設一次，同時跑的兩場沒辦法用不同的卡 |
+| D126 | 企業伺服器的請求一律不跟著轉址，3xx 當成錯誤（§36.2，4.2.1 的安全審查） | 跟著轉址（4.2.0）：307、308 轉到別的主機時，`Authorization` 會被拿掉，但 body（refresh token、錄音、逐字稿）照樣送過去。只跟同一個主機的轉址：要自己判斷 301、302、307、308 和要不要重送 body，§36.2 的 API 也沒有需要轉址的地方；伺服器搬家時請管理者給新網址 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

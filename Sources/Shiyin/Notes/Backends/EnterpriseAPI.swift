@@ -6,9 +6,17 @@ struct EnterpriseAPI: LLMBackend {
     let model: String
 
     private var inner: OpenAICompatibleAPI {
-        OpenAICompatibleAPI(model: model, baseURL: EnterpriseServer.shared.savedURL?.appending(path: "api/v1/llm").absoluteString ?? "",
-                            key: { try await EnterpriseServer.shared.validAccessToken() }, requiresModel: false,
-                            name: String(localized: "公司的伺服器"), plainServerErrors: true)
+        let base = EnterpriseServer.shared.savedURL
+        return OpenAICompatibleAPI(model: model, baseURL: base?.appending(path: "api/v1/llm").absoluteString ?? "",
+                                   key: {
+                                       let token = try await EnterpriseServer.shared.validAccessToken()
+                                       // 等 token 的時候換了伺服器（加入連結）：新伺服器的 token 不能送到舊的伺服器
+                                       guard let saved = EnterpriseServer.shared.savedURL, let base, EnterpriseServer.sameServer(saved, base) else {
+                                           throw EnterpriseServer.Failure.loginExpired
+                                       }
+                                       return token
+                                   }, requiresModel: false,
+                                   name: String(localized: "公司的伺服器"), plainServerErrors: true, session: EnterpriseServer.session)
     }
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,

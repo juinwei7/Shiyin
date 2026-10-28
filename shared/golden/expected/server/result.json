@@ -66,5 +66,79 @@
   },
   {
     "error" : "empty"
+  },
+  {
+    "engine" : "breeze",
+    "seams" : [
+      600,
+      1200.5
+    ],
+    "segments" : [
+      {
+        "end" : 4,
+        "lowConfidence" : false,
+        "start" : 4,
+        "text" : "長度是零"
+      },
+      {
+        "end" : 6.5,
+        "lowConfidence" : true,
+        "start" : 5,
+        "text" : "留下這段"
+      },
+      {
+        "end" : 95040,
+        "lowConfidence" : false,
+        "start" : 95000,
+        "text" : "剛好在上限"
+      }
+    ]
+  },
+  {
+    "engine" : "breeze",
+    "seams" : [
+
+    ],
+    "segments" : [
+      {
+        "end" : 1,
+        "lowConfidence" : false,
+        "start" : 0,
+        "text" : "說話者太大"
+      },
+      {
+        "end" : 2,
+        "lowConfidence" : false,
+        "start" : 1,
+        "text" : "說話者是 0"
+      },
+      {
+        "end" : 3,
+        "lowConfidence" : false,
+        "start" : 2,
+        "text" : "說話者 64"
+      },
+      {
+        "end" : 4,
+        "lowConfidence" : false,
+        "start" : 3,
+        "text" : "說話者 65"
+      },
+      {
+        "end" : 5,
+        "lowConfidence" : false,
+        "start" : 4,
+        "text" : "說話者是負的"
+      },
+      {
+        "end" : 6,
+        "lowConfidence" : false,
+        "start" : 5,
+        "text" : "說話者很大"
+      }
+    ]
+  },
+  {
+    "error" : "empty"
   }
 ]

@@ -175,6 +175,8 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
     public string? Language { get; init; }
     /// <summary>企業伺服器自己擋下的（額度、暫停、格式）只顯示伺服器的訊息（R51.6）</summary>
     public bool PlainServerErrors { get; init; }
+    /// <summary>企業伺服器用不跟著轉址的 HttpClient（M§36.2、D126）；null 用整理工具共用的</summary>
+    public HttpClient? Http { get; init; }
 
     public const string BaseUrlKey = "openaiCompatibleBaseURL";
 
@@ -259,7 +261,7 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
             if (!string.IsNullOrEmpty(key)) r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, timeout.Token);
-            using var response = await client.Http.SendAsync(r, linked.Token);
+            using var response = await (Http ?? client.Http).SendAsync(r, linked.Token);
             var obj = JsonNode.Parse(await response.Content.ReadAsStringAsync(linked.Token)) as JsonObject;
             return (obj?["data"] as JsonArray)?.OfType<JsonObject>().Select(m => m["id"]?.GetValue<string>()).OfType<string>()
                 .OrderBy(x => x, StringComparer.Ordinal).ToList() ?? [];
@@ -278,7 +280,7 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
             ["response_format"] = responseFormat,
         };
         var key = await CurrentKey(cancel);
-        return await ApiRequest.Fetch(client.Http, () =>
+        return await ApiRequest.Fetch(Http ?? client.Http, () =>
         {
             var r = new HttpRequestMessage(HttpMethod.Post, baseText + "/chat/completions") { Content = ApiRequest.Json(body) };
             if (!string.IsNullOrEmpty(key)) r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
@@ -400,11 +402,21 @@ public static class TempDirectory
 /// </summary>
 public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
 {
-    OpenAICompatibleApi Inner(IEnterpriseAccess access) => new(client, model, (access.BaseUrl ?? "").TrimEnd('/') + "/api/v1/llm")
+    OpenAICompatibleApi Inner(IEnterpriseAccess access)
     {
-        Key = async cancel => await access.AccessToken(cancel), RequiresModel = false, Name = L.T("公司的伺服器"), Language = access.Language,
-        PlainServerErrors = true,
-    };
+        var baseUrl = access.BaseUrl;
+        return new(client, model, (baseUrl ?? "").TrimEnd('/') + "/api/v1/llm")
+        {
+            Key = async cancel =>
+            {
+                var token = await access.AccessToken(cancel);
+                // 等 token 的時候換了伺服器（加入連結）：新伺服器的 token 不能送到舊的伺服器
+                if (access.BaseUrl != baseUrl) throw LLMException.NotConfigured(L.T("企業伺服器的登入已失效，請重新登入"));
+                return token;
+            },
+            RequiresModel = false, Name = L.T("公司的伺服器"), Language = access.Language, PlainServerErrors = true, Http = access.Http,
+        };
+    }
 
     public async Task<string> GenerateJson(string system, string prompt, OutputFormat format, CancellationToken cancel)
     {
@@ -438,7 +450,7 @@ public sealed class EnterpriseApi(LLMClient client, string model) : ILLMBackend
             r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await access.AccessToken(cancel));
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, timeout.Token);
-            using var response = await client.Http.SendAsync(r, linked.Token);
+            using var response = await access.Http.SendAsync(r, linked.Token);
             if (!response.IsSuccessStatusCode) return null;
             var obj = JsonNode.Parse(await response.Content.ReadAsStringAsync(linked.Token)) as JsonObject;
             if (obj?["data"] is not JsonArray list) return null;

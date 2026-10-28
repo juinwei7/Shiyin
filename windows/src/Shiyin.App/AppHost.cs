@@ -26,6 +26,8 @@ public sealed class AppHost
     public AppSettings Settings { get; }
     public AppDatabase Db { get; }
     public HttpClient Http { get; } = new() { Timeout = TimeSpan.FromMinutes(20) };
+    /// <summary>企業伺服器專用：不跟著轉址（M§36.2、D126）；下載模型、更新用上面那個（要跟著轉址）</summary>
+    public HttpClient EnterpriseHttp { get; } = EnterpriseServer.NoRedirectClient();
     public ModelStore Models { get; }
     public GpuAcceleration Gpu { get; }
     public IKeyStore Keys { get; }
@@ -85,7 +87,7 @@ public sealed class AppHost
         // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）
         Tools = Debug && Settings.Flag("debugNoCli", false) ? new NoCliTools(new WindowsToolLocator()) : new WindowsToolLocator();
         // 企業伺服器：refresh token 跟 API key 存在同一個地方（認證管理員；DEBUG 只放記憶體）；DEBUG 可以連本機的 http
-        Enterprise = new EnterpriseServer(Settings, Http, new KeySecrets(Keys), Version, Environment.MachineName)
+        Enterprise = new EnterpriseServer(Settings, EnterpriseHttp, new KeySecrets(Keys), Version, Environment.MachineName)
         {
             AllowLocalHttp = Debug,
             // 公司詞彙表（R53）存在 SHIYIN_HOME
@@ -151,6 +153,12 @@ public sealed class AppHost
         catch (Exception e) when (e is EnterpriseException or UriFormatException)
         {
             Post(() => App.Current.EnterpriseSignedIn(e.Message));
+        }
+        catch (Exception e)
+        {
+            // 伺服器的回應再怎麼怪都不能讓登入默默失敗：log 只寫型別，畫面說不是拾音的伺服器
+            Log.Error($"enterprise sign-in failed: {e.GetType().Name}");
+            Post(() => App.Current.EnterpriseSignedIn(EnterpriseException.Of(EnterpriseFailure.NotShiyin).Message));
         }
     }
 

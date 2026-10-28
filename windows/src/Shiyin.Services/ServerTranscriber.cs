@@ -23,6 +23,10 @@ public sealed class ServerTranscriber(EnterpriseServer server)
     public sealed class FailedException(string message) : Exception(message);
 
     public const int ChunkSize = 8 * 1024 * 1024;
+    /// <summary>伺服器給的時間的上限（M§36.2，同 Mac）：一天的錄音再多一成（24 × 3600 × 1.1 秒）。超過的段落、接縫不收</summary>
+    public const double MaxSeconds = 95_040;
+    /// <summary>伺服器給的說話者編號只接受 1～64（M§36.2）：資料庫照最大的編號一個一個建說話者</summary>
+    public const int MaxSpeaker = 64;
 
     public Action<string> Stage { get; init; } = _ => { };
     /// <summary>0～1：上傳 0～0.1、伺服器轉錄 0.1～1</summary>
@@ -223,22 +227,35 @@ public sealed class ServerTranscriber(EnterpriseServer server)
         var (status, text, _) = await server.Call(HttpMethod.Get, $"api/v1/transcriptions/{id}", timeout: TimeSpan.FromSeconds(30), cancel: cancel);
         if (status != 200 || JsonNode.Parse(text) is not JsonObject o) throw EnterpriseServer.Failure(status, text);
         var error = o["error"] as JsonObject;
+        // 進度限在 0～1（同 Mac：畫面拿來算百分比）
+        var progress = o["progress"]?.GetValue<double>() is double p ? double.IsFinite(p) ? Math.Clamp(p, 0, 1) : 0 : (double?)null;
         return new JobState(o["status"]?.GetValue<string>() ?? "", o["queueAhead"]?.GetValue<int>(), o["stage"]?.GetValue<string>(),
-            o["progress"]?.GetValue<double>(), error?["kind"]?.GetValue<string>(), error?["message"]?.GetValue<string>());
+            progress, error?["kind"]?.GetValue<string>(), error?["message"]?.GetValue<string>());
     }
 
-    /// <summary>從伺服器收到的地方接著傳（HEAD 問位置），一次 8 MB。回傳 false 表示伺服器說檔案不對、要從頭傳</summary>
+    /// <summary>
+    /// 從伺服器收到的地方接著傳（HEAD 問位置），一次 8 MB。回傳 false 表示伺服器說檔案不對、要從頭傳。
+    /// 伺服器給的位置不合理（負的、比檔案大）就從頭傳；位置一直不往前就算失敗，不會一直重送（M§36.2，同 Mac）
+    /// </summary>
     async Task<bool> Upload(string id, string wav, long bytes, CancellationToken cancel)
     {
         var (headStatus, headBody, head) = await server.Call(HttpMethod.Head, $"api/v1/transcriptions/{id}/audio", timeout: TimeSpan.FromSeconds(30), cancel: cancel);
         if (headStatus != 200) throw EnterpriseServer.Failure(headStatus == 404 ? 404 : headStatus, headBody.Length > 0 ? headBody : """{"error":{"kind":"not_found"}}""");
-        var offset = Offset(head) ?? 0;
+        var offset = Offset(head, bytes) ?? 0;
         Stage(L.T("上傳錄音"));
         await using var file = File.OpenRead(wav);
         var buffer = new byte[ChunkSize];
+        var chunks = (bytes + ChunkSize - 1) / ChunkSize;
+        var sent = 0;
+        var stalled = 0;
         while (offset < bytes)
         {
             if (!ShouldContinue() || SwitchToLocal()) return true;
+            if (stalled >= 3 || ++sent > chunks * 2 + 3)
+            {
+                Log.Error("enterprise upload offset not advancing");
+                throw new FailedException(L.T("錄音一直沒辦法完整傳到企業伺服器"));
+            }
             file.Seek(offset, SeekOrigin.Begin);
             var read = await file.ReadAsync(buffer.AsMemory(0, (int)Math.Min(ChunkSize, bytes - offset)), cancel);
             if (read == 0) break;
@@ -246,22 +263,25 @@ public sealed class ServerTranscriber(EnterpriseServer server)
             content.Headers.ContentType = new MediaTypeHeaderValue("application/offset+octet-stream");
             var (status, text, headers) = await server.Call(HttpMethod.Patch, $"api/v1/transcriptions/{id}/audio", content,
                 new Dictionary<string, string> { ["Upload-Offset"] = offset.ToString() }, TimeSpan.FromMinutes(5), cancel);
+            var before = offset;
             switch (status)
             {
-                case 204: offset = Offset(headers) ?? offset + read; break;
-                case 409: offset = Offset(headers) ?? 0; break;
+                case 204: offset = Offset(headers, bytes) ?? offset + read; break;
+                case 409: offset = Offset(headers, bytes) ?? 0; break;
                 case 400:
                     Log.Error("enterprise upload rejected, restarting");
                     return false;
                 default: throw EnterpriseServer.Failure(status, text);
             }
+            stalled = offset > before ? 0 : stalled + 1;
             Progress(0.1 * offset / Math.Max(bytes, 1));
         }
         return true;
     }
 
-    static long? Offset(HttpResponseHeaders headers) =>
-        headers.TryGetValues("Upload-Offset", out var values) && long.TryParse(values.FirstOrDefault(), out var v) ? v : null;
+    /// <summary>伺服器回的 Upload-Offset：沒有、不是數字是 null；負的、比檔案大當成 0（從頭傳）</summary>
+    static long? Offset(HttpResponseHeaders headers, long bytes) =>
+        headers.TryGetValues("Upload-Offset", out var values) && long.TryParse(values.FirstOrDefault(), out var v) ? v >= 0 && v <= bytes ? v : 0 : null;
 
     async Task<Result> Fetch(string id, CancellationToken cancel)
     {
@@ -272,7 +292,8 @@ public sealed class ServerTranscriber(EnterpriseServer server)
 
     /// <summary>
     /// 伺服器的結果（M§36.2）換成本機的 TranscriptionResult：段落、說話者、聲紋（Windows 同一個模型）、分不準的分數。
-    /// 少了開始、結束、文字的段落略過（同 Mac，標準答案 server/result.json）
+    /// 少了開始、結束、文字的段落略過；時間不合理的段落也略過（不是有限的數字、開始是負的、結束比開始早、超過 MaxSeconds），
+    /// 接縫只留 0～MaxSeconds（同 Mac，標準答案 server/result.json）。說話者、聲紋的編號只接受 1～MaxSpeaker
     /// </summary>
     public static Result Parse(JsonObject o)
     {
@@ -282,22 +303,25 @@ public sealed class ServerTranscriber(EnterpriseServer server)
         {
             if (s["start"] is not JsonValue start || !start.TryGetValue<double>(out var from) || s["end"] is not JsonValue end || !end.TryGetValue<double>(out var to)
                 || s["text"] is not JsonValue t || !t.TryGetValue<string>(out var text)) continue;
+            if (!double.IsFinite(from) || !double.IsFinite(to) || from < 0 || to < from || to > MaxSeconds) continue;
             segments.Add(new TranscribedSegment(from, to, text, s["lowConfidence"] is JsonValue low && low.TryGetValue<bool>(out var l) && l));
-            speakers.Add(s["speaker"] is JsonValue v && v.TryGetValue<int>(out var n) ? n : null);
+            speakers.Add(s["speaker"] is JsonValue v && v.TryGetValue<int>(out var n) && n is >= 1 and <= MaxSpeaker ? n : null);
         }
         if (segments.Count == 0) throw new WhisperException(WhisperErrorKind.Empty);
         var voices = new Dictionary<int, SpeakerVoice>();
         foreach (var (key, value) in o["voices"] as JsonObject ?? [])
-            if (int.TryParse(key, out var speaker) && value is JsonObject voice && voice["embedding"] is JsonArray embedding)
+            if (int.TryParse(key, out var speaker) && speaker is >= 1 and <= MaxSpeaker && value is JsonObject voice && voice["embedding"] is JsonArray embedding)
                 voices[speaker] = new SpeakerVoice([.. embedding.Select(x => x!.GetValue<float>())], voice["seconds"]?.GetValue<double>() ?? 0,
                     voice["source"]?.GetValue<string>() ?? "mix");
         SpeakerRules.Quality? quality = o["diarizationQuality"] is JsonObject q
             ? new SpeakerRules.Quality(q["collisionRate"]?.GetValue<double>() ?? 0, q["multiSpeakerChunks"]?.GetValue<int>() ?? 0,
                 q["cohesion"]?.GetValue<double>() ?? 0, q["clusters"]?.GetValue<int>() ?? 0, q["chunks"]?.GetValue<int>() ?? 0)
             : null;
-        var seams = (o["seams"] as JsonArray ?? []).Select(x => x!.GetValue<double>()).ToList();
-        var transcription = new TranscriptionResult(segments, speakers, segments.Select(_ => (int?)null).ToList(),
-            o["duration"]?.GetValue<double>() ?? segments[^1].End, voices, seams, quality);
+        var seams = (o["seams"] as JsonArray ?? []).Select(x => x is JsonValue v && v.TryGetValue<double>(out var d) ? d : double.NaN)
+            .Where(x => double.IsFinite(x) && x >= 0 && x <= MaxSeconds).ToList();
+        // 錄音長度：不合理（負的、超過上限）時用最後一段的結束時間
+        var duration = o["duration"] is JsonValue dv && dv.TryGetValue<double>(out var dd) && double.IsFinite(dd) && dd >= 0 && dd <= MaxSeconds ? dd : segments[^1].End;
+        var transcription = new TranscriptionResult(segments, speakers, segments.Select(_ => (int?)null).ToList(), duration, voices, seams, quality);
         return new Result(transcription, o["transcribedWith"]?.GetValue<string>() ?? o["engine"]?.GetValue<string>() ?? "breeze");
     }
 

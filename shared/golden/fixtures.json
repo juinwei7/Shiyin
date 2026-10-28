@@ -1737,6 +1737,17 @@
     {"segments": [{"start": 0.5, "end": 1.5, "text": "只有一段"}]},
     {"segments": [{"start": 0, "end": 1}, {"end": 2, "text": "沒有開始"}, {"start": 2, "end": 3, "text": "留下這段"}]},
     {"segments": []},
-    {}
+    {},
+    {"segments": [{"start": -1, "end": 2, "text": "開始是負的"}, {"start": 3, "end": 2, "text": "結束比開始早"},
+                  {"start": 0, "end": 1e19, "text": "結束太大"}, {"start": 1e19, "end": 1e19, "text": "開始太大"},
+                  {"start": 95040, "end": 95041, "text": "超過上限"}, {"start": 4, "end": 4, "text": "長度是零"},
+                  {"start": 5, "end": 6.5, "text": "留下這段", "lowConfidence": true}, {"start": 95000, "end": 95040, "text": "剛好在上限"}],
+     "seams": [-1, 600, 1e19, 95041, 1200.5], "duration": 1e19},
+    {"segments": [{"start": 0, "end": 1, "text": "說話者太大", "speaker": 2147483647}, {"start": 1, "end": 2, "text": "說話者是 0", "speaker": 0},
+                  {"start": 2, "end": 3, "text": "說話者 64", "speaker": 64}, {"start": 3, "end": 4, "text": "說話者 65", "speaker": 65},
+                  {"start": 4, "end": 5, "text": "說話者是負的", "speaker": -1}, {"start": 5, "end": 6, "text": "說話者很大", "speaker": 1e12}],
+     "voices": {"0": {"embedding": [0.1], "seconds": 1, "source": "mix"}, "64": {"embedding": [0.5], "seconds": 1, "source": "mix"},
+                "65": {"embedding": [0.6], "seconds": 1, "source": "mix"}, "2147483647": {"embedding": [0.7], "seconds": 1, "source": "mix"}}},
+    {"segments": [{"start": -5, "end": -1, "text": "全部不合理"}]}
   ]
 }

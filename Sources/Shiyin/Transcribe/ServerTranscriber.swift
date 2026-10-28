@@ -41,6 +41,8 @@ struct ServerTranscriber {
     var onRemoteId: (String?) -> Void
 
     static let chunkSize = 8 * 1024 * 1024
+    /// 伺服器給的時間的上限（design §36.2）：一天的錄音再多一成（24 × 3600 × 1.1 秒）。超過的段落、接縫不收（太大的值換成 Int 會當掉）
+    nonisolated static let maxSeconds: Double = 95_040
     private var server: EnterpriseServer { .shared }
 
     // MARK: WAV
@@ -219,40 +221,59 @@ struct ServerTranscriber {
         guard response.statusCode == 200, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let status = json["status"] as? String else { throw EnterpriseServer.failure(data, response) }
         let error = json["error"] as? [String: Any]
+        // 進度限在 0～1：畫面拿來算百分比（Int 換不了的值會當掉）
+        let progress = (json["progress"] as? Double).map { $0.isFinite ? min(1, max(0, $0)) : 0 }
         return JobState(status: status, queueAhead: json["queueAhead"] as? Int, stage: json["stage"] as? String,
-                      progress: json["progress"] as? Double, errorKind: error?["kind"] as? String, errorMessage: error?["message"] as? String)
+                      progress: progress, errorKind: error?["kind"] as? String, errorMessage: error?["message"] as? String)
     }
 
-    /// 從伺服器收到的地方接著傳（HEAD 問位置），一次 8 MB。回傳 false 表示伺服器說檔案不對、要從頭傳
+    /// 從伺服器收到的地方接著傳（HEAD 問位置），一次 8 MB。回傳 false 表示伺服器說檔案不對、要從頭傳。
+    /// 伺服器給的位置不合理（負的、比檔案大）就從頭傳；位置一直不往前就算失敗，不會一直重送（design §36.2）
     private func upload(_ id: String, wav: URL, bytes: Int64) async throws -> Bool {
         let (_, head) = try await server.call("HEAD", "api/v1/transcriptions/\(id)/audio", timeout: 30)
         guard head.statusCode == 200 else { throw EnterpriseServer.Failure.server(kind: "not_found", message: "") }
-        var offset = Int64(head.value(forHTTPHeaderField: "Upload-Offset") ?? "0") ?? 0
+        var offset = Self.offset(head, bytes: bytes) ?? 0
         let file = try FileHandle(forReadingFrom: wav)
         defer { try? file.close() }
         stage(String(localized: "上傳錄音"))
+        let chunks = Int((bytes + Int64(Self.chunkSize) - 1) / Int64(Self.chunkSize))
+        var sent = 0
+        var stalled = 0
         while offset < bytes {
             guard shouldContinue(), !switchToLocal() else { return true }
+            sent += 1
+            if stalled >= 3 || sent > chunks * 2 + 3 {
+                log.error("enterprise upload offset not advancing")
+                throw Failed(message: String(localized: "錄音一直沒辦法完整傳到企業伺服器"))
+            }
             try file.seek(toOffset: UInt64(offset))
             let chunk = try file.read(upToCount: Self.chunkSize) ?? Data()
             if chunk.isEmpty { break }
             let (data, response) = try await server.call("PATCH", "api/v1/transcriptions/\(id)/audio", body: chunk, headers: [
                 "Upload-Offset": String(offset), "Content-Type": "application/offset+octet-stream",
             ], timeout: 300)
+            let before = offset
             switch response.statusCode {
             case 204:
-                offset = Int64(response.value(forHTTPHeaderField: "Upload-Offset") ?? "") ?? offset + Int64(chunk.count)
+                offset = Self.offset(response, bytes: bytes) ?? offset + Int64(chunk.count)
             case 409:
-                offset = Int64(response.value(forHTTPHeaderField: "Upload-Offset") ?? "") ?? 0
+                offset = Self.offset(response, bytes: bytes) ?? 0
             case 400:
                 log.error("enterprise upload rejected, restarting")
                 return false
             default:
                 throw EnterpriseServer.failure(data, response)
             }
+            stalled = offset > before ? 0 : stalled + 1
             progress(0.1 * Double(offset) / Double(max(bytes, 1)))
         }
         return true
+    }
+
+    /// 伺服器回的 Upload-Offset：沒有、不是數字是 nil；負的、比檔案大當成 0（從頭傳）
+    private static func offset(_ response: HTTPURLResponse, bytes: Int64) -> Int64? {
+        guard let value = response.value(forHTTPHeaderField: "Upload-Offset").flatMap({ Int64($0) }) else { return nil }
+        return (0...bytes).contains(value) ? value : 0
     }
 
     private func result(_ id: String) async throws -> Remote {
@@ -263,15 +284,18 @@ struct ServerTranscriber {
     }
 
     /// 伺服器的結果換成段落（M§36.2；標準答案 server/result.json）：少了開始、結束、文字的段落略過；一段都沒有是「沒有辨識出文字」。
+    /// 時間不合理的段落也略過（不是有限的數字、開始是負的、結束比開始早、超過 maxSeconds），接縫只留 0～maxSeconds（同 Windows）。
     /// 說話者在本機辨識，結果裡的 speaker、voices 不用
     nonisolated static func parse(_ json: [String: Any]) throws -> Remote {
         let items = json["segments"] as? [[String: Any]] ?? []
         let segments = items.compactMap { item -> TranscribedSegment? in
-            guard let start = item["start"] as? Double, let end = item["end"] as? Double, let text = item["text"] as? String else { return nil }
+            guard let start = item["start"] as? Double, let end = item["end"] as? Double, let text = item["text"] as? String,
+                  start.isFinite, end.isFinite, start >= 0, end >= start, end <= maxSeconds else { return nil }
             return TranscribedSegment(start: start, end: end, text: text, lowConfidence: item["lowConfidence"] as? Bool ?? false)
         }
         if segments.isEmpty { throw WhisperError.empty }
-        return Remote(segments: segments, seams: json["seams"] as? [Double] ?? [],
+        let seams = (json["seams"] as? [Any] ?? []).compactMap { $0 as? Double }.filter { $0.isFinite && $0 >= 0 && $0 <= maxSeconds }
+        return Remote(segments: segments, seams: seams,
                       engine: json["transcribedWith"] as? String ?? json["engine"] as? String ?? "breeze")
     }
 

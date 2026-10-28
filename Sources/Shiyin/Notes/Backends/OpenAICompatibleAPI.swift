@@ -20,6 +20,8 @@ struct OpenAICompatibleAPI: LLMBackend {
     var name: String? = nil
     /// 企業伺服器自己擋下的（額度、暫停、格式）只顯示伺服器的訊息（R51.6）
     var plainServerErrors = false
+    /// 企業伺服器用不跟著轉址的連線（design §36.2、D126）
+    var session: URLSession = .shared
 
     /// 設定裡的網址；DEBUG 建置可以用 llmurl 取代
     @MainActor
@@ -93,7 +95,7 @@ struct OpenAICompatibleAPI: LLMBackend {
         if let key, !key.isEmpty {
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
-        guard let (data, _) = try? await URLSession.shared.data(for: request),
+        guard let (data, _) = try? await session.data(for: request),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let list = object["data"] as? [[String: Any]] else { return [] }
         return list.compactMap { $0["id"] as? String }.sorted()
@@ -114,7 +116,7 @@ struct OpenAICompatibleAPI: LLMBackend {
         if self.key != nil { EnterpriseServer.addLanguage(&request) }
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        return try await APIRequest.fetch(request, provider: provider)
+        return try await APIRequest.fetch(request, provider: provider, session: session)
     }
 
     private func currentKey() async throws -> String? {

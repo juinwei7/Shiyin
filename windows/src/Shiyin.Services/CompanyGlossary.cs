@@ -12,6 +12,10 @@ public sealed class CompanyGlossary(string? file)
     readonly object gate = new();
     List<string>? cache;
 
+    /// <summary>伺服器給的詞的上限（M§36.2，同 Mac）：最多 500 個、每個最多 100 字（UTF-16 單位），太長的略過</summary>
+    public const int MaxTerms = 500;
+    public const int MaxTermLength = 100;
+
     /// <summary>換了（畫面、建議的新詞要重算）</summary>
     public event Action? Changed;
 
@@ -30,7 +34,7 @@ public sealed class CompanyGlossary(string? file)
 
     public void Save(IEnumerable<string> terms, string? updatedAt)
     {
-        var cleaned = Clean(terms);
+        var cleaned = Limited(terms);
         if (cleaned.SequenceEqual(Terms)) return;
         if (file is not null)
         {
@@ -58,6 +62,9 @@ public sealed class CompanyGlossary(string? file)
         var companyTerms = company.ToList();
         return companyTerms.Count == 0 ? [.. own] : Clean(own.Concat(companyTerms));
     }
+
+    /// <summary>去掉空白、重複之後，略過太長的、只留前 MaxTerms 個</summary>
+    public static List<string> Limited(IEnumerable<string> terms) => [.. Clean(terms).Where(t => t.Length <= MaxTermLength).Take(MaxTerms)];
 
     static List<string> Clean(IEnumerable<string> terms)
     {

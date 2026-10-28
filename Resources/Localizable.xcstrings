@@ -1558,6 +1558,17 @@
         }
       }
     },
+    "企業伺服器要求轉到別的網址（HTTP %lld），拾音不會跟著轉。請確認網址，或請公司的管理者檢查伺服器的設定。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The enterprise server asked to redirect to another address (HTTP %lld). Shiyin doesn't follow redirects. Check the URL, or ask your company's administrator to check the server settings."
+          }
+        }
+      }
+    },
     "企業伺服器轉錄": {
       "extractionState": "manual",
       "localizations": {
@@ -2430,13 +2441,13 @@
         }
       }
     },
-    "加入「%@」的企業伺服器？": {
+    "加入 %@ 的企業伺服器？": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Join the %@ enterprise server?"
+            "value": "Join the enterprise server at %@?"
           }
         }
       }
@@ -7051,6 +7062,17 @@
         }
       }
     },
+    "沒辦法產生登入用的隨機碼，請再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't generate a random code for signing in. Please try again."
+          }
+        }
+      }
+    },
     "沒辦法登入": {
       "extractionState": "manual",
       "localizations": {
@@ -7548,6 +7570,17 @@
         }
       }
     },
+    "登入成功之後，才會登出目前的「%@」（%@）；沒有登入成功就維持原本的登入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll be signed out of %@ (%@) only after signing in here succeeds. If it doesn't, you stay signed in as before."
+          }
+        }
+      }
+    },
     "登出": {
       "extractionState": "manual",
       "localizations": {
@@ -7610,17 +7643,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Current version"
-          }
-        }
-      }
-    },
-    "目前登入的「%@」會先登出。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You'll be signed out of %@ first."
           }
         }
       }
@@ -9516,6 +9538,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "codex isn't installed on this Mac. If you don't use Codex, choose an API instead"
+          }
+        }
+      }
+    },
+    "這台伺服器自稱「%@」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This server calls itself “%@”."
           }
         }
       }

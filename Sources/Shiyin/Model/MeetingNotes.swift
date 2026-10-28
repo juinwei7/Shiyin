@@ -265,7 +265,8 @@ extension MeetingNotes {
 /// 時間點格式：mm:ss，超過一小時用 h:mm:ss（與逐字稿一致）
 enum TimeFormat {
     static func string(_ seconds: Double) -> String {
-        let s = max(0, Int(seconds))
+        // Int() 遇到不是有限的數字、超過範圍的值會當掉（例如伺服器、模型給的怪時間）：先限在 0～10 億秒，一般的值結果不變
+        let s = seconds.isFinite ? Int(min(max(0, seconds), 1e9)) : 0
         if s >= 3600 { return String(format: "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60) }
         return String(format: "%02d:%02d", s / 60, s % 60)
     }

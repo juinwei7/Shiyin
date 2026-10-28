@@ -777,7 +777,7 @@ public sealed class SettingsWindow : Window
                 }));
             column.Children.Add(Note(L.F("轉錄：錄音會送到 %@（公司的伺服器），轉完就刪。說話者辨識也在伺服器上做，聲紋只存在這台電腦；筆記、會議紀錄不會因為轉錄送出。伺服器用的轉錄引擎：%@。",
                 server.Host, account.Engine == "qwen" ? L.T("Qwen3-ASR（阿里巴巴開源）") : L.T("Breeze ASR 25（聯發科）"))));
-            column.Children.Add(Ui.Button(L.T("登出"), async () => { await server.SignOut(); Show(); }));
+            column.Children.Add(Ui.Button(L.T("登出"), SignOut));
         }
         else
         {
@@ -792,10 +792,21 @@ public sealed class SettingsWindow : Window
     }
 
     /// <summary>
-    /// 加入連結（R49.7）：讀伺服器的 info，問「加入「名稱」的企業伺服器？」，加入就照「登入」（瀏覽器 → shiyin://auth）。
-    /// 已經登入同一台：說已經加入；登入的是別台：先登出
+    /// 加入連結（R49.7、M§36.2）：讀伺服器的 info，問「加入 主機 的企業伺服器？」（伺服器給的名稱只當成自稱），加入就照「登入」
+    /// （瀏覽器 → shiyin://auth）。已經登入同一台：說已經加入；登入的是別台：不先登出，新的登入成功了才換（EnterpriseServer.CompleteSignIn）。
+    /// async void：連結誰都做得出來，任何例外都接住（log 只寫型別），不能讓 app 當掉
     /// </summary>
     public async void ConfirmJoin(string text)
+    {
+        try { await Join(text); }
+        catch (Exception e)
+        {
+            Log.Error($"join failed: {e.GetType().Name}");
+            await Message(L.T("沒辦法加入"), EnterpriseException.Of(EnterpriseFailure.NotShiyin).Message);
+        }
+    }
+
+    async Task Join(string text)
     {
         var server = host.Enterprise;
         if (EnterpriseServer.Normalized(text, server.AllowLocalHttp) is not { } url)
@@ -803,9 +814,10 @@ public sealed class SettingsWindow : Window
             await Message(L.T("沒辦法加入"), EnterpriseException.Of(EnterpriseFailure.InvalidUrl).Message);
             return;
         }
-        if (server.IsSignedIn && server.SavedUrl == url && server.Account is { } account)
+        var hostName = EnterpriseServer.DisplayHost(url);
+        if (server.IsSignedIn && server.SavedUrl is { } saved && EnterpriseServer.SameServer(saved, url) && server.Account is { } account)
         {
-            await Message(L.F("已經加入「%@」了", account.ServerName), L.F("這台電腦已經用 %@ 登入 %@。", account.Email, url.Host));
+            await Message(L.F("已經加入「%@」了", account.ServerName), L.F("這台電腦已經用 %@ 登入 %@。", account.Email, hostName));
             return;
         }
         EnterpriseInfo info;
@@ -815,19 +827,19 @@ public sealed class SettingsWindow : Window
             await Message(L.T("沒辦法加入"), e.Message);
             return;
         }
-        var detail = L.F("會打開 %@ 的登入頁，用公司帳號登入。登入後錄音交給公司的伺服器轉錄，整理也用公司設定的模型。", url.Host);
-        if (server.Account is { } current) detail += "\n\n" + L.F("目前登入的「%@」會先登出。", current.ServerName);
+        var detail = L.F("這台伺服器自稱「%@」。", info.Name) + "\n\n"
+            + L.F("會打開 %@ 的登入頁，用公司帳號登入。登入後錄音交給公司的伺服器轉錄，整理也用公司設定的模型。", hostName);
+        if (server.Account is { } current)
+            detail += "\n\n" + L.F("登入成功之後，才會登出目前的「%@」（%@）；沒有登入成功就維持原本的登入。", current.ServerName, server.Host);
         var dialog = new ContentDialog
         {
-            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("加入「%@」的企業伺服器？", info.Name)),
+            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("加入 %@ 的企業伺服器？", hostName)),
             Content = Ui.Text(detail, 14), PrimaryButtonText = L.T("加入"), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Primary,
         };
         ContentDialogResult answer;
         try { answer = await dialog.ShowAsync(); }
         catch (Exception e) { Log.Error($"join dialog failed: {e.GetType().Name}"); return; }
         if (answer != ContentDialogResult.Primary) return;
-        if (server.HasAccount) await server.SignOut();
-        Show();
         try
         {
             var attempt = await server.BeginSignIn(url.ToString());
@@ -863,6 +875,21 @@ public sealed class SettingsWindow : Window
             error.Foreground = Ui.Danger;
             error.Text = e.Message;
         }
+        catch (Exception e)
+        {
+            // async void：不能讓 app 當掉（log 只寫型別）
+            Log.Error($"enterprise sign-in failed: {e.GetType().Name}");
+            error.Foreground = Ui.Danger;
+            error.Text = EnterpriseException.Of(EnterpriseFailure.NotShiyin).Message;
+        }
+    }
+
+    /// <summary>登出（R49.5）：async void，送不出去、伺服器回得怪也照樣清掉本機的登入，不能讓 app 當掉</summary>
+    async void SignOut()
+    {
+        try { await host.Enterprise.SignOut(); }
+        catch (Exception e) { Log.Error($"enterprise sign-out failed: {e.GetType().Name}"); }
+        Show();
     }
 
     /// <summary>「匿名使用統計」的「詳細…」（M§30.5、R40.4）：開關、說明、重設匿名 ID。不顯示送出的 JSON（使用者決定）</summary>

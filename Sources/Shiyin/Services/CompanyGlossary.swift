@@ -27,8 +27,12 @@ enum CompanyGlossary {
         }
     }
 
+    /// 伺服器給的詞的上限（design §36.2，同 Windows）：最多 500 個、每個最多 100 字（UTF-16 單位），太長的略過
+    static let maxTerms = 500
+    static let maxTermLength = 100
+
     static func save(_ terms: [String], updatedAt: String?) {
-        let cleaned = clean(terms)
+        let cleaned = limited(terms)
         guard cleaned != self.terms else { return }
         if let data = try? JSONEncoder().encode(Stored(terms: cleaned, updatedAt: updatedAt)) {
             try? FileManager.default.createDirectory(at: Paths.home, withIntermediateDirectories: true)
@@ -49,6 +53,11 @@ enum CompanyGlossary {
     /// 沒有公司的詞時照原本的詞彙表、一個字都不動：沒登入的人跟 4.1.2 一樣（R52.5；自己存了「API」和「api」兩個都留著）
     static func merge(_ own: [String], _ company: [String]) -> [String] {
         company.isEmpty ? own : clean(own + company)
+    }
+
+    /// 去掉空白、重複之後，略過太長的、只留前 maxTerms 個
+    static func limited(_ terms: [String]) -> [String] {
+        Array(clean(terms).filter { $0.utf16.count <= maxTermLength }.prefix(maxTerms))
     }
 
     private static func clean(_ terms: [String]) -> [String] {

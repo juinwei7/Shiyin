@@ -93,6 +93,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     /// <summary>公司詞彙表（R53）；App 給 SHIYIN_HOME 裡的檔案</summary>
     public CompanyGlossary Glossary { get; init; } = new(null);
 
+    /// <summary>http 要用 <see cref="NoRedirectClient"/>：企業伺服器的請求不跟著轉址（M§36.2、D126）</summary>
     public EnterpriseServer(AppSettings settings, HttpClient http, ISecretStore secrets, string appVersion, string device)
     {
         this.settings = settings;
@@ -122,12 +123,13 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     /// <summary>登入失效的說明；沒有失效是 null</summary>
     public string? ExpiredMessage { get { lock (gate) return HasAccount ? expiredMessage : null; } }
     public Uri? SavedUrl => Normalized(settings.String(UrlKey) ?? "", AllowLocalHttp);
-    /// <summary>隱私說明用的主機名稱（M§36.5）</summary>
-    public string Host => SavedUrl?.Host ?? "";
+    /// <summary>隱私說明用的主機名稱（M§36.5）；國際化網域是 punycode</summary>
+    public string Host => SavedUrl?.IdnHost ?? "";
     public string Language => L.English ? "en" : "zh-TW";
 
     // IEnterpriseAccess（整理工具，R51）
     public string? BaseUrl => HasAccount ? SavedUrl?.ToString().TrimEnd('/') : null;
+    public HttpClient Http => http;
     public bool LlmReady => IsSignedIn && Account?.Llm == true;
 
     async Task<string> IEnterpriseAccess.AccessToken(CancellationToken cancel)
@@ -139,9 +141,23 @@ public sealed class EnterpriseServer : IEnterpriseAccess
 
     static string Str(JsonObject o, string key) => o[key]?.GetValue<string>() ?? "";
 
+    /// <summary>
+    /// 伺服器的回應型別不對（例如 apiVersion 是字串、transcription 不是物件）時 GetValue、索引子丟出的例外：
+    /// 加入連結可以指到任何網站，接住當成不是拾音的伺服器，不能讓 app 當掉（design-windows §12.11）
+    /// </summary>
+    static bool IsMalformed(Exception e) => e is JsonException or InvalidOperationException or FormatException or ArgumentException;
+
+    /// <summary>企業伺服器專用的 HttpClient（M§36.2、D126）：不跟著轉址。跟著 307、308 轉到別的主機時，
+    /// Authorization 會拿掉，但 body（refresh token、錄音、逐字稿）照樣送過去。下載模型、更新用的共用 HttpClient 不變</summary>
+    public static HttpClient NoRedirectClient() =>
+        new(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(20) };
+
     // MARK: 網址
 
-    /// <summary>只接受 https；DEBUG 可以用本機的 http。去掉結尾的 /，貼了 /api/v1/info 之類的也去掉</summary>
+    /// <summary>
+    /// 只接受 https；DEBUG 可以用本機的 http。去掉結尾的 /，貼了 /api/v1/info 之類的也去掉。
+    /// 有帳號密碼（user:pass@）的不接受（加入連結用來假裝成別的網站，M§36.2）
+    /// </summary>
     public static Uri? Normalized(string text, bool allowLocalHttp = false)
     {
         var value = text.Trim();
@@ -150,23 +166,37 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         while (value.EndsWith('/')) value = value[..^1];
         foreach (var suffix in new[] { "/api/v1/info", "/api/v1", "/admin", "/login" })
             if (value.EndsWith(suffix, StringComparison.Ordinal)) value = value[..^suffix.Length];
-        if (!Uri.TryCreate(value + "/", UriKind.Absolute, out var url) || url.Host.Length == 0) return null;
+        if (!Uri.TryCreate(value + "/", UriKind.Absolute, out var url) || url.Host.Length == 0 || url.UserInfo.Length > 0) return null;
         if (url.Scheme == "https") return url;
         if (allowLocalHttp && url.Scheme == "http" && url.Host is "127.0.0.1" or "localhost" or "[::1]") return url;
         return null;
     }
 
-    /// <summary>確認那是拾音的伺服器、版本相容（R49.1、R49.2）</summary>
+    /// <summary>給人看的主機名稱：國際化網域是 punycode（xn--…），長得像別的網站的字元騙不了人</summary>
+    public static string DisplayHost(Uri url) => url.IdnHost;
+
+    /// <summary>同一台伺服器（不管結尾的斜線、大小寫，同 Mac）</summary>
+    public static bool SameServer(Uri a, Uri b) =>
+        string.Equals(a.ToString().TrimEnd('/'), b.ToString().TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>確認那是拾音的伺服器、版本相容（R49.1、R49.2）；型別不對也是「不是拾音的企業伺服器」</summary>
     public async Task<EnterpriseInfo> FetchInfo(Uri url, CancellationToken cancel = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(url, "api/v1/info"));
         request.Headers.AcceptLanguage.ParseAdd(Language);
         var (status, body, _) = await Send(request, TimeSpan.FromSeconds(15), cancel);
-        JsonObject? o = null;
-        try { o = JsonNode.Parse(body) as JsonObject; } catch (JsonException) { }
-        if (status != 200 || o is null || o["server"]?.GetValue<string>() != "shiyin") throw EnterpriseException.Of(EnterpriseFailure.NotShiyin);
-        var info = new EnterpriseInfo(Str(o, "name"), Str(o, "version"), o["apiVersion"]?.GetValue<int>() ?? 0, o["minAppApi"]?.GetValue<int>() ?? 0,
-            o["maxAudioSeconds"]?.GetValue<int>(), o["transcription"]?["engine"]?.GetValue<string>() ?? "breeze", o["llm"]?.GetValue<bool>() ?? false);
+        EnterpriseInfo? info = null;
+        if (status == 200)
+        {
+            try
+            {
+                if (JsonNode.Parse(body) is JsonObject o && o["server"]?.GetValue<string>() == "shiyin")
+                    info = new EnterpriseInfo(Str(o, "name"), Str(o, "version"), o["apiVersion"]?.GetValue<int>() ?? 0, o["minAppApi"]?.GetValue<int>() ?? 0,
+                        o["maxAudioSeconds"]?.GetValue<int>(), o["transcription"]?["engine"]?.GetValue<string>() ?? "breeze", o["llm"]?.GetValue<bool>() ?? false);
+            }
+            catch (Exception e) when (IsMalformed(e)) { }
+        }
+        if (info is null) throw EnterpriseException.Of(EnterpriseFailure.NotShiyin);
         if (info.ApiVersion < ApiVersion) throw EnterpriseException.Of(EnterpriseFailure.ServerTooOld);
         if (info.MinAppApi > ApiVersion) throw EnterpriseException.Of(EnterpriseFailure.AppTooOld);
         return info;
@@ -226,6 +256,16 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             ["grant_type"] = "authorization_code", ["code"] = code, ["code_verifier"] = attempt.Verifier,
             ["device"] = device, ["platform"] = "windows", ["appVersion"] = appVersion,
         }, cancel);
+        // 加入連結換到另一台（R49.7、M§36.2）：新的登入成功了才登出舊的。先拿舊伺服器的 access token
+        //（同時在換的 token 也等它換完，不然換完會把舊伺服器的 refresh token 寫回去），存好新的登入之後再撤銷
+        (Uri Url, string? Token)? previous = null;
+        if (HasAccount && SavedUrl is { } old && !SameServer(old, attempt.Base))
+        {
+            string? token = null;
+            try { token = await AccessToken(cancel); }
+            catch (EnterpriseException) { }
+            previous = (old, token);
+        }
         secrets.Save(CredentialAccount, tokens.Refresh);
         settings.Set(UrlKey, attempt.Base.ToString().TrimEnd('/'));
         SaveAccount(tokens.Email, tokens.Name, attempt.Info);
@@ -236,6 +276,15 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             expiredMessage = null;
         }
         Log.Info("enterprise server signed in");
+        if (previous is { } p)
+        {
+            // 舊伺服器那邊撤銷這台電腦（送不出去也照樣換）；舊公司的詞彙表不能留給新的公司用
+            if (p.Token is { } token) await Revoke(p.Url, token, cancel);
+            Glossary.Clear();
+            // 新的伺服器沒有提供整理：整理工具原本是「公司」的改成還沒設定（同登出，R49.5）
+            if (!attempt.Info.Llm && settings.ChosenProvider == LLMProvider.Enterprise) settings.Remove(AppSettings.ProviderKey);
+            Log.Info("enterprise server switched");
+        }
         Changed?.Invoke();
         await RefreshGlossary(cancel);
     }
@@ -247,8 +296,8 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         EnterpriseInfo info;
         try { info = await FetchInfo(url, cancel); }
         catch (Exception e) when (e is EnterpriseException or HttpRequestException or OperationCanceledException) { return; }
-        // 讀的時候登出、換了帳號：不要蓋掉
-        if (Account is not { } current || current.Email != before.Email) return;
+        // 讀的時候登出、換了帳號或伺服器：不要蓋掉
+        if (Account is not { } current || current.Email != before.Email || SavedUrl is not { } saved || !SameServer(saved, url)) return;
         if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm || current.ServerVersion != info.Version)
         {
             SaveAccount(current.Email, current.Name, info);
@@ -304,13 +353,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     {
         if (SavedUrl is { } url)
         {
-            try
-            {
-                var token = await AccessToken(cancel);
-                using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(url, "api/v1/auth/logout"));
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                await Send(request, TimeSpan.FromSeconds(10), cancel);
-            }
+            try { await Revoke(url, await AccessToken(cancel), cancel); }
             catch (EnterpriseException) { }
         }
         ForgetLogin();
@@ -322,6 +365,18 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         Log.Info("enterprise server signed out");
         Changed?.Invoke();
         settings.NotifySummarizerChanged();
+    }
+
+    /// <summary>撤銷這台電腦在伺服器上的登入（POST /api/v1/auth/logout）；送不出去不管</summary>
+    async Task Revoke(Uri url, string token, CancellationToken cancel)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(url, "api/v1/auth/logout"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            await Send(request, TimeSpan.FromSeconds(10), cancel);
+        }
+        catch (EnterpriseException) { }
     }
 
     void ForgetLogin()
@@ -363,9 +418,15 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         request.Headers.AcceptLanguage.ParseAdd(Language);
         var (status, text, _) = await Send(request, TimeSpan.FromSeconds(20), cancel);
         if (status != 200) throw Failure(status, text);
-        var o = JsonNode.Parse(text) as JsonObject ?? throw EnterpriseException.Of(EnterpriseFailure.NotShiyin);
-        return new Tokens(Str(o, "access_token"), o["expires_in"]?.GetValue<int>() ?? 3600, Str(o, "refresh_token"),
-            o["user"]?["email"]?.GetValue<string>() ?? "", o["user"]?["name"]?.GetValue<string>() ?? "");
+        // 型別不對、少了 token（同 Mac）：不是拾音的伺服器
+        try
+        {
+            if (JsonNode.Parse(text) is JsonObject o && Str(o, "access_token") is { Length: > 0 } access && Str(o, "refresh_token") is { Length: > 0 } refresh)
+                return new Tokens(access, o["expires_in"]?.GetValue<int>() ?? 3600, refresh,
+                    o["user"]?["email"]?.GetValue<string>() ?? "", o["user"]?["name"]?.GetValue<string>() ?? "");
+        }
+        catch (Exception e) when (IsMalformed(e)) { }
+        throw EnterpriseException.Of(EnterpriseFailure.NotShiyin);
     }
 
     /// <summary>還有效的 access token；過期了用 refresh token 換（同時只換一次：refresh token 換過就作廢）</summary>
@@ -418,15 +479,20 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         IReadOnlyDictionary<string, string>? headers = null, TimeSpan? timeout = null, CancellationToken cancel = default)
     {
         if (SavedUrl is not { } url) throw EnterpriseException.Of(EnterpriseFailure.LoginExpired);
+        // 中途換了伺服器（加入連結，M§36.2）：新伺服器的 token 不能送到舊的伺服器、舊伺服器的回應不能動到新的登入；
+        // 當成工作不在了（轉錄在新的伺服器重建）
+        bool Switched() => SavedUrl is not { } now || !SameServer(now, url);
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var token = await AccessToken(cancel);
+            if (Switched()) throw new EnterpriseException(EnterpriseFailure.Server, "", "not_found");
             using var request = new HttpRequestMessage(method, new Uri(url, path));
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             request.Headers.AcceptLanguage.ParseAdd(Language);
             foreach (var (name, value) in headers ?? new Dictionary<string, string>()) request.Headers.TryAddWithoutValidation(name, value);
             if (content is not null) request.Content = attempt == 0 ? content : await Clone(content);
             var (status, body, responseHeaders) = await Send(request, timeout ?? TimeSpan.FromSeconds(60), cancel);
+            if (Switched()) throw new EnterpriseException(EnterpriseFailure.Server, "", "not_found");
             if (status == 401 && attempt == 0) { InvalidateAccess(); continue; }
             if (status == 401) { MarkExpired(null, forget: true); throw EnterpriseException.Of(EnterpriseFailure.LoginExpired); }
             if (status == 403)
@@ -448,14 +514,17 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         return copy;
     }
 
-    /// <summary>送出請求；連不上、逾時、憑證不受信任換成 EnterpriseException</summary>
+    /// <summary>送出請求；連不上、逾時、憑證不受信任換成 EnterpriseException；伺服器要轉址（3xx）是錯誤（D126）</summary>
     async Task<(int, string, HttpResponseHeaders)> Send(HttpRequestMessage request, TimeSpan timeout, CancellationToken cancel)
     {
         using var limit = new CancellationTokenSource(timeout);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, limit.Token);
+        var target = request.RequestUri;
         try
         {
             using var response = await http.SendAsync(request, linked.Token);
+            // 轉址：NoRedirectClient 會原樣交回 3xx；給錯 HttpClient、已經跟著轉了的（RequestUri 換了）也當成錯誤
+            if ((int)response.StatusCode is >= 300 and < 400 || request.RequestUri != target) throw Redirected((int)response.StatusCode);
             var body = request.Method == HttpMethod.Head ? "" : await response.Content.ReadAsStringAsync(linked.Token);
             return ((int)response.StatusCode, body, response.Headers);
         }
@@ -468,17 +537,21 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         catch (HttpRequestException e) { throw EnterpriseException.Of(EnterpriseFailure.Unreachable, e.HttpRequestError.ToString()); }
     }
 
-    /// <summary>伺服器的錯誤 {"error": {"kind", "message"}}（M§36.2）</summary>
+    /// <summary>伺服器要轉到別的網址：不跟著轉（D126），不是暫時的問題（轉錄的工作算失敗）</summary>
+    public static EnterpriseException Redirected(int status) => new(EnterpriseFailure.Server,
+        L.F("企業伺服器要求轉到別的網址（HTTP %lld），拾音不會跟著轉。請確認網址，或請公司的管理者檢查伺服器的設定。", (long)status), "redirect");
+
+    /// <summary>伺服器的錯誤 {"error": {"kind", "message"}}（M§36.2）；kind、message 不是字串就當成沒有</summary>
     public static EnterpriseException Failure(int status, string body)
     {
         string? kind = null, message = null;
         try
         {
             var error = (JsonNode.Parse(body) as JsonObject)?["error"] as JsonObject;
-            kind = error?["kind"]?.GetValue<string>();
-            message = error?["message"]?.GetValue<string>();
+            kind = error?["kind"] is JsonValue kv && kv.TryGetValue<string>(out var k) ? k : null;
+            message = error?["message"] is JsonValue mv && mv.TryGetValue<string>(out var m) ? m : null;
         }
-        catch (JsonException) { }
+        catch (Exception e) when (IsMalformed(e)) { }
         kind ??= status >= 500 ? "server_error" : "bad_request";
         message ??= L.F("企業伺服器回傳錯誤（HTTP %lld）", status);
         if (status == 401 || kind == "unauthorized") return EnterpriseException.Of(EnterpriseFailure.LoginExpired);

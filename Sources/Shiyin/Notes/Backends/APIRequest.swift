@@ -18,12 +18,13 @@ enum APIRequest {
     }
 
     /// 送出請求，不檢查 HTTP 狀態（OpenAI 相容 API 要看錯誤內容決定要不要退回 JSON 模式）。
-    /// 網路暫時出錯、429、5xx 時自動重試一次（design §21.14、R20.5）；取消（Task 被取消）時丟出 CancellationError
-    static func fetch(_ request: URLRequest, provider: String) async throws -> Response {
+    /// 網路暫時出錯、429、5xx 時自動重試一次（design §21.14、R20.5）；取消（Task 被取消）時丟出 CancellationError。
+    /// session：企業伺服器用不跟著轉址的那一個（design §36.2、D126）
+    static func fetch(_ request: URLRequest, provider: String, session: URLSession = .shared) async throws -> Response {
         var retried = false
         while true {
             let (data, response): (Data, URLResponse)
-            do { (data, response) = try await URLSession.shared.data(for: request) }
+            do { (data, response) = try await session.data(for: request) }
             catch {
                 if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw CancellationError() }
                 if !retried, let code = (error as? URLError)?.code, retryableErrors.contains(code) {

@@ -74,22 +74,36 @@ final class EnterpriseServer {
 
     var savedURL: URL? { UserDefaults.standard.string(forKey: Self.urlKey).flatMap { Self.normalized($0) } }
     /// 隱私說明用的主機名稱（design §36.5）
-    var host: String { savedURL?.host() ?? "" }
+    var host: String { savedURL.map(Self.displayHost) ?? "" }
 
     // MARK: 網址
 
-    /// 只接受 https；DEBUG 版可以用本機的 http（R49.2）。去掉結尾的 /，貼了 /api/v1/info 之類的也去掉
+    /// 只接受 https；DEBUG 版可以用本機的 http（R49.2）。去掉結尾的 /，貼了 /api/v1/info 之類的也去掉。
+    /// 有帳號密碼（user:pass@）、主機是百分比編碼的非英文字的不接受（加入連結用來假裝成別的網站，design §36.2）
     nonisolated static func normalized(_ text: String) -> URL? {
         var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !value.contains("://") { value = "https://" + value }
         while value.hasSuffix("/") { value.removeLast() }
         for suffix in ["/api/v1/info", "/api/v1", "/admin", "/login"] where value.hasSuffix(suffix) { value.removeLast(suffix.count) }
         guard let url = URL(string: value), let host = url.host(), !host.isEmpty, let scheme = url.scheme?.lowercased() else { return nil }
+        guard (url.user() ?? "").isEmpty, (url.password() ?? "").isEmpty, displayHost(url).allSatisfy(\.isASCII) else { return nil }
         if scheme == "https" { return url }
         #if DEBUG
         if scheme == "http" && ["127.0.0.1", "localhost", "::1"].contains(host) { return url }
         #endif
         return nil
+    }
+
+    /// 給人看的主機名稱：國際化網域是 punycode（xn--…），長得像別的網站的字元騙不了人。
+    /// host() 對國際化網域回傳百分比編碼，percentEncoded: false 才是 punycode
+    nonisolated static func displayHost(_ url: URL) -> String {
+        url.host(percentEncoded: false) ?? ""
+    }
+
+    /// 同一台伺服器（不管結尾的斜線、大小寫）
+    nonisolated static func sameServer(_ a: URL, _ b: URL) -> Bool {
+        a.absoluteString.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "/")) ==
+            b.absoluteString.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 
     enum Failure: LocalizedError, Equatable {
@@ -155,8 +169,8 @@ final class EnterpriseServer {
     /// 重新讀伺服器的資訊（R51.5、design §36.3）：公司在後台加了模型、改了名稱或轉錄引擎；連不上就保留舊的。不讀鑰匙圈
     func refreshInfo() async {
         guard let url = savedURL, let before = account, let info = try? await fetchInfo(url) else { return }
-        // 讀的時候登出、換了帳號：不要蓋掉
-        guard let current = account, current.email == before.email else { return }
+        // 讀的時候登出、換了帳號或伺服器：不要蓋掉
+        guard let current = account, current.email == before.email, let saved = savedURL, Self.sameServer(saved, url) else { return }
         var updated = current
         updated.serverName = info.name
         updated.engine = info.transcription.engine
@@ -205,9 +219,12 @@ final class EnterpriseServer {
                 .replacingOccurrences(of: "=", with: "")
         }
 
-        static func random() -> String {
+        /// 32 bytes 隨機；系統產生不出來就不登入（全是 0 的 state、verifier 等於沒有保護）
+        static func random() throws -> String {
             var bytes = [UInt8](repeating: 0, count: 32)
-            _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+            guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+                throw Failure.server(kind: "random", message: String(localized: "沒辦法產生登入用的隨機碼，請再試一次"))
+            }
             return base64URL(Data(bytes))
         }
     }
@@ -216,7 +233,7 @@ final class EnterpriseServer {
     func beginSignIn(_ text: String) async throws -> Attempt {
         guard let url = Self.normalized(text) else { throw Failure.invalidURL }
         let info = try await fetchInfo(url)
-        return Attempt(base: url, info: info, verifier: Attempt.random() + Attempt.random(), state: Attempt.random())
+        return Attempt(base: url, info: info, verifier: try Attempt.random() + Attempt.random(), state: try Attempt.random())
     }
 
     /// 第二步：登入頁轉回 shiyin://auth?code=…&state=…，用授權碼加 PKCE 換 token
@@ -233,6 +250,12 @@ final class EnterpriseServer {
             "grant_type": "authorization_code", "code": code, "code_verifier": attempt.verifier,
             "device": Host.current().localizedName ?? "Mac", "platform": "mac", "appVersion": Updater.currentVersion,
         ])
+        // 加入連結換到另一台（R49.7、design §36.2）：新的登入成功了才登出舊的。先拿舊伺服器的 access token
+        //（同時在換的 token 也等它換完，不然換完會把舊伺服器的 refresh token 寫回鑰匙圈），存好新的登入之後再撤銷
+        var previous: (url: URL, token: String?)?
+        if account != nil, let old = savedURL, !Self.sameServer(old, attempt.base) {
+            previous = (old, try? await validAccessToken())
+        }
         try Keychain.set(Self.keychainAccount, tokens.refreshToken)
         UserDefaults.standard.set(attempt.base.absoluteString, forKey: Self.urlKey)
         let account = Account(email: tokens.email, name: tokens.name, serverName: attempt.info.name,
@@ -242,32 +265,43 @@ final class EnterpriseServer {
         accessExpires = Date().addingTimeInterval(TimeInterval(tokens.expiresIn) - 60)
         status = .signedIn
         log.info("enterprise server signed in")
+        if let previous {
+            // 舊伺服器那邊撤銷這台電腦（送不出去也照樣換）；舊公司的詞彙表不能留給新的公司用
+            if let token = previous.token { await Self.revoke(previous.url, token: token) }
+            CompanyGlossary.clear()
+            // 新的伺服器沒有提供整理：整理工具原本是「公司」的改成還沒設定（同登出，R49.5）
+            if !attempt.info.llm { Self.removeSaved(AppSettings.providerKey, ifEqual: LLMProvider.enterprise.rawValue) }
+            log.info("enterprise server switched")
+        }
         await refreshGlossary()
     }
 
     /// 登出（R49.5）：伺服器那邊撤銷這台電腦（送不出去也照樣清掉本機的），轉錄、整理改回本機的
     func signOut() async {
-        if let url = savedURL, let token = try? await validAccessToken() {
-            var request = URLRequest(url: url.appending(path: "api/v1/auth/logout"))
-            request.httpMethod = "POST"
-            request.timeoutInterval = 10
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            _ = try? await Self.send(request)
-        }
+        if let url = savedURL, let token = try? await validAccessToken() { await Self.revoke(url, token: token) }
         forgetLogin()
         CompanyGlossary.clear()
         UserDefaults.standard.removeObject(forKey: Self.accountKey)
         account = nil
         status = .signedOut
-        // 只清掉存下來的值是企業伺服器的設定（啟動參數帶的值不算：曾經因此刪掉使用者自己選的整理工具）
-        let saved = Bundle.main.bundleIdentifier.flatMap { UserDefaults.standard.persistentDomain(forName: $0) } ?? [:]
-        if saved[AppSettings.transcriptionEngineKey] as? String == "server" {
-            UserDefaults.standard.removeObject(forKey: AppSettings.transcriptionEngineKey)
-        }
-        if saved[AppSettings.providerKey] as? String == LLMProvider.enterprise.rawValue {
-            UserDefaults.standard.removeObject(forKey: AppSettings.providerKey)
-        }
+        Self.removeSaved(AppSettings.transcriptionEngineKey, ifEqual: "server")
+        Self.removeSaved(AppSettings.providerKey, ifEqual: LLMProvider.enterprise.rawValue)
         log.info("enterprise server signed out")
+    }
+
+    /// 撤銷這台電腦在伺服器上的登入（POST /api/v1/auth/logout）；送不出去不管
+    private static func revoke(_ url: URL, token: String) async {
+        var request = URLRequest(url: url.appending(path: "api/v1/auth/logout"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 10
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        _ = try? await send(request)
+    }
+
+    /// 只清掉存下來的值是企業伺服器的設定（啟動參數帶的值不算：曾經因此刪掉使用者自己選的整理工具）
+    private static func removeSaved(_ key: String, ifEqual value: String) {
+        let saved = Bundle.main.bundleIdentifier.flatMap { UserDefaults.standard.persistentDomain(forName: $0) } ?? [:]
+        if saved[key] as? String == value { UserDefaults.standard.removeObject(forKey: key) }
     }
 
     private func forgetLogin() {
@@ -356,8 +390,12 @@ final class EnterpriseServer {
     func call(_ method: String, _ path: String, json: Any? = nil, body: Data? = nil, headers: [String: String] = [:],
               timeout: TimeInterval = 60) async throws -> (Data, HTTPURLResponse) {
         guard let base = savedURL else { throw Failure.loginExpired }
+        // 中途換了伺服器（加入連結，design §36.2）：新伺服器的 token 不能送到舊的伺服器、舊伺服器的回應不能動到新的登入；
+        // 當成工作不在了（轉錄在新的伺服器重建）
+        func switched() -> Bool { savedURL.map { !Self.sameServer($0, base) } ?? true }
         for attempt in 0..<2 {
             let token = try await validAccessToken()
+            if switched() { throw Failure.server(kind: "not_found", message: "") }
             var request = URLRequest(url: base.appending(path: path))
             request.httpMethod = method
             request.timeoutInterval = timeout
@@ -371,6 +409,7 @@ final class EnterpriseServer {
                 request.httpBody = body
             }
             let (data, response) = try await Self.send(request)
+            if switched() { throw Failure.server(kind: "not_found", message: "") }
             if response.statusCode == 401 && attempt == 0 {
                 accessToken = nil
                 accessExpires = .distantPast
@@ -387,11 +426,16 @@ final class EnterpriseServer {
         throw Failure.loginExpired
     }
 
-    /// 送出請求；連不上、逾時、憑證不受信任換成 Failure
+    /// 企業伺服器專用的連線（design §36.2、D126）：不跟著轉址。URLSession.shared 會跟著 307、308 轉到別的主機，
+    /// Authorization 會拿掉，但 body（refresh token、錄音、逐字稿）照樣送過去
+    nonisolated static let session = URLSession(configuration: .default, delegate: NoRedirect(), delegateQueue: nil)
+
+    /// 送出請求；連不上、逾時、憑證不受信任換成 Failure；伺服器要轉址（3xx）是錯誤
     nonisolated static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw Failure.notShiyin }
+            if (300..<400).contains(http.statusCode) { throw redirected(http.statusCode) }
             return (data, http)
         } catch let error as URLError {
             switch error.code {
@@ -403,6 +447,11 @@ final class EnterpriseServer {
             default: throw Failure.unreachable(error.localizedDescription)
             }
         }
+    }
+
+    /// 伺服器要轉到別的網址：不跟著轉（D126），不是暫時的問題（轉錄的工作算失敗）
+    nonisolated static func redirected(_ status: Int) -> Failure {
+        .server(kind: "redirect", message: String(localized: "企業伺服器要求轉到別的網址（HTTP \(status)），拾音不會跟著轉。請確認網址，或請公司的管理者檢查伺服器的設定。"))
     }
 
     /// 伺服器的錯誤 {"error": {"kind", "message"}}（M§36.2）
@@ -460,4 +509,12 @@ final class EnterpriseServer {
         return state
     }
     #endif
+}
+
+/// 擋掉轉址：回傳 nil，URLSession 就把 3xx 的回應原樣交回來（EnterpriseServer.send 當成錯誤）
+private final class NoRedirect: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
 }

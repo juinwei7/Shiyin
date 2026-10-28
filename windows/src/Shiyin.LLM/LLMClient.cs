@@ -179,6 +179,8 @@ public interface IEnterpriseAccess
     void InvalidateAccess();
     /// <summary>伺服器給的訊息用 app 的介面語言（Accept-Language）</summary>
     string Language { get; }
+    /// <summary>企業伺服器專用的 HttpClient：不跟著轉址（M§36.2、D126）</summary>
+    HttpClient Http { get; }
 }
 
 /// <summary>找外部程式（claude、codex），找不到回傳 null（design-windows §10）</summary>
