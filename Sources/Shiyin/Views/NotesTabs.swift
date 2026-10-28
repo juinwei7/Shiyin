@@ -154,8 +154,9 @@ struct NotesPlaceholder: View {
                 Button("設定整理工具") { openSettings() }
             } else if AppSettings.provider != .none, let problem = model.summarizerProblem {
                 // 選了整理工具但還沒準備好（沒登入、沒有 key…，R45.4）：說原因，給修的按鈕
+                // 不加 fixedSize：這裡不在 ScrollView 裡，量最小高度時整個視窗的內容會被往上推（CLAUDE.md）
                 Text("整理工具還沒設定好：\(problem.message)")
-                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.secondary)
                 Button(problem.actionTitle) {
                     switch problem.action {
                     case .openSettings: openSettings()
