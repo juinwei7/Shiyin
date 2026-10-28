@@ -62,10 +62,9 @@ V1～V8 已完成（2026-10-25 使用者跑了後台的 migration 和 deploy）�
 
 ### Teams 的聲音、轉錄失敗的種類（R54，§6、§12.7、D127；2026-10-28 GitHub issue #2）
 
-- [ ] **電腦聲音改錄預設輸出裝置**（R54.1～R54.3）
-  - 驗證：Mac 上編譯檢查、`dotnet test` 通過；虛擬機（沒有音效裝置）用真的 WASAPI（不是 `record-sim`）「只錄電腦聲音」「兩者都錄」各錄 30 秒：錄音照常、電腦聲音那一聲道是靜音、沒有「沒辦法啟動」的提示、log 沒有錯誤；真的 Windows 電腦（要使用者或 issue #2 的回報者）：Teams 會議裡別人的聲音、YouTube 都錄得到，錄音中換預設輸出裝置、拔耳機會接著錄
-- [ ] **轉錄失敗的種類**（R54.4）
-  - 驗證：單元測試：`WhisperException` 每一種、`COMException` 的 `LogSummary`；轉錄失敗的工作寫進 `jobs.error_kind`，回報問題的文字有「transcribe：WhisperError.loadFailed」
+- [~] **電腦聲音改錄預設輸出裝置**（R54.1～R54.3）：2026-10-28 程式完成，Mac 上編譯檢查、`dotnet test` 150 個通過。還差：
+  - 虛擬機（沒有音效裝置）用真的 WASAPI（不是 `record-sim`）「只錄電腦聲音」「兩者都錄」各錄 30 秒：錄音照常、電腦聲音那一聲道是靜音、沒有「沒辦法啟動」的提示、log 有「no output device」。2026-10-28 Mac 的磁碟只剩 7.7 GB（`diskguard.sh` 的門檻 10 GB），沒有開虛擬機
+  - 真的 Windows 電腦（要使用者或 issue #2 的回報者）：Teams 會議裡別人的聲音、YouTube 都錄得到，錄音中換預設輸出裝置、拔耳機會接著錄
 - 等 issue #2 回覆再決定（R54「等回報的人回覆再決定」）：Teams 的喇叭不是預設裝置、顯示卡載入模型失敗時改用 CPU
 
 ### 要使用者的 Windows 電腦
