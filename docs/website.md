@@ -172,7 +172,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 | 什麼時候 | 怎麼觸發 |
 |---|---|
 | 推到 main，改到 `site/`、`docs/images/` 或這個 workflow | `push` |
-| 發布新版 | `workflow_run`：「打包」流程跑完、而且是推 tag 觸發的才部署（手動只建置 DMG 的不部署） |
+| 發布新版 | `workflow_run`：「打包」或「Windows 版發布」流程跑完、而且是推 tag 觸發的才部署（手動只建置的不部署）。2026-10-28 發 4.2.1 時 Windows 版比 Mac 晚 3 分鐘發布完，只等「打包」的話官網的 Windows 下載停在舊版，要手動重建 |
 | 手動 | Actions 頁面按「Run workflow」 |
 | 每天一次 | `schedule`：台灣時間早上 9 點重新建置部署，讓 GitHub 數據（§11）保持最新 |
 

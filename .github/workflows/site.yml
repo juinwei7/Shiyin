@@ -1,6 +1,6 @@
 # 官網（docs/website.md §8）：產生 site/dist，部署到 Cloudflare Pages
 # - 推到 main，改到網站或截圖
-# - 「打包」流程推 tag 發布新版之後（版本說明和下載連結跟著更新）
+# - 「打包」「Windows 版發布」流程推 tag 發布新版之後（版本說明和下載連結跟著更新；Windows 版常比 Mac 晚幾分鐘發布完，兩個都要等）
 # - 在 Actions 頁面手動執行
 #
 # 需要的設定（Settings → Secrets and variables → Actions）：
@@ -17,7 +17,7 @@ on:
       - "docs/images/**"
       - ".github/workflows/site.yml"
   workflow_run:
-    workflows: ["打包"]
+    workflows: ["打包", "Windows 版發布"]
     types: [completed]
   workflow_dispatch:
   # 每天台灣時間早上 9 點重新建置，首頁的 GitHub 數據（docs/website.md §11）才會更新
