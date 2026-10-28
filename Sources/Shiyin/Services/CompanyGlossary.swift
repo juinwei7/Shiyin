@@ -28,7 +28,7 @@ enum CompanyGlossary {
     }
 
     static func save(_ terms: [String], updatedAt: String?) {
-        let cleaned = merge(terms, [])
+        let cleaned = clean(terms)
         guard cleaned != self.terms else { return }
         if let data = try? JSONEncoder().encode(Stored(terms: cleaned, updatedAt: updatedAt)) {
             try? FileManager.default.createDirectory(at: Paths.home, withIntermediateDirectories: true)
@@ -45,10 +45,15 @@ enum CompanyGlossary {
         DispatchQueue.main.async { NotificationCenter.default.post(name: .companyGlossaryChanged, object: nil) }
     }
 
-    /// 自己的詞在前、公司的接在後面，不分大小寫去掉重複（轉錄的提示詞有長度上限，R53.2）
+    /// 自己的詞在前、公司的接在後面，不分大小寫去掉重複（轉錄的提示詞有長度上限，R53.2）。
+    /// 沒有公司的詞時照原本的詞彙表、一個字都不動：沒登入的人跟 4.1.2 一樣（R52.5；自己存了「API」和「api」兩個都留著）
     static func merge(_ own: [String], _ company: [String]) -> [String] {
+        company.isEmpty ? own : clean(own + company)
+    }
+
+    private static func clean(_ terms: [String]) -> [String] {
         var seen = Set<String>()
-        return (own + company).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        return terms.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
     }
 

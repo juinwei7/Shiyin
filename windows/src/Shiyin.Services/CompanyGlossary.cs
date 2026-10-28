@@ -30,7 +30,7 @@ public sealed class CompanyGlossary(string? file)
 
     public void Save(IEnumerable<string> terms, string? updatedAt)
     {
-        var cleaned = Merge(terms, []);
+        var cleaned = Clean(terms);
         if (cleaned.SequenceEqual(Terms)) return;
         if (file is not null)
         {
@@ -54,8 +54,15 @@ public sealed class CompanyGlossary(string? file)
     /// <summary>自己的詞在前、公司的接在後面，不分大小寫去掉重複（轉錄的提示詞有長度上限，R53.2）</summary>
     public static List<string> Merge(IEnumerable<string> own, IEnumerable<string> company)
     {
+        // 沒有公司的詞時照原本的詞彙表、一個字都不動：沒登入的人跟 4.1.2 一樣（R52.5；自己存了「API」和「api」兩個都留著）
+        var companyTerms = company.ToList();
+        return companyTerms.Count == 0 ? [.. own] : Clean(own.Concat(companyTerms));
+    }
+
+    static List<string> Clean(IEnumerable<string> terms)
+    {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        return [.. own.Concat(company).Select(t => t.Trim()).Where(t => t.Length > 0 && seen.Add(t))];
+        return [.. terms.Select(t => t.Trim()).Where(t => t.Length > 0 && seen.Add(t))];
     }
 
     public List<string> Merged(IEnumerable<string> own) => Merge(own, Terms);

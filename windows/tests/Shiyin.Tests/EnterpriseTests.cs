@@ -547,6 +547,8 @@ public sealed class EnterpriseTests : IDisposable
         Assert.Equal(1, changed);
         Assert.True(server.Glossary.Contains("breeze asr"));
         Assert.Equal(["自己的", "breeze asr", "拾音"], server.Glossary.Merged(["自己的", "breeze asr"]));
+        // 沒有公司的詞（沒登入的人）：自己的詞彙表一個字都不動，跟 4.1.2 一樣（R52.5）
+        Assert.Equal(["API", "api", " 前後有空白 "], CompanyGlossary.Merge(["API", "api", " 前後有空白 "], []));
         // 沒變就不通知；重開之後從檔案讀（連不上時照樣用）
         await server.RefreshGlossary();
         Assert.Equal(1, changed);
