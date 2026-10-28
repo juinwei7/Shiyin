@@ -9,7 +9,7 @@
 
 ```
 Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理員權限，也不用另外裝 .NET）
- ├─ Capture        WASAPI 擷取（麥克風）＋ WASAPI process loopback（電腦聲音，排除拾音自己和它開的程式）
+ ├─ Capture        WASAPI 擷取（麥克風）＋ WASAPI loopback（電腦聲音，預設輸出裝置，D127）
  │    ├─► RecordingWriter   16 kHz WAV，左聲道麥克風、右聲道電腦聲音（同 M§5.2），WAVRepair
  │    └─► LiveTranscriber   sherpa-onnx：Silero VAD ＋ SenseVoice → 即時逐字稿（暫定＋定稿）
  ├─ JobRunner      三條線（同 M§21.2）
@@ -44,7 +44,7 @@ Shiyin.exe（WinUI 3，單一程序，不需要 Python、ffmpeg、系統管理�
 |---|---|---|
 | 語言、介面（R26.3） | C# .NET 10（LTS，支援到 2028-11）＋ WinUI 3：Windows App SDK 2.5，**只參考用到的元件套件**（WinUI、Foundation、InteractiveExperiences） | 使用者決定（D42）。整包的 Windows App SDK 會帶進 Windows ML 的 `onnxruntime.dll`，跟 sherpa-onnx 的同名檔衝突 |
 | 麥克風（R1.1） | NAudio 3.3（MIT，`NAudio.Wasapi`）；不行就用 CsWin32 自己包 WASAPI | 3.x 是 2026-08 才出的新大版，版本釘死 |
-| 電腦聲音（R1.2） | WASAPI process loopback，`EXCLUDE_TARGET_PROCESS_TREE` 排除拾音自己（NAudio 3 的 `WithProcessLoopback`） | 對應 Mac 的「全域 tap 排除自己」；需要 build 20348 以上，Windows 11 都有 |
+| 電腦聲音（R1.2、R54） | 預設輸出裝置的 WASAPI loopback（endpoint loopback），換預設裝置時重開 | 原本用 process loopback 排除拾音自己（對應 Mac 的「全域 tap 排除自己」），新版 Teams 的聲音收到的全是 0（D127） |
 | 即時逐字稿（R2） | sherpa-onnx 1.13（Apache-2.0）：Silero VAD ＋ SenseVoice-Small int8；中文用 OpenccNetLib（MIT，s2twp）轉台灣繁體 | Windows 沒有可用的內建離線中文辨識（D44）；T-W5 的結果見 §7、D61 |
 | 快速辨識（R4.1、R20.8） | 同一個 SenseVoice 模型讀整個檔案 | 取代 macOS 內建（D45） |
 | 正式轉錄（R4） | whisper.cpp b5454（v1.9.5、commit `d1be6fd`，跟 `Package.swift` 同一版）自己建：x64 CPU 各種指令集（Vulkan 還沒做，D64）；ARM64 一個 CPU 版本（clang，§8）。加一層小的 C shim，C# 用 P/Invoke | 結果跟 Mac 一致（R28.4，D46、D56），T-W3 的結果見 §8 |
@@ -157,7 +157,11 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 ## 6. 錄音
 
 - **麥克風**：WASAPI 共用模式、事件驅動，用 Console／Multimedia 角色的端點，**不用 Communications**（Windows 會把其他聲音自動降低 80%）。裝置用端點 ID 記在設定。換裝置、拔耳機：NAudio 3.2 起的 `MMDeviceEnumerator.CreateNotificationClient()` 事件（3.0 起 `IMMNotificationClient` 不公開了），收到就重新開（D25）。
-- **電腦聲音**：process loopback 排除拾音的程序樹（claude CLI、WebView2 這些子程序也一起排除）。格式自己指定（沒有 GetMixFormat）：48 kHz 浮點雙聲道，再降混、重新取樣。輸出裝置換了要不要重開待 T-W2。
+- **電腦聲音**（R54、D127）：預設輸出裝置（Render、Console 角色）的 endpoint loopback，跟麥克風同一套：先請系統轉成 16 kHz 單聲道，不接受時用裝置的格式自己轉。
+  - 換預設輸出裝置（`DefaultDeviceChanged` 的 Render、Console）、正在錄的裝置被停用或拔掉時重新開始，接著錄新的預設裝置（同 D25 的 0.3 秒合併）。
+  - 沒有任何輸出裝置（例如虛擬機、沒接喇叭的桌機）：不算開始失敗，音源照時間補靜音，等 `DefaultDeviceChanged` 出現新的預設裝置再重開。
+  - 不排除拾音自己：錄音中在拾音裡播放錄音會錄進去（R54.3）。process loopback 錄不到新版 Teams（Windows 給全是 0 的資料、不回報錯誤），見 D127。
+  - Teams 的喇叭指定了不是預設的裝置時錄不到，等 GitHub issue #2 的回覆決定要不要同時錄那個裝置。
 - **沒有聲音在播時，電腦聲音完全不送資料**（連靜音都不送）。所以：
   - 寫檔時電腦聲音那一聲道依時間（QPC）補靜音，不是等它送資料。
   - 3 秒 watchdog（M§20.2）只看麥克風；電腦聲音沒有資料不算中斷。
@@ -387,6 +391,8 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 ProcessorNameString）、記憶體、顯示卡（DXGI 的介面卡名稱）、whisper 用的是 CPU 還是 Vulkan，其他同 M§21.9。
 
+最近失敗的工作的錯誤種類（`jobs.error_kind`，`ErrorSummary.LogSummary`，R54.4）：整理工具是 `LLMError.<種類>`（同 Mac）；轉錄是 `WhisperError.modelMissing`、`loadFailed`、`failed(<whisper 的錯誤代碼>)`、`cancelled`、`empty`、`qwenFailed(<HTTP 狀態>)`；Windows 系統元件的錯誤（`ExternalException`：COM、Media Foundation、Win32）寫型別和 HRESULT（`COMException 0xC00D36C4`）；其他寫型別名稱。都不含訊息（訊息可能有逐字稿）。Mac 是 `<domain> <code>`，不改（R26.5）。
+
 ### 12.8 設定
 
 `SHIYIN_HOME\settings.json`，鍵名跟 Mac 的 UserDefaults 相同（`llmProvider`、`transcriptionEngine`…）。寫入時先寫暫存檔再取代，避免寫到一半。DEBUG 可以用啟動參數覆蓋單一設定（`--set llmProvider=none`），只在這次執行有效，同 Mac 的 `-llmProvider none`。
@@ -550,6 +556,7 @@ Windows 版本和 build（`RtlGetVersion`）、CPU 名稱和架構（登錄的 P
 | D93 | Windows 的短句再確認用說話者辨識的同一個聲紋模型，跟每位說話者的聲紋比，像另一位 0.25 以上才改（§9；Mac 用另一個帶前後文的模型、跟長句的平均比、0.15，D92） | 照搬 Mac 的長句平均、0.15：Windows 的模型只聽得到這一句，AMI 沒重疊的句子改錯 5 句，使用者的訪談有 4 句改得跟 Mac 相反。像 Mac 帶前後文算：sherpa-onnx 的聲紋模型沒有遮罩的輸入（Mac 的 wespeaker_v2 有），只能把前後的聲音一起算，會混進別人的聲音（沒有試）。不做：完整逐字稿還是有進步（AMI 94.9% → 95.5%、AISHELL-4 96.6% → 97.1%），也沒有變差。取捨：使用者回報的那一句在 Windows 改不回來（兩位的分數只差 0.09）；說話者辨識多約 10～20% 的時間 |
 | D94 | Windows 找新版時自己讀 GitHub 的 release 清單（100 筆），其他照 Velopack 的 GithubSource（§14.3） | 照用 GithubSource：只讀最新的 10 筆，Mac 連發 10 版後 Windows 使用者看不到新版。固定網址的 feed（SimpleWebSource）：每次發布要另外更新一個固定的 release 或網站上的檔案，官網的 release 清單也要跳過它，多一個會出錯的地方。分 Mac、Windows 兩個 repo：星星、issue、下載數分散（D51）。取捨：Mac 在一次 Windows 發布之間發了 100 版以上才會再漏，到時候改成往下翻頁 |
 | D95 | Windows 的 Qwen3-ASR 用 llama.cpp 官方的 `llama-server.exe` 當子程序（HTTP），不做 shim DLL（§8.4） | 同程序載入 llama 的 DLL：跟 whisper 同名的 ggml DLL，載入器只認名稱，兩個版本不能並存；side-by-side manifest 可以但複雜、出錯時只會靜默用錯版本。自己建 llama.cpp 把 DLL 改名：每次升級要重建 cpu／cuda 兩種後端兩種架構，CI 時間和出錯的地方都多。用跟 llama 同版的 ggml 重建 whisper：whisper 固定在 d1be6fd 才跟 Mac 結果一致（R28.4）。取捨：多一個程序、每次轉錄多幾秒啟動（Mac 也是每次載入模型）、音訊要 base64 走 localhost（15 秒一段約 0.6 MB，可忽略）、要自己管子程序的生命週期（Job Object） |
+| D127 | Windows 的電腦聲音改錄預設輸出裝置（endpoint loopback），跟著預設裝置換（R54、§6；2026-10-28 GitHub issue #2） | 照舊用 process loopback 排除拾音自己：新版 Teams（ms-teams.exe）的聲音收到的全是 0，開始、收音都回報成功（排除和只錄某個程序兩種模式都一樣；Microsoft 的 ApplicationLoopback 範例 microsoft/Windows-classic-samples#414、OBS 的應用程式音訊擷取一樣）。process loopback 為主，偵測到「自己收到靜音、輸出裝置卻有聲音」才改錄整個裝置：Teams 跟別的聲音同時在播時偵測不到，還要一直讀每個裝置的音量、切換時兩邊銜接。process loopback 和 endpoint loopback 一起錄再混：別的 app 的聲音兩邊都有，會疊兩次。取捨：錄音中在拾音裡播放錄音會錄進去（Mac 排除自己，R54.3）；Teams 的喇叭指定了不是預設的裝置時錄不到（等 issue 的回覆決定要不要同時錄那個裝置） |
 
 ## 17. 需要先做的實驗
 
