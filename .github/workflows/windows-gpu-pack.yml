@@ -70,6 +70,9 @@ jobs:
           New-ItemProperty -Path 'HKLM:\SOFTWARE\Khronos\Vulkan\Drivers' -Name $icd.FullName -Value 0 -PropertyType DWord -Force | Out-Null
           $env:VK_DRIVER_FILES = $icd.FullName
           $env:VK_ICD_FILENAMES = $icd.FullName
+          # ggml-vulkan 預設只用獨顯、內顯，lavapipe 回報的是 CPU 類型（run 40821775975：「ggml_vulkan: No devices found.」）：直接指定第 0 個裝置。
+          # 使用者的 AMD 顯示卡（獨顯、Radeon 內顯）是獨顯、內顯類型，app 不用設這個
+          $env:GGML_VK_VISIBLE_DEVICES = '0'
           # Vulkan 的載入器：run 40819293791 少了它，ggml-vulkan.dll 載入失敗，ggml 又是安靜地跳過，只剩 CPU
           $rt = Join-Path $env:RUNNER_TEMP 'vulkan-rt.zip'
           Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanRT-X64-$env:VULKAN_SDK_VERSION-Components.zip" -OutFile $rt
