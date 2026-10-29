@@ -56,7 +56,7 @@ final class Recorder {
         /// 錄音畫面、選單列、通知都用同一句（R42）
         var text: String {
             switch self {
-            case .silent: return String(localized: "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。")
+            case .silent: return String(localized: "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音與轉錄」換一個。")
             case .quiet: return String(localized: "聲音有點小：手機或筆電放近說話的人一點。")
             case .noisy: return String(localized: "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。")
             }

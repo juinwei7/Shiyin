@@ -2451,24 +2451,24 @@
         }
       }
     },
-    "到「模型與儲存空間」下載": {
+    "到設定的「錄音與轉錄」下載": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download it in “Models & Storage”"
+            "value": "Download it in Settings → Recording & Transcription"
           }
         }
       }
     },
-    "到「模型與儲存空間」下載，或在「錄音」把正式轉錄改成 macOS 內建": {
+    "到設定的「錄音與轉錄」下載，或把正式轉錄改成 macOS 內建": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download it in “Models & Storage”, or set transcription to macOS in “Recording”"
+            "value": "Download it in Settings → Recording & Transcription, or set transcription to macOS there"
           }
         }
       }
@@ -10149,13 +10149,13 @@
         }
       }
     },
-    "還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載": {
+    "還沒有下載轉錄模型，請到設定 → 錄音與轉錄下載": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The transcription model hasn't been downloaded. Download it in Settings → Models & Storage."
+            "value": "The transcription model hasn't been downloaded. Download it in Settings → Recording & Transcription."
           }
         }
       }
@@ -11315,13 +11315,13 @@
         }
       }
     },
-    "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。": {
+    "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音與轉錄」換一個。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The microphone isn’t picking up any sound. It may be muted, in use by another app, or the wrong microphone. You can choose another one in Settings → Recording."
+            "value": "The microphone isn’t picking up any sound. It may be muted, in use by another app, or the wrong microphone. You can choose another one in Settings → Recording & Transcription."
           }
         }
       }
