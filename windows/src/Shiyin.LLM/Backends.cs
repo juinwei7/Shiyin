@@ -367,7 +367,11 @@ sealed class CodexCli(LLMClient client, string model) : ILLMBackend
                 var detail = result.StderrTail(500);
                 if (LLMException.IsLoginProblem(detail)) throw LLMException.NotLoggedIn("codex");
                 if (LLMException.IsLimitProblem(detail)) throw LLMException.Limited(detail);
-                throw LLMException.Failed(detail.Length == 0 ? L.F("codex 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail);
+                var message = detail.Length == 0 ? L.F("codex 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail;
+                // 桌面版附的 codex 出錯：建議另外裝 CLI（R55.4）
+                if (tool.DesktopApp is { } app)
+                    message += "\n" + L.F("這是 %@ 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。", app);
+                throw LLMException.Failed(message);
             }
             return data;
         }

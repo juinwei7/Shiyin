@@ -259,6 +259,13 @@ public static class ControlPipe
 
     static string? enterpriseError;
 
+    /// <summary>state 的 tools：執行檔、桌面版的名稱和啟動用的 id、子程序的 PATH</summary>
+    static JsonObject? ToolState(ToolCommand? tool) => tool is null ? null : new JsonObject
+    {
+        ["path"] = tool.Executable, ["desktopApp"] = tool.DesktopApp, ["appId"] = tool.AppUserModelId,
+        ["pathEnv"] = tool.Environment?.GetValueOrDefault("PATH")?.Split(';').FirstOrDefault(),
+    };
+
     static JsonNode State(AppHost host, MainWindow? main)
     {
         var r = host.Recorder;
@@ -286,6 +293,13 @@ public static class ControlPipe
             ["models"] = models,
             ["transcriptionEngine"] = host.Settings.TranscriptionEngine,
             ["provider"] = host.Settings.Provider.Code(),
+            // 找到的 claude、codex：使用者自己裝的，或桌面版附的（M§37.4、design-windows §10）
+            ["tools"] = new JsonObject
+            {
+                ["claude"] = ToolState(host.Tools.Find("claude")),
+                ["codex"] = ToolState(host.Tools.Find("codex")),
+                ["claudeDesktop"] = DesktopApps.HasClaude(),
+            },
             ["enterprise"] = new JsonObject
             {
                 ["url"] = host.Enterprise.SavedUrl?.ToString(), ["hasAccount"] = host.Enterprise.HasAccount, ["signedIn"] = host.Enterprise.IsSignedIn,

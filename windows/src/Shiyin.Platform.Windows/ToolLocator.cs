@@ -13,12 +13,95 @@ public sealed class WindowsToolLocator : IToolLocator
     static string Roaming => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
     static string Local => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
+    /// <summary>Codex 桌面版（Microsoft Store）的 package family（R55，design-windows §10）</summary>
+    public const string CodexFamily = "OpenAI.Codex_2p2nqsd0c76g0";
+    /// <summary>Claude 桌面版（Store 和官網的安裝檔都是 MSIX）的 package family（R56）</summary>
+    public const string ClaudeFamily = "Claude_pzs8sxrjxfjjc";
+
+    /// <summary>DEBUG 的 debugOnlyDesktopCli：不看使用者自己裝的 claude、codex，只找桌面版附的（M§37.4）</summary>
+    public bool SkipInstalled { get; init; }
+    /// <summary>DEBUG 的 debugCodexApp：把這個資料夾當成 Codex 桌面版的安裝資料夾（不問系統）</summary>
+    public string? CodexAppOverride { get; init; }
+    /// <summary>DEBUG 的 debugClaudeDesktop：假裝有、沒有 Claude 桌面版</summary>
+    public bool? ClaudeDesktopOverride { get; init; }
+
     public ToolCommand? Find(string name) => name switch
     {
-        "claude" => Claude(),
-        "codex" => Codex(),
+        "claude" => SkipInstalled ? null : Claude(),
+        "codex" => (SkipInstalled ? null : Codex()) ?? CodexDesktop(),
         _ => Exe(name + ".exe") is { } exe ? new ToolCommand(exe, []) : null,
     };
+
+    readonly object gate = new();
+    (ToolCommand? Tool, DateTime At)? codexDesktop;
+    (bool Found, DateTime At)? claudeDesktop;
+    string? lastProblem;
+
+    /// <summary>Codex 桌面版附的 codex（R55.1）：npm、PATH 都找不到時才找；結果留 30 秒（同其他工具），不記住路徑（桌面版更新後位置會變）</summary>
+    ToolCommand? CodexDesktop()
+    {
+        lock (gate)
+        {
+            if (codexDesktop is { } cached && DateTime.UtcNow - cached.At < TimeSpan.FromSeconds(30)) return cached.Tool;
+            var tool = FindCodexDesktop();
+            codexDesktop = (tool, DateTime.UtcNow);
+            return tool;
+        }
+    }
+
+    ToolCommand? FindCodexDesktop()
+    {
+        var installs = CodexAppOverride is { Length: > 0 } dir ? [new Packages.Installed("debug", dir)] : Packages.ByFamily(CodexFamily);
+        var problems = new List<string>();
+        foreach (var install in installs)
+        {
+            if (CodexPackage.Find(Path.Combine(install.Path, "app", "resources"), out var problem) is not { } package)
+            {
+                problems.Add(problem ?? "");
+                continue;
+            }
+            Report(null);
+            var (name, appId) = Packages.Manifest(install.Path, "Codex");
+            return With(package.Executable, [], package.PathDir) with
+            {
+                DesktopApp = name,
+                AppUserModelId = appId is null ? null : $"{CodexFamily}!{appId}",
+            };
+        }
+        Report(problems.Count == 0 ? null : string.Join(", ", problems));
+        return null;
+    }
+
+    /// <summary>說明檔不對只記原因，同一個原因不重複記</summary>
+    void Report(string? problem)
+    {
+        if (problem == lastProblem) return;
+        lastProblem = problem;
+        if (problem is not null) Shiyin.Services.Log.Info($"codex desktop app skipped: {problem}");
+    }
+
+    /// <summary>這台電腦有沒有 Claude 桌面版（R56.2）：MSIX 套件，或舊版安裝在 %LOCALAPPDATA%\AnthropicClaude；結果留 30 秒</summary>
+    public bool HasClaudeDesktop()
+    {
+        if (ClaudeDesktopOverride is { } fake) return fake;
+        lock (gate)
+        {
+            if (claudeDesktop is { } cached && DateTime.UtcNow - cached.At < TimeSpan.FromSeconds(30)) return cached.Found;
+            var found = Packages.ByFamily(ClaudeFamily).Count > 0 || File.Exists(Path.Combine(Local, "AnthropicClaude", "claude.exe"));
+            claudeDesktop = (found, DateTime.UtcNow);
+            return found;
+        }
+    }
+
+    /// <summary>「重新檢查」：剛裝好、剛移除的桌面版馬上看得到</summary>
+    public void ClearCache()
+    {
+        lock (gate)
+        {
+            codexDesktop = null;
+            claudeDesktop = null;
+        }
+    }
 
     static ToolCommand? Claude()
     {

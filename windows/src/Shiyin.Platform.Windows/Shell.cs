@@ -29,6 +29,14 @@ public static class Shell
         Process.Start(info);
     }
 
+    /// <summary>打開 Microsoft Store 的 app（Codex 桌面版登入用，R55.3）：explorer.exe shell:AppsFolder\&lt;package family&gt;!&lt;app id&gt;</summary>
+    public static void OpenPackagedApp(string appUserModelId)
+    {
+        var info = new ProcessStartInfo("explorer.exe");
+        info.ArgumentList.Add(@"shell:AppsFolder\" + appUserModelId);
+        Process.Start(info);
+    }
+
     /// <summary>
     /// 開終端機登入 claude 或 codex（design-windows §10）：Windows Terminal，沒有就用 cmd.exe /k。
     /// 參數是固定的，不放任何使用者的內容

@@ -352,8 +352,13 @@ public sealed class DetailView
                 else
                 {
                     // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
-                    if (f.Kind != JobKind.Transcribe && LLMException.IsLoginProblem(f.Error) && host.Settings.Provider is LLMProvider.Claude or LLMProvider.Codex)
-                        actions.Children.Add(Ui.Button(L.F("重新登入 %@", host.Settings.Provider.ShortLabel()), () => CliLogin.Open(host, host.Settings.Provider)));
+                    if (f.Kind != JobKind.Transcribe && LLMException.IsLoginMessage(f.Error) && host.Settings.Provider is LLMProvider.Claude or LLMProvider.Codex)
+                    {
+                        // 桌面版附的 codex：打開那個 app 登入（R55.3）
+                        var app = host.Settings.Provider == LLMProvider.Codex ? DesktopApps.CodexAppName() : null;
+                        actions.Children.Add(Ui.Button(app is not null ? L.F("打開 %@ 登入", app) : L.F("重新登入 %@", host.Settings.Provider.ShortLabel()),
+                            () => CliLogin.Open(host, host.Settings.Provider)));
+                    }
                     actions.Children.Add(Ui.Button(L.T("重試"), () => host.Controller.Retry(id)));
                 }
                 var message = Ui.Text(f.Kind == JobKind.Transcribe ? L.F("轉錄失敗：%@", f.Error) : L.F("整理失敗：%@", f.Error), 13, maxLines: 3, select: true);
