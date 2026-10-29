@@ -1,7 +1,7 @@
 # Windows 的 AMD 顯示卡加速元件（design-windows §8「AMD 顯示卡加速」、D127、R27 R4.7）：用跟安裝檔同一個 commit 的 whisper.cpp 建 Vulkan 版，
 # CI 沒有顯示卡，用 Mesa 的 lavapipe（軟體實作的 Vulkan）跑一次語言偵測、跟同一次建置的 CPU 版比（判斷出同一個語言、三個機率差 ≤ 0.03），打包成 whisper-vulkan-x64.zip。
 # 手動執行；publish 打勾才上傳到 prerelease win-gpu-vulkan-b5454（官網、Windows 的檢查更新都跳過 prerelease，Mac 的更新網址是 latest）。
-# whisper 升版才要重跑；跑完把印出的大小、SHA-256 填進 ModelStore.GpuVulkan（tasks W-AMD1）
+# whisper 升版才要重跑；跑完把印出的大小、SHA-256 填進 ModelStore.GpuVulkan、VulkanFiles
 name: Windows 顯示卡元件（Vulkan）
 
 on:
