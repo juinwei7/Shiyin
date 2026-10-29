@@ -45,6 +45,17 @@
         }
       }
     },
+    "AMD 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AMD GPU acceleration is ready. Reopen Shiyin and transcription will use the GPU."
+          }
+        }
+      }
+    },
     "AMD 顯示卡加速（Vulkan）": {
       "extractionState": "manual",
       "localizations": {
