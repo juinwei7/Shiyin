@@ -55,6 +55,9 @@ public static class SystemInfo
     /// <summary>有 NVIDIA 顯示卡（R27 R4.6）：顯示卡驅動的登錄裡，硬體 ID 的廠商是 10DE</summary>
     public static bool HasNvidiaGpu() => Adapters().Any(a => a.DeviceId.Contains("VEN_10DE", StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>有 AMD 顯示卡（R27 R4.7，含 Radeon 內顯）：硬體 ID 的廠商是 1002</summary>
+    public static bool HasAmdGpu() => Adapters().Any(a => a.DeviceId.Contains("VEN_1002", StringComparison.OrdinalIgnoreCase));
+
     /// <summary>顯示卡驅動的登錄：名稱、硬體 ID（PCI\VEN_xxxx&amp;DEV_xxxx…）</summary>
     static List<(string Name, string DeviceId)> Adapters()
     {

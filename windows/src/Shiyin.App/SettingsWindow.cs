@@ -566,7 +566,7 @@ public sealed class SettingsWindow : Window
         {
             S.Set(AppSettings.TranscriptionEngineKey, e);
             if (e == "qwen") host.Models.AutoStart(ModelStore.Model.Qwen);
-            host.Gpu.OfferQwenCuda();
+            host.Gpu.OfferQwenGpu();
             host.Runner.Wake();
             Show();
         }, L.T("正式轉錄")));
@@ -625,22 +625,43 @@ public sealed class SettingsWindow : Window
             if (note.Length > 0) models.Children.Add(Note(note));
         }
         // Qwen 的 CUDA 版（design-windows §8.4）：有 NVIDIA 顯示卡或已經下載過才顯示
-        if (host.Gpu.Applies || host.Models.StateOf(ModelStore.Model.QwenCuda) is not ModelStore.State.Missing)
+        if (host.Gpu.Kind == GpuAcceleration.Pack.Cuda || host.Models.StateOf(ModelStore.Model.QwenCuda) is not ModelStore.State.Missing)
         {
             models.Children.Add(ModelRow(ModelStore.Model.QwenCuda, transcribing));
             models.Children.Add(Note(L.T("有 NVIDIA 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 的轉錄會快很多。272 MB，解開約 610 MB（llama.cpp 官方的 CUDA 版，要先有上面的 NVIDIA 顯示卡加速）。刪除後不會再自動下載。")));
         }
         // NVIDIA 顯示卡加速（R27 R4.6）：只在有 NVIDIA 顯示卡的 x64 電腦（或已經下載過）顯示
-        if (host.Gpu.Applies || host.Models.StateOf(ModelStore.Model.GpuCuda) is not ModelStore.State.Missing)
+        if (host.Gpu.Kind == GpuAcceleration.Pack.Cuda || host.Models.StateOf(ModelStore.Model.GpuCuda) is not ModelStore.State.Missing)
         {
-            // 元件已經載入時刪不掉（DLL 在用），重新開啟拾音之後才能刪
-            var inUse = WhisperEngine.NativeDirectory is { } pack && WhisperEngine.LoadedDirectory == pack;
+            var inUse = PackInUse(ModelStore.Model.GpuCuda);
             models.Children.Add(ModelRow(ModelStore.Model.GpuCuda, transcribing || inUse,
                 inUse ? L.T("轉錄正在用這個元件，重新開啟拾音後才能刪除") : null));
             models.Children.Add(Note(L.T("有 NVIDIA 顯示卡時自動下載，轉錄會快很多。685 MB，解開約 1.1 GB（whisper.cpp 官方的 CUDA 版）。刪除後不會再自動下載。")));
         }
+        // AMD 顯示卡加速（R27 R4.7）：只在有 AMD 顯示卡（沒有 NVIDIA）的 x64 電腦（或已經下載過）顯示
+        if (host.Gpu.Kind == GpuAcceleration.Pack.Vulkan || host.Models.StateOf(ModelStore.Model.QwenVulkan) is not ModelStore.State.Missing)
+        {
+            models.Children.Add(ModelRow(ModelStore.Model.QwenVulkan, transcribing));
+            models.Children.Add(Note(L.F("有 AMD 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 改用顯示卡轉錄。%@，解開約 %@（llama.cpp 官方的 Vulkan 版）。刪除後不會再自動下載。",
+                Recorder.ByteCount(ModelStore.QwenVulkan.Size), Recorder.ByteCount(Unpacked(ModelStore.QwenVulkan)))));
+        }
+        if (host.Gpu.Kind == GpuAcceleration.Pack.Vulkan || host.Models.StateOf(ModelStore.Model.GpuVulkan) is not ModelStore.State.Missing)
+        {
+            var inUse = PackInUse(ModelStore.Model.GpuVulkan);
+            models.Children.Add(ModelRow(ModelStore.Model.GpuVulkan, transcribing || inUse,
+                inUse ? L.T("轉錄正在用這個元件，重新開啟拾音後才能刪除") : null));
+            models.Children.Add(Note(L.F("有 AMD 顯示卡時自動下載，正式轉錄改用顯示卡。%@，解開約 %@（拾音用同一版 whisper.cpp 建的 Vulkan 版）。刪除後不會再自動下載。",
+                Recorder.ByteCount(ModelStore.GpuVulkan.Size), Recorder.ByteCount(Unpacked(ModelStore.GpuVulkan)))));
+        }
         return models;
     }
+
+    /// <summary>元件已經載入時刪不掉（DLL 在用），重新開啟拾音之後才能刪</summary>
+    bool PackInUse(ModelStore.Model pack) =>
+        WhisperEngine.LoadedDirectory is { } loaded && string.Equals(loaded, host.Models.Directory(pack), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>壓縮檔解開之後的大小（解出來的檔案加起來）</summary>
+    static long Unpacked(ModelStore.ModelInfo info) => info.Files.Sum(f => f.Extract?.Sum(e => e.Size) ?? f.Size);
 
     FrameworkElement StorageRows()
     {

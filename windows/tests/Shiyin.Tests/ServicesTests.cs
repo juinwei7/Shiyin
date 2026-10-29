@@ -375,12 +375,12 @@ public sealed class ServicesTests : IDisposable
         {
             // 用不上（沒有 NVIDIA 或不是 x64）：不下載、不記成下載過
             var store = new ModelStore(paths.Models, http, catalog);
-            new GpuAcceleration(store, settings, applies: false, app).Start();
+            new GpuAcceleration(store, settings, GpuAcceleration.Pack.None, app).Start();
             Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.GpuCuda));
             Assert.False(settings.GpuPackOffered);
 
             // 用得上：自動下載一次；裝好時 whisper 還沒載入，就改從元件資料夾載入，shim 和 VC++ 執行階段複製過去
-            var gpu = new GpuAcceleration(store, settings, applies: true, app);
+            var gpu = new GpuAcceleration(store, settings, GpuAcceleration.Pack.Cuda, app);
             gpu.Start();
             Assert.True(settings.GpuPackOffered);
             Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuCuda, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
@@ -393,7 +393,7 @@ public sealed class ServicesTests : IDisposable
             // app 更新後 shim 換了：下次啟動時複製新的
             Whisper.WhisperEngine.NativeDirectory = null;
             File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [9, 9]);
-            new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, applies: true, app).Start();
+            new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, GpuAcceleration.Pack.Cuda, app).Start();
             Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
             Assert.Equal([9, 9], File.ReadAllBytes(Path.Combine(dir, "shiyin_whisper.dll")));
 
@@ -401,11 +401,101 @@ public sealed class ServicesTests : IDisposable
             Whisper.WhisperEngine.NativeDirectory = null;
             store.Delete(ModelStore.Model.GpuCuda);
             var after = new ModelStore(paths.Models, http, catalog);
-            new GpuAcceleration(after, settings, applies: true, app).Start();
+            new GpuAcceleration(after, settings, GpuAcceleration.Pack.Cuda, app).Start();
             Assert.IsType<ModelStore.State.Missing>(after.StateOf(ModelStore.Model.GpuCuda));
             Assert.Null(Whisper.WhisperEngine.NativeDirectory);
         }
         finally { Whisper.WhisperEngine.NativeDirectory = null; }
+    }
+
+    [Fact]
+    public void GpuPackDependsOnArchitectureAndVendor()
+    {
+        // R27 R4.6、R4.7：只有 x64；NVIDIA 和 AMD 都有時用 CUDA；都沒有（只有 Intel）不下載
+        Assert.Equal(GpuAcceleration.Pack.Cuda, GpuAcceleration.PackFor(x64: true, nvidia: true, amd: false));
+        Assert.Equal(GpuAcceleration.Pack.Cuda, GpuAcceleration.PackFor(x64: true, nvidia: true, amd: true));
+        Assert.Equal(GpuAcceleration.Pack.Vulkan, GpuAcceleration.PackFor(x64: true, nvidia: false, amd: true));
+        Assert.Equal(GpuAcceleration.Pack.None, GpuAcceleration.PackFor(x64: true, nvidia: false, amd: false));
+        Assert.Equal(GpuAcceleration.Pack.None, GpuAcceleration.PackFor(x64: false, nvidia: true, amd: true));
+    }
+
+    [Fact]
+    public async Task VulkanPackDownloadsOnceAndQwenUsesVulkanServer()
+    {
+        var a = Bytes(1_000, 8);
+        var b = Bytes(500, 9);
+        var whisperZip = Zip(("whisper.dll", a));
+        var llamaZip = Zip(("llama-server.exe", b));
+        Serve(new() { ["/vulkan.zip"] = new(whisperZip), ["/llama.zip"] = new(llamaZip) });
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.GpuVulkan] = new("vulkan", [new("gpu-vulkan/pack.zip", server.Url + "/vulkan.zip", whisperZip.Length, Sha(whisperZip),
+                [new ModelStore.ArchiveEntry("whisper.dll", "gpu-vulkan/whisper.dll", a.Length)])], Folder: "gpu-vulkan"),
+            [ModelStore.Model.QwenVulkan] = new("qwen vulkan", [new("qwen-runtime-vulkan/llama.zip", server.Url + "/llama.zip", llamaZip.Length, Sha(llamaZip),
+                [new ModelStore.ArchiveEntry("llama-server.exe", "qwen-runtime-vulkan/llama-server.exe", b.Length)])], Folder: "qwen-runtime-vulkan"),
+        };
+        var app = Path.Combine(home.Path, "app");
+        Directory.CreateDirectory(app);
+        File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [1, 2, 3]);
+        var settings = AppSettings.InMemory();
+        try
+        {
+            // 有 AMD、沒有 NVIDIA：下載 Vulkan 版（只自動一次），CUDA 版不碰；沒選 Qwen 時不下載 Qwen 的 Vulkan 版
+            var store = new ModelStore(paths.Models, http, catalog);
+            var gpu = new GpuAcceleration(store, settings, GpuAcceleration.Pack.Vulkan, app);
+            gpu.Start();
+            Assert.True(settings.GpuVulkanOffered);
+            Assert.False(settings.GpuPackOffered);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuVulkan, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            var dir = Path.Combine(paths.Models, "gpu-vulkan");
+            for (var i = 0; i < 100 && Whisper.WhisperEngine.NativeDirectory != dir; i++) await Task.Delay(20);
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.Equal([1, 2, 3], File.ReadAllBytes(Path.Combine(dir, "shiyin_whisper.dll")));
+            Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.GpuCuda));
+            Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.QwenVulkan));
+            Assert.False(settings.QwenVulkanOffered);
+
+            // 選了 Qwen：自動下載一次 llama.cpp 的 Vulkan 版（不用 whisper 的 CUDA 元件）；裝好之後 llama-server 用 Vulkan 版、-ngl 999、不用另外的執行階段
+            Assert.Equal(GpuAcceleration.QwenGpu.None, gpu.QwenRuntime);
+            settings.Set(AppSettings.TranscriptionEngineKey, "qwen");
+            gpu.OfferQwenGpu();
+            Assert.True(settings.QwenVulkanOffered);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.QwenVulkan, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            Assert.Equal(GpuAcceleration.QwenGpu.Vulkan, gpu.QwenRuntime);
+            var options = new SpeechEngines(store, () => gpu.QwenRuntime).QwenOptions();
+            Assert.Equal(store.PathIn(ModelStore.QwenVulkanServerPath), options.Executable);
+            Assert.True(options.Gpu);
+            Assert.Null(options.ExtraPath);
+
+            // 刪掉之後不再自動下載；換成 NVIDIA 的電腦（或 x64 以外）不用 Vulkan 版的 Qwen
+            store.Delete(ModelStore.Model.QwenVulkan);
+            gpu.OfferQwenGpu();
+            Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.QwenVulkan));
+            Assert.Equal(GpuAcceleration.QwenGpu.None, new GpuAcceleration(store, settings, GpuAcceleration.Pack.Cuda, app).QwenRuntime);
+            Assert.Equal(store.PathIn(ModelStore.QwenServerPath), new SpeechEngines(store).QwenOptions().Executable);
+        }
+        finally { Whisper.WhisperEngine.NativeDirectory = null; }
+    }
+
+    [Fact]
+    public void VulkanPacksUnpackTheRightFiles()
+    {
+        // Qwen 的 Vulkan 版：ggml-vulkan 加上跟 CPU 版一樣的檔案；whisper 的 Vulkan 版：跟 CUDA 版同一組 whisper、ggml，ggml-cuda 換成 ggml-vulkan
+        var qwen = Assert.Single(ModelStore.QwenVulkan.Files);
+        Assert.Equal("qwen-runtime-vulkan", ModelStore.QwenVulkan.Folder);
+        var names = qwen.Extract!.Select(e => e.Entry).ToHashSet();
+        Assert.Contains("ggml-vulkan.dll", names);
+        Assert.Contains("llama-server.exe", names);
+        Assert.All(qwen.Extract!, e => Assert.StartsWith("qwen-runtime-vulkan/", e.Path));
+        var cpu = ModelStore.Qwen.Files[2].Extract!.Select(e => e.Entry).ToHashSet();
+        if (!cpu.Contains("ggml-cpu.dll")) Assert.Superset(cpu, names);   // x64 的 CPU 版（ARM64 的 CPU 版檔案不同）
+        var whisper = Assert.Single(ModelStore.GpuVulkan.Files);
+        Assert.Equal("gpu-vulkan", ModelStore.GpuVulkan.Folder);
+        var files = whisper.Extract!.Select(e => e.Entry).ToList();
+        Assert.Contains("ggml-vulkan.dll", files);
+        Assert.Contains("whisper.dll", files);
+        Assert.DoesNotContain("ggml-cuda.dll", files);
+        Assert.DoesNotContain("shiyin_whisper.dll", files);   // shim 用安裝資料夾的（同 CUDA）
     }
 
     // MARK: 匯入、封包

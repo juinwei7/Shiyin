@@ -59,8 +59,8 @@ public interface ISpeechEngines
                                   IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control);
 }
 
-/// <summary>真的引擎：whisper.cpp、SenseVoice、sherpa-onnx、llama-server，模型從 ModelStore 的位置讀。qwenCuda：Qwen 要不要用 CUDA 版</summary>
-public sealed class SpeechEngines(ModelStore models, Func<bool>? qwenCuda = null) : ISpeechEngines
+/// <summary>真的引擎：whisper.cpp、SenseVoice、sherpa-onnx、llama-server，模型從 ModelStore 的位置讀。qwenGpu：Qwen 用哪一版的 llama-server（CUDA、Vulkan、CPU）</summary>
+public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGpu>? qwenGpu = null) : ISpeechEngines
 {
     public List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
                                          IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control)
@@ -69,15 +69,22 @@ public sealed class SpeechEngines(ModelStore models, Func<bool>? qwenCuda = null
         return QwenTranscriber.Transcribe(samples, chunks, server, language, glossary, control, retry, guard);
     }
 
-    /// <summary>llama-server 的位置：SHIYIN_QWEN_SERVER（Mac 上評估用）、CUDA 版（有 NVIDIA 而且裝好）、CPU 版</summary>
+    /// <summary>llama-server 的位置：SHIYIN_QWEN_SERVER（Mac 上評估用）、CUDA 版（有 NVIDIA 而且裝好）、Vulkan 版（有 AMD 而且裝好）、CPU 版。
+    /// CUDA 版的 cudart、cublas 用 whisper 那一份（子程序的 PATH）；Vulkan 版不用另外的執行階段</summary>
     public QwenServer.Options QwenOptions()
     {
-        var cuda = qwenCuda?.Invoke() == true;
+        var gpu = qwenGpu?.Invoke() ?? GpuAcceleration.QwenGpu.None;
         var custom = Environment.GetEnvironmentVariable("SHIYIN_QWEN_SERVER");
         var files = models.InfoOf(ModelStore.Model.Qwen).Files;
-        return new QwenServer.Options(custom ?? models.PathIn(cuda ? ModelStore.QwenCudaServerPath : ModelStore.QwenServerPath),
-            models.PathOf(files[0]), models.PathOf(files[1]), QwenServer.DefaultThreads, cuda || custom is not null,
-            cuda ? models.PathIn(ModelStore.CudaRuntimePath) : null);
+        var server = gpu switch
+        {
+            GpuAcceleration.QwenGpu.Cuda => ModelStore.QwenCudaServerPath,
+            GpuAcceleration.QwenGpu.Vulkan => ModelStore.QwenVulkanServerPath,
+            _ => ModelStore.QwenServerPath,
+        };
+        return new QwenServer.Options(custom ?? models.PathIn(server),
+            models.PathOf(files[0]), models.PathOf(files[1]), QwenServer.DefaultThreads, gpu != GpuAcceleration.QwenGpu.None || custom is not null,
+            gpu == GpuAcceleration.QwenGpu.Cuda ? models.PathIn(ModelStore.CudaRuntimePath) : null);
     }
 
     public SenseVoiceModels FastModels

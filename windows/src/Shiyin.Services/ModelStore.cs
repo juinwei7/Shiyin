@@ -14,8 +14,9 @@ namespace Shiyin.Services;
 /// </summary>
 public sealed class ModelStore
 {
-    /// <summary>Qwen：Qwen3-ASR 的兩個模型檔加 llama.cpp 的執行檔（design-windows §8.4）；QwenCuda：NVIDIA 用的 llama.cpp CUDA 版</summary>
-    public enum Model { Breeze, Japanese, LanguageDetection, FastRecognition, Diarization, GpuCuda, Qwen, QwenCuda }
+    /// <summary>Qwen：Qwen3-ASR 的兩個模型檔加 llama.cpp 的執行檔（design-windows §8.4）；QwenCuda：NVIDIA 用的 llama.cpp CUDA 版；
+    /// GpuVulkan、QwenVulkan：AMD 用的 whisper、llama.cpp Vulkan 版（R27 R4.7、D127）</summary>
+    public enum Model { Breeze, Japanese, LanguageDetection, FastRecognition, Diarization, GpuCuda, Qwen, QwenCuda, GpuVulkan, QwenVulkan }
 
     /// <summary>壓縮檔裡要解出來的檔案：壓縮檔裡的路徑、解到哪裡（models 底下）、大小</summary>
     public sealed record ArchiveEntry(string Entry, string Path, long Size);
@@ -98,6 +99,23 @@ public sealed class ModelStore
         684_913_404, "afef0b881c500958921c3f5523b50e59ee2ec9b6f5cbd25b324c51ed308a957a",
         [.. CudaFiles.Select(f => new ArchiveEntry("Release/" + f.Name, "gpu-cuda12/" + f.Name, f.Size))])], Folder: "gpu-cuda12");
 
+    // 要在 GpuVulkan 之前宣告。W-AMD1：windows-gpu-pack.yml 建好之後，把每個檔案的大小、壓縮檔的大小和 SHA-256 填進來
+    static readonly (string Name, long Size)[] VulkanFiles =
+    [
+        ("whisper.dll", 0), ("ggml.dll", 0), ("ggml-base.dll", 0), ("ggml-vulkan.dll", 0),
+        ("ggml-cpu-alderlake.dll", 0), ("ggml-cpu-cannonlake.dll", 0), ("ggml-cpu-cascadelake.dll", 0),
+        ("ggml-cpu-haswell.dll", 0), ("ggml-cpu-icelake.dll", 0), ("ggml-cpu-sandybridge.dll", 0),
+        ("ggml-cpu-skylakex.dll", 0), ("ggml-cpu-sse42.dll", 0), ("ggml-cpu-x64.dll", 0),
+    ];
+
+    /// <summary>
+    /// AMD 顯示卡加速（R27 R4.7、design-windows §8、D127）：拾音自己在 CI 用同一個 commit 建的 whisper Vulkan 版（windows-gpu-pack.yml），
+    /// 放在 GitHub 的 prerelease（官網、Windows 的檢查更新都跳過 prerelease）。整套 whisper 都用這裡的，shim 用安裝資料夾的（同 CUDA）
+    /// </summary>
+    public static readonly ModelInfo GpuVulkan = new(L.T("AMD 顯示卡加速（Vulkan）"), [new("gpu-vulkan/whisper-vulkan.zip",
+        "https://github.com/juinwei7/Shiyin/releases/download/win-gpu-vulkan-b5454/whisper-vulkan-x64.zip",
+        0, "", [.. VulkanFiles.Select(f => new ArchiveEntry(f.Name, "gpu-vulkan/" + f.Name, f.Size))])], Folder: "gpu-vulkan");
+
     // MARK: Qwen3-ASR（R43.9、design-windows §8.4、D95）：模型同 Mac，執行檔是 llama.cpp 官方 b11840 的 Windows 版
 
     const string LlamaRelease = "https://github.com/ggml-org/llama.cpp/releases/download/b11840";
@@ -127,6 +145,12 @@ public sealed class ModelStore
         ("ggml-cuda.dll", 577_741_824), .. LlamaX64,
     ];
 
+    /// <summary>Vulkan 版（AMD，R4.7）：ggml-vulkan 加上跟 CPU 版一樣的檔案（大小也一樣）；Vulkan 的執行階段是顯示卡驅動附的</summary>
+    static readonly (string Name, long Size)[] LlamaVulkan =
+    [
+        ("ggml-vulkan.dll", 41_530_368), .. LlamaX64,
+    ];
+
     static IReadOnlyList<ArchiveEntry> Entries((string Name, long Size)[] files, string folder) =>
         [.. files.Select(f => new ArchiveEntry(f.Name, folder + "/" + f.Name, f.Size))];
 
@@ -151,9 +175,15 @@ public sealed class ModelStore
             272_406_409, "519357996dfae171eee635cfbe9b4ca0c21bdfd85a59356b593578b41c1a2d0f", Entries(LlamaCuda, "qwen-runtime-cuda")),
     ], Folder: "qwen-runtime-cuda");
 
-    /// <summary>llama-server 在哪：CUDA 版（有裝、有 NVIDIA）或 CPU 版</summary>
+    public static readonly ModelInfo QwenVulkan = new(L.T("Qwen3-ASR 的 AMD 顯示卡加速（Vulkan）"), [
+        new("qwen-runtime-vulkan/llama-vulkan.zip", $"{LlamaRelease}/llama-b11840-bin-win-vulkan-x64.zip",
+            36_956_784, "406c827d9cb6f968eafeabdfb6bca5a2c3c3a20722f6b8d4f0714fcba303a492", Entries(LlamaVulkan, "qwen-runtime-vulkan")),
+    ], Folder: "qwen-runtime-vulkan");
+
+    /// <summary>llama-server 在哪：CUDA 版（有裝、有 NVIDIA）、Vulkan 版（有裝、有 AMD）或 CPU 版</summary>
     public const string QwenServerPath = "qwen-runtime/llama-server.exe";
     public const string QwenCudaServerPath = "qwen-runtime-cuda/llama-server.exe";
+    public const string QwenVulkanServerPath = "qwen-runtime-vulkan/llama-server.exe";
     public const string CudaRuntimePath = "gpu-cuda12";
 
     public static ModelInfo Info(Model model) => model switch
@@ -162,6 +192,8 @@ public sealed class ModelStore
         Model.GpuCuda => GpuCuda,
         Model.Qwen => Qwen,
         Model.QwenCuda => QwenCuda,
+        Model.GpuVulkan => GpuVulkan,
+        Model.QwenVulkan => QwenVulkan,
         Model.Japanese => Japanese,
         Model.LanguageDetection => LanguageDetection,
         Model.FastRecognition => FastRecognition,
