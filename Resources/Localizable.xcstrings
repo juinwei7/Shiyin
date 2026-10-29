@@ -84,6 +84,17 @@
         }
       }
     },
+    "%@ 附的 codex": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codex bundled with %@"
+          }
+        }
+      }
+    },
     "%@・最近：%@ %@": {
       "extractionState": "manual",
       "localizations": {
@@ -635,6 +646,17 @@
         }
       }
     },
+    "Codex 還沒登入或登入已過期，請打開 %@ 重新登入後再試一次。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex isn’t signed in, or its sign-in has expired. Open %@, sign in again, and try once more."
+          }
+        }
+      }
+    },
     "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。": {
       "extractionState": "manual",
       "localizations": {
@@ -657,6 +679,17 @@
         }
       }
     },
+    "Codex 還沒登入，請打開 %@ 登入之後再整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex isn’t signed in. Open %@ and sign in to summarize."
+          }
+        }
+      }
+    },
     "Codex（codex CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -664,6 +697,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Codex (codex CLI)"
+          }
+        }
+      }
+    },
+    "Codex（使用 %@ 附的 codex）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex (using the codex bundled with %@)"
           }
         }
       }
@@ -1635,6 +1679,17 @@
         }
       }
     },
+    "你有 Claude 桌面版：另外安裝 Claude Code（命令列版）之後，拾音就能用你的 Claude 訂閱（Pro 以上）整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You have the Claude desktop app. Install Claude Code (the command-line version) as well, and Shiyin can summarize with your Claude subscription (Pro or higher)."
+          }
+        }
+      }
+    },
     "你的回答": {
       "extractionState": "manual",
       "localizations": {
@@ -1642,6 +1697,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your answer"
+          }
+        }
+      }
+    },
+    "使用 %@ 附的 codex（這台 Mac 沒有另外安裝 Codex CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the codex bundled with %@ (Codex CLI isn't installed separately on this Mac)"
           }
         }
       }
@@ -3402,6 +3468,17 @@
         }
       }
     },
+    "安裝說明": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installation guide"
+          }
+        }
+      }
+    },
     "完成": {
       "extractionState": "manual",
       "localizations": {
@@ -4292,6 +4369,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Manual edit"
+          }
+        }
+      }
+    },
+    "打開 %@ 登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@ to Sign In"
+          }
+        }
+      }
+    },
+    "打開「終端機」，貼上這一行安裝：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Terminal and paste this line to install:"
           }
         }
       }
@@ -6166,6 +6265,17 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "有 Claude 桌面版，但拾音要另外安裝 Claude Code（命令列版）：在終端機執行 %@，再執行 claude 登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Claude desktop app is installed, but Shiyin needs Claude Code (the command-line version): run %@ in Terminal, then sign in by running claude"
           }
         }
       }
@@ -8418,6 +8528,17 @@
         }
       }
     },
+    "裝好之後在終端機執行 claude 登入，再按「重新檢查」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After installing, run claude in Terminal to sign in, then click “Check Again”."
+          }
+        }
+      }
+    },
     "複製": {
       "extractionState": "manual",
       "localizations": {
@@ -9498,6 +9619,17 @@
         }
       }
     },
+    "這台 Mac 找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code (the command-line version) isn't installed on this Mac. The Claude desktop app can't be used directly: go to Settings → Summarizer and follow the steps to install Claude Code, or choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
     "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
       "extractionState": "manual",
       "localizations": {
@@ -9516,6 +9648,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "codex isn't installed on this Mac. If you don't use Codex, go to Settings → Summarizer and choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有安裝 Claude Code（命令列版），安裝方法在下面": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code (the command-line version) isn't installed on this Mac. See how to install it below"
           }
         }
       }
@@ -9747,6 +9890,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Don’t mention this again during this recording"
+          }
+        }
+      }
+    },
+    "這是 %@ 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is the codex bundled with %@. You can also install Codex CLI (npm install -g @openai/codex) and try again."
           }
         }
       }

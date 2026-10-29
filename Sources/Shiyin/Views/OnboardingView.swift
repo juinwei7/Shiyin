@@ -22,6 +22,8 @@ struct OnboardingView: View {
     /// 第二段選的整理工具（R45.2、design §34.3）：選了不等於設定好，準備好（登入了、存了 key）才寫進設定
     @State private var pending: LLMProvider?
     @State private var setup: ProviderSetup = .idle
+    /// Claude Code 安裝說明的「重新檢查」：重新找 claude
+    @State private var toolRecheck = 0
 
     private enum ProviderSetup: Equatable {
         case idle, checkingLogin, notLoggedIn, needsKey, needsCompat, testing
@@ -151,6 +153,7 @@ struct OnboardingView: View {
     /// 整理工具（R44.6、D111）：先問「你平常用哪個 AI？」，選了才列對應的一到兩個選項，每個一行寫要不要錢。
     /// 選了不等於設定好（R45.2）：準備好才寫進設定，寫進去時測一次
     private var providers: some View {
+        _ = toolRecheck
         let claude = Paths.findTool("claude"), codex = Paths.findTool("codex")
         let usualValue = usual ?? guessedUsual(claude: claude, codex: codex)
         let list = options(for: usualValue, claude: claude, codex: codex)
@@ -166,6 +169,13 @@ struct OnboardingView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            // 只有 Claude 桌面版：說明怎麼裝 Claude Code（R56.2）
+            if usualValue == "claude" && claude == nil && DesktopApps.hasClaude {
+                ClaudeCodeInstallHint {
+                    DesktopApps.clearCache()
+                    toolRecheck += 1
+                }
+            }
             Picker("整理工具", selection: Binding(get: { shown?.rawValue ?? "" }, set: { choose(LLMProvider(rawValue: $0)) })) {
                 ForEach(list, id: \.provider) { option in
                     VStack(alignment: .leading, spacing: 2) {
@@ -211,7 +221,10 @@ struct OnboardingView: View {
             } else if state == .notLoggedIn {
                 Text("\(name) 還沒登入，登入之後才會用它整理。").foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
                 HStack {
-                    Button("登入 \(name)") { CLILogin.openLogin(provider) }
+                    // 桌面版附的 codex：打開那個 app 登入（R55.3）
+                    Button(CLILogin.desktopApp(provider).map { String(localized: "打開 \($0) 登入") } ?? String(localized: "登入 \(name)")) {
+                        CLILogin.openLogin(provider)
+                    }
                     Button("重新檢查") { choose(provider) }
                 }
             }
@@ -328,7 +341,12 @@ struct OnboardingView: View {
             return list
         case "chatgpt":
             var list: [ProviderOption] = []
-            if codex != nil { list.append(.init(provider: .codex, title: String(localized: "Codex（這台 Mac 已經裝了 codex CLI）"), cost: subscription)) }
+            if codex != nil {
+                // 桌面版附的 codex（R55.3）
+                let title = CLILogin.desktopApp(.codex).map { String(localized: "Codex（使用 \($0) 附的 codex）") }
+                    ?? String(localized: "Codex（這台 Mac 已經裝了 codex CLI）")
+                list.append(.init(provider: .codex, title: title, cost: subscription))
+            }
             list.append(.init(provider: .openai, title: String(localized: "OpenAI API"), cost: api))
             return list
         case "gemini":

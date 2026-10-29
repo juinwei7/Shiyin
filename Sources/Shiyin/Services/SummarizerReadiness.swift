@@ -27,6 +27,8 @@ enum SummarizerProblem: Equatable {
         case .off: return String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API")
         case .notInstalled(let provider): return LLMError.notInstalled(provider == .codex ? "codex" : "claude").localizedDescription
         case .notLoggedIn(let provider):
+            // 用桌面版附的 codex：到那個 app 登入（R55.3）
+            if let app = CLILogin.desktopApp(provider) { return String(localized: "Codex 還沒登入，請打開 \(app) 登入之後再整理。") }
             return provider == .codex
                 ? String(localized: "Codex 還沒登入，登入之後才能整理（終端機指令：codex login）。")
                 : String(localized: "Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。")
@@ -41,7 +43,7 @@ enum SummarizerProblem: Equatable {
     var action: Action {
         switch self {
         case .notLoggedIn(let provider): return .login(provider)
-        case .paused(let provider, let detail) where (provider == .claude || provider == .codex) && LLMError.isLoginProblem(detail):
+        case .paused(let provider, let detail) where (provider == .claude || provider == .codex) && LLMError.isLoginMessage(detail):
             return .login(provider)
         default: return .openSettings
         }
@@ -50,7 +52,9 @@ enum SummarizerProblem: Equatable {
     var actionTitle: String {
         switch action {
         case .openSettings: return String(localized: "打開設定")
-        case .login(let provider): return String(localized: "登入 \(provider == .codex ? "Codex" : "Claude Code")")
+        case .login(let provider):
+            if let app = CLILogin.desktopApp(provider) { return String(localized: "打開 \(app) 登入") }
+            return String(localized: "登入 \(provider == .codex ? "Codex" : "Claude Code")")
         }
     }
 }

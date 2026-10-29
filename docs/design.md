@@ -1639,29 +1639,32 @@ Windows 的做法在 design-windows §10。
 
 ### 37.2 畫面（R55.2、R55.3、R55.4）
 
-- 自動選整理工具（§19.6）、`SummarizerProblem`（§34.1）、引導和設定頁的選單都用 `findTool`，桌面版附的 codex 自動算進去，不另外改。
-- 設定的整理工具選了 Codex、用的是桌面版附的：「狀態」已登入時寫「已登入 …（使用 ChatGPT 附的 codex）」；沒登入時按鈕是「打開 ChatGPT 登入」（`NSWorkspace.shared.open(appURL)`），不開終端機跑 `codex login`。
-- `SummarizerProblem.notLoggedIn(.codex)`：用桌面版附的時候，`message` 是「Codex 還沒登入：打開 ChatGPT 登入後，回到拾音按「重新檢查」」，`action` 的按鈕（會議頁、失敗橫幅）是「打開 ChatGPT」，按下去同上。
-- 引導：「Codex（這台 Mac 已經裝了 codex CLI）」在用桌面版附的時候改成「Codex（使用 ChatGPT 附的 codex）」。
+- 自動選整理工具（§19.6）、`SummarizerProblem`（§34.1）、引導和設定頁的選單都用 `findTool`，桌面版附的 codex 自動算進去，不另外改。`CLILogin.desktopApp(provider)`：用桌面版附的 codex 時是 app 的名稱，其他是 nil，下面的文字都看它。
+- 設定的整理工具選了 Codex、用的是桌面版附的：「狀態」照舊（已登入、沒有登入），下面多一行小字「使用 ChatGPT 附的 codex（這台 Mac 沒有另外安裝 Codex CLI）」；沒登入時的按鈕是「打開 ChatGPT 登入」（`CLILogin.openLogin` 遇到 `appURL` 就 `NSWorkspace.shared.open(appURL)`），不開終端機跑 `codex login`。「重新檢查」清掉 §37.1 的快取再查登入。
+- `SummarizerProblem.notLoggedIn(.codex)`：`message` 是「Codex 還沒登入，請打開 ChatGPT 登入之後再整理。」，`actionTitle`（會議頁、失敗橫幅）是「打開 ChatGPT 登入」。`LLMError.notLoggedIn("codex")` 是「Codex 還沒登入或登入已過期，請打開 ChatGPT 重新登入後再試一次。」。
+- 這兩句沒有終端機指令，`LLMError.isLoginProblem` 認不出來；它也是標準答案（`util/login-problem.json`）比對的函式，所以不改它，另外加 `LLMError.isLoginMessage`（`isLoginProblem` 或包含上面那句），給失敗橫幅的「打開 ChatGPT 登入」和 `.paused` 的 `action` 用。
+- 引導：「Codex（這台 Mac 已經裝了 codex CLI）」在用桌面版附的時候改成「Codex（使用 ChatGPT 附的 codex）」；沒登入時的按鈕同上。
 - 環境檢查：codex 那一列的 `detail` 寫「ChatGPT 附的 codex」。
-- 桌面版附的 codex 執行失敗（不是沒登入、用量上限，§34.4）：錯誤訊息後面接「也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試」（R55.4）。
+- 桌面版附的 codex 執行失敗（不是沒登入、用量上限，§34.4）：錯誤訊息後面換行接「這是 ChatGPT 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。」（R55.4）。
 
 ### 37.3 Claude 桌面版：說明怎麼裝 Claude Code（R56，D128）
 
 - 不找 Claude 桌面版裡的 claude（`~/Library/Application Support/Claude/claude-code/<版本>/<雜湊>/claude.app`）：那是桌面版私有的資料夾，登入由桌面版管，Anthropic 的條款不允許第三方 app 轉用 Claude 帳號的登入資料（D128）。
-- 有沒有 Claude 桌面版：LaunchServices 找得到 bundle id `com.anthropic.claudefordesktop`（快取 30 秒，同 §37.1）。
-- 提示（`ClaudeCodeInstallHint`）：「你有 Claude 桌面版：另外安裝 Claude Code（命令列版）之後，拾音就能用你的 Claude 訂閱整理。」、可以選取的指令 `curl -fsSL https://claude.ai/install.sh | bash` 和「複製」按鈕、「安裝說明」連結（`https://code.claude.com/docs/en/setup`）、「重新檢查」（清掉找工具的快取，重新查登入）。原生安裝會放在 `~/.local/bin/claude`，`toolDirectories` 本來就找得到。出現在：
-  - 設定的整理工具：claude 找不到、有 Claude 桌面版，而且選的是 Claude Code（R56.3）或還沒設定（`needsProviderSetup`）時，放在選單下面。選單裡的 Claude Code 照舊「（沒有安裝）」、不能選。已經用別的整理工具的人不顯示。
-  - 引導：第一段選了「Claude」、claude 找不到、有 Claude 桌面版時，放在第二段的選項上面（Anthropic API 照舊可以選）。
-  - `SummarizerProblem.notInstalled(.claude)`、`LLMError.notInstalled("claude")`（R35.4）：有 Claude 桌面版時，`message` 改成「這台電腦找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」」。
+- 有沒有 Claude 桌面版：`DesktopApps.hasClaude`，LaunchServices 找得到 bundle id `com.anthropic.claudefordesktop`（快取 30 秒，同 §37.1）。
+- 提示（`Views/ClaudeCodeInstallHint.swift`）：「你有 Claude 桌面版：另外安裝 Claude Code（命令列版）之後，拾音就能用你的 Claude 訂閱（Pro 以上）整理。」（官方說明寫免費方案不能用 Claude Code）、「打開「終端機」，貼上這一行安裝：」、可以選取的指令 `curl -fsSL https://claude.ai/install.sh | bash` 和「複製」按鈕（按了變「已複製」；「複製」在翻譯表裡是複製會議的 Duplicate，這裡用 `MeetingLanguage.ui(zh: "複製", en: "Copy")`）、「安裝說明」連結（`https://code.claude.com/docs/en/setup`）、「重新檢查」、小字「裝好之後在終端機執行 claude 登入，再按「重新檢查」。」。原生安裝會放在 `~/.local/bin/claude`，`toolDirectories` 本來就找得到。出現在：
+  - 設定的整理工具：claude 找不到、有 Claude 桌面版，而且選的是 Claude Code（R56.3）或還沒設定（`needsProviderSetup`）時，放在選單和「狀態」下面；這時「狀態」寫「這台 Mac 沒有安裝 Claude Code（命令列版），安裝方法在下面」。選單裡的 Claude Code 照舊「（沒有安裝）」、不能選。已經用別的整理工具的人不顯示。
+  - 引導：第一段是「Claude」、claude 找不到、有 Claude 桌面版時，放在第二段的選項上面（Anthropic API 照舊可以選）。
+  - `SummarizerProblem.notInstalled(.claude)`、`LLMError.notInstalled("claude")`（R35.4）：有 Claude 桌面版時是「這台 Mac 找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」」。
+  - 環境檢查：claude 找不到、有 Claude 桌面版時，`fix` 寫「有 Claude 桌面版，但拾音要另外安裝 Claude Code（命令列版）：在終端機執行 curl -fsSL https://claude.ai/install.sh | bash，再執行 claude 登入」。
 - 不在拾音裡執行安裝指令（R56「不做」）：要執行網路上的腳本，失敗時拾音也說明不了。
 
 ### 37.4 DEBUG、驗證
 
-- `-debugNoCLI YES` 照舊是 claude、codex 都找不到（包括桌面版），舊的驗證方法不變。另外加：`-debugOnlyDesktopCLI YES` 不看 `toolDirectories`，只找桌面版（在裝了 CLI 的電腦上測桌面版）；`-debugClaudeDesktop yes|no` 假裝有、沒有 Claude 桌面版；`-debugCodexApp <路徑>` 不問 LaunchServices，把這個資料夾當成 Codex 桌面版（在暫存資料夾做說明檔不對的假 app：`layoutVersion` 2、`..`、絕對路徑、entrypoint 不能執行）。
-- `shiyinctl state` 多 `tools`：`{"claude": {"path", "desktopApp"}, "codex": {…}, "claudeDesktop": true}`。
-- 這台 Mac（ChatGPT.app 26.1021）：`-debugOnlyDesktopCLI YES -llmProvider codex` 看 state、設定頁和引導（`preview`）、環境檢查；實際整理一場短的會議（會用使用者的 ChatGPT 額度，先問）。「打開 ChatGPT 登入」會在使用者的畫面上打開 ChatGPT，也要先問。
-- Claude 的提示：`-debugNoCLI YES -llmProvider ""` 看設定頁、引導；`-debugNoCLI YES -llmProvider claude` 看會議頁的訊息；`-debugClaudeDesktop no` 都不出現；按「複製」後剪貼簿是那一行指令。
+- `-debugNoCLI YES` 照舊是 claude、codex 都找不到（包括桌面版），舊的驗證方法不變。另外加：`-debugOnlyDesktopCLI YES` 不看 `toolDirectories`，只找桌面版（在裝了 CLI 的電腦上測桌面版；claude 沒有桌面版可找，所以也是找不到）；`-debugClaudeDesktop yes|no` 假裝有、沒有 Claude 桌面版；`-debugCodexApp <路徑>` 不問 LaunchServices，把這個資料夾當成 Codex 桌面版（在暫存資料夾做說明檔不對的假 app：`layoutVersion` 2、`..`、絕對路徑、entrypoint 不能執行、不是 JSON）。
+- `shiyinctl state` 多 `tools`：`{"claude": {"path", "desktopApp"}, "codex": {"path", "desktopApp", "extraPath"}, "claudeDesktop": true}`；`environment` 每一項多 `detail`、`fix`。
+- 假的 Codex 桌面版：`Contents/MacOS` 放一個只寫標記檔就結束的小程式（`LSUIElement`，不出現在 Dock），`codex-cli/bin/codex` 是 shell script（`login status` 印 Logged in、其他印到 stderr 後結束代碼 3）：測「打開 … 登入」打開的是哪個 app、執行失敗的訊息，不會在使用者的畫面上打開真的 ChatGPT。
+- `shiyinctl summon` 遇到 preview 的視窗（本來就是 `canJoinAllSpaces`）不加 `moveToActiveSpace`：同時設兩種會被 AppKit 丟例外、DEBUG 版當掉（2026-10-29 驗收時發生）。要把 DEBUG 版拉到前面時，依 pid 啟用（`NSRunningApplication.activate`），不要 `open <DEBUG 的 app>`：程序不在時會開出一份沒有 `SHIYIN_HOME` 的新 DEBUG 版。
+- 2026-10-29 的驗收寫在 commit 訊息。
 
 ## 14. 決策紀錄
 
