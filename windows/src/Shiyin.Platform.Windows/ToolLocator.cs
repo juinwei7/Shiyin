@@ -55,21 +55,39 @@ public sealed class WindowsToolLocator : IToolLocator
         var problems = new List<string>();
         foreach (var install in installs)
         {
-            if (CodexPackage.Find(Path.Combine(install.Path, "app", "resources"), out var problem) is not { } package)
+            // 桌面版自己執行的是複製到 %LOCALAPPDATA% 的那份；還沒複製過（沒開過桌面版）才用套件裡的
+            ToolCommand command;
+            if (RelocatedCodex() is { } relocated) command = With(relocated, []);
+            else if (CodexPackage.Find(Path.Combine(install.Path, "app", "resources"), out var problem) is { } package)
+                command = With(package.Executable, [], package.PathDir);
+            else
             {
                 problems.Add(problem ?? "");
                 continue;
             }
             Report(null);
             var (name, appId) = Packages.Manifest(install.Path, "Codex");
-            return With(package.Executable, [], package.PathDir) with
-            {
-                DesktopApp = name,
-                AppUserModelId = appId is null ? null : $"{CodexFamily}!{appId}",
-            };
+            return command with { DesktopApp = name, AppUserModelId = appId is null ? null : $"{CodexFamily}!{appId}" };
         }
         Report(problems.Count == 0 ? null : string.Join(", ", problems));
         return null;
+    }
+
+    /// <summary>
+    /// 桌面版會把附的 codex.exe 複製到 %LOCALAPPDATA%\OpenAI\Codex\bin\&lt;雜湊&gt;\ 再執行：直接執行 WindowsApps 裡的那份，有些電腦會拒絕存取
+    /// （openai/codex #40700、#40867、#42645、#54698）。每個版本一個資料夾，用最新複製的那個；.staging-… 是複製到一半的
+    /// </summary>
+    static string? RelocatedCodex()
+    {
+        try
+        {
+            return new DirectoryInfo(Path.Combine(Local, "OpenAI", "Codex", "bin")).EnumerateDirectories()
+                .Where(d => !d.Name.StartsWith('.') && File.Exists(Path.Combine(d.FullName, "codex.exe")))
+                .OrderByDescending(d => d.CreationTimeUtc)
+                .Select(d => Path.Combine(d.FullName, "codex.exe"))
+                .FirstOrDefault();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     }
 
     /// <summary>說明檔不對只記原因，同一個原因不重複記</summary>

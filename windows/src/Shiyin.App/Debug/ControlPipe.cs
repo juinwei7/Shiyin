@@ -58,6 +58,15 @@ public static class ControlPipe
         switch (args.FirstOrDefault())
         {
             case "state": return State(host, main);
+            // packages <package family>：用 Packages.ByFamily、Manifest 查 MSIX 套件（測查 Codex、Claude 桌面版的系統呼叫，design-windows §10）
+            case "packages" when args.Length > 1:
+                return new JsonArray([.. Platform.Packages.ByFamily(args[1]).Select(p =>
+                {
+                    var (name, appId) = Platform.Packages.Manifest(p.Path, "?");
+                    return (JsonNode)new JsonObject { ["fullName"] = p.FullName, ["path"] = p.Path, ["name"] = name, ["appId"] = appId };
+                })]);
+            // tools refresh：清掉桌面版的快取（等於「重新檢查」）
+            case "tools" when args.Length > 1 && args[1] == "refresh": host.Locator.ClearCache(); return Ok;
             case "select" when args.Length > 1 && long.TryParse(args[1], out var id): main?.Reveal(id); return Ok;
             // tab <summary|transcript|ask>；舊名稱當別名：topics → 紀錄、review → 紀錄並展開待確認、notes → 逐字稿並展開我的筆記（R44.1）
             case "tab" when args.Length > 1 && DetailTabs.Resolve(args[1]) is { } resolved:

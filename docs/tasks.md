@@ -9,14 +9,10 @@
 
 ## Codex、Claude 的桌面版（R55、R56，design §37、design-windows §10、D128；2026-10-29 Threads 的使用者回饋）
 
-Mac（DT1、DT2）2026-10-29 完成，驗收寫在 commit 訊息。Windows 的程式也完成了，剩虛擬機和真的電腦。
+Mac（DT1、DT2）、Windows 的 Claude 桌面版提示（DT4）2026-10-29 完成，驗收寫在 commit 訊息；Windows 的 Codex 桌面版剩真的電腦。
 
-- [~] **DT3 Windows 找 Codex 桌面版附的 codex**（R55，design-windows §10）：程式完成，`dotnet test` 通過（`DesktopAppsTests`：說明檔的規則、沒有說明檔時的 `codex.exe`、桌面版的訊息和按鈕）。還差虛擬機（2026-10-29 Mac 只剩 10 GB，diskguard 的門檻，沒開）：
-  - 驗證：用 `winget install Codex -s msstore` 裝桌面版，記下套件的實際樣子（package family 是不是 `OpenAI.Codex_2p2nqsd0c76g0`、有沒有 `codex-cli\codex-package.json`、entrypoint 是不是 .exe、從套件外能不能執行），寫回 design-windows §10；`--set debugOnlyDesktopCli=YES` 時 `state` 的 `tools.codex`、設定頁（`uia.sh`）的「使用 Codex 附的 codex」和登入狀態、按「打開 Codex 登入」打開的是桌面版；實際整理一場短的會議；`--set debugCodexApp=<假資料夾>` 測說明檔不對時當作沒有（log 有原因）
-- [~] **DT4 Windows 的 Claude 桌面版提示**（R56，design-windows §10）：程式完成，`dotnet test` 通過。還差虛擬機（同 DT3）：
-  - 驗證：`--set debugNoCli=YES` 時，裝 Claude 桌面版（MSIX）前後的設定頁（還沒設定、選了 Claude Code）、引導（選 Claude）有沒有提示；按「複製」後剪貼簿是 `irm https://claude.ai/install.ps1 | iex`；`--set debugClaudeDesktop=no` 不出現
-- [ ] **DT5 只裝了 Codex 桌面版的 Windows 電腦**（要使用者，或請回報的人試）：整理一場會議
-  - 驗證：設定頁寫「使用 Codex 附的 codex」，整理成功
+- [~] **DT3 真的 Codex 桌面版**（R55，design-windows §10；要使用者，或請回報的人試）：程式完成，`dotnet test` 通過；套件的樣子從 openai/codex 的 issue 查到（`app\resources\codex.exe`、桌面版複製到 `%LOCALAPPDATA%\OpenAI\Codex\bin\<雜湊>\`），查套件的系統呼叫在虛擬機驗過。虛擬機沒有 Microsoft Store、裝不了 Codex 桌面版；2026-10-29 想在虛擬機下載 codex 做一個假的桌面版來測，被 Claude Code 的權限檢查擋下，沒有做。還差：
+  - 驗證：一台只裝了 Codex 桌面版（沒有 Codex CLI）的 Windows 電腦，開過一次桌面版之後：設定頁寫「使用 Codex 附的 codex」、登入狀態正確（DEBUG 版的 `state` 的 `tools.codex` 是 `%LOCALAPPDATA%\OpenAI\Codex\bin\…\codex.exe`）；按「打開 Codex 登入」打開的是桌面版；整理一場會議成功
 
 ## 企業伺服器（R49～R52，design §36；2026-10-27 使用者新需求）
 

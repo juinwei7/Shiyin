@@ -1069,6 +1069,17 @@
         }
       }
     },
+    "沒辦法執行 %@ 附的 codex（%@）。可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't run the codex bundled with %@ (%@). You can install Codex CLI (npm install -g @openai/codex) and try again."
+          }
+        }
+      }
+    },
     "沒辦法把 key 存進認證管理員（錯誤代碼 %lld）": {
       "extractionState": "manual",
       "localizations": {
