@@ -16,8 +16,9 @@ permissions:
   contents: write
 
 env:
-  VULKAN_SDK_VERSION: 1.4.309.0
-  VULKAN_SDK_SHA256: 48b132169b64fe65cdb0f20970195335a65354e73f1ea5373032c2a8bbad4297
+  # 跟 llama.cpp b11840 的 Windows Vulkan 版同一個 SDK：ggml-vulkan 要 SPIRV-Headers 的 CMake 設定檔，1.4.309.0 沒有（2026-10-29 run 40817771887）
+  VULKAN_SDK_VERSION: 1.4.357.0
+  VULKAN_SDK_SHA256: 81f474711e9042f4cd22b31b2f7a8870db2e428b21586fb43dd80150be97310d
   MESA_VERSION: 26.2.4
   MESA_SHA256: 351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695
   BASE_MODEL_URL: https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin
@@ -36,12 +37,13 @@ jobs:
         shell: pwsh
         run: |
           $exe = Join-Path $env:RUNNER_TEMP 'vulkan-sdk.exe'
-          Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanSDK-$env:VULKAN_SDK_VERSION-Installer.exe" -OutFile $exe
+          Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe" -OutFile $exe
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($hash -ne $env:VULKAN_SDK_SHA256) { throw "Vulkan SDK 的 SHA-256 不對：$hash" }
           $dir = "C:\VulkanSDK\$env:VULKAN_SDK_VERSION"
           Start-Process -FilePath $exe -ArgumentList '--root', $dir, '--accept-licenses', '--default-answer', '--confirm-command', 'install' -Wait -NoNewWindow
           if (-not (Test-Path "$dir\Bin\glslc.exe")) { throw '裝完找不到 glslc（ggml-vulkan 建置時要用它編 shader）' }
+          if (-not (Get-ChildItem $dir -Recurse -Filter 'SPIRV-HeadersConfig.cmake' -ErrorAction SilentlyContinue)) { throw '裝完找不到 SPIRV-HeadersConfig.cmake（ggml-vulkan 的 find_package 要用）' }
           "VULKAN_SDK=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           "$dir\Bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
       - name: 建 whisper（Vulkan）
