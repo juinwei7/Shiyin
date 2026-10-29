@@ -62,8 +62,8 @@ V1～V8 已完成（2026-10-25 使用者跑了後台的 migration 和 deploy）�
 
 ### AMD 顯示卡加速（R27 R4.7、§8、§8.4、D127；2026-10-29 使用者要求）
 
-- [ ] **W-AMD2 app 偵測、下載、載入**：`SystemInfo.HasAmdGpu`、`GpuAcceleration` 兩種 `Pack`、`Model.GpuVulkan`、`Model.QwenVulkan`、設定頁的模型清單
-  - 驗證：`dotnet test`（哪種電腦用哪一包、Qwen 用哪個 llama-server 和 `-ngl`、解壓縮的清單）；`l10n.py windows-check`；虛擬機（沒有 AMD）不下載、設定頁不顯示 AMD 的兩列
+- [ ] **W-AMD2 沒有 AMD 的 x64 電腦不受影響**：偵測、下載、載入、設定頁已經在虛擬機驗過（2026-10-29，x64 DEBUG 版加 `--set debugAmd=YES`），還差對照組
+  - 驗證：虛擬機的 x64 DEBUG 版不加 `debugAmd`、全新的資料夾：不下載、設定頁沒有 AMD 的兩列（Mac 的磁碟要剩 15 GB 以上，不然磁碟保護會把虛擬機停掉）
 - [~] **W-AMD3 真的 AMD 電腦**（要使用者）：有 Radeon 獨顯或內顯（780M、860M）的 Windows 電腦，啟動後自動下載、重新開啟後轉錄一場 Breeze 和 Qwen
   - 驗證：log 有「whisper will load from the pack」、回報問題的顯示卡是 Radeon；同一段錄音的逐字稿跟 CPU 版相同；記下倍速（跟 CPU 比）寫進 R4.7
 
