@@ -1,5 +1,5 @@
 # Windows 的 AMD 顯示卡加速元件（design-windows §8「AMD 顯示卡加速」、D127、R27 R4.7）：用跟安裝檔同一個 commit 的 whisper.cpp 建 Vulkan 版，
-# CI 沒有顯示卡，用 Mesa 的 lavapipe（軟體實作的 Vulkan）跑一次語言偵測、跟同一次建置的 CPU 版比（三個機率差 ≤ 0.01），打包成 whisper-vulkan-x64.zip。
+# CI 沒有顯示卡，用 Mesa 的 lavapipe（軟體實作的 Vulkan）跑一次語言偵測、跟同一次建置的 CPU 版比（判斷出同一個語言、三個機率差 ≤ 0.03），打包成 whisper-vulkan-x64.zip。
 # 手動執行；publish 打勾才上傳到 prerelease win-gpu-vulkan-b5454（官網、Windows 的檢查更新都跳過 prerelease，Mac 的更新網址是 latest）。
 # whisper 升版才要重跑；跑完把印出的大小、SHA-256 填進 ModelStore.GpuVulkan（tasks W-AMD1）
 name: Windows 顯示卡元件（Vulkan）
@@ -123,9 +123,13 @@ jobs:
               $result[$kind] = (Get-Content "build/detect-$kind.json" -Raw | ConvertFrom-Json).probabilities
               Write-Host "$kind $($result[$kind] | ConvertTo-Json -Compress)"
           }
+          # Vulkan 用 fp16 算、CPU 用 fp32，本來就有一點差（Mac 的 Metal、NVIDIA 的 CUDA 也是 fp16）：run 40822650922 英文 0.9854 對 0.9980。
+          # 算錯的 Vulkan 會判斷錯語言或機率亂掉，所以要同一個語言、差 ≤ 0.03
+          $best = { param($p) ('zh', 'en', 'ja' | Sort-Object { -$p.$_ })[0] }
+          if ((& $best $result['cpu']) -ne (& $best $result['vulkan'])) { throw 'Vulkan 版跟 CPU 版判斷出的語言不同' }
           foreach ($lang in 'zh', 'en', 'ja') {
               $d = [math]::Abs($result['cpu'].$lang - $result['vulkan'].$lang)
-              if ($d -gt 0.01) { throw "Vulkan 版跟 CPU 版的 $lang 機率差 $d（上限 0.01）" }
+              if ($d -gt 0.03) { throw "Vulkan 版跟 CPU 版的 $lang 機率差 $d（上限 0.03）" }
           }
           if ($result['vulkan'].en -lt 0.5) { throw '英文錄音沒有判斷成英文' }
           Write-Host 'Vulkan 版跟 CPU 版的語言偵測一致'
