@@ -99,13 +99,13 @@ public sealed class ModelStore
         684_913_404, "afef0b881c500958921c3f5523b50e59ee2ec9b6f5cbd25b324c51ed308a957a",
         [.. CudaFiles.Select(f => new ArchiveEntry("Release/" + f.Name, "gpu-cuda12/" + f.Name, f.Size))])], Folder: "gpu-cuda12");
 
-    // 要在 GpuVulkan 之前宣告。W-AMD1：windows-gpu-pack.yml 建好之後，把每個檔案的大小、壓縮檔的大小和 SHA-256 填進來
+    // 要在 GpuVulkan 之前宣告。zip 裡另外有 parakeet.dll，whisper 用不到，不解出來
     static readonly (string Name, long Size)[] VulkanFiles =
     [
-        ("whisper.dll", 0), ("ggml.dll", 0), ("ggml-base.dll", 0), ("ggml-vulkan.dll", 0),
-        ("ggml-cpu-alderlake.dll", 0), ("ggml-cpu-cannonlake.dll", 0), ("ggml-cpu-cascadelake.dll", 0),
-        ("ggml-cpu-haswell.dll", 0), ("ggml-cpu-icelake.dll", 0), ("ggml-cpu-sandybridge.dll", 0),
-        ("ggml-cpu-skylakex.dll", 0), ("ggml-cpu-sse42.dll", 0), ("ggml-cpu-x64.dll", 0),
+        ("whisper.dll", 1_930_752), ("ggml.dll", 178_176), ("ggml-base.dll", 892_928), ("ggml-vulkan.dll", 45_598_720),
+        ("ggml-cpu-alderlake.dll", 1_184_256), ("ggml-cpu-cannonlake.dll", 1_224_192), ("ggml-cpu-cascadelake.dll", 1_235_968),
+        ("ggml-cpu-haswell.dll", 1_185_280), ("ggml-cpu-icelake.dll", 1_235_968), ("ggml-cpu-sandybridge.dll", 1_200_640),
+        ("ggml-cpu-skylakex.dll", 1_224_192), ("ggml-cpu-sse42.dll", 1_037_824), ("ggml-cpu-x64.dll", 1_042_432),
     ];
 
     /// <summary>
@@ -114,7 +114,7 @@ public sealed class ModelStore
     /// </summary>
     public static readonly ModelInfo GpuVulkan = new(L.T("AMD 顯示卡加速（Vulkan）"), [new("gpu-vulkan/whisper-vulkan.zip",
         "https://github.com/juinwei7/Shiyin/releases/download/win-gpu-vulkan-b5454/whisper-vulkan-x64.zip",
-        0, "", [.. VulkanFiles.Select(f => new ArchiveEntry(f.Name, "gpu-vulkan/" + f.Name, f.Size))])], Folder: "gpu-vulkan");
+        19_779_448, "34e2f79a224f0b9f0edcaaca442732246230f2556435743761fad167490621af", [.. VulkanFiles.Select(f => new ArchiveEntry(f.Name, "gpu-vulkan/" + f.Name, f.Size))])], Folder: "gpu-vulkan");
 
     // MARK: Qwen3-ASR（R43.9、design-windows §8.4、D95）：模型同 Mac，執行檔是 llama.cpp 官方 b11840 的 Windows 版
 

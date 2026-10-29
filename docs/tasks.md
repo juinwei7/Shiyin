@@ -62,8 +62,6 @@ V1～V8 已完成（2026-10-25 使用者跑了後台的 migration 和 deploy）�
 
 ### AMD 顯示卡加速（R27 R4.7、§8、§8.4、D127；2026-10-29 使用者要求）
 
-- [ ] **W-AMD1 建 Vulkan 版的 whisper、發布元件**：`windows-gpu-pack.yml` 手動執行
-  - 驗證：CI 通過；lavapipe 的語言偵測跟 CPU 版判斷出同一個語言、三個機率差 ≤ 0.03；prerelease `win-gpu-vulkan-b5454` 有 `whisper-vulkan-x64.zip`；大小、SHA-256、每個 DLL 的大小寫進 `ModelStore.GpuVulkan` 和 R4.7；`node site/build.mjs` 照樣成功（prerelease 被跳過）
 - [ ] **W-AMD2 app 偵測、下載、載入**：`SystemInfo.HasAmdGpu`、`GpuAcceleration` 兩種 `Pack`、`Model.GpuVulkan`、`Model.QwenVulkan`、設定頁的模型清單
   - 驗證：`dotnet test`（哪種電腦用哪一包、Qwen 用哪個 llama-server 和 `-ngl`、解壓縮的清單）；`l10n.py windows-check`；虛擬機（沒有 AMD）不下載、設定頁不顯示 AMD 的兩列
 - [~] **W-AMD3 真的 AMD 電腦**（要使用者）：有 Radeon 獨顯或內顯（780M、860M）的 Windows 電腦，啟動後自動下載、重新開啟後轉錄一場 Breeze 和 Qwen
