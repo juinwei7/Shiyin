@@ -153,7 +153,7 @@ public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGp
     }
 }
 
-/// <summary>轉錄的設定（M§6、§17）。工作佇列用目前的 app 設定產生；評估工具從 JSON 讀</summary>
+/// <summary>轉錄的設定（M§6、M§17）。工作佇列用目前的 app 設定產生；評估工具從 JSON 讀</summary>
 public sealed record TranscriptionOptions
 {
     /// <summary>Breeze：whisper.cpp，模型依會議語言；Fast：快速辨識（SenseVoice，Mac 的「macOS 內建」，D45）；Qwen：Qwen3-ASR（llama-server，design-windows §8.4）</summary>

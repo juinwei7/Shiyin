@@ -108,7 +108,7 @@ export function windowsSchema({ lang, site, win }) {
         datePublished: win.date.slice(0, 10),
         downloadUrl: win.x64.url,
         installUrl: `${site}${c.prefix}/download/windows`,
-        softwareRequirements: 'Windows 11 (x64 or ARM64), 8 GB RAM; an NVIDIA graphics card is optional and speeds up transcription',
+        softwareRequirements: 'Windows 11 (x64 or ARM64), 8 GB RAM; an NVIDIA or AMD graphics card is optional and is used for transcription',
         featureList: c.seo.features,
         inLanguage: ['zh-Hant', 'en'],
         isAccessibleForFree: true,
@@ -190,7 +190,7 @@ export function llmsTxt({ site, latest, windows = null, guides = [] }) {
   const date = latest.date.slice(0, 10);
   // Windows 版（docs/website.md §16.2）：有 release 才寫出版本和頁面，不然寫開發中
   const windowsLine = windows
-    ? `Also available for Windows 11 (x64 and ARM64): Shiyin for Windows ${windows.version} (released ${windows.date.slice(0, 10)}), with the same features; transcription uses an NVIDIA graphics card automatically when there is one. See ${site}/en/windows/.`
+    ? `Also available for Windows 11 (x64 and ARM64): Shiyin for Windows ${windows.version} (released ${windows.date.slice(0, 10)}), with the same features; transcription uses an NVIDIA or AMD graphics card automatically when there is one. See ${site}/en/windows/.`
     : 'A Windows version is in development.';
   const windowsPage = windows ? `- [Shiyin for Windows](${site}/en/windows/): requirements, download and install steps for Windows 11\n- [Download the latest Windows installer (x64)](${site}/download/windows)\n` : '';
   const windowsZh = windows ? `也有 Windows 版（Windows 11，x64 和 ARM）：${site}/windows/。` : 'Windows 版開發中。';

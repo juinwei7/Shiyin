@@ -30,7 +30,9 @@
 |---|---|---|
 | 首頁 | `/`、`/en/`、`/ja/` | 一句話介紹、示範、怎麼用（附真實截圖）、隱私與整理工具、系統需求與下載、最近更新、常見問題 |
 | 版本說明 | `/changelog/`、`/en/changelog/`、`/ja/changelog/` | 每一版的更新內容，附發布日期和下載連結（日文版顯示英文的更新內容） |
-| 下載 | `/download` | 直接轉到最新版的 DMG，給 README、社群貼文用的固定連結 |
+| 下載 | `/download`、`/download/windows`、`/download/windows-arm64` | 直接轉到最新版的 DMG、Windows 的 x64、ARM64 安裝檔，給 README、社群貼文用的固定連結 |
+| Windows 版 | `/windows/`、`/en/windows/`、`/ja/windows/` | Windows 版的介紹、需求、下載和安裝步驟（§16） |
+| 指南 | `/guides/`、`/guides/<slug>/`（英文、日文加 `/en`、`/ja`） | 教學和比較（§14.2） |
 | 找不到頁面 | 404 | 說明找不到，給回首頁和版本說明的連結 |
 
 不做：
@@ -76,30 +78,37 @@
 ### 4.3 首頁版面
 
 ```
-┌──────────────────────────────────────────────────────┐
-│ [圖示] 拾音              功能  隱私  版本說明  English │
-│                                                      │
-│                       [圖示]                          │
-│                Mac 上的會議紀錄 app                    │
-│   錄音、轉錄、整理成會議紀錄，都在你的 Mac 上完成。     │
-│   每一條紀錄都附時間點，點一下就聽得到原話。            │
-│                  ( 下載拾音 3.3.0 )                    │
-│       免費、開源，需要 macOS 26 和 Apple Silicon        │
-│                                                      │
-│   ┌──────── 重刻的拾音視窗（示範，§10）────────┐       │
-│     ( ॥ ) ( 錄音 )( 草稿 )( 正式版 )( 待確認 )( 提問 )    │
-│        這一段在做什麼的一句說明                         │
-│                                                      │
-│   開會時，邊錄邊看逐字稿（兩段說明）＋錄音中截圖          │
-│   停止後，在 Mac 上正式轉錄（兩段說明）＋逐字稿截圖       │
-│   整理成會議紀錄，不確定的地方會問你                     │
-│   錄音不會離開你的 Mac（留在 Mac／送到整理工具 兩欄清單） │
-│   下載（版本、系統、空間、費用；DMG 按鈕；第一次打開 1-2-3）│
-│   最近更新（最新兩版，連到版本說明）                     │
-│   常見問題（點開收合）                                  │
-│ ──────────────────────────────────────────────────── │
-│ 拾音 Shiyin，個人開源專案  GitHub  贊助  版本說明  English │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ [圖示] 拾音     功能  隱私  版本說明  指南  Windows  [地球 中文 ▾] │
+│                                                          │
+│     你用的是 Windows 電腦，Windows 版在這裡 →（只有 Windows 的訪客，§16.2） │
+│                         [圖示]                             │
+│                  Mac 上的會議紀錄 app                       │
+│     錄音、轉錄、整理成會議紀錄，都在你的 Mac 上完成。         │
+│     每一條紀錄都附時間點，點一下就聽得到原話。                │
+│        ( 下載拾音 X.Y.Z )  ( ★ 在 GitHub 點星 ｜ 53 )        │
+│  免費、開源，需要 macOS 26 和 Apple Silicon・也有 Windows 版   │
+│                    已下載 134 次（§11）                      │
+│                 ▶ 看 52 秒的介紹影片                         │
+│                                                          │
+│   ┌──────── 重刻的拾音視窗（示範，§10）────────┐             │
+│   ( ॥ ) ( 錄音 )( 草稿 )( 正式版 )( 待確認 )( 提問 )          │
+│        這一段在做什麼的一句說明                               │
+│                                                          │
+│   看 52 秒的介紹影片（§15）                                  │
+│   開會時，邊錄邊看逐字稿（兩段說明）＋錄音中截圖               │
+│   停止後，在 Mac 上正式轉錄（兩段說明）＋逐字稿截圖            │
+│   整理成會議紀錄，不確定的地方會問你                          │
+│   錄音不會離開你的 Mac（留在 Mac／送到整理工具 兩欄清單；      │
+│     整理工具、匿名使用統計、企業伺服器各一段）                 │
+│   下載（版本、系統、空間、費用；DMG 按鈕；第一次打開 1-2-3；    │
+│     Windows 版的卡片；點星和贊助）                            │
+│   最近更新（最新兩版，連到版本說明）                           │
+│   常見問題（點開收合）                                        │
+│   更多說明（這個語言的指南，§14.2）                           │
+│ ──────────────────────────────────────────────────────── │
+│ 拾音 Shiyin，個人開源專案  GitHub  贊助  版本說明  Windows 版  指南  English  日本語 │
+└──────────────────────────────────────────────────────────┘
 ```
 
 第一屏的下載按鈕先捲到「下載」區（那裡有系統需求和第一次打開的步驟），「下載」區的按鈕才直接下載 DMG。
@@ -117,16 +126,23 @@
 - **不用框架，一支沒有相依套件的 Node 程式**（`site/build.mjs`，只用 Node 內建功能）產生靜態網頁到 `site/dist/`。專案放在有 iCloud 同步的桌面，不要帶進 `node_modules`。
   - 本機需要 Node 20 以上；CI 用 GitHub 的 ubuntu 機器內建的 Node。
 - 檔案：
-  - `site/src/content.mjs`：中英文的所有文字
-  - `site/src/releases.mjs`：讀取、檢查 GitHub Releases
-  - `site/src/pages.mjs`：首頁、版本說明、404 的 HTML
+  - `site/src/content.mjs`：中文、英文、日文三種語言的文字（首頁、版本說明、Windows 版的頁面、指南的共用文字）
+  - `site/src/guides.mjs`：指南的內容（§14.2）
+  - `site/src/releases.mjs`：讀取、檢查 GitHub Releases（Mac 和 Windows 分開，§7）
+  - `site/src/pages.mjs`：首頁、版本說明、Windows 版、指南、404 的 HTML
+  - `site/src/seo.mjs`：結構化資料（JSON-LD）、`/llms.txt`、IndexNow 的金鑰（§14.1）
   - `site/src/style.css`：建置時直接寫進每一頁（少一個請求）
   - `site/src/demo-content.mjs`、`demo-markup.mjs`、`demo.css`、`demo.js`：首屏示範的文字、HTML、樣式、播放（§10）
-  - `site/public/`：圖示、分享預覽圖、截圖的 AVIF，原樣複製
+  - `site/src/platform.js`：用 Windows 的訪客提示（§16.2）
+  - `site/public/`：圖示、分享預覽圖、截圖的 AVIF、介紹影片（`videos/`，§15）、`_headers`、Search Console 的驗證檔，原樣複製
   - `site/serve.mjs`：本機預覽，會照 `_redirects` 轉址、找不到時回 404 頁
-  - `site/make-images.sh`：把 `docs/images` 的截圖轉成 AVIF（macOS 的 `sips`），截圖更新時跑一次
+  - `site/indexnow.mjs`：部署後把 sitemap 的網址送給 IndexNow（§14.1）
+  - `site/make-images.sh`：把 `docs/images` 的截圖轉成 AVIF（macOS 的 `sips`）、產生 favicon、用 `site/og.html` 截分享預覽圖，截圖或圖示更新時跑一次
 - 截圖：只有一份來源，是 README 用的 `docs/images`（英文版用 `docs/images/en`）。建置時複製 PNG 當備援；網頁優先用 AVIF（1920 和 960 寬兩種，品質 60，大小約原本的四分之一，文字看不出差別）。缺 AVIF 時建置失敗，提醒先跑 `make-images.sh`。
-- 網址：`/`、`/changelog/`、`/en/`、`/en/changelog/`、`/ja/`、`/ja/changelog/`、`/download`、404 頁（`/404.html`、`/en/404.html`、`/ja/404.html`）。
+- 網址（英文、日文在前面加 `/en`、`/ja`）：
+  - 頁面：`/`、`/changelog/`、`/windows/`（有 Windows 版才有）、`/guides/`、`/guides/<slug>/`（只有寫了的語言）、404 頁（`/404.html`）
+  - 轉址（`_redirects`）：`/download`（最新的 DMG）、`/download/windows`、`/download/windows-arm64`（最新的 Windows 安裝檔），三種語言都有
+  - 其他（只有根目錄）：`/robots.txt`、`/sitemap.xml`、`/llms.txt`、`/<IndexNow 的金鑰>.txt`、`/demo.js`、`/platform.js`、`/images/`、`/videos/`
 - 日文版：介面名稱照 app 的英文寫（「Record」「To confirm」），常見問題和下載區寫清楚 app 只有英文、繁體中文介面；截圖用英文版的；字體改用 Hiragino Sans（`:lang(ja)`），不然漢字會用蘋方的中文字形。
 - SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.weibuilds.com`。
 - Google Search Console：用 HTML 檔驗證網站擁有權，驗證通過後也要一直留著，刪掉會失去驗證。檔名要多一個 `.html`（`site/public/google<代碼>.html.html`）：Cloudflare Pages 會把 `.html` 結尾的網址 308 轉址到沒有副檔名的網址，而且不能關；多一個副檔名，`/google<代碼>.html` 才會直接回 200。sitemap 在 Search Console 送出 `/sitemap.xml`。
@@ -330,7 +346,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 - 內部連結：首頁最後加「更多說明」列出該語言的指南；頁首（手機上隱藏）和頁尾加「指南」；指南之間互相連結。
 - 寫法：
   - 跟 §4 的文案原則一樣講清楚、不堆形容詞，跟 app 用同樣的詞（英文照翻譯表的英文介面名稱）；不用破折號、「在這個…的時代」這類 AI 腔。內文一律寫「拾音 Shiyin」：「拾音」單獨搜會跑出拾音燈、拾音器。
-  - 每個數字、別人的功能和價格都附來源連結和查證日期（2026-10-21）。比較要公平：寫出別人的優點和拾音不適合的情況（沒有 Windows、要 macOS 26、不支援台語、語言少），別人也做得到的不寫成只有拾音做得到（例如 Minutes 也能用 Claude 訂閱）。沒有用同一批錄音測過，就不排準確度名次。沒查證到的不寫（例如雅婷的價格各來源不一致，只連官網）。
+  - 每個數字、別人的功能和價格都附來源連結和查證日期（2026-10-21）。比較要公平：寫出別人的優點和拾音不適合的情況（要 macOS 26 或 Windows 11、沒有 Linux 和手機版、不支援台語、語言少），別人也做得到的不寫成只有拾音做得到（例如 Minutes 也能用 Claude 訂閱）。沒有用同一批錄音測過，就不排準確度名次。沒查證到的不寫（例如雅婷的價格各來源不一致，只連官網）。
   - 不大量產生相似的頁面：每篇都要回答一個具體的問題。
 - 維護：app 的功能、價格、系統需求變了，或別人的價格變了，要改內容和 `updated`。比較頁每季重新查證一次。
 
@@ -341,7 +357,6 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 - 中文：「拾音 Shiyin｜Mac 會議記錄、逐字稿 app，免費開源、錄音不上傳」（標題用「記錄」，內文照 app 用「紀錄」，兩種寫法都搜得到）
 - 英文：「Shiyin: Free Meeting Notes App for Mac, Transcribed Locally」
 - 日文：「拾音 Shiyin｜Mac の議事録・文字起こしアプリ（無料、ローカル処理）」
-- 常見問題「有 Windows 版嗎」改成 Windows 版開發中。
 
 ### 14.4 站外（每一個都要使用者同意才做）
 
@@ -349,16 +364,16 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 
 | 平台 | 收錄方式 | 備註 |
 |---|---|---|
-| GitHub repo | 已做（2026-10-21）：說明和 20 個 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 放在 `.github/README.md`，GitHub 首頁顯示英文 | open-source-mac-os-apps 不收 README 不是英文的專案。不直接把 README.md 換成英文：windows 分支改過兩份 README，對調檔名合併時會衝突 |
 | AlternativeTo | 登錄 app，加到 Otter、Granola、MacWhisper、Meetily 的替代清單 | 要驗證 email |
 | OpenAlternative | 表單送出 | 要登入 |
-| awesome-mac | 發 PR（英中日韓四份 README 一起改） | 2026-10-21 發了 jaywcjlove/awesome-mac#3711，放在 Audio Record and Process |
-| open-source-mac-os-apps | 改 applications.json 發 PR | 要先有英文 README；2026-10-21 發了 serhii-londar/open-source-mac-os-apps#1730 |
+| open-source-mac-os-apps | 改 applications.json 發 PR | 2026-10-21 發了 serhii-londar/open-source-mac-os-apps#1730，2026-10-29 還沒合併 |
 | Product Hunt、Show HN | 本人發、本人回應 | 不能拉票 |
 | 台灣媒體、社群 | 寄給報導過 Breeze ASR 25 的 INSIDE、TechNews；PTT MAC 板 | |
 | awesome-whisper | 要 100 顆星以上 | 之後再說 |
 
 不做：awesome-selfhosted（只收網路服務）、Homebrew 官方 cask（要公證）、買連結、灌評論、用多個帳號推薦。
+
+已經做了的：GitHub repo 的說明和 20 個 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 放在 `.github/README.md`，GitHub 首頁顯示英文（open-source-mac-os-apps 這類清單不收 README 不是英文的專案），中文的在根目錄的 `README.md`，兩份要一起改。awesome-mac 收錄在 Audio Record and Process（jaywcjlove/awesome-mac#3711，2026-10-22 合併）。
 
 ### 14.5 量成效
 
@@ -391,7 +406,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 
 **首頁維持以 Mac 為主，另外做一頁 Windows 版**：首頁的標題、說明是照「Mac 會議記錄」優化過的（§14.3），改成兩個平台各半會影響 Mac 的搜尋，對現有使用者也比較亂。
 
-**還沒有 Windows 版的 release 時，網站跟現在一模一樣**（同 §7）：不產生 Windows 的頁面、首頁不出現 Windows 的連結、常見問題照舊寫「開發中」。不放「即將推出」。
+沒有 Windows 版的 release 時（例如 `--releases` 只給 Mac 的版本試建置），不產生 Windows 的頁面、首頁不出現 Windows 的連結、常見問題寫「開發中」（4.0.0 以前的樣子，同 §7）。
 
 ### 16.1 Windows 版的頁面（`/windows/`、`/en/windows/`、`/ja/windows/`）
 
@@ -400,15 +415,15 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 | 第一屏 | 「Windows 上的會議紀錄 app」（英文 A meeting-notes app for Windows、日文 Windows の議事録アプリ），說明同首頁但「在你的電腦上」；「下載 Windows 版 X.Y.Z」（捲到下載區）、點星；「免費、開源，需要 Windows 11（x64 或 ARM）・也有 Mac 版」 |
 | 截圖 | 會議紀錄（摘要），Windows 版真的畫面 |
 | 開會時，邊錄邊看逐字稿 | 同首頁，快捷鍵寫 Windows 的（Ctrl+R、Ctrl+Alt+Shift+B）；錄音中的截圖 |
-| 停止後，在電腦上正式轉錄 | 同首頁，加一段 NVIDIA 顯示卡加速（自動下載、40 分鐘的會議 RTX 3060 約 8 分鐘、只用 CPU 約 30 分鐘，requirements R27 R4.6、N2 的實測）；逐字稿的截圖 |
+| 停止後，在電腦上正式轉錄 | 同首頁，加一段顯示卡加速：NVIDIA 自動下載（40 分鐘的會議 RTX 3060 約 8 分鐘、只用 CPU 約 30 分鐘，requirements R27 R4.6、N2 的實測）；AMD（含 Radeon 內顯）自動下載 Vulkan 版（約 20 MB，R4.7，還沒在真的 AMD 電腦上量過速度，不寫數字）；逐字稿的截圖 |
 | 整理成會議紀錄 | 同首頁 |
 | 錄音不會離開你的電腦 | 同首頁的隱私，把「Mac」換成「電腦」 |
-| 下載 | 版本（連到 GitHub Release，Windows 版的更新紀錄不在網站上，§7）、系統、記憶體、磁碟空間（模型約 2 GB，NVIDIA 另外約 1.1 GB）、顯示卡、費用；x64 的下載按鈕、ARM 的連結；安裝三步；SmartScreen 的示意圖（§16.3）；智慧型應用程式控制的說明；點星和贊助 |
-| 電腦效能（在下載區的需求表下面） | 只寫量過或確定的事：NVIDIA 顯示卡最快（RTX 3060 的實測、驅動 527 版以後、顯示記憶體建議 4 GB 以上，轉錄模型約 1.7 GB）；只用 CPU 比較慢（同一台桌機的實測，筆電可能比會議本身還久；轉錄最多用 8 個執行緒）；等不及時改用快速辨識（設定 → 錄音 → 正式轉錄，比較不準、不參考詞彙表）；錄音中的即時逐字稿約用一個核心的三分之一（R27 R2.1 的實測）；ARM 的電腦只用 CPU。不寫沒量過的 CPU 等級、顯示卡型號清單；有更多電腦的實測再補成表 |
+| 下載 | 版本（連到 GitHub Release，Windows 版的更新紀錄不在網站上，§7）、系統、記憶體、磁碟空間（模型約 2 GB，NVIDIA 另外約 1.1 GB、AMD 另外約 60 MB）、顯示卡、費用；x64 的下載按鈕、ARM 的連結；安裝三步；SmartScreen 的示意圖（§16.3）；智慧型應用程式控制的說明；點星和贊助 |
+| 電腦效能（在下載區的需求表下面） | 只寫量過或確定的事：NVIDIA 顯示卡最快（RTX 3060 的實測、驅動 527 版以後、顯示記憶體建議 4 GB 以上，轉錄模型約 1.7 GB）；只用 CPU 比較慢（同一台桌機的實測，筆電可能比會議本身還久；轉錄最多用 8 個執行緒）；等不及時改用快速辨識（設定 → 錄音與轉錄 → 正式轉錄，比較不準、不參考詞彙表）；錄音中的即時逐字稿約用一個核心的三分之一（R27 R2.1 的實測）；AMD 顯示卡自動下載加速元件、用顯示卡轉錄（不寫速度）；ARM 的電腦、Intel 顯示卡只用 CPU。不寫沒量過的 CPU 等級、顯示卡型號清單；有更多電腦的實測再補成表 |
 | 最近更新 | 最新的 Windows 版（版本說明從 GitHub Release 讀，§7） |
-| 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
+| 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎（AMD 也會用顯示卡，其他用 CPU）、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
 
-- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（2560×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。
+- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（桌面 1728×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。
 - 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
 - 分享預覽圖全站共用一張（`og.png`、`og-en.png`、`og-ja.png`，`site/og.html` 截的）：標題「Mac 和 Windows 的會議紀錄 app」（英文 A meeting-notes app for Mac and Windows、日文 Mac と Windows の議事録アプリ），右邊 Mac 的截圖在後面露出紅黃綠、Windows 的截圖在前面露出視窗按鈕。首頁的標題、說明照樣以 Mac 為主（搜尋只看那些），預覽圖是貼到 Threads、LINE 時給人看的，兩個平台都要看得到。換圖時 `content.mjs` 的網址把 `?v=` 加一：Threads、Facebook 依圖片網址快取，同一個網址不會重抓。
 
@@ -416,7 +431,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 
 - 第一屏的「免費、開源，需要 macOS 26 和 Apple Silicon」後面加「・也有 Windows 版」，連到 Windows 版的頁面。
 - 用 Windows 的訪客（`navigator.userAgent` 有 Windows），第一屏上面多一行「你用的是 Windows 電腦，Windows 版在這裡 →」。用 `/platform.js`（另一個小檔案，CSP 只允許自己網站的 script）把預設 `hidden` 的那一行打開；沒有 JavaScript 時不出現，不影響其他內容。
-- 下載區：Mac 的下載照舊；原本 Windows 的那一塊改成一張卡片：「Windows 版」、一句需求（Windows 11、x64 或 ARM、有 NVIDIA 顯示卡時轉錄更快）、「下載 Windows 版」按鈕（x64）、「系統需求和安裝步驟」連到 Windows 頁的下載區。SmartScreen、智慧型應用程式控制的說明移到 Windows 頁。
+- 下載區：Mac 的下載照舊；Windows 是一張卡片：「Windows 版」、一句需求（Windows 11、x64 或 ARM、有 NVIDIA 顯示卡時轉錄更快，AMD 也會用顯示卡）、「下載 Windows 版」按鈕（x64）、「系統需求和安裝步驟」連到 Windows 頁的下載區。SmartScreen、智慧型應用程式控制的說明移到 Windows 頁。
 - 頁首的導覽（手機上隱藏）、頁尾加平台的切換：Windows 頁顯示「Mac」連回首頁，其他頁顯示「Windows」。
 - 常見問題「有 Windows 版或手機版嗎？」改成「有 Windows 版（Windows 11，x64 和 ARM），功能跟 Mac 版一樣」，連到 Windows 頁；沒有手機版。結構化資料的 FAQ 跟著。
 - `/llms.txt`：有 Windows 版時寫出 Windows 版的版本、需求和頁面連結，取代「Windows 版開發中」。
@@ -428,7 +443,7 @@ Windows 使用者最容易卡住的是第一次執行時的 SmartScreen（拾音
 ### 16.4 截圖怎麼拍（虛擬機）
 
 - 示範資料：Mac 的 `~/Library/Caches/ShiyinDemo/home`（中文）、`ShiyinDemoEN/home`（英文）的資料庫用 `sqlite3 .backup` 複製，加上 `audio/`；中文的拿掉 Mac 截圖裡沒有的兩場（12、14）。兩邊的資料庫結構相同（requirements R28.5），直接放進虛擬機的 `C:\ShiyinDemo`、`C:\ShiyinDemoEN`，模型用硬連結。
-- 解析度和縮放：UTM 會把高度定在視窗的高度（1044），2560×1044 最多 150%。用 `DisplayConfigSetDeviceInfo`（設定 app 用的同一個）改縮放，app 不用重開。截圖用 DWM 的外框（`DWMWA_EXTENDED_FRAME_BOUNDS`）和 `CopyFromScreen`，截圖的程式要宣告支援高 DPI（`SetThreadDpiAwarenessContext`），不然座標會被換算。
+- 解析度和縮放：UTM 會把高度定在視窗的高度（1044），這個高度最多 150%。用 `DisplayConfigSetDeviceInfo`（設定 app 用的同一個）改縮放，app 不用重開。截圖用 DWM 的外框（`DWMWA_EXTENDED_FRAME_BOUNDS`）和 `CopyFromScreen`，截圖的程式要宣告支援高 DPI（`SetThreadDpiAwarenessContext`），不然座標會被換算。
 - 專案在有 iCloud 同步的桌面：`make-images.sh` 短時間內重寫同一個檔案時，iCloud 會留下「summary 2.avif」這種衝突副本（舊的內容），commit 前用 `git status` 看有沒有沒加進 git 的副本，刪掉。
 - 工具在 `scripts/windows/vm/ps/`：`display.ps1`（解析度）、`dpi.ps1`（縮放）、`snapwin.ps1`（放好視窗、截圖）、`clickname.ps1`（用虛擬機的滑鼠點元件）、`setnotes.ps1`（填輸入框），用 `insession.sh` 在桌面跑。截完把縮放改回 100%、解析度改回 1024×768。
 - 紀錄：點「紀錄」分頁讓焦點離開搜尋框（Lumio 那場，英文是 Kickoff 那場）；逐字稿：點 00:24（英文 00:22）那一段的時間，**再點一次「逐字稿」分頁**讓「從 00:24 開始播放」的提示框消失（只把滑鼠移開，提示框會留著）；錄音：`record-sim` 用 Lumio 的錄音（英文用定價那場），筆記用 UI Automation 填兩行，再點側欄讓筆記框沒有焦點，約 30 秒時截（4.1 的錄音畫面沒改，錄音的截圖沿用）。點擊用虛擬機裡的滑鼠（只送進虛擬機）。
