@@ -87,8 +87,17 @@ public sealed class AppHost
         Keys = Debug && !Settings.Flag("debugRealKeychain", false) ? new MemoryKeyStore() : new CredentialStore();
         var children = new ChildProcesses();
         var runner = new ProcessRunner { OnStarted = children.Add };
-        // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）
-        Tools = Debug && Settings.Flag("debugNoCli", false) ? new NoCliTools(new WindowsToolLocator()) : new WindowsToolLocator();
+        // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）；
+        // debugOnlyDesktopCli、debugCodexApp、debugClaudeDesktop 測桌面版（R55、R56，M§37.4）
+        Locator = new WindowsToolLocator
+        {
+            SkipInstalled = Debug && Settings.Flag("debugOnlyDesktopCli", false),
+            CodexAppOverride = Debug ? Settings.String("debugCodexApp") : null,
+            ClaudeDesktopOverride = Debug ? Settings.String("debugClaudeDesktop")?.ToLowerInvariant() switch { "yes" => true, "no" => false, _ => null } : null,
+        };
+        Tools = Debug && Settings.Flag("debugNoCli", false) ? new NoCliTools(Locator) : Locator;
+        DesktopApps.CodexAppName = () => Tools.Find("codex")?.DesktopApp;
+        DesktopApps.HasClaude = Locator.HasClaudeDesktop;
         // 企業伺服器：refresh token 跟 API key 存在同一個地方（認證管理員；DEBUG 只放記憶體）；DEBUG 可以連本機的 http
         Enterprise = new EnterpriseServer(Settings, EnterpriseHttp, new KeySecrets(Keys), Version, Environment.MachineName)
         {
@@ -270,6 +279,9 @@ public sealed class AppHost
         Usage.Touch();
         _ = Usage.RunAutomaticSends(CancellationToken.None);
     }
+
+    /// <summary>找工具的本體：桌面版的快取、有沒有 Claude 桌面版（R55、R56）</summary>
+    public WindowsToolLocator Locator { get; }
 
     /// <summary>找 claude、codex（設定頁、引導、整理工具共用；DEBUG 的 debugNoCli 會換掉）</summary>
     public IToolLocator Tools { get; }

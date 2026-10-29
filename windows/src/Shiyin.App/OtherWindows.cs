@@ -136,7 +136,9 @@ public static class OtherWindows
             case "chatgpt":
             {
                 List<ProviderOption> list = [];
-                if (hasCodex) list.Add(new(LLMProvider.Codex, L.T("Codex（這台電腦已經裝了 codex CLI）"), subscription));
+                // 桌面版附的 codex（R55.3）
+                if (hasCodex) list.Add(new(LLMProvider.Codex, DesktopApps.CodexAppName() is { } app ? L.F("Codex（使用 %@ 附的 codex）", app)
+                    : L.T("Codex（這台電腦已經裝了 codex CLI）"), subscription));
                 list.Add(new(LLMProvider.OpenAI, L.T("OpenAI API"), api));
                 return list;
             }
@@ -195,6 +197,9 @@ public static class OtherWindows
             Choose(ProviderOptions(code, hasClaude, hasCodex)[0].Provider);
         };
         column.Children.Add(segments);
+        // 只有 Claude 桌面版：說明怎麼裝 Claude Code（R56.2）
+        if (chosenUsual == "claude" && !hasClaude && DesktopApps.HasClaude())
+            column.Children.Add(ClaudeCodeHint.Build(() => { host.Locator.ClearCache(); render(); }));
         // 第二段：對應的整理工具，每個一行寫要不要錢
         var radios = Ui.Column(6);
         foreach (var option in options)
@@ -241,7 +246,9 @@ public static class OtherWindows
             else if (state == ProviderSetup.NotLoggedIn)
             {
                 column.Children.Add(Ui.Text(L.F("%@ 還沒登入，登入之後才會用它整理。", name), 13, color: Ui.Danger));
-                column.Children.Add(Ui.Row(8, Ui.Button(L.F("登入 %@", name), () => CliLogin.Open(host, cli)), Ui.Button(L.T("重新檢查"), () => Choose(cli))));
+                // 桌面版附的 codex：打開那個 app 登入（R55.3）
+                var loginTitle = cli == LLMProvider.Codex && DesktopApps.CodexAppName() is { } app ? L.F("打開 %@ 登入", app) : L.F("登入 %@", name);
+                column.Children.Add(Ui.Row(8, Ui.Button(loginTitle, () => CliLogin.Open(host, cli)), Ui.Button(L.T("重新檢查"), () => Choose(cli))));
             }
         }
         if (state == ProviderSetup.Testing)

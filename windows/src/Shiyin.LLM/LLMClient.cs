@@ -89,10 +89,16 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
 
     static string Describe(LLMErrorKind kind, string detail) => kind switch
     {
+        // 只有 Claude 桌面版：說明要另外裝 Claude Code（R56.3）
+        LLMErrorKind.NotInstalled when detail == "claude" && DesktopApps.HasClaude() =>
+            L.T("這台電腦找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」"),
         // 一般使用者不知道什麼是指令：說清楚是給已經在用 Claude Code（Codex）的人，沒有的話改用 API（R35.4）
         LLMErrorKind.NotInstalled => detail == "codex"
             ? L.T("這台電腦找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
             : L.T("這台電腦找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」"),
+        // 用桌面版附的 codex：到那個 app 登入（R55.3）
+        LLMErrorKind.NotLoggedIn when detail == "codex" && DesktopApps.CodexAppName() is { } app =>
+            L.F("Codex 還沒登入或登入已過期，請打開 %@ 重新登入後再試一次。", app),
         LLMErrorKind.NotLoggedIn => detail == "codex"
             ? L.T("Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
             : L.T("Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。"),
@@ -142,6 +148,10 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
         _ => "LLMError.badOutput",
     };
 
+    /// <summary>工作紀錄的失敗訊息是不是登入問題：CLI 的訊息（IsLoginProblem），加上桌面版附的 codex 的「打開 Codex 重新登入」（沒有終端機指令，M§37.2）</summary>
+    public static bool IsLoginMessage(string text) =>
+        IsLoginProblem(text) || (DesktopApps.CodexAppName() is not null && text.Contains(NotLoggedIn("codex").Message, StringComparison.Ordinal));
+
     /// <summary>CLI 的錯誤訊息是不是登入問題</summary>
     public static bool IsLoginProblem(string text)
     {
@@ -189,8 +199,10 @@ public interface IToolLocator
     ToolCommand? Find(string name);
 }
 
-/// <summary>要執行的程式：真正的執行檔，加上要放在最前面的參數（例如用 node 執行 js 時是 js 的路徑）</summary>
-public sealed record ToolCommand(string Executable, IReadOnlyList<string> PrefixArguments, IReadOnlyDictionary<string, string>? Environment = null);
+/// <summary>要執行的程式：真正的執行檔，加上要放在最前面的參數（例如用 node 執行 js 時是 js 的路徑）。
+/// DesktopApp、AppUserModelId：桌面版附的 codex 時是那個 app 的名稱和啟動用的 id（R55，M§37）</summary>
+public sealed record ToolCommand(string Executable, IReadOnlyList<string> PrefixArguments, IReadOnlyDictionary<string, string>? Environment = null,
+    string? DesktopApp = null, string? AppUserModelId = null);
 
 /// <summary>一種整理工具的呼叫方式（M§19.1、D22）</summary>
 public interface ILLMBackend

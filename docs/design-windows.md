@@ -265,13 +265,14 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 子程序放進 Job Object（`KILL_ON_JOB_CLOSE`）：拾音當掉時子程序一起結束；逾時時整棵程序樹一起結束。
 - 登入：用固定參數開 Windows Terminal（沒有就用 `cmd.exe /k`）執行 `claude` 或 `codex login`，參數裡不放任何使用者內容。
 - **還沒設定整理工具**（R35、M§19.6、D95）：同 Mac。`AppSettings.DetectCli` 由 App 用 `WindowsToolLocator` 找 claude、codex（要掃過 PATH 的每個資料夾，快取 30 秒）；Services、測試裡沒給就是找不到。DEBUG 加 `--set debugNoCli=YES` 當成找不到。
-- **Codex 桌面版附的 codex**（R55、M§37、D128）：npm、PATH 都找不到 codex 時才找。桌面版是 Microsoft Store 的 MSIX 套件 `OpenAI.Codex`（package family `OpenAI.Codex_2p2nqsd0c76g0`，從 Store 的安裝檔名看到的，要在真的電腦上確認）。
-  - 安裝資料夾用 Win32 的 `GetPackagesByPackageFamily` 加 `GetPackagePathByFullName`（kernel32，P/Invoke，不用 WinRT 的 `PackageManager`）查。`C:\Program Files\WindowsApps` 一般使用者列不出內容，不能用掃資料夾的方式找；資料夾名稱有版本號，每次重新查（跟其他工具一樣快取 30 秒），不記住路徑。
-  - 資料夾裡先找跟 Mac 一樣的說明檔 `app\resources\codex-cli\codex-package.json`（規則同 M§37.1：`layoutVersion` 1、相對路徑、不接受 `..`；`pathDir` 接到子程序的 PATH）。沒有說明檔時找 `app\resources\codex.exe`（第三方文章寫的位置）。實際的樣子要在虛擬機裝起來確認後寫回這裡。
-  - 從套件外直接執行 `WindowsApps` 裡的 exe（沒有套件身分）：一般的 Win32 執行檔可以執行，也要在虛擬機確認。啟動失敗（拒絕存取）時當成沒找到，log 記一筆。
-  - app 的名稱、打開 app：讀套件資料夾的 `AppxManifest.xml`，名稱用 `Properties/DisplayName`（是 `ms-resource:` 時用「Codex」），`Application` 的 `Id` 組成 `<package family>!<Id>`；「打開 Codex 登入」用 `explorer.exe shell:AppsFolder\<package family>!<Id>`（`ArgumentList`，不經過 cmd.exe）。
-- **Claude 桌面版**（R56、M§37.3）：有沒有安裝看 MSIX 套件 `Claude_pzs8sxrjxfjjc`（Store 和官網的安裝檔現在都是 MSIX），或舊版安裝在 `%LOCALAPPDATA%\AnthropicClaude\claude.exe`。提示的指令是 PowerShell 的 `irm https://claude.ai/install.ps1 | iex`，說明寫「在 PowerShell 貼上」；原生安裝放在 `%USERPROFILE%\.local\bin\claude.exe`，本來就找得到。畫面、出現的地方、訊息同 Mac。
-- DEBUG：`--set debugOnlyDesktopCli=YES`（只找桌面版）、`--set debugClaudeDesktop=yes|no`；`state` 的 `tools` 同 Mac。
+- **Codex 桌面版附的 codex**（R55、M§37、D128）：npm、PATH 都找不到 codex 時才找（`WindowsToolLocator.CodexDesktop`，結果留 30 秒，不記住路徑）。桌面版是 Microsoft Store 的 MSIX 套件 `OpenAI.Codex`（package family `OpenAI.Codex_2p2nqsd0c76g0`，從 Store 的安裝檔名看到的，**還沒在真的電腦上確認**）。
+  - 安裝資料夾：`Platform/Packages.cs` 用 kernel32 的 `GetPackagesByPackageFamily` 加 `GetPackagePathByFullName`（LibraryImport）查。`C:\Program Files\WindowsApps` 一般使用者列不出內容，不能用掃資料夾的方式找；資料夾名稱有版本號，所以每次重新查。
+  - 執行檔：`Shiyin.LLM/DesktopApps.cs` 的 `CodexPackage.Find(<安裝資料夾>\app\resources)`（跨平台，Mac 上的 `dotnet test` 測得到）：先找跟 Mac 一樣的說明檔 `codex-cli\codex-package.json`（`layoutVersion` 1；`entrypoint`、`pathDir` 是相對路徑，不接受絕對路徑、磁碟代號、`..`，展開後要在 `codex-cli` 裡面；**`entrypoint` 一定要是 .exe**：.cmd、.ps1 要經過 cmd.exe 或 PowerShell，參數會被改寫）。有說明檔但不對就當作沒有，不退回別的位置；沒有說明檔時找 `resources\codex.exe`（第三方文章寫的位置）。不對的原因記 log（同一個原因只記一次）。實際的樣子要在虛擬機裝起來確認後寫回這裡。
+  - 從套件外直接執行 `WindowsApps` 裡的 exe（沒有套件身分）：一般的 Win32 執行檔可以執行，**也還沒在虛擬機確認**。
+  - app 的名稱、打開 app：`Packages.Manifest` 讀套件資料夾的 `AppxManifest.xml`，名稱用 `Properties/DisplayName`（是 `ms-resource:` 時用「Codex」），第一個 `Application` 的 `Id` 組成 `<package family>!<Id>`。找到的 `ToolCommand` 多 `DesktopApp`（名稱）、`AppUserModelId`；`CliLogin.Open` 遇到它們就 `Shell.OpenPackagedApp`（`explorer.exe shell:AppsFolder\<id>`，`ArgumentList`，不經過 cmd.exe），提示「拾音：正在打開 Codex。在那裡登入之後，回到拾音按「重新檢查」。」，不開終端機。
+  - 訊息：`DesktopApps.CodexAppName`（App 啟動時接成 `Tools.Find("codex")?.DesktopApp`）給 `LLMException.NotLoggedIn("codex")`、`SummarizerProblem` 的訊息和按鈕、失敗橫幅的「打開 Codex 登入」、`LLMException.IsLoginMessage`（同 M§37.2：標準答案用的 `IsLoginProblem` 不改）。設定頁、引導的文字同 Mac（「使用 Codex 附的 codex（這台電腦沒有另外安裝 Codex CLI）」「Codex（使用 Codex 附的 codex）」「打開 Codex 登入」）；Windows 沒有環境檢查的清單。
+- **Claude 桌面版**（R56、M§37.3）：`WindowsToolLocator.HasClaudeDesktop`（接到 `DesktopApps.HasClaude`，留 30 秒）看 MSIX 套件 `Claude_pzs8sxrjxfjjc`（Store 和官網的安裝檔現在都是 MSIX），或舊版安裝在 `%LOCALAPPDATA%\AnthropicClaude\claude.exe`。提示在 `Shiyin.App/ClaudeCodeHint.cs`：指令是 PowerShell 的 `irm https://claude.ai/install.ps1 | iex`（「打開 PowerShell，貼上這一行安裝：」，Consolas 字型、可以選取）、「複製」（翻譯表裡的「複製」是 Duplicate，這裡用 `L.English ? "Copy" : "複製"`）、「安裝說明」、「重新檢查」（清掉桌面版的快取、重畫）。原生安裝放在 `%USERPROFILE%\.local\bin\claude.exe`，本來就找得到。出現的地方、訊息同 Mac。
+- DEBUG：`--set debugOnlyDesktopCli=YES`（不看使用者自己裝的 claude、codex，只找桌面版）、`--set debugCodexApp=<資料夾>`（把這個資料夾當成 Codex 桌面版的安裝資料夾，不問系統）、`--set debugClaudeDesktop=yes|no`；`--set debugNoCli=YES` 照舊連桌面版都找不到。`state` 多 `tools`：`claude`、`codex`（`path`、`desktopApp`、`appId`、`pathEnv`）、`claudeDesktop`。
 
 ### 10.1 整理工具設定好才用、失敗說清楚怎麼修（R45～R47、M§34）
 

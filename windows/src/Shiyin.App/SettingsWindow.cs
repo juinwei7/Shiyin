@@ -115,17 +115,24 @@ public sealed class SettingsWindow : Window
             column.Children.Add(CompanyModels());
         _ = host.Enterprise.RefreshInfo();
 
+        // 只有 Claude 桌面版：說明怎麼裝 Claude Code（R56.2、R56.3）；已經在用別的整理工具的人不顯示
+        var claudeHint = (provider == LLMProvider.Claude || S.NeedsProviderSetup) && ClaudeCodeHint.Applies(host);
         if (provider is LLMProvider.Claude or LLMProvider.Codex)
         {
+            // 桌面版附的 codex：寫出來，登入是打開那個 app（R55.3）
+            var desktopApp = provider == LLMProvider.Codex ? host.Tools.Find("codex")?.DesktopApp : null;
             var status = Ui.Text(L.T("檢查登入狀態…"), 13, color: Ui.Secondary);
-            var login = Ui.Button(L.F("登入 %@", provider.ShortLabel()), () => CliLogin.Open(host, provider));
+            var login = Ui.Button(desktopApp is not null ? L.F("打開 %@ 登入", desktopApp) : L.F("登入 %@", provider.ShortLabel()), () => CliLogin.Open(host, provider));
             login.Visibility = Visibility.Collapsed;
             async void Check(bool userInitiated)
             {
+                if (userInitiated) host.Locator.ClearCache();
                 if (host.Tools.Find(provider == LLMProvider.Claude ? "claude" : "codex") is null)
                 {
                     status.Text = provider == LLMProvider.Codex ? L.T("這台電腦沒有安裝 codex：沒有在用 Codex 的話，請改選 API")
+                        : claudeHint ? L.T("這台電腦沒有安裝 Claude Code（命令列版），安裝方法在下面")
                         : L.T("這台電腦沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API");
+                    if (userInitiated) Show();
                     return;
                 }
                 var result = await CliLogin.Refresh(provider);
@@ -138,7 +145,11 @@ public sealed class SettingsWindow : Window
             }
             Check(false);
             column.Children.Add(Ui.Row(8, Ui.Text(L.T("狀態"), 13), status, login, Ui.IconButton(Symbol.Refresh, L.T("重新檢查登入狀態"), () => Check(true))));
+            if (desktopApp is not null)
+                column.Children.Add(Ui.Caption(L.F("使用 %@ 附的 codex（這台電腦沒有另外安裝 Codex CLI）", desktopApp)));
         }
+        if (claudeHint)
+            column.Children.Add(ClaudeCodeHint.Build(() => { host.Locator.ClearCache(); Show(); }));
 
         // OpenAI 相容 API 的網址（M§19.3）
         if (provider == LLMProvider.OpenAICompatible)

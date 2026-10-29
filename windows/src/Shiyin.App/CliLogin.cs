@@ -91,6 +91,13 @@ public static class CliLogin
             host.Notifier.Notice(LLMException.NotInstalled(provider == LLMProvider.Codex ? "codex" : "claude").Message);
             return;
         }
+        // 桌面版附的 codex：打開那個 app 登入（R55.3），不開終端機
+        if (tool.DesktopApp is { } app && tool.AppUserModelId is { } appId)
+        {
+            Shell.OpenPackagedApp(appId);
+            host.Notifier.Notice(L.F("拾音：正在打開 %@。在那裡登入之後，回到拾音按「重新檢查」。", app));
+            return;
+        }
         Shell.OpenLoginTerminal(tool, provider == LLMProvider.Codex ? ["login"] : ["auth", "login"]);
         host.Notifier.Notice(L.F("拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。", provider.ShortLabel()));
     }

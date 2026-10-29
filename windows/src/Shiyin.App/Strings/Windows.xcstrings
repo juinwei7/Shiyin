@@ -408,6 +408,17 @@
         }
       }
     },
+    "使用 %@ 附的 codex（這台電腦沒有另外安裝 Codex CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the codex bundled with %@ (Codex CLI isn't installed separately on this PC)"
+          }
+        }
+      }
+    },
     "依回答修正": {
       "extractionState": "manual",
       "localizations": {
@@ -684,6 +695,17 @@
         }
       }
     },
+    "打開 PowerShell，貼上這一行安裝：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open PowerShell and paste this line to install:"
+          }
+        }
+      }
+    },
     "打開設定": {
       "extractionState": "manual",
       "localizations": {
@@ -779,6 +801,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shiyin doesn't have permission to use the microphone"
+          }
+        }
+      }
+    },
+    "拾音：正在打開 %@。在那裡登入之後，回到拾音按「重新檢查」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin: opening %@. After you sign in there, come back to Shiyin and click “Check Again”."
           }
         }
       }
@@ -1421,6 +1454,17 @@
         }
       }
     },
+    "這台電腦找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code (the command-line version) isn't installed on this PC. The Claude desktop app can't be used directly: go to Settings → Summarizer and follow the steps to install Claude Code, or choose an API (with an API key) or “Don't summarize”."
+          }
+        }
+      }
+    },
     "這台電腦找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
       "extractionState": "manual",
       "localizations": {
@@ -1450,6 +1494,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "This PC doesn't have Claude Code or Codex. To have AI write your meeting notes, choose an API and paste an API key (there's a link to get one). You can also set this up later; recording and transcripts work either way."
+          }
+        }
+      }
+    },
+    "這台電腦沒有安裝 Claude Code（命令列版），安裝方法在下面": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code (the command-line version) isn't installed on this PC. See how to install it below"
           }
         }
       }
