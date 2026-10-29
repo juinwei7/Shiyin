@@ -18,7 +18,7 @@ enum WhisperError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .modelMissing: return String(localized: "還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載")
+        case .modelMissing: return String(localized: "還沒有下載轉錄模型，請到設定 → 錄音與轉錄下載")
         case .loadFailed: return String(localized: "轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載")
         case .failed(let code): return String(localized: "轉錄失敗（whisper 錯誤代碼 \(code)）")
         case .cancelled: return String(localized: "已取消")

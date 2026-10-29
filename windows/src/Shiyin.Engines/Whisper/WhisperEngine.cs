@@ -27,7 +27,7 @@ public sealed class WhisperException(WhisperErrorKind kind, int code = 0) : Exce
 
     static string Describe(WhisperErrorKind kind, int code) => kind switch
     {
-        WhisperErrorKind.ModelMissing => L.T("還沒有下載轉錄模型，請到設定 → 模型與儲存空間下載"),
+        WhisperErrorKind.ModelMissing => L.T("還沒有下載轉錄模型，請到設定 → 錄音與轉錄下載"),
         WhisperErrorKind.LoadFailed => L.T("轉錄模型載入失敗，模型檔可能已損壞，請到設定重新下載"),
         WhisperErrorKind.Failed => L.F("轉錄失敗（whisper 錯誤代碼 %d）", (long)code),
         WhisperErrorKind.Cancelled => L.T("已取消"),
