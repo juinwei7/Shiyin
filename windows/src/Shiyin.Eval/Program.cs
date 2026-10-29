@@ -29,6 +29,8 @@ switch (args.FirstOrDefault())
     case "live-eval": return Live(args[1], args[2], args[3]);
     case "info":
         Console.WriteLine(WhisperEngine.SystemInfo);
+        // whisper 會用的顯示卡（design-windows §8）：空的是只用 CPU；windows-gpu-pack.yml 用它確認 lavapipe 的 Vulkan 有被用上
+        Console.WriteLine($"gpu: {WhisperEngine.GpuDevice}");
         return 0;
     default:
         Console.Error.WriteLine("用法：shiyin-eval transcribe-eval|detect-eval|info …");
