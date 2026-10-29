@@ -1,15 +1,29 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Shiyin.Localization;
+using Shiyin.Model;
 using Shiyin.Transcribe;
 
 namespace Shiyin.Whisper;
 
 public enum WhisperErrorKind { ModelMissing, LoadFailed, Failed, Cancelled, Empty, QwenFailed }
 
-public sealed class WhisperException(WhisperErrorKind kind, int code = 0) : Exception(Describe(kind, code))
+public sealed class WhisperException(WhisperErrorKind kind, int code = 0) : Exception(Describe(kind, code)), ILogSummary
 {
     public WhisperErrorKind Kind { get; } = kind;
+    /// <summary>whisper 的錯誤代碼（Failed）、llama-server 的 HTTP 狀態（QwenFailed）；沒有是 0</summary>
+    public int Code { get; } = code;
+
+    /// <summary>jobs.error_kind、log 用的種類（design-windows §12.7、R54.4）；轉錄失敗的回報原本只看得到「WhisperException」</summary>
+    public string LogSummary => Kind switch
+    {
+        WhisperErrorKind.ModelMissing => "WhisperError.modelMissing",
+        WhisperErrorKind.LoadFailed => "WhisperError.loadFailed",
+        WhisperErrorKind.Failed => $"WhisperError.failed({Code})",
+        WhisperErrorKind.Cancelled => "WhisperError.cancelled",
+        WhisperErrorKind.QwenFailed => Code == 0 ? "WhisperError.qwenFailed" : $"WhisperError.qwenFailed({Code})",
+        _ => "WhisperError.empty",
+    };
 
     static string Describe(WhisperErrorKind kind, int code) => kind switch
     {
