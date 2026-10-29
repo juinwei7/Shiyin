@@ -776,3 +776,37 @@
 - 邊錄邊上傳（停止錄音後幾分鐘內就有正式逐字稿，下一版）
 - 公司從後台把詞彙表、範本、設定推到每台電腦，或限制只能用公司的整理工具（下一版）
 - 同時登入兩個以上的企業伺服器
+
+## 38. 只裝了 Codex、Claude 的桌面版（2026-10-29，Threads 的使用者回饋）
+
+第 37 節在 `fix/teams-loopback` 分支（R54）。
+
+使用者（Windows，AMD 顯示卡）：「預設抓不到 Codex 桌面版，我請 AI 幫我修好了」（同一則的 AMD 顯示卡加速見 R27 R4.7）。原因：Windows 版找 codex 只看 PATH 和 npm 的全域安裝；Codex 桌面版（Microsoft Store）附的 codex.exe 在 `C:\Program Files\WindowsApps\OpenAI.Codex_<版本>_…\app\resources\`（第三方文章寫的，OpenAI 的文件沒寫，要在真的電腦上確認），不在 PATH 上。OpenAI 的文件寫明 Windows 桌面版跟 CLI 共用 `%USERPROFILE%\.codex`，在桌面版登入過，CLI 也是登入的。
+
+Claude 桌面版也會自己下載一份 Claude Code，但那是桌面版內部用的：Mac 放在 `~/Library/Application Support/Claude/claude-code/<版本>/<雜湊>/claude.app`（只有自己讀得到的資料夾），登入由桌面版管。Anthropic 的條款（code.claude.com/docs/en/legal-and-compliance，2026-10-29 查）允許使用者用自己的訂閱登入原版的 Claude Code，但不允許第三方 app 收集、儲存或轉用 Claude 帳號的登入資料。
+
+2026-10-29 使用者決定：Codex 找不到 CLI 時用桌面版附的；Claude 不用桌面版裡的，改成說明怎麼安裝 Claude Code。
+
+### R55 用 Codex 桌面版附的 codex（P1）
+
+- R55.1 找 codex 的順序：先找使用者自己裝的 Codex CLI（跟現在一樣）；找不到時，用 Codex 桌面版附的 codex。兩個都有時用 CLI。
+- R55.2 只裝了 Codex 桌面版的電腦，跟有 CLI 的一樣：自動選整理工具時找得到（R35.1）、引導和設定的整理工具可以選 Codex（R35.3、R45.3）、準備好了沒照樣判斷（R45.1：問 codex 自己有沒有登入，拾音不讀、不複製 Codex 的登入資料）。
+- R55.3 設定的整理工具看得出用的是哪一份：用桌面版附的時候寫「使用 Codex 桌面版附的 codex」。這時沒登入的說明改成「打開 Codex 桌面版登入」。
+- R55.4 桌面版更新後（安裝位置跟著版本變）照樣找得到，不用重新設定；桌面版移除後當成沒有安裝（R35.4）。桌面版附的 codex 執行失敗時，訊息建議另外安裝 Codex CLI。
+- R55.5 不改 Codex 桌面版的檔案和設定，只執行它附的 codex。
+
+### R56 只有 Claude 桌面版時，說明怎麼裝 Claude Code（P1）
+
+- R56.1 拾音照舊只用使用者自己裝的 Claude Code，不用 Claude 桌面版裡的那一份（上面的原因）。
+- R56.2 這台電腦有 Claude 桌面版、找不到 Claude Code 時，引導和設定的整理工具裡 Claude Code 那一項不是只寫「沒有安裝」，而是說明「你有 Claude 桌面版：另外安裝 Claude Code（命令列版）之後，拾音就能用你的 Claude 訂閱整理」，附可以複製的官方安裝指令（Windows：`irm https://claude.ai/install.ps1 | iex`，Mac：`curl -fsSL https://claude.ai/install.sh | bash`）和官方說明的連結。裝好、登入之後按「重新檢查」就能選。
+- R56.3 選了 Claude Code、這台電腦卻找不到時（R35.4），有 Claude 桌面版的話也加上 R56.2 的說明。
+
+### 等使用者決定
+
+- Mac 要不要一起做：Mac 也有一樣的情況（Codex.app、Claude.app）。R28 的原則是兩邊一起做，但這會改 Mac 的行為（R26.5）。
+
+### 不做（這一版）
+
+- 用 Claude 桌面版裡的 Claude Code（R56.1）
+- 讀 Claude 桌面版、Codex 的登入資料
+- 在拾音裡直接執行安裝指令，幫使用者裝 Claude Code、Codex CLI
