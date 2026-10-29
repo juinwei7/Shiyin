@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-拾音 Shiyin 是 macOS 原生的會議紀錄 app（SwiftUI，macOS 26）。目前是 4.2.1（4.1 加上三個分頁的減法、待確認就地回答、收音提醒送通知、可選的 Qwen3-ASR 引擎，Windows 同步；4.1.1 整理工具設定好才用、失敗說清楚怎麼修；4.1.2 忘了停止錄音時提醒、自動停止；4.2 可以連公司的企業伺服器（在公司的伺服器轉錄、整理，公司詞彙表、加入連結）；4.2.1 企業伺服器的安全強化；第三版加上英文版、開源準備、轉錄準確度、日文、更多整理工具、穩定性修正；3.5 加上草稿紀錄、聲紋、猜說話者、對會議提問、偵測會議；3.6 加上重新辨識說話者、合併和改句子的說話者、分不準的提醒、收音提醒，修正錄音中畫面卡住；4.0 加上 Windows 版、待確認的是非題、聲紋沒把握時先問、短句的說話者、沒有 claude／codex 時先不整理）：
+拾音 Shiyin 是 macOS 原生的會議紀錄 app（SwiftUI，macOS 26）。目前是 4.2.2（4.1 加上三個分頁的減法、待確認就地回答、收音提醒送通知、可選的 Qwen3-ASR 引擎，Windows 同步；4.1.1 整理工具設定好才用、失敗說清楚怎麼修；4.1.2 忘了停止錄音時提醒、自動停止；4.2 可以連公司的企業伺服器（在公司的伺服器轉錄、整理，公司詞彙表、加入連結）；4.2.1 企業伺服器的安全強化；4.2.2 只裝 Codex 桌面版也能整理、只有 Claude 桌面版時說明怎麼裝 Claude Code，Windows 加上 AMD 顯示卡加速、錄得到 Teams 的聲音；第三版加上英文版、開源準備、轉錄準確度、日文、更多整理工具、穩定性修正；3.5 加上草稿紀錄、聲紋、猜說話者、對會議提問、偵測會議；3.6 加上重新辨識說話者、合併和改句子的說話者、分不準的提醒、收音提醒，修正錄音中畫面卡住；4.0 加上 Windows 版、待確認的是非題、聲紋沒把握時先問、短句的說話者、沒有 claude／codex 時先不整理）：
 
 - 錄音：AVAudioEngine 收麥克風、Core Audio process tap 收電腦聲音，寫成雙聲道 WAV（`Sources/Shiyin/Capture/`）
 - 即時逐字稿：系統的 SpeechAnalyzer（zh_TW、en_US 或 ja_JP，依會議語言）
@@ -12,7 +12,7 @@
 
 不需要 Python、Homebrew、ffmpeg。選型的理由在 design.md 的決策紀錄（D#）。已經刪掉的舊文件（第二版的規格 `docs/archive/v2/`、選型實驗 `docs/spikes/`、3.4.0 以前完整的 `docs/tasks.md`）用 `git show b621ed6:<路徑>` 看。
 
-**Windows 版**（2026-10-20 起開發，4.0.0 跟 Mac 一起發布）：C# .NET 10＋WinUI 3，程式放 `windows/`，功能對齊 Mac 4.2.1；需求在 requirements 第 22 節（R26～R28），設計在 `docs/design-windows.md`，任務在 tasks.md 的「Windows 版」。見下面的「Windows 版」一節。
+**Windows 版**（2026-10-20 起開發，4.0.0 跟 Mac 一起發布）：C# .NET 10＋WinUI 3，程式放 `windows/`，功能對齊 Mac 4.2.2；需求在 requirements 第 22 節（R26～R28），設計在 `docs/design-windows.md`，任務在 tasks.md 的「Windows 版」。見下面的「Windows 版」一節。
 
 ## 開發流程：SDD（規格驅動）
 
@@ -78,8 +78,8 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite # 看資料
 - PowerShell 傳給外部程式的 `-D名稱=$變數`、`--名稱=$變數` 要整串加雙引號（`"-DFOO=$x"`）：「-」開頭的參數裡的變數不會展開，程式拿到的是 `$x` 這串字（2026-10-22 CI 建 whisper 時，x64 因此去找 Vulkan）。
 - 測安裝檔（design-windows §14）：`pack.ps1` 打包、`Setup.exe --silent` 安裝、`%LOCALAPPDATA%\ShiyinApp\Update.exe --uninstall --silent` 移除；移除後等 20 秒再重裝（Velopack 會延後刪安裝資料夾，會把剛裝好的刪掉）。測 app 內更新用 `pack.ps1 -UpdateTest`（§14.2）。安裝版跟 DEBUG 版共用通知的 AppUserModelID，移除安裝版會把通知中心裡 DEBUG 版的通知一起清掉。
 - 官網的 Windows 版截圖：docs/website.md §16.4（虛擬機調成 150%、示範資料 `C:\ShiyinDemo`、`C:\ShiyinDemoEN`、`scripts/windows/vm/ps` 的 snapwin、clickname、dpi、display、setnotes），截完改回 100%、1024×768。截圖程式要宣告支援高 DPI，不然座標會被換算；PowerShell 的變數不分大小寫（`$h` 會蓋掉 `$H`）。
-- Windows 的 release 用 `win-vX.Y.Z` tag，一律不設成 latest（Mac 的更新網址用 latest）；第一個 Windows release 之前官網要先改好（design-windows §14.3、§14.4）。
-- .NET 10 SDK 裝在 `~/.dotnet`（使用者的資料夾，沒有加進 PATH）。在 `windows/` 下跑：`~/.dotnet/dotnet test tests/Shiyin.Tests`（這版 SDK 不認 `--project`）（標準答案、資料庫、整理工具，Mac 上就能跑；建置輸出在 `~/Library/Caches/ShiyinBuild-win`）。
+- Windows 的 release 用 `win-vX.Y.Z` tag，一律不設成 latest（Mac 的更新網址用 latest；design-windows §14.3）。
+- .NET 10 SDK 裝在 `~/.dotnet`（使用者的資料夾，沒有加進 PATH）。在 `windows/` 下跑：`~/.dotnet/dotnet test --project tests/Shiyin.Tests`（標準答案、資料庫、整理工具，Mac 上就能跑；建置輸出在 `~/Library/Caches/ShiyinBuild-win`）。
 - 重新產生標準答案：建 Mac 的 DEBUG 版，用暫存的 `SHIYIN_HOME` 啟動（`open -g -n --env SHIYIN_HOME=… … --args -ApplePersistenceIgnoreState YES -llmProvider none`），`shiyinctl dump-golden "$PWD/shared/golden/fixtures.json" <資料夾>`，等 `<資料夾>/result.json` 出現（`"ok": true`），刪掉 result.json 後換掉 `shared/golden/expected/`。跑兩次比對要完全相同。
 - Mac 上只能編譯檢查 app（`dotnet build Shiyin.Windows.slnx`，App、Platform 用 `EnableWindowsTargeting`，不自帶 Windows App SDK、不產生 .pri，建出來的東西不能用）；真的建置、打包在 Windows：`scripts/windows/build-whisper.ps1 -Arch x64|arm64`（whisper.cpp 固定在 d1be6fde）、`scripts/windows/pack.ps1 -Version … -Arch … -Whisper …`（自帶 .NET 和 Windows App SDK、vpk pack、安裝檔改成 `Shiyin-<版本>-win-<架構>-Setup.exe`、簽更新說明）。
 - 第三方授權：更新 Windows 的套件、whisper.cpp 之後跑 `DOTNET=~/.dotnet/dotnet python3 scripts/windows/make-third-party-licenses.py`，commit 產生的 `windows/src/Shiyin.App/ThirdPartyLicenses.txt`（app 用到沒列過的套件時會停下來，要在腳本裡加上授權從哪裡來）。

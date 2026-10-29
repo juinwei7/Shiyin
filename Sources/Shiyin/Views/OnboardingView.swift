@@ -2,7 +2,7 @@ import AVFoundation
 import SwiftUI
 import UserNotifications
 
-/// 首次使用引導（design §11、R10.2）：歡迎 → 權限 → 下載模型 → 整理工具 → 完成。每一步都可以略過。
+/// 首次使用引導（design §33.4、R44.6）：歡迎使用拾音（含權限）→ 整理工具 → 準備好了，模型在背景下載。每一步都可以略過。
 struct OnboardingView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss

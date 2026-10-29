@@ -34,7 +34,7 @@ export const GUIDES = [
   {
     slug: 'google-meet-transcript',
     published: '2026-10-21',
-    updated: '2026-10-21',
+    updated: '2026-10-29',
     zh: {
       title: 'Google Meet 中文逐字稿怎麼做？內建不支援中文時的做法｜拾音 Shiyin',
       description: 'Google Meet 內建的逐字稿和 Gemini 筆記目前不支援中文。這篇說明在 Mac 上錄下 Meet 會議，轉成中文逐字稿和會議記錄的方法，錄音不用上傳。',
@@ -80,7 +80,7 @@ ${table(['做法', '中文', '費用', '錄音在哪裡', '其他人看得到嗎
         ['其他與會者會知道我在錄音嗎？', '拾音不會加入會議，Meet 裡不會顯示。不過錄音前還是建議先告知與會者，這是基本禮貌，有些公司也有規定。'],
         ['Meet 錄影存到雲端硬碟的檔案可以轉嗎？', '可以。把下載下來的 mp4 拖進拾音的視窗就會轉錄，一樣會分出說話者、整理成會議紀錄。'],
         ['要付費嗎？', '拾音免費、開源。整理會議紀錄用的是你自己的 ChatGPT、Claude 訂閱或 API 額度；選「不整理」就沒有任何費用。'],
-        ['Windows 可以用嗎？', '目前只有 Mac 版（macOS 26 以上、Apple Silicon），Windows 版正在開發。'],
+        ['Windows 可以用嗎？', '可以。拾音也有 Windows 版（Windows 11，x64 和 ARM），一樣錄得到 Meet 裡對方的聲音、轉成中文逐字稿，<a href="/windows/">看 Windows 版</a>。'],
       ],
     },
   },
@@ -235,7 +235,7 @@ ${table(['測試資料', 'Whisper large-v2', 'Breeze ASR 25', '差別'], [
   {
     slug: 'offline-transcription-mac',
     published: '2026-10-21',
-    updated: '2026-10-21',
+    updated: '2026-10-29',
     zh: {
       title: '會議錄音不想上傳？Mac 離線轉逐字稿的方法｜拾音 Shiyin',
       description: '大部分逐字稿服務要把錄音上傳到雲端。這篇說明在 Mac 上離線轉錄會議、分說話者的方法，哪些步驟會用到網路，以及完全不連網的設定。',
@@ -261,7 +261,7 @@ ${table(['步驟', '在哪裡做', '要網路嗎'], [
 
 <h2>完全不連網的設定</h2>
 <ol>
-<li>在有網路的時候先把轉錄模型下載好（第一次打開的引導，或設定的「模型與儲存空間」）。</li>
+<li>在有網路的時候先把轉錄模型下載好（第一次打開的引導，或設定的「錄音與轉錄」）。</li>
 <li>在 Mac 上裝好 Ollama 或 LM Studio，下載一個本機模型。</li>
 <li>拾音的設定 → 整理工具，選「OpenAI 相容 API」，網址填 Ollama 或 LM Studio 的本機網址（不用 key）。</li>
 <li>或者整理工具選「不整理」，只留逐字稿。</li>
@@ -307,7 +307,7 @@ ${table(['Step', 'Where', 'Internet?'], [
 
 <h2>A fully offline setup</h2>
 <ol>
-<li>Download the transcription models while you’re online (during first launch, or in Settings → Models & Storage).</li>
+<li>Download the transcription models while you’re online (during first launch, or in Settings → Recording & Transcription).</li>
 <li>Install Ollama or LM Studio and download a local model.</li>
 <li>In Shiyin, open Settings → Summarizer, choose “OpenAI-compatible API” and enter the local Ollama or LM Studio address (no key needed).</li>
 <li>Or choose “Don’t summarize” and keep just the transcript.</li>
@@ -370,7 +370,7 @@ ${table(['処理', '場所', 'インターネット'], [
 `,
       faq: [
         ['料金はかかりますか？', '拾音は無料です。議事録の作成には、手持ちの ChatGPT や Claude のサブスクリプション、または API の利用料がかかります。「Don’t summarize」を選べば費用はかかりません。'],
-        ['必要な環境は？', 'macOS 26 以降、Apple シリコン（M1 以降）、メモリ 8 GB 以上です。Windows 版は開発中です。'],
+        ['必要な環境は？', 'macOS 26 以降、Apple シリコン（M1 以降）、メモリ 8 GB 以上です。Windows 11（x64、ARM）用の<a href="/ja/windows/">Windows 版</a>もあります。'],
         ['話者は分けられますか？', 'はい。話者を自動で識別し、名前を付けると声を覚えて次の会議から自動で名前を入れます。間違いは統合や行ごとの修正で直せます。'],
         ['アプリは日本語で表示されますか？', 'いいえ。アプリの表示は英語と繁体字中国語のみです。会議の言語は日本語を選べます。'],
       ],
@@ -380,7 +380,7 @@ ${table(['処理', '場所', 'インターネット'], [
   {
     slug: 'chatgpt-claude-meeting-notes',
     published: '2026-10-21',
-    updated: '2026-10-21',
+    updated: '2026-10-29',
     zh: {
       title: '用 ChatGPT、Claude 訂閱整理會議記錄，不用再多付一份月費｜拾音 Shiyin',
       description: '已經有 ChatGPT 或 Claude 的訂閱，就不一定要再訂會議記錄工具。這篇比較手動把逐字稿貼給 ChatGPT，和用拾音自動整理、每一條附時間點的差別。',
@@ -407,7 +407,7 @@ ${table(['処理', '場所', 'インターネット'], [
 
 <h2>設定步驟</h2>
 <ol>
-<li>照官方說明安裝 Claude Code 或 Codex，在終端機登入一次。</li>
+<li>照官方說明安裝 Claude Code 或 Codex，在終端機登入一次。已經裝了 Codex 桌面版（Mac 上新版叫 ChatGPT）、在裡面登入過的話，拾音會直接用它附的 codex，不用另外安裝；只有 Claude 桌面版的話，還是要另外安裝 Claude Code，拾音的設定裡會附上安裝指令。</li>
 <li>打開拾音的設定 → 整理工具，選 Claude Code 或 Codex。</li>
 <li>之後每場會議停止錄音，就會自動整理。</li>
 </ol>
@@ -450,7 +450,7 @@ ${table(['処理', '場所', 'インターネット'], [
 
 <h2>Setup</h2>
 <ol>
-<li>Install Claude Code or Codex following the official instructions and sign in once in Terminal.</li>
+<li>Install Claude Code or Codex following the official instructions and sign in once in Terminal. If you already use the Codex desktop app (now called ChatGPT on the Mac) and are signed in there, Shiyin uses the codex that comes with it, so there’s nothing else to install. The Claude desktop app isn’t enough on its own: install Claude Code as well, and Shiyin shows the install command in Settings.</li>
 <li>In Shiyin, open Settings → Summarizer and choose Claude Code or Codex.</li>
 <li>From then on, notes are written automatically when you stop recording.</li>
 </ol>
@@ -472,7 +472,7 @@ ${table(['処理', '場所', 'インターネット'], [
   {
     slug: 'meeting-notes-apps-compared',
     published: '2026-10-21',
-    updated: '2026-10-21',
+    updated: '2026-10-29',
     zh: {
       title: '會議記錄工具比較 2026：拾音、Notta、Otter、Granola、雅婷逐字稿、Meetily｜拾音 Shiyin',
       description: '整理幾款常見的會議記錄、逐字稿工具：價格、錄音在哪裡轉、要不要會議機器人、中文支援和平台，也寫出拾音不適合的情況。2026 年 10 月查證。',
@@ -480,11 +480,11 @@ ${table(['処理', '場所', 'インターネット'], [
       lead: '選會議記錄工具，最常卡在三件事：錄音能不能上傳、中文夾英文轉得準不準、要不要再付一份月費。下面整理幾款常見工具的差別，也寫出拾音不適合的情況。',
       body: `
 <h2>先說結論</h2>
-<p>在 Mac 上開會、錄音不想上傳、會議常常中文夾英文，拾音是免費的選擇：錄音、轉錄、分說話者都在本機，整理用你自己的 ChatGPT 或 Claude 訂閱。如果要在手機上錄、沒有 Mac，或會議裡常講台語，雲端服務會比較合適。</p>
+<p>在 Mac 或 Windows 上開會、錄音不想上傳、會議常常中文夾英文，拾音是免費的選擇：錄音、轉錄、分說話者都在本機，整理用你自己的 ChatGPT 或 Claude 訂閱。如果要在手機上錄，或會議裡常講台語，雲端服務會比較合適。</p>
 
 <h2>一覽表</h2>
 ${table(['工具', '價格', '錄音在哪裡轉', '會議機器人', '中文', '平台'], [
-  ['拾音', '免費，MIT 開源', '你的 Mac', '不用', '支援，針對台灣中文夾英文', 'Mac（macOS 26、Apple Silicon）；Windows 開發中'],
+  ['拾音', '免費，MIT 開源', '你的電腦', '不用', '支援，針對台灣中文夾英文', 'Mac（macOS 26、Apple Silicon）、Windows 11（x64、ARM）'],
   ['Notta', '免費每月 120 分鐘（每次最多 3 分鐘）；Pro 年繳每月 US$8.17', '雲端', '有，可錄 Zoom、Teams、Meet、Webex', '支援', '網頁、手機、電腦'],
   ['Otter', '免費每月 300 分鐘；Pro 年繳每月 US$8.33', '雲端', '有，會加入 Zoom、Teams、Meet', '支援', '網頁、手機'],
   ['Granola', '免費版只保留 30 天紀錄；Business 每月 US$14', '錄音串流到轉錄服務（Deepgram、AssemblyAI），不保留錄音', '不用', '有多語言支援', '電腦、iOS、Android'],
@@ -505,9 +505,9 @@ ${table(['工具', '價格', '錄音在哪裡轉', '會議機器人', '中文', 
 
 <h2>其他工具比較適合的情況</h2>
 <ul>
-<li><strong>要用手機錄，或沒有 Mac</strong>：Notta、Otter、雅婷逐字稿都有手機 app。</li>
+<li><strong>要用手機錄</strong>：Notta、Otter、雅婷逐字稿都有手機 app。</li>
 <li><strong>會議裡常講台語</strong>：雅婷逐字稿支援台語，拾音不支援。</li>
-<li><strong>要用 Windows</strong>：Meetily 有 Windows 版；拾音的 Windows 版還在開發。</li>
+<li><strong>要用 Linux</strong>：Meetily 可以從原始碼在 Linux 上建置；拾音只有 Mac 和 Windows 11 版。</li>
 <li><strong>團隊要在網頁上一起看、一起改</strong>：雲端服務比較方便。</li>
 <li><strong>Mac 比較舊</strong>：拾音要 macOS 26 和 Apple Silicon（M1 以上），Intel Mac 不能用。</li>
 </ul>
@@ -535,11 +535,11 @@ ${table(['工具', '價格', '錄音在哪裡轉', '會議機器人', '中文', 
       lead: 'Granola and Otter are the best-known AI meeting note takers, but both process audio in the cloud and charge for their full plans. These open-source apps record and transcribe on your own computer. Here is how they compare, including where Shiyin isn’t the best fit.',
       body: `
 <h2>The short answer</h2>
-<p>For free, local meeting notes on a Mac with automatic speaker identification, in English, Chinese or Japanese, Shiyin fits well. If you need Windows or many more languages, Meetily and Minutes run on more platforms. Anarlog adds hosted sync and collaboration on its paid plan.</p>
+<p>For free, local meeting notes on a Mac or a Windows 11 PC with automatic speaker identification, in English, Chinese or Japanese, Shiyin fits well. If you meet in many more languages, Meetily and Minutes cover more of them, and Meetily also builds on Linux. Anarlog adds hosted sync and collaboration on its paid plan.</p>
 
 <h2>Open-source apps that run locally</h2>
 ${table(['App', 'Price', 'Transcription', 'Speaker identification', 'Notes written by', 'Platforms'], [
-  ['Shiyin', 'Free (MIT)', 'On your Mac: Breeze ASR 25, or Whisper large-v3-turbo for Japanese', 'Automatic and free; remembers voices across meetings', 'Your Claude or ChatGPT subscription (Claude Code, Codex), an API key, or a local model', 'macOS 26, Apple Silicon; Windows in development'],
+  ['Shiyin', 'Free (MIT)', 'On your computer: Breeze ASR 25, or Whisper large-v3-turbo for Japanese', 'Automatic and free; remembers voices across meetings', 'Your Claude or ChatGPT subscription (Claude Code, Codex), an API key, or a local model', 'macOS 26 on Apple Silicon; Windows 11 (x64, ARM)'],
   ['Meetily', 'Community edition free (MIT); Pro $10/user/month billed annually', 'On your computer: Whisper or Parakeet', 'Pro only', 'Claude, Groq, OpenAI API or local Ollama', 'macOS, Windows; Linux from source'],
   ['Anarlog (formerly Hyprnote)', 'Free (MIT); Pro $14/person/month', 'On-device on the free plan; cloud transcription on Pro', 'Manual labels free; automatic on Pro', 'On-device models or your own API keys', 'Apple Silicon Mac'],
   ['Minutes', 'Free (MIT)', 'On your computer: Whisper or Parakeet', 'Yes (pyannote)', 'Any LLM; can use your Claude subscription through MCP', 'Mac, Windows'],
@@ -563,7 +563,7 @@ ${table(['App', 'Price', 'Where audio is processed', 'Meeting bot'], [
 
 <h2>When another app fits better</h2>
 <ul>
-<li><strong>You use Windows or Linux.</strong> Meetily and Minutes support Windows; Shiyin’s Windows version is still in development.</li>
+<li><strong>You use Linux.</strong> Meetily builds from source on Linux; Shiyin runs only on macOS and Windows 11.</li>
 <li><strong>You meet in languages other than English, Chinese or Japanese.</strong> Meetily and Minutes use Whisper or Parakeet, which cover many more languages.</li>
 <li><strong>You have an Intel Mac or an older macOS.</strong> Shiyin needs macOS 26 on Apple Silicon.</li>
 <li><strong>Your team wants shared, synced notes.</strong> Anarlog Pro and Granola are built for that.</li>
@@ -583,7 +583,7 @@ ${table(['App', 'Price', 'Where audio is processed', 'Meeting bot'], [
         ['Is Shiyin really free?', 'Yes. It’s free and open source with no account and no usage limits. The only cost is your own AI subscription or API usage, if you choose to use one.'],
         ['Which is the most accurate?', 'We haven’t tested every app on the same recordings, so we don’t rank them. Try one of your own meetings in each.'],
         ['Can I import transcripts from another app?', 'Yes. Shiyin imports srt, vtt and txt transcripts and writes meeting notes from them.'],
-        ['Does Shiyin work on Windows?', 'Not yet. A Windows version is in development.'],
+        ['Does Shiyin work on Windows?', 'Yes. <a href="/en/windows/">Shiyin for Windows</a> runs on Windows 11 (x64 and ARM) with the same features as the Mac version.'],
       ],
     },
   },

@@ -49,6 +49,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 - **會議紀錄**
   - 範本：一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自訂
   - 整理工具：Claude Code、Codex CLI、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API（Groq、OpenRouter、本機的 Ollama、LM Studio），或「不整理」只要逐字稿
+  - 只裝了 Codex 桌面版（Mac 上新版叫 ChatGPT）也可以：拾音會用它附的 codex。只有 Claude 桌面版時，引導和設定會說明怎麼另外裝 Claude Code，附上可以複製的安裝指令
   - 停止錄音後先用即時逐字稿整理一份草稿（標「草稿」），正式轉錄完成後自動換成正式版
   - 可以直接編輯；每次修改都留版本，可以復原
 - **匯出與分享**
@@ -78,8 +79,8 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 | 晶片 | Apple Silicon（M1 以上） |
 | 系統 | macOS 26 以上 |
 | 記憶體 | 8 GB 以上。轉錄加說話者辨識的峰值約 2.9 GB，長錄音分段轉錄，會議長短影響不大（4 小時的會議 2.9 GB，M3 Pro 實測） |
-| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文會議另外 574 MB、自動偵測語言 60 MB，加上錄音：m4a 約每小時 10～30 MB |
-| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`）、Anthropic API key、OpenAI API key、Gemini API key，或 OpenAI 相容 API（Groq、OpenRouter 填 key；本機的 Ollama、LM Studio 不用 key）。也可以選「不整理」 |
+| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文會議另外 574 MB、自動偵測語言 60 MB、改選 Qwen3-ASR 另外約 2.5 GB，加上錄音：m4a 約每小時 10～30 MB |
+| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`，只裝了 Codex 桌面版也可以）、Anthropic API key、OpenAI API key、Gemini API key，或 OpenAI 相容 API（Groq、OpenRouter 填 key；本機的 Ollama、LM Studio 不用 key）。也可以選「不整理」 |
 | 網路 | 第一次下載模型、整理會議紀錄時需要；錄音、轉錄、說話者辨識都不需要 |
 
 ## 安裝
@@ -106,27 +107,28 @@ scripts/build-app.sh --install         # 建置 release 版並安裝到 ~/Applic
 
 ## Windows 版
 
-Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Mac 4.1 相同。到[官網](https://shiyin.weibuilds.com/windows/)或這個 repo 的 Releases 下載（tag 是 `win-vX.Y.Z`）。
+Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Mac 4.2 相同。到[官網](https://shiyin.weibuilds.com/windows/)或這個 repo 的 Releases 下載（tag 是 `win-vX.Y.Z`）。
 
 | 項目 | 需求 |
 |---|---|
 | 系統 | Windows 11（x64 或 ARM64）。N 版要先裝「媒體功能套件」（Media Feature Pack） |
 | 記憶體 | 8 GB 以上 |
 | 磁碟空間 | 第一次使用時下載：快速辨識約 240 MB、說話者辨識約 45 MB、轉錄模型約 1.7 GB；日文會議另外 574 MB；改選 Qwen3-ASR 另外約 2.5 GB（含 llama.cpp 的執行檔） |
-| 顯示卡 | 不是必要的。x64 的電腦有 NVIDIA 顯示卡時，拾音會自動下載顯示卡加速（約 685 MB），正式轉錄改用顯示卡（40 分鐘的會議用 RTX 3060 約 8 分鐘，只用 CPU 約 30 分鐘） |
+| 顯示卡 | 不是必要的。x64 的電腦有 NVIDIA 顯示卡時，拾音會自動下載顯示卡加速（約 685 MB），正式轉錄改用顯示卡（40 分鐘的會議用 RTX 3060 約 8 分鐘，只用 CPU 約 30 分鐘）；有 AMD 顯示卡（含 Radeon 內顯）時自動下載 Vulkan 版的加速（約 20 MB），一樣用顯示卡轉錄。Intel 顯示卡、ARM 的電腦只用 CPU |
 | 效能 | NVIDIA 顯示卡最快：顯示記憶體建議 4 GB 以上、驅動要 527 版以後。只用 CPU 時比較慢，筆電可能比會議本身還久；轉錄最多用 8 個執行緒。等不及的話，「設定 → 錄音與轉錄 → 正式轉錄」改成「快速辨識」（快很多但比較不準）。錄音中的即時逐字稿約用一個 CPU 核心的三分之一 |
 | 整理工具 | 同 Mac |
 
 跟 Mac 版不一樣的地方：
 
 - **安裝**：執行 `Shiyin-<版本>-win-x64-Setup.exe`（ARM 的電腦用 `win-arm64` 那個），不用系統管理員權限，裝在 `%LOCALAPPDATA%\ShiyinApp`。安裝檔沒有程式碼簽章：出現「Windows 已保護您的電腦」時按「其他資訊」→「仍要執行」；開著「智慧型應用程式控制」時會被直接擋下，要先到「Windows 安全性 → 應用程式與瀏覽器控制」關掉它。之後有新版時，拾音會在 app 裡問你要不要更新。
+- **電腦聲音**：錄的是 Windows 預設輸出裝置播放的所有聲音（Teams 會議的聲音也錄得到），換預設輸出裝置、拔耳機時接著錄新的裝置。錄音中在拾音裡播放錄音，聲音也會錄進去（Mac 會排除拾音自己的聲音）。
 - **系統匣**取代選單列：關掉主視窗時拾音留在系統匣，錄音和轉錄不會中斷；Windows 11 預設把新圖示收在工作列的「^」裡。
 - **快捷鍵**：⌘ 換成 Ctrl；在其他 app 裡用 Ctrl+Alt+Shift+R 開始或停止錄音、Ctrl+Alt+Shift+B 標記重點。
 - **辨識**：即時逐字稿和「快速辨識」（取代 macOS 內建辨識，轉錄模型還沒下載好時先用）是 SenseVoice；說話者辨識是 sherpa-onnx，聲紋跟 Mac 版不通用。.shiyin 封包兩邊可以互相匯入。
-- **資料與隱私**：資料在 `%LOCALAPPDATA%\Shiyin`（只有這個 Windows 使用者讀得到），設定是裡面的 `settings.json`；API key 存在 Windows 的「認證管理員」，不寫進檔案或 log。解除安裝不會刪掉錄音和資料庫。其他同上面的〈資料與隱私〉。
+- **資料與隱私**：資料在 `%LOCALAPPDATA%\Shiyin`（只有這個 Windows 使用者讀得到），設定是裡面的 `settings.json`；API key 存在 Windows 的「認證管理員」，不寫進檔案或 log。解除安裝不會刪掉錄音和資料庫。其他同下面的〈資料與隱私〉。
 - **授權**：另外用了 sherpa-onnx、ONNX Runtime、SenseVoice、pyannote、3D-Speaker、NAudio、Velopack、WinUIEx、Windows App SDK 等，完整的清單和條文在「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt`（`scripts/windows/make-third-party-licenses.py` 產生，更新套件後要重跑）。
 
-從原始碼建置要在 Windows 上，需要 .NET 10 SDK、Visual Studio Build Tools（C++）、CMake：
+從原始碼建置要在 Windows 上，需要 .NET 10 SDK、Visual Studio Build Tools（C++，含 ARM64 的工具）、CMake、Git；ARM64 另外要 LLVM（clang）和 Ninja，AMD 用的 Vulkan 版（`-Vulkan`）要先裝 Vulkan SDK：
 
 ```powershell
 pwsh scripts/windows/build-whisper.ps1 -Arch x64 -Out build\whisper-x64
@@ -151,16 +153,28 @@ Mac 和 Windows 都可以用。說話者的聲紋只存在自己的電腦；公�
 ### 用 GitHub Actions（推薦）
 
 1. 改 `Resources/Info.plist` 的 `CFBundleShortVersionString`，commit 並推上去。
-2. 打一個帶說明的 tag 並推上去，說明文字就是這版的更新內容：
+2. 打一個帶說明的 tag 並推上去，說明文字就是這版的更新內容（GitHub Release 和官網的版本說明都用它）：
 
    ```bash
-   git tag -a v3.1.1 -m "這版改了什麼"
-   git push origin v3.1.1
+   git tag -a vX.Y.Z -F 說明.txt
+   git push origin vX.Y.Z
+   ```
+
+   `說明.txt` 是中文一段、空一行、英文一段，標題的版本號跟 tag 一致，每一條用「- 」開頭（格式不對時官網建置會失敗）：
+
+   ```
+   拾音 X.Y.Z：副標
+   - 使用者看得到的改變，一行一條
+
+   Shiyin X.Y.Z: Subtitle
+   - One item per line
    ```
 
 3. [`.github/workflows/release.yml`](.github/workflows/release.yml) 會在 `macos-26` runner 上建置 DMG，建立 GitHub Release 並上傳 DMG 和 `shiyin-update.json`。tag 跟版本號不一致時會直接失敗。
 
 也可以在 Actions 頁面手動執行「打包」，只建置、不發布，DMG 放在那次執行的 artifact。
+
+Windows 版推 `win-vX.Y.Z` 的 tag（標題寫「拾音 Windows X.Y.Z」「Shiyin for Windows X.Y.Z」）：[`.github/workflows/release-windows.yml`](.github/workflows/release-windows.yml) 在 x64、ARM64 的 Windows 上建置、打包，建立不設成 latest 的 Release（Mac 的 app 內更新讀 latest）。
 
 設定（Settings → Secrets and variables → Actions，都是選填）：
 
@@ -201,7 +215,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 | 錄音、逐字稿、資料庫、模型 | `~/Library/Application Support/Shiyin`（權限 700，不會被 iCloud 同步） |
 | 錄音、轉錄、說話者辨識 | 完全在本機，不連網 |
 | 整理、校稿、提問、猜說話者 | 逐字稿文字、你的筆記、詞彙表、會議基本資料會送到你選的服務（Anthropic、OpenAI、Google，或 OpenAI 相容 API 填的網址）。問所有會議時只送找到的相關片段。錄音檔不會送出 |
-| 聲紋 | 說話者的聲音特徵（一組數字，不是錄音）只存在本機資料庫，不上傳、不放進匯出的 .shiyin 封包；設定 → 說話者可以刪除或關閉 |
+| 聲紋 | 說話者的聲音特徵（一組數字，不是錄音）只存在本機資料庫，不上傳、不放進匯出的 .shiyin 封包；設定 → 說話者與詞彙可以刪除或關閉 |
 | 企業伺服器（登入了才有） | 錄音送到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；整理工具選「公司」時，逐字稿送到公司的伺服器，由公司選的模型整理。Mac 在本機辨識說話者，Windows 交給伺服器辨識、聲紋傳回來只存在本機。登入的 token 存在鑰匙圈（Windows 是認證管理員）。公司的後台只看得到用量，看不到會議內容 |
 | 回報問題 | 只在你按「在 GitHub 回報」時用瀏覽器打開 GitHub，內容你看過、自己送出：版本、環境、錯誤的種類（登入企業伺服器時加上伺服器的版本），不含會議內容、檔名、API key、伺服器網址或帳號 |
 | 匿名使用統計 | 每天送一份給拾音的開發者：版本、系統、錄音和轉錄的分鐘數、用了哪些功能（包括有沒有用企業伺服器轉錄、整理）、失敗的次數和種類（例如沒登入、key 錯誤，不含錯誤訊息），加上一個隨機的匿名 ID。不含會議標題、逐字稿、會議紀錄、人名、聲紋、伺服器網址、公司名稱或任何檔案。設定 → 進階可以關掉 |
@@ -216,7 +230,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 | 整理工具 | Claude、Codex、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API 或不整理；登入狀態、測試整理工具；API key；OpenAI 相容 API 的網址（有常用服務可選）；模型；轉錄完是否自動整理、是否檢查可能聽錯的字；範本（內建和自訂、預設範本） |
 | 錄音與轉錄 | 錄音來源、麥克風、權限設定；預設會議語言、自動偵測會議語言；正式轉錄引擎（Breeze、Qwen3-ASR 或 macOS 內建）、說話者辨識、即時逐字稿、下載／暫停／刪除模型；偵測線上會議和不提醒的 app、全域快捷鍵（開始停止錄音、標記重點） |
 | 說話者與詞彙 | 記住說話者的聲音（聲紋）、認識的人：改名、刪除、全部刪除；詞彙表：人名、系統名、專有名詞的正確寫法，轉錄和整理都會參考；建議加入的詞 |
-| 進階 | 更新網址與檢查更新、環境檢查、壓縮錄音、空間用量、重新顯示首次使用引導、重建搜尋索引、匿名使用統計、刪除第二版留下的舊檔案 |
+| 進階 | 企業伺服器（登入、登出）、更新網址與檢查更新、環境檢查、壓縮錄音、空間用量、重新顯示首次使用引導、重建搜尋索引、匿名使用統計、刪除第二版留下的舊檔案 |
 
 ## 開發
 
@@ -226,6 +240,8 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 |---|---|
 | [`docs/requirements.md`](docs/requirements.md) | 需求 |
 | [`docs/design.md`](docs/design.md) | 架構、資料模型、提示詞、介面、決策紀錄 |
+| [`docs/design-windows.md`](docs/design-windows.md) | Windows 版跟 Mac 不同的地方、標準答案、驗證環境 |
+| [`docs/website.md`](docs/website.md) | 官網的需求和設計 |
 | [`docs/tasks.md`](docs/tasks.md) | 還沒完成的任務 |
 | [`CLAUDE.md`](CLAUDE.md) | 開發與驗證時要注意的事 |
 
@@ -243,9 +259,14 @@ Sources/Shiyin/
 ├── Services/     工作佇列、模型下載、更新、鑰匙圈、全域快捷鍵、通知
 ├── Views/        SwiftUI 畫面
 └── Debug/        DEBUG 版的控制通道（shiyinctl）
-Resources/        Info.plist、翻譯表（Localizable.xcstrings）、圖示
-scripts/          建置、DMG、自簽憑證、圖示、開發工具
-docs/             規格與實驗紀錄
+Sources/QwenShim/ llama.cpp 的 C 薄層（Qwen3-ASR）
+Resources/        Info.plist、翻譯表（Localizable.xcstrings）、圖示、OpenCC 字表
+windows/          Windows 版（C#、.NET 10、WinUI 3）
+shared/golden/    Mac 產生的標準答案，Windows 版的測試跟它比對
+site/             官網（shiyin.weibuilds.com）
+workers/usage/    匿名使用統計的後台（Cloudflare Workers）
+scripts/          建置、DMG、自簽憑證、圖示、開發工具；scripts/windows/ 是 Windows 版的建置和打包
+docs/             規格
 ```
 
 ### 常用指令
