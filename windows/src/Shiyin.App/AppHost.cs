@@ -245,7 +245,9 @@ public sealed class AppHost
     public void Start()
     {
         // 在任何轉錄之前（Controller.Start 會接著做當掉前沒做完的工作）：決定 whisper 從哪裡載入
-        Gpu.RestartNeeded += () => Post(() => Notifier.Notice(L.T("NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")));
+        Gpu.RestartNeeded += () => Post(() => Notifier.Notice(Gpu.Kind == GpuAcceleration.Pack.Vulkan
+            ? L.T("AMD 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")
+            : L.T("NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")));
         Gpu.Start();
         Controller.Start();
         Detector.Prompted += p => Post(() => ShowMeetingPrompt?.Invoke(p));
