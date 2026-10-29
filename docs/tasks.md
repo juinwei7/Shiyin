@@ -60,6 +60,15 @@ V1～V8 已完成（2026-10-25 使用者跑了後台的 migration 和 deploy）�
 
 使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。這一段的「§」指 `design-windows.md`，「M§」指 `design.md`。
 
+### AMD 顯示卡加速（R27 R4.7、§8、§8.4、D127；2026-10-29 使用者要求）
+
+- [ ] **W-AMD1 建 Vulkan 版的 whisper、發布元件**：`windows-gpu-pack.yml` 手動執行
+  - 驗證：CI 通過；lavapipe 的語言偵測跟 CPU 版三個機率差 ≤ 0.01；prerelease `win-gpu-vulkan-b5454` 有 `whisper-vulkan-x64.zip`；大小、SHA-256、每個 DLL 的大小寫進 `ModelStore.GpuVulkan` 和 R4.7；`node site/build.mjs` 照樣成功（prerelease 被跳過）
+- [ ] **W-AMD2 app 偵測、下載、載入**：`SystemInfo.HasAmdGpu`、`GpuAcceleration` 兩種 `Pack`、`Model.GpuVulkan`、`Model.QwenVulkan`、設定頁的模型清單
+  - 驗證：`dotnet test`（哪種電腦用哪一包、Qwen 用哪個 llama-server 和 `-ngl`、解壓縮的清單）；`l10n.py windows-check`；虛擬機（沒有 AMD）不下載、設定頁不顯示 AMD 的兩列
+- [~] **W-AMD3 真的 AMD 電腦**（要使用者）：有 Radeon 獨顯或內顯（780M、860M）的 Windows 電腦，啟動後自動下載、重新開啟後轉錄一場 Breeze 和 Qwen
+  - 驗證：log 有「whisper will load from the pack」、回報問題的顯示卡是 Radeon；同一段錄音的逐字稿跟 CPU 版相同；記下倍速（跟 CPU 比）寫進 R4.7
+
 ### 要使用者的 Windows 電腦
 
 - [~] **錄音中換裝置**（R18.2、§6）：錄音中換預設的麥克風、輸出裝置，錄音不中斷、接到新的裝置（W0.3、W4.2）

@@ -77,9 +77,12 @@ public sealed class AppHost
         // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；App 顯示原因後結束
         Db = new AppDatabase(Paths.Database, Paths.Backups);
         Models = new ModelStore(Paths.Models, Http);
-        // NVIDIA 顯示卡加速（R27 R4.6）：官方的 CUDA 版只有 x64。DEBUG 的 --set debugNvidia=YES 當作有 NVIDIA（虛擬機測自動下載）
+        // 顯示卡加速：NVIDIA 用官方的 CUDA 版（R27 R4.6）、AMD 用拾音的 Vulkan 版（R4.7），都只有 x64。
+        // DEBUG 的 --set debugNvidia=YES、--set debugAmd=YES 當作有那張顯示卡（虛擬機測自動下載）
         var nvidia = SystemInfo.HasNvidiaGpu() || (Debug && Settings.Flag("debugNvidia", false));
-        Gpu = new GpuAcceleration(Models, Settings, nvidia && RuntimeInformation.ProcessArchitecture == Architecture.X64, AppContext.BaseDirectory);
+        var amd = SystemInfo.HasAmdGpu() || (Debug && Settings.Flag("debugAmd", false));
+        Gpu = new GpuAcceleration(Models, Settings, GpuAcceleration.PackFor(RuntimeInformation.ProcessArchitecture == Architecture.X64, nvidia, amd),
+            AppContext.BaseDirectory);
         // DEBUG 預設不讀真的認證管理員（同 Mac 3.4.1）：key 只放記憶體，要測時加 --set debugRealKeychain=YES
         Keys = Debug && !Settings.Flag("debugRealKeychain", false) ? new MemoryKeyStore() : new CredentialStore();
         var children = new ChildProcesses();
@@ -108,7 +111,7 @@ public sealed class AppHost
         {
             Url = Debug ? null : BuiltUsageUrl, AlwaysOffered = Debug,
         };
-        var engines = new SpeechEngines(Models, () => Gpu.QwenCudaReady);
+        var engines = new SpeechEngines(Models, () => Gpu.QwenRuntime);
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage, Enterprise = Enterprise };
         Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes));

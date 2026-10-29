@@ -36,6 +36,9 @@ public sealed class AppSettings
     public const string GpuPackOfferedKey = "gpuPackOffered";
     /// <summary>Qwen3-ASR 的 CUDA 版已經自動下載過（design-windows §8.4）</summary>
     public const string QwenCudaOfferedKey = "qwenCudaOffered";
+    /// <summary>AMD 顯示卡加速（R27 R4.7）：whisper、Qwen 的 Vulkan 版各自只自動下載一次</summary>
+    public const string GpuVulkanOfferedKey = "gpuVulkanOffered";
+    public const string QwenVulkanOfferedKey = "qwenVulkanOffered";
     public const string CompatibleBaseUrlKey = "openaiCompatibleBaseURL";
     public const string OnboardingKey = "hasCompletedOnboarding";
     public const string GuideKey = "hasSeenGuide";
@@ -291,6 +294,8 @@ public sealed class AppSettings
     public bool AutoDetectLanguage => Flag(AutoDetectLanguageKey, true);
     public bool GpuPackOffered => Flag(GpuPackOfferedKey, false);
     public bool QwenCudaOffered => Flag(QwenCudaOfferedKey, false);
+    public bool GpuVulkanOffered => Flag(GpuVulkanOfferedKey, false);
+    public bool QwenVulkanOffered => Flag(QwenVulkanOfferedKey, false);
     /// <summary>mic / system / both</summary>
     public string RecordSource => String(RecordSourceKey) ?? "mic";
     /// <summary>麥克風的端點 ID；空的是系統預設</summary>

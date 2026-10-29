@@ -45,6 +45,17 @@
         }
       }
     },
+    "AMD 顯示卡加速（Vulkan）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AMD GPU acceleration (Vulkan)"
+          }
+        }
+      }
+    },
     "API key 存在 Windows 的認證管理員，不會寫進任何檔案。": {
       "extractionState": "manual",
       "localizations": {
@@ -129,6 +140,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "PDF and docx use a serif font for section headings; Markdown is good for pasting into Notion or GitHub."
+          }
+        }
+      }
+    },
+    "Qwen3-ASR 的 AMD 顯示卡加速（Vulkan）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AMD GPU acceleration for Qwen3-ASR (Vulkan)"
           }
         }
       }
@@ -911,6 +933,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meeting date: from each file's name or modification date"
+          }
+        }
+      }
+    },
+    "有 AMD 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 改用顯示卡轉錄。%@，解開約 %@（llama.cpp 官方的 Vulkan 版）。刪除後不會再自動下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded automatically when this PC has an AMD GPU and Qwen3-ASR is selected, so Qwen transcribes on the GPU. %@, about %@ unpacked (the official llama.cpp Vulkan build). Once deleted, it won’t be downloaded again automatically."
+          }
+        }
+      }
+    },
+    "有 AMD 顯示卡時自動下載，正式轉錄改用顯示卡。%@，解開約 %@（拾音用同一版 whisper.cpp 建的 Vulkan 版）。刪除後不會再自動下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded automatically when this PC has an AMD GPU, so final transcription runs on the GPU. %@, about %@ unpacked (a Vulkan build Shiyin makes from the same whisper.cpp version). Once deleted, it won’t be downloaded again automatically."
           }
         }
       }
