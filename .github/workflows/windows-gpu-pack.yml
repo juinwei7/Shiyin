@@ -19,6 +19,8 @@ env:
   # 跟 llama.cpp b11840 的 Windows Vulkan 版同一個 SDK：ggml-vulkan 要 SPIRV-Headers 的 CMake 設定檔，1.4.309.0 沒有（2026-10-29 run 40817771887）
   VULKAN_SDK_VERSION: 1.4.357.0
   VULKAN_SDK_SHA256: 81f474711e9042f4cd22b31b2f7a8870db2e428b21586fb43dd80150be97310d
+  # Vulkan 的載入器（vulkan-1.dll）：使用者的電腦是顯示卡驅動附的，CI 沒有顯示卡驅動，只在測試時從這裡拿（不放進元件）
+  VULKAN_RT_SHA256: a14672efed15aafc7f5a16572d35cd3a3416eadf670aeee3cdf50ee32d5fbf83
   MESA_VERSION: 26.2.4
   MESA_SHA256: 351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695
   BASE_MODEL_URL: https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin
@@ -64,11 +66,41 @@ jobs:
           if (-not $icd) { throw '找不到 lavapipe 的 ICD（lvp_icd*.json）' }
           $env:VK_DRIVER_FILES = $icd.FullName
           $env:VK_ICD_FILENAMES = $icd.FullName
+          # Vulkan 的載入器：run 40819293791 少了它，ggml-vulkan.dll 載入失敗，ggml 又是安靜地跳過，只剩 CPU
+          $rt = Join-Path $env:RUNNER_TEMP 'vulkan-rt.zip'
+          Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanRT-X64-$env:VULKAN_SDK_VERSION-Components.zip" -OutFile $rt
+          if ((Get-FileHash $rt -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:VULKAN_RT_SHA256) { throw 'Vulkan 執行階段的 SHA-256 不對' }
+          Expand-Archive $rt -DestinationPath "$env:RUNNER_TEMP\vulkan-rt" -Force
+          $loader = Get-ChildItem "$env:RUNNER_TEMP\vulkan-rt" -Recurse -Filter 'vulkan-1.dll' | Where-Object FullName -match '\\x64\\' | Select-Object -First 1
+          if (-not $loader) { throw '找不到 x64 的 vulkan-1.dll' }
+          $env:PATH = "$($loader.DirectoryName);$env:PATH"
+          & (Join-Path $loader.DirectoryName 'vulkaninfo.exe') --summary
+          # 直接載入一次 ggml-vulkan.dll：載入失敗時印出原因（ggml 自己載入失敗不會說）
+          try { [System.Runtime.InteropServices.NativeLibrary]::Load((Resolve-Path build/whisper-vulkan/ggml-vulkan.dll).Path) | Out-Null; Write-Host 'ggml-vulkan.dll 載入成功' }
+          catch { throw "ggml-vulkan.dll 載入失敗：$($_.Exception.Message)" }
           # 語言偵測的模型（同 ModelStore.LanguageDetection）、whisper.cpp 原始碼附的英文錄音
           Invoke-WebRequest $env:BASE_MODEL_URL -OutFile build/models/ggml-base-q5_1.bin
           if ((Get-FileHash build/models/ggml-base-q5_1.bin -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:BASE_MODEL_SHA256) { throw '模型的 SHA-256 不對' }
-          $wav = Join-Path ([System.IO.Path]::GetTempPath()) 'shiyin-whisper-x64\whisper.cpp\samples\jfk.wav'
-          if (-not (Test-Path $wav)) { throw "找不到 $wav" }
+          $jfk = Join-Path ([System.IO.Path]::GetTempPath()) 'shiyin-whisper-x64\whisper.cpp\samples\jfk.wav'
+          if (-not (Test-Path $jfk)) { throw "找不到 $jfk" }
+          # 語言偵測要湊滿 10 秒有聲音的錄音（LanguageCollector）：jfk.wav 只有 11 秒（中間有停頓），接成三遍（run 40819293791 的 CPU 版因此沒有結果）
+          $bytes = [System.IO.File]::ReadAllBytes($jfk)
+          $i = 12; $fmt = $null; $data = $null
+          while ($i -lt $bytes.Length - 8) {
+              $id = [System.Text.Encoding]::ASCII.GetString($bytes, $i, 4); $n = [BitConverter]::ToInt32($bytes, $i + 4)
+              if ($id -eq 'fmt ') { $fmt = New-Object byte[] $n; [Array]::Copy($bytes, $i + 8, $fmt, 0, $n) }
+              if ($id -eq 'data') { $data = New-Object byte[] $n; [Array]::Copy($bytes, $i + 8, $data, 0, $n); break }
+              $i += 8 + $n + ($n % 2)
+          }
+          if (-not $fmt -or -not $data) { throw 'jfk.wav 讀不到 fmt 或 data' }
+          $ms = New-Object System.IO.MemoryStream; $w = New-Object System.IO.BinaryWriter($ms)
+          $total = $data.Length * 3
+          $w.Write([System.Text.Encoding]::ASCII.GetBytes('RIFF')); $w.Write([int](4 + 8 + $fmt.Length + 8 + $total)); $w.Write([System.Text.Encoding]::ASCII.GetBytes('WAVE'))
+          $w.Write([System.Text.Encoding]::ASCII.GetBytes('fmt ')); $w.Write([int]$fmt.Length); $w.Write($fmt)
+          $w.Write([System.Text.Encoding]::ASCII.GetBytes('data')); $w.Write([int]$total); foreach ($k in 1..3) { $w.Write($data) }
+          $w.Flush()
+          $wav = Join-Path (Resolve-Path build).Path 'jfk3.wav'
+          [System.IO.File]::WriteAllBytes($wav, $ms.ToArray())
           $env:SHIYIN_MODELS = (Resolve-Path build/models).Path
           $result = @{}
           foreach ($kind in 'cpu', 'vulkan') {
