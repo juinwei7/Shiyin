@@ -64,6 +64,10 @@ jobs:
           7z x $z "-o$env:RUNNER_TEMP\mesa" -y | Out-Null
           $icd = Get-ChildItem "$env:RUNNER_TEMP\mesa" -Recurse -Filter 'lvp_icd*.json' | Where-Object FullName -match '\\x64\\' | Select-Object -First 1
           if (-not $icd) { throw '找不到 lavapipe 的 ICD（lvp_icd*.json）' }
+          # 登記到登錄（跟一般的顯示卡驅動一樣）：GitHub 的 Windows 機器用系統管理員權限跑，Vulkan 載入器這時會忽略 VK_DRIVER_FILES、VK_ICD_FILENAMES
+          #（run 40820562359：「Registry lookup failed to get ICD manifest files」「Found no drivers」）
+          New-Item -Path 'HKLM:\SOFTWARE\Khronos\Vulkan\Drivers' -Force | Out-Null
+          New-ItemProperty -Path 'HKLM:\SOFTWARE\Khronos\Vulkan\Drivers' -Name $icd.FullName -Value 0 -PropertyType DWord -Force | Out-Null
           $env:VK_DRIVER_FILES = $icd.FullName
           $env:VK_ICD_FILENAMES = $icd.FullName
           # Vulkan 的載入器：run 40819293791 少了它，ggml-vulkan.dll 載入失敗，ggml 又是安靜地跳過，只剩 CPU
