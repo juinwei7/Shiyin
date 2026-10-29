@@ -7,6 +7,19 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## Codex、Claude 的桌面版（R55、R56，design §37、design-windows §10、D128；2026-10-29 Threads 的使用者回饋）
+
+- [ ] **DT1 Mac 找 Codex 桌面版附的 codex**（R55，§37.1、§37.2）：`Paths.locateTool`、說明檔、快取、子程序的 PATH、設定頁的狀態和「打開 ChatGPT 登入」、`SummarizerProblem`、引導、環境檢查、執行失敗的建議
+  - 驗證：`-debugOnlyDesktopCLI YES` 時 `state` 的 codex 是 ChatGPT 附的、`login status` 是已登入；設定頁、引導（`preview`）、環境檢查的文字；說明檔不對（`layoutVersion` 2、`..`、絕對路徑、entrypoint 不能執行）時當作沒有（暫存資料夾做假的 app，用 `-debugCodexApp` 指過去）；`-debugNoCLI YES` 照舊什麼都找不到；實際整理一場短的會議（會用使用者的 ChatGPT 額度，先問）；`l10n.py check`
+- [ ] **DT2 Mac 的 Claude 桌面版提示**（R56，§37.3）
+  - 驗證：`-debugNoCLI YES -llmProvider ""` 設定頁、引導有提示（`preview`）；`-debugNoCLI YES -llmProvider claude` 會議頁和整理失敗的訊息；`-debugClaudeDesktop no` 都不出現；已經選了別的整理工具時不出現；按「複製」後剪貼簿是那一行指令（真的畫面上用 AX 按）；`l10n.py check`
+- [ ] **DT3 Windows 找 Codex 桌面版附的 codex**（R55，design-windows §10）
+  - 驗證：`dotnet test`（說明檔的規則、沒有說明檔時的 `codex.exe`、AppxManifest 的名稱和 Id）；虛擬機用 `winget install Codex -s msstore` 裝桌面版，記下套件的實際樣子（package family、`codex-package.json` 或 `codex.exe`、從套件外能不能執行），寫回 design-windows §10；`--set debugOnlyDesktopCli=YES` 時 `state`、設定頁（`uia.sh`）、`codex login status`；`l10n.py windows-check`
+- [ ] **DT4 Windows 的 Claude 桌面版提示**（R56，design-windows §10）
+  - 驗證：`dotnet test`；虛擬機裝 Claude 桌面版（MSIX）前後的設定頁、引導（`--set debugNoCli=YES`）；`l10n.py windows-check`
+- [ ] **DT5 只裝了 Codex 桌面版的 Windows 電腦**（要使用者，或請回報的人試）：整理一場會議
+  - 驗證：設定頁寫「使用 Codex 附的 codex」，整理成功
+
 ## 企業伺服器（R49～R52，design §36；2026-10-27 使用者新需求）
 
 伺服器是另外的私人專案，它的任務寫在伺服器專案自己的 tasks。這裡只有 app 這邊。
