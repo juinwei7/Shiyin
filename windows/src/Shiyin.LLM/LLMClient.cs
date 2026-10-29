@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
@@ -82,7 +83,7 @@ public static class LLMProviders
 public enum LLMErrorKind { NotInstalled, NotLoggedIn, MissingKey, Rejected, Limited, Unreachable, NotConfigured, Failed, BadOutput }
 
 /// <summary>整理工具的錯誤（M§19、§21.9）：訊息給使用者看；log 只寫 <see cref="LogSummary"/>，不寫內容（R18.8）</summary>
-public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(Describe(kind, detail))
+public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(Describe(kind, detail)), ILogSummary
 {
     public LLMErrorKind Kind { get; } = kind;
     public string Detail { get; } = detail;
@@ -164,8 +165,13 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
 
 public static class ErrorSummary
 {
-    /// <summary>任何錯誤的摘要：LLM 的錯誤寫種類，其他寫型別名稱</summary>
-    public static string LogSummary(this Exception e) => e is LLMException l ? l.LogSummary : e.GetType().Name;
+    /// <summary>任何錯誤的摘要（design-windows §12.7、R54.4）：整理工具、轉錄的錯誤寫種類，Windows 系統元件的錯誤加上 HRESULT，其他寫型別名稱</summary>
+    public static string LogSummary(this Exception e) => e switch
+    {
+        ILogSummary known => known.LogSummary,
+        ExternalException system => $"{e.GetType().Name} 0x{system.HResult:X8}",
+        _ => e.GetType().Name,
+    };
 }
 
 /// <summary>API key 存放（Windows 是認證管理員，design-windows §12.5）</summary>

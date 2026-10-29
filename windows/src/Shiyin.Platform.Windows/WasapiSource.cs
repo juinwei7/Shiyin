@@ -10,7 +10,8 @@ namespace Shiyin.Platform;
 
 /// <summary>
 /// WASAPI 擷取（design-windows §6）：麥克風用共用模式、事件驅動，用 Console 角色的預設端點（不用 Communications：Windows 會把其他聲音自動降低）；
-/// 電腦聲音用 process loopback 排除拾音自己的程序樹（claude CLI、WebView2 也一起排除）。
+/// 電腦聲音錄預設輸出裝置（Console 角色）的 loopback，換預設裝置時重開，沒有輸出裝置時只補靜音
+/// （R54、D129：原本用 process loopback 排除拾音自己，新版 Teams 的聲音收到的全是 0）。
 /// 先請系統直接轉成 16 kHz 單聲道浮點（AUTOCONVERTPCM），不行再用裝置的格式自己降混、重新取樣。
 /// 電腦聲音沒有東西在播時系統不送資料，這裡依時間補靜音，寫檔的對齊規則才跟 Mac 一樣
 /// </summary>
@@ -29,6 +30,8 @@ public sealed class WasapiSource : IAudioSource
     volatile bool stopping;
     MMDeviceEnumerator? enumerator;
     MMDeviceNotificationClient? notifications;
+    /// <summary>電腦聲音正在錄的輸出裝置（被停用、拔掉時重開）；沒有輸出裝置時是 null</summary>
+    volatile string? outputId;
 
     public Action<float[]>? OnSamples { get; set; }
     public Action? OnInterruption { get; set; }
@@ -69,7 +72,7 @@ public sealed class WasapiSource : IAudioSource
         notifications.DeviceRemoved += (_, e) => { if (Concerns(e.DeviceId)) OnInterruption?.Invoke(); };
     }
 
-    bool Concerns(string? id) => kind == Kind.Microphone && (deviceId.Length == 0 || id == deviceId);
+    bool Concerns(string? id) => kind == Kind.Microphone ? deviceId.Length == 0 || id == deviceId : id is not null && id == outputId;
 
     public void Stop()
     {
@@ -82,11 +85,16 @@ public sealed class WasapiSource : IAudioSource
         enumerator = null;
     }
 
-    AudioClient Activate()
+    /// <summary>電腦聲音沒有任何輸出裝置時回傳 null（R54.2）</summary>
+    AudioClient? Activate()
     {
-        if (kind == Kind.SystemAudio)
-            return AudioClient.ActivateProcessLoopbackAsync((uint)Environment.ProcessId, ProcessLoopbackMode.ExcludeTargetProcessTree).GetAwaiter().GetResult();
         using var devices = new MMDeviceEnumerator();
+        if (kind == Kind.SystemAudio)
+        {
+            var output = devices.TryGetDefaultAudioEndpoint(DataFlow.Render, Role.Console, out var o) ? o : null;
+            outputId = output?.ID;
+            return output?.CreateAudioClient();
+        }
         MMDevice? device = null;
         if (deviceId.Length > 0)
             try { device = devices.GetDevice(deviceId); if (device.State != DeviceState.Active) device = null; }
@@ -103,19 +111,42 @@ public sealed class WasapiSource : IAudioSource
         {
             WaveFormat format;
             var loopback = kind == Kind.SystemAudio ? AudioClientStreamFlags.Loopback : AudioClientStreamFlags.None;
+            var clock = Stopwatch.StartNew();
+            long emitted = 0;
+            // 電腦聲音沒有東西在播時不送資料：照時間補靜音（留 50 毫秒的餘裕，真的資料晚一點到時不會重疊太多）
+            void PadSilence()
+            {
+                var expected = (long)(clock.Elapsed.TotalSeconds * StreamResampler.OutputRate);
+                if (expected - emitted <= StreamResampler.OutputRate / 10) return;
+                var gap = (int)(expected - emitted - StreamResampler.OutputRate / 20);
+                emitted += gap;
+                OnSamples?.Invoke(new float[gap]);
+            }
+            client = Activate();
+            if (client is null)
+            {
+                // 沒有輸出裝置（R54.2）：不算開始失敗，只補靜音；接上裝置時 DefaultDeviceChanged 會讓 Recorder 重開
+                Log.Info("capture SystemAudio: no output device, recording silence");
+                ready.Set();
+                while (!stopping)
+                {
+                    Thread.Sleep(100);
+                    PadSilence();
+                }
+                return;
+            }
             try
             {
-                client = Activate();
                 format = WaveFormat.CreateIeeeFloatWaveFormat(StreamResampler.OutputRate, 1);
                 client.Initialize(AudioClientShareMode.Shared,
                     AudioClientStreamFlags.EventCallback | AudioClientStreamFlags.AutoConvertPcm | AudioClientStreamFlags.SrcDefaultQuality | loopback,
                     BufferDuration, 0, format, Guid.Empty);
             }
-            catch (COMException e) when (e.HResult != AccessDenied && kind == Kind.Microphone)
+            catch (COMException e) when (e.HResult != AccessDenied)
             {
                 // 系統不幫忙轉格式：用裝置的格式，自己轉
-                client?.Dispose();
-                client = Activate();
+                client.Dispose();
+                client = Activate() ?? throw new CaptureException(L.F("%@失敗（錯誤代碼 %@）", L.T("開始錄音"), $"0x{e.HResult:X8}"));
                 format = client.MixFormat;
                 client.Initialize(AudioClientShareMode.Shared, AudioClientStreamFlags.EventCallback | loopback, BufferDuration, 0, format, Guid.Empty);
             }
@@ -128,8 +159,7 @@ public sealed class WasapiSource : IAudioSource
             var resampler = new StreamResampler(format.SampleRate);
             client.Start();
             ready.Set();
-            var clock = Stopwatch.StartNew();
-            long emitted = 0;
+            clock.Restart();
             while (!stopping)
             {
                 signal.WaitOne(100);
@@ -151,17 +181,7 @@ public sealed class WasapiSource : IAudioSource
                     emitted += samples.Length;
                     OnSamples?.Invoke(samples);
                 }
-                // 電腦聲音沒有東西在播時不送資料：照時間補靜音（留 50 毫秒的餘裕，真的資料晚一點到時不會重疊太多）
-                if (!any && kind == Kind.SystemAudio)
-                {
-                    var expected = (long)(clock.Elapsed.TotalSeconds * StreamResampler.OutputRate);
-                    if (expected - emitted > StreamResampler.OutputRate / 10)
-                    {
-                        var gap = (int)(expected - emitted - StreamResampler.OutputRate / 20);
-                        emitted += gap;
-                        OnSamples?.Invoke(new float[gap]);
-                    }
-                }
+                if (!any && kind == Kind.SystemAudio) PadSilence();
             }
             client.Stop();
         }
