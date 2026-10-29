@@ -48,6 +48,7 @@ struct ProviderSettings: View {
     @State private var testResult: (ok: Bool, message: String)?
     @State private var login: CLILogin.Status?
     @State private var checkingLogin = false
+    @State private var recheckCount = 0
     /// 公司提供的模型（R51.1）：nil 是還沒取到或取不到
     @State private var companyModels: [EnterpriseAPI.Model]?
 
@@ -81,7 +82,8 @@ struct ProviderSettings: View {
                     HStack(spacing: 8) {
                         if Paths.findTool(current == .claude ? "claude" : "codex") == nil {
                             Text(current == .codex ? "這台 Mac 沒有安裝 codex：沒有在用 Codex 的話，請改選 API"
-                                                   : "這台 Mac 沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API")
+                                 : showClaudeHint ? "這台 Mac 沒有安裝 Claude Code（命令列版），安裝方法在下面"
+                                 : "這台 Mac 沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API")
                                 .foregroundStyle(.secondary)
                         } else if checkingLogin {
                             Text("檢查登入狀態…").foregroundStyle(.secondary)
@@ -89,17 +91,28 @@ struct ProviderSettings: View {
                             Text(login.loggedIn ? String(localized: "已登入 \(login.detail)") : String(localized: "沒有登入"))
                                 .foregroundStyle(login.loggedIn ? Color.celadon : Color.red)
                             if !login.loggedIn {
-                                Button("登入 \(current.shortLabel)") { CLILogin.openLogin(current) }
+                                // 桌面版附的 codex：打開那個 app 登入（R55.3）
+                                Button(desktopApp.map { String(localized: "打開 \($0) 登入") } ?? String(localized: "登入 \(current.shortLabel)")) {
+                                    CLILogin.openLogin(current)
+                                }
                             }
                         } else {
                             Text("已安裝，看不出登入狀態").foregroundStyle(.secondary)
                         }
-                        Button { Task { await checkLogin(userInitiated: true) } } label: { Image(systemName: "arrow.clockwise") }
+                        Button { recheck() } label: { Image(systemName: "arrow.clockwise") }
                             .buttonStyle(.borderless)
                             .help("重新檢查登入狀態")
                             .disabled(checkingLogin)
                     }
                 }
+                // 用的是桌面版附的 codex：寫出來，使用者才知道沒有另外裝 CLI（R55.3）
+                if let desktopApp {
+                    Text("使用 \(desktopApp) 附的 codex（這台 Mac 沒有另外安裝 Codex CLI）")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if showClaudeHint {
+                ClaudeCodeInstallHint { recheck() }
             }
             // OpenAI 相容 API 的網址（design §19.3、§19.4）
             if current == .openaiCompatible {
@@ -246,6 +259,23 @@ struct ProviderSettings: View {
         guard tested == current else { return }
         testResult = result
         testing = false
+    }
+
+    /// 用桌面版附的 codex 時是那個 app 的名稱（R55.3）
+    private var desktopApp: String? { current == .codex ? CLILogin.desktopApp(.codex) : nil }
+
+    /// 只有 Claude 桌面版：說明怎麼裝 Claude Code（R56.2、R56.3）；已經在用別的整理工具的人不顯示
+    private var showClaudeHint: Bool {
+        _ = recheckCount   // 按了「重新檢查」要重新算
+        return (current == .claude || AppSettings.needsProviderSetup) && ClaudeCodeInstallHint.applies
+    }
+
+    /// 「重新檢查」：剛裝好、剛移除的 CLI 和桌面版馬上看得到，再查一次登入
+    private func recheck() {
+        DesktopApps.clearCache()
+        recheckCount += 1
+        model.refreshSummarizerProblem()
+        Task { await checkLogin(userInitiated: true) }
     }
 
     /// userInitiated：使用者按了「重新檢查」，查到已登入就測一次（R45.3）；打開設定頁時的自動檢查不測（不花額度）

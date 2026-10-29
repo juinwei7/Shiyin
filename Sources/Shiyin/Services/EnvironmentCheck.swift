@@ -17,7 +17,8 @@ struct EnvironmentStatus: Equatable {
     @MainActor
     static func check(models: ModelStore) -> EnvironmentStatus {
         let claude = Paths.findTool("claude")
-        let codex = Paths.findTool("codex")
+        let codexTool = Paths.locateTool("codex")
+        let codex = codexTool?.url
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
         // 正式轉錄用企業伺服器：這台 Mac 不用轉錄模型（R50.7）
         let server = AppSettings.usesEnterpriseTranscription
@@ -52,8 +53,13 @@ struct EnvironmentStatus: Equatable {
                  detail: mic == .authorized ? String(localized: "已允許") : mic == .notDetermined ? String(localized: "還沒詢問") : String(localized: "被拒絕"),
                  fix: String(localized: "第一次錄音時會詢問；被拒絕的話到「系統設定 → 隱私權與安全性 → 麥克風」打開拾音"), required: false),
             Item(name: "claude CLI", ok: claude != nil, detail: claude?.path ?? String(localized: "找不到"),
-                 fix: String(localized: "整理工具選 Claude 時需要：安裝 Claude Code 並在終端機執行 claude 登入"), required: false),
-            Item(name: "codex CLI", ok: codex != nil, detail: codex?.path ?? String(localized: "找不到"),
+                 // 只有 Claude 桌面版：拾音不用桌面版裡的那一份，要另外裝（R56）
+                 fix: claude == nil && DesktopApps.hasClaude
+                     ? String(localized: "有 Claude 桌面版，但拾音要另外安裝 Claude Code（命令列版）：在終端機執行 \(ClaudeCodeInstallHint.command)，再執行 claude 登入")
+                     : String(localized: "整理工具選 Claude 時需要：安裝 Claude Code 並在終端機執行 claude 登入"), required: false),
+            // 桌面版附的 codex 寫出是哪個 app 的（R55.3）
+            Item(name: "codex CLI", ok: codex != nil,
+                 detail: codexTool?.desktopApp.map { String(localized: "\($0) 附的 codex") } ?? codex?.path ?? String(localized: "找不到"),
                  fix: String(localized: "整理工具選 Codex 時需要：安裝 Codex CLI 並執行 codex login"), required: false),
             Item(name: "Anthropic API key", ok: Keychain.exists("anthropic"),
                  detail: Keychain.exists("anthropic") ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Anthropic API 時需要"), required: false),

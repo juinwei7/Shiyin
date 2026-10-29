@@ -31,7 +31,9 @@ enum CLILogin {
             }
             return Status(loggedIn: loggedIn, detail: detail)
         case .codex:
-            guard let exe = Paths.findTool("codex"), let output = await run(exe, ["login", "status"]) else { return nil }
+            // 桌面版附的 codex 也一樣問它自己（跟 CLI 共用 ~/.codex，拾音不讀登入資料，R55.2）
+            guard let tool = Paths.locateTool("codex"),
+                  let output = await run(tool.url, ["login", "status"], environment: tool.environment) else { return nil }
             // codex 把狀態印在 stdout 或 stderr，兩個都看
             let line = (output.stdout + "\n" + output.stderr).split(separator: "\n").first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
                 .map(String.init) ?? ""
@@ -60,7 +62,13 @@ enum CLILogin {
     /// 打開「終端機」執行登入指令（會開瀏覽器登入頁）。用 .command 檔案打開，不需要自動化權限
     static func openLogin(_ provider: LLMProvider) {
         let tool = provider == .codex ? "codex" : "claude"
-        guard let exe = Paths.findTool(tool) else { return }
+        guard let location = Paths.locateTool(tool) else { return }
+        // 桌面版附的 codex：打開那個 app 登入（R55.3），不開終端機
+        if let app = location.appURL {
+            NSWorkspace.shared.open(app)
+            return
+        }
+        let exe = location.url
         let arguments = provider == .codex ? "login" : "auth login"
         let intro = String(localized: "拾音：正在打開瀏覽器登入 \(provider.shortLabel)。登入完成後，回到拾音按「重試」或「測試整理工具」。")
         let done = String(localized: "完成後可以關掉這個視窗。")
@@ -87,8 +95,14 @@ enum CLILogin {
         "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    private static func run(_ exe: URL, _ arguments: [String]) async -> (stdout: String, stderr: String)? {
-        let process = Subprocess(exe, arguments, directory: FileManager.default.temporaryDirectory)
+    /// 用桌面版附的 codex 時是 app 的名稱（例如 ChatGPT），使用者自己裝的是 nil（R55.3）
+    nonisolated static func desktopApp(_ provider: LLMProvider) -> String? {
+        provider == .codex ? Paths.locateTool("codex")?.desktopApp : nil
+    }
+
+    private static func run(_ exe: URL, _ arguments: [String],
+                            environment: [String: String]? = nil) async -> (stdout: String, stderr: String)? {
+        let process = Subprocess(exe, arguments, environment: environment, directory: FileManager.default.temporaryDirectory)
         guard let result = try? await process.run(timeout: 20) else { return nil }
         return (String(decoding: result.stdout, as: UTF8.self), result.stderrTail(500))
     }

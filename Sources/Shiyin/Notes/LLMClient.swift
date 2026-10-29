@@ -84,10 +84,18 @@ enum LLMError: LocalizedError {
         switch self {
         case .notInstalled(let name):
             // 一般使用者不知道什麼是指令：說清楚是給已經在用 Claude Code（Codex）的人，沒有的話改用 API（R35.4）
+            if name == "claude" && DesktopApps.hasClaude {
+                // 只有 Claude 桌面版：說明要另外裝 Claude Code（R56.3）
+                return String(localized: "這台 Mac 找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」")
+            }
             return name == "codex"
                 ? String(localized: "這台 Mac 找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
                 : String(localized: "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
         case .notLoggedIn(let name):
+            // 用桌面版附的 codex：到那個 app 登入（R55.3）
+            if name == "codex", let app = CLILogin.desktopApp(.codex) {
+                return String(localized: "Codex 還沒登入或登入已過期，請打開 \(app) 重新登入後再試一次。")
+            }
             return name == "codex"
                 ? String(localized: "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
                 : String(localized: "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。")
@@ -116,6 +124,11 @@ enum LLMError: LocalizedError {
     static func isLimitProblem(_ text: String) -> Bool {
         let t = text.lowercased()
         return ["usage limit", "rate limit", "limit reached", "rate_limit"].contains { t.contains($0) }
+    }
+
+    /// 工作紀錄的失敗訊息是不是登入問題：CLI 的訊息（isLoginProblem），加上桌面版附的 codex 的「打開 ChatGPT 重新登入」（沒有終端機指令，R55.3）
+    static func isLoginMessage(_ text: String) -> Bool {
+        isLoginProblem(text) || (CLILogin.desktopApp(.codex) != nil && text.contains(LLMError.notLoggedIn("codex").localizedDescription))
     }
 
     /// CLI 的錯誤訊息是不是登入問題，例如「Not logged in · Please run /login」「Failed to authenticate: OAuth session expired」

@@ -43,7 +43,7 @@ struct CodexCLI: LLMBackend {
 
     func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
                       onStart: (Subprocess) -> Void) async throws -> Data {
-        guard let exe = Paths.findTool("codex") else { throw LLMError.notInstalled("codex") }
+        guard let tool = Paths.locateTool("codex") else { throw LLMError.notInstalled("codex") }
         let dir = try Paths.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let schemaFile = dir.appendingPathComponent("schema.json")
@@ -53,7 +53,7 @@ struct CodexCLI: LLMBackend {
                     "--output-schema", schemaFile.path, "-o", output.path]
         if !model.isEmpty { args += ["-m", model] }
         args.append("-")
-        let process = Subprocess(exe, args, directory: dir)
+        let process = Subprocess(tool.url, args, environment: tool.environment, directory: dir)
         onStart(process)
         // Codex 沒有獨立的系統提示詞參數，放在使用者提示詞前面
         let result = try await process.run(input: Data((system + "\n\n" + prompt).utf8), timeout: LLMClient.timeout)
@@ -61,7 +61,12 @@ struct CodexCLI: LLMBackend {
             let detail = result.stderrTail(500)
             if LLMError.isLoginProblem(detail) { throw LLMError.notLoggedIn("codex") }
             if LLMError.isLimitProblem(detail) { throw LLMError.limited(detail) }
-            throw LLMError.failed(detail.isEmpty ? String(localized: "codex 沒有回傳結果（結束代碼 \(result.status)）") : detail)
+            let message = detail.isEmpty ? String(localized: "codex 沒有回傳結果（結束代碼 \(result.status)）") : detail
+            // 桌面版附的 codex 出錯：建議另外裝 CLI（R55.4）
+            if let app = tool.desktopApp {
+                throw LLMError.failed(message + "\n" + String(localized: "這是 \(app) 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。"))
+            }
+            throw LLMError.failed(message)
         }
         return data
     }

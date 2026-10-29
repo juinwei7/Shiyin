@@ -29,23 +29,51 @@ enum Paths {
         (NSHomeDirectory() as NSString).appendingPathComponent(".local/bin"),
     ]
 
-    static func findTool(_ name: String) -> URL? {
+    /// 找到的外部工具（design §37.1）
+    struct ToolLocation: Equatable {
+        let url: URL
+        /// 接在子程序 PATH 前面的資料夾（桌面版附的 codex 的 codex-path，有 rg）
+        let extraPath: [String]
+        /// 桌面版附的 codex：app 的名稱和位置；使用者自己裝的 CLI 是 nil
+        let desktopApp: String?
+        let appURL: URL?
+
+        /// 子程序用的環境變數
+        var environment: [String: String] { Paths.subprocessEnvironment(prependPath: extraPath) }
+    }
+
+    static func findTool(_ name: String) -> URL? { locateTool(name)?.url }
+
+    /// 先找使用者自己裝的（toolDirectories），codex 找不到時再找 Codex 桌面版附的（R55.1）
+    static func locateTool(_ name: String) -> ToolLocation? {
         #if DEBUG
-        // -debugNoCLI YES：當成沒有安裝 claude、codex，在裝了 CLI 的電腦上測（design §19.6）
+        // -debugNoCLI YES：當成沒有安裝 claude、codex（包括桌面版附的），在裝了 CLI 的電腦上測（design §19.6）
         if ["claude", "codex"].contains(name) && UserDefaults.standard.bool(forKey: "debugNoCLI") { return nil }
+        // -debugOnlyDesktopCLI YES：不看使用者自己裝的，只找桌面版附的（design §37.4）
+        let skipInstalled = UserDefaults.standard.bool(forKey: "debugOnlyDesktopCLI")
+        #else
+        let skipInstalled = false
         #endif
-        for dir in toolDirectories {
-            let path = (dir as NSString).appendingPathComponent(name)
-            if FileManager.default.isExecutableFile(atPath: path) { return URL(fileURLWithPath: path) }
+        if !skipInstalled {
+            for dir in toolDirectories {
+                let path = (dir as NSString).appendingPathComponent(name)
+                if FileManager.default.isExecutableFile(atPath: path) {
+                    return ToolLocation(url: URL(fileURLWithPath: path), extraPath: [], desktopApp: nil, appURL: nil)
+                }
+            }
+        }
+        if name == "codex", let codex = DesktopApps.codex() {
+            return ToolLocation(url: codex.executable, extraPath: codex.pathDir.map { [$0.path] } ?? [],
+                                desktopApp: codex.name, appURL: codex.app)
         }
         return nil
     }
 
     /// 子程序用的環境變數：補上工具目錄到 PATH
-    static func subprocessEnvironment(extra: [String: String] = [:]) -> [String: String] {
+    static func subprocessEnvironment(extra: [String: String] = [:], prependPath: [String] = []) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         let current = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
-        env["PATH"] = (toolDirectories + [current]).joined(separator: ":")
+        env["PATH"] = (prependPath + toolDirectories + [current]).joined(separator: ":")
         env.merge(extra) { _, new in new }
         return env
     }
