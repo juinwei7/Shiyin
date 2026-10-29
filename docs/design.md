@@ -1619,6 +1619,50 @@ app                                              企業伺服器
 - Windows 的 `dotnet test`（`EnterpriseTests`）用測試裡的假伺服器照 §36.2 回應：登入、PKCE、換 token、失效、停用、登出、上傳續傳、伺服器忙之後接著傳、重開後接著做、改在這台電腦轉錄、JobRunner 整段、整理換 token 再送；4.2.1 加上不跟著轉址、回應型別不對、加入別台時保留舊的登入、不合理的結果和 `Upload-Offset`、詞彙表上限。
 - 2026-10-27 的驗證寫在 tasks 和 commit 訊息；還沒做的：Windows 的畫面在虛擬機走一次、真的按 Mac 的「登入」（`ASWebAuthenticationSession` 的視窗會出現在使用者的畫面上）、真的 Google 登入、機房的 NVIDIA 主機。
 
+## 37. Codex、Claude 的桌面版（R55、R56，D128）
+
+Windows 的做法在 design-windows §10。
+
+### 37.1 找 Codex 桌面版附的 codex（R55.1、R55.4、R55.5）
+
+- `Paths.locateTool(name) -> ToolLocation?`：`url`（執行檔）、`extraPath`（要接在子程序 PATH 前面的資料夾）、`desktopApp`（桌面版附的時候是 app 的名稱，使用者自己裝的是 nil）。`findTool(name)` 照舊回傳 `locateTool(name)?.url`，原本的呼叫不用改。
+- 順序：先找 `toolDirectories`（使用者自己裝的 CLI，同現在）；`codex` 找不到時再找桌面版。claude 不找桌面版（§37.3）。
+- 找桌面版：用 bundle id 問 LaunchServices（`NSWorkspace.shared.urlsForApplications(withBundleIdentifier: "com.openai.codex")`），不看 app 的名稱（已經從 Codex.app 改名成 ChatGPT.app，bundle id 沒變）。逐一看每個 app 的 `Contents/Resources/codex-cli/codex-package.json`（桌面版自己的說明檔，2026-10-29 是 `{"layoutVersion": 1, "entrypoint": "bin/codex", "pathDir": "codex-path", …}`）：
+  - `layoutVersion` 是 1、`entrypoint` 和 `pathDir` 是 `codex-cli` 裡面的相對路徑（不接受絕對路徑、`..`）、`entrypoint` 是可執行檔，才算找到。說明檔不在、看不懂、`layoutVersion` 不是 1：當作沒有，log 記一筆（只記原因）。
+  - 執行 `entrypoint`（現在是一個 shell script，`exec "$bin_dir/../CodexCLI.app/Contents/MacOS/codex" "$@"`）；`Process` 照舊用參數陣列，script 用 `"$@"` 原樣轉交，參數不會被改寫。照說明檔走，不直接執行裡面的 `CodexCLI.app`：OpenAI 改內部結構時，只要說明檔還在就找得到。
+  - `extraPath` 是 `pathDir`（裡面有 rg），同 npm 版 `codex.js` 的做法。
+  - `desktopApp` 用 app 的 `CFBundleDisplayName`（沒有就用 `CFBundleName`）：現在是「ChatGPT」。
+- 快取：問 LaunchServices 比看檔案慢，設定頁每次重畫都會呼叫 `findTool`，所以桌面版的結果快取 30 秒（同 Windows）。使用者自己裝的 CLI 照舊每次看檔案。不記住路徑：桌面版更新、搬走、移除之後，下一次就找到新的位置或回到「沒有安裝」（R35.4）。
+- 子程序：`CodexCLI`、`CLILogin` 把 `extraPath` 接在 `Paths.subprocessEnvironment` 的 PATH 前面。
+- 參數：2026-10-29 桌面版附的是 `0.164.0-alpha.11.1`（Homebrew 是 0.164.0），`exec --skip-git-repo-check --ephemeral --sandbox read-only --color never --output-schema -o -m` 和 `login status` 都能用；登入跟 CLI 共用 `~/.codex`。
+- 拾音不讀、不複製 `~/.codex` 的任何檔案，登入狀態照舊問 `codex login status`（§34.1）。
+
+### 37.2 畫面（R55.2、R55.3、R55.4）
+
+- 自動選整理工具（§19.6）、`SummarizerProblem`（§34.1）、引導和設定頁的選單都用 `findTool`，桌面版附的 codex 自動算進去，不另外改。
+- 設定的整理工具選了 Codex、用的是桌面版附的：「狀態」已登入時寫「已登入 …（使用 ChatGPT 附的 codex）」；沒登入時按鈕是「打開 ChatGPT 登入」（`NSWorkspace.shared.open(appURL)`），不開終端機跑 `codex login`。
+- `SummarizerProblem.notLoggedIn(.codex)`：用桌面版附的時候，`message` 是「Codex 還沒登入：打開 ChatGPT 登入後，回到拾音按「重新檢查」」，`action` 的按鈕（會議頁、失敗橫幅）是「打開 ChatGPT」，按下去同上。
+- 引導：「Codex（這台 Mac 已經裝了 codex CLI）」在用桌面版附的時候改成「Codex（使用 ChatGPT 附的 codex）」。
+- 環境檢查：codex 那一列的 `detail` 寫「ChatGPT 附的 codex」。
+- 桌面版附的 codex 執行失敗（不是沒登入、用量上限，§34.4）：錯誤訊息後面接「也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試」（R55.4）。
+
+### 37.3 Claude 桌面版：說明怎麼裝 Claude Code（R56，D128）
+
+- 不找 Claude 桌面版裡的 claude（`~/Library/Application Support/Claude/claude-code/<版本>/<雜湊>/claude.app`）：那是桌面版私有的資料夾，登入由桌面版管，Anthropic 的條款不允許第三方 app 轉用 Claude 帳號的登入資料（D128）。
+- 有沒有 Claude 桌面版：LaunchServices 找得到 bundle id `com.anthropic.claudefordesktop`（快取 30 秒，同 §37.1）。
+- 提示（`ClaudeCodeInstallHint`）：「你有 Claude 桌面版：另外安裝 Claude Code（命令列版）之後，拾音就能用你的 Claude 訂閱整理。」、可以選取的指令 `curl -fsSL https://claude.ai/install.sh | bash` 和「複製」按鈕、「安裝說明」連結（`https://code.claude.com/docs/en/setup`）、「重新檢查」（清掉找工具的快取，重新查登入）。原生安裝會放在 `~/.local/bin/claude`，`toolDirectories` 本來就找得到。出現在：
+  - 設定的整理工具：claude 找不到、有 Claude 桌面版，而且選的是 Claude Code（R56.3）或還沒設定（`needsProviderSetup`）時，放在選單下面。選單裡的 Claude Code 照舊「（沒有安裝）」、不能選。已經用別的整理工具的人不顯示。
+  - 引導：第一段選了「Claude」、claude 找不到、有 Claude 桌面版時，放在第二段的選項上面（Anthropic API 照舊可以選）。
+  - `SummarizerProblem.notInstalled(.claude)`、`LLMError.notInstalled("claude")`（R35.4）：有 Claude 桌面版時，`message` 改成「這台電腦找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」」。
+- 不在拾音裡執行安裝指令（R56「不做」）：要執行網路上的腳本，失敗時拾音也說明不了。
+
+### 37.4 DEBUG、驗證
+
+- `-debugNoCLI YES` 照舊是 claude、codex 都找不到（包括桌面版），舊的驗證方法不變。另外加：`-debugOnlyDesktopCLI YES` 不看 `toolDirectories`，只找桌面版（在裝了 CLI 的電腦上測桌面版）；`-debugClaudeDesktop yes|no` 假裝有、沒有 Claude 桌面版；`-debugCodexApp <路徑>` 不問 LaunchServices，把這個資料夾當成 Codex 桌面版（在暫存資料夾做說明檔不對的假 app：`layoutVersion` 2、`..`、絕對路徑、entrypoint 不能執行）。
+- `shiyinctl state` 多 `tools`：`{"claude": {"path", "desktopApp"}, "codex": {…}, "claudeDesktop": true}`。
+- 這台 Mac（ChatGPT.app 26.1021）：`-debugOnlyDesktopCLI YES -llmProvider codex` 看 state、設定頁和引導（`preview`）、環境檢查；實際整理一場短的會議（會用使用者的 ChatGPT 額度，先問）。「打開 ChatGPT 登入」會在使用者的畫面上打開 ChatGPT，也要先問。
+- Claude 的提示：`-debugNoCLI YES -llmProvider ""` 看設定頁、引導；`-debugNoCLI YES -llmProvider claude` 看會議頁的訊息；`-debugClaudeDesktop no` 都不出現；按「複製」後剪貼簿是那一行指令。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1695,5 +1739,6 @@ app                                              企業伺服器
 | D124 | 整理工具的選單叫「公司（<公司名稱>）」，登入了、公司有提供整理才出現；登入只在進階；選了只顯示公司設定的模型，不填 key、模型（R51.1，2026-10-27 使用者要求） | 選單一直有「公司」、沒登入就在整理工具頁直接登入（同一天做過一版）：使用者說登入應該都在進階，這裡只選模型。app 照舊讓使用者自己輸入模型名稱：公司的模型由管理者決定，打錯名稱只會失敗 |
 | D125 | 多張顯示卡由伺服器分配，核心只加「用第幾張」（§36.6） | 每張卡開一個伺服器程序（或容器）、前面再擋一層分流：管理者要自己設好幾份、登入和工作佇列要共用，部署變複雜。whisper 也用 `CUDA_VISIBLE_DEVICES`：whisper 跟伺服器在同一個程序，環境變數只能設一次，同時跑的兩場沒辦法用不同的卡 |
 | D126 | 企業伺服器的請求一律不跟著轉址，3xx 當成錯誤（§36.2，4.2.1 的安全審查） | 跟著轉址（4.2.0）：307、308 轉到別的主機時，`Authorization` 會被拿掉，但 body（refresh token、錄音、逐字稿）照樣送過去。只跟同一個主機的轉址：要自己判斷 301、302、307、308 和要不要重送 body，§36.2 的 API 也沒有需要轉址的地方；伺服器搬家時請管理者給新網址 |
+| D128 | 找不到 Codex CLI 時用 Codex 桌面版附的 codex（照它的說明檔 `codex-package.json` 找）；Claude 不用桌面版裡的 Claude Code，只說明怎麼安裝（R55、R56、§37；2026-10-29 使用者決定） | 兩個都用桌面版附的：Claude 桌面版的 Claude Code 放在桌面版私有的資料夾、登入由桌面版管，要讓它登入就得碰桌面版的登入資料，Anthropic 的條款不允許第三方 app 轉用。兩個都不用、只說明怎麼裝 CLI：Codex 桌面版跟 CLI 共用登入（OpenAI 的文件），又有說明檔寫好執行檔在哪裡，直接用比要使用者另外裝 npm 簡單。在拾音裡直接執行安裝指令：要執行網路上的腳本，Windows 還要開 PowerShell，失敗時說明不了。取捨：桌面版附 codex 的位置不是 OpenAI 公開的介面，改了要跟著改；找不到時只是回到「沒有安裝」，不會壞掉 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

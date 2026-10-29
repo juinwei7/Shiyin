@@ -265,6 +265,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 子程序放進 Job Object（`KILL_ON_JOB_CLOSE`）：拾音當掉時子程序一起結束；逾時時整棵程序樹一起結束。
 - 登入：用固定參數開 Windows Terminal（沒有就用 `cmd.exe /k`）執行 `claude` 或 `codex login`，參數裡不放任何使用者內容。
 - **還沒設定整理工具**（R35、M§19.6、D95）：同 Mac。`AppSettings.DetectCli` 由 App 用 `WindowsToolLocator` 找 claude、codex（要掃過 PATH 的每個資料夾，快取 30 秒）；Services、測試裡沒給就是找不到。DEBUG 加 `--set debugNoCli=YES` 當成找不到。
+- **Codex 桌面版附的 codex**（R55、M§37、D128）：npm、PATH 都找不到 codex 時才找。桌面版是 Microsoft Store 的 MSIX 套件 `OpenAI.Codex`（package family `OpenAI.Codex_2p2nqsd0c76g0`，從 Store 的安裝檔名看到的，要在真的電腦上確認）。
+  - 安裝資料夾用 Win32 的 `GetPackagesByPackageFamily` 加 `GetPackagePathByFullName`（kernel32，P/Invoke，不用 WinRT 的 `PackageManager`）查。`C:\Program Files\WindowsApps` 一般使用者列不出內容，不能用掃資料夾的方式找；資料夾名稱有版本號，每次重新查（跟其他工具一樣快取 30 秒），不記住路徑。
+  - 資料夾裡先找跟 Mac 一樣的說明檔 `app\resources\codex-cli\codex-package.json`（規則同 M§37.1：`layoutVersion` 1、相對路徑、不接受 `..`；`pathDir` 接到子程序的 PATH）。沒有說明檔時找 `app\resources\codex.exe`（第三方文章寫的位置）。實際的樣子要在虛擬機裝起來確認後寫回這裡。
+  - 從套件外直接執行 `WindowsApps` 裡的 exe（沒有套件身分）：一般的 Win32 執行檔可以執行，也要在虛擬機確認。啟動失敗（拒絕存取）時當成沒找到，log 記一筆。
+  - app 的名稱、打開 app：讀套件資料夾的 `AppxManifest.xml`，名稱用 `Properties/DisplayName`（是 `ms-resource:` 時用「Codex」），`Application` 的 `Id` 組成 `<package family>!<Id>`；「打開 Codex 登入」用 `explorer.exe shell:AppsFolder\<package family>!<Id>`（`ArgumentList`，不經過 cmd.exe）。
+- **Claude 桌面版**（R56、M§37.3）：有沒有安裝看 MSIX 套件 `Claude_pzs8sxrjxfjjc`（Store 和官網的安裝檔現在都是 MSIX），或舊版安裝在 `%LOCALAPPDATA%\AnthropicClaude\claude.exe`。提示的指令是 PowerShell 的 `irm https://claude.ai/install.ps1 | iex`，說明寫「在 PowerShell 貼上」；原生安裝放在 `%USERPROFILE%\.local\bin\claude.exe`，本來就找得到。畫面、出現的地方、訊息同 Mac。
+- DEBUG：`--set debugOnlyDesktopCli=YES`（只找桌面版）、`--set debugClaudeDesktop=yes|no`；`state` 的 `tools` 同 Mac。
 
 ### 10.1 整理工具設定好才用、失敗說清楚怎麼修（R45～R47、M§34）
 
