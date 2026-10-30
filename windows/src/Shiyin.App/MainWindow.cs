@@ -48,6 +48,7 @@ public sealed class MainWindow : Window
         Title = L.T("拾音");
         WindowPlacement.Center(this, 1180, 780);
         WindowPlacement.MinimumSize(this, 960, 620);
+        Ui.ContentScale = TextSizes.Scale(host.Settings.TextSize);   // 會議內容的文字大小（R59）
         detailView = new DetailView(host, this);
         Build();
         // 關掉主視窗只是藏起來（R13.3）
@@ -71,6 +72,8 @@ public sealed class MainWindow : Window
         host.Settings.Changed += key =>
         {
             if (key is AppSettings.ProviderKey or AppSettings.CompatibleBaseUrlKey || key.EndsWith("Model", StringComparison.Ordinal)) host.Post(Refresh);
+            // 文字大小（R59）：快捷鍵、設定頁、控制通道改的都一樣，整個會議內容重畫
+            if (key == AppSettings.TextSizeKey) host.Post(ApplyTextSize);
         };
         // 工作進度不發事件：轉錄、整理中每秒更新一次列表的狀態和會議頁的進度
         progressTimer.Tick += (_, _) => Ui.Guard(() =>
@@ -155,6 +158,15 @@ public sealed class MainWindow : Window
             Accelerator(VirtualKey.Number1 + i, VirtualKeyModifiers.Control, () => { if (State.Detail is not null) State.SetTab(tab); });
         }
         Accelerator(VirtualKey.Delete, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d && !State.ShowTrash) _ = ConfirmTrash(d.Meeting.Id!.Value); });
+        // 會議內容的文字大小（R59.1）：Ctrl+=（加號那顆，按不按 Shift 都算）、數字鍵盤的 +；Ctrl+-；Ctrl+0
+        const VirtualKey plus = (VirtualKey)187, minus = (VirtualKey)189;   // VK_OEM_PLUS、VK_OEM_MINUS
+        Accelerator(plus, VirtualKeyModifiers.Control, () => ChangeTextSize(1));
+        Accelerator(plus, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => ChangeTextSize(1));
+        Accelerator(VirtualKey.Add, VirtualKeyModifiers.Control, () => ChangeTextSize(1));
+        Accelerator(minus, VirtualKeyModifiers.Control, () => ChangeTextSize(-1));
+        Accelerator(VirtualKey.Subtract, VirtualKeyModifiers.Control, () => ChangeTextSize(-1));
+        Accelerator(VirtualKey.Number0, VirtualKeyModifiers.Control, () => ChangeTextSize(null));
+        Accelerator(VirtualKey.NumberPad0, VirtualKeyModifiers.Control, () => ChangeTextSize(null));
         // 空白鍵播放／暫停；游標在輸入框時不攔截（M§9.4）
         root.KeyDown += (_, e) =>
         {
@@ -164,6 +176,26 @@ public sealed class MainWindow : Window
             e.Handled = true;
         };
         Content = Ui.WindowBackground(root);
+    }
+
+    /// <summary>放大、縮小一級，null 是實際大小（R59.1）；到頭了不動。Windows 沒有選單列，下方提示目前的大小</summary>
+    void ChangeTextSize(int? delta)
+    {
+        var current = host.Settings.TextSize;
+        var level = delta is int d ? TextSizes.Clamp(current + d) : 0;
+        if (level == current) return;
+        host.Settings.Set(AppSettings.TextSizeKey, (double)level);
+        ShowNotice(L.F("會議內容的文字大小：%@", TextSizes.Label(level)));
+    }
+
+    /// <summary>文字大小改了：會議內容整個重畫（R59.2）</summary>
+    void ApplyTextSize()
+    {
+        var scale = TextSizes.Scale(host.Settings.TextSize);
+        if (scale == Ui.ContentScale) return;
+        Ui.ContentScale = scale;
+        Refresh();
+        detailView.Rescale();
     }
 
     static void Place(Grid grid, FrameworkElement element, int row)
@@ -211,9 +243,23 @@ public sealed class MainWindow : Window
         var settings = host.Settings;
         var record = new SplitButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Microphone), Ui.Text(MeetingLanguages.Ui("錄音", "Record"), wrap: false)) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(record, MeetingLanguages.Ui("錄音", "Record"));
-        ToolTipService.SetToolTip(record, L.F("開始錄音（Ctrl+R），用%@辨識；點右邊的箭頭可以改錄音來源和語言", settings.DefaultMeetingLanguage.UiName()));
+        ToolTipService.SetToolTip(record, L.F("開始錄音（Ctrl+R），用%@辨識；點右邊的箭頭可以改錄音來源、麥克風和語言", settings.DefaultMeetingLanguage.UiName()));
         record.Click += (_, _) => host.Controller.StartRecording(State.CurrentFolder);
         var menu = new MenuFlyout();
+        FillRecordMenu(menu);
+        // 打開時才重建：麥克風的清單是當下的裝置（接上、拔掉耳機後，R58.1）
+        menu.Opening += (_, _) => Ui.Guard(() => FillRecordMenu(menu));
+        record.Flyout = menu;
+        toolbar.Children.Add(record);
+        toolbar.Children.Add(Ui.IconButton(Symbol.Message, L.T("問所有會議，回答附上是哪一場會議、哪個時間點"), () => App.Current.ShowAskAll()));
+        toolbar.Children.Add(Ui.IconButton(Symbol.Setting, L.T("設定"), () => App.Current.ShowSettings()));
+    }
+
+    /// <summary>錄音按鈕的下拉選單：錄音來源、麥克風（R58.1）、會議語言</summary>
+    void FillRecordMenu(MenuFlyout menu)
+    {
+        var settings = host.Settings;
+        menu.Items.Clear();
         foreach (var source in new[] { "mic", "both", "system" })
             menu.Items.Add(Ui.Check(SourceLabel(source), settings.RecordSource == source, () =>
             {
@@ -222,6 +268,21 @@ public sealed class MainWindow : Window
                 BuildToolbar();
             }));
         menu.Items.Add(new MenuFlyoutSeparator());
+        // 麥克風（R58.1）：跟設定頁的「麥克風」同一個設定；只錄電腦聲音時不列
+        if (settings.RecordSource != "system")
+        {
+            var mic = new MenuFlyoutSubItem { Text = L.F("麥克風：%@", MicrophoneMenu.SelectedLabel(host)), Icon = new SymbolIcon(Symbol.Microphone) };
+            foreach (var item in MicrophoneMenu.Items(host, id => settings.InputDevice == id, id =>
+            {
+                settings.Set(AppSettings.InputDeviceKey, id.Length == 0 ? null : id);
+                ShowNotice(id.Length == 0
+                    ? L.F("之後的錄音用系統預設的麥克風（%@）", MicrophoneMenu.Name(host, ""))
+                    : L.F("之後的錄音用 %@", MicrophoneMenu.Name(host, id)));
+                BuildToolbar();
+            })) mic.Items.Add(item);
+            menu.Items.Add(mic);
+            menu.Items.Add(new MenuFlyoutSeparator());
+        }
         foreach (var language in Enum.GetValues<MeetingLanguage>())
             menu.Items.Add(Ui.Check(language.Name(), settings.DefaultMeetingLanguage == language, () =>
             {
@@ -229,10 +290,6 @@ public sealed class MainWindow : Window
                 ShowNotice(L.F("之後的錄音都用%@", language.UiName()));
                 BuildToolbar();
             }));
-        record.Flyout = menu;
-        toolbar.Children.Add(record);
-        toolbar.Children.Add(Ui.IconButton(Symbol.Message, L.T("問所有會議，回答附上是哪一場會議、哪個時間點"), () => App.Current.ShowAskAll()));
-        toolbar.Children.Add(Ui.IconButton(Symbol.Setting, L.T("設定"), () => App.Current.ShowSettings()));
     }
 
     public static string SourceLabel(string source) => source switch

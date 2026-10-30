@@ -66,7 +66,7 @@ public sealed class ReviewTab
         var idx = suggestion.Speaker;
         var skipped = draft.SpeakerSkipped.Contains(idx);
         var current = value.Speakers.GetValueOrDefault(idx) ?? "";
-        var question = Ui.Text(Language.Text($"「{current}」是{suggestion.Name}嗎？", $"Is “{current}” {suggestion.Name}?", $"「{current}」は{suggestion.Name}ですか？"), 14, select: true);  // l10n-skip：會議語言的題目
+        var question = Ui.Text(Language.Text($"「{current}」是{suggestion.Name}嗎？", $"Is “{current}” {suggestion.Name}?", $"「{current}」は{suggestion.Name}ですか？"), Ui.C(14), select: true);  // l10n-skip：會議語言的題目
         question.Language = Ui.ContentLanguage(Language);
         if (skipped) { question.Foreground = Ui.Secondary; question.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough; }
         var icon = new FontIcon { Glyph = "", FontSize = 14, Foreground = Ui.Speaker(idx), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 3, 0, 0) };
@@ -75,9 +75,9 @@ public sealed class ReviewTab
         var parts = Ui.Column(8, Ui.Bar(icon, question, null, 10));
         if (suggestion.Reason.Length > 0 || suggestion.Time.Length > 0)
         {
-            var reason = Ui.Text(suggestion.Reason, 13, color: Ui.Secondary);
+            var reason = Ui.Text(suggestion.Reason, Ui.C(13), color: Ui.Secondary);
             reason.Language = Ui.ContentLanguage(Language);
-            var line = Ui.Bar(suggestion.Time.Length > 0 ? (FrameworkElement)Ui.Time(suggestion.Time, host.Player.IsLoaded ? s => host.Player.Seek(s) : null) : null, reason, null, 6);
+            var line = Ui.Bar(suggestion.Time.Length > 0 ? (FrameworkElement)Ui.Time(suggestion.Time, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, size: Ui.C(13)) : null, reason, null, 6);
             line.Margin = new Thickness(22, 0, 0, 0);
             parts.Children.Add(line);
         }
@@ -125,11 +125,11 @@ public static class ReviewRows
                                             Action<double>? seek, Action refresh, Action changed)
     {
         var dismissed = draft.Dismissed.Contains(index);
-        var question = Ui.Text(item.Question, 14, select: true);
+        var question = Ui.Text(item.Question, Ui.C(14), select: true);
         question.Language = Ui.ContentLanguage(language);
         if (dismissed) { question.Foreground = Ui.Secondary; question.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough; }
         // 題目放中間那欄才會換行（放在橫的 StackPanel 裡不會換行，長的題目會被切掉）
-        var lead = Ui.Row(10, Ui.Text($"{index + 1}", 14, bold: true, color: Ui.Signal, wrap: false), Ui.Time(item.Time, seek));
+        var lead = Ui.Row(10, Ui.Text($"{index + 1}", Ui.C(14), bold: true, color: Ui.Signal, wrap: false), Ui.Time(item.Time, seek, size: Ui.C(13)));
         lead.VerticalAlignment = VerticalAlignment.Top;   // 題號、時間對齊題目的第一行
         if (dismissed)
             return Ui.Bar(lead, question, SkipButton(true, () => { draft.Dismissed.Remove(index); draft.Flush(); refresh(); }), 10);

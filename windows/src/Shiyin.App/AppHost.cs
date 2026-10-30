@@ -123,7 +123,7 @@ public sealed class AppHost
         var engines = new SpeechEngines(Models, () => Gpu.QwenRuntime);
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage, Enterprise = Enterprise };
-        Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes));
+        Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes, MicrophoneList, DefaultMicrophone));
         // 忘了停止錄音（M§35.2）：DEBUG 用 --set idleRemindSeconds=60 --set idleStopSeconds=180 縮短
         if (Debug)
         {
@@ -324,6 +324,26 @@ public sealed class AppHost
 
     /// <summary>快捷鍵被別的 app 佔走的原因（設定頁顯示）</summary>
     public string? HotKeyError { get; set; }
+
+    /// <summary>DEBUG 的 fakemic（M§38.7）：假的麥克風只在記憶體，第一支當成系統預設，排在真的裝置前面</summary>
+    public IReadOnlyList<MicrophoneDevice> FakeMicrophones { get; set; } = [];
+
+    /// <summary>這台電腦的麥克風（R58）：錄音按鈕的下拉選單、錄音列、設定頁、Recorder 都用這裡</summary>
+    public IReadOnlyList<MicrophoneDevice> MicrophoneList()
+    {
+        List<MicrophoneDevice> real;
+        try { real = Microphones.All(); }
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { real = []; }
+        return [.. FakeMicrophones, .. real];
+    }
+
+    /// <summary>系統預設的麥克風；DEBUG 的 fakemic 時是第一支假的</summary>
+    public MicrophoneDevice? DefaultMicrophone()
+    {
+        if (FakeMicrophones.Count > 0) return FakeMicrophones[0];
+        try { return Microphones.Default(); }
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { return null; }
+    }
 
     IReadOnlyList<(int Channel, IAudioSource Source)> MakeSources(string source, string device) => source switch
     {
