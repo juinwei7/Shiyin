@@ -88,9 +88,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 
-    /// 空白鍵播放／暫停；游標在輸入框時不攔截（design §9.4）
+    /// 空白鍵播放／暫停；游標在輸入框時不攔截（design §9.4）。
+    /// ⌘=（美式鍵盤上 + 的那個鍵，不按 Shift）也算「放大文字」：選單的 ⌘+ 要按 Shift 才對得上（design §38.5）
     private func installSpaceKey() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
+               event.charactersIgnoringModifiers == "=" {
+                TextSize.change(1)
+                return nil
+            }
             guard event.keyCode == 49,
                   event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
                   let window = NSApp.keyWindow, window.identifier?.rawValue.hasPrefix("main") == true,

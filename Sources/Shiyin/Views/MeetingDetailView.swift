@@ -11,6 +11,7 @@ struct MeetingDetailView: View {
         @Bindable var model = model
         VStack(spacing: 0) {
             MeetingTop(detail: detail, isRecording: isRecordingThis)
+                .environment(\.textScale, 1)   // 標題列不跟著文字大小（R59.2）
 
             Divider()
 
@@ -30,6 +31,7 @@ struct MeetingDetailView: View {
             }
         }
         .environment(\.meetingLanguage, detail.meeting.meetingLanguage)   // 內容的字形、標題字型（design §18.6）
+        .contentTextScale()   // 會議內容的文字大小（design §38.5）
         .navigationTitle(detail.meeting.displayTitle)
         .toolbar {
             if !isRecordingThis {
@@ -43,6 +45,10 @@ struct MeetingDetailView: View {
                 }
                 // 垃圾桶裡的會議不能操作
                 if !isTrashed {
+                    // 匯出放在「更多」左邊，看得到（R60、design §38.6）
+                    ToolbarItem(placement: .primaryAction) {
+                        ExportMenu()
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         MoreMenu(detail: detail)
                     }
@@ -374,6 +380,26 @@ struct StatusBanner: View {
     }
 }
 
+/// 右上角的「匯出」（R60、design §38.6）：按下打開匯出對話框，箭頭直接複製會議紀錄。
+/// 工具列的選單建立一次就不更新，動作在按下時才看目前選取的會議（同「更多」）
+struct ExportMenu: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Menu {
+            Button("複製會議紀錄：保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
+            Button("複製會議紀錄：Markdown") { model.copyNotes(.markdown) }
+            Button("複製會議紀錄：純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
+        } label: {
+            Label("匯出", systemImage: "square.and.arrow.up")
+        } primaryAction: {
+            model.openExportSheet()
+        }
+        .labelStyle(.titleAndIcon)
+        .help("匯出會議紀錄、逐字稿或錄音（⌘E）；箭頭可以直接複製會議紀錄")
+    }
+}
+
 struct MoreMenu: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
@@ -381,19 +407,14 @@ struct MoreMenu: View {
     // 工具列右上角的選單建立一次就不會更新（換會議、工作開始或結束都一樣，加 .id 也沒用），
     // 所以這裡不預先停用：按下時由 AppModel 檢查目前的會議，不能做就說明原因
     var body: some View {
-        // 五項（R44.4，design §33.2）：重新處理的四個動作收成子選單；兩個「復原」回到紀錄的編輯列和說話者的改名處
+        // 三項（R44.4、R60，design §33.2、§38.6）：重新處理的四個動作收成子選單；兩個「復原」回到紀錄的編輯列和說話者的改名處；
+        // 匯出、複製會議紀錄在左邊的「匯出」
         Menu {
             Menu("重新處理", systemImage: "arrow.clockwise") {
                 Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
                 Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
                 Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
                 Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
-            }
-            Button("匯出…", systemImage: "square.and.arrow.up") { model.openExportSheet() }
-            Menu("複製會議紀錄", systemImage: "doc.on.doc") {
-                Button("保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
-                Button("Markdown") { model.copyNotes(.markdown) }
-                Button("純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
             }
             Divider()
             // 工具列的選單建立一次就不會更新（停用狀態、按鈕記住的會議），動作一律在按下時才看目前選取的會議

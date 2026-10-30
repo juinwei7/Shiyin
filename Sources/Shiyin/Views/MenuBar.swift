@@ -59,7 +59,13 @@ struct MenuBarContent: View {
                     Button(recorder.isPaused ? "繼續" : "暫停") { recorder.isPaused ? recorder.resume() : recorder.pause() }
                     Button("停止") { recorder.stop() }
                 }
-                if recorder.hasMic { RecorderMeter(recorder: recorder, system: false, segments: 24) }
+                if recorder.hasMic {
+                    RecorderMeter(recorder: recorder, system: false, segments: 24)
+                    // 正在用哪一支麥克風（design §38.3）
+                    if let device = recorder.micDevice {
+                        Text("麥克風：\(device.name)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
                 if recorder.hasSystem { RecorderMeter(recorder: recorder, system: true, segments: 24) }
                 if recorder.idlePrompt {
                     // 忘了停止錄音（R48.1）：同錄音畫面
@@ -71,6 +77,22 @@ struct MenuBarContent: View {
                         HStack {
                             Button("繼續錄") { recorder.continueAfterIdle() }
                             Button("停止錄音") { recorder.stop() }
+                        }
+                        .font(.caption)
+                    }
+                }
+                if let hint = recorder.micHint {
+                    // 用藍牙耳機的麥克風錄現場會議（design §38.4）：同錄音畫面
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(hint.text, systemImage: "headphones")
+                            .font(.caption)
+                            .foregroundStyle(Color.signal)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            if let builtIn = hint.builtIn {
+                                Button("改用 \(builtIn.name)") { model.switchMicrophone(builtIn.uid) }
+                            }
+                            Button("知道了") { recorder.dismissMicHint() }
                         }
                         .font(.caption)
                     }

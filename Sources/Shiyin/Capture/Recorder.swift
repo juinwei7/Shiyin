@@ -63,6 +63,25 @@ final class Recorder {
         }
     }
     private(set) var levelHint: LevelHint?
+
+    /// 正在收音的麥克風（design §38.3、R58.2）：開始、重新開始、換麥克風後更新
+    private(set) var micDevice: AudioDevices.Device?
+    /// 用藍牙耳機的麥克風錄現場會議（design §38.4、R58.3）
+    struct MicHint: Equatable {
+        var name: String
+        /// 這台電腦的內建麥克風，提示列的「改用」按鈕用；沒有就不放按鈕
+        var builtIn: AudioDevices.Device?
+
+        /// 錄音畫面、選單列、通知都用同一句
+        var text: String {
+            String(localized: "正在用「\(name)」收音：這是藍牙耳機的麥克風，人不在旁邊時錄不到現場的聲音。")
+        }
+    }
+    private(set) var micHint: MicHint?
+    @ObservationIgnored private var micHintDismissed = false
+    @ObservationIgnored private var micHintNotified = false
+    /// 藍牙的提示第一次出現：AppModel 決定要不要送通知（同收音提醒，design §31.5）
+    @ObservationIgnored var onMicHint: ((MicHint) -> Void)?
     @ObservationIgnored private var dismissedLevelHints: Set<LevelHint> = []
     /// 這場錄音已經通知過的提示（R42.1：每種每場最多一次）
     @ObservationIgnored private var notifiedLevelHints: Set<LevelHint> = []
@@ -162,6 +181,7 @@ final class Recorder {
         simulationEnded = false
         begin(meetingId: meetingId) {
             let source = FileSource(url: file, speed: speed)
+            source.deviceUID = AppSettings.inputDeviceUID
             source.onEnded = { [weak self] in Task { @MainActor in self?.simulationEnded = true } }
             var list: [(Int, AudioSource)] = [(0, source)]
             if both {
@@ -241,6 +261,42 @@ final class Recorder {
             if Double(last.filter { $0 > threshold }.count) >= Double(last.count) * 0.3 { return true }
         }
         return false
+    }
+
+    /// 換麥克風（design §38.3、R58.2）：存成設定，錄音中就接著用新的這支錄（同一個檔案，錄音不停）
+    func switchMicrophone(uid: String) {
+        UserDefaults.standard.set(uid, forKey: AppSettings.inputDeviceKey)
+        guard isRecording, let mic = sources[0] as? MicrophoneInput else { return }
+        mic.deviceUID = uid
+        log.info("switching microphone")
+        restartSource(0)
+    }
+
+    /// 藍牙提示的「知道了」：這場錄音不再出現
+    func dismissMicHint() {
+        micHintDismissed = true
+        updateMicHint()
+    }
+
+    private func updateMicDevice() {
+        let device = (sources[0] as? MicrophoneInput)?.current
+        if device != micDevice { micDevice = device }
+        updateMicHint()
+    }
+
+    /// 只錄麥克風（現場會議）、實際收音的是藍牙、不是使用者自己指定的那支時提示（R58.3、R58.4、D130）
+    private func updateMicHint() {
+        var hint: MicHint?
+        if isRecording, source == "mic", !micHintDismissed, let device = micDevice, device.isBluetooth,
+           device.uid != AppSettings.inputDeviceUID {
+            hint = MicHint(name: device.name, builtIn: MicrophoneMonitor.shared.inputs.first(where: \.isBuiltIn))
+        }
+        guard hint != micHint else { return }
+        micHint = hint
+        if let hint, !micHintNotified {
+            micHintNotified = true
+            onMicHint?(hint)
+        }
     }
 
     /// 「知道了」：這一種提示這場錄音不再出現
@@ -326,6 +382,9 @@ final class Recorder {
             levelHint = nil
             dismissedLevelHints = []
             notifiedLevelHints = []
+            micHint = nil
+            micHintDismissed = false
+            micHintNotified = false
             (noisySeconds, quietSeconds) = (0, 0)
             lastSpeechAt = 0
             liveActive = false
@@ -342,6 +401,7 @@ final class Recorder {
             }
             RunLoop.main.add(timer, forMode: .common)
             meterTimer = timer
+            updateMicDevice()
             if AppSettings.liveTranscription { startLive(writer: writer, meetingId: meetingId) }
             startLanguageDetection(meetingId: meetingId)
             log.info("recording started (\(self.source, privacy: .public))")
@@ -546,6 +606,7 @@ final class Recorder {
             reconnectErrors[channel] = error.localizedDescription
             log.error("audio source \(channel) restart failed: \(error.localizedDescription, privacy: .public)")
         }
+        if channel == 0 { updateMicDevice() }
         updateDeviceWarning()
     }
 
@@ -604,6 +665,8 @@ final class Recorder {
         tap.setDetector(nil)
         languageSwitch = nil
         levelHint = nil
+        micHint = nil
+        micDevice = nil
         idlePrompt = false
         liveActive = false
         meetingId = nil

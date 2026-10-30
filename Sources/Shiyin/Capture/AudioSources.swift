@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreAudio
 import Foundation
+import Observation
 
 /// 所有音源輸出的統一格式：16 kHz、單聲道、Float32（design §5.1）
 enum CaptureFormat {
@@ -23,6 +24,14 @@ extension AudioSource {
         stop()
         try start()
     }
+}
+
+/// 麥克風那一聲道的音源（design §38.3）：可以換裝置，看得到實際在收音的是哪一支
+protocol MicrophoneInput: AudioSource {
+    /// 指定的輸入裝置 UID，空字串是系統預設；改了之後 `restart()` 才生效
+    var deviceUID: String { get set }
+    /// 實際在收音的裝置（指定的不在時是系統預設）；`start()` 成功後才有
+    var current: AudioDevices.Device? { get }
 }
 
 /// 把任意格式的 buffer 持續轉成 16 kHz 單聲道（保留重取樣的狀態，適合串流）
@@ -56,12 +65,13 @@ final class StreamConverter {
 }
 
 /// 麥克風（AVAudioEngine）。可以指定輸入裝置的 UID，空字串表示系統預設。
-final class MicrophoneSource: AudioSource {
+final class MicrophoneSource: MicrophoneInput {
     var onSamples: (([Float]) -> Void)?
     var onInterruption: (() -> Void)?
     private var engine = AVAudioEngine()
     private var observer: NSObjectProtocol?
-    private let deviceUID: String
+    var deviceUID: String
+    private(set) var current: AudioDevices.Device?
 
     init(deviceUID: String) {
         self.deviceUID = deviceUID
@@ -93,6 +103,7 @@ final class MicrophoneSource: AudioSource {
             stop()
             throw error
         }
+        current = AudioDevices.device(id: input.auAudioUnit.deviceID)
     }
 
     func stop() {
@@ -189,9 +200,12 @@ final class SystemAudioSource: AudioSource {
 
 #if DEBUG
 /// 只在 DEBUG：用音訊檔模擬音源，speed 是播放倍速（驗證錄音流程用，見 design §13 of v2）
-final class FileSource: AudioSource {
+final class FileSource: MicrophoneInput {
     var onSamples: (([Float]) -> Void)?
     var onInterruption: (() -> Void)?
+    /// 模擬錄音的麥克風（design §38.7）：照 `MicrophoneMonitor` 的清單（含 `fakemic` 的假裝置）決定是哪一支
+    var deviceUID = ""
+    private(set) var current: AudioDevices.Device?
     /// 模擬「麥克風＋電腦聲音」時，同一段音訊在同一個迴圈裡也送給第二個聲道。
     /// 兩個聲道各開一個 FileSource 的話，高倍速時兩邊的速度會不一樣，造成真實裝置不會有的「晚到」
     var mirror: MirroredSource?
@@ -212,6 +226,8 @@ final class FileSource: AudioSource {
 
     /// 從上次停下的位置接著送，所以 restart()（stop 再 start）等於繼續送
     func start() throws {
+        let uid = deviceUID
+        current = MainActor.assumeIsolated { MicrophoneMonitor.shared.resolve(uid) }
         let url = url, speed = speed
         task = Task.detached { [weak self] in
             guard let self else { return }
@@ -283,14 +299,36 @@ enum AudioDevices {
         var id: String { uid }
         var uid: String
         var name: String
+        /// 連接方式（`kAudioDevicePropertyTransportType`）：藍牙、內建、USB…
+        var transport: UInt32 = 0
+
+        var isBluetooth: Bool { transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE }
+        var isBuiltIn: Bool { transport == kAudioDeviceTransportTypeBuiltIn }
     }
 
     static func inputDevices() -> [Device] {
-        allDevices().compactMap { id in
-            guard hasInputStreams(id), let uid = string(id, kAudioDevicePropertyDeviceUID),
-                  let name = string(id, kAudioObjectPropertyName) else { return nil }
-            return Device(uid: uid, name: name)
-        }
+        allDevices().compactMap { id in hasInputStreams(id) ? device(id: id) : nil }
+    }
+
+    static func device(id: AudioDeviceID) -> Device? {
+        guard id != kAudioObjectUnknown, let uid = string(id, kAudioDevicePropertyDeviceUID),
+              let name = string(id, kAudioObjectPropertyName) else { return nil }
+        var transport: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyTransportType, mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        _ = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &transport)
+        return Device(uid: uid, name: name, transport: transport)
+    }
+
+    /// 系統預設的輸入裝置
+    static func defaultInput() -> Device? {
+        var id = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &id) == noErr else { return nil }
+        return device(id: id)
     }
 
     static func deviceID(forUID uid: String) -> AudioDeviceID? {
@@ -342,4 +380,50 @@ enum AudioDevices {
         guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value) == noErr, let value else { return nil }
         return value.takeRetainedValue() as String
     }
+}
+
+/// 這台電腦的麥克風清單和系統預設（design §38.1）：接上、拔掉裝置或系統換了預設就更新。
+/// 錄音按鈕的選單、錄音畫面、設定頁共用
+@MainActor @Observable
+final class MicrophoneMonitor {
+    static let shared = MicrophoneMonitor()
+
+    private(set) var inputs: [AudioDevices.Device] = []
+    private(set) var defaultInput: AudioDevices.Device?
+    #if DEBUG
+    /// shiyinctl fakemic：假的麥克風（只在記憶體，模擬錄音用，design §38.7）；`fakeDefault` 是假裝的系統預設
+    var fakes: [AudioDevices.Device] = [] { didSet { refresh() } }
+    var fakeDefault: String? { didSet { refresh() } }
+    #endif
+
+    private init() {
+        refresh()
+        for selector in [kAudioHardwarePropertyDevices, kAudioHardwarePropertyDefaultInputDevice] {
+            var address = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
+                                                     mElement: kAudioObjectPropertyElementMain)
+            AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, .main) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.refresh() }
+            }
+        }
+    }
+
+    /// 值真的變了才設（design §25）
+    func refresh() {
+        var list = AudioDevices.inputDevices()
+        var preset = AudioDevices.defaultInput()
+        #if DEBUG
+        list += fakes
+        if let fakeDefault { preset = list.first { $0.uid == fakeDefault } }
+        #endif
+        if list != inputs { inputs = list }
+        if preset != defaultInput { defaultInput = preset }
+    }
+
+    /// 這個設定實際會用哪一支：指定的在就用它，不在或沒指定就是系統預設
+    func resolve(_ uid: String) -> AudioDevices.Device? {
+        (uid.isEmpty ? nil : inputs.first { $0.uid == uid }) ?? defaultInput
+    }
+
+    /// 選單的 `.id`：清單或預設變了就換一個新的選單（工具列的選單建立一次就不更新）
+    var signature: String { inputs.map(\.uid).joined(separator: ",") + "|" + (defaultInput?.uid ?? "") }
 }
