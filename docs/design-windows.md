@@ -361,11 +361,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 11.7 麥克風看得到、換得到，文字大小，匯出（R58～R60，M§38）
 
-- 麥克風（R58）：裝置清單、預設的錄音裝置用 `MMDeviceEnumerator`（Capture、Console 角色，同 §6），換裝置的事件（`CreateNotificationClient`）同時更新清單。錄音按鈕的下拉選單、錄音列的麥克風名稱（點了換）、設定頁的「麥克風」共用同一個設定 `inputDeviceUID`。錄音中換：改 `WasapiSource` 的端點 ID 再重新開始（同 §6 換裝置的流程），寫檔照舊。
-- 藍牙：端點的 `PKEY_Device_EnumeratorName` 是 `BTHENUM`、`BTHHFENUM`、`BTHLEDEVICE`（或屬性 `PKEY_Device_BusTypeGuid` 是藍牙）算藍牙；內建麥克風用 `PKEY_AudioEndpoint_FormFactor` 是 `Microphone`／`LineLevel`、`EnumeratorName` 不是 USB、藍牙（實作時在虛擬機和真的電腦確認，寫回這裡）。提示列、通知、系統匣的規則同 M§38.4、§11.5。
-- 文字大小（R59）：設定 `contentTextSize` 同 Mac，`Ctrl+=`／`Ctrl+加號`、`Ctrl+-`、`Ctrl+0`（`KeyboardAccelerator`）；會議內容的字級乘上倍率，側欄、按鈕不變。
-- 匯出（R60）：會議頁右上角「更多」左邊加 `SplitButton`「匯出」（按下打開匯出對話框，箭頭是複製會議紀錄的三種格式）；`MoreMenu` 拿掉匯出、複製。
-- DEBUG 控制通道：`fakemic`、`micswitch`、`michint`、`textsize`，同 Mac（M§38.7）。
+- 麥克風的資訊（R58）：`Services.Capture.MicrophoneDevice`（`Id`、`Name`、`IsBluetooth`、`IsBuiltIn`）。Platform 的 `Microphones.All()`（Capture、Active 的端點）、`Microphones.Default()`（Capture、Console 角色的預設，同 §6）。每次要用時才列（打開下拉選單的 `Opening`、設定頁建畫面時），不另外常駐監聽：下拉選單打開時就是當下的裝置。
+- 藍牙、內建的判斷看端點的屬性（`MMDevice.Properties`）：`PKEY_Device_EnumeratorName`（`{a45c254e-df1c-4efd-8020-67d146a850e0}`,24）是 `BTHENUM`、`BTHHFENUM`、`BTHLE`、`BTHLEDEVICE`（`BTH` 開頭）算藍牙；`PKEY_AudioEndpoint_FormFactor`（`{1da5d803-d492-4edd-8c23-e0c0ffee7f0e}`,0）是 `Microphone`（4）、而且 enumerator 不是 USB、藍牙、`ROOT`（虛擬的音效驅動程式）算內建。讀不到屬性就當成都不是（不提醒，比誤報好）。虛擬機沒有音效裝置，判斷方法要在真的電腦上確認（MT6 的 `[~]`）。
+- `WasapiSource`：麥克風的端點 ID 改成可以改的 `DeviceId`；開始（含重新開始）時記下實際開的端點 `Current`（指定的不在時是系統預設）。`IMicrophoneSource`（`IAudioSource` 加 `DeviceId`、`Current`）讓 Recorder 拿得到。
+- `Recorder`（Core，用標準的單元測試測）：`MicDevice`（`Begin`、`RestartSource(0)` 之後更新；模擬錄音時照設定從 `Hooks.Microphones` 找，找不到用 `Hooks.DefaultMicrophone`）、`MicHint`（條件同 M§38.4）、`MicHintAppeared`（第一次出現，App 照 R42 送通知）、`SwitchMicrophone(id)`（寫 `inputDeviceUID`、改 `DeviceId`、`RestartSource(0)`，模擬錄音時 FileSource 從停下的位置接著送）、`DismissMicHint()`。`Hooks` 加 `Microphones`、`DefaultMicrophone`（預設值是空的，原本的測試不用改）。
+- 錄音按鈕的下拉選單（R58.1）：來源、語言之間加子選單「麥克風：<目前的選擇>」，裡面是「系統預設（<名稱>）」、每一支、存的 ID 不在時的「之前選的麥克風（沒有接上，會用系統預設）」；子選單在 `MenuFlyout.Opening` 才建，接上、拔掉耳機後打開就是新的清單。錄音來源是「只錄電腦聲音」時不放。
+- 錄音列（R58.2）：麥克風音量條後面加 `DropDownButton`（名稱，最寬 180、超過截斷），選單同上，選了 `SwitchMicrophone`。`FitRow` 放不下時整個藏起來（音量條還在）。系統匣的右鍵選單在錄音中多一行「麥克風：<名稱>」。
+- 藍牙的提示列、通知、系統匣：同 §11.5 的收音提醒（提示列的「改用 <內建>」「知道了」、`Notifier.MicHint`、系統匣的提示文字和右鍵選單）。
+- 文字大小（R59）：設定 `contentTextSize`（−1～5，同 Mac），`TextSizes.Scales` 在 Services。`Ui.ContentScale`（啟動和設定改了時設）、`Ui.C(size)` 乘上倍率；會議內容的元件（紀錄、待確認的題目、逐字稿的段落和欄寬、提問、錄音中的即時逐字稿、我的筆記、紀錄的編輯器）建的時候用 `Ui.C`，側欄、按鈕、提示列、搜尋列不用。設定改了：主視窗整個重畫、逐字稿重綁看得到的那幾段、錄音中的即時逐字稿重建。快捷鍵掛在主視窗：`Ctrl+=`、`Ctrl+Shift+=`（加號）、數字鍵盤的 `Ctrl++` 放大，`Ctrl+-`、數字鍵盤的 `Ctrl+-` 縮小，`Ctrl+0`、數字鍵盤的 `Ctrl+0` 實際大小；Windows 沒有選單列，按了在下方提示「會議內容的文字大小：130%」。設定頁「進階」加「顯示」一組（介面語言之後）。
+- 匯出（R60）：會議頁右上角「更多」左邊加 `SplitButton`（分享圖示加「匯出」，按下打開匯出對話框，箭頭是複製會議紀錄的三種格式）；`MoreMenu` 剩重新處理、移到資料夾、移到垃圾桶。條件同「更多」（不在垃圾桶、不是錄音中的那場）。
+- DEBUG 控制通道（M§38.7）：`fakemic <名稱> <bluetooth 0|1> [內建的名稱]`（假的麥克風只在記憶體，當成系統預設，排在真的裝置前面；`fakemic off` 清掉）、`micswitch <id|default>`、`michint dismiss`、`textsize <−1～5>`；`state` 的 `recorder` 多 `micDevice`、`micHint`，最外層多 `textSize`。
 
 ## 12. 系統整合
 
@@ -542,7 +547,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 從 SSH 啟動的程式不會出現在登入的桌面，UI Automation 也碰不到桌面。所以用排程工作在桌面的工作階段執行 PowerShell（`ps/in-session.ps1`：註冊「互動式登入」的工作、等它跑完、讀回輸出）。
 
 - `insession.sh`：把標準輸入的 PowerShell 放到桌面跑，例如 `ps/start-app.ps1` 在桌面開 DEBUG 版（資料在 `C:\ShiyinTest`）。
-- `uia.sh <動作> <視窗> <名稱>`（`ps/uia.ps1`，Windows 內建的 UIAutomationClient）：`windows`、`dump`、`click`（Invoke／Toggle／選取／展開）、`open`（會打開選單的按鈕，交給另一個程序按，不然會等到選單關掉）、`menu`、`choose`（下拉選單）、`set`（輸入框）、`close`。同名的元件能按的排前面，`名稱#2` 指定第幾個。
+- `uia.sh <動作> <視窗> <名稱>`（`ps/uia.ps1`，Windows 內建的 UIAutomationClient）：`windows`、`dump`、`click`（Invoke／Toggle／選取／展開）、`open`（會打開選單的按鈕，交給另一個程序按，不然會等到選單關掉）、`menu`、`choose`（下拉選單）、`set`（輸入框）、`close`。同名的元件能按的排前面，`名稱#2` 指定第幾個。SplitButton 的箭頭、DropDownButton、子選單用 `ps/expand.ps1 <視窗> <名稱> [項目] [子選單的項目或 ?]`（ExpandCollapsePattern；`uia.ps1` 的 `click`、`menu` 用 Invoke，會按到 SplitButton 主要的動作），放在 `insession.sh` 裡跑。
 - `shot.sh <檔案>`：在 Mac 上用 `screencapture -l` 截 UTM 的視窗（整個虛擬機的畫面）。
 - UI Automation 做不到時（開著選單、存檔對話框時 UI Automation 會卡住）：用 UTM 的 AppleScript `input scan code` 送按鍵，只會送進虛擬機，不會到 Mac 前景的 app。
 - 系統的視窗（SmartScreen、系統匣）不屬於拾音：直接從桌面的根元件找（例如系統匣在 `Shell_TrayWnd`，隱藏的圖示先按「顯示隱藏的圖示」）。

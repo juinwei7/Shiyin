@@ -176,6 +176,77 @@ public sealed class RecorderTests : IDisposable
         recorder.Stop();
     }
 
+    static readonly MicrophoneDevice AirPods = new("bt", "AirPods Pro", IsBluetooth: true);
+    static readonly MicrophoneDevice BuiltIn = new("in", "麥克風陣列", IsBuiltIn: true);
+
+    Recorder MakeWithMicrophones(AppSettings settings) =>
+        new(settings, paths, NoPower.Instance, new Recorder.Hooks((_, _) => [], _ => null, null, _ => 50_000_000_000, () => [AirPods, BuiltIn], () => AirPods));
+
+    static AppSettings Quiet(Dictionary<string, string>? extra = null)
+    {
+        var values = new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" };
+        foreach (var (k, v) in extra ?? []) values[k] = v;
+        return AppSettings.InMemory(values);
+    }
+
+    /// <summary>藍牙耳機的提醒、錄音中換麥克風（R58.2～R58.4、M§38.3、§38.4）：用模擬錄音和假的麥克風清單（同 DEBUG 的 fakemic）</summary>
+    [Fact]
+    public async Task BluetoothMicHintAndSwitchingMicrophone()
+    {
+        var settings = Quiet();
+        var recorder = MakeWithMicrophones(settings);
+        var appeared = new List<Recorder.MicHintInfo>();
+        recorder.MicHintAppeared += h => { lock (appeared) appeared.Add(h); };
+        Recorder.Result? result = null;
+        recorder.Finished += r => result = r;
+        recorder.StartSimulated(1, Wav(8), 2, both: false, MeetingLanguage.Zh, new WavDecoder());
+        // 系統預設是藍牙耳機、只錄麥克風：提醒，可以改用內建麥克風
+        Assert.Equal(AirPods, recorder.MicDevice);
+        Assert.Equal(new Recorder.MicHintInfo("AirPods Pro", BuiltIn), recorder.MicHint);
+        Assert.Contains("AirPods Pro", recorder.MicHint!.Text);
+        Assert.Single(appeared);
+        await Until(() => recorder.Elapsed > 0.5);
+        // 「改用」：存成設定、換成內建、提醒收起來，錄音不中斷
+        recorder.SwitchMicrophone(BuiltIn.Id);
+        Assert.Equal("in", settings.InputDevice);
+        Assert.Equal(BuiltIn, recorder.MicDevice);
+        Assert.Null(recorder.MicHint);
+        var before = recorder.Elapsed;
+        await Task.Delay(400);
+        Assert.True(recorder.Elapsed > before);
+        // 換回系統預設：又是藍牙，提醒再出現，但同一場不再通知
+        recorder.SwitchMicrophone("");
+        Assert.Equal("", settings.InputDevice);
+        Assert.NotNull(recorder.MicHint);
+        Assert.Single(appeared);
+        // 「知道了」之後這場不再出現
+        recorder.DismissMicHint();
+        Assert.Null(recorder.MicHint);
+        recorder.SwitchMicrophone(BuiltIn.Id);
+        recorder.SwitchMicrophone("");
+        Assert.Null(recorder.MicHint);
+        recorder.Stop();
+        Assert.Null(recorder.MicDevice);
+        // 換了三次麥克風，錄到的長度照樣是整段（2 倍速的 8 秒，停的時候還沒送完的不算）
+        Assert.Equal((long)Math.Round(result!.Duration * 16000), Read(result.File!).Frames);
+    }
+
+    [Theory]
+    [InlineData("bt", false)]      // 自己指定那支藍牙耳機：選了就是知道（R58.4）
+    [InlineData("", true)]         // 線上會議（有電腦聲音）：戴耳機說話是正常的
+    public void NoBluetoothHintWhenChosenOrOnlineMeeting(string device, bool both)
+    {
+        var settings = Quiet(device.Length > 0 ? new() { ["inputDeviceUID"] = device } : null);
+        var recorder = MakeWithMicrophones(settings);
+        var appeared = 0;
+        recorder.MicHintAppeared += _ => appeared++;
+        recorder.StartSimulated(2, Wav(4), 1, both, MeetingLanguage.Zh, new WavDecoder());
+        Assert.Equal(AirPods, recorder.MicDevice);
+        Assert.Null(recorder.MicHint);
+        Assert.Equal(0, appeared);
+        recorder.Stop();
+    }
+
     [Fact]
     public async Task WatchdogWarnsWhenSourceStalls()
     {

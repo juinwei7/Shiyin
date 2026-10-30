@@ -15,7 +15,7 @@ namespace Shiyin.Platform;
 /// 先請系統直接轉成 16 kHz 單聲道浮點（AUTOCONVERTPCM），不行再用裝置的格式自己降混、重新取樣。
 /// 電腦聲音沒有東西在播時系統不送資料，這裡依時間補靜音，寫檔的對齊規則才跟 Mac 一樣
 /// </summary>
-public sealed class WasapiSource : IAudioSource
+public sealed class WasapiSource : IMicrophoneSource
 {
     public enum Kind { Microphone, SystemAudio }
 
@@ -25,7 +25,7 @@ public sealed class WasapiSource : IAudioSource
     static readonly Guid FloatSubtype = new("00000003-0000-0010-8000-00aa00389b71");
 
     readonly Kind kind;
-    readonly string deviceId;
+    volatile string deviceId;
     Thread? thread;
     volatile bool stopping;
     MMDeviceEnumerator? enumerator;
@@ -35,6 +35,10 @@ public sealed class WasapiSource : IAudioSource
 
     public Action<float[]>? OnSamples { get; set; }
     public Action? OnInterruption { get; set; }
+    /// <summary>麥克風的端點 ID，空的是系統預設；錄音中換麥克風（R58.2）時改這個再 Restart()</summary>
+    public string DeviceId { get => deviceId; set => deviceId = value; }
+    /// <summary>麥克風實際開的端點（指定的不在時是系統預設，R58.2）；開始（含重新開始）時更新</summary>
+    public MicrophoneDevice? Current { get; private set; }
 
     /// <summary>deviceId：麥克風的端點 ID，空的是系統預設（電腦聲音不用）</summary>
     public WasapiSource(Kind kind, string deviceId = "")
@@ -101,6 +105,7 @@ public sealed class WasapiSource : IAudioSource
             catch (COMException) { device = null; }
         // 指定的裝置不在了：跟著系統預設（同 Mac）
         device ??= devices.TryGetDefaultAudioEndpoint(DataFlow.Capture, Role.Console, out var d) ? d : throw new CaptureException(CaptureErrors.NoInput);
+        Current = Microphones.Describe(device);
         return device.CreateAudioClient();
     }
 
@@ -209,11 +214,52 @@ public sealed class WasapiSource : IAudioSource
             client?.Dispose();
         }
     }
+}
 
-    /// <summary>可以選的麥克風（設定頁）：端點 ID、名稱</summary>
-    public static List<(string Id, string Name)> Microphones()
+/// <summary>
+/// 這台電腦的麥克風（R58、design-windows §11.7）：錄音按鈕的下拉選單、錄音列、設定頁都用。每次要用時才列，打開選單時就是當下的裝置。
+/// 藍牙看端點的 enumerator（BTHENUM、BTHHFENUM、BTHLE…），內建看外型是麥克風、而且不是 USB、藍牙、虛擬的驅動程式（ROOT）
+/// </summary>
+public static class Microphones
+{
+    /// <summary>PKEY_Device_EnumeratorName：端點底下的裝置是哪一種匯流排列舉的（USB、HDAUDIO、BTHENUM…）</summary>
+    static readonly PropertyKey EnumeratorName = new(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 24);
+    /// <summary>PKEY_AudioEndpoint_FormFactor：喇叭、耳機、麥克風…（EndpointFormFactor，Microphone 是 4）</summary>
+    static readonly PropertyKey FormFactor = new(new Guid("1da5d803-d492-4edd-8c23-e0c0ffee7f0e"), 0);
+    const int FormFactorMicrophone = 4;
+
+    /// <summary>可以選的麥克風（啟用中的錄音端點）</summary>
+    public static List<MicrophoneDevice> All()
     {
         using var devices = new MMDeviceEnumerator();
-        return devices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(d => (d.ID, d.FriendlyName)).ToList();
+        return devices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(Describe).ToList();
+    }
+
+    /// <summary>系統預設的麥克風（Console 角色，同錄音用的，design-windows §6）；沒有時是 null</summary>
+    public static MicrophoneDevice? Default()
+    {
+        using var devices = new MMDeviceEnumerator();
+        return devices.TryGetDefaultAudioEndpoint(DataFlow.Capture, Role.Console, out var d) ? Describe(d) : null;
+    }
+
+    public static MicrophoneDevice Describe(MMDevice device)
+    {
+        string? enumerator = null;
+        int? formFactor = null;
+        try
+        {
+            var properties = device.Properties;
+            if (properties.Contains(EnumeratorName)) enumerator = properties[EnumeratorName].Value as string;
+            if (properties.Contains(FormFactor) && properties[FormFactor].Value is { } f) formFactor = Convert.ToInt32(f, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        // 讀不到屬性：當成不是藍牙、不是內建（不提醒，比誤報好）
+        catch (Exception e) when (e is COMException or InvalidCastException or FormatException or NotSupportedException or OverflowException) { }
+        var upper = enumerator?.ToUpperInvariant() ?? "";
+        var bluetooth = upper.StartsWith("BTH", StringComparison.Ordinal);
+        var builtIn = formFactor == FormFactorMicrophone && upper.Length > 0 && !bluetooth && upper != "USB" && upper != "ROOT";
+        string name;
+        try { name = device.FriendlyName; }
+        catch (COMException) { name = device.ID; }
+        return new MicrophoneDevice(device.ID, name, bluetooth, builtIn);
     }
 }

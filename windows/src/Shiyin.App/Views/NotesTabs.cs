@@ -44,17 +44,17 @@ public sealed class NotesTabs
 
     static StackPanel Column() => new() { Spacing = 26 };
 
-    /// <summary>閱讀的欄位最寬 680（同 Mac），靠左</summary>
-    static ScrollViewer Reading(UIElement column) => Ui.Scroll(new ReadingColumn(column, 680), 32);
+    /// <summary>閱讀的欄位最寬 680（同 Mac），靠左；文字放大時跟著變寬（R59.2）</summary>
+    static ScrollViewer Reading(UIElement column) => Ui.Scroll(new ReadingColumn(column, Ui.C(680)), 32);
 
     FrameworkElement Section(string title, MeetingLanguage language, UIElement content) =>
-        Ui.Column(10, Ui.Heading(title, language), content);
+        Ui.Column(10, Ui.Heading(title, language, Ui.C(18)), content);
 
     /// <summary>時間點後面加待確認的標記（R41.1）：這一條對到題目時顯示，點了在下面展開就地回答（R41.2）</summary>
     UIElement? Trailing(MeetingDetail detail, NoteItemRef r, string time)
     {
         var marker = ReviewRows.Marker(detail, r, draft, window);
-        var clock = time.Length > 0 ? Ui.Time(time, SeekIfLoaded) : null;
+        var clock = time.Length > 0 ? Ui.Time(time, SeekIfLoaded, size: Ui.C(13)) : null;
         return marker is null ? clock : clock is null ? marker : Ui.Row(8, clock, marker);
     }
 
@@ -68,9 +68,9 @@ public sealed class NotesTabs
         foreach (var item in items)
         {
             var r = refOf(index++);
-            var text = Ui.Text(item.Text, 14, select: true);
+            var text = Ui.Text(item.Text, Ui.C(14), select: true);
             text.Language = Ui.ContentLanguage(language);
-            var row = Ui.Split(Ui.Text("•", 14, color: Ui.Secondary), Ui.Inline(text, Trailing(detail, r, item.Time)));
+            var row = Ui.Split(Ui.Text("•", Ui.C(14), color: Ui.Secondary), Ui.Inline(text, Trailing(detail, r, item.Time)));
             panel.Children.Add(ExpandedCard(detail, r) is { } card ? Ui.Column(8, row, card) : row);
         }
         return panel;
@@ -91,20 +91,20 @@ public sealed class NotesTabs
             if (span > 1) Grid.SetColumnSpan(e, span);
             grid.Children.Add(e);
         }
-        Add(Ui.Caption(L.T("負責人")), rows, 0);
-        Add(Ui.Caption(L.T("事項")), rows, 1);
-        Add(Ui.Caption(L.T("期限")), rows++, 2);
+        Add(Ui.Text(L.T("負責人"), Ui.C(12), color: Ui.Secondary), rows, 0);
+        Add(Ui.Text(L.T("事項"), Ui.C(12), color: Ui.Secondary), rows, 1);
+        Add(Ui.Text(L.T("期限"), Ui.C(12), color: Ui.Secondary), rows++, 2);
         for (var i = 0; i < items.Count; i++)
         {
             var item = items[i];
             var r = NoteItemRef.ActionItems(i);
-            var owner = Ui.Text(item.Owner.Length == 0 ? L.T("未指定") : item.Owner, 14, color: item.Owner.Length == 0 ? Ui.Signal : null, wrap: false);
+            var owner = Ui.Text(item.Owner.Length == 0 ? L.T("未指定") : item.Owner, Ui.C(14), color: item.Owner.Length == 0 ? Ui.Signal : null, wrap: false);
             owner.Language = Ui.ContentLanguage(language);
-            var task = Ui.Text(item.Task, 14, select: true);
+            var task = Ui.Text(item.Task, Ui.C(14), select: true);
             task.Language = Ui.ContentLanguage(language);
             Add(owner, rows, 0);
             Add(Ui.Inline(task, Trailing(detail, r, item.Time)), rows, 1);
-            Add(Ui.Text(item.Due.Length == 0 ? "—" : item.Due, 14, color: item.Due.Length == 0 ? Ui.Secondary : null, wrap: false), rows++, 2);
+            Add(Ui.Text(item.Due.Length == 0 ? "—" : item.Due, Ui.C(14), color: item.Due.Length == 0 ? Ui.Secondary : null, wrap: false), rows++, 2);
             if (ExpandedCard(detail, r) is { } card) Add(card, rows++, 0, 3);
         }
         return grid;
@@ -194,7 +194,7 @@ public sealed class NotesTabs
             {
                 var topic = notes.Topics[t];
                 var index = t;
-                topics.Children.Add(Ui.Column(10, Ui.Bar(Ui.Time(topic.Start, SeekIfLoaded) as FrameworkElement, Ui.Heading(topic.Title, language, 16), null, 10),
+                topics.Children.Add(Ui.Column(10, Ui.Bar(Ui.Time(topic.Start, SeekIfLoaded, size: Ui.C(13)) as FrameworkElement, Ui.Heading(topic.Title, language, Ui.C(16)), null, 10),
                     Items(topic.Points, language, detail, i => NoteItemRef.TopicPoint(index, i))));
             }
             column.Children.Add(Section(L.T("議題"), language, topics));
@@ -208,7 +208,7 @@ public sealed class NotesTabs
         if (detail.Meeting.NotesBy is { } by)
         {
             var template = window.State.Templates.FirstOrDefault(t => t.Id == detail.Meeting.TemplateId)?.DisplayName() ?? L.T("一般會議");
-            column.Children.Add(Ui.Text(L.F("由 %@ 整理．%@", LLMProviders.Parse(by)?.ShortLabel() ?? by, L.T("範本：") + template), 12, color: Ui.Tertiary));
+            column.Children.Add(Ui.Text(L.F("由 %@ 整理．%@", LLMProviders.Parse(by)?.ShortLabel() ?? by, L.T("範本：") + template), Ui.C(12), color: Ui.Tertiary));
         }
         return Reading(column);
     }
@@ -218,7 +218,7 @@ public sealed class NotesTabs
     {
         var state = window.State;
         var icon = new FontIcon { Glyph = "\uE9CE", FontSize = 14, Foreground = Ui.Signal, VerticalAlignment = VerticalAlignment.Center };
-        var header = Ui.Row(10, icon, Ui.Text(L.F("還有 %lld 題待確認", detail.ReviewCount), 14, bold: true, wrap: false));
+        var header = Ui.Row(10, icon, Ui.Text(L.F("還有 %lld 題待確認", detail.ReviewCount), Ui.C(14), bold: true, wrap: false));
         var expander = new Expander
         {
             Header = header, IsExpanded = state.ReviewExpanded,
@@ -239,6 +239,7 @@ public sealed class NotesTabs
         var state = window.State;
         notesBox.Load(detail.Meeting.Id!.Value, detail.Meeting.UserNotes);
         userNotes.Language = Ui.ContentLanguage(detail.Meeting.MeetingLanguage);
+        userNotes.FontSize = Ui.C(14);   // 我的筆記跟著會議內容的文字大小（R59.2）
         var lines = detail.Meeting.UserNotes.Split('\n').Count(l => l.Trim().Length > 0);
         var icon = new FontIcon { Glyph = "\uE70B", FontSize = 14, Foreground = Ui.Secondary, VerticalAlignment = VerticalAlignment.Center };
         var label = lines > 0 ? L.F("我的筆記（%lld 行）", lines) : L.T("寫筆記");
@@ -251,7 +252,7 @@ public sealed class NotesTabs
         FrameworkElement Body()
         {
             if (userNotes.Parent is Panel old) old.Children.Remove(userNotes);
-            userNotes.Height = 180;
+            userNotes.Height = Ui.C(180);
             return Ui.Column(8,
                 Ui.Caption(L.T("播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多 → 重新處理」選「重新整理會議紀錄」。")),
                 userNotes);
@@ -267,7 +268,7 @@ public sealed class NotesTabs
             marks = new DropDownButton { Content = L.F("重點標記 %lld", detail.Bookmarks.Count), Flyout = menu, VerticalAlignment = VerticalAlignment.Top };
         }
         var bar = Ui.Bar(null, expander, marks, 8);
-        return new Border { Child = new ReadingColumn(bar, 760), Padding = new Thickness(20, 8, 20, 0) };
+        return new Border { Child = new ReadingColumn(bar, Ui.C(760)), Padding = new Thickness(20, 8, 20, 0) };
     }
 }
 
@@ -298,7 +299,7 @@ public sealed class NotesEditor
             Ui.Row(8, Ui.Button(L.T("取消"), () => Finished?.Invoke(false)), Ui.Button(L.T("完成"), () => Finished?.Invoke(true), accent: true)));
         bar.Padding = new Thickness(32, 10, 32, 10);
         Root.Children.Add(bar);
-        var scroll = Ui.Scroll(new ReadingColumn(body, 720), 32);
+        var scroll = Ui.Scroll(new ReadingColumn(body, Ui.C(720)), 32);
         Grid.SetRow(scroll, 1);
         Root.Children.Add(scroll);
         Rebuild();
@@ -314,7 +315,7 @@ public sealed class NotesEditor
     void Rebuild()
     {
         body.Children.Clear();
-        var titleBox = new TextBox { Text = notes.Title, PlaceholderText = L.T("標題"), FontFamily = Ui.TitleFont(language), FontSize = 18 };
+        var titleBox = new TextBox { Text = notes.Title, PlaceholderText = L.T("標題"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(18) };
         titleBox.TextChanged += (_, _) => notes = notes with { Title = titleBox.Text };
         body.Children.Add(titleBox);
         body.Children.Add(Section(L.T("摘要"), ItemsEditor(notes.Summary)));
@@ -330,14 +331,14 @@ public sealed class NotesEditor
             {
                 var index = i;
                 var item = notes.ReviewItems[i];
-                list.Children.Add(Ui.Bar(Ui.Text(item.Time, 13, color: Ui.Secondary, wrap: false), Ui.Text(item.Question, 14),
+                list.Children.Add(Ui.Bar(Ui.Text(item.Time, Ui.C(13), color: Ui.Secondary, wrap: false), Ui.Text(item.Question, Ui.C(14)),
                     Ui.IconButton(Symbol.Delete, L.T("刪除這一題"), () => { notes.ReviewItems.RemoveAt(index); Rebuild(); })));
             }
             body.Children.Add(Section(L.T("待確認"), list));
         }
     }
 
-    UIElement Section(string title, UIElement content) => Ui.Column(8, Ui.Heading(title, language, 16), content);
+    UIElement Section(string title, UIElement content) => Ui.Column(8, Ui.Heading(title, language, Ui.C(16)), content);
 
     /// <summary>議題（原本自己一個「詳細」分頁，R44.1）：每個議題有時間、標題和幾條重點</summary>
     UIElement TopicsEditor()
@@ -349,7 +350,7 @@ public sealed class NotesEditor
             var topic = notes.Topics[i];
             var start = new TextBox { Text = topic.Start, Width = 70, PlaceholderText = L.T("時間") };
             start.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Start = start.Text };
-            var title = new TextBox { Text = topic.Title, PlaceholderText = L.T("議題"), FontFamily = Ui.TitleFont(language) };
+            var title = new TextBox { Text = topic.Title, PlaceholderText = L.T("議題"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(14) };
             title.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Title = title.Text };
             var delete = Ui.IconButton(Symbol.Delete, L.T("刪除這個議題"), () => { notes.Topics.RemoveAt(index); Rebuild(); });
             panel.Children.Add(Ui.Column(8, Ui.Bar(start, title, delete), ItemsEditor(notes.Topics[index].Points)));
@@ -364,7 +365,7 @@ public sealed class NotesEditor
         for (var i = 0; i < items.Count; i++)
         {
             var index = i;
-            var text = new TextBox { Text = items[i].Text, PlaceholderText = L.T("內容"), TextWrapping = TextWrapping.Wrap, AcceptsReturn = false, Language = Ui.ContentLanguage(language) };
+            var text = new TextBox { Text = items[i].Text, PlaceholderText = L.T("內容"), TextWrapping = TextWrapping.Wrap, AcceptsReturn = false, Language = Ui.ContentLanguage(language), FontSize = Ui.C(14) };
             text.TextChanged += (_, _) => items[index] = items[index] with { Text = text.Text };
             var time = new TextBox { Text = items[i].Time, PlaceholderText = L.T("時間"), Width = 70 };
             time.TextChanged += (_, _) => items[index] = items[index] with { Time = time.Text };
@@ -382,7 +383,7 @@ public sealed class NotesEditor
             var index = i;
             var owner = new TextBox { Text = items[i].Owner, PlaceholderText = L.T("負責人"), Width = 90 };
             owner.TextChanged += (_, _) => items[index] = items[index] with { Owner = owner.Text };
-            var task = new TextBox { Text = items[i].Task, PlaceholderText = L.T("事項"), TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(language) };
+            var task = new TextBox { Text = items[i].Task, PlaceholderText = L.T("事項"), TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(language), FontSize = Ui.C(14) };
             task.TextChanged += (_, _) => items[index] = items[index] with { Task = task.Text };
             var due = new TextBox { Text = items[i].Due, PlaceholderText = "yyyy-MM-dd", Width = 110 };
             due.TextChanged += (_, _) => items[index] = items[index] with { Due = due.Text };
@@ -429,13 +430,13 @@ public sealed class AskTab
         var records = host.Db.Questions(id);
         var list = new StackPanel { Spacing = 18, Padding = new Thickness(32, 20, 32, 20) };
         if (records.Count == 0 && askingMeeting != id)
-            list.Children.Add(Ui.Column(6, Ui.Heading(L.T("問這場會議"), MeetingLanguage.Zh),
-                Ui.Text(L.T("例如：「誰負責寄信的部分？」「最後決定的上線日期是哪一天？」回答只根據這場會議的會議紀錄和逐字稿，每一點都附上時間，點了就能聽原話。"), color: Ui.Secondary)));
+            list.Children.Add(Ui.Column(6, Ui.Heading(L.T("問這場會議"), MeetingLanguage.Zh, Ui.C(18)),
+                Ui.Text(L.T("例如：「誰負責寄信的部分？」「最後決定的上線日期是哪一天？」回答只根據這場會議的會議紀錄和逐字稿，每一點都附上時間，點了就能聽原話。"), Ui.C(14), color: Ui.Secondary)));
         foreach (var record in records) list.Children.Add(QuestionCard(record, null, time => { if (TimeFormat.Seconds(time) is double s) host.Player.Seek(s); }, null));
         if (askingMeeting == id)
             list.Children.Add(Ui.Row(10, new ProgressRing { IsActive = true, Width = 16, Height = 16 },
                 Ui.Text(L.F("正在用 %@ 回答…", host.Settings.Provider.ShortLabel()), color: Ui.Secondary), Ui.Link(L.T("取消"), () => asking?.Cancel())));
-        var scroll = new ScrollViewer { Content = new ReadingColumn(list, 760) };
+        var scroll = new ScrollViewer { Content = new ReadingColumn(list, Ui.C(760)) };
         var bar = InputBar(input, () => Submit(), records.Count == 0 ? null : () => { host.Db.DeleteQuestions(id); window.Refresh(); }, host);
         var grid = new Grid();
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -498,19 +499,21 @@ public sealed class AskTab
     /// <summary>一組問答：問題、回答、出處（時間點，跨會議時加上會議名稱）</summary>
     public static FrameworkElement QuestionCard(Data.QuestionRecord record, Func<long, string?>? meetingTitle, Action<string> onCitation, Action<long, string>? onMeetingCitation)
     {
-        var panel = Ui.Column(8, Ui.Text(record.Question, 14, bold: true, select: true));
+        // 問答是會議內容，跟著文字大小（R59.2）
+        var panel = Ui.Column(8, Ui.Text(record.Question, Ui.C(14), bold: true, select: true));
         if (AskPrompt.Answer.Decode(record.Answer) is { } answer)
         {
-            panel.Children.Add(Ui.Text(answer.Text.Replace("**", ""), 14, color: answer.Found ? null : Ui.Secondary, select: true));
+            panel.Children.Add(Ui.Text(answer.Text.Replace("**", ""), Ui.C(14), color: answer.Found ? null : Ui.Secondary, select: true));
             foreach (var c in answer.Citations)
             {
                 var label = c.MeetingId is long mid && onMeetingCitation is not null ? $"{meetingTitle?.Invoke(mid) ?? L.T("會議")} {c.Time}" : c.Time;
                 var link = Ui.Link(label, () => { if (c.MeetingId is long m && onMeetingCitation is not null) onMeetingCitation(m, c.Time); else onCitation(c.Time); });
                 link.Foreground = Ui.Celadon;
-                panel.Children.Add(Ui.Split(link, Ui.Text(c.Quote, 13, color: Ui.Secondary, maxLines: 2), 8));
+                link.FontSize = Ui.C(14);
+                panel.Children.Add(Ui.Split(link, Ui.Text(c.Quote, Ui.C(13), color: Ui.Secondary, maxLines: 2), 8));
             }
             if (answer.MeetingIds is { } ids && record.MeetingId is null)
-                panel.Children.Add(Ui.Text(ids.Count == 0 ? L.T("沒有找到相關的會議") : L.F("參考了 %lld 場會議", ids.Count), 12, color: Ui.Tertiary));
+                panel.Children.Add(Ui.Text(ids.Count == 0 ? L.T("沒有找到相關的會議") : L.F("參考了 %lld 場會議", ids.Count), Ui.C(12), color: Ui.Tertiary));
         }
         return new Border { Child = panel, Padding = new Thickness(14), CornerRadius = new CornerRadius(10), Background = Ui.Subtle };
     }

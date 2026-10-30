@@ -142,6 +142,24 @@ public static class ControlPipe
                 return Ok;
             case "recordinterrupt" when args.Length > 1 && int.TryParse(args[1], out var ch): host.Recorder.SimulateInterruption(ch); return Ok;
             case "recordlang" when args.Length > 1 && MeetingLanguages.Parse(args[1]) is { } language: host.Recorder.SwitchLanguage(language); return Ok;
+            // 麥克風（R58、M§38.7）：fakemic <名稱> <bluetooth 0|1> [內建的名稱]：假的麥克風（只在記憶體，第一支當成系統預設）；fakemic off 清掉。
+            // 模擬錄音（record-sim）的 micDevice 照設定從這裡找，測得到選單、提示列、通知、換了之後錄音不中斷
+            case "fakemic" when args.Length > 1:
+                if (args[1] == "off") host.FakeMicrophones = [];
+                else
+                {
+                    var fakes = new List<Services.Capture.MicrophoneDevice> { new("fake:default", args[1], IsBluetooth: args.Length > 2 && args[2] == "1") };
+                    if (args.Length > 3) fakes.Add(new("fake:builtin", args[3], IsBuiltIn: true));
+                    host.FakeMicrophones = fakes;
+                }
+                return Ok;
+            // micswitch <id|default>：等於在錄音列的麥克風清單選一支（沒在錄音時只改設定）
+            case "micswitch" when args.Length > 1: host.Recorder.SwitchMicrophone(args[1] == "default" ? "" : args[1]); return Ok;
+            case "michint" when args.Length > 1 && args[1] == "dismiss": host.Recorder.DismissMicHint(); return Ok;
+            // textsize <−1～5>：會議內容的文字大小（R59），等於按快捷鍵或在設定頁選
+            case "textsize" when args.Length > 1 && int.TryParse(args[1], out var level):
+                host.Settings.Set(AppSettings.TextSizeKey, (double)TextSizes.Clamp(level));
+                return Ok;
             // import [lang=zh|en|ja] <檔案…>：同 Mac 的 shiyinctl import。跟拖進來一樣分流：封包、逐字稿、Markdown 直接匯入，錄音不跳匯入選項
             case "import" when args.Length > 1:
             {
@@ -321,6 +339,10 @@ public static class ControlPipe
                 ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
                 ["language"] = r.Language.Code(), ["liveLines"] = r.LiveLines.Count, ["volatile"] = r.VolatileText, ["liveStatus"] = r.LiveStatus,
                 ["deviceWarning"] = r.DeviceWarning, ["hint"] = r.Hint?.ToString(), ["systemSilent"] = r.SystemSilent,
+                // 正在收音的麥克風、藍牙耳機的提醒（R58、M§38.7）
+                ["micDevice"] = r.MicDevice is { } mic
+                    ? new JsonObject { ["name"] = mic.Name, ["id"] = mic.Id, ["bluetooth"] = mic.IsBluetooth, ["builtIn"] = mic.IsBuiltIn } : null,
+                ["micHint"] = r.MicHint is { } micHint ? new JsonObject { ["name"] = micHint.Name, ["builtIn"] = micHint.BuiltIn?.Name } : null,
                 ["levelCheck"] = new JsonObject(r.LevelCheck.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)JsonValue.Create(p.Value.ToString())))),
                 // 忘了停止錄音（M§35）
                 ["idle"] = new JsonObject
@@ -330,6 +352,8 @@ public static class ControlPipe
                 },
             },
             ["hotKeyError"] = host.HotKeyError,
+            ["textSize"] = host.Settings.TextSize,
+            ["inputDevice"] = host.Settings.InputDevice,
             ["notifications"] = host.Notifier.Enabled,
             ["lastToast"] = host.Notifier.LastShown is { } toast ? new JsonObject { ["title"] = toast.Title, ["body"] = toast.Body } : null,
         };
