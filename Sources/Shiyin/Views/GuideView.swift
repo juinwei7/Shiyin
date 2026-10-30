@@ -12,7 +12,7 @@ struct GuideView: View {
 
     private let steps: [Step] = [
         Step(symbol: "record.circle", title: String(localized: "錄音或匯入"),
-             body: String(localized: "按工具列的「錄音」（⌘R）開始錄；點按鈕旁的箭頭可以選錄音來源，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。已經有錄音檔的話，拖進視窗、按「匯入」（⌘O），或拖到 Dock 上的拾音圖示都可以。")),
+             body: String(localized: "按工具列的「錄音」（⌘R）開始錄；點按鈕旁的箭頭可以選錄音來源和麥克風，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。錄音畫面的音量條旁寫著正在用哪一支麥克風，點一下可以換；藍牙耳機連著時，系統可能自動改用耳機的麥克風，現場會議記得換成這台 Mac 的麥克風。已經有錄音檔的話，拖進視窗、按「匯入」（⌘O），或拖到 Dock 上的拾音圖示都可以。")),
         Step(symbol: "text.bubble", title: String(localized: "邊錄邊看、邊記"),
              body: String(localized: "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間（錄完在逐字稿分頁頂部的「我的筆記」還能改）。重要的地方按「標記重點」（⌘B），在其他 app 裡也可以按 ⌃⌥⌘B。需要中斷時按「暫停」（⇧⌘P），暫停的時間不會錄進去。")),
         Step(symbol: "waveform", title: String(localized: "正式轉錄、分辨說話者"),
@@ -22,7 +22,7 @@ struct GuideView: View {
         Step(symbol: "questionmark.bubble", title: String(localized: "回答待確認、修改"),
              body: String(localized: "整理時沒把握的人名、專有名詞、負責人和期限會列成待確認的題目。紀錄裡有疑問的那一條旁邊會有「？」，點了就能當場回答；紀錄頂部的「還有 N 題待確認」點開可以一次看完。能用是或否回答的直接按「是」「不是」（按「是」不用等整理工具），其他的在「你的回答」欄位回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的按「略過」，或一次「全部略過」。也可以按「編輯」直接改。改錯了按「編輯」旁的「復原上一版」。")),
         Step(symbol: "square.and.arrow.up", title: String(localized: "匯出、分享"),
-             body: String(localized: "從「更多」選「匯出…」（⌘E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入。「複製會議紀錄」可以直接貼到 Notion、Slack 或郵件。")),
+             body: String(localized: "按右上角的「匯出」（⌘E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入。「匯出」旁邊的箭頭可以直接複製會議紀錄，貼到 Notion、Slack 或郵件。")),
     ]
 
     var body: some View {
@@ -115,14 +115,15 @@ struct GuideView: View {
             GuideSection(title: String(localized: "快捷鍵")) {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 18, verticalSpacing: 7) {
                     shortcut("⌘R", String(localized: "開始或停止錄音"))
-                    shortcut("⌃⌥⌘R", String(localized: "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）"))
+                    shortcut("⌃⌥⌘R", String(localized: "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音與轉錄關掉）"))
                     shortcut("⇧⌘P", String(localized: "暫停或繼續錄音"))
                     shortcut("⌘B", String(localized: "錄音中標記重點"))
                     shortcut("⌃⌥⌘B", String(localized: "錄音中在其他 app 裡也能標記重點"))
                     shortcut("⌘O", String(localized: "匯入"))
                     shortcut("⌘E", String(localized: "匯出"))
                     shortcut(String(localized: "空白鍵"), String(localized: "播放或暫停"))
-                    shortcut(String(localized: "⌘1～⌘6"), String(localized: "切換摘要、詳細、逐字稿、待確認、筆記、提問"))
+                    shortcut(String(localized: "⌘1～⌘3"), String(localized: "切換紀錄、逐字稿、提問"))
+                    shortcut("⌘+ / ⌘−", String(localized: "放大、縮小會議內容的文字（⌘0 回到標準大小）"))
                     shortcut("⌘F", String(localized: "搜尋逐字稿（在「逐字稿」）"))
                     shortcut("⌘,", String(localized: "設定"))
                     shortcut("⌘?", String(localized: "打開這份說明"))

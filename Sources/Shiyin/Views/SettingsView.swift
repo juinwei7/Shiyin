@@ -743,7 +743,6 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.idleStopKey) private var idleStop = true
     @AppStorage(AppSettings.bookmarkHotKeyKey) private var bookmarkHotKey = true
     @State private var mutedApps: [String] = []
-    @State private var devices: [AudioDevices.Device] = []
     @State private var hotKeyFailed = false
 
     var body: some View {
@@ -755,10 +754,12 @@ struct RecordingSettings: View {
                     Text("只錄電腦聲音").tag("system")
                 }
                 Picker("麥克風", selection: $device) {
-                    Text("系統預設").tag("")
-                    ForEach(devices) { Text($0.name).tag($0.uid) }
+                    MicrophoneOptions(saved: device)
                 }
                 .disabled(source == "system")
+                // R58.6：其他換麥克風的地方、藍牙耳機會把系統預設換掉
+                Text("錄音按鈕旁的箭頭、錄音畫面也可以換麥克風。藍牙耳機連著時，系統預設可能會自動變成耳機的麥克風，現場會議請選這台 Mac 的麥克風。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Text("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。第一次錄電腦聲音時，macOS 會詢問「錄製系統音訊」的權限。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
@@ -854,7 +855,6 @@ struct RecordingSettings: View {
         }
         .formStyle(.grouped)
         .onAppear {
-            devices = AudioDevices.inputDevices()
             hotKeyFailed = hotKey && !GlobalHotKey.shared.isRegistered
             mutedApps = MeetingDetector.muted
         }
@@ -971,6 +971,7 @@ struct ModelRow: View {
 
 struct AdvancedSettings: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(AppSettings.textSizeKey) private var textSize = 0
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage(Updater.urlKey) private var updateURL = ""
     @State private var showingUsageStats = false
@@ -980,6 +981,14 @@ struct AdvancedSettings: View {
         Form {
             // 企業伺服器（R49、design §36.3）：放在最上面，公司的人照「進階 → 企業伺服器」找得到
             Section("企業伺服器") { EnterpriseServerSettings() }
+            // 會議內容的文字大小（design §38.5、R59）
+            Section("顯示") {
+                Picker("會議內容的文字大小", selection: $textSize) {
+                    ForEach(TextSize.levels, id: \.self) { Text(TextSize.label($0)).tag($0) }
+                }
+                Text("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 ⌘＋、⌘－ 調整，⌘0 回到標準大小。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             // app 內更新（R10.6）
             Section("更新") {
                 LabeledContent("目前版本", value: Updater.currentVersion)

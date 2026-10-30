@@ -338,6 +338,7 @@ final class AppModel {
         GlobalHotKey.shared.onBookmark = { [weak self] in self?.bookmarkFromHotKey() }
         recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
         recorder.onLevelHint = { [weak self] hint in self?.levelHintAppeared(hint) }
+        recorder.onMicHint = { [weak self] hint in self?.micHintAppeared(hint) }
         // 忘了停止錄音（design §35、R48）：提醒一出現就送通知（人多半不在電腦前）
         recorder.onIdlePrompt = { [weak self] in
             guard let self, let id = self.recorder.meetingId else { return }
@@ -518,7 +519,9 @@ final class AppModel {
     var menuBarSymbol: String {
         if bookmarkFlash { return "star.circle.fill" }
         // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來
-        if recorder.isRecording { return recorder.levelHint != nil || recorder.idlePrompt ? "mic.badge.exclamationmark" : "record.circle.fill" }
+        if recorder.isRecording {
+            return recorder.levelHint != nil || recorder.micHint != nil || recorder.idlePrompt ? "mic.badge.exclamationmark" : "record.circle.fill"
+        }
         if runner.isBusy || queuedCount > 0 { return "waveform.circle.fill" }
         return "waveform"
     }
@@ -526,10 +529,32 @@ final class AppModel {
     /// 收音提醒第一次出現（R42.1、design §31.5）：拾音不是最前面的 app、或主視窗沒開時送通知，點了打開錄音中的會議。
     /// 每場每種最多一次由 Recorder 管；拾音在前面時只有錄音畫面和選單列的提示
     private func levelHintAppeared(_ hint: Recorder.LevelHint) {
-        guard let id = recorder.meetingId else { return }
-        let mainVisible = NSApp.windows.contains { $0.isVisible && $0.identifier?.rawValue.hasPrefix("main") == true }
-        guard !(NSApp.isActive && mainVisible) else { return }
-        notifier.levelHint(hint, meetingId: id)
+        guard let id = recorder.meetingId, !mainWindowInFront else { return }
+        notifier.levelHint(hint.text, kind: hint.rawValue, meetingId: id)
+    }
+
+    /// 用藍牙耳機的麥克風錄現場會議（design §38.4、R58.3）：通知的規則同收音提醒
+    private func micHintAppeared(_ hint: Recorder.MicHint) {
+        guard let id = recorder.meetingId, !mainWindowInFront else { return }
+        notifier.levelHint(hint.text, kind: "bluetooth", meetingId: id)
+    }
+
+    private var mainWindowInFront: Bool {
+        NSApp.isActive && NSApp.windows.contains { $0.isVisible && $0.identifier?.rawValue.hasPrefix("main") == true }
+    }
+
+    /// 換麥克風（design §38.2、§38.3、R58）：錄音中就接著用新的這支錄；沒在錄音時只改設定。提示讓人知道選到了
+    func switchMicrophone(_ uid: String) {
+        let monitor = MicrophoneMonitor.shared
+        recorder.switchMicrophone(uid: uid)
+        let name = monitor.resolve(uid)?.name ?? ""
+        if recorder.isRecording {
+            noticeMessage = uid.isEmpty ? String(localized: "已改用系統預設的麥克風（\(name)），之後的錄音也用系統預設")
+                : String(localized: "已改用 \(name)，之後的錄音也用這支")
+        } else {
+            noticeMessage = uid.isEmpty ? String(localized: "之後的錄音用系統預設的麥克風（\(name)）")
+                : String(localized: "之後的錄音用 \(name)")
+        }
     }
 
     func refreshEnvironment() {

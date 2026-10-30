@@ -71,6 +71,7 @@ struct ShiyinApp: App {
 struct AppCommands: Commands {
     let model: AppModel
     @Environment(\.openWindow) private var openWindow
+    @AppStorage(AppSettings.textSizeKey) private var textSize = 0
 
     var body: some Commands {
         CommandGroup(after: .appInfo) {
@@ -97,6 +98,19 @@ struct AppCommands: Commands {
             Button("匯出…") { model.openMainWindow?(); model.openExportSheet() }
                 .keyboardShortcut("e")
                 .disabled(model.detail == nil)
+        }
+        // 會議內容的文字大小（design §38.5、R59）：「顯示」選單；⌘= 不用按 Shift 也算放大（AppDelegate 攔下來）
+        CommandGroup(after: .toolbar) {
+            Divider()
+            Button("放大文字") { TextSize.change(1) }
+                .keyboardShortcut("+")
+                .disabled(textSize >= TextSize.levels.upperBound)
+            Button("縮小文字") { TextSize.change(-1) }
+                .keyboardShortcut("-")
+                .disabled(textSize <= TextSize.levels.lowerBound)
+            Button("實際大小") { TextSize.change(nil) }
+                .keyboardShortcut("0")
+                .disabled(textSize == 0)
         }
         CommandGroup(replacing: .help) {
             Button("拾音使用說明") { openWindow(id: "guide") }

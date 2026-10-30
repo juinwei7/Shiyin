@@ -39,7 +39,7 @@ struct ReviewTab: View {
             Divider().padding(.vertical, embedded ? 8 : 0)
             HStack(spacing: 12) {
                 Text(footnote)
-                    .font(.callout)
+                    .contentFont(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
@@ -104,7 +104,7 @@ struct ReviewTab: View {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         if !suggestion.time.isEmpty { TimeButton(time: suggestion.time) }
                         Text(suggestion.reason).meetingText()
-                            .font(.callout)
+                            .contentFont(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -161,7 +161,7 @@ struct ReviewQuestionRow: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("\(index + 1)")
-                    .font(.callout.monospacedDigit().weight(.semibold))
+                    .contentFont(.callout, weight: .semibold, monospacedDigit: true)
                     .foregroundStyle(Color.signal)
                 TimeButton(time: item.time)
                 Text(item.question).meetingText()

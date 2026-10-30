@@ -4,6 +4,7 @@ import SwiftUI
 struct AskTab: View {
     @Environment(AppModel.self) private var model
     @Environment(\.snapshotMode) private var snapshotMode
+    @Environment(\.textScale) private var scale
     let detail: MeetingDetail
     @State private var question = ""
 
@@ -60,9 +61,10 @@ struct AskTab: View {
                 .id("asking")
             }
         }
+        .contentFont()   // 文字大小（design §38.5）
         .padding(.horizontal, 32)
         .padding(.vertical, 20)
-        .frame(maxWidth: 760, alignment: .leading)
+        .frame(maxWidth: 760 * scale, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -137,7 +139,7 @@ struct QuestionView: View {
                                         onMeetingCitation(id, citation.time)
                                     } label: {
                                         Text("\(meetingTitle?(id) ?? String(localized: "會議")) \(citation.time)")
-                                            .font(.callout.monospacedDigit())
+                                            .contentFont(.callout, monospacedDigit: true)
                                             .foregroundStyle(Color.celadon)
                                     }
                                     .buttonStyle(.plain)
@@ -145,18 +147,18 @@ struct QuestionView: View {
                                 } else {
                                     Button(citation.time) { onCitation(citation.time) }
                                         .buttonStyle(.plain)
-                                        .font(.callout.monospacedDigit())
+                                        .contentFont(.callout, monospacedDigit: true)
                                         .foregroundStyle(Color.celadon)
                                         .help("從 \(citation.time) 開始播放")
                                 }
-                                Text(citation.quote).font(.callout).foregroundStyle(.secondary).lineLimit(2).meetingText()
+                                Text(citation.quote).contentFont(.callout).foregroundStyle(.secondary).lineLimit(2).meetingText()
                             }
                         }
                     }
                 }
                 if let ids = answer.meetingIds, record.meetingId == nil {
                     Text(ids.isEmpty ? String(localized: "沒有找到相關的會議") : String(localized: "參考了 \(ids.count) 場會議"))
-                        .font(.caption).foregroundStyle(.tertiary)
+                        .contentFont(.caption).foregroundStyle(.tertiary)
                 }
             }
         }
@@ -210,6 +212,7 @@ struct AskAllView: View {
                             }
                         }
                     }
+                    .contentFont()   // 文字大小（design §38.5）
                     .padding(24)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -225,6 +228,7 @@ struct AskAllView: View {
             }
         }
         .frame(minWidth: 560, minHeight: 480)
+        .contentTextScale()
         .onAppear { model.loadAllQuestions() }
     }
 }

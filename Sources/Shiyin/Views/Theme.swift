@@ -6,6 +6,30 @@ extension EnvironmentValues {
     @Entry var snapshotMode = false
     /// 正在看的會議的語言：決定會議內容的字形和標題字型（design §18.6）
     @Entry var meetingLanguage: MeetingLanguage = .zh
+    /// 會議內容的文字大小倍率（design §38.5、R59）：`contentFont`、`contentTitleFont` 和內容的欄寬乘上它
+    @Entry var textScale: CGFloat = 1
+}
+
+/// 會議內容的文字大小（design §38.5、R59、D131）：設定存 −1～5，0 是 100%
+enum TextSize {
+    static let levels = -1...5
+    static let scales: [CGFloat] = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2]
+
+    static var level: Int { min(max(UserDefaults.standard.integer(forKey: AppSettings.textSizeKey), levels.lowerBound), levels.upperBound) }
+
+    static func scale(_ level: Int) -> CGFloat {
+        scales[min(max(level, levels.lowerBound), levels.upperBound) - levels.lowerBound]
+    }
+
+    static func label(_ level: Int) -> String {
+        level == 0 ? String(localized: "100%（標準）") : "\(Int((scale(level) * 100).rounded()))%"
+    }
+
+    /// 放大（+1）、縮小（−1）、實際大小（nil）；到頭就不動
+    static func change(_ step: Int?) {
+        let next = step.map { min(max(level + $0, levels.lowerBound), levels.upperBound) } ?? 0
+        UserDefaults.standard.set(next, forKey: AppSettings.textSizeKey)
+    }
 }
 
 /// 視覺 token（design §9.3）
@@ -56,20 +80,65 @@ private struct MeetingText: ViewModifier {
     }
 }
 
-/// 會議內容的標題（會議標題、段落、議題）：宋體-繁；日文會議改用ヒラギノ明朝，宋體的漢字是中文寫法（design §18.6）
+/// 會議內容的標題（會議標題、段落、議題）：宋體-繁；日文會議改用ヒラギノ明朝，宋體的漢字是中文寫法（design §18.6）。
+/// 字級跟著文字大小（design §38.5）
 private struct ContentTitleFont: ViewModifier {
     @Environment(\.meetingLanguage) private var language
+    @Environment(\.textScale) private var scale
     let size: CGFloat
 
     func body(content: Content) -> some View {
-        content.font(language == .ja ? .custom("Hiragino Mincho ProN", size: size).weight(.semibold) : .songti(size))
+        let size = size * scale
+        return content.font(language == .ja ? .custom("Hiragino Mincho ProN", size: size).weight(.semibold) : .songti(size))
             .meetingText()
+    }
+}
+
+/// 會議內容的字級（design §38.5）：macOS 的字級乘上文字大小的倍率。
+/// macOS 的 SwiftUI 不理 `dynamicTypeSize`，所以自己算（D131）
+private struct ContentFont: ViewModifier {
+    @Environment(\.textScale) private var scale
+    let style: Font.TextStyle
+    let weight: Font.Weight?
+    let monospacedDigit: Bool
+
+    func body(content: Content) -> some View {
+        var font = Font.system(size: Self.size(style) * scale, weight: weight ?? (style == .headline ? .bold : .regular))
+        if monospacedDigit { font = font.monospacedDigit() }
+        return content.font(font)
+    }
+
+    /// macOS 的字級（NSFont.preferredFont(forTextStyle:)，2026-10-30 在 macOS 26 量的）
+    static func size(_ style: Font.TextStyle) -> CGFloat {
+        switch style {
+        case .largeTitle: return 26
+        case .title: return 22
+        case .title2: return 17
+        case .title3: return 15
+        case .headline, .body: return 13
+        case .callout: return 12
+        case .subheadline: return 11
+        default: return 10   // footnote、caption、caption2
+        }
+    }
+}
+
+/// 依設定把文字大小的倍率放進 environment（會議頁、問所有會議）
+private struct TextScaleFromSettings: ViewModifier {
+    @AppStorage(AppSettings.textSizeKey) private var level = 0
+
+    func body(content: Content) -> some View {
+        content.environment(\.textScale, TextSize.scale(level))
     }
 }
 
 extension View {
     func meetingText() -> some View { modifier(MeetingText()) }
     func contentTitleFont(_ size: CGFloat) -> some View { modifier(ContentTitleFont(size: size)) }
+    func contentFont(_ style: Font.TextStyle = .body, weight: Font.Weight? = nil, monospacedDigit: Bool = false) -> some View {
+        modifier(ContentFont(style: style, weight: weight, monospacedDigit: monospacedDigit))
+    }
+    func contentTextScale() -> some View { modifier(TextScaleFromSettings()) }
 }
 
 /// 可以點的時間點：跳到錄音的那個位置播放（R4.2、R5.2）
@@ -84,11 +153,11 @@ struct TimeButton: View {
         if let seconds = seek ?? TimeFormat.seconds(time), model.player.isLoaded {
             Button(time) { model.player.seek(to: seconds) }
                 .buttonStyle(.plain)
-                .font(.callout.monospacedDigit())
+                .contentFont(.callout, monospacedDigit: true)   // 跟著文字大小（design §38.5）
                 .foregroundStyle(Color.celadon)
                 .help("從 \(time) 開始播放")
         } else if !time.isEmpty {
-            Text(time).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+            Text(time).contentFont(.callout, monospacedDigit: true).foregroundStyle(.secondary)
         }
     }
 }

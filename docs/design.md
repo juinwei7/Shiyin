@@ -1653,7 +1653,7 @@ Windows 的做法在 design-windows §11.7。
 
 ### 38.4 藍牙耳機的提醒（R58.3、R58.4，D130）
 
-- `Recorder.micHint: MicHint?`（`name`、`builtIn: AudioDevices.Device?`）。`micDevice` 更新時判斷：錄音來源是 `mic`、`inputDeviceUID` 是空字串（系統預設）、`micDevice.isBluetooth`、這場沒按過「知道了」→ 顯示；換成不是藍牙、改成指定的裝置就收起來。`builtIn` 是 `inputs` 裡第一支 `isBuiltIn` 的。
+- `Recorder.micHint: MicHint?`（`name`、`builtIn: AudioDevices.Device?`）。`micDevice` 更新時判斷：錄音來源是 `mic`、`micDevice.isBluetooth`、`micDevice.uid` 不是 `inputDeviceUID`（選的是系統預設，或指定的那支不在、退回系統預設）、這場沒按過「知道了」→ 顯示；換成不是藍牙、改成指定這支就收起來。`builtIn` 是 `inputs` 裡第一支 `isBuiltIn` 的。
 - 錄音畫面的提示列（同 §26.1 的樣式）：`Label("正在用「<名稱>」收音：這是藍牙耳機的麥克風，人不在旁邊時錄不到現場的聲音。", systemImage: "headphones")`，按鈕「改用 <內建的名稱>」（`switchMicrophone(builtIn.uid)`；沒有內建麥克風時不放）、「知道了」（這場錄音不再出現）。
 - 第一次出現時 `onMicHint` → `AppModel` 照收音提醒的規則（§31.5）：拾音不在最前面才送通知，同一場最多一次，點通知打開錄音中的會議。選單列的提示、選單列圖示的驚嘆號同 `levelHint`。
 - 不自動換麥克風（D104）。
@@ -1662,8 +1662,9 @@ Windows 的做法在 design-windows §11.7。
 
 - 設定：`AppSettings.textSizeKey = "contentTextSize"`（整數 −1～5，0 是 100%），對應 `TextSize.scales = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2]`。
 - macOS 的 SwiftUI 不吃 `dynamicTypeSize`（2026-10-30 在 macOS 26 試過：`.dynamicTypeSize(.accessibility2)` 跟 `.small` 量出來一樣大），所以自己縮放：`EnvironmentValues.textScale`，在 `MeetingDetailView` 依設定放進 environment；`View.contentFont(_ style:, weight:, monospacedDigit:)` 照 macOS 的字級（body 13、callout 12、caption 10、title3 15、headline 13 粗體）乘上 `textScale` 給 `.system(size:)`；`contentTitleFont(size)` 也乘上去。
+- `MeetingTop`（標題列）放 `.environment(\.textScale, 1)`、`EditBar` 固定 `.font(.body)`：會議標題用 `contentTitleFont`，不擋的話 200% 時標題列很大。
 - 要改的地方（只改會議內容，R59.2）：`ReadingColumn`（預設字級、最寬 680 × scale）、紀錄的條目、時間點、待確認的題目（`ReviewTab`、`InlineReviewCard`）、逐字稿的段落（文字、時間點欄 58 × scale、說話者欄 72 × scale、校正建議、最寬 760 × scale；搜尋列、提示列不改）、提問的問答和引用、即時逐字稿（時間欄 52 × scale）、`UserNotesEditor`、紀錄的編輯器（`TextEditor` 用 `.system(size: 13 × scale)`）。
-- 選單：`CommandGroup(after: .toolbar)`（「顯示」選單）放「放大文字」（⌘＋）、「縮小文字」（⌘－）、「實際大小」（⌘0），到頭時停用。⌘＋在美式鍵盤要按 Shift，另外放一個隱藏的 ⌘= 也算放大。
+- 選單：`CommandGroup(after: .toolbar)`（「顯示方式」選單，英文 View）放「放大文字」（⌘＋）、「縮小文字」（⌘－）、「實際大小」（⌘0），到頭時停用。⌘＋在美式鍵盤要按 Shift：`AppDelegate` 的按鍵監聽把不按 Shift 的 ⌘= 也當成放大（SwiftUI 的選單不能放隱藏的項目）。
 - 設定頁：「進階」加 `Section("顯示")`：`Picker("會議內容的文字大小")` 七段（「100%（標準）」），下面一行「也可以用 ⌘＋、⌘－ 調整」。
 - 不影響匯出、複製、`shiyinctl snapshot` 的預設（snapshot 照設定畫，驗證時看得到放大）。
 - DEBUG：`state` 多 `textSize`；`textsize <−1～5>`（寫共用設定，測完 `defaults delete com.weiwei.shiyin contentTextSize`）。

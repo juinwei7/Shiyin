@@ -439,6 +439,7 @@ struct RecordingControls: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.defaultMeetingLanguageKey) private var language: MeetingLanguage = .systemDefault
+    @AppStorage(AppSettings.inputDeviceKey) private var device = ""
 
     var body: some View {
         if model.recorder.isRecording {
@@ -467,6 +468,13 @@ struct RecordingControls: View {
                     ForEach(["mic", "both", "system"], id: \.self) { Text(Self.sourceLabel($0)).tag($0) }
                 }
                 .pickerStyle(.inline)
+                // 麥克風（R58.1、design §38.2）：跟設定頁同一個設定
+                if source != "system" {
+                    Picker("麥克風", selection: Binding(get: { device }, set: { model.switchMicrophone($0) })) {
+                        MicrophoneOptions(saved: device)
+                    }
+                    .pickerStyle(.inline)
+                }
                 Picker("會議語言", selection: Binding(get: { language }, set: { value in
                     language = value
                     model.noticeMessage = String(localized: "之後的錄音都用\(value.uiName)")
@@ -480,8 +488,27 @@ struct RecordingControls: View {
                 model.startRecording()
             }
             .help("開始錄音（⌘R），用\(language.uiName)辨識；點右邊的箭頭可以改錄音來源和語言")
-            // 工具列的選單建立一次就不會更新勾選，選項變了就換一個新的選單
-            .id("\(source)-\(language.rawValue)")
+            // 工具列的選單建立一次就不會更新勾選，選項變了（含接上、拔掉麥克風）就換一個新的選單
+            .id("\(source)-\(language.rawValue)-\(device)-\(MicrophoneMonitor.shared.signature)")
+        }
+    }
+}
+
+/// 麥克風的選項（R58、design §38.2）：系統預設（寫出現在是哪一支）、每一支麥克風；存的那支沒接上時也列出來，勾選才看得到。
+/// tag 是 UID，系統預設是空字串
+struct MicrophoneOptions: View {
+    let saved: String
+
+    var body: some View {
+        let monitor = MicrophoneMonitor.shared
+        if let name = monitor.defaultInput?.name {
+            Text("系統預設（\(name)）").tag("")
+        } else {
+            Text("系統預設").tag("")
+        }
+        ForEach(monitor.inputs) { Text($0.name).tag($0.uid) }
+        if !saved.isEmpty && !monitor.inputs.contains(where: { $0.uid == saved }) {
+            Text("之前選的麥克風（沒有接上，會用系統預設）").tag(saved)
         }
     }
 }

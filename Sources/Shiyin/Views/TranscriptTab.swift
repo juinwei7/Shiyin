@@ -5,6 +5,7 @@ struct TranscriptTab: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.snapshotMode) private var snapshotMode
+    @Environment(\.textScale) private var scale
     let detail: MeetingDetail
 
     @State private var query = ""
@@ -76,7 +77,8 @@ struct TranscriptTab: View {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(visibleSegments.prefix(18)) { segment in row(segment) }
                 }
-                .frame(maxWidth: 760, alignment: .leading)
+                .contentFont()   // 文字大小（design §38.5）
+                .frame(maxWidth: 760 * scale, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -89,7 +91,8 @@ struct TranscriptTab: View {
                                     .id(segment.id)
                             }
                         }
-                        .frame(maxWidth: 760, alignment: .leading)
+                        .contentFont()   // 文字大小（design §38.5）
+                        .frame(maxWidth: 760 * scale, alignment: .leading)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 14)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -318,7 +321,7 @@ struct TranscriptTab: View {
                     .buttonStyle(.link)
             }
         }
-        .font(.caption)
+        .contentFont(.caption)
     }
 
     @ViewBuilder
@@ -327,16 +330,16 @@ struct TranscriptTab: View {
         let isHighlighted = segment.id == model.highlightSegment
         HStack(alignment: .firstTextBaseline, spacing: 14) {
             TimeButton(time: TimeFormat.string(segment.start), seek: segment.start)
-                .frame(width: 58, alignment: .trailing)
+                .frame(width: 58 * scale, alignment: .trailing)
             if let idx = segment.speaker {
                 Button(detail.speakerName(idx) ?? "") {
                     renameText = detail.speakerName(idx) ?? ""
                     if let id = segment.id { renaming = (idx, id) }
                 }
                 .buttonStyle(.plain)
-                .font(.callout.weight(.medium))
+                .contentFont(.callout, weight: .medium)
                 .foregroundStyle(Color.speaker(idx))
-                .frame(width: 72, alignment: .leading)
+                .frame(width: 72 * scale, alignment: .leading)
                 .lineLimit(1)
                 .help("點一下幫這位說話者改名")
                 .popover(isPresented: Binding(get: { renaming?.segment == segment.id && segment.id != nil },

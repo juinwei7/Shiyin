@@ -3,6 +3,7 @@ import SwiftUI
 /// 閱讀用的欄位：靠左、寬度上限約 680 pt
 struct ReadingColumn<Content: View>: View {
     @Environment(\.snapshotMode) private var snapshotMode
+    @Environment(\.textScale) private var scale
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -17,7 +18,8 @@ struct ReadingColumn<Content: View>: View {
         VStack(alignment: .leading, spacing: 26) {
             content
         }
-        .frame(maxWidth: 680, alignment: .leading)
+        .contentFont()   // 文字大小（design §38.5）：欄寬跟著放大，一行的字數不變
+        .frame(maxWidth: 680 * scale, alignment: .leading)
         .padding(.horizontal, 32)
         .padding(.vertical, 24)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -85,7 +87,7 @@ struct ReviewMarker: View {
                 }
             } label: {
                 Text(count > 1 ? "\(MeetingLanguage.ui(zh: "？", en: "?"))\(count)" : MeetingLanguage.ui(zh: "？", en: "?"))
-                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .contentFont(.caption2, weight: .semibold, monospacedDigit: true)
                     .foregroundStyle(Color.signal)
                     .padding(.horizontal, count > 1 ? 5 : 0)
                     .frame(minWidth: 17, minHeight: 17)
@@ -114,7 +116,7 @@ struct InlineReviewCard: View {
                 }
                 HStack(spacing: 12) {
                     Text("只送這一條的題目；有回答的交給整理工具依答案修正，略過的直接移除。")
-                        .font(.caption)
+                        .contentFont(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
@@ -228,7 +230,7 @@ struct NotesPage: View {
                 }
                 if let by = detail.meeting.notesBy {
                     Text("由 \(LLMProvider(rawValue: by)?.shortLabel ?? by) 整理．\(templateName)")
-                        .font(.caption)
+                        .contentFont(.caption)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -261,10 +263,10 @@ struct ReviewBanner: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "questionmark.circle.fill").foregroundStyle(Color.signal)
-                    Text("還有 \(detail.reviewCount) 題待確認").font(.callout.weight(.medium))
+                    Text("還有 \(detail.reviewCount) 題待確認").contentFont(.callout, weight: .medium)
                     Spacer()
-                    Text(model.reviewExpanded ? "收起" : "展開").font(.callout).foregroundStyle(.secondary)
-                    Image(systemName: model.reviewExpanded ? "chevron.up" : "chevron.down").font(.caption).foregroundStyle(.secondary)
+                    Text(model.reviewExpanded ? "收起" : "展開").contentFont(.callout).foregroundStyle(.secondary)
+                    Image(systemName: model.reviewExpanded ? "chevron.up" : "chevron.down").contentFont(.caption).foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -307,6 +309,7 @@ struct EditBar: View {
                 .disabled(disabled)
                 .help(disabled ? "正在處理這場會議，完成後才能編輯" : "直接修改會議紀錄，存檔時會留一個版本")
         }
+        .font(.body)   // 按鈕不跟著文字大小（R59.2）
         .padding(.bottom, -18)
     }
 }
@@ -324,7 +327,7 @@ struct ActionItemsTable: View {
                 Text("事項")
                 Text("期限")
             }
-            .font(.caption)
+            .contentFont(.caption)
             .foregroundStyle(.secondary)
             Divider().gridCellUnsizedAxes(.horizontal)
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
@@ -367,6 +370,7 @@ extension Binding {
 
 /// 手動編輯會議紀錄（R6.6）：每一條都是可以改的欄位，可以新增、刪除、上下移動；按「完成」才存成新版本
 struct NotesEditor: View {
+    @Environment(\.textScale) private var scale
     @Binding var notes: MeetingNotes
     let onFinish: (Bool) -> Void
 
@@ -397,7 +401,7 @@ struct NotesEditor: View {
                             let topic = $notes.topics.safe(i, fallback: .init(title: "", start: "", points: []))
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    TextField("時間", text: topic.start).frame(width: 70).monospacedDigit()
+                                    TextField("時間", text: topic.start).frame(width: 70 * scale).monospacedDigit()
                                     TextField("議題", text: topic.title).contentTitleFont(16)
                                     Button { if notes.topics.indices.contains(i) { notes.topics.remove(at: i) } } label: { Image(systemName: "trash") }
                                         .buttonStyle(.borderless).help("刪除這個議題")
@@ -409,7 +413,7 @@ struct NotesEditor: View {
                             notes.topics.append(.init(title: "", start: "", points: []))
                         }
                         .buttonStyle(.borderless)
-                        .font(.callout)
+                        .contentFont(.callout)
                     }
                     ForEach(notes.custom.indices, id: \.self) { i in
                         let section = $notes.custom.safe(i, fallback: .init(title: "", items: []))
@@ -430,7 +434,8 @@ struct NotesEditor: View {
                     }
                 }
                 .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 720, alignment: .leading)
+                .contentFont()   // 文字大小（design §38.5）
+                .frame(maxWidth: 720 * scale, alignment: .leading)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -452,6 +457,7 @@ private struct EditorSection<Content: View>: View {
 }
 
 private struct ItemsEditor: View {
+    @Environment(\.textScale) private var scale
     @Binding var items: [MeetingNotes.Item]
 
     var body: some View {
@@ -460,18 +466,19 @@ private struct ItemsEditor: View {
                 let item = $items.safe(i, fallback: .init(text: ""))
                 HStack(spacing: 6) {
                     TextField("內容", text: item.text, axis: .vertical).meetingText()
-                    TextField("時間", text: item.time).frame(width: 64).monospacedDigit()
+                    TextField("時間", text: item.time).frame(width: 64 * scale).monospacedDigit()
                     RowButtons(index: i, count: items.count, move: { $items.move(i, to: $0) }, delete: { $items.remove(i) })
                 }
             }
             Button("新增一條", systemImage: "plus") { items.append(.init(text: "")) }
                 .buttonStyle(.borderless)
-                .font(.callout)
+                .contentFont(.callout)
         }
     }
 }
 
 private struct ActionItemsEditor: View {
+    @Environment(\.textScale) private var scale
     @Binding var items: [MeetingNotes.ActionItem]
 
     var body: some View {
@@ -479,16 +486,16 @@ private struct ActionItemsEditor: View {
             ForEach(items.indices, id: \.self) { i in
                 let item = $items.safe(i, fallback: .init(owner: "", task: "", due: ""))
                 HStack(spacing: 6) {
-                    TextField("負責人", text: item.owner).frame(width: 90)
+                    TextField("負責人", text: item.owner).frame(width: 90 * scale)
                     TextField("事項", text: item.task, axis: .vertical).meetingText()
-                    TextField("yyyy-MM-dd", text: item.due).frame(width: 100).monospacedDigit()
-                    TextField("時間", text: item.time).frame(width: 64).monospacedDigit()
+                    TextField("yyyy-MM-dd", text: item.due).frame(width: 100 * scale).monospacedDigit()
+                    TextField("時間", text: item.time).frame(width: 64 * scale).monospacedDigit()
                     RowButtons(index: i, count: items.count, move: { $items.move(i, to: $0) }, delete: { $items.remove(i) })
                 }
             }
             Button("新增待辦", systemImage: "plus") { items.append(.init(owner: "", task: "", due: "")) }
                 .buttonStyle(.borderless)
-                .font(.callout)
+                .contentFont(.callout)
         }
     }
 }
