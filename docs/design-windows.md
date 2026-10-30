@@ -359,6 +359,14 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 設定頁四頁、引導三步，分法同 M§33.3、§33.4（Windows 沒有 CLI 時「你平常用哪個 AI？」的第二段只列 API）。
 - 標準答案不變；介面文字跑 `l10n.py windows-check`。
 
+### 11.7 麥克風看得到、換得到，文字大小，匯出（R58～R60，M§38）
+
+- 麥克風（R58）：裝置清單、預設的錄音裝置用 `MMDeviceEnumerator`（Capture、Console 角色，同 §6），換裝置的事件（`CreateNotificationClient`）同時更新清單。錄音按鈕的下拉選單、錄音列的麥克風名稱（點了換）、設定頁的「麥克風」共用同一個設定 `inputDeviceUID`。錄音中換：改 `WasapiSource` 的端點 ID 再重新開始（同 §6 換裝置的流程），寫檔照舊。
+- 藍牙：端點的 `PKEY_Device_EnumeratorName` 是 `BTHENUM`、`BTHHFENUM`、`BTHLEDEVICE`（或屬性 `PKEY_Device_BusTypeGuid` 是藍牙）算藍牙；內建麥克風用 `PKEY_AudioEndpoint_FormFactor` 是 `Microphone`／`LineLevel`、`EnumeratorName` 不是 USB、藍牙（實作時在虛擬機和真的電腦確認，寫回這裡）。提示列、通知、系統匣的規則同 M§38.4、§11.5。
+- 文字大小（R59）：設定 `contentTextSize` 同 Mac，`Ctrl+=`／`Ctrl+加號`、`Ctrl+-`、`Ctrl+0`（`KeyboardAccelerator`）；會議內容的字級乘上倍率，側欄、按鈕不變。
+- 匯出（R60）：會議頁右上角「更多」左邊加 `SplitButton`「匯出」（按下打開匯出對話框，箭頭是複製會議紀錄的三種格式）；`MoreMenu` 拿掉匯出、複製。
+- DEBUG 控制通道：`fakemic`、`micswitch`、`michint`、`textsize`，同 Mac（M§38.7）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

@@ -1305,7 +1305,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 
 ### 33.2 「更多」五項、復原回到原位（R44.4）
 
-- `MoreMenu`：`Menu("重新處理")`｛重新整理會議紀錄、檢查可能聽錯的字、重新轉錄（含說話者辨識）、重新辨識說話者…｝、匯出…、複製會議紀錄（子選單不變）、`FolderMenu`、移到垃圾桶。工具列的選單建立一次就不更新的限制不變（§23.4），動作照舊按下時才檢查。
+- `MoreMenu`：`Menu("重新處理")`｛重新整理會議紀錄、檢查可能聽錯的字、重新轉錄（含說話者辨識）、重新辨識說話者…｝、匯出…、複製會議紀錄（子選單不變）、`FolderMenu`、移到垃圾桶。R60 起匯出、複製會議紀錄移到右上角的 `ExportMenu`（§38.6），`MoreMenu` 剩重新處理、`FolderMenu`、移到垃圾桶。工具列的選單建立一次就不更新的限制不變（§23.4），動作照舊按下時才檢查。
 - 「復原上一版會議紀錄」：`EditBar` 右邊多一顆 `arrow.uturn.backward` 的按鈕，`detail.canUndoNotes`（`notes_versions` 這場有超過一筆）才顯示；按了同 `AppModel.undoNotes()`。
 - 「復原說話者的調整」：改名小視窗（`RenameSpeakerForm`）底部和逐字稿右鍵選單各加一項，文字用 `db.speakerUndoLabel(id)`（例如「復原：把說話者 2 併進怡君」），nil 就不顯示；按了同 `AppModel.undoSpeakerEdit()`。`MeetingDetail` 加 `speakerUndoLabel: String?`、`canUndoNotes: Bool`，載入會議時一起查。
 
@@ -1628,6 +1628,58 @@ Windows 的做法在 design-windows §10。
 - 假的 Codex 桌面版：`Contents/MacOS` 放一個只寫標記檔就結束的小程式（`LSUIElement`，不出現在 Dock），`codex-cli/bin/codex` 是 shell script（`login status` 印 Logged in、其他印到 stderr 後結束代碼 3）：測「打開 … 登入」打開的是哪個 app、執行失敗的訊息，不會在使用者的畫面上打開真的 ChatGPT。
 - `shiyinctl summon` 遇到 preview 的視窗（本來就是 `canJoinAllSpaces`）不加 `moveToActiveSpace`：同時設兩種會被 AppKit 丟例外、DEBUG 版當掉（2026-10-29 驗收時發生）。要把 DEBUG 版拉到前面時，依 pid 啟用（`NSRunningApplication.activate`），不要 `open <DEBUG 的 app>`：程序不在時會開出一份沒有 `SHIYIN_HOME` 的新 DEBUG 版。
 
+## 38. 麥克風看得到、換得到，文字大小，匯出（R58～R60，D130～D132）
+
+Windows 的做法在 design-windows §11.7。
+
+### 38.1 麥克風的資訊（R58）
+
+- `AudioDevices.Device` 加 `transport`（`kAudioDevicePropertyTransportType`）、`isBluetooth`（`kAudioDeviceTransportTypeBluetooth`、`BluetoothLE`）、`isBuiltIn`（`kAudioDeviceTransportTypeBuiltIn`）。加 `defaultInput()`（`kAudioHardwarePropertyDefaultInputDevice`）、`device(id:)`。
+- `MicrophoneMonitor`（`@Observable`、`@MainActor`、單例）：在系統物件上監聽 `kAudioHardwarePropertyDevices`、`kAudioHardwarePropertyDefaultInputDevice`，回到主執行緒重讀 `inputs`、`defaultInput`；值真的變了才設（§25）。錄音按鈕的選單、錄音畫面、設定頁的「麥克風」都用它，不再各自在 `onAppear` 讀一次。
+- `MicrophoneSource.deviceUID` 改成可以改（換麥克風時先改再 `restart()`）；`start()` 成功後讀 `inputNode.auAudioUnit.deviceID`，存成 `current: AudioDevices.Device?`（真正在收音的那支：指定的不在時是系統預設）。
+
+### 38.2 錄音按鈕的選單（R58.1）
+
+- `RecordingControls` 的選單在「錄音來源」和「會議語言」之間加 `Picker("麥克風")`（inline），錄音來源是「只錄電腦聲音」時不放。選項：「系統預設（<目前預設的名稱>）」（tag 空字串）、`inputs` 每一支（tag UID）；存的 UID 不在 `inputs` 時多一項「之前選的麥克風（沒有接上，會用系統預設）」，讓勾選看得到。
+- 選了寫 `inputDeviceUID`（同設定頁），提示「之後的錄音用 <名稱>」（系統預設寫「之後的錄音用系統預設的麥克風（<名稱>）」）。
+- 工具列的選單建立一次就不更新（§23.4），`.id` 加上麥克風的設定、`inputs` 的 UID、預設的 UID，裝置變了就換一個新的選單。
+
+### 38.3 錄音畫面換麥克風（R58.2，D130）
+
+- `Recorder.micDevice: AudioDevices.Device?`：`begin()`、`restartSource(0)` 之後從 `MicrophoneSource.current` 更新（值變了才設）。
+- `Recorder.switchMicrophone(uid:)`：寫 `inputDeviceUID`，改 `MicrophoneSource.deviceUID`，`restartSource(0)`（§20.2 的重新開始：新的 engine、重讀輸入格式；寫檔、即時逐字稿接的是 `RecordingWriter` 和 `MixTap`，不用重來）。換的時候錄音檔那一聲道的空檔照 §20.2 補靜音。
+- 畫面：控制列的麥克風音量條後面加 `MicrophoneMenu`：`Menu`，標籤是 `micDevice.name`（最寬 180 pt、單行截斷）加向下的箭頭，`.menuStyle(.borderlessButton)`，選項同 §38.2（勾選的是正在收音的那支），選了呼叫 `switchMicrophone`，提示「已改用 <名稱>，之後的錄音也用這支」。滑鼠提示「正在用這支麥克風收音，點一下可以換」。視窗窄的時候（`ViewThatFits` 最窄那層）只留圖示，名稱放在滑鼠提示。
+- 選單列的錄音狀態（`MenuBarContent`）多一行「麥克風：<名稱>」。
+
+### 38.4 藍牙耳機的提醒（R58.3、R58.4，D130）
+
+- `Recorder.micHint: MicHint?`（`name`、`builtIn: AudioDevices.Device?`）。`micDevice` 更新時判斷：錄音來源是 `mic`、`inputDeviceUID` 是空字串（系統預設）、`micDevice.isBluetooth`、這場沒按過「知道了」→ 顯示；換成不是藍牙、改成指定的裝置就收起來。`builtIn` 是 `inputs` 裡第一支 `isBuiltIn` 的。
+- 錄音畫面的提示列（同 §26.1 的樣式）：`Label("正在用「<名稱>」收音：這是藍牙耳機的麥克風，人不在旁邊時錄不到現場的聲音。", systemImage: "headphones")`，按鈕「改用 <內建的名稱>」（`switchMicrophone(builtIn.uid)`；沒有內建麥克風時不放）、「知道了」（這場錄音不再出現）。
+- 第一次出現時 `onMicHint` → `AppModel` 照收音提醒的規則（§31.5）：拾音不在最前面才送通知，同一場最多一次，點通知打開錄音中的會議。選單列的提示、選單列圖示的驚嘆號同 `levelHint`。
+- 不自動換麥克風（D104）。
+
+### 38.5 文字大小（R59，D131）
+
+- 設定：`AppSettings.textSizeKey = "contentTextSize"`（整數 −1～5，0 是 100%），對應 `TextSize.scales = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2]`。
+- macOS 的 SwiftUI 不吃 `dynamicTypeSize`（2026-10-30 在 macOS 26 試過：`.dynamicTypeSize(.accessibility2)` 跟 `.small` 量出來一樣大），所以自己縮放：`EnvironmentValues.textScale`，在 `MeetingDetailView` 依設定放進 environment；`View.contentFont(_ style:, weight:, monospacedDigit:)` 照 macOS 的字級（body 13、callout 12、caption 10、title3 15、headline 13 粗體）乘上 `textScale` 給 `.system(size:)`；`contentTitleFont(size)` 也乘上去。
+- 要改的地方（只改會議內容，R59.2）：`ReadingColumn`（預設字級、最寬 680 × scale）、紀錄的條目、時間點、待確認的題目（`ReviewTab`、`InlineReviewCard`）、逐字稿的段落（文字、時間點欄 58 × scale、說話者欄 72 × scale、校正建議、最寬 760 × scale；搜尋列、提示列不改）、提問的問答和引用、即時逐字稿（時間欄 52 × scale）、`UserNotesEditor`、紀錄的編輯器（`TextEditor` 用 `.system(size: 13 × scale)`）。
+- 選單：`CommandGroup(after: .toolbar)`（「顯示」選單）放「放大文字」（⌘＋）、「縮小文字」（⌘－）、「實際大小」（⌘0），到頭時停用。⌘＋在美式鍵盤要按 Shift，另外放一個隱藏的 ⌘= 也算放大。
+- 設定頁：「進階」加 `Section("顯示")`：`Picker("會議內容的文字大小")` 七段（「100%（標準）」），下面一行「也可以用 ⌘＋、⌘－ 調整」。
+- 不影響匯出、複製、`shiyinctl snapshot` 的預設（snapshot 照設定畫，驗證時看得到放大）。
+- DEBUG：`state` 多 `textSize`；`textsize <−1～5>`（寫共用設定，測完 `defaults delete com.weiwei.shiyin contentTextSize`）。
+
+### 38.6 匯出按鈕（R60，D132）
+
+- `ExportMenu`：`Menu { 複製會議紀錄的三種格式 } label: { Label("匯出", systemImage: "square.and.arrow.up") } primaryAction: { model.openExportSheet() }`，`.labelStyle(.titleAndIcon)`（工具列預設只顯示圖示），滑鼠提示「匯出會議紀錄、逐字稿或錄音（⌘E）；箭頭可以直接複製會議紀錄」。三個選項：「複製會議紀錄：保留格式（貼到 Word、Notion、郵件）」「複製會議紀錄：Markdown」「複製會議紀錄：純文字（貼到 Slack、訊息）」，呼叫同現在的 `copyNotes`。
+- `MeetingDetailView` 的工具列：`ExportMenu` 放在 `MoreMenu` 前面，條件同 `MoreMenu`（不是錄音中的那場、不在垃圾桶）。`MoreMenu` 拿掉匯出、複製會議紀錄。工具列的選單建立一次就不更新的限制同 `MoreMenu`：動作按下時才看目前選取的會議。
+- 使用說明「匯出、分享」：「按右上角的「匯出」（⌘E）…；「匯出」旁邊的箭頭可以直接複製會議紀錄，貼到 Notion、Slack 或郵件。」
+
+### 38.7 DEBUG、驗證
+
+- 模擬錄音沒有真的麥克風：`shiyinctl fakemic <名稱> <bluetooth 0|1> [builtin 名稱]` 讓模擬錄音的 `micDevice` 是這支、`inputs` 多這幾支假的裝置（只在記憶體）；模擬錄音時 `switchMicrophone` 照樣寫設定、更新 `micDevice`、`restart()` FileSource（從停下的位置繼續送）。這樣測得到選單、提示列、通知、換了之後錄音不中斷；真的 AVAudioEngine 換裝置要使用者實測（`[~]`）。
+- `state` 的 `recorder` 多 `micDevice`（名稱、uid、bluetooth）、`micHint`；`micswitch <uid|default>` 等於在錄音畫面選一支；`michint dismiss` 等於按「知道了」。
+- 測完 `defaults read com.weiwei.shiyin` 比對：`inputDeviceUID`、`contentTextSize` 不能留下測試的值。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1704,5 +1756,8 @@ Windows 的做法在 design-windows §10。
 | D125 | 多張顯示卡由伺服器分配，核心只加「用第幾張」（§36.6） | 每張卡開一個伺服器程序（或容器）、前面再擋一層分流：管理者要自己設好幾份、登入和工作佇列要共用，部署變複雜。whisper 也用 `CUDA_VISIBLE_DEVICES`：whisper 跟伺服器在同一個程序，環境變數只能設一次，同時跑的兩場沒辦法用不同的卡 |
 | D126 | 企業伺服器的請求一律不跟著轉址，3xx 當成錯誤（§36.2，4.2.1 的安全審查） | 跟著轉址（4.2.0）：307、308 轉到別的主機時，`Authorization` 會被拿掉，但 body（refresh token、錄音、逐字稿）照樣送過去。只跟同一個主機的轉址：要自己判斷 301、302、307、308 和要不要重送 body，§36.2 的 API 也沒有需要轉址的地方；伺服器搬家時請管理者給新網址 |
 | D128 | 找不到 Codex CLI 時用 Codex 桌面版附的 codex（照它的說明檔 `codex-package.json` 找）；Claude 不用桌面版裡的 Claude Code，只說明怎麼安裝（R55、R56、§37；2026-10-29 使用者決定） | 兩個都用桌面版附的：Claude 桌面版的 Claude Code 放在桌面版私有的資料夾、登入由桌面版管，要讓它登入就得碰桌面版的登入資料，Anthropic 的條款不允許第三方 app 轉用。兩個都不用、只說明怎麼裝 CLI：Codex 桌面版跟 CLI 共用登入（OpenAI 的文件），又有說明檔寫好執行檔在哪裡，直接用比要使用者另外裝 npm 簡單。在拾音裡直接執行安裝指令：要執行網路上的腳本，Windows 還要開 PowerShell，失敗時說明不了。取捨：桌面版附 codex 的位置不是 OpenAI 公開的介面，改了要跟著改；找不到時只是回到「沒有安裝」，不會壞掉 |
+| D130 | 錄音中換麥克風、藍牙提醒的「改用」都存成設定，之後的錄音也用這支；藍牙只在「只錄麥克風」、麥克風是系統預設時提醒（R58、§38.3、§38.4；2026-10-30 使用者決定做提醒） | 換的只用在這一場：下一場藍牙耳機還連著，又會錄到耳機；設定頁、錄音選單、錄音畫面三個地方是同一個設定，比較好懂。一連上藍牙就自動改用內建麥克風：線上會議戴耳機說話、刻意選藍牙麥克風的人會被改掉（D104）。線上會議（有電腦聲音）也提醒：戴耳機開線上會議本來就用耳機的麥克風，每場都跳會煩 |
+| D131 | 文字大小自己縮放（environment 的倍率乘上 macOS 的字級），只放大會議內容，七段 85%～200%（R59、§38.5） | `dynamicTypeSize`：macOS 的 SwiftUI 不理它（實測）。整個視窗放大（`scaleEffect`）：字會糊、點擊位置會錯。連側欄、按鈕一起放大：系統元件的字級改不了，放大一半很怪；看不清楚的是要讀的內容 |
+| D132 | 匯出用工具列的分割按鈕（按下匯出、箭頭複製），放在「更多」左邊（R60、§38.6；2026-10-30 使用者選的） | 系統的分享按鈕（`ShareLink`）：要先決定分享哪個檔案、什麼格式，跟匯出對話框重複。只放在紀錄分頁的最底下：要捲到底才看得到，逐字稿、提問分頁也找不到。「更多」裡也留一份：同一件事兩個地方，R44 的減法就是要拿掉這種重複 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
