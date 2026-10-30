@@ -120,6 +120,15 @@ public static class Ui
         return Brush(light, d);
     }
 
+    /// <summary>
+    /// 會議內容的文字大小（R59、design-windows §11.7）：設定的倍率（85%～200%）。會議內容（紀錄、逐字稿、提問、即時逐字稿、我的筆記）
+    /// 建元件時用 <see cref="C"/> 乘上去；側欄、按鈕、提示列不用。設定改了之後主視窗重畫
+    /// </summary>
+    public static double ContentScale { get; set; } = 1;
+
+    /// <summary>會議內容的字級、欄寬乘上文字大小的倍率</summary>
+    public static double C(double size) => Math.Round(size * ContentScale, 1);
+
     /// <summary>會議內容的標題字型：中文、英文新細明體，日文 Yu Mincho（design-windows §11.3；W2 截圖比較後定）</summary>
     public static FontFamily TitleFont(MeetingLanguage language) =>
         new(language == MeetingLanguage.Ja ? "Yu Mincho" : "PMingLiU, Microsoft JhengHei UI");
@@ -286,17 +295,17 @@ public static class Ui
     /// 時間點：可以點的時候跳到錄音的那個位置播放（R4.2、R5.2）。at：實際的秒數（逐字稿的段落），
     /// 不給時照顯示的時間跳（顯示的時間去掉了小數，24.4 秒的段落顯示 00:24，跳到 24.0 會落在上一段）
     /// </summary>
-    public static UIElement Time(string time, Action<double>? seek, double? at = null)
+    public static UIElement Time(string time, Action<double>? seek, double? at = null, double size = 13)
     {
         if (time.Length == 0) return new TextBlock();
         if (seek is not null && (at ?? TimeFormat.Seconds(time)) is double seconds)
         {
-            var b = new HyperlinkButton { Content = time, Padding = new Thickness(0), FontSize = 13, Foreground = Celadon };
+            var b = new HyperlinkButton { Content = time, Padding = new Thickness(0), FontSize = size, Foreground = Celadon };
             ToolTipService.SetToolTip(b, Localization.L.F("從 %@ 開始播放", time));
             b.Click += (_, _) => seek(seconds);
             return b;
         }
-        return Text(time, 13, color: Secondary, wrap: false);
+        return Text(time, size, color: Secondary, wrap: false);
     }
 
     /// <summary>enabled：哪些選項能選（例如沒安裝的 CLI 不能選，R45.3）；沒給就全部能選</summary>

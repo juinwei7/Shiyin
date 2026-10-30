@@ -21,6 +21,17 @@ public interface IAudioSource
     }
 }
 
+/// <summary>一支麥克風（R58、design-windows §11.7）：端點 ID、名稱、是不是藍牙、是不是電腦內建的</summary>
+public sealed record MicrophoneDevice(string Id, string Name, bool IsBluetooth = false, bool IsBuiltIn = false);
+
+/// <summary>麥克風的音源：可以換裝置（錄音中換麥克風，R58.2），開始後知道實際在收音的是哪一支（指定的不在時是系統預設）</summary>
+public interface IMicrophoneSource : IAudioSource
+{
+    /// <summary>空的是系統預設；改了之後 Restart() 才生效</summary>
+    string DeviceId { get; set; }
+    MicrophoneDevice? Current { get; }
+}
+
 /// <summary>開始錄音的錯誤；AccessDenied 是 Windows 的麥克風權限被關掉（R27 R1.8）</summary>
 public sealed class CaptureException(string message, bool accessDenied = false) : Exception(message)
 {

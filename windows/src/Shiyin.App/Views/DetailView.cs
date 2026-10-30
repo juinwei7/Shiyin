@@ -118,6 +118,13 @@ public sealed class DetailView
         player.Child = host.Paths.HasAudio(value.Meeting) ? playerBar.Show(value) : null;
     }
 
+    /// <summary>文字大小改了（R59）：逐字稿看得到的那幾段、錄音中的即時逐字稿重建（其他分頁由主視窗重畫）</summary>
+    public void Rescale()
+    {
+        transcript.Rescale();
+        recording.Rescale();
+    }
+
     public void UpdateRecording()
     {
         if (detail is null) return;
@@ -183,10 +190,11 @@ public sealed class DetailView
         title.IsTextSelectionEnabled = true;
         title.MaxLines = 2;
         var edit = Ui.Link(L.T("編輯"), () => _ = Dialogs.EditInfo(window, meeting));
-        var more = IsTrashed || IsRecordingThis ? null : MoreMenu();
+        // 「匯出」在「更多」左邊（R60.1）；垃圾桶、錄音中的那場都不顯示（R60.3）
+        var actions = IsTrashed || IsRecordingThis ? null : Ui.Row(8, ExportMenu(), MoreMenu());
         // 標題長的時候換行（最多兩行），「編輯」接在後面：放在橫的 StackPanel 裡不會換行，視窗窄時「編輯」會被切掉
         edit.Margin = new Thickness(0, 9, 0, 0);   // 對齊標題的第一行（26 號字的行高約 35）
-        top.Children.Add(Ui.Bar(null, Ui.Inline(title, edit, 12), more));
+        top.Children.Add(Ui.Bar(null, Ui.Inline(title, edit, 12), actions));
         top.Children.Add(InfoRow());
         if (IsTrashed) top.Children.Add(TrashBanner());
         else
@@ -421,8 +429,24 @@ public sealed class DetailView
 
     void Seek(double seconds) => host.Player.Seek(seconds);
 
+    /// <summary>「匯出」（R60.1、M§38.6）：按下打開匯出對話框（同 Ctrl+E），箭頭是複製會議紀錄的三種格式</summary>
+    FrameworkElement ExportMenu()
+    {
+        var id = Detail.Meeting.Id!.Value;
+        var menu = new MenuFlyout();
+        menu.Items.Add(Ui.Item(L.T("複製會議紀錄：保留格式（貼到 Word、Notion、郵件）"), () => CopyNotes(id, "rich")));
+        menu.Items.Add(Ui.Item(L.T("複製會議紀錄：Markdown"), () => CopyNotes(id, "markdown")));
+        menu.Items.Add(Ui.Item(L.T("複製會議紀錄：純文字（貼到 Slack、訊息）"), () => CopyNotes(id, "plain")));
+        var button = new SplitButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Share), Ui.Text(L.T("匯出"), wrap: false)), Flyout = menu };
+        button.Click += (_, _) => _ = Dialogs.Export(window, id);
+        // 內容是圖示加文字時，無障礙名稱不會自動帶出來
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.T("匯出"));
+        ToolTipService.SetToolTip(button, L.T("匯出會議紀錄、逐字稿或錄音（Ctrl+E）；箭頭可以直接複製會議紀錄"));
+        return button;
+    }
+
     /// <summary>「更多」選單（同 Mac 的 MoreMenu）：按下時由 AppController 檢查目前的會議，不能做就說明原因。
-    /// 五項（R44.4，M§33.2）：重新處理的四個動作收成子選單；兩個「復原」回到紀錄的編輯列和說話者的改名處</summary>
+    /// 三項（R44.4、R60.2，M§33.2）：重新處理的四個動作收成子選單、移到資料夾、移到垃圾桶；匯出、複製會議紀錄在旁邊的「匯出」</summary>
     FrameworkElement MoreMenu()
     {
         var id = Detail.Meeting.Id!.Value;
@@ -435,11 +459,6 @@ public sealed class DetailView
             Ui.Item(L.T("重新辨識說話者…"), () => { if (c.RequestRediarize(id)) _ = Dialogs.Rediarize(window, id); }, icon: Symbol.People));
         redo.Icon = new SymbolIcon(Symbol.Sync);
         menu.Items.Add(redo);
-        menu.Items.Add(Ui.Item(L.T("匯出…"), () => _ = Dialogs.Export(window, id), icon: Symbol.Share));
-        menu.Items.Add(Ui.Sub(L.T("複製會議紀錄"),
-            Ui.Item(L.T("保留格式（貼到 Word、Notion、郵件）"), () => CopyNotes(id, "rich")),
-            Ui.Item(L.T("Markdown"), () => CopyNotes(id, "markdown")),
-            Ui.Item(L.T("純文字（貼到 Slack、訊息）"), () => CopyNotes(id, "plain"))));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(window.FolderMenu(id, Detail.Meeting.Folder));
         menu.Items.Add(Ui.Item(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(id), icon: Symbol.Delete));
@@ -481,6 +500,9 @@ public sealed class RecordingPanel
     readonly Ellipse dot = new() { Width = 10, Height = 10 };
     readonly LevelMeter mic = new(), system = new();
     readonly FitRow meters = new() { Spacing = 14 };
+    /// <summary>正在收音的麥克風（R58.2）：點了從清單換一支，錄音不中斷</summary>
+    readonly DropDownButton micName = new() { MaxWidth = 180, Padding = new Thickness(8, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center };
+    readonly TextBlock micNameText = Ui.Text("", 13, wrap: false);
     // 音量條各自一列，一開始就建好，之後只切換顯示：每次更新都重建 Row 的話，音量條還在舊的 Row 裡，
     // 再放進新的 Row 會丟出「已經是別的元件的子元件」（0x800F1000，2026-10-21 在虛擬機錄音時當掉）
     readonly StackPanel micRow, systemRow;
@@ -489,6 +511,7 @@ public sealed class RecordingPanel
     readonly StackPanel hints = new();
     readonly StackPanel lines = new() { Spacing = 8, Padding = new Thickness(20) };
     readonly TextBlock volatileText = Ui.Text("", 14);
+    readonly TextBlock volatileMark = Ui.Text("…", 13, color: Ui.Secondary, wrap: false);
     // 正在講的那句：「…」放在時間那欄，文字跟定稿的句子對齊（同 Mac）
     readonly Grid volatileRow;
     readonly ScrollViewer scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -504,13 +527,28 @@ public sealed class RecordingPanel
         this.host = host;
         this.window = window;
         notesBox = new UserNotesBox(host, userNotes, () => host.Recorder.Elapsed);
-        var mark = Ui.Text("…", 13, color: Ui.Secondary, wrap: false);
-        mark.Width = 52;
-        mark.TextAlignment = TextAlignment.Right;
-        volatileRow = Ui.Split(mark, volatileText, 12);
+        volatileMark.TextAlignment = TextAlignment.Right;
+        volatileRow = Ui.Split(volatileMark, volatileText, 12);
+        ApplyScale();
         micRow = Ui.Row(4, new SymbolIcon(Symbol.Microphone), mic.Root);
         systemRow = Ui.Row(4, new SymbolIcon(Symbol.Volume), system.Root);
+        micName.Content = micNameText;
+        ToolTipService.SetToolTip(micName, L.T("正在用這支麥克風收音，點一下可以換"));
+        var micMenu = new MenuFlyout();
+        // 打開時才列：接上、拔掉耳機後就是當下的清單；勾選的是正在收音的那支
+        micMenu.Opening += (_, _) => Ui.Guard(() =>
+        {
+            micMenu.Items.Clear();
+            var r = host.Recorder;
+            foreach (var item in MicrophoneMenu.Items(host, id => r.MicDevice?.Id == id, id =>
+            {
+                r.SwitchMicrophone(id);
+                window.ShowNotice(L.F("已改用 %@，之後的錄音也用這支", r.MicDevice?.Name ?? MicrophoneMenu.Name(host, id)));
+            })) micMenu.Items.Add(item);
+        });
+        micName.Flyout = micMenu;
         meters.Children.Add(micRow);
+        meters.Children.Add(micName);
         meters.Children.Add(systemRow);
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star) })
             Root.RowDefinitions.Add(new RowDefinition { Height = h });
@@ -588,6 +626,13 @@ public sealed class RecordingPanel
         pause.Content = r.IsPaused ? L.T("繼續") : L.T("暫停");
         ToolTipService.SetToolTip(pause, r.IsPaused ? L.T("繼續錄音（Ctrl+Shift+P）") : L.T("暫停錄音（Ctrl+Shift+P）"));
         micRow.Visibility = r.HasMic ? Visibility.Visible : Visibility.Collapsed;
+        micName.Visibility = r.HasMic && r.MicDevice is not null ? Visibility.Visible : Visibility.Collapsed;
+        var name = r.MicDevice?.Name ?? "";
+        if (micNameText.Text != name)
+        {
+            micNameText.Text = name;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(micName, L.F("麥克風：%@", name));
+        }
         systemRow.Visibility = r.HasSystem ? Visibility.Visible : Visibility.Collapsed;
         mic.Running = r.HasMic;
         system.Running = r.HasSystem;
@@ -618,6 +663,22 @@ public sealed class RecordingPanel
                 Background = warm, Padding = new Thickness(16, 8, 16, 8),
                 Child = Ui.Bar(null, Ui.Text(HintText(hint), 13), Ui.Button(L.T("知道了"), r.DismissLevelHint, tooltip: L.T("這場錄音不再提示這件事"))),
             });
+        if (r.MicHint is { } micHint)
+        {
+            // 用藍牙耳機的麥克風錄現場會議（R58.3）：可以一鍵改用內建麥克風；不自動換（D104）
+            var builtIn = micHint.BuiltIn;
+            var use = builtIn is null ? null : Ui.Button(L.F("改用 %@", builtIn.Name), () =>
+            {
+                r.SwitchMicrophone(builtIn.Id);
+                window.ShowNotice(L.F("已改用 %@，之後的錄音也用這支", builtIn.Name));
+            });
+            hints.Children.Add(new Border
+            {
+                Background = warm, Padding = new Thickness(16, 8, 16, 8),
+                Child = Ui.Bar(null, Ui.Text(micHint.Text, 13),
+                    Ui.Row(8, use, Ui.Button(L.T("知道了"), r.DismissMicHint, tooltip: L.T("這場錄音不再提示這件事")))),
+            });
+        }
 
         var all = r.LiveLines;
         if (all.Count < shownLines) { lines.Children.Clear(); shownLines = 0; }
@@ -629,10 +690,10 @@ public sealed class RecordingPanel
         for (; shownLines < all.Count; shownLines++)
         {
             var line = all[shownLines];
-            var text = Ui.Text(line.Text, 14, select: true);
+            var text = Ui.Text(line.Text, Ui.C(14), select: true);
             text.Language = Ui.ContentLanguage(language);
-            var time = Ui.Text(TimeFormat.String(line.Start), 13, color: Ui.Celadon, wrap: false);
-            time.Width = 52;
+            var time = Ui.Text(TimeFormat.String(line.Start), Ui.C(13), color: Ui.Celadon, wrap: false);
+            time.Width = Ui.C(52);
             time.TextAlignment = TextAlignment.Right;
             lines.Children.Add(Ui.Split(time, text, 12));
         }
@@ -644,6 +705,56 @@ public sealed class RecordingPanel
 
     /// <summary>提示的文字在 LevelHints.Text（錄音畫面、系統匣、通知共用，R42）</summary>
     public static string HintText(Recorder.LevelHint hint) => hint.Text();
+
+    /// <summary>文字大小改了（R59）：即時逐字稿、正在講的那句、我的筆記換成新的大小，已經出現的句子重建</summary>
+    public void Rescale()
+    {
+        ApplyScale();
+        lines.Children.Clear();
+        shownLines = 0;
+        if (meetingId is not null) Update();
+    }
+
+    void ApplyScale()
+    {
+        volatileText.FontSize = Ui.C(14);
+        volatileMark.FontSize = Ui.C(13);
+        volatileMark.Width = Ui.C(52);
+        userNotes.FontSize = Ui.C(14);
+    }
+}
+
+/// <summary>
+/// 麥克風的選項（R58.1、R58.2，同 Mac 的 §38.2）：系統預設（後面寫出現在是哪一支）、每一支、存的 ID 不在時的「之前選的麥克風」。
+/// 錄音按鈕的下拉選單和錄音列共用；isChecked 決定勾哪一個（下拉選單勾設定，錄音列勾正在收音的那支）
+/// </summary>
+public static class MicrophoneMenu
+{
+    public static List<MenuFlyoutItemBase> Items(AppHost host, Func<string, bool> isChecked, Action<string> select)
+    {
+        var devices = host.MicrophoneList();
+        var fallback = host.DefaultMicrophone();
+        var saved = host.Settings.InputDevice;
+        var items = new List<MenuFlyoutItemBase> { Ui.Check(DefaultLabel(fallback), isChecked(""), () => select("")) };
+        foreach (var device in devices) items.Add(Ui.Check(device.Name, isChecked(device.Id), () => select(device.Id)));
+        if (saved.Length > 0 && devices.All(d => d.Id != saved))
+            items.Add(Ui.Check(L.T("之前選的麥克風（沒有接上，會用系統預設）"), isChecked(saved), () => select(saved)));
+        return items;
+    }
+
+    static string DefaultLabel(MicrophoneDevice? fallback) => fallback is null ? L.T("系統預設") : L.F("系統預設（%@）", fallback.Name);
+
+    /// <summary>設定裡選的那支的名稱（下拉選單的子選單標題）</summary>
+    public static string SelectedLabel(AppHost host)
+    {
+        var saved = host.Settings.InputDevice;
+        if (saved.Length == 0) return DefaultLabel(host.DefaultMicrophone());
+        return host.MicrophoneList().FirstOrDefault(d => d.Id == saved)?.Name ?? L.T("之前選的麥克風（沒有接上，會用系統預設）");
+    }
+
+    /// <summary>某一支的名稱；空的是系統預設的那支</summary>
+    public static string Name(AppHost host, string id) =>
+        id.Length == 0 ? host.DefaultMicrophone()?.Name ?? L.T("系統預設") : host.MicrophoneList().FirstOrDefault(d => d.Id == id)?.Name ?? id;
 }
 
 /// <summary>

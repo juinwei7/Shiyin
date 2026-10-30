@@ -18,8 +18,9 @@
   - 驗證：「顯示」選單的放大、縮小、實際大小用 AX 按（快捷鍵用 `CGEvent.postToPid` 送 ⌘= ⌘- ⌘0）：紀錄、逐字稿、提問、錄音中的即時逐字稿、我的筆記跟著變，側欄、工具列、搜尋列不變；到 200%、85% 時選單停用；200% 時時間點、說話者沒有被擠掉（`screencapture -l` 看）；設定頁的選單跟著變；匯出的 PDF 字級不變；測完 `defaults delete com.weiwei.shiyin contentTextSize`
 - [ ] **MT5 匯出按鈕**（R60，§38.6）
   - 驗證：會議頁右上角有「匯出」（圖示加文字），按下打開匯出對話框（AX 按）；箭頭的三個複製選項貼出來跟原本的「複製會議紀錄」一樣（比對剪貼簿）；「更多」剩三項；垃圾桶、錄音中的會議沒有「匯出」；英文介面看一次；使用說明改了
-- [ ] **MT6 Windows**（R58～R60、design-windows §11.7）
-  - 驗證：虛擬機 DEBUG 版照 MT1、MT2、MT4、MT5 的方式各走一次（`ctl.sh`、`uia.sh`、`shot.sh`）；`dotnet test` 通過；`l10n.py windows-check` 沒有缺的；虛擬機沒有藍牙，藍牙的判斷用 `fakemic` 測，真的藍牙耳機併進「要使用者的 Windows 電腦」
+- [~] **MT6 Windows**（R58～R60、design-windows §11.7）：程式完成；Mac 上 `dotnet test` 170 個通過（含 `RecorderTests.BluetoothMicHintAndSwitchingMicrophone`、`NoBluetoothHintWhenChosenOrOnlineMeeting`、`UtilTests.TextSizesClampAndLabel`），`l10n.py windows-check` 沒有缺的；虛擬機的 DEBUG 版建置成功，會議頁右上角「匯出」在「更多」左邊、「更多」剩重新處理、移到資料夾、移到垃圾桶（UIA、截圖）。還差：
+  - 虛擬機（2026-10-30 開到一半 Mac 剩 9 GB，被 `diskguard.sh` 停掉；虛擬機的磁碟檔已經 24 GB，開著時 Mac 的 swap 也會變大，要先騰出空間）：`fakemic "AirPods Pro" 1 "麥克風陣列"`＋`record-sim` 走錄音列的麥克風名稱、從清單換（`ps/expand.ps1 '拾音' '麥克風：AirPods Pro' <項目>`）、藍牙的提示列和「改用」、主視窗藏起來時的通知（`state` 的 `lastToast`）、系統匣；錄音按鈕下拉的「麥克風：…」子選單（`expand.ps1 '拾音' '錄音' '麥克風：…' ?`）；文字大小（`textsize 5`、`-1`、設定頁「顯示」，200% 時逐字稿的時間、說話者欄沒被擠掉，`Ctrl+=` 用 UTM 的 `input scan code` 送）；「匯出」箭頭的三種複製（`expand.ps1 '拾音' '匯出' '複製會議紀錄：Markdown'` 後在桌面 `Get-Clipboard`）、按下打開匯出對話框；英文介面（`--set interfaceLanguage=en`）截圖。測試資料用 `C:\ShiyinMicTest`（`C:\ShiyinDemo` 的複本，models 是 junction），測完刪掉
+  - 使用者的 Windows 電腦：真的藍牙耳機當預設麥克風時提示列出現、內建麥克風認得出來（`PKEY_Device_EnumeratorName`、`PKEY_AudioEndpoint_FormFactor` 的判斷，看 `state` 的 `recorder.micDevice`）；錄音中在錄音列換麥克風，錄音不中斷、長度對
 
 ## Codex、Claude 的桌面版（R55、R56，design §37、design-windows §10、D128；2026-10-29 Threads 的使用者回饋）
 

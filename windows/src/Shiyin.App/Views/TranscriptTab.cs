@@ -92,6 +92,12 @@ public sealed class TranscriptTab
 
     public void FocusSearch() => search.Focus(FocusState.Programmatic);
 
+    /// <summary>文字大小改了（R59）：看得到的那幾段重建；其他的捲到時才建，本來就會用新的大小</summary>
+    public void Rescale()
+    {
+        if (detail is not null) RefreshRows();
+    }
+
     public FrameworkElement Show(MeetingDetail value, bool changed, FrameworkElement? notes = null)
     {
         if (changed)
@@ -294,8 +300,9 @@ public sealed class TranscriptTab
     {
         var d = detail!;
         var grid = new Grid { ColumnSpacing = 14, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(6) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(58) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(d.Speakers.Count > 0 || segment.Speaker is not null ? 80 : 0) });
+        // 時間、說話者的欄寬跟著文字大小（R59.2），放大時不會被擠掉
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Ui.C(58)) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(d.Speakers.Count > 0 || segment.Speaker is not null ? Ui.C(80) : 0) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         if (segment.Id == currentId) grid.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(34, 0x2D, 0x6A, 0x5D));
         else if (segment.Id == highlightId) grid.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(46, 0xB9, 0x7F, 0x06));
@@ -305,7 +312,7 @@ public sealed class TranscriptTab
             grid.BorderThickness = new Thickness(3, 0, 0, 0);
             ToolTipService.SetToolTip(grid, L.T("辨識信心低，建議對照錄音確認"));
         }
-        var time = (FrameworkElement)Ui.Time(TimeFormat.String(segment.Start), host.Player.IsLoaded ? s => host.Player.Seek(s) : null, segment.Start);
+        var time = (FrameworkElement)Ui.Time(TimeFormat.String(segment.Start), host.Player.IsLoaded ? s => host.Player.Seek(s) : null, segment.Start, Ui.C(13));
         time.HorizontalAlignment = HorizontalAlignment.Right;
         // 時間、說話者對齊第一行（同 Mac 的 firstTextBaseline）：預設是上下置中，長的段落、有校正建議時會對不齊
         time.VerticalAlignment = VerticalAlignment.Top;
@@ -314,7 +321,7 @@ public sealed class TranscriptTab
         {
             var speaker = new HyperlinkButton
             {
-                Content = Ui.Text(d.SpeakerName(idx) ?? "", 13, bold: true, color: Ui.Speaker(idx), wrap: false), Padding = new Thickness(0),
+                Content = Ui.Text(d.SpeakerName(idx) ?? "", Ui.C(13), bold: true, color: Ui.Speaker(idx), wrap: false), Padding = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Top,
             };
             ToolTipService.SetToolTip(speaker, L.T("點一下幫這位說話者改名"));
@@ -333,7 +340,7 @@ public sealed class TranscriptTab
     FrameworkElement Text(Segment segment, MenuFlyout menu)
     {
         var corrections = segment.Id is long id && detail!.CorrectionsBySegment.TryGetValue(id, out var list) ? list : [];
-        var text = Ui.Text(segment.Text, 14, select: true);
+        var text = Ui.Text(segment.Text, Ui.C(14), select: true);
         text.Language = Ui.ContentLanguage(Language);
         // 可以選取的文字有自己的右鍵選單（只有拷貝、全選），會蓋掉這一段的選單：文字上按右鍵也開這一段的（裡面有「拷貝」）
         text.ContextFlyout = menu;
@@ -365,9 +372,9 @@ public sealed class TranscriptTab
     {
         var meeting = detail!.Meeting.Id!.Value;
         if (c.Status == "accepted")
-            return Ui.Row(8, Ui.Text(L.F("已改成「%@」（原本是「%@」）", c.Suggestion, c.Original), 12, color: Ui.Secondary),
+            return Ui.Row(8, Ui.Text(L.F("已改成「%@」（原本是「%@」）", c.Suggestion, c.Original), Ui.C(12), color: Ui.Secondary),
                 Ui.Link(L.T("還原"), () => { if (c.Id is long id) host.Controller.RevertCorrection(meeting, id); }));
-        return Ui.Bar(Ui.Text(L.F("「%@」→「%@」", c.Original, c.Suggestion), 12, bold: true, wrap: false), Ui.Text(c.Reason, 12, color: Ui.Secondary, maxLines: 2),
+        return Ui.Bar(Ui.Text(L.F("「%@」→「%@」", c.Original, c.Suggestion), Ui.C(12), bold: true, wrap: false), Ui.Text(c.Reason, Ui.C(12), color: Ui.Secondary, maxLines: 2),
             Ui.Row(8, Ui.Link(L.T("忽略"), () => { if (c.Id is long id) host.Controller.RejectCorrection(meeting, id); }),
                 Ui.Link(L.T("接受"), () => { if (c.Id is long id) host.Controller.AcceptCorrection(meeting, id); })));
     }
@@ -447,7 +454,7 @@ public sealed class TranscriptTab
 
     FrameworkElement Editor(Segment segment)
     {
-        var box = new TextBox { Text = editText, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(Language) };
+        var box = new TextBox { Text = editText, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(Language), FontSize = Ui.C(14) };
         box.TextChanged += (_, _) => { editText = box.Text; draftTimer.Stop(); draftTimer.Start(); };
         box.KeyDown += (_, e) =>
         {

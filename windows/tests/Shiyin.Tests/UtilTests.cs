@@ -10,6 +10,22 @@ namespace Shiyin.Tests;
 /// <summary>小工具：會議紀錄的寬鬆解碼、時間格式、日期、檔名、匯入、回傳結果的檢查</summary>
 public class UtilTests
 {
+    /// <summary>會議內容的文字大小（R59.3、M§38.5）：七段、存 −1～5、超出範圍拉回來</summary>
+    [Fact]
+    public void TextSizesClampAndLabel()
+    {
+        Assert.Equal(0.85, Shiyin.Services.TextSizes.Scale(-1));
+        Assert.Equal(1, Shiyin.Services.TextSizes.Scale(0));
+        Assert.Equal(2, Shiyin.Services.TextSizes.Scale(5));
+        Assert.Equal(2, Shiyin.Services.TextSizes.Scale(9));
+        Assert.Equal("130%", Shiyin.Services.TextSizes.Label(2));
+        Assert.Equal(0, Shiyin.Services.AppSettings.InMemory().TextSize);
+        Assert.Equal(5, Shiyin.Services.AppSettings.InMemory(new Dictionary<string, string> { ["contentTextSize"] = "12" }).TextSize);
+        var settings = Shiyin.Services.AppSettings.InMemory();
+        settings.Set(Shiyin.Services.AppSettings.TextSizeKey, 3.0);
+        Assert.Equal(3, settings.TextSize);
+    }
+
     static IEnumerable<JsonElement> Items(string path) => Golden.ExpectedJson(path).EnumerateArray();
 
     [Fact]

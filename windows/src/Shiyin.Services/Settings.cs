@@ -42,6 +42,8 @@ public sealed class AppSettings
     public const string CompatibleBaseUrlKey = "openaiCompatibleBaseURL";
     public const string OnboardingKey = "hasCompletedOnboarding";
     public const string GuideKey = "hasSeenGuide";
+    /// <summary>會議內容的文字大小（R59、M§38.5）：−1～5，0 是 100%（TextSizes）</summary>
+    public const string TextSizeKey = "contentTextSize";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
     public const string InterfaceLanguageKey = "interfaceLanguage";
 
@@ -300,6 +302,8 @@ public sealed class AppSettings
     public string RecordSource => String(RecordSourceKey) ?? "mic";
     /// <summary>麥克風的端點 ID；空的是系統預設</summary>
     public string InputDevice => String(InputDeviceKey) ?? "";
+    /// <summary>會議內容的文字大小（R59）：存的值超出範圍時拉回來</summary>
+    public int TextSize => TextSizes.Clamp((int)Math.Round(Double(TextSizeKey) ?? 0));
     public string DefaultTemplate => String(DefaultTemplateKey) ?? "general";
     public bool GlobalHotKey => Flag(GlobalHotKeyKey, true);
     public bool Voiceprints => Flag(VoiceprintsKey, true);
@@ -320,4 +324,17 @@ public sealed class AppSettings
     public static MeetingLanguage SystemDefaultLanguage =>
         !L.English ? MeetingLanguage.Zh
         : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ja" ? MeetingLanguage.Ja : MeetingLanguage.En;
+}
+
+/// <summary>會議內容的文字大小（R59.3、M§38.5）：七段 85%～200%，設定存的是 −1～5（0 是 100%），同 Mac</summary>
+public static class TextSizes
+{
+    public static readonly double[] Scales = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2];
+    public const int Min = -1;
+    public const int Max = 5;
+
+    public static int Clamp(int level) => Math.Clamp(level, Min, Max);
+    public static double Scale(int level) => Scales[Clamp(level) - Min];
+    /// <summary>「130%」；100% 是「100%（標準）」</summary>
+    public static string Label(int level) => level == 0 ? L.T("100%（標準）") : $"{Math.Round(Scale(level) * 100)}%";
 }

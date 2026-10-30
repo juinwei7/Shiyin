@@ -45,6 +45,17 @@
         }
       }
     },
+    "100%（標準）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100% (Default)"
+          }
+        }
+      }
+    },
     "AMD 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡": {
       "extractionState": "manual",
       "localizations": {
@@ -353,6 +364,39 @@
         }
       }
     },
+    "之前選的麥克風（沒有接上，會用系統預設）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previously chosen microphone (not connected; using system default)"
+          }
+        }
+      }
+    },
+    "之後的錄音用 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New recordings will use %@"
+          }
+        }
+      }
+    },
+    "之後的錄音用系統預設的麥克風（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New recordings will use the system default microphone (%@)"
+          }
+        }
+      }
+    },
     "之後隨時可以從系統匣或設定的「進階」再打開使用說明。": {
       "extractionState": "manual",
       "localizations": {
@@ -360,6 +404,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "You can open this guide again any time from the system tray or Settings → Advanced."
+          }
+        }
+      }
+    },
+    "也可以用 Ctrl＋＋、Ctrl＋－ 調整": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also press Ctrl+Plus or Ctrl+Minus."
           }
         }
       }
@@ -540,6 +595,17 @@
         }
       }
     },
+    "匯出會議紀錄、逐字稿或錄音（Ctrl+E）；箭頭可以直接複製會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export notes, transcript, or audio (Ctrl+E). Use the arrow to copy the notes."
+          }
+        }
+      }
+    },
     "即時逐字稿和快速辨識用，約 240 MB。": {
       "extractionState": "manual",
       "localizations": {
@@ -591,6 +657,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saved in Credential Manager (type a new one to replace it)"
+          }
+        }
+      }
+    },
+    "已改用 %@，之後的錄音也用這支": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switched to %@. New recordings will use it too."
           }
         }
       }
@@ -871,6 +948,17 @@
         }
       }
     },
+    "按側欄上方的「錄音」（Ctrl+R）開始錄；點按鈕旁的箭頭可以選錄音來源和麥克風，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。錄音畫面會寫出正在用哪一支麥克風，點一下可以換；藍牙耳機連著時 Windows 可能自動改用耳機的麥克風，拾音會提醒你。已經有錄音檔的話，拖進視窗、按「匯入」（Ctrl+O），或在檔案總管按右鍵用拾音開啟都可以。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Record at the top of the sidebar (Ctrl+R) to start. The arrow next to it chooses the source and microphone — for online meetings pick “Microphone + computer audio (online meeting)” so the other side is recorded too. While recording, the microphone in use is shown and you can click it to switch; if a Bluetooth headset is connected, Windows may switch to its microphone, and Shiyin will let you know. If you already have a recording, drag it into the window, click Import (Ctrl+O), or right-click it in File Explorer and open it with Shiyin."
+          }
+        }
+      }
+    },
     "按側欄上方的「錄音」（Ctrl+R）開始錄；點按鈕旁的箭頭可以選錄音來源，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。已經有錄音檔的話，拖進視窗、按「匯入」（Ctrl+O），或在檔案總管按右鍵用拾音開啟都可以。": {
       "extractionState": "manual",
       "localizations": {
@@ -882,6 +970,17 @@
         }
       }
     },
+    "按右上角的「匯出」（Ctrl+E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入（Mac 版也可以）。「匯出」旁邊的箭頭可以直接複製會議紀錄，貼到 Notion、Slack 或郵件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Export at the top right (Ctrl+E): notes can be saved as Markdown, PDF or Word; transcripts as txt, srt, vtt or Word; recordings as m4a or wav. Send a “Whole meeting (.shiyin)” to a colleague and they can import it with a double-click (on the Mac version too). The arrow next to Export copies the notes so you can paste them straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
     "播放": {
       "extractionState": "manual",
       "localizations": {
@@ -889,6 +988,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Play"
+          }
+        }
+      }
+    },
+    "改用 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use %@"
+          }
+        }
+      }
+    },
+    "放大、縮小會議內容的文字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make meeting text bigger or smaller"
           }
         }
       }
@@ -955,6 +1076,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uses your glossary; fewer dropped words and homophone errors than Breeze in multi-speaker meetings. An open-source model from Alibaba that runs entirely on this PC without network access; output is converted to Taiwanese Traditional Chinese. Downloads about 2.5 GB of model files plus the llama.cpp program. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
+          }
+        }
+      }
+    },
+    "會議內容的文字回到實際大小": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset meeting text to actual size"
+          }
+        }
+      }
+    },
+    "會議內容的文字大小": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting text size"
+          }
+        }
+      }
+    },
+    "會議內容的文字大小：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting text size: %@"
           }
         }
       }
@@ -1058,6 +1212,28 @@
         }
       }
     },
+    "正在用「%@」收音：這是藍牙耳機的麥克風，人不在旁邊時錄不到現場的聲音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording with “%@”, a Bluetooth headset microphone. If you're not near it, it won't pick up the room."
+          }
+        }
+      }
+    },
+    "正在用這支麥克風收音，點一下可以換": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording with this microphone. Click to switch."
+          }
+        }
+      }
+    },
     "沒辦法刪除認證管理員裡的 key（錯誤代碼 %lld）": {
       "extractionState": "manual",
       "localizations": {
@@ -1157,6 +1333,17 @@
         }
       }
     },
+    "系統預設（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System default (%@)"
+          }
+        }
+      }
+    },
     "繼續錄音（Ctrl+Shift+P）": {
       "extractionState": "manual",
       "localizations": {
@@ -1175,6 +1362,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Voiceprints (a speaker's voice features: a list of numbers, not audio) stay on this PC and are never included in exported .shiyin packages."
+          }
+        }
+      }
+    },
+    "複製會議紀錄：Markdown": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Notes: Markdown"
+          }
+        }
+      }
+    },
+    "複製會議紀錄：保留格式（貼到 Word、Notion、郵件）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Notes: Formatted (for Word, Notion, email)"
+          }
+        }
+      }
+    },
+    "複製會議紀錄：純文字（貼到 Slack、訊息）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Notes: Plain Text (for Slack, Messages)"
           }
         }
       }
@@ -1729,6 +1949,17 @@
         }
       }
     },
+    "錄音按鈕旁的箭頭、錄音畫面的麥克風名稱也可以換麥克風。藍牙耳機連著時，Windows 可能自動改用耳機的麥克風，人不在旁邊就錄不到現場的聲音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also switch microphones from the arrow next to Record or by clicking the microphone name while recording. If a Bluetooth headset is connected, Windows may switch to its microphone, which won't pick up the room if you're not near it."
+          }
+        }
+      }
+    },
     "錄音會送到 %@（公司的伺服器）轉錄，轉完就刪；說話者辨識也在伺服器上做，聲紋只存在這台電腦。會參考詞彙表。連不上時會等，也可以改在這台電腦轉錄。": {
       "extractionState": "manual",
       "localizations": {
@@ -1747,6 +1978,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When an online meeting starts in Zoom, Teams, Google Meet and so on, Shiyin reminds you to record, and reminds you to stop when it seems to have ended."
+          }
+        }
+      }
+    },
+    "開始錄音（Ctrl+R），用%@辨識；點右邊的箭頭可以改錄音來源、麥克風和語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start recording (Ctrl+R), recognizing %@; click the arrow on the right to change the source, microphone, and language"
           }
         }
       }
@@ -1780,6 +2022,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Computer audio"
+          }
+        }
+      }
+    },
+    "顯示": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display"
+          }
+        }
+      }
+    },
+    "麥克風：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone: %@"
           }
         }
       }

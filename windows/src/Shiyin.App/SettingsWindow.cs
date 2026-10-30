@@ -538,13 +538,15 @@ public sealed class SettingsWindow : Window
         var source = Ui.Column(12);
         source.Children.Add(Ui.Combo(new[] { "mic", "both", "system" }.Select(s => (s, MainWindow.SourceLabel(s))), S.RecordSource,
             s => { S.Set(AppSettings.RecordSourceKey, s); Show(); }, L.T("錄音來源")));
-        List<(string Id, string Name)> microphones;
-        try { microphones = WasapiSource.Microphones(); }
-        catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { microphones = []; }
-        var mic = Ui.Combo(new[] { ("", L.T("系統預設")) }.Concat(microphones), S.InputDevice, id => S.Set(AppSettings.InputDeviceKey, id), L.T("麥克風"));
+        // 同錄音按鈕的下拉選單（R58.1）：系統預設後面寫出現在是哪一支
+        var fallback = host.DefaultMicrophone();
+        var microphones = host.MicrophoneList().Select(d => (d.Id, d.Name));
+        var mic = Ui.Combo(new[] { ("", fallback is null ? L.T("系統預設") : L.F("系統預設（%@）", fallback.Name)) }.Concat(microphones), S.InputDevice,
+            id => S.Set(AppSettings.InputDeviceKey, id.Length == 0 ? null : id), L.T("麥克風"));
         mic.IsEnabled = S.RecordSource != "system";
         source.Children.Add(mic);
         source.Children.Add(Note(L.T("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。")));
+        source.Children.Add(Note(L.T("錄音按鈕旁的箭頭、錄音畫面的麥克風名稱也可以換麥克風。藍牙耳機連著時，Windows 可能自動改用耳機的麥克風，人不在旁邊就錄不到現場的聲音。")));
         source.Children.Add(Ui.Button(L.T("麥克風權限設定"), Shell.OpenMicrophonePrivacy));
 
         var language = Ui.Column(12);
@@ -753,6 +755,10 @@ public sealed class SettingsWindow : Window
         // 企業伺服器（R49、M§36.3）：放在最上面，公司的人照「進階 → 企業伺服器」找得到
         column.Children.Add(Section(L.T("企業伺服器"), Enterprise()));
         column.Children.Add(Section(L.T("介面"), language));
+        // 會議內容的文字大小（R59.1）：快捷鍵改的也是這個設定
+        var levels = Enumerable.Range(TextSizes.Min, TextSizes.Max - TextSizes.Min + 1);
+        var textSize = Ui.Combo(levels.Select(l => (l, TextSizes.Label(l))), S.TextSize, l => S.Set(AppSettings.TextSizeKey, (double)l), L.T("會議內容的文字大小"));
+        column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("也可以用 Ctrl＋＋、Ctrl＋－ 調整"))));
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));
         if (host.Updater is { } updater)
         {
