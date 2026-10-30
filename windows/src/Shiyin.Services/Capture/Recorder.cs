@@ -26,12 +26,20 @@ public sealed class Recorder
         Noisy,
     }
 
-    /// <summary>平台提供的東西：音源、即時辨識、語言偵測、剩餘空間（測試換成假的）</summary>
+    /// <summary>藍牙耳機的提醒（R58.3、M§38.4）：正在收音的那支的名稱、這台電腦的內建麥克風（可以「改用」，沒有時是 null）</summary>
+    public sealed record MicHintInfo(string Name, MicrophoneDevice? BuiltIn)
+    {
+        public string Text => MicHints.Text(Name);
+    }
+
+    /// <summary>平台提供的東西：音源、即時辨識、語言偵測、剩餘空間、麥克風清單（測試換成假的）</summary>
     public sealed record Hooks(
         Func<string, string, IReadOnlyList<(int Channel, IAudioSource Source)>> MakeSources,
         Func<MeetingLanguage, ILiveTranscriber?> MakeLive,
         Func<float[], Dictionary<MeetingLanguage, double>>? DetectLanguage,
-        Func<string, long?> AvailableBytes);
+        Func<string, long?> AvailableBytes,
+        Func<IReadOnlyList<MicrophoneDevice>>? Microphones = null,
+        Func<MicrophoneDevice?>? DefaultMicrophone = null);
 
     readonly object gate = new();
     readonly AppSettings settings;
@@ -72,6 +80,10 @@ public sealed class Recorder
     /// <summary>有音源超過 3 秒沒送資料、正在重新連接（M§20.2）</summary>
     public string? DeviceWarning { get; private set; }
     public LevelHint? Hint { get; private set; }
+    /// <summary>正在收音的麥克風（R58.2）：實際開的那支，不是「系統預設」這幾個字；沒有麥克風時是 null</summary>
+    public MicrophoneDevice? MicDevice { get; private set; }
+    /// <summary>用藍牙耳機的麥克風錄現場會議（R58.3）</summary>
+    public MicHintInfo? MicHint { get; private set; }
     /// <summary>DEBUG 的 state：收音提醒的數字（M§26.1）</summary>
     public Dictionary<string, object> LevelCheck { get; private set; } = [];
     /// <summary>好像沒人在說話了，要停止錄音嗎？（R48.1、M§35.2）</summary>
@@ -106,6 +118,9 @@ public sealed class Recorder
     public event Action<LevelHint>? HintAppeared;
     /// <summary>沒人說話的提醒出現（App 送通知）。跟 Changed 一樣在背景執行緒發</summary>
     public event Action? IdlePromptAppeared;
+    /// <summary>藍牙耳機的提醒第一次出現（R58.3：同一場最多通知一次）。在呼叫的執行緒上發</summary>
+    public event Action<MicHintInfo>? MicHintAppeared;
+    bool micHintDismissed, micHintNotified;
     int noisySeconds, quietSeconds;
     /// <summary>忘了停止錄音（M§35.1）：最後有人說話的錄音秒數；即時逐字稿有沒有接上音訊</summary>
     double lastSpeechAt;
@@ -268,6 +283,67 @@ public sealed class Recorder
         Notify();
     }
 
+    /// <summary>
+    /// 換麥克風（R58.2、M§38.3）：存成設定（之後的錄音也用這支，D130）；錄音中就接著用新的麥克風錄進同一個檔案。
+    /// id 空的是系統預設。模擬錄音時音訊照樣從檔案來，只換顯示的裝置（FileSource 從停下的位置接著送）
+    /// </summary>
+    public void SwitchMicrophone(string id)
+    {
+        settings.Set(AppSettings.InputDeviceKey, id.Length == 0 ? null : id);
+        lock (gate)
+        {
+            if (!IsRecording || !HasMic || !sources.TryGetValue(0, out var source)) return;
+            if (source is IMicrophoneSource mic) mic.DeviceId = id;
+            Log.Info("switching microphone");
+            RestartSource(0);
+            UpdateMicrophone();
+        }
+        Notify();
+    }
+
+    /// <summary>藍牙耳機的提醒按「知道了」：這場錄音不再出現</summary>
+    public void DismissMicHint()
+    {
+        lock (gate)
+        {
+            if (MicHint is null) return;
+            micHintDismissed = true;
+            MicHint = null;
+        }
+        Notify();
+    }
+
+    /// <summary>
+    /// 開始、重新開始之後：記下正在收音的麥克風，判斷藍牙耳機的提醒（R58.3、R58.4）。
+    /// 只錄麥克風（現場會議）、麥克風是系統預設、實際收音的是藍牙、這場沒按過「知道了」才提醒。回傳畫面要不要重畫
+    /// </summary>
+    bool UpdateMicrophone()
+    {
+        MicrophoneDevice? device = null;
+        if (HasMic && sources.GetValueOrDefault(0) is { } source)
+        {
+            if (source is IMicrophoneSource mic) device = mic.Current;
+            else if (simulation is not null)
+            {
+                // 模擬錄音：照設定找（DEBUG 的 fakemic 給的假裝置），找不到就是系統預設
+                var id = settings.InputDevice;
+                device = (id.Length > 0 ? hooks.Microphones?.Invoke().FirstOrDefault(d => d.Id == id) : null) ?? hooks.DefaultMicrophone?.Invoke();
+            }
+        }
+        MicHintInfo? hint = null;
+        if (device is { IsBluetooth: true } && Source == "mic" && settings.InputDevice.Length == 0 && !micHintDismissed)
+            hint = new MicHintInfo(device.Name, hooks.Microphones?.Invoke().FirstOrDefault(d => d.IsBuiltIn && d.Id != device.Id));
+        var changed = device != MicDevice || hint != MicHint;
+        MicDevice = device;
+        MicHint = hint;
+        if (hint is not null && !micHintNotified)
+        {
+            micHintNotified = true;
+            MicHintAppeared?.Invoke(hint);
+        }
+        return changed;
+    }
+
     public void Stop() => Stop(null);
 
     /// <summary>idleSince：沒人說話太久而自動停止（R48.2），最後有人說話的秒數</summary>
@@ -365,6 +441,8 @@ public sealed class Recorder
             Hint = null;
             dismissedHints.Clear();
             notifiedHints.Clear();
+            (micHintDismissed, micHintNotified) = (false, false);
+            MicHint = null;
             (noisySeconds, quietSeconds) = (0, 0);
             lastSpeechAt = 0;
             liveActive = false;
@@ -381,6 +459,7 @@ public sealed class Recorder
             if (settings.LiveTranscription) StartLive(newWriter, meetingId, restarted: false);
             StartLanguageDetection(meetingId);
             Log.Info($"recording started ({Source})");
+            UpdateMicrophone();
         }
         catch (Exception e)
         {
@@ -640,6 +719,7 @@ public sealed class Recorder
                 if (pendingRestarts.GetValueOrDefault(channel) != cts) return;
                 pendingRestarts.Remove(channel);
                 RestartSource(channel);
+                if (channel == 0) UpdateMicrophone();
             }
             Notify();
         }, TaskScheduler.Default);
@@ -669,6 +749,7 @@ public sealed class Recorder
         if (simulationEnded) return false;
         var now = DateTime.UtcNow;
         var before = DeviceWarning;
+        var micChanged = false;
         foreach (var channel in sources.Keys.Order().ToList())
         {
             if (w.SecondsSinceSamples(channel) > 3)
@@ -677,6 +758,7 @@ public sealed class Recorder
                 if (!reconnecting.ContainsKey(channel)) Log.Info($"audio source {channel} stalled");
                 reconnecting[channel] = now;
                 RestartSource(channel);
+                if (channel == 0) micChanged |= UpdateMicrophone();
             }
             else if (reconnecting.Remove(channel))
             {
@@ -685,7 +767,7 @@ public sealed class Recorder
                 UpdateDeviceWarning();
             }
         }
-        return before != DeviceWarning;
+        return before != DeviceWarning || micChanged;
     }
 
     void UpdateDeviceWarning()
@@ -736,6 +818,8 @@ public sealed class Recorder
         tap.SetDetector(null);
         LanguageSwitch = null;
         Hint = null;
+        MicDevice = null;
+        MicHint = null;
         MeetingId = null;
         StartedAt = null;
         IsRecording = false;
@@ -776,4 +860,10 @@ public static class LevelHints
         Recorder.LevelHint.Quiet => L.T("聲音有點小：手機或筆電放近說話的人一點。"),
         _ => L.T("背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。"),
     };
+}
+
+/// <summary>藍牙耳機的提醒（R58.3）：錄音畫面、系統匣、通知共用（同 Mac 的 §38.4）</summary>
+public static class MicHints
+{
+    public static string Text(string name) => L.F("正在用「%@」收音：這是藍牙耳機的麥克風，人不在旁邊時錄不到現場的聲音。", name);
 }

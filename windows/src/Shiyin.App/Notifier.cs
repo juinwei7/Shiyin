@@ -61,6 +61,9 @@ public sealed class Notifier
     /// <summary>收音提醒（R42.3、M§31.5）：內容跟錄音畫面同一句，點了打開錄音中的會議</summary>
     public void LevelHint(Recorder.LevelHint hint, long meetingId) => Show(NotificationLinks.OpenMeeting(meetingId), L.T("收音提醒"), hint.Text());
 
+    /// <summary>用藍牙耳機的麥克風錄現場會議（R58.3）：同收音提醒，點了打開錄音中的會議</summary>
+    public void MicHint(Recorder.MicHintInfo hint, long meetingId) => Show(NotificationLinks.OpenMeeting(meetingId), L.T("收音提醒"), hint.Text);
+
     void Show(string launch, string title, string body, params (string Label, string Url)[] buttons)
     {
         LastShown = (title, body);
