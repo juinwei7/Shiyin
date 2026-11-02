@@ -1681,6 +1681,114 @@ Windows 的做法在 design-windows §11.7。
 - `state` 的 `recorder` 多 `micDevice`（名稱、uid、bluetooth）、`micHint`；`micswitch <uid|default>` 等於在錄音畫面選一支；`michint dismiss` 等於按「知道了」。
 - 測完 `defaults read com.weiwei.shiyin` 比對：`inputDeviceUID`、`contentTextSize` 不能留下測試的值。
 
+## 39. 會議的參考文件（R61，D133～D136）
+
+Windows 的做法在 design-windows §11.8。
+
+### 39.1 資料（migration `v10`）
+
+```sql
+CREATE TABLE documents (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,               -- 加入時的檔名（含副檔名）
+  file       TEXT NOT NULL,               -- documents/ 底下的路徑：<id>/<檔名>
+  kind       TEXT NOT NULL,               -- pdf / docx / pptx / text / image
+  pages      TEXT NOT NULL,               -- JSON 字串陣列：每一頁（投影片）讀出來的文字；沒有頁的格式只有一項
+  ocr        INTEGER NOT NULL DEFAULT 0,  -- 有沒有用文字辨識
+  created_at TEXT NOT NULL
+);
+CREATE INDEX documents_meeting ON documents(meeting_id, id);
+```
+
+- 原始檔放 `Paths.documentsDir`（`SHIYIN_HOME/documents`）的 `<id>/<檔名>`：每份一個資料夾，用原本的檔名，「打開」時預覽程式的標題才是原本的名字。
+- `MeetingDocument`（`Model/Records.swift`）；`AppDatabase.documents(meetingId)`、`addDocument(meetingId:name:kind:pages:ocr:)`（同一個寫入交易裡先插入、再用 id 填 `file`）、`deleteDocument(id)`（回傳刪掉的那筆）。文件不進搜尋索引（R61 不做）。
+- 會議永久刪除（清空垃圾桶、垃圾桶過期、`purge`）前先讀出這場的文件，刪掉 `documents/<id>/`；資料表的列跟著 `ON DELETE CASCADE` 刪掉。
+- `MeetingDetail.documents`，載入會議時一起讀；`documentUse`：照 §39.3 分配後每一份用了多少（選單顯示「太長，只用前 N 頁」）。
+
+### 39.2 讀出文字（`IO/DocumentReader.swift`，D134、D136）
+
+- 副檔名決定種類（小寫）：pdf → `pdf`；docx → `docx`；pptx → `pptx`；txt、md、markdown → `text`；png、jpg、jpeg、heic → `image`。
+- 拖進主視窗時當成文件的（R61.3）：pdf、docx、pptx、png、jpg、jpeg、heic，加上讀不了但看得出是文件的 key、pages、numbers、doc、rtf、ppt、xls、xlsx（給它們專門的說明）。txt、md 不算（照舊是逐字稿、筆記）。
+- 讀不了的原因（`DocumentError`，訊息都寫檔名）：
+  - Keynote、Pages、Numbers：「拾音讀不了 Keynote 檔。請先在 Keynote 匯出成 PDF 再加入。」（Pages、Numbers 同樣寫法）；doc：「拾音讀不了舊版的 Word 檔（.doc）。請另存成 docx 或 PDF 再加入。」；其他：「拾音讀不了 .xls 檔。請先匯出成 PDF 再加入。」
+  - 超過 200 MB：「「<檔名>」超過 200 MB，拾音不讀這麼大的文件。」
+  - 有密碼的 PDF：「「<檔名>」有密碼保護，拾音讀不了。請先移除密碼再加入。」
+  - 壞掉、解不開：「「<檔名>」讀不出來，檔案可能壞了。」
+  - 讀不到任何文字：「「<檔名>」裡讀不到文字。」
+  - 不是 UTF-8、UTF-16 的文字檔：「「<檔名>」不是 UTF-8 的文字檔。請另存成 UTF-8 再加入。」
+- **整理文字**（每一頁都做，Windows 照同樣的規則，標準答案比對）：`\r\n`、`\r` 換成 `\n`；每行去掉行尾的空白（空格、tab、U+00A0、U+3000）；連續三個以上的換行變成兩個；整頁去掉頭尾的空白和換行。
+- **PDF**：PDFKit。`PDFDocument(url:)` 失敗是壞掉；`isLocked` 是有密碼。每一頁 `page.string`。一頁的文字（不算空白）少於 20 個字、而且這份辨識過的頁數還不到 50 頁時，當成掃描的頁面：`thumbnail(of:for: .mediaBox)` 畫成長邊 2000 px 的圖，用文字辨識；辨識出來比原本長才用，`ocr` 記成 1。超過 50 頁的掃描頁面是空的（R61.7）。
+- **圖片**：`CGImageSource` 讀第一張（照 EXIF 的方向），文字辨識，`ocr` 是 1。
+- **文字辨識**：Vision 的 `VNRecognizeTextRequest`，`.accurate`、`usesLanguageCorrection`；語言依會議語言：中文 `zh-Hant`、`zh-Hans`、`en-US`，英文 `en-US`，日文 `ja-JP`、`en-US`。每個結果取第一個候選，照 Vision 的順序一行一個。
+- **docx、pptx**：`/usr/bin/ditto -x -k` 解壓到 `tmp/`（參數陣列，同封包），`XMLParser` 處理命名空間、只看元素的本地名稱：
+  - docx 讀 `word/document.xml`；pptx 讀 `ppt/presentation.xml` 的 `sldIdLst`（每個 `sldId` 的 `r:id`，照順序）→ `ppt/_rels/presentation.xml.rels` 對到 `Target`（相對於 `ppt/`；`/` 開頭的是從根算；有 `..` 的不讀）→ 每張投影片的 XML 是一頁。備忘稿不讀。
+  - 同一套規則讀 Word 和投影片的文字：`t` 的父元素是 `r` 或 `fld` 時收文字；`tab`（父元素是 `r`）是 `\t`；`br`（父元素是 `r` 或 `p`）、`cr`（父元素是 `r`）是 `\n`；`p` 結束換行。表格（`tbl`）：最外層表格裡的段落結束時接一個空格，`tc` 結束時把這格的文字（去頭尾空白）收起來，`tr` 結束時把這列的格子用「 | 」接起來成一行；表格裡的表格攤平到外層的格子。`delText`、`instrText` 不收；`Fallback`（markup compatibility，同一個文字方塊的舊版寫法）裡的內容整個跳過，不然文字方塊會重複。
+- **文字檔**：開頭是 UTF-8 的 BOM 就去掉；UTF-16 的 BOM 用 UTF-16；其他照 UTF-8 嚴格解碼，失敗就是編碼錯誤。md 照原文。
+- 頁數：PDF 每頁一項、pptx 每張投影片一項（空的也算），其他一項。全部的頁都是空的就是「讀不到文字」。
+- 讀檔在背景（`Task.detached`）：文字辨識一頁約 0.5～1 秒。
+
+### 39.3 送給整理工具（`Notes/DocumentPrompt.swift`，D133、D135）
+
+- `DocumentText`：名稱（去掉副檔名；去掉後是空的就用原名）、種類、每頁的文字。照加入的順序。
+- **長度分配**（R61.7）：上限 40,000 字（Swift 的 `Character`，Windows 用字形叢集）。每份的長度是各頁字數的和。平均分配：照長度由短到長（一樣長照加入的順序），每份拿「剩下的額度 ÷ 還沒分到的份數」（整數除法）和自己的長度取小的。截斷：照頁的順序整頁放進去，放不下的那一頁取前面的字，後面的頁不送；`includedPages` 是有送到的頁數（含被截的那頁），`truncated` 是有沒有被截。
+- **提示詞裡的區塊**：放在重點標記之後、逐字稿之前；沒有文件時沒有這一段（R61.5：提示詞跟現在一字不差）。
+
+  ```
+  會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：
+  《報價單》
+  [第 1 頁]
+  …
+  [第 2 頁]
+  …
+
+  《規格書》（文件太長，只附上前 12 頁，共 40 頁）
+  …
+  ```
+
+  - 頁碼只有 PDF（「[第 N 頁]」）和投影片（「[第 N 張投影片]」）有；空的頁不寫（頁碼照原本的算）。英文 `[Page N]`／`[Slide N]`，日文 `[N ページ]`／`[スライド N]`。
+  - 文件名稱：中文《名稱》、日文『名稱』、英文 `Document: 名稱`。
+  - 截斷的說明：有頁碼的「（文件太長，只附上前 N 頁，共 M 頁）」「（文件太長，只附上前 N 張投影片，共 M 張）」；沒有頁碼的「（文件太長，只附上前 X 字，共 Y 字）」；英文、日文各一份（`DocumentPrompt`）。
+- **整理的規則**：`NotesPrompt.system(language, documents:)`，有文件時在原本的規則後面接（中文、英文 12～16，日文 13～17）：
+  1. 「會議參考資料」是會議中一起討論的文件，用來看懂逐字稿：指的是哪一頁、哪個方案，數字、名稱、專有名詞的正確寫法。
+  2. 紀錄以會議中實際討論的為準；文件有、會議沒討論的不寫。
+  3. 用到文件的資訊（數字、規格、日期、條文）時句尾註明出處「（《報價單》第 3 頁）」，投影片寫「第 3 張投影片」，沒有頁碼只寫《名稱》；`time` 照舊填逐字稿裡討論到它的時間。
+  4. 會議的說法跟文件不一樣時照會議寫，列進 reviewItems。
+  5. 專有名詞、人名在文件裡找得到寫法的照文件寫，不用列進 reviewItems（規則 2 的例外）。
+- `NotesContext.documents`（預設空的）；`JobRunner.summarize` 從資料庫讀這場的文件放進去，`system` 帶 `documents: !context.documents.isEmpty`。草稿、校稿（`revise` 用 `summarize` 組）都一樣帶。逐字稿校正、猜說話者、問所有會議不帶。
+- **提問**（R61.6）：`AskPrompt.meetingPrompt(…, documents:)` 把同一個區塊放在會議紀錄之後、逐字稿之前；`meetingSystem(language, documents:)` 有文件時加一條：文件也可以拿來回答，但要說清楚是會議中說的、還是只有文件裡寫的；根據文件的重點放進 citations 時 `time` 填空字串，`quote` 開頭寫出處（「《報價單》第 3 頁：…」）。`validate(_:meetingIds:documentCitations:)`：有文件時保留 `time` 是空的、`quote` 不是空的引用；沒有文件時照舊丟掉。提問分頁的引用 `time` 是空的就不放時間按鈕，前面放文件的圖示。
+
+### 39.4 畫面（R61.1、R61.4、R61.8）
+
+- `DocumentsMenu`：會議標題下資訊列的選單，放在會議語言之後（錄音中也有；垃圾桶裡的會議不放）。標籤：沒有文件「加入文件」、有文件「N 份文件」、讀取中「正在讀取文件…」，圖示 `paperclip`。滑鼠提示「會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗」。
+- 選單內容：每一份是一個子選單，標題「<檔名>（N 頁）」（只有 PDF、投影片寫頁數），被截掉的接「，太長，只用前 N 頁」（沒有頁碼的「，太長，只用前面的部分」）；子選單「打開」（`NSWorkspace.open`）、「移除」。讀取中的「正在讀取「<檔名>」…」（停用）。分隔線後「加入文件…」。
+- 「加入文件…」：`NSOpenPanel`，可以多選，類型 pdf、docx、pptx、純文字、Markdown、png、jpeg、heic。
+- `AppModel.addDocuments(_ urls:, to meetingId:)`：一份一份依序讀（加入的順序固定），讀取中記在 `readingDocuments[meetingId]`。讀完複製原始檔、寫資料庫、重新載入；提示「已加入「<檔名>」」（用了文字辨識加「，用文字辨識讀出文字」）。失敗：`errorMessage` 寫 §39.2 的原因。
+- 拖放：`requestImport` 先挑出 §39.2 的文件，加到選取中的會議；沒有選取、在垃圾桶時提示「先選一場會議，再把文件拖進來」。其他檔案照舊匯入。Dock、Finder 打開的檔案（`importDirectly`）走同一條。
+- 移除：刪資料庫的列和 `documents/<id>/`，提示「已移除「<檔名>」」。不另外確認（重新加入就回來了）。
+- **文件有變動**（R61.8）：加入、移除時這場會議已經有會議紀錄（含草稿），就把 id 放進 `AppModel.documentsChanged`（只在記憶體）。紀錄分頁頂部（待確認條的上面）顯示 `DocumentsBanner`：「文件有變動，會議紀錄還沒用上。」，按鈕「重新整理會議紀錄」（`resummarize()`）、「不用」。`resummarize()` 排了工作就把這場拿掉。
+
+### 39.5 封包（R61.9）
+
+- 匯出：有文件時封包多 `documents.json` 和 `documents/` 資料夾。`documents.json` 是陣列，每項 `name`、`file`（`documents/<序號>-<檔名>`，序號從 1）、`kind`、`pages`、`ocr`；`manifest` 的格式版本不變（1），舊版拾音不認得這兩個就略過。`ExportBundle.documents`。
+- 匯入：有 `documents.json` 就讀，讀不出來、`kind` 不認得、`file` 不是 `documents/<一般的檔名>`（不能有其他 `/`、`..`、`.` 開頭）、不是一般檔案或是符號連結，都當成封包不正確（「封包裡的文件不正確」），同錄音檔的檢查。檔名只取最後一段，不能是空的、不能 `.` 開頭。
+
+### 39.6 使用說明、隱私（R61.10）
+
+- 使用說明在「找會議、播放」之後加一段「會議的參考文件」：怎麼加（「文件」選單、拖進視窗；純文字、Markdown 從「加入文件…」選）；整理、提問時會一起送、紀錄以會議中講的為準、會註明出處、整理好的會議加了文件要按「重新整理會議紀錄」；掃描的 PDF、圖片用文字辨識，一場最多 4 萬字，Keynote、Pages 先匯出成 PDF。
+- 「資料與隱私」的整理那一條加上「加入的文件讀出來的文字」。
+
+### 39.7 DEBUG、驗證
+
+- `shiyinctl adddoc <會議 id> <檔案>`（同拖放加入，非同步；看 `state`）、`removedoc <文件 id>`、`docread <檔案> <zh|en|ja> <輸出.json>`（只讀出文字，不寫資料庫：`kind`、`pages`、`ocr`，或 `error`）、`docbanner <會議 id> dismiss|resummarize`。
+- `state` 多 `documents`（選取中的會議：`id`、`name`、`kind`、`pages`（頁數）、`ocr`、`includedPages`、`truncated`）、`readingDocuments`、`documentsChanged`。
+- 標準答案（design-windows §4）：
+  - `fixtures.json` 的三場會議各加 `documents`（直接給每頁的文字），提示詞多 `notes-system-documents.txt`、`summarize-general-documents.txt`、`revise-documents.txt`、`ask-meeting-system-documents.txt`、`ask-meeting-prompt-documents.txt`；沒有文件的檔案不變（R61.5）。
+  - `documentBudget`：幾組文件長度和上限 → `documents/budget.json`（每份的 `includedPages`、`includedChars`、`truncated`）和組好的區塊。
+  - `shared/golden/documents/` 放小的 docx、pptx（含表格、文字方塊、`Fallback`、`tab`、`br`）、UTF-8 有／沒有 BOM、UTF-16 的 txt、md，讀出來的結果 → `documents/read/<檔名>.json`。PDF、文字辨識兩邊用的引擎不同，不比標準答案。
+  - 資料庫：`schema.sql` 多 `documents`；`db` 的步驟多加入文件、列出、刪除文件、刪除會議時一起刪。
+  - 封包：有文件的會議多 `documents.json`。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1760,5 +1868,9 @@ Windows 的做法在 design-windows §11.7。
 | D130 | 錄音中換麥克風、藍牙提醒的「改用」都存成設定，之後的錄音也用這支；藍牙只在「只錄麥克風」、麥克風是系統預設時提醒（R58、§38.3、§38.4；2026-10-30 使用者決定做提醒） | 換的只用在這一場：下一場藍牙耳機還連著，又會錄到耳機；設定頁、錄音選單、錄音畫面三個地方是同一個設定，比較好懂。一連上藍牙就自動改用內建麥克風：線上會議戴耳機說話、刻意選藍牙麥克風的人會被改掉（D104）。線上會議（有電腦聲音）也提醒：戴耳機開線上會議本來就用耳機的麥克風，每場都跳會煩 |
 | D131 | 文字大小自己縮放（environment 的倍率乘上 macOS 的字級），只放大會議內容，七段 85%～200%（R59、§38.5） | `dynamicTypeSize`：macOS 的 SwiftUI 不理它（實測）。整個視窗放大（`scaleEffect`）：字會糊、點擊位置會錯。連側欄、按鈕一起放大：系統元件的字級改不了，放大一半很怪；看不清楚的是要讀的內容 |
 | D132 | 匯出用工具列的分割按鈕（按下匯出、箭頭複製），放在「更多」左邊（R60、§38.6；2026-10-30 使用者選的） | 系統的分享按鈕（`ShareLink`）：要先決定分享哪個檔案、什麼格式，跟匯出對話框重複。只放在紀錄分頁的最底下：要捲到底才看得到，逐字稿、提問分頁也找不到。「更多」裡也留一份：同一件事兩個地方，R44 的減法就是要拿掉這種重複 |
+| D133 | 文件是「會議參考資料」，跟使用者筆記分開，規則只在有文件時加進提示詞（R61.5、§39.3；2026-11-02） | 貼進「我的筆記」：筆記的規則是「必須納入紀錄」，文件會被整段搬進紀錄、看起來像會議上講過。規則一律加在提示詞裡：沒有文件的會議也多一段用不到的規則，提示詞跟現在不同，整理的結果可能跟著變 |
+| D134 | 拾音自己讀出文字（PDFKit、Vision、自己解 docx／pptx），整理工具只收到文字（§39.2） | 把檔案交給整理工具：claude CLI 刻意不給工具（`--tools ""`），codex 是唯讀沙盒；API 各家上傳檔案的方式都不同（Anthropic 的 PDF、OpenAI 的 files、Gemini 的 file API），OpenAI 相容 API 和企業伺服器沒有；換整理工具結果就不一樣。直接送 PDF 給有視覺能力的模型：只有部分 API 支援，費用高很多 |
+| D135 | 一場會議的文件合計 40,000 字，超過時平均分配、截掉每份的後面（R61.7、§39.3） | 不設上限：本機模型（Ollama）的長度很短，雲端的費用跟著文件長度漲，一份 200 頁的規格書可能比逐字稿長十倍。先來先送：一份很長的規格書會把後面加的議程擠掉。先請 AI 挑出跟會議有關的段落：準一點，但多一次呼叫、多等一段時間；先看實際用的人會不會碰到上限 |
+| D136 | docx、pptx 用 `ditto` 解壓、自己讀 XML，不用 `NSAttributedString`（§39.2） | `NSAttributedString` 讀 docx：讀不了 pptx，表格、文字方塊的寫法不受控制，Windows（OpenXml）的結果對不上，標準答案就比不了；自己讀的規則兩邊一樣，用同一組測試檔比對 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
