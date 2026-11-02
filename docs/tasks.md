@@ -10,9 +10,9 @@
 ## 麥克風、文字大小、匯出（R58～R60，design §38、design-windows §11.7、D130～D132；2026-10-30 Threads 的使用者回饋＋使用者的建議）
 
 - [~] **MT3 真的麥克風**（要使用者）：真的 AirPods（或其他藍牙耳機）連著時按錄音：提示列出現，按「改用 MacBook Pro 的麥克風」後錄到現場的聲音、錄音不中斷；錄音中在麥克風名稱的清單換來換去，錄音檔沒有斷掉、長度對
-- [~] **MT6 Windows**（R58～R60、design-windows §11.7）：程式完成；Mac 上 `dotnet test` 170 個通過（含 `RecorderTests.BluetoothMicHintAndSwitchingMicrophone`、`NoBluetoothHintWhenChosenOrOnlineMeeting`、`UtilTests.TextSizesClampAndLabel`），`l10n.py windows-check` 沒有缺的；虛擬機的 DEBUG 版建置成功，會議頁右上角「匯出」在「更多」左邊、「更多」剩重新處理、移到資料夾、移到垃圾桶（UIA、截圖）。還差：
-  - 虛擬機（2026-10-30 開到一半 Mac 剩 9 GB，被 `diskguard.sh` 停掉；虛擬機的磁碟檔已經 24 GB，開著時 Mac 的 swap 也會變大，要先騰出空間）：`fakemic "AirPods Pro" 1 "麥克風陣列"`＋`record-sim` 走錄音列的麥克風名稱、從清單換（`ps/expand.ps1 '拾音' '麥克風：AirPods Pro' <項目>`）、藍牙的提示列和「改用」、主視窗藏起來時的通知（`state` 的 `lastToast`）、系統匣；錄音按鈕下拉的「麥克風：…」子選單（`expand.ps1 '拾音' '錄音' '麥克風：…' ?`）；文字大小（`textsize 5`、`-1`、設定頁「顯示」，200% 時逐字稿的時間、說話者欄沒被擠掉，`Ctrl+=` 用 UTM 的 `input scan code` 送）；「匯出」箭頭的三種複製（`expand.ps1 '拾音' '匯出' '複製會議紀錄：Markdown'` 後在桌面 `Get-Clipboard`）、按下打開匯出對話框；英文介面（`--set interfaceLanguage=en`）截圖。測試資料用 `C:\ShiyinMicTest`（`C:\ShiyinDemo` 的複本，models 是 junction），測完刪掉
-  - 使用者的 Windows 電腦：真的藍牙耳機當預設麥克風時提示列出現、內建麥克風認得出來（`PKEY_Device_EnumeratorName`、`PKEY_AudioEndpoint_FormFactor` 的判斷，看 `state` 的 `recorder.micDevice`）；錄音中在錄音列換麥克風，錄音不中斷、長度對
+- [~] **MT6 Windows**（R58～R60、design-windows §11.7）：程式完成、虛擬機驗過（2026-11-02，見 commit 訊息）。還差（要使用者的 Windows 電腦）：
+  - 真的藍牙耳機當預設麥克風時提示列出現、內建麥克風認得出來（`PKEY_Device_EnumeratorName`、`PKEY_AudioEndpoint_FormFactor` 的判斷，看 `state` 的 `recorder.micDevice`）；錄音中在錄音列換麥克風，錄音不中斷、長度對
+  - 系統匣右鍵選單裡的藍牙提示（虛擬機沒有打開系統匣看，寫法同收音提醒）
 
 ## Codex、Claude 的桌面版（R55、R56，design §37、design-windows §10、D128；2026-10-29 Threads 的使用者回饋）
 

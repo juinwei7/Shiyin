@@ -12,6 +12,7 @@ using Shiyin.Services;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.System;
+using Windows.UI.Core;
 
 namespace Shiyin.App;
 
@@ -158,15 +159,25 @@ public sealed class MainWindow : Window
             Accelerator(VirtualKey.Number1 + i, VirtualKeyModifiers.Control, () => { if (State.Detail is not null) State.SetTab(tab); });
         }
         Accelerator(VirtualKey.Delete, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d && !State.ShowTrash) _ = ConfirmTrash(d.Meeting.Id!.Value); });
-        // 會議內容的文字大小（R59.1）：Ctrl+=（加號那顆，按不按 Shift 都算）、數字鍵盤的 +；Ctrl+-；Ctrl+0
-        const VirtualKey plus = (VirtualKey)187, minus = (VirtualKey)189;   // VK_OEM_PLUS、VK_OEM_MINUS
-        Accelerator(plus, VirtualKeyModifiers.Control, () => ChangeTextSize(1));
-        Accelerator(plus, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => ChangeTextSize(1));
-        Accelerator(VirtualKey.Add, VirtualKeyModifiers.Control, () => ChangeTextSize(1));
-        Accelerator(minus, VirtualKeyModifiers.Control, () => ChangeTextSize(-1));
-        Accelerator(VirtualKey.Subtract, VirtualKeyModifiers.Control, () => ChangeTextSize(-1));
-        Accelerator(VirtualKey.Number0, VirtualKeyModifiers.Control, () => ChangeTextSize(null));
-        Accelerator(VirtualKey.NumberPad0, VirtualKeyModifiers.Control, () => ChangeTextSize(null));
+        // 會議內容的文字大小（R59.1）：Ctrl+=（加號那顆，按不按 Shift 都算）、數字鍵盤的 +；Ctrl+-；Ctrl+0。
+        // 不用 KeyboardAccelerator：游標在輸入框（搜尋框、筆記）時，TextBox 會把 Ctrl+- 當成「插入選擇性連字號」吃掉，
+        // 加速鍵收不到（2026-11-02 虛擬機：Ctrl+=、Ctrl+0 有用，只有 Ctrl+- 沒反應）。PreviewKeyDown 比輸入框先收到
+        root.PreviewKeyDown += (_, e) =>
+        {
+            static bool Down(VirtualKey key) => InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
+            if (!Down(VirtualKey.Control) || Down(VirtualKey.Menu)) return;   // 右 Alt（AltGr）在某些鍵盤是 Ctrl+Alt，不算
+            int? step = (int)e.Key switch
+            {
+                187 or (int)VirtualKey.Add => 1,          // VK_OEM_PLUS
+                189 or (int)VirtualKey.Subtract => -1,    // VK_OEM_MINUS
+                (int)VirtualKey.Number0 or (int)VirtualKey.NumberPad0 => 0,
+                _ => null,
+            };
+            if (step is not int s) return;
+            if (s != 1 && Down(VirtualKey.Shift)) return;   // Shift 只在加號那顆算（Ctrl+Shift+= 就是 Ctrl++）
+            ChangeTextSize(s == 0 ? null : s);
+            e.Handled = true;
+        };
         // 空白鍵播放／暫停；游標在輸入框時不攔截（M§9.4）
         root.KeyDown += (_, e) =>
         {

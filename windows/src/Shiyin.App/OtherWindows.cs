@@ -395,7 +395,7 @@ public static class OtherWindows
             AppHost.Current.Usage.IsOffered ? L.T("每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。") : null));
         column.Children.Add(Section(L.T("快捷鍵"),
             L.F("%@：%@", "Ctrl+R", L.T("開始或停止錄音")),
-            L.F("%@：%@", "Ctrl+Alt+Shift+R", L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）")),
+            L.F("%@：%@", "Ctrl+Alt+Shift+R", L.T("在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音與轉錄關掉）")),
             L.F("%@：%@", "Ctrl+Shift+P", L.T("暫停或繼續錄音")),
             L.F("%@：%@", "Ctrl+B", L.T("錄音中標記重點")),
             L.F("%@：%@", "Ctrl+Alt+Shift+B", L.T("錄音中在其他 app 裡也能標記重點")),
