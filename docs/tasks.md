@@ -11,7 +11,7 @@
 
 - [~] **MT3 真的麥克風**（要使用者）：真的 AirPods（或其他藍牙耳機）連著時按錄音：提示列出現，按「改用 MacBook Pro 的麥克風」後錄到現場的聲音、錄音不中斷；錄音中在麥克風名稱的清單換來換去，錄音檔沒有斷掉、長度對
 - [~] **MT6 Windows**（R58～R60、design-windows §11.7）：程式完成、虛擬機驗過（2026-11-02，見 commit 訊息）。還差（要使用者的 Windows 電腦）：
-  - 真的藍牙耳機當預設麥克風時提示列出現、內建麥克風認得出來（`PKEY_Device_EnumeratorName`、`PKEY_AudioEndpoint_FormFactor` 的判斷，看 `state` 的 `recorder.micDevice`）；錄音中在錄音列換麥克風，錄音不中斷、長度對
+  - 真的藍牙耳機當預設麥克風時提示列出現、內建麥克風認得出來（`PKEY_Device_EnumeratorName`、`PKEY_AudioEndpoint_FormFactor` 的判斷，看 `state` 的 `recorder.micDevice`）；插著有線耳機（耳機孔的麥克風）時，「改用」的按鈕不能指到耳機孔的麥克風（Mac 4.2.3 有這個問題，用 data source 排除）；錄音中在錄音列換麥克風，錄音不中斷、長度對
   - 系統匣右鍵選單裡的藍牙提示（虛擬機沒有打開系統匣看，寫法同收音提醒）
 
 ## Codex、Claude 的桌面版（R55、R56，design §37、design-windows §10、D128；2026-10-29 Threads 的使用者回饋）
