@@ -227,12 +227,33 @@ public static class Microphones
     /// <summary>PKEY_AudioEndpoint_FormFactor：喇叭、耳機、麥克風…（EndpointFormFactor，Microphone 是 4）</summary>
     static readonly PropertyKey FormFactor = new(new Guid("1da5d803-d492-4edd-8c23-e0c0ffee7f0e"), 0);
     const int FormFactorMicrophone = 4;
+    /// <summary>PKEY_AudioEndpoint_JackSubType：端點的 KSNODETYPE（GUID 字串）</summary>
+    static readonly PropertyKey JackSubType = new(new Guid("1da5d803-d492-4edd-8c23-e0c0ffee7f0e"), 8);
+    /// <summary>KSNODETYPE_MICROPHONE_ARRAY、KSNODETYPE_PROCESSING_MICROPHONE_ARRAY：筆電內建的麥克風陣列</summary>
+    static readonly string[] ArrayTypes = ["{DFF21BE5-F70F-11D0-B917-00A0C9223196}", "{DFF21BE6-F70F-11D0-B917-00A0C9223196}"];
 
-    /// <summary>可以選的麥克風（啟用中的錄音端點）</summary>
+    /// <summary>
+    /// 可以選的麥克風（啟用中的錄音端點）。有麥克風陣列時只有陣列算內建：耳機孔的麥克風也是 HDAUDIO、外型也可能是麥克風，
+    /// 不擋的話藍牙提示的「改用」會指到耳機孔（Mac 4.2.3 插著有線耳機時發生過，design-windows §11.7）
+    /// </summary>
     public static List<MicrophoneDevice> All()
     {
         using var devices = new MMDeviceEnumerator();
-        return devices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(Describe).ToList();
+        var list = devices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(d => (Device: Describe(d), Array: IsArray(d))).ToList();
+        if (list.Any(x => x.Device.IsBuiltIn && x.Array))
+            return list.Select(x => x.Device.IsBuiltIn && !x.Array ? x.Device with { IsBuiltIn = false } : x.Device).ToList();
+        return list.Select(x => x.Device).ToList();
+    }
+
+    static bool IsArray(MMDevice device)
+    {
+        try
+        {
+            var properties = device.Properties;
+            return properties.Contains(JackSubType) && properties[JackSubType].Value is string type
+                && ArrayTypes.Contains(type, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception e) when (e is COMException or InvalidCastException or NotSupportedException) { return false; }
     }
 
     /// <summary>系統預設的麥克風（Console 角色，同錄音用的，design-windows §6）；沒有時是 null</summary>
