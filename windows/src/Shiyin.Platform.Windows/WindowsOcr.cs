@@ -116,19 +116,30 @@ public sealed class WindowsOcr : IDocumentOcr
         return string.Join("\n", result.Lines.Select(Line));
     }
 
-    /// <summary>一行的字接起來：前後兩個字都不是中日文時才加空格（Windows 的中文辨識一個字一個 word，直接用 Line.Text 會變成「會 議 議 程」）</summary>
+    /// <summary>
+    /// 一行的字接起來（Windows 的中文辨識一個字一個 word，直接用 Line.Text 會變成「會 議 議 程」、「1 2 / 1 5」）：
+    /// 前後兩個字都不是中日文、而且兩個 word 之間真的有空隙（超過字高的四分之一）才加空格
+    /// </summary>
     static string Line(OcrLine line)
     {
         var sb = new StringBuilder();
+        Windows.Foundation.Rect? previous = null;
         foreach (var word in line.Words)
         {
             var text = word.Text;
             if (text.Length == 0) continue;
-            if (sb.Length > 0 && !IsCjk(sb[^1]) && !IsCjk(text[0])) sb.Append(' ');
+            var box = word.BoundingRect;
+            if (sb.Length > 0 && previous is { } p && !IsCjk(sb[^1]) && !IsCjk(text[0]) && !Number(sb[^1], text[0])
+                && box.X - (p.X + p.Width) > 0.25 * Math.Max(p.Height, box.Height)) sb.Append(' ');
             sb.Append(text);
+            previous = box;
         }
         return sb.ToString();
     }
+
+    /// <summary>數字中間（12、12/15、3.5、10:30、1,000、50%）不加空格：數字窄，框之間的空隙看起來比較大</summary>
+    static bool Number(char a, char b) => (char.IsAsciiDigit(a) || char.IsAsciiDigit(b))
+        && (char.IsAsciiDigit(a) || "/.:,-%".Contains(a)) && (char.IsAsciiDigit(b) || "/.:,-%".Contains(b));
 
     static bool IsCjk(char c) => c is >= '⺀' and <= '鿿' or >= '豈' and <= '﫿' or >= '︰' and <= '﹏'
         or >= '＀' and <= '￯' or >= '\uD800' and <= '\uDFFF';
