@@ -50,6 +50,10 @@ public sealed class DocumentServicesTests : IDisposable
         Assert.Equal(3, r.Pages.Count);
         Assert.Contains("480,000", r.Pages[0]);
         Assert.Contains("報價單", r.Pages[0]);
+        // 蘋方輸出的 PDF：PdfPig 取出來是康熙部首（⾳、⼀），換回一般的漢字
+        Assert.Contains("拾音企業版", r.Pages[0]);
+        Assert.Contains("第一期", r.Pages[0]);
+        Assert.DoesNotContain(r.Pages, p => p.Any(c => c is >= '\u2F00' and <= '\u2FDF'));
         Assert.Contains("18%", r.Pages[1]);
         Assert.Contains("L40S", r.Pages[2]);
         Assert.False(r.Ocr);

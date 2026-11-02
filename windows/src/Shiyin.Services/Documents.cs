@@ -40,7 +40,7 @@ public static class DocumentFiles
             for (var number = 1; number <= pdf.NumberOfPages; number++)
             {
                 string text;
-                try { text = DocumentReader.Normalize(ContentOrderTextExtractor.GetText(pdf.GetPage(number))); }
+                try { text = DocumentReader.Normalize(Ideographs(ContentOrderTextExtractor.GetText(pdf.GetPage(number)))); }
                 catch (Exception e) when (e is not OutOfMemoryException) { text = ""; }
                 if (text.Count(c => !char.IsWhiteSpace(c)) < DocumentReader.ScannedPageChars && recognized < DocumentReader.MaxOcrPages)
                 {
@@ -61,6 +61,18 @@ public static class DocumentFiles
             if (missing && pages.All(p => p.Length == 0)) throw NoOcr(name, language);
             return (pages, used);
         }
+    }
+
+    /// <summary>
+    /// 康熙部首（U+2F00～U+2FD5）換成一般的漢字：有些 PDF（例如 macOS 用蘋方輸出的）字型的對照表把「音」「一」對到部首，
+    /// PdfPig 照表取出來就變成「⾳」「⼀」，送給整理工具、搜尋都對不上（2026-11-02 虛擬機發現；Mac 的 PDFKit 會換掉）
+    /// </summary>
+    internal static string Ideographs(string text)
+    {
+        if (!text.Any(c => c is >= '\u2F00' and <= '\u2FDF')) return text;
+        var sb = new System.Text.StringBuilder(text.Length);
+        foreach (var c in text) sb.Append(c is >= '\u2F00' and <= '\u2FDF' ? c.ToString().Normalize(System.Text.NormalizationForm.FormKC) : c);
+        return sb.ToString();
     }
 
     static (List<string>, bool) ReadImage(string path, MeetingLanguage language, IDocumentOcr? ocr)
