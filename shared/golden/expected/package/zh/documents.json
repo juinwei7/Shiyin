@@ -1,0 +1,32 @@
+[
+  {
+    "file" : "documents/1-產品週會議程.pdf",
+    "kind" : "pdf",
+    "name" : "產品週會議程.pdf",
+    "ocr" : false,
+    "pages" : [
+      "議程\n一、Lumio 上線時程\n二、寄信服務：SendGrid 或 Amazon SES",
+      "",
+      "附錄：費用比較\nSendGrid Pro | US$ 89.95／月\nAmazon SES | US$ 0.10／千封"
+    ]
+  },
+  {
+    "file" : "documents/2-寄信服務規格.docx",
+    "kind" : "docx",
+    "name" : "寄信服務規格.docx",
+    "ocr" : false,
+    "pages" : [
+      "寄信服務規格\n每天寄送上限：50,000 封\n退信率要低於 2%"
+    ]
+  },
+  {
+    "file" : "documents/3-上線簡報.pptx",
+    "kind" : "pptx",
+    "name" : "上線簡報.pptx",
+    "ocr" : false,
+    "pages" : [
+      "上線時程\n10/30 公測\n11/15 正式上線",
+      "費用"
+    ]
+  }
+]

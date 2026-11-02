@@ -1,0 +1,11 @@
+[
+  {
+    "file" : "documents/1-見積書.png",
+    "kind" : "image",
+    "name" : "見積書.png",
+    "ocr" : true,
+    "pages" : [
+      "見積書\n合計 120 万円\n納期 11 月末"
+    ]
+  }
+]

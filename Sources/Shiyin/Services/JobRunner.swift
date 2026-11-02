@@ -627,7 +627,8 @@ final class JobRunner {
             meeting: meeting, segments: segments,
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
             bookmarks: try db.bookmarks(job.meetingId), glossary: try glossaryTerms(),
-            template: template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}"))
+            template: template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}"),
+            documents: try db.documents(job.meetingId).map(DocumentText.init))
         let prompt: String
         if let answers {
             guard let notes = meeting.decodedNotes else { return false }
@@ -635,7 +636,7 @@ final class JobRunner {
         } else {
             prompt = NotesPrompt.summarize(context)
         }
-        let system = NotesPrompt.system(meeting.meetingLanguage)
+        let system = NotesPrompt.system(meeting.meetingLanguage, documents: !context.documents.isEmpty)
         let notes = try await callLLM(lane) { onStart in
             try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
         }

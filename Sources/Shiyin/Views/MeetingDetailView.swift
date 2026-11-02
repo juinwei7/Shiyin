@@ -158,6 +158,8 @@ struct MeetingHeader: View {
         }
         .fixedSize()
         .help("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄")
+        // 會議的參考文件（design §39.4）：垃圾桶裡的會議不放
+        if meeting.deletedAt == nil { DocumentsMenu(detail: detail) }
         // 錄音中先填人數（design §26.2）：錄完轉錄時用
         if model.recorder.isRecording && model.recorder.meetingId == meeting.id {
             Menu {

@@ -75,6 +75,13 @@ struct GuideView: View {
                 GuideBullet(String(localized: "遇到問題，可以從「輔助說明」選單選「回報問題…」，會附上版本和環境（不含會議內容）。"))
             }
 
+            // 會議的參考文件（design §39.6、R61.10）
+            GuideSection(title: String(localized: "會議的參考文件")) {
+                GuideBullet(String(localized: "會議中一起討論的文件（簡報、規格書、報價單、白板照片）可以加進會議：會議標題下迴紋針圖示的選單（還沒有文件時寫「加入文件」）選「加入文件…」，或把 PDF、Word、PowerPoint、圖片拖進視窗。純文字、Markdown 要從「加入文件…」選（拖進來的 txt 會當成逐字稿、md 會當成筆記）。"))
+                GuideBullet(String(localized: "整理會議紀錄、提問時，文件讀出來的文字會一起送給整理工具，幫忙看懂討論、寫對數字和名稱。紀錄還是以會議中講的為準，用到文件的地方會註明出處，會議說的跟文件不一樣時會列成待確認。已經整理好的會議加了文件，按紀錄上方的「重新整理會議紀錄」。"))
+                GuideBullet(String(localized: "掃描的 PDF、圖片用 macOS 的文字辨識讀出文字。一場會議的文件合計最多 4 萬字，太長的只送前面的部分。Keynote、Pages 請先匯出成 PDF。"))
+            }
+
             GuideSection(title: String(localized: "設定（⌘,）")) {
                 GuideBullet(String(localized: "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。最下面的「範本」內建五種；也可以複製一份來改，或自己新增段落與指示。"))
                 GuideBullet(String(localized: "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。"))
@@ -88,7 +95,7 @@ struct GuideView: View {
             GuideSection(title: String(localized: "資料與隱私")) {
                 GuideBullet(String(localized: "錄音、逐字稿和會議紀錄都只存在這台 Mac 上（~/Library/Application Support/Shiyin），不會被 iCloud 同步。"))
                 GuideBullet(String(localized: "即時逐字稿、正式轉錄、說話者辨識都在本機進行，不需要網路。"))
-                GuideBullet(String(localized: "整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記和詞彙表送到你選的整理工具，錄音檔不會送出。選「不整理」就完全離線。"))
+                GuideBullet(String(localized: "整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記、加入的文件讀出來的文字和詞彙表送到你選的整理工具，錄音檔和文件的原始檔不會送出。選「不整理」就完全離線。"))
                 GuideBullet(String(localized: "聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台 Mac，不會放進匯出的 .shiyin 封包。"))
                 GuideBullet(String(localized: "API key 存在 macOS 鑰匙圈，不會寫進任何檔案。"))
                 // 企業伺服器（R52.1）：登入了才寫，沒登入的人照原本的說明

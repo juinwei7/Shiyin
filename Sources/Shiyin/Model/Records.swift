@@ -245,3 +245,36 @@ struct GlossaryTerm: SnakeCaseRecord, Identifiable, Hashable {
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
+
+/// 會議的參考文件的種類（design §39.2）：PDF、投影片有頁碼
+enum DocumentKind: String, Codable, CaseIterable {
+    case pdf, docx, pptx, text, image
+
+    var isPaged: Bool { self == .pdf || self == .pptx }
+}
+
+/// 會議的參考文件（design §39.1、R61）：原始檔在 documents/<file>，讀出來的文字每頁一項
+struct MeetingDocument: SnakeCaseRecord, Identifiable, Hashable {
+    static let databaseTableName = "documents"
+    var id: Int64?
+    var meetingId: Int64
+    var name: String
+    var file: String = ""
+    var kind: String
+    var pages: String                    // JSON 字串陣列
+    var ocr: Bool = false
+    var createdAt: String = Clock.now()
+
+    mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
+
+    var documentKind: DocumentKind { DocumentKind(rawValue: kind) ?? .text }
+    var pageTexts: [String] { (try? JSONDecoder().decode([String].self, from: Data(pages.utf8))) ?? [] }
+    var fileURL: URL { Paths.documentsDir.appendingPathComponent(file) }
+
+    /// 頁的文字存成 JSON（同會議紀錄的寫法，Windows 用 SwiftJson 寫出一樣的字串）
+    static func encodePages(_ pages: [String]) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.withoutEscapingSlashes]
+        return String(data: (try? encoder.encode(pages)) ?? Data(), encoding: .utf8) ?? "[]"
+    }
+}

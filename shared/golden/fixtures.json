@@ -1240,6 +1240,58 @@
    "key": "ja"
   },
   {
+   "op": "addDocument",
+   "key": "zh",
+   "name": "產品週會議程.pdf",
+   "kind": "pdf",
+   "pages": [
+    "議程\n一、上線時程\n二、寄信服務",
+    "",
+    "附錄：費用\nSendGrid Pro | US$ 89.95"
+   ],
+   "ocr": false
+  },
+  {
+   "op": "addDocument",
+   "key": "zh",
+   "name": "規格書.docx",
+   "kind": "docx",
+   "pages": [
+    "寄信服務改用 SendGrid。"
+   ],
+   "ocr": false
+  },
+  {
+   "op": "addDocument",
+   "key": "ja",
+   "name": "見積書.png",
+   "kind": "image",
+   "pages": [
+    "見積書\n合計 120 万円"
+   ],
+   "ocr": true
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/01a-documents.json",
+   "tables": [
+    "documents"
+   ]
+  },
+  {
+   "op": "deleteDocument",
+   "key": "zh",
+   "index": 0,
+   "file": "db/01b-delete-document.json"
+  },
+  {
+   "op": "dumpTables",
+   "file": "db/01c-documents.json",
+   "tables": [
+    "documents"
+   ]
+  },
+  {
    "op": "dumpTables",
    "file": "db/01-import.json",
    "tables": [
@@ -1681,7 +1733,8 @@
     "speakers",
     "bookmarks",
     "notes_versions",
-    "search"
+    "search",
+    "documents"
    ]
   }
  ],
@@ -1749,5 +1802,232 @@
      "voices": {"0": {"embedding": [0.1], "seconds": 1, "source": "mix"}, "64": {"embedding": [0.5], "seconds": 1, "source": "mix"},
                 "65": {"embedding": [0.6], "seconds": 1, "source": "mix"}, "2147483647": {"embedding": [0.7], "seconds": 1, "source": "mix"}}},
     {"segments": [{"start": -5, "end": -1, "text": "全部不合理"}]}
+  ],
+ "meetingDocuments": {
+  "zh": [
+   {
+    "name": "產品週會議程.pdf",
+    "kind": "pdf",
+    "pages": [
+     "議程\n一、Lumio 上線時程\n二、寄信服務：SendGrid 或 Amazon SES",
+     "",
+     "附錄：費用比較\nSendGrid Pro | US$ 89.95／月\nAmazon SES | US$ 0.10／千封"
+    ],
+    "ocr": false
+   },
+   {
+    "name": "寄信服務規格.docx",
+    "kind": "docx",
+    "pages": [
+     "寄信服務規格\n每天寄送上限：50,000 封\n退信率要低於 2%"
+    ],
+    "ocr": false
+   },
+   {
+    "name": "上線簡報.pptx",
+    "kind": "pptx",
+    "pages": [
+     "上線時程\n10/30 公測\n11/15 正式上線",
+     "費用"
+    ],
+    "ocr": false
+   }
+  ],
+  "en": [
+   {
+    "name": "Q3 Roadmap.pdf",
+    "kind": "pdf",
+    "pages": [
+     "Q3 Roadmap\nLaunch: October 30\nBudget: $12,000"
+    ],
+    "ocr": false
+   }
+  ],
+  "ja": [
+   {
+    "name": "見積書.png",
+    "kind": "image",
+    "pages": [
+     "見積書\n合計 120 万円\n納期 11 月末"
+    ],
+    "ocr": true
+   }
   ]
+ },
+ "documentBudget": [
+  {
+   "limit": 100,
+   "documents": [
+    {
+     "name": "A",
+     "kind": "pdf",
+     "pages": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+     ]
+    },
+    {
+     "name": "B",
+     "kind": "docx",
+     "pages": [
+      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+     ]
+    },
+    {
+     "name": "C",
+     "kind": "text",
+     "pages": [
+      "dddddddddd"
+     ]
+    }
+   ]
+  },
+  {
+   "limit": 60,
+   "documents": [
+    {
+     "name": "同長一",
+     "kind": "text",
+     "pages": [
+      "一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一"
+     ]
+    },
+    {
+     "name": "同長二",
+     "kind": "text",
+     "pages": [
+      "二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二"
+     ]
+    }
+   ]
+  },
+  {
+   "limit": 10,
+   "documents": [
+    {
+     "name": "簡報",
+     "kind": "pptx",
+     "pages": [
+      "",
+      "xxxxxxxx",
+      "yyyyyyyy"
+     ]
+    }
+   ]
+  },
+  {
+   "limit": 100,
+   "documents": [
+    {
+     "name": "四頁",
+     "kind": "pdf",
+     "pages": [
+      "甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲",
+      "乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙",
+      "丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙丙",
+      "丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁丁"
+     ]
+    },
+    {
+     "name": "投影片",
+     "kind": "pptx",
+     "pages": [
+      "一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一",
+      "二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二",
+      "三三三三三三三三三三三三三三三三三三三三三三三三三三三三三三"
+     ]
+    }
+   ]
+  },
+  {
+   "limit": 5,
+   "documents": [
+    {
+     "name": "字形",
+     "kind": "image",
+     "pages": [
+      "ab👍🏽cdéf"
+     ]
+    }
+   ]
+  },
+  {
+   "limit": 40000,
+   "documents": [
+    {
+     "name": "組合字",
+     "kind": "pdf",
+     "pages": [
+      "é 👨‍👩‍👧 第一頁",
+      "",
+      "第三頁"
+     ]
+    },
+    {
+     "name": "空的檔名.txt",
+     "kind": "text",
+     "pages": [
+      "內容"
+     ]
+    }
+   ]
+  }
+ ],
+ "documentNormalize": [
+  "  a  \r\n\r\n\r\nb\t　\n\n\n\nc \n",
+  "\n\n  ",
+  "x\ry\r\nz",
+  "　開頭的全形空白\n行尾 \t\n\n\n\n",
+  "表格 | 一格  \n\n下一段"
+ ],
+ "documentNames": [
+  "報價單.PDF",
+  "a.docx",
+  "b.pptx",
+  "c.txt",
+  "d.md",
+  "e.markdown",
+  "f.png",
+  "g.JPG",
+  "h.jpeg",
+  "i.heic",
+  "j.key",
+  "k.pages",
+  "l.numbers",
+  "m.doc",
+  "n.rtf",
+  "o.ppt",
+  "p.xls",
+  "q.xlsx",
+  "r",
+  ".hidden.pdf",
+  "..pdf",
+  "...",
+  "s.m4a",
+  "t.srt",
+  "u.shiyin",
+  "dir/v.pdf"
+ ],
+ "documentPaths": [
+  "documents/1-a.pdf",
+  "documents/../x",
+  "documents/.a",
+  "documents/",
+  "x/1-a.pdf",
+  "documents/a/b.pdf",
+  "documents\\a.pdf",
+  "documents/a\\b.pdf",
+  "/documents/a.pdf",
+  "documents",
+  "documents/1-報價單.pdf"
+ ],
+ "pptxTargets": [
+  "slides/slide1.xml",
+  "/ppt/slides/slide2.xml",
+  "../slides/slide3.xml",
+  "slides/./slide4.xml",
+  "slides/slide[5].xml",
+  "slides/投影片.xml",
+  ""
+ ]
 }

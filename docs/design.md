@@ -1721,8 +1721,8 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 - **PDF**：PDFKit。`PDFDocument(url:)` 失敗是壞掉；`isLocked` 是有密碼。每一頁 `page.string`。一頁的文字（不算空白）少於 20 個字、而且這份辨識過的頁數還不到 50 頁時，當成掃描的頁面：`thumbnail(of:for: .mediaBox)` 畫成長邊 2000 px 的圖，用文字辨識；辨識出來比原本長才用，`ocr` 記成 1。超過 50 頁的掃描頁面是空的（R61.7）。
 - **圖片**：`CGImageSource` 讀第一張（照 EXIF 的方向），文字辨識，`ocr` 是 1。
 - **文字辨識**：Vision 的 `VNRecognizeTextRequest`，`.accurate`、`usesLanguageCorrection`；語言依會議語言：中文 `zh-Hant`、`zh-Hans`、`en-US`，英文 `en-US`，日文 `ja-JP`、`en-US`。每個結果取第一個候選，照 Vision 的順序一行一個。
-- **docx、pptx**：`/usr/bin/ditto -x -k` 解壓到 `tmp/`（參數陣列，同封包），`XMLParser` 處理命名空間、只看元素的本地名稱：
-  - docx 讀 `word/document.xml`；pptx 讀 `ppt/presentation.xml` 的 `sldIdLst`（每個 `sldId` 的 `r:id`，照順序）→ `ppt/_rels/presentation.xml.rels` 對到 `Target`（相對於 `ppt/`；`/` 開頭的是從根算；有 `..` 的不讀）→ 每張投影片的 XML 是一頁。備忘稿不讀。
+- **docx、pptx**：`/usr/bin/unzip -p` 只取要讀的 XML（參數陣列；不解出圖片，解出來超過 64 MB 就停，防壓縮炸彈），`XMLParser` 處理命名空間、只看元素的本地名稱、不解析外部實體：
+  - docx 讀 `word/document.xml`；pptx 讀 `ppt/presentation.xml` 的 `sldIdLst`（每個 `sldId` 的 `r:id`，照順序）→ `ppt/_rels/presentation.xml.rels` 對到 `Target`（相對於 `ppt/`；`/` 開頭的是從根算；有 `..`、英數字和 `_./-` 以外的字元的不讀：unzip 的參數是萬用字元的樣式）→ 每張投影片的 XML 是一頁。備忘稿不讀。
   - 同一套規則讀 Word 和投影片的文字：`t` 的父元素是 `r` 或 `fld` 時收文字；`tab`（父元素是 `r`）是 `\t`；`br`（父元素是 `r` 或 `p`）、`cr`（父元素是 `r`）是 `\n`；`p` 結束換行。表格（`tbl`）：最外層表格裡的段落結束時接一個空格，`tc` 結束時把這格的文字（去頭尾空白）收起來，`tr` 結束時把這列的格子用「 | 」接起來成一行；表格裡的表格攤平到外層的格子。`delText`、`instrText` 不收；`Fallback`（markup compatibility，同一個文字方塊的舊版寫法）裡的內容整個跳過，不然文字方塊會重複。
 - **文字檔**：開頭是 UTF-8 的 BOM 就去掉；UTF-16 的 BOM 用 UTF-16；其他照 UTF-8 嚴格解碼，失敗就是編碼錯誤。md 照原文。
 - 頁數：PDF 每頁一項、pptx 每張投影片一項（空的也算），其他一項。全部的頁都是空的就是「讀不到文字」。
@@ -1748,7 +1748,7 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 
   - 頁碼只有 PDF（「[第 N 頁]」）和投影片（「[第 N 張投影片]」）有；空的頁不寫（頁碼照原本的算）。英文 `[Page N]`／`[Slide N]`，日文 `[N ページ]`／`[スライド N]`。
   - 文件名稱：中文《名稱》、日文『名稱』、英文 `Document: 名稱`。
-  - 截斷的說明：有頁碼的「（文件太長，只附上前 N 頁，共 M 頁）」「（文件太長，只附上前 N 張投影片，共 M 張）」；沒有頁碼的「（文件太長，只附上前 X 字，共 Y 字）」；英文、日文各一份（`DocumentPrompt`）。
+  - 截斷的說明：有頁碼、而且後面還有整頁沒送的「（文件太長，只附上前 N 頁，共 M 頁）」「（文件太長，只附上前 N 張投影片，共 M 張）」；沒有頁碼、或截在最後一頁裡的「（文件太長，只附上前 X 字，共 Y 字）」；英文、日文各一份（`DocumentPrompt`）。選單的「太長，只用前 N 頁」同一個規則，用字數時寫「太長，只用前面的部分」。
 - **整理的規則**：`NotesPrompt.system(language, documents:)`，有文件時在原本的規則後面接（中文、英文 12～16，日文 13～17）：
   1. 「會議參考資料」是會議中一起討論的文件，用來看懂逐字稿：指的是哪一頁、哪個方案，數字、名稱、專有名詞的正確寫法。
   2. 紀錄以會議中實際討論的為準；文件有、會議沒討論的不寫。
@@ -1763,7 +1763,7 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 - `DocumentsMenu`：會議標題下資訊列的選單，放在會議語言之後（錄音中也有；垃圾桶裡的會議不放）。標籤：沒有文件「加入文件」、有文件「N 份文件」、讀取中「正在讀取文件…」，圖示 `paperclip`。滑鼠提示「會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗」。
 - 選單內容：每一份是一個子選單，標題「<檔名>（N 頁）」（只有 PDF、投影片寫頁數），被截掉的接「，太長，只用前 N 頁」（沒有頁碼的「，太長，只用前面的部分」）；子選單「打開」（`NSWorkspace.open`）、「移除」。讀取中的「正在讀取「<檔名>」…」（停用）。分隔線後「加入文件…」。
 - 「加入文件…」：`NSOpenPanel`，可以多選，類型 pdf、docx、pptx、純文字、Markdown、png、jpeg、heic。
-- `AppModel.addDocuments(_ urls:, to meetingId:)`：一份一份依序讀（加入的順序固定），讀取中記在 `readingDocuments[meetingId]`。讀完複製原始檔、寫資料庫、重新載入；提示「已加入「<檔名>」」（用了文字辨識加「，用文字辨識讀出文字」）。失敗：`errorMessage` 寫 §39.2 的原因。
+- `AppModel.addDocuments(_ urls:, to meetingId:)`：一份一份依序讀（加入的順序固定），讀取中記在 `readingDocuments[meetingId]`。這場已經有同一份（檔名和讀出來的文字都一樣）就不加，提示「「<檔名>」已經加過了」（送給整理工具會重複）。讀完複製原始檔、寫資料庫、重新載入；提示「已加入「<檔名>」」（用了文字辨識加「，用文字辨識讀出文字」）。失敗：`errorMessage` 寫 §39.2 的原因。
 - 拖放：`requestImport` 先挑出 §39.2 的文件，加到選取中的會議；沒有選取、在垃圾桶時提示「先選一場會議，再把文件拖進來」。其他檔案照舊匯入。Dock、Finder 打開的檔案（`importDirectly`）走同一條。
 - 移除：刪資料庫的列和 `documents/<id>/`，提示「已移除「<檔名>」」。不另外確認（重新加入就回來了）。
 - **文件有變動**（R61.8）：加入、移除時這場會議已經有會議紀錄（含草稿），就把 id 放進 `AppModel.documentsChanged`（只在記憶體）。紀錄分頁頂部（待確認條的上面）顯示 `DocumentsBanner`：「文件有變動，會議紀錄還沒用上。」，按鈕「重新整理會議紀錄」（`resummarize()`）、「不用」。`resummarize()` 排了工作就把這場拿掉。
@@ -1871,6 +1871,6 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 | D133 | 文件是「會議參考資料」，跟使用者筆記分開，規則只在有文件時加進提示詞（R61.5、§39.3；2026-11-02） | 貼進「我的筆記」：筆記的規則是「必須納入紀錄」，文件會被整段搬進紀錄、看起來像會議上講過。規則一律加在提示詞裡：沒有文件的會議也多一段用不到的規則，提示詞跟現在不同，整理的結果可能跟著變 |
 | D134 | 拾音自己讀出文字（PDFKit、Vision、自己解 docx／pptx），整理工具只收到文字（§39.2） | 把檔案交給整理工具：claude CLI 刻意不給工具（`--tools ""`），codex 是唯讀沙盒；API 各家上傳檔案的方式都不同（Anthropic 的 PDF、OpenAI 的 files、Gemini 的 file API），OpenAI 相容 API 和企業伺服器沒有；換整理工具結果就不一樣。直接送 PDF 給有視覺能力的模型：只有部分 API 支援，費用高很多 |
 | D135 | 一場會議的文件合計 40,000 字，超過時平均分配、截掉每份的後面（R61.7、§39.3） | 不設上限：本機模型（Ollama）的長度很短，雲端的費用跟著文件長度漲，一份 200 頁的規格書可能比逐字稿長十倍。先來先送：一份很長的規格書會把後面加的議程擠掉。先請 AI 挑出跟會議有關的段落：準一點，但多一次呼叫、多等一段時間；先看實際用的人會不會碰到上限 |
-| D136 | docx、pptx 用 `ditto` 解壓、自己讀 XML，不用 `NSAttributedString`（§39.2） | `NSAttributedString` 讀 docx：讀不了 pptx，表格、文字方塊的寫法不受控制，Windows（OpenXml）的結果對不上，標準答案就比不了；自己讀的規則兩邊一樣，用同一組測試檔比對 |
+| D136 | docx、pptx 用 `unzip -p` 取出 XML、自己讀，不用 `NSAttributedString`（§39.2） | `NSAttributedString` 讀 docx：讀不了 pptx，表格、文字方塊的寫法不受控制，Windows（OpenXml）的結果對不上，標準答案就比不了；自己讀的規則兩邊一樣，用同一組測試檔比對 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

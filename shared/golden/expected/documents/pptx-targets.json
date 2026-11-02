@@ -1,0 +1,30 @@
+[
+  {
+    "path" : "ppt/slides/slide1.xml",
+    "target" : "slides/slide1.xml"
+  },
+  {
+    "path" : "ppt/slides/slide2.xml",
+    "target" : "/ppt/slides/slide2.xml"
+  },
+  {
+    "path" : null,
+    "target" : "../slides/slide3.xml"
+  },
+  {
+    "path" : null,
+    "target" : "slides/./slide4.xml"
+  },
+  {
+    "path" : null,
+    "target" : "slides/slide[5].xml"
+  },
+  {
+    "path" : null,
+    "target" : "slides/投影片.xml"
+  },
+  {
+    "path" : null,
+    "target" : ""
+  }
+]

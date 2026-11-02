@@ -74,6 +74,9 @@ struct MeetingDetail: Equatable {
     var bookmarks: [Bookmark]
     /// 逐字稿校正建議（design §17.4）
     var corrections: [Correction] = []
+    /// 會議的參考文件（design §39.1）和照長度分配後每一份用了多少（§39.3，選單顯示「太長，只用前 N 頁」）
+    var documents: [MeetingDocument] = []
+    var documentUse: [Int64: DocumentPrompt.Allocated] = [:]
     /// 逐字稿分頁用的索引，載入時算一次，不要每次畫面更新都重算（design §21.12）：
     /// 每段的校正（不含已忽略的）、依開始時間排好的段落
     var correctionsBySegment: [Int64: [Correction]] = [:]
@@ -103,6 +106,12 @@ struct MeetingDetail: Equatable {
 
     mutating func linkReviewItems() {
         reviewLinks = notes?.reviewLinks() ?? [:]
+    }
+
+    mutating func loadDocuments(_ rows: [MeetingDocument]) {
+        documents = rows
+        let allocated = DocumentPrompt.allocate(rows.map(DocumentText.init))
+        documentUse = Dictionary(uniqueKeysWithValues: zip(rows, allocated).compactMap { row, use in row.id.map { ($0, use) } })
     }
 
     mutating func loadSpeakers(_ rows: [SpeakerName]) {
@@ -199,6 +208,10 @@ final class AppModel {
     /// 紀錄頂部「還有 N 題待確認」、逐字稿頂部「我的筆記」展開了沒（design §33.1）：只記這次選取期間，換會議就收起
     var reviewExpanded = false
     var userNotesExpanded = false
+    /// 正在讀取的參考文件：會議 id → 檔名（design §39.4）
+    var readingDocuments: [Int64: [String]] = [:]
+    /// 已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體
+    var documentsChanged: Set<Int64> = []
     var filter = ""
     /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
     var folderFilter: String?
@@ -242,7 +255,7 @@ final class AppModel {
     private init() {
         do {
             try Paths.ensureDirectories()
-            db = try AppDatabase(path: Paths.database.path)
+            db = try AppDatabase(path: Paths.database.path, documentsRoot: Paths.documentsDir)
         } catch {
             // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；說明清楚後結束，不要直接閃退
             let alert = NSAlert()
@@ -454,6 +467,7 @@ final class AppModel {
             speakers: Dictionary(uniqueKeysWithValues: speakerRows.map { ($0.idx, $0.name) }),
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
         loaded.loadSpeakers(speakerRows)
+        loaded.loadDocuments((try? db.documents(id)) ?? [])
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.speakerUndoLabel = try? db.speakerUndoLabel(id)
         if let until = try? db.transcribedUntil(id), let duration = meeting.durationSeconds, Double(duration) - until >= 60 {
@@ -565,6 +579,11 @@ final class AppModel {
     // MARK: 匯入（R3）
 
     func requestImport(_ urls: [URL]) {
+        // 文件加到選取中的會議（R61.1、R61.3）；其他照舊匯入
+        let documents = urls.filter(DocumentReader.isDroppedDocument)
+        if !documents.isEmpty { addDroppedDocuments(documents) }
+        let urls = urls.filter { !DocumentReader.isDroppedDocument($0) }
+        guard !urls.isEmpty else { return }
         let packages = urls.filter { $0.pathExtension.lowercased() == "shiyin" }
         let transcripts = urls.filter { ["srt", "vtt", "txt"].contains($0.pathExtension.lowercased()) }
         let markdown = urls.filter { ["md", "markdown"].contains($0.pathExtension.lowercased()) }
@@ -1031,6 +1050,7 @@ final class AppModel {
         }
         // 沒登入、沒有 key…：不排，說原因（R45.4、design §34.2）
         if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        documentsChanged.remove(id)
         perform { try db.enqueue(id, kind: .summarize) }
         runner.wake()
     }
@@ -1487,12 +1507,13 @@ final class AppModel {
         guard let meeting = try db.meeting(meetingId) else { throw ExportError.meetingGone }
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
-                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes)
+                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId))
     }
 
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
-        return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes)
+        return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes,
+                            documents: d.documents)
     }
 
     /// 寫出檔案
@@ -1610,6 +1631,7 @@ final class AppModel {
         static let segments = DetailParts(rawValue: 1 << 2)
         static let corrections = DetailParts(rawValue: 1 << 3)
         static let meeting = DetailParts(rawValue: 1 << 4)   // 會議本身、會議紀錄、版本數
+        static let documents = DetailParts(rawValue: 1 << 5)
     }
 
     func perform(_ scope: ReloadScope = .all, _ work: () throws -> Void) {
@@ -1643,6 +1665,7 @@ final class AppModel {
         if parts.contains(.bookmarks) { updated.bookmarks = (try? db.bookmarks(id)) ?? [] }
         if parts.contains(.segments) { updated.segments = (try? db.segments(id)) ?? [] }
         if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }
+        if parts.contains(.documents) { updated.loadDocuments((try? db.documents(id)) ?? []) }
         if parts.contains(.meeting), let meeting = try? db.meeting(id) {
             updated.meeting = meeting
             updated.notes = meeting.decodedNotes

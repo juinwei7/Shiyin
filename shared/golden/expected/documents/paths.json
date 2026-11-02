@@ -1,0 +1,46 @@
+[
+  {
+    "path" : "documents/1-a.pdf",
+    "safe" : true
+  },
+  {
+    "path" : "documents/../x",
+    "safe" : false
+  },
+  {
+    "path" : "documents/.a",
+    "safe" : false
+  },
+  {
+    "path" : "documents/",
+    "safe" : false
+  },
+  {
+    "path" : "x/1-a.pdf",
+    "safe" : false
+  },
+  {
+    "path" : "documents/a/b.pdf",
+    "safe" : false
+  },
+  {
+    "path" : "documents\\a.pdf",
+    "safe" : false
+  },
+  {
+    "path" : "documents/a\\b.pdf",
+    "safe" : false
+  },
+  {
+    "path" : "/documents/a.pdf",
+    "safe" : false
+  },
+  {
+    "path" : "documents",
+    "safe" : false
+  },
+  {
+    "path" : "documents/1-報價單.pdf",
+    "safe" : true
+  }
+]

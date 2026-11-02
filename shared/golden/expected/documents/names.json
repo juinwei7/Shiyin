@@ -1,0 +1,158 @@
+[
+  {
+    "dropped" : true,
+    "kind" : "pdf",
+    "name" : "報價單.PDF",
+    "safeName" : "報價單.PDF"
+  },
+  {
+    "dropped" : true,
+    "kind" : "docx",
+    "name" : "a.docx",
+    "safeName" : "a.docx"
+  },
+  {
+    "dropped" : true,
+    "kind" : "pptx",
+    "name" : "b.pptx",
+    "safeName" : "b.pptx"
+  },
+  {
+    "dropped" : false,
+    "kind" : "text",
+    "name" : "c.txt",
+    "safeName" : "c.txt"
+  },
+  {
+    "dropped" : false,
+    "kind" : "text",
+    "name" : "d.md",
+    "safeName" : "d.md"
+  },
+  {
+    "dropped" : false,
+    "kind" : "text",
+    "name" : "e.markdown",
+    "safeName" : "e.markdown"
+  },
+  {
+    "dropped" : true,
+    "kind" : "image",
+    "name" : "f.png",
+    "safeName" : "f.png"
+  },
+  {
+    "dropped" : true,
+    "kind" : "image",
+    "name" : "g.JPG",
+    "safeName" : "g.JPG"
+  },
+  {
+    "dropped" : true,
+    "kind" : "image",
+    "name" : "h.jpeg",
+    "safeName" : "h.jpeg"
+  },
+  {
+    "dropped" : true,
+    "kind" : "image",
+    "name" : "i.heic",
+    "safeName" : "i.heic"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "j.key",
+    "safeName" : "j.key"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "k.pages",
+    "safeName" : "k.pages"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "l.numbers",
+    "safeName" : "l.numbers"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "m.doc",
+    "safeName" : "m.doc"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "n.rtf",
+    "safeName" : "n.rtf"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "o.ppt",
+    "safeName" : "o.ppt"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "p.xls",
+    "safeName" : "p.xls"
+  },
+  {
+    "dropped" : true,
+    "kind" : null,
+    "name" : "q.xlsx",
+    "safeName" : "q.xlsx"
+  },
+  {
+    "dropped" : false,
+    "kind" : null,
+    "name" : "r",
+    "safeName" : "r"
+  },
+  {
+    "dropped" : true,
+    "kind" : "pdf",
+    "name" : ".hidden.pdf",
+    "safeName" : "hidden.pdf"
+  },
+  {
+    "dropped" : false,
+    "kind" : null,
+    "name" : "..pdf",
+    "safeName" : "pdf"
+  },
+  {
+    "dropped" : false,
+    "kind" : null,
+    "name" : "...",
+    "safeName" : "document"
+  },
+  {
+    "dropped" : false,
+    "kind" : null,
+    "name" : "s.m4a",
+    "safeName" : "s.m4a"
+  },
+  {
+    "dropped" : false,
+    "kind" : null,
+    "name" : "t.srt",
+    "safeName" : "t.srt"
+  },
+  {
+    "dropped" : false,
+    "kind" : null,
+    "name" : "u.shiyin",
+    "safeName" : "u.shiyin"
+  },
+  {
+    "dropped" : true,
+    "kind" : "pdf",
+    "name" : "dir/v.pdf",
+    "safeName" : "v.pdf"
+  }
+]

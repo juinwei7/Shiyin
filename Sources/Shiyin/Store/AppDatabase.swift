@@ -26,9 +26,12 @@ struct SearchHit: Identifiable, Hashable {
 
 final class AppDatabase: @unchecked Sendable {
     let pool: DatabasePool
+    /// 參考文件原始檔的資料夾（design §39.1）；nil 時刪除會議、文件不碰檔案（標準答案的暫存資料庫）
+    let documentsRoot: URL?
 
     /// 開啟資料庫；有待執行的 migration 時，先把舊檔備份到 backups/（N3）
-    init(path: String) throws {
+    init(path: String, documentsRoot: URL? = nil) throws {
+        self.documentsRoot = documentsRoot
         var config = Configuration()
         config.foreignKeysEnabled = true
         pool = try DatabasePool(path: path, configuration: config)
@@ -240,6 +243,22 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 會議的參考文件（design §39.1、R61）
+        migrator.registerMigration("v10") { db in
+            try db.execute(sql: """
+                CREATE TABLE documents (
+                  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+                  name       TEXT NOT NULL,
+                  file       TEXT NOT NULL,
+                  kind       TEXT NOT NULL,
+                  pages      TEXT NOT NULL,
+                  ocr        INTEGER NOT NULL DEFAULT 0,
+                  created_at TEXT NOT NULL
+                );
+                CREATE INDEX documents_meeting ON documents(meeting_id, id);
+                """)
+        }
         return migrator
     }
 
@@ -347,14 +366,17 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
-    /// 永久刪除（垃圾桶清除或使用者確認）
+    /// 永久刪除（垃圾桶清除或使用者確認）；參考文件的原始檔一起刪（design §39.1）
     func deleteMeeting(_ id: Int64) throws {
-        try pool.write { db in
+        let files = try pool.write { db -> [String] in
+            let files = try MeetingDocument.filter(Column("meeting_id") == id).fetchAll(db).map(\.file)
             // 段落會跟著會議刪掉（ON DELETE CASCADE），所以先刪索引
             try Self.unindexSegments(db, meetingId: id)
             try Self.unindexMeeting(db, meetingId: id)
             _ = try Meeting.deleteOne(db, key: id)
+            return files
         }
+        files.forEach(removeDocumentFile)
     }
 
     /// 移到垃圾桶或還原（R9.3）
@@ -584,6 +606,46 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     // MARK: 重點與筆記
+
+    // MARK: 參考文件（design §39.1、R61）
+
+    func document(_ id: Int64) throws -> MeetingDocument? {
+        try pool.read { db in try MeetingDocument.fetchOne(db, key: id) }
+    }
+
+    func documents(_ meetingId: Int64) throws -> [MeetingDocument] {
+        try pool.read { db in try MeetingDocument.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db) }
+    }
+
+    /// 先插入、再用 id 填 file（documents/<id>/<檔名>），同一個交易
+    func addDocument(_ meetingId: Int64, name: String, kind: DocumentKind, pages: [String], ocr: Bool) throws -> MeetingDocument {
+        try pool.write { db in
+            var document = MeetingDocument(meetingId: meetingId, name: name, kind: kind.rawValue,
+                                           pages: MeetingDocument.encodePages(pages), ocr: ocr)
+            try document.insert(db)
+            document.file = "\(document.id!)/\(name)"
+            try document.update(db)
+            return document
+        }
+    }
+
+    /// 刪掉一份文件，連同原始檔；回傳刪掉的那筆
+    @discardableResult
+    func deleteDocument(_ id: Int64) throws -> MeetingDocument? {
+        let document = try pool.write { db -> MeetingDocument? in
+            guard let document = try MeetingDocument.fetchOne(db, key: id) else { return nil }
+            _ = try MeetingDocument.deleteOne(db, key: id)
+            return document
+        }
+        if let document { removeDocumentFile(document.file) }
+        return document
+    }
+
+    /// 原始檔放在 documents/<id>/ 底下，整個資料夾刪掉。標準答案的暫存資料庫不碰檔案（documentsRoot 是 nil）
+    private func removeDocumentFile(_ file: String) {
+        guard let documentsRoot, let folder = file.split(separator: "/").first, Int64(folder) != nil else { return }
+        try? FileManager.default.removeItem(at: documentsRoot.appendingPathComponent(String(folder), isDirectory: true))
+    }
 
     func bookmarks(_ meetingId: Int64) throws -> [Bookmark] {
         try pool.read { db in try Bookmark.filter(Column("meeting_id") == meetingId).order(Column("time")).fetchAll(db) }
