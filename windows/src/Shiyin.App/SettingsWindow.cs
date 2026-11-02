@@ -758,7 +758,7 @@ public sealed class SettingsWindow : Window
         // 會議內容的文字大小（R59.1）：快捷鍵改的也是這個設定
         var levels = Enumerable.Range(TextSizes.Min, TextSizes.Max - TextSizes.Min + 1);
         var textSize = Ui.Combo(levels.Select(l => (l, TextSizes.Label(l))), S.TextSize, l => S.Set(AppSettings.TextSizeKey, (double)l), L.T("會議內容的文字大小"));
-        column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("也可以用 Ctrl＋＋、Ctrl＋－ 調整"))));
+        column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 Ctrl+加號、Ctrl+減號調整，Ctrl+0 回到標準大小。"))));
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));
         if (host.Updater is { } updater)
         {

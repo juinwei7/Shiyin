@@ -1344,6 +1344,17 @@
         }
       }
     },
+    "紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 Ctrl+加號、Ctrl+減號調整，Ctrl+0 回到標準大小。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text in Notes, Transcript, Ask, the live transcript and My notes. You can also press Ctrl+Plus or Ctrl+Minus, and Ctrl+0 to return to the default size."
+          }
+        }
+      }
+    },
     "繼續錄音（Ctrl+Shift+P）": {
       "extractionState": "manual",
       "localizations": {
