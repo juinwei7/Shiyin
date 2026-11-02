@@ -5,15 +5,21 @@ namespace Shiyin.Notes;
 /// <summary>校稿時使用者的一題回答</summary>
 public sealed record ReviewAnswer(string Time, string Question, string Answer);
 
-/// <summary>整理需要的材料</summary>
+/// <summary>整理需要的材料；Documents 是會議參考資料（M§39.3、R61.5），沒有文件時提示詞跟以前一字不差</summary>
 public sealed record NotesContext(
     Meeting Meeting, IReadOnlyList<Segment> Segments, IReadOnlyDictionary<int, string> Speakers,
-    IReadOnlyList<Bookmark> Bookmarks, IReadOnlyList<string> Glossary, TemplateDefinition Template);
+    IReadOnlyList<Bookmark> Bookmarks, IReadOnlyList<string> Glossary, TemplateDefinition Template,
+    IReadOnlyList<DocumentText>? Documents = null);
 
 /// <summary>整理與校稿的提示詞（M§8.3），依會議語言分成中文、英文、日文三份。中文要跟 3.0 一字不差（R28.1）</summary>
 public static class NotesPrompt
 {
-    public static string System(MeetingLanguage language) => language.Text(SystemChinese, SystemEnglish, SystemJapanese);
+    /// <summary>documents：有參考文件時接上文件的規則（M§39.3、D133）</summary>
+    public static string System(MeetingLanguage language, bool documents = false)
+    {
+        var text = language.Text(SystemChinese, SystemEnglish, SystemJapanese);
+        return documents ? text + "\n" + DocumentPrompt.NotesRules(language) : text;
+    }
 
     public const string SystemChinese = """
         你是會議紀錄整理者。根據使用者提供的會議逐字稿，整理成結構化的會議紀錄，一律使用繁體中文（台灣用語）。
@@ -157,6 +163,11 @@ public static class NotesPrompt
             lines.Add("");
             lines.Add($"{l.Bookmarks}{l.Colon}" + string.Join(l.ListSeparator,
                 c.Bookmarks.Select(b => TimeFormat.String(b.Time) + (b.Label.Length == 0 ? "" : $" {b.Label}"))));
+        }
+        if (c.Documents is { Count: > 0 } documents)
+        {
+            lines.Add("");
+            lines.Add(DocumentPrompt.Block(documents, language));
         }
         lines.Add("");
         lines.Add($"{l.Transcript}{l.Colon}");

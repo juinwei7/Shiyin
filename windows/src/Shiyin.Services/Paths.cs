@@ -33,6 +33,8 @@ public sealed class ShiyinPaths
     /// <summary>錄音中的檔案：&lt;會議 id&gt;-&lt;uuid&gt;.wav，當掉後由復原流程接回（M§20.6）</summary>
     public string Recording => Path.Combine(Audio, "recording");
     public string Database => Path.Combine(Home, "shiyin.sqlite");
+    /// <summary>會議的參考文件的原始檔（M§39.1）</summary>
+    public string Documents => Path.Combine(Home, "documents");
     public string Tmp => Path.Combine(Home, "tmp");
     public string Logs => Path.Combine(Home, "logs");
     public string Settings => Path.Combine(Home, "settings.json");
@@ -40,6 +42,9 @@ public sealed class ShiyinPaths
     public string Usage => Path.Combine(Home, "usage.json");
 
     public string AudioPath(Meeting meeting) => Path.Combine(Audio, meeting.AudioFile);
+
+    /// <summary>參考文件的原始檔：documents\&lt;id&gt;\&lt;檔名&gt;（資料庫裡用 /）</summary>
+    public string DocumentPath(MeetingDocument document) => Path.Combine([Documents, .. document.File.Split('/')]);
 
     /// <summary>有錄音檔（同 Mac 的 hasAudio：欄位有值而且檔案在）</summary>
     public bool HasAudio(Meeting meeting) => meeting.AudioFile.Length > 0 && File.Exists(AudioPath(meeting));

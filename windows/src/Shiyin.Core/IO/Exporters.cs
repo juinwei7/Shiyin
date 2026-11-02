@@ -8,6 +8,9 @@ public sealed record ExportBundle(
     Meeting Meeting, IReadOnlyList<Segment> Segments, IReadOnlyDictionary<int, string> Speakers,
     IReadOnlyList<Bookmark> Bookmarks, MeetingNotes? Notes)
 {
+    /// <summary>參考文件（M§39.5）：只有 .shiyin 封包用到</summary>
+    public IReadOnlyList<MeetingDocument> Documents { get; init; } = [];
+
     public string? SpeakerName(int? idx) => idx is int i ? (Speakers.TryGetValue(i, out var n) ? n : Text.Speaker(i)) : null;
 
     /// <summary>匯出內容的標題、欄位名稱：跟著會議語言，不是介面語言（M§16.6）</summary>

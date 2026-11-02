@@ -279,6 +279,8 @@ public sealed class DetailView
         foreach (var l in MeetingLanguages.All) languageMenu.Items.Add(Ui.Check(l.Name(), l == meeting.MeetingLanguage, () => host.Controller.SetMeetingLanguage(meeting.Id!.Value, l)));
         language.Flyout = languageMenu;
         menus.Children.Add(language);
+        // 會議的參考文件（M§39.4、design-windows §11.8）：垃圾桶裡的會議不放
+        if (!IsTrashed) menus.Children.Add(DocumentsMenu());
         // 錄音中先填人數（M§26.2）：錄完轉錄時用
         if (IsRecordingThis)
         {
@@ -299,6 +301,54 @@ public sealed class DetailView
         wrap.Children.Add(info);
         wrap.Children.Add(menus);
         return wrap;
+    }
+
+    /// <summary>
+    /// 會議的參考文件（R61.1、R61.4，同 Mac 的 DocumentsMenu）：標籤「加入文件」「N 份文件」「正在讀取文件…」，
+    /// 每一份是子選單（打開、移除），最後「加入文件…」
+    /// </summary>
+    DropDownButton DocumentsMenu()
+    {
+        var id = Detail.Meeting.Id!.Value;
+        var reading = host.Controller.ReadingDocuments.GetValueOrDefault(id) ?? [];
+        var label = reading.Count > 0 ? L.T("正在讀取文件…") : Detail.Documents.Count == 0 ? L.T("加入文件") : L.F("%lld 份文件", Detail.Documents.Count);
+        var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Attach), Ui.Text(label, wrap: false)) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+        ToolTipService.SetToolTip(button, L.T("會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗"));
+        var menu = new MenuFlyout();
+        foreach (var document in Detail.Documents)
+        {
+            var sub = new MenuFlyoutSubItem { Text = DocumentTitle(document) };
+            sub.Items.Add(Ui.Item(L.T("打開"), () => { if (host.Controller.DocumentFile(document) is { } path) Shiyin.Platform.Shell.OpenFile(path); }));
+            sub.Items.Add(Ui.Item(L.T("移除"), () => host.Controller.RemoveDocument(document.Id!.Value)));
+            menu.Items.Add(sub);
+        }
+        foreach (var name in reading) menu.Items.Add(Ui.Item(L.F("正在讀取「%@」…", name), () => { }, enabled: false));
+        if (Detail.Documents.Count > 0 || reading.Count > 0) menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Ui.Item(L.T("加入文件…"), () => _ = window.PickDocuments(id)));
+        button.Flyout = menu;
+        return button;
+    }
+
+    /// <summary>「報價單.pdf（3 頁）」；照長度分配後被截掉的接「，太長，只用前 N 頁」（M§39.3）</summary>
+    string DocumentTitle(MeetingDocument document)
+    {
+        var use = Detail.DocumentUse.GetValueOrDefault(document.Id ?? 0);
+        var pages = use?.Document.Pages.Count ?? 0;
+        var text = document.DocumentKind switch
+        {
+            DocumentKind.Pdf => L.F("%@（%lld 頁）", document.Name, pages),
+            DocumentKind.Pptx => L.F("%@（%lld 張投影片）", document.Name, pages),
+            _ => document.Name,
+        };
+        if (use is { Truncated: true })
+            text += (use.CutByPages ? document.DocumentKind : DocumentKind.Text) switch
+            {
+                DocumentKind.Pdf => L.F("，太長，只用前 %lld 頁", use.IncludedPages),
+                DocumentKind.Pptx => L.F("，太長，只用前 %lld 張", use.IncludedPages),
+                _ => L.T("，太長，只用前面的部分"),
+            };
+        return text;
     }
 
     /// <summary>狀態列：左邊的說明放中間那欄（長的會換行），跟右邊的按鈕上下置中</summary>

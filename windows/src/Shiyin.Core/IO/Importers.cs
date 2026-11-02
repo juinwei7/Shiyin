@@ -212,6 +212,41 @@ public static class PackageJson
             r.Str("folder"), r.Str("language"), notes, r.Str("notesBy"), speakers, bookmarks);
     }
 
+    // MARK: 參考文件（M§39.5）
+
+    /// <summary>documents.json 的一項：file 是封包裡原始檔的位置</summary>
+    public sealed record DocumentInfo(string Name, string File, string Kind, List<string> Pages, bool Ocr);
+
+    /// <summary>原始檔放 documents/&lt;序號&gt;-&lt;檔名&gt;，序號從 1（同 Mac 的 documentEntries）</summary>
+    public static List<DocumentInfo> DocumentEntries(IEnumerable<MeetingDocument> documents) =>
+        documents.Select((d, i) => new DocumentInfo(d.Name, $"documents/{i + 1}-{d.Name}", d.Kind, d.PageTexts, d.Ocr)).ToList();
+
+    public static string Write(IEnumerable<DocumentInfo> documents) => Pretty(new JNode.Arr(documents.Select(d =>
+        (JNode)new JNode.Obj().Add("name", d.Name).Add("file", d.File).Add("kind", d.Kind).Add("pages", JNode.Of(d.Pages))
+            .Add("ocr", JNode.Of(d.Ocr)))));
+
+    public static List<DocumentInfo>? ReadDocuments(string json)
+    {
+        if (JsonRead.Parse(json) is not { ValueKind: JsonValueKind.Array } r) return null;
+        var list = new List<DocumentInfo>();
+        foreach (var d in r.EnumerateArray())
+        {
+            if (d.Str("name") is not { } name || d.Str("file") is not { } file || d.Str("kind") is not { } kind
+                || d.Strings("pages") is not { } pages || d.Bool("ocr") is not { } ocr) return null;
+            list.Add(new DocumentInfo(name, file, kind, pages, ocr));
+        }
+        return list;
+    }
+
+    /// <summary>封包裡文件的位置只能是 documents/&lt;一般的檔名&gt;：封包可能來自別人，不能指到別的地方（同 Mac 的 isSafeDocumentPath）</summary>
+    public static bool IsSafeDocumentPath(string file)
+    {
+        var parts = file.Split('/');
+        if (parts.Length != 2 || parts[0] != "documents") return false;
+        var name = parts[1];
+        return name.Length > 0 && !name.StartsWith('.') && !name.Contains('\\');
+    }
+
     public static List<SegmentInfo>? ReadSegments(string json)
     {
         if (JsonRead.Parse(json) is not { ValueKind: JsonValueKind.Array } r) return null;

@@ -221,6 +221,16 @@ public sealed class DatabaseTests : IDisposable
                 case "cancelJobs": Result(op, new JNode.Obj().Add("running", new JNode.Arr(db.CancelJobs(Id(op)).Select(x => (JNode)new JNode.Int(x))))); break;
                 case "setTrashed": db.SetTrashed(Id(op), op.Bool("trashed") ?? false); break;
                 case "rebuildSearchIndex": db.RebuildSearchIndex(); break;
+                case "addDocument":   // 參考文件（M§39.1）
+                    db.AddDocument(Id(op), op.Str("name")!, DocumentKinds.Parse(op.Str("kind"))!.Value, op.Strings("pages") ?? [], op.Bool("ocr") ?? false);
+                    break;
+                case "deleteDocument":
+                {
+                    var list = db.Documents(Id(op));
+                    var deleted = db.DeleteDocument(list[(int)op.Long("index")!].Id!.Value);
+                    Result(op, new JNode.Obj().Add("deleted", JNode.Of(deleted?.Name)));
+                    break;
+                }
                 case "deleteMeeting": db.DeleteMeeting(Id(op)); break;
                 default: Assert.Fail("不認得的步驟 " + op.Str("op")); break;
             }

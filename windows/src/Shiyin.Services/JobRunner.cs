@@ -674,7 +674,8 @@ public sealed class JobRunner
         var template = templates.FirstOrDefault(t => t.Id == meeting.TemplateId) ?? templates.FirstOrDefault(t => t.Id == "general");
         var context = new NotesContext(meeting, segments, db.Speakers(job.MeetingId).ToDictionary(s => s.Idx, s => s.Name),
             db.Bookmarks(job.MeetingId), GlossaryTerms(),
-            template?.DefinitionFor(meeting.MeetingLanguage) ?? TemplateDefinition.Decode("{}"));
+            template?.DefinitionFor(meeting.MeetingLanguage) ?? TemplateDefinition.Decode("{}"),
+            db.Documents(job.MeetingId).Select(DocumentText.From).ToList());
         string prompt;
         if (answers is not null)
         {
@@ -682,7 +683,7 @@ public sealed class JobRunner
             prompt = NotesPrompt.Revise(context, current, answers);
         }
         else prompt = NotesPrompt.Summarize(context);
-        var notes = await llm.Generate(provider, settings.Model, NotesPrompt.System(meeting.MeetingLanguage), prompt, cancel);
+        var notes = await llm.Generate(provider, settings.Model, NotesPrompt.System(meeting.MeetingLanguage, context.Documents is { Count: > 0 }), prompt, cancel);
         if (!IsStillRunning(job)) return false;
         if (draft)
         {

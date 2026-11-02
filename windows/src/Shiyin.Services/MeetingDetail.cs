@@ -84,6 +84,16 @@ public sealed class MeetingDetail
     public List<Bookmark> Bookmarks { get; set; } = [];
     /// <summary>逐字稿校正建議（M§17.4）</summary>
     public List<Correction> Corrections { get; set; } = [];
+    /// <summary>會議的參考文件（M§39.1）和照長度分配後每一份用了多少（M§39.3，選單顯示「太長，只用前 N 頁」）</summary>
+    public List<MeetingDocument> Documents { get; private set; } = [];
+    public Dictionary<long, DocumentPrompt.Allocated> DocumentUse { get; private set; } = [];
+
+    public void LoadDocuments(List<MeetingDocument> rows)
+    {
+        Documents = rows;
+        var allocated = DocumentPrompt.Allocate(rows.Select(DocumentText.From).ToList());
+        DocumentUse = rows.Zip(allocated).Where(p => p.First.Id is not null).ToDictionary(p => p.First.Id!.Value, p => p.Second);
+    }
     /// <summary>每段的校正（不含已忽略的）</summary>
     public Dictionary<long, List<Correction>> CorrectionsBySegment { get; private set; } = [];
     public double[] TimelineStarts { get; private set; } = [];
@@ -116,6 +126,7 @@ public sealed class MeetingDetail
             SpeakerUndoLabel = db.SpeakerUndoLabel(id),
         };
         detail.LoadSpeakers(db.Speakers(id));
+        detail.LoadDocuments(db.Documents(id));
         detail.SpeakerCandidates = db.VoiceprintCandidates(id);
         if (JobRunner.TranscribedUntil(db.LastTranscribePayload(id)) is double until && meeting.DurationSeconds is int duration && duration - until >= 60)
             detail.UntranscribedMinutes = (int)Math.Round((duration - until) / 60, MidpointRounding.AwayFromZero);
