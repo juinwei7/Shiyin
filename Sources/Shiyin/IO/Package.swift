@@ -34,6 +34,23 @@ enum MeetingPackage {
     struct SpeakerJSON: Codable { var idx: Int; var name: String }
     struct BookmarkJSON: Codable { var time: Double; var label: String }
     struct SegmentJSON: Codable { var start: Double; var end: Double; var text: String; var lowConfidence: Bool; var speaker: Int? }
+    /// 參考文件（design §39.5）：documents.json 的一項，file 是封包裡原始檔的位置
+    struct DocumentJSON: Codable { var name: String; var file: String; var kind: String; var pages: [String]; var ocr: Bool }
+
+    /// documents.json 的內容：原始檔放 documents/<序號>-<檔名>，序號從 1
+    static func documentEntries(_ documents: [MeetingDocument]) -> [DocumentJSON] {
+        documents.enumerated().map { i, d in
+            DocumentJSON(name: d.name, file: "documents/\(i + 1)-\(d.name)", kind: d.kind, pages: d.pageTexts, ocr: d.ocr)
+        }
+    }
+
+    /// 封包裡文件的位置只能是 documents/<一般的檔名>：封包可能來自別人，不能指到別的地方
+    static func isSafeDocumentPath(_ file: String) -> Bool {
+        let parts = file.split(separator: "/", omittingEmptySubsequences: false)
+        guard parts.count == 2, parts[0] == "documents" else { return false }
+        let name = parts[1]
+        return !name.isEmpty && !name.hasPrefix(".") && !name.contains("\\")
+    }
 
     enum PackageError: LocalizedError {
         case invalid(String), tooNew(Int)
@@ -68,6 +85,16 @@ enum MeetingPackage {
             .write(to: dir.appendingPathComponent("meeting.json"))
         try encoder.encode(b.segments.map { SegmentJSON(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence, speaker: $0.speaker) })
             .write(to: dir.appendingPathComponent("transcript.json"))
+        // 參考文件：原始檔不在了的那份不放（不然匯入時會被當成壞掉的封包）
+        let documents = b.documents.filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }
+        if !documents.isEmpty {
+            try FileManager.default.createDirectory(at: dir.appendingPathComponent("documents"), withIntermediateDirectories: true)
+            let entries = documentEntries(documents)
+            for (entry, document) in zip(entries, documents) {
+                try FileManager.default.copyItem(at: document.fileURL, to: dir.appendingPathComponent(entry.file))
+            }
+            try encoder.encode(entries).write(to: dir.appendingPathComponent("documents.json"))
+        }
         try? FileManager.default.removeItem(at: url)
         try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path])
     }
@@ -104,6 +131,19 @@ enum MeetingPackage {
             }
             audioName = name
         }
+        // 參考文件（design §39.5）：先全部檢查過，再建立會議
+        var documents: [DocumentJSON] = []
+        let documentsURL = dir.appendingPathComponent("documents.json")
+        if FileManager.default.fileExists(atPath: documentsURL.path) {
+            guard let data = try? Data(contentsOf: documentsURL), let decoded = try? decoder.decode([DocumentJSON].self, from: data),
+                  decoded.allSatisfy({ entry in
+                      let values = try? dir.appendingPathComponent(entry.file).resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                      return DocumentKind(rawValue: entry.kind) != nil && isSafeDocumentPath(entry.file)
+                          && values?.isRegularFile == true && values?.isSymbolicLink != true
+                  })
+            else { throw PackageError.invalid(String(localized: "封包裡的文件不正確")) }
+            documents = decoded
+        }
 
         let audioExt = audioName.map { Importer.safeExtension(URL(fileURLWithPath: $0)) }
         var meeting = try db.insertMeeting(Meeting(
@@ -125,6 +165,10 @@ enum MeetingPackage {
             for bookmark in info.bookmarks { try db.addBookmark(id, time: bookmark.time, label: bookmark.label) }
             if let notes = info.notes { try db.saveNotes(id, notes: notes, by: info.notesBy, reason: String(localized: "匯入")) }
             try db.updateUserNotes(id, info.userNotes)
+            for entry in documents {
+                _ = try DocumentStore.save(dir.appendingPathComponent(entry.file), name: entry.name, kind: DocumentKind(rawValue: entry.kind)!,
+                                           pages: entry.pages, ocr: entry.ocr, meetingId: id, db: db)
+            }
             meeting = try db.meeting(id) ?? meeting
         } catch {
             try? db.deleteMeeting(meeting.id!)

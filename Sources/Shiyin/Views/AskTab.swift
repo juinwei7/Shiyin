@@ -144,6 +144,12 @@ struct QuestionView: View {
                                     }
                                     .buttonStyle(.plain)
                                     .help("打開這場會議，從 \(citation.time) 開始")
+                                } else if citation.time.isEmpty {
+                                    // 參考文件的出處（design §39.3）：沒有錄音的時間點，quote 開頭寫了文件名稱和頁數
+                                    Image(systemName: "paperclip")
+                                        .contentFont(.callout)
+                                        .foregroundStyle(.secondary)
+                                        .help("出自這場會議的參考文件")
                                 } else {
                                     Button(citation.time) { onCitation(citation.time) }
                                         .buttonStyle(.plain)

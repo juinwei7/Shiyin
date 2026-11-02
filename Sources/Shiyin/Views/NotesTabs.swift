@@ -192,6 +192,10 @@ struct NotesPage: View {
                 .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
+                // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
+                if let id = detail.meeting.id, model.documentsChanged.contains(id) {
+                    DocumentsBanner().environment(\.textScale, 1)
+                }
                 if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
                 EditBar(disabled: model.detailStatus?.isActive == true, onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
                     base = notes; editing = notes

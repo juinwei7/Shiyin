@@ -1,0 +1,22 @@
+[
+  {
+    "input" : "  a  \r\n\r\n\r\nb\t　\n\n\n\nc \n",
+    "output" : "a\n\nb\n\nc"
+  },
+  {
+    "input" : "\n\n  ",
+    "output" : ""
+  },
+  {
+    "input" : "x\ry\r\nz",
+    "output" : "x\ny\nz"
+  },
+  {
+    "input" : "　開頭的全形空白\n行尾 \t\n\n\n\n",
+    "output" : "開頭的全形空白\n行尾"
+  },
+  {
+    "input" : "表格 | 一格  \n\n下一段",
+    "output" : "表格 | 一格\n\n下一段"
+  }
+]

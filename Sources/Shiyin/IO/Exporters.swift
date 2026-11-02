@@ -10,6 +10,8 @@ struct ExportBundle {
     var speakers: [Int: String]
     var bookmarks: [Bookmark]
     var notes: MeetingNotes?
+    /// 參考文件（design §39.5）：只有 .shiyin 封包用到
+    var documents: [MeetingDocument] = []
 
     func speakerName(_ idx: Int?) -> String? { idx.map { speakers[$0] ?? text.speaker($0) } }
 

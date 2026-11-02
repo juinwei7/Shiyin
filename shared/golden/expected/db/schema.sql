@@ -1,4 +1,5 @@
 CREATE INDEX corrections_meeting ON corrections(meeting_id);
+CREATE INDEX documents_meeting ON documents(meeting_id, id);
 CREATE INDEX jobs_meeting ON jobs(meeting_id, id);
 CREATE INDEX jobs_status ON jobs(status, id);
 CREATE INDEX questions_meeting ON questions(meeting_id, id);
@@ -18,6 +19,16 @@ CREATE TABLE corrections (
   suggestion TEXT NOT NULL,
   reason     TEXT NOT NULL DEFAULT '',
   status     TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL
+);
+CREATE TABLE documents (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  file       TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  pages      TEXT NOT NULL,
+  ocr        INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
 CREATE TABLE drafts (

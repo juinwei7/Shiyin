@@ -15,12 +15,16 @@ struct NotesContext {
     var bookmarks: [Bookmark]
     var glossary: [String]
     var template: TemplateDefinition
+    /// 會議參考資料（design §39.3、R61.5）；沒有文件時提示詞跟以前一字不差
+    var documents: [DocumentText] = []
 }
 
 /// 整理與校稿的提示詞（design §8.3），規則沿用第二版；依會議語言分成中文、英文、日文三份（design §16.5、§18.4）
 enum NotesPrompt {
-    static func system(_ language: MeetingLanguage) -> String {
-        language.text(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+    /// documents：有參考文件時接上文件的規則（design §39.3、D133）
+    static func system(_ language: MeetingLanguage, documents: Bool = false) -> String {
+        let base = language.text(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+        return documents ? base + "\n" + DocumentPrompt.notesRules(language) : base
     }
 
     static let systemChinese = """
@@ -176,6 +180,10 @@ enum NotesPrompt {
             lines.append("")
             lines.append("\(l.bookmarks)\(l.colon)" + c.bookmarks.map { TimeFormat.string($0.time) + ($0.label.isEmpty ? "" : " \($0.label)") }
                 .joined(separator: l.listSeparator))
+        }
+        if !c.documents.isEmpty {
+            lines.append("")
+            lines.append(DocumentPrompt.block(c.documents, language: language))
         }
         lines.append("")
         lines.append("\(l.transcript)\(l.colon)")

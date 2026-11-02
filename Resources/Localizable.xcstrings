@@ -161,6 +161,52 @@
         }
       }
     },
+    "%@（%lld 張投影片）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ (%lld slide)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ (%lld slides)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@（%lld 頁）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ (%lld page)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ (%lld pages)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%@（之後可以在設定 → 整理工具重新測試）": {
       "extractionState": "manual",
       "localizations": {
@@ -313,6 +359,29 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld people"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld 份文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld document"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld documents"
                 }
               }
             }
@@ -1049,6 +1118,39 @@
         }
       }
     },
+    "「%@」不是 UTF-8 的文字檔。請另存成 UTF-8 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” isn't a UTF-8 text file. Save it as UTF-8 and add it again."
+          }
+        }
+      }
+    },
+    "「%@」已經加過了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” has already been added"
+          }
+        }
+      }
+    },
+    "「%@」有密碼保護，拾音讀不了。請先移除密碼再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is password-protected, so Shiyin can't read it. Remove the password and add it again."
+          }
+        }
+      }
+    },
     "「%@」裡沒有可以用的逐字稿內容": {
       "extractionState": "manual",
       "localizations": {
@@ -1056,6 +1158,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@” has no usable transcript content"
+          }
+        }
+      }
+    },
+    "「%@」裡讀不到文字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No text could be read from “%@”."
+          }
+        }
+      }
+    },
+    "「%@」讀不出來，檔案可能壞了。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” couldn't be read. The file may be damaged."
+          }
+        }
+      }
+    },
+    "「%@」超過 200 MB，拾音不讀這麼大的文件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is larger than 200 MB. Shiyin doesn't read documents that large."
           }
         }
       }
@@ -1342,6 +1477,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not this person"
+          }
+        }
+      }
+    },
+    "不用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Now"
           }
         }
       }
@@ -2018,6 +2164,17 @@
         }
       }
     },
+    "先選一場會議，再把文件拖進來": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a meeting first, then drag the documents in"
+          }
+        }
+      }
+    },
     "內容": {
       "extractionState": "manual",
       "localizations": {
@@ -2316,6 +2473,17 @@
         }
       }
     },
+    "出自這場會議的參考文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From this meeting's reference documents"
+          }
+        }
+      }
+    },
     "分享…": {
       "extractionState": "manual",
       "localizations": {
@@ -2544,6 +2712,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Join the enterprise server at %@?"
+          }
+        }
+      }
+    },
+    "加入文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Documents"
+          }
+        }
+      }
+    },
+    "加入文件…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Documents…"
           }
         }
       }
@@ -3564,6 +3754,17 @@
         }
       }
     },
+    "封包裡的文件不正確": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the documents in the package are invalid"
+          }
+        }
+      }
+    },
     "封包裡的錄音檔不正確": {
       "extractionState": "manual",
       "localizations": {
@@ -3696,13 +3897,47 @@
         }
       }
     },
+    "已加入 %lld 份文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added %lld document"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added %lld documents"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "已加入「%@」": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Joined %@"
+            "value": "Added “%@”"
+          }
+        }
+      }
+    },
+    "已加入「%@」，用文字辨識讀出文字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added “%@” (text read with text recognition)"
           }
         }
       }
@@ -3967,6 +4202,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Moved to Trash. You can restore it within 30 days."
+          }
+        }
+      }
+    },
+    "已移除「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed “%@”"
           }
         }
       }
@@ -4436,6 +4682,17 @@
         }
       }
     },
+    "打開": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        }
+      }
+    },
     "打開 %@ 登入": {
       "extractionState": "manual",
       "localizations": {
@@ -4531,6 +4788,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No results for “%@”"
+          }
+        }
+      }
+    },
+    "找不到「%@」的原始檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The original file of “%@” is missing"
           }
         }
       }
@@ -4844,6 +5112,72 @@
         }
       }
     },
+    "拾音讀不了 .%@ 檔。請先匯出成 PDF 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't read .%@ files. Export it as PDF and add that instead."
+          }
+        }
+      }
+    },
+    "拾音讀不了 Keynote 檔。請先在 Keynote 匯出成 PDF 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't read Keynote files. Export it as PDF in Keynote and add that instead."
+          }
+        }
+      }
+    },
+    "拾音讀不了 Numbers 檔。請先在 Numbers 匯出成 PDF 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't read Numbers files. Export it as PDF in Numbers and add that instead."
+          }
+        }
+      }
+    },
+    "拾音讀不了 Pages 檔。請先在 Pages 匯出成 PDF 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't read Pages files. Export it as PDF in Pages and add that instead."
+          }
+        }
+      }
+    },
+    "拾音讀不了沒有副檔名的檔案。請先匯出成 PDF 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't read files without an extension. Export it as PDF and add that instead."
+          }
+        }
+      }
+    },
+    "拾音讀不了舊版的 Word 檔（.doc）。請另存成 docx 或 PDF 再加入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin can't read old Word files (.doc). Save it as docx or PDF and add that instead."
+          }
+        }
+      }
+    },
     "拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。": {
       "extractionState": "manual",
       "localizations": {
@@ -4917,6 +5251,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Click “Record” (⌘R) in the toolbar to start. Click the arrow next to it to choose the source and microphone; for online meetings choose “Microphone + computer audio (online meetings)” so the other side is recorded too. While recording, the microphone in use is shown next to the level meter; click it to switch. When Bluetooth headphones are connected, macOS may switch to their microphone, so for in-person meetings switch back to this Mac’s microphone. If you already have a recording, drag it into the window, click “Import” (⌘O), or drop it on the Shiyin icon in the Dock."
+          }
+        }
+      }
+    },
+    "掃描的 PDF、圖片用 macOS 的文字辨識讀出文字。一場會議的文件合計最多 4 萬字，太長的只送前面的部分。Keynote、Pages 請先匯出成 PDF。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text in scanned PDFs and images is read with macOS text recognition. A meeting's documents can total up to 40,000 characters; for longer ones only the beginning is sent. Export Keynote and Pages files as PDF first."
           }
         }
       }
@@ -5297,13 +5642,13 @@
         }
       }
     },
-    "整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記和詞彙表送到你選的整理工具，錄音檔不會送出。選「不整理」就完全離線。": {
+    "整理、回答待確認、提問、猜說話者時，會把逐字稿文字、你的筆記、加入的文件讀出來的文字和詞彙表送到你選的整理工具，錄音檔和文件的原始檔不會送出。選「不整理」就完全離線。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When summarizing, revising, answering questions or guessing speaker names, the transcript text, your notes and the glossary are sent to the summarizer you chose. The recording is never sent. Choose “Don't summarize” to stay fully offline."
+            "value": "When writing notes, answering questions to confirm, asking questions, or guessing speakers, the transcript text, your notes, the text read from added documents, and the glossary are sent to the summarizer you chose. Recordings and the original document files are never sent. Choose “Don't summarize” to stay fully offline."
           }
         }
       }
@@ -5660,6 +6005,17 @@
         }
       }
     },
+    "整理會議紀錄、提問時，文件讀出來的文字會一起送給整理工具，幫忙看懂討論、寫對數字和名稱。紀錄還是以會議中講的為準，用到文件的地方會註明出處，會議說的跟文件不一樣時會列成待確認。已經整理好的會議加了文件，按紀錄上方的「重新整理會議紀錄」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When writing notes or answering questions, the text read from the documents is sent along to the summarizer to help it follow the discussion and get numbers and names right. The notes still follow what was said in the meeting: where a document is used, the source is cited, and where the meeting and a document disagree, it becomes a question to confirm. If the meeting already has notes, click “Summarize Again” above the notes after adding documents."
+          }
+        }
+      }
+    },
     "整理草稿": {
       "extractionState": "manual",
       "localizations": {
@@ -5667,6 +6023,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Drafting notes"
+          }
+        }
+      }
+    },
+    "文件有變動，會議紀錄還沒用上。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents changed. The notes don't use them yet."
           }
         }
       }
@@ -6155,6 +6522,28 @@
         }
       }
     },
+    "會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents discussed in the meeting (slides, specs, quotes…). Used when writing notes and answering questions. You can also drag documents into the window"
+          }
+        }
+      }
+    },
+    "會議中一起討論的文件（簡報、規格書、報價單、白板照片）可以加進會議：會議標題下迴紋針圖示的選單（還沒有文件時寫「加入文件」）選「加入文件…」，或把 PDF、Word、PowerPoint、圖片拖進視窗。純文字、Markdown 要從「加入文件…」選（拖進來的 txt 會當成逐字稿、md 會當成筆記）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents discussed in a meeting (slides, specs, quotes, whiteboard photos) can be added to it: in the paperclip menu below the meeting title (“Add Documents” when there are none yet), choose “Add Documents…”, or drag PDF, Word, PowerPoint, or image files into the window. Plain text and Markdown files have to be chosen with “Add Documents…” (a dragged txt file becomes a transcript, an md file becomes notes)."
+          }
+        }
+      }
+    },
     "會議內容的文字大小": {
       "extractionState": "manual",
       "localizations": {
@@ -6217,6 +6606,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meeting title"
+          }
+        }
+      }
+    },
+    "會議的參考文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference documents"
           }
         }
       }
@@ -6912,6 +7312,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting is being processed. You can edit the transcript when that's done"
+          }
+        }
+      }
+    },
+    "正在讀取「%@」…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading “%@”…"
+          }
+        }
+      }
+    },
+    "正在讀取文件…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading Documents…"
           }
         }
       }
@@ -8070,6 +8492,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Move to Folder"
+          }
+        }
+      }
+    },
+    "移除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
           }
         }
       }
@@ -10244,6 +10677,17 @@
         }
       }
     },
+    "選擇會議中一起討論的文件（PDF、Word、PowerPoint、純文字、圖片）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose documents discussed in the meeting (PDF, Word, PowerPoint, plain text, images)"
+          }
+        }
+      }
+    },
     "還原": {
       "extractionState": "manual",
       "localizations": {
@@ -11715,6 +12159,63 @@
           "stringUnit": {
             "state": "translated",
             "value": ", %@"
+          }
+        }
+      }
+    },
+    "，太長，只用前 %lld 張": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": ", too long, only the first %lld slide is used"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": ", too long, only the first %lld slides are used"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "，太長，只用前 %lld 頁": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": ", too long, only the first %lld page is used"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": ", too long, only the first %lld pages are used"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "，太長，只用前面的部分": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", too long, only the beginning is used"
           }
         }
       }

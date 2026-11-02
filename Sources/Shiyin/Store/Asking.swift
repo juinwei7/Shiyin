@@ -113,13 +113,16 @@ extension AppModel {
             return "[\(TimeFormat.string(s.start))] \(speaker)\(s.text)"
         }
         let history = meetingQuestions.suffix(3).compactMap { q in q.decoded.map { (q.question, $0.answer) } }
-        let prompt = AskPrompt.meetingPrompt(meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: history, question: question)
-        let system = AskPrompt.meetingSystem(language)
+        let documents = ((try? db.documents(id)) ?? []).map(DocumentText.init)
+        let prompt = AskPrompt.meetingPrompt(meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: history, question: question,
+                                             documents: documents)
+        let system = AskPrompt.meetingSystem(language, documents: !documents.isEmpty)
         run(.meeting(id)) {
             let raw = try await AskPrompt.generate(AskPrompt.Answer.self, provider: provider, model: model, system: system,
                                                    prompt: prompt, format: AskPrompt.meetingFormat, onStart: { self.askProcess = $0 })
             return QuestionRecord(meetingId: id, question: question,
-                                  answer: Self.json(AskPrompt.validate(raw, meetingIds: nil)), provider: provider.rawValue)
+                                  answer: Self.json(AskPrompt.validate(raw, meetingIds: nil, documentCitations: !documents.isEmpty)),
+                                  provider: provider.rawValue)
         }
     }
 

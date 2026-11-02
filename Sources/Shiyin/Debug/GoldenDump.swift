@@ -19,8 +19,11 @@ enum GoldenDump {
             try? FileManager.default.removeItem(at: out)
             try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
             var dump = Writer(root: out)
+            // 參考文件的測試檔放在 fixtures.json 旁邊的 documents/（design §39.7）
+            let documentsFolder = URL(fileURLWithPath: fixtures).deletingLastPathComponent().appendingPathComponent("documents", isDirectory: true)
             let fixtures = Fixtures(root)
             prompts(fixtures, &dump)
+            documents(fixtures, folder: documentsFolder, &dump)
             templates(&dump)
             exports(fixtures, &dump)
             utilities(fixtures, &dump)
@@ -83,6 +86,8 @@ enum GoldenDump {
         var history: [(question: String, answer: String)]
         var question: String
         var knownPeople: [String]
+        /// 參考文件（design §39.7）：fixtures 的 meetingDocuments，name 含副檔名，直接給每頁的文字
+        var documents: [MeetingDocument]
         var language: MeetingLanguage { meeting.meetingLanguage }
 
         /// 資料庫裡的說話者表：1 到最大編號，沒改名的是預設名稱（跟 saveTranscript 一樣）
@@ -102,7 +107,13 @@ enum GoldenDump {
 
         init(_ root: Object) {
             self.root = root
-            meetings = (root["meetings"] as? [Object] ?? []).map(GoldenDump.meetingFixture)
+            // 參考文件放在 meetingDocuments（會議的 key → 文件），不動原本的會議資料
+            let documents = root["meetingDocuments"] as? Object ?? [:]
+            meetings = (root["meetings"] as? [Object] ?? []).map { o in
+                var fx = GoldenDump.meetingFixture(o)
+                fx.documents = (documents[fx.key] as? [Object] ?? []).map(GoldenDump.documentFixture)
+                return fx
+            }
         }
 
         func meeting(_ key: String) -> MeetingFixture { meetings.first { $0.key == key }! }
@@ -148,7 +159,12 @@ enum GoldenDump {
         return MeetingFixture(key: o["key"] as? String ?? "", raw: o, meeting: meeting, segments: segments, speakers: speakers,
                               voices: voices, bookmarks: bookmarks, glossary: o["glossary"] as? [String] ?? [], notes: notes,
                               answers: answers, history: history, question: o["question"] as? String ?? "",
-                              knownPeople: o["knownPeople"] as? [String] ?? [])
+                              knownPeople: o["knownPeople"] as? [String] ?? [], documents: [])
+    }
+
+    nonisolated private static func documentFixture(_ o: Object) -> MeetingDocument {
+        MeetingDocument(meetingId: 0, name: o["name"] as? String ?? "", kind: o["kind"] as? String ?? "text",
+                        pages: MeetingDocument.encodePages(o["pages"] as? [String] ?? []), ocr: o["ocr"] as? Bool ?? false)
     }
 
     nonisolated private static func double(_ value: Any?) -> Double {
@@ -227,6 +243,22 @@ enum GoldenDump {
             w.text(dir + "ask-all-prompt.txt", AskPrompt.allPrompt(l, blocks: blocks, question: f["askAllQuestion"] as? String ?? ""))
             w.text(dir + "keywords-system.txt", AskPrompt.keywordsSystem(l))
             w.text(dir + "keywords-prompt.txt", AskPrompt.keywordsPrompt(l, question: fx.question))
+
+            // 有參考文件時（design §39.3）：沒有文件的檔案不變（R61.5）
+            if !fx.documents.isEmpty {
+                let texts = fx.documents.map(DocumentText.init)
+                var withDocuments = context(general.definition(for: l))
+                withDocuments.documents = texts
+                w.text(dir + "notes-system-documents.txt", NotesPrompt.system(l, documents: true))
+                w.text(dir + "summarize-general-documents.txt", NotesPrompt.summarize(withDocuments))
+                if let notes = fx.notes {
+                    w.text(dir + "revise-documents.txt", NotesPrompt.revise(withDocuments, notes: notes, answers: fx.answers))
+                }
+                w.text(dir + "ask-meeting-system-documents.txt", AskPrompt.meetingSystem(l, documents: true))
+                w.text(dir + "ask-meeting-prompt-documents.txt", AskPrompt.meetingPrompt(
+                    meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: Array(fx.history.suffix(3)), question: fx.question,
+                    documents: texts))
+            }
         }
 
         w.text("schemas/notes.json", MeetingNotes.jsonSchema)
@@ -348,6 +380,64 @@ enum GoldenDump {
             let manifest = MeetingPackage.Manifest(format: MeetingPackage.formatVersion, app: "3.6.0", exportedAt: "2026-10-20T00:00:00Z",
                                                    audio: "audio.m4a")
             if let data = try? encoder.encode(manifest) { w.text("package/\(fx.key)/manifest.json", String(decoding: data, as: UTF8.self)) }
+            // 參考文件（design §39.5）
+            if !fx.documents.isEmpty, let data = try? encoder.encode(MeetingPackage.documentEntries(fx.documents)) {
+                w.text("package/\(fx.key)/documents.json", String(decoding: data, as: UTF8.self))
+            }
+        }
+    }
+
+    // MARK: 參考文件（design §39.7）
+
+    private static func documents(_ f: Fixtures, folder: URL, _ w: inout Writer) {
+        func texts(_ list: Any?) -> [DocumentText] {
+            (list as? [Object] ?? []).map {
+                DocumentText(name: $0["name"] as? String ?? "", kind: DocumentKind(rawValue: $0["kind"] as? String ?? "") ?? .text,
+                             pages: $0["pages"] as? [String] ?? [])
+            }
+        }
+        // 長度分配和組好的區塊
+        w.json("documents/budget.json", (f["documentBudget"] as? [Object] ?? []).map { c -> Object in
+            let limit = c["limit"] as? Int ?? DocumentPrompt.limit
+            let docs = texts(c["documents"])
+            var blocks: Object = [:]
+            for language in MeetingLanguage.allCases where !docs.isEmpty {
+                blocks[language.rawValue] = DocumentPrompt.block(docs, language: language, limit: limit)
+            }
+            return ["limit": limit, "blocks": blocks,
+                    "allocated": DocumentPrompt.allocate(docs, limit: limit).map {
+                        ["pages": $0.pages, "includedPages": $0.includedPages, "includedChars": $0.includedChars,
+                         "truncated": $0.truncated, "length": $0.document.length] as Object
+                    }]
+        })
+        w.json("documents/normalize.json", (f["documentNormalize"] as? [String] ?? []).map {
+            ["input": $0, "output": DocumentReader.normalize($0)]
+        })
+        // 檔名：種類、拖進來算不算文件、存的檔名；封包裡的位置安不安全
+        w.json("documents/names.json", (f["documentNames"] as? [String] ?? []).map { name -> Object in
+            let url = URL(fileURLWithPath: "/tmp/" + name)
+            return ["name": name, "kind": DocumentReader.kind(of: url).map { $0.rawValue as Any } ?? NSNull(),
+                    "dropped": DocumentReader.isDroppedDocument(url), "safeName": DocumentStore.safeName(name)]
+        })
+        w.json("documents/paths.json", (f["documentPaths"] as? [String] ?? []).map {
+            ["path": $0, "safe": MeetingPackage.isSafeDocumentPath($0)] as Object
+        })
+        w.json("documents/pptx-targets.json", (f["pptxTargets"] as? [String] ?? []).map {
+            ["target": $0, "path": OfficeText.resolve($0).map { $0 as Any } ?? NSNull()] as Object
+        })
+        // 測試檔讀出來的文字：docx、pptx、純文字（PDF、圖片兩邊的引擎不同，不比）
+        let files = ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).filter { !$0.hasPrefix(".") }.sorted()
+        for name in files where ["docx", "pptx", "txt", "md", "key", "doc"].contains((name as NSString).pathExtension.lowercased()) {
+            let object: Object
+            do {
+                let r = try DocumentReader.read(folder.appendingPathComponent(name), language: .zh)
+                object = ["kind": r.kind.rawValue, "pages": r.pages, "ocr": r.ocr]
+            } catch let error as DocumentReader.DocumentError {
+                object = ["error": error.code]
+            } catch {
+                object = ["error": "\(error)"]
+            }
+            w.json("documents/read/\(name).json", object)
         }
     }
 
@@ -750,6 +840,13 @@ enum GoldenDump {
                 try db.setTrashed(id(op), op["trashed"] as? Bool ?? false)
             case "rebuildSearchIndex":
                 try db.rebuildSearchIndex()
+            case "addDocument":   // 參考文件（design §39.1）
+                _ = try db.addDocument(id(op), name: op["name"] as? String ?? "", kind: DocumentKind(rawValue: op["kind"] as? String ?? "") ?? .text,
+                                       pages: op["pages"] as? [String] ?? [], ocr: op["ocr"] as? Bool ?? false)
+            case "deleteDocument":
+                let list = try db.documents(id(op))
+                let deleted = try db.deleteDocument(list[op["index"] as? Int ?? 0].id!)
+                if let file { w.json(file, ["deleted": deleted.map { $0.name as Any } ?? NSNull()]) }
             case "deleteMeeting":
                 try db.deleteMeeting(id(op))
             default:

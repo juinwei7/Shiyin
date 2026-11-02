@@ -45,7 +45,13 @@ enum AskPrompt {
 
     // MARK: 提示詞（中文、英文、日文各一份）
 
-    static func meetingSystem(_ l: MeetingLanguage) -> String {
+    /// documents：有參考文件時加一條（design §39.3、R61.6）
+    static func meetingSystem(_ l: MeetingLanguage, documents: Bool = false) -> String {
+        let base = meetingSystemBase(l)
+        return documents ? base + "\n" + DocumentPrompt.askRule(l) : base
+    }
+
+    private static func meetingSystemBase(_ l: MeetingLanguage) -> String {
         l.text(zh: """
         你是會議助理，只根據提供的這場會議的內容（會議紀錄和逐字稿）回答使用者的問題。
 
@@ -127,7 +133,7 @@ enum AskPrompt {
     }
 
     static func meetingPrompt(meeting: Meeting, notes: MeetingNotes?, lines: [String], history: [(question: String, answer: String)],
-                              question: String) -> String {
+                              question: String, documents: [DocumentText] = []) -> String {
         let l = meeting.meetingLanguage
         let colon = l.text(zh: "：", en: ": ", ja: "：")
         var out: [String] = []
@@ -140,6 +146,10 @@ enum AskPrompt {
             out.append("")
             out.append(l.text(zh: "會議紀錄（JSON）", en: "Meeting notes (JSON)", ja: "議事録（JSON）") + colon)
             out.append(notes.jsonString())
+        }
+        if !documents.isEmpty {
+            out.append("")
+            out.append(DocumentPrompt.block(documents, language: l))
         }
         out.append("")
         out.append(l.text(zh: "逐字稿（[時間] 說話者：內容）", en: "Transcript ([time] speaker: text)", ja: "文字起こし（[時刻] 話者：内容）") + colon)
@@ -191,14 +201,16 @@ enum AskPrompt {
     }
 
     /// 丟掉不能用的出處：時間格式不對、跨會議時不是提供的會議
-    static func validate(_ answer: Answer, meetingIds: Set<Int64>?) -> Answer {
+    /// documentCitations：這場會議有參考文件，time 是空的引用是文件的出處，留著（design §39.3）
+    static func validate(_ answer: Answer, meetingIds: Set<Int64>?, documentCitations: Bool = false) -> Answer {
         var result = answer
         result.answer = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines)
         result.citations = answer.citations.compactMap { c in
             var c = c
             c.time = TimeFormat.clean(c.time)
             c.quote = c.quote.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard TimeFormat.seconds(c.time) != nil else { return nil }
+            let fromDocument = documentCitations && meetingIds == nil && c.time.isEmpty && !c.quote.isEmpty
+            guard fromDocument || TimeFormat.seconds(c.time) != nil else { return nil }
             if let meetingIds {
                 guard let id = c.meetingId, meetingIds.contains(id) else { return nil }
             } else {

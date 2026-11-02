@@ -1,0 +1,24 @@
+{
+  "documents" : [
+    {
+      "created_at" : "<time>",
+      "file" : "2/規格書.docx",
+      "id" : 2,
+      "kind" : "docx",
+      "meeting_id" : 1,
+      "name" : "規格書.docx",
+      "ocr" : 0,
+      "pages" : "[\"寄信服務改用 SendGrid。\"]"
+    },
+    {
+      "created_at" : "<time>",
+      "file" : "3/見積書.png",
+      "id" : 3,
+      "kind" : "image",
+      "meeting_id" : 3,
+      "name" : "見積書.png",
+      "ocr" : 1,
+      "pages" : "[\"見積書\\n合計 120 万円\"]"
+    }
+  ]
+}

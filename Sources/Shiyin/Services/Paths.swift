@@ -20,6 +20,8 @@ enum Paths {
     static var audioDir: URL { home.appendingPathComponent("audio", isDirectory: true) }
     static var recordingDir: URL { audioDir.appendingPathComponent("recording", isDirectory: true) }
     static var database: URL { home.appendingPathComponent("shiyin.sqlite") }
+    /// 會議的參考文件的原始檔（design §39.1）
+    static var documentsDir: URL { home.appendingPathComponent("documents", isDirectory: true) }
     static var tmpDir: URL { home.appendingPathComponent("tmp", isDirectory: true) }
     static var logsDir: URL { home.appendingPathComponent("logs", isDirectory: true) }
 
