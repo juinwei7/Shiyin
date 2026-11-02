@@ -125,6 +125,7 @@ Mac 的 DEBUG 控制通道加 `shiyinctl dump-golden <fixtures.json> <輸出資�
 | `pipeline/` | 合成訊號的分段點、語言偵測收集的結果、接縫和回音的比對、說話者編號、分不準的判斷、重新辨識的名字沿用 |
 | `db/` | `schema.sql`（跑完 migration v1～v9 後 `sqlite_master` 的 SQL）、每一步資料庫操作後的資料表和回傳值（含搜尋、詞彙建議、聲紋比對） |
 | `util/` | 時間、日期、檔名、匯入、模型回傳的檢查等小工具的結果 |
+| `documents/` | 參考文件（M§39.7）：長度分配和組好的區塊、整理文字、檔名、封包裡的路徑、pptx 的 Target、`shared/golden/documents/` 測試檔讀出來的文字 |
 | `llm/mac-requests.jsonl` | Mac 的 DEBUG 版接假伺服器（`scripts/dev/fake-llm-server.py`）實際送出的四種 API 請求；Windows 送同樣的提示詞，body 要解析後相同 |
 
 ### 4.2 Windows 比對
@@ -372,6 +373,18 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 文字大小（R59）：設定 `contentTextSize`（−1～5，同 Mac），`TextSizes.Scales` 在 Services。`Ui.ContentScale`（啟動和設定改了時設）、`Ui.C(size)` 乘上倍率；會議內容的元件（紀錄、待確認的題目、逐字稿的段落和欄寬、提問、錄音中的即時逐字稿、我的筆記、紀錄的編輯器）建的時候用 `Ui.C`，側欄、按鈕、提示列、搜尋列不用。設定改了：主視窗整個重畫、逐字稿重綁看得到的那幾段、錄音中的即時逐字稿重建。快捷鍵在主視窗的 `PreviewKeyDown` 處理（不用 `KeyboardAccelerator`：游標在輸入框時 TextBox 把 `Ctrl+-` 當成「插入選擇性連字號」吃掉，加速鍵收不到，2026-11-02 虛擬機發現；PreviewKeyDown 比輸入框先收到，處理完設 Handled，輸入框也不會多一個連字號）：`Ctrl+=`、`Ctrl+Shift+=`（加號）、數字鍵盤的 `Ctrl++` 放大，`Ctrl+-`、數字鍵盤的 `Ctrl+-` 縮小，`Ctrl+0`、數字鍵盤的 `Ctrl+0` 實際大小；Windows 沒有選單列，按了在下方提示「會議內容的文字大小：130%」。設定頁「進階」加「顯示」一組（介面語言之後）。
 - 匯出（R60）：會議頁右上角「更多」左邊加 `SplitButton`（分享圖示加「匯出」，按下打開匯出對話框，箭頭是複製會議紀錄的三種格式）；`MoreMenu` 剩重新處理、移到資料夾、移到垃圾桶。條件同「更多」（不在垃圾桶、不是錄音中的那場）。
 - DEBUG 控制通道（M§38.7）：`fakemic <名稱> <bluetooth 0|1> [內建的名稱]`（假的麥克風只在記憶體，當成系統預設，排在真的裝置前面；`fakemic off` 清掉）、`micswitch <id|default>`、`michint dismiss`、`textsize <−1～5>`；`state` 的 `recorder` 多 `micDevice`、`micHint`，最外層多 `textSize`。
+
+### 11.8 會議的參考文件（R61，M§39）
+
+- **Core**（跟 Mac 逐字相同，標準答案比對）：`Model/Records.cs` 的 `DocumentKind`、`MeetingDocument`（頁的文字用 `SwiftJsonWriter` 寫成跟 Mac 一樣的 JSON）；`Notes/DocumentPrompt.cs`（`DocumentText`、長度分配、區塊、截斷的說明、整理和提問的規則；字數用 `SwiftText.Count`、截斷用 `SwiftText.Prefix`）；`NotesPrompt.System(language, documents)`、`NotesContext.Documents`、`AskPrompt.MeetingSystem(l, documents)`、`MeetingPrompt(…, documents)`、`Validate(…, documentCitations)`。
+- **讀出文字**：`Core/IO/DocumentReader.cs`：種類、拖放算不算文件、整理文字（M§39.2 的規則）、純文字的編碼、docx／pptx（`System.IO.Compression.ZipArchive` 只讀要的那幾個檔，一個檔解出來超過 64 MB 就停；`XmlReader` 不解析 DTD，規則同 M§39.2，只看本地名稱；pptx 的 Target 同 `OfficeText.resolve`）、`DocumentError`（`Code` 同 Mac，訊息用 Mac 的同一句中文查表）。
+- **PDF**：PdfPig（`PdfPig` 0.1.16，Apache-2.0，純 C#，Mac 上的測試也跑得到）在 Services 的 `Documents.cs`：每頁用 `ContentOrderTextExtractor` 取文字；要密碼的 PDF（`PdfDocumentEncryptedException`）是 `locked`；打不開是 `unreadable`。文字少於 20 字的頁、圖片交給 `IDocumentOcr`（Platform）；沒有實作（Mac 上的測試）時當成辨識不出文字。
+- **文字辨識**（Platform 的 `WindowsOcr`）：`Windows.Media.Ocr.OcrEngine`，語言依會議語言（中文 `zh-Hant-TW`→`zh-TW`→`zh-Hans-CN`、英文 `en-US`、日文 `ja-JP`），都沒有就用 `TryCreateFromUserProfileLanguages`。PDF 的頁用 `Windows.Data.Pdf` 畫成長邊 2000 px（同 Mac），圖片用 `BitmapDecoder`（照 EXIF 方向），超過 `OcrEngine.MaxImageDimension` 先縮小。每一行把 `Words` 接起來：前後兩個字都不是中日文時才加空格（Windows 的中文辨識一個字一個 word，直接用 `Line.Text` 會變成「會 議 議 程」）。這台電腦沒有可以用的辨識語言時，掃描的頁和圖片是空的，整份讀不到字時說明「「<檔名>」裡讀不到文字。這台電腦沒有<語言>的文字辨識：到「設定 → 時間與語言 → 語言與地區」加入<語言>再試。」（Windows 才有的字串）。
+- **資料庫**：migration `v10` 的 SQL 從 Mac 照抄（`MigrationSql.V10`）；`AppDatabase` 建構時多 `documentsRoot`（同 Mac：null 時不碰檔案），`Documents`、`Document`、`AddDocument`、`DeleteDocument`、`DeleteMeeting` 先讀出文件的 `file` 再刪資料夾。`Paths.DocumentsDir`（`SHIYIN_HOME\documents`）；檔名照 Mac 的 `safeName`，另外把 Windows 檔名不能用的字元（`<>:"/\\|?*`、控制字元）換成 `-`（標準答案的檔名都沒有這些字元），`file` 是 `<id>/<檔名>`（資料庫裡用 `/`，組路徑時用 `Path.Combine` 拆開）。
+- **Services**：`AppController.AddDocuments(paths, meetingId)`（依序讀、同一份不重複加、讀取中記在 `ReadingDocuments`、完成後 `DocumentsChanged`）、`RemoveDocument`、`DismissDocumentsChanged`、`Resummarize` 清掉提示；`MeetingDetail.Documents`、`DocumentUse`；`JobRunner` 整理時帶文件；`Asking` 單場提問帶文件；`MeetingPackage` 匯出、匯入 `documents.json`（路徑檢查同 Mac 的 `isSafeDocumentPath`；Mac 的封包裡檔名有 Windows 不能用的字元時，存檔時照上面換掉）。
+- **畫面**：會議標題下資訊列的 `DropDownButton`（迴紋針圖示，文字同 Mac：「加入文件」「N 份文件」「正在讀取文件…」），選單每一份是子選單（打開、移除），最後「加入文件…」用 `FileOpenPicker`（多選，pdf、docx、pptx、txt、md、png、jpg、jpeg、heic）。打開用 `Shell` 的預設程式（`ShellExecute`，參數不經過 cmd.exe）。拖放：`RequestImport` 先挑出文件加到選取中的會議（同 M§39.4）。紀錄分頁頂部的提示列「文件有變動，會議紀錄還沒用上。」（不用、重新整理會議紀錄）。提問的出處 `Time` 是空的時候不放時間按鈕，放迴紋針圖示。使用說明照 Mac 加一段、改隱私那一條（「macOS 的文字辨識」改成「Windows 的文字辨識」，Windows 才有的字串）。
+- **DEBUG 控制通道**：`adddoc <會議 id> <檔案>…`、`drop <檔案>…`、`removedoc <文件 id>`、`docread <檔案> <zh|en|ja> <輸出.json>`、`docbanner <會議 id> dismiss|resummarize`；`state` 多 `documents`、`readingDocuments`、`documentsChanged`（同 M§39.7）。
+- **標準答案**：`documents/`（分配、整理文字、檔名、路徑、pptx 的 Target、`shared/golden/documents/` 測試檔讀出來的結果）、提示詞的 `*-documents`、`db/`、`package/` 的 `documents.json`。PDF、文字辨識兩邊引擎不同，不比標準答案：Windows 的測試用 Mac 上也跑得到的 PdfPig 讀測試用的 PDF，檢查每頁的文字有沒有讀到。
 
 ## 12. 系統整合
 

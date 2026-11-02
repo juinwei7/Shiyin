@@ -71,6 +71,13 @@ public sealed class AppController
     public int ImportingCount => Volatile.Read(ref importing);
     int importing;
 
+    /// <summary>文字辨識（Platform 的 Windows.Media.Ocr）；沒給（測試）時掃描的 PDF、圖片讀不出文字</summary>
+    public IDocumentOcr? Ocr { get; init; }
+    /// <summary>正在讀取的參考文件：會議 id → 檔名（M§39.4）。只在畫面的執行緒改</summary>
+    public Dictionary<long, List<string>> ReadingDocuments { get; } = [];
+    /// <summary>已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體</summary>
+    public HashSet<long> DocumentsChanged { get; } = [];
+
     public AppController(AppDatabase db, AppSettings settings, ShiyinPaths paths, ModelStore models, JobRunner runner, Recorder recorder,
                          IAudioDecoder decoder, IExportPlatform? exporter, string appVersion)
     {
@@ -175,6 +182,14 @@ public sealed class AppController
     /// </summary>
     public List<string> RequestImport(IReadOnlyList<string> files, string folder, long? selected)
     {
+        // 文件加到選取中的會議（R61.1、R61.3）；其他照舊匯入
+        var documents = files.Where(DocumentReader.IsDroppedDocument).ToList();
+        if (documents.Count > 0)
+        {
+            AddDroppedDocuments(documents, selected);
+            files = files.Where(f => !DocumentReader.IsDroppedDocument(f)).ToList();
+            if (files.Count == 0) return [];
+        }
         var packages = files.Where(f => Importer.Extension(f) == "shiyin").ToList();
         var transcripts = files.Where(f => Importer.TranscriptExtensions.Contains(Importer.Extension(f))).ToList();
         var markdown = files.Where(f => Importer.MarkdownExtensions.Contains(Importer.Extension(f))).ToList();
@@ -759,8 +774,81 @@ public sealed class AppController
         }
         // 沒登入、沒有 key…：不排，說原因（R45.4、M§34.2）
         if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
+        DocumentsChanged.Remove(id);
         Perform(id, () => Db.Enqueue(id, JobKind.Summarize));
         Runner.Wake();
+    }
+
+    // MARK: 參考文件（R61，M§39.4）
+
+    /// <summary>拖進主視窗的文件：加到選取中的會議（R61.1）</summary>
+    public void AddDroppedDocuments(IReadOnlyList<string> files, long? selected)
+    {
+        if (selected is not long id || Db.Meeting(id) is not { DeletedAt: null })
+        {
+            Error?.Invoke(L.T("先選一場會議，再把文件拖進來"));
+            return;
+        }
+        _ = AddDocuments(files, id);
+    }
+
+    /// <summary>一份一份依序讀（加入的順序固定），讀取中記在 ReadingDocuments；讀完複製原始檔、寫資料庫</summary>
+    public async Task AddDocuments(IReadOnlyList<string> files, long meetingId)
+    {
+        if (files.Count == 0 || Db.Meeting(meetingId) is not { } meeting) return;
+        var language = meeting.MeetingLanguage;
+        if (!ReadingDocuments.TryGetValue(meetingId, out var names)) ReadingDocuments[meetingId] = names = [];
+        names.AddRange(files.Select(Path.GetFileName)!);
+        Changed?.Invoke(meetingId);
+        var added = new List<MeetingDocument>();
+        var failures = new List<string>();
+        foreach (var file in files)
+        {
+            try { added.Add(await Task.Run(() => DocumentStore.Add(file, meetingId, language, Db, Paths, Ocr))); }
+            catch (DocumentError e) { failures.Add(e.Message); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException) { failures.Add(e.Message); }
+            names.Remove(Path.GetFileName(file));
+            if (names.Count == 0) ReadingDocuments.Remove(meetingId);
+            Changed?.Invoke(meetingId);
+        }
+        if (failures.Count > 0) Error?.Invoke(string.Join("\n", failures));
+        if (added.Count == 0) return;
+        Notice?.Invoke(added.Count == 1
+            ? added[0].Ocr ? L.F("已加入「%@」，用文字辨識讀出文字", added[0].Name) : L.F("已加入「%@」", added[0].Name)
+            : L.F("已加入 %lld 份文件", added.Count));
+        MarkDocumentsChanged(meetingId);
+    }
+
+    /// <summary>移除：不另外確認（重新加入就回來了）</summary>
+    public void RemoveDocument(long documentId)
+    {
+        if (Db.Document(documentId) is not { } document) return;
+        Perform(document.MeetingId, () => Db.DeleteDocument(documentId));
+        Notice?.Invoke(L.F("已移除「%@」", document.Name));
+        MarkDocumentsChanged(document.MeetingId);
+    }
+
+    /// <summary>原始檔的位置；不在了回傳 null 並說明</summary>
+    public string? DocumentFile(MeetingDocument document)
+    {
+        var path = Paths.DocumentPath(document);
+        if (File.Exists(path)) return path;
+        Error?.Invoke(L.F("找不到「%@」的原始檔", document.Name));
+        return null;
+    }
+
+    /// <summary>已經有會議紀錄（含草稿）時，紀錄分頁頂部提示重新整理（R61.8）</summary>
+    void MarkDocumentsChanged(long meetingId)
+    {
+        if (Db.Meeting(meetingId)?.Notes is null) return;
+        DocumentsChanged.Add(meetingId);
+        Changed?.Invoke(meetingId);
+    }
+
+    public void DismissDocumentsChanged(long meetingId)
+    {
+        DocumentsChanged.Remove(meetingId);
+        Changed?.Invoke(meetingId);
     }
 
     public void UndoNotes(long id)
@@ -937,7 +1025,7 @@ public sealed class AppController
     {
         if (Db.Meeting(meetingId) is not { } meeting) throw new ExportException(L.T("這場會議已經被刪除，沒辦法匯出"));
         return new ExportBundle(meeting, Db.Segments(meetingId), Db.Speakers(meetingId).ToDictionary(s => s.Idx, s => s.Name),
-            Db.Bookmarks(meetingId), meeting.DecodedNotes);
+            Db.Bookmarks(meetingId), meeting.DecodedNotes) { Documents = Db.Documents(meetingId) };
     }
 
     /// <summary>寫出檔案；文字格式、封包在背景寫，長會議不卡住畫面（M§21.13）</summary>

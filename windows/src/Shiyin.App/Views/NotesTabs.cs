@@ -181,6 +181,8 @@ public sealed class NotesTabs
         if (detail.Notes is not { IsEmpty: false } notes) return Placeholder(detail);
         var language = detail.Meeting.MeetingLanguage;
         var column = Column();
+        // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
+        if (host.Controller.DocumentsChanged.Contains(detail.Meeting.Id!.Value)) column.Children.Add(DocumentsBanner(detail.Meeting.Id!.Value));
         if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
         column.Children.Add(EditBar(detail));
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
@@ -211,6 +213,20 @@ public sealed class NotesTabs
             column.Children.Add(Ui.Text(L.F("由 %@ 整理．%@", LLMProviders.Parse(by)?.ShortLabel() ?? by, L.T("範本：") + template), Ui.C(12), color: Ui.Tertiary));
         }
         return Reading(column);
+    }
+
+    /// <summary>文件有變動（R61.8，同 Mac 的 DocumentsBanner）：不用、重新整理會議紀錄</summary>
+    FrameworkElement DocumentsBanner(long id)
+    {
+        var left = Ui.Row(8, new SymbolIcon(Symbol.Attach), Ui.Text(L.T("文件有變動，會議紀錄還沒用上。"), 13));
+        var right = Ui.Row(8, Ui.Button(L.T("不用"), () => host.Controller.DismissDocumentsChanged(id)),
+            Ui.Button(L.T("重新整理會議紀錄"), () => host.Controller.Resummarize(id), accent: true));
+        left.VerticalAlignment = VerticalAlignment.Center;
+        right.VerticalAlignment = VerticalAlignment.Center;
+        return new Border
+        {
+            Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8), Background = Ui.Subtle,
+        };
     }
 
     /// <summary>紀錄頂部的「還有 N 題待確認」（R44.2，同 Mac 的 ReviewBanner）：點了在下面展開待確認的題目，再點收起；展開的狀態換會議就重設</summary>
@@ -506,6 +522,14 @@ public sealed class AskTab
             panel.Children.Add(Ui.Text(answer.Text.Replace("**", ""), Ui.C(14), color: answer.Found ? null : Ui.Secondary, select: true));
             foreach (var c in answer.Citations)
             {
+                if (c.Time.Length == 0)
+                {
+                    // 參考文件的出處（M§39.3）：沒有錄音的時間點，quote 開頭寫了文件名稱和頁數
+                    var clip = new SymbolIcon(Symbol.Attach) { Foreground = Ui.Secondary };
+                    ToolTipService.SetToolTip(clip, L.T("出自這場會議的參考文件"));
+                    panel.Children.Add(Ui.Split(clip, Ui.Text(c.Quote, Ui.C(13), color: Ui.Secondary, maxLines: 2), 8));
+                    continue;
+                }
                 var label = c.MeetingId is long mid && onMeetingCitation is not null ? $"{meetingTitle?.Invoke(mid) ?? L.T("會議")} {c.Time}" : c.Time;
                 var link = Ui.Link(label, () => { if (c.MeetingId is long m && onMeetingCitation is not null) onMeetingCitation(m, c.Time); else onCitation(c.Time); });
                 link.Foreground = Ui.Celadon;

@@ -101,13 +101,20 @@ public sealed partial class AppDatabase
         db.Query("SELECT id FROM meetings WHERE source = 'recording' AND audio_file = '' AND deleted_at IS NULL").Select(r => r.Long("id")).ToList());
 
     /// <summary>永久刪除</summary>
-    public void DeleteMeeting(long id) => Write(db =>
+    /// <summary>永久刪除；參考文件的原始檔一起刪（M§39.1）</summary>
+    public void DeleteMeeting(long id)
     {
-        // 段落會跟著會議刪掉（ON DELETE CASCADE），所以先刪索引
-        UnindexSegments(db, id);
-        UnindexMeeting(db, id);
-        db.Execute("DELETE FROM meetings WHERE id = ?", id);
-    });
+        var files = Write(db =>
+        {
+            var files = db.Query("SELECT file FROM documents WHERE meeting_id = ?", id).Select(r => r.Str("file")).ToList();
+            // 段落會跟著會議刪掉（ON DELETE CASCADE），所以先刪索引
+            UnindexSegments(db, id);
+            UnindexMeeting(db, id);
+            db.Execute("DELETE FROM meetings WHERE id = ?", id);
+            return files;
+        });
+        files.ForEach(RemoveDocumentFile);
+    }
 
     /// <summary>移到垃圾桶或還原（R9.3）</summary>
     public void SetTrashed(long id, bool trashed) =>

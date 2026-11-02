@@ -17,10 +17,14 @@ public sealed partial class AppDatabase : IDisposable
 
     public string Path { get; }
 
+    /// <summary>參考文件原始檔的資料夾（M§39.1）；null 時刪除會議、文件不碰檔案（標準答案的測試）</summary>
+    public string? DocumentsRoot { get; }
+
     /// <summary>開啟資料庫；有待執行的 migration 時，先把舊檔備份到 backupsDir（N3）</summary>
-    public AppDatabase(string path, string? backupsDir = null)
+    public AppDatabase(string path, string? backupsDir = null, string? documentsRoot = null)
     {
         Path = path;
+        DocumentsRoot = documentsRoot;
         connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = path, Mode = SqliteOpenMode.ReadWriteCreate, ForeignKeys = true, Pooling = true, DefaultTimeout = 30,
@@ -164,7 +168,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"];
 
     void Migrate(string? backupsDir)
     {
@@ -223,6 +227,7 @@ public sealed partial class AppDatabase : IDisposable
             case "v7": db.Execute(MigrationSql.V7); break;
             case "v8": db.Execute(MigrationSql.V8); break;
             case "v9": db.Execute(MigrationSql.V9); break;
+            case "v10": db.Execute(MigrationSql.V10); break;
         }
     }
 

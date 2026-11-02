@@ -56,6 +56,14 @@ public class ExportTests
         Golden.Json($"package/{key}/transcript.json", IO.PackageJson.Write(fx.Segments.Select(s =>
             new IO.PackageJson.SegmentInfo(s.Start, s.End, s.Text, s.LowConfidence, s.Speaker))));
         Golden.Json($"package/{key}/manifest.json", IO.PackageJson.Write(new IO.PackageJson.Manifest(1, "3.6.0", "2026-10-20T00:00:00Z", "audio.m4a")));
+        if (fx.Documents.Count > 0)
+        {
+            // 參考文件（M§39.5）：寫出來跟 Mac 一樣，Mac 寫的讀得回來
+            Golden.Json($"package/{key}/documents.json", IO.PackageJson.Write(IO.PackageJson.DocumentEntries(fx.Documents)));
+            var documents = IO.PackageJson.ReadDocuments(Golden.Expected($"package/{key}/documents.json"));
+            Assert.Equal(fx.Documents.Select(d => d.PageTexts), documents!.Select(d => d.Pages));
+            Assert.All(documents!, d => Assert.True(IO.PackageJson.IsSafeDocumentPath(d.File)));
+        }
 
         // Mac 寫的 JSON 讀得回來，內容相同
         var read = IO.PackageJson.ReadMeeting(Golden.Expected($"package/{key}/meeting.json"));

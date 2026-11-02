@@ -29,10 +29,17 @@ public class PromptTests
         }
         var custom = new TemplateRecord { Id = "custom-1", Name = "客戶會議", Builtin = false, Definition = Golden.Fixtures.GetProperty("customTemplate").GetRawText() };
         Golden.Text(dir + "summarize-custom.txt", NotesPrompt.Summarize(Context(fx, custom.DefinitionFor(fx.Language))));
+        var general = new TemplateRecord { Id = "general", Builtin = true, Definition = BuiltinTemplates.All[0].Definition.JsonString() };
         if (fx.Notes is { } notes)
-        {
-            var general = new TemplateRecord { Id = "general", Builtin = true, Definition = BuiltinTemplates.All[0].Definition.JsonString() };
             Golden.Text(dir + "revise.txt", NotesPrompt.Revise(Context(fx, general.DefinitionFor(fx.Language)), notes, fx.Answers));
+
+        // 有參考文件時（M§39.3）：沒有文件的檔案不變（R61.5）
+        if (fx.Documents.Count > 0)
+        {
+            var withDocuments = Context(fx, general.DefinitionFor(fx.Language)) with { Documents = fx.Documents.Select(DocumentText.From).ToList() };
+            Golden.Text(dir + "notes-system-documents.txt", NotesPrompt.System(fx.Language, documents: true));
+            Golden.Text(dir + "summarize-general-documents.txt", NotesPrompt.Summarize(withDocuments));
+            if (fx.Notes is { } n) Golden.Text(dir + "revise-documents.txt", NotesPrompt.Revise(withDocuments, n, fx.Answers));
         }
     }
 
@@ -83,6 +90,12 @@ public class PromptTests
         Golden.Text(dir + "ask-all-prompt.txt", AskPrompt.AllPrompt(l, blocks, Golden.Fixtures.Str("askAllQuestion") ?? ""));
         Golden.Text(dir + "keywords-system.txt", AskPrompt.KeywordsSystem(l));
         Golden.Text(dir + "keywords-prompt.txt", AskPrompt.KeywordsPrompt(l, fx.Question));
+        if (fx.Documents.Count > 0)
+        {
+            Golden.Text(dir + "ask-meeting-system-documents.txt", AskPrompt.MeetingSystem(l, documents: true));
+            Golden.Text(dir + "ask-meeting-prompt-documents.txt", AskPrompt.MeetingPrompt(meeting, meeting.DecodedNotes, lines,
+                fx.History.TakeLast(3).ToList(), fx.Question, fx.Documents.Select(DocumentText.From).ToList()));
+        }
     }
 
     [Fact]

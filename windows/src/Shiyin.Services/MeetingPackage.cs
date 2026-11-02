@@ -37,6 +37,15 @@ public static class MeetingPackage
                     new PackageJson.SegmentInfo(s.Start, s.End, s.Text, s.LowConfidence, s.Speaker))));
                 // 錄音已經壓縮過，不再壓
                 if (audioName is not null) zip.CreateEntryFromFile(paths.AudioPath(m), audioName, CompressionLevel.NoCompression);
+                // 參考文件（M§39.5）：原始檔不在了的那份不放（不然匯入時會被當成壞掉的封包）
+                var documents = b.Documents.Where(d => File.Exists(paths.DocumentPath(d))).ToList();
+                if (documents.Count > 0)
+                {
+                    var entries = PackageJson.DocumentEntries(documents);
+                    foreach (var (entry, document) in entries.Zip(documents))
+                        zip.CreateEntryFromFile(paths.DocumentPath(document), entry.File, CompressionLevel.Optimal);
+                    Add(zip, "documents.json", PackageJson.Write(entries));
+                }
             }
             File.Move(temp, destination, overwrite: true);
         }
@@ -80,6 +89,19 @@ public static class MeetingPackage
                     throw PackageException.Invalid(L.T("封包裡的錄音檔不正確"));
             }
 
+            // 參考文件（M§39.5）：先全部檢查過，再建立會議
+            var documents = new List<(PackageJson.DocumentInfo Info, ZipArchiveEntry Entry)>();
+            if (Read(zip, "documents.json") is { } dj)
+            {
+                var list = PackageJson.ReadDocuments(dj) ?? throw PackageException.Invalid(L.T("封包裡的文件不正確"));
+                foreach (var info2 in list)
+                {
+                    if (DocumentKinds.Parse(info2.Kind) is null || !PackageJson.IsSafeDocumentPath(info2.File) || Entry(zip, info2.File) is not { } entry)
+                        throw PackageException.Invalid(L.T("封包裡的文件不正確"));
+                    documents.Add((info2, entry));
+                }
+            }
+
             var meeting = db.InsertMeeting(new Meeting
             {
                 Title = info.Title, TitleLocked = info.TitleLocked, MeetingDate = info.MeetingDate, Participants = info.Participants,
@@ -104,6 +126,8 @@ public static class MeetingPackage
                 foreach (var (time, label) in info.Bookmarks) db.AddBookmark(id, time, label);
                 if (info.Notes is not null) db.SaveNotes(id, info.Notes, info.NotesBy, L.T("匯入"));
                 db.UpdateUserNotes(id, info.UserNotes);
+                foreach (var (doc, entry) in documents)
+                    DocumentStore.Save(entry, doc.Name, DocumentKinds.Parse(doc.Kind)!.Value, doc.Pages, doc.Ocr, id, db, paths);
                 return db.Meeting(id) ?? meeting;
             }
             catch

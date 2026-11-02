@@ -231,3 +231,51 @@ public static class PathText
         return slash < 0 ? trimmed : trimmed[(slash + 1)..];
     }
 }
+
+/// <summary>會議的參考文件的種類（M§39.2）：PDF、投影片有頁碼</summary>
+public enum DocumentKind { Pdf, Docx, Pptx, Text, Image }
+
+public static class DocumentKinds
+{
+    public static string Raw(this DocumentKind kind) => kind switch
+    {
+        DocumentKind.Pdf => "pdf", DocumentKind.Docx => "docx", DocumentKind.Pptx => "pptx", DocumentKind.Image => "image", _ => "text",
+    };
+
+    public static DocumentKind? Parse(string? raw) => raw switch
+    {
+        "pdf" => DocumentKind.Pdf, "docx" => DocumentKind.Docx, "pptx" => DocumentKind.Pptx, "text" => DocumentKind.Text, "image" => DocumentKind.Image,
+        _ => null,
+    };
+
+    public static bool IsPaged(this DocumentKind kind) => kind is DocumentKind.Pdf or DocumentKind.Pptx;
+}
+
+/// <summary>會議的參考文件（資料表 documents，M§39.1、R61）：原始檔在 documents/&lt;file&gt;，讀出來的文字每頁一項</summary>
+public sealed class MeetingDocument
+{
+    public long? Id { get; set; }
+    public long MeetingId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>documents 底下的路徑：&lt;id&gt;/&lt;檔名&gt;（用 /，同 Mac）</summary>
+    public string File { get; set; } = "";
+    public string Kind { get; set; } = "text";
+    /// <summary>JSON 字串陣列</summary>
+    public string Pages { get; set; } = "[]";
+    public bool Ocr { get; set; }
+    public string CreatedAt { get; set; } = Clock.Now();
+
+    public DocumentKind DocumentKind => DocumentKinds.Parse(Kind) ?? DocumentKind.Text;
+
+    public List<string> PageTexts
+    {
+        get
+        {
+            try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(Pages) ?? []; }
+            catch (System.Text.Json.JsonException) { return []; }
+        }
+    }
+
+    /// <summary>頁的文字存成 JSON：跟 Mac 的 JSONEncoder（.withoutEscapingSlashes）一樣</summary>
+    public static string EncodePages(IEnumerable<string> pages) => SwiftJsonWriter.Write(JNode.Of(pages), sortKeys: false, escapeSlashes: false);
+}

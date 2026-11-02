@@ -79,7 +79,7 @@ public static class Golden
     public sealed record MeetingFixture(
         string Key, Meeting Meeting, List<Segment> Segments, Dictionary<int, string> Speakers, Dictionary<int, SpeakerVoice> Voices,
         List<Bookmark> Bookmarks, List<string> Glossary, MeetingNotes? Notes, List<ReviewAnswer> Answers,
-        List<(string Question, string Answer)> History, string Question, List<string> KnownPeople)
+        List<(string Question, string Answer)> History, string Question, List<string> KnownPeople, List<MeetingDocument> Documents)
     {
         public MeetingLanguage Language => Meeting.MeetingLanguage;
 
@@ -124,9 +124,24 @@ public static class Golden
         var notes = o.Get("notes") is { ValueKind: JsonValueKind.Object } n ? MeetingNotes.Decode(n) : null;
         var answers = o.GetProperty("answers").EnumerateArray().Select(a => new ReviewAnswer(a.Str("time") ?? "", a.Str("question") ?? "", a.Str("answer") ?? "")).ToList();
         var history = o.GetProperty("history").EnumerateArray().Select(h => (h.Str("question") ?? "", h.Str("answer") ?? "")).ToList();
-        return new MeetingFixture(o.Str("key")!, meeting, segments, speakers, voices, bookmarks, o.Strings("glossary") ?? [], notes, answers,
-            history, o.Str("question") ?? "", o.Strings("knownPeople") ?? []);
+        // 參考文件放在 meetingDocuments（會議的 key → 文件），同 Mac 的 GoldenDump
+        var key = o.Str("key")!;
+        var documents = Fixtures.Get("meetingDocuments") is { ValueKind: JsonValueKind.Object } all && all.Get(key) is { ValueKind: JsonValueKind.Array } list
+            ? list.EnumerateArray().Select(Document).ToList() : [];
+        return new MeetingFixture(key, meeting, segments, speakers, voices, bookmarks, o.Strings("glossary") ?? [], notes, answers,
+            history, o.Str("question") ?? "", o.Strings("knownPeople") ?? [], documents);
     }
+
+    public static MeetingDocument Document(JsonElement d) => new()
+    {
+        Name = d.Str("name") ?? "", Kind = d.Str("kind") ?? "text", Pages = MeetingDocument.EncodePages(d.Strings("pages") ?? []),
+        Ocr = d.Bool("ocr") ?? false,
+    };
+
+    public static List<DocumentText> Texts(JsonElement? list) => list is { ValueKind: JsonValueKind.Array } l
+        ? l.EnumerateArray().Select(d => new DocumentText(d.Str("name") ?? "", DocumentKinds.Parse(d.Str("kind")) ?? DocumentKind.Text,
+            d.Strings("pages") ?? [])).ToList()
+        : [];
 
     /// <summary>跟 Mac 一樣的亂數：線性同餘，取高 16 位當 Int16</summary>
     public struct Lcg(uint state)

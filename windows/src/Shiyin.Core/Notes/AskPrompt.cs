@@ -60,7 +60,11 @@ public static class AskPrompt
     public static readonly OutputFormat AllFormat = new(AllSchema, "save_answer", "Save the answer to the question");
     public static readonly OutputFormat KeywordsFormat = new(KeywordsSchema, "save_search_keywords", "Save the search keywords for the question");
 
-    public static string MeetingSystem(MeetingLanguage l) => l.Text("""
+    /// <summary>documents：有參考文件時加一條（M§39.3、R61.6）</summary>
+    public static string MeetingSystem(MeetingLanguage l, bool documents = false) =>
+        documents ? MeetingSystemBase(l) + "\n" + DocumentPrompt.AskRule(l) : MeetingSystemBase(l);
+
+    static string MeetingSystemBase(MeetingLanguage l) => l.Text("""
         你是會議助理，只根據提供的這場會議的內容（會議紀錄和逐字稿）回答使用者的問題。
 
         規則：
@@ -136,7 +140,8 @@ public static class AskPrompt
         """);
 
     public static string MeetingPrompt(Meeting meeting, MeetingNotes? notes, IReadOnlyList<string> lines,
-                                       IReadOnlyList<(string Question, string Answer)> history, string question)
+                                       IReadOnlyList<(string Question, string Answer)> history, string question,
+                                       IReadOnlyList<DocumentText>? documents = null)
     {
         var l = meeting.MeetingLanguage;
         var colon = l.Text("：", ": ", "：");
@@ -152,6 +157,11 @@ public static class AskPrompt
             output.Add("");
             output.Add(l.Text("會議紀錄（JSON）", "Meeting notes (JSON)", "議事録（JSON）") + colon);
             output.Add(notes.JsonString());
+        }
+        if (documents is { Count: > 0 })
+        {
+            output.Add("");
+            output.Add(DocumentPrompt.Block(documents, l));
         }
         output.Add("");
         output.Add(l.Text("逐字稿（[時間] 說話者：內容）", "Transcript ([time] speaker: text)", "文字起こし（[時刻] 話者：内容）") + colon);
@@ -196,15 +206,17 @@ public static class AskPrompt
 
     public static string KeywordsPrompt(MeetingLanguage l, string question) => l.Text("問題：", "Question: ", "質問：") + question;
 
-    /// <summary>丟掉不能用的出處：時間格式不對、跨會議時不是提供的會議</summary>
-    public static Answer Validate(Answer answer, IReadOnlySet<long>? meetingIds)
+    /// <summary>丟掉不能用的出處：時間格式不對、跨會議時不是提供的會議。documentCitations：這場會議有參考文件，
+    /// time 是空的引用是文件的出處，留著（M§39.3）</summary>
+    public static Answer Validate(Answer answer, IReadOnlySet<long>? meetingIds, bool documentCitations = false)
     {
         var citations = new List<Citation>();
         foreach (var c in answer.Citations)
         {
             var time = TimeFormat.Clean(c.Time);
             var quote = c.Quote.Trim();
-            if (TimeFormat.Seconds(time) is null) continue;
+            var fromDocument = documentCitations && meetingIds is null && time.Length == 0 && quote.Length > 0;
+            if (!fromDocument && TimeFormat.Seconds(time) is null) continue;
             long? id = c.MeetingId;
             if (meetingIds is not null)
             {

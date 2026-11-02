@@ -12,6 +12,8 @@
     <ProjectReference Include="../Shiyin.LLM/Shiyin.LLM.csproj" />
     <ProjectReference Include="../Shiyin.Engines/Shiyin.Engines.csproj" />
     <PackageReference Include="DocumentFormat.OpenXml" />
+    <!-- 參考文件的 PDF 取文字（design-windows §11.8）：純 C#，Mac 上的測試也跑得到 -->
+    <PackageReference Include="PdfPig" />
     <!-- 只用純 C# 的部分（重新取樣、格式換算），WASAPI、Media Foundation 在 Platform -->
     <PackageReference Include="NAudio.Core" />
     <!-- 只用讀 GitHub release 清單的部分（WindowsReleaseSource）；安裝、更新在 Platform -->

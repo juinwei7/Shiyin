@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Shiyin.App.Views;
 using Shiyin.Data;
+using Shiyin.IO;
 using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Services;
@@ -580,6 +581,16 @@ public sealed class MainWindow : Window
             picker.FileTypeFilter.Add("." + ext);
         var files = await picker.PickMultipleFilesAsync();
         if (files.Count > 0) RequestImport(files.Select(f => f.Path).ToList());
+    }
+
+    /// <summary>「加入文件…」（R61.1）：選檔後加到這場會議</summary>
+    public async Task PickDocuments(long meetingId)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, Handle);
+        foreach (var ext in DocumentReader.PickerExtensions) picker.FileTypeFilter.Add(ext);
+        var files = await picker.PickMultipleFilesAsync();
+        if (files.Count > 0) await host.Controller.AddDocuments(files.Select(f => f.Path).ToList(), meetingId);
     }
 
     public void RequestImport(IReadOnlyList<string> files)

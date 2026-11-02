@@ -161,6 +161,31 @@ public static class ControlPipe
                 host.Settings.Set(AppSettings.TextSizeKey, (double)TextSizes.Clamp(level));
                 return Ok;
             // import [lang=zh|en|ja] <檔案…>：同 Mac 的 shiyinctl import。跟拖進來一樣分流：封包、逐字稿、Markdown 直接匯入，錄音不跳匯入選項
+            // 會議的參考文件（design-windows §11.8、M§39.7）：adddoc <會議 id> <檔案>…（同「加入文件…」選了這些檔）；drop <檔案>…（等於拖進主視窗）；
+            // removedoc <文件 id>；docread <檔案> <zh|en|ja>（只讀出文字，回傳 kind、pages、ocr 或 error）；docbanner <會議 id> dismiss|resummarize
+            case "adddoc" when args.Length > 2 && long.TryParse(args[1], out var docMeeting):
+                _ = host.Controller.AddDocuments(args[2..], docMeeting);
+                return Ok;
+            case "drop" when args.Length > 1: main?.RequestImport(args[1..]); return Ok;
+            case "removedoc" when args.Length > 1 && long.TryParse(args[1], out var documentId): host.Controller.RemoveDocument(documentId); return Ok;
+            case "docread" when args.Length > 2:
+            {
+                var docLanguage = MeetingLanguages.Parse(args[2]) ?? MeetingLanguage.Zh;
+                var started = DateTime.UtcNow;
+                try
+                {
+                    var r = Task.Run(() => DocumentFiles.Read(args[1], docLanguage, new Platform.WindowsOcr())).GetAwaiter().GetResult();
+                    return new JsonObject
+                    {
+                        ["kind"] = r.Kind.Raw(), ["pages"] = new JsonArray([.. r.Pages.Select(x => (JsonNode)x)]), ["ocr"] = r.Ocr,
+                        ["seconds"] = (DateTime.UtcNow - started).TotalSeconds,
+                    };
+                }
+                catch (Shiyin.IO.DocumentError e) { return new JsonObject { ["error"] = e.Message, ["code"] = e.Code }; }
+            }
+            case "docbanner" when args.Length > 2 && long.TryParse(args[1], out var bannerMeeting):
+                if (args[2] == "dismiss") host.Controller.DismissDocumentsChanged(bannerMeeting); else host.Controller.Resummarize(bannerMeeting);
+                return Ok;
             case "import" when args.Length > 1:
             {
                 var files = args[1..].ToList();
@@ -315,6 +340,19 @@ public static class ControlPipe
             ["reviewExpanded"] = main?.State.ReviewExpanded,
             ["userNotesExpanded"] = main?.State.UserNotesExpanded,
             ["reviewInline"] = main?.ReviewDraft.Expanded?.ToString(),
+            // 會議的參考文件（M§39.7）：選取中的會議
+            ["documents"] = new JsonArray([.. (main?.State.Detail?.Documents ?? []).Select(d =>
+            {
+                var use = main!.State.Detail!.DocumentUse.GetValueOrDefault(d.Id ?? 0);
+                return (JsonNode)new JsonObject
+                {
+                    ["id"] = d.Id, ["name"] = d.Name, ["kind"] = d.Kind, ["file"] = d.File, ["pages"] = d.PageTexts.Count, ["ocr"] = d.Ocr,
+                    ["includedPages"] = use?.IncludedPages ?? 0, ["truncated"] = use?.Truncated ?? false,
+                };
+            })]),
+            ["readingDocuments"] = new JsonObject(host.Controller.ReadingDocuments.Select(p =>
+                new KeyValuePair<string, JsonNode?>(p.Key.ToString(), new JsonArray([.. p.Value.Select(n => (JsonNode)n)])))),
+            ["documentsChanged"] = new JsonArray([.. host.Controller.DocumentsChanged.Order().Select(x => (JsonNode)x)]),
             ["meetings"] = main?.State.Meetings.Count,
             ["running"] = running,
             ["models"] = models,

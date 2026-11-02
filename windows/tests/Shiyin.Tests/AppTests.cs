@@ -127,6 +127,32 @@ public sealed class AppTests : IDisposable
     }
 
     [Fact]
+    public void ControllerAddsInOrderAndMarksChangedNotes()
+    {
+        // 會議的參考文件（design-windows §11.8、M§39.4）
+        var samples = Path.Combine(Golden.Root, "documents");
+        var id = db.InsertMeeting(new Meeting { MeetingDate = "2026-11-02", SourceFilename = "a.m4a" }, null).Id!.Value;
+        db.SaveNotes(id, new MeetingNotes { Title = "t" }, "claude", "整理", NotesSource.Generated);
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var errors = new List<string>();
+        controller.Error += errors.Add;
+        controller.AddDocuments([Path.Combine(samples, "簡報.pptx"), Path.Combine(samples, "簡報.key"), Path.Combine(samples, "議程.md")], id)
+            .GetAwaiter().GetResult();
+        Assert.Equal(["簡報.pptx", "議程.md"], db.Documents(id).Select(d => d.Name));
+        Assert.Contains("Keynote", Assert.Single(errors));
+        Assert.Contains(id, controller.DocumentsChanged);
+        Assert.Empty(controller.ReadingDocuments);
+        // 拖放：文件加到選取中的會議，沒有選取時說明
+        Assert.Empty(controller.RequestImport([Path.Combine(samples, "規格書.docx")], "", null));
+        Assert.Contains("先選一場會議", errors[^1]);
+        controller.DismissDocumentsChanged(id);
+        Assert.DoesNotContain(id, controller.DocumentsChanged);
+        controller.RemoveDocument(db.Documents(id)[0].Id!.Value);
+        Assert.Equal(["議程.md"], db.Documents(id).Select(d => d.Name));
+        Assert.Contains(id, controller.DocumentsChanged);
+    }
+
+    [Fact]
     public void RecoversCrashedRecordings()
     {
         var settings = AppSettings.InMemory();

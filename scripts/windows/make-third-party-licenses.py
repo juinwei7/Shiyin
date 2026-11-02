@@ -158,6 +158,8 @@ def main():
         (r"Velopack", "Velopack", "MIT", "https://github.com/velopack/velopack", "LICENSE"),
         (r"WinUIEx", "WinUIEx", "MIT", "https://github.com/dotMorten/WinUIEx", "LICENSE"),
         (r"ZstdSharp\.Port", "ZstdSharp", "MIT", "https://github.com/oleg-st/ZstdSharp", "LICENSE"),
+        # 參考文件的 PDF 取文字（design-windows §11.8）
+        (r"PdfPig", "PdfPig", "Apache-2.0", "https://github.com/UglyToad/PdfPig", "LICENSE"),
     ]:
         pid, version = take(pattern)
         repo, ref = repository(pid, version)

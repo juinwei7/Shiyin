@@ -243,6 +243,17 @@
         }
       }
     },
+    "「%@」裡讀不到文字。這台電腦沒有%@的文字辨識：到「設定 → 時間與語言 → 語言與地區」加入%@再試。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No text could be read from “%@”. This PC has no text recognition for %@: add %@ in Settings → Time & language → Language & region, then try again."
+          }
+        }
+      }
+    },
     "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。在「你的回答」欄位直接回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的勾「略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
       "extractionState": "manual",
       "localizations": {
@@ -977,6 +988,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Click Export at the top right (Ctrl+E): notes can be saved as Markdown, PDF or Word; transcripts as txt, srt, vtt or Word; recordings as m4a or wav. Send a “Whole meeting (.shiyin)” to a colleague and they can import it with a double-click (on the Mac version too). The arrow next to Export copies the notes so you can paste them straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
+    "掃描的 PDF、圖片用 Windows 的文字辨識讀出文字（要有會議語言的辨識：設定 → 時間與語言 → 語言與地區）。一場會議的文件合計最多 4 萬字，太長的只送前面的部分。Keynote、Pages 請先匯出成 PDF。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text in scanned PDFs and images is read with Windows text recognition (it needs recognition for the meeting language: Settings → Time & language → Language & region). A meeting's documents can total up to 40,000 characters; for longer ones only the beginning is sent. Export Keynote and Pages files as PDF first."
           }
         }
       }

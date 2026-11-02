@@ -75,7 +75,7 @@ public sealed class AppHost
             FileAssociations.UpdateNames();
         }
         // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；App 顯示原因後結束
-        Db = new AppDatabase(Paths.Database, Paths.Backups);
+        Db = new AppDatabase(Paths.Database, Paths.Backups, Paths.Documents);
         Models = new ModelStore(Paths.Models, Http);
         // 顯示卡加速：NVIDIA 用官方的 CUDA 版（R27 R4.6）、AMD 用拾音的 Vulkan 版（R4.7），都只有 x64。
         // DEBUG 的 --set debugNvidia=YES、--set debugAmd=YES 當作有那張顯示卡（虛擬機測自動下載）
@@ -130,7 +130,7 @@ public sealed class AppHost
             if (double.TryParse(Settings.String("idleRemindSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var remind) && remind > 0) Recorder.IdleRemindSeconds = remind;
             if (double.TryParse(Settings.String("idleStopSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var stop) && stop > 0) Recorder.IdleStopSeconds = stop;
         }
-        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage };
+        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage, Ocr = new WindowsOcr() };
         Detector = new MeetingDetector(new ConsentStoreMicrophoneUsage(), Settings) { IsRecording = () => Recorder.IsRecording };
         HotKeys = new GlobalHotKeys();
         Ask = new AskService(Db, Settings, Llm) { Usage = Usage };
