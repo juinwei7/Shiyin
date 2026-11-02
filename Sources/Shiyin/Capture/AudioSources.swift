@@ -301,10 +301,17 @@ enum AudioDevices {
         var name: String
         /// 連接方式（`kAudioDevicePropertyTransportType`）：藍牙、內建、USB…
         var transport: UInt32 = 0
+        /// 輸入的 data source（`kAudioDevicePropertyDataSource`）：內建的麥克風是 imic，耳機孔的「外接麥克風」是 emic
+        var dataSource: UInt32 = 0
 
         var isBluetooth: Bool { transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE }
-        var isBuiltIn: Bool { transport == kAudioDeviceTransportTypeBuiltIn }
+        /// 這台 Mac 本身的麥克風。耳機孔的輸入連接方式也是內建，要用 data source 排除（2026-11-02：插著有線耳機時，
+        /// 藍牙提示的按鈕變成「改用 外接麥克風」）
+        var isBuiltIn: Bool { transport == kAudioDeviceTransportTypeBuiltIn && dataSource != AudioDevices.externalMicSource }
     }
+
+    /// 四字碼 emic（外接麥克風）
+    static let externalMicSource: UInt32 = 0x656D_6963
 
     static func inputDevices() -> [Device] {
         allDevices().compactMap { id in hasInputStreams(id) ? device(id: id) : nil }
@@ -318,7 +325,12 @@ enum AudioDevices {
         var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyTransportType, mScope: kAudioObjectPropertyScopeGlobal,
                                                  mElement: kAudioObjectPropertyElementMain)
         _ = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &transport)
-        return Device(uid: uid, name: name, transport: transport)
+        var source: UInt32 = 0
+        address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyDataSource, mScope: kAudioDevicePropertyScopeInput,
+                                             mElement: kAudioObjectPropertyElementMain)
+        size = UInt32(MemoryLayout<UInt32>.size)
+        _ = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &source)
+        return Device(uid: uid, name: name, transport: transport, dataSource: source)
     }
 
     /// 系統預設的輸入裝置
