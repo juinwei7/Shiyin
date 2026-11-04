@@ -477,7 +477,7 @@ final class Recorder {
                 .map { "\($0.key.rawValue) \(String(format: "%.2f", $0.value))" }.joined(separator: ", ")
             log.info("language detection: \(summary, privacy: .public)")
             guard let (best, p) = probabilities.max(by: { $0.value < $1.value }).map({ ($0.key, $0.value) }),
-                  best != language, p >= LanguageDetector.threshold else { return }
+                  best.profile.family != language.profile.family, p >= LanguageDetector.threshold else { return }   // 同一個語系不切（design §41.4）
             let from = language
             switchLanguage(to: best)
             languageSwitch = (from, best)

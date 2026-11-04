@@ -773,7 +773,7 @@ enum DebugControl {
                 else { throw LLMError.badOutput("bad input") }
                 let language = MeetingLanguage(rawValue: settings["language"] as? String ?? "zh") ?? .zh
                 let speakerName = { (s: [String: Any]) -> String? in
-                    (s["speaker"] as? Int).map { language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") }
+                    (s["speaker"] as? Int).map { language.defaultSpeaker($0) }
                 }
                 let context = TranscriptCorrection.Context(
                     language: language,

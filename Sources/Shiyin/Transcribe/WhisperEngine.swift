@@ -39,19 +39,15 @@ enum WhisperEngine {
         "ご視聴ありがとうございました", "ご視聴いただきありがとうございました", "チャンネル登録",  // l10n-skip
     ]
 
-    /// 基本提示詞＋詞彙表（R4.1）：依會議語言（design §16.4、§18.2），中文、日文 150 字、英文 400 個字元以內
+    /// 基本提示詞＋詞彙表（R4.1）：依會議語言（design §16.4、§18.2、§41.3），寫在語言檔的 whisperPrompt（中文、日文 150 字、英文 400 個字元以內）
     static func prompt(glossary: [String], language: MeetingLanguage = .zh, style: String? = nil) -> String {
-        let limit = language == .en ? 400 : 150
+        let p = language.profile.whisperPrompt
+        let limit = p.limit
         // 評估用的另一種寫法（design §17.1）：Whisper 的提示詞是「前面已經講過的話」，寫成像逐字稿的一句話，
         // 詞彙放在句子裡，順便帶出繁體和標點的風格
-        if style == "natural" {
+        if style == "natural", let empty = p.natural, let list = p.naturalList {
             func natural(_ terms: [String]) -> String {
-                let list = terms.joined(separator: language == .en ? ", " : "、")   // l10n-skip
-                return terms.isEmpty
-                    ? language.text(zh: "好，那我們開始今天的會議。", en: "Okay, let's get started with today's meeting.", ja: "はい、では今日の会議を始めます。")  // l10n-skip
-                    : language.text(zh: "好，那我們開始今天的會議，先看一下 \(list) 這幾個部分的進度。",
-                                    en: "Okay, let's get started with today's meeting. First, a quick update on \(list).",
-                                    ja: "はい、では今日の会議を始めます。まず \(list) の進捗を確認しましょう。")  // l10n-skip
+                terms.isEmpty ? empty : list.replacingOccurrences(of: "%@", with: terms.joined(separator: p.separator))
             }
             var picked: [String] = []
             for term in glossary {
@@ -60,12 +56,9 @@ enum WhisperEngine {
             }
             return natural(picked)
         }
-        let base = language.text(zh: "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。", en: "The following is a recording of a work meeting.",
-                                 ja: "以下は仕事の会議の録音です。")  // l10n-skip
+        let base = p.base
         func build(_ terms: [String]) -> String {
-            terms.isEmpty ? base : base + language.text(zh: "詞彙：" + terms.joined(separator: "、") + "。",
-                                                        en: " Glossary: " + terms.joined(separator: ", ") + ".",
-                                                        ja: "用語：" + terms.joined(separator: "、") + "。")  // l10n-skip
+            terms.isEmpty ? base : base + p.glossary.replacingOccurrences(of: "%@", with: terms.joined(separator: p.separator))
         }
         var picked: [String] = []
         for term in glossary {

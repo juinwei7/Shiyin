@@ -52,7 +52,7 @@ enum AskPrompt {
     }
 
     private static func meetingSystemBase(_ l: MeetingLanguage) -> String {
-        l.text(zh: """
+        l.prompt(zh: """
         你是會議助理，只根據提供的這場會議的內容（會議紀錄和逐字稿）回答使用者的問題。
 
         規則：
@@ -80,7 +80,7 @@ enum AskPrompt {
     }
 
     static func allSystem(_ l: MeetingLanguage) -> String {
-        l.text(zh: """
+        l.prompt(zh: """
         你是會議助理，只根據提供的幾場會議的片段回答使用者的問題。每場會議有編號、標題、日期、會議紀錄的摘要，以及跟問題有關的逐字稿片段。
 
         規則：
@@ -108,7 +108,7 @@ enum AskPrompt {
     }
 
     static func keywordsSystem(_ l: MeetingLanguage) -> String {
-        l.text(zh: """
+        l.prompt(zh: """
         把使用者對會議的問題，轉成用來全文搜尋會議逐字稿的關鍵詞。
 
         規則：
@@ -135,16 +135,16 @@ enum AskPrompt {
     static func meetingPrompt(meeting: Meeting, notes: MeetingNotes?, lines: [String], history: [(question: String, answer: String)],
                               question: String, documents: [DocumentText] = []) -> String {
         let l = meeting.meetingLanguage
-        let colon = l.text(zh: "：", en: ": ", ja: "：")
+        let colon = l.prompt(zh: "：", en: ": ", ja: "：")
         var out: [String] = []
-        out.append(l.text(zh: "會議標題", en: "Meeting title", ja: "会議タイトル") + colon + meeting.displayTitle)
-        out.append(l.text(zh: "會議日期", en: "Meeting date", ja: "会議の日付") + colon + meeting.meetingDate)
+        out.append(l.prompt(zh: "會議標題", en: "Meeting title", ja: "会議タイトル") + colon + meeting.displayTitle)
+        out.append(l.prompt(zh: "會議日期", en: "Meeting date", ja: "会議の日付") + colon + meeting.meetingDate)
         if !meeting.participantList.isEmpty {
-            out.append(l.text(zh: "參加者", en: "Participants", ja: "参加者") + colon + meeting.participantList.joined(separator: l.text(zh: "、", en: ", ", ja: "、")))
+            out.append(l.prompt(zh: "參加者", en: "Participants", ja: "参加者") + colon + meeting.participantList.joined(separator: l.prompt(zh: "、", en: ", ", ja: "、")))
         }
         if let notes {
             out.append("")
-            out.append(l.text(zh: "會議紀錄（JSON）", en: "Meeting notes (JSON)", ja: "議事録（JSON）") + colon)
+            out.append(l.prompt(zh: "會議紀錄（JSON）", en: "Meeting notes (JSON)", ja: "議事録（JSON）") + colon)
             out.append(notes.jsonString())
         }
         if !documents.isEmpty {
@@ -152,42 +152,42 @@ enum AskPrompt {
             out.append(DocumentPrompt.block(documents, language: l))
         }
         out.append("")
-        out.append(l.text(zh: "逐字稿（[時間] 說話者：內容）", en: "Transcript ([time] speaker: text)", ja: "文字起こし（[時刻] 話者：内容）") + colon)
+        out.append(l.prompt(zh: "逐字稿（[時間] 說話者：內容）", en: "Transcript ([time] speaker: text)", ja: "文字起こし（[時刻] 話者：内容）") + colon)
         out += lines
         if !history.isEmpty {
             out.append("")
-            out.append(l.text(zh: "之前的問答（追問時參考）", en: "Earlier questions and answers (for follow-ups)", ja: "これまでの質問と回答（追加の質問の参考）") + colon)
+            out.append(l.prompt(zh: "之前的問答（追問時參考）", en: "Earlier questions and answers (for follow-ups)", ja: "これまでの質問と回答（追加の質問の参考）") + colon)
             for item in history {
                 out.append("Q" + colon + item.question)
                 out.append("A" + colon + item.answer)
             }
         }
         out.append("")
-        out.append(l.text(zh: "問題", en: "Question", ja: "質問") + colon + question)
+        out.append(l.prompt(zh: "問題", en: "Question", ja: "質問") + colon + question)
         return out.joined(separator: "\n")
     }
 
     static func allPrompt(_ l: MeetingLanguage, blocks: [MeetingBlock], question: String) -> String {
-        let colon = l.text(zh: "：", en: ": ", ja: "：")
+        let colon = l.prompt(zh: "：", en: ": ", ja: "：")
         var out: [String] = []
         for block in blocks {
-            out.append(l.text(zh: "【會議 \(block.id)】", en: "[Meeting \(block.id)]", ja: "【会議 \(block.id)】") + " \(block.title)（\(block.date)）")
+            out.append(l.prompt(zh: "【會議 \(block.id)】", en: "[Meeting \(block.id)]", ja: "【会議 \(block.id)】") + " \(block.title)（\(block.date)）")
             if !block.summary.isEmpty {
-                out.append(l.text(zh: "摘要與決議", en: "Summary and decisions", ja: "要約と決定事項") + colon)
+                out.append(l.prompt(zh: "摘要與決議", en: "Summary and decisions", ja: "要約と決定事項") + colon)
                 out += block.summary.map { "- " + $0 }
             }
             if !block.lines.isEmpty {
-                out.append(l.text(zh: "逐字稿片段", en: "Transcript excerpts", ja: "文字起こしの抜粋") + colon)
+                out.append(l.prompt(zh: "逐字稿片段", en: "Transcript excerpts", ja: "文字起こしの抜粋") + colon)
                 out += block.lines
             }
             out.append("")
         }
-        out.append(l.text(zh: "問題", en: "Question", ja: "質問") + colon + question)
+        out.append(l.prompt(zh: "問題", en: "Question", ja: "質問") + colon + question)
         return out.joined(separator: "\n")
     }
 
     static func keywordsPrompt(_ l: MeetingLanguage, question: String) -> String {
-        l.text(zh: "問題：", en: "Question: ", ja: "質問：") + question
+        l.prompt(zh: "問題：", en: "Question: ", ja: "質問：") + question
     }
 
     // MARK: 送出

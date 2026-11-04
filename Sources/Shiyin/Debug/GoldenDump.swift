@@ -95,7 +95,7 @@ enum GoldenDump {
             let count = segments.compactMap(\.speaker).max() ?? 0
             var table: [Int: String] = [:]
             for idx in stride(from: 1, through: count, by: 1) {
-                table[idx] = speakers[idx] ?? language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")
+                table[idx] = speakers[idx] ?? language.defaultSpeaker(idx)
             }
             return table
         }
@@ -204,7 +204,7 @@ enum GoldenDump {
 
             // 逐字稿校正：跟 JobRunner.correct 一樣組 Context
             let names = fx.speakerTable
-            let speakerName = { (idx: Int?) -> String? in idx.map { names[$0] ?? l.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") } }
+            let speakerName = { (idx: Int?) -> String? in idx.map { names[$0] ?? l.defaultSpeaker($0) } }
             let correction = TranscriptCorrection.Context(
                 language: l, title: fx.meeting.title, participants: fx.meeting.participantList,
                 speakerNames: Array(Set(names.values)).sorted(), glossary: fx.glossary,
@@ -220,14 +220,14 @@ enum GoldenDump {
             let naming = SpeakerNaming.Context(
                 language: l, meetingDate: fx.meeting.meetingDate, title: fx.meeting.title, participants: fx.meeting.participantList,
                 knownPeople: fx.knownPeople, glossary: fx.glossary, unnamed: unnamed,
-                speakerName: { names[$0] ?? l.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") },
+                speakerName: { names[$0] ?? l.defaultSpeaker($0) },
                 segments: fx.segments.map { ($0.start, $0.speaker, $0.text) })
             w.text(dir + "naming-system.txt", SpeakerNaming.system(l))
             w.text(dir + "naming-prompt.txt", SpeakerNaming.prompt(naming))
 
             // 對一場會議提問：跟 AppModel.askMeeting 一樣組逐字稿
             let lines = fx.segments.map { s -> String in
-                let speaker = s.speaker.map { (names[$0] ?? l.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)")) + l.text(zh: "：", en: ": ", ja: "：") } ?? ""
+                let speaker = s.speaker.map { (names[$0] ?? l.defaultSpeaker($0)) + l.text(zh: "：", en: ": ", ja: "：") } ?? ""
                 return "[\(TimeFormat.string(s.start))] \(speaker)\(s.text)"
             }
             var meeting = fx.meeting

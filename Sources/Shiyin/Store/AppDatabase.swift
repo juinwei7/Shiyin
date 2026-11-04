@@ -423,8 +423,17 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 「說話者 1」「Speaker 1」「話者 1」這種預設名稱
     static func isDefaultSpeakerName(_ name: String) -> Bool {
-        (try? #/^(說話者|Speaker|話者) \d+$/#.wholeMatch(in: name)) != nil
+        (try? defaultSpeakerPattern.wholeMatch(in: name)) != nil
     }
+
+    /// 語言檔裡每種語言的預設說話者名稱（design §41.1）：「說話者 %lld」→「說話者 \d+」，接成一個樣式
+    private static let defaultSpeakerPattern: Regex<AnyRegexOutput> = {
+        let forms = LanguageProfiles.all.map { profile -> String in
+            let parts = profile.speaker.components(separatedBy: "%lld")
+            return parts.map { NSRegularExpression.escapedPattern(for: $0) }.joined(separator: "\\d+")
+        }
+        return try! Regex("^(?:" + forms.joined(separator: "|") + ")$")
+    }()
 
     /// 寫入正式逐字稿：取代舊的正式版，並刪掉即時預覽（design §5.3）
     /// voices：每位說話者的聲紋、說話秒數、收音（design §21.4），寫進 speakers
@@ -448,7 +457,7 @@ final class AppDatabase: @unchecked Sendable {
             try SpeakerName.filter(Column("meeting_id") == meetingId).deleteAll(db)
             for idx in stride(from: 1, through: speakerCount, by: 1) {
                 var speaker = SpeakerName(meetingId: meetingId, idx: idx,
-                                          name: language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)"))
+                                          name: language.defaultSpeaker(idx))
                 if let old = named[idx] {
                     speaker.name = old.name
                     speaker.nameSource = old.nameSource == "default" ? "manual" : old.nameSource
@@ -1047,7 +1056,7 @@ final class AppDatabase: @unchecked Sendable {
             for term in accepted where term.contains(where: { $0.isASCII && $0.isLetter }) { add(term, .correction) }
             // 中文、日文會議標題裡的英文詞通常是產品名、專案名；英文會議的標題就不拆了
             let word = #/[A-Za-z][A-Za-z0-9.+\-]{2,}/#
-            for meeting in meetings where meeting.meetingLanguage != .en {
+            for meeting in meetings where !meeting.meetingLanguage.profile.spaced {
                 for match in meeting.title.matches(of: word) { add(String(match.output), .title) }
             }
             let existing = Set(try String.fetchAll(db, sql: "SELECT term FROM glossary").map { $0.lowercased() })

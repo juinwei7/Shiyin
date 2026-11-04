@@ -2,14 +2,14 @@ import Foundation
 import whisper
 
 /// 自動偵測會議的主要語言（design §18.8、R16、D21）：開始錄音後收集約 10 秒有聲音的片段，
-/// 用 Whisper base 只在中文、英文、日文三者之間判斷
+/// 用 Whisper base 在語言檔裡可以偵測的語言之間判斷（design §41.4）
 enum LanguageDetector {
     /// 要收集幾秒有聲音的片段
     static let seconds: Double = 10
-    /// 三種語言的機率加總成 1 之後，最高的超過這個才切換
+    /// 可以偵測的語言的機率加總成 1 之後，最高的超過這個才切換
     static let threshold = 0.7
 
-    /// 回傳中文、英文、日文各自的機率（加總為 1）。blocking，在背景執行
+    /// 回傳可以偵測的語言各自的機率（加總為 1）。blocking，在背景執行
     nonisolated static func detect(_ samples: [Float], modelPath: String) throws -> [MeetingLanguage: Double] {
         guard FileManager.default.fileExists(atPath: modelPath) else { throw WhisperError.modelMissing }
         var params = whisper_context_default_params()
@@ -25,7 +25,8 @@ enum LanguageDetector {
         guard top >= 0 else { throw WhisperError.failed(Int32(top)) }
         var result: [MeetingLanguage: Double] = [:]
         for language in MeetingLanguage.allCases {
-            let id = Int(whisper_lang_id(language.whisperCode))
+            guard let code = language.profile.detect else { continue }
+            let id = Int(whisper_lang_id(code))
             result[language] = probs.indices.contains(id) ? Double(probs[id]) : 0
         }
         let total = result.values.reduce(0, +)

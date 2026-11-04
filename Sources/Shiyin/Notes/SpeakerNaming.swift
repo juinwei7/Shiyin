@@ -35,7 +35,7 @@ enum SpeakerNaming {
     // MARK: 提示詞（中文、英文、日文各一份）
 
     static func system(_ language: MeetingLanguage) -> String {
-        language.text(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+        language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
     }
 
     private static let systemChinese = """
@@ -76,19 +76,19 @@ enum SpeakerNaming {
 
     static func prompt(_ c: Context) -> String {
         let l = c.language
-        let separator = l.text(zh: "、", en: ", ", ja: "、"), colon = l.text(zh: "：", en: ": ", ja: "：")
-        let none = l.text(zh: "（無）", en: "(none)", ja: "（なし）")
+        let separator = l.prompt(zh: "、", en: ", ", ja: "、"), colon = l.prompt(zh: "：", en: ": ", ja: "：")
+        let none = l.prompt(zh: "（無）", en: "(none)", ja: "（なし）")
         func list(_ items: [String]) -> String { items.isEmpty ? none : items.joined(separator: separator) }
         var lines: [String] = []
-        lines.append(l.text(zh: "會議日期", en: "Meeting date", ja: "会議の日付") + colon + c.meetingDate)
-        lines.append(l.text(zh: "會議標題", en: "Meeting title", ja: "会議タイトル") + colon + (c.title.isEmpty ? none : c.title))
-        lines.append(l.text(zh: "參加者", en: "Participants", ja: "参加者") + colon + list(c.participants))
-        lines.append(l.text(zh: "認識的人（之前的會議出現過的名字，寫法可以參考）", en: "Known people (names from earlier meetings, for spelling)",
+        lines.append(l.prompt(zh: "會議日期", en: "Meeting date", ja: "会議の日付") + colon + c.meetingDate)
+        lines.append(l.prompt(zh: "會議標題", en: "Meeting title", ja: "会議タイトル") + colon + (c.title.isEmpty ? none : c.title))
+        lines.append(l.prompt(zh: "參加者", en: "Participants", ja: "参加者") + colon + list(c.participants))
+        lines.append(l.prompt(zh: "認識的人（之前的會議出現過的名字，寫法可以參考）", en: "Known people (names from earlier meetings, for spelling)",
                             ja: "知っている人（以前の会議に出てきた名前。表記の参考に）") + colon + list(c.knownPeople))  // l10n-skip
-        lines.append(l.text(zh: "詞彙表", en: "Glossary", ja: "用語集") + colon + list(c.glossary))
-        lines.append(l.text(zh: "要猜的說話者", en: "Speakers to identify", ja: "判断する話者") + colon + list(c.unnamed.map(c.speakerName)))
+        lines.append(l.prompt(zh: "詞彙表", en: "Glossary", ja: "用語集") + colon + list(c.glossary))
+        lines.append(l.prompt(zh: "要猜的說話者", en: "Speakers to identify", ja: "判断する話者") + colon + list(c.unnamed.map(c.speakerName)))
         lines.append("")
-        lines.append(l.text(zh: "逐字稿（[時間] 說話者：內容）：", en: "Transcript ([time] speaker: text):", ja: "文字起こし（[時刻] 話者：内容）："))
+        lines.append(l.prompt(zh: "逐字稿（[時間] 說話者：內容）：", en: "Transcript ([time] speaker: text):", ja: "文字起こし（[時刻] 話者：内容）："))
         for s in c.segments {
             let speaker = s.speaker.map { c.speakerName($0) + colon } ?? ""
             lines.append("[\(TimeFormat.string(s.start))] \(speaker)\(s.text)")

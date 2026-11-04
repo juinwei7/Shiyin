@@ -168,7 +168,7 @@ struct MeetingDetail: Equatable {
 
     func speakerName(_ idx: Int?) -> String? {
         guard let idx else { return nil }
-        return speakers[idx] ?? meeting.meetingLanguage.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
+        return speakers[idx] ?? meeting.meetingLanguage.defaultSpeaker(idx)  // l10n-skip
     }
 }
 
@@ -1238,7 +1238,7 @@ final class AppModel {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         // 清空就回到預設名稱，用會議語言（會帶進會議紀錄和匯出），不是介面語言
         let language = detail?.meeting.meetingLanguage ?? .zh
-        let fallback = language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
+        let fallback = language.defaultSpeaker(idx)  // l10n-skip
         let name = trimmed.isEmpty ? fallback : trimmed
         let old = detail?.speakers[idx]
         perform(.detail([.speakers, .meeting])) {
@@ -1255,7 +1255,7 @@ final class AppModel {
     func rejectVoiceprintMatch(_ idx: Int) {
         guard let id = selection else { return }
         let language = detail?.meeting.meetingLanguage ?? .zh
-        let fallback = language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)")  // l10n-skip
+        let fallback = language.defaultSpeaker(idx)  // l10n-skip
         let old = detail?.speakers[idx]
         perform(.detail([.speakers, .meeting])) {
             try db.rejectVoiceprintMatch(id, idx: idx, defaultName: fallback)

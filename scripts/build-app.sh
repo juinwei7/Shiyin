@@ -46,6 +46,8 @@ ditto "$BIN_DIR/whisper.framework" "$APP/Contents/Frameworks/whisper.framework"
 ditto "$BIN_DIR/llama.framework" "$APP/Contents/Frameworks/llama.framework"
 # 簡轉繁的字表（design §32.5）
 ditto Resources/opencc "$APP/Contents/Resources/opencc"
+# 會議語言的語言檔（design §41.1），Windows 內嵌同一份
+cp Resources/languages.json "$APP/Contents/Resources/languages.json"
 for bundle in "$BIN_DIR"/*.bundle; do ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"; done
 chmod -R u+w "$APP"
 if [ -f Resources/AppIcon.icns ]; then

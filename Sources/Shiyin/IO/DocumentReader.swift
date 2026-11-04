@@ -185,11 +185,7 @@ enum DocumentReader {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        switch language {
-        case .zh: request.recognitionLanguages = ["zh-Hant", "zh-Hans", "en-US"]
-        case .en: request.recognitionLanguages = ["en-US"]
-        case .ja: request.recognitionLanguages = ["ja-JP", "en-US"]
-        }
+        request.recognitionLanguages = language.profile.ocr.mac   // 語言檔（design §41.5）
         try VNImageRequestHandler(cgImage: image, orientation: orientation).perform([request])
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     }

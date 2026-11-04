@@ -23,7 +23,7 @@ struct NotesContext {
 enum NotesPrompt {
     /// documents：有參考文件時接上文件的規則（design §39.3、D133）
     static func system(_ language: MeetingLanguage, documents: Bool = false) -> String {
-        let base = language.text(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+        let base = language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
         return documents ? base + "\n" + DocumentPrompt.notesRules(language) : base
     }
 
@@ -141,7 +141,7 @@ enum NotesPrompt {
             section: { id, label in "\(id)（\(label)）" })
 
         static func of(_ language: MeetingLanguage) -> Labels {
-            switch language {
+            switch language.base {
             case .zh: return zh
             case .en: return en
             case .ja: return ja
@@ -155,7 +155,7 @@ enum NotesPrompt {
         let l = Labels.of(language)
         var lines: [String] = []
         let weekday = DateText.weekday(m.meetingDate, language: language)
-        lines.append("\(l.meetingDate)\(l.colon)\(m.meetingDate)" + (language == .en ? " (\(weekday))" : "（\(weekday)）"))
+        lines.append("\(l.meetingDate)\(l.colon)\(m.meetingDate)" + (language.base == .en ? " (\(weekday))" : "（\(weekday)）"))
         lines.append("\(l.existingTitle)\(l.colon)\(m.titleLocked ? m.title : "")")
         let participants = m.participantList
         lines.append("\(l.participants)\(l.colon)\(participants.isEmpty ? l.notProvided : participants.joined(separator: l.listSeparator))")
@@ -163,7 +163,7 @@ enum NotesPrompt {
         lines.append("")
         lines.append("\(l.template)\(l.colon)\(c.template.description)")
         let sectionNames = TemplateDefinition.builtinSectionIDs.filter { c.template.includes($0) }
-            .map { l.section($0, TemplateDefinition.sectionLabel($0, language: language)) }
+            .map { l.section($0, TemplateDefinition.sectionLabel($0, language: language, prompt: true)) }
         lines.append("\(l.sections)\(l.colon)\(sectionNames.joined(separator: l.listSeparator))")
         if !c.template.custom.isEmpty {
             lines.append("\(l.custom)\(l.colon)")

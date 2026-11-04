@@ -79,8 +79,8 @@ struct ReviewTab: View {
     private func speakerRow(_ idx: Int, _ suggestion: SpeakerNaming.Suggestion, draft: ReviewDraft) -> some View {
         let skipped = draft.speakerSkipped.contains(idx)
         let current = detail.speakers[idx] ?? ""
-        let question = language.text(zh: "「\(current)」是\(suggestion.name)嗎？", en: "Is “\(current)” \(suggestion.name)?",
-                                     ja: "「\(current)」は\(suggestion.name)ですか？")  // l10n-skip：會議語言的題目
+        let question = language.format(zh: "「%@」是%@嗎？", en: "Is “%@” %@?", ja: "「%@」は%@ですか？",
+                                       current, suggestion.name)  // l10n-skip：會議語言的題目
         let choice = YesNoAnswer(draft.speakerAnswers[idx] ?? "", language: language) ?? YesNoAnswer(isYes: nil)
         let others = (detail.speakerCandidates[idx] ?? []).filter { $0.caseInsensitiveCompare(suggestion.name) != .orderedSame }
         return VStack(alignment: .leading, spacing: 8) {
