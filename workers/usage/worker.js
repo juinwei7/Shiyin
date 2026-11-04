@@ -19,7 +19,8 @@ const USAGE = {
 };
 const USAGE_DICTS = {
   engines: { breeze: 'engine_breeze', builtin: 'engine_builtin', whisperJa: 'engine_whisper_ja', qwen: 'engine_qwen', server: 'engine_server' },
-  meetingLanguages: { zh: 'lang_zh', en: 'lang_en', ja: 'lang_ja' },
+  // 4.4 加粵語、韓文（R63.7、design §41.6）：舊版 app 沒有這兩個鍵就當 0
+  meetingLanguages: { zh: 'lang_zh', en: 'lang_en', ja: 'lang_ja', yue: 'lang_yue', ko: 'lang_ko' },
   summarizer: {
     claudeCode: 'summarizer_claude_code', codex: 'summarizer_codex', api: 'summarizer_api', local: 'summarizer_local',
     enterprise: 'summarizer_enterprise',
