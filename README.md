@@ -52,6 +52,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - 只裝了 Codex 桌面版（Mac 上新版叫 ChatGPT）也可以：拾音會用它附的 codex。只有 Claude 桌面版時，引導和設定會說明怎麼另外裝 Claude Code，附上可以複製的安裝指令
   - 停止錄音後先用即時逐字稿整理一份草稿（標「草稿」），正式轉錄完成後自動換成正式版
   - 可以直接編輯；每次修改都留版本，可以復原
+  - 參考文件：會議中一起討論的文件（PDF、Word、PowerPoint、純文字、照片）可以加進會議，整理、提問時一起參考，數字和名稱照文件寫對；用到文件的地方註明出處，會議說的跟文件不一樣時列成待確認。掃描的 PDF 和照片用 macOS 的文字辨識讀出文字，一場會議的文件合計最多 4 萬字
 - **匯出與分享**
 
   | 項目 | 格式 |
@@ -59,7 +60,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   | 會議紀錄 | Markdown、PDF、Word；也可以複製成保留格式的文字（貼到 Word、Notion、郵件）、Markdown、純文字 |
   | 逐字稿 | txt、Markdown、srt、vtt、Word（可選要不要時間點和說話者） |
   | 錄音 | m4a、wav |
-  | 整場會議 | .shiyin 封包（錄音、逐字稿、說話者、紀錄、筆記、重點），對方雙擊就能匯入 |
+  | 整場會議 | .shiyin 封包（錄音、逐字稿、說話者、紀錄、筆記、重點、參考文件），對方雙擊就能匯入 |
 
   匯出時也可以直接用 AirDrop、Mail、訊息分享。
 - **對會議提問**：在會議的「提問」分頁用自然語言問（例如「預算最後決定多少？」），回答附錄音時間點，點了跳過去。工具列的「提問」可以問所有會議、目前的資料夾或最近 30 天，回答附上是哪一場會議
@@ -124,9 +125,9 @@ Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Ma
 - **電腦聲音**：錄的是 Windows 預設輸出裝置播放的所有聲音（Teams 會議的聲音也錄得到），換預設輸出裝置、拔耳機時接著錄新的裝置。錄音中在拾音裡播放錄音，聲音也會錄進去（Mac 會排除拾音自己的聲音）。
 - **系統匣**取代選單列：關掉主視窗時拾音留在系統匣，錄音和轉錄不會中斷；Windows 11 預設把新圖示收在工作列的「^」裡。
 - **快捷鍵**：⌘ 換成 Ctrl；在其他 app 裡用 Ctrl+Alt+Shift+R 開始或停止錄音、Ctrl+Alt+Shift+B 標記重點。
-- **辨識**：即時逐字稿和「快速辨識」（取代 macOS 內建辨識，轉錄模型還沒下載好時先用）是 SenseVoice；說話者辨識是 sherpa-onnx，聲紋跟 Mac 版不通用。.shiyin 封包兩邊可以互相匯入。
+- **辨識**：即時逐字稿和「快速辨識」（取代 macOS 內建辨識，轉錄模型還沒下載好時先用）是 SenseVoice；說話者辨識是 sherpa-onnx，聲紋跟 Mac 版不通用。參考文件的 PDF 用 PdfPig 讀文字，掃描的 PDF 和照片用 Windows 的文字辨識（要有會議語言的辨識：設定 → 時間與語言 → 語言與地區）。.shiyin 封包兩邊可以互相匯入。
 - **資料與隱私**：資料在 `%LOCALAPPDATA%\Shiyin`（只有這個 Windows 使用者讀得到），設定是裡面的 `settings.json`；API key 存在 Windows 的「認證管理員」，不寫進檔案或 log。解除安裝不會刪掉錄音和資料庫。其他同下面的〈資料與隱私〉。
-- **授權**：另外用了 sherpa-onnx、ONNX Runtime、SenseVoice、pyannote、3D-Speaker、NAudio、Velopack、WinUIEx、Windows App SDK 等，完整的清單和條文在「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt`（`scripts/windows/make-third-party-licenses.py` 產生，更新套件後要重跑）。
+- **授權**：另外用了 sherpa-onnx、ONNX Runtime、SenseVoice、pyannote、3D-Speaker、NAudio、PdfPig、Velopack、WinUIEx、Windows App SDK 等，完整的清單和條文在「關於拾音」和安裝資料夾的 `Third-Party Licenses.txt`（`scripts/windows/make-third-party-licenses.py` 產生，更新套件後要重跑）。
 
 從原始碼建置要在 Windows 上，需要 .NET 10 SDK、Visual Studio Build Tools（C++，含 ARM64 的工具）、CMake、Git；ARM64 另外要 LLVM（clang）和 Ninja，AMD 用的 Vulkan 版（`-Vulkan`）要先裝 Vulkan SDK：
 
@@ -214,7 +215,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 |---|---|
 | 錄音、逐字稿、資料庫、模型 | `~/Library/Application Support/Shiyin`（權限 700，不會被 iCloud 同步） |
 | 錄音、轉錄、說話者辨識 | 完全在本機，不連網 |
-| 整理、校稿、提問、猜說話者 | 逐字稿文字、你的筆記、詞彙表、會議基本資料會送到你選的服務（Anthropic、OpenAI、Google，或 OpenAI 相容 API 填的網址）。問所有會議時只送找到的相關片段。錄音檔不會送出 |
+| 整理、校稿、提問、猜說話者 | 逐字稿文字、你的筆記、加入的參考文件讀出來的文字（原始檔不送）、詞彙表、會議基本資料會送到你選的服務（Anthropic、OpenAI、Google，或 OpenAI 相容 API 填的網址）。問所有會議時只送找到的相關片段。錄音檔不會送出 |
 | 聲紋 | 說話者的聲音特徵（一組數字，不是錄音）只存在本機資料庫，不上傳、不放進匯出的 .shiyin 封包；設定 → 說話者與詞彙可以刪除或關閉 |
 | 企業伺服器（登入了才有） | 錄音送到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；整理工具選「公司」時，逐字稿送到公司的伺服器，由公司選的模型整理。Mac 在本機辨識說話者，Windows 交給伺服器辨識、聲紋傳回來只存在本機。登入的 token 存在鑰匙圈（Windows 是認證管理員）。公司的後台只看得到用量，看不到會議內容 |
 | 回報問題 | 只在你按「在 GitHub 回報」時用瀏覽器打開 GitHub，內容你看過、自己送出：版本、環境、錯誤的種類（登入企業伺服器時加上伺服器的版本），不含會議內容、檔名、API key、伺服器網址或帳號 |
