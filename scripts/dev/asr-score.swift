@@ -1,7 +1,7 @@
 // 轉錄評分（design §17.1、R14.1）：比較標準答案和 shiyinctl transcribe-eval 的輸出。
 // 用法：swift scripts/dev/asr-score.swift <標準答案.json> <辨識結果.json> [--window 開始秒 結束秒] [--keywords 詞1,詞2] [--json 輸出.json] [--confusions N] [--keep-script]
 //
-// 標準答案：{"lang": "zh"、"en" 或 "ja", "segments": [{"start": 秒, "end": 秒, "speaker": "A", "text": "…"}]}
+// 標準答案：{"lang": "zh"、"en"、"ja"、"yue" 或 "ko", "segments": [{"start": 秒, "end": 秒, "speaker": "A", "text": "…"}]}
 // 中文、日文一個字（漢字、假名）算一個單位、英文一個單字算一個單位，所以中文、日文是 CER、英文是 WER、夾雜英文是兩者混合。
 // 中文兩邊都轉成簡體再比（AISHELL-4 的答案是簡體），去掉標點和空白。
 // 日文（design §18.7）：全形半形統一、漢字數字轉阿拉伯數字（國會會議錄寫「二〇二五年」，辨識結果多半寫「2025年」）。
@@ -60,7 +60,8 @@ let hypSegs = hyp.segments.filter(inWindow).sorted { $0.start < $1.start }
 
 func normalize(_ text: String) -> String {
     var t = text.lowercased()
-    if lang == "zh" && !keepScript { t = t.applyingTransform(StringTransform("Hant-Hans"), reverse: false) ?? t }
+    // 粵語跟中文一樣，繁簡都換成簡體再比（辨識結果可能是簡體）
+    if (lang == "zh" || lang == "yue") && !keepScript { t = t.applyingTransform(StringTransform("Hant-Hans"), reverse: false) ?? t }
     if lang == "ja" {
         t = t.precomposedStringWithCompatibilityMapping.lowercased()
         for _ in 0..<2 { t = t.replacing(#/(\d),(\d{3})/#) { "\($0.output.1)\($0.output.2)" } }  // 1,000,000 要兩次
@@ -89,8 +90,10 @@ func kanjiNumber(_ run: String) -> String {
     return String(total + section + current)
 }
 
+/// 一個字一個單位的字：漢字、假名、韓文的音節（韓文也算 CER，空格的位置不算錯）
 func isCJK(_ c: Character) -> Bool {
-    c.unicodeScalars.contains { (0x3400...0x9FFF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) || isKana($0.value) }
+    c.unicodeScalars.contains { (0x3400...0x9FFF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) || isKana($0.value)
+        || (0xAC00...0xD7AF).contains($0.value) }
 }
 
 /// 平假名、片假名、長音符號、「々」（中黑點「・」不算）
@@ -113,7 +116,7 @@ func tokens(_ text: String) -> [String] {
     return out.map { $0.hasSuffix("'") ? String($0.dropLast()) : $0 }
 }
 
-let fillers: Set<String> = lang == "zh"
+let fillers: Set<String> = lang == "zh" || lang == "yue"
     ? ["呃", "嗯", "啊", "哦", "唉", "诶", "哎", "呀", "嘛", "呢"]
     : ["um", "uh", "hmm", "mm", "mhm", "er", "erm", "ah", "huh"]
 

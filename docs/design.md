@@ -1817,6 +1817,91 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 - 驗證（Mac）：DEBUG 版、暫存 `SHIYIN_HOME`、`-debugToolDirectory` 指到假的 CLI，`llmprovider claude` 匯入一場：`jobs.error_kind` 是 `LLMError.limited`，失敗橫幅（`screencapture -l`）照 §40.2 兩行、有「重試」、沒有「重新登入」，通知（`state` 的 `notifications`）是第一行整句，`shiyinctl usage` 的 `errorDetail` 是 `limited`（DEBUG 版要先 `usageurl http://127.0.0.1:<埠>/…` 才會記統計）；英文介面看一次；`llmprovider codex` 再一次。
 - 驗證（Windows）：`ServicesTests` 列出 R62.1 的各種說法（含不該算的：一般的失敗、登入問題），`LLMTests` 用假的 claude、codex 腳本（Mac 上跑）確認拋 `Limited`、訊息兩行。
 
+## 41. 更多會議語言：語言檔、粵語、韓文（R63～R65，D139～D142）
+
+Windows 的做法在 design-windows §11.9。
+
+### 41.1 語言檔（`Resources/languages.json`，D139）
+
+Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接跑建置輸出時讀原始碼樹的那份），Windows 內嵌在 Shiyin.Core（同 `Resources/opencc`）。陣列的順序就是選單的順序。每一筆：
+
+| 欄位 | 內容 | 例 |
+|---|---|---|
+| `code` | 存在資料庫 `meetings.language` 的代碼 | `zh`、`en`、`ja`、`yue`、`ko` |
+| `name` | 選單上的名稱（用那個語言自己的寫法，兩種介面都一樣） | `中文`、`廣東話`、`한국어` |
+| `uiName` | 介面提到這個語言時的名稱：`{"zh": …, "en": …}` | `{"zh": "韓文", "en": "Korean"}` |
+| `tier` | `tuned`（精調）或 `general`（一般，選單名稱後面接「（實驗性）」） | |
+| `base` | 用哪一份手寫的提示詞、標籤：`zh`、`en`、`ja` | 粵語 `zh`、韓文 `en` |
+| `outputName` | 一般語言：通用提示詞裡「用 … 寫」的語言名稱（英文） | `Korean` |
+| `transcriptNote` | 精調語言共用別的語言的提示詞時，補一段說明逐字稿的語言（整理、校正的 system 各一段） | 粵語：逐字稿是粵語口語… |
+| `locale` | 日期、星期的寫法 | `zh_TW`、`ko_KR`、`zh_HK` |
+| `live.mac`／`live.windows` | 即時逐字稿：SpeechAnalyzer 的語系；SenseVoice 的語言 | `ko_KR`／`ko` |
+| `transcription.model` | 正式轉錄預設的模型：`breeze`、`turbo`（Whisper large-v3-turbo，原本只給日文）、`qwen` | |
+| `transcription.engineSetting` | 跟著設定的「Breeze／Qwen3-ASR」（只有中文、英文是 true） | |
+| `transcription.whisper`／`qwen` | whisper.cpp 的 `language`、Qwen3-ASR 的語言名稱；沒有就是 null（那個引擎不能用） | `yue`／`Cantonese` |
+| `transcription.traditional` | Qwen3-ASR 的輸出轉台灣繁體（§32.5） | 中文、粵語 true |
+| `text.spaced` | 用空格分詞（英文類）：詞彙表的分隔、上限、幻覺防線的字數算法 | 英文 true |
+| `whisperPrompt` | `base`、`glossary`（`%@` 是詞彙）、`separator`、`limit`、`natural`（評估用的口語寫法，選填） | |
+| `detect` | 自動偵測時 Whisper base 的語言代碼；null 是不能偵測 | 粵語 null |
+| `family` | 語系：同一個語系的語言自動偵測時不互相切換 | 中文、粵語 `zh` |
+| `ocr.mac`／`ocr.windows` | 參考文件的文字辨識語言（§39.2、design-windows §11.8） | |
+| `fonts` | 會議內容的字形（`typesetting`）、標題字型（`titleMac`、`titleWindows`）、匯出 HTML 的字型（`htmlMac`、`htmlWindows` 各有 `body`、`heading`）、Word 的字型（`docx`：`ascii`、`eastAsia`）、HTML 的 `lang` | 韓文 `ko`、`AppleMyungjo` |
+| `speaker` | 預設的說話者名稱，`%lld` 是編號 | `說話者 %lld`、`화자 %lld` |
+| `strings` | 一般語言的字串表：鍵是英文那一份的字（含 `%@`、`%lld`），值是這個語言的寫法 | `"Summary": "요약"` |
+
+- 中文、英文、日文的值照現在程式裡寫死的字一個字一個字搬過去（R63.3），標準答案證明沒變。
+- `MeetingLanguage` 從 enum 改成以 `code` 為身分的型別：`MeetingLanguage.zh` 這些常數留著（呼叫的地方不用改），`allCases` 是語言檔的順序，`MeetingLanguage(rawValue:)` 不認得的代碼回 nil（資料庫裡讀到不認得的代碼照舊當成中文）。語言的做法一律問 `profile`，不再寫 `language == .ja`。
+- 字串的兩個入口（D140）：
+  - `text(zh:en:ja:)`：給人看的字（匯出、預設名稱、待確認的是非題）。`base` 是中文、日文就用那一份；`base` 是英文時查 `strings`，查不到用英文。
+  - `prompt(zh:en:ja:)`：提示詞裡的字，只看 `base`，不查字串表（一般語言的提示詞維持英文）。`Notes/` 底下組提示詞的地方都改用這個。
+  - 有插值的字（長度「1 hr 5 min」、括號、是非題）改成格式字串：`format(zh:en:ja:, 參數…)`，一般語言查 `strings` 的格式。
+  - 預設的說話者名稱只有一個地方：`language.defaultSpeaker(idx)`（原本散在 12 個地方）；`isDefaultSpeakerName` 認語言檔裡所有語言的 `speaker`。
+
+### 41.2 兩級（R63.2、D140、D141）
+
+- **精調語言**：`NotesPrompt`、`AskPrompt`、`TranscriptCorrection`、`SpeakerNaming`、`DocumentPrompt` 照 `base` 選那一份。`transcriptNote` 有值時（粵語），整理和逐字稿校正的 system 最後空一行接上那一段（不編號，不跟參考文件的規則 12～16 撞號）：
+  - 整理：「注意：逐字稿是粵語（廣東話）的口語，常見「係」「唔」「咗」「嘅」「佢哋」「喺」這些字。會議紀錄要寫成繁體中文的書面語，不要照抄口語；人名、專有名詞照逐字稿的寫法。」
+  - 逐字稿校正：「注意：逐字稿是粵語（廣東話）的口語，「係」「唔」「咗」「嘅」「佢哋」「喺」「冇」是正確的寫法，不要改成普通話。」
+- **一般語言**：用英文那一份，改兩個地方（`NotesPrompt.system`）：「written entirely in English」改成「written entirely in Korean」、「translated into English if it is not in English」改成「translated into Korean if it is not in Korean」；最後空一行接「Output language: Korean. Every text value in the JSON (title, summary, decisions, action items, open questions, topics, custom sections, review questions) must be in Korean; keep the JSON keys and the time format as they are.」。提問照舊「用提問的語言回答」；逐字稿校正、猜說話者的理由照英文（給介面的使用者看）。範本用英文版（`definition(for:)` 依 `base`）。
+- 選單、設定頁的名稱：一般語言是「한국어（實驗性）」（英文介面「한국어 (Experimental)」）。
+
+### 41.3 轉錄（R64.2、R65.2、D142）
+
+- `ModelStore.transcription(for:)`：`transcription.model` 是 `turbo` → `.japanese`（模型的名稱改成「Whisper large-v3-turbo（日文、粵語、韓文）」）；是 `breeze`、`engineSetting` 是 true → 照設定 Breeze 或 Qwen；`qwen` → `.qwen`。`transcribedWith` 照實際用的模型寫（`japanese` 照舊表示 turbo，資料庫的值不改）。
+- `WhisperEngine.prompt` 讀 `whisperPrompt`；whisper 的 `language` 用 `transcription.whisper`。Qwen 的語言名稱、繁體轉換、詞彙表的分隔和上限、幻覺防線用「字」還是「詞」算，讀 `transcription.qwen`、`traditional`、`text.spaced`、`whisperPrompt.limit`。
+- 引擎沒有這個語言時（例如設定是 Qwen、語言是韓文而 `qwen` 是 null）用 `transcription.model`；macOS 內建辨識（`useSystemTranscriber`）用 `live.mac` 的語系，系統沒有這個語系時退回 `transcription.model`。
+- 粵語、韓文用哪個模型照評估決定（§41.7 的表、D142）。
+
+### 41.4 即時逐字稿、自動偵測（R63.5、R64.4、R65.5）
+
+- 即時逐字稿的 `SpeechTranscriber(locale:)` 用 `live.mac`；系統還沒有這個語系的模型時照舊先下載（§5.3）。
+- 自動偵測：Whisper base 的機率只取語言檔裡 `detect` 不是 null 的語言（中文、英文、日文、韓文），加總成 1 後最高的超過門檻、而且**語系**跟目前的會議語言不同才切換。粵語的會議偵測到中文、中文的會議偵測到中文都不切。
+- 取捨：多了韓文，中文、英文、日文的機率加總的分母多一項。韓文的語音在中文、英文、日文的錄音裡幾乎是 0，判斷結果不變；用現有的偵測評估資料驗證（§41.7）。
+
+### 41.5 顯示、匯出、文字辨識
+
+- 會議內容的字形 `fonts.typesetting`、標題字型 `fonts.titleMac`（Windows `titleWindows`），取代 `language == .ja ? … : …`。
+- 匯出的 HTML（PDF 用）字型、`lang` 讀 `fonts.htmlMac`、`fonts.lang`；Windows 讀 `htmlWindows`、Word 讀 `docx`。
+- 參考文件的文字辨識語言讀 `ocr.mac`（Windows `ocr.windows`）。
+- 日期、星期用 `locale`。
+
+### 41.6 選單、設定、統計
+
+- 錄音按鈕的選單、匯入對話框、會議頁的語言選單、設定的預設會議語言：列 `MeetingLanguage.allCases`（名稱見 §41.2）。
+- 預設會議語言：macOS 的第一個語言是韓文時用韓文（同日文的做法）；香港的中文（zh-HK）仍然預設中文，粵語要自己選。
+- 匿名統計：`meetingLanguages` 照代碼記（原本固定三個鍵）。後台（`workers/usage`）加 `lang_yue`、`lang_ko` 兩欄和 migration；多的鍵後台本來就略過，後台還沒部署也不會讓統計失敗。
+
+### 41.7 評估（R63.6、D142）
+
+- 資料：`scripts/dev/make-eval-data-langs.py` 產生 `yue-fleurs`、`ko-fleurs`（FLEURS 測試集前 60 句，各約 11、13 分鐘）和 `yue-synth`、`ko-synth`（macOS 語音合成的開發週會，夾英文產品名、人名，有詞彙表和關鍵詞）。`asr-score.swift`：粵語跟中文一樣先轉簡體再算 CER；韓文一個音節一個單位（CER）。
+- 比較：Whisper large-v3-turbo、Qwen3-ASR 1.7B、macOS 內建（`live.mac` 的語系）。選錯字率低、關鍵詞抓得到的當 `transcription.model`。
+- 自動偵測：用現有的偵測資料（中文、英文、日文）確認加了韓文之後結果不變，再用韓文、粵語的資料確認韓文偵測得到、粵語不會被切成中文。
+
+### 41.8 DEBUG、驗證
+
+- 標準答案：`fixtures.json` 加一場粵語、一場韓文的測試會議（提示詞、匯出、封包），`util/` 加語言檔的整理結果（每種語言的名稱、預設說話者、whisper 提示詞、偵測代碼）；原本三種語言的檔案一個字都不能變。
+- `shiyinctl language <id> <代碼>`、`import lang=<代碼>`、`transcribe-eval` 的 `language` 都接受新的代碼。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1901,5 +1986,8 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 | D135 | 一場會議的文件合計 40,000 字，超過時平均分配、截掉每份的後面（R61.7、§39.3） | 不設上限：本機模型（Ollama）的長度很短，雲端的費用跟著文件長度漲，一份 200 頁的規格書可能比逐字稿長十倍。先來先送：一份很長的規格書會把後面加的議程擠掉。先請 AI 挑出跟會議有關的段落：準一點，但多一次呼叫、多等一段時間；先看實際用的人會不會碰到上限 |
 | D136 | docx、pptx 用 `unzip -p` 取出 XML、自己讀，不用 `NSAttributedString`（§39.2） | `NSAttributedString` 讀 docx：讀不了 pptx，表格、文字方塊的寫法不受控制，Windows（OpenXml）的結果對不上，標準答案就比不了；自己讀的規則兩邊一樣，用同一組測試檔比對 |
 | D137 | 額度用完時附上 CLI 的原文，不自己換算恢復時間（R62.2、§40；2026-11-04） | 解析「resets Nov 2 at 9pm (Asia/Taipei)」換成「11/2 晚上 9 點恢復」：Claude Code、Codex 的說法常改（這次就是新說法沒認出來），日期、時區的寫法不一，解析失敗反而少了資訊。只寫「額度用完了」：看不出要等多久、要不要先換整理工具 |
+| D139 | 語言的做法放在一份 JSON 語言檔（Mac、Windows 共用），`MeetingLanguage` 改成以代碼為身分的型別（§41.1；2026-11-04 使用者要通用架構） | 照舊用 enum、每加一種語言加一個 case：每一層都要改 switch，Mac、Windows 各改一次，「通用」只是名義上的。每個平台各寫一份設定：兩邊會慢慢不一樣，標準答案也比不到設定本身 |
+| D140 | 語言分精調、一般兩級；一般語言用英文的提示詞加「用某語言寫」，給人看的字查字串表，提示詞的字不查（§41.2） | 每種語言都手寫一份提示詞：一種語言要寫、調五份提示詞，加語言的成本跟現在一樣高。提示詞也翻成那個語言：模型讀英文的規則最穩，翻譯的規則會走樣、沒辦法逐字檢查。字串表連提示詞一起查：英文提示詞裡夾著韓文的欄位名稱，結果難以預測 |
+| D141 | 粵語的會議紀錄用中文那份提示詞，寫成繁體中文的書面語，加一段說明逐字稿是粵語口語（§41.2） | 寫成粵語口語：讀紀錄的人多半習慣書面語，口語的紀錄不好轉寄。當成一般語言用英文提示詞：中文的規則（台灣用語、繁體、期限換算）已經調過，粵語的紀錄本來就要寫成中文 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
