@@ -78,6 +78,17 @@
         }
       }
     },
+    "AMD、Intel 顯示卡加速（Vulkan）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AMD and Intel GPU acceleration (Vulkan)"
+          }
+        }
+      }
+    },
     "API key 存在 Windows 的認證管理員，不會寫進任何檔案。": {
       "extractionState": "manual",
       "localizations": {
@@ -100,6 +111,28 @@
         }
       }
     },
+    "CPU（Intel 顯示卡沒通過檢查）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU (the Intel GPU didn’t pass the check)"
+          }
+        }
+      }
+    },
+    "CPU（Intel 顯示卡還沒檢查）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU (the Intel GPU hasn’t been checked yet)"
+          }
+        }
+      }
+    },
     "Claude Code（這台電腦已經裝了 claude CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -118,6 +151,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Codex (the codex CLI is installed on this PC)"
+          }
+        }
+      }
+    },
+    "Intel 顯示卡加速下載好了，重新開啟拾音後，下一次轉錄會先檢查顯示卡是不是比較快，是的話就改用顯示卡": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intel GPU acceleration is ready. Reopen Shiyin and the next transcription will first check whether the GPU is faster, and use it if it is."
           }
         }
       }
@@ -1179,6 +1223,17 @@
         }
       }
     },
+    "有 Intel 顯示卡時自動下載。第一次正式轉錄時，先用這場錄音的一段比對顯示卡和 CPU，結果一樣、顯示卡又比較快才改用顯示卡。%@，解開約 %@（拾音用同一版 whisper.cpp 建的 Vulkan 版）。刪除後不會再自動下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded automatically when this PC has an Intel GPU. The first final transcription compares the GPU with the CPU on part of that recording, and switches to the GPU only if the results match and the GPU is faster. %@, about %@ unpacked (a Vulkan build Shiyin makes from the same whisper.cpp version). Once deleted, it won’t be downloaded again automatically."
+          }
+        }
+      }
+    },
     "有 NVIDIA 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 的轉錄會快很多。272 MB，解開約 610 MB（llama.cpp 官方的 CUDA 版，要先有上面的 NVIDIA 顯示卡加速）。刪除後不會再自動下載。": {
       "extractionState": "manual",
       "localizations": {
@@ -1223,6 +1278,17 @@
         }
       }
     },
+    "檢查通過：正式轉錄用顯示卡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check passed: final transcription runs on the GPU."
+          }
+        }
+      }
+    },
     "正在下載%@": {
       "extractionState": "manual",
       "localizations": {
@@ -1230,6 +1296,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Downloading %@"
+          }
+        }
+      }
+    },
+    "正在檢查顯示卡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the GPU."
           }
         }
       }
@@ -1795,6 +1872,17 @@
         }
       }
     },
+    "這台電腦的顯示卡沒有通過檢查（沒有比 CPU 快、結果跟 CPU 不一樣，或出錯）：正式轉錄用 CPU。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This PC’s GPU didn’t pass the check (it wasn’t faster than the CPU, its results didn’t match, or it hit an error): final transcription runs on the CPU."
+          }
+        }
+      }
+    },
     "這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。": {
       "extractionState": "manual",
       "localizations": {
@@ -1868,6 +1956,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "If something goes wrong, choose Report a problem… in Settings → Advanced; it includes the version and environment (no meeting content)."
+          }
+        }
+      }
+    },
+    "還沒檢查：下一次正式轉錄時檢查。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not checked yet: it will be checked during the next final transcription."
           }
         }
       }

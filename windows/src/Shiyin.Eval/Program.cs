@@ -27,6 +27,8 @@ switch (args.FirstOrDefault())
     case "fast-eval": return Fast(args[1], args[2], args[3]);
     // live-eval <錄音.wav> <設定.json> <輸出.json>：照錄音的速度餵即時逐字稿，記下暫定、定稿的延遲（T-W5）
     case "live-eval": return Live(args[1], args[2], args[3]);
+    // gpu-check <錄音.wav> <輸出.json> [zh|en|ja]：Intel 顯示卡加速的檢查（R27 R4.8、design-windows §8）：開頭 180 秒裡最大聲的 30 秒，顯示卡和 CPU 各轉一次
+    case "gpu-check": return GpuCheck(args[1], args[2], args.Length > 3 ? args[3] : "zh");
     case "info":
         Console.WriteLine(WhisperEngine.SystemInfo);
         // whisper 會用的顯示卡（design-windows §8）：空的是只用 CPU；windows-gpu-pack.yml 用它確認 lavapipe 的 Vulkan 有被用上
@@ -180,6 +182,33 @@ Diarizer.Options DiarizerOptionsFrom(JsonObject options)
             SingleSpeaker = options["singleSpeaker"]?.GetValue<double>() ?? new SpeakerClustering.Options().SingleSpeaker,
         },
     };
+}
+
+int GpuCheck(string audio, string output, string code)
+{
+    var samples = WavStream.ReadAll(audio);
+    var rate = (int)WhisperRules.SampleRate;
+    var head = samples.AsSpan(0, Math.Min(samples.Length, (int)(GpuCheckRules.ScanSeconds * rate)));
+    var window = (int)(GpuCheckRules.SampleSeconds * rate);
+    var start = GpuCheckRules.LoudestWindow(head, window, (int)(GpuCheckRules.StepSeconds * rate));
+    var sample = head.Slice(start, Math.Min(window, head.Length - start)).ToArray();
+    var language = MeetingLanguages.All.First(l => l.Code() == code);
+    var model = Path.Combine(models, language == MeetingLanguage.Ja ? "ggml-large-v3-turbo-q5_0.bin" : "breeze-asr-25-q8_0.bin");
+    var prompt = WhisperRules.Prompt([], language);
+    // 跟 app 一樣 CPU 先（GpuCheckFlow）
+    var cpu = WhisperEngine.TimedTranscribe(sample, model, prompt, language.WhisperCode(), new WhisperControl(), useGpu: false);
+    var gpu = WhisperEngine.TimedTranscribe(sample, model, prompt, language.WhisperCode(), new WhisperControl(), useGpu: true);
+    var r = (GpuText: gpu.Text, GpuSeconds: gpu.Seconds, CpuText: cpu.Text, CpuSeconds: cpu.Seconds);
+    var result = new JsonObject
+    {
+        ["audio"] = audio, ["gpu"] = WhisperEngine.GpuDevice, ["start"] = start / WhisperRules.SampleRate, ["seconds"] = sample.Length / WhisperRules.SampleRate,
+        ["gpuSeconds"] = r.GpuSeconds, ["cpuSeconds"] = r.CpuSeconds,
+        ["similarity"] = GpuCheckRules.TextSimilarity(r.GpuText, r.CpuText),
+        ["verdict"] = GpuCheckRules.Decide(r.GpuText, r.CpuText, r.GpuSeconds, r.CpuSeconds).ToString(),
+        ["gpuText"] = r.GpuText, ["cpuText"] = r.CpuText,
+    };
+    File.WriteAllText(output, result.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+    return 0;
 }
 
 int Detect(string audio, double start, string output)

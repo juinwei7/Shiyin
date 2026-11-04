@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Shiyin.Localization;
@@ -187,6 +188,34 @@ public static class WhisperEngine
         }
         if (session.Segments.Count == 0) throw new WhisperException(WhisperErrorKind.Empty);
         return (session.Segments, seams, offset);
+    }
+
+    /// <summary>
+    /// Intel 顯示卡加速的檢查（R27 R4.8、design-windows §8）：用顯示卡或 CPU 轉一段取樣（參數同正式轉錄），回傳文字和轉錄花的秒數（不含載入）。
+    /// 不管 <see cref="UseGpu"/>。顯示卡先用開頭幾秒暖機一次、不計時（第一次會編譯 shader）
+    /// </summary>
+    public static (string Text, double Seconds) TimedTranscribe(float[] samples, string modelPath, string prompt, string language,
+                                                                WhisperControl control, bool useGpu)
+    {
+        _ = Silenced.Value;
+        if (!File.Exists(modelPath)) throw new WhisperException(WhisperErrorKind.ModelMissing);
+        var ctx = WhisperNative.Init(modelPath, useGpu ? 1 : 0, 1);
+        if (ctx == IntPtr.Zero) throw new WhisperException(WhisperErrorKind.LoadFailed);
+        Interlocked.Increment(ref contexts);
+        try
+        {
+            if (useGpu)
+                Run(ctx, samples.AsSpan(0, Math.Min(samples.Length, (int)(GpuCheckRules.WarmupSeconds * WhisperRules.SampleRate))),
+                    0, prompt, language, control, 0, 0);
+            var watch = Stopwatch.StartNew();
+            var segments = Run(ctx, samples, 0, prompt, language, control, 0, 0);
+            return (string.Concat(segments.Select(s => s.Text)), watch.Elapsed.TotalSeconds);
+        }
+        finally
+        {
+            WhisperNative.Free(ctx);
+            Interlocked.Decrement(ref contexts);
+        }
     }
 
     sealed class CallState(WhisperControl control, double progressBase, double progressSpan)

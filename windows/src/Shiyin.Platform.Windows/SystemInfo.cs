@@ -58,6 +58,9 @@ public static class SystemInfo
     /// <summary>有 AMD 顯示卡（R27 R4.7，含 Radeon 內顯）：硬體 ID 的廠商是 1002</summary>
     public static bool HasAmdGpu() => Adapters().Any(a => a.DeviceId.Contains("VEN_1002", StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>有 Intel 顯示卡（R27 R4.8，含 Iris Xe、Arc 內顯）：硬體 ID 的廠商是 8086</summary>
+    public static bool HasIntelGpu() => Adapters().Any(a => a.DeviceId.Contains("VEN_8086", StringComparison.OrdinalIgnoreCase));
+
     /// <summary>顯示卡驅動的登錄：名稱、硬體 ID（PCI\VEN_xxxx&amp;DEV_xxxx…）</summary>
     static List<(string Name, string DeviceId)> Adapters()
     {

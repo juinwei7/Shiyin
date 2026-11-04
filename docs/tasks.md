@@ -97,6 +97,12 @@
 - [~] **W-AMD3 真的 AMD 電腦**（要使用者）：有 Radeon 獨顯或內顯（780M、860M）的 Windows 電腦，啟動後自動下載、重新開啟後轉錄一場 Breeze 和 Qwen
   - 驗證：log 有「whisper will load from the pack」、回報問題的顯示卡是 Radeon；同一段錄音的逐字稿跟 CPU 版相同；記下倍速（跟 CPU 比）寫進 R4.7
 
+### Intel 顯示卡加速（R27 R4.8、§8、D138；2026-11-04 使用者決定不等實機）
+
+- [~] **W-INTEL 真的 Intel 電腦**：程式完成，Mac 上測試過（見 commit 訊息）；沒有在 Intel 的 Windows 電腦上跑過
+  - 驗證：發布後一週，統計裡 CPU 名稱是 Intel 的 x64 電腦，新版的轉錄倍速（`transcribed_seconds ÷ transcribe_wall_seconds`）跟舊版比；有 Intel 筆電時：第一次轉錄的 log 有 `gpu check:`，回報問題的 whisper 欄、設定的模型清單寫出結果；Core Ultra（Arc）、11～13 代（Iris Xe）各一台
+  - 量到數字之後再改官網（`site/src/content.mjs` 的 Windows 效能、FAQ 還寫「Intel 顯示卡只用 CPU」；website.md §16.1「電腦效能」那一列只寫量過的事）
+
 ### 要使用者的 Windows 電腦
 
 - [~] **錄音中換裝置**（R18.2、R54、§6）：錄音中換預設的麥克風，錄音不中斷、接到新的麥克風（W0.3、W4.2）；錄音中換預設輸出裝置、拔耳機，電腦聲音接著錄（Teams 的聲音 issue #2 已經由回報者確認、結案）

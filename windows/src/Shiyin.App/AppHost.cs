@@ -77,12 +77,14 @@ public sealed class AppHost
         // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；App 顯示原因後結束
         Db = new AppDatabase(Paths.Database, Paths.Backups, Paths.Documents);
         Models = new ModelStore(Paths.Models, Http);
-        // 顯示卡加速：NVIDIA 用官方的 CUDA 版（R27 R4.6）、AMD 用拾音的 Vulkan 版（R4.7），都只有 x64。
-        // DEBUG 的 --set debugNvidia=YES、--set debugAmd=YES 當作有那張顯示卡（虛擬機測自動下載）
+        // 顯示卡加速：NVIDIA 用官方的 CUDA 版（R27 R4.6）、AMD 用拾音的 Vulkan 版（R4.7）、只有 Intel 時也用 Vulkan 版但先檢查（R4.8），都只有 x64。
+        // DEBUG 的 --set debugNvidia=YES、--set debugAmd=YES、--set debugIntel=YES 當作有那張顯示卡（虛擬機測自動下載）
         var nvidia = SystemInfo.HasNvidiaGpu() || (Debug && Settings.Flag("debugNvidia", false));
         var amd = SystemInfo.HasAmdGpu() || (Debug && Settings.Flag("debugAmd", false));
-        Gpu = new GpuAcceleration(Models, Settings, GpuAcceleration.PackFor(RuntimeInformation.ProcessArchitecture == Architecture.X64, nvidia, amd),
-            AppContext.BaseDirectory);
+        var intel = SystemInfo.HasIntelGpu() || (Debug && Settings.Flag("debugIntel", false));
+        var x64 = RuntimeInformation.ProcessArchitecture == Architecture.X64;
+        Gpu = new GpuAcceleration(Models, Settings, GpuAcceleration.PackFor(x64, nvidia, amd, intel), AppContext.BaseDirectory,
+            checkFirst: GpuAcceleration.NeedsCheck(x64, nvidia, amd, intel));
         // DEBUG 預設不讀真的認證管理員（同 Mac 3.4.1）：key 只放記憶體，要測時加 --set debugRealKeychain=YES
         Keys = Debug && !Settings.Flag("debugRealKeychain", false) ? new MemoryKeyStore() : new CredentialStore();
         var children = new ChildProcesses();
@@ -120,7 +122,7 @@ public sealed class AppHost
         {
             Url = Debug ? null : BuiltUsageUrl, AlwaysOffered = Debug,
         };
-        var engines = new SpeechEngines(Models, () => Gpu.QwenRuntime);
+        var engines = new SpeechEngines(Models, () => Gpu.QwenRuntime, Gpu);
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage, Enterprise = Enterprise };
         Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes, MicrophoneList, DefaultMicrophone));
@@ -254,10 +256,14 @@ public sealed class AppHost
     public void Start()
     {
         // 在任何轉錄之前（Controller.Start 會接著做當掉前沒做完的工作）：決定 whisper 從哪裡載入
-        Gpu.RestartNeeded += () => Post(() => Notifier.Notice(Gpu.Kind == GpuAcceleration.Pack.Vulkan
-            ? L.T("AMD 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")
-            : L.T("NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")));
+        Gpu.RestartNeeded += () => Post(() => Notifier.Notice(Gpu.Kind == GpuAcceleration.Pack.Cuda
+            ? L.T("NVIDIA 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")
+            : Gpu.CheckFirst
+                ? L.T("Intel 顯示卡加速下載好了，重新開啟拾音後，下一次轉錄會先檢查顯示卡是不是比較快，是的話就改用顯示卡")
+                : L.T("AMD 顯示卡加速下載好了，重新開啟拾音後，轉錄就會用顯示卡")));
         Gpu.Start();
+        // Intel 還沒檢查：先在這裡載入一次 Vulkan 版，載入時當掉下次就改用 CPU（R4.8）
+        Gpu.ProbeFirstLoad(() => WhisperEngine.GpuDevice);
         Controller.Start();
         Detector.Prompted += p => Post(() => ShowMeetingPrompt?.Invoke(p));
         Detector.Start();
