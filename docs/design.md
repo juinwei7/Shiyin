@@ -1916,6 +1916,23 @@ Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接�
 - 標準答案：`fixtures.json` 加一場粵語、一場韓文的測試會議（提示詞、匯出、封包），`util/` 加語言檔的整理結果（每種語言的名稱、預設說話者、whisper 提示詞、偵測代碼）；原本三種語言的檔案一個字都不能變。
 - `shiyinctl language <id> <代碼>`、`import lang=<代碼>`、`transcribe-eval` 的 `language` 都接受新的代碼。
 
+### 41.9 台語的評估（R66）
+
+- 模型：聯發科 Breeze-ASR-26（Whisper large-v2 微調、約 1 萬小時合成的台語語音、Apache-2.0，輸出華語文字）。評估用社群轉的 GGML q8_0（`doggy8088/Breeze-ASR-26-GGML`，1.66 GB，SHA256 `e878f611…`），放 `~/Library/Caches/ShiyinSpike/models/`，用 `transcribe-eval` 的 `model` 指定，跟 Breeze 25 走同一條 whisper 流程（`language` 給 `zh`）。
+- 資料：`scripts/dev/make-eval-data-taigi.py`。來源跟聯發科的 Breeze Taigi 評測一樣（arXiv 2603.19259 §3.2）：行政院的廣播公益廣告月包（10 個月、去掉重複後 38 則），同一則有華語、臺語版，正確答案是華語腳本（自動拿掉角色名、音效、舞台指示）。三組各 20 分鐘：`taigi-psa`（台語版）、`taigi-psa-zh`（同樣廣告的華語版）、`taigi-mix`（一則華語一則台語交替）。華語錄音對華語腳本的錯字率（Breeze 25 5.9%）就是正確答案本身的誤差上限；台語的數字只拿來比高低。
+- 國語有沒有變差：同一個模型也跑現有的國語資料（AISHELL-4 真人會議、合成的中英夾雜會議、TaiMECS、台大課程、Formosa）。
+- 結果（2026-11-05，字錯誤率；括號是關鍵詞抓到幾個）：
+
+  | | Breeze 25 | Qwen3-ASR | macOS 內建 | Breeze-ASR-26 |
+  |---|---|---|---|---|
+  | `taigi-psa`（台語） | 56.2% | 55.3% | 64.5% | 還沒跑完 |
+  | `taigi-psa-zh`（同樣的華語） | 5.9% | 10.5% | 9.4% | 還沒跑完 |
+  | `taigi-mix`（交替） | 27.6% | 31.7% | 35.6% | 還沒跑完 |
+  | `aishell`（國語真人會議） | 29.4% | | | 36.9% |
+  | `synth`（中英夾雜會議） | 5.2%（5/6） | | | 7.2%（1/6） |
+
+  目前的引擎都聽不懂台語（55%～65%，大多是用華語的音去猜）。Breeze-ASR-26 的國語會議比 Breeze 25 差（AISHELL-4 多了 400 個漏字），英文產品名幾乎都沒抓到（Redis、Fonpay 都變成別的字）：不適合取代中文會議的 Breeze 25。台語那三組 2026-11-05 跑到一半時系統記憶體不足，背景工作被停掉，還沒跑。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
