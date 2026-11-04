@@ -651,8 +651,8 @@ public sealed class SettingsWindow : Window
                 inUse ? L.T("轉錄正在用這個元件，重新開啟拾音後才能刪除") : null));
             models.Children.Add(Note(L.T("有 NVIDIA 顯示卡時自動下載，轉錄會快很多。685 MB，解開約 1.1 GB（whisper.cpp 官方的 CUDA 版）。刪除後不會再自動下載。")));
         }
-        // AMD 顯示卡加速（R27 R4.7）：只在有 AMD 顯示卡（沒有 NVIDIA）的 x64 電腦（或已經下載過）顯示
-        if (host.Gpu.Kind == GpuAcceleration.Pack.Vulkan || host.Models.StateOf(ModelStore.Model.QwenVulkan) is not ModelStore.State.Missing)
+        // AMD 顯示卡加速（R27 R4.7）：只在有 AMD 顯示卡（沒有 NVIDIA）的 x64 電腦（或已經下載過）顯示；Qwen 的 Intel 版先不做（R4.8）
+        if ((host.Gpu.Kind == GpuAcceleration.Pack.Vulkan && !host.Gpu.CheckFirst) || host.Models.StateOf(ModelStore.Model.QwenVulkan) is not ModelStore.State.Missing)
         {
             models.Children.Add(ModelRow(ModelStore.Model.QwenVulkan, transcribing));
             models.Children.Add(Note(L.F("有 AMD 顯示卡、選了 Qwen3-ASR 時自動下載，Qwen 改用顯示卡轉錄。%@，解開約 %@（llama.cpp 官方的 Vulkan 版）。刪除後不會再自動下載。",
@@ -663,8 +663,20 @@ public sealed class SettingsWindow : Window
             var inUse = PackInUse(ModelStore.Model.GpuVulkan);
             models.Children.Add(ModelRow(ModelStore.Model.GpuVulkan, transcribing || inUse,
                 inUse ? L.T("轉錄正在用這個元件，重新開啟拾音後才能刪除") : null));
-            models.Children.Add(Note(L.F("有 AMD 顯示卡時自動下載，正式轉錄改用顯示卡。%@，解開約 %@（拾音用同一版 whisper.cpp 建的 Vulkan 版）。刪除後不會再自動下載。",
-                Recorder.ByteCount(ModelStore.GpuVulkan.Size), Recorder.ByteCount(Unpacked(ModelStore.GpuVulkan)))));
+            // Intel：先檢查才用顯示卡，寫出規則和結果（R4.8）
+            models.Children.Add(Note(host.Gpu.CheckFirst
+                ? L.F("有 Intel 顯示卡時自動下載。第一次正式轉錄時，先用這場錄音的一段比對顯示卡和 CPU，結果一樣、顯示卡又比較快才改用顯示卡。%@，解開約 %@（拾音用同一版 whisper.cpp 建的 Vulkan 版）。刪除後不會再自動下載。",
+                    Recorder.ByteCount(ModelStore.GpuVulkan.Size), Recorder.ByteCount(Unpacked(ModelStore.GpuVulkan)))
+                : L.F("有 AMD 顯示卡時自動下載，正式轉錄改用顯示卡。%@，解開約 %@（拾音用同一版 whisper.cpp 建的 Vulkan 版）。刪除後不會再自動下載。",
+                    Recorder.ByteCount(ModelStore.GpuVulkan.Size), Recorder.ByteCount(Unpacked(ModelStore.GpuVulkan)))));
+            if (host.Gpu.CheckFirst && host.Models.IsInstalled(ModelStore.Model.GpuVulkan))
+                models.Children.Add(Note(host.Gpu.CheckState switch
+                {
+                    GpuAcceleration.CheckGpu => L.T("檢查通過：正式轉錄用顯示卡。"),
+                    GpuAcceleration.CheckCpu => L.T("這台電腦的顯示卡沒有通過檢查（沒有比 CPU 快、結果跟 CPU 不一樣，或出錯）：正式轉錄用 CPU。"),
+                    GpuAcceleration.CheckRunning => L.T("正在檢查顯示卡。"),
+                    _ => L.T("還沒檢查：下一次正式轉錄時檢查。"),
+                }));
         }
         return models;
     }

@@ -38,6 +38,8 @@ public sealed class AppSettings
     public const string QwenCudaOfferedKey = "qwenCudaOffered";
     /// <summary>AMD 顯示卡加速（R27 R4.7）：whisper、Qwen 的 Vulkan 版各自只自動下載一次</summary>
     public const string GpuVulkanOfferedKey = "gpuVulkanOffered";
+    /// <summary>Intel 顯示卡加速的檢查結果（R27 R4.8）：沒有值、running、gpu、cpu（GpuAcceleration.Check*）</summary>
+    public const string GpuVulkanCheckKey = "gpuVulkanCheck";
     public const string QwenVulkanOfferedKey = "qwenVulkanOffered";
     public const string CompatibleBaseUrlKey = "openaiCompatibleBaseURL";
     public const string OnboardingKey = "hasCompletedOnboarding";

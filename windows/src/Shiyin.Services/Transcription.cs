@@ -59,8 +59,20 @@ public interface ISpeechEngines
                                   IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control);
 }
 
-/// <summary>真的引擎：whisper.cpp、SenseVoice、sherpa-onnx、llama-server，模型從 ModelStore 的位置讀。qwenGpu：Qwen 用哪一版的 llama-server（CUDA、Vulkan、CPU）</summary>
-public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGpu>? qwenGpu = null) : ISpeechEngines
+/// <summary>Intel 顯示卡加速的檢查（R27 R4.8、design-windows §8）：GpuAcceleration 實作</summary>
+public interface IWhisperGpuCheck
+{
+    /// <summary>這次正式轉錄前要先檢查</summary>
+    bool CheckPending { get; }
+    void BeginCheck();
+    void FinishCheck(GpuCheckRules.Verdict verdict);
+}
+
+/// <summary>
+/// 真的引擎：whisper.cpp、SenseVoice、sherpa-onnx、llama-server，模型從 ModelStore 的位置讀。qwenGpu：Qwen 用哪一版的 llama-server（CUDA、Vulkan、CPU）；
+/// gpuCheck：Intel 顯示卡第一次正式轉錄前的檢查（R4.8）
+/// </summary>
+public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGpu>? qwenGpu = null, IWhisperGpuCheck? gpuCheck = null) : ISpeechEngines
 {
     public List<TranscribedSegment> Qwen(float[] samples, IReadOnlyList<(int Start, int End)> chunks, MeetingLanguage language,
                                          IReadOnlyList<string> glossary, bool retry, bool guard, WhisperControl control)
@@ -109,6 +121,8 @@ public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGp
         IAudioStream audio, double chunkSeconds, string model, string prompt, string language, WhisperControl control)
     {
         LogBackend();
+        // Intel 顯示卡：第一次正式轉錄前，用這場錄音的一段比對顯示卡和 CPU（R4.8）；讀過的開頭接回串流前面
+        if (gpuCheck is not null) audio = GpuCheckFlow.Run(audio, gpuCheck, WhisperEngine.GpuDevice, Timed(model, prompt, language, control));
         return WhisperEngine.TranscribeFile(audio, chunkSeconds, model, prompt, language, control);
     }
 
@@ -116,8 +130,12 @@ public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGp
                                                    string language, WhisperControl control)
     {
         LogBackend();
+        if (gpuCheck is not null) GpuCheckFlow.Run(samples, gpuCheck, WhisperEngine.GpuDevice, Timed(model, prompt, language, control));
         return WhisperEngine.Transcribe(samples, chunks, model, prompt, language, control);
     }
+
+    static GpuCheckFlow.Transcriber Timed(string model, string prompt, string language, WhisperControl control) =>
+        (sample, useGpu) => WhisperEngine.TimedTranscribe(sample, model, prompt, language, control, useGpu);
 
     static int backendLogged;
 
@@ -127,7 +145,9 @@ public sealed class SpeechEngines(ModelStore models, Func<GpuAcceleration.QwenGp
         if (Interlocked.Exchange(ref backendLogged, 1) == 1) return;
         var gpu = WhisperEngine.GpuDevice;
         var from = WhisperEngine.NativeDirectory is { } pack && WhisperEngine.LoadedDirectory == pack ? "gpu pack" : "app";
-        Log.Info($"whisper: {(gpu.Length > 0 ? gpu : "CPU")}, loaded from {from}");
+        // Intel 還沒通過檢查時 ggml 找得到顯示卡，但 whisper 用 CPU（R4.8）
+        var backend = gpu.Length == 0 ? "CPU" : WhisperEngine.UseGpu ? gpu : $"CPU ({gpu} not used)";
+        Log.Info($"whisper: {backend}, loaded from {from}");
     }
 
     public List<TranscribedSegment> Fast(IAudioStream audio, MeetingLanguage language, Action<double> progress, CancellationToken cancel) =>
@@ -455,6 +475,95 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
             return speakers;
         }
     }
+}
+
+/// <summary>
+/// Intel 顯示卡第一次正式轉錄前的檢查（R27 R4.8、design-windows §8、D138）：開頭最多 180 秒裡挑最大聲的 30 秒，
+/// CPU、顯示卡各轉一次再判斷
+/// </summary>
+static class GpuCheckFlow
+{
+    /// <summary>用顯示卡（true）或 CPU 轉一段，回傳文字和轉錄花的秒數</summary>
+    public delegate (string Text, double Seconds) Transcriber(float[] sample, bool useGpu);
+
+    static int ScanSamples => (int)(GpuCheckRules.ScanSeconds * WhisperRules.SampleRate);
+
+    /// <summary>從串流讀（正式轉錄）：回傳的串流先吐出讀過的開頭，正式轉錄照樣從頭</summary>
+    public static IAudioStream Run(IAudioStream audio, IWhisperGpuCheck check, string gpuDevice, Transcriber transcribe)
+    {
+        if (!Ready(check, gpuDevice)) return audio;
+        var head = new List<float>();
+        audio.Fill(head, ScanSamples);
+        var samples = head.ToArray();
+        Check(samples, check, transcribe);
+        return new ReplayStream(samples, audio);
+    }
+
+    /// <summary>已經解碼好的整段（分聲道轉錄）</summary>
+    public static void Run(float[] samples, IWhisperGpuCheck check, string gpuDevice, Transcriber transcribe)
+    {
+        if (Ready(check, gpuDevice)) Check(samples.AsSpan(0, Math.Min(samples.Length, ScanSamples)), check, transcribe);
+    }
+
+    /// <summary>要檢查、而且 whisper 找得到顯示卡；驅動沒有 Vulkan 裝置（或太舊）時本來就只能用 CPU，直接記成沒通過</summary>
+    static bool Ready(IWhisperGpuCheck check, string gpuDevice)
+    {
+        if (!check.CheckPending) return false;
+        if (gpuDevice.Length > 0) return true;
+        check.FinishCheck(GpuCheckRules.Verdict.Cpu);
+        Log.Info("gpu check: cpu (no gpu device)");
+        return false;
+    }
+
+    static void Check(ReadOnlySpan<float> head, IWhisperGpuCheck check, Transcriber transcribe)
+    {
+        var rate = (int)WhisperRules.SampleRate;
+        var window = (int)(GpuCheckRules.SampleSeconds * rate);
+        var start = GpuCheckRules.LoudestWindow(head, window, (int)(GpuCheckRules.StepSeconds * rate));
+        var sample = head.Slice(start, Math.Min(window, head.Length - start)).ToArray();
+        // 判斷不了、取消、CPU 那次出錯都清回還沒檢查（finally），下一場再試；只有顯示卡那次出錯才算沒通過
+        var verdict = GpuCheckRules.Verdict.Inconclusive;
+        check.BeginCheck();
+        try
+        {
+            // CPU 先：電腦還沒熱起來時量 CPU，對顯示卡偏保守。CPU 出錯是 whisper 本身的問題（例如模型壞了），照原樣丟出
+            var cpu = transcribe(sample, false);
+            (string Text, double Seconds) gpu;
+            try { gpu = transcribe(sample, true); }
+            catch (Exception e) when (e is not OperationCanceledException and not WhisperException { Kind: WhisperErrorKind.Cancelled })
+            {
+                // 顯示卡那次載入失敗、算失敗，或驅動丟出別的例外：沒通過，這一場接著用 CPU 轉
+                verdict = GpuCheckRules.Verdict.Cpu;
+                Log.Error($"gpu check: cpu (gpu failed: {(e is ILogSummary summary ? summary.LogSummary : e.GetType().Name)})");
+                return;
+            }
+            verdict = GpuCheckRules.Decide(gpu.Text, cpu.Text, gpu.Seconds, cpu.Seconds);
+            Log.Info($"gpu check: {verdict.ToString().ToLowerInvariant()} similarity={GpuCheckRules.TextSimilarity(gpu.Text, cpu.Text):F2} "
+                + $"gpu={gpu.Seconds:F1}s cpu={cpu.Seconds:F1}s");
+        }
+        finally { check.FinishCheck(verdict); }
+    }
+}
+
+/// <summary>先吐出已經讀過的取樣，再接著讀原本的串流（顯示卡檢查讀過的開頭，R4.8）</summary>
+sealed class ReplayStream(float[] head, IAudioStream inner) : IAudioStream
+{
+    int position;
+    public int EstimatedCount => inner.EstimatedCount;
+    public bool Finished => position >= head.Length && inner.Finished;
+
+    public void Fill(List<float> buffer, int count)
+    {
+        if (position < head.Length)
+        {
+            var take = Math.Min(head.Length - position, Math.Max(count - buffer.Count, 0));
+            buffer.AddRange(head.AsSpan(position, take));
+            position += take;
+        }
+        if (position >= head.Length && buffer.Count < count) inner.Fill(buffer, count);
+    }
+
+    public void Dispose() => inner.Dispose();
 }
 
 /// <summary>記下讀了多少取樣（快速辨識的錄音長度；檔案標頭的長度只是估計）</summary>

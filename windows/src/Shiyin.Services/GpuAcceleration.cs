@@ -1,19 +1,29 @@
+using Shiyin.Localization;
+using Shiyin.Transcribe;
 using Shiyin.Whisper;
 
 namespace Shiyin.Services;
 
 /// <summary>
 /// 顯示卡加速：x64 有 NVIDIA 顯示卡時自動下載一次 whisper.cpp 官方的 CUDA 版（R27 R4.6、design-windows §8、D64，ModelStore.Model.GpuCuda）；
-/// 有 AMD 顯示卡（沒有 NVIDIA）時自動下載一次拾音自己建的 Vulkan 版（R27 R4.7、§8、D127，ModelStore.Model.GpuVulkan）。
+/// 有 AMD 顯示卡（沒有 NVIDIA）時自動下載一次拾音自己建的 Vulkan 版（R27 R4.7、§8、D127，ModelStore.Model.GpuVulkan）；
+/// 只有 Intel 顯示卡時也下載 Vulkan 版，但第一次正式轉錄時先檢查，通過才用顯示卡（R27 R4.8、D138）。
 /// 裝好之後，第一次用 whisper 之前把安裝資料夾的 shim 和 VC++ 執行階段複製過去，whisper 整套從那裡載入
 /// </summary>
-public sealed class GpuAcceleration
+public sealed class GpuAcceleration : IWhisperGpuCheck
 {
-    /// <summary>這台電腦用哪一包：None（不是 x64，或沒有 NVIDIA、AMD）、Cuda（有 NVIDIA）、Vulkan（有 AMD、沒有 NVIDIA）</summary>
+    /// <summary>這台電腦用哪一包：None（不是 x64，或沒有 NVIDIA、AMD、Intel）、Cuda（有 NVIDIA）、Vulkan（有 AMD 或 Intel、沒有 NVIDIA）</summary>
     public enum Pack { None, Cuda, Vulkan }
 
-    /// <summary>NVIDIA 和 AMD 都有（AMD 內顯＋NVIDIA 獨顯的筆電）時用 CUDA；Intel 顯示卡先不用（R4.7）；官方的 CUDA 版和拾音的 Vulkan 版都只有 x64</summary>
-    public static Pack PackFor(bool x64, bool nvidia, bool amd) => !x64 ? Pack.None : nvidia ? Pack.Cuda : amd ? Pack.Vulkan : Pack.None;
+    /// <summary>NVIDIA 和 AMD 都有（AMD 內顯＋NVIDIA 獨顯的筆電）時用 CUDA；只有 Intel 時也用 Vulkan 版（R4.8）；官方的 CUDA 版和拾音的 Vulkan 版都只有 x64</summary>
+    public static Pack PackFor(bool x64, bool nvidia, bool amd, bool intel = false) =>
+        !x64 ? Pack.None : nvidia ? Pack.Cuda : amd || intel ? Pack.Vulkan : Pack.None;
+
+    /// <summary>用 Vulkan 版之前要先檢查：只有 Intel 顯示卡（R4.8、D138）</summary>
+    public static bool NeedsCheck(bool x64, bool nvidia, bool amd, bool intel) => PackFor(x64, nvidia, amd, intel) == Pack.Vulkan && !amd;
+
+    /// <summary>Intel 的檢查狀態（設定 gpuVulkanCheck，design-windows §8）：沒有值是還沒檢查</summary>
+    public const string CheckRunning = "running", CheckGpu = "gpu", CheckCpu = "cpu";
 
     /// <summary>Qwen 用哪一版的 llama-server（design-windows §8.4）</summary>
     public enum QwenGpu { None, Cuda, Vulkan }
@@ -27,22 +37,35 @@ public sealed class GpuAcceleration
 
     public Pack Kind { get; }
 
-    /// <summary>這台電腦用得上（AppHost 判斷）：x64，有 NVIDIA 或 AMD 顯示卡</summary>
+    /// <summary>只有 Intel 顯示卡：Vulkan 版要通過檢查才用顯示卡（R4.8）；Qwen 的 Vulkan 版不給</summary>
+    public bool CheckFirst { get; }
+
+    /// <summary>這台電腦用得上（AppHost 判斷）：x64，有 NVIDIA、AMD 或 Intel 顯示卡</summary>
     public bool Applies => Kind != Pack.None;
+
+    /// <summary>Intel 的檢查結果：null（還沒檢查）、running、gpu、cpu</summary>
+    public string? CheckState => settings.String(AppSettings.GpuVulkanCheckKey) is { Length: > 0 } state ? state : null;
 
     /// <summary>元件下載好了，但 whisper 已經從安裝資料夾載入：要重新開啟拾音才會用上</summary>
     public event Action? RestartNeeded;
 
-    public GpuAcceleration(ModelStore models, AppSettings settings, Pack pack, string appDirectory)
+    public GpuAcceleration(ModelStore models, AppSettings settings, Pack pack, string appDirectory, bool checkFirst = false)
     {
         this.models = models;
         this.settings = settings;
         this.appDirectory = appDirectory;
         Kind = pack;
+        CheckFirst = pack == Pack.Vulkan && checkFirst;
         models.Installed += model =>
         {
             if (model is ModelStore.Model.Qwen or ModelStore.Model.GpuCuda or ModelStore.Model.GpuVulkan) OfferQwenGpu();
             if (model is not (ModelStore.Model.GpuCuda or ModelStore.Model.GpuVulkan)) return;
+            // 重新下載就重新檢查；檢查前用 CPU（R4.8）
+            if (model == ModelStore.Model.GpuVulkan && CheckFirst)
+            {
+                settings.Set(AppSettings.GpuVulkanCheckKey, (string?)null);
+                if (!WhisperEngine.IsLoaded) WhisperEngine.UseGpu = false;
+            }
             if (WhisperEngine.IsLoaded) RestartNeeded?.Invoke();
             else Use(model);
         };
@@ -53,12 +76,12 @@ public sealed class GpuAcceleration
 
     /// <summary>
     /// Qwen 用哪一版（design-windows §8.4）：CUDA 版要 NVIDIA、llama.cpp 的 CUDA 版裝好、whisper 的 CUDA 元件也在（cudart、cublas 用它的）；
-    /// Vulkan 版要 AMD、llama.cpp 的 Vulkan 版裝好（不用另外的執行階段）
+    /// Vulkan 版要 AMD（Intel 先不做，R4.8）、llama.cpp 的 Vulkan 版裝好（不用另外的執行階段）
     /// </summary>
     public QwenGpu QwenRuntime => Kind switch
     {
         Pack.Cuda when models.IsInstalled(ModelStore.Model.QwenCuda) && models.IsInstalled(ModelStore.Model.GpuCuda) => QwenGpu.Cuda,
-        Pack.Vulkan when models.IsInstalled(ModelStore.Model.QwenVulkan) => QwenGpu.Vulkan,
+        Pack.Vulkan when !CheckFirst && models.IsInstalled(ModelStore.Model.QwenVulkan) => QwenGpu.Vulkan,
         _ => QwenGpu.None,
     };
 
@@ -76,7 +99,7 @@ public sealed class GpuAcceleration
             Log.Info("gpu pack: downloading llama.cpp cuda for qwen");
             models.AutoStart(ModelStore.Model.QwenCuda);
         }
-        else if (Kind == Pack.Vulkan)
+        else if (Kind == Pack.Vulkan && !CheckFirst)
         {
             if (settings.QwenVulkanOffered) return;
             settings.Set(AppSettings.QwenVulkanOfferedKey, true);
@@ -89,11 +112,14 @@ public sealed class GpuAcceleration
     public void Start()
     {
         OfferQwenGpu();
+        if (CheckFirst) PrepareCheck();
         // 這台電腦的那一包先；換過顯示卡（之前下載過另一包）時照樣用裝好的那一包
         var other = WhisperPack == ModelStore.Model.GpuCuda ? ModelStore.Model.GpuVulkan : ModelStore.Model.GpuCuda;
         foreach (var pack in new[] { WhisperPack, other })
         {
             if (!models.IsInstalled(pack)) continue;
+            // Intel 沒通過檢查：不載入 Vulkan 版，跟沒有元件一樣用安裝資料夾的 CPU 版（R4.8）
+            if (pack == ModelStore.Model.GpuVulkan && CheckFirst && CheckState == CheckCpu) continue;
             Use(pack);
             return;
         }
@@ -103,8 +129,77 @@ public sealed class GpuAcceleration
         // 轉錄用企業伺服器時不下載（R50.7）；換回本機的引擎後，下次開啟拾音再判斷
         if (settings.TranscriptionEngine == "server") return;
         settings.Set(offeredKey, true);
-        Log.Info(Kind == Pack.Vulkan ? "gpu pack: amd found, downloading vulkan" : "gpu pack: nvidia found, downloading");
+        Log.Info(Kind == Pack.Cuda ? "gpu pack: nvidia found, downloading"
+            : CheckFirst ? "gpu pack: intel found, downloading vulkan" : "gpu pack: amd found, downloading vulkan");
         models.AutoStart(WhisperPack);
+    }
+
+    /// <summary>啟動時（R4.8）：上次檢查到一半拾音當掉（例如顯示卡驅動出錯）就當成沒通過；通過之前 whisper 用 CPU</summary>
+    void PrepareCheck()
+    {
+        if (CheckState == CheckRunning)
+        {
+            settings.Set(AppSettings.GpuVulkanCheckKey, CheckCpu);
+            Log.Info("gpu check: crashed last time, using cpu");
+        }
+        WhisperEngine.UseGpu = CheckState == CheckGpu;
+    }
+
+    /// <summary>這次正式轉錄前要不要先檢查（R4.8）：只有 Intel、whisper 從 Vulkan 版載入（或還沒載入、會從那裡載入）、還沒檢查過</summary>
+    public bool CheckPending
+    {
+        get
+        {
+            if (!CheckFirst || CheckState is not null) return false;
+            var dir = models.Directory(ModelStore.Model.GpuVulkan);
+            return string.Equals(WhisperEngine.NativeDirectory, dir, StringComparison.OrdinalIgnoreCase)
+                && (!WhisperEngine.IsLoaded || string.Equals(WhisperEngine.LoadedDirectory, dir, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    /// <summary>
+    /// 啟動時（AppHost 在任何轉錄、語言偵測之前呼叫，R4.8）：Intel 還沒檢查、這次要從 Vulkan 版載入時，先載入一次（ggml-vulkan 會列出顯示卡）。
+    /// 載入前記成檢查中：驅動在這裡就當掉時，下次開啟當成沒通過，不會每次錄音、轉錄都當掉
+    /// </summary>
+    public void ProbeFirstLoad(Func<string> load)
+    {
+        if (!CheckPending || WhisperEngine.IsLoaded) return;
+        BeginCheck();
+        try
+        {
+            var device = load();
+            settings.Set(AppSettings.GpuVulkanCheckKey, (string?)null);
+            Log.Info($"gpu check: vulkan pack loaded, {(device.Length > 0 ? "gpu found" : "no gpu")}");
+        }
+        catch (Exception e)
+        {
+            // 載入不了（例如少了 DLL）：下次開啟改從安裝資料夾載入
+            settings.Set(AppSettings.GpuVulkanCheckKey, CheckCpu);
+            Log.Error($"gpu check: cpu (load failed: {e.GetType().Name})");
+        }
+    }
+
+    /// <summary>開始檢查：先記成檢查中，這時當掉下次開啟就當成沒通過</summary>
+    public void BeginCheck() => settings.Set(AppSettings.GpuVulkanCheckKey, CheckRunning);
+
+    /// <summary>檢查完：通過就從這一場開始用顯示卡；判斷不了（或取消）清回還沒檢查，下一場再試</summary>
+    public void FinishCheck(GpuCheckRules.Verdict verdict)
+    {
+        settings.Set(AppSettings.GpuVulkanCheckKey, verdict switch
+        {
+            GpuCheckRules.Verdict.Gpu => CheckGpu,
+            GpuCheckRules.Verdict.Cpu => CheckCpu,
+            _ => null,
+        });
+        WhisperEngine.UseGpu = verdict == GpuCheckRules.Verdict.Gpu;
+    }
+
+    /// <summary>回報問題的 whisper 欄（R4.8）：Intel 還沒通過時 whisper 用的是 CPU，不是 ggml 找到的那張顯示卡</summary>
+    public string WhisperBackend(string gpuDevice)
+    {
+        if (gpuDevice.Length == 0) return "";
+        if (!CheckFirst || CheckState == CheckGpu) return gpuDevice;
+        return CheckState == CheckCpu ? L.T("CPU（Intel 顯示卡沒通過檢查）") : L.T("CPU（Intel 顯示卡還沒檢查）");
     }
 
     void Use(ModelStore.Model pack)

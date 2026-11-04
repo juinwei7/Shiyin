@@ -469,6 +469,257 @@ public sealed class ServicesTests : IDisposable
         Assert.Equal(GpuAcceleration.Pack.Vulkan, GpuAcceleration.PackFor(x64: true, nvidia: false, amd: true));
         Assert.Equal(GpuAcceleration.Pack.None, GpuAcceleration.PackFor(x64: true, nvidia: false, amd: false));
         Assert.Equal(GpuAcceleration.Pack.None, GpuAcceleration.PackFor(x64: false, nvidia: true, amd: true));
+        // R4.8：只有 Intel 也用 Vulkan 版，但要先檢查；有 AMD 或 NVIDIA 時照舊
+        Assert.Equal(GpuAcceleration.Pack.Vulkan, GpuAcceleration.PackFor(x64: true, nvidia: false, amd: false, intel: true));
+        Assert.Equal(GpuAcceleration.Pack.Cuda, GpuAcceleration.PackFor(x64: true, nvidia: true, amd: false, intel: true));
+        Assert.Equal(GpuAcceleration.Pack.None, GpuAcceleration.PackFor(x64: false, nvidia: false, amd: false, intel: true));
+        Assert.True(GpuAcceleration.NeedsCheck(x64: true, nvidia: false, amd: false, intel: true));
+        Assert.False(GpuAcceleration.NeedsCheck(x64: true, nvidia: false, amd: true, intel: true));
+        Assert.False(GpuAcceleration.NeedsCheck(x64: true, nvidia: true, amd: false, intel: true));
+        Assert.False(GpuAcceleration.NeedsCheck(x64: false, nvidia: false, amd: false, intel: true));
+        Assert.False(GpuAcceleration.NeedsCheck(x64: true, nvidia: false, amd: true, intel: false));
+    }
+
+    [Fact]
+    public void GpuCheckRulesNeedSameTextAndFaster()
+    {
+        // R4.8、D138：CPU 聽出的字太少（沒人說話）判斷不了；文字差太多、或顯示卡沒有比較快就用 CPU
+        var text = "今天討論下週的產品發布，先確認官網的截圖都換好了";
+        Assert.Equal(GpuCheckRules.Verdict.Gpu, GpuCheckRules.Decide(text, text, 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Gpu, GpuCheckRules.Decide("今天討論下週的產品發佈，先確認官網的截圖都換好了", text, 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Gpu, GpuCheckRules.Decide("今天 討論下週的產品發布，\n先確認官網的截圖都換好了", text, 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Gpu, GpuCheckRules.Decide(text, text, 16, 20));
+        // 只快一點點（不到 CPU 時間的 8 成以內）也用 CPU
+        Assert.Equal(GpuCheckRules.Verdict.Cpu, GpuCheckRules.Decide(text, text, 17, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Cpu, GpuCheckRules.Decide(text, text, 20, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Cpu, GpuCheckRules.Decide(text, text, 25, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Cpu, GpuCheckRules.Decide("！！！！！！！！！！！！！！！！！！！！", text, 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Cpu, GpuCheckRules.Decide("", text, 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Cpu, GpuCheckRules.Decide("今天討論下週的產品發布今天討論下週的產品發布今天討論下週的產品發布今天討論下週", text, 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Inconclusive, GpuCheckRules.Decide("謝謝", "謝謝", 5, 20));
+        Assert.Equal(GpuCheckRules.Verdict.Inconclusive, GpuCheckRules.Decide("亂七八糟的一長串文字一長串文字", "  ", 5, 20));
+        Assert.Equal(1.0, GpuCheckRules.TextSimilarity("a b", "ab"));
+
+        // 最大聲的一段：前 10 個取樣安靜、後面大聲，每 2 個取樣一個起點
+        var samples = new float[30];
+        for (var i = 14; i < 30; i++) samples[i] = 0.5f;
+        Assert.Equal(14, GpuCheckRules.LoudestWindow(samples, 10, 2));
+        Assert.Equal(0, GpuCheckRules.LoudestWindow(samples.AsSpan(0, 8), 10, 2));
+        Assert.Equal(0, GpuCheckRules.LoudestWindow(new float[30], 10, 2));
+    }
+
+    [Fact]
+    public async Task IntelPackWaitsForCheckBeforeUsingGpu()
+    {
+        var a = Bytes(1_000, 8);
+        var b = Bytes(500, 9);
+        var whisperZip = Zip(("whisper.dll", a));
+        var llamaZip = Zip(("llama-server.exe", b));
+        Serve(new() { ["/vulkan.zip"] = new(whisperZip), ["/llama.zip"] = new(llamaZip) });
+        var catalog = new Dictionary<ModelStore.Model, ModelStore.ModelInfo>
+        {
+            [ModelStore.Model.GpuVulkan] = new("vulkan", [new("gpu-vulkan/pack.zip", server.Url + "/vulkan.zip", whisperZip.Length, Sha(whisperZip),
+                [new ModelStore.ArchiveEntry("whisper.dll", "gpu-vulkan/whisper.dll", a.Length)])], Folder: "gpu-vulkan"),
+            [ModelStore.Model.QwenVulkan] = new("qwen vulkan", [new("qwen-runtime-vulkan/llama.zip", server.Url + "/llama.zip", llamaZip.Length, Sha(llamaZip),
+                [new ModelStore.ArchiveEntry("llama-server.exe", "qwen-runtime-vulkan/llama-server.exe", b.Length)])], Folder: "qwen-runtime-vulkan"),
+        };
+        var app = Path.Combine(home.Path, "app");
+        Directory.CreateDirectory(app);
+        File.WriteAllBytes(Path.Combine(app, "shiyin_whisper.dll"), [1, 2, 3]);
+        var settings = AppSettings.InMemory();
+        try
+        {
+            // 只有 Intel：下載同一份 Vulkan 版；裝好之後從那裡載入，但檢查之前 whisper 用 CPU
+            var store = new ModelStore(paths.Models, http, catalog);
+            var gpu = new GpuAcceleration(store, settings, GpuAcceleration.Pack.Vulkan, app, checkFirst: true);
+            Assert.True(gpu.CheckFirst);
+            gpu.Start();
+            Assert.True(settings.GpuVulkanOffered);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuVulkan, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            var dir = Path.Combine(paths.Models, "gpu-vulkan");
+            for (var i = 0; i < 100 && Whisper.WhisperEngine.NativeDirectory != dir; i++) await Task.Delay(20);
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.False(Whisper.WhisperEngine.UseGpu);
+            Assert.Null(gpu.CheckState);
+            Assert.True(gpu.CheckPending);
+            Assert.Equal("CPU（Intel 顯示卡還沒檢查）", gpu.WhisperBackend("Vulkan0 (Intel(R) Arc(TM) Graphics)"));
+            Assert.Equal("", gpu.WhisperBackend(""));
+
+            // Qwen 的 Vulkan 版只給 AMD：選了 Qwen 也不下載、不用
+            settings.Set(AppSettings.TranscriptionEngineKey, "qwen");
+            gpu.OfferQwenGpu();
+            Assert.False(settings.QwenVulkanOffered);
+            Assert.IsType<ModelStore.State.Missing>(store.StateOf(ModelStore.Model.QwenVulkan));
+            store.Start(ModelStore.Model.QwenVulkan);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.QwenVulkan, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            Assert.Equal(GpuAcceleration.QwenGpu.None, gpu.QwenRuntime);
+            Assert.Equal(GpuAcceleration.QwenGpu.Vulkan, new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, GpuAcceleration.Pack.Vulkan, app).QwenRuntime);
+
+            // 通過：這一場起用顯示卡；下次開啟照樣用
+            gpu.BeginCheck();
+            Assert.Equal(GpuAcceleration.CheckRunning, gpu.CheckState);
+            Assert.False(gpu.CheckPending);
+            gpu.FinishCheck(GpuCheckRules.Verdict.Gpu);
+            Assert.True(Whisper.WhisperEngine.UseGpu);
+            Assert.Equal("Vulkan0 (Intel)", gpu.WhisperBackend("Vulkan0 (Intel)"));
+            Whisper.WhisperEngine.NativeDirectory = null;
+            var again = new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, GpuAcceleration.Pack.Vulkan, app, checkFirst: true);
+            again.Start();
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.True(Whisper.WhisperEngine.UseGpu);
+            Assert.False(again.CheckPending);
+
+            // 判斷不了：清回還沒檢查，下一場再試
+            again.FinishCheck(GpuCheckRules.Verdict.Inconclusive);
+            Assert.Null(again.CheckState);
+            Assert.False(Whisper.WhisperEngine.UseGpu);
+            Assert.True(again.CheckPending);
+
+            // 檢查到一半當掉：下次開啟當成沒通過，不載入 Vulkan 版（用安裝資料夾的 CPU 版）
+            again.BeginCheck();
+            Whisper.WhisperEngine.NativeDirectory = null;
+            Whisper.WhisperEngine.UseGpu = true;
+            var crashed = new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, GpuAcceleration.Pack.Vulkan, app, checkFirst: true);
+            crashed.Start();
+            Assert.Equal(GpuAcceleration.CheckCpu, crashed.CheckState);
+            Assert.Null(Whisper.WhisperEngine.NativeDirectory);
+            Assert.False(Whisper.WhisperEngine.UseGpu);
+            Assert.False(crashed.CheckPending);
+            Assert.Equal("CPU（Intel 顯示卡沒通過檢查）", crashed.WhisperBackend("Vulkan0 (Intel)"));
+
+            // 重新下載：重新檢查（等 Installed 的處理做完：最後一步是改從元件資料夾載入）
+            store.Delete(ModelStore.Model.GpuVulkan);
+            Whisper.WhisperEngine.UseGpu = true;
+            store.Start(ModelStore.Model.GpuVulkan);
+            Assert.IsType<ModelStore.State.Installed>(await WaitFor(store, ModelStore.Model.GpuVulkan, s => s is ModelStore.State.Installed or ModelStore.State.Failed));
+            for (var i = 0; i < 100 && Whisper.WhisperEngine.NativeDirectory != dir; i++) await Task.Delay(20);
+            Assert.Equal(dir, Whisper.WhisperEngine.NativeDirectory);
+            Assert.Null(gpu.CheckState);
+            Assert.False(Whisper.WhisperEngine.UseGpu);
+
+            // 啟動時先試載入一次 Vulkan 版：載入得了就清回還沒檢查；載入時丟出例外就改用 CPU；不用檢查時不載入
+            var probes = 0;
+            gpu.ProbeFirstLoad(() => { Assert.Equal(GpuAcceleration.CheckRunning, gpu.CheckState); probes++; return "Vulkan0 (Intel)"; });
+            Assert.Equal(1, probes);
+            Assert.Null(gpu.CheckState);
+            gpu.ProbeFirstLoad(() => throw new DllNotFoundException());
+            Assert.Equal(GpuAcceleration.CheckCpu, gpu.CheckState);
+            gpu.ProbeFirstLoad(() => { probes++; return ""; });
+            Assert.Equal(1, probes);
+
+            // AMD 不檢查：照舊用顯示卡
+            Whisper.WhisperEngine.NativeDirectory = null;
+            Whisper.WhisperEngine.UseGpu = true;
+            var amd = new GpuAcceleration(new ModelStore(paths.Models, http, catalog), settings, GpuAcceleration.Pack.Vulkan, app);
+            amd.Start();
+            Assert.False(amd.CheckFirst);
+            Assert.False(amd.CheckPending);
+            Assert.True(Whisper.WhisperEngine.UseGpu);
+            Assert.Equal("Vulkan0 (AMD)", amd.WhisperBackend("Vulkan0 (AMD)"));
+        }
+        finally
+        {
+            Whisper.WhisperEngine.NativeDirectory = null;
+            Whisper.WhisperEngine.UseGpu = true;
+        }
+    }
+
+    sealed class FakeGpuCheck : IWhisperGpuCheck
+    {
+        public bool CheckPending { get; set; } = true;
+        public List<string> Calls { get; } = [];
+        public void BeginCheck() => Calls.Add("begin");
+        public void FinishCheck(GpuCheckRules.Verdict verdict)
+        {
+            Calls.Add(verdict.ToString());
+            CheckPending = false;
+        }
+    }
+
+    [Fact]
+    public void GpuCheckFlowComparesLoudestPartAndReplaysTheStart()
+    {
+        // 4 分鐘的錄音：前 60 秒安靜，60～90 秒大聲；檢查讀開頭 180 秒、挑最大聲的 30 秒，讀過的接回串流前面
+        var rate = 16000;
+        var audio = new float[240 * rate];
+        for (var i = 0; i < audio.Length; i++) audio[i] = (float)(0.001 * Math.Sin(i * 0.01) + (i >= 60 * rate && i < 90 * rate ? 0.3 * Math.Sin(i * 0.05) : 0));
+        var text = "今天討論下週的產品發布，先確認官網的截圖";
+        var calls = new List<(bool Gpu, float[] Sample)>();
+        var check = new FakeGpuCheck();
+        var stream = GpuCheckFlow.Run(new SampleStream(audio), check, "Vulkan0 (Intel)", (sample, useGpu) =>
+        {
+            calls.Add((useGpu, sample));
+            return (text, useGpu ? 4 : 30);
+        });
+        Assert.Equal(["begin", "Gpu"], check.Calls);
+        // CPU 先、顯示卡後，同一段：最大聲的 60～90 秒
+        Assert.Equal([false, true], calls.Select(c => c.Gpu));
+        Assert.Equal(audio.AsSpan(60 * rate, 30 * rate).ToArray(), calls[0].Sample);
+        Assert.Equal(calls[0].Sample, calls[1].Sample);
+        // 正式轉錄照樣從頭讀到尾、一個取樣都不少（每次要的量不一樣也一樣）
+        var replayed = new List<float>();
+        foreach (var need in new[] { 1000, 50 * rate, 200 * rate, int.MaxValue })
+        {
+            var buffer = new List<float>();
+            stream.Fill(buffer, need);
+            replayed.AddRange(buffer);
+        }
+        Assert.True(stream.Finished);
+        Assert.Equal(audio, replayed.ToArray());
+
+        // 不用檢查：原本的串流，不比對
+        var idle = new FakeGpuCheck { CheckPending = false };
+        var source = new SampleStream(audio);
+        Assert.Same(source, GpuCheckFlow.Run(source, idle, "Vulkan0 (Intel)", (_, _) => throw new InvalidOperationException()));
+        Assert.Empty(idle.Calls);
+
+        // 驅動沒有顯示卡：直接用 CPU，不比對
+        var none = new FakeGpuCheck();
+        GpuCheckFlow.Run(new SampleStream(audio), none, "", (_, _) => throw new InvalidOperationException());
+        Assert.Equal(["Cpu"], none.Calls);
+
+        // 顯示卡那次出錯（whisper 的錯誤，或驅動丟出的其他例外）：沒通過，串流照樣從頭讀完
+        foreach (var error in new Exception[] { new WhisperException(WhisperErrorKind.Failed, -3), new System.Runtime.InteropServices.SEHException() })
+        {
+            var failed = new FakeGpuCheck();
+            var rest = GpuCheckFlow.Run(new SampleStream(audio), failed, "Vulkan0 (Intel)", (_, useGpu) => useGpu ? throw error : (text, 30));
+            Assert.Equal(["begin", "Cpu"], failed.Calls);
+            var all = new List<float>();
+            rest.Fill(all, int.MaxValue);
+            Assert.Equal(audio, all.ToArray());
+        }
+
+        // CPU 那次出錯（例如模型壞了）：不是顯示卡的問題，清回還沒檢查、照原樣丟出，也不跑顯示卡
+        var cpuFailed = new FakeGpuCheck();
+        var gpuRuns = 0;
+        Assert.Throws<WhisperException>(() => GpuCheckFlow.Run(new SampleStream(audio), cpuFailed, "Vulkan0 (Intel)",
+            (_, useGpu) => { if (useGpu) gpuRuns++; throw new WhisperException(WhisperErrorKind.LoadFailed); }));
+        Assert.Equal(["begin", "Inconclusive"], cpuFailed.Calls);
+        Assert.Equal(0, gpuRuns);
+
+        // 取消（不管在哪一邊）：清回還沒檢查、照樣取消
+        foreach (var gpuSide in new[] { false, true })
+        {
+            var cancelled = new FakeGpuCheck();
+            Assert.Throws<WhisperException>(() => GpuCheckFlow.Run(new SampleStream(audio), cancelled, "Vulkan0 (Intel)",
+                (_, useGpu) => useGpu == gpuSide ? throw new WhisperException(WhisperErrorKind.Cancelled) : (text, 30)));
+            Assert.Equal(["begin", "Inconclusive"], cancelled.Calls);
+        }
+
+        // 很短的錄音（不到 30 秒）：整段拿去比；判斷不了時清回還沒檢查
+        var shortAudio = audio.AsSpan(60 * rate, 12 * rate).ToArray();
+        float[]? shortCompared = null;
+        var unsure = new FakeGpuCheck();
+        GpuCheckFlow.Run(new SampleStream(shortAudio), unsure, "Vulkan0 (Intel)", (s, useGpu) => { shortCompared = s; return ("", useGpu ? 1 : 2); });
+        Assert.Equal(shortAudio, shortCompared);
+        Assert.Equal(["begin", "Inconclusive"], unsure.Calls);
+
+        // 分聲道轉錄（已經解碼好的整段）：一樣挑最大聲的 30 秒
+        var split = new FakeGpuCheck();
+        float[]? splitSample = null;
+        GpuCheckFlow.Run(audio, split, "Vulkan0 (Intel)", (s, useGpu) => { splitSample = s; return (text, useGpu ? 4 : 30); });
+        Assert.Equal(["begin", "Gpu"], split.Calls);
+        Assert.Equal(audio.AsSpan(60 * rate, 30 * rate).ToArray(), splitSample);
     }
 
     [Fact]

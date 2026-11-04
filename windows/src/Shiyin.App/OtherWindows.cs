@@ -419,7 +419,7 @@ public static class OtherWindows
     public static Window Report(AppHost host)
     {
         var window = new Window { Title = L.T("回報問題") };
-        var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, Whisper.WhisperEngine.GpuDevice),
+        var text = ProblemReport.Text(host.Db, host.Settings, SystemInfo.Collect(host.Version, host.Version, host.Gpu.WhisperBackend(Whisper.WhisperEngine.GpuDevice)),
             host.Enterprise.Account, host.Enterprise.IsSignedIn);
         // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行
         var content = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = text, IsReadOnly = true, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas") };

@@ -109,10 +109,10 @@ public sealed class ModelStore
     ];
 
     /// <summary>
-    /// AMD 顯示卡加速（R27 R4.7、design-windows §8、D127）：拾音自己在 CI 用同一個 commit 建的 whisper Vulkan 版（windows-gpu-pack.yml），
+    /// AMD、Intel 顯示卡加速（R27 R4.7、R4.8、design-windows §8、D127、D138）：拾音自己在 CI 用同一個 commit 建的 whisper Vulkan 版（windows-gpu-pack.yml），
     /// 放在 GitHub 的 prerelease（官網、Windows 的檢查更新都跳過 prerelease）。整套 whisper 都用這裡的，shim 用安裝資料夾的（同 CUDA）
     /// </summary>
-    public static readonly ModelInfo GpuVulkan = new(L.T("AMD 顯示卡加速（Vulkan）"), [new("gpu-vulkan/whisper-vulkan.zip",
+    public static readonly ModelInfo GpuVulkan = new(L.T("AMD、Intel 顯示卡加速（Vulkan）"), [new("gpu-vulkan/whisper-vulkan.zip",
         "https://github.com/juinwei7/Shiyin/releases/download/win-gpu-vulkan-b5454/whisper-vulkan-x64.zip",
         19_779_448, "34e2f79a224f0b9f0edcaaca442732246230f2556435743761fad167490621af", [.. VulkanFiles.Select(f => new ArchiveEntry(f.Name, "gpu-vulkan/" + f.Name, f.Size))])], Folder: "gpu-vulkan");
 
