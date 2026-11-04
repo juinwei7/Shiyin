@@ -12,7 +12,7 @@
 - [ ] **LANG3 Mac 加粵語、韓文**（R64、R65）：語言檔兩筆、韓文字串表、提示詞的兩級、選單、統計
   - 驗證：DEBUG 版匯入粵語、韓文的合成會議：正式轉錄、即時逐字稿（模擬錄音）、整理（假伺服器看提示詞、真的 Claude 整理一次各一場）、匯出、封包；英文介面
 - [ ] **LANG5 Windows**（design-windows §11.9）：同 LANG1、LANG3，dotnet test 全過；虛擬機匯入韓文、粵語的合成會議，快速辨識（SenseVoice）、選單、匯出
-- [ ] **LANG6 後台的統計欄位**（R63.7）：`workers/usage` 加 `lang_yue`、`lang_ko` 和 migration；部署要使用者（同 E6）
+- [~] **LANG6 後台的統計欄位**（R63.7）：程式完成（`lang_yue`、`lang_ko`、`migrate-languages.sql`）。還差：使用者先跑 `migrate-languages.sql`、再部署 worker（同 E6）
 
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57；2026-10-29 Threads 的使用者回饋）
 
