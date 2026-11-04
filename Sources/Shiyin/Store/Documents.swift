@@ -113,7 +113,7 @@ enum DocumentStore {
             try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.copyItem(at: source, to: destination)
         } catch {
-            try? db.deleteDocument(document.id!)
+            _ = try? db.deleteDocument(document.id!)
             throw error
         }
         return document
