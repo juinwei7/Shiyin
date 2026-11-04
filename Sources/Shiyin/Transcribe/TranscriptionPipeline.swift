@@ -60,7 +60,7 @@ struct TranscriptionOptions: Codable {
     init() {}
 
     /// 寫進 meetings.transcribed_with（design §21.17）
-    var transcribedWith: String { engine == .system ? "system" : engine == .qwen ? "qwen" : language == .ja ? "japanese" : "breeze" }
+    var transcribedWith: String { engine == .system ? "system" : engine == .qwen ? "qwen" : language.usesTurbo ? "japanese" : "breeze" }
 
     /// local：使用者在這一場按了「改在這台電腦轉錄」（R50.5），不用企業伺服器
     @MainActor
@@ -131,7 +131,7 @@ struct TranscriptionPipeline {
     var options: TranscriptionOptions
     /// whisper 模型檔（engine 是 breeze 時用）：評估時可以指定，平常依會議語言選。不看引擎設定：設定是 Qwen 時 transcription(for:) 回 qwen，
     /// 但 whisper 這條路只認 Breeze 和 large-v3-turbo（2026-10-24 評估時 Breeze 跑去載 GGUF 而失敗）
-    var modelPath: String { options.model ?? ModelStore.path(options.language == .ja ? .japanese : .breeze).path }
+    var modelPath: String { options.model ?? ModelStore.path(options.language.usesTurbo ? .japanese : .breeze).path }
     /// 目前在做哪一步（顯示在會議列表）
     var stage: (String) -> Void = { _ in }
     /// 整體進度 0～1，會從背景執行緒呼叫

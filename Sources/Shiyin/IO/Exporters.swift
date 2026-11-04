@@ -39,10 +39,10 @@ struct ExportText {
     var unassigned: String { language.text(zh: "未指定", en: "Unassigned", ja: "未定") }
     var colon: String { language.text(zh: "：", en: ": ", ja: "：") }
     var listSeparator: String { language.text(zh: "、", en: ", ", ja: "、") }
-    func speaker(_ idx: Int) -> String { language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)") }
+    func speaker(_ idx: Int) -> String { language.defaultSpeaker(idx) }
     func section(_ id: String) -> String { TemplateDefinition.sectionLabel(id, language: language) }
     /// 括號：中文用全形、英文用半形加空白
-    func paren(_ inner: String) -> String { language.text(zh: "（\(inner)）", en: " (\(inner))", ja: "（\(inner)）") }
+    func paren(_ inner: String) -> String { language.format(zh: "（%@）", en: " (%@)", ja: "（%@）", inner) }
     func dateLine(_ meetingDate: String) -> String { meetingDate + paren(DateText.weekday(meetingDate, language: language)) }
 }
 
@@ -217,14 +217,12 @@ enum HTML {
             .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
     }
 
-    /// 英文用系統字和襯線標題，中文用蘋方和宋體，日文用ヒラギノ角ゴ和明朝（design §16.6、§18.5）
+    /// 字型、lang 寫在語言檔（design §16.6、§18.5、§41.5）：英文用系統字和襯線標題，中文用蘋方和宋體，日文用ヒラギノ角ゴ和明朝
     static func document(title: String, body: String, language: MeetingLanguage = .zh) -> String {
-        let bodyFont = language.text(zh: "\"PingFang TC\", -apple-system, sans-serif", en: "-apple-system, \"PingFang TC\", sans-serif",
-                                     ja: "\"Hiragino Sans\", \"Hiragino Kaku Gothic ProN\", -apple-system, sans-serif")
-        let headingFont = language.text(zh: "\"Songti TC\", serif", en: "\"New York\", Georgia, \"Songti TC\", serif",
-                                        ja: "\"Hiragino Mincho ProN\", serif")
+        let fonts = language.profile.fonts
+        let bodyFont = fonts.htmlMac.body, headingFont = fonts.htmlMac.heading
         return """
-        <!doctype html><html lang="\(language.text(zh: "zh-Hant", en: "en", ja: "ja"))"><head><meta charset="utf-8"><title>\(escape(title))</title><style>
+        <!doctype html><html lang="\(fonts.lang)"><head><meta charset="utf-8"><title>\(escape(title))</title><style>
         body { font-family: \(bodyFont); font-size: 12pt; line-height: 1.6; color: #1E2625; }
         h1, h2, h3 { font-family: \(headingFont); font-weight: 600; }
         h1 { font-size: 22pt; margin-bottom: 4pt; } h2 { font-size: 15pt; margin-top: 18pt; } h3 { font-size: 13pt; }

@@ -34,7 +34,7 @@ enum TranscriptCorrection {
     // MARK: 提示詞（中文、英文、日文各一份，design §16.5、§18.4）
 
     static func system(_ language: MeetingLanguage) -> String {
-        language.text(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+        language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
     }
 
     private static let systemChinese = """
@@ -75,20 +75,20 @@ enum TranscriptCorrection {
 
     static func prompt(_ c: Context, range: Range<Int>) -> String {
         let l = c.language
-        let separator = l.text(zh: "、", en: ", ", ja: "、"), colon = l.text(zh: "：", en: ": ", ja: "：")
-        let none = l.text(zh: "（無）", en: "(none)", ja: "（なし）")
+        let separator = l.prompt(zh: "、", en: ", ", ja: "、"), colon = l.prompt(zh: "：", en: ": ", ja: "：")
+        let none = l.prompt(zh: "（無）", en: "(none)", ja: "（なし）")
         var lines: [String] = []
-        lines.append(l.text(zh: "會議標題", en: "Meeting title", ja: "会議タイトル") + colon + (c.title.isEmpty ? none : c.title))
+        lines.append(l.prompt(zh: "會議標題", en: "Meeting title", ja: "会議タイトル") + colon + (c.title.isEmpty ? none : c.title))
         if !c.participants.isEmpty {
-            lines.append(l.text(zh: "參加者", en: "Participants", ja: "参加者") + colon + c.participants.joined(separator: separator))
+            lines.append(l.prompt(zh: "參加者", en: "Participants", ja: "参加者") + colon + c.participants.joined(separator: separator))
         }
         if !c.speakerNames.isEmpty {
-            lines.append(l.text(zh: "說話者", en: "Speakers", ja: "話者") + colon + c.speakerNames.joined(separator: separator))
+            lines.append(l.prompt(zh: "說話者", en: "Speakers", ja: "話者") + colon + c.speakerNames.joined(separator: separator))
         }
         let glossary = c.glossary.isEmpty ? none : c.glossary.joined(separator: separator)
-        lines.append(l.text(zh: "詞彙表（正確寫法）", en: "Glossary (correct spellings)", ja: "用語集（正しい表記）") + colon + glossary)
+        lines.append(l.prompt(zh: "詞彙表（正確寫法）", en: "Glossary (correct spellings)", ja: "用語集（正しい表記）") + colon + glossary)
         lines.append("")
-        lines.append(l.text(zh: "逐字稿（每行開頭的數字是段落編號，segment 欄位填這個數字）：",
+        lines.append(l.prompt(zh: "逐字稿（每行開頭的數字是段落編號，segment 欄位填這個數字）：",
                             en: "Transcript (the number at the start of each line is the segment number; put it in the \"segment\" field):",
                             ja: "文字起こし（各行の先頭の数字は段落番号。segment 欄にこの数字を入れる）："))
         for i in range {

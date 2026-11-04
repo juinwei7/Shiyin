@@ -539,7 +539,7 @@ final class JobRunner {
             let context = SpeakerNaming.Context(
                 language: language, meetingDate: meeting.meetingDate, title: meeting.title, participants: meeting.participantList,
                 knownPeople: try db.peopleNames(), glossary: try glossaryTerms(), unnamed: unnamed,
-                speakerName: { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") },
+                speakerName: { names[$0] ?? language.defaultSpeaker($0) },
                 segments: segments.map { ($0.start, $0.speaker, $0.text) })
             let suggestions = try await callLLM(lane) { onStart in
                 try await SpeakerNaming.suggest(context, provider: provider, model: AppSettings.model, onStart: onStart)
@@ -567,7 +567,7 @@ final class JobRunner {
             let language = meeting.meetingLanguage
             let names = Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) })
             let speakerName = { (idx: Int?) -> String? in
-                idx.map { names[$0] ?? language.text(zh: "說話者 \($0)", en: "Speaker \($0)", ja: "話者 \($0)") }
+                idx.map { names[$0] ?? language.defaultSpeaker($0) }
             }
             let context = TranscriptCorrection.Context(
                 language: language, title: meeting.title, participants: meeting.participantList,

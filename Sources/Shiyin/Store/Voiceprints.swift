@@ -73,8 +73,8 @@ extension AppDatabase {
                     matched += 1
                 } else {
                     // 沒把握：不帶入，存成建議，在待確認問「說話者 N 是 X 嗎？」（design §27）
-                    let reason = language.text(zh: "聲音跟之前的\(name)很像", en: "Sounds like \(name) from earlier meetings",
-                                               ja: "以前の\(name)の声に似ています")  // l10n-skip：會議語言的原因
+                    let reason = language.format(zh: "聲音跟之前的%@很像", en: "Sounds like %@ from earlier meetings",
+                                                 ja: "以前の%@の声に似ています", name)  // l10n-skip：會議語言的原因
                     try db.execute(sql: """
                         UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = NULL
                         WHERE meeting_id = ? AND idx = ? AND name_source = 'default'
@@ -175,7 +175,7 @@ extension AppDatabase {
             let count = segmentSpeakers.compactMap(\.speaker).max() ?? 0
             for idx in stride(from: 1, through: count, by: 1) {
                 var speaker = SpeakerName(meetingId: meetingId, idx: idx,
-                                          name: language.text(zh: "說話者 \(idx)", en: "Speaker \(idx)", ja: "話者 \(idx)"))
+                                          name: language.defaultSpeaker(idx))
                 if let old = inherited[idx] {
                     speaker.name = old.name
                     speaker.nameSource = old.source

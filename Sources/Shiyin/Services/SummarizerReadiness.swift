@@ -148,7 +148,7 @@ enum SummarizerTest {
     static func run(provider: LLMProvider, model: String) async throws -> Int {
         let started = Date()
         let language = AppSettings.defaultMeetingLanguage
-        let prompt = language.text(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
+        let prompt = language.prompt(zh: "這是連線測試。逐字稿：\n[00:00] 說話者 1：大家好，今天只是測試一下。",
                                    en: "This is a connection test. Transcript:\n[00:00] Speaker 1: Hi everyone, this is just a test.",
                                    ja: "これは接続テストです。文字起こし：\n[00:00] 話者 1：皆さん、今日はテストだけです。")  // l10n-skip
         _ = try await LLMClient.generate(provider: provider, model: model, system: NotesPrompt.system(language),

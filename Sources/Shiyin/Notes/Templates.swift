@@ -11,13 +11,15 @@ struct TemplateDefinition: Codable, Hashable {
     static let builtinSectionIDs = ["summary", "decisions", "actionItems", "openQuestions", "topics"]
 
     /// 段落名稱：介面用介面語言，提示詞用會議語言（design §16.5）
-    static func sectionLabel(_ id: String, language: MeetingLanguage) -> String {
+    /// prompt：提示詞裡用（一般語言不查字串表，design §41.1）
+    static func sectionLabel(_ id: String, language: MeetingLanguage, prompt: Bool = false) -> String {
+        let pick = prompt ? language.prompt : language.text
         switch id {
-        case "summary": return language.text(zh: "摘要", en: "Summary", ja: "要約")
-        case "decisions": return language.text(zh: "決議", en: "Decisions", ja: "決定事項")
-        case "actionItems": return language.text(zh: "待辦", en: "Action items", ja: "ToDo")
-        case "openQuestions": return language.text(zh: "未決問題", en: "Open questions", ja: "未決事項")
-        default: return language.text(zh: "議題詳細", en: "Topics", ja: "議題ごとの詳細")
+        case "summary": return pick("摘要", "Summary", "要約")
+        case "decisions": return pick("決議", "Decisions", "決定事項")
+        case "actionItems": return pick("待辦", "Action items", "ToDo")
+        case "openQuestions": return pick("未決問題", "Open questions", "未決事項")
+        default: return pick("議題詳細", "Topics", "議題ごとの詳細")
         }
     }
 
@@ -168,8 +170,9 @@ extension TemplateRecord {
 
     /// 整理時用的內容：內建範本跟著會議語言，自訂範本照使用者寫的
     func definition(for language: MeetingLanguage) -> TemplateDefinition {
-        if builtin, language == .en, let english = BuiltinTemplates.english[id] { return english.definition }
-        if builtin, language == .ja, let japanese = BuiltinTemplates.japanese[id] { return japanese }
+        // 依語言用哪一份（design §41.2）：一般語言用英文版，粵語用中文版
+        if builtin, language.base == .en, let english = BuiltinTemplates.english[id] { return english.definition }
+        if builtin, language.base == .ja, let japanese = BuiltinTemplates.japanese[id] { return japanese }
         return TemplateDefinition.decode(definition)
     }
 }

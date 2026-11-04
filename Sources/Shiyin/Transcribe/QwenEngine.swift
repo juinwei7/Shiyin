@@ -122,8 +122,7 @@ enum QwenEngine {
 
     /// 詞彙表當作提示（Qwen3-ASR 的 contextual biasing）：跟 whisper 的提示詞同樣的上限（中文 150 字、英文 400 個字元）
     static func context(glossary: [String], language: MeetingLanguage) -> String {
-        let limit = language == .en ? 400 : 150
-        let separator = language == .en ? ", " : "、"   // l10n-skip
+        let limit = language.profile.whisperPrompt.limit, separator = language.profile.whisperPrompt.separator
         var picked: [String] = []
         for term in glossary {
             let candidate = (picked + [term]).joined(separator: separator)
@@ -133,13 +132,8 @@ enum QwenEngine {
         return picked.joined(separator: separator)
     }
 
-    static func languageName(_ language: MeetingLanguage) -> String {
-        switch language {
-        case .zh: return "Chinese"
-        case .en: return "English"
-        case .ja: return "Japanese"
-        }
-    }
+    /// 語言檔的 transcription.qwen；Qwen3-ASR 不能用的語言不會走到這裡（ModelStore.transcription(for:)）
+    static func languageName(_ language: MeetingLanguage) -> String { language.profile.transcription.qwen ?? "Chinese" }
 
     /// 每 0.1 秒一格的能量中位數（只算有聲音的格）：分段和幻覺防線都用它當「有聲音」的基準
     static func medianFrameEnergy(_ samples: UnsafeBufferPointer<Float>) -> Double {
@@ -214,7 +208,7 @@ enum QwenEngine {
                 for piece in try run(engine, buffer: buffer, range: chunk.range, context: context, language: languageName, control: control,
                                      retry: retry, guardMedian: useGuard ? median : nil, depth: 0) {
                     var text = piece.text
-                    if language == .zh { text = ChineseScript.toTaiwan(text) }
+                    if language.profile.transcription.traditional { text = ChineseScript.toTaiwan(text) }
                     guard !text.isEmpty else { continue }
                     segments.append(TranscribedSegment(start: Double(piece.range.lowerBound) / AudioDecoder.sampleRate,
                                                        end: Double(piece.range.upperBound) / AudioDecoder.sampleRate,

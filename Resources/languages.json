@@ -1,0 +1,206 @@
+{
+ "comment": "會議語言的做法（design §41.1、D139）：Mac、Windows 共用。中文、英文、日文的值是 4.3.0 以前寫死在程式裡的字，改了要重跑標準答案。陣列的順序是選單的順序。",
+ "languages": [
+  {
+   "code": "zh",
+   "name": "中文",
+   "uiName": {
+    "zh": "中文",
+    "en": "Chinese"
+   },
+   "tier": "tuned",
+   "base": "zh",
+   "locale": "zh_TW",
+   "live": {
+    "mac": "zh_TW",
+    "windows": "zh",
+    "windowsConvert": "s2twp"
+   },
+   "transcription": {
+    "model": "breeze",
+    "engineSetting": true,
+    "whisper": "zh",
+    "qwen": "Chinese",
+    "traditional": true
+   },
+   "spaced": false,
+   "whisperPrompt": {
+    "base": "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。",
+    "glossary": "詞彙：%@。",
+    "separator": "、",
+    "limit": 150,
+    "natural": "好，那我們開始今天的會議。",
+    "naturalList": "好，那我們開始今天的會議，先看一下 %@ 這幾個部分的進度。"
+   },
+   "detect": "zh",
+   "family": "zh",
+   "ocr": {
+    "mac": [
+     "zh-Hant",
+     "zh-Hans",
+     "en-US"
+    ],
+    "windows": [
+     "zh-Hant-TW",
+     "zh-TW",
+     "zh-Hant",
+     "zh-Hant-HK",
+     "zh-Hans-CN",
+     "zh-CN",
+     "zh-Hans"
+    ],
+    "windowsUserProfile": false
+   },
+   "fonts": {
+    "typesetting": "zh-Hant",
+    "lang": "zh-Hant",
+    "titleMac": "Songti TC",
+    "titleWindows": "PMingLiU, Microsoft JhengHei UI",
+    "contentWindows": "zh-TW",
+    "htmlMac": {
+     "body": "\"PingFang TC\", -apple-system, sans-serif",
+     "heading": "\"Songti TC\", serif"
+    },
+    "htmlWindows": {
+     "body": "\"Microsoft JhengHei\", \"Segoe UI\", sans-serif",
+     "heading": "PMingLiU, \"Microsoft JhengHei\", serif"
+    },
+    "docx": {
+     "body": "Microsoft JhengHei",
+     "heading": "PMingLiU"
+    }
+   },
+   "speaker": "說話者 %lld"
+  },
+  {
+   "code": "en",
+   "name": "English",
+   "uiName": {
+    "zh": "英文",
+    "en": "English"
+   },
+   "tier": "tuned",
+   "base": "en",
+   "locale": "en_US",
+   "live": {
+    "mac": "en_US",
+    "windows": "en",
+    "windowsConvert": null
+   },
+   "transcription": {
+    "model": "breeze",
+    "engineSetting": true,
+    "whisper": "en",
+    "qwen": "English",
+    "traditional": false
+   },
+   "spaced": true,
+   "whisperPrompt": {
+    "base": "The following is a recording of a work meeting.",
+    "glossary": " Glossary: %@.",
+    "separator": ", ",
+    "limit": 400,
+    "natural": "Okay, let's get started with today's meeting.",
+    "naturalList": "Okay, let's get started with today's meeting. First, a quick update on %@."
+   },
+   "detect": "en",
+   "family": "en",
+   "ocr": {
+    "mac": [
+     "en-US"
+    ],
+    "windows": [
+     "en-US",
+     "en-GB",
+     "en"
+    ],
+    "windowsUserProfile": true
+   },
+   "fonts": {
+    "typesetting": "zh-Hant",
+    "lang": "en",
+    "titleMac": "Songti TC",
+    "titleWindows": "PMingLiU, Microsoft JhengHei UI",
+    "contentWindows": "en-US",
+    "htmlMac": {
+     "body": "-apple-system, \"PingFang TC\", sans-serif",
+     "heading": "\"New York\", Georgia, \"Songti TC\", serif"
+    },
+    "htmlWindows": {
+     "body": "\"Segoe UI\", \"Microsoft JhengHei\", sans-serif",
+     "heading": "Georgia, PMingLiU, serif"
+    },
+    "docx": {
+     "body": "Segoe UI",
+     "heading": "Georgia"
+    }
+   },
+   "speaker": "Speaker %lld"
+  },
+  {
+   "code": "ja",
+   "name": "日本語",
+   "uiName": {
+    "zh": "日文",
+    "en": "Japanese"
+   },
+   "tier": "tuned",
+   "base": "ja",
+   "locale": "ja_JP",
+   "live": {
+    "mac": "ja_JP",
+    "windows": "ja",
+    "windowsConvert": null
+   },
+   "transcription": {
+    "model": "turbo",
+    "engineSetting": false,
+    "whisper": "ja",
+    "qwen": "Japanese",
+    "traditional": false
+   },
+   "spaced": false,
+   "whisperPrompt": {
+    "base": "以下は仕事の会議の録音です。",
+    "glossary": "用語：%@。",
+    "separator": "、",
+    "limit": 150,
+    "natural": "はい、では今日の会議を始めます。",
+    "naturalList": "はい、では今日の会議を始めます。まず %@ の進捗を確認しましょう。"
+   },
+   "detect": "ja",
+   "family": "ja",
+   "ocr": {
+    "mac": [
+     "ja-JP",
+     "en-US"
+    ],
+    "windows": [
+     "ja-JP",
+     "ja"
+    ],
+    "windowsUserProfile": false
+   },
+   "fonts": {
+    "typesetting": "ja",
+    "lang": "ja",
+    "titleMac": "Hiragino Mincho ProN",
+    "titleWindows": "Yu Mincho",
+    "contentWindows": "ja-JP",
+    "htmlMac": {
+     "body": "\"Hiragino Sans\", \"Hiragino Kaku Gothic ProN\", -apple-system, sans-serif",
+     "heading": "\"Hiragino Mincho ProN\", serif"
+    },
+    "htmlWindows": {
+     "body": "\"Yu Gothic\", \"Meiryo\", \"Segoe UI\", sans-serif",
+     "heading": "\"Yu Mincho\", serif"
+    },
+    "docx": {
+     "body": "Yu Gothic",
+     "heading": "Yu Mincho"
+    }
+   },
+   "speaker": "話者 %lld"
+  }
+ ]
+}
