@@ -370,7 +370,7 @@ enum DebugControl {
             model.recorder.simulateStall(channel: args.count > 2 ? Int(args[2]) ?? 0 : 0, seconds: args[1] == "off" ? nil : Double(args[1]) ?? 5)
         case "recordinterrupt":   // recordinterrupt [聲道]：等於音源發現裝置變了，Recorder 會重新開始這個音源
             model.recorder.simulateInterruption(channel: args.count > 1 ? Int(args[1]) ?? 0 : 0)
-        case "recordlang":   // recordlang <zh|en|ja>：錄音中換會議語言（等於按「改回」）
+        case "recordlang":   // recordlang <語言代碼>：錄音中換會議語言（等於按「改回」；zh、en、ja、yue、ko…）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
         case "record-sim":
             // record-sim <音檔> <倍速> <both: 1/0>

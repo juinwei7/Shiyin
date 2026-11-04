@@ -188,10 +188,16 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
     var usesTurbo: Bool { profile.transcription.model == "turbo" }
 
     /// 介面上列出用某個轉錄模型的語言，例如「日文和韓文」（設定的模型名稱、環境檢查）
-    static func uiNames(model: String) -> String {
+    static func uiNames(model: String) -> String { uiNames(allCases.filter { $0.profile.transcription.model == model }) }
+
+    /// 自動偵測認得的語言（語言檔的 detect 不是 null，design §41.4）
+    static var detectable: [MeetingLanguage] { allCases.filter { $0.profile.detect != nil } }
+
+    /// 介面上列出幾種語言：「中文、英文、日文和韓文」「Chinese, English, Japanese, and Korean」
+    static func uiNames(_ languages: [MeetingLanguage]) -> String {
         let formatter = ListFormatter()
         formatter.locale = Locale(identifier: interface == .en ? "en" : "zh-Hant")  // l10n-skip
-        return formatter.string(from: allCases.filter { $0.profile.transcription.model == model }.map(\.uiName)) ?? ""
+        return formatter.string(from: languages.map(\.uiName)) ?? ""
     }
 
     /// 同一個中文詞在英文要用不同說法的少數地方（例如「錄音」：按鈕是 Record、分頁是 Recording），

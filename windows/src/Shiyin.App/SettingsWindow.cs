@@ -573,7 +573,7 @@ public sealed class SettingsWindow : Window
             language.Children.Add(Ui.Bar(null, Ui.Text(busy ? L.T("正在下載語言偵測模型…") : L.T("語言偵測模型還沒下載，下載好之前錄音不會自動偵測"), 12, color: Ui.Signal),
                 busy ? null : Ui.Button(L.T("下載"), () => host.Models.Start(ModelStore.Model.LanguageDetection))));
         }
-        language.Children.Add(Note(L.T("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")));
+        language.Children.Add(Note(L.F("開始錄音後聽約 10 秒，判斷是哪一種語言（%@）；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。", MeetingLanguages.UiNames(MeetingLanguages.Detectable))));
 
         var transcription = Ui.Column(12);
         // 正式轉錄引擎（R4.1、M§32.3；Qwen3-ASR 見 design-windows §8.4）

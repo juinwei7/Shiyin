@@ -3,12 +3,12 @@
 拾音 Shiyin 是 macOS 原生的會議紀錄 app（SwiftUI，macOS 26）。目前是 4.3.0（4.1 加上三個分頁的減法、待確認就地回答、收音提醒送通知、可選的 Qwen3-ASR 引擎，Windows 同步；4.1.1 整理工具設定好才用、失敗說清楚怎麼修；4.1.2 忘了停止錄音時提醒、自動停止；4.2 可以連公司的企業伺服器（在公司的伺服器轉錄、整理，公司詞彙表、加入連結）；4.2.1 企業伺服器的安全強化；4.2.2 只裝 Codex 桌面版也能整理、只有 Claude 桌面版時說明怎麼裝 Claude Code，Windows 加上 AMD 顯示卡加速、錄得到 Teams 的聲音；4.2.3 錄音按鈕和錄音畫面可以選、換麥克風，藍牙耳機的麥克風錄現場會議時提醒，會議內容的文字大小（⌘＋／⌘－），右上角的匯出按鈕；4.3 會議的參考文件（加入 PDF、Word、PowerPoint、圖片，整理和提問時一起參考、註明出處）、整理工具的額度用完時說清楚，Windows 只有 Intel 顯示卡的電腦也試著用顯示卡轉錄；第三版加上英文版、開源準備、轉錄準確度、日文、更多整理工具、穩定性修正；3.5 加上草稿紀錄、聲紋、猜說話者、對會議提問、偵測會議；3.6 加上重新辨識說話者、合併和改句子的說話者、分不準的提醒、收音提醒，修正錄音中畫面卡住；4.0 加上 Windows 版、待確認的是非題、聲紋沒把握時先問、短句的說話者、沒有 claude／codex 時先不整理）：
 
 - 錄音：AVAudioEngine 收麥克風、Core Audio process tap 收電腦聲音，寫成雙聲道 WAV（`Sources/Shiyin/Capture/`）
-- 即時逐字稿：系統的 SpeechAnalyzer（zh_TW、en_US 或 ja_JP，依會議語言）
-- 正式轉錄：預設 whisper.cpp（官方 XCFramework）+ Breeze ASR 25 GGML q8_0（聯發科），可以改用 macOS 內建（SpeechAnalyzer 讀檔），模型還沒下載好時也先用內建；4.1 起設定裡可選 Qwen3-ASR 1.7B（阿里巴巴開源；llama.cpp 官方 XCFramework，經 C 薄層 `Sources/QwenShim/` 進 Swift；輸出簡體，`ChineseScript` 用 `Resources/opencc/` 的 OpenCC 字表轉台灣繁體；先辨識說話者再分段，每段 ≤ 15 秒，`Transcribe/QwenEngine.swift`；design §32，使用者決定預設維持 Breeze）；日文會議用 Whisper large-v3-turbo q5_0；whisper 從檔案依序讀、每 10 分鐘一段（design §21.16）；說話者辨識：FluidAudio（`Sources/Shiyin/Transcribe/`），聲紋比對在 `Store/Voiceprints.swift`
+- 即時逐字稿：系統的 SpeechAnalyzer（語系依會議語言，寫在語言檔的 `live.mac`：zh_TW、en_US、ja_JP、zh_HK（粵語）、ko_KR）
+- 正式轉錄：預設 whisper.cpp（官方 XCFramework）+ Breeze ASR 25 GGML q8_0（聯發科），可以改用 macOS 內建（SpeechAnalyzer 讀檔），模型還沒下載好時也先用內建；4.1 起設定裡可選 Qwen3-ASR 1.7B（阿里巴巴開源；llama.cpp 官方 XCFramework，經 C 薄層 `Sources/QwenShim/` 進 Swift；輸出簡體，`ChineseScript` 用 `Resources/opencc/` 的 OpenCC 字表轉台灣繁體；先辨識說話者再分段，每段 ≤ 15 秒，`Transcribe/QwenEngine.swift`；design §32，使用者決定預設維持 Breeze）；日文、韓文會議用 Whisper large-v3-turbo q5_0，粵語固定用 Qwen3-ASR（沒下載好時先用內建，不用 Breeze；簡轉繁後套語言檔的 `scriptFixes`，D142）；whisper 從檔案依序讀、每 10 分鐘一段（design §21.16）；說話者辨識：FluidAudio（`Sources/Shiyin/Transcribe/`），聲紋比對在 `Store/Voiceprints.swift`
 - 整理：claude CLI、codex CLI、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API，共同介面 `LLMBackend`（`Sources/Shiyin/Notes/`，各家在 `Notes/Backends/`，design §19）
 - 會議的參考文件（R61，4.3）：會議可以加 PDF、Word、PowerPoint、純文字、圖片，整理和對這場會議提問時當成「會議參考資料」送出；讀文字在 `IO/DocumentReader.swift`（PDFKit、Vision、`unzip -p`），提示詞在 `Notes/DocumentPrompt.swift`，原始檔在 `SHIYIN_HOME/documents/<id>/`；Windows 用 PdfPig＋Windows.Media.Ocr（design §39、design-windows §11.8）。驗證用 `shiyinctl docread`、`adddoc`
 - 資料庫：GRDB（SQLite、FTS5 全文搜尋）
-- 多語言：介面繁中、英文（跟著 macOS 語言）；每場會議另外有會議語言（中文／英文／日文），決定轉錄、整理、匯出用哪個語言（design §16、§18）；錄音開始後用 Whisper base 自動偵測（§18.8）
+- 多語言：介面繁中、英文（跟著 macOS 語言）；每場會議另外有會議語言（中文／英文／日文／廣東話／韓文），決定轉錄、整理、匯出用哪個語言（design §16、§18）；錄音開始後用 Whisper base 自動偵測（§18.8）。每種語言的做法寫在共用的語言檔 `Resources/languages.json`（design §41、D139）：精調語言（中英日、粵語）用手寫的提示詞，一般語言（韓文）用英文提示詞加「用某語言寫」、給人看的字查字串表（D140）。加語言＝語言檔加一筆、評估選轉錄模型（§41.7）、標準答案加一場測試會議；**不要再寫 `language == .ja`**，做法問 `language.profile`
 - 發布：自簽憑證或 ad-hoc 簽章的 DMG（沒有 Apple 開發者帳號）
 
 不需要 Python、Homebrew、ffmpeg。選型的理由在 design.md 的決策紀錄（D#）。已經刪掉的舊文件（第二版的規格 `docs/archive/v2/`、選型實驗 `docs/spikes/`、3.4.0 以前完整的 `docs/tasks.md`）用 `git show b621ed6:<路徑>` 看。
@@ -95,7 +95,7 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite # 看資料
 
 - 程式裡照樣寫中文；SwiftUI 的字面值會自動查 `Resources/Localizable.xcstrings`，其他地方（錯誤、提示、通知、狀態文字）要包 `String(localized:)`。鍵就是中文原文。
 - 改過介面文字一定要跑 `scripts/dev/l10n.py check`，再把新條目的英文用 `apply` 寫進去。不會顯示在介面上的中文行尾加 `// l10n-skip`。
-- 同一句中文在不同地方要不同的英文時，用 `MeetingLanguage.ui(zh:en:)`；依會議語言（不是介面語言）的文字用 `meeting.meetingLanguage.text(zh:en:)`，例如匯出、預設說話者名稱。
+- 同一句中文在不同地方要不同的英文時，用 `MeetingLanguage.ui(zh:en:)`；依會議語言（不是介面語言）的文字用 `meeting.meetingLanguage.text(zh:en:ja:)`（給人看的，一般語言查字串表），提示詞裡的字用 `prompt(zh:en:ja:)`（不查字串表），有插值的用 `format(zh:en:ja:, …)`，預設說話者名稱用 `defaultSpeaker(_:)`（design §41.1）。
 - 中文提示詞、中文匯出格式要跟 3.0 一字不差，改英文版時不要動到中文那一份。
 
 ## 發布新版的說明文字
@@ -125,7 +125,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
   - `shiyinctl snapshot` 用 ImageRenderer，不會跳出視窗，但畫不出 AppKit 元件（TextField、Picker、ScrollView 會變成黃色佔位框），適合看排版、顏色。
   - 要看真正的畫面，用 `screencapture -x -o -l <視窗編號>` 只擷取拾音的視窗（視窗編號用 CGWindowListCopyWindowInfo 依 PID 找）。螢幕鎖定時拍不到。
 - 從這個終端機（Claude Code）用 `open` 開 app，app 會繼承 Claude Code session 的環境變數，子程序的 `claude` 會沿用這個 session 的登入。要模擬使用者的電腦（例如沒登入）時，用 `env -i HOME=… PATH=/usr/bin:/bin SHIYIN_HOME=… <app>/Contents/MacOS/Shiyin &` 啟動。
-- 英文介面：直接執行 `build/Shiyin.app/Contents/MacOS/Shiyin -AppleLanguages "(en)"`（要用示範資料時前面加 `SHIYIN_HOME=…`）；中文介面就是系統語言。改會議語言用 `shiyinctl language <id> zh|en`。
+- 英文介面：直接執行 `build/Shiyin.app/Contents/MacOS/Shiyin -AppleLanguages "(en)"`（要用示範資料時前面加 `SHIYIN_HOME=…`）；中文介面就是系統語言。改會議語言用 `shiyinctl language <id> <代碼>`（zh、en、ja、yue、ko）。
 - 還沒完成首次使用引導的話，每次啟動都會打開引導視窗，測試時記得用 `shiyinctl closewindow onboarding` 關掉。
 - 編輯器、對話框的按鈕（完成、取消、儲存）要在真的 app 上用 AX 按過，不能只用 shiyinctl 直接存資料：3.2.0 的會議紀錄編輯器一按「完成」就閃退，就是因為當時只用 `shiyinctl editnotes` 驗證。
 - 拾音的視窗在別的桌面（Space）時，AX 列不出它的視窗。要先用 System Events `set frontmost`，等 AX 看得到視窗再操作；使用者在用電腦時會被切回去，先跟使用者說一聲。

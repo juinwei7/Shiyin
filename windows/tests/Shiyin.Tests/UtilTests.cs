@@ -35,7 +35,7 @@ public class UtilTests
     {
         string[] glossary = ["Lumio", "Redis", "Kubernetes"];
         var expected = Items("util/languages.json").ToList();
-        Assert.Equal(expected.Select(e => e.Str("code")).ToList(), MeetingLanguages.All.Select(l => l.Code).ToList());
+        Assert.Equal(expected.Select(e => e.Str("code")!).ToList(), MeetingLanguages.All.Select(l => l.Code).ToList());
         foreach (var item in expected)
         {
             var l = MeetingLanguages.Parse(item.Str("code"))!.Value;

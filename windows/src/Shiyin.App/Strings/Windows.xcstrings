@@ -992,6 +992,17 @@
         }
       }
     },
+    "按「停止並轉錄」後，拾音會在這台電腦上重新轉錄（中文、英文用 Breeze ASR 25，%@用 Whisper large-v3-turbo，%@用 Qwen3-ASR），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After you click Stop and transcribe, Shiyin transcribes again on this PC (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for %@, Qwen3-ASR for %@) and tells the speakers apart. While you wait, a draft of the notes is written from the live transcript and replaced automatically when the final version is ready. Click “Speaker 1” in the transcript to give a real name and the whole meeting updates; Shiyin remembers that voice and fills in the name in later meetings (marked Auto — click it if it's wrong)."
+          }
+        }
+      }
+    },
     "按「停止並轉錄」後，拾音會在這台電腦上重新轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper large-v3-turbo），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。": {
       "extractionState": "manual",
       "localizations": {
@@ -2154,6 +2165,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "When an online meeting starts in Zoom, Teams, Google Meet and so on, Shiyin reminds you to record, and reminds you to stop when it seems to have ended."
+          }
+        }
+      }
+    },
+    "開始錄音後聽約 10 秒，判斷是哪一種語言（%@）；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After recording starts, listens for about 10 seconds to tell which language is spoken (%@). If it differs from the meeting language and the result is confident, it switches automatically; you can switch back on the recording screen. Needs the 60 MB language detection model."
           }
         }
       }

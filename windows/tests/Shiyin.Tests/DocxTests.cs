@@ -42,12 +42,28 @@ public sealed class DocxTests : IDisposable
         Assert.Equal(3, rows.Count);
     }
 
+    /// <summary>Word 的字型讀語言檔的 fonts.docx（M§41.5）：韓文是 Malgun Gothic／Batang，粵語跟中文一樣</summary>
+    [Fact]
+    public void FontsFollowLanguageFile()
+    {
+        foreach (var (code, body, heading) in new[] { ("ko", "Malgun Gothic", "Batang"), ("yue", "Microsoft JhengHei", "PMingLiU"), ("ja", "Yu Gothic", "Yu Mincho") })
+        {
+            var path = Path.Combine(home.Path, $"fonts-{code}.docx");
+            DocxWriter.Write(File.ReadAllText(Path.Combine(Golden.Root, "expected", $"export/{code}/notes.html")), path, MeetingLanguages.Parse(code)!.Value);
+            using var doc = WordprocessingDocument.Open(path, false);
+            var fonts = doc.MainDocumentPart!.StyleDefinitionsPart!.Styles!.Descendants<RunFonts>()
+                .SelectMany(f => new[] { f.Ascii?.Value, f.EastAsia?.Value }).Where(f => f is not null).Distinct().ToList();
+            Assert.Contains(body, fonts);
+            Assert.Contains(heading, fonts);
+        }
+    }
+
     [Fact]
     public void TranscriptAndOtherLanguages()
     {
         var (paragraphs, _) = Convert("export/zh/transcript-tt.html", MeetingLanguage.Zh);
         Assert.Contains(paragraphs, p => p.Text == "00:00 王小明：大家好，今天討論 v3.6 的上線時程。");
-        foreach (var language in new[] { "en", "ja" })
+        foreach (var language in new[] { "en", "ja", "yue", "ko" })
         {
             var (notes, _) = Convert($"export/{language}/notes.html", MeetingLanguages.Parse(language)!.Value);
             Assert.Equal("Heading1", notes[0].Style);

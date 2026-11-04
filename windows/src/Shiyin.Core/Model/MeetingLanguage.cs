@@ -144,9 +144,15 @@ public static class MeetingLanguages
     public static bool UsesTurbo(this MeetingLanguage l) => l.Profile.Transcription.Model == "turbo";
 
     /// <summary>介面上列出用某個轉錄模型的語言，例如「日文和韓文」（同 Mac 的 ListFormatter）</summary>
-    public static string UiNames(string model)
+    public static string UiNames(string model) => UiNames(All.Where(l => l.Profile.Transcription.Model == model));
+
+    /// <summary>自動偵測認得的語言（語言檔的 detect 不是 null，M§41.4）</summary>
+    public static IEnumerable<MeetingLanguage> Detectable => All.Where(l => l.Profile.Detect is not null);
+
+    /// <summary>介面上列出幾種語言：「中文、英文、日文和韓文」「Chinese, English, Japanese, and Korean」</summary>
+    public static string UiNames(IEnumerable<MeetingLanguage> languages)
     {
-        var names = All.Where(l => l.Profile.Transcription.Model == model).Select(l => l.UiName()).ToList();
+        var names = languages.Select(l => l.UiName()).ToList();
         if (names.Count < 2) return names.FirstOrDefault() ?? "";
         if (Interface == MeetingLanguage.En)
             return names.Count == 2 ? $"{names[0]} and {names[1]}" : string.Join(", ", names[..^1]) + ", and " + names[^1];

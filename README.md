@@ -8,7 +8,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 
 - 錄音、轉錄、說話者辨識都在本機完成，錄音不會上傳
 - 不需要安裝 Python、Homebrew 或 ffmpeg，下載 DMG 就能用
-- 介面有繁體中文和英文（跟著 macOS 的語言），會議可以是中文、英文或日文
+- 介面有繁體中文和英文（跟著 macOS 的語言），會議可以是中文、英文、日文、廣東話或韓文（韓文是實驗性的）
 - 需要 Apple Silicon 和 macOS 26
 
 ![會議紀錄](docs/images/summary.png)
@@ -35,9 +35,9 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - 磁碟空間不夠時會提醒；寫不進磁碟時自動停止，已經錄到的部分會保留、照常轉錄
   - app 當掉或電腦突然關機，下次開啟會自動復原錄音
 - **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」
-- **本機轉錄**：whisper.cpp + Breeze ASR 25（聯發科），詞彙表會當成提示詞；設定裡可以改選 llama.cpp + Qwen3-ASR 1.7B（阿里巴巴開源，多人會議漏字少，輸出轉成台灣繁體，全程本機）；日文會議用 Whisper large-v3-turbo（第一次轉錄日文會議時才下載）。也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）。模型還沒下載好時，先用 macOS 內建辨識轉錄，下載好之後可以一鍵重新轉錄。長錄音分段轉錄，4 小時的會議也不會吃掉太多記憶體
-- **會議語言**：每場會議可以選中文、英文或日文，轉錄、會議紀錄、匯出的標題都跟著這個語言；日文會議的內容用日文字形，PDF、Word 用日文字型。預設語言在設定裡改
-- **自動偵測語言**：開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時，自動切換即時逐字稿和會議語言，錄音畫面可以改回來
+- **本機轉錄**：whisper.cpp + Breeze ASR 25（聯發科），詞彙表會當成提示詞；設定裡可以改選 llama.cpp + Qwen3-ASR 1.7B（阿里巴巴開源，多人會議漏字少，輸出轉成台灣繁體，全程本機）；日文、韓文會議用 Whisper large-v3-turbo（第一次轉錄時才下載）；廣東話會議一律用 Qwen3-ASR，照粵語口語轉成繁體（第一次轉錄時才下載）。也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）。模型還沒下載好時，先用 macOS 內建辨識轉錄，下載好之後可以一鍵重新轉錄。長錄音分段轉錄，4 小時的會議也不會吃掉太多記憶體
+- **會議語言**：每場會議可以選中文、英文、日文、廣東話或韓文，轉錄、會議紀錄、匯出的標題都跟著這個語言；日文、韓文會議的內容用各自的字形，PDF、Word 用各自的字型。廣東話的逐字稿照粵語口語寫（係、唔、咗），會議紀錄寫成繁體中文的書面語。韓文是實驗性的：會議紀錄、匯出都是韓文，但提示詞沒有像中文、英文、日文那樣逐字調過。預設語言在設定裡改。每種語言的做法寫在一份語言檔（`Resources/languages.json`），Mac、Windows 共用
+- **自動偵測語言**：開始錄音後聽約 10 秒，判斷是中文、英文、日文還是韓文；跟會議語言不同而且有把握時，自動切換即時逐字稿和會議語言，錄音畫面可以改回來。廣東話會判成中文，兩者之間不會自動切換，廣東話會議要自己選
 - **逐字稿校正**：轉錄完，整理工具依詞彙表和上下文找出可能聽錯的字（同音字、專有名詞），標在逐字稿裡，你按「接受」才改，可以還原
 - **詞彙表建議**：從參加者、說話者名字、校正過的字、會議標題建議要加進詞彙表的詞
 - **說話者辨識**：逐字稿每段標上說話者，每個人一個顏色；可以改名、只看某一位說話者
@@ -80,7 +80,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 | 晶片 | Apple Silicon（M1 以上） |
 | 系統 | macOS 26 以上 |
 | 記憶體 | 8 GB 以上。轉錄加說話者辨識的峰值約 2.9 GB，長錄音分段轉錄，會議長短影響不大（4 小時的會議 2.9 GB，M3 Pro 實測） |
-| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文會議另外 574 MB、自動偵測語言 60 MB、改選 Qwen3-ASR 另外約 2.5 GB，加上錄音：m4a 約每小時 10～30 MB |
+| 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文、韓文會議另外 574 MB、自動偵測語言 60 MB、改選 Qwen3-ASR 或開廣東話會議另外約 2.5 GB，加上錄音：m4a 約每小時 10～30 MB |
 | 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`，只裝了 Codex 桌面版也可以）、Anthropic API key、OpenAI API key、Gemini API key，或 OpenAI 相容 API（Groq、OpenRouter 填 key；本機的 Ollama、LM Studio 不用 key）。也可以選「不整理」 |
 | 網路 | 第一次下載模型、整理會議紀錄時需要；錄音、轉錄、說話者辨識都不需要 |
 
@@ -114,7 +114,7 @@ Windows 版在 [`windows/`](windows/)（C#、.NET 10、WinUI 3），功能跟 Ma
 |---|---|
 | 系統 | Windows 11（x64 或 ARM64）。N 版要先裝「媒體功能套件」（Media Feature Pack） |
 | 記憶體 | 8 GB 以上 |
-| 磁碟空間 | 第一次使用時下載：快速辨識約 240 MB、說話者辨識約 45 MB、轉錄模型約 1.7 GB；日文會議另外 574 MB；改選 Qwen3-ASR 另外約 2.5 GB（含 llama.cpp 的執行檔） |
+| 磁碟空間 | 第一次使用時下載：快速辨識約 240 MB、說話者辨識約 45 MB、轉錄模型約 1.7 GB；日文、韓文會議另外 574 MB；改選 Qwen3-ASR 或開廣東話會議另外約 2.5 GB（含 llama.cpp 的執行檔） |
 | 顯示卡 | 不是必要的。x64 的電腦有 NVIDIA 顯示卡時，拾音會自動下載顯示卡加速（約 685 MB），正式轉錄改用顯示卡（40 分鐘的會議用 RTX 3060 約 8 分鐘，只用 CPU 約 30 分鐘）；有 AMD 顯示卡（含 Radeon 內顯）時自動下載 Vulkan 版的加速（約 20 MB），一樣用顯示卡轉錄。只有 Intel 顯示卡時也下載這一份，第一次正式轉錄時先用一段錄音比對顯示卡和 CPU，結果一樣、顯示卡又比較快才改用顯示卡。ARM 的電腦只用 CPU |
 | 效能 | NVIDIA 顯示卡最快：顯示記憶體建議 4 GB 以上、驅動要 527 版以後。只用 CPU 時比較慢，筆電可能比會議本身還久；轉錄最多用 8 個執行緒。等不及的話，「設定 → 錄音與轉錄 → 正式轉錄」改成「快速辨識」（快很多但比較不準）。錄音中的即時逐字稿約用一個 CPU 核心的三分之一 |
 | 整理工具 | 同 Mac |
@@ -299,16 +299,17 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 - Claude 整理通常要 30～70 秒，偶爾會到幾分鐘。
 - 英文會議的轉錄：在公開的英文會議片段（AMI，4 人）上，字錯誤率 Breeze 約 36%、Qwen3-ASR 約 34%、macOS 內建約 37%（去掉語助詞後約 33%、31%、34%），大多是同時說話的漏字。
 - 日文會議的轉錄：在日本國會公開的專家聽證（6 人）上，字錯誤率 Whisper large-v3-turbo 約 8～9%。正確答案用的國會會議錄刪掉了語助詞，實際的錯誤率會比這個低。
-- 還沒有：中文、英文、日文以外的語言、日文介面、行事曆整合、iPhone 版。
+- 廣東話、韓文會議的轉錄（用 macOS 語音合成的開發週會和 FLEURS 朗讀句子，2026-11-04）：廣東話用 Qwen3-ASR，字錯誤率約 2～4%，照粵語口語寫；韓文用 Whisper large-v3-turbo，約 6%。還沒有用真人會議量過。
+- 還沒有：其他會議語言（加在語言檔裡，見 design §41）、日文和韓文介面、行事曆整合、iPhone 版。
 
 ## 使用的開源專案與模型
 
 | 名稱 | 用途 | 授權 |
 |---|---|---|
-| [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | 正式轉錄（Breeze、日文）、語言偵測 | MIT |
+| [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | 正式轉錄（Breeze、日文、韓文）、語言偵測 | MIT |
 | [Breeze ASR 25](https://huggingface.co/MediaTek-Research/Breeze-ASR-25)（[GGML 轉檔](https://huggingface.co/shdennlin/breeze-asr-25-ggml)） | 轉錄模型（繁體中文、中英夾雜） | Apache-2.0 |
-| [Whisper](https://github.com/openai/whisper) large-v3-turbo、base（[GGML 轉檔](https://huggingface.co/ggerganov/whisper.cpp)） | 日文轉錄、自動偵測語言 | MIT |
-| [Qwen3-ASR 1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)（[GGUF 轉檔](https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF)） | 可選的轉錄模型（中文、英文；輸出用 [OpenCC](https://github.com/BYVoid/OpenCC) 的字表轉成台灣繁體） | Apache-2.0 |
+| [Whisper](https://github.com/openai/whisper) large-v3-turbo、base（[GGML 轉檔](https://huggingface.co/ggerganov/whisper.cpp)） | 日文、韓文轉錄、自動偵測語言 | MIT |
+| [Qwen3-ASR 1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)（[GGUF 轉檔](https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF)） | 可選的轉錄模型（中文、英文）、廣東話的轉錄（輸出用 [OpenCC](https://github.com/BYVoid/OpenCC) 的字表轉成台灣繁體） | Apache-2.0 |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | 跑 Qwen3-ASR | MIT |
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | 說話者辨識 | Apache-2.0 |
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | SQLite 資料庫、全文搜尋 | MIT |
