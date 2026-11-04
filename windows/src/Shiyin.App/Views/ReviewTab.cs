@@ -66,7 +66,7 @@ public sealed class ReviewTab
         var idx = suggestion.Speaker;
         var skipped = draft.SpeakerSkipped.Contains(idx);
         var current = value.Speakers.GetValueOrDefault(idx) ?? "";
-        var question = Ui.Text(Language.Text($"「{current}」是{suggestion.Name}嗎？", $"Is “{current}” {suggestion.Name}?", $"「{current}」は{suggestion.Name}ですか？"), Ui.C(14), select: true);  // l10n-skip：會議語言的題目
+        var question = Ui.Text(Language.Format("「%@」是%@嗎？", "Is “%@” %@?", "「%@」は%@ですか？", current, suggestion.Name), Ui.C(14), select: true);  // l10n-skip：會議語言的題目
         question.Language = Ui.ContentLanguage(Language);
         if (skipped) { question.Foreground = Ui.Secondary; question.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough; }
         var icon = new FontIcon { Glyph = "", FontSize = 14, Foreground = Ui.Speaker(idx), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 3, 0, 0) };

@@ -29,14 +29,15 @@ public sealed class SenseVoiceRecognizer : IDisposable
         this.language = language;
         var config = new OfflineRecognizerConfig();
         config.ModelConfig.SenseVoice.Model = models.Model;
-        config.ModelConfig.SenseVoice.Language = language.Code();
+        config.ModelConfig.SenseVoice.Language = language.Profile.Live.Windows;
         config.ModelConfig.SenseVoice.UseInverseTextNormalization = 1;
         config.ModelConfig.Tokens = models.Tokens;
         config.ModelConfig.NumThreads = threads;
         config.ModelConfig.Provider = "cpu";
         config.DecodingMethod = "greedy_search";
         recognizer = new OfflineRecognizer(config);
-        if (language == MeetingLanguage.Zh) opencc = new Opencc("s2twp");
+        // 語言檔的 live.windowsConvert（中文 s2twp、粵語 s2tw，M§41.3）
+        if (language.Profile.Live.WindowsConvert is { } convert) opencc = new Opencc(convert);
     }
 
     public void Dispose() => recognizer.Dispose();
@@ -59,7 +60,7 @@ public sealed class SenseVoiceRecognizer : IDisposable
     string Clean(string text)
     {
         var t = System.Text.RegularExpressions.Regex.Replace(text, "<\\|[^|]*\\|>", "").Trim();
-        return opencc is null ? t : opencc.Convert(t, true);
+        return opencc is null ? t : language.Profile.FixScript(opencc.Convert(t, true));
     }
 }
 

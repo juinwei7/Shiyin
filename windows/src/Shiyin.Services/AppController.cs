@@ -140,10 +140,10 @@ public sealed class AppController
 
     public MeetingStatus Status(MeetingDetail detail) => Status(detail.Meeting.Id!.Value, detail.LatestJob, detail.ReviewCount);
 
-    /// <summary>這場會議是在模型下載好之前用快速辨識轉錄的，現在可以用 Breeze 重新轉錄（M§21.17）</summary>
+    /// <summary>這場會議是在模型下載好之前用快速辨識轉錄的，現在可以用 Breeze 重新轉錄（M§21.17）；固定用 Qwen 的語言（粵語）看 Qwen（M§41.3）</summary>
     public bool CanUpgradeTranscript(Meeting meeting) =>
         meeting.TranscribedWith == "system" && !Settings.UseFastTranscriber && Paths.HasAudio(meeting) && meeting.DeletedAt is null
-        && Models.IsInstalled(ModelStore.Transcription(meeting.MeetingLanguage));
+        && Models.IsInstalled(meeting.MeetingLanguage.Profile.Transcription.Model == "qwen" ? ModelStore.Model.Qwen : ModelStore.Transcription(meeting.MeetingLanguage));
 
     // MARK: 資料夾（R9.2）
 
@@ -695,7 +695,7 @@ public sealed class AppController
         if (Db.Meeting(id) is not { } meeting) return;
         var trimmed = name.Trim();
         // 清空就回到預設名稱，用會議語言（會帶進會議紀錄和匯出），不是介面語言
-        var fallback = meeting.MeetingLanguage.Text($"說話者 {idx}", $"Speaker {idx}", $"話者 {idx}");  // l10n-skip
+        var fallback = meeting.MeetingLanguage.DefaultSpeaker(idx);  // l10n-skip
         var newName = trimmed.Length == 0 ? fallback : trimmed;
         var old = Db.Speakers(id).FirstOrDefault(s => s.Idx == idx)?.Name;
         Perform(id, () =>
@@ -713,7 +713,7 @@ public sealed class AppController
     public void RejectVoiceprintMatch(long id, int idx)
     {
         if (Db.Meeting(id) is not { } meeting) return;
-        var fallback = meeting.MeetingLanguage.Text($"說話者 {idx}", $"Speaker {idx}", $"話者 {idx}");  // l10n-skip
+        var fallback = meeting.MeetingLanguage.DefaultSpeaker(idx);  // l10n-skip
         var old = Db.Speakers(id).FirstOrDefault(s => s.Idx == idx)?.Name;
         Perform(id, () =>
         {

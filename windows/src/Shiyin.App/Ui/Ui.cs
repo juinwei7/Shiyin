@@ -129,12 +129,11 @@ public static class Ui
     /// <summary>會議內容的字級、欄寬乘上文字大小的倍率</summary>
     public static double C(double size) => Math.Round(size * ContentScale, 1);
 
-    /// <summary>會議內容的標題字型：中文、英文新細明體，日文 Yu Mincho（design-windows §11.3；W2 截圖比較後定）</summary>
-    public static FontFamily TitleFont(MeetingLanguage language) =>
-        new(language == MeetingLanguage.Ja ? "Yu Mincho" : "PMingLiU, Microsoft JhengHei UI");
+    /// <summary>會議內容的標題字型：中文、英文新細明體，日文 Yu Mincho（design-windows §11.3；W2 截圖比較後定），語言檔的 fonts.titleWindows</summary>
+    public static FontFamily TitleFont(MeetingLanguage language) => new(language.Profile.Fonts.TitleWindows);
 
-    /// <summary>會議內容的語言（ja-JP 時用日文字形，D20）</summary>
-    public static string ContentLanguage(MeetingLanguage language) => language.Text("zh-TW", "en-US", "ja-JP");
+    /// <summary>會議內容的語言（ja-JP 時用日文字形，D20），語言檔的 fonts.contentWindows</summary>
+    public static string ContentLanguage(MeetingLanguage language) => language.Profile.Fonts.ContentWindows;
 
     public static TextBlock Text(string text, double size = 14, bool bold = false, Brush? color = null, bool wrap = true, int maxLines = 0,
                                  bool select = false)

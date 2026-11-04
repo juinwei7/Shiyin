@@ -29,20 +29,24 @@ struct EnvironmentStatus: Equatable {
                               detail: String(localized: "已登入 \(account.email)（\(account.serverName)）"),
                               fix: String(localized: "登入已失效：到「進階 → 企業伺服器」重新登入"), required: server))
         }
+        // 第一項是預設會議語言的模型（Qwen3-ASR 或 Breeze，design §32.6、§41.3）；預設語言用 large-v3-turbo 時看中文的
+        let defaultLanguage = AppSettings.defaultMeetingLanguage
+        let main = defaultLanguage.usesTurbo ? MeetingLanguage.zh : defaultLanguage
+        let qwen = ModelStore.transcription(for: main) == .qwen
         return EnvironmentStatus(items: items + [
-            // 預設開日文會議的人不一定需要中文、英文的模型（目前引擎用的：Qwen3-ASR 或 Breeze，design §32.6）
-            Item(name: AppSettings.transcriptionEngine != "qwen" ? String(localized: "轉錄模型 Breeze ASR 25") : String(localized: "轉錄模型 Qwen3-ASR 1.7B"),
-                 ok: models.isInstalled(transcriptionFor: .zh) || AppSettings.useSystemTranscriber || server,
-                 detail: server && !models.isInstalled(transcriptionFor: .zh) ? String(localized: "沒有下載，正式轉錄用企業伺服器") : models.isInstalled(transcriptionFor: .zh)
-                     ? (AppSettings.transcriptionEngine != "qwen" ? String(localized: "已下載（1.66 GB）") : String(localized: "已下載（2.5 GB）")) : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識") : String(localized: "還沒下載"),
+            // 預設開日文會議的人不一定需要中文、英文的模型
+            Item(name: !qwen ? String(localized: "轉錄模型 Breeze ASR 25") : String(localized: "轉錄模型 Qwen3-ASR 1.7B"),
+                 ok: models.isInstalled(transcriptionFor: main) || AppSettings.useSystemTranscriber || server,
+                 detail: server && !models.isInstalled(transcriptionFor: main) ? String(localized: "沒有下載，正式轉錄用企業伺服器") : models.isInstalled(transcriptionFor: main)
+                     ? (!qwen ? String(localized: "已下載（1.66 GB）") : String(localized: "已下載（2.5 GB）")) : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識") : String(localized: "還沒下載"),
                  fix: String(localized: "到設定的「錄音與轉錄」下載，或把正式轉錄改成 macOS 內建"),
-                 required: !AppSettings.defaultMeetingLanguage.usesTurbo && !server),
-            Item(name: String(localized: "日文轉錄模型"), ok: models.isInstalled(.japanese) || AppSettings.useSystemTranscriber || server,
+                 required: !defaultLanguage.usesTurbo && !server),
+            Item(name: String(localized: "\(MeetingLanguage.uiNames(model: "turbo"))轉錄模型"), ok: models.isInstalled(.japanese) || AppSettings.useSystemTranscriber || server,
                  detail: models.isInstalled(.japanese) ? String(localized: "已下載（574 MB）")
                      : server ? String(localized: "沒有下載，正式轉錄用企業伺服器")
                      : AppSettings.useSystemTranscriber ? String(localized: "沒有下載，正式轉錄使用 macOS 內建辨識")
-                     : String(localized: "還沒下載，第一次轉錄日文會議時會自動下載"),
-                 fix: String(localized: "到設定的「錄音與轉錄」下載"), required: AppSettings.defaultMeetingLanguage.usesTurbo && !AppSettings.useSystemTranscriber && !server),
+                     : String(localized: "還沒下載，第一次轉錄\(MeetingLanguage.uiNames(model: "turbo"))會議時會自動下載"),
+                 fix: String(localized: "到設定的「錄音與轉錄」下載"), required: defaultLanguage.usesTurbo && !AppSettings.useSystemTranscriber && !server),
             Item(name: String(localized: "語言偵測模型"), ok: models.isInstalled(.languageDetection) || !AppSettings.autoDetectLanguage,
                  detail: models.isInstalled(.languageDetection) ? String(localized: "已下載（60 MB）")
                      : AppSettings.autoDetectLanguage ? String(localized: "還沒下載，下載好之前錄音不會自動偵測語言") : String(localized: "沒有開自動偵測會議語言"),

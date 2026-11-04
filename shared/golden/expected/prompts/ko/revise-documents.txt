@@ -1,0 +1,32 @@
+Meeting date: 2026-11-03 (화요일)
+Existing title: Lumio 주간 회의
+Participants: 김민준, 이서연
+Glossary (correct spellings): Lumio, Redis, Kubernetes
+
+Template: Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics
+Sections to produce: summary (Summary), decisions (Decisions), actionItems (Action items), openQuestions (Open questions), topics (Topics)
+
+Reference documents (added by the user; [Page N] marks page numbers):
+Document: 견적서
+[Page 1]
+견적서
+라이선스 4,800만 원
+
+Transcript ([time] speaker: text; (?) marks low-confidence segments): 
+[00:00] 화자 1: 안녕하세요, 김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다.
+[00:05] 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다.
+[00:11] 화자 1: (?) 서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?
+[00:15] 네.
+[1:00:05] 화자 3: 오늘은 여기까지 하겠습니다.
+
+Current meeting notes (JSON): 
+{"actionItems":[{"due":"2026-11-04","owner":"이서연","task":"롤백 절차 정리","time":"00:11"}],"custom":[],"decisions":[{"text":"출시일은 예정대로 유지","time":"1:00:05"}],"openQuestions":[],"reviewItems":[{"question":"담당자가 이서연 님인가요?","time":"00:11","yesNo":true}],"summary":[{"text":"Redis 캐시로 응답 시간 단축","time":"00:05"}],"title":"Lumio 주간 회의","topics":[]}
+
+The user's answers to the review questions: 
+1. [00:11] 담당자가 이서연 님인가요?
+   Answer: 예
+
+Revise the meeting notes according to the user's answers and return the complete notes:
+- Fix everything related to each answer (check the summary, decisions, action items, open questions, topics, custom sections and title), keeping the times unchanged.
+- Remove answered questions from reviewItems; keep unanswered questions from the current notes as they are.
+- Do not add new questions unless an answer raises a new doubt.

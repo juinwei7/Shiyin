@@ -1,0 +1,6 @@
+Turn the user's question about their meetings into keywords for a full-text search of meeting transcripts.
+
+Rules:
+1. 3 to 8 keywords, most important first.
+2. Include synonyms, common phrasings, spellings in other languages and abbreviations (for "email", also list "mail", "SendGrid").
+3. Each keyword is a word or short phrase of at least 2 characters. No full sentences, and no words every meeting has, like "meeting" or "discuss".

@@ -297,8 +297,8 @@ public sealed partial class AppDatabase
             var term = r.Str("suggestion");
             if (SwiftText.Characters(term).Any(c => SwiftText.IsAscii(c) && SwiftText.IsLetter(c))) Add(term, GlossarySuggestion.From.Correction);
         }
-        // 中文、日文會議標題裡的英文詞通常是產品名、專案名；英文會議的標題就不拆了
-        foreach (var m in meetings.Where(m => m.MeetingLanguage != MeetingLanguage.En))
+        // 中文、日文會議標題裡的英文詞通常是產品名、專案名；英文這種用空格分詞的語言，標題就不拆了（語言檔的 spaced）
+        foreach (var m in meetings.Where(m => !m.MeetingLanguage.Profile.Spaced))
             foreach (Match match in TitleWord.Matches(m.Title)) Add(match.Value, GlossarySuggestion.From.Title);
         var existing = db.Query("SELECT term FROM glossary").Select(r => SwiftText.Lower(r.Str("term"))).ToHashSet();
         var dismissed = db.Query("SELECT term FROM glossary_dismissed").Select(r => SwiftText.Lower(r.Str("term"))).ToHashSet();

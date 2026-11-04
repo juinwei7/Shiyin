@@ -310,9 +310,11 @@ public static class WhisperEngine
             fixed (float* p = probs) top = WhisperNative.LangAutoDetect(ctx, threads, p);
             if (top < 0) throw new WhisperException(WhisperErrorKind.Failed, top);
             var result = new Dictionary<Model.MeetingLanguage, double>();
+            // 語言檔裡可以偵測的語言（M§41.4）：Whisper base 沒有粵語，粵語不參加
             foreach (var language in Model.MeetingLanguages.All)
             {
-                var id = WhisperNative.LangId(Model.MeetingLanguages.WhisperCode(language));
+                if (language.Profile.Detect is not { } code) continue;
+                var id = WhisperNative.LangId(code);
                 result[language] = id >= 0 && id < probs.Length ? probs[id] : 0;
             }
             var sum = result.Values.Sum();

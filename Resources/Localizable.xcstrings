@@ -150,6 +150,61 @@
         }
       }
     },
+    "%@會議一律用 Qwen3-ASR。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ meetings always use Qwen3-ASR."
+          }
+        }
+      }
+    },
+    "%@會議改用 Whisper large-v3-turbo（574 MB）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ meetings use Whisper large-v3-turbo (574 MB) instead."
+          }
+        }
+      }
+    },
+    "%@會議用，574 MB。第一次轉錄這些語言的會議時會自動下載。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used for %@ meetings, 574 MB. Downloaded automatically the first time a meeting in one of these languages is transcribed."
+          }
+        }
+      }
+    },
+    "%@轉錄模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ transcription model"
+          }
+        }
+      }
+    },
+    "%@轉錄模型 Whisper large-v3-turbo（q5_0）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ transcription model Whisper large-v3-turbo (q5_0)"
+          }
+        }
+      }
+    },
     "%@（%@）": {
       "extractionState": "manual",
       "localizations": {
@@ -6214,39 +6269,6 @@
         }
       }
     },
-    "日文會議用，574 MB。第一次轉錄日文會議時會自動下載。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used for Japanese meetings, 574 MB. Downloaded automatically the first time a Japanese meeting is transcribed."
-          }
-        }
-      }
-    },
-    "日文轉錄模型": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Japanese transcription model"
-          }
-        }
-      }
-    },
-    "日文轉錄模型 Whisper large-v3-turbo（q5_0）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Japanese transcription model Whisper large-v3-turbo (q5_0)"
-          }
-        }
-      }
-    },
     "是": {
       "extractionState": "manual",
       "localizations": {
@@ -6511,24 +6533,24 @@
         }
       }
     },
-    "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。日文會議改用 Whisper large-v3-turbo（574 MB）。": {
+    "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uses your glossary, so mixed Chinese-English and proper nouns come out better; MediaTek's open-source Taiwanese model, about 1.7 GB to download. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
+            "value": "Uses your glossary, so mixed Chinese-English and proper nouns come out better; MediaTek's open-source Taiwanese model, about 1.7 GB to download."
           }
         }
       }
     },
-    "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。日文會議改用 Whisper large-v3-turbo（574 MB）。": {
+    "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uses your glossary; drops fewer words in multi-speaker meetings and confuses fewer homophones than Breeze, about 30% faster. An open-source model from Alibaba that runs entirely on this Mac with no network access; Chinese output is converted to Taiwanese Traditional. Requires a 2.5 GB model download. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
+            "value": "Uses your glossary; drops fewer words in multi-speaker meetings and confuses fewer homophones than Breeze, about 30% faster. An open-source model from Alibaba that runs entirely on this Mac with no network access; Chinese output is converted to Taiwanese Traditional. Requires a 2.5 GB model download."
           }
         }
       }
@@ -7477,6 +7499,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Used when final transcription is set to Qwen3-ASR, 2.5 GB."
+          }
+        }
+      }
+    },
+    "正式轉錄選「Qwen3-ASR」時用；%@會議一律用。2.5 GB。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used when final transcription is set to Qwen3-ASR; %@ meetings always use it. 2.5 GB."
           }
         }
       }
@@ -8782,13 +8815,13 @@
         }
       }
     },
-    "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開日文會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB": {
+    "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開%@會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 1.7 GB for models (transcription 1.66 GB, speaker recognition 21 MB; another 574 MB for Japanese meetings and 60 MB for language detection), plus recordings: they're compressed to m4a after transcription, about 10–30 MB per hour"
+            "value": "About 1.7 GB for models (transcription 1.66 GB, speaker recognition 21 MB; another 574 MB for %@ meetings and 60 MB for language detection), plus recordings: they're compressed to m4a after transcription, about 10–30 MB per hour"
           }
         }
       }
@@ -10434,13 +10467,24 @@
         }
       }
     },
-    "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用日文轉錄模型重新轉錄，通常比較準。": {
+    "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用 Qwen3-ASR 重新轉錄，通常比較準。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This meeting was transcribed with macOS built-in recognition before the model finished downloading. Transcribing it again with the Japanese transcription model is usually more accurate."
+            "value": "This meeting was transcribed with macOS built-in recognition before the model finished downloading. Transcribing it again with Qwen3-ASR is usually more accurate."
+          }
+        }
+      }
+    },
+    "這場會議是在模型下載好之前，用 macOS 內建辨識轉錄的。可以用%@轉錄模型重新轉錄，通常比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting was transcribed with macOS built-in recognition before the model finished downloading. Transcribing it again with the %@ transcription model is usually more accurate."
           }
         }
       }
@@ -10799,13 +10843,13 @@
         }
       }
     },
-    "還沒下載，第一次轉錄日文會議時會自動下載": {
+    "還沒下載，第一次轉錄%@會議時會自動下載": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not downloaded. Downloads automatically the first time a Japanese meeting is transcribed"
+            "value": "Not downloaded. Downloads automatically the first time a %@ meeting is transcribed"
           }
         }
       }

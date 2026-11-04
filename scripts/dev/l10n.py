@@ -255,7 +255,7 @@ def windows_check():
             stripped = line.strip()
             if stripped.startswith("//") or stripped.startswith("///") or "Log." in line or "l10n-skip" in line:
                 continue
-            if ".Text(" in line or "Ui(\"" in line:   # MeetingLanguage.Text(zh, en, ja)、MeetingLanguages.Ui(zh, en)：各語言自己寫好
+            if ".Text(" in line or ".Prompt(" in line or ".Format(\"" in line or "Ui(\"" in line:   # MeetingLanguage.Text／Prompt／Format(zh, en, ja)、MeetingLanguages.Ui(zh, en)：各語言自己寫好
                 continue
             literals = [t for t in CS_STRING.findall(line.split("//")[0]) if CJK.search(t)]
             looked_up = [m.group(2) for m in CALL.finditer(line) if CJK.search(m.group(2))]

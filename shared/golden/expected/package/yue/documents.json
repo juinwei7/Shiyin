@@ -1,0 +1,12 @@
+[
+  {
+    "file" : "documents/1-報價單.pdf",
+    "kind" : "pdf",
+    "name" : "報價單.pdf",
+    "ocr" : false,
+    "pages" : [
+      "報價單\n授權費 NT$ 480,000",
+      "付款條件\n維護費每年 18%"
+    ]
+  }
+]

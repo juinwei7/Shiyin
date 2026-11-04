@@ -295,7 +295,7 @@ public sealed class MainWindow : Window
             menu.Items.Add(mic);
             menu.Items.Add(new MenuFlyoutSeparator());
         }
-        foreach (var language in Enum.GetValues<MeetingLanguage>())
+        foreach (var language in MeetingLanguages.All)
             menu.Items.Add(Ui.Check(language.Name(), settings.DefaultMeetingLanguage == language, () =>
             {
                 settings.Set(AppSettings.DefaultMeetingLanguageKey, language.Code());

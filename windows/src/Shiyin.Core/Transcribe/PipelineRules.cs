@@ -22,13 +22,12 @@ public static class WhisperRules
         "ご視聴ありがとうございました", "ご視聴いただきありがとうございました", "チャンネル登録",  // l10n-skip
     ];
 
-    /// <summary>基本提示詞＋詞彙表：中文、日文 150 字、英文 400 個字元以內</summary>
+    /// <summary>基本提示詞＋詞彙表：寫在語言檔的 whisperPrompt（M§41.3；中文、日文 150 字、英文 400 個字元以內）</summary>
     public static string Prompt(IReadOnlyList<string> glossary, MeetingLanguage language)
     {
-        var baseText = language.Text("以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。", "The following is a recording of a work meeting.", "以下は仕事の会議の録音です。");
-        var limit = language == MeetingLanguage.En ? 400 : 150;
-        string Build(List<string> terms) => terms.Count == 0 ? baseText : baseText + language.Text(
-            "詞彙：" + string.Join("、", terms) + "。", " Glossary: " + string.Join(", ", terms) + ".", "用語：" + string.Join("、", terms) + "。");  // l10n-skip
+        var p = language.Profile.WhisperPrompt;
+        var limit = p.Limit;
+        string Build(List<string> terms) => terms.Count == 0 ? p.Base : p.Base + p.Glossary.Replace("%@", string.Join(p.Separator, terms), StringComparison.Ordinal);
         var picked = new List<string>();
         foreach (var term in glossary)
         {

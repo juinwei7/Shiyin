@@ -48,7 +48,7 @@ int Transcribe(string audio, string optionsPath, string output)
     var glossary = options["glossary"]?.AsArray().Select(x => x!.GetValue<string>()).ToList() ?? [];
     var chunkSeconds = options["chunkSeconds"]?.GetValue<double>() ?? 600;
     var model = options["model"]?.GetValue<string>()
-        ?? Path.Combine(models, language == MeetingLanguage.Ja ? "ggml-large-v3-turbo-q5_0.bin" : "breeze-asr-25-q8_0.bin");
+        ?? Path.Combine(models, language.UsesTurbo() ? "ggml-large-v3-turbo-q5_0.bin" : "breeze-asr-25-q8_0.bin");
     var result = new JsonObject { ["audio"] = audio, ["options"] = options.DeepClone(), ["engine"] = "windows-whisper", ["system"] = WhisperEngine.SystemInfo };
     try
     {
@@ -193,7 +193,7 @@ int GpuCheck(string audio, string output, string code)
     var start = GpuCheckRules.LoudestWindow(head, window, (int)(GpuCheckRules.StepSeconds * rate));
     var sample = head.Slice(start, Math.Min(window, head.Length - start)).ToArray();
     var language = MeetingLanguages.All.First(l => l.Code() == code);
-    var model = Path.Combine(models, language == MeetingLanguage.Ja ? "ggml-large-v3-turbo-q5_0.bin" : "breeze-asr-25-q8_0.bin");
+    var model = Path.Combine(models, language.UsesTurbo() ? "ggml-large-v3-turbo-q5_0.bin" : "breeze-asr-25-q8_0.bin");
     var prompt = WhisperRules.Prompt([], language);
     // 跟 app 一樣 CPU 先（GpuCheckFlow）
     var cpu = WhisperEngine.TimedTranscribe(sample, model, prompt, language.WhisperCode(), new WhisperControl(), useGpu: false);

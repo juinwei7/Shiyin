@@ -193,6 +193,6 @@ public sealed class MeetingDetail
     }
 
     public string? SpeakerName(int? idx) => idx is int i
-        ? Speakers.TryGetValue(i, out var name) ? name : Meeting.MeetingLanguage.Text($"說話者 {i}", $"Speaker {i}", $"話者 {i}")  // l10n-skip
+        ? Speakers.TryGetValue(i, out var name) ? name : Meeting.MeetingLanguage.DefaultSpeaker(i)  // l10n-skip
         : null;
 }

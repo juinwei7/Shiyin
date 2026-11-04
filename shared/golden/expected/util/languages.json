@@ -1,0 +1,348 @@
+[
+  {
+    "base" : "zh",
+    "code" : "zh",
+    "detect" : "zh",
+    "duration" : [
+      "1 分鐘",
+      "1 小時",
+      "1 小時 5 分鐘"
+    ],
+    "family" : "zh",
+    "fonts" : [
+      "zh-Hant",
+      "zh-Hant",
+      "Songti TC"
+    ],
+    "format" : [
+      "「A」是B嗎？"
+    ],
+    "isDefault" : [
+      true,
+      false
+    ],
+    "name" : "中文",
+    "ocr" : [
+      "zh-Hant",
+      "zh-Hans",
+      "en-US"
+    ],
+    "prompt" : [
+      "摘要"
+    ],
+    "promptSections" : [
+      "摘要",
+      "決議",
+      "待辦",
+      "未決問題",
+      "議題詳細"
+    ],
+    "qwen" : "Chinese",
+    "qwenContext" : "Lumio、Redis、Kubernetes",
+    "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
+    "sections" : [
+      "摘要",
+      "決議",
+      "待辦",
+      "未決問題",
+      "議題詳細"
+    ],
+    "speaker" : [
+      "說話者 1",
+      "說話者 12"
+    ],
+    "text" : [
+      "摘要",
+      "沒有的字"
+    ],
+    "tier" : "tuned",
+    "uiName" : [
+      "中文",
+      "Chinese"
+    ],
+    "usesTurbo" : false,
+    "weekday" : "星期三",
+    "whisper" : "zh",
+    "whisperPrompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Lumio、Redis、Kubernetes。",
+    "yesNo" : [
+      "是",
+      "不是，C"
+    ]
+  },
+  {
+    "base" : "en",
+    "code" : "en",
+    "detect" : "en",
+    "duration" : [
+      "1 min",
+      "1 hr",
+      "1 hr 5 min"
+    ],
+    "family" : "en",
+    "fonts" : [
+      "zh-Hant",
+      "en",
+      "Songti TC"
+    ],
+    "format" : [
+      "Is “A” B?"
+    ],
+    "isDefault" : [
+      true,
+      false
+    ],
+    "name" : "English",
+    "ocr" : [
+      "en-US"
+    ],
+    "prompt" : [
+      "Summary"
+    ],
+    "promptSections" : [
+      "Summary",
+      "Decisions",
+      "Action items",
+      "Open questions",
+      "Topics"
+    ],
+    "qwen" : "English",
+    "qwenContext" : "Lumio, Redis, Kubernetes",
+    "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
+    "sections" : [
+      "Summary",
+      "Decisions",
+      "Action items",
+      "Open questions",
+      "Topics"
+    ],
+    "speaker" : [
+      "Speaker 1",
+      "Speaker 12"
+    ],
+    "text" : [
+      "Summary",
+      "Not in table"
+    ],
+    "tier" : "tuned",
+    "uiName" : [
+      "英文",
+      "English"
+    ],
+    "usesTurbo" : false,
+    "weekday" : "Wednesday",
+    "whisper" : "en",
+    "whisperPrompt" : "The following is a recording of a work meeting. Glossary: Lumio, Redis, Kubernetes.",
+    "yesNo" : [
+      "Yes",
+      "No, C"
+    ]
+  },
+  {
+    "base" : "ja",
+    "code" : "ja",
+    "detect" : "ja",
+    "duration" : [
+      "1 分",
+      "1 時間",
+      "1 時間 5 分"
+    ],
+    "family" : "ja",
+    "fonts" : [
+      "ja",
+      "ja",
+      "Hiragino Mincho ProN"
+    ],
+    "format" : [
+      "「A」はBですか？"
+    ],
+    "isDefault" : [
+      true,
+      false
+    ],
+    "name" : "日本語",
+    "ocr" : [
+      "ja-JP",
+      "en-US"
+    ],
+    "prompt" : [
+      "要約"
+    ],
+    "promptSections" : [
+      "要約",
+      "決定事項",
+      "ToDo",
+      "未決事項",
+      "議題ごとの詳細"
+    ],
+    "qwen" : "Japanese",
+    "qwenContext" : "Lumio、Redis、Kubernetes",
+    "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
+    "sections" : [
+      "要約",
+      "決定事項",
+      "ToDo",
+      "未決事項",
+      "議題ごとの詳細"
+    ],
+    "speaker" : [
+      "話者 1",
+      "話者 12"
+    ],
+    "text" : [
+      "要約",
+      "ない"
+    ],
+    "tier" : "tuned",
+    "uiName" : [
+      "日文",
+      "Japanese"
+    ],
+    "usesTurbo" : true,
+    "weekday" : "水曜日",
+    "whisper" : "ja",
+    "whisperPrompt" : "以下は仕事の会議の録音です。用語：Lumio、Redis、Kubernetes。",
+    "yesNo" : [
+      "はい",
+      "いいえ、C"
+    ]
+  },
+  {
+    "base" : "zh",
+    "code" : "yue",
+    "detect" : null,
+    "duration" : [
+      "1 分鐘",
+      "1 小時",
+      "1 小時 5 分鐘"
+    ],
+    "family" : "zh",
+    "fonts" : [
+      "zh-Hant",
+      "zh-Hant",
+      "Songti TC"
+    ],
+    "format" : [
+      "「A」是B嗎？"
+    ],
+    "isDefault" : [
+      true,
+      false
+    ],
+    "name" : "廣東話",
+    "ocr" : [
+      "zh-Hant",
+      "yue-Hant",
+      "en-US"
+    ],
+    "prompt" : [
+      "摘要"
+    ],
+    "promptSections" : [
+      "摘要",
+      "決議",
+      "待辦",
+      "未決問題",
+      "議題詳細"
+    ],
+    "qwen" : "Cantonese",
+    "qwenContext" : "Lumio、Redis、Kubernetes",
+    "script" : "我係陳家豪，唔係好穩定，系統同關係都冇問題，唔該晒，聯繫我，曬太陽",
+    "sections" : [
+      "摘要",
+      "決議",
+      "待辦",
+      "未決問題",
+      "議題詳細"
+    ],
+    "speaker" : [
+      "說話者 1",
+      "說話者 12"
+    ],
+    "text" : [
+      "摘要",
+      "沒有的字"
+    ],
+    "tier" : "tuned",
+    "uiName" : [
+      "廣東話",
+      "Cantonese"
+    ],
+    "usesTurbo" : false,
+    "weekday" : "星期三",
+    "whisper" : "yue",
+    "whisperPrompt" : "以下係廣東話嘅工作會議錄音，會夾雜英文專有名詞。詞彙：Lumio、Redis、Kubernetes。",
+    "yesNo" : [
+      "是",
+      "不是，C"
+    ]
+  },
+  {
+    "base" : "en",
+    "code" : "ko",
+    "detect" : "ko",
+    "duration" : [
+      "1분",
+      "1시간",
+      "1시간 5분"
+    ],
+    "family" : "ko",
+    "fonts" : [
+      "ko",
+      "ko",
+      "AppleMyungjo"
+    ],
+    "format" : [
+      "“A”은(는) B 님인가요?"
+    ],
+    "isDefault" : [
+      true,
+      false
+    ],
+    "name" : "한국어（實驗性）",
+    "ocr" : [
+      "ko-KR",
+      "en-US"
+    ],
+    "prompt" : [
+      "Summary"
+    ],
+    "promptSections" : [
+      "Summary",
+      "Decisions",
+      "Action items",
+      "Open questions",
+      "Topics"
+    ],
+    "qwen" : "Korean",
+    "qwenContext" : "Lumio, Redis, Kubernetes",
+    "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
+    "sections" : [
+      "요약",
+      "결정 사항",
+      "할 일",
+      "미결 사항",
+      "안건별 내용"
+    ],
+    "speaker" : [
+      "화자 1",
+      "화자 12"
+    ],
+    "text" : [
+      "요약",
+      "Not in table"
+    ],
+    "tier" : "general",
+    "uiName" : [
+      "韓文",
+      "Korean"
+    ],
+    "usesTurbo" : true,
+    "weekday" : "수요일",
+    "whisper" : "ko",
+    "whisperPrompt" : "다음은 업무 회의 녹음입니다. 용어: Lumio, Redis, Kubernetes.",
+    "yesNo" : [
+      "예",
+      "아니요, C"
+    ]
+  }
+]

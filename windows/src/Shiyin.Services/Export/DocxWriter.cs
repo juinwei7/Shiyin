@@ -33,13 +33,8 @@ public static partial class DocxWriter
         main.Document.Save();
     }
 
-    /// <summary>匯出用的第一個字型（Windows 的那一組，design-windows §11.3）</summary>
-    static (string Body, string Heading) Fonts(MeetingLanguage language) => language switch
-    {
-        MeetingLanguage.En => ("Segoe UI", "Georgia"),
-        MeetingLanguage.Ja => ("Yu Gothic", "Yu Mincho"),
-        _ => ("Microsoft JhengHei", "PMingLiU"),
-    };
+    /// <summary>匯出用的第一個字型（Windows 的那一組，design-windows §11.3）：語言檔的 fonts.docx</summary>
+    static (string Body, string Heading) Fonts(MeetingLanguage language) => (language.Profile.Fonts.Docx.Body, language.Profile.Fonts.Docx.Heading);
 
     static string BodyOf(string html)
     {

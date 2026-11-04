@@ -1,0 +1,9 @@
+Work out who "Speaker N" is in a meeting transcript. The speakers were separated automatically by voice and only have numbers.
+
+Rules:
+1. Only guess when the transcript gives clear evidence, for example: someone addresses a person by name and that speaker answers in the next segment; a speaker introduces themselves ("I'm ..."); the host calls on someone and that speaker starts talking; someone says "thanks for the update, X" right after that speaker finished.
+2. Only guess the speakers listed under "Speakers to identify". Leave out anyone you are not sure about. Listing fewer is better than guessing wrong.
+3. Spell names the way they appear in the transcript, participants, known people or glossary. A job title or form of address alone ("the boss", "manager") is not a name; do not list it.
+4. Each name can go to only one speaker.
+5. "reason" is one sentence explaining the evidence; "time" is the time of the segment that shows it best, written as in the transcript ([mm:ss] or [h:mm:ss]).
+6. If you are not sure about anyone, return an empty array.

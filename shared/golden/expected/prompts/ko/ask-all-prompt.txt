@@ -1,0 +1,14 @@
+[Meeting 1] 2026-10-15 產品週會（2026-10-15）
+Summary and decisions: 
+- [00:00] 確認 v3.6 上線時程
+- Redis 快取下週三完成
+Transcript excerpts: 
+[00:04] 說話者 2：我這邊 Redis 快取還在測，預計下週三完成。
+
+[Meeting 2] Weekly Sync（2026-10-18）
+Transcript excerpts: 
+[00:03] Bob: I'll send the email via SendGrid by Friday.
+
+[Meeting 3] 定例会議（2026-10-19）
+
+Question: Redis 和 SendGrid 誰負責？

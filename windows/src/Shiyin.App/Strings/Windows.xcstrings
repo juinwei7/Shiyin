@@ -419,6 +419,17 @@
         }
       }
     },
+    "中文、英文可選的引擎（阿里巴巴開源），約 2.5 GB，含 llama.cpp 的執行檔；「正式轉錄」選了它才會用，%@會議一律用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional engine for Chinese and English (open-sourced by Alibaba), about 2.5 GB including the llama.cpp program; used when selected under Final transcription, and always for %@ meetings."
+          }
+        }
+      }
+    },
     "之前選的麥克風（沒有接上，會用系統預設）": {
       "extractionState": "manual",
       "localizations": {
@@ -1131,6 +1142,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uses your glossary and handles mixed Chinese and English and proper nouns better; downloads a model of about 1.7 GB. Japanese meetings use Whisper large-v3-turbo (574 MB) instead."
+          }
+        }
+      }
+    },
+    "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少；阿里巴巴開源的模型，全程在這台電腦上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型和 llama.cpp 的執行檔。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your glossary; fewer dropped words and homophone errors than Breeze in multi-speaker meetings. An open-source model from Alibaba that runs entirely on this PC without network access; output is converted to Taiwanese Traditional Chinese. Downloads about 2.5 GB of model files plus the llama.cpp program."
           }
         }
       }
@@ -1890,6 +1912,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting was transcribed with Quick recognition before the model finished downloading. Re-transcribing with Breeze is usually more accurate."
+          }
+        }
+      }
+    },
+    "這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Qwen3-ASR 重新轉錄，通常比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting was transcribed with Quick recognition before the model finished downloading. Re-transcribing with Qwen3-ASR is usually more accurate."
+          }
+        }
+      }
+    },
+    "這場會議是在模型下載好之前，用快速辨識轉錄的。可以用%@轉錄模型重新轉錄，通常比較準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting was transcribed with Quick recognition before the model finished downloading. Re-transcribing with the %@ transcription model is usually more accurate."
           }
         }
       }

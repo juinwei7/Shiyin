@@ -9,13 +9,8 @@
 
 ## 更多會議語言：語言檔、粵語、韓文（R63～R65，design §41、design-windows §11.9、D139～D142；2026-11-04 使用者新需求）
 
-- [ ] **LANG1 Mac 改讀語言檔**（§41.1）：`Resources/languages.json`、`MeetingLanguage` 改成以代碼為身分、`prompt`／`text`／`format`、`defaultSpeaker`；中文、英文、日文的行為不變
-  - 驗證：dump-golden 跟改之前的標準答案一字不差；swift build、l10n check
-- [ ] **LANG2 評估、選粵語和韓文的轉錄引擎**（§41.7、D142）：Whisper large-v3-turbo、Qwen3-ASR、macOS 內建各跑 yue、ko 的 fleurs 和 synth；自動偵測的前後比較
-  - 驗證：錯字率、關鍵詞寫進 §41.7 的表，D142 寫選了什麼、為什麼；中文、英文、日文的偵測結果不變
 - [ ] **LANG3 Mac 加粵語、韓文**（R64、R65）：語言檔兩筆、韓文字串表、提示詞的兩級、選單、統計
   - 驗證：DEBUG 版匯入粵語、韓文的合成會議：正式轉錄、即時逐字稿（模擬錄音）、整理（假伺服器看提示詞、真的 Claude 整理一次各一場）、匯出、封包；英文介面
-- [ ] **LANG4 標準答案**：fixtures 加粵語、韓文的會議，`util/` 加語言檔的結果
 - [ ] **LANG5 Windows**（design-windows §11.9）：同 LANG1、LANG3，dotnet test 全過；虛擬機匯入韓文、粵語的合成會議，快速辨識（SenseVoice）、選單、匯出
 - [ ] **LANG6 後台的統計欄位**（R63.7）：`workers/usage` 加 `lang_yue`、`lang_ko` 和 migration；部署要使用者（同 E6）
 

@@ -12,15 +12,19 @@ public sealed record TemplateDefinition(string Description, List<string> Section
     /// <summary>內建段落：summary、decisions、actionItems、openQuestions、topics</summary>
     public static readonly string[] BuiltinSectionIds = ["summary", "decisions", "actionItems", "openQuestions", "topics"];
 
-    /// <summary>段落名稱：介面用介面語言，提示詞用會議語言</summary>
-    public static string SectionLabel(string id, MeetingLanguage language) => id switch
+    /// <summary>段落名稱：介面用介面語言，提示詞用會議語言；prompt：提示詞裡用（一般語言不查字串表，M§41.1）</summary>
+    public static string SectionLabel(string id, MeetingLanguage language, bool prompt = false)
     {
-        "summary" => language.Text("摘要", "Summary", "要約"),
-        "decisions" => language.Text("決議", "Decisions", "決定事項"),
-        "actionItems" => language.Text("待辦", "Action items", "ToDo"),
-        "openQuestions" => language.Text("未決問題", "Open questions", "未決事項"),
-        _ => language.Text("議題詳細", "Topics", "議題ごとの詳細"),
-    };
+        string pick(string zh, string en, string ja) => prompt ? language.Prompt(zh, en, ja) : language.Text(zh, en, ja);
+        return id switch
+        {
+            "summary" => pick("摘要", "Summary", "要約"),
+            "decisions" => pick("決議", "Decisions", "決定事項"),
+            "actionItems" => pick("待辦", "Action items", "ToDo"),
+            "openQuestions" => pick("未決問題", "Open questions", "未決事項"),
+            _ => pick("議題詳細", "Topics", "議題ごとの詳細"),
+        };
+    }
 
     public bool Includes(string section) => Sections.Contains(section);
 
@@ -157,8 +161,9 @@ public static class BuiltinTemplates
     /// <summary>整理時用的內容：內建範本跟著會議語言，自訂範本照使用者寫的</summary>
     public static TemplateDefinition DefinitionFor(this TemplateRecord t, MeetingLanguage language)
     {
-        if (t.Builtin && language == MeetingLanguage.En && English.TryGetValue(t.Id, out var e)) return e.Definition;
-        if (t.Builtin && language == MeetingLanguage.Ja && Japanese.TryGetValue(t.Id, out var j)) return j;
+        // 依語言用哪一份（M§41.2）：一般語言用英文版，粵語用中文版
+        if (t.Builtin && language.Base() == PromptBase.En && English.TryGetValue(t.Id, out var e)) return e.Definition;
+        if (t.Builtin && language.Base() == PromptBase.Ja && Japanese.TryGetValue(t.Id, out var j)) return j;
         return TemplateDefinition.Decode(t.Definition);
     }
 }

@@ -1,0 +1,75 @@
+{
+  "bookmarks" : [
+    {
+      "label" : "",
+      "time" : 18
+    }
+  ],
+  "channels" : "both",
+  "durationSeconds" : 310,
+  "folder" : "",
+  "language" : "yue",
+  "meetingDate" : "2026-11-03",
+  "notes" : {
+    "actionItems" : [
+      {
+        "due" : "2026-11-05",
+        "owner" : "李嘉欣",
+        "task" : "撰寫還原步驟",
+        "time" : "00:18"
+      }
+    ],
+    "custom" : [
+
+    ],
+    "decisions" : [
+
+    ],
+    "openQuestions" : [
+
+    ],
+    "reviewItems" : [
+      {
+        "question" : "「嘉欣」是李嘉欣嗎？",
+        "time" : "00:06",
+        "yesNo" : true
+      }
+    ],
+    "summary" : [
+      {
+        "text" : "已部署到測試環境，暫無重大問題",
+        "time" : "00:06"
+      }
+    ],
+    "title" : "Lumio 進度週會",
+    "topics" : [
+      {
+        "points" : [
+          {
+            "text" : "加入 Redis 快取，平均回應約 200 毫秒",
+            "time" : "00:12"
+          }
+        ],
+        "start" : "00:12",
+        "title" : "效能"
+      }
+    ]
+  },
+  "notesBy" : "claude",
+  "participants" : "陳家豪、李嘉欣",
+  "sourceFilename" : "2026-11-03 產品週會（廣東話）.m4a",
+  "speakers" : [
+    {
+      "idx" : 1,
+      "name" : "陳家豪"
+    },
+    {
+      "idx" : 2,
+      "name" : "說話者 2"
+    }
+  ],
+  "templateId" : "general",
+  "title" : "",
+  "titleLocked" : false,
+  "userNotes" : "[00:20] 記得問 Redis 嘅費用"
+}

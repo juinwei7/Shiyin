@@ -322,10 +322,19 @@ public sealed class AppSettings
     /// <summary>新會議的會議語言（M§16.3）；沒設定時跟著介面語言</summary>
     public MeetingLanguage DefaultMeetingLanguage => MeetingLanguages.Parse(String(DefaultMeetingLanguageKey)) ?? SystemDefaultLanguage;
 
-    /// <summary>同 Mac 的 systemDefault：英文介面而且 Windows 的語言是日文時用日文，其他跟著介面</summary>
-    public static MeetingLanguage SystemDefaultLanguage =>
-        !L.English ? MeetingLanguage.Zh
-        : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ja" ? MeetingLanguage.Ja : MeetingLanguage.En;
+    /// <summary>
+    /// 同 Mac 的 systemDefault：英文介面而且 Windows 的語言是語言檔裡中文、英文以外的語言（日文、韓文）時用那個語言，其他跟著介面。
+    /// 香港的中文仍然預設中文，粵語要自己選（M§41.6）
+    /// </summary>
+    public static MeetingLanguage SystemDefaultLanguage
+    {
+        get
+        {
+            if (!L.English) return MeetingLanguage.Zh;
+            var first = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            return MeetingLanguages.All.FirstOrDefault(l => l != MeetingLanguage.En && l.Profile.Family != "zh" && l.Code == first, MeetingLanguage.En);
+        }
+    }
 }
 
 /// <summary>會議內容的文字大小（R59.3、M§38.5）：七段 85%～200%，設定存的是 −1～5（0 是 100%），同 Mac</summary>

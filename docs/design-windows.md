@@ -401,6 +401,18 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **DEBUG 控制通道**：`adddoc <會議 id> <檔案>…`、`drop <檔案>…`、`removedoc <文件 id>`、`docread <檔案> <zh|en|ja> <輸出.json>`、`docbanner <會議 id> dismiss|resummarize`；`state` 多 `documents`、`readingDocuments`、`documentsChanged`（同 M§39.7）。
 - **標準答案**：`documents/`（分配、整理文字、檔名、路徑、pptx 的 Target、`shared/golden/documents/` 測試檔讀出來的結果）、提示詞的 `*-documents`、`db/`、`package/` 的 `documents.json`。PDF、文字辨識兩邊引擎不同，不比標準答案：Windows 的測試用 Mac 上也跑得到的 PdfPig 讀測試用的 PDF，檢查每頁的文字有沒有讀到。
 
+### 11.9 更多會議語言（R63～R65，M§41）
+
+- 語言檔 `Resources/languages.json` 內嵌在 Shiyin.Core（`LogicalName="languages.json"`，同 opencc 的字表），`LanguageProfiles` 讀一次。`MeetingLanguage` 從 enum 改成以代碼為身分的 `readonly struct`（`default` 等於中文，原本 enum 的預設值就是中文）：`MeetingLanguage.Zh／En／Ja` 這些靜態欄位留著，`switch` 的常數比對都改成問 `Profile`。擴充方法照舊（`Code`、`Parse`、`Text`、`Name`、`UiName`、`WhisperCode`、`DefaultSpeaker`），加上 `Prompt`、`Format`、`Base`、`UsesTurbo`，意思同 Mac（M§41.1）。
+- 跟 Mac 不同的地方：
+  - 即時逐字稿、快速辨識是 SenseVoice（§7）：語言用 `live.windows`（粵語 `yue`、韓文 `ko`），輸出照 `live.windowsConvert` 轉（中文 `s2twp`、粵語 `s2tw`）再套 `scriptFixes`。粵語的 Qwen 還沒下載好時用快速辨識（Mac 是 macOS 內建）。
+  - 匯出：HTML 的字型讀 `fonts.htmlWindows`（`ExportFonts.Mac`／`Windows` 改成從語言檔挑哪一組），Word 讀 `fonts.docx`；標題字型 `fonts.titleWindows`、內容的語言 `fonts.contentWindows`。
+  - 文字辨識讀 `ocr.windows`，`windowsUserProfile` 是 true 的語言（英文）找不到時用使用者的語言設定。
+  - 星期幾：中文、英文、日文照舊用寫死的表（跟 Mac 的系統格式相同）；一般語言用 `locale` 的 `CultureInfo`（韓文「목요일」，跟 Mac 一樣）。
+  - 預設會議語言：英文介面而且 Windows 的語言是語言檔裡中文、英文以外的語言時用那個語言（`TwoLetterISOLanguageName` 比對代碼）。
+- 標準答案：`util/languages.json`（每種語言推出來的名稱、說話者、提示詞、長度、星期、字串表、簡轉繁的修正）由 `UtilTests.LanguageProfiles` 逐項比；粵語、韓文的測試會議走跟中文、英文、日文同樣的提示詞、匯出、封包測試。
+- `sync.sh` 同步到虛擬機時要帶 `Resources/languages.json`（漏了 Shiyin.Core 建置不過）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

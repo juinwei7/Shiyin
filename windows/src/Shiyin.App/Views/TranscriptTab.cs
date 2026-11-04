@@ -117,6 +117,14 @@ public sealed class TranscriptTab
         return root;
     }
 
+    /// <summary>重新轉錄會用的模型（M§41.3）</summary>
+    string UpgradeText(MeetingLanguage language) => ModelStore.Transcription(language, host.Settings.TranscriptionEngine) switch
+    {
+        ModelStore.Model.Japanese => L.F("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用%@轉錄模型重新轉錄，通常比較準。", MeetingLanguages.UiNames("turbo")),
+        ModelStore.Model.Qwen => L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Qwen3-ASR 重新轉錄，通常比較準。"),
+        _ => L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。"),
+    };
+
     MeetingLanguage Language => detail?.Meeting.MeetingLanguage ?? MeetingLanguage.Zh;
     bool Busy => window.State.DetailStatus?.IsActive == true;
 
@@ -172,9 +180,7 @@ public sealed class TranscriptTab
             });
         // 模型下載好之前用快速辨識轉錄的會議（M§21.17）
         if (host.Controller.CanUpgradeTranscript(d.Meeting) && !Busy)
-            bars.Children.Add(Bar(Ui.Bar(null, Ui.Text(d.Meeting.MeetingLanguage == MeetingLanguage.Ja
-                    ? L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用日文轉錄模型重新轉錄，通常比較準。")
-                    : L.T("這場會議是在模型下載好之前，用快速辨識轉錄的。可以用 Breeze 重新轉錄，通常比較準。"), 13),
+            bars.Children.Add(Bar(Ui.Bar(null, Ui.Text(UpgradeText(d.Meeting.MeetingLanguage), 13),
                 Ui.Button(L.T("重新轉錄"), () => host.Controller.Retranscribe(id), accent: true, tooltip: L.T("逐字稿裡改過的文字會換成新的逐字稿，說話者的名字會留著")))));
         // 說話者可能分得不夠（M§24.5）
         if (d.ShowsSpeakerHint && !Busy)
