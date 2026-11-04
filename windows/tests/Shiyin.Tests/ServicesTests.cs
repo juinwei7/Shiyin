@@ -173,6 +173,41 @@ public sealed class ServicesTests : IDisposable
     }
 
     [Fact]
+    public void LimitProblemCoversCliWordings()
+    {
+        // R62.1：Claude Code、Codex 的各種用量上限（2026-10-31 使用者電腦上的「weekly limit」原本被當成其他）
+        string[] limits = [
+            "You've hit your weekly limit · resets Nov 2 at 9pm (Asia/Taipei)",
+            "You've hit your limit · resets 3pm (Asia/Taipei)",
+            "You've hit your session limit ∙ resets 11pm",
+            "You've hit your Opus limit",
+            "5-hour limit reached ∙ resets 3pm",
+            "Opus weekly limit reached",
+            "Weekly limit · resets Nov 9 at 10am",
+            "Claude AI usage limit reached|1700000000",
+            "ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro) or try again in 4 days 2 hours.",
+            "Credit balance is too low",
+            "stream error: exceeded retry limit, last status: 429 Too Many Requests",
+            "You exceeded your current quota, please check your plan and billing details.",
+            "{\"error\":{\"code\":\"insufficient_quota\"}}",
+        ];
+        foreach (var text in limits) Assert.True(LLMException.IsLimitProblem(text), text);
+        string[] others = [
+            "API Error: 500 Internal Server Error",
+            "API Error: Overloaded",
+            "Not logged in · Please run /login",
+            "claude 沒有回傳結果（結束代碼 1）",
+            "This prompt is too long. Please shorten it.",
+            "We hit your target. The limit is fine.",
+        ];
+        foreach (var text in others) Assert.False(LLMException.IsLimitProblem(text), text);
+        // 找不到哪一行是額度用完時只有第一行
+        Assert.Equal("Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。",
+            LLMException.CliLimited(LLMProvider.Codex, "").Message);
+        Assert.Equal(LLMErrorKind.Limited, LLMException.CliLimited(LLMProvider.Claude, "x").Kind);
+    }
+
+    [Fact]
     public void ErrorKindsSayWhichTranscriptionFailure()
     {
         // 回報問題、log 寫出轉錄失敗是哪一種（R54.4、design-windows §12.7）：原本只看得到「WhisperException」

@@ -356,6 +356,43 @@ public sealed class LLMTests : IDisposable
         finally { TempDirectory.Delete(dir); }
     }
 
+    /// <summary>額度用完（R62、M§40）：claude 的每週額度、codex 的 usage limit 拋 Limited，訊息兩行（怎麼辦＋CLI 的原文）</summary>
+    [Fact]
+    public async Task CliLimitsSayWhatToDo()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var dir = TempDirectory.Create();
+        try
+        {
+            var claude = Path.Combine(dir, "claude");
+            await File.WriteAllTextAsync(claude, "#!/bin/sh\ncat > /dev/null\n"
+                + "echo '{\"type\":\"result\",\"is_error\":true,\"result\":\"You\\u0027ve hit your weekly limit · resets Nov 2 at 9pm (Asia/Taipei)\"}'\nexit 1\n");
+            var codex = Path.Combine(dir, "codex");
+            // codex 的 stderr 前面有別的 log（含提示詞裡剛好有的「rate limit」），錯誤在最後一行
+            await File.WriteAllTextAsync(codex, "#!/bin/sh\ncat > /dev/null\n"
+                + "echo 'OpenAI Codex v0.98.0' >&2\necho 'user: we discussed the rate limit of the old API' >&2\n"
+                + "echo \"ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro) or try again in 4 days 2 hours.\" >&2\nexit 1\n");
+            foreach (var script in new[] { claude, codex })
+                File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+            var e = await Assert.ThrowsAsync<LLMException>(() =>
+                new LLMClient(new MemoryKeys([]), new FixedTool(claude), new ProcessRunner(), http).Generate(LLMProvider.Claude, "", "S", "P", CancellationToken.None));
+            Assert.Equal(LLMErrorKind.Limited, e.Kind);
+            Assert.Equal("LLMError.limited", e.LogSummary);
+            Assert.Equal("Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。\n"
+                + "Claude Code 的訊息：You've hit your weekly limit · resets Nov 2 at 9pm (Asia/Taipei)", e.Message);
+            Assert.False(LLMException.IsLoginMessage(e.Message));
+
+            e = await Assert.ThrowsAsync<LLMException>(() =>
+                new LLMClient(new MemoryKeys([]), new FixedTool(codex), new ProcessRunner(), http).Generate(LLMProvider.Codex, "", "S", "P", CancellationToken.None));
+            Assert.Equal(LLMErrorKind.Limited, e.Kind);
+            Assert.Equal("Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。\n"
+                + "Codex 的訊息：ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro) or try again in 4 days 2 hours.", e.Message);
+            Assert.False(LLMException.IsLoginMessage(e.Message));
+        }
+        finally { TempDirectory.Delete(dir); }
+    }
+
     static string MeetingNotesSchema => Model.MeetingNotes.JsonSchema;
 
     sealed class FixedTool(string path) : IToolLocator

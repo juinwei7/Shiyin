@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
@@ -126,12 +127,30 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
         errorKind is not null && new[] { "LLMError.notInstalled", "LLMError.notLoggedIn", "LLMError.missingKey", "LLMError.rejected", "LLMError.notConfigured" }
             .Any(errorKind.StartsWith);
 
-    /// <summary>claude、codex 的輸出是不是用量上限（M§34.4）</summary>
+    /// <summary>claude、codex 的輸出是不是用量上限（R62.1、M§40.1）：「Claude AI usage limit reached」「You've hit your usage limit」
+    /// 「You've hit your weekly limit · resets Nov 2 at 9pm」「Credit balance is too low」「429 Too Many Requests」</summary>
     public static bool IsLimitProblem(string text)
     {
         var t = text.ToLowerInvariant();
-        string[] markers = ["usage limit", "rate limit", "limit reached", "rate_limit"];
-        return markers.Any(t.Contains);
+        string[] markers = ["usage limit", "rate limit", "limit reached", "rate_limit",
+            "credit balance is too low", "insufficient_quota", "exceeded your current quota", "too many requests"];
+        if (markers.Any(t.Contains)) return true;
+        // 「hit your limit」「hit your weekly limit」「hit your Opus limit」；「… limit · resets 3pm」
+        return Regex.IsMatch(t, @"hit your[^.\n]{0,30}limit") || Regex.IsMatch(t, @"limit\W{1,5}resets");
+    }
+
+    /// <summary>claude、codex 的額度用完（R62.2、M§40.2）：說是哪個工具、怎麼辦，下一行附上 CLI 的原文（裡面有什麼時候恢復，D137）</summary>
+    public static LLMException CliLimited(LLMProvider provider, string output)
+    {
+        var advice = provider == LLMProvider.Codex
+            ? L.T("Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。")
+            : L.T("Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。");
+        // 最後一行符合的：codex 的 stderr 前面可能有別的 log，錯誤在最後
+        var line = output.Split('\n').Select(l => l.Trim()).LastOrDefault(IsLimitProblem);
+        if (line is null) return Limited(advice);
+        var original = line.Length > 300 ? line[..300] : line;
+        var source = provider == LLMProvider.Codex ? L.F("Codex 的訊息：%@", original) : L.F("Claude Code 的訊息：%@", original);
+        return Limited(advice + "\n" + source);
     }
     public static LLMException BadOutput(string detail) => new(LLMErrorKind.BadOutput, detail);
 

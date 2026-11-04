@@ -326,14 +326,14 @@ sealed class ClaudeCli(LLMClient client, string model) : ILLMBackend
             {
                 var detail = result.StderrTail(500);
                 if (LLMException.IsLoginProblem(detail + result.Stdout)) throw LLMException.NotLoggedIn("claude");
-                if (LLMException.IsLimitProblem(detail + result.Stdout)) throw LLMException.Limited(detail.Length == 0 ? result.Stdout[..Math.Min(500, result.Stdout.Length)] : detail);
+                if (LLMException.IsLimitProblem(detail + result.Stdout)) throw LLMException.CliLimited(LLMProvider.Claude, detail + "\n" + result.Stdout);
                 throw LLMException.Failed(detail.Length == 0 ? L.F("claude 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail);
             }
             if (obj["is_error"]?.GetValueKind() == JsonValueKind.True || obj["structured_output"] is null)
             {
                 var message = obj["result"]?.GetValueKind() == JsonValueKind.String ? obj["result"]!.GetValue<string>() : result.StderrTail(500);
                 if (LLMException.IsLoginProblem(message)) throw LLMException.NotLoggedIn("claude");
-                if (LLMException.IsLimitProblem(message)) throw LLMException.Limited(message.Length > 500 ? message[..500] : message);
+                if (LLMException.IsLimitProblem(message)) throw LLMException.CliLimited(LLMProvider.Claude, message);
                 throw LLMException.Failed(message.Length > 500 ? message[..500] : message);
             }
             return obj["structured_output"]!.ToJsonString();
@@ -375,7 +375,7 @@ sealed class CodexCli(LLMClient client, string model) : ILLMBackend
             {
                 var detail = result.StderrTail(500);
                 if (LLMException.IsLoginProblem(detail)) throw LLMException.NotLoggedIn("codex");
-                if (LLMException.IsLimitProblem(detail)) throw LLMException.Limited(detail);
+                if (LLMException.IsLimitProblem(detail)) throw LLMException.CliLimited(LLMProvider.Codex, detail);
                 var message = detail.Length == 0 ? L.F("codex 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail;
                 // 桌面版附的 codex 出錯：建議另外裝 CLI（R55.4）
                 if (tool.DesktopApp is { } app)

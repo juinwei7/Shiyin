@@ -284,6 +284,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 引導的整理工具這一步、設定視窗的整理工具頁、會議頁的提示和失敗橫幅照 M§34.3、M§34.4；沒安裝的 CLI 在下拉選單裡 `IsEnabled = false`。
 - `LLMError` 多 `Rejected`、`Limited`、`Unreachable`、`NotConfigured`；暫停只在記憶體，指紋是 provider、模型、OpenAI 相容 API 的網址、認證管理員的寫入次數。
 - 統計的 `errorDetail` 同 M§34.5（`UsageStats.cs`），測試比對 Mac 產生的 JSON 鍵。
+- 額度用完（R62、M§40）：`LLMException.IsLimitProblem` 的說法、`LLMException.CliLimited` 的兩行訊息同 Mac；`ServicesTests` 列出各種說法，`LLMTests` 用假的 claude、codex 腳本測。
 
 ## 11. 介面
 

@@ -98,7 +98,9 @@ public sealed class Notifier
         var launch = NotificationLinks.OpenMeeting(job.MeetingId);
         if (error is not null)
         {
-            var message = error.Message.Length > 60 ? error.Message[..60] : error.Message;
+            // 只取第一行（M§40.2）：額度用完的第二行是 CLI 的原文，放不下就不要擠進來
+            var firstLine = error.Message.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? error.Message;
+            var message = firstLine.Length > 60 ? firstLine[..60] : firstLine;
             Show(launch, job.Kind == JobKind.Transcribe ? L.T("轉錄失敗") : L.T("整理失敗"), L.F("%@：%@", title, message));
         }
         else if (job.Kind == JobKind.Transcribe) Show(launch, L.T("轉錄完成"), title);

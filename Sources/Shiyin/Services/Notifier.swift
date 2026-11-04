@@ -102,7 +102,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let title = meeting.displayTitle
         if let error {
             content.title = job.kind == .transcribe ? String(localized: "轉錄失敗") : String(localized: "整理失敗")
-            content.body = String(localized: "\(title)：\(String(error.localizedDescription.prefix(60)))")
+            // 只取第一行（design §40.2）：額度用完的第二行是 CLI 的原文，放不下就不要擠進來
+            let firstLine = error.localizedDescription.split(whereSeparator: \.isNewline).first.map(String.init) ?? error.localizedDescription
+            content.body = String(localized: "\(title)：\(String(firstLine.prefix(60)))")
         } else if job.kind == .transcribe {
             content.title = String(localized: "轉錄完成")
             content.body = title

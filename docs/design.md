@@ -1789,6 +1789,34 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
   - 資料庫：`schema.sql` 多 `documents`；`db` 的步驟多加入文件、列出、刪除文件、刪除會議時一起刪。
   - 封包：有文件的會議多 `documents.json`。
 
+## 40. 額度用完認得出來、說清楚（R62，D137）
+
+### 40.1 認得出來（R62.1）
+
+- `LLMError.isLimitProblem(_:)`（Windows `LLMException.IsLimitProblem`）：轉小寫後含下面任一個就是用量上限：
+  - 原本的：`usage limit`、`rate limit`、`rate_limit`、`limit reached`（「Claude AI usage limit reached」「5-hour limit reached」「You've hit your usage limit」）
+  - Claude Code 的新說法：`hit your … limit`（`hit your` 和 `limit` 之間最多 30 個字、不跨句：「hit your limit」「hit your weekly limit」「hit your Opus limit」）、`limit · resets`（`limit` 和 `resets` 之間只有空白和符號）
+  - 餘額不足、請求太多：`credit balance is too low`、`insufficient_quota`、`exceeded your current quota`、`too many requests`
+- 判斷的順序不變：先看是不是登入問題（`isLoginProblem`），再看是不是用量上限，都不是才算 `failed`。
+- 統計照 §34.5 記成 `limited`，沒有新欄位。
+
+### 40.2 說清楚（R62.2）
+
+- `LLMError.cliLimited(_ provider: LLMProvider, output: String)`（Windows `LLMException.CliLimited`）回傳 `.limited(訊息)`。`ClaudeCLI`、`CodexCLI` 原本拋 `.limited(原文)` 的三個地方改用它（Windows 的 `ClaudeCli`、`CodexCli` 一樣）。
+- 訊息兩行：
+  - 第一行：「Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。」（Codex：「Codex 的用量額度用完了，……先換成 Claude Code 或 API。」）中文不超過 60 個字，通知放得下整句。
+  - 第二行：「Claude Code 的訊息：<原文>」。原文是輸出裡**最後一行**符合 `isLimitProblem` 的（codex 的 stderr 前面可能有別的 log，錯誤在最後），去掉前後空白、最多 300 字；找不到這一行時沒有第二行。
+- 通知（`Notifier.jobFinished`，Windows `Notifier.JobFinished`）：失敗的通知內容改成只取錯誤訊息的**第一行**，再取前 60 個字（原本是整段的前 60 個字，第二行的開頭會被擠進來）。額度用完的通知就是第一行整句，點通知打開會議，橫幅有第二行。其他錯誤大多只有一行，不受影響。
+- 不自己換算恢復時間（D137）。訊息裡沒有「auth login」這類字，`isLoginMessage` 不會把它當成登入問題（橫幅不會出現「重新登入」）。
+- API 的 429（`APIRequest`）不變（R62.4）。
+
+### 40.3 DEBUG、驗證
+
+- `-debugToolDirectory <資料夾>`（只在 DEBUG）：`Paths.locateTool` 找 claude、codex 時先找這個資料夾，用假的 CLI 測，不動 `~/.local/bin` 裡真的 claude。
+- 假的 claude：`auth status --json` 回 `{"loggedIn": true, …}`；`-p` 讀完 stdin、印出 `{"type":"result","is_error":true,"result":"You've hit your weekly limit · resets Nov 2 at 9pm (Asia/Taipei)"}`、結束代碼 1。假的 codex：`login status` 回已登入；`exec` 在 stderr 印幾行 log、最後一行是「ERROR: You've hit your usage limit. … try again in 4 days 2 hours.」、結束代碼 1。
+- 驗證（Mac）：DEBUG 版、暫存 `SHIYIN_HOME`、`-debugToolDirectory` 指到假的 CLI，`llmprovider claude` 匯入一場：`jobs.error_kind` 是 `LLMError.limited`，失敗橫幅（`screencapture -l`）照 §40.2 兩行、有「重試」、沒有「重新登入」，通知（`state` 的 `notifications`）是第一行整句，`shiyinctl usage` 的 `errorDetail` 是 `limited`（DEBUG 版要先 `usageurl http://127.0.0.1:<埠>/…` 才會記統計）；英文介面看一次；`llmprovider codex` 再一次。
+- 驗證（Windows）：`ServicesTests` 列出 R62.1 的各種說法（含不該算的：一般的失敗、登入問題），`LLMTests` 用假的 claude、codex 腳本（Mac 上跑）確認拋 `Limited`、訊息兩行。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -1872,5 +1900,6 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 | D134 | 拾音自己讀出文字（PDFKit、Vision、自己解 docx／pptx），整理工具只收到文字（§39.2） | 把檔案交給整理工具：claude CLI 刻意不給工具（`--tools ""`），codex 是唯讀沙盒；API 各家上傳檔案的方式都不同（Anthropic 的 PDF、OpenAI 的 files、Gemini 的 file API），OpenAI 相容 API 和企業伺服器沒有；換整理工具結果就不一樣。直接送 PDF 給有視覺能力的模型：只有部分 API 支援，費用高很多 |
 | D135 | 一場會議的文件合計 40,000 字，超過時平均分配、截掉每份的後面（R61.7、§39.3） | 不設上限：本機模型（Ollama）的長度很短，雲端的費用跟著文件長度漲，一份 200 頁的規格書可能比逐字稿長十倍。先來先送：一份很長的規格書會把後面加的議程擠掉。先請 AI 挑出跟會議有關的段落：準一點，但多一次呼叫、多等一段時間；先看實際用的人會不會碰到上限 |
 | D136 | docx、pptx 用 `unzip -p` 取出 XML、自己讀，不用 `NSAttributedString`（§39.2） | `NSAttributedString` 讀 docx：讀不了 pptx，表格、文字方塊的寫法不受控制，Windows（OpenXml）的結果對不上，標準答案就比不了；自己讀的規則兩邊一樣，用同一組測試檔比對 |
+| D137 | 額度用完時附上 CLI 的原文，不自己換算恢復時間（R62.2、§40；2026-11-04） | 解析「resets Nov 2 at 9pm (Asia/Taipei)」換成「11/2 晚上 9 點恢復」：Claude Code、Codex 的說法常改（這次就是新說法沒認出來），日期、時區的寫法不一，解析失敗反而少了資訊。只寫「額度用完了」：看不出要等多久、要不要先換整理工具 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

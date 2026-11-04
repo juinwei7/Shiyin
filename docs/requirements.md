@@ -872,3 +872,23 @@ Claude 桌面版也會自己下載一份 Claude Code，但那是桌面版內部�
 - Keynote、Pages、Excel、舊版 Word（doc）、rtf、Google 文件的連結：請使用者匯出成 PDF
 - 紀錄的出處點了打開文件的那一頁；匯出的會議紀錄附上文件清單
 - iPhone
+
+## 42. 額度用完時說清楚（2026-11-04，匿名統計發現）
+
+匿名統計：Mac 4.2.3 的整理有 38% 失敗（164 次裡 62 次），幾乎都歸在「其他」，從統計看不出原因。使用者自己的電腦 10/31～11/1 五次整理失敗，全是 Claude Code 回「You've hit your weekly limit · resets Nov 2 at 9pm (Asia/Taipei)」：拾音只認得「usage limit」「rate limit」「limit reached」，每週額度這類新的說法被當成「其他」。畫面上只有一行英文，看不出是額度用完、什麼時候恢復、可以先換別的整理工具。
+
+2026-11-04 使用者決定先做（「做吧」）。
+
+### R62 額度用完時認得出來、說清楚（P0）
+
+- R62.1 Claude Code、Codex 回報用量上限的各種說法都算「額度或用量上限」（R46.1 的其他、R47.1 的統計種類），包括：每週額度、工作階段（5 小時）的額度、Opus 的額度（「You've hit your weekly limit」「You've hit your limit · resets 3pm」「5-hour limit reached」）；餘額不足（「Credit balance is too low」、OpenAI 的「exceeded your current quota」）；請求太多（「429 Too Many Requests」）。原本認得的說法照舊。
+- R62.2 額度用完時，會議頁的失敗橫幅、提問的錯誤說：哪個整理工具的額度用完了、等恢復後再試、或到設定 → 整理工具先換別的（Claude Code 建議換 Codex 或 API，Codex 建議換 Claude Code 或 API）；下一行附上 CLI 自己的那句話（裡面有什麼時候恢復）。通知只放第一句（通知只顯示前 60 個字，放不下第二行）。
+- R62.3 額度用完照舊不算設定問題（R46.1）：橫幅有「重試」，不暫停自動整理。
+- R62.4 API（Anthropic、OpenAI、Gemini、OpenAI 相容）的 HTTP 429 照舊（原本就說是超過用量限制）。
+- R62.5 Mac、Windows 一起做（R28）。
+
+### 不做（這一版）
+
+- 自己換算恢復的時間（「11/2 晚上 9 點恢復」）、到時間自動重試：CLI 的說法常常改，日期、時區的寫法不一（D137）
+- 額度用完後暫停自動整理：每週額度要等好幾天，暫停後額度恢復了，中間的會議也不會自動補整理；先看統計裡額度用完的次數再決定
+- 把「其他」拆得更細（HTTP 狀態碼、CLI 的結束碼、哪一步失敗）：下一步另外做
