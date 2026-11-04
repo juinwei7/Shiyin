@@ -51,6 +51,13 @@ enum Paths {
         #if DEBUG
         // -debugNoCLI YES：當成沒有安裝 claude、codex（包括桌面版附的），在裝了 CLI 的電腦上測（design §19.6）
         if ["claude", "codex"].contains(name) && UserDefaults.standard.bool(forKey: "debugNoCLI") { return nil }
+        // -debugToolDirectory <資料夾>：先找這個資料夾，用假的 claude、codex 測（design §40.3）
+        if let debugDir = UserDefaults.standard.string(forKey: "debugToolDirectory"), !debugDir.isEmpty {
+            let path = (debugDir as NSString).appendingPathComponent(name)
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return ToolLocation(url: URL(fileURLWithPath: path), extraPath: [], desktopApp: nil, appURL: nil)
+            }
+        }
         // -debugOnlyDesktopCLI YES：不看使用者自己裝的，只找桌面版附的（design §37.4）
         let skipInstalled = UserDefaults.standard.bool(forKey: "debugOnlyDesktopCLI")
         #else

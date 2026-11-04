@@ -120,10 +120,31 @@ enum LLMError: LocalizedError {
             .contains { errorKind.hasPrefix($0) }
     }
 
-    /// claude、codex 的輸出是不是用量上限（「Claude AI usage limit reached」「You've hit your usage limit」）
+    /// claude、codex 的輸出是不是用量上限（R62.1、design §40.1）：「Claude AI usage limit reached」「You've hit your usage limit」
+    /// 「You've hit your weekly limit · resets Nov 2 at 9pm」「Credit balance is too low」「429 Too Many Requests」
     static func isLimitProblem(_ text: String) -> Bool {
         let t = text.lowercased()
-        return ["usage limit", "rate limit", "limit reached", "rate_limit"].contains { t.contains($0) }
+        let markers = ["usage limit", "rate limit", "limit reached", "rate_limit",
+                       "credit balance is too low", "insufficient_quota", "exceeded your current quota", "too many requests"]
+        if markers.contains(where: { t.contains($0) }) { return true }
+        // 「hit your limit」「hit your weekly limit」「hit your Opus limit」；「… limit · resets 3pm」
+        return t.contains(#/hit your[^.\n]{0,30}limit/#) || t.contains(#/limit\W{1,5}resets/#)
+    }
+
+    /// claude、codex 的額度用完（R62.2、design §40.2）：說是哪個工具、怎麼辦，下一行附上 CLI 的原文（裡面有什麼時候恢復，D137）
+    static func cliLimited(_ provider: LLMProvider, output: String) -> LLMError {
+        let advice = provider == .codex
+            ? String(localized: "Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。")
+            : String(localized: "Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。")
+        // 最後一行符合的：codex 的 stderr 前面可能有別的 log，錯誤在最後
+        guard let line = output.split(whereSeparator: \.isNewline)
+            .map({ $0.trimmingCharacters(in: .whitespaces) })
+            .last(where: { isLimitProblem($0) }) else { return .limited(advice) }
+        let original = String(line.prefix(300))
+        let source = provider == .codex
+            ? String(localized: "Codex 的訊息：\(original)")
+            : String(localized: "Claude Code 的訊息：\(original)")
+        return .limited(advice + "\n" + source)
     }
 
     /// 工作紀錄的失敗訊息是不是登入問題：CLI 的訊息（isLoginProblem），加上桌面版附的 codex 的「打開 ChatGPT 重新登入」（沒有終端機指令，R55.3）

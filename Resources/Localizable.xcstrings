@@ -682,6 +682,28 @@
     "Claude": {
       "extractionState": "manual"
     },
+    "Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code is out of usage until it resets. Try again then, or switch to Codex or an API in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "Claude Code 的訊息：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code says: %@"
+          }
+        }
+      }
+    },
     "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。": {
       "extractionState": "manual",
       "localizations": {
@@ -722,6 +744,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude (claude CLI)"
+          }
+        }
+      }
+    },
+    "Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex is out of usage until it resets. Try again then, or switch to Claude Code or an API in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "Codex 的訊息：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex says: %@"
           }
         }
       }
