@@ -80,7 +80,7 @@ public sealed partial class AppDatabase
             else
             {
                 // 沒把握：不帶入，存成建議，在待確認問「說話者 N 是 X 嗎？」（M§27）
-                var reason = language.Text($"聲音跟之前的{name}很像", $"Sounds like {name} from earlier meetings", $"以前の{name}の声に似ています");  // l10n-skip：會議語言的原因
+                var reason = language.Format("聲音跟之前的%@很像", "Sounds like %@ from earlier meetings", "以前の%@の声に似ています", name);  // l10n-skip：會議語言的原因
                 db.Execute("""
                     UPDATE speakers SET suggested_name = ?, suggestion_reason = ?, suggestion_time = NULL
                     WHERE meeting_id = ? AND idx = ? AND name_source = 'default'

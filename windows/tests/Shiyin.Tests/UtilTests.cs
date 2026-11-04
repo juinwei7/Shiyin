@@ -3,6 +3,7 @@ using Shiyin.IO;
 using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Text;
+using Shiyin.Transcribe;
 using Xunit;
 
 namespace Shiyin.Tests;
@@ -27,6 +28,43 @@ public class UtilTests
     }
 
     static IEnumerable<JsonElement> Items(string path) => Golden.ExpectedJson(path).EnumerateArray();
+
+    /// <summary>語言檔推出來的東西（M§41.8）：每種語言的名稱、預設說話者、轉錄的參數、給人看的字、提示詞的字，跟 Mac 逐項相同</summary>
+    [Fact]
+    public void LanguageProfiles()
+    {
+        string[] glossary = ["Lumio", "Redis", "Kubernetes"];
+        var expected = Items("util/languages.json").ToList();
+        Assert.Equal(expected.Select(e => e.Str("code")).ToList(), MeetingLanguages.All.Select(l => l.Code).ToList());
+        foreach (var item in expected)
+        {
+            var l = MeetingLanguages.Parse(item.Str("code"))!.Value;
+            var p = l.Profile;
+            Assert.Equal(item.Str("name"), l.Name());
+            Assert.Equal(item.Strings("uiName"), [p.UiName.Zh, p.UiName.En]);
+            Assert.Equal(item.Str("tier"), p.Tier);
+            Assert.Equal(item.Str("base"), p.Base);
+            Assert.Equal(item.Strings("speaker"), [l.DefaultSpeaker(1), l.DefaultSpeaker(12)]);
+            Assert.Equal(item.Get("isDefault")!.Value.EnumerateArray().Select(b => b.GetBoolean()).ToList(),
+                [SpeakerNames.IsDefault(l.DefaultSpeaker(3)), SpeakerNames.IsDefault(l.DefaultSpeaker(3) + "x")]);
+            Assert.Equal(item.Str("whisper"), l.WhisperCode());
+            Assert.Equal(item.Str("qwen"), QwenRules.LanguageName(l));
+            Assert.Equal(item.Str("detect"), p.Detect);
+            Assert.Equal(item.Str("family"), p.Family);
+            Assert.Equal(item.Get("usesTurbo")!.Value.GetBoolean(), l.UsesTurbo());
+            Assert.Equal(item.Str("whisperPrompt"), WhisperRules.Prompt(glossary, l));
+            Assert.Equal(item.Str("qwenContext"), QwenRules.Context(glossary, l));
+            Assert.Equal(item.Strings("duration"), [TimeFormat.Duration(65, l), TimeFormat.Duration(3600, l), TimeFormat.Duration(3900, l)]);
+            Assert.Equal(item.Str("weekday"), DateText.Weekday("2026-11-04", l));
+            Assert.Equal(item.Strings("text"), [l.Text("摘要", "Summary", "要約"), l.Text("沒有的字", "Not in table", "ない")]);
+            Assert.Equal(item.Strings("prompt"), [l.Prompt("摘要", "Summary", "要約")]);
+            Assert.Equal(item.Strings("format"), [l.Format("「%@」是%@嗎？", "Is “%@” %@?", "「%@」は%@ですか？", "A", "B")]);
+            Assert.Equal(item.Strings("yesNo"), [new YesNoAnswer(true).Text(l), new YesNoAnswer(false, "C").Text(l)]);
+            Assert.Equal(item.Strings("sections"), TemplateDefinition.BuiltinSectionIds.Select(id => TemplateDefinition.SectionLabel(id, l)).ToList());
+            Assert.Equal(item.Strings("promptSections"), TemplateDefinition.BuiltinSectionIds.Select(id => TemplateDefinition.SectionLabel(id, l, prompt: true)).ToList());
+            Assert.Equal(item.Str("script"), p.FixScript(ChineseScript.ToTaiwan("我系陈家豪，唔系好稳定，系统同关系都冇问题，唔该晒，联系我，晒太阳")));
+        }
+    }
 
     [Fact]
     public void SimplifiedToTaiwan()
@@ -54,7 +92,8 @@ public class UtilTests
         foreach (var item in Items("util/notes-decode.json"))
         {
             var input = item.Str("input")!;
-            var notes = input is "zh" or "en" or "ja" ? Golden.Meeting(input).Notes : MeetingNotes.Decode(input);
+            // 會議的 key（zh、en、ja、yue、ko…）是那場會議的紀錄，其他是要解碼的 JSON
+            var notes = Golden.Meetings.Any(m => m.Key == input) ? Golden.Meeting(input).Notes : MeetingNotes.Decode(input);
             if (item.Get("jsonString") is { ValueKind: JsonValueKind.Null })
             {
                 Assert.Null(notes);

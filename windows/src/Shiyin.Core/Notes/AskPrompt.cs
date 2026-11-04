@@ -64,7 +64,7 @@ public static class AskPrompt
     public static string MeetingSystem(MeetingLanguage l, bool documents = false) =>
         documents ? MeetingSystemBase(l) + "\n" + DocumentPrompt.AskRule(l) : MeetingSystemBase(l);
 
-    static string MeetingSystemBase(MeetingLanguage l) => l.Text("""
+    static string MeetingSystemBase(MeetingLanguage l) => l.Prompt("""
         你是會議助理，只根據提供的這場會議的內容（會議紀錄和逐字稿）回答使用者的問題。
 
         規則：
@@ -90,7 +90,7 @@ public static class AskPrompt
         4. 質問と同じ言語で答える。
         """);
 
-    public static string AllSystem(MeetingLanguage l) => l.Text("""
+    public static string AllSystem(MeetingLanguage l) => l.Prompt("""
         你是會議助理，只根據提供的幾場會議的片段回答使用者的問題。每場會議有編號、標題、日期、會議紀錄的摘要，以及跟問題有關的逐字稿片段。
 
         規則：
@@ -116,7 +116,7 @@ public static class AskPrompt
         4. 質問と同じ言語で答える。
         """);
 
-    public static string KeywordsSystem(MeetingLanguage l) => l.Text("""
+    public static string KeywordsSystem(MeetingLanguage l) => l.Prompt("""
         把使用者對會議的問題，轉成用來全文搜尋會議逐字稿的關鍵詞。
 
         規則：
@@ -144,18 +144,18 @@ public static class AskPrompt
                                        IReadOnlyList<DocumentText>? documents = null)
     {
         var l = meeting.MeetingLanguage;
-        var colon = l.Text("：", ": ", "：");
+        var colon = l.Prompt("：", ": ", "：");
         var output = new List<string>
         {
-            l.Text("會議標題", "Meeting title", "会議タイトル") + colon + meeting.DisplayTitle,
-            l.Text("會議日期", "Meeting date", "会議の日付") + colon + meeting.MeetingDate,
+            l.Prompt("會議標題", "Meeting title", "会議タイトル") + colon + meeting.DisplayTitle,
+            l.Prompt("會議日期", "Meeting date", "会議の日付") + colon + meeting.MeetingDate,
         };
         if (meeting.ParticipantList.Count > 0)
-            output.Add(l.Text("參加者", "Participants", "参加者") + colon + string.Join(l.Text("、", ", ", "、"), meeting.ParticipantList));
+            output.Add(l.Prompt("參加者", "Participants", "参加者") + colon + string.Join(l.Prompt("、", ", ", "、"), meeting.ParticipantList));
         if (notes is not null)
         {
             output.Add("");
-            output.Add(l.Text("會議紀錄（JSON）", "Meeting notes (JSON)", "議事録（JSON）") + colon);
+            output.Add(l.Prompt("會議紀錄（JSON）", "Meeting notes (JSON)", "議事録（JSON）") + colon);
             output.Add(notes.JsonString());
         }
         if (documents is { Count: > 0 })
@@ -164,12 +164,12 @@ public static class AskPrompt
             output.Add(DocumentPrompt.Block(documents, l));
         }
         output.Add("");
-        output.Add(l.Text("逐字稿（[時間] 說話者：內容）", "Transcript ([time] speaker: text)", "文字起こし（[時刻] 話者：内容）") + colon);
+        output.Add(l.Prompt("逐字稿（[時間] 說話者：內容）", "Transcript ([time] speaker: text)", "文字起こし（[時刻] 話者：内容）") + colon);
         output.AddRange(lines);
         if (history.Count > 0)
         {
             output.Add("");
-            output.Add(l.Text("之前的問答（追問時參考）", "Earlier questions and answers (for follow-ups)", "これまでの質問と回答（追加の質問の参考）") + colon);
+            output.Add(l.Prompt("之前的問答（追問時參考）", "Earlier questions and answers (for follow-ups)", "これまでの質問と回答（追加の質問の参考）") + colon);
             foreach (var item in history)
             {
                 output.Add("Q" + colon + item.Question);
@@ -177,34 +177,34 @@ public static class AskPrompt
             }
         }
         output.Add("");
-        output.Add(l.Text("問題", "Question", "質問") + colon + question);
+        output.Add(l.Prompt("問題", "Question", "質問") + colon + question);
         return string.Join("\n", output);
     }
 
     public static string AllPrompt(MeetingLanguage l, IReadOnlyList<MeetingBlock> blocks, string question)
     {
-        var colon = l.Text("：", ": ", "：");
+        var colon = l.Prompt("：", ": ", "：");
         var output = new List<string>();
         foreach (var block in blocks)
         {
-            output.Add(l.Text($"【會議 {block.Id}】", $"[Meeting {block.Id}]", $"【会議 {block.Id}】") + $" {block.Title}（{block.Date}）");
+            output.Add(l.Prompt($"【會議 {block.Id}】", $"[Meeting {block.Id}]", $"【会議 {block.Id}】") + $" {block.Title}（{block.Date}）");
             if (block.Summary.Count > 0)
             {
-                output.Add(l.Text("摘要與決議", "Summary and decisions", "要約と決定事項") + colon);
+                output.Add(l.Prompt("摘要與決議", "Summary and decisions", "要約と決定事項") + colon);
                 output.AddRange(block.Summary.Select(s => "- " + s));
             }
             if (block.Lines.Count > 0)
             {
-                output.Add(l.Text("逐字稿片段", "Transcript excerpts", "文字起こしの抜粋") + colon);
+                output.Add(l.Prompt("逐字稿片段", "Transcript excerpts", "文字起こしの抜粋") + colon);
                 output.AddRange(block.Lines);
             }
             output.Add("");
         }
-        output.Add(l.Text("問題", "Question", "質問") + colon + question);
+        output.Add(l.Prompt("問題", "Question", "質問") + colon + question);
         return string.Join("\n", output);
     }
 
-    public static string KeywordsPrompt(MeetingLanguage l, string question) => l.Text("問題：", "Question: ", "質問：") + question;
+    public static string KeywordsPrompt(MeetingLanguage l, string question) => l.Prompt("問題：", "Question: ", "質問：") + question;
 
     /// <summary>丟掉不能用的出處：時間格式不對、跨會議時不是提供的會議。documentCitations：這場會議有參考文件，
     /// time 是空的引用是文件的出處，留著（M§39.3）</summary>

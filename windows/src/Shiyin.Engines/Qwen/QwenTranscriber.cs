@@ -43,7 +43,7 @@ public static class QwenTranscriber
             if (control.IsCancelled) throw new WhisperException(WhisperErrorKind.Cancelled);
             foreach (var piece in Run(samples, start, end, context, languageName, decoder, control, retry, median, 0))
             {
-                var text = language == MeetingLanguage.Zh ? ChineseScript.ToTaiwan(piece.Text) : piece.Text;
+                var text = language.Profile.Transcription.Traditional ? language.Profile.FixScript(ChineseScript.ToTaiwan(piece.Text)) : piece.Text;
                 if (text.Length == 0) continue;
                 segments.Add(new TranscribedSegment(piece.Start / WhisperRules.SampleRate, piece.End / WhisperRules.SampleRate, text, piece.Trimmed));
             }

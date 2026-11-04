@@ -1835,11 +1835,12 @@ Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接�
 | `outputName` | 一般語言：通用提示詞裡「用 … 寫」的語言名稱（英文） | `Korean` |
 | `transcriptNote` | 精調語言共用別的語言的提示詞時，補一段說明逐字稿的語言（整理、校正的 system 各一段） | 粵語：逐字稿是粵語口語… |
 | `locale` | 日期、星期的寫法 | `zh_TW`、`ko_KR`、`zh_HK` |
-| `live.mac`／`live.windows` | 即時逐字稿：SpeechAnalyzer 的語系；SenseVoice 的語言 | `ko_KR`／`ko` |
+| `live.mac`／`live.windows`／`live.windowsConvert` | 即時逐字稿：SpeechAnalyzer 的語系；SenseVoice 的語言；SenseVoice 的輸出要做的 OpenCC 轉換（null 是不轉） | 粵語 `zh_HK`／`yue`／`s2tw` |
 | `transcription.model` | 正式轉錄預設的模型：`breeze`、`turbo`（Whisper large-v3-turbo，原本只給日文）、`qwen` | |
 | `transcription.engineSetting` | 跟著設定的「Breeze／Qwen3-ASR」（只有中文、英文是 true） | |
 | `transcription.whisper`／`qwen` | whisper.cpp 的 `language`、Qwen3-ASR 的語言名稱；沒有就是 null（那個引擎不能用） | `yue`／`Cantonese` |
 | `transcription.traditional` | Qwen3-ASR 的輸出轉台灣繁體（§32.5） | 中文、粵語 true |
+| `scriptFixes` | 簡轉繁之後的修正（選填）：`from` 換成 `to`，除非那個字落在 `keep` 的詞裡；套在 Qwen3-ASR 的輸出和 Windows 的 SenseVoice 上（§41.3） | 粵語：`系`→`係`（`系統`、`體系`…不換） |
 | `text.spaced` | 用空格分詞（英文類）：詞彙表的分隔、上限、幻覺防線的字數算法 | 英文 true |
 | `whisperPrompt` | `base`、`glossary`（`%@` 是詞彙）、`separator`、`limit`、`natural`（評估用的口語寫法，選填） | |
 | `detect` | 自動偵測時 Whisper base 的語言代碼；null 是不能偵測 | 粵語 null |
@@ -1855,7 +1856,7 @@ Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接�
   - `text(zh:en:ja:)`：給人看的字（匯出、預設名稱、待確認的是非題）。`base` 是中文、日文就用那一份；`base` 是英文時查 `strings`，查不到用英文。
   - `prompt(zh:en:ja:)`：提示詞裡的字，只看 `base`，不查字串表（一般語言的提示詞維持英文）。`Notes/` 底下組提示詞的地方都改用這個。
   - 有插值的字（長度「1 hr 5 min」、括號、是非題）改成格式字串：`format(zh:en:ja:, 參數…)`，一般語言查 `strings` 的格式。
-  - 預設的說話者名稱只有一個地方：`language.defaultSpeaker(idx)`（原本散在 12 個地方）；`isDefaultSpeakerName` 認語言檔裡所有語言的 `speaker`。
+  - 預設的說話者名稱只有一個地方：`language.defaultSpeaker(idx)`（原本散在 12 個地方）；`isDefaultSpeakerName` 認語言檔裡所有語言的 `speaker`。整理的提示詞裡沒有名字的說話者也用它（原本是提示詞標籤裡另一份「Speaker N」）：韓文會議的紀錄才會寫「화자 2」，改名時換得到（§21.6）。中文、英文、日文兩份的字一樣，提示詞不變。
 
 ### 41.2 兩級（R63.2、D140、D141）
 
@@ -1867,14 +1868,16 @@ Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接�
 
 ### 41.3 轉錄（R64.2、R65.2、D142）
 
-- `ModelStore.transcription(for:)`：`transcription.model` 是 `turbo` → `.japanese`（模型的名稱改成「Whisper large-v3-turbo（日文、粵語、韓文）」）；是 `breeze`、`engineSetting` 是 true → 照設定 Breeze 或 Qwen；`qwen` → `.qwen`。`transcribedWith` 照實際用的模型寫（`japanese` 照舊表示 turbo，資料庫的值不改）。
-- `WhisperEngine.prompt` 讀 `whisperPrompt`；whisper 的 `language` 用 `transcription.whisper`。Qwen 的語言名稱、繁體轉換、詞彙表的分隔和上限、幻覺防線用「字」還是「詞」算，讀 `transcription.qwen`、`traditional`、`text.spaced`、`whisperPrompt.limit`。
-- 引擎沒有這個語言時（例如設定是 Qwen、語言是韓文而 `qwen` 是 null）用 `transcription.model`；macOS 內建辨識（`useSystemTranscriber`）用 `live.mac` 的語系，系統沒有這個語系時退回 `transcription.model`。
-- 粵語、韓文用哪個模型照評估決定（§41.7 的表、D142）。
+- `ModelStore.transcription(for:)`：`transcription.model` 是 `turbo` → `.japanese`；是 `breeze`、`engineSetting` 是 true → 照設定 Breeze 或 Qwen；`qwen` → `.qwen`。`transcribedWith` 照實際用的模型寫（`japanese` 照舊表示 turbo，資料庫的值不改）。
+- 評估後（§41.7、D142）：粵語 `qwen`、韓文 `turbo`。「正式轉錄」的設定（Breeze／Qwen3-ASR）只管 `engineSetting` 的語言（中文、英文）；設定成 macOS 內建（`useSystemTranscriber`）時所有語言都用內建，語系是 `live.mac`。
+- 模型還沒下載好時（§21.17、D35）：中文、英文選了 Qwen 而已經有 Breeze 時先用 Breeze（R43.7）；固定用 Qwen 的語言（粵語）**不用 Breeze**（Breeze 是台灣華語的模型），先用 macOS 內建（Windows 用快速辨識，SenseVoice 認得粵語），模型好了可以重新轉錄。
+- 介面上的模型名稱從語言檔列出用它的語言：turbo 是「日文和韓文轉錄模型 Whisper large-v3-turbo（q5_0）」，設定頁的說明「日文和韓文會議改用 Whisper large-v3-turbo（574 MB）。廣東話會議一律用 Qwen3-ASR。」，重新轉錄的提示依 `transcription(for:)` 寫 Breeze、Qwen3-ASR 或「日文和韓文轉錄模型」。
+- `WhisperEngine.prompt` 讀 `whisperPrompt`；whisper 的 `language` 用 `transcription.whisper`。Qwen 的語言名稱、繁體轉換、詞彙表的分隔和上限讀 `transcription.qwen`、`traditional`、`whisperPrompt`。
+- 粵語的簡轉繁（`scriptFixes`）：Qwen3-ASR 的粵語輸出是簡體，OpenCC 的字表不認得粵語的「系」（是）：單獨的「系」照字表留著、「唔系好」被詞表轉成「唔繫好」、「唔該晒」的「晒」被轉成「曬」。轉完再把「系」「繫」換成「係」、「曬」換成「晒」，落在 `keep` 的詞（系統、系列、體系、聯繫、維繫、曬太陽…）裡的不換。
 
 ### 41.4 即時逐字稿、自動偵測（R63.5、R64.4、R65.5）
 
-- 即時逐字稿的 `SpeechTranscriber(locale:)` 用 `live.mac`；系統還沒有這個語系的模型時照舊先下載（§5.3）。
+- 即時逐字稿的 `SpeechTranscriber(locale:)` 用 `live.mac`；系統還沒有這個語系的模型時照舊先下載（§5.3）。粵語用 `zh_HK`（香港的粵語，輸出繁體、「係」「啲」照粵語寫）：`yue_CN` 認得的字一樣，但輸出簡體（2026-11-04 用 `yue-synth` 比過）。
 - 自動偵測：Whisper base 的機率只取語言檔裡 `detect` 不是 null 的語言（中文、英文、日文、韓文），加總成 1 後最高的超過門檻、而且**語系**跟目前的會議語言不同才切換。粵語的會議偵測到中文、中文的會議偵測到中文都不切。
 - 取捨：多了韓文，中文、英文、日文的機率加總的分母多一項。韓文的語音在中文、英文、日文的錄音裡幾乎是 0，判斷結果不變；用現有的偵測評估資料驗證（§41.7）。
 
@@ -1896,6 +1899,17 @@ Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接�
 - 資料：`scripts/dev/make-eval-data-langs.py` 產生 `yue-fleurs`、`ko-fleurs`（FLEURS 測試集前 60 句，各約 11、13 分鐘）和 `yue-synth`、`ko-synth`（macOS 語音合成的開發週會，夾英文產品名、人名，有詞彙表和關鍵詞）。`asr-score.swift`：粵語跟中文一樣先轉簡體再算 CER；韓文一個音節一個單位（CER）。
 - 比較：Whisper large-v3-turbo、Qwen3-ASR 1.7B、macOS 內建（`live.mac` 的語系）。選錯字率低、關鍵詞抓得到的當 `transcription.model`。
 - 自動偵測：用現有的偵測資料（中文、英文、日文）確認加了韓文之後結果不變，再用韓文、粵語的資料確認韓文偵測得到、粵語不會被切成中文。
+- 結果（2026-11-04，M3 Pro，`runs/4.4-*`；字錯率，合成會議的括號是關鍵詞抓到幾個／7）：
+
+  | | Whisper large-v3-turbo | Qwen3-ASR 1.7B | macOS 內建 |
+  |---|---|---|---|
+  | `yue-synth` | 19.7%（6）：寫成書面語（我是、我們） | **2.4%**（5）：照粵語寫（我係、我哋） | 7.2%（1） |
+  | `yue-fleurs` | 8.8% | **4.1%** | 7.8% |
+  | `ko-synth` | **5.9%**（4） | 24.2%（6）：把詞彙表當成一句話吐出來、幾句聽成亂碼 | 23.7%（1） |
+  | `ko-fleurs` | 5.9% | **2.6%** | 3.6% |
+
+  粵語選 Qwen3-ASR：兩組都最低，也是唯一照粵語口語寫的（R64.2）。韓文選 turbo：合成會議（最像真的會議：夾英文、有詞彙表）Qwen3-ASR 不穩，turbo 兩組都在 6% 左右；FLEURS 是唸稿，Qwen 好但不代表會議。
+- 自動偵測（2026-11-04，`shiyinctl detect-eval`，每段錄音取 2～5 個起點、共 39 次；同一次的機率只取中文、英文、日文重新加總就是加韓文之前的判斷）：中文（AISHELL-4、台灣的課程錄音、合成會議）、英文（AMI）、日文（國會、FLEURS、合成會議）、粵語共 32 次，加了韓文前後判斷完全相同，韓文的機率都在 0.01 以下（AMI 有一個起點沒有語音，不算）。韓文 7 次都判成韓文（0.97～1.00）；加之前會判成英文或日文，FLEURS 第一段英文 0.81，中文會議講韓文時會被切成英文。粵語都判成中文（0.98～1.00），同一個語系不切。
 
 ### 41.8 DEBUG、驗證
 
@@ -1989,5 +2003,6 @@ Mac 的 app 帶一份（`build-app.sh` 複製到 bundle 的 Resources；直接�
 | D139 | 語言的做法放在一份 JSON 語言檔（Mac、Windows 共用），`MeetingLanguage` 改成以代碼為身分的型別（§41.1；2026-11-04 使用者要通用架構） | 照舊用 enum、每加一種語言加一個 case：每一層都要改 switch，Mac、Windows 各改一次，「通用」只是名義上的。每個平台各寫一份設定：兩邊會慢慢不一樣，標準答案也比不到設定本身 |
 | D140 | 語言分精調、一般兩級；一般語言用英文的提示詞加「用某語言寫」，給人看的字查字串表，提示詞的字不查（§41.2） | 每種語言都手寫一份提示詞：一種語言要寫、調五份提示詞，加語言的成本跟現在一樣高。提示詞也翻成那個語言：模型讀英文的規則最穩，翻譯的規則會走樣、沒辦法逐字檢查。字串表連提示詞一起查：英文提示詞裡夾著韓文的欄位名稱，結果難以預測 |
 | D141 | 粵語的會議紀錄用中文那份提示詞，寫成繁體中文的書面語，加一段說明逐字稿是粵語口語（§41.2） | 寫成粵語口語：讀紀錄的人多半習慣書面語，口語的紀錄不好轉寄。當成一般語言用英文提示詞：中文的規則（台灣用語、繁體、期限換算）已經調過，粵語的紀錄本來就要寫成中文 |
+| D142 | 粵語正式轉錄固定用 Qwen3-ASR、還沒下載好時先用 macOS 內建（Windows 快速辨識），不用 Breeze；韓文用 Whisper large-v3-turbo；粵語的即時逐字稿用 `zh_HK`（§41.3、§41.7；2026-11-04 評估） | 粵語用 turbo：設 `yue` 也寫成書面語（我是、我們），合成會議的錯字率 19.7%，失去 R64.2 的口語。粵語用 macOS 內建當正式轉錄：錯字率 7%～8%、關鍵詞只抓到 1 個（不參考詞彙表）。韓文用 Qwen3-ASR：唸稿最好，但會議錄音會把詞彙表吐出來、整句聽錯（24%）。粵語沒下載 Qwen 時先用 Breeze：Breeze 是台灣華語的模型，粵語會被聽成華語。即時逐字稿用 `yue_CN`：辨識結果一樣，但輸出簡體 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。

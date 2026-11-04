@@ -45,7 +45,7 @@ final class ModelStore: NSObject {
 
     /// whisper.cpp 官方轉檔的 Whisper large-v3-turbo q5_0，固定 commit（design §18.2、D19）
     nonisolated static let japanese = ModelInfo(
-        name: String(localized: "日文轉錄模型 Whisper large-v3-turbo（q5_0）"),
+        name: String(localized: "\(MeetingLanguage.uiNames(model: "turbo"))轉錄模型 Whisper large-v3-turbo（q5_0）"),
         filename: "ggml-large-v3-turbo-q5_0.bin",
         url: URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin")!,
         size: 574_041_195,

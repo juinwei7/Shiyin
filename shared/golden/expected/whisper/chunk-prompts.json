@@ -58,5 +58,45 @@
     "key" : "ja",
     "previous" : "long",
     "prompt" : "Per 34第35句 sentence number 35第36句 sentence number 36第37句 sentence number 37第38句 sentence number 38第39句 sentence number 39"
+  },
+  {
+    "key" : "yue",
+    "previous" : 0,
+    "prompt" : "以下係廣東話嘅工作會議錄音，會夾雜英文專有名詞。詞彙：Lumio、Redis。"
+  },
+  {
+    "key" : "yue",
+    "previous" : 1,
+    "prompt" : "以下係廣東話嘅工作會議錄音，會夾雜英文專有名詞。詞彙：Lumio、Redis。大家好，我係陳家豪，今日我哋主要傾下 Lumio 嘅進度。"
+  },
+  {
+    "key" : "yue",
+    "previous" : 5,
+    "prompt" : "以下係廣東話嘅工作會議錄音，會夾雜英文專有名詞。詞彙：Lumio、Redis。大家好，我係陳家豪，今日我哋主要傾下 Lumio 嘅進度。上個禮拜五已經部署咗去測試環境，暫時未見到大問題。我哋加咗 Redis 做快取，平均回應時間跌到兩百毫秒左右。嘉欣你可唔可以喺禮拜三之前寫好還原步驟？冇問題。"
+  },
+  {
+    "key" : "yue",
+    "previous" : "long",
+    "prompt" : "Per 34第35句 sentence number 35第36句 sentence number 36第37句 sentence number 37第38句 sentence number 38第39句 sentence number 39"
+  },
+  {
+    "key" : "ko",
+    "previous" : 0,
+    "prompt" : "다음은 업무 회의 녹음입니다. 용어: Lumio, Redis, Kubernetes."
+  },
+  {
+    "key" : "ko",
+    "previous" : 1,
+    "prompt" : "다음은 업무 회의 녹음입니다. 용어: Lumio, Redis, Kubernetes.안녕하세요, 김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다."
+  },
+  {
+    "key" : "ko",
+    "previous" : 5,
+    "prompt" : "다음은 업무 회의 녹음입니다. 용어: Lumio, Redis, Kubernetes.김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다.Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다.서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?네.오늘은 여기까지 하겠습니다."
+  },
+  {
+    "key" : "ko",
+    "previous" : "long",
+    "prompt" : "Per 34第35句 sentence number 35第36句 sentence number 36第37句 sentence number 37第38句 sentence number 38第39句 sentence number 39"
   }
 ]

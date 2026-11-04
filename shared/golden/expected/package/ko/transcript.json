@@ -1,0 +1,36 @@
+[
+  {
+    "end" : 5,
+    "lowConfidence" : false,
+    "speaker" : 1,
+    "start" : 0.5,
+    "text" : "안녕하세요, 김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다."
+  },
+  {
+    "end" : 11,
+    "lowConfidence" : false,
+    "speaker" : 2,
+    "start" : 5,
+    "text" : "Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다."
+  },
+  {
+    "end" : 15.5,
+    "lowConfidence" : true,
+    "speaker" : 1,
+    "start" : 11,
+    "text" : "서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?"
+  },
+  {
+    "end" : 17,
+    "lowConfidence" : false,
+    "start" : 15.5,
+    "text" : "네."
+  },
+  {
+    "end" : 3610,
+    "lowConfidence" : false,
+    "speaker" : 3,
+    "start" : 3605,
+    "text" : "오늘은 여기까지 하겠습니다."
+  }
+]

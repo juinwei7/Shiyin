@@ -33,6 +33,8 @@
     "blocks" : {
       "en" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: A (too long; only the first 45 of 60 characters are included)\n[Page 1]\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n[Page 2]\nbbbbbbbbbbbbbbb\n\nDocument: B (too long; only the first 45 of 200 characters are included)\nccccccccccccccccccccccccccccccccccccccccccccc\n\nDocument: C\ndddddddddd",
       "ja" : "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）：\n『A』（長すぎるため、全 60 文字のうち最初の 45 文字のみ）\n[1 ページ]\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n[2 ページ]\nbbbbbbbbbbbbbbb\n\n『B』（長すぎるため、全 200 文字のうち最初の 45 文字のみ）\nccccccccccccccccccccccccccccccccccccccccccccc\n\n『C』\ndddddddddd",
+      "ko" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: A (too long; only the first 45 of 60 characters are included)\n[Page 1]\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n[Page 2]\nbbbbbbbbbbbbbbb\n\nDocument: B (too long; only the first 45 of 200 characters are included)\nccccccccccccccccccccccccccccccccccccccccccccc\n\nDocument: C\ndddddddddd",
+      "yue" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《A》（文件太長，只附上前 45 字，共 60 字）\n[第 1 頁]\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n[第 2 頁]\nbbbbbbbbbbbbbbb\n\n《B》（文件太長，只附上前 45 字，共 200 字）\nccccccccccccccccccccccccccccccccccccccccccccc\n\n《C》\ndddddddddd",
       "zh" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《A》（文件太長，只附上前 45 字，共 60 字）\n[第 1 頁]\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n[第 2 頁]\nbbbbbbbbbbbbbbb\n\n《B》（文件太長，只附上前 45 字，共 200 字）\nccccccccccccccccccccccccccccccccccccccccccccc\n\n《C》\ndddddddddd"
     },
     "limit" : 100
@@ -61,6 +63,8 @@
     "blocks" : {
       "en" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 同長一 (too long; only the first 30 of 50 characters are included)\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n\nDocument: 同長二 (too long; only the first 30 of 50 characters are included)\n二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二",
       "ja" : "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）：\n『同長一』（長すぎるため、全 50 文字のうち最初の 30 文字のみ）\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n\n『同長二』（長すぎるため、全 50 文字のうち最初の 30 文字のみ）\n二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二",
+      "ko" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 同長一 (too long; only the first 30 of 50 characters are included)\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n\nDocument: 同長二 (too long; only the first 30 of 50 characters are included)\n二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二",
+      "yue" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《同長一》（文件太長，只附上前 30 字，共 50 字）\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n\n《同長二》（文件太長，只附上前 30 字，共 50 字）\n二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二",
       "zh" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《同長一》（文件太長，只附上前 30 字，共 50 字）\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n\n《同長二》（文件太長，只附上前 30 字，共 50 字）\n二二二二二二二二二二二二二二二二二二二二二二二二二二二二二二"
     },
     "limit" : 60
@@ -82,6 +86,8 @@
     "blocks" : {
       "en" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 簡報 (too long; only the first 10 of 16 characters are included)\n[Slide 2]\nxxxxxxxx\n[Slide 3]\nyy",
       "ja" : "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）：\n『簡報』（長すぎるため、全 16 文字のうち最初の 10 文字のみ）\n[スライド 2]\nxxxxxxxx\n[スライド 3]\nyy",
+      "ko" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 簡報 (too long; only the first 10 of 16 characters are included)\n[Slide 2]\nxxxxxxxx\n[Slide 3]\nyy",
+      "yue" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《簡報》（文件太長，只附上前 10 字，共 16 字）\n[第 2 張投影片]\nxxxxxxxx\n[第 3 張投影片]\nyy",
       "zh" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《簡報》（文件太長，只附上前 10 字，共 16 字）\n[第 2 張投影片]\nxxxxxxxx\n[第 3 張投影片]\nyy"
     },
     "limit" : 10
@@ -112,6 +118,8 @@
     "blocks" : {
       "en" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 四頁 (too long; only the first 2 of 4 pages are included)\n[Page 1]\n甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲\n[Page 2]\n乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙\n\nDocument: 投影片 (too long; only the first 2 of 3 slides are included)\n[Slide 1]\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n[Slide 2]\n二二二二二二二二二二二二二二二二二二二二",
       "ja" : "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）：\n『四頁』（長すぎるため、全 4 ページのうち最初の 2 ページのみ）\n[1 ページ]\n甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲\n[2 ページ]\n乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙\n\n『投影片』（長すぎるため、全 3 枚のスライドのうち最初の 2 枚のみ）\n[スライド 1]\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n[スライド 2]\n二二二二二二二二二二二二二二二二二二二二",
+      "ko" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 四頁 (too long; only the first 2 of 4 pages are included)\n[Page 1]\n甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲\n[Page 2]\n乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙\n\nDocument: 投影片 (too long; only the first 2 of 3 slides are included)\n[Slide 1]\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n[Slide 2]\n二二二二二二二二二二二二二二二二二二二二",
+      "yue" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《四頁》（文件太長，只附上前 2 頁，共 4 頁）\n[第 1 頁]\n甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲\n[第 2 頁]\n乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙\n\n《投影片》（文件太長，只附上前 2 張投影片，共 3 張）\n[第 1 張投影片]\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n[第 2 張投影片]\n二二二二二二二二二二二二二二二二二二二二",
       "zh" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《四頁》（文件太長，只附上前 2 頁，共 4 頁）\n[第 1 頁]\n甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲\n[第 2 頁]\n乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙\n\n《投影片》（文件太長，只附上前 2 張投影片，共 3 張）\n[第 1 張投影片]\n一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一\n[第 2 張投影片]\n二二二二二二二二二二二二二二二二二二二二"
     },
     "limit" : 100
@@ -131,6 +139,8 @@
     "blocks" : {
       "en" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 字形 (too long; only the first 5 of 7 characters are included)\nab👍🏽cd",
       "ja" : "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）：\n『字形』（長すぎるため、全 7 文字のうち最初の 5 文字のみ）\nab👍🏽cd",
+      "ko" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 字形 (too long; only the first 5 of 7 characters are included)\nab👍🏽cd",
+      "yue" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《字形》（文件太長，只附上前 5 字，共 7 字）\nab👍🏽cd",
       "zh" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《字形》（文件太長，只附上前 5 字，共 7 字）\nab👍🏽cd"
     },
     "limit" : 5
@@ -161,6 +171,8 @@
     "blocks" : {
       "en" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 組合字\n[Page 1]\né 👨‍👩‍👧 第一頁\n[Page 3]\n第三頁\n\nDocument: 空的檔名.txt\n內容",
       "ja" : "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）：\n『組合字』\n[1 ページ]\né 👨‍👩‍👧 第一頁\n[3 ページ]\n第三頁\n\n『空的檔名.txt』\n內容",
+      "ko" : "Reference documents (added by the user; [Page N] marks page numbers):\nDocument: 組合字\n[Page 1]\né 👨‍👩‍👧 第一頁\n[Page 3]\n第三頁\n\nDocument: 空的檔名.txt\n內容",
+      "yue" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《組合字》\n[第 1 頁]\né 👨‍👩‍👧 第一頁\n[第 3 頁]\n第三頁\n\n《空的檔名.txt》\n內容",
       "zh" : "會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：\n《組合字》\n[第 1 頁]\né 👨‍👩‍👧 第一頁\n[第 3 頁]\n第三頁\n\n《空的檔名.txt》\n內容"
     },
     "limit" : 40000

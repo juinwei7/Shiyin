@@ -1,0 +1,11 @@
+[
+  {
+    "file" : "documents/1-견적서.pdf",
+    "kind" : "pdf",
+    "name" : "견적서.pdf",
+    "ocr" : false,
+    "pages" : [
+      "견적서\n라이선스 4,800만 원"
+    ]
+  }
+]

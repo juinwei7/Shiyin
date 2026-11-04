@@ -77,16 +77,10 @@ public sealed class WindowsOcr : IDocumentOcr
         }
     }
 
-    /// <summary>會議語言的辨識；英文會議找不到時用使用者的語言設定（中文的辨識也認得英文）</summary>
+    /// <summary>會議語言的辨識（語言檔的 ocr.windows，M§41.5）；英文會議找不到時用使用者的語言設定（中文的辨識也認得英文）</summary>
     static OcrEngine? Engine(MeetingLanguage language)
     {
-        string[] tags = language switch
-        {
-            MeetingLanguage.En => ["en-US", "en-GB", "en"],
-            MeetingLanguage.Ja => ["ja-JP", "ja"],
-            _ => ["zh-Hant-TW", "zh-TW", "zh-Hant", "zh-Hant-HK", "zh-Hans-CN", "zh-CN", "zh-Hans"],
-        };
-        foreach (var tag in tags)
+        foreach (var tag in language.Profile.Ocr.Windows)
         {
             try
             {
@@ -95,7 +89,7 @@ public sealed class WindowsOcr : IDocumentOcr
             }
             catch (ArgumentException) { }
         }
-        return language == MeetingLanguage.En ? OcrEngine.TryCreateFromUserProfileLanguages() : null;
+        return language.Profile.Ocr.WindowsUserProfile ? OcrEngine.TryCreateFromUserProfileLanguages() : null;
     }
 
     static async Task<string> Recognize(OcrEngine engine, BitmapDecoder decoder)

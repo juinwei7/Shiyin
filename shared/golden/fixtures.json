@@ -449,6 +449,310 @@
    "knownPeople": [
     "田中"
    ]
+  },
+  {
+   "key": "yue",
+   "meeting": {
+    "title": "",
+    "titleLocked": false,
+    "meetingDate": "2026-11-03",
+    "participants": "陳家豪、李嘉欣",
+    "sourceFilename": "2026-11-03 產品週會（廣東話）.m4a",
+    "durationSeconds": 310,
+    "templateId": "general",
+    "userNotes": "[00:20] 記得問 Redis 嘅費用",
+    "language": "yue",
+    "folder": "",
+    "channels": "both"
+   },
+   "segments": [
+    {
+     "start": 1.0,
+     "end": 6.0,
+     "text": "大家好，我係陳家豪，今日我哋主要傾下 Lumio 嘅進度。",
+     "lowConfidence": false,
+     "speaker": 1
+    },
+    {
+     "start": 6.0,
+     "end": 12.5,
+     "text": "上個禮拜五已經部署咗去測試環境，暫時未見到大問題。",
+     "lowConfidence": false,
+     "speaker": 2
+    },
+    {
+     "start": 12.5,
+     "end": 18.0,
+     "text": "我哋加咗 Redis 做快取，平均回應時間跌到兩百毫秒左右。",
+     "lowConfidence": true,
+     "speaker": 2
+    },
+    {
+     "start": 18.0,
+     "end": 24.0,
+     "text": "嘉欣你可唔可以喺禮拜三之前寫好還原步驟？",
+     "lowConfidence": false,
+     "speaker": 1
+    },
+    {
+     "start": 24.0,
+     "end": 26.0,
+     "text": "冇問題。",
+     "lowConfidence": false,
+     "speaker": 2
+    }
+   ],
+   "speakers": {
+    "1": "陳家豪"
+   },
+   "voices": {
+    "1": {
+     "embedding": [
+      0.7,
+      0.1,
+      0.2,
+      0.0,
+      0.3,
+      0.1,
+      0.0,
+      0.2
+     ],
+     "seconds": 30.0,
+     "source": "mic"
+    },
+    "2": {
+     "embedding": [
+      0.1,
+      0.8,
+      0.0,
+      0.3,
+      0.0,
+      0.2,
+      0.1,
+      0.0
+     ],
+     "seconds": 25.0,
+     "source": "mic"
+    }
+   },
+   "bookmarks": [
+    {
+     "time": 18.0,
+     "label": ""
+    }
+   ],
+   "glossary": [
+    "Lumio",
+    "Redis"
+   ],
+   "notes": {
+    "title": "Lumio 進度週會",
+    "summary": [
+     {
+      "text": "已部署到測試環境，暫無重大問題",
+      "time": "00:06"
+     }
+    ],
+    "decisions": [],
+    "actionItems": [
+     {
+      "owner": "李嘉欣",
+      "task": "撰寫還原步驟",
+      "due": "2026-11-05",
+      "time": "00:18"
+     }
+    ],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "效能",
+      "start": "00:12",
+      "points": [
+       {
+        "text": "加入 Redis 快取，平均回應約 200 毫秒",
+        "time": "00:12"
+       }
+      ]
+     }
+    ],
+    "custom": [],
+    "reviewItems": [
+     {
+      "time": "00:06",
+      "question": "「嘉欣」是李嘉欣嗎？",
+      "yesNo": true
+     }
+    ]
+   },
+   "answers": [
+    {
+     "time": "00:06",
+     "question": "「嘉欣」是李嘉欣嗎？",
+     "answer": "是"
+    }
+   ],
+   "history": [
+    {
+     "question": "邊個負責還原步驟？",
+     "answer": "李嘉欣。"
+    }
+   ],
+   "question": "還原步驟幾時要寫好？",
+   "knownPeople": [
+    "陳家豪",
+    "李嘉欣"
+   ]
+  },
+  {
+   "key": "ko",
+   "meeting": {
+    "title": "Lumio 주간 회의",
+    "titleLocked": true,
+    "meetingDate": "2026-11-03",
+    "participants": "김민준, 이서연",
+    "sourceFilename": "weekly-ko.m4a",
+    "durationSeconds": 3725,
+    "templateId": "general",
+    "userNotes": "",
+    "language": "ko",
+    "folder": "제품",
+    "channels": "mic"
+   },
+   "segments": [
+    {
+     "start": 0.5,
+     "end": 5.0,
+     "text": "안녕하세요, 김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다.",
+     "lowConfidence": false,
+     "speaker": 1
+    },
+    {
+     "start": 5.0,
+     "end": 11.0,
+     "text": "Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다.",
+     "lowConfidence": false,
+     "speaker": 2
+    },
+    {
+     "start": 11.0,
+     "end": 15.5,
+     "text": "서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?",
+     "lowConfidence": true,
+     "speaker": 1
+    },
+    {
+     "start": 15.5,
+     "end": 17.0,
+     "text": "네.",
+     "lowConfidence": false,
+     "speaker": null
+    },
+    {
+     "start": 3605.0,
+     "end": 3610.0,
+     "text": "오늘은 여기까지 하겠습니다.",
+     "lowConfidence": false,
+     "speaker": 3
+    }
+   ],
+   "speakers": {
+    "2": "이서연"
+   },
+   "voices": {
+    "1": {
+     "embedding": [
+      0.6,
+      0.2,
+      0.1,
+      0.1,
+      0.0,
+      0.3,
+      0.2,
+      0.0
+     ],
+     "seconds": 35.0,
+     "source": "mic"
+    },
+    "2": {
+     "embedding": [
+      0.0,
+      0.1,
+      0.9,
+      0.0,
+      0.2,
+      0.0,
+      0.0,
+      0.4
+     ],
+     "seconds": 20.0,
+     "source": "mic"
+    },
+    "3": {
+     "embedding": [
+      0.3,
+      0.0,
+      0.0,
+      0.8,
+      0.1,
+      0.0,
+      0.5,
+      0.1
+     ],
+     "seconds": 5.0,
+     "source": "mic"
+    }
+   },
+   "bookmarks": [],
+   "glossary": [
+    "Lumio",
+    "Redis",
+    "Kubernetes"
+   ],
+   "notes": {
+    "title": "Lumio 주간 회의",
+    "summary": [
+     {
+      "text": "Redis 캐시로 응답 시간 단축",
+      "time": "00:05"
+     }
+    ],
+    "decisions": [
+     {
+      "text": "출시일은 예정대로 유지",
+      "time": "1:00:05"
+     }
+    ],
+    "actionItems": [
+     {
+      "owner": "이서연",
+      "task": "롤백 절차 정리",
+      "due": "2026-11-04",
+      "time": "00:11"
+     }
+    ],
+    "openQuestions": [],
+    "topics": [],
+    "custom": [],
+    "reviewItems": [
+     {
+      "time": "00:11",
+      "question": "담당자가 이서연 님인가요?",
+      "yesNo": true
+     }
+    ]
+   },
+   "answers": [
+    {
+     "time": "00:11",
+     "question": "담당자가 이서연 님인가요?",
+     "answer": "예"
+    }
+   ],
+   "history": [],
+   "question": "롤백 절차는 언제까지인가요?",
+   "knownPeople": [
+    "김민준"
+   ]
   }
  ],
  "customTemplate": {
@@ -1851,6 +2155,27 @@
      "見積書\n合計 120 万円\n納期 11 月末"
     ],
     "ocr": true
+   }
+  ],
+  "yue": [
+   {
+    "name": "報價單.pdf",
+    "kind": "pdf",
+    "pages": [
+     "報價單\n授權費 NT$ 480,000",
+     "付款條件\n維護費每年 18%"
+    ],
+    "ocr": false
+   }
+  ],
+  "ko": [
+   {
+    "name": "견적서.pdf",
+    "kind": "pdf",
+    "pages": [
+     "견적서\n라이선스 4,800만 원"
+    ],
+    "ocr": false
    }
   ]
  },

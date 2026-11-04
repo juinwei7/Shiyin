@@ -1,0 +1,19 @@
+Meeting date: 2026-11-03 (화요일)
+Existing title: Lumio 주간 회의
+Participants: 김민준, 이서연
+Glossary (correct spellings): Lumio, Redis, Kubernetes
+
+Template: User interviews, expert interviews, job interviews
+Sections to produce: summary (Summary), topics (Topics)
+Custom sections (in custom, in this order): 
+- Interviewee background: The interviewee's role, experience and context
+- Key quotes: Keep the interviewee's own words, one quote per item, with its time
+- Insights and opportunities: Needs, pain points and opportunities drawn from the interview
+Additional instructions: This is an interview. Focus on what the interviewee said; do not present the interviewer's assumptions as the interviewee's opinions.
+
+Transcript ([time] speaker: text; (?) marks low-confidence segments): 
+[00:00] 화자 1: 안녕하세요, 김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다.
+[00:05] 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다.
+[00:11] 화자 1: (?) 서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?
+[00:15] 네.
+[1:00:05] 화자 3: 오늘은 여기까지 하겠습니다.

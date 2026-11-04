@@ -75,7 +75,7 @@ public static class DocumentPrompt
     {
         var lines = new List<string>
         {
-            language.Text("會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：",
+            language.Prompt("會議參考資料（使用者加入的文件，[第 N 頁] 是頁碼）：",
                           "Reference documents (added by the user; [Page N] marks page numbers):",
                           "会議の参考資料（ユーザーが追加した文書。[N ページ] はページ番号）："),  // l10n-skip
         };
@@ -96,11 +96,11 @@ public static class DocumentPrompt
         return string.Join("\n", lines);
     }
 
-    public static string Title(string name, MeetingLanguage language) => language.Text($"《{name}》", $"Document: {name}", $"『{name}』");
+    public static string Title(string name, MeetingLanguage language) => language.Prompt($"《{name}》", $"Document: {name}", $"『{name}』");
 
     public static string Marker(int page, DocumentKind kind, MeetingLanguage language) => kind == DocumentKind.Pptx
-        ? language.Text($"[第 {page} 張投影片]", $"[Slide {page}]", $"[スライド {page}]")
-        : language.Text($"[第 {page} 頁]", $"[Page {page}]", $"[{page} ページ]");
+        ? language.Prompt($"[第 {page} 張投影片]", $"[Slide {page}]", $"[スライド {page}]")
+        : language.Prompt($"[第 {page} 頁]", $"[Page {page}]", $"[{page} ページ]");
 
     public static string TruncationNote(Allocated item, MeetingLanguage language)
     {
@@ -108,16 +108,16 @@ public static class DocumentPrompt
         switch (item.CutByPages ? item.Document.Kind : DocumentKind.Text)
         {
             case DocumentKind.Pdf:
-                return language.Text($"（文件太長，只附上前 {n} 頁，共 {m} 頁）",
+                return language.Prompt($"（文件太長，只附上前 {n} 頁，共 {m} 頁）",
                                      $" (too long; only the first {n} of {m} pages are included)",
                                      $"（長すぎるため、全 {m} ページのうち最初の {n} ページのみ）");  // l10n-skip
             case DocumentKind.Pptx:
-                return language.Text($"（文件太長，只附上前 {n} 張投影片，共 {m} 張）",
+                return language.Prompt($"（文件太長，只附上前 {n} 張投影片，共 {m} 張）",
                                      $" (too long; only the first {n} of {m} slides are included)",
                                      $"（長すぎるため、全 {m} 枚のスライドのうち最初の {n} 枚のみ）");  // l10n-skip
             default:
                 int x = item.IncludedChars, y = item.Document.Length;
-                return language.Text($"（文件太長，只附上前 {x} 字，共 {y} 字）",
+                return language.Prompt($"（文件太長，只附上前 {x} 字，共 {y} 字）",
                                      $" (too long; only the first {x} of {y} characters are included)",
                                      $"（長すぎるため、全 {y} 文字のうち最初の {x} 文字のみ）");  // l10n-skip
         }
@@ -126,7 +126,7 @@ public static class DocumentPrompt
     // MARK: 規則（有文件時才接在原本的規則後面）
 
     /// <summary>整理：中文、英文 12～16，日文 13～17</summary>
-    public static string NotesRules(MeetingLanguage language) => language.Text("""
+    public static string NotesRules(MeetingLanguage language) => language.Prompt("""
         12. 「會議參考資料」是使用者加入、會議中一起討論的文件（簡報、規格書、報價單等）。用它來看懂逐字稿：討論指的是哪一頁、哪個方案，以及數字、名稱、專有名詞的正確寫法。
         13. 紀錄以會議中實際討論的內容為準。文件裡有、但會議中沒有討論的內容，不要寫進紀錄。
         14. 紀錄用到文件裡的資訊（數字、規格、日期、條文）時，在該條的句尾註明出處，例如「（《報價單》第 3 頁）」；投影片寫「（《簡報》第 3 張投影片）」，沒有頁碼的文件只寫「（《議程》）」。time 仍填逐字稿裡討論到它的時間點。
@@ -147,7 +147,7 @@ public static class DocumentPrompt
         """);
 
     /// <summary>對一場會議提問：第 5 條</summary>
-    public static string AskRule(MeetingLanguage language) => language.Text("""
+    public static string AskRule(MeetingLanguage language) => language.Prompt("""
         5. 「會議參考資料」是會議中一起討論的文件，也可以用來回答，但要說清楚是會議中說的，還是只有文件裡寫的。根據文件的重點放進 citations 時，time 填空字串，quote 開頭寫出處，例如「《報價單》第 3 頁：…」。
         """, """
         5. The "Reference documents" were discussed in the meeting and can also be used to answer, but make clear whether something was said in the meeting or is only written in a document. For a point based on a document, add a citation with "time" as an empty string and "quote" starting with the source, for example "Quote, p. 3: …".

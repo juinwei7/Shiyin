@@ -38,7 +38,7 @@ public sealed record ExportText(MeetingLanguage Language)
     public string Speaker(int idx) => Language.DefaultSpeaker(idx);
     public string Section(string id) => TemplateDefinition.SectionLabel(id, Language);
     /// <summary>括號：中文用全形、英文用半形加空白</summary>
-    public string Paren(string inner) => Language.Text($"（{inner}）", $" ({inner})", $"（{inner}）");
+    public string Paren(string inner) => Language.Format("（%@）", " (%@)", "（%@）", inner);
     public string DateLine(string meetingDate) => meetingDate + Paren(DateText.Weekday(meetingDate, Language));
 }
 
@@ -186,20 +186,14 @@ public static class NotesExporter
     static string Cell(string text) => text.Length == 0 ? "—" : text.Replace("|", "\\|", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal);
 }
 
-/// <summary>匯出 HTML 用的字型（M§16.6、§18.5；Windows 的字型見 design-windows §11.3）</summary>
-public sealed record ExportFonts(string BodyZh, string BodyEn, string BodyJa, string HeadingZh, string HeadingEn, string HeadingJa)
+/// <summary>匯出 HTML 用的字型（M§16.6、§18.5、§41.5；Windows 的字型見 design-windows §11.3）：語言檔的 fonts.htmlMac／htmlWindows</summary>
+public sealed record ExportFonts(Func<LanguageProfile, LanguageProfile.FontPair> Pick)
 {
     /// <summary>Mac 的字型（標準答案用這一組比對）</summary>
-    public static readonly ExportFonts Mac = new(
-        "\"PingFang TC\", -apple-system, sans-serif", "-apple-system, \"PingFang TC\", sans-serif",
-        "\"Hiragino Sans\", \"Hiragino Kaku Gothic ProN\", -apple-system, sans-serif",
-        "\"Songti TC\", serif", "\"New York\", Georgia, \"Songti TC\", serif", "\"Hiragino Mincho ProN\", serif");
+    public static readonly ExportFonts Mac = new(p => p.Fonts.HtmlMac);
 
     /// <summary>Windows 的字型</summary>
-    public static readonly ExportFonts Windows = new(
-        "\"Microsoft JhengHei\", \"Segoe UI\", sans-serif", "\"Segoe UI\", \"Microsoft JhengHei\", sans-serif",
-        "\"Yu Gothic\", \"Meiryo\", \"Segoe UI\", sans-serif",
-        "PMingLiU, \"Microsoft JhengHei\", serif", "Georgia, PMingLiU, serif", "\"Yu Mincho\", serif");
+    public static readonly ExportFonts Windows = new(p => p.Fonts.HtmlWindows);
 }
 
 public static class HtmlText
@@ -207,13 +201,13 @@ public static class HtmlText
     public static string Escape(string s) => s.Replace("&", "&amp;", StringComparison.Ordinal).Replace("<", "&lt;", StringComparison.Ordinal)
         .Replace(">", "&gt;", StringComparison.Ordinal).Replace("\"", "&quot;", StringComparison.Ordinal);
 
-    public static string Document(string title, string body, MeetingLanguage language = MeetingLanguage.Zh, ExportFonts? fonts = null)
+    public static string Document(string title, string body, MeetingLanguage language = default, ExportFonts? fonts = null)
     {
-        var f = fonts ?? ExportFonts.Windows;
-        var bodyFont = language.Text(f.BodyZh, f.BodyEn, f.BodyJa);
-        var headingFont = language.Text(f.HeadingZh, f.HeadingEn, f.HeadingJa);
+        var f = (fonts ?? ExportFonts.Windows).Pick(language.Profile);
+        var bodyFont = f.Body;
+        var headingFont = f.Heading;
         return $$"""
-            <!doctype html><html lang="{{language.Text("zh-Hant", "en", "ja")}}"><head><meta charset="utf-8"><title>{{Escape(title)}}</title><style>
+            <!doctype html><html lang="{{language.Profile.Fonts.Lang}}"><head><meta charset="utf-8"><title>{{Escape(title)}}</title><style>
             body { font-family: {{bodyFont}}; font-size: 12pt; line-height: 1.6; color: #1E2625; }
             h1, h2, h3 { font-family: {{headingFont}}; font-weight: 600; }
             h1 { font-size: 22pt; margin-bottom: 4pt; } h2 { font-size: 15pt; margin-top: 18pt; } h3 { font-size: 13pt; }

@@ -206,7 +206,7 @@ public sealed record TranscriptionOptions
     public int? GpuDevice { get; init; }
 
     /// <summary>寫進 meetings.transcribed_with（M§21.17）：快速辨識跟 Mac 的內建一樣寫 system</summary>
-    public string TranscribedWith => Engine == EngineKind.Fast ? "system" : Engine == EngineKind.Qwen ? "qwen" : Language == MeetingLanguage.Ja ? "japanese" : "breeze";
+    public string TranscribedWith => Engine == EngineKind.Fast ? "system" : Engine == EngineKind.Qwen ? "qwen" : Language.UsesTurbo() ? "japanese" : "breeze";
 
     /// <summary>這個語言的模型還沒下載好時，這一場先用快速辨識（M§21.17、D35）；選了 Qwen 還沒下載好、Breeze 在時先用 Breeze（R43.7）</summary>
     public static TranscriptionOptions Current(AppSettings settings, ModelStore models, MeetingLanguage language, IReadOnlyList<string> glossary,
@@ -227,7 +227,8 @@ public sealed record TranscriptionOptions
         if (settings.UseFastTranscriber) return EngineKind.Fast;
         var wanted = ModelStore.Transcription(language, settings.TranscriptionEngine);
         if (models.IsInstalled(wanted)) return wanted == ModelStore.Model.Qwen ? EngineKind.Qwen : EngineKind.Breeze;
-        return wanted == ModelStore.Model.Qwen && models.IsInstalled(ModelStore.Model.Breeze) ? EngineKind.Breeze : EngineKind.Fast;
+        return wanted == ModelStore.Model.Qwen && ModelStore.BreezeStandsInForQwen(language) && models.IsInstalled(ModelStore.Model.Breeze)
+            ? EngineKind.Breeze : EngineKind.Fast;
     }
 }
 

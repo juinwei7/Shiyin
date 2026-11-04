@@ -41,7 +41,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
     static string Line(Segment s, IReadOnlyDictionary<int, string> names, MeetingLanguage language)
     {
         var speaker = s.Speaker is int i
-            ? (names.TryGetValue(i, out var n) ? n : language.Text($"說話者 {i}", $"Speaker {i}", $"話者 {i}")) + language.Text("：", ": ", "：")  // l10n-skip
+            ? (names.TryGetValue(i, out var n) ? n : language.DefaultSpeaker(i)) + language.Text("：", ": ", "：")  // l10n-skip
             : "";
         return $"[{TimeFormat.String(s.Start)}] {speaker}{s.Text}";
     }

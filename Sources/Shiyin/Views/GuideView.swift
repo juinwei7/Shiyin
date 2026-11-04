@@ -113,7 +113,7 @@ struct GuideView: View {
                     requirement(String(localized: "晶片"), String(localized: "Apple Silicon（M1 以上）"))
                     requirement(String(localized: "系統"), String(localized: "macOS 26 以上"))
                     requirement(String(localized: "記憶體"), String(localized: "8 GB 以上。轉錄加說話者辨識時最高約 2.9 GB，長錄音分段轉錄，會議長短影響不大（4 小時的會議 2.9 GB，M3 Pro 實測）"))
-                    requirement(String(localized: "磁碟空間"), String(localized: "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開日文會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB"))
+                    requirement(String(localized: "磁碟空間"), String(localized: "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開\(MeetingLanguage.uiNames(model: "turbo"))會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB"))
                     requirement(String(localized: "先安裝"), String(localized: "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude 或 codex，或準備 Anthropic、OpenAI 的 API key"))
                     requirement(String(localized: "網路"), String(localized: "第一次使用下載模型時需要（約 1.7 GB）；整理會議紀錄時需要。錄音、轉錄不需要"))
                 }

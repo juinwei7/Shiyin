@@ -14,11 +14,23 @@ public sealed record NotesContext(
 /// <summary>整理與校稿的提示詞（M§8.3），依會議語言分成中文、英文、日文三份。中文要跟 3.0 一字不差（R28.1）</summary>
 public static class NotesPrompt
 {
-    /// <summary>documents：有參考文件時接上文件的規則（M§39.3、D133）</summary>
+    /// <summary>
+    /// documents：有參考文件時接上文件的規則（M§39.3、D133）。語言的兩級（M§41.2、D140、D141）：
+    /// 共用別的語言那份的精調語言（粵語）最後接一段逐字稿的說明；一般語言（韓文）用英文那份、改成用那個語言寫
+    /// </summary>
     public static string System(MeetingLanguage language, bool documents = false)
     {
-        var text = language.Text(SystemChinese, SystemEnglish, SystemJapanese);
-        return documents ? text + "\n" + DocumentPrompt.NotesRules(language) : text;
+        var text = language.Prompt(SystemChinese, SystemEnglish, SystemJapanese);
+        var profile = language.Profile;
+        if (profile.IsGeneral && profile.OutputName is { } name)
+            text = text.Replace("written entirely in English.", $"written entirely in {name}.", StringComparison.Ordinal)
+                .Replace("(translated into English if it is not in English)", $"(translated into {name} if it is not in {name})", StringComparison.Ordinal);
+        if (documents) text += "\n" + DocumentPrompt.NotesRules(language);
+        if (profile.TranscriptNote is { } note) text += "\n\n" + note.Notes;
+        if (profile.IsGeneral && profile.OutputName is { } output)
+            text += $"\n\nOutput language: {output}. Every text value in the JSON (title, summary, decisions, action items, open questions, "
+                + $"topics, custom sections, review questions) must be in {output}; keep the JSON keys and the time format as they are.";
+        return text;
     }
 
     public const string SystemChinese = """
@@ -78,7 +90,7 @@ public static class NotesPrompt
         string MeetingDate, string ExistingTitle, string Participants, string NotProvided, string Glossary, string None,
         string Template, string Sections, string Custom, string Extra, string UserNotes, string Bookmarks, string Transcript,
         string CurrentNotes, string Answers, string Answer, string ReviseInstructions, string ListSeparator, string Colon,
-        Func<int, string> Speaker, Func<string, string, string> Section)
+        Func<string, string, string> Section)
     {
         public static readonly Labels Zh = new(
             "會議日期", "現有標題", "與會者", "未提供", "詞彙表（正確寫法）", "無", "範本", "要產生的段落",
@@ -93,7 +105,7 @@ public static class NotesPrompt
             - 已回答的題目從 reviewItems 移除；目前會議紀錄裡沒被回答的題目原樣保留。
             - 除非回答本身帶出新的疑點，否則不要新增題目。
             """,
-            "、", "：", n => $"說話者 {n}", (id, label) => $"{id}（{label}）");
+            "、", "：", (id, label) => $"{id}（{label}）");
 
         public static readonly Labels En = new(
             "Meeting date", "Existing title", "Participants", "not provided", "Glossary (correct spellings)", "none", "Template",
@@ -108,7 +120,7 @@ public static class NotesPrompt
             - Remove answered questions from reviewItems; keep unanswered questions from the current notes as they are.
             - Do not add new questions unless an answer raises a new doubt.
             """,
-            ", ", ": ", n => $"Speaker {n}", (id, label) => $"{id} ({label})");
+            ", ", ": ", (id, label) => $"{id} ({label})");
 
         public static readonly Labels Ja = new(
             "会議日", "既存のタイトル", "参加者", "未記入", "用語集（正しい表記）", "なし", "テンプレート", "作成するセクション",
@@ -123,9 +135,9 @@ public static class NotesPrompt
             - 回答済みの質問は reviewItems から削除し、現在の議事録にある未回答の質問はそのまま残す。
             - 回答そのものが新しい疑問を生まない限り、質問を追加しない。
             """,
-            "、", "：", n => $"話者 {n}", (id, label) => $"{id}（{label}）");
+            "、", "：", (id, label) => $"{id}（{label}）");
 
-        public static Labels Of(MeetingLanguage l) => l switch { MeetingLanguage.En => En, MeetingLanguage.Ja => Ja, _ => Zh };
+        public static Labels Of(MeetingLanguage l) => l.Base() switch { PromptBase.En => En, PromptBase.Ja => Ja, _ => Zh };
     }
 
     public static string Summarize(NotesContext c)
@@ -135,7 +147,7 @@ public static class NotesPrompt
         var l = Labels.Of(language);
         var lines = new List<string>();
         var weekday = DateText.Weekday(m.MeetingDate, language);
-        lines.Add($"{l.MeetingDate}{l.Colon}{m.MeetingDate}" + (language == MeetingLanguage.En ? $" ({weekday})" : $"（{weekday}）"));
+        lines.Add($"{l.MeetingDate}{l.Colon}{m.MeetingDate}" + (language.Base() == PromptBase.En ? $" ({weekday})" : $"（{weekday}）"));
         lines.Add($"{l.ExistingTitle}{l.Colon}{(m.TitleLocked ? m.Title : "")}");
         var participants = m.ParticipantList;
         lines.Add($"{l.Participants}{l.Colon}{(participants.Count == 0 ? l.NotProvided : string.Join(l.ListSeparator, participants))}");
@@ -143,7 +155,7 @@ public static class NotesPrompt
         lines.Add("");
         lines.Add($"{l.Template}{l.Colon}{c.Template.Description}");
         var sectionNames = TemplateDefinition.BuiltinSectionIds.Where(c.Template.Includes)
-            .Select(id => l.Section(id, TemplateDefinition.SectionLabel(id, language)));
+            .Select(id => l.Section(id, TemplateDefinition.SectionLabel(id, language, prompt: true)));
         lines.Add($"{l.Sections}{l.Colon}{string.Join(l.ListSeparator, sectionNames)}");
         if (c.Template.Custom.Count > 0)
         {
@@ -173,7 +185,7 @@ public static class NotesPrompt
         lines.Add($"{l.Transcript}{l.Colon}");
         foreach (var s in c.Segments)
         {
-            var speaker = s.Speaker is int idx ? (c.Speakers.TryGetValue(idx, out var name) ? name : l.Speaker(idx)) + l.Colon : "";
+            var speaker = s.Speaker is int idx ? (c.Speakers.TryGetValue(idx, out var name) ? name : language.DefaultSpeaker(idx)) + l.Colon : "";
             lines.Add($"[{TimeFormat.String(s.Start)}] {speaker}{(s.LowConfidence ? "(?) " : "")}{s.Text}");
         }
         return string.Join("\n", lines);

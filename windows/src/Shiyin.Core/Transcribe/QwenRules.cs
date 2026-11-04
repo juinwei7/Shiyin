@@ -139,8 +139,8 @@ public static class QwenRules
     /// <summary>詞彙表當作提示（Qwen3-ASR 的 contextual biasing）：跟 whisper 的提示詞同樣的上限（中文 150 字、英文 400 個字元）</summary>
     public static string Context(IReadOnlyList<string> glossary, MeetingLanguage language)
     {
-        var limit = language == MeetingLanguage.En ? 400 : 150;
-        var separator = language == MeetingLanguage.En ? ", " : "、";   // l10n-skip
+        var limit = language.Profile.WhisperPrompt.Limit;
+        var separator = language.Profile.WhisperPrompt.Separator;
         var picked = new List<string>();
         foreach (var term in glossary)
         {
@@ -151,12 +151,8 @@ public static class QwenRules
         return string.Join(separator, picked);
     }
 
-    public static string LanguageName(MeetingLanguage language) => language switch
-    {
-        MeetingLanguage.Zh => "Chinese",
-        MeetingLanguage.En => "English",
-        _ => "Japanese",
-    };
+    /// <summary>語言檔的 transcription.qwen；Qwen3-ASR 不能用的語言不會走到這裡（ModelStore.Transcription）</summary>
+    public static string LanguageName(MeetingLanguage language) => language.Profile.Transcription.Qwen ?? "Chinese";
 
     /// <summary>assistant 先填的開頭（Qwen3-ASR 的輸出格式）：強制語言</summary>
     public static string Prefill(string languageName) => $"language {languageName}<asr_text>";

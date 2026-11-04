@@ -1,0 +1,70 @@
+{
+  "bookmarks" : [
+
+  ],
+  "channels" : "mic",
+  "durationSeconds" : 3725,
+  "folder" : "제품",
+  "language" : "ko",
+  "meetingDate" : "2026-11-03",
+  "notes" : {
+    "actionItems" : [
+      {
+        "due" : "2026-11-04",
+        "owner" : "이서연",
+        "task" : "롤백 절차 정리",
+        "time" : "00:11"
+      }
+    ],
+    "custom" : [
+
+    ],
+    "decisions" : [
+      {
+        "text" : "출시일은 예정대로 유지",
+        "time" : "1:00:05"
+      }
+    ],
+    "openQuestions" : [
+
+    ],
+    "reviewItems" : [
+      {
+        "question" : "담당자가 이서연 님인가요?",
+        "time" : "00:11",
+        "yesNo" : true
+      }
+    ],
+    "summary" : [
+      {
+        "text" : "Redis 캐시로 응답 시간 단축",
+        "time" : "00:05"
+      }
+    ],
+    "title" : "Lumio 주간 회의",
+    "topics" : [
+
+    ]
+  },
+  "notesBy" : "claude",
+  "participants" : "김민준, 이서연",
+  "sourceFilename" : "weekly-ko.m4a",
+  "speakers" : [
+    {
+      "idx" : 1,
+      "name" : "화자 1"
+    },
+    {
+      "idx" : 2,
+      "name" : "이서연"
+    },
+    {
+      "idx" : 3,
+      "name" : "화자 3"
+    }
+  ],
+  "templateId" : "general",
+  "title" : "Lumio 주간 회의",
+  "titleLocked" : true,
+  "userNotes" : ""
+}

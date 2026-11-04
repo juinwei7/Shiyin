@@ -25,7 +25,7 @@ public static class SpeakerNaming
     /// <summary>工具說明是給模型看的，不是介面文字</summary>
     public static readonly OutputFormat Format = new(JsonSchema, "save_speaker_names", "Save the speaker names inferred from the transcript");
 
-    public static string System(MeetingLanguage language) => language.Text(SystemChinese, SystemEnglish, SystemJapanese);
+    public static string System(MeetingLanguage language) => language.Prompt(SystemChinese, SystemEnglish, SystemJapanese);
 
     const string SystemChinese = """
         你要從會議逐字稿判斷「說話者 N」是誰。逐字稿的說話者是用聲音自動分出來的，只有編號。
@@ -66,8 +66,8 @@ public static class SpeakerNaming
     public static string Prompt(Context c)
     {
         var l = c.Language;
-        string separator = l.Text("、", ", ", "、"), colon = l.Text("：", ": ", "：");
-        var none = l.Text("（無）", "(none)", "（なし）");
+        string separator = l.Prompt("、", ", ", "、"), colon = l.Prompt("：", ": ", "：");
+        var none = l.Prompt("（無）", "(none)", "（なし）");
         string List(IEnumerable<string> items)
         {
             var list = items.ToList();
@@ -75,15 +75,15 @@ public static class SpeakerNaming
         }
         var lines = new List<string>
         {
-            l.Text("會議日期", "Meeting date", "会議の日付") + colon + c.MeetingDate,
-            l.Text("會議標題", "Meeting title", "会議タイトル") + colon + (c.Title.Length == 0 ? none : c.Title),
-            l.Text("參加者", "Participants", "参加者") + colon + List(c.Participants),
-            l.Text("認識的人（之前的會議出現過的名字，寫法可以參考）", "Known people (names from earlier meetings, for spelling)",
+            l.Prompt("會議日期", "Meeting date", "会議の日付") + colon + c.MeetingDate,
+            l.Prompt("會議標題", "Meeting title", "会議タイトル") + colon + (c.Title.Length == 0 ? none : c.Title),
+            l.Prompt("參加者", "Participants", "参加者") + colon + List(c.Participants),
+            l.Prompt("認識的人（之前的會議出現過的名字，寫法可以參考）", "Known people (names from earlier meetings, for spelling)",
                 "知っている人（以前の会議に出てきた名前。表記の参考に）") + colon + List(c.KnownPeople),
-            l.Text("詞彙表", "Glossary", "用語集") + colon + List(c.Glossary),
-            l.Text("要猜的說話者", "Speakers to identify", "判断する話者") + colon + List(c.Unnamed.Select(c.SpeakerName)),
+            l.Prompt("詞彙表", "Glossary", "用語集") + colon + List(c.Glossary),
+            l.Prompt("要猜的說話者", "Speakers to identify", "判断する話者") + colon + List(c.Unnamed.Select(c.SpeakerName)),
             "",
-            l.Text("逐字稿（[時間] 說話者：內容）：", "Transcript ([time] speaker: text):", "文字起こし（[時刻] 話者：内容）："),
+            l.Prompt("逐字稿（[時間] 說話者：內容）：", "Transcript ([time] speaker: text):", "文字起こし（[時刻] 話者：内容）："),
         };
         foreach (var s in c.Segments)
         {
@@ -114,18 +114,16 @@ public static class SpeakerNaming
 
 public static class SpeakerNames
 {
-    static readonly string[] Prefixes = ["說話者 ", "Speaker ", "話者 "];
-
-    /// <summary>「說話者 1」「Speaker 1」「話者 1」這種預設名稱。跟 Mac 的 <c>^(說話者|Speaker|話者) \d+$</c> 一樣：
-    /// Swift 的 <c>\d</c> 是 Character.isNumber，「說話者 一」也算</summary>
-    public static bool IsDefault(string name)
+    /// <summary>語言檔每種語言的 speaker（「說話者 %lld」…）拆成前後兩段</summary>
+    static readonly (string Prefix, string Suffix)[] Formats = [.. LanguageProfiles.All.Select(p => p.Speaker).Distinct().Select(f =>
     {
-        foreach (var prefix in Prefixes)
-        {
-            if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
-            var rest = SwiftText.Characters(name[prefix.Length..]);
-            return rest.Count > 0 && rest.All(SwiftText.IsNumber);
-        }
-        return false;
-    }
+        var i = f.IndexOf("%lld", StringComparison.Ordinal);
+        return (f[..i], f[(i + 4)..]);
+    })];
+
+    /// <summary>「說話者 1」「Speaker 1」「話者 1」「화자 1」這種預設名稱。跟 Mac 用語言檔組出來的 <c>^(?:說話者 \d+|Speaker \d+|…)$</c> 一樣：
+    /// Swift 的 <c>\d</c> 是 Character.isNumber，「說話者 一」也算</summary>
+    public static bool IsDefault(string name) => Formats.Any(f =>
+        name.Length > f.Prefix.Length + f.Suffix.Length && name.StartsWith(f.Prefix, StringComparison.Ordinal) && name.EndsWith(f.Suffix, StringComparison.Ordinal)
+        && SwiftText.Characters(name[f.Prefix.Length..^f.Suffix.Length]) is { Count: > 0 } rest && rest.All(SwiftText.IsNumber));
 }

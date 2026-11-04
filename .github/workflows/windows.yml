@@ -5,9 +5,9 @@ name: Windows 版測試
 on:
   push:
     branches: [windows]
-    paths: ['windows/**', 'shared/**', 'scripts/windows/**', '.github/workflows/windows.yml']
+    paths: ['windows/**', 'shared/**', 'scripts/windows/**', 'Resources/languages.json', 'Resources/opencc/**', '.github/workflows/windows.yml']
   pull_request:
-    paths: ['windows/**', 'shared/**', 'scripts/windows/**', '.github/workflows/windows.yml']
+    paths: ['windows/**', 'shared/**', 'scripts/windows/**', 'Resources/languages.json', 'Resources/opencc/**', '.github/workflows/windows.yml']
   workflow_dispatch:
 
 jobs:

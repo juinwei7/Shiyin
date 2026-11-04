@@ -21,7 +21,12 @@ public static class TranscriptCorrection
     /// <summary>工具說明是給模型看的，不是介面文字</summary>
     public static readonly OutputFormat Format = new(JsonSchema, "save_corrections", "Save transcript correction suggestions");
 
-    public static string System(MeetingLanguage language) => language.Text(SystemChinese, SystemEnglish, SystemJapanese);
+    /// <summary>共用別的語言那份的精調語言（粵語）最後接一段逐字稿的說明（M§41.2）</summary>
+    public static string System(MeetingLanguage language)
+    {
+        var text = language.Prompt(SystemChinese, SystemEnglish, SystemJapanese);
+        return language.Profile.TranscriptNote is { } note ? text + "\n\n" + note.Correction : text;
+    }
 
     const string SystemChinese = """
         你是會議逐字稿的校對員。逐字稿是語音辨識自動產生的，會有聽錯的字。你的工作是找出「很可能是辨識聽錯」的地方，提出更正建議。
@@ -63,17 +68,17 @@ public static class TranscriptCorrection
     public static string Prompt(Context c, int start, int end)
     {
         var l = c.Language;
-        string separator = l.Text("、", ", ", "、"), colon = l.Text("：", ": ", "：");
-        var none = l.Text("（無）", "(none)", "（なし）");
-        var lines = new List<string> { l.Text("會議標題", "Meeting title", "会議タイトル") + colon + (c.Title.Length == 0 ? none : c.Title) };
+        string separator = l.Prompt("、", ", ", "、"), colon = l.Prompt("：", ": ", "：");
+        var none = l.Prompt("（無）", "(none)", "（なし）");
+        var lines = new List<string> { l.Prompt("會議標題", "Meeting title", "会議タイトル") + colon + (c.Title.Length == 0 ? none : c.Title) };
         if (c.Participants.Count > 0)
-            lines.Add(l.Text("參加者", "Participants", "参加者") + colon + string.Join(separator, c.Participants));
+            lines.Add(l.Prompt("參加者", "Participants", "参加者") + colon + string.Join(separator, c.Participants));
         if (c.SpeakerNames.Count > 0)
-            lines.Add(l.Text("說話者", "Speakers", "話者") + colon + string.Join(separator, c.SpeakerNames));
+            lines.Add(l.Prompt("說話者", "Speakers", "話者") + colon + string.Join(separator, c.SpeakerNames));
         var glossary = c.Glossary.Count == 0 ? none : string.Join(separator, c.Glossary);
-        lines.Add(l.Text("詞彙表（正確寫法）", "Glossary (correct spellings)", "用語集（正しい表記）") + colon + glossary);
+        lines.Add(l.Prompt("詞彙表（正確寫法）", "Glossary (correct spellings)", "用語集（正しい表記）") + colon + glossary);
         lines.Add("");
-        lines.Add(l.Text("逐字稿（每行開頭的數字是段落編號，segment 欄位填這個數字）：",
+        lines.Add(l.Prompt("逐字稿（每行開頭的數字是段落編號，segment 欄位填這個數字）：",
             "Transcript (the number at the start of each line is the segment number; put it in the \"segment\" field):",
             "文字起こし（各行の先頭の数字は段落番号。segment 欄にこの数字を入れる）："));
         for (var i = start; i < end; i++)

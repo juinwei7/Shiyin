@@ -44,6 +44,8 @@ struct LanguageProfile: Decodable {
         let htmlWindows: HTMLFonts
     }
     struct Notes: Decodable { let notes: String; let correction: String }
+    /// 簡轉繁之後的修正：from 換成 to，除非那個字在 keep 的詞裡（design §41.3）
+    struct ScriptFix: Decodable { let from: String; let to: String; let keep: [String] }
 
     let code: String
     let name: String
@@ -57,6 +59,8 @@ struct LanguageProfile: Decodable {
     let locale: String
     let live: Live
     let transcription: Transcription
+    /// 粵語：Qwen3-ASR 的簡體輸出轉繁體後，「系」「繫」多半是「係」、「曬」多半是「晒」
+    let scriptFixes: [ScriptFix]?
     /// 用空格分詞（英文類）：詞彙表的分隔、上限、幻覺防線的字數算法
     let spaced: Bool
     let whisperPrompt: WhisperPrompt
@@ -70,6 +74,25 @@ struct LanguageProfile: Decodable {
     let speaker: String
     /// 一般語言的字串表：鍵是英文那一份的字（含 %@、%lld）
     let strings: [String: String]?
+
+    /// 套用 scriptFixes：一個字一個字看，落在 keep 的詞裡就不換
+    func fixScript(_ text: String) -> String {
+        guard let scriptFixes, !scriptFixes.isEmpty else { return text }
+        var chars = Array(text)
+        for fix in scriptFixes {
+            guard let from = fix.from.first, let to = fix.to.first else { continue }
+            let keeps = fix.keep.map(Array.init)
+            for i in chars.indices where chars[i] == from {
+                let kept = keeps.contains { word in
+                    word.indices.contains { j in
+                        word[j] == from && i - j >= 0 && i - j + word.count <= chars.count && Array(chars[(i - j)..<(i - j + word.count)]) == word
+                    }
+                }
+                if !kept { chars[i] = to }
+            }
+        }
+        return String(chars)
+    }
 }
 
 /// 語言檔（`Resources/languages.json`）：app 的 bundle 裡一份；直接跑建置輸出（沒有 bundle）時讀原始碼樹的那份
@@ -163,6 +186,13 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
 
     /// 正式轉錄的 whisper 用 large-v3-turbo（日文、粵語、韓文…）還是 Breeze（design §41.3）
     var usesTurbo: Bool { profile.transcription.model == "turbo" }
+
+    /// 介面上列出用某個轉錄模型的語言，例如「日文和韓文」（設定的模型名稱、環境檢查）
+    static func uiNames(model: String) -> String {
+        let formatter = ListFormatter()
+        formatter.locale = Locale(identifier: interface == .en ? "en" : "zh-Hant")  // l10n-skip
+        return formatter.string(from: allCases.filter { $0.profile.transcription.model == model }.map(\.uiName)) ?? ""
+    }
 
     /// 同一個中文詞在英文要用不同說法的少數地方（例如「錄音」：按鈕是 Record、分頁是 Recording），
     /// 直接依介面語言給兩種寫法，不經過翻譯表

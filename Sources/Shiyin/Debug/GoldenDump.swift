@@ -444,6 +444,27 @@ enum GoldenDump {
     // MARK: 小工具
 
     private static func utilities(_ f: Fixtures, _ w: inout Writer) {
+        // 語言檔推出來的東西（design §41.8）：每種語言的名稱、預設說話者、轉錄的參數、給人看的字、提示詞的字
+        let glossarySample = ["Lumio", "Redis", "Kubernetes"]
+        w.json("util/languages.json", MeetingLanguage.allCases.map { l -> Object in
+            let p = l.profile
+            return ["code": l.rawValue, "name": l.name, "uiName": [p.uiName.zh, p.uiName.en], "tier": p.tier.rawValue, "base": l.base.rawValue,
+                    "speaker": [l.defaultSpeaker(1), l.defaultSpeaker(12)],
+                    "isDefault": [AppDatabase.isDefaultSpeakerName(l.defaultSpeaker(3)), AppDatabase.isDefaultSpeakerName(l.defaultSpeaker(3) + "x")],
+                    "whisper": l.whisperCode, "qwen": QwenEngine.languageName(l), "detect": p.detect ?? NSNull(), "family": p.family,
+                    "usesTurbo": l.usesTurbo, "whisperPrompt": WhisperEngine.prompt(glossary: glossarySample, language: l),
+                    "qwenContext": QwenEngine.context(glossary: glossarySample, language: l),
+                    "duration": [TimeFormat.duration(65, language: l), TimeFormat.duration(3600, language: l), TimeFormat.duration(3900, language: l)],
+                    "weekday": DateText.weekday("2026-11-04", language: l),
+                    "text": [l.text(zh: "摘要", en: "Summary", ja: "要約"), l.text(zh: "沒有的字", en: "Not in table", ja: "ない")],
+                    "prompt": [l.prompt(zh: "摘要", en: "Summary", ja: "要約")],
+                    "format": [l.format(zh: "「%@」是%@嗎？", en: "Is “%@” %@?", ja: "「%@」は%@ですか？", "A", "B")],
+                    "yesNo": [YesNoAnswer(isYes: true).text(l), YesNoAnswer(isYes: false, correction: "C").text(l)],
+                    "sections": TemplateDefinition.builtinSectionIDs.map { TemplateDefinition.sectionLabel($0, language: l) },
+                    "promptSections": TemplateDefinition.builtinSectionIDs.map { TemplateDefinition.sectionLabel($0, language: l, prompt: true) },
+                    "script": p.fixScript(ChineseScript.toTaiwan("我系陈家豪，唔系好稳定，系统同关系都冇问题，唔该晒，联系我，晒太阳")),  // l10n-skip
+                    "ocr": p.ocr.mac, "fonts": [p.fonts.typesetting, p.fonts.lang, p.fonts.titleMac]]
+        })
         // 會議紀錄的寬鬆解碼、JSON 字串、純文字、改名
         var decode: [Object] = []
         for input in f["notesDecode"] as? [String] ?? [] {

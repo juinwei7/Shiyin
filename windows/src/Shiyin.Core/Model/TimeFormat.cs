@@ -59,9 +59,9 @@ public static class TimeFormat
         var minutes = Math.Max(1, (long)SwiftText.Round(seconds.Value / 60.0));
         long h = minutes / 60, m = minutes % 60;
         if (minutes >= 60)
-            return m == 0 ? language.Text($"{h} 小時", $"{h} hr", $"{h} 時間")
-                : language.Text($"{h} 小時 {m} 分鐘", $"{h} hr {m} min", $"{h} 時間 {m} 分");
-        return language.Text($"{minutes} 分鐘", $"{minutes} min", $"{minutes} 分");
+            return m == 0 ? language.Format("%lld 小時", "%lld hr", "%lld 時間", h)
+                : language.Format("%lld 小時 %lld 分鐘", "%lld hr %lld min", "%lld 時間 %lld 分", h, m);
+        return language.Format("%lld 分鐘", "%lld min", "%lld 分", minutes);
     }
 
     /// <summary>srt 用 00:01:02,345；vtt 用 00:01:02.345</summary>
@@ -84,10 +84,15 @@ public static class DateText
     static readonly string[] En = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     static readonly string[] Ja = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
 
-    /// <summary>星期幾：中文「星期四」、英文「Thursday」、日文「木曜日」（Mac 用系統的格式，結果相同，這裡直接寫）</summary>
+    /// <summary>
+    /// 星期幾：中文「星期四」、英文「Thursday」、日文「木曜日」（Mac 用系統的格式，結果相同，這裡直接寫）；
+    /// 一般語言（韓文「목요일」）用語言檔 locale 的系統格式（M§41.5）
+    /// </summary>
     public static string Weekday(string text, MeetingLanguage language)
     {
         if (Date(text) is not { } date) return "";
+        if (language.Profile.IsGeneral)
+            return new CultureInfo(language.Profile.Locale.Replace('_', '-')).DateTimeFormat.GetDayName(date.DayOfWeek);
         var i = (int)date.DayOfWeek;
         return language.Text(Zh[i], En[i], Ja[i]);
     }

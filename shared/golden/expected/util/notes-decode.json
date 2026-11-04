@@ -46,5 +46,17 @@
     "isEmpty" : false,
     "jsonString" : "{\"actionItems\":[{\"due\":\"2026-10-23\",\"owner\":\"Bob\",\"task\":\"Send the email via SendGrid\",\"time\":\"00:03\"}],\"custom\":[{\"items\":[{\"text\":\"Roadmap on track\",\"time\":\"00:00\"}],\"title\":\"Updates and progress\"}],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[{\"question\":\"Is \\\"beta\\\" the right term?\",\"time\":\"00:08\"}],\"summary\":[{\"text\":\"Reviewed the Q4 roadmap\",\"time\":\"00:00\"}],\"title\":\"Q4 roadmap\",\"topics\":[]}",
     "plainText" : "Q4 roadmap\nReviewed the Q4 roadmap\nBob Send the email via SendGrid 2026-10-23\nUpdates and progress\nRoadmap on track\nIs \"beta\" the right term?"
+  },
+  {
+    "input" : "yue",
+    "isEmpty" : false,
+    "jsonString" : "{\"actionItems\":[{\"due\":\"2026-11-05\",\"owner\":\"李嘉欣\",\"task\":\"撰寫還原步驟\",\"time\":\"00:18\"}],\"custom\":[],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[{\"question\":\"「嘉欣」是李嘉欣嗎？\",\"time\":\"00:06\",\"yesNo\":true}],\"summary\":[{\"text\":\"已部署到測試環境，暫無重大問題\",\"time\":\"00:06\"}],\"title\":\"Lumio 進度週會\",\"topics\":[{\"points\":[{\"text\":\"加入 Redis 快取，平均回應約 200 毫秒\",\"time\":\"00:12\"}],\"start\":\"00:12\",\"title\":\"效能\"}]}",
+    "plainText" : "Lumio 進度週會\n已部署到測試環境，暫無重大問題\n李嘉欣 撰寫還原步驟 2026-11-05\n效能\n加入 Redis 快取，平均回應約 200 毫秒\n「嘉欣」是李嘉欣嗎？"
+  },
+  {
+    "input" : "ko",
+    "isEmpty" : false,
+    "jsonString" : "{\"actionItems\":[{\"due\":\"2026-11-04\",\"owner\":\"이서연\",\"task\":\"롤백 절차 정리\",\"time\":\"00:11\"}],\"custom\":[],\"decisions\":[{\"text\":\"출시일은 예정대로 유지\",\"time\":\"1:00:05\"}],\"openQuestions\":[],\"reviewItems\":[{\"question\":\"담당자가 이서연 님인가요?\",\"time\":\"00:11\",\"yesNo\":true}],\"summary\":[{\"text\":\"Redis 캐시로 응답 시간 단축\",\"time\":\"00:05\"}],\"title\":\"Lumio 주간 회의\",\"topics\":[]}",
+    "plainText" : "Lumio 주간 회의\nRedis 캐시로 응답 시간 단축\n출시일은 예정대로 유지\n이서연 롤백 절차 정리 2026-11-04\n담당자가 이서연 님인가요?"
   }
 ]

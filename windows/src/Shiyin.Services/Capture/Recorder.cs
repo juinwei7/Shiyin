@@ -560,7 +560,8 @@ public sealed class Recorder
             Log.Info("language detection: " + string.Join(", ", probabilities.OrderBy(p => p.Key.Code(), StringComparer.Ordinal)
                 .Select(p => $"{p.Key.Code()} {p.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}")));
             var best = probabilities.OrderByDescending(p => p.Value).First();
-            if (best.Key == Language || best.Value < LanguageCollector.Threshold) return;
+            // 同一個語系不切（M§41.4）：例如粵語會議偵測成中文
+            if (best.Key.Profile.Family == Language.Profile.Family || best.Value < LanguageCollector.Threshold) return;
             var from = Language;
             SwitchLanguageLocked(best.Key);
             LanguageSwitch = (from, best.Key);

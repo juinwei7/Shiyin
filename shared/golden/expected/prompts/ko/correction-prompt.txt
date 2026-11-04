@@ -1,0 +1,11 @@
+Meeting title: Lumio 주간 회의
+Participants: 김민준, 이서연
+Speakers: 이서연, 화자 1, 화자 3
+Glossary (correct spellings): Lumio, Redis, Kubernetes
+
+Transcript (the number at the start of each line is the segment number; put it in the "segment" field):
+[0] 화자 1: 안녕하세요, 김민준입니다. 오늘은 Lumio 다음 버전을 확인하겠습니다.
+[1] 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다.
+[2] 화자 1: 서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?
+[3] 네.
+[4] 화자 3: 오늘은 여기까지 하겠습니다.

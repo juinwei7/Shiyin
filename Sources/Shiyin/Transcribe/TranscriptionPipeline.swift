@@ -69,13 +69,14 @@ struct TranscriptionOptions: Codable {
         var options = TranscriptionOptions()
         options.minSpeakers = minSpeakers
         // 這個語言的模型還沒下載好時，這一場先用 macOS 內建辨識（design §21.17、D35）；
-        // 中文、英文選了 Qwen3-ASR（design §32.3）而還沒下載好、已經有 Breeze 時先用 Breeze（R43.7）
+        // 中文、英文選了 Qwen3-ASR（design §32.3）而還沒下載好、已經有 Breeze 時先用 Breeze（R43.7）；
+        // 固定用 Qwen3-ASR 的語言（粵語）不用 Breeze，先用內建（design §41.3）
         let wanted = ModelStore.transcription(for: language)
         // 企業伺服器（R50.1）：登入失效時也照樣選它，工作停著等重新登入（R49.4）
         if AppSettings.usesEnterpriseTranscription && !local { options.engine = .server }
         else if AppSettings.useSystemTranscriber { options.engine = .system }
         else if ModelStore.isDownloaded(wanted) { options.engine = wanted == .qwen ? .qwen : .breeze }
-        else if wanted == .qwen && ModelStore.isDownloaded(.breeze) { options.engine = .breeze }
+        else if wanted == .qwen && language.profile.transcription.engineSetting && ModelStore.isDownloaded(.breeze) { options.engine = .breeze }
         else { options.engine = .system }
         options.language = language
         options.glossary = glossary

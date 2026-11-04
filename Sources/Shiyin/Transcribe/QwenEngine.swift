@@ -208,7 +208,7 @@ enum QwenEngine {
                 for piece in try run(engine, buffer: buffer, range: chunk.range, context: context, language: languageName, control: control,
                                      retry: retry, guardMedian: useGuard ? median : nil, depth: 0) {
                     var text = piece.text
-                    if language.profile.transcription.traditional { text = ChineseScript.toTaiwan(text) }
+                    if language.profile.transcription.traditional { text = language.profile.fixScript(ChineseScript.toTaiwan(text)) }
                     guard !text.isEmpty else { continue }
                     segments.append(TranscribedSegment(start: Double(piece.range.lowerBound) / AudioDecoder.sampleRate,
                                                        end: Double(piece.range.upperBound) / AudioDecoder.sampleRate,

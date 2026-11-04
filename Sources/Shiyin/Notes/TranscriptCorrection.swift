@@ -33,8 +33,11 @@ enum TranscriptCorrection {
 
     // MARK: 提示詞（中文、英文、日文各一份，design §16.5、§18.4）
 
+    /// 共用別的語言那份的精調語言（粵語）最後接一段逐字稿的說明（design §41.2）
     static func system(_ language: MeetingLanguage) -> String {
-        language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+        let text = language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
+        guard let note = language.profile.transcriptNote?.correction else { return text }
+        return text + "\n\n" + note
     }
 
     private static let systemChinese = """

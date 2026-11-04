@@ -162,13 +162,13 @@ public sealed class JobRunner
         if (UsesEnterprise) return true;
         var waiting = false;
         if (!settings.UseFastTranscriber)
-            foreach (var language in Enum.GetValues<MeetingLanguage>())
+            foreach (var language in MeetingLanguages.All)
             {
                 var wanted = ModelStore.Transcription(language, settings.TranscriptionEngine);
                 if (models.IsInstalled(wanted) || !db.HasQueuedTranscribe(language)) continue;
                 models.AutoStart(wanted);
                 // Qwen 還沒下載好、Breeze 在時先用 Breeze（R43.7）；都沒有才等快速辨識
-                if (wanted == ModelStore.Model.Qwen && models.IsInstalled(ModelStore.Model.Breeze)) continue;
+                if (wanted == ModelStore.Model.Qwen && ModelStore.BreezeStandsInForQwen(language) && models.IsInstalled(ModelStore.Model.Breeze)) continue;
                 if (!models.IsInstalled(ModelStore.Model.FastRecognition)) waiting = true;
             }
         if (settings.UseFastTranscriber && !models.IsInstalled(ModelStore.Model.FastRecognition)) waiting = true;
@@ -549,7 +549,7 @@ public sealed class JobRunner
             var language = meeting.MeetingLanguage;
             var context = new SpeakerNaming.Context(language, meeting.MeetingDate, meeting.Title, meeting.ParticipantList, db.PeopleNames(),
                 GlossaryTerms(), unnamed,
-                idx => names.TryGetValue(idx, out var n) ? n : language.Text($"說話者 {idx}", $"Speaker {idx}", $"話者 {idx}"),
+                idx => names.TryGetValue(idx, out var n) ? n : language.DefaultSpeaker(idx),
                 segments.Select(s => (s.Start, s.Speaker, s.Text)).ToList());
             var json = await llm.GenerateJson(provider, settings.Model, SpeakerNaming.System(language), SpeakerNaming.Prompt(context),
                 SpeakerNaming.Format, cancel);
@@ -595,7 +595,7 @@ public sealed class JobRunner
             state.Stage = L.T("檢查可能聽錯的字");
             var language = meeting.MeetingLanguage;
             var names = db.Speakers(job.MeetingId).ToDictionary(s => s.Idx, s => s.Name);
-            string? SpeakerName(int? idx) => idx is int i ? names.TryGetValue(i, out var n) ? n : language.Text($"說話者 {i}", $"Speaker {i}", $"話者 {i}") : null;
+            string? SpeakerName(int? idx) => idx is int i ? names.TryGetValue(i, out var n) ? n : language.DefaultSpeaker(i) : null;
             var context = new TranscriptCorrection.Context(language, meeting.Title, meeting.ParticipantList,
                 names.Values.Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList(), GlossaryTerms(),
                 segments.Select(s => (s.Text, SpeakerName(s.Speaker))).ToList());
