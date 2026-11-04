@@ -796,7 +796,7 @@ struct RecordingSettings: View {
                         }
                     }
                 }
-                Text("開始錄音後聽約 10 秒，判斷是中文、英文還是日文；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
+                Text("開始錄音後聽約 10 秒，判斷是哪一種語言（\(MeetingLanguage.uiNames(MeetingLanguage.detectable))）；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Section("轉錄") {

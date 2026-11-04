@@ -16,7 +16,7 @@ struct GuideView: View {
         Step(symbol: "text.bubble", title: String(localized: "邊錄邊看、邊記"),
              body: String(localized: "錄音中畫面左邊是即時逐字稿，講完幾秒內就會出現；右邊「我的筆記」每換一行會自動記下當時的錄音時間（錄完在逐字稿分頁頂部的「我的筆記」還能改）。重要的地方按「標記重點」（⌘B），在其他 app 裡也可以按 ⌃⌥⌘B。需要中斷時按「暫停」（⇧⌘P），暫停的時間不會錄進去。")),
         Step(symbol: "waveform", title: String(localized: "正式轉錄、分辨說話者"),
-             body: String(localized: "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper large-v3-turbo），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。")),
+             body: String(localized: "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，\(MeetingLanguage.uiNames(model: "turbo"))用 Whisper large-v3-turbo，\(MeetingLanguage.uiNames(model: "qwen"))用 Qwen3-ASR），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。")),
         Step(symbol: "doc.text", title: String(localized: "看會議紀錄"),
              body: String(localized: "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。")),
         Step(symbol: "questionmark.bubble", title: String(localized: "回答待確認、修改"),
