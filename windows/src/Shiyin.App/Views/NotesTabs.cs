@@ -235,20 +235,17 @@ public sealed class NotesTabs
         return Reading(column);
     }
 
-    /// <summary>心智圖模式（M§42.4）：上面照舊是提示條、編輯列，下面是可以上下左右捲的心智圖；段落名稱跟著介面語言（同條列）</summary>
+    /// <summary>
+    /// 心智圖模式（M§42.4）：上面照舊是提示條、編輯列，下面是心智圖；段落名稱跟著介面語言（同條列）。
+    /// 整頁一起上下捲（同條列、同 Mac）：待確認展開時很高，心智圖不會被擠掉
+    /// </summary>
     FrameworkElement MindMapPage(MeetingDetail detail, MeetingNotes notes, StackPanel header)
     {
         var layout = MindMap.LayoutOf(MindMap.Tree(notes, detail.Meeting.DisplayTitle, MindMap.Labels.For(MeetingLanguages.Interface)));
-        var grid = new Grid();
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var top = new Border { Child = new ReadingColumn(header, Ui.C(680)), Padding = new Thickness(32, 24, 32, 16) };
-        var map = MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded);
-        Grid.SetRow(top, 0);
-        Grid.SetRow(map, 1);
-        grid.Children.Add(top);
-        grid.Children.Add(map);
-        return grid;
+        var page = new StackPanel();
+        page.Children.Add(new Border { Child = new ReadingColumn(header, Ui.C(680)), Padding = new Thickness(32, 24, 32, 16) });
+        page.Children.Add(MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded));
+        return new ScrollViewer { Content = page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     }
 
     /// <summary>文件有變動（R61.8，同 Mac 的 DocumentsBanner）：不用、重新整理會議紀錄</summary>

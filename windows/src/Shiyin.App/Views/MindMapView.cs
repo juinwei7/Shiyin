@@ -103,22 +103,29 @@ public static class MindMapView
         return border;
     }
 
-    /// <summary>畫面上：可以上下左右捲；比畫面寬時縮小到放得下（最小 0.6 倍），再乘上文字大小（R59）</summary>
+    /// <summary>
+    /// 畫面上：比畫面寬時縮小到放得下（最小 0.6 倍），再乘上文字大小（R59）；還是比畫面寬時左右捲，上下跟著整頁捲（同 Mac）。
+    /// 縮放用 Viewbox（不用 ScrollViewer 的 ZoomFactor：放在上下捲的頁面裡，高度會照沒縮放的算，下面空一大塊）
+    /// </summary>
     public static FrameworkElement Scrolling(MindMap.Layout layout, MeetingLanguage language, Action<double>? seek)
     {
-        var canvas = Build(layout, language, exporting: false, seek);
+        var box = new Viewbox
+        {
+            Child = Build(layout, language, exporting: false, seek), Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            Width = layout.Width, Height = layout.Height,
+        };
         var scroll = new ScrollViewer
         {
-            Content = canvas, HorizontalScrollMode = ScrollMode.Enabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ZoomMode = ZoomMode.Enabled, MinZoomFactor = 0.3f, MaxZoomFactor = 4f,
+            Content = box, HorizontalScrollMode = ScrollMode.Enabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollMode = ScrollMode.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
-        var fitted = false;
         scroll.SizeChanged += (_, e) =>
         {
-            if (fitted || e.NewSize.Width <= 0) return;
-            fitted = true;
-            var fit = Math.Max(0.6, Math.Min(1, (e.NewSize.Width - 16) / layout.Width));
-            scroll.ChangeView(0, 0, (float)(fit * Ui.ContentScale), true);
+            if (e.NewSize.Width <= 0) return;
+            var zoom = Math.Max(0.6, Math.Min(1, (e.NewSize.Width - 16) / layout.Width)) * Ui.ContentScale;
+            box.Width = layout.Width * zoom;
+            box.Height = layout.Height * zoom;
         };
         return scroll;
     }

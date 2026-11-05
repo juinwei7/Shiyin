@@ -416,7 +416,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.10 心智圖（R67，M§42）
 
 - 樹、排版、SVG 在 Shiyin.Core（`Notes/MindMap.cs`），跟 Mac 一字一句同一套規則，標準答案 `mindmap/*.json`、`*.svg` 逐字比。
-- 畫面：紀錄分頁的編輯列左邊加「條列｜心智圖」切換（設定的 `notesView`）。心智圖是 `Canvas`：連線用 `Path`（`BezierSegment`），節點是 `Border`＋`TextBlock`（每行一個 `Run`、`LineBreak`，字型照會議語言的 `fonts.titleWindows`、`contentWindows`），時間是可以按的連結（播放）。外面是可以上下左右捲的 `ScrollViewer`，整張比畫面寬時縮小（`ZoomFactor`，最小 0.6）。
+- 畫面：紀錄分頁的編輯列左邊加「條列｜心智圖」切換（設定的 `notesView`）。心智圖是 `Canvas`：連線用 `Path`（`BezierSegment`），節點是 `Border`＋`TextBlock`（每行一個 `Run`、`LineBreak`，字型照會議語言的 `fonts.titleWindows`、`contentWindows`），時間是可以按的連結（播放）。提示條、編輯列和心智圖整頁一起上下捲（同 Mac），心智圖比畫面寬時左右捲；整張比畫面寬時用 `Viewbox` 縮小（最小 0.6，乘上文字大小；不用 `ZoomFactor`：放在上下捲的頁面裡高度會照沒縮放的算）。
 - 匯出：SVG 直接寫 `MindMap.Svg`；PDF 用現有的 WebView2 列印（`Pdf.Print`），HTML 裡只放那張 SVG，紙張設成跟圖一樣大（加邊）、一頁；PNG 用 `RenderTargetBitmap` 畫匯出模式的 `Canvas`（放在視窗裡一個看不到的 `Popup`，畫完拿掉），2 倍。右上角「匯出」選單的「複製心智圖（圖片）」用同一張 PNG 放進剪貼簿（`DataPackage.SetBitmap`）。
 
 ## 12. 系統整合

@@ -9,6 +9,8 @@ struct MindMapView: View {
     @Environment(\.colorScheme) private var colorScheme
     let layout: MindMap.Layout
     let language: MeetingLanguage
+    /// 畫面上可以用的寬度（外面那層量的；放在上下捲的頁面裡，不能自己用 GeometryReader 量高度）
+    var availableWidth: Double = 0
     var exporting = false
     /// 點時間點（畫面上、有錄音時才有）
     var onSeek: ((Double) -> Void)? = nil
@@ -17,17 +19,15 @@ struct MindMapView: View {
         if exporting || snapshotMode {
             canvas
         } else {
-            GeometryReader { geo in
-                // 比畫面寬時縮小到放得下（最小 0.6 倍），再乘上文字大小（⌘＋／⌘－）
-                let fit = max(0.6, min(1, (geo.size.width - 16) / layout.width))
-                let zoom = fit * textScale
-                ScrollView([.horizontal, .vertical]) {
-                    canvas
-                        .scaleEffect(zoom, anchor: .topLeading)
-                        .frame(width: layout.width * zoom, height: layout.height * zoom, alignment: .topLeading)
-                }
-                .defaultScrollAnchor(.top)   // 比畫面矮時靠上，不要上下置中
+            // 比畫面寬時縮小到放得下（最小 0.6 倍），再乘上文字大小（⌘＋／⌘－）；還是比畫面寬時左右捲，上下跟著整頁捲
+            let fit = max(0.6, min(1, (availableWidth - 16) / layout.width))
+            let zoom = fit * textScale
+            ScrollView(.horizontal) {
+                canvas
+                    .scaleEffect(zoom, anchor: .topLeading)
+                    .frame(width: layout.width * zoom, height: layout.height * zoom, alignment: .topLeading)
             }
+            .frame(height: layout.height * zoom)
         }
     }
 
