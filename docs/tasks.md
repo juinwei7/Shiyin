@@ -9,7 +9,6 @@
 
 ## 更多會議語言：語言檔、粵語、韓文（R63～R65，design §41、design-windows §11.9、D139～D142；2026-11-04 使用者新需求）
 
-- [~] **LANG5 Windows**（design-windows §11.9）：程式完成，dotnet test 199/199；Mac 上跑過 C# 的 SenseVoice（粵語、韓文）、whisper turbo（韓文）、Qwen（粵語，跟 Mac app 逐字相同）。還差：虛擬機（Mac 磁碟要 10 GB 以上才開得了）匯入韓文、粵語的合成會議，看實際的畫面（選單上的名稱、標題字型、韓文的即時逐字稿）
 - [~] **LANG6 後台的統計欄位**（R63.7）：程式完成（`lang_yue`、`lang_ko`、`migrate-languages.sql`）。還差：使用者先跑 `migrate-languages.sql`、再部署 worker（同 E6）
 
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57；2026-10-29 Threads 的使用者回饋）
