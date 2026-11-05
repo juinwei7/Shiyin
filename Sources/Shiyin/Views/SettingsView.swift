@@ -733,6 +733,21 @@ struct RecordingSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
 
+    /// 正式轉錄引擎的說明；Breeze、Qwen3-ASR 後面接不跟著這個設定的語言
+    private var engineDescription: String {
+        switch engine {
+        case "server":
+            return String(localized: "錄音會送到 \(EnterpriseServer.shared.host)（公司的伺服器）轉錄，轉完就刪；說話者辨識和聲紋在這台 Mac 上做，聲紋不會送出。會參考詞彙表。連不上時會等，也可以改在這台 Mac 轉錄。")
+        case "system":
+            return String(localized: "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。")
+        case "qwen":
+            return String(localized: "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。")
+                + Self.otherEngines
+        default:
+            return String(localized: "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。") + Self.otherEngines
+        }
+    }
+
     /// 不跟著這個設定的語言（design §41.3）：「日文和韓文會議改用 Whisper large-v3-turbo（574 MB）。廣東話會議一律用 Qwen3-ASR。」
     static var otherEngines: String {
         let space = MeetingLanguage.ui(zh: "", en: " ")
@@ -814,14 +829,7 @@ struct RecordingSettings: View {
                     model.runner.wake()
                     model.refreshEnvironment()
                 }
-                (Text(engine == "server"
-                     ? "錄音會送到 \(EnterpriseServer.shared.host)（公司的伺服器）轉錄，轉完就刪；說話者辨識和聲紋在這台 Mac 上做，聲紋不會送出。會參考詞彙表。連不上時會等，也可以改在這台 Mac 轉錄。"
-                     : engine == "system"
-                     ? "不用下載模型，速度快很多；但不參考詞彙表，英文專有名詞、人名比較容易錯。"
-                     : engine == "qwen"
-                     ? "會參考詞彙表，多人會議的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴開源的模型，全程在這台 Mac 上跑、不連網，輸出會轉成台灣繁體；需要下載約 2.5 GB 的模型。"
-                     : "會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。")
-                 + Text(verbatim: engine == "server" || engine == "system" ? "" : Self.otherEngines))
+                Text(verbatim: engineDescription)
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Toggle("轉錄時辨識說話者", isOn: $diarize)
                 Toggle("錄音中顯示即時逐字稿", isOn: $live)

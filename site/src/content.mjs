@@ -26,7 +26,7 @@ export const content = {
     seo: {
       appName: '拾音 Shiyin',
       category: '會議記錄、逐字稿',
-      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議'],
     },
     nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -65,7 +65,7 @@ export const content = {
       h2: '停止後，在 Mac 上正式轉錄',
       ps: [
         '停止錄音後，拾音會在你的 Mac 上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。人多、吵雜時分錯了也好改：可以先告訴拾音大約幾個人，也可以把兩位說話者合併成一位，或直接改某一句是誰說的。',
-        '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過，「deploy」「Redis」這種詞不會被聽成別的字；日文會議改用 Whisper。產品名、人名可以先加進詞彙表，轉錄時會參考。',
+        '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過，「deploy」「Redis」這種詞不會被聽成別的字；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
       ],
     },
     notes: {
@@ -95,7 +95,7 @@ export const content = {
       rows: [
         ['系統', 'macOS 26 以上，Apple Silicon（M1 以上）'],
         ['記憶體', '8 GB 以上'],
-        ['磁碟空間', '轉錄模型約 1.7 GB，第一次使用時下載（下載好之前先用 macOS 內建辨識）；日文會議另外約 570 MB'],
+        ['磁碟空間', '轉錄模型約 1.7 GB，第一次使用時下載（下載好之前先用 macOS 內建辨識）；日文、韓文會議另外約 570 MB，廣東話會議另外約 2.5 GB'],
         ['費用', '免費，MIT 授權開源'],
       ],
       button: (file) => `下載 ${file}`,
@@ -121,7 +121,7 @@ export const content = {
       items: [
         ['要付費嗎？', '拾音免費。整理會議紀錄用的是你自己的 Claude、ChatGPT 訂閱或 API 額度；選「不整理」就只有逐字稿，不會有任何費用。'],
         ['需要網路嗎？', '錄音、轉錄、說話者辨識都不需要。第一次下載轉錄模型、整理會議紀錄和對會議提問時需要。'],
-        ['支援哪些語言？', '介面有繁體中文和英文；會議可以是中文、英文或日文，開始錄音後會自動判斷。'],
+        ['支援哪些語言？', '介面有繁體中文和英文；會議可以是中文、英文、日文、廣東話或韓文（實驗性）。開始錄音後會自動判斷中文、英文、日文、韓文。'],
         ['可以轉錄已經錄好的檔案嗎？', '可以。把錄音或影片拖進視窗就會轉錄，也可以匯入 srt、vtt、txt 逐字稿。'],
       ],
       windows: {
@@ -156,7 +156,7 @@ export const content = {
         h2: '停止後，在電腦上正式轉錄',
         ps: [
           '停止錄音後，拾音會在你的電腦上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。',
-          '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過；日文會議改用 Whisper。產品名、人名可以先加進詞彙表，轉錄時會參考。',
+          '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
         ],
         gpu: '有 NVIDIA 顯示卡的電腦，拾音會自動下載顯示卡加速（約 685 MB），之後正式轉錄就用顯示卡：40 分鐘的會議用 RTX 3060 約 8 分鐘轉完，只用 CPU 時約 30 分鐘。有 AMD 顯示卡（含 Radeon 內顯）的電腦，拾音會自動下載 AMD 顯示卡加速（約 20 MB），一樣用顯示卡轉錄。沒有這兩種顯示卡也能用，只是比較慢。',
       },
@@ -171,7 +171,7 @@ export const content = {
         rows: [
           ['系統', 'Windows 11（x64 或 ARM）'],
           ['記憶體', '8 GB 以上'],
-          ['磁碟空間', '模型約 2 GB，第一次使用時下載（下載好之前先用快速辨識）；顯示卡加速另外約 1.1 GB（NVIDIA）或 60 MB（AMD）；日文會議另外約 570 MB'],
+          ['磁碟空間', '模型約 2 GB，第一次使用時下載（下載好之前先用快速辨識）；顯示卡加速另外約 1.1 GB（NVIDIA）或 60 MB（AMD）；日文、韓文會議另外約 570 MB，廣東話會議另外約 2.5 GB'],
           ['顯示卡', '不需要；有 NVIDIA 或 AMD 顯示卡時自動用它轉錄'],
           ['費用', '免費，MIT 授權開源'],
         ],
@@ -266,7 +266,7 @@ export const content = {
     seo: {
       appName: 'Shiyin',
       category: 'Meeting notes, transcription',
-      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese and Japanese meetings'],
+      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings'],
     },
     nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -304,7 +304,7 @@ export const content = {
       h2: 'When you stop, your Mac transcribes it properly',
       ps: [
         'After you stop, Shiyin transcribes the recording again on your Mac. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings. Crowded or noisy room? Tell Shiyin roughly how many people there are, merge two speakers into one, or change who said a line.',
-        'English and Chinese meetings use Breeze ASR 25, which is tuned for Taiwanese Mandarin mixed with English; Japanese meetings use Whisper. Add product names and people to the glossary and transcription takes them into account.',
+        'English and Chinese meetings use Breeze ASR 25, which is tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product names and people to the glossary and transcription takes them into account.',
       ],
     },
     notes: {
@@ -332,7 +332,7 @@ export const content = {
       rows: [
         ['System', 'macOS 26 or later, Apple Silicon (M1 or later)'],
         ['Memory', '8 GB or more'],
-        ['Disk space', 'About 1.7 GB of transcription models, downloaded on first use (macOS built-in recognition is used until then), plus about 570 MB for Japanese meetings'],
+        ['Disk space', 'About 1.7 GB of transcription models, downloaded on first use (macOS built-in recognition is used until then), plus about 570 MB for Japanese and Korean meetings and about 2.5 GB for Cantonese meetings'],
         ['Price', 'Free, open source under the MIT License'],
       ],
       button: (file) => `Download ${file}`,
@@ -358,7 +358,7 @@ export const content = {
       items: [
         ['Does it cost anything?', 'Shiyin is free. Meeting notes are written with your own Claude or ChatGPT subscription or API credit. Choose “Don’t summarize” and you get just the transcript, at no cost.'],
         ['Does it need the internet?', 'Recording, transcription and speaker identification don’t. Downloading the transcription models the first time, writing the notes and asking your meetings questions do.'],
-        ['Which languages does it support?', 'The interface is in English and Traditional Chinese. Meetings can be in English, Chinese or Japanese, and Shiyin detects which after you start recording.'],
+        ['Which languages does it support?', 'The interface is in English and Traditional Chinese. Meetings can be in English, Chinese, Japanese, Cantonese or Korean (experimental); Shiyin detects English, Chinese, Japanese and Korean after you start recording.'],
         ['Can it transcribe a recording I already have?', 'Yes. Drag the audio or video file into the window and it’s transcribed. You can also import srt, vtt or txt transcripts.'],
       ],
       windows: {
@@ -392,7 +392,7 @@ export const content = {
         h2: 'When you stop, your PC transcribes it properly',
         ps: [
           'After you stop, Shiyin transcribes the recording again on your PC. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings.',
-          'Chinese and English use Breeze ASR 25, tuned for Taiwanese Mandarin mixed with English; Japanese meetings use Whisper. Add product and people’s names to the glossary and transcription takes them into account.',
+          'Chinese and English use Breeze ASR 25, tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product and people’s names to the glossary and transcription takes them into account.',
         ],
         gpu: 'With an NVIDIA graphics card, Shiyin downloads GPU acceleration automatically (about 685 MB) and transcribes on the GPU: a 40-minute meeting took about 8 minutes on an RTX 3060, versus about 30 minutes on the CPU alone. With AMD graphics (including Radeon integrated graphics), Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and transcribes on the GPU as well. Without either it still works, just more slowly.',
       },
@@ -407,7 +407,7 @@ export const content = {
         rows: [
           ['System', 'Windows 11 (x64 or ARM)'],
           ['Memory', '8 GB or more'],
-          ['Disk space', 'About 2 GB of models, downloaded on first use (Quick recognition is used until then); GPU acceleration takes about 1.1 GB more with NVIDIA or 60 MB with AMD; about 570 MB more for Japanese meetings'],
+          ['Disk space', 'About 2 GB of models, downloaded on first use (Quick recognition is used until then); GPU acceleration takes about 1.1 GB more with NVIDIA or 60 MB with AMD; about 570 MB more for Japanese and Korean meetings and about 2.5 GB more for Cantonese meetings'],
           ['Graphics', 'Not required; NVIDIA and AMD graphics are used automatically for transcription'],
           ['Price', 'Free, open source under the MIT License'],
         ],
@@ -502,7 +502,7 @@ export const content = {
     seo: {
       appName: '拾音 Shiyin',
       category: '會議記錄、逐字稿',
-      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文會議'],
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議'],
     },
     nav: { features: '機能', privacy: 'プライバシー', changelog: 'リリースノート', languages: '言語', label: 'サイト', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -540,7 +540,7 @@ export const content = {
       h2: '録音を止めたら、Mac で正式に文字起こし',
       ps: [
         '録音を止めると、拾音が Mac の中で録音をもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も聞き分けます。「Speaker 1」を名前に変えれば、会議全体に反映されます。拾音はその人の声を覚え、次の会議から自動で名前を入れます。人が多い会議や騒がしい場所で話者を間違えても、すぐに直せます。おおよその人数を拾音に伝えたり、2 人の話者を 1 人にまとめたり（Merge Into…）、ある発言の話者を変えたり（Who Said This Line?）できます。',
-        '日本語の会議は Whisper large-v3-turbo で文字起こしします。英語と中国語の会議には、台湾華語と英語の混ざった会話に合わせて調整された Breeze ASR 25 を使います。製品名や人名を用語集に登録しておくと、文字起こしのときに参考にされます。',
+        '日本語と韓国語の会議は Whisper large-v3-turbo、広東語の会議は Qwen3-ASR で文字起こしします。英語と中国語の会議には、台湾華語と英語の混ざった会話に合わせて調整された Breeze ASR 25 を使います。製品名や人名を用語集に登録しておくと、文字起こしのときに参考にされます。',
       ],
     },
     notes: {
@@ -568,7 +568,7 @@ export const content = {
       rows: [
         ['システム', 'macOS 26 以降、Apple シリコン（M1 以降）'],
         ['メモリ', '8 GB 以上'],
-        ['ディスク容量', '文字起こしモデル約 1.7 GB（初回使用時にダウンロード。それまでは macOS の音声認識を使います）。日本語の会議用にさらに約 570 MB'],
+        ['ディスク容量', '文字起こしモデル約 1.7 GB（初回使用時にダウンロード。それまでは macOS の音声認識を使います）。日本語・韓国語の会議用にさらに約 570 MB、広東語の会議用に約 2.5 GB'],
         ['表示言語', '英語、繁体字中国語（日本語表示には対応していません）'],
         ['価格', '無料、MIT ライセンスのオープンソース'],
       ],
@@ -595,7 +595,7 @@ export const content = {
       items: [
         ['料金はかかりますか？', '拾音は無料です。議事録のまとめには、ご自身の Claude、ChatGPT のサブスクリプションか API の利用枠を使います。「Don’t summarize」を選べば文字起こしだけになり、費用はかかりません。'],
         ['インターネット接続は必要ですか？', '録音、文字起こし、話者の識別には不要です。文字起こしモデルの初回ダウンロード、議事録のまとめ、会議への質問には必要です。'],
-        ['どの言語に対応していますか？', '会議は日本語、英語、中国語に対応し、録音を始めると自動で判別します。アプリの表示は英語と繁体字中国語で、日本語表示には対応していません。'],
+        ['どの言語に対応していますか？', '会議は日本語、英語、中国語、広東語、韓国語（試験的）に対応し、録音を始めると日本語・英語・中国語・韓国語を自動で判別します。アプリの表示は英語と繁体字中国語で、日本語表示には対応していません。'],
         ['録音済みのファイルも文字起こしできますか？', 'できます。音声や動画のファイルをウインドウにドラッグすると文字起こしされます。srt、vtt、txt の文字起こしも読み込めます。'],
       ],
       windows: {
@@ -629,7 +629,7 @@ export const content = {
         h2: '録音を止めたら、PC で正式に文字起こし',
         ps: [
           '録音を止めると、拾音が PC の中でもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も区別します。「Speaker 1」を名前に変えれば会議全体に反映され、その声を覚えて次の会議から名前を自動で入れます。',
-          '日本語の会議は Whisper、中国語と英語は Breeze ASR 25 を使います。製品名や人名を用語集に入れておくと、文字起こしで参考にします。',
+          '日本語と韓国語の会議は Whisper、広東語は Qwen3-ASR、中国語と英語は Breeze ASR 25 を使います。製品名や人名を用語集に入れておくと、文字起こしで参考にします。',
         ],
         gpu: 'NVIDIA のグラフィックスカードがある PC では、GPU アクセラレーション（約 685 MB）を自動でダウンロードし、GPU で文字起こしします。40 分の会議が RTX 3060 で約 8 分（CPU だけでは約 30 分）でした。AMD のグラフィックス（Radeon の内蔵グラフィックスを含む）がある PC では、AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、同じく GPU で文字起こしします。どちらもなくても使えますが、時間がかかります。',
       },
@@ -644,7 +644,7 @@ export const content = {
         rows: [
           ['システム', 'Windows 11（x64 または ARM）'],
           ['メモリ', '8 GB 以上'],
-          ['ディスク容量', 'モデル約 2 GB（初回使用時にダウンロード。それまでは Quick recognition を使います）。GPU アクセラレーション用に NVIDIA ではさらに約 1.1 GB、AMD では約 60 MB、日本語の会議用にさらに約 570 MB'],
+          ['ディスク容量', 'モデル約 2 GB（初回使用時にダウンロード。それまでは Quick recognition を使います）。GPU アクセラレーション用に NVIDIA ではさらに約 1.1 GB、AMD では約 60 MB、日本語・韓国語の会議用にさらに約 570 MB、広東語の会議用に約 2.5 GB'],
           ['グラフィックス', '不要。NVIDIA、AMD のグラフィックスがあれば自動で文字起こしに使います'],
           ['表示言語', '英語、繁体字中国語（日本語表示には対応していません）'],
           ['価格', '無料、MIT ライセンスのオープンソース'],

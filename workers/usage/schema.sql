@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   lang_zh INTEGER NOT NULL DEFAULT 0,
   lang_en INTEGER NOT NULL DEFAULT 0,
   lang_ja INTEGER NOT NULL DEFAULT 0,
-  lang_yue INTEGER NOT NULL DEFAULT 0,         -- 4.4（R63.7）：粵語、韓文；已經建好的資料庫跑 migrate-languages.sql
+  lang_yue INTEGER NOT NULL DEFAULT 0,         -- 4.5（R63.7）：粵語、韓文；已經建好的資料庫跑 migrate-languages.sql
   lang_ko INTEGER NOT NULL DEFAULT 0,
   diarization_runs INTEGER NOT NULL DEFAULT 0,
   summarizer_claude_code INTEGER NOT NULL DEFAULT 0,
