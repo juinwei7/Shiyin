@@ -413,6 +413,12 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 標準答案：`util/languages.json`（每種語言推出來的名稱、說話者、提示詞、長度、星期、字串表、簡轉繁的修正）由 `UtilTests.LanguageProfiles` 逐項比；粵語、韓文的測試會議走跟中文、英文、日文同樣的提示詞、匯出、封包測試。
 - `sync.sh` 同步到虛擬機時要帶 `Resources/languages.json`（漏了 Shiyin.Core 建置不過）。
 
+### 11.10 心智圖（R67，M§42）
+
+- 樹、排版、SVG 在 Shiyin.Core（`Notes/MindMap.cs`），跟 Mac 一字一句同一套規則，標準答案 `mindmap/*.json`、`*.svg` 逐字比。
+- 畫面：紀錄分頁的編輯列左邊加「條列｜心智圖」切換（設定的 `notesView`）。心智圖是 `Canvas`：連線用 `Path`（`BezierSegment`），節點是 `Border`＋`TextBlock`（每行一個 `Run`、`LineBreak`，字型照會議語言的 `fonts.titleWindows`、`contentWindows`），時間是可以按的連結（播放）。外面是可以上下左右捲的 `ScrollViewer`，整張比畫面寬時縮小（`ZoomFactor`，最小 0.6）。
+- 匯出：SVG 直接寫 `MindMap.Svg`；PDF 用現有的 WebView2 列印（`Pdf.Print`），HTML 裡只放那張 SVG，紙張設成跟圖一樣大（加邊）、一頁；PNG 用 `RenderTargetBitmap` 畫匯出模式的 `Canvas`（放在視窗裡一個看不到的 `Popup`，畫完拿掉），2 倍。右上角「匯出」選單的「複製心智圖（圖片）」用同一張 PNG 放進剪貼簿（`DataPackage.SetBitmap`）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

@@ -7,6 +7,15 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 心智圖（R67，design §42、design-windows §11.10、D143～D144；2026-11-05 使用者新需求）
+
+- [ ] **MM1 樹、排版、SVG（Mac）**（§42.1～42.3）：`Notes/MindMap.swift`；標準答案 `mindmap/<會議>.json`、`.svg`，fixtures 加一場很多議題、很長的句子的會議
+  - 驗證：dump-golden 兩次相同；原本的標準答案一個字都沒變；看 SVG 的樣子（用瀏覽器開）
+- [ ] **MM2 Mac 畫面、匯出**（§42.4）：紀錄分頁的切換、`MindMapView`、點時間播放、匯出 PNG／PDF／SVG、複製成圖片
+  - 驗證：DEBUG 版用真的畫面看中文、英文、日文、韓文的會議（淺色、深色、英文介面、文字放大）；點時間點有播放；匯出的三種檔案打開看；複製後貼到預覽程式；l10n check
+- [ ] **MM3 Windows**（design-windows §11.10）：Core 的樹、排版、SVG 過標準答案；畫面、匯出、複製
+  - 驗證：dotnet test 全過；虛擬機看畫面、匯出三種檔案、複製（Mac 磁碟要 10 GB 以上才開得了虛擬機）
+
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57；2026-10-29 Threads 的使用者回饋）
 
 - [ ] **R57 設計**：先寫 design（新的一節＋決策紀錄）：怎麼判斷「低到一般錄音環境不會出現」、找出正在用麥克風的 app（同偵測會議 R19.4）、跟「聲音有點小」（R24.3）的關係
