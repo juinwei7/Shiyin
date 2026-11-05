@@ -145,12 +145,27 @@ public sealed class NotesTabs
         return panel;
     }
 
-    /// <summary>右上角的「編輯」；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）</summary>
+    /// <summary>右上角的「編輯」；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）；左邊是「條列｜心智圖」（R67）</summary>
     FrameworkElement EditBar(MeetingDetail detail)
     {
         var busy = window.State.DetailStatus?.IsActive == true;
         var row = Ui.Row(8);
         row.HorizontalAlignment = HorizontalAlignment.Right;
+        var mode = new SelectorBar();
+        foreach (var (code, label) in new[] { ("list", L.T("條列")), ("mindMap", L.T("心智圖")) })
+        {
+            var item = new SelectorBarItem { Text = label, Tag = code };
+            mode.Items.Add(item);
+            if (code == host.Settings.NotesView) mode.SelectedItem = item;
+        }
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(mode, L.T("顯示方式"));
+        ToolTipService.SetToolTip(mode, L.T("把會議紀錄切換成條列或心智圖"));
+        mode.SelectionChanged += (_, _) =>
+        {
+            if (mode.SelectedItem?.Tag is not string code || code == host.Settings.NotesView) return;
+            host.Settings.Set(AppSettings.NotesViewKey, code);
+            window.Refresh();
+        };
         if (detail.CanUndoNotes)
         {
             var undo = Ui.Button(L.T("復原上一版"), () => host.Controller.UndoNotes(detail.Meeting.Id!.Value), tooltip: L.T("換回上一版會議紀錄（再按一次換回更早的）"));
@@ -171,7 +186,11 @@ public sealed class NotesTabs
         }, tooltip: busy ? L.T("正在處理這場會議，完成後才能編輯") : L.T("直接修改會議紀錄，存檔時會留一個版本"));
         edit.IsEnabled = !busy;
         row.Children.Add(edit);
-        return row;
+        var bar = new Grid();
+        bar.Children.Add(mode);
+        bar.Children.Add(row);
+        mode.HorizontalAlignment = HorizontalAlignment.Left;
+        return bar;
     }
 
     /// <summary>紀錄（R44.1）：摘要、決議、待辦、未決問題、議題、自訂段落由上而下一頁；有待確認時頂部一條可以展開（R44.2）</summary>
@@ -185,6 +204,7 @@ public sealed class NotesTabs
         if (host.Controller.DocumentsChanged.Contains(detail.Meeting.Id!.Value)) column.Children.Add(DocumentsBanner(detail.Meeting.Id!.Value));
         if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
         column.Children.Add(EditBar(detail));
+        if (host.Settings.NotesView == "mindMap") return MindMapPage(detail, notes, column);
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
         if (notes.Decisions.Count > 0) column.Children.Add(Section(L.T("決議"), language, Items(notes.Decisions, language, detail, NoteItemRef.Decisions)));
         if (notes.ActionItems.Count > 0) column.Children.Add(Section(L.T("待辦"), language, ActionItems(notes.ActionItems, language, detail)));
@@ -213,6 +233,22 @@ public sealed class NotesTabs
             column.Children.Add(Ui.Text(L.F("由 %@ 整理．%@", LLMProviders.Parse(by)?.ShortLabel() ?? by, L.T("範本：") + template), Ui.C(12), color: Ui.Tertiary));
         }
         return Reading(column);
+    }
+
+    /// <summary>心智圖模式（M§42.4）：上面照舊是提示條、編輯列，下面是可以上下左右捲的心智圖；段落名稱跟著介面語言（同條列）</summary>
+    FrameworkElement MindMapPage(MeetingDetail detail, MeetingNotes notes, StackPanel header)
+    {
+        var layout = MindMap.LayoutOf(MindMap.Tree(notes, detail.Meeting.DisplayTitle, MindMap.Labels.For(MeetingLanguages.Interface)));
+        var grid = new Grid();
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        var top = new Border { Child = new ReadingColumn(header, Ui.C(680)), Padding = new Thickness(32, 24, 32, 16) };
+        var map = MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded);
+        Grid.SetRow(top, 0);
+        Grid.SetRow(map, 1);
+        grid.Children.Add(top);
+        grid.Children.Add(map);
+        return grid;
     }
 
     /// <summary>文件有變動（R61.8，同 Mac 的 DocumentsBanner）：不用、重新整理會議紀錄</summary>

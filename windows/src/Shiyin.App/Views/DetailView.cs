@@ -487,6 +487,8 @@ public sealed class DetailView
         menu.Items.Add(Ui.Item(L.T("複製會議紀錄：保留格式（貼到 Word、Notion、郵件）"), () => CopyNotes(id, "rich")));
         menu.Items.Add(Ui.Item(L.T("複製會議紀錄：Markdown"), () => CopyNotes(id, "markdown")));
         menu.Items.Add(Ui.Item(L.T("複製會議紀錄：純文字（貼到 Slack、訊息）"), () => CopyNotes(id, "plain")));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Ui.Item(L.T("複製心智圖（圖片）"), () => _ = CopyMindMap(id)));
         var button = new SplitButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Share), Ui.Text(L.T("匯出"), wrap: false)), Flyout = menu };
         button.Click += (_, _) => _ = Dialogs.Export(window, id);
         // 內容是圖示加文字時，無障礙名稱不會自動帶出來
@@ -517,6 +519,26 @@ public sealed class DetailView
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.T("更多"));
         ToolTipService.SetToolTip(button, L.T("更多動作"));
         return button;
+    }
+
+    /// <summary>複製心智圖（M§42.4）：PNG 放進剪貼簿</summary>
+    public async Task CopyMindMap(long id)
+    {
+        try
+        {
+            var b = host.Controller.Bundle(id);
+            if (AppController.MindMapLayout(b) is not { } layout)
+            {
+                window.ShowNotice(L.T("還沒有會議紀錄可以畫成心智圖"));
+                return;
+            }
+            await Copy.Image(await MindMapImage.Png(layout, b.Meeting.MeetingLanguage));
+            window.ShowNotice(L.T("已複製心智圖"));
+        }
+        catch (Exception e) when (e is AppController.ExportException or IOException or System.Runtime.InteropServices.COMException)
+        {
+            window.ShowError(e.Message);
+        }
     }
 
     void CopyNotes(long id, string style)

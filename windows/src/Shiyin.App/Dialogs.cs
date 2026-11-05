@@ -96,6 +96,8 @@ public static class Dialogs
     {
         "md" => "Markdown",
         "pdf" => "PDF",
+        "png" => L.T("PNG 圖片"),
+        "svg" => "SVG",
         "docx" => L.T("Word（docx）"),
         "txt" => L.T("純文字（txt）"),
         "srt" => L.T("字幕（srt）"),
@@ -116,7 +118,8 @@ public static class Dialogs
         // 還沒有會議紀錄（整理中或整理失敗）時，預設改匯出逐字稿
         var item = hasNotes ? ExportItem.Notes : ExportItem.Transcript;
         var format = item.Formats()[0];
-        var items = Enum.GetValues<ExportItem>().Where(i => i != ExportItem.Audio || hasAudio).ToList();
+        var hasMindMap = bundle.Notes is { IsEmpty: false };
+        var items = Enum.GetValues<ExportItem>().Where(i => (i != ExportItem.Audio || hasAudio) && (i != ExportItem.MindMap || hasMindMap)).ToList();
         var itemBox = Ui.Combo(items.Select(i => (i, i.Label())), item, _ => { }, L.T("項目"));
         var formatBox = new ComboBox { Header = L.T("格式"), MinWidth = 200 };
         var times = new CheckBox { Content = L.T("包含時間點"), IsChecked = true };
@@ -137,6 +140,7 @@ public static class Dialogs
             {
                 ExportItem.Notes when !hasNotes => L.T("這場會議還沒有會議紀錄（還在整理或整理失敗），匯出的會議紀錄只會有標題和基本資料。要留下內容，請改匯出逐字稿。"),
                 ExportItem.Notes => L.T("PDF 和 docx 的段落標題使用明體；Markdown 適合貼到 Notion、GitHub。"),
+                ExportItem.MindMap => L.T("依會議紀錄畫成心智圖。PNG 適合貼到聊天軟體、簡報；SVG 可以再用其他軟體編輯。"),
                 ExportItem.Transcript => L.T("srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。"),
                 ExportItem.Audio => L.T("m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。"),
                 _ => L.T("包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。"),

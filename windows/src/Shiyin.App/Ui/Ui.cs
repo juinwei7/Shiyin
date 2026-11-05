@@ -20,6 +20,10 @@ public static class Ui
 
     /// <summary>深色、淺色模式換了：重新決定顏色（畫面會整個重畫）</summary>
     public static void SetTheme(ElementTheme theme) => dark = theme == ElementTheme.Dark;
+    public static bool IsDark => dark;
+
+    /// <summary>"#RRGGBB"</summary>
+    public static Color HexColor(string hex) => Hex(Convert.ToUInt32(hex.TrimStart('#'), 16));
 
     static Color Hex(uint rgb) => Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     static SolidColorBrush Brush(uint light, uint darkColor) => new(Hex(dark ? darkColor : light));

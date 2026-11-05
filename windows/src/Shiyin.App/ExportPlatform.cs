@@ -20,6 +20,17 @@ public sealed class ExportPlatform(AppHost host) : IExportPlatform
 
     public Task NotesPdf(ExportBundle b, string path, CancellationToken cancel) => Pdf.Print(NotesExporter.Html(b, ExportFonts.Windows), path, cancel);
 
+    public async Task MindMapPng(Notes.MindMap.Layout layout, Model.MeetingLanguage language, string path, CancellationToken cancel)
+    {
+        var png = await MindMapImage.Png(layout, language);
+        await File.WriteAllBytesAsync(path, png, cancel);
+    }
+
+    /// <summary>HTML 裡只放那張 SVG，紙張跟圖一樣大、沒有邊（SVG 自己留了邊），一頁</summary>
+    public Task MindMapPdf(Notes.MindMap.Layout layout, Model.MeetingLanguage language, string path, CancellationToken cancel) =>
+        Pdf.Print($"<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{{margin:0;padding:0}}svg{{display:block}}</style></head><body>{Notes.MindMap.Svg(layout, language)}</body></html>",
+            path, cancel, layout.Width / 96, layout.Height / 96, 0);
+
     public Task Audio(string source, string format, string path, CancellationToken cancel) => host.Compressor.Export(source, format, path, cancel);
 }
 
@@ -31,7 +42,8 @@ public static class Pdf
 {
     public static IntPtr Window { get; set; }
 
-    public static async Task Print(string html, string path, CancellationToken cancel)
+    /// <summary>pageWidth、pageHeight（英吋）、margin（pt）沒給時是 A4、邊界 56 pt</summary>
+    public static async Task Print(string html, string path, CancellationToken cancel, double pageWidth = 8.27, double pageHeight = 11.69, double margin = 56)
     {
         // Windows 11 本來就有 WebView2 執行階段，但 N 版、LTSC、被精簡過的系統可能沒有（2026-10-21 在虛擬機看到「系統找不到指定的檔案」）
         string? runtime = null;
@@ -54,10 +66,10 @@ public static class Pdf
                 web.NavigateToString(html);
                 await loaded.Task.WaitAsync(TimeSpan.FromSeconds(30), cancel);
                 var settings = environment.CreatePrintSettings();
-                settings.PageWidth = 8.27;
-                settings.PageHeight = 11.69;
+                settings.PageWidth = pageWidth;
+                settings.PageHeight = pageHeight;
                 // 56 pt = 0.78 英吋
-                settings.MarginTop = settings.MarginBottom = settings.MarginLeft = settings.MarginRight = 56 / 72.0;
+                settings.MarginTop = settings.MarginBottom = settings.MarginLeft = settings.MarginRight = margin / 72.0;
                 settings.ShouldPrintBackgrounds = true;
                 settings.ShouldPrintHeaderAndFooter = false;
                 if (!await web.PrintToPdfAsync(path, settings)) throw new IOException(Localization.L.T("匯出 PDF 失敗"));
@@ -81,6 +93,17 @@ public static class Copy
     {
         var package = new DataPackage();
         package.SetText(text);
+        Clipboard.SetContent(package);
+    }
+
+    /// <summary>圖片（心智圖，design-windows §11.10）</summary>
+    public static async Task Image(byte[] png)
+    {
+        var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+        await stream.WriteAsync(System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions.AsBuffer(png));
+        stream.Seek(0);
+        var package = new DataPackage();
+        package.SetBitmap(Windows.Storage.Streams.RandomAccessStreamReference.CreateFromStream(stream));
         Clipboard.SetContent(package);
     }
 

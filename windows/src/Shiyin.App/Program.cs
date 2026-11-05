@@ -111,6 +111,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         host.ShowMeetingPrompt = ShowMeetingPrompt;
         main = new MainWindow(host);
         Pdf.Window = main.Handle;
+        MindMapImage.Root = () => main?.XamlRoot;
         main.Activate();
         host.Start();
         BuildTray();
