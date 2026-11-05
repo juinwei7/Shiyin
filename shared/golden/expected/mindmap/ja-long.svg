@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1237" height="160" viewBox="0 0 1237 160" font-family="&quot;Hiragino Sans&quot;, &quot;Hiragino Kaku Gothic ProN&quot;, -apple-system, &quot;Yu Gothic&quot;, &quot;Meiryo&quot;, &quot;Segoe UI&quot;, sans-serif">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<path d="M 730.5 80 C 758.5 80 758.5 49 786.5 49" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 886 49 C 902 49 902 49 918 49" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 730.5 80 C 758.5 80 758.5 106 786.5 106" fill="none" stroke="#3E6FA8" stroke-width="2"/>
+<path d="M 866.5 106 C 882.5 106 882.5 106 898.5 106" fill="none" stroke="#3E6FA8" stroke-width="1.5"/>
+<path d="M 418.5 80 C 390.5 80 390.5 80 362.5 80" fill="none" stroke="#B7862A" stroke-width="2"/>
+<path d="M 305.5 80 C 289.5 80 289.5 80 273.5 80" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<rect x="418.5" y="55.5" width="312" height="49" rx="12" fill="#2D6A5D"/>
+<text font-size="20" fill="#FFFFFF" font-family="&quot;Hiragino Mincho ProN&quot;, &quot;Yu Mincho&quot;, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="574.5" y="80">新製品の発売スケジュール確認</tspan></text>
+<rect x="786.5" y="32" width="99.5" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text x="796.5" y="49" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:30</text>
+<text font-size="15" fill="#1E2625" font-family="&quot;Hiragino Mincho ProN&quot;, &quot;Yu Mincho&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="831" y="49">発売日</tspan></text>
+<text x="924" y="49" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">01:00</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="958.5" y="49">在庫は十分。</tspan></text>
+<rect x="786.5" y="89" width="80" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Hiragino Mincho ProN&quot;, &quot;Yu Mincho&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="796.5" y="106">決定事項</tspan></text>
+<text x="904.5" y="96.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">03:00</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="939" y="96.5">発売日は予定どおり十一月五日とし、延期は</tspan><tspan x="939" y="115.5">しない。</tspan></text>
+<rect x="305.5" y="63" width="57" height="34" rx="8" fill="#FFFFFF" stroke="#B7862A" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Hiragino Mincho ProN&quot;, &quot;Yu Mincho&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="352.5" y="80">ToDo</tspan></text>
+<text x="267.5" y="70.5" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">04:10</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="233" y="70.5">森：販売店向けの説明資料を作る</tspan><tspan x="233" y="89.5">（2026-11-01）</tspan></text>
+</svg>

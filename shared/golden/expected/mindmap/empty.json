@@ -1,0 +1,31 @@
+{
+  "boxes" : [
+    {
+      "branch" : -1,
+      "h" : 49,
+      "id" : 0,
+      "level" : 0,
+      "lines" : [
+        "會議"
+      ],
+      "side" : 0,
+      "time" : "",
+      "timeWidth" : 0,
+      "w" : 72,
+      "x" : 32,
+      "y" : 32
+    }
+  ],
+  "edges" : [
+
+  ],
+  "height" : 113,
+  "tree" : {
+    "children" : [
+
+    ],
+    "text" : "會議",
+    "time" : ""
+  },
+  "width" : 136
+}

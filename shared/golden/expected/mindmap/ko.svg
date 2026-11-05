@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1016" height="150" viewBox="0 0 1016 150" font-family="&quot;Apple SD Gothic Neo&quot;, -apple-system, &quot;Malgun Gothic&quot;, &quot;Segoe UI&quot;, sans-serif">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<path d="M 617 75 C 645 75 645 49 673 49" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 723 49 C 739 49 739 49 755 49" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 617 75 C 645 75 645 101 673 101" fill="none" stroke="#3E6FA8" stroke-width="2"/>
+<path d="M 757.5 101 C 773.5 101 773.5 101 789.5 101" fill="none" stroke="#3E6FA8" stroke-width="1.5"/>
+<path d="M 435 75 C 407 75 407 75 379 75" fill="none" stroke="#B7862A" stroke-width="2"/>
+<path d="M 324.5 75 C 308.5 75 308.5 75 292.5 75" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<rect x="435" y="50.5" width="182" height="49" rx="12" fill="#2D6A5D"/>
+<text font-size="20" fill="#FFFFFF" font-family="AppleMyungjo, Batang, &quot;Malgun Gothic&quot;, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="526" y="75">Lumio 주간 회의</tspan></text>
+<rect x="673" y="32" width="50" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="AppleMyungjo, Batang, &quot;Malgun Gothic&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="683" y="49">요약</tspan></text>
+<text x="761" y="49" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:05</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="795.5" y="49">Redis 캐시로 응답 시간 단축</tspan></text>
+<rect x="673" y="84" width="84.5" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="AppleMyungjo, Batang, &quot;Malgun Gothic&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="683" y="101">결정 사항</tspan></text>
+<text x="795.5" y="101" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">1:00:05</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="840" y="101">출시일은 예정대로 유지</tspan></text>
+<rect x="324.5" y="58" width="54.5" height="34" rx="8" fill="#FFFFFF" stroke="#B7862A" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="AppleMyungjo, Batang, &quot;Malgun Gothic&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="369" y="75">할 일</tspan></text>
+<text x="286.5" y="75" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:11</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="252" y="75">이서연: 롤백 절차 정리 (2026-11-04)</tspan></text>
+</svg>

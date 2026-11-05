@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1148" height="113" viewBox="0 0 1148 113" font-family="-apple-system, &quot;PingFang TC&quot;, &quot;Segoe UI&quot;, &quot;Microsoft JhengHei&quot;, sans-serif">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<path d="M 643 56.5 C 671 56.5 671 56.5 699 56.5" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 779.5 56.5 C 795.5 56.5 795.5 56.5 811.5 56.5" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 530.5 56.5 C 502.5 56.5 502.5 56.5 474.5 56.5" fill="none" stroke="#3E6FA8" stroke-width="2"/>
+<path d="M 356 56.5 C 340 56.5 340 56.5 324 56.5" fill="none" stroke="#3E6FA8" stroke-width="1.5"/>
+<rect x="530.5" y="32" width="112.5" height="49" rx="12" fill="#2D6A5D"/>
+<text font-size="20" fill="#FFFFFF" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="587" y="56.5">Meeting</tspan></text>
+<rect x="699" y="39.5" width="80.5" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="709" y="56.5">Summary</tspan></text>
+<text x="817.5" y="47" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:00</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="852" y="47">Weekly sync with the design team about</tspan><tspan x="852" y="66">the onboarding flow</tspan></text>
+<rect x="356" y="39.5" width="118.5" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="464.5" y="56.5">Action items</tspan></text>
+<text x="318" y="47" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">02:00</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="283.5" y="47">Bob: Ship the new onboarding screens</tspan><tspan x="283.5" y="66">(2026-11-20)</tspan></text>
+</svg>

@@ -26,6 +26,7 @@ enum GoldenDump {
             documents(fixtures, folder: documentsFolder, &dump)
             templates(&dump)
             exports(fixtures, &dump)
+            mindMaps(fixtures, &dump)
             utilities(fixtures, &dump)
             pipeline(fixtures, &dump)
             server(fixtures, &dump)
@@ -438,6 +439,34 @@ enum GoldenDump {
                 object = ["error": "\(error)"]
             }
             w.json("documents/read/\(name).json", object)
+        }
+    }
+
+    // MARK: 心智圖（design §42.5）：每場有紀錄的會議和 mindMapCases，段落名稱用會議語言（同匯出）
+
+    private static func mindMaps(_ f: Fixtures, _ w: inout Writer) {
+        var cases: [(key: String, notes: MeetingNotes, title: String, language: MeetingLanguage)] = []
+        for fx in f.meetings { if let notes = fx.notes { cases.append((fx.key, notes, fx.meeting.displayTitle, fx.language)) } }
+        for o in f["mindMapCases"] as? [Object] ?? [] {
+            guard let notes = o["notes"].flatMap(decodeNotes) else { continue }
+            cases.append((o["key"] as? String ?? "", notes, o["title"] as? String ?? "",
+                          MeetingLanguage(rawValue: o["language"] as? String ?? "zh") ?? .zh))
+        }
+        func half(_ x: Double) -> Double { Double(MindMap.number(x))! }
+        func node(_ n: MindMap.Node) -> Object { ["text": n.text, "time": n.time, "children": n.children.map(node)] }
+        for c in cases {
+            let tree = MindMap.tree(notes: c.notes, title: c.title, labels: .init(c.language))
+            let layout = MindMap.layout(tree)
+            let boxes: [Object] = layout.boxes.map { b in
+                ["id": b.id, "level": b.level, "branch": b.branch, "side": b.side, "x": half(b.x), "y": half(b.y), "w": half(b.w),
+                 "h": half(b.h), "lines": b.lines, "time": b.time, "timeWidth": half(b.timeWidth)]
+            }
+            let edges: [Object] = layout.edges.map { e in
+                ["from": e.from, "to": e.to, "branch": e.branch, "x0": half(e.x0), "y0": half(e.y0), "x1": half(e.x1), "y1": half(e.y1)]
+            }
+            w.json("mindmap/\(c.key).json", ["tree": node(tree), "width": half(layout.width), "height": half(layout.height),
+                                              "boxes": boxes, "edges": edges] as Object)
+            w.text("mindmap/\(c.key).svg", MindMap.svg(layout, language: c.language))
         }
     }
 
