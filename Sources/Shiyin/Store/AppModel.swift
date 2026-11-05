@@ -1526,6 +1526,17 @@ final class AppModel {
             case "docx": try await HTML.docx(NotesExporter.html(b)).write(to: url)
             default: try NotesExporter.markdown(b).write(to: url, atomically: true, encoding: .utf8)
             }
+        case .mindMap:
+            // 心智圖（design §42.4）：段落名稱跟著會議語言，同其他匯出
+            guard let layout = MindMapExport.layout(b) else { throw ExportError.noNotes }
+            let language = b.meeting.meetingLanguage
+            switch format {
+            case "svg": try MindMap.svg(layout, language: language).write(to: url, atomically: true, encoding: .utf8)
+            case "pdf": try MindMapExport.pdf(layout, language: language, to: url)
+            default:
+                guard let data = MindMapExport.png(layout, language: language) else { throw ExportError.noNotes }
+                try data.write(to: url)
+            }
         case .transcript:
             if format == "docx" { try await HTML.docx(TranscriptExporter.html(b, times: times, speakers: speakers)).write(to: url) }
             else {
@@ -1546,14 +1557,20 @@ final class AppModel {
         let base = "\(m.meetingDate) \(m.displayTitle)".replacingOccurrences(of: "/", with: "／").replacingOccurrences(of: ":", with: "：")  // l10n-skip
         switch item {
         case .transcript: return String(localized: "\(base)（逐字稿）.\(format)")
+        case .mindMap: return String(localized: "\(base)（心智圖）.\(format)")
         case .audio: return "\(base).\(format)"
         default: return "\(base).\(format)"
         }
     }
 
     enum ExportError: LocalizedError {
-        case meetingGone
-        var errorDescription: String? { String(localized: "這場會議已經被刪除，沒辦法匯出") }
+        case meetingGone, noNotes
+        var errorDescription: String? {
+            switch self {
+            case .meetingGone: return String(localized: "這場會議已經被刪除，沒辦法匯出")
+            case .noNotes: return String(localized: "這場會議還沒有會議紀錄，畫不出心智圖")
+            }
+        }
     }
 
     enum CopyStyle { case plain, markdown, rich }
@@ -1575,6 +1592,18 @@ final class AppModel {
             HTML.copy(plain: NotesExporter.plain(b), html: NotesExporter.html(b))
         }
         noticeMessage = String(localized: "已複製會議紀錄")
+    }
+
+    /// 複製心智圖（design §42.4）：PNG 放進剪貼簿，貼到聊天軟體、簡報
+    func copyMindMap() {
+        guard let b = exportBundle() else { return }
+        guard let layout = MindMapExport.layout(b), let png = MindMapExport.png(layout, language: b.meeting.meetingLanguage) else {
+            noticeMessage = String(localized: "還沒有會議紀錄可以畫成心智圖")
+            return
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setData(png, forType: .png)
+        noticeMessage = String(localized: "已複製心智圖")
     }
 
     // MARK: 搜尋（R9.1）

@@ -179,9 +179,11 @@ struct NotesPlaceholder: View {
 }
 
 /// 紀錄分頁（R44.1，design §33.1）：待確認的條、摘要、決議、待辦、未決問題、議題、自訂段落，一頁捲到底（順序同匯出）。
-/// 可以切換成編輯模式（R6.6），一份編輯器編全部
+/// 可以切換成編輯模式（R6.6），一份編輯器編全部；也可以切換成心智圖（R67，design §42.4）
 struct NotesPage: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.textScale) private var scale
+    @AppStorage(AppSettings.notesViewKey) private var notesView = "list"
     let detail: MeetingDetail
     @State private var editing: MeetingNotes?
     @State private var base: MeetingNotes?
@@ -190,16 +192,11 @@ struct NotesPage: View {
         if let current = editing {
             NotesEditor(notes: Binding(draft: $editing, fallback: current)) { finish($0) }
                 .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
+        } else if let notes = detail.notes, !notes.isEmpty, notesView == "mindMap" {
+            mindMapPage(notes)
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
-                // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
-                if let id = detail.meeting.id, model.documentsChanged.contains(id) {
-                    DocumentsBanner().environment(\.textScale, 1)
-                }
-                if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
-                EditBar(disabled: model.detailStatus?.isActive == true, onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
-                    base = notes; editing = notes
-                }
+                header(notes)
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
                 }
@@ -240,6 +237,35 @@ struct NotesPage: View {
             }
         } else {
             NotesPlaceholder(detail: detail)
+        }
+    }
+
+    /// 提示條和編輯列：條列、心智圖共用
+    @ViewBuilder private func header(_ notes: MeetingNotes) -> some View {
+        // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
+        if let id = detail.meeting.id, model.documentsChanged.contains(id) {
+            DocumentsBanner().environment(\.textScale, 1)
+        }
+        if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
+        EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true,
+                onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
+            base = notes; editing = notes
+        }
+    }
+
+    /// 心智圖模式（design §42.4）：上面照舊是提示條、編輯列，下面是可以上下左右捲的心智圖；段落名稱跟著介面語言（同條列）
+    private func mindMapPage(_ notes: MeetingNotes) -> some View {
+        let layout = MindMap.layout(MindMap.tree(notes: notes, title: detail.meeting.displayTitle, labels: .init(.interface)))
+        return VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 26) { header(notes) }
+                .contentFont()
+                .frame(maxWidth: 680 * scale, alignment: .leading)
+                .padding(.horizontal, 32)
+                .padding(.top, 24)
+                .padding(.bottom, 26)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            MindMapView(layout: layout, language: detail.meeting.meetingLanguage,
+                        onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil)
         }
     }
 
@@ -289,8 +315,10 @@ struct ReviewBanner: View {
     }
 }
 
-/// 右上角的「編輯」按鈕；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）
+/// 右上角的「編輯」按鈕；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）；左邊是「條列｜心智圖」（R67）
 struct EditBar: View {
+    /// list／mindMap；nil 不顯示切換
+    var viewMode: Binding<String>? = nil
     /// 轉錄或整理中不能編輯：工作完成時會整份寫回，手動改的會被蓋掉
     var disabled = false
     /// nil：沒有上一版，不顯示
@@ -299,6 +327,16 @@ struct EditBar: View {
 
     var body: some View {
         HStack(spacing: 14) {
+            if let viewMode {
+                Picker("顯示方式", selection: viewMode) {
+                    Text("條列").tag("list")
+                    Text("心智圖").tag("mindMap")
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("把會議紀錄切換成條列或心智圖")
+            }
             Spacer()
             if let onUndo {
                 Button("復原上一版", systemImage: "arrow.uturn.backward", action: onUndo)

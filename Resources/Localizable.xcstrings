@@ -295,6 +295,17 @@
         }
       }
     },
+    "%@（心智圖）.%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (mind map).%@"
+          }
+        }
+      }
+    },
     "%@（正式轉錄完成後會自動更新）": {
       "extractionState": "manual",
       "localizations": {
@@ -973,6 +984,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't create the PDF"
+          }
+        }
+      }
+    },
+    "PNG 圖片": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG image"
           }
         }
       }
@@ -2071,6 +2093,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Revising from answers: %@"
+          }
+        }
+      }
+    },
+    "依會議紀錄畫成心智圖。PNG 適合貼到聊天軟體、簡報；SVG 可以再用其他軟體編輯。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draws the meeting notes as a mind map. PNG works well in chats and slides; SVG can be edited in other apps."
           }
         }
       }
@@ -4371,6 +4404,17 @@
         }
       }
     },
+    "已複製心智圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mind map copied"
+          }
+        }
+      }
+    },
     "已複製會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -4666,6 +4710,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Undo: %@"
+          }
+        }
+      }
+    },
+    "心智圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mind map"
           }
         }
       }
@@ -5020,6 +5075,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apply every suggestion to the transcript. You can revert each one later."
+          }
+        }
+      }
+    },
+    "把會議紀錄切換成條列或心智圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the meeting notes as a list or a mind map"
           }
         }
       }
@@ -6996,6 +7062,17 @@
         }
       }
     },
+    "條列": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List"
+          }
+        }
+      }
+    },
     "標記這個時間點（⌘B），整理時會被當成重點": {
       "extractionState": "manual",
       "localizations": {
@@ -7796,6 +7873,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't join"
+          }
+        }
+      }
+    },
+    "沒辦法建立 PDF": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't create the PDF"
           }
         }
       }
@@ -9222,6 +9310,17 @@
         }
       }
     },
+    "複製心智圖（圖片）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Mind Map (Image)"
+          }
+        }
+      }
+    },
     "複製會議紀錄（Markdown）": {
       "extractionState": "manual",
       "localizations": {
@@ -10588,6 +10687,17 @@
         }
       }
     },
+    "這場會議還沒有會議紀錄，畫不出心智圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no notes yet, so there's no mind map to draw"
+          }
+        }
+      }
+    },
     "這場錄音不再提示這件事": {
       "extractionState": "manual",
       "localizations": {
@@ -10949,6 +11059,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No meetings yet"
+          }
+        }
+      }
+    },
+    "還沒有會議紀錄可以畫成心智圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meeting notes to draw as a mind map yet"
           }
         }
       }
@@ -12016,6 +12137,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Display"
+          }
+        }
+      }
+    },
+    "顯示方式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
           }
         }
       }
