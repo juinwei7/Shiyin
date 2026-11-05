@@ -204,7 +204,7 @@ Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later
 
 - Local transcription: recordings are transcribed on the Mac with whisper.cpp. No audio is uploaded, and transcription works offline.
 - No meeting bot: it records the microphone and the computer's audio directly, so the other side of Zoom, Meet or Teams is captured without a bot joining.
-- Built for Taiwanese Mandarin mixed with English: Chinese and English meetings use Breeze ASR 25 (MediaTek Research), tuned for code-switching such as "deploy" or "Redis" inside Mandarin sentences. Japanese meetings use Whisper large-v3-turbo. The meeting language is detected automatically.
+- Built for Taiwanese Mandarin mixed with English: Chinese and English meetings use Breeze ASR 25 (MediaTek Research), tuned for code-switching such as "deploy" or "Redis" inside Mandarin sentences. Japanese and Korean meetings use Whisper large-v3-turbo, and Cantonese meetings use Qwen3-ASR. The meeting language is detected automatically.
 - Bring your own AI: notes are written by the Claude or ChatGPT subscription you already have (through Claude Code or Codex), or with an Anthropic, OpenAI, Gemini or OpenAI-compatible API key (Groq, OpenRouter). For a fully offline setup, point it at a local model in Ollama or LM Studio, and nothing leaves the Mac at all. Only transcript text is sent, and only to the provider you pick. You can also choose not to summarize and keep just the transcript.
 - Notes you can check: a summary, decisions, action items and open questions, each with a timestamp. Names and terms the AI is unsure about are listed under "To confirm" instead of being guessed.
 - Speaker identification with voiceprints: name a speaker once and Shiyin recognizes the voice in later meetings. Speakers can be merged or reassigned line by line.
@@ -223,6 +223,6 @@ ${windowsPage}- [Source code on GitHub](${GITHUB})
 ${guideLinks.length || guideLinksZh.length ? `\n## Guides and comparisons\n\n${[...guideLinks, ...guideLinksZh].join('\n')}\n` : ''}
 ## 繁體中文摘要
 
-拾音是 Mac 上免費、開源（MIT）的會議記錄 app：錄現場或線上會議（Zoom、Google Meet、Teams，不用派機器人進會議），錄音中有即時逐字稿，錄完在 Mac 本機轉錄（錄音不上傳、可離線），分出說話者，再用你自己的 Claude、ChatGPT 訂閱、API，或本機的 Ollama、LM Studio（完全不連網）整理成會議紀錄（摘要、決議、待辦），每一條都附時間點，點了就聽到原話。中文轉錄用 Breeze ASR 25，針對台灣中文夾英文；也支援英文、日文會議。需要 macOS 26 和 Apple Silicon，${windowsZh}
+拾音是 Mac 上免費、開源（MIT）的會議記錄 app：錄現場或線上會議（Zoom、Google Meet、Teams，不用派機器人進會議），錄音中有即時逐字稿，錄完在 Mac 本機轉錄（錄音不上傳、可離線），分出說話者，再用你自己的 Claude、ChatGPT 訂閱、API，或本機的 Ollama、LM Studio（完全不連網）整理成會議紀錄（摘要、決議、待辦），每一條都附時間點，點了就聽到原話。中文轉錄用 Breeze ASR 25，針對台灣中文夾英文；也支援英文、日文、廣東話、韓文會議。需要 macOS 26 和 Apple Silicon，${windowsZh}
 `;
 }

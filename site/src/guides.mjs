@@ -210,7 +210,7 @@ ${table(['測試資料', 'Whisper large-v2', 'Breeze ASR 25', '差別'], [
 <li>按「錄音」開始錄，或把已經錄好的音檔、影片（m4a、mp3、wav、mp4、mov 等）拖進視窗。</li>
 <li>停止後拾音在本機轉錄，逐字稿每一段都標上說話者和時間點。</li>
 </ol>
-<p>英文會議同樣用 Breeze ASR 25，日文會議改用 Whisper large-v3-turbo。開始錄音後拾音會自己判斷是哪一種語言。</p>
+<p>英文會議同樣用 Breeze ASR 25，日文、韓文會議改用 Whisper large-v3-turbo，廣東話會議用 Qwen3-ASR。開始錄音後拾音會自己判斷是哪一種語言。</p>
 
 <h2>讓專有名詞也轉對</h2>
 <ul>
@@ -227,7 +227,7 @@ ${table(['測試資料', 'Whisper large-v2', 'Breeze ASR 25', '差別'], [
         ['一定要網路嗎？', '只有第一次下載模型時要。之後轉錄、分說話者都在本機，不需要網路。'],
         ['可以只用 macOS 內建的辨識嗎？', '可以，在設定裡改用 macOS 內建辨識，不用下載模型、速度快很多，但不會參考詞彙表，中英夾雜的準確度也比較差。'],
         ['錄音會上傳嗎？', '不會。轉錄在你的 Mac 上完成，只有整理會議紀錄時，逐字稿的文字會送到你選的整理工具。'],
-        ['支援台語嗎？', '目前不支援。會議語言可以選中文、英文或日文。'],
+        ['支援台語嗎？', '目前不支援。我們試過聯發科開源的台語模型，準確度還不夠用在會議紀錄，有更好的模型會再評估。會議語言可以選中文、英文、日文、廣東話或韓文。'],
       ],
     },
   },
@@ -299,7 +299,7 @@ ${table(['步驟', '在哪裡做', '要網路嗎'], [
 ${table(['Step', 'Where', 'Internet?'], [
   ['Recording', 'Your Mac', 'No'],
   ['Live transcript while recording', 'Your Mac (macOS on-device speech recognition)', 'No'],
-  ['Final transcription', 'Your Mac (whisper.cpp with Breeze ASR 25, or Whisper large-v3-turbo for Japanese)', 'Only to download the models once'],
+  ['Final transcription', 'Your Mac (whisper.cpp with Breeze ASR 25, Whisper large-v3-turbo for Japanese and Korean, or Qwen3-ASR for Cantonese)', 'Only to download the models once'],
   ['Speaker identification and voiceprints', 'Your Mac', 'No'],
   ['Meeting notes and questions', 'The summarizer you choose', 'Yes with ChatGPT, Claude or an API; no with a local model in Ollama or LM Studio, or with “Don’t summarize”'],
 ])}
@@ -324,7 +324,7 @@ ${table(['Step', 'Where', 'Internet?'], [
       faq: [
         ['Is the live transcript uploaded?', 'No. The live transcript uses the speech recognition built into macOS, which runs on the device.'],
         ['Where do voiceprints go?', 'Nowhere. They stay on your Mac, and you can view, delete or turn them off in Settings.'],
-        ['Which languages can it transcribe?', 'English, Chinese (including Mandarin mixed with English) and Japanese. Shiyin detects the language after you start recording.'],
+        ['Which languages can it transcribe?', 'English, Chinese (including Mandarin mixed with English), Japanese, Cantonese and Korean (experimental). Shiyin detects English, Chinese, Japanese and Korean after you start recording.'],
         ['Can I share notes with colleagues?', 'Export them as Markdown, PDF or Word, or send the whole meeting as a .shiyin file that opens in Shiyin with a double-click.'],
       ],
     },
@@ -338,7 +338,7 @@ ${table(['Step', 'Where', 'Internet?'], [
 <ul>
 <li>日本語の会議は Whisper large-v3-turbo で文字起こしします。初めて日本語の会議を文字起こしするときに、モデル（約 570 MB）をダウンロードします。</li>
 <li>録音中のリアルタイム文字起こしは、macOS に内蔵された端末上の音声認識を使います。</li>
-<li>録音を始めて約 10 秒で、日本語・英語・中国語のどれかを自動で判定します。</li>
+<li>録音を始めて約 10 秒で、日本語・英語・中国語・韓国語のどれかを自動で判定します。</li>
 <li>議事録と文字起こしは日本語で作られ、PDF と Word には日本語のフォントが使われます。</li>
 </ul>
 <p class="note">アプリの表示は英語と繁体字中国語のみです。日本語の macOS では英語で表示されます。</p>
@@ -535,11 +535,11 @@ ${table(['工具', '價格', '錄音在哪裡轉', '會議機器人', '中文', 
       lead: 'Granola and Otter are the best-known AI meeting note takers, but both process audio in the cloud and charge for their full plans. These open-source apps record and transcribe on your own computer. Here is how they compare, including where Shiyin isn’t the best fit.',
       body: `
 <h2>The short answer</h2>
-<p>For free, local meeting notes on a Mac or a Windows 11 PC with automatic speaker identification, in English, Chinese or Japanese, Shiyin fits well. If you meet in many more languages, Meetily and Minutes cover more of them, and Meetily also builds on Linux. Anarlog adds hosted sync and collaboration on its paid plan.</p>
+<p>For free, local meeting notes on a Mac or a Windows 11 PC with automatic speaker identification, in English, Chinese, Japanese, Cantonese or Korean, Shiyin fits well. If you meet in many more languages, Meetily and Minutes cover more of them, and Meetily also builds on Linux. Anarlog adds hosted sync and collaboration on its paid plan.</p>
 
 <h2>Open-source apps that run locally</h2>
 ${table(['App', 'Price', 'Transcription', 'Speaker identification', 'Notes written by', 'Platforms'], [
-  ['Shiyin', 'Free (MIT)', 'On your computer: Breeze ASR 25, or Whisper large-v3-turbo for Japanese', 'Automatic and free; remembers voices across meetings', 'Your Claude or ChatGPT subscription (Claude Code, Codex), an API key, or a local model', 'macOS 26 on Apple Silicon; Windows 11 (x64, ARM)'],
+  ['Shiyin', 'Free (MIT)', 'On your computer: Breeze ASR 25, Whisper large-v3-turbo for Japanese and Korean, or Qwen3-ASR for Cantonese', 'Automatic and free; remembers voices across meetings', 'Your Claude or ChatGPT subscription (Claude Code, Codex), an API key, or a local model', 'macOS 26 on Apple Silicon; Windows 11 (x64, ARM)'],
   ['Meetily', 'Community edition free (MIT); Pro $10/user/month billed annually', 'On your computer: Whisper or Parakeet', 'Pro only', 'Claude, Groq, OpenAI API or local Ollama', 'macOS, Windows; Linux from source'],
   ['Anarlog (formerly Hyprnote)', 'Free (MIT); Pro $14/person/month', 'On-device on the free plan; cloud transcription on Pro', 'Manual labels free; automatic on Pro', 'On-device models or your own API keys', 'Apple Silicon Mac'],
   ['Minutes', 'Free (MIT)', 'On your computer: Whisper or Parakeet', 'Yes (pyannote)', 'Any LLM; can use your Claude subscription through MCP', 'Mac, Windows'],
@@ -564,7 +564,7 @@ ${table(['App', 'Price', 'Where audio is processed', 'Meeting bot'], [
 <h2>When another app fits better</h2>
 <ul>
 <li><strong>You use Linux.</strong> Meetily builds from source on Linux; Shiyin runs only on macOS and Windows 11.</li>
-<li><strong>You meet in languages other than English, Chinese or Japanese.</strong> Meetily and Minutes use Whisper or Parakeet, which cover many more languages.</li>
+<li><strong>You meet in languages other than English, Chinese, Japanese, Cantonese or Korean.</strong> Meetily and Minutes use Whisper or Parakeet, which cover many more languages.</li>
 <li><strong>You have an Intel Mac or an older macOS.</strong> Shiyin needs macOS 26 on Apple Silicon.</li>
 <li><strong>Your team wants shared, synced notes.</strong> Anarlog Pro and Granola are built for that.</li>
 <li><strong>You record on your phone.</strong> Granola and Otter have mobile apps.</li>
