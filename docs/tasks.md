@@ -7,10 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 更多會議語言：語言檔、粵語、韓文（R63～R65，design §41、design-windows §11.9、D139～D142；2026-11-04 使用者新需求）
-
-- [~] **LANG6 後台的統計欄位**（R63.7）：程式完成（`lang_yue`、`lang_ko`、`migrate-languages.sql`）。還差：使用者先跑 `migrate-languages.sql`、再部署 worker（同 E6）
-
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57；2026-10-29 Threads 的使用者回饋）
 
 - [ ] **R57 設計**：先寫 design（新的一節＋決策紀錄）：怎麼判斷「低到一般錄音環境不會出現」、找出正在用麥克風的 app（同偵測會議 R19.4）、跟「聲音有點小」（R24.3）的關係
