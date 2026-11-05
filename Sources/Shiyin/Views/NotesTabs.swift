@@ -183,6 +183,7 @@ struct NotesPlaceholder: View {
 struct NotesPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.textScale) private var scale
+    @Environment(\.snapshotMode) private var snapshotMode
     @AppStorage(AppSettings.notesViewKey) private var notesView = "list"
     let detail: MeetingDetail
     @State private var editing: MeetingNotes?
@@ -253,19 +254,31 @@ struct NotesPage: View {
         }
     }
 
-    /// 心智圖模式（design §42.4）：上面照舊是提示條、編輯列，下面是可以上下左右捲的心智圖；段落名稱跟著介面語言（同條列）
+    /// 心智圖模式（design §42.4）：上面照舊是提示條、編輯列，下面是心智圖；段落名稱跟著介面語言（同條列）。
+    /// 整頁一起上下捲（同條列）：待確認展開時很高，放在捲動外面會把整個視窗的內容往上推（2026-11-05 使用者看到整個視窗空白）
     private func mindMapPage(_ notes: MeetingNotes) -> some View {
         let layout = MindMap.layout(MindMap.tree(notes: notes, title: detail.meeting.displayTitle, labels: .init(.interface)))
-        return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 26) { header(notes) }
-                .contentFont()
-                .frame(maxWidth: 680 * scale, alignment: .leading)
-                .padding(.horizontal, 32)
-                .padding(.top, 24)
-                .padding(.bottom, 26)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            MindMapView(layout: layout, language: detail.meeting.meetingLanguage,
-                        onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil)
+        func page(width: Double) -> some View {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 26) { header(notes) }
+                    .contentFont()
+                    .frame(maxWidth: 680 * scale, alignment: .leading)
+                    .padding(.horizontal, 32)
+                    .padding(.top, 24)
+                    .padding(.bottom, 26)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                MindMapView(layout: layout, language: detail.meeting.meetingLanguage, availableWidth: width,
+                            onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil)
+            }
+        }
+        return Group {
+            if snapshotMode {
+                page(width: 900)
+            } else {
+                GeometryReader { geo in
+                    ScrollView(.vertical) { page(width: geo.size.width) }
+                }
+            }
         }
     }
 

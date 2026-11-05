@@ -1973,7 +1973,7 @@ Windows 的做法在 design-windows §11.10。
 ### 42.4 畫面（Mac）
 
 - 紀錄分頁的編輯列左邊加「條列｜心智圖」切換（`notesView`：`list`／`mindMap`，存在 UserDefaults）。心智圖模式時，待確認、參考文件的提示條、編輯列照舊在上面，下面換成心智圖；按「編輯」切回條列模式的編輯器。
-- `MindMapView`：用排版的座標，連線畫在 `Canvas`，節點是一般的 SwiftUI 文字（字型照會議語言，`contentTitleFont`、`meetingText`），時間用 `TimeButton`（點了播放）。外面是可以上下左右捲的 `ScrollView`；整張比畫面寬時縮小到放得下，最小 0.6 倍；文字大小（⌘＋／⌘－）一起放大縮小。snapshot 模式不用 `ScrollView`。
+- `MindMapView`：用排版的座標，連線畫在 `Canvas`，節點是一般的 SwiftUI 文字（字型照會議語言，`contentTitleFont`、`meetingText`），時間用 `TimeButton`（點了播放）。提示條、編輯列和心智圖整頁一起上下捲（同條列；待確認展開時很高，放在捲動外面會把整個視窗的內容往上推，2026-11-05 使用者看到整個視窗空白），心智圖比畫面寬時自己左右捲；整張比畫面寬時縮小到放得下，最小 0.6 倍；文字大小（⌘＋／⌘－）一起放大縮小。snapshot 模式不用 `ScrollView`。
 - 匯出：`ExportItem.mindMap`，格式 png、pdf、svg。PNG、PDF 用 `ImageRenderer` 畫同一個 `MindMapView`（匯出模式：會議語言的段落名稱、淺色、白底、時間是一般文字），PNG 2 倍；SVG 直接寫 `MindMap.svg`。右上角「匯出」選單加「複製心智圖（圖片）」：PNG 放進剪貼簿。
 - 會議沒有紀錄時切換不能用（同匯出）。
 
