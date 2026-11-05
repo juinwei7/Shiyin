@@ -661,6 +661,17 @@
         }
       }
     },
+    "匯出失敗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export failed"
+          }
+        }
+      }
+    },
     "匯出會議紀錄、逐字稿或錄音（Ctrl+E）；箭頭可以直接複製會議紀錄": {
       "extractionState": "manual",
       "localizations": {

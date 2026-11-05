@@ -46,6 +46,8 @@ public sealed class AppSettings
     public const string GuideKey = "hasSeenGuide";
     /// <summary>會議內容的文字大小（R59、M§38.5）：−1～5，0 是 100%（TextSizes）</summary>
     public const string TextSizeKey = "contentTextSize";
+    /// <summary>紀錄分頁：list（條列）／mindMap（心智圖，M§42.4）</summary>
+    public const string NotesViewKey = "notesView";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
     public const string InterfaceLanguageKey = "interfaceLanguage";
 
@@ -305,6 +307,7 @@ public sealed class AppSettings
     /// <summary>麥克風的端點 ID；空的是系統預設</summary>
     public string InputDevice => String(InputDeviceKey) ?? "";
     /// <summary>會議內容的文字大小（R59）：存的值超出範圍時拉回來</summary>
+    public string NotesView => String(NotesViewKey) ?? "list";
     public int TextSize => TextSizes.Clamp((int)Math.Round(Double(TextSizeKey) ?? 0));
     public string DefaultTemplate => String(DefaultTemplateKey) ?? "general";
     public bool GlobalHotKey => Flag(GlobalHotKeyKey, true);

@@ -14,17 +14,21 @@ public interface IExportPlatform
     Task NotesPdf(ExportBundle bundle, string path, CancellationToken cancel);
     Task NotesDocx(ExportBundle bundle, string path, CancellationToken cancel);
     Task TranscriptDocx(ExportBundle bundle, bool times, bool speakers, string path, CancellationToken cancel);
+    /// <summary>心智圖（M§42.4、design-windows §11.10）：PNG 是 2 倍、PDF 一頁跟圖一樣大</summary>
+    Task MindMapPng(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
+    Task MindMapPdf(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
     /// <summary>錄音轉成 m4a 或 wav（同格式時直接複製）</summary>
     Task Audio(string source, string format, string path, CancellationToken cancel);
 }
 
-public enum ExportItem { Notes, Transcript, Audio, Package }
+public enum ExportItem { Notes, MindMap, Transcript, Audio, Package }
 
 public static class ExportItems
 {
     public static string Label(this ExportItem item) => item switch
     {
         ExportItem.Notes => L.T("會議紀錄"),
+        ExportItem.MindMap => L.T("心智圖"),
         ExportItem.Transcript => L.T("逐字稿"),
         ExportItem.Audio => L.T("錄音"),
         _ => L.T("整場會議（.shiyin）"),
@@ -33,6 +37,7 @@ public static class ExportItems
     public static string[] Formats(this ExportItem item) => item switch
     {
         ExportItem.Notes => ["md", "pdf", "docx"],
+        ExportItem.MindMap => ["png", "pdf", "svg"],
         ExportItem.Transcript => ["txt", "md", "srt", "vtt", "docx"],
         ExportItem.Audio => ["m4a", "wav"],
         _ => ["shiyin"],
@@ -1037,6 +1042,16 @@ public sealed class AppController
             case ExportItem.Notes when format == "pdf": await Platform().NotesPdf(b, path, cancel); break;
             case ExportItem.Notes when format == "docx": await Platform().NotesDocx(b, path, cancel); break;
             case ExportItem.Notes: await Task.Run(() => File.WriteAllText(path, NotesExporter.Markdown(b)), cancel); break;
+            case ExportItem.MindMap:
+            {
+                // 心智圖（M§42.4）：段落名稱跟著會議語言，同其他匯出
+                var layout = MindMapLayout(b) ?? throw new ExportException(L.T("這場會議還沒有會議紀錄，畫不出心智圖"));
+                var language = b.Meeting.MeetingLanguage;
+                if (format == "svg") await Task.Run(() => File.WriteAllText(path, Notes.MindMap.Svg(layout, language)), cancel);
+                else if (format == "pdf") await Platform().MindMapPdf(layout, language, path, cancel);
+                else await Platform().MindMapPng(layout, language, path, cancel);
+                break;
+            }
             case ExportItem.Transcript when format == "docx": await Platform().TranscriptDocx(b, times, speakers, path, cancel); break;
             case ExportItem.Transcript: await Task.Run(() => File.WriteAllText(path, TranscriptExporter.Text(b, format, times, speakers)), cancel); break;
             case ExportItem.Audio:
@@ -1049,6 +1064,14 @@ public sealed class AppController
 
     IExportPlatform Platform() => exporter ?? throw new ExportException(L.T("這個格式在這裡不能匯出"));
 
+    /// <summary>匯出用的心智圖排版（會議語言的段落名稱）；沒有紀錄時 null</summary>
+    public static Notes.MindMap.Layout? MindMapLayout(ExportBundle b)
+    {
+        if (b.Notes is not { IsEmpty: false } notes) return null;
+        var language = b.Meeting.MeetingLanguage;
+        return Notes.MindMap.LayoutOf(Notes.MindMap.Tree(notes, b.Meeting.DisplayTitle, Notes.MindMap.Labels.For(language)));
+    }
+
     public static string SuggestedFilename(ExportItem item, string format, Meeting? meeting)
     {
         if (meeting is null) return L.F("會議.%@", format);
@@ -1056,7 +1079,12 @@ public sealed class AppController
         var name = $"{meeting.MeetingDate} {meeting.DisplayTitle}";
         foreach (var (from, to) in new[] { ('/', '／'), ('\\', '＼'), (':', '：'), ('*', '＊'), ('?', '？'), ('"', '＂'), ('<', '＜'), ('>', '＞'), ('|', '｜') })
             name = name.Replace(from, to);
-        return item == ExportItem.Transcript ? L.F("%@（逐字稿）.%@", name, format) : $"{name}.{format}";
+        return item switch
+        {
+            ExportItem.Transcript => L.F("%@（逐字稿）.%@", name, format),
+            ExportItem.MindMap => L.F("%@（心智圖）.%@", name, format),
+            _ => $"{name}.{format}",
+        };
     }
 
     // MARK: 搜尋（R9.1）
