@@ -353,10 +353,10 @@ struct UserNotesDisclosure: View {
             .padding(.vertical, 8)
             if model.userNotesExpanded {
                 VStack(alignment: .leading, spacing: 8) {
+                    // 不能加 fixedSize：量最小高度時會用很窄的寬度，算出很高的高度，整個視窗的內容被往上推（2026-11-05 使用者看到）
                     Text("播放錄音時換行，會自動加上當下的播放時間。整理時 AI 會參考這些筆記；改完之後可以從「更多 → 重新處理」選「重新整理會議紀錄」。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                     UserNotesEditor(meetingId: detail.meeting.id!, initial: detail.meeting.userNotes) {
                         model.player.isPlaying ? model.player.currentTime : nil
                     }
