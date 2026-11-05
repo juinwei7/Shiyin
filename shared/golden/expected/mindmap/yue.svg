@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1244.5" height="113" viewBox="0 0 1244.5 113" font-family="&quot;PingFang TC&quot;, -apple-system, &quot;Microsoft JhengHei&quot;, &quot;Segoe UI&quot;, sans-serif">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<path d="M 762 56.5 C 790 56.5 790 56.5 818 56.5" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 902.5 56.5 C 918.5 56.5 918.5 56.5 934.5 56.5" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 440 56.5 C 412 56.5 412 56.5 384 56.5" fill="none" stroke="#3E6FA8" stroke-width="2"/>
+<path d="M 334 56.5 C 318 56.5 318 56.5 302 56.5" fill="none" stroke="#3E6FA8" stroke-width="1.5"/>
+<rect x="440" y="32" width="322" height="49" rx="12" fill="#2D6A5D"/>
+<text font-size="20" fill="#FFFFFF" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="601" y="56.5">2026-11-03 產品週會（廣東話）</tspan></text>
+<rect x="818" y="39.5" width="84.5" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text x="828" y="56.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:12</text>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="862.5" y="56.5">效能</tspan></text>
+<text x="940.5" y="56.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:12</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="975" y="56.5">加入 Redis 快取，平均回應約 200 毫秒</tspan></text>
+<rect x="334" y="39.5" width="50" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="374" y="56.5">待辦</tspan></text>
+<text x="296" y="56.5" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:18</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="261.5" y="56.5">李嘉欣：撰寫還原步驟（2026-11-05）</tspan></text>
+</svg>

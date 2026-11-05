@@ -429,7 +429,9 @@
     "Is “%@” %@?": "“%@”은(는) %@ 님인가요?",
     "Yes": "예",
     "No": "아니요",
-    "Sounds like %@ from earlier meetings": "이전 회의의 %@ 님과 목소리가 비슷합니다"
+    "Sounds like %@ from earlier meetings": "이전 회의의 %@ 님과 목소리가 비슷합니다",
+    "Meeting": "회의",
+    "Topic": "주제"
    }
   }
  ]

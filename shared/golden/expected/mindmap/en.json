@@ -1,0 +1,213 @@
+{
+  "boxes" : [
+    {
+      "branch" : -1,
+      "h" : 49,
+      "id" : 0,
+      "level" : 0,
+      "lines" : [
+        "Weekly Sync"
+      ],
+      "side" : 0,
+      "time" : "",
+      "timeWidth" : 0,
+      "w" : 154.5,
+      "x" : 460,
+      "y" : 55.5
+    },
+    {
+      "branch" : 0,
+      "h" : 34,
+      "id" : 1,
+      "level" : 1,
+      "lines" : [
+        "Summary"
+      ],
+      "side" : 1,
+      "time" : "",
+      "timeWidth" : 0,
+      "w" : 80.5,
+      "x" : 670.5,
+      "y" : 32
+    },
+    {
+      "branch" : 0,
+      "h" : 25,
+      "id" : 2,
+      "level" : 2,
+      "lines" : [
+        "Reviewed the Q4 roadmap"
+      ],
+      "side" : 1,
+      "time" : "00:00",
+      "timeWidth" : 34.5,
+      "w" : 206.5,
+      "x" : 783,
+      "y" : 36.5
+    },
+    {
+      "branch" : 1,
+      "h" : 34,
+      "id" : 3,
+      "level" : 1,
+      "lines" : [
+        "Action items"
+      ],
+      "side" : 1,
+      "time" : "",
+      "timeWidth" : 0,
+      "w" : 118.5,
+      "x" : 670.5,
+      "y" : 89
+    },
+    {
+      "branch" : 1,
+      "h" : 44,
+      "id" : 4,
+      "level" : 2,
+      "lines" : [
+        "Bob: Send the email via SendGrid",
+        "(2026-10-23)"
+      ],
+      "side" : 1,
+      "time" : "00:03",
+      "timeWidth" : 34.5,
+      "w" : 265.5,
+      "x" : 821,
+      "y" : 84
+    },
+    {
+      "branch" : 2,
+      "h" : 34,
+      "id" : 5,
+      "level" : 1,
+      "lines" : [
+        "Updates and progress"
+      ],
+      "side" : -1,
+      "time" : "",
+      "timeWidth" : 0,
+      "w" : 182,
+      "x" : 222,
+      "y" : 63
+    },
+    {
+      "branch" : 2,
+      "h" : 25,
+      "id" : 6,
+      "level" : 2,
+      "lines" : [
+        "Roadmap on track"
+      ],
+      "side" : -1,
+      "time" : "00:00",
+      "timeWidth" : 34.5,
+      "w" : 158,
+      "x" : 32,
+      "y" : 67.5
+    }
+  ],
+  "edges" : [
+    {
+      "branch" : 0,
+      "from" : 0,
+      "to" : 1,
+      "x0" : 614.5,
+      "x1" : 670.5,
+      "y0" : 80,
+      "y1" : 49
+    },
+    {
+      "branch" : 0,
+      "from" : 1,
+      "to" : 2,
+      "x0" : 751,
+      "x1" : 783,
+      "y0" : 49,
+      "y1" : 49
+    },
+    {
+      "branch" : 1,
+      "from" : 0,
+      "to" : 3,
+      "x0" : 614.5,
+      "x1" : 670.5,
+      "y0" : 80,
+      "y1" : 106
+    },
+    {
+      "branch" : 1,
+      "from" : 3,
+      "to" : 4,
+      "x0" : 789,
+      "x1" : 821,
+      "y0" : 106,
+      "y1" : 106
+    },
+    {
+      "branch" : 2,
+      "from" : 0,
+      "to" : 5,
+      "x0" : 460,
+      "x1" : 404,
+      "y0" : 80,
+      "y1" : 80
+    },
+    {
+      "branch" : 2,
+      "from" : 5,
+      "to" : 6,
+      "x0" : 222,
+      "x1" : 190,
+      "y0" : 80,
+      "y1" : 80
+    }
+  ],
+  "height" : 160,
+  "tree" : {
+    "children" : [
+      {
+        "children" : [
+          {
+            "children" : [
+
+            ],
+            "text" : "Reviewed the Q4 roadmap",
+            "time" : "00:00"
+          }
+        ],
+        "text" : "Summary",
+        "time" : ""
+      },
+      {
+        "children" : [
+          {
+            "children" : [
+
+            ],
+            "text" : "Bob: Send the email via SendGrid (2026-10-23)",
+            "time" : "00:03"
+          }
+        ],
+        "text" : "Action items",
+        "time" : ""
+      },
+      {
+        "children" : [
+          {
+            "children" : [
+
+            ],
+            "text" : "Roadmap on track",
+            "time" : "00:00"
+          }
+        ],
+        "text" : "Updates and progress",
+        "time" : ""
+      }
+    ],
+    "text" : "Weekly Sync",
+    "time" : ""
+  },
+  "width" : 1118.5
+}

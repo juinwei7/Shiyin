@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1118.5" height="160" viewBox="0 0 1118.5 160" font-family="-apple-system, &quot;PingFang TC&quot;, &quot;Segoe UI&quot;, &quot;Microsoft JhengHei&quot;, sans-serif">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<path d="M 614.5 80 C 642.5 80 642.5 49 670.5 49" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 751 49 C 767 49 767 49 783 49" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 614.5 80 C 642.5 80 642.5 106 670.5 106" fill="none" stroke="#3E6FA8" stroke-width="2"/>
+<path d="M 789 106 C 805 106 805 106 821 106" fill="none" stroke="#3E6FA8" stroke-width="1.5"/>
+<path d="M 460 80 C 432 80 432 80 404 80" fill="none" stroke="#B7862A" stroke-width="2"/>
+<path d="M 222 80 C 206 80 206 80 190 80" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<rect x="460" y="55.5" width="154.5" height="49" rx="12" fill="#2D6A5D"/>
+<text font-size="20" fill="#FFFFFF" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="537.5" y="80">Weekly Sync</tspan></text>
+<rect x="670.5" y="32" width="80.5" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="680.5" y="49">Summary</tspan></text>
+<text x="789" y="49" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:00</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="823.5" y="49">Reviewed the Q4 roadmap</tspan></text>
+<rect x="670.5" y="89" width="118.5" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="680.5" y="106">Action items</tspan></text>
+<text x="827" y="96.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:03</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="861.5" y="96.5">Bob: Send the email via SendGrid</tspan><tspan x="861.5" y="115.5">(2026-10-23)</tspan></text>
+<rect x="222" y="63" width="182" height="34" rx="8" fill="#FFFFFF" stroke="#B7862A" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;New York&quot;, Georgia, &quot;Songti TC&quot;, PMingLiU, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="394" y="80">Updates and progress</tspan></text>
+<text x="184" y="80" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:00</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="149.5" y="80">Roadmap on track</tspan></text>
+</svg>

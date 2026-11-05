@@ -2354,5 +2354,251 @@
   "slides/slide[5].xml",
   "slides/投影片.xml",
   ""
+ ],
+ "mindMapCases": [
+  {
+   "key": "long",
+   "language": "zh",
+   "title": "2027 年度產品規劃與跨部門資源協調會議（含 Q1 上線時程、預算與人力、風險檢討）",
+   "notes": {
+    "title": "",
+    "summary": [
+     {
+      "text": "摘要不畫，因為有議題",
+      "time": "00:00"
+     }
+    ],
+    "decisions": [
+     {
+      "text": "Q1 只上 internationalization-and-localization-pipeline 的第一階段，其他延到 Q2。",
+      "time": "12:30"
+     },
+     {
+      "text": "預算上限 NT$2,400,000",
+      "time": ""
+     }
+    ],
+    "actionItems": [
+     {
+      "owner": "王小明",
+      "task": "整理 Q1 上線清單，含每一項的負責人、風險和備案，週五前寄給所有人",
+      "due": "2026-11-13",
+      "time": "15:02"
+     },
+     {
+      "owner": "",
+      "task": "確認 AWS 帳單",
+      "due": "",
+      "time": "1:02:05"
+     },
+     {
+      "owner": "Alice",
+      "task": "Review the deployment runbook",
+      "due": "next Monday",
+      "time": ""
+     },
+     {
+      "owner": "李",
+      "task": "",
+      "due": "",
+      "time": ""
+     }
+    ],
+    "openQuestions": [
+     {
+      "text": "人力不夠的時候，要先砍功能還是延後上線？",
+      "time": "40:10"
+     }
+    ],
+    "topics": [
+     {
+      "title": "上線時程",
+      "start": "00:00",
+      "points": [
+       {
+        "text": "Q1 上線，目標 3/31；如果 2 月的壓力測試沒過，就改成先開放內部使用，外部延到 4 月。",
+        "time": "01:10"
+       },
+       {
+        "text": "iOS 跟 Android 同一天上",
+        "time": "03:05"
+       }
+      ]
+     },
+     {
+      "title": "預算",
+      "start": "05:20",
+      "points": [
+       {
+        "text": "雲端費用比去年多 18%，主要是 GPU 推論",
+        "time": "05:40"
+       }
+      ]
+     },
+     {
+      "title": "人力",
+      "start": "10:00",
+      "points": [
+       {
+        "text": "前端缺 2 人",
+        "time": "10:30"
+       },
+       {
+        "text": "後端：缺 1 人，但可以從平台組借",
+        "time": "11:00"
+       },
+       {
+        "text": "設計：沒問題",
+        "time": ""
+       }
+      ]
+     },
+     {
+      "title": "風險檢討：第三方支付 API（FonPay、LINE Pay、Apple Pay）在尖峰時段的逾時問題",
+      "start": "20:00",
+      "points": [
+       {
+        "text": "FonPay 的 sandbox 跟正式環境行為不一樣，要另外排測試。",
+        "time": "21:15"
+       }
+      ]
+     },
+     {
+      "title": "",
+      "start": "",
+      "points": []
+     },
+     {
+      "title": "",
+      "start": "30:00",
+      "points": [
+       {
+        "text": "沒有標題的議題",
+        "time": "30:05"
+       }
+      ]
+     },
+     {
+      "title": "其他",
+      "start": "45:00",
+      "points": []
+     }
+    ],
+    "custom": [
+     {
+      "title": "下次會議",
+      "items": [
+       {
+        "text": "11/20（五）下午兩點",
+        "time": ""
+       }
+      ]
+     },
+     {
+      "title": "空的段落",
+      "items": []
+     },
+     {
+      "title": "",
+      "items": [
+       {
+        "text": "沒有標題的段落",
+        "time": ""
+       }
+      ]
+     }
+    ],
+    "reviewItems": [
+     {
+      "time": "10:30",
+      "question": "前端缺 2 人還是 3 人？"
+     }
+    ]
+   }
+  },
+  {
+   "key": "summary-only",
+   "language": "en",
+   "title": "",
+   "notes": {
+    "title": "",
+    "summary": [
+     {
+      "text": "Weekly sync with the design team about the onboarding flow",
+      "time": "00:00"
+     },
+     {
+      "text": "   ",
+      "time": "00:10"
+     }
+    ],
+    "decisions": [],
+    "actionItems": [
+     {
+      "owner": "Bob",
+      "task": "Ship the new onboarding screens",
+      "due": "2026-11-20",
+      "time": "02:00"
+     }
+    ],
+    "openQuestions": [],
+    "topics": [],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "empty",
+   "language": "zh",
+   "title": "",
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "ja-long",
+   "language": "ja",
+   "title": "新製品の発売スケジュール確認",
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [
+     {
+      "text": "発売日は予定どおり十一月五日とし、延期はしない。",
+      "time": "03:00"
+     }
+    ],
+    "actionItems": [
+     {
+      "owner": "森",
+      "task": "販売店向けの説明資料を作る",
+      "due": "2026-11-01",
+      "time": "04:10"
+     }
+    ],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "発売日",
+      "start": "00:30",
+      "points": [
+       {
+        "text": "在庫は十分。",
+        "time": "01:00"
+       }
+      ]
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  }
  ]
 }
