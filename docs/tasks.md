@@ -10,8 +10,7 @@
 ## 心智圖（R67，design §42、design-windows §11.10、D143～D144；2026-11-05 使用者新需求）
 
 - [~] **MM2 Mac 畫面、匯出**（§42.4）：程式完成、畫面和匯出驗過。還差：在使用者的畫面上點心智圖的時間點（測試視窗在別的桌面，AX 按不到）、「複製心智圖」後貼到別的程式（測試時不蓋掉使用者的剪貼簿）
-- [ ] **MM3 Windows**（design-windows §11.10）：Core 的樹、排版、SVG 過標準答案；畫面、匯出、複製
-  - 驗證：dotnet test 全過；虛擬機看畫面、匯出三種檔案、複製（Mac 磁碟要 10 GB 以上才開得了虛擬機）
+- [~] **MM3 Windows**（design-windows §11.10）：程式完成，dotnet test 208/208（心智圖跟 Mac 的標準答案逐字相同）。還差：虛擬機看畫面、匯出 PNG（RenderTargetBitmap）、PDF（WebView2）、複製圖片（2026-11-05 Mac 的 swap 用到 17 GB、磁碟一直被吃，diskguard 開機後就停掉虛擬機，沒驗）
 
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57；2026-10-29 Threads 的使用者回饋）
 
