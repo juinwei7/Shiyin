@@ -47,11 +47,12 @@ struct ExportText {
 }
 
 enum ExportItem: String, CaseIterable, Identifiable {
-    case notes, transcript, audio, package
+    case notes, mindMap, transcript, audio, package
     var id: String { rawValue }
     var label: String {
         switch self {
         case .notes: return String(localized: "會議紀錄")
+        case .mindMap: return String(localized: "心智圖")
         case .transcript: return String(localized: "逐字稿")
         case .audio: return String(localized: "錄音")
         case .package: return String(localized: "整場會議（.shiyin）")
@@ -60,6 +61,7 @@ enum ExportItem: String, CaseIterable, Identifiable {
     var formats: [String] {
         switch self {
         case .notes: return ["md", "pdf", "docx"]
+        case .mindMap: return ["png", "pdf", "svg"]   // design §42.4
         case .transcript: return ["txt", "md", "srt", "vtt", "docx"]
         case .audio: return ["m4a", "wav"]
         case .package: return ["shiyin"]

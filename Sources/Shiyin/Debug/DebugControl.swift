@@ -30,6 +30,9 @@ enum DebugControl {
         let id = args.count > 1 ? Int64(args[1]) : nil
         switch name {
         case "select": model.showTrash = false; model.selection = id
+        // notesview list|mindmap：紀錄分頁切換成條列或心智圖（design §42.5；寫進共用設定，測完 defaults delete com.weiwei.shiyin notesView）
+        case "notesview":
+            UserDefaults.standard.set(args.count > 1 && args[1].lowercased() == "mindmap" ? "mindMap" : "list", forKey: AppSettings.notesViewKey)
         case "tab":   // tab <summary|transcript|ask>；舊名稱 topics、review、notes 當別名（review 順便展開待確認、notes 展開我的筆記，design §33.1）
             if let r = DetailTab.resolve(args[1]) {
                 model.tab = r.tab
@@ -422,7 +425,9 @@ enum DebugControl {
         case "docbanner":
             model.selection = id
             if args.count > 2, args[2] == "dismiss" { model.dismissDocumentsChanged() } else { model.resummarize() }
-        case "copy": model.copyNotes(args.count > 1 && args[1] == "plain" ? .plain : args.count > 1 && args[1] == "md" ? .markdown : .rich)
+        case "copy":   // copy [plain|md|mindmap]
+            if args.count > 1 && args[1] == "mindmap" { model.copyMindMap() }
+            else { model.copyNotes(args.count > 1 && args[1] == "plain" ? .plain : args.count > 1 && args[1] == "md" ? .markdown : .rich) }
         case "search": model.searchQuery = args.count > 1 ? args[1] : ""
         case "openhit": if let index = Int(args[1]), model.searchResults.indices.contains(index) { model.openSearchHit(model.searchResults[index]) }
         case "model":   // model start|pause|delete [breeze|japanese|languageDetection|qwen]（qwen 是兩個檔一起）
@@ -619,6 +624,7 @@ enum DebugControl {
         var out: [String: Any] = [
             "selection": model.selection ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
+            "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
             // 會議的參考文件（design §39.7）：選取中的會議
             "documents": (model.detail?.documents ?? []).map { d -> [String: Any] in
                 let use = model.detail?.documentUse[d.id ?? 0]

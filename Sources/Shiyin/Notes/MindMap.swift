@@ -97,12 +97,18 @@ enum MindMap {
         return em * size
     }
 
-    /// 英數連在一起的詞（含詞中的 - . _ / '）不拆
+    /// 英數連在一起的詞（含詞中的 - . _ / '）不拆；韓文用空格分詞，諺文連在一起也不拆
     private static func isWordChar(_ c: Character) -> Bool {
         guard let s = c.unicodeScalars.first?.value else { return false }
         if (0x30...0x39).contains(s) || (0x41...0x5A).contains(s) || (0x61...0x7A).contains(s) { return true }
+        if (0xAC00...0xD7A3).contains(s) || (0x1100...0x11FF).contains(s) || (0x3130...0x318F).contains(s) { return true }
         if [0x2D, 0x2E, 0x5F, 0x2F, 0x27].contains(s) { return true }
         return (0xC0...0x24F).contains(s) && s != 0xD7 && s != 0xF7
+    }
+
+    private static func isDigitChar(_ c: Character) -> Bool {
+        guard let s = c.unicodeScalars.first?.value else { return false }
+        return (0x30...0x39).contains(s)
     }
 
     /// 英文字母（含拉丁字母），不含數字
@@ -112,14 +118,16 @@ enum MindMap {
     }
 
     /// 不放行首的標點、不放行尾的括號
-    private static let closing: Set<Character> = ["，", "。", "、", "；", "：", "！", "？", "）", "」", "』", ",", ";", ":", "!", "?", ")"]
-    private static let opening: Set<Character> = ["（", "「", "『", "《", "〈", "【", "("]
+    private static let closing: Set<Character> = ["，", "。", "、", "；", "：", "！", "？", "）", "」", "』", ",", ";", ":", "!", "?", ")"]  // l10n-skip
+    private static let opening: Set<Character> = ["（", "「", "『", "《", "〈", "【", "("]  // l10n-skip
 
     static func wrap(_ text: String, maxWidth: Double, size: Double) -> [String] {
         var tokens: [String] = []
         var word = ""
         for c in text {
             // 詞裡的 - / 前面是字母時後面可以斷行（日期、分數不拆：2026-11-13、3/31）
+            // 數字後面的 , : % 跟著數字（8,000、11:00、18%）
+            if [",", ":", "%"].contains(c), let last = word.last, isDigitChar(last) { word.append(c); continue }
             if isWordChar(c) {
                 let afterLetter = word.last.map(isLetterChar) ?? false
                 word.append(c)

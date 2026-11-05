@@ -392,6 +392,8 @@ struct ExportMenu: View {
             Button("複製會議紀錄：保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
             Button("複製會議紀錄：Markdown") { model.copyNotes(.markdown) }
             Button("複製會議紀錄：純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
+            Divider()
+            Button("複製心智圖（圖片）") { model.copyMindMap() }
         } label: {
             Label("匯出", systemImage: "square.and.arrow.up")
         } primaryAction: {

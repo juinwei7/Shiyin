@@ -26,6 +26,7 @@ enum AppSettings {
     static let bookmarkHotKeyKey = "bookmarkHotKey"
     static let idleStopKey = "idleStop"
     static let textSizeKey = "contentTextSize"   // 會議內容的文字大小，−1～5，0 是 100%（design §38.5）
+    static let notesViewKey = "notesView"   // 紀錄分頁：list（條列）／mindMap（心智圖，design §42.4）
 
     private static var d: UserDefaults { .standard }
 

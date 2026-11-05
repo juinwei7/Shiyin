@@ -25,7 +25,8 @@ struct ExportSheet: View {
             Form {
                 Picker("項目", selection: $item) {
                     ForEach(ExportItem.allCases) { item in
-                        Text(item.label).tag(item).disabled(item == .audio && bundle?.meeting.hasAudio != true)
+                        Text(item.label).tag(item)
+                            .disabled(item == .audio && bundle?.meeting.hasAudio != true || item == .mindMap && !hasMindMap)
                     }
                 }
                 Picker("格式", selection: $format) {
@@ -68,6 +69,8 @@ struct ExportSheet: View {
     }
 
     private var hasNotes: Bool { bundle?.notes != nil }
+    /// 心智圖要有內容（design §42.4）
+    private var hasMindMap: Bool { bundle?.notes.map { !$0.isEmpty } ?? false }
 
     private var hint: String {
         switch item {
@@ -76,6 +79,7 @@ struct ExportSheet: View {
                 return String(localized: "這場會議還沒有會議紀錄（還在整理或整理失敗），匯出的會議紀錄只會有標題和基本資料。要留下內容，請改匯出逐字稿。")
             }
             return String(localized: "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。")
+        case .mindMap: return String(localized: "依會議紀錄畫成心智圖。PNG 適合貼到聊天軟體、簡報；SVG 可以再用其他軟體編輯。")
         case .transcript: return String(localized: "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。")
         case .audio: return String(localized: "m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。")
         case .package: return String(localized: "包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。")
@@ -88,7 +92,7 @@ struct ExportSheet: View {
     }
 
     private func formatLabel(_ format: String) -> String {
-        ["md": "Markdown", "pdf": "PDF", "docx": String(localized: "Word（docx）"), "txt": String(localized: "純文字（txt）"), "srt": String(localized: "字幕（srt）"),
+        ["md": "Markdown", "pdf": "PDF", "png": String(localized: "PNG 圖片"), "svg": "SVG", "docx": String(localized: "Word（docx）"), "txt": String(localized: "純文字（txt）"), "srt": String(localized: "字幕（srt）"),
          "vtt": String(localized: "字幕（vtt）"), "m4a": "m4a", "wav": "wav", "shiyin": String(localized: ".shiyin 封包")][format] ?? format
     }
 
