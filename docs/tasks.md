@@ -9,10 +9,6 @@
 
 ## 議題時間軸（R68，design §43、design-windows §11.11、D145；2026-11-06 使用者同意的建議）
 
-- [ ] **TL1 段落（Mac、標準答案）**（§43.1）：`MindMap.topicRanges`；`util/topic-ranges.json`，fixtures 加特殊情況
-  - 驗證：dump-golden 兩次相同；原本的標準答案一個字都沒變
-- [ ] **TL2 Mac 畫面**（§43.2）：播放條上的議題帶、目前的議題、點了播放、說明文字
-  - 驗證：DEBUG 版真的畫面看示範會議（中文、日文，淺色、深色、英文介面、很多議題、議題很短），點一段後 state 的播放位置是那個議題的開始；沒有議題的會議播放條照舊
 - [ ] **TL3 Windows**（design-windows §11.11）：Core 的段落過標準答案；播放條的議題帶
   - 驗證：dotnet test 全過；虛擬機看畫面、點一段播放（Mac 的記憶體、磁碟夠的時候）
 

@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// 底部播放列：播放鍵、時間、錄音時間軸（R5.3）
+/// 底部播放列：播放鍵、時間、錄音時間軸（R5.3），有議題時上面加議題帶（R68）
 struct PlayerBar: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
 
     var body: some View {
         let player = model.player
-        HStack(spacing: 14) {
+        let duration = max(player.duration, Double(detail.meeting.durationSeconds ?? 0))
+        let topics = detail.notes.map {
+            MindMap.topicRanges(notes: $0, duration: duration, untitled: MindMap.topicLabel(.interface))
+        } ?? []
+        HStack(alignment: .timelineCenter, spacing: 14) {
             Button { player.toggle() } label: {
                 Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
                     .font(.title3)
@@ -21,15 +25,22 @@ struct PlayerBar: View {
                 .font(.callout.monospacedDigit())
                 .frame(width: 52, alignment: .trailing)
 
-            TimelineBar(segments: detail.segments,
-                        reviewTimes: (detail.notes?.reviewItems ?? []).compactMap { TimeFormat.seconds($0.time) },
-                        bookmarkTimes: detail.bookmarks.map(\.time),
-                        duration: max(player.duration, Double(detail.meeting.durationSeconds ?? 0)),
-                        currentTime: player.currentTime,
-                        onSeek: { seconds, play in player.seek(to: seconds, play: play) })
-                .frame(height: 30)
+            VStack(spacing: 4) {
+                if !topics.isEmpty {
+                    TopicBand(ranges: topics, duration: duration, currentTime: player.currentTime,
+                              onSeek: { seconds in player.seek(to: seconds, play: true) })
+                }
+                TimelineBar(segments: detail.segments,
+                            reviewTimes: (detail.notes?.reviewItems ?? []).compactMap { TimeFormat.seconds($0.time) },
+                            bookmarkTimes: detail.bookmarks.map(\.time),
+                            duration: duration,
+                            currentTime: player.currentTime,
+                            onSeek: { seconds, play in player.seek(to: seconds, play: play) })
+                    .frame(height: 30)
+                    .alignmentGuide(.timelineCenter) { $0[VerticalAlignment.center] }
+            }
 
-            Text(TimeFormat.string(max(player.duration, Double(detail.meeting.durationSeconds ?? 0))))
+            Text(TimeFormat.string(duration))
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(width: 52, alignment: .leading)
@@ -58,6 +69,61 @@ struct PlayerBar: View {
 
     private func speedLabel(_ value: Float) -> String {
         value == 1 ? "1×" : String(format: "%g×", value)
+    }
+}
+
+private extension VerticalAlignment {
+    /// 播放列的其他元件對齊時間軸的中間（上面有議題帶時也一樣）
+    struct TimelineCenter: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat { context[VerticalAlignment.center] }
+    }
+
+    static let timelineCenter = VerticalAlignment(TimelineCenter.self)
+}
+
+/// 議題帶（design §43.2、R68）：時間軸上面每個議題一段，顏色同心智圖的那一支，點了從那個議題開始播放
+struct TopicBand: View {
+    let ranges: [MindMap.TopicRange]
+    let duration: Double
+    let currentTime: Double
+    let onSeek: (Double) -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GeometryReader { geo in
+            let scale = duration > 0 ? geo.size.width / CGFloat(duration) : 0
+            ZStack(alignment: .topLeading) {
+                ForEach(Array(ranges.enumerated()), id: \.offset) { _, range in
+                    segment(range, width: max(2, CGFloat(range.end - range.start) * scale - 2))
+                        .offset(x: CGFloat(range.start) * scale)
+                }
+            }
+        }
+        .frame(height: 18)
+    }
+
+    private func segment(_ range: MindMap.TopicRange, width: CGFloat) -> some View {
+        let color = Color(hex: MindMap.color(range.branch, dark: colorScheme == .dark))
+        let isCurrent = currentTime >= range.start && currentTime < range.end
+        let label = "\(range.title)　\(TimeFormat.string(range.start))–\(TimeFormat.string(range.end))"  // l10n-skip：名稱和時間，不用翻譯
+        return Button { onSeek(range.start) } label: {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4).fill(color.opacity(isCurrent ? 0.45 : 0.18))
+                // 整個標題放得下，或至少放得下一兩個字加「…」才寫字，不然只留色塊（只剩「…」看不出是什麼）
+                if MindMap.width(range.title, size: 11) + 10 <= width || width >= 40 {
+                    Text(range.title)
+                        .font(.system(size: 11, weight: isCurrent ? .semibold : .regular))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal, 5)
+                }
+            }
+            .frame(width: width, height: 18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
     }
 }
 

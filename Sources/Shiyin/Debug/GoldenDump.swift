@@ -468,6 +468,20 @@ enum GoldenDump {
                                               "boxes": boxes, "edges": edges] as Object)
             w.text("mindmap/\(c.key).svg", MindMap.svg(layout, language: c.language))
         }
+        // 議題時間軸（design §43.3）：有紀錄的會議用會議長度，mindMapCases 用 3600 秒，topicRangeCases 帶自己的長度
+        var rangeCases: [(key: String, notes: MeetingNotes, duration: Double, language: MeetingLanguage)] = []
+        for fx in f.meetings { if let notes = fx.notes { rangeCases.append((fx.key, notes, Double(fx.meeting.durationSeconds ?? 0), fx.language)) } }
+        for c in cases.dropFirst(rangeCases.count) { rangeCases.append((c.key, c.notes, 3600, c.language)) }
+        for o in f["topicRangeCases"] as? [Object] ?? [] {
+            guard let notes = o["notes"].flatMap(decodeNotes) else { continue }
+            rangeCases.append((o["key"] as? String ?? "", notes, double(o["duration"]),
+                               MeetingLanguage(rawValue: o["language"] as? String ?? "zh") ?? .zh))
+        }
+        w.json("util/topic-ranges.json", rangeCases.map { c -> Object in
+            let ranges = MindMap.topicRanges(notes: c.notes, duration: c.duration, untitled: MindMap.topicLabel(c.language))
+            return ["key": c.key, "duration": c.duration,
+                    "ranges": ranges.map { ["branch": $0.branch, "title": $0.title, "start": $0.start, "end": $0.end] as Object }]
+        })
     }
 
     // MARK: 小工具

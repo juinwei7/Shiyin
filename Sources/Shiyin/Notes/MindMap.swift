@@ -21,25 +21,36 @@ enum MindMap {
             decisions = x.section("decisions")
             actionItems = x.section("actionItems")
             openQuestions = x.section("openQuestions")
-            topics = language.text(zh: "議題", en: "Topic", ja: "議題")  // l10n-skip：會議語言的文字
+            topics = MindMap.topicLabel(language)
             untitled = language.text(zh: "會議", en: "Meeting", ja: "会議")  // l10n-skip：會議語言的文字
             colon = x.colon
             paren = x.paren
         }
     }
 
+    /// 沒有標題的議題叫什麼
+    static func topicLabel(_ language: MeetingLanguage) -> String {
+        language.text(zh: "議題", en: "Topic", ja: "議題")  // l10n-skip：會議語言的文字
+    }
+
     // MARK: 樹（§42.1）
 
+    private static func clean(_ s: String) -> String {
+        s.replacingOccurrences(of: "\r\n", with: " ").replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 畫成分支的議題：有標題或有重點的（心智圖的前幾支，議題時間軸也用這一份）
+    private static func shownTopics(_ notes: MeetingNotes) -> [MeetingNotes.Topic] {
+        notes.topics.filter { !clean($0.title).isEmpty || $0.points.contains { !clean($0.text).isEmpty } }
+    }
+
     static func tree(notes: MeetingNotes, title: String, labels: Labels) -> Node {
-        func clean(_ s: String) -> String {
-            s.replacingOccurrences(of: "\r\n", with: " ").replacingOccurrences(of: "\n", with: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
         func leaves(_ items: [MeetingNotes.Item]) -> [Node] {
             items.map { Node(text: clean($0.text), time: clean($0.time)) }.filter { !$0.text.isEmpty }
         }
         var branches: [Node] = []
-        let topics = notes.topics.filter { !clean($0.title).isEmpty || !leaves($0.points).isEmpty }
+        let topics = shownTopics(notes)
         if topics.isEmpty {
             let summary = leaves(notes.summary)
             if !summary.isEmpty { branches.append(Node(text: labels.summary, time: "", children: summary)) }
@@ -69,6 +80,32 @@ enum MindMap {
         }
         let name = clean(title)
         return Node(text: name.isEmpty ? labels.untitled : name, time: "", children: branches)
+    }
+
+    // MARK: 議題時間軸（§43.1、R68）
+
+    /// 播放條上的一段議題；branch 是心智圖的第幾支（顏色一樣）
+    struct TopicRange: Equatable {
+        var branch: Int
+        var title: String
+        var start: Double
+        var end: Double
+    }
+
+    /// 讀不到開始時間的議題不畫；依開始時間排序，每段到下一個議題開始，最後一段到會議結束
+    static func topicRanges(notes: MeetingNotes, duration: Double, untitled: String) -> [TopicRange] {
+        guard duration > 0 else { return [] }
+        let timed = shownTopics(notes).enumerated().compactMap { i, topic -> TopicRange? in
+            guard let start = TimeFormat.seconds(topic.start) else { return nil }
+            let name = clean(topic.title)
+            return TopicRange(branch: i, title: name.isEmpty ? untitled : name, start: start, end: 0)
+        }.sorted { ($0.start, $0.branch) < ($1.start, $1.branch) }
+        var ranges: [TopicRange] = []
+        for (k, var range) in timed.enumerated() {
+            range.end = min(k + 1 < timed.count ? timed[k + 1].start : duration, duration)
+            if range.start < range.end { ranges.append(range) }
+        }
+        return ranges
     }
 
     // MARK: 文字寬度、換行（§42.2）

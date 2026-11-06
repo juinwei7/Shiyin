@@ -2600,5 +2600,203 @@
     "reviewItems": []
    }
   }
+ ],
+ "topicRangeCases": [
+  {
+   "key": "no-time",
+   "language": "zh",
+   "duration": 1800,
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "上線時程",
+      "start": "",
+      "points": []
+     },
+     {
+      "title": "預算",
+      "start": "約十分鐘",
+      "points": []
+     },
+     {
+      "title": "人力",
+      "start": "--",
+      "points": []
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "unsorted",
+   "language": "zh",
+   "duration": 1200,
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "結論",
+      "start": "10:00",
+      "points": []
+     },
+     {
+      "title": "開場",
+      "start": "00:30",
+      "points": []
+     },
+     {
+      "title": "預算",
+      "start": "05:00",
+      "points": []
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "same-time",
+   "language": "zh",
+   "duration": 600,
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "甲",
+      "start": "02:00",
+      "points": []
+     },
+     {
+      "title": "乙",
+      "start": "02:00",
+      "points": []
+     },
+     {
+      "title": "丙",
+      "start": "04:00",
+      "points": []
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "past-end",
+   "language": "zh",
+   "duration": 600,
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "開場",
+      "start": "00:00",
+      "points": []
+     },
+     {
+      "title": "預算",
+      "start": "[03:00]",
+      "points": []
+     },
+     {
+      "title": "人力",
+      "start": "09:00–09:30",
+      "points": []
+     },
+     {
+      "title": "散會後",
+      "start": "12:00",
+      "points": []
+     },
+     {
+      "title": "剛好結束",
+      "start": "10:00",
+      "points": []
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "zero-duration",
+   "language": "zh",
+   "duration": 0,
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "開場",
+      "start": "00:00",
+      "points": []
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  },
+  {
+   "key": "untitled",
+   "language": "en",
+   "duration": 3725,
+   "notes": {
+    "title": "",
+    "summary": [],
+    "decisions": [],
+    "actionItems": [],
+    "openQuestions": [],
+    "topics": [
+     {
+      "title": "",
+      "start": "00:10",
+      "points": []
+     },
+     {
+      "title": "",
+      "start": "01:00",
+      "points": [
+       {
+        "text": "Budget is fine.",
+        "time": ""
+       }
+      ]
+     },
+     {
+      "title": "  Wrap-up\n",
+      "start": "1:02:03",
+      "points": []
+     },
+     {
+      "title": "Q&A",
+      "start": "1：00：00",
+      "points": []
+     }
+    ],
+    "custom": [],
+    "reviewItems": []
+   }
+  }
  ]
 }

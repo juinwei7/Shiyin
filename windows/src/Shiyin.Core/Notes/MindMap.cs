@@ -22,9 +22,12 @@ public static class MindMap
         {
             var x = new ExportText(language);
             return new Labels(x.Section("summary"), x.Section("decisions"), x.Section("actionItems"), x.Section("openQuestions"),
-                language.Text("議題", "Topic", "議題"), language.Text("會議", "Meeting", "会議"), x.Colon, x.Paren);  // l10n-skip：會議語言的文字
+                TopicLabel(language), language.Text("會議", "Meeting", "会議"), x.Colon, x.Paren);  // l10n-skip：會議語言的文字
         }
     }
+
+    /// <summary>沒有標題的議題叫什麼</summary>
+    public static string TopicLabel(MeetingLanguage language) => language.Text("議題", "Topic", "議題");  // l10n-skip：會議語言的文字
 
     // MARK: 樹（M§42.1）
 
@@ -33,10 +36,14 @@ public static class MindMap
     static List<Node> Leaves(List<MeetingNotes.Item> items) =>
         [.. items.Select(i => new Node(Clean(i.Text), Clean(i.Time), [])).Where(n => n.Text.Length > 0)];
 
+    /// <summary>畫成分支的議題：有標題或有重點的（心智圖的前幾支，議題時間軸也用這一份）</summary>
+    static List<MeetingNotes.Topic> ShownTopics(MeetingNotes notes) =>
+        [.. notes.Topics.Where(t => Clean(t.Title).Length > 0 || t.Points.Any(p => Clean(p.Text).Length > 0))];
+
     public static Node Tree(MeetingNotes notes, string title, Labels labels)
     {
         var branches = new List<Node>();
-        var topics = notes.Topics.Where(t => Clean(t.Title).Length > 0 || Leaves(t.Points).Count > 0).ToList();
+        var topics = ShownTopics(notes);
         if (topics.Count == 0)
         {
             var summary = Leaves(notes.Summary);
@@ -73,6 +80,33 @@ public static class MindMap
         }
         var rootName = Clean(title);
         return new Node(rootName.Length == 0 ? labels.Untitled : rootName, "", branches);
+    }
+
+    // MARK: 議題時間軸（M§43.1、R68）
+
+    /// <summary>播放條上的一段議題；Branch 是心智圖的第幾支（顏色一樣）</summary>
+    public sealed record TopicRange(int Branch, string Title, double Start, double End);
+
+    /// <summary>讀不到開始時間的議題不畫；依開始時間排序，每段到下一個議題開始，最後一段到會議結束</summary>
+    public static List<TopicRange> TopicRanges(MeetingNotes notes, double duration, string untitled)
+    {
+        if (!(duration > 0)) return [];
+        var timed = new List<TopicRange>();
+        var topics = ShownTopics(notes);
+        for (var i = 0; i < topics.Count; i++)
+        {
+            if (TimeFormat.Seconds(topics[i].Start) is not { } start) continue;
+            var name = Clean(topics[i].Title);
+            timed.Add(new TopicRange(i, name.Length == 0 ? untitled : name, start, 0));
+        }
+        timed = [.. timed.OrderBy(r => r.Start).ThenBy(r => r.Branch)];
+        var ranges = new List<TopicRange>();
+        for (var k = 0; k < timed.Count; k++)
+        {
+            var end = Math.Min(k + 1 < timed.Count ? timed[k + 1].Start : duration, duration);
+            if (timed[k].Start < end) ranges.Add(timed[k] with { End = end });
+        }
+        return ranges;
     }
 
     // MARK: 文字寬度、換行（M§42.2）
