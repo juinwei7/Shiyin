@@ -98,7 +98,7 @@
 │   看 52 秒的介紹影片（§15）                                  │
 │   開會時，邊錄邊看逐字稿（兩段說明）＋錄音中截圖               │
 │   停止後，在 Mac 上正式轉錄（兩段說明）＋逐字稿截圖            │
-│   整理成會議紀錄，不確定的地方會問你                          │
+│   整理成會議紀錄，不確定的地方會問你＋心智圖截圖（4.6）        │
 │   錄音不會離開你的 Mac（留在 Mac／送到整理工具 兩欄清單；      │
 │     整理工具、匿名使用統計、企業伺服器各一段）                 │
 │   下載（版本、系統、空間、費用；DMG 按鈕；第一次打開 1-2-3；    │
@@ -416,14 +416,14 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 | 截圖 | 會議紀錄（摘要），Windows 版真的畫面 |
 | 開會時，邊錄邊看逐字稿 | 同首頁，快捷鍵寫 Windows 的（Ctrl+R、Ctrl+Alt+Shift+B）；錄音中的截圖 |
 | 停止後，在電腦上正式轉錄 | 同首頁，加一段顯示卡加速：NVIDIA 自動下載（40 分鐘的會議 RTX 3060 約 8 分鐘、只用 CPU 約 30 分鐘，requirements R27 R4.6、N2 的實測）；AMD（含 Radeon 內顯）自動下載 Vulkan 版（約 20 MB，R4.7，還沒在真的 AMD 電腦上量過速度，不寫數字）；逐字稿的截圖 |
-| 整理成會議紀錄 | 同首頁 |
+| 整理成會議紀錄 | 同首頁；心智圖的截圖 |
 | 錄音不會離開你的電腦 | 同首頁的隱私，把「Mac」換成「電腦」 |
 | 下載 | 版本（連到 GitHub Release，Windows 版的更新紀錄不在網站上，§7）、系統、記憶體、磁碟空間（模型約 2 GB，NVIDIA 另外約 1.1 GB、AMD 另外約 60 MB）、顯示卡、費用；x64 的下載按鈕、ARM 的連結；安裝三步；SmartScreen 的示意圖（§16.3）；智慧型應用程式控制的說明；點星和贊助 |
 | 電腦效能（在下載區的需求表下面） | 只寫量過或確定的事：NVIDIA 顯示卡最快（RTX 3060 的實測、驅動 527 版以後、顯示記憶體建議 4 GB 以上，轉錄模型約 1.7 GB）；只用 CPU 比較慢（同一台桌機的實測，筆電可能比會議本身還久；轉錄最多用 8 個執行緒）；等不及時改用快速辨識（設定 → 錄音與轉錄 → 正式轉錄，比較不準、不參考詞彙表）；錄音中的即時逐字稿約用一個核心的三分之一（R27 R2.1 的實測）；AMD 顯示卡自動下載加速元件、用顯示卡轉錄（不寫速度）；ARM 的電腦、Intel 顯示卡只用 CPU。不寫沒量過的 CPU 等級、顯示卡型號清單；有更多電腦的實測再補成表 |
 | 最近更新 | 最新的 Windows 版（版本說明從 GitHub Release 讀，§7） |
 | 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎（AMD 也會用顯示卡，其他用 CPU）、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
 
-- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），三張 summary、recording、transcript。虛擬機調成 150%（桌面 1728×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。
+- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），四張 summary、recording、transcript、mindmap。虛擬機調成 150%（桌面 1728×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。心智圖（mindmap）例外：Windows 的側欄不能收，960 寬放不下整張圖，改在 125% 拍 1340×780 的視窗，裁成 1656×962（`pages.mjs` 的 `shot()` 帶 `size`）。
 - 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
 - 分享預覽圖全站共用一張（`og.png`、`og-en.png`、`og-ja.png`，`site/og.html` 截的）：標題「Mac 和 Windows 的會議紀錄 app」（英文 A meeting-notes app for Mac and Windows、日文 Mac と Windows の議事録アプリ），右邊 Mac 的截圖在後面露出紅黃綠、Windows 的截圖在前面露出視窗按鈕。首頁的標題、說明照樣以 Mac 為主（搜尋只看那些），預覽圖是貼到 Threads、LINE 時給人看的，兩個平台都要看得到。換圖時 `content.mjs` 的網址把 `?v=` 加一：Threads、Facebook 依圖片網址快取，同一個網址不會重抓。
 
@@ -446,6 +446,7 @@ Windows 使用者最容易卡住的是第一次執行時的 SmartScreen（拾音
 - 解析度和縮放：UTM 會把高度定在視窗的高度（1044），這個高度最多 150%。用 `DisplayConfigSetDeviceInfo`（設定 app 用的同一個）改縮放，app 不用重開。截圖用 DWM 的外框（`DWMWA_EXTENDED_FRAME_BOUNDS`）和 `CopyFromScreen`，截圖的程式要宣告支援高 DPI（`SetThreadDpiAwarenessContext`），不然座標會被換算。
 - 專案在有 iCloud 同步的桌面：`make-images.sh` 短時間內重寫同一個檔案時，iCloud 會留下「summary 2.avif」這種衝突副本（舊的內容），commit 前用 `git status` 看有沒有沒加進 git 的副本，刪掉。
 - 工具在 `scripts/windows/vm/ps/`：`display.ps1`（解析度）、`dpi.ps1`（縮放）、`snapwin.ps1`（放好視窗、截圖）、`clickname.ps1`（用虛擬機的滑鼠點元件）、`setnotes.ps1`（填輸入框），用 `insession.sh` 在桌面跑。截完把縮放改回 100%、解析度改回 1024×768。
-- 紀錄：點「紀錄」分頁讓焦點離開搜尋框（Lumio 那場，英文是 Kickoff 那場）；逐字稿：點 00:24（英文 00:22）那一段的時間，**再點一次「逐字稿」分頁**讓「從 00:24 開始播放」的提示框消失（只把滑鼠移開，提示框會留著）；錄音：`record-sim` 用 Lumio 的錄音（英文用定價那場），筆記用 UI Automation 填兩行，再點側欄讓筆記框沒有焦點，約 30 秒時截（4.1 的錄音畫面沒改，錄音的截圖沿用）。點擊用虛擬機裡的滑鼠（只送進虛擬機）。
+- 紀錄：點「紀錄」分頁讓焦點離開搜尋框（Lumio 那場，英文是 Kickoff 那場）；逐字稿：點 00:24（英文 00:22）那一段的時間，**再點一次「逐字稿」分頁**讓「從 00:24 開始播放」的提示框消失（只把滑鼠移開，提示框會留著）；錄音：`record-sim` 用 Lumio 的錄音（英文用定價那場），筆記用 UI Automation 填兩行，再點側欄讓筆記框沒有焦點，約 30 秒時截（4.1 的錄音畫面沒改，錄音的截圖沿用）。點擊用虛擬機裡的滑鼠（只送進虛擬機）。紀錄的播放位置 `seek 27.5`（英文 125），讓議題帶中間的一段亮起來（4.6）。
+- 心智圖（4.6）：`notesview mindmap`，`dpi.ps1 125`、`snapwin.ps1 place … -Width 1340 -Height 780`（125% 時視窗最高約 780），中文 `select 3`、英文 `select 2`，`seek 100`；點「心智圖」（英文 Mind map）讓焦點離開搜尋框，`ps/wheel.ps1 1620 450 -6 1722 600` 捲到底（整張圖露出來，滑鼠移到視窗外，捲軸和提示框才會收起來），截完 `dpi.ps1 150` 或 100。裁切：`python3 scripts/windows/vm/crop-shot.py <截圖> <輸出> 1.25`（150% 的不用給縮放；會自動湊成偶數、四角透明）。拍完把兩個示範資料夾的 `notesView` 改回 list。
 - 虛擬機的桌面 1728×1044 就夠（960×640 在 150% 是 1440×960，`-Top 6` 整個在工作列上面），`display.ps1 set 2560 1044` 在 UTM 現在的設定會失敗（-1），不用改解析度。OneDrive 的「開啟 Windows 備份」提示框會蓋在右下角、被截進去：`Stop-Process -Name OneDrive`，並把 `HKCU\…\Run` 的 OneDrive 拿掉（2026-10-25 已拿掉）。
-- Mac 的截圖（`docs/images/`、`docs/images/en/`，1920×1344）：DEBUG 版用示範資料的複本啟動（中文的要把 12、14 兩場連同 segments、speakers 等有 meeting_id 的資料表一起刪掉，不然 FOREIGN KEY 開不了資料庫），`shiyinctl windowsize 960 672` 把視窗調成截圖的大小（視窗在別的桌面時 AX 改不了），`screencapture -x -o -l <視窗編號>` 在別的桌面也截得到（視窗編號用 CGWindowList 依 pid 找，標題是會議名稱）；系統要先在深色模式。紀錄：`select 2`、`tab summary`；逐字稿：`select 3`（英文 1）、`tab transcript`、`seek 24.5`（英文 23.5，讓 00:24／00:22 那一段反白）。
+- Mac 的截圖（`docs/images/`、`docs/images/en/`，1920×1344）：DEBUG 版用示範資料的複本啟動（中文的要把 12、14 兩場連同 segments、speakers 等有 meeting_id 的資料表一起刪掉，不然 FOREIGN KEY 開不了資料庫），`shiyinctl windowsize 960 672` 把視窗調成截圖的大小（視窗在別的桌面時 AX 改不了），`screencapture -x -o -l <視窗編號>` 在別的桌面也截得到（視窗編號用 CGWindowList 依 pid 找，標題是會議名稱）；系統要先在深色模式。紀錄：`select 2`、`tab summary`、`seek 27.5`（英文 125）；逐字稿：`select 3`（英文 1）、`tab transcript`、`seek 24.5`（英文 23.5，讓 00:24／00:22 那一段反白）。接了滑鼠時系統會一直顯示捲軸：啟動參數加 `-AppleShowScrollBars WhenScrolling`（只對這次執行）。心智圖（4.6）：`notesview mindmap`，`clickat 244 26` 收起側欄（再按一次打開），中文 `select 3`、英文 `select 2`，`livescroll 1` 捲到底讓整張圖露出來，`seek 100`；拍完 `notesview list`、打開側欄，共用設定的視窗大小、側欄照拍之前的還原。
