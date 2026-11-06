@@ -358,6 +358,19 @@ enum DebugControl {
             let index = args.count > 2 ? Int(args[2]) ?? 0 : 0
             let pressed = matches.indices.contains(index) && matches[index].accessibilityPerformPress()
             if args.count > 3 { write(["found": matches.count, "pressed": pressed], to: args[3]) }
+        // clickat <x> <y> [視窗 id]：在視窗裡點一下（點，左上原點，含標題列；預設主視窗）。直接交給 NSWindow.sendEvent，
+        // 走 AppKit、SwiftUI 正常的點擊判斷，視窗在別的桌面（例如使用者在全螢幕的 app）也點得到，不碰使用者的滑鼠
+        case "clickat":
+            let target = args.count > 3 ? args[3] : "main"
+            guard let x = Double(args[1]), let y = Double(args[2]),
+                  let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue == target }) else { break }
+            let point = NSPoint(x: x, y: window.frame.height - y)
+            for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                    window.sendEvent(event)
+                }
+            }
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerm(args[1])
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
@@ -625,6 +638,11 @@ enum DebugControl {
             "selection": model.selection ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
+            // 播放條上的議題帶（design §43.3）：選取中的會議，長度同播放條
+            "topicRanges": model.detail.flatMap { d in
+                d.notes.map { MindMap.topicRanges(notes: $0, duration: max(model.player.duration, Double(d.meeting.durationSeconds ?? 0)),
+                                                  untitled: MindMap.topicLabel(.interface)) }
+            }.map { $0.map { ["branch": $0.branch, "title": $0.title, "start": $0.start, "end": $0.end] } } ?? [],
             // 會議的參考文件（design §39.7）：選取中的會議
             "documents": (model.detail?.documents ?? []).map { d -> [String: Any] in
                 let use = model.detail?.documentUse[d.id ?? 0]

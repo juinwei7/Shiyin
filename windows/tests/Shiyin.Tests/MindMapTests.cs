@@ -55,6 +55,29 @@ public class MindMapTests
         Golden.Text($"mindmap/{key}.svg", MindMap.Svg(layout, language));
     }
 
+    /// <summary>議題時間軸（M§43.3）：有紀錄的會議用會議長度，mindMapCases 用 3600 秒，topicRangeCases 帶自己的長度</summary>
+    [Fact]
+    public void TopicRangesSameAsMac()
+    {
+        var cases = new List<(string Key, MeetingNotes Notes, double Duration, MeetingLanguage Language)>();
+        foreach (var m in Golden.Meetings.Where(m => m.Notes is not null))
+            cases.Add((m.Key, m.Notes!, m.Meeting.DurationSeconds ?? 0, m.Meeting.MeetingLanguage));
+        foreach (var c in Golden.Fixtures.GetProperty("mindMapCases").EnumerateArray())
+            cases.Add((c.Str("key")!, MeetingNotes.Decode(c.GetProperty("notes")), 3600, MeetingLanguages.Parse(c.Str("language")) ?? MeetingLanguage.Zh));
+        foreach (var c in Golden.Fixtures.GetProperty("topicRangeCases").EnumerateArray())
+            cases.Add((c.Str("key")!, MeetingNotes.Decode(c.GetProperty("notes")), c.GetProperty("duration").GetDouble(),
+                       MeetingLanguages.Parse(c.Str("language")) ?? MeetingLanguage.Zh));
+        var json = new JsonArray([.. cases.Select(c => (JsonNode)new JsonObject
+        {
+            ["key"] = c.Key, ["duration"] = c.Duration,
+            ["ranges"] = new JsonArray([.. MindMap.TopicRanges(c.Notes, c.Duration, MindMap.TopicLabel(c.Language)).Select(r => (JsonNode)new JsonObject
+            {
+                ["branch"] = r.Branch, ["title"] = r.Title, ["start"] = r.Start, ["end"] = r.End,
+            })]),
+        })]);
+        Golden.Json("util/topic-ranges.json", json.ToJsonString());
+    }
+
     [Fact]
     public void WrapKeepsWordsDatesAndBrackets()
     {
