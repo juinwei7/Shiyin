@@ -7,15 +7,10 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 議題時間軸（R68，design §43、design-windows §11.11、D145；2026-11-06 使用者同意的建議）
-
-- [ ] **TL3 Windows**（design-windows §11.11）：Core 的段落過標準答案；播放條的議題帶
-  - 驗證：dotnet test 全過；虛擬機看畫面、點一段播放（Mac 的記憶體、磁碟夠的時候）
-
 ## 心智圖（R67，design §42、design-windows §11.10、D143～D144；2026-11-05 使用者新需求）
 
-- [~] **MM2 Mac 畫面、匯出**（§42.4）：程式完成、畫面和匯出驗過。還差：在使用者的畫面上點心智圖的時間點（測試視窗在別的桌面，AX 按不到）、「複製心智圖」後貼到別的程式（測試時不蓋掉使用者的剪貼簿）
-- [~] **MM3 Windows**（design-windows §11.10）：程式完成，dotnet test 208/208（心智圖跟 Mac 的標準答案逐字相同）。還差：虛擬機看畫面、匯出 PNG（RenderTargetBitmap）、PDF（WebView2）、複製圖片（2026-11-05 Mac 的 swap 用到 17 GB、磁碟一直被吃，diskguard 開機後就停掉虛擬機，沒驗）
+- [~] **MM2 Mac 畫面、匯出**（§42.4）：程式完成、畫面和匯出驗過，時間點用 `clickat` 點過（2026-11-06：議題的 01:05、條目的 00:58 都從那裡播放，點空白不會跳）。還差：「複製心智圖」後貼到別的程式（測試時不蓋掉使用者的剪貼簿）
+- [~] **MM3 Windows**（design-windows §11.10）：程式完成，dotnet test 209/209；2026-11-06 虛擬機看過畫面（淺色、深色、英文）、匯出 PNG、PDF、SVG，時間連結按得到。還差：「複製心智圖（圖片）」貼到別的程式（UTM 可能跟 Mac 共用剪貼簿，測試時不蓋掉使用者的剪貼簿）
 
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57；2026-10-29 Threads 的使用者回饋）
 

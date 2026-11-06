@@ -136,6 +136,10 @@ public static class Ui
     /// <summary>會議內容的標題字型：中文、英文新細明體，日文 Yu Mincho（design-windows §11.3；W2 截圖比較後定），語言檔的 fonts.titleWindows</summary>
     public static FontFamily TitleFont(MeetingLanguage language) => new(language.Profile.Fonts.TitleWindows);
 
+    /// <summary>內文的字型（語言檔 fonts.htmlWindows.body 去掉引號和 sans-serif）：要粗體又不能用明體時用（明體沒有粗體，系統加粗後會糊）</summary>
+    public static FontFamily BodyFont(MeetingLanguage language) =>
+        new(string.Join(", ", language.Profile.Fonts.HtmlWindows.Body.Split(',').Select(n => n.Trim().Trim('"')).Where(n => n.Length > 0 && n is not ("serif" or "sans-serif"))));
+
     /// <summary>會議內容的語言（ja-JP 時用日文字形，D20），語言檔的 fonts.contentWindows</summary>
     public static string ContentLanguage(MeetingLanguage language) => language.Profile.Fonts.ContentWindows;
 
