@@ -1058,6 +1058,17 @@
         }
       }
     },
+    "按右上角的「匯出」（Ctrl+E）：會議紀錄可以存成 Markdown、PDF、Word，心智圖可以存成 PNG、PDF、SVG；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入（Mac 版也可以）。「匯出」旁邊的箭頭可以直接複製會議紀錄或心智圖的圖片，貼到 Notion、Slack 或郵件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Export at the top right (Ctrl+E): notes can be saved as Markdown, PDF or Word, and the mind map as PNG, PDF or SVG; transcripts as txt, srt, vtt or Word; recordings as m4a or wav. Send a “Whole meeting (.shiyin)” to a colleague and they can import it with a double-click (on the Mac version too). The arrow next to Export copies the notes, or the mind map as an image, so you can paste them straight into Notion, Slack or email."
+          }
+        }
+      }
+    },
     "按右上角的「匯出」（Ctrl+E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入（Mac 版也可以）。「匯出」旁邊的箭頭可以直接複製會議紀錄，貼到 Notion、Slack 或郵件。": {
       "extractionState": "manual",
       "localizations": {
@@ -1740,6 +1751,17 @@
         }
       }
     },
+    "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。上方的「條列｜心智圖」可以把紀錄畫成心智圖，一眼看出有哪些議題。範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，回答會附上時間點；側欄上方的提問按鈕可以一次問所有會議。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes are generated automatically after transcription. The Notes tab shows, from top to bottom, the summary, decisions, action items, open questions, and the discussion by topic; click the timestamp after any item to play the recording from there. Switch “List | Mind map” at the top to draw the notes as a mind map and see every topic at a glance. The template menu switches to formats such as one-on-one, interview, lecture, or brainstorming; afterwards choose More → Reprocess → Regenerate Notes. To find something, ask in the Ask tab and the answer comes with timestamps; the Ask button above the sidebar asks across all meetings."
+          }
+        }
+      }
+    },
     "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，回答會附上時間點；側欄上方的提問按鈕可以一次問所有會議。": {
       "extractionState": "manual",
       "localizations": {
@@ -1802,6 +1824,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcription: recordings are sent to %1$@ (your company's server) and deleted after transcription. Speakers are also identified on the server; voiceprints stay on this computer, and notes and meeting notes are not sent for transcription. Transcription engine on the server: %2$@."
+          }
+        }
+      }
+    },
+    "逐字稿裡琥珀色的段落辨識信心比較低，值得回頭聽；時間軸上的三角形是待確認題目、圓點是你標的重點；時間軸上面的色塊是議題，點了從那個議題開始聽。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amber segments in the transcript have lower recognition confidence and are worth listening to again. On the timeline, triangles are questions to confirm and dots are your bookmarks; the colored blocks above it are topics — click one to listen from where that topic starts."
           }
         }
       }

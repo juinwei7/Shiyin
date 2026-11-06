@@ -18,11 +18,11 @@ struct GuideView: View {
         Step(symbol: "waveform", title: String(localized: "正式轉錄、分辨說話者"),
              body: String(localized: "按「停止並轉錄」後，拾音會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，\(MeetingLanguage.uiNames(model: "turbo"))用 Whisper large-v3-turbo，\(MeetingLanguage.uiNames(model: "qwen"))用 Qwen3-ASR），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。")),
         Step(symbol: "doc.text", title: String(localized: "看會議紀錄"),
-             body: String(localized: "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。")),
+             body: String(localized: "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。上方的「條列｜心智圖」可以把紀錄畫成心智圖，一眼看出有哪些議題。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。")),
         Step(symbol: "questionmark.bubble", title: String(localized: "回答待確認、修改"),
              body: String(localized: "整理時沒把握的人名、專有名詞、負責人和期限會列成待確認的題目。紀錄裡有疑問的那一條旁邊會有「？」，點了就能當場回答；紀錄頂部的「還有 N 題待確認」點開可以一次看完。能用是或否回答的直接按「是」「不是」（按「是」不用等整理工具），其他的在「你的回答」欄位回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的按「略過」，或一次「全部略過」。也可以按「編輯」直接改。改錯了按「編輯」旁的「復原上一版」。")),
         Step(symbol: "square.and.arrow.up", title: String(localized: "匯出、分享"),
-             body: String(localized: "按右上角的「匯出」（⌘E）：會議紀錄可以存成 Markdown、PDF、Word；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入。「匯出」旁邊的箭頭可以直接複製會議紀錄，貼到 Notion、Slack 或郵件。")),
+             body: String(localized: "按右上角的「匯出」（⌘E）：會議紀錄可以存成 Markdown、PDF、Word，心智圖可以存成 PNG、PDF、SVG；逐字稿可以存成 txt、srt、vtt、Word；錄音可以存成 m4a、wav；「整場會議（.shiyin）」可以傳給同事，對方雙擊就能匯入。「匯出」旁邊的箭頭可以直接複製會議紀錄或心智圖的圖片，貼到 Notion、Slack 或郵件。")),
     ]
 
     var body: some View {
@@ -66,7 +66,7 @@ struct GuideView: View {
             GuideSection(title: String(localized: "找會議、播放")) {
                 GuideBullet(String(localized: "側欄上方的「搜尋所有會議」會同時搜標題、逐字稿、會議紀錄和你的筆記，點結果就跳到那一段。"))
                 GuideBullet(String(localized: "點任何時間點或視窗底部的時間軸就從那裡播放，空白鍵播放或暫停；播放列右邊可以選 0.75×～2× 的速度。"))
-                GuideBullet(String(localized: "逐字稿裡琥珀色的段落辨識信心比較低，值得回頭聽；時間軸上的三角形是待確認題目、圓點是你標的重點。"))
+                GuideBullet(String(localized: "逐字稿裡琥珀色的段落辨識信心比較低，值得回頭聽；時間軸上的三角形是待確認題目、圓點是你標的重點；時間軸上面的色塊是議題，點了從那個議題開始聽。"))
                 GuideBullet(String(localized: "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄上方的「資料夾」可以切換只看某個資料夾；正在看某個資料夾時，新錄的和匯入的會議都會放進去。資料夾按右鍵可以重新命名或刪除（會議會保留）。"))
                 GuideBullet(String(localized: "刪除的會議會先放進側欄最下面的「垃圾桶」，30 天內都可以還原。"))
                 GuideBullet(String(localized: "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多 → 重新處理」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題右邊的「人數」）或匯入時也可以先選。"))
