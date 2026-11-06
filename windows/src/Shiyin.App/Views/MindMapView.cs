@@ -59,10 +59,12 @@ public static class MindMapView
             Language = language.Profile.Fonts.ContentWindows, TextWrapping = TextWrapping.NoWrap,
             VerticalAlignment = VerticalAlignment.Top,
         };
+        // 根用標題字型（同 Ui.Heading）；第一層用內文字型：新細明體、Batang 沒有粗體，縮小到 9 px 左右時系統把點陣字加粗，筆畫糊成一團
+        // （2026-11-06 虛擬機 100%）。用 Bold 不用 SemiBold（同 Ui.Text）：正黑體沒有 SemiBold，會被換成新細明體的假粗體
         if (b.Level < 2)
         {
-            text.FontFamily = Ui.TitleFont(language);
-            text.FontWeight = FontWeights.SemiBold;
+            text.FontFamily = b.Level == 0 ? Ui.TitleFont(language) : Ui.BodyFont(language);
+            text.FontWeight = FontWeights.Bold;
         }
         for (var i = 0; i < b.Lines.Count; i++)
         {
@@ -74,7 +76,11 @@ public static class MindMapView
         if (b.Time.Length > 0)
         {
             time = !exporting && seek is not null && TimeFormat.Seconds(b.Time) is double seconds
-                ? new HyperlinkButton { Content = b.Time, Padding = new Thickness(0), FontSize = MindMap.TimeSize, Foreground = Ui.Celadon }
+                ? new HyperlinkButton
+                {
+                    Content = b.Time, Padding = new Thickness(0), MinWidth = 0, MinHeight = 0, BorderThickness = new Thickness(0),
+                    FontSize = MindMap.TimeSize, Foreground = Ui.Celadon,
+                }
                 : new TextBlock { Text = b.Time, FontSize = MindMap.TimeSize, Foreground = exporting ? Brush(MindMap.SecondaryColor) : Ui.Secondary };
             if (time is HyperlinkButton link && TimeFormat.Seconds(b.Time) is double at) link.Click += (_, _) => seek!(at);
             time.VerticalAlignment = VerticalAlignment.Top;
@@ -97,7 +103,9 @@ public static class MindMapView
         {
             border.Background = exporting ? new SolidColorBrush(Colors.White) : Ui.CardBackground;
             border.BorderBrush = Brush(MindMap.Color(b.Branch, dark));
+            // Border 的框線畫在內距裡面、會佔掉文字的空間（Mac 的框線疊在上面不佔）：內距扣掉框線，文字才放得下（2026-11-06 粗體標題的左右被切掉）
             border.BorderThickness = new Thickness(1.5);
+            border.Padding = new Thickness(s.PadH - 1.5, s.PadV - 1.5, s.PadH - 1.5, s.PadV - 1.5);
             border.CornerRadius = new CornerRadius(8);
         }
         return border;

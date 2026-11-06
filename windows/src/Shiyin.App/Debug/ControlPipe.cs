@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Shiyin.LLM;
 using Shiyin.Model;
+using Shiyin.Notes;
 using Shiyin.Platform;
 using Shiyin.Services;
 
@@ -74,6 +75,11 @@ public static class ControlPipe
                 host.Settings.Set(AppSettings.NotesViewKey, args[1].Equals("mindmap", StringComparison.OrdinalIgnoreCase) ? "mindMap" : "list");
                 main?.Refresh();
                 return Ok;
+            // seek <秒> [play]、toggle：播放（同 Mac）
+            case "seek" when args.Length > 1 && double.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out var seekTo):
+                host.Player.Seek(seekTo, args.Length > 2 && args[2] == "play");
+                return Ok;
+            case "toggle": host.Player.Toggle(); return Ok;
             case "tab" when args.Length > 1 && DetailTabs.Resolve(args[1]) is { } resolved:
                 main?.State.OpenTab(resolved.Tab, resolved.ExpandReview, resolved.ExpandNotes);
                 return Ok;
@@ -344,6 +350,14 @@ public static class ControlPipe
             ["tab"] = main?.State.Tab.ToString().ToLowerInvariant(),
             ["reviewExpanded"] = main?.State.ReviewExpanded,
             ["notesView"] = host.Settings.NotesView,
+            // 播放（同 Mac 的 player）、播放條上的議題帶（M§43.3）：選取中的會議，長度同播放條
+            ["player"] = new JsonObject
+            {
+                ["loaded"] = host.Player.IsLoaded, ["playing"] = host.Player.IsPlaying, ["time"] = host.Player.CurrentTime, ["duration"] = host.Player.Duration,
+            },
+            ["topicRanges"] = new JsonArray([.. (main?.State.Detail is { Notes: { } topicNotes } topicDetail
+                ? MindMap.TopicRanges(topicNotes, Math.Max(host.Player.Duration, topicDetail.Meeting.DurationSeconds ?? 0), MindMap.TopicLabel(MeetingLanguages.Interface))
+                : []).Select(r => (JsonNode)new JsonObject { ["branch"] = r.Branch, ["title"] = r.Title, ["start"] = r.Start, ["end"] = r.End })]),
             ["userNotesExpanded"] = main?.State.UserNotesExpanded,
             ["reviewInline"] = main?.ReviewDraft.Expanded?.ToString(),
             // 會議的參考文件（M§39.7）：選取中的會議

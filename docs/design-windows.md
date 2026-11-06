@@ -416,13 +416,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.10 心智圖（R67，M§42）
 
 - 樹、排版、SVG 在 Shiyin.Core（`Notes/MindMap.cs`），跟 Mac 一字一句同一套規則，標準答案 `mindmap/*.json`、`*.svg` 逐字比。
-- 畫面：紀錄分頁的編輯列左邊加「條列｜心智圖」切換（設定的 `notesView`）。心智圖是 `Canvas`：連線用 `Path`（`BezierSegment`），節點是 `Border`＋`TextBlock`（每行一個 `Run`、`LineBreak`，字型照會議語言的 `fonts.titleWindows`、`contentWindows`），時間是可以按的連結（播放）。提示條、編輯列和心智圖整頁一起上下捲（同 Mac），心智圖比畫面寬時左右捲；整張比畫面寬時用 `Viewbox` 縮小（最小 0.6，乘上文字大小；不用 `ZoomFactor`：放在上下捲的頁面裡高度會照沒縮放的算）。
+- 畫面：紀錄分頁的編輯列左邊加「條列｜心智圖」切換（設定的 `notesView`）。心智圖是 `Canvas`：連線用 `Path`（`BezierSegment`），節點是 `Border`＋`TextBlock`（每行一個 `Run`、`LineBreak`，字型照會議語言的 `fonts.titleWindows`（根）、`contentWindows`（第一層用內文字型的 `Bold`：新細明體、Batang 沒有粗體，縮小時系統加粗的點陣字會糊掉；`SemiBold` 會被換成新細明體）；`Border` 的框線畫在內距裡面，第一層的內距要扣掉框線的 1.5，不然文字放不下），時間是可以按的連結（播放）。提示條、編輯列和心智圖整頁一起上下捲（同 Mac），心智圖比畫面寬時左右捲；整張比畫面寬時用 `Viewbox` 縮小（最小 0.6，乘上文字大小；不用 `ZoomFactor`：放在上下捲的頁面裡高度會照沒縮放的算）。
 - 匯出：SVG 直接寫 `MindMap.Svg`；PDF 用現有的 WebView2 列印（`Pdf.Print`），HTML 裡只放那張 SVG，紙張設成跟圖一樣大（加邊）、一頁；PNG 用 `RenderTargetBitmap` 畫匯出模式的 `Canvas`（放在視窗裡一個看不到的 `Popup`，畫完拿掉），2 倍。右上角「匯出」選單的「複製心智圖（圖片）」用同一張 PNG 放進剪貼簿（`DataPackage.SetBitmap`）。
 
 ### 11.11 議題時間軸（R68，M§43）
 
 - 段落用 Shiyin.Core 的 `MindMap.TopicRanges`（同 Mac，標準答案 `util/topic-ranges.json`）。
-- 畫面：`PlayerBar` 的時間軸上面多一條議題帶（Grid 裡一段一個 `Border`＋`TextBlock`，`TextTrimming` 截短），寬度、時間比例同時間軸；正在播放的那段底色變深、字變粗；點了從那個議題開始播放；`ToolTip` 是「議題名稱　開始–結束」，`AutomationProperties.Name` 同樣的字。
+- 畫面：`PlayerBar` 的時間軸上面多一條議題帶（Grid 裡一段一個 `Border`＋`TextBlock`，`TextTrimming` 截短），寬度、時間比例同時間軸；正在播放的那段底色變深、字變粗（`Bold`，不用 `SemiBold`：中文會被換成新細明體的假粗體）；點了從那個議題開始播放；`ToolTip` 是「議題名稱　開始–結束」，`AutomationProperties.Name` 同樣的字。
 
 ## 12. 系統整合
 
