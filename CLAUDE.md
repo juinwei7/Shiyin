@@ -146,6 +146,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 - `AVAudioFile` 關檔後 `length` 會變 0，不能用它判斷錄了多久（曾經因此刪掉整場錄音）。
 - zsh 內建的 `log` 會蓋掉系統指令，要用 `/usr/bin/log`；zsh 不會依 IFS 切字串；`rm -f *.wav` 沒有符合的檔案時會報錯。
 - bash 腳本裡，變數後面緊接全形字時要寫成 `${VAR}`，否則全形字的位元組會被吃進變數名稱。
+- 桌面有 iCloud 同步：短時間內改寫的檔案會冒出「MindMap 2.swift」這種衝突副本（舊內容、沒進 git），Mac 的 SwiftPM、Windows 的 dotnet 都會把它當成程式編進去，重複定義、建置失敗（2026-11-06 同步到虛擬機時才發現）。建置、`sync.sh`、發布前用 `git status` 看有沒有「 2.」結尾的檔案，確認內容是舊版本再刪（虛擬機的 `C:\src` 也要刪，tar 解開不會刪舊檔）。
 - 用腳本做大段替換後，檢查檔案的行數和結尾：曾經因為替換腳本漏接後半段，把整個檔案截斷。
 - 整理工具（3.4）：測 API 用假伺服器 `scripts/dev/fake-llm-server.py` 加上 `shiyinctl llmurl`；key、整理工具、模型用只放記憶體的 `llmkey`、`llmprovider`。DEBUG 版（3.4.1 起）預設不讀真的鑰匙圈，要測時加 `-debugRealKeychain YES`（會讀使用者存的 key，可能跳出確認視窗）。**不要用 `setkey` 和 `defaults write` 測**：鑰匙圈項目綁定建立它的 app 簽章，ad-hoc 重建後或使用者自己的拾音去讀都會跳出系統的存取確認；整理工具設定跟使用者的拾音共用。
 - 使用者的拾音可能也開著（`~/Desktop/Shiyin.app`），跟測試用的 DEBUG 版共用設定和視窗狀態。DEBUG 版用 `open -g -n … --args -ApplePersistenceIgnoreState YES` 啟動，否則可能照上次被 `pkill` 時的狀態還原成一個視窗都沒有；設定值可以用啟動參數帶（`-llmProvider gemini`），只在這次執行有效。

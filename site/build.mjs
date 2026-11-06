@@ -23,7 +23,7 @@ const { values: args } = parseArgs({ options: { releases: { type: 'string' }, re
 const out = path.resolve(args.out ?? path.join(here, 'dist'));
 const site = (process.env.SITE_URL || 'https://shiyin.weibuilds.com').replace(/\/+$/, '');
 // Windows 版的截圖（docs/website.md §16.1）在 windows/ 底下
-const SHOTS = ['', 'en/', 'windows/', 'en/windows/'].flatMap((dir) => ['summary', 'recording', 'transcript'].map((name) => `docs/images/${dir}${name}.png`));
+const SHOTS = ['', 'en/', 'windows/', 'en/windows/'].flatMap((dir) => ['summary', 'recording', 'transcript', 'mindmap'].map((name) => `docs/images/${dir}${name}.png`));
 
 try {
   const { mac: releases, windows } = await loadAllReleases({ file: args.releases });

@@ -119,10 +119,10 @@ ${scripts}</body>
 }
 
 // 截圖：優先用 AVIF（960、1920 寬），PNG 當備援。first 是第一屏那張，不延後載入
-// win：Windows 版的截圖（docs/images/windows，1418×946，§16.1）
-function shot(lang, name, alt, { first = false, caption = '', win = false } = {}) {
+// win：Windows 版的截圖（docs/images/windows，1418×946，§16.1）；size：尺寸不一樣的截圖（Windows 的心智圖）
+function shot(lang, name, alt, { first = false, caption = '', win = false, size = null } = {}) {
   const dir = content[lang].images + (win ? '/windows' : '');
-  const [width, height] = win ? [1418, 946] : [1920, 1344];
+  const [width, height] = size ?? (win ? [1418, 946] : [1920, 1344]);
   const loading = first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
   return `<picture>
   <source type="image/avif" srcset="${dir}/${name}-960.avif 960w, ${dir}/${name}.avif ${width}w" sizes="(max-width: 1000px) calc(100vw - 40px), 960px">
@@ -272,6 +272,9 @@ ${shot(lang, 'transcript', c.shots.transcript, { caption: c.shots.credit })}
 ${paragraphs(c.notes.ps)}
 <p class="note">${c.notes.note}</p>
 </section>
+<figure class="wide part">
+${shot(lang, 'mindmap', c.shots.mindmap)}
+</figure>
 
 <section class="col part" id="privacy">
 <h2>${c.privacy.h2}</h2>
@@ -369,6 +372,9 @@ ${shot(lang, 'transcript', w.shots.transcript, { win: true, caption: c.shots.cre
 ${paragraphs(c.notes.ps)}
 <p class="note">${c.notes.note}</p>
 </section>
+<figure class="wide part">
+${shot(lang, 'mindmap', w.shots.mindmap, { win: true, size: [1656, 962] })}
+</figure>
 
 <section class="col part" id="privacy">
 <h2>${w.privacy.h2}</h2>
