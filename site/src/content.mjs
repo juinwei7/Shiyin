@@ -124,6 +124,7 @@ export const content = {
         ['需要網路嗎？', '錄音、轉錄、說話者辨識都不需要。第一次下載轉錄模型、整理會議紀錄和對會議提問時需要。'],
         ['支援哪些語言？', '介面有繁體中文和英文；會議可以是中文、英文、日文、廣東話或韓文（實驗性）。開始錄音後會自動判斷中文、英文、日文、韓文。'],
         ['可以轉錄已經錄好的檔案嗎？', '可以。把錄音或影片拖進視窗就會轉錄，也可以匯入 srt、vtt、txt 逐字稿。'],
+        ['可以在 Claude Code、Codex 裡問我的會議嗎？', '可以。在設定 → 進階打開「讓 AI 工具讀取會議」，按一下就加到 Claude Code、Codex 或 Claude Desktop（MCP），拾音不用開著。在 AI 工具裡問「上週的待辦有哪些」，回答會附上會議和時間點的連結。只能讀、不能改；讀到的內容會交給那個 AI 工具處理。'],
       ],
       windows: {
         q: '有 Windows 版或手機版嗎？',
@@ -363,6 +364,7 @@ export const content = {
         ['Does it need the internet?', 'Recording, transcription and speaker identification don’t. Downloading the transcription models the first time, writing the notes and asking your meetings questions do.'],
         ['Which languages does it support?', 'The interface is in English and Traditional Chinese. Meetings can be in English, Chinese, Japanese, Cantonese or Korean (experimental); Shiyin detects English, Chinese, Japanese and Korean after you start recording.'],
         ['Can it transcribe a recording I already have?', 'Yes. Drag the audio or video file into the window and it’s transcribed. You can also import srt, vtt or txt transcripts.'],
+        ['Can I ask about my meetings in Claude Code or Codex?', 'Yes. Turn on “Let AI tools read meetings” in Settings → Advanced and add Shiyin to Claude Code, Codex or Claude Desktop with one click (MCP); Shiyin doesn’t need to be open. Ask “What are last week’s action items?” and the answer links to the meetings and timestamps. AI tools can only read, not change anything, and what they read is handled by that AI tool.'],
       ],
       windows: {
         q: 'Is there a Windows or phone version?',
@@ -602,6 +604,7 @@ export const content = {
         ['インターネット接続は必要ですか？', '録音、文字起こし、話者の識別には不要です。文字起こしモデルの初回ダウンロード、議事録のまとめ、会議への質問には必要です。'],
         ['どの言語に対応していますか？', '会議は日本語、英語、中国語、広東語、韓国語（試験的）に対応し、録音を始めると日本語・英語・中国語・韓国語を自動で判別します。アプリの表示は英語と繁体字中国語で、日本語表示には対応していません。'],
         ['録音済みのファイルも文字起こしできますか？', 'できます。音声や動画のファイルをウインドウにドラッグすると文字起こしされます。srt、vtt、txt の文字起こしも読み込めます。'],
+        ['Claude Code や Codex から会議について質問できますか？', 'できます。設定 → Advanced で「Let AI tools read meetings」をオンにすると、ワンクリックで Claude Code、Codex、Claude Desktop に追加できます（MCP）。拾音を開いておく必要はありません。「先週のアクションアイテムは？」と聞くと、会議と時刻へのリンク付きで答えます。読み取り専用で、読んだ内容はその AI ツールで処理されます。'],
       ],
       windows: {
         q: 'Windows 版やスマートフォン版はありますか？',
