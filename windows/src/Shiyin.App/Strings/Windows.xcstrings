@@ -133,6 +133,17 @@
         }
       }
     },
+    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），拾音不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can search and read your meeting notes and transcripts (read-only), even when Shiyin isn't open. What they read is handled by that AI tool and leaves this PC, just like when meeting notes are written."
+          }
+        }
+      }
+    },
     "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → 進階 → AI 工具（MCP）」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。": {
       "extractionState": "manual",
       "localizations": {

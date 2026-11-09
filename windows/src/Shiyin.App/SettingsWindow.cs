@@ -874,8 +874,10 @@ public sealed class SettingsWindow : Window
     }
 
     /// <summary>
-    /// Claude Desktop 的設定檔：MSIX 版（Store、官網的安裝檔）讀的是套件自己的 LocalCache（AppData 被虛擬化），
-    /// 有那個資料夾就寫那裡，不然寫 %APPDATA%\Claude。DEBUG 可以用 SHIYIN_CLAUDE_DESKTOP_CONFIG 指到別的檔
+    /// Claude Desktop 的設定檔：MSIX 版（Store、官網的安裝檔）的 AppData 被虛擬化，只讀套件自己的 LocalCache\Roaming\Claude
+    /// （寫到 %APPDATA%\Claude 它讀不到，連它自己的「Edit Config」都開錯檔，anthropics/claude-code#26073）。
+    /// 裝了 MSIX 版（還沒開過、資料夾還不在也算）或有那個資料夾就寫那裡，都沒有才寫 %APPDATA%\Claude（舊的安裝方式）。
+    /// DEBUG 可以用 SHIYIN_CLAUDE_DESKTOP_CONFIG 指到別的檔
     /// </summary>
     static string ClaudeDesktopConfig()
     {
@@ -884,7 +886,8 @@ public sealed class SettingsWindow : Window
 #endif
         var msix = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Packages", WindowsToolLocator.ClaudeFamily,
             "LocalCache", "Roaming", "Claude");
-        var folder = Directory.Exists(msix) ? msix : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Claude");
+        var installed = Directory.Exists(msix) || Packages.ByFamily(WindowsToolLocator.ClaudeFamily).Count > 0;
+        var folder = installed ? msix : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Claude");
         return Path.Combine(folder, "claude_desktop_config.json");
     }
 

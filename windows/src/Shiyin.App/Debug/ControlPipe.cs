@@ -89,7 +89,7 @@ public static class ControlPipe
             case "open" when args.Length > 1:
                 switch (args[1])
                 {
-                    case "settings": app.ShowSettings(); break;
+                    case "settings": app.ShowSettings(); if (args.Length > 2) app.OpenSettingsPage(args[2]); break;   // open settings [provider|recording|names|advanced]
                     case "guide": app.ShowGuide(); break;
                     case "report": app.ShowReport(); break;
                     case "ask": app.ShowAskAll(); break;
@@ -98,6 +98,8 @@ public static class ControlPipe
                 }
                 return Ok;
             case "quit": _ = app.Quit(confirmed: true); return Ok;
+            // openlink <shiyin:…>：等於點了這個網址（AI 工具給的會議連結 shiyin://open?meeting=…&t=…，M§44.5）
+            case "openlink" when args.Length > 1: { var link = args[1]; host.Post(() => App.Current.OpenLink(link)); } return Ok;
             // 待確認就地回答（R41，M§31.2）：reviewexpand <summary|decisions|actionItems|openQuestions|topic|custom> <位置> [第二個位置]（- 收合）；
             // reviewsubmit（送目前的草稿）；reviewskipall（全部略過）；review <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>（直接送 SubmitReview）
             case "reviewexpand" when args.Length > 1 && main is not null:
