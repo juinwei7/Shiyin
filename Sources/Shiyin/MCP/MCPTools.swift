@@ -338,17 +338,17 @@ enum MCPTools {
         return t.isEmpty ? nil : t
     }
 
-    /// 數量：數字或數字的字串，限在 1～max；沒給、看不懂用預設值
+    /// 數量：數字或數字的字串，限在 1～max；沒給、看不懂用預設值。先限在 ±10 億再轉成整數（Int(Double) 超出範圍會當掉）
     private static func number(_ value: Any?, fallback: Int, max: Int) -> Int {
-        let n: Int? = (value as? NSNumber).map { Int(floor($0.doubleValue)) } ?? text(value).flatMap { Int($0) }
+        let n: Int? = (value as? NSNumber).map { Int(Swift.min(Swift.max(floor($0.doubleValue), -1e9), 1e9)) } ?? text(value).flatMap { Int($0) }
         return Swift.min(Swift.max(n ?? fallback, 1), max)
     }
 
-    /// 時間：秒數，或 05:20、1:05:20
+    /// 時間：秒數，或 05:20、1:05:20。超過 12 個字的不算時間（換算成秒時會溢位）
     private static func time(_ value: Any?, _ name: String) throws -> Double? {
         if let n = value as? NSNumber { return Swift.max(0, n.doubleValue) }
         guard let t = text(value) else { return nil }
-        guard let seconds = TimeFormat.seconds(t) else { throw ArgumentError("\(name) must be a time like 05:20 or 1:05:20.") }
+        guard t.count <= 12, let seconds = TimeFormat.seconds(t) else { throw ArgumentError("\(name) must be a time like 05:20 or 1:05:20.") }
         return seconds
     }
 }
