@@ -82,6 +82,13 @@ struct GuideView: View {
                 GuideBullet(String(localized: "掃描的 PDF、圖片用 macOS 的文字辨識讀出文字。一場會議的文件合計最多 4 萬字，太長的只送前面的部分。Keynote、Pages 請先匯出成 PDF。"))
             }
 
+            // 讓 AI 工具讀取會議（本地 MCP，design §44.4、R69）
+            GuideSection(title: String(localized: "讓 AI 工具讀取會議")) {
+                GuideBullet(String(localized: "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → 進階 → AI 工具（MCP）」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。"))
+                GuideBullet(String(localized: "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開拾音、跳到那個時間點。"))
+                GuideBullet(String(localized: "只能讀、不能改；垃圾桶裡的會議、正在錄的會議讀不到。讀到的會議內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台 Mac；關掉開關就讀不到了。"))
+            }
+
             GuideSection(title: String(localized: "設定（⌘,）")) {
                 GuideBullet(String(localized: "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。最下面的「範本」內建五種；也可以複製一份來改，或自己新增段落與指示。"))
                 GuideBullet(String(localized: "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。"))

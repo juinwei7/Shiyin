@@ -814,6 +814,17 @@
         }
       }
     },
+    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → 進階 → AI 工具（MCP）」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your Shiyin meetings directly: in Settings › Advanced › AI tools (MCP), turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. Shiyin doesn't need to be open."
+          }
+        }
+      }
+    },
     "Claude Code（這台 Mac 已經裝了 claude CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -2947,6 +2958,17 @@
         }
       }
     },
+    "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開拾音、跳到那個時間點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then just ask in the AI tool, for example “List my meetings this week”, “What are the action items from last week's meetings?” or “Find the meetings that discussed the budget and summarize them for my manager”. It also works together with your other tools (turning action items into tickets, writing a weekly report). Meeting links in the answers open Shiyin at that moment."
+          }
+        }
+      }
+    },
     "包含時間點": {
       "extractionState": "manual",
       "localizations": {
@@ -3308,6 +3330,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "You can only import audio, video, transcripts (srt, vtt, txt), Markdown or .shiyin files"
+          }
+        }
+      }
+    },
+    "只能讀、不能改；垃圾桶裡的會議、正在錄的會議讀不到。讀到的會議內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台 Mac；關掉開關就讀不到了。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read-only: AI tools can't change anything, and meetings in the Trash or still being recorded aren't available. The meeting content they read is handled by that AI tool and leaves this Mac, just like when meeting notes are written. Turn the switch off to stop access."
           }
         }
       }
