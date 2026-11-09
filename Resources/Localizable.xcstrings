@@ -2483,6 +2483,17 @@
         }
       }
     },
+    "公司的企業伺服器關掉了這個功能。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your company's Shiyin server has turned this off."
+          }
+        }
+      }
+    },
     "公司的伺服器": {
       "extractionState": "manual",
       "localizations": {
