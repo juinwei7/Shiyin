@@ -59,6 +59,23 @@
   },
   {
     "args" : {
+      "folder" : "專案 A",
+      "limit" : 1e+30
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "1 meeting (newest first). Read one with get_meeting_notes or get_transcript.\n\n- id 1 · 2026-10-15 · v3.6 上線週會\n  duration 1:05:12 · language zh · folder 專案 A · participants 王小明, 李大華, Amy, 陳美玲 · speakers 王小明, 說話者 2, 說話者 3 · notes ready · 2 action items · shiyin://open?meeting=1\n"
+  },
+  {
+    "args" : {
+      "limit" : "9999999999"
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "5 meetings (newest first). Read one with get_meeting_notes or get_transcript.\n\n- id 5 · 2026-11-03 · Lumio 주간 회의\n  duration 1:02:05 · language ko · folder 제품 · participants 김민준, 이서연 · speakers 화자 1, 이서연, 화자 3 · notes ready · 1 action item · shiyin://open?meeting=5\n\n- id 4 · 2026-11-03 · Lumio 進度週會\n  duration 05:10 · language yue · participants 陳家豪, 李嘉欣 · speakers 陳家豪, 說話者 2 · notes ready · 1 action item · shiyin://open?meeting=4\n\n- id 3 · 2026-10-19 · 定例会議\n  language ja · participants 田中, 佐藤 · speakers 話者 1, 話者 2 · no notes yet · shiyin://open?meeting=3\n\n- id 2 · 2026-10-18 · Weekly Sync\n  duration 02:05 · language en · participants Alice, Bob · speakers Speaker 1, Bob, Speaker 3 · notes ready · 1 action item · shiyin://open?meeting=2\n\n- id 1 · 2026-10-15 · v3.6 上線週會\n  duration 1:05:12 · language zh · folder 專案 A · participants 王小明, 李大華, Amy, 陳美玲 · speakers 王小明, 說話者 2, 說話者 3 · notes ready · 2 action items · shiyin://open?meeting=1\n"
+  },
+  {
+    "args" : {
       "query" : "Redis"
     },
     "isError" : false,
@@ -246,6 +263,15 @@
     "args" : {
       "meeting_id" : 1,
       "start" : "abc"
+    },
+    "isError" : true,
+    "name" : "get_transcript",
+    "text" : "start must be a time like 05:20 or 1:05:20."
+  },
+  {
+    "args" : {
+      "meeting_id" : 1,
+      "start" : "999999999999999999:00:00"
     },
     "isError" : true,
     "name" : "get_transcript",
