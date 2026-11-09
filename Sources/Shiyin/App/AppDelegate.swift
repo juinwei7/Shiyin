@@ -23,10 +23,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await CLILogin.refreshIfStale() }
     }
 
-    /// 拖到 Dock 圖示、Finder 的「打開方式」（R1.3）；企業伺服器的加入連結 shiyin://join（R49.7）
+    /// 拖到 Dock 圖示、Finder 的「打開方式」（R1.3）；企業伺服器的加入連結 shiyin://join（R49.7）；
+    /// AI 工具給的會議連結 shiyin://open（design §44.5）
     func application(_ application: NSApplication, open urls: [URL]) {
         AppModel.shared.start()
         for link in urls where EnterpriseJoin.isJoin(link) { Task { await EnterpriseJoin.handle(link) } }
+        for link in urls { if let target = MeetingLink.parse(link) { AppModel.shared.openMeetingLink(target.meetingId, seconds: target.seconds) } }
         let files = urls.filter(\.isFileURL)
         if !files.isEmpty { AppModel.shared.importDirectly(files) }
     }
