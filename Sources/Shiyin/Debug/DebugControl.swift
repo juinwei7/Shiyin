@@ -199,6 +199,8 @@ enum DebugControl {
                 }
                 if let output { write(["ok": r.ok, "message": r.message], to: output) }
             }
+        case "mcpcopy":   // mcpcopy command|json：等於按設定頁「複製」選單的「複製 Claude Code 指令」「複製設定（JSON）」（design §44.6）
+            MCPSetup.copy(args.count > 1 && args[1] == "json" ? .configJSON : .claudeCodeCommand)
         case "openlink":   // openlink <shiyin://open?…>：等於點了 AI 工具給的會議連結（design §44.5），不拉到前面
             if let url = URL(string: args[1]), let target = MeetingLink.parse(url) {
                 model.openMeetingLink(target.meetingId, seconds: target.seconds, activate: false)
@@ -495,6 +497,17 @@ enum DebugControl {
             case "join":   // join <shiyin://join?server=…>：等於點了加入連結（會跳出確認，出現在使用者畫面上）
                 if let url = URL(string: args[2]) { Task { await EnterpriseJoin.handle(url) } }
             case "local": model.runner.transcribeLocally(meetingId: Int64(args[2]) ?? -1)
+            case "info":   // info <網址> <輸出.json>：只讀伺服器的 /api/v1/info、寫出解析結果，不改帳號和設定（本地 MCP 的 mcp 欄位，design §44.6）
+                let output = args[3]
+                Task {
+                    guard let url = EnterpriseServer.normalized(args[2]) else { write(["ok": false, "error": "bad url"], to: output); return }
+                    do {
+                        let info = try await EnterpriseServer.shared.fetchInfo(url)
+                        write(["ok": true, "name": info.name, "llm": info.llm, "mcp": info.mcp.map { $0 as Any } ?? NSNull()], to: output)
+                    } catch {
+                        write(["ok": false, "error": error.localizedDescription], to: output)
+                    }
+                }
             default: break
             }
         case "llmkey":   // llmkey <account> <key>：只放記憶體
