@@ -110,7 +110,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         host.ShowMain = id => { if (id is long m) ShowMeeting(m); else ShowMain(); };
         host.ShowMeetingAt = (id, seconds) =>
         {
-            ShowMeeting(id);
+            if (!ShowMeeting(id)) return;
             main?.State.SetTab(DetailTab.Transcript);
             host.Player.Seek(seconds, play: false);
         };
@@ -215,9 +215,17 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         main.Activate();
     }
 
-    public void ShowMeeting(long id)
+    /// <summary>打開那場會議；會議已經永久刪掉了（舊的通知、AI 工具給的舊連結，M§44.5）就打開主視窗、提示，回傳 false</summary>
+    public bool ShowMeeting(long id)
     {
+        if (host?.Db.Meeting(id) is null)
+        {
+            ShowMain();
+            Notice(L.T("找不到這場會議，可能已經刪掉了"));
+            return false;
+        }
         main?.Reveal(id);
+        return true;
     }
 
     static void Bring(Window window, int width, int height)
@@ -227,6 +235,9 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         WindowPlacement.MinimumSize(window, Math.Min(width, 520), Math.Min(height, 440));
         window.Activate();
     }
+
+    /// <summary>DEBUG 控制通道：設定視窗切到這一頁</summary>
+    public void OpenSettingsPage(string page) => settings?.Open(page);
 
     public void ShowSettings()
     {
