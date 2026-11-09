@@ -1,6 +1,6 @@
 import SwiftUI
 
-@main
+/// 進入點在 main.swift（`--mcp` 要在 SwiftUI 啟動前分流，design §44.1）
 struct ShiyinApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 

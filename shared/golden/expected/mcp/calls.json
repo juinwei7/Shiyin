@@ -1,0 +1,311 @@
+[
+  {
+    "args" : {
+
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "5 meetings (newest first). Read one with get_meeting_notes or get_transcript.\n\n- id 5 · 2026-11-03 · Lumio 주간 회의\n  duration 1:02:05 · language ko · folder 제품 · participants 김민준, 이서연 · speakers 화자 1, 이서연, 화자 3 · notes ready · 1 action item · shiyin://open?meeting=5\n\n- id 4 · 2026-11-03 · Lumio 進度週會\n  duration 05:10 · language yue · participants 陳家豪, 李嘉欣 · speakers 陳家豪, 說話者 2 · notes ready · 1 action item · shiyin://open?meeting=4\n\n- id 3 · 2026-10-19 · 定例会議\n  language ja · participants 田中, 佐藤 · speakers 話者 1, 話者 2 · no notes yet · shiyin://open?meeting=3\n\n- id 2 · 2026-10-18 · Weekly Sync\n  duration 02:05 · language en · participants Alice, Bob · speakers Speaker 1, Bob, Speaker 3 · notes ready · 1 action item · shiyin://open?meeting=2\n\n- id 1 · 2026-10-15 · v3.6 上線週會\n  duration 1:05:12 · language zh · folder 專案 A · participants 王小明, 李大華, Amy, 陳美玲 · speakers 王小明, 說話者 2, 說話者 3 · notes ready · 2 action items · shiyin://open?meeting=1\n"
+  },
+  {
+    "args" : {
+      "from" : "2026-10-16",
+      "to" : "2026-10-31"
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "2 meetings (newest first). Read one with get_meeting_notes or get_transcript.\n\n- id 3 · 2026-10-19 · 定例会議\n  language ja · participants 田中, 佐藤 · speakers 話者 1, 話者 2 · no notes yet · shiyin://open?meeting=3\n\n- id 2 · 2026-10-18 · Weekly Sync\n  duration 02:05 · language en · participants Alice, Bob · speakers Speaker 1, Bob, Speaker 3 · notes ready · 1 action item · shiyin://open?meeting=2\n"
+  },
+  {
+    "args" : {
+      "folder" : "專案 A"
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "1 meeting (newest first). Read one with get_meeting_notes or get_transcript.\n\n- id 1 · 2026-10-15 · v3.6 上線週會\n  duration 1:05:12 · language zh · folder 專案 A · participants 王小明, 李大華, Amy, 陳美玲 · speakers 王小明, 說話者 2, 說話者 3 · notes ready · 2 action items · shiyin://open?meeting=1\n"
+  },
+  {
+    "args" : {
+      "limit" : 2
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "5 meetings (newest first). Read one with get_meeting_notes or get_transcript.\nShowing the newest 2. Narrow with from, to or folder, or raise limit (up to 100).\n\n- id 5 · 2026-11-03 · Lumio 주간 회의\n  duration 1:02:05 · language ko · folder 제품 · participants 김민준, 이서연 · speakers 화자 1, 이서연, 화자 3 · notes ready · 1 action item · shiyin://open?meeting=5\n\n- id 4 · 2026-11-03 · Lumio 進度週會\n  duration 05:10 · language yue · participants 陳家豪, 李嘉欣 · speakers 陳家豪, 說話者 2 · notes ready · 1 action item · shiyin://open?meeting=4\n"
+  },
+  {
+    "args" : {
+      "limit" : "0"
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "5 meetings (newest first). Read one with get_meeting_notes or get_transcript.\nShowing the newest 1. Narrow with from, to or folder, or raise limit (up to 100).\n\n- id 5 · 2026-11-03 · Lumio 주간 회의\n  duration 1:02:05 · language ko · folder 제품 · participants 김민준, 이서연 · speakers 화자 1, 이서연, 화자 3 · notes ready · 1 action item · shiyin://open?meeting=5\n"
+  },
+  {
+    "args" : {
+      "folder" : "專案 A",
+      "from" : "2027-01-01"
+    },
+    "isError" : false,
+    "name" : "list_meetings",
+    "text" : "No meetings found on or after 2027-01-01 in folder 專案 A."
+  },
+  {
+    "args" : {
+      "to" : "2026-10"
+    },
+    "isError" : true,
+    "name" : "list_meetings",
+    "text" : "to must be a date like 2026-11-05."
+  },
+  {
+    "args" : {
+      "query" : "Redis"
+    },
+    "isError" : false,
+    "name" : "search_meetings",
+    "text" : "\"Redis\" found in 3 meetings (newest first).\n\n## id 5 · 2026-11-03 · Lumio 주간 회의\n- notes: Lumio 주간 회의 Redis 캐시로 응답 시간 단축 출시일은 예정대로 유지 이서연 롤백 절차 정리 2026-11-04…\n- transcript 00:05 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다. · shiyin://open?meeting=5&t=5\n\n## id 4 · 2026-11-03 · Lumio 進度週會\n- notes: …題 李嘉欣 撰寫還原步驟 2026-11-05 效能 加入 Redis 快取，平均回應約 200 毫秒 「嘉欣」是李嘉欣嗎？\n- my notes: [00:20] 記得問 Redis 嘅費用\n- transcript 00:12 說話者 2: 我哋加咗 Redis 做快取，平均回應時間跌到兩百毫秒左右。 · shiyin://open?meeting=4&t=12\n\n## id 1 · 2026-10-15 · v3.6 上線週會\n- notes: v3.6 上線週會 確認 v3.6 上線時程 Redis 快取下週三完成 部署腳本路徑維持 /deploy/k8s Kubernetes 版本？ 王小明 確…\n- my notes: [00:30] 確認上線日期 [02:10] Redis 快取要再測 \n- transcript 00:04 說話者 2: 我這邊 Redis 快取還在測，預計下週三完成。 · shiyin://open?meeting=1&t=4\n- transcript 01:05 說話者 2: 說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題 · shiyin://open?meeting=1&t=65\n"
+  },
+  {
+    "args" : {
+      "limit" : 1,
+      "query" : "Redis"
+    },
+    "isError" : false,
+    "name" : "search_meetings",
+    "text" : "\"Redis\" found in 3 meetings (newest first).\n\n## id 5 · 2026-11-03 · Lumio 주간 회의\n- notes: Lumio 주간 회의 Redis 캐시로 응답 시간 단축 출시일은 예정대로 유지 이서연 롤백 절차 정리 2026-11-04…\n- transcript 00:05 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다. · shiyin://open?meeting=5&t=5\n\n(More meetings match. Narrow with from/to, or raise limit (up to 20).)\n"
+  },
+  {
+    "args" : {
+      "from" : "2026-11-01",
+      "query" : "Redis",
+      "to" : "2026-11-30"
+    },
+    "isError" : false,
+    "name" : "search_meetings",
+    "text" : "\"Redis\" found in 2 meetings (newest first).\n\n## id 5 · 2026-11-03 · Lumio 주간 회의\n- notes: Lumio 주간 회의 Redis 캐시로 응답 시간 단축 출시일은 예정대로 유지 이서연 롤백 절차 정리 2026-11-04…\n- transcript 00:05 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다. · shiyin://open?meeting=5&t=5\n\n## id 4 · 2026-11-03 · Lumio 進度週會\n- notes: …題 李嘉欣 撰寫還原步驟 2026-11-05 效能 加入 Redis 快取，平均回應約 200 毫秒 「嘉欣」是李嘉欣嗎？\n- my notes: [00:20] 記得問 Redis 嘅費用\n- transcript 00:12 說話者 2: 我哋加咗 Redis 做快取，平均回應時間跌到兩百毫秒左右。 · shiyin://open?meeting=4&t=12\n"
+  },
+  {
+    "args" : {
+      "query" : "上線"
+    },
+    "isError" : false,
+    "name" : "search_meetings",
+    "text" : "\"上線\" found in 1 meeting (newest first).\n\n## id 1 · 2026-10-15 · v3.6 上線週會\n- title: v3.6 上線週會\n- notes: v3.6 上線週會 確認 v3.6 上線時程 Redis 快取下週三完成 部署腳本路徑維持 /deploy/k8s…\n- my notes: [00:30] 確認上線日期 [02:10] Redis 快取要再測 \n- transcript 00:00 王小明: 大家好，今天討論 v3.6 的上線時程。 · shiyin://open?meeting=1&t=0\n"
+  },
+  {
+    "args" : {
+      "query" : "Weekly"
+    },
+    "isError" : false,
+    "name" : "search_meetings",
+    "text" : "\"Weekly\" found in 1 meeting (newest first).\n\n## id 2 · 2026-10-18 · Weekly Sync\n- title: Weekly Sync\n"
+  },
+  {
+    "args" : {
+      "query" : "沒有這個詞"
+    },
+    "isError" : false,
+    "name" : "search_meetings",
+    "text" : "No matches for \"沒有這個詞\". Try another word: a synonym, the English or Chinese name, or a shorter phrase.\n"
+  },
+  {
+    "args" : {
+      "query" : "  "
+    },
+    "isError" : true,
+    "name" : "search_meetings",
+    "text" : "query is required: a keyword or short phrase."
+  },
+  {
+    "args" : {
+      "meeting_id" : 1
+    },
+    "isError" : false,
+    "name" : "get_meeting_notes",
+    "text" : "# v3.6 上線週會\n\n- 日期：2026-10-15（星期四）\n- 與會者：王小明、李大華、Amy、陳美玲\n- 說話者：王小明、說話者 2、說話者 3\n- 長度：1 小時 5 分鐘\n\n## 摘要\n- 確認 v3.6 上線時程（00:00）\n- Redis 快取下週三完成\n\n## 決議\n- 部署腳本路徑維持 /deploy/k8s（00:15）\n\n## 待辦\n| 負責人 | 事項 | 期限 | 時間點 |\n|---|---|---|---|\n| 王小明 | 確認 <admin> 權限 \\| 部署 | 2026-10-21 | 1:02:05 |\n| — | Redis 快取測試 第二行 | — | — |\n\n## 未決問題\n- Kubernetes 版本？（00:09）\n\n## 近況與進展\n- 部署 \"腳本\" OK（00:15）\n\n## 詳細\n\n### [00:00] 上線時程\n- 目標 10/21（1:02:05）\n\n### [00:04] 快取 & 部署\n\n## 待確認\n- [00:09] 「Kubernetes」的寫法對嗎？\n- [] 負責人是誰？\n\n## 我的筆記\n\n[00:30] 確認上線日期\n[02:10] Redis 快取要再測\n\n---\nid 1 · shiyin://open?meeting=1 · transcript: get_transcript(meeting_id: 1)\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 2
+    },
+    "isError" : false,
+    "name" : "get_meeting_notes",
+    "text" : "# Weekly Sync\n\n- Date: 2026-10-18 (Sunday)\n- Participants: Alice, Bob\n- Speakers: Speaker 1, Bob, Speaker 3\n- Duration: 2 min\n\n## Summary\n- Reviewed the Q4 roadmap (00:00)\n\n## Action items\n| Owner | Item | Due | Time |\n|---|---|---|---|\n| Bob | Send the email via SendGrid | 2026-10-23 | 00:03 |\n\n## Updates and progress\n- Roadmap on track (00:00)\n\n## To confirm\n- [00:08] Is \"beta\" the right term?\n\n---\nid 2 · shiyin://open?meeting=2 · transcript: get_transcript(meeting_id: 2)\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 3
+    },
+    "isError" : false,
+    "name" : "get_meeting_notes",
+    "text" : "# 定例会議\n\n- 日付：2026-10-19（月曜日）\n- 参加者：田中、佐藤\n- 話者：話者 1、話者 2\n- 所要時間：1 分\n\n（議事録はまだありません）\n\n## メモ\n\nアイデアを全部メモ\n\n---\nid 3 · shiyin://open?meeting=3 · transcript: get_transcript(meeting_id: 3)\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 4
+    },
+    "isError" : false,
+    "name" : "get_meeting_notes",
+    "text" : "# Lumio 進度週會\n\n- 日期：2026-11-03（星期二）\n- 與會者：陳家豪、李嘉欣\n- 說話者：陳家豪、說話者 2\n- 長度：5 分鐘\n\n## 摘要\n- 已部署到測試環境，暫無重大問題（00:06）\n\n## 待辦\n| 負責人 | 事項 | 期限 | 時間點 |\n|---|---|---|---|\n| 李嘉欣 | 撰寫還原步驟 | 2026-11-05 | 00:18 |\n\n## 詳細\n\n### [00:12] 效能\n- 加入 Redis 快取，平均回應約 200 毫秒（00:12）\n\n## 待確認\n- [00:06] 「嘉欣」是李嘉欣嗎？\n\n## 我的筆記\n\n[00:20] 記得問 Redis 嘅費用\n\n---\nid 4 · shiyin://open?meeting=4 · transcript: get_transcript(meeting_id: 4)\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 5
+    },
+    "isError" : false,
+    "name" : "get_meeting_notes",
+    "text" : "# Lumio 주간 회의\n\n- 날짜: 2026-11-03 (화요일)\n- 참석자: 김민준, 이서연\n- 화자: 화자 1, 이서연, 화자 3\n- 소요 시간: 1시간 2분\n\n## 요약\n- Redis 캐시로 응답 시간 단축 (00:05)\n\n## 결정 사항\n- 출시일은 예정대로 유지 (1:00:05)\n\n## 할 일\n| 담당자 | 내용 | 기한 | 시간 |\n|---|---|---|---|\n| 이서연 | 롤백 절차 정리 | 2026-11-04 | 00:11 |\n\n## 확인 필요\n- [00:11] 담당자가 이서연 님인가요?\n\n---\nid 5 · shiyin://open?meeting=5 · transcript: get_transcript(meeting_id: 5)\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 6
+    },
+    "isError" : true,
+    "name" : "get_meeting_notes",
+    "text" : "Meeting 6 not found. Find meeting ids with list_meetings or search_meetings."
+  },
+  {
+    "args" : {
+      "meeting_id" : 7
+    },
+    "isError" : true,
+    "name" : "get_meeting_notes",
+    "text" : "Meeting 7 not found. Find meeting ids with list_meetings or search_meetings."
+  },
+  {
+    "args" : {
+      "meeting_id" : 9999
+    },
+    "isError" : true,
+    "name" : "get_meeting_notes",
+    "text" : "Meeting 9999 not found. Find meeting ids with list_meetings or search_meetings."
+  },
+  {
+    "args" : {
+      "meeting_id" : "1"
+    },
+    "isError" : false,
+    "name" : "get_meeting_notes",
+    "text" : "# v3.6 上線週會\n\n- 日期：2026-10-15（星期四）\n- 與會者：王小明、李大華、Amy、陳美玲\n- 說話者：王小明、說話者 2、說話者 3\n- 長度：1 小時 5 分鐘\n\n## 摘要\n- 確認 v3.6 上線時程（00:00）\n- Redis 快取下週三完成\n\n## 決議\n- 部署腳本路徑維持 /deploy/k8s（00:15）\n\n## 待辦\n| 負責人 | 事項 | 期限 | 時間點 |\n|---|---|---|---|\n| 王小明 | 確認 <admin> 權限 \\| 部署 | 2026-10-21 | 1:02:05 |\n| — | Redis 快取測試 第二行 | — | — |\n\n## 未決問題\n- Kubernetes 版本？（00:09）\n\n## 近況與進展\n- 部署 \"腳本\" OK（00:15）\n\n## 詳細\n\n### [00:00] 上線時程\n- 目標 10/21（1:02:05）\n\n### [00:04] 快取 & 部署\n\n## 待確認\n- [00:09] 「Kubernetes」的寫法對嗎？\n- [] 負責人是誰？\n\n## 我的筆記\n\n[00:30] 確認上線日期\n[02:10] Redis 快取要再測\n\n---\nid 1 · shiyin://open?meeting=1 · transcript: get_transcript(meeting_id: 1)\n"
+  },
+  {
+    "args" : {
+
+    },
+    "isError" : true,
+    "name" : "get_meeting_notes",
+    "text" : "meeting_id is required: a meeting id from list_meetings or search_meetings."
+  },
+  {
+    "args" : {
+      "meeting_id" : 1
+    },
+    "isError" : false,
+    "name" : "get_transcript",
+    "text" : "id 1 · 2026-10-15 · v3.6 上線週會 · duration 1:05:12\n\n[00:00] 王小明：大家好，今天討論 v3.6 的上線時程。\n[00:04] 說話者 2：我這邊 Redis 快取還在測，預計下週三完成。\n[00:09] 王小明：好，那 \"Kubernetes\" 的部署呢？\n[00:15] 說話者 3：部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。\n[00:20] （背景噪音）\n[01:05] 說話者 2：說話者 1 剛剛說的我同意 😀，Redis 的 TTL 設 100% 沒問題\n[1:02:05] 王小明：最後確認：期限 10/21，負責人小明。\n[1:02:11] 說話者 2：嗯\n"
+  },
+  {
+    "args" : {
+      "end" : 30,
+      "meeting_id" : 1,
+      "start" : "00:10"
+    },
+    "isError" : false,
+    "name" : "get_transcript",
+    "text" : "id 1 · 2026-10-15 · v3.6 上線週會 · duration 1:05:12\n\n[00:15] 說話者 3：部署腳本放在 /deploy/k8s，路徑沒變 & 權限 <admin> 要再確認。\n[00:20] （背景噪音）\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 1
+    },
+    "isError" : false,
+    "maxChars" : 60,
+    "name" : "get_transcript",
+    "text" : "id 1 · 2026-10-15 · v3.6 上線週會 · duration 1:05:12\n\n[00:00] 王小明：大家好，今天討論 v3.6 的上線時程。\n\n(Stopped at 00:04 of 1:05:12 to keep this short. Continue with get_transcript(meeting_id: 1, start: \"00:04\").)\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 1,
+      "start" : "3:00:00"
+    },
+    "isError" : false,
+    "name" : "get_transcript",
+    "text" : "No transcript after 3:00:00 (the meeting is 1:05:12 long).\n"
+  },
+  {
+    "args" : {
+      "end" : "11:00",
+      "meeting_id" : 1,
+      "start" : "10:00"
+    },
+    "isError" : false,
+    "name" : "get_transcript",
+    "text" : "No transcript between 10:00 and 11:00 (the meeting is 1:05:12 long).\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 1,
+      "start" : "abc"
+    },
+    "isError" : true,
+    "name" : "get_transcript",
+    "text" : "start must be a time like 05:20 or 1:05:20."
+  },
+  {
+    "args" : {
+      "meeting_id" : 3
+    },
+    "isError" : false,
+    "name" : "get_transcript",
+    "text" : "id 3 · 2026-10-19 · 定例会議 · duration 00:12\n\n[00:00] 話者 1：皆さん、おはようございます。\n[00:05] 話者 2：新しいアイデアを三つ出します。\n[00:09] 話者 1：ありがとうございます、田中さん。\n"
+  },
+  {
+    "args" : {
+      "meeting_id" : 5,
+      "start" : 5
+    },
+    "isError" : false,
+    "name" : "get_transcript",
+    "text" : "id 5 · 2026-11-03 · Lumio 주간 회의 · duration 1:02:05\n\n[00:05] 이서연: Redis 캐시를 넣어서 평균 응답 시간이 이백 밀리초 정도로 줄었습니다.\n[00:11] 화자 1: 서연 씨, 수요일까지 롤백 절차를 정리해 주시겠어요?\n[00:15] 네.\n[1:00:05] 화자 3: 오늘은 여기까지 하겠습니다.\n"
+  },
+  {
+    "args" : {
+
+    },
+    "isError" : false,
+    "name" : "list_action_items",
+    "text" : "5 action items in 4 meetings (newest first).\n\n## id 5 · 2026-11-03 · Lumio 주간 회의\n- 이서연: 롤백 절차 정리 · due 2026-11-04 · 00:11\n\n## id 4 · 2026-11-03 · Lumio 進度週會\n- 李嘉欣: 撰寫還原步驟 · due 2026-11-05 · 00:18\n\n## id 2 · 2026-10-18 · Weekly Sync\n- Bob: Send the email via SendGrid · due 2026-10-23 · 00:03\n\n## id 1 · 2026-10-15 · v3.6 上線週會\n- 王小明: 確認 <admin> 權限 | 部署 · due 2026-10-21 · 1:02:05\n- (unassigned): Redis 快取測試 第二行\n"
+  },
+  {
+    "args" : {
+      "owner" : "bob"
+    },
+    "isError" : false,
+    "name" : "list_action_items",
+    "text" : "1 action item in 1 meeting (newest first).\n\n## id 2 · 2026-10-18 · Weekly Sync\n- Bob: Send the email via SendGrid · due 2026-10-23 · 00:03\n"
+  },
+  {
+    "args" : {
+      "limit" : 2
+    },
+    "isError" : false,
+    "name" : "list_action_items",
+    "text" : "5 action items in 4 meetings (newest first).\n\n## id 5 · 2026-11-03 · Lumio 주간 회의\n- 이서연: 롤백 절차 정리 · due 2026-11-04 · 00:11\n\n## id 4 · 2026-11-03 · Lumio 進度週會\n- 李嘉欣: 撰寫還原步驟 · due 2026-11-05 · 00:18\n\n(Showing the first 2. Narrow with from/to or owner.)\n"
+  },
+  {
+    "args" : {
+      "from" : "2026-11-01",
+      "owner" : "nobody"
+    },
+    "isError" : false,
+    "name" : "list_action_items",
+    "text" : "No action items found on or after 2026-11-01 for owner nobody.\n"
+  },
+  {
+    "args" : {
+
+    },
+    "name" : "no_such_tool",
+    "unknown" : true
+  }
+]

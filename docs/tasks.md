@@ -9,14 +9,12 @@
 
 ## 讓 AI 工具讀取會議：本地 MCP（R69，design §44、design-windows §11.12、D146～D149；2026-11-09 使用者新需求）
 
-- [ ] **MCP1 Mac 伺服器、工具**（§44.1、§44.2）：`main.swift` 分流、唯讀資料庫、協定、五個工具、標準答案 `db/mcp.json`
-  - 驗證：`dump-golden` 跑兩次完全相同；DEBUG 版的執行檔用 stdin 送 `initialize`、`tools/list`、`tools/call`：拾音沒開、開著、資料庫要升級、開關關掉各一次；MCP 模式不出現在 Dock、不復原錄音中的會議
 - [ ] **MCP2 Mac 加到 AI 工具、設定頁、會議連結**（§44.3～§44.5）
   - 驗證：用 AX 按設定頁的三個按鈕（暫存的 `CLAUDE_CONFIG_DIR`、`CODEX_HOME`、`SHIYIN_CLAUDE_DESKTOP_CONFIG`），三邊的設定檔寫對、按兩次不重複；`open 'shiyin://open?meeting=…&t=…'` 跳到那個時間點；`claude -p` 用暫存的設定端到端問答；`l10n.py check` 通過
 - [ ] **MCP3 企業伺服器可以關掉**（R69.6、§44.1）：Mac、Windows 讀 `info` 的 `mcp`
   - 驗證：本機的伺服器（開發設定）`info` 回 `mcp: false` 時，設定頁的開關不能打開、`tools/call` 回公司關掉了；伺服器加欄位寫進伺服器專案的 tasks
 - [ ] **MCP4 Windows**（design-windows §11.12）
-  - 驗證：`dotnet test` 比 `db/mcp.json`；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息；虛擬機：設定頁的按鈕寫對設定檔、`shiyin://open` 跳到時間點、`pack.ps1` 打包的安裝版裡有 `shiyin-mcp.exe` 而且跑得起來
+  - 驗證：`dotnet test` 比 `mcp/calls.json`；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息；虛擬機：設定頁的按鈕寫對設定檔、`shiyin://open` 跳到時間點、`pack.ps1` 打包的安裝版裡有 `shiyin-mcp.exe` 而且跑得起來
 - [ ] **MCP5 使用說明、官網**（§44.4）：Mac、Windows 的使用說明加「讓 AI 工具讀取會議」，官網的功能列表
   - 驗證：使用說明的視窗看過（中英文）；`node site/build.mjs` 通過
 

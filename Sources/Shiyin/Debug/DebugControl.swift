@@ -187,6 +187,7 @@ enum DebugControl {
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
         case "dump-golden": GoldenDump.run(fixtures: args[1], output: args[2])   // design-windows §4.1
+        case "seedfixtures": GoldenDump.seed(fixtures: args[1], keys: Array(args.dropFirst(2)), into: model)   // 本地 MCP 的示範會議（design §44.6）
         case "segment-embed": segmentEmbed(audio: args[1], spans: args[2], output: args[3], batched: args.count > 4 ? Int(args[4]) : nil)   // design §6.3.2
         case "correct-eval": correctEval(input: args[1], options: args[2], output: args[3])          // design §17.4
         case "detect-eval": detectEval(audio: args[1], start: Double(args[2]) ?? 0, output: args[3])  // design §18.8

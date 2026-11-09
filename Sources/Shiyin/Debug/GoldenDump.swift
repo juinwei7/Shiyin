@@ -31,6 +31,7 @@ enum GoldenDump {
             pipeline(fixtures, &dump)
             server(fixtures, &dump)
             try database(fixtures, &dump)
+            try mcp(fixtures, &dump)
             result["ok"] = true
             result["files"] = dump.count
         } catch {
@@ -776,6 +777,69 @@ enum GoldenDump {
 
     // MARK: 資料庫（R28.5）
 
+    /// shiyinctl seedfixtures <fixtures.json> [key…]：把 fixtures 的會議寫進目前的資料庫（暫存的 SHIYIN_HOME），測本地 MCP 用（design §44.6）
+    static func seed(fixtures: String, keys: [String], into model: AppModel) {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: fixtures)),
+              let root = try? JSONSerialization.jsonObject(with: data) as? Object else { return }
+        let f = Fixtures(root)
+        for fx in f.meetings where keys.isEmpty || keys.contains(fx.key) { _ = try? insertFixture(model.db, fx) }
+        model.reload()
+    }
+
+    /// 把一場 fixture 的會議寫進資料庫（逐字稿、說話者、重點、會議紀錄、筆記、詞彙），回傳會議 id
+    private static func insertFixture(_ db: AppDatabase, _ fx: MeetingFixture, audioExtension: String? = "m4a") throws -> Int64 {
+        let meeting = try db.insertMeeting(fx.meeting, audioExtension: audioExtension)
+        let mid = meeting.id!
+        let segments = fx.segments.map { s -> Segment in var s = s; s.meetingId = mid; return s }
+        try db.saveTranscript(mid, segments: segments, duration: fx.meeting.durationSeconds ?? 0,
+                              speakerCount: segments.compactMap(\.speaker).max() ?? 0, voices: fx.voices, transcribedWith: "breeze")
+        for (idx, name) in fx.speakers.sorted(by: { $0.key < $1.key }) { try db.renameSpeaker(mid, idx: idx, name: name) }
+        for b in fx.bookmarks { try db.addBookmark(mid, time: b.time, label: b.label) }
+        if let notes = fx.notes { try db.saveNotes(mid, notes: notes, by: "claude", reason: "整理", source: .generated) }  // l10n-skip
+        try db.updateUserNotes(mid, fx.meeting.userNotes)
+        for term in fx.glossary { try db.addTerm(term) }
+        return mid
+    }
+
+    /// 本地 MCP 的工具（design §44.6）：另一個資料庫放 fixtures 的會議，加一場在垃圾桶、一場正在錄的（都不該讀到），
+    /// 照 mcp.calls 一個一個叫，寫出回傳的文字；工具的定義、instructions 寫進 mcp/tools.json
+    private static func mcp(_ f: Fixtures, _ w: inout Writer) throws {
+        guard let spec = f["mcp"] as? Object else { return }
+        let dir = try Paths.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let db = try AppDatabase(path: dir.appendingPathComponent("mcp.sqlite").path)
+        var ids: [String: Int64] = [:]
+        for key in spec["meetings"] as? [String] ?? [] { ids[key] = try insertFixture(db, f.meeting(key)) }
+        if let key = spec["trashed"] as? String {
+            let id = try insertFixture(db, f.meeting(key))
+            try db.setTrashed(id, true)
+            ids["trashed"] = id
+        }
+        if let key = spec["recording"] as? String {
+            var fx = f.meeting(key)
+            fx.meeting.source = "recording"
+            ids["recording"] = try insertFixture(db, fx, audioExtension: nil)
+        }
+        var calls: [Object] = []
+        for call in spec["calls"] as? [Object] ?? [] {
+            let name = call["name"] as? String ?? ""
+            var args = call["args"] as? Object ?? [:]
+            if let key = call["meeting"] as? String { args["meeting_id"] = ids[key] ?? 0 }
+            let limit = call["maxChars"] as? Int ?? MCPTools.transcriptLimit
+            var entry: Object = ["name": name, "args": args]
+            if let r = try MCPTools.call(name, args, db: db, transcriptLimit: limit) {
+                entry["text"] = r.text
+                entry["isError"] = r.isError
+            } else {
+                entry["unknown"] = true
+            }
+            if call["maxChars"] != nil { entry["maxChars"] = limit }
+            calls.append(entry)
+        }
+        w.json("mcp/calls.json", calls)
+        w.json("mcp/tools.json", ["instructions": MCPTools.instructions, "tools": MCPTools.definitions] as Object)
+    }
+
     private static func database(_ f: Fixtures, _ w: inout Writer) throws {
         let dir = try Paths.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -795,17 +859,7 @@ enum GoldenDump {
                 w.text(file ?? "db/schema.sql", sql.joined(separator: ";\n") + ";\n")
             case "importFixture":
                 let fx = f.meeting(op["key"] as? String ?? "")
-                let meeting = try db.insertMeeting(fx.meeting, audioExtension: "m4a")
-                let mid = meeting.id!
-                ids[fx.key] = mid
-                let segments = fx.segments.map { s -> Segment in var s = s; s.meetingId = mid; return s }
-                try db.saveTranscript(mid, segments: segments, duration: fx.meeting.durationSeconds ?? 0,
-                                      speakerCount: segments.compactMap(\.speaker).max() ?? 0, voices: fx.voices, transcribedWith: "breeze")
-                for (idx, name) in fx.speakers.sorted(by: { $0.key < $1.key }) { try db.renameSpeaker(mid, idx: idx, name: name) }
-                for b in fx.bookmarks { try db.addBookmark(mid, time: b.time, label: b.label) }
-                if let notes = fx.notes { try db.saveNotes(mid, notes: notes, by: "claude", reason: "整理", source: .generated) }  // l10n-skip
-                try db.updateUserNotes(mid, fx.meeting.userNotes)
-                for term in fx.glossary { try db.addTerm(term) }
+                ids[fx.key] = try insertFixture(db, fx)
             case "dumpTables":
                 var tables: Object = [:]
                 for table in op["tables"] as? [String] ?? [] { tables[table] = try dumpTable(db, table) }

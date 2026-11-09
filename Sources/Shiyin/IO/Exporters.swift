@@ -32,6 +32,8 @@ struct ExportText {
     var noNotes: String { language.text(zh: "（尚未整理成會議紀錄）", en: "(No meeting notes yet)", ja: "（議事録はまだありません）") }
     var details: String { language.text(zh: "詳細", en: "Details", ja: "詳細") }
     var review: String { language.text(zh: "待確認", en: "To confirm", ja: "要確認") }
+    /// 本地 MCP 的會議紀錄接在後面的「我的筆記」（design §44.2）
+    var userNotes: String { language.text(zh: "我的筆記", en: "My notes", ja: "メモ") }
     var owner: String { language.text(zh: "負責人", en: "Owner", ja: "担当") }
     var task: String { language.text(zh: "事項", en: "Item", ja: "内容") }
     var due: String { language.text(zh: "期限", en: "Due", ja: "期限") }
@@ -101,7 +103,7 @@ enum TranscriptExporter {
         }
     }
 
-    private static func line(_ b: ExportBundle, _ s: Segment, times: Bool, speakers: Bool, markdown: Bool = false) -> String {
+    static func line(_ b: ExportBundle, _ s: Segment, times: Bool, speakers: Bool, markdown: Bool = false) -> String {
         var prefix = ""
         if times { prefix += markdown ? "`\(TimeFormat.string(s.start))` " : "[\(TimeFormat.string(s.start))] " }
         if speakers, let name = b.speakerName(s.speaker) { prefix += markdown ? "**\(name)**\(b.text.colon)" : "\(name)\(b.text.colon)" }
