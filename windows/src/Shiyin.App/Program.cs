@@ -108,6 +108,12 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             return;
         }
         host.ShowMain = id => { if (id is long m) ShowMeeting(m); else ShowMain(); };
+        host.ShowMeetingAt = (id, seconds) =>
+        {
+            ShowMeeting(id);
+            main?.State.SetTab(DetailTab.Transcript);
+            host.Player.Seek(seconds, play: false);
+        };
         host.ShowMeetingPrompt = ShowMeetingPrompt;
         main = new MainWindow(host);
         Pdf.Window = main.Handle;

@@ -48,6 +48,8 @@ public sealed class AppSettings
     public const string TextSizeKey = "contentTextSize";
     /// <summary>紀錄分頁：list（條列）／mindMap（心智圖，M§42.4）</summary>
     public const string NotesViewKey = "notesView";
+    /// <summary>讓 AI 工具讀取會議（本地 MCP，M§44.1），預設關</summary>
+    public const string McpEnabledKey = "mcpEnabled";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
     public const string InterfaceLanguageKey = "interfaceLanguage";
 
@@ -291,6 +293,7 @@ public sealed class AppSettings
     /// <summary>自動排程（整理、校正、猜說話者、草稿）只在準備好時排（R45.4）</summary>
     public bool SummarizerReady => SummarizerProblem is null;
     public bool AutoSummarize => Flag(AutoSummarizeKey, true);
+    public bool McpEnabled => Flag(McpEnabledKey, false);
     public bool CompressAudio => Flag(CompressAudioKey, true);
     public bool Diarize => Flag(DiarizeKey, true);
     /// <summary>線上會議的麥克風、電腦聲音分開轉錄（M§17.3）；還在評估，設定裡沒有開關</summary>

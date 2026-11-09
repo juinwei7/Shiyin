@@ -782,6 +782,8 @@ public sealed class SettingsWindow : Window
         var levels = Enumerable.Range(TextSizes.Min, TextSizes.Max - TextSizes.Min + 1);
         var textSize = Ui.Combo(levels.Select(l => (l, TextSizes.Label(l))), S.TextSize, l => S.Set(AppSettings.TextSizeKey, (double)l), L.T("會議內容的文字大小"));
         column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 Ctrl+加號、Ctrl+減號調整，Ctrl+0 回到標準大小。"))));
+        // 讓 AI 工具讀取會議（本地 MCP，R69、design-windows §11.12）
+        column.Children.Add(Section(L.T("AI 工具（MCP）"), Mcp()));
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));
         if (host.Updater is { } updater)
         {
@@ -805,6 +807,85 @@ public sealed class SettingsWindow : Window
         if (host.Usage.IsOffered)
             column.Children.Add(Ui.Card(Ui.Bar(Ui.Text(L.T("匿名使用統計"), 14), null, Ui.Button(L.T("詳細…"), ShowUsageStats))));
         return column;
+    }
+
+    // MARK: 讓 AI 工具讀取會議（本地 MCP，R69、M§44.4、design-windows §11.12）
+
+    FrameworkElement Mcp()
+    {
+        var blocked = host.Enterprise.Account?.Mcp == false;
+        var enabled = S.McpEnabled && !blocked;
+        var toggle = Ui.Toggle(L.T("讓 AI 工具讀取會議"), enabled, on => { if (on) S.Set(AppSettings.McpEnabledKey, true); else S.Remove(AppSettings.McpEnabledKey); Show(); });
+        toggle.IsEnabled = !blocked;
+        var column = Ui.Column(10, toggle, Note(blocked ? L.T("公司的企業伺服器關掉了這個功能。")
+            : L.T("Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），拾音不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。")));
+        if (!enabled) return column;
+        var server = McpServerPath();
+        var home = Shiyin.Services.Mcp.McpSetup.CustomHome();
+        var claude = host.Tools.Find("claude");
+        var codex = host.Tools.Find("codex");
+        var desktop = host.Locator.HasClaudeDesktop();
+        var result = Ui.Text("", 13, color: Ui.Secondary, select: true);
+        Button Add(string title, bool available, Func<Task<Shiyin.Services.Mcp.McpSetup.Outcome>> action)
+        {
+            var button = Ui.Button(title, () => { });
+            button.IsEnabled = available;
+            button.Click += async (_, _) =>
+            {
+                button.IsEnabled = false;
+                result.Text = "";
+                var outcome = await action();
+                result.Text = outcome.Message;
+                result.Foreground = outcome.Ok ? Ui.Secondary : Ui.Danger;
+                button.IsEnabled = true;
+            };
+            return button;
+        }
+        // 「複製」在翻譯表是 Duplicate（複製一份範本），這裡是 Copy（同 Mac）
+        var copy = new DropDownButton { Content = MeetingLanguages.Ui("複製", "Copy"), Flyout = new MenuFlyout
+        {
+            Items =
+            {
+                Ui.Item(L.T("複製 Claude Code 指令"), () => { Copy.Text(Shiyin.Services.Mcp.McpSetup.ClaudeCodeCommand(server, home)); result.Text = L.T("已複製"); }),
+                Ui.Item(L.T("複製設定（JSON）"), () => { Copy.Text(Shiyin.Services.Mcp.McpSetup.ConfigJson(server, home)); result.Text = L.T("已複製"); }),
+            },
+        } };
+        column.Children.Add(Ui.Row(8,
+            Add(L.T("加到 Claude Code"), claude is not null, () => Shiyin.Services.Mcp.McpSetup.AddToClaudeCode(claude, host.Processes, server, home)),
+            Add(L.T("加到 Codex"), codex is not null, () => Shiyin.Services.Mcp.McpSetup.AddToCodex(codex, host.Processes, server, home)),
+            Add(L.T("加到 Claude Desktop"), desktop, () => Task.FromResult(Shiyin.Services.Mcp.McpSetup.AddToClaudeDesktop(ClaudeDesktopConfig(), server, home))),
+            copy));
+        var missing = new List<string>();
+        if (claude is null) missing.Add("claude");
+        if (codex is null) missing.Add("codex");
+        if (!desktop) missing.Add("Claude Desktop");
+        if (missing.Count > 0) column.Children.Add(Note(L.F("這台電腦上找不到 %@；其他支援 MCP 的工具可以用「複製」自己貼上設定。", string.Join(L.T("、"), missing))));
+        column.Children.Add(result);
+        return column;
+    }
+
+    /// <summary>shiyin-mcp.exe：安裝版跟 Shiyin.exe 同一個資料夾；DEBUG 可以用 SHIYIN_MCP_SERVER 指到 dotnet build 的輸出</summary>
+    static string McpServerPath()
+    {
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("SHIYIN_MCP_SERVER") is { Length: > 0 } debug) return debug;
+#endif
+        return Shiyin.Services.Mcp.McpSetup.ServerPath(AppContext.BaseDirectory);
+    }
+
+    /// <summary>
+    /// Claude Desktop 的設定檔：MSIX 版（Store、官網的安裝檔）讀的是套件自己的 LocalCache（AppData 被虛擬化），
+    /// 有那個資料夾就寫那裡，不然寫 %APPDATA%\Claude。DEBUG 可以用 SHIYIN_CLAUDE_DESKTOP_CONFIG 指到別的檔
+    /// </summary>
+    static string ClaudeDesktopConfig()
+    {
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("SHIYIN_CLAUDE_DESKTOP_CONFIG") is { Length: > 0 } debug) return debug;
+#endif
+        var msix = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Packages", WindowsToolLocator.ClaudeFamily,
+            "LocalCache", "Roaming", "Claude");
+        var folder = Directory.Exists(msix) ? msix : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Claude");
+        return Path.Combine(folder, "claude_desktop_config.json");
     }
 
     // MARK: 企業伺服器（R49、design-windows §12.11）

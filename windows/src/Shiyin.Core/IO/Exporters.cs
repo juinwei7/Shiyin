@@ -28,6 +28,8 @@ public sealed record ExportText(MeetingLanguage Language)
     public string NoNotes => Language.Text("（尚未整理成會議紀錄）", "(No meeting notes yet)", "（議事録はまだありません）");
     public string Details => Language.Text("詳細", "Details", "詳細");
     public string Review => Language.Text("待確認", "To confirm", "要確認");
+    /// <summary>本地 MCP 的會議紀錄接在後面的「我的筆記」（M§44.2）</summary>
+    public string UserNotes => Language.Text("我的筆記", "My notes", "メモ");
     public string Owner => Language.Text("負責人", "Owner", "担当");
     public string Task => Language.Text("事項", "Item", "内容");
     public string Due => Language.Text("期限", "Due", "期限");
@@ -64,7 +66,7 @@ public static class TranscriptExporter
         }
     }
 
-    static string Line(ExportBundle b, Segment s, bool times, bool speakers, bool markdown = false)
+    public static string Line(ExportBundle b, Segment s, bool times, bool speakers, bool markdown = false)
     {
         var prefix = "";
         if (times) prefix += markdown ? $"`{TimeFormat.String(s.Start)}` " : $"[{TimeFormat.String(s.Start)}] ";

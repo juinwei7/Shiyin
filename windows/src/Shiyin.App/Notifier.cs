@@ -150,6 +150,8 @@ public sealed class Notifier
             case NotificationLinks.Link.Prompt { Action: "stop" }: host.Recorder.Stop(); break;
             case NotificationLinks.Link.Prompt { Action: "continue", App: "idle" }: host.Recorder.ContinueAfterIdle(); break;   // 忘了停止錄音（R48.1）
             case NotificationLinks.Link.Prompt: break;   // 繼續錄
+            // AI 工具給的會議連結有時間點（M§44.5）：切到逐字稿、從那裡開始
+            case NotificationLinks.Link.Open { MeetingId: long id, Seconds: double at } when host.ShowMeetingAt is { } show: show(id, at); break;
             case NotificationLinks.Link.Open { MeetingId: var id }: host.ShowMain?.Invoke(id); break;
         }
     }

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- shiyin-mcp.exe（design-windows §11.12、M§44）：給 AI 工具用的本地 MCP 伺服器（stdio），跟 Shiyin.exe 發布在同一個資料夾 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>shiyin-mcp</AssemblyName>
+    <RootNamespace>Shiyin.Mcp</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shiyin.Services/Shiyin.Services.csproj" />
+  </ItemGroup>
+</Project>

@@ -12,11 +12,13 @@ using Shiyin.Model;
 namespace Shiyin.Services;
 
 /// <summary>伺服器的 /api/v1/info（M§36.2）</summary>
-public sealed record EnterpriseInfo(string Name, string Version, int ApiVersion, int MinAppApi, int? MaxAudioSeconds, string Engine, bool Llm);
+/// <summary>Mcp：公司讓不讓 AI 工具讀取會議（本地 MCP，R69.6）；沒有 = 允許</summary>
+public sealed record EnterpriseInfo(string Name, string Version, int ApiVersion, int MinAppApi, int? MaxAudioSeconds, string Engine, bool Llm, bool? Mcp = null);
 
 /// <summary>登入的帳號（不含密鑰），存在 settings.json</summary>
 /// <summary>登入的帳號（不含密鑰）；ServerVersion 是伺服器的版本（回報問題用，R52.3），4.2 以前存的帳號沒有</summary>
-public sealed record EnterpriseAccount(string Email, string Name, string ServerName, string Engine, bool Llm, string? ServerVersion = null);
+/// Mcp 是公司關掉本地 MCP 時的 false（R69.6）
+public sealed record EnterpriseAccount(string Email, string Name, string ServerName, string Engine, bool Llm, string? ServerVersion = null, bool? Mcp = null);
 
 /// <summary>轉錄交給企業伺服器時，畫面上進度後面的說明（排隊第幾、為什麼在等）；有值就顯示「改在這台電腦轉錄」（R50.3、R50.5）</summary>
 public sealed record ServerNote(string Text, bool Waiting = false);
@@ -112,7 +114,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             {
                 var o = JsonNode.Parse(json) as JsonObject;
                 return o is null ? null : new EnterpriseAccount(Str(o, "email"), Str(o, "name"), Str(o, "serverName"), Str(o, "engine"),
-                    o["llm"]?.GetValue<bool>() ?? false, o["serverVersion"]?.GetValue<string>());
+                    o["llm"]?.GetValue<bool>() ?? false, o["serverVersion"]?.GetValue<string>(), OptionalBool(o["mcp"]));
             }
             catch (JsonException) { return null; }
         }
@@ -192,7 +194,8 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             {
                 if (JsonNode.Parse(body) is JsonObject o && o["server"]?.GetValue<string>() == "shiyin")
                     info = new EnterpriseInfo(Str(o, "name"), Str(o, "version"), o["apiVersion"]?.GetValue<int>() ?? 0, o["minAppApi"]?.GetValue<int>() ?? 0,
-                        o["maxAudioSeconds"]?.GetValue<int>(), o["transcription"]?["engine"]?.GetValue<string>() ?? "breeze", o["llm"]?.GetValue<bool>() ?? false);
+                        o["maxAudioSeconds"]?.GetValue<int>(), o["transcription"]?["engine"]?.GetValue<string>() ?? "breeze", o["llm"]?.GetValue<bool>() ?? false,
+                        OptionalBool(o["mcp"]));
             }
             catch (Exception e) when (IsMalformed(e)) { }
         }
@@ -298,7 +301,8 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         catch (Exception e) when (e is EnterpriseException or HttpRequestException or OperationCanceledException) { return; }
         // 讀的時候登出、換了帳號或伺服器：不要蓋掉
         if (Account is not { } current || current.Email != before.Email || SavedUrl is not { } saved || !SameServer(saved, url)) return;
-        if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm || current.ServerVersion != info.Version)
+        if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm || current.ServerVersion != info.Version
+            || current.Mcp != info.Mcp)
         {
             SaveAccount(current.Email, current.Name, info);
             Changed?.Invoke();
@@ -332,12 +336,26 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         return ParseQuery(query).GetValueOrDefault("server") ?? "";
     }
 
-    void SaveAccount(string email, string name, EnterpriseInfo info) =>
-        settings.Set(AccountKey, new JsonObject
+    void SaveAccount(string email, string name, EnterpriseInfo info)
+    {
+        var account = new JsonObject
         {
             ["email"] = email, ["name"] = name, ["serverName"] = info.Name, ["engine"] = info.Engine, ["llm"] = info.Llm,
             ["serverVersion"] = info.Version,
-        }.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+        };
+        if (info.Mcp is bool mcp) account["mcp"] = mcp;
+        settings.Set(AccountKey, account.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+    }
+
+    static bool? OptionalBool(JsonNode? node) => node is JsonValue v && v.TryGetValue<bool>(out var b) ? b : null;
+
+    /// <summary>公司的企業伺服器關掉了「讓 AI 工具讀取會議」（R69.6、M§44.1）：直接讀存著的帳號（shiyin-mcp 不建 EnterpriseServer）</summary>
+    public static bool McpBlocked(AppSettings settings)
+    {
+        if (settings.String(AccountKey) is not { Length: > 0 } json) return false;
+        try { return JsonNode.Parse(json) is JsonObject o && OptionalBool(o["mcp"]) == false; }
+        catch (JsonException) { return false; }
+    }
 
     /// <summary>shiyin://auth 的網址是不是登入的回呼（App 判斷要不要交給 CompleteSignIn）</summary>
     public static bool IsCallback(string url) =>

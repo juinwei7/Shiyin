@@ -11,8 +11,11 @@
 
 - [~] **MCP2 Mac 加到 AI 工具、設定頁、會議連結**（§44.3～§44.5）：程式完成，三個「加到…」用 AX 按過、會議連結、`claude -p` 端到端都驗過（見 commit 訊息）。還差：「複製」選單的兩項貼到別的程式（測試時不蓋掉使用者的剪貼簿）
 - [~] **MCP3 企業伺服器可以關掉**（R69.6、§44.1）：Mac 完成（`info`、帳號的 `mcp`），用假帳號驗過設定頁和 MCP 的回覆；Windows 併在 MCP4。還差：伺服器專案的 S13 做好後，Mac、Windows 連本機伺服器（開發設定）走一次：後台關掉 → 重新開啟拾音 → 開關不能打開、`tools/call` 回公司關掉了
-- [ ] **MCP4 Windows**（design-windows §11.12）：含企業伺服器的 `mcp`（MCP3）
-  - 驗證：`dotnet test` 比 `mcp/calls.json`；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息；虛擬機：設定頁的按鈕寫對設定檔、`shiyin://open` 跳到時間點、`pack.ps1` 打包的安裝版裡有 `shiyin-mcp.exe` 而且跑得起來
+- [~] **MCP4 Windows**（design-windows §11.12）：含企業伺服器的 `mcp`（MCP3）。程式完成，Mac 上 `dotnet test` 217/217（標準答案 41 個工具呼叫逐字相同、協定、開關、唯讀、企業伺服器、`McpSetup`），`shiyin-mcp.dll` 讀 Mac 的資料庫跟 `Shiyin --mcp` 逐字相同。還差（虛擬機）：
+  - 設定頁的三個按鈕寫對設定檔（`SHIYIN_MCP_SERVER`、暫存的 `CLAUDE_CONFIG_DIR`、`CODEX_HOME`、`SHIYIN_CLAUDE_DESKTOP_CONFIG`），中英文的版面
+  - `shiyin://open?meeting=…&t=…`（DEBUG 的控制通道 `OpenLink`）跳到那個時間點
+  - `pack.ps1` 打包的安裝版裡有 `shiyin-mcp.exe`、跑得起來（`Setup.exe --silent` 裝好後用 stdin 送 `initialize`、`tools/call`）
+  - 裝了 Claude Desktop（MSIX）的 Windows：設定檔寫到 `LocalCache\Roaming\Claude` 之後 Claude Desktop 真的讀得到
 - [ ] **MCP5 使用說明、官網**（§44.4）：Mac、Windows 的使用說明加「讓 AI 工具讀取會議」，官網的功能列表
   - 驗證：使用說明的視窗看過（中英文）；`node site/build.mjs` 通過
 
