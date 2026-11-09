@@ -49,6 +49,33 @@ final class AppDatabase: @unchecked Sendable {
         try migrator.migrate(pool)
     }
 
+    enum ReadOnlyError: Error {
+        /// 還有沒跑的 migration：更新後還沒開過拾音
+        case needsUpgrade
+        /// 資料庫比這版程式新
+        case newerDatabase
+    }
+
+    /// 只讀（本地 MCP，design §44.1）：不跑 migration、不備份；資料庫的版本跟這版程式不同就丟出錯誤。
+    /// 旁邊沒有 -wal、-shm（拾音上次正常關閉）時唯讀連線打不開（SQLite 14），改用一般連線：一樣只讀，SQLite 自己建那兩個檔
+    init(readOnlyPath path: String) throws {
+        documentsRoot = nil
+        var config = Configuration()
+        config.readonly = true
+        do {
+            pool = try DatabasePool(path: path, configuration: config)
+        } catch let error as DatabaseError where error.resultCode == .SQLITE_CANTOPEN {
+            config.readonly = false
+            pool = try DatabasePool(path: path, configuration: config)
+        }
+        let migrator = Self.migrator
+        let (superseded, completed) = try pool.read { db in
+            (try migrator.hasBeenSuperseded(db), try migrator.hasCompletedMigrations(db))
+        }
+        if superseded { throw ReadOnlyError.newerDatabase }
+        if !completed { throw ReadOnlyError.needsUpgrade }
+    }
+
     private static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in

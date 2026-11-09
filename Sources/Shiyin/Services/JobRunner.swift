@@ -27,6 +27,7 @@ enum AppSettings {
     static let idleStopKey = "idleStop"
     static let textSizeKey = "contentTextSize"   // 會議內容的文字大小，−1～5，0 是 100%（design §38.5）
     static let notesViewKey = "notesView"   // 紀錄分頁：list（條列）／mindMap（心智圖，design §42.4）
+    static let mcpEnabledKey = "mcpEnabled"   // 讓 AI 工具讀取會議（本地 MCP，design §44.1），預設關
 
     private static var d: UserDefaults { .standard }
 
@@ -74,6 +75,7 @@ enum AppSettings {
         return d.string(forKey: provider.modelKey) ?? ""
     }
     static var autoSummarize: Bool { flag(autoSummarizeKey, default: true) }
+    static var mcpEnabled: Bool { flag(mcpEnabledKey, default: false) }
     static var compressAudio: Bool { flag(compressAudioKey, default: true) }
     static var diarize: Bool { flag(diarizeKey, default: true) }
     /// 線上會議的麥克風、電腦聲音分開轉錄（design §17.3）；還在評估，設定裡沒有開關，測試時用 defaults 打開

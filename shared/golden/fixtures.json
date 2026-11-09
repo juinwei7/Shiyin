@@ -2798,5 +2798,223 @@
     "reviewItems": []
    }
   }
- ]
+ ],
+ "mcp": {
+  "comment": "本地 MCP 的工具（design §44.6）：meetings 是放進資料庫的會議；trashed、recording 各再放一份在垃圾桶、正在錄的（都不該讀到）。meeting 換成那場的 id；maxChars 是逐字稿一次最多幾個字",
+  "meetings": [
+   "zh",
+   "en",
+   "ja",
+   "yue",
+   "ko"
+  ],
+  "trashed": "en",
+  "recording": "ja",
+  "calls": [
+   {
+    "name": "list_meetings"
+   },
+   {
+    "name": "list_meetings",
+    "args": {
+     "from": "2026-10-16",
+     "to": "2026-10-31"
+    }
+   },
+   {
+    "name": "list_meetings",
+    "args": {
+     "folder": "專案 A"
+    }
+   },
+   {
+    "name": "list_meetings",
+    "args": {
+     "limit": 2
+    }
+   },
+   {
+    "name": "list_meetings",
+    "args": {
+     "limit": "0"
+    }
+   },
+   {
+    "name": "list_meetings",
+    "args": {
+     "from": "2027-01-01",
+     "folder": "專案 A"
+    }
+   },
+   {
+    "name": "list_meetings",
+    "args": {
+     "to": "2026-10"
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "Redis"
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "Redis",
+     "limit": 1
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "Redis",
+     "from": "2026-11-01",
+     "to": "2026-11-30"
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "上線"
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "Weekly"
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "沒有這個詞"
+    }
+   },
+   {
+    "name": "search_meetings",
+    "args": {
+     "query": "  "
+    }
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "zh"
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "en"
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "ja"
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "yue"
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "ko"
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "trashed"
+   },
+   {
+    "name": "get_meeting_notes",
+    "meeting": "recording"
+   },
+   {
+    "name": "get_meeting_notes",
+    "args": {
+     "meeting_id": 9999
+    }
+   },
+   {
+    "name": "get_meeting_notes",
+    "args": {
+     "meeting_id": "1"
+    }
+   },
+   {
+    "name": "get_meeting_notes"
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "zh"
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "zh",
+    "args": {
+     "start": "00:10",
+     "end": 30
+    }
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "zh",
+    "maxChars": 60
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "zh",
+    "args": {
+     "start": "3:00:00"
+    }
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "zh",
+    "args": {
+     "start": "10:00",
+     "end": "11:00"
+    }
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "zh",
+    "args": {
+     "start": "abc"
+    }
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "ja"
+   },
+   {
+    "name": "get_transcript",
+    "meeting": "ko",
+    "args": {
+     "start": 5
+    }
+   },
+   {
+    "name": "list_action_items"
+   },
+   {
+    "name": "list_action_items",
+    "args": {
+     "owner": "bob"
+    }
+   },
+   {
+    "name": "list_action_items",
+    "args": {
+     "limit": 2
+    }
+   },
+   {
+    "name": "list_action_items",
+    "args": {
+     "from": "2026-11-01",
+     "owner": "nobody"
+    }
+   },
+   {
+    "name": "no_such_tool"
+   }
+  ]
+ }
 }
