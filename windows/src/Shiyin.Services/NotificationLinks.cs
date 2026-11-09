@@ -12,8 +12,8 @@ public sealed class NotificationLinks
 
     public abstract record Link
     {
-        /// <summary>打開主視窗；有會議 id 時選到那場</summary>
-        public sealed record Open(long? MeetingId) : Link;
+        /// <summary>打開主視窗；有會議 id 時選到那場；有秒數時切到逐字稿、從那裡開始（AI 工具給的會議連結，M§44.5）</summary>
+        public sealed record Open(long? MeetingId, double? Seconds = null) : Link;
         /// <summary>偵測會議的按鈕：start、mute、stop、continue</summary>
         public sealed record Prompt(string Action, string App) : Link;
     }
@@ -35,10 +35,17 @@ public sealed class NotificationLinks
     {
         if (!IsLink(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
         var query = Query(uri.Query);
-        switch (uri.AbsolutePath.Trim('/').ToLowerInvariant())
+        // shiyin:open?…（通知）的 open 是路徑；shiyin://open?…（本地 MCP 的會議連結，M§44.5）的 open 是主機名稱
+        var path = uri.AbsolutePath.Trim('/');
+        if (path.Length == 0) path = uri.Host;
+        switch (path.ToLowerInvariant())
         {
             case "open":
-                return new Link.Open(query.TryGetValue("meeting", out var id) && long.TryParse(id, out var meetingId) && meetingId > 0 ? meetingId : null);
+                long? meeting = query.TryGetValue("meeting", out var id) && long.TryParse(id, out var meetingId) && meetingId > 0 ? meetingId : null;
+                double? seconds = meeting is not null && query.TryGetValue("t", out var t)
+                    && double.TryParse(t, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var at)
+                    && double.IsFinite(at) ? Math.Max(0, at) : null;
+                return new Link.Open(meeting, seconds);
             case "prompt":
                 if (query.TryGetValue("token", out var token) && CryptographicOperations.FixedTimeEquals(
                         System.Text.Encoding.ASCII.GetBytes(token), System.Text.Encoding.ASCII.GetBytes(Token))

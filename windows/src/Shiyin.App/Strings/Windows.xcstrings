@@ -1861,6 +1861,17 @@
         }
       }
     },
+    "這台電腦上找不到 %@；其他支援 MCP 的工具可以用「複製」自己貼上設定。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ not found on this PC. For other tools that support MCP, use Copy and paste the settings yourself."
+          }
+        }
+      }
+    },
     "這台電腦已經用 %@ 登入 %@。": {
       "extractionState": "manual",
       "localizations": {

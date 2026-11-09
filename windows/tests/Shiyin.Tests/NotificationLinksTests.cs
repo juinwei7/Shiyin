@@ -15,6 +15,12 @@ public sealed class NotificationLinksTests
         Assert.Equal(new Link.Open(null), links.Parse("shiyin:open"));
         Assert.Equal(new Link.Open(null), links.Parse("shiyin:open?meeting=abc"));
         Assert.Equal(new Link.Open(null), links.Parse("shiyin:open?meeting=-3"));
+        // 本地 MCP 的會議連結（M§44.5）：shiyin://open，可以帶秒數
+        Assert.Equal(new Link.Open(42, 320), links.Parse("shiyin://open?meeting=42&t=320"));
+        Assert.Equal(new Link.Open(42), links.Parse("shiyin://open?meeting=42"));
+        Assert.Equal(new Link.Open(42, 0), links.Parse("shiyin://open?meeting=42&t=-5"));
+        Assert.Equal(new Link.Open(42), links.Parse("shiyin://open?meeting=42&t=abc"));
+        Assert.Equal(new Link.Open(null), links.Parse("shiyin://open?t=5"));
     }
 
     [Fact]

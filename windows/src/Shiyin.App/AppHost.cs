@@ -54,6 +54,8 @@ public sealed class AppHost
 
     /// <summary>熱鍵、通知、偵測會議要開主視窗、提醒時呼叫（App 設定）</summary>
     public Action<long?>? ShowMain { get; set; }
+    /// <summary>打開那場會議的逐字稿、從這個秒數開始（本地 MCP 的會議連結，M§44.5）</summary>
+    public Action<long, double>? ShowMeetingAt { get; set; }
     public Action<MeetingDetector.Prompt>? ShowMeetingPrompt { get; set; }
 
     public AppHost(DispatcherQueue dispatcher, IReadOnlyList<string> args)
@@ -89,6 +91,7 @@ public sealed class AppHost
         Keys = Debug && !Settings.Flag("debugRealKeychain", false) ? new MemoryKeyStore() : new CredentialStore();
         var children = new ChildProcesses();
         var runner = new ProcessRunner { OnStarted = children.Add };
+        Processes = runner;
         // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）；
         // debugOnlyDesktopCli、debugCodexApp、debugClaudeDesktop 測桌面版（R55、R56，M§37.4）
         Locator = new WindowsToolLocator
@@ -288,6 +291,8 @@ public sealed class AppHost
 
     /// <summary>找工具的本體：桌面版的快取、有沒有 Claude 桌面版（R55、R56）</summary>
     public WindowsToolLocator Locator { get; }
+    /// <summary>執行 claude、codex 等外部程式（子程序放進 Job Object）</summary>
+    public ProcessRunner Processes { get; }
 
     /// <summary>找 claude、codex（設定頁、引導、整理工具共用；DEBUG 的 debugNoCli 會換掉）</summary>
     public IToolLocator Tools { get; }

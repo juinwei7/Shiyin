@@ -22,6 +22,11 @@ dotnet publish (Join-Path $root 'windows\src\Shiyin.App\Shiyin.App.csproj') -c R
     -p:Version=$Version -p:WindowsAppSDKSelfContained=true -p:ShiyinUpdateTest=$($UpdateTest.IsPresent.ToString().ToLowerInvariant()) `
     "-p:ShiyinUsageUrl=$env:SHIYIN_USAGE_URL" -o $publish
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish 失敗' }
+# 本地 MCP（design-windows §11.12）：shiyin-mcp.exe 發布到同一個資料夾，用 Shiyin.exe 自帶的同一份 .NET
+dotnet publish (Join-Path $root 'windows\src\Shiyin.Mcp\Shiyin.Mcp.csproj') -c Release -r "win-$Arch" --self-contained `
+    "-p:Version=$Version" -o $publish
+if ($LASTEXITCODE -ne 0) { throw 'dotnet publish（shiyin-mcp）失敗' }
+if (-not (Test-Path (Join-Path $publish 'shiyin-mcp.exe'))) { throw '安裝檔裡沒有 shiyin-mcp.exe' }
 if ($UpdateTest) { Write-Warning '測試更新的建置：更新來源、公鑰從環境變數讀，不能拿去發布' }
 Copy-Item (Join-Path $Whisper '*.dll') $publish -Force
 # 第三方授權（R27 R13.1）跟著 app 一起裝

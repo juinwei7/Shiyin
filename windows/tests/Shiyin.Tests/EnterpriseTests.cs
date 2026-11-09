@@ -31,6 +31,8 @@ public sealed class EnterpriseTests : IDisposable
         public bool Disabled;
         public bool Down;
         public bool Llm = true;
+        /// <summary>公司讓不讓 AI 工具讀取會議（R69.6）；null 是舊的伺服器（info 沒有這個欄位）</summary>
+        public bool? Mcp;
         /// <summary>公司詞彙表（R53）；null 是舊的伺服器（404）</summary>
         public List<string>? GlossaryTerms = [];
         // 工作
@@ -87,11 +89,13 @@ public sealed class EnterpriseTests : IDisposable
                     await Text(c, 200, InfoBody);
                     return;
                 case ("GET", "/api/v1/info"):
-                    await Json(c, 200, new JsonObject
+                    var info = new JsonObject
                     {
                         ["server"] = "shiyin", ["apiVersion"] = 1, ["minAppApi"] = 1, ["name"] = Name, ["version"] = "1.0.0",
                         ["maxAudioSeconds"] = 28800, ["transcription"] = new JsonObject { ["engine"] = "breeze" }, ["llm"] = Llm,
-                    });
+                    };
+                    if (Mcp is bool mcp) info["mcp"] = mcp;
+                    await Json(c, 200, info);
                     return;
                 case ("GET", "/login"):
                     Challenge = c.Request.QueryString["code_challenge"];
@@ -915,6 +919,29 @@ public sealed class EnterpriseTests : IDisposable
         await server.SignOut();
         settings.Set(AppSettings.ProviderKey, "enterprise");
         Assert.Equal(SummarizerProblemKind.EnterpriseSignedOut, settings.SummarizerProblem?.Kind);
+    }
+
+    [Fact]
+    public async Task CompanyCanTurnOffMcp()
+    {
+        // 舊的伺服器（沒有 mcp）：允許
+        var server = await SignedIn();
+        Assert.Null(server.Account?.Mcp);
+        Assert.False(EnterpriseServer.McpBlocked(settings));
+        // 後台關掉：重新讀伺服器的資訊時記下來（R69.6）
+        fake.Mcp = false;
+        var changed = 0;
+        server.Changed += () => changed++;
+        await server.RefreshInfo();
+        Assert.Equal(1, changed);
+        Assert.False(server.Account?.Mcp);
+        Assert.True(EnterpriseServer.McpBlocked(settings));
+        // 打開：恢復
+        fake.Mcp = true;
+        await server.RefreshInfo();
+        Assert.False(EnterpriseServer.McpBlocked(settings));
+        await server.SignOut();
+        Assert.False(EnterpriseServer.McpBlocked(settings));
     }
 
     /// <summary>公司在後台設定的模型（R51.1）：名稱給人看、id 給伺服器、哪個是預設</summary>

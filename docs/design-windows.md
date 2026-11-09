@@ -426,13 +426,14 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 11.12 讓 AI 工具讀取會議：本地 MCP（R69，M§44）
 
-- 另外一個命令列程式 `shiyin-mcp.exe`（`src/Shiyin.Mcp`，參考 Shiyin.Data、Shiyin.Core），跟 `Shiyin.exe` 放在同一個資料夾（`pack.ps1` 發布到同一個 self-contained 的資料夾，執行環境共用、只多兩個小檔）。不像 Mac 用同一個執行檔：WinUI 的 exe 是視窗程式，啟動時有單一執行個體的轉送、Velopack 的 hook，stdio 也不是它的用法。
-- 協定、工具、回傳的文字同 Mac（`Shiyin.Core` 的 `Mcp/McpTools.cs`、`Mcp/McpServer.cs`；標準答案 `mcp/calls.json` 逐字比）。資料庫用唯讀連線（`Mode=ReadOnly`），不跑 migration；版本檢查同 Mac（`schema_version` 跟這版認得的 migration 比）。
-- 開關是 `settings.json` 的 `mcpEnabled`（每次 `tools/call` 重讀檔案）；企業伺服器的 `mcp: false` 同 Mac（存在帳號裡）。
-- 路徑：安裝版是 `%LOCALAPPDATA%\ShiyinApp\current\shiyin-mcp.exe`（Velopack 更新後路徑不變），不需要 Mac 的啟動檔。`SHIYIN_HOME` 是用環境變數指定的（DEBUG、示範資料）時，登記時一起帶（Claude Code `-e SHIYIN_HOME=…`、Codex `--env SHIYIN_HOME=…`、Claude Desktop 的 `env`）。
-- 加到 Claude Code、Codex：`ToolLocator` 找到的 `claude.exe`、`codex.exe`，`ProcessStartInfo.ArgumentList`；只有 npm 的 `.cmd` 時不能用（不能經過 cmd.exe），按鈕不能按、說明用「複製指令」。Claude Desktop：`%APPDATA%\Claude\claude_desktop_config.json`（寫法同 Mac：先備份成 `.bak`、只改 `mcpServers.shiyin`）；Claude Desktop 有沒有裝看 `%LOCALAPPDATA%\AnthropicClaude` 或 `%APPDATA%\Claude`。
-- 設定頁（進階）同 Mac 的一組「AI 工具（MCP）」；會議連結 `shiyin://open?meeting=…&t=…` 接在現有的 `shiyin:` 網址處理（同通知的按鈕）。
-- 驗證：`dotnet test` 比標準答案；Mac 上直接跑 `shiyin-mcp.dll` 用 stdin 送協定訊息（暫存的 `SHIYIN_HOME`，同 Mac 的資料庫）；虛擬機裡 Claude Code 沒有登入時只驗設定檔寫對。
+- 另外一個命令列程式 `shiyin-mcp.exe`（`src/Shiyin.Mcp`，只有入口，參考 Shiyin.Services），跟 `Shiyin.exe` 放在同一個資料夾（`pack.ps1` 發布到同一個 self-contained 的資料夾，執行環境共用、只多兩個小檔）。不像 Mac 用同一個執行檔：WinUI 的 exe 是視窗程式，啟動時有單一執行個體的轉送、Velopack 的 hook，stdio 也不是它的用法。
+- 協定、工具、回傳的文字同 Mac：`Shiyin.Services` 的 `Mcp/McpTools.cs`、`Mcp/McpServer.cs`（要讀 settings.json、企業帳號，所以放 Services；標準答案 `mcp/calls.json`、`mcp/tools.json` 逐字比）。資料庫用 `AppDatabase.OpenReadOnly`（`Mode=ReadOnly`，不跑 migration；`grdb_migrations` 跟這版認得的比，同 Mac）；沒有 `-wal`、`-shm` 時（SQLite 14）改用 `Mode=ReadWrite`（不是 GRDB，不會建、刪暫時的表）。工具參數的數字看 JSON 的種類（`JsonValueKind.Number`），解析來的、程式建的都讀得到。
+- 開關是 `settings.json` 的 `mcpEnabled`（每次 `tools/call` 重讀檔案）；`--set 鍵=值` 只對那次執行有效（測試用）。企業伺服器的 `mcp: false` 同 Mac：`EnterpriseInfo`、`EnterpriseAccount` 的 `Mcp`，`EnterpriseServer.McpBlocked(settings)` 直接讀存著的帳號。log 寫進 `logs\shiyin-<日期>.log`（同 app，只寫工具名稱、筆數、花多久）。
+- 路徑：安裝版是 `%LOCALAPPDATA%\ShiyinApp\current\shiyin-mcp.exe`（Velopack 更新後路徑不變），不需要 Mac 的啟動檔。`SHIYIN_HOME` 是用環境變數指定的（DEBUG、示範資料）時，登記時一起帶（Claude Code `-e SHIYIN_HOME=…`，要放在名稱後面：`-e` 可以接好幾個值，放前面會把名稱也吃掉；Codex `--env SHIYIN_HOME=…`；Claude Desktop 的 `env`）。
+- 加到 Claude Code、Codex（`Mcp/McpSetup.cs`）：`IToolLocator` 找到的 claude、codex（真正的 exe，或 node 加套件的 js；不會經過 cmd.exe），`ProcessRunner`（`ArgumentList`）；先 `mcp remove` 再 `mcp add`。Claude Desktop：寫法同 Mac（先備份成 `.bak`、只改 `mcpServers.shiyin`，Windows 的 `JsonObject` 保留其他鍵的順序）；設定檔的位置：MSIX 版（Store、官網的安裝檔都是 MSIX，`Claude_pzs8sxrjxfjjc`）的 AppData 被虛擬化，有 `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude` 就寫那裡，不然寫 `%APPDATA%\Claude\claude_desktop_config.json`（要在裝了 Claude Desktop 的 Windows 確認）。有沒有裝看 `WindowsToolLocator.HasClaudeDesktop()`。
+- 設定頁（進階）同 Mac 的一組「AI 工具（MCP）」：開關、三個按鈕、「複製」下拉選單（英文是 Copy，用 `MeetingLanguages.Ui`；翻譯表的「複製」是 Duplicate）。DEBUG：`SHIYIN_MCP_SERVER` 指到 `dotnet build` 出來的 shiyin-mcp（DEBUG 的 app 資料夾裡沒有）、`SHIYIN_CLAUDE_DESKTOP_CONFIG` 指到別的設定檔。
+- 會議連結：`NotificationLinks.Parse` 也認得 `shiyin://open?meeting=…&t=…`（`open` 是主機名稱、路徑是空的；通知用的 `shiyin:open?…` 照舊），`Link.Open` 多了 `Seconds`。有時間點時 `AppHost.ShowMeetingAt`：打開那場、切到逐字稿、從那裡開始（同「問所有會議」點出處）；沒有時同點通知（選到那場，分頁不變）。
+- 驗證：`dotnet test`（標準答案、協定、開關、唯讀、企業伺服器的 `mcp`、`McpSetup` 的參數和設定檔）；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息、跟 Mac 的 `Shiyin --mcp` 讀同一份資料庫逐字比；虛擬機裡 Claude Code 沒有登入時只驗設定檔寫對。
 
 ## 12. 系統整合
 
