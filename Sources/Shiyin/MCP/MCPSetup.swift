@@ -52,7 +52,12 @@ enum MCPSetup {
         return String(decoding: data, as: UTF8.self)
     }
 
-    static func copy(_ text: String) {
+    enum CopyItem { case claudeCodeCommand, configJSON }
+
+    /// 設定頁「複製」選單的兩項：先確定啟動檔在，再放進剪貼簿
+    static func copy(_ item: CopyItem) {
+        try? installLauncher()
+        let text = item == .claudeCodeCommand ? claudeCodeCommand : configJSON
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
     }

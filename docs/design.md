@@ -2142,7 +2142,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - `MCPServer` 的協定：DEBUG 版的執行檔直接用 stdin 送 `initialize`、`tools/list`、`tools/call`（暫存的 `SHIYIN_HOME`，啟動參數帶 `-mcpEnabled YES`）；拾音沒開、開著、錄音中、資料庫要升級各試一次。
 - 端到端：`claude -p … --mcp-config <暫存設定> --strict-mcp-config`，暫存的 `SHIYIN_HOME`、示範的會議，問「列出會議」「這場的待辦」，回答對得上資料庫。
 - 設定頁的按鈕用 AX 按（暫存的 `CLAUDE_CONFIG_DIR`、`CODEX_HOME`、`SHIYIN_CLAUDE_DESKTOP_CONFIG`），確認三邊的設定檔寫對、再按一次不會重複。
-- DEBUG：`shiyinctl mcpsetup claudecode|codex|desktop <輸出.json>` 等於按「加到…」；`openlink <shiyin://open?…>` 等於點會議連結（不拉到前面）；`state` 的 `mcp`（開關、啟動檔）。從系統送網址要對 DEBUG 版的 pid 送 GURL 的 Apple Event，**不要用 `open <網址>`**：所有拾音都是同一個 bundle id，網址可能交給使用者正式的拾音。
+- DEBUG：`shiyinctl mcpsetup claudecode|codex|desktop <輸出.json>` 等於按「加到…」；`mcpcopy command|json` 等於按「複製」選單的兩項（測試前後用 `pbsnap` 之類的工具存、還原使用者的剪貼簿）；`enterprise info <網址> <輸出.json>` 只讀伺服器的 `info`、寫出解析結果（不改帳號：完整的重新取得會把帳號寫回共用設定，蓋掉使用者正式的登入）；`openlink <shiyin://open?…>` 等於點會議連結（不拉到前面）；`state` 的 `mcp`（開關、啟動檔）。從系統送網址要對 DEBUG 版的 pid 送 GURL 的 Apple Event，**不要用 `open <網址>`**：所有拾音都是同一個 bundle id，網址可能交給使用者正式的拾音。
 
 ## 14. 決策紀錄
 

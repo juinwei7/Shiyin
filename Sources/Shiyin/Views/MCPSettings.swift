@@ -43,8 +43,8 @@ struct MCPSettings: View {
                     .disabled(busy || !hasDesktop)
                 // 「複製」在翻譯表是 Duplicate（複製一份範本），這裡是 Copy
                 Menu(MeetingLanguage.ui(zh: "複製", en: "Copy")) {
-                    Button("複製 Claude Code 指令") { copy(MCPSetup.claudeCodeCommand) }
-                    Button("複製設定（JSON）") { copy(MCPSetup.configJSON) }
+                    Button("複製 Claude Code 指令") { copy(.claudeCodeCommand) }
+                    Button("複製設定（JSON）") { copy(.configJSON) }
                 }
                 .fixedSize()
                 if busy { ProgressView().controlSize(.small) }
@@ -80,9 +80,8 @@ struct MCPSettings: View {
         }
     }
 
-    private func copy(_ text: String) {
-        try? MCPSetup.installLauncher()
-        MCPSetup.copy(text)
+    private func copy(_ item: MCPSetup.CopyItem) {
+        MCPSetup.copy(item)
         outcome = MCPSetup.Outcome(ok: true, message: String(localized: "已複製"))
     }
 }
