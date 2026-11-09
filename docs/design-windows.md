@@ -424,6 +424,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 段落用 Shiyin.Core 的 `MindMap.TopicRanges`（同 Mac，標準答案 `util/topic-ranges.json`）。
 - 畫面：`PlayerBar` 的時間軸上面多一條議題帶（Grid 裡一段一個 `Border`＋`TextBlock`，`TextTrimming` 截短），寬度、時間比例同時間軸；正在播放的那段底色變深、字變粗（`Bold`，不用 `SemiBold`：中文會被換成新細明體的假粗體）；點了從那個議題開始播放；`ToolTip` 是「議題名稱　開始–結束」，`AutomationProperties.Name` 同樣的字。
 
+### 11.12 讓 AI 工具讀取會議：本地 MCP（R69，M§44）
+
+- 另外一個命令列程式 `shiyin-mcp.exe`（`src/Shiyin.Mcp`，參考 Shiyin.Data、Shiyin.Core），跟 `Shiyin.exe` 放在同一個資料夾（`pack.ps1` 發布到同一個 self-contained 的資料夾，執行環境共用、只多兩個小檔）。不像 Mac 用同一個執行檔：WinUI 的 exe 是視窗程式，啟動時有單一執行個體的轉送、Velopack 的 hook，stdio 也不是它的用法。
+- 協定、工具、回傳的文字同 Mac（`Shiyin.Core` 的 `Mcp/McpTools.cs`、`Mcp/McpServer.cs`；標準答案 `db/mcp.json` 逐字比）。資料庫用唯讀連線（`Mode=ReadOnly`），不跑 migration；版本檢查同 Mac（`schema_version` 跟這版認得的 migration 比）。
+- 開關是 `settings.json` 的 `mcpEnabled`（每次 `tools/call` 重讀檔案）；企業伺服器的 `mcp: false` 同 Mac（存在帳號裡）。
+- 路徑：安裝版是 `%LOCALAPPDATA%\ShiyinApp\current\shiyin-mcp.exe`（Velopack 更新後路徑不變），不需要 Mac 的啟動檔。`SHIYIN_HOME` 是用環境變數指定的（DEBUG、示範資料）時，登記時一起帶（Claude Code `-e SHIYIN_HOME=…`、Codex `--env SHIYIN_HOME=…`、Claude Desktop 的 `env`）。
+- 加到 Claude Code、Codex：`ToolLocator` 找到的 `claude.exe`、`codex.exe`，`ProcessStartInfo.ArgumentList`；只有 npm 的 `.cmd` 時不能用（不能經過 cmd.exe），按鈕不能按、說明用「複製指令」。Claude Desktop：`%APPDATA%\Claude\claude_desktop_config.json`（寫法同 Mac：先備份成 `.bak`、只改 `mcpServers.shiyin`）；Claude Desktop 有沒有裝看 `%LOCALAPPDATA%\AnthropicClaude` 或 `%APPDATA%\Claude`。
+- 設定頁（進階）同 Mac 的一組「AI 工具（MCP）」；會議連結 `shiyin://open?meeting=…&t=…` 接在現有的 `shiyin:` 網址處理（同通知的按鈕）。
+- 驗證：`dotnet test` 比標準答案；Mac 上直接跑 `shiyin-mcp.dll` 用 stdin 送協定訊息（暫存的 `SHIYIN_HOME`，同 Mac 的資料庫）；虛擬機裡 Claude Code 沒有登入時只驗設定檔寫對。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔
