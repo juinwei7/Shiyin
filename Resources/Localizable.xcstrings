@@ -681,6 +681,17 @@
         }
       }
     },
+    "AI 工具（MCP）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI tools (MCP)"
+          }
+        }
+      }
+    },
     "API key": {
       "extractionState": "manual"
     },
@@ -792,6 +803,17 @@
         }
       }
     },
+    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），拾音不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can search and read your meeting notes and transcripts (read-only), even when Shiyin isn't open. What they read is handled by that AI tool and leaves this Mac, just like when meeting notes are written."
+          }
+        }
+      }
+    },
     "Claude Code（這台 Mac 已經裝了 claude CLI）": {
       "extractionState": "manual",
       "localizations": {
@@ -799,6 +821,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude Code (claude CLI is installed on this Mac)"
+          }
+        }
+      }
+    },
+    "Claude Desktop 的設定檔不是拾音看得懂的格式，沒有改動：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin couldn't read Claude Desktop's settings file, so it wasn't changed: %@"
           }
         }
       }
@@ -2870,6 +2903,39 @@
         }
       }
     },
+    "加到 Claude Code": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Claude Code"
+          }
+        }
+      }
+    },
+    "加到 Claude Desktop": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Claude Desktop"
+          }
+        }
+      }
+    },
+    "加到 Codex": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Codex"
+          }
+        }
+      }
+    },
     "包含時間點": {
       "extractionState": "manual",
       "localizations": {
@@ -4074,6 +4140,39 @@
         }
       }
     },
+    "已加到 Claude Code，開新的對話就能用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added to Claude Code. Start a new conversation to use it."
+          }
+        }
+      }
+    },
+    "已加到 Claude Desktop，重新開啟 Claude Desktop 後就能用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added to Claude Desktop. Quit and reopen Claude Desktop to use it."
+          }
+        }
+      }
+    },
+    "已加到 Codex，開新的對話就能用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added to Codex. Start a new conversation to use it."
+          }
+        }
+      }
+    },
     "已匯入「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -4935,6 +5034,28 @@
         }
       }
     },
+    "找不到 claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't find claude"
+          }
+        }
+      }
+    },
+    "找不到 codex": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't find codex"
+          }
+        }
+      }
+    },
     "找不到「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -4986,6 +5107,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No output device found, so system audio can't be captured"
+          }
+        }
+      }
+    },
+    "找不到這場會議，可能已經刪掉了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't find this meeting. It may have been deleted."
           }
         }
       }
@@ -7756,6 +7888,39 @@
         }
       }
     },
+    "沒有加到 Claude Code：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't add to Claude Code: %@"
+          }
+        }
+      }
+    },
+    "沒有加到 Claude Desktop：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't add to Claude Desktop: %@"
+          }
+        }
+      }
+    },
+    "沒有加到 Codex：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't add to Codex: %@"
+          }
+        }
+      }
+    },
     "沒有可以復原的說話者調整（改名、重新辨識說話者之後就不能復原之前的調整）": {
       "extractionState": "manual",
       "localizations": {
@@ -7851,6 +8016,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No transcript."
+          }
+        }
+      }
+    },
+    "沒有錯誤訊息": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No error message"
           }
         }
       }
@@ -9310,6 +9486,17 @@
         }
       }
     },
+    "複製 Claude Code 指令": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Claude Code Command"
+          }
+        }
+      }
+    },
     "複製心智圖（圖片）": {
       "extractionState": "manual",
       "localizations": {
@@ -9372,6 +9559,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copy Notes: Plain Text (for Slack, Messages)"
+          }
+        }
+      }
+    },
+    "複製設定（JSON）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Settings (JSON)"
           }
         }
       }
@@ -9812,6 +10010,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t read the API key from the keychain (error %lld)"
+          }
+        }
+      }
+    },
+    "讓 AI 工具讀取會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let AI tools read meetings"
           }
         }
       }
@@ -10397,6 +10606,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Who Said This Line?"
+          }
+        }
+      }
+    },
+    "這台 Mac 上找不到 %@；其他支援 MCP 的工具可以用「複製」自己貼上設定。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ not found on this Mac. For other tools that support MCP, use Copy and paste the settings yourself."
           }
         }
       }

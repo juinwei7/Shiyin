@@ -2128,7 +2128,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 - 新的一組「AI 工具（MCP）」：
   - 開關「讓 AI 工具讀取會議」，說明：「Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），拾音不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。」
-  - 打開時：「加到 Claude Code」「加到 Codex」「加到 Claude Desktop」三個按鈕和「複製」選單（§44.3）；找不到 claude、codex 時那顆按鈕不能按，旁邊寫「找不到」。按了之後下面一行寫結果（「已加到 Claude Code，開新的對話就能用。」／失敗時寫 CLI 的錯誤訊息第一行）。
+  - 打開時：「加到 Claude Code」「加到 Codex」「加到 Claude Desktop」三個按鈕和「複製」選單（§44.3；英文是 Copy，翻譯表裡的「複製」是 Duplicate，用 `MeetingLanguage.ui`）；找不到 claude、codex 時那顆按鈕不能按，旁邊寫「找不到」。按了之後下面一行寫結果（「已加到 Claude Code，開新的對話就能用。」／失敗時寫 CLI 的錯誤訊息第一行）。
   - 企業伺服器關掉時：開關不能打開，說明改成「公司的企業伺服器關掉了這個功能。」
 - 使用說明加一段「讓 AI 工具讀取會議」：怎麼打開、怎麼問（「列出我這週的會議」「上週的待辦有哪些」）、隱私。
 
@@ -2142,6 +2142,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - `MCPServer` 的協定：DEBUG 版的執行檔直接用 stdin 送 `initialize`、`tools/list`、`tools/call`（暫存的 `SHIYIN_HOME`，啟動參數帶 `-mcpEnabled YES`）；拾音沒開、開著、錄音中、資料庫要升級各試一次。
 - 端到端：`claude -p … --mcp-config <暫存設定> --strict-mcp-config`，暫存的 `SHIYIN_HOME`、示範的會議，問「列出會議」「這場的待辦」，回答對得上資料庫。
 - 設定頁的按鈕用 AX 按（暫存的 `CLAUDE_CONFIG_DIR`、`CODEX_HOME`、`SHIYIN_CLAUDE_DESKTOP_CONFIG`），確認三邊的設定檔寫對、再按一次不會重複。
+- DEBUG：`shiyinctl mcpsetup claudecode|codex|desktop <輸出.json>` 等於按「加到…」；`openlink <shiyin://open?…>` 等於點會議連結（不拉到前面）；`state` 的 `mcp`（開關、啟動檔）。從系統送網址要對 DEBUG 版的 pid 送 GURL 的 Apple Event，**不要用 `open <網址>`**：所有拾音都是同一個 bundle id，網址可能交給使用者正式的拾音。
 
 ## 14. 決策紀錄
 

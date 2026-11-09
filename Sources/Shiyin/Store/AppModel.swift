@@ -321,6 +321,8 @@ final class AppModel {
         }
         meetingDetector.start()
         BuiltinTemplates.seed(db)
+        // 本地 MCP 的啟動檔指到目前這份拾音（design §44.3）：搬家、更新後 AI 工具的設定不用動
+        if AppSettings.mcpEnabled { try? MCPSetup.installLauncher() }
         // claude、codex 的登入狀態（design §34.1）：沒登入時不自動整理
         Task { await CLILogin.refreshIfStale() }
         // 企業伺服器：公司在後台加了模型、改了設定，不用重新登入（R51.5）
@@ -826,6 +828,24 @@ final class AppModel {
         showTrash = trash.contains { $0.id == id }
         selection = id
         openMainWindow?()
+    }
+
+    /// 會議連結 shiyin://open?meeting=…&t=…（design §44.5）：有時間點時切到逐字稿、從那裡開始，沒有時看紀錄
+    func openMeetingLink(_ id: Int64, seconds: Double?, activate: Bool = true) {
+        if activate { NSApp.activate() }
+        guard (try? db.meeting(id)) != nil else {
+            openMainWindow?()
+            noticeMessage = String(localized: "找不到這場會議，可能已經刪掉了")
+            return
+        }
+        reveal(id)
+        guard let seconds else {
+            tab = .summary
+            return
+        }
+        tab = .transcript
+        player.seek(to: seconds, play: false)
+        if let segment = detail?.segmentId(at: seconds) { flashSegment(segment) }
     }
 
     func updateInfo(title: String, date: String, participants: String) {

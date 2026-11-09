@@ -1009,6 +1009,8 @@ struct AdvancedSettings: View {
                 Text("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 ⌘＋、⌘－ 調整，⌘0 回到標準大小。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
+            // 讓 AI 工具讀取會議（本地 MCP，design §44.4、R69）
+            Section("AI 工具（MCP）") { MCPSettings() }
             // app 內更新（R10.6）
             Section("更新") {
                 LabeledContent("目前版本", value: Updater.currentVersion)

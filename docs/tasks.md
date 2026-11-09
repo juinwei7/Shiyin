@@ -9,8 +9,7 @@
 
 ## 讓 AI 工具讀取會議：本地 MCP（R69，design §44、design-windows §11.12、D146～D149；2026-11-09 使用者新需求）
 
-- [ ] **MCP2 Mac 加到 AI 工具、設定頁、會議連結**（§44.3～§44.5）
-  - 驗證：用 AX 按設定頁的三個按鈕（暫存的 `CLAUDE_CONFIG_DIR`、`CODEX_HOME`、`SHIYIN_CLAUDE_DESKTOP_CONFIG`），三邊的設定檔寫對、按兩次不重複；`open 'shiyin://open?meeting=…&t=…'` 跳到那個時間點；`claude -p` 用暫存的設定端到端問答；`l10n.py check` 通過
+- [~] **MCP2 Mac 加到 AI 工具、設定頁、會議連結**（§44.3～§44.5）：程式完成，三個「加到…」用 AX 按過、會議連結、`claude -p` 端到端都驗過（見 commit 訊息）。還差：「複製」選單的兩項貼到別的程式（測試時不蓋掉使用者的剪貼簿）
 - [ ] **MCP3 企業伺服器可以關掉**（R69.6、§44.1）：Mac、Windows 讀 `info` 的 `mcp`
   - 驗證：本機的伺服器（開發設定）`info` 回 `mcp: false` 時，設定頁的開關不能打開、`tools/call` 回公司關掉了；伺服器加欄位寫進伺服器專案的 tasks
 - [ ] **MCP4 Windows**（design-windows §11.12）

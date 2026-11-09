@@ -188,6 +188,21 @@ enum DebugControl {
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
         case "dump-golden": GoldenDump.run(fixtures: args[1], output: args[2])   // design-windows §4.1
         case "seedfixtures": GoldenDump.seed(fixtures: args[1], keys: Array(args.dropFirst(2)), into: model)   // 本地 MCP 的示範會議（design §44.6）
+        case "mcpsetup":   // mcpsetup claudecode|codex|desktop <輸出.json>：等於按設定頁的「加到…」（design §44.6）
+            let output = args.count > 2 ? args[2] : nil
+            Task {
+                let r: MCPSetup.Outcome
+                switch args.count > 1 ? args[1] : "" {
+                case "claudecode": r = await MCPSetup.addToClaudeCode()
+                case "codex": r = await MCPSetup.addToCodex()
+                default: r = MCPSetup.addToClaudeDesktop()
+                }
+                if let output { write(["ok": r.ok, "message": r.message], to: output) }
+            }
+        case "openlink":   // openlink <shiyin://open?…>：等於點了 AI 工具給的會議連結（design §44.5），不拉到前面
+            if let url = URL(string: args[1]), let target = MeetingLink.parse(url) {
+                model.openMeetingLink(target.meetingId, seconds: target.seconds, activate: false)
+            }
         case "segment-embed": segmentEmbed(audio: args[1], spans: args[2], output: args[3], batched: args.count > 4 ? Int(args[4]) : nil)   // design §6.3.2
         case "correct-eval": correctEval(input: args[1], options: args[2], output: args[3])          // design §17.4
         case "detect-eval": detectEval(audio: args[1], start: Double(args[2]) ?? 0, output: args[3])  // design §18.8
@@ -639,6 +654,9 @@ enum DebugControl {
             "selection": model.selection ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
+            // 本地 MCP（design §44.6）：開關、啟動檔
+            "mcp": ["enabled": AppSettings.mcpEnabled, "launcher": MCPSetup.launcherURL.path,
+                    "launcherExists": FileManager.default.fileExists(atPath: MCPSetup.launcherURL.path)] as [String: Any],
             // 播放條上的議題帶（design §43.3）：選取中的會議，長度同播放條
             "topicRanges": model.detail.flatMap { d in
                 d.notes.map { MindMap.topicRanges(notes: $0, duration: max(model.player.duration, Double(d.meeting.durationSeconds ?? 0)),
