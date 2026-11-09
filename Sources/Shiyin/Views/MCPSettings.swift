@@ -9,8 +9,12 @@ struct MCPSettings: View {
     @State private var outcome: MCPSetup.Outcome?
     @State private var busy = false
 
+    /// 公司的企業伺服器關掉了（R69.6）
+    private var blocked: Bool { EnterpriseServer.shared.account?.mcp == false }
+
     var body: some View {
-        Toggle("讓 AI 工具讀取會議", isOn: $enabled)
+        Toggle("讓 AI 工具讀取會議", isOn: blocked ? .constant(false) : $enabled)
+            .disabled(blocked)
             .onChange(of: enabled) { _, on in
                 outcome = nil
                 if on { try? MCPSetup.installLauncher() }
@@ -21,9 +25,15 @@ struct MCPSettings: View {
                 hasCodex = Paths.locateTool("codex") != nil
                 hasDesktop = MCPSetup.claudeDesktopInstalled
             }
-        Text("Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），拾音不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。")
-            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-        if enabled {
+        Group {
+            if blocked {
+                Text("公司的企業伺服器關掉了這個功能。")
+            } else {
+                Text("Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），拾音不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。")
+            }
+        }
+        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        if enabled && !blocked {
             HStack {
                 Button("加到 Claude Code") { run { await MCPSetup.addToClaudeCode() } }
                     .disabled(busy || !hasClaude)

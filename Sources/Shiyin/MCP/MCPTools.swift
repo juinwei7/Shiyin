@@ -69,6 +69,9 @@ enum MCPTools {
 
     /// 開關、打開資料庫，再叫工具（`Shiyin --mcp` 用）。每次都重新打開：app 這時升級資料庫也不會被舊的連線擋住
     static func run(_ name: String, _ args: [String: Any]) -> Result {
+        guard !EnterpriseServer.mcpBlocked else {
+            return Result(text: "Your company's Shiyin server has turned off reading meetings from AI tools.", isError: true)
+        }
         guard AppSettings.mcpEnabled else {
             return Result(text: "Reading meetings is turned off in Shiyin. Ask the user to turn on \"讓 AI 工具讀取會議 / Let AI tools read meetings (MCP)\" in Shiyin › Settings › Advanced (進階).", isError: true)  // l10n-skip
         }

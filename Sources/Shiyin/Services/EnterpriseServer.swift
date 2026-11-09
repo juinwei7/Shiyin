@@ -10,7 +10,7 @@ final class EnterpriseServer {
     static let shared = EnterpriseServer()
 
     static let urlKey = "enterpriseServerURL"
-    static let accountKey = "enterpriseServerAccount"
+    nonisolated static let accountKey = "enterpriseServerAccount"
     static let keychainAccount = "enterpriseServer"
     /// 這版 app 說的 API 版本（M§36.2）
     static let apiVersion = 1
@@ -31,6 +31,8 @@ final class EnterpriseServer {
         var maxAudioSeconds: Int?
         var transcription: Transcription
         var llm: Bool
+        /// 公司讓不讓 AI 工具讀取會議（本地 MCP，R69.6）；沒有 = 允許
+        var mcp: Bool?
     }
 
     /// 登入的帳號（不含密鑰）
@@ -42,6 +44,15 @@ final class EnterpriseServer {
         var llm: Bool
         /// 伺服器的版本（回報問題用，R52.3）；4.2 以前存的帳號沒有
         var serverVersion: String?
+        /// 公司關掉本地 MCP 時是 false（R69.6）；沒有 = 允許
+        var mcp: Bool?
+    }
+
+    /// 公司的企業伺服器關掉了「讓 AI 工具讀取會議」（R69.6、design §44.1）。直接讀存著的帳號：`Shiyin --mcp` 不建 EnterpriseServer
+    nonisolated static var mcpBlocked: Bool {
+        guard let data = UserDefaults.standard.data(forKey: accountKey),
+              let account = try? JSONDecoder().decode(Account.self, from: data) else { return false }
+        return account.mcp == false
     }
 
     enum Status: Equatable {
@@ -176,6 +187,7 @@ final class EnterpriseServer {
         updated.engine = info.transcription.engine
         updated.llm = info.llm
         updated.serverVersion = info.version
+        updated.mcp = info.mcp
         if updated != current {
             save(updated)
             NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
@@ -259,7 +271,8 @@ final class EnterpriseServer {
         try Keychain.set(Self.keychainAccount, tokens.refreshToken)
         UserDefaults.standard.set(attempt.base.absoluteString, forKey: Self.urlKey)
         let account = Account(email: tokens.email, name: tokens.name, serverName: attempt.info.name,
-                              engine: attempt.info.transcription.engine, llm: attempt.info.llm, serverVersion: attempt.info.version)
+                              engine: attempt.info.transcription.engine, llm: attempt.info.llm, serverVersion: attempt.info.version,
+                              mcp: attempt.info.mcp)
         save(account)
         accessToken = tokens.accessToken
         accessExpires = Date().addingTimeInterval(TimeInterval(tokens.expiresIn) - 60)

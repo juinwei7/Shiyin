@@ -10,9 +10,8 @@
 ## 讓 AI 工具讀取會議：本地 MCP（R69，design §44、design-windows §11.12、D146～D149；2026-11-09 使用者新需求）
 
 - [~] **MCP2 Mac 加到 AI 工具、設定頁、會議連結**（§44.3～§44.5）：程式完成，三個「加到…」用 AX 按過、會議連結、`claude -p` 端到端都驗過（見 commit 訊息）。還差：「複製」選單的兩項貼到別的程式（測試時不蓋掉使用者的剪貼簿）
-- [ ] **MCP3 企業伺服器可以關掉**（R69.6、§44.1）：Mac、Windows 讀 `info` 的 `mcp`
-  - 驗證：本機的伺服器（開發設定）`info` 回 `mcp: false` 時，設定頁的開關不能打開、`tools/call` 回公司關掉了；伺服器加欄位寫進伺服器專案的 tasks
-- [ ] **MCP4 Windows**（design-windows §11.12）
+- [~] **MCP3 企業伺服器可以關掉**（R69.6、§44.1）：Mac 完成（`info`、帳號的 `mcp`），用假帳號驗過設定頁和 MCP 的回覆；Windows 併在 MCP4。還差：伺服器專案的 S13 做好後，Mac、Windows 連本機伺服器（開發設定）走一次：後台關掉 → 重新開啟拾音 → 開關不能打開、`tools/call` 回公司關掉了
+- [ ] **MCP4 Windows**（design-windows §11.12）：含企業伺服器的 `mcp`（MCP3）
   - 驗證：`dotnet test` 比 `mcp/calls.json`；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息；虛擬機：設定頁的按鈕寫對設定檔、`shiyin://open` 跳到時間點、`pack.ps1` 打包的安裝版裡有 `shiyin-mcp.exe` 而且跑得起來
 - [ ] **MCP5 使用說明、官網**（§44.4）：Mac、Windows 的使用說明加「讓 AI 工具讀取會議」，官網的功能列表
   - 驗證：使用說明的視窗看過（中英文）；`node site/build.mjs` 通過
