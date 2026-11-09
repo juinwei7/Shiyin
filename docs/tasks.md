@@ -16,8 +16,10 @@
   - `shiyin://open?meeting=…&t=…`（DEBUG 的控制通道 `OpenLink`）跳到那個時間點
   - `pack.ps1` 打包的安裝版裡有 `shiyin-mcp.exe`、跑得起來（`Setup.exe --silent` 裝好後用 stdin 送 `initialize`、`tools/call`）
   - 裝了 Claude Desktop（MSIX）的 Windows：設定檔寫到 `LocalCache\Roaming\Claude` 之後 Claude Desktop 真的讀得到
-- [ ] **MCP5 使用說明、官網**（§44.4）：Mac、Windows 的使用說明加「讓 AI 工具讀取會議」，官網的功能列表
-  - 驗證：使用說明的視窗看過（中英文）；`node site/build.mjs` 通過
+- [~] **MCP5 使用說明、官網**（§44.4）：Mac、Windows 的使用說明加了「讓 AI 工具讀取會議」，Mac 中英文的視窗看過。還差：
+  - Windows 的使用說明畫面（跟 MCP4 一起在虛擬機看）
+  - 官網（`site/src/content.mjs` 的常見問題、隱私）、README：**發布 4.7 時**跟版本號一起改（推到 main 就會部署官網，不能先改）
+  - 驗證：`node site/build.mjs` 通過
 
 ## 心智圖（R67，design §42、design-windows §11.10、D143～D144；2026-11-05 使用者新需求）
 
