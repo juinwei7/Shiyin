@@ -322,7 +322,7 @@ final class AppModel {
         meetingDetector.start()
         BuiltinTemplates.seed(db)
         // 本地 MCP 的啟動檔指到目前這份拾音（design §44.3）：搬家、更新後 AI 工具的設定不用動
-        if AppSettings.mcpEnabled { try? MCPSetup.installLauncher() }
+        if AppSettings.mcpEnabled { _ = try? MCPSetup.installLauncher() }
         // claude、codex 的登入狀態（design §34.1）：沒登入時不自動整理
         Task { await CLILogin.refreshIfStale() }
         // 企業伺服器：公司在後台加了模型、改了設定，不用重新登入（R51.5）

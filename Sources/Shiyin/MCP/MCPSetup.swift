@@ -94,7 +94,7 @@ enum MCPSetup {
 
     /// 設定頁「複製」選單的兩項：先確定啟動檔在，再放進剪貼簿
     static func copy(_ item: CopyItem) {
-        try? installLauncher()
+        _ = try? installLauncher()
         let text = item == .claudeCodeCommand ? claudeCodeCommand : configJSON
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
