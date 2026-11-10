@@ -22,6 +22,23 @@ enum MCPSetup {
         return lines.joined(separator: "\n") + "\n"
     }
 
+    enum SetupError: LocalizedError {
+        case translocated
+        var errorDescription: String? {
+            switch self {
+            case .translocated: return String(localized: "先把拾音拖進「應用程式」資料夾再打開，AI 工具才找得到它。")
+            }
+        }
+    }
+
+    /// 沒拖進「應用程式」就從 DMG、下載資料夾打開時，macOS 把拾音搬到暫時的路徑（App Translocation），啟動檔不能指過去（design §44.3）
+    static var isTranslocated: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SHIYIN_FAKE_TRANSLOCATED"] == "1" { return true }
+        #endif
+        return Bundle.main.bundlePath.contains("/AppTranslocation/")
+    }
+
     /// 寫啟動檔，內容一樣就不寫。DEBUG 版沒有指定 SHIYIN_HOME 時不寫：不然使用者的 AI 工具會被指到 DEBUG 版
     @discardableResult
     static func installLauncher() throws -> URL {
@@ -29,7 +46,9 @@ enum MCPSetup {
         #if DEBUG
         guard customHome != nil else { throw CocoaError(.featureUnsupported) }
         #endif
+        guard !isTranslocated else { throw SetupError.translocated }
         guard let executable = Bundle.main.executableURL?.path else { throw CocoaError(.fileNoSuchFile) }
+        removeQuarantine(in: Bundle.main.bundleURL)
         let url = launcherURL
         let script = launcherScript(executable: executable, home: customHome)
         if (try? String(contentsOf: url, encoding: .utf8)) != script {
@@ -38,6 +57,25 @@ enum MCPSetup {
         }
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
         return url
+    }
+
+    /// 拿掉 bundle 的隔離屬性（D150）：從網路下載的拾音每個檔案都有 com.apple.quarantine，AI 工具直接執行裡面的執行檔時
+    /// Gatekeeper 會跳出提示、程序卡住。拾音跑得起來就代表使用者放行過。主執行檔沒有隔離屬性就不走整個 bundle（每次啟動都會叫）
+    @discardableResult
+    static func removeQuarantine(in bundle: URL) -> Int {
+        let name = "com.apple.quarantine"
+        let executable = Bundle(url: bundle)?.executableURL ?? bundle
+        guard getxattr(executable.path, name, nil, 0, 0, XATTR_NOFOLLOW) >= 0 else { return 0 }
+        var urls = [bundle]
+        if let items = FileManager.default.enumerator(at: bundle, includingPropertiesForKeys: nil) {
+            for case let url as URL in items { urls.append(url) }
+        }
+        var removed = 0, failed = 0
+        for url in urls where getxattr(url.path, name, nil, 0, 0, XATTR_NOFOLLOW) >= 0 {
+            if removexattr(url.path, name, XATTR_NOFOLLOW) == 0 { removed += 1 } else { failed += 1 }
+        }
+        log.info("mcp: removed quarantine from \(removed) file(s), \(failed) failed")
+        return removed
     }
 
     static func shellQuote(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }

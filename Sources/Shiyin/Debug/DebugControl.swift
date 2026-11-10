@@ -201,6 +201,8 @@ enum DebugControl {
             }
         case "mcpcopy":   // mcpcopy command|json：等於按設定頁「複製」選單的「複製 Claude Code 指令」「複製設定（JSON）」（design §44.6）
             MCPSetup.copy(args.count > 1 && args[1] == "json" ? .configJSON : .claudeCodeCommand)
+        case "unquarantine":   // unquarantine <app 的路徑> <輸出.json>：對那個 bundle 跑拿掉隔離屬性（D150）
+            write(["removed": MCPSetup.removeQuarantine(in: URL(fileURLWithPath: args[1]))], to: args[2])
         case "openlink":   // openlink <shiyin://open?…>：等於點了 AI 工具給的會議連結（design §44.5），不拉到前面
             if let url = URL(string: args[1]), let target = MeetingLink.parse(url) {
                 model.openMeetingLink(target.meetingId, seconds: target.seconds, activate: false)

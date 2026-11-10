@@ -2118,6 +2118,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
   路徑用單引號（裡面的 `'` 寫成 `'\''`）。`SHIYIN_HOME` 是用環境變數指定的，`exec` 前多一行 `export SHIYIN_HOME='…'`。開關打開時、每次啟動（開關開著）時寫，內容一樣就不寫。DEBUG 版沒有指定 `SHIYIN_HOME` 時不寫（不然使用者的 AI 工具會被指到 DEBUG 版）。
 - 設定裡登記的都是啟動檔的路徑：拾音搬家、更新後下次啟動就改寫啟動檔，AI 工具的設定不用動（R69.4）。
+- 拿掉 app 自己的隔離屬性（D150）：從網路下載的 DMG 裝的拾音，每個檔案都帶 `com.apple.quarantine`。AI 工具直接執行裡面的執行檔時，Gatekeeper 會跳出提示等人回應、程序卡住（2026-11-09 實測：DMG 加上隔離屬性、複製出來，用啟動檔執行就是這樣）。寫啟動檔時，主執行檔有隔離屬性就把整個 bundle 的拿掉（`removexattr`；拿不掉照樣寫，只記 log）。拾音跑得起來就代表使用者已經放行過，這只是把放行的結果套用到 AI 工具的執行路徑上。
+- 沒拖進「應用程式」就從 DMG、下載資料夾打開時，macOS 會把拾音搬到暫時的路徑（App Translocation，路徑裡有 `/AppTranslocation/`），啟動檔不能指過去：不寫啟動檔，「加到…」和「複製」回「先把拾音拖進「應用程式」資料夾再打開，AI 工具才找得到它。」。DEBUG：環境變數 `SHIYIN_FAKE_TRANSLOCATED=1` 當成被搬走。
 - 加到 Claude Code：`claude mcp remove --scope user shiyin`（不在也沒關係）再 `claude mcp add --scope user shiyin -- <啟動檔>`。用 `Paths.locateTool("claude")` 和它的環境變數；20 秒逾時。從 Finder 開的拾音沒有使用者 shell 的環境變數，Claude Code 的設定放在別處（`CLAUDE_CONFIG_DIR`）的人要自己用「複製指令」。
 - 加到 Codex：`codex mcp remove shiyin` 再 `codex mcp add shiyin -- <啟動檔>`（`Paths.locateTool("codex")`，含桌面版附的）。
 - 加到 Claude Desktop：`~/Library/Application Support/Claude/claude_desktop_config.json` 讀成 JSON 物件（沒有檔案就是空物件；不是 JSON 物件就報錯、不動檔案），設 `mcpServers.shiyin = {"command": <啟動檔>}`，原檔先複製成 `claude_desktop_config.json.bak`，寫回（排序過的鍵、縮排；其他設定保留，只是鍵的順序會變）。提示「重新開啟 Claude Desktop 後就看得到」。Claude Desktop 沒裝（`/Applications/Claude.app`、`~/Applications/Claude.app` 都沒有）時按鈕不能按。
@@ -2239,5 +2241,6 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D147 | MCP 的協定自己寫（一行一個 JSON-RPC），不用官方的 Swift、C# SDK（§44.1） | 官方 SDK：協定細節（版本協商、通知、取消）不用自己顧，但 Swift 版多帶 swift-log、swift-system 等套件，C# 版要 Microsoft.Extensions.Hosting；這裡只用到五個方法、沒有串流和通知，兩邊各一百多行，回傳的內容又要用標準答案比，協定這層越薄越好 |
 | D148 | Mac 在 `SHIYIN_HOME/bin/shiyin-mcp` 放一個啟動檔，AI 工具登記的都是它，拾音每次啟動時改寫成目前的路徑（§44.3） | 直接登記 app 裡的執行檔：使用者把拾音拖到別的資料夾（例如桌面）後設定就斷了。符號連結指到執行檔：`Bundle.main` 會變成連結所在的資料夾，讀不到 app 的設定（UserDefaults 的網域）。做成 Claude Desktop 的 `.mcpb` 擴充：只有 Claude Desktop 用得到，裡面還是要指到 app 的路徑 |
 | D149 | 工具回傳 Markdown 文字、英文的固定標籤，會議內容照原本的語言（§44.2） | 回 JSON（`structuredContent`）：AI 也讀得懂，但中文內容加上欄位名稱、跳脫字元，長度多三成；會議紀錄本來就有匯出用的 Markdown。標籤跟著介面語言：讀的是 AI，不是人，換介面語言時回傳的內容不該跟著變（標準答案也要多一份） |
+| D150 | 寫本地 MCP 的啟動檔時，拿掉 app 自己的隔離屬性（§44.3；2026-11-09 驗證時發現） | 不處理、靠使用者第一次打開時的放行：放行之後 AI 工具直接執行 bundle 裡的執行檔會不會再被擋，要使用者在系統設定裡輸入密碼按「仍要打開」才驗得到，沒辦法確定；還沒放行時實測會跳出提示、程序卡住，AI 工具只看到逾時。叫使用者自己在終端機跑 `xattr -dr`：一般使用者不會，也不該教他們關掉安全機制。啟動檔改成用 `open -a` 透過 LaunchServices 開：stdio 接不起來 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
