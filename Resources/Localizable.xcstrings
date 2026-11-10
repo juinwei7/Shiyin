@@ -2340,6 +2340,17 @@
         }
       }
     },
+    "先把拾音拖進「應用程式」資料夾再打開，AI 工具才找得到它。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Shiyin to the Applications folder and open it from there first, so AI tools can find it."
+          }
+        }
+      }
+    },
     "先選一場會議，再把文件拖進來": {
       "extractionState": "manual",
       "localizations": {

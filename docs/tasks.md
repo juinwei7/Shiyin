@@ -9,7 +9,9 @@
 
 ## 讓 AI 工具讀取會議：本地 MCP（R69，design §44、design-windows §11.12、D146～D149；2026-11-09 使用者新需求）
 
-- [~] **MCP4 Windows**（design-windows §11.12）：程式完成，虛擬機驗過（2026-11-09，見 commit 訊息）。還差：裝了 Claude Desktop（MSIX）的 Windows 按「加到 Claude Desktop」後，重新開啟 Claude Desktop 看得到 shiyin（虛擬機裡沒有 Claude Desktop，從外部下載安裝程式會被權限擋；寫入的位置照 anthropics/claude-code#26073 回報的 LocalCache\Roaming\Claude）
+- [~] **MCP6 真的 Claude Desktop、Mac 的複製選單**（§44.3、design-windows §11.12）：其他都驗過了（見 commit 訊息），剩下：
+  - Windows：裝了 Claude Desktop（MSIX）的電腦按「加到 Claude Desktop」後，重新開啟看得到 shiyin（虛擬機裡沒有 Claude Desktop，從外部下載安裝程式會被權限擋）
+  - Mac 設定頁的「複製」選單在真的畫面上點（拾音的視窗要在目前的桌面；選單的動作已經用同一段程式驗過，Windows 的選單是真的點過的）
 - [~] **MCP5 使用說明、官網**（§44.4）：Mac、Windows 的使用說明加了「讓 AI 工具讀取會議」，Mac、Windows 中英文的視窗都看過；官網的常見問題（中、英、日）、README（中、英）改好放在 `mcp-site` 分支（`node site/build.mjs` 在乾淨的 worktree 建置過，三頁都有）。還差：
   - **發布 4.7 時**把 `mcp-site` 合進 main（推到 main 就會部署官網，不能先合）
 

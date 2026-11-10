@@ -17,7 +17,10 @@ struct MCPSettings: View {
             .disabled(blocked)
             .onChange(of: enabled) { _, on in
                 outcome = nil
-                if on { try? MCPSetup.installLauncher() }
+                guard on else { return }
+                do { try MCPSetup.installLauncher() } catch let error as MCPSetup.SetupError {
+                    outcome = MCPSetup.Outcome(ok: false, message: error.localizedDescription)
+                } catch {}
             }
             // 進到設定頁時找一次（找 claude、codex 會讀檔案系統，不在每次重畫時做）
             .task {
@@ -81,6 +84,10 @@ struct MCPSettings: View {
     }
 
     private func copy(_ item: MCPSetup.CopyItem) {
+        guard !MCPSetup.isTranslocated else {
+            outcome = MCPSetup.Outcome(ok: false, message: MCPSetup.SetupError.translocated.localizedDescription)
+            return
+        }
         MCPSetup.copy(item)
         outcome = MCPSetup.Outcome(ok: true, message: String(localized: "已複製"))
     }
