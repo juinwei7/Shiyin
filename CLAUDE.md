@@ -144,7 +144,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
 - 設定頁是 `Form`，`shiyinctl snapshot` 畫不出來（一片空白）。 要測按鍵或右鍵時，用 `CGEvent.postToPid(拾音的 pid)` 只送給拾音（不經過最前面的 app）；輸入框和清單的焦點用 AX 的 `AXFocused` 設，不要靠點擊。座標點擊（`click at`）會點到當下最上層的視窗，點之前一定要確認拾音在最前面。測模型下載出錯用 `shiyinctl modelurl <模型> <網址>` 指到本機伺服器。要看真的畫面：把 app 拉到前景（System Events 的 `set frontmost`），用 AX 點 app 自己的選單和按鈕（設定的分頁是 `button "錄音與轉錄" of toolbar 1`；4.1 起設定只有整理工具、錄音與轉錄、說話者與詞彙、進階四頁，design §33.3），再 `screencapture -l <視窗編號>`；螢幕上鎖時截不到。選單裡的選項用 AX 點會寫進共用的 UserDefaults，測完要 `defaults delete`。
 - 示範資料夾的 `models` 是指到正式資料夾（`~/Library/Application Support/Shiyin/models`）的連結：在示範資料夾下載的模型會存進正式資料夾；設定頁的「模型」大小在示範資料夾會顯示 0（不跟著連結算）。
 - `AVAudioFile` 關檔後 `length` 會變 0，不能用它判斷錄了多久（曾經因此刪掉整場錄音）。
-- zsh 內建的 `log` 會蓋掉系統指令，要用 `/usr/bin/log`；zsh 不會依 IFS 切字串；`rm -f *.wav` 沒有符合的檔案時會報錯。
+- zsh 內建的 `log` 會蓋掉系統指令，要用 `/usr/bin/log`；zsh 不會依 IFS 切字串；`rm -f *.wav` 沒有符合的檔案時會報錯；`"$c:refs/heads/main"` 的 `:r` 會被當成變數的修飾符（2026-11-10 推送時參數壞掉），變數後面接冒號要寫 `${c}:`。
 - bash 腳本裡，變數後面緊接全形字時要寫成 `${VAR}`，否則全形字的位元組會被吃進變數名稱。
 - 桌面有 iCloud 同步：短時間內改寫的檔案會冒出「MindMap 2.swift」這種衝突副本（舊內容、沒進 git），Mac 的 SwiftPM、Windows 的 dotnet 都會把它當成程式編進去，重複定義、建置失敗（2026-11-06 同步到虛擬機時才發現）。建置、`sync.sh`、發布前用 `git status` 看有沒有「 2.」結尾的檔案，確認內容是舊版本再刪（虛擬機的 `C:\src` 也要刪，tar 解開不會刪舊檔）。
 - 用腳本做大段替換後，檢查檔案的行數和結尾：曾經因為替換腳本漏接後半段，把整個檔案截斷。
