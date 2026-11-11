@@ -165,6 +165,11 @@ final class Updater {
     // MARK: 安裝
 
     func install(_ manifest: Manifest, model: AppModel) async {
+        // 已經在下載（例如設定頁按了、主視窗的詢問又按一次）就不再下載一次
+        if case .downloading = state { return }
+        if case .installing = state { return }
+        // 從設定頁開始時，主視窗還開著的詢問收起來：開著的 alert 會擋住結束（下載中結束要能問）
+        prompt = nil
         var workDir: URL?
         do {
             guard !model.recorder.isRecording, !model.runner.isBusy else { throw UpdateError.busy }

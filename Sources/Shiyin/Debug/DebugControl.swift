@@ -563,9 +563,8 @@ enum DebugControl {
         case "quitprompt":   // quitprompt <輸出.json>：現在結束拾音的話會問什麼（不真的結束；design §12 的下載中提醒）
             let prompt = AppDelegate.terminationPrompt()
             write(["prompt": prompt != nil, "title": prompt?.title ?? "", "info": prompt?.info ?? ""], to: args[1])
-        case "installupdate":   // 等於在「可以更新了」的對話框按「更新」：先關掉對話框（開著時 app 結束不了，替換會被取消）
+        case "installupdate":   // 等於在設定頁按「下載並更新到」：install 自己會收起主視窗的詢問（開著時 app 結束不了，替換會被取消）
             if case .available(let manifest) = model.updater.state {
-                model.updater.prompt = nil
                 Task { await model.updater.install(manifest, model: model) }
             }
         case "dismissupdate": model.updater.prompt = nil
