@@ -335,6 +335,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   - 有新版時跳出對話框（版本、更新內容），使用者按「下載並更新」才開始。更新內容只列前幾項（`ReleaseNotes.brief`，4.1 起）：tag 的說明是「中文一段、空一行、英文一段」，取介面語言那一段（英文找「Shiyin」開頭的段，中文找「拾音」開頭的）裡「- 」開頭的條目，最多 4 項，其餘寫「……還有 N 項，完整說明在官網。」；沒有條目的說明就列標題以外的行。Windows 同一套（標準答案 `util/release-notes.json`）
   - 安裝流程：錄音中或有工作在跑時拒絕 → 下載 DMG 到 `tmp/` → 驗證 SHA-256 → `hdiutil attach` 唯讀掛載 → 把 Shiyin.app 複製出來 → 卸載 → 用 Security framework 檢查新 app 的簽章有效，而且符合目前這個 app 的 designated requirement（自簽憑證時等於鎖定同一張憑證）→ 寫一個固定內容的小腳本，用參數傳入 PID 和路徑：等 app 結束後把舊 app 改名備份、放進新 app、成功就刪掉備份、失敗就還原，最後重新開啟 → app 結束
   - app 所在的資料夾不能寫入時（一般使用者帳號裝在 /Applications），改成打開下載好的 DMG，請使用者手動拖進去
+  - 下載的進度（4.7.1，R10.6）：用自己的 URLSession 加 `URLSessionDownloadDelegate`（同 ModelStore）拿已下載、總共幾個位元組，存在 `Updater.progress`；百分比變了、或離上次更新超過 1 秒才更新（避免整個視窗一直重排）。主視窗下方（短暫提示的同一個位置，在它上面）一條常駐的提示「正在下載 4.7.1　45%（13 / 30 MB）・下載好會自動重新開啟」加進度條，下載完換成「正在準備安裝…」；設定「進階」的更新那一行同樣的字加進度條。不知道總共多大時只寫已下載幾 MB、進度條不定。下載中結束拾音（`applicationShouldTerminate`）先問「更新還在下載，要結束拾音嗎？」（結束的話下載中斷，之後再按一次就好）；更新器自己在下載完、替換前結束 app 時狀態是「準備安裝」，不會問
   - 從網路下載的檔案不會被加上 quarantine（app 沒有開 `LSFileQuarantineEnabled`），所以替換後打開不會再被 Gatekeeper 擋
 - CI 打包（GitHub Actions，`.github/workflows/release.yml`）：
   - 推 `v*` 的 tag：在 `macos-26`（Apple Silicon、Xcode 26）上跑 `make-dmg.sh`，產出 DMG 和 `shiyin-update.json`，建立 GitHub Release 並上傳；tag 跟 `Info.plist` 的版本號不一致時直接失敗。tag 的說明文字當成更新內容
