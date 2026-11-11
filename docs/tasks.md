@@ -9,8 +9,6 @@
 
 ## 更新下載的進度（R10.6，design §12、design-windows §14.2；2026-11-11 使用者按了更新、網路慢看不到動靜）
 
-- [ ] **UP1 Mac**：下載進度存在 `Updater.progress`，主視窗下方的提示條、設定「進階」顯示百分比和 MB，下載中結束先問
-  - 驗證：`make-update-fixtures.sh` 的更新檔放在限速的本機伺服器，DEBUG 版 `setupdateurl`、`installupdate`：主視窗截圖看得到進度一直往上，`state` 的 updater 進度跟伺服器送出的位元組對得上；下載中 `quit` 會問；下載完正常替換、重新開啟
 - [ ] **UP2 Windows**：側欄底部、設定「進階」顯示百分比，下載中結束先問
   - 驗證：`dotnet test`；虛擬機用 `pack.ps1 -UpdateTest` 兩個版本、限速的本機伺服器，截圖看得到進度；下載中結束會問
 

@@ -57,6 +57,38 @@ final class Updater {
     /// 有新版時要問使用者（主視窗會跳出對話框）
     var prompt: Manifest?
 
+    /// 下載的進度（design §12，4.7.1）：網路慢的時候要看得出來還在下載
+    struct Progress: Equatable {
+        var version: String
+        var received: Int64
+        /// 不知道總共多大時是 0
+        var total: Int64
+
+        var fraction: Double? { total > 0 ? min(1, Double(received) / Double(total)) : nil }
+        var percent: Int { Int((fraction ?? 0) * 100) }
+
+        /// 「正在下載 4.7.1　45%（13.2 MB / 30.5 MB）」
+        var text: String {
+            let received = ByteCountFormatter.string(fromByteCount: self.received, countStyle: .file)
+            guard total > 0 else { return String(localized: "正在下載 \(version)　已下載 \(received)") }
+            let total = ByteCountFormatter.string(fromByteCount: self.total, countStyle: .file)
+            return String(localized: "正在下載 \(version)　\(percent)%（\(received) / \(total)）")
+        }
+    }
+
+    private(set) var progress: Progress?
+    @ObservationIgnored private var progressUpdated = Date.distantPast
+
+    /// 百分比變了、或離上次超過 1 秒才更新：一直變的屬性會讓整個視窗重排（CLAUDE.md 錄音中的效能）
+    private func report(_ received: Int64, _ total: Int64) {
+        guard var current = progress else { return }
+        let next = Progress(version: current.version, received: received, total: total)
+        guard next.percent != current.percent || Date().timeIntervalSince(progressUpdated) >= 1 || next.total != current.total else { return }
+        current = next
+        progress = current
+        progressUpdated = Date()
+    }
+
     static var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
     }
@@ -141,13 +173,16 @@ final class Updater {
             let dmgURL = try Self.validated(URL(string: manifest.url, relativeTo: feed)?.absoluteURL)
 
             state = .downloading
+            progress = Progress(version: manifest.version, received: 0, total: 0)
+            progressUpdated = .distantPast
             let work = try Paths.makeTempDirectory()
             workDir = work
-            let (downloaded, response) = try await URLSession.shared.download(from: dmgURL)
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            guard code == 200 else { throw UpdateError.http(code) }
             let dmg = work.appendingPathComponent("update.dmg")
-            try FileManager.default.moveItem(at: downloaded, to: dmg)
+            let code = try await UpdateDownloader(destination: dmg) { received, total in
+                Task { @MainActor [weak self] in self?.report(received, total) }
+            }.run(dmgURL)
+            progress = nil
+            guard code == 200 else { throw UpdateError.http(code) }
             let hash = try await Task.detached { try ModelStore.sha256(dmg) }.value
             guard hash == manifest.sha256.lowercased() else { throw UpdateError.checksum }
 
@@ -173,6 +208,7 @@ final class Updater {
             try? FileManager.default.removeItem(at: work)
             state = .failed(String(localized: "已取消更新，舊版沒有改動"))
         } catch {
+            progress = nil
             // 失敗時把下載和解出來的檔案都刪掉，舊版完全不受影響
             if let workDir { try? FileManager.default.removeItem(at: workDir) }
             state = .failed(error.localizedDescription)
@@ -254,5 +290,54 @@ final class Updater {
         process.standardError = FileHandle.nullDevice
         try process.run()
         return process
+    }
+}
+
+/// 下載更新的 DMG（design §12，4.7.1）：自己的 URLSession 加 delegate 才拿得到進度（同 ModelStore）。回傳 HTTP 狀態碼
+private final class UpdateDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let destination: URL
+    private let onProgress: @Sendable (Int64, Int64) -> Void
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Int, Error>?
+    private var status = 0
+    private var moveError: Error?
+
+    init(destination: URL, onProgress: @escaping @Sendable (Int64, Int64) -> Void) {
+        self.destination = destination
+        self.onProgress = onProgress
+    }
+
+    func run(_ url: URL) async throws -> Int {
+        let session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.withLock { self.continuation = continuation }
+                session.downloadTask(with: url).resume()
+            }
+        } onCancel: {
+            session.invalidateAndCancel()
+        }
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
+                    totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        onProgress(totalBytesWritten, max(0, totalBytesExpectedToWrite))
+    }
+
+    /// 暫存檔在這個方法回傳後就會被刪掉，要在這裡搬走
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        let code = (downloadTask.response as? HTTPURLResponse)?.statusCode ?? 0
+        let error: Error?
+        do { try FileManager.default.moveItem(at: location, to: destination); error = nil } catch let e { error = e }
+        lock.withLock { status = code; moveError = error }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let (continuation, status, moveError) = lock.withLock { () -> (CheckedContinuation<Int, Error>?, Int, Error?) in
+            defer { self.continuation = nil }
+            return (self.continuation, self.status, self.moveError)
+        }
+        if let error = error ?? moveError { continuation?.resume(throwing: error) } else { continuation?.resume(returning: status) }
     }
 }
