@@ -555,6 +555,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
   - app 內建公鑰；下載新版後、套用前驗證簽章、版本比目前新、套件的 SHA-256 相符，不符就刪掉下載的檔案、拒絕更新
   - 等於 Mac 的「新版要跟目前的 app 同一個簽章身分」（M§12）
 - 有 Authenticode 簽章（SignPath）之後，加檢查「新版的簽署者跟目前的相同」。
+- 下載的進度（4.7.1，R10.6、M§12）：Velopack 的下載回呼給百分比（`State.Downloading(Percent)`），沒有位元組數，所以只寫百分比。主視窗側欄底部（同模型下載）「正在下載更新 45%」加進度條；設定「進階」的更新那一行寫「正在下載更新 45%…」加進度條。下載中結束拾音（`App.Quit`）先問「更新還在下載，要結束拾音嗎？」
 - 檢查時機、錄音或工作中不能更新、資料庫自動遷移同 M§12。Windows 的麥克風權限跟著「桌面 app」整體，不綁 app 的版本，更新後不用重新允許（R10.7，要在有麥克風的電腦上確認）。沒有更新金鑰的 DEBUG 版不檢查。
 - 測試更新：`pack.ps1 -UpdateTest` 建的版本（編譯時加 `UPDATE_TEST`，發布的版本不會有）改從環境變數 `SHIYIN_UPDATE_SOURCE`（Velopack 的 SimpleWebSource，更新說明也從這裡讀）、`SHIYIN_UPDATE_PUBLIC_KEY` 讀更新來源和公鑰。用測試金鑰打包兩個版本，Mac 上開本機伺服器、`ssh -R` 讓虛擬機連進來。
 
