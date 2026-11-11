@@ -135,6 +135,8 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         if (host.Updater is { } updater) updater.Changed += () => host.Post(() =>
         {
             if (updater.Current is Updater.State.Available a) _ = AskToUpdate(a.Version, a.Notes);
+            // 從設定頁開始下載時，主視窗還開著的詢問收起來：同時只能開一個 ContentDialog，開著的話結束時的確認出不來
+            else if (updater.Current is Updater.State.Downloading or Updater.State.Installing) askDialog?.Hide();
         });
     }
 
@@ -300,9 +302,11 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         prompt.Show();
     }
 
+    ContentDialog? askDialog;
+
     async Task AskToUpdate(string version, string? notes)
     {
-        if (main?.XamlRoot is null || host?.Updater is not { } updater) return;
+        if (main?.XamlRoot is null || host?.Updater is not { } updater || askDialog is not null) return;
         // 更新內容只列前幾項（R10.6、M§12）：tag 的說明中英各一段、每段好幾條，整段放進對話框太長
         var (items, more) = ReleaseNotes.Brief(notes ?? "", L.English);
         var brief = string.Join("\n", items.Select(i => "• " + i).Concat(more > 0 ? [L.F("……還有 %lld 項，完整說明在官網。", more)] : []));
@@ -311,7 +315,10 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         {
             XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(L.F("拾音 %@ 可以更新了", version)), Content = Ui.Text(text), PrimaryButtonText = L.T("下載並更新"), CloseButtonText = L.T("稍後"),
         };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        askDialog = dialog;
+        var result = await dialog.ShowAsync();
+        askDialog = null;
+        if (result != ContentDialogResult.Primary) return;
         main.ShowNotice(L.T("正在下載更新，完成後拾音會自動重新打開"));
         if (await updater.Install(version) is { } reason) main.ShowError(L.F("更新失敗：%@", reason));
     }
@@ -418,21 +425,25 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         return menu;
     }
 
-    /// <summary>錄音中或有工作在跑時先確認（R11.7、R13.4）；結束前讓編輯器存草稿（M§21.15）</summary>
+    /// <summary>錄音中、有工作在跑、更新還在下載時先確認（R11.7、R13.4、R10.6）；結束前讓編輯器存草稿（M§21.15）</summary>
     public async Task Quit(bool confirmed = false)
     {
         if (host is null) { Exit(); return; }
         var recording = host.Recorder.IsRecording;
         var busy = host.Runner.IsBusy;
-        if ((recording || busy) && !confirmed && main?.XamlRoot is not null)
+        // 更新下載中（R10.6）：下載好之後的「準備安裝」是更新器自己要結束重開，不問
+        var updating = host.Updater?.Current is Updater.State.Downloading;
+        if ((recording || busy || updating) && !confirmed && main?.XamlRoot is not null)
         {
             ShowMain();
             var info = new List<string>();
             if (recording) info.Add(L.T("錄音會先存好，下次開啟拾音時開始轉錄。"));
             if (busy) info.Add(L.T("進行中的轉錄或整理會中斷，下次開啟時從頭重跑。"));
+            if (updating) info.Add(L.T("更新的下載會中斷，之後再按一次「下載並更新」就好。"));
+            var title = recording ? L.T("正在錄音，要結束拾音嗎？") : busy ? L.T("還有工作在進行，要結束拾音嗎？") : L.T("更新還在下載，要結束拾音嗎？");
             var dialog = new ContentDialog
             {
-                XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(recording ? L.T("正在錄音，要結束拾音嗎？") : L.T("還有工作在進行，要結束拾音嗎？")),
+                XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(title),
                 Content = string.Join("\n", info), PrimaryButtonText = L.T("結束"), CloseButtonText = L.T("取消"),
             };
             if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;

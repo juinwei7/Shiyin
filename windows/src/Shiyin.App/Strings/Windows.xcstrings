@@ -1399,6 +1399,28 @@
         }
       }
     },
+    "正在下載更新 %lld%%": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading update %lld%%"
+          }
+        }
+      }
+    },
+    "正在下載更新 %lld%%…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading update %lld%%…"
+          }
+        }
+      }
+    },
     "正在檢查顯示卡。": {
       "extractionState": "manual",
       "localizations": {

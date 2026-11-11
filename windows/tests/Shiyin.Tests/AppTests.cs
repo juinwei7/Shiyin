@@ -374,15 +374,21 @@ public sealed class AppTests : IDisposable
 
     // MARK: 更新
 
-    sealed class FakeUpdates(string version, Dictionary<string, string> files, byte[] manifest, string signature) : IUpdatePlatform
+    sealed class FakeUpdates(string version, Dictionary<string, string> files, byte[] manifest, string signature, int[]? progressSteps = null, Task? gate = null) : IUpdatePlatform
     {
+        public int Downloads { get; private set; }
         public string CurrentVersion => "3.6.0";
         public string Arch => "x64";
         public bool Applied { get; private set; }
         public bool Deleted { get; private set; }
         public Task<(string Version, string? Notes)?> Check(CancellationToken cancel) => Task.FromResult<(string, string?)?>((version, "說明"));
-        public Task<IReadOnlyDictionary<string, string>> Download(string v, Action<int> progress, CancellationToken cancel) =>
-            Task.FromResult<IReadOnlyDictionary<string, string>>(files);
+        public async Task<IReadOnlyDictionary<string, string>> Download(string v, Action<int> progress, CancellationToken cancel)
+        {
+            Downloads++;
+            foreach (var p in progressSteps ?? []) progress(p);
+            if (gate is not null) await gate;
+            return files;
+        }
         public Task<(byte[] Manifest, string Signature)> FetchManifest(string v, CancellationToken cancel) => Task.FromResult((manifest, signature));
         public void DeleteDownloads(string v) => Deleted = true;
         public void ApplyAndRestart(string v) => Applied = true;
@@ -419,6 +425,28 @@ public sealed class AppTests : IDisposable
         Assert.True(Updater.IsNewer("3.6.10", "3.6.9"));
         Assert.False(Updater.IsNewer("3.6", "3.6.0"));
         Assert.Null(UpdateManifest.Parse(Encoding.UTF8.GetBytes("""{"version":"1","arch":"x64","files":[{"name":"../x","size":1,"sha256":"a"}]}""")));
+    }
+
+    [Fact]
+    public async Task UpdateDownloadReportsEachPercentOnce()
+    {
+        // Velopack 的回呼同一個百分比會來好幾次：變了才通知（R10.6、design-windows §14.2）
+        var platform = new FakeUpdates("3.6.1", [], [], "", [0, 0, 10, 10, 10, 45, 100, 100]);
+        var updater = new Updater(platform, UpdateSignature.Generate().Public, AppSettings.InMemory(), () => false);
+        var seen = new List<string>();
+        updater.Changed += () => seen.Add(updater.Current is Updater.State.Downloading ? updater.Current.Label : updater.Current.GetType().Name);
+        await updater.Install("3.6.1");
+        Assert.Equal(["正在下載更新 0%…", "正在下載更新 10%…", "正在下載更新 45%…", "正在下載更新 100%…", "Installing", "Failed"], seen);
+
+        // 下載中再按一次（設定頁和主視窗的詢問各按一次）不會再下載一次
+        var gate = new TaskCompletionSource();
+        var slow = new FakeUpdates("3.6.1", [], [], "", [5], gate.Task);
+        var second = new Updater(slow, UpdateSignature.Generate().Public, AppSettings.InMemory(), () => false);
+        var first = second.Install("3.6.1");
+        Assert.Null(await second.Install("3.6.1"));
+        gate.SetResult();
+        await first;
+        Assert.Equal(1, slow.Downloads);
     }
 
     // MARK: 提問、回報問題

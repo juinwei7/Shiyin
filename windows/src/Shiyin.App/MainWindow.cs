@@ -91,6 +91,8 @@ public sealed class MainWindow : Window
         host.Controller.Error += m => host.Post(() => ShowError(m));
         host.Controller.Reveal += id => host.Post(() => Reveal(id));
         host.Recorder.Changed += () => host.Post(ShowRecorderAlerts);
+        // 更新下載的進度只重畫側欄底部（R10.6）
+        if (host.Updater is { } updater) updater.Changed += () => host.Post(BuildFooter);
         toastTimer.Tick += (_, _) => { toast.IsOpen = false; toastTimer.Stop(); };
         // 換深淺色：列表的顏色是建列時給的，要重建
         root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); listSignature = null; Refresh(); };
@@ -528,6 +530,12 @@ public sealed class MainWindow : Window
             if (host.Models.StateOf(model) is ModelStore.State.Downloading { Total: > 0 } d)
                 footer.Children.Add(Ui.Column(2, Ui.Text(L.F("正在下載%@", ModelStore.Info(model).Name), 12, color: Ui.Secondary, maxLines: 1),
                     new ProgressBar { Maximum = d.Total, Value = d.Received }));
+        // 更新下載中（R10.6、design-windows §14.2）：Velopack 只給百分比；下載好、驗證、套用前是「正在準備安裝」
+        if (host.Updater?.Current is Updater.State.Downloading u)
+            footer.Children.Add(Ui.Column(2, Ui.Text(L.F("正在下載更新 %lld%%", (long)u.Percent), 12, color: Ui.Secondary, maxLines: 1),
+                new ProgressBar { Maximum = 100, Value = u.Percent }));
+        else if (host.Updater?.Current is Updater.State.Installing)
+            footer.Children.Add(Ui.Row(8, new ProgressRing { Width = 16, Height = 16, IsActive = true }, Ui.Text(L.T("正在準備安裝…"), 13, color: Ui.Secondary)));
         var trash = Ui.Link(State.ShowTrash ? L.T("回到所有會議") : L.F("垃圾桶（%lld）", State.Trash.Count), () => State.ToggleTrash());
         var import = State.ShowTrash ? null : Ui.Link(L.T("匯入"), () => _ = PickAndImport());
         if (import is not null) ToolTipService.SetToolTip(import, L.T("匯入錄音、影片、逐字稿或 .shiyin 封包（Ctrl+O）"));

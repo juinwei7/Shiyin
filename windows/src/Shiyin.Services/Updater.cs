@@ -119,7 +119,7 @@ public sealed class Updater(IUpdatePlatform platform, string publicKeyPem, AppSe
             Checking => L.T("正在檢查…"),
             UpToDate => L.T("已是最新版本"),
             Available a => L.F("有新版本 %@", a.Version),
-            Downloading => L.T("正在下載更新…"),
+            Downloading d => L.F("正在下載更新 %lld%%…", (long)d.Percent),
             Installing => L.T("正在準備安裝…"),
             Failed f => f.Reason,
             _ => "",
@@ -187,12 +187,15 @@ public sealed class Updater(IUpdatePlatform platform, string publicKeyPem, AppSe
     /// <summary>下載、驗證、套用。失敗回傳原因（也會寫進 Current）；成功時 app 會結束重開，不會回來</summary>
     public async Task<string?> Install(string version, CancellationToken cancel = default)
     {
+        // 已經在下載（例如設定頁按了、主視窗的詢問又按一次）就不再下載一次
+        if (Current is State.Downloading or State.Installing) return null;
         try
         {
             if (busy()) throw new UpdateException(L.T("錄音或轉錄、整理進行中，完成後再更新"));
             if (!IsNewer(version, platform.CurrentVersion)) throw new UpdateException(L.T("更新檔的版本沒有比較新"));
             Set(new State.Downloading(0));
-            var files = await platform.Download(version, p => Set(new State.Downloading(p)), cancel);
+            // Velopack 的回呼同一個百分比會來好幾次：變了才通知，畫面不用一直重畫（R10.6）
+            var files = await platform.Download(version, p => { if (Current != new State.Downloading(p)) Set(new State.Downloading(p)); }, cancel);
             Set(new State.Installing());
             var (manifestBytes, signature) = await platform.FetchManifest(version, cancel);
             await Verify(manifestBytes, signature, version, files, cancel);

@@ -1,5 +1,8 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Shiyin.Data;
 using Shiyin.LLM;
 using Shiyin.Localization;
@@ -53,6 +56,8 @@ public sealed class SettingsWindow : Window
         // 企業伺服器的登入狀態變了（登入、失效、登出）
         host.Enterprise.Changed += () => host.Post(() => { if (current is "advanced" or "provider" or "recording") Show(); });
         host.Enterprise.Glossary.Changed += () => host.Post(() => { if (current is "names") Show(); });
+        // 更新的進度、結果：只重畫更新那一塊（整頁重畫會捲回頂端）
+        if (host.Updater is { } updater) updater.Changed += () => host.Post(() => { if (current == "advanced") FillUpdate(updater); });
         Show();
     }
 
@@ -79,6 +84,55 @@ public sealed class SettingsWindow : Window
     AppSettings S => host.Settings;
 
     static TextBlock Note(string text) => Ui.Text(text, 12, color: Ui.Secondary);
+
+    StackPanel? updateRows;
+    TextBlock? updateLabel;
+    ProgressBar? updateBar;
+
+    /// <summary>「進階」的更新那一行：狀態、檢查、下載並更新；下載中加進度條（R10.6、design-windows §14.2，Velopack 只給百分比）</summary>
+    void FillUpdate(Updater updater)
+    {
+        if (updateRows is null) return;
+        // 下載中只換百分比：整行重畫的話，焦點會跳到下面的開關（再按空白鍵就改到設定）
+        if (updater.Current is Updater.State.Downloading d && updateBar is { IsIndeterminate: false } && updateLabel is not null)
+        {
+            updateLabel.Text = d.Label;
+            updateBar.Value = d.Percent;
+            if (updateBar.IsTabStop) AutomationProperties.SetName(updateBar, d.Label);
+            return;
+        }
+        // 第一次畫（Advanced() 裡）還沒放進視窗，XamlRoot 是 null：GetFocusedElement(null) 會丟例外，整頁打不開
+        var hadFocus = updateRows.XamlRoot is { } root && FocusManager.GetFocusedElement(root) is DependencyObject focused && Inside(focused, updateRows);
+        updateRows.Children.Clear();
+        updateLabel = Ui.Text(updater.Current.Label, 13, color: updater.Current is Updater.State.Failed ? Ui.Danger : Ui.Secondary);
+        var check = Ui.Button(L.T("檢查更新"), () => _ = updater.Check(userInitiated: true));
+        check.IsEnabled = updater.Current is not (Updater.State.Downloading or Updater.State.Installing);
+        var row = Ui.Row(10, check, updateLabel);
+        if (updater.Current is Updater.State.Available a)
+            row.Children.Insert(1, Ui.Button(L.F("下載並更新到 %@", a.Version), () => _ = updater.Install(a.Version), accent: true));
+        updateRows.Children.Add(row);
+        updateBar = updater.Current switch
+        {
+            Updater.State.Downloading p => new ProgressBar { Maximum = 100, Value = p.Percent },
+            Updater.State.Installing => new ProgressBar { IsIndeterminate = true },
+            _ => null,
+        };
+        if (updateBar is not null) updateRows.Children.Add(updateBar);
+        // 按「下載並更新到」之後那顆按鈕不見了：焦點留在這一行（進度條），不要掉到別的設定
+        if (!hadFocus) return;
+        Control? target = check.IsEnabled ? check : updateBar;
+        if (target is null) return;
+        target.IsTabStop = true;
+        AutomationProperties.SetName(target, updater.Current.Label);
+        target.Focus(FocusState.Programmatic);
+    }
+
+    static bool Inside(DependencyObject element, DependencyObject container)
+    {
+        for (var e = element; e is not null; e = VisualTreeHelper.GetParent(e))
+            if (e == container) return true;
+        return false;
+    }
 
     /// <summary>不跟著「正式轉錄」設定的語言（M§41.3）：「日文和韓文會議改用 Whisper large-v3-turbo（574 MB）。廣東話會議一律用 Qwen3-ASR。」</summary>
     static string OtherEngines()
@@ -787,13 +841,9 @@ public sealed class SettingsWindow : Window
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));
         if (host.Updater is { } updater)
         {
-            var label = Ui.Text(updater.Current.Label, 13, color: updater.Current is Updater.State.Failed ? Ui.Danger : Ui.Secondary);
-            var check = Ui.Button(L.T("檢查更新"), () => { });
-            check.Click += async (_, _) => { await updater.Check(userInitiated: true); Show(); };
-            var row = Ui.Row(10, check, label);
-            if (updater.Current is Updater.State.Available a)
-                row.Children.Insert(1, Ui.Button(L.F("下載並更新到 %@", a.Version), async () => { await updater.Install(a.Version); Show(); }, accent: true));
-            update.Children.Add(row);
+            (updateRows, updateLabel, updateBar) = (Ui.Column(8), null, null);
+            FillUpdate(updater);
+            update.Children.Add(updateRows);
         }
         else update.Children.Add(Note(L.T("這個版本沒有更新金鑰（開發版），不會檢查更新。")));
         column.Children.Add(Section(L.T("更新"), update));
