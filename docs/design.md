@@ -796,6 +796,7 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 - 跨會議：工具列「提問」按鈕打開「問所有會議」視窗，範圍可選「所有會議／目前的資料夾／最近 30 天」。兩步：
   1. 請整理工具從問題抽出 3～8 個搜尋關鍵詞（含同義詞、中英寫法），輸出 `{"keywords":[…]}`。
   2. 每個關鍵詞用現有的全文搜尋找段落，依命中數和日期挑最多 8 場會議；每場帶會議紀錄的摘要和決議、命中段落和前後各一段，總長上限 40,000 字。請整理工具回答，輸出 `{"answer":"…","citations":[{"meetingId":12,"time":"12:30","quote":"…"}]}`。找不到相關會議就直接說找不到，不呼叫第二步。
+- 解析回答時缺的欄位用預設值（2026-11-11 使用者用 Anthropic API 提問時遇到：模型不一定照 schema 填，少一個欄位就整個失敗，訊息還寫成「會議紀錄格式不正確」）：只有缺 `answer`（或不是字串）才算失敗；`found` 沒有、不是布林時看有沒有出處；`citations` 沒有、不是陣列時當成空的；出處不是物件的略過，`time`、`quote` 沒有或是 null 時當成空字串（之後照舊由 `validate` 丟掉用不到的）。Mac、Windows 同一套（標準答案 `util/answer-decode.json`）。解析失敗的訊息是「回傳的回答格式不正確：…」（`LLMError.badAnswer`），不說會議紀錄。
 - 問答存在 `questions`；`answer` 存 JSON。回答裡的時間點、會議都可以點。
 - 用設定的整理工具（`LLMClient.generateJSON`，新的 `OutputFormat`）。CLI 可以結束子程序、API 可以取消 Task（§21.14）。不排進工作佇列（使用者在等），同時只問一題。
 - 提示詞新寫（`Notes/AskPrompt.swift`），要求只根據提供的內容回答、每個重點附時間點、找不到就說沒提到。

@@ -3554,6 +3554,17 @@
         }
       }
     },
+    "回傳的回答格式不正確：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The answer came back in the wrong format: %@"
+          }
+        }
+      }
+    },
     "回傳的會議紀錄格式不正確：%@": {
       "extractionState": "manual",
       "localizations": {

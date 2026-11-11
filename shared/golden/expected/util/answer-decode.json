@@ -1,0 +1,12 @@
+[
+  "{\"answer\":\"完整的回答\",\"citations\":[{\"quote\":\"原話\",\"time\":\"01:05\"}],\"found\":true}",
+  "{\"answer\":\"沒有 found\",\"citations\":[{\"quote\":\"有出處\",\"time\":\"02:10\"}],\"found\":true}",
+  "{\"answer\":\"沒有 found 也沒有出處\",\"citations\":[],\"found\":false}",
+  "{\"answer\":\"citations 是 null\",\"citations\":[],\"found\":true}",
+  "{\"answer\":\"citations 不是陣列\",\"citations\":[],\"found\":false}",
+  "{\"answer\":\"出處缺欄位\",\"citations\":[{\"quote\":\"\",\"time\":\"03:00\"},{\"quote\":\"只有原話\",\"time\":\"\"},{\"quote\":\"time 是 null\",\"time\":\"\"},{\"meetingId\":12,\"quote\":\"跨會議\",\"time\":\"04:00\"}],\"found\":true}",
+  "{\"answer\":\"found 是字串\",\"citations\":[],\"found\":false}",
+  null,
+  null,
+  null
+]

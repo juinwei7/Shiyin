@@ -182,7 +182,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         LLMException { Kind: LLMErrorKind.Rejected } => "keyRejected",
         LLMException { Kind: LLMErrorKind.Limited } => "limited",
         LLMException { Kind: LLMErrorKind.Unreachable } => "unreachable",
-        LLMException { Kind: LLMErrorKind.BadOutput } => "badOutput",
+        LLMException { Kind: LLMErrorKind.BadOutput or LLMErrorKind.BadAnswer } => "badOutput",
         TimeoutException => "timeout",
         _ => "other",
     };

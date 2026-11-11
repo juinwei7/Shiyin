@@ -79,6 +79,8 @@ enum LLMError: LocalizedError {
     case notConfigured(String)
     case failed(String)
     case badOutput(String)
+    /// 提問的回答格式不對（design §21.8）：不說「會議紀錄」
+    case badAnswer(String)
 
     var errorDescription: String? {
         switch self {
@@ -102,6 +104,7 @@ enum LLMError: LocalizedError {
         case .missingKey(let name): return String(localized: "還沒有填 \(name) 的 API key，請到設定 → 整理工具填寫")
         case .rejected(let detail), .limited(let detail), .unreachable(let detail), .notConfigured(let detail), .failed(let detail): return detail
         case .badOutput(let detail): return String(localized: "回傳的會議紀錄格式不正確：\(detail)")
+        case .badAnswer(let detail): return String(localized: "回傳的回答格式不正確：\(detail)")
         }
     }
 
@@ -109,7 +112,7 @@ enum LLMError: LocalizedError {
     var isSetupProblem: Bool {
         switch self {
         case .notInstalled, .notLoggedIn, .missingKey, .rejected, .notConfigured: return true
-        case .limited, .unreachable, .failed, .badOutput: return false
+        case .limited, .unreachable, .failed, .badOutput, .badAnswer: return false
         }
     }
 
@@ -175,6 +178,7 @@ extension Error {
             case .notConfigured: return "LLMError.notConfigured"
             case .failed: return "LLMError.failed"
             case .badOutput: return "LLMError.badOutput"
+            case .badAnswer: return "LLMError.badAnswer"
             }
         }
         let error = self as NSError
