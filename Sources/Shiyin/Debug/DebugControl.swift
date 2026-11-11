@@ -560,8 +560,14 @@ enum DebugControl {
         // 更新（R10.6）
         case "setupdateurl": UserDefaults.standard.set(args.count > 1 && args[1] != "-" ? args[1] : nil, forKey: Updater.urlKey)
         case "checkupdate": Task { await model.updater.check(userInitiated: true) }
-        case "installupdate":
-            if case .available(let manifest) = model.updater.state { Task { await model.updater.install(manifest, model: model) } }
+        case "quitprompt":   // quitprompt <輸出.json>：現在結束拾音的話會問什麼（不真的結束；design §12 的下載中提醒）
+            let prompt = AppDelegate.terminationPrompt()
+            write(["prompt": prompt != nil, "title": prompt?.title ?? "", "info": prompt?.info ?? ""], to: args[1])
+        case "installupdate":   // 等於在「可以更新了」的對話框按「更新」：先關掉對話框（開著時 app 結束不了，替換會被取消）
+            if case .available(let manifest) = model.updater.state {
+                model.updater.prompt = nil
+                Task { await model.updater.install(manifest, model: model) }
+            }
         case "dismissupdate": model.updater.prompt = nil
         // 匿名使用統計（design §30.7）：DEBUG 版只在這裡設了網址才累計、送出
         case "usageurl":   // usageurl <網址|off>：只在記憶體設統計網址
@@ -743,6 +749,8 @@ enum DebugControl {
             "folders": model.folders.map { ["name": $0.name, "count": $0.count] },
             "folderFilter": model.folderFilter ?? "",
             "update": ["state": model.updater.state.label, "prompt": model.updater.prompt?.version ?? "",
+                       "received": model.updater.progress?.received ?? -1, "total": model.updater.progress?.total ?? -1,
+                       "progressText": model.updater.progress?.text ?? "",
                        "version": Updater.currentVersion, "feed": Updater.feedURLString],
             "hotkey": ["registered": GlobalHotKey.shared.isRegistered, "status": Int(GlobalHotKey.shared.status),
                        "bookmarkRegistered": GlobalHotKey.shared.isBookmarkRegistered],

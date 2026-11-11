@@ -1025,10 +1025,14 @@ struct AdvancedSettings: View {
                         Button("下載並更新到 \(manifest.version)") { Task { await model.updater.install(manifest, model: model) } }
                             .buttonStyle(.borderedProminent)
                     }
-                    Text(model.updater.state.label)
+                    Text(model.updater.progress?.text ?? model.updater.state.label)
                         .font(.callout)
                         .foregroundStyle(isFailure ? .red : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                // 下載的進度（design §12，4.7.1）
+                if let progress = model.updater.progress {
+                    if let fraction = progress.fraction { ProgressView(value: fraction).tint(.signal) } else { ProgressView().progressViewStyle(.linear) }
                 }
             }
             Section("環境檢查") {
