@@ -195,6 +195,21 @@ public class UtilTests
         Assert.Equal(vector, Voiceprint.Vector(Convert.FromBase64String(data.Str("base64")!)));
     }
 
+    /// <summary>提問的回答解析（M§21.8）：缺欄位用預設值，只有沒有 answer 才失敗，跟 Mac 的 util/answer-decode.json 逐字比</summary>
+    [Fact]
+    public void DecodeAnswerLeniently()
+    {
+        var expected = Golden.ExpectedJson("util/answer-decode.json").EnumerateArray().ToList();
+        var cases = Golden.Fixtures.GetProperty("answerDecodeCases").EnumerateArray().ToList();
+        Assert.Equal(expected.Count, cases.Count);
+        for (var i = 0; i < cases.Count; i++)
+        {
+            var decoded = AskPrompt.Answer.Decode(cases[i].GetRawText());
+            if (expected[i].ValueKind == System.Text.Json.JsonValueKind.Null) Assert.True(decoded is null, $"answerDecodeCases[{i}]");
+            else Assert.Equal(expected[i].GetString(), decoded?.JsonString());
+        }
+    }
+
     [Fact]
     public void ValidateModelOutput()
     {

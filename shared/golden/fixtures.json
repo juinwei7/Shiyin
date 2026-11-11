@@ -3036,5 +3036,79 @@
     "name": "no_such_tool"
    }
   ]
- }
+ },
+ "answerDecodeCases": [
+  {
+   "answer": "完整的回答",
+   "found": true,
+   "citations": [
+    {
+     "time": "01:05",
+     "quote": "原話"
+    }
+   ]
+  },
+  {
+   "answer": "沒有 found",
+   "citations": [
+    {
+     "time": "02:10",
+     "quote": "有出處"
+    }
+   ]
+  },
+  {
+   "answer": "沒有 found 也沒有出處"
+  },
+  {
+   "answer": "citations 是 null",
+   "found": true,
+   "citations": null
+  },
+  {
+   "answer": "citations 不是陣列",
+   "found": false,
+   "citations": "01:05"
+  },
+  {
+   "answer": "出處缺欄位",
+   "found": true,
+   "citations": [
+    {
+     "time": "03:00"
+    },
+    {
+     "quote": "只有原話"
+    },
+    {
+     "time": null,
+     "quote": "time 是 null"
+    },
+    "不是物件",
+    {
+     "meetingId": 12,
+     "time": "04:00",
+     "quote": "跨會議"
+    }
+   ]
+  },
+  {
+   "answer": "found 是字串",
+   "found": "yes",
+   "citations": []
+  },
+  {
+   "found": true,
+   "citations": []
+  },
+  {
+   "answer": null,
+   "found": true,
+   "citations": []
+  },
+  [
+   1,
+   2
+  ]
+ ]
 }

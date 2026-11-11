@@ -61,7 +61,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
         var documents = db.Documents(id).Select(DocumentText.From).ToList();
         var prompt = AskPrompt.MeetingPrompt(meeting, meeting.DecodedNotes, lines, history, question, documents);
         var json = await llm.GenerateJson(provider, model, AskPrompt.MeetingSystem(language, documents.Count > 0), prompt, AskPrompt.MeetingFormat, cancel);
-        var raw = AskPrompt.Answer.Decode(json) ?? throw LLMException.BadOutput("JSON" + provider.BadOutputHint());
+        var raw = AskPrompt.Answer.Decode(json) ?? throw LLMException.BadAnswer("JSON" + provider.BadOutputHint());
         var record = new QuestionRecord
         {
             MeetingId = id, Question = question, Answer = AskPrompt.Validate(raw, null, documents.Count > 0).JsonString(), Provider = provider.Code(),
@@ -90,7 +90,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
         {
             var json = await llm.GenerateJson(provider, model, AskPrompt.AllSystem(language), AskPrompt.AllPrompt(language, blocks, question),
                 AskPrompt.AllFormat, cancel);
-            var raw = AskPrompt.Answer.Decode(json) ?? throw LLMException.BadOutput("JSON" + provider.BadOutputHint());
+            var raw = AskPrompt.Answer.Decode(json) ?? throw LLMException.BadAnswer("JSON" + provider.BadOutputHint());
             answer = AskPrompt.Validate(raw, blocks.Select(b => b.Id).ToHashSet()) with { Keywords = keywords, MeetingIds = blocks.Select(b => b.Id).ToList() };
         }
         var record = new QuestionRecord { MeetingId = null, Scope = scope.Code(), Question = question, Answer = answer.JsonString(), Provider = provider.Code() };
@@ -109,7 +109,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
         }
         catch (Exception e) when (e is System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
         {
-            throw LLMException.BadOutput(e.Message + provider.BadOutputHint());
+            throw LLMException.BadAnswer(e.Message + provider.BadOutputHint());
         }
     }
 

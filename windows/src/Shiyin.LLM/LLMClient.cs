@@ -81,7 +81,8 @@ public static class LLMProviders
 
 /// <summary>Rejected：key 錯誤或沒權限（401、403、key 不對的 400）；Limited：429、CLI 的 usage limit；
 /// Unreachable：連不到；NotConfigured：OpenAI 相容 API 沒填網址或模型、設定為不整理（M§34.4）</summary>
-public enum LLMErrorKind { NotInstalled, NotLoggedIn, MissingKey, Rejected, Limited, Unreachable, NotConfigured, Failed, BadOutput }
+/// BadAnswer：提問的回答格式不對（M§21.8），不說「會議紀錄」
+public enum LLMErrorKind { NotInstalled, NotLoggedIn, MissingKey, Rejected, Limited, Unreachable, NotConfigured, Failed, BadOutput, BadAnswer }
 
 /// <summary>整理工具的錯誤（M§19、§21.9）：訊息給使用者看；log 只寫 <see cref="LogSummary"/>，不寫內容（R18.8）</summary>
 public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(Describe(kind, detail)), ILogSummary
@@ -106,6 +107,7 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
             : L.T("Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。"),
         LLMErrorKind.MissingKey => L.F("還沒有填 %@ 的 API key，請到設定 → 整理工具填寫", detail),
         LLMErrorKind.BadOutput => L.F("回傳的會議紀錄格式不正確：%@", detail),
+        LLMErrorKind.BadAnswer => L.F("回傳的回答格式不正確：%@", detail),
         _ => detail,
     };
 
@@ -153,6 +155,7 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
         return Limited(advice + "\n" + source);
     }
     public static LLMException BadOutput(string detail) => new(LLMErrorKind.BadOutput, detail);
+    public static LLMException BadAnswer(string detail) => new(LLMErrorKind.BadAnswer, detail);
 
     /// <summary>寫進 log 的錯誤摘要：只有種類，不含訊息（整理工具回傳的錯誤訊息可能帶有逐字稿）</summary>
     public string LogSummary => Kind switch
@@ -165,6 +168,7 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
         LLMErrorKind.Unreachable => "LLMError.unreachable",
         LLMErrorKind.NotConfigured => "LLMError.notConfigured",
         LLMErrorKind.Failed => "LLMError.failed",
+        LLMErrorKind.BadAnswer => "LLMError.badAnswer",
         _ => "LLMError.badOutput",
     };
 

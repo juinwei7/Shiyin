@@ -179,7 +179,7 @@ final class UsageStats: @unchecked Sendable {
             case .rejected: return "keyRejected"
             case .limited: return "limited"
             case .unreachable: return "unreachable"
-            case .badOutput: return "badOutput"
+            case .badOutput, .badAnswer: return "badOutput"
             case .failed: return "other"
             }
         }

@@ -587,6 +587,17 @@ enum GoldenDump {
         w.json("util/voiceprint-data.json", [["vector": [0.5, -1.25, 3.0], "base64": Voiceprint.data([0.5, -1.25, 3.0]).base64EncodedString()]])
 
         // 回傳結果的檢查
+        // 提問的回答解析（design §21.8）：缺欄位用預設值，只有沒有 answer 才失敗（null）
+        if let cases = f["answerDecodeCases"] as? [Any] {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+            w.json("util/answer-decode.json", cases.map { item -> Any in
+                guard let data = try? JSONSerialization.data(withJSONObject: item),
+                      let answer = try? JSONDecoder().decode(AskPrompt.Answer.self, from: data),
+                      let encoded = try? encoder.encode(answer) else { return NSNull() }
+                return String(decoding: encoded, as: UTF8.self)
+            })
+        }
         if let item = f["validateAnswers"] as? Object, let answer = item["answer"],
            let data = try? JSONSerialization.data(withJSONObject: answer),
            let decoded = try? JSONDecoder().decode(AskPrompt.Answer.self, from: data) {

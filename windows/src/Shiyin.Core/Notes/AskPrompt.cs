@@ -26,18 +26,19 @@ public static class AskPrompt
             return SwiftJsonWriter.Write(o, sortKeys: true, escapeSlashes: false);
         }
 
-        /// <summary>解析整理工具回傳的 JSON；格式不對回傳 null</summary>
+        /// <summary>
+        /// 解析整理工具回傳的 JSON；只有 answer 一定要有，沒有（或不是 JSON 物件）回傳 null（M§21.8，同 Mac）：
+        /// found 沒有時看有沒有出處，citations 沒有是空的，不是物件的出處略過，time、quote 沒有或是 null 時當成空字串
+        /// </summary>
         public static Answer? Decode(string json)
         {
             if (JsonRead.Parse(json) is not { ValueKind: JsonValueKind.Object } root) return null;
-            if (root.Str("answer") is not { } text || root.Bool("found") is not { } found
-                || root.Get("citations") is not { ValueKind: JsonValueKind.Array } list) return null;
+            if (root.Str("answer") is not { } text) return null;
             var citations = new List<Citation>();
-            foreach (var c in list.EnumerateArray())
-            {
-                if (c.Str("time") is not { } time || c.Str("quote") is not { } quote) return null;
-                citations.Add(new Citation(c.Long("meetingId"), time, quote));
-            }
+            if (root.Get("citations") is { ValueKind: JsonValueKind.Array } list)
+                foreach (var c in list.EnumerateArray())
+                    if (c.ValueKind == JsonValueKind.Object) citations.Add(new Citation(c.Long("meetingId"), c.Str("time") ?? "", c.Str("quote") ?? ""));
+            var found = root.Bool("found") ?? citations.Count > 0;
             List<long>? ids = null;
             if (root.Get("meetingIds") is { ValueKind: JsonValueKind.Array } idList)
                 ids = idList.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Number).Select(x => x.GetInt64()).ToList();
