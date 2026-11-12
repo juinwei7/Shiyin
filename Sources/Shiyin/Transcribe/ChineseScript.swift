@@ -92,4 +92,91 @@ enum ChineseScript {
             return v == "臺" ? "台" : v   // l10n-skip
         })
     }
+
+    // MARK: 繁轉簡（design §47.1、D153）
+
+    /// 繁轉簡的字表：台灣用字換回一般繁體（詞組、單字），再轉簡體（詞組、單字）
+    struct SimplifiedTables: Sendable {
+        var standardPhrases: [String: String]
+        var standardLongest: Int
+        var standardCharacters: [Character: Character]
+        var phrases: [String: String]
+        var longest: Int
+        var characters: [Character: Character]
+    }
+
+    nonisolated(unsafe) private static var cachedSimplified: SimplifiedTables?
+
+    static func simplifiedTables() throws -> SimplifiedTables {
+        lock.lock(); defer { lock.unlock() }
+        if let cachedSimplified { return cachedSimplified }
+        let dir = tablesDirectory
+        func rows(_ name: String) throws -> [(String, String)] {
+            let text = try String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8)
+            return text.split(separator: "\n").compactMap { line in
+                let parts = line.split(separator: "\t", maxSplits: 1)
+                guard parts.count == 2 else { return nil }
+                return (String(parts[0]), String(parts[1]))
+            }
+        }
+        func phrases(_ name: String) throws -> ([String: String], Int) {
+            var map: [String: String] = [:], longest = 1
+            for (key, value) in try rows(name) {
+                map[key] = value
+                longest = max(longest, key.count)
+            }
+            return (map, longest)
+        }
+        let (standardPhrases, standardLongest) = try phrases("TWVariantsRevPhrases.tsv")
+        let (simplifiedPhrases, longest) = try phrases("TSPhrases.tsv")
+        // 台灣用字的單字表反過來查（OpenCC 的 TWVariantsRev 是建置時從 TWVariants 反轉的）；同一個字有兩個來源時用先出現的
+        var standard: [Character: Character] = [:]
+        for (key, value) in try rows("TWVariants.tsv") where key.count == 1 && value.count == 1 && standard[value.first!] == nil {
+            standard[value.first!] = key.first!
+        }
+        var characters: [Character: Character] = [:]
+        for (key, value) in try rows("TSCharacters.tsv") where key.count == 1 && value.count == 1 {
+            characters[key.first!] = value.first!
+        }
+        let result = SimplifiedTables(standardPhrases: standardPhrases, standardLongest: standardLongest, standardCharacters: standard,
+                                      phrases: simplifiedPhrases, longest: longest, characters: characters)
+        cachedSimplified = result
+        return result
+    }
+
+    /// 台灣繁體轉簡體（同 OpenCC 的 tw2s，只換字不換用語）；字表讀不到時原樣回傳
+    static func toSimplified(_ text: String) -> String {
+        guard let tables = try? simplifiedTables() else {
+            log.error("simplified tables missing")
+            return text
+        }
+        let standard = convert(Array(text), phrases: tables.standardPhrases, longest: tables.standardLongest, characters: tables.standardCharacters)
+        return convert(Array(standard), phrases: tables.phrases, longest: tables.longest, characters: tables.characters)
+    }
+
+    /// 詞組最長匹配（只有中日韓的字才可能是詞組的開頭），沒有就查單字表，查不到原樣保留
+    private static func convert(_ chars: [Character], phrases: [String: String], longest: Int, characters: [Character: Character]) -> String {
+        var out = String()
+        var i = 0
+        while i < chars.count {
+            var matched = false
+            if chars[i].unicodeScalars.first.map({ (0x3400...0x9FFF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) }) == true {
+                var length = min(longest, chars.count - i)
+                while length >= 2 {
+                    if let value = phrases[String(chars[i..<i + length])] {
+                        out += value
+                        i += length
+                        matched = true
+                        break
+                    }
+                    length -= 1
+                }
+            }
+            if !matched {
+                out.append(characters[chars[i]] ?? chars[i])
+                i += 1
+            }
+        }
+        return out
+    }
 }

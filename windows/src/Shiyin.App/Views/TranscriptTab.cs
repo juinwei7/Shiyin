@@ -395,6 +395,7 @@ public sealed class TranscriptTab
         if (segment.Id is long id && segment.Kind == "final" && detail!.Speakers.Count > 0)
         {
             menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(Ui.Item(L.T("拆成兩句…"), () => _ = Dialogs.SplitSegment(window, detail, segment)));   // R70
             menu.Items.Add(SpeakerChoices(L.T("這句是誰說的"), [id], segment.Speaker));
             var run = detail.SpeakerRun(id);
             if (run.Count > 1) menu.Items.Add(SpeakerChoices(L.F("這段連續的話是誰說的（%lld 句）", run.Count), run, segment.Speaker));

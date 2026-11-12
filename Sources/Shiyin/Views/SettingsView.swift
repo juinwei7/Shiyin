@@ -761,6 +761,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
     @AppStorage(AppSettings.liveTranscriptionKey) private var live = true
     @AppStorage(AppSettings.autoDetectLanguageKey) private var autoDetect = true
+    @AppStorage(AppSettings.chineseScriptKey) private var chineseScript = "traditional"
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true
@@ -797,6 +798,13 @@ struct RecordingSettings: View {
                     ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
                 }
                 Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                // 中文的字（R71、design §47.3）
+                Picker("中文的字", selection: $chineseScript) {
+                    Text("繁體（台灣）").tag("traditional")
+                    Text("簡體").tag("simplified")
+                }
+                Text("只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Toggle("自動偵測會議語言", isOn: $autoDetect)
                     .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }

@@ -1734,6 +1734,17 @@
         }
       }
     },
+    "中文的字": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chinese script"
+          }
+        }
+      }
+    },
     "之前選的麥克風（沒有接上，會用系統預設）": {
       "extractionState": "manual",
       "localizations": {
@@ -3363,6 +3374,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Undo skip"
+          }
+        }
+      }
+    },
+    "只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applies to transcripts, meeting notes and exports of Chinese meetings; the interface doesn’t change. Existing meetings stay as they are until you transcribe or summarize them again."
           }
         }
       }
@@ -9211,6 +9233,17 @@
         }
       }
     },
+    "簡體": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simplified"
+          }
+        }
+      }
+    },
     "系統": {
       "extractionState": "manual",
       "localizations": {
@@ -9449,6 +9482,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Make Text Smaller"
+          }
+        }
+      }
+    },
+    "繁體（台灣）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traditional (Taiwan)"
           }
         }
       }

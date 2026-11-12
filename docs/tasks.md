@@ -14,8 +14,6 @@
 
 ## 中文逐字稿、會議紀錄用簡體（R71，design §47、design-windows §11.14、D153～D154；2026-11-12 GitHub #3）
 
-- [ ] **SC1 Mac**（§47）：`ChineseScript.toSimplified`、設定、轉錄／即時／整理／校正／猜說話者／匯出、標準答案 `util/tw2s.json`
-  - 驗證：`dump-golden` 跑兩次相同；DEBUG 版設成簡體：模擬錄音的即時逐字稿、正式逐字稿、會議紀錄（假的整理工具）、匯出的每一種格式都是簡體；設回繁體後結果跟改之前一樣
 - [ ] **SC2 Windows**（design-windows §11.14）：同上
   - 驗證：`dotnet test` 的標準答案通過；虛擬機的設定頁看得到、選得到
 

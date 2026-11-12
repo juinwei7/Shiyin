@@ -205,6 +205,56 @@ public static class Dialogs
         host.Controller.Rediarize(meetingId, count.SelectedIndex <= 0 ? null : count.SelectedIndex + 1);
     }
 
+    // MARK: 拆成兩句（R70、M§46.3）
+
+    /// <summary>DEBUG 的 splitcaret 用：開著的拆句對話框的文字框</summary>
+    internal static TextBox? SplitBox;
+
+    /// <summary>前半句、後半句（去掉頭尾的空白）；任一邊沒有字是 null（R70.2，同 AppDatabase.SplitSegment）</summary>
+    static (string Head, string Tail)? SplitParts(string text, int at)
+    {
+        if (at <= 0 || at >= text.Length) return null;
+        char[] blanks = [' ', '\t', '\n', '\r', '\u3000'];
+        var head = text[..at].Trim(blanks);
+        var tail = text[at..].Trim(blanks);
+        return head.Length == 0 || tail.Length == 0 ? null : (head, tail);
+    }
+
+    /// <summary>右鍵「拆成兩句…」：唯讀的文字框放游標（SelectionStart 是 UTF-16 的位置，同 Mac），選後半句的說話者。
+    /// 預設是下一句的說話者；下一句是同一位時用上一句的；都是同一位時新的說話者</summary>
+    public static async Task SplitSegment(MainWindow window, MeetingDetail detail, Segment segment)
+    {
+        if (window.XamlRoot is null || segment.Id is not long segmentId || detail.Meeting.Id is not long meetingId) return;
+        var index = detail.Segments.FindIndex(s => s.Id == segmentId);
+        var next = index >= 0 && index + 1 < detail.Segments.Count ? detail.Segments[index + 1].Speaker : null;
+        var previous = index > 0 ? detail.Segments[index - 1].Speaker : null;
+        var target = new[] { next, previous }.FirstOrDefault(s => s is not null && s != segment.Speaker);
+        var options = detail.Speakers.Keys.Order()
+            .Select(idx => ((int?)idx, idx == segment.Speaker ? L.F("%@（同一位）", detail.SpeakerName(idx) ?? "") : detail.SpeakerName(idx) ?? ""))
+            .Append(((int?)null, L.T("新的說話者"))).ToList();
+        var speaker = Ui.Combo(options, target, v => target = v, L.T("後半句是"));
+        var box = new TextBox { Text = segment.Text, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, Header = L.T("在文字裡點一下要拆開的地方") };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, L.T("要拆開的句子"));
+        var preview = Ui.Text("", 12, color: Ui.Secondary);
+        var form = Ui.Column(12, box, preview, speaker);
+        form.Width = 440;
+        var dialog = Dialog(window, L.T("拆成兩句"), form, L.T("拆開"));
+        dialog.IsPrimaryButtonEnabled = false;
+        box.SelectionChanged += (_, _) =>
+        {
+            var parts = SplitParts(segment.Text, box.SelectionStart);
+            preview.Text = parts is { } p ? L.F("前半句：…%@｜後半句：%@…", p.Head[^Math.Min(8, p.Head.Length)..], p.Tail[..Math.Min(8, p.Tail.Length)]) : "";
+            dialog.IsPrimaryButtonEnabled = parts is not null;
+        };
+        SplitBox = box;
+        try
+        {
+            if (await Show(dialog) != ContentDialogResult.Primary) return;
+            AppHost.Current.Controller.SplitSegment(meetingId, segmentId, box.SelectionStart, target);
+        }
+        finally { SplitBox = null; }
+    }
+
     // MARK: 會議資訊
 
     public static async Task EditInfo(MainWindow window, Meeting meeting)

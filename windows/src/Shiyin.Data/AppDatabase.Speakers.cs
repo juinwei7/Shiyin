@@ -273,7 +273,8 @@ public sealed partial class AppDatabase
     // MARK: 說話者的修正（M§24.2～§24.4、R23）
 
     /// <summary>改之前先存一份，只留最近一次</summary>
-    static void SaveSpeakerUndo(Db db, long meetingId, string label, string? notesBefore = null, string? notesAfter = null)
+    static void SaveSpeakerUndo(Db db, long meetingId, string label, string? notesBefore = null, string? notesAfter = null,
+                                (long Id, long NewId, string Gap)? split = null)
     {
         var segments = new JNode.Arr(db.Query("SELECT id, speaker, speaker_manual FROM segments WHERE meeting_id = ? AND kind = 'final'", meetingId)
             .Select(r =>
@@ -292,6 +293,8 @@ public sealed partial class AppDatabase
         var snapshot = new JNode.Obj().Add("segments", segments).Add("speakers", speakers);
         if (notesBefore is not null) snapshot.Add("notesBefore", notesBefore);
         if (notesAfter is not null) snapshot.Add("notesAfter", notesAfter);
+        // 拆句（M§46.1）：前半句、後半句的 id，中間去掉的空白
+        if (split is { } sp) snapshot.Add("split", new JNode.Obj().Add("id", new JNode.Int(sp.Id)).Add("newId", new JNode.Int(sp.NewId)).Add("gap", sp.Gap));
         // Mac 用沒有排序的 JSONEncoder 寫（Data 是 base64、斜線會跳脫）；讀的時候兩邊都只看內容
         var json = SwiftJsonWriter.Write(snapshot, sortKeys: false, escapeSlashes: true);
         db.Execute("INSERT OR REPLACE INTO speaker_undo (meeting_id, snapshot, label, created_at) VALUES (?, ?, ?, ?)", meetingId, json, label, Clock.Now());
@@ -309,6 +312,8 @@ public sealed partial class AppDatabase
             && db.Scalar("SELECT notes FROM meetings WHERE id = ?", meetingId) as string == after
             && db.Scalar("SELECT notes FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", meetingId) as string == before)
             UndoNotes(db, meetingId);
+        if (snapshot.TryGetProperty("split", out var split) && split.ValueKind == JsonValueKind.Object)
+            JoinSplit(db, meetingId, split.Long("id") ?? 0, split.Long("newId") ?? 0, split.Str("gap") ?? "");
         foreach (var s in snapshot.GetProperty("segments").EnumerateArray())
             db.Execute("UPDATE segments SET speaker = ?, speaker_manual = ? WHERE id = ?", s.Long("speaker"), s.Bool("manual") ?? false, s.Long("id"));
         var people = db.Query("SELECT id FROM people").Select(r => r.Long("id")).ToHashSet();
@@ -374,18 +379,28 @@ public sealed partial class AppDatabase
     public int ReassignSegments(long meetingId, IReadOnlyList<long> ids, int? to, string label) => Write(db =>
     {
         SaveSpeakerUndo(db, meetingId, label);
-        var target = to ?? 0;
-        if (to is null)
-        {
-            target = (int)((db.Scalar("SELECT MAX(idx) FROM speakers WHERE meeting_id = ?", meetingId) as long?) ?? 0) + 1;
-            var language = FetchMeeting(db, meetingId)?.MeetingLanguage ?? MeetingLanguage.Zh;
-            InsertSpeakerRow(db, new SpeakerName
-            {
-                MeetingId = meetingId, Idx = target, Name = language.DefaultSpeaker(target),
-                AudioSource = db.Scalar("SELECT audio_source FROM speakers WHERE meeting_id = ? LIMIT 1", meetingId) as string ?? "mix",
-            });
-        }
+        var target = to ?? AddSpeaker(db, meetingId);
         foreach (var id in ids) db.Execute("UPDATE segments SET speaker = ?, speaker_manual = 1 WHERE id = ? AND meeting_id = ?", target, id, meetingId);
+        RemoveEmptySpeakers(db, meetingId);
+        return target;
+    });
+
+    /// <summary>新增一位說話者（預設名稱），回傳編號</summary>
+    static int AddSpeaker(Db db, long meetingId)
+    {
+        var target = (int)((db.Scalar("SELECT MAX(idx) FROM speakers WHERE meeting_id = ?", meetingId) as long?) ?? 0) + 1;
+        var language = FetchMeeting(db, meetingId)?.MeetingLanguage ?? MeetingLanguage.Zh;
+        InsertSpeakerRow(db, new SpeakerName
+        {
+            MeetingId = meetingId, Idx = target, Name = language.DefaultSpeaker(target),
+            AudioSource = db.Scalar("SELECT audio_source FROM speakers WHERE meeting_id = ? LIMIT 1", meetingId) as string ?? "mix",
+        });
+        return target;
+    }
+
+    /// <summary>沒有段落的說話者拿掉</summary>
+    static void RemoveEmptySpeakers(Db db, long meetingId)
+    {
         var empty = db.Query("""
             SELECT idx FROM speakers s WHERE meeting_id = ?
               AND NOT EXISTS (SELECT 1 FROM segments g WHERE g.meeting_id = s.meeting_id AND g.speaker = s.idx)
@@ -396,8 +411,72 @@ public sealed partial class AppDatabase
             db.Execute("DELETE FROM voiceprints WHERE meeting_id = ? AND speaker_idx = ?", meetingId, e);
         }
         DeleteOrphanPeople(db);
-        return target;
+    }
+
+    /// <summary>拆句時去掉的空白（M§46.1）：空白、tab、換行、全形空白</summary>
+    static bool IsGap(char c) => c is ' ' or '\t' or '\n' or '\r' or '\u3000';
+
+    /// <summary>把一句拆成兩句（R70、M§46.1）：at 是 UTF-16 的位置，to 是後半句的說話者（null 是新的說話者）。
+    /// 任一邊沒有字就不拆，回傳 null；拆了回傳後半句的 id</summary>
+    public long? SplitSegment(long meetingId, long id, int at, int? to, string label) => Write(db =>
+    {
+        if (db.QueryOne("SELECT * FROM segments WHERE id = ?", id) is not { } row) return (long?)null;
+        var segment = ToSegment(row);
+        if (segment.MeetingId != meetingId || segment.Kind != "final") return null;
+        var text = segment.Text;
+        if (at <= 0 || at >= text.Length) return null;
+        int headEnd = at, tailStart = at, headStart = 0, tailEnd = text.Length;
+        while (headEnd > 0 && IsGap(text[headEnd - 1])) headEnd--;
+        while (tailStart < text.Length && IsGap(text[tailStart])) tailStart++;
+        while (headStart < headEnd && IsGap(text[headStart])) headStart++;
+        while (tailEnd > tailStart && IsGap(text[tailEnd - 1])) tailEnd--;
+        if (headStart >= headEnd || tailStart >= tailEnd) return null;
+        var head = text[headStart..headEnd];
+        var tail = text[tailStart..tailEnd];
+        var gap = text[headEnd..tailStart];
+        // 時間照字數（不算空白）的比例，四捨五入到 0.01 秒（同 Mac 的 rounded()）
+        double a = head.Count(c => !IsGap(c)), b = tail.Count(c => !IsGap(c));
+        var cut = Math.Round((segment.Start + (segment.End - segment.Start) * a / (a + b)) * 100, MidpointRounding.AwayFromZero) / 100;
+        // 先佔好 id 才存得了復原：新的一句的 id 是現在最大的 + 1（AUTOINCREMENT）
+        var newId = ((db.Scalar("SELECT seq FROM sqlite_sequence WHERE name = 'segments'") as long?) ?? 0) + 1;
+        SaveSpeakerUndo(db, meetingId, label, split: (id, newId, gap));
+        var target = to ?? AddSpeaker(db, meetingId);
+        db.Execute("UPDATE segments SET seq = seq + 1 WHERE meeting_id = ? AND seq > ?", meetingId, segment.Seq);
+        db.Execute("UPDATE segments SET text = ?, end = ? WHERE id = ?", head, cut, id);
+        db.Execute("UPDATE search SET text = ? WHERE rowid = ?", head, id);
+        var second = new Segment
+        {
+            MeetingId = meetingId, Seq = segment.Seq + 1, Start = cut, End = segment.End, Text = tail, LowConfidence = segment.LowConfidence,
+            Speaker = target, Kind = "final", Channel = segment.Channel, SpeakerManual = true,
+        };
+        InsertSegmentRow(db, second);
+        // 復原存的 id 要對（同一個交易裡只有這裡新增段落，AUTOINCREMENT 一定是這個）
+        if (second.Id != newId) throw new InvalidOperationException("split: unexpected segment id");  // l10n-skip
+        IndexSegment(db, meetingId, newId, tail);
+        // 校正建議跟著文字（R70.6）：待確認的看原文、已接受的看建議，只在後半句找得到的移過去
+        foreach (var c in db.Query("SELECT id, status, original, suggestion FROM corrections WHERE segment_id = ?", id).ToList())
+        {
+            var key = c.Str("status") == "accepted" ? c.Str("suggestion") : c.Str("original");
+            if (key.Length > 0 && !head.Contains(key, StringComparison.Ordinal) && tail.Contains(key, StringComparison.Ordinal))
+                db.Execute("UPDATE corrections SET segment_id = ? WHERE id = ?", newId, c.Long("id"));
+        }
+        RemoveEmptySpeakers(db, meetingId);
+        return newId;
     });
+
+    /// <summary>復原拆句（M§46.1）：兩句接回一句，文字是兩句現在的內容</summary>
+    static void JoinSplit(Db db, long meetingId, long id, long newId, string gap)
+    {
+        if (db.QueryOne("SELECT * FROM segments WHERE id = ?", id) is not { } fr || db.QueryOne("SELECT * FROM segments WHERE id = ?", newId) is not { } sr) return;
+        var (first, second) = (ToSegment(fr), ToSegment(sr));
+        var text = first.Text + gap + second.Text;
+        db.Execute("UPDATE corrections SET segment_id = ? WHERE segment_id = ?", id, newId);
+        db.Execute("UPDATE segments SET text = ?, end = ? WHERE id = ?", text, second.End, id);
+        db.Execute("UPDATE search SET text = ? WHERE rowid = ?", text, id);
+        db.Execute("DELETE FROM search WHERE rowid = ?", newId);
+        db.Execute("DELETE FROM segments WHERE id = ?", newId);
+        db.Execute("UPDATE segments SET seq = seq - 1 WHERE meeting_id = ? AND seq > ?", meetingId, second.Seq);
+    }
 
     /// <summary>說話者辨識完記下自我檢查的分數（M§24.5），之前按過的「不用了」重設</summary>
     public void SetSpeakerCheck(long meetingId, double? score) =>

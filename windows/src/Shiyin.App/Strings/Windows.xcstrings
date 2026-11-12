@@ -937,6 +937,17 @@
         }
       }
     },
+    "拆成兩句": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split into Two Lines"
+          }
+        }
+      }
+    },
     "拾音幫你把會議變成逐字稿和會議紀錄：錄音時就能看到即時逐字稿，錄完會在這台電腦上正式轉錄（中文、英文用 Breeze ASR 25，日文用 Whisper）、分辨說話者，再用 Claude、Codex 或 API 整理成摘要、決議和待辦。": {
       "extractionState": "manual",
       "localizations": {

@@ -2090,6 +2090,17 @@
   "English only, 123 numbers.",
   ""
  ],
+ "tw2sCases": [
+  "今天的會議由王小明負責，Redis 的快取時間改成兩分鐘。",
+  "軟體、伺服器、資料庫都要更新，後來發現裡面很複雜。",
+  "頭髮很長，皇后在後面；乾淨、幹部、乾燥、餅乾、幹活。",
+  "臺灣的麵條，一隻貓，幾個人，鐘錶，歷史，著急，為什麼，儘量。",
+  "說話者 1 剛剛說的我同意 😀，期限 10/21。",
+  "一口吃個胖子；喫飯了沒？",
+  "決議、待辦、未決問題、摘要、議題",
+  "English only, 123 numbers.",
+  ""
+ ],
   "serverSettings": [
     {"language": "zh", "glossary": ["拾音", "Breeze ASR"], "audioSource": "mix"},
     {"language": "en", "glossary": [], "audioSource": "mic", "minSpeakers": 3},

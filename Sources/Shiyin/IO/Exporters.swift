@@ -215,6 +215,23 @@ enum NotesExporter {
 
 // MARK: - HTML → PDF、docx、剪貼簿（design §10）
 
+/// 中文會議用簡體時，匯出整份轉成簡體（R71.3、design §47.2）：標題、欄位名稱、預設的說話者名稱也一起轉
+enum ExportScript {
+    static func text(_ text: String, _ b: ExportBundle) -> String {
+        AppSettings.script(text, for: b.meeting.meetingLanguage)
+    }
+
+    /// HTML 另外把語言標記、繁體中文的字型換成簡體的
+    static func html(_ html: String, _ b: ExportBundle) -> String {
+        guard AppSettings.simplifiedChinese(for: b.meeting.meetingLanguage) else { return html }
+        var out = ChineseScript.toSimplified(html)
+        for (from, to) in [("lang=\"zh-Hant\"", "lang=\"zh-Hans\""), ("PingFang TC", "PingFang SC"), ("Songti TC", "Songti SC")] {   // l10n-skip
+            out = out.replacingOccurrences(of: from, with: to)
+        }
+        return out
+    }
+}
+
 enum HTML {
     static func escape(_ s: String) -> String {
         s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")

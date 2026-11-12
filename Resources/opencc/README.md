@@ -4,3 +4,6 @@
 `STCharacters.txt`、`STPhrases.txt`、`TWVariants.txt`，只留每個鍵的第一個候選、去掉註解（鍵和值相同的詞組要保留：它們擋住逐字轉換，例如「公里」「皇后」），存成 tab 分隔的 `.tsv`。
 Qwen3-ASR 輸出簡體，app 用這三張表轉成台灣繁體（`ChineseScript.toTaiwan`）；Windows 版讀同一份。
 重新產生：`~/Library/Caches/ShiyinSpike/qwen3asr/opencc/` 的縮表步驟，或直接照上面的規則處理 OpenCC 的原檔。
+
+繁轉簡（design §47.1、D153）另外用 `TSCharacters.txt`、`TSPhrases.txt`、`TWVariantsRevPhrases.txt`（同樣只留第一個候選），
+台灣用字的單字表把 `TWVariants.tsv` 反過來查（OpenCC 的 `TWVariantsRev` 是建置時反轉產生的，原始碼裡沒有），做法同 OpenCC 的 tw2s（`ChineseScript.toSimplified`）。

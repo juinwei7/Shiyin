@@ -679,6 +679,19 @@ public sealed class AppController
         Perform(id, () => Db.ReassignSegments(id, ids, to, label));
     }
 
+    /// <summary>「拆成兩句…」（R70、M§46）：at 是 UTF-16 的位置，to 是後半句的說話者（null 是新的說話者）</summary>
+    public void SplitSegment(long id, long segmentId, int at, int? to)
+    {
+        if (MeetingDetail.Load(Db, id) is not { } detail) return;
+        if (SpeakerEditProblem(id, detail) is { } problem) { Notice?.Invoke(problem); return; }
+        var target = to is int t ? detail.SpeakerName(t)! : L.T("新的說話者");
+        Perform(id, () =>
+        {
+            if (Db.SplitSegment(id, segmentId, at, to, L.F("把一句拆成兩句（後半句是「%@」說的）", target)) is not null)
+                Notice?.Invoke(L.T("已拆成兩句。要復原的話，在逐字稿按右鍵選「復原」。"));
+        });
+    }
+
     /// <summary>說話者改名視窗、右鍵選單的「復原：…」（R44.4）：只復原最近一次合併或改句子</summary>
     public void UndoSpeakerEdit(long id)
     {
