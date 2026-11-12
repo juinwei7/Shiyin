@@ -447,6 +447,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `ChineseScript.ToSimplified`：同 Mac，字表內嵌同一份 `Resources/opencc/*.tsv`（多 `TSCharacters`、`TSPhrases`、`TWVariantsRevPhrases`），標準答案 `util/tw2s.json` 逐字比。
 - `settings.json` 的 `chineseScript`；轉的地方同 Mac 的表（正式轉錄、即時逐字稿、整理、校正、猜說話者、匯出）。設定頁「錄音與轉錄」同一個位置。
 
+### 11.15 簡體中文的介面（R72，M§48）
+
+- 介面語言：`AppHost.InterfaceLanguage(setting)` 回傳 `zh`／`zh-Hans`／`en`（取代 `UsesEnglish`）；設定「進階」的選單：跟著 Windows、繁體中文、简体中文、English（選單裡的語言名稱用各自的寫法）。
+- `L.Use(table, plurals, simplified)`：簡體時讀兩份 xcstrings 的 `zh-Hans`，查不到的鍵 `ChineseScript.ToSimplifiedUI`；`L.Simplified`。用語表 `Resources/l10n/zh-Hans-terms.tsv` 內嵌在 Shiyin.Core（同 opencc 的字表）。
+- 字型：視窗的根元素 `Language = "zh-CN"`（簡體介面）；`Ui.ContentLanguage(language)` 對中文會議看「中文的字」。
+- 驗證：`dotnet test`（`util/ui-hans.json`）；虛擬機 `--set interfaceLanguage=zh-Hans` 截圖主視窗、設定四頁、引導、對話框。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

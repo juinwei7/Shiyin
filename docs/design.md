@@ -2241,6 +2241,39 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 「錄音與轉錄」的會議語言下面加一列「中文的字」：選單「繁體（台灣）」「簡體」，說明「只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。」Windows 同一個位置。
 
+## 48. 簡體中文的介面（R72，D155～D157；GitHub #3）
+
+### 48.1 翻譯怎麼來（D155）
+
+- 不手寫：簡體從繁體的介面文字自動產生，三步：
+  1. **用語表** `Resources/l10n/zh-Hans-terms.tsv`（台灣的介面用語 → 大陸的介面用語，已經是簡體，例如 `設定→设置`、`檔案→文件`、`文件→文档`、`匯出→导出`、`預設→默认`、`伺服器→服务器`、`軟體→软件`、`視窗→窗口`、`登入→登录`、`紀錄→记录`），在繁體的原文上做最長匹配（同一個位置用最長的詞，換過的字不再換第二次，所以「文件→文档」「檔案→文件」不會連鎖）。
+  2. 剩下的字用 `ChineseScript.toSimplified`（§47.1，只換字）。
+  3. **手動指定** `Resources/l10n/zh-Hans-overrides.json`（`{"繁體原文": "简体"}`）：自動轉得不自然的條目，優先於前兩步。
+- `scripts/dev/l10n.py`：`hans`（重新產生 Localizable.xcstrings、Windows.xcstrings 所有條目的 `zh-Hans`），`check`、`windows-check` 先跑 `hans`，所以新增、改過的介面文字自動有簡體（R72.6）。另外檢查：產生出來的簡體裡沒有繁體字（再做一次繁轉簡結果不變）、插值（`%@`、`%lld`、`%1$@`）跟原文一樣。複數條目（英文的 `variations.plural`）的簡體只有一種寫法。
+- Python 的轉換跟 Swift、C# 的同一套（同樣的字表、同樣的最長匹配）；`check` 用標準答案 `util/ui-hans.json`（Mac 的 `ChineseScript.toSimplifiedUI` 算的）核對 Python 算的一樣。
+
+### 48.2 Mac
+
+- `Info.plist` 的 `CFBundleLocalizations` 加 `zh-Hans`；`Resources/zh-Hans.lproj/InfoPlist.strings`（app 名稱、權限說明、檔案類型名稱，由 `l10n.py hans` 從繁體那份產生）；`build-app.sh` 的 Credits.html 多一份 `zh-Hans`。xcstringstool 會編出 `zh-Hans.lproj/Localizable.strings`。
+- 介面語言：`MeetingLanguage.interface` 照舊只分中文、英文（決定用哪一份手寫的文字）；另外 `MeetingLanguage.simplifiedInterface`（`Bundle.main.preferredLocalizations.first` 是 `zh-Hans`）。系統的偏好語言是 `zh-Hans`、`zh-CN`、`zh-SG` 時 macOS 會選 `zh-Hans`；`zh-HK`、`zh-TW` 照舊是 `zh-Hant`。
+- 不查翻譯表的中文（寫死在程式裡的兩種語言）在簡體介面執行時轉：`ChineseScript.toSimplifiedUI`（用語表＋繁轉簡，同 48.1 的前兩步；用語表放進 app 的 Resources）。地方：`MeetingLanguage.ui(zh:en:)`、`uiName`（語言檔的中文名稱）、內建範本的名稱和說明（`displayName`、`displayDescription`）、app 裡顯示的更新說明（`ReleaseNotes.text` 的中文那段）、問題回報裡的介面語言名稱（「简体中文」）。`uiNames` 的 `ListFormatter` 用 `zh-Hans`。
+- 字形：所有視窗套的 `.chineseGlyphs()` 在簡體介面用 `zh-Hans`（簡體的標點位置）；會議標題、段落標題的宋體用 `Songti SC`。會議內容（中文會議）的字形、標題字型跟著「中文的字」（R72.5）：簡體用 `zh-Hans`、`Songti SC`，繁體照舊（`MeetingLanguage.contentTypesetting`、`contentTitleFont`，取代直接讀語言檔的 `fonts.typesetting`、`fonts.titleMac`）。
+- 「中文的字」的預設（R72.5）：`chineseScript` 沒有值時，簡體介面是 `simplified`、其他是 `traditional`（`AppSettings.chineseScript`）；設定頁的選單顯示的也是這個值。
+- DEBUG：state 的 `languages` 加 `interfaceScript`（`zh-Hant`／`zh-Hans`／`en`）；簡體介面用 `-AppleLanguages "(zh-Hans)"` 啟動。
+
+### 48.3 Windows（design-windows §11.15）
+
+- 介面語言的設定值多一個 `zh-Hans`；沒設定時 `CurrentUICulture` 是 `zh-CN`、`zh-SG` 或 `zh-Hans*` 的用簡體，`zh-TW`、`zh-HK`、`zh-MO`、`zh-Hant*` 用繁體，其他英文。
+- `L`：多一個簡體模式，查兩份 xcstrings 的 `zh-Hans`；表裡沒有的鍵（動態組出來的文字）執行時用 `ChineseScript.ToSimplifiedUI` 轉，不會漏出繁體。`MeetingLanguages.Ui(zh, en)` 同 Mac。
+- 字型：每個視窗的根元素 `Language` 設成 `zh-CN`（WinUI 依語言挑中文字型：微軟雅黑），會議內容同 Mac 跟著「中文的字」（`zh-CN`／`zh-TW`）。
+- 統計的介面語言送 `zh-Hans`。
+
+### 48.4 驗證
+
+- `l10n.py check`、`windows-check` 通過（沒有缺簡體、沒有繁體字、插值相同）；標準答案 `util/ui-hans.json`（Mac 產生、Windows 和 l10n.py 比對）。
+- Mac DEBUG 版 `-AppleLanguages "(zh-Hans)"`：主視窗（紀錄、逐字稿、提問）、錄音畫面、選單列、設定四頁（`preview settings`）、首次使用引導、使用說明、匯出對話框截圖，找不到繁體字、版面沒有跑掉；「中文的字」沒選過時是簡體。繁體、英文介面截圖跟改之前一樣。
+- Windows 虛擬機 `--set interfaceLanguage=zh-Hans`：同樣的畫面。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2341,5 +2374,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D152 | 拆句的時間照字數比例估，位置用 UTF-16（§46.1；2026-11-12，GitHub #6） | 用每個字的時間：Qwen3-ASR 不給、Breeze 給的是 token 的時間，存檔時就沒留；要留得改轉錄流程和資料庫。位置用 `Character`：Swift 和 C# 算法不同（C# 沒有字素），emoji 會差一格，兩邊結果對不起來 |
 | D153 | 簡體只換字、不換用語（tw2s，不是 tw2sp）（§47.1；2026-11-12，GitHub #3） | 連用語一起換（軟體→软件）：字表大很多、換錯時（專有名詞、產品名）使用者很難察覺；回報的人要的是字體，Qwen3-ASR 原本輸出的簡體也不換用語 |
 | D154 | 繁體做完、存檔前才轉簡體（§47.2） | 提示詞改成要求簡體：中文提示詞要跟 3.0 一字不差，繁體使用者的結果會變；Breeze 本來就輸出繁體，還是要轉。存繁體、顯示時才轉：搜尋要用繁體字才找得到，使用者打簡體編輯又會混在一起 |
+| D155 | 簡體介面的翻譯從繁體自動產生（用語表＋繁轉簡＋少數手動指定），不手寫一份（§48.1；2026-11-12） | 手寫或找人翻一份：一千多條，之後每次改介面都要記得改，一定會漏；繁體跟簡體大部分只差字，用語差異可以列表。只換字不換用語（同 D153）：介面上「設定」「檔案」「匯出」在大陸讀起來不對，介面跟逐字稿不同，介面是使用者天天看的 |
+| D156 | 不查表的中文在簡體介面執行時轉，Windows 查不到的鍵也執行時轉（§48.2、§48.3） | 這些地方全部改成查表：寫死兩種語言的地方本來就是因為同一句中文要不同的英文（D12 的例外），改查表要多一套鍵；範本名稱、語言名稱、更新說明不是介面字串 |
+| D157 | 簡體介面時「中文的字」預設簡體，會議內容的字形跟著「中文的字」（§48.2；2026-11-12 使用者同意） | 預設維持繁體：用簡體介面的人幾乎都要簡體的逐字稿，還要自己去找設定。內容字形跟著介面：繁體介面的人選了簡體逐字稿，會用繁體字形顯示簡體字，標點位置不對 |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
