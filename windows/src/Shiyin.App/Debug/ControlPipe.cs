@@ -366,7 +366,7 @@ public static class ControlPipe
             // 播放（同 Mac 的 player）、播放條上的議題帶（M§43.3）：選取中的會議，長度同播放條
             ["player"] = new JsonObject
             {
-                ["loaded"] = host.Player.IsLoaded, ["playing"] = host.Player.IsPlaying, ["time"] = host.Player.CurrentTime, ["duration"] = host.Player.Duration,
+                ["loaded"] = host.Player.IsLoaded, ["mixing"] = host.Player.IsMixing, ["playing"] = host.Player.IsPlaying, ["time"] = host.Player.CurrentTime, ["duration"] = host.Player.Duration,
             },
             ["topicRanges"] = new JsonArray([.. (main?.State.Detail is { Notes: { } topicNotes } topicDetail
                 ? MindMap.TopicRanges(topicNotes, Math.Max(host.Player.Duration, topicDetail.Meeting.DurationSeconds ?? 0), MindMap.TopicLabel(MeetingLanguages.Interface))

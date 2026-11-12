@@ -27,6 +27,38 @@ public class UtilTests
         Assert.Equal(3, settings.TextSize);
     }
 
+    /// <summary>雙聲道的錄音混在一起（R73、M§49.1）：(L + R) × 0.7071、截在 ±1；其他聲道數取平均</summary>
+    [Fact]
+    public void ChannelMixSumsStereo()
+    {
+        var mono = new float[3];
+        Shiyin.Services.Capture.ChannelMix.Mix([0.5f, 0, -0.5f, 0.2f, 0.9f, 0.9f], 2, mono);
+        Assert.Equal([0.35355f, -0.21213f, 1f], mono.Select(v => MathF.Round(v, 5)));
+        var three = new float[1];
+        Shiyin.Services.Capture.ChannelMix.Mix([0.3f, 0.6f, 0.9f], 3, three);
+        Assert.Equal(0.6f, three[0], 5);
+    }
+
+    /// <summary>左聲道有聲音、右聲道靜音的 WAV 讀成單聲道：峰值是左聲道 × 0.7071、長度不變</summary>
+    [Fact]
+    public void ChannelMixReadsStereoWavAsMono()
+    {
+        using var home = new TempHome();
+        var path = Path.Combine(home.Path, "both.wav");
+        var count = 16000;
+        var left = Enumerable.Range(0, count).Select(i => 0.5f * MathF.Sin(i * 0.1f)).ToArray();
+        using (var writer = new WavWriter(path, 2)) writer.Write([left, new float[count]], count);
+        using var reader = new NAudio.Wave.WaveFileReader(path);
+        var mono = new Shiyin.Services.Capture.ChannelMix.ToMono(NAudio.Wave.WaveExtensionMethods.ToSampleProvider(reader));
+        Assert.Equal(1, mono.WaveFormat.Channels);
+        var all = new List<float>();
+        var buffer = new float[1600];
+        int n;
+        while ((n = mono.Read(buffer)) > 0) all.AddRange(buffer[..n]);
+        Assert.Equal(count, all.Count);
+        Assert.Equal(0.5f * 0.7071f, all.Max(MathF.Abs), 3);
+    }
+
     static IEnumerable<JsonElement> Items(string path) => Golden.ExpectedJson(path).EnumerateArray();
 
     /// <summary>語言檔推出來的東西（M§41.8）：每種語言的名稱、預設說話者、轉錄的參數、給人看的字、提示詞的字，跟 Mac 逐項相同</summary>

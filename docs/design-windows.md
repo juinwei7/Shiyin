@@ -460,7 +460,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - 混音：`Shiyin.Services.Capture.ChannelMix.Mix(ReadOnlySpan<float> interleaved, int channels, Span<float> mono)`：2 個聲道時 m = (L + R) × 0.7071、超過 ±1 截掉（同 M§49.1）；其他聲道數取平均。單元測試在 `UtilTests`。
 - 播放：`Player.Load(path, mixChannels)`，`MainState` 傳 `meeting.Channels == "both"`。要混音時 `MediaPlayer.Source` 是 `MediaStreamSource`（`MixedAudioSource`）：NAudio 讀原檔（wav 用 `WaveFileReader`，其他用 `MediaFoundationReader`），PCM 16-bit 單聲道、原檔的取樣率，`SampleRequested` 每次讀 0.1 秒混好送出，`Starting` 時跳到要求的位置（`CurrentTime`）。`MediaPlayer.MediaFailed` 時改回直接播原檔（兩耳分開，至少聽得到）。
-- 匯出 m4a（`MediaFoundationCompressor.Export`）：`both` 的會議即使原檔是 m4a 也重新壓縮：讀原檔 → 混成單聲道（`MixToMono` 的 `IWaveProvider`）→ 照舊升頻到 48 kHz、AAC。wav、`.shiyin` 照舊。
+- 匯出（`MediaFoundationCompressor.Export(…, mixChannels)`）：`both` 的會議即使原檔是同一種格式也重新轉。m4a：讀原檔 → 混成單聲道（`ChannelMix.ToMono`）→ 照舊升頻到 48 kHz、AAC；wav 照舊解碼成 16 kHz 單聲道（原本原檔是 wav 時直接複製）。`.shiyin` 照舊。
 - 驗證：`dotnet test`（混音）；虛擬機沒有音效裝置，`MediaPlayer` 播不出來（§15），播放要真的 Windows 電腦；匯出 m4a 在虛擬機上做、讀回來看兩邊一樣。
 
 ### 11.17 錄音中麥克風一直重新連接（R74，M§50）
