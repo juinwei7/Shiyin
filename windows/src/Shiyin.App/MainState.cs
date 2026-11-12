@@ -114,7 +114,7 @@ public sealed class MainState
         var meeting = Detail.Meeting;
         if (forceAudio || previous?.Id != meeting.Id || previous?.AudioFile != meeting.AudioFile)
         {
-            if (host.Paths.HasAudio(meeting)) host.Player.Load(host.Paths.AudioPath(meeting)); else host.Player.Unload();
+            if (host.Paths.HasAudio(meeting)) host.Player.Load(host.Paths.AudioPath(meeting), meeting.Channels == "both"); else host.Player.Unload();
         }
     }
 

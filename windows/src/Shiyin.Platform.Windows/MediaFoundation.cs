@@ -154,7 +154,7 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
     /// WAVE_FORMAT_EXTENSIBLE（很多錄音軟體、afconvert 寫的 WAV）換成一般的 PCM／浮點格式，資料本身不變：
     /// MediaFoundationResampler 只認 PCM 和 IEEE float 的格式標記（2026-10-21 在虛擬機匯入這種 WAV，壓縮失敗）
     /// </summary>
-    sealed class StandardFormat(IWaveProvider inner) : IWaveProvider
+    internal sealed class StandardFormat(IWaveProvider inner) : IWaveProvider
     {
         public WaveFormat WaveFormat { get; } = Standard(inner.WaveFormat);
         public int Read(Span<byte> buffer) => inner.Read(buffer);
@@ -173,11 +173,16 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
         public int Read(Span<byte> buffer) => cancel.IsCancellationRequested ? 0 : inner.Read(buffer);
     }
 
-    /// <summary>匯出錄音（R7.2）：m4a 是 m4a 時直接複製；wav 解碼成 16 kHz 的 WAV</summary>
-    public async Task Export(string source, string format, string destination, CancellationToken cancel)
+    /// <summary>
+    /// 匯出錄音（R7.2）：m4a 是 m4a 時直接複製；wav 解碼成 16 kHz 的 WAV。
+    /// mixChannels：「麥克風＋電腦聲音」的錄音（R73.2、design-windows §11.16）：m4a 混成單聲道再壓縮、wav 解碼成單聲道，
+    /// 原檔是同一種格式也一樣
+    /// </summary>
+    public async Task Export(string source, string format, string destination, CancellationToken cancel, bool mixChannels = false)
     {
         var ext = Importer.Extension(source);
-        if (ext == format) { File.Copy(source, destination, overwrite: true); return; }
+        if (format == "m4a" && mixChannels) { await CompressMixed(source, destination, cancel); return; }
+        if (ext == format && !mixChannels) { File.Copy(source, destination, overwrite: true); return; }
         if (format == "m4a" && ext == "wav") { await Compress(source, destination, cancel); return; }
         if (format == "m4a")
         {
@@ -200,4 +205,23 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
         }
         throw new IOException(L.T("不支援這個音訊格式"));
     }
+
+    /// <summary>讀原檔、兩個聲道混成單聲道（ChannelMix），照壓縮的做法升頻到 48 kHz、AAC</summary>
+    static Task CompressMixed(string source, string m4aPath, CancellationToken cancel) => Task.Run(() =>
+    {
+        using var reader = MixedAudioSource.OpenReader(source);
+        var mono = new ChannelMix.ToMono(new StandardFormat(reader).ToSampleProvider()).ToWaveProvider16();
+        using var resampled = new MediaFoundationResampler(mono, new WaveFormat(48000, 16, 1)) { ResamplerQuality = 60 };
+        var temp = m4aPath + ".tmp.mp4";
+        try
+        {
+            MediaFoundationEncoder.EncodeToAac(new Cancellable(resampled, cancel), temp, 96000);
+            cancel.ThrowIfCancellationRequested();
+            File.Move(temp, m4aPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temp)) File.Delete(temp);
+        }
+    }, cancel);
 }

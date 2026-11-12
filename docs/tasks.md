@@ -9,7 +9,7 @@
 
 ## 雙聲道的錄音兩耳都聽得到（R73，design §49、design-windows §11.16、D158；2026-11-12，GitHub #7）
 
-- [ ] **CH2 Windows**（design-windows §11.16）：`ChannelMix.Mix`、`MixedAudioSource`、匯出 m4a。驗證：`dotnet test`；虛擬機匯出 m4a 讀回來兩邊一樣；播放要真的 Windows 電腦
+- [~] **CH2 Windows**（design-windows §11.16）：程式完成，dotnet test、虛擬機的匯出驗過（2026-11-12，見 commit 訊息）。還差：真的 Windows 電腦（虛擬機沒有音效裝置，`MediaPlayer` 回 0xC00D36FA）播「麥克風＋電腦聲音」的會議，兩耳都聽得到、倍速和跳播照常、state 的 `player.mixing` 是 true
 
 ## 錄音中麥克風一直重新連接（R74，design §50、design-windows §11.17、D159、D160；2026-11-12，GitHub #8）
 

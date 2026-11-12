@@ -18,7 +18,8 @@ public interface IExportPlatform
     Task MindMapPng(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
     Task MindMapPdf(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
     /// <summary>錄音轉成 m4a 或 wav（同格式時直接複製）</summary>
-    Task Audio(string source, string format, string path, CancellationToken cancel);
+    /// <summary>mixChannels：「麥克風＋電腦聲音」的錄音，m4a 兩個聲道混在一起（R73.2）</summary>
+    Task Audio(string source, string format, string path, bool mixChannels, CancellationToken cancel);
 }
 
 public enum ExportItem { Notes, MindMap, Transcript, Audio, Package }
@@ -1071,7 +1072,7 @@ public sealed class AppController
                 break;
             case ExportItem.Audio:
                 if (!Paths.HasAudio(b.Meeting)) throw new ExportException(L.T("這場會議沒有錄音檔"));
-                await Platform().Audio(Paths.AudioPath(b.Meeting), format, path, cancel);
+                await Platform().Audio(Paths.AudioPath(b.Meeting), format, path, b.Meeting.Channels == "both", cancel);
                 break;
             case ExportItem.Package: await Task.Run(() => MeetingPackage.Export(b, path, Paths, appVersion), cancel); break;
         }
