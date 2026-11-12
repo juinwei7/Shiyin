@@ -440,7 +440,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - `AppDatabase.SplitSegment`：同 Mac（UTF-16 的位置、時間的比例、快照的 `split`、校正建議移到後半句、復原時接回），標準答案 `db/35～38` 逐欄比。
 - 逐字稿的右鍵選單在「這句是誰說的」上面加「拆成兩句…」；按了打開 `ContentDialog`（先收起已經開著的）：唯讀的 `TextBox`（`SelectionStart`）、預覽的前後半句、「後半句是」`ComboBox`、「拆開」「取消」。「拆開」照 R70.2 啟用。
-- DEBUG 控制通道：`splitsegment <段落 id> <位置> <說話者|new>`（對目前選取的會議）。
+- DEBUG 控制通道（對目前選取的會議）：`splitsegment <段落 id> <位置> <說話者|new>`、`splitmode <段落 id>`（打開對話框）、`splitcaret <位置>`（對話框的游標）、`undospeaker`。
 
 ### 11.14 中文逐字稿、會議紀錄用簡體（R71，M§47）
 

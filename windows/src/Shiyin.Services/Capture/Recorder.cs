@@ -506,6 +506,7 @@ public sealed class Recorder
                 if (restarted) created.Offset = w.RecordedSeconds;
                 created.Volatile += text =>
                 {
+                    text = settings.Script(text, Language);   // 中文會議用簡體時轉成簡體（M§47.2）
                     lock (gate)
                     {
                         if (live != created) return;
@@ -517,6 +518,7 @@ public sealed class Recorder
                 };
                 created.Final += (start, end, text) =>
                 {
+                    text = settings.Script(text, Language);
                     lock (gate)
                     {
                         if (live != created) return;

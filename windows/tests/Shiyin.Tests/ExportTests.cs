@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Shiyin.IO;
 using Shiyin.Model;
+using Shiyin.Services;
+using Shiyin.Services.Export;
 using Shiyin.Text;
 using Xunit;
 
@@ -38,6 +40,23 @@ public class ExportTests
         Golden.Text(dir + "transcript-f.srt", TranscriptExporter.Text(b, "srt", true, false));
         Golden.Text(dir + "transcript-t.vtt", TranscriptExporter.Text(b, "vtt", true, true));
         Golden.Text(dir + "transcript-f.vtt", TranscriptExporter.Text(b, "vtt", true, false));
+        // 中文會議用簡體（M§47.2）：整份轉，跟 Mac 一樣只比文字格式；設定是繁體、會議不是中文時原樣
+        if (key == "zh")
+        {
+            var simplified = AppSettings.InMemory(new Dictionary<string, string> { [AppSettings.ChineseScriptKey] = "simplified" });
+            Golden.Text(dir + "simplified/notes.md", ExportScript.Text(simplified, b, NotesExporter.Markdown(b)));
+            Golden.Text(dir + "simplified/notes.txt", ExportScript.Text(simplified, b, NotesExporter.Plain(b)));
+            Golden.Text(dir + "simplified/transcript-tt.txt", ExportScript.Text(simplified, b, TranscriptExporter.Text(b, "txt", true, true)));
+            Golden.Text(dir + "simplified/transcript-t.srt", ExportScript.Text(simplified, b, TranscriptExporter.Text(b, "srt", true, true)));
+            Assert.Contains("lang=\"zh-Hans\"", ExportScript.Html(simplified, b, NotesExporter.Html(b, ExportFonts.Windows)));
+            Assert.Contains("Microsoft YaHei", ExportScript.Html(simplified, b, NotesExporter.Html(b, ExportFonts.Windows)));
+            Assert.Equal(NotesExporter.Markdown(b), ExportScript.Text(AppSettings.InMemory(), b, NotesExporter.Markdown(b)));
+        }
+        else
+        {
+            var simplified = AppSettings.InMemory(new Dictionary<string, string> { [AppSettings.ChineseScriptKey] = "simplified" });
+            Assert.Equal(NotesExporter.Markdown(b), ExportScript.Text(simplified, b, NotesExporter.Markdown(b)));
+        }
         var empty = b with { Notes = new MeetingNotes { Title = "x" } };
         Golden.Text(dir + "notes-empty.md", NotesExporter.Markdown(empty));
         Golden.Text(dir + "notes-empty.html", NotesExporter.Html(empty, ExportFonts.Mac));
