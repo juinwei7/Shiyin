@@ -421,6 +421,8 @@ enum DebugControl {
             model.recorder.simulateStall(channel: args.count > 2 ? Int(args[2]) ?? 0 : 0, seconds: args[1] == "off" ? nil : Double(args[1]) ?? 5)
         case "recordinterrupt":   // recordinterrupt [聲道]：等於音源發現裝置變了，Recorder 會重新開始這個音源
             model.recorder.simulateInterruption(channel: args.count > 1 ? Int(args[1]) ?? 0 : 0)
+        case "recordflap":   // recordflap <次數> [秒數]：麥克風接下來幾次開始收音後都說裝置變了，每次重新開始花幾秒（design §50.4）
+            model.recorder.simulateFlapping(times: Int(args[1]) ?? 0, seconds: args.count > 2 ? Double(args[2]) ?? 0 : 0)
         case "recordlang":   // recordlang <語言代碼>：錄音中換會議語言（等於按「改回」；zh、en、ja、yue、ko…）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
         case "record-sim":
@@ -748,6 +750,7 @@ enum DebugControl {
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? "",
+                         "restarts": model.recorder.restartInfo,   // 重新連接的節奏（design §50.4）
                          // 麥克風（design §38.7）
                          "micDevice": model.recorder.micDevice.map { ["name": $0.name, "uid": $0.uid, "bluetooth": $0.isBluetooth] } as Any,
                          "micHint": model.recorder.micHint.map { ["text": $0.text, "builtIn": $0.builtIn?.name ?? ""] } as Any],

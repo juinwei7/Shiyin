@@ -19149,6 +19149,23 @@
         }
       }
     },
+    "電腦聲音的擷取一直在重新連接，錄音可能斷斷續續。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电脑声音的撷取一直在重新连接，录音可能断断续续。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer audio capture keeps reconnecting, so the recording may have gaps."
+          }
+        }
+      }
+    },
     "電腦聲音的擷取中斷了，正在重新連接…": {
       "extractionState": "manual",
       "localizations": {
@@ -19353,6 +19370,23 @@
         }
       }
     },
+    "麥克風一直在重新連接，錄音可能斷斷續續。藍牙耳機的麥克風常這樣，可以點上面的麥克風名稱換成內建麥克風。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风一直在重新连接，录音可能断断续续。蓝牙耳机的麦克风常这样，可以点上面的麦克风名称换成内建麦克风。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone keeps reconnecting, so the recording may have gaps. Bluetooth headset microphones often do this. Click the microphone name above to switch to the built-in microphone."
+          }
+        }
+      }
+    },
     "麥克風幾乎收不到聲音：%@ 可能正在用這支麥克風做回音消除（例如用 Safari 開的 Google Meet），拾音收不到你的聲音。請改用 Chrome 開會，或讓會議和拾音用不同的麥克風。": {
       "extractionState": "manual",
       "localizations": {
@@ -19468,6 +19502,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "麦克风没有送出声音，重新连接失败：%@。会继续重试，录音没有停"
+          }
+        }
+      }
+    },
+    "麥克風沒辦法開始收音（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风没办法开始收音（%@）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone couldn't start recording (%@)"
           }
         }
       }
