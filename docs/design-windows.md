@@ -436,6 +436,17 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 會議連結：`NotificationLinks.Parse` 也認得 `shiyin://open?meeting=…&t=…`（`open` 是主機名稱、路徑是空的；通知用的 `shiyin:open?…` 照舊），`Link.Open` 多了 `Seconds`。有時間點時 `AppHost.ShowMeetingAt`：打開那場、切到逐字稿、從那裡開始（同「問所有會議」點出處）；沒有時同點通知（選到那場，分頁不變）。會議已經永久刪掉了（舊的連結、舊的通知）：打開主視窗、提示「找不到這場會議，可能已經刪掉了」（同 Mac），不選那個 id。
 - 驗證：`dotnet test`（標準答案、協定、開關、唯讀、企業伺服器的 `mcp`、`McpSetup` 的參數和設定檔）；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息、跟 Mac 的 `Shiyin --mcp` 讀同一份資料庫逐字比；虛擬機裡 Claude Code 沒有登入時只驗設定檔寫對。
 
+### 11.13 把一句拆成兩句（R70，M§46）
+
+- `AppDatabase.SplitSegment`：同 Mac（UTF-16 的位置、時間的比例、快照的 `split`、校正建議移到後半句、復原時接回），標準答案 `db/35～38` 逐欄比。
+- 逐字稿的右鍵選單在「這句是誰說的」上面加「拆成兩句…」；按了打開 `ContentDialog`（先收起已經開著的）：唯讀的 `TextBox`（`SelectionStart`）、預覽的前後半句、「後半句是」`ComboBox`、「拆開」「取消」。「拆開」照 R70.2 啟用。
+- DEBUG 控制通道：`splitsegment <段落 id> <位置> <說話者|new>`（對目前選取的會議）。
+
+### 11.14 中文逐字稿、會議紀錄用簡體（R71，M§47）
+
+- `ChineseScript.ToSimplified`：同 Mac，字表內嵌同一份 `Resources/opencc/*.tsv`（多 `TSCharacters`、`TSPhrases`、`TWVariantsRevPhrases`），標準答案 `util/tw2s.json` 逐字比。
+- `settings.json` 的 `chineseScript`；轉的地方同 Mac 的表（正式轉錄、即時逐字稿、整理、校正、猜說話者、匯出）。設定頁「錄音與轉錄」同一個位置。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔
