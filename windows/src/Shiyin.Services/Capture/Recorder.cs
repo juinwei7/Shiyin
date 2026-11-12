@@ -130,6 +130,9 @@ public sealed class Recorder
     readonly Dictionary<int, DateTime> reconnecting = [];
     readonly Dictionary<int, string> reconnectErrors = [];
     readonly Dictionary<int, CancellationTokenSource> pendingRestarts = [];
+    /// <summary>重新連接的節奏（M§50.1）：每個聲道 60 秒內重新連接的時間、上次重新連接完的時間</summary>
+    readonly Dictionary<int, List<DateTime>> restarts = [];
+    readonly Dictionary<int, DateTime> restartedAt = [];
     DateTime lastDiskCheck = DateTime.MinValue;
     bool warnedLowDisk;
     bool simulationEnded;
@@ -295,7 +298,7 @@ public sealed class Recorder
             if (!IsRecording || !HasMic || !sources.TryGetValue(0, out var source)) return;
             if (source is IMicrophoneSource mic) mic.DeviceId = id;
             Log.Info("switching microphone");
-            RestartSource(0);
+            RestartSource(0, counted: false);
             UpdateMicrophone();
         }
         Notify();
@@ -618,6 +621,10 @@ public sealed class Recorder
                     changed |= CheckLevels(w);
                     var idle = CheckIdle(w);
                     changed |= idle.Changed;
+                    // 「一直在重新連接」1 分鐘沒再重新連接就收起（M§50.1）
+                    var warning = DeviceWarning;
+                    UpdateDeviceWarning();
+                    changed |= warning != DeviceWarning;
                     if (idle.Stop)
                     {
                         Log.Info($"recording auto-stopped after {(int)(Elapsed - lastSpeechAt)}s without speech");
@@ -702,19 +709,32 @@ public sealed class Recorder
         return unit == 0 ? $"{bytes} bytes" : value.ToString(unit >= 3 ? "0.##" : "0.#", System.Globalization.CultureInfo.InvariantCulture) + " " + units[unit];
     }
 
-    // MARK: 換裝置、看門狗（M§20.2、R18.2、D25）
+    // MARK: 換裝置、看門狗（M§20.2、R18.2、D25；節奏 M§50.1）
 
-    /// <summary>裝置切換時通知會連續來好幾次，等 0.3 秒沒有新的通知再重新開始</summary>
+    /// <summary>60 秒內已經重新連接 n 次，下一次等多久：前兩次 0.3 秒，之後 2、4、8、16 秒，最多 30 秒（M§50.1、R74.2）</summary>
+    public static double RestartDelay(int n) => n < 3 ? 0.3 : Math.Min(30, Math.Pow(2, n - 2));
+
+    /// <summary>這個聲道 60 秒內重新連接了幾次（順便丟掉更早的）</summary>
+    int RecentRestarts(int channel, DateTime now)
+    {
+        if (!restarts.TryGetValue(channel, out var times)) return 0;
+        times.RemoveAll(t => now - t >= TimeSpan.FromSeconds(60));
+        return times.Count;
+    }
+
+    /// <summary>裝置切換時通知會連續來好幾次，等一下沒有新的通知再重新開始；一直重新連接時等久一點</summary>
     void ScheduleRestart(int channel)
     {
         CancellationTokenSource cts;
+        double delay;
         lock (gate)
         {
             if (!IsRecording) return;
             pendingRestarts.GetValueOrDefault(channel)?.Cancel();
             pendingRestarts[channel] = cts = new CancellationTokenSource();
+            delay = RestartDelay(RecentRestarts(channel, DateTime.UtcNow));
         }
-        _ = Task.Delay(300, cts.Token).ContinueWith(t =>
+        _ = Task.Delay(TimeSpan.FromSeconds(delay), cts.Token).ContinueWith(t =>
         {
             if (t.IsCanceled) return;
             lock (gate)
@@ -728,9 +748,15 @@ public sealed class Recorder
         }, TaskScheduler.Default);
     }
 
-    void RestartSource(int channel)
+    /// <summary>counted：算進重新連接的次數（使用者換麥克風不算）</summary>
+    void RestartSource(int channel, bool counted = true)
     {
         if (!IsRecording || !sources.TryGetValue(channel, out var source)) return;
+        if (counted)
+        {
+            if (!restarts.TryGetValue(channel, out var times)) restarts[channel] = times = [];
+            times.Add(DateTime.UtcNow);
+        }
         try
         {
             source.Restart();
@@ -739,14 +765,18 @@ public sealed class Recorder
         }
         catch (Exception e)
         {
-            // 錄音不停：另一個音源照常錄，雙聲道時這段會補靜音；看門狗每 5 秒再試
+            // 錄音不停：另一個音源照常錄，雙聲道時這段會補靜音；看門狗再試
             reconnectErrors[channel] = e.Message;
             Log.Error($"audio source {channel} restart failed: {e.GetType().Name}");
         }
+        restartedAt[channel] = DateTime.UtcNow;
         UpdateDeviceWarning();
     }
 
-    /// <summary>音源超過 3 秒沒送資料：提示並每 5 秒試一次重新開始；收到資料後提示消失</summary>
+    /// <summary>
+    /// 音源超過 3 秒沒送資料：提示並重新連接；重新連接完 5 秒內、等著重新連接時不再重開（R74.1），
+    /// 重試的間隔 max(5, 重新連接的節奏)；收到資料後提示消失
+    /// </summary>
     bool Watchdog(RecordingWriter w)
     {
         if (simulationEnded) return false;
@@ -757,8 +787,16 @@ public sealed class Recorder
         {
             if (w.SecondsSinceSamples(channel) > 3)
             {
-                if (reconnecting.TryGetValue(channel, out var last) && now - last < TimeSpan.FromSeconds(5)) continue;
-                if (!reconnecting.ContainsKey(channel)) Log.Info($"audio source {channel} stalled");
+                if (!reconnecting.ContainsKey(channel))
+                {
+                    Log.Info($"audio source {channel} stalled");
+                    reconnecting[channel] = DateTime.MinValue;
+                    UpdateDeviceWarning();
+                }
+                if (pendingRestarts.ContainsKey(channel)) continue;
+                if (restartedAt.TryGetValue(channel, out var done) && now - done < TimeSpan.FromSeconds(5)) continue;
+                var interval = TimeSpan.FromSeconds(Math.Max(5, RestartDelay(RecentRestarts(channel, now))));
+                if (now - reconnecting[channel] < interval) continue;
                 reconnecting[channel] = now;
                 RestartSource(channel);
                 if (channel == 0) micChanged |= UpdateMicrophone();
@@ -773,18 +811,22 @@ public sealed class Recorder
         return before != DeviceWarning || micChanged;
     }
 
+    /// <summary>提示列（M§50.1）：重新連接失敗的原因 ＞ 一直在重新連接（60 秒內 3 次以上）＞ 正在重新連接…</summary>
     void UpdateDeviceWarning()
     {
+        bool IsMic(int channel) => Source != "system" && channel == 0;
+        var now = DateTime.UtcNow;
+        int? stalled = reconnecting.Count > 0 ? reconnecting.Keys.Min() : null;
+        int? flapping = sources.Keys.Order().Where(c => RecentRestarts(c, now) >= 3).Select(c => (int?)c).FirstOrDefault();
         string? warning = null;
-        if (reconnecting.Count > 0)
-        {
-            var channel = reconnecting.Keys.Min();
-            var mic = Source != "system" && channel == 0;
-            warning = reconnectErrors.TryGetValue(channel, out var reason)
-                ? mic ? L.F("麥克風沒有送出聲音，重新連接失敗：%@。會繼續重試，錄音沒有停", reason)
-                      : L.F("電腦聲音的擷取中斷了，重新連接失敗：%@。會繼續重試，錄音沒有停", reason)
-                : mic ? L.T("麥克風沒有送出聲音，正在重新連接…") : L.T("電腦聲音的擷取中斷了，正在重新連接…");
-        }
+        if (stalled is int s && reconnectErrors.TryGetValue(s, out var reason))
+            warning = IsMic(s) ? L.F("麥克風沒有送出聲音，重新連接失敗：%@。會繼續重試，錄音沒有停", reason)
+                : L.F("電腦聲音的擷取中斷了，重新連接失敗：%@。會繼續重試，錄音沒有停", reason);
+        else if (flapping is int f)
+            warning = IsMic(f) ? L.T("麥克風一直在重新連接，錄音可能斷斷續續。藍牙耳機的麥克風常這樣，可以點上面的麥克風名稱換成內建麥克風。")
+                : L.T("電腦聲音的擷取一直在重新連接，錄音可能斷斷續續。");
+        else if (stalled is int r)
+            warning = IsMic(r) ? L.T("麥克風沒有送出聲音，正在重新連接…") : L.T("電腦聲音的擷取中斷了，正在重新連接…");
         DeviceWarning = warning;
     }
 
@@ -807,6 +849,8 @@ public sealed class Recorder
         generation++;
         foreach (var p in pendingRestarts.Values) p.Cancel();
         pendingRestarts.Clear();
+        restarts.Clear();
+        restartedAt.Clear();
         reconnecting.Clear();
         reconnectErrors.Clear();
         DeviceWarning = null;
