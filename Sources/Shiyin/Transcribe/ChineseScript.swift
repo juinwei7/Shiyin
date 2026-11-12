@@ -179,4 +179,60 @@ enum ChineseScript {
         }
         return out
     }
+
+    // MARK: 簡體介面的用語（design §48.1、D156）
+
+    nonisolated(unsafe) private static var cachedTerms: (map: [String: String], longest: Int)?
+
+    /// 用語表（`Resources/l10n/zh-Hans-terms.tsv`）：app bundle 的 Resources/l10n，沒有 bundle 時用原始碼樹的
+    private static func terms() -> (map: [String: String], longest: Int) {
+        lock.lock(); defer { lock.unlock() }
+        if let cachedTerms { return cachedTerms }
+        var url = Bundle.main.resourceURL?.appendingPathComponent("l10n/zh-Hans-terms.tsv")
+        if url.map({ !FileManager.default.fileExists(atPath: $0.path) }) ?? true {
+            url = tablesDirectory.deletingLastPathComponent().appendingPathComponent("l10n/zh-Hans-terms.tsv")
+        }
+        var map: [String: String] = [:], longest = 1
+        if let url, let text = try? String(contentsOf: url, encoding: .utf8) {
+            for line in text.split(separator: "\n") {
+                let parts = line.split(separator: "\t", maxSplits: 1)
+                guard parts.count == 2 else { continue }
+                map[String(parts[0])] = String(parts[1])
+                longest = max(longest, parts[0].count)
+            }
+        } else {
+            log.error("zh-Hans terms missing")
+        }
+        cachedTerms = (map, longest)
+        return (map, longest)
+    }
+
+    /// 介面文字轉成簡體（同 scripts/dev/l10n.py 的 to_simplified_ui）：用語表在繁體原文上最長匹配，換過的不再轉；其餘的字繁轉簡
+    static func toSimplifiedUI(_ text: String) -> String {
+        let (map, longest) = terms()
+        let chars = Array(text)
+        var out = String(), gap = String()
+        var i = 0
+        while i < chars.count {
+            var matched = false
+            var length = min(longest, chars.count - i)
+            while length >= 1 {
+                if let value = map[String(chars[i..<i + length])] {
+                    out += toSimplified(gap)
+                    gap = ""
+                    out += value
+                    i += length
+                    matched = true
+                    break
+                }
+                length -= 1
+            }
+            if !matched {
+                gap.append(chars[i])
+                i += 1
+            }
+        }
+        return out + toSimplified(gap)
+    }
 }
+

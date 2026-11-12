@@ -752,6 +752,7 @@ enum DebugControl {
                                                                             "builtIn": $0.isBuiltIn] },
                             "default": MicrophoneMonitor.shared.defaultInput?.uid ?? "", "setting": AppSettings.inputDeviceUID],
             "languages": ["defaultMeeting": AppSettings.defaultMeetingLanguage.rawValue, "interface": MeetingLanguage.interface.rawValue,
+                          "interfaceScript": MeetingLanguage.interfaceCode, "chineseScript": AppSettings.chineseScript,
                           "preferred": Locale.preferredLanguages.first ?? ""],
             "models": ["breeze": "\(model.models.state)", "japanese": "\(model.models.state(.japanese))",
                        "qwen": "\(model.models.combinedState(.qwen))",

@@ -289,15 +289,20 @@ enum TimeFormat {
     }
 
     /// 會議長度的口語說法，例如「9 分鐘」「1 小時 5 分鐘」；介面用介面語言，匯出用會議語言
-    static func duration(_ seconds: Int?, language: MeetingLanguage = .interface) -> String {
+    /// language 是 nil 時用介面語言（畫面上），簡體介面轉成簡體（design §48.2）；匯出給會議語言
+    static func duration(_ seconds: Int?, language: MeetingLanguage? = nil) -> String {
         guard let seconds else { return "" }
+        let l = language ?? .interface
         let minutes = max(1, Int((Double(seconds) / 60).rounded()))
         let h = minutes / 60, m = minutes % 60
+        let text: String
         if minutes >= 60 {
-            return m == 0 ? language.format(zh: "%lld 小時", en: "%lld hr", ja: "%lld 時間", h)
-            : language.format(zh: "%lld 小時 %lld 分鐘", en: "%lld hr %lld min", ja: "%lld 時間 %lld 分", h, m)
+            text = m == 0 ? l.format(zh: "%lld 小時", en: "%lld hr", ja: "%lld 時間", h)
+            : l.format(zh: "%lld 小時 %lld 分鐘", en: "%lld hr %lld min", ja: "%lld 時間 %lld 分", h, m)
+        } else {
+            text = l.format(zh: "%lld 分鐘", en: "%lld min", ja: "%lld 分", minutes)
         }
-        return language.format(zh: "%lld 分鐘", en: "%lld min", ja: "%lld 分", minutes)
+        return language == nil && MeetingLanguage.simplifiedInterface ? ChineseScript.toSimplifiedUI(text) : text
     }
 
     /// srt 用 00:01:02,345；vtt 用 00:01:02.345

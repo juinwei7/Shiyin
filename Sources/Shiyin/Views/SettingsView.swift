@@ -571,6 +571,8 @@ struct TemplateSettings: View {
     private func load(_ id: String?) {
         guard let template = model.templates.first(where: { $0.id == id }) else { draft = nil; return }
         draft = template.definition(for: .interface)
+        // 內建範本不能改、不會存檔：簡體介面顯示簡體（design §48.2）
+        if template.builtin, MeetingLanguage.simplifiedInterface { draft = draft?.mappingText(ChineseScript.toSimplifiedUI) }
         draftName = template.displayName
     }
 
@@ -761,7 +763,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
     @AppStorage(AppSettings.liveTranscriptionKey) private var live = true
     @AppStorage(AppSettings.autoDetectLanguageKey) private var autoDetect = true
-    @AppStorage(AppSettings.chineseScriptKey) private var chineseScript = "traditional"
+    @AppStorage(AppSettings.chineseScriptKey) private var chineseScript = AppSettings.defaultChineseScript
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true

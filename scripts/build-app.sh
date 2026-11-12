@@ -48,6 +48,9 @@ ditto "$BIN_DIR/llama.framework" "$APP/Contents/Frameworks/llama.framework"
 ditto Resources/opencc "$APP/Contents/Resources/opencc"
 # 會議語言的語言檔（design §41.1），Windows 內嵌同一份
 cp Resources/languages.json "$APP/Contents/Resources/languages.json"
+# 簡體介面的用語表（design §48.2）：執行時轉不查表的中文
+mkdir -p "$APP/Contents/Resources/l10n"
+cp Resources/l10n/zh-Hans-terms.tsv "$APP/Contents/Resources/l10n/zh-Hans-terms.tsv"
 for bundle in "$BIN_DIR"/*.bundle; do ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"; done
 chmod -R u+w "$APP"
 if [ -f Resources/AppIcon.icns ]; then
@@ -70,6 +73,7 @@ text = html.escape(open(sys.argv[1], encoding="utf-8").read())
 kofi = "https://ko-fi.com/weiwei_chang"
 sponsor = {
     "zh-Hant": f"覺得拾音好用的話，可以<a href=\"{kofi}\">請我喝杯咖啡</a>。",
+    "zh-Hans": f"觉得拾音好用的话，可以<a href=\"{kofi}\">请我喝杯咖啡</a>。",
     "en": f"Enjoying Shiyin? <a href=\"{kofi}\">Buy me a coffee</a>.",
 }
 for lang, line in sponsor.items():
