@@ -1921,6 +1921,14 @@
     "search"
    ]
   },
+  {"op": "splitSegment", "key": "zh", "seq": 6, "at": 5, "to": null, "label": "拆成兩句", "file": "db/35-split-result.json"},
+  {"op": "dumpTables", "file": "db/36-split.json", "tables": ["segments", "speakers", "corrections", "search", "speaker_undo"]},
+  {"op": "undoSpeakerEdit", "key": "zh", "file": "db/37-unsplit-result.json"},
+  {"op": "dumpTables", "file": "db/38-unsplit.json", "tables": ["segments", "speakers", "corrections", "search", "speaker_undo"]},
+  {"op": "splitSegment", "key": "zh", "seq": 5, "at": 0, "to": 1, "label": "拆不開：開頭", "file": "db/39-split-none.json"},
+  {"op": "splitSegment", "key": "zh", "seq": 5, "at": 17, "to": 2, "label": "拆成兩句：同一位", "file": "db/40-split-emoji.json"},
+  {"op": "splitSegment", "key": "en", "seq": 1, "at": 33, "to": null, "label": "Split", "file": "db/41-split-en.json"},
+  {"op": "dumpTables", "file": "db/42-split.json", "tables": ["segments", "speakers", "speaker_undo"]},
   {
    "op": "addTerm",
    "term": "  Valkey  "

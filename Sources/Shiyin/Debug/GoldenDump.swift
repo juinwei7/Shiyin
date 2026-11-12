@@ -908,6 +908,11 @@ enum GoldenDump {
                 let segmentIds = try (op["seqs"] as? [Int] ?? []).map { try segmentId(mid, seq: $0) }
                 let target = try db.reassignSegments(mid, ids: segmentIds, to: op["to"] as? Int, label: op["label"] as? String ?? "")
                 w.json(file!, ["speaker": target])
+            case "splitSegment":   // 拆成兩句（design §46.1）
+                let mid = id(op)
+                let newId = try db.splitSegment(mid, id: try segmentId(mid, seq: op["seq"] as? Int ?? 0), at: op["at"] as? Int ?? 0,
+                                                to: op["to"] as? Int, label: op["label"] as? String ?? "")
+                w.json(file!, ["segmentId": newId.map { $0 as Any } ?? NSNull()])
             case "replace":
                 let r = try db.replace(id(op), find: op["find"] as? String ?? "", with: op["with"] as? String ?? "")
                 w.json(file!, ["segmentsChanged": r.segmentsChanged, "notesChanged": r.notesChanged])

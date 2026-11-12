@@ -21,6 +21,10 @@ struct TranscriptTab: View {
     /// 正在改名的說話者和點的那一段：改名視窗掛在點的那一段（逐字稿是延遲建立的，第一段可能還不存在）
     @State private var renaming: (speaker: Int, segment: Int64)?
     @State private var renameText = ""
+    /// 拆成兩句（design §46.2）：正在拆的那一句、游標的位置（UTF-16）、後半句的說話者（nil 是新的說話者）
+    @State private var splittingId: Int64?
+    @State private var splitOffset: Int?
+    @State private var splitTarget: Int?
     @FocusState private var searchFocused: Bool
 
     init(detail: MeetingDetail, speakerFilter: Int? = nil) {
@@ -126,6 +130,15 @@ struct TranscriptTab: View {
                         model.debugEditSegment = nil
                     }
                     #endif
+                    .onChange(of: model.splitRequest, initial: true) { _, id in
+                        guard let id else { return }
+                        model.splitRequest = nil
+                        startSplit(id)
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(150))
+                            proxy.scrollTo(id, anchor: .center)
+                        }
+                    }
                     .onChange(of: model.highlightSegment, initial: true) { _, id in
                         guard let id else { return }
                         // 要跳到的段落被說話者篩選藏起來時，先取消篩選
@@ -366,7 +379,9 @@ struct TranscriptTab: View {
                     }
                 }
             }
-            if editingId == segment.id {
+            if splittingId == segment.id {
+                splitEditor(segment)
+            } else if editingId == segment.id {
                 VStack(alignment: .trailing, spacing: 6) {
                     TextField("段落內容", text: $editText, axis: .vertical).meetingText()
                         .textFieldStyle(.roundedBorder)
@@ -411,6 +426,7 @@ struct TranscriptTab: View {
             // 改這句的說話者（design §24.3、R23.2）
             if let id = segment.id, segment.kind == "final", !detail.speakers.isEmpty {
                 Divider()
+                Button("拆成兩句…") { startSplit(id) }   // R70
                 Menu("這句是誰說的") { speakerChoices(for: [id], current: segment.speaker) }
                 let run = detail.speakerRun(around: id)
                 if run.count > 1 {
@@ -423,6 +439,74 @@ struct TranscriptTab: View {
             }
         }
         .help(segment.lowConfidence ? "辨識信心低，建議對照錄音確認" : "")
+    }
+
+    // MARK: 拆成兩句（R70、design §46.2）
+
+    private func startSplit(_ id: Int64) {
+        guard let index = detail.segments.firstIndex(where: { $0.id == id }) else { return }
+        if model.detailStatus?.isActive == true {
+            model.noticeMessage = String(localized: "正在處理這場會議，完成後才能改說話者")
+            return
+        }
+        if editingId != nil { cancelEdit() }
+        // 預設：下一句的說話者；下一句是同一位時用上一句的；都是同一位時新的說話者
+        let current = detail.segments[index].speaker
+        let next = detail.segments.dropFirst(index + 1).first?.speaker
+        let previous = index > 0 ? detail.segments[index - 1].speaker : nil
+        splitTarget = [next, previous].compactMap { $0 }.first { $0 != current }
+        splitOffset = nil
+        splittingId = id
+    }
+
+    /// 前半句、後半句（去掉頭尾的空白）；任一邊沒有字是 nil（R70.2，同 `AppDatabase.splitSegment`）
+    private func splitParts(_ text: String) -> (head: String, tail: String)? {
+        guard let offset = splitOffset else { return nil }
+        let ns = text as NSString
+        guard offset > 0, offset < ns.length else { return nil }
+        let blanks = CharacterSet(charactersIn: " \t\n\r\u{3000}")
+        let head = ns.substring(to: offset).trimmingCharacters(in: blanks)
+        let tail = ns.substring(from: offset).trimmingCharacters(in: blanks)
+        return head.isEmpty || tail.isEmpty ? nil : (head, tail)
+    }
+
+    @ViewBuilder
+    private func splitEditor(_ segment: Segment) -> some View {
+        let parts = splitParts(segment.text)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("在文字裡點一下要拆開的地方").font(.caption).foregroundStyle(.secondary)
+            SplitTextView(text: segment.text, scale: scale, offset: $splitOffset)
+                .frame(minHeight: 40)
+                .padding(4)
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.secondary.opacity(0.3)))
+            if let parts {
+                Text("前半句：…\(String(parts.head.suffix(8)))｜後半句：\(String(parts.tail.prefix(8)))…")
+                    .font(.caption).foregroundStyle(.secondary).meetingText()
+            }
+            HStack {
+                Picker("後半句是", selection: $splitTarget) {
+                    ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
+                        let name = detail.speakerName(idx) ?? ""
+                        Text(idx == segment.speaker ? String(localized: "\(name)（同一位）") : name).tag(Optional(idx))
+                    }
+                    Divider()
+                    Text("新的說話者").tag(Int?.none)
+                }
+                .fixedSize()
+                Spacer()
+                Button("取消") { splittingId = nil }
+                    .keyboardShortcut(.cancelAction)
+                Button("拆開") {
+                    guard let id = segment.id, let offset = splitOffset else { return }
+                    splittingId = nil
+                    model.splitSegment(id, at: offset, to: splitTarget)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(parts == nil)
+            }
+            .controlSize(.small)
+        }
     }
 
     /// 除了 idx 以外的說話者（合併、改說話者的選單）
@@ -648,3 +732,54 @@ private struct PlaybackFollower: View {
             }
     }
 }
+
+/// 拆成兩句時放游標的文字（design §46.2）：看得到游標、選得到位置，但不能改字。位置用 UTF-16（NSString 的單位）
+private struct SplitTextView: NSViewRepresentable {
+    let text: String
+    let scale: CGFloat
+    @Binding var offset: Int?
+
+    func makeNSView(context: Context) -> NSTextView {
+        let view = NSTextView()
+        view.delegate = context.coordinator
+        view.isRichText = false
+        view.drawsBackground = false
+        view.textContainerInset = NSSize(width: 2, height: 2)
+        view.setAccessibilityLabel(String(localized: "要拆開的句子"))
+        view.string = text
+        view.font = .systemFont(ofSize: NSFont.systemFontSize * scale)
+        view.textContainer?.widthTracksTextView = true
+        DispatchQueue.main.async { view.window?.makeFirstResponder(view) }
+        return view
+    }
+
+    func updateNSView(_ view: NSTextView, context: Context) {
+        context.coordinator.parent = self
+        if view.string != text { view.string = text }
+        view.font = .systemFont(ofSize: NSFont.systemFontSize * scale)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView view: NSTextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, let container = view.textContainer, let layout = view.layoutManager else { return nil }
+        container.containerSize = NSSize(width: max(width - 4, 10), height: .greatestFiniteMagnitude)
+        layout.ensureLayout(for: container)
+        return CGSize(width: width, height: ceil(layout.usedRect(for: container).height) + 4)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: SplitTextView
+        init(parent: SplitTextView) { self.parent = parent }
+
+        /// 不能改字（打字、貼上、刪除都擋掉），游標照樣看得到
+        func textView(_ textView: NSTextView, shouldChangeTextIn range: NSRange, replacementString: String?) -> Bool { false }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let view = notification.object as? NSTextView else { return }
+            let location = view.selectedRange().location
+            parent.offset = location == NSNotFound ? nil : location
+        }
+    }
+}
+

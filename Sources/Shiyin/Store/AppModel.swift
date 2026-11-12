@@ -228,6 +228,8 @@ final class AppModel {
     var searchResults: [SearchHit] = []
     /// 搜尋結果點進來時要高亮的逐字稿段落
     var highlightSegment: Int64?
+    /// 逐字稿要進入拆成兩句的模式（design §46.2）：右鍵選單、DEBUG 的 splitmode 設，逐字稿分頁接手後清掉
+    var splitRequest: Int64?
 
     var pendingImport: [URL] = []
     var showImportSheet = false
@@ -1035,6 +1037,21 @@ final class AppModel {
         }
     }
 
+    /// 「拆成兩句…」（R70、design §46）：at 是 UTF-16 的位置，to 是後半句的說話者（nil 是新的說話者）
+    func splitSegment(_ segmentId: Int64, at: Int, to idx: Int?) {
+        guard let id = selection else { return }
+        if let problem = speakerEditProblem(id) {
+            noticeMessage = problem
+            return
+        }
+        let target = idx.flatMap { detail?.speakerName($0) } ?? String(localized: "新的說話者")
+        perform(.detail([.speakers, .segments, .corrections])) {
+            if try db.splitSegment(id, id: segmentId, at: at, to: idx, label: String(localized: "把一句拆成兩句（後半句是「\(target)」說的）")) != nil {
+                noticeMessage = String(localized: "已拆成兩句。要復原的話，在逐字稿按右鍵選「復原」。")
+            }
+        }
+    }
+
     /// 「復原說話者的調整」（改名小視窗、逐字稿右鍵選單）：只復原最近一次合併或改句子
     func undoSpeakerEdit() {
         guard let id = selection else { return }
@@ -1046,7 +1063,7 @@ final class AppModel {
             noticeMessage = String(localized: "沒有可以復原的說話者調整（改名、重新辨識說話者之後就不能復原之前的調整）")
             return
         }
-        perform(.detail([.speakers, .segments, .meeting])) {
+        perform(.detail([.speakers, .segments, .meeting, .corrections])) {
             if try db.undoSpeakerEdit(id) { noticeMessage = String(localized: "已復原：\(label)") }
         }
     }

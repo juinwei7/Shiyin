@@ -150,7 +150,7 @@
       "meeting_id" : 1,
       "ref" : 6,
       "rowid" : 6,
-      "text" : "說話者 1 剛剛說的我同意 😀，Valkey 的 TTL 設 100% 沒問題"
+      "text" : "說話者 1 剛剛說的我同意 😀，"
     },
     {
       "kind" : "segment",
@@ -178,7 +178,7 @@
       "meeting_id" : 2,
       "ref" : 10,
       "rowid" : 10,
-      "text" : "I'll send the email via SendGrid by Friday."
+      "text" : "I'll send the email via SendGrid"
     },
     {
       "kind" : "segment",
@@ -200,6 +200,20 @@
       "ref" : 13,
       "rowid" : 13,
       "text" : "The beta list is ready."
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 18,
+      "rowid" : 18,
+      "text" : "Valkey 的 TTL 設 100% 沒問題"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 19,
+      "rowid" : 19,
+      "text" : "by Friday."
     },
     {
       "kind" : "title",
@@ -305,7 +319,7 @@
     },
     {
       "channel" : null,
-      "end" : 70.299999999999997,
+      "end" : 67.319999999999993,
       "id" : 6,
       "kind" : "final",
       "low_confidence" : 0,
@@ -314,7 +328,7 @@
       "speaker" : 2,
       "speaker_manual" : 0,
       "start" : 65,
-      "text" : "說話者 1 剛剛說的我同意 😀，Valkey 的 TTL 設 100% 沒問題"
+      "text" : "說話者 1 剛剛說的我同意 😀，"
     },
     {
       "channel" : null,
@@ -323,7 +337,7 @@
       "kind" : "final",
       "low_confidence" : 0,
       "meeting_id" : 1,
-      "seq" : 6,
+      "seq" : 7,
       "speaker" : 1,
       "speaker_manual" : 0,
       "start" : 3725.4000000000001,
@@ -336,7 +350,7 @@
       "kind" : "final",
       "low_confidence" : 0,
       "meeting_id" : 1,
-      "seq" : 7,
+      "seq" : 8,
       "speaker" : 1,
       "speaker_manual" : 1,
       "start" : 3731,
@@ -357,7 +371,7 @@
     },
     {
       "channel" : null,
-      "end" : 8,
+      "end" : 6.8799999999999999,
       "id" : 10,
       "kind" : "final",
       "low_confidence" : 0,
@@ -366,7 +380,7 @@
       "speaker" : 2,
       "speaker_manual" : 0,
       "start" : 3.5,
-      "text" : "I'll send the email via SendGrid by Friday."
+      "text" : "I'll send the email via SendGrid"
     },
     {
       "channel" : null,
@@ -375,7 +389,7 @@
       "kind" : "final",
       "low_confidence" : 1,
       "meeting_id" : 2,
-      "seq" : 2,
+      "seq" : 3,
       "speaker" : 1,
       "speaker_manual" : 0,
       "start" : 8,
@@ -388,7 +402,7 @@
       "kind" : "final",
       "low_confidence" : 0,
       "meeting_id" : 2,
-      "seq" : 3,
+      "seq" : 4,
       "speaker" : null,
       "speaker_manual" : 0,
       "start" : 12.25,
@@ -401,11 +415,37 @@
       "kind" : "final",
       "low_confidence" : 0,
       "meeting_id" : 2,
-      "seq" : 4,
+      "seq" : 5,
       "speaker" : 3,
       "speaker_manual" : 0,
       "start" : 13,
       "text" : "The beta list is ready."
+    },
+    {
+      "channel" : null,
+      "end" : 70.299999999999997,
+      "id" : 18,
+      "kind" : "final",
+      "low_confidence" : 0,
+      "meeting_id" : 1,
+      "seq" : 6,
+      "speaker" : 2,
+      "speaker_manual" : 1,
+      "start" : 67.319999999999993,
+      "text" : "Valkey 的 TTL 設 100% 沒問題"
+    },
+    {
+      "channel" : null,
+      "end" : 8,
+      "id" : 19,
+      "kind" : "final",
+      "low_confidence" : 0,
+      "meeting_id" : 2,
+      "seq" : 2,
+      "speaker" : 4,
+      "speaker_manual" : 1,
+      "start" : 6.8799999999999999,
+      "text" : "by Friday."
     }
   ],
   "speakers" : [
@@ -493,6 +533,19 @@
       "idx" : 4,
       "meeting_id" : 1,
       "name" : "說話者 4",
+      "name_source" : "default",
+      "person_id" : null,
+      "speech_seconds" : 0,
+      "suggested_name" : null,
+      "suggestion_reason" : null,
+      "suggestion_time" : null
+    },
+    {
+      "audio_source" : "mic",
+      "embedding" : null,
+      "idx" : 4,
+      "meeting_id" : 2,
+      "name" : "Speaker 4",
       "name_source" : "default",
       "person_id" : null,
       "speech_seconds" : 0,

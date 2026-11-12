@@ -9,8 +9,6 @@
 
 ## 把一句拆成兩句（R70，design §46、design-windows §11.13、D152；2026-11-12 GitHub #6）
 
-- [ ] **SP1 Mac**（§46.1、§46.2）：`splitSegment`、復原、右鍵選單和拆開的模式、DEBUG `splitsegment`、標準答案 `db/35～38`
-  - 驗證：`dump-golden` 跑兩次相同；DEBUG 版拆一句（中文、英文）、看時間和說話者、復原後跟拆之前一樣；用 AX 按過「拆成兩句…」「拆開」「取消」
 - [ ] **SP2 Windows**（design-windows §11.13）：同上
   - 驗證：`dotnet test` 的標準答案通過；虛擬機的 DEBUG 版用 UIA 按過「拆成兩句…」「拆開」
 

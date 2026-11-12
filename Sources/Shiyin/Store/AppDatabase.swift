@@ -833,7 +833,7 @@ final class AppDatabase: @unchecked Sendable {
         return metaRowidBase + meetingId * 4 + code
     }
 
-    private static func indexSegment(_ db: Database, meetingId: Int64, id: Int64, text: String) throws {
+    static func indexSegment(_ db: Database, meetingId: Int64, id: Int64, text: String) throws {
         try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) VALUES (?, ?, 'segment', ?, ?)",
                        arguments: [id, meetingId, id, text])
     }

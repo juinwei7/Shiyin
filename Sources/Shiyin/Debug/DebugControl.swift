@@ -145,6 +145,21 @@ enum DebugControl {
             model.selection = id
             model.reassignSegments(args.dropFirst(3).compactMap { Int64($0) }, to: args[2] == "new" ? nil : Int(args[2]))
         case "undospeaker": model.selection = id; model.undoSpeakerEdit()
+        case "splitmode":   // splitmode <會議 id> <段落 id>：逐字稿進入拆成兩句的模式（等於右鍵「拆成兩句…」）
+            model.selection = id
+            model.tab = .transcript
+            model.splitRequest = Int64(args[2])
+        case "splitcaret":   // splitcaret <UTF-16 位置>：拆開模式的文字框把游標放到這裡（背景的視窗點不到文字框，design §46.2）
+            func find(_ view: NSView) -> NSTextView? {
+                if let text = view as? NSTextView, text.accessibilityLabel() == String(localized: "要拆開的句子") { return text }
+                return view.subviews.lazy.compactMap(find).first
+            }
+            if let content = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" })?.contentView, let text = find(content) {
+                text.setSelectedRange(NSRange(location: Int(args[1]) ?? 0, length: 0))
+            }
+        case "splitsegment":   // splitsegment <會議 id> <段落 id> <UTF-16 位置> <說話者|new>：拆成兩句（design §46.2）
+            model.selection = id
+            model.splitSegment(Int64(args[2]) ?? 0, at: Int(args[3]) ?? 0, to: args[4] == "new" ? nil : Int(args[4]))
         case "speakerhint": model.selection = id; if args.count > 2, args[2] == "dismiss" { model.dismissSpeakerHint() }
         case "minspeakers": model.selection = id; model.setMinSpeakers(args[2] == "auto" ? nil : Int(args[2]))   // 錄音中的「人數」選單（design §26.2）
         case "levelhint": if args.count > 1, args[1] == "dismiss" { model.recorder.dismissLevelHint() }   // 收音提醒按「知道了」
