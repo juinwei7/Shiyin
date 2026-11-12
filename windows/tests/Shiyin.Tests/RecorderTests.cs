@@ -266,6 +266,89 @@ public sealed class RecorderTests : IDisposable
         recorder.Stop();
     }
 
+    /// <summary>
+    /// 一直說裝置變了、重新開始後很久才有資料的音源（藍牙耳機切換成通話模式，M§50.4）：開始後 0.2 秒送「裝置變了」（Flaps 次），
+    /// 重新開始後 SilentAfterRestart 秒才有資料
+    /// </summary>
+    sealed class FlappingSource : IAudioSource
+    {
+        public Action<float[]>? OnSamples { get; set; }
+        public Action? OnInterruption { get; set; }
+        public int Flaps;
+        public double SilentAfterRestart;
+        public readonly List<DateTime> Starts = [];
+        CancellationTokenSource? cancel;
+
+        public void Start()
+        {
+            var cts = cancel = new CancellationTokenSource();
+            bool flap;
+            double silent;
+            lock (Starts)
+            {
+                Starts.Add(DateTime.UtcNow);
+                flap = Flaps-- > 0;
+                silent = Starts.Count > 1 ? SilentAfterRestart : 0;
+            }
+            new Thread(() =>
+            {
+                if (silent > 0 && cts.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(silent))) return;
+                while (!cts.IsCancellationRequested)
+                {
+                    OnSamples?.Invoke(new float[1600]);
+                    if (cts.Token.WaitHandle.WaitOne(100)) return;
+                }
+            }) { IsBackground = true }.Start();
+            if (flap) _ = Task.Delay(200).ContinueWith(_ => OnInterruption?.Invoke());
+        }
+
+        public void Stop() => cancel?.Cancel();
+        public double[] Gaps() { lock (Starts) return [.. Starts.Zip(Starts.Skip(1), (a, b) => (b - a).TotalSeconds)]; }
+        public int Count { get { lock (Starts) return Starts.Count; } }
+    }
+
+    [Fact]
+    public void RestartDelayBacksOff()
+    {
+        Assert.Equal([0.3, 0.3, 0.3, 2, 4, 8, 16, 30, 30], Enumerable.Range(0, 9).Select(Recorder.RestartDelay));
+    }
+
+    /// <summary>一直重新連接時間隔拉長、提示「一直在重新連接」（R74.2、R74.3、M§50.1）</summary>
+    [Fact]
+    public async Task FlappingSourceBacksOffAndWarns()
+    {
+        var source = new FlappingSource { Flaps = 5 };
+        var recorder = Make(Quiet(), source: source);
+        recorder.Start(9, MeetingLanguage.Zh, "mic");
+        // 開始 + 5 次重新開始：0.3、0.3、0.3 秒之後是 2、4 秒（加上每次開始後 0.2 秒才送通知）
+        await Until(() => source.Count >= 6, 15);
+        var gaps = source.Gaps();
+        Assert.All(gaps[..3], g => Assert.InRange(g, 0.4, 1.5));
+        Assert.InRange(gaps[3], 2.1, 3.5);
+        Assert.InRange(gaps[4], 4.1, 5.5);
+        Assert.Contains("一直在重新連接", recorder.DeviceWarning);
+        // 通知用完了：不再重新開始
+        await Task.Delay(1500);
+        Assert.Equal(6, source.Count);
+        recorder.Stop();
+    }
+
+    /// <summary>重新開始後要等幾秒才有資料（藍牙）：看門狗在重新連接完 5 秒內不再重開，等資料來（R74.1）</summary>
+    [Fact]
+    public async Task WatchdogWaitsAfterRestart()
+    {
+        var source = new FlappingSource { Flaps = 1, SilentAfterRestart = 4.5 };
+        var recorder = Make(Quiet(), source: source);
+        recorder.Start(10, MeetingLanguage.Zh, "mic");
+        await Until(() => source.Count >= 2, 5);
+        // 3 秒沒有資料時照舊提示，但不重新開始；資料來了提示收起
+        await Until(() => recorder.DeviceWarning is not null, 6);
+        Assert.Contains("正在重新連接", recorder.DeviceWarning);
+        await Until(() => recorder.DeviceWarning is null, 6);
+        Assert.Equal(2, source.Count);
+        recorder.Stop();
+    }
+
     [Fact]
     public async Task WarnsAboutDiskAndPermission()
     {
