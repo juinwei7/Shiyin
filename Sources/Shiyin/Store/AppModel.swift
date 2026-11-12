@@ -483,7 +483,7 @@ final class AppModel {
         detail = loaded
         syncReviewDraft()
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
-            if meeting.hasAudio { player.load(meeting.audioURL) } else { player.unload() }
+            if meeting.hasAudio { player.load(meeting.audioURL, mixChannels: meeting.channels == "both") } else { player.unload() }
         }
     }
 

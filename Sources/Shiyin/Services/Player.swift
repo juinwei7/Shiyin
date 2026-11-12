@@ -15,8 +15,11 @@ final class Player {
     @ObservationIgnored private var player: AVPlayer?
     @ObservationIgnored private var observer: Any?
     @ObservationIgnored private var loadedURL: URL?
+    /// 雙聲道的錄音混在一起播（design §49、R73）：音軌讀到、裝好混音後才是 true
+    @ObservationIgnored private(set) var isMixing = false
 
-    func load(_ url: URL) {
+    /// mixChannels：「麥克風＋電腦聲音」的錄音（左右聲道是不同的音源），兩個聲道混在一起播
+    func load(_ url: URL, mixChannels: Bool = false) {
         guard url != loadedURL else { return }
         unload()
         guard FileManager.default.fileExists(atPath: url.path) else { return }
@@ -27,6 +30,13 @@ final class Player {
         self.player = player
         loadedURL = url
         isLoaded = true
+        if mixChannels {
+            Task {
+                guard let mix = await ChannelMix.audioMix(for: item.asset), self.player?.currentItem === item else { return }
+                item.audioMix = mix
+                isMixing = true
+            }
+        }
         observer = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self] time in
             MainActor.assumeIsolated {
                 guard let self, let player = self.player else { return }
@@ -47,11 +57,19 @@ final class Player {
         player = nil
         observer = nil
         loadedURL = nil
+        isMixing = false
         currentTime = 0
         duration = 0
         isPlaying = false
         isLoaded = false
     }
+
+    #if DEBUG
+    /// shiyinctl playvolume：AVPlayer 的音量在混音的 tap 之後，設 0 時照樣混音、聽不到（design §49.3）
+    func setVolume(_ value: Float) {
+        player?.volume = value
+    }
+    #endif
 
     func setRate(_ value: Float) {
         rate = value

@@ -9,7 +9,6 @@
 
 ## 雙聲道的錄音兩耳都聽得到（R73，design §49、design-windows §11.16、D158；2026-11-12，GitHub #7）
 
-- [ ] **CH1 Mac**（§49.1）：`ChannelMix`、`Player.load(_:mixChannels:)`、匯出 m4a。驗證照 §49.3：左聲道有聲音、右聲道靜音的 `both` 會議播放時 `player.mix` 兩邊一樣、≈ 左聲道 × 0.71（`playvolume 0`，使用者聽不到）；`mic` 的會議不混；匯出的 m4a 兩個聲道一樣；倍速、跳播照常
 - [ ] **CH2 Windows**（design-windows §11.16）：`ChannelMix.Mix`、`MixedAudioSource`、匯出 m4a。驗證：`dotnet test`；虛擬機匯出 m4a 讀回來兩邊一樣；播放要真的 Windows 電腦
 
 ## 錄音中麥克風一直重新連接（R74，design §50、design-windows §11.17、D159、D160；2026-11-12，GitHub #8）
