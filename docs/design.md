@@ -2275,6 +2275,52 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - Mac DEBUG 版 `-AppleLanguages "(zh-Hans)"`：主視窗（紀錄、逐字稿、提問）、錄音畫面、選單列、設定四頁（`preview settings`）、首次使用引導、使用說明、匯出對話框截圖，找不到繁體字、版面沒有跑掉；「中文的字」沒選過時是簡體。繁體、英文介面截圖跟改之前一樣。
 - Windows 虛擬機 `--set interfaceLanguage=zh-Hans`：同樣的畫面。
 
+## 49. 雙聲道的錄音兩耳都聽得到（R73，D158；GitHub #7）
+
+### 49.1 混音（`Services/ChannelMix.swift`）
+
+- `ChannelMix.audioMix(for: AVAsset) async -> AVAudioMix?`：音軌是 2 個聲道時，回傳一個裝了 `MTAudioProcessingTap` 的 `AVAudioMix`；其他（單聲道、讀不到音軌）回傳 nil，照原樣播。
+- tap 的 process：`MTAudioProcessingTapGetSourceAudio` 取來源音訊，處理格式是 2 個聲道、非交錯的 Float32 時，每個取樣 m = (L + R) × 0.7071（同 AVAssetReader 混成單聲道的 −3 dB，量過：左聲道 0.5、右聲道 0 混出 0.354），超過 ±1 截掉，寫回兩個聲道。其他格式（prepare 時看 ASBD）不動。
+- 只在會議的 `channels` 是 `both` 時用（R73.5）：`Player.load(_:mixChannels:)`，`AppModel` 傳 `meeting.channels == "both"`。`load` 照舊馬上建好 `AVPlayerItem`，音軌讀到後才設 `item.audioMix`（可以中途設）。
+- 匯出 m4a（`AudioExporter`）：`both` 的會議一律用 `AVAssetExportSession`（AppleM4A）轉，即使原檔已經是 m4a，`session.audioMix` 設成同一個混音；輸出還是雙聲道，兩個聲道一樣。wav、`.shiyin` 照舊。
+
+### 49.2 Windows（design-windows §11.16）
+
+`both` 的會議用 `MediaStreamSource` 播：NAudio 讀原檔、每次送 0.1 秒、混成單聲道 16-bit PCM 交給 `MediaPlayer`；匯出 m4a 先混成單聲道再壓縮。混音的算法同 49.1（`ChannelMix.Mix`）。
+
+### 49.3 驗證
+
+- DEBUG：tap 記下處理過的取樣數、混音後兩個聲道的峰值（state 的 `player.mix`）；`shiyinctl playvolume <0～1>`（AVPlayer 的音量，在 tap 之後，設 0 時 tap 照樣處理、使用者聽不到）。
+- 暫存的 `SHIYIN_HOME` 匯入一個左聲道有聲音、右聲道靜音的 WAV，用 sqlite3 把那場的 `channels` 改成 `both`（等於「麥克風＋電腦聲音」錄到的）：播放後 `player.mix` 兩個聲道的峰值相同、≈ 原本左聲道 × 0.71；改回 `mic` 時沒有混音。匯出 m4a 後讀兩個聲道，兩邊相同、≈ 原本左聲道 × 0.71。
+
+## 50. 錄音中麥克風一直重新連接（R74，D159、D160；GitHub #8）
+
+### 50.1 重新連接的節奏（Mac、Windows 的 `Recorder` 同一套）
+
+- 每個聲道記下重新連接的時間（`restarts[channel]`；裝置變了、看門狗觸發的都算，使用者換麥克風不算），只留 60 秒內的；n 是 60 秒內的次數。
+- `delay(n)`：n < 3 是 0.3 秒，之後是 2^(n−2) 秒（n = 3 是 2 秒、4 是 4 秒、5 是 8 秒、6 是 16 秒），最多 30 秒。
+- 裝置變了（`onInterruption`）：等 `delay(n)` 秒沒有新的通知再重新連接（原本固定 0.3 秒）。
+- 看門狗：超過 3 秒沒送資料時照舊提示；距離上次重新連接完至少 5 秒、沒有正在進行的重新連接，才重新連接（R74.1）；之後重試的間隔是 max(5, `delay(n)`) 秒。
+- 提示（`deviceWarning`，每秒重算）：重新連接失敗的原因 ＞ 一直在重新連接（n ≥ 3，R74.3）＞ 正在重新連接…。n 掉到 3 以下（60 秒沒再重新連接）時「一直在重新連接」那句消失。
+
+### 50.2 Mac：重新連接在背景（D160）
+
+- `Recorder` 多一個序列佇列 `deviceQueue`：重新連接（`restart()`）在這裡做，做完回主執行緒更新正在收音的麥克風、失敗的原因、提示。同一個聲道正在重新連接時又要重新連接（換麥克風）：記下來，做完再做一次。
+- 停止錄音時在 `deviceQueue` 上停掉音源（`deviceQueue.sync`）：等正在進行的重新連接做完，不會跟它同時動 AVAudioEngine。開始錄音照舊在主執行緒（還沒有別的工作）。重新連接做完時錄音已經停了（音源不是現在的），結果丟掉。
+- 模擬錄音的 `FileSource`（DEBUG）原本在 `start()` 用 `MainActor.assumeIsolated` 讀麥克風清單，背景會當掉：改讀 `MicrophoneMonitor` 上鎖的快照（`resolveSnapshot(_:)`，`refresh()` 時更新）。
+
+### 50.3 Mac：收音的格式（R74.5）
+
+- `installTap(onBus: 0, bufferSize: 4096, format: nil)`：用 input node 當下的格式。原本先讀 `outputFormat(forBus:)` 再傳進去，兩次之間裝置換了取樣率時 AVAudioEngine 丟 NSException（格式跟硬體不符）。`outputFormat` 只用來確認有輸入（取樣率 > 0）。
+- `StreamConverter` 看每個 buffer 的格式，跟上一個不同就重建 `AVAudioConverter`。
+- Objective-C 的例外：新的 C 系 target `Sources/ObjCCatch`（一個 `.m`，`ShiyinCatch(block) -> NSString?` 用 `@try/@catch` 包住，回傳例外的原因），包住 `inputNode`、`setDeviceID`、`installTap`、`prepare`、`start`；接到例外就停掉 engine、丟 `CaptureError.engine(原因)`，當成重新連接失敗（看門狗照常重試，開始錄音時就失敗則照舊顯示「沒辦法開始錄音」）。
+
+### 50.4 驗證
+
+- DEBUG：`shiyinctl recordflap <次數> [秒數]`：模擬錄音的麥克風（`FileSource`）接下來 N 次開始收音後 0.5 秒送出「裝置變了」，每次開始收音花 <秒數>（模擬藍牙），state 的 `recorder.restarts`（每個聲道 60 秒內重新連接的秒數）。驗證：重新連接的間隔照 50.1 拉長、提示換成「一直在重新連接」、停止後再開始恢復；開始收音花 3 秒時 `metrics` 的 `maxMainGapMs` 不到 0.5 秒（畫面不卡）、錄音沒停。
+- 真的裝置：內建麥克風錄音、錄音中換到別的麥克風再換回來（格式不同），錄音照常；AirPods 要回報的人或使用者實測。
+- Windows：`RecorderTests` 用會一直送通知、開始收音很慢的假音源，驗證同樣的節奏和提示。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2378,5 +2424,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D155 | 簡體介面的翻譯從繁體自動產生（用語表＋繁轉簡＋少數手動指定），不手寫一份（§48.1；2026-11-12） | 手寫或找人翻一份：一千多條，之後每次改介面都要記得改，一定會漏；繁體跟簡體大部分只差字，用語差異可以列表。只換字不換用語（同 D153）：介面上「設定」「檔案」「匯出」在大陸讀起來不對，介面跟逐字稿不同，介面是使用者天天看的 |
 | D156 | 不查表的中文在簡體介面執行時轉，Windows 查不到的鍵也執行時轉（§48.2、§48.3） | 這些地方全部改成查表：寫死兩種語言的地方本來就是因為同一句中文要不同的英文（D12 的例外），改查表要多一套鍵；範本名稱、語言名稱、更新說明不是介面字串 |
 | D157 | 簡體介面時「中文的字」預設簡體，會議內容的字形跟著「中文的字」（§48.2；2026-11-12 使用者同意） | 預設維持繁體：用簡體介面的人幾乎都要簡體的逐字稿，還要自己去找設定。內容字形跟著介面：繁體介面的人選了簡體逐字稿，會用繁體字形顯示簡體字，標點位置不對 |
+| D158 | 雙聲道的錄音在播放、匯出 m4a 時才混音（MTAudioProcessingTap；Windows 是 MediaStreamSource），錄音檔不變（§49；2026-11-12，GitHub #7） | 錄成單聲道、壓縮時混成單聲道：分聲道轉錄、判斷誰是我（§17.3）就沒有資料了。另外產生一份混好的播放檔：多一倍空間，長會議點了播放要等。用 AVAudioEngine 自己寫播放器：倍速、跳播、時間都要重寫。混音的音量用相加乘 0.71 而不是平均：跟轉錄時 AVAssetReader 混成單聲道一樣，只有一邊有聲音（最常見）時不會小一半 |
+| D159 | 重新連接的間隔逐漸拉長，看門狗在重新連接完先等 5 秒（§50.1；2026-11-12，GitHub #8） | 藍牙的裝置不重新連接：AVAudioEngine 收到裝置變了之後會自己停下來，不重開就一直沒聲音。一直重新連接時自動改用內建麥克風：D104 不自動換麥克風，使用者可能就是要用耳機的麥克風。原因是推測的（沒有 AirPods 4、還沒拿到當機報告），這兩個改動對所有裝置都安全：正常換裝置時前兩次照舊 0.3 秒 |
+| D160 | Mac 的重新連接在背景佇列做，AVAudioEngine 的 Objective-C 例外用一個小的 `.m` 接住（§50.2、§50.3） | 留在主執行緒：藍牙開始收音要好幾秒，畫面卡住（回報的「卡死一會」）。整個錄音（含開始、停止）都搬到背景：Recorder 的狀態都在主執行緒，改動太大。不接例外：格式在中途改變時直接當掉，Swift 的 `do/catch` 接不到 NSException |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
