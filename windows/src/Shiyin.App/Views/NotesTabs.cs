@@ -241,7 +241,7 @@ public sealed class NotesTabs
     /// </summary>
     FrameworkElement MindMapPage(MeetingDetail detail, MeetingNotes notes, StackPanel header)
     {
-        var layout = MindMap.LayoutOf(MindMap.Tree(notes, detail.Meeting.DisplayTitle, MindMap.Labels.For(MeetingLanguages.Interface)));
+        var layout = MindMap.LayoutOf(MindMap.Tree(notes, detail.Meeting.DisplayTitle, MindMap.Labels.For(MeetingLanguages.Interface, L.Ui)));
         var page = new StackPanel();
         page.Children.Add(new Border { Child = new ReadingColumn(header, Ui.C(680)), Padding = new Thickness(32, 24, 32, 16) });
         page.Children.Add(MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded));

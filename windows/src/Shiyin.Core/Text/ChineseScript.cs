@@ -170,5 +170,56 @@ public static class ChineseScript
         }
         return out_.ToString();
     }
+
+    // MARK: 簡體介面的用語（M§48.1、D156）
+
+    static readonly Lazy<(Dictionary<string, string> Map, int Longest)> Terms = new(() =>
+    {
+        var map = new Dictionary<string, string>();
+        var longest = 1;
+        using var stream = typeof(ChineseScript).Assembly.GetManifestResourceStream("l10n/zh-Hans-terms.tsv")
+            ?? throw new InvalidOperationException("找不到內嵌的用語表");   // l10n-skip
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        while (reader.ReadLine() is { } line)
+        {
+            var tab = line.IndexOf('\t');
+            if (tab <= 0) continue;
+            map[line[..tab]] = line[(tab + 1)..];
+            longest = Math.Max(longest, SwiftText.Count(line[..tab]));
+        }
+        return (map, longest);
+    });
+
+    /// <summary>介面文字轉成簡體（同 Mac 的 toSimplifiedUI、l10n.py 的 to_simplified_ui）：用語表在繁體原文上最長匹配，
+    /// 換過的不再轉；其餘的字繁轉簡</summary>
+    public static string ToSimplifiedUI(string text)
+    {
+        var (map, longest) = Terms.Value;
+        var chars = SwiftText.Characters(text);
+        var result = new StringBuilder(text.Length);
+        var gap = new StringBuilder();
+        var i = 0;
+        while (i < chars.Count)
+        {
+            var matched = false;
+            for (var length = Math.Min(longest, chars.Count - i); length >= 1; length--)
+            {
+                if (map.TryGetValue(string.Concat(chars.GetRange(i, length)), out var value))
+                {
+                    result.Append(ToSimplified(gap.ToString())).Append(value);
+                    gap.Clear();
+                    i += length;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched)
+            {
+                gap.Append(chars[i]);
+                i++;
+            }
+        }
+        return result.Append(ToSimplified(gap.ToString())).ToString();
+    }
 }
 

@@ -18,11 +18,13 @@ public static class MindMap
     public sealed record Labels(string Summary, string Decisions, string ActionItems, string OpenQuestions, string Topics,
                                 string Untitled, string Colon, Func<string, string> Paren)
     {
-        public static Labels For(MeetingLanguage language)
+        /// <summary>script：中文會議用簡體時轉成簡體（同匯出）、簡體介面時轉（畫面上，M§48.2）</summary>
+        public static Labels For(MeetingLanguage language, Func<string, string>? script = null)
         {
             var x = new ExportText(language);
-            return new Labels(x.Section("summary"), x.Section("decisions"), x.Section("actionItems"), x.Section("openQuestions"),
-                TopicLabel(language), language.Text("會議", "Meeting", "会議"), x.Colon, x.Paren);  // l10n-skip：會議語言的文字
+            var s = script ?? (t => t);
+            return new Labels(s(x.Section("summary")), s(x.Section("decisions")), s(x.Section("actionItems")), s(x.Section("openQuestions")),
+                s(TopicLabel(language)), s(language.Text("會議", "Meeting", "会議")), x.Colon, t => s(x.Paren(t)));  // l10n-skip：會議語言的文字
         }
     }
 

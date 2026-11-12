@@ -382,7 +382,7 @@ public sealed class SettingsWindow : Window
         SummarizerProblemKind.Incomplete => L.T("還沒有填網址或模型。設定好之前不會自動整理。"),
         SummarizerProblemKind.EnterpriseSignedOut => L.T("公司的伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。"),
         SummarizerProblemKind.EnterpriseNoModels => L.T("公司的伺服器還沒有提供整理用的模型：請管理者在伺服器後台的「整理模型」加上模型。"),
-        _ => L.F("上次整理失敗：%@。改好設定，或按「測試整理工具」成功之後，才會再自動整理。", problem!.Detail.TrimEnd('。', '.', ' ')),
+        _ => L.F("上次整理失敗：%@。改好設定，或按「測試整理工具」成功之後，才會再自動整理。", L.Ui(problem!.Detail.TrimEnd('。', '.', ' '))),
     };
 
     string Privacy(LLMProvider provider) => provider switch
@@ -445,6 +445,10 @@ public sealed class SettingsWindow : Window
     FrameworkElement TemplateEditor(TemplateRecord template)
     {
         var definition = template.DefinitionFor(MeetingLanguages.Interface);
+        // 內建範本不能改、不會存檔：簡體介面顯示簡體（M§48.2）
+        if (template.Builtin && L.Simplified)
+            definition = definition with { Description = L.Ui(definition.Description), Instruction = L.Ui(definition.Instruction),
+                                           Custom = [.. definition.Custom.Select(c => c with { Title = L.Ui(c.Title), Instruction = L.Ui(c.Instruction) })] };
         var sections = definition.Sections.ToList();
         var custom = definition.Custom.ToList();
         var name = new TextBox { Header = L.T("名稱"), Text = template.DisplayName(), IsEnabled = !template.Builtin };
@@ -455,7 +459,7 @@ public sealed class SettingsWindow : Window
         var toggles = Ui.Column(4, Ui.Text(L.T("要產生的段落"), 14, bold: true));
         foreach (var id in TemplateDefinition.BuiltinSectionIds)
         {
-            var box = new CheckBox { Content = TemplateDefinition.SectionLabel(id, MeetingLanguages.Interface), IsChecked = sections.Contains(id), IsEnabled = !template.Builtin };
+            var box = new CheckBox { Content = L.Ui(TemplateDefinition.SectionLabel(id, MeetingLanguages.Interface)), IsChecked = sections.Contains(id), IsEnabled = !template.Builtin };
             box.Click += (_, _) => { if (box.IsChecked == true) { if (!sections.Contains(id)) sections.Add(id); } else sections.Remove(id); };
             toggles.Children.Add(box);
         }
@@ -573,7 +577,7 @@ public sealed class SettingsWindow : Window
                 XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("刪除所有認識的人的聲音特徵？")), Content = L.T("已經帶入的名字會留著，之後的會議不會再自動帶入。"),
                 PrimaryButtonText = L.T("全部刪除"), CloseButtonText = L.T("取消"),
             };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary) { host.Controller.DeleteAllPeople(); Show(); }
+            if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary) { host.Controller.DeleteAllPeople(); Show(); }
         };
         column.Children.Add(Ui.Bar(Ui.Text(L.T("認識的人"), 15, bold: true), null, deleteAll));
         if (people.Count == 0) column.Children.Add(Ui.Text(L.T("還沒有認識的人。在逐字稿點「說話者 1」改成名字，拾音就會記住這個人。"), 13, color: Ui.Secondary));
@@ -586,7 +590,7 @@ public sealed class SettingsWindow : Window
             {
                 var box = new TextBox { Text = person.Name };
                 var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("改名")), Content = box, PrimaryButtonText = L.T("儲存"), CloseButtonText = L.T("取消") };
-                if (await dialog.ShowAsync() == ContentDialogResult.Primary && box.Text.Trim().Length > 0) { host.Controller.RenamePerson(person.Id, box.Text.Trim()); Show(); }
+                if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary && box.Text.Trim().Length > 0) { host.Controller.RenamePerson(person.Id, box.Text.Trim()); Show(); }
             };
             column.Children.Add(Ui.Bar(null, Ui.Column(2, Ui.Text(person.Name, 14), Ui.Caption(detail)),
                 Ui.Row(8, rename, Ui.IconButton(Symbol.Delete, L.F("刪除「%@」的聲音特徵（已經帶入的名字留著）", person.Name), () => { host.Controller.DeletePerson(person.Id); Show(); }))));
@@ -617,7 +621,7 @@ public sealed class SettingsWindow : Window
         language.Children.Add(Note(L.T("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")));
         // 中文的字（R71、M§47.3）
         language.Children.Add(Ui.Combo(new[] { ("traditional", L.T("繁體（台灣）")), ("simplified", L.T("簡體")) },
-            S.String(AppSettings.ChineseScriptKey) == "simplified" ? "simplified" : "traditional", v => S.Set(AppSettings.ChineseScriptKey, v), L.T("中文的字")));
+            S.ChineseScript, v => S.Set(AppSettings.ChineseScriptKey, v), L.T("中文的字")));
         language.Children.Add(Note(L.T("只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。")));
         language.Children.Add(Ui.Toggle(L.T("自動偵測會議語言"), S.AutoDetectLanguage, on =>
         {
@@ -819,7 +823,7 @@ public sealed class SettingsWindow : Window
                 XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("刪除「%@」？", name)), Content = L.T("之後要用的時候需要重新下載。"),
                 PrimaryButtonText = L.T("刪除"), CloseButtonText = L.T("取消"),
             };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary) { host.Models.Delete(model); Show(); }
+            if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary) { host.Models.Delete(model); Show(); }
         };
         return button;
     }
@@ -831,7 +835,7 @@ public sealed class SettingsWindow : Window
         var column = Ui.Column(16);
         // 介面語言（D57）：Windows 沒有替桌面 app 個別設定語言的地方
         // 語言的名稱用各自的語言寫
-        var language = Ui.Combo(new[] { ("", L.T("跟著 Windows")), ("zh", "中文"), ("en", "English") }, S.String(AppSettings.InterfaceLanguageKey) ?? "",  // l10n-skip
+        var language = Ui.Combo(new[] { ("", L.T("跟著 Windows")), ("zh", "繁體中文"), ("zh-Hans", "简体中文"), ("en", "English") }, S.String(AppSettings.InterfaceLanguageKey) ?? "",  // l10n-skip
             v => { S.Set(AppSettings.InterfaceLanguageKey, v.Length == 0 ? null : v); App.Current.Notice(L.T("重新打開拾音後換成新的介面語言")); }, L.T("介面語言"));
         // 企業伺服器（R49、M§36.3）：放在最上面，公司的人照「進階 → 企業伺服器」找得到
         column.Children.Add(Section(L.T("企業伺服器"), Enterprise()));
@@ -1036,7 +1040,7 @@ public sealed class SettingsWindow : Window
             Content = Ui.Text(detail, 14), PrimaryButtonText = L.T("加入"), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Primary,
         };
         ContentDialogResult answer;
-        try { answer = await dialog.ShowAsync(); }
+        try { answer = await Ui.InterfaceLanguage(dialog).ShowAsync(); }
         catch (Exception e) { Log.Error($"join dialog failed: {e.GetType().Name}"); return; }
         if (answer != ContentDialogResult.Primary) return;
         try
@@ -1054,7 +1058,7 @@ public sealed class SettingsWindow : Window
             XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(title), Content = Ui.Text(text, 14),
             CloseButtonText = L.T("好"), DefaultButton = ContentDialogButton.Close,
         };
-        try { await dialog.ShowAsync(); }
+        try { await Ui.InterfaceLanguage(dialog).ShowAsync(); }
         catch (Exception e) { Log.Error($"message dialog failed: {e.GetType().Name}"); }
     }
 
@@ -1110,7 +1114,7 @@ public sealed class SettingsWindow : Window
                 Ui.Row(10, Ui.Button(L.T("重設匿名 ID"), () => { usage.ResetInstallId(); reset.Text = L.T("已重設匿名 ID"); }), reset)),
             CloseButtonText = L.T("完成"), DefaultButton = ContentDialogButton.Close,
         };
-        try { await dialog.ShowAsync(); }
+        try { await Ui.InterfaceLanguage(dialog).ShowAsync(); }
         catch (Exception e) { Log.Error($"usage dialog failed: {e.GetType().Name}"); }
     }
 }

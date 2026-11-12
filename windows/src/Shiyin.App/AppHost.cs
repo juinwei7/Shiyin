@@ -70,6 +70,8 @@ public sealed class AppHost
         Log.Configure(Paths.Logs);
         Settings = AppSettings.Load(Paths.Settings, AppSettings.ParseOverrides(args));
         UseInterfaceLanguage(Settings.String(AppSettings.InterfaceLanguageKey));
+        // 中文會議用簡體時，新增的預設說話者名稱也是簡體（M§48.2）
+        MeetingLanguages.SimplifiedChineseContent = () => Settings.SimplifiedChinese(MeetingLanguage.Zh);
         // 換了介面語言時，開始功能表、桌面的捷徑和檔案類型的名稱跟著換（R27 R12.3）
         if (Shortcuts.IsInstalledApp)
         {
@@ -121,7 +123,7 @@ public sealed class AppHost
         Settings.CliLoggedIn = CliLogin.Cached;
         // 匿名使用統計（design-windows §12.10）：正式版用打包時寫進 app 的網址；DEBUG 不讀，只用控制通道的 usageurl
         Usage = new UsageStats(Paths.Usage, Settings, Http,
-            () => new UsageStats.AppInfo(Version, SystemInfo.UsageOs(), SystemInfo.CpuName(), L.English ? "en" : "zh-Hant"))
+            () => new UsageStats.AppInfo(Version, SystemInfo.UsageOs(), SystemInfo.CpuName(), MeetingLanguages.InterfaceCode))
         {
             Url = Debug ? null : BuiltUsageUrl, AlwaysOffered = Debug,
         };
@@ -208,12 +210,13 @@ public sealed class AppHost
     static string? BuiltUsageUrl => typeof(AppHost).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(a => a.Key == "ShiyinUsageURL")?.Value;
 
-    /// <summary>介面語言（design-windows §11.4、D57）：設定的 zh、en，沒設定時跟著 Windows 的顯示語言（中文以外都用英文）</summary>
-    public static bool UsesEnglish(string? setting) => setting switch
+    /// <summary>介面語言（design-windows §11.4、§11.15、D57）：設定的 zh、zh-Hans、en，沒設定時跟著 Windows 的顯示語言：
+    /// 中國大陸、新加坡的中文（zh-CN、zh-SG、zh-Hans*）是簡體，其他中文是繁體，中文以外都用英文</summary>
+    public static string InterfaceLanguage(string? setting) => setting switch
     {
-        "zh" => false,
-        "en" => true,
-        _ => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "zh",
+        "zh" or "zh-Hans" or "en" => setting,
+        _ => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "zh" ? "en"
+            : CultureInfo.CurrentUICulture.Name is "zh-CN" or "zh-SG" || CultureInfo.CurrentUICulture.Name.StartsWith("zh-Hans", StringComparison.Ordinal) ? "zh-Hans" : "zh",
     };
 
     /// <summary>Velopack 的安裝、更新 hook 用（這時還沒有 AppHost）：照設定的介面語言，捷徑、檔案類型的名稱才會對</summary>
@@ -225,7 +228,22 @@ public sealed class AppHost
 
     static void UseInterfaceLanguage(string? setting)
     {
-        if (!UsesEnglish(setting)) { L.Use(null); return; }
+        var language = InterfaceLanguage(setting);
+        if (language == "zh") { L.Use(null); return; }
+        if (language == "zh-Hans")
+        {
+            // 簡體（M§48.3）：兩份翻譯表的 zh-Hans，同一個鍵以 Windows 的為準；查不到的鍵 L.T 執行時轉
+            var hans = new Dictionary<string, string>();
+            foreach (var name in new[] { "Localizable.xcstrings", "Windows.xcstrings" })
+            {
+                using var stream = typeof(AppHost).Assembly.GetManifestResourceStream(name);
+                if (stream is null) continue;
+                using var reader = new StreamReader(stream);
+                foreach (var (k, v) in L.ReadXcstringsHans(reader.ReadToEnd())) hans[k] = v;
+            }
+            L.UseSimplified(hans);
+            return;
+        }
         var table = new Dictionary<string, string>();
         var plurals = new Dictionary<string, (string, string)>();
         // 先讀 Mac 的，再讀 Windows 才有的（同一個鍵以 Windows 的為準）

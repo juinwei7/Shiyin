@@ -91,7 +91,7 @@ public sealed class PlayerBar
         if (duration != topicsDuration)
         {
             topicsDuration = duration;
-            topics.Show(detail.Notes is { } notes ? MindMap.TopicRanges(notes, duration, MindMap.TopicLabel(MeetingLanguages.Interface)) : [], duration);
+            topics.Show(detail.Notes is { } notes ? MindMap.TopicRanges(notes, duration, L.Ui(MindMap.TopicLabel(MeetingLanguages.Interface))) : [], duration);
         }
         topics.Update(player.CurrentTime);
         root.Opacity = player.IsLoaded ? 1 : 0.5;

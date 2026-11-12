@@ -9,5 +9,7 @@
     <EmbeddedResource Include="../../../Resources/opencc/*.tsv" LogicalName="opencc/%(Filename)%(Extension)" />
     <!-- 語言檔（M§41.1、D139）：跟 Mac 共用同一份 -->
     <EmbeddedResource Include="../../../Resources/languages.json" LogicalName="languages.json" />
+    <!-- 簡體介面的用語表（M§48.1、D155）：跟 Mac 共用同一份 -->
+    <EmbeddedResource Include="../../../Resources/l10n/zh-Hans-terms.tsv" LogicalName="l10n/zh-Hans-terms.tsv" />
   </ItemGroup>
 </Project>

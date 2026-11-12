@@ -451,7 +451,9 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - 介面語言：`AppHost.InterfaceLanguage(setting)` 回傳 `zh`／`zh-Hans`／`en`（取代 `UsesEnglish`）；設定「進階」的選單：跟著 Windows、繁體中文、简体中文、English（選單裡的語言名稱用各自的寫法）。
 - `L.Use(table, plurals, simplified)`：簡體時讀兩份 xcstrings 的 `zh-Hans`，查不到的鍵 `ChineseScript.ToSimplifiedUI`；`L.Simplified`。用語表 `Resources/l10n/zh-Hans-terms.tsv` 內嵌在 Shiyin.Core（同 opencc 的字表）。
-- 字型：視窗的根元素 `Language = "zh-CN"`（簡體介面）；`Ui.ContentLanguage(language)` 對中文會議看「中文的字」。
+- 字型：視窗的根元素（`Ui.WindowBackground`）、對話框（`Ui.InterfaceLanguage`）的 `Language = "zh-CN"`（簡體介面）；`Ui.ContentLanguage(language)` 對中文會議看「中文的字」。
+- 執行時轉（`L.Ui`）：`MeetingLanguages.Ui`、語言名稱、內建範本的名稱和說明（設定裡的範本內容只顯示）、會議長度、心智圖和播放條的段落名稱、更新說明、存起來的失敗原因。`MeetingLanguages.SimplifiedChineseContent`（AppHost 接到設定）：中文會議用簡體時新增的預設說話者是「说话者 N」；`AppController.MindMapLayout(b, settings)` 匯出的心智圖段落名稱同匯出轉。
+- `sync.sh` 帶 `Resources/l10n`。
 - 驗證：`dotnet test`（`util/ui-hans.json`）；虛擬機 `--set interfaceLanguage=zh-Hans` 截圖主視窗、設定四頁、引導、對話框。
 
 ## 12. 系統整合

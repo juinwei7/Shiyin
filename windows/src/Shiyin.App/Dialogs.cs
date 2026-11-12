@@ -43,6 +43,7 @@ public static class Dialogs
     static async Task<ContentDialogResult> Show(ContentDialog dialog)
     {
         await Gate.WaitAsync();
+        Ui.InterfaceLanguage(dialog);
         try { return await dialog.ShowAsync(); }
         finally { Gate.Release(); }
     }

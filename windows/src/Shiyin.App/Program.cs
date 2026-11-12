@@ -309,12 +309,14 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         if (main?.XamlRoot is null || host?.Updater is not { } updater || askDialog is not null) return;
         // 更新內容只列前幾項（R10.6、M§12）：tag 的說明中英各一段、每段好幾條，整段放進對話框太長
         var (items, more) = ReleaseNotes.Brief(notes ?? "", L.English);
-        var brief = string.Join("\n", items.Select(i => "• " + i).Concat(more > 0 ? [L.F("……還有 %lld 項，完整說明在官網。", more)] : []));
+        // 簡體介面：說明只有繁體、英文兩段，中文那段執行時轉（M§48.3）
+        var brief = string.Join("\n", items.Select(i => "• " + (L.English ? i : L.Ui(i))).Concat(more > 0 ? [L.F("……還有 %lld 項，完整說明在官網。", more)] : []));
         var text = string.Join("\n\n", new[] { brief, L.F("目前是 %@。更新時拾音會結束並重新打開，會議資料都會保留。", host.Version) }.Where(t => t.Length > 0));
         var dialog = new ContentDialog
         {
             XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(L.F("拾音 %@ 可以更新了", version)), Content = Ui.Text(text), PrimaryButtonText = L.T("下載並更新"), CloseButtonText = L.T("稍後"),
         };
+        Ui.InterfaceLanguage(dialog);
         askDialog = dialog;
         var result = await dialog.ShowAsync();
         askDialog = null;
@@ -446,7 +448,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
                 XamlRoot = main.XamlRoot, Title = Ui.DialogTitle(title),
                 Content = string.Join("\n", info), PrimaryButtonText = L.T("結束"), CloseButtonText = L.T("取消"),
             };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await Ui.InterfaceLanguage(dialog).ShowAsync() != ContentDialogResult.Primary) return;
         }
         main?.Refresh();
         await Task.Run(host.StopWork);

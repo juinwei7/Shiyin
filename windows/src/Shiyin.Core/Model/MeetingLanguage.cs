@@ -159,12 +159,22 @@ public static class MeetingLanguages
         return string.Join("、", names[..^1]) + "和" + names[^1];  // l10n-skip
     }
 
-    /// <summary>同一個中文詞在英文要用不同說法的少數地方，直接依介面語言給兩種寫法</summary>
-    public static string Ui(string zh, string en) => Interface == MeetingLanguage.En ? en : zh;
+    /// <summary>同一個中文詞在英文要用不同說法的少數地方，直接依介面語言給兩種寫法；簡體介面時中文那份執行時轉（M§48.3）</summary>
+    public static string Ui(string zh, string en) => Interface == MeetingLanguage.En ? en : L.Ui(zh);
 
-    /// <summary>目前的介面語言，只會是中文或英文</summary>
+    /// <summary>目前的介面語言，只會是中文或英文；中文再分繁簡，看 L.Simplified</summary>
     public static MeetingLanguage Interface => L.English ? MeetingLanguage.En : MeetingLanguage.Zh;
 
-    /// <summary>預設的說話者名稱：「說話者 1」「Speaker 1」「話者 1」（語言檔的 speaker）</summary>
-    public static string DefaultSpeaker(this MeetingLanguage l, int idx) => L.Format(l.Profile.Speaker, idx);
+    /// <summary>介面語言的代碼：zh-Hant、zh-Hans、en（統計用）</summary>
+    public static string InterfaceCode => L.English ? "en" : L.Simplified ? "zh-Hans" : "zh-Hant";  // l10n-skip
+
+    /// <summary>中文會議用簡體（R71、M§47.2）：app 啟動時接到設定的「中文的字」；測試、標準答案是繁體</summary>
+    public static Func<bool> SimplifiedChineseContent { get; set; } = () => false;
+
+    /// <summary>預設的說話者名稱：「說話者 1」「Speaker 1」「話者 1」（語言檔的 speaker）；中文會議用簡體時「说话者 1」（M§48.2）</summary>
+    public static string DefaultSpeaker(this MeetingLanguage l, int idx)
+    {
+        var name = L.Format(l.Profile.Speaker, idx);
+        return l == MeetingLanguage.Zh && SimplifiedChineseContent() ? Shiyin.Text.ChineseScript.ToSimplified(name) : name;
+    }
 }

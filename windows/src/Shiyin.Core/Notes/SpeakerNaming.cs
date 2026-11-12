@@ -115,7 +115,8 @@ public static class SpeakerNaming
 public static class SpeakerNames
 {
     /// <summary>語言檔每種語言的 speaker（「說話者 %lld」…）拆成前後兩段</summary>
-    static readonly (string Prefix, string Suffix)[] Formats = [.. LanguageProfiles.All.Select(p => p.Speaker).Distinct().Select(f =>
+    // 每種語言的寫法，加上中文用簡體時的寫法（「说话者 %lld」，M§47.2）
+    static readonly (string Prefix, string Suffix)[] Formats = [.. LanguageProfiles.All.SelectMany(p => new[] { p.Speaker, ChineseScript.ToSimplified(p.Speaker) }).Distinct().Select(f =>
     {
         var i = f.IndexOf("%lld", StringComparison.Ordinal);
         return (f[..i], f[(i + 4)..]);

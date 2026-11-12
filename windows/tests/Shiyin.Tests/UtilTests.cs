@@ -83,6 +83,32 @@ public class UtilTests
     }
 
     [Fact]
+    public void SimplifiedInterfaceTerms()
+    {
+        // 簡體介面的用語（M§48.1）：跟 Mac 的 ChineseScript.toSimplifiedUI 逐字相同
+        foreach (var item in Items("util/ui-hans.json"))
+            Assert.Equal(item.Str("out"), ChineseScript.ToSimplifiedUI(item.Str("in")!));
+    }
+
+    [Fact]
+    public void SimplifiedInterfaceTables()
+    {
+        // 兩份翻譯表的中文條目都有簡體（l10n.py hans 產生），沒有繁體字
+        foreach (var path in new[] { "Resources/Localizable.xcstrings", "windows/src/Shiyin.App/Strings/Windows.xcstrings" })
+        {
+            var file = Path.Combine(Golden.Root, "..", "..", path);
+            var hans = Localization.L.ReadXcstringsHans(File.ReadAllText(file));
+            using var doc = JsonDocument.Parse(File.ReadAllText(file));
+            foreach (var entry in doc.RootElement.GetProperty("strings").EnumerateObject())
+            {
+                if (!entry.Name.Any(c => c >= 0x4E00 && c <= 0x9FFF)) continue;
+                Assert.True(hans.TryGetValue(entry.Name, out var value), $"{path}：{entry.Name} 沒有簡體");
+                Assert.Equal(value, ChineseScript.ToSimplified(value!));
+            }
+        }
+    }
+
+    [Fact]
     public void ReleaseNotesBrief()
     {
         // 更新說明只列前幾項（R10.6）：取段落、取條目跟 Mac 的 ReleaseNotes.brief 相同

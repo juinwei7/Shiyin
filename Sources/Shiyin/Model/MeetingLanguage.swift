@@ -212,6 +212,9 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
         Bundle.main.preferredLocalizations.first?.hasPrefix("zh") == true ? .zh : .en
     }
 
+    /// 存起來的介面文字（失敗原因：失敗當時用當時的介面語言寫的）在簡體介面轉成簡體（design §48.2）
+    static func uiStored(_ text: String) -> String { simplifiedInterface ? ChineseScript.toSimplifiedUI(text) : text }
+
     /// 介面是簡體中文（design §48.2、R72.3）：macOS 的偏好語言是 zh-Hans、zh-CN、zh-SG 時系統選 zh-Hans
     static var simplifiedInterface: Bool { Bundle.main.preferredLocalizations.first == "zh-Hans" }
 

@@ -1058,7 +1058,7 @@ public sealed class AppController
             case ExportItem.MindMap:
             {
                 // 心智圖（M§42.4）：段落名稱跟著會議語言，同其他匯出
-                var layout = MindMapLayout(b) ?? throw new ExportException(L.T("這場會議還沒有會議紀錄，畫不出心智圖"));
+                var layout = MindMapLayout(b, Settings) ?? throw new ExportException(L.T("這場會議還沒有會議紀錄，畫不出心智圖"));
                 var language = b.Meeting.MeetingLanguage;
                 if (format == "svg") await Task.Run(() => File.WriteAllText(path, Notes.MindMap.Svg(layout, language)), cancel);
                 else if (format == "pdf") await Platform().MindMapPdf(layout, language, path, cancel);
@@ -1079,12 +1079,13 @@ public sealed class AppController
 
     IExportPlatform Platform() => exporter ?? throw new ExportException(L.T("這個格式在這裡不能匯出"));
 
-    /// <summary>匯出用的心智圖排版（會議語言的段落名稱）；沒有紀錄時 null</summary>
-    public static Notes.MindMap.Layout? MindMapLayout(ExportBundle b)
+    /// <summary>匯出用的心智圖排版（會議語言的段落名稱；中文會議用簡體時轉，M§47.2）；沒有紀錄時 null</summary>
+    public static Notes.MindMap.Layout? MindMapLayout(ExportBundle b, AppSettings? settings = null)
     {
         if (b.Notes is not { IsEmpty: false } notes) return null;
         var language = b.Meeting.MeetingLanguage;
-        return Notes.MindMap.LayoutOf(Notes.MindMap.Tree(notes, b.Meeting.DisplayTitle, Notes.MindMap.Labels.For(language)));
+        Func<string, string>? script = settings is null ? null : s => settings.Script(s, language);
+        return Notes.MindMap.LayoutOf(Notes.MindMap.Tree(notes, b.Meeting.DisplayTitle, Notes.MindMap.Labels.For(language, script)));
     }
 
     public static string SuggestedFilename(ExportItem item, string format, Meeting? meeting)
