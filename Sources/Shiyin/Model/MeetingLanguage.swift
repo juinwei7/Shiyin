@@ -143,7 +143,7 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
     }
 
     /// 介面上提到這個語言時的名稱（跟著介面語言），例如「已切換成日文」
-    var uiName: String { MeetingLanguage.interface == .en ? profile.uiName.en : profile.uiName.zh }
+    var uiName: String { MeetingLanguage.ui(zh: profile.uiName.zh, en: profile.uiName.en) }
 
     /// SpeechAnalyzer（即時逐字稿、macOS 內建辨識）用的語言
     var speechLocale: Locale { Locale(identifier: profile.live.mac) }
@@ -179,7 +179,8 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
     }
 
     /// 預設的說話者名稱：「說話者 1」「Speaker 1」「話者 1」
-    func defaultSpeaker(_ idx: Int) -> String { String(format: profile.speaker, idx) }
+    /// 中文會議用簡體時寫成「说话者 1」（R71、design §47.2）；以前存的「說話者 1」照樣認得是預設名稱
+    func defaultSpeaker(_ idx: Int) -> String { AppSettings.script(String(format: profile.speaker, idx), for: self) }
 
     /// 日期、星期的格式
     var locale: Locale { Locale(identifier: profile.locale) }
@@ -196,17 +197,35 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
     /// 介面上列出幾種語言：「中文、英文、日文和韓文」「Chinese, English, Japanese, and Korean」
     static func uiNames(_ languages: [MeetingLanguage]) -> String {
         let formatter = ListFormatter()
-        formatter.locale = Locale(identifier: interface == .en ? "en" : "zh-Hant")  // l10n-skip
+        formatter.locale = Locale(identifier: interface == .en ? "en" : simplifiedInterface ? "zh-Hans" : "zh-Hant")  // l10n-skip
         return formatter.string(from: languages.map(\.uiName)) ?? ""
     }
 
     /// 同一個中文詞在英文要用不同說法的少數地方（例如「錄音」：按鈕是 Record、分頁是 Recording），
-    /// 直接依介面語言給兩種寫法，不經過翻譯表
-    static func ui(zh: String, en: String) -> String { interface == .en ? en : zh }
+    /// 直接依介面語言給兩種寫法，不經過翻譯表；簡體介面時中文那份執行時轉（design §48.2、D156）
+    static func ui(zh: String, en: String) -> String {
+        interface == .en ? en : simplifiedInterface ? ChineseScript.toSimplifiedUI(zh) : zh
+    }
 
-    /// 目前的介面語言（跟著 macOS 的語言設定），只會是中文或英文
+    /// 目前的介面語言（跟著 macOS 的語言設定），只會是中文或英文；中文再分繁簡，看 `simplifiedInterface`
     static var interface: MeetingLanguage {
         Bundle.main.preferredLocalizations.first?.hasPrefix("zh") == true ? .zh : .en
+    }
+
+    /// 介面是簡體中文（design §48.2、R72.3）：macOS 的偏好語言是 zh-Hans、zh-CN、zh-SG 時系統選 zh-Hans
+    static var simplifiedInterface: Bool { Bundle.main.preferredLocalizations.first == "zh-Hans" }
+
+    /// 介面語言的代碼：zh-Hant、zh-Hans、en（問題回報、統計、DEBUG 用）
+    static var interfaceCode: String { interface == .en ? "en" : simplifiedInterface ? "zh-Hans" : "zh-Hant" }  // l10n-skip
+
+    /// 中文會議的內容用簡體的字形（R72.5、D157）：跟著「中文的字」；其他語言照語言檔
+    var contentTypesetting: String {
+        self == .zh && AppSettings.simplifiedChinese(for: .zh) ? "zh-Hans" : profile.fonts.typesetting  // l10n-skip
+    }
+
+    /// 會議標題、段落標題的字型：中文會議用簡體時宋體-簡，其他照語言檔
+    var contentTitleFont: String {
+        self == .zh && AppSettings.simplifiedChinese(for: .zh) ? "Songti SC" : profile.fonts.titleMac  // l10n-skip
     }
 
     /// 新會議沒有設定時的預設會議語言：跟著介面語言；macOS 的第一個語言是語言檔裡中文、英文以外的語言

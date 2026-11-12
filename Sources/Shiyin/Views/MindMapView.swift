@@ -119,12 +119,12 @@ private struct MindMapNode: View {
                     .frame(height: s.lineHeight)
             }
         }
-        .typesettingLanguage(Locale.Language(identifier: language.profile.fonts.typesetting))
+        .typesettingLanguage(Locale.Language(identifier: language.contentTypesetting))
     }
 
     private var font: Font {
         let s = box.style
-        return box.level == 2 ? .system(size: s.size) : .custom(language.profile.fonts.titleMac, size: s.size).weight(.semibold)
+        return box.level == 2 ? .system(size: s.size) : .custom(language.contentTitleFont, size: s.size).weight(.semibold)
     }
 
     private var foreground: Color {
@@ -147,7 +147,8 @@ enum MindMapExport {
     static func layout(_ b: ExportBundle) -> MindMap.Layout? {
         guard let notes = b.notes, !notes.isEmpty else { return nil }
         let language = b.meeting.meetingLanguage
-        return MindMap.layout(MindMap.tree(notes: notes, title: b.meeting.displayTitle, labels: .init(language)))
+        return MindMap.layout(MindMap.tree(notes: notes, title: b.meeting.displayTitle,
+                                           labels: .init(language, script: { AppSettings.script($0, for: language) })))
     }
 
     private static func renderer(_ layout: MindMap.Layout, language: MeetingLanguage) -> ImageRenderer<some View> {

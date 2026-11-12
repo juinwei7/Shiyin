@@ -9,10 +9,6 @@
 
 ## 簡體中文的介面（R72，design §48、design-windows §11.15、D155～D157；2026-11-12 使用者決定做、GitHub #3）
 
-- [ ] **ZH1 翻譯的產生**（§48.1）：用語表、`l10n.py hans`、`check` 的檢查、`ChineseScript.toSimplifiedUI`（Mac、Windows）、標準答案 `util/ui-hans.json`
-  - 驗證：`l10n.py check`、`windows-check` 通過；`dump-golden` 跑兩次相同；`dotnet test` 通過
-- [ ] **ZH2 Mac**（§48.2）：Info.plist、InfoPlist.strings、Credits、執行時轉的地方、字形、「中文的字」的預設
-  - 驗證：DEBUG 版 `-AppleLanguages "(zh-Hans)"` 各畫面截圖沒有繁體字；繁體、英文介面跟改之前一樣
 - [ ] **ZH3 Windows**（§48.3、design-windows §11.15）
   - 驗證：`dotnet test`；虛擬機 `--set interfaceLanguage=zh-Hans` 各畫面截圖
 

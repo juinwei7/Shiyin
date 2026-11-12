@@ -9,7 +9,7 @@ struct PlayerBar: View {
         let player = model.player
         let duration = max(player.duration, Double(detail.meeting.durationSeconds ?? 0))
         let topics = detail.notes.map {
-            MindMap.topicRanges(notes: $0, duration: duration, untitled: MindMap.topicLabel(.interface))
+            MindMap.topicRanges(notes: $0, duration: duration, untitled: MeetingLanguage.ui(zh: MindMap.topicLabel(.zh), en: MindMap.topicLabel(.en)))
         } ?? []
         HStack(alignment: .timelineCenter, spacing: 14) {
             Button { player.toggle() } label: {

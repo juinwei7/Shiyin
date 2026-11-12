@@ -729,6 +729,8 @@ enum GoldenDump {
         w.json("util/s2tw.json", (f["s2twCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toTaiwan($0)] as Object })
         // 繁轉簡（design §47.1）
         w.json("util/tw2s.json", (f["tw2sCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toSimplified($0)] as Object })
+        // 簡體介面的用語（design §48.1）：l10n.py 也拿這份核對
+        w.json("util/ui-hans.json", (f["uiHansCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toSimplifiedUI($0)] as Object })
 
         // 更新說明的摘要（R10.6、design §12）：詢問更新的視窗只列前幾項，取段落、取條目的規則兩邊相同
         w.json("util/release-notes.json", (f["releaseNotesCases"] as? [Object] ?? []).map { c -> Object in

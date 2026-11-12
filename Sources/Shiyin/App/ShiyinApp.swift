@@ -156,10 +156,10 @@ struct AppCommands: Commands {
 }
 
 extension View {
-    /// 會議內容裡的中文一律用繁體中文的字形（design §16.2）：英文介面時系統會改用簡體的字型，
-    /// 全形逗號、問號的位置跟繁體不同。只影響中文字的字形，英文不受影響
+    /// 介面上的中文用繁體中文的字形（design §16.2）：英文介面時系統會改用簡體的字型，
+    /// 全形逗號、問號的位置跟繁體不同。簡體介面用簡體的字形（§48.2）。只影響中文字的字形，英文不受影響
     func chineseGlyphs() -> some View {
-        typesettingLanguage(Locale.Language(identifier: "zh-Hant"))
+        typesettingLanguage(Locale.Language(identifier: MeetingLanguage.simplifiedInterface ? "zh-Hans" : "zh-Hant"))  // l10n-skip
     }
 
     /// 單獨一段會議內容（會議列表的標題、搜尋結果）的字形跟著會議語言（design §18.6）

@@ -7,6 +7,8 @@
   scripts/dev/l10n.py windows-check     Windows 版（windows/src 的 C#）：列出 L.T、L.F 用到但兩份翻譯表都沒有英文的條目、沒查表的介面中文
   scripts/dev/l10n.py windows-apply <翻譯.json>  把 Windows 才有的英文翻譯寫進 windows/src/Shiyin.App/Strings/Windows.xcstrings
                                      （Mac 的 Localizable.xcstrings 不動，R26.5；app 先讀 Mac 的再讀 Windows 的）
+  scripts/dev/l10n.py hans      從繁體自動產生兩份翻譯表的簡體（design §48.1：用語表＋繁轉簡＋手動指定）、zh-Hans 的 InfoPlist.strings；
+                                check、windows-check 會先跑這個
 
 為什麼不用 xcstringstool：它的 extract 看不出型別，插值會變成 %arg，跟執行時 SwiftUI 查的鍵對不上；
 sync 又不接受編譯器產生的 stringsdata，所以自己合併（xcstrings 就是 JSON）。
@@ -27,6 +29,156 @@ CJK = re.compile("[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]")  # 中文字和全
 # 不顯示在介面上的中文：DEBUG 控制通道、送給 LLM 的提示詞（會議紀錄、逐字稿校正）、各語言分開寫好的內容
 # 範本：中文版是寫進資料庫的內容，英文版另外寫好，介面文字都用 language.text(zh:en:)
 SKIP_FILES = {"Debug/DebugControl.swift", "Notes/NotesPrompt.swift", "Notes/Templates.swift", "Notes/TranscriptCorrection.swift"}
+
+
+# MARK: 簡體中文的介面（design §48.1、D155）
+
+OPENCC = ROOT / "Resources" / "opencc"
+L10N = ROOT / "Resources" / "l10n"
+GOLDEN_UTIL = ROOT / "shared" / "golden" / "expected" / "util"
+PLACEHOLDER = re.compile(r"%(?:\d+\$)?(?:@|lld|ld|d|lf|f)")
+_tables = {}
+
+
+def _rows(path):
+    for line in path.read_text(encoding="utf-8").split("\n"):
+        parts = line.split("\t", 1)
+        if len(parts) == 2 and parts[0]:
+            yield parts[0], parts[1]
+
+
+def _hans_tables():
+    """同 Swift 的 ChineseScript.simplifiedTables：台灣用字換回一般繁體（詞組、反查 TWVariants），再轉簡體（詞組、單字）"""
+    if not _tables:
+        standard = {}
+        for key, value in _rows(OPENCC / "TWVariants.tsv"):
+            if len(key) == 1 and len(value) == 1:
+                standard.setdefault(value, key)
+        _tables["standard"] = (dict(_rows(OPENCC / "TWVariantsRevPhrases.tsv")), standard)
+        _tables["simplified"] = (dict(_rows(OPENCC / "TSPhrases.tsv")),
+                                 {k: v for k, v in _rows(OPENCC / "TSCharacters.tsv") if len(k) == 1 and len(v) == 1})
+        _tables["terms"] = dict(_rows(L10N / "zh-Hans-terms.tsv"))
+    return _tables
+
+
+def _is_cjk(ch):
+    return 0x3400 <= ord(ch) <= 0x9FFF or 0xF900 <= ord(ch) <= 0xFAFF
+
+
+def _convert(text, phrases, characters):
+    longest = max((len(k) for k in phrases), default=1)
+    out, i = [], 0
+    while i < len(text):
+        matched = False
+        if _is_cjk(text[i]):
+            for length in range(min(longest, len(text) - i), 1, -1):
+                value = phrases.get(text[i:i + length])
+                if value is not None:
+                    out.append(value)
+                    i += length
+                    matched = True
+                    break
+        if not matched:
+            out.append(characters.get(text[i], text[i]))
+            i += 1
+    return "".join(out)
+
+
+def to_simplified(text):
+    """同 ChineseScript.toSimplified（design §47.1）：只換字"""
+    t = _hans_tables()
+    return _convert(_convert(text, *t["standard"]), *t["simplified"])
+
+
+def to_simplified_ui(text):
+    """同 ChineseScript.toSimplifiedUI（design §48.1）：用語表在繁體原文上最長匹配，換過的不再轉；其餘的字繁轉簡"""
+    terms = _hans_tables()["terms"]
+    longest = max((len(k) for k in terms), default=1)
+    out, gap, i = [], [], 0
+    while i < len(text):
+        for length in range(min(longest, len(text) - i), 0, -1):
+            value = terms.get(text[i:i + length])
+            if value is not None:
+                out.append(to_simplified("".join(gap)))
+                gap = []
+                out.append(value)
+                i += length
+                break
+        else:
+            gap.append(text[i])
+            i += 1
+    out.append(to_simplified("".join(gap)))
+    return "".join(out)
+
+
+def _hans_value(key, overrides):
+    return overrides.get(key, to_simplified_ui(key))
+
+
+def _hans_catalog(path):
+    """一份翻譯表的每個中文條目寫上 zh-Hans；回傳 (改了幾條, 問題)"""
+    if not path.exists():
+        return 0, []
+    cat = json.loads(path.read_text())
+    overrides = json.loads((L10N / "zh-Hans-overrides.json").read_text(encoding="utf-8"))
+    changed, problems = 0, []
+    for key, entry in cat["strings"].items():
+        locs = entry.get("localizations", {})
+        if not CJK.search(key):
+            if locs.pop("zh-Hans", None) is not None:
+                changed += 1
+            continue
+        value = _hans_value(key, overrides)
+        if to_simplified(value) != value:
+            problems.append(f"還有繁體字：{key} → {value}")
+        if PLACEHOLDER.findall(value) != PLACEHOLDER.findall(key):
+            problems.append(f"插值不一樣：{key} → {value}")
+        unit = {"stringUnit": {"state": "translated", "value": value}}
+        if locs.get("zh-Hans") != unit:
+            entry.setdefault("localizations", {})["zh-Hans"] = unit
+            changed += 1
+    if changed:
+        cat["strings"] = dict(sorted(cat["strings"].items()))
+        path.write_text(json.dumps(cat, ensure_ascii=False, indent=2) + "\n")
+    return changed, problems
+
+
+def hans(quiet=False):
+    problems = []
+    total = 0
+    for path in (CATALOG, WINDOWS_CATALOG):
+        changed, issues = _hans_catalog(path)
+        total += changed
+        problems += issues
+    # app 名稱、權限說明、檔案類型名稱（design §48.2）：從繁體那份產生
+    source = ROOT / "Resources" / "zh-Hant.lproj" / "InfoPlist.strings"
+    target = ROOT / "Resources" / "zh-Hans.lproj" / "InfoPlist.strings"
+    lines = []
+    for line in source.read_text(encoding="utf-8").split("\n"):
+        m = re.match(r'^(".*?" = ")(.*)(";)$', line)
+        if m:
+            lines.append(m.group(1) + to_simplified_ui(m.group(2)) + m.group(3))
+        elif line.startswith("/*"):
+            lines.append("/* 簡體中文（design §48.2）：scripts/dev/l10n.py hans 從 zh-Hant.lproj 產生，不要手改 */")  # l10n-skip
+        else:
+            lines.append(line)
+    text = "\n".join(lines)
+    target.parent.mkdir(exist_ok=True)
+    if not target.exists() or target.read_text(encoding="utf-8") != text:
+        target.write_text(text, encoding="utf-8")
+        total += 1
+    # Python 跟 Swift、C# 轉的要一樣（標準答案是 Mac 的 dump-golden 算的）
+    for name, fn in (("tw2s.json", to_simplified), ("ui-hans.json", to_simplified_ui)):
+        golden = GOLDEN_UTIL / name
+        if golden.exists():
+            for item in json.loads(golden.read_text()):
+                if fn(item["in"]) != item["out"]:
+                    problems.append(f"跟標準答案 {name} 不一樣：{item['in']} → {fn(item['in'])}（應該是 {item['out']}）")
+    if not quiet or total:
+        print(f"簡體：更新 {total} 條")
+    for p in problems:
+        print(f"  {p}")
+    return problems
 
 
 def own_swift_files():
@@ -138,8 +290,8 @@ def has_english(entry):
 
 def check():
     found = extract()
+    problems = len(hans(quiet=True))
     cat = load_catalog()
-    problems = 0
     used = {k for entries in found.values() for _, k in entries}
     missing = [k for k in sorted(used) if CJK.search(k) and not has_english(cat["strings"].get(k, {}))]
     if missing:
@@ -238,11 +390,11 @@ def windows_keys():
 
 
 def windows_check():
+    problems = len(hans(quiet=True))
     mac = load_catalog()["strings"]
     win = load_windows_catalog()["strings"]
     keys = windows_keys()
     missing = [k for k in sorted(keys) if CJK.search(k) and not has_english(win.get(k, {})) and not has_english(mac.get(k, {}))]
-    problems = 0
     if missing:
         problems += len(missing)
         print(f"缺英文翻譯（{len(missing)} 條）：")
@@ -296,4 +448,6 @@ if __name__ == "__main__":
     elif command == "windows-apply":
         windows_apply(sys.argv[2])
     else:
-        {"extract": extract, "check": check, "windows-check": windows_check}[command]()
+        result = {"extract": extract, "check": check, "windows-check": windows_check, "hans": hans}[command]()
+        if command == "hans" and result:
+            sys.exit(1)

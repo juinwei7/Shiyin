@@ -1,0 +1,9 @@
+/* 簡體中文（design §48.2）：scripts/dev/l10n.py hans 從 zh-Hant.lproj 產生，不要手改 */
+"CFBundleDisplayName" = "拾音";
+"CFBundleName" = "拾音";
+"NSMicrophoneUsageDescription" = "会议录音需要使用麦克风。录音只存在这台 Mac 上。";
+"NSAudioCaptureUsageDescription" = "录线上会议（Zoom、Meet、Teams）时，需要录下电脑播放的对方声音。录音只存在这台 Mac 上。";
+"NSSpeechRecognitionUsageDescription" = "录音时在这台 Mac 上实时产生逐字稿，不会上传。";
+"Shiyin Meeting" = "拾音会议";
+"Subtitles or Transcript" = "字幕或逐字稿";
+"Audio or Video" = "录音或视频";

@@ -25,7 +25,7 @@ struct TemplateDefinition: Codable, Hashable {
 
     /// 設定畫面用的段落清單（介面語言）
     static var builtinSections: [(id: String, label: String)] {
-        builtinSectionIDs.map { ($0, sectionLabel($0, language: .interface)) }
+        builtinSectionIDs.map { ($0, MeetingLanguage.ui(zh: sectionLabel($0, language: .zh), en: sectionLabel($0, language: .en))) }
     }
 
     var description: String
@@ -34,6 +34,12 @@ struct TemplateDefinition: Codable, Hashable {
     var instruction: String
 
     func includes(_ section: String) -> Bool { sections.contains(section) }
+
+    /// 每一段文字都套用 transform（簡體介面顯示內建範本用）
+    func mappingText(_ r: (String) -> String) -> TemplateDefinition {
+        TemplateDefinition(description: r(description), sections: sections,
+                           custom: custom.map { CustomSpec(title: r($0.title), instruction: r($0.instruction)) }, instruction: r(instruction))
+    }
 
     static func decode(_ json: String) -> TemplateDefinition {
         (try? JSONDecoder().decode(TemplateDefinition.self, from: Data(json.utf8)))
@@ -156,16 +162,18 @@ enum BuiltinTemplates {
 }
 
 extension TemplateRecord {
-    /// 介面上顯示的名稱：內建範本跟著介面語言，自訂範本照使用者取的名字
+    /// 介面上顯示的名稱：內建範本跟著介面語言（簡體介面執行時轉，design §48.2），自訂範本照使用者取的名字
     var displayName: String {
-        guard builtin, MeetingLanguage.interface == .en, let english = BuiltinTemplates.english[id] else { return name }
-        return english.name
+        guard builtin else { return name }
+        if MeetingLanguage.interface == .en, let english = BuiltinTemplates.english[id] { return english.name }
+        return MeetingLanguage.simplifiedInterface ? ChineseScript.toSimplifiedUI(name) : name
     }
 
     /// 介面上顯示的說明
     var displayDescription: String {
         if builtin, MeetingLanguage.interface == .en, let english = BuiltinTemplates.english[id] { return english.definition.description }
-        return TemplateDefinition.decode(definition).description
+        let description = TemplateDefinition.decode(definition).description
+        return builtin && MeetingLanguage.simplifiedInterface ? ChineseScript.toSimplifiedUI(description) : description
     }
 
     /// 整理時用的內容：內建範本跟著會議語言，自訂範本照使用者寫的

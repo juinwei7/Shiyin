@@ -109,8 +109,11 @@ enum AppSettings {
     }
     /// 中文會議用簡體（R71、design §47.2）：設定是簡體、會議語言是中文時。轉錄、整理、匯出各自在做的時候看
     static func simplifiedChinese(for language: MeetingLanguage) -> Bool {
-        language == .zh && d.string(forKey: chineseScriptKey) == "simplified"
+        language == .zh && chineseScript == "simplified"
     }
+    /// 「中文的字」：沒有選過時簡體介面是 simplified、其他 traditional（R72.5、D157）
+    static var chineseScript: String { d.string(forKey: chineseScriptKey) ?? defaultChineseScript }
+    static var defaultChineseScript: String { MeetingLanguage.simplifiedInterface ? "simplified" : "traditional" }  // l10n-skip
     /// 中文會議用簡體時轉成簡體，其他原樣
     static func script(_ text: String, for language: MeetingLanguage) -> String {
         simplifiedChinese(for: language) ? ChineseScript.toSimplified(text) : text

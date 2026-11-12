@@ -257,7 +257,9 @@ struct NotesPage: View {
     /// 心智圖模式（design §42.4）：上面照舊是提示條、編輯列，下面是心智圖；段落名稱跟著介面語言（同條列）。
     /// 整頁一起上下捲（同條列）：待確認展開時很高，放在捲動外面會把整個視窗的內容往上推（2026-11-05 使用者看到整個視窗空白）
     private func mindMapPage(_ notes: MeetingNotes) -> some View {
-        let layout = MindMap.layout(MindMap.tree(notes: notes, title: detail.meeting.displayTitle, labels: .init(.interface)))
+        // 段落名稱用介面語言（同條列）；簡體介面轉成簡體（design §48.2）
+        let labels = MindMap.Labels(.interface, script: { MeetingLanguage.simplifiedInterface ? ChineseScript.toSimplifiedUI($0) : $0 })
+        let layout = MindMap.layout(MindMap.tree(notes: notes, title: detail.meeting.displayTitle, labels: labels))
         func page(width: Double) -> some View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 26) { header(notes) }
