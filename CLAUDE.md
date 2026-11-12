@@ -8,7 +8,7 @@
 - 整理：claude CLI、codex CLI、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API，共同介面 `LLMBackend`（`Sources/Shiyin/Notes/`，各家在 `Notes/Backends/`，design §19）
 - 會議的參考文件（R61，4.3）：會議可以加 PDF、Word、PowerPoint、純文字、圖片，整理和對這場會議提問時當成「會議參考資料」送出；讀文字在 `IO/DocumentReader.swift`（PDFKit、Vision、`unzip -p`），提示詞在 `Notes/DocumentPrompt.swift`，原始檔在 `SHIYIN_HOME/documents/<id>/`；Windows 用 PdfPig＋Windows.Media.Ocr（design §39、design-windows §11.8）。驗證用 `shiyinctl docread`、`adddoc`
 - 資料庫：GRDB（SQLite、FTS5 全文搜尋）
-- 多語言：介面繁中、英文（跟著 macOS 語言）；每場會議另外有會議語言（中文／英文／日文／廣東話／韓文），決定轉錄、整理、匯出用哪個語言（design §16、§18）；錄音開始後用 Whisper base 自動偵測（§18.8）。每種語言的做法寫在共用的語言檔 `Resources/languages.json`（design §41、D139）：精調語言（中英日、粵語）用手寫的提示詞，一般語言（韓文）用英文提示詞加「用某語言寫」、給人看的字查字串表（D140）。加語言＝語言檔加一筆、評估選轉錄模型（§41.7）、標準答案加一場測試會議；**不要再寫 `language == .ja`**，做法問 `language.profile`
+- 多語言：介面繁中、簡中、英文（跟著 macOS 語言；簡中從繁體自動產生：`Resources/l10n/` 的用語表＋繁轉簡，design §48）；每場會議另外有會議語言（中文／英文／日文／廣東話／韓文），決定轉錄、整理、匯出用哪個語言（design §16、§18）；錄音開始後用 Whisper base 自動偵測（§18.8）。每種語言的做法寫在共用的語言檔 `Resources/languages.json`（design §41、D139）：精調語言（中英日、粵語）用手寫的提示詞，一般語言（韓文）用英文提示詞加「用某語言寫」、給人看的字查字串表（D140）。加語言＝語言檔加一筆、評估選轉錄模型（§41.7）、標準答案加一場測試會議；**不要再寫 `language == .ja`**，做法問 `language.profile`
 - 發布：自簽憑證或 ad-hoc 簽章的 DMG（沒有 Apple 開發者帳號）
 
 不需要 Python、Homebrew、ffmpeg。選型的理由在 design.md 的決策紀錄（D#）。已經刪掉的舊文件（第二版的規格 `docs/archive/v2/`、選型實驗 `docs/spikes/`、3.4.0 以前完整的 `docs/tasks.md`）用 `git show b621ed6:<路徑>` 看。
@@ -96,7 +96,8 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite # 看資料
 ## 介面文字（3.1 起）
 
 - 程式裡照樣寫中文；SwiftUI 的字面值會自動查 `Resources/Localizable.xcstrings`，其他地方（錯誤、提示、通知、狀態文字）要包 `String(localized:)`。鍵就是中文原文。
-- 改過介面文字一定要跑 `scripts/dev/l10n.py check`，再把新條目的英文用 `apply` 寫進去。不會顯示在介面上的中文行尾加 `// l10n-skip`。
+- 改過介面文字一定要跑 `scripts/dev/l10n.py check`，再把新條目的英文用 `apply` 寫進去。簡體不用手寫：`check`（和 `windows-check`）會先跑 `hans`，從繁體自動產生；轉得不自然的詞加進 `Resources/l10n/zh-Hans-terms.tsv`（用語表，改了要重跑 Mac 的 dump-golden），個別條目寫在 `zh-Hans-overrides.json`。不會顯示在介面上的中文行尾加 `// l10n-skip`。
+- 程式裡寫死、不查表的中文（`ui(zh:en:)`、範本名稱、存起來的訊息）在簡體介面要經過 `ChineseScript.toSimplifiedUI`（Windows `L.Ui`），見 design §48.2。
 - 同一句中文在不同地方要不同的英文時，用 `MeetingLanguage.ui(zh:en:)`；依會議語言（不是介面語言）的文字用 `meeting.meetingLanguage.text(zh:en:ja:)`（給人看的，一般語言查字串表），提示詞裡的字用 `prompt(zh:en:ja:)`（不查字串表），有插值的用 `format(zh:en:ja:, …)`，預設說話者名稱用 `defaultSpeaker(_:)`（design §41.1）。
 - 中文提示詞、中文匯出格式要跟 3.0 一字不差，改英文版時不要動到中文那一份。
 
@@ -127,7 +128,7 @@ Shiyin 3.3.0: Japanese meetings and automatic language detection
   - `shiyinctl snapshot` 用 ImageRenderer，不會跳出視窗，但畫不出 AppKit 元件（TextField、Picker、ScrollView 會變成黃色佔位框），適合看排版、顏色。
   - 要看真正的畫面，用 `screencapture -x -o -l <視窗編號>` 只擷取拾音的視窗（視窗編號用 CGWindowListCopyWindowInfo 依 PID 找）。螢幕鎖定時拍不到。
 - 從這個終端機（Claude Code）用 `open` 開 app，app 會繼承 Claude Code session 的環境變數，子程序的 `claude` 會沿用這個 session 的登入。要模擬使用者的電腦（例如沒登入）時，用 `env -i HOME=… PATH=/usr/bin:/bin SHIYIN_HOME=… <app>/Contents/MacOS/Shiyin &` 啟動。
-- 英文介面：直接執行 `build/Shiyin.app/Contents/MacOS/Shiyin -AppleLanguages "(en)"`（要用示範資料時前面加 `SHIYIN_HOME=…`）；中文介面就是系統語言。改會議語言用 `shiyinctl language <id> <代碼>`（zh、en、ja、yue、ko）。
+- 英文介面：直接執行 `build/Shiyin.app/Contents/MacOS/Shiyin -AppleLanguages "(en)"`（簡體中文介面是 `"(zh-Hans)"`，Windows 是 `--set interfaceLanguage=zh-Hans`）（要用示範資料時前面加 `SHIYIN_HOME=…`）；中文介面就是系統語言。改會議語言用 `shiyinctl language <id> <代碼>`（zh、en、ja、yue、ko）。
 - 還沒完成首次使用引導的話，每次啟動都會打開引導視窗，測試時記得用 `shiyinctl closewindow onboarding` 關掉。
 - 編輯器、對話框的按鈕（完成、取消、儲存）要在真的 app 上用 AX 按過，不能只用 shiyinctl 直接存資料：3.2.0 的會議紀錄編輯器一按「完成」就閃退，就是因為當時只用 `shiyinctl editnotes` 驗證。
 - 拾音的視窗在別的桌面（Space）時，AX 列不出它的視窗。要先用 System Events `set frontmost`，等 AX 看得到視窗再操作；使用者在用電腦時會被切回去，先跟使用者說一聲。
