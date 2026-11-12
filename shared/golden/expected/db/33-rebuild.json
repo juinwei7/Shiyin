@@ -40,7 +40,7 @@
       "meeting_id" : 1,
       "ref" : 6,
       "rowid" : 6,
-      "text" : "說話者 1 剛剛說的我同意 😀，Valkey 的 TTL 設 100% 沒問題"
+      "text" : "說話者 1 剛剛說的我同意 😀，"
     },
     {
       "kind" : "segment",
@@ -68,7 +68,7 @@
       "meeting_id" : 2,
       "ref" : 10,
       "rowid" : 10,
-      "text" : "I'll send the email via SendGrid by Friday."
+      "text" : "I'll send the email via SendGrid"
     },
     {
       "kind" : "segment",
@@ -111,6 +111,20 @@
       "ref" : 16,
       "rowid" : 16,
       "text" : "ありがとうございます、田中さん。"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 1,
+      "ref" : 18,
+      "rowid" : 18,
+      "text" : "Valkey 的 TTL 設 100% 沒問題"
+    },
+    {
+      "kind" : "segment",
+      "meeting_id" : 2,
+      "ref" : 19,
+      "rowid" : 19,
+      "text" : "by Friday."
     },
     {
       "kind" : "title",

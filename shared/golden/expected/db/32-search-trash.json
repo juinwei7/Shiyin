@@ -26,8 +26,8 @@
     {
       "kind" : "segment",
       "meetingId" : 1,
-      "ref" : 6,
-      "snippet" : "說話者 1 剛剛說的我同意 😀，Valkey 的 TTL 設 100% 沒問題"
+      "ref" : 18,
+      "snippet" : "Valkey 的 TTL 設 100% 沒問題"
     }
   ]
 }

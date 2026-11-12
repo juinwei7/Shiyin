@@ -295,6 +295,17 @@
         }
       }
     },
+    "%@（同一位）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (same speaker)"
+          }
+        }
+      }
+    },
     "%@（心智圖）.%@": {
       "extractionState": "manual",
       "localizations": {
@@ -2891,6 +2902,17 @@
         }
       }
     },
+    "前半句：…%@｜後半句：%@…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First part: …%1$@ | Second part: %2$@…"
+          }
+        }
+      }
+    },
     "前面還有 %lld 場": {
       "extractionState": "manual",
       "localizations": {
@@ -3730,6 +3752,17 @@
         }
       }
     },
+    "在文字裡點一下要拆開的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click in the text where you want to split it"
+          }
+        }
+      }
+    },
     "垃圾桶": {
       "extractionState": "manual",
       "localizations": {
@@ -4349,6 +4382,17 @@
         }
       }
     },
+    "已拆成兩句。要復原的話，在逐字稿按右鍵選「復原」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split into two lines. To undo, right-click in the transcript and choose Undo."
+          }
+        }
+      }
+    },
     "已改成「%@」（原本是「%@」）": {
       "extractionState": "manual",
       "localizations": {
@@ -4798,6 +4842,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remind me when nobody's talking, and stop after 30 minutes"
+          }
+        }
+      }
+    },
+    "後半句是": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second part by"
           }
         }
       }
@@ -5277,6 +5332,17 @@
         }
       }
     },
+    "把一句拆成兩句（後半句是「%@」說的）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split a line (second part by “%@”)"
+          }
+        }
+      }
+    },
     "把一句改成「%@」說的": {
       "extractionState": "manual",
       "localizations": {
@@ -5350,6 +5416,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Move this meeting to Trash?"
+          }
+        }
+      }
+    },
+    "拆成兩句…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split into Two Lines…"
+          }
+        }
+      }
+    },
+    "拆開": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split"
           }
         }
       }
@@ -9746,6 +9834,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "What to write"
+          }
+        }
+      }
+    },
+    "要拆開的句子": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line to split"
           }
         }
       }
