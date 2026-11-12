@@ -457,6 +457,8 @@ final class Recorder {
             #endif
             guard let self else { return }
             // 有新的字就是有人在說話（design §35.1）
+            // 中文會議用簡體時轉成簡體（design §47.2）
+            let text = AppSettings.script(text, for: self.language)
             if !text.isEmpty && text != self.volatileText { self.markSpeech() }
             self.volatileText = text
         }
@@ -465,6 +467,7 @@ final class Recorder {
         live.onFinal = { [weak self] start, end, text in
             guard let self else { return }
             let (start, end) = (start + offset.seconds, end + offset.seconds)
+            let text = AppSettings.script(text, for: self.language)
             self.liveLines.append(LiveLine(start: start, end: end, text: text))
             if !text.isEmpty { self.markSpeech() }
             self.onLiveFinal?(meetingId, start, end, text)

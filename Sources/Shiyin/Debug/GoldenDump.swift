@@ -358,6 +358,13 @@ enum GoldenDump {
             w.text(dir + "transcript-f.srt", TranscriptExporter.text(bundle, format: "srt", times: true, speakers: false))
             w.text(dir + "transcript-t.vtt", TranscriptExporter.text(bundle, format: "vtt", times: true, speakers: true))
             w.text(dir + "transcript-f.vtt", TranscriptExporter.text(bundle, format: "vtt", times: true, speakers: false))
+            // 中文會議用簡體（design §47.2）：整份轉，HTML 的字型各平台不同，只比文字格式
+            if fx.key == "zh" {
+                w.text(dir + "simplified/notes.md", ChineseScript.toSimplified(NotesExporter.markdown(bundle)))
+                w.text(dir + "simplified/notes.txt", ChineseScript.toSimplified(NotesExporter.plain(bundle)))
+                w.text(dir + "simplified/transcript-tt.txt", ChineseScript.toSimplified(TranscriptExporter.text(bundle, format: "txt", times: true, speakers: true)))
+                w.text(dir + "simplified/transcript-t.srt", ChineseScript.toSimplified(TranscriptExporter.text(bundle, format: "srt", times: true, speakers: true)))
+            }
             // 沒有會議紀錄、空的會議紀錄
             var empty = bundle
             empty.notes = MeetingNotes(title: "x")
@@ -720,6 +727,8 @@ enum GoldenDump {
 
         // 簡體轉台灣繁體（design §32.5）：Windows 讀同一份字表、同一套最長匹配，要逐字相同
         w.json("util/s2tw.json", (f["s2twCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toTaiwan($0)] as Object })
+        // 繁轉簡（design §47.1）
+        w.json("util/tw2s.json", (f["tw2sCases"] as? [String] ?? []).map { ["in": $0, "out": ChineseScript.toSimplified($0)] as Object })
 
         // 更新說明的摘要（R10.6、design §12）：詢問更新的視窗只列前幾項，取段落、取條目的規則兩邊相同
         w.json("util/release-notes.json", (f["releaseNotesCases"] as? [Object] ?? []).map { c -> Object in

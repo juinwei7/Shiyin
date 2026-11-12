@@ -2232,7 +2232,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | 整理存檔（草稿、正式、校稿） | 會議紀錄每一個文字欄位（`MeetingNotes.mappingText`） |
 | 校正建議存檔 | `original`、`suggestion`、`reason` |
 | AI 猜的說話者存檔 | 原因（名字照轉） |
-| 匯出（會議紀錄的 Markdown、純文字、HTML／PDF／Word、拷貝；逐字稿的 txt、Markdown、srt、vtt、HTML／Word） | 整份輸出；HTML 的 `lang="zh-Hant"` 改成 `zh-Hans` |
+| 匯出（會議紀錄的 Markdown、純文字、HTML／PDF／Word、拷貝；逐字稿的 txt、Markdown、srt、vtt、HTML／Word） | 整份輸出；HTML 的 `lang="zh-Hant"` 改成 `zh-Hans`，字型換成簡體的（Mac：PingFang SC、Songti SC；Windows：Microsoft YaHei、SimSun） |
 
 - 用的是做這件事那時候的設定（轉錄、整理、匯出各自看）。以前的會議不動（R71.5）。
 - 不轉：提問（回答用問題的語言，R71.7）、介面文字、本地 MCP（回傳資料庫裡的內容，簡體的會議本來就是簡體）、心智圖的圖片匯出。

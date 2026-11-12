@@ -156,6 +156,9 @@ struct MeetingNotes: Codable, Hashable {
         return mappingText { regex.stringByReplacingMatches(in: $0, range: NSRange($0.startIndex..., in: $0), withTemplate: template) }
     }
 
+    /// 每一個文字欄位轉成簡體（design §47.2）
+    func simplified() -> MeetingNotes { mappingText(ChineseScript.toSimplified) }
+
     /// 每一個文字欄位都套用 transform（時間點不變）
     private func mappingText(_ r: (String) -> String) -> MeetingNotes {
         func ri(_ i: Item) -> Item { Item(text: r(i.text), time: i.time) }

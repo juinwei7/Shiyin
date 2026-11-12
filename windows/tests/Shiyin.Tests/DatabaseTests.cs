@@ -151,6 +151,13 @@ public sealed class DatabaseTests : IDisposable
                     Result(op, new JNode.Obj().Add("speaker", new JNode.Int(target)));
                     break;
                 }
+                case "splitSegment":   // 拆成兩句（M§46.1）
+                {
+                    var mid = Id(op);
+                    var newId = db.SplitSegment(mid, SegmentId(mid, (int)op.Long("seq")!), (int)op.Long("at")!, (int?)op.Long("to"), op.Str("label")!);
+                    Result(op, new JNode.Obj().Add("segmentId", newId is long n ? new JNode.Int(n) : JNode.NullValue));
+                    break;
+                }
                 case "replace":
                 {
                     var r = db.Replace(Id(op), op.Str("find")!, op.Str("with")!);

@@ -213,6 +213,17 @@ public static class ControlPipe
                 _ = host.Controller.ImportFiles(media, options, folder);
                 return Ok;
             }
+            // 拆成兩句（M§46.3，對目前選取的會議）：splitsegment <段落 id> <UTF-16 位置> <說話者|new>；
+            // splitmode <段落 id> 打開對話框（等於右鍵「拆成兩句…」）；splitcaret <位置> 把對話框的游標放到那裡；undospeaker 復原
+            case "splitsegment" when args.Length > 3 && main?.State.Selection is long splitMeeting && long.TryParse(args[1], out var splitId) && int.TryParse(args[2], out var at):
+                host.Controller.SplitSegment(splitMeeting, splitId, at, args[3] == "new" ? null : int.Parse(args[3]));
+                return Ok;
+            case "splitmode" when args.Length > 1 && main?.State.Detail is { } splitDetail && long.TryParse(args[1], out var modeId)
+                                  && splitDetail.Segments.FirstOrDefault(s => s.Id == modeId) is { } splitSegment:
+                _ = Dialogs.SplitSegment(main, splitDetail, splitSegment);
+                return Ok;
+            case "splitcaret" when args.Length > 1 && int.TryParse(args[1], out var caret): Dialogs.SplitBox?.Select(caret, 0); return Ok;
+            case "undospeaker" when main?.State.Selection is long undoMeeting: host.Controller.UndoSpeakerEdit(undoMeeting); return Ok;
             case "purge" when args.Length > 1 && long.TryParse(args[1], out var purge): host.Controller.DeletePermanently(purge); return Ok;
             // export <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的]：同 Mac 的 shiyinctl export。
             // 在 UI 執行緒上跑（PDF 要建 WebView2），所以不等它：失敗時寫 <路徑>.error（同 Mac）
