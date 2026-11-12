@@ -7,6 +7,17 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 雙聲道的錄音兩耳都聽得到（R73，design §49、design-windows §11.16、D158；2026-11-12，GitHub #7）
+
+- [ ] **CH1 Mac**（§49.1）：`ChannelMix`、`Player.load(_:mixChannels:)`、匯出 m4a。驗證照 §49.3：左聲道有聲音、右聲道靜音的 `both` 會議播放時 `player.mix` 兩邊一樣、≈ 左聲道 × 0.71（`playvolume 0`，使用者聽不到）；`mic` 的會議不混；匯出的 m4a 兩個聲道一樣；倍速、跳播照常
+- [ ] **CH2 Windows**（design-windows §11.16）：`ChannelMix.Mix`、`MixedAudioSource`、匯出 m4a。驗證：`dotnet test`；虛擬機匯出 m4a 讀回來兩邊一樣；播放要真的 Windows 電腦
+
+## 錄音中麥克風一直重新連接（R74，design §50、design-windows §11.17、D159、D160；2026-11-12，GitHub #8）
+
+- [ ] **RC1 Mac**（§50.1～§50.3）：重新連接的節奏、背景佇列、`installTap(format: nil)`、`ObjCCatch`。驗證照 §50.4：`recordflap` 的間隔、提示、`maxMainGapMs`；內建麥克風錄音中換麥克風再換回來
+- [ ] **RC2 Windows**（design-windows §11.17）：同樣的節奏和提示。驗證：`RecorderTests`
+- [ ] **RC3 真的 AirPods**：回報的人（GitHub #8）提供當機報告、更新後再試；或使用者用 AirPods 錄一段
+
 ## 讓 AI 工具讀取會議：本地 MCP（R69，design §44、design-windows §11.12、D146～D149；2026-11-09 使用者新需求）
 
 - [~] **MCP6 真的 Claude Desktop、Mac 的複製選單**（§44.3、design-windows §11.12）：其他都驗過了（見 commit 訊息）；Mac 的 Claude Desktop 2026-11-10 驗過（使用者執行的腳本暫時加上 shiyin、驗完還原：initialize、tools/list 都有回應）。剩下：
