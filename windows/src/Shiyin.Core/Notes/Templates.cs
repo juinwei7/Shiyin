@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Text;
 
@@ -152,11 +153,13 @@ public static class BuiltinTemplates
 
     /// <summary>介面上顯示的名稱：內建範本跟著介面語言，自訂範本照使用者取的名字</summary>
     public static string DisplayName(this TemplateRecord t) =>
-        t.Builtin && MeetingLanguages.Interface == MeetingLanguage.En && English.TryGetValue(t.Id, out var e) ? e.Name : t.Name;
+        !t.Builtin ? t.Name : MeetingLanguages.Interface == MeetingLanguage.En && English.TryGetValue(t.Id, out var e) ? e.Name : L.Ui(t.Name);
 
+    /// <summary>簡體介面時內建範本的說明執行時轉（M§48.2）</summary>
     public static string DisplayDescription(this TemplateRecord t) =>
         t.Builtin && MeetingLanguages.Interface == MeetingLanguage.En && English.TryGetValue(t.Id, out var e)
-            ? e.Definition.Description : TemplateDefinition.Decode(t.Definition).Description;
+            ? e.Definition.Description
+            : t.Builtin ? L.Ui(TemplateDefinition.Decode(t.Definition).Description) : TemplateDefinition.Decode(t.Definition).Description;
 
     /// <summary>整理時用的內容：內建範本跟著會議語言，自訂範本照使用者寫的</summary>
     public static TemplateDefinition DefinitionFor(this TemplateRecord t, MeetingLanguage language)

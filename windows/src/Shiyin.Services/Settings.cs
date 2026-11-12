@@ -328,7 +328,9 @@ public sealed class AppSettings
     public string CompatibleBaseUrl => String(CompatibleBaseUrlKey) ?? "";
 
     /// <summary>中文會議用簡體（R71、M§47.2）：設定是簡體、會議語言是中文時。轉錄、整理、匯出各自在做的時候看</summary>
-    public bool SimplifiedChinese(MeetingLanguage language) => language == MeetingLanguage.Zh && String(ChineseScriptKey) == "simplified";
+    public bool SimplifiedChinese(MeetingLanguage language) => language == MeetingLanguage.Zh && ChineseScript == "simplified";
+    /// <summary>「中文的字」：沒有選過時簡體介面是 simplified、其他 traditional（R72.5、D157）</summary>
+    public string ChineseScript => String(ChineseScriptKey) ?? (L.Simplified ? "simplified" : "traditional");  // l10n-skip
     /// <summary>中文會議用簡體時轉成簡體，其他原樣</summary>
     public string Script(string text, MeetingLanguage language) => SimplifiedChinese(language) ? Shiyin.Text.ChineseScript.ToSimplified(text) : text;
 

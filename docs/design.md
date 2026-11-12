@@ -2259,7 +2259,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 不查翻譯表的中文（寫死在程式裡的兩種語言）在簡體介面執行時轉：`ChineseScript.toSimplifiedUI`（用語表＋繁轉簡，同 48.1 的前兩步；用語表放進 app 的 Resources）。地方：`MeetingLanguage.ui(zh:en:)`、`uiName`（語言檔的中文名稱）、內建範本的名稱和說明（`displayName`、`displayDescription`）、app 裡顯示的更新說明（`ReleaseNotes.text` 的中文那段）、問題回報裡的介面語言名稱（「简体中文」）。`uiNames` 的 `ListFormatter` 用 `zh-Hans`。
 - 字形：所有視窗套的 `.chineseGlyphs()` 在簡體介面用 `zh-Hans`（簡體的標點位置）；會議標題、段落標題的宋體用 `Songti SC`。會議內容（中文會議）的字形、標題字型跟著「中文的字」（R72.5）：簡體用 `zh-Hans`、`Songti SC`，繁體照舊（`MeetingLanguage.contentTypesetting`、`contentTitleFont`，取代直接讀語言檔的 `fonts.typesetting`、`fonts.titleMac`）。
 - 「中文的字」的預設（R72.5）：`chineseScript` 沒有值時，簡體介面是 `simplified`、其他是 `traditional`（`AppSettings.chineseScript`）；設定頁的選單顯示的也是這個值。
-- 跟著「中文的字」的還有：中文會議新增的預設說話者名稱（`defaultSpeaker`，簡體時「说话者 N」；`isDefaultSpeakerName` 兩種寫法都認得）、心智圖的段落名稱（畫面上用介面語言、簡體介面轉；匯出用會議語言、同匯出轉）。畫面上的會議長度（`TimeFormat.duration` 不帶語言時）、播放條的「議題」、設定裡範本的段落名稱和內建範本的內容（只顯示，內建範本不能改）在簡體介面轉。
+- 跟著「中文的字」的還有：中文會議新增的預設說話者名稱（`defaultSpeaker`，簡體時「说话者 N」；`isDefaultSpeakerName` 兩種寫法都認得）、心智圖的段落名稱（畫面上用介面語言、簡體介面轉；匯出用會議語言、同匯出轉）。存起來的失敗原因（`MeetingLanguage.uiStored`，失敗當時的介面語言寫的）、畫面上的會議長度（`TimeFormat.duration` 不帶語言時）、播放條的「議題」、設定裡範本的段落名稱和內建範本的內容（只顯示，內建範本不能改）在簡體介面轉。
 - DEBUG：state 的 `languages` 加 `interfaceScript`（`zh-Hant`／`zh-Hans`／`en`）；簡體介面用 `-AppleLanguages "(zh-Hans)"` 啟動。
 
 ### 48.3 Windows（design-windows §11.15）

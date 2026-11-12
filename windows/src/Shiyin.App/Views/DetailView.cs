@@ -215,7 +215,7 @@ public sealed class DetailView
         var info = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
         if (meeting.Folder.Length > 0) info.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Folder) { Foreground = Ui.Secondary }, Ui.Text(meeting.Folder, 13, color: Ui.Secondary, wrap: false)));
         info.Children.Add(Ui.Text($"{meeting.MeetingDate} {DateText.Weekday(meeting.MeetingDate, MeetingLanguages.Interface)}", 13, color: Ui.Secondary, wrap: false));
-        if (meeting.DurationSeconds is not null) info.Children.Add(Ui.Text(TimeFormat.Duration(meeting.DurationSeconds, MeetingLanguages.Interface), 13, color: Ui.Secondary, wrap: false));
+        if (meeting.DurationSeconds is not null) info.Children.Add(Ui.Text(L.Ui(TimeFormat.Duration(meeting.DurationSeconds, MeetingLanguages.Interface)), 13, color: Ui.Secondary, wrap: false));
         if (Detail.UntranscribedMinutes is int minutes)
         {
             // 自動停止的錄音（M§35.3、R48.3）：後面沒人說話的部分沒有轉錄
@@ -420,7 +420,7 @@ public sealed class DetailView
                     }
                     actions.Children.Add(Ui.Button(L.T("重試"), () => host.Controller.Retry(id)));
                 }
-                var message = Ui.Text(f.Kind == JobKind.Transcribe ? L.F("轉錄失敗：%@", f.Error) : L.F("整理失敗：%@", f.Error), 13, maxLines: 3, select: true);
+                var message = Ui.Text(f.Kind == JobKind.Transcribe ? L.F("轉錄失敗：%@", L.Ui(f.Error)) : L.F("整理失敗：%@", L.Ui(f.Error)), 13, maxLines: 3, select: true);
                 return Banner(Ui.Split(new SymbolIcon(Symbol.Important) { Foreground = Ui.Danger, VerticalAlignment = VerticalAlignment.Top }, message, 8), actions,
                     new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 0xC0, 0x39, 0x2B)));
             case MeetingStatus.Cancelled:
@@ -528,7 +528,7 @@ public sealed class DetailView
         try
         {
             var b = host.Controller.Bundle(id);
-            if (AppController.MindMapLayout(b) is not { } layout)
+            if (AppController.MindMapLayout(b, host.Settings) is not { } layout)
             {
                 window.ShowNotice(L.T("還沒有會議紀錄可以畫成心智圖"));
                 return;

@@ -64,7 +64,7 @@ public static class Ui
     /// 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase）。WinUI 的視窗沒設底色時深色模式是純黑
     ///（2026-10-21 朋友的電腦上看到）。每個視窗的最外層都要設，跟著深淺色換
     /// </summary>
-    public static T WindowBackground<T>(T root) where T : FrameworkElement => Surface(root, 0xFFFFFF, 0x202020);
+    public static T WindowBackground<T>(T root) where T : FrameworkElement => Surface(InterfaceLanguage(root), 0xFFFFFF, 0x202020);
 
     /// <summary>主視窗的側欄：淺色 #F7F7F7、深色 #2B2B2B，跟內容區分得出來（同 Mac 的側欄）</summary>
     public static T SidebarBackground<T>(T root) where T : FrameworkElement => Surface(root, 0xF7F7F7, 0x2B2B2B);
@@ -141,7 +141,16 @@ public static class Ui
         new(string.Join(", ", language.Profile.Fonts.HtmlWindows.Body.Split(',').Select(n => n.Trim().Trim('"')).Where(n => n.Length > 0 && n is not ("serif" or "sans-serif"))));
 
     /// <summary>會議內容的語言（ja-JP 時用日文字形，D20），語言檔的 fonts.contentWindows</summary>
-    public static string ContentLanguage(MeetingLanguage language) => language.Profile.Fonts.ContentWindows;
+    /// <summary>會議內容的語言標記（挑字型）：中文會議跟著「中文的字」（R72.5、M§48.3），簡體是 zh-CN</summary>
+    public static string ContentLanguage(MeetingLanguage language) =>
+        language == MeetingLanguage.Zh && AppHost.Current.Settings.SimplifiedChinese(language) ? "zh-CN" : language.Profile.Fonts.ContentWindows;  // l10n-skip
+
+    /// <summary>簡體介面時視窗、對話框的語言標記設成 zh-CN：WinUI 依語言挑中文字型（微軟雅黑），不然簡體字用繁體的字型（M§48.3）</summary>
+    public static T InterfaceLanguage<T>(T element) where T : FrameworkElement
+    {
+        if (L.Simplified) element.Language = "zh-CN";  // l10n-skip
+        return element;
+    }
 
     public static TextBlock Text(string text, double size = 14, bool bold = false, Brush? color = null, bool wrap = true, int maxLines = 0,
                                  bool select = false)

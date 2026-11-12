@@ -7,11 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 簡體中文的介面（R72，design §48、design-windows §11.15、D155～D157；2026-11-12 使用者決定做、GitHub #3）
-
-- [ ] **ZH3 Windows**（§48.3、design-windows §11.15）
-  - 驗證：`dotnet test`；虛擬機 `--set interfaceLanguage=zh-Hans` 各畫面截圖
-
 ## 讓 AI 工具讀取會議：本地 MCP（R69，design §44、design-windows §11.12、D146～D149；2026-11-09 使用者新需求）
 
 - [~] **MCP6 真的 Claude Desktop、Mac 的複製選單**（§44.3、design-windows §11.12）：其他都驗過了（見 commit 訊息）；Mac 的 Claude Desktop 2026-11-10 驗過（使用者執行的腳本暫時加上 shiyin、驗完還原：initialize、tools/list 都有回應）。剩下：

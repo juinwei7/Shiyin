@@ -6,7 +6,8 @@ namespace Shiyin.Localization;
 
 /// <summary>
 /// 介面文字（design-windows §11.4）：鍵是中文原文，跟 Mac 的 Localizable.xcstrings 一樣；英文介面查表，
-/// 中文介面直接用鍵。插值的寫法照 xcstrings（<c>%@</c>、<c>%lld</c>、<c>%1$@</c>），才能沿用 Mac 的英文。
+/// 繁體中文介面直接用鍵，簡體中文介面查 zh-Hans、查不到的執行時轉（M§48.3、D156）。
+/// 插值的寫法照 xcstrings（<c>%@</c>、<c>%lld</c>、<c>%1$@</c>），才能沿用 Mac 的英文。
 /// </summary>
 public static partial class L
 {
@@ -16,16 +17,40 @@ public static partial class L
     /// <summary>目前的介面語言是不是英文（app 啟動時依 Windows 的顯示語言或設定決定）</summary>
     public static bool English { get; private set; }
 
+    /// <summary>介面是簡體中文（M§48.3）</summary>
+    public static bool Simplified { get; private set; }
+
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> converted = new();
+
     /// <summary>pluralTable：英文有單複數的條目（xcstrings 的 variations.plural）</summary>
     public static void Use(IReadOnlyDictionary<string, string>? englishTable, IReadOnlyDictionary<string, (string One, string Other)>? pluralTable = null)
     {
         table = englishTable ?? new Dictionary<string, string>();
         plurals = pluralTable ?? new Dictionary<string, (string, string)>();
         English = englishTable is not null;
+        Simplified = false;
+    }
+
+    /// <summary>簡體中文介面：hansTable 是兩份 xcstrings 的 zh-Hans</summary>
+    public static void UseSimplified(IReadOnlyDictionary<string, string> hansTable)
+    {
+        table = hansTable;
+        plurals = new Dictionary<string, (string, string)>();
+        English = false;
+        Simplified = true;
+        converted.Clear();
     }
 
     /// <summary>沒有插值的文字</summary>
-    public static string T(string key) => English && table.TryGetValue(key, out var v) ? v : key;
+    public static string T(string key)
+    {
+        if (English) return table.TryGetValue(key, out var v) ? v : key;
+        if (!Simplified) return key;
+        return table.TryGetValue(key, out var hans) ? hans : converted.GetOrAdd(key, Shiyin.Text.ChineseScript.ToSimplifiedUI);
+    }
+
+    /// <summary>不查表的中文（程式裡寫好的兩種語言、範本名稱、更新說明）：簡體介面執行時轉（M§48.3）</summary>
+    public static string Ui(string zh) => Simplified ? converted.GetOrAdd(zh, Shiyin.Text.ChineseScript.ToSimplifiedUI) : zh;
 
     /// <summary>有插值的文字：<c>L.F("找不到 %@ 指令", name)</c>。英文有單複數時看第一個整數</summary>
     public static string F(string key, params object?[] args)
@@ -36,6 +61,18 @@ public static partial class L
             return Format(count is not null && Convert.ToInt64(count, CultureInfo.InvariantCulture) == 1 ? p.One : p.Other, args);
         }
         return Format(T(key), args);
+    }
+
+    /// <summary>讀 xcstrings 的簡體中文（l10n.py hans 產生的 zh-Hans）</summary>
+    public static Dictionary<string, string> ReadXcstringsHans(string json)
+    {
+        var result = new Dictionary<string, string>();
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        foreach (var entry in doc.RootElement.GetProperty("strings").EnumerateObject())
+            if (entry.Value.TryGetProperty("localizations", out var locs) && locs.TryGetProperty("zh-Hans", out var hans)
+                && hans.TryGetProperty("stringUnit", out var unit) && unit.TryGetProperty("value", out var value))
+                result[entry.Name] = value.GetString() ?? entry.Name;
+        return result;
     }
 
     /// <summary>讀 xcstrings（Mac 的 Localizable.xcstrings 同一種格式）的英文：一般的條目、單複數的條目</summary>
