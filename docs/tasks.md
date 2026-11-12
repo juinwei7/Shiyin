@@ -13,7 +13,7 @@
 
 ## 錄音中麥克風一直重新連接（R74，design §50、design-windows §11.17、D159、D160；2026-11-12，GitHub #8）
 
-- [ ] **RC1 Mac**（§50.1～§50.3）：重新連接的節奏、背景佇列、`installTap(format: nil)`、`ObjCCatch`。驗證照 §50.4：`recordflap` 的間隔、提示、`maxMainGapMs`；內建麥克風錄音中換麥克風再換回來
+- [~] **RC1 Mac**（§50.1～§50.3）：程式完成，`recordflap` 驗過（2026-11-12，見 commit 訊息）。還差（要使用者在電腦前：DEBUG 版用真的麥克風可能跳出權限確認）：內建麥克風錄音、錄音中從麥克風名稱換到別的麥克風再換回來，錄音照常、log 沒有 `microphone engine exception`
 - [ ] **RC2 Windows**（design-windows §11.17）：同樣的節奏和提示。驗證：`RecorderTests`
 - [ ] **RC3 真的 AirPods**：回報的人（GitHub #8）提供當機報告、更新後再試；或使用者用 AirPods 錄一段
 

@@ -23,6 +23,8 @@ let package = Package(
             checksum: "4127cc50e99f1c722ff67b7de60275f8345b1453a288668a37bb7875a520ecbe"
         ),
         .target(name: "QwenShim", dependencies: ["llama"], path: "Sources/QwenShim"),
+        // 接住 AVAudioEngine 的 Objective-C 例外（design §50.3、D160）
+        .target(name: "ObjCCatch", path: "Sources/ObjCCatch"),
         .executableTarget(
             name: "Shiyin",
             dependencies: [
@@ -30,6 +32,7 @@ let package = Package(
                 .product(name: "FluidAudio", package: "FluidAudio"),
                 "whisper",
                 "QwenShim",
+                "ObjCCatch",
             ],
             path: "Sources/Shiyin",
             swiftSettings: [.swiftLanguageMode(.v5)],
