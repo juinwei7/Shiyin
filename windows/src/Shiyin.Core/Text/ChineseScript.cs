@@ -84,4 +84,91 @@ public static class ChineseScript
         }
         return result.ToString();
     }
+
+    // MARK: 繁轉簡（M§47.1、D153）
+
+    /// <summary>繁轉簡的字表：台灣用字換回一般繁體（詞組、單字），再轉簡體（詞組、單字）</summary>
+    sealed class SimplifiedTables
+    {
+        public readonly Dictionary<string, string> StandardPhrases = new();
+        public int StandardLongest = 1;
+        public readonly Dictionary<string, string> StandardCharacters = new();
+        public readonly Dictionary<string, string> Phrases = new();
+        public int Longest = 1;
+        public readonly Dictionary<string, string> Characters = new();
+    }
+
+    static readonly Lazy<SimplifiedTables> LoadedSimplified = new(LoadSimplified);
+
+    static IEnumerable<(string Key, string Value)> Rows(string name)
+    {
+        using var stream = typeof(ChineseScript).Assembly.GetManifestResourceStream("opencc/" + name)
+            ?? throw new InvalidOperationException($"找不到內嵌的字表 {name}");   // l10n-skip
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        while (reader.ReadLine() is { } line)
+        {
+            var tab = line.IndexOf('\t');
+            if (tab > 0) yield return (line[..tab], line[(tab + 1)..]);
+        }
+    }
+
+    static SimplifiedTables LoadSimplified()
+    {
+        var t = new SimplifiedTables();
+        foreach (var (key, value) in Rows("TWVariantsRevPhrases.tsv"))
+        {
+            t.StandardPhrases[key] = value;
+            t.StandardLongest = Math.Max(t.StandardLongest, SwiftText.Count(key));
+        }
+        foreach (var (key, value) in Rows("TSPhrases.tsv"))
+        {
+            t.Phrases[key] = value;
+            t.Longest = Math.Max(t.Longest, SwiftText.Count(key));
+        }
+        // 台灣用字的單字表反過來查（同 Mac）；同一個字有兩個來源時用先出現的
+        foreach (var (key, value) in Rows("TWVariants.tsv"))
+            if (SwiftText.Count(key) == 1 && SwiftText.Count(value) == 1) t.StandardCharacters.TryAdd(value, key);
+        foreach (var (key, value) in Rows("TSCharacters.tsv"))
+            if (SwiftText.Count(key) == 1 && SwiftText.Count(value) == 1) t.Characters[key] = value;
+        return t;
+    }
+
+    /// <summary>台灣繁體轉簡體（同 OpenCC 的 tw2s，只換字不換用語；同 Mac 的 toSimplified）</summary>
+    public static string ToSimplified(string text)
+    {
+        var t = LoadedSimplified.Value;
+        var standard = Convert(SwiftText.Characters(text), t.StandardPhrases, t.StandardLongest, t.StandardCharacters);
+        return Convert(SwiftText.Characters(standard), t.Phrases, t.Longest, t.Characters);
+    }
+
+    /// <summary>詞組最長匹配（只有中日韓的字才可能是詞組的開頭），沒有就查單字表，查不到原樣保留</summary>
+    static string Convert(List<string> chars, Dictionary<string, string> phrases, int longest, Dictionary<string, string> characters)
+    {
+        var out_ = new StringBuilder();
+        var i = 0;
+        while (i < chars.Count)
+        {
+            var matched = false;
+            if (IsCjk(chars[i]))
+            {
+                for (var length = Math.Min(longest, chars.Count - i); length >= 2; length--)
+                {
+                    if (phrases.TryGetValue(string.Concat(chars.GetRange(i, length)), out var value))
+                    {
+                        out_.Append(value);
+                        i += length;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            if (!matched)
+            {
+                out_.Append(characters.TryGetValue(chars[i], out var single) ? single : chars[i]);
+                i++;
+            }
+        }
+        return out_.ToString();
+    }
 }
+

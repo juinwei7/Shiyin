@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Shiyin.Services.Export;
 using Shiyin.LLM;
 using Shiyin.Localization;
 using Shiyin.Model;
@@ -551,9 +552,12 @@ public sealed class DetailView
         }
         switch (style)
         {
-            case "plain": Copy.Text(IO.NotesExporter.Plain(b)); break;
-            case "markdown": Copy.Text(IO.NotesExporter.Markdown(b)); break;
-            default: Copy.Rich(IO.NotesExporter.Plain(b), IO.NotesExporter.Html(b, IO.ExportFonts.Windows)); break;
+            // 中文會議用簡體時整份轉成簡體（M§47.2）
+            case "plain": Copy.Text(ExportScript.Text(host.Settings, b, IO.NotesExporter.Plain(b))); break;
+            case "markdown": Copy.Text(ExportScript.Text(host.Settings, b, IO.NotesExporter.Markdown(b))); break;
+            default:
+                Copy.Rich(ExportScript.Text(host.Settings, b, IO.NotesExporter.Plain(b)), ExportScript.Html(host.Settings, b, IO.NotesExporter.Html(b, IO.ExportFonts.Windows)));
+                break;
         }
         window.ShowNotice(L.T("已複製會議紀錄"));
     }

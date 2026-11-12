@@ -50,6 +50,8 @@ public sealed class AppSettings
     public const string NotesViewKey = "notesView";
     /// <summary>讓 AI 工具讀取會議（本地 MCP，M§44.1），預設關</summary>
     public const string McpEnabledKey = "mcpEnabled";
+    /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
+    public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
     public const string InterfaceLanguageKey = "interfaceLanguage";
 
@@ -324,6 +326,11 @@ public sealed class AppSettings
     public string TranscriptionEngine => String(TranscriptionEngineKey) ?? "breeze";
     public bool UseQwen => TranscriptionEngine == "qwen";
     public string CompatibleBaseUrl => String(CompatibleBaseUrlKey) ?? "";
+
+    /// <summary>中文會議用簡體（R71、M§47.2）：設定是簡體、會議語言是中文時。轉錄、整理、匯出各自在做的時候看</summary>
+    public bool SimplifiedChinese(MeetingLanguage language) => language == MeetingLanguage.Zh && String(ChineseScriptKey) == "simplified";
+    /// <summary>中文會議用簡體時轉成簡體，其他原樣</summary>
+    public string Script(string text, MeetingLanguage language) => SimplifiedChinese(language) ? Shiyin.Text.ChineseScript.ToSimplified(text) : text;
 
     /// <summary>新會議的會議語言（M§16.3）；沒設定時跟著介面語言</summary>
     public MeetingLanguage DefaultMeetingLanguage => MeetingLanguages.Parse(String(DefaultMeetingLanguageKey)) ?? SystemDefaultLanguage;

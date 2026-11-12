@@ -75,6 +75,14 @@ public class UtilTests
     }
 
     [Fact]
+    public void TaiwanToSimplified()
+    {
+        // 繁轉簡（M§47.1）：跟 Mac 的 ChineseScript.toSimplified 逐字相同
+        foreach (var item in Items("util/tw2s.json"))
+            Assert.Equal(item.Str("out"), ChineseScript.ToSimplified(item.Str("in")!));
+    }
+
+    [Fact]
     public void ReleaseNotesBrief()
     {
         // 更新說明只列前幾項（R10.6）：取段落、取條目跟 Mac 的 ReleaseNotes.brief 相同

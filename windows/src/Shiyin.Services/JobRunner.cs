@@ -396,9 +396,11 @@ public sealed class JobRunner
         if (ran is not { } result) return;
         // 只轉錄前段時，會議長度維持整個錄音（播放、資訊列用）
         var savedDuration = trimmed is not null ? Math.Max(meeting.DurationSeconds ?? 0, result.Duration) : result.Duration;
+        // 中文會議用簡體時，存檔前才轉（M§47.2、D154）
+        var language = meeting.MeetingLanguage;
         var segments = result.Segments.Select((s, i) => new Segment
         {
-            MeetingId = job.MeetingId, Seq = i, Start = s.Start, End = s.End, Text = s.Text, LowConfidence = s.LowConfidence,
+            MeetingId = job.MeetingId, Seq = i, Start = s.Start, End = s.End, Text = settings.Script(s.Text, language), LowConfidence = s.LowConfidence,
             Speaker = result.Speakers[i], Kind = "final", Channel = result.Channels[i],
         }).ToList();
         db.SaveTranscript(job.MeetingId, segments, (int)Math.Round(savedDuration, MidpointRounding.AwayFromZero),
@@ -555,6 +557,8 @@ public sealed class JobRunner
                 SpeakerNaming.Format, cancel);
             var suggestions = SpeakerNaming.Validate(ParseSuggestions(json, provider), context);
             if (!IsStillRunning(job)) return;
+            // 中文會議用簡體時，原因、名字轉成簡體（M§47.2）
+            suggestions = suggestions.Select(s => s with { Name = settings.Script(s.Name, language), Reason = settings.Script(s.Reason, language) }).ToList();
             db.SaveSpeakerSuggestions(job.MeetingId, suggestions);
             Log.Info($"speaker names suggested: {suggestions.Count}");
         }
@@ -611,7 +615,9 @@ public sealed class JobRunner
             if (!IsStillRunning(job)) return;
             db.SaveCorrections(job.MeetingId, result.Where(s => segments[s.Segment].Id is not null).Select(s => new Correction
             {
-                MeetingId = job.MeetingId, SegmentId = segments[s.Segment].Id!.Value, Original = s.Original, Suggestion = s.Suggestion, Reason = s.Reason,
+                // 中文會議用簡體時，建議和原因轉成簡體（原文照逐字稿，已經對過，M§47.2）
+                MeetingId = job.MeetingId, SegmentId = segments[s.Segment].Id!.Value, Original = s.Original,
+                Suggestion = settings.Script(s.Suggestion, language), Reason = settings.Script(s.Reason, language),
             }).ToList());
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -685,6 +691,8 @@ public sealed class JobRunner
         else prompt = NotesPrompt.Summarize(context);
         var notes = await llm.Generate(provider, settings.Model, NotesPrompt.System(meeting.MeetingLanguage, context.Documents is { Count: > 0 }), prompt, cancel);
         if (!IsStillRunning(job)) return false;
+        // 中文會議用簡體時，整理完才轉（提示詞照舊，M§47.2、D154）
+        if (settings.SimplifiedChinese(meeting.MeetingLanguage)) notes = notes.Simplified();
         if (draft)
         {
             // 整理草稿的期間正式逐字稿好了、或已經有會議紀錄：丟掉草稿

@@ -615,6 +615,10 @@ public sealed class SettingsWindow : Window
         var language = Ui.Column(12);
         language.Children.Add(Ui.Combo(MeetingLanguages.All.Select(l => (l, l.Name())), S.DefaultMeetingLanguage, l => S.Set(AppSettings.DefaultMeetingLanguageKey, l.Code()), L.T("預設會議語言")));
         language.Children.Add(Note(L.T("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")));
+        // 中文的字（R71、M§47.3）
+        language.Children.Add(Ui.Combo(new[] { ("traditional", L.T("繁體（台灣）")), ("simplified", L.T("簡體")) },
+            S.String(AppSettings.ChineseScriptKey) == "simplified" ? "simplified" : "traditional", v => S.Set(AppSettings.ChineseScriptKey, v), L.T("中文的字")));
+        language.Children.Add(Note(L.T("只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。")));
         language.Children.Add(Ui.Toggle(L.T("自動偵測會議語言"), S.AutoDetectLanguage, on =>
         {
             S.Set(AppSettings.AutoDetectLanguageKey, on);

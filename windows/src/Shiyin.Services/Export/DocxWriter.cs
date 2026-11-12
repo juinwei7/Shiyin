@@ -16,12 +16,13 @@ public static partial class DocxWriter
 {
     const string Text = "1E2625", Muted = "68726F", Accent = "2D6A5D", Rule = "DCE1DE";
 
-    public static void Write(string html, string path, MeetingLanguage language)
+    /// <summary>simplified：中文會議用簡體時（M§47.2）字型換成微軟雅黑、宋體，語言標成 zh-CN</summary>
+    public static void Write(string html, string path, MeetingLanguage language, bool simplified = false)
     {
-        var (body, heading) = Fonts(language);
+        var (body, heading) = simplified ? ("Microsoft YaHei", "SimSun") : Fonts(language);   // l10n-skip
         using var doc = WordprocessingDocument.Create(path, WordprocessingDocumentType.Document);
         var main = doc.AddMainDocumentPart();
-        AddStyles(main, body, heading, language);
+        AddStyles(main, body, heading, language, simplified);
         var numbering = AddNumbering(main);
         var content = new Body();
         foreach (var block in Parse(BodyOf(html))) content.Append(block.ToOpenXml(numbering));
@@ -45,9 +46,9 @@ public static partial class DocxWriter
 
     // MARK: 樣式
 
-    static void AddStyles(MainDocumentPart main, string body, string heading, MeetingLanguage language)
+    static void AddStyles(MainDocumentPart main, string body, string heading, MeetingLanguage language, bool simplified)
     {
-        var lang = language.Text("zh-TW", "en-US", "ja-JP");
+        var lang = simplified ? "zh-CN" : language.Text("zh-TW", "en-US", "ja-JP");
         RunProperties Run(string font, int halfPoints, string color, bool bold = false)
         {
             // 子元素的順序要照 Word 的 schema：rFonts、b、color、sz、lang

@@ -1054,7 +1054,7 @@ public sealed class AppController
         {
             case ExportItem.Notes when format == "pdf": await Platform().NotesPdf(b, path, cancel); break;
             case ExportItem.Notes when format == "docx": await Platform().NotesDocx(b, path, cancel); break;
-            case ExportItem.Notes: await Task.Run(() => File.WriteAllText(path, NotesExporter.Markdown(b)), cancel); break;
+            case ExportItem.Notes: await Task.Run(() => File.WriteAllText(path, Shiyin.Services.Export.ExportScript.Text(Settings, b, NotesExporter.Markdown(b))), cancel); break;
             case ExportItem.MindMap:
             {
                 // 心智圖（M§42.4）：段落名稱跟著會議語言，同其他匯出
@@ -1066,7 +1066,9 @@ public sealed class AppController
                 break;
             }
             case ExportItem.Transcript when format == "docx": await Platform().TranscriptDocx(b, times, speakers, path, cancel); break;
-            case ExportItem.Transcript: await Task.Run(() => File.WriteAllText(path, TranscriptExporter.Text(b, format, times, speakers)), cancel); break;
+            case ExportItem.Transcript:
+                await Task.Run(() => File.WriteAllText(path, Shiyin.Services.Export.ExportScript.Text(Settings, b, TranscriptExporter.Text(b, format, times, speakers))), cancel);
+                break;
             case ExportItem.Audio:
                 if (!Paths.HasAudio(b.Meeting)) throw new ExportException(L.T("這場會議沒有錄音檔"));
                 await Platform().Audio(Paths.AudioPath(b.Meeting), format, path, cancel);

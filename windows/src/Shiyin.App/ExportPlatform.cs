@@ -13,12 +13,15 @@ namespace Shiyin.App;
 public sealed class ExportPlatform(AppHost host) : IExportPlatform
 {
     public Task NotesDocx(ExportBundle b, string path, CancellationToken cancel) =>
-        Task.Run(() => DocxWriter.Write(NotesExporter.Html(b, ExportFonts.Windows), path, b.Meeting.MeetingLanguage), cancel);
+        Task.Run(() => DocxWriter.Write(ExportScript.Html(host.Settings, b, NotesExporter.Html(b, ExportFonts.Windows)), path, b.Meeting.MeetingLanguage,
+            host.Settings.SimplifiedChinese(b.Meeting.MeetingLanguage)), cancel);
 
     public Task TranscriptDocx(ExportBundle b, bool times, bool speakers, string path, CancellationToken cancel) =>
-        Task.Run(() => DocxWriter.Write(TranscriptExporter.Html(b, times, speakers, ExportFonts.Windows), path, b.Meeting.MeetingLanguage), cancel);
+        Task.Run(() => DocxWriter.Write(ExportScript.Html(host.Settings, b, TranscriptExporter.Html(b, times, speakers, ExportFonts.Windows)), path,
+            b.Meeting.MeetingLanguage, host.Settings.SimplifiedChinese(b.Meeting.MeetingLanguage)), cancel);
 
-    public Task NotesPdf(ExportBundle b, string path, CancellationToken cancel) => Pdf.Print(NotesExporter.Html(b, ExportFonts.Windows), path, cancel);
+    public Task NotesPdf(ExportBundle b, string path, CancellationToken cancel) =>
+        Pdf.Print(ExportScript.Html(host.Settings, b, NotesExporter.Html(b, ExportFonts.Windows)), path, cancel);
 
     public async Task MindMapPng(Notes.MindMap.Layout layout, Model.MeetingLanguage language, string path, CancellationToken cancel)
     {

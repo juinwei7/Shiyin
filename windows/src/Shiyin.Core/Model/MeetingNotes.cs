@@ -134,6 +134,9 @@ public sealed record MeetingNotes
         return MappingText(s => regex.Replace(s, replacement.Replace("$", "$$")));
     }
 
+    /// <summary>每一個文字欄位轉成簡體（M§47.2）</summary>
+    public MeetingNotes Simplified() => MappingText(Text.ChineseScript.ToSimplified);
+
     MeetingNotes MappingText(Func<string, string> r)
     {
         Item Ri(Item i) => new(r(i.Text), i.Time);
