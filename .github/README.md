@@ -8,7 +8,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 
 - Recording, transcription and speaker identification all run locally; recordings are never uploaded
 - No Python, Homebrew or ffmpeg to install: download the DMG and go
-- Interface in English and Traditional Chinese (follows your macOS language); meetings can be in English, Chinese or Japanese
+- Interface in English, Traditional Chinese and Simplified Chinese (follows your macOS language); meetings can be in English, Chinese, Japanese, Cantonese or Korean (experimental)
 - Requires Apple Silicon and macOS 26
 
 ![Meeting notes](../docs/images/en/summary.png)
@@ -291,7 +291,7 @@ scripts/dev/l10n.py check         # after changing UI text: extract strings, lis
 sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # data
 ```
 
-Interface strings are written in Traditional Chinese in the code and looked up in `Resources/Localizable.xcstrings`, which holds the English translations.
+Interface strings are written in Traditional Chinese in the code and looked up in `Resources/Localizable.xcstrings`, which holds the English translations; the Simplified Chinese ones are generated from the Traditional text (`scripts/dev/l10n.py hans`, term list in `Resources/l10n/`).
 
 ## Known limitations
 
