@@ -100,7 +100,7 @@ struct MenuBarContent: View {
                 if let hint = recorder.levelHint {
                     // 收音提醒（R42.2）：跟錄音畫面同一句，「知道了」這場不再提示
                     VStack(alignment: .leading, spacing: 6) {
-                        Label(hint.text, systemImage: hint == .noisy ? "waveform.badge.exclamationmark" : "mic.badge.xmark")
+                        Label(recorder.text(for: hint), systemImage: hint == .noisy ? "waveform.badge.exclamationmark" : "mic.badge.xmark")
                             .font(.caption)
                             .foregroundStyle(Color.signal)
                             .fixedSize(horizontal: false, vertical: true)

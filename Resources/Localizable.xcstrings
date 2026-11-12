@@ -2660,6 +2660,17 @@
         }
       }
     },
+    "其他 app": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "another app"
+          }
+        }
+      }
+    },
     "其他人…（到逐字稿改名）": {
       "extractionState": "manual",
       "localizations": {
@@ -12511,6 +12522,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Microphone"
+          }
+        }
+      }
+    },
+    "麥克風幾乎收不到聲音：%@ 可能正在用這支麥克風做回音消除（例如用 Safari 開的 Google Meet），拾音收不到你的聲音。請改用 Chrome 開會，或讓會議和拾音用不同的麥克風。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone is picking up almost nothing: %@ may be using this microphone for echo cancellation (for example Google Meet in Safari), so Shiyin can’t hear you. Join the meeting in Chrome instead, or use different microphones for the meeting and Shiyin."
+          }
+        }
+      }
+    },
+    "麥克風幾乎收不到聲音：%@ 可能正在用這支麥克風做回音消除，拾音收不到你的聲音。請讓 %@ 和拾音用不同的麥克風。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone is picking up almost nothing: %1$@ may be using this microphone for echo cancellation, so Shiyin can’t hear you. Use different microphones for %2$@ and Shiyin."
           }
         }
       }
