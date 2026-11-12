@@ -379,10 +379,11 @@ enum AudioExporter {
         guard b.meeting.hasAudio else { throw ExportError.noAudio }
         let source = b.meeting.audioURL
         try? FileManager.default.removeItem(at: url)
-        // 「麥克風＋電腦聲音」的錄音：m4a 兩個聲道混在一起（design §49.1、R73.2），原檔是 m4a 也要重新轉
+        // 「麥克風＋電腦聲音」的錄音（design §49.1、R73.2）：m4a 兩個聲道混在一起、wav 混成單聲道，原檔是同一種格式也要重新轉
+        let both = b.meeting.channels == "both"
         let asset = AVURLAsset(url: source)
-        let mix = format == "m4a" && b.meeting.channels == "both" ? await ChannelMix.audioMix(for: asset) : nil
-        if format == source.pathExtension.lowercased() && mix == nil {
+        let mix = format == "m4a" && both ? await ChannelMix.audioMix(for: asset) : nil
+        if format == source.pathExtension.lowercased() && !both {
             try FileManager.default.copyItem(at: source, to: url)
         } else if format == "m4a" {
             guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A)

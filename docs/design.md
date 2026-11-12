@@ -2282,7 +2282,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - `ChannelMix.audioMix(for: AVAsset) async -> AVAudioMix?`：音軌是 2 個聲道時，回傳一個裝了 `MTAudioProcessingTap` 的 `AVAudioMix`；其他（單聲道、讀不到音軌）回傳 nil，照原樣播。
 - tap 的 process：`MTAudioProcessingTapGetSourceAudio` 取來源音訊，處理格式是 2 個聲道、非交錯的 Float32 時，每個取樣 m = (L + R) × 0.7071（同 AVAssetReader 混成單聲道的 −3 dB，量過：左聲道 0.5、右聲道 0 混出 0.354），超過 ±1 截掉，寫回兩個聲道。其他格式（prepare 時看 ASBD）不動。
 - 只在會議的 `channels` 是 `both` 時用（R73.5）：`Player.load(_:mixChannels:)`，`AppModel` 傳 `meeting.channels == "both"`。`load` 照舊馬上建好 `AVPlayerItem`，音軌讀到後才設 `item.audioMix`（可以中途設）。
-- 匯出 m4a（`AudioExporter`）：`both` 的會議一律用 `AVAssetExportSession`（AppleM4A）轉，即使原檔已經是 m4a，`session.audioMix` 設成同一個混音；輸出還是雙聲道，兩個聲道一樣。wav、`.shiyin` 照舊。
+- 匯出（`AudioExporter`）：`both` 的會議即使原檔是同一種格式也重新轉。m4a 用 `AVAssetExportSession`（AppleM4A），`session.audioMix` 設成同一個混音，輸出還是雙聲道、兩個聲道一樣；wav 照舊解碼成 16 kHz 單聲道（原本原檔是 wav 時直接複製，左右分開）。`.shiyin` 照舊。
 
 ### 49.2 Windows（design-windows §11.16）
 
