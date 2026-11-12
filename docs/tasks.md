@@ -20,8 +20,9 @@
 
 ## Safari 開 Google Meet 時麥克風收不到聲音（R57，design §45、D151；2026-10-29 Threads 的使用者回饋、GitHub #4）
 
-- [ ] **R57 Mac 實作**（R57.1～R57.5）：錄音中 10 秒內提示、提示列、通知、選單列圖示、同一場只提醒一次、使用說明的常見問題
-  - 驗證：DEBUG 版用 `vpio-hold.swift` 對內建麥克風開語音處理時錄音（要使用者在電腦前，會用到麥克風），10 秒內出現提示、寫出 app 的名稱；關掉後提示收起；安靜的會議錄音用 `record-sim` 不誤報
+- [~] **R57 Mac 實作**（R57.1～R57.5，design §45）：程式完成，用 `record-sim` 驗過（2026-11-12，見 commit 訊息）。還差（要使用者在電腦前，會用到麥克風）：
+  - 真的語音處理：DEBUG 版用內建麥克風錄音時跑 `scripts/dev/vpio-hold.swift`，10 秒內出現提示；關掉後提示收起
+  - 用 Safari 開 Google Meet 時提示寫的是 Safari（Safari 的網頁由 `com.apple.WebKit.GPU` 收音是照 GitHub #4 的 log 寫的，還沒在這台電腦看過 Core Audio 回報的 bundle ID；不是的話「偵測到線上會議」對 Safari 也不會提醒，要一起改 `MeetingDetector.known`）
 
 ## 會議的參考文件（R61，design §39、design-windows §11.8、D133～D136；2026-11-02 使用者新需求）
 

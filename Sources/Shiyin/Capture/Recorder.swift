@@ -50,6 +50,7 @@ final class Recorder {
     /// 收音提醒（design §26.1、R24.1、R24.3）
     enum LevelHint: String {
         case silent   // 麥克風的聲音完全是 0
+        case suppressed   // 幾乎沒聲音：被別的 app 的語音處理佔住（design §45、R57）
         case quiet    // 有人在說話，但聲音很小
         case noisy    // 背景一直很大聲
 
@@ -57,12 +58,34 @@ final class Recorder {
         var text: String {
             switch self {
             case .silent: return String(localized: "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音與轉錄」換一個。")
+            case .suppressed: return Self.suppressedText(nil)
             case .quiet: return String(localized: "聲音有點小：手機或筆電放近說話的人一點。")
             case .noisy: return String(localized: "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。")
             }
         }
+
+        /// 被佔住的提示要寫出是哪個 app（design §45.3、R57.1、R57.2）：瀏覽器、找不到是誰時建議改用 Chrome，其他 app 只建議換麥克風
+        static func suppressedText(_ user: MeetingDetector.MicrophoneUser?) -> String {
+            guard let user, !user.isBrowser else {
+                let name = user?.name ?? String(localized: "其他 app")
+                return String(localized: "麥克風幾乎收不到聲音：\(name) 可能正在用這支麥克風做回音消除（例如用 Safari 開的 Google Meet），拾音收不到你的聲音。請改用 Chrome 開會，或讓會議和拾音用不同的麥克風。")
+            }
+            return String(localized: "麥克風幾乎收不到聲音：\(user.name) 可能正在用這支麥克風做回音消除，拾音收不到你的聲音。請讓 \(user.name) 和拾音用不同的麥克風。")
+        }
     }
     private(set) var levelHint: LevelHint?
+    /// 提示的文字（錄音畫面、選單列、通知共用，R42）
+    func text(for hint: LevelHint) -> String {
+        hint == .suppressed ? LevelHint.suppressedText(suppressedBy) : hint.text
+    }
+    /// 被佔住的提示出現時，正在用麥克風的 app（design §45.2）；AppModel 接到 MeetingDetector
+    @ObservationIgnored var microphoneUser: (() -> MeetingDetector.MicrophoneUser?)?
+    @ObservationIgnored private var suppressedBy: MeetingDetector.MicrophoneUser?
+    /// 這場錄音稍早的背景音量（最低值）；晚 10 秒才算數，還沒算數的放 pendingFloor（design §45.1）
+    @ObservationIgnored private var micFloor: Float?
+    @ObservationIgnored private var pendingFloor: [Float] = []
+    /// 幾乎沒聲音之後 30 秒內的背景不算：30 秒的音量裡還有那時候的
+    @ObservationIgnored private var floorHold = 0
 
     /// 正在收音的麥克風（design §38.3、R58.2）：開始、重新開始、換麥克風後更新
     private(set) var micDevice: AudioDevices.Device?
@@ -213,6 +236,7 @@ final class Recorder {
     func resume() {
         guard isRecording, isPaused else { return }
         writer?.resetRecentLevels()
+        resetMicFloor()
         (noisySeconds, quietSeconds) = (0, 0)
         markSpeech()   // 按了繼續表示人還在，重新計時（design §35.1）
         writer?.setPaused(false)
@@ -280,7 +304,10 @@ final class Recorder {
 
     private func updateMicDevice() {
         let device = (sources[0] as? MicrophoneInput)?.current
-        if device != micDevice { micDevice = device }
+        if device != micDevice {
+            micDevice = device
+            resetMicFloor()   // 換了一支麥克風，底噪不一樣
+        }
         updateMicHint()
     }
 
@@ -297,6 +324,12 @@ final class Recorder {
             micHintNotified = true
             onMicHint?(hint)
         }
+    }
+
+    private func resetMicFloor() {
+        micFloor = nil
+        pendingFloor = []
+        floorHold = 0
     }
 
     /// 「知道了」：這一種提示這場錄音不再出現
@@ -386,6 +419,8 @@ final class Recorder {
             micHintDismissed = false
             micHintNotified = false
             (noisySeconds, quietSeconds) = (0, 0)
+            suppressedBy = nil
+            resetMicFloor()
             lastSpeechAt = 0
             liveActive = false
             idlePrompt = false
@@ -539,7 +574,8 @@ final class Recorder {
     private func checkLevels(_ writer: RecordingWriter) {
         guard hasMic, !isPaused else { return }
         let silent = writer.silence(0) > 10
-        let levels = writer.recentLevels(0).sorted()
+        let recent = writer.recentLevels(0)
+        let levels = recent.sorted()
         var speech: Float = 0, background: Float = 0
         if levels.count >= 300 {
             speech = levels[Int(Double(levels.count - 1) * 0.9)]
@@ -548,17 +584,50 @@ final class Recorder {
             // 說話比背景大 4 dB 以上才算有人在說話（完全安靜時聲音很平），不是安靜的停頓
             quietSeconds = speech < -50 && speech - background >= 4 ? quietSeconds + 1 : 0
         }
-        let hint: LevelHint? = silent ? .silent : quietSeconds >= 60 ? .quiet : noisySeconds >= 45 ? .noisy : nil
+        // 被別的 app 的語音處理佔住（design §45.1、R57）：最近 8 秒幾乎沒聲音（完全是 0 的不算），
+        // 而且是內建麥克風、或這場錄音稍早的背景比現在高 12 dB 以上
+        var nearSilent = false, suppressed = false
+        if recent.count >= 80 {
+            let tail = recent.suffix(80).sorted()
+            nearSilent = tail.count(where: { $0 > -119 && $0 < -70 }) >= 72
+            if nearSilent {
+                quietSeconds = 0   // 不是「聲音有點小」（R57.3）
+                pendingFloor = []
+                floorHold = 30
+                suppressed = micIsBuiltIn || micFloor.map { $0 - tail[71] >= 12 } ?? false
+            } else if floorHold > 0 {
+                floorHold -= 1
+            } else if levels.count >= 300 {
+                pendingFloor.append(background)
+                if pendingFloor.count > 10 {
+                    let value = pendingFloor.removeFirst()
+                    if value > -119 { micFloor = min(micFloor ?? value, value) }
+                }
+            }
+        }
+        let hint: LevelHint? = silent ? .silent : suppressed ? .suppressed : quietSeconds >= 60 ? .quiet : noisySeconds >= 45 ? .noisy : nil
         let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
         if shown != levelHint {
+            // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）
+            if shown == .suppressed { suppressedBy = microphoneUser?() }
             levelHint = shown
             // 第一次出現才通知（R42.1）；提示消失又出現不再通知
             if let shown, notifiedLevelHints.insert(shown).inserted { onLevelHint?(shown) }
         }
         #if DEBUG
         levelCheck = ["speech": speech, "background": background, "frames": levels.count, "silentSeconds": writer.silence(0),
-                      "noisySeconds": noisySeconds, "quietSeconds": quietSeconds, "hint": levelHint?.rawValue ?? ""]
+                      "noisySeconds": noisySeconds, "quietSeconds": quietSeconds, "hint": levelHint?.rawValue ?? "",
+                      "nearSilent": nearSilent, "floor": micFloor ?? 0, "suppressedApp": suppressedBy?.name ?? "",
+                      "text": levelHint.map { text(for: $0) } ?? ""]
         #endif
+    }
+
+    /// 正在收音的是這台 Mac 的內建麥克風；模擬錄音沒有真的裝置，DEBUG 用 -debugMicBuiltIn YES 當成內建（design §45.4）
+    private var micIsBuiltIn: Bool {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "debugMicBuiltIn") { return true }
+        #endif
+        return micDevice?.isBuiltIn == true
     }
 
     /// 開始錄音時剩不到 1 GB、錄音中剩不到 300 MB 就提醒（錄音照常進行；寫不進去時 tick 會停止錄音）

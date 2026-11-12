@@ -128,6 +128,43 @@ final class MeetingDetector {
         return result
     }
 
+    /// 正在用麥克風的 app（design §45.2、R57.2）：瀏覽器、找不到是誰時，被佔住的提示建議改用 Chrome
+    struct MicrophoneUser: Equatable {
+        var name: String
+        var isBrowser: Bool
+    }
+
+    /// 已知的會議 app、瀏覽器優先，其次是其他一般的 app；拾音自己、系統的背景程序不算。都沒有回傳 nil
+    func microphoneUser() -> MicrophoneUser? {
+        var other: MicrophoneUser?
+        #if DEBUG
+        // 模擬的 app（meetingapp）
+        for (bundle, on) in simulated.sorted(by: { $0.key < $1.key }) where on {
+            if let user = Self.microphoneUser(bundle: bundle) { return user }
+        }
+        #endif
+        let own = ProcessInfo.processInfo.processIdentifier
+        for object in Self.processObjects() {
+            guard Self.isRunningInput(object), let pid = Self.pid(object), pid != own else { continue }
+            let bundle = Self.bundleID(object) ?? ""
+            guard bundle != Bundle.main.bundleIdentifier else { continue }   // 另一份拾音
+            if let user = Self.microphoneUser(bundle: bundle) { return user }
+            if other == nil, let app = NSRunningApplication(processIdentifier: pid), app.activationPolicy == .regular,
+               let name = app.localizedName {
+                other = MicrophoneUser(name: name, isBrowser: false)
+            }
+        }
+        return other
+    }
+
+    /// 已知的會議 app、瀏覽器；Safari 的網頁由 WebKit 的 GPU 程序收音（GitHub #4 的 log）
+    static func microphoneUser(bundle: String) -> MicrophoneUser? {
+        if bundle == "com.apple.WebKit.GPU" { return MicrophoneUser(name: "Safari", isBrowser: true) }
+        guard let known = known(bundle) else { return nil }
+        if let name = meetingApps[known] { return MicrophoneUser(name: name, isBrowser: false) }
+        return browsers[known].map { MicrophoneUser(name: $0, isBrowser: true) }
+    }
+
     /// 已知名單裡的 ID：完全相同，或是它的 helper（前綴相同，例如 com.google.Chrome.helper）
     static func known(_ bundle: String) -> String? {
         let all = Array(meetingApps.keys) + Array(browsers.keys)
@@ -152,6 +189,14 @@ final class MeetingDetector {
         var value: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         return AudioObjectGetPropertyData(object, &address, 0, nil, &size, &value) == noErr && value != 0
+    }
+
+    private static func pid(_ object: AudioObjectID) -> pid_t? {
+        var address = AudioObjectPropertyAddress(mSelector: kAudioProcessPropertyPID,
+                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var value: pid_t = 0
+        var size = UInt32(MemoryLayout<pid_t>.size)
+        return AudioObjectGetPropertyData(object, &address, 0, nil, &size, &value) == noErr ? value : nil
     }
 
     private static func bundleID(_ object: AudioObjectID) -> String? {
