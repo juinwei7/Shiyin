@@ -121,16 +121,20 @@ enum DebugControl {
         // 偵測會議（design §21.7）：meetingapp <bundleID> start|stop；meetingprompts <輸出.json>；meetingaction <按鈕>
         case "meetingapp": model.meetingDetector.simulated[args[1]] = args[2] == "start"
         case "meetingprompts":
-            let current = MeetingPromptPanel.shared.current
+            let current = RecordingIsland.isEnabled ? RecordingIsland.shared.state.prompt?.prompt : MeetingPromptPanel.shared.current
             let text: String
             switch current {
             case .start(let app): text = "start:\(app.bundleID)"
             case .stop(let app): text = "stop:\(app.bundleID)"
             case nil: text = ""
             }
-            write(["prompt": text, "actions": MeetingPromptPanel.shared.actions.keys.sorted(), "muted": MeetingDetector.muted,
+            let actions = RecordingIsland.isEnabled ? (RecordingIsland.shared.state.prompt?.actions.map(\.id) ?? []).sorted()
+                : MeetingPromptPanel.shared.actions.keys.sorted()
+            write(["prompt": text, "actions": actions, "muted": MeetingDetector.muted,
                    "recording": model.recorder.isRecording], to: args[1])
-        case "meetingaction": MeetingPromptPanel.shared.perform(args[1])
+        case "meetingaction": RecordingIsland.isEnabled ? RecordingIsland.shared.perform(args[1]) : MeetingPromptPanel.shared.perform(args[1])
+        case "island":   // island hover on|off：等於滑鼠移到錄音島上、移開（design §57.3）
+            if args.count > 2, args[1] == "hover" { RecordingIsland.shared.state.hover = args[2] == "on"; RecordingIsland.shared.update() }
         // reportinfo <輸出.json>：回報問題會附上的內容和網址（不打開瀏覽器、不動剪貼簿，design §21.9）
         case "reportinfo":
             let text = ProblemReport.text(db: model.db)
@@ -771,6 +775,7 @@ enum DebugControl {
                  "due": entry.item.due.map { "\($0.year ?? 0)-\($0.month ?? 0)-\($0.day ?? 0)" } ?? ""]
             },
             "reminderStatus": model.reminderStatus,
+            "island": RecordingIsland.shared.debugInfo,   // 錄音島（design §57.3）
             // 人物頁（design §60.2）
             "sidebarMode": model.sidebarMode.rawValue, "selectedPerson": model.selectedPerson ?? -1,
             "peopleOverview": model.peopleOverview.map { ["id": $0.id, "name": $0.name, "meetings": $0.meetingCount,

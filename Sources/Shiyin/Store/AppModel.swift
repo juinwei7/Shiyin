@@ -371,7 +371,7 @@ final class AppModel {
         recorder.onMicHint = { [weak self] hint in self?.micHintAppeared(hint) }
         // 忘了停止錄音（design §35、R48）：提醒一出現就送通知（人多半不在電腦前）
         recorder.onIdlePrompt = { [weak self] in
-            guard let self, let id = self.recorder.meetingId else { return }
+            guard let self, let id = self.recorder.meetingId, !RecordingIsland.isEnabled else { return }
             self.notifier.idlePrompt(meetingId: id)
         }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
@@ -563,13 +563,14 @@ final class AppModel {
     /// 收音提醒第一次出現（R42.1、design §31.5）：拾音不是最前面的 app、或主視窗沒開時送通知，點了打開錄音中的會議。
     /// 每場每種最多一次由 Recorder 管；拾音在前面時只有錄音畫面和選單列的提示
     private func levelHintAppeared(_ hint: Recorder.LevelHint) {
-        guard let id = recorder.meetingId, !mainWindowInFront else { return }
+        // 錄音島打開時提醒在島上，不另外送通知（design §57.2、R81.4）
+        guard let id = recorder.meetingId, !mainWindowInFront, !RecordingIsland.isEnabled else { return }
         notifier.levelHint(recorder.text(for: hint), kind: hint.rawValue, meetingId: id)
     }
 
     /// 用藍牙耳機的麥克風錄現場會議（design §38.4、R58.3）：通知的規則同收音提醒
     private func micHintAppeared(_ hint: Recorder.MicHint) {
-        guard let id = recorder.meetingId, !mainWindowInFront else { return }
+        guard let id = recorder.meetingId, !mainWindowInFront, !RecordingIsland.isEnabled else { return }
         notifier.levelHint(hint.text, kind: "bluetooth", meetingId: id)
     }
 
@@ -679,6 +680,7 @@ final class AppModel {
     func startRecording() {
         guard !recorder.isRecording else { return }
         MeetingPromptPanel.shared.close()
+        RecordingIsland.shared.closePrompt()
         #if DEBUG
         // 啟動參數 -debugRecordFile <音檔>：開始錄音改用模擬錄音，驗證時不要真的用使用者的麥克風錄（design §21.7）
         if let file = UserDefaults.standard.string(forKey: "debugRecordFile") {
@@ -1360,6 +1362,11 @@ final class AppModel {
 
     /// 有通知權限就發通知（帶按鈕），沒有就用不搶焦點的浮動視窗
     func showMeetingPrompt(_ prompt: MeetingDetector.Prompt) {
+        // 錄音島打開時由島顯示，取代右上角的浮動視窗和通知（design §57.2、R81.3）
+        if RecordingIsland.isEnabled {
+            showMeetingPanel(prompt, island: true)
+            return
+        }
         Task {
             if await notifier.isAuthorized() {
                 notifier.meetingPrompt(prompt)
@@ -1369,20 +1376,23 @@ final class AppModel {
         }
     }
 
-    private func showMeetingPanel(_ prompt: MeetingDetector.Prompt) {
+    private func showMeetingPanel(_ prompt: MeetingDetector.Prompt, island: Bool = false) {
+        let show: (MeetingDetector.Prompt, [(id: String, title: String, action: () -> Void)], String) -> Void = island
+            ? { RecordingIsland.shared.showPrompt($0, actions: $1, message: $2) }
+            : { MeetingPromptPanel.shared.show($0, actions: $1, message: $2) }
         switch prompt {
         case .start(let app):
-            MeetingPromptPanel.shared.show(prompt, actions: [
+            show(prompt, [
                 ("later", String(localized: "這次不用"), {}),
                 // 名稱長的 app（Microsoft Teams）放進按鈕會被截掉；訊息裡已經有 app 的名字
                 ("mute", String(localized: "不要再提醒這個 app"), { MeetingDetector.mute(app.bundleID) }),
                 ("start", String(localized: "開始錄音"), { [weak self] in self?.startRecording() }),
-            ], message: String(localized: "\(app.name) 正在開會，要開始錄音嗎？"))
+            ], String(localized: "\(app.name) 正在開會，要開始錄音嗎？"))
         case .stop:
-            MeetingPromptPanel.shared.show(prompt, actions: [
+            show(prompt, [
                 ("continue", String(localized: "繼續錄"), {}),
                 ("stop", String(localized: "停止並轉錄"), { [weak self] in self?.recorder.stop() }),
-            ], message: String(localized: "會議好像結束了，要停止錄音嗎？"))
+            ], String(localized: "會議好像結束了，要停止錄音嗎？"))
         }
     }
 

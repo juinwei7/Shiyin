@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppModel.shared.start()
         installSpaceKey()
         WindowSharing.install()
+        RecordingIsland.shared.install(AppModel.shared)
         #if DEBUG
         DebugControl.install()
         #endif

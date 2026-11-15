@@ -31,6 +31,7 @@ enum AppSettings {
     static let chineseScriptKey = "chineseScript"   // 中文的字：traditional／simplified（沒有值 = traditional，design §47.2）
     static let hideFromScreenSharingKey = "hideFromScreenSharing"   // 分享畫面時藏起拾音的視窗，預設關（design §53）
     static let remindersListKey = "remindersListId"   // 提醒事項裡「拾音」列表的 id（design §52.1）
+    static let recordingIslandKey = "recordingIsland"   // 在螢幕上方顯示錄音島，預設開（design §57.2）
 
     private static var d: UserDefaults { .standard }
 
@@ -94,6 +95,8 @@ enum AppSettings {
     static var globalHotKey: Bool { flag(globalHotKeyKey, default: true) }
     /// 記住說話者的聲音，之後的會議自動帶入名字（design §21.4、R19.3）
     static var voiceprints: Bool { flag(voiceprintsKey, default: true) }
+    /// 在螢幕上方顯示錄音島（design §57、R81.8）
+    static var recordingIsland: Bool { flag(recordingIslandKey, default: true) }
     /// 分享畫面時藏起拾音的視窗（design §53、R77）
     static var hideFromScreenSharing: Bool { flag(hideFromScreenSharingKey, default: false) }
     /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）

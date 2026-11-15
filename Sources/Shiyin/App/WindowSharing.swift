@@ -29,6 +29,8 @@ enum WindowSharing {
     }
 
     static func apply(to window: NSWindow) {
+        // 錄音島一律拍不到（R81.7），自己設
+        if window is IslandPanel { return }
         let type: NSWindow.SharingType = AppSettings.hideFromScreenSharing ? .none : .readOnly
         if window.sharingType != type { window.sharingType = type }
     }

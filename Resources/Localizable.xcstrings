@@ -6060,6 +6060,23 @@
         }
       }
     },
+    "在螢幕上方顯示錄音島": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在屏幕上方显示录音岛"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the recording island at the top of the screen"
+          }
+        }
+      }
+    },
     "在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。": {
       "extractionState": "manual",
       "localizations": {
@@ -7197,6 +7214,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暂停，点一下打开录音中的会议"
+          }
+        }
+      }
+    },
+    "已標記": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已标记"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marked"
           }
         }
       }
@@ -19493,6 +19527,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音中在其他 app 里也能标记重点"
+          }
+        }
+      }
+    },
+    "錄音中在螢幕上方正中間（有瀏海的 Mac 接在瀏海兩側）顯示錄音的時間和提醒，全螢幕開會、分享畫面時也看得到，分享畫面拍不到它。偵測到線上會議時的「要開始錄音嗎？」也在這裡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中在屏幕上方正中间（有浏海的 Mac 接在浏海两侧）显示录音的时间和提醒，全屏开会、分享画面时也看得到，分享画面拍不到它。检测到线上会议时的“要开始录音吗？”也在这里。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, the elapsed time and alerts appear at the top center of the screen (around the notch on Macs that have one). You can see it in full-screen meetings and while sharing your screen, and screen sharing doesn't capture it. “Start recording?” for online meetings shows up here too."
           }
         }
       }
