@@ -483,7 +483,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 11.20 錄一段自己的聲音（R80，M§56）
 
-- 資料同 M§56.1（settings.json 的 `selfPersonId`、`voiceprints.audio_source = 'enroll'`）。聲紋用 Windows 自己的說話者辨識（§9）算，跟 Mac 不共用（R28.6）。
+- 資料同 M§56.1（`voiceprints.audio_source = 'enroll'` 那一份的人就是「我」；每人 30 份的上限不刪它）。聲紋用 Windows 自己的說話者辨識（§9）算，跟 Mac 不共用（R28.6）。
 - 錄音用 `WasapiSource`（麥克風，設定裡選的那支），規則同 M§56.2；畫面在設定「說話者與詞彙」，`ContentDialog`（同時只能一個，先收起其他的）。
 - DEBUG：控制通道 `enrollvoice <音檔> <名字>`、`enrolldelete`，state 的 `selfPerson`。
 

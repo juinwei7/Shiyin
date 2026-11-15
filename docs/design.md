@@ -2367,7 +2367,31 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ## 54. 說話者辨識換成 Nemotron-3 的評估（R78）
 
-評估結果寫在這裡（進行中）。
+2026-11-15。比的是 FluidAudio 0.17.7（拾音現在用的版本）裡的兩種：拾音現在的離線流程（pyannote community-1 分段＋WeSpeaker 聲紋＋VBx 分群，拾音的設定 §6.3.2，用 DEBUG 版的 `voiceprint-eval` 跑）和 Nemotron-3-Diarization（NVIDIA，Core ML，`offline` 設定、門檻 0.5，用 FluidAudio 的 CLI `nemotron3-diarize` 跑）。兩邊的輸出用同一個計分程式（10 毫秒一格、邊界前後 0.25 秒不計、重疊照算、匈牙利法對應說話者），參考答案是 AMI 的 segments 標註。
+
+**AMI 測試集**（ES2004、IS1009、TS3003、EN2002 共 16 場 Mix-Headset，加 IS1009a、TS3003a 的遠距麥克風 Array1-01；AMI 的測試集不在 Nemotron 的訓練資料裡）：
+
+| | 拾音現在 | Nemotron-3 |
+|---|---|---|
+| DER（近距 16 場） | 18.1%（漏判 15.7、誤判 0.7、搞混 1.6） | 25.7%（漏判 24.9、誤判 0.2、搞混 0.5） |
+| DER（遠距 2 場） | 22.0%（搞混 4.1） | 29.2%（搞混 0.5） |
+| 人數分對 | 近距 14/16、遠距 1/2（TS3003a 4 人只分出 2 人） | 近距 15/16（ES2004b 多分 1 人）、遠距 2/2 |
+| 沒重疊的句子標對（前後 0.2 秒內沒有別人說話，1181 句） | 77.2% | 90.2% |
+| 其中 2 秒內的短句（622 句） | 59.0% | 82.2% |
+| 速度（M4，32 分鐘的會議） | 18 秒（DEBUG 建置，release 會更快） | 約 2 秒（1100 倍速） |
+
+- 18 段錄音每一段都是 Nemotron 的句子標得比較對。拾音實際上對 0.5～4 秒的短句還有一次再確認（§6.3.2、R34），上表沒有算進去，所以拾音的短句實際上比 59% 好一點。
+- Nemotron 的漏判多 9 個百分點：AMI 的標註一段話裡含句中的停頓，Nemotron 把停頓判成沒人說話（mm2t 的評估也看到一樣的情況）。拾音是把逐字稿的每一句標給重疊最多的說話者，沒有重疊的找最近的一段（`Diarizer.assign`），停頓被判成沒人說話影響不大；看的應該是「句子標對」那一列。
+- 包含插話、附和（別人說話時的 yeah、mm-hmm，AMI 每場有一半以上的句子是這種）一起算時，拾音 41.9%、Nemotron 62.3%：兩邊都常把插話判給正在說話的那個人，Nemotron 本來就能判斷同時有兩個人說話，抓得比較多。
+
+**使用者自己的中文會議**（9 場，17～109 分鐘，在這台 Mac 本機跑，錄音、內容沒有離開）：Nemotron 每場都分出比較多人（說話合計 8 秒以上的：3／6／6／5／3／7／7／8／3 人，拾音是 3／3／5／4／2／4／6／6／2 人）。使用者大部分的會議沒有幫每位說話者取名，只有一場（16.6 分鐘、使用者取了 2 個名字）看得出來：Nemotron 多分出一位說了 21 秒的人，對不對要聽過才知道。109 分鐘那場 Nemotron 剛好分到 8 人，是這個模型的上限（`Nemotron-3 Diarization (8-speaker)`），超過 8 人的會議會被併在一起。
+
+**其他**：
+- 授權：OpenMDW 1.1（Linux Foundation 為模型寫的寬鬆授權，可以商用，要附授權條款）。模型的 Core ML 版由 FluidInference 轉換，app 第一次用時下載（跟現在的說話者辨識模型一樣）。
+- 只有 Mac：Windows 的說話者辨識是另一套（R28.6），要用的話得另外找 ONNX 版本。
+- 聲紋照舊用現在的 WeSpeaker（R78.2）：Nemotron 只分人，聲紋要用 Nemotron 分出來的時段另外算（FluidAudio 有 `embedSpans`）。
+
+**結論**：英文會議上 Nemotron 明顯比較好（句子標對 77% → 90%、短句 59% → 82%、遠距不會少分人），而且快很多；中文會議分出的人數比較多，看不出是分得比較細還是拆錯了。建議的下一步（使用者決定，R78.3）：先做成設定裡的選項（預設照舊），由使用者在幾場自己的會議上比較兩種的逐字稿說話者；或先標註 2～3 場中文會議各 10 分鐘的說話者，再用同一個計分程式比。超過 8 人的會議照舊用現在的流程。
 
 ## 55. 本機的整理模型評估（R79）
 
@@ -2377,10 +2401,10 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ### 56.1 資料
 
-- 「我」是誰記在設定 `selfPersonId`（Windows 在 settings.json），不改資料庫結構（D164）。那個人不在了（被刪掉、全部刪除）時當成沒錄過。
-- 錄的聲紋存成 `voiceprints` 的一列：`person_id` 是我、`audio_source = 'enroll'`、`meeting_id`、`speaker_idx` 是 NULL。一個人最多一份 `enroll`，重錄時換掉。比對（`matchVoiceprints`、`voiceprintCandidates`）本來就讀全部的聲紋，不用改；每人最多 30 份的上限（§21.4）刪最舊的時跳過 `enroll`。
-- `AppDatabase.enrollVoiceprint(name:embedding:) -> Int64`：照名字找人（不分大小寫，同 `learnVoiceprint`），沒有就建立；刪掉之前「我」那份 `enroll`（換了名字時是另一個人的），存新的一份。`deleteEnrollment()`：刪掉那份 `enroll`，沒有其他聲紋、也沒有會議用到的人照舊由 `deleteOrphanPeople` 刪掉。
-- 改名、刪除某人、全部刪除（§21.4 的設定）照舊；刪掉的是「我」時清掉 `selfPersonId`。
+- 錄的聲紋存成 `voiceprints` 的一列：`audio_source = 'enroll'`、`meeting_id`、`speaker_idx` 是 NULL。整個資料庫最多一份 `enroll`，**它的 `person_id` 就是「我」**，不另外記在設定裡、不改資料庫結構（D164）：改名、合併到同名的人（§21.4 的 `renamePerson` 會把聲紋搬過去）時「我」跟著走；刪掉那個人時聲紋跟著刪（外鍵），就當成沒錄過。
+- 比對（`matchVoiceprints`、`voiceprintCandidates`）本來就讀全部的聲紋，不用改。每人最多 30 份的上限（§21.4）只算會議裡學到的，不刪 `enroll`。
+- `AppDatabase.enrollVoiceprint(name:embedding:) -> Int64`：同一個交易裡刪掉現有的 `enroll`、照名字找人（不分大小寫，同 `learnVoiceprint`）沒有就建立、存新的一份，再 `deleteOrphanPeople`（之前的「我」換了名字、又沒有其他聲紋和會議用到時刪掉）。`deleteEnrollment()`：刪掉那份 `enroll`，再 `deleteOrphanPeople`。`enrollment()`：「我」的 id、名字、錄的時間。
+- 設定頁的認識的人（`peopleSummaries`）多一欄「是不是我」和錄的時間。
 
 ### 56.2 錄音和算聲紋（`Capture/VoiceEnrollment.swift`）
 
@@ -2388,6 +2412,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 按「完成」：有聲音的部分不到 10 秒時不收，提示「再多唸一點（有聲音的部分要 10 秒以上）」；完全是 0 超過 3 秒時提示「麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。」
 - 算聲紋：`Diarizer.diarize(samples:)`（模型不在時先 `prepare()` 下載，顯示「正在準備說話者辨識的模型…」），取說話秒數最多的那一位的聲紋，說話秒數要 ≥ 8 秒（同比對的下限 `voiceprintMinimumSeconds`）。錄音只在記憶體裡，算完就丟（R80.5）。
 - 錄音中（`recorder.isRecording`）、聲紋關掉時按鈕停用，說明「錄音中不能錄」「先打開上面的「記住說話者的聲音」」。
+- 算聲紋用另外一個 `OfflineDiarizerManager`（`Diarizer.diarize(samples:config: Diarizer.config())`），不用轉錄工作共用的那一個：轉錄線可能正在辨識說話者。
 
 ### 56.3 畫面（設定「說話者與詞彙」）
 
@@ -2511,4 +2536,4 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D161 | Mac 錄不到電腦聲音用「錄製系統音訊」的權限狀態判斷（私有的 `TCCAccessPreflight`，查不到就不提示；§51.1） | 看有沒有 app 在輸出（mm2t 的做法）：Mac 的程序物件只看得出 IO 開著，看不出有沒有聲音；拾音錄的是全部的電腦聲音，總有 app 開著輸出，對方都靜音時也是 0，會在權限正常時誤報。權限被拒絕時錄到的全是 0、系統不報錯，看權限是唯一確定的線索 |
 | D162 | 加過哪些提醒事項不存在資料庫，靠提醒事項的 `url` 帶會議 id 和事項文字的雜湊去重（§52.1）；Windows 不做 | 資料庫加一張表記加過的提醒：要 migration、標準答案，Windows 也要跟著改結構卻沒有這個功能；使用者在提醒事項裡刪掉的也還記著。Windows 接 Microsoft To Do：要使用者登入 Microsoft 帳號、拾音要跟微軟註冊 app（Graph API），先看有沒有人要 |
 | D163 | 分享時藏起視窗是全部視窗一起、預設關（§53） | 預設開：拾音自己的截圖驗證、官網截圖都拍不到，使用者自己截圖、錄教學影片也拍不到，要知道有這個設定才不會困惑。只藏主視窗：設定頁、錄音畫面、使用說明一樣看得到會議的內容 |
-| D164 | 「我」記在設定、錄的聲紋存成一份 `audio_source = 'enroll'` 的聲紋（§56.1），不改資料庫結構 | `people` 加「是不是我」的欄位：要 migration、兩邊的標準答案，只為了一個值。錄好幾段、分現場和線上：先看一段夠不夠用（§56.4）。放進首次使用引導：引導維持三步（R44.6），而且第一次打開時還沒有說話者辨識的模型 |
+| D164 | 錄的聲紋存成一份 `audio_source = 'enroll'` 的聲紋，它的 `person_id` 就是「我」（§56.1），不改資料庫結構、不記在設定 | `people` 加「是不是我」的欄位：要 migration、兩邊的標準答案，只為了一個值。記在設定（原本的設計）：改名合併到同名的人時 id 會變、資料庫複本和設定對不上。錄好幾段、分現場和線上：先看一段夠不夠用（§56.4）。放進首次使用引導：引導維持三步（R44.6），而且第一次打開時還沒有說話者辨識的模型 |
