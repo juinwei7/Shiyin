@@ -26,7 +26,7 @@ export const content = {
     seo: {
       appName: '拾音 Shiyin',
       category: '會議記錄、逐字稿',
-      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議'],
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議', '錄音島：開會時在螢幕上方看得到、控制錄音', '人物：跟每個人開過的會、他負責的待辦'],
     },
     nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -58,8 +58,9 @@ export const content = {
     live: {
       h2: '開會時，邊錄邊看逐字稿',
       ps: [
-        '按「錄音」就開始，講完幾秒內逐字稿就會出現。線上會議把錄音來源選「麥克風＋電腦聲音」，Zoom、Meet、Teams 對方的聲音也會錄進來，不用派機器人加入會議。開線上會議時，拾音會提醒你要不要開始錄音。麥克風沒收到聲音、聲音太小或背景太吵時，錄音畫面也會提醒你。',
+        '按「錄音」就開始，講完幾秒內逐字稿就會出現。線上會議把錄音來源選「麥克風＋電腦聲音」，Zoom、Meet、Teams 對方的聲音也會錄進來，不用派機器人加入會議。開線上會議時，拾音會提醒你要不要開始錄音。麥克風沒收到聲音、聲音太小、背景太吵或錄不到電腦聲音時，錄音畫面也會提醒你。',
         '右邊可以做筆記，每換一行會自動記下當時的錄音時間；重要的地方按「標記重點」，在其他 app 裡按 ⌃⌥⌘B 也可以。整理時這些都會被當成重點。',
+        '錄音時，螢幕上方正中間會出現錄音島（有瀏海的 Mac 在瀏海兩側），切到別的 app、全螢幕開會時也看得到錄了多久；滑鼠移上去可以暫停、標記重點、停止，也看得到最新一句逐字稿。在設定打開「分享畫面時藏起拾音的視窗」，分享整個螢幕時別人看不到拾音。',
       ],
     },
     transcribe: {
@@ -67,6 +68,7 @@ export const content = {
       ps: [
         '停止錄音後，拾音會在你的 Mac 上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。人多、吵雜時分錯了也好改：可以先告訴拾音大約幾個人，也可以把兩位說話者合併成一位，或直接改某一句是誰說的。',
         '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過，「deploy」「Redis」這種詞不會被聽成別的字；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
+        '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；錄音忘了停、兩場會議錄在一起時，可以從某一句分成兩場。',
       ],
     },
     notes: {
@@ -76,7 +78,7 @@ export const content = {
         'AI 不確定的人名、專有名詞、負責人和期限，會列在「待確認」讓你回答，回答後再依你的答案修正紀錄。逐字稿裡可能聽錯的字也會標出來，你按「接受」才會改。',
         '想找某件事，可以直接問會議：「預算最後決定多少？」回答會附上時間點；也可以一次問所有會議。',
       ],
-      note: '範本有一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自己做。紀錄可以直接編輯，每次修改都留版本；也可以切換成心智圖，匯出成圖片。播放條上會標出每個議題從哪裡講到哪裡，點了就從那裡開始聽。',
+      note: '範本有一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自己做。紀錄可以直接編輯，每次修改都留版本；也可以切換成心智圖，匯出成圖片。播放條上會標出每個議題從哪裡講到哪裡，點了就從那裡開始聽。待辦可以一鍵加到 Mac 的「提醒事項」，附上回到會議的連結。',
     },
     privacy: {
       h2: '錄音不會離開你的 Mac',
@@ -125,6 +127,7 @@ export const content = {
         ['支援哪些語言？', '介面有繁體中文、簡體中文和英文；會議可以是中文、英文、日文、廣東話或韓文（實驗性）。開始錄音後會自動判斷中文、英文、日文、韓文。'],
         ['用 Safari 開 Google Meet 時，為什麼錄不到我自己的聲音？', 'Safari 會用 macOS 的回音消除佔住麥克風，這段時間其他 app 從同一支麥克風幾乎收不到聲音，這是 macOS 的限制；對方的聲音不受影響。改用 Chrome 開會，或讓會議和拾音用不同的麥克風（例如會議用耳機、拾音用內建麥克風）就錄得到。'],
         ['可以轉錄已經錄好的檔案嗎？', '可以。把錄音或影片拖進視窗就會轉錄，也可以匯入 srt、vtt、txt 逐字稿。'],
+        ['錄音忘了停，兩場會議錄在一起怎麼辦？', '在逐字稿裡第二場開始的那一句按右鍵，選「從這裡分成兩場…」。錄音、逐字稿、標記重點會從那裡切開，變成兩場會議，各自重新整理會議紀錄。另外，錄音中 15 分鐘沒人說話時拾音會提醒你，30 分鐘會自動停止。'],
         ['可以在 Claude Code、Codex 裡問我的會議嗎？', '可以。在設定 → 進階打開「讓 AI 工具讀取會議」，按一下就加到 Claude Code、Codex 或 Claude Desktop（MCP），拾音不用開著。在 AI 工具裡問「上週的待辦有哪些」，回答會附上會議和時間點的連結。只能讀、不能改；讀到的內容會交給那個 AI 工具處理。'],
       ],
       windows: {
@@ -154,6 +157,7 @@ export const content = {
         ps: [
           '按「錄音」（Ctrl+R）就開始，講完幾秒內逐字稿就會出現。線上會議把錄音來源選「麥克風＋電腦聲音」，Zoom、Meet、Teams 對方的聲音也會錄進來，不用派機器人加入會議。開 Teams、Zoom 時，拾音會提醒你要不要開始錄音。',
           '右邊可以做筆記，每換一行會自動記下當時的錄音時間；重要的地方按「標記重點」，在其他 app 裡按 Ctrl+Alt+Shift+B 也可以。關掉視窗後拾音會留在系統匣，錄音不會中斷。',
+          '錄音時，螢幕上緣正中間會出現錄音島，切到別的 app、全螢幕開會時也看得到錄了多久；滑鼠移上去可以暫停、標記重點、停止，也看得到最新一句逐字稿。在設定打開「分享畫面時藏起拾音的視窗」，分享整個螢幕時別人看不到拾音。',
         ],
       },
       transcribe: {
@@ -161,6 +165,7 @@ export const content = {
         ps: [
           '停止錄音後，拾音會在你的電腦上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。',
           '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
+          '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；錄音忘了停、兩場會議錄在一起時，可以從某一句分成兩場。',
         ],
         gpu: '有 NVIDIA 顯示卡的電腦，拾音會自動下載顯示卡加速（約 685 MB），之後正式轉錄就用顯示卡：40 分鐘的會議用 RTX 3060 約 8 分鐘轉完，只用 CPU 時約 30 分鐘。有 AMD 顯示卡（含 Radeon 內顯）的電腦，拾音會自動下載 AMD 顯示卡加速（約 20 MB），一樣用顯示卡轉錄。沒有這兩種顯示卡也能用，只是比較慢。',
       },
@@ -270,7 +275,7 @@ export const content = {
     seo: {
       appName: 'Shiyin',
       category: 'Meeting notes, transcription',
-      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings'],
+      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings', 'The recording island: see and control the recording at the top of the screen', 'People: every meeting with someone and the action items they own'],
     },
     nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -301,8 +306,9 @@ export const content = {
     live: {
       h2: 'Read the transcript while you meet',
       ps: [
-        'Click Record and the transcript appears a few seconds after people speak. For online meetings, set the source to “Microphone + computer audio” and the other side of Zoom, Meet or Teams is recorded too, with no bot joining your call. When an online meeting starts, Shiyin asks whether to record. If the microphone isn’t picking up sound, the sound is too quiet or the room is too noisy, the recording screen tells you.',
+        'Click Record and the transcript appears a few seconds after people speak. For online meetings, set the source to “Microphone + computer audio” and the other side of Zoom, Meet or Teams is recorded too, with no bot joining your call. When an online meeting starts, Shiyin asks whether to record. If the microphone isn’t picking up sound, the sound is too quiet, the room is too noisy or computer audio can’t be recorded, the recording screen tells you.',
         'Take notes on the right: each new line is stamped with the recording time. Click Bookmark at important moments, or press ⌃⌥⌘B from any other app. Both are treated as key points when the notes are written.',
+        'While you record, the recording island sits at the top center of the screen (on either side of the notch on Macs that have one), so you can see the recording time from other apps and full-screen meetings. Hover over it to pause, bookmark or stop, and to see the latest line of the transcript. Turn on “Hide Shiyin’s windows when sharing the screen” in Settings and people won’t see Shiyin when you share your whole screen.',
       ],
     },
     transcribe: {
@@ -310,6 +316,7 @@ export const content = {
       ps: [
         'After you stop, Shiyin transcribes the recording again on your Mac. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings. Crowded or noisy room? Tell Shiyin roughly how many people there are, merge two speakers into one, or change who said a line.',
         'English and Chinese meetings use Breeze ASR 25, which is tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product names and people to the glossary and transcription takes them into account.',
+        'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript, and if you forgot to stop recording and two meetings ended up in one, split it into two from any line.',
       ],
     },
     notes: {
@@ -319,7 +326,7 @@ export const content = {
         'Names, terms, owners and due dates the summarizer isn’t sure about are listed under “To confirm”. Answer them and the notes are revised. Words in the transcript that were probably misheard are marked too, and nothing changes until you click Accept.',
         'Looking for something? Ask the meeting, like “What budget did we settle on?”, and the answer comes with timestamps. You can ask all your meetings at once, too.',
       ],
-      note: 'Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own. You can edit the notes directly, and every change is versioned. Switch to a mind map and export it as an image. The playback bar marks where each topic starts and ends; click one to listen from there.',
+      note: 'Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own. You can edit the notes directly, and every change is versioned. Switch to a mind map and export it as an image. The playback bar marks where each topic starts and ends; click one to listen from there. Add the action items to Apple Reminders with one click, each with a link back to the meeting.',
     },
     privacy: {
       h2: 'Your recordings stay on your Mac',
@@ -366,6 +373,7 @@ export const content = {
         ['Which languages does it support?', 'The interface is in English, Traditional Chinese and Simplified Chinese. Meetings can be in English, Chinese, Japanese, Cantonese or Korean (experimental); Shiyin detects English, Chinese, Japanese and Korean after you start recording.'],
         ['Why is my own voice missing when I use Google Meet in Safari?', 'Safari holds the microphone for macOS echo cancellation, and while it does, other apps get almost nothing from the same microphone. This is a macOS limitation; the other participants are still recorded. Join the meeting in Chrome instead, or use different microphones for the meeting and Shiyin (for example a headset for the meeting and the built-in microphone for Shiyin).'],
         ['Can it transcribe a recording I already have?', 'Yes. Drag the audio or video file into the window and it’s transcribed. You can also import srt, vtt or txt transcripts.'],
+        ['I forgot to stop recording and two meetings ended up in one. What can I do?', 'In the transcript, right-click the line where the second meeting starts and choose Split Meeting Here…. The recording, transcript and bookmarks are split there into two meetings, and each gets its own notes. Shiyin also reminds you after 15 minutes without anyone speaking and stops recording after 30.'],
         ['Can I ask about my meetings in Claude Code or Codex?', 'Yes. Turn on “Let AI tools read meetings” in Settings → Advanced and add Shiyin to Claude Code, Codex or Claude Desktop with one click (MCP); Shiyin doesn’t need to be open. Ask “What are last week’s action items?” and the answer links to the meetings and timestamps. AI tools can only read, not change anything, and what they read is handled by that AI tool.'],
       ],
       windows: {
@@ -394,6 +402,7 @@ export const content = {
         ps: [
           'Click Record (Ctrl+R) and the transcript appears a few seconds after each sentence. For online meetings, set the source to “Microphone + computer audio” and the other side of Zoom, Meet or Teams is recorded too, with no bot joining the call. When Teams or Zoom starts a meeting, Shiyin asks whether to start recording.',
           'Take notes on the right; each new line gets the current recording time. Click Bookmark for important moments, or press Ctrl+Alt+Shift+B from any app. Close the window and Shiyin keeps running in the system tray without stopping the recording.',
+          'While you record, the recording island sits at the top center of the screen, so you can see the recording time from other apps and full-screen meetings. Hover over it to pause, bookmark or stop, and to see the latest line of the transcript. Turn on “Hide Shiyin’s windows when sharing the screen” in Settings and people won’t see Shiyin when you share your whole screen.',
         ],
       },
       transcribe: {
@@ -401,6 +410,7 @@ export const content = {
         ps: [
           'After you stop, Shiyin transcribes the recording again on your PC. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings.',
           'Chinese and English use Breeze ASR 25, tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product and people’s names to the glossary and transcription takes them into account.',
+          'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript, and if you forgot to stop recording and two meetings ended up in one, split it into two from any line.',
         ],
         gpu: 'With an NVIDIA graphics card, Shiyin downloads GPU acceleration automatically (about 685 MB) and transcribes on the GPU: a 40-minute meeting took about 8 minutes on an RTX 3060, versus about 30 minutes on the CPU alone. With AMD graphics (including Radeon integrated graphics), Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and transcribes on the GPU as well. Without either it still works, just more slowly.',
       },
@@ -541,8 +551,9 @@ export const content = {
     live: {
       h2: '会議中は、文字起こしを見ながら録音',
       ps: [
-        '「Record」を押すと録音が始まり、話してから数秒で文字起こしが表示されます。オンライン会議では録音ソースを「Microphone + computer audio」にすると、Zoom、Meet、Teams の相手の声も録音されます。会議にボットを参加させる必要はありません。オンライン会議が始まると、録音するかどうか拾音が確認します。マイクに音が入っていない、声が小さすぎる、周りがうるさすぎるときも、録音画面でお知らせします。',
+        '「Record」を押すと録音が始まり、話してから数秒で文字起こしが表示されます。オンライン会議では録音ソースを「Microphone + computer audio」にすると、Zoom、Meet、Teams の相手の声も録音されます。会議にボットを参加させる必要はありません。オンライン会議が始まると、録音するかどうか拾音が確認します。マイクに音が入っていない、声が小さすぎる、周りがうるさすぎる、パソコンの音が録音できないときも、録音画面でお知らせします。',
         '右側にはメモを書けます。改行するたびにその時点の録音時間が記録され、大事な場面では「Bookmark」を押します。ほかのアプリを使っていても ⌃⌥⌘B で記録できます。議事録をまとめるときは、これらが重要なポイントとして扱われます。',
+        '録音中は、画面上部の中央に「recording island」が表示されます（ノッチのある Mac ではノッチの両側）。ほかのアプリや全画面の会議中でも録音時間が見え、マウスを乗せると一時停止、Bookmark、停止ができ、最新の文字起こしも表示されます。設定で「Hide Shiyin’s windows when sharing the screen」をオンにすると、画面全体を共有しても相手に拾音は見えません。',
       ],
     },
     transcribe: {
@@ -550,6 +561,7 @@ export const content = {
       ps: [
         '録音を止めると、拾音が Mac の中で録音をもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も聞き分けます。「Speaker 1」を名前に変えれば、会議全体に反映されます。拾音はその人の声を覚え、次の会議から自動で名前を入れます。人が多い会議や騒がしい場所で話者を間違えても、すぐに直せます。おおよその人数を拾音に伝えたり、2 人の話者を 1 人にまとめたり（Merge Into…）、ある発言の話者を変えたり（Who Said This Line?）できます。',
         '日本語と韓国語の会議は Whisper large-v3-turbo、広東語の会議は Qwen3-ASR で文字起こしします。英語と中国語の会議には、台湾華語と英語の混ざった会話に合わせて調整された Breeze ASR 25 を使います。製品名や人名を用語集に登録しておくと、文字起こしのときに参考にされます。',
+        'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除したり、録音を止め忘れて 2 つの会議が 1 つになったときに、ある一文から 2 つの会議に分けたりもできます。',
       ],
     },
     notes: {
@@ -559,7 +571,7 @@ export const content = {
         'AI が確信を持てない人名、固有名詞、担当者、期限は「To confirm」に一覧され、答えるとその内容で議事録が修正されます。聞き間違えた可能性のある語も文字起こしに印が付き、「Accept」を押すまで変更されません。',
         '探したいことがあれば、「予算はいくらに決まった？」のように会議に質問できます（「Ask」タブ）。答えにはタイムスタンプが付き、すべての会議にまとめて質問することもできます。',
       ],
-      note: 'テンプレートは一般的な会議、1on1、インタビュー、講義・講演、ブレインストーミングのほか、自分で作ることもできます。議事録は直接編集でき、変更のたびに版が残ります。マインドマップに切り替えて画像として書き出すこともできます。再生バーには議題ごとの区間が表示され、クリックするとその議題から聞けます。',
+      note: 'テンプレートは一般的な会議、1on1、インタビュー、講義・講演、ブレインストーミングのほか、自分で作ることもできます。議事録は直接編集でき、変更のたびに版が残ります。マインドマップに切り替えて画像として書き出すこともできます。再生バーには議題ごとの区間が表示され、クリックするとその議題から聞けます。ToDo はワンクリックで Mac の「リマインダー」に追加でき、会議へ戻るリンクも付きます。',
     },
     privacy: {
       h2: '録音は Mac の外に出ません',
@@ -607,6 +619,7 @@ export const content = {
         ['どの言語に対応していますか？', '会議は日本語、英語、中国語、広東語、韓国語（試験的）に対応し、録音を始めると日本語・英語・中国語・韓国語を自動で判別します。アプリの表示は英語、繁体字中国語、簡体字中国語で、日本語表示には対応していません。'],
         ['Safari で Google Meet を開くと、自分の声が録音されないのはなぜですか？', 'Safari は macOS のエコーキャンセルでマイクを占有するため、その間はほかのアプリが同じマイクからほとんど音を拾えません。macOS の制限で、相手の声は録音されます。Chrome で会議に参加するか、会議と拾音で別のマイクを使ってください（会議はヘッドセット、拾音は内蔵マイクなど）。'],
         ['録音済みのファイルも文字起こしできますか？', 'できます。音声や動画のファイルをウインドウにドラッグすると文字起こしされます。srt、vtt、txt の文字起こしも読み込めます。'],
+        ['録音を止め忘れて、2 つの会議が 1 つの録音になってしまったら？', '文字起こしで 2 つ目の会議が始まる一文を右クリックし、「Split Meeting Here…」を選びます。録音、文字起こし、Bookmark がそこで分かれて 2 つの会議になり、それぞれ議事録をまとめ直します。また、録音中に 15 分間だれも話さないとお知らせし、30 分で自動的に録音を止めます。'],
         ['Claude Code や Codex から会議について質問できますか？', 'できます。設定 → Advanced で「Let AI tools read meetings」をオンにすると、ワンクリックで Claude Code、Codex、Claude Desktop に追加できます（MCP）。拾音を開いておく必要はありません。「先週のアクションアイテムは？」と聞くと、会議と時刻へのリンク付きで答えます。読み取り専用で、読んだ内容はその AI ツールで処理されます。'],
       ],
       windows: {
@@ -635,6 +648,7 @@ export const content = {
         ps: [
           '「Record」（Ctrl+R）を押すと録音が始まり、話し終えて数秒で文字起こしが表示されます。オンライン会議では録音のソースを「Microphone + computer audio」にすると、Zoom、Meet、Teams の相手の声も録音でき、ボットを会議に参加させる必要はありません。Teams や Zoom で会議が始まると、録音するかどうか確認されます。',
           '右側にメモを取れます。改行するたびにその時点の録音時間が付きます。大事なところは「Bookmark」、ほかのアプリからは Ctrl+Alt+Shift+B でも付けられます。ウインドウを閉じても拾音はシステムトレイに残り、録音は止まりません。',
+          '録音中は、画面上部の中央に「recording island」が表示されます。ほかのアプリや全画面の会議中でも録音時間が見え、マウスを乗せると一時停止、Bookmark、停止ができ、最新の文字起こしも表示されます。設定で「Hide Shiyin’s windows when sharing the screen」をオンにすると、画面全体を共有しても相手に拾音は見えません。',
         ],
       },
       transcribe: {
@@ -642,6 +656,7 @@ export const content = {
         ps: [
           '録音を止めると、拾音が PC の中でもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も区別します。「Speaker 1」を名前に変えれば会議全体に反映され、その声を覚えて次の会議から名前を自動で入れます。',
           '日本語と韓国語の会議は Whisper、広東語は Qwen3-ASR、中国語と英語は Breeze ASR 25 を使います。製品名や人名を用語集に入れておくと、文字起こしで参考にします。',
+          'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除したり、録音を止め忘れて 2 つの会議が 1 つになったときに、ある一文から 2 つの会議に分けたりもできます。',
         ],
         gpu: 'NVIDIA のグラフィックスカードがある PC では、GPU アクセラレーション（約 685 MB）を自動でダウンロードし、GPU で文字起こしします。40 分の会議が RTX 3060 で約 8 分（CPU だけでは約 30 分）でした。AMD のグラフィックス（Radeon の内蔵グラフィックスを含む）がある PC では、AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、同じく GPU で文字起こしします。どちらもなくても使えますが、時間がかかります。',
       },
