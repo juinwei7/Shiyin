@@ -149,7 +149,10 @@ final class MicrophoneSource: MicrophoneInput {
                 }
                 engine.prepare()
                 try engine.start()
-                current = AudioDevices.device(id: input.auAudioUnit.deviceID)
+                // 用系統預設時，engine 收音的可能是它自己建的聚合裝置（CADefaultDeviceAggregate-<pid>-0）：
+                // 名字、藍牙的判斷（R58.3）要看真的那支麥克風，也就是系統預設的輸入（2026-11-15 真的錄音時發現）
+                let device = AudioDevices.device(id: input.auAudioUnit.deviceID)
+                current = device?.isEngineAggregate == true ? AudioDevices.defaultInput() ?? device : device
             } catch {
                 failure = error
             }
@@ -396,13 +399,15 @@ enum AudioDevices {
         /// 這台 Mac 本身的麥克風。耳機孔的輸入連接方式也是內建，要用 data source 排除（2026-11-02：插著有線耳機時，
         /// 藍牙提示的按鈕變成「改用 外接麥克風」）
         var isBuiltIn: Bool { transport == kAudioDeviceTransportTypeBuiltIn && dataSource != AudioDevices.externalMicSource }
+        /// AVAudioEngine 用系統預設的裝置時自己建的聚合裝置，不是使用者看得到、選得到的麥克風
+        var isEngineAggregate: Bool { uid.hasPrefix("CADefaultDeviceAggregate") }
     }
 
     /// 四字碼 emic（外接麥克風）
     static let externalMicSource: UInt32 = 0x656D_6963
 
     static func inputDevices() -> [Device] {
-        allDevices().compactMap { id in hasInputStreams(id) ? device(id: id) : nil }
+        allDevices().compactMap { id in hasInputStreams(id) ? device(id: id) : nil }.filter { !$0.isEngineAggregate }
     }
 
     static func device(id: AudioDeviceID) -> Device? {

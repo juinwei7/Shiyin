@@ -1639,7 +1639,7 @@ Windows 的做法在 design-windows §11.7。
 
 - `AudioDevices.Device` 加 `transport`（`kAudioDevicePropertyTransportType`）、`dataSource`（輸入的 `kAudioDevicePropertyDataSource`）、`isBluetooth`（`kAudioDeviceTransportTypeBluetooth`、`BluetoothLE`）、`isBuiltIn`（`kAudioDeviceTransportTypeBuiltIn`，而且 data source 不是 `emic`：耳機孔的「外接麥克風」連接方式也是內建，4.2.3 插著有線耳機時藍牙提示的按鈕變成「改用 外接麥克風」；內建的麥克風是 `imic`）。加 `defaultInput()`（`kAudioHardwarePropertyDefaultInputDevice`）、`device(id:)`。
 - `MicrophoneMonitor`（`@Observable`、`@MainActor`、單例）：在系統物件上監聽 `kAudioHardwarePropertyDevices`、`kAudioHardwarePropertyDefaultInputDevice`，回到主執行緒重讀 `inputs`、`defaultInput`；值真的變了才設（§25）。錄音按鈕的選單、錄音畫面、設定頁的「麥克風」都用它，不再各自在 `onAppear` 讀一次。
-- `MicrophoneSource.deviceUID` 改成可以改（換麥克風時先改再 `restart()`）；`start()` 成功後讀 `inputNode.auAudioUnit.deviceID`，存成 `current: AudioDevices.Device?`（真正在收音的那支：指定的不在時是系統預設）。
+- `MicrophoneSource.deviceUID` 改成可以改（換麥克風時先改再 `restart()`）；`start()` 成功後讀 `inputNode.auAudioUnit.deviceID`，存成 `current: AudioDevices.Device?`（真正在收音的那支：指定的不在時是系統預設）。讀到的是 AVAudioEngine 自己建的聚合裝置（UID 開頭 `CADefaultDeviceAggregate`，用系統預設、輸入輸出是不同硬體時）就改用 `AudioDevices.defaultInput()`；麥克風清單也排除它（2026-11-15 真的錄音時發現：錄音畫面寫成「CADefaultDeviceAggregate-<pid>-0」，連接方式是聚合、藍牙提醒 R58.3 不會出現，4.2.3 起都這樣）。
 
 ### 38.2 錄音按鈕的選單（R58.1）
 
