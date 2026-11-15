@@ -620,6 +620,7 @@ struct SpeakerSettings: View {
         Toggle("記住說話者的聲音，之後的會議自動帶入名字", isOn: $voiceprints)
         Text("替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台 Mac 的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。")
             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        MyVoiceRow()
         HStack {
             Text("認識的人").font(.headline)
             Spacer()
@@ -639,7 +640,8 @@ struct SpeakerSettings: View {
                     Button("取消") { renaming = nil }.buttonStyle(.link)
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(person.name)
+                        // 錄過「我的聲音」的人（design §56.3、R80.4）
+                        Text(person.enrolledAt != nil ? String(localized: "\(person.name)（我）") : person.name)
                         Text(detailLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
@@ -661,6 +663,125 @@ struct SpeakerSettings: View {
         let prints = String(localized: "\(person.voiceprintCount) 份聲音特徵")
         guard let title = person.lastMeetingTitle, let date = person.lastMeetingDate else { return prints }
         return String(localized: "\(prints)・最近：\(date) \(title)")
+    }
+}
+
+/// 我的聲音（design §56.3、R80）：錄一段自己的聲音，第一場會議就認得自己
+struct MyVoiceRow: View {
+    @Environment(AppModel.self) private var model
+    @AppStorage(AppSettings.voiceprintsKey) private var voiceprints = true
+    @State private var showingSheet = false
+
+    var body: some View {
+        let me = model.people.first { $0.enrolledAt != nil }
+        let recording = model.recorder.isRecording
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("我的聲音")
+                Group {
+                    if let me, let at = me.enrolledAt {
+                        Text("\(me.name)・已錄（\(String(at.prefix(10)))）")
+                    } else if !voiceprints {
+                        Text("先打開上面的「記住說話者的聲音」")
+                    } else if recording {
+                        Text("錄音中不能錄（麥克風在用）")
+                    } else {
+                        Text("錄一段你自己的聲音，第一場會議就認得你。")
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if me != nil {
+                Button("重錄…") { showingSheet = true }.disabled(!voiceprints || recording)
+                Button("刪除") { model.deleteEnrollment() }
+                    .buttonStyle(.link)
+                    .help("只刪這份聲音特徵，會議裡的名字照舊")
+            } else {
+                Button("錄一段我的聲音…") { showingSheet = true }.disabled(!voiceprints || recording)
+            }
+        }
+        .sheet(isPresented: $showingSheet) { VoiceEnrollmentSheet() }
+        #if DEBUG
+        .onChange(of: model.debugSettingsAction) { _, action in
+            if action?.first == "enrollsheet" { model.debugSettingsAction = nil; showingSheet = true }
+        }
+        #endif
+    }
+}
+
+/// 錄「我的聲音」的視窗（design §56.3）：名字、要唸的文字、音量、秒數
+struct VoiceEnrollmentSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var enrollment = VoiceEnrollment()
+    @State private var name = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("錄一段我的聲音").font(.title3.bold())
+            Text("按「開始」，用平常開會說話的音量唸下面這段（約 20～30 秒），唸完按「完成」。拾音只用這段聲音算出你的聲音特徵，算完就刪掉錄音。")
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Text("名字")
+                TextField("名字", text: $name).textFieldStyle(.roundedBorder)
+            }
+            Text(VoiceEnrollment.passage)
+                .font(.title3)
+                .lineSpacing(6)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                LevelMeter { [enrollment] in enrollment.level }
+                Text(status).font(.callout).monospacedDigit().foregroundStyle(.secondary)
+            }
+            if enrollment.micSilent {
+                Text("麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。")
+                    .font(.callout).foregroundStyle(Color.signal).fixedSize(horizontal: false, vertical: true)
+            }
+            if case .failed(let message) = enrollment.phase {
+                Text(message).font(.callout).foregroundStyle(Color.signal).fixedSize(horizontal: false, vertical: true)
+            }
+            HStack {
+                Spacer()
+                Button("取消") { enrollment.cancel(); dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                switch enrollment.phase {
+                case .recording:
+                    Button("完成") { save() }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!enrollment.canFinish || name.trimmingCharacters(in: .whitespaces).isEmpty)
+                case .computing:
+                    ProgressView().controlSize(.small)
+                case .idle, .failed:
+                    Button(enrollment.seconds > 0 ? "重新開始" : "開始") { enrollment.start() }
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+        }
+        .padding(20)
+        .frame(width: 520)
+        .onAppear { name = model.enrollmentDefaultName }
+        .onDisappear { enrollment.cancel() }
+    }
+
+    private var status: String {
+        switch enrollment.phase {
+        case .recording:
+            return String(localized: "已錄 \(Int(enrollment.seconds)) 秒・有聲音的部分 \(Int(enrollment.voicedSeconds)) 秒（要 10 秒以上）")
+        case .computing:
+            return String(localized: "正在算聲音特徵…第一次要先下載說話者辨識的模型")
+        default:
+            return ""
+        }
+    }
+
+    private func save() {
+        Task {
+            if await enrollment.finish(name: name, model: model) { dismiss() }
+        }
     }
 }
 

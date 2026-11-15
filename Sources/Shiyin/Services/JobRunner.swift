@@ -30,7 +30,6 @@ enum AppSettings {
     static let mcpEnabledKey = "mcpEnabled"   // 讓 AI 工具讀取會議（本地 MCP，design §44.1），預設關
     static let chineseScriptKey = "chineseScript"   // 中文的字：traditional／simplified（沒有值 = traditional，design §47.2）
     static let hideFromScreenSharingKey = "hideFromScreenSharing"   // 分享畫面時藏起拾音的視窗，預設關（design §53）
-    static let selfPersonKey = "selfPersonId"   // 錄過「我的聲音」的那個人（design §56.1）
     static let remindersListKey = "remindersListId"   // 提醒事項裡「拾音」列表的 id（design §52.1）
 
     private static var d: UserDefaults { .standard }

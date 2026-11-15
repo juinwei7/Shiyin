@@ -435,6 +435,16 @@ enum DebugControl {
             let matching = FakeReminders.shared.entries.indices.filter { Reminders.meetingAndKey(FakeReminders.shared.entries[$0].item.url)?.meetingId == id }
             if let n = Int(args[2]), n < matching.count { FakeReminders.shared.entries[matching[n]].completed = true }
             model.refreshReminderStatus()
+        case "enrollvoice":   // enrollvoice <音檔> <名字>：用音檔代替麥克風錄「我的聲音」（design §56.3）
+            Task {
+                do {
+                    let samples = try await AudioDecoder.decode(URL(fileURLWithPath: args[1]))
+                    try await model.enrollVoice(name: args[2], samples: samples)
+                } catch {
+                    model.errorMessage = error.localizedDescription
+                }
+            }
+        case "enrolldelete": model.deleteEnrollment()
         case "hidesharing":   // hidesharing on|off：改預設值（只在記憶體，不寫進共用設定；共用設定裡有值時以它為準），套用到所有視窗（design §53）
             UserDefaults.standard.register(defaults: [AppSettings.hideFromScreenSharingKey: args[1] == "on"])
             WindowSharing.applyAll()
@@ -754,6 +764,8 @@ enum DebugControl {
                  "due": entry.item.due.map { "\($0.year ?? 0)-\($0.month ?? 0)-\($0.day ?? 0)" } ?? ""]
             },
             "reminderStatus": model.reminderStatus,
+            // 我的聲音（design §56.3）
+            "selfPerson": ((try? model.db.enrollment()) ?? nil).map { ["id": $0.personId, "name": $0.name, "createdAt": $0.createdAt] } as Any,
             "remindersAccess": Reminders.store.access.rawValue,
             "player": ["loaded": model.player.isLoaded, "playing": model.player.isPlaying,
                        "time": model.player.currentTime, "duration": model.player.duration, "rate": model.player.rate,

@@ -18,6 +18,8 @@ struct PersonSummary: Identifiable, Hashable {
     var voiceprintCount: Int
     var lastMeetingTitle: String?
     var lastMeetingDate: String?
+    /// 錄過「我的聲音」的人（design §56.1）：錄的時間
+    var enrolledAt: String? = nil
 }
 
 /// 聲紋的比對與學習（design §21.4、R19.3、D29）。都在本機的資料庫裡做，不上傳
@@ -147,9 +149,10 @@ extension AppDatabase {
             try db.execute(sql: """
                 INSERT INTO voiceprints (person_id, embedding, audio_source, meeting_id, speaker_idx, created_at) VALUES (?, ?, ?, ?, ?, ?)
                 """, arguments: [personId, embedding, speaker.audioSource, meetingId, idx, Clock.now()])
+            // 錄的「我的聲音」不算在上限裡、不刪（design §56.1）
             try db.execute(sql: """
-                DELETE FROM voiceprints WHERE person_id = ? AND id NOT IN
-                  (SELECT id FROM voiceprints WHERE person_id = ? ORDER BY id DESC LIMIT ?)
+                DELETE FROM voiceprints WHERE person_id = ? AND audio_source <> 'enroll' AND id NOT IN
+                  (SELECT id FROM voiceprints WHERE person_id = ? AND audio_source <> 'enroll' ORDER BY id DESC LIMIT ?)
                 """, arguments: [personId, personId, Self.voiceprintsPerPerson])
         }
     }
@@ -252,6 +255,7 @@ extension AppDatabase {
             try Row.fetchAll(db, sql: """
                 SELECT p.id, p.name,
                   (SELECT count(*) FROM voiceprints v WHERE v.person_id = p.id) AS prints,
+                  (SELECT v.created_at FROM voiceprints v WHERE v.person_id = p.id AND v.audio_source = 'enroll' LIMIT 1) AS enrolled,
                   (SELECT m.id FROM speakers s JOIN meetings m ON m.id = s.meeting_id
                      WHERE s.person_id = p.id AND m.deleted_at IS NULL ORDER BY m.meeting_date DESC LIMIT 1) AS last_id
                 FROM people p ORDER BY p.name COLLATE NOCASE
@@ -259,7 +263,8 @@ extension AppDatabase {
                     // 沒有標題的會議跟會議列表一樣顯示檔名
                     let last = try (row["last_id"] as Int64?).flatMap { try Meeting.fetchOne(db, key: $0) }
                     return PersonSummary(id: row["id"], name: row["name"], voiceprintCount: row["prints"],
-                                         lastMeetingTitle: last?.displayTitle, lastMeetingDate: last?.meetingDate)
+                                         lastMeetingTitle: last?.displayTitle, lastMeetingDate: last?.meetingDate,
+                                         enrolledAt: row["enrolled"])
                 }
         }
     }
@@ -287,6 +292,48 @@ extension AppDatabase {
 
     func deleteAllPeople() throws {
         try pool.write { db in try db.execute(sql: "DELETE FROM people") }
+    }
+
+    // MARK: 我的聲音（design §56.1、R80）
+
+    /// 錄好的聲紋存成「我」的一份 enroll 聲紋：先刪掉現有的那份（整個資料庫最多一份），照名字找人、沒有就建立。
+    /// 之前的「我」換了名字、又沒有其他聲紋和會議用到時刪掉。回傳「我」的 id
+    @discardableResult
+    func enrollVoiceprint(name: String, embedding: [Float]) throws -> Int64 {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try pool.write { db in
+            try db.execute(sql: "DELETE FROM voiceprints WHERE audio_source = 'enroll'")
+            var person = try Person.filter(sql: "name = ? COLLATE NOCASE", arguments: [trimmed]).fetchOne(db)
+            if person == nil {
+                var created = Person(name: trimmed)
+                try created.insert(db)
+                person = created
+            }
+            guard let personId = person?.id else { throw DatabaseError(message: "person not created") }
+            try db.execute(sql: """
+                INSERT INTO voiceprints (person_id, embedding, audio_source, meeting_id, speaker_idx, created_at) VALUES (?, ?, 'enroll', NULL, NULL, ?)
+                """, arguments: [personId, Voiceprint.data(embedding), Clock.now()])
+            try Self.deleteOrphanPeople(db)
+            return personId
+        }
+    }
+
+    /// 刪掉「我的聲音」那份聲紋（這個人和會議裡的名字照舊，R80.4）
+    func deleteEnrollment() throws {
+        try pool.write { db in
+            try db.execute(sql: "DELETE FROM voiceprints WHERE audio_source = 'enroll'")
+            try Self.deleteOrphanPeople(db)
+        }
+    }
+
+    /// 「我」：有 enroll 聲紋的那個人
+    func enrollment() throws -> (personId: Int64, name: String, createdAt: String)? {
+        try pool.read { db in
+            try Row.fetchOne(db, sql: """
+                SELECT p.id, p.name, v.created_at FROM voiceprints v JOIN people p ON p.id = v.person_id
+                WHERE v.audio_source = 'enroll' LIMIT 1
+                """).map { ($0["id"], $0["name"], $0["created_at"]) }
+        }
     }
 
     /// 認識的人的名字，給猜說話者參考寫法

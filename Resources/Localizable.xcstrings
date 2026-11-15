@@ -143,6 +143,23 @@
         }
       }
     },
+    "%@・已錄（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@・已录（%@）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · recorded %@"
+          }
+        }
+      }
+    },
     "%@・最近：%@ %@": {
       "extractionState": "manual",
       "localizations": {
@@ -469,6 +486,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@（心智图）.%@"
+          }
+        }
+      }
+    },
+    "%@（我）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（我）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (me)"
           }
         }
       }
@@ -3602,6 +3636,23 @@
         }
       }
     },
+    "先打開上面的「記住說話者的聲音」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先打开上面的“记住说话者的声音”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on “Remember speakers' voices” above first"
+          }
+        }
+      }
+    },
     "先把拾音拖進「應用程式」資料夾再打開，AI 工具才找得到它。": {
       "extractionState": "manual",
       "localizations": {
@@ -4103,6 +4154,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "其他人…（到逐字稿改名）"
+          }
+        }
+      }
+    },
+    "再多唸一點：有聲音的部分要 10 秒以上。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再多念一点：有声音的部分要 10 秒以上。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep reading a little longer: Shiyin needs at least 10 seconds of speech."
           }
         }
       }
@@ -5159,6 +5227,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消略过"
+          }
+        }
+      }
+    },
+    "只刪這份聲音特徵，會議裡的名字照舊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只删这份声音特征，会议里的名字照旧"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deletes only this voice profile. Names in your meetings stay as they are."
           }
         }
       }
@@ -7217,6 +7302,23 @@
         }
       }
     },
+    "已記住你的聲音：之後的會議聽到像你的聲音，會帶入「%@」或在待確認問你": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已记住你的声音：之后的会议听到像你的声音，会带入“%@”或在待确认问你"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin now knows your voice. When it hears a voice like yours in later meetings, it fills in “%@” or asks you in the questions to confirm."
+          }
+        }
+      }
+    },
     "已重新辨識說話者：分出 %lld 位。名字請再確認一下；會議紀錄要更新的話，請重新整理會議紀錄。": {
       "extractionState": "manual",
       "localizations": {
@@ -7259,6 +7361,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已重置匿名 ID"
+          }
+        }
+      }
+    },
+    "已錄 %lld 秒・有聲音的部分 %lld 秒（要 10 秒以上）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已录 %lld 秒・有声音的部分 %lld 秒（要 10 秒以上）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recorded %lld s · speech %lld s (needs 10 s or more)"
           }
         }
       }
@@ -7793,6 +7912,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的笔记（%lld 行）"
+          }
+        }
+      }
+    },
+    "我的聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的声音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My voice"
           }
         }
       }
@@ -8557,6 +8693,23 @@
         }
       }
     },
+    "拾音會在這台 Mac 上把會議錄下來，轉成逐字稿，再整理成會議紀錄。我現在唸這一段，是要讓拾音記住我的聲音。之後開會的時候，拾音聽到這個聲音，就會在逐字稿上標出我的名字。聲音特徵只存在這台電腦裡，不會上傳。下午三點，我們要討論下一季的計畫，請大家先看一下上週的數字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音会在这台 Mac 上把会议录下来，转成逐字稿，再整理成会议记录。我现在念这一段，是要让拾音记住我的声音。之后开会的时候，拾音听到这个声音，就会在逐字稿上标出我的名字。声音特征只存在这台电脑里，不会上传。下午三点，我们要讨论下一季的计划，请大家先看一下上周的数字。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin records meetings on this Mac, turns them into transcripts, and writes up meeting notes. I'm reading this so Shiyin can learn my voice. In future meetings, when Shiyin hears this voice, it will put my name next to what I said. The voice profile stays on this computer and is never uploaded. At three this afternoon we'll talk about next quarter's plan, so please take a look at last week's numbers first."
+          }
+        }
+      }
+    },
     "拾音正在轉錄或整理會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -8876,6 +9029,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "按“录音”开始，或把录音文件拖进来。"
+          }
+        }
+      }
+    },
+    "按「開始」，用平常開會說話的音量唸下面這段（約 20～30 秒），唸完按「完成」。拾音只用這段聲音算出你的聲音特徵，算完就刪掉錄音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按“开始”，用平常开会说话的音量念下面这段（约 20～30 秒），念完按“完成”。拾音只用这段声音算出你的声音特征，算完就删掉录音。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start and read the passage below at your usual meeting volume (about 20–30 seconds), then click Done. Shiyin uses the recording only to work out your voice profile and deletes it right after."
           }
         }
       }
@@ -12090,6 +12260,23 @@
         }
       }
     },
+    "正在算聲音特徵…第一次要先下載說話者辨識的模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在算声音特征…第一次要先下载说话者识别的模型"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Working out your voice profile… The first time, the speaker recognition model is downloaded first"
+          }
+        }
+      }
+    },
     "正在處理這場會議，完成後才能改說話者": {
       "extractionState": "manual",
       "localizations": {
@@ -12834,6 +13021,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有开自动检测会议语言"
+          }
+        }
+      }
+    },
+    "沒聽清楚你的聲音：請在安靜的地方再錄一次，照著畫面上的文字唸完。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没听清楚你的声音：请在安静的地方再录一次，照着画面上的文字念完。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin couldn't hear your voice clearly. Please record again somewhere quiet and read the whole passage."
           }
         }
       }
@@ -18481,6 +18685,23 @@
         }
       }
     },
+    "重新開始": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新开始"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Over"
+          }
+        }
+      }
+    },
     "重新顯示首次使用引導": {
       "extractionState": "manual",
       "localizations": {
@@ -18532,6 +18753,23 @@
         }
       }
     },
+    "重錄…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重录…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record Again…"
+          }
+        }
+      }
+    },
     "重點標記 %lld": {
       "extractionState": "manual",
       "localizations": {
@@ -18545,6 +18783,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "重点标记 %lld"
+          }
+        }
+      }
+    },
+    "錄一段你自己的聲音，第一場會議就認得你。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录一段你自己的声音，第一场会议就认得你。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record your own voice so Shiyin recognizes you from your first meeting."
+          }
+        }
+      }
+    },
+    "錄一段我的聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录一段我的声音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record My Voice"
+          }
+        }
+      }
+    },
+    "錄一段我的聲音…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录一段我的声音…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record My Voice…"
           }
         }
       }
@@ -18749,6 +19038,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音中 15 分钟没人说话时提醒你；再 15 分钟还是没人说话就自动停止，只转录到最后有人说话的地方，录音文件完整保留。"
+          }
+        }
+      }
+    },
+    "錄音中不能錄（麥克風在用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中不能录（麦克风在用）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not available while recording (the microphone is in use)"
           }
         }
       }
@@ -19718,6 +20024,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "麦克风权限设置"
+          }
+        }
+      }
+    },
+    "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风没有收到声音：可能被静音、被其他 app 占用，或选错了麦克风。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone isn't picking up any sound. It may be muted, in use by another app, or the wrong microphone."
           }
         }
       }
