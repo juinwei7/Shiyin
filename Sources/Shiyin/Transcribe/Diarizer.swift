@@ -111,13 +111,13 @@ enum Diarizer {
         let started = Date()
         let turns: [Turn]
         do {
+            // 背景的工作不會跟著取消（32 分鐘的會議約 2 秒），做完再看要不要停
             turns = try await nemotronTurns(samples)
-        } catch is CancellationError {
-            throw CancellationError()
         } catch {
             log.error("nemotron failed: \(error.localizedDescription, privacy: .public)")
             return standard
         }
+        try Task.checkCancellation()
         onProgress(1)
         guard let combined = combine(standard: standard, nemotron: turns) else {
             log.info("nemotron saturated: \(Set(turns.map(\.speaker)).count, privacy: .public) speakers, standard \(standard.speechSeconds.count, privacy: .public)")
@@ -206,7 +206,6 @@ enum Diarizer {
         return try await Task.detached(priority: .userInitiated) {
             let config = Nemotron3Config.offline
             let models = try await Nemotron3Models.loadFromHuggingFace(config: config, cacheDirectory: directory)
-            try Task.checkCancellation()
             let diarizer = Nemotron3Diarizer(config: config, models: models)
             let (probabilities, frames) = try diarizer.processComplete(samples)
             let segments = Nemotron3Diarizer.segments(probabilities: probabilities, frameCount: frames, numSpeakers: config.numSpeakers)

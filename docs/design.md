@@ -1200,7 +1200,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 
 - `Recorder.levelHint` 從 nil 變成某個值時（§26.1 的規則不變），`AppModel` 觀察到就：
   - `NSApp.isActive == false` 或主視窗沒開時，`Notifier.levelHint(hint, meetingId:)` 送通知：標題「收音提醒」，內文同 `RecordingPanel.levelHintText`，類別 `LEVEL_HINT`，點了 `reveal(meetingId)`。`Recorder` 記 `notifiedLevelHints: Set<LevelHint>`，每場每種一次，錄音開始時清掉。
-  - 不管前景與否，`AppModel.menuBarSymbol` 在 `levelHint != nil` 時用 `mic.badge.exclamationmark`，提示消失就換回錄音中的圖示。`MenuBarContent` 在錄音控制下面顯示同一句提示（琥珀色）和「知道了」（`dismissLevelHint`）。
+  - 不管前景與否，`AppModel.menuBarSymbol` 在 `levelHint != nil` 時用提示列同一個圖示（`LevelHint.symbol`），藍牙麥克風、太久沒人說話時用 `mic.badge.xmark`，提示消失就換回錄音中的圖示（4.1～4.8.1 寫的是 `mic.badge.exclamationmark`，系統沒有這個 SF Symbol，選單列變空白；2026-11-15 改）。`MenuBarContent` 在錄音控制下面顯示同一句提示（琥珀色）和「知道了」（`dismissLevelHint`）。
 - 通知權限沒給時只有選單列的變化（跟其他通知一樣，R11.2）。
 - Windows：design-windows §11.5。
 
@@ -2472,7 +2472,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ### 57.4 iPhone（R82，`ios` 分支的 design-ios §11.1）
 
-- `RecordingActivity.ContentState` 多一個 `hint: String?`（收音提醒的那一句，同 Mac 的 `LevelHint.text`），`LiveActivityController.sync()` 在 `levelHint` 變了時更新。鎖定畫面、展開的動態島多一列琥珀色的提示；精簡的動態島左邊從紅點換成 `mic.badge.exclamationmark`。
+- `RecordingActivity.ContentState` 多 `hint: String?`（收音提醒的那一句，同錄音畫面的提示列）和 `hintSymbol: String?`（提示列的圖示），`LiveActivityController.sync()` 在 `levelHint` 變了時更新。鎖定畫面、展開的動態島多一列琥珀色的提示；精簡的動態島左邊從紅點換成琥珀色的提示圖示。
 
 ## 58. 人有臉：頭像和釉色（R83，D167）
 

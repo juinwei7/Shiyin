@@ -552,9 +552,11 @@ final class AppModel {
 
     var menuBarSymbol: String {
         if bookmarkFlash { return "star.circle.fill" }
-        // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來
+        // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來。
+        // 圖示同提示列（mic.badge.exclamationmark 不是系統有的 SF Symbol，4.1～4.8.1 選單列在這時是空白的）
         if recorder.isRecording {
-            return recorder.levelHint != nil || recorder.micHint != nil || recorder.idlePrompt ? "mic.badge.exclamationmark" : "record.circle.fill"
+            if let hint = recorder.levelHint { return hint.symbol }
+            return recorder.micHint != nil || recorder.idlePrompt ? "mic.badge.xmark" : "record.circle.fill"
         }
         if runner.isBusy || queuedCount > 0 { return "waveform.circle.fill" }
         return "waveform"
