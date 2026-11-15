@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarize_err_local INTEGER NOT NULL DEFAULT 0,
   summarize_err_enterprise INTEGER NOT NULL DEFAULT 0,   -- 4.2（R52.2）
   summarize_err_draft INTEGER NOT NULL DEFAULT 0,
+  summarize_err_other_detail TEXT,                       -- 2026-11-15（R86）：「其他」的種類 {"http404": 2, …}
   received_at TEXT NOT NULL,
   PRIMARY KEY (install_id, date)
 );

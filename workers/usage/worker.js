@@ -43,6 +43,11 @@ const ERROR_DETAIL_DICTS = {
   },
 };
 const ERROR_DETAIL_NUMBERS = { summarizeDraft: 'summarize_err_draft' };
+// 2026-11-15 加（R86、design §61.1）：「其他」再分成幾種（HTTP 狀態碼、CLI 結束代碼），存成一欄 JSON；只收這些鍵，舊版 app 沒有就是 null
+const SUMMARIZE_OTHER_KEYS = [
+  'http400', 'http404', 'http413', 'http500', 'http502', 'http503', 'http504', 'http529', 'httpOther',
+  'incomplete', 'cliExit1', 'cliExit2', 'cliExit127', 'cliSignal', 'cliExitOther', 'cliNoOutput', 'cliError', 'unknown',
+];
 
 const text = (status, body) => new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
@@ -138,6 +143,15 @@ export function toRow(body, now) {
     if (value === null) return `bad errorDetail.${key}`;
     row[column] = value;
   }
+  const other = detail.summarizeOther ?? {};
+  if (typeof other !== 'object' || Array.isArray(other)) return 'bad errorDetail.summarizeOther';
+  const otherCounts = {};
+  for (const key of SUMMARIZE_OTHER_KEYS) {
+    const value = number(other[key] ?? 0);   // 不認得的鍵忽略
+    if (value === null) return `bad errorDetail.summarizeOther.${key}`;
+    if (value > 0) otherCounts[key] = value;
+  }
+  row.summarize_err_other_detail = Object.keys(otherCounts).length ? JSON.stringify(otherCounts) : null;
   return row;
 }
 
