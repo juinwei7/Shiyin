@@ -32,6 +32,13 @@ public sealed class MainState
     public string SearchQuery { get; private set; } = "";
     public List<SearchHit> SearchResults { get; private set; } = [];
     public bool SearchActive => SearchQuery.Trim().Length > 0;
+    /// <summary>側欄是會議還是人物（M§60.2、R85.1）：不記在設定，每次打開都從會議開始</summary>
+    public SidebarMode Sidebar { get; private set; } = SidebarMode.Meetings;
+    /// <summary>人物列表、選了哪個人（M§60.2）</summary>
+    public List<PersonOverview> People { get; private set; } = [];
+    public long? SelectedPerson { get; private set; }
+    /// <summary>右邊顯示人物頁：選了「人物」，而且不在垃圾桶、沒在搜尋（搜尋的結果是會議）</summary>
+    public bool ShowsPeople => Sidebar == SidebarMode.People && !ShowTrash && !SearchActive;
 
     /// <summary>畫面要重畫（在 UI 執行緒）</summary>
     public event Action? Changed;
@@ -100,6 +107,40 @@ public sealed class MainState
         // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議
         if (FolderFilter is { } folder && !Meetings.Any(m => m.Meeting.Folder == folder)) FolderFilter = null;
         if (SearchActive) SearchResults = host.Controller.Search(SearchQuery);
+        LoadPeople();
+    }
+
+    /// <summary>人物列表（M§60.1）：改名、合併、刪除、新的會議都會變；選的人不在了就清掉</summary>
+    void LoadPeople()
+    {
+        try { People = host.Db.PeopleOverview(); }
+        catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"people reload failed: {e.SqliteErrorCode}"); }
+        if (SelectedPerson is long p && !People.Any(x => x.Id == p)) SelectedPerson = null;
+    }
+
+    /// <summary>側欄的「會議｜人物」（M§60.2）</summary>
+    public void SetSidebar(SidebarMode mode)
+    {
+        if (Sidebar == mode) return;
+        Sidebar = mode;
+        if (mode == SidebarMode.People) LoadPeople();
+        Changed?.Invoke();
+    }
+
+    /// <summary>改名之後選這個名字的人（改成已經有的名字時合併過去，選那個人）</summary>
+    public void SelectPersonNamed(string name)
+    {
+        LoadPeople();
+        SelectPerson(People.FirstOrDefault(p => string.Equals(p.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))?.Id);
+    }
+
+    /// <summary>選一個人（側欄的人物列表、DEBUG 的 person）；側欄切到人物</summary>
+    public void SelectPerson(long? id)
+    {
+        Sidebar = SidebarMode.People;
+        LoadPeople();
+        SelectedPerson = id is long p && People.Any(x => x.Id == p) ? p : null;
+        Changed?.Invoke();
     }
 
     public void ReloadDetail(bool forceAudio = false)
@@ -146,6 +187,8 @@ public sealed class MainState
     public void Reveal(long id)
     {
         LoadLists();
+        // 從人物頁、通知、會議連結打開一場會議：側欄切回會議（M§60.2）
+        Sidebar = SidebarMode.Meetings;
         ShowTrash = Trash.Any(m => m.Id == id);
         Selection = null;
         Select(id);
@@ -188,3 +231,6 @@ public sealed class MainState
         Changed?.Invoke();
     }
 }
+
+/// <summary>側欄是會議還是人物（M§60.2）</summary>
+public enum SidebarMode { Meetings, People }

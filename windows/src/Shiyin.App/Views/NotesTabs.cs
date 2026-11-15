@@ -102,7 +102,17 @@ public sealed class NotesTabs
             owner.Language = Ui.ContentLanguage(language);
             var task = Ui.Text(item.Task, Ui.C(14), select: true);
             task.Language = Ui.ContentLanguage(language);
-            Add(owner, rows, 0);
+            // 負責人是這場的說話者時放他的頭像（M§58.2、R83.2）
+            if (detail.SpeakerIdx(item.Owner) is int speaker)
+            {
+                var avatar = Ui.Avatar(item.Owner, Ui.Speaker(speaker), Ui.C(18), speaker == detail.SelfIdx);
+                avatar.VerticalAlignment = VerticalAlignment.Center;
+                owner.VerticalAlignment = VerticalAlignment.Center;
+                var chip = Ui.Row(6, avatar, owner);
+                chip.VerticalAlignment = VerticalAlignment.Top;
+                Add(chip, rows, 0);
+            }
+            else Add(owner, rows, 0);
             Add(Ui.Inline(task, Trailing(detail, r, item.Time)), rows, 1);
             Add(Ui.Text(item.Due.Length == 0 ? "—" : item.Due, Ui.C(14), color: item.Due.Length == 0 ? Ui.Secondary : null, wrap: false), rows++, 2);
             if (ExpandedCard(detail, r) is { } card) Add(card, rows++, 0, 3);

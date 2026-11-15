@@ -231,6 +231,17 @@ public class UtilTests
             Assert.Equal(item.Strings("list"), new Meeting { Participants = item.Str("text")! }.ParticipantList);
         foreach (var item in Items("util/default-speaker-names.json"))
             Assert.Equal(item.Bool("isDefault"), SpeakerNames.IsDefault(item.Str("name")!));
+        // 頭像的字和釉色（M§58、design-windows §11.22）：Mac 的 PersonAvatar.initials、Color.person、Color.speaker
+        static string[] Hexes((uint Light, uint Dark) c) => [c.Light.ToString("X6"), c.Dark.ToString("X6")];
+        var avatars = Golden.ExpectedJson("util/avatars.json");
+        foreach (var item in avatars.GetProperty("people").EnumerateArray())
+        {
+            var name = item.Str("name")!;
+            Assert.True(item.Str("initials") == Avatars.Initials(name), $"「{name}」的頭像：預期 {item.Str("initials")}，實際 {Avatars.Initials(name)}");
+            Assert.Equal(item.Strings("color"), Hexes(Avatars.Speaker(Avatars.PersonIndex(name))));
+        }
+        foreach (var item in avatars.GetProperty("speakers").EnumerateArray())
+            Assert.Equal(item.Strings("color"), Hexes(Avatars.Speaker((int)item.Long("idx")!)));
         foreach (var item in Items("util/transcript-import.json"))
         {
             var input = Golden.Fixtures.GetProperty("transcriptImports").EnumerateArray().First(x => x.Str("ext") == item.Str("ext")).Str("text")!;

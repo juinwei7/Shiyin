@@ -106,6 +106,19 @@ public sealed class MeetingDetail
     public Dictionary<int, SpeakerNaming.Suggestion> SpeakerSuggestions { get; private set; } = [];
     /// <summary>每位說話者最像的幾位認識的人（R33）：「是別人」的選單、待確認的「不是」</summary>
     public Dictionary<int, List<string>> SpeakerCandidates { get; set; } = [];
+    /// <summary>「我」是哪一位說話者（M§58.2）：載入時算一次</summary>
+    public int? SelfIdx { get; set; }
+
+    /// <summary>名字（不分大小寫、去掉頭尾空白）是這場哪一位說話者：待辦的負責人放頭像用（M§58.2）</summary>
+    public int? SpeakerIdx(string name)
+    {
+        var trimmed = name.Trim();
+        if (trimmed.Length == 0) return null;
+        foreach (var (idx, speaker) in Speakers.OrderBy(p => p.Key))
+            if (string.Equals(speaker, trimmed, StringComparison.OrdinalIgnoreCase)) return idx;
+        return null;
+    }
+
     /// <summary>待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）</summary>
     public int ReviewCount => (Notes?.ReviewItems.Count ?? 0) + SpeakerSuggestions.Count;
     /// <summary>待確認的題目對應到哪一條紀錄（R41.1、M§31.1）：載入時算一次（Windows 每次都整份重讀）</summary>
@@ -125,7 +138,10 @@ public sealed class MeetingDetail
             LatestJob = db.LatestJob(id), Bookmarks = db.Bookmarks(id), Corrections = db.Corrections(id),
             SpeakerUndoLabel = db.SpeakerUndoLabel(id),
         };
-        detail.LoadSpeakers(db.Speakers(id));
+        var speakers = db.Speakers(id);
+        detail.LoadSpeakers(speakers);
+        // 「我」（R80）：連到有 enroll 聲紋的那個人的說話者，頭像加一圈青瓷綠（M§58.2）
+        if (db.Enrollment() is { } me) detail.SelfIdx = speakers.FirstOrDefault(s => s.PersonId == me.PersonId)?.Idx;
         detail.LoadDocuments(db.Documents(id));
         detail.SpeakerCandidates = db.VoiceprintCandidates(id);
         if (JobRunner.TranscribedUntil(db.LastTranscribePayload(id)) is double until && meeting.DurationSeconds is int duration && duration - until >= 60)

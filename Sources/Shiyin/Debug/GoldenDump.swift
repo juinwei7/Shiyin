@@ -1,7 +1,9 @@
 #if DEBUG
+import AppKit
 import FluidAudio
 import Foundation
 import GRDB
+import SwiftUI
 
 /// 產生 Windows 版用來比對的標準答案（design-windows §4）：讀 shared/golden/fixtures.json，用 Mac 的程式算出提示詞、範本、
 /// 匯出、轉錄流程的規則、資料庫的結果，寫進輸出資料夾。只在 DEBUG 建置，不改任何正式的行為（R26.5）。
@@ -575,6 +577,13 @@ enum GoldenDump {
         w.json("util/default-speaker-names.json", (f["defaultSpeakerNames"] as? [String] ?? []).map {
             ["name": $0, "isDefault": AppDatabase.isDefaultSpeakerName($0)] as Object
         })
+        // 頭像的字和釉色（design §58）：人物照名字算的顏色、說話者照編號的顏色，寫淺色、深色的 sRGB
+        w.json("util/avatars.json", [
+            "people": (f["avatarNames"] as? [String] ?? []).map {
+                ["name": $0, "initials": PersonAvatar.initials($0), "color": hexes(Color.person($0))] as Object
+            },
+            "speakers": (f["avatarSpeakers"] as? [Int] ?? []).map { ["idx": $0, "color": hexes(Color.speaker($0))] as Object },
+        ] as Object)
         w.json("util/transcript-import.json", (f["transcriptImports"] as? [Object] ?? []).map { item -> Object in
             let parsed = TranscriptImporter.parse(item["text"] as? String ?? "", ext: item["ext"] as? String ?? "")
             return ["ext": item["ext"] ?? "", "segments": parsed.segments.map { ["start": $0.start, "end": $0.end, "text": $0.text] }]
@@ -994,9 +1003,46 @@ enum GoldenDump {
                 if let file { w.json(file, ["deleted": deleted.map { $0.name as Any } ?? NSNull()]) }
             case "deleteMeeting":
                 try db.deleteMeeting(id(op))
+            case "enrollVoiceprint":   // 我的聲音（design §56.1）：人物頁的「我」（§60.1）
+                _ = try db.enrollVoiceprint(name: op["name"] as? String ?? "", embedding: (op["embedding"] as? [Double] ?? []).map { Float($0) })
+            case "peopleOverview":   // 人物頁（design §60.1）：側欄的人物列表
+                w.json(file!, try db.peopleOverview().map {
+                    ["id": $0.id, "name": $0.name, "meetings": $0.meetingCount, "last": $0.lastMeetingDate ?? NSNull(), "me": $0.isMe] as Object
+                })
+            case "personMeetings":   // 每個人出現過的會議、說了多久
+                var result: Object = [:]
+                for person in try db.peopleOverview() {
+                    result[person.name] = try db.personMeetings(person.id).map {
+                        ["meetingId": $0.id, "date": $0.meeting.meetingDate, "title": $0.meeting.displayTitle, "seconds": $0.seconds] as Object
+                    }
+                }
+                w.json(file!, result)
+            case "personActionItems":   // 負責人是這個名字的待辦（R85.3）
+                var result: Object = [:]
+                for name in op["names"] as? [String] ?? [] {
+                    result[name] = try db.personActionItems(name).map {
+                        ["meetingId": $0.meeting.id ?? 0, "date": $0.meeting.meetingDate, "title": $0.meeting.displayTitle, "index": $0.index,
+                         "owner": $0.item.owner, "task": $0.item.task, "due": $0.item.due, "time": $0.item.time] as Object
+                    }
+                }
+                w.json(file!, result)
             default:
                 throw LLMError.badOutput("unknown op \(op["op"] ?? "")")
             }
+        }
+    }
+
+    /// 顏色在淺色、深色模式下的 sRGB（"3F5BA9"）：頭像的釉色（design §58.1）
+    private static func hexes(_ color: Color) -> [String] {
+        let ns = NSColor(color)
+        return [NSAppearance.Name.aqua, .darkAqua].map { name in
+            var hex = ""
+            NSAppearance(named: name)?.performAsCurrentDrawingAppearance {
+                guard let c = ns.usingColorSpace(.sRGB) else { return }
+                hex = String(format: "%02X%02X%02X", Int((c.redComponent * 255).rounded()), Int((c.greenComponent * 255).rounded()),
+                             Int((c.blueComponent * 255).rounded()))
+            }
+            return hex
         }
     }
 

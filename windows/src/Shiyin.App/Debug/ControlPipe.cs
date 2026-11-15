@@ -83,6 +83,13 @@ public static class ControlPipe
             case "tab" when args.Length > 1 && DetailTabs.Resolve(args[1]) is { } resolved:
                 main?.State.OpenTab(resolved.Tab, resolved.ExpandReview, resolved.ExpandNotes);
                 return Ok;
+            // 人物頁（M§60.2、design-windows §11.22）：sidebar people|meetings（側欄的「會議｜人物」）；person <人的 id>（切到人物、選這個人）
+            case "sidebar" when args.Length > 1 && main is not null:
+                main.State.SetSidebar(args[1] == "people" ? SidebarMode.People : SidebarMode.Meetings);
+                return Ok;
+            case "person" when args.Length > 1 && long.TryParse(args[1], out var personId) && main is not null:
+                main.State.SelectPerson(personId);
+                return Ok;
             case "closewindow" when args.Length > 1:
                 if (args[1] == "main") main?.AppWindow.Hide();
                 return Ok;
@@ -329,6 +336,9 @@ public static class ControlPipe
             case "meetingapp" when args.Length > 2:
                 host.Detector.Simulated[args[1]] = args[2] == "on";
                 return Ok;
+            // 錄音島（design-windows §11.21、M§57.3）：island hover on|off（等於滑鼠移上去、移開）；meetingaction <later|mute|start|continue|stop>（按島上偵測會議的按鈕）
+            case "island" when args.Length > 2 && args[1] == "hover": app.Island?.SetHover(args[2] == "on"); return Ok;
+            case "meetingaction" when args.Length > 1: app.Island?.Perform(args[1]); return Ok;
             case "rediarize" when args.Length > 2 && long.TryParse(args[1], out var meeting):
                 host.Controller.Rediarize(meeting, int.TryParse(args[2], out var n) ? n : null);
                 return Ok;
@@ -419,6 +429,21 @@ public static class ControlPipe
                 ["expired"] = host.Enterprise.ExpiredMessage, ["error"] = enterpriseError,
                 ["glossary"] = new JsonArray([.. host.Enterprise.Glossary.Terms.Select(t => (JsonNode)t)]),
             },
+            // 錄音島（M§57.3）：mode 是 hidden／collapsed／hint／prompt／hover，frame 是實際像素
+            ["island"] = App.Current.Island is { } island ? new JsonObject
+            {
+                ["enabled"] = island.Enabled, ["visible"] = island.AppWindow.IsVisible, ["mode"] = island.Mode,
+                ["frame"] = new JsonArray(island.Frame.X, island.Frame.Y, island.Frame.W, island.Frame.H),
+                ["hintKey"] = island.HintKey ?? "", ["prompt"] = island.Prompt?.Message ?? "",
+                ["actions"] = new JsonArray([.. (island.Prompt?.Actions ?? []).Select(a => (JsonNode)a.Id)]),
+            } : null,
+            // 人物頁（M§60.2）
+            ["sidebarMode"] = main?.State.Sidebar == SidebarMode.People ? "people" : "meetings",
+            ["selectedPerson"] = main?.State.SelectedPerson ?? -1,
+            ["peopleOverview"] = new JsonArray([.. (main?.State.People ?? []).Select(p => (JsonNode)new JsonObject
+            {
+                ["id"] = p.Id, ["name"] = p.Name, ["meetings"] = p.MeetingCount, ["last"] = p.LastMeetingDate ?? "", ["me"] = p.IsMe,
+            })]),
             // 我的聲音（design-windows §11.20）
             ["selfPerson"] = host.Db.Enrollment() is { } me ? new JsonObject { ["id"] = me.PersonId, ["name"] = me.Name, ["createdAt"] = me.CreatedAt } : null,
             ["recorder"] = new JsonObject

@@ -7,10 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 介面改版：人有臉、會議頁上方、人物頁（R83～R85，design §58～§60、design-windows §11.22、D167；2026-11-15 使用者決定）
-
-- [ ] **UI3 Windows 頭像、會議頁上方、人物頁**（design-windows §11.22）。驗證：`dotnet test`（人物的查詢、標準答案）；虛擬機截圖
-
 ## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
 
 - [~] **FC3 後台**（§61.1、§61.2 的統計）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`（「其他」的種類、Nemotron-3 的次數兩欄），再 `wrangler deploy`（先 migration 再 deploy）
@@ -19,9 +15,8 @@
 ## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
 
 - [~] **IS1 Mac 錄音島**（§57.1～§57.3）：程式完成，DEBUG 版驗過（2026-11-15，見 commit 訊息）。還差（要使用者在電腦前，島會出現在畫面上）：真的錄音時島在瀏海兩側、全螢幕的 Zoom／Keynote 上看得到、換桌面跟著走；滑鼠移上去展開、移開收回；拾音不在前面時按島上的「暫停」「標記重點」一下就有作用、拾音不會跑到前面；分享整個螢幕時對方看不到島
-- [ ] **IS2 Windows 錄音島**（design-windows §11.21）。驗證：虛擬機 record-sim、`playingapp` 的提示、`island hover on`、`meetingapp` 的提醒，截圖；不在工作列、分享畫面拍不到（snapwin）
+- [~] **IS2 Windows 錄音島**（design-windows §11.21）：程式完成，虛擬機驗過（2026-11-15，見 commit 訊息）。還差（要真的 Windows 電腦：虛擬機沒有顯示卡加速、沒有音效裝置、只有一個螢幕）：真的錄音時島在螢幕上緣正中間、圓角；Teams、Zoom、瀏覽器全螢幕（視窗化的全螢幕）時島在上面看得到；兩個螢幕時跟著前景視窗換螢幕；縮放 125%、150% 時大小對；在別的 app 裡按島上的「暫停」「標記重點」一下就有作用、那個 app 的焦點不會被搶走，「打開拾音」把拾音拉到最前面；真的 Teams、Zoom、Google Meet 分享整個螢幕時對方看不到島
 - [~] **IS3 iPhone 的動態島加上收音提醒**（R82、§57.4，`ios` 分支 cc90eb1）：模擬器驗過精簡的動態島（紅點 → 琥珀色的提示圖示，見 commit 訊息）。還差（要真的 iPhone）：錄音中讓麥克風收不到聲音（或在很吵的地方），鎖定畫面、長按動態島展開都有那一列琥珀色的提示；回到 app 按「知道了」後動態島換回紅點
-- [ ] **IS4 使用說明**（R81.10）：Mac 做完了（錄音島、人物頁、Nemotron-3，`l10n.py check` 完整）；還差 Windows 的使用說明、`windows-check`
 
 ## 參考另一個會議紀錄 app 的改進（R75～R80，design §51～§56、design-windows §11.18～§11.20、D161～D164；2026-11-15 使用者決定先做）
 

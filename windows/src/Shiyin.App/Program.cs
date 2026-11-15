@@ -86,6 +86,11 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     SettingsWindow? settings;
     Window? onboarding, guide, report, about, askAll;
     MeetingPromptWindow? prompt;
+    /// <summary>錄音島（R81.9、design-windows §11.21）</summary>
+    IslandWindow? island;
+    public IslandWindow? Island => island;
+    /// <summary>主視窗的 HWND（錄音島的「打開拾音」拉到前面用）</summary>
+    public IntPtr? MainHandle => main?.Handle;
     WinUIEx.TrayIcon? tray;
 
     public App(string[] args)
@@ -120,6 +125,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         MindMapImage.Root = () => main?.XamlRoot;
         main.Activate();
         host.Start();
+        island = new IslandWindow(host);
         BuildTray();
         if (!host.Settings.Flag(AppSettings.OnboardingKey, false)) ShowOnboarding();
         else if (!host.Settings.Flag(AppSettings.GuideKey, false))
@@ -291,10 +297,19 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         Bring(askAll, 720, 740);
     }
 
-    /// <summary>有通知權限就發通知（帶按鈕），沒有就用不搶焦點的小視窗（同 Mac）</summary>
+    /// <summary>
+    /// 錄音島打開時由島顯示（R81.3，取代右下角的小視窗和偵測會議的通知）；關掉時照舊：有通知權限就發通知（帶按鈕），
+    /// 沒有就用不搶焦點的小視窗（同 Mac）
+    /// </summary>
     void ShowMeetingPrompt(MeetingDetector.Prompt p)
     {
         if (host is null) return;
+        if (island is { Enabled: true })
+        {
+            prompt?.Close();
+            island.ShowPrompt(p);
+            return;
+        }
         if (host.Notifier.MeetingPrompt(p)) return;
         prompt?.Close();
         prompt = new MeetingPromptWindow(host, p);
@@ -340,11 +355,11 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         // 藍牙耳機的提醒（R58.3）：同收音提醒，拾音不在前景才送通知（每場最多一次由 Recorder 管）
         host.Recorder.MicHintAppeared += hint => host.Post(() =>
         {
-            if (host.Recorder.MeetingId is not long id || (main is { IsForeground: true } && main.AppWindow.IsVisible)) return;
+            if (host.Recorder.MeetingId is not long id || (main is { IsForeground: true } && main.AppWindow.IsVisible) || IslandShowsAlerts) return;
             host.Notifier.MicHint(hint, id);
         });
-        // 忘了停止錄音（R48.1、R48.2）：提醒一出現就送通知（人多半不在電腦前）；自動停止了也通知
-        host.Recorder.IdlePromptAppeared += () => host.Post(() => { if (host.Recorder.MeetingId is long id) host.Notifier.IdlePrompt(id); });
+        // 忘了停止錄音（R48.1、R48.2）：提醒一出現就送通知（人多半不在電腦前）；自動停止了也通知（錄音已經停了，島打開時也送）
+        host.Recorder.IdlePromptAppeared += () => host.Post(() => { if (host.Recorder.MeetingId is long id && !IslandShowsAlerts) host.Notifier.IdlePrompt(id); });
         host.Controller.IdleStopped += (id, title) => host.Post(() => host.Notifier.IdleStopped(id, title));
     }
 
@@ -359,11 +374,14 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             : host.Runner.IsBusy ? L.T("拾音：處理中") : L.T("拾音");
     }
 
+    /// <summary>錄音島打開時，錄音中的提醒在島上，不另外送通知（R81.4、M§57.2）：島在全螢幕、分享畫面時都看得到，兩邊都跳很吵</summary>
+    bool IslandShowsAlerts => island is { Enabled: true };
+
     /// <summary>收音提醒第一次出現（R42.3、M§31.5）：拾音的視窗不是前景時送通知，點了打開那場會議；每場每種一次由 Recorder 管</summary>
     void HintAppeared(Recorder.LevelHint hint)
     {
         if (host is null || host.Recorder.MeetingId is not long id) return;
-        if (main is { IsForeground: true } && main.AppWindow.IsVisible) return;
+        if ((main is { IsForeground: true } && main.AppWindow.IsVisible) || IslandShowsAlerts) return;
         host.Notifier.LevelHint(host.Recorder.HintText(hint), id);
     }
 
@@ -454,6 +472,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         await Task.Run(host.StopWork);
         host.Close();
         tray?.Dispose();
+        island?.Close();
         Exit();
     }
 }

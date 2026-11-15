@@ -239,6 +239,33 @@ public sealed class DatabaseTests : IDisposable
                     break;
                 }
                 case "deleteMeeting": db.DeleteMeeting(Id(op)); break;
+                // 人物頁（M§60.1、design-windows §11.22）：「我」、一起開過的會議、負責的待辦
+                case "enrollVoiceprint":
+                    db.EnrollVoiceprint(op.Str("name")!, [.. op.GetProperty("embedding").EnumerateArray().Select(x => (float)x.GetDouble())]);
+                    break;
+                case "peopleOverview":
+                    Result(op, new JNode.Arr(db.PeopleOverview().Select(p => (JNode)new JNode.Obj().Add("id", new JNode.Int(p.Id)).Add("name", p.Name)
+                        .Add("meetings", new JNode.Int(p.MeetingCount)).Add("last", JNode.Of(p.LastMeetingDate)).Add("me", JNode.Of(p.IsMe)))));
+                    break;
+                case "personMeetings":
+                {
+                    var o = new JNode.Obj();
+                    foreach (var person in db.PeopleOverview())
+                        o.Add(person.Name, new JNode.Arr(db.PersonMeetings(person.Id).Select(m => (JNode)new JNode.Obj().Add("meetingId", new JNode.Int(m.Id))
+                            .Add("date", m.Meeting.MeetingDate).Add("title", m.Meeting.DisplayTitle).Add("seconds", JNode.Of(m.Seconds)))));
+                    Result(op, o);
+                    break;
+                }
+                case "personActionItems":
+                {
+                    var o = new JNode.Obj();
+                    foreach (var name in op.GetProperty("names").EnumerateArray().Select(x => x.GetString()!))
+                        o.Add(name, new JNode.Arr(db.PersonActionItems(name).Select(a => (JNode)new JNode.Obj().Add("meetingId", new JNode.Int(a.Meeting.Id ?? 0))
+                            .Add("date", a.Meeting.MeetingDate).Add("title", a.Meeting.DisplayTitle).Add("index", new JNode.Int(a.Index))
+                            .Add("owner", a.Item.Owner).Add("task", a.Item.Task).Add("due", a.Item.Due).Add("time", a.Item.Time))));
+                    Result(op, o);
+                    break;
+                }
                 default: Assert.Fail("不認得的步驟 " + op.Str("op")); break;
             }
         }

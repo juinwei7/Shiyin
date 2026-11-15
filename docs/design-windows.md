@@ -493,16 +493,20 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `IslandWindow`（`Shiyin.App`）：WinUI 的 `Window`，`OverlappedPresenter` 拿掉標題列和邊框、不能縮放，`IsAlwaysOnTop`；`WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`（不出現在工作列、按了不搶焦點），`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` 一律套用（不看 R77 的設定）；Windows 11 的圓角（`DWMWA_WINDOW_CORNER_PREFERENCE = DWMWCP_ROUND`）。
 - 位置：前景視窗所在的螢幕（`DisplayArea.GetFromPoint`，用 `GetForegroundWindow` 的矩形中心），工作區上緣正中間往下 6 px；收起時是 160×32（邏輯像素）的膠囊，展開時 440 寬、高度照內容量，重新 `MoveAndResize`。
 - 內容、出現的時機、展開 10 秒後收回、偵測會議的提醒、島打開時錄音中的提醒不送通知，規則同 M§57.2；資料從 `Recorder`（`Hint`、`MicHint`、`IdlePrompt`、`DeviceWarning`）和 `MeetingDetector` 的提醒來。偵測會議原本的 `MeetingPromptWindow` 只在島關掉時用。
-- 滑過去展開：`PointerEntered`／`PointerExited`（移出 0.3 秒後收回）。
-- 設定 `recordingIsland`（settings.json，預設 true）。
-- DEBUG：控制通道 `island hover on|off`、state 的 `island`；`--set debugIslandCapture=YES` 讓截圖拍得到（同 Mac）。
+- 滑過去展開：`PointerEntered`／`PointerExited`（移出 0.3 秒後收回）。滑過去的畫面在提醒那一句下面也放提醒的按鈕（「知道了」「繼續錄」…）：展開的提醒一滑過去就換成控制的畫面，不放的話提醒的按鈕永遠按不到（M§57.2 的 Mac 也是這樣，要 Mac 一起改）。即時逐字稿那一句只改文字、不重建（重建時按到一半的按鈕會按不到）。
+- `OverlappedPresenter.SetBorderAndTitleBar(false, false)` 之後視窗還留著 `WS_DLGFRAME`（四周 3 px 的框，client 比視窗小 6 px）：第一次出現前改成 `WS_POPUP`、`SWP_FRAMECHANGED`；`DWMWA_BORDER_COLOR` 設成不畫。
+- 「打開拾音」：打開錄音中的會議後 `SetForegroundWindow(主視窗)`（島按了不搶焦點，只靠 `Activate` 時主視窗不會到前面；剛收到點擊的是拾音，系統允許）。
+- 偵測會議的提醒左上角是青瓷綠的麥克風（Mac 是 waveform）。
+- 設定 `recordingIsland`（settings.json，預設 true），在「錄音與轉錄 → 提醒與快捷鍵」，說明同 Mac 但不提瀏海。
+- DEBUG：控制通道 `island hover on|off`、`meetingaction <later|mute|start|continue|stop>`（按島上偵測會議的按鈕，同 Mac）、state 的 `island`（`enabled`、`visible`、`mode`、`frame`（實際像素）、`hintKey`、`prompt`、`actions`）；`--set debugIslandCapture=YES` 讓截圖拍得到（同 Mac）。
+- 虛擬機驗證：`shot.sh`（UTM 拍虛擬機的畫面輸出）一定拍得到島，要看拍不拍得到用 insession 裡的 `CopyFromScreen`。滑過去要用 `mouse_event` 的相對移動（真的輸入），`SetCursorPos` 不會觸發 WinUI 的 `PointerEntered`。虛擬機沒有顯示卡加速，DWM 的圓角看不到（主視窗也是直角）。
 
 ### 11.22 人有臉、會議頁上方、人物頁（R83～R85，M§58～§60）
 
-- 頭像：`Ui.Avatar(name, color, size, isMe)`（`Border` 圓角＝直徑的一半、釉色 18% 的底、粗體的字；尺寸、取字的規則、顏色同 M§58，`Color.Person(name)` 用同樣的 FNV-1a）。用在會議頁上方、逐字稿、待辦的負責人、人物頁、側欄。
-- 會議頁上方：同 M§59，`MeetingSettingsMenu` 是一個 `DropDownButton`＋`MenuFlyout`（三段用 `MenuFlyoutSeparator` 和停用的標題項目隔開）。
-- 人物頁：側欄上方的 `SelectorBar`（會議｜人物）；資料用 `AppDatabase.PeopleOverview`、`PersonMeetings`、`PersonActionItems`（同 M§60.1 的 SQL，標準答案 `db/` 加一份）；右邊的 `PersonPage` 同 M§60.2（沒有「加到提醒事項」）。
-- DEBUG：控制通道 `sidebar people|meetings`、`person <id>`，state 同 Mac。
+- 頭像：`Ui.Avatar(name, color, size, isMe)`（`Border` 圓角＝直徑的一半、釉色 18% 的底、粗體的字；取字的規則、顏色同 M§58，在 Core 的 `Avatars`：`Initials`、`PersonIndex`（同樣的 FNV-1a）、`Palette`，`Ui.Speaker`、`Ui.Person` 都用它）。尺寸照 Mac 的程式：逐字稿、待辦 18（跟著文字大小 `Ui.C`）、會議頁上方 20（M§58.2 寫 22，Mac 的程式是 20）、側欄 26、人物頁 56。用在會議頁上方、逐字稿、待辦的負責人、人物頁、側欄。標準答案 `util/avatars.json`（Mac 的 `PersonAvatar.initials`、`Color.person`、`Color.speaker` 在淺色、深色外觀下解出的 sRGB）。
+- 會議頁上方：同 M§59，`MeetingSettingsMenu` 是一個 `DropDownButton`＋`MenuFlyout`（三段用 `MenuFlyoutSeparator` 和停用的標題項目隔開）。第二列是 `LeadingTrailing`（`Ui.cs`，同 Mac 的 `ViewThatFits`）：放得下時選單靠右同一列，放不下時換到下一行。
+- 人物頁：側欄上方的 `SelectorBar`（會議｜人物，`MainState.Sidebar`，不記在設定）；資料用 `AppDatabase.PeopleOverview`、`PersonMeetings`、`PersonActionItems`（同 M§60.1 的 SQL，標準答案 `db/43～48`；同一天的人照名字排用介面語言的排序，兩邊的語系不一定一樣，標準答案避開同一天）；右邊的 `PersonPage` 同 M§60.2（沒有「加到提醒事項」）。主視窗每次資料改了都重畫，人物頁內容一樣時留著原本的元件（轉錄的進度一直更新時捲動位置才不會跳回最上面）。「會議」那一段的英文用 Meetings（「會議」這個鍵的英文是單數的 Meeting）。設定「說話者與詞彙」的認識的人下面加一行「也可以在側欄的「人物」管理」（R85.5；Mac 2026-11-15 還沒有）。
+- DEBUG：控制通道 `sidebar people|meetings`、`person <id>`，state 的 `sidebarMode`、`selectedPerson`、`peopleOverview`（同 Mac）。
 
 ## 12. 系統整合
 
