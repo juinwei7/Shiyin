@@ -2444,6 +2444,35 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 端到端：`enrollvoice` 存成 A（MEO015）後匯入 ES2004b，轉錄完 A 那位說話者直接帶入「MEO015」（name_source = voiceprint）。重錄成 B 之後只剩一份 enroll、A 留著（會議裡用到）；刪除後 enroll 是 0、只靠 enroll 存在的 B 跟著拿掉。
 - 限制：「唸的那段」是從會議裡剪的（同一支麥克風、說話的語氣），真的照稿唸、換了地方和麥克風時相似度可能低一點，那時多半落在「待確認問」，不會帶錯；要使用者用真的麥克風錄一次確認。
 
+## 57. 錄音島（R81、R82，D165、D166）
+
+### 57.1 視窗（`App/RecordingIsland.swift`）
+
+- 一個 `NSPanel`（`IslandPanel`：`.borderless`、`.nonactivatingPanel`，`canBecomeKey`、`canBecomeMain` 都是 false，按按鈕不會讓拾音跑到前面）。`level = .statusBar`（蓋在選單列和全螢幕的 app 上面），`collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]`，`backgroundColor = .clear`、`isOpaque = false`、`hasShadow = false`（形狀和陰影由 SwiftUI 畫），`sharingType = .none`（R81.7，不看 R77 的設定，`WindowSharing.apply` 跳過它）。
+- 視窗的大小跟著內容（`NSHostingView.fittingSize`）：收起時就是那一小塊，不擋下面視窗的點擊（R81.6）；展開、收回時重新算大小、置中、上緣貼著螢幕的上緣。
+- 哪個螢幕：`NSScreen.main`（目前在用的 app 的視窗所在的螢幕）。換 app（`NSWorkspace.didActivateApplicationNotification`）、換桌面（`activeSpaceDidChangeNotification`）、螢幕設定變了（`NSApplication.didChangeScreenParametersNotification`）時重新放。
+- 瀏海：`screen.safeAreaInsets.top > 0` 時有瀏海；瀏海的左右邊界是 `auxiliaryTopLeftArea.maxX`、`auxiliaryTopRightArea.minX`，高度是 `safeAreaInsets.top`。收起時島的寬度是瀏海寬度加兩邊各 64 pt，高度同瀏海，下緣兩個角是圓角（像從瀏海垂下來）；左右兩翼放紅點、時間，中間不放東西。沒有瀏海：選單列（`frame.maxY - visibleFrame.maxY`）下方 6 pt、置中、高 26 pt 的膠囊。展開時往下長，寬 420 pt。
+- 顏色固定黑底白字（跟瀏海接在一起，深色、淺色模式都一樣）；按鈕用白色的膠囊（主要的那顆是青瓷綠）。
+
+### 57.2 什麼時候出現、顯示什麼（`IslandModel`，@Observable）
+
+- 出現：錄音中（`recorder.isRecording`），或有偵測會議的提醒（`meetingPrompt != nil`）。其他時候 `orderOut`。設定 `recordingIsland`（預設 true）關掉時都不出現（R81.8）。
+- 收起（錄音中）：左翼紅點（暫停時是暫停圖示；有提醒時是琥珀色的點），右翼經過的時間（`TimeFormat.string(elapsedSeconds)`）。
+- 提醒（R81.2）：`recorder.levelHint`（`recorder.text(for:)`、「知道了」＝`dismissLevelHint`；錄不到電腦聲音多一個「打開系統設定」）、`recorder.micHint`（「改用 <內建麥克風>」「知道了」）、`recorder.idlePrompt`（「繼續錄」「停止錄音」）、`recorder.deviceWarning`（沒有按鈕）。同時有好幾個時一次只展開一個，順序同錄音畫面的提示列（沒人說話 → 藍牙 → 收音 → 重新連接）。新的提醒出現（`hintKey` 變了）就展開 10 秒（`expandedUntil`），之後收回成琥珀色的點；滑過去再展開。
+- 偵測會議（R81.3）：`AppModel.showMeetingPrompt` 在島打開時改成 `island.show(prompt, actions:message:)`（按鈕、文字同 `showMeetingPanel`），展開 30 秒後收起（沒在錄音時島就消失）。`MeetingPromptPanel`、偵測會議的通知只在島關掉時用。
+- 滑過去（R81.5，`onHover`）：展開成：第一列紅點、時間、麥克風和電腦聲音的音量條（`LevelMeter`）；有提醒時第二列是提醒；最新一句即時逐字稿（`liveLines.last` 或 `volatileText`，一行，截斷）；按鈕「暫停／繼續」「標記重點」「停止並轉錄」「打開拾音」（`AppModel.reveal(meetingId)` 並把 app 拉到前面）。滑出 0.3 秒後收回（避免滑過邊界就閃）。
+- 通知（R81.4）：島打開時 `levelHintAppeared`、`micHintAppeared`、`onIdlePrompt` 不送通知；選單列的警示圖示照舊（選單列看得到時也是線索）。
+
+### 57.3 驗證
+
+- 島一律拍不到，驗證時 DEBUG 加 `-debugIslandCapture YES`（`sharingType = .readOnly`）才能 `screencapture -l`；`-debugIslandBehind YES` 把島放在桌面層（被所有視窗蓋住，不會出現在使用者的畫面上，照樣拍得到）。
+- DEBUG：state 的 `island`（`visible`、`mode`：hidden／collapsed／hint／prompt／hover、`frame`、`notch`、`text`）；`island hover on|off`（等於滑鼠移上去、移開）；`meetingapp <bundleID> start` 觸發偵測會議時島顯示提醒，`meetingaction <id>` 按島上的按鈕（同原本的浮動視窗）。
+- 搭配 `record-sim`、`-debugSystemAudioPermission denied`（R75 的提示）、`-idleRemindSeconds`（R48）看提醒展開、10 秒後收回；有瀏海的螢幕和外接螢幕（沒有瀏海）各看一次。
+
+### 57.4 iPhone（R82，`ios` 分支的 design-ios §11.1）
+
+- `RecordingActivity.ContentState` 多一個 `hint: String?`（收音提醒的那一句，同 Mac 的 `LevelHint.text`），`LiveActivityController.sync()` 在 `levelHint` 變了時更新。鎖定畫面、展開的動態島多一列琥珀色的提示；精簡的動態島左邊從紅點換成 `mic.badge.exclamationmark`。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2556,3 +2585,5 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D162 | 加過哪些提醒事項不存在資料庫，靠提醒事項的 `url` 帶會議 id 和事項文字的雜湊去重（§52.1）；Windows 不做 | 資料庫加一張表記加過的提醒：要 migration、標準答案，Windows 也要跟著改結構卻沒有這個功能；使用者在提醒事項裡刪掉的也還記著。Windows 接 Microsoft To Do：要使用者登入 Microsoft 帳號、拾音要跟微軟註冊 app（Graph API），先看有沒有人要 |
 | D163 | 分享時藏起視窗是全部視窗一起、預設關（§53） | 預設開：拾音自己的截圖驗證、官網截圖都拍不到，使用者自己截圖、錄教學影片也拍不到，要知道有這個設定才不會困惑。只藏主視窗：設定頁、錄音畫面、使用說明一樣看得到會議的內容 |
 | D164 | 錄的聲紋存成一份 `audio_source = 'enroll'` 的聲紋，它的 `person_id` 就是「我」（§56.1），不改資料庫結構、不記在設定 | `people` 加「是不是我」的欄位：要 migration、兩邊的標準答案，只為了一個值。記在設定（原本的設計）：改名合併到同名的人時 id 會變、資料庫複本和設定對不上。錄好幾段、分現場和線上：先看一段夠不夠用（§56.4）。放進首次使用引導：引導維持三步（R44.6），而且第一次打開時還沒有說話者辨識的模型 |
+| D165 | 錄音島用一個自己畫的 `NSPanel` 貼在瀏海兩側（`.statusBar` 層、所有桌面、全螢幕上），大小跟著內容（§57.1） | 只靠選單列和通知：全螢幕時選單列藏起來，分享畫面時通知可能被擋，開會時正好看不到。固定一個大的透明視窗、只畫中間：透明的地方也會擋住下面視窗的點擊（瀏覽器的分頁）。蘋果沒有給 Mac 動態島的 API |
+| D166 | 島打開時，錄音中的提醒只在島上、不送通知；偵測會議的提醒也改由島顯示（§57.2，R81.3、R81.4） | 島和通知都送：同一件事跳兩次；通知在分享畫面、全螢幕時可能看不到，島看得到。保留右上角的浮動視窗：跟島是同一件事，位置還不一樣 |

@@ -7,6 +7,13 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
+
+- [ ] **IS1 Mac 錄音島**（§57.1～§57.3）。驗證：`-debugIslandCapture YES -debugIslandBehind YES` 的 DEBUG 版：record-sim 時島出現（收起：紅點、時間），截圖；`-debugSystemAudioPermission denied` 的提示展開、10 秒後收回成琥珀色的點；`island hover on` 展開的控制和最新一句；`meetingapp us.zoom.xos start` 時沒在錄音也出現「要開始錄音嗎？」，`meetingaction start` 開始錄音；島打開時不送通知（state 的 notifications）；關掉設定後回到右上角的浮動視窗。有瀏海的螢幕、沒有瀏海的螢幕（外接）各看一次位置（沒有外接螢幕時用 DEBUG 的 `-debugIslandNoNotch YES`）
+- [ ] **IS2 Windows 錄音島**（design-windows §11.21）。驗證：虛擬機 record-sim、`playingapp` 的提示、`island hover on`、`meetingapp` 的提醒，截圖；不在工作列、分享畫面拍不到（snapwin）
+- [ ] **IS3 iPhone 的動態島加上收音提醒**（R82、§57.4，`ios` 分支）。驗證：模擬器建置、錄音中出現收音提醒時即時動態的內容（模擬器看動態島）
+- [ ] **IS4 使用說明**（R81.10）：Mac、Windows 的使用說明加上錄音島；`l10n.py check`、`windows-check`
+
 ## 參考另一個會議紀錄 app 的改進（R75～R80，design §51～§56、design-windows §11.18～§11.20、D161～D164；2026-11-15 使用者決定先做）
 
 - [~] **SA1 Mac 錄不到電腦聲音**（§51.1）：程式完成，DEBUG 版的模擬錄音驗過（2026-11-15，見 commit 訊息）。還差（要使用者在電腦前，會改到真的權限）：DEBUG 版在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」關掉，錄「麥克風＋電腦聲音」、放一段影片：5 秒內出現提示；錄音中打開權限，電腦聲音接上、提示收起來

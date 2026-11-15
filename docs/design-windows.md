@@ -487,6 +487,15 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 錄音用 `WasapiSource`（麥克風，設定裡選的那支），規則同 M§56.2；畫面在設定「說話者與詞彙」，`ContentDialog`（同時只能一個，先收起其他的）。
 - DEBUG：控制通道 `enrollvoice <音檔> <名字>`、`enrolldelete`，state 的 `selfPerson`。
 
+### 11.21 錄音島（R81.9，M§57）
+
+- `IslandWindow`（`Shiyin.App`）：WinUI 的 `Window`，`OverlappedPresenter` 拿掉標題列和邊框、不能縮放，`IsAlwaysOnTop`；`WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`（不出現在工作列、按了不搶焦點），`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` 一律套用（不看 R77 的設定）；Windows 11 的圓角（`DWMWA_WINDOW_CORNER_PREFERENCE = DWMWCP_ROUND`）。
+- 位置：前景視窗所在的螢幕（`DisplayArea.GetFromPoint`，用 `GetForegroundWindow` 的矩形中心），工作區上緣正中間往下 6 px；收起時是 160×32（邏輯像素）的膠囊，展開時 440 寬、高度照內容量，重新 `MoveAndResize`。
+- 內容、出現的時機、展開 10 秒後收回、偵測會議的提醒、島打開時錄音中的提醒不送通知，規則同 M§57.2；資料從 `Recorder`（`Hint`、`MicHint`、`IdlePrompt`、`DeviceWarning`）和 `MeetingDetector` 的提醒來。偵測會議原本的 `MeetingPromptWindow` 只在島關掉時用。
+- 滑過去展開：`PointerEntered`／`PointerExited`（移出 0.3 秒後收回）。
+- 設定 `recordingIsland`（settings.json，預設 true）。
+- DEBUG：控制通道 `island hover on|off`、state 的 `island`；`--set debugIslandCapture=YES` 讓截圖拍得到（同 Mac）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔
