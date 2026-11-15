@@ -241,10 +241,10 @@ struct TranscriptionPipeline {
         let control = WhisperEngine.Control { report($0 * share) }
         setCancel { control.cancel() }
         let prompt = WhisperEngine.prompt(glossary: options.glossary, language: options.language, style: options.tuning?.promptStyle)
-        let (path, code, chunkSeconds, tuning) = (modelPath, options.language.whisperCode, options.chunkSeconds, options.tuning)
+        let (path, code, chunkSeconds, tuning, glossary) = (modelPath, options.language.whisperCode, options.chunkSeconds, options.tuning, options.glossary)
         let result = try await Task.detached(priority: .userInitiated) {
-            try await WhisperEngine.transcribe(file: audio, chunkSeconds: chunkSeconds, modelPath: path, prompt: prompt, language: code,
-                                               control: control, tuning: tuning)
+            try await WhisperEngine.transcribe(file: audio, chunkSeconds: chunkSeconds, modelPath: path, prompt: prompt, glossary: glossary,
+                                               language: code, control: control, tuning: tuning)
         }.value
         guard shouldContinue() else { return nil }
         let duration = Double(result.sampleCount) / AudioDecoder.sampleRate
@@ -450,12 +450,12 @@ struct TranscriptionPipeline {
                 let control = WhisperEngine.Control { report(base + $0 * span) }
                 setCancel { control.cancel() }
                 let prompt = WhisperEngine.prompt(glossary: options.glossary, language: options.language, style: options.tuning?.promptStyle)
-                let (path, code, chunkSeconds, tuning) = (modelPath, options.language.whisperCode, options.chunkSeconds, options.tuning)
+                let (path, code, chunkSeconds, tuning, glossary) = (modelPath, options.language.whisperCode, options.chunkSeconds, options.tuning, options.glossary)
                 let chunks: [Range<Int>]
                 (segments, chunks) = try await Task.detached(priority: .userInitiated) {
                     let chunks = WhisperEngine.chunks(samples, seconds: chunkSeconds)
-                    return (try WhisperEngine.transcribe(samples: samples, chunks: chunks, modelPath: path, prompt: prompt, language: code,
-                                                         control: control, tuning: tuning), chunks)
+                    return (try WhisperEngine.transcribe(samples: samples, chunks: chunks, modelPath: path, prompt: prompt, glossary: glossary,
+                                                         language: code, control: control, tuning: tuning), chunks)
                 }.value
                 seams = chunks.dropFirst().map { Double($0.lowerBound) / AudioDecoder.sampleRate }
             }

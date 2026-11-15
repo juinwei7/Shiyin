@@ -39,6 +39,46 @@ enum WhisperEngine {
         "ご視聴ありがとうございました", "ご視聴いただきありがとうございました", "チャンネル登録",  // l10n-skip
     ]
 
+    /// 整句只是標記或標點（[BLANK_AUDIO]、[silence]、(marker tapping)、<|5.55|>、「-」）：沒人講話時的輸出（design §6.2）
+    static func isNonSpeech(_ text: String) -> Bool {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if squeezed(text).isEmpty { return true }
+        let pairs: [Character: Character] = ["[": "]", "(": ")", "（": "）", "<": ">", "【": "】"]
+        guard let open = text.first, let close = pairs[open], text.count > 1, text.last == close else { return false }
+        return !text.dropFirst().dropLast().contains { pairs.keys.contains($0) || pairs.values.contains($0) }
+    }
+
+    /// 詞彙表被照抄成一句（「甲、乙、丙。」，GitHub #9）：沒人講話時 Whisper、Qwen3-ASR 會把提示裡的詞彙照抄出來。
+    /// 整句在提示詞裡、拿掉開頭的標籤（「詞彙：」）後能拆成兩個以上的詞彙才算，只講一個詞彙的句子照樣留著（design §6.2）
+    static func echoesGlossary(_ text: String, prompt: String, glossary: [String]) -> Bool {
+        var text = squeezed(text)
+        guard !text.isEmpty, squeezed(prompt).contains(text) else { return false }
+        if let label = glossaryLabels.first(where: { text.hasPrefix($0) }) { text.removeFirst(label.count) }
+        let terms = Set(glossary.map(squeezed).filter { !$0.isEmpty })
+        let chars = Array(text)
+        guard !chars.isEmpty else { return false }
+        // most[i]：前 i 個字最多能拆成幾個詞彙（拆不完是 nil）
+        var most = [Int?](repeating: nil, count: chars.count + 1)
+        most[0] = 0
+        for end in 1...chars.count {
+            for start in 0..<end {
+                if let count = most[start], terms.contains(String(chars[start..<end])) { most[end] = max(most[end] ?? 0, count + 1) }
+            }
+        }
+        return (most[chars.count] ?? 0) >= 2
+    }
+
+    /// 比對用：去掉標點、符號、空白，轉小寫
+    private static func squeezed(_ text: String) -> String {
+        let skip = CharacterSet.punctuationCharacters.union(.symbols).union(.whitespacesAndNewlines)
+        return String(String.UnicodeScalarView(text.lowercased().unicodeScalars.filter { !skip.contains($0) }))
+    }
+
+    /// 語言檔的詞彙表標籤（「詞彙：%@。」的「詞彙」、" Glossary: %@." 的 glossary）
+    private static let glossaryLabels: [String] = Array(Set(MeetingLanguage.allCases.compactMap { language in
+        language.profile.whisperPrompt.glossary.components(separatedBy: "%@").first.map(squeezed)
+    }.filter { !$0.isEmpty })).sorted { $0.count != $1.count ? $0.count > $1.count : $0 < $1 }
+
     /// 基本提示詞＋詞彙表（R4.1）：依會議語言（design §16.4、§18.2、§41.3），寫在語言檔的 whisperPrompt（中文、日文 150 字、英文 400 個字元以內）
     static func prompt(glossary: [String], language: MeetingLanguage = .zh, style: String? = nil) -> String {
         let p = language.profile.whisperPrompt
@@ -127,12 +167,14 @@ enum WhisperEngine {
     final class Session {
         private let ctx: OpaquePointer
         private let prompt: String, language: String
+        private let glossary: [String]
         let control: Control
         private let tuning: TranscriptionOptions.DecoderTuning?
         private(set) var segments: [TranscribedSegment] = []
 
-        init(modelPath: String, prompt: String, language: String, control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) throws {
-            self.tuning = tuning
+        init(modelPath: String, prompt: String, glossary: [String] = [], language: String, control: Control,
+             tuning: TranscriptionOptions.DecoderTuning? = nil) throws {
+            (self.tuning, self.glossary) = (tuning, glossary)
             _ = silenceLogs
             guard FileManager.default.fileExists(atPath: modelPath) else { throw WhisperError.modelMissing }
             var contextParams = whisper_context_default_params()
@@ -155,6 +197,7 @@ enum WhisperEngine {
             let chunkPrompt = segments.isEmpty ? prompt : prompt + (language == "en" ? " " : "") + WhisperEngine.tail(of: segments, language: language)
             let progress = ChunkProgress(control: control, base: progressBase, span: progressSpan)
             var part = try WhisperEngine.run(ctx, samples: samples, offset: offset, prompt: chunkPrompt, language: language, progress: progress, tuning: tuning)
+            if tuning?.keepAll != true { part.removeAll { WhisperEngine.echoesGlossary($0.text, prompt: prompt, glossary: glossary) } }
             if offset > 0, let last = segments.last {
                 // 接縫：開頭幾秒跟前一段最後一句重複的（提示詞被念出來）去掉
                 let seam = Double(offset) / AudioDecoder.sampleRate
@@ -165,9 +208,9 @@ enum WhisperEngine {
     }
 
     /// 辨識已經解碼的整段錄音（分聲道時用）。chunks 是分段的範圍（`chunks(_:seconds:)`）
-    static func transcribe(samples: [Float], chunks: [Range<Int>]? = nil, modelPath: String, prompt: String, language: String = "zh",
-                           control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) throws -> [TranscribedSegment] {
-        let session = try Session(modelPath: modelPath, prompt: prompt, language: language, control: control, tuning: tuning)
+    static func transcribe(samples: [Float], chunks: [Range<Int>]? = nil, modelPath: String, prompt: String, glossary: [String] = [],
+                           language: String = "zh", control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) throws -> [TranscribedSegment] {
+        let session = try Session(modelPath: modelPath, prompt: prompt, glossary: glossary, language: language, control: control, tuning: tuning)
         let total = Double(max(samples.count, 1))
         try samples.withUnsafeBufferPointer { buffer in
             for range in chunks ?? [0..<samples.count] {
@@ -181,10 +224,10 @@ enum WhisperEngine {
 
     /// 從檔案依序讀、一段一段轉錄，不先解碼整段（design §21.16）。切的位置跟 `chunks(_:seconds:)` 相同。
     /// 回傳逐字稿、分段的位置（第幾個取樣）、總取樣數
-    static func transcribe(file url: URL, chunkSeconds: Double, modelPath: String, prompt: String, language: String,
+    static func transcribe(file url: URL, chunkSeconds: Double, modelPath: String, prompt: String, glossary: [String] = [], language: String,
                            control: Control, tuning: TranscriptionOptions.DecoderTuning? = nil) async throws -> (segments: [TranscribedSegment], seams: [Int], sampleCount: Int) {
         let stream = try await AudioDecoder.Stream(url)
-        let session = try Session(modelPath: modelPath, prompt: prompt, language: language, control: control, tuning: tuning)
+        let session = try Session(modelPath: modelPath, prompt: prompt, glossary: glossary, language: language, control: control, tuning: tuning)
         let rate = Int(AudioDecoder.sampleRate)
         let chunk = Int(chunkSeconds * Double(rate))
         // 剩下超過「一段＋2 分鐘」才切，所以要讀到這麼多才能決定；不分段時讀完整段
@@ -291,6 +334,7 @@ enum WhisperEngine {
             let keepAll = tuning?.keepAll == true
             if !keepAll && noSpeech > 0.6 && avgLogProb < -1.0 { continue }
             if !keepAll && text.count < 40 && hallucinationPhrases.contains(where: { text.contains($0) }) { continue }
+            if !keepAll && isNonSpeech(text) { continue }
             // 最後一個 30 秒的窗會補零，時間點可能超過這一段的結尾
             segments.append(TranscribedSegment(
                 start: min(offset + Double(whisper_full_get_segment_t0(ctx, i)) / 100, limit),

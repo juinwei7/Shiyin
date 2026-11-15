@@ -7,6 +7,10 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 沒人講話時編出整句（design §6.2；2026-11-16 驗 GitHub #9 時發現）
+
+- [ ] **HL1 很長的安靜段落被編出整句**：3 秒的話後面接 57 秒的底噪（約 −64 dBFS 的白噪音），Breeze 在後半段編出「在這裡我們可以看到很多不同的東西…」「所以我們 can't stop the time.」，信心不低、§6.2 的過濾擋不掉（只有標記、詞彙表被照抄的才擋）。合成的白噪音不一定代表真的會議室。先量真的錄音裡多常發生（AMI 的會議前後、使用者同意的會議裡沒人講話的段落），常發生再決定要不要在轉錄前用語音偵測（FluidAudio 的 VAD 或 whisper.cpp 的 VAD）跳過沒人講話的段落，要重跑 R43.4 的錯字率確認沒有漏字。驗證：同一段錄音前後的 `transcribe-eval` 比較，編出來的句子不見、AMI 和 synth 的錯字率不變差
+
 ## 介面改版（R83～R85，design §59、§60.2；2026-11-15 使用者覺得醜，照 Apple 的 Mac 介面準則重新設計）
 
 - [ ] **A11Y1 錄音、匯出旁邊的箭頭沒有名字**：工具列的分割選單（`Menu` 加 `primaryAction`）箭頭那一半在輔助使用裡是另一個 AXMenuButton，名字是空的，VoiceOver 讀不出來；`accessibilityLabel` 加在整個 `Menu` 上碰不到它（2026-11-15 試過）。要換成兩個控制項（按鈕＋只有箭頭的選單，各自有名字）或用 AppKit 的 NSSegmentedControl。驗證：axpress list 看到兩個 AXMenuButton 都有名字，按得到

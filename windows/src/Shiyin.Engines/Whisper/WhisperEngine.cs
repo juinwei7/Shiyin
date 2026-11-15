@@ -45,6 +45,8 @@ public sealed class WhisperControl(Action<double>? onProgress = null, Cancellati
     public bool IsCancelled => Cancel.IsCancellationRequested;
     /// <summary>用第幾張顯示卡（企業伺服器分配，M§36.6、D125）；null 用第一張</summary>
     public int? GpuDevice { get; init; }
+    /// <summary>這場的詞彙表：被照抄成一句的丟掉（M§6.2）</summary>
+    public IReadOnlyList<string> Glossary { get; init; } = [];
 }
 
 /// <summary>依序讀出 16 kHz 單聲道 float（長錄音分段轉錄，M§21.16）</summary>
@@ -141,6 +143,7 @@ public static class WhisperEngine
             // 前一段最後的文字接在提示詞後面，跟 whisper 自己連續轉錄時一樣
             var chunkPrompt = WhisperRules.ChunkPrompt(prompt, Segments, language);
             var part = Run(ctx, samples, offset, chunkPrompt, language, Control, progressBase, progressSpan);
+            part.RemoveAll(s => WhisperRules.EchoesGlossary(s.Text, prompt, Control.Glossary));
             if (offset > 0 && Segments.Count > 0)
                 part = WhisperRules.DropSeamRepeats(part, Segments[^1], offset / WhisperRules.SampleRate);
             Segments.AddRange(part);

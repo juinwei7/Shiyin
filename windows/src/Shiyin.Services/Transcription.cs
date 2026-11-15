@@ -279,7 +279,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
             }
             else
             {
-                var control = new WhisperControl(p => Progress(p * share), cancel) { GpuDevice = options.GpuDevice };
+                var control = new WhisperControl(p => Progress(p * share), cancel) { GpuDevice = options.GpuDevice, Glossary = options.Glossary };
                 var prompt = WhisperRules.Prompt(options.Glossary, options.Language);
                 var result = engines.WhisperFile(stream, options.ChunkSeconds, modelPath, prompt, options.Language.WhisperCode(), control);
                 segments = result.Segments;
@@ -427,7 +427,7 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
             }
             else
             {
-                var control = new WhisperControl(p => Progress(from + p * span), cancel) { GpuDevice = options.GpuDevice };
+                var control = new WhisperControl(p => Progress(from + p * span), cancel) { GpuDevice = options.GpuDevice, Glossary = options.Glossary };
                 var prompt = WhisperRules.Prompt(options.Glossary, options.Language);
                 segments = engines.WhisperSamples(samples, WhisperRules.Chunks(samples, options.ChunkSeconds), modelPath, prompt,
                     options.Language.WhisperCode(), control);

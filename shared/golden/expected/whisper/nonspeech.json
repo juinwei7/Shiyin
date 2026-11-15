@@ -1,0 +1,66 @@
+[
+  {
+    "nonSpeech" : true,
+    "text" : "[BLANK_AUDIO]"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "[silence]"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "(marker tapping)"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "<|5.55|>"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "-"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "。"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "（笑）"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "【音樂】"
+  },
+  {
+    "nonSpeech" : false,
+    "text" : "[音樂] 大家好"
+  },
+  {
+    "nonSpeech" : false,
+    "text" : "(1) 第一點"
+  },
+  {
+    "nonSpeech" : false,
+    "text" : "好"
+  },
+  {
+    "nonSpeech" : false,
+    "text" : "Hello (world)"
+  },
+  {
+    "nonSpeech" : false,
+    "text" : "[a][b]"
+  },
+  {
+    "nonSpeech" : false,
+    "text" : "<|0.00|>大家好"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "()"
+  },
+  {
+    "nonSpeech" : true,
+    "text" : "[ ]"
+  }
+]

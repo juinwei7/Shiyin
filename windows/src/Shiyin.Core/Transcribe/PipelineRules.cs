@@ -101,9 +101,53 @@ public static class WhisperRules
         return size > 0 ? (double)input.Length / size : 1;
     }
 
-    /// <summary>一段 whisper 的結果要不要留下：幾乎確定沒人講話、信心又低是幻覺；短句含常見的幻覺字串也丟掉</summary>
+    /// <summary>一段 whisper 的結果要不要留下：幾乎確定沒人講話、信心又低是幻覺；短句含常見的幻覺字串、整句只是標記或標點也丟掉</summary>
     public static bool Keep(string text, double noSpeech, double avgLogProb) =>
-        !(noSpeech > 0.6 && avgLogProb < -1.0) && !(SwiftText.Count(text) < 40 && HallucinationPhrases.Any(p => text.Contains(p, StringComparison.Ordinal)));
+        !(noSpeech > 0.6 && avgLogProb < -1.0) && !(SwiftText.Count(text) < 40 && HallucinationPhrases.Any(p => text.Contains(p, StringComparison.Ordinal)))
+        && !IsNonSpeech(text);
+
+    static readonly Dictionary<char, char> Brackets = new() { ['['] = ']', ['('] = ')', ['（'] = '）', ['<'] = '>', ['【'] = '】' };
+
+    /// <summary>整句只是標記或標點（[BLANK_AUDIO]、[silence]、(marker tapping)、&lt;|5.55|&gt;、「-」）：沒人講話時的輸出（M§6.2）</summary>
+    public static bool IsNonSpeech(string text)
+    {
+        text = text.Trim();
+        if (Squeezed(text).Length == 0) return true;
+        if (text.Length < 2 || !Brackets.TryGetValue(text[0], out var close) || text[^1] != close) return false;
+        return !text[1..^1].Any(c => Brackets.ContainsKey(c) || Brackets.ContainsValue(c));
+    }
+
+    /// <summary>詞彙表被照抄成一句（「甲、乙、丙。」，GitHub #9）：沒人講話時 Whisper、Qwen3-ASR 會把提示裡的詞彙照抄出來。
+    /// 整句在提示詞裡、拿掉開頭的標籤（「詞彙：」）後能拆成兩個以上的詞彙才算，只講一個詞彙的句子照樣留著（M§6.2）</summary>
+    public static bool EchoesGlossary(string text, string prompt, IReadOnlyList<string> glossary)
+    {
+        text = Squeezed(text);
+        if (text.Length == 0 || !Squeezed(prompt).Contains(text, StringComparison.Ordinal)) return false;
+        if (GlossaryLabels.FirstOrDefault(l => text.StartsWith(l, StringComparison.Ordinal)) is { } label) text = text[label.Length..];
+        if (text.Length == 0) return false;
+        var terms = glossary.Select(Squeezed).Where(t => t.Length > 0).ToHashSet();
+        // most[i]：前 i 個字最多能拆成幾個詞彙（拆不完是 null）
+        var most = new int?[text.Length + 1];
+        most[0] = 0;
+        for (var end = 1; end <= text.Length; end++)
+            for (var start = 0; start < end; start++)
+                if (most[start] is { } count && terms.Contains(text[start..end])) most[end] = Math.Max(most[end] ?? 0, count + 1);
+        return (most[text.Length] ?? 0) >= 2;
+    }
+
+    /// <summary>比對用：去掉標點、符號、空白，轉小寫</summary>
+    static string Squeezed(string text)
+    {
+        var builder = new StringBuilder();
+        foreach (var rune in text.ToLowerInvariant().EnumerateRunes())
+            if (!Rune.IsPunctuation(rune) && !Rune.IsSymbol(rune) && !Rune.IsWhiteSpace(rune)) builder.Append(rune.ToString());
+        return builder.ToString();
+    }
+
+    /// <summary>語言檔的詞彙表標籤（「詞彙：%@。」的「詞彙」、" Glossary: %@." 的 glossary）</summary>
+    static readonly string[] GlossaryLabels = [.. MeetingLanguages.All
+        .Select(l => Squeezed(l.Profile.WhisperPrompt.Glossary.Split("%@")[0])).Where(l => l.Length > 0).Distinct()
+        .OrderByDescending(l => l.Length).ThenBy(l => l, StringComparer.Ordinal)];
 
     /// <summary>辨識信心低：平均 log 機率低於 -1，或壓縮比大於 2.4</summary>
     public static bool LowConfidence(string text, double avgLogProb) => avgLogProb < -1.0 || CompressionRatio(text) > 2.4;

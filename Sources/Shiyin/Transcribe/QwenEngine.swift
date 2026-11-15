@@ -210,6 +210,8 @@ enum QwenEngine {
                     var text = piece.text
                     if language.profile.transcription.traditional { text = language.profile.fixScript(ChineseScript.toTaiwan(text)) }
                     guard !text.isEmpty else { continue }
+                    // 詞彙表被照抄成一句（design §6.2）：輸出是簡體，詞彙可能是繁體或簡體，轉換前後都比
+                    if [piece.text, text].contains(where: { WhisperEngine.echoesGlossary($0, prompt: context, glossary: glossary) }) { continue }
                     segments.append(TranscribedSegment(start: Double(piece.range.lowerBound) / AudioDecoder.sampleRate,
                                                        end: Double(piece.range.upperBound) / AudioDecoder.sampleRate,
                                                        text: text, lowConfidence: piece.trimmed))

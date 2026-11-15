@@ -160,6 +160,10 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
   - `abort_callback` 用來取消
   - 其他使用預設值
 - 段落的平均 token 機率太低，或壓縮比太高時，標成低信心（沿用 v2 的門檻概念）。
+- 沒人講話時的輸出不留（2026-11-16，GitHub #9）：
+  - 整句只是標記或標點：`[BLANK_AUDIO]`、`[silence]`、`(marker tapping)`、`<|5.55|>`、「-」（頭尾是成對的括號、中間沒有別的括號，或去掉標點、符號、空白後是空的）。
+  - 詞彙表被照抄成一句（「甲、乙、丙。」）：去掉標點、符號、空白、轉小寫後整句在提示詞裡，拿掉開頭的「詞彙」「Glossary」這類標籤後能拆成兩個以上的詞彙。只講一個詞彙的句子照樣留著。Qwen3-ASR 的提示（§32.4）也套用：簡體輸出和轉成繁體後的文字有一個符合就丟掉。
+  - 全部丟掉時就是「錄音裡沒有辨識到任何語音」。Whisper 的這兩條跟著 `transcribe-eval` 的 `keepAll` 一起關掉。標準答案：`whisper/nonspeech.json`、`whisper/echoes.json`。
 - 在程式內的背景 Task 執行，不另外開子程序（D4）。
 
 ### 6.2.1 macOS 內建辨識（R4.1、D11）

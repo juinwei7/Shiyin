@@ -1,0 +1,209 @@
+[
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "甲、乙、丙。"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "詞彙：甲、乙、丙。"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "甲。"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "乙、丙"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "丙、甲"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "甲乙丙我們開始開會"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting. Glossary: 甲, 乙, 丙.",
+    "text" : "甲、乙、丙。"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "詞彙："
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : ""
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "Claude",
+      "Claude Code"
+    ],
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting. Glossary: Claude, Claude Code.",
+    "text" : "Claude Code"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "Claude",
+      "Claude Code"
+    ],
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting. Glossary: Claude, Claude Code.",
+    "text" : "Glossary: Claude, Claude Code."
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "Claude",
+      "Claude Code"
+    ],
+    "language" : "en",
+    "prompt" : "The following is a recording of a work meeting. Glossary: Claude, Claude Code.",
+    "text" : "claude claude code"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "Redis",
+      "Kubernetes",
+      "拾音",
+      "SendGrid"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。",
+    "text" : "Redis、Kubernetes、拾音"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "Redis",
+      "Kubernetes",
+      "拾音",
+      "SendGrid"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。",
+    "text" : "我們用 Redis 和 Kubernetes"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+      "Redis",
+      "Kubernetes",
+      "拾音",
+      "SendGrid"
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。詞彙：Redis、Kubernetes、拾音、SendGrid。",
+    "text" : "拾音"
+  },
+  {
+    "echo" : false,
+    "glossary" : [
+
+    ],
+    "language" : "zh",
+    "prompt" : "以下是繁體中文的工作會議錄音，會夾雜英文專有名詞。",
+    "text" : "以下是繁體中文的工作會議錄音"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "ja",
+    "prompt" : "以下は仕事の会議の録音です。用語：甲、乙、丙。",
+    "text" : "用語：甲、乙"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "ko",
+    "prompt" : "다음은 업무 회의 녹음입니다. 용어: 甲, 乙, 丙.",
+    "text" : "용어: 甲, 乙"
+  },
+  {
+    "echo" : true,
+    "glossary" : [
+      "甲",
+      "乙",
+      "丙"
+    ],
+    "language" : "yue",
+    "prompt" : "以下係廣東話嘅工作會議錄音，會夾雜英文專有名詞。詞彙：甲、乙、丙。",
+    "text" : "詞彙：甲、乙"
+  }
+]

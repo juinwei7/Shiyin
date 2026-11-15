@@ -184,6 +184,16 @@ public class PromptTests
             var ratio = WhisperRules.CompressionRatio(item.Str("text")!);
             Assert.InRange(ratio, Golden.Number(item.Get("ratio")) - 0.05, Golden.Number(item.Get("ratio")) + 0.05);
         }
+        // 沒人講話時的輸出（M§6.2）：只是標記或標點、詞彙表被照抄
+        foreach (var item in Golden.ExpectedJson("whisper/nonspeech.json").EnumerateArray())
+            Assert.True(item.GetProperty("nonSpeech").GetBoolean() == WhisperRules.IsNonSpeech(item.Str("text")!), item.Str("text"));
+        foreach (var item in Golden.ExpectedJson("whisper/echoes.json").EnumerateArray())
+        {
+            var glossary = item.GetProperty("glossary").EnumerateArray().Select(x => x.GetString()!).ToList();
+            var prompt = WhisperRules.Prompt(glossary, MeetingLanguages.Parse(item.Str("language"))!.Value);
+            Assert.Equal(item.Str("prompt"), prompt);
+            Assert.True(item.GetProperty("echo").GetBoolean() == WhisperRules.EchoesGlossary(item.Str("text")!, prompt, glossary), item.Str("text"));
+        }
     }
 
     [Fact]

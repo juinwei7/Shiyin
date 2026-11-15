@@ -306,6 +306,23 @@ enum GoldenDump {
         let ratios = ["短", "this is a normal sentence without much repetition at all",  // l10n-skip
                       String(repeating: "重複", count: 40), String(repeating: "ha ", count: 30), "一二三四五六七八九十一二三四五六七八九十"]  // l10n-skip
         w.json("whisper/compression.json", ratios.map { ["text": $0, "ratio": WhisperEngine.compressionRatio($0)] })
+        // 沒人講話時的輸出（design §6.2）：只是標記或標點、詞彙表被照抄
+        let marks = ["[BLANK_AUDIO]", "[silence]", "(marker tapping)", "<|5.55|>", "-", "。", "（笑）", "【音樂】", "[音樂] 大家好",  // l10n-skip
+                     "(1) 第一點", "好", "Hello (world)", "[a][b]", "<|0.00|>大家好", "()", "[ ]"]  // l10n-skip
+        w.json("whisper/nonspeech.json", marks.map { ["text": $0, "nonSpeech": WhisperEngine.isNonSpeech($0)] })
+        let abc = ["甲", "乙", "丙"], redis = glossaries.count > 1 ? glossaries[1] : [], claude = ["Claude", "Claude Code"]  // l10n-skip
+        let echoes: [(String, [String], MeetingLanguage)] = [
+            ("甲、乙、丙。", abc, .zh), ("詞彙：甲、乙、丙。", abc, .zh), ("甲。", abc, .zh), ("乙、丙", abc, .zh), ("丙、甲", abc, .zh),  // l10n-skip
+            ("甲乙丙我們開始開會", abc, .zh), ("甲、乙、丙。", abc, .en), ("詞彙：", abc, .zh), ("", abc, .zh),  // l10n-skip
+            ("Claude Code", claude, .en), ("Glossary: Claude, Claude Code.", claude, .en), ("claude claude code", claude, .en),
+            ("Redis、Kubernetes、拾音", redis, .zh), ("我們用 Redis 和 Kubernetes", redis, .zh), ("拾音", redis, .zh),  // l10n-skip
+            ("以下是繁體中文的工作會議錄音", [], .zh), ("用語：甲、乙", abc, .ja), ("용어: 甲, 乙", abc, MeetingLanguage(rawValue: "ko")!), ("詞彙：甲、乙", abc, MeetingLanguage(rawValue: "yue")!),  // l10n-skip
+        ]
+        w.json("whisper/echoes.json", echoes.map { text, glossary, language in
+            let prompt = WhisperEngine.prompt(glossary: glossary, language: language)
+            return ["text": text, "glossary": glossary, "language": language.rawValue, "prompt": prompt,
+                    "echo": WhisperEngine.echoesGlossary(text, prompt: prompt, glossary: glossary)] as Object
+        })
     }
 
     /// 沒有 sortedKeys 的 JSONEncoder 每次啟動鍵的順序都不同（範本的定義、說話者的復原資料）：重新排序後再寫，Windows 比對解析後的內容

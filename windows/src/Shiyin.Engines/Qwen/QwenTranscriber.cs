@@ -45,6 +45,8 @@ public static class QwenTranscriber
             {
                 var text = language.Profile.Transcription.Traditional ? language.Profile.FixScript(ChineseScript.ToTaiwan(piece.Text)) : piece.Text;
                 if (text.Length == 0) continue;
+                // 詞彙表被照抄成一句（M§6.2）：輸出是簡體，詞彙可能是繁體或簡體，轉換前後都比
+                if (WhisperRules.EchoesGlossary(piece.Text, context, glossary) || WhisperRules.EchoesGlossary(text, context, glossary)) continue;
                 segments.Add(new TranscribedSegment(piece.Start / WhisperRules.SampleRate, piece.End / WhisperRules.SampleRate, text, piece.Trimmed));
             }
             control.OnProgress(Math.Min(1, end / total));
