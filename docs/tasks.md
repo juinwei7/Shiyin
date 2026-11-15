@@ -7,10 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 介面改版：人有臉、會議頁上方、人物頁（R83～R85，design §58～§60、design-windows §11.22、D167；2026-11-15 使用者決定）
-
-- [ ] **UI3 Windows 頭像、會議頁上方、人物頁**（design-windows §11.22）。驗證：`dotnet test`（人物的查詢、標準答案）；虛擬機截圖
-
 ## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
 
 - [~] **FC3 後台**（§61.1）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`，再 `wrangler deploy`（先 migration 再 deploy）

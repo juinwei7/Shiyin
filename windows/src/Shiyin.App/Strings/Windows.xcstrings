@@ -834,6 +834,23 @@
         }
       }
     },
+    "也可以在側欄的「人物」管理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also manage them under People in the sidebar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "也可以在侧边栏的“人物”管理"
+          }
+        }
+      }
+    },
     "也可以用 Ctrl＋＋、Ctrl＋－ 調整": {
       "extractionState": "manual",
       "localizations": {

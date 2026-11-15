@@ -308,7 +308,8 @@ public sealed class TranscriptTab
         var grid = new Grid { ColumnSpacing = 14, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(6) };
         // 時間、說話者的欄寬跟著文字大小（R59.2），放大時不會被擠掉
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Ui.C(58)) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(d.Speakers.Count > 0 || segment.Speaker is not null ? Ui.C(80) : 0) });
+        // 說話者欄放頭像加名字（M§58.2），比原本寬一點（同 Mac 的 72 → 96）
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(d.Speakers.Count > 0 || segment.Speaker is not null ? Ui.C(104) : 0) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         if (segment.Id == currentId) grid.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(34, 0x2D, 0x6A, 0x5D));
         else if (segment.Id == highlightId) grid.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(46, 0xB9, 0x7F, 0x06));
@@ -325,11 +326,15 @@ public sealed class TranscriptTab
         grid.Children.Add(time);
         if (segment.Speaker is int idx)
         {
+            // 頭像加名字（M§58.2、R83.2）：名字太長時切掉，頭像一直看得到
+            var avatar = Ui.Avatar(d.SpeakerName(idx) ?? "", Ui.Speaker(idx), Ui.C(18), idx == d.SelfIdx);
+            avatar.VerticalAlignment = VerticalAlignment.Center;
             var speaker = new HyperlinkButton
             {
-                Content = Ui.Text(d.SpeakerName(idx) ?? "", Ui.C(13), bold: true, color: Ui.Speaker(idx), wrap: false), Padding = new Thickness(0),
-                VerticalAlignment = VerticalAlignment.Top,
+                Content = Ui.Split(avatar, Ui.Text(d.SpeakerName(idx) ?? "", Ui.C(13), bold: true, color: Ui.Speaker(idx), wrap: false), 6), Padding = new Thickness(0),
+                VerticalAlignment = VerticalAlignment.Top, HorizontalContentAlignment = HorizontalAlignment.Left,
             };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(speaker, d.SpeakerName(idx) ?? "");
             ToolTipService.SetToolTip(speaker, L.T("點一下幫這位說話者改名"));
             speaker.Click += (_, _) => RenameFlyout(speaker, idx).ShowAt(speaker);
             Grid.SetColumn(speaker, 1);

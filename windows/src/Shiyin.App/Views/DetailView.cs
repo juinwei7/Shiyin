@@ -225,83 +225,121 @@ public sealed class DetailView
         }
         if (Detail.Speakers.Count > 0)
         {
-            var speakers = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            foreach (var idx in Detail.Speakers.Keys.Order())
+            // 與會者：頭像加名字，最多 4 位，其他收成「+N」（M§59、R84.1）
+            var speakers = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+            var ids = Detail.Speakers.Keys.Order().ToList();
+            foreach (var idx in ids.Take(VisibleSpeakers)) speakers.Children.Add(SpeakerChip(idx));
+            if (ids.Count > VisibleSpeakers)
             {
-                var name = Ui.Text(Detail.Speakers[idx], 13, color: Ui.Speaker(idx), wrap: false);
-                if (Detail.SpeakerSources.GetValueOrDefault(idx) == "voiceprint")
+                var more = new MenuFlyout();
+                foreach (var idx in ids.Skip(VisibleSpeakers))
+                    more.Items.Add(Ui.Item(Detail.Speakers[idx], () => window.State.SetTab(DetailTab.Transcript)));
+                var plus = new HyperlinkButton
                 {
-                    // 聲紋自動帶入的名字（M§21.4，同 Mac 的 AutoSpeakerName）：名字本身可以點（沒有框和箭頭），
-                    // 後面接一個小膠囊「自動」。點名字直接選是別人（最像的幾位認識的人，一次改名、記住聲音、改會議紀錄，R33.4），或說不是他
-                    var menu = new MenuFlyout();
-                    var others = Detail.SpeakerCandidates.GetValueOrDefault(idx) ?? [];
-                    if (others.Count > 0)
-                    {
-                        menu.Items.Add(Ui.Item(L.T("是別人："), () => { }, enabled: false));
-                        foreach (var other in others)
-                            menu.Items.Add(Ui.Item(other, () => host.Controller.RenameSpeaker(meeting.Id!.Value, idx, other)));
-                    }
-                    menu.Items.Add(Ui.Item(L.T("其他人…（到逐字稿改名）"), () => window.State.SetTab(DetailTab.Transcript)));
-                    menu.Items.Add(new MenuFlyoutSeparator());
-                    menu.Items.Add(Ui.Item(L.F("不是%@（不知道是誰）", Detail.Speakers[idx]), () => host.Controller.RejectVoiceprintMatch(meeting.Id!.Value, idx)));
-                    var button = new HyperlinkButton { Content = name, Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
-                    button.Click += (_, _) => menu.ShowAt(button);
-                    Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.F("%@（自動）", Detail.Speakers[idx]));
-                    var badge = new Border
-                    {
-                        Child = Ui.Text(L.T("自動"), 10, color: Ui.Secondary, wrap: false), Background = Ui.Subtle,
-                        CornerRadius = new CornerRadius(7), Padding = new Thickness(5, 0, 5, 1), VerticalAlignment = VerticalAlignment.Center,
-                    };
-                    var auto = Ui.Row(4, button, badge);
-                    ToolTipService.SetToolTip(auto, L.T("拾音認出這個人的聲音，自動帶入名字。不對的話點名字"));
-                    speakers.Children.Add(auto);
-                }
-                else
-                {
-                    name.VerticalAlignment = VerticalAlignment.Center;
-                    speakers.Children.Add(name);
-                }
+                    Content = Ui.Text($"+{ids.Count - VisibleSpeakers}", 13, color: Ui.Secondary, wrap: false), Padding = new Thickness(2, 0, 2, 0),
+                    MinHeight = 0, VerticalAlignment = VerticalAlignment.Center,
+                };
+                plus.Click += (_, _) => more.ShowAt(plus);
+                ToolTipService.SetToolTip(plus, L.T("其他與會者"));
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(plus, L.T("其他與會者"));
+                speakers.Children.Add(plus);
             }
             info.Children.Add(speakers);
         }
         else if (meeting.ParticipantList.Count > 0) info.Children.Add(Ui.Text(string.Join(L.T("、"), meeting.ParticipantList), 13, color: Ui.Secondary, wrap: false));
 
         var menus = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var templates = window.State.Templates;
-        var template = new DropDownButton { Content = templates.FirstOrDefault(t => t.Id == meeting.TemplateId)?.DisplayName() ?? L.T("一般會議") };
-        ToolTipService.SetToolTip(template, L.T("會議紀錄的範本。換了範本之後，從「更多 → 重新處理」選「重新整理會議紀錄」就會照新範本整理"));
-        var templateMenu = new MenuFlyout();
-        foreach (var t in templates) templateMenu.Items.Add(Ui.Check(t.DisplayName(), t.Id == meeting.TemplateId, () => host.Controller.SetTemplate(meeting.Id!.Value, t.Id)));
-        template.Flyout = templateMenu;
-        menus.Children.Add(template);
-        var language = new DropDownButton { Content = meeting.MeetingLanguage.Name() };
-        ToolTipService.SetToolTip(language, L.T("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄"));
-        var languageMenu = new MenuFlyout();
-        foreach (var l in MeetingLanguages.All) languageMenu.Items.Add(Ui.Check(l.Name(), l == meeting.MeetingLanguage, () => host.Controller.SetMeetingLanguage(meeting.Id!.Value, l)));
-        language.Flyout = languageMenu;
-        menus.Children.Add(language);
+        menus.Children.Add(MeetingSettingsMenu());
         // 會議的參考文件（M§39.4、design-windows §11.8）：垃圾桶裡的會議不放
         if (!IsTrashed) menus.Children.Add(DocumentsMenu());
-        // 錄音中先填人數（M§26.2）：錄完轉錄時用
-        if (IsRecordingThis)
+        foreach (var child in info.Children.OfType<FrameworkElement>()) child.VerticalAlignment = VerticalAlignment.Center;
+        // 放得下時同一列、選單靠右；放不下時選單換到下一行（同 Mac 的 ViewThatFits）
+        return new LeadingTrailing(info, menus);
+    }
+
+    /// <summary>會議頁上方最多顯示幾位與會者（M§59）</summary>
+    const int VisibleSpeakers = 4;
+
+    /// <summary>
+    /// 一位與會者：頭像加名字（M§58.2）。聲紋自動帶入的名字（M§21.4，同 Mac 的 AutoSpeakerName）：名字本身可以點（沒有框和箭頭），
+    /// 後面接一個小膠囊「自動」。點名字直接選是別人（最像的幾位認識的人，一次改名、記住聲音、改會議紀錄，R33.4），或說不是他
+    /// </summary>
+    FrameworkElement SpeakerChip(int idx)
+    {
+        var meeting = Detail.Meeting;
+        var avatar = Ui.Avatar(Detail.Speakers[idx], Ui.Speaker(idx), 20, idx == Detail.SelfIdx);
+        avatar.VerticalAlignment = VerticalAlignment.Center;
+        var name = Ui.Text(Detail.Speakers[idx], 13, color: Ui.Speaker(idx), wrap: false);
+        if (Detail.SpeakerSources.GetValueOrDefault(idx) != "voiceprint")
         {
-            var count = new DropDownButton { Content = meeting.MinSpeakers is int n ? L.F("大約 %lld 人", n) : L.T("人數：自動判斷") };
-            var countMenu = new MenuFlyout();
-            countMenu.Items.Add(Ui.Check(L.T("自動判斷"), meeting.MinSpeakers is null, () => host.Controller.SetMinSpeakers(meeting.Id!.Value, null)));
+            name.VerticalAlignment = VerticalAlignment.Center;
+            return Ui.Row(5, avatar, name);
+        }
+        var menu = new MenuFlyout();
+        var others = Detail.SpeakerCandidates.GetValueOrDefault(idx) ?? [];
+        if (others.Count > 0)
+        {
+            menu.Items.Add(Ui.Item(L.T("是別人："), () => { }, enabled: false));
+            foreach (var other in others)
+                menu.Items.Add(Ui.Item(other, () => host.Controller.RenameSpeaker(meeting.Id!.Value, idx, other)));
+        }
+        menu.Items.Add(Ui.Item(L.T("其他人…（到逐字稿改名）"), () => window.State.SetTab(DetailTab.Transcript)));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Ui.Item(L.F("不是%@（不知道是誰）", Detail.Speakers[idx]), () => host.Controller.RejectVoiceprintMatch(meeting.Id!.Value, idx)));
+        // 頭像也放進按鈕裡：點頭像、點名字都打開同一個選單（R83.2）
+        var button = new HyperlinkButton { Content = Ui.Row(5, avatar, name), Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
+        button.Click += (_, _) => menu.ShowAt(button);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.F("%@（自動）", Detail.Speakers[idx]));
+        var badge = new Border
+        {
+            Child = Ui.Text(L.T("自動"), 10, color: Ui.Secondary, wrap: false), Background = Ui.Subtle,
+            CornerRadius = new CornerRadius(7), Padding = new Thickness(5, 0, 5, 1), VerticalAlignment = VerticalAlignment.Center,
+        };
+        var auto = Ui.Row(4, button, badge);
+        ToolTipService.SetToolTip(auto, L.T("拾音認出這個人的聲音，自動帶入名字。不對的話點名字"));
+        return auto;
+    }
+
+    /// <summary>
+    /// 「會議設定」（M§59、R84.2）：範本、會議語言、大約幾個人（只在錄這場時）放在一個選單，分三段、打勾目前的選項；
+    /// 標題寫「&lt;範本&gt;・&lt;語言&gt;」
+    /// </summary>
+    DropDownButton MeetingSettingsMenu()
+    {
+        var meeting = Detail.Meeting;
+        var id = meeting.Id!.Value;
+        var templates = window.State.Templates;
+        var template = templates.FirstOrDefault(t => t.Id == meeting.TemplateId)?.DisplayName() ?? L.T("一般會議");
+        var recordingThis = IsRecordingThis;
+        var menu = new MenuFlyout();
+        menu.Items.Add(Ui.Item(L.T("範本"), () => { }, enabled: false));
+        foreach (var t in templates) menu.Items.Add(Ui.Check(t.DisplayName(), t.Id == meeting.TemplateId, () => host.Controller.SetTemplate(id, t.Id)));
+        // 會議語言（M§16.3）
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Ui.Item(L.T("會議語言"), () => { }, enabled: false));
+        foreach (var l in MeetingLanguages.All) menu.Items.Add(Ui.Check(l.Name(), l == meeting.MeetingLanguage, () => host.Controller.SetMeetingLanguage(id, l)));
+        // 錄音中先填人數（M§26.2）：錄完轉錄時用
+        if (recordingThis)
+        {
+            menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(Ui.Item(L.T("大約幾個人"), () => { }, enabled: false));
+            menu.Items.Add(Ui.Check(L.T("自動判斷"), meeting.MinSpeakers is null, () => host.Controller.SetMinSpeakers(id, null)));
             for (var i = 2; i <= 12; i++)
             {
                 var value = i;
-                countMenu.Items.Add(Ui.Check(L.F("%lld 人", value), meeting.MinSpeakers == value, () => host.Controller.SetMinSpeakers(meeting.Id!.Value, value)));
+                menu.Items.Add(Ui.Check(L.F("%lld 人", value), meeting.MinSpeakers == value, () => host.Controller.SetMinSpeakers(id, value)));
             }
-            count.Flyout = countMenu;
-            ToolTipService.SetToolTip(count, L.T("大約幾個人：人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準"));
-            menus.Children.Add(count);
         }
-        foreach (var child in info.Children.OfType<FrameworkElement>()) child.VerticalAlignment = VerticalAlignment.Center;
-        var wrap = new StackPanel { Spacing = 8 };
-        wrap.Children.Add(info);
-        wrap.Children.Add(menus);
-        return wrap;
+        var label = recordingThis && meeting.MinSpeakers is int n
+            ? L.F("%@・%@・大約 %lld 人", template, meeting.MeetingLanguage.Name(), n)
+            : L.F("%@・%@", template, meeting.MeetingLanguage.Name());
+        var button = new DropDownButton { Content = Ui.Row(6, new FontIcon { Glyph = "\uE9E9", FontSize = 14 }, Ui.Text(label, wrap: false)), Flyout = menu };
+        // 內容是圖示加文字時，無障礙名稱不會自動帶出來
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+        ToolTipService.SetToolTip(button, recordingThis
+            ? L.T("範本、會議語言、大約幾個人。人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
+            : L.T("範本和會議語言。換了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄"));
+        return button;
     }
 
     /// <summary>

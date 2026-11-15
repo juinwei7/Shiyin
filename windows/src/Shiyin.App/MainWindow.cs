@@ -30,6 +30,9 @@ public sealed class MainWindow : Window
     readonly AutoSuggestBox search = new() { PlaceholderText = L.T("搜尋所有會議"), Margin = new Thickness(12, 0, 12, 8), QueryIcon = new SymbolIcon(Symbol.Find) };
     readonly ListView list = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(4, 0, 4, 0) };
     readonly StackPanel folders = new() { Spacing = 2, Margin = new Thickness(8, 0, 8, 4) };
+    /// <summary>側欄上方的「會議｜人物」（M§60.2、R85.1）：垃圾桶裡、搜尋中不顯示</summary>
+    readonly SelectorBar sidebarSwitch = new() { Margin = new Thickness(8, 0, 8, 4) };
+    readonly PersonPage personPage;
     readonly StackPanel footer = new() { Spacing = 6, Margin = new Thickness(12, 6, 12, 10) };
     readonly Border detailHost = new();
     readonly InfoBar toast = new() { IsClosable = true, Severity = InfoBarSeverity.Informational, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 80), MaxWidth = 560 };
@@ -52,6 +55,7 @@ public sealed class MainWindow : Window
         WindowPlacement.MinimumSize(this, 960, 620);
         Ui.ContentScale = TextSizes.Scale(host.Settings.TextSize);   // 會議內容的文字大小（R59）
         detailView = new DetailView(host, this);
+        personPage = new PersonPage(host, this);
         Build();
         // 關掉主視窗只是藏起來（R13.3）
         AppWindow.Closing += (_, e) =>
@@ -109,13 +113,23 @@ public sealed class MainWindow : Window
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var sidebar = Ui.SidebarBackground(new Grid { BorderBrush = Ui.Divider, BorderThickness = new Thickness(0, 0, 1, 0) });
-        foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
+        foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             sidebar.RowDefinitions.Add(new RowDefinition { Height = h });
         Place(sidebar, toolbar, 0);
         Place(sidebar, search, 1);
-        Place(sidebar, folders, 2);
-        Place(sidebar, list, 3);
-        Place(sidebar, footer, 4);
+        Place(sidebar, sidebarSwitch, 2);
+        Place(sidebar, folders, 3);
+        Place(sidebar, list, 4);
+        Place(sidebar, footer, 5);
+        // 會議｜人物：不記在設定，每次打開都從會議開始（M§60.2）
+        foreach (var (mode, label) in new[] { (SidebarMode.Meetings, MeetingLanguages.Ui("會議", "Meetings")), (SidebarMode.People, L.T("人物")) })
+            sidebarSwitch.Items.Add(new SelectorBarItem { Text = label, Tag = mode });
+        sidebarSwitch.SelectionChanged += (_, _) =>
+        {
+            if (updatingSelection || sidebarSwitch.SelectedItem?.Tag is not SidebarMode mode) return;
+            detailView.FlushDrafts();
+            State.SetSidebar(mode);
+        };
         Grid.SetColumn(sidebar, 0);
         root.Children.Add(sidebar);
         Grid.SetColumn(detailHost, 1);
@@ -129,6 +143,7 @@ public sealed class MainWindow : Window
             if (updatingSelection) return;
             if (list.SelectedItem is ListViewItem { Tag: long id }) State.Select(id);
             else if (list.SelectedItem is ListViewItem { Tag: SearchHit hit }) OpenSearchHit(hit);
+            else if (list.SelectedItem is ListViewItem { Tag: PersonOverview person }) State.SelectPerson(person.Id);
         };
 
         // 拖放匯入（R3.1）
@@ -230,12 +245,31 @@ public sealed class MainWindow : Window
     public void Refresh()
     {
         BuildToolbar();
+        BuildSidebarSwitch();
         BuildFolders();
         BuildList();
         BuildFooter();
+        if (State.ShowsPeople)
+        {
+            // 人物頁（M§60.2）：會議的內容先收起來（編輯中的存草稿），播放照常
+            if (ReferenceEquals(detailHost.Child, detailView.Root)) detailView.FlushDrafts();
+            var page = personPage.Show(State.People.FirstOrDefault(p => p.Id == State.SelectedPerson));
+            if (!ReferenceEquals(detailHost.Child, page)) detailHost.Child = page;
+            return;
+        }
         if (State.Detail is { } detail) detailView.Show(detail);
         else detailView.Clear();
         detailHost.Child = State.Detail is null ? EmptyDetail() : detailView.Root;
+    }
+
+    /// <summary>「會議｜人物」跟著目前的模式；垃圾桶裡、搜尋中不顯示</summary>
+    void BuildSidebarSwitch()
+    {
+        sidebarSwitch.Visibility = State.ShowTrash || State.SearchActive ? Visibility.Collapsed : Visibility.Visible;
+        updatingSelection = true;
+        foreach (var item in sidebarSwitch.Items)
+            if ((SidebarMode)item.Tag == State.Sidebar && !ReferenceEquals(sidebarSwitch.SelectedItem, item)) sidebarSwitch.SelectedItem = item;
+        updatingSelection = false;
     }
 
     void BuildToolbar()
@@ -316,7 +350,7 @@ public sealed class MainWindow : Window
     void BuildFolders()
     {
         folders.Children.Clear();
-        if (State.ShowTrash || State.SearchActive) return;
+        if (State.ShowTrash || State.SearchActive || State.ShowsPeople) return;
         var all = AppController.Folders(State.Meetings);
         if (all.Count == 0) return;
         folders.Children.Add(Ui.Caption(L.T("資料夾")));
@@ -373,7 +407,8 @@ public sealed class MainWindow : Window
         rowViews.Clear();
         updatingSelection = true;
         list.Items.Clear();
-        if (State.SearchActive)
+        if (State.ShowsPeople) BuildPeopleList();
+        else if (State.SearchActive)
         {
             if (State.SearchResults.Count == 0) list.Items.Add(new ListViewItem { Content = Ui.Text(L.F("找不到「%@」", State.SearchQuery), color: Ui.Secondary), IsEnabled = false });
             foreach (var group in State.SearchResults.GroupBy(h => h.MeetingId))
@@ -408,10 +443,46 @@ public sealed class MainWindow : Window
         updatingSelection = false;
     }
 
+    /// <summary>人物列表（M§60.2、R85.1）：頭像、名字（我的話後面「（我）」）、「N 場會議・最近 &lt;日期&gt;」</summary>
+    void BuildPeopleList()
+    {
+        if (State.People.Count == 0)
+        {
+            var empty = Ui.Text(L.T("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。"), 13, color: Ui.Secondary);
+            empty.TextAlignment = TextAlignment.Center;
+            list.Items.Add(new ListViewItem { Content = empty, IsEnabled = false, Padding = new Thickness(16, 24, 16, 0) });
+            return;
+        }
+        foreach (var person in State.People)
+        {
+            var name = person.IsMe ? L.F("%@（我）", person.Name) : person.Name;
+            var summary = Views.PersonPage.SummaryLine(person);
+            var avatar = Ui.Avatar(person.Name, Ui.Person(person.Name), 26, person.IsMe);
+            avatar.VerticalAlignment = VerticalAlignment.Center;
+            var text = Ui.Column(2, Ui.Text(name, 14, wrap: false), Ui.Text(summary, 12, color: Ui.Secondary, wrap: false));
+            var row = Ui.Split(avatar, text, 10);
+            row.Padding = new Thickness(0, 4, 0, 4);
+            var item = new ListViewItem { Tag = person, Content = row };
+            // 列裡是好幾個元件：螢幕閱讀器、UI Automation 讀的名稱
+            AutomationProperties.SetName(item, name + MeetingLanguages.Ui("，", ", ") + summary);
+            list.Items.Add(item);
+            if (person.Id == State.SelectedPerson) list.SelectedItem = item;
+        }
+    }
+
     /// <summary>列表的樣子；搜尋結果（不顯示狀態）每次重建，回傳 null</summary>
     string? ListSignature()
     {
         if (State.SearchActive) return null;
+        if (State.ShowsPeople)
+        {
+            // 人物：名字、場數、日期、選了誰（每秒的進度更新不會重建）
+            var people = new System.Text.StringBuilder("people");
+            foreach (var p in State.People)
+                people.Append('\u001E').Append(p.Id).Append('\u001F').Append(p.Name).Append('\u001F').Append(p.MeetingCount)
+                    .Append('\u001F').Append(p.LastMeetingDate).Append('\u001F').Append(p.IsMe).Append('\u001F').Append(p.Id == State.SelectedPerson);
+            return people.ToString();
+        }
         var text = new System.Text.StringBuilder(State.ShowTrash ? "trash" : "meetings");
         // 右鍵選單的「移到資料夾」列出所有資料夾：資料夾變了也要重建
         foreach (var (name, _) in AppController.Folders(State.Meetings)) text.Append('\u001D').Append(name);
@@ -423,6 +494,7 @@ public sealed class MainWindow : Window
 
     void UpdateRows()
     {
+        if (State.ShowsPeople) return;
         updatingSelection = true;
         foreach (var row in State.FilteredMeetings)
             if (rowViews.TryGetValue(row.Id, out var view)) SetStatus(view, row);

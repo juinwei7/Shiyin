@@ -598,6 +598,8 @@ public sealed class SettingsWindow : Window
             column.Children.Add(Ui.Bar(null, Ui.Column(2, Ui.Text(label, 14), Ui.Caption(detail)),
                 Ui.Row(8, rename, Ui.IconButton(Symbol.Delete, L.F("刪除「%@」的聲音特徵（已經帶入的名字留著）", person.Name), () => { host.Controller.DeletePerson(person.Id); Show(); }))));
         }
+        // 人物頁（R85.5）：一起開過的會議、負責的待辦、改名和合併也在那裡
+        if (people.Count > 0) column.Children.Add(Ui.Text(L.T("也可以在側欄的「人物」管理"), 13, color: Ui.Secondary));
         return column;
     }
 
