@@ -7,10 +7,6 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
-## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
-
-- [~] **FC3 後台**（§61.1、§61.2 的統計）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`（「其他」的種類、Nemotron-3 的次數兩欄），再 `wrangler deploy`（先 migration 再 deploy）
-
 ## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
 
 - [~] **IS1 Mac 錄音島**（§57.1～§57.3）：程式完成，DEBUG 版驗過（2026-11-15，見 commit 訊息）。還差（要使用者在電腦前，島會出現在畫面上）：真的錄音時島在瀏海兩側、全螢幕的 Zoom／Keynote 上看得到、換桌面跟著走；滑鼠移上去展開、移開收回；拾音不在前面時按島上的「暫停」「標記重點」一下就有作用、拾音不會跑到前面；分享整個螢幕時對方看不到島
@@ -80,7 +76,6 @@
   - 虛擬機：伺服器轉錄的結果在會議頁；「等企業伺服器」時按「改在這台電腦轉錄」，用本機的引擎轉完（R50.5）；使用說明有企業伺服器的隱私段落（R52.1）；按「登出」後設定回到沒登入、正式轉錄改回本機的引擎、整理工具原本是公司的改成「還沒設定」、公司的詞彙表刪掉（R49.5、R53.4）
   - 有瀏覽器的 Windows 電腦：用真的瀏覽器登入，回到拾音顯示「已登入」（R49.1）
   - Mac：按下加入連結確認視窗的「加入」走完登入（登入頁會出現在使用者畫面上，先跟使用者說）
-- [~] **E6 統計的後台**（R52.2）：app（Mac、Windows）已經送 `engines.server`、`summarizer.enterprise`、`errorDetail.summarizeProvider.enterprise`，`workers/usage` 的 worker 和 `schema.sql` 加好了。還差：使用者跑 `migrate-enterprise.sql`、部署 worker（`cd workers/usage && npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-enterprise.sql && npx wrangler@4 deploy`）；**先跑 migration 再部署**，不然新的 worker 寫不存在的欄會失敗
 - [ ] **E7 接上機房的伺服器**（等伺服器專案裝好）：Mac、Windows 各錄一場真的會議（要使用者）
   - 驗證：結果跟同一段錄音在本機用同一個引擎轉的一樣（R50.4）；一小時的錄音上傳、轉錄各花多久寫進 design §36；用正式版（不是 DEBUG）登入，登入資料存在鑰匙圈（Windows 是認證管理員），重新開啟拾音還是登入的（R49.4、R49.6）
 
