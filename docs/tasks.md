@@ -10,7 +10,6 @@
 ## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
 
 - [~] **FC3 後台**（§61.1、§61.2 的統計）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`（「其他」的種類、Nemotron-3 的次數兩欄），再 `wrangler deploy`（先 migration 再 deploy）
-- [ ] **CK1 驗收清單**：把 tasks.md 裡要使用者在電腦前的 `[~]` 整理成一份照順序走的清單（Mac、Windows 各一份）
 
 ## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
 
