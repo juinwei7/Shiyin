@@ -11,6 +11,36 @@ enum CaptureFormat {
     static let mono = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: 1, interleaved: false)!
 }
 
+/// 「錄製系統音訊」的權限（design §51.1、D161）：系統沒有公開的查法，用私有的 TCCAccessPreflight
+/// （0 允許、1 拒絕、其他還沒問過）。符號找不到（系統改了做法）時是 nil，不提示
+enum SystemAudioPermission: String {
+    case granted, denied, notDetermined
+
+    static func status() -> SystemAudioPermission? {
+        #if DEBUG
+        if let debugOverride { return debugOverride }
+        #endif
+        guard let preflight else { return nil }
+        switch preflight("kTCCServiceAudioCapture" as CFString, nil) {
+        case 0: return .granted
+        case 1: return .denied
+        default: return .notDetermined
+        }
+    }
+
+    #if DEBUG
+    /// -debugSystemAudioPermission、shiyinctl systempermission 蓋掉查到的權限（design §51.1）
+    nonisolated(unsafe) static var debugOverride = UserDefaults.standard.string(forKey: "debugSystemAudioPermission").flatMap(SystemAudioPermission.init)
+    #endif
+
+    private static let preflight: (@convention(c) (CFString, CFDictionary?) -> Int32)? = {
+        guard let handle = dlopen("/System/Library/PrivateFrameworks/TCC.framework/Versions/A/TCC", RTLD_NOW),
+              let symbol = dlsym(handle, "TCCAccessPreflight") else { return nil }
+        // 回傳的是 32 位元的列舉，讀成更寬的型別會讀到暫存器高位的垃圾
+        return unsafeBitCast(symbol, to: (@convention(c) (CFString, CFDictionary?) -> Int32).self)
+    }()
+}
+
 /// 音源：把收到的音訊轉成 16 kHz 單聲道後交給 `onSamples`。callback 在音訊執行緒上，不能做重的事。
 protocol AudioSource: AnyObject {
     var onSamples: (([Float]) -> Void)? { get set }
@@ -295,7 +325,10 @@ final class FileSource: MicrophoneInput {
                 self.lock.withLock { self.position = end }
                 // 停住的聲道照樣往前走（時間在過），只是沒有送出資料，跟真的裝置停了一樣
                 if !stalled.contains(0) { self.onSamples?(chunk) }
-                if !stalled.contains(1) { self.mirror?.onSamples?(chunk) }
+                if !stalled.contains(1), let mirror = self.mirror {
+                    // 電腦聲音那一聲道全是 0：模擬「錄製系統音訊」被拒絕（design §51.1）
+                    mirror.onSamples?(mirror.silent ? [Float](repeating: 0, count: chunk.count) : chunk)
+                }
                 try? await Task.sleep(for: .seconds(0.1 / speed))
             }
         }
@@ -321,6 +354,8 @@ final class FileSource: MicrophoneInput {
 /// 只負責接收 FileSource 轉送的音訊，自己不產生資料
 final class MirroredSource: AudioSource {
     var onSamples: (([Float]) -> Void)?
+    /// 送全是 0 的音訊（record-sim 的第三個參數 2）
+    var silent = false
     var onInterruption: (() -> Void)?
     func start() throws {}
     func stop() {}

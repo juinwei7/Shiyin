@@ -63,8 +63,14 @@ struct RecordingPanel: View {
             if let hint = recorder.levelHint {
                 // 收音提醒（design §26.1）
                 HStack(spacing: 12) {
-                    Label(recorder.text(for: hint), systemImage: hint == .noisy ? "waveform.badge.exclamationmark" : "mic.badge.xmark")
+                    Label(recorder.text(for: hint), systemImage: hint.symbol)
                     Spacer()
+                    if hint == .systemDenied {
+                        // 錄不到電腦聲音（design §51.1、R75.2）：允許之後拾音自己接上，不用重新開始錄音
+                        Button("打開系統設定") { Recorder.openPrivacySettings("Privacy_AudioCapture") }
+                            .buttonStyle(.borderedProminent)
+                            .help("允許之後，拾音會自己接上電腦的聲音")
+                    }
                     Button("知道了") { recorder.dismissLevelHint() }
                         .help("這場錄音不再提示這件事")
                 }
@@ -172,7 +178,8 @@ struct RecordingPanel: View {
 
     private func warning(_ recorder: Recorder) -> String? {
         if let warning = recorder.deviceWarning { return warning }
-        if recorder.hasSystem && recorder.systemSilent {
+        // 錄不到電腦聲音的提示（design §51.1）出現時不再講一次
+        if recorder.hasSystem && recorder.systemSilent && recorder.levelHint != .systemDenied {
             return String(localized: "超過 15 秒沒有收到系統聲音：請確認線上會議有聲音，並在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音")
         }
         return recorder.liveStatus.isEmpty ? nil : recorder.liveStatus

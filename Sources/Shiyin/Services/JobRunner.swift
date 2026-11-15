@@ -29,6 +29,9 @@ enum AppSettings {
     static let notesViewKey = "notesView"   // 紀錄分頁：list（條列）／mindMap（心智圖，design §42.4）
     static let mcpEnabledKey = "mcpEnabled"   // 讓 AI 工具讀取會議（本地 MCP，design §44.1），預設關
     static let chineseScriptKey = "chineseScript"   // 中文的字：traditional／simplified（沒有值 = traditional，design §47.2）
+    static let hideFromScreenSharingKey = "hideFromScreenSharing"   // 分享畫面時藏起拾音的視窗，預設關（design §53）
+    static let selfPersonKey = "selfPersonId"   // 錄過「我的聲音」的那個人（design §56.1）
+    static let remindersListKey = "remindersListId"   // 提醒事項裡「拾音」列表的 id（design §52.1）
 
     private static var d: UserDefaults { .standard }
 
@@ -92,6 +95,8 @@ enum AppSettings {
     static var globalHotKey: Bool { flag(globalHotKeyKey, default: true) }
     /// 記住說話者的聲音，之後的會議自動帶入名字（design §21.4、R19.3）
     static var voiceprints: Bool { flag(voiceprintsKey, default: true) }
+    /// 分享畫面時藏起拾音的視窗（design §53、R77）
+    static var hideFromScreenSharing: Bool { flag(hideFromScreenSharingKey, default: false) }
     /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）
     static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
     /// 很久沒人說話時提醒，30 分鐘後自動停止（design §35、R48.5）

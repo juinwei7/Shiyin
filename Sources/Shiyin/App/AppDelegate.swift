@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppModel.shared.start()
         installSpaceKey()
+        WindowSharing.install()
         #if DEBUG
         DebugControl.install()
         #endif
@@ -21,6 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 回到前景時更新 claude、codex 的登入狀態（使用者可能剛在終端機登入，design §34.1）
     func applicationDidBecomeActive(_ notification: Notification) {
         Task { await CLILogin.refreshIfStale() }
+        // 使用者可能剛在提醒事項裡完成了待辦（design §52.2）
+        AppModel.shared.refreshReminderStatus()
     }
 
     /// 拖到 Dock 圖示、Finder 的「打開方式」（R1.3）；企業伺服器的加入連結 shiyin://join（R49.7）；

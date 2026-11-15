@@ -51,6 +51,7 @@ final class Recorder {
     enum LevelHint: String {
         case silent   // 麥克風的聲音完全是 0
         case suppressed   // 幾乎沒聲音：被別的 app 的語音處理佔住（design §45、R57）
+        case systemDenied   // 沒有「錄製系統音訊」的權限，電腦聲音全是 0（design §51.1、R75）
         case quiet    // 有人在說話，但聲音很小
         case noisy    // 背景一直很大聲
 
@@ -59,8 +60,18 @@ final class Recorder {
             switch self {
             case .silent: return String(localized: "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音與轉錄」換一個。")
             case .suppressed: return Self.suppressedText(nil)
+            case .systemDenied: return String(localized: "拾音沒有「錄製系統音訊」的權限，錄不到電腦的聲音（線上會議裡其他人說話的聲音）：請到「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音。")
             case .quiet: return String(localized: "聲音有點小：手機或筆電放近說話的人一點。")
             case .noisy: return String(localized: "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴拾音大約幾個人。")
+            }
+        }
+
+        /// 提示列、選單列的圖示
+        var symbol: String {
+            switch self {
+            case .noisy: return "waveform.badge.exclamationmark"
+            case .systemDenied: return "speaker.slash"
+            default: return "mic.badge.xmark"
             }
         }
 
@@ -112,6 +123,11 @@ final class Recorder {
     @ObservationIgnored var onLevelHint: ((LevelHint) -> Void)?
     @ObservationIgnored private var noisySeconds = 0
     @ObservationIgnored private var quietSeconds = 0
+    /// 這場錄音看過「錄製系統音訊」被拒絕（design §51.1）：之後每秒再查，變成允許就重新接上電腦聲音
+    @ObservationIgnored private var systemDeniedSeen = false
+    @ObservationIgnored private var systemPermission: SystemAudioPermission?
+    /// 因為允許了權限而重新接上電腦聲音的次數（DEBUG 的 state）
+    @ObservationIgnored private(set) var permissionRestarts = 0
 
     /// 忘了停止錄音（design §35、R48）：最後有人說話的錄音秒數；即時逐字稿有沒有接上音訊
     @ObservationIgnored private var lastSpeechAt: Double = 0
@@ -204,7 +220,7 @@ final class Recorder {
 
     #if DEBUG
     /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）
-    func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, language: MeetingLanguage) {
+    func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, systemSilent: Bool = false, language: MeetingLanguage) {
         guard !isRecording else { return }
         source = both ? "both" : "mic"
         self.language = language
@@ -216,6 +232,7 @@ final class Recorder {
             var list: [(Int, AudioSource)] = [(0, source)]
             if both {
                 let mirror = MirroredSource()
+                mirror.silent = systemSilent
                 source.mirror = mirror
                 list.append((1, mirror))
             }
@@ -440,6 +457,9 @@ final class Recorder {
             micHintDismissed = false
             micHintNotified = false
             (noisySeconds, quietSeconds) = (0, 0)
+            systemDeniedSeen = false
+            systemPermission = nil
+            permissionRestarts = 0
             suppressedBy = nil
             resetMicFloor()
             lastSpeechAt = 0
@@ -597,7 +617,16 @@ final class Recorder {
 
     /// 收音提醒（design §26.1）：每秒看麥克風最近 30 秒的音量。第 90 百分位是說話的音量、第 10 百分位是背景
     private func checkLevels(_ writer: RecordingWriter) {
-        guard hasMic, !isPaused else { return }
+        guard !isPaused else { return }
+        let systemDenied = checkSystemPermission(writer)
+        guard hasMic else {
+            updateLevelHint(systemDenied ? .systemDenied : nil)
+            #if DEBUG
+            levelCheck = ["hint": levelHint?.rawValue ?? "", "systemPermission": systemPermission?.rawValue ?? "",
+                          "systemSilentSeconds": writer.silence(0), "text": levelHint.map { text(for: $0) } ?? ""]
+            #endif
+            return
+        }
         let silent = writer.silence(0) > 10
         let recent = writer.recentLevels(0)
         let levels = recent.sorted()
@@ -630,21 +659,46 @@ final class Recorder {
                 }
             }
         }
-        let hint: LevelHint? = silent ? .silent : suppressed ? .suppressed : quietSeconds >= 60 ? .quiet : noisySeconds >= 45 ? .noisy : nil
-        let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
-        if shown != levelHint {
-            // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）
-            if shown == .suppressed { suppressedBy = microphoneUser?() }
-            levelHint = shown
-            // 第一次出現才通知（R42.1）；提示消失又出現不再通知
-            if let shown, notifiedLevelHints.insert(shown).inserted { onLevelHint?(shown) }
-        }
+        let hint: LevelHint? = silent ? .silent : suppressed ? .suppressed : systemDenied ? .systemDenied
+            : quietSeconds >= 60 ? .quiet : noisySeconds >= 45 ? .noisy : nil
+        updateLevelHint(hint)
         #if DEBUG
         levelCheck = ["speech": speech, "background": background, "frames": levels.count, "silentSeconds": writer.silence(0),
                       "noisySeconds": noisySeconds, "quietSeconds": quietSeconds, "hint": levelHint?.rawValue ?? "",
                       "nearSilent": nearSilent, "floor": micFloor ?? 0, "suppressedApp": suppressedBy?.name ?? "",
+                      "systemPermission": systemPermission?.rawValue ?? "",
+                      "systemSilentSeconds": hasSystem ? writer.silence(source == "both" ? 1 : 0) : 0,
                       "text": levelHint.map { text(for: $0) } ?? ""]
         #endif
+    }
+
+    private func updateLevelHint(_ hint: LevelHint?) {
+        let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
+        guard shown != levelHint else { return }
+        // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）
+        if shown == .suppressed { suppressedBy = microphoneUser?() }
+        levelHint = shown
+        // 第一次出現才通知（R42.1）；提示消失又出現不再通知
+        if let shown, notifiedLevelHints.insert(shown).inserted { onLevelHint?(shown) }
+    }
+
+    /// 錄不到電腦聲音（design §51.1、R75.2）：電腦聲音那一聲道完全是 0 超過 5 秒時才查權限；被拒絕就提示。
+    /// 看過被拒絕之後每秒再查（按了「知道了」也一樣），變成允許就重新接上電腦聲音，不用重新開始錄音
+    private func checkSystemPermission(_ writer: RecordingWriter) -> Bool {
+        guard hasSystem else { return false }
+        let channel = source == "both" ? 1 : 0
+        guard systemDeniedSeen || writer.silence(channel) >= 5 else { return false }
+        systemPermission = SystemAudioPermission.status()
+        if systemPermission == .denied {
+            systemDeniedSeen = true
+            return writer.silence(channel) >= 5
+        }
+        if systemDeniedSeen && systemPermission == .granted {
+            systemDeniedSeen = false
+            permissionRestarts += 1
+            restartSource(channel, counted: false)
+        }
+        return false
     }
 
     /// 正在收音的是這台 Mac 的內建麥克風；模擬錄音沒有真的裝置，DEBUG 用 -debugMicBuiltIn YES 當成內建（design §45.4）

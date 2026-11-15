@@ -26,13 +26,35 @@ struct ReadingColumn<Content: View>: View {
     }
 }
 
-struct NotesSection<Content: View>: View {
+struct NotesSection<Content: View, Accessory: View>: View {
     let title: String
-    @ViewBuilder var content: Content
+    /// 標題右邊的按鈕（「待辦」的「加到提醒事項」，design §52.2）
+    var accessory: Accessory
+    var content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) where Accessory == EmptyView {
+        self.title = title
+        self.accessory = EmptyView()
+        self.content = content()
+    }
+
+    init(title: String, @ViewBuilder accessory: () -> Accessory, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.accessory = accessory()
+        self.content = content()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).contentTitleFont(18)
+            if Accessory.self == EmptyView.self {
+                Text(title).contentTitleFont(18)
+            } else {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title).contentTitleFont(18)
+                    Spacer()
+                    accessory
+                }
+            }
             content
         }
     }
@@ -205,7 +227,18 @@ struct NotesPage: View {
                     NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions, detail: detail) { .decisions($0) } }
                 }
                 if !notes.actionItems.isEmpty {
-                    NotesSection(title: String(localized: "待辦")) { ActionItemsTable(items: notes.actionItems, detail: detail) { .actionItems($0) } }
+                    NotesSection(title: String(localized: "待辦")) {
+                        // 加到提醒事項（design §52.2、R76.1）：垃圾桶裡的會議不顯示
+                        if detail.meeting.deletedAt == nil {
+                            Button("加到提醒事項", systemImage: "checklist") { model.addActionItemsToReminders() }
+                                .buttonStyle(.borderless)
+                                .font(.callout)
+                                .disabled(model.addingReminders)
+                                .help("把這場會議的待辦加到「提醒事項」app 的「\(Reminders.listTitle)」列表，加過的不會重複加")
+                        }
+                    } content: {
+                        ActionItemsTable(items: notes.actionItems, detail: detail) { .actionItems($0) }
+                    }
                 }
                 if !notes.openQuestions.isEmpty {
                     NotesSection(title: String(localized: "未決問題")) { ItemList(items: notes.openQuestions, detail: detail) { .openQuestions($0) } }
@@ -398,6 +431,13 @@ struct ActionItemsTable: View {
                             .fixedSize(horizontal: false, vertical: true)
                         if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
                         if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }
+                        // 已經加到提醒事項的（design §52.2、R76.4）：完成了打勾
+                        if detail != nil, let done = model.reminderStatus[Reminders.key(item.task)] {
+                            Image(systemName: done ? "checkmark.circle.fill" : "checklist")
+                                .foregroundStyle(done ? Color.celadon : Color.secondary)
+                                .contentFont(.caption)
+                                .help(done ? "已在提醒事項裡完成" : "已加到提醒事項")
+                        }
                     }
                     .gridColumnAlignment(.leading)
                     Text(item.due.isEmpty ? "—" : item.due)

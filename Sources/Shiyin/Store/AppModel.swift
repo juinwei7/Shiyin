@@ -248,6 +248,9 @@ final class AppModel {
     var queuedCount = 0
     var errorMessage: String?
     var noticeMessage: String?
+    /// 目前這場會議的待辦哪些在提醒事項裡：item 鍵 → 完成了沒（design §52.2）
+    var reminderStatus: [String: Bool] = [:]
+    var addingReminders = false
     /// 第二版留下的 Python 環境、mlx 模型（R10.5）
     var legacyBytes: Int64 = 0
 
@@ -482,6 +485,7 @@ final class AppModel {
         loaded.linkReviewItems()
         detail = loaded
         syncReviewDraft()
+        if previous?.id != meeting.id { refreshReminderStatus() }
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL, mixChannels: meeting.channels == "both") } else { player.unload() }
         }
@@ -692,12 +696,12 @@ final class AppModel {
 
     #if DEBUG
     /// 只在 DEBUG：用音訊檔模擬錄音（shiyinctl record-sim）
-    func startSimulatedRecording(file: URL, speed: Double, both: Bool) {
+    func startSimulatedRecording(file: URL, speed: Double, both: Bool, systemSilent: Bool = false) {
         guard !recorder.isRecording, let meeting = try? db.insertMeeting(Meeting(
             meetingDate: DateText.string(Date()), sourceFilename: String(localized: "模擬錄音"), source: "recording",
             channels: both ? "both" : "mic", folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
             audioExtension: nil) else { return }
-        recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both, language: meeting.meetingLanguage)
+        recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both, systemSilent: systemSilent, language: meeting.meetingLanguage)
         reload()
         selection = meeting.id
     }

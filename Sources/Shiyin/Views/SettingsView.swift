@@ -1002,6 +1002,7 @@ struct ModelRow: View {
 struct AdvancedSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.textSizeKey) private var textSize = 0
+    @AppStorage(AppSettings.hideFromScreenSharingKey) private var hideFromScreenSharing = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage(Updater.urlKey) private var updateURL = ""
     @State private var showingUsageStats = false
@@ -1017,6 +1018,10 @@ struct AdvancedSettings: View {
                     ForEach(TextSize.levels, id: \.self) { Text(TextSize.label($0)).tag($0) }
                 }
                 Text("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 ⌘＋、⌘－ 調整，⌘0 回到標準大小。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                // 分享畫面時藏起拾音的視窗（design §53、R77）
+                Toggle("分享畫面時藏起拾音的視窗", isOn: $hideFromScreenSharing)
+                Text("打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             // 讓 AI 工具讀取會議（本地 MCP，design §44.4、R69）

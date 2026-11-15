@@ -3551,6 +3551,23 @@
         }
       }
     },
+    "允許之後，拾音會自己接上電腦的聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许之后，拾音会自己接上电脑的声音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once allowed, Shiyin picks up the computer's audio on its own"
+          }
+        }
+      }
+    },
     "先不用": {
       "extractionState": "manual",
       "localizations": {
@@ -4158,6 +4175,23 @@
         }
       }
     },
+    "分享畫面時藏起拾音的視窗": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享画面时藏起拾音的窗口"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Shiyin's windows when sharing the screen"
+          }
+        }
+      }
+    },
     "分頁": {
       "extractionState": "manual",
       "localizations": {
@@ -4574,6 +4608,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加到 Codex"
+          }
+        }
+      }
+    },
+    "加到提醒事項": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加到提醒事项"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Reminders"
           }
         }
       }
@@ -6542,6 +6593,52 @@
         }
       }
     },
+    "已加到提醒事項": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加到提醒事项"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added to Reminders"
+          }
+        }
+      }
+    },
+    "已加到提醒事項的「%@」列表：%lld 項": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加到提醒事项的“%@”列表：%lld 项"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added %2$lld to-do to the “%1$@” list in Reminders"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added %2$lld to-dos to the “%1$@” list in Reminders"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "已匯入「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -6623,6 +6720,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已取消转录"
+          }
+        }
+      }
+    },
+    "已在提醒事項裡完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在提醒事项里完成"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed in Reminders"
           }
         }
       }
@@ -7785,6 +7899,23 @@
         }
       }
     },
+    "打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时，别人看不到拾音（例如其他会议的记录）。截图、屏幕录像也拍不到拾音。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, people can't see Shiyin (for example, notes from other meetings) when you share your whole screen in Zoom, Teams, or Google Meet. Screenshots and screen recordings won't show Shiyin either."
+          }
+        }
+      }
+    },
     "打開拾音": {
       "extractionState": "manual",
       "localizations": {
@@ -7968,6 +8099,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "找不到可以用的麦克风"
+          }
+        }
+      }
+    },
+    "找不到提醒事項裡的「拾音」列表": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到提醒事项里的“拾音”列表"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't find the “Shiyin” list in Reminders"
           }
         }
       }
@@ -8239,6 +8387,23 @@
         }
       }
     },
+    "把這場會議的待辦加到「提醒事項」app 的「%@」列表，加過的不會重複加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把这场会议的待办加到“提醒事项”app 的“%@”列表，加过的不会重复加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add this meeting's to-dos to the “%@” list in the Reminders app. To-dos already added aren't added again."
+          }
+        }
+      }
+    },
     "把這場會議移到垃圾桶？": {
       "extractionState": "manual",
       "localizations": {
@@ -8422,6 +8587,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "拾音正在录音"
+          }
+        }
+      }
+    },
+    "拾音沒有「錄製系統音訊」的權限，錄不到電腦的聲音（線上會議裡其他人說話的聲音）：請到「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音没有“录制系统音频”的权限，录不到电脑的声音（线上会议里其他人说话的声音）：请到“系统设置 → 隐私与安全性 → 录制屏幕与系统录音”允许拾音。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin doesn't have permission to record system audio, so it can't record your computer's audio (other people talking in an online meeting). Allow Shiyin in System Settings → Privacy & Security → Screen & System Audio Recording."
+          }
+        }
+      }
+    },
+    "拾音沒有使用提醒事項的權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音没有使用提醒事项的权限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin doesn't have access to Reminders"
           }
         }
       }
@@ -8888,6 +9087,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "提问"
+          }
+        }
+      }
+    },
+    "提醒事項裡沒有可以建立列表的帳號": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提醒事项里没有可以建立列表的账号"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders has no account where a list can be created"
           }
         }
       }
@@ -12639,6 +12855,23 @@
         }
       }
     },
+    "沒辦法加到提醒事項：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没办法加到提醒事项：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't add to Reminders: %@"
+          }
+        }
+      }
+    },
     "沒辦法建立 PDF": {
       "extractionState": "manual",
       "localizations": {
@@ -15531,6 +15764,23 @@
         }
       }
     },
+    "請到「系統設定 → 隱私權與安全性 → 提醒事項」允許拾音，再按一次「加到提醒事項」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请到“系统设置 → 隐私与安全性 → 提醒事项”允许拾音，再按一次“加到提醒事项”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Shiyin in System Settings → Privacy & Security → Reminders, then click “Add to Reminders” again."
+          }
+        }
+      }
+    },
     "請到「系統設定 → 隱私權與安全性 → 麥克風」打開「拾音」，再重新開始錄音。": {
       "extractionState": "manual",
       "localizations": {
@@ -17081,6 +17331,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这场会议还没有会议记录，画不出心智图"
+          }
+        }
+      }
+    },
+    "這場的待辦都已經在提醒事項了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场的待办都已经在提醒事项了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting's to-dos are already in Reminders"
           }
         }
       }

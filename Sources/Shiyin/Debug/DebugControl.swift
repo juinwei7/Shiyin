@@ -426,8 +426,20 @@ enum DebugControl {
         case "recordlang":   // recordlang <語言代碼>：錄音中換會議語言（等於按「改回」；zh、en、ja、yue、ko…）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
         case "record-sim":
-            // record-sim <音檔> <倍速> <both: 1/0>
-            model.startSimulatedRecording(file: URL(fileURLWithPath: args[1]), speed: Double(args[2]) ?? 1, both: args.count > 3 && args[3] == "1")
+            // record-sim <音檔> <倍速> <both: 1/0/2>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）
+            let channels = args.count > 3 ? args[3] : "0"
+            model.startSimulatedRecording(file: URL(fileURLWithPath: args[1]), speed: Double(args[2]) ?? 1,
+                                          both: channels == "1" || channels == "2", systemSilent: channels == "2")
+        case "reminders": model.selection = id; model.addActionItemsToReminders()   // reminders <會議 id>：等於按「加到提醒事項」（design §52.2）
+        case "reminderdone":   // reminderdone <會議 id> <第幾項，0 開始>：假的提醒事項裡把那場會議的第幾項設成完成
+            let matching = FakeReminders.shared.entries.indices.filter { Reminders.meetingAndKey(FakeReminders.shared.entries[$0].item.url)?.meetingId == id }
+            if let n = Int(args[2]), n < matching.count { FakeReminders.shared.entries[matching[n]].completed = true }
+            model.refreshReminderStatus()
+        case "hidesharing":   // hidesharing on|off：改預設值（只在記憶體，不寫進共用設定；共用設定裡有值時以它為準），套用到所有視窗（design §53）
+            UserDefaults.standard.register(defaults: [AppSettings.hideFromScreenSharingKey: args[1] == "on"])
+            WindowSharing.applyAll()
+        case "systempermission":   // systempermission <denied|granted|notDetermined|real>：蓋掉查到的「錄製系統音訊」權限（design §51.1）
+            SystemAudioPermission.debugOverride = SystemAudioPermission(rawValue: args[1])
         case "seek": model.player.seek(to: Double(args[1]) ?? 0, play: args.count > 2 && args[2] == "play")
         case "rate": model.player.setRate(Float(args[1]) ?? 1)
         case "playvolume": model.player.setVolume(Float(args[1]) ?? 1)   // playvolume <0～1>（design §49.3）
@@ -736,6 +748,13 @@ enum DebugControl {
                       "claudeDesktop": DesktopApps.hasClaude],
             "transcriptionEngine": AppSettings.transcriptionEngine,
             "textSize": TextSize.level,   // 會議內容的文字大小（design §38.5）
+            // 提醒事項（design §52.2）：假的列表裡的每一項、目前這場會議的狀態
+            "reminders": FakeReminders.shared.entries.map { entry -> [String: Any] in
+                ["title": entry.item.title, "notes": entry.item.notes, "url": entry.item.url.absoluteString, "completed": entry.completed,
+                 "due": entry.item.due.map { "\($0.year ?? 0)-\($0.month ?? 0)-\($0.day ?? 0)" } ?? ""]
+            },
+            "reminderStatus": model.reminderStatus,
+            "remindersAccess": Reminders.store.access.rawValue,
             "player": ["loaded": model.player.isLoaded, "playing": model.player.isPlaying,
                        "time": model.player.currentTime, "duration": model.player.duration, "rate": model.player.rate,
                        "mixing": model.player.isMixing,
@@ -746,6 +765,8 @@ enum DebugControl {
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,
                          "liveStatus": model.recorder.liveStatus, "permissionDenied": model.recorder.permissionDenied,
                          "levelCheck": model.recorder.levelCheck,   // 收音提醒（design §26.1）
+                         "permissionRestarts": model.recorder.permissionRestarts,   // 允許了權限而重新接上電腦聲音（design §51.1）
+                         "systemSilent": model.recorder.systemSilent,
                          "idle": model.recorder.idleInfo,   // 忘了停止錄音（design §35）
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
@@ -780,11 +801,12 @@ enum DebugControl {
             "highlightSegment": model.highlightSegment ?? -1,
             "errorMessage": model.errorMessage ?? "",
             "noticeMessage": model.noticeMessage ?? "",
-            // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用
+            // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用；sharing 是分享畫面時藏不藏（0 none、1 readOnly，design §53）
             "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible,
                                             "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,
                                             "minSizeW": $0.minSize.width, "minSizeH": $0.minSize.height,
-                                            "width": $0.frame.width, "height": $0.frame.height] },
+                                            "width": $0.frame.width, "height": $0.frame.height,
+                                            "number": $0.windowNumber, "sharing": $0.sharingType.rawValue] },
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         if let detail = model.detail {
