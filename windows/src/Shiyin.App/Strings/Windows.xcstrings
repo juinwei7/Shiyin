@@ -987,6 +987,23 @@
         }
       }
     },
+    "側欄上方切到「人物」，可以看拾音認識的每個人：一起開過的會議（每場他說了多久）、所有會議紀錄裡他負責的待辦，點了打開那場會議、從那個時間點播放。同一個人被記成兩個名字時按「合併到…」，也可以在這裡「改名」「刪除聲音特徵…」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch the top of the sidebar to People to see everyone Shiyin knows: the meetings you've had together (and how long they spoke in each) and their action items from all meeting notes. Click one to open that meeting and play from that point. If the same person was saved under two names, use Merge Into…; you can also Rename or Delete Voice Profile… here."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "侧边栏上方切到“人物”，可以看拾音认识的每个人：一起开过的会议（每场他说了多久）、所有会议记录里他负责的待办，点了打开那场会议、从那个时间点播放。同一个人被记成两个名字时按“合并到…”，也可以在这里“改名”“删除声音特征…”。"
+          }
+        }
+      }
+    },
     "全域快捷鍵 Ctrl+Alt+Shift+R：在其他 app 裡也能開始或停止錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -3664,6 +3681,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音中画面左边是实时逐字稿，讲完几秒内就会出现；右边“我的笔记”每换一行会自动记下当时的录音时间（录完在逐字稿标签页顶部的“我的笔记”还能改）。重要的地方按“标记重点”（Ctrl+B），在其他 app 里也可以按 Ctrl+Alt+Shift+B。需要中断时按“暂停”（Ctrl+Shift+P），暂停的时间不会录进去。"
+          }
+        }
+      }
+    },
+    "錄音中螢幕上方正中間會有一個小小的錄音島，顯示錄音的時間；收音有問題（麥克風沒收到聲音、用的是藍牙耳機的麥克風、好像沒人在說話）時會往下展開那一句提醒和按鈕。滑鼠移上去可以看音量和最新一句逐字稿，直接按「暫停」「標記重點」「打開拾音」「停止並轉錄」，不用切回拾音。全螢幕開會、分享畫面時也看得到，分享畫面拍不到它；偵測到線上會議時的「要開始錄音嗎？」也在這裡。不想要的話，到「設定 → 錄音與轉錄 → 提醒與快捷鍵」關掉「在螢幕上方顯示錄音島」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While you record, a small recording island at the top center of the screen shows the elapsed time. When something is wrong with the audio (the microphone hears nothing, you're using a Bluetooth headset's microphone, or nobody seems to be talking), it expands to show the alert and its buttons. Hover over it to see the levels and the latest line of the transcript, and use Pause, Bookmark, Open Shiyin, or Stop & Transcribe without switching back to Shiyin. You can see it in full-screen meetings and while sharing your screen, and screen sharing doesn't capture it. “Start recording?” for online meetings shows up here too. If you don't want it, turn off “Show the recording island at the top of the screen” in Settings → Recording & Transcription → Alerts & Shortcuts."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中屏幕上方正中间会有一个小小的录音岛，显示录音的时间；收音有问题（麦克风没收到声音、用的是蓝牙耳机的麦克风、好像没人在说话）时会往下展开那一句提醒和按钮。鼠标移上去可以看音量和最新一句逐字稿，直接按“暂停”“标记重点”“打开拾音”“停止并转录”，不用切回拾音。全屏开会、分享画面时也看得到，分享画面拍不到它；检测到线上会议时的“要开始录音吗？”也在这里。不想要的话，到“设置 → 录音与转录 → 提醒与快捷键”关掉“在屏幕上方显示录音岛”。"
           }
         }
       }
