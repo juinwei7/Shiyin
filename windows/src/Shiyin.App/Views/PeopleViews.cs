@@ -50,59 +50,97 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         return new Grid { Children = { content } };
     }
 
+    /// <summary>
+    /// 上面是頁面的標題列（同會議頁：左邊頭像、名字、摘要，右上角「更多」，不跟著捲動），下面是負責的待辦和會議。
+    /// 內容跟標題列同樣的左右邊距、整欄寬：負責的待辦那張表右邊跟「更多」對齊（M§60.2）
+    /// </summary>
     FrameworkElement Page(PersonOverview person, List<PersonMeeting> meetings, List<PersonActionItem> items)
     {
         var column = new StackPanel { Spacing = 26 };
-        column.Children.Add(Header(person));
         column.Children.Add(Section(L.T("負責的待辦"), items.Count == 0
             ? Ui.Text(L.T("會議紀錄裡還沒有這個人負責的待辦。"), Ui.C(14), color: Ui.Secondary)
             : ItemsGrid(items)));
-        // 英文是複數（「會議」這個鍵在別處是單數的 Meeting），同側欄的「會議｜人物」
+        // 英文是複數（「會議」這個鍵在別處是單數的 Meeting）
         column.Children.Add(Section(MeetingLanguages.Ui("會議", "Meetings"), MeetingList(meetings)));
-        return Ui.Scroll(new ReadingColumn(column, Ui.C(680)), 32);
+        var scroll = new ScrollViewer
+        {
+            Content = new Border { Padding = new Thickness(32, 14, 32, 32), Child = column },
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+        var page = new Grid();
+        page.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        page.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        page.Children.Add(Header(person));
+        Grid.SetRow(scroll, 1);
+        page.Children.Add(scroll);
+        return page;
     }
 
     static FrameworkElement Section(string title, UIElement content) =>
         Ui.Column(10, Ui.Heading(title, MeetingLanguage.Zh, Ui.C(18)), content);
 
+    /// <summary>頭像（我的話外圈細的青瓷綠）、名字（我的話旁邊灰字「我」）、摘要；改名、合併、刪除收在右上角的「更多」</summary>
     FrameworkElement Header(PersonOverview person)
     {
-        var name = Ui.Heading(person.Name, MeetingLanguage.Zh, Ui.C(26));
+        var name = Ui.Heading(person.Name, MeetingLanguage.Zh, 26);
         name.IsTextSelectionEnabled = true;
-        name.MaxLines = 2;
-        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        name.MaxLines = 1;
+        name.TextTrimming = TextTrimming.CharacterEllipsis;
+        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         title.Children.Add(name);
         if (person.IsMe)
         {
-            // 「我」（R80）：青瓷綠的小膠囊
-            var me = new Border
-            {
-                Child = Ui.Text(L.T("我"), 12, bold: true, color: Ui.Celadon, wrap: false), CornerRadius = new CornerRadius(9),
-                Padding = new Thickness(7, 1, 7, 2), VerticalAlignment = VerticalAlignment.Center,
-                Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(38, Ui.Celadon.Color.R, Ui.Celadon.Color.G, Ui.Celadon.Color.B)),
-            };
+            var me = Ui.Text(L.T("我"), 14, color: Ui.Secondary, wrap: false);
+            me.VerticalAlignment = VerticalAlignment.Bottom;
+            me.Margin = new Thickness(0, 0, 0, 5);
             title.Children.Add(me);
         }
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 18 };
-        buttons.Children.Add(RenameButton(person));
-        var others = window.State.People.Where(p => p.Id != person.Id).ToList();
-        if (others.Count > 0) buttons.Children.Add(MergeButton(person, others));
-        buttons.Children.Add(DeleteButton(person));
-        var info = Ui.Column(6, title, Ui.Text(SummaryLine(person, longForm: true), Ui.C(14), color: Ui.Secondary), buttons);
-        var avatar = Ui.Avatar(person.Name, Ui.Person(person.Name), 56, person.IsMe);
+        var info = Ui.Column(4, title, Ui.Text(SummaryLine(person, longForm: true), 14, color: Ui.Secondary));
+        info.VerticalAlignment = VerticalAlignment.Center;
+        var avatar = Ui.Avatar(person.Name, Ui.Person(person.Name), 52, person.IsMe);
         avatar.VerticalAlignment = VerticalAlignment.Center;
-        var header = Ui.Split(avatar, info, 18);
-        header.Padding = new Thickness(0, 0, 0, 8);
+        var more = MoreMenu(person);
+        more.VerticalAlignment = VerticalAlignment.Top;
+        var header = Ui.Bar(avatar, info, more, 16);
+        header.Margin = new Thickness(32, 20, 32, 10);
         return header;
     }
 
-    /// <summary>「改名」（同設定頁）：改成已經有的名字時合併過去，選那個人</summary>
-    HyperlinkButton RenameButton(PersonOverview person)
+    /// <summary>
+    /// 「更多」（同會議頁的「更多」：DropDownButton＋MenuFlyout，無障礙名稱「更多」）：改名…（輸入框接在「更多」下面）、
+    /// 合併到（子選單：其他認識的人）、刪除聲音特徵…（確認對話框）
+    /// </summary>
+    DropDownButton MoreMenu(PersonOverview person)
     {
-        var button = Ui.Link(L.T("改名"), () => { });
-        var box = new TextBox { Text = person.Name, PlaceholderText = L.T("名字"), Width = 240 };
-        AutomationProperties.SetName(box, L.T("名字"));
-        var flyout = new Flyout();
+        var menu = new MenuFlyout();
+        var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.More), Ui.Text(L.T("更多"), wrap: false)), Flyout = menu };
+        AutomationProperties.SetName(button, L.T("更多"));
+        ToolTipService.SetToolTip(button, L.T("改名、跟另一個名字合併（同一個人被記成兩個名字時）、刪除聲音特徵"));
+        var rename = RenameFlyout(person);
+        menu.Items.Add(Ui.Item(L.T("改名…"), () => rename.ShowAt(button), icon: Symbol.Rename));
+        var others = window.State.People.Where(p => p.Id != person.Id).ToList();
+        if (others.Count > 0)
+        {
+            // 同一個人被記成兩個名字時，合併成一個（聲音特徵、會議裡的名字一起改成那個名字）
+            var merge = new MenuFlyoutSubItem { Text = L.T("合併到"), Icon = new SymbolIcon(Symbol.People) };
+            foreach (var other in others)
+                merge.Items.Add(Ui.Item(other.Name, () =>
+                {
+                    host.Controller.RenamePerson(person.Id, other.Name);
+                    window.State.SelectPerson(other.Id);
+                }));
+            menu.Items.Add(merge);
+        }
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Ui.Item(L.T("刪除聲音特徵…"), () => _ = ConfirmDelete(person), icon: Symbol.Delete));
+        return button;
+    }
+
+    /// <summary>「改名…」（同設定頁）：接在「更多」下面；改成已經有的名字時合併過去，選那個人</summary>
+    Flyout RenameFlyout(PersonOverview person)
+    {
+        var box = new TextBox { Text = person.Name, Header = L.T("名字"), Width = 260 };
+        var flyout = new Flyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
         void Save()
         {
             var text = box.Text.Trim();
@@ -123,38 +161,18 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         actions.HorizontalAlignment = HorizontalAlignment.Right;
         flyout.Content = Ui.Column(12, box, actions);
         flyout.Opening += (_, _) => box.Text = person.Name;
-        button.Click += (_, _) => flyout.ShowAt(button);
-        return button;
+        // 打開時名字整個選好，直接打新的名字
+        flyout.Opened += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectAll(); };
+        return flyout;
     }
 
-    /// <summary>「合併到…」：其他認識的人，選了就把這個人改成那個名字（同名合併，聲音特徵、會議裡的名字一起改）</summary>
-    HyperlinkButton MergeButton(PersonOverview person, List<PersonOverview> others)
+    /// <summary>刪除聲音特徵（同設定頁）：確認對話框，主要按鈕是「刪除」、預設按鈕是取消，內文寫出是哪個人</summary>
+    async Task ConfirmDelete(PersonOverview person)
     {
-        var button = Ui.Link(L.T("合併到…"), () => { });
-        ToolTipService.SetToolTip(button, L.T("同一個人被記成兩個名字時，合併成一個（聲音特徵、會議裡的名字一起改）"));
-        var menu = new MenuFlyout();
-        foreach (var other in others)
-            menu.Items.Add(Ui.Item(other.Name, () =>
-            {
-                host.Controller.RenamePerson(person.Id, other.Name);
-                window.State.SelectPerson(other.Id);
-            }));
-        button.Click += (_, _) => menu.ShowAt(button);
-        return button;
-    }
-
-    /// <summary>「刪除聲音特徵…」（確認對話框，同設定頁）：已經帶入的名字留著</summary>
-    HyperlinkButton DeleteButton(PersonOverview person)
-    {
-        var button = Ui.Link(L.T("刪除聲音特徵…"), () => { });
-        button.Foreground = Ui.Danger;
-        button.Click += async (_, _) =>
-        {
-            if (!await Dialogs.Confirm(window, L.F("刪除「%@」的聲音特徵？", person.Name), L.T("已經帶入的名字會留著，之後的會議不會再自動帶入。"), L.T("刪除"))) return;
-            host.Controller.DeletePerson(person.Id);
-            window.State.SelectPerson(null);
-        };
-        return button;
+        if (!await Dialogs.Confirm(window, L.F("刪除「%@」的聲音特徵？", person.Name),
+                L.F("拾音會忘記「%@」的聲音，之後的會議不會再自動帶入這個名字。已經帶入的名字會留著。", person.Name), L.T("刪除"), destructive: true)) return;
+        host.Controller.DeletePerson(person.Id);
+        window.State.SelectPerson(null);
     }
 
     /// <summary>負責的待辦：事項、期限、哪一場會議和時間點（點了打開那場、從那裡播放）</summary>

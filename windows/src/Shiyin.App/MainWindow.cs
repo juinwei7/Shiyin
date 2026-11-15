@@ -29,9 +29,13 @@ public sealed class MainWindow : Window
     readonly StackPanel toolbar = new() { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(12, 10, 12, 6) };
     readonly AutoSuggestBox search = new() { PlaceholderText = L.T("搜尋所有會議"), Margin = new Thickness(12, 0, 12, 8), QueryIcon = new SymbolIcon(Symbol.Find) };
     readonly ListView list = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(4, 0, 4, 0) };
-    readonly StackPanel folders = new() { Spacing = 2, Margin = new Thickness(8, 0, 8, 4) };
-    /// <summary>側欄上方的「會議｜人物」（M§60.2、R85.1）：垃圾桶裡、搜尋中不顯示</summary>
-    readonly SelectorBar sidebarSwitch = new() { Margin = new Thickness(8, 0, 8, 4) };
+    /// <summary>
+    /// 側欄的導覽（M§60.2、R85.1）：所有會議、人物、資料夾都是同一種列，用平台的 ListView 項目（同 Outlook、檔案總管的資料夾窗格），
+    /// 選到的那一列是平台的選取樣子（強調色＝青瓷綠）。下面一段的標題在 sectionTitle
+    /// </summary>
+    readonly ListView scopes = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(4, 0, 4, 0) };
+    readonly TextBlock sectionTitle = Ui.Caption("");
+    readonly StackPanel folders = new() { Spacing = 2, Margin = new Thickness(0, 0, 0, 2) };
     readonly PersonPage personPage;
     readonly StackPanel footer = new() { Spacing = 6, Margin = new Thickness(12, 6, 12, 10) };
     readonly Border detailHost = new();
@@ -113,23 +117,24 @@ public sealed class MainWindow : Window
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var sidebar = Ui.SidebarBackground(new Grid { BorderBrush = Ui.Divider, BorderThickness = new Thickness(0, 0, 1, 0) });
-        foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
+        foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             sidebar.RowDefinitions.Add(new RowDefinition { Height = h });
         Place(sidebar, toolbar, 0);
         Place(sidebar, search, 1);
-        Place(sidebar, sidebarSwitch, 2);
-        Place(sidebar, folders, 3);
-        Place(sidebar, list, 4);
-        Place(sidebar, footer, 5);
-        // 會議｜人物：不記在設定，每次打開都從會議開始（M§60.2）
-        foreach (var (mode, label) in new[] { (SidebarMode.Meetings, MeetingLanguages.Ui("會議", "Meetings")), (SidebarMode.People, L.T("人物")) })
-            sidebarSwitch.Items.Add(new SelectorBarItem { Text = label, Tag = mode });
-        sidebarSwitch.SelectionChanged += (_, _) =>
+        folders.Children.Add(scopes);
+        sectionTitle.Margin = new Thickness(16, 8, 16, 2);
+        folders.Children.Add(sectionTitle);
+        Place(sidebar, folders, 2);
+        AutomationProperties.SetName(scopes, L.T("資料夾"));
+        scopes.SelectionChanged += (_, _) =>
         {
-            if (updatingSelection || sidebarSwitch.SelectedItem?.Tag is not SidebarMode mode) return;
+            if (updatingSelection || scopes.SelectedItem is not ListViewItem { Tag: Scope scope }) return;
             detailView.FlushDrafts();
-            State.SetSidebar(mode);
+            if (scope.People) State.SetSidebar(SidebarMode.People);
+            else State.ShowMeetings(scope.Folder);
         };
+        Place(sidebar, list, 3);
+        Place(sidebar, footer, 4);
         Grid.SetColumn(sidebar, 0);
         root.Children.Add(sidebar);
         Grid.SetColumn(detailHost, 1);
@@ -245,7 +250,6 @@ public sealed class MainWindow : Window
     public void Refresh()
     {
         BuildToolbar();
-        BuildSidebarSwitch();
         BuildFolders();
         BuildList();
         BuildFooter();
@@ -260,16 +264,6 @@ public sealed class MainWindow : Window
         if (State.Detail is { } detail) detailView.Show(detail);
         else detailView.Clear();
         detailHost.Child = State.Detail is null ? EmptyDetail() : detailView.Root;
-    }
-
-    /// <summary>「會議｜人物」跟著目前的模式；垃圾桶裡、搜尋中不顯示</summary>
-    void BuildSidebarSwitch()
-    {
-        sidebarSwitch.Visibility = State.ShowTrash || State.SearchActive ? Visibility.Collapsed : Visibility.Visible;
-        updatingSelection = true;
-        foreach (var item in sidebarSwitch.Items)
-            if ((SidebarMode)item.Tag == State.Sidebar && !ReferenceEquals(sidebarSwitch.SelectedItem, item)) sidebarSwitch.SelectedItem = item;
-        updatingSelection = false;
     }
 
     void BuildToolbar()
@@ -347,36 +341,68 @@ public sealed class MainWindow : Window
         _ => L.T("只錄麥克風"),
     };
 
+    /// <summary>側欄導覽的一列：人物，或所有會議（Folder 是 null）、某個資料夾</summary>
+    sealed record Scope(bool People, string? Folder);
+
+    string? scopesSignature;
+
+    /// <summary>
+    /// 側欄的導覽（M§60.2、R85.1，2026-11-15 照 Mac 改，拿掉 SelectorBar）：搜尋框下面一直有「所有會議」「人物」兩列（圖示、名字、數量），
+    /// 有資料夾時下面是「資料夾」那一組，最後是下面那一段的標題（選的那一項的名字）。點所有會議、資料夾回到會議模式，點人物切到人物模式。
+    /// 垃圾桶裡、搜尋中不顯示（搜尋的結果是會議）。名字、數量沒變時只換選取，不重建（滑鼠停留、鍵盤焦點不會跳）
+    /// </summary>
     void BuildFolders()
     {
-        folders.Children.Clear();
-        if (State.ShowTrash || State.SearchActive || State.ShowsPeople) return;
+        var hidden = State.ShowTrash || State.SearchActive;
+        folders.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        if (hidden) return;
+        var people = State.Sidebar == SidebarMode.People;
         var all = AppController.Folders(State.Meetings);
-        if (all.Count == 0) return;
-        folders.Children.Add(Ui.Caption(L.T("資料夾")));
-        folders.Children.Add(FolderRow(L.T("所有會議"), State.Meetings.Count, State.FolderFilter is null, () => State.SetFolder(null), null));
-        foreach (var (name, count) in all) folders.Children.Add(FolderRow(name, count, State.FolderFilter == name, () => State.SetFolder(name), name));
+        var signature = string.Join('\u001F', [State.Meetings.Count.ToString(), State.People.Count.ToString(), .. all.Select(f => $"{f.Name}\u001E{f.Count}")]);
+        if (signature != scopesSignature)
+        {
+            scopesSignature = signature;
+            updatingSelection = true;
+            scopes.Items.Clear();
+            scopes.Items.Add(ScopeRow(L.T("所有會議"), State.Meetings.Count, new Scope(false, null), Symbol.AllApps));
+            scopes.Items.Add(ScopeRow(L.T("人物"), State.People.Count, new Scope(true, null), Symbol.People));
+            if (all.Count > 0)
+            {
+                // 「資料夾」那一組的標題：不能選的項目（同搜尋結果的會議標題）
+                var header = Ui.Caption(L.T("資料夾"));
+                scopes.Items.Add(new ListViewItem { Content = header, IsEnabled = false, IsTabStop = false, MinHeight = 28, Padding = new Thickness(12, 8, 12, 0) });
+                foreach (var (name, count) in all) scopes.Items.Add(ScopeRow(name, count, new Scope(false, name), Symbol.Folder));
+            }
+            updatingSelection = false;
+        }
+        var current = new Scope(people, people ? null : State.FolderFilter);
+        var selected = scopes.Items.OfType<ListViewItem>().FirstOrDefault(i => i.Tag is Scope s && s == current);
+        if (!ReferenceEquals(scopes.SelectedItem, selected))
+        {
+            updatingSelection = true;
+            scopes.SelectedItem = selected;
+            updatingSelection = false;
+        }
+        sectionTitle.Text = people ? L.T("人物") : State.FolderFilter ?? L.T("所有會議");
     }
 
-    UIElement FolderRow(string name, int count, bool selected, Action click, string? folder)
+    /// <summary>一列：圖示、名字、數量；資料夾的右鍵選單可以重新命名、刪除</summary>
+    ListViewItem ScopeRow(string name, int count, Scope scope, Symbol icon)
     {
-        var label = Ui.Text(name, 14, bold: selected, color: selected ? Ui.Celadon : null, wrap: false);
-        var button = new Button
+        var item = new ListViewItem
         {
-            Content = Ui.Bar(new SymbolIcon(folder is null ? Symbol.AllApps : Symbol.Folder), label, Ui.Text(count.ToString(), 12, color: Ui.Secondary)),
-            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0), Padding = new Thickness(8, 4, 8, 4),
+            Tag = scope, HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36,
+            Content = Ui.Bar(new SymbolIcon(icon), Ui.Text(name, 14, wrap: false), Ui.Text(count.ToString(), 12, color: Ui.Secondary), 10),
         };
-        button.Click += (_, _) => click();
-        AutomationProperties.SetName(button, name + MeetingLanguages.Ui("，", ", ") + count);
-        if (folder is not null)
+        AutomationProperties.SetName(item, name + MeetingLanguages.Ui("，", ", ") + count);
+        if (scope.Folder is { } folder)
         {
             var menu = new MenuFlyout();
             menu.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Dialogs.RenameFolder(this, folder)));
             menu.Items.Add(Ui.Item(L.T("刪除資料夾（會議會保留）"), () => host.Controller.DeleteFolder(folder)));
-            button.ContextFlyout = menu;
+            item.ContextFlyout = menu;
         }
-        return button;
+        return item;
     }
 
     /// <summary>一列會議：狀態文字、進度條直接改，不用整個列表重建</summary>

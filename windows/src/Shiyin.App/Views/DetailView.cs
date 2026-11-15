@@ -333,7 +333,8 @@ public sealed class DetailView
         var label = recordingThis && meeting.MinSpeakers is int n
             ? L.F("%@・%@・大約 %lld 人", template, meeting.MeetingLanguage.Name(), n)
             : L.F("%@・%@", template, meeting.MeetingLanguage.Name());
-        var button = new DropDownButton { Content = Ui.Row(6, new FontIcon { Glyph = "\uE9E9", FontSize = 14 }, Ui.Text(label, wrap: false)), Flyout = menu };
+        // 沒有框：跟資訊列同一層，不比標題搶眼（M§59，2026-11-15 照 Mac 改）
+        var button = Ui.Borderless(new DropDownButton { Content = Ui.Row(6, new FontIcon { Glyph = "\uE9E9", FontSize = 14 }, Ui.Text(label, wrap: false)), Flyout = menu });
         // 內容是圖示加文字時，無障礙名稱不會自動帶出來
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
         ToolTipService.SetToolTip(button, recordingThis
@@ -351,7 +352,7 @@ public sealed class DetailView
         var id = Detail.Meeting.Id!.Value;
         var reading = host.Controller.ReadingDocuments.GetValueOrDefault(id) ?? [];
         var label = reading.Count > 0 ? L.T("正在讀取文件…") : Detail.Documents.Count == 0 ? L.T("加入文件") : L.F("%lld 份文件", Detail.Documents.Count);
-        var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Attach), Ui.Text(label, wrap: false)) };
+        var button = Ui.Borderless(new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.Attach), Ui.Text(label, wrap: false)) });
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
         ToolTipService.SetToolTip(button, L.T("會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗"));
         var menu = new MenuFlyout();

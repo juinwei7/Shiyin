@@ -350,7 +350,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.3 外觀、字型
 
 - 顏色（celadon、signal、說話者 8 色）在 `Ui/Ui.cs`，每個顏色有淺色、深色兩個值，跟著視窗的主題換（Mac 是 `Views/Theme.swift`）。
-- 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase），每個視窗的最外層用 `Ui.WindowBackground` 設、跟著深淺色換。沒設時深色模式是純黑。主視窗的側欄淺色 #F7F7F7、深色 #2B2B2B（跟內容區分得出來，同 Mac 的側欄）。
+- 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase），每個視窗的最外層用 `Ui.WindowBackground` 設、跟著深淺色換。沒設時深色模式是純黑。主視窗的側欄淺色 #F7F7F7、深色 #2B2B2B（跟內容區分得出來，同 Mac 的側欄）。對比主題（高對比）開著時兩種都換成系統的視窗底色（`UISettings.UIElementColor(Window)`）：不然平台的控制項是對比主題的顏色、底色還是淺色，每段文字都被加上底板；開、關對比主題時聽 `UISettings.ColorValuesChanged` 重畫（`AccessibilitySettings.HighContrastChanged` 在沒打包的桌面 app 訂閱時丟 0x80070490，2026-11-15 虛擬機啟動就當掉）。
 - 介面字型用系統預設（Segoe UI Variable、微軟正黑體）。會議標題的明體：Mac 用宋體，Windows 中文、英文用新細明體（`PMingLiU`，沒有時退回 `Microsoft JhengHei UI`），日文用 `Yu Mincho`，都是粗體（`Ui.TitleFont`、`Ui.Heading`）。
 - 會議內容依會議語言設定 `Language`（ja-JP 時日文字形，對應 D20）。
 - 匯出（PDF、docx）的字型：中文 Microsoft JhengHei／PMingLiU、日文 Yu Gothic／Yu Mincho、英文 Segoe UI／Georgia（Mac 是 New York）。
@@ -504,8 +504,9 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.22 人有臉、會議頁上方、人物頁（R83～R85，M§58～§60）
 
 - 頭像：`Ui.Avatar(name, color, size, isMe)`（`Border` 圓角＝直徑的一半、釉色 18% 的底、粗體的字；取字的規則、顏色同 M§58，在 Core 的 `Avatars`：`Initials`、`PersonIndex`（同樣的 FNV-1a）、`Palette`，`Ui.Speaker`、`Ui.Person` 都用它）。尺寸照 Mac 的程式：逐字稿、待辦 18（跟著文字大小 `Ui.C`）、會議頁上方 20（M§58.2 寫 22，Mac 的程式是 20）、側欄 26、人物頁 56。用在會議頁上方、逐字稿、待辦的負責人、人物頁、側欄。標準答案 `util/avatars.json`（Mac 的 `PersonAvatar.initials`、`Color.person`、`Color.speaker` 在淺色、深色外觀下解出的 sRGB）。
-- 會議頁上方：同 M§59，`MeetingSettingsMenu` 是一個 `DropDownButton`＋`MenuFlyout`（三段用 `MenuFlyoutSeparator` 和停用的標題項目隔開）。第二列是 `LeadingTrailing`（`Ui.cs`，同 Mac 的 `ViewThatFits`）：放得下時選單靠右同一列，放不下時換到下一行。
-- 人物頁：側欄上方的 `SelectorBar`（會議｜人物，`MainState.Sidebar`，不記在設定；**Mac 2026-11-15 改成「所有會議」「人物」兩列（M§60.2），Windows 要跟著改，見 tasks 的 UI4**）；資料用 `AppDatabase.PeopleOverview`、`PersonMeetings`、`PersonActionItems`（同 M§60.1 的 SQL，標準答案 `db/43～48`；同一天的人照名字排用介面語言的排序，兩邊的語系不一定一樣，標準答案避開同一天）；右邊的 `PersonPage` 同 M§60.2（沒有「加到提醒事項」）。主視窗每次資料改了都重畫，人物頁內容一樣時留著原本的元件（轉錄的進度一直更新時捲動位置才不會跳回最上面）。「會議」那一段的英文用 Meetings（「會議」這個鍵的英文是單數的 Meeting）。設定「說話者與詞彙」的認識的人下面加一行「也可以在側欄的「人物」管理」（R85.5；Mac 2026-11-15 還沒有）。
+- 會議頁上方：同 M§59，`MeetingSettingsMenu` 是一個 `DropDownButton`＋`MenuFlyout`（三段用 `MenuFlyoutSeparator` 和停用的標題項目隔開）。「會議設定」和文件選單沒有框（2026-11-15 照 Mac 改）：平台的 `DropDownButton` 加輕量的樣式覆寫 `Ui.Borderless`（不換 ControlTemplate，範本讀的 `Button*` 主題資源換成 subtle 那一組：平常透明、滑過去 `SubtleFillColorSecondaryBrush`，文字 `AccentTextFillColorPrimaryBrush`）。第二列是 `LeadingTrailing`（`Ui.cs`，同 Mac 的 `ViewThatFits`）：放得下時選單靠右同一列，放不下時換到下一行。
+- 側欄（2026-11-15 照 M§60.2 改，拿掉 `SelectorBar`）：搜尋框下面一個平台的 `ListView`（`scopes`，同 Outlook、檔案總管的資料夾窗格；不自訂 ControlTemplate）：「所有會議（數量）」「人物（數量）」，有資料夾時一個不能選的「資料夾」標題項目、每個資料夾（數量、右鍵選單）。選到的那一列是平台的選取樣子（強調色＝青瓷綠）。下面一行是下面那一段的標題（所有會議、資料夾名稱或人物），再下面是會議或人物的 `ListView`。點所有會議、資料夾：`MainState.ShowMeetings(folder)`（回到會議模式）；點人物：`SetSidebar(People)`。垃圾桶裡、搜尋中整組不顯示。名字、數量沒變時只換選取、不重建。微軟的對照表裡 2～3 種模式是 `SelectorBar`，但這裡的三種項目（所有會議、人物、資料夾）是同一層的導覽目的地、數量不固定，照資料夾窗格的做法比較對。
+- 人物頁：資料用 `AppDatabase.PeopleOverview`、`PersonMeetings`、`PersonActionItems`（同 M§60.1 的 SQL，標準答案 `db/43～48`；同一天的人照名字排用介面語言的排序，兩邊的語系不一定一樣，標準答案避開同一天）；右邊的 `PersonPage` 同 M§60.2（沒有「加到提醒事項」）。上面是不跟著捲動的標題列（同會議頁：左邊頭像 52、名字、摘要，右上角「更多」）；「我」只留細的外圈（最多 2，`AccentFillColorDefaultBrush`）和名字旁的灰字「我」。「更多」是 `DropDownButton`＋`MenuFlyout`（同會議頁，無障礙名稱「更多」）：「改名…」（`Flyout` 接在「更多」下面，名字選好）、「合併到」（子選單）、分隔線、「刪除聲音特徵…」（`ContentDialog`：主要按鈕「刪除」、預設按鈕是取消、標題和內文都寫出是哪個人）。內容跟標題列同樣的左右邊距、整欄寬，負責的待辦那張表（事項那一欄撐滿）右邊跟「更多」對齊（Windows 沒有「加到提醒事項」，對齊的是「更多」）。主視窗每次資料改了都重畫，人物頁內容一樣時留著原本的元件（轉錄的進度一直更新時捲動位置才不會跳回最上面）。「會議」那一段的英文用 Meetings（「會議」這個鍵的英文是單數的 Meeting）。視窗標題照舊是「拾音」（會議頁也是），人名在頁面的標題列。設定「說話者與詞彙」的認識的人下面加一行「也可以在側欄的「人物」管理」（R85.5）。
 - DEBUG：控制通道 `sidebar people|meetings`、`person <id>`，state 的 `sidebarMode`、`selectedPerson`、`peopleOverview`（同 Mac）。
 
 ## 12. 系統整合

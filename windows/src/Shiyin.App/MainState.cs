@@ -216,6 +216,14 @@ public sealed class MainState
         Changed?.Invoke();
     }
 
+    /// <summary>側欄點「所有會議」或資料夾（M§60.2）：回到會議模式、只看那個資料夾，畫面重畫一次</summary>
+    public void ShowMeetings(string? folder)
+    {
+        Sidebar = SidebarMode.Meetings;
+        FolderFilter = folder;
+        Changed?.Invoke();
+    }
+
     public void ToggleTrash()
     {
         ShowTrash = !ShowTrash;

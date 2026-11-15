@@ -31,10 +31,13 @@ public static class Dialogs
         await Show(dialog);
     }
 
-    public static async Task<bool> Confirm(MainWindow window, string title, string message, string action)
+    /// <summary>destructive：刪除這類動作，預設按鈕（Enter）是「取消」，不小心按 Enter 不會刪掉</summary>
+    public static async Task<bool> Confirm(MainWindow window, string title, string message, string action, bool destructive = false)
     {
         if (window.XamlRoot is null) return false;
-        return await Show(Dialog(window, title, Ui.Text(message), action)) == ContentDialogResult.Primary;
+        var dialog = Dialog(window, title, Ui.Text(message), action);
+        if (destructive) dialog.DefaultButton = ContentDialogButton.Close;
+        return await Show(dialog) == ContentDialogResult.Primary;
     }
 
     /// <summary>同時只能開一個 ContentDialog：前一個還開著時等它關掉</summary>

@@ -1679,6 +1679,23 @@
         }
       }
     },
+    "拾音會忘記「%@」的聲音，之後的會議不會再自動帶入這個名字。已經帶入的名字會留著。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin will forget %@'s voice, and later meetings won't fill in this name automatically. Names already filled in stay as they are."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音会忘记“%@”的声音，之后的会议不会再自动带入这个名字。已经带入的名字会留着。"
+          }
+        }
+      }
+    },
     "拾音會議封包": {
       "extractionState": "manual",
       "localizations": {

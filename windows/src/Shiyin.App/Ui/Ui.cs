@@ -37,6 +37,10 @@ public static class Ui
     public static Brush CardBackground => Resource("CardBackgroundFillColorDefaultBrush", 0xFB, 0xFB, 0xFB, 0x2B, 0x2B, 0x2B);
     public static Brush Subtle => Resource("SubtleFillColorSecondaryBrush", 0xEE, 0xEE, 0xEE, 0x33, 0x33, 0x33);
     public static Brush Divider => Resource("DividerStrokeColorDefaultBrush", 0xE5, 0xE5, 0xE5, 0x3A, 0x3A, 0x3A);
+    /// <summary>強調色的文字（強調色＝青瓷綠，ApplyAccent）：淺色、深色、高對比都由平台給對的顏色</summary>
+    public static Brush AccentText => Resource("AccentTextFillColorPrimaryBrush", 0x24, 0x55, 0x49, 0x8F, 0xC6, 0xB8);
+    /// <summary>強調色的填色（「我」的外圈）</summary>
+    public static Brush AccentFill => Resource("AccentFillColorDefaultBrush", 0x2D, 0x6A, 0x5D, 0x6D, 0xB2, 0xA1);
 
     static object? Lookup(string key)
     {
@@ -69,12 +73,31 @@ public static class Ui
     /// <summary>主視窗的側欄：淺色 #F7F7F7、深色 #2B2B2B，跟內容區分得出來（同 Mac 的側欄）</summary>
     public static T SidebarBackground<T>(T root) where T : FrameworkElement => Surface(root, 0xF7F7F7, 0x2B2B2B);
 
-    /// <summary>不透明的底色，跟著元件的深淺色換（建好之後不會重建的元件用）</summary>
+    static readonly Windows.UI.ViewManagement.AccessibilitySettings Accessibility = new();
+    /// <summary>要一直留著同一個實例，ColorValuesChanged 才會一直收到</summary>
+    static readonly Windows.UI.ViewManagement.UISettings ColorSettings = new();
+
+    /// <summary>Windows 的對比主題（高對比）開著</summary>
+    public static bool HighContrast
+    {
+        get
+        {
+            try { return Accessibility.HighContrast; }
+            catch (Exception e) when (e is System.Runtime.InteropServices.COMException or InvalidCastException) { return false; }
+        }
+    }
+
+    /// <summary>
+    /// 不透明的底色，跟著元件的深淺色換（建好之後不會重建的元件用）。對比主題（高對比）時用系統的視窗底色
+    ///（UISettings 的 Window 顏色，同 SystemColorWindowColor）：不然平台的控制項是對比主題的顏色、底色還是淺色，文字都被加上底板
+    /// </summary>
     static T Surface<T>(T root, uint light, uint darkColor) where T : FrameworkElement
     {
         void Apply()
         {
-            var brush = new SolidColorBrush(root.ActualTheme == ElementTheme.Dark ? Hex(darkColor) : Hex(light));
+            var color = HighContrast ? ColorSettings.UIElementColor(Windows.UI.ViewManagement.UIElementType.Window)
+                : root.ActualTheme == ElementTheme.Dark ? Hex(darkColor) : Hex(light);
+            var brush = new SolidColorBrush(color);
             switch (root)
             {
                 case Panel p: p.Background = brush; break;
@@ -84,6 +107,16 @@ public static class Ui
         }
         Apply();
         root.ActualThemeChanged += (_, _) => Apply();
+        // 對比主題開、關：AccessibilitySettings.HighContrastChanged 在沒打包的桌面 app 訂閱時丟 0x80070490（2026-11-15 虛擬機啟動就當掉），
+        // 改聽 UISettings.ColorValuesChanged（系統顏色換了；不在 UI 執行緒）。訂閱失敗就算了，重新開啟拾音時照樣對；視窗關掉就不再聽
+        var queue = root.DispatcherQueue;
+        Windows.Foundation.TypedEventHandler<Windows.UI.ViewManagement.UISettings, object> changed = (_, _) => queue?.TryEnqueue(() => Guard(Apply));
+        try
+        {
+            ColorSettings.ColorValuesChanged += changed;
+            root.Unloaded += (_, _) => { try { ColorSettings.ColorValuesChanged -= changed; } catch (System.Runtime.InteropServices.COMException) { } };
+        }
+        catch (System.Runtime.InteropServices.COMException e) { Services.Log.Error($"color settings subscribe failed: 0x{e.HResult:X8}"); }
         return root;
     }
 
@@ -136,12 +169,12 @@ public static class Ui
         };
         var c = color.Color;
         // Border 的框線畫在裡面（不佔外面的寬度，CLAUDE.md）：外圈用 BorderThickness，大小照樣是直徑
-        var ring = isMe ? Math.Max(1.5, size / 14) : 0;
+        var ring = isMe ? Math.Min(2, Math.Max(1.5, size / 14)) : 0;   // 細的一圈，最多 2（同 Mac）
         var avatar = new Border
         {
             Width = size, Height = size, CornerRadius = new CornerRadius(size / 2), Child = text,
             Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(255 * 0.18), c.R, c.G, c.B)),
-            BorderBrush = isMe ? Celadon : null, BorderThickness = new Thickness(ring),
+            BorderBrush = isMe ? AccentFill : null, BorderThickness = new Thickness(ring),
         };
         // 名字就在旁邊，螢幕閱讀器不用再唸一次頭像
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(avatar, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
@@ -230,6 +263,28 @@ public static class Ui
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, tooltip);
         b.Click += (_, _) => click();
         return b;
+    }
+
+    /// <summary>
+    /// 沒有框和底色的按鈕（同 Mac 的 .menuStyle(.borderlessButton)，M§59）：文字、圖示青瓷綠，滑過去才有淡淡的底色。
+    /// 會議頁上方的「會議設定」、文件選單用：跟資訊列同一層，不比標題搶眼
+    /// </summary>
+    public static T Borderless<T>(T button) where T : Button
+    {
+        // 平台的按鈕加輕量的樣式覆寫（不換 ControlTemplate）：範本各狀態讀的主題資源換成「subtle」那一組
+        //（跟 ListView 的列、NavigationView 的項目同樣的透明底，滑過去、按下才有底色），文字是強調色的文字
+        var clear = Resource("SubtleFillColorTransparentBrush", 0, 0, 0, 0, 0, 0);
+        foreach (var key in new[] { "ButtonBackground", "ButtonBackgroundDisabled", "ButtonBorderBrush", "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed", "ButtonBorderBrushDisabled" })
+            button.Resources[key] = clear;
+        button.Resources["ButtonBackgroundPointerOver"] = Subtle;
+        button.Resources["ButtonBackgroundPressed"] = Resource("SubtleFillColorTertiaryBrush", 0xE8, 0xE8, 0xE8, 0x2E, 0x2E, 0x2E);
+        foreach (var key in new[] { "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" }) button.Resources[key] = AccentText;
+        button.Resources["ButtonForegroundDisabled"] = Resource("TextFillColorDisabledBrush", 0xA0, 0xA0, 0xA0, 0x78, 0x78, 0x78);
+        button.Background = clear;
+        button.BorderThickness = new Thickness(0);
+        button.Foreground = AccentText;
+        button.Padding = new Thickness(6, 3, 6, 3);
+        return button;
     }
 
     public static HyperlinkButton Link(string text, Action click)
