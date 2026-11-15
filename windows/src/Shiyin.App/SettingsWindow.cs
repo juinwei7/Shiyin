@@ -777,6 +777,9 @@ public sealed class SettingsWindow : Window
 
         var alerts = Ui.Column(12);
         alerts.Children.Add(Ui.Toggle(L.T("偵測到線上會議時提醒錄音"), S.MeetingDetection, on => S.Set(AppSettings.MeetingDetectionKey, on)));
+        // 錄音島（M§57、R81.8、design-windows §11.21）
+        alerts.Children.Add(Ui.Toggle(L.T("在螢幕上方顯示錄音島"), S.RecordingIsland, on => S.Set(AppSettings.RecordingIslandKey, on)));
+        alerts.Children.Add(Note(L.T("錄音中在螢幕上方正中間顯示錄音的時間和提醒，全螢幕開會、分享畫面時也看得到，分享畫面拍不到它。偵測到線上會議時的「要開始錄音嗎？」也在這裡。")));
         // 忘了停止錄音（M§35、R48.5）
         alerts.Children.Add(Ui.Toggle(L.T("很久沒人說話時提醒，30 分鐘後自動停止"), S.IdleStop, on => S.Set(AppSettings.IdleStopKey, on)));
         alerts.Children.Add(Note(L.T("錄音中 15 分鐘沒人說話時提醒你；再 15 分鐘還是沒人說話就自動停止，只轉錄到最後有人說話的地方，錄音檔完整保留。")));

@@ -493,9 +493,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `IslandWindow`（`Shiyin.App`）：WinUI 的 `Window`，`OverlappedPresenter` 拿掉標題列和邊框、不能縮放，`IsAlwaysOnTop`；`WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`（不出現在工作列、按了不搶焦點），`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` 一律套用（不看 R77 的設定）；Windows 11 的圓角（`DWMWA_WINDOW_CORNER_PREFERENCE = DWMWCP_ROUND`）。
 - 位置：前景視窗所在的螢幕（`DisplayArea.GetFromPoint`，用 `GetForegroundWindow` 的矩形中心），工作區上緣正中間往下 6 px；收起時是 160×32（邏輯像素）的膠囊，展開時 440 寬、高度照內容量，重新 `MoveAndResize`。
 - 內容、出現的時機、展開 10 秒後收回、偵測會議的提醒、島打開時錄音中的提醒不送通知，規則同 M§57.2；資料從 `Recorder`（`Hint`、`MicHint`、`IdlePrompt`、`DeviceWarning`）和 `MeetingDetector` 的提醒來。偵測會議原本的 `MeetingPromptWindow` 只在島關掉時用。
-- 滑過去展開：`PointerEntered`／`PointerExited`（移出 0.3 秒後收回）。
-- 設定 `recordingIsland`（settings.json，預設 true）。
-- DEBUG：控制通道 `island hover on|off`、state 的 `island`；`--set debugIslandCapture=YES` 讓截圖拍得到（同 Mac）。
+- 滑過去展開：`PointerEntered`／`PointerExited`（移出 0.3 秒後收回）。滑過去的畫面在提醒那一句下面也放提醒的按鈕（「知道了」「繼續錄」…）：展開的提醒一滑過去就換成控制的畫面，不放的話提醒的按鈕永遠按不到（M§57.2 的 Mac 也是這樣，要 Mac 一起改）。即時逐字稿那一句只改文字、不重建（重建時按到一半的按鈕會按不到）。
+- `OverlappedPresenter.SetBorderAndTitleBar(false, false)` 之後視窗還留著 `WS_DLGFRAME`（四周 3 px 的框，client 比視窗小 6 px）：第一次出現前改成 `WS_POPUP`、`SWP_FRAMECHANGED`；`DWMWA_BORDER_COLOR` 設成不畫。
+- 「打開拾音」：打開錄音中的會議後 `SetForegroundWindow(主視窗)`（島按了不搶焦點，只靠 `Activate` 時主視窗不會到前面；剛收到點擊的是拾音，系統允許）。
+- 偵測會議的提醒左上角是青瓷綠的麥克風（Mac 是 waveform）。
+- 設定 `recordingIsland`（settings.json，預設 true），在「錄音與轉錄 → 提醒與快捷鍵」，說明同 Mac 但不提瀏海。
+- DEBUG：控制通道 `island hover on|off`、`meetingaction <later|mute|start|continue|stop>`（按島上偵測會議的按鈕，同 Mac）、state 的 `island`（`enabled`、`visible`、`mode`、`frame`（實際像素）、`hintKey`、`prompt`、`actions`）；`--set debugIslandCapture=YES` 讓截圖拍得到（同 Mac）。
+- 虛擬機驗證：`shot.sh`（UTM 拍虛擬機的畫面輸出）一定拍得到島，要看拍不拍得到用 insession 裡的 `CopyFromScreen`。滑過去要用 `mouse_event` 的相對移動（真的輸入），`SetCursorPos` 不會觸發 WinUI 的 `PointerEntered`。虛擬機沒有顯示卡加速，DWM 的圓角看不到（主視窗也是直角）。
 
 ### 11.22 人有臉、會議頁上方、人物頁（R83～R85，M§58～§60）
 

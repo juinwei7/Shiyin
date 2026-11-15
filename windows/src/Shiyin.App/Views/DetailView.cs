@@ -876,9 +876,11 @@ public static class MicrophoneMenu
 /// </summary>
 public sealed class LevelMeter
 {
-    const int Segments = 14;
+    readonly int segments;
+    /// <summary>錄音島（一律深色）自己給顏色：沒亮、亮、滿格（M§57.2）；沒給時跟著主視窗的深淺色</summary>
+    readonly (Brush Off, Brush On, Brush Peak)? colors;
     public StackPanel Root { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-    readonly Rectangle[] bars = new Rectangle[Segments];
+    readonly Rectangle[] bars;
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     public Func<float> Read { get; set; } = () => 0;
     public bool Running
@@ -886,23 +888,27 @@ public sealed class LevelMeter
         set { if (value) timer.Start(); else timer.Stop(); }
     }
 
-    public LevelMeter()
+    public LevelMeter(int segments = 14, (Brush Off, Brush On, Brush Peak)? colors = null)
     {
-        for (var i = 0; i < Segments; i++)
+        this.segments = segments;
+        this.colors = colors;
+        bars = new Rectangle[segments];
+        for (var i = 0; i < segments; i++)
         {
             bars[i] = new Rectangle { Width = 4, Height = 12, RadiusX = 1, RadiusY = 1 };
             Root.Children.Add(bars[i]);
         }
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(Root, L.T("音量"));
         timer.Tick += (_, _) => Ui.Guard(() => Draw(Read()));
+        Draw(0);
     }
 
     void Draw(float level)
     {
-        for (var i = 0; i < Segments; i++)
+        for (var i = 0; i < segments; i++)
         {
-            var lit = i < level * Segments;
-            bars[i].Fill = !lit ? Ui.Subtle : i >= Segments - 3 ? Ui.Signal : Ui.Celadon;
+            var lit = i < level * segments;
+            bars[i].Fill = !lit ? colors?.Off ?? Ui.Subtle : i >= segments - 3 ? colors?.Peak ?? Ui.Signal : colors?.On ?? Ui.Celadon;
         }
     }
 }

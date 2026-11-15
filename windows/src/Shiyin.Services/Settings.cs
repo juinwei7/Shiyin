@@ -52,6 +52,8 @@ public sealed class AppSettings
     public const string McpEnabledKey = "mcpEnabled";
     /// <summary>分享畫面時藏起拾音的視窗（R77、design-windows §11.19），預設關</summary>
     public const string HideFromScreenSharingKey = "hideFromScreenSharing";
+    /// <summary>在螢幕上方顯示錄音島，預設開（M§57.2、R81.8、design-windows §11.21）</summary>
+    public const string RecordingIslandKey = "recordingIsland";
     /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
     public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
@@ -321,6 +323,8 @@ public sealed class AppSettings
     public bool GlobalHotKey => Flag(GlobalHotKeyKey, true);
     public bool Voiceprints => Flag(VoiceprintsKey, true);
     public bool MeetingDetection => Flag(MeetingDetectionKey, true);
+    /// <summary>在螢幕上方顯示錄音島（M§57、R81.8）</summary>
+    public bool RecordingIsland => Flag(RecordingIslandKey, true);
     public bool BookmarkHotKey => Flag(BookmarkHotKeyKey, true);
     public bool IdleStop => Flag(IdleStopKey, true);
     /// <summary>正式轉錄用快速辨識（Mac 的「macOS 內建」，D45）：設定值同 Mac 是 system</summary>
