@@ -425,6 +425,23 @@
         }
       }
     },
+    "%@（2）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（2）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (2)"
+          }
+        }
+      }
+    },
     "%@（之後可以在設定 → 整理工具重新測試）": {
       "extractionState": "manual",
       "localizations": {
@@ -4460,6 +4477,40 @@
         }
       }
     },
+    "分成兩場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分成两场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split"
+          }
+        }
+      }
+    },
+    "分成兩場失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分成两场失败：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't split the meeting: %@"
+          }
+        }
+      }
+    },
     "分頁": {
       "extractionState": "manual",
       "localizations": {
@@ -4596,6 +4647,23 @@
         }
       }
     },
+    "刪除一句「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除一句“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete line “%@”"
+          }
+        }
+      }
+    },
     "刪除所有認識的人的聲音特徵？": {
       "extractionState": "manual",
       "localizations": {
@@ -4711,6 +4779,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除这个议题"
+          }
+        }
+      }
+    },
+    "刪除這句": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除这句"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Line"
           }
         }
       }
@@ -6803,6 +6888,40 @@
         }
       }
     },
+    "已分成兩場：「%@」。兩場都在重新整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已分成两场：“%@”。两场都在重新整理会议记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split into two meetings: “%@”. Both are being summarized again"
+          }
+        }
+      }
+    },
+    "已分成兩場：「%@」。兩場都要重新整理會議紀錄，設定好整理工具後按「重新整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已分成两场：“%@”。两场都要重新整理会议记录，设置好整理工具后按“重新整理”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split into two meetings: “%@”. Both need to be summarized again. Set up a summarizer, then click Summarize Again"
+          }
+        }
+      }
+    },
     "已刪除第二版的 Python 環境和舊模型": {
       "extractionState": "manual",
       "localizations": {
@@ -6816,6 +6935,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已删除第二版的 Python 环境和旧模型"
+          }
+        }
+      }
+    },
+    "已刪除這句。要復原的話，在逐字稿按右鍵選「復原」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除这句。要撤销的话，在逐字稿按右键选“撤销”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line deleted. To undo, right-click in the transcript and choose Undo."
           }
         }
       }
@@ -7112,6 +7248,93 @@
           "stringUnit": {
             "state": "translated",
             "value": "已撤销：%@"
+          }
+        }
+      }
+    },
+    "已把 %lld 場會議移出資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已把 %lld 场会议移出文件夹"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Removed %lld meeting from its folder"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Removed %lld meetings from their folders"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "已把 %lld 場會議移到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已把 %lld 场会议移到“%@”"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meeting to “%@”"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meetings to “%@”"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "已把 %lld 場會議移到垃圾桶，30 天內都可以還原": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已把 %lld 场会议移到回收站，30 天内都可以还原"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meeting to Trash. You can restore it within 30 days."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meetings to Trash. You can restore them within 30 days."
+                }
+              }
+            }
           }
         }
       }
@@ -7592,6 +7815,35 @@
         }
       }
     },
+    "已選取 %lld 場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选取 %lld 场会议"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Meeting Selected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Meetings Selected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "已重新辨識說話者：分出 %lld 位。名字請再確認一下；會議紀錄要更新的話，請重新整理會議紀錄。": {
       "extractionState": "manual",
       "localizations": {
@@ -7922,6 +8174,23 @@
         }
       }
     },
+    "從 %@ 這句開始分成另一場會議？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 %@ 这句开始分成另一场会议？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split off a new meeting starting with the line at %@?"
+          }
+        }
+      }
+    },
     "從 %@ 開始播放": {
       "extractionState": "manual",
       "localizations": {
@@ -7952,6 +8221,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "从左边选一场会议"
+          }
+        }
+      }
+    },
+    "從這裡分成兩場…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从这里分成两场…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split Meeting Here…"
           }
         }
       }
@@ -8728,6 +9014,64 @@
         }
       }
     },
+    "把 %lld 場會議移到垃圾桶…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把 %lld 场会议移到回收站…"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %lld Meeting to Trash…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %lld Meetings to Trash…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "把 %lld 場會議移到垃圾桶？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把 %lld 场会议移到回收站？"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %lld meeting to Trash?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %lld meetings to Trash?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "把「%@」合併到「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -9438,6 +9782,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "按“开始使用”后会打开使用说明，介绍录音、实时逐字稿、会议记录和导出的用法。"
+          }
+        }
+      }
+    },
+    "按住 ⌘ 點選可以加入或取消，按住 ⇧ 點選一次選一段。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住 ⌘ 点击可以加入或取消，按住 ⇧ 点击一次选一段。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘-click to add or remove a meeting. Shift-click to select a range."
           }
         }
       }
@@ -12686,6 +13047,40 @@
         }
       }
     },
+    "正在處理這場會議，完成後才能修改逐字稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在处理这场会议，完成后才能修改逐字稿"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is being processed. You can edit the transcript when it’s done"
+          }
+        }
+      }
+    },
+    "正在處理這場會議，完成後才能分成兩場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在处理这场会议，完成后才能分成两场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is being processed. You can split it when it’s done"
+          }
+        }
+      }
+    },
     "正在處理這場會議，完成後才能改說話者": {
       "extractionState": "manual",
       "localizations": {
@@ -13077,6 +13472,35 @@
         }
       }
     },
+    "永久刪除 %lld 場會議？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久删除 %lld 场会议？"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld meeting permanently?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld meetings permanently?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "永久刪除…": {
       "extractionState": "manual",
       "localizations": {
@@ -13090,6 +13514,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "永久删除…"
+          }
+        }
+      }
+    },
+    "永久刪除垃圾桶裡的 %lld 場會議？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久删除回收站里的 %lld 场会议？"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Permanently delete the %lld meeting in Trash?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Permanently delete the %lld meetings in Trash?"
+                }
+              }
+            }
           }
         }
       }
@@ -13583,6 +14036,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "没办法开始录音：%@"
+          }
+        }
+      }
+    },
+    "清空垃圾桶": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空回收站"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty Trash"
+          }
+        }
+      }
+    },
+    "清空垃圾桶…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空回收站…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty Trash…"
           }
         }
       }
@@ -17535,6 +18022,40 @@
         }
       }
     },
+    "這些會議都已經在「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些会议都已经在“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These meetings are already in “%@”"
+          }
+        }
+      }
+    },
+    "這些會議都沒有在資料夾裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些会议都没有在文件夹里"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None of these meetings are in a folder"
+          }
+        }
+      }
+    },
     "這個名字是拾音認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。": {
       "extractionState": "manual",
       "localizations": {
@@ -17616,6 +18137,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这个网址不是拾音的企业服务器"
+          }
+        }
+      }
+    },
+    "這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。分開後沒辦法合併回來。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这句和之后的逐字稿、录音、标记重点变成新的一场，前面的留在这场；我的笔记、参考文档、提问留在这场。两场都要重新整理会议记录。分开后没办法合并回来。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This line and everything after it (transcript, recording, bookmarks) becomes a new meeting. Everything before stays here, along with My notes, documents and questions. Both meetings are summarized again. Split meetings can't be merged back."
           }
         }
       }
@@ -18045,6 +18583,23 @@
         }
       }
     },
+    "這場會議還在錄音，請先停止錄音再分成兩場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场会议还在录音，请先停止录音再分成两场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is still recording. Stop the recording before splitting it"
+          }
+        }
+      }
+    },
     "這場會議還在錄音，請先停止錄音再移到垃圾桶": {
       "extractionState": "manual",
       "localizations": {
@@ -18444,6 +18999,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还原"
+          }
+        }
+      }
+    },
+    "還在錄音的那場會議沒有移到垃圾桶，請先停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还在录音的那场会议没有移到回收站，请先停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting that is still recording wasn't moved to Trash. Stop the recording first"
           }
         }
       }

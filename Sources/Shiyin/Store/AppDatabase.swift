@@ -406,6 +406,75 @@ final class AppDatabase: @unchecked Sendable {
         files.forEach(removeDocumentFile)
     }
 
+    /// 從 cut 秒分成兩場（R90、design §64）：開始時間 ≥ cut 的段落、標記重點搬到新的一場，時間減 cut；說話者兩邊各留有段落的，
+    /// 只在新的一場說話的人，聲紋改指新的一場。回傳新的一場（錄音檔名已經給好，檔案由呼叫的人搬）
+    func splitMeeting(_ id: Int64, at cut: Double, title: String, audioExtension: String?) throws -> Meeting? {
+        try pool.write { db in
+            guard var original = try Meeting.fetchOne(db, key: id) else { return nil }
+            var meeting = original
+            meeting.id = nil
+            meeting.title = title
+            meeting.audioFile = ""
+            meeting.notes = nil
+            meeting.notesBy = nil
+            meeting.notesDraft = 0
+            meeting.userNotes = ""
+            meeting.speakerHintDismissed = false
+            meeting.durationSeconds = original.durationSeconds.map { max(0, $0 - Int(cut.rounded())) }
+            let started = ISO8601DateFormatter().date(from: original.createdAt) ?? Date()
+            meeting.createdAt = ISO8601DateFormatter().string(from: started.addingTimeInterval(cut))
+            meeting.updatedAt = Clock.now()
+            try meeting.insert(db)
+            let newId = meeting.id!
+            if let audioExtension {
+                meeting.audioFile = "\(newId).\(audioExtension)"
+                try meeting.update(db)
+            }
+            try Self.index(db, meetingId: newId, kind: .title, ref: 0, text: meeting.displayTitle)
+
+            let moved = try Segment.filter(Column("meeting_id") == id && Column("start") >= cut).order(Column("seq")).fetchAll(db).compactMap(\.id)
+            for (seq, segmentId) in moved.enumerated() {
+                try db.execute(sql: "UPDATE segments SET meeting_id = ?, seq = ?, start = MAX(0, start - ?), end = MAX(0, end - ?) WHERE id = ?",
+                               arguments: [newId, seq, cut, cut, segmentId])
+            }
+            for chunk in stride(from: 0, to: moved.count, by: 500).map({ Array(moved[$0..<min($0 + 500, moved.count)]) }) {
+                let marks = chunk.map { _ in "?" }.joined(separator: ",")
+                try db.execute(sql: "UPDATE corrections SET meeting_id = ? WHERE segment_id IN (\(marks))", arguments: StatementArguments([newId] + chunk))
+                try db.execute(sql: "UPDATE search SET meeting_id = ? WHERE rowid IN (\(marks))", arguments: StatementArguments([newId] + chunk))
+            }
+            try db.execute(sql: "UPDATE bookmarks SET meeting_id = ?, time = MAX(0, time - ?) WHERE meeting_id = ? AND time >= ?",
+                           arguments: [newId, cut, id, cut])
+
+            func speaks(_ meetingId: Int64, _ idx: Int) throws -> Bool {
+                try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM segments WHERE meeting_id = ? AND speaker = ?)", arguments: [meetingId, idx]) ?? false
+            }
+            for var speaker in try SpeakerName.filter(Column("meeting_id") == id).fetchAll(db) {
+                if try !speaks(id, speaker.idx), try speaks(newId, speaker.idx) {
+                    try db.execute(sql: "UPDATE voiceprints SET meeting_id = ? WHERE meeting_id = ? AND speaker_idx = ?", arguments: [newId, id, speaker.idx])
+                }
+                speaker.meetingId = newId
+                try speaker.insert(db)
+            }
+            try Self.removeEmptySpeakers(db, meetingId: id)
+            try Self.removeEmptySpeakers(db, meetingId: newId)
+
+            original.durationSeconds = Int(cut.rounded())
+            original.updatedAt = Clock.now()
+            try original.update(db)
+            // 段落換了，說話者的復原對不上（design §24.2）
+            try db.execute(sql: "DELETE FROM speaker_undo WHERE meeting_id = ?", arguments: [id])
+            return meeting
+        }
+    }
+
+    /// 這場會議有沒有排隊中或執行中的工作（任何種類，含壓縮、校正這些輔助工作）
+    func hasActiveJobs(_ meetingId: Int64) throws -> Bool {
+        try pool.read { db in
+            try Job.filter(Column("meeting_id") == meetingId
+                           && [JobStatus.queued.rawValue, JobStatus.running.rawValue].contains(Column("status"))).fetchCount(db) > 0
+        }
+    }
+
     /// 移到垃圾桶或還原（R9.3）
     func setTrashed(_ id: Int64, _ trashed: Bool) throws {
         try pool.write { db in

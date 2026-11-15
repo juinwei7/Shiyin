@@ -2542,6 +2542,41 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 統計（§30.4）：`usage.diarizationNemotron`（照設定用了 Nemotron-3 的次數，轉錄、重新辨識各算一次；評估時指定模型的不算）。後台 `diarization_nemotron`，沒送的當 0（舊版 app、Windows），跟 §61.1 同一個 migration。
 - DEBUG：啟動參數 `-diarizationModel nemotron`；`shiyinctl model start|delete nemotron`、state 的 `models.nemotron`；`voiceprint-eval` 的設定加 `"model": "nemotron"`，輸出同格式（多一個 `model`；沒有聲紋的說話者也列），可以用 `scripts/dev/diarize-der.py` 比。
 
+## 62. 會議多選、清空垃圾桶（R88）
+
+- `AppModel.selectedMeetings: Set<Int64>`（多選）和原本的 `selection`（目前這場：會議頁、播放、工具列都看它）並存。列表綁 `listSelection`：讀的時候選了兩場以上是 `selectedMeetings`，不然是 `selection`；寫的時候存進 `selectedMeetings`，只剩一場（或沒有）時同時設 `selection`。程式設 `selection`（還原、錄音停止後跳到那場）時，不在多選裡就把多選換成那一場。換資料夾、進出垃圾桶、搜尋時多選清掉。
+- 選了兩場以上：右邊顯示 `MultiSelectionView`（「已選取 N 場會議」，按鈕：移到資料夾的選單、移到垃圾桶…；垃圾桶裡是還原、永久刪除…）。
+- 右鍵選單改用 `contextMenu(forSelectionType:)`：在選取的列上按是全部，不在選取裡只有那一列（SwiftUI 的行為）。⌘⌫（`requestDelete`）對全部。確認對話框寫場數（「把 3 場會議移到垃圾桶？」）。
+- `moveToTrash`、`restore`、`deletePermanently` 改成收多場；正在錄音的那場跳過，通知寫出原因（R88.2）。
+- 清空垃圾桶：垃圾桶列表上方那一列加「清空垃圾桶…」（垃圾桶是空的時停用），確認「永久刪除垃圾桶裡的 N 場會議？」，`emptyTrash()` 對垃圾桶的全部做 `deletePermanently`。
+- Windows：design-windows §11.23。
+
+## 63. 刪除逐字稿的一句（R89，D171）
+
+- 跟說話者的修正共用一格復原（§24.2 的 `speaker_undo`）：快照多記 `deleted`（那一句的整筆資料、它的校正建議）。
+- `AppDatabase.deleteSegment(meetingId, id:, label:)`：存快照 → 刪搜尋索引、刪段落（校正建議跟著 `ON DELETE CASCADE`）→ 後面的 `seq` 減 1 → `removeEmptySpeakers`。
+- 復原：用原本的 id 放回段落，後面的 `seq` 加 1，加回索引和校正建議；說話者照快照放回（同 §24.2）。
+- 右鍵選單：「刪除這句」放在說話者那一組後面，沒辨識說話者的會議也有；「復原：…」移出「有說話者才顯示」的那一組。復原的說明是「刪除一句「前 12 個字…」」。
+- 正在處理、在垃圾桶裡的會議不能刪（同 `speakerEditProblem`，訊息改成「完成後才能修改逐字稿」）。
+- Windows：design-windows §11.23。
+
+## 64. 從某一句分成兩場會議（R90，D170）
+
+- 入口：逐字稿的正式段落（不是第一句）右鍵「從這裡分成兩場…」→ 確認對話框（`AppModel.splitMeetingRequest`；`splitRequest` 是拆句用的）。切開的時間 `cut` 是那一句的開始時間（四捨五入到 0.01 秒）。
+- 先擋：正在錄音、這場有排隊或進行中的工作、在垃圾桶裡（R90.4）。
+- 錄音（`AudioSplit.split(url, at:)`，背景執行）：用 `AVAudioFile` 讀，前段、後段各寫一個暫存檔，格式照原本的檔（`fileFormat.settings`：WAV 還是 WAV、m4a 重新編碼成同樣設定的 AAC），聲道數不變。錄音檔不見的會議跳過這一步。
+- 資料庫（`AppDatabase.splitMeeting`，一個交易）：
+  1. 新增一場：複製原本那場的欄位（日期、會議語言、範本、資料夾、收音來源、`channels`、`transcribed_with`、`min_speakers`、與會者），標題是原本的 `displayTitle` 加「（2）」（`title_locked` 照原本的），`created_at` 是原本的加 `cut` 秒，`duration_seconds` 是原本的減 `cut`；`notes` 空的；錄音檔名 `<新 id>.<副檔名>`。
+  2. 開始時間 ≥ `cut` 的段落（正式、即時都算）搬到新的一場，時間減 `cut`，`seq` 重新從 0 編；校正建議、搜尋索引的 `meeting_id` 跟著改。
+  3. 標記重點（`bookmarks`）時間 ≥ `cut` 的搬過去、時間減 `cut`。
+  4. 說話者：整份複製到新的一場；只在新的那場有段落的說話者，聲紋（`voiceprints` 的 `meeting_id`）改指新的那場；兩邊各自 `removeEmptySpeakers`。
+  5. 原本那場：`duration_seconds` 改成 `cut`，刪掉說話者的復原（快照對不上了）。
+- 交易成功後：新的那場的錄音搬進 `audio/`，原本那場的錄音換成前段（先 `player.unload`，同 `onAudioReplaced`）。
+- 整理工具設定好時兩場都排 `summarize`（原本那場現有的紀錄由 `saveNotes` 存成舊版本）；沒設定時通知「兩場都要重新整理會議紀錄，設定好整理工具後按「重新整理」」。
+- 選取留在原本那場，通知「已分成兩場：「新的標題」」。
+- DEBUG：`shiyinctl splitmeeting <會議 id> <段落 id>`（不經過確認對話框）、`deletesegment <會議 id> <段落 id>`。
+- Windows：design-windows §11.23。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2659,3 +2694,5 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D167 | 說話者的 8 種顏色直接當成「釉色」，頭像是釉色底加名字的第一個字；會議裡照說話者編號、人物頁照名字算（§58） | 換一套新的顏色：使用者已經習慣每個說話者的顏色。人物頁也照編號：同一個人在不同會議的編號不同，沒辦法用。頭像用照片：要上傳、管理，資料夾裡也沒有照片 |
 | D168 | 「其他」的失敗只記固定幾種的次數（HTTP 狀態碼、CLI 結束代碼），後台存成一欄 JSON（§61.1） | 每一種一欄：之後多一種就要 migration。記訊息的前幾個字（D114 已經不採用）。只記 HTTP 狀態碼：CLI 的失敗（Claude Code）也很多 |
 | D169 | Nemotron-3 分人、聲紋借用標準流程裡重疊最多的那位，兩個都跑（§61.2） | 升級 FluidAudio 到有 `embedSpans` 的版本、另外算聲紋：整個說話者辨識的行為會跟著變，要重新評估；而且標準流程本來就要跑（品質檢查、超過 8 人時比較）。只用 Nemotron：沒有聲紋就不能自動帶入名字 |
+| D170 | 分割會議不能復原、不能合併回來；確認對話框寫清楚（§64） | 存一份完整的快照（錄音、每個表）讓它能復原：要另外管理一份錄音大小的副本，所有相關的表都要記。分割前把原本那場放進垃圾桶當備份：垃圾桶多一場看不懂的會議，錄音佔兩倍 |
+| D171 | 刪除一句跟說話者的修正共用「復原」（只復原最近一次，§63） | 另外做「最近刪除的句子」：要新的表和畫面。刪除前確認：一次刪一句，確認比復原麻煩 |

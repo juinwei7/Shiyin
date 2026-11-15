@@ -430,16 +430,23 @@ struct TranscriptTab: View {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(segment.text, forType: .string)
             }
-            // 改這句的說話者（design §24.3、R23.2）
-            if let id = segment.id, segment.kind == "final", !detail.speakers.isEmpty {
+            if let id = segment.id, segment.kind == "final" {
                 Divider()
-                Button("拆成兩句…") { startSplit(id) }   // R70
-                Menu("這句是誰說的") { speakerChoices(for: [id], current: segment.speaker) }
-                let run = detail.speakerRun(around: id)
-                if run.count > 1 {
-                    Menu("這段連續的話是誰說的（\(run.count) 句）") { speakerChoices(for: run, current: segment.speaker) }
+                // 改這句的說話者（design §24.3、R23.2）
+                if !detail.speakers.isEmpty {
+                    Button("拆成兩句…") { startSplit(id) }   // R70
+                    Menu("這句是誰說的") { speakerChoices(for: [id], current: segment.speaker) }
+                    let run = detail.speakerRun(around: id)
+                    if run.count > 1 {
+                        Menu("這段連續的話是誰說的（\(run.count) 句）") { speakerChoices(for: run, current: segment.speaker) }
+                    }
                 }
-                // 復原最近一次說話者的調整（R44.4，原本在「更多」）：有東西可復原才出現
+                // 分割會議（R90、design §64）：第一句之前沒有東西，不能從第一句分
+                if detail.segments.first(where: { $0.kind == "final" })?.id != id {
+                    Button("從這裡分成兩場…") { model.splitMeetingRequest = id }
+                }
+                Button("刪除這句", role: .destructive) { model.deleteSegment(id) }   // R89
+                // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
                 if let label = detail.speakerUndoLabel {
                     Button("復原：\(label)") { model.undoSpeakerEdit() }
                 }

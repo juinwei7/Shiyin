@@ -117,6 +117,12 @@ struct MainView: View {
     @AppStorage("hasSeenGuide") private var hasSeenGuide = false
     @State private var dropTargeted = false
 
+    /// 「從這裡分成兩場…」那一句的開始時間（R90）
+    private var splitTime: String {
+        guard let id = model.splitMeetingRequest, let segment = model.detail?.segments.first(where: { $0.id == id }) else { return "" }
+        return TimeFormat.string(segment.start)
+    }
+
     var body: some View {
         @Bindable var model = model
         NavigationSplitView {
@@ -130,6 +136,8 @@ struct MainView: View {
                 } else {
                     PeopleEmptyView()
                 }
+            } else if model.multiSelected.count > 1 {
+                MultiSelectionView(ids: model.multiSelected)
             } else if let detail = model.detail {
                 MeetingDetailView(detail: detail)
                     .id(detail.meeting.id)
@@ -174,19 +182,63 @@ struct MainView: View {
                   String(localized: "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。")]
                 .filter { !$0.isEmpty }.joined(separator: "\n\n"))
         }
-        .confirmationDialog("永久刪除這場會議？", isPresented: Binding(get: { model.confirmPurge != nil }, set: { if !$0 { model.confirmPurge = nil } })) {
+        .confirmationDialog((model.confirmPurge?.count ?? 0) > 1 ? String(localized: "永久刪除 \(model.confirmPurge?.count ?? 0) 場會議？")
+                                                                 : String(localized: "永久刪除這場會議？"),
+                            isPresented: Binding(get: { model.confirmPurge != nil }, set: { if !$0 { model.confirmPurge = nil } })) {
             Button("永久刪除", role: .destructive) {
-                if let id = model.confirmPurge { model.deletePermanently(id) }
+                if let ids = model.confirmPurge { model.deletePermanently(ids) }
             }
         } message: {
             Text("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。")
         }
-        .confirmationDialog("把這場會議移到垃圾桶？", isPresented: $model.confirmDelete) {
-            Button("移到垃圾桶", role: .destructive) {
-                if let id = model.deleteTarget { model.moveToTrash(id) }
+        // 清空垃圾桶（R88.3）
+        .confirmationDialog(String(localized: "永久刪除垃圾桶裡的 \(model.trash.count) 場會議？"), isPresented: $model.confirmEmptyTrash) {
+            Button("清空垃圾桶", role: .destructive) { model.emptyTrash() }
+        } message: {
+            Text("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。")
+        }
+        // 從某一句分成兩場（R90、design §64）：分開後沒辦法合併回來（D170）
+        .confirmationDialog(String(localized: "從 \(splitTime) 這句開始分成另一場會議？"),
+                            isPresented: Binding(get: { model.splitMeetingRequest != nil }, set: { if !$0 { model.splitMeetingRequest = nil } })) {
+            Button("分成兩場") {
+                if let id = model.splitMeetingRequest { model.splitMeeting(at: id) }
             }
         } message: {
+            Text("這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。分開後沒辦法合併回來。")
+        }
+        .confirmationDialog(model.deleteTargets.count > 1 ? String(localized: "把 \(model.deleteTargets.count) 場會議移到垃圾桶？")
+                                                          : String(localized: "把這場會議移到垃圾桶？"), isPresented: $model.confirmDelete) {
+            Button("移到垃圾桶", role: .destructive) { model.moveToTrash(model.deleteTargets) }
+        } message: {
             Text("30 天內都可以從垃圾桶還原。")
+        }
+    }
+}
+
+/// 選了兩場以上的會議（R88、design §62）：能一起做的事
+struct MultiSelectionView: View {
+    @Environment(AppModel.self) private var model
+    let ids: [Int64]
+
+    var body: some View {
+        ContentUnavailableView {
+            Label("已選取 \(ids.count) 場會議", systemImage: "square.stack")
+        } description: {
+            Text("按住 ⌘ 點選可以加入或取消，按住 ⇧ 點選一次選一段。")
+        } actions: {
+            HStack {
+                if model.showTrash {
+                    Button("還原") { model.restore(ids) }
+                    Button("永久刪除…", role: .destructive) { model.confirmPurge = ids }
+                } else {
+                    FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
+                        .fixedSize()
+                    Button("移到垃圾桶…", role: .destructive) {
+                        model.deleteTargets = ids
+                        model.confirmDelete = true
+                    }
+                }
+            }
         }
     }
 }
@@ -310,9 +362,16 @@ struct SidebarView: View {
 
     private var meetingList: some View {
         @Bindable var model = model
-        return List(selection: $model.selection) {
+        // 多選（R88、design §62）：⌘、⇧ 點選；右鍵在選取的列上是全部
+        return List(selection: $model.listSelection) {
             if model.showTrash {
-                Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("清空垃圾桶…") { model.confirmEmptyTrash = true }
+                        .controlSize(.small)
+                        .disabled(model.trash.isEmpty)
+                }
             } else {
                 scopeSections
             }
@@ -320,16 +379,26 @@ struct SidebarView: View {
                 ForEach(model.filteredMeetings) { row in
                     MeetingRowView(row: row, status: model.status(row))
                         .tag(row.id)
-                        .contextMenu {
-                            if model.showTrash {
-                                Button("還原") { model.restore(row.id) }
-                                Button("永久刪除…", role: .destructive) { model.confirmPurge = row.id }
-                            } else {
-                                FolderMenu(meetingId: row.id, current: row.meeting.folder)
-                                Divider()
-                                Button("移到垃圾桶", role: .destructive) { model.moveToTrash(row.id) }
-                            }
+                }
+            }
+        }
+        .contextMenu(forSelectionType: Int64.self) { selected in
+            let ids = model.filteredMeetings.map(\.id).filter { selected.contains($0) }
+            if !ids.isEmpty {
+                if model.showTrash {
+                    Button("還原") { model.restore(ids) }
+                    Button("永久刪除…", role: .destructive) { model.confirmPurge = ids }
+                } else {
+                    FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
+                    Divider()
+                    if ids.count == 1 {
+                        Button("移到垃圾桶", role: .destructive) { model.moveToTrash(ids) }
+                    } else {
+                        Button("把 \(ids.count) 場會議移到垃圾桶…", role: .destructive) {
+                            model.deleteTargets = ids
+                            model.confirmDelete = true
                         }
+                    }
                 }
             }
         }
@@ -369,30 +438,31 @@ struct FolderRow: View {
 struct FolderMenu: View {
     @Environment(AppModel.self) private var model
     /// nil：目前選取的會議。工具列的選單可能沿用之前建立的，按下時才決定是哪一場，不然會移到上一場會議
-    var meetingId: Int64? = nil
+    var meetingIds: [Int64]? = nil
+    /// 這幾場現在在的資料夾（空字串是不在資料夾裡）；多選而且在不同資料夾時是 nil
     var current: String? = nil
 
-    private var target: Int64? { meetingId ?? model.selection }
-    private var folder: String { current ?? model.detail?.meeting.folder ?? "" }
+    private var targets: [Int64] { meetingIds ?? [model.selection].compactMap { $0 } }
 
     var body: some View {
         Menu("移到資料夾", systemImage: "folder") {
-            if meetingId == nil {
-                // 工具列的選單內容不會更新，列出全部資料夾和固定的「移出資料夾」，選到原本的資料夾時 AppModel 會說明
+            if meetingIds == nil || current == nil {
+                // 工具列的選單內容不會更新，列出全部資料夾和固定的「移出資料夾」，選到原本的資料夾時 AppModel 會說明；
+                // 多選而且在不同資料夾時也是這樣
                 ForEach(model.folders, id: \.name) { item in
-                    Button(item.name) { if let target { model.moveToFolder(target, folder: item.name) } }
+                    Button(item.name) { model.moveToFolder(targets, folder: item.name) }
                 }
                 if !model.folders.isEmpty { Divider() }
-                Button("新資料夾…") { if let target { model.folderPrompt = .create(target) } }
-                Button("移出資料夾") { if let target { model.moveToFolder(target, folder: "") } }
-            } else {
+                Button("新資料夾…") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
+                Button("移出資料夾") { model.moveToFolder(targets, folder: "") }
+            } else if let folder = current {
                 ForEach(model.folders.filter { $0.name != folder }, id: \.name) { item in
-                    Button(item.name) { if let target { model.moveToFolder(target, folder: item.name) } }
+                    Button(item.name) { model.moveToFolder(targets, folder: item.name) }
                 }
                 if !model.folders.filter({ $0.name != folder }).isEmpty { Divider() }
-                Button("新資料夾…") { if let target { model.folderPrompt = .create(target) } }
+                Button("新資料夾…") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
                 if !folder.isEmpty {
-                    Button("移出「\(folder)」") { if let target { model.moveToFolder(target, folder: "") } }
+                    Button("移出「\(folder)」") { model.moveToFolder(targets, folder: "") }
                 }
             }
         }
@@ -411,7 +481,7 @@ struct FolderPromptModifier: ViewModifier {
             Button(confirmTitle) {
                 let value = name.trimmingCharacters(in: .whitespacesAndNewlines)
                 switch model.folderPrompt {
-                case .create(let id)?: if !value.isEmpty { model.moveToFolder(id, folder: value) }
+                case .create(let ids)?: if !value.isEmpty { model.moveToFolder(ids, folder: value) }
                 case .rename(let old)?: model.renameFolder(old, to: value)
                 case nil: break
                 }

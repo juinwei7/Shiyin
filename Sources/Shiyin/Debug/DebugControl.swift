@@ -47,7 +47,21 @@ enum DebugControl {
         case "trash": if let id { model.moveToTrash(id) }
         case "restore": if let id { model.restore(id) }
         case "purge": if let id { model.deletePermanently(id) }
-        case "confirmpurge": model.confirmPurge = id   // 等於在垃圾桶按右鍵「永久刪除…」
+        case "confirmpurge": model.confirmPurge = id.map { [$0] }   // 等於在垃圾桶按右鍵「永久刪除…」
+        // 多選（R88、design §62）：selectmany <id,id,…>（等於 ⌘ 點選）；trashmany、restoremany、purgemany <id,id,…>；
+        // showtrash 0|1；confirmemptytrash（跳出確認）；emptytrash（不經過確認）
+        case "selectmany": model.listSelection = Set(args[1].split(separator: ",").compactMap { Int64($0) })
+        case "trashmany": model.moveToTrash(args[1].split(separator: ",").compactMap { Int64($0) })
+        case "restoremany": model.restore(args[1].split(separator: ",").compactMap { Int64($0) })
+        case "purgemany": model.deletePermanently(args[1].split(separator: ",").compactMap { Int64($0) })
+        case "showtrash": model.showTrash = args.count > 1 && args[1] == "1"
+        case "confirmemptytrash": model.confirmEmptyTrash = true
+        case "emptytrash": model.emptyTrash()
+        // 刪除一句（R89、design §63）：deletesegment <會議 id> <段落 id>；分割會議（R90、§64）：splitmeeting <會議 id> <段落 id>（不經過確認），
+        // splitconfirm <會議 id> <段落 id>（跳出確認對話框，等於右鍵「從這裡分成兩場…」）
+        case "deletesegment": model.selection = id; model.deleteSegment(Int64(args[2]) ?? 0)
+        case "splitmeeting": model.selection = id; model.splitMeeting(at: Int64(args[2]) ?? 0)
+        case "splitconfirm": model.selection = id; model.tab = .transcript; model.splitMeetingRequest = Int64(args[2])
         case "reviewexpand":
             // reviewexpand <會議 id> <summary|decisions|actionItems|openQuestions|topic|custom> <位置> [第二個位置]：
             // 等於點那一條紀錄旁的待確認標記（R41.2）；位置給 - 就收合。視窗不在目前的桌面時 press 按不到標記，用這個
@@ -737,6 +751,11 @@ enum DebugControl {
         let model = AppModel.shared
         var out: [String: Any] = [
             "selection": model.selection ?? -1,
+            // 多選、清空垃圾桶、分割會議（design §62、§64）
+            "multiSelected": model.multiSelected, "showTrash": model.showTrash, "trashCount": model.trash.count,
+            "confirmDelete": model.confirmDelete, "deleteTargets": model.deleteTargets, "confirmPurge": model.confirmPurge ?? [],
+            "confirmEmptyTrash": model.confirmEmptyTrash, "splitMeetingRequest": model.splitMeetingRequest ?? -1,
+            "splittingMeeting": model.splittingMeeting ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
             // 本地 MCP（design §44.6）：開關、啟動檔

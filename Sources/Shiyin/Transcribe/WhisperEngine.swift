@@ -43,7 +43,7 @@ enum WhisperEngine {
     static func isNonSpeech(_ text: String) -> Bool {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if squeezed(text).isEmpty { return true }
-        let pairs: [Character: Character] = ["[": "]", "(": ")", "（": "）", "<": ">", "【": "】"]
+        let pairs: [Character: Character] = ["[": "]", "(": ")", "（": "）", "<": ">", "【": "】"]  // l10n-skip
         guard let open = text.first, let close = pairs[open], text.count > 1, text.last == close else { return false }
         return !text.dropFirst().dropLast().contains { pairs.keys.contains($0) || pairs.values.contains($0) }
     }
