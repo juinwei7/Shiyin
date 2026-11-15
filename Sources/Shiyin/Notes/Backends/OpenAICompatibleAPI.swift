@@ -75,7 +75,7 @@ struct OpenAICompatibleAPI: LLMBackend {
         }
         let choice = (response.object["choices"] as? [[String: Any]])?.first
         let finish = choice?["finish_reason"] as? String
-        if finish == "length" { throw LLMError.failed(String(localized: "回應不完整（可能超過長度上限）")) }
+        if finish == "length" { throw LLMError.failed(String(localized: "回應不完整（可能超過長度上限）"), cause: .incomplete) }
         guard let text = (choice?["message"] as? [String: Any])?["content"] as? String, !text.isEmpty else {
             throw LLMError.badOutput(String(localized: "回應裡沒有文字（status：\(finish ?? String(localized: "未知"))）"))
         }

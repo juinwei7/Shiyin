@@ -24,13 +24,14 @@ struct ClaudeCLI: LLMBackend {
             let detail = result.stderrTail(500)
             if LLMError.isLoginProblem(detail + text) { throw LLMError.notLoggedIn("claude") }
             if LLMError.isLimitProblem(detail + text) { throw LLMError.cliLimited(.claude, output: detail + "\n" + text) }
-            throw LLMError.failed(detail.isEmpty ? String(localized: "claude 沒有回傳結果（結束代碼 \(result.status)）") : detail)
+            throw LLMError.failed(detail.isEmpty ? String(localized: "claude 沒有回傳結果（結束代碼 \(result.status)）") : detail,
+                                  cause: .cli(result))
         }
         if (object["is_error"] as? Bool) == true || object["structured_output"] == nil {
             let message = (object["result"] as? String) ?? result.stderrTail(500)
             if LLMError.isLoginProblem(message) { throw LLMError.notLoggedIn("claude") }
             if LLMError.isLimitProblem(message) { throw LLMError.cliLimited(.claude, output: message) }
-            throw LLMError.failed(String(message.prefix(500)))
+            throw LLMError.failed(String(message.prefix(500)), cause: .cliError)
         }
         return try JSONSerialization.data(withJSONObject: object["structured_output"]!)
     }
@@ -64,9 +65,10 @@ struct CodexCLI: LLMBackend {
             let message = detail.isEmpty ? String(localized: "codex 沒有回傳結果（結束代碼 \(result.status)）") : detail
             // 桌面版附的 codex 出錯：建議另外裝 CLI（R55.4）
             if let app = tool.desktopApp {
-                throw LLMError.failed(message + "\n" + String(localized: "這是 \(app) 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。"))
+                throw LLMError.failed(message + "\n" + String(localized: "這是 \(app) 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。"),
+                                      cause: .cli(result))
             }
-            throw LLMError.failed(message)
+            throw LLMError.failed(message, cause: .cli(result))
         }
         return data
     }
