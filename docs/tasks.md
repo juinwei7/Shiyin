@@ -7,6 +7,19 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 參考另一個會議紀錄 app 的改進（R75～R80，design §51～§56、design-windows §11.18～§11.20、D161～D164；2026-11-15 使用者決定先做）
+
+- [ ] **SA1 Mac 錄不到電腦聲音**（§51.1）。驗證：DEBUG 版加 `-debugSystemAudioPermission denied`，`record-sim <檔> 1 2`（電腦聲音全是 0）：約 5 秒後 state 的 `recorder.levelHint` 是 `systemDenied`、提示列有「打開系統設定」、選單列圖示換成警示、那一行小字不出現；`systempermission granted` 後 `permissionRestarts` 是 1、提示收起來；`granted` 時同樣錄只有那一行小字（15 秒後）。提示列截圖
+- [ ] **SA2 Windows 錄不到電腦聲音**（design-windows §11.18）。驗證：`RecorderTests` 新加的（在別的裝置、在預設裝置、沒有 app、聲音恢復）；虛擬機 `Playing()` 不丟例外
+- [ ] **RM1 Mac 待辦加進提醒事項**（§52）。驗證：DEBUG 版 `-debugFakeReminders YES`：`reminders <id>` 加進去的每一項（標題、備註、到期日、url）照 §52.1；再按一次不重複、提示「都已經在提醒事項了」；`reminderdone` 後畫面上那一條變成打勾（截圖）；編輯模式、垃圾桶不顯示按鈕。真的提醒事項（權限詢問、列表建立）要使用者在電腦前
+- [ ] **HS1 Mac 分享時藏起視窗**（§53）。驗證：打開後 `screencapture -l` 拍不到拾音的視窗、ScreenCaptureKit 截整個螢幕看不到拾音（拍得到就照實改說明，R77.4）；關掉後恢復；選單列的小視窗、設定、使用說明也一樣
+- [ ] **HS2 Windows 分享時藏起視窗**（design-windows §11.19）。驗證：虛擬機開、關各截一次
+- [ ] **NE1 說話者辨識的評估**（R78、§54）：AMI 測試集（Mix-Headset、Array1-01）兩種模型的 DER、搞混的比例、人數；使用者的會議分出的人數。結果寫進 §54
+- [ ] **LL1 本機整理模型的評估**（R79、§55）：Qwen3.5 9B、4B 跟 Claude 整理同樣的會議，比 R79.2 列的項目。結果寫進 §55
+- [ ] **MV1 Mac 錄一段自己的聲音**（§56）。驗證：§56.4 的 AMI 評估；設定頁截圖（沒錄過、錄過、「（我）」）；sheet 用 AX 按過開始、完成、取消；重錄、刪除後資料庫只有一份或沒有 `enroll`
+- [ ] **MV2 Windows 錄一段自己的聲音**（design-windows §11.20）。驗證：`dotnet test`（資料庫的 enroll、刪除）；虛擬機用 `enrollvoice` 走一次、設定頁截圖
+- [ ] **DOC 使用說明**（R76.8、R77.2、R80.6）：Mac、Windows 的使用說明加上提醒事項、分享時藏起視窗、我的聲音；`l10n.py check`、`windows-check` 通過
+
 ## 雙聲道的錄音兩耳都聽得到（R73，design §49、design-windows §11.16、D158；2026-11-12，GitHub #7）
 
 - [~] **CH2 Windows**（design-windows §11.16）：程式完成，dotnet test、虛擬機的匯出驗過（2026-11-12，見 commit 訊息）。還差：真的 Windows 電腦（虛擬機沒有音效裝置，`MediaPlayer` 回 0xC00D36FA）播「麥克風＋電腦聲音」的會議，兩耳都聽得到、倍速和跳播照常、state 的 `player.mixing` 是 true

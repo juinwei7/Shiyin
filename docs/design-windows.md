@@ -468,6 +468,25 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `Recorder` 的重新連接節奏同 M§50.1（`restarts`、`Delay(n)`、看門狗在重新連接完先等 5 秒、提示）。Windows 的重新連接本來就在背景（thread pool），沒有 M§50.2、§50.3 的問題。
 - 驗證：`RecorderTests` 用會一直送通知、開始收音很慢的假音源（`IAudioSource`）。
 
+### 11.18 錄不到電腦聲音時說清楚（R75.3、R75.4，M§51.2）
+
+- `Shiyin.Platform.Windows.AudioOutputs.Playing()`：`MMDeviceEnumerator` 列出 `DataFlow.Render`、`DeviceState.Active` 的每個裝置，`AudioSessionManager.Sessions` 裡 `State == AudioSessionStateActive`、`AudioMeterInformation.MasterPeakValue > 0` 的工作階段，排除 `IsSystemSoundsSession` 和拾音自己的程序；回傳 `PlayingApp(ProcessId, Name, DeviceId, DeviceName, IsDefault)`，`IsDefault` 比對 `GetDefaultAudioEndpoint(Render, Console)`（錄音用的那一個，§6）。名稱：§12.4 的會議 app、瀏覽器用固定的名稱，其他用 `Process.MainModule.FileVersionInfo.FileDescription`，讀不到用程序名稱。COM 例外一律當成沒有。
+- `Recorder.PlayingApps`（`Func<IReadOnlyList<PlayingApp>>?`，AppHost 接上）、`LevelHint.SystemElsewhere`、`LevelHint.SystemMissing`，規則同 M§51.2；文字在 `LevelHints.Text(hint, Recorder)`（要用記下來的 app、裝置名稱）。
+- 錄音畫面的提示列、系統匣、通知照 §11.5。
+- 驗證：`RecorderTests`（假的音源、假的 `PlayingApps`：在別的裝置、在預設裝置、沒有 app、聲音恢復）；虛擬機沒有音效裝置，`Playing()` 只能確認不丟例外、回傳空的。
+
+### 11.19 分享畫面時藏起拾音的視窗（R77，M§53）
+
+- `WindowCapture.Apply(Window, bool hide)`：`SetWindowDisplayAffinity(hwnd, hide ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE)`（user32，`WDA_EXCLUDEFROMCAPTURE = 0x11`）。每個 `Window` 在建立時（`AppHost` 開視窗的地方）套用；設定改了時對所有開著的視窗套用。系統匣的小視窗也是。
+- 設定 `hideFromScreenSharing`（settings.json），「進階 → 顯示」同 Mac 的開關和說明。
+- 驗證：虛擬機截圖（`shot.sh`，用 `Graphics.CopyFromScreen`／BitBlt 時藏起來的視窗是黑的或看不到），開、關各截一次。
+
+### 11.20 錄一段自己的聲音（R80，M§56）
+
+- 資料同 M§56.1（settings.json 的 `selfPersonId`、`voiceprints.audio_source = 'enroll'`）。聲紋用 Windows 自己的說話者辨識（§9）算，跟 Mac 不共用（R28.6）。
+- 錄音用 `WasapiSource`（麥克風，設定裡選的那支），規則同 M§56.2；畫面在設定「說話者與詞彙」，`ContentDialog`（同時只能一個，先收起其他的）。
+- DEBUG：控制通道 `enrollvoice <音檔> <名字>`、`enrolldelete`，state 的 `selfPerson`。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

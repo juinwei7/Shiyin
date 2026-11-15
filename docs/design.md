@@ -2321,6 +2321,85 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 真的裝置：內建麥克風錄音、錄音中換到別的麥克風再換回來（格式不同），錄音照常；AirPods 要回報的人或使用者實測。
 - Windows：`RecorderTests` 用會一直送通知、開始收音很慢的假音源，驗證同樣的節奏和提示。
 
+## 51. 錄不到電腦聲音時說清楚（R75，D161）
+
+### 51.1 Mac：看「錄製系統音訊」的權限
+
+- `SystemAudioPermission.status() -> Status?`（`Capture/AudioSources.swift`）：`dlopen` 私有的 TCC.framework，呼叫 `TCCAccessPreflight("kTCCServiceAudioCapture", nil)`，回傳 Int32：0 允許、1 拒絕、2 還沒問過（2026-11-15 在這台 Mac 用終端機實測：麥克風、螢幕錄製 0，系統錄音 2）。符號找不到（系統改了做法）回傳 nil，不提示（R75.2）。只在錄音中、電腦聲音那一聲道已經完全是 0 的時候每秒查一次，平常不查。
+- `Recorder.LevelHint` 加 `.systemDenied`。`checkLevels` 改成：暫停時不判斷；有麥克風才算麥克風那幾種；有電腦聲音（`hasSystem`）時，電腦聲音那一聲道（`both` 是 1、`system` 是 0）`writer.silence ≥ 5` 而且權限是拒絕 → `.systemDenied`。優先順序：沒有收到聲音 → 被佔住 → **錄不到電腦聲音** → 聲音太小 → 背景太吵。
+- 允許之後自己接上（R75.2）：看過「拒絕」之後（`systemDeniedSeen`，按了「知道了」也照樣看），每秒再查；變成允許時對電腦聲音那一聲道 `restartSource(channel, counted: false)`（同換麥克風，不算重新連接的次數），重建 tap 和聚合裝置。提示在權限變成允許時就不再成立，收起來。
+- 文字（錄音畫面的提示列、選單列、通知同一句，R42）：「拾音沒有「錄製系統音訊」的權限，錄不到電腦的聲音（線上會議裡其他人說話的聲音）：請到「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許拾音。」圖示 `speaker.slash`。提示列、選單列多一個「打開系統設定」（`Recorder.openPrivacySettings("Privacy_AudioCapture")`）。
+- 原本的那一行小字（`systemSilent`，§20）在這個提示出現時不顯示，避免同一件事講兩次；其他時候照舊（R75.5）。
+- DEBUG：啟動參數 `-debugSystemAudioPermission denied|granted|notDetermined` 蓋掉查到的權限，`shiyinctl systempermission <denied|granted|notDetermined|real>` 錄音中改；`record-sim` 的第三個參數 `2` 是「雙聲道、電腦聲音那一聲道全是 0」（模擬被拒絕）；state 的 `recorder.levelCheck` 加 `systemPermission`、`systemSilentSeconds`，`recorder.permissionRestarts`（因為允許而重新接上的次數）。
+
+### 51.2 Windows：app 的聲音在別的輸出裝置（design-windows §11.18）
+
+- Platform 的 `AudioOutputs.Playing()`：列出所有啟用中的輸出裝置上、狀態是 Active、目前音量（`AudioMeterInformation.MasterPeakValue`）> 0 的音訊工作階段，回傳 app（程序 id、名稱）、裝置（id、名稱）、是不是預設裝置（`Role.Console`，跟錄音用的同一個）。拾音自己、系統音效（`IsSystemSoundsSession`）不算。
+- `Recorder`（Services）注入 `Func<IReadOnlyList<PlayingApp>>`：有電腦聲音、電腦聲音那一聲道 `silence ≥ 10` 時每 2 秒查一次；有正在播出聲音的 app 就提示：不在預設裝置上 → `LevelHint.SystemElsewhere`，在預設裝置上 → `LevelHint.SystemMissing`。挑哪一個 app（R75.4）：會議 app（§12.4 的清單）→ 瀏覽器 → 其他；同一類取第一個。名稱、裝置在提示出現時記下來，之後不變。電腦聲音恢復（不再是 0）、或沒有 app 在播出聲音時收起來。
+- 優先順序同 Mac（`SystemElsewhere`、`SystemMissing` 排在麥克風沒有收到聲音之後、聲音太小之前）。
+- 驗證：`RecorderTests` 用電腦聲音那一聲道全是 0 的假音源、假的 `Playing()`。
+
+## 52. 待辦加進「提醒事項」（R76，D162）
+
+### 52.1 寫進提醒事項（`Services/Reminders.swift`，只有 Mac）
+
+- `ReminderStore` 協定：`access`（`.granted`／`.denied`／`.notDetermined`）、`requestAccess() async -> Bool`、`list() throws -> String`（列表的 id）、`existing(meetingId:) throws -> [String: Bool]`（item 鍵 → 完成了沒）、`add(_ items: [ReminderItem], to list: String) throws`。正式的是 `EventKitReminders`（`EKEventStore`、`requestFullAccessToReminders`），DEBUG 加 `-debugFakeReminders YES` 時用記憶體裡的假的（不碰使用者真的提醒事項、不跳權限詢問）。
+- 列表：記在設定 `remindersListId` 的那一個；找不到時找標題是「拾音」或「Shiyin」的提醒事項列表；都沒有就建立，標題跟著介面語言（中文「拾音」、其他「Shiyin」；簡體介面「拾音」），來源用 `defaultCalendarForNewReminders()?.source`。
+- 每一項（`ReminderItem`）：標題是事項；備註依會議語言（`meetingLanguage.text`）寫「負責人：<負責人>」（沒有就不寫）、「會議：<標題>（<日期>）」、「時間點：<mm:ss>」（沒有就不寫）；期限是 `yyyy-MM-dd`（整理的規則，§8）時設成 `dueDateComponents`（年、月、日，不設時、分，不加鬧鐘），其他非空的期限寫進備註「期限：<期限>」。`url` 是 `shiyin://open?meeting=<id>&t=<秒>&item=<鍵>`（同 R69.5 的連結，打開那場會議、跳到那個時間點；`item` 拾音打開時不理會）。
+- 去重的鍵：`item` = 事項文字（去掉頭尾空白）的 SHA-256 前 12 個十六進位字。已經在列表裡、`url` 的 `meeting` 和 `item` 都一樣的不再加（R76.3）。不另外存在資料庫（D162）。
+- 按鈕（R76.1）：權限是 `.notDetermined` 先 `requestAccess`；拒絕時跳出說明（R76.5）和「打開系統設定」（`Privacy_Reminders`）。加完提示「已加到提醒事項的「拾音」列表：N 項」，都加過時「這場的待辦都已經在提醒事項了」。失敗照原因說明。
+- Info.plist 加 `NSRemindersFullAccessUsageDescription`：「拾音會把你選的會議待辦加到「提醒事項」。」（英文、簡體在 InfoPlist.strings）。
+
+### 52.2 畫面
+
+- 紀錄分頁的「待辦」段落標題右邊（`NotesSection` 加 `accessory`）：`Button("加到提醒事項", systemImage: "checklist")`，`.borderless`、小字。編輯模式、垃圾桶裡的會議、沒有待辦時不顯示；正在加的時候停用。
+- 每一條待辦：已經在提醒事項裡的，事項文字後面（時間點、待確認標記之後）加 `Image(systemName: "checklist")`（完成了是 `checkmark.circle.fill`、青瓷綠），`.help`「已加到提醒事項」／「已在提醒事項裡完成」。
+- 狀態（R76.4）：`AppModel.reminderStatus: [String: Bool]`（目前這場會議，item 鍵 → 完成了沒），換會議、加完、app 回到前景（`NSApplication.didBecomeActiveNotification`）時在背景讀一次；權限不是 `.granted` 就不讀（不會因此跳出詢問）。匯出、心智圖不畫。
+- DEBUG：`shiyinctl reminders <會議 id>`（等於按按鈕）、`reminderdone <會議 id> <第幾項>`（假的提醒事項裡把那一項設成完成）；state 的 `reminders`（假的列表裡的每一項：標題、備註、到期日、url、完成）和 `reminderStatus`。
+
+## 53. 分享畫面時藏起拾音的視窗（R77，D163）
+
+- 設定 `hideFromScreenSharing`（預設 false；Windows 在 settings.json）。「進階 → 顯示」加開關「分享畫面時藏起拾音的視窗」和 R77.2 的說明。
+- Mac：`WindowSharing.apply()`（`App/`）把 `NSApp.windows` 每一個的 `sharingType` 設成 `.none`（開）或 `.readOnly`（關，系統的預設）。什麼時候套用：設定改了（`UserDefaults.didChangeNotification` 時比對值）、app 啟動、任何視窗變成 key／main（`NSWindow.didBecomeKeyNotification`、`didBecomeMainNotification`）、視窗顯示出來（`NSWindow.didChangeOcclusionStateNotification`：選單列的小視窗、偵測會議的浮動提醒不會變成 key，但出現時會收到這個）。只在值不同時才設。
+- 已知的限制（R77.4，實測後寫進說明）：`sharingType = .none` 擋得住 `CGWindowListCreateImage`（`screencapture`）；ScreenCaptureKit（新版的 Zoom、Teams、Meet、系統的截圖和錄影）是否遵守要實測。
+- Windows：`SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE)`（0x11，Windows 10 2004 起；關掉時 `WDA_NONE`），每個視窗（主視窗、設定、使用說明、引導、對話框所在的視窗、系統匣的小視窗）建立時和設定改了時套用（design-windows §11.19）。
+- DEBUG：啟動參數 `-hideFromScreenSharing YES`；state 的 `windows` 列出每個視窗的 `sharingType`。
+
+## 54. 說話者辨識換成 Nemotron-3 的評估（R78）
+
+評估結果寫在這裡（進行中）。
+
+## 55. 本機的整理模型評估（R79）
+
+評估結果寫在這裡（進行中）。
+
+## 56. 錄一段自己的聲音（R80，D164）
+
+### 56.1 資料
+
+- 「我」是誰記在設定 `selfPersonId`（Windows 在 settings.json），不改資料庫結構（D164）。那個人不在了（被刪掉、全部刪除）時當成沒錄過。
+- 錄的聲紋存成 `voiceprints` 的一列：`person_id` 是我、`audio_source = 'enroll'`、`meeting_id`、`speaker_idx` 是 NULL。一個人最多一份 `enroll`，重錄時換掉。比對（`matchVoiceprints`、`voiceprintCandidates`）本來就讀全部的聲紋，不用改；每人最多 30 份的上限（§21.4）刪最舊的時跳過 `enroll`。
+- `AppDatabase.enrollVoiceprint(name:embedding:) -> Int64`：照名字找人（不分大小寫，同 `learnVoiceprint`），沒有就建立；刪掉之前「我」那份 `enroll`（換了名字時是另一個人的），存新的一份。`deleteEnrollment()`：刪掉那份 `enroll`，沒有其他聲紋、也沒有會議用到的人照舊由 `deleteOrphanPeople` 刪掉。
+- 改名、刪除某人、全部刪除（§21.4 的設定）照舊；刪掉的是「我」時清掉 `selfPersonId`。
+
+### 56.2 錄音和算聲紋（`Capture/VoiceEnrollment.swift`）
+
+- 用 `MicrophoneSource`（跟錄音同一個，設定裡選的麥克風，R58）收 16 kHz 單聲道，最多 40 秒，到了自動停。每 100 毫秒算一次音量（RMS，dBFS），高於 −50 dBFS 的格算「有聲音」；畫面顯示音量和有聲音的秒數。
+- 按「完成」：有聲音的部分不到 10 秒時不收，提示「再多唸一點（有聲音的部分要 10 秒以上）」；完全是 0 超過 3 秒時提示「麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。」
+- 算聲紋：`Diarizer.diarize(samples:)`（模型不在時先 `prepare()` 下載，顯示「正在準備說話者辨識的模型…」），取說話秒數最多的那一位的聲紋，說話秒數要 ≥ 8 秒（同比對的下限 `voiceprintMinimumSeconds`）。錄音只在記憶體裡，算完就丟（R80.5）。
+- 錄音中（`recorder.isRecording`）、聲紋關掉時按鈕停用，說明「錄音中不能錄」「先打開上面的「記住說話者的聲音」」。
+
+### 56.3 畫面（設定「說話者與詞彙」）
+
+- 「記住說話者的聲音」說明的下面、「認識的人」上面加一列「我的聲音」：還沒錄過時寫「錄一段你自己的聲音，第一場會議就認得你。」和按鈕「錄一段我的聲音…」；錄過時寫「<名字>・已錄（<日期>）」和「重錄…」「刪除」。
+- 按了打開 sheet：名字欄位（預設：已經錄過的那個人，或 `NSFullUserName()`）、要唸的文字（介面語言：中文一段約 120 字、英文約 60 字，介紹拾音怎麼用聲紋）、音量條、秒數、「開始」→「完成」、「取消」。完成後「正在算聲音特徵…」，存好提示「已記住你的聲音」並關掉。
+- 認識的人列表裡「我」的名字後面加「（我）」。
+- DEBUG：`shiyinctl enrollvoice <音檔> <名字>`（用音檔代替麥克風，走同一個算聲紋、存檔的流程）、`enrolldelete`；state 的 `selfPerson`（id、名字、有沒有 enroll 的聲紋）。
+
+### 56.4 驗證
+
+- AMI ES2004a 的個人麥克風（Headset），每個人取一段 20～30 秒自己說話的地方當「唸的那段」，`enrollvoice` 存成那個人；再用 `voiceprint-eval`／匯入 ES2004b～d（Mix-Headset）看有沒有帶入或在待確認問，算錄的聲紋跟會議裡同一個人、不同的人的相似度，寫進這裡。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2429,3 +2508,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D160 | Mac 的重新連接在背景佇列做，AVAudioEngine 的 Objective-C 例外用一個小的 `.m` 接住（§50.2、§50.3） | 留在主執行緒：藍牙開始收音要好幾秒，畫面卡住（回報的「卡死一會」）。整個錄音（含開始、停止）都搬到背景：Recorder 的狀態都在主執行緒，改動太大。不接例外：格式在中途改變時直接當掉，Swift 的 `do/catch` 接不到 NSException |
 
 沿用 v2 的決策：資料放 Application Support（v2 D3）、GRDB（v2 D5）、會議紀錄存 JSON 加版本（v2 D6）、DEBUG 控制通道（v2 §13）。
+| D161 | Mac 錄不到電腦聲音用「錄製系統音訊」的權限狀態判斷（私有的 `TCCAccessPreflight`，查不到就不提示；§51.1） | 看有沒有 app 在輸出（mm2t 的做法）：Mac 的程序物件只看得出 IO 開著，看不出有沒有聲音；拾音錄的是全部的電腦聲音，總有 app 開著輸出，對方都靜音時也是 0，會在權限正常時誤報。權限被拒絕時錄到的全是 0、系統不報錯，看權限是唯一確定的線索 |
+| D162 | 加過哪些提醒事項不存在資料庫，靠提醒事項的 `url` 帶會議 id 和事項文字的雜湊去重（§52.1）；Windows 不做 | 資料庫加一張表記加過的提醒：要 migration、標準答案，Windows 也要跟著改結構卻沒有這個功能；使用者在提醒事項裡刪掉的也還記著。Windows 接 Microsoft To Do：要使用者登入 Microsoft 帳號、拾音要跟微軟註冊 app（Graph API），先看有沒有人要 |
+| D163 | 分享時藏起視窗是全部視窗一起、預設關（§53） | 預設開：拾音自己的截圖驗證、官網截圖都拍不到，使用者自己截圖、錄教學影片也拍不到，要知道有這個設定才不會困惑。只藏主視窗：設定頁、錄音畫面、使用說明一樣看得到會議的內容 |
+| D164 | 「我」記在設定、錄的聲紋存成一份 `audio_source = 'enroll'` 的聲紋（§56.1），不改資料庫結構 | `people` 加「是不是我」的欄位：要 migration、兩邊的標準答案，只為了一個值。錄好幾段、分現場和線上：先看一段夠不夠用（§56.4）。放進首次使用引導：引導維持三步（R44.6），而且第一次打開時還沒有說話者辨識的模型 |
