@@ -5686,6 +5686,23 @@
         }
       }
     },
+    "合併到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合并到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Into"
+          }
+        }
+      }
+    },
     "合併到…": {
       "extractionState": "manual",
       "localizations": {
@@ -5733,23 +5750,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "同一个人被分成两位时，把这位说的话全部算到另一位"
-          }
-        }
-      }
-    },
-    "同一個人被記成兩個名字時，合併成一個（聲音特徵、會議裡的名字一起改）": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同一个人被记成两个名字时，合并成一个（声音特征、会议里的名字一起改）"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When one person is saved under two names, merge them into one (voice profiles and names in meetings change together)"
           }
         }
       }
@@ -9938,6 +9938,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "改名"
+          }
+        }
+      }
+    },
+    "改名…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改名…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename…"
+          }
+        }
+      }
+    },
+    "改名、跟另一個名字合併（同一個人被記成兩個名字時）、刪除聲音特徵": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改名、跟另一个名字合并（同一个人被记成两个名字时）、删除声音特征"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename, merge with another name (when one person was saved under two names), or delete the voice profile"
           }
         }
       }

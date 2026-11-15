@@ -198,22 +198,10 @@ struct SidebarView: View {
         @Bindable var model = model
         VStack(spacing: 0) {
             let searching = !model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
-            // 會議｜人物（design §60.2、R85.1）：垃圾桶裡、搜尋中不顯示（搜尋的結果是會議）
-            if !model.showTrash && !searching {
-                Picker("", selection: $model.sidebarMode) {
-                    Text(MeetingLanguage.ui(zh: "會議", en: "Meetings")).tag(SidebarMode.meetings)
-                    Text("人物").tag(SidebarMode.people)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .padding(.horizontal, 12)
-                .padding(.top, 4)
-                .padding(.bottom, 6)
-            }
             if searching {
                 SearchResultsList()
             } else if model.sidebarMode == .people && !model.showTrash {
-                PeopleList()
+                peopleList
             } else {
                 meetingList
             }
@@ -255,6 +243,7 @@ struct SidebarView: View {
             .padding(.vertical, 8)
         }
         .searchable(text: $model.searchQuery, placement: .sidebar, prompt: "搜尋所有會議")
+        .onAppear { model.reloadPeopleOverview() }
         .toolbar {
             ToolbarItemGroup {
                 RecordingControls()
@@ -269,28 +258,65 @@ struct SidebarView: View {
         }
     }
 
+    /// 側欄最上面的兩組（design §60.2、R85.1）：所有會議、人物，再來是資料夾。跟資料夾同一種列，
+    /// 點了換下面那一段的內容（macOS 的側欄是導覽清單，不放分段控制）
+    @ViewBuilder
+    private var scopeSections: some View {
+        let people = model.sidebarMode == .people
+        Section {
+            FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full",
+                      selected: !people && model.folderFilter == nil) {
+                model.sidebarMode = .meetings
+                model.folderFilter = nil
+            }
+            FolderRow(name: String(localized: "人物"), count: model.peopleOverview.count, symbol: "person.2", selected: people) {
+                model.sidebarMode = .people
+                model.reloadPeopleOverview()
+            }
+        }
+        if !model.folders.isEmpty {
+            Section("資料夾") {
+                ForEach(model.folders, id: \.name) { folder in
+                    FolderRow(name: folder.name, count: folder.count, symbol: "folder", selected: !people && model.folderFilter == folder.name) {
+                        model.sidebarMode = .meetings
+                        model.folderFilter = folder.name
+                    }
+                    .contextMenu {
+                        Button("重新命名…") { model.folderPrompt = .rename(folder.name) }
+                        Button("刪除資料夾（會議會保留）", role: .destructive) { model.deleteFolder(folder.name) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 人物模式：上面同樣是所有會議、人物、資料夾，下面是認識的人（design §60.2）
+    private var peopleList: some View {
+        @Bindable var model = model
+        return List(selection: $model.selectedPerson) {
+            scopeSections
+            Section("人物") {
+                ForEach(model.peopleOverview) { person in
+                    PersonRow(person: person).tag(person.id)
+                }
+                if model.peopleOverview.isEmpty {
+                    Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        .selectionDisabled()
+                }
+            }
+        }
+    }
+
     private var meetingList: some View {
         @Bindable var model = model
         return List(selection: $model.selection) {
             if model.showTrash {
                 Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
-            } else if !model.folders.isEmpty {
-                Section("資料夾") {
-                    FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: model.folderFilter == nil) {
-                        model.folderFilter = nil
-                    }
-                    ForEach(model.folders, id: \.name) { folder in
-                        FolderRow(name: folder.name, count: folder.count, symbol: "folder", selected: model.folderFilter == folder.name) {
-                            model.folderFilter = folder.name
-                        }
-                        .contextMenu {
-                            Button("重新命名…") { model.folderPrompt = .rename(folder.name) }
-                            Button("刪除資料夾（會議會保留）", role: .destructive) { model.deleteFolder(folder.name) }
-                        }
-                    }
-                }
+            } else {
+                scopeSections
             }
-            Section(model.showTrash || model.folders.isEmpty ? "" : (model.folderFilter ?? String(localized: "所有會議"))) {
+            Section(model.showTrash ? "" : (model.folderFilter ?? String(localized: "所有會議"))) {
                 ForEach(model.filteredMeetings) { row in
                     MeetingRowView(row: row, status: model.status(row))
                         .tag(row.id)

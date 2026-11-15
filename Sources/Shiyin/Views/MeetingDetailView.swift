@@ -203,6 +203,8 @@ struct MeetingHeader: View {
                   : String(localized: "\(template)・\(meeting.meetingLanguage.name)"),
                   systemImage: "slider.horizontal.3")
         }
+        // 沒有框：跟資訊列同一層，不比標題搶眼（design §59）
+        .menuStyle(.borderlessButton)
         .fixedSize()
         .help(recordingThis
               ? String(localized: "範本、會議語言、大約幾個人。人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
@@ -457,6 +459,8 @@ struct MoreMenu: View {
         } label: {
             Label("更多", systemImage: "ellipsis.circle")
         }
+        // 工具列的選單只顯示圖示，輔助使用拿不到 Label 的文字，要另外給名字
+        .accessibilityLabel(Text("更多"))
         .help("更多動作")
     }
 }

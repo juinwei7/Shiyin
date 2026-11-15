@@ -22,6 +22,7 @@ struct DocumentsMenu: View {
         } label: {
             Label(label(reading: !reading.isEmpty), systemImage: "paperclip")
         }
+        .menuStyle(.borderlessButton)
         .fixedSize()
         .help("會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗")
     }

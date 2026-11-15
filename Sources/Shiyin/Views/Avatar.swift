@@ -22,7 +22,7 @@ struct PersonAvatar: View {
             .background(color.opacity(0.18), in: Circle())
             .overlay {
                 // 「我」（R80）外圈一圈青瓷綠
-                if isMe { Circle().strokeBorder(Color.celadon, lineWidth: max(1.5, diameter / 14)) }
+                if isMe { Circle().strokeBorder(Color.celadon, lineWidth: min(2, max(1.5, diameter / 14))) }
             }
             .accessibilityHidden(true)
     }

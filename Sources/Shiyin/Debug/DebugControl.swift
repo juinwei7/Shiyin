@@ -680,6 +680,9 @@ enum DebugControl {
             let prefix = args.count > 1 ? args[1] : "main"
             NSApp.windows.filter { $0.identifier?.rawValue.hasPrefix(prefix) == true }.forEach { $0.close() }
         case "openwindow": model.openWindowById?(args[1])
+        case "windowlevel":   // windowlevel <視窗 id 開頭> desktop|normal：放到桌面層（被所有視窗蓋住，screencapture -l 照樣截得到），不出現在使用者的畫面上
+            let level = args.count > 2 && args[2] == "desktop" ? NSWindow.Level(Int(CGWindowLevelForKey(.desktopWindow))) : .normal
+            NSApp.windows.filter { $0.identifier?.rawValue.hasPrefix(args[1]) == true }.forEach { $0.level = level }
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)

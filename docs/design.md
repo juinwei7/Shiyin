@@ -2495,7 +2495,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 ```
 
 - 第二列左邊：資料夾、日期、長度、「最後 N 分鐘沒有人說話」（同現在），與會者是頭像加名字（同現在的名字可以點、自動帶入的有選單），最多顯示 4 位，其他收成「+N」選單（列出其他人，點了同名字的選單）。沒有說話者時照舊寫與會者的名單。
-- 右邊：`MeetingSettingsMenu`：標題「<範本>・<語言>」（`doc.text` 圖示），內容三段：「範本」（同現在）、「會議語言」（同現在）、「大約幾個人」（只在錄這場時，同現在）；`.help` 說明換了要從「更多 → 重新處理」重新整理。文件選單照舊。
+- 右邊：`MeetingSettingsMenu`：標題「<範本>・<語言>」（`slider.horizontal.3` 圖示），沒有框（`.menuStyle(.borderlessButton)`，文件選單也是，2026-11-15 改：有底色的按鈕比標題還搶眼），內容三段：「範本」（同現在）、「會議語言」（同現在）、「大約幾個人」（只在錄這場時，同現在）；`.help` 說明換了要從「更多 → 重新處理」重新整理。文件選單照舊。
 - 放不下時（`ViewThatFits`）照舊把選單換到下一行。
 
 ## 60. 人物頁（R85）
@@ -2508,9 +2508,10 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ### 60.2 畫面
 
-- `AppModel.sidebarMode`（`meetings`／`people`，不記在設定：每次打開都從會議開始，DEBUG 測試也不會改到使用者的設定）、`selectedPerson: Int64?`。側欄最上面（搜尋框下面）`Picker` 分段控制「會議｜人物」；在垃圾桶、搜尋中時不顯示（搜尋的結果是會議）。
-- `PeopleList`：`List(selection: $model.selectedPerson)`，每一列頭像（26 pt）、名字（我的話後面「（我）」）、第二行「N 場會議・最近 <日期>」。沒有人時的空白畫面同 R85.4。
-- 右邊：`sidebarMode == .people` 時顯示 `PersonPage`（沒選人時是說明）。`ReadingColumn` 裡：大頭像、名字、「一起開過 N 場會議，最近 <日期>」、按鈕「改名」（popover，同設定頁）「合併到…」（選單：其他認識的人，選了 `renamePerson(id, to: 那個人的名字)`，同名合併）「刪除聲音特徵」（確認對話框，同設定頁）；「他負責的待辦」：`ActionItemsTable` 同樣的格線（事項、期限、會議的標題和時間點按鈕），右上角「加到提醒事項」（只加還沒加的；同 §52，但跨會議：每一項的 url 照它自己的會議）；「會議」：每列日期、標題、「說了 N 分鐘」，點了 `reveal(meetingId)`（切回「會議」、選那場）。點待辦的時間點：切回會議、選那場、從那裡播放。
+- `AppModel.sidebarMode`（`meetings`／`people`，不記在設定：每次打開都從會議開始，DEBUG 測試也不會改到使用者的設定）、`selectedPerson: Int64?`。
+- 側欄是 source list（2026-11-15 改，使用者覺得分段控制醜；照 Apple 的 Mac 介面準則：側欄是導覽清單，切換內容的分段控制放工具列、不放側欄，標準控制項不套品牌色）：搜尋框下面一直有一組「所有會議（數量）」「人物（數量）」，跟資料夾同一種列（`FolderRow`：圖示 `tray.full`／`person.2`、名字、數量，選到的那一列青瓷綠）；有資料夾時下面是「資料夾」那一組；再下面一段照選的項目列會議或人物，段落標題是那一項的名字。點「所有會議」或資料夾：`sidebarMode = .meetings`、設 `folderFilter`；點「人物」：`sidebarMode = .people`。在垃圾桶、搜尋中時不顯示這幾組（搜尋的結果是會議）。
+- 人物模式：`List(selection: $model.selectedPerson)`，上面同樣是那幾組，下面「人物」一段，每一列（`PersonRow`）頭像（26 pt）、名字（我的話後面「（我）」）、第二行「N 場會議・最近 <日期>」。沒有人時那一段寫說明（同 R85.4）。
+- 右邊：`sidebarMode == .people` 時顯示 `PersonPage`（沒選人時是說明）。視窗標題是人名。`ReadingColumn` 裡：頭像（52 pt；我的話外圈細的青瓷綠，名字旁邊灰字「我」）、名字、「一起開過 N 場會議，最近 <日期>」；動作放在工具列右上角的「更多」（同會議頁的「更多」，輔助使用的名字是「更多」）：「改名…」（popover 接在「更多」下面，同設定頁）、「合併到」（子選單：其他認識的人，選了 `renamePerson(id, to: 那個人的名字)`，同名合併）、分隔線、「刪除聲音特徵…」（確認對話框，同設定頁）；「負責的待辦」：同樣的格線（事項、期限、會議的標題和時間點按鈕），事項那一欄撐滿，表格跟段落同寬，右上角「加到提醒事項」（只加還沒加的；同 §52，但跨會議：每一項的 url 照它自己的會議）；「會議」：每列日期、標題、「說了 N 分鐘」，點了 `reveal(meetingId)`（切回「會議」、選那場）。點待辦的時間點：切回會議、選那場、從那裡播放。
 - DEBUG：`sidebar people|meetings`、`person <id>`；state 的 `sidebarMode`、`selectedPerson`、`personPage`（待辦、會議的數目）。
 
 ## 61. 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，D168、D169）

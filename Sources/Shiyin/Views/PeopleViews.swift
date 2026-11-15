@@ -1,32 +1,18 @@
 import SwiftUI
 
-/// 側欄的人物列表（design §60.2、R85.1）
-struct PeopleList: View {
-    @Environment(AppModel.self) private var model
+/// 側欄的一個人（design §60.2、R85.1）：頭像、名字、一起開過幾場和最近一場
+struct PersonRow: View {
+    let person: PersonOverview
 
     var body: some View {
-        @Bindable var model = model
-        List(selection: $model.selectedPerson) {
-            ForEach(model.peopleOverview) { person in
-                HStack(spacing: 10) {
-                    PersonAvatar(name: person.name, color: Color.person(person.name), size: 26, isMe: person.isMe, scales: false)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(person.isMe ? String(localized: "\(person.name)（我）") : person.name).lineLimit(1)
-                        Text(PersonPage.summaryLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                }
-                .padding(.vertical, 2)
-                .tag(person.id)
+        HStack(spacing: 10) {
+            PersonAvatar(name: person.name, color: Color.person(person.name), size: 26, isMe: person.isMe, scales: false)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(person.isMe ? String(localized: "\(person.name)（我）") : person.name).lineLimit(1)
+                Text(PersonPage.summaryLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
-        .overlay {
-            if model.peopleOverview.isEmpty {
-                Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
-                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    .padding(24)
-            }
-        }
-        .onAppear { model.reloadPeopleOverview() }
+        .padding(.vertical, 2)
     }
 }
 
@@ -76,47 +62,28 @@ struct PersonPage: View {
                 }
             }
         }
+        .navigationTitle(person.name)
+        // 改名、合併、刪除放在工具列右上角的「更多」，跟會議頁同一個位置
+        .toolbar { ToolbarItem(placement: .primaryAction) { moreMenu } }
         .task(id: person) { load() }
     }
 
+    /// 頭像、名字、摘要；改名、合併、刪除收在右邊的「更多」（同會議頁的「更多」，破壞性的動作不跟其他並排）
     private var header: some View {
-        HStack(alignment: .center, spacing: 18) {
-            PersonAvatar(name: person.name, color: Color.person(person.name), size: 56, isMe: person.isMe, scales: false)
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(person.name).contentTitleFont(26).textSelection(.enabled)
+        HStack(alignment: .center, spacing: 16) {
+            PersonAvatar(name: person.name, color: Color.person(person.name), size: 52, isMe: person.isMe, scales: false)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(person.name).contentTitleFont(26).textSelection(.enabled).lineLimit(1)
                     if person.isMe {
-                        Text("我").font(.caption.weight(.semibold)).foregroundStyle(Color.celadon)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.celadon.opacity(0.15), in: Capsule())
+                        Text("我").font(.callout).foregroundStyle(.secondary)
                     }
                 }
-                Text(Self.summaryLine(person, long: true)).foregroundStyle(.secondary)
-                HStack(spacing: 14) {
-                    Button("改名") { renameText = person.name; renaming = true }
-                        .popover(isPresented: $renaming, arrowEdge: .bottom) { renameForm }
-                    let others = model.peopleOverview.filter { $0.id != person.id }
-                    if !others.isEmpty {
-                        Menu("合併到…") {
-                            ForEach(others) { other in
-                                Button(other.name) {
-                                    model.renamePerson(person.id, to: other.name)
-                                    model.selectedPerson = other.id
-                                }
-                            }
-                        }
-                        .menuStyle(.borderlessButton)
-                        .menuIndicator(.hidden)
-                        .fixedSize()
-                        .help("同一個人被記成兩個名字時，合併成一個（聲音特徵、會議裡的名字一起改）")
-                    }
-                    Button("刪除聲音特徵…", role: .destructive) { confirmDelete = true }
-                }
-                .buttonStyle(.link)
-                .font(.callout)
+                Text(Self.summaryLine(person, long: true)).font(.callout).foregroundStyle(.secondary)
             }
+            Spacer(minLength: 0)
         }
-        .padding(.bottom, 8)
+        .padding(.bottom, 4)
         .confirmationDialog("刪除「\(person.name)」的聲音特徵？", isPresented: $confirmDelete) {
             Button("刪除", role: .destructive) {
                 model.deletePerson(person.id)
@@ -125,6 +92,30 @@ struct PersonPage: View {
         } message: {
             Text("已經帶入的名字會留著，之後的會議不會再自動帶入。")
         }
+    }
+
+    private var moreMenu: some View {
+        let others = model.peopleOverview.filter { $0.id != person.id }
+        return Menu {
+            Button("改名…") { renameText = person.name; renaming = true }
+            if !others.isEmpty {
+                Menu("合併到") {
+                    ForEach(others) { other in
+                        Button(other.name) {
+                            model.renamePerson(person.id, to: other.name)
+                            model.selectedPerson = other.id
+                        }
+                    }
+                }
+            }
+            Divider()
+            Button("刪除聲音特徵…", role: .destructive) { confirmDelete = true }
+        } label: {
+            Label("更多", systemImage: "ellipsis.circle")
+        }
+        .accessibilityLabel(Text("更多"))
+        .help("改名、跟另一個名字合併（同一個人被記成兩個名字時）、刪除聲音特徵")
+        .popover(isPresented: $renaming, arrowEdge: .bottom) { renameForm }
     }
 
     private var renameForm: some View {
@@ -164,6 +155,7 @@ struct PersonPage: View {
             ForEach(items) { entry in
                 GridRow {
                     Text(entry.item.task).meetingText().textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(entry.item.due.isEmpty ? "—" : entry.item.due).monospacedDigit()
                         .foregroundStyle(entry.item.due.isEmpty ? .secondary : .primary)
                     Button {
