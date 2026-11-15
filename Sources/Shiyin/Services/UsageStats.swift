@@ -14,6 +14,8 @@ final class UsageStats: @unchecked Sendable {
         var engines = ["breeze": 0, "builtin": 0, "whisperJa": 0, "qwen": 0, "server": 0]
         var meetingLanguages = ["zh": 0, "en": 0, "ja": 0]
         var diarizationRuns = 0
+        /// 其中用 Nemotron-3 分的（R87.4）
+        var diarizationNemotron = 0
         var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0, "enterprise": 0]
         var questionsAsked = 0
         /// 待確認送出的題數（R41.7、§31.3）：回答（打字或「不是」）、確認（「是」）、略過
@@ -44,6 +46,7 @@ final class UsageStats: @unchecked Sendable {
             engines = try c.decodeIfPresent([String: Int].self, forKey: .engines) ?? base.engines
             meetingLanguages = try c.decodeIfPresent([String: Int].self, forKey: .meetingLanguages) ?? base.meetingLanguages
             diarizationRuns = try c.decodeIfPresent(Int.self, forKey: .diarizationRuns) ?? 0
+            diarizationNemotron = try c.decodeIfPresent(Int.self, forKey: .diarizationNemotron) ?? 0
             summarizer = try c.decodeIfPresent([String: Int].self, forKey: .summarizer) ?? base.summarizer
             questionsAsked = try c.decodeIfPresent(Int.self, forKey: .questionsAsked) ?? 0
             review = try c.decodeIfPresent([String: Int].self, forKey: .review) ?? base.review
@@ -134,6 +137,11 @@ final class UsageStats: @unchecked Sendable {
     /// 重新辨識說話者完成
     func rediarized() {
         add { $0.diarizationRuns += 1 }
+    }
+
+    /// 說話者辨識用了 Nemotron-3（R87.4）：轉錄、重新辨識各算一次，跟 diarizationRuns 一起看
+    func diarizedWithNemotron() {
+        add { $0.diarizationNemotron += 1 }
     }
 
     /// 整理（含草稿、修正）成功。只記整理工具的種類，不記網址、模型
@@ -356,6 +364,8 @@ final class UsageStats: @unchecked Sendable {
         var engines: [String: Int]
         var meetingLanguages: [String: Int]
         var diarizationRuns: Int
+        /// 2026-11-15 加（R87.4）：舊後台沒有這一欄就忽略
+        var diarizationNemotron: Int
         var summarizer: [String: Int]
         var questionsAsked: Int
         var review: [String: Int]
@@ -370,6 +380,7 @@ final class UsageStats: @unchecked Sendable {
                          meetingsImported: c.meetingsImported, importedSeconds: c.importedSeconds,
                          transcribedSeconds: c.transcribedSeconds, transcribeWallSeconds: c.transcribeWallSeconds,
                          engines: c.engines, meetingLanguages: c.meetingLanguages, diarizationRuns: c.diarizationRuns,
+                         diarizationNemotron: c.diarizationNemotron,
                          summarizer: c.summarizer, questionsAsked: c.questionsAsked, review: c.review),
             errors: c.errors,
             errorDetail: ErrorDetail(summarize: c.summarizeErrors, summarizeProvider: c.summarizeErrorProviders,

@@ -1052,6 +1052,7 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 | `engines.breeze`／`builtin`／`whisperJa`／`qwen` | 轉錄完成，依 `transcribedWith`（breeze／system／japanese／qwen）加語音秒數。`builtin` 是系統內建或快速辨識：Mac 是 macOS 內建辨識，Windows 是快速辨識（SenseVoice），報表依平台顯示名稱 | 同上 |
 | `meetingLanguages.zh`／`en`／`ja` | 轉錄完成，依會議語言加一場 | 同上 |
 | `diarizationRuns` | 轉錄時有做說話者辨識、重新辨識說話者完成 | `JobRunner.transcribe`、`rediarize` |
+| `diarizationNemotron` | 其中照設定用了 Nemotron-3 的（R87.4，2026-11-15 加；Windows 不送） | `Diarizer.diarize` |
 | `summarizer.claudeCode`／`codex`／`api`／`local` | 整理（含草稿、回答待確認後的修正）成功；Anthropic、OpenAI、Gemini、遠端的 OpenAI 相容 API 算 `api`，網址是 localhost、127.0.0.1 的 OpenAI 相容 API 算 `local` | `JobRunner.execute` |
 | `questionsAsked` | 提問（單場或所有會議）得到回答 | `Asking` |
 | `errors.recording`／`transcribe`／`diarize`／`summarize` | 錄音結束時有錯誤；轉錄、重新辨識、整理（含修正）的工作失敗 | `AppModel`、`JobRunner.execute` |
@@ -2525,15 +2526,16 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 ### 61.2 說話者辨識選 Nemotron-3（R87，只有 Mac）
 
 - 設定 `diarizationModel`：`standard`（預設）／`nemotron`。「錄音與轉錄 → 轉錄」的「轉錄時辨識說話者」下面加選單。
-- 模型：FluidInference 的 `nemotron-3-diarization-coreml` 的 `offline` 預設（`Nemotron3Config.preset(named: "offline")`），放 `models/fluidaudio/nemotron3`；`ModelStore` 加 `nemotron` 這一項（下載、暫停、刪除、進度同其他模型；設定的模型清單選了 Nemotron-3 才列）。
-- `Diarizer.diarize` 選了 Nemotron-3 時（`minSpeakers` 沒有、或 ≤ 8）：
+- 模型：FluidInference 的 `nemotron-3-diarization-coreml` 的 `offline` 預設（`Nemotron3Config.offline`），用 `Nemotron3Models.loadFromHuggingFace(cacheDirectory: models/fluidaudio)` 下載到 `models/fluidaudio/nemotron-3-diarization`（約 190 MB；FluidAudio 下載完整才寫權重版本的標記，`Diarizer.isNemotronInstalled` 看這個）。`ModelStore.nemotronState`、`prepareNemotron()`、`deleteNemotron()`（FluidAudio 只給比例，不能暫停；進度條用 190 MB 換算）；設定選了 Nemotron-3 時開始下載，模型清單選了或下載過才列。
+- `Diarizer.diarize` 選了 Nemotron-3 時（`minSpeakers` 沒有、或 ≤ 8；模型還沒下載好、Nemotron 出錯時用標準的，只寫 log）：
   1. 照舊跑標準的離線流程（聲紋、品質檢查、短句再確認都要用到）。
-  2. 跑 Nemotron-3（`processComplete`），每 10 毫秒每個人的機率 ≥ 0.5 算在說話，同一個人間隔 0.5 秒以內的接起來、短於 0.3 秒的不要，變成 turns（同 FluidAudio CLI 的轉法）。
+  2. 跑 Nemotron-3（`processComplete`，在背景執行緒，用完就放掉模型），用 FluidAudio 的 `Nemotron3Diarizer.segments`：每 10 毫秒每個人的機率 > 0.5 算在說話、短於 0.2 秒的不要，變成 turns（同 FluidAudio CLI，§54 的評估就是這樣轉的）。進度：標準流程佔 90%。
   3. 聲紋：每位 Nemotron 的說話者，找標準流程裡跟他重疊最多的那一位；那一位的時間有一半以上跟他重疊時，借用那一位的聲紋。兩位 Nemotron 的說話者對到同一位時，只給重疊比較多的那位（另一位沒有聲紋，不比對）。說話秒數照 Nemotron 的 turns 算。
+     標準流程把幾個人併成一位時，多出來的人沒有聲紋（AMI ES2004a 的前 5 分鐘：標準 1 人、Nemotron 3 人，只有說最多的那位借到）。不用短句再確認（R34）的 wespeaker_v2 另外算：跟存起來的聲紋（離線流程的 community-1）不是同一個模型，比不準。
   4. Nemotron 分滿 8 人、而且標準流程分出更多人時，用標準的結果（R87.3）。
   5. 其他（`assign`、品質檢查、短句再確認）照舊用 turns。
-- 統計（§30.4）：`diarization` 多記 `nemotron` 的次數（用了幾場）。
-- DEBUG：啟動參數 `-diarizationModel nemotron`；`voiceprint-eval` 的設定加 `"model": "nemotron"`，輸出同格式，可以用 `scripts/dev/diarize-der.py` 比。
+- 統計（§30.4）：`usage.diarizationNemotron`（照設定用了 Nemotron-3 的次數，轉錄、重新辨識各算一次；評估時指定模型的不算）。後台 `diarization_nemotron`，沒送的當 0（舊版 app、Windows），跟 §61.1 同一個 migration。
+- DEBUG：啟動參數 `-diarizationModel nemotron`；`shiyinctl model start|delete nemotron`、state 的 `models.nemotron`；`voiceprint-eval` 的設定加 `"model": "nemotron"`，輸出同格式（多一個 `model`；沒有聲紋的說話者也列），可以用 `scripts/dev/diarize-der.py` 比。
 
 ## 14. 決策紀錄
 

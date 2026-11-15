@@ -17,6 +17,8 @@ enum Diarizer {
         var speechSeconds: [Int: Double]
         /// 分得準不準的線索（design §24.3）
         var quality: Quality? = nil
+        /// 說話的時段用哪個模型分的（R87）
+        var model: Model = .standard
         #if DEBUG
         /// 評估用（shiyinctl voiceprint-eval 的 dump）：每個片段裡每位說話者的聲紋
         var chunks: [ChunkEmbedding] = []
@@ -44,6 +46,11 @@ enum Diarizer {
             if clusters <= 1 && multiSpeakerChunks >= 10 && collisionRate >= 0.5 { return 1 }
             return max(0, 1 - cohesion)
         }
+    }
+
+    /// 說話者辨識的模型（design §61.2、R87）：標準（pyannote＋VBx）、Nemotron-3（NVIDIA，最多 8 人）
+    enum Model: String {
+        case standard, nemotron
     }
 
     static var modelsDirectory: URL { Paths.modelsDir.appendingPathComponent("fluidaudio", isDirectory: true) }
@@ -84,9 +91,47 @@ enum Diarizer {
 
     /// minSpeakers：至少分出幾個人（design §23.2），nil 自動判斷；clustering：評估時換分群的設定（門檻、人數）
     /// config：評估時整份換掉（DEBUG 的 voiceprint-eval，短句的實驗 design §6.3.2）
+    /// model：評估時指定模型；nil 照設定（換了分群設定、整份設定時用標準的）
     static func diarize(samples: [Float], minSpeakers: Int? = nil, clustering: OfflineDiarizerConfig.Clustering? = nil,
-                        config: OfflineDiarizerConfig? = nil,
+                        config: OfflineDiarizerConfig? = nil, model requested: Model? = nil,
                         onProgress: @escaping @Sendable (Double) -> Void) async throws -> Output {
+        var model = requested ?? (clustering == nil && config == nil ? AppSettings.diarizationModel : .standard)
+        // Nemotron-3 最多分 8 人：先填人數選了 9 人以上時用標準的（R87.3）；模型還沒下載好時也先用標準的
+        if model == .nemotron && ((minSpeakers ?? 0) > 8 || !isNemotronInstalled) {
+            log.info("nemotron skipped: minSpeakers \(minSpeakers ?? 0, privacy: .public), installed \(isNemotronInstalled, privacy: .public)")
+            model = .standard
+        }
+        // Nemotron-3 很快（32 分鐘的會議約 2 秒），標準流程佔進度的 90%
+        let share = model == .nemotron ? 0.9 : 1
+        let standard = try await standardDiarize(samples: samples, minSpeakers: minSpeakers, clustering: clustering, config: config) {
+            onProgress($0 * share)
+        }
+        guard model == .nemotron else { return standard }
+        try Task.checkCancellation()
+        let started = Date()
+        let turns: [Turn]
+        do {
+            turns = try await nemotronTurns(samples)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            log.error("nemotron failed: \(error.localizedDescription, privacy: .public)")
+            return standard
+        }
+        onProgress(1)
+        guard let combined = combine(standard: standard, nemotron: turns) else {
+            log.info("nemotron saturated: \(Set(turns.map(\.speaker)).count, privacy: .public) speakers, standard \(standard.speechSeconds.count, privacy: .public)")
+            return standard
+        }
+        log.info("nemotron: \(combined.speechSeconds.count, privacy: .public) speakers in \(Date().timeIntervalSince(started), format: .fixed(precision: 1), privacy: .public)s")
+        if requested == nil { UsageStats.shared.diarizedWithNemotron() }
+        return combined
+    }
+
+    /// 標準的離線流程（pyannote＋VBx）
+    private static func standardDiarize(samples: [Float], minSpeakers: Int?, clustering: OfflineDiarizerConfig.Clustering?,
+                                        config: OfflineDiarizerConfig?,
+                                        onProgress: @escaping @Sendable (Double) -> Void) async throws -> Output {
         var clustering = clustering
         if clustering == nil, let minSpeakers {
             clustering = .community
@@ -126,6 +171,90 @@ enum Diarizer {
         var output = Output(turns: turns, voiceprints: voiceprints, speechSeconds: seconds, quality: result.chunkEmbeddings.map(quality))
         #if DEBUG
         output.chunks = result.chunkEmbeddings ?? []
+        #endif
+        return output
+    }
+
+    // MARK: Nemotron-3（design §61.2、R87）
+
+    static var nemotronConfig: Nemotron3Config { .offline }
+    /// FluidAudio 下載到 models/fluidaudio/nemotron-3-diarization（大約 190 MB）
+    static var nemotronDirectory: URL { modelsDirectory.appendingPathComponent(Repo.nemotron3Diarization.folderName, isDirectory: true) }
+
+    /// 下載完整時 FluidAudio 才寫這個標記（權重版本），下載到一半的不算
+    static var isNemotronInstalled: Bool {
+        let marker = nemotronDirectory.appendingPathComponent(ModelNames.Nemotron3.weightsVersionFile)
+        let version = (try? String(contentsOf: marker, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return version == ModelNames.Nemotron3.weightsVersion
+    }
+
+    /// 下載並載入一次（確認模型可以用）；設定選了 Nemotron-3 時由 ModelStore 呼叫
+    nonisolated static func prepareNemotron(progress: @escaping @Sendable (Double) -> Void) async throws {
+        let directory = await modelsDirectory
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        _ = try await Nemotron3Models.loadFromHuggingFace(config: .offline, cacheDirectory: directory) { progress($0.fractionCompleted) }
+    }
+
+    static func deleteNemotron() {
+        try? FileManager.default.removeItem(at: nemotronDirectory)
+    }
+
+    /// Nemotron-3 的說話時段：每 10 毫秒每個人的機率 > 0.5 算在說話、短於 0.2 秒的不要（FluidAudio 的 segments，
+    /// 同 CLI 和 §54 的評估）；依第一次出現的順序編號。在背景執行緒跑，不卡主執行緒；用完就放掉模型
+    nonisolated static func nemotronTurns(_ samples: [Float]) async throws -> [Turn] {
+        let directory = await modelsDirectory
+        return try await Task.detached(priority: .userInitiated) {
+            let config = Nemotron3Config.offline
+            let models = try await Nemotron3Models.loadFromHuggingFace(config: config, cacheDirectory: directory)
+            try Task.checkCancellation()
+            let diarizer = Nemotron3Diarizer(config: config, models: models)
+            let (probabilities, frames) = try diarizer.processComplete(samples)
+            let segments = Nemotron3Diarizer.segments(probabilities: probabilities, frameCount: frames, numSpeakers: config.numSpeakers)
+            var numbering: [Int: Int] = [:]
+            return segments.map { segment in
+                let number = numbering[segment.speakerIndex] ?? {
+                    numbering[segment.speakerIndex] = numbering.count + 1
+                    return numbering.count
+                }()
+                return Turn(speaker: number, start: Double(segment.startSeconds), end: Double(segment.endSeconds))
+            }
+        }.value
+    }
+
+    /// 用 Nemotron-3 的時段、標準流程的聲紋（design §61.2）：每位 Nemotron 的說話者借跟他重疊最多的那位標準說話者的聲紋，
+    /// 那一位有一半以上的時間跟他重疊才借；兩位對到同一位時給重疊比較多的。品質檢查照標準流程的。
+    /// Nemotron 分滿 8 人、標準流程分出更多人時回傳 nil（用標準的，R87.3）
+    nonisolated static func combine(standard: Output, nemotron turns: [Turn], maxSpeakers: Int = 8) -> Output? {
+        let speakers = Set(turns.map(\.speaker))
+        let standardSpeakers = Set(standard.turns.map(\.speaker))
+        guard !speakers.isEmpty else { return nil }
+        if speakers.count >= maxSpeakers && standardSpeakers.count > speakers.count { return nil }
+        var seconds: [Int: Double] = [:]
+        for turn in turns { seconds[turn.speaker, default: 0] += max(0, turn.end - turn.start) }
+        var standardSeconds: [Int: Double] = [:]
+        for turn in standard.turns { standardSeconds[turn.speaker, default: 0] += max(0, turn.end - turn.start) }
+        // 重疊的秒數 [Nemotron 的說話者: [標準的說話者: 秒數]]
+        var overlap: [Int: [Int: Double]] = [:]
+        for a in turns {
+            for b in standard.turns where b.end > a.start && b.start < a.end {
+                overlap[a.speaker, default: [:]][b.speaker, default: 0] += min(a.end, b.end) - max(a.start, b.start)
+            }
+        }
+        // 每位 Nemotron 的說話者：重疊最多的標準說話者，那一位一半以上的時間跟他重疊才算
+        var claims: [Int: (speaker: Int, overlap: Double)] = [:]
+        for speaker in speakers.sorted() {
+            guard let best = overlap[speaker]?.max(by: { $0.value < $1.value || ($0.value == $1.value && $0.key > $1.key) }),
+                  let total = standardSeconds[best.key], total > 0, best.value >= total * 0.5,
+                  standard.voiceprints[best.key] != nil else { continue }
+            if let other = claims[best.key], other.overlap >= best.value { continue }
+            claims[best.key] = (speaker, best.value)
+        }
+        var voiceprints: [Int: [Float]] = [:]
+        for (standardSpeaker, claim) in claims { voiceprints[claim.speaker] = standard.voiceprints[standardSpeaker] }
+        var output = Output(turns: turns.sorted { ($0.start, $0.speaker) < ($1.start, $1.speaker) }, voiceprints: voiceprints,
+                            speechSeconds: seconds, quality: standard.quality, model: .nemotron)
+        #if DEBUG
+        output.chunks = standard.chunks
         #endif
         return output
     }

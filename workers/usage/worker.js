@@ -17,6 +17,8 @@ const USAGE = {
   transcribedSeconds: 'transcribed_seconds', transcribeWallSeconds: 'transcribe_wall_seconds',
   diarizationRuns: 'diarization_runs', questionsAsked: 'questions_asked',
 };
+// 2026-11-15 加（R87.4、design §61.2）：說話者辨識用了 Nemotron-3 的次數；舊版 app、Windows 沒有就當 0
+const USAGE_OPTIONAL = { diarizationNemotron: 'diarization_nemotron' };
 const USAGE_DICTS = {
   engines: { breeze: 'engine_breeze', builtin: 'engine_builtin', whisperJa: 'engine_whisper_ja', qwen: 'engine_qwen', server: 'engine_server' },
   // 4.5 加粵語、韓文（R63.7、design §41.6）：舊版 app 沒有這兩個鍵就當 0
@@ -108,6 +110,11 @@ export function toRow(body, now) {
   if (!usage || typeof usage !== 'object') return 'bad usage';
   for (const [key, column] of Object.entries(USAGE)) {
     const value = number(usage[key]);
+    if (value === null) return `bad usage.${key}`;
+    row[column] = value;
+  }
+  for (const [key, column] of Object.entries(USAGE_OPTIONAL)) {
+    const value = number(usage[key] ?? 0);
     if (value === null) return `bad usage.${key}`;
     row[column] = value;
   }

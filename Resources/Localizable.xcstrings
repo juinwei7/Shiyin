@@ -1556,6 +1556,40 @@
         }
       }
     },
+    "NVIDIA 的模型，最多分 8 人。英文會議的測試（AMI）中，沒被插話的句子標對 77% → 90%；中文會議會分出比較多人，還在觀察。超過 8 人的會議、模型還沒下載好時用標準的。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA 的模型，最多分 8 人。英文会议的测试（AMI）中，没被插话的句子标对 77% → 90%；中文会议会分出比较多人，还在观察。超过 8 人的会议、模型还没下载好时用标准的。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A model from NVIDIA that tells up to 8 people apart. In English meeting tests (AMI), sentences without crosstalk were labeled correctly 90% of the time instead of 77%; in Chinese meetings it finds more people, which is still being evaluated. Meetings with more than 8 people, or before the model has downloaded, use Standard."
+          }
+        }
+      }
+    },
+    "Nemotron-3（實驗性，英文會議比較準）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nemotron-3（实验性，英文会议比较准）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nemotron-3 (experimental, more accurate for English meetings)"
+          }
+        }
+      }
+    },
     "OpenAI API": {
       "extractionState": "manual"
     },
@@ -2358,6 +2392,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "下载"
+          }
+        }
+      }
+    },
+    "下載不完整，請再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载不完整，请再试一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download didn't finish. Try again."
           }
         }
       }
@@ -11960,6 +12011,23 @@
         }
       }
     },
+    "標準": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标准"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        }
+      }
+    },
     "標記這個時間點（⌘B），整理時會被當成重點": {
       "extractionState": "manual",
       "localizations": {
@@ -16304,6 +16372,23 @@
         }
       }
     },
+    "說話者辨識模型 Nemotron-3（NVIDIA）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说话者识别模型 Nemotron-3（NVIDIA）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker recognition model Nemotron-3 (NVIDIA)"
+          }
+        }
+      }
+    },
     "說話者辨識模型（FluidAudio）": {
       "extractionState": "manual",
       "localizations": {
@@ -16317,6 +16402,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "说话者识别模型（FluidAudio）"
+          }
+        }
+      }
+    },
+    "說話者辨識的模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说话者识别的模型"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker recognition model"
+          }
+        }
+      }
+    },
+    "說話者辨識選「Nemotron-3」時用，約 190 MB。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说话者识别选“Nemotron-3”时用，约 190 MB。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used when speaker recognition is set to Nemotron-3. About 190 MB."
           }
         }
       }

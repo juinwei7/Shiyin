@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarize_err_enterprise INTEGER NOT NULL DEFAULT 0,   -- 4.2（R52.2）
   summarize_err_draft INTEGER NOT NULL DEFAULT 0,
   summarize_err_other_detail TEXT,                       -- 2026-11-15（R86）：「其他」的種類 {"http404": 2, …}
+  diarization_nemotron INTEGER NOT NULL DEFAULT 0,       -- 2026-11-15（R87.4）：說話者辨識用了 Nemotron-3 的次數
   received_at TEXT NOT NULL,
   PRIMARY KEY (install_id, date)
 );

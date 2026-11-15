@@ -11,6 +11,7 @@ enum AppSettings {
     static let autoSummarizeKey = "autoSummarize"
     static let compressAudioKey = "compressAudio"
     static let diarizeKey = "diarize"
+    static let diarizationModelKey = "diarizationModel"
     static let splitChannelsKey = "splitChannels"
     static let correctTranscriptKey = "correctTranscript"
     static let liveTranscriptionKey = "liveTranscription"
@@ -82,6 +83,8 @@ enum AppSettings {
     static var mcpEnabled: Bool { flag(mcpEnabledKey, default: false) }
     static var compressAudio: Bool { flag(compressAudioKey, default: true) }
     static var diarize: Bool { flag(diarizeKey, default: true) }
+    /// 說話者辨識的模型（design §61.2、R87）：standard（預設）、nemotron；不認得的值當 standard
+    static var diarizationModel: Diarizer.Model { Diarizer.Model(rawValue: d.string(forKey: diarizationModelKey) ?? "") ?? .standard }
     /// 線上會議的麥克風、電腦聲音分開轉錄（design §17.3）；還在評估，設定裡沒有開關，測試時用 defaults 打開
     static var splitChannels: Bool { flag(splitChannelsKey, default: false) }
     /// 轉錄完先找出可能聽錯的字（design §17.4）；評估後預設開啟（§17.6）

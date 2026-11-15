@@ -293,6 +293,7 @@ enum DebugControl {
         // voiceprint-eval <設定.json> <輸出.json>：設定是 [{"file": 音檔, "name": 名稱}]；每個檔案跑說話者辨識，
         // 輸出每位說話者的聲紋、說話秒數、說話的時段，用來跟 AMI 標註比對、決定門檻（design §21.4.1）
         // 設定的每一項可以加 threshold、minSpeakers、numSpeakers（字串）換分群設定，比較分出幾個人；dump（路徑）倒出每個片段的聲紋
+        // model：standard、nemotron（R87，design §61.2；沒寫時用標準的）
         case "voiceprint-eval":
             let config = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: args[1])))) as? [[String: String]] ?? []
             let output = args[2]
@@ -322,7 +323,9 @@ enum DebugControl {
                             if let v = item["step"].flatMap(Double.init) { c.segmentation.stepRatio = v }
                             config = c
                         }
-                        let diarization = try await Diarizer.diarize(samples: samples, clustering: clustering, config: config) { _ in }
+                        let diarization = try await Diarizer.diarize(samples: samples, minSpeakers: item["minSpeakers"].flatMap(Int.init),
+                                                                     clustering: clustering, config: config,
+                                                                     model: Diarizer.Model(rawValue: item["model"] ?? "") ?? .standard) { _ in }
                         // dump：<路徑>.f32 是每個片段的聲紋（256 個 Float32 一筆），<路徑>.json 是對應的群、片段、片段裡的說話者
                         if let dump = item["dump"] {
                             var floats: [Float] = []
@@ -332,12 +335,15 @@ enum DebugControl {
                                    "local": diarization.chunks.map(\.speakerIndex), "start": diarization.chunks.map(\.startTimeSeconds),
                                    "end": diarization.chunks.map(\.endTimeSeconds)], to: dump + ".json")
                         }
-                        let speakers: [[String: Any]] = diarization.voiceprints.keys.sorted().map { number in
+                        // Nemotron-3 的說話者不一定有聲紋（§61.2）：說過話的都列
+                        let numbers = Set(diarization.turns.map(\.speaker)).union(diarization.voiceprints.keys).sorted()
+                        let speakers: [[String: Any]] = numbers.map { number in
                             ["number": number, "seconds": diarization.speechSeconds[number] ?? 0,
                              "embedding": diarization.voiceprints[number] ?? [],
                              "turns": diarization.turns.filter { $0.speaker == number }.map { [$0.start, $0.end] }]
                         }
                         results.append(["name": item["name"] ?? file, "seconds": Double(samples.count) / AudioDecoder.sampleRate,
+                                        "model": diarization.model.rawValue,
                                         "elapsed": Date().timeIntervalSince(started), "speakers": speakers,
                                         "collisionRate": diarization.quality?.collisionRate ?? -1,
                                         "multiSpeakerChunks": diarization.quality?.multiSpeakerChunks ?? -1,
@@ -514,6 +520,8 @@ enum DebugControl {
             else { model.copyNotes(args.count > 1 && args[1] == "plain" ? .plain : args.count > 1 && args[1] == "md" ? .markdown : .rich) }
         case "search": model.searchQuery = args.count > 1 ? args[1] : ""
         case "openhit": if let index = Int(args[1]), model.searchResults.indices.contains(index) { model.openSearchHit(model.searchResults[index]) }
+        case "model" where args.count > 2 && args[2] == "nemotron":   // model start|delete nemotron（R87，FluidAudio 下載）
+            args[1] == "start" ? model.models.prepareNemotron() : args[1] == "delete" ? model.models.deleteNemotron() : ()
         case "model":   // model start|pause|delete [breeze|japanese|languageDetection|qwen]（qwen 是兩個檔一起）
             let which = ModelStore.Model(rawValue: args.count > 2 ? args[2] : "") ?? .breeze
             args[1] == "start" ? model.models.startAll(which) : args[1] == "pause" ? model.models.pauseAll(which) : model.models.deleteAll(which)
@@ -675,7 +683,7 @@ enum DebugControl {
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        case "preview":   // preview <settings|onboarding [步驟]|import|rename> [front]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
+        case "preview":   // preview <settings|onboarding [步驟]|import|rename> [front] [height=<點>]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
@@ -683,7 +691,10 @@ enum DebugControl {
             let detailPage = args.count > 1 && args[1] == "detail"
             // preview settings <分頁編號>：預覽視窗一開始停在那個分頁（0 整理工具 … 4 錄音、5 模型與儲存空間）
             SettingsView.previewTab = args.count > 2 && args[1] == "settings" ? Int(args[2]) ?? 0 : 0
-            let size = detailPage ? NSSize(width: 1100, height: 760) : NSSize(width: 640, height: 560)
+            // height=<點>：設定頁要看下面的段落時拉高（桌面層的視窗捲不了）
+            let height = args.first { $0.hasPrefix("height=") }.flatMap { Double($0.dropFirst(7)) }
+            SettingsView.previewHeight = height.map { CGFloat($0) - 40 } ?? 520
+            let size = detailPage ? NSSize(width: 1100, height: 760) : NSSize(width: 640, height: height ?? 560)
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
                                   backing: .buffered, defer: false)
             // 加 front：放在一般視窗層（會出現在使用者畫面上），輔助使用才看得到、按得到裡面的按鈕
@@ -811,7 +822,8 @@ enum DebugControl {
                           "preferred": Locale.preferredLanguages.first ?? ""],
             "models": ["breeze": "\(model.models.state)", "japanese": "\(model.models.state(.japanese))",
                        "qwen": "\(model.models.combinedState(.qwen))",
-                       "languageDetection": "\(model.models.state(.languageDetection))", "diarizer": "\(model.models.diarizerState)"],
+                       "languageDetection": "\(model.models.state(.languageDetection))", "diarizer": "\(model.models.diarizerState)",
+                       "nemotron": "\(model.models.nemotronState)", "diarizationModel": AppSettings.diarizationModel.rawValue],
             "exportMeeting": model.exportMeetingId as Any,
             "search": ["query": model.searchQuery, "results": model.searchResults.map { ["meeting": $0.meetingId, "kind": $0.kind.rawValue, "ref": $0.ref, "snippet": $0.snippet] }],
             "trash": model.trash.map { $0.id },

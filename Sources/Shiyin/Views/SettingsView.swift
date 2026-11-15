@@ -5,6 +5,8 @@ struct SettingsView: View {
     #if DEBUG
     /// shiyinctl preview settings <分頁>：預覽視窗一開始停在哪個分頁（0 整理工具、1 錄音與轉錄、2 說話者與詞彙、3 進階）
     nonisolated(unsafe) static var previewTab = 0
+    /// shiyinctl preview settings <分頁> height=<點>：拉高看下面的段落（桌面層的預覽視窗捲不了）
+    nonisolated(unsafe) static var previewHeight: CGFloat = 520
     #endif
     @State private var tab: Int = {
         #if DEBUG
@@ -14,6 +16,14 @@ struct SettingsView: View {
         #endif
     }()
 
+    private static var height: CGFloat {
+        #if DEBUG
+        return previewHeight
+        #else
+        return 520
+        #endif
+    }
+
     var body: some View {
         // 四個分頁（R44.5，design §33.3、D110）：只搬位置、加分組，每個項目和存的鍵都沒變
         TabView(selection: $tab) {
@@ -22,7 +32,7 @@ struct SettingsView: View {
             NamesSettings().tabItem { Label("說話者與詞彙", systemImage: "person.text.rectangle") }.tag(2)
             AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }.tag(3)
         }
-        .frame(width: 640, height: 520)
+        .frame(width: 640, height: Self.height)
         .tint(.celadon)
     }
 }
@@ -886,6 +896,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.autoDetectLanguageKey) private var autoDetect = true
     @AppStorage(AppSettings.chineseScriptKey) private var chineseScript = AppSettings.defaultChineseScript
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
+    @AppStorage(AppSettings.diarizationModelKey) private var diarizationModel = Diarizer.Model.standard.rawValue
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true
     @AppStorage(AppSettings.recordingIslandKey) private var recordingIsland = true
@@ -964,6 +975,19 @@ struct RecordingSettings: View {
                 Text(verbatim: engineDescription)
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Toggle("轉錄時辨識說話者", isOn: $diarize)
+                // 說話者辨識的模型（design §61.2、R87）
+                Picker("說話者辨識的模型", selection: $diarizationModel) {
+                    Text("標準").tag(Diarizer.Model.standard.rawValue)
+                    Text("Nemotron-3（實驗性，英文會議比較準）").tag(Diarizer.Model.nemotron.rawValue)
+                }
+                .disabled(!diarize)
+                .onChange(of: diarizationModel) { _, value in
+                    if value == Diarizer.Model.nemotron.rawValue { model.models.prepareNemotron() }
+                }
+                if diarizationModel == Diarizer.Model.nemotron.rawValue {
+                    Text("NVIDIA 的模型，最多分 8 人。英文會議的測試（AMI）中，沒被插話的句子標對 77% → 90%；中文會議會分出比較多人，還在觀察。超過 8 人的會議、模型還沒下載好時用標準的。")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
                 Toggle("錄音中顯示即時逐字稿", isOn: $live)
                 // 模型清單（原「模型與儲存空間」分頁，R44.5）
                 ModelRows()
@@ -1042,6 +1066,13 @@ struct ModelRows: View {
         Text("自動偵測會議語言用，60 MB。").font(.caption).foregroundStyle(.secondary)
         ModelRow(title: String(localized: "說話者辨識模型（FluidAudio）"), state: model.models.diarizerState,
                  start: model.models.prepareDiarizer, pause: nil, delete: nil)
+        // Nemotron-3（R87）：選了或下載過才列
+        if AppSettings.diarizationModel == .nemotron || model.models.nemotronState != .missing {
+            ModelRow(title: String(localized: "說話者辨識模型 Nemotron-3（NVIDIA）"), state: model.models.nemotronState,
+                     start: model.models.prepareNemotron, pause: nil,
+                     delete: { model.models.deleteNemotron() }, deleteDisabled: transcribing)
+            Text("說話者辨識選「Nemotron-3」時用，約 190 MB。").font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
 
