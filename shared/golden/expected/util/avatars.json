@@ -1,0 +1,291 @@
+{
+  "people" : [
+    {
+      "color" : [
+        "7A4FB5",
+        "BFA0EE"
+      ],
+      "initials" : "王",
+      "name" : "王小明"
+    },
+    {
+      "color" : [
+        "7A4FB5",
+        "BFA0EE"
+      ],
+      "initials" : "王",
+      "name" : "  王小明 "
+    },
+    {
+      "color" : [
+        "A23B3B",
+        "EE8E8E"
+      ],
+      "initials" : "B",
+      "name" : "Bob"
+    },
+    {
+      "color" : [
+        "A23B3B",
+        "EE8E8E"
+      ],
+      "initials" : "B",
+      "name" : "bob"
+    },
+    {
+      "color" : [
+        "9A5B13",
+        "E2A65E"
+      ],
+      "initials" : "AC",
+      "name" : "Amy Chen"
+    },
+    {
+      "color" : [
+        "8E3B6B",
+        "E08BBE"
+      ],
+      "initials" : "AC",
+      "name" : "amy-chen"
+    },
+    {
+      "color" : [
+        "2D6A5D",
+        "6DB2A1"
+      ],
+      "initials" : "MJ",
+      "name" : "mary_jane.watson"
+    },
+    {
+      "color" : [
+        "2D6A5D",
+        "6DB2A1"
+      ],
+      "initials" : "AB",
+      "name" : "alice  bob   carol"
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "O",
+      "name" : "O'Brien"
+    },
+    {
+      "color" : [
+        "9A5B13",
+        "E2A65E"
+      ],
+      "initials" : "ÉD",
+      "name" : "Élodie Durand"
+    },
+    {
+      "color" : [
+        "7A4FB5",
+        "BFA0EE"
+      ],
+      "initials" : "3",
+      "name" : "說話者 3"
+    },
+    {
+      "color" : [
+        "9A5B13",
+        "E2A65E"
+      ],
+      "initials" : "12",
+      "name" : "說話者 123"
+    },
+    {
+      "color" : [
+        "4F7A28",
+        "9BCB6E"
+      ],
+      "initials" : "一",
+      "name" : "說話者 一"
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "12",
+      "name" : "Speaker 12"
+    },
+    {
+      "color" : [
+        "2D6A5D",
+        "6DB2A1"
+      ],
+      "initials" : "1",
+      "name" : "話者 1"
+    },
+    {
+      "color" : [
+        "2D6A5D",
+        "6DB2A1"
+      ],
+      "initials" : "2",
+      "name" : "화자 2"
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "이",
+      "name" : "이서연"
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "た",
+      "name" : "たなか"
+    },
+    {
+      "color" : [
+        "2D6A5D",
+        "6DB2A1"
+      ],
+      "initials" : "タ",
+      "name" : "タナカ"
+    },
+    {
+      "color" : [
+        "4F7A28",
+        "9BCB6E"
+      ],
+      "initials" : "陳",
+      "name" : "陳 美玲"
+    },
+    {
+      "color" : [
+        "A23B3B",
+        "EE8E8E"
+      ],
+      "initials" : "😀S",
+      "name" : "😀 Smile"
+    },
+    {
+      "color" : [
+        "A23B3B",
+        "EE8E8E"
+      ],
+      "initials" : "A",
+      "name" : "a"
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "?",
+      "name" : ""
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "?",
+      "name" : "   "
+    },
+    {
+      "color" : [
+        "4F7A28",
+        "9BCB6E"
+      ],
+      "initials" : "S",
+      "name" : "Speaker"
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "initials" : "說",
+      "name" : "說話者1"
+    }
+  ],
+  "speakers" : [
+    {
+      "color" : [
+        "3F5BA9",
+        "8FA8EE"
+      ],
+      "idx" : 0
+    },
+    {
+      "color" : [
+        "3F5BA9",
+        "8FA8EE"
+      ],
+      "idx" : 1
+    },
+    {
+      "color" : [
+        "8E3B6B",
+        "E08BBE"
+      ],
+      "idx" : 2
+    },
+    {
+      "color" : [
+        "4F7A28",
+        "9BCB6E"
+      ],
+      "idx" : 3
+    },
+    {
+      "color" : [
+        "7A4FB5",
+        "BFA0EE"
+      ],
+      "idx" : 4
+    },
+    {
+      "color" : [
+        "A23B3B",
+        "EE8E8E"
+      ],
+      "idx" : 5
+    },
+    {
+      "color" : [
+        "2F7486",
+        "7CC4D6"
+      ],
+      "idx" : 6
+    },
+    {
+      "color" : [
+        "9A5B13",
+        "E2A65E"
+      ],
+      "idx" : 7
+    },
+    {
+      "color" : [
+        "2D6A5D",
+        "6DB2A1"
+      ],
+      "idx" : 8
+    },
+    {
+      "color" : [
+        "3F5BA9",
+        "8FA8EE"
+      ],
+      "idx" : 9
+    },
+    {
+      "color" : [
+        "3F5BA9",
+        "8FA8EE"
+      ],
+      "idx" : 17
+    }
+  ]
+}
