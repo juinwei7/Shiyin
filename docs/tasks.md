@@ -10,6 +10,7 @@
 ## 介面改版（R83～R85，design §59、§60.2；2026-11-15 使用者覺得醜，照 Apple 的 Mac 介面準則重新設計）
 
 - [ ] **UI4 Windows 跟著改**（design-windows §11.22）：側欄的 `SelectorBar` 換成「所有會議」「人物」兩列（跟資料夾同一種列、帶數量）；會議頁上方的「會議設定」、文件選單沒有框；人物頁的改名、合併、刪除收進右上角的「更多」，視窗標題是人名，負責的待辦整欄寬。驗證：`dotnet test`、`windows-check`；虛擬機截圖（淺色、深色、英文），用 UIA 按「更多 → 改名…」
+- [ ] **A11Y1 錄音、匯出旁邊的箭頭沒有名字**：工具列的分割選單（`Menu` 加 `primaryAction`）箭頭那一半在輔助使用裡是另一個 AXMenuButton，名字是空的，VoiceOver 讀不出來；`accessibilityLabel` 加在整個 `Menu` 上碰不到它（2026-11-15 試過）。要換成兩個控制項（按鈕＋只有箭頭的選單，各自有名字）或用 AppKit 的 NSSegmentedControl。驗證：axpress list 看到兩個 AXMenuButton 都有名字，按得到
 
 ## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
 
