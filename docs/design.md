@@ -2461,7 +2461,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 收起（錄音中）：左翼紅點（暫停時是暫停圖示；有提醒時是琥珀色的點），右翼經過的時間（`TimeFormat.string(elapsedSeconds)`）。
 - 提醒（R81.2）：`recorder.levelHint`（`recorder.text(for:)`、「知道了」＝`dismissLevelHint`；錄不到電腦聲音多一個「打開系統設定」）、`recorder.micHint`（「改用 <內建麥克風>」「知道了」）、`recorder.idlePrompt`（「繼續錄」「停止錄音」）、`recorder.deviceWarning`（沒有按鈕）。同時有好幾個時一次只展開一個，順序同錄音畫面的提示列（沒人說話 → 藍牙 → 收音 → 重新連接）。新的提醒出現（`hintKey` 變了）就展開 10 秒（`expandedUntil`），之後收回成琥珀色的點；滑過去再展開。
 - 偵測會議（R81.3）：`AppModel.showMeetingPrompt` 在島打開時改成 `island.show(prompt, actions:message:)`（按鈕、文字同 `showMeetingPanel`），展開 30 秒後收起（沒在錄音時島就消失）。`MeetingPromptPanel`、偵測會議的通知只在島關掉時用。
-- 滑過去（R81.5，`onHover`）：展開成：第一列紅點、時間、麥克風和電腦聲音的音量條（`LevelMeter`）；有提醒時第二列是提醒；最新一句即時逐字稿（`liveLines.last` 或 `volatileText`，一行，截斷）；按鈕「暫停／繼續」「標記重點」「停止並轉錄」「打開拾音」（`AppModel.reveal(meetingId)` 並把 app 拉到前面）。滑出 0.3 秒後收回（避免滑過邊界就閃）。
+- 滑過去（R81.5，`onHover`）：展開成：第一列紅點、時間、麥克風和電腦聲音的音量條（`LevelMeter`）；有提醒時第二列是提醒和提醒的按鈕（「知道了」「繼續錄」「改用…」：展開的提醒一滑過去就換成這個畫面，不放的話那些按鈕永遠按不到；Windows 驗證時發現，2026-11-15 改）；最新一句即時逐字稿（`liveLines.last` 或 `volatileText`，一行，截斷）；按鈕「暫停／繼續」「標記重點」「停止並轉錄」「打開拾音」（`AppModel.reveal(meetingId)` 並把 app 拉到前面）。滑出 0.3 秒後收回（避免滑過邊界就閃）。
 - 通知（R81.4）：島打開時 `levelHintAppeared`、`micHintAppeared`、`onIdlePrompt` 不送通知；選單列的警示圖示照舊（選單列看得到時也是線索）。
 
 ### 57.3 驗證
@@ -2483,7 +2483,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ### 58.2 頭像（`Views/Avatar.swift`）
 
-- `PersonAvatar(name:, color:, size:, isMe:)`：圓形，底色是釉色 18% 不透明，字是釉色（粗體，字級是直徑的 0.46）；`isMe` 時外圈 1.5 pt 青瓷綠。尺寸：逐字稿 18 pt、會議頁上方 22 pt、待辦 18 pt、側欄 26 pt、人物頁 56 pt；跟著文字大小（R59）放大。
+- `PersonAvatar(name:, color:, size:, isMe:)`：圓形，底色是釉色 18% 不透明，字是釉色（粗體，字級是直徑的 0.46）；`isMe` 時外圈 1.5 pt 青瓷綠。尺寸：逐字稿 18 pt、會議頁上方 20 pt、待辦 18 pt、側欄 26 pt、人物頁 56 pt；跟著文字大小（R59）放大。
 - 字（`PersonAvatar.initials(_:)`）：預設名稱（`AppDatabase.isDefaultSpeakerName`）寫裡面的數字；第一個字是中日韓文字（Han、Hiragana、Katakana、Hangul）時取第一個字；其他照空白切開，取前兩段的第一個字母（大寫）；都沒有時取第一個字。
 - 用在（R83.2）：會議頁上方的與會者（§59）、逐字稿的說話者欄（`TranscriptTab` 名字前面）、待辦的負責人（`ActionItemsTable`：負責人跟這場的某位說話者同名時用他的編號的顏色，不然不放頭像）、人物（§60）。「我」：說話者連到的人是有 enroll 聲紋的那個人（`MeetingDetail.selfIdx`，載入時算一次）。
 

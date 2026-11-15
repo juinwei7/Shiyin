@@ -58,7 +58,7 @@ struct PersonPage: View {
                     itemsGrid
                 }
             }
-            NotesSection(title: String(localized: "會議")) {
+            NotesSection(title: MeetingLanguage.ui(zh: "會議", en: "Meetings")) {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(meetings) { entry in
                         Button { model.openFromPersonPage(entry.id) } label: {

@@ -2957,6 +2957,23 @@
         }
       }
     },
+    "也可以在側欄的「人物」管理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "也可以在侧边栏的“人物”管理"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also manage them under People in the sidebar."
+          }
+        }
+      }
+    },
     "也可以把新的錄音檔拖進來。": {
       "extractionState": "manual",
       "localizations": {

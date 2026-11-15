@@ -158,6 +158,8 @@ struct IslandRoot: View {
             if let hint = currentHint {
                 Label(hint.text, systemImage: hint.symbol).foregroundStyle(Color.signal).lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
+                // 提醒的按鈕也放這裡：展開的提醒一滑過去就換成這個畫面，不放的話「知道了」「繼續錄」永遠按不到
+                hintButtons(hint)
             }
             HStack(spacing: 8) {
                 IslandButton(title: recorder.isPaused ? String(localized: "繼續") : String(localized: "暫停"),
@@ -185,12 +187,17 @@ struct IslandRoot: View {
             Label(hint.text, systemImage: hint.symbol)
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
-            if !hint.buttons.isEmpty {
-                HStack(spacing: 8) {
-                    Spacer(minLength: 0)
-                    ForEach(Array(hint.buttons.enumerated()), id: \.offset) { _, button in
-                        IslandButton(title: button.title, role: button.primary ? .primary : .normal, action: button.action)
-                    }
+            hintButtons(hint)
+        }
+    }
+
+    @ViewBuilder
+    private func hintButtons(_ hint: IslandHint) -> some View {
+        if !hint.buttons.isEmpty {
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                ForEach(Array(hint.buttons.enumerated()), id: \.offset) { _, button in
+                    IslandButton(title: button.title, role: button.primary ? .primary : .normal, action: button.action)
                 }
             }
         }

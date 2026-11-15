@@ -667,6 +667,10 @@ struct SpeakerSettings: View {
         } message: {
             Text("已經帶入的名字會留著，之後的會議不會再自動帶入。")
         }
+        // 人物頁（R85.5）
+        if !model.people.isEmpty {
+            Text("也可以在側欄的「人物」管理").font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private func detailLine(_ person: PersonSummary) -> String {
