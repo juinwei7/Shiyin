@@ -445,6 +445,13 @@ enum DebugControl {
                 }
             }
         case "enrolldelete": model.deleteEnrollment()
+        case "sidebar":   // sidebar people|meetings：側欄的「會議｜人物」（design §60.2）
+            model.sidebarMode = args.count > 1 && args[1] == "people" ? .people : .meetings
+            model.reloadPeopleOverview()
+        case "person":   // person <人的 id>：側欄切到人物、選這個人
+            model.sidebarMode = .people
+            model.reloadPeopleOverview()
+            model.selectedPerson = id
         case "hidesharing":   // hidesharing on|off：改預設值（只在記憶體，不寫進共用設定；共用設定裡有值時以它為準），套用到所有視窗（design §53）
             UserDefaults.standard.register(defaults: [AppSettings.hideFromScreenSharingKey: args[1] == "on"])
             WindowSharing.applyAll()
@@ -764,6 +771,10 @@ enum DebugControl {
                  "due": entry.item.due.map { "\($0.year ?? 0)-\($0.month ?? 0)-\($0.day ?? 0)" } ?? ""]
             },
             "reminderStatus": model.reminderStatus,
+            // 人物頁（design §60.2）
+            "sidebarMode": model.sidebarMode.rawValue, "selectedPerson": model.selectedPerson ?? -1,
+            "peopleOverview": model.peopleOverview.map { ["id": $0.id, "name": $0.name, "meetings": $0.meetingCount,
+                                                          "last": $0.lastMeetingDate ?? "", "me": $0.isMe] },
             // 我的聲音（design §56.3）
             "selfPerson": ((try? model.db.enrollment()) ?? nil).map { ["id": $0.personId, "name": $0.name, "createdAt": $0.createdAt] } as Any,
             "remindersAccess": Reminders.store.access.rawValue,

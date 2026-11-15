@@ -41,7 +41,8 @@ extension Color {
 }
 
 extension Color {
-    /// 說話者的顏色（8 色循環，深淺色模式都看得清楚）。
+    /// 說話者的顏色（8 色循環，深淺色模式都看得清楚），也是頭像的「釉色」（design §58.1）：
+    /// 天青、茄皮紫、茶葉末、鈞紫、霽紅、松石、醬釉、青瓷。
     /// 青瓷綠是時間點按鈕的顏色、琥珀色代表低信心，所以這兩種排在最後，人少的會議不會用到
     static func speaker(_ idx: Int) -> Color {
         let palette: [(UInt32, UInt32)] = [

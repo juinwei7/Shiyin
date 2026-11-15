@@ -123,7 +123,14 @@ struct MainView: View {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 380)
         } detail: {
-            if let detail = model.detail {
+            if model.sidebarMode == .people && !model.showTrash && model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+                // 人物頁（design §60.2）
+                if let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) {
+                    PersonPage(person: person).id(person.id)
+                } else {
+                    PeopleEmptyView()
+                }
+            } else if let detail = model.detail {
                 MeetingDetailView(detail: detail)
                     .id(detail.meeting.id)
             } else {
@@ -190,10 +197,25 @@ struct SidebarView: View {
     var body: some View {
         @Bindable var model = model
         VStack(spacing: 0) {
-            if model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
-                meetingList
-            } else {
+            let searching = !model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
+            // 會議｜人物（design §60.2、R85.1）：垃圾桶裡、搜尋中不顯示（搜尋的結果是會議）
+            if !model.showTrash && !searching {
+                Picker("", selection: $model.sidebarMode) {
+                    Text(MeetingLanguage.ui(zh: "會議", en: "Meetings")).tag(SidebarMode.meetings)
+                    Text("人物").tag(SidebarMode.people)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(.horizontal, 12)
+                .padding(.top, 4)
+                .padding(.bottom, 6)
+            }
+            if searching {
                 SearchResultsList()
+            } else if model.sidebarMode == .people && !model.showTrash {
+                PeopleList()
+            } else {
+                meetingList
             }
             Divider()
             if model.importingCount > 0 {

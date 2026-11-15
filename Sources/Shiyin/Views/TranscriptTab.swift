@@ -353,14 +353,21 @@ struct TranscriptTab: View {
             TimeButton(time: TimeFormat.string(segment.start), seek: segment.start)
                 .frame(width: 58 * scale, alignment: .trailing)
             if let idx = segment.speaker {
-                Button(detail.speakerName(idx) ?? "") {
+                Button {
                     renameText = detail.speakerName(idx) ?? ""
                     if let id = segment.id { renaming = (idx, id) }
+                } label: {
+                    // 頭像加名字（design §58.2、R83.2）
+                    HStack(spacing: 6) {
+                        PersonAvatar(name: detail.speakerName(idx) ?? "", color: Color.speaker(idx), isMe: idx == detail.selfIdx)
+                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 * scale }
+                        Text(detail.speakerName(idx) ?? "")
+                    }
                 }
                 .buttonStyle(.plain)
                 .contentFont(.callout, weight: .medium)
                 .foregroundStyle(Color.speaker(idx))
-                .frame(width: 72 * scale, alignment: .leading)
+                .frame(width: 96 * scale, alignment: .leading)
                 .lineLimit(1)
                 .help("點一下幫這位說話者改名")
                 .popover(isPresented: Binding(get: { renaming?.segment == segment.id && segment.id != nil },

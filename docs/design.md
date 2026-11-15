@@ -2507,7 +2507,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ### 60.2 畫面
 
-- `AppModel.sidebarMode`（`meetings`／`people`，記在 `@AppStorage`）、`selectedPerson: Int64?`。側欄最上面（搜尋框下面）`Picker` 分段控制「會議｜人物」；在垃圾桶、搜尋中時不顯示（搜尋的結果是會議）。
+- `AppModel.sidebarMode`（`meetings`／`people`，不記在設定：每次打開都從會議開始，DEBUG 測試也不會改到使用者的設定）、`selectedPerson: Int64?`。側欄最上面（搜尋框下面）`Picker` 分段控制「會議｜人物」；在垃圾桶、搜尋中時不顯示（搜尋的結果是會議）。
 - `PeopleList`：`List(selection: $model.selectedPerson)`，每一列頭像（26 pt）、名字（我的話後面「（我）」）、第二行「N 場會議・最近 <日期>」。沒有人時的空白畫面同 R85.4。
 - 右邊：`sidebarMode == .people` 時顯示 `PersonPage`（沒選人時是說明）。`ReadingColumn` 裡：大頭像、名字、「一起開過 N 場會議，最近 <日期>」、按鈕「改名」（popover，同設定頁）「合併到…」（選單：其他認識的人，選了 `renamePerson(id, to: 那個人的名字)`，同名合併）「刪除聲音特徵」（確認對話框，同設定頁）；「他負責的待辦」：`ActionItemsTable` 同樣的格線（事項、期限、會議的標題和時間點按鈕），右上角「加到提醒事項」（只加還沒加的；同 §52，但跨會議：每一項的 url 照它自己的會議）；「會議」：每列日期、標題、「說了 N 分鐘」，點了 `reveal(meetingId)`（切回「會議」、選那場）。點待辦的時間點：切回會議、選那場、從那裡播放。
 - DEBUG：`sidebar people|meetings`、`person <id>`；state 的 `sidebarMode`、`selectedPerson`、`personPage`（待辦、會議的數目）。

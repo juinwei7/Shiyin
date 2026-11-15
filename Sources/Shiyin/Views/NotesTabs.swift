@@ -406,6 +406,7 @@ struct EditBar: View {
 
 struct ActionItemsTable: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.textScale) private var scale
     let items: [MeetingNotes.ActionItem]
     var detail: MeetingDetail? = nil
     var ref: (Int) -> NoteItemRef? = { _ in nil }
@@ -423,8 +424,15 @@ struct ActionItemsTable: View {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 let ref = ref(index)
                 GridRow {
-                    Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner).meetingText()
-                        .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        // 負責人是這場的說話者時放他的頭像（design §58.2、R83.2）
+                        if let idx = detail?.speakerIdx(named: item.owner) {
+                            PersonAvatar(name: item.owner, color: Color.speaker(idx), isMe: idx == detail?.selfIdx)
+                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 * scale }
+                        }
+                        Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner).meetingText()
+                            .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
+                    }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(item.task).meetingText()
                             .textSelection(.enabled)

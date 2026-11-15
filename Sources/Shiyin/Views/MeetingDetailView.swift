@@ -109,13 +109,22 @@ struct MeetingHeader: View {
                     .help("錄音中很久沒人說話，拾音自動停止了錄音。要轉錄全部的話，用「更多 → 重新處理 → 重新轉錄」。")
             }
             if !detail.speakers.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(detail.speakers.keys.sorted(), id: \.self) { idx in
-                        if detail.speakerSources[idx] == "voiceprint" {
-                            AutoSpeakerName(idx: idx, name: detail.speakers[idx] ?? "", others: detail.speakerCandidates[idx] ?? [])
-                        } else {
-                            Text(detail.speakers[idx] ?? "").foregroundStyle(Color.speaker(idx))
+                // 與會者：頭像加名字，最多 4 位，其他收成「+N」（design §59、R84.1）
+                let ids = detail.speakers.keys.sorted()
+                HStack(spacing: 10) {
+                    ForEach(ids.prefix(Self.visibleSpeakers), id: \.self) { idx in speakerChip(idx) }
+                    if ids.count > Self.visibleSpeakers {
+                        Menu {
+                            ForEach(ids.dropFirst(Self.visibleSpeakers), id: \.self) { idx in
+                                Button(detail.speakers[idx] ?? "") { model.tab = .transcript }
+                            }
+                        } label: {
+                            Text("+\(ids.count - Self.visibleSpeakers)")
                         }
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .fixedSize()
+                        .help("其他與會者")
                     }
                 }
             } else if !meeting.participantList.isEmpty {
@@ -127,61 +136,79 @@ struct MeetingHeader: View {
         .foregroundStyle(.secondary)
     }
 
+    /// 會議頁上方最多顯示幾位與會者（design §59）
+    private static let visibleSpeakers = 4
+
+    /// 一位與會者：頭像加名字。選單按鈕只畫得出文字，頭像放在選單外面（CLAUDE.md）
+    @ViewBuilder
+    private func speakerChip(_ idx: Int) -> some View {
+        let name = detail.speakers[idx] ?? ""
+        HStack(spacing: 5) {
+            PersonAvatar(name: name, color: Color.speaker(idx), size: 20, isMe: idx == detail.selfIdx, scales: false)
+            if detail.speakerSources[idx] == "voiceprint" {
+                AutoSpeakerName(idx: idx, name: name, others: detail.speakerCandidates[idx] ?? [])
+            } else {
+                Text(name).foregroundStyle(Color.speaker(idx))
+            }
+        }
+    }
+
+    /// 「會議設定」：範本、會議語言、大約幾個人放在一起（design §59、R84.2）；文件選單照舊
     @ViewBuilder
     private func menus(_ meeting: Meeting) -> some View {
+        let template = model.templates.first { $0.id == meeting.templateId }?.displayName ?? String(localized: "一般會議")
+        let recordingThis = model.recorder.isRecording && model.recorder.meetingId == meeting.id
         Menu {
-            ForEach(model.templates) { template in
-                Button {
-                    model.setTemplate(template.id)
-                } label: {
-                    if template.id == meeting.templateId { Label(template.displayName, systemImage: "checkmark") }
-                    else { Text(template.displayName) }
-                }
-            }
-        } label: {
-            Label(model.templates.first { $0.id == meeting.templateId }?.displayName ?? String(localized: "一般會議"), systemImage: "doc.text")
-        }
-        .fixedSize()
-        .help("會議紀錄的範本。換了範本之後，從「更多 → 重新處理」選「重新整理會議紀錄」就會照新範本整理")
-        // 會議語言（design §16.3）
-        Menu {
-            ForEach(MeetingLanguage.allCases) { language in
-                Button {
-                    model.setMeetingLanguage(language)
-                } label: {
-                    if language == meeting.meetingLanguage { Label(language.name, systemImage: "checkmark") }
-                    else { Text(language.name) }
-                }
-            }
-        } label: {
-            Label(meeting.meetingLanguage.name, systemImage: "globe")
-        }
-        .fixedSize()
-        .help("會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄")
-        // 會議的參考文件（design §39.4）：垃圾桶裡的會議不放
-        if meeting.deletedAt == nil { DocumentsMenu(detail: detail) }
-        // 錄音中先填人數（design §26.2）：錄完轉錄時用
-        if model.recorder.isRecording && model.recorder.meetingId == meeting.id {
-            Menu {
-                Button {
-                    model.setMinSpeakers(nil)
-                } label: {
-                    if meeting.minSpeakers == nil { Label("自動判斷", systemImage: "checkmark") } else { Text("自動判斷") }
-                }
-                ForEach(2...12, id: \.self) { n in
+            Section("範本") {
+                ForEach(model.templates) { item in
                     Button {
-                        model.setMinSpeakers(n)
+                        model.setTemplate(item.id)
                     } label: {
-                        if meeting.minSpeakers == n { Label("\(n) 人", systemImage: "checkmark") } else { Text("\(n) 人") }
+                        if item.id == meeting.templateId { Label(item.displayName, systemImage: "checkmark") }
+                        else { Text(item.displayName) }
                     }
                 }
-            } label: {
-                Label(meeting.minSpeakers.map { String(localized: "大約 \($0) 人") } ?? String(localized: "人數：自動判斷"),
-                      systemImage: "person.2")
             }
-            .fixedSize()
-            .help("大約幾個人：人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
+            // 會議語言（design §16.3）
+            Section("會議語言") {
+                ForEach(MeetingLanguage.allCases) { language in
+                    Button {
+                        model.setMeetingLanguage(language)
+                    } label: {
+                        if language == meeting.meetingLanguage { Label(language.name, systemImage: "checkmark") }
+                        else { Text(language.name) }
+                    }
+                }
+            }
+            // 錄音中先填人數（design §26.2）：錄完轉錄時用
+            if recordingThis {
+                Section("大約幾個人") {
+                    Button {
+                        model.setMinSpeakers(nil)
+                    } label: {
+                        if meeting.minSpeakers == nil { Label("自動判斷", systemImage: "checkmark") } else { Text("自動判斷") }
+                    }
+                    ForEach(2...12, id: \.self) { n in
+                        Button {
+                            model.setMinSpeakers(n)
+                        } label: {
+                            if meeting.minSpeakers == n { Label("\(n) 人", systemImage: "checkmark") } else { Text("\(n) 人") }
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label(recordingThis && meeting.minSpeakers != nil
+                  ? String(localized: "\(template)・\(meeting.meetingLanguage.name)・大約 \(meeting.minSpeakers ?? 0) 人")
+                  : String(localized: "\(template)・\(meeting.meetingLanguage.name)"),
+                  systemImage: "slider.horizontal.3")
         }
+        .fixedSize()
+        .help(recordingThis
+              ? String(localized: "範本、會議語言、大約幾個人。人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
+              : String(localized: "範本和會議語言。換了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄"))
+        // 會議的參考文件（design §39.4）：垃圾桶裡的會議不放
+        if meeting.deletedAt == nil { DocumentsMenu(detail: detail) }
     }
 }
 

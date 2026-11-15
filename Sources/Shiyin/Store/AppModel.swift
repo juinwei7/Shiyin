@@ -90,6 +90,15 @@ struct MeetingDetail: Equatable {
     var speakerSuggestions: [Int: SpeakerNaming.Suggestion] = [:]
     /// 每位說話者最像的幾位認識的人（R33）：「是別人」的選單、待確認的「不是」
     var speakerCandidates: [Int: [String]] = [:]
+    /// 「我」是哪一位說話者（design §58.2）
+    var selfIdx: Int?
+
+    /// 名字（不分大小寫）是這場哪一位說話者：待辦的負責人放頭像用（design §58.2）
+    func speakerIdx(named name: String) -> Int? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return speakers.first { $0.value.caseInsensitiveCompare(trimmed) == .orderedSame }?.key
+    }
     /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
     var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
     /// 可以復原的說話者調整（合併、改句子）的說明，沒有就是 nil；顯示在改名小視窗和逐字稿右鍵選單（R44.4）
@@ -477,6 +486,8 @@ final class AppModel {
         loaded.loadSpeakers(speakerRows)
         loaded.loadDocuments((try? db.documents(id)) ?? [])
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
+        // 「我」（R80）：連到有 enroll 聲紋的那個人的說話者，頭像加一圈青瓷綠（design §58.2）
+        if let me = (try? db.enrollment()) ?? nil { loaded.selfIdx = speakerRows.first { $0.personId == me.personId }?.idx }
         loaded.speakerUndoLabel = try? db.speakerUndoLabel(id)
         if let until = try? db.transcribedUntil(id), let duration = meeting.durationSeconds, Double(duration) - until >= 60 {
             loaded.untranscribedMinutes = Int(((Double(duration) - until) / 60).rounded())
@@ -1398,9 +1409,14 @@ final class AppModel {
     // MARK: 認識的人（設定頁，design §21.4）
 
     var people: [PersonSummary] = []
+    /// 側欄是會議還是人物、選了哪個人、人物列表（design §60.2）。不記在設定：每次打開拾音都從會議開始
+    var sidebarMode: SidebarMode = .meetings
+    var selectedPerson: Int64?
+    var peopleOverview: [PersonOverview] = []
 
     func reloadPeople() {
         people = (try? db.peopleSummaries()) ?? []
+        reloadPeopleOverview()
     }
 
     func renamePerson(_ id: Int64, to name: String) {

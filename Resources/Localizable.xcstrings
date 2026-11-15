@@ -143,6 +143,26 @@
         }
       }
     },
+    "%@・%@": {
+      "extractionState": "manual"
+    },
+    "%@・%@・大約 %lld 人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@・%@・大约 %lld 人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ · About %3$lld people"
+          }
+        }
+      }
+    },
     "%@・已錄（%@）": {
       "extractionState": "manual",
       "localizations": {
@@ -745,6 +765,35 @@
         }
       }
     },
+    "%lld 場會議・最近 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 场会议・最近 %@"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meeting · Latest %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meetings · Latest %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld 處": {
       "extractionState": "manual",
       "localizations": {
@@ -822,6 +871,9 @@
           }
         }
       }
+    },
+    "+%lld": {
+      "extractionState": "manual"
     },
     "- %@ %@：%@": {
       "extractionState": "manual",
@@ -2196,6 +2248,35 @@
         }
       }
     },
+    "一起開過 %lld 場會議，最近 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一起开过 %lld 场会议，最近 %@"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meeting together, latest on %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meetings together, latest on %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "上一步": {
       "extractionState": "manual",
       "localizations": {
@@ -2876,19 +2957,19 @@
         }
       }
     },
-    "人數：自動判斷": {
+    "人物": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "People: Detect Automatically"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "人数：自动判断"
+            "value": "人物"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People"
           }
         }
       }
@@ -4175,6 +4256,23 @@
         }
       }
     },
+    "其他與會者": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他与会者"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other participants"
+          }
+        }
+      }
+    },
     "再多唸一點：有聲音的部分要 10 秒以上。": {
       "extractionState": "manual",
       "localizations": {
@@ -4379,6 +4477,23 @@
         }
       }
     },
+    "刪除「%@」的聲音特徵？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除“%@”的声音特征？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the voice profile of “%@”?"
+          }
+        }
+      }
+    },
     "刪除「%@」？": {
       "extractionState": "manual",
       "localizations": {
@@ -4443,6 +4558,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除第二版的 Python 环境和旧模型"
+          }
+        }
+      }
+    },
+    "刪除聲音特徵…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除声音特征…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Voice Profile…"
           }
         }
       }
@@ -5520,6 +5652,23 @@
         }
       }
     },
+    "同一個人被記成兩個名字時，合併成一個（聲音特徵、會議裡的名字一起改）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一个人被记成两个名字时，合并成一个（声音特征、会议里的名字一起改）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When one person is saved under two names, merge them into one (voice profiles and names in meetings change together)"
+          }
+        }
+      }
+    },
     "同一個詞的每一處一起接受或忽略": {
       "extractionState": "manual",
       "localizations": {
@@ -5911,6 +6060,23 @@
         }
       }
     },
+    "在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在逐字稿点“说话者 1”改成名字，或到设置录一段你自己的声音，拾音就会记住这个人。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click “Speaker 1” in a transcript to give them a name, or record your own voice in Settings, and Shiyin will remember them."
+          }
+        }
+      }
+    },
     "垃圾桶": {
       "extractionState": "manual",
       "localizations": {
@@ -6076,35 +6242,6 @@
         }
       }
     },
-    "大約 %lld 人": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "About %lld Person"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "About %lld People"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "大约 %lld 人"
-          }
-        }
-      }
-    },
     "大約幾個人": {
       "extractionState": "manual",
       "localizations": {
@@ -6118,23 +6255,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "大约几个人"
-          }
-        }
-      }
-    },
-    "大約幾個人：人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Roughly how many people: with many people, noise, or a phone on the table, telling Shiyin ahead of time helps it tell speakers apart"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "大约几个人：人多、吵杂或手机放在桌上录音时，先告诉拾音大约几个人，说话者会分得比较准"
           }
         }
       }
@@ -7921,6 +8041,23 @@
         }
       }
     },
+    "我": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me"
+          }
+        }
+      }
+    },
     "我的筆記": {
       "extractionState": "manual",
       "localizations": {
@@ -8171,6 +8308,23 @@
         }
       }
     },
+    "打開這場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开这场会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open this meeting"
+          }
+        }
+      }
+    },
     "打開這場會議，從 %@ 開始": {
       "extractionState": "manual",
       "localizations": {
@@ -8184,6 +8338,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开这场会议，从 %@ 开始"
+          }
+        }
+      }
+    },
+    "打開這場會議，從這裡開始播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开这场会议，从这里开始播放"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open this meeting and play from here"
           }
         }
       }
@@ -8574,6 +8745,23 @@
         }
       }
     },
+    "把這些待辦加到「提醒事項」app 的「%@」列表，加過的不會重複加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把这些待办加到“提醒事项”app 的“%@”列表，加过的不会重复加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add these to-dos to the “%@” list in the Reminders app. To-dos already added aren't added again."
+          }
+        }
+      }
+    },
     "把這場會議的待辦加到「提醒事項」app 的「%@」列表，加過的不會重複加": {
       "extractionState": "manual",
       "localizations": {
@@ -8825,6 +9013,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shiyin doesn't have access to Reminders"
+          }
+        }
+      }
+    },
+    "拾音沒有使用提醒事項的權限：請到「系統設定 → 隱私權與安全性 → 提醒事項」允許拾音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音没有使用提醒事项的权限：请到“系统设置 → 隐私与安全性 → 提醒事项”允许拾音。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin doesn't have access to Reminders. Allow Shiyin in System Settings → Privacy & Security → Reminders."
           }
         }
       }
@@ -11335,23 +11540,6 @@
         }
       }
     },
-    "會議紀錄的範本。換了範本之後，從「更多 → 重新處理」選「重新整理會議紀錄」就會照新範本整理": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Template for the meeting notes. After changing it, choose More → Reprocess → Regenerate Notes to rewrite the notes with the new template"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会议记录的模板。换了模板之后，从“更多 → 重新处理”选“重新整理会议记录”就会照新模板整理"
-          }
-        }
-      }
-    },
     "會議紀錄草稿好了": {
       "extractionState": "manual",
       "localizations": {
@@ -11382,6 +11570,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议记录里推测出来的人名、专有名词、负责人和期限，都已经确认过了。"
+          }
+        }
+      }
+    },
+    "會議紀錄裡還沒有這個人負責的待辦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议记录里还没有这个人负责的待办。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No action items for this person in the meeting notes yet."
           }
         }
       }
@@ -11450,23 +11655,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议语言改成 %@，要重新转录或整理的话，从“更多 → 重新处理”选"
-          }
-        }
-      }
-    },
-    "會議語言：決定轉錄和會議紀錄用的語言。改了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meeting language: the language used for transcription and notes. After changing it, re-transcribe or regenerate the notes from More → Reprocess"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会议语言：决定转录和会议记录用的语言。改了之后，从“更多 → 重新处理”重新转录或重新整理会议记录"
           }
         }
       }
@@ -14540,6 +14728,40 @@
         }
       }
     },
+    "範本、會議語言、大約幾個人。人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模板、会议语言、大约几个人。人多、吵杂或手机放在桌上录音时，先告诉拾音大约几个人，说话者会分得比较准"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template, meeting language and about how many people. When there are many people, it's noisy, or the phone is on the table, tell Shiyin about how many people there are so speakers are separated better"
+          }
+        }
+      }
+    },
+    "範本和會議語言。換了之後，從「更多 → 重新處理」重新轉錄或重新整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模板和会议语言。换了之后，从“更多 → 重新处理”重新转录或重新整理会议记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template and meeting language. After changing them, re-transcribe or refresh the notes from More → Reprocess"
+          }
+        }
+      }
+    },
     "範本：": {
       "extractionState": "manual",
       "localizations": {
@@ -15849,6 +16071,52 @@
         }
       }
     },
+    "說了 %lld 分鐘": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说了 %lld 分钟"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Spoke %lld minute"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Spoke %lld minutes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "說了不到 1 分鐘": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说了不到 1 分钟"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spoke less than a minute"
+          }
+        }
+      }
+    },
     "說話者": {
       "extractionState": "manual",
       "localizations": {
@@ -16236,6 +16504,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "负责人"
+          }
+        }
+      }
+    },
+    "負責的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "负责的待办"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action items"
           }
         }
       }
@@ -17008,6 +17293,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这不是有效的拾音文件包：%@"
+          }
+        }
+      }
+    },
+    "這些待辦都已經在提醒事項了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些待办都已经在提醒事项了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These to-dos are already in Reminders"
           }
         }
       }
@@ -17789,6 +18091,23 @@
         }
       }
     },
+    "選一個人，看一起開過的會議和負責的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选一个人，看一起开过的会议和负责的待办"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a person to see the meetings you shared and their action items"
+          }
+        }
+      }
+    },
     "選一個範本": {
       "extractionState": "manual",
       "localizations": {
@@ -18022,6 +18341,23 @@
         }
       }
     },
+    "還沒有一起開過會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有一起开过会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meetings together yet"
+          }
+        }
+      }
+    },
     "還沒有下載轉錄模型，請到設定 → 錄音與轉錄下載": {
       "extractionState": "manual",
       "localizations": {
@@ -18239,6 +18575,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有词汇。用词修正时勾选“加进词汇表”也会加到这里。"
+          }
+        }
+      }
+    },
+    "還沒有認識的人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有认识的人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No people yet"
           }
         }
       }
@@ -18970,6 +19323,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录制系统音频"
+          }
+        }
+      }
+    },
+    "錄過你的聲音，還沒有一起開過會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录过你的声音，还没有一起开过会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your voice is recorded; no meetings yet"
           }
         }
       }
