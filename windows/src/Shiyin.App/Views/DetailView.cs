@@ -737,7 +737,7 @@ public sealed class RecordingPanel
             hints.Children.Add(new Border
             {
                 Background = warm, Padding = new Thickness(16, 8, 16, 8),
-                Child = Ui.Bar(null, Ui.Text(HintText(hint), 13), Ui.Button(L.T("知道了"), r.DismissLevelHint, tooltip: L.T("這場錄音不再提示這件事"))),
+                Child = Ui.Bar(null, Ui.Text(r.HintText(hint), 13), Ui.Button(L.T("知道了"), r.DismissLevelHint, tooltip: L.T("這場錄音不再提示這件事"))),
             });
         if (r.MicHint is { } micHint)
         {
@@ -779,8 +779,6 @@ public sealed class RecordingPanel
         if (followLatest) scroll.ChangeView(null, double.MaxValue, null, disableAnimation: true);
     }
 
-    /// <summary>提示的文字在 LevelHints.Text（錄音畫面、系統匣、通知共用，R42）</summary>
-    public static string HintText(Recorder.LevelHint hint) => hint.Text();
 
     /// <summary>文字大小改了（R59）：即時逐字稿、正在講的那句、我的筆記換成新的大小，已經出現的句子重建</summary>
     public void Rescale()

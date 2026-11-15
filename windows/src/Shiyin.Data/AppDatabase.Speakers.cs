@@ -8,7 +8,8 @@ using Shiyin.Transcribe;
 namespace Shiyin.Data;
 
 /// <summary>設定頁的認識的人：幾份聲紋、最近出現在哪場會議</summary>
-public sealed record PersonSummary(long Id, string Name, int VoiceprintCount, string? LastMeetingTitle, string? LastMeetingDate);
+/// <summary>EnrolledAt：錄過「我的聲音」的人（M§56.1）錄的時間</summary>
+public sealed record PersonSummary(long Id, string Name, int VoiceprintCount, string? LastMeetingTitle, string? LastMeetingDate, string? EnrolledAt = null);
 
 /// <summary>一組問答（M§21.8）：meeting_id 是 NULL 時是問所有會議</summary>
 public sealed class QuestionRecord
@@ -150,11 +151,44 @@ public sealed partial class AppDatabase
         if (existing.Any(e => Voiceprint.Similarity(vector, e) > 0.95)) return;
         db.Execute("INSERT INTO voiceprints (person_id, embedding, audio_source, meeting_id, speaker_idx, created_at) VALUES (?, ?, ?, ?, ?, ?)",
             personId, embedding, speaker.AudioSource, meetingId, idx, Clock.Now());
+        // 錄的「我的聲音」不算在上限裡、不刪（M§56.1）
         db.Execute("""
-            DELETE FROM voiceprints WHERE person_id = ? AND id NOT IN
-              (SELECT id FROM voiceprints WHERE person_id = ? ORDER BY id DESC LIMIT ?)
+            DELETE FROM voiceprints WHERE person_id = ? AND audio_source <> 'enroll' AND id NOT IN
+              (SELECT id FROM voiceprints WHERE person_id = ? AND audio_source <> 'enroll' ORDER BY id DESC LIMIT ?)
             """, personId, personId, VoiceprintsPerPerson);
     });
+
+    /// <summary>錄好的聲紋存成「我」的一份 enroll 聲紋（M§56.1、R80）：先刪掉現有的那份（整個資料庫最多一份），照名字找人、沒有就建立。
+    /// 之前的「我」換了名字、又沒有其他聲紋和會議用到時刪掉。回傳「我」的 id</summary>
+    public long EnrollVoiceprint(string name, float[] embedding) => Write(db =>
+    {
+        var trimmed = name.Trim();
+        db.Execute("DELETE FROM voiceprints WHERE audio_source = 'enroll'");
+        var personId = db.Scalar("SELECT id FROM people WHERE name = ? COLLATE NOCASE", trimmed) as long?;
+        if (personId is null)
+        {
+            db.Execute("INSERT INTO people (name, created_at) VALUES (?, ?)", trimmed, Clock.Now());
+            personId = db.LastInsertRowId;
+        }
+        db.Execute("INSERT INTO voiceprints (person_id, embedding, audio_source, meeting_id, speaker_idx, created_at) VALUES (?, ?, 'enroll', NULL, NULL, ?)",
+            personId, Voiceprint.Data(embedding), Clock.Now());
+        DeleteOrphanPeople(db);
+        return personId.Value;
+    });
+
+    /// <summary>刪掉「我的聲音」那份聲紋（R80.4）</summary>
+    public void DeleteEnrollment() => Write(db =>
+    {
+        db.Execute("DELETE FROM voiceprints WHERE audio_source = 'enroll'");
+        DeleteOrphanPeople(db);
+    });
+
+    /// <summary>「我」：有 enroll 聲紋的那個人</summary>
+    public (long PersonId, string Name, string CreatedAt)? Enrollment() => Read(db =>
+        db.QueryOne("""
+            SELECT p.id, p.name, v.created_at FROM voiceprints v JOIN people p ON p.id = v.person_id
+            WHERE v.audio_source = 'enroll' LIMIT 1
+            """) is { } r ? (r.Long("id"), r.Str("name"), r.Str("created_at")) : ((long, string, string)?)null);
 
     /// <summary>這場會議說話者辨識至少分出幾個人（M§23.2），null 自動判斷</summary>
     public void SetMinSpeakers(long meetingId, int? minSpeakers) =>
@@ -232,13 +266,14 @@ public sealed partial class AppDatabase
     public List<PersonSummary> PeopleSummaries() => Read(db => db.Query("""
         SELECT p.id, p.name,
           (SELECT count(*) FROM voiceprints v WHERE v.person_id = p.id) AS prints,
+          (SELECT v.created_at FROM voiceprints v WHERE v.person_id = p.id AND v.audio_source = 'enroll' LIMIT 1) AS enrolled,
           (SELECT m.id FROM speakers s JOIN meetings m ON m.id = s.meeting_id
              WHERE s.person_id = p.id AND m.deleted_at IS NULL ORDER BY m.meeting_date DESC LIMIT 1) AS last_id
         FROM people p ORDER BY p.name COLLATE NOCASE
         """).Select(r =>
     {
         var last = r.LongOrNull("last_id") is long id ? FetchMeeting(db, id) : null;
-        return new PersonSummary(r.Long("id"), r.Str("name"), r.Int("prints"), last?.DisplayTitle, last?.MeetingDate);
+        return new PersonSummary(r.Long("id"), r.Str("name"), r.Int("prints"), last?.DisplayTitle, last?.MeetingDate, r.StrOrNull("enrolled"));
     }).ToList());
 
     /// <summary>改名：認識的人和所有連到他的說話者一起改；新名字已經有人用了就合併過去</summary>

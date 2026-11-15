@@ -1,6 +1,40 @@
 {
   "sourceLanguage": "zh-Hant",
   "strings": {
+    "%1$@ 的聲音從「%2$@」播出，拾音錄的是預設的「%3$@」，所以錄不到。請把 Windows 的預設輸出裝置改成「%2$@」（設定 → 系統 → 音效 → 輸出），或在 %1$@ 裡把喇叭改成預設的裝置。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is playing through “%2$@”, but Shiyin records the default device “%3$@”, so it can't hear it. Set Windows' default output device to “%2$@” (Settings → System → Sound → Output), or switch the speaker in %1$@ to the default device."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 的声音从“%2$@”播出，拾音录的是默认的“%3$@”，所以录不到。请把 Windows 的默认输出装置改成“%2$@”（设置 → 系统 → 音效 → 输出），或在 %1$@ 里把扬声器改成默认的装置。"
+          }
+        }
+      }
+    },
+    "%@ 正在播放聲音，但拾音錄不到電腦的聲音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is playing audio, but Shiyin can't record the computer's audio."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 正在播放声音，但拾音录不到电脑的声音。"
+          }
+        }
+      }
+    },
     "%@失敗（錯誤代碼 %@）": {
       "extractionState": "manual",
       "localizations": {
@@ -1509,6 +1543,23 @@
         }
       }
     },
+    "拾音會在這台電腦上把會議錄下來，轉成逐字稿，再整理成會議紀錄。我現在唸這一段，是要讓拾音記住我的聲音。之後開會的時候，拾音聽到這個聲音，就會在逐字稿上標出我的名字。聲音特徵只存在這台電腦裡，不會上傳。下午三點，我們要討論下一季的計畫，請大家先看一下上週的數字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin records meetings on this computer, turns them into transcripts, and writes up meeting notes. I'm reading this so Shiyin can learn my voice. In future meetings, when Shiyin hears this voice, it will put my name next to what I said. The voice profile stays on this computer and is never uploaded. At three this afternoon we'll talk about next quarter's plan, so please take a look at last week's numbers first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音会在这台电脑上把会议录下来，转成逐字稿，再整理成会议记录。我现在念这一段，是要让拾音记住我的声音。之后开会的时候，拾音听到这个声音，就会在逐字稿上标出我的名字。声音特征只存在这台电脑里，不会上传。下午三点，我们要讨论下一季的计划，请大家先看一下上周的数字。"
+          }
+        }
+      }
+    },
     "拾音會常駐在工作列右下角的系統匣，關掉視窗也會繼續錄音和整理。": {
       "extractionState": "manual",
       "localizations": {
@@ -2304,6 +2355,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "没办法把 key 存进凭据管理器（错误代码 %lld）"
+          }
+        }
+      }
+    },
+    "沒辦法算出聲音特徵：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't work out the voice profile: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没办法算出声音特征：%@"
           }
         }
       }

@@ -4,6 +4,7 @@ using Shiyin.LLM;
 using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
+using Shiyin.Speakers;
 using Shiyin.Transcribe;
 using Shiyin.Whisper;
 
@@ -156,6 +157,9 @@ public sealed class JobRunner
     /// 轉錄線能不能接工作：模型還沒下載好的語言先用快速辨識（M§21.17），Breeze、日文模型在背景下載；
     /// 快速辨識、說話者辨識的模型也還沒好時先不接（Mac 的內建辨識不用下載，Windows 要，design-windows §8）
     /// </summary>
+    /// <summary>「我的聲音」（R80、design-windows §11.20）：一段錄音辨識說話者、算聲紋。每次建新的辨識器，不跟轉錄線共用</summary>
+    public Diarizer.Output DiarizeClip(float[] samples, CancellationToken cancel = default) => engines.Diarize(samples, null, _ => { }, cancel);
+
     bool PrepareTranscription()
     {
         // 轉錄用企業伺服器：這台電腦不用模型（R50.7），說話者也在伺服器辨識

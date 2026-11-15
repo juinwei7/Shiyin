@@ -568,6 +568,7 @@ public sealed class SettingsWindow : Window
         column.Children.Add(Ui.Toggle(L.T("記住說話者的聲音，之後的會議自動帶入名字"), S.Voiceprints, on => S.Set(AppSettings.VoiceprintsKey, on)));
         column.Children.Add(Ui.Text(L.T("替說話者取名時，拾音會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台電腦的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。"), 13, color: Ui.Secondary));
         var people = host.Db.PeopleSummaries();
+        column.Children.Add(MyVoice(people));
         var deleteAll = Ui.Button(L.T("全部刪除…"), () => { });
         deleteAll.IsEnabled = people.Count > 0;
         deleteAll.Click += async (_, _) =>
@@ -592,11 +593,117 @@ public sealed class SettingsWindow : Window
                 var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("改名")), Content = box, PrimaryButtonText = L.T("儲存"), CloseButtonText = L.T("取消") };
                 if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary && box.Text.Trim().Length > 0) { host.Controller.RenamePerson(person.Id, box.Text.Trim()); Show(); }
             };
-            column.Children.Add(Ui.Bar(null, Ui.Column(2, Ui.Text(person.Name, 14), Ui.Caption(detail)),
+            // 錄過「我的聲音」的人標「（我）」（R80.4）
+            var label = person.EnrolledAt is null ? person.Name : L.F("%@（我）", person.Name);
+            column.Children.Add(Ui.Bar(null, Ui.Column(2, Ui.Text(label, 14), Ui.Caption(detail)),
                 Ui.Row(8, rename, Ui.IconButton(Symbol.Delete, L.F("刪除「%@」的聲音特徵（已經帶入的名字留著）", person.Name), () => { host.Controller.DeletePerson(person.Id); Show(); }))));
         }
         return column;
     }
+
+    // MARK: 我的聲音（R80、design-windows §11.20、M§56.3）
+
+    FrameworkElement MyVoice(List<PersonSummary> people)
+    {
+        var me = people.FirstOrDefault(p => p.EnrolledAt is not null);
+        var recording = host.Recorder.IsRecording;
+        var caption = me is { EnrolledAt: { } at } ? L.F("%@・已錄（%@）", me.Name, at[..Math.Min(10, at.Length)])
+            : !S.Voiceprints ? L.T("先打開上面的「記住說話者的聲音」")
+            : recording ? L.T("錄音中不能錄（麥克風在用）")
+            : L.T("錄一段你自己的聲音，第一場會議就認得你。");
+        var record = Ui.Button(me is null ? L.T("錄一段我的聲音…") : L.T("重錄…"), () => _ = RecordMyVoice(me?.Name));
+        record.IsEnabled = S.Voiceprints && !recording;
+        var actions = Ui.Row(8, record);
+        if (me is not null)
+        {
+            var delete = Ui.Link(L.T("刪除"), () => { host.Controller.DeleteEnrollment(); Show(); });
+            ToolTipService.SetToolTip(delete, L.T("只刪這份聲音特徵，會議裡的名字照舊"));
+            actions.Children.Add(delete);
+        }
+        return Ui.Bar(null, Ui.Column(2, Ui.Text(L.T("我的聲音"), 14), Ui.Caption(caption)), actions);
+    }
+
+    /// <summary>錄音的對話框（M§56.3）：名字、要唸的文字、秒數；「開始」→「完成」（有聲音的部分 10 秒以上才能按）→ 算聲紋</summary>
+    async Task RecordMyVoice(string? name)
+    {
+        var enrollment = new VoiceEnrollment(() => new WasapiSource(WasapiSource.Kind.Microphone, S.InputDevice));
+        var nameBox = new TextBox { Header = L.T("名字"), Text = name ?? Environment.UserName };
+        var status = Ui.Text("", 13, color: Ui.Secondary);
+        var warning = Ui.Text("", 13, color: Ui.Signal);
+        var passage = new Border
+        {
+            Background = Ui.Subtle, CornerRadius = new CornerRadius(8), Padding = new Thickness(14),
+            Child = new TextBlock { Text = MyVoicePassage, TextWrapping = TextWrapping.Wrap, FontSize = 17, LineHeight = 28 },
+        };
+        var content = Ui.Column(12,
+            Ui.Text(L.T("按「開始」，用平常開會說話的音量唸下面這段（約 20～30 秒），唸完按「完成」。拾音只用這段聲音算出你的聲音特徵，算完就刪掉錄音。"), 13, color: Ui.Secondary),
+            nameBox, passage, status, warning);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("錄一段我的聲音")), Content = content,
+            PrimaryButtonText = L.T("開始"), CloseButtonText = L.T("取消"),
+        };
+        var computing = false;
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(200);
+        timer.Tick += (_, _) =>
+        {
+            if (computing) return;
+            if (enrollment.Recording)
+            {
+                status.Text = L.F("已錄 %lld 秒・有聲音的部分 %lld 秒（要 10 秒以上）", (long)enrollment.Seconds, (long)enrollment.VoicedSeconds);
+                dialog.IsPrimaryButtonEnabled = enrollment.CanFinish && nameBox.Text.Trim().Length > 0;
+            }
+            else if (dialog.PrimaryButtonText == L.T("完成"))
+            {
+                // 到 40 秒自動停了：還是可以按「完成」
+                dialog.IsPrimaryButtonEnabled = enrollment.CanFinish && nameBox.Text.Trim().Length > 0;
+            }
+            if (enrollment.MicSilent) warning.Text = L.T("麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。");
+        };
+        timer.Start();
+        dialog.PrimaryButtonClick += async (_, e) =>
+        {
+            e.Cancel = true;
+            if (dialog.PrimaryButtonText != L.T("完成"))
+            {
+                warning.Text = "";
+                try { enrollment.Start(); }
+                catch (Exception ex) when (ex is CaptureException or System.Runtime.InteropServices.COMException)
+                {
+                    warning.Text = L.F("沒辦法開始錄音：%@", ex.Message);
+                    return;
+                }
+                dialog.PrimaryButtonText = L.T("完成");
+                dialog.IsPrimaryButtonEnabled = false;
+                return;
+            }
+            var deferral = e.GetDeferral();
+            var samples = enrollment.Stop();
+            computing = true;
+            dialog.IsPrimaryButtonEnabled = false;
+            status.Text = L.T("正在算聲音特徵…第一次要先下載說話者辨識的模型");
+            var error = await host.Controller.EnrollVoice(nameBox.Text.Trim(), samples);
+            computing = false;
+            deferral.Complete();
+            if (error is null)
+            {
+                dialog.Hide();
+                App.Current.Notice(L.F("已記住你的聲音：之後的會議聽到像你的聲音，會帶入「%@」或在待確認問你", nameBox.Text.Trim()));
+                return;
+            }
+            warning.Text = error;
+            dialog.PrimaryButtonText = L.T("重新開始");
+            dialog.IsPrimaryButtonEnabled = true;
+        };
+        await Ui.InterfaceLanguage(dialog).ShowAsync();
+        timer.Stop();
+        enrollment.Stop();
+        Show();
+    }
+
+    /// <summary>要唸的文字（R80.1，同 Mac 的 VoiceEnrollment.passage，「Mac」換成「電腦」）</summary>
+    static string MyVoicePassage => L.T("拾音會在這台電腦上把會議錄下來，轉成逐字稿，再整理成會議紀錄。我現在唸這一段，是要讓拾音記住我的聲音。之後開會的時候，拾音聽到這個聲音，就會在逐字稿上標出我的名字。聲音特徵只存在這台電腦裡，不會上傳。下午三點，我們要討論下一季的計畫，請大家先看一下上週的數字。");
 
     // MARK: 錄音與轉錄（R1、R4、R44.5）：錄音來源、語言、轉錄（含模型）、提醒與快捷鍵四組
 
@@ -843,7 +950,10 @@ public sealed class SettingsWindow : Window
         // 會議內容的文字大小（R59.1）：快捷鍵改的也是這個設定
         var levels = Enumerable.Range(TextSizes.Min, TextSizes.Max - TextSizes.Min + 1);
         var textSize = Ui.Combo(levels.Select(l => (l, TextSizes.Label(l))), S.TextSize, l => S.Set(AppSettings.TextSizeKey, (double)l), L.T("會議內容的文字大小"));
-        column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 Ctrl+加號、Ctrl+減號調整，Ctrl+0 回到標準大小。"))));
+        // 分享畫面時藏起拾音的視窗（R77、design-windows §11.19）
+        var hide = Ui.Toggle(L.T("分享畫面時藏起拾音的視窗"), S.HideFromScreenSharing, on => { S.Set(AppSettings.HideFromScreenSharingKey, on); WindowCapture.Set(on); });
+        column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 Ctrl+加號、Ctrl+減號調整，Ctrl+0 回到標準大小。")),
+            hide, Note(L.T("打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。"))));
         // 讓 AI 工具讀取會議（本地 MCP，R69、design-windows §11.12）
         column.Children.Add(Section(L.T("AI 工具（MCP）"), Mcp()));
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));

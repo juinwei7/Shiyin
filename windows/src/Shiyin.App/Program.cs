@@ -364,7 +364,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     {
         if (host is null || host.Recorder.MeetingId is not long id) return;
         if (main is { IsForeground: true } && main.AppWindow.IsVisible) return;
-        host.Notifier.LevelHint(hint, id);
+        host.Notifier.LevelHint(host.Recorder.HintText(hint), id);
     }
 
     MenuFlyout TrayMenu()
@@ -388,7 +388,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             if (recorder.Hint is { } hint)
             {
                 // 收音提醒（R42.2）：跟錄音畫面同一句，「知道了」這場不再提示
-                menu.Items.Add(new MenuFlyoutItem { Text = hint.Text(), IsEnabled = false });
+                menu.Items.Add(new MenuFlyoutItem { Text = recorder.HintText(hint), IsEnabled = false });
                 menu.Items.Add(Ui.Item(L.T("知道了"), recorder.DismissLevelHint));
             }
             if (recorder.MicHint is { } micHint)

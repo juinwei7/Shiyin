@@ -96,6 +96,77 @@ public sealed class AppTests : IDisposable
 
     // MARK: 錄音存檔、復原
 
+    /// <summary>我的聲音（R80、M§56.1）：一份 enroll 聲紋就是「我」；比對照常帶入；30 份的上限不刪 enroll；重錄換掉、刪除只刪那份</summary>
+    [Fact]
+    public void EnrolledVoiceIsMe()
+    {
+        static float[] OneHot(int i) { var v = new float[40]; v[i] = 1; return v; }
+        Assert.Null(db.Enrollment());
+        db.EnrollVoiceprint("  小魏 ", OneHot(0));
+        Assert.Equal("小魏", db.Enrollment()?.Name);
+        Assert.NotNull(db.PeopleSummaries().Single().EnrolledAt);
+        // 新的會議裡就是我的聲音的說話者直接帶入
+        var first = db.InsertMeeting(new Meeting { SourceFilename = "a" }, null).Id!.Value;
+        db.SaveTranscript(first, [new Segment { MeetingId = first, End = 20, Text = "x", Speaker = 1 }], 1, 1,
+            new Dictionary<int, SpeakerVoice> { [1] = new(OneHot(0), 20, "mic") });
+        Assert.Equal(1, db.MatchVoiceprints(first));
+        Assert.Equal(("小魏", "voiceprint"), (db.Speakers(first).Single().Name, db.Speakers(first).Single().NameSource));
+        // 會議裡學到 31 份：只留最新的 30 份，enroll 不刪
+        for (var i = 1; i <= 31; i++)
+        {
+            var id = db.InsertMeeting(new Meeting { SourceFilename = $"m{i}" }, null).Id!.Value;
+            db.SaveTranscript(id, [new Segment { MeetingId = id, End = 20, Text = "x", Speaker = 1 }], 1, 1,
+                new Dictionary<int, SpeakerVoice> { [1] = new(OneHot(i), 20, "mic") });
+            db.LearnVoiceprint(id, 1, "小魏");
+        }
+        Assert.Equal(31, db.PeopleSummaries().Single(p => p.Name == "小魏").VoiceprintCount);
+        Assert.Equal("小魏", db.Enrollment()?.Name);
+        // 重錄成另一個名字：只剩一份 enroll，小魏留著（會議用到）
+        db.EnrollVoiceprint("小陳", OneHot(39));
+        Assert.Equal("小陳", db.Enrollment()?.Name);
+        Assert.Equal(30, db.PeopleSummaries().Single(p => p.Name == "小魏").VoiceprintCount);
+        // 刪除：enroll 沒了，只靠它存在的小陳拿掉，小魏照舊
+        db.DeleteEnrollment();
+        Assert.Null(db.Enrollment());
+        Assert.Equal(["小魏"], db.PeopleSummaries().Select(p => p.Name));
+    }
+
+    /// <summary>錄「我的聲音」（R80.3、M§56.2）：算有聲音的秒數、完全沒聲音的提示；取說話最多、≥ 8 秒的那一位的聲紋</summary>
+    [Fact]
+    public void VoiceEnrollmentCountsSpeech()
+    {
+        var source = new BurstSource();
+        var enrollment = new VoiceEnrollment(() => source);
+        enrollment.Start();
+        source.Send(12, 0.2f);   // 12 秒說話
+        source.Send(4, 0);       // 4 秒完全沒聲音
+        Assert.InRange(enrollment.VoicedSeconds, 11.9, 12.1);
+        Assert.InRange(enrollment.Seconds, 15.9, 16.1);
+        Assert.True(enrollment.CanFinish);
+        Assert.True(enrollment.MicSilent);
+        Assert.Equal(16 * 16000, enrollment.Stop().Length);
+        Assert.False(enrollment.Recording);
+
+        static Shiyin.Speakers.Diarizer.Output Output(Dictionary<int, double> seconds) =>
+            new([], seconds.Keys.ToDictionary(k => k, k => new float[] { k }), seconds, null, []);
+        Assert.Equal([2f], VoiceEnrollment.BestVoiceprint(Output(new() { [1] = 5, [2] = 9 })));
+        Assert.Null(VoiceEnrollment.BestVoiceprint(Output(new() { [1] = 5 })));
+    }
+
+    sealed class BurstSource : IAudioSource
+    {
+        public Action<float[]>? OnSamples { get; set; }
+        public Action? OnInterruption { get; set; }
+        public void Start() { }
+        public void Stop() { }
+        /// <summary>一次送 seconds 秒（每 0.1 秒一段），amplitude 0 是完全沒聲音</summary>
+        public void Send(double seconds, float amplitude)
+        {
+            for (var n = 0; n < (int)Math.Round(seconds * 10); n++)
+                OnSamples?.Invoke(Enumerable.Range(0, 1600).Select(i => amplitude * MathF.Sin(i * 0.07f)).ToArray());
+        }
+    }
+
     [Fact]
     public async Task RecordingIsSavedAndQueued()
     {

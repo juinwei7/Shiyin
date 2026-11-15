@@ -14,6 +14,7 @@ public static partial class WindowPlacement
     {
         SetIcon(window);
         FollowTheme(window);
+        WindowCapture.Track(window);
         var area = DisplayArea.GetFromWindowId(window.AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
         var scale = Scale(window);
         var w = Math.Min((int)Math.Round(width * scale), area.Width - 16);

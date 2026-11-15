@@ -50,6 +50,8 @@ public sealed class AppSettings
     public const string NotesViewKey = "notesView";
     /// <summary>讓 AI 工具讀取會議（本地 MCP，M§44.1），預設關</summary>
     public const string McpEnabledKey = "mcpEnabled";
+    /// <summary>分享畫面時藏起拾音的視窗（R77、design-windows §11.19），預設關</summary>
+    public const string HideFromScreenSharingKey = "hideFromScreenSharing";
     /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
     public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
@@ -296,6 +298,7 @@ public sealed class AppSettings
     public bool SummarizerReady => SummarizerProblem is null;
     public bool AutoSummarize => Flag(AutoSummarizeKey, true);
     public bool McpEnabled => Flag(McpEnabledKey, false);
+    public bool HideFromScreenSharing => Flag(HideFromScreenSharingKey, false);
     public bool CompressAudio => Flag(CompressAudioKey, true);
     public bool Diarize => Flag(DiarizeKey, true);
     /// <summary>線上會議的麥克風、電腦聲音分開轉錄（M§17.3）；還在評估，設定裡沒有開關</summary>

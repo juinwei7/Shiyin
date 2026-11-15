@@ -1035,6 +1035,28 @@ public sealed class AppController
     public void DeletePerson(long id) => Perform(null, () => Db.DeletePerson(id));
     public void DeleteAllPeople() => Perform(null, Db.DeleteAllPeople);
 
+    /// <summary>錄好的「我的聲音」算聲紋、存成「我」（R80、M§56）。回傳錯誤訊息，成功是 null</summary>
+    public async Task<string?> EnrollVoice(string name, float[] samples)
+    {
+        try
+        {
+            // ConfigureAwait(false)：DEBUG 的控制通道在 UI 執行緒上等結果
+            var embedding = await Task.Run(() => VoiceEnrollment.BestVoiceprint(Runner.DiarizeClip(samples))).ConfigureAwait(false);
+            if (embedding is null) return L.T("沒聽清楚你的聲音：請在安靜的地方再錄一次，照著畫面上的文字唸完。");
+            Db.EnrollVoiceprint(name, embedding);
+            Changed?.Invoke(null);
+            return null;
+        }
+        catch (Exception e)
+        {
+            Log.Error($"enroll voice failed: {e.GetType().Name}");
+            return L.F("沒辦法算出聲音特徵：%@", e.Message);
+        }
+    }
+
+    /// <summary>只刪那份聲紋，會議裡的名字照舊（R80.4）</summary>
+    public void DeleteEnrollment() => Perform(null, Db.DeleteEnrollment);
+
     // MARK: 匯出（R7）
 
     public sealed class ExportException(string message) : Exception(message);

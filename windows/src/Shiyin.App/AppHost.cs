@@ -69,6 +69,7 @@ public sealed class AppHost
         Paths.EnsureDirectories();
         Log.Configure(Paths.Logs);
         Settings = AppSettings.Load(Paths.Settings, AppSettings.ParseOverrides(args));
+        WindowCapture.Set(Settings.HideFromScreenSharing);   // 分享畫面時藏起拾音的視窗（R77），之後開的視窗照這個值
         UseInterfaceLanguage(Settings.String(AppSettings.InterfaceLanguageKey));
         // 中文會議用簡體時，新增的預設說話者名稱也是簡體（M§48.2）
         MeetingLanguages.SimplifiedChineseContent = () => Settings.SimplifiedChinese(MeetingLanguage.Zh);
@@ -130,7 +131,7 @@ public sealed class AppHost
         var engines = new SpeechEngines(Models, () => Gpu.QwenRuntime, Gpu);
         var power = new PowerRequests();
         Runner = new JobRunner(Db, Settings, Paths, Models, Llm, Decoder, engines, Compressor, power) { Usage = Usage, Enterprise = Enterprise };
-        Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes, MicrophoneList, DefaultMicrophone));
+        Recorder = new Recorder(Settings, Paths, power, new Recorder.Hooks(MakeSources, MakeLive, DetectLanguage, Shell.AvailableBytes, MicrophoneList, DefaultMicrophone, PlayingApps));
         // 忘了停止錄音（M§35.2）：DEBUG 用 --set idleRemindSeconds=60 --set idleStopSeconds=180 縮短
         if (Debug)
         {
@@ -372,6 +373,17 @@ public sealed class AppHost
         if (FakeMicrophones.Count > 0) return FakeMicrophones[0];
         try { return Microphones.Default(); }
         catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { return null; }
+    }
+
+    /// <summary>DEBUG 的 playingapp（design-windows §11.18）：假的「正在出聲的 app」，蓋掉真的（虛擬機沒有音效裝置）</summary>
+    public IReadOnlyList<Recorder.PlayingApp>? FakePlayingApps { get; set; }
+
+    /// <summary>正在出聲的 app（R75.3）：Recorder 在電腦聲音全是 0 時才來問；讀不到時是空的</summary>
+    public IReadOnlyList<Recorder.PlayingApp> PlayingApps()
+    {
+        if (FakePlayingApps is { } fake) return fake;
+        try { return AudioOutputs.Playing(); }
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException) { return []; }
     }
 
     IReadOnlyList<(int Channel, IAudioSource Source)> MakeSources(string source, string device) => source switch

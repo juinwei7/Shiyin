@@ -157,6 +157,19 @@ public static class ControlPipe
             case "recordlang" when args.Length > 1 && MeetingLanguages.Parse(args[1]) is { } language: host.Recorder.SwitchLanguage(language); return Ok;
             // 麥克風（R58、M§38.7）：fakemic <名稱> <bluetooth 0|1> [內建的名稱]：假的麥克風（只在記憶體，第一支當成系統預設）；fakemic off 清掉。
             // 模擬錄音（record-sim）的 micDevice 照設定從這裡找，測得到選單、提示列、通知、換了之後錄音不中斷
+            // enrollvoice <音檔> <名字>：用音檔代替麥克風錄「我的聲音」（design-windows §11.20），回傳錯誤訊息（成功是空的）
+            case "enrollvoice" when args.Length > 2:
+            {
+                var samples = host.Decoder.Decode(args[1]);
+                var error = host.Controller.EnrollVoice(args[2], samples).GetAwaiter().GetResult();
+                return new JsonObject { ["error"] = error ?? "" };
+            }
+            case "enrolldelete": host.Controller.DeleteEnrollment(); return Ok;
+            // playingapp <名稱> <meeting|browser|other> <裝置> <1=在預設裝置上> <預設裝置的名稱>｜playingapp off：假的正在出聲的 app（design-windows §11.18）
+            case "playingapp" when args.Length > 1:
+                host.FakePlayingApps = args[1] == "off" ? null
+                    : args.Length > 5 ? [new Services.Capture.Recorder.PlayingApp(args[1], args[2], args[3], args[4] == "1", args[5])] : [];
+                return Ok;
             case "fakemic" when args.Length > 1:
                 if (args[1] == "off") host.FakeMicrophones = [];
                 else
@@ -405,11 +418,14 @@ public static class ControlPipe
                 ["expired"] = host.Enterprise.ExpiredMessage, ["error"] = enterpriseError,
                 ["glossary"] = new JsonArray([.. host.Enterprise.Glossary.Terms.Select(t => (JsonNode)t)]),
             },
+            // 我的聲音（design-windows §11.20）
+            ["selfPerson"] = host.Db.Enrollment() is { } me ? new JsonObject { ["id"] = me.PersonId, ["name"] = me.Name, ["createdAt"] = me.CreatedAt } : null,
             ["recorder"] = new JsonObject
             {
                 ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
                 ["language"] = r.Language.Code(), ["liveLines"] = r.LiveLines.Count, ["volatile"] = r.VolatileText, ["liveStatus"] = r.LiveStatus,
                 ["deviceWarning"] = r.DeviceWarning, ["hint"] = r.Hint?.ToString(), ["systemSilent"] = r.SystemSilent,
+                ["hintText"] = r.Hint is { } shown ? r.HintText(shown) : null, ["systemCulprit"] = r.SystemCulprit?.Name,
                 // 正在收音的麥克風、藍牙耳機的提醒（R58、M§38.7）
                 ["micDevice"] = r.MicDevice is { } mic
                     ? new JsonObject { ["name"] = mic.Name, ["id"] = mic.Id, ["bluetooth"] = mic.IsBluetooth, ["builtIn"] = mic.IsBuiltIn } : null,

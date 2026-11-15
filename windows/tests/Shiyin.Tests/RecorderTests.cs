@@ -307,6 +307,86 @@ public sealed class RecorderTests : IDisposable
         public int Count { get { lock (Starts) return Starts.Count; } }
     }
 
+    /// <summary>每 0.1 秒送一段：Loud 時是正弦波，不然全是 0（模擬錄不到的電腦聲音）</summary>
+    sealed class ToneSource : IAudioSource
+    {
+        public Action<float[]>? OnSamples { get; set; }
+        public Action? OnInterruption { get; set; }
+        public volatile bool Loud;
+        CancellationTokenSource? cancel;
+
+        public void Start()
+        {
+            var cts = cancel = new CancellationTokenSource();
+            new Thread(() =>
+            {
+                var t = 0;
+                while (!cts.IsCancellationRequested)
+                {
+                    var chunk = new float[1600];
+                    if (Loud) for (var i = 0; i < chunk.Length; i++) chunk[i] = 0.2f * MathF.Sin(t++ * 0.07f);
+                    OnSamples?.Invoke(chunk);
+                    if (cts.Token.WaitHandle.WaitOne(100)) return;
+                }
+            }) { IsBackground = true }.Start();
+        }
+
+        public void Stop() => cancel?.Cancel();
+    }
+
+    Recorder MakeBoth(AppSettings settings, IAudioSource mic, IAudioSource system, Func<IReadOnlyList<Recorder.PlayingApp>> playing) =>
+        new(settings, paths, NoPower.Instance, new Recorder.Hooks(
+            (_, _) => [(0, mic), (1, system)], _ => new FakeLive(), null, _ => 50_000_000_000, PlayingApps: playing))
+        { SystemMissingSeconds = 1 };
+
+    /// <summary>R75.3：電腦聲音全是 0、有 app 在別的輸出裝置出聲：提示寫出 app、它的裝置、預設裝置；會議 app 排在瀏覽器前面</summary>
+    [Fact]
+    public async Task SystemAudioOnOtherDeviceHints()
+    {
+        var settings = Quiet();
+        var mic = new ToneSource { Loud = true };
+        var system = new ToneSource();
+        Recorder.PlayingApp[] apps =
+        [
+            new("Chrome", "browser", "Speakers", true, "Speakers"),
+            new("Microsoft Teams", "meeting", "Jabra Speak 710", false, "Speakers"),
+        ];
+        var recorder = MakeBoth(settings, mic, system, () => apps);
+        recorder.Start(11, MeetingLanguage.Zh, "both");
+        await Until(() => recorder.Hint == Recorder.LevelHint.SystemElsewhere);
+        Assert.Equal("Microsoft Teams", recorder.SystemCulprit?.Name);
+        var text = recorder.HintText(Recorder.LevelHint.SystemElsewhere);
+        Assert.Contains("Microsoft Teams", text);
+        Assert.Contains("「Jabra Speak 710」", text);
+        Assert.Contains("「Speakers」", text);
+        // 電腦聲音恢復就收起來（R75.1）
+        system.Loud = true;
+        await Until(() => recorder.Hint is null);
+        recorder.Stop();
+    }
+
+    /// <summary>R75.3：app 就在預設裝置上還是錄不到 → SystemMissing；沒有 app 在出聲 → 不提示</summary>
+    [Fact]
+    public async Task SystemAudioMissingOrNobodyPlaying()
+    {
+        var settings = Quiet();
+        Recorder.PlayingApp[] apps = [new("Zoom", "meeting", "Speakers", true, "Speakers")];
+        var playing = true;
+        var recorder = MakeBoth(settings, new ToneSource { Loud = true }, new ToneSource(), () => playing ? apps : []);
+        recorder.Start(12, MeetingLanguage.Zh, "both");
+        await Until(() => recorder.Hint == Recorder.LevelHint.SystemMissing);
+        Assert.Contains("Zoom", recorder.HintText(Recorder.LevelHint.SystemMissing));
+        playing = false;
+        await Until(() => recorder.Hint is null);
+        recorder.Stop();
+
+        var quiet = MakeBoth(settings, new ToneSource { Loud = true }, new ToneSource(), () => []);
+        quiet.Start(13, MeetingLanguage.Zh, "both");
+        await Task.Delay(3500);
+        Assert.Null(quiet.Hint);
+        quiet.Stop();
+    }
+
     [Fact]
     public void RestartDelayBacksOff()
     {
