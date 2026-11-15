@@ -178,7 +178,7 @@ public sealed class Recorder
     }
 
     /// <summary>DEBUG：用音訊檔模擬錄音（record-sim，speed 是倍速）</summary>
-    public void StartSimulated(long meetingId, string file, double speed, bool both, MeetingLanguage language, IAudioDecoder decoder)
+    public void StartSimulated(long meetingId, string file, double speed, bool both, MeetingLanguage language, IAudioDecoder decoder, bool systemSilent = false)
     {
         lock (gate)
         {
@@ -194,7 +194,7 @@ public sealed class Recorder
                 var list = new List<(int, IAudioSource)> { (0, fileSource) };
                 if (both)
                 {
-                    var mirror = new MirroredSource();
+                    var mirror = new MirroredSource { Silent = systemSilent };
                     fileSource.Mirror = mirror;
                     list.Add((1, mirror));
                 }

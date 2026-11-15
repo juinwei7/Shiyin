@@ -94,7 +94,8 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
                 lock (gate) position = end;
                 // 停住的聲道照樣往前走（時間在過），只是沒有送出資料，跟真的裝置停了一樣
                 if (!stalled.Contains(0)) OnSamples?.Invoke(piece);
-                if (!stalled.Contains(1)) Mirror?.OnSamples?.Invoke(piece);
+                // 電腦聲音那一聲道全是 0：模擬錄不到電腦聲音（record-sim 的第三個參數 2，design-windows §11.18）
+                if (!stalled.Contains(1)) Mirror?.OnSamples?.Invoke(Mirror.Silent ? new float[piece.Length] : piece);
                 sent += piece.Length;
                 var wait = sent / 16000.0 / speed - clock.Elapsed.TotalSeconds;
                 if (wait > 0 && cts.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(wait))) return;
@@ -124,6 +125,8 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
 public sealed class MirroredSource : IAudioSource
 {
     public Action<float[]>? OnSamples { get; set; }
+    /// <summary>送全是 0 的音訊</summary>
+    public bool Silent { get; init; }
     public Action? OnInterruption { get; set; }
     public void Start() { }
     public void Stop() { }

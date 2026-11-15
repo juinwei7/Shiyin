@@ -146,8 +146,9 @@ public static class ControlPipe
             }
             case "record-sim" when args.Length > 1:
                 var speed = args.Length > 2 && double.TryParse(args[2], out var s) ? s : 1;
-                var both = args.Length > 3 && args[3] == "1";
-                return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder ?? "") };
+                // 第三個參數：1 是雙聲道，2 是雙聲道、電腦聲音全是 0（design-windows §11.18）
+                var both = args.Length > 3 && args[3] is "1" or "2";
+                return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder ?? "", args.Length > 3 && args[3] == "2") };
             case "recordstop": host.Recorder.Stop(); return Ok;
             case "recordpause": if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause(); return Ok;
             case "recordstall" when args.Length > 1 && int.TryParse(args[1], out var channel):

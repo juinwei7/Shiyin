@@ -713,7 +713,9 @@ public sealed class RecordingPanel
         mic.Running = r.HasMic;
         system.Running = r.HasSystem;
         warning.Text = r.DeviceWarning
-            ?? (r.HasSystem && r.SystemSilent ? L.T("超過 15 秒沒有收到電腦的聲音：請確認線上會議有聲音在播") : r.LiveStatus);
+            // 錄不到電腦聲音的提示（R75.3）出現時不再講一次
+            ?? (r.HasSystem && r.SystemSilent && r.Hint is not (Recorder.LevelHint.SystemElsewhere or Recorder.LevelHint.SystemMissing)
+                ? L.T("超過 15 秒沒有收到電腦的聲音：請確認線上會議有聲音在播") : r.LiveStatus);
         warning.Visibility = warning.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         hints.Children.Clear();
