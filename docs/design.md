@@ -2367,7 +2367,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ## 54. 說話者辨識換成 Nemotron-3 的評估（R78）
 
-2026-11-15。比的是 FluidAudio 0.17.7（拾音現在用的版本）裡的兩種：拾音現在的離線流程（pyannote community-1 分段＋WeSpeaker 聲紋＋VBx 分群，拾音的設定 §6.3.2，用 DEBUG 版的 `voiceprint-eval` 跑）和 Nemotron-3-Diarization（NVIDIA，Core ML，`offline` 設定、門檻 0.5，用 FluidAudio 的 CLI `nemotron3-diarize` 跑）。兩邊的輸出用同一個計分程式（10 毫秒一格、邊界前後 0.25 秒不計、重疊照算、匈牙利法對應說話者），參考答案是 AMI 的 segments 標註。
+2026-11-15。比的是 FluidAudio 0.17.7（拾音現在用的版本）裡的兩種：拾音現在的離線流程（pyannote community-1 分段＋WeSpeaker 聲紋＋VBx 分群，拾音的設定 §6.3.2，用 DEBUG 版的 `voiceprint-eval` 跑）和 Nemotron-3-Diarization（NVIDIA，Core ML，`offline` 設定、門檻 0.5，用 FluidAudio 的 CLI `nemotron3-diarize` 跑）。兩邊的輸出用同一個計分程式（`scripts/dev/diarize-der.py`：10 毫秒一格、邊界前後 0.25 秒不計、重疊照算、匈牙利法對應說話者），參考答案是 AMI 的 segments 標註。
 
 **AMI 測試集**（ES2004、IS1009、TS3003、EN2002 共 16 場 Mix-Headset，加 IS1009a、TS3003a 的遠距麥克風 Array1-01；AMI 的測試集不在 Nemotron 的訓練資料裡）：
 
@@ -2395,7 +2395,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ## 55. 本機的整理模型評估（R79）
 
-2026-11-15，Apple M5 Pro、48 GB。llama.cpp b11929 的 `llama-server`（OpenAI 相容 API）跑 Qwen3.5 9B、4B（unsloth 的 Q4_K_M GGUF，Apache-2.0），上下文 64k、全部放 GPU。拾音的 DEBUG 版用「OpenAI 相容 API」整理，中間用一個只記錄、照樣轉送的代理記下請求（提示詞、JSON schema 都是拾音現在的，llama-server 把 schema 轉成文法，格式一定對），之後直接重送同一份請求、換參數比較。會議是使用者的 4 場中文會議（17、32、39、75 分鐘，一般會議範本），比的是原本用 Claude（claude CLI、Anthropic API）整理的版本（有校稿過的用校稿前那一版）。全部在本機，寫進這裡的只有統計。
+2026-11-15，Apple M5 Pro、48 GB。llama.cpp b11929 的 `llama-server`（OpenAI 相容 API）跑 Qwen3.5 9B、4B（unsloth 的 Q4_K_M GGUF，Apache-2.0），上下文 64k、全部放 GPU。拾音的 DEBUG 版用「OpenAI 相容 API」整理，中間用一個只記錄、照樣轉送的代理（`scripts/dev/llm-proxy.py`）記下請求（提示詞、JSON schema 都是拾音現在的，llama-server 把 schema 轉成文法，格式一定對），之後直接重送同一份請求、換參數比較（`scripts/dev/llm-replay.py`）。會議是使用者的 4 場中文會議（17、32、39、75 分鐘，一般會議範本），比的是原本用 Claude（claude CLI、Anthropic API）整理的版本（有校稿過的用校稿前那一版）。全部在本機，寫進這裡的只有統計。
 
 | | 每場（4 場平均）摘要／議題／要點／決議／待辦 | 4 場的時間點 | 時間點附近逐字稿的字重疊（低於 0.2 的比例） | 一場要多久 | 記憶體 |
 |---|---|---|---|---|---|
@@ -2411,7 +2411,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 調 temperature、打開思考都沒有明顯變好，思考還慢兩三倍。
 - 下載：9B 5.7 GB、4B 2.7 GB；9B 要 16 GB 以上的 Mac（mm2t 的評估也一樣），拾音的最低需求是 8 GB（N4）。
 
-**結論**：現在不建議內建。用拾音現在的提示詞，本機 9B 整理出來的紀錄只有 Claude 的三分之一到一半，決議常常整個漏掉，這不是調參數能補的。沒有 Claude Code、Codex、API 的人，現在已經可以用「OpenAI 相容 API」接 Ollama、LM Studio（R17.2，內容不離開電腦）。要內建的話得另外設計（R79.3）：給小模型的提示詞分步驟（先列議題、再逐段寫要點、最後挑決議和待辦）、只在 16 GB 以上的 Mac 打開、下次有更好的開源模型再用同一套方法重測（記錄、重送的工具和這份比較都可以重用）。
+**結論**：現在不建議內建。用拾音現在的提示詞，本機 9B 整理出來的紀錄只有 Claude 的三分之一到一半，決議常常整個漏掉，這不是調參數能補的。沒有 Claude Code、Codex、API 的人，現在已經可以用「OpenAI 相容 API」接 Ollama、LM Studio（R17.2，內容不離開電腦）。要內建的話得另外設計（R79.3）：給小模型的提示詞分步驟（先列議題、再逐段寫要點、最後挑決議和待辦）、只在 16 GB 以上的 Mac 打開、下次有更好的開源模型再用同一套方法重測（上面兩個工具；記錄裡有逐字稿，評估完就刪掉，這次的也刪了）。
 
 ## 56. 錄一段自己的聲音（R80，D164）
 
