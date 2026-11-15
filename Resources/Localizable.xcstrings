@@ -2128,6 +2128,23 @@
         }
       }
     },
+    "「進階 → 顯示」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“高级 → 显示”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced → Display, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
+          }
+        }
+      }
+    },
     "「進階」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查、錄音和模型佔用的空間。": {
       "extractionState": "manual",
       "localizations": {
@@ -4477,6 +4494,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除这个议题"
+          }
+        }
+      }
+    },
+    "到「設定 → 說話者與詞彙 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到“设置 → 说话者与词汇 → 我的声音”录一段自己的声音（照着画面上的文字念约 20 秒），第一场会议就认得你：声音像你的说话者会直接带入你的名字，没把握时在待确认问你。录音只用来算声音特征，算完就删掉。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record your own voice in Settings → Speakers & Glossary → My voice (read the passage on screen for about 20 seconds), and Shiyin recognizes you from your first meeting: a speaker who sounds like you gets your name, or Shiyin asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
           }
         }
       }
@@ -7594,6 +7628,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "待办"
+          }
+        }
+      }
+    },
+    "待辦可以加到 macOS 的「提醒事項」：在紀錄的「待辦」右邊按「加到提醒事項」，會加進「拾音」列表；期限是日期的會設成到期日，點提醒裡的連結就回到這場會議的那個時間點。加過的不會重複加，在提醒事項裡完成的，紀錄裡那一條會打勾。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待办可以加到 macOS 的“提醒事项”：在记录的“待办”右边按“加到提醒事项”，会加进“拾音”列表；期限是日期的会设成到期日，点提醒里的链接就回到这场会议的那个时间点。加过的不会重复加，在提醒事项里完成的，记录里那一条会打勾。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To-dos can go into the macOS Reminders app: click “Add to Reminders” next to To-dos in the notes, and they're added to the “Shiyin” list. Deadlines that are dates become due dates, and the link in each reminder takes you back to that moment in the meeting. To-dos already added aren't added again, and ones you complete in Reminders get a check mark in the notes."
           }
         }
       }
