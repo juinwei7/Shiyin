@@ -2548,7 +2548,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 選了兩場以上：右邊顯示 `MultiSelectionView`（「已選取 N 場會議」，按鈕：移到資料夾的選單、移到垃圾桶…；垃圾桶裡是還原、永久刪除…）。
 - 右鍵選單改用 `contextMenu(forSelectionType:)`：在選取的列上按是全部，不在選取裡只有那一列（SwiftUI 的行為）。⌘⌫（`requestDelete`）對全部。確認對話框寫場數（「把 3 場會議移到垃圾桶？」）。
 - `moveToTrash`、`restore`、`deletePermanently` 改成收多場；正在錄音的那場跳過，通知寫出原因（R88.2）。
-- 清空垃圾桶：垃圾桶列表上方那一列加「清空垃圾桶…」（垃圾桶是空的時停用），確認「永久刪除垃圾桶裡的 N 場會議？」，`emptyTrash()` 對垃圾桶的全部做 `deletePermanently`。
+- 清空垃圾桶：側欄底下那一列的右邊（一般時是「匯入」）在垃圾桶裡換成「清空垃圾桶…」（垃圾桶是空的時停用），確認「永久刪除垃圾桶裡的 N 場會議？」，`emptyTrash()` 對垃圾桶的全部做 `deletePermanently`。
 - Windows：design-windows §11.23。
 
 ## 63. 刪除逐字稿的一句（R89，D171）

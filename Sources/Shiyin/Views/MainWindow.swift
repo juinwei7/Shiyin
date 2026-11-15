@@ -280,8 +280,15 @@ struct SidebarView: View {
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
                 Spacer()
-                // 匯入放這裡：側邊欄的工具列放不下，會被收進「>>」（design §22.2、R21.5）
-                if !model.showTrash {
+                // 匯入放這裡：側邊欄的工具列放不下，會被收進「>>」（design §22.2、R21.5）；垃圾桶裡換成清空（R88.3）
+                if model.showTrash {
+                    Button { model.confirmEmptyTrash = true } label: {
+                        Label("清空垃圾桶…", systemImage: "trash.slash")
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .disabled(model.trash.isEmpty)
+                } else {
                     Button { model.showFileImporter = true } label: {
                         Label("匯入", systemImage: "square.and.arrow.down")
                     }
@@ -365,13 +372,7 @@ struct SidebarView: View {
         // 多選（R88、design §62）：⌘、⇧ 點選；右鍵在選取的列上是全部
         return List(selection: $model.listSelection) {
             if model.showTrash {
-                HStack {
-                    Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("清空垃圾桶…") { model.confirmEmptyTrash = true }
-                        .controlSize(.small)
-                        .disabled(model.trash.isEmpty)
-                }
+                Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
             } else {
                 scopeSections
             }

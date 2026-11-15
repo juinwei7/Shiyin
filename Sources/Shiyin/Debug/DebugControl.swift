@@ -420,9 +420,11 @@ enum DebugControl {
         // clickat <x> <y> [視窗 id]：在視窗裡點一下（點，左上原點，含標題列；預設主視窗）。直接交給 NSWindow.sendEvent，
         // 走 AppKit、SwiftUI 正常的點擊判斷，視窗在別的桌面（例如使用者在全螢幕的 app）也點得到，不碰使用者的滑鼠
         case "clickat":
+            // 視窗 id 或視窗編號（確認對話框的 sheet 沒有 id，用 screencapture 看到的編號）
             let target = args.count > 3 ? args[3] : "main"
             guard let x = Double(args[1]), let y = Double(args[2]),
-                  let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue == target }) else { break }
+                  let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == target || "\($0.windowNumber)" == target) })
+            else { break }
             let point = NSPoint(x: x, y: window.frame.height - y)
             for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
                 if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
@@ -430,6 +432,14 @@ enum DebugControl {
                     window.sendEvent(event)
                 }
             }
+        // pressbutton <按鈕的字> [視窗編號]：按 AppKit 的按鈕（確認對話框的 NSAlert 在桌面層時 AX 看不到、clickat 點不到）
+        case "pressbutton":
+            func find(_ view: NSView) -> NSButton? {
+                if let button = view as? NSButton, button.title == args[1], button.isEnabled { return button }
+                return view.subviews.lazy.compactMap(find).first
+            }
+            let windows = NSApp.windows.filter { $0.isVisible && (args.count < 3 || "\($0.windowNumber)" == args[2]) }
+            windows.lazy.compactMap { $0.contentView.flatMap(find) }.first?.performClick(nil)
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerm(args[1])
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
