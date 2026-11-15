@@ -83,7 +83,7 @@ public sealed class UsageStatsTests : IDisposable
         Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"server":70,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":2},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":1},"transcribeWallSeconds":45,"transcribedSeconds":820}""",
             payload["usage"]!.ToJsonString());
         Assert.Equal("""{"diarize":0,"recording":1,"summarize":5,"transcribe":0}""", payload["errors"]!.ToJsonString());
-        Assert.Equal("""{"summarize":{"badOutput":0,"keyRejected":1,"limited":1,"missingKey":0,"notConfigured":0,"notInstalled":0,"notLoggedIn":1,"other":0,"timeout":1,"unreachable":0},"summarizeDraft":1,"summarizeProvider":{"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":0}}""",
+        Assert.Equal("""{"summarize":{"badOutput":0,"keyRejected":1,"limited":1,"missingKey":0,"notConfigured":0,"notInstalled":0,"notLoggedIn":1,"other":0,"timeout":1,"unreachable":0},"summarizeDraft":1,"summarizeOther":{},"summarizeProvider":{"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":0}}""",
             payload["errorDetail"]!.ToJsonString());
 
         // 存檔再讀回來：數字、安裝 ID 都在（同 Mac 的 usage.json 格式）
@@ -92,6 +92,26 @@ public sealed class UsageStatsTests : IDisposable
         var stored = JsonNode.Parse(System.IO.File.ReadAllText(File))!.AsObject();
         Assert.Equal(["days", "installId", "sent"], stored.Select(p => p.Key));
         Assert.Equal(56, (int)stored["days"]!["2026-10-22"]!["recordedSeconds"]!);
+    }
+
+    /// <summary>「其他」的種類（R86、M§61.1）：只記 Failed 有種類的，只送大於 0 的，存檔再讀回來還在</summary>
+    [Fact]
+    public void SummarizeOtherCauses()
+    {
+        var settings = AppSettings.InMemory();
+        var usage = Make(settings);
+        usage.SummarizeFailed(LLMException.Failed("x", FailureCause.Http404), LLMProvider.Anthropic, draft: false);
+        usage.SummarizeFailed(LLMException.Failed("x", FailureCause.Http404), LLMProvider.OpenAI, draft: false);
+        usage.SummarizeFailed(LLMException.Failed("x", FailureCause.CliExit1), LLMProvider.Claude, draft: false);
+        usage.SummarizeFailed(LLMException.Failed("x"), LLMProvider.Claude, draft: false);
+        usage.SummarizeFailed(LLMException.Rejected("x"), LLMProvider.Gemini, draft: false);
+
+        var detail = Preview(usage)["errorDetail"]!;
+        Assert.Equal(4, (int)detail["summarize"]!["other"]!);
+        Assert.Equal("""{"cliExit1":1,"http404":2}""", detail["summarizeOther"]!.ToJsonString());
+        Assert.Equal(detail.ToJsonString(), Preview(Make(settings))["errorDetail"]!.ToJsonString());
+        Assert.Equal("LLMError.failed.http404", LLMException.Failed("x", FailureCause.Http404).LogSummary);
+        Assert.Equal("LLMError.failed", LLMException.Failed("x").LogSummary);
     }
 
     [Fact]

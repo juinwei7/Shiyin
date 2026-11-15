@@ -115,7 +115,7 @@ public static class ApiRequest
         {
             401 or 403 => LLMException.Rejected(message),
             429 => LLMException.Limited(message),
-            _ => LLMException.Failed(message),
+            _ => LLMException.Failed(message, FailureCauses.Http(r.Status)),
         };
     }
 
@@ -132,7 +132,7 @@ public static class ApiRequest
         // 設定問題和用量上限分開（M§34.4）：key 錯誤或沒權限要改設定，429 等一下或加值
         if (keyProblem || status == 403) return LLMException.Rejected(text);
         if (status == 429) return LLMException.Limited(text);
-        return LLMException.Failed(text);
+        return LLMException.Failed(text, FailureCauses.Http(status));
     }
 
     public static StringContent Json(JsonNode body) => new(body.ToJsonString(), Encoding.UTF8, "application/json");

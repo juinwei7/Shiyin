@@ -13,7 +13,6 @@
 
 ## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
 
-- [ ] **FC2 Windows 失敗的種類**（design-windows §10.1）。驗證：`dotnet test`
 - [~] **FC3 後台**（§61.1）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`，再 `wrangler deploy`（先 migration 再 deploy）
 - [ ] **NE3 Mac 說話者辨識選 Nemotron-3**（§61.2）。驗證：`voiceprint-eval` 加 `"model": "nemotron"` 跑 AMI 18 段，`diarize-der.py` 的結果跟 §54 的 Nemotron 一致（句子標對 90% 上下）；匯入一場、重新辨識說話者；模型下載、刪除；9 人以上的人數用標準的
 - [ ] **CK1 驗收清單**：把 tasks.md 裡要使用者在電腦前的 `[~]` 整理成一份照順序走的清單（Mac、Windows 各一份）

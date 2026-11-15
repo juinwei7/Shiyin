@@ -27,7 +27,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
     // 整理失敗的種類（R47、M§34.5）：要在 Groups 前面（靜態欄位照順序初始化）
     public static readonly string[] SummarizeErrorKinds =
         ["notInstalled", "notLoggedIn", "missingKey", "notConfigured", "keyRejected", "limited", "timeout", "unreachable", "badOutput", "other"];
-    static readonly string[] DetailFields = ["summarizeErrors", "summarizeErrorProviders", "summarizeDraftErrors"];
+    static readonly string[] DetailFields = ["summarizeErrors", "summarizeErrorProviders", "summarizeDraftErrors", "summarizeOther"];
 
     // 欄位和鍵名同 Mac 的 Counters（usage.json、送出的格式都跟 Mac 一樣）
     static readonly string[] Numbers =
@@ -43,6 +43,8 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         // 整理失敗的種類、當時的整理工具（R47、M§34.5）；summarizeDraftErrors 在 Numbers
         ("summarizeErrors", SummarizeErrorKinds),
         ("summarizeErrorProviders", ["claudeCode", "codex", "api", "local", "enterprise"]),
+        // 「其他」是哪一種（R86、M§61.1）：FailureCause 的鍵
+        ("summarizeOther", Enum.GetValues<FailureCause>().Select(c => c.Key()).ToArray()),
     ];
 
 
@@ -158,6 +160,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
             c.Add("summarizeErrors", kind, 1);
             if (providerKey is not null) c.Add("summarizeErrorProviders", providerKey, 1);
             if (draft) c.Add("summarizeDraftErrors", 1);
+            if (kind == "other" && OtherCause(error) is { } cause) c.Add("summarizeOther", cause, 1);
         });
     }
 
@@ -186,6 +189,10 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         TimeoutException => "timeout",
         _ => "other",
     };
+
+    /// <summary>「其他」的種類（R86）；不是 Failed 或種類不明時是 null</summary>
+    public static string? OtherCause(Exception error) =>
+        error is LLMException { Kind: LLMErrorKind.Failed } e && e.Cause != FailureCause.Unknown ? e.Cause.Key() : null;
 
     public void Asked() => Add(c => c.Add("questionsAsked", 1));
 
@@ -373,6 +380,8 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
                 ["summarize"] = Sorted(counters.Dicts["summarizeErrors"].ToDictionary(p => p.Key, p => (JsonNode?)p.Value)),
                 ["summarizeProvider"] = Sorted(counters.Dicts["summarizeErrorProviders"].ToDictionary(p => p.Key, p => (JsonNode?)p.Value)),
                 ["summarizeDraft"] = counters.Values["summarizeDraftErrors"],
+                // 2026-11-15 加（R86）：只送大於 0 的
+                ["summarizeOther"] = Sorted(counters.Dicts["summarizeOther"].Where(p => p.Value > 0).ToDictionary(p => p.Key, p => (JsonNode?)p.Value)),
             }),
         });
     }

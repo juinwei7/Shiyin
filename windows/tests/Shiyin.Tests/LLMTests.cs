@@ -328,6 +328,53 @@ public sealed class LLMTests : IDisposable
         Assert.Contains("回應不完整", e.Message);
     }
 
+    /// <summary>「其他」的種類（R86、M§61.1）：API 照 HTTP 狀態碼、回應不完整；不看錯誤的文字</summary>
+    [Fact]
+    public async Task FailureCausesFromApi()
+    {
+        foreach (var (status, key) in new[] { (404, "http404"), (400, "http400"), (413, "http413"), (418, "httpOther") })
+        {
+            server.Respond = _ => (status, """{"error":{"message":"model not found"}}""", null);
+            var e = await Assert.ThrowsAsync<LLMException>(() => Client().Generate(LLMProvider.Anthropic, "", "S", "P", CancellationToken.None));
+            Assert.Equal($"LLMError.failed.{key}", e.LogSummary);
+        }
+        server.Respond = _ => (200, """{"status":"incomplete"}""", null);
+        var incomplete = await Assert.ThrowsAsync<LLMException>(() => Client().Generate(LLMProvider.Gemini, "", "S", "P", CancellationToken.None));
+        Assert.Equal("LLMError.failed.incomplete", incomplete.LogSummary);
+    }
+
+    /// <summary>CLI 的種類（R86）：結束代碼、沒有輸出、is_error、被系統結束</summary>
+    [Fact]
+    public async Task FailureCausesFromCli()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var dir = TempDirectory.Create();
+        try
+        {
+            var cases = new (LLMProvider Provider, string Body, string Key)[]
+            {
+                (LLMProvider.Claude, "echo 'boom' >&2\nexit 1", "cliExit1"),
+                (LLMProvider.Claude, "exit 0", "cliNoOutput"),
+                (LLMProvider.Claude, "echo '{\"is_error\":true,\"result\":\"API Error: 500\"}'", "cliError"),
+                (LLMProvider.Claude, "exit 127", "cliExit127"),
+                (LLMProvider.Claude, "kill -9 $$", "cliSignal"),
+                (LLMProvider.Codex, "echo 'usage' >&2\nexit 2", "cliExit2"),
+                (LLMProvider.Codex, "exit 0", "cliNoOutput"),
+                (LLMProvider.Codex, "exit 3", "cliExitOther"),
+            };
+            foreach (var (provider, body, key) in cases)
+            {
+                var script = Path.Combine(dir, $"tool-{key}-{provider}");
+                await File.WriteAllTextAsync(script, "#!/bin/sh\ncat > /dev/null\n" + body + "\n");
+                File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                var e = await Assert.ThrowsAsync<LLMException>(() =>
+                    new LLMClient(new MemoryKeys([]), new FixedTool(script), new ProcessRunner(), http).Generate(provider, "", "S", "P", CancellationToken.None));
+                Assert.Equal($"LLMError.failed.{key}", e.LogSummary);
+            }
+        }
+        finally { TempDirectory.Delete(dir); }
+    }
+
     /// <summary>CLI：用參數陣列、提示詞從 stdin 送（用一個假的 claude 腳本測，只在有 /bin/sh 的機器跑）</summary>
     [Fact]
     public async Task ClaudeCliArgumentsAndStdin()

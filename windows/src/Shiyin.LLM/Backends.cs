@@ -127,7 +127,7 @@ sealed class GeminiApi(LLMClient client, string model) : ILLMBackend
         switch (status)
         {
             case "completed": break;
-            case "incomplete": throw LLMException.Failed(L.T("回應不完整（可能超過長度上限）"));
+            case "incomplete": throw LLMException.Failed(L.T("回應不完整（可能超過長度上限）"), FailureCause.Incomplete);
             default: throw LLMException.Failed(L.F("Gemini 沒有完成整理（status：%@）", status));
         }
         // steps 裡還有思考過程（thought），只取模型的輸出
@@ -237,7 +237,7 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
         if (response.Status != 200) throw (PlainServerErrors ? ApiRequest.ServerError(response) : null) ?? ApiRequest.Error(response, provider);
         var choice = (response.Object["choices"] as JsonArray)?.FirstOrDefault() as JsonObject;
         var finish = choice?["finish_reason"]?.GetValue<string>();
-        if (finish == "length") throw LLMException.Failed(L.T("回應不完整（可能超過長度上限）"));
+        if (finish == "length") throw LLMException.Failed(L.T("回應不完整（可能超過長度上限）"), FailureCause.Incomplete);
         var text = (choice?["message"] as JsonObject)?["content"]?.GetValue<string>();
         if (string.IsNullOrEmpty(text)) throw LLMException.BadOutput(L.F("回應裡沒有文字（status：%@）", finish ?? L.T("未知")));
         var json = ExtractJson(text);
@@ -327,14 +327,15 @@ sealed class ClaudeCli(LLMClient client, string model) : ILLMBackend
                 var detail = result.StderrTail(500);
                 if (LLMException.IsLoginProblem(detail + result.Stdout)) throw LLMException.NotLoggedIn("claude");
                 if (LLMException.IsLimitProblem(detail + result.Stdout)) throw LLMException.CliLimited(LLMProvider.Claude, detail + "\n" + result.Stdout);
-                throw LLMException.Failed(detail.Length == 0 ? L.F("claude 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail);
+                throw LLMException.Failed(detail.Length == 0 ? L.F("claude 沒有回傳結果（結束代碼 %lld）", (long)result.ExitCode) : detail,
+                    FailureCauses.Cli(result));
             }
             if (obj["is_error"]?.GetValueKind() == JsonValueKind.True || obj["structured_output"] is null)
             {
                 var message = obj["result"]?.GetValueKind() == JsonValueKind.String ? obj["result"]!.GetValue<string>() : result.StderrTail(500);
                 if (LLMException.IsLoginProblem(message)) throw LLMException.NotLoggedIn("claude");
                 if (LLMException.IsLimitProblem(message)) throw LLMException.CliLimited(LLMProvider.Claude, message);
-                throw LLMException.Failed(message.Length > 500 ? message[..500] : message);
+                throw LLMException.Failed(message.Length > 500 ? message[..500] : message, FailureCause.CliError);
             }
             return obj["structured_output"]!.ToJsonString();
         }
@@ -380,7 +381,7 @@ sealed class CodexCli(LLMClient client, string model) : ILLMBackend
                 // 桌面版附的 codex 出錯：建議另外裝 CLI（R55.4）
                 if (tool.DesktopApp is { } app)
                     message += "\n" + L.F("這是 %@ 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。", app);
-                throw LLMException.Failed(message);
+                throw LLMException.Failed(message, FailureCauses.Cli(result));
             }
             return data;
         }

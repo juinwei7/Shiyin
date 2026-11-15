@@ -84,11 +84,52 @@ public static class LLMProviders
 /// BadAnswer：提問的回答格式不對（M§21.8），不說「會議紀錄」
 public enum LLMErrorKind { NotInstalled, NotLoggedIn, MissingKey, Rejected, Limited, Unreachable, NotConfigured, Failed, BadOutput, BadAnswer }
 
+/// <summary>「其他」的失敗是哪一種（M§61.1、R86）：只看 HTTP 狀態碼、CLI 的結束代碼，不看錯誤的文字；<see cref="FailureCauses.Key"/> 是統計的鍵（同 Mac）</summary>
+public enum FailureCause
+{
+    Http400, Http404, Http413, Http500, Http502, Http503, Http504, Http529, HttpOther,
+    Incomplete,
+    CliExit1, CliExit2, CliExit127, CliSignal, CliExitOther, CliNoOutput, CliError,
+    Unknown,
+}
+
+public static class FailureCauses
+{
+    /// <summary>統計、error_kind 用的鍵：http404、cliExit1…（Mac 的 rawValue）</summary>
+    public static string Key(this FailureCause cause) { var name = cause.ToString(); return char.ToLowerInvariant(name[0]) + name[1..]; }
+
+    public static FailureCause Http(int status) => status switch
+    {
+        400 => FailureCause.Http400,
+        404 => FailureCause.Http404,
+        413 => FailureCause.Http413,
+        500 => FailureCause.Http500,
+        502 => FailureCause.Http502,
+        503 => FailureCause.Http503,
+        504 => FailureCause.Http504,
+        529 => FailureCause.Http529,
+        _ => FailureCause.HttpOther,
+    };
+
+    /// <summary>CLI 結束了但沒有結果：0 是沒有輸出；被系統結束（Windows 的 NTSTATUS 是負數，Mac、Linux 是 128 以上）是 CliSignal</summary>
+    public static FailureCause Cli(ProcessResult result) => result.ExitCode switch
+    {
+        < 0 or > 128 => FailureCause.CliSignal,
+        0 => FailureCause.CliNoOutput,
+        1 => FailureCause.CliExit1,
+        2 => FailureCause.CliExit2,
+        127 => FailureCause.CliExit127,
+        _ => FailureCause.CliExitOther,
+    };
+}
+
 /// <summary>整理工具的錯誤（M§19、§21.9）：訊息給使用者看；log 只寫 <see cref="LogSummary"/>，不寫內容（R18.8）</summary>
-public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(Describe(kind, detail)), ILogSummary
+public sealed class LLMException(LLMErrorKind kind, string detail, FailureCause cause = FailureCause.Unknown) : Exception(Describe(kind, detail)), ILogSummary
 {
     public LLMErrorKind Kind { get; } = kind;
     public string Detail { get; } = detail;
+    /// <summary>Failed 的種類（R86）：統計、回報問題用，不含任何文字</summary>
+    public FailureCause Cause { get; } = cause;
 
     static string Describe(LLMErrorKind kind, string detail) => kind switch
     {
@@ -114,7 +155,7 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
     public static LLMException NotInstalled(string name) => new(LLMErrorKind.NotInstalled, name);
     public static LLMException NotLoggedIn(string name) => new(LLMErrorKind.NotLoggedIn, name);
     public static LLMException MissingKey(string name) => new(LLMErrorKind.MissingKey, name);
-    public static LLMException Failed(string detail) => new(LLMErrorKind.Failed, detail);
+    public static LLMException Failed(string detail, FailureCause cause = FailureCause.Unknown) => new(LLMErrorKind.Failed, detail, cause);
     public static LLMException Rejected(string detail) => new(LLMErrorKind.Rejected, detail);
     public static LLMException Limited(string detail) => new(LLMErrorKind.Limited, detail);
     public static LLMException Unreachable(string detail) => new(LLMErrorKind.Unreachable, detail);
@@ -167,7 +208,7 @@ public sealed class LLMException(LLMErrorKind kind, string detail) : Exception(D
         LLMErrorKind.Limited => "LLMError.limited",
         LLMErrorKind.Unreachable => "LLMError.unreachable",
         LLMErrorKind.NotConfigured => "LLMError.notConfigured",
-        LLMErrorKind.Failed => "LLMError.failed",
+        LLMErrorKind.Failed => Cause == FailureCause.Unknown ? "LLMError.failed" : $"LLMError.failed.{Cause.Key()}",
         LLMErrorKind.BadAnswer => "LLMError.badAnswer",
         _ => "LLMError.badOutput",
     };
