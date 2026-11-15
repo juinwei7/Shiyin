@@ -496,6 +496,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 設定 `recordingIsland`（settings.json，預設 true）。
 - DEBUG：控制通道 `island hover on|off`、state 的 `island`；`--set debugIslandCapture=YES` 讓截圖拍得到（同 Mac）。
 
+### 11.22 人有臉、會議頁上方、人物頁（R83～R85，M§58～§60）
+
+- 頭像：`Ui.Avatar(name, color, size, isMe)`（`Border` 圓角＝直徑的一半、釉色 18% 的底、粗體的字；尺寸、取字的規則、顏色同 M§58，`Color.Person(name)` 用同樣的 FNV-1a）。用在會議頁上方、逐字稿、待辦的負責人、人物頁、側欄。
+- 會議頁上方：同 M§59，`MeetingSettingsMenu` 是一個 `DropDownButton`＋`MenuFlyout`（三段用 `MenuFlyoutSeparator` 和停用的標題項目隔開）。
+- 人物頁：側欄上方的 `SelectorBar`（會議｜人物）；資料用 `AppDatabase.PeopleOverview`、`PersonMeetings`、`PersonActionItems`（同 M§60.1 的 SQL，標準答案 `db/` 加一份）；右邊的 `PersonPage` 同 M§60.2（沒有「加到提醒事項」）。
+- DEBUG：控制通道 `sidebar people|meetings`、`person <id>`，state 同 Mac。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

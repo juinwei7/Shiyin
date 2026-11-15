@@ -2473,6 +2473,68 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 - `RecordingActivity.ContentState` 多一個 `hint: String?`（收音提醒的那一句，同 Mac 的 `LevelHint.text`），`LiveActivityController.sync()` 在 `levelHint` 變了時更新。鎖定畫面、展開的動態島多一列琥珀色的提示；精簡的動態島左邊從紅點換成 `mic.badge.exclamationmark`。
 
+## 58. 人有臉：頭像和釉色（R83，D167）
+
+### 58.1 釉色
+
+- 說話者的 8 種顏色（`Color.speaker`）就是釉色，色相、深淺色模式的值都不變（R83.3），只是給名字、統一用在頭像：天青 `3F5BA9`／`8FA8EE`、茄皮紫 `8E3B6B`／`E08BBE`、茶葉末 `4F7A28`／`9BCB6E`、鈞紫 `7A4FB5`／`BFA0EE`、霽紅 `A23B3B`／`EE8E8E`、松石 `2F7486`／`7CC4D6`、醬釉 `9A5B13`／`E2A65E`、青瓷 `2D6A5D`／`6DB2A1`（淺色／深色）。
+- 會議裡：照說話者的編號（同現在）。人物頁、側欄：照名字算（`Color.person(name)`：名字去掉頭尾空白、轉小寫的 UTF-8 做 FNV-1a，取 8 的餘數），同一個名字每次都一樣。
+
+### 58.2 頭像（`Views/Avatar.swift`）
+
+- `PersonAvatar(name:, color:, size:, isMe:)`：圓形，底色是釉色 18% 不透明，字是釉色（粗體，字級是直徑的 0.46）；`isMe` 時外圈 1.5 pt 青瓷綠。尺寸：逐字稿 18 pt、會議頁上方 22 pt、待辦 18 pt、側欄 26 pt、人物頁 56 pt；跟著文字大小（R59）放大。
+- 字（`PersonAvatar.initials(_:)`）：預設名稱（`AppDatabase.isDefaultSpeakerName`）寫裡面的數字；第一個字是中日韓文字（Han、Hiragana、Katakana、Hangul）時取第一個字；其他照空白切開，取前兩段的第一個字母（大寫）；都沒有時取第一個字。
+- 用在（R83.2）：會議頁上方的與會者（§59）、逐字稿的說話者欄（`TranscriptTab` 名字前面）、待辦的負責人（`ActionItemsTable`：負責人跟這場的某位說話者同名時用他的編號的顏色，不然不放頭像）、人物（§60）。「我」：說話者連到的人是有 enroll 聲紋的那個人（`MeetingDetail.selfIdx`，載入時算一次）。
+
+## 59. 會議頁上方（R84）
+
+```
+遙控器介面與外觀設計討論   編輯
+10/15 星期四  3 分鐘  (陳)陳志明 (林)林佳怡 (王)說話者 3        [一般會議・中文 ▾] [📎 加入文件 ▾]
+```
+
+- 第二列左邊：資料夾、日期、長度、「最後 N 分鐘沒有人說話」（同現在），與會者是頭像加名字（同現在的名字可以點、自動帶入的有選單），最多顯示 4 位，其他收成「+N」選單（列出其他人，點了同名字的選單）。沒有說話者時照舊寫與會者的名單。
+- 右邊：`MeetingSettingsMenu`：標題「<範本>・<語言>」（`doc.text` 圖示），內容三段：「範本」（同現在）、「會議語言」（同現在）、「大約幾個人」（只在錄這場時，同現在）；`.help` 說明換了要從「更多 → 重新處理」重新整理。文件選單照舊。
+- 放不下時（`ViewThatFits`）照舊把選單換到下一行。
+
+## 60. 人物頁（R85）
+
+### 60.1 資料（`Store/People.swift`，AppDatabase）
+
+- `peopleOverview() -> [PersonOverview]`：每個人的 id、名字、一起開過幾場（`speakers.person_id` 連到、會議不在垃圾桶的會議數）、最近一場的日期、是不是我（有 enroll 聲紋）；排序：我、最近一場的日期由新到舊、名字。
+- `personMeetings(id) -> [(meeting, seconds)]`：他出現過的會議（不在垃圾桶），說了多久＝那場這位說話者的 `segments`（`kind = final`）的 `end - start` 加總；照日期由新到舊。
+- `personActionItems(name) -> [PersonActionItem]`：所有不在垃圾桶的會議紀錄的待辦，負責人（去掉頭尾空白）跟名字一樣或包含名字（不分大小寫，R85.3）；每一條帶會議 id、標題、日期、事項、期限、時間點；照會議日期由新到舊、會議裡的順序。跟本地 MCP 的 `list_action_items` 用同一個比對（包含）。
+
+### 60.2 畫面
+
+- `AppModel.sidebarMode`（`meetings`／`people`，記在 `@AppStorage`）、`selectedPerson: Int64?`。側欄最上面（搜尋框下面）`Picker` 分段控制「會議｜人物」；在垃圾桶、搜尋中時不顯示（搜尋的結果是會議）。
+- `PeopleList`：`List(selection: $model.selectedPerson)`，每一列頭像（26 pt）、名字（我的話後面「（我）」）、第二行「N 場會議・最近 <日期>」。沒有人時的空白畫面同 R85.4。
+- 右邊：`sidebarMode == .people` 時顯示 `PersonPage`（沒選人時是說明）。`ReadingColumn` 裡：大頭像、名字、「一起開過 N 場會議，最近 <日期>」、按鈕「改名」（popover，同設定頁）「合併到…」（選單：其他認識的人，選了 `renamePerson(id, to: 那個人的名字)`，同名合併）「刪除聲音特徵」（確認對話框，同設定頁）；「他負責的待辦」：`ActionItemsTable` 同樣的格線（事項、期限、會議的標題和時間點按鈕），右上角「加到提醒事項」（只加還沒加的；同 §52，但跨會議：每一項的 url 照它自己的會議）；「會議」：每列日期、標題、「說了 N 分鐘」，點了 `reveal(meetingId)`（切回「會議」、選那場）。點待辦的時間點：切回會議、選那場、從那裡播放。
+- DEBUG：`sidebar people|meetings`、`person <id>`；state 的 `sidebarMode`、`selectedPerson`、`personPage`（待辦、會議的數目）。
+
+## 61. 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，D168、D169）
+
+### 61.1 「其他」的種類（R86）
+
+- `LLMError.failed(String, cause: FailureCause = .unknown)`。`FailureCause`（rawValue 是統計的鍵）：`http400`、`http404`、`http413`、`http500`、`http502`、`http503`、`http504`、`http529`、`httpOther`、`incomplete`、`cliExit1`、`cliExit2`、`cliExit127`、`cliSignal`、`cliExitOther`、`cliNoOutput`、`cliError`、`unknown`。
+- 哪裡給：`APIRequest.error`、`serverError` 照 HTTP 狀態碼；Gemini 的 `incomplete`、OpenAI 相容的 `finish_reason = length` → `incomplete`；Claude Code 沒有 JSON：結束代碼 0 → `cliNoOutput`，1、2、127 → 同名，大於 128 或被訊號結束 → `cliSignal`，其他 → `cliExitOther`；`is_error` → `cliError`；Codex 同樣照結束代碼，成功但沒有輸出檔 → `cliNoOutput`。
+- 統計（§34.5）：`summarizeFailureKind` 是 `other` 時另外記 `summarizeOther[cause] += 1`；`errorDetail` 多一個 `"summarizeOther": {鍵: 次數}`（只送大於 0 的；鍵只會是上面那幾個）。後台 `usage_daily` 加一欄 `summarize_err_other_detail TEXT`（JSON），worker 只收上面那幾個鍵、整數（`migrate-summarize-other.sql`，使用者自己跑 migration 和 deploy）。
+- `logSummary`（`jobs.error_kind`、回報問題）：`LLMError.failed` 改成 `LLMError.failed.<cause>`（`unknown` 時照舊 `LLMError.failed`）；`isSetupProblem` 等判斷只看前綴，不受影響。
+- Windows（design-windows §10.1）照同一份規則、同樣的鍵。
+
+### 61.2 說話者辨識選 Nemotron-3（R87，只有 Mac）
+
+- 設定 `diarizationModel`：`standard`（預設）／`nemotron`。「錄音與轉錄 → 轉錄」的「轉錄時辨識說話者」下面加選單。
+- 模型：FluidInference 的 `nemotron-3-diarization-coreml` 的 `offline` 預設（`Nemotron3Config.preset(named: "offline")`），放 `models/fluidaudio/nemotron3`；`ModelStore` 加 `nemotron` 這一項（下載、暫停、刪除、進度同其他模型；設定的模型清單選了 Nemotron-3 才列）。
+- `Diarizer.diarize` 選了 Nemotron-3 時（`minSpeakers` 沒有、或 ≤ 8）：
+  1. 照舊跑標準的離線流程（聲紋、品質檢查、短句再確認都要用到）。
+  2. 跑 Nemotron-3（`processComplete`），每 10 毫秒每個人的機率 ≥ 0.5 算在說話，同一個人間隔 0.5 秒以內的接起來、短於 0.3 秒的不要，變成 turns（同 FluidAudio CLI 的轉法）。
+  3. 聲紋：每位 Nemotron 的說話者，找標準流程裡跟他重疊最多的那一位；那一位的時間有一半以上跟他重疊時，借用那一位的聲紋。兩位 Nemotron 的說話者對到同一位時，只給重疊比較多的那位（另一位沒有聲紋，不比對）。說話秒數照 Nemotron 的 turns 算。
+  4. Nemotron 分滿 8 人、而且標準流程分出更多人時，用標準的結果（R87.3）。
+  5. 其他（`assign`、品質檢查、短句再確認）照舊用 turns。
+- 統計（§30.4）：`diarization` 多記 `nemotron` 的次數（用了幾場）。
+- DEBUG：啟動參數 `-diarizationModel nemotron`；`voiceprint-eval` 的設定加 `"model": "nemotron"`，輸出同格式，可以用 `scripts/dev/diarize-der.py` 比。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2587,3 +2649,6 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D164 | 錄的聲紋存成一份 `audio_source = 'enroll'` 的聲紋，它的 `person_id` 就是「我」（§56.1），不改資料庫結構、不記在設定 | `people` 加「是不是我」的欄位：要 migration、兩邊的標準答案，只為了一個值。記在設定（原本的設計）：改名合併到同名的人時 id 會變、資料庫複本和設定對不上。錄好幾段、分現場和線上：先看一段夠不夠用（§56.4）。放進首次使用引導：引導維持三步（R44.6），而且第一次打開時還沒有說話者辨識的模型 |
 | D165 | 錄音島用一個自己畫的 `NSPanel` 貼在瀏海兩側（`.statusBar` 層、所有桌面、全螢幕上），大小跟著內容（§57.1） | 只靠選單列和通知：全螢幕時選單列藏起來，分享畫面時通知可能被擋，開會時正好看不到。固定一個大的透明視窗、只畫中間：透明的地方也會擋住下面視窗的點擊（瀏覽器的分頁）。蘋果沒有給 Mac 動態島的 API |
 | D166 | 島打開時，錄音中的提醒只在島上、不送通知；偵測會議的提醒也改由島顯示（§57.2，R81.3、R81.4） | 島和通知都送：同一件事跳兩次；通知在分享畫面、全螢幕時可能看不到，島看得到。保留右上角的浮動視窗：跟島是同一件事，位置還不一樣 |
+| D167 | 說話者的 8 種顏色直接當成「釉色」，頭像是釉色底加名字的第一個字；會議裡照說話者編號、人物頁照名字算（§58） | 換一套新的顏色：使用者已經習慣每個說話者的顏色。人物頁也照編號：同一個人在不同會議的編號不同，沒辦法用。頭像用照片：要上傳、管理，資料夾裡也沒有照片 |
+| D168 | 「其他」的失敗只記固定幾種的次數（HTTP 狀態碼、CLI 結束代碼），後台存成一欄 JSON（§61.1） | 每一種一欄：之後多一種就要 migration。記訊息的前幾個字（D114 已經不採用）。只記 HTTP 狀態碼：CLI 的失敗（Claude Code）也很多 |
+| D169 | Nemotron-3 分人、聲紋借用標準流程裡重疊最多的那位，兩個都跑（§61.2） | 升級 FluidAudio 到有 `embedSpans` 的版本、另外算聲紋：整個說話者辨識的行為會跟著變，要重新評估；而且標準流程本來就要跑（品質檢查、超過 8 人時比較）。只用 Nemotron：沒有聲紋就不能自動帶入名字 |

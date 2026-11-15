@@ -7,6 +7,20 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 介面改版：人有臉、會議頁上方、人物頁（R83～R85，design §58～§60、design-windows §11.22、D167；2026-11-15 使用者決定）
+
+- [ ] **UI1 Mac 頭像和會議頁上方**（§58、§59）。驗證：示範會議（seedfixtures）的會議頁上方、逐字稿、待辦截圖（淺色、深色、英文）；「會議設定」選單的三段（AX 列出項目）；與會者超過 4 位時的「+N」；「我」的外圈
+- [ ] **UI2 Mac 人物頁**（§60）。驗證：側欄切到「人物」、選一個人，人物頁的待辦、會議（截圖）；點待辦的時間點跳回會議、播放；改名、合併、刪除聲音特徵用 AX 按過；沒有人時的說明
+- [ ] **UI3 Windows 頭像、會議頁上方、人物頁**（design-windows §11.22）。驗證：`dotnet test`（人物的查詢、標準答案）；虛擬機截圖
+
+## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
+
+- [ ] **FC1 Mac 失敗的種類**（§61.1）。驗證：假伺服器回 400、404、529、finish length，假的 claude 結束代碼 1、2、0 沒有輸出、`is_error`：`jobs.error_kind`、`shiyinctl usage` 的 `summarizeOther`
+- [ ] **FC2 Windows 失敗的種類**（design-windows §10.1）。驗證：`dotnet test`
+- [ ] **FC3 後台**（§61.1）：`schema.sql`、`migrate-summarize-other.sql`、worker；`wrangler dev --local` 送一份有 `summarizeOther` 的統計，查到那一欄。還差：使用者跑 migration、deploy（先 migration 再 deploy）
+- [ ] **NE3 Mac 說話者辨識選 Nemotron-3**（§61.2）。驗證：`voiceprint-eval` 加 `"model": "nemotron"` 跑 AMI 18 段，`diarize-der.py` 的結果跟 §54 的 Nemotron 一致（句子標對 90% 上下）；匯入一場、重新辨識說話者；模型下載、刪除；9 人以上的人數用標準的
+- [ ] **CK1 驗收清單**：把 tasks.md 裡要使用者在電腦前的 `[~]` 整理成一份照順序走的清單（Mac、Windows 各一份）
+
 ## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
 
 - [ ] **IS1 Mac 錄音島**（§57.1～§57.3）。驗證：`-debugIslandCapture YES -debugIslandBehind YES` 的 DEBUG 版：record-sim 時島出現（收起：紅點、時間），截圖；`-debugSystemAudioPermission denied` 的提示展開、10 秒後收回成琥珀色的點；`island hover on` 展開的控制和最新一句；`meetingapp us.zoom.xos start` 時沒在錄音也出現「要開始錄音嗎？」，`meetingaction start` 開始錄音；島打開時不送通知（state 的 notifications）；關掉設定後回到右上角的浮動視窗。有瀏海的螢幕、沒有瀏海的螢幕（外接）各看一次位置（沒有外接螢幕時用 DEBUG 的 `-debugIslandNoNotch YES`）
