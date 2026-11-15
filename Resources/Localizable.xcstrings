@@ -2248,19 +2248,19 @@
         }
       }
     },
-    "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。": {
+    "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。「說話者辨識的模型」可以選 Nemotron-3（實驗性，英文會議分得比較準，最多分 8 人）。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recording & Transcription: audio source and microphone, meeting language, the final-transcription engine and models, live transcript and speaker identification, online-meeting alerts and shortcuts. Final transcription can use Breeze ASR 25 (recommended; MediaTek's Taiwanese model, uses your glossary), Qwen3-ASR (open-sourced by Alibaba; drops fewer words in multi-speaker meetings, runs entirely on this Mac), or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong)."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“录音与转录”：录音来源和麦克风、会议语言、正式转录的引擎和模型、要不要实时逐字稿和说话者识别、线上会议的提醒和快捷键。“正式转录”可以选 Breeze ASR 25（建议，联发科的台湾模型，会参考词汇表）、Qwen3-ASR（阿里巴巴开源，多人会议漏字少，全程本地）或 macOS 内建（不用下载模型、速度快，但英文专有名词比较容易错）。"
+            "value": "“录音与转录”：录音来源和麦克风、会议语言、正式转录的引擎和模型、要不要实时逐字稿和说话者识别、线上会议的提醒和快捷键。“正式转录”可以选 Breeze ASR 25（建议，联发科的台湾模型，会参考词汇表）、Qwen3-ASR（阿里巴巴开源，多人会议漏字少，全程本地）或 macOS 内建（不用下载模型、速度快，但英文专有名词比较容易错）。“说话者识别的模型”可以选 Nemotron-3（实验性，英文会议分得比较准，最多分 8 人）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording & Transcription: audio source and microphone, meeting language, the final-transcription engine and models, live transcript and speaker identification, online-meeting alerts and shortcuts. Final transcription can use Breeze ASR 25 (recommended; MediaTek's Taiwanese model, uses your glossary), Qwen3-ASR (open-sourced by Alibaba; drops fewer words in multi-speaker meetings, runs entirely on this Mac), or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong). Speaker recognition model can be set to Nemotron-3 (experimental; tells speakers apart more accurately in English meetings, up to 8 people)."
           }
         }
       }
@@ -3611,6 +3611,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止录音，开始正式转录"
+          }
+        }
+      }
+    },
+    "側欄上方切到「人物」，可以看拾音認識的每個人：一起開過哪些會議、每場說了多久、負責哪些待辦（點了就打開那場會議、從那裡播放）。在人物頁也可以改名、把被記成兩個名字的同一個人合併，或刪除聲音特徵。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "侧边栏上方切到“人物”，可以看拾音认识的每个人：一起开过哪些会议、每场说了多久、负责哪些待办（点了就打开那场会议、从那里播放）。在人物页也可以改名、把被记成两个名字的同一个人合并，或删除声音特征。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch to People at the top of the sidebar to see everyone Shiyin knows: the meetings you had together, how long they spoke in each, and the action items they own (click one to open that meeting and play from there). On a person's page you can also rename them, merge two names that are really the same person, or delete their voice profile."
           }
         }
       }
@@ -16236,19 +16253,19 @@
         }
       }
     },
-    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多 → 重新處理」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題右邊的「人數」）或匯入時也可以先選。": {
+    "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多 → 重新處理」選「重新辨識說話者…」，告訴拾音大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題下方右邊的選單裡的「大約幾個人」）或匯入時也可以先選。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Too few speakers detected (many people, noise, or a phone on the table far from everyone)? Choose More → Reprocess → Re-identify speakers… and tell Shiyin roughly how many people there were. Only the speaker labels change; the transcript text stays. You can also set the count while recording (the People control next to the meeting title) or when importing."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "说话者分得太少（人多、吵杂、手机放在桌上远距收音）时，从“更多 → 重新处理”选“重新识别说话者…”，告诉拾音大约几个人。只会重新分辨谁在说话，逐字稿的文字不会变。录音中（会议标题右边的“人数”）或导入时也可以先选。"
+            "value": "说话者分得太少（人多、吵杂、手机放在桌上远距收音）时，从“更多 → 重新处理”选“重新识别说话者…”，告诉拾音大约几个人。只会重新分辨谁在说话，逐字稿的文字不会变。录音中（会议标题下方右边的菜单里的“大约几个人”）或导入时也可以先选。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too few speakers detected (many people, noise, or a phone on the table far from everyone)? Choose More → Reprocess → Re-identify speakers… and tell Shiyin roughly how many people there were. Only the speaker labels change; the transcript text stays. You can also set the count while recording (Roughly how many people, in the menu on the right below the meeting title) or when importing."
           }
         }
       }
@@ -17052,19 +17069,19 @@
         }
       }
     },
-    "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。上方的「條列｜心智圖」可以把紀錄畫成心智圖，一眼看出有哪些議題。右上角的範本選單可以換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。": {
+    "轉錄完會自動整理。「紀錄」分頁由上而下是摘要、決議、待辦、未決問題和依議題分段的討論；每一條後面的時間點點一下，就從錄音那裡開始播放。上方的「條列｜心智圖」可以把紀錄畫成心智圖，一眼看出有哪些議題。會議標題下方右邊的選單（寫著「一般會議・中文」這類）可以把範本換成一對一、訪談、課堂／演講、腦力激盪等格式，換完從「更多 → 重新處理」選「重新整理會議紀錄」。想找某件事，可以在「提問」分頁直接問，例如「預算最後決定多少？」，回答會附上時間點；工具列的「提問」可以一次問所有會議。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notes are generated automatically after transcription. The Notes tab runs top to bottom: summary, decisions, action items, open questions, then the discussion by topic; click the timestamp after any line to play the recording from there. Switch “List | Mind map” at the top to draw the notes as a mind map and see every topic at a glance. The template menu at the top right switches to formats such as one-on-one, interview, lecture or brainstorming; after changing it, choose More → Reprocess → Regenerate Notes. To find something, ask directly on the Ask tab, for example “What was the final budget?”; answers include timestamps. The Ask button in the toolbar searches every meeting at once."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "转录完会自动整理。“记录”标签页由上而下是摘要、决议、待办、未决问题和依议题分段的讨论；每一条后面的时间点点一下，就从录音那里开始播放。上方的“条列｜心智图”可以把记录画成心智图，一眼看出有哪些议题。右上角的模板菜单可以换成一对一、访谈、课堂／演讲、脑力激荡等格式，换完从“更多 → 重新处理”选“重新整理会议记录”。想找某件事，可以在“提问”标签页直接问，例如“预算最后决定多少？”，回答会附上时间点；工具栏的“提问”可以一次问所有会议。"
+            "value": "转录完会自动整理。“记录”标签页由上而下是摘要、决议、待办、未决问题和依议题分段的讨论；每一条后面的时间点点一下，就从录音那里开始播放。上方的“条列｜心智图”可以把记录画成心智图，一眼看出有哪些议题。会议标题下方右边的菜单（写着“一般会议・中文”这类）可以把模板换成一对一、访谈、课堂／演讲、脑力激荡等格式，换完从“更多 → 重新处理”选“重新整理会议记录”。想找某件事，可以在“提问”标签页直接问，例如“预算最后决定多少？”，回答会附上时间点；工具栏的“提问”可以一次问所有会议。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes are generated automatically after transcription. The Notes tab runs top to bottom: summary, decisions, action items, open questions, then the discussion by topic; click the timestamp after any line to play the recording from there. Switch “List | Mind map” at the top to draw the notes as a mind map and see every topic at a glance. The menu on the right below the meeting title (it reads something like “General meeting・English”) switches the template to formats such as one-on-one, interview, lecture or brainstorming; after changing it, choose More → Reprocess → Regenerate Notes. To find something, ask directly on the Ask tab, for example “What was the final budget?”; answers include timestamps. The Ask button in the toolbar searches every meeting at once."
           }
         }
       }
@@ -19735,6 +19752,23 @@
         }
       }
     },
+    "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回拾音。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音與轉錄」關掉「在螢幕上方顯示錄音島」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中屏幕上方正中间会出现录音岛（有浏海的 Mac 接在浏海两侧），显示录了多久、音量和收音提醒；鼠标移上去可以暂停、标记重点、停止并转录，不用切回拾音。全屏开会、换桌面都看得到，分享画面时对方看不到。不想要的话到“设置 → 录音与转录”关掉“在屏幕上方显示录音岛”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, the recording island appears at the top center of the screen (on Macs with a notch, on either side of it), showing how long you've recorded, the level and any audio alerts. Hover over it to Pause, Bookmark or Stop & Transcribe without switching back to Shiyin. It stays visible in full-screen meetings and on every desktop, and others can't see it when you share your screen. To turn it off, go to Settings → Recording & Transcription and turn off “Show the recording island at the top of the screen”."
+          }
+        }
+      }
+    },
     "錄音中顯示即時逐字稿": {
       "extractionState": "manual",
       "localizations": {
@@ -20092,19 +20126,19 @@
         }
       }
     },
-    "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。": {
+    "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音（打開錄音島時提醒出現在島上）；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When you join a Zoom, Teams, Google Meet or other online meeting, Shiyin asks whether to start recording, and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for This App” on the reminder."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开 Zoom、Teams、Google Meet 等线上会议时，拾音会提醒你开始录音；会议好像结束时提醒停止。不想被某个 app 提醒，在提醒上按“不要再提醒”。"
+            "value": "开 Zoom、Teams、Google Meet 等线上会议时，拾音会提醒你开始录音（打开录音岛时提醒出现在岛上）；会议好像结束时提醒停止。不想被某个 app 提醒，在提醒上按“不要再提醒”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you join a Zoom, Teams, Google Meet or other online meeting, Shiyin asks whether to start recording (on the recording island when it's turned on), and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for This App” on the reminder."
           }
         }
       }

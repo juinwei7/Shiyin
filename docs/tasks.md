@@ -13,7 +13,7 @@
 
 ## 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，design §61、D168、D169；2026-11-15 使用者決定）
 
-- [~] **FC3 後台**（§61.1）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`，再 `wrangler deploy`（先 migration 再 deploy）
+- [~] **FC3 後台**（§61.1、§61.2 的統計）：程式完成，`wrangler dev --local` 驗過。還差：使用者跑 `migrate-summarize-other.sql`（「其他」的種類、Nemotron-3 的次數兩欄），再 `wrangler deploy`（先 migration 再 deploy）
 - [ ] **CK1 驗收清單**：把 tasks.md 裡要使用者在電腦前的 `[~]` 整理成一份照順序走的清單（Mac、Windows 各一份）
 
 ## 錄音島（R81、R82，design §57、design-windows §11.21、D165、D166；2026-11-15 使用者決定做）
@@ -21,7 +21,7 @@
 - [~] **IS1 Mac 錄音島**（§57.1～§57.3）：程式完成，DEBUG 版驗過（2026-11-15，見 commit 訊息）。還差（要使用者在電腦前，島會出現在畫面上）：真的錄音時島在瀏海兩側、全螢幕的 Zoom／Keynote 上看得到、換桌面跟著走；滑鼠移上去展開、移開收回；拾音不在前面時按島上的「暫停」「標記重點」一下就有作用、拾音不會跑到前面；分享整個螢幕時對方看不到島
 - [ ] **IS2 Windows 錄音島**（design-windows §11.21）。驗證：虛擬機 record-sim、`playingapp` 的提示、`island hover on`、`meetingapp` 的提醒，截圖；不在工作列、分享畫面拍不到（snapwin）
 - [ ] **IS3 iPhone 的動態島加上收音提醒**（R82、§57.4，`ios` 分支）。驗證：模擬器建置、錄音中出現收音提醒時即時動態的內容（模擬器看動態島）
-- [ ] **IS4 使用說明**（R81.10）：Mac、Windows 的使用說明加上錄音島；`l10n.py check`、`windows-check`
+- [ ] **IS4 使用說明**（R81.10）：Mac 做完了（錄音島、人物頁、Nemotron-3，`l10n.py check` 完整）；還差 Windows 的使用說明、`windows-check`
 
 ## 參考另一個會議紀錄 app 的改進（R75～R80，design §51～§56、design-windows §11.18～§11.20、D161～D164；2026-11-15 使用者決定先做）
 
