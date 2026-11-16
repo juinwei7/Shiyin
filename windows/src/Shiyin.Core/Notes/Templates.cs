@@ -171,3 +171,24 @@ public static class BuiltinTemplates
         return TemplateDefinition.Decode(t.Definition);
     }
 }
+
+/// <summary>
+/// 新增詞彙的欄位一次貼上好幾個（R94.1、M§68，同 Mac 的 GlossaryInput.split）：用換行、逗號（半形、全形）、頓號、分號（半形、全形）分開，
+/// 去頭尾空白、拿掉空的和重複的（不分大小寫，留第一個）。標準答案 util/glossary-split.json
+/// </summary>
+public static class GlossaryInput
+{
+    static readonly char[] Separators = ['\n', '\r', ',', '，', '、', ';', '；'];
+
+    public static List<string> Split(string text)
+    {
+        var seen = new HashSet<string>();
+        var result = new List<string>();
+        foreach (var part in text.Split(Separators))
+        {
+            var term = SwiftText.Trim(part);
+            if (term.Length > 0 && seen.Add(SwiftText.Lower(term))) result.Add(term);
+        }
+        return result;
+    }
+}

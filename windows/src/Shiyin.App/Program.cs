@@ -120,6 +120,12 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             host.Player.Seek(seconds, play: false);
         };
         host.ShowMeetingPrompt = ShowMeetingPrompt;
+        // 倒數收起了（時間到、錄音先停了）：島上、小視窗的「會議好像結束了」跟著收起（R95）
+        host.MeetingEnd.Ended += () => host.Post(() =>
+        {
+            if (island?.Prompt?.Prompt is MeetingDetector.Prompt.Stop) island.ClosePrompt();
+            if (prompt?.Prompt is MeetingDetector.Prompt.Stop) prompt.Close();
+        });
         main = new MainWindow(host);
         Pdf.Window = main.Handle;
         MindMapImage.Root = () => main?.XamlRoot;
@@ -304,6 +310,8 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     void ShowMeetingPrompt(MeetingDetector.Prompt p)
     {
         if (host is null) return;
+        // 會議好像結束了：倒數完自動停止錄音（R95、M§69）；先開始倒數，島、通知、小視窗才寫得出秒數
+        if (p is MeetingDetector.Prompt.Stop && host.Settings.AutoStopOnMeetingEnd) host.MeetingEnd.Start();
         if (island is { Enabled: true })
         {
             prompt?.Close();
@@ -429,7 +437,8 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
                     JobKind.Revise => L.T("依回答修正"),
                     JobKind.Correct => L.T("檢查可能聽錯的字"),
                     JobKind.NameSpeakers => L.T("猜說話者"),
-                    JobKind.Summarize => L.T("整理"),
+                    // 精簡逐字稿（R96）：同 Mac 的選單列，寫「整理中」
+                    JobKind.Summarize or JobKind.Clean => L.T("整理"),
                     _ => running.Stage.Length == 0 ? L.T("轉錄") : running.Stage,
                 };
                 var progress = running.Progress is double p ? $" {(int)(p * 100)}%" : "";

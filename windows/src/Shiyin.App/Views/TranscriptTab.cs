@@ -21,6 +21,8 @@ public sealed class TranscriptTab
     readonly TextBox search = new() { PlaceholderText = L.T("搜尋逐字稿"), MinWidth = 120 };
     readonly TextBlock matchLabel = Ui.Text("", 12, color: null, wrap: false);
     readonly ComboBox speakerFilter = new() { Width = 160 };
+    /// <summary>原文｜精簡（R96、M§70、design-windows §11.29）：存在設定的 transcriptView</summary>
+    readonly SelectorBar viewBar = new();
     readonly StackPanel bars = new();
     readonly ListView list = new() { SelectionMode = ListViewSelectionMode.None, IsItemClickEnabled = false };
     // 搜尋框最寬 300、視窗窄時跟著縮，後面的篩選和「用詞修正…」照內容寬，不會被擠出畫面（2026-10-22 介面巡檢，760 寬的視窗）
@@ -39,6 +41,8 @@ public sealed class TranscriptTab
     long? highlightId;
     bool showGroups;
     bool updating;
+    /// <summary>還沒有精簡版時那一塊的樣子（產生中、進度）：一樣時不重建（每秒看一次）</summary>
+    string? cleanKey;
 
     static readonly Lazy<DataTemplate> RowTemplate = new(() => (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
         "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ContentControl HorizontalContentAlignment=\"Stretch\" HorizontalAlignment=\"Stretch\"/></DataTemplate>"));
@@ -52,6 +56,17 @@ public sealed class TranscriptTab
         searchRow.Padding = new Thickness(20, 10, 20, 10);
         // 篩選說話者的下拉選單沒有標題，螢幕閱讀器只會讀「下拉式方塊」
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(speakerFilter, L.T("說話者"));
+        // 原文｜精簡（R96）：同紀錄分頁的「條列｜心智圖｜人物」用平台的 SelectorBar
+        foreach (var (code, label) in new[] { ("original", L.T("原文")), ("clean", L.T("精簡")) })
+            viewBar.Items.Add(new SelectorBarItem { Text = label, Tag = code });
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(viewBar, L.T("逐字稿"));
+        ToolTipService.SetToolTip(viewBar, L.T("精簡：用整理工具去掉贅字、重複和改口的版本；播放、搜尋、匯出照舊用原文"));
+        viewBar.SelectionChanged += (_, _) =>
+        {
+            if (updating || viewBar.SelectedItem?.Tag is not string code || code == host.Settings.TranscriptView) return;
+            host.Settings.Set(AppSettings.TranscriptViewKey, code);
+            if (detail is not null) Rebind();
+        };
         root.Children.Add(top);
         Grid.SetRow(searchRow, 1);
         root.Children.Add(searchRow);
@@ -156,6 +171,11 @@ public sealed class TranscriptTab
             updating = false;
             AddToSearchRow(speakerFilter, GridLength.Auto);
         }
+        updating = true;
+        foreach (var item in viewBar.Items) if ((string)item.Tag == host.Settings.TranscriptView) viewBar.SelectedItem = item;
+        updating = false;
+        viewBar.IsEnabled = detail.Segments.Count > 0;
+        AddToSearchRow(viewBar, GridLength.Auto);
         var replace = Ui.Button(L.T("用詞修正…"), () => _ = Dialogs.Replace(window, detail.Meeting.Id!.Value, search.Text),
             tooltip: L.T("把逐字稿和會議紀錄裡的同一個詞一起改掉"));
         // 轉錄或整理中不能改：工作完成時會整份寫回逐字稿或會議紀錄
@@ -220,16 +240,79 @@ public sealed class TranscriptTab
     void Rebind()
     {
         var d = detail!;
-        visible = filter is int f ? d.Segments.Where(s => s.Speaker == f).ToList() : d.Segments;
+        // 精簡：整句都是贅字的那句不顯示（R96.1）
+        var segments = CleanShown ? d.Segments.Where(s => s.Id is not long id || !d.CleanLines.TryGetValue(id, out var t) || t.Length > 0).ToList() : d.Segments;
+        visible = filter is int f ? segments.Where(s => s.Speaker == f).ToList() : segments;
         UpdateMatches();
+        cleanKey = null;
         if (d.Segments.Count == 0)
         {
             list.ItemsSource = null;
             list.Header = new Border { Padding = new Thickness(22), Child = Ui.Text(Busy ? L.T("轉錄完成後，逐字稿會出現在這裡。") : L.T("沒有逐字稿。"), color: Ui.Secondary) };
             return;
         }
+        // 還沒有精簡版（R96.2）：說明和「產生精簡版」；產生中顯示進度；上次失敗寫原因
+        if (Clean && d.CleanLines.Count == 0)
+        {
+            list.ItemsSource = null;
+            list.Header = CleanPlaceholder();
+            return;
+        }
         list.Header = null;
         list.ItemsSource = visible;
+    }
+
+    bool Clean => host.Settings.TranscriptView == "clean";
+    /// <summary>精簡而且這場已經有精簡版</summary>
+    bool CleanShown => Clean && detail is { CleanLines.Count: > 0 };
+
+    /// <summary>畫面上這一句的文字：精簡時是精簡版（改過、拆開的句子沒有精簡版，照原文）</summary>
+    string DisplayText(Segment segment) =>
+        CleanShown && segment.Id is long id && detail!.CleanLines.TryGetValue(id, out var clean) ? clean : segment.Text;
+
+    (bool Active, double? Progress) CleaningState() => host.Controller.CleaningProgress(detail!.Meeting.Id!.Value);
+
+    static string CleanStateKey((bool Active, double? Progress) state) =>
+        state.Active ? $"active|{(state.Progress is double p ? (int)(p * 100) : -1)}" : "idle";
+
+    /// <summary>
+    /// 還沒有精簡版時（同 Mac 的 cleanPlaceholder）：說明、上次失敗的原因、「產生精簡版」（失敗過是「再試一次」）；產生中是進度。
+    /// 字跟著文字大小，按鈕不跟（R59.2）
+    /// </summary>
+    FrameworkElement CleanPlaceholder()
+    {
+        var d = detail!;
+        var state = CleaningState();
+        cleanKey = CleanStateKey(state);
+        var column = new StackPanel { Spacing = 12, MaxWidth = Ui.C(760), HorizontalAlignment = HorizontalAlignment.Left };
+        if (state.Active)
+        {
+            var progress = state.Progress is double p ? L.F("正在產生精簡版 %lld%%", (long)(p * 100)) : L.T("正在產生精簡版…");
+            column.Children.Add(Ui.Row(10, new ProgressRing { IsActive = true, Width = 16, Height = 16 }, Ui.Text(progress, Ui.C(14))));
+        }
+        else
+        {
+            column.Children.Add(Ui.Text(L.T("精簡版用整理工具去掉「嗯、呃、那個」這類贅字、重複的字詞和說到一半改口的部分，不改意思、不摘要。每一句的時間和說話者不變。"),
+                Ui.C(14), color: Ui.Secondary));
+            if (d.CleanFailure is { } failure)
+                column.Children.Add(Ui.Text(failure.Length == 0 ? L.T("上次產生精簡版失敗。") : L.F("上次產生精簡版失敗：%@", L.Ui(failure)), Ui.C(14), color: Ui.Signal, select: true));
+            var label = d.CleanFailure is null ? L.T("產生精簡版") : L.T("再試一次");
+            var button = new Button { Content = Ui.Row(8, new SymbolIcon(Symbol.Filter), Ui.Text(label, wrap: false)) };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+            ToolTipService.SetToolTip(button, L.T("會用整理工具的額度；長的會議要幾分鐘"));
+            button.IsEnabled = !Busy;
+            var id = d.Meeting.Id!.Value;
+            button.Click += (_, _) => host.Controller.GenerateCleanTranscript(id);
+            column.Children.Add(button);
+        }
+        return new Border { Padding = new Thickness(22), Child = column };
+    }
+
+    /// <summary>產生精簡版的進度（轉錄、整理中每秒呼叫一次）：還沒有精簡版、樣子變了才重建那一塊</summary>
+    public void UpdateClean()
+    {
+        if (detail is null || !Clean || detail.CleanLines.Count > 0 || detail.Segments.Count == 0) return;
+        if (CleanStateKey(CleaningState()) != cleanKey) list.Header = CleanPlaceholder();
     }
 
     void UpdateMatches()
@@ -268,7 +351,7 @@ public sealed class TranscriptTab
         slot.Content = Row(segment);
         var speaker = segment.Speaker is int idx ? detail?.SpeakerName(idx) : null;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(container,
-            string.Join(" ", new[] { TimeFormat.String(segment.Start), speaker, segment.Text }.Where(t => !string.IsNullOrEmpty(t))));
+            string.Join(" ", new[] { TimeFormat.String(segment.Start), speaker, DisplayText(segment) }.Where(t => !string.IsNullOrEmpty(t))));
     }
 
     /// <summary>捲到這一段並暫時加底色；要跳到的段落被說話者篩選藏起來時，先取消篩選</summary>
@@ -350,8 +433,10 @@ public sealed class TranscriptTab
 
     FrameworkElement Text(Segment segment, MenuFlyout menu)
     {
-        var corrections = segment.Id is long id && detail!.CorrectionsBySegment.TryGetValue(id, out var list) ? list : [];
-        var text = Ui.Text(segment.Text, Ui.C(14), select: true);
+        // 精簡（R96）：顯示精簡版的文字，不標校正建議、搜尋（校正、搜尋對的是原文）；改過的句子沒有精簡版，照原文
+        string? clean = CleanShown && segment.Id is long cleanId && detail!.CleanLines.TryGetValue(cleanId, out var cleanText) ? cleanText : null;
+        var corrections = clean is null && segment.Id is long id && detail!.CorrectionsBySegment.TryGetValue(id, out var list) ? list : [];
+        var text = Ui.Text(clean ?? segment.Text, Ui.C(14), select: true);
         text.Language = Ui.ContentLanguage(Language);
         // 可以選取的文字有自己的右鍵選單（只有拷貝、全選），會蓋掉這一段的選單：文字上按右鍵也開這一段的（裡面有「拷貝」）
         text.ContextFlyout = menu;
@@ -361,7 +446,7 @@ public sealed class TranscriptTab
             var at = segment.Text.IndexOf(c.Original, StringComparison.Ordinal);
             if (at >= 0) text.TextHighlighters.Add(Highlighter(at, c.Original.Length, Microsoft.UI.ColorHelper.FromArgb(52, 0xB9, 0x7F, 0x06)));
         }
-        var q = search.Text.Trim();
+        var q = clean is null ? search.Text.Trim() : "";
         if (q.Length > 0)
             for (var at = segment.Text.IndexOf(q, StringComparison.CurrentCultureIgnoreCase); at >= 0; at = segment.Text.IndexOf(q, at + q.Length, StringComparison.CurrentCultureIgnoreCase))
                 text.TextHighlighters.Add(Highlighter(at, q.Length, Microsoft.UI.ColorHelper.FromArgb(90, 0xB9, 0x7F, 0x06)));

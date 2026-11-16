@@ -105,10 +105,18 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         this.device = device;
     }
 
+    /// <summary>
+    /// DEBUG 的 --set debugEnterpriseUnreachable=YES（R93、design-windows §11.26，同 Mac 的 -debugEnterpriseUnreachable）：
+    /// 假裝登入了一台連不上的伺服器（http://127.0.0.1:9），只在記憶體，不寫設定、不讀認證管理員
+    /// </summary>
+    public bool DebugUnreachable { get; init; }
+    static readonly Uri UnreachableUrl = new("http://127.0.0.1:9/");
+
     public EnterpriseAccount? Account
     {
         get
         {
+            if (DebugUnreachable) return new EnterpriseAccount("debug@example.invalid", "", "", "breeze", false);
             if (settings.String(AccountKey) is not { Length: > 0 } json) return null;
             try
             {
@@ -121,10 +129,10 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     }
 
     public bool HasAccount => Account is not null;
-    public bool IsSignedIn { get { lock (gate) return HasAccount && expiredMessage is null; } }
+    public bool IsSignedIn { get { lock (gate) return DebugUnreachable || (HasAccount && expiredMessage is null); } }
     /// <summary>登入失效的說明；沒有失效是 null</summary>
     public string? ExpiredMessage { get { lock (gate) return HasAccount ? expiredMessage : null; } }
-    public Uri? SavedUrl => Normalized(settings.String(UrlKey) ?? "", AllowLocalHttp);
+    public Uri? SavedUrl => DebugUnreachable ? UnreachableUrl : Normalized(settings.String(UrlKey) ?? "", AllowLocalHttp);
     /// <summary>隱私說明用的主機名稱（M§36.5）；國際化網域是 punycode</summary>
     public string Host => SavedUrl?.IdnHost ?? "";
     public string Language => L.English ? "en" : "zh-TW";
@@ -450,6 +458,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     /// <summary>還有效的 access token；過期了用 refresh token 換（同時只換一次：refresh token 換過就作廢）</summary>
     public async Task<string> AccessToken(CancellationToken cancel = default)
     {
+        if (DebugUnreachable) return "debug";
         if (!HasAccount || SavedUrl is not { } url) throw EnterpriseException.Of(EnterpriseFailure.LoginExpired);
         lock (gate) if (accessToken is not null && accessExpires > DateTime.UtcNow) return accessToken;
         await refreshing.WaitAsync(cancel);

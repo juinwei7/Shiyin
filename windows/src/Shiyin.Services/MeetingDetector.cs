@@ -54,6 +54,8 @@ public sealed class MeetingDetector
     /// <summary>要提醒時（AppController 決定用通知還是小視窗）。在背景執行緒觸發</summary>
     public event Action<Prompt>? Prompted;
     public Func<bool> IsRecording { get; set; } = () => false;
+    /// <summary>現在有會議 app 在用麥克風（R95：倒數完時會議又開始了就不停止，同 Mac 的 meetingAppActive）</summary>
+    public bool MeetingAppActive { get { lock (gate) return activeSince.Count > 0; } }
     /// <summary>DEBUG 的 meetingapp：模擬某個 app 開始、停止用麥克風</summary>
     public Dictionary<string, bool> Simulated { get; } = [];
 

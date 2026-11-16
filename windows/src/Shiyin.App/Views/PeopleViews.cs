@@ -88,6 +88,18 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         name.TextTrimming = TextTrimming.CharacterEllipsis;
         var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         title.Children.Add(name);
+        // 名字旁的鉛筆（R85.6、M§60.2）：打開同一個改名輸入框，接在鉛筆下面；取消、儲存同「更多 → 改名…」
+        var rename = RenameFlyout(person);
+        var pencil = Ui.Borderless(new Button { Content = new SymbolIcon(Symbol.Edit) });
+        pencil.Padding = new Thickness(6);
+        pencil.VerticalAlignment = VerticalAlignment.Center;
+        ToolTipService.SetToolTip(pencil, L.T("改名"));
+        AutomationProperties.SetName(pencil, L.T("改名"));
+        pencil.Click += (_, _) => rename.ShowAt(pencil, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
+        });
+        title.Children.Add(pencil);
         if (person.IsMe)
         {
             var me = Ui.Text(L.T("我"), 14, color: Ui.Secondary, wrap: false);
@@ -99,7 +111,7 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         info.VerticalAlignment = VerticalAlignment.Center;
         var avatar = Ui.Avatar(person.Name, Ui.Person(person.Name), 52, person.IsMe);
         avatar.VerticalAlignment = VerticalAlignment.Center;
-        var more = MoreMenu(person);
+        var more = MoreMenu(person, rename);
         more.VerticalAlignment = VerticalAlignment.Top;
         var header = Ui.Bar(avatar, info, more, 16);
         header.Margin = new Thickness(32, 20, 32, 10);
@@ -110,14 +122,16 @@ public sealed class PersonPage(AppHost host, MainWindow window)
     /// 「更多」（同會議頁的「更多」：DropDownButton＋MenuFlyout，無障礙名稱「更多」）：改名…（輸入框接在「更多」下面）、
     /// 合併到（子選單：其他認識的人）、刪除聲音特徵…（確認對話框）
     /// </summary>
-    DropDownButton MoreMenu(PersonOverview person)
+    DropDownButton MoreMenu(PersonOverview person, Flyout rename)
     {
         var menu = new MenuFlyout();
         var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.More), Ui.Text(L.T("更多"), wrap: false)), Flyout = menu };
         AutomationProperties.SetName(button, L.T("更多"));
         ToolTipService.SetToolTip(button, L.T("改名、跟另一個名字合併（同一個人被記成兩個名字時）、刪除聲音特徵"));
-        var rename = RenameFlyout(person);
-        menu.Items.Add(Ui.Item(L.T("改名…"), () => rename.ShowAt(button), icon: Symbol.Rename));
+        menu.Items.Add(Ui.Item(L.T("改名…"), () => rename.ShowAt(button, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
+        }), icon: Symbol.Rename));
         var others = window.State.People.Where(p => p.Id != person.Id).ToList();
         if (others.Count > 0)
         {
@@ -140,7 +154,8 @@ public sealed class PersonPage(AppHost host, MainWindow window)
     Flyout RenameFlyout(PersonOverview person)
     {
         var box = new TextBox { Text = person.Name, Header = L.T("名字"), Width = 260 };
-        var flyout = new Flyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
+        // 接在按的那個按鈕下面（ShowAt 時給位置）：「更多」靠右對齊、名字旁的鉛筆靠左對齊
+        var flyout = new Flyout();
         void Save()
         {
             var text = box.Text.Trim();

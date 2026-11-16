@@ -16,8 +16,14 @@ namespace Shiyin.Services;
 /// </summary>
 public sealed class ServerTranscriber(EnterpriseServer server)
 {
-    /// <summary>使用者按了「改在這台電腦轉錄」</summary>
-    public sealed class SwitchToLocalException : Exception;
+    /// <summary>使用者按了「改在這台電腦轉錄」；Automatic 是連不上太久自動改的（R93、M§67）</summary>
+    public sealed class SwitchToLocalException(bool automatic = false) : Exception
+    {
+        public bool Automatic { get; } = automatic;
+    }
+
+    /// <summary>連不上（網路、伺服器出錯）連續這麼久就自動改在這台電腦轉錄（R93、M§67）</summary>
+    public static readonly TimeSpan DefaultAutoLocalAfter = TimeSpan.FromMinutes(10);
 
     /// <summary>伺服器轉錄失敗（例如錄音太長）：不是暫時的問題，工作算失敗</summary>
     public sealed class FailedException(string message) : Exception(message);
@@ -41,6 +47,8 @@ public sealed class ServerTranscriber(EnterpriseServer server)
     public Func<int, TimeSpan> RetryDelay { get; init; } = attempt => TimeSpan.FromSeconds(Math.Min(300, 30 * (1 << Math.Min(attempt - 1, 4))));
     public TimeSpan PollRunning { get; init; } = TimeSpan.FromSeconds(2);
     public TimeSpan PollQueued { get; init; } = TimeSpan.FromSeconds(5);
+    /// <summary>連不上連續多久自動改本機（JobRunner 給；DEBUG 的 --set serverAutoLocalSeconds 改短，測試也改短）</summary>
+    public TimeSpan AutoLocalAfter { get; init; } = DefaultAutoLocalAfter;
 
     public sealed record Result(TranscriptionResult Transcription, string TranscribedWith);
 
@@ -85,6 +93,8 @@ public sealed class ServerTranscriber(EnterpriseServer server)
         var id = remoteId;
         var waited = 0;
         var rejected = 0;
+        // 從什麼時候開始連續連不上（R93）：跟伺服器說上話就清掉
+        DateTime? unreachableSince = null;
         OnServer(new ServerNote(""));
         try
         {
@@ -101,6 +111,7 @@ public sealed class ServerTranscriber(EnterpriseServer server)
                         OnRemoteId(id);
                     }
                     var state = await Status(id, cancel);
+                    unreachableSince = null;
                     if (waited > 0) { OnServer(new ServerNote("")); waited = 0; }
                     switch (state.Status)
                     {
@@ -137,8 +148,24 @@ public sealed class ServerTranscriber(EnterpriseServer server)
                 }
                 catch (EnterpriseException e) when (e.IsTemporary || e.IsSetupProblem)
                 {
+                    // 連不上（網路、伺服器出錯）連續太久：自動改在這台電腦轉錄（R93）；伺服器忙、登入失效照舊等
+                    TimeSpan? limit = null;
+                    if (IsUnreachable(e))
+                    {
+                        var since = unreachableSince ??= DateTime.UtcNow;
+                        var left = AutoLocalAfter - (DateTime.UtcNow - since);
+                        if (left <= TimeSpan.Zero)
+                        {
+                            await Delete(id);
+                            OnRemoteId(null);
+                            Log.Info($"enterprise server unreachable for {(int)AutoLocalAfter.TotalSeconds}s, switching to local transcription");
+                            throw new SwitchToLocalException(automatic: true);
+                        }
+                        limit = left;
+                    }
+                    else unreachableSince = null;
                     waited++;
-                    await WaitForServer(e, waited, cancel);
+                    await WaitForServer(e, waited, cancel, limit);
                 }
                 catch (EnterpriseException e)
                 {
@@ -152,10 +179,12 @@ public sealed class ServerTranscriber(EnterpriseServer server)
     }
 
     /// <summary>等伺服器（R50.5）：30 秒、1 分鐘、2 分鐘…最長 5 分鐘再試；登入失效時等使用者重新登入（每 5 秒看一次）</summary>
-    async Task WaitForServer(EnterpriseException failure, int attempt, CancellationToken cancel)
+    async Task WaitForServer(EnterpriseException failure, int attempt, CancellationToken cancel, TimeSpan? limit = null)
     {
         var setup = failure.IsSetupProblem;
         var delay = setup ? TimeSpan.FromSeconds(5) : RetryDelay(attempt);
+        // 快到自動改本機的時間（R93）時只等到那時候（無條件進位到秒、至少 1 秒，同 Mac）
+        if (limit is { } l && TimeSpan.FromSeconds(Math.Max(1, Math.Ceiling(l.TotalSeconds))) is var cap && cap < delay) delay = cap;
         var seconds = (long)delay.TotalSeconds;
         var text = setup ? failure.Message
             : failure.ServerKind == "busy" ? L.F("等企業伺服器：伺服器忙，%lld 秒後再試", seconds)
@@ -173,6 +202,10 @@ public sealed class ServerTranscriber(EnterpriseServer server)
             if (setup && server.IsSignedIn) return;
         }
     }
+
+    /// <summary>算「連不上」的失敗（R93）：網路不通、伺服器出錯；伺服器忙（在排隊）、登入失效不算</summary>
+    static bool IsUnreachable(EnterpriseException e) =>
+        e.Kind == EnterpriseFailure.Unreachable || (e.Kind == EnterpriseFailure.Server && e.ServerKind == "server_error");
 
     /// <summary>階段的文字會接「中 N%」（「企業伺服器轉錄中 42%」），排隊第幾放在後面的說明</summary>
     void Report(JobState state)
