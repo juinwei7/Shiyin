@@ -185,3 +185,14 @@ extension TemplateRecord {
         return TemplateDefinition.decode(definition)
     }
 }
+
+/// 新增詞彙的欄位一次貼上好幾個（R94.1）：用換行、逗號、頓號、分號分開，去頭尾空白、拿掉空的和重複的（不分大小寫，留第一個）
+enum GlossaryInput {
+    static func split(_ text: String) -> [String] {
+        let separators = CharacterSet(charactersIn: "\n\r,，、;；")
+        var seen = Set<String>()
+        return text.components(separatedBy: separators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+    }
+}

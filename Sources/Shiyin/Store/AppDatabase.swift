@@ -1135,6 +1135,26 @@ final class AppDatabase: @unchecked Sendable {
         _ = try pool.write { db in try GlossaryTerm.deleteOne(db, key: id) }
     }
 
+    /// 一次加好幾個（R94.1）：回傳實際加進去的個數（已經有的跳過，不分大小寫）
+    @discardableResult
+    func addTerms(_ terms: [String]) throws -> Int {
+        try pool.write { db in
+            var added = 0
+            for term in terms {
+                let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                try db.execute(sql: "INSERT OR IGNORE INTO glossary (term, created_at) VALUES (?, ?)", arguments: [trimmed, Clock.now()])
+                added += db.changesCount
+            }
+            return added
+        }
+    }
+
+    /// 批次刪除（R94.3）
+    func deleteTerms(_ ids: [Int64]) throws {
+        _ = try pool.write { db in try GlossaryTerm.deleteAll(db, keys: ids) }
+    }
+
     /// 詞彙表建議（design §17.5、R14.5）：從參加者、改過名字的說話者、接受過的校正、中文會議標題裡的英文詞找。
     /// 已經在詞彙表裡、被忽略過的不建議；出現越多次排越前面
     func glossarySuggestions(limit: Int = 12) throws -> [GlossarySuggestion] {

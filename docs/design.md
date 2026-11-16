@@ -2604,6 +2604,20 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`notesview people`；`peoplenotes <會議 id>`（等於按「產生每個人的重點」）。
 - Windows：design-windows §11.25。
 
+## 67. 企業伺服器連不上時自動改在這台電腦轉錄（R93）
+
+- `ServerTranscriber.transcribe` 記「連續連不上」的開始時間：`EnterpriseServer.Failure.unreachable`、`.server(kind: "server_error")` 時記下第一次的時間；任何一次跟伺服器說上話（建工作、查狀態、上傳成功）就清掉。`busy`（伺服器忙、排隊）、登入失效不算。
+- 連續 10 分鐘（`ServerTranscriber.autoLocalAfter`，DEBUG 可以用啟動參數 `-serverAutoLocalSeconds` 改短）就丟 `SwitchToLocal(automatic: true)`，`JobRunner` 照「改在這台電腦轉錄」的路（R50.5）用本機的引擎轉；`automatic` 時 `Notifier.serverFallback(meeting)` 發通知「企業伺服器連不上，已改在這台電腦轉錄」，內文是會議標題。
+- Windows：design-windows §11.26。
+
+## 68. 詞彙表：一次加好幾個、搜尋、批次刪除（R94）
+
+- `GlossaryInput.split`：用換行、逗號（半形、全形）、頓號、分號（半形、全形）分開，去頭尾空白、拿掉空的和重複的（不分大小寫，留第一個）。標準答案 `util/glossary-split.json`。
+- `AppDatabase.addTerms`（`INSERT OR IGNORE`，回傳實際加了幾個）、`deleteTerms`；`AppModel.addTerms`：一個詞而且已經有時說「「X」已經在詞彙表裡了」，好幾個時說「已加入 N 個詞彙（，M 個已經有了）」。
+- 設定頁：新增的欄位是多行的 `TextField`（`axis: .vertical`，1～4 行，Return 送出），標籤「新增詞彙」、提示字「產品名、人名；可以一次貼上好幾個」；超過 10 個詞時「搜尋詞彙」（不分大小寫）；每個詞前面是勾選框，上面一列「全選」（搜尋時「全選搜到的 N 個」；都勾了變「取消勾選」）和「刪除勾選的 N 個…」（確認對話框）；勾了之後被單獨刪掉的詞不算在 N 裡。
+- DEBUG：`addterm <文字>` 走 `addTerms`（`\n` 當換行）。
+- Windows：design-windows §11.27。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

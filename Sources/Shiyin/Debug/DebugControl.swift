@@ -445,7 +445,7 @@ enum DebugControl {
             let windows = NSApp.windows.filter { $0.isVisible && (args.count < 3 || "\($0.windowNumber)" == args[2]) }
             windows.lazy.compactMap { $0.contentView.flatMap(find) }.first?.performClick(nil)
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
-        case "addterm": model.addTerm(args[1])
+        case "addterm": model.addTerms(args[1].replacingOccurrences(of: "\\n", with: "\n"))   // 一次好幾個（R94.1）：「\n」當換行
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
         case "record":
             switch args[1] {

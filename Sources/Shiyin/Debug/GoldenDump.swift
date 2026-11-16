@@ -310,6 +310,10 @@ enum GoldenDump {
         let marks = ["[BLANK_AUDIO]", "[silence]", "(marker tapping)", "<|5.55|>", "-", "。", "（笑）", "【音樂】", "[音樂] 大家好",  // l10n-skip
                      "(1) 第一點", "好", "Hello (world)", "[a][b]", "<|0.00|>大家好", "()", "[ ]"]  // l10n-skip
         w.json("whisper/nonspeech.json", marks.map { ["text": $0, "nonSpeech": WhisperEngine.isNonSpeech($0)] })
+        // 一次貼上好幾個詞彙（R94.1）
+        let pasted = ["Redis", "Redis、Kubernetes、拾音", "Redis, kubernetes\nKubernetes；SendGrid;  \n\n  拾音 ", "  ", "A，B，a",  // l10n-skip
+                      "Claude Code\r\nCodex", "第一行\n第二行、第三行"]  // l10n-skip
+        w.json("util/glossary-split.json", pasted.map { ["input": $0, "terms": GlossaryInput.split($0)] as Object })
         let abc = ["甲", "乙", "丙"], redis = glossaries.count > 1 ? glossaries[1] : [], claude = ["Claude", "Claude Code"]  // l10n-skip
         let echoes: [(String, [String], MeetingLanguage)] = [
             ("甲、乙、丙。", abc, .zh), ("詞彙：甲、乙、丙。", abc, .zh), ("甲。", abc, .zh), ("乙、丙", abc, .zh), ("丙、甲", abc, .zh),  // l10n-skip

@@ -2112,6 +2112,23 @@
         }
       }
     },
+    "「%@」已經在詞彙表裡了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”已经在词汇表里了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is already in the glossary"
+          }
+        }
+      }
+    },
     "「%@」有密碼保護，拾音讀不了。請先移除密碼再加入。": {
       "extractionState": "manual",
       "localizations": {
@@ -3955,6 +3972,52 @@
         }
       }
     },
+    "全選": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全选"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select All"
+          }
+        }
+      }
+    },
+    "全選搜到的 %lld 個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全选搜到的 %lld 个"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Select the %lld Match"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Select All %lld Matches"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "全部刪除": {
       "extractionState": "manual",
       "localizations": {
@@ -4677,6 +4740,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete line “%@”"
+          }
+        }
+      }
+    },
+    "刪除勾選的 %lld 個…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除勾选的 %lld 个…"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Selected…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Selected…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "刪除勾選的 %lld 個詞彙？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除勾选的 %lld 个词汇？"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld selected term?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld selected terms?"
+                }
+              }
+            }
           }
         }
       }
@@ -5580,6 +5701,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        }
+      }
+    },
+    "取消勾選": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消勾选"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deselect All"
           }
         }
       }
@@ -7032,6 +7170,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "已加入 %lld 份文档"
+          }
+        }
+      }
+    },
+    "已加入 %lld 個詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入 %lld 个词汇"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added %lld term"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added %lld terms"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "已加入 %lld 個詞彙，%lld 個已經有了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入 %lld 个词汇，%lld 个已经有了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %1$lld terms; %2$lld were already in the glossary"
           }
         }
       }
@@ -10150,6 +10334,23 @@
         }
       }
     },
+    "搜尋詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search terms"
+          }
+        }
+      }
+    },
     "搜尋逐字稿": {
       "extractionState": "manual",
       "localizations": {
@@ -11238,19 +11439,19 @@
         }
       }
     },
-    "新增詞彙，例如產品名或人名": {
+    "新增詞彙": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add a term, such as a product or person's name"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加词汇，例如产品名或人名"
+            "value": "添加词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add term"
           }
         }
       }
@@ -13819,6 +14020,23 @@
         }
       }
     },
+    "沒有含「%@」的詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有含“%@”的词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No terms contain “%@”"
+          }
+        }
+      }
+    },
     "沒有填": {
       "extractionState": "manual",
       "localizations": {
@@ -14524,6 +14742,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "环境检查"
+          }
+        }
+      }
+    },
+    "產品名、人名；可以一次貼上好幾個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "产品名、人名；可以一次粘贴好几个"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Product or person’s name; you can paste several"
           }
         }
       }
@@ -17603,6 +17838,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳到第一处"
+          }
+        }
+      }
+    },
+    "輸入要找的字": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入要找的字"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type to search"
           }
         }
       }

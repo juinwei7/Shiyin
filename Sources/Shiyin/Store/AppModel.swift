@@ -1638,6 +1638,22 @@ final class AppModel {
     func dismissGlossarySuggestion(_ term: String) { perform { try db.dismissGlossarySuggestion(term) } }
     func deleteTerm(_ id: Int64) { perform { try db.deleteTerm(id) } }
 
+    /// 新增詞彙（R94.1）：一次貼上好幾個時用換行、逗號、頓號、分號分開，已經有的跳過
+    func addTerms(_ text: String) {
+        let terms = GlossaryInput.split(text)
+        guard !terms.isEmpty else { return }
+        var added = 0
+        perform { added = try db.addTerms(terms) }
+        if terms.count == 1 && added == 0 {
+            noticeMessage = String(localized: "「\(terms[0])」已經在詞彙表裡了")
+        } else if terms.count > 1 {
+            noticeMessage = added == terms.count ? String(localized: "已加入 \(added) 個詞彙")
+                : String(localized: "已加入 \(added) 個詞彙，\(terms.count - added) 個已經有了")
+        }
+    }
+
+    func deleteTerms(_ ids: [Int64]) { perform { try db.deleteTerms(ids) } }
+
     func saveTemplate(_ template: TemplateRecord) { perform { try db.saveTemplate(template) } }
     func deleteTemplate(_ id: String) { perform { try db.deleteTemplate(id) } }
 

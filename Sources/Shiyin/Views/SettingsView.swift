@@ -803,13 +803,30 @@ struct VoiceEnrollmentSheet: View {
 struct GlossarySettings: View {
     @Environment(AppModel.self) private var model
     @State private var newTerm = ""
+    /// 搜尋（R94.2）、勾選（R94.3）
+    @State private var query = ""
+    @State private var selected: Set<Int64> = []
+    @State private var confirmDelete = false
+
+    /// 勾選裡還在詞彙表的（勾了之後被單獨刪掉的不算）
+    private var checked: Set<Int64> { selected.intersection(model.glossary.compactMap(\.id)) }
+
+    /// 目前列出來的詞（搜尋時只有搜到的）
+    private var shown: [GlossaryTerm] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return q.isEmpty ? model.glossary : model.glossary.filter { $0.term.range(of: q, options: .caseInsensitive) != nil }
+    }
 
     var body: some View {
         Text("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。")
             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-        HStack {
-            TextField("新增詞彙，例如產品名或人名", text: $newTerm).textFieldStyle(.roundedBorder).onSubmit(add)
-            Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+        // 一次貼上好幾個也可以（R94.1）：換行、逗號、頓號、分號分開
+        HStack(alignment: .top) {
+            TextField("新增詞彙", text: $newTerm, prompt: Text("產品名、人名；可以一次貼上好幾個"), axis: .vertical)
+                .lineLimit(1...4)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit(add)
+            Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         // 詞彙表建議（design §17.5）：最多 12 個
         if !model.glossarySuggestions.isEmpty {
@@ -831,13 +848,38 @@ struct GlossarySettings: View {
         if model.glossary.isEmpty {
             Text("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。").font(.callout).foregroundStyle(.secondary)
         }
-        ForEach(model.glossary) { term in
+        // 搜尋（R94.2）：超過 10 個才出現
+        if model.glossary.count > 10 {
+            TextField("搜尋詞彙", text: $query, prompt: Text("輸入要找的字")).textFieldStyle(.roundedBorder)
+        }
+        // 全選、刪除勾選的（R94.3）
+        if !shown.isEmpty {
             HStack {
-                Text(term.term)
+                let ids = Set(shown.compactMap(\.id))
+                if ids.isSubset(of: selected) {
+                    Button("取消勾選") { selected.subtract(ids) }.buttonStyle(.link)
+                } else {
+                    Button(query.isEmpty ? "全選" : "全選搜到的 \(ids.count) 個") { selected.formUnion(ids) }.buttonStyle(.link)
+                }
+                Spacer()
+                if !checked.isEmpty {
+                    Button("刪除勾選的 \(checked.count) 個…", role: .destructive) { confirmDelete = true }
+                }
+            }
+            .font(.callout)
+        }
+        ForEach(shown) { term in
+            HStack {
+                Toggle(term.term, isOn: Binding(get: { selected.contains(term.id ?? -1) },
+                                                set: { if let id = term.id { if $0 { selected.insert(id) } else { selected.remove(id) } } }))
+                    .toggleStyle(.checkbox)
                 Spacer()
                 Button { model.deleteTerm(term.id!) } label: { Image(systemName: "trash") }
                     .buttonStyle(.borderless).help("刪除「\(term.term)」")
             }
+        }
+        if shown.isEmpty && !model.glossary.isEmpty {
+            Text("沒有含「\(query)」的詞彙").font(.callout).foregroundStyle(.secondary)
         }
         // 公司詞彙表（R53.3）：唯讀，接在自己的詞後面
         if !model.companyGlossary.isEmpty {
@@ -856,10 +898,16 @@ struct GlossarySettings: View {
             .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             // 打開這頁時更新公司詞彙表（R53.1）
             .task { await EnterpriseServer.shared.refreshGlossary() }
+            .confirmationDialog("刪除勾選的 \(checked.count) 個詞彙？", isPresented: $confirmDelete) {
+                Button("刪除", role: .destructive) {
+                    model.deleteTerms(Array(checked))
+                    selected = []
+                }
+            }
     }
 
     private func add() {
-        model.addTerm(newTerm)
+        model.addTerms(newTerm)
         newTerm = ""
     }
 }
