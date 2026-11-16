@@ -4132,19 +4132,19 @@
         }
       }
     },
-    "側欄太長時可以收起來：點「定期會議」「資料夾」「所有會議」這些標題就收起或展開。資料夾、定期會議前面的箭頭可以在原地展開最近 5 場，點一場直接打開；點名稱照舊只看那個資料夾。": {
+    "側欄太長時可以收起來：點「資料夾」「所有會議」這些標題就收起或展開。點資料夾（定期會議也在這裡，圖示上有 ↻）會在原地展開最近 5 場，圖示換成打開的資料夾，點一場直接打開；要讓下面的列表只看某個資料夾，按右鍵選「只看這個資料夾」。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "侧边栏太长时可以收起来：点“定期会议”“文件夹”“所有会议”这些标题就收起或展开。文件夹、定期会议前面的箭头可以在原地展开最近 5 场，点一场直接打开；点名称照旧只看那个文件夹。"
+            "value": "侧边栏太长时可以收起来：点“文件夹”“所有会议”这些标题就收起或展开。点文件夹（定期会议也在这里，图标上有 ↻）会在原地展开最近 5 场，图标换成打开的文件夹，点一场直接打开；要让下面的列表只看某个文件夹，按右键选“只看这个文件夹”。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When the sidebar gets long, collapse it: click a heading such as Recurring Meetings, Folders, or All Meetings to hide or show that section. The arrow in front of a folder or recurring meeting shows its 5 most recent meetings right there; click one to open it. Clicking the name still shows only that folder."
+            "value": "When the sidebar gets long, collapse it: click a heading such as Folders or All Meetings to hide or show that section. Clicking a folder (recurring meetings are here too, marked with ↻) shows its 5 most recent meetings right there and the icon changes to an open folder; click one to open it. To show only one folder in the list below, right-click it and choose Show Only This Folder."
           }
         }
       }
@@ -6358,6 +6358,23 @@
         }
       }
     },
+    "只看這個資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只看这个文件夹"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Only This Folder"
+          }
+        }
+      }
+    },
     "只能匯入錄音、影片、逐字稿（srt、vtt、txt）、Markdown 或 .shiyin 檔": {
       "extractionState": "manual",
       "localizations": {
@@ -7475,23 +7492,6 @@
         }
       }
     },
-    "定期會議": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "定期会议"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recurring Meetings"
-          }
-        }
-      }
-    },
     "定期會議・%@。點了打開系列頁": {
       "extractionState": "manual",
       "localizations": {
@@ -7607,40 +7607,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "展开"
-          }
-        }
-      }
-    },
-    "展開「%@」": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "展开“%@”"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expand “%@”"
-          }
-        }
-      }
-    },
-    "展開最近的會議": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "展开最近的会议"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show recent meetings"
           }
         }
       }
@@ -9749,6 +9715,23 @@
         }
       }
     },
+    "打開定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Recurring Meeting"
+          }
+        }
+      }
+    },
     "打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。": {
       "extractionState": "manual",
       "localizations": {
@@ -11437,40 +11420,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "收起"
-          }
-        }
-      }
-    },
-    "收起「%@」": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收起“%@”"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Collapse “%@”"
-          }
-        }
-      }
-    },
-    "收起最近的會議": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收起最近的会议"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide recent meetings"
           }
         }
       }
@@ -15424,6 +15373,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有找到相关的会议"
+          }
+        }
+      }
+    },
+    "沒有會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meetings"
           }
         }
       }

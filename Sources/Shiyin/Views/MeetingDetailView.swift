@@ -522,7 +522,7 @@ struct MoreMenu: View {
             Divider()
             // 工具列的選單建立一次就不會更新（停用狀態、按鈕記住的會議），動作一律在按下時才看目前選取的會議
             FolderMenu()
-            Button("移到垃圾桶", systemImage: "trash", role: .destructive) {
+            DestructiveMenuButton(String(localized: "移到垃圾桶")) {
                 if let id = model.selection { model.moveToTrash(id) }
             }
         } label: {

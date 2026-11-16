@@ -24,6 +24,15 @@ extension AppModel {
         if !expanded, sidebarExpanded.contains(key) { sidebarExpanded.remove(key) }
     }
 
+    /// 點資料夾、定期會議：在原地展開或收起（R101.2）
+    func toggleRow(_ key: String) { setRow(key, expanded: !isRowExpanded(key)) }
+
+    /// 下面的列表只看這個資料夾（「顯示全部 N 場」、右鍵「只看這個資料夾」）
+    func showFolder(_ name: String) {
+        sidebarMode = .meetings
+        folderFilter = name
+    }
+
     /// 資料夾、定期會議裡的會議（不含垃圾桶），日期新到舊（資料庫讀出來的順序）
     func peekRows(folder: String) -> [MeetingRow] { meetings.filter { $0.meeting.folder == folder } }
     func peekRows(series id: Int64) -> [MeetingRow] { meetings.filter { $0.meeting.seriesId == id } }

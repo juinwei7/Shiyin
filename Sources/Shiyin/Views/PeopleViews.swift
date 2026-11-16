@@ -221,23 +221,26 @@ struct PersonMenuItems: View {
     let person: PersonOverview
 
     var body: some View {
-        let others = model.peopleOverview.filter { $0.id != person.id }
-        Button("重新命名…") {
-            model.selectedPerson = person.id
-            model.personRenameRequest = person.id
-        }
-        if !others.isEmpty {
-            Menu("合併到") {
-                ForEach(others) { other in
-                    Button(other.name) {
-                        model.renamePerson(person.id, to: other.name)
-                        model.selectedPerson = other.id
+        Group {
+            let others = model.peopleOverview.filter { $0.id != person.id }
+            Button("重新命名…", systemImage: "pencil") {
+                model.selectedPerson = person.id
+                model.personRenameRequest = person.id
+            }
+            if !others.isEmpty {
+                Menu("合併到", systemImage: "person.2") {
+                    ForEach(others) { other in
+                        Button(other.name) {
+                            model.renamePerson(person.id, to: other.name)
+                            model.selectedPerson = other.id
+                        }
                     }
                 }
             }
+            Divider()
+            DestructiveMenuButton(String(localized: "移除這個人…"), systemImage: "person.crop.circle.badge.minus") { model.confirmRemovePerson = person.id }
         }
-        Divider()
-        Button("移除這個人…", role: .destructive) { model.confirmRemovePerson = person.id }
+        .menuIcons()
     }
 }
 

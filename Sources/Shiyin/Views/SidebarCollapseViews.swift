@@ -2,12 +2,31 @@ import SwiftUI
 
 // MARK: - 側欄的收合（R101、design §75）
 
-/// 箭頭的寬度：資料夾、定期會議列最前面的箭頭，沒有箭頭的列（所有會議、人物、展開的會議）留同樣的空位對齊
-enum SidebarMetrics {
-    static let chevron: CGFloat = 12
+/// 側欄的列滑鼠移上去時，整列一塊淡淡的圓角底（R101，參考 ChatGPT 桌面版）：跟系統選取的那一塊一樣大，
+/// 選到的列被系統的選取蓋過去
+struct SidebarHoverModifier: ViewModifier {
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.primary.opacity(hovering ? 0.08 : 0))
+                    .padding(.horizontal, -SidebarHoverModifier.inset.width)
+                    .padding(.vertical, -SidebarHoverModifier.inset.height)
+            }
+            .onHover { hovering = $0 }
+    }
+
+    /// 內容到系統選取那一塊的邊的距離
+    static let inset = CGSize(width: 6, height: 3)
 }
 
-/// 可以收合的段落標題：標題後面一個小箭頭，標題和箭頭是同一顆按鈕
+extension View {
+    func sidebarHover() -> some View { modifier(SidebarHoverModifier()) }
+}
+
+/// 可以收合的段落標題：標題後面一個小箭頭（滑過標題或收起來時才出現，參考 ChatGPT 桌面版），標題和箭頭是同一顆按鈕
 struct SidebarSectionHeader: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -16,6 +35,7 @@ struct SidebarSectionHeader: View {
     /// 旁邊還有選單（會議列表的「顯示方式」）：段落標題在輔助使用裡會跟選單併成一個元件，按下去要照舊打開選單，
     /// 所以這時不用按鈕，收合改成有名字的動作（2026-11-16 用 AX 按的時候發現選單打不開）
     var besideMenu = false
+    @State private var hovering = false
 
     var body: some View {
         let expanded = model.isSectionExpanded(key)
@@ -27,9 +47,11 @@ struct SidebarSectionHeader: View {
             Image(systemName: expanded ? "chevron.down" : "chevron.right")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.tertiary)
+                .opacity(hovering || !expanded ? 1 : 0)
                 .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
+        .onHover { hovering = $0 }
         let help = expanded ? String(localized: "收起這一段") : String(localized: "展開這一段")
         if besideMenu {
             label
@@ -46,48 +68,98 @@ struct SidebarSectionHeader: View {
     }
 }
 
-/// 資料夾、定期會議列最前面的箭頭：點了在原地展開或收起（不觸發整列的「只看這個資料夾」）
-struct SidebarDisclosure {
-    var key: String
-    /// 沒有會議時不顯示箭頭（位置留著）
-    var enabled: Bool
-}
-
-struct SidebarChevron: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let disclosure: SidebarDisclosure?
-    let name: String
+/// 側欄的資料夾圖示（R101）：關著、打開兩種表示有沒有展開（參考 ChatGPT 桌面版的專案列表）；系統圖示沒有打開的資料夾，
+/// 自己畫（`OpenFolderShape`），大小、粗細照系統的 `folder`。標記在右上角：齒輪是有自動加入條件，↻ 是定期會議
+struct FolderGlyph: View {
+    var open: Bool
+    var badge: String? = nil
 
     var body: some View {
-        if let disclosure, disclosure.enabled {
-            let expanded = model.isRowExpanded(disclosure.key)
-            let toggle = {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.setRow(disclosure.key, expanded: !expanded) }
+        // 看不見的系統資料夾圖示決定大小、基線，畫的東西放在它上面
+        Image(systemName: "folder").hidden()
+            .overlay {
+                GeometryReader { g in
+                    let badgeSize = g.size.height * 0.62
+                    let center = CGPoint(x: g.size.width * 0.88, y: g.size.height * 0.2)
+                    ZStack {
+                        Group {
+                            if open {
+                                OpenFolderShape()
+                                    .stroke(style: StrokeStyle(lineWidth: g.size.height * 0.085, lineCap: .round, lineJoin: .round))
+                            } else {
+                                Image(systemName: "folder").resizable()
+                            }
+                        }
+                        // 標記的位置挖空，線才不會穿過標記。遮罩一定要給明確的顏色：側欄的預設前景色是半透明的，
+                        // 拿來當遮罩整個圖示會不見（2026-11-16 在側欄上才看到）
+                        .mask {
+                            BadgeHole(center: center, radius: badge == nil ? 0 : badgeSize * 0.62)
+                                .fill(Color.black, style: FillStyle(eoFill: true))
+                        }
+                        if let badge {
+                            Image(systemName: badge)
+                                .resizable().scaledToFit()
+                                .fontWeight(.bold)
+                                .frame(width: badgeSize, height: badgeSize)
+                                .position(center)
+                        }
+                    }
+                }
             }
-            Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: SidebarMetrics.chevron, height: 16)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: toggle)
-                .help(expanded ? String(localized: "收起最近的會議") : String(localized: "展開最近的會議"))
-                .accessibilityElement()
-                .accessibilityLabel(Text(expanded ? "收起「\(name)」" : "展開「\(name)」"))
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction(.default, toggle)
-        } else {
-            Color.clear.frame(width: SidebarMetrics.chevron, height: 1)
-        }
+            .accessibilityHidden(true)
     }
 }
 
-/// 資料夾、定期會議在原地展開的最近 5 場；超過時最後一列「顯示全部 N 場」（等於點資料夾名稱）
+/// 整個框，挖掉標記的圓（even-odd）
+private struct BadgeHole: Shape {
+    var center: CGPoint
+    var radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path(rect)
+        if radius > 0 { path.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)) }
+        return path
+    }
+}
+
+/// 打開的資料夾：後面一片帶標籤的背板，前面一片斜的蓋子（座標是系統 `folder` 圖示的框裡的比例）
+struct OpenFolderShape: Shape {
+    func path(in r: CGRect) -> Path {
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: r.minX + x * r.width, y: r.minY + y * r.height) }
+        var path = Path()
+        path.move(to: p(0.10, 0.80))
+        path.addLine(to: p(0.10, 0.22))
+        path.addQuadCurve(to: p(0.17, 0.14), control: p(0.10, 0.14))
+        path.addLine(to: p(0.36, 0.14))
+        path.addQuadCurve(to: p(0.42, 0.17), control: p(0.40, 0.14))
+        path.addLine(to: p(0.47, 0.24))
+        path.addLine(to: p(0.76, 0.24))
+        path.addQuadCurve(to: p(0.83, 0.31), control: p(0.83, 0.24))
+        path.addLine(to: p(0.83, 0.42))
+        path.move(to: p(0.10, 0.80))
+        path.addQuadCurve(to: p(0.17, 0.86), control: p(0.11, 0.86))
+        path.addLine(to: p(0.76, 0.86))
+        path.addQuadCurve(to: p(0.83, 0.81), control: p(0.81, 0.86))
+        path.addLine(to: p(0.95, 0.50))
+        path.addQuadCurve(to: p(0.90, 0.42), control: p(0.97, 0.42))
+        path.addLine(to: p(0.30, 0.42))
+        path.addQuadCurve(to: p(0.24, 0.47), control: p(0.26, 0.42))
+        path.addLine(to: p(0.10, 0.80))
+        return path
+    }
+}
+
+/// 資料夾、定期會議在原地展開的最近 5 場；超過時最後一列「顯示全部 N 場」（下面的列表只看這個資料夾、打開系列頁）；
+/// 沒有會議時一列「沒有會議」
 struct SidebarPeek: View {
     let rows: [MeetingRow]
     let showAll: () -> Void
 
     var body: some View {
+        if rows.isEmpty {
+            SidebarPeekLine { Text("沒有會議").foregroundStyle(.secondary) }
+                .selectionDisabled()
+        }
         // id 用字串：ForEach 會把 id 當成列的 tag，用會議 id 的話 List 會把這幾列當成選取（跟下面的列表一起亮成一整條）
         ForEach(rows.prefix(5).map { (key: "peek:\($0.id)", row: $0) }, id: \.key) { item in
             SidebarPeekRow(row: item.row)
@@ -101,6 +173,7 @@ struct SidebarPeek: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(perform: showAll)
+            .sidebarHover()
             .selectionDisabled()
         }
     }
@@ -126,19 +199,17 @@ private struct SidebarPeekRow: View {
         .onTapGesture(perform: open)
         .contextMenu { MeetingMenuItems(ids: [row.id]) }
         .rowMenu(selected: selected) { MeetingMenuItems(ids: [row.id]) }
+        .sidebarHover()
         .help("\(row.meeting.meetingDate)・\(row.meeting.displayTitle)")
         .selectionDisabled()
     }
 }
 
-/// 縮排到跟資料夾名稱對齊：箭頭的空位＋看不見的資料夾圖示
+/// 縮排到跟資料夾名稱對齊：看不見的資料夾圖示
 private struct SidebarPeekLine<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        HStack(spacing: 2) {
-            Color.clear.frame(width: SidebarMetrics.chevron, height: 1)
-            Label { content } icon: { Image(systemName: "folder").hidden() }
-        }
+        Label { content } icon: { Image(systemName: "folder").hidden() }
     }
 }

@@ -931,7 +931,7 @@ struct GlossarySettings: View {
             .contextMenu {
                 Button("重新命名…") { startEditing(term) }
                 Divider()
-                Button("刪除", role: .destructive) { model.deleteTerm(term.id!) }
+                DestructiveMenuButton(String(localized: "刪除")) { model.deleteTerm(term.id!) }
             }
         }
         if shown.isEmpty && !model.glossary.isEmpty {

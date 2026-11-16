@@ -492,7 +492,7 @@ struct TranscriptTab: View {
                 if detail.segments.first(where: { $0.kind == "final" })?.id != id {
                     Button("從這裡分成兩場…") { model.splitMeetingRequest = id }
                 }
-                Button("刪除這句", role: .destructive) { model.deleteSegment(id) }   // R89
+                DestructiveMenuButton(String(localized: "刪除這句")) { model.deleteSegment(id) }   // R89
                 // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
                 if let label = detail.speakerUndoLabel {
                     Button("復原：\(label)") { model.undoSpeakerEdit() }

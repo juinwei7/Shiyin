@@ -352,7 +352,7 @@ struct UserNotesDisclosure: View {
                                 Button("跳到這裡") { model.player.seek(to: bookmark.time) }
                                 Button("重新命名…") { model.renamingBookmark = bookmark }
                                 Divider()
-                                Button("刪除", role: .destructive) { if let id = bookmark.id { model.deleteBookmark(id) } }
+                                DestructiveMenuButton(String(localized: "刪除")) { if let id = bookmark.id { model.deleteBookmark(id) } }
                             }
                         }
                     }

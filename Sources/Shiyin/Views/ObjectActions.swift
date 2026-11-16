@@ -7,8 +7,8 @@ struct RowMenuButton<Items: View>: View {
     @ViewBuilder var items: () -> Items
 
     var body: some View {
-        Menu { items() } label: {
-            Image(systemName: "ellipsis.circle")
+        Menu { items().menuIcons() } label: {
+            Image(systemName: "ellipsis")
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -16,6 +16,28 @@ struct RowMenuButton<Items: View>: View {
         .tint(.secondary)
         .help("更多動作")
         .accessibilityLabel(Text("更多動作"))
+    }
+}
+
+/// 選單裡會刪掉、移除東西的項目：紅色的字和圖示（R101，參考 ChatGPT 桌面版）。macOS 的選單不會照 role 變色，
+/// 要自己上色；title 已經查過字串表（呼叫的地方用 `String(localized:)`）
+struct DestructiveMenuButton: View {
+    let title: String
+    var systemImage = "trash"
+    let action: () -> Void
+
+    init(_ title: String, systemImage: String = "trash", action: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.action = action
+    }
+
+    var body: some View {
+        Button(role: .destructive, action: action) {
+            Label { Text(verbatim: title).foregroundStyle(.red) } icon: { Image(systemName: systemImage).foregroundStyle(.red) }
+        }
+        // 選單的圖示用主色畫（字用前景色）
+        .tint(.red)
     }
 }
 
@@ -39,6 +61,9 @@ private struct RowMenuModifier<Items: View>: ViewModifier {
 }
 
 extension View {
+    /// 選單項目顯示圖示（macOS 的選單預設只顯示文字；R101，參考 ChatGPT 桌面版的選單）；圖示跟字同色，不用 app 的主色
+    func menuIcons() -> some View { labelStyle(.titleAndIcon).tint(.primary) }
+
     func rowMenu<Items: View>(selected: Bool = false, @ViewBuilder _ items: @escaping () -> Items) -> some View {
         modifier(RowMenuModifier(selected: selected, items: items))
     }
@@ -50,26 +75,29 @@ struct MeetingMenuItems: View {
     let ids: [Int64]
 
     var body: some View {
-        if model.showTrash {
-            Button("還原") { model.restore(ids) }
-            Button("永久刪除…", role: .destructive) { model.confirmPurge = ids }
-        } else if !ids.isEmpty {
-            if ids.count == 1, let id = ids.first {
-                Button("重新命名…") { model.requestRenameMeeting(id) }
+        Group {
+            if model.showTrash {
+                Button("還原", systemImage: "arrow.uturn.backward") { model.restore(ids) }
+                DestructiveMenuButton(String(localized: "永久刪除…")) { model.confirmPurge = ids }
+            } else if !ids.isEmpty {
+                if ids.count == 1, let id = ids.first {
+                    Button("重新命名…", systemImage: "pencil") { model.requestRenameMeeting(id) }
+                    Divider()
+                }
+                FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
+                SeriesMenu(meetingIds: ids)
                 Divider()
-            }
-            FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
-            SeriesMenu(meetingIds: ids)
-            Divider()
-            if ids.count == 1 {
-                Button("移到垃圾桶", role: .destructive) { model.moveToTrash(ids) }
-            } else {
-                Button("把 \(ids.count) 場會議移到垃圾桶…", role: .destructive) {
-                    model.deleteTargets = ids
-                    model.confirmDelete = true
+                if ids.count == 1 {
+                    DestructiveMenuButton(String(localized: "移到垃圾桶")) { model.moveToTrash(ids) }
+                } else {
+                    DestructiveMenuButton(String(localized: "把 \(ids.count) 場會議移到垃圾桶…")) {
+                        model.deleteTargets = ids
+                        model.confirmDelete = true
+                    }
                 }
             }
         }
+        .menuIcons()
     }
 }
 
@@ -79,10 +107,18 @@ struct FolderMenuItems: View {
     let folder: String
 
     var body: some View {
-        Button(model.folderRule(folder) == nil ? "自動加入的條件…" : "編輯自動加入的條件…") { model.editingFolderRule = folder }
-        Button("重新命名…") { model.folderPrompt = .rename(folder) }
-        Divider()
-        Button("刪除資料夾…", role: .destructive) { model.confirmDeleteFolder = folder }
+        Group {
+            // 點資料夾是展開、收起（R101），只看這個資料夾從這裡
+            Button("只看這個資料夾", systemImage: "line.3.horizontal.decrease") { model.showFolder(folder) }
+            Divider()
+            Button("重新命名…", systemImage: "pencil") { model.folderPrompt = .rename(folder) }
+            Button(model.folderRule(folder) == nil ? "自動加入的條件…" : "編輯自動加入的條件…", systemImage: "gearshape") {
+                model.editingFolderRule = folder
+            }
+            Divider()
+            DestructiveMenuButton(String(localized: "刪除資料夾…")) { model.confirmDeleteFolder = folder }
+        }
+        .menuIcons()
     }
 }
 
@@ -90,11 +126,20 @@ struct FolderMenuItems: View {
 struct SeriesMenuItems: View {
     @Environment(AppModel.self) private var model
     let series: MeetingSeries
+    /// 側欄：點定期會議是展開、收起（R101），系列頁從這裡打開；系列頁自己的「更多」不用
+    var inSidebar = false
 
     var body: some View {
-        Button("重新命名…") { model.renamingSeries = series.id }
-        Divider()
-        Button("刪除定期會議…", role: .destructive) { model.confirmDeleteSeries = series.id }
+        Group {
+            if inSidebar, let id = series.id {
+                Button("打開定期會議", systemImage: "arrow.up.forward.app") { model.openSeries(id) }
+                Divider()
+            }
+            Button("重新命名…", systemImage: "pencil") { model.renamingSeries = series.id }
+            Divider()
+            DestructiveMenuButton(String(localized: "刪除定期會議…")) { model.confirmDeleteSeries = series.id }
+        }
+        .menuIcons()
     }
 }
 
@@ -105,13 +150,16 @@ struct MeetingLinkMenuItems: View {
     var series: MeetingSeries? = nil
 
     var body: some View {
-        Button("打開這場會議") {
-            if series != nil { model.selection = meeting.id } else { model.openFromPersonPage(meeting.id ?? 0) }
+        Group {
+            Button("打開這場會議", systemImage: "arrow.up.forward.app") {
+                if series != nil { model.selection = meeting.id } else { model.openFromPersonPage(meeting.id ?? 0) }
+            }
+            if let series, let id = meeting.id {
+                Divider()
+                Button("移出「\(series.name)」", systemImage: "minus.circle") { model.setSeries([id], series: nil) }
+            }
         }
-        if let series, let id = meeting.id {
-            Divider()
-            Button("移出「\(series.name)」") { model.setSeries([id], series: nil) }
-        }
+        .menuIcons()
     }
 }
 
@@ -204,18 +252,21 @@ struct NoteItemMenuItems: View {
     let time: String
 
     var body: some View {
-        Button("拷貝") {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
+        Group {
+            Button("拷貝", systemImage: "doc.on.doc") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+            }
+            if let seconds = TimeFormat.seconds(time), model.player.isLoaded {
+                Button("從這裡播放", systemImage: "play") { model.player.seek(to: seconds) }
+            }
+            Divider()
+            Button("編輯這一條", systemImage: "pencil") { model.editingNoteItem = ref }
+                .disabled(!model.canEditNotes)
+            DestructiveMenuButton(String(localized: "刪除這一條")) { model.deleteNoteItem(ref) }
+                .disabled(!model.canEditNotes)
         }
-        if let seconds = TimeFormat.seconds(time), model.player.isLoaded {
-            Button("從這裡播放") { model.player.seek(to: seconds) }
-        }
-        Divider()
-        Button("編輯這一條") { model.editingNoteItem = ref }
-            .disabled(!model.canEditNotes)
-        Button("刪除這一條", role: .destructive) { model.deleteNoteItem(ref) }
-            .disabled(!model.canEditNotes)
+        .menuIcons()
     }
 }
 

@@ -2,45 +2,36 @@ import SwiftUI
 
 // MARK: - 定期會議（R99、design §73）
 
-/// 側欄的「定期會議」一段：有建議時第一列「發現 N 組可能的定期會議」，再來每個定期會議一列
-struct SeriesSidebarSection: View {
+/// 側欄「資料夾」那一段裡的定期會議（R101：樣子、操作都跟資料夾一樣，不另外一段）：有建議時第一列
+/// 「發現 N 組可能的定期會議」，再來每個定期會議一列（資料夾圖示加 ↻ 標記）
+struct SeriesSidebarRows: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if !model.series.isEmpty || !model.seriesCandidates.isEmpty {
-            // 段落可以收起；每個定期會議可以在原地展開最近的會議（R101、design §75）
-            Section {
-                if model.isSectionExpanded("series") {
-                    if !model.seriesCandidates.isEmpty {
-                        Button { model.showSeriesSuggestions = true } label: {
-                            HStack(spacing: 2) {
-                                Color.clear.frame(width: SidebarMetrics.chevron, height: 1)
-                                Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
-                                    .foregroundStyle(Color.celadon)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
-                    }
-                    ForEach(model.series) { series in
-                        let id = series.id ?? 0
-                        let key = AppModel.seriesKey(id)
-                        let count = model.seriesCount(id)
-                        FolderRow(name: series.name, count: count, symbol: "arrow.triangle.2.circlepath",
-                                  selected: model.sidebarMode == .meetings && model.seriesFilter == id,
-                                  disclosure: SidebarDisclosure(key: key, enabled: count > 0),
-                                  menu: { AnyView(SeriesMenuItems(series: series)) }) {
-                            model.openSeries(id)
-                        }
-                        .help(series.frequencyText)
-                        if count > 0 && model.isRowExpanded(key) {
-                            SidebarPeek(rows: model.peekRows(series: id)) { model.openSeries(id) }
-                        }
-                    }
-                }
-            } header: {
-                SidebarSectionHeader(title: String(localized: "定期會議"), key: "series")
+        if !model.seriesCandidates.isEmpty {
+            Button { model.showSeriesSuggestions = true } label: {
+                Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
+                    .foregroundStyle(Color.celadon)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
+        }
+        ForEach(model.series) { series in
+            let id = series.id ?? 0
+            let key = AppModel.seriesKey(id)
+            let expanded = model.isRowExpanded(key)
+            // 定期會議也是資料夾的樣子，右上角 ↻ 標記（R101）
+            FolderRow(name: series.name, count: model.seriesCount(id), symbol: "folder",
+                      selected: model.sidebarMode == .meetings && model.seriesFilter == id,
+                      folder: .init(expanded: expanded, badge: "arrow.triangle.2.circlepath"),
+                      menu: { AnyView(SeriesMenuItems(series: series, inSidebar: true)) }) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) }
+            }
+            .help(series.frequencyText)
+            if expanded {
+                SidebarPeek(rows: model.peekRows(series: id)) { model.openSeries(id) }
             }
         }
     }
@@ -347,7 +338,7 @@ struct SeriesMenu: View {
             }
         }
         if let current, let series = model.seriesById(current) {
-            Button("移出「\(series.name)」") { model.setSeries(meetingIds, series: nil) }
+            Button("移出「\(series.name)」", systemImage: "minus.circle") { model.setSeries(meetingIds, series: nil) }
         }
     }
 }

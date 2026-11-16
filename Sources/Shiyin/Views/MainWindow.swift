@@ -272,6 +272,7 @@ struct MultiSelectionView: View {
 
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var model = model
@@ -361,26 +362,26 @@ struct SidebarView: View {
                 model.reloadPeopleOverview()
             }
         }
-        SeriesSidebarSection()
-        if !model.folders.isEmpty {
-            // 段落可以收起；每個資料夾可以在原地展開最近的會議（R101、design §75）
+        if !model.folders.isEmpty || !model.series.isEmpty || !model.seriesCandidates.isEmpty {
+            // 段落可以收起；每個資料夾、定期會議可以在原地展開最近的會議。定期會議的樣子、操作都跟資料夾一樣，
+            // 放在同一段的最上面，不另外一段（R101、design §75）
             Section {
                 if model.isSectionExpanded("folders") {
+                    SeriesSidebarRows()
                     ForEach(model.folders, id: \.name) { folder in
-                        // 有自動加入條件的資料夾換圖示，滑過去看條件（design §72）
+                        // 有自動加入條件的資料夾加齒輪標記，滑過去看條件（design §72）
                         let rule = model.folderRule(folder.name)
                         let key = AppModel.folderKey(folder.name)
-                        let show = {
-                            model.sidebarMode = .meetings
-                            model.folderFilter = folder.name
-                        }
-                        FolderRow(name: folder.name, count: folder.count, symbol: rule == nil ? "folder" : "folder.badge.gearshape",
+                        let expanded = model.isRowExpanded(key)
+                        FolderRow(name: folder.name, count: folder.count, symbol: "folder",
                                   selected: !people && model.folderFilter == folder.name,
-                                  disclosure: SidebarDisclosure(key: key, enabled: folder.count > 0),
-                                  menu: { AnyView(FolderMenuItems(folder: folder.name)) }, action: show)
+                                  folder: .init(expanded: expanded, badge: rule == nil ? nil : "gearshape.fill"),
+                                  menu: { AnyView(FolderMenuItems(folder: folder.name)) }) {
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) }
+                        }
                         .help(rule.map { model.folderRuleSummary($0) } ?? "")
-                        if folder.count > 0 && model.isRowExpanded(key) {
-                            SidebarPeek(rows: model.peekRows(folder: folder.name), showAll: show)
+                        if expanded {
+                            SidebarPeek(rows: model.peekRows(folder: folder.name)) { model.showFolder(folder.name) }
                         }
                     }
                 }
@@ -397,6 +398,7 @@ struct SidebarView: View {
             .rowMenu(selected: selected) {
                 MeetingMenuItems(ids: selected && model.multiSelected.count > 1 ? model.multiSelected : [row.id])
             }
+            .sidebarHover()
             .tag(row.id)
     }
 
@@ -410,6 +412,7 @@ struct SidebarView: View {
                     ForEach(model.peopleOverview) { person in
                         PersonRow(person: person)
                             .rowMenu(selected: model.selectedPerson == person.id) { PersonMenuItems(person: person) }
+                            .sidebarHover()
                             .tag(person.id)
                             .contextMenu { PersonMenuItems(person: person) }
                     }
@@ -494,24 +497,32 @@ struct FolderRow: View {
     let count: Int
     let symbol: String
     let selected: Bool
-    /// 資料夾、定期會議：最前面的箭頭在原地展開最近的會議（R101）；沒有的列留同樣的空位，圖示才對齊
-    var disclosure: SidebarDisclosure? = nil
+    /// 資料夾、定期會議（R101）：點了在原地展開、收起，圖示換成打開或關著的資料夾（nil 是所有會議、人物這種一般的列）
+    var folder: FolderState? = nil
     var menu: (() -> AnyView)? = nil
     let action: () -> Void
     @State private var hovering = false
 
+    struct FolderState {
+        var expanded: Bool
+        /// 右上角的標記：齒輪（有自動加入條件）、↻（定期會議）
+        var badge: String?
+    }
+
     var body: some View {
         let showMenu = menu != nil && (hovering || selected)
         HStack {
-            HStack(spacing: 2) {
-                SidebarChevron(disclosure: disclosure, name: name)
-                Label(name, systemImage: symbol)
-                    .foregroundStyle(selected ? Color.celadon : .primary)
-                    .fontWeight(selected ? .semibold : .regular)
-                    // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）
-                    .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityAction(.default, action)
+            Label {
+                Text(name)
+            } icon: {
+                if let folder { FolderGlyph(open: folder.expanded, badge: folder.badge) } else { Image(systemName: symbol) }
             }
+            .foregroundStyle(selected ? Color.celadon : .primary)
+            .fontWeight(selected ? .semibold : .regular)
+            // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）；資料夾的值是展開了沒
+            .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityValue(folder.map { Text($0.expanded ? "已展開" : "已收起") } ?? Text(""))
+            .accessibilityAction(.default, action)
             Spacer()
             ZStack(alignment: .trailing) {
                 Text("\(count)").monospacedDigit().foregroundStyle(.secondary)
@@ -527,6 +538,7 @@ struct FolderRow: View {
         .onTapGesture(perform: action)
         .contextMenu { if let menu { menu() } }
         .onHover { hovering = $0 }
+        .sidebarHover()
     }
 }
 
@@ -549,16 +561,16 @@ struct FolderMenu: View {
                     Button(item.name) { model.moveToFolder(targets, folder: item.name) }
                 }
                 if !model.folders.isEmpty { Divider() }
-                Button("新資料夾…") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
-                Button("移出資料夾") { model.moveToFolder(targets, folder: "") }
+                Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
+                Button("移出資料夾", systemImage: "minus.circle") { model.moveToFolder(targets, folder: "") }
             } else if let folder = current {
                 ForEach(model.folders.filter { $0.name != folder }, id: \.name) { item in
                     Button(item.name) { model.moveToFolder(targets, folder: item.name) }
                 }
                 if !model.folders.filter({ $0.name != folder }).isEmpty { Divider() }
-                Button("新資料夾…") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
+                Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
                 if !folder.isEmpty {
-                    Button("移出「\(folder)」") { model.moveToFolder(targets, folder: "") }
+                    Button("移出「\(folder)」", systemImage: "minus.circle") { model.moveToFolder(targets, folder: "") }
                 }
             }
         }

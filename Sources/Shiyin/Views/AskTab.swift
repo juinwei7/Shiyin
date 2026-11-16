@@ -93,7 +93,7 @@ struct AskInputBar: View {
                     .disabled(busy || question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.askUnavailableReason != nil)
                 if let onClear {
                     Menu {
-                        Button("清除問答紀錄", role: .destructive, action: onClear)
+                        DestructiveMenuButton(String(localized: "清除問答紀錄"), action: onClear)
                     } label: { Image(systemName: "ellipsis.circle") }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
