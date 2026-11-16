@@ -15,7 +15,7 @@
 ## 心智圖放大縮小、每個人的重點（R91、R92，design §65、§66；2026-11-16 使用者新需求）
 
 - [~] **MZ1 Mac 心智圖放大縮小**（§65）：程式完成，`clickat` 按過（2026-11-16，見 commit 訊息）。還差（要使用者）：觸控板兩指開合
-- [~] **MZ2、PP2 Windows**（design-windows §11.24、§11.25）：程式完成，`dotnet test`、虛擬機用 `uia.sh`、`wheel.ps1 ctrl` 按過（2026-11-16，見 commit 訊息）。還差：`shared/golden/expected/llm/mac-requests.jsonl` 要用 Mac 的 DEBUG 版接 `fake-llm-server.py` 重錄（Mac 現在送的 schema 多了 people；把錄下來的舊 schema 換成 `schemas/notes.json` 後四筆 body 跟 Windows 完全相同），重錄後 `LLMTests.SameBodiesAsMacRequests` 才會過；精確式觸控板的捏合縮放（要真的 Windows 筆電，虛擬機只送得出滑鼠的 Ctrl＋滾輪）
+- [~] **MZ2、PP2 Windows**（design-windows §11.24、§11.25）：程式完成，`dotnet test`、虛擬機用 `uia.sh`、`wheel.ps1 ctrl` 按過（2026-11-16，見 commit 訊息）。還差：精確式觸控板的捏合縮放（要真的 Windows 筆電，虛擬機只送得出滑鼠的 Ctrl＋滾輪）
 
 ## 沒人講話時編出整句（design §6.2；2026-11-16 驗 GitHub #9 時發現）
 
