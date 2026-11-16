@@ -187,8 +187,9 @@ public sealed class TranscriptTab
     {
         bars.Children.Clear();
         var d = detail!;
-        var warm = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(20, 0xB9, 0x7F, 0x06));
-        Border Bar(FrameworkElement content) => new() { Child = content, Padding = new Thickness(20, 8, 20, 8), Background = warm };
+        var warm = Ui.Tint(Ui.SignalColor, 20 / 255.0);
+        // 對比主題時沒有底色、一圈細框（Ui.Tinted）
+        Border Bar(FrameworkElement content) => Ui.Tinted(new Border { Child = content, Padding = new Thickness(20, 8, 20, 8) }, warm);
         var id = d.Meeting.Id!.Value;
         // 信心低的圖例自己一行（放在搜尋列裡，視窗窄時會把「用詞修正…」擠出畫面，2026-10-21 在虛擬機看到）
         if (d.Segments.Any(s => s.LowConfidence))
@@ -394,13 +395,19 @@ public sealed class TranscriptTab
         // 說話者欄放頭像加名字（M§58.2），比原本寬一點（同 Mac 的 72 → 96）
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(d.Speakers.Count > 0 || segment.Speaker is not null ? Ui.C(104) : 0) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        if (segment.Id == currentId) grid.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(34, 0x2D, 0x6A, 0x5D));
-        else if (segment.Id == highlightId) grid.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(46, 0xB9, 0x7F, 0x06));
+        if (segment.Id == currentId) grid.Background = Ui.Tint(Ui.CeladonColor, 34 / 255.0);
+        else if (segment.Id == highlightId) grid.Background = Ui.Tint(Ui.SignalColor, 46 / 255.0);
         if (segment.LowConfidence)
         {
             grid.BorderBrush = Ui.Signal;
             grid.BorderThickness = new Thickness(3, 0, 0, 0);
             ToolTipService.SetToolTip(grid, L.T("辨識信心低，建議對照錄音確認"));
+        }
+        // 對比主題：目前播放、跳過來的段落沒有底色（Ui.Tint 透明），改成一圈框（目前播放的是反白的顏色）；信心低的左邊照樣粗一點
+        if (Ui.HighContrast && (segment.Id == currentId || segment.Id == highlightId))
+        {
+            grid.BorderBrush = segment.Id == currentId ? Ui.Celadon : Ui.Primary;
+            grid.BorderThickness = new Thickness(segment.LowConfidence ? 3 : 2, 2, 2, 2);
         }
         var time = (FrameworkElement)Ui.Time(TimeFormat.String(segment.Start), host.Player.IsLoaded ? s => host.Player.Seek(s) : null, segment.Start, Ui.C(13));
         time.HorizontalAlignment = HorizontalAlignment.Right;
@@ -414,7 +421,7 @@ public sealed class TranscriptTab
             avatar.VerticalAlignment = VerticalAlignment.Center;
             var speaker = new HyperlinkButton
             {
-                Content = Ui.Split(avatar, Ui.Text(d.SpeakerName(idx) ?? "", Ui.C(13), bold: true, color: Ui.Speaker(idx), wrap: false), 6), Padding = new Thickness(0),
+                Content = Ui.FollowForeground(Ui.Split(avatar, Ui.Text(d.SpeakerName(idx) ?? "", Ui.C(13), bold: true, color: Ui.Speaker(idx), wrap: false), 6)), Padding = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Top, HorizontalContentAlignment = HorizontalAlignment.Left,
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(speaker, d.SpeakerName(idx) ?? "");
@@ -460,6 +467,12 @@ public sealed class TranscriptTab
     {
         // 字的顏色要給：預設是黑色，深色模式下標起來的字幾乎看不見（2026-10-22 介面巡檢）
         var h = new TextHighlighter { Background = new SolidColorBrush(color), Foreground = Ui.Primary };
+        if (Ui.HighContrast)
+        {
+            // 對比主題：反白的底、反白的字（系統色成對用）
+            h.Background = Ui.SystemBrush(Windows.UI.ViewManagement.UIElementType.Highlight);
+            h.Foreground = Ui.SystemBrush(Windows.UI.ViewManagement.UIElementType.HighlightText);
+        }
         h.Ranges.Add(new TextRange(start, length));
         return h;
     }

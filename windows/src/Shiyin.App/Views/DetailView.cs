@@ -298,7 +298,7 @@ public sealed class DetailView
         {
             // 點名字重新命名、右鍵：重新命名…、合併到 ▸（R100，同逐字稿點說話者）
             name.VerticalAlignment = VerticalAlignment.Center;
-            var chip = new HyperlinkButton { Content = Ui.Row(5, avatar, name), Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
+            var chip = new HyperlinkButton { Content = Ui.FollowForeground(Ui.Row(5, avatar, name)), Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
             var rename = SpeakerRenameFlyout(idx);
             chip.Click += (_, _) => rename.ShowAt(chip);
             chip.ContextFlyout = SpeakerMenu(idx, chip, rename);
@@ -318,7 +318,7 @@ public sealed class DetailView
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Ui.Item(L.F("不是%@（不知道是誰）", Detail.Speakers[idx]), () => host.Controller.RejectVoiceprintMatch(meeting.Id!.Value, idx)));
         // 頭像也放進按鈕裡：點頭像、點名字都打開同一個選單（R83.2）
-        var button = new HyperlinkButton { Content = Ui.Row(5, avatar, name), Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
+        var button = new HyperlinkButton { Content = Ui.FollowForeground(Ui.Row(5, avatar, name)), Padding = new Thickness(0), MinHeight = 0, VerticalAlignment = VerticalAlignment.Center };
         button.Click += (_, _) => menu.ShowAt(button);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, L.F("%@（自動）", Detail.Speakers[idx]));
         var badge = new Border
@@ -469,7 +469,8 @@ public sealed class DetailView
         if (left is FrameworkElement l) l.VerticalAlignment = VerticalAlignment.Center;
         if (right is FrameworkElement rr) rr.VerticalAlignment = VerticalAlignment.Center;
         var bar = right is FrameworkElement r ? Ui.Bar(null, left as FrameworkElement, r, 12) : (FrameworkElement)left;
-        return new Border { Child = bar, Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8), Background = background };
+        // 對比主題時沒有底色、一圈細框（Ui.Tinted）
+        return Ui.Tinted(new Border { Child = bar, Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) }, background);
     }
 
     Border TrashBanner()
@@ -981,7 +982,7 @@ public sealed class LevelMeter
         for (var i = 0; i < segments; i++)
         {
             var lit = i < level * segments;
-            bars[i].Fill = !lit ? colors?.Off ?? Ui.Subtle : i >= segments - 3 ? colors?.Peak ?? Ui.Signal : colors?.On ?? Ui.Celadon;
+            bars[i].Fill = !lit ? colors?.Off ?? Ui.Track : i >= segments - 3 ? colors?.Peak ?? Ui.Signal : colors?.On ?? Ui.Celadon;
         }
     }
 }

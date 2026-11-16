@@ -96,7 +96,7 @@ public static partial class Dialogs
                 var date = Ui.Text(meeting.Meeting.MeetingDate, 13, color: Ui.Secondary, wrap: false);
                 var title = Ui.Text(meeting.Meeting.DisplayTitle, 13, wrap: false);
                 title.Language = Ui.ContentLanguage(meeting.Meeting.MeetingLanguage);
-                var check = new CheckBox { Content = Ui.Row(12, date, title), IsChecked = true };
+                var check = new CheckBox { Content = Ui.FollowForeground(Ui.Row(12, date, title)), IsChecked = true };   // 對比主題：字跟著勾選框的前景色
                 AutomationProperties.SetName(check, $"{meeting.Meeting.MeetingDate} {meeting.Meeting.DisplayTitle}");
                 var meetingId = id;
                 check.Checked += (_, _) => { chosen.Add(meetingId); dialog.IsPrimaryButtonEnabled = chosen.Count >= 2; };

@@ -28,7 +28,7 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
         var rows = window.State.Meetings.Where(m => m.Meeting.SeriesId == id).ToList();
         var items = SeriesOpenItems.Compute(host.Db.SeriesMeetings(id));
         var regulars = Organizing.Regulars(id, window.State.Meetings, window.State.MeetingPeople, window.State.People);
-        var key = string.Join('\u001F', series.Id, series.Name, series.FrequencyText, Ui.IsDark, Ui.ContentScale,
+        var key = string.Join('\u001F', series.Id, series.Name, series.FrequencyText, Ui.ThemeKey, Ui.ContentScale,
             string.Join(',', rows.Select(r => $"{r.Id}|{r.Meeting.DisplayTitle}|{r.Meeting.MeetingDate}|{r.Meeting.DurationSeconds}")),
             string.Join(',', regulars.Select(p => $"{p.Id}|{p.Name}|{p.IsMe}")),
             string.Join(',', items.Select(i => $"{i.Meeting.Id}|{i.Meeting.DisplayTitle}|{i.Index}|{i.Item}")));
@@ -88,13 +88,12 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
         delete.Click += (_, _) => _ = window.ConfirmDeleteSeries(series.Id ?? 0);
         var info = Ui.Column(4, title, Ui.Text(Organizing.SeriesSummaryLine(series, rows), 14, color: Ui.Secondary), delete);
         info.VerticalAlignment = VerticalAlignment.Center;
-        var c = Ui.CeladonColor;
-        var icon = new Border
+        // 對比主題時沒有底色、一圈細框（Ui.Tinted）
+        var icon = Ui.Tinted(new Border
         {
             Width = 52, Height = 52, CornerRadius = new CornerRadius(26), VerticalAlignment = VerticalAlignment.Center,
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(31, c.R, c.G, c.B)),
             Child = new SymbolIcon(Symbol.Sync) { Foreground = Ui.Celadon, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
-        };
+        }, Ui.Tint(Ui.CeladonColor, 31 / 255.0));
         var more = MoreMenu(series, rename);
         more.VerticalAlignment = VerticalAlignment.Top;
         var header = Ui.Bar(icon, info, more, 16);
@@ -158,7 +157,7 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
             label.VerticalAlignment = VerticalAlignment.Center;
             var button = new Button
             {
-                Content = Ui.Row(6, avatar, label), Padding = new Thickness(4, 2, 6, 2),
+                Content = Ui.FollowForeground(Ui.Row(6, avatar, label)), Padding = new Thickness(4, 2, 6, 2),
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0),
             };
             ToolTipService.SetToolTip(button, L.T("打開人物頁"));
@@ -218,7 +217,9 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
         var id = entry.Meeting.Id ?? 0;
         var content = Ui.Row(6, Ui.Text(entry.Meeting.MeetingDate, Ui.C(13), wrap: false),
             entry.Item.Time.Length > 0 ? Ui.Text(entry.Item.Time, Ui.C(13), color: Ui.Celadon, wrap: false) : null);
-        var button = new HyperlinkButton { Content = content, Padding = new Thickness(0), Foreground = Ui.Primary, VerticalAlignment = VerticalAlignment.Top };
+        // 對比主題：字跟著超連結的顏色（自己給的文字顏色、反白的顏色會讓它看起來不像連結，滑過去也不會反白）
+        var button = new HyperlinkButton { Content = Ui.FollowForeground(content), Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Top };
+        if (!Ui.HighContrast) button.Foreground = Ui.Primary;
         ToolTipService.SetToolTip(button, L.T("打開這場會議，從這裡開始播放"));
         AutomationProperties.SetName(button, entry.Item.Time.Length > 0 ? $"{entry.Meeting.MeetingDate} {entry.Item.Time}" : entry.Meeting.MeetingDate);
         button.Click += (_, _) =>
@@ -243,7 +244,8 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
                 : Ui.Text(L.Ui(TimeFormat.Duration(meeting.DurationSeconds, MeetingLanguages.Interface)), Ui.C(13), color: Ui.Secondary, wrap: false);
             var button = new Button
             {
-                Content = Ui.Bar(date, title, length, 14), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                // 對比主題：字跟著按鈕的前景色（滑過去是反白的字，Ui.FollowForeground）
+                Content = Ui.FollowForeground(Ui.Bar(date, title, length, 14)), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0), Padding = new Thickness(6, 4, 6, 4),
             };
             ToolTipService.SetToolTip(button, L.T("打開這場會議"));
@@ -343,11 +345,11 @@ public static class FollowUpIcons
         {
             case FollowUpStatus.Done:
                 grid.Children.Add(new Ellipse { Fill = color });
-                // \u6253\u52FE\u662F\u5167\u5BB9\u7684\u5E95\u8272\uFF08\u540C Mac \u7684 checkmark.circle.fill \u93E4\u7A7A\uFF09\uFF1A\u6DF1\u8272\u6A21\u5F0F\u7684\u9752\u74F7\u7DA0\u6BD4\u8F03\u4EAE\uFF0C\u767D\u8272\u7684\u52FE\u5728\u4E0A\u9762\u770B\u4E0D\u6E05\u695A\uFF082026-11-16 \u6DF1\u8272\u5DE1\u6AA2\uFF09
+                // 打勾是內容的底色（同 Mac 的 checkmark.circle.fill 鏤空）：深色模式的青瓷綠比較亮，白色的勾在上面看不清楚（2026-11-16 深色巡檢）。對比主題時是反白的字（Ui.OnCeladon）
                 grid.Children.Add(new FontIcon
                 {
                     Glyph = "\uE73E", FontSize = size * 0.6,
-                    Foreground = new SolidColorBrush(Ui.IsDark ? Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20) : Microsoft.UI.Colors.White),
+                    Foreground = Ui.OnCeladon,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 });
                 break;

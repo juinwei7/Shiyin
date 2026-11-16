@@ -33,7 +33,7 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         }
         var meetings = host.Db.PersonMeetings(person.Id);
         var items = host.Db.PersonActionItems(person.Name);
-        var key = string.Join('\u001F', person, Ui.IsDark, Ui.ContentScale, string.Join(',', window.State.People.Select(p => p.Id + p.Name)),
+        var key = string.Join('\u001F', person, Ui.ThemeKey, Ui.ContentScale, string.Join(',', window.State.People.Select(p => p.Id + p.Name)),
             string.Join(',', meetings.Select(m => $"{m.Id}|{m.Meeting.DisplayTitle}|{m.Meeting.MeetingDate}|{m.Seconds}")),
             string.Join(',', items.Select(i => $"{i.Meeting.Id}|{i.Meeting.DisplayTitle}|{i.Index}|{i.Item}")));
         if (key == shownKey && shown is not null) return shown;
@@ -307,7 +307,9 @@ public sealed class PersonPage(AppHost host, MainWindow window)
             Grid.SetColumn(time, 1);
             content.Children.Add(time);
         }
-        var button = new HyperlinkButton { Content = content, Padding = new Thickness(0), Foreground = Ui.Primary, VerticalAlignment = VerticalAlignment.Top };
+        // 對比主題：字跟著超連結的顏色（自己給的文字顏色、反白的顏色會讓它看起來不像連結，滑過去也不會反白）
+        var button = new HyperlinkButton { Content = Ui.FollowForeground(content), Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Top };
+        if (!Ui.HighContrast) button.Foreground = Ui.Primary;
         ToolTipService.SetToolTip(button, L.T("打開這場會議，從這裡開始播放"));
         AutomationProperties.SetName(button, entry.Item.Time.Length > 0 ? $"{entry.Meeting.DisplayTitle} {entry.Item.Time}" : entry.Meeting.DisplayTitle);
         button.Click += (_, _) => Open(id, TimeFormat.Seconds(entry.Item.Time));
@@ -327,7 +329,8 @@ public sealed class PersonPage(AppHost host, MainWindow window)
             var row = Ui.Bar(date, title, spoke, 14);
             var button = new Button
             {
-                Content = row, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                // 對比主題：字跟著按鈕的前景色（滑過去是反白的字，Ui.FollowForeground）
+                Content = Ui.FollowForeground(row), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0), Padding = new Thickness(6, 4, 6, 4),
             };
             ToolTipService.SetToolTip(button, L.T("打開這場會議"));

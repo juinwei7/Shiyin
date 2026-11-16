@@ -166,6 +166,8 @@ public sealed class MainWindow : Window
         toastTimer.Tick += (_, _) => { toast.IsOpen = false; toastTimer.Stop(); };
         // 換深淺色：列表的顏色是建列時給的，要重建
         root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); restyle.ForEach(a => a()); listSignature = null; Refresh(); };
+        // 對比主題開關、換一個對比主題（ActualTheme 不會變）：同樣重新給顏色、重畫（design-windows §11.3）
+        Ui.OnContrastChanged(root, () => { restyle.ForEach(a => a()); listSignature = null; Refresh(); });
         Ui.SetTheme(root.ActualTheme);
         restyle.ForEach(a => a());
         State.Reload();
@@ -180,6 +182,7 @@ public sealed class MainWindow : Window
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var sidebar = Ui.SidebarBackground(new Grid { BorderBrush = Ui.Divider, BorderThickness = new Thickness(0, 0, 1, 0) });
+        restyle.Add(() => sidebar.BorderBrush = Ui.Divider);
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             sidebar.RowDefinitions.Add(new RowDefinition { Height = h });
         Place(sidebar, toolbar, 0);
@@ -549,7 +552,7 @@ public sealed class MainWindow : Window
         if (hidden) return;
         var people = State.Sidebar == SidebarMode.People;
         var all = Organizing.Folders(State.Meetings, State.FolderRules);
-        var signature = string.Join('\u001F', [State.Meetings.Count.ToString(), State.People.Count.ToString(), Ui.IsDark.ToString(),
+        var signature = string.Join('\u001F', [State.Meetings.Count.ToString(), State.People.Count.ToString(), Ui.ThemeKey,
             .. all.Select(f => $"{f.Name}\u001E{f.Count}\u001E{(State.RuleFor(f.Name) is { } rule ? RuleTip(rule) : "")}"),
             "series", State.SeriesCandidates.Count.ToString(), .. State.Series.Select(x => $"{x.Id}\u001E{x.Name}\u001E{x.FrequencyText}\u001E{State.SeriesCount(x.Id ?? 0)}")]);
         if (signature != scopesSignature)
@@ -633,7 +636,7 @@ public sealed class MainWindow : Window
         var badge = new Border
         {
             Width = 13, Height = 13, CornerRadius = new CornerRadius(6.5), Child = gear,
-            Background = new SolidColorBrush(Ui.HexColor(Ui.IsDark ? "#2B2B2B" : "#F7F7F7")),
+            Background = Ui.SidebarColor,
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, -4, -4),
         };
         return new Grid { Width = 20, Height = 20, Children = { new SymbolIcon(Symbol.Folder), badge } };
@@ -647,7 +650,7 @@ public sealed class MainWindow : Window
         var item = new ListViewItem
         {
             Tag = new Scope(false, null, Suggestions: true), HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36,
-            Content = Ui.Bar(icon, Ui.Text(text, 14, color: Ui.Celadon, wrap: false), null, 10),
+            Content = Ui.FollowForeground(Ui.Bar(icon, Ui.Text(text, 14, color: Ui.Celadon, wrap: false), null, 10)),
         };
         ToolTipService.SetToolTip(item, L.T("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦"));
         AutomationProperties.SetName(item, text);
@@ -674,7 +677,7 @@ public sealed class MainWindow : Window
         var item = new ListViewItem
         {
             Tag = scope, HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36,
-            Content = Ui.Bar(icon, Ui.Text(name, 14, wrap: false), right, 10),
+            Content = Ui.FollowForeground(Ui.Bar(icon, Ui.Text(name, 14, wrap: false), right, 10)),
         };
         AutomationProperties.SetName(item, name + MeetingLanguages.Ui("，", ", ") + count);
         if (fill is not null && more is not null)
@@ -849,7 +852,7 @@ public sealed class MainWindow : Window
                 {
                     var snippet = Ui.Text(hit.Snippet, 13, maxLines: 3);
                     if (meeting is not null) snippet.Language = Ui.ContentLanguage(meeting.MeetingLanguage);
-                    var hitItem = new ListViewItem { Tag = hit, Content = Ui.Column(2, Ui.Caption(KindLabel(hit.Kind)), snippet) };
+                    var hitItem = new ListViewItem { Tag = hit, Content = Ui.FollowForeground(Ui.Column(2, Ui.Caption(KindLabel(hit.Kind)), snippet)) };
                     AutomationProperties.SetName(hitItem, KindLabel(hit.Kind) + MeetingLanguages.Ui("：", ": ") + hit.Snippet);
                     list.Items.Add(hitItem);
                 }
@@ -940,7 +943,7 @@ public sealed class MainWindow : Window
             row.Children.Add(avatar);
             row.Children.Add(text);
             row.Children.Add(more);
-            var item = new ListViewItem { Tag = person, Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            var item = new ListViewItem { Tag = person, Content = Ui.FollowForeground(row), HorizontalContentAlignment = HorizontalAlignment.Stretch };
             // 列裡是好幾個元件：螢幕閱讀器、UI Automation 讀的名稱
             AutomationProperties.SetName(item, name + MeetingLanguages.Ui("，", ", ") + summary);
             item.ContextFlyout = RowMore.Context(Fill);
@@ -1017,7 +1020,7 @@ public sealed class MainWindow : Window
         var content = Ui.Split(column, more, 4, new GridLength(1, GridUnitType.Star));
         Grid.SetColumn(column, 0);
         content.ColumnDefinitions[1].Width = GridLength.Auto;
-        var item = new ListViewItem { Tag = row.Id, Content = content, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        var item = new ListViewItem { Tag = row.Id, Content = Ui.FollowForeground(content), HorizontalContentAlignment = HorizontalAlignment.Stretch };
         RowMore.Attach(item, more, () => item.IsSelected);
         return new RowView(item, column, status);
     }
@@ -1029,7 +1032,9 @@ public sealed class MainWindow : Window
         if (view.Status.Text != status.Label)
         {
             view.Status.Text = status.Label;
-            view.Status.Foreground = status switch
+            // 對比主題：跟著列的前景色（選到、滑過時是反白的字），不用自己的顏色（Ui.FollowForeground）
+            if (Ui.HighContrast) view.Status.ClearValue(TextBlock.ForegroundProperty);
+            else view.Status.Foreground = status switch
             {
                 MeetingStatus.Recording or MeetingStatus.Failed => Ui.Danger,
                 MeetingStatus.Queued or MeetingStatus.Transcribing or MeetingStatus.Summarizing or MeetingStatus.Review => Ui.Signal,

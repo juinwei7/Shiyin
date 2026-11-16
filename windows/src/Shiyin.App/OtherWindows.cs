@@ -50,7 +50,7 @@ public static class OtherWindows
             progress.Children.Clear();
             for (var i = 0; i < titles.Length; i++)
             {
-                var bar = new Microsoft.UI.Xaml.Shapes.Rectangle { Height = 4, RadiusX = 2, RadiusY = 2, Fill = i <= step ? Ui.Celadon : Ui.Subtle };
+                var bar = new Microsoft.UI.Xaml.Shapes.Rectangle { Height = 4, RadiusX = 2, RadiusY = 2, Fill = i <= step ? Ui.Celadon : Ui.Track };
                 Grid.SetColumn(bar, i);
                 progress.Children.Add(bar);
             }
@@ -364,7 +364,7 @@ public static class OtherWindows
             var number = new Border
             {
                 Width = 24, Height = 24, CornerRadius = new CornerRadius(12), Background = Ui.Celadon, VerticalAlignment = VerticalAlignment.Top,
-                Child = new TextBlock { Text = $"{i + 1}", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White) },
+                Child = new TextBlock { Text = $"{i + 1}", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.HighContrast ? Ui.OnCeladon : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White) },
             };
             column.Children.Add(Ui.Split(number, Ui.Column(6, Ui.Heading(steps[i].Title, MeetingLanguage.Zh), Ui.Text(steps[i].Body, select: true)), 14));
         }
