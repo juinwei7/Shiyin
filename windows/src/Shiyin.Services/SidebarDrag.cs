@@ -4,19 +4,19 @@ using Shiyin.Localization;
 namespace Shiyin.Services;
 
 /// <summary>
-/// 側欄的拖曳（R103、M§77、design-windows §11.36，同 Mac 的 Store/SidebarDrag.swift）：「資料夾」那一段（定期會議、資料夾）拖曳排好的順序，
-/// 存在 settings.json 的 sidebarOrder（字串陣列，照順序；鍵同 sidebarExpanded：folder:名稱、series:id）；拖一場會議時帶哪幾場
+/// 側欄的拖曳（R103、M§77、design-windows §11.36，同 Mac 的 Store/SidebarDrag.swift）：「資料夾」那一段拖曳排好的順序，
+/// 存在 settings.json 的 sidebarOrder（字串陣列，照順序；鍵同 sidebarExpanded：folder:名稱）；拖一場會議時帶哪幾場
 /// </summary>
 public static class SidebarDrag
 {
-    /// <summary>DataPackage 的自訂格式（只在拾音裡面）：拖的會議（id 用逗號分開）、拖的資料夾或定期會議（鍵）</summary>
+    /// <summary>DataPackage 的自訂格式（只在拾音裡面）：拖的會議（id 用逗號分開）、拖的資料夾（鍵）</summary>
     public const string MeetingFormat = "com.weiwei.shiyin.meeting-ids";
     public const string ItemFormat = "com.weiwei.shiyin.sidebar-item";
 
     public static List<string> Order(AppSettings settings) => settings.StringList(AppSettings.SidebarOrderKey);
 
     /// <summary>
-    /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照預設（defaults：定期會議在前、資料夾照名稱）
+    /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照預設（defaults：資料夾照名稱）
     /// </summary>
     public static List<string> Sorted(IReadOnlyList<string> defaults, IReadOnlyList<string> order)
     {
@@ -31,7 +31,7 @@ public static class SidebarDrag
     public static List<string> Sorted(AppSettings settings, IReadOnlyList<string> defaults) => Sorted(defaults, Order(settings));
 
     /// <summary>
-    /// 把一個資料夾或定期會議拖到另一個的前面或後面（current 是畫面上的順序）；整段的順序寫回 sidebarOrder。回傳有沒有寫（設定改了才重畫）
+    /// 把一個資料夾拖到另一個的前面或後面（current 是畫面上的順序）；整段的順序寫回 sidebarOrder。回傳有沒有寫（設定改了才重畫）
     /// </summary>
     public static bool Move(AppSettings settings, IReadOnlyList<string> current, string key, string target, bool before)
     {
@@ -64,7 +64,7 @@ public static class SidebarDrag
         Save(settings, keys);
     }
 
-    /// <summary>刪除資料夾、定期會議：拿掉它的鍵</summary>
+    /// <summary>刪除資料夾：拿掉它的鍵</summary>
     public static void Remove(AppSettings settings, string key)
     {
         var keys = Order(settings);
@@ -79,9 +79,9 @@ public static class SidebarDrag
     public static List<long> Decode(string text) =>
         text.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => long.TryParse(x, out var v) ? v : 0).Where(v => v > 0).ToList();
 
-    /// <summary>下面列表的標題能不能收會議（R103.1）：在看資料夾、定期會議，或是「其他會議」；看所有會議、篩選中、垃圾桶、人物時不行</summary>
-    public static bool HeaderAccepts(bool trash, bool people, string? folderFilter, long? seriesFilter, bool othersOnly) =>
-        !trash && !people && (folderFilter is not null || seriesFilter is not null || othersOnly);
+    /// <summary>下面列表的標題能不能收會議（R103.1）：在看資料夾，或是「其他會議」；看所有會議、篩選中、垃圾桶、人物時不行</summary>
+    public static bool HeaderAccepts(bool trash, bool people, string? folderFilter, bool othersOnly) =>
+        !trash && !people && (folderFilter is not null || othersOnly);
 
     static bool Save(AppSettings settings, List<string> keys)
     {
@@ -94,24 +94,17 @@ public static class SidebarDrag
 public sealed partial class AppController
 {
     /// <summary>
-    /// 會議拖到下面列表的標題（R103.1，同 Mac 的 dropOnListHeader）：在看資料夾＝移進去、在看定期會議＝加進去、
-    /// 「其他會議」＝移出資料夾和定期會議（移出資料夾的提示照 MoveToFolder；只移出定期會議時「已移出定期會議」）
+    /// 會議拖到下面列表的標題（R103.1，同 Mac 的 dropOnListHeader）：在看資料夾＝移進去、「其他會議」＝移出資料夾（提示照 MoveToFolder）
     /// </summary>
-    public void DropOnListHeader(IReadOnlyList<long> ids, string? folderFilter, long? seriesFilter, bool othersOnly)
+    public void DropOnListHeader(IReadOnlyList<long> ids, string? folderFilter, bool othersOnly)
     {
         if (ids.Count == 0) return;
         if (folderFilter is not null) MoveToFolder(ids, folderFilter);
-        else if (seriesFilter is long series) SetSeries(ids, series);
         else if (othersOnly)
         {
-            var meetings = ids.Select(Db.Meeting).OfType<Model.Meeting>().ToList();
-            var inSeries = meetings.Where(m => m.SeriesId is not null).Select(m => m.Id!.Value).ToList();
-            var inFolder = meetings.Where(m => m.Folder.Length > 0).Select(m => m.Id!.Value).ToList();
-            if (inSeries.Count > 0) SetSeries(inSeries, null);
+            var inFolder = ids.Select(Db.Meeting).OfType<Model.Meeting>().Where(m => m.Folder.Length > 0).Select(m => m.Id!.Value).ToList();
             if (inFolder.Count > 0) MoveToFolder(inFolder, "");
-            if (inSeries.Count == 0 && inFolder.Count == 0)
-                Notice?.Invoke(ids.Count == 1 ? L.T("這場會議沒有在任何資料夾裡") : L.T("這些會議都沒有在資料夾裡"));
-            else if (inFolder.Count == 0) Notice?.Invoke(L.T("已移出定期會議"));
+            else Notice?.Invoke(ids.Count == 1 ? L.T("這場會議沒有在任何資料夾裡") : L.T("這些會議都沒有在資料夾裡"));
         }
     }
 }

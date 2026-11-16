@@ -4,14 +4,13 @@ namespace Shiyin.Services;
 
 /// <summary>
 /// 重新命名的對話框要改的東西（R102、M§76、design-windows §11.35，同 Mac 的 Store/RenameTarget.swift）：
-/// 會議、資料夾、新資料夾（建立後把這幾場會議移進去）、定期會議、人物、重點標記
+/// 會議、資料夾、新資料夾（建立後把這幾場會議移進去）、人物、重點標記（定期會議 D177 拿掉）
 /// </summary>
 public abstract record RenameTarget
 {
     public sealed record Meeting(long Id) : RenameTarget;
     public sealed record Folder(string Name) : RenameTarget;
     public sealed record NewFolder(IReadOnlyList<long> Ids) : RenameTarget;
-    public sealed record Series(long Id) : RenameTarget;
     public sealed record Person(long Id) : RenameTarget;
     public sealed record Bookmark(long Id) : RenameTarget;
 
@@ -21,7 +20,6 @@ public abstract record RenameTarget
         Meeting m => $"meeting({m.Id})",
         Folder f => $"folder(\"{f.Name}\")",
         NewFolder n => $"newFolder([{string.Join(", ", n.Ids)}])",
-        Series s => $"series({s.Id})",
         Person p => $"person({p.Id})",
         Bookmark b => $"bookmark({b.Id})",
         _ => "",
@@ -72,7 +70,6 @@ public sealed partial class AppController
     {
         RenameTarget.Meeting m => Db.Meeting(m.Id) is { } meeting ? (meeting.Title.Length == 0 ? meeting.DisplayTitle : meeting.Title) : "",
         RenameTarget.Folder f => f.Name,
-        RenameTarget.Series s => Db.Series().FirstOrDefault(x => x.Id == s.Id)?.Name ?? "",
         RenameTarget.Person p => Db.PeopleOverview().FirstOrDefault(x => x.Id == p.Id)?.Name ?? "",
         RenameTarget.Bookmark b => Db.Bookmark(b.Id)?.Label ?? "",
         _ => "",
@@ -96,7 +93,6 @@ public sealed partial class AppController
             // 「+」建的是空的資料夾（R104），從會議的選單建的會把會議移進去
             case RenameTarget.NewFolder n when n.Ids.Count == 0: CreateFolder(trimmed); break;
             case RenameTarget.NewFolder n: MoveToFolder(n.Ids, trimmed); break;
-            case RenameTarget.Series s: RenameSeries(s.Id, trimmed); break;
             case RenameTarget.Person p: RenamePerson(p.Id, trimmed); break;
             case RenameTarget.Bookmark b:
                 if (Db.Bookmark(b.Id) is { } bookmark) RenameBookmark(bookmark.MeetingId, b.Id, trimmed);

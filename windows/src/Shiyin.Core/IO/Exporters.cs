@@ -35,14 +35,6 @@ public sealed record ExportText(MeetingLanguage Language)
     public string Due => Language.Text("期限", "Due", "期限");
     public string Time => Language.Text("時間點", "Time", "時刻");
     public string Unassigned => Language.Text("未指定", "Unassigned", "未定");
-    /// <summary>定期會議的「上次的待辦」（M§73）</summary>
-    public string FollowUps => Language.Text("上次的待辦", "Action items from last time", "前回のアクションアイテム");
-    public string Status(FollowUpStatus status) => status switch
-    {
-        FollowUpStatus.Done => Language.Text("完成", "Done", "完了"),
-        FollowUpStatus.Ongoing => Language.Text("還在進行", "In progress", "進行中"),
-        _ => Language.Text("這次沒提到", "Not mentioned", "今回は言及なし"),
-    };
     public string Colon => Language.Text("：", ": ", "：");
     public string ListSeparator => Language.Text("、", ", ", "、");
     public string Speaker(int idx) => Language.DefaultSpeaker(idx);
@@ -124,11 +116,6 @@ public static class NotesExporter
             output.AddRange(items.Select(i => $"- {i.Text}{T(i.Time)}"));
         }
         Section(x.Section("summary"), notes.Summary);
-        if (notes.FollowUps.Count > 0)
-        {
-            output.AddRange(["", $"## {x.FollowUps}"]);
-            output.AddRange(notes.FollowUps.Select(f => $"- {x.Status(f.Status)}{x.Colon}{f.Task}{(f.Owner.Length == 0 ? "" : x.Paren(f.Owner))}{T(f.Time)}"));
-        }
         Section(x.Section("decisions"), notes.Decisions);
         if (notes.ActionItems.Count > 0)
         {
@@ -176,10 +163,6 @@ public static class NotesExporter
             body += $"<h2>{HtmlText.Escape(title)}</h2>\n<ul>" + string.Concat(items.Select(i => $"<li>{HtmlText.Escape(i.Text)}{T(i.Time)}</li>")) + "</ul>\n";
         }
         List(x.Section("summary"), notes.Summary);
-        if (notes.FollowUps.Count > 0)
-            body += $"<h2>{HtmlText.Escape(x.FollowUps)}</h2>\n<ul>" + string.Concat(notes.FollowUps.Select(f =>
-                $"<li><strong>{HtmlText.Escape(x.Status(f.Status))}</strong>{x.Colon}{HtmlText.Escape(f.Task)}"
-                + (f.Owner.Length == 0 ? "" : HtmlText.Escape(x.Paren(f.Owner))) + $"{T(f.Time)}</li>")) + "</ul>\n";
         List(x.Section("decisions"), notes.Decisions);
         if (notes.ActionItems.Count > 0)
         {
