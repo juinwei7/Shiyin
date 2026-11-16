@@ -18,8 +18,7 @@ public static partial class Dialogs
     /// 樣子照 ChatGPT 的「重新命名對話」（R102.1、M§76）：大標題、右上角 ✕、一行灰字說明、細框的輸入框（帶目前的名字並全選）、
     /// 右下兩顆圓角按鈕「取消」（淡底細框）「儲存」（新資料夾「建立並移入」、「+」是「建立」；字的顏色當底：淺色黑底白字、深色白底黑字）。
     /// 名字空白、沒改時「儲存」停用（Enter 也不會存）；改成已經有的資料夾、人物名字時說明換成合併的提醒。Enter 儲存、Esc 取消。
-    /// ContentDialog 內建的標題、按鈕不用（按鈕撐滿一整排、主要按鈕在左邊、底下一條灰色的按鈕區），整個內容自己排、按鈕區收起來（design-windows §11.35）。
-    /// 會議、資料夾、新資料夾、定期會議、人物、標記都用這一個；同時只開一個
+    /// R106 起元件是共用的 Sheet、SheetDialog（design-windows §11.39），樣子不變。會議、資料夾、新資料夾、定期會議、人物、標記都用這一個；同時只開一個
     /// </summary>
     public static async Task Rename(MainWindow window, RenameTarget target)
     {
@@ -36,29 +35,15 @@ public static partial class Dialogs
             RenameTarget.Person => L.T("名字"),
             _ => L.T("名稱"),
         };
-        var dialog = new ContentDialog { XamlRoot = window.XamlRoot };
+        var heading = RenameTitle(target);
+        var sheet = new SheetDialog(window, heading);
         var saved = false;
-
-        var title = Ui.DialogTitle(RenameTitle(target));
-        title.FontSize = 22;
-        var hint = Ui.Text("", 14, color: Ui.Secondary);
-        var close = SidebarLook.HeaderIcon(new Button(), "");
-        close.Margin = new Thickness(0, -2, -6, 0);
-        close.VerticalAlignment = VerticalAlignment.Top;
-        ToolTipService.SetToolTip(close, L.T("取消"));
-        AutomationProperties.SetName(close, L.T("取消"));
-        close.Click += (_, _) => dialog.Hide();
-        var header = Ui.Bar(null, Ui.Column(6, title, hint), close, 12);
-
-        var box = RenameBox(original, placeholder);
-        var cancel = PillButton(L.T("取消"), prominent: false);
-        var primary = PillButton(emptyFolder ? L.T("建立") : newFolder ? L.T("建立並移入") : L.T("儲存"), prominent: true);
-        cancel.Click += (_, _) => dialog.Hide();
-        var buttons = Ui.Row(10, cancel, primary);
-        buttons.HorizontalAlignment = HorizontalAlignment.Right;
-        var form = Ui.Column(18, header, box, buttons);
-        form.Width = 392;
-        dialog.Content = form;
+        var hint = Sheet.Subtitle("");
+        var box = Sheet.TextField(original, placeholder);
+        var primary = Sheet.Pill(emptyFolder ? L.T("建立") : newFolder ? L.T("建立並移入") : L.T("儲存"), Sheet.Kind.Primary);
+        sheet.Form.Children.Add(Sheet.Header(heading, sheet.Cancel, hint));
+        sheet.Form.Children.Add(box);
+        sheet.Form.Children.Add(Sheet.Buttons(null, Sheet.Pill(L.T("取消"), click: sheet.Cancel), primary));
 
         // 資料夾、人物（合併的提醒）：打開時的名單
         var folders = state.Folders.Select(f => f.Name).ToList();
@@ -74,37 +59,17 @@ public static partial class Dialogs
         {
             if (!CanSave()) return;
             saved = true;
-            dialog.Hide();
+            sheet.Close();
         }
         primary.Click += (_, _) => Save();
         box.TextChanged += (_, _) => Update();
-        // Enter 儲存（主要按鈕不是 ContentDialog 的預設按鈕了，自己接）、Esc 取消
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key != Windows.System.VirtualKey.Enter) return;
-            e.Handled = true;
-            Save();
-        };
-        form.KeyDown += (_, e) =>
-        {
-            if (e.Key != Windows.System.VirtualKey.Escape) return;
-            e.Handled = true;
-            dialog.Hide();
-        };
-        // 內建的按鈕區（沒有按鈕時照樣是底下一條灰色的空白）收起來，整個對話框同一個底色。
-        // 打開時輸入框拿到焦點、名字整個選好，直接打新的名字：ContentDialog 打開後會把焦點給第一個能按的元件（右上角的 ✕），排在它後面
-        dialog.Opened += (_, _) => Ui.Guard(() =>
-        {
-            if (Descendant(dialog, "CommandSpace") is FrameworkElement commands) commands.Visibility = Visibility.Collapsed;
-            box.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => Ui.Guard(() =>
-            {
-                box.Focus(FocusState.Programmatic);
-                box.SelectAll();
-            }));
-        });
+        // Enter 儲存（主要按鈕停用時不存）、Esc 取消；打開時輸入框拿到焦點、名字整個選好，直接打新的名字（SheetDialog）
+        sheet.Submit = Save;
+        sheet.Primary = primary;
+        sheet.Focus = box;
         Update();
         RenamingTarget = target;
-        try { await Show(dialog); }
+        try { await sheet.Show(); }
         finally { RenamingTarget = null; }
         if (!saved) return;
         var name = box.Text.Trim();
@@ -113,80 +78,6 @@ public static partial class Dialogs
         host.Controller.CommitRename(target, name);
         // 人物模式：選改完的那個人（改成已經有的名字時合併過去，是那個人）
         if (target is RenameTarget.Person && state.Sidebar == SidebarMode.People) state.SelectPersonNamed(name);
-    }
-
-    /// <summary>範本裡有名字的元件（ContentDialog 的按鈕區）</summary>
-    static DependencyObject? Descendant(DependencyObject root, string name)
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is FrameworkElement { Name: var n } && n == name) return child;
-            if (Descendant(child, name) is { } found) return found;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// 細框的輸入框（ChatGPT、同 Mac：圓角 10，沒焦點時字色 25% 的框、有焦點時 75%，沒有強調色的焦點線；字 15）。對比主題時照平台
-    /// </summary>
-    static TextBox RenameBox(string text, string placeholder)
-    {
-        var box = new TextBox { Text = text, PlaceholderText = placeholder, FontSize = 15, CornerRadius = new CornerRadius(10), Padding = new Thickness(12, 8, 12, 8) };
-        AutomationProperties.SetName(box, placeholder);
-        if (Ui.HighContrast) return box;
-        var fill = SidebarLook.Gray(0.04);
-        box.Resources["TextControlBackground"] = fill;
-        box.Resources["TextControlBackgroundPointerOver"] = fill;
-        box.Resources["TextControlBackgroundFocused"] = fill;
-        box.Resources["TextControlBorderBrush"] = SidebarLook.Gray(0.25);
-        box.Resources["TextControlBorderBrushPointerOver"] = SidebarLook.Gray(0.4);
-        box.Resources["TextControlBorderBrushFocused"] = SidebarLook.Gray(0.75);
-        box.Resources["TextControlBorderThemeThickness"] = new Thickness(1);
-        box.Resources["TextControlBorderThemeThicknessFocused"] = new Thickness(1.5);
-        return box;
-    }
-
-    /// <summary>
-    /// 對話框的圓角按鈕（同 Mac 的 SheetPillButtonStyle）：主要按鈕是字的顏色當底、視窗底色的字（淺色黑底白字、深色白底黑字），停用時 35%；
-    /// 次要按鈕淡淡的底加細框。圓角 10、高 34。對比主題時照平台（主要按鈕是強調色的按鈕）
-    /// </summary>
-    static Button PillButton(string text, bool prominent)
-    {
-        var button = new Button { Content = text, MinWidth = 68, MinHeight = 34, Padding = new Thickness(18, 0, 18, 0), CornerRadius = new CornerRadius(10) };
-        if (Ui.HighContrast)
-        {
-            if (prominent && Application.Current.Resources.TryGetValue("AccentButtonStyle", out var style) && style is Style accent) button.Style = accent;
-            return button;
-        }
-        Brush Ink(double opacity) => SidebarLook.Gray(opacity);
-        var paper = new SolidColorBrush(Ui.IsDark ? Ui.HexColor("#202020") : Microsoft.UI.Colors.White);
-        var clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        var r = button.Resources;
-        if (prominent)
-        {
-            r["ButtonBackground"] = Ink(1);
-            r["ButtonBackgroundPointerOver"] = Ink(0.85);
-            r["ButtonBackgroundPressed"] = Ink(0.75);
-            r["ButtonBackgroundDisabled"] = Ink(0.35);
-            foreach (var key in new[] { "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed", "ButtonForegroundDisabled" }) r[key] = paper;
-            foreach (var key in new[] { "ButtonBorderBrush", "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed", "ButtonBorderBrushDisabled" }) r[key] = clear;
-            button.Background = Ink(1);
-            button.Foreground = paper;
-            button.BorderBrush = clear;
-        }
-        else
-        {
-            r["ButtonBackground"] = Ink(0.06);
-            r["ButtonBackgroundPointerOver"] = Ink(0.10);
-            r["ButtonBackgroundPressed"] = Ink(0.14);
-            foreach (var key in new[] { "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" }) r[key] = Ui.Primary;
-            foreach (var key in new[] { "ButtonBorderBrush", "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed" }) r[key] = Ink(0.18);
-            button.Background = Ink(0.06);
-            button.Foreground = Ui.Primary;
-            button.BorderBrush = Ink(0.18);
-        }
-        return button;
     }
 
     static string RenameTitle(RenameTarget target) => target switch

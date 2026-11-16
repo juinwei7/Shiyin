@@ -88,10 +88,11 @@ public sealed class NotesTabs
     /// <summary>就地改的輸入框：Enter 儲存、Esc 取消；待辦只改事項</summary>
     FrameworkElement ItemEditor(MeetingDetail detail, NoteItemRef r, MeetingLanguage language)
     {
-        var box = new TextBox
+        // 同彈窗的框、小一號（R106.4）
+        var box = Sheet.Field(new TextBox
         {
             TextWrapping = TextWrapping.Wrap, Text = detail.Notes?.TextAt(r) ?? "", FontSize = Ui.C(14), Language = Ui.ContentLanguage(language),
-        };
+        }, compact: true);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, L.T("編輯這一條"));
         void Save()
         {
@@ -106,9 +107,9 @@ public sealed class NotesTabs
             else if (e.Key == Windows.System.VirtualKey.Escape) { e.Handled = true; Cancel(); }
         };
         box.Loaded += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectionStart = box.Text.Length; };
-        var save = Ui.Button(L.T("儲存"), Save, accent: true);
+        var save = Sheet.Pill(L.T("儲存"), Sheet.Kind.Primary, compact: true, click: Save);
         box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0;
-        var buttons = Ui.Row(8, Ui.Button(L.T("取消"), Cancel), save);
+        var buttons = Ui.Row(8, Sheet.Pill(L.T("取消"), compact: true, click: Cancel), save);
         var hint = Ui.Text(L.T("Enter 儲存、Esc 取消"), 12, color: Ui.Secondary);
         hint.VerticalAlignment = VerticalAlignment.Center;
         return Ui.Column(6, box, Ui.Bar(null, hint, buttons));
@@ -611,8 +612,11 @@ public sealed class NotesEditor
         showsPeople = notes.People.Count > 0;
         Root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         Root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var bar = Ui.Bar(Ui.Text(L.T("編輯會議紀錄"), 15, bold: true), null,
-            Ui.Row(8, Ui.Button(L.T("取消"), () => Finished?.Invoke(false)), Ui.Button(L.T("完成"), () => Finished?.Invoke(true), accent: true)));
+        // 同彈窗的按鈕、小一號（R106.4）
+        var bar = Ui.Bar(Ui.Text(L.T("編輯會議紀錄"), 18, bold: true), null,
+            Ui.Row(8, Sheet.Pill(L.T("取消"), compact: true, click: () => Finished?.Invoke(false)),
+                Sheet.Pill(L.T("完成"), Sheet.Kind.Primary, compact: true, click: () => Finished?.Invoke(true))));
+        bar.VerticalAlignment = VerticalAlignment.Center;
         bar.Padding = new Thickness(32, 10, 32, 10);
         Root.Children.Add(bar);
         var scroll = Ui.Scroll(new ReadingColumn(body, Ui.C(720)), 32);
@@ -631,7 +635,7 @@ public sealed class NotesEditor
     void Rebuild()
     {
         body.Children.Clear();
-        var titleBox = new TextBox { Text = notes.Title, PlaceholderText = L.T("標題"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(18) };
+        var titleBox = Field(new TextBox { Text = notes.Title, PlaceholderText = L.T("標題"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(18) });
         titleBox.TextChanged += (_, _) => notes = notes with { Title = titleBox.Text };
         body.Children.Add(titleBox);
         body.Children.Add(Section(L.T("摘要"), ItemsEditor(notes.Summary)));
@@ -658,6 +662,9 @@ public sealed class NotesEditor
 
     UIElement Section(string title, UIElement content) => Ui.Column(8, Ui.Heading(title, language, Ui.C(16)), content);
 
+    /// <summary>編輯器的欄位：同彈窗的框、小一號（R106.4）</summary>
+    static TextBox Field(TextBox box) => Sheet.Field(box, compact: true);
+
     /// <summary>議題（原本自己一個「詳細」分頁，R44.1）：每個議題有時間、標題和幾條重點</summary>
     UIElement TopicsEditor()
     {
@@ -666,9 +673,9 @@ public sealed class NotesEditor
         {
             var index = i;
             var topic = notes.Topics[i];
-            var start = new TextBox { Text = topic.Start, Width = 70, PlaceholderText = L.T("時間") };
+            var start = Field(new TextBox { Text = topic.Start, Width = 70, PlaceholderText = L.T("時間") });
             start.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Start = start.Text };
-            var title = new TextBox { Text = topic.Title, PlaceholderText = L.T("議題"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(14) };
+            var title = Field(new TextBox { Text = topic.Title, PlaceholderText = L.T("議題"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(14) });
             title.TextChanged += (_, _) => notes.Topics[index] = notes.Topics[index] with { Title = title.Text };
             var delete = Ui.IconButton(Symbol.Delete, L.T("刪除這個議題"), () => { notes.Topics.RemoveAt(index); Rebuild(); });
             panel.Children.Add(Ui.Column(8, Ui.Bar(start, title, delete), ItemsEditor(notes.Topics[index].Points)));
@@ -684,7 +691,7 @@ public sealed class NotesEditor
         for (var i = 0; i < notes.People.Count; i++)
         {
             var index = i;
-            var name = new TextBox { Text = notes.People[i].Name, PlaceholderText = L.T("名字"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(14) };
+            var name = Field(new TextBox { Text = notes.People[i].Name, PlaceholderText = L.T("名字"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(14) });
             name.TextChanged += (_, _) => notes.People[index] = notes.People[index] with { Name = name.Text };
             var delete = Ui.IconButton(Symbol.Delete, L.T("刪除這個人的重點"), () => { notes.People.RemoveAt(index); Rebuild(); });
             panel.Children.Add(Ui.Column(8, Ui.Bar(null, name, delete), ItemsEditor(notes.People[index].Points)));
@@ -699,9 +706,9 @@ public sealed class NotesEditor
         for (var i = 0; i < items.Count; i++)
         {
             var index = i;
-            var text = new TextBox { Text = items[i].Text, PlaceholderText = L.T("內容"), TextWrapping = TextWrapping.Wrap, AcceptsReturn = false, Language = Ui.ContentLanguage(language), FontSize = Ui.C(14) };
+            var text = Field(new TextBox { Text = items[i].Text, PlaceholderText = L.T("內容"), TextWrapping = TextWrapping.Wrap, AcceptsReturn = false, Language = Ui.ContentLanguage(language), FontSize = Ui.C(14) });
             text.TextChanged += (_, _) => items[index] = items[index] with { Text = text.Text };
-            var time = new TextBox { Text = items[i].Time, PlaceholderText = L.T("時間"), Width = 70 };
+            var time = Field(new TextBox { Text = items[i].Time, PlaceholderText = L.T("時間"), Width = 70 });
             time.TextChanged += (_, _) => items[index] = items[index] with { Time = time.Text };
             panel.Children.Add(Ui.Bar(null, text, Ui.Row(6, time, RowButtons(items, index)), 6));
         }
@@ -715,13 +722,13 @@ public sealed class NotesEditor
         for (var i = 0; i < items.Count; i++)
         {
             var index = i;
-            var owner = new TextBox { Text = items[i].Owner, PlaceholderText = L.T("負責人"), Width = 90 };
+            var owner = Field(new TextBox { Text = items[i].Owner, PlaceholderText = L.T("負責人"), Width = 90 });
             owner.TextChanged += (_, _) => items[index] = items[index] with { Owner = owner.Text };
-            var task = new TextBox { Text = items[i].Task, PlaceholderText = L.T("事項"), TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(language), FontSize = Ui.C(14) };
+            var task = Field(new TextBox { Text = items[i].Task, PlaceholderText = L.T("事項"), TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(language), FontSize = Ui.C(14) });
             task.TextChanged += (_, _) => items[index] = items[index] with { Task = task.Text };
-            var due = new TextBox { Text = items[i].Due, PlaceholderText = "yyyy-MM-dd", Width = 110 };
+            var due = Field(new TextBox { Text = items[i].Due, PlaceholderText = "yyyy-MM-dd", Width = 110 });
             due.TextChanged += (_, _) => items[index] = items[index] with { Due = due.Text };
-            var time = new TextBox { Text = items[i].Time, PlaceholderText = L.T("時間"), Width = 70 };
+            var time = Field(new TextBox { Text = items[i].Time, PlaceholderText = L.T("時間"), Width = 70 });
             time.TextChanged += (_, _) => items[index] = items[index] with { Time = time.Text };
             panel.Children.Add(Ui.Bar(owner, task, Ui.Row(6, due, time, RowButtons(items, index))));
         }
@@ -811,7 +818,9 @@ public sealed class AskTab
         var column = Ui.Column(6);
         column.Padding = new Thickness(32, 12, 32, 12);
         if (host.Ask.UnavailableReason is { } reason) column.Children.Add(Ui.Text(reason, 12, color: Ui.Signal));
-        var ask = Ui.Button(L.T("提問"), submit, accent: true);
+        // 同彈窗的框和主要按鈕（R106.4，同 Mac 的 .textFieldStyle(.sheet)）
+        Sheet.Field(input);
+        var ask = Sheet.Pill(L.T("提問"), Sheet.Kind.Primary, click: submit);
         ask.IsEnabled = host.Ask.UnavailableReason is null;
         FrameworkElement right = ask;
         if (clear is not null)

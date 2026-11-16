@@ -498,6 +498,8 @@ public static partial class ControlPipe
             ["confirmDeleteSeries"] = main?.DeletingSeries ?? -1,
             // 重新命名的對話框開著時要改的東西（R102，同 Mac：meeting(42)、folder("客戶")、newFolder([1, 2])…；沒開是空字串）
             ["renameTarget"] = Dialogs.RenamingTarget?.Key ?? "",
+            // 照 Sheet 樣子的對話框（R106、design-windows §11.39）開著時是它的標題，沒開是空字串
+            ["sheet"] = Dialogs.OpenSheet ?? "",
             ["editingNoteItem"] = main?.NotesTabs.EditingItem(main.State.Detail)?.ToString() ?? "",
             ["bookmarks"] = new JsonArray([.. (main?.State.Detail?.Bookmarks ?? []).Select(b => (JsonNode)new JsonObject { ["id"] = b.Id, ["time"] = b.Time, ["label"] = b.Label })]),
             // 側欄的收合（R101，同 Mac）：收起來的段落、在原地展開的資料夾和定期會議

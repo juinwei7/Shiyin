@@ -354,7 +354,9 @@ public sealed class DetailView
     {
         var meetingId = Detail.Meeting.Id!.Value;
         var current = Detail.Speakers[idx];
-        var box = new TextBox { Text = current, Header = L.T("名字"), Width = 240 };
+        // 同彈窗的元件（R106.4）：標題粗體、同一種框、圓角按鈕
+        var box = Sheet.TextField(current, L.T("名字"));
+        box.Width = 280;
         var flyout = new Flyout();
         void Save()
         {
@@ -362,12 +364,12 @@ public sealed class DetailView
             flyout.Hide();
             if (text.Length > 0 && text != current) host.Controller.RenameSpeaker(meetingId, idx, text);
         }
-        var save = Ui.Button(L.T("儲存"), Save, accent: true);
+        var save = Sheet.Pill(L.T("儲存"), Sheet.Kind.Primary, click: Save);
         box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0;
         box.KeyDown += (_, e) => { if (e.Key == Windows.System.VirtualKey.Enter) { e.Handled = true; Save(); } };
-        var actions = Ui.Row(8, Ui.Button(L.T("取消"), flyout.Hide), save);
+        var actions = Ui.Row(8, Sheet.Pill(L.T("取消"), click: flyout.Hide), save);
         actions.HorizontalAlignment = HorizontalAlignment.Right;
-        flyout.Content = Ui.Column(12, box, actions);
+        flyout.Content = Ui.Column(12, Ui.Text(L.T("說話者名字"), 18, bold: true), box, actions);
         flyout.Opened += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectAll(); };
         return flyout;
     }

@@ -648,7 +648,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 「⋯」（`Ui/RowMore`，同 Mac 的 `RowMenuButton`）：`Ui.Borderless` 的按鈕、`E712`（More）、次要文字的顏色，`ToolTip` 和無障礙名稱「更多動作」；`Flyout` 是同一份選單。滑鼠進出那一列（`PointerEntered`／`PointerExited`）、那一列選到（`SelectorItem.IsSelectedProperty` 的變化）或選單開著時顯示，沒顯示時透明、不能按、不能 Tab（照樣佔位，列的寬度不跳）。資料夾、定期會議的「⋯」跟數量疊在同一格，顯示時數量透明（同 Mac 的 `FolderRow`）。會議列、人物列放在最右邊一欄；人物頁、系列頁的會議列放在列右邊的內距裡；紀錄的條目接在時間點、待確認的標記後面（同 `Ui.Inline` 的 trailing，短的時候緊接在文字後面）。
 - 鍵盤（側欄）：照選到、亮起來的東西（`MainWindow.SidebarRename`、`SidebarDelete`，同 Mac 的 `sidebarReturn`、`sidebarDelete`）。重新命名是 Enter 或 F2（Windows 的慣例，檔案總管、Outlook 的資料夾都是 F2；Mac 是 Return）。會議列表（`list.KeyDown`）：人物模式選到人 → 重新命名／移除；選到一場會議（不是多選）→ 重新命名（R102 起都是重新命名的對話框，§11.35）；多選時 Delete 一起移到垃圾桶；沒選會議而在看定期會議、資料夾 → 重新命名或刪除它；垃圾桶裡 Delete 是永久刪除。側欄上面的資料夾、定期會議那幾列有焦點時照那一列，不是右邊選的會議（Windows 的側欄是兩個清單，Mac 是一個）；R101 起那幾列點了是在原地展開（§11.34），按鍵在那一列自己處理：F2 重新命名、Delete 刪除，Enter 是展開收起。Ctrl＋Delete 照舊是整個視窗的移到垃圾桶。
 - 會議的重新命名（`RenameMeetingUi`）：原本是選那場、打開「編輯」的 `ContentDialog`（標題、日期、與會者）；R102 起是重新命名的對話框（§11.35）。
-- 刪除資料夾、定期會議的確認改到主視窗（`ConfirmDeleteFolder`、`ConfirmDeleteSeries`，`Dialogs.Confirm`、預設按鈕是取消）：「刪除資料夾「X」？」說明「裡面的 N 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。」（沒有會議時只有後半句）、按鈕「刪除資料夾」；「刪除定期會議「X」？」同系列頁、按鈕「刪除定期會議」。原本資料夾、定期會議右鍵的「刪除…（會議會保留）」直接刪，改成先確認（同 Mac）。正在看那個資料夾時刪掉後回到所有會議。
+- 刪除資料夾、定期會議的確認改到主視窗（`ConfirmDeleteFolder`、`ConfirmDeleteSeries`，`Dialogs.Confirm`；R106 起是 §11.39 的確認，紅底、Enter 是確認）：「刪除資料夾「X」？」說明「裡面的 N 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。」（沒有會議時只有後半句）、按鈕「刪除資料夾」；「刪除定期會議「X」？」同系列頁、按鈕「刪除定期會議」。原本資料夾、定期會議右鍵的「刪除…（會議會保留）」直接刪，改成先確認（同 Mac）。正在看那個資料夾時刪掉後回到所有會議。
 - 人物頁：名字旁的鉛筆 `ToolTip` 改「重新命名」；摘要下面一排 `Ui.Borderless`：「合併到」（`DropDownButton`，`Symbol.People`，沒有別人時不放，`ToolTip`「同一個人被記成兩個名字時，合併成一個」）、「移除這個人…」（`Symbol.Delete`、`Ui.Danger` 的紅字）。系列頁：摘要下面「刪除定期會議…」（紅字）。右上角的「更多」照舊。
 - 按鈕吃掉右鍵的問題（Mac a8a59e8）：WinUI 的右鍵選單是 `ContextFlyout`，掛在按鈕本身就出得來；人物頁、系列頁的會議列、說話者的名字都掛在按鈕上，側欄的資料夾、定期會議列是 `ListViewItem`（不是按鈕），掛在整列。
 - 會議頁上方的說話者：沒有自動帶入的名字改成 `HyperlinkButton`（頭像＋名字），點了打開重新命名的 `Flyout`（名字選好、Enter 儲存，`RenameSpeaker`），`ToolTip`「重新命名「X」，整場的逐字稿和會議紀錄都會跟著改」；右鍵：重新命名…、合併到 ▸（其他說話者，`MergeSpeaker`）。自動帶入的名字點了照舊是「是別人／不是他」的選單，右鍵同上。
@@ -693,7 +693,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - 狀態、規則在 Services（`Renaming.cs`，同 Mac 的 `Store/RenameTarget.swift`）：`RenameTarget`（record：`Meeting(id)`、`Folder(名稱)`、`NewFolder(會議 id)`、`Series(id)`、`Person(id)`、`Bookmark(id)`；`Key` 同 Mac 的 `"\(self)"`：`meeting(42)`、`folder("客戶")`、`newFolder([1, 2])`）；`Renaming.CanSave`（名字空白、沒改不能存，新資料夾有字就能建立）、`Renaming.Conflict`（資料夾同名、人物同名大小寫不分時是合併）；`AppController.CurrentName`（從資料庫讀：沒取過標題的會議是檔名；人物、標記不靠畫面上的列表，Mac 驗收時人物列表沒打開過、輸入框是空的）、`CommitRename`（走原本的動作）。
 - 對話框 `Dialogs.Rename`（`RenameDialog.cs`）。樣子照 ChatGPT 的「重新命名對話」（85e6998，R102.1，同 M§76 的 `RenameSheet`）：
-  - 內容寬 392（`ContentDialog` 自己的內距 24）：上面一列是大標題（`Ui.DialogTitle`，22 號粗體：重新命名會議／資料夾／定期會議／這個人／標記、新資料夾）和右上角的 ✕（`SidebarLook.HeaderIcon` 的 `E711`，`ToolTip` 和無障礙名稱「取消」，等於取消），標題下面一行灰字說明（14 號、`Ui.Secondary`，文字同 Mac：會議「保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。」、資料夾「資料夾裡的會議都會跟著改。」、新資料夾「例如專案名稱或客戶名稱。這場會議會移進新資料夾。」（好幾場時「這 N 場會議」）、「+」的新資料夾「例如專案名稱或客戶名稱。」、定期會議「保持簡短、容易辨識。」、人物「所有會議裡的這個人都會跟著改。」、標記「12:34 的標記」）；再來是輸入框；右下兩顆圓角按鈕「取消」「儲存」（新資料夾「建立並移入」、「+」是「建立」）。
+  - 內容寬 392（`ContentDialog` 自己的內距 24）：上面一列是大標題（`Ui.DialogTitle`，22 號粗體：重新命名會議／資料夾／定期會議／這個人／標記、新資料夾）和右上角的 ✕（`SidebarLook.HeaderIcon` 的 `E711`，`ToolTip` 和無障礙名稱「取消」（R106 起「關閉」、不能 Tab，§11.39），等於取消），標題下面一行灰字說明（14 號、`Ui.Secondary`，文字同 Mac：會議「保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。」、資料夾「資料夾裡的會議都會跟著改。」、新資料夾「例如專案名稱或客戶名稱。這場會議會移進新資料夾。」（好幾場時「這 N 場會議」）、「+」的新資料夾「例如專案名稱或客戶名稱。」、定期會議「保持簡短、容易辨識。」、人物「所有會議裡的這個人都會跟著改。」、標記「12:34 的標記」）；再來是輸入框；右下兩顆圓角按鈕「取消」「儲存」（新資料夾「建立並移入」、「+」是「建立」）。
   - 輸入框（`RenameBox`）：細框、沒有強調色的焦點線：覆寫 `TextControlBorderBrush`（字色 25%）、`PointerOver`（40%）、`Focused`（75%），`TextControlBorderThemeThickness` 1、`Focused` 1.5（原本是底下一條 2 的強調色），底色字色 4%，圓角 10、字 15、內距 12×8。`PlaceholderText` 和無障礙名稱：資料夾名稱、名字、名稱。
   - 按鈕（`PillButton`，同 Mac 的 `SheetPillButtonStyle`）：圓角 10、高 34、最寬 68 起、左右 18。主要按鈕是字的顏色當底、視窗底色的字（淺色黑底白字、深色白底黑字），滑過 85%、按下 75%、停用 35%（覆寫 `ButtonBackground*`、`ButtonForeground*`、`ButtonBorderBrush*`）；取消是字色 6% 的底加 18% 的細框。
   - 為什麼不用 `ContentDialog` 內建的標題和按鈕：內建的兩顆按鈕撐滿一整排、主要按鈕在左邊、底下一條灰色的按鈕區，樣式只能整組換。所以標題、按鈕都放在內容裡，`PrimaryButtonText`、`CloseButtonText` 不設；按鈕區（範本裡的 `CommandSpace`，沒有按鈕時照樣是一條灰色的空白）在 `Opened` 時從視覺樹找出來收起。Enter（輸入框的 `KeyDown`）存、Esc（內容的 `KeyDown`）和 ✕、取消是 `Hide`，存了沒有自己記（`ShowAsync` 的結果都是 None）。
@@ -734,6 +734,61 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 「資料夾」那一段一直顯示；標題右邊「+」（`SidebarLook.HeaderIcon` 的 `E710`，`ToolTip`、無障礙名稱「新資料夾」；點按鈕不會收合，`SidebarItem` 不管從按鈕來的點擊）打開 §11.35 的對話框（`RenameTarget.NewFolder([])`）：標題「新資料夾」、說明「例如專案名稱或客戶名稱。」、主要按鈕「建立」；名字跟已經有的資料夾一樣時說明「已經有「X」。」、「建立」停用（`Renaming.CanSave` 的 conflict）。建立走 `AppController.CreateFolder`（同名的不建，提示「已建立資料夾「X」」），新的資料夾排在「資料夾」那一段的最後（§11.36 的排序）。沒有任何資料夾、定期會議、建議時，段落裡一行次要文字「按 + 新增資料夾」（停用的項目）。Windows 沒有選單列（Mac 的「檔案 → 新資料夾…」⇧⌘N 沒有對應）。
 - DEBUG（同 Mac）：`foldernew <名稱>`；state 的 `folders`（名稱、場數，同 Mac）。
 - 測試：`OrganizeTests.OrganizingHelpers`（資料夾表的名字也列出來、不重複）、`OrganizeTests.RenameRules`（「+」同名不能建）、`AppTests.RenameDialogReadsAndCommits`（「+」建立、提示、同名不建、會議都移走了還在）。
+
+### 11.38 選單照 ChatGPT（R105，M§79）
+
+- 用什麼做（評估後）：**平台的 `MenuFlyout` 加輕量的樣式覆寫**（`Ui/MenuLook`），不像 Mac 自己畫面板。Mac 自己畫是因為 macOS 的 NSMenu 換不了樣子（圓角、列高、底色、圖示顏色都固定）；WinUI 的 MenuFlyout 本來就是圓角面板、Segoe Fluent 的細線圖示（`Icon`）、右邊灰色的快捷鍵提示（`KeyboardAcceleratorTextOverride`，範本裡的 `KeyboardAcceleratorTextBlock`）、子選單的「›」（`E974`）、滑過一塊圓角底，子選單開在右邊（滑鼠移過去的延遲照系統的選單延遲），↑↓→←、Enter、Esc、點外面和切到別的 app 就關、UI Automation（`uia.sh rclick` 照樣按得到）、對比主題都由平台處理；差的只是尺寸和顏色，都有主題資源或屬性可以換（`MenuFlyoutPresenterStyle`、項目的 `Resources`、`CornerRadius`、`MinHeight`），不用換 ControlTemplate。自己用 `Popup` 畫的話鍵盤、焦點、無障礙、對比主題、螢幕邊緣、子選單的斜移都要自己做（winui-design 的「自己做元件」要全部做到），沒有必要。
+- 樣子（數字照 M§79）：
+  - 面板：`MenuFlyoutPresenterStyle`（`MenuLook.Presenter`，照深淺色快取：Style 用過之後不能改）圓角 14、不透明的底（淺色白；深色 #323232：Mac 是 white 0.17＝#2B2B2B，但 Windows 的側欄就是 #2B2B2B，開在側欄上只剩細框分得出來；平台是壓克力）、字色 10% 的細框、內距 1,3（加上每一項平台的外距 4,2，四邊各 5，同 Mac 的 padding 5）、最窄 200。陰影照平台。子選單的面板 WinUI 會套同一個 Style（MenuFlyoutSubItem 把 MenuFlyout 的 MenuFlyoutPresenterStyle 帶給子選單的面板）。
+  - 每一項（`MenuFlyoutItem`、`MenuFlyoutSubItem`）：`MinHeight` 36（減掉平台上下各 2 的外距，滑過的底 32；平台用滑鼠打開時約 29）、圓角 8、滑過字色 9% 的底（按下 12%、子選單打開時 9%），鍵盤選到的是平台的焦點框（圓角跟著是 8）。字 14、圖示 16（平台的 Viewbox）照平台。快捷鍵提示、「›」是次要文字的顏色（紅色那一項的快捷鍵也是灰的，同 Mac）。左右的內距照平台（滑鼠打開時 11，範本的 NarrowPadding 動畫寫死的 StaticResource，覆寫不到；Mac 是 9）。
+  - 分隔線：字色 10%、上下 4、左右縮進 8（`Padding` 8,4；平台是 -4,1，伸到項目外面）。
+  - 刪除、移除這類照 §11.34 的 `Ui.DangerItem`（紅字紅圖示，滑過也是紅的）。
+- 右邊的快捷鍵提示（`MenuLook.Hint`）：只是提示、不註冊快捷鍵（ContextFlyout 裡的 KeyboardAccelerator 在選單關著時也會生效，每一列都註冊一次會搶同一個鍵；同 Mac 不註冊的理由）。寫 Windows 的鍵（§11.33 的側欄鍵盤）：重新命名…「F2」（會議、資料夾、定期會議、人物；會議、人物 Enter 也可以，但 F2 是 Windows 的慣例）、移到垃圾桶／把 N 場會議移到垃圾桶…／永久刪除…／刪除資料夾…／刪除定期會議…／移除這個人…「Delete」。Mac 只標會議的重新命名、移到垃圾桶和人物的重新命名（↩、⌘⌫）；Windows 的資料夾、定期會議列也有 F2、Delete，一起標。人物頁右上角的「更多」（同一份項目，`PersonPage.MenuItems(sidebar: false)`）不標：焦點不在側欄時 F2、Delete 沒作用。
+- 用在哪裡（R105.1）：`RowMore.Button`／`RowMore.Context`（側欄的資料夾、定期會議、展開的會議、人物，人物頁和系列頁裡的會議，會議紀錄的每一條）和會議列表的右鍵（`MainWindow.RowMenu`）：打開時（`Opening`）填完內容後 `MenuLook.Apply`，建的時候也先套一次（面板在第一次打開前就建好）。工具列和頁面的「更多」、逐字稿的右鍵、錄音按鈕、顯示方式、設定的選單照舊是平台的樣子（R105.2）。
+- 「⋯」打開的位置：`BottomEdgeAlignedLeft`（選單左上角對齊「⋯」的左下，同 Mac；原本 BottomEdgeAlignedRight），放不下時平台會換邊。右鍵照平台開在游標的位置。
+- 對比主題：不覆寫（`MenuLook.Apply` 直接回傳），照平台的系統色（§11.3：滑過去是反白的底，自己的灰色會看不見）。
+- 驗證：虛擬機 `uia.sh menukeys <視窗> <列> <鍵…> [right|more]`（真的滑鼠右鍵或點列右邊的「⋯」打開，同一個程序接著按鍵：下一個 PowerShell 會搶到焦點、選單被關掉），截圖（深色、淺色、高對比）。
+
+### 11.39 彈窗、確認、就地編輯的共用樣子（R106，M§80）
+
+- 元件在 `Ui/Sheet.cs`（同 Mac 的 `Views/SheetStyle.swift`），從 §11.35 的重新命名對話框抽出來（重新命名的樣子不變）：
+  - `Sheet.Header(標題, 關閉, 說明, 右邊的小字)`：大標題（22 號粗體）、標題下面一行灰字說明（`Sheet.Subtitle`，14 號、次要文字、會換行）、標題列右邊的小字（「第 1 組，共 2 組」，13 號次要文字）、右上角 ✕（`SidebarLook.HeaderIcon` 的 `E711`，`ToolTip` 和無障礙名稱「關閉」，同 Mac；§11.35 原本是「取消」）。✕ 不能 Tab：`ContentDialog` 打開時會把焦點給第一個能 Tab 的元件（§11.35 踩過：焦點在 ✕），同 Mac 的 ✕ 沒有焦點，鍵盤用 Esc。
+  - `Sheet.Field(TextBox, compact)`：§11.35 的 `RenameBox` 搬過來：字色 4% 的底、25% 的細框、滑過 40%、有焦點 75% 1.5（覆寫 `TextControlBorderBrush*`、`TextControlBorderThemeThickness*`；原本是底下一條 2 的強調色），圓角 10、字 15、內距 12×8。compact（就地編輯）圓角 8、內距 9×5，字照原本（會議內容跟著文字大小）。多行的、唯讀的也一樣。`Sheet.TextField(字, placeholder)` 建一個新的（placeholder 也是無障礙名稱）。
+  - `Sheet.Combo(ComboBox)`：選單式的欄位（同 Mac 的 `SheetMenuField`）：同一種框（`ComboBoxBackground*`、`ComboBoxBorderBrush*`、`ComboBoxBorderThemeThickness`），圓角 10、字 15、高 38、撐滿欄寬；有鍵盤焦點時左邊那一小條（範本的 `Pill`，原本強調色）換成字色 75%。下拉的清單照平台。
+  - `Sheet.Date(CalendarDatePicker)`：同一種框（`CalendarDatePicker*`），右邊的日曆圖示、打開的月曆照平台（Mac 要自己把沒有框的日期欄位放進框裡，Windows 的 CalendarDatePicker 本來就是一個框）。
+  - `Sheet.Label`、`Sheet.Labeled(標籤, 欄位)`：欄位上面的灰色小標籤（13 號、次要文字，間距 6；欄位沒有無障礙名稱時用標籤的字）。原本用控制項的 `Header`（14 號主色字）都拿掉。`Sheet.Pair`：兩個欄位排一列、各一半（同 Mac 的 HStack 兩欄）。`Sheet.Box`：同一種框的一塊（勾選清單、好幾個檔時「依各檔案的檔名或修改日期」）。
+  - `Sheet.Pill(字, Kind, compact)`：§11.35 的 `PillButton` 搬過來，多一種刪除類：`Primary` 字色當底、視窗底色的字（淺色黑底白字、深色白底黑字），`Destructive` 紅底白字（#C42B1C，Windows 的 critical 紅，深淺色同一個：`Ui.Danger` 深色模式是淡紅，配白字看不清；白字對比 5.9:1），兩種都是滑過 85%、按下 75%、停用 35%；`Secondary` 字色 6% 的底加 18% 的細框。圓角 10、高 34、最窄 68、左右 18；compact（就地編輯）圓角 8、高 26、最窄 52、左右 12、字 13。`Sheet.DangerText`：次要按鈕紅字（資料夾條件的「移除條件」）。`Sheet.Buttons(左邊, 右邊…)`：按鈕列，左邊一顆（「分享…」「不是定期會議」「移除條件」）、其他靠右，間距 10。
+  - 對比主題：框、按鈕都不覆寫（照平台的系統色；主要、刪除類是 `AccentButtonStyle`），`Sheet.Box` 是一圈文字顏色的細框（§11.3）。
+- `SheetDialog`：照這個樣子的 `ContentDialog`（§11.35 的做法搬過來）：內建的標題、按鈕都不用，內容寬 392（Mac 的 sheetChrome 440 減掉 ContentDialog 兩邊的 24）或 432（Mac 480），按鈕區（`CommandSpace`）在 `Opened` 時收起來。`ContentDialogMinHeight` 改 0（平台最小 184，一行說明的確認底下會多一塊空白）。
+  - 深淺色：`RequestedTheme` 照主視窗（`Ui.IsDark`）。開著拾音時換了 Windows 的深淺色，ContentDialog 照樣是開 app 時的顏色（2026-11-17 虛擬機：換成深色後對話框是淺色的底、字是照深色給的白字）。對比主題時不設。
+  - 焦點：打開後給 `Focus`（輸入框全選，`SelectOnFocus` 是 false 時不選）：排一個低優先順序的工作，350 毫秒後還不在它上面（使用者還沒按鍵）再給一次；而且 `Focus` 的 `TabIndex` 設 0。ContentDialog 打開後自己會把焦點給「第一個」能 Tab 的元件，有時候比排的工作晚（2026-11-17 虛擬機：清空垃圾桶的確認焦點落在「取消」，Enter 變成取消）。
+  - 焦點留在對話框裡（`FocusManager.GettingFocus`）：選單裡的項目打開對話框時，選單晚一點關掉、把焦點還給對話框後面的「⋯」（2026-11-17 虛擬機：之後的 Enter、Esc 都送到側欄，對話框關不掉）。焦點要跑到主視窗裡的元件時，原本在對話框裡就留在原地，不然給 `Focus`／`Primary`；下拉選單、月曆在對話框自己的 popup 裡，不管。
+  - Enter（ContentDialog 的 `PreviewKeyDown`，往下傳的時候就接住）：焦點不在按鈕（勾選框不算）、選單式的欄位、日期、多行的輸入框上時做 `Submit`；`Primary` 停用時不做（同 Mac 的 `.defaultAction` 停用時按 Return 沒反應）。不能等內容的 `KeyDown`：ContentDialog 自己也收 Enter（沒有內建按鈕時關掉、結果是 None），剛打開、視窗剛拿回前景、焦點還沒進到內容裡時按 Enter 就被它關掉了（2026-11-17 虛擬機：刪除資料夾的確認按 Enter 沒刪）。
+  - Esc（內容的 `KeyDown`）、✕：`Escape`，沒給是關掉。`ContentDialog` 自己也會收 Esc（焦點不在內容裡時）：`Closing` 不是自己關的就取消、改做 `Escape`（可能的定期會議的 Esc 是「略過」，不是關掉）。
+  - 同時只開一個（`Dialogs.Show` 的 Gate，§11.2.1）。開著時 `Dialogs.OpenSheet` 是標題（DEBUG 的 state `sheet`）。
+  - 標題列自己排兩欄（不用 `Ui.Bar`：左邊空的那一欄照樣多一段間距，標題會比欄位往右縮 12）。
+- 確認（R106.2）：`Dialogs.Confirm(標題, 說明, 確認的字, destructive)` 改成 SheetDialog：標題、說明、✕，右下「取消」（次要）、確認（刪除類紅底，其他主要按鈕），寬 392、間距 22。打開時焦點在確認的按鈕（`Programmatic`：Enter 直接按它；Tab 到「取消」再 Enter 是取消）。**改了**：原本刪除類的預設按鈕是「取消」（不小心按 Enter 不會刪），R106.2 改成 Enter 是確認、Esc 是取消（同 Mac 的 `.defaultAction`）。
+  - 刪除類（紅底）：刪除資料夾、刪除定期會議、移除這個人、移到垃圾桶（原本不是刪除類，同 Mac 改成紅底）、永久刪除、清空垃圾桶。分成兩場不是刪除類（原本是，同 Mac 改成主要按鈕；「分開後沒辦法合併回來」寫在說明）。麥克風權限的「打開設定」也走這裡（主要按鈕）。
+  - Windows 的確認本來就是各自 `await`（`MainWindow.ConfirmTrash`、`ConfirmPurge`…），不用 Mac 的 `activeConfirmation`（Mac 是 SwiftUI 一個 `.sheet(item:)` 從狀態組出來）；DEBUG 的狀態（`deleteTargets`、`confirmPurge`、`confirmDeleteFolder`…）照舊。
+  - 錯誤、錄音的提醒（`Dialogs.Alert`）照舊是系統的對話框（同 Mac 的 `.alert`）；設定視窗、更新、結束拾音的對話框照舊（R106 沒列）。
+- 其他彈窗（R106.1、R106.3，同 Mac 的版面）：
+  - 匯入（寬 432）：「匯入錄音」（好幾個「匯入 N 個錄音檔」）、檔名（灰字，前面 `E8D6` 的聲音圖示）、標題（一個檔時）、會議日期｜大約幾個人、與會者、範本｜會議語言，「取消」「匯入並開始轉錄」。
+  - 匯出（寬 432）：「匯出「X」」、項目｜格式、包含時間點和包含說話者同一列（逐字稿時）、說明（還沒有會議紀錄時琥珀色）；左下「分享…」（次要；原本是 ContentDialog 的第二顆按鈕），右下「取消」「存檔…」。打開時焦點在「存檔…」（欄位都是選單式的，選單有焦點時 Enter 是打開它）。
+  - 重新辨識說話者：說明放在標題下面、大約幾個人（寬 220）、灰字的提醒，「取消」「開始」。打開時焦點在「開始」（同匯出）。
+  - 拆成兩句（Windows 才有的對話框，Mac 是就地拆）：說明「在文字裡點一下要拆開的地方」、唯讀的文字放進同一種框（有焦點時框變亮，打開時焦點在文字上、不全選）、預覽、後半句是，「取消」「拆開」（沒點在中間時停用）。
+  - 編輯會議資訊（R106.3）：標題改「編輯會議資訊」（原本「編輯」）、說明「標題、日期、與會者。」，標題（打開時全選）、會議日期、與會者，「取消」「儲存」。Windows 本來就是對話框（Mac 原本是小視窗）。
+  - 用詞修正（寬 432）：說明、錯誤寫法｜正確寫法（打開時錯誤寫法全選）、加進詞彙表、結果（青瓷綠，取代之後才出現），「取消」（取代過後是「完成」）「全部取代」（錯誤寫法空白或跟正確寫法一樣時停用；原本按了沒反應）。
+  - 資料夾的自動加入條件（寬 432）：說明、標題包含、這些人都參加（同一種框裡的勾選清單，最高 140）、用這個範本｜屬於定期會議（沒有定期會議時只有範本）、套用；左下「移除條件」（紅字的次要按鈕，有條件時；原本是第二顆按鈕），右下「取消」「儲存」。
+  - 可能的定期會議（寬 432）：標題、「第 1 組，共 2 組」（標題列右邊）、說明、名稱、與會者、包含哪幾場（同一種框裡的勾選清單，最高 200）；左下「不是定期會議」，右下「略過」（Esc、✕）「建立」（少於 2 場時停用）。處理完時只剩說明和「完成」，Esc、✕ 也是關掉（同 Mac 的 `escCloses`）。換一組時整個內容重建、焦點回到名稱；名稱的輸入框是同一個，先從上一組的那一欄拿下來（還掛在舊的欄裡，`Parent` 卻是 null，要自己記著那一欄；再放進新的欄 WinUI 丟 0x800F1000，2026-11-17 虛擬機：略過第一組後第二組只剩標題）。
+  - 重新命名（§11.35）改用共用的元件（`SheetDialog`、`Sheet.TextField`、`Sheet.Pill`），樣子、行為不變，✕ 的名稱改「關閉」。
+- 就地編輯（R106.4）：
+  - 逐字稿改句子：同一種框（不是 compact 的框，字照會議內容的文字大小，同 Mac 的 `.sheet`），「取消」「儲存」compact。
+  - 說話者改名的小視窗（逐字稿點說話者、會議頁上方的說話者）：標題「說話者名字」18 號粗體、輸入框（`Sheet.TextField`）、「不是他」「合併到…」「復原：…」次要、「儲存」主要（同 Mac 的小視窗用一般大小的按鈕），寬 320。
+  - 紀錄的條目、待確認的回答（「是誰？」「正確的是…」「你的回答」）和「全部略過」「收合」「送出」、編輯會議紀錄（每個欄位、標題 18 號粗體、「取消」「完成」）：compact。
+  - 提問的輸入列（這場會議、所有會議共用 `AskTab.InputBar`）：同一種框（一般大小）、「提問」主要按鈕。
+- 頁面的提示條、空白頁的按鈕照舊（R106.5）。
+- DEBUG：`dialogui <export|rediarize|editinfo|replace|split|trash|purge> <會議 id[,…]> [段落 id 或錯誤寫法]`（同 Mac 的 `exportui`、`preview editinfo|replace|rediarize`；確認的其他幾種照舊用 `folderdeleteui`、`seriesdeleteui`、`personremove`、`confirmemptytrash`、`splitconfirm`，資料夾條件 `editfolderrule`、定期會議 `seriessheet`、匯入 `importinto`、重新命名 `renameui`），state 的 `sheet`（開著的對話框的標題，沒開是空字串）。
+- 驗證：虛擬機 `uia.sh` 打開每一種、截圖（深色、淺色、高對比），按 Enter／Esc（`uia.sh key`）、✕（`uia.sh click … 關閉`），看 state 的 `sheet` 和對應的狀態；從右鍵選單的項目打開（`uia.sh rclick … <項目>`、`menukeys … 28,0D`）再按 Enter／Esc；開著拾音時換深淺色再打開。
 
 ## 12. 系統整合
 
@@ -912,7 +967,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 從 SSH 啟動的程式不會出現在登入的桌面，UI Automation 也碰不到桌面。所以用排程工作在桌面的工作階段執行 PowerShell（`ps/in-session.ps1`：註冊「互動式登入」的工作、等它跑完、讀回輸出）。
 
 - `insession.sh`：把標準輸入的 PowerShell 放到桌面跑，例如 `ps/start-app.ps1` 在桌面開 DEBUG 版（資料在 `C:\ShiyinTest`）。
-- `uia.sh <動作> <視窗> <名稱>`（`ps/uia.ps1`，Windows 內建的 UIAutomationClient）：`windows`、`dump`、`click`（Invoke／Toggle／選取／展開）、`open`（會打開選單的按鈕，交給另一個程序按，不然會等到選單關掉）、`menu`、`choose`（下拉選單）、`set`（輸入框）、`close`。同名的元件能按的排前面，`名稱#2` 指定第幾個。拖曳用 `drag`（真的滑鼠，也能從檔案總管拖檔案進來，§11.36），鍵盤焦點用 `focus`、`focused`。SplitButton 的箭頭、DropDownButton、子選單用 `ps/expand.ps1 <視窗> <名稱> [項目] [子選單的項目或 ?]`（ExpandCollapsePattern；`uia.ps1` 的 `click`、`menu` 用 Invoke，會按到 SplitButton 主要的動作），放在 `insession.sh` 裡跑。
+- `uia.sh <動作> <視窗> <名稱>`（`ps/uia.ps1`，Windows 內建的 UIAutomationClient）：`windows`、`dump`、`click`（Invoke／Toggle／選取／展開）、`open`（會打開選單的按鈕，交給另一個程序按，不然會等到選單關掉）、`menu`、`choose`（下拉選單）、`set`（輸入框）、`close`、`menukeys`（真的滑鼠打開右鍵或「⋯」的選單、同一個程序接著按鍵，§11.38）。同名的元件能按的排前面，`名稱#2` 指定第幾個。拖曳用 `drag`（真的滑鼠，也能從檔案總管拖檔案進來，§11.36），鍵盤焦點用 `focus`、`focused`。SplitButton 的箭頭、DropDownButton、子選單用 `ps/expand.ps1 <視窗> <名稱> [項目] [子選單的項目或 ?]`（ExpandCollapsePattern；`uia.ps1` 的 `click`、`menu` 用 Invoke，會按到 SplitButton 主要的動作），放在 `insession.sh` 裡跑。
 - `shot.sh <檔案>`：在 Mac 上用 `screencapture -l` 截 UTM 的視窗（整個虛擬機的畫面）。
 - UI Automation 做不到時（開著選單、存檔對話框時 UI Automation 會卡住）：用 UTM 的 AppleScript `input scan code` 送按鍵，只會送進虛擬機，不會到 Mac 前景的 app。
 - 系統的視窗（SmartScreen、系統匣）不屬於拾音：直接從桌面的根元件找（例如系統匣在 `Shell_TrayWnd`，隱藏的圖示先按「顯示隱藏的圖示」）。

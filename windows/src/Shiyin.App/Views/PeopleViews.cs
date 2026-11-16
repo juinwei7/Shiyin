@@ -138,12 +138,12 @@ public sealed class PersonPage(AppHost host, MainWindow window)
     /// 一個人的動作（R85.7，同 Mac 的 PersonMenuItems）：人物頁的「更多」和側欄人物列的右鍵選單共用。
     /// 重新命名…（選那個人、打開重新命名的對話框，R102）、合併到（子選單：其他認識的人）、分隔線、移除這個人…（確認對話框）
     /// </summary>
-    public List<MenuFlyoutItemBase> MenuItems(PersonOverview person)
+    /// <param name="sidebar">側欄人物列的右鍵、「⋯」：右邊標 F2、Delete（R105，側欄的鍵盤；人物頁的「更多」焦點不在側欄，不標）</param>
+    public List<MenuFlyoutItemBase> MenuItems(PersonOverview person, bool sidebar = false)
     {
-        var items = new List<MenuFlyoutItemBase>
-        {
-            Ui.Item(L.T("重新命名…"), () => window.RenamePersonUi(person.Id), icon: Symbol.Edit),
-        };
+        var rename = Ui.Item(L.T("重新命名…"), () => window.RenamePersonUi(person.Id), icon: Symbol.Edit);
+        if (sidebar) MenuLook.Hint(rename, MenuLook.Rename);
+        var items = new List<MenuFlyoutItemBase> { rename };
         var others = window.State.People.Where(p => p.Id != person.Id).ToList();
         if (others.Count > 0)
         {
@@ -158,7 +158,9 @@ public sealed class PersonPage(AppHost host, MainWindow window)
             items.Add(merge);
         }
         items.Add(new MenuFlyoutSeparator());
-        items.Add(Ui.DangerItem(L.T("移除這個人…"), () => _ = window.ConfirmRemovePerson(person.Id), icon: null, glyph: Ui.RemovePersonGlyph));
+        var remove = Ui.DangerItem(L.T("移除這個人…"), () => _ = window.ConfirmRemovePerson(person.Id), icon: null, glyph: Ui.RemovePersonGlyph);
+        if (sidebar) MenuLook.Hint(remove, MenuLook.Delete);
+        items.Add(remove);
         return items;
     }
 
