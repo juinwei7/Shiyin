@@ -58,8 +58,8 @@ struct PersonPage: View {
                         }
                         .buttonStyle(.plain)
                         .help("打開這場會議")
+                        .contextMenu { MeetingLinkMenuItems(meeting: entry.meeting) }   // 掛在按鈕上，不然按鈕會吃掉右鍵
                         .rowMenu { MeetingLinkMenuItems(meeting: entry.meeting) }
-                        .contextMenu { MeetingLinkMenuItems(meeting: entry.meeting) }
                     }
                 }
             }

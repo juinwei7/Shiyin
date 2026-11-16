@@ -2681,17 +2681,18 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 ## 74. 每一種東西都能直接改、刪（R100）
 
 - 共用的選單內容，「⋯」、右鍵、「更多」用同一份：`MeetingMenuItems(ids:)`（側欄的會議）、`FolderMenuItems(folder:)`、`SeriesMenuItems(series:)`、`PersonMenuItems(person:)`（§60.2）、`MeetingLinkMenuItems`（人物頁、系列頁裡的會議）。
+- 側欄的資料夾、定期會議列（`FolderRow`）用點擊手勢不用 `Button`：右鍵選單掛在整列上，按鈕可能吃掉右鍵。
 - 「⋯」（`RowMenuButton`）：列的右邊一顆 `ellipsis.circle` 的無邊框選單按鈕，滑鼠在列上（`onHover`）或那一列選到時才顯示（沒顯示時用 opacity 0 佔位，列的寬度不跳），輔助使用的名字是「更多動作」。`FolderRow` 加一個可以不給的 `menu`，有選單時數量和「⋯」在同一個位置（滑過時「⋯」取代數量）。
 - 鍵盤（側欄的 List，`onKeyPress(.return)`、`onDeleteCommand`），照「現在選到、亮起來的是什麼」：選到一場會議（不是多選）→ Return 重新命名、Delete 移到垃圾桶（確認，同 ⌘⌫）；多選 → Delete 一起移到垃圾桶；人物模式選到人 → Return 重新命名、Delete 移除；沒選會議而正在看定期會議 → Return 重新命名、Delete 刪除（確認）；沒選會議而正在看資料夾 → Return 重新命名、Delete 刪除資料夾（確認，會議留著）。垃圾桶裡 Delete 是永久刪除（確認）。
 - 會議的重新命名：`renameMeetingRequest`：選那場、打開會議頁「編輯」的輸入框（標題、日期、與會者，`EditInfoForm`）。
 - 刪除資料夾、定期會議的確認對話框放主視窗（`confirmDeleteFolder`、`confirmDeleteSeries`）：「刪除資料夾「X」？」說明「裡面的 N 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。」；「刪除定期會議「X」？」同系列頁。
 - 人物頁標題下面一排（borderless、`.callout`）：「合併到 ▸」（選單）「移除這個人…」（紅字）；系列頁：「刪除定期會議…」（紅字）。重新命名是名字旁的鉛筆（不重複放）；右上角的「更多」照舊。
 - 會議頁上方的說話者：名字可以點（同逐字稿點說話者，打開重新命名的輸入框，§21.6）；右鍵：重新命名…、合併到 ▸（其他說話者，同逐字稿的合併 R36）。自動帶入的名字照舊是選單（AutoSpeakerName）。
-- 紀錄的條目（`ItemList`、`ActionItemsTable` 的事項、議題的要點）：雙擊那一條變成輸入框（Return 儲存、Esc 取消；待辦只改事項，負責人和期限照舊用「編輯」）；右鍵：拷貝、從這裡播放（有時間點時）、編輯這一條、刪除這一條。存檔同手動編輯（`saveEditedNotes`，留一個版本），刪除後提示「已刪除一條紀錄，可以用「復原上一版會議紀錄」還原」。錄音中、正在整理時不能改（同「編輯」按鈕）。
+- 紀錄的條目（`ItemList`、`ActionItemsTable` 的事項、議題的要點）：能直接改的條目不開文字選取（開了的話右鍵是系統的文字選單、雙擊只選到一個詞；2026-11-16 自己驗收時發現），整行（含行尾空白，`contentShape`）都可以右鍵、雙擊；要拷貝用右鍵的「拷貝」。雙擊那一條變成輸入框（Return 儲存、Esc 取消；待辦只改事項，負責人和期限照舊用「編輯」）；右鍵：拷貝、從這裡播放（有時間點時）、編輯這一條、刪除這一條。存檔同手動編輯（`saveEditedNotes`，留一個版本），刪除後提示「已刪除一條紀錄，可以用「復原上一版會議紀錄」還原」。錄音中、正在整理時不能改（同「編輯」按鈕）。
 - 重點標記（逐字稿上方的「重點標記 N」選單）：每個標記一個子選單「跳到這裡」「重新命名…」「刪除」；`AppDatabase.renameBookmark`。
 - 詞彙（設定）：雙擊詞變成輸入框改字（`AppDatabase.renameTerm`，改成已經有的詞時合併）；右鍵：重新命名…、刪除。範本列表右鍵：複製、設為預設、刪除（自訂的才有）。設定「認識的人」的「改名」改叫「重新命名」，垃圾桶的說明改成「移除「X」」。
 - 用詞：「改名…」全部改成「重新命名…」（人物、說話者的選單），鉛筆的說明也是「重新命名」。
-- DEBUG：`renamemeetingui <id>`、`folderdeleteui <名稱>`、`seriesdeleteui <id>`（打開確認）、`sidebarkey return|delete`（等於在側欄按鍵）、`noteitem editui|edit|delete <section> <i> [<j>] [文字]`、`bookmarkrename[ui] <id> [名稱]`、`termrename <id> <詞>`；state 的 `confirmDeleteFolder`、`confirmDeleteSeries`、`renameMeetingRequest`、`personRenameRequest`、`editingNoteItem`、`renamingFolder`、`renamingSeries`。
+- DEBUG：`capturemenu <輸出.json>`（接下來打開的選單把項目寫出來再關掉，配合 AX 的 AXShowMenu 檢查右鍵選單的內容）、`mouseat <left|right|double|move> <x> <y> <視窗> [選單輸出]`、`keyat <return|delete|escape|f2> <視窗>`、`renamemeetingui <id>`、`folderdeleteui <名稱>`、`seriesdeleteui <id>`（打開確認）、`sidebarkey return|delete`（等於在側欄按鍵）、`noteitem editui|edit|delete <section> <i> [<j>] [文字]`、`bookmarkrename[ui] <id> [名稱]`、`termrename <id> <詞>`；state 的 `confirmDeleteFolder`、`confirmDeleteSeries`、`renameMeetingRequest`、`personRenameRequest`、`editingNoteItem`、`renamingFolder`、`renamingSeries`。
 - Windows：design-windows §11.33。
 
 ## 14. 決策紀錄

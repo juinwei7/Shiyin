@@ -80,7 +80,7 @@ struct ItemList: View {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("•").foregroundStyle(.secondary)
                             (Text(item.text)).meetingText()
-                                .textSelection(.enabled)
+                                .selectableUnlessEditable(ref != nil && detail != nil)
                                 .fixedSize(horizontal: false, vertical: true)
                             if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
                             if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }
@@ -547,7 +547,7 @@ struct ActionItemsTable: View {
                             NoteItemEditor(ref: ref)
                         } else {
                         Text(item.task).meetingText()
-                            .textSelection(.enabled)
+                            .selectableUnlessEditable(ref != nil && detail != nil)
                             .fixedSize(horizontal: false, vertical: true)
                         if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
                         if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }

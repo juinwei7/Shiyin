@@ -169,6 +169,7 @@ struct MeetingHeader: View {
                 Button { startRenaming(idx) } label: { Text(name).foregroundStyle(Color.speaker(idx)) }
                     .buttonStyle(.plain)
                     .help("重新命名「\(name)」，整場的逐字稿和會議紀錄都會跟著改")
+                    .contextMenu { speakerMenu(idx) }   // 按鈕會吃掉右鍵，要掛在按鈕本身
             }
         }
         .contextMenu { speakerMenu(idx) }

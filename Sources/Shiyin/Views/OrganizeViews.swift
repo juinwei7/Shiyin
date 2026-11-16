@@ -26,7 +26,6 @@ struct SeriesSidebarSection: View {
                         model.openSeries(id)
                     }
                     .help(series.frequencyText)
-                    .contextMenu { SeriesMenuItems(series: series) }
                 }
             }
         }
@@ -194,8 +193,8 @@ struct SeriesPage: View {
                         }
                         .buttonStyle(.plain)
                         .help("打開這場會議")
+                        .contextMenu { MeetingLinkMenuItems(meeting: row.meeting, series: rowSeries) }   // 掛在按鈕上，不然按鈕會吃掉右鍵
                         .rowMenu { MeetingLinkMenuItems(meeting: row.meeting, series: rowSeries) }
-                        .contextMenu { MeetingLinkMenuItems(meeting: row.meeting, series: rowSeries) }
                     }
                 }
             }

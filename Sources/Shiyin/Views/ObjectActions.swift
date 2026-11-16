@@ -178,10 +178,11 @@ private struct NoteItemActions: ViewModifier {
     func body(content: Content) -> some View {
         if let ref {
             content
-                .rowMenu { NoteItemMenuItems(ref: ref, text: text, time: time) }
+                // 整行（含行尾空白）都可以右鍵、雙擊；文字不當成可選取（selectableUnlessEditable），右鍵才是這一份
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { if model.canEditNotes { model.editingNoteItem = ref } }
                 .contextMenu { NoteItemMenuItems(ref: ref, text: text, time: time) }
-                // 文字可以選取，雙擊要跟選字同時收（不然雙擊只會選到一個詞）
-                .simultaneousGesture(TapGesture(count: 2).onEnded { if model.canEditNotes { model.editingNoteItem = ref } })
+                .rowMenu { NoteItemMenuItems(ref: ref, text: text, time: time) }
         } else {
             content
         }
@@ -245,5 +246,14 @@ struct NoteItemEditor: View {
             text = model.detail?.notes?.text(at: ref) ?? ""
             focused = true
         }
+    }
+}
+
+extension View {
+    /// 能直接改的紀錄（R100）不開文字選取：開了的話右鍵是系統的文字選單、雙擊只選到一個詞。
+    /// 要拷貝用右鍵的「拷貝」，要改一部分雙擊進去改
+    @ViewBuilder
+    func selectableUnlessEditable(_ editable: Bool) -> some View {
+        if editable { self } else { textSelection(.enabled) }
     }
 }

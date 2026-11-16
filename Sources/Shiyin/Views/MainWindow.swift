@@ -374,7 +374,6 @@ struct SidebarView: View {
                         model.folderFilter = folder.name
                     }
                     .help(rule.map { model.folderRuleSummary($0) } ?? "")
-                    .contextMenu { FolderMenuItems(folder: folder.name) }
                 }
             }
         }
@@ -464,7 +463,8 @@ struct SidebarView: View {
 }
 
 /// 側欄的資料夾列（R9.2）：點了就只看這個資料夾。有選單時（資料夾、定期會議，R100）滑過或選到時
-/// 數量的位置換成「⋯」
+/// 數量的位置換成「⋯」。整列用點擊手勢，不用 Button：List 裡的按鈕會把右鍵當成點擊，右鍵選單出不來
+/// （2026-11-16 自己驗收時發現）
 struct FolderRow: View {
     let name: String
     let count: Int
@@ -477,17 +477,13 @@ struct FolderRow: View {
     var body: some View {
         let showMenu = menu != nil && (hovering || selected)
         HStack {
-            Button(action: action) {
-                HStack {
-                    Label(name, systemImage: symbol)
-                        .foregroundStyle(selected ? Color.celadon : .primary)
-                        .fontWeight(selected ? .semibold : .regular)
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(selected ? .isSelected : [])
+            Label(name, systemImage: symbol)
+                .foregroundStyle(selected ? Color.celadon : .primary)
+                .fontWeight(selected ? .semibold : .regular)
+                // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）
+                .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                .accessibilityAction(.default, action)
+            Spacer()
             ZStack(alignment: .trailing) {
                 Text("\(count)").monospacedDigit().foregroundStyle(.secondary)
                     .opacity(showMenu ? 0 : 1)
@@ -498,6 +494,9 @@ struct FolderRow: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: action)
+        .contextMenu { if let menu { menu() } }
         .onHover { hovering = $0 }
     }
 }

@@ -556,6 +556,59 @@ enum DebugControl {
                     window.sendEvent(event)
                 }
             }
+        // mouseat <left|right|double|move> <x> <y> <視窗 id 或編號> [選單輸出.json]：同 clickat，直接交給 NSWindow.sendEvent，
+        // 不碰使用者的滑鼠、不用切到那個桌面（R100 自己驗收）。給了輸出檔時，接下來打開的選單（右鍵、「⋯」）把項目寫出來再關掉
+        case "mouseat":
+            guard args.count > 4, let x = Double(args[2]), let y = Double(args[3]),
+                  let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == args[4] || "\($0.windowNumber)" == args[4]) })
+            else { break }
+            if args.count > 5 { captureNextMenu(to: args[5]) }
+            let point = NSPoint(x: x, y: window.frame.height - y)
+            func send(_ type: NSEvent.EventType, clicks: Int) {
+                if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: clicks, pressure: 1) {
+                    window.sendEvent(event)
+                }
+            }
+            // 從 CGEvent 產生（同真的滑鼠：帶按鍵編號、螢幕座標、底下的視窗），NSEvent.mouseEvent 做的右鍵跟真的不一樣
+            func sendCG(_ type: CGEventType, _ button: CGMouseButton, clicks: Int64) {
+                let screen = window.convertPoint(toScreen: point)
+                let flipped = CGPoint(x: screen.x, y: (NSScreen.screens.first?.frame.height ?? 0) - screen.y)
+                guard let cg = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: flipped, mouseButton: button) else { return }
+                cg.setIntegerValueField(.mouseEventClickState, value: clicks)
+                cg.setIntegerValueField(.mouseEventWindowUnderMousePointer, value: Int64(window.windowNumber))
+                cg.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent, value: Int64(window.windowNumber))
+                if let event = NSEvent(cgEvent: cg) { window.sendEvent(event) }
+            }
+            switch args[1] {
+            case "right": send(.rightMouseDown, clicks: 1); send(.rightMouseUp, clicks: 1)
+            case "cgright": sendCG(.rightMouseDown, .right, clicks: 1); sendCG(.rightMouseUp, .right, clicks: 1)
+            case "cgleft": sendCG(.leftMouseDown, .left, clicks: 1); sendCG(.leftMouseUp, .left, clicks: 1)
+            case "cgdouble":
+                sendCG(.leftMouseDown, .left, clicks: 1); sendCG(.leftMouseUp, .left, clicks: 1)
+                sendCG(.leftMouseDown, .left, clicks: 2); sendCG(.leftMouseUp, .left, clicks: 2)
+            case "double": send(.leftMouseDown, clicks: 1); send(.leftMouseUp, clicks: 1); send(.leftMouseDown, clicks: 2); send(.leftMouseUp, clicks: 2)
+            case "move": send(.mouseMoved, clicks: 0)
+            default: send(.leftMouseDown, clicks: 1); send(.leftMouseUp, clicks: 1)
+            }
+        case "capturemenu": captureNextMenu(to: args[1])   // capturemenu <輸出.json>：接下來打開的選單寫出項目後關掉（配合外面送的真的滑鼠事件）
+        // keyat <return|delete|escape|f2> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
+        case "keyat":
+            guard args.count > 2, let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == args[2] || "\($0.windowNumber)" == args[2]) })
+            else { break }
+            let (code, chars): (UInt16, String) = switch args[1] {
+            case "delete": (51, "\u{7f}")
+            case "escape": (53, "\u{1b}")
+            case "f2": (120, String(UnicodeScalar(NSF2FunctionKey)!))
+            default: (36, "\r")
+            }
+            for type in [NSEvent.EventType.keyDown, .keyUp] {
+                if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                windowNumber: window.windowNumber, context: nil, characters: chars, charactersIgnoringModifiers: chars,
+                                                isARepeat: false, keyCode: code) {
+                    window.sendEvent(event)
+                }
+            }
         // pressbutton <按鈕的字> [視窗編號]：按 AppKit 的按鈕（確認對話框的 NSAlert 在桌面層時 AX 看不到、clickat 點不到）
         case "pressbutton":
             func find(_ view: NSView) -> NSButton? {
@@ -1073,6 +1126,32 @@ enum DebugControl {
             return nil
         }
         return NSApp.windows.lazy.filter(\.isVisible).compactMap { $0.contentView.flatMap(find) }.first
+    }
+
+    /// 下一個開始追蹤的選單（右鍵選單、「⋯」）：項目寫到 path（子選單展開成「父 ▸ 子」），然後關掉，不留在使用者畫面上
+    private static var menuObserver: NSObjectProtocol?
+    private static func captureNextMenu(to path: String) {
+        if let menuObserver { NotificationCenter.default.removeObserver(menuObserver) }
+        menuObserver = NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { note in
+            guard let menu = note.object as? NSMenu, menu.supermenu == nil, menu != NSApp.mainMenu else { return }
+            if let observer = menuObserver { NotificationCenter.default.removeObserver(observer); menuObserver = nil }
+            func titles(_ m: NSMenu, _ prefix: String) -> [String] {
+                m.items.flatMap { item -> [String] in
+                    if item.isSeparatorItem { return [prefix + "——"] }
+                    let line = prefix + item.title + (item.isEnabled ? "" : "（停用）") + (item.state == .on ? "（✓）" : "")
+                    return [line] + (item.submenu.map { titles($0, prefix + item.title + " ▸ ") } ?? [])
+                }
+            }
+            // SwiftUI 的選單內容在開始追蹤時才補齊，等一下再讀（選單追蹤時主執行緒在 event tracking 模式，要排在 common）
+            nonisolated(unsafe) let tracked = menu
+            RunLoop.main.perform(inModes: [.common]) {
+                MainActor.assumeIsolated {
+                    tracked.update()
+                    write(["items": titles(tracked, "")], to: path)
+                    tracked.cancelTracking()
+                }
+            }
+        }
     }
 
     private static func write(_ object: [String: Any], to path: String) {
