@@ -417,7 +417,13 @@ public sealed class SettingsWindow : Window
         var list = new ListView { SelectionMode = ListViewSelectionMode.Single, Width = 200 };
         foreach (var t in templates)
         {
-            var item = new ListViewItem { Tag = t.Id, Content = Ui.Bar(Ui.Text(t.DisplayName(), 14, wrap: false), null, t.Id == S.DefaultTemplate ? Ui.Caption(L.T("預設")) : null) };
+            // 名字放在撐滿的那一欄、太長時省略號：英文的「General meeting (copy)」會把右邊的「Default」擠出列表（2026-11-16 英文巡檢）
+            var item = new ListViewItem
+            {
+                Tag = t.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Content = Ui.Bar(null, Ui.Text(t.DisplayName(), 14, wrap: false), t.Id == S.DefaultTemplate ? Ui.Caption(L.T("預設")) : null),
+            };
+            ToolTipService.SetToolTip(item, t.DisplayName());
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, t.DisplayName());
             // 右鍵（R100）：複製、設為預設範本、刪除（自訂的才有）
             var record = t;
@@ -454,7 +460,8 @@ public sealed class SettingsWindow : Window
     void CreateTemplate(TemplateRecord? source, TemplateDefinition? edited)
     {
         var id = "custom-" + Guid.NewGuid().ToString("N")[..8];
-        var definition = edited ?? source?.DefinitionFor(MeetingLanguages.Interface) ?? new TemplateDefinition("", ["summary", "decisions", "actionItems"], [], "");
+        // 複製內建範本：跟畫面上看到的一樣（簡體介面是簡體，同 Mac 的「複製」按鈕用畫面上的 draft）
+        var definition = edited ?? (source is null ? null : Shown(source)) ?? new TemplateDefinition("", ["summary", "decisions", "actionItems"], [], "");
         host.Controller.SaveTemplate(new TemplateRecord
         {
             Id = id, Name = source is null ? L.T("新範本") : L.F("%@（副本）", source.DisplayName()), Builtin = false, Definition = definition.JsonString(),
@@ -463,13 +470,18 @@ public sealed class SettingsWindow : Window
         Show();
     }
 
-    FrameworkElement TemplateEditor(TemplateRecord template)
+    /// <summary>畫面上顯示的範本內容：內建範本不能改、不會存檔，簡體介面顯示簡體（M§48.2）</summary>
+    static TemplateDefinition Shown(TemplateRecord template)
     {
         var definition = template.DefinitionFor(MeetingLanguages.Interface);
-        // 內建範本不能改、不會存檔：簡體介面顯示簡體（M§48.2）
-        if (template.Builtin && L.Simplified)
-            definition = definition with { Description = L.Ui(definition.Description), Instruction = L.Ui(definition.Instruction),
-                                           Custom = [.. definition.Custom.Select(c => c with { Title = L.Ui(c.Title), Instruction = L.Ui(c.Instruction) })] };
+        if (!template.Builtin || !L.Simplified) return definition;
+        return definition with { Description = L.Ui(definition.Description), Instruction = L.Ui(definition.Instruction),
+                                 Custom = [.. definition.Custom.Select(c => c with { Title = L.Ui(c.Title), Instruction = L.Ui(c.Instruction) })] };
+    }
+
+    FrameworkElement TemplateEditor(TemplateRecord template)
+    {
+        var definition = Shown(template);
         var sections = definition.Sections.ToList();
         var custom = definition.Custom.ToList();
         var name = new TextBox { Header = L.T("名稱"), Text = template.DisplayName(), IsEnabled = !template.Builtin };

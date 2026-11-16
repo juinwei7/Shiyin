@@ -43,6 +43,13 @@ public sealed class MainWindow : Window
     readonly Button viewOptions = new();
     readonly Grid sectionHeader;
     readonly Grid filterBar;
+    readonly FontIcon filterFunnel = new() { Glyph = "\uE71C", FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>
+    /// 建構時就做好、之後不重建的元件（側欄的標題列、篩選列、垃圾桶那一行）：換深淺色時重新給顏色。
+    /// 文字的灰色是 app 主題的資源，拿到的是當時那一份，開著 app 換成淺色時還是深色用的淺灰（看不見）；
+    /// 青瓷綠看 Ui.SetTheme，建構時還沒設（深色模式開 app 時漏斗是淺色用的深綠）。2026-11-16 虛擬機的深色巡檢
+    /// </summary>
+    readonly List<Action> restyle = [];
     readonly TextBlock filterText = Ui.Text("", 13, maxLines: 2);
     readonly StackPanel filterEmpty;
     readonly StackPanel folders = new() { Spacing = 2, Margin = new Thickness(0, 0, 0, 2) };
@@ -81,7 +88,8 @@ public sealed class MainWindow : Window
         emptyTrash.VerticalAlignment = VerticalAlignment.Center;
         // 垃圾桶裡也照排序（R97.4）：「顯示方式」只有排序那一段（Windows 沒有選單列，放在說明那一行）
         var trashOptions = ViewOptionsButton(trash: true);
-        trashHeader = Ui.Bar(null, Ui.Caption(L.T("垃圾桶裡的會議 30 天後會永久刪除")), Ui.Row(4, trashOptions, emptyTrash));
+        var trashNote = Ui.Caption(L.T("垃圾桶裡的會議 30 天後會永久刪除"));
+        trashHeader = Ui.Bar(null, trashNote, Ui.Row(4, trashOptions, emptyTrash));
         ConfigureViewOptions(viewOptions, trash: false);
         sectionTitle.VerticalAlignment = VerticalAlignment.Center;
         sectionTitle.TextTrimming = TextTrimming.CharacterEllipsis;
@@ -94,16 +102,24 @@ public sealed class MainWindow : Window
         ToolTipService.SetToolTip(clear, L.T("清除篩選"));
         AutomationProperties.SetName(clear, L.T("清除篩選"));
         clear.Click += (_, _) => State.SetFilter(new MeetingFilter());
-        var funnel = new FontIcon { Glyph = "\uE71C", FontSize = 13, Foreground = Ui.Celadon, VerticalAlignment = VerticalAlignment.Center };
         filterText.VerticalAlignment = VerticalAlignment.Center;
         clear.VerticalAlignment = VerticalAlignment.Center;
-        filterBar = Ui.Bar(funnel, filterText, clear, 6);
+        filterBar = Ui.Bar(filterFunnel, filterText, clear, 6);
         filterBar.Margin = new Thickness(16, 2, 10, 2);
         var clearLink = Ui.Link(L.T("清除篩選"), () => State.SetFilter(new MeetingFilter()));
-        filterEmpty = Ui.Column(4, Ui.Text(L.T("沒有符合篩選的會議"), 13, color: Ui.Secondary), clearLink);
+        var emptyNote = Ui.Text(L.T("沒有符合篩選的會議"), 13, color: Ui.Secondary);
+        filterEmpty = Ui.Column(4, emptyNote, clearLink);
         filterEmpty.Margin = new Thickness(16, 4, 12, 4);
         trashHeader.Margin = new Thickness(16, 0, 12, 6);
         trashHeader.Visibility = Visibility.Collapsed;
+        restyle.Add(() =>
+        {
+            sectionTitle.Foreground = trashNote.Foreground = emptyNote.Foreground = Ui.Secondary;
+            Ui.Borderless(clear, Ui.Secondary);
+            filterFunnel.Foreground = Ui.Celadon;
+            StyleViewOptions(viewOptions, force: true);
+            StyleViewOptions(trashOptions, force: true);
+        });
         Build();
         // 關掉主視窗只是藏起來（R13.3）
         AppWindow.Closing += (_, e) =>
@@ -149,8 +165,9 @@ public sealed class MainWindow : Window
         if (host.Updater is { } updater) updater.Changed += () => host.Post(BuildFooter);
         toastTimer.Tick += (_, _) => { toast.IsOpen = false; toastTimer.Stop(); };
         // 換深淺色：列表的顏色是建列時給的，要重建
-        root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); listSignature = null; Refresh(); };
+        root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); restyle.ForEach(a => a()); listSignature = null; Refresh(); };
         Ui.SetTheme(root.ActualTheme);
+        restyle.ForEach(a => a());
         State.Reload();
     }
 

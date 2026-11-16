@@ -263,7 +263,10 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
     }
 }
 
-/// <summary>一排會換行的小元件（常參加的人，同 Mac 的 FlowLayout）</summary>
+/// <summary>
+/// 一排會換行的小元件（常參加的人，同 Mac 的 FlowLayout；會議頁上方的資訊列）。同一行裡高度不同的元件上下置中
+/// （資訊列的名字是按鈕，比一般的文字高一點）
+/// </summary>
 public sealed partial class FlowPanel : Panel
 {
     public double Spacing { get; set; } = 8;
@@ -286,14 +289,29 @@ public sealed partial class FlowPanel : Panel
 
     protected override Windows.Foundation.Size ArrangeOverride(Windows.Foundation.Size final)
     {
-        double x = 0, y = 0, line = 0;
-        foreach (var child in Children)
+        // 先分好行、算每一行的高度，再排（同一行裡置中）
+        var lines = new List<(int Start, int Count, double Height)>();
+        double x = 0, line = 0;
+        int start = 0;
+        for (var i = 0; i < Children.Count; i++)
         {
-            var size = child.DesiredSize;
-            if (x > 0 && x + size.Width > final.Width) { x = 0; y += line + LineSpacing; line = 0; }
-            child.Arrange(new Windows.Foundation.Rect(x, y, size.Width, size.Height));
+            var size = Children[i].DesiredSize;
+            if (x > 0 && x + size.Width > final.Width) { lines.Add((start, i - start, line)); start = i; x = 0; line = 0; }
             x += size.Width + Spacing;
             line = Math.Max(line, size.Height);
+        }
+        if (Children.Count > start) lines.Add((start, Children.Count - start, line));
+        double y = 0;
+        foreach (var (first, count, height) in lines)
+        {
+            x = 0;
+            for (var i = first; i < first + count; i++)
+            {
+                var size = Children[i].DesiredSize;
+                Children[i].Arrange(new Windows.Foundation.Rect(x, y + (height - size.Height) / 2, size.Width, size.Height));
+                x += size.Width + Spacing;
+            }
+            y += height + LineSpacing;
         }
         return final;
     }
@@ -325,9 +343,11 @@ public static class FollowUpIcons
         {
             case FollowUpStatus.Done:
                 grid.Children.Add(new Ellipse { Fill = color });
+                // \u6253\u52FE\u662F\u5167\u5BB9\u7684\u5E95\u8272\uFF08\u540C Mac \u7684 checkmark.circle.fill \u93E4\u7A7A\uFF09\uFF1A\u6DF1\u8272\u6A21\u5F0F\u7684\u9752\u74F7\u7DA0\u6BD4\u8F03\u4EAE\uFF0C\u767D\u8272\u7684\u52FE\u5728\u4E0A\u9762\u770B\u4E0D\u6E05\u695A\uFF082026-11-16 \u6DF1\u8272\u5DE1\u6AA2\uFF09
                 grid.Children.Add(new FontIcon
                 {
-                    Glyph = "\uE73E", FontSize = size * 0.6, Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                    Glyph = "\uE73E", FontSize = size * 0.6,
+                    Foreground = new SolidColorBrush(Ui.IsDark ? Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20) : Microsoft.UI.Colors.White),
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 });
                 break;

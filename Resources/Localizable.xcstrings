@@ -2636,7 +2636,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Action Items from Last Time"
+            "value": "Action items from last time"
           }
         }
       }
@@ -21454,7 +21454,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open Action Items"
+            "value": "Open action items"
           }
         }
       }
