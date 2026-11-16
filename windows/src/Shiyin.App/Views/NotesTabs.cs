@@ -573,7 +573,7 @@ public sealed class NotesTabs
                 var bookmark = b;
                 var sub = new MenuFlyoutSubItem { Text = $"{TimeFormat.String(b.Time)} {b.Label}" };
                 sub.Items.Add(Ui.Item(L.T("跳到這裡"), () => Seek(bookmark.Time), icon: Symbol.Play));
-                sub.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Dialogs.RenameBookmark(window, bookmark), icon: Symbol.Edit));
+                sub.Items.Add(Ui.Item(L.T("重新命名…"), () => window.RenameUi(new RenameTarget.Bookmark(bookmark.Id ?? 0)), icon: Symbol.Edit));
                 sub.Items.Add(new MenuFlyoutSeparator());
                 sub.Items.Add(Ui.DangerItem(L.T("刪除"), () => host.Controller.DeleteBookmark(bookmark.MeetingId, bookmark.Id ?? 0)));
                 menu.Items.Add(sub);

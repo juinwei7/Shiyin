@@ -201,15 +201,28 @@ public sealed partial class AppController
     {
         var name = newName.Trim();
         if (name.Length == 0 || name == old) return;
-        // 側欄展開的資料夾跟著改名（R101、design-windows §11.34）
+        // 側欄展開的資料夾、排序的鍵跟著改名（R101、R103，design-windows §11.34、§11.36）
         SidebarCollapse.RenameFolder(Settings, old, name);
+        SidebarDrag.RenameFolder(Settings, old, name);
         Perform(null, () => Db.RenameFolder(old, name));
     }
 
-    /// <summary>刪除資料夾：會議留著，移回「不在資料夾」；側欄展開的鍵拿掉（R101）</summary>
+    /// <summary>
+    /// 建一個空的資料夾（R104、M§78，「資料夾」標題的「+」、DEBUG 的 foldernew）：已經有同名的資料夾（資料夾表、會議的資料夾、自動加入條件）時不建
+    /// </summary>
+    public void CreateFolder(string name)
+    {
+        var trimmed = name.Trim();
+        if (trimmed.Length == 0 || Organizing.Folders(Db.MeetingRows(), Db.FolderRules(), Db.FolderNames()).Any(f => f.Name == trimmed)) return;
+        Perform(null, () => Db.CreateFolder(trimmed));
+        Notice?.Invoke(L.F("已建立資料夾「%@」", trimmed));
+    }
+
+    /// <summary>刪除資料夾：會議留著，移回「不在資料夾」；側欄展開、排序的鍵拿掉（R101、R103）</summary>
     public void DeleteFolder(string name)
     {
         SidebarCollapse.SetRow(Settings, SidebarCollapse.FolderKey(name), false);
+        SidebarDrag.Remove(Settings, SidebarCollapse.FolderKey(name));
         Perform(null, () => Db.RenameFolder(name, ""));
     }
 

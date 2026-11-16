@@ -12,7 +12,7 @@ using Windows.Storage;
 
 namespace Shiyin.App;
 
-/// <summary>對話框（ContentDialog）：匯入、匯出、重新辨識說話者、編輯資訊、資料夾、用詞修正、確認、錯誤</summary>
+/// <summary>對話框（ContentDialog）：匯入、匯出、重新辨識說話者、編輯資訊、用詞修正、確認、錯誤（重新命名在 RenameDialog.cs）</summary>
 public static partial class Dialogs
 {
     static ContentDialog Dialog(MainWindow window, string title, UIElement content, string primary, string? close = null) => new()
@@ -53,7 +53,11 @@ public static partial class Dialogs
 
     // MARK: 匯入（R1.2）
 
-    public static async Task Import(MainWindow window, IReadOnlyList<string> files)
+    /// <summary>DEBUG 的 state（showImportSheet，同 Mac）：匯入的對話框開著沒</summary>
+    public static bool ImportOpen { get; private set; }
+
+    /// <param name="folder">匯入到哪個資料夾：從檔案總管拖到側欄的資料夾上時是那個資料夾（R103.3），不然是目前看的資料夾</param>
+    public static async Task Import(MainWindow window, IReadOnlyList<string> files, string? folder = null)
     {
         var host = AppHost.Current;
         var single = files.Count == 1;
@@ -81,7 +85,11 @@ public static partial class Dialogs
         form.Children.Add(count);
         form.Width = 420;
         var dialog = Dialog(window, single ? L.T("匯入錄音") : L.F("匯入 %lld 個錄音檔", files.Count), new ScrollViewer { Content = form }, L.T("匯入並開始轉錄"));
-        if (await Show(dialog) != ContentDialogResult.Primary) return;
+        ImportOpen = true;
+        ContentDialogResult result;
+        try { result = await Show(dialog); }
+        finally { ImportOpen = false; }
+        if (result != ContentDialogResult.Primary) return;
         var options = new ImportOptions
         {
             Title = title.Text,
@@ -91,7 +99,7 @@ public static partial class Dialogs
             Language = MeetingLanguages.All[Math.Max(0, language.SelectedIndex)],
             MinSpeakers = count.SelectedIndex <= 0 ? null : count.SelectedIndex + 1,
         };
-        await host.Controller.ConfirmImport(files, options, window.State.CurrentFolder);
+        await host.Controller.ConfirmImport(files, options, folder ?? window.State.CurrentFolder);
     }
 
     // MARK: 匯出（R7）
@@ -274,28 +282,6 @@ public static partial class Dialogs
         var edited = title.Text.Trim();
         var dateText = date.Date is { } picked ? DateText.String(DateOnly.FromDateTime(picked.Date)) : meeting.MeetingDate;
         AppHost.Current.Controller.UpdateInfo(meeting.Id!.Value, edited == meeting.DisplayTitle ? meeting.Title : edited, dateText, participants.Text);
-    }
-
-    // MARK: 資料夾（R9.2）
-
-    /// <summary>新資料夾：選的會議（多選時是全部，R88）移進去</summary>
-    public static async Task NewFolder(MainWindow window, IReadOnlyList<long> meetingIds)
-    {
-        if (meetingIds.Count == 0) return;
-        var name = new TextBox { PlaceholderText = L.T("資料夾名稱") };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(name, L.T("資料夾名稱"));
-        var form = Ui.Column(10, Ui.Text(L.T("例如專案名稱或客戶名稱。這場會議會移進新資料夾。"), color: Ui.Secondary), name);
-        if (await Show(Dialog(window, L.T("新資料夾"), form, L.T("建立並移入"))) != ContentDialogResult.Primary) return;
-        if (name.Text.Trim().Length > 0) AppHost.Current.Controller.MoveToFolder(meetingIds, name.Text);
-    }
-
-    public static async Task RenameFolder(MainWindow window, string old)
-    {
-        var name = new TextBox { Text = old };
-        var form = Ui.Column(10, Ui.Text(L.T("資料夾裡的會議都會跟著改。"), color: Ui.Secondary), name);
-        if (await Show(Dialog(window, L.T("重新命名資料夾"), form, L.T("重新命名"))) != ContentDialogResult.Primary) return;
-        if (window.State.FolderFilter == old) window.State.SetFolder(name.Text.Trim());
-        AppHost.Current.Controller.RenameFolder(old, name.Text);
     }
 
     // MARK: 用詞修正（R4.5）

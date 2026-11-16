@@ -179,11 +179,15 @@ public sealed record SeriesJoinSuggestion(MeetingSeries Series, IReadOnlyList<lo
 /// <summary>資料夾自動歸類、定期會議的畫面用的計算（R98、R99、M§72、§73，同 Mac 的 Store/OrganizeActions.swift）</summary>
 public static class Organizing
 {
-    /// <summary>現有的資料夾和各自的場數（不含垃圾桶），依名稱排序；有自動加入條件的資料夾沒有會議也列出來（M§72）</summary>
-    public static List<(string Name, int Count)> Folders(IEnumerable<MeetingRow> meetings, IEnumerable<FolderRule> rules)
+    /// <summary>
+    /// 現有的資料夾和各自的場數（不含垃圾桶），依名稱排序：會議的資料夾、有自動加入條件的資料夾（M§72）、資料夾表（names：自己建的空資料夾，
+    /// 會議都移走了也還在，R104、M§78）三者的聯集，沒有會議的是 0 場
+    /// </summary>
+    public static List<(string Name, int Count)> Folders(IEnumerable<MeetingRow> meetings, IEnumerable<FolderRule> rules, IEnumerable<string>? names = null)
     {
         var counts = meetings.Where(m => m.Meeting.Folder.Length > 0).GroupBy(m => m.Meeting.Folder).ToDictionary(g => g.Key, g => g.Count());
         foreach (var rule in rules) counts.TryAdd(rule.Folder, 0);
+        foreach (var name in names ?? []) if (name.Length > 0) counts.TryAdd(name, 0);
         return counts.Select(p => (p.Key, p.Value)).OrderBy(f => f.Key, NaturalComparer.Instance).ToList();
     }
 

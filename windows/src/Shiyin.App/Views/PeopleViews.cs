@@ -6,13 +6,13 @@ using Microsoft.UI.Xaml.Media;
 using Shiyin.Data;
 using Shiyin.Localization;
 using Shiyin.Model;
-using Windows.System;
+using Shiyin.Services;
 
 namespace Shiyin.App.Views;
 
 /// <summary>
 /// 人物頁（M§60.2、R85，design-windows §11.22；同 Mac 的 Views/PeopleViews.swift）：大頭像、名字、一起開過幾場，
-/// 改名、合併到…、刪除聲音特徵；負責的待辦（點了打開那場、從那裡播放）；一起開過的會議（他說了多久）。
+/// 重新命名、合併到…、刪除聲音特徵；負責的待辦（點了打開那場、從那裡播放）；一起開過的會議（他說了多久）。
 /// Windows 沒有「加到提醒事項」
 /// </summary>
 public sealed class PersonPage(AppHost host, MainWindow window)
@@ -88,20 +88,14 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         name.TextTrimming = TextTrimming.CharacterEllipsis;
         var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         title.Children.Add(name);
-        // 名字旁的鉛筆（R85.6、M§60.2）：打開同一個改名輸入框，接在鉛筆下面；取消、儲存同「更多 → 改名…」
-        var rename = RenameFlyout(person);
+        // 名字旁的鉛筆（R85.6、M§60.2）：打開重新命名的對話框（R102，「更多」、側欄右鍵的「重新命名…」也是這一個）
         var pencil = Ui.Borderless(new Button { Content = new SymbolIcon(Symbol.Edit) });
-        // 「更多 → 改名…」、側欄右鍵的「改名…」也打開這一個（R85.7）
-        (pencilButton, renameFlyout, headerPerson) = (pencil, rename, person.Id);
-        pencil.Loaded += (_, _) => OpenPendingRename();
         pencil.Padding = new Thickness(6);
         pencil.VerticalAlignment = VerticalAlignment.Center;
         ToolTipService.SetToolTip(pencil, L.T("重新命名"));
         AutomationProperties.SetName(pencil, L.T("重新命名"));
-        pencil.Click += (_, _) => rename.ShowAt(pencil, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
-        {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
-        });
+        var personId = person.Id;
+        pencil.Click += (_, _) => window.RenameUi(new RenameTarget.Person(personId));
         title.Children.Add(pencil);
         if (person.IsMe)
         {
@@ -142,17 +136,13 @@ public sealed class PersonPage(AppHost host, MainWindow window)
 
     /// <summary>
     /// 一個人的動作（R85.7，同 Mac 的 PersonMenuItems）：人物頁的「更多」和側欄人物列的右鍵選單共用。
-    /// 改名…（選那個人、打開名字旁鉛筆下面的輸入框）、合併到（子選單：其他認識的人）、分隔線、移除這個人…（確認對話框）
+    /// 重新命名…（選那個人、打開重新命名的對話框，R102）、合併到（子選單：其他認識的人）、分隔線、移除這個人…（確認對話框）
     /// </summary>
     public List<MenuFlyoutItemBase> MenuItems(PersonOverview person)
     {
         var items = new List<MenuFlyoutItemBase>
         {
-            Ui.Item(L.T("重新命名…"), () =>
-            {
-                window.State.SelectPerson(person.Id);
-                RequestRename(person.Id);
-            }, icon: Symbol.Edit),
+            Ui.Item(L.T("重新命名…"), () => window.RenamePersonUi(person.Id), icon: Symbol.Edit),
         };
         var others = window.State.People.Where(p => p.Id != person.Id).ToList();
         if (others.Count > 0)
@@ -198,63 +188,6 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         remove.Click += (_, _) => _ = window.ConfirmRemovePerson(person.Id);
         row.Children.Add(remove);
         return row;
-    }
-
-    // 名字旁的鉛筆和它的改名輸入框（目前畫出來的那個人）；「重新命名…」要打開的人
-    Button? pencilButton;
-    Flyout? renameFlyout;
-    long? headerPerson;
-    long? pendingRename;
-
-    /// <summary>「改名…」（更多、側欄右鍵、DEBUG 的 personrenameui）：那個人的頁面畫好、鉛筆放進畫面之後打開輸入框</summary>
-    public void RequestRename(long personId)
-    {
-        pendingRename = personId;
-        OpenPendingRename();
-    }
-
-    void OpenPendingRename()
-    {
-        if (pendingRename is not long id || headerPerson != id || pencilButton is not { IsLoaded: true } pencil || renameFlyout is not { } flyout) return;
-        pendingRename = null;
-        flyout.ShowAt(pencil, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
-        {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
-        });
-    }
-
-    /// <summary>DEBUG 的 state：改名的輸入框開著沒</summary>
-    public bool RenameOpen => renameFlyout?.IsOpen == true;
-
-    /// <summary>改名的輸入框（同設定頁）：接在名字旁的鉛筆下面；改成已經有的名字時合併過去，選那個人</summary>
-    Flyout RenameFlyout(PersonOverview person)
-    {
-        var box = new TextBox { Text = person.Name, Header = L.T("名字"), Width = 260 };
-        // 接在按的那個按鈕下面（ShowAt 時給位置）：「更多」靠右對齊、名字旁的鉛筆靠左對齊
-        var flyout = new Flyout();
-        void Save()
-        {
-            var text = box.Text.Trim();
-            if (text.Length == 0) return;
-            flyout.Hide();
-            host.Controller.RenamePerson(person.Id, text);
-            window.State.SelectPersonNamed(text);
-        }
-        var save = Ui.Button(L.T("儲存"), Save, accent: true);
-        box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0;
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key != VirtualKey.Enter) return;
-            e.Handled = true;
-            Save();
-        };
-        var actions = Ui.Row(8, Ui.Button(L.T("取消"), flyout.Hide), save);
-        actions.HorizontalAlignment = HorizontalAlignment.Right;
-        flyout.Content = Ui.Column(12, box, actions);
-        flyout.Opening += (_, _) => box.Text = person.Name;
-        // 打開時名字整個選好，直接打新的名字
-        flyout.Opened += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectAll(); };
-        return flyout;
     }
 
     /// <summary>負責的待辦：事項、期限、哪一場會議和時間點（點了打開那場、從那裡播放）</summary>

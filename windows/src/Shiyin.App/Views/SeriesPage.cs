@@ -7,7 +7,6 @@ using Shiyin.Data;
 using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Services;
-using Windows.System;
 
 namespace Shiyin.App.Views;
 
@@ -69,16 +68,15 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
         name.IsTextSelectionEnabled = true;
         name.MaxLines = 1;
         name.TextTrimming = TextTrimming.CharacterEllipsis;
-        var rename = RenameFlyout(series);
+        // 鉛筆、「更多 → 重新命名…」打開重新命名的對話框（R102）
+        var seriesId = series.Id ?? 0;
+        void Rename() => window.RenameUi(new RenameTarget.Series(seriesId));
         var pencil = Ui.Borderless(new Button { Content = new SymbolIcon(Symbol.Edit) });
         pencil.Padding = new Thickness(6);
         pencil.VerticalAlignment = VerticalAlignment.Center;
         ToolTipService.SetToolTip(pencil, L.T("重新命名"));
         AutomationProperties.SetName(pencil, L.T("重新命名"));
-        pencil.Click += (_, _) => rename.ShowAt(pencil, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
-        {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
-        });
+        pencil.Click += (_, _) => Rename();
         var title = Ui.Row(8, name, pencil);
         // 看得到的動作（R100）：「刪除定期會議…」（紅字）；重新命名是名字旁的鉛筆，右上角「更多」照舊
         var delete = Ui.Borderless(new Button { Content = Ui.Row(6, new SymbolIcon(Symbol.Delete), Ui.Text(L.T("刪除定期會議…"), 13, wrap: false)) }, Ui.Danger);
@@ -94,55 +92,24 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
             Width = 52, Height = 52, CornerRadius = new CornerRadius(26), VerticalAlignment = VerticalAlignment.Center,
             Child = new SymbolIcon(Symbol.Sync) { Foreground = Ui.Celadon, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
         }, Ui.Tint(Ui.CeladonColor, 31 / 255.0));
-        var more = MoreMenu(series, rename);
+        var more = MoreMenu(series, Rename);
         more.VerticalAlignment = VerticalAlignment.Top;
         var header = Ui.Bar(icon, info, more, 16);
         header.Margin = new Thickness(32, 20, 32, 10);
         return header;
     }
 
-    /// <summary>「更多」（同人物頁）：重新命名…（輸入框接在「更多」下面）、刪除定期會議…（確認對話框）</summary>
-    DropDownButton MoreMenu(MeetingSeries series, Flyout rename)
+    /// <summary>「更多」（同人物頁）：重新命名…（對話框，R102）、刪除定期會議…（確認對話框）</summary>
+    DropDownButton MoreMenu(MeetingSeries series, Action rename)
     {
         var menu = new MenuFlyout();
         var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.More), Ui.Text(L.T("更多"), wrap: false)), Flyout = menu };
         AutomationProperties.SetName(button, L.T("更多"));
         ToolTipService.SetToolTip(button, L.T("重新命名、刪除定期會議"));
-        menu.Items.Add(Ui.Item(L.T("重新命名…"), () => rename.ShowAt(button, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
-        {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
-        }), icon: Symbol.Edit));
+        menu.Items.Add(Ui.Item(L.T("重新命名…"), rename, icon: Symbol.Edit));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Ui.DangerItem(L.T("刪除定期會議…"), () => _ = window.ConfirmDeleteSeries(series.Id ?? 0)));
         return button;
-    }
-
-    /// <summary>改名（同人物頁的改名）：名稱選好；Enter 存</summary>
-    Flyout RenameFlyout(MeetingSeries series)
-    {
-        var box = new TextBox { Text = series.Name, Header = L.T("名稱"), Width = 260 };
-        var flyout = new Flyout();
-        void Save()
-        {
-            var text = box.Text.Trim();
-            if (text.Length == 0) return;
-            flyout.Hide();
-            host.Controller.RenameSeries(series.Id ?? 0, text);
-        }
-        var save = Ui.Button(L.T("儲存"), Save, accent: true);
-        box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0;
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key != VirtualKey.Enter) return;
-            e.Handled = true;
-            Save();
-        };
-        var actions = Ui.Row(8, Ui.Button(L.T("取消"), flyout.Hide), save);
-        actions.HorizontalAlignment = HorizontalAlignment.Right;
-        flyout.Content = Ui.Column(12, box, actions);
-        flyout.Opening += (_, _) => box.Text = series.Name;
-        flyout.Opened += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectAll(); };
-        return flyout;
     }
 
     /// <summary>常參加的人（過半數場次都有的人物）：頭像＋名字，放不下時換行；點了打開人物頁</summary>

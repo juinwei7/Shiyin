@@ -142,14 +142,15 @@ public sealed class MainState
             GlossarySuggestions = [.. host.Db.GlossarySuggestions().Where(s => !host.Enterprise.Glossary.Contains(s.Term))];
             MeetingPeople = host.Db.MeetingPeople();
             FolderRules = host.Db.FolderRules();
+            FolderNames = host.Db.FolderNames();
             Series = host.Db.Series();
             SeriesRejected = host.Db.RejectedSeriesKeys();
             SeriesCandidates = SeriesDetector.Candidates(Organizing.SeriesInputs(Meetings, MeetingPeople), SeriesRejected);
         }
         catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"reload failed: {e.SqliteErrorCode}"); }
         if (Selection is long id && !Meetings.Any(m => m.Id == id) && !Trash.Any(m => m.Id == id)) Selection = null;
-        // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議；有自動加入條件的資料夾沒有會議也留著（M§72）
-        if (FolderFilter is { } folder && !Meetings.Any(m => m.Meeting.Folder == folder) && !FolderRules.Any(r => r.Folder == folder)) FolderFilter = null;
+        // 資料夾不見了（刪除、改名）就回到所有會議；資料夾表裡的（R104：會議都移走了也還在）、有自動加入條件的資料夾沒有會議也留著（M§72）
+        if (FolderFilter is { } folder && !Folders.Any(f => f.Name == folder)) FolderFilter = null;
         if (SeriesFilter is long series && !Series.Any(s => s.Id == series)) SeriesFilter = null;
         // 多選裡已經不在列表的（移到垃圾桶、永久刪除、還原之後）拿掉，剩不到兩場就清掉（M§62）
         if (multiSelection.Count > 0)
@@ -253,6 +254,12 @@ public sealed class MainState
         Organizing.JoinSuggestion(meeting, Meetings, MeetingPeople, Series, SeriesRejected, host.Recorder.MeetingId);
 
     public FolderRule? RuleFor(string folder) => FolderRules.FirstOrDefault(r => r.Folder == folder);
+
+    /// <summary>資料夾表裡的名字（R104、M§78：自己建的空資料夾、會議都移走了的資料夾也在）</summary>
+    public List<string> FolderNames { get; private set; } = [];
+
+    /// <summary>側欄的資料夾和場數：資料夾表、會議的資料夾、自動加入條件三者的聯集，依名稱排序（沒有會議的是 0 場）</summary>
+    public List<(string Name, int Count)> Folders => Organizing.Folders(Meetings, FolderRules, FolderNames);
 
     public void SetSort(MeetingSort sort)
     {
