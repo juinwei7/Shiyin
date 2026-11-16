@@ -102,16 +102,30 @@ public sealed partial class AppDatabase
         Index(db, m.Id!.Value, SearchKind.UserNotes, m.UserNotes);
     });
 
-    /// <summary>資料夾（R9.2）：資料夾就是 meetings.folder 的值，空字串表示不在任何資料夾</summary>
+    /// <summary>
+    /// 資料夾（R9.2）：資料夾就是 meetings.folder 的值，空字串表示不在任何資料夾。
+    /// 自己移進、移出資料夾後不再自動放、不再建議（folder_decided，M§72）
+    /// </summary>
     public void SetFolder(IReadOnlyList<long> ids, string folder)
     {
         if (ids.Count == 0) return;
-        Write(db => { foreach (var id in ids) db.Execute("UPDATE meetings SET folder = ?, updated_at = ? WHERE id = ?", folder, Clock.Now(), id); });
+        Write(db =>
+        {
+            foreach (var id in ids) db.Execute("UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", folder, Clock.Now(), id);
+        });
     }
 
-    /// <summary>改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改</summary>
-    public void RenameFolder(string old, string newName) =>
-        Write(db => db.Execute("UPDATE meetings SET folder = ?, updated_at = ? WHERE folder = ?", newName, Clock.Now(), old));
+    /// <summary>
+    /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改。
+    /// 改名時自動加入的條件跟著改名；刪除資料夾（或新名稱已經有條件）時條件一起刪（M§72）
+    /// </summary>
+    public void RenameFolder(string old, string newName) => Write(db =>
+    {
+        db.Execute("UPDATE meetings SET folder = ?, updated_at = ? WHERE folder = ?", newName, Clock.Now(), old);
+        var targetHasRule = db.Scalar("SELECT 1 FROM folder_rules WHERE folder = ?", newName) is not null;
+        if (newName.Length == 0 || targetHasRule) db.Execute("DELETE FROM folder_rules WHERE folder = ?", old);
+        else db.Execute("UPDATE folder_rules SET folder = ? WHERE folder = ?", newName, old);
+    });
 
     /// <summary>錄音中途當掉、連錄音檔都沒有的會議（M§20.6）</summary>
     public List<long> EmptyRecordingMeetings() => Read(db =>
@@ -402,6 +416,9 @@ public sealed partial class AppDatabase
         Write(db => db.Execute("INSERT INTO bookmarks (meeting_id, time, label) VALUES (?, ?, ?)", meetingId, time, label));
 
     public void DeleteBookmark(long id) => Write(db => db.Execute("DELETE FROM bookmarks WHERE id = ?", id));
+
+    /// <summary>重新命名一個重點標記（R100、M§74）</summary>
+    public void RenameBookmark(long id, string label) => Write(db => db.Execute("UPDATE bookmarks SET label = ? WHERE id = ?", label, id));
 
     public void UpdateUserNotes(long meetingId, string text) => Write(db =>
     {

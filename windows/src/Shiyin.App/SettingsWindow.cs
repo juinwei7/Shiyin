@@ -419,6 +419,17 @@ public sealed class SettingsWindow : Window
         {
             var item = new ListViewItem { Tag = t.Id, Content = Ui.Bar(Ui.Text(t.DisplayName(), 14, wrap: false), null, t.Id == S.DefaultTemplate ? Ui.Caption(L.T("預設")) : null) };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, t.DisplayName());
+            // 右鍵（R100）：複製、設為預設範本、刪除（自訂的才有）
+            var record = t;
+            var menu = new MenuFlyout();
+            menu.Items.Add(Ui.Item(L.T("複製"), () => CreateTemplate(record, null), icon: Symbol.Copy));
+            menu.Items.Add(Ui.Item(L.T("設為預設範本"), () => { S.Set(AppSettings.DefaultTemplateKey, record.Id); Show(); }, S.DefaultTemplate != record.Id));
+            if (!record.Builtin)
+            {
+                menu.Items.Add(new MenuFlyoutSeparator());
+                menu.Items.Add(Ui.Item(L.T("刪除"), () => DeleteTemplate(record), icon: Symbol.Delete));
+            }
+            item.ContextFlyout = menu;
             list.Items.Add(item);
             if (t.Id == templateId) list.SelectedItem = item;
         }
@@ -428,6 +439,16 @@ public sealed class SettingsWindow : Window
         var left = Ui.Column(8, list, Ui.Row(8, create, copy));
         var right = templates.FirstOrDefault(t => t.Id == templateId) is { } template ? TemplateEditor(template) : Ui.Text(L.T("選一個範本"), color: Ui.Secondary);
         return Ui.Split(left, right, 16);
+    }
+
+    /// <summary>刪掉一個自訂範本：是預設範本的話預設改回一般會議，不然新會議會指到不存在的範本</summary>
+    void DeleteTemplate(TemplateRecord template)
+    {
+        if (template.Builtin) return;
+        if (S.DefaultTemplate == template.Id) S.Set(AppSettings.DefaultTemplateKey, "general");
+        host.Controller.DeleteTemplate(template.Id);
+        if (templateId == template.Id) templateId = null;
+        Show();
     }
 
     void CreateTemplate(TemplateRecord? source, TemplateDefinition? edited)
@@ -495,14 +516,7 @@ public sealed class SettingsWindow : Window
         actions.Children.Add(setDefault);
         if (!template.Builtin)
         {
-            actions.Children.Add(Ui.Button(L.T("刪除"), () =>
-            {
-                // 刪掉的是預設範本的話，預設改回一般會議，不然新會議會指到不存在的範本
-                if (S.DefaultTemplate == template.Id) S.Set(AppSettings.DefaultTemplateKey, "general");
-                host.Controller.DeleteTemplate(template.Id);
-                templateId = null;
-                Show();
-            }));
+            actions.Children.Add(Ui.Button(L.T("刪除"), () => DeleteTemplate(template)));
             actions.Children.Add(Ui.Button(L.T("儲存"), () => { Save(); Show(); }, accent: true));
         }
         var note = template.Builtin ? Note(L.T("內建範本不能修改，可以按「複製」做一份自己的。")) : null;
@@ -529,6 +543,10 @@ public sealed class SettingsWindow : Window
     bool focusGlossaryInput;
     bool settingGlossaryChecks;
     bool confirmingTerms;
+    /// <summary>認識的人的重新命名、移除對話框開著（同時只能開一個 ContentDialog）</summary>
+    bool confirmingPerson;
+    /// <summary>正在就地改的詞（R100）</summary>
+    long? editingTerm;
 
     FrameworkElement Glossary()
     {
@@ -655,11 +673,63 @@ public sealed class SettingsWindow : Window
         foreach (var term in shown)
         {
             var id = term.Id!.Value;
-            var box = new CheckBox { Content = term.Term, IsChecked = glossaryChecked.Contains(id) };
+            // 就地改一個詞（R100）：Enter 儲存、Esc 取消；改成已經有的詞時合併
+            if (editingTerm == id)
+            {
+                var edit = new TextBox { Text = term.Term, MinWidth = 200 };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(edit, L.T("詞彙"));
+                void Save()
+                {
+                    editingTerm = null;
+                    if (edit.Text.Trim().Length > 0 && edit.Text.Trim() != term.Term) host.Controller.RenameTerm(id, edit.Text);
+                    Show();
+                }
+                void Cancel() { editingTerm = null; FillGlossaryList(); }
+                edit.KeyDown += (_, e) =>
+                {
+                    if (e.Key == Windows.System.VirtualKey.Enter) { e.Handled = true; Save(); }
+                    else if (e.Key == Windows.System.VirtualKey.Escape) { e.Handled = true; Cancel(); }
+                };
+                edit.Loaded += (_, _) => { edit.Focus(FocusState.Programmatic); edit.SelectAll(); };
+                glossaryList.Children.Add(Ui.Bar(null, edit, Ui.Row(8, Ui.Link(L.T("取消"), Cancel), Ui.Link(L.T("儲存"), Save))));
+                continue;
+            }
+            var label = Ui.Text(term.Term, 14, wrap: false);
+            ToolTipService.SetToolTip(label, L.T("雙擊可以修改"));
+            var box = new CheckBox { Content = label, IsChecked = glossaryChecked.Contains(id) };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, term.Term);
             box.Checked += (_, _) => CheckTerm(id, true);
             box.Unchecked += (_, _) => CheckTerm(id, false);
             glossaryBoxes[id] = box;
-            glossaryList.Children.Add(Ui.Bar(null, box, Ui.IconButton(Symbol.Delete, L.F("刪除「%@」", term.Term), () => { host.Controller.DeleteTerm(id); Show(); })));
+            void StartEditing() { editingTerm = id; FillGlossaryList(); }
+            // 雙擊詞改字（兩下點擊各切換一次勾選，剛好切回原本的）。CheckBox 自己處理指標、不會發 DoubleTapped
+            // （掛在字上、掛在 CheckBox 加 handledEventsToo 都收不到，2026-11-16 虛擬機上按兩下沒反應），
+            // 改成自己看兩次按下的間隔；第二次放開、勾選切回去之後才進入修改
+            long lastPress = 0;
+            var secondPress = false;
+            box.AddHandler(UIElement.PointerPressedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, _) =>
+            {
+                var now = Environment.TickCount64;
+                secondPress = now - lastPress <= 500;
+                lastPress = secondPress ? 0 : now;
+            }), true);
+            box.AddHandler(UIElement.PointerReleasedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, _) =>
+            {
+                if (!secondPress) return;
+                secondPress = false;
+                DispatcherQueue.TryEnqueue(StartEditing);
+            }), true);
+            var row = Ui.Bar(null, box, Ui.Row(4,
+                Ui.IconButton(Symbol.Edit, L.F("修改「%@」", term.Term), StartEditing),
+                Ui.IconButton(Symbol.Delete, L.F("刪除「%@」", term.Term), () => { host.Controller.DeleteTerm(id); Show(); })));
+            // 右鍵（R100）：重新命名…、刪除
+            var menu = new MenuFlyout();
+            menu.Items.Add(Ui.Item(L.T("重新命名…"), StartEditing, icon: Symbol.Rename));
+            menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(Ui.Item(L.T("刪除"), () => { host.Controller.DeleteTerm(id); Show(); }, icon: Symbol.Delete));
+            row.ContextFlyout = menu;
+            row.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);   // 整列的空白處也能右鍵
+            glossaryList.Children.Add(row);
         }
         if (shown.Count == 0 && glossaryTerms.Count > 0) glossaryList.Children.Add(Ui.Text(L.F("沒有含「%@」的詞彙", glossaryQuery.Trim()), 13, color: Ui.Secondary));
     }
@@ -740,17 +810,50 @@ public sealed class SettingsWindow : Window
         {
             var prints = L.F("%lld 份聲音特徵", person.VoiceprintCount);
             var detail = person.LastMeetingTitle is { } title && person.LastMeetingDate is { } date ? L.F("%@・最近：%@ %@", prints, date, title) : prints;
-            var rename = Ui.Link(L.T("改名"), () => { });
-            rename.Click += async (_, _) =>
+            // 用詞同人物頁（R100）：重新命名；移除前確認
+            async Task Rename()
             {
-                var box = new TextBox { Text = person.Name };
-                var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("改名")), Content = box, PrimaryButtonText = L.T("儲存"), CloseButtonText = L.T("取消") };
-                if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary && box.Text.Trim().Length > 0) { host.Controller.RenamePerson(person.Id, box.Text.Trim()); Show(); }
-            };
+                if (confirmingPerson) return;
+                confirmingPerson = true;
+                try
+                {
+                    var box = new TextBox { Text = person.Name };
+                    var dialog = new ContentDialog
+                    {
+                        XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.T("重新命名")), Content = box, PrimaryButtonText = L.T("儲存"), CloseButtonText = L.T("取消"),
+                        DefaultButton = ContentDialogButton.Primary,
+                    };
+                    if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary && box.Text.Trim().Length > 0) { host.Controller.RenamePerson(person.Id, box.Text.Trim()); Show(); }
+                }
+                finally { confirmingPerson = false; }
+            }
+            async Task Remove()
+            {
+                if (confirmingPerson) return;
+                confirmingPerson = true;
+                try
+                {
+                    var dialog = new ContentDialog
+                    {
+                        XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("移除「%@」？", person.Name)),
+                        Content = Ui.Text(L.T("會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。")),
+                        PrimaryButtonText = L.T("移除"), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Close,
+                    };
+                    if (await Ui.InterfaceLanguage(dialog).ShowAsync() == ContentDialogResult.Primary) { host.Controller.DeletePerson(person.Id); Show(); }
+                }
+                finally { confirmingPerson = false; }
+            }
+            var rename = Ui.Link(L.T("重新命名"), () => _ = Rename());
             // 錄過「我的聲音」的人標「（我）」（R80.4）
             var label = person.EnrolledAt is null ? person.Name : L.F("%@（我）", person.Name);
-            column.Children.Add(Ui.Bar(null, Ui.Column(2, Ui.Text(label, 14), Ui.Caption(detail)),
-                Ui.Row(8, rename, Ui.IconButton(Symbol.Delete, L.F("刪除「%@」的聲音特徵（已經帶入的名字留著）", person.Name), () => { host.Controller.DeletePerson(person.Id); Show(); }))));
+            var row = Ui.Bar(null, Ui.Column(2, Ui.Text(label, 14), Ui.Caption(detail)),
+                Ui.Row(8, rename, Ui.IconButton(Symbol.Delete, L.F("移除「%@」（會議裡的名字留著）", person.Name), () => _ = Remove())));
+            var menu = new MenuFlyout();
+            menu.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Rename(), icon: Symbol.Rename));
+            menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(Ui.Item(L.T("移除這個人…"), () => _ = Remove(), icon: Symbol.Delete));
+            row.ContextFlyout = menu;
+            column.Children.Add(row);
         }
         // 人物頁（R85.5）：一起開過的會議、負責的待辦、改名和合併也在那裡
         if (people.Count > 0) column.Children.Add(Ui.Text(L.T("也可以在側欄的「人物」管理"), 13, color: Ui.Secondary));

@@ -40,6 +40,10 @@ public sealed class Meeting
     public int? MinSpeakers { get; set; }
     public double? SpeakerCheck { get; set; }
     public bool SpeakerHintDismissed { get; set; }
+    /// <summary>v12（M§72、§73）：資料夾已經決定了（自動放過、自己移過、建議按了不用）</summary>
+    public bool FolderDecided { get; set; }
+    /// <summary>v12：屬於哪個定期會議</summary>
+    public long? SeriesId { get; set; }
 
     public MeetingLanguage MeetingLanguage => MeetingLanguages.Parse(Language) ?? MeetingLanguage.Zh;
 

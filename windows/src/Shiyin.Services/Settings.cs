@@ -58,6 +58,9 @@ public sealed class AppSettings
     public const string AutoStopOnMeetingEndKey = "autoStopOnMeetingEnd";
     /// <summary>逐字稿：original（原文）／clean（精簡，R96、M§70）</summary>
     public const string TranscriptViewKey = "transcriptView";
+    /// <summary>會議列表的排序、分組（R97、M§71、design-windows §11.30）：dateDesc／dateAsc／title／duration、none／month／folder／series</summary>
+    public const string MeetingSortKey = "meetingSort";
+    public const string MeetingGroupingKey = "meetingGrouping";
     /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
     public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
@@ -333,6 +336,9 @@ public sealed class AppSettings
     public bool AutoStopOnMeetingEnd => Flag(AutoStopOnMeetingEndKey, true);
     /// <summary>逐字稿顯示原文還是精簡版（R96.1）</summary>
     public string TranscriptView => String(TranscriptViewKey) == "clean" ? "clean" : "original";
+    /// <summary>會議列表的排序、分組（R97.2）：記住；認不得的值用預設</summary>
+    public MeetingSort MeetingSort => MeetingSorts.Parse(String(MeetingSortKey)) ?? MeetingSort.DateDesc;
+    public MeetingGrouping MeetingGrouping => MeetingGroupings.Parse(String(MeetingGroupingKey)) ?? MeetingGrouping.None;
     public bool BookmarkHotKey => Flag(BookmarkHotKeyKey, true);
     public bool IdleStop => Flag(IdleStopKey, true);
     /// <summary>正式轉錄用快速辨識（Mac 的「macOS 內建」，D45）：設定值同 Mac 是 system</summary>

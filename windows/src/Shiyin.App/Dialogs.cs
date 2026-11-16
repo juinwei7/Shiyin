@@ -13,7 +13,7 @@ using Windows.Storage;
 namespace Shiyin.App;
 
 /// <summary>對話框（ContentDialog）：匯入、匯出、重新辨識說話者、編輯資訊、資料夾、用詞修正、確認、錯誤</summary>
-public static class Dialogs
+public static partial class Dialogs
 {
     static ContentDialog Dialog(MainWindow window, string title, UIElement content, string primary, string? close = null) => new()
     {

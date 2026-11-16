@@ -57,6 +57,16 @@ public class ExportTests
             var simplified = AppSettings.InMemory(new Dictionary<string, string> { [AppSettings.ChineseScriptKey] = "simplified" });
             Assert.Equal(NotesExporter.Markdown(b), ExportScript.Text(simplified, b, NotesExporter.Markdown(b)));
         }
+        // 上次的待辦（M§73）：三種狀態、有沒有負責人、時間點
+        if (fx.Notes is { } notes)
+        {
+            List<MeetingNotes.FollowUp> followUps = [.. notes.ActionItems.Select((item, i) =>
+                new MeetingNotes.FollowUp(item.Task, item.Owner, i % 2 == 0 ? FollowUpStatus.Done : FollowUpStatus.Ongoing, i == 0 ? "00:05" : "")),
+                new MeetingNotes.FollowUp("Carried over item", "", FollowUpStatus.NotMentioned)];
+            var withFollowUps = b with { Notes = notes with { FollowUps = followUps } };
+            Golden.Text(dir + "notes-followups.md", NotesExporter.Markdown(withFollowUps));
+            Golden.Text(dir + "notes-followups.html", NotesExporter.Html(withFollowUps, ExportFonts.Mac));
+        }
         var empty = b with { Notes = new MeetingNotes { Title = "x" } };
         Golden.Text(dir + "notes-empty.md", NotesExporter.Markdown(empty));
         Golden.Text(dir + "notes-empty.html", NotesExporter.Html(empty, ExportFonts.Mac));

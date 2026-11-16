@@ -271,6 +271,18 @@ public sealed partial class AppDatabase
 
     public void DeleteTerm(long id) => Write(db => db.Execute("DELETE FROM glossary WHERE id = ?", id));
 
+    /// <summary>改一個詞（R100、M§74，同 Mac 的 renameTerm）：改成已經有的詞時合併（刪掉這一個）；空的不改</summary>
+    public void RenameTerm(long id, string term)
+    {
+        var trimmed = term.Trim();
+        if (trimmed.Length == 0) return;
+        Write(db =>
+        {
+            if (db.Scalar("SELECT id FROM glossary WHERE term = ? AND id != ?", trimmed, id) is not null) db.Execute("DELETE FROM glossary WHERE id = ?", id);
+            else db.Execute("UPDATE glossary SET term = ? WHERE id = ?", trimmed, id);
+        });
+    }
+
     /// <summary>一次加好幾個（R94.1、M§68，同 Mac 的 addTerms）：回傳實際加進去的個數；已經有的跳過（INSERT OR IGNORE，term 是 UNIQUE）</summary>
     public int AddTerms(IEnumerable<string> terms) => Write(db =>
     {

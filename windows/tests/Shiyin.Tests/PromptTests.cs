@@ -30,6 +30,13 @@ public class PromptTests
         var custom = new TemplateRecord { Id = "custom-1", Name = "客戶會議", Builtin = false, Definition = Golden.Fixtures.GetProperty("customTemplate").GetRawText() };
         Golden.Text(dir + "summarize-custom.txt", NotesPrompt.Summarize(Context(fx, custom.DefinitionFor(fx.Language))));
         var general = new TemplateRecord { Id = "general", Builtin = true, Definition = BuiltinTemplates.All[0].Definition.JsonString() };
+        // 定期會議接上一場（R99.5、M§73）：上一場用這場的紀錄，加上一條上次還在進行的
+        if (fx.Notes is { } previousNotes)
+        {
+            var previous = new PreviousMeeting(previousNotes.Title, "2026-11-02",
+                [.. previousNotes.ActionItems, new MeetingNotes.ActionItem("", "Carried over item", "")], previousNotes.OpenQuestions);
+            Golden.Text(dir + "summarize-followups.txt", NotesPrompt.Summarize(Context(fx, general.DefinitionFor(fx.Language)) with { Previous = previous }));
+        }
         if (fx.Notes is { } notes)
             Golden.Text(dir + "revise.txt", NotesPrompt.Revise(Context(fx, general.DefinitionFor(fx.Language)), notes, fx.Answers));
 

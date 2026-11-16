@@ -168,7 +168,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12"];
 
     void Migrate(string? backupsDir)
     {
@@ -229,6 +229,7 @@ public sealed partial class AppDatabase : IDisposable
             case "v9": db.Execute(MigrationSql.V9); break;
             case "v10": db.Execute(MigrationSql.V10); break;
             case "v11": db.Execute(MigrationSql.V11); break;
+            case "v12": db.Execute(MigrationSql.V12); break;
         }
     }
 
@@ -243,7 +244,7 @@ public sealed partial class AppDatabase : IDisposable
         UserNotes = r.Str("user_notes"), Source = r.Str("source"), Channels = r.Str("channels"), DeletedAt = r.StrOrNull("deleted_at"),
         Folder = r.Str("folder"), Language = r.Str("language"), NotesDraft = r.Int("notes_draft"), TranscribedWith = r.Str("transcribed_with"),
         MinSpeakers = r.IntOrNull("min_speakers"), SpeakerCheck = r.DoubleOrNull("speaker_check"),
-        SpeakerHintDismissed = r.Bool("speaker_hint_dismissed"),
+        SpeakerHintDismissed = r.Bool("speaker_hint_dismissed"), FolderDecided = r.Bool("folder_decided"), SeriesId = r.LongOrNull("series_id"),
     };
 
     internal static Segment ToSegment(Row r) => new()
@@ -291,18 +292,18 @@ public sealed partial class AppDatabase : IDisposable
 
     static readonly string MeetingColumns = "title, title_locked, meeting_date, participants, source_filename, audio_file, duration_seconds, notes, notes_by, "
         + "created_at, updated_at, template_id, user_notes, source, channels, deleted_at, folder, language, notes_draft, transcribed_with, "
-        + "min_speakers, speaker_check, speaker_hint_dismissed";
+        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided, series_id";
 
     static object?[] MeetingValues(Meeting m) =>
     [
         m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.AudioFile, m.DurationSeconds, m.Notes, m.NotesBy,
         m.CreatedAt, m.UpdatedAt, m.TemplateId, m.UserNotes, m.Source, m.Channels, m.DeletedAt, m.Folder, m.Language, m.NotesDraft,
-        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed,
+        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided, m.SeriesId,
     ];
 
     internal static long InsertMeetingRow(Db db, Meeting m)
     {
-        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 23))})", MeetingValues(m));
+        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 25))})", MeetingValues(m));
         return db.LastInsertRowId;
     }
 

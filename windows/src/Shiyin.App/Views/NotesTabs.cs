@@ -64,6 +64,83 @@ public sealed class NotesTabs
         return marker is null ? clock : clock is null ? marker : Ui.Row(8, clock, marker);
     }
 
+    // MARK: 紀錄的條目：雙擊就地改、右鍵、「⋯」（R100、M§74）
+
+    NoteItemRef? editingItem;
+    long? editingMeeting;
+
+    /// <summary>正在就地改的那一條（只算目前這場會議；DEBUG 的 state）</summary>
+    public NoteItemRef? EditingItem(MeetingDetail? detail) => detail?.Meeting.Id == editingMeeting ? editingItem : null;
+
+    /// <summary>能不能就地改：有紀錄、不在垃圾桶、沒在錄這場、沒在處理（同「編輯」按鈕）</summary>
+    bool CanEdit(MeetingDetail detail) => detail.Notes is not null && detail.Meeting.DeletedAt is null && host.Recorder.MeetingId != detail.Meeting.Id
+        && window.State.DetailStatus?.IsActive != true && editor is null;
+
+    /// <summary>開始就地改一條（雙擊、右鍵「編輯這一條」、DEBUG 的 noteitem editui）</summary>
+    public void BeginEdit(MeetingDetail detail, NoteItemRef? item)
+    {
+        if (item is { } r && !CanEdit(detail)) return;
+        editingItem = item;
+        editingMeeting = detail.Meeting.Id;
+        window.Refresh();
+    }
+
+    /// <summary>就地改的輸入框：Enter 儲存、Esc 取消；待辦只改事項</summary>
+    FrameworkElement ItemEditor(MeetingDetail detail, NoteItemRef r, MeetingLanguage language)
+    {
+        var box = new TextBox
+        {
+            TextWrapping = TextWrapping.Wrap, Text = detail.Notes?.TextAt(r) ?? "", FontSize = Ui.C(14), Language = Ui.ContentLanguage(language),
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, L.T("編輯這一條"));
+        void Save()
+        {
+            editingItem = null;
+            host.Controller.EditNoteItem(detail.Meeting.Id!.Value, r, box.Text);
+            window.Refresh();
+        }
+        void Cancel() => BeginEdit(detail, null);
+        box.KeyDown += (_, e) =>
+        {
+            if (e.Key == Windows.System.VirtualKey.Enter) { e.Handled = true; Save(); }
+            else if (e.Key == Windows.System.VirtualKey.Escape) { e.Handled = true; Cancel(); }
+        };
+        box.Loaded += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectionStart = box.Text.Length; };
+        var save = Ui.Button(L.T("儲存"), Save, accent: true);
+        box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0;
+        var buttons = Ui.Row(8, Ui.Button(L.T("取消"), Cancel), save);
+        var hint = Ui.Text(L.T("Enter 儲存、Esc 取消"), 12, color: Ui.Secondary);
+        hint.VerticalAlignment = VerticalAlignment.Center;
+        return Ui.Column(6, box, Ui.Bar(null, hint, buttons));
+    }
+
+    /// <summary>一條紀錄的選單（同 Mac 的 NoteItemMenuItems）：拷貝、從這裡播放（有時間點、有錄音時）、編輯這一條、刪除這一條（不確認，可以復原上一版）</summary>
+    void FillItemMenu(MenuFlyout menu, MeetingDetail detail, NoteItemRef r, string text, string time)
+    {
+        menu.Items.Add(Ui.Item(L.T("拷貝"), () => Copy.Text(text), icon: Symbol.Copy));
+        if (TimeFormat.Seconds(time) is double seconds && host.Player.IsLoaded)
+            menu.Items.Add(Ui.Item(L.T("從這裡播放"), () => host.Player.Seek(seconds, true), icon: Symbol.Play));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        var editable = CanEdit(detail);
+        menu.Items.Add(Ui.Item(L.T("編輯這一條"), () => BeginEdit(detail, r), editable, Symbol.Edit));
+        menu.Items.Add(Ui.Item(L.T("刪除這一條"), () => host.Controller.DeleteNoteItem(detail.Meeting.Id!.Value, r), editable, Symbol.Delete));
+    }
+
+    /// <summary>時間點、待確認的標記後面接「⋯」</summary>
+    static UIElement WithMore(UIElement? trailing, Button more) => trailing is null ? more : Ui.Row(8, trailing, more);
+
+    /// <summary>
+    /// 右鍵、雙擊就地改、滑過時的「⋯」。能直接改的條目不開文字選取（同 Mac a8a59e8，M§74）：開了的話右鍵是系統的文字選單（拷貝、全選）、
+    /// 雙擊只選到一個詞；拷貝用右鍵的「拷貝」。整行（含行尾空白）都要收得到，列的背景設成透明（沒有背景的 Panel 空白處點不到）
+    /// </summary>
+    void ItemActions(Panel row, Button more, MeetingDetail detail, NoteItemRef r, string itemText, string time)
+    {
+        row.Background ??= new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        row.ContextFlyout = RowMore.Context(menu => FillItemMenu(menu, detail, r, itemText, time));
+        row.AddHandler(UIElement.DoubleTappedEvent, new Microsoft.UI.Xaml.Input.DoubleTappedEventHandler((_, _) => BeginEdit(detail, r)), true);
+        RowMore.Attach(row, more);
+    }
+
     FrameworkElement? ExpandedCard(MeetingDetail detail, NoteItemRef r) =>
         draft.Expanded == r && detail.ReviewLinks.TryGetValue(r, out var indexes) ? ReviewRows.Card(detail, indexes, draft, host, window) : null;
 
@@ -74,9 +151,17 @@ public sealed class NotesTabs
         foreach (var item in items)
         {
             var r = refOf(index++);
-            var text = Ui.Text(item.Text, Ui.C(14), select: true);
+            // 就地改這一條（R100）
+            if (EditingItem(detail) == r)
+            {
+                panel.Children.Add(Ui.Split(Ui.Text("•", Ui.C(14), color: Ui.Secondary), ItemEditor(detail, r, language)));
+                continue;
+            }
+            var text = Ui.Text(item.Text, Ui.C(14));   // 不開文字選取（見 ItemActions）
             text.Language = Ui.ContentLanguage(language);
-            var row = Ui.Split(Ui.Text("•", Ui.C(14), color: Ui.Secondary), Ui.Inline(text, Trailing(detail, r, item.Time)));
+            var more = RowMore.Button(menu => FillItemMenu(menu, detail, r, item.Text, item.Time));
+            var row = Ui.Split(Ui.Text("•", Ui.C(14), color: Ui.Secondary), Ui.Inline(text, WithMore(Trailing(detail, r, item.Time), more)));
+            ItemActions(row, more, detail, r, item.Text, item.Time);
             panel.Children.Add(ExpandedCard(detail, r) is { } card ? Ui.Column(8, row, card) : row);
         }
         return panel;
@@ -106,8 +191,9 @@ public sealed class NotesTabs
             var r = NoteItemRef.ActionItems(i);
             var owner = Ui.Text(item.Owner.Length == 0 ? L.T("未指定") : item.Owner, Ui.C(14), color: item.Owner.Length == 0 ? Ui.Signal : null, wrap: false);
             owner.Language = Ui.ContentLanguage(language);
-            var task = Ui.Text(item.Task, Ui.C(14), select: true);
+            var task = Ui.Text(item.Task, Ui.C(14));   // 不開文字選取（見 ItemActions）
             task.Language = Ui.ContentLanguage(language);
+            var more = RowMore.Button(menu => FillItemMenu(menu, detail, r, item.Task, item.Time));
             // 負責人是這場的說話者時放他的頭像（M§58.2、R83.2）
             if (detail.SpeakerIdx(item.Owner) is int speaker)
             {
@@ -119,7 +205,15 @@ public sealed class NotesTabs
                 Add(chip, rows, 0);
             }
             else Add(owner, rows, 0);
-            Add(Ui.Inline(task, Trailing(detail, r, item.Time)), rows, 1);
+            // 就地改只改事項（R100）：負責人、期限照舊用「編輯」
+            if (EditingItem(detail) == r) Add(ItemEditor(detail, r, language), rows, 1);
+            else
+            {
+                // 外面包一層撐滿事項那一欄：行尾的空白也能右鍵、雙擊
+                var cell = new Grid { Children = { Ui.Inline(task, WithMore(Trailing(detail, r, item.Time), more)) } };
+                ItemActions(cell, more, detail, r, item.Task, item.Time);
+                Add(cell, rows, 1);
+            }
             Add(Ui.Text(item.Due.Length == 0 ? "—" : item.Due, Ui.C(14), color: item.Due.Length == 0 ? Ui.Secondary : null, wrap: false), rows++, 2);
             if (ExpandedCard(detail, r) is { } card) Add(card, rows++, 0, 3);
         }
@@ -280,6 +374,9 @@ public sealed class NotesTabs
         var column = Column();
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
         if (host.Controller.DocumentsChanged.Contains(detail.Meeting.Id!.Value)) column.Children.Add(DocumentsBanner(detail.Meeting.Id!.Value));
+        // 這場很像某個資料夾裡的會議（R98.3、M§72）：待確認條的上面
+        if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId) is { } suggestion)
+            column.Children.Add(FolderSuggestionBanner(detail.Meeting.Id!.Value, suggestion));
         if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
         column.Children.Add(EditBar(detail));
         if (host.Settings.NotesView == "mindMap") return MindMapPage(detail, notes, column);
@@ -290,6 +387,8 @@ public sealed class NotesTabs
             return Reading(column);
         }
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
+        // 定期會議的上一場的待辦（R99.5、M§73）：只有 followUps 不是空的才有；心智圖不畫
+        if (notes.FollowUps.Count > 0) column.Children.Add(Section(L.T("上次的待辦"), language, FollowUps(notes.FollowUps, language)));
         if (notes.Decisions.Count > 0) column.Children.Add(Section(L.T("決議"), language, Items(notes.Decisions, language, detail, NoteItemRef.Decisions)));
         if (notes.ActionItems.Count > 0) column.Children.Add(Section(L.T("待辦"), language, ActionItems(notes.ActionItems, language, detail)));
         if (notes.OpenQuestions.Count > 0) column.Children.Add(Section(L.T("未決問題"), language, Items(notes.OpenQuestions, language, detail, NoteItemRef.OpenQuestions)));
@@ -337,6 +436,56 @@ public sealed class NotesTabs
         // Ctrl＋滾輪在整頁都能縮放、滑鼠在圖上時一般的滾輪捲整頁（design-windows §11.24）
         page.Children.Add(MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded, MindMapZoom, page: scroller));
         return scroller;
+    }
+
+    /// <summary>
+    /// 這場很像某個資料夾裡的會議（R98.3、同 Mac 的 FolderSuggestionBanner）：「這場很像「客戶」裡的會議：陳家豪、Bob 都參加（2 場）」，
+    /// 「不用」（之後不再建議這場）、「放進去」。提示列不跟著文字大小（R59.2），底色是淡淡的青瓷綠
+    /// </summary>
+    FrameworkElement FolderSuggestionBanner(long id, FolderSuggestion suggestion)
+    {
+        var text = Ui.Text(Organizing.SuggestionText(suggestion, window.State.People), 13, maxLines: 2);
+        var left = Ui.Split(new FontIcon { Glyph = "\uE8F4", FontSize = 15, Foreground = Ui.Celadon, VerticalAlignment = VerticalAlignment.Center }, text);
+        var right = Ui.Row(8, Ui.Button(L.T("不用"), () => host.Controller.DismissFolderSuggestion(id)),
+            Ui.Button(L.T("放進去"), () => host.Controller.AcceptFolderSuggestion(id, suggestion.Folder), accent: true));
+        left.VerticalAlignment = VerticalAlignment.Center;
+        right.VerticalAlignment = VerticalAlignment.Center;
+        var c = Ui.CeladonColor;
+        return new Border
+        {
+            Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8),
+            Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(Ui.IsDark ? (byte)36 : (byte)20, c.R, c.G, c.B)),
+        };
+    }
+
+    /// <summary>
+    /// 上次的待辦（R99.5、同 Mac 的 FollowUpsList）：每一條前面是狀態的圖示，後面事項、負責人（次要文字）、狀態（小字、狀態的顏色）、時間點。
+    /// 編輯器不能改這一段（重新整理會重算）
+    /// </summary>
+    UIElement FollowUps(List<MeetingNotes.FollowUp> followUps, MeetingLanguage language)
+    {
+        var panel = new StackPanel { Spacing = 9 };
+        foreach (var item in followUps)
+        {
+            var icon = FollowUpIcons.Icon(item.Status, Ui.C(15));
+            icon.VerticalAlignment = VerticalAlignment.Top;
+            icon.Margin = new Thickness(0, Ui.C(3), 0, 0);
+            var task = Ui.Text(item.Task, Ui.C(14), select: true);
+            task.Language = Ui.ContentLanguage(language);
+            var trailing = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            if (item.Owner.Length > 0)
+            {
+                var owner = Ui.Text(item.Owner, Ui.C(14), color: Ui.Secondary, wrap: false);
+                owner.Language = Ui.ContentLanguage(language);
+                trailing.Children.Add(owner);
+            }
+            var status = Ui.Text(FollowUpIcons.Label(item.Status), Ui.C(12), color: FollowUpIcons.Color(item.Status), wrap: false);
+            status.VerticalAlignment = VerticalAlignment.Center;
+            trailing.Children.Add(status);
+            if (item.Time.Length > 0) trailing.Children.Add(Ui.Time(item.Time, SeekIfLoaded, size: Ui.C(13)));
+            panel.Children.Add(Ui.Split(icon, Ui.Inline(task, trailing)));
+        }
+        return panel;
     }
 
     /// <summary>文件有變動（R61.8，同 Mac 的 DocumentsBanner）：不用、重新整理會議紀錄</summary>
@@ -404,7 +553,17 @@ public sealed class NotesTabs
         if (detail.Bookmarks.Count > 0)
         {
             var menu = new MenuFlyout();
-            foreach (var b in detail.Bookmarks) menu.Items.Add(Ui.Item($"{TimeFormat.String(b.Time)} {b.Label}", () => Seek(b.Time)));
+            // 每個標記：跳到這裡、重新命名…、刪除（R100）
+            foreach (var b in detail.Bookmarks)
+            {
+                var bookmark = b;
+                var sub = new MenuFlyoutSubItem { Text = $"{TimeFormat.String(b.Time)} {b.Label}" };
+                sub.Items.Add(Ui.Item(L.T("跳到這裡"), () => Seek(bookmark.Time), icon: Symbol.Play));
+                sub.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Dialogs.RenameBookmark(window, bookmark), icon: Symbol.Rename));
+                sub.Items.Add(new MenuFlyoutSeparator());
+                sub.Items.Add(Ui.Item(L.T("刪除"), () => host.Controller.DeleteBookmark(bookmark.MeetingId, bookmark.Id ?? 0), icon: Symbol.Delete));
+                menu.Items.Add(sub);
+            }
             marks = new DropDownButton { Content = L.F("重點標記 %lld", detail.Bookmarks.Count), Flyout = menu, VerticalAlignment = VerticalAlignment.Top };
         }
         var bar = Ui.Bar(null, expander, marks, 8);

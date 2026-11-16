@@ -50,7 +50,7 @@ public static class ExportItems
 /// 會議的操作（同 Mac 的 AppModel，不含畫面的狀態）：匯入、錄音存檔、當掉後復原、垃圾桶、重新轉錄、說話者的修正、整理、校正。
 /// 畫面（ViewModel）傳入要操作哪一場會議；結果用 Notice、Error 事件告訴使用者，資料改了用 Changed 通知重讀
 /// </summary>
-public sealed class AppController
+public sealed partial class AppController
 {
     public AppDatabase Db { get; }
     public AppSettings Settings { get; }
@@ -116,6 +116,8 @@ public sealed class AppController
         runner.EditedDraftReplaced += _ =>
             Notice?.Invoke(L.T("正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回"));
         runner.Changed += () => Changed?.Invoke(null);
+        // 自動放進資料夾、加入定期會議了（M§72、§73）
+        runner.Organized += Organized;
     }
 
     /// <summary>啟動時：內建範本、清掉上次的暫存、過期的垃圾桶、復原錄音、開始工作佇列（同 Mac 的 AppModel.start）</summary>
@@ -1343,33 +1345,4 @@ public sealed class AppController
     // MARK: 搜尋（R9.1）
 
     public List<SearchHit> Search(string query) => query.Trim().Length == 0 ? [] : Db.Search(query);
-}
-
-/// <summary>名稱排序跟 Finder 一樣：數字照大小（「第 2 週」排在「第 10 週」前面）</summary>
-public sealed class NaturalComparer : IComparer<string>
-{
-    public static readonly NaturalComparer Instance = new();
-
-    public int Compare(string? x, string? y)
-    {
-        if (x is null || y is null) return string.Compare(x, y, StringComparison.Ordinal);
-        int i = 0, j = 0;
-        while (i < x.Length && j < y.Length)
-        {
-            if (char.IsAsciiDigit(x[i]) && char.IsAsciiDigit(y[j]))
-            {
-                var si = i; while (i < x.Length && char.IsAsciiDigit(x[i])) i++;
-                var sj = j; while (j < y.Length && char.IsAsciiDigit(y[j])) j++;
-                var a = x[si..i].TrimStart('0');
-                var b = y[sj..j].TrimStart('0');
-                var c = a.Length != b.Length ? a.Length.CompareTo(b.Length) : string.CompareOrdinal(a, b);
-                if (c != 0) return c;
-                continue;
-            }
-            var d = string.Compare(x[i].ToString(), y[j].ToString(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase);
-            if (d != 0) return d;
-            i++; j++;
-        }
-        return (x.Length - i).CompareTo(y.Length - j);
-    }
 }
