@@ -58,10 +58,10 @@ public sealed class AppSettings
     public const string AutoStopOnMeetingEndKey = "autoStopOnMeetingEnd";
     /// <summary>逐字稿：original（原文）／clean（精簡，R96、M§70）</summary>
     public const string TranscriptViewKey = "transcriptView";
-    /// <summary>會議列表的排序、分組（R97、M§71、design-windows §11.30）：dateDesc／dateAsc／title／duration、none／month／folder／series</summary>
+    /// <summary>會議列表的排序、分組（R97、M§71、design-windows §11.30）：dateDesc／dateAsc／title／duration、none／month／folder（以前存的 series 讀成不分組）</summary>
     public const string MeetingSortKey = "meetingSort";
     public const string MeetingGroupingKey = "meetingGrouping";
-    /// <summary>側欄收起來的段落、在原地展開的資料夾和定期會議（R101、M§75、design-windows §11.34）：字串陣列，鍵同 Mac</summary>
+    /// <summary>側欄收起來的段落、在原地展開的資料夾（R101、M§75、design-windows §11.34）：字串陣列，鍵同 Mac</summary>
     public const string SidebarCollapsedKey = "sidebarCollapsed";
     public const string SidebarExpandedKey = "sidebarExpanded";
     /// <summary>側欄「資料夾」那一段拖曳排好的順序（R103.2、M§77、design-windows §11.36）：字串陣列（照順序），鍵同 sidebarExpanded</summary>

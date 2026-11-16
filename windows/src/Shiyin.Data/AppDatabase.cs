@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using Shiyin.Model;
+using Shiyin.Text;
 
 namespace Shiyin.Data;
 
@@ -168,7 +169,13 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14"];
+
+    /// <summary>
+    /// 這次開資料庫時 migration v14 換掉的定期會議（id → 資料夾名稱，D177）；沒跑 v14 時是空的。
+    /// 設定檔裡側欄的鍵（series:id）由 Services 換成 folder:名稱（同 Mac 的 AppDatabase.replaceSeriesKeys）
+    /// </summary>
+    public IReadOnlyDictionary<long, string> MigratedSeries { get; private set; } = new Dictionary<long, string>();
 
     void Migrate(string? backupsDir)
     {
@@ -192,17 +199,19 @@ public sealed partial class AppDatabase : IDisposable
                 using (var tx = writer.BeginTransaction(deferred: false))
                 {
                     var t = new Db(writer, tx);
-                    RunMigration(t, id);
+                    var migrated = RunMigration(t, id);
                     t.Execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", id);
                     if (t.Query("PRAGMA foreign_key_check").Count > 0) throw new InvalidOperationException($"foreign key violation in {id}");
                     tx.Commit();
+                    if (migrated is not null) MigratedSeries = migrated;
                 }
                 db.Execute("PRAGMA foreign_keys = ON");
             }
         }
     }
 
-    static void RunMigration(Db db, string id)
+    /// <summary>v14 回傳換掉的定期會議（id → 資料夾名稱），其他是 null</summary>
+    static Dictionary<long, string>? RunMigration(Db db, string id)
     {
         switch (id)
         {
@@ -235,7 +244,25 @@ public sealed partial class AppDatabase : IDisposable
                 db.Execute("INSERT OR IGNORE INTO folders (name, created_at) SELECT DISTINCT folder, ? FROM meetings WHERE folder <> ''", Clock.Now());
                 db.Execute("INSERT OR IGNORE INTO folders (name, created_at) SELECT folder, created_at FROM folder_rules");
                 break;
+            case "v14":
+            {
+                // 拿掉定期會議（R99、M§73、D177）：每個定期會議換成同名的資料夾（已經有就合在一起），裡面不在資料夾的會議移進去
+                //（已經在別的資料夾的不動），再做 MigrationSql.V14
+                var names = new Dictionary<long, string>();
+                foreach (var row in db.Query("SELECT id, name FROM series ORDER BY id"))
+                {
+                    var name = SwiftText.Trim(row.Str("name"));
+                    if (name.Length == 0) continue;
+                    var seriesId = row.Long("id");
+                    names[seriesId] = name;
+                    db.Execute("INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", name, Clock.Now());
+                    db.Execute("UPDATE meetings SET folder = ?, folder_decided = 1 WHERE series_id = ? AND folder = ''", name, seriesId);
+                }
+                db.Execute(MigrationSql.V14);
+                return names;
+            }
         }
+        return null;
     }
 
     // MARK: 對應
@@ -249,7 +276,7 @@ public sealed partial class AppDatabase : IDisposable
         UserNotes = r.Str("user_notes"), Source = r.Str("source"), Channels = r.Str("channels"), DeletedAt = r.StrOrNull("deleted_at"),
         Folder = r.Str("folder"), Language = r.Str("language"), NotesDraft = r.Int("notes_draft"), TranscribedWith = r.Str("transcribed_with"),
         MinSpeakers = r.IntOrNull("min_speakers"), SpeakerCheck = r.DoubleOrNull("speaker_check"),
-        SpeakerHintDismissed = r.Bool("speaker_hint_dismissed"), FolderDecided = r.Bool("folder_decided"), SeriesId = r.LongOrNull("series_id"),
+        SpeakerHintDismissed = r.Bool("speaker_hint_dismissed"), FolderDecided = r.Bool("folder_decided"),
     };
 
     internal static Segment ToSegment(Row r) => new()
@@ -297,18 +324,18 @@ public sealed partial class AppDatabase : IDisposable
 
     static readonly string MeetingColumns = "title, title_locked, meeting_date, participants, source_filename, audio_file, duration_seconds, notes, notes_by, "
         + "created_at, updated_at, template_id, user_notes, source, channels, deleted_at, folder, language, notes_draft, transcribed_with, "
-        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided, series_id";
+        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided";
 
     static object?[] MeetingValues(Meeting m) =>
     [
         m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.AudioFile, m.DurationSeconds, m.Notes, m.NotesBy,
         m.CreatedAt, m.UpdatedAt, m.TemplateId, m.UserNotes, m.Source, m.Channels, m.DeletedAt, m.Folder, m.Language, m.NotesDraft,
-        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided, m.SeriesId,
+        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided,
     ];
 
     internal static long InsertMeetingRow(Db db, Meeting m)
     {
-        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 25))})", MeetingValues(m));
+        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 24))})", MeetingValues(m));
         return db.LastInsertRowId;
     }
 

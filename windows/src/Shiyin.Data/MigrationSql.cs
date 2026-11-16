@@ -211,7 +211,7 @@ static class MigrationSql
         """;
 
     /// <summary>
-    /// 資料夾自動歸類、定期會議（R98、R99、M§72、§73）：series（定期會議）、series_rejected（按了「不是定期會議」的那一組）、
+    /// 資料夾自動歸類、定期會議（R98、R99、M§72、§73；定期會議 v14 拿掉）：series（定期會議）、series_rejected（按了「不是定期會議」的那一組）、
     /// folder_rules（資料夾的自動加入條件，keywords、people 是 JSON 陣列）；meetings 加 folder_decided、series_id
     /// </summary>
     public const string V12 = """
@@ -247,5 +247,18 @@ static class MigrationSql
           name       TEXT PRIMARY KEY,
           created_at TEXT NOT NULL
         );
+        """;
+
+    /// <summary>
+    /// 拿掉定期會議（R99、M§73、D177）的後半：每個定期會議換成同名資料夾（AppDatabase.RunMigration 先一個一個做）之後，
+    /// 資料夾條件的定期會議拿掉（條件都空了就刪掉那一筆）、會議的 series_id 清掉、清空 series 和 series_rejected。
+    /// 表、欄位留著不用（拿掉有外鍵的欄位要重建整張 meetings），同 Mac 的 v14
+    /// </summary>
+    public const string V14 = """
+        UPDATE folder_rules SET series_id = NULL;
+        DELETE FROM folder_rules WHERE keywords = '[]' AND people = '[]' AND template_id IS NULL;
+        UPDATE meetings SET series_id = NULL WHERE series_id IS NOT NULL;
+        DELETE FROM series;
+        DELETE FROM series_rejected;
         """;
 }

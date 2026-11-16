@@ -18,7 +18,7 @@ public static partial class Dialogs
     /// 樣子照 ChatGPT 的「重新命名對話」（R102.1、M§76）：大標題、右上角 ✕、一行灰字說明、細框的輸入框（帶目前的名字並全選）、
     /// 右下兩顆圓角按鈕「取消」（淡底細框）「儲存」（新資料夾「建立並移入」、「+」是「建立」；字的顏色當底：淺色黑底白字、深色白底黑字）。
     /// 名字空白、沒改時「儲存」停用（Enter 也不會存）；改成已經有的資料夾、人物名字時說明換成合併的提醒。Enter 儲存、Esc 取消。
-    /// R106 起元件是共用的 Sheet、SheetDialog（design-windows §11.39），樣子不變。會議、資料夾、新資料夾、定期會議、人物、標記都用這一個；同時只開一個
+    /// R106 起元件是共用的 Sheet、SheetDialog（design-windows §11.39），樣子不變。會議、資料夾、新資料夾、人物、標記都用這一個；同時只開一個
     /// </summary>
     public static async Task Rename(MainWindow window, RenameTarget target)
     {
@@ -85,7 +85,6 @@ public static partial class Dialogs
         RenameTarget.Meeting => L.T("重新命名會議"),
         RenameTarget.Folder => L.T("重新命名資料夾"),
         RenameTarget.NewFolder => L.T("新資料夾"),
-        RenameTarget.Series => L.T("重新命名定期會議"),
         RenameTarget.Person => L.T("重新命名這個人"),
         _ => L.T("重新命名標記"),
     };
@@ -103,7 +102,6 @@ public static partial class Dialogs
             RenameTarget.NewFolder { Ids.Count: 0 } => L.T("例如專案名稱或客戶名稱。"),
             RenameTarget.NewFolder n => n.Ids.Count > 1 ? L.F("例如專案名稱或客戶名稱。這 %lld 場會議會移進新資料夾。", n.Ids.Count)
                 : L.T("例如專案名稱或客戶名稱。這場會議會移進新資料夾。"),
-            RenameTarget.Series => L.T("保持簡短、容易辨識。"),
             RenameTarget.Person => L.T("所有會議裡的這個人都會跟著改。"),
             _ => L.F("%@ 的標記", TimeFormat.String(bookmarkTime)),
         };

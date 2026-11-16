@@ -1521,11 +1521,11 @@ public sealed class ServicesTests : IDisposable
     }
 
     /// <summary>
-    /// 定期會議接上一場（R99.5、M§73、D174）：系列裡的會議，使用者提示詞多了上一場的待辦（加上它還沒完成的 followUps）和未決問題，
-    /// 整理完 followUps 只留對得上的；不在系列裡的會議提示詞不變、followUps 清空。整理完照資料夾的條件放、發 Organized（M§72）
+    /// 整理完照資料夾的條件放、發 Organized（M§72）。定期會議接上一場（R99.5、M§73）D177 拿掉：提示詞沒有上一場那一段，
+    /// 整理工具還回 followUps 時也不存（R99.3）
     /// </summary>
     [Fact]
-    public async Task SeriesMeetingFollowsUpLastActionItems()
+    public async Task SummarizeFilesIntoFolderWithoutFollowUps()
     {
         var prompts = new List<string>();
         server.Handle = async c =>
@@ -1535,9 +1535,7 @@ public sealed class ServicesTests : IDisposable
             lock (prompts) prompts.Add(body["messages"]![0]!["content"]!.GetValue<string>());
             var input = JsonNode.Parse("""
                 {"title":"產品週會 11/09","summary":[{"text":"進度","time":"00:01"}],"people":[],
-                 "followUps":[{"task":"寄信給客戶","owner":"小明","status":"done","time":"00:01"},
-                              {"task":"寫單元測試","owner":"","status":"ongoing","time":""},
-                              {"task":"確認 SSO 權限","owner":"Amy","status":"notMentioned","time":""}],
+                 "followUps":[{"task":"寄信給客戶","owner":"小明","status":"done","time":"00:01"}],
                  "decisions":[],"actionItems":[],"openQuestions":[],"topics":[],"custom":[],"reviewItems":[]}
                 """);
             var reply = new JsonObject { ["content"] = new JsonArray(new JsonObject { ["type"] = "tool_use", ["name"] = "save_meeting_notes", ["input"] = input }) };
@@ -1550,40 +1548,24 @@ public sealed class ServicesTests : IDisposable
         var (runner, _, _) = Runner(settings);
         var previous = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
         var current = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
-        var single = db.InsertMeeting(new Meeting { SourceFilename = "c", MeetingDate = "2026-11-09" }, null).Id!.Value;
-        db.SaveNotes(previous, new MeetingNotes
-        {
-            Title = "產品週會 11/02", ActionItems = [new("小明", "寄信給客戶", "2026-11-05")], OpenQuestions = [new("預算？", "00:03")],
-            FollowUps = [new("確認 SSO 權限", "Amy", FollowUpStatus.Ongoing), new("競品比較表", "Amy", FollowUpStatus.Done)],
-        }, "claude", "整理", NotesSource.Generated);
-        db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, People = [1, 2] }, [previous, current]);
+        db.SaveNotes(previous, new MeetingNotes { Title = "產品週會 11/02", ActionItems = [new("小明", "寄信給客戶", "2026-11-05")] },
+            "claude", "整理", NotesSource.Generated);
+        db.SetFolder([previous], "產品");
         db.SaveFolderRule(new FolderRule { Folder = "產品", Keywords = ["週會"] });
-        foreach (var id in new[] { current, single })
-        {
-            db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 2, Text = "信寄了", Speaker = 1 }], 2, 1);
-            db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload()));
-        }
+        db.SaveTranscript(current, [new Segment { MeetingId = current, Seq = 0, Start = 0, End = 2, Text = "信寄了", Speaker = 1 }], 2, 1);
+        db.Enqueue(current, JobKind.Summarize, JobRunner.Encode(new SummarizePayload()));
         var organized = new List<(long, string?)>();
-        runner.Organized += (id, folder, _) => { lock (organized) organized.Add((id, folder)); };
+        runner.Organized += (id, folder) => { lock (organized) organized.Add((id, folder)); };
         runner.Start();
-        try { await Until(() => new[] { current, single }.All(id => db.LatestJob(id)?.Status is JobStatus.Done or JobStatus.Failed)); }
+        try { await Until(() => db.LatestJob(current)?.Status is JobStatus.Done or JobStatus.Failed); }
         finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
-        Assert.Equal(2, prompts.Count);
-        var withPrevious = Assert.Single(prompts, p => p.Contains("上次會議", StringComparison.Ordinal));
-        Assert.Contains("""
-            上次會議（2026-11-02「產品週會 11/02」）的待辦：
-            - 小明：寄信給客戶（期限 2026-11-05）
-            - Amy：確認 SSO 權限
-            上次的未決問題：
-            - 預算？
-            請在 followUps 逐條列出上次的待辦
-            """.ReplaceLineEndings("\n"), withPrevious);
-        Assert.DoesNotContain("競品比較表", withPrevious);
-        Assert.Equal(["寄信給客戶", "確認 SSO 權限"], db.Meeting(current)!.DecodedNotes!.FollowUps.Select(f => f.Task));
-        Assert.Empty(db.Meeting(single)!.DecodedNotes!.FollowUps);
-        // 兩場的標題都有「週會」：整理完自動放進「產品」
-        Assert.Equal(("產品", "產品"), (db.Meeting(current)!.Folder, db.Meeting(single)!.Folder));
-        Assert.Equal([(current, "產品"), (single, "產品")], organized.OrderBy(o => o.Item1).Select(o => (o.Item1, (string?)o.Item2)));
+        var prompt = Assert.Single(prompts);
+        Assert.DoesNotContain("上次會議", prompt);
+        Assert.DoesNotContain("followUps", prompt);
+        Assert.DoesNotContain("followUps", db.Meeting(current)!.Notes!);
+        // 標題有「週會」：整理完自動放進「產品」
+        Assert.Equal("產品", db.Meeting(current)!.Folder);
+        Assert.Equal([(current, "產品")], organized.Select(o => (o.Item1, (string?)o.Item2)));
     }
 
     [Fact]

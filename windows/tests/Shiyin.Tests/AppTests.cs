@@ -337,7 +337,7 @@ public sealed class AppTests : IDisposable
         Assert.Equal(["Redis", "Kubernetes", "Claude Code"], db.Glossary().Select(t => t.Term));
     }
 
-    /// <summary>側欄展開的資料夾、定期會議（R101、design-windows §11.34）：資料夾改名時鍵跟著改，刪除資料夾、定期會議時拿掉</summary>
+    /// <summary>側欄展開的資料夾（R101、design-windows §11.34）：資料夾改名時鍵跟著改，刪除資料夾時拿掉</summary>
     [Fact]
     public void SidebarKeysFollowFolderRenameAndDelete()
     {
@@ -345,16 +345,16 @@ public sealed class AppTests : IDisposable
         var controller = Controller(settings, out _);
         var a = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
         var b = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
-        db.SetFolder([a, b], "客戶");
-        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [] }, [a, b]).Id!.Value;
+        db.SetFolder([a], "客戶");
+        db.SetFolder([b], "設計");
         SidebarCollapse.SetRow(settings, "folder:客戶", true);
-        SidebarCollapse.SetRow(settings, SidebarCollapse.SeriesKey(series), true);
+        SidebarCollapse.SetRow(settings, "folder:設計", true);
         SidebarCollapse.SetSection(settings, "folders", false);
         controller.RenameFolder("客戶", "客戶 A");
-        Assert.Equal(["客戶 A"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
-        Assert.Equal(["folder:客戶 A", $"series:{series}"], settings.StringList(AppSettings.SidebarExpandedKey));
+        Assert.Equal(["客戶 A", "設計"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct().Order());
+        Assert.Equal(["folder:客戶 A", "folder:設計"], settings.StringList(AppSettings.SidebarExpandedKey));
         controller.DeleteFolder("客戶 A");
-        controller.DeleteSeries(series);
+        controller.DeleteFolder("設計");
         Assert.Empty(settings.StringList(AppSettings.SidebarExpandedKey));
         // 段落的收合不受影響
         Assert.Equal(["folders"], settings.StringList(AppSettings.SidebarCollapsedKey));
@@ -383,17 +383,12 @@ public sealed class AppTests : IDisposable
         // 新資料夾：會議移進去；資料夾改名時排序的鍵跟著改
         controller.CommitRename(new RenameTarget.NewFolder([a, b]), "客戶");
         Assert.Equal(["客戶"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
-        settings.Set(AppSettings.SidebarOrderKey, ["folder:客戶", "series:9"]);
+        settings.Set(AppSettings.SidebarOrderKey, ["folder:客戶", "folder:例會"]);
         controller.CommitRename(new RenameTarget.Folder("客戶"), "客戶 A");
         Assert.Equal(["客戶 A"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
-        Assert.Equal(["folder:客戶 A", "series:9"], settings.StringList(AppSettings.SidebarOrderKey));
+        Assert.Equal(["folder:客戶 A", "folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
         controller.DeleteFolder("客戶 A");
-        Assert.Equal(["series:9"], settings.StringList(AppSettings.SidebarOrderKey));
-
-        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [] }, [a]).Id!.Value;
-        Assert.Equal("產品週會", controller.CurrentName(new RenameTarget.Series(series)));
-        controller.CommitRename(new RenameTarget.Series(series), "產品例會");
-        Assert.Equal("產品例會", db.Series().Single().Name);
+        Assert.Equal(["folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
 
         long amy = 0, ming = 0;
         db.Write(d =>
@@ -431,8 +426,7 @@ public sealed class AppTests : IDisposable
     }
 
     /// <summary>
-    /// 會議拖到列表的標題（R103.1、M§77）：在看資料夾＝移進去、在看定期會議＝加進去、「其他會議」＝移出資料夾和定期會議；
-    /// 都不在資料夾裡時說一聲，只移出定期會議時「已移出定期會議」
+    /// 會議拖到列表的標題（R103.1、M§77）：在看資料夾＝移進去、「其他會議」＝移出資料夾；都不在資料夾裡時說一聲
     /// </summary>
     [Fact]
     public void DropOnListHeaderMovesMeetings()
@@ -442,22 +436,17 @@ public sealed class AppTests : IDisposable
         controller.Notice += notices.Add;
         var a = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
         var b = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
-        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [] }, []).Id!.Value;
-        controller.DropOnListHeader([a, b], "客戶", null, othersOnly: false);
+        controller.DropOnListHeader([a, b], "客戶", othersOnly: false);
         Assert.Equal(["客戶", "客戶"], new[] { a, b }.Select(id => db.Meeting(id)!.Folder));
-        controller.DropOnListHeader([b], null, series, othersOnly: false);
-        Assert.Equal(series, db.Meeting(b)!.SeriesId);
-        controller.DropOnListHeader([a, b], null, null, othersOnly: true);
-        Assert.All(new[] { a, b }.Select(id => db.Meeting(id)!), m => Assert.True(m.Folder.Length == 0 && m.SeriesId is null));
+        controller.DropOnListHeader([a, b], null, othersOnly: true);
+        Assert.All(new[] { a, b }.Select(id => db.Meeting(id)!), m => Assert.Equal("", m.Folder));
         Assert.Equal("已把 2 場會議移出資料夾", notices[^1]);
-        controller.DropOnListHeader([a], null, null, othersOnly: true);
+        controller.DropOnListHeader([a], null, othersOnly: true);
         Assert.Equal("這場會議沒有在任何資料夾裡", notices[^1]);
-        controller.SetSeries([a], series);
-        controller.DropOnListHeader([a], null, null, othersOnly: true);
-        Assert.Null(db.Meeting(a)!.SeriesId);
-        Assert.Equal("已移出定期會議", notices[^1]);
+        controller.DropOnListHeader([a, b], null, othersOnly: true);
+        Assert.Equal("這些會議都沒有在資料夾裡", notices[^1]);
         // 看所有會議時（不是其他會議）不動
-        controller.DropOnListHeader([a], null, null, othersOnly: false);
+        controller.DropOnListHeader([a], null, othersOnly: false);
         Assert.Equal("", db.Meeting(a)!.Folder);
     }
 
@@ -511,79 +500,6 @@ public sealed class AppTests : IDisposable
         controller.RenameTerm(Term("Redls"), "Redis");
         controller.RenameTerm(Term("K8s"), "  ");
         Assert.Equal(["Redis", "K8s"], db.Glossary().Select(t => t.Term));
-    }
-
-    /// <summary>
-    /// 建議加入定期會議（R99.3、M§73）：每週一 10:00 的系列，週一只認出一位系列的人 → 建議（文字、共同的人）；
-    /// 同一群人（會自動加入）、星期幾不對、沒有人物、錄這場、垃圾桶、已經在系列裡都不建議。
-    /// 「不是」記進 series_rejected 的 join|會議|系列、之後不再建議；「加進去」設成那個系列
-    /// </summary>
-    [Fact]
-    public void SeriesJoinSuggestionAcceptAndDismiss()
-    {
-        var controller = Controller(AppSettings.InMemory(), out _);
-        var taipei = TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei");
-        string[] names = ["陳家豪", "王小明", "Amy", "Bob", "訪客"];
-        var people = new long[names.Length];
-        db.Write(d =>
-        {
-            for (var i = 0; i < names.Length; i++)
-            {
-                d.Execute("INSERT INTO people (name, created_at) VALUES (?, ?)", names[i], Clock.Now());
-                people[i] = d.LastInsertRowId;
-            }
-        });
-        // 10:00 台北 = 02:00Z；2026-11-02、09、16 是週一
-        long Add(string date, string createdAt, params int[] attended)
-        {
-            var id = db.InsertMeeting(new Meeting { Title = "會議", MeetingDate = date, Source = "recording", CreatedAt = createdAt, SourceFilename = "x.wav" }, null).Id!.Value;
-            db.Write(d =>
-            {
-                for (var i = 0; i < attended.Length; i++)
-                    d.Execute("INSERT INTO speakers (meeting_id, idx, name, name_source, person_id) VALUES (?, ?, ?, 'voiceprint', ?)",
-                        id, i + 1, names[attended[i]], people[attended[i]]);
-            });
-            return id;
-        }
-        var a = Add("2026-11-02", "2026-11-02T02:00:00Z", 0, 1, 2, 3);
-        var b = Add("2026-11-09", "2026-11-09T02:05:00Z", 0, 1, 2);
-        var onlyOne = Add("2026-11-16", "2026-11-16T02:10:00Z", 0);
-        var withGuest = Add("2026-11-16", "2026-11-16T02:30:00Z", 1, 4);
-        var samePeople = Add("2026-11-16", "2026-11-16T02:00:00Z", 0, 1, 2);
-        var tuesday = Add("2026-11-17", "2026-11-17T02:00:00Z", 0);
-        var nobody = Add("2026-11-16", "2026-11-16T02:00:00Z");
-        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [.. people[..4]] }, [a, b]);
-        var sid = series.Id!.Value;
-
-        SeriesJoinSuggestion? Suggest(long id, long? recording = null, Action<Meeting>? change = null)
-        {
-            var meeting = db.Meeting(id)!;
-            change?.Invoke(meeting);
-            return Organizing.JoinSuggestion(meeting, db.MeetingRows(), db.MeetingPeople(), db.Series(), db.RejectedSeriesKeys(), recording, taipei);
-        }
-        var s = Suggest(onlyOne);
-        Assert.Equal(sid, s?.Series.Id);
-        Assert.Equal([people[0]], s!.Shared);
-        Assert.Equal("這場可能是定期會議「產品週會」的一場：週一、陳家豪 有參加", Organizing.JoinSuggestionText(s, db.PeopleOverview()));
-        Assert.Equal([people[1]], Suggest(withGuest)?.Shared);
-        Assert.Null(Suggest(samePeople));
-        Assert.Equal(sid, db.AutoJoinSeries(samePeople, taipei)?.Id);
-        Assert.Null(Suggest(tuesday));
-        Assert.Null(Suggest(nobody));
-        Assert.Null(Suggest(onlyOne, recording: onlyOne));
-        Assert.Null(Suggest(onlyOne, change: m => m.DeletedAt = Clock.Now()));
-        Assert.Null(Suggest(a));
-        // 自動加入的那場（11/16）是系列的最近一場：同一天的不再符合「相隔 1～35 天」
-        db.SetSeries([samePeople], null);
-
-        controller.DismissSeriesJoin(withGuest, sid);
-        Assert.Contains($"join|{withGuest}|{sid}", db.RejectedSeriesKeys());
-        Assert.Null(Suggest(withGuest));
-        Assert.NotNull(Suggest(onlyOne));
-
-        controller.AcceptSeriesJoin(onlyOne, sid);
-        Assert.Equal(sid, db.Meeting(onlyOne)!.SeriesId);
-        Assert.Null(Suggest(onlyOne));
     }
 
     /// <summary>「人物」的「產生每個人的重點」（R92.4、M§66）：排 summarize，payload 只多 people；沒設整理工具時不排、說原因。草稿的 payload 跟以前一字不差</summary>

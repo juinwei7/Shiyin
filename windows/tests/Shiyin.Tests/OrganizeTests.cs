@@ -8,8 +8,8 @@ using Xunit;
 namespace Shiyin.Tests;
 
 /// <summary>
-/// 會議的分類、排序（R97～R99、M§71～§73、design-windows §11.30～§11.32）：定期會議、資料夾的條件和建議、上次的待辦跟 Mac 的標準答案相同；
-/// 資料庫的操作、列表的排序分組篩選
+/// 會議的分類、排序（R97、R98、M§71、§72、design-windows §11.30、§11.31）：資料夾的條件和建議跟 Mac 的標準答案相同；
+/// 資料庫的操作、列表的排序分組篩選；拿掉定期會議的 migration v14（R99、M§73、D177）
 /// </summary>
 public sealed class OrganizeTests : IDisposable
 {
@@ -30,141 +30,29 @@ public sealed class OrganizeTests : IDisposable
 
     static IEnumerable<JsonElement> Items(string path) => Golden.ExpectedJson(path).EnumerateArray();
 
-    static int? NullableInt(JsonElement? e) => e is { ValueKind: JsonValueKind.Number } n ? n.GetInt32() : null;
-
     static HashSet<long> Ids(JsonElement? e) => e is { ValueKind: JsonValueKind.Array } a ? a.EnumerateArray().Select(x => x.GetInt64()).ToHashSet() : [];
 
     // MARK: 標準答案
 
-    /// <summary>會議的時間（M§73）：錄音才有開始時間、要跟會議日期同一天（時區固定台北）</summary>
+    /// <summary>標題的共同詞（資料夾的建議用，M§72；原本是定期會議的預設名稱，D177 拿掉後改名 common-word）</summary>
     [Fact]
-    public void MeetingTimeMatchesMac()
+    public void CommonWordMatchesMac()
     {
-        var expected = Items("util/meeting-time.json").ToList();
-        Assert.NotEmpty(expected);
-        foreach (var e in expected)
-        {
-            var input = e.GetProperty("input");
-            var meeting = new Meeting { MeetingDate = input.Str("meetingDate")!, CreatedAt = input.Str("createdAt")!, Source = input.Str("source")!, SourceFilename = "x.wav" };
-            var time = MeetingTime.Of(meeting, TimeZoneInfo.FindSystemTimeZoneById(input.Str("timeZone")!));
-            Assert.Equal(NullableInt(e.Get("day")), time?.Day);
-            Assert.Equal(NullableInt(e.Get("weekday")), time?.Weekday);
-            Assert.Equal(NullableInt(e.Get("minute")), time?.Minute);
-        }
-    }
-
-    /// <summary>找可能的定期會議（M§73、D173）：每週一、隔週四、時間差太多、人不同、不到三場、已經拒絕過；名稱、頻率是繁中介面</summary>
-    [Fact]
-    public void SeriesDetectMatchesMac()
-    {
-        var cases = Items("util/series-detect.json").ToList();
-        Assert.Equal(5, cases.Count);
-        foreach (var c in cases)
-        {
-            var inputs = c.GetProperty("input").EnumerateArray().Select(i => new SeriesDetector.Input(i.Long("id")!.Value,
-                new MeetingTime((int)i.Long("day")!.Value, NullableInt(i.Get("minute"))), Ids(i.Get("people")), i.Str("title")!)).ToList();
-            var rejected = (c.Strings("rejected") ?? []).ToHashSet();
-            var actual = SeriesDetector.Candidates(inputs, rejected);
-            var expected = c.GetProperty("candidates").EnumerateArray().ToList();
-            Assert.True(expected.Count == actual.Count, $"{c.Str("name")}：{expected.Count} 組 ≠ {actual.Count} 組");
-            for (var i = 0; i < expected.Count; i++)
-            {
-                var e = expected[i];
-                var a = actual[i];
-                Assert.Equal(e.Str("key"), a.Key);
-                Assert.Equal(e.GetProperty("meetingIds").EnumerateArray().Select(x => x.GetInt64()), a.MeetingIds);
-                Assert.Equal((int)e.Long("weekday")!.Value, a.Weekday);
-                Assert.Equal(NullableInt(e.Get("minute")), a.Minute);
-                Assert.Equal((int)e.Long("intervalWeeks")!.Value, a.IntervalWeeks);
-                Assert.Equal(e.GetProperty("people").EnumerateArray().Select(x => x.GetInt64()), a.People);
-                Assert.Equal(e.Str("name"), a.Name);
-                Assert.Equal(e.Str("frequency"), a.FrequencyText);
-            }
-        }
-        foreach (var e in Items("util/series-common-word.json"))
-            Assert.Equal(e.Get("word") is { ValueKind: JsonValueKind.String } w ? w.GetString() : null, SeriesDetector.CommonWord(e.Strings("titles")!));
-        foreach (var e in Items("util/series-frequency.json"))
-        {
-            var (weekday, minute, interval) = ((int)e.Long("weekday")!.Value, NullableInt(e.Get("minute")), (int)e.Long("intervalWeeks")!.Value);
-            Assert.Equal(e.Str("text"), SeriesDetector.FrequencyText(weekday, minute, interval));
-            Assert.Equal(e.Str("defaultName"), SeriesDetector.DefaultName(["A", "B"], weekday, minute));
-        }
-    }
-
-    /// <summary>還沒完成的待辦、上一場（R99.4、R99.5）：由舊到新用 followUps 拿掉完成的，再加入這一場的待辦</summary>
-    [Fact]
-    public void SeriesOpenItemsMatchMac()
-    {
-        var expected = Golden.ExpectedJson("util/series-open-items.json");
-        var meetings = expected.GetProperty("meetings").EnumerateArray().Select(m => new Meeting
-        {
-            Id = m.Long("id"), MeetingDate = m.Str("meetingDate")!, Notes = m.Str("notes"), SourceFilename = "x.wav",
-        }).ToList();
-        var open = SeriesOpenItems.Compute(meetings);
-        var e = expected.GetProperty("open").EnumerateArray().ToList();
-        Assert.Equal(e.Select(x => (x.Long("meeting"), (int)x.Long("index")!.Value, x.Str("task"))),
-            open.Select(o => (o.Meeting.Id, o.Index, (string?)o.Item.Task)));
-        var previous = expected.GetProperty("previous").EnumerateArray().ToList();
-        Assert.Equal(meetings.Count, previous.Count);
-        for (var i = 0; i < meetings.Count; i++)
-        {
-            var p = PreviousMeeting.Of(meetings[i]);
-            if (previous[i].ValueKind == JsonValueKind.Null) { Assert.Null(p); continue; }
-            Assert.NotNull(p);
-            Assert.Equal(previous[i].GetProperty("items").EnumerateArray().Select(x => (x.Str("owner"), x.Str("task"), x.Str("due"))),
-                p.Items.Select(x => ((string?)x.Owner, (string?)x.Task, (string?)x.Due)));
-            Assert.Equal(previous[i].Strings("openQuestions"), p.OpenQuestions.Select(q => q.Text).ToList());
-        }
-    }
-
-    /// <summary>整理後的驗證（M§73）：對不到給的待辦的丟掉、同一條只留第一個；沒給上一場時清空</summary>
-    [Fact]
-    public void FollowUpsValidateMatchesMac()
-    {
-        var expected = Golden.ExpectedJson("util/followups-validate.json");
-        var previous = new PreviousMeeting("t", "2026-11-09", expected.GetProperty("previousItems").EnumerateArray()
-            .Select(i => new MeetingNotes.ActionItem(i.Str("owner")!, i.Str("task")!, "")).ToList(), []);
-        static List<MeetingNotes.FollowUp> Decode(JsonElement list) => list.EnumerateArray()
-            .Select(f => new MeetingNotes.FollowUp(f.Str("task")!, f.Str("owner")!, FollowUpStatuses.Parse(f.Str("status"))!.Value)).ToList();
-        static IEnumerable<(string, string, string)> Key(IEnumerable<MeetingNotes.FollowUp> list) => list.Select(f => (f.Task, f.Owner, f.Status.Code()));
-        var raw = Decode(expected.GetProperty("input"));
-        Assert.Equal(Key(Decode(expected.GetProperty("valid"))), Key(PreviousMeeting.ValidFollowUps(raw, previous)));
-        Assert.Equal(Key(Decode(expected.GetProperty("withoutPrevious"))), Key(PreviousMeeting.ValidFollowUps(raw, null)));
-    }
-
-    /// <summary>新的一場要不要加入定期會議（M§73）：自動加入、建議、都不是</summary>
-    [Fact]
-    public void SeriesJoinMatchesMac()
-    {
-        foreach (var c in Golden.ExpectedJson("util/series-join.json").EnumerateArray())
-        {
-            var minute = c.GetProperty("minute").ValueKind == JsonValueKind.Null ? (int?)null : c.GetProperty("minute").GetInt32();
-            var time = new MeetingTime(c.GetProperty("day").GetInt32(), minute);
-            var attended = c.GetProperty("attended").EnumerateArray().Select(x => x.GetInt64()).ToHashSet();
-            var infos = c.GetProperty("series").EnumerateArray().Select(s => new SeriesDetector.SeriesInfo(
-                s.GetProperty("id").GetInt64(), s.GetProperty("weekday").GetInt32(),
-                s.GetProperty("minute").ValueKind == JsonValueKind.Null ? null : s.GetProperty("minute").GetInt32(),
-                s.GetProperty("people").EnumerateArray().Select(x => x.GetInt64()).ToHashSet(),
-                s.GetProperty("lastDay").ValueKind == JsonValueKind.Null ? null : s.GetProperty("lastDay").GetInt32())).ToList();
-            var decision = SeriesDetector.Decide(time, attended, infos);
-            var d = c.GetProperty("decision");
-            var name = c.Str("name");
-            Assert.True((d.TryGetProperty("join", out var j) ? j.GetInt64() : (long?)null) == decision.Join, name);
-            Assert.True((d.TryGetProperty("suggest", out var sg) ? sg.GetInt64() : (long?)null) == decision.Suggest, name);
-            var shared = d.TryGetProperty("shared", out var sh) ? sh.EnumerateArray().Select(x => x.GetInt64()).ToList() : [];
-            Assert.Equal(shared, decision.Shared);
-        }
+        var cases = Items("util/common-word.json").ToList();
+        Assert.NotEmpty(cases);
+        foreach (var e in cases)
+            Assert.Equal(e.Get("word") is { ValueKind: JsonValueKind.String } w ? w.GetString() : null, MeetingSimilarity.CommonWord(e.Strings("titles")!));
     }
 
     /// <summary>資料夾的條件（R98.1）、建議（R98.3）</summary>
     [Fact]
     public void FolderRulesAndSuggestionsMatchMac()
     {
-        var rule = new FolderRule { Folder = "產品", Keywords = ["週會", "sync"], People = [1, 2], TemplateId = "one-on-one", SeriesId = 3 };
+        var rule = new FolderRule { Folder = "產品", Keywords = ["週會", "sync"], People = [1, 2], TemplateId = "one-on-one" };
         var cases = Items("util/folder-rule-match.json").ToList();
-        Assert.Equal(7, cases.Count);
+        Assert.Equal(6, cases.Count);
         foreach (var c in cases)
-            Assert.Equal(c.Bool("matches"), rule.Matches(c.Str("title")!, Ids(c.Get("attended")), c.Str("templateId")!, c.Long("seriesId")));
+            Assert.Equal(c.Bool("matches"), rule.Matches(c.Str("title")!, Ids(c.Get("attended")), c.Str("templateId")!));
 
         var expected = Golden.ExpectedJson("util/folder-suggest.json");
         var others = expected.GetProperty("others").EnumerateArray()
@@ -247,66 +135,84 @@ public sealed class OrganizeTests : IDisposable
     }
 
     /// <summary>
-    /// 定期會議（M§73）：建立、改名、刪除（會議留著、記進拒絕）；上一場（同系列、比較早、有紀錄）；
-    /// 自動加入（星期幾、時間、同一群人、相隔 1～35 天）
+    /// 拿掉定期會議（R99、M§73、D177）的 migration v14：每個定期會議換成同名資料夾（名字頭尾的空白去掉、空的不換），裡面不在資料夾的會議移進去
+    /// （已經在別的資料夾的不動），同名的資料夾已經有時合在一起；資料夾條件的定期會議拿掉（條件都空了就刪那一筆）；series、series_rejected 清空、
+    /// series_id 都是 null；MigratedSeries 是換掉的名稱（設定檔的鍵照這個換），再開一次是空的
     /// </summary>
     [Fact]
-    public void SeriesInDatabase()
+    public void MigrationV14TurnsSeriesIntoFolders()
     {
-        var taipei = TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei");
-        // 2026-11-02、09、16 是週一；10:00 台北 = 02:00Z
-        var a = Meeting("週會 1", "2026-11-02", "recording", "2026-11-02T02:00:00Z");
-        var b = Meeting("週會 2", "2026-11-09", "recording", "2026-11-09T02:05:00Z");
-        var c = Meeting("週會 3", "2026-11-16", "recording", "2026-11-16T02:10:00Z");
-        var late = Meeting("下午", "2026-11-16", "recording", "2026-11-16T08:00:00Z");
-        var tuesday = Meeting("週二", "2026-11-17", "recording", "2026-11-17T02:00:00Z");
-        var bob = Meeting("跟 Bob", "2026-11-16", "recording", "2026-11-16T02:00:00Z");
-        foreach (var id in new[] { a, b, c, late, tuesday }) Attend(id, 1, 2, 4);
-        Attend(bob, 1, 9);
-        var created = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [1, 2, 4] }, [a, b]);
-        Assert.NotNull(created.Id);
-        Assert.Equal("[1,2,4]", db.Read(d => d.Scalar("SELECT people FROM series")));
-        Assert.Equal([b, a], db.SeriesMeetings(created.Id!.Value).Select(m => m.Id!.Value));
+        var path = Path.Combine(home.Path, "v13.sqlite");
+        long a, b, c, other;
+        using (var old = new AppDatabase(path))
+        {
+            long Add(string title, string folder = "") =>
+                old.InsertMeeting(new Meeting { Title = title, MeetingDate = "2026-11-02", SourceFilename = "x.wav", Folder = folder }, null).Id!.Value;
+            a = Add("週會 1");
+            b = Add("週會 2", folder: "客戶");
+            c = Add("設計評審");
+            other = Add("面試");
+            // 回到 v13（定期會議還在的時候）：兩個定期會議（一個跟已經有的資料夾同名、一個名字是空的）、拒絕過的組、條件的定期會議
+            old.Write(d =>
+            {
+                var now = Clock.Now();
+                d.Execute("DELETE FROM grdb_migrations WHERE identifier = 'v14'");
+                d.Execute("INSERT INTO series (id, name, weekday, minute, interval_weeks, people, created_at) VALUES (1, ' 產品週會 ', 2, 600, 1, '[1,2]', ?)", now);
+                d.Execute("INSERT INTO series (id, name, weekday, minute, interval_weeks, people, created_at) VALUES (2, '設計', 5, NULL, 2, '[]', ?)", now);
+                d.Execute("INSERT INTO series (id, name, weekday, minute, interval_weeks, people, created_at) VALUES (3, '  ', 3, NULL, 1, '[]', ?)", now);
+                d.Execute("UPDATE meetings SET series_id = 1 WHERE id IN (?, ?)", a, b);
+                d.Execute("UPDATE meetings SET series_id = 2 WHERE id = ?", c);
+                d.Execute("UPDATE meetings SET series_id = 3 WHERE id = ?", other);
+                d.Execute("INSERT OR IGNORE INTO folders (name, created_at) VALUES ('設計', ?)", now);
+                d.Execute("INSERT INTO series_rejected (key, created_at) VALUES ('5|15|1,3', ?)", now);
+                d.Execute("INSERT INTO folder_rules (folder, keywords, people, template_id, series_id, created_at) VALUES ('只有定期會議', '[]', '[]', NULL, 1, ?)", now);
+                d.Execute("INSERT INTO folder_rules (folder, keywords, people, template_id, series_id, created_at) VALUES ('產品', '[\"週會\"]', '[]', NULL, 1, ?)", now);
+            });
+        }
+        using (var migrated = new AppDatabase(path))
+        {
+            Assert.Equal(new Dictionary<long, string> { [1] = "產品週會", [2] = "設計" }, migrated.MigratedSeries);
+            Assert.Equal(("產品週會", true), (migrated.Meeting(a)!.Folder, migrated.Meeting(a)!.FolderDecided));
+            Assert.Equal("客戶", migrated.Meeting(b)!.Folder);
+            Assert.Equal("設計", migrated.Meeting(c)!.Folder);
+            Assert.Equal("", migrated.Meeting(other)!.Folder);
+            Assert.Contains("產品週會", migrated.FolderNames());
+            Assert.Single(migrated.FolderNames(), "設計");
+            // 只有定期會議條件的那一筆刪掉，另一筆留著（定期會議拿掉）
+            Assert.Equal(["產品"], migrated.FolderRules().Select(r => r.Folder));
+            Assert.Equal(["週會"], migrated.FolderRules()[0].Keywords);
+            Assert.Equal(0L, migrated.Read(d => d.Scalar("SELECT COUNT(*) FROM folder_rules WHERE series_id IS NOT NULL")));
+            Assert.Equal(0L, migrated.Read(d => d.Scalar("SELECT COUNT(*) FROM meetings WHERE series_id IS NOT NULL")));
+            Assert.Equal(0L, migrated.Read(d => d.Scalar("SELECT COUNT(*) FROM series")));
+            Assert.Equal(0L, migrated.Read(d => d.Scalar("SELECT COUNT(*) FROM series_rejected")));
+            // 之後存的條件、會議 series_id 一律是 null
+            migrated.SaveFolderRule(new FolderRule { Folder = "產品", Keywords = ["sync"] });
+            Assert.Equal(0L, migrated.Read(d => d.Scalar("SELECT COUNT(*) FROM folder_rules WHERE series_id IS NOT NULL")));
+        }
+        using (var again = new AppDatabase(path)) Assert.Empty(again.MigratedSeries);
 
-        // 上一場：b 的上一場是 a，要有紀錄
-        Assert.Null(db.PreviousSeriesMeeting(db.Meeting(b)!));
-        db.SaveNotes(a, new MeetingNotes { Title = "週會 1", ActionItems = [new("小明", "寄信", "")] }, "claude", "整理", NotesSource.Generated);
-        Assert.Equal(a, db.PreviousSeriesMeeting(db.Meeting(b)!)!.Id);
-        Assert.Null(db.PreviousSeriesMeeting(db.Meeting(a)!));
-        Assert.Null(db.PreviousSeriesMeeting(db.Meeting(c)!));
-
-        Assert.Null(db.AutoJoinSeries(late, taipei));
-        Assert.Null(db.AutoJoinSeries(tuesday, taipei));
-        Assert.Null(db.AutoJoinSeries(bob, taipei));
-        Assert.Equal(created.Id, db.AutoJoinSeries(c, taipei)?.Id);
-        Assert.Equal(created.Id, db.Meeting(c)!.SeriesId);
-        Assert.Null(db.AutoJoinSeries(c, taipei));
-        // c 的上一場：b 還沒有紀錄，往前找到 a
-        Assert.Equal(a, db.PreviousSeriesMeeting(db.Meeting(c)!)!.Id);
-
-        db.RenameSeries(created.Id!.Value, "PM 週會");
-        Assert.Equal("PM 週會", db.Series().Single().Name);
-        db.SetSeries([late], created.Id);
-        db.SetSeries([late], null);
-        Assert.Null(db.Meeting(late)!.SeriesId);
-        db.DeleteSeries(created.Id!.Value);
-        Assert.Empty(db.Series());
-        Assert.Null(db.Meeting(a)!.SeriesId);
-        Assert.Contains("2|10|1,2,4", db.RejectedSeriesKeys());
-        db.RejectSeries("5|15|1,3");
-        db.RejectSeries("5|15|1,3");
-        Assert.Equal(2, db.RejectedSeriesKeys().Count);
-        Assert.Equal([1L, 2L, 4L], db.MeetingPeople()[a].Order());
+        // 設定檔裡的鍵（同 Mac 的 replaceSeriesKeys）：series:<id> 換成 folder:<名稱>，跟原本的重複時留前面的、找不到的拿掉；
+        // 展開的照 Ordinal 排序、排序的照原本的順序
+        var settings = AppSettings.InMemory();
+        settings.Set(AppSettings.SidebarExpandedKey, ["folder:客戶", "series:1", "series:9"]);
+        settings.Set(AppSettings.SidebarOrderKey, ["series:2", "folder:客戶", "folder:設計", "series:1"]);
+        SidebarCollapse.ReplaceSeriesKeys(settings, new Dictionary<long, string> { [1] = "產品週會", [2] = "設計" });
+        Assert.Equal(["folder:客戶", "folder:產品週會"], settings.StringList(AppSettings.SidebarExpandedKey));
+        Assert.Equal(["folder:設計", "folder:客戶", "folder:產品週會"], settings.StringList(AppSettings.SidebarOrderKey));
+        var writes = 0;
+        settings.Changed += _ => writes++;
+        SidebarCollapse.ReplaceSeriesKeys(settings, new Dictionary<long, string> { [1] = "產品週會" });
+        Assert.Equal(0, writes);
     }
 
     // MARK: 列表
 
     static MeetingRow Row(long id, string title, string date, int? duration = null, string folder = "", int review = 0, string template = "general",
-        string? notes = null, long? series = null) =>
+        string? notes = null) =>
         new(new Meeting
         {
             Id = id, Title = title, MeetingDate = date, DurationSeconds = duration, Folder = folder, TemplateId = template, Notes = notes,
-            SeriesId = series, SourceFilename = "x.wav",
+            SourceFilename = "x.wav",
         }, null, review);
 
     /// <summary>排序、分組、篩選（R97、M§71）：舊到新反過來、標題照數字大小、長度沒有的排最後；月份、資料夾的分組；篩選都要符合</summary>
@@ -318,7 +224,7 @@ public sealed class OrganizeTests : IDisposable
         [
             Row(5, "第 10 週", "2026-11-10", 600, folder: "專案", review: 2),
             Row(4, "第 2 週", "2026-11-03", null, notes: """{"actionItems":[{"owner":"王小明、Amy","task":"寄信","due":"","time":""}]}"""),
-            Row(3, "Kickoff", "2026-10-20", 1800, folder: "專案", template: "one-on-one", series: 7),
+            Row(3, "Kickoff", "2026-10-20", 1800, folder: "專案", template: "one-on-one"),
             Row(2, "b", "2026-10-02", 60, folder: "客戶"),
             Row(1, "A", "2026-09-30", 60),
         ];
@@ -339,23 +245,23 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal([5L, 3L], folders.First(g => g.Title == "專案").Rows.Select(r => r.Id));
         Assert.Single(MeetingList.Groups(rows, MeetingGrouping.Folder, MeetingSort.DateDesc, trash: true));
         Assert.Equal(MeetingGrouping.None, MeetingList.Effective(MeetingGrouping.Folder, "專案"));
-        Assert.Equal(MeetingGrouping.None, MeetingList.Effective(MeetingGrouping.Series, null));
         Assert.DoesNotContain(MeetingGrouping.Folder, MeetingList.Available("專案"));
-        Assert.DoesNotContain(MeetingGrouping.Series, MeetingList.Available(null));
+        Assert.Equal([MeetingGrouping.None, MeetingGrouping.Month, MeetingGrouping.Folder], MeetingList.Available(null));
+        // 以前存的「依定期會議」（series）讀成不分組
+        Assert.Null(MeetingGroupings.Parse("series"));
 
         var people = new Dictionary<long, HashSet<long>> { [3] = [1, 2], [5] = [2] };
         List<long> Ids(MeetingFilter f, string? me = "王小明") =>
-            MeetingList.Filtered(rows, false, null, null, f, MeetingSort.DateDesc, people, me).Select(r => r.Id).ToList();
+            MeetingList.Filtered(rows, false, null, f, MeetingSort.DateDesc, people, me).Select(r => r.Id).ToList();
         Assert.Equal([5L], Ids(new MeetingFilter(NeedsReview: true)));
         Assert.Equal([4L], Ids(new MeetingFilter(MyActionItems: true)));
         Assert.Empty(Ids(new MeetingFilter(MyActionItems: true), me: null));
         Assert.Equal([5L, 3L], Ids(new MeetingFilter(PersonId: 2)));
         Assert.Equal([3L], Ids(new MeetingFilter(PersonId: 2, TemplateId: "one-on-one")));
         Assert.Empty(Ids(new MeetingFilter(NeedsReview: true, TemplateId: "one-on-one")));
-        Assert.Equal([3L], MeetingList.Filtered(rows, false, null, 7, new MeetingFilter(), MeetingSort.DateDesc, people, null).Select(r => r.Id));
-        Assert.Equal([5L, 3L], MeetingList.Filtered(rows, false, "專案", null, new MeetingFilter(), MeetingSort.DateDesc, people, null).Select(r => r.Id));
+        Assert.Equal([5L, 3L], MeetingList.Filtered(rows, false, "專案", new MeetingFilter(), MeetingSort.DateDesc, people, null).Select(r => r.Id));
         // 垃圾桶不篩選
-        Assert.Equal(5, MeetingList.Filtered(rows, true, "專案", 7, new MeetingFilter(NeedsReview: true), MeetingSort.DateDesc, people, null).Count);
+        Assert.Equal(5, MeetingList.Filtered(rows, true, "專案", new MeetingFilter(NeedsReview: true), MeetingSort.DateDesc, people, null).Count);
 
         var overview = new List<PersonOverview> { new(2, "王小明", 2, "2026-11-10", true) };
         var templates = new List<TemplateRecord> { new() { Id = "one-on-one", Name = "一對一", Builtin = false, Definition = "{}" } };
@@ -376,7 +282,6 @@ public sealed class OrganizeTests : IDisposable
         var writes = 0;
         settings.Changed += _ => writes++;
         Assert.Equal("folder:客戶", SidebarCollapse.FolderKey("客戶"));
-        Assert.Equal("series:7", SidebarCollapse.SeriesKey(7));
         Assert.True(SidebarCollapse.IsSectionExpanded(settings, "folders"));
         Assert.False(SidebarCollapse.IsRowExpanded(settings, "folder:客戶"));
         SidebarCollapse.SetSection(settings, "folders", false);
@@ -386,10 +291,10 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal(["folders", "meetings"], settings.StringList(AppSettings.SidebarCollapsedKey));
         Assert.False(SidebarCollapse.IsSectionExpanded(settings, "folders"));
         SidebarCollapse.SetRow(settings, "folder:客戶", true);
-        SidebarCollapse.SetRow(settings, "series:7", true);
+        SidebarCollapse.SetRow(settings, "folder:例會", true);
         Assert.True(SidebarCollapse.IsRowExpanded(settings, "folder:客戶"));
         SidebarCollapse.RenameFolder(settings, "客戶", "客戶 A");
-        Assert.Equal(["folder:客戶 A", "series:7"], settings.StringList(AppSettings.SidebarExpandedKey));
+        Assert.Equal(["folder:例會", "folder:客戶 A"], settings.StringList(AppSettings.SidebarExpandedKey));
         // 沒展開的資料夾改名不寫
         writes = 0;
         SidebarCollapse.RenameFolder(settings, "設計", "設計 B");
@@ -397,11 +302,10 @@ public sealed class OrganizeTests : IDisposable
 
         List<MeetingRow> rows =
         [
-            Row(6, "f", "2026-11-12", folder: "客戶"), Row(5, "e", "2026-11-10", folder: "客戶", series: 7), Row(4, "d", "2026-11-03"),
-            Row(3, "c", "2026-10-20", folder: "客戶", series: 7), Row(2, "b", "2026-10-02", folder: "設計"), Row(1, "a", "2026-09-30", folder: "客戶"),
+            Row(6, "f", "2026-11-12", folder: "客戶"), Row(5, "e", "2026-11-10", folder: "客戶"), Row(4, "d", "2026-11-03"),
+            Row(3, "c", "2026-10-20", folder: "客戶"), Row(2, "b", "2026-10-02", folder: "設計"), Row(1, "a", "2026-09-30", folder: "客戶"),
         ];
         Assert.Equal([6L, 5L, 3L, 1L], SidebarCollapse.PeekRows(rows, "客戶").Select(r => r.Id));
-        Assert.Equal([5L, 3L], SidebarCollapse.PeekRows(rows, 7).Select(r => r.Id));
         Assert.Empty(SidebarCollapse.PeekRows(rows, "例會"));
 
         var months = MeetingList.Groups(rows, MeetingGrouping.Month, MeetingSort.DateDesc, trash: false);
@@ -411,24 +315,20 @@ public sealed class OrganizeTests : IDisposable
         SidebarCollapse.SetSection(settings, "meetings", false);
         SidebarCollapse.ExpandToShow(settings, 3, months, rows);
         Assert.Equal(["folders", "group:month-2026-11"], settings.StringList(AppSettings.SidebarCollapsedKey));
-        // 在資料夾、定期會議裡（下面的列表沒有）：展開「資料夾」那一段和那個定期會議或資料夾
-        SidebarCollapse.SetRow(settings, "series:7", false);
-        SidebarCollapse.ExpandToShow(settings, 5, [], rows);
-        Assert.Equal(["group:month-2026-11"], settings.StringList(AppSettings.SidebarCollapsedKey));
-        Assert.Contains("series:7", settings.StringList(AppSettings.SidebarExpandedKey));
+        // 在資料夾裡（下面的列表沒有）：展開「資料夾」那一段和那個資料夾
         SidebarCollapse.ExpandToShow(settings, 2, [], rows);
+        Assert.Equal(["group:month-2026-11"], settings.StringList(AppSettings.SidebarCollapsedKey));
         Assert.Contains("folder:設計", settings.StringList(AppSettings.SidebarExpandedKey));
 
-        // 其他會議（R101.6）：有資料夾、定期會議的會議時才只放其他的；篩選、依資料夾分組、看某個資料夾時照舊
+        // 其他會議（R101.6）：有資料夾的會議時才只放其他的；篩選、依資料夾分組、看某個資料夾時照舊
         var none = new MeetingFilter();
-        Assert.True(SidebarCollapse.ShowsOthersOnly(rows, false, null, null, none, MeetingGrouping.Month));
-        Assert.Equal([4L], rows.Where(r => !SidebarCollapse.InFolderOrSeries(r)).Select(r => r.Id));
-        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, null, new MeetingFilter(NeedsReview: true), MeetingGrouping.None));
-        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, null, none, MeetingGrouping.Folder));
-        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, "客戶", null, none, MeetingGrouping.None));
-        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, 7, none, MeetingGrouping.None));
-        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, true, null, null, none, MeetingGrouping.None));
-        Assert.False(SidebarCollapse.ShowsOthersOnly([Row(4, "d", "2026-11-03")], false, null, null, none, MeetingGrouping.None));
+        Assert.True(SidebarCollapse.ShowsOthersOnly(rows, false, null, none, MeetingGrouping.Month));
+        Assert.Equal([4L], rows.Where(r => !SidebarCollapse.InFolder(r)).Select(r => r.Id));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, new MeetingFilter(NeedsReview: true), MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, none, MeetingGrouping.Folder));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, "客戶", none, MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, true, null, none, MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly([Row(4, "d", "2026-11-03")], false, null, none, MeetingGrouping.None));
     }
 
     /// <summary>
@@ -441,39 +341,39 @@ public sealed class OrganizeTests : IDisposable
         var settings = AppSettings.InMemory();
         var writes = 0;
         settings.Changed += key => { if (key == AppSettings.SidebarOrderKey) writes++; };
-        string[] defaults = ["series:1", "folder:客戶", "folder:設計", "folder:例會"];
+        string[] defaults = ["folder:產品週會", "folder:客戶", "folder:設計", "folder:例會"];
         // 沒排過：照預設
         Assert.Equal(defaults, SidebarDrag.Sorted(settings, defaults));
-        // 「設計」拖到「產品週會」（series:1）上半：排到最前面，整段寫回
-        Assert.True(SidebarDrag.Move(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", "series:1", before: true));
-        Assert.Equal(["folder:設計", "series:1", "folder:客戶", "folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
-        // 新的資料夾、定期會議排在最後，照預設的順序（定期會議在前、資料夾照名稱）
-        string[] more = ["series:1", "series:2", "folder:客戶", "folder:設計", "folder:例會", "folder:新專案"];
-        Assert.Equal(["folder:設計", "series:1", "folder:客戶", "folder:例會", "series:2", "folder:新專案"], SidebarDrag.Sorted(settings, more));
+        // 「設計」拖到「產品週會」上半：排到最前面，整段寫回
+        Assert.True(SidebarDrag.Move(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", "folder:產品週會", before: true));
+        Assert.Equal(["folder:設計", "folder:產品週會", "folder:客戶", "folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
+        // 新的資料夾排在最後，照預設的順序
+        string[] more = ["folder:產品週會", "folder:週會二", "folder:客戶", "folder:設計", "folder:例會", "folder:新專案"];
+        Assert.Equal(["folder:設計", "folder:產品週會", "folder:客戶", "folder:例會", "folder:週會二", "folder:新專案"], SidebarDrag.Sorted(settings, more));
         // 拖到下半＝放在後面；拖到自己、拖到不在這一段的不動
         Assert.True(SidebarDrag.Move(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", "folder:客戶", before: false));
-        Assert.Equal(["series:1", "folder:客戶", "folder:設計", "folder:例會"], SidebarDrag.Sorted(settings, defaults));
+        Assert.Equal(["folder:產品週會", "folder:客戶", "folder:設計", "folder:例會"], SidebarDrag.Sorted(settings, defaults));
         Assert.False(SidebarDrag.Move(settings, defaults, "folder:設計", "folder:設計", before: true));
         Assert.False(SidebarDrag.Move(settings, defaults, "folder:設計", "folder:不見了", before: true));
         // 往上、往下移一格（Alt+↑／↓）；到頭了不動、不寫
         writes = 0;
         Assert.True(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:例會", -1));
-        Assert.Equal(["series:1", "folder:客戶", "folder:例會", "folder:設計"], SidebarDrag.Sorted(settings, defaults));
+        Assert.Equal(["folder:產品週會", "folder:客戶", "folder:例會", "folder:設計"], SidebarDrag.Sorted(settings, defaults));
         Assert.True(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:客戶", 1));
-        Assert.Equal(["series:1", "folder:例會", "folder:客戶", "folder:設計"], SidebarDrag.Sorted(settings, defaults));
-        Assert.False(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "series:1", -1));
+        Assert.Equal(["folder:產品週會", "folder:例會", "folder:客戶", "folder:設計"], SidebarDrag.Sorted(settings, defaults));
+        Assert.False(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:產品週會", -1));
         Assert.False(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", 1));
         Assert.Equal(2, writes);
         // 資料夾改名：鍵換掉、位置不變；改成已經有的資料夾（合併）時拿掉舊的；刪除拿掉；沒排過的資料夾改名不寫
         SidebarDrag.RenameFolder(settings, "例會", "週例會");
-        Assert.Equal(["series:1", "folder:週例會", "folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
+        Assert.Equal(["folder:產品週會", "folder:週例會", "folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
         SidebarDrag.RenameFolder(settings, "週例會", "設計");
-        Assert.Equal(["series:1", "folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
-        SidebarDrag.Remove(settings, "series:1");
+        Assert.Equal(["folder:產品週會", "folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
+        SidebarDrag.Remove(settings, "folder:產品週會");
         Assert.Equal(["folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
         writes = 0;
         SidebarDrag.RenameFolder(settings, "沒排過", "還是沒排過");
-        SidebarDrag.Remove(settings, "series:9");
+        SidebarDrag.Remove(settings, "folder:不見了");
         Assert.Equal(0, writes);
 
         // 拖一場會議：在多選裡就是整個多選，不然只有它
@@ -482,13 +382,12 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal([4L], SidebarDrag.DragIds(4, []));
         Assert.Equal([5L, 3L], SidebarDrag.Decode(SidebarDrag.Encode([5, 3])));
         Assert.Empty(SidebarDrag.Decode("x,"));
-        // 列表的標題：看資料夾、定期會議、「其他會議」時收；看所有會議、垃圾桶、人物時不收
-        Assert.True(SidebarDrag.HeaderAccepts(false, false, "客戶", null, false));
-        Assert.True(SidebarDrag.HeaderAccepts(false, false, null, 1, false));
-        Assert.True(SidebarDrag.HeaderAccepts(false, false, null, null, true));
-        Assert.False(SidebarDrag.HeaderAccepts(false, false, null, null, false));
-        Assert.False(SidebarDrag.HeaderAccepts(true, false, "客戶", null, false));
-        Assert.False(SidebarDrag.HeaderAccepts(false, true, null, null, true));
+        // 列表的標題：看資料夾、「其他會議」時收；看所有會議、垃圾桶、人物時不收
+        Assert.True(SidebarDrag.HeaderAccepts(false, false, "客戶", false));
+        Assert.True(SidebarDrag.HeaderAccepts(false, false, null, true));
+        Assert.False(SidebarDrag.HeaderAccepts(false, false, null, false));
+        Assert.False(SidebarDrag.HeaderAccepts(true, false, "客戶", false));
+        Assert.False(SidebarDrag.HeaderAccepts(false, true, null, true));
     }
 
     /// <summary>重新命名的規則（R102、M§76）：空白、沒改不能存（新資料夾有字就能建立）；資料夾同名、人物同名（大小寫不分）是合併；鍵同 Mac</summary>
@@ -508,7 +407,6 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal("客戶", Renaming.Conflict(new RenameTarget.NewFolder([3]), "客戶", folders, people));
         Assert.Equal("Amy", Renaming.Conflict(new RenameTarget.Person(1), "amy", folders, people));
         Assert.Null(Renaming.Conflict(new RenameTarget.Person(2), "AMY", folders, people));
-        Assert.Null(Renaming.Conflict(new RenameTarget.Series(1), "設計", folders, people));
         // 「+」建空的資料夾（R104）：同名的已經有就不能建；從會議的選單建的照舊可以（移進那個資料夾）
         Assert.True(Renaming.IsEmptyNewFolder(new RenameTarget.NewFolder([])));
         Assert.False(Renaming.IsEmptyNewFolder(new RenameTarget.NewFolder([3])));
@@ -523,11 +421,11 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal("bookmark(5)", new RenameTarget.Bookmark(5).Key);
     }
 
-    /// <summary>側欄的資料夾（有條件的沒有會議也列出來）、可能的定期會議的輸入、建議的文字、條件的說明（M§72、§73）</summary>
+    /// <summary>側欄的資料夾（有條件的沒有會議也列出來）、建議的文字、條件的說明（M§72）</summary>
     [Fact]
     public void OrganizingHelpers()
     {
-        List<MeetingRow> rows = [Row(1, "a", "2026-11-02", folder: "產品"), Row(2, "b", "2026-11-02", series: 3), Row(3, "c", "2026-x")];
+        List<MeetingRow> rows = [Row(1, "a", "2026-11-02", folder: "產品"), Row(2, "b", "2026-11-02"), Row(3, "c", "2026-x")];
         var folders = Organizing.Folders(rows, [new FolderRule { Folder = "空的資料夾", Keywords = ["x"] }, new FolderRule { Folder = "產品" }]);
         Assert.Equal(2, folders.Count);
         Assert.Contains(("空的資料夾", 0), folders);
@@ -537,18 +435,14 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal(3, withTable.Count);
         Assert.Contains(("新專案", 0), withTable);
         Assert.Contains(("產品", 1), withTable);
-        Assert.Equal([1L], Organizing.SeriesInputs(rows, new Dictionary<long, HashSet<long>>()).Select(i => i.Id));
-        Assert.Equal(3, Organizing.CommonSeries(rows, [2]));
-        Assert.Null(Organizing.CommonSeries(rows, [1, 2]));
 
         var people = new List<PersonOverview> { new(2, "陳家豪", 1, null, false), new(3, "Bob", 1, null, false) };
         Assert.Equal("這場很像「客戶」裡的會議：陳家豪、Bob 都參加（2 場）", Organizing.SuggestionText(new FolderSuggestion("客戶", [2, 3], null, 2), people));
         Assert.Equal("這場很像「設計」裡的會議：標題都有「設計評審」（2 場）", Organizing.SuggestionText(new FolderSuggestion("設計", null, "設計評審", 2), people));
-        var series = new List<MeetingSeries> { new() { Id = 4, Name = "產品週會", Weekday = 2 } };
         var templates = new List<TemplateRecord> { new() { Id = "one-on-one", Name = "一對一", Definition = "{}" } };
-        Assert.Equal("自動加入：標題包含 週會、sync；陳家豪、Bob 都參加；範本：一對一；定期會議：產品週會",
-            Organizing.RuleSummary(new FolderRule { Folder = "x", Keywords = ["週會", "sync"], People = [2, 3], TemplateId = "one-on-one", SeriesId = 4 },
-                people, templates, series));
+        Assert.Equal("自動加入：標題包含 週會、sync；陳家豪、Bob 都參加；範本：一對一",
+            Organizing.RuleSummary(new FolderRule { Folder = "x", Keywords = ["週會", "sync"], People = [2, 3], TemplateId = "one-on-one" },
+                people, templates));
         var withNotes = new Meeting { Id = 9, Title = "需求確認", Notes = "{}", MeetingDate = "2026-11-02", SourceFilename = "x" };
         List<MeetingRow> folderRows = [Row(1, "客戶 A 訪談", "2026-11-01", folder: "客戶"), Row(2, "客戶 A 追蹤", "2026-11-01", folder: "客戶")];
         var attended = new Dictionary<long, HashSet<long>> { [1] = [2, 3], [2] = [1, 2, 3], [9] = [2, 3] };
@@ -556,25 +450,20 @@ public sealed class OrganizeTests : IDisposable
         Assert.Null(Organizing.Suggestion(withNotes, folderRows, attended, recordingId: 9));
         withNotes.FolderDecided = true;
         Assert.Null(Organizing.Suggestion(withNotes, folderRows, attended, null));
-        Assert.Equal("每週一 10:00・2 場・最近 2026-11-09",
-            Organizing.SeriesSummaryLine(new MeetingSeries { Weekday = 2, Minute = 600 }, [Row(2, "b", "2026-11-09"), Row(1, "a", "2026-11-02")]));
     }
 
-    /// <summary>上次的待辦（M§73）：空的時候不寫進 JSON（以前的紀錄一字不差）；status 認不得時是「這次沒提到」；改名字、簡體、搜尋</summary>
+    /// <summary>
+    /// 以前定期會議的「上次的待辦」（followUps，M§73，D177 拿掉）：解碼時略過，存回去時就沒了；沒有這一段的紀錄存起來一字不差（R99.3）
+    /// </summary>
     [Fact]
-    public void FollowUpsInNotes()
+    public void OldFollowUpsAreDropped()
     {
         const string old = """{"actionItems":[],"custom":[],"decisions":[],"openQuestions":[],"reviewItems":[],"summary":[{"text":"a","time":"00:01"}],"title":"t","topics":[]}""";
-        Assert.Equal(old, MeetingNotes.Decode(old.Replace("\"title\"", "\"followUps\":[],\"title\"", StringComparison.Ordinal))!.JsonString());
-        var notes = MeetingNotes.Decode("""{"followUps":[{"task":"寄信給說話者 1","owner":"說話者 1","status":"done","time":"(00:05)"},{"task":5,"status":"later"}]}""")!;
-        Assert.Equal(FollowUpStatus.Done, notes.FollowUps[0].Status);
-        Assert.Equal("00:05", notes.FollowUps[0].Time);
-        Assert.Equal(("", FollowUpStatus.NotMentioned), (notes.FollowUps[1].Task, notes.FollowUps[1].Status));
-        Assert.False(notes.IsEmpty);
-        Assert.Contains("\"followUps\":[{\"owner\":\"說話者 1\",\"status\":\"done\",\"task\":\"寄信給說話者 1\",\"time\":\"00:05\"}", notes.JsonString());
-        Assert.Empty(MeetingNotes.Decode("""{"followUps":[{"task":"x"},3]}""")!.FollowUps);
-        var renamed = notes.ReplacingSpeakerName("說話者 1", "王小明", isDefaultName: true);
-        Assert.Equal(("寄信給王小明", "王小明"), (renamed.FollowUps[0].Task, renamed.FollowUps[0].Owner));
-        Assert.Contains("說話者 1 寄信給說話者 1", notes.PlainText);
+        Assert.Equal(old, MeetingNotes.Decode(old)!.JsonString());
+        var withFollowUps = old.Replace("\"title\"", "\"followUps\":[{\"task\":\"寄信\",\"owner\":\"王小明\",\"status\":\"done\",\"time\":\"00:05\"}],\"title\"", StringComparison.Ordinal);
+        var notes = MeetingNotes.Decode(withFollowUps)!;
+        Assert.Equal(old, notes.JsonString());
+        Assert.DoesNotContain("寄信", notes.PlainText);
+        Assert.True(MeetingNotes.Decode("""{"followUps":[{"task":"x"}]}""")!.IsEmpty);
     }
 }

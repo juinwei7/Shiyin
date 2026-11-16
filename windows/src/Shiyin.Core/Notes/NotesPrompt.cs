@@ -6,13 +6,13 @@ namespace Shiyin.Notes;
 public sealed record ReviewAnswer(string Time, string Question, string Answer);
 
 /// <summary>
-/// 整理需要的材料；Documents 是會議參考資料（M§39.3、R61.5），沒有文件時提示詞跟以前一字不差；
-/// Previous 是定期會議的上一場（R99.5、M§73），沒有時提示詞跟以前一字不差
+/// 整理需要的材料；Documents 是會議參考資料（M§39.3、R61.5），沒有文件時提示詞跟以前一字不差。
+/// 定期會議的上一場（M§73）D177 拿掉
 /// </summary>
 public sealed record NotesContext(
     Meeting Meeting, IReadOnlyList<Segment> Segments, IReadOnlyDictionary<int, string> Speakers,
     IReadOnlyList<Bookmark> Bookmarks, IReadOnlyList<string> Glossary, TemplateDefinition Template,
-    IReadOnlyList<DocumentText>? Documents = null, PreviousMeeting? Previous = null);
+    IReadOnlyList<DocumentText>? Documents = null);
 
 /// <summary>整理與校稿的提示詞（M§8.3），依會議語言分成中文、英文、日文三份。中文要跟 3.0 一字不差（R28.1）</summary>
 public static class NotesPrompt
@@ -182,11 +182,6 @@ public static class NotesPrompt
             lines.Add($"{l.Bookmarks}{l.Colon}" + string.Join(l.ListSeparator,
                 c.Bookmarks.Select(b => TimeFormat.String(b.Time) + (b.Label.Length == 0 ? "" : $" {b.Label}"))));
         }
-        if (c.Previous is { } previous)
-        {
-            lines.Add("");
-            lines.Add(PreviousBlock(previous, language));
-        }
         if (c.Documents is { Count: > 0 } documents)
         {
             lines.Add("");
@@ -199,35 +194,6 @@ public static class NotesPrompt
             var speaker = s.Speaker is int idx ? (c.Speakers.TryGetValue(idx, out var name) ? name : language.DefaultSpeaker(idx)) + l.Colon : "";
             lines.Add($"[{TimeFormat.String(s.Start)}] {speaker}{(s.LowConfidence ? "(?) " : "")}{s.Text}");
         }
-        return string.Join("\n", lines);
-    }
-
-    /// <summary>上一場的待辦、未決問題和怎麼填 followUps（M§73、D174）：放在使用者提示詞，system 提示詞不變</summary>
-    public static string PreviousBlock(PreviousMeeting p, MeetingLanguage language)
-    {
-        var l = language;
-        var colon = l.Prompt("：", ": ", "：");
-        var title = p.Title.Length == 0 ? "" : l.Prompt($"「{p.Title}」", $", \"{p.Title}\"", $"「{p.Title}」");
-        var lines = new List<string>
-        {
-            l.Prompt($"上次會議（{p.Date}{title}）的待辦：", $"Action items from the last meeting ({p.Date}{title}):",
-                $"前回の会議（{p.Date}{title}）のアクションアイテム："),
-        };
-        foreach (var item in p.Items)
-        {
-            var owner = item.Owner.Length == 0 ? l.Prompt("（未指定）", "(unassigned)", "（未定）") : item.Owner;
-            var due = item.Due.Length == 0 ? "" : l.Prompt($"（期限 {item.Due}）", $" (due {item.Due})", $"（期限 {item.Due}）");
-            lines.Add($"- {owner}{colon}{item.Task}{due}");
-        }
-        if (p.OpenQuestions.Count > 0)
-        {
-            lines.Add(l.Prompt("上次的未決問題：", "Open questions from the last meeting:", "前回の未決事項："));
-            lines.AddRange(p.OpenQuestions.Select(q => $"- {q.Text}"));
-        }
-        lines.Add(l.Prompt(
-            "請在 followUps 逐條列出上次的待辦：task、owner 照上面抄；status 填 done（這次會議說完成了）、ongoing（還在進行或延後）或 notMentioned（這次沒提到）；time 填這次會議提到它的時間點，沒提到就給空字串。上次的未決問題這次有結論的寫進 decisions。",
-            "In followUps, list every action item from the last meeting: copy task and owner as written above; set status to done (this meeting said it is finished), ongoing (still in progress or postponed) or notMentioned (not mentioned this time); time is when this meeting mentions it, or an empty string. If an open question from the last meeting was settled this time, put the outcome in decisions.",
-            "followUps に前回のアクションアイテムを 1 件ずつ入れること。task と owner は上の記載をそのまま写し、status は done（今回の会議で完了と言われた）、ongoing（進行中または延期）、notMentioned（今回は触れられていない）のいずれかにする。time は今回の会議で触れられた時刻、触れられていなければ空文字列。前回の未決事項に今回結論が出たものは decisions に入れる。"));
         return string.Join("\n", lines);
     }
 

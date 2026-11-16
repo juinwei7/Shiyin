@@ -18,8 +18,6 @@ public sealed record MeetingNotes
     public sealed record ReviewItem(string Time, string Question, bool YesNo = false);
     /// <summary>每個人的重點（R92、M§66）：Name 是逐字稿裡的說話者名稱</summary>
     public sealed record Person(string Name, List<Item> Points);
-    /// <summary>上一場的待辦這次怎麼了（R99.5、M§73）：只有定期會議裡、有上一場的會議才有</summary>
-    public sealed record FollowUp(string Task, string Owner, FollowUpStatus Status, string Time = "");
 
     public string Title { get; init; } = "";
     public List<Item> Summary { get; init; } = [];
@@ -30,10 +28,9 @@ public sealed record MeetingNotes
     public List<CustomSection> Custom { get; init; } = [];
     public List<ReviewItem> ReviewItems { get; init; } = [];
     public List<Person> People { get; init; } = [];
-    public List<FollowUp> FollowUps { get; init; } = [];
 
     public bool IsEmpty => Summary.Count == 0 && Decisions.Count == 0 && ActionItems.Count == 0 && OpenQuestions.Count == 0
-                           && Topics.Count == 0 && Custom.Count == 0 && People.Count == 0 && FollowUps.Count == 0;
+                           && Topics.Count == 0 && Custom.Count == 0 && People.Count == 0;
 
     // MARK: 讀取
 
@@ -55,7 +52,6 @@ public sealed record MeetingNotes
         ReviewItems = List(root.Get("reviewItems"), DecodeReview) ?? [],
         Topics = List(root.Get("topics"), DecodeTopic) ?? [],
         People = List(root.Get("people"), DecodePerson) ?? [],
-        FollowUps = List(root.Get("followUps"), DecodeFollowUp) ?? [],
     };
 
     /// <summary>陣列裡任何一個元素解不開，整個陣列就是 null（Swift 的 <c>try? decode([T].self)</c>）</summary>
@@ -98,11 +94,6 @@ public sealed record MeetingNotes
     static Person? DecodePerson(JsonElement e) => e.ValueKind != JsonValueKind.Object ? null
         : new Person(e.Str("name") ?? "", Items(e.Get("points")) ?? []);
 
-    /// <summary>上次的待辦（同 Mac 的 FollowUp.init(from:)）：task、owner 型別不對當作空的，status 認不得時是「這次沒提到」</summary>
-    static FollowUp? DecodeFollowUp(JsonElement e) => e.ValueKind != JsonValueKind.Object ? null
-        : new FollowUp(e.Str("task") ?? "", e.Str("owner") ?? "", FollowUpStatuses.Parse(e.Str("status")) ?? FollowUpStatus.NotMentioned,
-            TimeFormat.Clean(e.Str("time") ?? ""));
-
     static ReviewItem? DecodeReview(JsonElement e) => e.ValueKind != JsonValueKind.Object ? null
         : new ReviewItem(TimeFormat.Clean(e.Str("time") ?? ""), e.Str("question") ?? "", e.Bool("yesNo") ?? false);
 
@@ -138,10 +129,7 @@ public sealed record MeetingNotes
         // people 是空的時不寫（同 Mac 的 MeetingNotes.encode，M§66）：以前的會議紀錄、沒有這一段的會議紀錄存起來跟以前一字不差
         if (People.Count > 0)
             obj.Add("people", new JNode.Arr(People.Select(p => (JNode)new JNode.Obj().Add("name", p.Name).Add("points", Items(p.Points)))));
-        // followUps 也一樣（M§73）：空的時候不寫
-        if (FollowUps.Count > 0)
-            obj.Add("followUps", new JNode.Arr(FollowUps.Select(f => (JNode)new JNode.Obj()
-                .Add("task", f.Task).Add("owner", f.Owner).Add("status", f.Status.Code()).Add("time", f.Time))));
+        // 以前定期會議的 followUps（M§73，D177 拿掉）不讀不寫：以前存的解碼時略過，存回去時就沒了
         return obj;
     }
 
@@ -176,7 +164,6 @@ public sealed record MeetingNotes
             Custom = Custom.Select(c => new CustomSection(r(c.Title), c.Items.Select(Ri).ToList())).ToList(),
             ReviewItems = ReviewItems.Select(x => new ReviewItem(x.Time, r(x.Question), x.YesNo)).ToList(),
             People = People.Select(p => new Person(r(p.Name), p.Points.Select(Ri).ToList())).ToList(),
-            FollowUps = FollowUps.Select(f => new FollowUp(r(f.Task), r(f.Owner), f.Status, f.Time)).ToList(),
         };
     }
 
@@ -191,7 +178,6 @@ public sealed record MeetingNotes
             lines.AddRange(OpenQuestions.Select(i => i.Text));
             foreach (var p in People) { lines.Add(p.Name); lines.AddRange(p.Points.Select(i => i.Text)); }
             lines.AddRange(ActionItems.Select(a => $"{a.Owner} {a.Task} {a.Due}"));
-            lines.AddRange(FollowUps.Select(f => $"{f.Owner} {f.Task}"));
             foreach (var t in Topics) { lines.Add(t.Title); lines.AddRange(t.Points.Select(i => i.Text)); }
             foreach (var c in Custom) { lines.Add(c.Title); lines.AddRange(c.Items.Select(i => i.Text)); }
             lines.AddRange(ReviewItems.Select(r => r.Question));
@@ -206,34 +192,12 @@ public sealed record MeetingNotes
     const string ItemsSchema = """{"type":"array","items":{"type":"object","additionalProperties":false,"required":["text","time"],"properties":{"text":{"type":"string"},"time":{"type":"string"}}}}""";
 
     public static readonly string JsonSchema =
-        """{"type":"object","additionalProperties":false,"required":["title","summary","people","followUps","decisions","actionItems","openQuestions","topics","custom","reviewItems"],"properties":{"title":{"type":"string"},"summary":""" + ItemsSchema
+        """{"type":"object","additionalProperties":false,"required":["title","summary","people","decisions","actionItems","openQuestions","topics","custom","reviewItems"],"properties":{"title":{"type":"string"},"summary":""" + ItemsSchema
         + ""","people":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","points"],"properties":{"name":{"type":"string"},"points":""" + ItemsSchema + "}}}"
-        + ""","followUps":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["task","owner","status","time"],"properties":{"task":{"type":"string"},"owner":{"type":"string"},"status":{"type":"string","enum":["done","ongoing","notMentioned"]},"time":{"type":"string"}}}}"""
         + ""","decisions":""" + ItemsSchema
         + ""","actionItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["owner","task","due","time"],"properties":{"owner":{"type":"string"},"task":{"type":"string"},"due":{"type":"string"},"time":{"type":"string"}}}}"""
         + ""","openQuestions":""" + ItemsSchema
         + ""","topics":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["title","start","points"],"properties":{"title":{"type":"string"},"start":{"type":"string"},"points":""" + ItemsSchema + "}}}"
         + ""","custom":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["title","items"],"properties":{"title":{"type":"string"},"items":""" + ItemsSchema + "}}}"
         + ""","reviewItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["time","question","yesNo"],"properties":{"time":{"type":"string"},"question":{"type":"string"},"yesNo":{"type":"boolean"}}}}}}""";
-}
-
-/// <summary>上次的待辦的狀態（M§73）：完成、還在進行、這次沒提到</summary>
-public enum FollowUpStatus { Done, Ongoing, NotMentioned }
-
-public static class FollowUpStatuses
-{
-    public static string Code(this FollowUpStatus s) => s switch
-    {
-        FollowUpStatus.Done => "done",
-        FollowUpStatus.Ongoing => "ongoing",
-        _ => "notMentioned",
-    };
-
-    public static FollowUpStatus? Parse(string? code) => code switch
-    {
-        "done" => FollowUpStatus.Done,
-        "ongoing" => FollowUpStatus.Ongoing,
-        "notMentioned" => FollowUpStatus.NotMentioned,
-        _ => null,
-    };
 }

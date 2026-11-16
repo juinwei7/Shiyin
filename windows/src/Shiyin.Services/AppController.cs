@@ -116,7 +116,7 @@ public sealed partial class AppController
         runner.EditedDraftReplaced += _ =>
             Notice?.Invoke(L.T("正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回"));
         runner.Changed += () => Changed?.Invoke(null);
-        // 自動放進資料夾、加入定期會議了（M§72、§73）
+        // 自動放進資料夾了（M§72）
         runner.Organized += Organized;
     }
 

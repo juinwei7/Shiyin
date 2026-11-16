@@ -67,7 +67,6 @@ public sealed class MainWindow : Window
     readonly Grid trashHeader;
     readonly Button emptyTrash;
     readonly PersonPage personPage;
-    readonly SeriesPage seriesPage;
     readonly StackPanel footer = new() { Spacing = 6, Margin = new Thickness(12, 6, 12, 10) };
     readonly Border detailHost = new();
     readonly InfoBar toast = new() { IsClosable = true, Severity = InfoBarSeverity.Informational, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 80), MaxWidth = 560 };
@@ -93,7 +92,6 @@ public sealed class MainWindow : Window
         Ui.ContentScale = TextSizes.Scale(host.Settings.TextSize);   // 會議內容的文字大小（R59）
         detailView = new DetailView(host, this);
         personPage = new PersonPage(host, this);
-        seriesPage = new SeriesPage(host, this);
         emptyTrash = Ui.Button(L.T("清空垃圾桶…"), () => _ = ConfirmEmptyTrash());
         emptyTrash.VerticalAlignment = VerticalAlignment.Center;
         // 垃圾桶裡也照排序（R97.4）：「顯示方式」只有排序那一段（Windows 沒有選單列，放在說明那一行）
@@ -225,14 +223,6 @@ public sealed class MainWindow : Window
         Place(sidebar, folders, 2);
         Place(sidebar, trashHeader, 2);
         AutomationProperties.SetName(scopes, L.T("資料夾"));
-        // 「發現 N 組可能的定期會議」那一列（M§73）是動作不是地方：點了（或 Enter）打開確認，選取留在原本那一列
-        scopes.IsItemClickEnabled = true;
-        scopes.ItemClick += (_, e) =>
-        {
-            // 項目直接是 ListViewItem 時，ClickedItem 是它的 Content（2026-11-16 虛擬機：比對 Tag 一直對不到）
-            var clicked = e.ClickedItem as ListViewItem ?? scopes.Items.OfType<ListViewItem>().FirstOrDefault(i => ReferenceEquals(i.Content, e.ClickedItem));
-            if (clicked is { Tag: Scope { Suggestions: true } }) _ = Dialogs.SeriesSuggestions(this);
-        };
         scopes.SelectionChanged += (_, _) =>
         {
             if (updatingSelection) return;
@@ -243,14 +233,8 @@ public sealed class MainWindow : Window
                 return;
             }
             if (scopes.SelectedItem is not ListViewItem { Tag: Scope scope }) return;
-            if (scope.Suggestions)
-            {
-                SyncScopeSelection();
-                return;
-            }
             detailView.FlushDrafts();
             if (scope.People) State.SetSidebar(SidebarMode.People);
-            else if (scope.Series is long series) State.ShowSeries(series);
             else State.ShowMeetings(scope.Folder);
         };
         Place(sidebar, list, 3);
@@ -326,13 +310,12 @@ public sealed class MainWindow : Window
         sectionHeader.AllowDrop = true;
         sectionHeader.DragOver += (_, e) =>
         {
-            var accepts = DraggingMeetings(e) is not null && SidebarDrag.HeaderAccepts(State.ShowTrash, State.ShowsPeople, State.FolderFilter, State.SeriesFilter, State.ListShowsOthersOnly);
+            var accepts = DraggingMeetings(e) is not null && SidebarDrag.HeaderAccepts(State.ShowTrash, State.ShowsPeople, State.FolderFilter, State.ListShowsOthersOnly);
             if (accepts) ClearDropTargets();
             ShowHeaderDrop(accepts);
             if (!accepts) return;
             e.AcceptedOperation = DataPackageOperation.Move;
-            Caption(e, State.FolderFilter is { } folder ? L.F("移到「%@」", folder)
-                : State.SeriesById(State.SeriesFilter) is { } series ? L.F("加到「%@」", series.Name) : L.T("移出資料夾和定期會議"));
+            Caption(e, State.FolderFilter is { } folder ? L.F("移到「%@」", folder) : L.T("移出資料夾"));
             e.Handled = true;
         };
         sectionHeader.DragLeave += (_, _) => ShowHeaderDrop(false);
@@ -342,7 +325,7 @@ public sealed class MainWindow : Window
             if (DraggingMeetings(e) is not { } ids) return;
             e.Handled = true;
             EndDrag();
-            host.Controller.DropOnListHeader(ids, State.FolderFilter, State.SeriesFilter, State.ListShowsOthersOnly);
+            host.Controller.DropOnListHeader(ids, State.FolderFilter, State.ListShowsOthersOnly);
         };
 
         // 拖放匯入（R3.1）
@@ -479,14 +462,6 @@ public sealed class MainWindow : Window
             return;
         }
         multiPane = null;
-        // 系列頁（M§73）：側欄點了定期會議、還沒選會議
-        if (State.Selection is null && !State.ShowTrash && !State.SearchActive && State.SeriesById(State.SeriesFilter) is { } series)
-        {
-            if (ReferenceEquals(detailHost.Child, detailView.Root)) detailView.FlushDrafts();
-            var page = seriesPage.Show(series);
-            if (!ReferenceEquals(detailHost.Child, page)) detailHost.Child = page;
-            return;
-        }
         if (State.Detail is { } detail) detailView.Show(detail);
         else detailView.Clear();
         detailHost.Child = State.Detail is null ? EmptyDetail() : detailView.Root;
@@ -617,20 +592,16 @@ public sealed class MainWindow : Window
         _ => L.T("只錄麥克風"),
     };
 
-    /// <summary>
-    /// 側欄導覽的一列：人物，或所有會議（Folder 是 null）、某個資料夾、某個定期會議（Series）；
-    /// Suggestions 是「發現 N 組可能的定期會議」（動作，不是地方）
-    /// </summary>
-    sealed record Scope(bool People, string? Folder, long? Series = null, bool Suggestions = false);
+    /// <summary>側欄導覽的一列：人物，或所有會議（Folder 是 null）、某個資料夾</summary>
+    sealed record Scope(bool People, string? Folder);
 
     string? scopesSignature;
 
     /// <summary>
     /// 側欄的導覽（M§60.2、R85.1，2026-11-15 照 Mac 改，拿掉 SelectorBar）：搜尋框下面一直有「所有會議」「人物」兩列（圖示、名字、數量），
-    /// 有定期會議、資料夾時下面是那兩組，最後是下面那一段的標題（選的那一項的名字）。點所有會議回到會議模式，點人物切到人物模式；
-    /// 點資料夾、定期會議是在原地展開、收起最近 5 場（R101、design-windows §11.34），只看它要用展開後的「顯示全部」（定期會議也可以右鍵「打開定期會議」）。
-    /// 「資料夾」一段一直顯示，標題右邊「+」建空的資料夾（R104、design-windows §11.37）。
-    /// 「定期會議」「資料夾」兩組可以收起。垃圾桶裡、搜尋中不顯示（搜尋的結果是會議）。名字、數量沒變時只換選取，不重建（滑鼠停留、鍵盤焦點不會跳）
+    /// 下面是資料夾，最後是下面那一段的標題（選的那一項的名字）。點所有會議回到會議模式，點人物切到人物模式；
+    /// 點資料夾是在原地展開、收起最近 5 場（R101、design-windows §11.34），只看它要用展開後的「顯示全部」。
+    /// 「資料夾」一段一直顯示，標題右邊「+」建空的資料夾（R104、design-windows §11.37），可以收起（定期會議 D177 拿掉）。垃圾桶裡、搜尋中不顯示（搜尋的結果是會議）。名字、數量沒變時只換選取，不重建（滑鼠停留、鍵盤焦點不會跳）
     /// </summary>
     void BuildFolders()
     {
@@ -644,17 +615,14 @@ public sealed class MainWindow : Window
         var all = State.Folders;
         var collapsed = SidebarCollapse.Collapsed(host.Settings);
         var expanded = SidebarCollapse.Expanded(host.Settings);
-        // 在原地展開的資料夾、定期會議：裡面的會議也要算進樣子（改名、新的會議）
+        // 在原地展開的資料夾：裡面的會議也要算進樣子（改名、新的會議）
         var peeks = new Dictionary<string, List<MeetingRow>>();
         foreach (var (name, _) in all)
             if (expanded.Contains(SidebarCollapse.FolderKey(name))) peeks[SidebarCollapse.FolderKey(name)] = SidebarCollapse.PeekRows(State.Meetings, name);
-        foreach (var series in State.Series)
-            if (series.Id is long sid && expanded.Contains(SidebarCollapse.SeriesKey(sid))) peeks[SidebarCollapse.SeriesKey(sid)] = SidebarCollapse.PeekRows(State.Meetings, sid);
         // 「資料夾」那一段的順序（R103.2）：拖曳排過的照 sidebarOrder，新的在後面
         var order = SidebarKeys();
         var signature = string.Join('\u001F', [State.Meetings.Count.ToString(), State.People.Count.ToString(), Ui.ThemeKey, "order", .. order,
             .. all.Select(f => $"{f.Name}\u001E{f.Count}\u001E{(State.RuleFor(f.Name) is { } rule ? RuleTip(rule) : "")}"),
-            "series", State.SeriesCandidates.Count.ToString(), .. State.Series.Select(x => $"{x.Id}\u001E{x.Name}\u001E{x.FrequencyText}\u001E{State.SeriesCount(x.Id ?? 0)}"),
             "collapsed", collapsed.Contains("folders").ToString(),
             .. peeks.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "\u001E" + p.Value.Count + "\u001E" + string.Join('\u001E',
                 p.Value.Take(SidebarCollapse.PeekCount).Select(r => $"{r.Id}\u001D{r.Meeting.DisplayTitle}\u001D{r.Meeting.MeetingDate}\u001D{r.Meeting.Language}")))]);
@@ -666,15 +634,14 @@ public sealed class MainWindow : Window
             peekViews.Clear();
             scopes.Items.Add(ScopeRow(L.T("所有會議"), State.Meetings.Count, new Scope(false, null), new SymbolIcon(Symbol.AllApps)));
             scopes.Items.Add(ScopeRow(L.T("人物"), State.People.Count, new Scope(true, null), new SymbolIcon(Symbol.People)));
-            // 「資料夾」一段（R101.3）：發現 N 組可能的定期會議、定期會議（資料夾加 ↻ 標記，M§73）、資料夾。
-            // 定期會議的樣子、操作都跟資料夾一樣，不另外一段。一直顯示，標題右邊「+」建空的資料夾（R104）
+            // 「資料夾」一段（R101.3）：一直顯示，標題右邊「+」建空的資料夾（R104）
             {
                 var open = !collapsed.Contains("folders");
                 scopes.Items.Add(SectionItem("folders", L.T("資料夾"), open, trailing: NewFolderButton()));
                 if (open)
                 {
-                    // 還沒有任何資料夾、定期會議：一行說明（R104.2）
-                    if (all.Count == 0 && State.Series.Count == 0 && State.SeriesCandidates.Count == 0)
+                    // 還沒有任何資料夾：一行說明（R104.2）
+                    if (all.Count == 0)
                     {
                         var none = new ListViewItem
                         {
@@ -684,24 +651,11 @@ public sealed class MainWindow : Window
                         AutomationProperties.SetName(none, L.T("按 + 新增資料夾"));
                         scopes.Items.Add(none);
                     }
-                    if (State.SeriesCandidates.Count > 0) scopes.Items.Add(SuggestionsRow(State.SeriesCandidates.Count));
                     var counts = all.ToDictionary(f => f.Name, f => f.Count);
                     foreach (var key in order)
                     {
                         var rows = peeks.GetValueOrDefault(key);
-                        if (State.Series.FirstOrDefault(x => x.Id is long sid && SidebarCollapse.SeriesKey(sid) == key) is { } series)
-                        {
-                            var id = series.Id ?? 0;
-                            // 會議拖到這裡＝加進去（不檢查條件，同右鍵）；檔案不收
-                            var drop = new RowDrop(key, ids => host.Controller.SetSeries(ids, id), L.F("加到「%@」", series.Name), null, null);
-                            var row = FolderRow(series.Name, State.SeriesCount(id), new Scope(false, null, id), key, rows is not null, SeriesBadge, drop,
-                                menu => FillSeriesMenu(menu, id), () => RenameUi(new RenameTarget.Series(id)), () => ConfirmDeleteSeries(id));
-                            // 滑過去看「每週一 10:00」
-                            ToolTipService.SetToolTip(row, series.FrequencyText);
-                            scopes.Items.Add(row);
-                            if (rows is not null) AddPeek(rows, key, () => State.ShowSeries(id));
-                        }
-                        else if (key.StartsWith("folder:", StringComparison.Ordinal) && counts.TryGetValue(key["folder:".Length..], out var count))
+                        if (key.StartsWith("folder:", StringComparison.Ordinal) && counts.TryGetValue(key["folder:".Length..], out var count))
                         {
                             // 有自動加入條件的資料夾右下角一個小齒輪（同 Mac 的 folder.badge.gearshape），滑過去看條件（M§72）
                             var folder = key["folder:".Length..];
@@ -721,9 +675,9 @@ public sealed class MainWindow : Window
             updatingSelection = false;
         }
         SyncScopeSelection();
-        // 標題：「所有會議」（或資料夾、定期會議的名稱），分組時接「・依月份」；人物模式沒有「顯示方式」
+        // 標題：「所有會議」（或資料夾的名稱），分組時接「・依月份」；人物模式沒有「顯示方式」
         // 下面只放資料夾以外的會議時叫「其他會議」（R101.6）
-        var scope = State.SeriesById(State.SeriesFilter)?.Name ?? State.FolderFilter ?? (State.ListShowsOthersOnly ? L.T("其他會議") : L.T("所有會議"));
+        var scope = State.FolderFilter ?? (State.ListShowsOthersOnly ? L.T("其他會議") : L.T("所有會議"));
         var grouping = State.EffectiveGrouping;
         sectionTitle.Text = people ? L.T("人物") : grouping == MeetingGrouping.None ? scope : scope + "・" + grouping.Label();
         // 名稱是收合的按鈕（R101）：會議列表（人物模式是人物列表）收起時只剩這一行
@@ -748,14 +702,14 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>
-    /// 側欄的選取跟著 State：人物、定期會議、資料夾或所有會議；一樣時不動。只看某個資料夾、定期會議時（「顯示全部」、右鍵）
+    /// 側欄的選取跟著 State：人物、資料夾或所有會議；一樣時不動。只看某個資料夾時（「顯示全部」）
     /// 那一列照舊是選到的樣子。展開的會議的「選到」樣子也在這裡換（R101）
     /// </summary>
     void SyncScopeSelection()
     {
         StylePeeks();
         var people = State.Sidebar == SidebarMode.People;
-        var current = people ? new Scope(true, null) : State.SeriesFilter is long series ? new Scope(false, null, series) : new Scope(false, State.FolderFilter);
+        var current = people ? new Scope(true, null) : new Scope(false, State.FolderFilter);
         var selected = scopes.Items.OfType<ListViewItem>().FirstOrDefault(i => i.Tag is Scope s && s == current);
         if (ReferenceEquals(scopes.SelectedItem, selected)) return;
         var was = updatingSelection;
@@ -764,7 +718,7 @@ public sealed class MainWindow : Window
         updatingSelection = was;
     }
 
-    string RuleTip(FolderRule rule) => Organizing.RuleSummary(rule, State.People, State.Templates, State.Series);
+    string RuleTip(FolderRule rule) => Organizing.RuleSummary(rule, State.People, State.Templates);
 
     // MARK: 收合（R101、design-windows §11.34）
 
@@ -772,8 +726,7 @@ public sealed class MainWindow : Window
     const string ChevronRight = "\uE76C";
     /// <summary>側欄每一列圖示的寬度（SymbolIcon 20）：展開的會議留這個空位，名稱跟資料夾名稱對齊</summary>
     const double IconWidth = 20;
-    /// <summary>資料夾圖示上的小標記：定期會議（↻，右上角）、自動加入的條件（齒輪，右下角）</summary>
-    const string SeriesBadge = "\uE895";
+    /// <summary>資料夾圖示上的小標記：自動加入的條件（齒輪，右下角）</summary>
     const string RuleBadge = "\uE713";
     const string FolderGlyph = "\uE8B7";
     const string FolderOpenGlyph = "\uE838";
@@ -786,24 +739,22 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>
-    /// 資料夾、定期會議的圖示（R101.2）：收起時關著的資料夾（Segoe Fluent 的 Folder E8B7）、展開時打開的資料夾（FolderOpen E838）。
-    /// 定期會議右上角一個小的 ↻、有自動加入條件的資料夾右下角一個小齒輪（M§72），放在側欄底色的小圓上，不跟資料夾的線疊在一起
+    /// 資料夾的圖示（R101.2）：收起時關著的資料夾（Segoe Fluent 的 Folder E8B7）、展開時打開的資料夾（FolderOpen E838）。
+    /// 有自動加入條件的資料夾右下角一個小齒輪（M§72），放在側欄底色的小圓上，不跟資料夾的線疊在一起
     /// </summary>
     static FrameworkElement FolderIcon(bool open, string? badge, out FontIcon folder)
     {
         folder = new FontIcon { Glyph = open ? FolderOpenGlyph : FolderGlyph, FontSize = 20 };
         var grid = new Grid { Width = IconWidth, Height = 20, Children = { folder } };
         if (badge is null) return grid;
-        var top = badge == SeriesBadge;
         var mark = new FontIcon
         {
-            Glyph = badge, FontSize = top ? 9 : 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            Glyph = badge, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
         };
         grid.Children.Add(new Border
         {
             Width = 13, Height = 13, CornerRadius = new CornerRadius(6.5), Child = mark, Background = Ui.SidebarColor,
-            HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Bottom,
-            Margin = top ? new Thickness(0, -4, -4, 0) : new Thickness(0, 0, -4, -4),
+            HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, -4, -4),
         });
         return grid;
     }
@@ -983,7 +934,7 @@ public sealed class MainWindow : Window
         };
         SidebarLook.Row(item);
         AutomationProperties.SetName(item, name);
-        AutomationProperties.SetAutomationId(item, "scope:" + (scope.Series is long s ? $"series:{s}" : "folder:" + scope.Folder));
+        AutomationProperties.SetAutomationId(item, "scope:folder:" + scope.Folder);
         SidebarLook.Status(item, expanded, L.F("%lld 場", count));
         AutomationProperties.SetHelpText(item, L.T("按 Alt+↑、Alt+↓ 可以往上移、往下移"));
         item.ContextFlyout = RowMore.Context(fill);
@@ -1174,12 +1125,8 @@ public sealed class MainWindow : Window
         else sectionTitle.ClearValue(TextBlock.ForegroundProperty);
     }
 
-    /// <summary>「資料夾」那一段的鍵（定期會議、資料夾），照拖曳排好的順序（新的在後面，預設定期會議在前、資料夾照名稱）</summary>
-    public List<string> SidebarKeys() => SidebarDrag.Sorted(host.Settings,
-    [
-        .. State.Series.Select(x => SidebarCollapse.SeriesKey(x.Id ?? 0)),
-        .. State.Folders.Select(f => SidebarCollapse.FolderKey(f.Name)),
-    ]);
+    /// <summary>「資料夾」那一段的鍵，照拖曳排好的順序（新的在後面，預設照名稱）</summary>
+    public List<string> SidebarKeys() => SidebarDrag.Sorted(host.Settings, [.. State.Folders.Select(f => SidebarCollapse.FolderKey(f.Name))]);
 
     /// <summary>Alt+↑／↓：往上、往下移一格，焦點留在這一列（設定改了才重畫；到頭了不動）</summary>
     void MoveFolderRow(string key, int offset)
@@ -1307,23 +1254,6 @@ public sealed class MainWindow : Window
         }
     }
 
-    /// <summary>「發現 N 組可能的定期會議」（M§73）：青瓷綠的燈泡和字，點了逐組確認</summary>
-    ListViewItem SuggestionsRow(int count)
-    {
-        var text = L.F("發現 %lld 組可能的定期會議", count);
-        var icon = new FontIcon { Glyph = "\uE82F", FontSize = 16, Foreground = Ui.Celadon };
-        var item = new ListViewItem
-        {
-            Tag = new Scope(false, null, Suggestions: true), HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36,
-            Content = Ui.FollowForeground(Ui.Bar(icon, Ui.Text(text, 14, color: Ui.Celadon, wrap: false), null, 10)),
-        };
-        SidebarLook.Row(item, showSelected: false);
-        ToolTipService.SetToolTip(item, L.T("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦"));
-        AutomationProperties.SetName(item, text);
-        AutomationProperties.SetAutomationId(item, "scope:suggestions");
-        return item;
-    }
-
     /// <summary>
     /// 一列：圖示、名字（所有會議、人物：點了換下面的列表）。右邊不放數量（R101.4），無障礙的值唸得到；
     /// 「所有會議」是回到預設的畫面，不畫選到的樣子（ChatGPT 上面的「新對話」也不亮），人物模式時「人物」亮
@@ -1341,13 +1271,6 @@ public sealed class MainWindow : Window
         return item;
     }
 
-    /// <summary>打開定期會議（右鍵的第一項）：草稿先存</summary>
-    void ShowSeries(long id)
-    {
-        detailView.FlushDrafts();
-        State.ShowSeries(id);
-    }
-
     /// <summary>資料夾的動作（R100、同 Mac 的 FolderMenuItems）：右鍵、「⋯」</summary>
     void FillFolderMenu(MenuFlyout menu, string folder)
     {
@@ -1358,17 +1281,6 @@ public sealed class MainWindow : Window
             () => _ = Dialogs.FolderRule(this, folder), icon: Symbol.Setting));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(MenuLook.Hint(Ui.DangerItem(L.T("刪除資料夾…"), () => _ = ConfirmDeleteFolder(folder)), MenuLook.Delete));
-    }
-
-    /// <summary>定期會議的動作（R100、同 Mac 的 SeriesMenuItems）：側欄的右鍵、「⋯」</summary>
-    void FillSeriesMenu(MenuFlyout menu, long id)
-    {
-        // 點定期會議是在原地展開（R101.2），打開系列頁從這裡（或展開後的「顯示全部」）
-        menu.Items.Add(Ui.Item(L.T("打開定期會議"), () => ShowSeries(id), glyph: Ui.OpenGlyph));
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(MenuLook.Hint(Ui.Item(L.T("重新命名…"), () => RenameUi(new RenameTarget.Series(id)), icon: Symbol.Edit), MenuLook.Rename));
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(MenuLook.Hint(Ui.DangerItem(L.T("刪除定期會議…"), () => _ = ConfirmDeleteSeries(id)), MenuLook.Delete));
     }
 
     // MARK: 顯示方式（R97、M§71）
@@ -1766,7 +1678,6 @@ public sealed class MainWindow : Window
             menu.Items.Add(new MenuFlyoutSeparator());
         }
         menu.Items.Add(FolderSubMenu(ids, CommonFolder(ids)));
-        foreach (var item in SeriesMenuItems(ids)) menu.Items.Add(item);
         menu.Items.Add(new MenuFlyoutSeparator());
         // 一場直接移（可以還原）；好幾場先確認（M§62）
         menu.Items.Add(MenuLook.Hint(ids.Count == 1 ? Ui.DangerItem(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(ids))
@@ -1775,29 +1686,6 @@ public sealed class MainWindow : Window
 
     /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null</summary>
     string? CommonFolder(IReadOnlyList<long> ids) => AppController.CommonFolder(State.ShowTrash ? State.Trash : State.Meetings, ids);
-
-    /// <summary>
-    /// 會議的右鍵選單（同 Mac 的 SeriesMenu，M§73）：「加到定期會議 ▸」列出全部系列（都在同一個系列時不列它）；
-    /// 都在同一個系列時多「移出「產品週會」」。多選時全部；手動加入不檢查條件
-    /// </summary>
-    List<MenuFlyoutItemBase> SeriesMenuItems(IReadOnlyList<long> ids)
-    {
-        var items = new List<MenuFlyoutItemBase>();
-        var current = Organizing.CommonSeries(State.Meetings, ids.ToList());
-        if (State.Series.Count > 0)
-        {
-            var sub = new MenuFlyoutSubItem { Text = L.T("加到定期會議"), Icon = new SymbolIcon(Symbol.Sync) };
-            foreach (var series in State.Series.Where(s => s.Id != current))
-            {
-                var id = series.Id;
-                sub.Items.Add(Ui.Item(series.Name, () => host.Controller.SetSeries(ids, id)));
-            }
-            if (sub.Items.Count > 0) items.Add(sub);
-        }
-        if (State.SeriesById(current) is { } inSeries)
-            items.Add(Ui.Item(L.F("移出「%@」", inSeries.Name), () => host.Controller.SetSeries(ids, null), icon: Symbol.Remove));
-        return items;
-    }
 
     /// <summary>「移到資料夾」選單：既有的資料夾、新資料夾、移出資料夾（R9.2）</summary>
     public MenuFlyoutSubItem FolderMenu(long id, string current) => FolderSubMenu([id], current);
@@ -2042,7 +1930,7 @@ public sealed class MainWindow : Window
 
     /// <summary>
     /// 側欄的 Enter／F2（R100、同 Mac 的 sidebarReturn）：人物模式選到人 → 重新命名那個人；選到一場會議（不是多選）→ 重新命名會議；
-    /// 沒選會議而在看定期會議、資料夾 → 重新命名它。垃圾桶、搜尋中不處理。回傳有沒有處理
+    /// 沒選會議而在看資料夾 → 重新命名它。垃圾桶、搜尋中不處理。回傳有沒有處理
     /// </summary>
     public bool SidebarRename()
     {
@@ -2055,7 +1943,6 @@ public sealed class MainWindow : Window
         }
         if (State.MultiSelected.Count > 1) return false;
         if (SelectedMeetings() is [var id]) RenameMeetingUi(id);
-        else if (State.SeriesFilter is long series) RenameUi(new RenameTarget.Series(series));
         else if (State.FolderFilter is { } folder) RenameUi(new RenameTarget.Folder(folder));
         else return false;
         return true;
@@ -2063,7 +1950,7 @@ public sealed class MainWindow : Window
 
     /// <summary>
     /// 側欄的 Delete（R88.2、R85.7、R100，同 Mac 的 sidebarDelete）：人物 → 移除；選到的會議（多選時全部）→ 移到垃圾桶（垃圾桶裡是永久刪除）；
-    /// 沒選會議而在看定期會議 → 刪除定期會議；在看資料夾 → 刪除資料夾。都先確認
+    /// 沒選會議而在看資料夾 → 刪除資料夾。都先確認
     /// </summary>
     public bool SidebarDelete()
     {
@@ -2076,7 +1963,6 @@ public sealed class MainWindow : Window
         }
         var ids = SelectedMeetings();
         if (ids.Count > 0) _ = State.ShowTrash ? ConfirmPurge(ids) : ConfirmTrash(ids);
-        else if (!State.ShowTrash && State.SeriesFilter is long series) _ = ConfirmDeleteSeries(series);
         else if (!State.ShowTrash && State.FolderFilter is { } folder) _ = ConfirmDeleteFolder(folder);
         else return false;
         return true;
@@ -2133,9 +2019,8 @@ public sealed class MainWindow : Window
     /// </summary>
     public void RenameMeetingUi(long id) => RenameUi(new RenameTarget.Meeting(id));
 
-    /// <summary>確認對話框開著時要刪的資料夾、定期會議（DEBUG 的 state，同 Mac 的 confirmDeleteFolder、confirmDeleteSeries）</summary>
+    /// <summary>確認對話框開著時要刪的資料夾（DEBUG 的 state，同 Mac 的 confirmDeleteFolder）</summary>
     public string? DeletingFolder { get; private set; }
-    public long? DeletingSeries { get; private set; }
 
     /// <summary>
     /// 刪除資料夾（R100）：會議留著（移到「不在資料夾」），自動加入的條件一起刪；確認的按鈕紅底、Enter 是確認（R106.2）。
@@ -2157,21 +2042,6 @@ public sealed class MainWindow : Window
         if (!ok) return;
         if (State.FolderFilter == folder) State.ShowMeetings(null);
         host.Controller.DeleteFolder(folder);
-    }
-
-    /// <summary>刪除定期會議（R100）：會議留著；之後不再自動加入、不再建議同一組；確認的按鈕紅底、Enter 是確認（R106.2）</summary>
-    public async Task ConfirmDeleteSeries(long id)
-    {
-        if (DeletingSeries is not null || State.SeriesById(id) is not { } series) return;
-        DeletingSeries = id;
-        bool ok;
-        try
-        {
-            ok = await Dialogs.Confirm(this, L.F("刪除定期會議「%@」？", series.Name), L.T("會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。"),
-                L.T("刪除定期會議"), destructive: true);
-        }
-        finally { DeletingSeries = null; }
-        if (ok) host.Controller.DeleteSeries(id);
     }
 
     /// <summary>重新命名一個人（人物頁的「更多」、側欄右鍵、Enter／F2、DEBUG 的 personrenameui）：選那個人、打開重新命名的對話框（R102）</summary>

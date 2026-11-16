@@ -736,3 +736,57 @@ public sealed partial class LeadingTrailing : Panel
         return final;
     }
 }
+
+/// <summary>
+/// 一排會換行的小元件（同 Mac 的 FlowLayout；會議頁上方的資訊列；原本在系列頁的檔案裡，定期會議 D177 拿掉後搬過來）。同一行裡高度不同的元件上下置中
+/// （資訊列的名字是按鈕，比一般的文字高一點）
+/// </summary>
+public sealed partial class FlowPanel : Panel
+{
+    public double Spacing { get; set; } = 8;
+    public double LineSpacing { get; set; } = 8;
+
+    protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size available)
+    {
+        double x = 0, y = 0, line = 0, widest = 0;
+        foreach (var child in Children)
+        {
+            child.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+            var size = child.DesiredSize;
+            if (x > 0 && x + size.Width > available.Width) { x = 0; y += line + LineSpacing; line = 0; }
+            x += size.Width + Spacing;
+            line = Math.Max(line, size.Height);
+            widest = Math.Max(widest, x - Spacing);
+        }
+        return new Windows.Foundation.Size(double.IsInfinity(available.Width) ? widest : Math.Min(widest, available.Width), y + line);
+    }
+
+    protected override Windows.Foundation.Size ArrangeOverride(Windows.Foundation.Size final)
+    {
+        // 先分好行、算每一行的高度，再排（同一行裡置中）
+        var lines = new List<(int Start, int Count, double Height)>();
+        double x = 0, line = 0;
+        int start = 0;
+        for (var i = 0; i < Children.Count; i++)
+        {
+            var size = Children[i].DesiredSize;
+            if (x > 0 && x + size.Width > final.Width) { lines.Add((start, i - start, line)); start = i; x = 0; line = 0; }
+            x += size.Width + Spacing;
+            line = Math.Max(line, size.Height);
+        }
+        if (Children.Count > start) lines.Add((start, Children.Count - start, line));
+        double y = 0;
+        foreach (var (first, count, height) in lines)
+        {
+            x = 0;
+            for (var i = first; i < first + count; i++)
+            {
+                var size = Children[i].DesiredSize;
+                Children[i].Arrange(new Windows.Foundation.Rect(x, y + (height - size.Height) / 2, size.Width, size.Height));
+                x += size.Width + Spacing;
+            }
+            y += height + LineSpacing;
+        }
+        return final;
+    }
+}

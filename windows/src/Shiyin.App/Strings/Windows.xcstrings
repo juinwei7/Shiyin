@@ -1140,23 +1140,6 @@
         }
       }
     },
-    "刪除定期會議": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete Recurring Meeting"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除定期会议"
-          }
-        }
-      }
-    },
     "刪除資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -1255,23 +1238,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "到逐字稿改名"
-          }
-        }
-      }
-    },
-    "加到「%@」": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add to “%@”"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加到“%@”"
           }
         }
       }
@@ -1442,23 +1408,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "同一个人被记成两个名字时，合并成一个"
-          }
-        }
-      }
-    },
-    "同一群人每週固定時間開的會，拾音會在側欄問你要不要設成「定期會議」。設好之後，下一場會自動加進去，整理時對照上一場的待辦，在會議紀錄寫「上次的待辦」哪些完成了；系列頁列出還沒完成的待辦。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When the same people meet at the same time every week, Shiyin asks in the sidebar whether to make it a recurring meeting. After that, each new meeting joins automatically, and its notes check last time’s action items under “Action Items from Last Time”; the recurring meeting’s page lists the open action items."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同一群人每周固定时间开的会，拾音会在侧边栏问你要不要设成“定期会议”。设好之后，下一场会自动加进去，整理时对照上一场的待办，在会议记录写“上次的待办”哪些完成了；系列页列出还没完成的待办。"
           }
         }
       }
@@ -2716,19 +2665,19 @@
         }
       }
     },
-    "每一種東西都可以直接改：側欄的會議、資料夾、定期會議、人物按右鍵，或滑鼠移上去時右邊的「⋯」；選到時按 Enter 或 F2 重新命名、按 Delete 刪除。會議紀錄的每一條按兩下就能改，按右鍵可以刪掉那一條（改錯了按紀錄分頁「編輯」旁的「復原上一版」）。會議頁上方的說話者點名字就能重新命名。": {
+    "每一種東西都可以直接改：側欄的會議、資料夾、人物按右鍵，或滑鼠移上去時右邊的「⋯」；選到時按 Enter 或 F2 重新命名、按 Delete 刪除。會議紀錄的每一條按兩下就能改，按右鍵可以刪掉那一條（改錯了按紀錄分頁「編輯」旁的「復原上一版」）。會議頁上方的說話者點名字就能重新命名。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can change anything in place: right-click a meeting, folder, recurring meeting or person in the sidebar, or use the “⋯” that appears when you hover; with one selected, press Enter or F2 to rename it or Delete to delete it. Double-click any item in the meeting notes to edit it, or right-click to delete it (if you make a mistake, use Restore previous version next to Edit on the Notes tab). Click a speaker’s name at the top of a meeting to rename them."
+            "value": "You can change anything in place: right-click a meeting, folder or person in the sidebar, or use the “⋯” that appears when you hover; with one selected, press Enter or F2 to rename it or Delete to delete it. Double-click any item in the meeting notes to edit it, or right-click to delete it (if you make a mistake, use Restore previous version next to Edit on the Notes tab). Click a speaker’s name at the top of a meeting to rename them."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "每一种东西都可以直接改：侧边栏的会议、文件夹、定期会议、人物按右键，或鼠标移上去时右边的“⋯”；选到时按 Enter 或 F2 重新命名、按 Delete 删除。会议记录的每一条按两下就能改，按右键可以删掉那一条（改错了按记录标签页“编辑”旁的“恢复上一版”）。会议页上方的说话者点名字就能重新命名。"
+            "value": "每一种东西都可以直接改：侧边栏的会议、文件夹、人物按右键，或鼠标移上去时右边的“⋯”；选到时按 Enter 或 F2 重新命名、按 Delete 删除。会议记录的每一条按两下就能改，按右键可以删掉那一条（改错了按记录标签页“编辑”旁的“恢复上一版”）。会议页上方的说话者点名字就能重新命名。"
           }
         }
       }
@@ -2899,23 +2848,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前不整理：录音、转录、逐字稿全部留在这台电脑。"
-          }
-        }
-      }
-    },
-    "移出資料夾和定期會議": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove from folders and recurring meetings"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移出文件夹和定期会议"
           }
         }
       }

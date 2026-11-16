@@ -8,7 +8,7 @@ namespace Shiyin.App.Debug;
 
 /// <summary>
 /// 控制通道：會議列表的排序、分組、篩選（M§71），資料夾自動歸類（M§72），定期會議（M§73）。名稱同 Mac 的 DebugControl；
-/// Mac 寫到檔案的（foldersuggest、seriescandidates、seriesopenitems、previousmeeting）這裡直接回傳 JSON（design-windows §11.30～§11.32）
+/// Mac 寫到檔案的（foldersuggest）這裡直接回傳 JSON（design-windows §11.30、§11.31）。定期會議（M§73）D177 拿掉
 /// </summary>
 public static partial class ControlPipe
 {
@@ -52,14 +52,13 @@ public static partial class ControlPipe
                 }
                 return Ok;
             }
-            // 重新命名的對話框（R102、design-windows §11.35，同 Mac）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
+            // 重新命名的對話框（R102、design-windows §11.35，同 Mac）：renameui <meeting|folder|person|bookmark|newfolder> <id、名稱或會議 id,…>
             case "renameui" when args.Length > 2 && main is not null:
             {
                 RenameTarget? target = args[1] switch
                 {
                     "meeting" when Id(2) is long m => new RenameTarget.Meeting(m),
                     "folder" => new RenameTarget.Folder(args[2]),
-                    "series" when Id(2) is long s => new RenameTarget.Series(s),
                     "person" when Id(2) is long p => new RenameTarget.Person(p),
                     "bookmark" when Id(2) is long b => new RenameTarget.Bookmark(b),
                     "newfolder" => new RenameTarget.NewFolder(SidebarDrag.Decode(args[2])),
@@ -78,20 +77,17 @@ public static partial class ControlPipe
                 main.ImportInto([args[2]], args[1]);
                 return Ok;
             // 每一種東西都能直接改、刪（R100、M§74，同 Mac 的名稱）：renamemeetingui <id>（等於側欄右鍵「重新命名…」、Enter／F2）；
-            // folderdeleteui <名稱>、seriesdeleteui <id>（打開刪除的確認）；sidebarkey return|delete（等於在側欄的會議列表按 Enter、Delete）
+            // folderdeleteui <名稱>（打開刪除的確認）；sidebarkey return|delete（等於在側欄的會議列表按 Enter、Delete）
             case "renamemeetingui" when Id(1) is long renameMeeting && main is not null:
                 main.RenameMeetingUi(renameMeeting);
                 return Ok;
             case "folderdeleteui" when args.Length > 1 && main is not null:
                 _ = main.ConfirmDeleteFolder(args[1]);
                 return Ok;
-            case "seriesdeleteui" when Id(1) is long deleteSeries && main is not null:
-                _ = main.ConfirmDeleteSeries(deleteSeries);
-                return Ok;
             case "sidebarkey" when args.Length > 1 && main is not null:
                 return new JsonObject { ["handled"] = args[1] == "return" ? main.SidebarRename() : main.SidebarDelete() };
             // 側欄的收合（R101、design-windows §11.34，同 Mac）：sidebarsection <folders|meetings|people|group:…> on|off（on 是展開）、
-            // sidebarexpand <folder:名稱|series:id> on|off
+            // sidebarexpand <folder:名稱> on|off
             case "sidebarsection" when args.Length > 2:
                 SidebarCollapse.SetSection(host.Settings, args[1], args[2] == "on");
                 return Ok;
@@ -102,14 +98,6 @@ public static partial class ControlPipe
             case "folder" when args.Length > 2 && Id(1) is long folderMeeting:
                 host.Controller.MoveToFolder(folderMeeting, args[2] == "-" ? "" : args[2]);
                 return Ok;
-            // seriesnew <名稱> <會議 id,…>：直接建一個定期會議（每週一 10:00，不經過建議；Windows 才有，準備示範資料用：建議要真的錄音的開始時間）
-            case "seriesnew" when args.Length > 2:
-            {
-                var ids = args[2].Split(',').Select(x => long.TryParse(x, out var v) ? v : -1).Where(v => v > 0).ToList();
-                var made = host.Db.CreateSeries(new MeetingSeries { Name = args[1], Weekday = 2, Minute = 600, People = [] }, ids);
-                state?.Reload();
-                return new JsonObject { ["id"] = made.Id };
-            }
             // noteitem <editui|edit|delete|cancel> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]：
             // 選取中的會議的一條紀錄（editui 打開就地改的輸入框、edit 直接存、delete 刪掉）
             case "noteitem" when args.Length > 3 && main?.State.Detail is { } noteDetail:
@@ -148,7 +136,7 @@ public static partial class ControlPipe
             case "reload":
                 state?.Reload();
                 return Ok;
-            // listsort <dateDesc|dateAsc|title|duration>、listgroup <none|month|folder|series>
+            // listsort <dateDesc|dateAsc|title|duration>、listgroup <none|month|folder>
             case "listsort" when args.Length > 1 && MeetingSorts.Parse(args[1]) is { } sort:
                 state?.SetSort(sort);
                 return Ok;
@@ -170,7 +158,7 @@ public static partial class ControlPipe
                 return Ok;
             }
             // folderrule <資料夾> <JSON|JSON 檔的路徑|-> [apply]：等於在條件的編輯按「儲存」（- 是移除）。
-            // JSON 是 {"keywords":[…],"people":[id…],"templateId":…,"seriesId":…}；從 SSH 傳中文不方便時給檔案路徑
+            // JSON 是 {"keywords":[…],"people":[id…],"templateId":…}；從 SSH 傳中文不方便時給檔案路徑
             case "folderrule" when args.Length > 2:
             {
                 var rule = new FolderRule { Folder = args[1] };
@@ -182,7 +170,6 @@ public static partial class ControlPipe
                         rule.Keywords = o["keywords"]?.AsArray().Select(x => x!.GetValue<string>()).ToList() ?? [];
                         rule.People = o["people"]?.AsArray().Select(x => x!.GetValue<long>()).ToList() ?? [];
                         rule.TemplateId = o["templateId"]?.GetValue<string>();
-                        rule.SeriesId = o["seriesId"]?.GetValue<long>();
                     }
                 }
                 host.Controller.SaveFolderRule(rule, args.Length > 3 && args[3] == "apply");
@@ -197,7 +184,7 @@ public static partial class ControlPipe
             case "autofile" when Id(1) is long fileId:
             {
                 var folder = host.Db.AutoFile(fileId);
-                if (folder is not null) host.Controller.Organized(fileId, folder, null);
+                if (folder is not null) host.Controller.Organized(fileId, folder);
                 return new JsonObject { ["folder"] = folder };
             }
             // foldersuggest <會議 id>：紀錄分頁頂端的建議（沒有時 folder 是空字串）
@@ -224,98 +211,6 @@ public static partial class ControlPipe
                 state.Reload();
                 return Ok;
             }
-            // seriessuggest <會議 id>：紀錄分頁頂端建議加入的定期會議（R99.3；沒有時 series 是 -1、text 是空字串）
-            case "seriessuggest" when Id(1) is long joinSuggestId && state is not null:
-            {
-                var s = host.Db.Meeting(joinSuggestId) is { } meeting ? state.SeriesJoinSuggestion(meeting) : null;
-                return new JsonObject
-                {
-                    ["series"] = s?.Series.Id ?? -1, ["shared"] = new JsonArray([.. (s?.Shared ?? []).Select(p => (JsonNode)p)]),
-                    ["text"] = s is null ? "" : Organizing.JoinSuggestionText(s, state.People),
-                };
-            }
-            // seriessuggestion accept|dismiss <會議 id>：等於按「加進去」「不是」
-            case "seriessuggestion" when args.Length > 2 && Id(2) is long suggestedId && state is not null:
-            {
-                if (host.Db.Meeting(suggestedId) is not { } meeting || state.SeriesJoinSuggestion(meeting) is not { } s) return new JsonObject { ["error"] = "no suggestion" };
-                if (args[1] == "accept") host.Controller.AcceptSeriesJoin(suggestedId, s.Series.Id!.Value);
-                else if (args[1] == "dismiss") host.Controller.DismissSeriesJoin(suggestedId, s.Series.Id!.Value);
-                state.Reload();
-                return Ok;
-            }
-            // seriescandidates：可能的定期會議
-            case "seriescandidates" when state is not null:
-                return new JsonObject
-                {
-                    ["candidates"] = new JsonArray([.. state.SeriesCandidates.Select(c => (JsonNode)new JsonObject
-                    {
-                        ["key"] = c.Key, ["name"] = c.Name, ["meetingIds"] = new JsonArray([.. c.MeetingIds.Select(x => (JsonNode)x)]), ["weekday"] = c.Weekday,
-                        ["minute"] = c.Minute ?? -1, ["intervalWeeks"] = c.IntervalWeeks, ["people"] = new JsonArray([.. c.People.Select(x => (JsonNode)x)]),
-                        ["frequency"] = c.FrequencyText,
-                    })]),
-                };
-            // seriescreate <候選的 key> <名稱|-> [會議 id,…]：等於確認時按「建立」
-            case "seriescreate" when args.Length > 2 && state is not null:
-            {
-                if (state.SeriesCandidates.FirstOrDefault(c => c.Key == args[1]) is not { } candidate) return new JsonObject { ["error"] = "no candidate" };
-                var ids = args.Length > 3 ? args[3].Split(',').Select(x => long.TryParse(x, out var v) ? v : -1).Where(v => v > 0).ToList() : candidate.MeetingIds;
-                var created = host.Controller.CreateSeries(candidate, args[2] == "-" ? "" : args[2], ids);
-                state.Reload();
-                return new JsonObject { ["id"] = created?.Id };
-            }
-            // seriesreject <key>：等於按「不是定期會議」
-            case "seriesreject" when args.Length > 1 && state is not null:
-                if (state.SeriesCandidates.FirstOrDefault(c => c.Key == args[1]) is { } rejected) host.Controller.RejectSeriesCandidate(rejected);
-                state.Reload();
-                return Ok;
-            // seriesjoin <會議 id> <系列 id|->：右鍵「加到定期會議 ▸」「移出「…」」
-            case "seriesjoin" when args.Length > 2 && Id(1) is long joinId:
-                host.Controller.SetSeries([joinId], Id(2));
-                state?.Reload();
-                return Ok;
-            // seriesfilter <系列 id|->：側欄點了定期會議（- 回到所有會議）
-            case "seriesfilter" when args.Length > 1 && state is not null:
-                if (Id(1) is long seriesId) state.ShowSeries(seriesId); else state.ShowMeetings(null);
-                return Ok;
-            case "seriesrename" when args.Length > 2 && Id(1) is long renameId:
-                host.Controller.RenameSeries(renameId, args[2]);
-                state?.Reload();
-                return Ok;
-            case "seriesdelete" when Id(1) is long deleteId:
-                host.Controller.DeleteSeries(deleteId);
-                state?.Reload();
-                return Ok;
-            // autojoin <會議 id>：轉錄完的自動加入定期會議，回傳加入的系列
-            case "autojoin" when Id(1) is long autoId:
-            {
-                var series = host.Db.AutoJoinSeries(autoId);
-                if (series is not null) host.Controller.Organized(autoId, null, series);
-                return new JsonObject { ["series"] = series?.Id };
-            }
-            // seriessheet：打開可能的定期會議的確認（等於點側欄「發現 N 組…」）
-            case "seriessheet" when main is not null:
-                _ = Dialogs.SeriesSuggestions(main);
-                return Ok;
-            // seriesopenitems <系列 id>：還沒完成的待辦
-            case "seriesopenitems" when Id(1) is long openId:
-                return new JsonObject
-                {
-                    ["items"] = new JsonArray([.. Data.SeriesOpenItems.Compute(host.Db.SeriesMeetings(openId)).Select(i => (JsonNode)new JsonObject
-                    {
-                        ["meeting"] = i.Meeting.Id, ["index"] = i.Index, ["task"] = i.Item.Task, ["owner"] = i.Item.Owner,
-                    })]),
-                };
-            // previousmeeting <會議 id>：整理時會接上的上一場（R99.5）和提示詞的那一段
-            case "previousmeeting" when Id(1) is long previousId && host.Db.Meeting(previousId) is { } current:
-            {
-                var previous = host.Db.PreviousSeriesMeeting(current);
-                var p = previous is null ? null : PreviousMeeting.Of(previous);
-                return new JsonObject
-                {
-                    ["meeting"] = previous?.Id ?? -1, ["items"] = new JsonArray([.. (p?.Items ?? []).Select(i => (JsonNode)i.Task)]),
-                    ["block"] = p is null ? "" : NotesPrompt.PreviousBlock(p, current.MeetingLanguage),
-                };
-            }
         }
         return null;
     }
@@ -340,13 +235,7 @@ public static partial class ControlPipe
     static JsonNode FolderRulesState(MainWindow? main) => new JsonArray([.. (main?.State.FolderRules ?? []).Select(r => (JsonNode)new JsonObject
     {
         ["folder"] = r.Folder, ["keywords"] = new JsonArray([.. r.Keywords.Select(k => (JsonNode)k)]), ["people"] = new JsonArray([.. r.People.Select(p => (JsonNode)p)]),
-        ["templateId"] = r.TemplateId ?? "", ["seriesId"] = r.SeriesId ?? -1,
-    })]);
-
-    static JsonNode SeriesState(MainWindow? main) => new JsonArray([.. (main?.State.Series ?? []).Select(x => (JsonNode)new JsonObject
-    {
-        ["id"] = x.Id, ["name"] = x.Name, ["weekday"] = x.Weekday, ["minute"] = x.Minute ?? -1, ["intervalWeeks"] = x.IntervalWeeks,
-        ["people"] = new JsonArray([.. x.People.Select(p => (JsonNode)p)]), ["count"] = main!.State.SeriesCount(x.Id ?? 0),
+        ["templateId"] = r.TemplateId ?? "",
     })]);
 }
 #endif

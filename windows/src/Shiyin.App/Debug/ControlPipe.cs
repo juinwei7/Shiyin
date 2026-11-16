@@ -484,18 +484,13 @@ public static partial class ControlPipe
                 ? new JsonObject { ["progress"] = cleaning.Progress } : null,
             // 詞彙表（R94）
             ["glossary"] = new JsonArray([.. host.Db.Glossary().Select(t => (JsonNode)t.Term)]),
-            // 會議列表、資料夾的條件、定期會議（M§71～§73，同 Mac 的 list、folderRules、series、seriesCandidates、seriesFilter）
+            // 會議列表、資料夾的條件（M§71、§72，同 Mac 的 list、folderRules）
             ["list"] = ListState(main),
             ["folderRules"] = FolderRulesState(main),
-            ["series"] = SeriesState(main),
-            ["seriesCandidates"] = main?.State.SeriesCandidates.Count,
-            ["seriesFilter"] = main?.State.SeriesFilter ?? -1,
-            ["seriesDialog"] = Dialogs.SeriesSuggestionKey,
             // 移除一個人的確認開著時是誰（R85.7，同 Mac；沒有是 -1）、人物頁改名的輸入框開著沒（Mac 沒有）
             ["confirmRemovePerson"] = main?.RemovingPerson ?? -1,
-            // 每一種東西都能直接改、刪（R100，同 Mac）：刪除資料夾、定期會議的確認開著時是哪個；就地改的那一條
+            // 每一種東西都能直接改、刪（R100，同 Mac）：刪除資料夾的確認開著時是哪個；就地改的那一條
             ["confirmDeleteFolder"] = main?.DeletingFolder ?? "",
-            ["confirmDeleteSeries"] = main?.DeletingSeries ?? -1,
             // 重新命名的對話框開著時要改的東西（R102，同 Mac：meeting(42)、folder("客戶")、newFolder([1, 2])…；沒開是空字串）
             ["renameTarget"] = Dialogs.RenamingTarget?.Key ?? "",
             // 照 Sheet 樣子的對話框（R106、design-windows §11.39）開著時是它的標題，沒開是空字串
