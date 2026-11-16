@@ -1517,6 +1517,8 @@ final class AppModel {
 
     /// 有通知權限就發通知（帶按鈕），沒有就用不搶焦點的浮動視窗
     func showMeetingPrompt(_ prompt: MeetingDetector.Prompt) {
+        // 會議好像結束了：倒數完自動停止錄音（R95、design §69）
+        if case .stop = prompt, AppSettings.autoStopOnMeetingEnd { startMeetingEndCountdown() }
         // 錄音島打開時由島顯示，取代右上角的浮動視窗和通知（design §57.2、R81.3）
         if RecordingIsland.isEnabled {
             showMeetingPanel(prompt, island: true)
@@ -1544,11 +1546,57 @@ final class AppModel {
                 ("start", String(localized: "開始錄音"), { [weak self] in self?.startRecording() }),
             ], String(localized: "\(app.name) 正在開會，要開始錄音嗎？"))
         case .stop:
-            show(prompt, [
-                ("continue", String(localized: "繼續錄"), {}),
-                ("stop", String(localized: "停止並轉錄"), { [weak self] in self?.recorder.stop() }),
-            ], String(localized: "會議好像結束了，要停止錄音嗎？"))
+            let actions: [(id: String, title: String, action: () -> Void)] = [
+                ("continue", String(localized: "繼續錄"), { [weak self] in self?.cancelMeetingEndCountdown() }),
+                ("stop", String(localized: "停止並轉錄"), { [weak self] in self?.cancelMeetingEndCountdown(); self?.recorder.stop() }),
+            ]
+            if let deadline = meetingEndDeadline {
+                let countdown: (Int) -> String = { String(localized: "會議好像結束了，\($0) 秒後自動停止錄音") }
+                if island {
+                    RecordingIsland.shared.showPrompt(prompt, actions: actions, message: countdown(AppSettings.meetingEndCountdown),
+                                                      deadline: deadline, countdown: countdown)
+                } else {
+                    MeetingPromptPanel.shared.show(prompt, actions: actions, message: countdown(AppSettings.meetingEndCountdown))
+                }
+            } else {
+                show(prompt, actions, String(localized: "會議好像結束了，要停止錄音嗎？"))
+            }
         }
+    }
+
+    /// 會議結束的倒數（R95）：時間到時還在錄同一場、會議 app 沒有又開始用麥克風，就停止並轉錄
+    @ObservationIgnored private var meetingEndTask: Task<Void, Never>?
+    private(set) var meetingEndDeadline: Date?
+
+    private func startMeetingEndCountdown() {
+        meetingEndTask?.cancel()
+        let seconds = AppSettings.meetingEndCountdown
+        let meetingId = recorder.meetingId
+        meetingEndDeadline = Date().addingTimeInterval(TimeInterval(seconds))
+        meetingEndTask = Task { [weak self] in
+            // 每秒看一次：錄音已經停了（按了停止、別的原因）就收起倒數
+            for _ in 0..<seconds {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self else { return }
+                if !self.recorder.isRecording || self.recorder.meetingId != meetingId { break }
+            }
+            guard !Task.isCancelled, let self else { return }
+            self.meetingEndDeadline = nil
+            RecordingIsland.shared.closePrompt()
+            MeetingPromptPanel.shared.close()
+            guard self.recorder.isRecording, self.recorder.meetingId == meetingId, !self.meetingDetector.meetingAppActive,
+                  let id = meetingId else { return }
+            let title = (try? self.db.meeting(id))?.displayTitle ?? ""
+            log.info("meeting ended, auto-stopping the recording after \(seconds)s")
+            self.recorder.stop()
+            self.notifier.meetingEndStopped(meetingId: id, title: title)
+        }
+    }
+
+    private func cancelMeetingEndCountdown() {
+        meetingEndTask?.cancel()
+        meetingEndTask = nil
+        meetingEndDeadline = nil
     }
 
     /// 通知上的按鈕
@@ -1556,7 +1604,8 @@ final class AppModel {
         switch action {
         case "start": startRecording()
         case "mute": MeetingDetector.mute(bundle)
-        case "stop": recorder.stop()
+        case "stop": cancelMeetingEndCountdown(); recorder.stop()
+        case "continue": cancelMeetingEndCountdown()
         default: break
         }
     }

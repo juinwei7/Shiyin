@@ -149,6 +149,7 @@ enum DebugControl {
             let actions = RecordingIsland.isEnabled ? (RecordingIsland.shared.state.prompt?.actions.map(\.id) ?? []).sorted()
                 : MeetingPromptPanel.shared.actions.keys.sorted()
             write(["prompt": text, "actions": actions, "muted": MeetingDetector.muted,
+                   "countdown": model.meetingEndDeadline.map { max(0, $0.timeIntervalSinceNow) } ?? -1,
                    "recording": model.recorder.isRecording], to: args[1])
         case "meetingaction": RecordingIsland.isEnabled ? RecordingIsland.shared.perform(args[1]) : MeetingPromptPanel.shared.perform(args[1])
         case "island":   // island hover on|off：等於滑鼠移到錄音島上、移開（design §57.3）

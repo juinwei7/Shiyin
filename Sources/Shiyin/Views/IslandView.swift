@@ -205,7 +205,15 @@ struct IslandRoot: View {
 
     private func promptBody(_ prompt: IslandState.Prompt) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(prompt.message).font(.system(size: 14, weight: .medium)).fixedSize(horizontal: false, vertical: true)
+            // 會議結束的倒數（R95）：每秒換成剩下的秒數
+            if let deadline = prompt.deadline, let countdown = prompt.countdown {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(countdown(max(0, Int(deadline.timeIntervalSince(context.date).rounded(.up)))))
+                        .font(.system(size: 14, weight: .medium)).fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                Text(prompt.message).font(.system(size: 14, weight: .medium)).fixedSize(horizontal: false, vertical: true)
+            }
             HStack(spacing: 8) {
                 Spacer(minLength: 0)
                 ForEach(Array(prompt.actions.enumerated()), id: \.offset) { index, action in

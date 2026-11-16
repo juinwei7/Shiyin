@@ -33,6 +33,7 @@ enum AppSettings {
     static let hideFromScreenSharingKey = "hideFromScreenSharing"   // 分享畫面時藏起拾音的視窗，預設關（design §53）
     static let remindersListKey = "remindersListId"   // 提醒事項裡「拾音」列表的 id（design §52.1）
     static let recordingIslandKey = "recordingIsland"   // 在螢幕上方顯示錄音島，預設開（design §57.2）
+    static let autoStopOnMeetingEndKey = "autoStopOnMeetingEnd"   // 會議結束時倒數後自動停止錄音，預設開（design §69）
 
     private static var d: UserDefaults { .standard }
 
@@ -100,6 +101,15 @@ enum AppSettings {
     static var voiceprints: Bool { flag(voiceprintsKey, default: true) }
     /// 在螢幕上方顯示錄音島（design §57、R81.8）
     static var recordingIsland: Bool { flag(recordingIslandKey, default: true) }
+    static var autoStopOnMeetingEnd: Bool { flag(autoStopOnMeetingEndKey, default: true) }
+    /// 會議結束後倒數幾秒自動停止（R95）；DEBUG 可以用 -meetingEndCountdownSeconds 改短
+    static var meetingEndCountdown: Int {
+        #if DEBUG
+        let seconds = UserDefaults.standard.integer(forKey: "meetingEndCountdownSeconds")
+        if seconds > 0 { return seconds }
+        #endif
+        return 60
+    }
     /// 分享畫面時藏起拾音的視窗（design §53、R77）
     static var hideFromScreenSharing: Bool { flag(hideFromScreenSharingKey, default: false) }
     /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）

@@ -828,6 +828,35 @@
         }
       }
     },
+    "%lld 秒後自動停止錄音並轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 秒后自动停止录音并转录"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recording stops and is transcribed in %lld second"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recording stops and is transcribed in %lld seconds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld 處": {
       "extractionState": "manual",
       "localizations": {
@@ -1814,19 +1843,19 @@
         }
       }
     },
-    "Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。": {
+    "Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你，不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When Zoom, Teams, Webex, Google Meet (in a browser) or a similar app starts using the microphone and Shiyin isn't recording, Shiyin asks whether to record, and asks again when the meeting seems to end. It only asks; it never records on its own."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zoom、Teams、Webex、Google Meet（浏览器）等开始用麦克风、拾音没在录音时提醒你；会议结束时提醒停止。只提醒，不会自动录音。"
+            "value": "Zoom、Teams、Webex、Google Meet（浏览器）等开始用麦克风、拾音没在录音时提醒你，不会自动开始录音。会议 app 停止用麦克风时倒数 60 秒，没按“继续录”就停止并转录；关掉“自动停止”时只问要不要停止。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Zoom, Teams, Webex, Google Meet (in a browser) or another meeting app starts using the microphone and Shiyin isn't recording, Shiyin asks whether to record; it never starts recording on its own. When the meeting app stops using the microphone, a 60-second countdown starts and the recording stops and is transcribed unless you click Keep Recording. With automatic stop turned off, Shiyin only asks whether to stop."
           }
         }
       }
@@ -12204,6 +12233,35 @@
         }
       }
     },
+    "會議好像結束了，%lld 秒後自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议好像结束了，%lld 秒后自动停止录音"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The meeting seems to have ended. Recording stops in %lld second"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The meeting seems to have ended. Recording stops in %lld seconds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "會議好像結束了，要停止錄音嗎？": {
       "extractionState": "manual",
       "localizations": {
@@ -12421,6 +12479,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议记录要用哪个 AI 整理？之后可以在设置里更改。"
+          }
+        }
+      }
+    },
+    "會議結束時自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议结束时自动停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop recording automatically when the meeting ends"
+          }
+        }
+      }
+    },
+    "會議結束，已自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议结束，已自动停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting ended, so recording stopped"
           }
         }
       }

@@ -2618,6 +2618,14 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`addterm <文字>` 走 `addTerms`（`\n` 當換行）。
 - Windows：design-windows §11.27。
 
+## 69. 會議結束時倒數自動停止錄音（R95）
+
+- 設定 `autoStopOnMeetingEnd`（預設開），在「錄音與轉錄 → 提醒與快捷鍵」，偵測會議關掉時停用；說明改成「…不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。」
+- `AppModel.showMeetingPrompt(.stop)`：設定開著時 `startMeetingEndCountdown()`：記 `meetingEndDeadline`，每秒看一次（錄音停了就收起），到時還在錄同一場、會議 app 沒有又開始用麥克風（`MeetingDetector.meetingAppActive`）就 `recorder.stop()`，發通知「會議結束，已自動停止錄音」（內文是會議標題）。按「繼續錄」「停止並轉錄」（島、浮動視窗、通知的按鈕）都取消倒數。
+- 錄音島：`showPrompt` 多 `deadline`、`countdown`，訊息用 `TimelineView` 每秒換成「會議好像結束了，N 秒後自動停止錄音」；倒數的提醒到期限才收起（不是 30 秒）。浮動視窗（島關掉、沒有通知權限）寫同一句、不倒數；通知的內文寫「60 秒後自動停止錄音並轉錄」。
+- DEBUG：`-meetingEndCountdownSeconds` 改倒數秒數；`meetingprompts` 多 `countdown`（剩幾秒，沒在倒數是 -1）。
+- Windows：design-windows §11.28。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

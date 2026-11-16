@@ -951,6 +951,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.diarizationModelKey) private var diarizationModel = Diarizer.Model.standard.rawValue
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true
+    @AppStorage(AppSettings.autoStopOnMeetingEndKey) private var autoStopOnMeetingEnd = true
     @AppStorage(AppSettings.recordingIslandKey) private var recordingIsland = true
     @AppStorage(AppSettings.idleStopKey) private var idleStop = true
     @AppStorage(AppSettings.bookmarkHotKeyKey) private var bookmarkHotKey = true
@@ -1047,11 +1048,14 @@ struct RecordingSettings: View {
             Section("提醒與快捷鍵") {
                 // 偵測線上會議（design §21.7、R19.4）
                 Toggle("偵測到線上會議時提醒錄音", isOn: $meetingDetection)
+                // 會議結束時倒數自動停止（design §69、R95）
+                Toggle("會議結束時自動停止錄音", isOn: $autoStopOnMeetingEnd)
+                    .disabled(!meetingDetection)
                 // 錄音島（design §57、R81.8）
                 Toggle("在螢幕上方顯示錄音島", isOn: $recordingIsland)
                 Text("錄音中在螢幕上方正中間（有瀏海的 Mac 接在瀏海兩側）顯示錄音的時間和提醒，全螢幕開會、分享畫面時也看得到，分享畫面拍不到它。偵測到線上會議時的「要開始錄音嗎？」也在這裡。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。")
+                Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你，不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 ForEach(mutedApps, id: \.self) { bundle in
                     HStack {

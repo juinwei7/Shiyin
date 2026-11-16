@@ -47,7 +47,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             content.userInfo = ["bundle": app.bundleID]
         case .stop(let app):
             content.title = String(localized: "會議好像結束了")
-            content.body = String(localized: "要停止錄音並轉錄嗎？")
+            content.body = AppSettings.autoStopOnMeetingEnd ? String(localized: "\(AppSettings.meetingEndCountdown) 秒後自動停止錄音並轉錄")
+                                                            : String(localized: "要停止錄音並轉錄嗎？")
             content.categoryIdentifier = "MEETING_STOP"
             content.userInfo = ["bundle": app.bundleID]
         }
@@ -93,6 +94,19 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.userInfo = ["meetingId": NSNumber(value: meetingId)]
         #if DEBUG
         recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "idle": "stopped"]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
+    /// 會議結束、倒數完自動停止錄音（R95、design §69）
+    func meetingEndStopped(meetingId: Int64, title: String) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "會議結束，已自動停止錄音")
+        content.body = title
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meetingId)]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId]] + recent).prefix(10))
         #endif
         post(content)
     }

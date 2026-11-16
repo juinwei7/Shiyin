@@ -38,13 +38,15 @@ final class RecordingIsland {
 
     // MARK: 偵測會議的提醒（R81.3）
 
-    func showPrompt(_ prompt: MeetingDetector.Prompt, actions: [(id: String, title: String, action: () -> Void)], message: String) {
+    /// deadline、countdown：會議結束的倒數（R95）：訊息每秒換成剩下的秒數，倒數完才收起來（不是 30 秒）
+    func showPrompt(_ prompt: MeetingDetector.Prompt, actions: [(id: String, title: String, action: () -> Void)], message: String,
+                    deadline: Date? = nil, countdown: ((Int) -> String)? = nil) {
         state.prompt = IslandState.Prompt(prompt: prompt, message: message, actions: actions.map { item in
             IslandState.Action(id: item.id, title: item.title, run: { [weak self] in
                 self?.closePrompt()
                 item.action()
             })
-        }, expires: Date().addingTimeInterval(30))
+        }, expires: deadline?.addingTimeInterval(2) ?? Date().addingTimeInterval(30), deadline: deadline, countdown: countdown)
         update()
     }
 
@@ -151,6 +153,9 @@ final class IslandState {
         var message: String
         var actions: [Action]
         var expires: Date
+        /// 倒數到什麼時候、訊息怎麼寫（R95）；nil 是一般的提醒
+        var deadline: Date? = nil
+        var countdown: ((Int) -> String)? = nil
     }
 
     var hover = false

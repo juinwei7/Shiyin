@@ -31,6 +31,8 @@ final class MeetingDetector {
 
     /// 要提醒時呼叫（AppModel 決定用通知還是浮動視窗）
     var onPrompt: ((Prompt) -> Void)?
+    /// 現在有會議 app 在用麥克風（R95：倒數完時會議又開始了就不停止）
+    var meetingAppActive: Bool { !activeSince.isEmpty }
     var isRecording: () -> Bool = { false }
 
     private var timer: Timer?
