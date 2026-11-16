@@ -572,7 +572,7 @@ enum DebugControl {
             guard args.count > 4, let x = Double(args[2]), let y = Double(args[3]),
                   let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == args[4] || "\($0.windowNumber)" == args[4]) })
             else { break }
-            if args.count > 5 { captureNextMenu(to: args[5]) }
+            if args.count > 5 { captureNextMenu(to: args[5], keep: args.count > 6 ? Double(args[6]) ?? 0 : 0) }
             let point = NSPoint(x: x, y: window.frame.height - y)
             func send(_ type: NSEvent.EventType, clicks: Int) {
                 if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
@@ -1153,15 +1153,18 @@ enum DebugControl {
     /// 下一個開始追蹤的選單（右鍵選單、「⋯」）：項目寫到 path（子選單展開成「父 ▸ 子」），然後關掉，不留在使用者畫面上
     private static var menuObserver: NSObjectProtocol?
     private static var eventMonitor: Any?
-    private static func captureNextMenu(to path: String) {
+    /// keep：選單留著幾秒再關（給外面截圖）
+    private static func captureNextMenu(to path: String, keep: Double = 0) {
         if let menuObserver { NotificationCenter.default.removeObserver(menuObserver) }
         menuObserver = NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { note in
             guard let menu = note.object as? NSMenu, menu.supermenu == nil, menu != NSApp.mainMenu else { return }
             if let observer = menuObserver { NotificationCenter.default.removeObserver(observer); menuObserver = nil }
             func titles(_ m: NSMenu, _ prefix: String) -> [String] {
                 m.items.flatMap { item -> [String] in
-                    if item.isSeparatorItem { return [prefix + "——"] }
-                    let line = prefix + item.title + (item.isEnabled ? "" : "（停用）") + (item.state == .on ? "（✓）" : "")
+                    let hidden = item.isHidden ? "（隱藏）" : ""
+                    if item.isSeparatorItem { return [prefix + "——" + hidden] }
+                    let header = item.isSectionHeader ? "【段落】" : ""
+                    let line = prefix + header + item.title + (item.isEnabled ? "" : "（停用）") + (item.state == .on ? "（✓）" : "") + hidden
                     return [line] + (item.submenu.map { titles($0, prefix + item.title + " ▸ ") } ?? [])
                 }
             }
@@ -1171,7 +1174,12 @@ enum DebugControl {
                 MainActor.assumeIsolated {
                     tracked.update()
                     write(["items": titles(tracked, "")], to: path)
-                    tracked.cancelTracking()
+                    if keep > 0 {
+                        let timer = Timer(timeInterval: keep, repeats: false) { _ in MainActor.assumeIsolated { tracked.cancelTracking() } }
+                        RunLoop.main.add(timer, forMode: .common)
+                    } else {
+                        tracked.cancelTracking()
+                    }
                 }
             }
         }

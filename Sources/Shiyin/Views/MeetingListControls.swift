@@ -15,9 +15,10 @@ struct MeetingListMenu: View {
             Menu("篩選") { filters }
                 .disabled(model.showTrash)
         } else {
-            Section("排序方式") { sortPicker.pickerStyle(.inline).labelsHidden() }
+            // inline 的 Picker 自己會帶段落標題和分隔線；再包一層 Section 會多出連續好幾條分隔線（2026-11-16 自己驗收時發現）
+            sortPicker.pickerStyle(.inline)
             if !model.showTrash {
-                Section("分組方式") { groupingPicker.pickerStyle(.inline).labelsHidden() }
+                groupingPicker.pickerStyle(.inline)
                 Section("篩選") { filters }
             }
         }
