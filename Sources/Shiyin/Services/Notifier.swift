@@ -97,6 +97,19 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(content)
     }
 
+    /// 企業伺服器連不上太久，自動改在這台電腦轉錄（R93、design §67）
+    func serverFallback(meeting: Meeting) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "企業伺服器連不上，已改在這台電腦轉錄")
+        content.body = meeting.displayTitle
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meeting.id ?? 0)]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meeting.id ?? 0]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
     func jobFinished(_ job: Job, meeting: Meeting, error: Error?) {
         let content = UNMutableNotificationContent()
         let title = meeting.displayTitle

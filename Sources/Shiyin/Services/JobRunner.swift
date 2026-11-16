@@ -404,9 +404,11 @@ final class JobRunner {
         do {
             guard let value = try await pipeline.run(trimmed ?? meeting.audioURL) else { return }
             result = value
-        } catch is ServerTranscriber.SwitchToLocal {
-            // 改在這台 Mac 轉（R50.5）：用本機的引擎，模型還沒下載好就先下載、先用 macOS 內建（同 D35）
+        } catch let switched as ServerTranscriber.SwitchToLocal {
+            // 改在這台 Mac 轉（R50.5）：用本機的引擎，模型還沒下載好就先下載、先用 macOS 內建（同 D35）；
+            // 連不上太久自動改的（R93）發通知
             running[lane]?.server = nil
+            if switched.automatic { AppModel.shared.notifier.serverFallback(meeting: meeting) }
             pipeline = try makePipeline(local: true)
             if !AppSettings.useSystemTranscriber { AppModel.shared.models.autoStartTranscription(for: meeting.meetingLanguage) }
             guard let value = try await pipeline.run(trimmed ?? meeting.audioURL) else { return }

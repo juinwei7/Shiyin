@@ -3297,6 +3297,23 @@
         }
       }
     },
+    "企業伺服器連不上，已改在這台電腦轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "企业服务器连不上，已改在这台电脑转录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t reach the company server, so this meeting is being transcribed on this computer"
+          }
+        }
+      }
+    },
     "企業伺服器（%@）": {
       "extractionState": "manual",
       "localizations": {

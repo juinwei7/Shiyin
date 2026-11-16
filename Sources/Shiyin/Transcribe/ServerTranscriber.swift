@@ -20,8 +20,17 @@ struct ServerTranscriber {
         var engine: String
     }
 
-    /// 使用者按了「改在這台電腦轉錄」
-    struct SwitchToLocal: Error {}
+    /// 使用者按了「改在這台電腦轉錄」；automatic 是連不上太久自動改的（R93）
+    struct SwitchToLocal: Error { var automatic = false }
+
+    /// 連不上（網路、伺服器出錯）連續這麼久就自動改在這台電腦轉錄（R93、design §67）；DEBUG 可以用 -serverAutoLocalSeconds 改短
+    static var autoLocalAfter: TimeInterval {
+        #if DEBUG
+        let seconds = UserDefaults.standard.double(forKey: "serverAutoLocalSeconds")
+        if seconds > 0 { return seconds }
+        #endif
+        return 600
+    }
 
     /// 伺服器轉錄失敗（例如錄音太長）：不是暫時的問題，工作算失敗
     struct Failed: LocalizedError {
@@ -89,6 +98,8 @@ struct ServerTranscriber {
         var id = remoteId
         var waited = 0
         var rejectedUploads = 0
+        /// 從什麼時候開始連續連不上（R93）：跟伺服器說上話就清掉
+        var unreachableSince: Date?
         onServer(ServerNote(text: ""))
         defer { onServer(nil) }
         while true {
@@ -100,6 +111,7 @@ struct ServerTranscriber {
                     onRemoteId(id)
                 }
                 let state = try await status(id!)
+                unreachableSince = nil
                 if waited > 0 { onServer(ServerNote(text: "")); waited = 0 }
                 switch state.status {
                 case "uploading":
@@ -133,8 +145,24 @@ struct ServerTranscriber {
                     onRemoteId(nil)
                     continue
                 }
+                // 連不上（網路、伺服器出錯）連續太久：自動改在這台電腦轉錄（R93）；伺服器忙、登入失效照舊等
+                var limit: TimeInterval?
+                if Self.isUnreachable(failure) {
+                    let since = unreachableSince ?? Date()
+                    unreachableSince = since
+                    let left = Self.autoLocalAfter - Date().timeIntervalSince(since)
+                    if left <= 0 {
+                        await delete(id)
+                        onRemoteId(nil)
+                        log.info("enterprise server unreachable for \(Int(Self.autoLocalAfter))s, switching to local transcription")
+                        throw SwitchToLocal(automatic: true)
+                    }
+                    limit = left
+                } else {
+                    unreachableSince = nil
+                }
                 waited += 1
-                try await waitForServer(failure, attempt: waited)
+                try await waitForServer(failure, attempt: waited, atMost: limit)
             } catch let failure as EnterpriseServer.Failure {
                 if case .server(let kind, _) = failure, kind == "not_found" {
                     id = nil
@@ -149,9 +177,11 @@ struct ServerTranscriber {
     }
 
     /// 等伺服器（R50.5）：30 秒、1 分鐘、2 分鐘…最長 5 分鐘再試；登入失效時等使用者重新登入（每 5 秒看一次）
-    private func waitForServer(_ failure: EnterpriseServer.Failure, attempt: Int) async throws {
+    private func waitForServer(_ failure: EnterpriseServer.Failure, attempt: Int, atMost limit: TimeInterval? = nil) async throws {
         let setup = failure.isSetupProblem
-        let seconds = setup ? 5 : min(300, 30 * (1 << min(attempt - 1, 4)))
+        var seconds = setup ? 5 : min(300, 30 * (1 << min(attempt - 1, 4)))
+        // 快到自動改本機的時間（R93）時只等到那時候
+        if let limit { seconds = max(1, min(seconds, Int(limit.rounded(.up)))) }
         let text: String
         if setup { text = failure.errorDescription ?? "" }
         else if case .server(let kind, _) = failure { text = kind == "busy" ? String(localized: "等企業伺服器：伺服器忙，\(seconds) 秒後再試")
@@ -166,6 +196,15 @@ struct ServerTranscriber {
             if switchToLocal() { return }
             // 重新登入了就馬上再試
             if setup && server.isSignedIn { return }
+        }
+    }
+
+    /// 算「連不上」的失敗（R93）：網路不通、伺服器出錯；伺服器忙（在排隊）不算
+    private static func isUnreachable(_ failure: EnterpriseServer.Failure) -> Bool {
+        switch failure {
+        case .unreachable: return true
+        case .server(let kind, _): return kind == "server_error"
+        default: return false
         }
     }
 
