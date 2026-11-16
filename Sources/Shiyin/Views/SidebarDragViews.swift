@@ -159,7 +159,8 @@ struct SidebarDragHandle: NSViewRepresentable {
     let type: UTType?
     let data: () -> Data
     let label: String
-    let onClick: () -> Void
+    /// 點一下（放開時）：帶著修飾鍵（⌘、⇧ 多選）
+    let onClick: (NSEvent.ModifierFlags) -> Void
 
     func makeNSView(context: Context) -> HandleView { HandleView() }
 
@@ -174,9 +175,12 @@ struct SidebarDragHandle: NSViewRepresentable {
         var type: UTType?
         var data: (() -> Data)?
         var label = ""
-        var onClick: (() -> Void)?
+        var onClick: ((NSEvent.ModifierFlags) -> Void)?
         private var downPoint: NSPoint?
         private var dragging = false
+
+        /// 視窗不在前面時第一下也算（同表格的列：點一下就選到，不是只把視窗叫到前面）
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
         /// 只接左鍵；右鍵、滑過、捲動交給下面
         override func hitTest(_ point: NSPoint) -> NSView? {
@@ -207,7 +211,13 @@ struct SidebarDragHandle: NSViewRepresentable {
         }
 
         override func mouseUp(with event: NSEvent) {
-            if !dragging { onClick?() }
+            if !dragging {
+                onClick?(event.modifierFlags)
+                // 按鍵（↑↓、Return、Delete）照舊給側欄的表格：這一下沒經過表格，它不會自己變成第一回應者
+                var view = superview
+                while let current = view, !(current is NSTableView) { view = current.superview }
+                if let table = view, window?.firstResponder !== table { window?.makeFirstResponder(table) }
+            }
             downPoint = nil
             dragging = false
         }
@@ -246,6 +256,13 @@ struct SidebarDragHandle: NSViewRepresentable {
 extension View {
     /// 蓋上拖曳把手（只接左鍵；沒拖就是點一下）
     func sidebarDragHandle(type: UTType, label: String, data: @escaping () -> Data, onClick: @escaping () -> Void) -> some View {
+        overlay { SidebarDragHandle(type: type, data: data, label: label, onClick: { _ in onClick() }) }
+    }
+
+    /// 下面列表的會議列（List 有選取的列）也蓋把手，不用 List 自己的 onDrag：沒選到的列直接拖時，拖得起來但放不進資料夾
+    /// （2026-11-17 使用者用三指拖移：「一定要先點到才能拖嗎？」）；點一下、⌘／⇧ 多選改成自己做（type 是 nil 時不能拖）
+    func sidebarDragHandle(type: UTType?, label: String, data: @escaping () -> Data,
+                           onClick: @escaping (NSEvent.ModifierFlags) -> Void) -> some View {
         overlay { SidebarDragHandle(type: type, data: data, label: label, onClick: onClick) }
     }
 
@@ -253,6 +270,6 @@ extension View {
     /// 會延後滑鼠事件的單擊、雙擊辨識器，點下面列表的會議時，按下被延後送進表格、放開被扣在辨識器那邊，表格一直等放開，
     /// 整個 app 卡住到下一次按滑鼠（2026-11-17 使用者：「點進去就會當機約 1～5 秒」，用 sample 抓到）
     func sidebarClick(_ action: @escaping () -> Void) -> some View {
-        overlay { SidebarDragHandle(type: nil, data: { Data() }, label: "", onClick: action) }
+        overlay { SidebarDragHandle(type: nil, data: { Data() }, label: "", onClick: { _ in action() }) }
     }
 }

@@ -70,6 +70,26 @@ extension AppModel {
         return provider
     }
 
+    /// 點下面列表的會議（design §77）：一般是只選這場；⌘ 加入或拿掉；⇧ 從上一次點的那場選到這場（照列表看到的順序）
+    func clickMeetingRow(_ id: Int64, modifiers: NSEvent.ModifierFlags) {
+        if modifiers.contains(.command) {
+            var ids = listSelection
+            if ids.contains(id) { ids.remove(id) } else { ids.insert(id) }
+            listSelection = ids
+            selectionAnchor = id
+        } else if modifiers.contains(.shift), let anchor = selectionAnchor ?? selection {
+            let order = meetingGroups.flatMap(\.rows).map(\.id)
+            if let a = order.firstIndex(of: anchor), let b = order.firstIndex(of: id) {
+                listSelection = Set(order[min(a, b)...max(a, b)])
+            } else {
+                listSelection = [id]
+            }
+        } else {
+            listSelection = [id]
+            selectionAnchor = id
+        }
+    }
+
     /// 會議拖到下面列表的標題：移進現在看的資料夾；「其他會議」是移出資料夾
     func dropOnListHeader(_ ids: [Int64]) {
         if let folder = folderFilter {

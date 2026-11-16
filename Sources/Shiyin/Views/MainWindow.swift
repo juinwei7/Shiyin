@@ -338,11 +338,17 @@ struct SidebarView: View {
     private func meetingRow(_ row: MeetingRow) -> some View {
         let selected = model.listSelection.contains(row.id)
         return MeetingRowView(row: row, status: model.status(row))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            // 拖到資料夾、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選。點一下選取（⌘、⇧ 多選）也在這裡，
+            // 不經過 List 自己的點擊、拖曳（design §77）。垃圾桶裡的不能拖。把手只蓋內容，不蓋右邊的「⋯」
+            .sidebarDragHandle(type: model.showTrash ? nil : .shiyinMeetingIDs, label: row.meeting.displayTitle,
+                               data: { Data(model.dragIDs(for: row.id).map(String.init).joined(separator: ",").utf8) }) {
+                model.clickMeetingRow(row.id, modifiers: $0)
+            }
             // 「⋯」和右鍵：自己畫的選單（R105）；選到的是多選裡的一場時，選單對整個多選
             .floatingRowMenu(selected: selected) { model.meetingMenu(model.dragIDs(for: row.id)) }
             .sidebarSelectableRow(selected: selected)
-            // 拖到資料夾、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選
-            .onDrag { model.meetingDragProvider(for: row.id) }
             .tag(row.id)
     }
 

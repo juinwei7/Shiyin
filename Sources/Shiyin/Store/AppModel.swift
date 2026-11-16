@@ -254,6 +254,8 @@ final class AppModel {
             if newValue.count <= 1 { selection = newValue.first }
         }
     }
+    /// ⇧ 點選的起點：上一次（沒按 ⇧）點的那場（design §77）
+    @ObservationIgnored var selectionAnchor: Int64?
     /// 選了兩場以上時的那幾場（列表的順序），不然是空的
     var multiSelected: [Int64] {
         selectedMeetings.count > 1 ? filteredMeetings.map(\.id).filter { selectedMeetings.contains($0) } : []
