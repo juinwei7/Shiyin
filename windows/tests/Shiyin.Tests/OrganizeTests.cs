@@ -365,6 +365,72 @@ public sealed class OrganizeTests : IDisposable
         Assert.Null(MeetingGroupings.Parse("x"));
     }
 
+    /// <summary>
+    /// 側欄的收合（R101、M§75、design-windows §11.34）：鍵同 Mac；段落預設展開、列預設收起；值沒變時不寫；
+    /// 展開的會議照列表的順序（日期新到舊）、不含別的資料夾；reveal 展開會議列表和那一組
+    /// </summary>
+    [Fact]
+    public void SidebarCollapseKeys()
+    {
+        var settings = AppSettings.InMemory();
+        var writes = 0;
+        settings.Changed += _ => writes++;
+        Assert.Equal("folder:客戶", SidebarCollapse.FolderKey("客戶"));
+        Assert.Equal("series:7", SidebarCollapse.SeriesKey(7));
+        Assert.True(SidebarCollapse.IsSectionExpanded(settings, "folders"));
+        Assert.False(SidebarCollapse.IsRowExpanded(settings, "folder:客戶"));
+        SidebarCollapse.SetSection(settings, "folders", false);
+        SidebarCollapse.SetSection(settings, "folders", false);
+        SidebarCollapse.SetSection(settings, "meetings", false);
+        Assert.Equal(2, writes);
+        Assert.Equal(["folders", "meetings"], settings.StringList(AppSettings.SidebarCollapsedKey));
+        Assert.False(SidebarCollapse.IsSectionExpanded(settings, "folders"));
+        SidebarCollapse.SetRow(settings, "folder:客戶", true);
+        SidebarCollapse.SetRow(settings, "series:7", true);
+        Assert.True(SidebarCollapse.IsRowExpanded(settings, "folder:客戶"));
+        SidebarCollapse.RenameFolder(settings, "客戶", "客戶 A");
+        Assert.Equal(["folder:客戶 A", "series:7"], settings.StringList(AppSettings.SidebarExpandedKey));
+        // 沒展開的資料夾改名不寫
+        writes = 0;
+        SidebarCollapse.RenameFolder(settings, "設計", "設計 B");
+        Assert.Equal(0, writes);
+
+        List<MeetingRow> rows =
+        [
+            Row(6, "f", "2026-11-12", folder: "客戶"), Row(5, "e", "2026-11-10", folder: "客戶", series: 7), Row(4, "d", "2026-11-03"),
+            Row(3, "c", "2026-10-20", folder: "客戶", series: 7), Row(2, "b", "2026-10-02", folder: "設計"), Row(1, "a", "2026-09-30", folder: "客戶"),
+        ];
+        Assert.Equal([6L, 5L, 3L, 1L], SidebarCollapse.PeekRows(rows, "客戶").Select(r => r.Id));
+        Assert.Equal([5L, 3L], SidebarCollapse.PeekRows(rows, 7).Select(r => r.Id));
+        Assert.Empty(SidebarCollapse.PeekRows(rows, "例會"));
+
+        var months = MeetingList.Groups(rows, MeetingGrouping.Month, MeetingSort.DateDesc, trash: false);
+        Assert.Equal("group:month-2026-10", SidebarCollapse.GroupKey(months[1]));
+        SidebarCollapse.SetSection(settings, "group:month-2026-10", false);
+        SidebarCollapse.SetSection(settings, "group:month-2026-11", false);
+        SidebarCollapse.SetSection(settings, "meetings", false);
+        SidebarCollapse.ExpandToShow(settings, 3, months, rows);
+        Assert.Equal(["folders", "group:month-2026-11"], settings.StringList(AppSettings.SidebarCollapsedKey));
+        // 在資料夾、定期會議裡（下面的列表沒有）：展開「資料夾」那一段和那個定期會議或資料夾
+        SidebarCollapse.SetRow(settings, "series:7", false);
+        SidebarCollapse.ExpandToShow(settings, 5, [], rows);
+        Assert.Equal(["group:month-2026-11"], settings.StringList(AppSettings.SidebarCollapsedKey));
+        Assert.Contains("series:7", settings.StringList(AppSettings.SidebarExpandedKey));
+        SidebarCollapse.ExpandToShow(settings, 2, [], rows);
+        Assert.Contains("folder:設計", settings.StringList(AppSettings.SidebarExpandedKey));
+
+        // 其他會議（R101.6）：有資料夾、定期會議的會議時才只放其他的；篩選、依資料夾分組、看某個資料夾時照舊
+        var none = new MeetingFilter();
+        Assert.True(SidebarCollapse.ShowsOthersOnly(rows, false, null, null, none, MeetingGrouping.Month));
+        Assert.Equal([4L], rows.Where(r => !SidebarCollapse.InFolderOrSeries(r)).Select(r => r.Id));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, null, new MeetingFilter(NeedsReview: true), MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, null, none, MeetingGrouping.Folder));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, "客戶", null, none, MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, false, null, 7, none, MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly(rows, true, null, null, none, MeetingGrouping.None));
+        Assert.False(SidebarCollapse.ShowsOthersOnly([Row(4, "d", "2026-11-03")], false, null, null, none, MeetingGrouping.None));
+    }
+
     /// <summary>側欄的資料夾（有條件的沒有會議也列出來）、可能的定期會議的輸入、建議的文字、條件的說明（M§72、§73）</summary>
     [Fact]
     public void OrganizingHelpers()

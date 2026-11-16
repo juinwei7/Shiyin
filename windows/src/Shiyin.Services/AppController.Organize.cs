@@ -32,8 +32,12 @@ public sealed partial class AppController
         Perform(null, () => Db.RenameSeries(id, trimmed));
     }
 
-    /// <summary>刪除定期會議：會議留著；之後不再建議同一組</summary>
-    public void DeleteSeries(long id) => Perform(null, () => Db.DeleteSeries(id));
+    /// <summary>刪除定期會議：會議留著；之後不再建議同一組；側欄展開的鍵拿掉（R101）</summary>
+    public void DeleteSeries(long id)
+    {
+        SidebarCollapse.SetRow(Settings, SidebarCollapse.SeriesKey(id), false);
+        Perform(null, () => Db.DeleteSeries(id));
+    }
 
     /// <summary>加到定期會議、移出（series 是 null）；多選時一起（手動加入不檢查條件）</summary>
     public void SetSeries(IReadOnlyList<long> ids, long? series)

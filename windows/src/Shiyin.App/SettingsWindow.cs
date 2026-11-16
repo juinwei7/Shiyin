@@ -433,7 +433,7 @@ public sealed class SettingsWindow : Window
             if (!record.Builtin)
             {
                 menu.Items.Add(new MenuFlyoutSeparator());
-                menu.Items.Add(Ui.Item(L.T("刪除"), () => DeleteTemplate(record), icon: Symbol.Delete));
+                menu.Items.Add(Ui.DangerItem(L.T("刪除"), () => DeleteTemplate(record)));
             }
             item.ContextFlyout = menu;
             list.Items.Add(item);
@@ -736,9 +736,9 @@ public sealed class SettingsWindow : Window
                 Ui.IconButton(Symbol.Delete, L.F("刪除「%@」", term.Term), () => { host.Controller.DeleteTerm(id); Show(); })));
             // 右鍵（R100）：重新命名…、刪除
             var menu = new MenuFlyout();
-            menu.Items.Add(Ui.Item(L.T("重新命名…"), StartEditing, icon: Symbol.Rename));
+            menu.Items.Add(Ui.Item(L.T("重新命名…"), StartEditing, icon: Symbol.Edit));
             menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(Ui.Item(L.T("刪除"), () => { host.Controller.DeleteTerm(id); Show(); }, icon: Symbol.Delete));
+            menu.Items.Add(Ui.DangerItem(L.T("刪除"), () => { host.Controller.DeleteTerm(id); Show(); }));
             row.ContextFlyout = menu;
             row.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);   // 整列的空白處也能右鍵
             glossaryList.Children.Add(row);
@@ -861,9 +861,9 @@ public sealed class SettingsWindow : Window
             var row = Ui.Bar(null, Ui.Column(2, Ui.Text(label, 14), Ui.Caption(detail)),
                 Ui.Row(8, rename, Ui.IconButton(Symbol.Delete, L.F("移除「%@」（會議裡的名字留著）", person.Name), () => _ = Remove())));
             var menu = new MenuFlyout();
-            menu.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Rename(), icon: Symbol.Rename));
+            menu.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Rename(), icon: Symbol.Edit));
             menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(Ui.Item(L.T("移除這個人…"), () => _ = Remove(), icon: Symbol.Delete));
+            menu.Items.Add(Ui.DangerItem(L.T("移除這個人…"), () => _ = Remove(), icon: null, glyph: Ui.RemovePersonGlyph));
             row.ContextFlyout = menu;
             column.Children.Add(row);
         }

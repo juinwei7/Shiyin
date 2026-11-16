@@ -511,7 +511,7 @@ public sealed class TranscriptTab
             if (d.Segments.FirstOrDefault(s => s.Kind == "final")?.Id != id)
                 menu.Items.Add(Ui.Item(L.T("從這裡分成兩場…"), () => _ = window.ConfirmSplitMeeting(meeting, segment)));
             // 刪除這句（R89、M§63）：不用確認，可以復原（D171）；沒辨識說話者的會議也有
-            menu.Items.Add(Ui.Item(L.T("刪除這句"), () => host.Controller.DeleteSegment(meeting, id), icon: Symbol.Delete));
+            menu.Items.Add(Ui.DangerItem(L.T("刪除這句"), () => host.Controller.DeleteSegment(meeting, id)));
             // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
             if (d.SpeakerUndoLabel is { } label)
                 menu.Items.Add(Ui.Item(L.F("復原：%@", label), () => host.Controller.UndoSpeakerEdit(meeting), icon: Symbol.Undo));

@@ -152,7 +152,7 @@ public sealed class PersonPage(AppHost host, MainWindow window)
             {
                 window.State.SelectPerson(person.Id);
                 RequestRename(person.Id);
-            }, icon: Symbol.Rename),
+            }, icon: Symbol.Edit),
         };
         var others = window.State.People.Where(p => p.Id != person.Id).ToList();
         if (others.Count > 0)
@@ -168,7 +168,7 @@ public sealed class PersonPage(AppHost host, MainWindow window)
             items.Add(merge);
         }
         items.Add(new MenuFlyoutSeparator());
-        items.Add(Ui.Item(L.T("移除這個人…"), () => _ = window.ConfirmRemovePerson(person.Id), icon: Symbol.Delete));
+        items.Add(Ui.DangerItem(L.T("移除這個人…"), () => _ = window.ConfirmRemovePerson(person.Id), icon: null, glyph: Ui.RemovePersonGlyph));
         return items;
     }
 
@@ -337,7 +337,7 @@ public sealed class PersonPage(AppHost host, MainWindow window)
             AutomationProperties.SetName(button, string.Join(MeetingLanguages.Ui("，", ", "), entry.Meeting.MeetingDate, entry.Meeting.DisplayTitle, Spoke(entry.Seconds)));
             var id = entry.Id;
             button.Click += (_, _) => Open(id, null);
-            list.Children.Add(MeetingLinkRow(button, menu => menu.Items.Add(Ui.Item(L.T("打開這場會議"), () => Open(id, null)))));
+            list.Children.Add(MeetingLinkRow(button, menu => menu.Items.Add(Ui.Item(L.T("打開這場會議"), () => Open(id, null), glyph: Ui.OpenGlyph))));
         }
         return list;
     }
