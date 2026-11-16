@@ -946,6 +946,21 @@ public sealed class AppController
         Runner.Wake();
     }
 
+    /// <summary>「人物」的「產生每個人的重點」（R92、M§66）：只補上這一段，摘要、決議、待辦這些段落不動</summary>
+    public void GeneratePeopleNotes(long id)
+    {
+        if (!ReadyForAction(id)) return;
+        if (Settings.Provider == LLMProvider.None)
+        {
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
+            return;
+        }
+        if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
+        Perform(id, () => Db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload(People: true))));
+        Runner.Wake();
+    }
+
     // MARK: 參考文件（R61，M§39.4）
 
     /// <summary>拖進主視窗的文件：加到選取中的會議（R61.1）</summary>

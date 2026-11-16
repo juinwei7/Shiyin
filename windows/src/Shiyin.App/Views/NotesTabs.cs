@@ -127,25 +127,60 @@ public sealed class NotesTabs
     }
 
     /// <summary>
-    /// 每個人的重點（R92、design-windows §11.25，同 Mac）：每個人一組，頭像＋名字，下面是重點（時間點、待確認的標記同其他段落）。
-    /// 頭像的顏色跟逐字稿的說話者一樣，對不到說話者時照名字算（同人物頁）；沒有重點的人不顯示
+    /// 人物（R92、M§66、design-windows §11.25，同 Mac 的 PeopleNotes）：每位說話者一張，頭像、名字、說了多久，重點（時間點、待確認的標記）、
+    /// 負責的待辦。這場的紀錄還沒有每個人的重點時說明原因；有兩位以上說話者時可以只補上這一段（其他段落不動）
     /// </summary>
-    UIElement People(List<MeetingNotes.Person> people, MeetingLanguage language, MeetingDetail detail)
+    FrameworkElement PeopleNotes(MeetingDetail detail, MeetingNotes notes, MeetingLanguage language)
     {
-        var panel = new StackPanel { Spacing = 18 };
-        for (var p = 0; p < people.Count; p++)
+        if (!notes.People.Any(p => p.Points.Count > 0))
         {
-            var person = people[p];
-            if (person.Points.Count == 0) continue;
-            var index = p;
-            var speaker = detail.SpeakerIdx(person.Name);
-            var avatar = Ui.Avatar(person.Name, speaker is int idx ? Ui.Speaker(idx) : Ui.Person(person.Name), Ui.C(22), speaker is not null && speaker == detail.SelfIdx);
-            var name = Ui.Heading(person.Name, language, Ui.C(16));
-            avatar.VerticalAlignment = VerticalAlignment.Center;
-            name.VerticalAlignment = VerticalAlignment.Center;
-            panel.Children.Add(Ui.Column(8, Ui.Split(avatar, name, 8), Items(person.Points, language, detail, i => NoteItemRef.Person(index, i))));
+            var panel = Ui.Column(12);
+            panel.Margin = new Thickness(0, 10, 0, 0);
+            if (detail.Speakers.Count < 2)
+                panel.Children.Add(Ui.Text(L.T("這場會議只有一位說話者（或沒有辨識說話者），沒有依人物整理的重點。"), Ui.C(14), color: Ui.Secondary));
+            else
+            {
+                panel.Children.Add(Ui.Text(L.T("這場的會議紀錄還沒有每個人的重點。"), Ui.C(14), color: Ui.Secondary));
+                var title = L.T("產生每個人的重點");
+                var button = new Button { Content = Ui.Row(8, new SymbolIcon(Symbol.People), Ui.Text(title, wrap: false)), HorizontalAlignment = HorizontalAlignment.Left };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, title);
+                ToolTipService.SetToolTip(button, L.T("用整理工具依說話者整理每個人的重點；摘要、決議、待辦這些段落不會變"));
+                button.IsEnabled = window.State.DetailStatus?.IsActive != true;
+                var id = detail.Meeting.Id!.Value;
+                button.Click += (_, _) => host.Controller.GeneratePeopleNotes(id);
+                panel.Children.Add(button);
+            }
+            return panel;
         }
-        return panel;
+        var cards = new StackPanel { Spacing = 30, Margin = new Thickness(0, 10, 0, 0) };
+        foreach (var card in detail.PeopleCards(notes)) cards.Children.Add(PersonCard(card, language, detail));
+        return cards;
+    }
+
+    /// <summary>
+    /// 一個人：頭像（顏色跟逐字稿的說話者一樣，對不到說話者時照名字算，同人物頁；「我」有外圈）、名字、「說了 N 分鐘（P%）」，
+    /// 下面是重點，再下面是負責的待辦（「事項（期限 日期）」，待確認的標記連到原本的待辦）
+    /// </summary>
+    FrameworkElement PersonCard(MeetingDetail.PersonCard card, MeetingLanguage language, MeetingDetail detail)
+    {
+        var name = card.Person.Name;
+        var avatar = Ui.Avatar(name, card.Speaker is int idx ? Ui.Speaker(idx) : Ui.Person(name), Ui.C(30), card.Speaker is not null && card.Speaker == detail.SelfIdx);
+        avatar.VerticalAlignment = VerticalAlignment.Center;
+        var spoke = card.Seconds is int seconds
+            ? Ui.Text(L.F("說了 %@（%lld%%）", L.Ui(TimeFormat.Duration(seconds, MeetingLanguages.Interface)), card.Percent ?? 0), Ui.C(12), color: Ui.Secondary)
+            : null;
+        var info = Ui.Column(2, Ui.Heading(name, language, Ui.C(18)), spoke);
+        info.VerticalAlignment = VerticalAlignment.Center;
+        var column = Ui.Column(10, Ui.Split(avatar, info, 10), Items(card.Person.Points, language, detail, i => NoteItemRef.Person(card.Index, i)));
+        if (card.Owned.Count > 0)
+        {
+            var label = Ui.Text(L.T("負責的待辦"), Ui.C(13), color: Ui.Secondary);
+            label.Margin = new Thickness(0, 4, 0, 0);
+            column.Children.Add(label);
+            var items = card.Owned.Select(o => new MeetingNotes.Item(o.Item.Due.Length == 0 ? o.Item.Task : L.F("%@（期限 %@）", o.Item.Task, o.Item.Due), o.Item.Time));
+            column.Children.Add(Items(items, language, detail, i => NoteItemRef.ActionItems(card.Owned[i].Index)));
+        }
+        return column;
     }
 
     /// <summary>沒有會議紀錄時的說明與動作</summary>
@@ -183,21 +218,21 @@ public sealed class NotesTabs
         return panel;
     }
 
-    /// <summary>右上角的「編輯」；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）；左邊是「條列｜心智圖」（R67）</summary>
+    /// <summary>右上角的「編輯」；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）；左邊是「條列｜心智圖｜人物」（R67、R92）</summary>
     FrameworkElement EditBar(MeetingDetail detail)
     {
         var busy = window.State.DetailStatus?.IsActive == true;
         var row = Ui.Row(8);
         row.HorizontalAlignment = HorizontalAlignment.Right;
         var mode = new SelectorBar();
-        foreach (var (code, label) in new[] { ("list", L.T("條列")), ("mindMap", L.T("心智圖")) })
+        foreach (var (code, label) in new[] { ("list", L.T("條列")), ("mindMap", L.T("心智圖")), ("people", L.T("人物")) })
         {
             var item = new SelectorBarItem { Text = label, Tag = code };
             mode.Items.Add(item);
             if (code == host.Settings.NotesView) mode.SelectedItem = item;
         }
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(mode, L.T("顯示方式"));
-        ToolTipService.SetToolTip(mode, L.T("把會議紀錄切換成條列或心智圖"));
+        ToolTipService.SetToolTip(mode, L.T("把會議紀錄切換成條列、心智圖或依人物整理"));
         mode.SelectionChanged += (_, _) =>
         {
             if (mode.SelectedItem?.Tag is not string code || code == host.Settings.NotesView) return;
@@ -231,7 +266,8 @@ public sealed class NotesTabs
         return bar;
     }
 
-    /// <summary>紀錄（R44.1）：摘要、每個人的重點、決議、待辦、未決問題、議題、自訂段落由上而下一頁；有待確認時頂部一條可以展開（R44.2）</summary>
+    /// <summary>紀錄（R44.1）：摘要、決議、待辦、未決問題、議題、自訂段落由上而下一頁；有待確認時頂部一條可以展開（R44.2）。
+    /// 也可以切換成心智圖（R67）、人物（R92：條列、心智圖不變，依人整理的另外一頁）</summary>
     public FrameworkElement Page(MeetingDetail detail, ReviewTab review)
     {
         if (editor is { } e && e.MeetingId == detail.Meeting.Id)
@@ -248,8 +284,12 @@ public sealed class NotesTabs
         column.Children.Add(EditBar(detail));
         if (host.Settings.NotesView == "mindMap") return MindMapPage(detail, notes, column);
         ResetMindMapZoom();
+        if (host.Settings.NotesView == "people")
+        {
+            column.Children.Add(PeopleNotes(detail, notes, language));
+            return Reading(column);
+        }
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
-        if (notes.People.Any(p => p.Points.Count > 0)) column.Children.Add(Section(L.T("每個人的重點"), language, People(notes.People, language, detail)));
         if (notes.Decisions.Count > 0) column.Children.Add(Section(L.T("決議"), language, Items(notes.Decisions, language, detail, NoteItemRef.Decisions)));
         if (notes.ActionItems.Count > 0) column.Children.Add(Section(L.T("待辦"), language, ActionItems(notes.ActionItems, language, detail)));
         if (notes.OpenQuestions.Count > 0) column.Children.Add(Section(L.T("未決問題"), language, Items(notes.OpenQuestions, language, detail, NoteItemRef.OpenQuestions)));
@@ -382,6 +422,8 @@ public sealed class NotesEditor
     public long MeetingId { get; }
     readonly MeetingLanguage language;
     readonly StackPanel body = new() { Spacing = 22 };
+    /// <summary>打開時有每個人的重點才顯示那一段（刪光了也留著，可以再新增；R92.5、M§66）</summary>
+    readonly bool showsPeople;
     MeetingNotes notes;
     public event Action<bool>? Finished;
 
@@ -393,6 +435,7 @@ public sealed class NotesEditor
         this.notes = Copy(notes);
         MeetingId = meetingId;
         this.language = language;
+        showsPeople = notes.People.Count > 0;
         Root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         Root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var bar = Ui.Bar(Ui.Text(L.T("編輯會議紀錄"), 15, bold: true), null,
@@ -419,12 +462,13 @@ public sealed class NotesEditor
         titleBox.TextChanged += (_, _) => notes = notes with { Title = titleBox.Text };
         body.Children.Add(titleBox);
         body.Children.Add(Section(L.T("摘要"), ItemsEditor(notes.Summary)));
-        body.Children.Add(Section(L.T("每個人的重點"), PeopleEditor()));
         body.Children.Add(Section(L.T("決議"), ItemsEditor(notes.Decisions)));
         body.Children.Add(Section(L.T("待辦"), ActionsEditor(notes.ActionItems)));
         body.Children.Add(Section(L.T("未決問題"), ItemsEditor(notes.OpenQuestions)));
         body.Children.Add(Section(L.T("議題"), TopicsEditor()));
         foreach (var section in notes.Custom) body.Children.Add(Section(section.Title, ItemsEditor(section.Items)));
+        // 每個人的重點（「人物」顯示的那一段）：有這一段時才出現，放在自訂段落後面（原本的編輯器不變）
+        if (showsPeople) body.Children.Add(Section(L.T("每個人的重點"), PeopleEditor()));
         if (notes.ReviewItems.Count > 0)
         {
             var list = Ui.Column(6);

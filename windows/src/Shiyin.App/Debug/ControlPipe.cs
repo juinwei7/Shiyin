@@ -70,10 +70,14 @@ public static class ControlPipe
             case "tools" when args.Length > 1 && args[1] == "refresh": host.Locator.ClearCache(); return Ok;
             case "select" when args.Length > 1 && long.TryParse(args[1], out var id): main?.Reveal(id); return Ok;
             // tab <summary|transcript|ask>；舊名稱當別名：topics → 紀錄、review → 紀錄並展開待確認、notes → 逐字稿並展開我的筆記（R44.1）
-            // notesview list|mindmap：紀錄分頁切換成條列或心智圖（M§42.5；寫進測試家目錄的 settings.json）
+            // notesview list|mindmap|people：紀錄分頁切換成條列、心智圖或人物（M§42.5、M§66；寫進測試家目錄的 settings.json）
             case "notesview" when args.Length > 1:
-                host.Settings.Set(AppSettings.NotesViewKey, args[1].Equals("mindmap", StringComparison.OrdinalIgnoreCase) ? "mindMap" : "list");
+                host.Settings.Set(AppSettings.NotesViewKey, args[1].ToLowerInvariant() switch { "mindmap" => "mindMap", "people" => "people", _ => "list" });
                 main?.Refresh();
+                return Ok;
+            // peoplenotes <會議 id>：等於按「人物」的「產生每個人的重點」（M§66、design-windows §11.25）
+            case "peoplenotes" when args.Length > 1 && long.TryParse(args[1], out var peopleMeeting):
+                host.Controller.GeneratePeopleNotes(peopleMeeting);
                 return Ok;
             // seek <秒> [play]、toggle：播放（同 Mac）
             case "seek" when args.Length > 1 && double.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out var seekTo):
@@ -438,6 +442,13 @@ public static class ControlPipe
             ["tab"] = main?.State.Tab.ToString().ToLowerInvariant(),
             ["reviewExpanded"] = main?.State.ReviewExpanded,
             ["notesView"] = host.Settings.NotesView,
+            // 「人物」（M§66、design-windows §11.25）：選取中的會議每一張的名字、對到的說話者、說了幾秒和百分比、重點幾條、負責的待辦（原本的位置）
+            ["peopleCards"] = new JsonArray([.. (main?.State.Detail is { Notes: { } peopleNotes } peopleDetail ? peopleDetail.PeopleCards(peopleNotes) : [])
+                .Select(c => (JsonNode)new JsonObject
+                {
+                    ["index"] = c.Index, ["name"] = c.Person.Name, ["speaker"] = c.Speaker, ["seconds"] = c.Seconds, ["percent"] = c.Percent,
+                    ["points"] = c.Person.Points.Count, ["owned"] = new JsonArray([.. c.Owned.Select(o => (JsonNode)o.Index)]),
+                })]),
             // 心智圖的縮放（R91、design-windows §11.24）：使用者選的倍數（null 是預設）、畫面上用的倍數（不含文字大小）
             ["mindMapZoom"] = main?.MindMapZoom.Value,
             ["mindMapScale"] = main?.MindMapZoom.Scale,

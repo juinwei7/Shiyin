@@ -15,7 +15,7 @@ public static class MindMap
     public sealed record Node(string Text, string Time, List<Node> Children);
 
     /// <summary>段落名稱和標點：畫面上用介面語言（同條列），匯出用會議語言（同 ExportText）</summary>
-    public sealed record Labels(string Summary, string People, string Decisions, string ActionItems, string OpenQuestions, string Topics,
+    public sealed record Labels(string Summary, string Decisions, string ActionItems, string OpenQuestions, string Topics,
                                 string Untitled, string Colon, Func<string, string> Paren)
     {
         /// <summary>script：中文會議用簡體時轉成簡體（同匯出）、簡體介面時轉（畫面上，M§48.2）</summary>
@@ -23,7 +23,7 @@ public static class MindMap
         {
             var x = new ExportText(language);
             var s = script ?? (t => t);
-            return new Labels(s(x.Section("summary")), s(x.Section("people")), s(x.Section("decisions")), s(x.Section("actionItems")), s(x.Section("openQuestions")),
+            return new Labels(s(x.Section("summary")), s(x.Section("decisions")), s(x.Section("actionItems")), s(x.Section("openQuestions")),
                 s(TopicLabel(language)), s(language.Text("會議", "Meeting", "会議")), x.Colon, t => s(x.Paren(t)));  // l10n-skip：會議語言的文字
         }
     }
@@ -59,19 +59,6 @@ public static class MindMap
                 branches.Add(new Node(name.Length == 0 ? labels.Topics : name, Clean(topic.Start), Leaves(topic.Points)));
             }
         }
-        // 每個人的重點（R92、M§66）：葉子是「名字：重點」，同待辦的「負責人：事項」
-        var people = new List<Node>();
-        foreach (var person in notes.People)
-        {
-            var name = Clean(person.Name);
-            foreach (var point in person.Points)
-            {
-                var text = Clean(point.Text);
-                if (text.Length == 0) continue;
-                people.Add(new Node(name.Length == 0 ? text : name + labels.Colon + text, Clean(point.Time), []));
-            }
-        }
-        if (people.Count > 0) branches.Add(new Node(labels.People, "", people));
         var decisions = Leaves(notes.Decisions);
         if (decisions.Count > 0) branches.Add(new Node(labels.Decisions, "", decisions));
         var actions = new List<Node>();
