@@ -389,6 +389,79 @@ public sealed class AppTests : IDisposable
         Assert.Equal(["Redis", "K8s"], db.Glossary().Select(t => t.Term));
     }
 
+    /// <summary>
+    /// 建議加入定期會議（R99.3、M§73）：每週一 10:00 的系列，週一只認出一位系列的人 → 建議（文字、共同的人）；
+    /// 同一群人（會自動加入）、星期幾不對、沒有人物、錄這場、垃圾桶、已經在系列裡都不建議。
+    /// 「不是」記進 series_rejected 的 join|會議|系列、之後不再建議；「加進去」設成那個系列
+    /// </summary>
+    [Fact]
+    public void SeriesJoinSuggestionAcceptAndDismiss()
+    {
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var taipei = TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei");
+        string[] names = ["陳家豪", "王小明", "Amy", "Bob", "訪客"];
+        var people = new long[names.Length];
+        db.Write(d =>
+        {
+            for (var i = 0; i < names.Length; i++)
+            {
+                d.Execute("INSERT INTO people (name, created_at) VALUES (?, ?)", names[i], Clock.Now());
+                people[i] = d.LastInsertRowId;
+            }
+        });
+        // 10:00 台北 = 02:00Z；2026-11-02、09、16 是週一
+        long Add(string date, string createdAt, params int[] attended)
+        {
+            var id = db.InsertMeeting(new Meeting { Title = "會議", MeetingDate = date, Source = "recording", CreatedAt = createdAt, SourceFilename = "x.wav" }, null).Id!.Value;
+            db.Write(d =>
+            {
+                for (var i = 0; i < attended.Length; i++)
+                    d.Execute("INSERT INTO speakers (meeting_id, idx, name, name_source, person_id) VALUES (?, ?, ?, 'voiceprint', ?)",
+                        id, i + 1, names[attended[i]], people[attended[i]]);
+            });
+            return id;
+        }
+        var a = Add("2026-11-02", "2026-11-02T02:00:00Z", 0, 1, 2, 3);
+        var b = Add("2026-11-09", "2026-11-09T02:05:00Z", 0, 1, 2);
+        var onlyOne = Add("2026-11-16", "2026-11-16T02:10:00Z", 0);
+        var withGuest = Add("2026-11-16", "2026-11-16T02:30:00Z", 1, 4);
+        var samePeople = Add("2026-11-16", "2026-11-16T02:00:00Z", 0, 1, 2);
+        var tuesday = Add("2026-11-17", "2026-11-17T02:00:00Z", 0);
+        var nobody = Add("2026-11-16", "2026-11-16T02:00:00Z");
+        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [.. people[..4]] }, [a, b]);
+        var sid = series.Id!.Value;
+
+        SeriesJoinSuggestion? Suggest(long id, long? recording = null, Action<Meeting>? change = null)
+        {
+            var meeting = db.Meeting(id)!;
+            change?.Invoke(meeting);
+            return Organizing.JoinSuggestion(meeting, db.MeetingRows(), db.MeetingPeople(), db.Series(), db.RejectedSeriesKeys(), recording, taipei);
+        }
+        var s = Suggest(onlyOne);
+        Assert.Equal(sid, s?.Series.Id);
+        Assert.Equal([people[0]], s!.Shared);
+        Assert.Equal("這場可能是定期會議「產品週會」的一場：週一、陳家豪 有參加", Organizing.JoinSuggestionText(s, db.PeopleOverview()));
+        Assert.Equal([people[1]], Suggest(withGuest)?.Shared);
+        Assert.Null(Suggest(samePeople));
+        Assert.Equal(sid, db.AutoJoinSeries(samePeople, taipei)?.Id);
+        Assert.Null(Suggest(tuesday));
+        Assert.Null(Suggest(nobody));
+        Assert.Null(Suggest(onlyOne, recording: onlyOne));
+        Assert.Null(Suggest(onlyOne, change: m => m.DeletedAt = Clock.Now()));
+        Assert.Null(Suggest(a));
+        // 自動加入的那場（11/16）是系列的最近一場：同一天的不再符合「相隔 1～35 天」
+        db.SetSeries([samePeople], null);
+
+        controller.DismissSeriesJoin(withGuest, sid);
+        Assert.Contains($"join|{withGuest}|{sid}", db.RejectedSeriesKeys());
+        Assert.Null(Suggest(withGuest));
+        Assert.NotNull(Suggest(onlyOne));
+
+        controller.AcceptSeriesJoin(onlyOne, sid);
+        Assert.Equal(sid, db.Meeting(onlyOne)!.SeriesId);
+        Assert.Null(Suggest(onlyOne));
+    }
+
     /// <summary>「人物」的「產生每個人的重點」（R92.4、M§66）：排 summarize，payload 只多 people；沒設整理工具時不排、說原因。草稿的 payload 跟以前一字不差</summary>
     [Fact]
     public void GeneratePeopleNotesQueuesPeopleOnlySummarize()

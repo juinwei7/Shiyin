@@ -154,6 +154,25 @@ public static partial class ControlPipe
                 state.Reload();
                 return Ok;
             }
+            // seriessuggest <會議 id>：紀錄分頁頂端建議加入的定期會議（R99.3；沒有時 series 是 -1、text 是空字串）
+            case "seriessuggest" when Id(1) is long joinSuggestId && state is not null:
+            {
+                var s = host.Db.Meeting(joinSuggestId) is { } meeting ? state.SeriesJoinSuggestion(meeting) : null;
+                return new JsonObject
+                {
+                    ["series"] = s?.Series.Id ?? -1, ["shared"] = new JsonArray([.. (s?.Shared ?? []).Select(p => (JsonNode)p)]),
+                    ["text"] = s is null ? "" : Organizing.JoinSuggestionText(s, state.People),
+                };
+            }
+            // seriessuggestion accept|dismiss <會議 id>：等於按「加進去」「不是」
+            case "seriessuggestion" when args.Length > 2 && Id(2) is long suggestedId && state is not null:
+            {
+                if (host.Db.Meeting(suggestedId) is not { } meeting || state.SeriesJoinSuggestion(meeting) is not { } s) return new JsonObject { ["error"] = "no suggestion" };
+                if (args[1] == "accept") host.Controller.AcceptSeriesJoin(suggestedId, s.Series.Id!.Value);
+                else if (args[1] == "dismiss") host.Controller.DismissSeriesJoin(suggestedId, s.Series.Id!.Value);
+                state.Reload();
+                return Ok;
+            }
             // seriescandidates：可能的定期會議
             case "seriescandidates" when state is not null:
                 return new JsonObject
