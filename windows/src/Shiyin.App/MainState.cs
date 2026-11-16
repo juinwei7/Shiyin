@@ -35,7 +35,19 @@ public sealed class MainState
     /// <summary>逐字稿頂部「我的筆記」有沒有展開（R44.3）；換會議就收起</summary>
     public bool UserNotesExpanded { get; set; }
     public bool ShowTrash { get; private set; }
+    /// <summary>側欄目前只看的資料夾；null 是所有會議（R9.2）。跟定期會議互斥</summary>
     public string? FolderFilter { get; private set; }
+    /// <summary>側欄只看哪一個定期會議（R99.3、M§73）；還沒選會議時右邊是系列頁。跟資料夾互斥</summary>
+    public long? SeriesFilter { get; private set; }
+    /// <summary>會議列表的篩選（R97.3、M§71）：只放記憶體，打開拾音時是空的</summary>
+    public MeetingFilter Filter { get; private set; } = new();
+    /// <summary>每場會議連到哪些人物（「有誰參加」篩選、資料夾的條件和建議、定期會議）</summary>
+    public Dictionary<long, HashSet<long>> MeetingPeople { get; private set; } = [];
+    /// <summary>資料夾的自動加入條件（R98、M§72）</summary>
+    public List<FolderRule> FolderRules { get; private set; } = [];
+    /// <summary>定期會議、可能的定期會議（R99、M§73）：每次讀列表時算</summary>
+    public List<MeetingSeries> Series { get; private set; } = [];
+    public List<SeriesCandidate> SeriesCandidates { get; private set; } = [];
     public string SearchQuery { get; private set; } = "";
     public List<SearchHit> SearchResults { get; private set; } = [];
     public bool SearchActive => SearchQuery.Trim().Length > 0;
@@ -126,11 +138,16 @@ public sealed class MainState
             Glossary = host.Db.Glossary();
             // 公司已經有的詞不再建議（R53.3）
             GlossarySuggestions = [.. host.Db.GlossarySuggestions().Where(s => !host.Enterprise.Glossary.Contains(s.Term))];
+            MeetingPeople = host.Db.MeetingPeople();
+            FolderRules = host.Db.FolderRules();
+            Series = host.Db.Series();
+            SeriesCandidates = SeriesDetector.Candidates(Organizing.SeriesInputs(Meetings, MeetingPeople), host.Db.RejectedSeriesKeys());
         }
         catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"reload failed: {e.SqliteErrorCode}"); }
         if (Selection is long id && !Meetings.Any(m => m.Id == id) && !Trash.Any(m => m.Id == id)) Selection = null;
-        // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議
-        if (FolderFilter is { } folder && !Meetings.Any(m => m.Meeting.Folder == folder)) FolderFilter = null;
+        // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議；有自動加入條件的資料夾沒有會議也留著（M§72）
+        if (FolderFilter is { } folder && !Meetings.Any(m => m.Meeting.Folder == folder) && !FolderRules.Any(r => r.Folder == folder)) FolderFilter = null;
+        if (SeriesFilter is long series && !Series.Any(s => s.Id == series)) SeriesFilter = null;
         // 多選裡已經不在列表的（移到垃圾桶、永久刪除、還原之後）拿掉，剩不到兩場就清掉（M§62）
         if (multiSelection.Count > 0)
         {
@@ -148,6 +165,8 @@ public sealed class MainState
         try { People = host.Db.PeopleOverview(); }
         catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"people reload failed: {e.SqliteErrorCode}"); }
         if (SelectedPerson is long p && !People.Any(x => x.Id == p)) SelectedPerson = null;
+        // 篩選的人不在了（合併、刪除）就不篩這一項
+        if (Filter.PersonId is long filtered && !People.Any(x => x.Id == filtered)) Filter = Filter with { PersonId = null };
     }
 
     /// <summary>側欄的「會議｜人物」（M§60.2）</summary>
@@ -192,14 +211,69 @@ public sealed class MainState
         }
     }
 
-    public List<MeetingRow> FilteredMeetings
+    /// <summary>列表上的會議（R97、M§71）：資料夾或定期會議、篩選（垃圾桶不篩選）、排序</summary>
+    public List<MeetingRow> FilteredMeetings =>
+        MeetingList.Filtered(ShowTrash ? Trash : Meetings, ShowTrash, FolderFilter, SeriesFilter, Filter, Sort, MeetingPeople, MyName);
+
+    /// <summary>列表的排序、分組（R97.2）：記在 settings.json</summary>
+    public MeetingSort Sort => host.Settings.MeetingSort;
+    public MeetingGrouping Grouping => host.Settings.MeetingGrouping;
+
+    /// <summary>實際用的分組：看某個資料夾時不依資料夾分組；垃圾桶、搜尋不分組</summary>
+    public MeetingGrouping EffectiveGrouping => ShowTrash ? MeetingGrouping.None : MeetingList.Effective(Grouping, FolderFilter);
+
+    /// <summary>分組後的列表（不分組時一段、標題是空的）</summary>
+    public List<MeetingGroup> Groups => MeetingList.Groups(FilteredMeetings, EffectiveGrouping, Sort, ShowTrash);
+
+    /// <summary>「我」的名字（R80）：「有我的待辦的」用；沒有設定「我」是 null</summary>
+    public string? MyName => MeetingList.MyName(People);
+
+    /// <summary>篩選的說明（列表上方那一列）</summary>
+    public string FilterSummary => MeetingList.FilterSummary(Filter, People, Templates);
+
+    public MeetingSeries? SeriesById(long? id) => id is long x ? Series.FirstOrDefault(s => s.Id == x) : null;
+
+    public int SeriesCount(long id) => Meetings.Count(m => m.Meeting.SeriesId == id);
+
+    public FolderRule? RuleFor(string folder) => FolderRules.FirstOrDefault(r => r.Folder == folder);
+
+    public void SetSort(MeetingSort sort)
     {
-        get
+        if (Sort == sort) return;
+        host.Settings.Set(AppSettings.MeetingSortKey, sort.Code());
+        Changed?.Invoke();
+    }
+
+    public void SetGrouping(MeetingGrouping grouping)
+    {
+        if (Grouping == grouping) return;
+        host.Settings.Set(AppSettings.MeetingGroupingKey, grouping.Code());
+        Changed?.Invoke();
+    }
+
+    /// <summary>換篩選時取消多選（M§71）</summary>
+    public void SetFilter(MeetingFilter filter)
+    {
+        if (Filter == filter) return;
+        Filter = filter;
+        multiSelection.Clear();
+        Changed?.Invoke();
+    }
+
+    /// <summary>側欄點了定期會議（M§73）：回到會議模式、只看它的會議，右邊是系列頁</summary>
+    public void ShowSeries(long? id)
+    {
+        multiSelection.Clear();
+        Sidebar = SidebarMode.Meetings;
+        if (id is not null)
         {
-            var source = ShowTrash ? Trash : Meetings;
-            if (!ShowTrash && FolderFilter is { } folder) source = source.Where(m => m.Meeting.Folder == folder).ToList();
-            return source;
+            ShowTrash = false;
+            FolderFilter = null;
+            Selection = null;
+            ReloadDetail();
         }
+        SeriesFilter = id;
+        Changed?.Invoke();
     }
 
     /// <summary>新會議要放進的資料夾：正在看某個資料夾時就放那裡</summary>
@@ -261,6 +335,7 @@ public sealed class MainState
         Sidebar = SidebarMode.Meetings;
         ShowTrash = false;
         FolderFilter = null;
+        SeriesFilter = null;
         Selection = null;
         multiSelection.Clear();
         var restored = ids.Where(id => Meetings.Any(m => m.Id == id)).ToList();
@@ -292,15 +367,17 @@ public sealed class MainState
     {
         if (FolderFilter != folder) multiSelection.Clear();
         FolderFilter = folder;
+        if (folder is not null) SeriesFilter = null;
         Changed?.Invoke();
     }
 
-    /// <summary>側欄點「所有會議」或資料夾（M§60.2）：回到會議模式、只看那個資料夾，畫面重畫一次</summary>
+    /// <summary>側欄點「所有會議」或資料夾（M§60.2）：回到會議模式、只看那個資料夾（不看定期會議），畫面重畫一次</summary>
     public void ShowMeetings(string? folder)
     {
-        if (FolderFilter != folder) multiSelection.Clear();
+        if (FolderFilter != folder || SeriesFilter is not null) multiSelection.Clear();
         Sidebar = SidebarMode.Meetings;
         FolderFilter = folder;
+        SeriesFilter = null;
         Changed?.Invoke();
     }
 

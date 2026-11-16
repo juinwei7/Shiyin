@@ -75,6 +75,8 @@ public sealed class JobRunner
     public event Action<long, int?, Exception?>? Rediarized;
     /// <summary>企業伺服器連不上太久，自動改在這台電腦轉錄了（R93、M§67）：App 發通知</summary>
     public event Action<long>? ServerFallback;
+    /// <summary>自動放進資料夾、加入定期會議了（M§72、§73）：會議 id、資料夾、定期會議；App 提示「「X」已放進「Y」」</summary>
+    public event Action<long, string?, MeetingSeries?>? Organized;
 
     /// <summary>匿名使用統計（design-windows §12.10）；沒給（測試）就不累計</summary>
     public UsageStats? Usage { get; init; }
@@ -435,6 +437,10 @@ public sealed class JobRunner
             var matched = db.MatchVoiceprints(job.MeetingId);
             if (matched > 0) Log.Info($"voiceprints matched {matched} speakers");
         }
+        // 說話者對到人物之後：加入定期會議（整理時才接得上上一場）、照資料夾的條件放（M§72、§73）
+        var joined = db.AutoJoinSeries(job.MeetingId);
+        var filed = db.AutoFile(job.MeetingId);
+        if (joined is not null || filed is not null) Organized?.Invoke(job.MeetingId, filed, joined);
         if (settings.CompressAudio && Importer.Extension(meeting.AudioFile) == "wav") db.Enqueue(job.MeetingId, JobKind.Compress);
         // 校正在輔助線、整理在整理線，兩個同時開始（M§21.2、R20.1）。
         // 整理工具還沒準備好（沒登入、沒有 key…）就都不排，不會「整理失敗」（R45.4、M§34.2）
@@ -756,7 +762,8 @@ public sealed class JobRunner
         }
         var context = new NotesContext(meeting, segments, db.Speakers(job.MeetingId).ToDictionary(s => s.Idx, s => s.Name),
             db.Bookmarks(job.MeetingId), GlossaryTerms(), definition,
-            db.Documents(job.MeetingId).Select(DocumentText.From).ToList());
+            db.Documents(job.MeetingId).Select(DocumentText.From).ToList(),
+            db.PreviousSeriesMeeting(meeting) is { } previousMeeting ? PreviousMeeting.Of(previousMeeting) : null);
         string prompt;
         if (answers is not null)
         {
@@ -766,6 +773,8 @@ public sealed class JobRunner
         else prompt = NotesPrompt.Summarize(context);
         var notes = await llm.Generate(provider, settings.Model, NotesPrompt.System(meeting.MeetingLanguage, context.Documents is { Count: > 0 }), prompt, cancel);
         if (!IsStillRunning(job)) return false;
+        // 上次的待辦（M§73）：沒給上一場時清空，對不到給的待辦的丟掉
+        notes = notes with { FollowUps = PreviousMeeting.ValidFollowUps(notes.FollowUps, context.Previous) };
         // 中文會議用簡體時，整理完才轉（提示詞照舊，M§47.2、D154）
         if (settings.SimplifiedChinese(meeting.MeetingLanguage)) notes = notes.Simplified();
         if (peopleOnly)
@@ -786,6 +795,8 @@ public sealed class JobRunner
         var replacedEdited = db.SaveNotes(job.MeetingId, notes, provider.Code(), answers is null ? L.T("重新整理") : L.T("校稿"),
             answers is null ? NotesSource.Generated : NotesSource.Revised);
         if (replacedEdited) EditedDraftReplaced?.Invoke(job.MeetingId);
+        // 整理完有標題了，照資料夾的條件放（M§72）
+        if (db.AutoFile(job.MeetingId) is { } folder) Organized?.Invoke(job.MeetingId, folder, null);
         return answers is not null || hadDraft == 0;
     }
 }

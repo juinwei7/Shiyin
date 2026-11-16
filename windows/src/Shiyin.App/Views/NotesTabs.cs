@@ -280,6 +280,9 @@ public sealed class NotesTabs
         var column = Column();
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
         if (host.Controller.DocumentsChanged.Contains(detail.Meeting.Id!.Value)) column.Children.Add(DocumentsBanner(detail.Meeting.Id!.Value));
+        // 這場很像某個資料夾裡的會議（R98.3、M§72）：待確認條的上面
+        if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId) is { } suggestion)
+            column.Children.Add(FolderSuggestionBanner(detail.Meeting.Id!.Value, suggestion));
         if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
         column.Children.Add(EditBar(detail));
         if (host.Settings.NotesView == "mindMap") return MindMapPage(detail, notes, column);
@@ -290,6 +293,8 @@ public sealed class NotesTabs
             return Reading(column);
         }
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
+        // 定期會議的上一場的待辦（R99.5、M§73）：只有 followUps 不是空的才有；心智圖不畫
+        if (notes.FollowUps.Count > 0) column.Children.Add(Section(L.T("上次的待辦"), language, FollowUps(notes.FollowUps, language)));
         if (notes.Decisions.Count > 0) column.Children.Add(Section(L.T("決議"), language, Items(notes.Decisions, language, detail, NoteItemRef.Decisions)));
         if (notes.ActionItems.Count > 0) column.Children.Add(Section(L.T("待辦"), language, ActionItems(notes.ActionItems, language, detail)));
         if (notes.OpenQuestions.Count > 0) column.Children.Add(Section(L.T("未決問題"), language, Items(notes.OpenQuestions, language, detail, NoteItemRef.OpenQuestions)));
@@ -337,6 +342,56 @@ public sealed class NotesTabs
         // Ctrl＋滾輪在整頁都能縮放、滑鼠在圖上時一般的滾輪捲整頁（design-windows §11.24）
         page.Children.Add(MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded, MindMapZoom, page: scroller));
         return scroller;
+    }
+
+    /// <summary>
+    /// 這場很像某個資料夾裡的會議（R98.3、同 Mac 的 FolderSuggestionBanner）：「這場很像「客戶」裡的會議：陳家豪、Bob 都參加（2 場）」，
+    /// 「不用」（之後不再建議這場）、「放進去」。提示列不跟著文字大小（R59.2），底色是淡淡的青瓷綠
+    /// </summary>
+    FrameworkElement FolderSuggestionBanner(long id, FolderSuggestion suggestion)
+    {
+        var text = Ui.Text(Organizing.SuggestionText(suggestion, window.State.People), 13, maxLines: 2);
+        var left = Ui.Split(new FontIcon { Glyph = "\uE8F4", FontSize = 15, Foreground = Ui.Celadon, VerticalAlignment = VerticalAlignment.Center }, text);
+        var right = Ui.Row(8, Ui.Button(L.T("不用"), () => host.Controller.DismissFolderSuggestion(id)),
+            Ui.Button(L.T("放進去"), () => host.Controller.AcceptFolderSuggestion(id, suggestion.Folder), accent: true));
+        left.VerticalAlignment = VerticalAlignment.Center;
+        right.VerticalAlignment = VerticalAlignment.Center;
+        var c = Ui.CeladonColor;
+        return new Border
+        {
+            Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8),
+            Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(Ui.IsDark ? (byte)36 : (byte)20, c.R, c.G, c.B)),
+        };
+    }
+
+    /// <summary>
+    /// 上次的待辦（R99.5、同 Mac 的 FollowUpsList）：每一條前面是狀態的圖示，後面事項、負責人（次要文字）、狀態（小字、狀態的顏色）、時間點。
+    /// 編輯器不能改這一段（重新整理會重算）
+    /// </summary>
+    UIElement FollowUps(List<MeetingNotes.FollowUp> followUps, MeetingLanguage language)
+    {
+        var panel = new StackPanel { Spacing = 9 };
+        foreach (var item in followUps)
+        {
+            var icon = FollowUpIcons.Icon(item.Status, Ui.C(15));
+            icon.VerticalAlignment = VerticalAlignment.Top;
+            icon.Margin = new Thickness(0, Ui.C(3), 0, 0);
+            var task = Ui.Text(item.Task, Ui.C(14), select: true);
+            task.Language = Ui.ContentLanguage(language);
+            var trailing = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            if (item.Owner.Length > 0)
+            {
+                var owner = Ui.Text(item.Owner, Ui.C(14), color: Ui.Secondary, wrap: false);
+                owner.Language = Ui.ContentLanguage(language);
+                trailing.Children.Add(owner);
+            }
+            var status = Ui.Text(FollowUpIcons.Label(item.Status), Ui.C(12), color: FollowUpIcons.Color(item.Status), wrap: false);
+            status.VerticalAlignment = VerticalAlignment.Center;
+            trailing.Children.Add(status);
+            if (item.Time.Length > 0) trailing.Children.Add(Ui.Time(item.Time, SeekIfLoaded, size: Ui.C(13)));
+            panel.Children.Add(Ui.Split(icon, Ui.Inline(task, trailing)));
+        }
+        return panel;
     }
 
     /// <summary>文件有變動（R61.8，同 Mac 的 DocumentsBanner）：不用、重新整理會議紀錄</summary>

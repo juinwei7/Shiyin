@@ -1985,6 +1985,23 @@
         }
       }
     },
+    "改名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename, merge with another name (when the same person was saved under two names), or remove this person"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改名、跟另一个名字合并（同一个人被记成两个名字时）、移除这个人"
+          }
+        }
+      }
+    },
     "改用 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -2134,6 +2151,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会参考词汇表，多人会议的漏字和同音字比 Breeze 少；阿里巴巴开源的模型，全程在这台电脑上跑、不连网，输出会转成台湾繁体；需要下载约 2.5 GB 的模型和 llama.cpp 的可执行文件。日文会议改用 Whisper large-v3-turbo（574 MB）。"
+          }
+        }
+      }
+    },
+    "會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They’ll be removed from People and their voice profile will be deleted. Names already filled in your meetings stay, but future meetings won’t recognize them automatically."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会从“人物”拿掉，也会删掉他的声音特征。会议里已经带入的名字会留着，之后的会议不会再自动认出他。"
           }
         }
       }
@@ -2627,6 +2661,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前不整理：录音、转录、逐字稿全部留在这台电脑。"
+          }
+        }
+      }
+    },
+    "移除「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove “%@”?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除“%@”？"
+          }
+        }
+      }
+    },
+    "移除這個人…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove This Person…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除这个人…"
           }
         }
       }

@@ -209,4 +209,35 @@ static class MigrationSql
           DELETE FROM clean_lines WHERE segment_id = NEW.id;
         END;
         """;
+
+    /// <summary>
+    /// 資料夾自動歸類、定期會議（R98、R99、M§72、§73）：series（定期會議）、series_rejected（按了「不是定期會議」的那一組）、
+    /// folder_rules（資料夾的自動加入條件，keywords、people 是 JSON 陣列）；meetings 加 folder_decided、series_id
+    /// </summary>
+    public const string V12 = """
+        CREATE TABLE series (
+          id             INTEGER PRIMARY KEY AUTOINCREMENT,
+          name           TEXT NOT NULL,
+          weekday        INTEGER NOT NULL,
+          minute         INTEGER,
+          interval_weeks INTEGER NOT NULL DEFAULT 1,
+          people         TEXT NOT NULL DEFAULT '[]',
+          created_at     TEXT NOT NULL
+        );
+        CREATE TABLE series_rejected (
+          key        TEXT PRIMARY KEY,
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE folder_rules (
+          folder      TEXT PRIMARY KEY,
+          keywords    TEXT NOT NULL DEFAULT '[]',
+          people      TEXT NOT NULL DEFAULT '[]',
+          template_id TEXT,
+          series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
+          created_at  TEXT NOT NULL
+        );
+        ALTER TABLE meetings ADD COLUMN folder_decided INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE meetings ADD COLUMN series_id INTEGER REFERENCES series(id) ON DELETE SET NULL;
+        CREATE INDEX meetings_series ON meetings(series_id);
+        """;
 }

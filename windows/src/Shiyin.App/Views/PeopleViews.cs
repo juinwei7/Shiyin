@@ -91,6 +91,9 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         // 名字旁的鉛筆（R85.6、M§60.2）：打開同一個改名輸入框，接在鉛筆下面；取消、儲存同「更多 → 改名…」
         var rename = RenameFlyout(person);
         var pencil = Ui.Borderless(new Button { Content = new SymbolIcon(Symbol.Edit) });
+        // 「更多 → 改名…」、側欄右鍵的「改名…」也打開這一個（R85.7）
+        (pencilButton, renameFlyout, headerPerson) = (pencil, rename, person.Id);
+        pencil.Loaded += (_, _) => OpenPendingRename();
         pencil.Padding = new Thickness(6);
         pencil.VerticalAlignment = VerticalAlignment.Center;
         ToolTipService.SetToolTip(pencil, L.T("改名"));
@@ -111,7 +114,7 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         info.VerticalAlignment = VerticalAlignment.Center;
         var avatar = Ui.Avatar(person.Name, Ui.Person(person.Name), 52, person.IsMe);
         avatar.VerticalAlignment = VerticalAlignment.Center;
-        var more = MoreMenu(person, rename);
+        var more = MoreMenu(person);
         more.VerticalAlignment = VerticalAlignment.Top;
         var header = Ui.Bar(avatar, info, more, 16);
         header.Margin = new Thickness(32, 20, 32, 10);
@@ -119,19 +122,38 @@ public sealed class PersonPage(AppHost host, MainWindow window)
     }
 
     /// <summary>
-    /// 「更多」（同會議頁的「更多」：DropDownButton＋MenuFlyout，無障礙名稱「更多」）：改名…（輸入框接在「更多」下面）、
-    /// 合併到（子選單：其他認識的人）、刪除聲音特徵…（確認對話框）
+    /// 「更多」（同會議頁的「更多」：DropDownButton＋MenuFlyout，無障礙名稱「更多」）：項目跟側欄人物列的右鍵選單同一份（R85.7）
     /// </summary>
-    DropDownButton MoreMenu(PersonOverview person, Flyout rename)
+    DropDownButton MoreMenu(PersonOverview person)
     {
         var menu = new MenuFlyout();
         var button = new DropDownButton { Content = Ui.Row(6, new SymbolIcon(Symbol.More), Ui.Text(L.T("更多"), wrap: false)), Flyout = menu };
         AutomationProperties.SetName(button, L.T("更多"));
-        ToolTipService.SetToolTip(button, L.T("改名、跟另一個名字合併（同一個人被記成兩個名字時）、刪除聲音特徵"));
-        menu.Items.Add(Ui.Item(L.T("改名…"), () => rename.ShowAt(button, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        ToolTipService.SetToolTip(button, L.T("改名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人"));
+        foreach (var item in MenuItems(person)) menu.Items.Add(item);
+        // 打開時重建：人物可能改了（合併到的名單）
+        menu.Opening += (_, _) => Ui.Guard(() =>
         {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
-        }), icon: Symbol.Rename));
+            menu.Items.Clear();
+            foreach (var item in MenuItems(person)) menu.Items.Add(item);
+        });
+        return button;
+    }
+
+    /// <summary>
+    /// 一個人的動作（R85.7，同 Mac 的 PersonMenuItems）：人物頁的「更多」和側欄人物列的右鍵選單共用。
+    /// 改名…（選那個人、打開名字旁鉛筆下面的輸入框）、合併到（子選單：其他認識的人）、分隔線、移除這個人…（確認對話框）
+    /// </summary>
+    public List<MenuFlyoutItemBase> MenuItems(PersonOverview person)
+    {
+        var items = new List<MenuFlyoutItemBase>
+        {
+            Ui.Item(L.T("改名…"), () =>
+            {
+                window.State.SelectPerson(person.Id);
+                RequestRename(person.Id);
+            }, icon: Symbol.Rename),
+        };
         var others = window.State.People.Where(p => p.Id != person.Id).ToList();
         if (others.Count > 0)
         {
@@ -143,14 +165,40 @@ public sealed class PersonPage(AppHost host, MainWindow window)
                     host.Controller.RenamePerson(person.Id, other.Name);
                     window.State.SelectPerson(other.Id);
                 }));
-            menu.Items.Add(merge);
+            items.Add(merge);
         }
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Ui.Item(L.T("刪除聲音特徵…"), () => _ = ConfirmDelete(person), icon: Symbol.Delete));
-        return button;
+        items.Add(new MenuFlyoutSeparator());
+        items.Add(Ui.Item(L.T("移除這個人…"), () => _ = window.ConfirmRemovePerson(person.Id), icon: Symbol.Delete));
+        return items;
     }
 
-    /// <summary>「改名…」（同設定頁）：接在「更多」下面；改成已經有的名字時合併過去，選那個人</summary>
+    // 名字旁的鉛筆和它的改名輸入框（目前畫出來的那個人）；「改名…」要打開的人
+    Button? pencilButton;
+    Flyout? renameFlyout;
+    long? headerPerson;
+    long? pendingRename;
+
+    /// <summary>「改名…」（更多、側欄右鍵、DEBUG 的 personrenameui）：那個人的頁面畫好、鉛筆放進畫面之後打開輸入框</summary>
+    public void RequestRename(long personId)
+    {
+        pendingRename = personId;
+        OpenPendingRename();
+    }
+
+    void OpenPendingRename()
+    {
+        if (pendingRename is not long id || headerPerson != id || pencilButton is not { IsLoaded: true } pencil || renameFlyout is not { } flyout) return;
+        pendingRename = null;
+        flyout.ShowAt(pencil, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
+        });
+    }
+
+    /// <summary>DEBUG 的 state：改名的輸入框開著沒</summary>
+    public bool RenameOpen => renameFlyout?.IsOpen == true;
+
+    /// <summary>改名的輸入框（同設定頁）：接在名字旁的鉛筆下面；改成已經有的名字時合併過去，選那個人</summary>
     Flyout RenameFlyout(PersonOverview person)
     {
         var box = new TextBox { Text = person.Name, Header = L.T("名字"), Width = 260 };
@@ -179,15 +227,6 @@ public sealed class PersonPage(AppHost host, MainWindow window)
         // 打開時名字整個選好，直接打新的名字
         flyout.Opened += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectAll(); };
         return flyout;
-    }
-
-    /// <summary>刪除聲音特徵（同設定頁）：確認對話框，主要按鈕是「刪除」、預設按鈕是取消，內文寫出是哪個人</summary>
-    async Task ConfirmDelete(PersonOverview person)
-    {
-        if (!await Dialogs.Confirm(window, L.F("刪除「%@」的聲音特徵？", person.Name),
-                L.F("拾音會忘記「%@」的聲音，之後的會議不會再自動帶入這個名字。已經帶入的名字會留著。", person.Name), L.T("刪除"), destructive: true)) return;
-        host.Controller.DeletePerson(person.Id);
-        window.State.SelectPerson(null);
     }
 
     /// <summary>負責的待辦：事項、期限、哪一場會議和時間點（點了打開那場、從那裡播放）</summary>

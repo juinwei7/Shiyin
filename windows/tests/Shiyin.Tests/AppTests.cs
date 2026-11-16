@@ -7,6 +7,7 @@ using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Services;
 using Shiyin.Services.Capture;
+using Shiyin.Text;
 using Shiyin.Speech;
 using Shiyin.Transcribe;
 using Shiyin.Whisper;

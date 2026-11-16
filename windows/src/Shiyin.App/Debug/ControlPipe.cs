@@ -15,7 +15,7 @@ namespace Shiyin.App.Debug;
 /// DEBUG 的控制通道（design-windows §15.3，對應 Mac 的 DebugControl）：named pipe「shiyin-debug」，一行一個指令（JSON 陣列），回一行 JSON。
 /// 驗證時用 shiyinctl.exe 送指令，不送鍵盤事件（CLAUDE.md）。只在 DEBUG 建置裡有
 /// </summary>
-public static class ControlPipe
+public static partial class ControlPipe
 {
     public const string Name = "shiyin-debug";
 
@@ -56,6 +56,8 @@ public static class ControlPipe
     static JsonNode Run(AppHost host, App app, string[] args)
     {
         var main = (MainWindow?)typeof(App).GetField("main", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(app);
+        // 會議列表的排序、分組、篩選，資料夾自動歸類，定期會議（M§71～§73、design-windows §11.30～§11.32）
+        if (Organize(host, main, args) is { } organized) return organized;
         switch (args.FirstOrDefault())
         {
             case "state": return State(host, main);
@@ -482,6 +484,17 @@ public static class ControlPipe
                 ? new JsonObject { ["progress"] = cleaning.Progress } : null,
             // 詞彙表（R94）
             ["glossary"] = new JsonArray([.. host.Db.Glossary().Select(t => (JsonNode)t.Term)]),
+            // 會議列表、資料夾的條件、定期會議（M§71～§73，同 Mac 的 list、folderRules、series、seriesCandidates、seriesFilter）
+            ["list"] = ListState(main),
+            ["folderRules"] = FolderRulesState(main),
+            ["series"] = SeriesState(main),
+            ["seriesCandidates"] = main?.State.SeriesCandidates.Count,
+            ["seriesFilter"] = main?.State.SeriesFilter ?? -1,
+            ["seriesDialog"] = Dialogs.SeriesSuggestionKey,
+            // 移除一個人的確認開著時是誰（R85.7，同 Mac；沒有是 -1）、人物頁改名的輸入框開著沒（Mac 沒有）
+            ["confirmRemovePerson"] = main?.RemovingPerson ?? -1,
+            ["personRenameOpen"] = main?.PersonRenameOpen,
+            ["folderRuleDialog"] = Dialogs.EditingFolderRule,
             // 會議結束的倒數（R95、M§69）：剩幾秒，沒在倒數是 -1（同 Mac 的 meetingprompts 的 countdown）
             ["meetingEndCountdown"] = host.MeetingEnd.Remaining(DateTime.UtcNow),
             ["reviewInline"] = main?.ReviewDraft.Expanded?.ToString(),
