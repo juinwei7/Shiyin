@@ -11,6 +11,10 @@ CREATE TABLE bookmarks (
   time       REAL NOT NULL,
   label      TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE clean_lines (
+  segment_id INTEGER PRIMARY KEY REFERENCES segments(id) ON DELETE CASCADE,
+  text       TEXT NOT NULL
+);
 CREATE TABLE corrections (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
@@ -135,3 +139,7 @@ CREATE TABLE voiceprints (
   speaker_idx  INTEGER,
   created_at   TEXT NOT NULL
 );
+CREATE TRIGGER clean_lines_text AFTER UPDATE OF text ON segments
+BEGIN
+  DELETE FROM clean_lines WHERE segment_id = NEW.id;
+END;

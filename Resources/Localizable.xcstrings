@@ -2442,6 +2442,40 @@
         }
       }
     },
+    "上次產生精簡版失敗。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次产生精简版失败。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The last attempt to create the clean version failed."
+          }
+        }
+      }
+    },
+    "上次產生精簡版失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次产生精简版失败：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The last attempt to create the clean version failed: %@"
+          }
+        }
+      }
+    },
     "下一步": {
       "extractionState": "manual",
       "localizations": {
@@ -4518,6 +4552,23 @@
         }
       }
     },
+    "再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再试一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try Again"
+          }
+        }
+      }
+    },
     "出了一點問題": {
       "extractionState": "manual",
       "localizations": {
@@ -5616,6 +5667,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "原因：%@\n\n你的资料没有被改动。升级前的备份在：%@\n请把这个消息截图给维护拾音的人。"
+          }
+        }
+      }
+    },
+    "原文": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original"
           }
         }
       }
@@ -12114,6 +12182,23 @@
         }
       }
     },
+    "會用整理工具的額度；長的會議要幾分鐘": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会用整理工具的额度；长的会议要几分钟"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your summarizer's quota; long meetings take a few minutes"
+          }
+        }
+      }
+    },
     "會議": {
       "extractionState": "manual",
       "localizations": {
@@ -13302,6 +13387,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在准备安装…"
+          }
+        }
+      }
+    },
+    "正在產生精簡版 %lld%%": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在产生精简版 %lld%%"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating the clean version… %lld%%"
+          }
+        }
+      }
+    },
+    "正在產生精簡版…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在产生精简版…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating the clean version…"
           }
         }
       }
@@ -14889,6 +15008,23 @@
         }
       }
     },
+    "產生精簡版": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "产生精简版"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Clean Version"
+          }
+        }
+      }
+    },
     "用企業伺服器整理會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -15946,6 +16082,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "简体"
+          }
+        }
+      }
+    },
+    "精簡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精简"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean"
+          }
+        }
+      }
+    },
+    "精簡版用整理工具去掉「嗯、呃、那個」這類贅字、重複的字詞和說到一半改口的部分，不改意思、不摘要。每一句的時間和說話者不變。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精简版用整理工具去掉“嗯、呃、那个”这类赘字、重复的字词和说到一半改口的部分，不改意思、不摘要。每一句的时间和说话者不变。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The clean version uses your summarizer to remove filler words like “um” and “uh”, repeated words and false starts, without changing the meaning or summarizing. Each line keeps its time and speaker."
+          }
+        }
+      }
+    },
+    "精簡：用整理工具去掉贅字、重複和改口的版本；播放、搜尋、匯出照舊用原文": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精简：用整理工具去掉赘字、重复和改口的版本；播放、搜索、导出照旧用原文"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean: a version without filler words, repetitions and false starts, made by your summarizer. Playback, search and export still use the original"
           }
         }
       }

@@ -90,6 +90,9 @@ struct MeetingDetail: Equatable {
     var speakerSuggestions: [Int: SpeakerNaming.Suggestion] = [:]
     /// 每位說話者最像的幾位認識的人（R33）：「是別人」的選單、待確認的「不是」
     var speakerCandidates: [Int: [String]] = [:]
+    /// 精簡逐字稿（R96、design §70）：段落 id → 精簡後的文字；空的是還沒產生。最後一次產生失敗的原因
+    var cleanLines: [Int64: String] = [:]
+    var cleanFailure: String?
     /// 「我」是哪一位說話者（design §58.2）
     var selfIdx: Int?
 
@@ -526,6 +529,8 @@ final class AppModel {
         loaded.loadSpeakers(speakerRows)
         loaded.loadDocuments((try? db.documents(id)) ?? [])
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
+        loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
+        loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
         // 「我」（R80）：連到有 enroll 聲紋的那個人的說話者，頭像加一圈青瓷綠（design §58.2）
         if let me = (try? db.enrollment()) ?? nil { loaded.selfIdx = speakerRows.first { $0.personId == me.personId }?.idx }
         loaded.speakerUndoLabel = try? db.speakerUndoLabel(id)
@@ -1250,6 +1255,28 @@ final class AppModel {
         runner.wake()
     }
 
+    /// 逐字稿「精簡」的「產生精簡版」（R96、design §70）：在輔助線跑，不發通知
+    func generateCleanTranscript() {
+        guard let id = selection, readyForAction(id) else { return }
+        guard AppSettings.provider != .none else {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        if (try? db.hasActiveJob(id, kind: .clean)) == true { return }
+        perform { try db.enqueue(id, kind: .clean) }
+        runner.wake()
+    }
+
+    /// 正在產生這場會議的精簡版：進度（0～1，還沒開始是 nil）
+    func cleaningProgress(_ meetingId: Int64) -> Double?? {
+        if let running = runner.running[.assist], running.job.kind == .clean, running.job.meetingId == meetingId { return .some(running.progress) }
+        if (try? db.hasActiveJob(meetingId, kind: .clean)) == true { return .some(nil) }
+        return nil
+    }
+
     /// 「人物」的「產生每個人的重點」（R92、design §66）：只補上這一段，摘要、決議、待辦這些段落不動
     func generatePeopleNotes() {
         guard let id = selection, readyForAction(id) else { return }
@@ -1971,6 +1998,8 @@ final class AppModel {
         if !segmentIds.isEmpty, let fresh = try? db.segments(ids: segmentIds) {
             let index = Dictionary(updated.segments.enumerated().compactMap { i, s in s.id.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
             for segment in fresh { if let id = segment.id, let i = index[id] { updated.segments[i] = segment } }
+            // 改了文字的句子，精簡版被觸發器刪掉了（R96）：拿掉畫面上的那幾句，回到原文
+            if !updated.cleanLines.isEmpty { segmentIds.forEach { updated.cleanLines[$0] = nil } }
         }
         #if DEBUG
         DebugMetrics.bump("reloadDetailParts")
@@ -1981,7 +2010,10 @@ final class AppModel {
             updated.speakerUndoLabel = try? db.speakerUndoLabel(id)
         }
         if parts.contains(.bookmarks) { updated.bookmarks = (try? db.bookmarks(id)) ?? [] }
-        if parts.contains(.segments) { updated.segments = (try? db.segments(id)) ?? [] }
+        if parts.contains(.segments) {
+            updated.segments = (try? db.segments(id)) ?? []
+            updated.cleanLines = (try? db.cleanLines(id)) ?? [:]
+        }
         if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }
         if parts.contains(.documents) { updated.loadDocuments((try? db.documents(id)) ?? []) }
         if parts.contains(.meeting), let meeting = try? db.meeting(id) {

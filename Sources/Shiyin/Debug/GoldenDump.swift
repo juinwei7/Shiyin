@@ -218,6 +218,10 @@ enum GoldenDump {
             if let r = f["correctionRange"] as? [Int], r.count == 2, r[1] <= fx.segments.count {
                 w.text(dir + "correction-prompt-range.txt", TranscriptCorrection.prompt(correction, range: r[0]..<r[1]))
             }
+            // 精簡逐字稿（R96、design §70）：跟 JobRunner.clean 一樣組 Context
+            let cleanup = TranscriptCleanup.Context(language: l, segments: fx.segments.map { ($0.text, speakerName($0.speaker)) })
+            w.text(dir + "clean-system.txt", TranscriptCleanup.system(l))
+            w.text(dir + "clean-prompt.txt", TranscriptCleanup.prompt(cleanup, range: 0..<fx.segments.count))
 
             // 猜說話者：跟 JobRunner.nameSpeakers 一樣
             let unnamed = names.keys.sorted().filter { AppDatabase.isDefaultSpeakerName(names[$0]!) }
@@ -271,9 +275,10 @@ enum GoldenDump {
         w.text("schemas/keywords.json", AskPrompt.keywordsSchema)
         w.text("schemas/naming.json", SpeakerNaming.jsonSchema)
         w.text("schemas/correction.json", TranscriptCorrection.jsonSchema)
+        w.text("schemas/clean.json", TranscriptCleanup.jsonSchema)
         let formats: [(String, LLMClient.OutputFormat)] = [
             ("notes", .meetingNotes), ("askMeeting", AskPrompt.meetingFormat), ("askAll", AskPrompt.allFormat),
-            ("keywords", AskPrompt.keywordsFormat), ("naming", SpeakerNaming.format), ("correction", TranscriptCorrection.format),
+            ("keywords", AskPrompt.keywordsFormat), ("naming", SpeakerNaming.format), ("correction", TranscriptCorrection.format), ("clean", TranscriptCleanup.format),
         ]
         w.json("schemas/formats.json", Dictionary(uniqueKeysWithValues: formats.map {
             ($0.0, ["toolName": $0.1.toolName, "toolDescription": $0.1.toolDescription, "schema": $0.1.schema])
@@ -664,6 +669,15 @@ enum GoldenDump {
             CorrectionSuggestion(segment: $0["segment"] as? Int ?? 0, original: $0["original"] as? String ?? "",
                                  suggestion: $0["suggestion"] as? String ?? "", reason: $0["reason"] as? String ?? "")
         }
+        // 精簡逐字稿的驗證（R96）：編號不在這一批、重複、跟原文一樣、比原文長太多的丟掉；空字串留著（整句都是贅字）
+        let cleanContext = TranscriptCleanup.Context(language: .zh, segments: zh.segments.map { ($0.text, nil) })
+        let cleanRaw = [TranscriptCleanup.Line(segment: 0, text: "  " + String(zh.segments[0].text.dropLast()) + " "),
+                        TranscriptCleanup.Line(segment: 0, text: "重複的第二個"), TranscriptCleanup.Line(segment: 1, text: zh.segments[1].text),  // l10n-skip
+                        TranscriptCleanup.Line(segment: 2, text: ""), TranscriptCleanup.Line(segment: 3, text: zh.segments[3].text + String(repeating: "補", count: 40)),  // l10n-skip
+                        TranscriptCleanup.Line(segment: 9, text: "範圍外")]  // l10n-skip
+        w.json("util/validate-clean.json", TranscriptCleanup.validate(cleanRaw, context: cleanContext, range: 0..<4).map {
+            ["segment": $0.segment, "text": $0.text] as Object
+        })
         let valid = TranscriptCorrection.validate(raw, context: correctionContext, range: 0..<4)
         w.json("util/validate-corrections.json", valid.map { s -> Object in
             let text = zh.segments[s.segment].text

@@ -45,6 +45,8 @@ enum DebugControl {
         case "retranscribe": model.selection = id; model.retranscribe()
         case "resummarize": model.selection = id; model.resummarize()
         case "peoplenotes": model.selection = id; model.generatePeopleNotes()   // 「人物」的「產生每個人的重點」（design §66）
+        case "cleantranscript": model.selection = id; model.generateCleanTranscript()   // 逐字稿「精簡」的「產生精簡版」（design §70）
+        case "transcriptview": UserDefaults.standard.set(args[1] == "clean" ? "clean" : "original", forKey: AppSettings.transcriptViewKey)
         case "undo": model.selection = id; model.undoNotes()
         case "trash": if let id { model.moveToTrash(id) }
         case "restore": if let id { model.restore(id) }

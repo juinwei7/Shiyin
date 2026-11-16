@@ -26,6 +26,9 @@ struct TranscriptTab: View {
     @State private var splitOffset: Int?
     @State private var splitTarget: Int?
     @FocusState private var searchFocused: Bool
+    /// 原文／精簡（R96、design §70）
+    @AppStorage(AppSettings.transcriptViewKey) private var transcriptView = "original"
+    private var cleanMode: Bool { transcriptView == "clean" }
 
     init(detail: MeetingDetail, speakerFilter: Int? = nil) {
         self.detail = detail
@@ -33,8 +36,11 @@ struct TranscriptTab: View {
     }
 
     private var visibleSegments: [Segment] {
-        guard let speakerFilter else { return detail.segments }
-        return detail.segments.filter { $0.speaker == speakerFilter }
+        // 精簡：整句都是贅字的那句不顯示（R96.1）
+        let segments = cleanMode && !detail.cleanLines.isEmpty
+            ? detail.segments.filter { segment in segment.id.map { detail.cleanLines[$0] != "" } ?? true } : detail.segments
+        guard let speakerFilter else { return segments }
+        return segments.filter { $0.speaker == speakerFilter }
     }
 
     private var matches: [Int64] {
@@ -76,6 +82,9 @@ struct TranscriptTab: View {
                     .foregroundStyle(.secondary)
                     .padding(32)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer()
+            } else if cleanMode && detail.cleanLines.isEmpty {
+                cleanPlaceholder
                 Spacer()
             } else if snapshotMode {
                 VStack(alignment: .leading, spacing: 2) {
@@ -198,6 +207,16 @@ struct TranscriptTab: View {
                 .frame(width: 150)
                 .help("只看某一位說話者的內容")
             }
+            // 原文／精簡（R96）
+            Picker("逐字稿", selection: $transcriptView) {
+                Text("原文").tag("original")
+                Text("精簡").tag("clean")
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .disabled(detail.segments.isEmpty)
+            .help("精簡：用整理工具去掉贅字、重複和改口的版本；播放、搜尋、匯出照舊用原文")
             Spacer()
             if detail.segments.contains(where: \.lowConfidence) {
                 Label("琥珀色是辨識信心低的段落", systemImage: "circle.fill")
@@ -212,6 +231,32 @@ struct TranscriptTab: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+
+    /// 還沒有精簡版（R96.2）：說明和「產生精簡版」；產生中顯示進度；上次失敗寫原因
+    @ViewBuilder private var cleanPlaceholder: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let progress = model.cleaningProgress(detail.meeting.id!) {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(progress.map { String(localized: "正在產生精簡版 \(Int($0 * 100))%") } ?? String(localized: "正在產生精簡版…"))
+                }
+            } else {
+                Text("精簡版用整理工具去掉「嗯、呃、那個」這類贅字、重複的字詞和說到一半改口的部分，不改意思、不摘要。每一句的時間和說話者不變。")
+                    .foregroundStyle(.secondary)
+                if let failure = detail.cleanFailure {
+                    Text(failure.isEmpty ? String(localized: "上次產生精簡版失敗。") : String(localized: "上次產生精簡版失敗：\(failure)"))
+                        .foregroundStyle(Color.signal)
+                }
+                Button(detail.cleanFailure == nil ? "產生精簡版" : "再試一次", systemImage: "text.badge.minus") { model.generateCleanTranscript() }
+                    .disabled(model.detailStatus?.isActive == true)
+                    .help("會用整理工具的額度；長的會議要幾分鐘")
+            }
+        }
+        .contentFont()
+        .padding(32)
+        .frame(maxWidth: 760 * scale, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// 重新轉錄會用的模型（design §41.3）
@@ -403,9 +448,11 @@ struct TranscriptTab: View {
                 }
             } else {
                 // 每一段的校正建議（design §17.4）：待確認的標在文字上並列出，已接受的可以還原，已拒絕的不顯示
-                let corrections = segment.id.flatMap { detail.correctionsBySegment[$0] } ?? []
+                // 精簡（R96）：顯示精簡版的文字，不標校正建議（校正對的是原文）；改過的句子沒有精簡版，照原文
+                let clean = cleanMode ? segment.id.flatMap { detail.cleanLines[$0] } : nil
+                let corrections = clean == nil ? (segment.id.flatMap { detail.correctionsBySegment[$0] } ?? []) : []
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(highlighted(segment.text, corrections: corrections)).meetingText()
+                    Text(clean.map { AttributedString($0) } ?? highlighted(segment.text, corrections: corrections)).meetingText()
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)

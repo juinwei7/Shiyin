@@ -2626,6 +2626,16 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`-meetingEndCountdownSeconds` 改倒數秒數；`meetingprompts` 多 `countdown`（剩幾秒，沒在倒數是 -1）。
 - Windows：design-windows §11.28。
 
+## 70. 去掉贅字的逐字稿（R96）
+
+- 資料（migration v11）：`clean_lines(segment_id PRIMARY KEY REFERENCES segments ON DELETE CASCADE, text)`，一句一列，產生時每一句都存（整理工具改過的存改過的、沒改的存原文、整句都是贅字存空字串），有沒有產生過看這場會議有沒有這份。句子刪掉（重新轉錄、刪除一句）跟著刪；觸發器 `clean_lines_text`（`AFTER UPDATE OF text ON segments`）在句子的文字改了（編輯、接受或還原校正、用詞修正、拆句）時刪掉那一句的精簡版，畫面上回到原文。Windows 用同一個 migration。
+- 工作：`JobKind.clean`，輔助線、用整理工具、不發通知（同校正）。`TranscriptCleanup`（提示詞中英日三份、粵語接 `transcriptNote.correction`）：每次 120 句，`[編號] 說話者：文字`，模型只回改過的句子 `{lines: [{segment, text}]}`；驗證丟掉編號不在這一批的、重複的（留第一個）、跟原文一樣的、比原文長太多的（原文字數＋max(10, 20%)，模型在補字），空字串留著。中文會議用簡體時存簡體。
+- 畫面：逐字稿上方「原文｜精簡」（`transcriptView`，存在 UserDefaults）。精簡：句子顯示 `cleanLines[id] ?? text`，不標校正建議；空字串的句子不顯示。還沒產生時顯示說明、「產生精簡版」（說明「會用整理工具的額度；長的會議要幾分鐘」）；產生中顯示進度；上次失敗寫原因、按鈕變「再試一次」。播放、搜尋、說話者篩選、用詞修正、匯出照舊用原文。
+- 只重讀幾句（編輯一句之後）時，那幾句的精簡版從畫面上拿掉（觸發器已經刪了）。
+- 標準答案：`prompts/<語言>/clean-system.txt`、`clean-prompt.txt`、`schemas/clean.json`、`schemas/formats.json` 的 clean、`util/validate-clean.json`、`db/schema.sql`。
+- DEBUG：`cleantranscript <會議 id>`（等於按「產生精簡版」）、`transcriptview original|clean`。
+- Windows：design-windows §11.29。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

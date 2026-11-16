@@ -9,6 +9,11 @@
     "toolDescription" : "Save the answer to the question",
     "toolName" : "save_answer"
   },
+  "clean" : {
+    "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"lines\"],\"properties\":{\"lines\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"segment\",\"text\"],\"properties\":{\"segment\":{\"type\":\"integer\"},\"text\":{\"type\":\"string\"}}}}}}",
+    "toolDescription" : "Save the cleaned-up transcript lines",
+    "toolName" : "save_clean_transcript"
+  },
   "correction" : {
     "schema" : "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"corrections\"],\"properties\":{\"corrections\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"segment\",\"original\",\"suggestion\",\"reason\"],\"properties\":{\"segment\":{\"type\":\"integer\"},\"original\":{\"type\":\"string\"},\"suggestion\":{\"type\":\"string\"},\"reason\":{\"type\":\"string\"}}}}}}",
     "toolDescription" : "Save transcript correction suggestions",

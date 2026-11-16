@@ -195,21 +195,22 @@ enum JobKind: String, Codable, CaseIterable {
     case correct   // 逐字稿校正（design §17.4）
     case nameSpeakers   // 猜說話者（design §21.5）
     case rediarize   // 只重新辨識說話者（design §23）
+    case clean   // 精簡逐字稿（design §70）
 
     /// 轉錄線、整理線、輔助線（design §21.2）：校正、猜說話者在輔助線，跟整理同時跑
     var lane: JobLane {
         switch self {
         case .transcribe, .compress, .rediarize: return .transcribe
         case .summarize, .revise: return .llm
-        case .correct, .nameSpeakers: return .assist
+        case .correct, .nameSpeakers, .clean: return .assist
         }
     }
 
     /// 要用整理工具的工作（design §34）
-    var usesSummarizer: Bool { self == .summarize || self == .revise || self == .correct || self == .nameSpeakers }
+    var usesSummarizer: Bool { self == .summarize || self == .revise || self == .correct || self == .nameSpeakers || self == .clean }
 
     /// 背景的輔助工作：不發通知、不改會議的狀態
-    var isAuxiliary: Bool { self == .compress || self == .correct || self == .nameSpeakers || self == .rediarize }
+    var isAuxiliary: Bool { self == .compress || self == .correct || self == .nameSpeakers || self == .rediarize || self == .clean }
 }
 
 enum JobLane: String, CaseIterable { case transcribe, llm, assist }

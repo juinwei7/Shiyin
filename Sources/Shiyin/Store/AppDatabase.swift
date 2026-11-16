@@ -286,6 +286,20 @@ final class AppDatabase: @unchecked Sendable {
                 CREATE INDEX documents_meeting ON documents(meeting_id, id);
                 """)
         }
+        // 精簡逐字稿（R96、design §70）：一句一列；句子刪掉（重新轉錄、刪除一句）時跟著刪，
+        // 句子的文字改了（編輯、校正、用詞修正、拆句）時刪掉那一句的精簡版，畫面上回到原文
+        migrator.registerMigration("v11") { db in
+            try db.execute(sql: """
+                CREATE TABLE clean_lines (
+                  segment_id INTEGER PRIMARY KEY REFERENCES segments(id) ON DELETE CASCADE,
+                  text       TEXT NOT NULL
+                );
+                CREATE TRIGGER clean_lines_text AFTER UPDATE OF text ON segments
+                BEGIN
+                  DELETE FROM clean_lines WHERE segment_id = NEW.id;
+                END;
+                """)
+        }
         return migrator
     }
 
@@ -587,6 +601,35 @@ final class AppDatabase: @unchecked Sendable {
             var segment = Segment(meetingId: meetingId, seq: seq, start: start, end: end, text: text, lowConfidence: false,
                                   speaker: nil, kind: "live")
             try segment.insert(db)
+        }
+    }
+
+    /// 某種工作最後一次的紀錄（輔助工作也算；精簡逐字稿失敗時要說明，R96）
+    func lastJob(_ meetingId: Int64, kind: JobKind) throws -> Job? {
+        try pool.read { db in
+            try Job.filter(Column("meeting_id") == meetingId && Column("kind") == kind.rawValue).order(Column("id").desc).fetchOne(db)
+        }
+    }
+
+    /// 精簡逐字稿（R96）：段落 id → 精簡後的文字（空字串是整句都是贅字）；沒產生過是空的
+    func cleanLines(_ meetingId: Int64) throws -> [Int64: String] {
+        try pool.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT c.segment_id, c.text FROM clean_lines c JOIN segments s ON s.id = c.segment_id WHERE s.meeting_id = ?
+                """, arguments: [meetingId])
+            return Dictionary(uniqueKeysWithValues: rows.map { (Int64.fromDatabaseValue($0[0]) ?? 0, String.fromDatabaseValue($0[1]) ?? "") })
+        }
+    }
+
+    /// 存精簡逐字稿：這場會議原本的精簡版整份換掉；段落已經不在（整理期間被刪、重新轉錄）的跳過
+    func saveCleanLines(_ meetingId: Int64, _ lines: [Int64: String]) throws {
+        try pool.write { db in
+            try db.execute(sql: "DELETE FROM clean_lines WHERE segment_id IN (SELECT id FROM segments WHERE meeting_id = ?)", arguments: [meetingId])
+            for (id, text) in lines {
+                try db.execute(sql: """
+                    INSERT INTO clean_lines (segment_id, text) SELECT id, ? FROM segments WHERE id = ? AND meeting_id = ?
+                    """, arguments: [text, id, meetingId])
+            }
         }
     }
 

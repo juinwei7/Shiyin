@@ -1,0 +1,53 @@
+[
+  {
+    "input" : "Redis",
+    "terms" : [
+      "Redis"
+    ]
+  },
+  {
+    "input" : "Redis、Kubernetes、拾音",
+    "terms" : [
+      "Redis",
+      "Kubernetes",
+      "拾音"
+    ]
+  },
+  {
+    "input" : "Redis, kubernetes\nKubernetes；SendGrid;  \n\n  拾音 ",
+    "terms" : [
+      "Redis",
+      "kubernetes",
+      "SendGrid",
+      "拾音"
+    ]
+  },
+  {
+    "input" : "  ",
+    "terms" : [
+
+    ]
+  },
+  {
+    "input" : "A，B，a",
+    "terms" : [
+      "A",
+      "B"
+    ]
+  },
+  {
+    "input" : "Claude Code\r\nCodex",
+    "terms" : [
+      "Claude Code",
+      "Codex"
+    ]
+  },
+  {
+    "input" : "第一行\n第二行、第三行",
+    "terms" : [
+      "第一行",
+      "第二行",
+      "第三行"
+    ]
+  }
+]

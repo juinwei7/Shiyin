@@ -34,6 +34,7 @@ enum AppSettings {
     static let remindersListKey = "remindersListId"   // 提醒事項裡「拾音」列表的 id（design §52.1）
     static let recordingIslandKey = "recordingIsland"   // 在螢幕上方顯示錄音島，預設開（design §57.2）
     static let autoStopOnMeetingEndKey = "autoStopOnMeetingEnd"   // 會議結束時倒數後自動停止錄音，預設開（design §69）
+    static let transcriptViewKey = "transcriptView"   // 逐字稿：original（原文）／clean（精簡，design §70）
 
     private static var d: UserDefaults { .standard }
 
@@ -307,6 +308,7 @@ final class JobRunner {
                 notify = try await summarize(job, lane: lane, answers: payload.answers)
             case .compress: try await compress(job)
             case .correct: await correct(job, lane: lane)
+            case .clean: try await clean(job, lane: lane)
             case .nameSpeakers: await nameSpeakers(job, lane: lane)
             case .rediarize: try await rediarize(job, lane: lane)
             }
@@ -655,6 +657,35 @@ final class JobRunner {
         } catch {
             log.error("transcript correction failed: \(error.logSummary, privacy: .public)")
         }
+    }
+
+    // MARK: 精簡逐字稿（R96、design §70）
+
+    /// 每一句都存：整理工具改過的用改過的，沒改的存原文（有沒有產生過看有沒有這份）；中文會議用簡體時轉成簡體
+    private func clean(_ job: Job, lane: JobLane) async throws {
+        guard let meeting = try db.meeting(job.meetingId) else { return }
+        let provider = AppSettings.provider
+        guard provider != .none else { throw LLMError.notConfigured(String(localized: "還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")) }
+        let segments = try db.segments(job.meetingId)
+        guard !segments.isEmpty else { return }
+        running[lane]?.provider = provider
+        running[lane]?.stage = String(localized: "產生精簡版")
+        let language = meeting.meetingLanguage
+        let names = Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) })
+        let context = TranscriptCleanup.Context(language: language, segments: segments.map { segment in
+            (segment.text, segment.speaker.map { names[$0] ?? language.defaultSpeaker($0) })
+        })
+        let changed = try await callLLM(lane) { onStart in
+            try await TranscriptCleanup.clean(context, provider: provider, model: AppSettings.model, onStart: onStart,
+                                              onProgress: { [weak self] value in self?.running[lane]?.progress = value })
+        }
+        guard isStillRunning(job) else { return }
+        var lines: [Int64: String] = [:]
+        for (index, segment) in segments.enumerated() {
+            guard let id = segment.id else { continue }
+            lines[id] = changed[index].map { AppSettings.script($0, for: language) } ?? segment.text
+        }
+        try db.saveCleanLines(job.meetingId, lines)
     }
 
     // MARK: 壓縮（design §6.4）
