@@ -413,24 +413,32 @@ struct StatusBanner: View {
 }
 
 /// 右上角的「匯出」（R60、design §38.6）：按下打開匯出對話框，箭頭直接複製會議紀錄。
+/// 按鈕和箭頭分成兩個控制項，各自有輔助使用的名字（A11Y1：分割選單的箭頭在 VoiceOver 沒有名字）。
 /// 工具列的選單建立一次就不更新，動作在按下時才看目前選取的會議（同「更多」）
 struct ExportMenu: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Menu {
-            Button("複製會議紀錄：保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
-            Button("複製會議紀錄：Markdown") { model.copyNotes(.markdown) }
-            Button("複製會議紀錄：純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
-            Divider()
-            Button("複製心智圖（圖片）") { model.copyMindMap() }
-        } label: {
-            Label("匯出", systemImage: "square.and.arrow.up")
-        } primaryAction: {
-            model.openExportSheet()
+        ControlGroup {
+            Button { model.openExportSheet() } label: {
+                Label("匯出", systemImage: "square.and.arrow.up")
+            }
+            .labelStyle(.titleAndIcon)
+            .help("匯出會議紀錄、逐字稿或錄音（⌘E）；箭頭可以直接複製會議紀錄")
+            Menu {
+                Button("複製會議紀錄：保留格式（貼到 Word、Notion、郵件）") { model.copyNotes(.rich) }
+                Button("複製會議紀錄：Markdown") { model.copyNotes(.markdown) }
+                Button("複製會議紀錄：純文字（貼到 Slack、訊息）") { model.copyNotes(.plain) }
+                Divider()
+                Button("複製心智圖（圖片）") { model.copyMindMap() }
+            } label: {
+                Label("複製", systemImage: "chevron.down")
+            }
+            .menuIndicator(.hidden)
+            .help("複製會議紀錄或心智圖")
+            .accessibilityLabel(Text("複製"))
         }
-        .labelStyle(.titleAndIcon)
-        .help("匯出會議紀錄、逐字稿或錄音（⌘E）；箭頭可以直接複製會議紀錄")
+        .controlGroupStyle(.navigation)
     }
 }
 

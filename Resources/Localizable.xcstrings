@@ -16388,6 +16388,23 @@
         }
       }
     },
+    "複製會議紀錄或心智圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制会议记录或心智图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the meeting notes or mind map"
+          }
+        }
+      }
+    },
     "複製會議紀錄（Markdown）": {
       "extractionState": "manual",
       "localizations": {
@@ -20562,6 +20579,23 @@
         }
       }
     },
+    "錄音來源、麥克風、會議語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音来源、麦克风、会议语言"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording source, microphone and meeting language"
+          }
+        }
+      }
+    },
     "錄音存檔失敗：%@（檔案還在 %@）": {
       "extractionState": "manual",
       "localizations": {
@@ -20796,6 +20830,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音里没有识别到任何语音"
+          }
+        }
+      }
+    },
+    "錄音選項": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音选项"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording Options"
           }
         }
       }

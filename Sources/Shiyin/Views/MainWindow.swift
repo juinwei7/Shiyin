@@ -618,35 +618,43 @@ struct RecordingControls: View {
                     .help("停止錄音並開始轉錄（⌘R）")
             }
         } else {
-            // 這兩個選項是之後錄音的設定，選完畫面不會變，跳一個提示讓人知道選到了
-            Menu {
-                Picker("錄音來源", selection: Binding(get: { source }, set: { value in
-                    source = value
-                    model.noticeMessage = String(localized: "之後的錄音：\(Self.sourceLabel(value))")
-                })) {
-                    ForEach(["mic", "both", "system"], id: \.self) { Text(Self.sourceLabel($0)).tag($0) }
+            // 這兩個選項是之後錄音的設定，選完畫面不會變，跳一個提示讓人知道選到了。
+            // 按鈕和箭頭分成兩個控制項（A11Y1）：分割選單（Menu 的 primaryAction）箭頭那一半在輔助使用裡沒有名字，VoiceOver 讀不出來
+            ControlGroup {
+                Button { model.startRecording() } label: {
+                    Label(MeetingLanguage.ui(zh: "錄音", en: "Record"), systemImage: "record.circle")
                 }
-                .pickerStyle(.inline)
-                // 麥克風（R58.1、design §38.2）：跟設定頁同一個設定
-                if source != "system" {
-                    Picker("麥克風", selection: Binding(get: { device }, set: { model.switchMicrophone($0) })) {
-                        MicrophoneOptions(saved: device)
+                .help("開始錄音（⌘R），用\(language.uiName)辨識；點右邊的箭頭可以改錄音來源和語言")
+                Menu {
+                    Picker("錄音來源", selection: Binding(get: { source }, set: { value in
+                        source = value
+                        model.noticeMessage = String(localized: "之後的錄音：\(Self.sourceLabel(value))")
+                    })) {
+                        ForEach(["mic", "both", "system"], id: \.self) { Text(Self.sourceLabel($0)).tag($0) }
                     }
                     .pickerStyle(.inline)
+                    // 麥克風（R58.1、design §38.2）：跟設定頁同一個設定
+                    if source != "system" {
+                        Picker("麥克風", selection: Binding(get: { device }, set: { model.switchMicrophone($0) })) {
+                            MicrophoneOptions(saved: device)
+                        }
+                        .pickerStyle(.inline)
+                    }
+                    Picker("會議語言", selection: Binding(get: { language }, set: { value in
+                        language = value
+                        model.noticeMessage = String(localized: "之後的錄音都用\(value.uiName)")
+                    })) {
+                        ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label("錄音選項", systemImage: "chevron.down")
                 }
-                Picker("會議語言", selection: Binding(get: { language }, set: { value in
-                    language = value
-                    model.noticeMessage = String(localized: "之後的錄音都用\(value.uiName)")
-                })) {
-                    ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
-                }
-                .pickerStyle(.inline)
-            } label: {
-                Label(MeetingLanguage.ui(zh: "錄音", en: "Record"), systemImage: "record.circle")
-            } primaryAction: {
-                model.startRecording()
+                .menuIndicator(.hidden)
+                .help("錄音來源、麥克風、會議語言")
+                .accessibilityLabel(Text("錄音選項"))
             }
-            .help("開始錄音（⌘R），用\(language.uiName)辨識；點右邊的箭頭可以改錄音來源和語言")
+            .controlGroupStyle(.navigation)
             // 工具列的選單建立一次就不會更新勾選，選項變了（含接上、拔掉麥克風）就換一個新的選單
             .id("\(source)-\(language.rawValue)-\(device)-\(MicrophoneMonitor.shared.signature)")
         }

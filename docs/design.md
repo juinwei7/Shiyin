@@ -1678,7 +1678,7 @@ Windows 的做法在 design-windows §11.7。
 
 ### 38.6 匯出按鈕（R60，D132）
 
-- `ExportMenu`：`Menu { 複製會議紀錄的三種格式 } label: { Label("匯出", systemImage: "square.and.arrow.up") } primaryAction: { model.openExportSheet() }`，`.labelStyle(.titleAndIcon)`（工具列預設只顯示圖示），滑鼠提示「匯出會議紀錄、逐字稿或錄音（⌘E）；箭頭可以直接複製會議紀錄」。三個選項：「複製會議紀錄：保留格式（貼到 Word、Notion、郵件）」「複製會議紀錄：Markdown」「複製會議紀錄：純文字（貼到 Slack、訊息）」，呼叫同現在的 `copyNotes`。
+- `ExportMenu`：`ControlGroup { Button("匯出") { model.openExportSheet() }；Menu { 複製會議紀錄的三種格式 } label: { Label("複製", systemImage: "chevron.down") } }`，`.controlGroupStyle(.navigation)`、選單 `.menuIndicator(.hidden)`，按鈕 `.labelStyle(.titleAndIcon)`（工具列預設只顯示圖示）。2026-11-16 從分割選單（`Menu` 加 `primaryAction`）改成兩個控制項：分割選單箭頭那一半在輔助使用裡沒有名字（A11Y1），現在兩半各自是「匯出」「複製」；`.navigation` 讓兩段跟以前一樣緊、中間有分隔線（預設的樣式比較寬，側欄上方的錄音那一組會把「提問」擠進「»」）。錄音那一組同樣做法（「錄音」「錄音選項」）。滑鼠提示「匯出會議紀錄、逐字稿或錄音（⌘E）；箭頭可以直接複製會議紀錄」。三個選項：「複製會議紀錄：保留格式（貼到 Word、Notion、郵件）」「複製會議紀錄：Markdown」「複製會議紀錄：純文字（貼到 Slack、訊息）」，呼叫同現在的 `copyNotes`。
 - `MeetingDetailView` 的工具列：`ExportMenu` 放在 `MoreMenu` 前面，條件同 `MoreMenu`（不是錄音中的那場、不在垃圾桶）。`MoreMenu` 拿掉匯出、複製會議紀錄。工具列的選單建立一次就不更新的限制同 `MoreMenu`：動作按下時才看目前選取的會議。
 - 使用說明「匯出、分享」：「按右上角的「匯出」（⌘E）…；「匯出」旁邊的箭頭可以直接複製會議紀錄，貼到 Notion、Slack 或郵件。」
 
