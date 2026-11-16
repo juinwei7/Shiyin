@@ -5,6 +5,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Services.Capture;
+using Shiyin.Text;
 
 namespace Shiyin.Services;
 
@@ -72,6 +73,17 @@ public sealed class AppController
     public event Action<long?>? Changed;
     /// <summary>要顯示這場會議（匯入完、錄音開始、點了通知）</summary>
     public event Action<long>? Reveal;
+    /// <summary>一次還原了好幾場（R88、M§62）：回到會議列表、選取那幾場</summary>
+    public event Action<IReadOnlyList<long>>? RevealMany;
+    /// <summary>要換掉、刪掉這場會議的錄音檔（分割會議、永久刪除）：畫面先停止播放、放掉檔案。在呼叫的執行緒上同步觸發</summary>
+    public event Action<long>? ReleasingAudio;
+    /// <summary>錄音檔換了（分割會議，design-windows §11.23）：畫面重新載入播放器</summary>
+    public event Action<long>? AudioReplaced;
+
+    /// <summary>分割會議的錄音（design-windows §11.23、D172）：Windows 是 Media Foundation（Platform）；沒給（測試）只切 WAV</summary>
+    public IAudioSplitter Splitter { get; init; } = new AudioSplit.WavOnly();
+    /// <summary>正在分割的會議（錄音切檔要幾秒，M§64）；同時只分一場</summary>
+    public long? SplittingMeeting { get; private set; }
 
     /// <summary>正在匯入的檔案數，側邊欄下方顯示（M§21.13、R20.4）</summary>
     public int ImportingCount => Volatile.Read(ref importing);
@@ -158,16 +170,29 @@ public sealed class AppController
         meetings.Where(m => m.Meeting.Folder.Length > 0).GroupBy(m => m.Meeting.Folder)
             .Select(g => (g.Key, g.Count())).OrderBy(f => f.Key, NaturalComparer.Instance).ToList();
 
-    public void MoveToFolder(long id, string folder)
+    public void MoveToFolder(long id, string folder) => MoveToFolder([id], folder);
+
+    /// <summary>移到資料夾（R9.2）；多選時一起移（R88、M§62），已經在那裡的跳過</summary>
+    public void MoveToFolder(IReadOnlyList<long> ids, string folder)
     {
         var name = folder.Trim();
-        if (Db.Meeting(id)?.Folder == name)
+        var targets = ids.Where(id => Db.Meeting(id)?.Folder != name).ToList();
+        if (targets.Count == 0)
         {
-            Notice?.Invoke(name.Length == 0 ? L.T("這場會議沒有在任何資料夾裡") : L.F("這場會議已經在「%@」", name));
+            if (ids.Count == 1) Notice?.Invoke(name.Length == 0 ? L.T("這場會議沒有在任何資料夾裡") : L.F("這場會議已經在「%@」", name));
+            else if (ids.Count > 1) Notice?.Invoke(name.Length == 0 ? L.T("這些會議都沒有在資料夾裡") : L.F("這些會議都已經在「%@」", name));
             return;
         }
-        Perform(null, () => Db.SetFolder([id], name));
-        Notice?.Invoke(name.Length == 0 ? L.T("已移出資料夾") : L.F("已移到「%@」", name));
+        Perform(null, () => Db.SetFolder(targets, name));
+        if (targets.Count == 1) Notice?.Invoke(name.Length == 0 ? L.T("已移出資料夾") : L.F("已移到「%@」", name));
+        else Notice?.Invoke(name.Length == 0 ? L.F("已把 %lld 場會議移出資料夾", targets.Count) : L.F("已把 %lld 場會議移到「%@」", targets.Count, name));
+    }
+
+    /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null（「移到資料夾」的選單，M§62）</summary>
+    public static string? CommonFolder(IEnumerable<MeetingRow> rows, IReadOnlyCollection<long> ids)
+    {
+        var folders = rows.Where(r => ids.Contains(r.Id)).Select(r => r.Meeting.Folder).Distinct().ToList();
+        return folders.Count == 1 ? folders[0] : null;
     }
 
     public void RenameFolder(string old, string newName)
@@ -527,38 +552,57 @@ public sealed class AppController
 
     public void SetTemplate(long id, string templateId) => Perform(id, () => Db.SetTemplate(id, templateId));
 
-    /// <summary>移到垃圾桶（R9.3）</summary>
-    public void MoveToTrash(long id)
+    public void MoveToTrash(long id) => MoveToTrash([id]);
+
+    /// <summary>移到垃圾桶（R9.3）；多選時一起移（R88.2），正在錄音的那場跳過、說明原因</summary>
+    public void MoveToTrash(IReadOnlyList<long> ids)
     {
-        if (Recorder.IsRecording && Recorder.MeetingId == id)
-        {
-            Error?.Invoke(L.T("這場會議還在錄音，請先停止錄音再移到垃圾桶"));
-            return;
-        }
+        long? recording = Recorder.IsRecording ? Recorder.MeetingId : null;
+        if (recording is long r && ids.Contains(r))
+            Error?.Invoke(ids.Count == 1 ? L.T("這場會議還在錄音，請先停止錄音再移到垃圾桶") : L.T("還在錄音的那場會議沒有移到垃圾桶，請先停止錄音"));
         // 已經在垃圾桶裡就不再處理，不然 30 天的期限會重新計算
-        if (Db.Meeting(id)?.DeletedAt is not null) return;
-        Runner.Cancel(id);
-        Perform(null, () => Db.SetTrashed(id, true));
-        Notice?.Invoke(L.T("已移到垃圾桶，30 天內都可以還原"));
+        var targets = ids.Where(id => id != recording && Db.Meeting(id) is { DeletedAt: null }).ToList();
+        if (targets.Count == 0) return;
+        foreach (var id in targets) Runner.Cancel(id);
+        Perform(null, () => { foreach (var id in targets) Db.SetTrashed(id, true); });
+        Notice?.Invoke(targets.Count == 1 ? L.T("已移到垃圾桶，30 天內都可以還原") : L.F("已把 %lld 場會議移到垃圾桶，30 天內都可以還原", targets.Count));
     }
 
-    public void Restore(long id)
+    public void Restore(long id) => Restore([id]);
+
+    /// <summary>還原（多選時一起，R88）：回到會議列表，選取還原的那幾場</summary>
+    public void Restore(IReadOnlyList<long> ids)
     {
-        Perform(null, () => Db.SetTrashed(id, false));
-        Reveal?.Invoke(id);
+        if (ids.Count == 0) return;
+        Perform(null, () => { foreach (var id in ids) Db.SetTrashed(id, false); });
+        if (ids.Count == 1) Reveal?.Invoke(ids[0]);
+        else RevealMany?.Invoke(ids);
     }
 
-    /// <summary>永久刪除（垃圾桶裡的「立即刪除」）</summary>
-    public void DeletePermanently(long id)
+    public void DeletePermanently(long id) => DeletePermanently([id]);
+
+    /// <summary>永久刪除（垃圾桶裡的「永久刪除」，多選時一起，R88）；正在錄音的那場不刪</summary>
+    public void DeletePermanently(IReadOnlyList<long> ids)
     {
-        if (Db.Meeting(id) is not { } meeting || (Recorder.IsRecording && Recorder.MeetingId == id)) return;
-        Runner.Cancel(id);
+        var meetings = ids.Select(Db.Meeting).OfType<Meeting>().Where(m => !(Recorder.IsRecording && Recorder.MeetingId == m.Id)).ToList();
+        if (meetings.Count == 0) return;
+        foreach (var meeting in meetings)
+        {
+            Runner.Cancel(meeting.Id!.Value);
+            ReleasingAudio?.Invoke(meeting.Id!.Value);
+        }
         Perform(null, () =>
         {
-            Db.DeleteMeeting(id);
-            if (Paths.HasAudio(meeting)) try { File.Delete(Paths.AudioPath(meeting)); } catch (IOException) { }
+            foreach (var meeting in meetings)
+            {
+                Db.DeleteMeeting(meeting.Id!.Value);
+                if (Paths.HasAudio(meeting)) try { File.Delete(Paths.AudioPath(meeting)); } catch (IOException) { }
+            }
         });
     }
+
+    /// <summary>清空垃圾桶（R88.3）</summary>
+    public void EmptyTrash() => DeletePermanently(Db.MeetingRows(trash: true).Select(r => r.Id).ToList());
 
     void PurgeExpiredTrash()
     {
@@ -646,11 +690,115 @@ public sealed class AppController
     // MARK: 說話者的修正（M§24、R23）
 
     /// <summary>轉錄或重新辨識說話者時不能改：完成時會整份寫回段落的說話者</summary>
-    string? SpeakerEditProblem(long id, MeetingDetail detail)
+    string? SpeakerEditProblem(long id, MeetingDetail detail, bool transcript = false)
     {
         if (detail.Meeting.DeletedAt is not null) return L.T("垃圾桶裡的會議要先還原才能操作");
-        if (Status(detail).IsActive || Db.HasActiveJob(id, JobKind.Rediarize)) return L.T("正在處理這場會議，完成後才能改說話者");
+        if (Status(detail).IsActive || Db.HasActiveJob(id, JobKind.Rediarize))
+            return transcript ? L.T("正在處理這場會議，完成後才能修改逐字稿") : L.T("正在處理這場會議，完成後才能改說話者");
         return null;
+    }
+
+    /// <summary>「刪除這句」（R89、M§63）：不用確認，跟說話者的調整共用「復原」（D171）</summary>
+    public void DeleteSegment(long id, long segmentId)
+    {
+        if (MeetingDetail.Load(Db, id) is not { } detail || detail.Segments.FirstOrDefault(s => s.Id == segmentId) is not { } segment) return;
+        if (SpeakerEditProblem(id, detail, transcript: true) is { } problem) { Notice?.Invoke(problem); return; }
+        // 復原的說明：前 12 個字（Swift 的字形叢集）
+        var preview = SwiftText.Count(segment.Text) > 12 ? SwiftText.Prefix(segment.Text, 12) + "…" : segment.Text;
+        Perform(id, () =>
+        {
+            if (Db.DeleteSegment(id, segmentId, L.F("刪除一句「%@」", preview)))
+                Notice?.Invoke(L.T("已刪除這句。要復原的話，在逐字稿按右鍵選「復原」。"));
+        });
+    }
+
+    /// <summary>
+    /// 從某一句分成兩場（R90、M§64、design-windows §11.23）：先在背景切錄音，再一個交易搬資料庫，最後換檔案、排重新整理。
+    /// 分開後不能復原（D170）。選取留在原本那場
+    /// </summary>
+    public async Task SplitMeeting(long id, long segmentId)
+    {
+        if (MeetingDetail.Load(Db, id) is not { } detail || detail.Segments.FirstOrDefault(s => s.Id == segmentId) is not { } segment) return;
+        var meeting = detail.Meeting;
+        if (Recorder.IsRecording && Recorder.MeetingId == id)
+        {
+            Error?.Invoke(L.T("這場會議還在錄音，請先停止錄音再分成兩場"));
+            return;
+        }
+        if (meeting.DeletedAt is not null)
+        {
+            Notice?.Invoke(L.T("垃圾桶裡的會議要先還原才能操作"));
+            return;
+        }
+        if (SplittingMeeting is not null || Db.HasActiveJobs(id) || Runner.RunningJob(id) is not null)
+        {
+            Notice?.Invoke(L.T("正在處理這場會議，完成後才能分成兩場"));
+            return;
+        }
+        // 切在那一句的開始，四捨五入到 0.01 秒（同 Mac 的 rounded()）
+        var cut = Math.Round(segment.Start * 100, MidpointRounding.AwayFromZero) / 100;
+        if (cut <= 0) return;
+        var title = L.F("%@（2）", meeting.DisplayTitle);
+        var audio = Paths.HasAudio(meeting) ? Paths.AudioPath(meeting) : null;
+        SplittingMeeting = id;
+        string? directory = null;
+        try
+        {
+            AudioSplit.Parts? parts = null;
+            if (audio is not null)
+            {
+                directory = Paths.MakeTempDirectory();
+                parts = await Splitter.Split(audio, cut, directory, CancellationToken.None);
+            }
+            // 錄音檔不見的會議只分逐字稿（R90.4）
+            if (Db.SplitMeeting(id, cut, title, parts?.Extension) is not { } created) return;
+            if (parts is not null && audio is not null)
+            {
+                ReleasingAudio?.Invoke(id);
+                await MoveWithRetry(parts.Tail, Paths.AudioPath(created));
+                var target = Db.Meeting(id) is { } updated ? Paths.AudioPath(updated) : audio;
+                await MoveWithRetry(parts.Head, target);
+                // 匯入的 mp3 這類格式切成 m4a：舊的檔案刪掉（D172）
+                if (!string.Equals(target, audio, StringComparison.OrdinalIgnoreCase)) try { File.Delete(audio); } catch (IOException) { }
+                AudioReplaced?.Invoke(id);
+            }
+            string message;
+            if (Settings.SummarizerReady)
+            {
+                Db.Enqueue(id, JobKind.Summarize);
+                Db.Enqueue(created.Id!.Value, JobKind.Summarize);
+                Runner.Wake();
+                message = L.F("已分成兩場：「%@」。兩場都在重新整理會議紀錄", created.DisplayTitle);
+            }
+            else message = L.F("已分成兩場：「%@」。兩場都要重新整理會議紀錄，設定好整理工具後按「重新整理」", created.DisplayTitle);
+            Changed?.Invoke(null);
+            Notice?.Invoke(message);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Log.Error($"split meeting failed: {e.GetType().Name}");
+            Error?.Invoke(L.F("分成兩場失敗：%@", e.Message));
+            Changed?.Invoke(null);
+        }
+        finally
+        {
+            SplittingMeeting = null;
+            if (directory is not null) try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>搬檔案、取代舊的；播放器剛放掉的檔案可能還被系統開著一下子：遇到 IOException 每 0.2 秒重試，最多 2 秒</summary>
+    static async Task MoveWithRetry(string source, string destination)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                File.Move(source, destination, overwrite: true);
+                return;
+            }
+            catch (Exception e) when ((e is IOException or UnauthorizedAccessException) && attempt < 10) { await Task.Delay(200); }
+        }
     }
 
     /// <summary>「合併到…」（R23.1）：from 說的話全部算 into 的；會議紀錄裡的名字跟著換</summary>

@@ -116,6 +116,73 @@ public sealed partial class AppDatabase
         files.ForEach(RemoveDocumentFile);
     }
 
+    /// <summary>
+    /// 從 cut 秒分成兩場（R90、M§64）：開始時間 ≥ cut 的段落（正式、即時都算）、標記重點搬到新的一場，時間減 cut、seq 重新從 0 編；
+    /// 校正建議、搜尋索引跟著段落。說話者兩邊各留有段落的；只在新的一場說話的人，聲紋改指新的一場。
+    /// audioExtension：切好的錄音的副檔名（null 是沒有錄音）；跟原本那場的不同時（匯入的 mp3 切成 m4a，design-windows §11.23）
+    /// 原本那場的錄音檔名一起改。回傳新的一場（錄音檔名已經給好，檔案由呼叫的人搬）
+    /// </summary>
+    public Meeting? SplitMeeting(long id, double cut, string title, string? audioExtension) => Write(db =>
+    {
+        if (FetchMeeting(db, id) is not { } original) return null;
+        var meeting = original.Clone();
+        meeting.Id = null;
+        meeting.Title = title;
+        meeting.AudioFile = "";
+        meeting.Notes = null;
+        meeting.NotesBy = null;
+        meeting.NotesDraft = 0;
+        meeting.UserNotes = "";
+        meeting.SpeakerHintDismissed = false;
+        // Swift 的 rounded() 是四捨五入
+        var cutSeconds = (int)Math.Round(cut, MidpointRounding.AwayFromZero);
+        meeting.DurationSeconds = original.DurationSeconds is int d ? Math.Max(0, d - cutSeconds) : null;
+        var started = DateTimeOffset.TryParse(original.CreatedAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var t) ? t : Clock.Source();
+        meeting.CreatedAt = started.AddSeconds(cut).UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+        meeting.UpdatedAt = Clock.Now();
+        var newId = InsertMeetingRow(db, meeting);
+        meeting.Id = newId;
+        if (audioExtension is not null)
+        {
+            meeting.AudioFile = $"{newId}.{audioExtension}";
+            UpdateMeetingRow(db, meeting);
+        }
+        Index(db, newId, SearchKind.Title, meeting.DisplayTitle);
+
+        var moved = db.Query("SELECT id FROM segments WHERE meeting_id = ? AND start >= ? ORDER BY seq", id, cut).Select(r => r.Long("id")).ToList();
+        for (var seq = 0; seq < moved.Count; seq++)
+            db.Execute("UPDATE segments SET meeting_id = ?, seq = ?, start = MAX(0, start - ?), end = MAX(0, end - ?) WHERE id = ?", newId, seq, cut, cut, moved[seq]);
+        db.Execute("UPDATE corrections SET meeting_id = ? WHERE segment_id IN (SELECT id FROM segments WHERE meeting_id = ?)", newId, newId);
+        db.Execute("UPDATE search SET meeting_id = ? WHERE rowid IN (SELECT id FROM segments WHERE meeting_id = ?)", newId, newId);
+        db.Execute("UPDATE bookmarks SET meeting_id = ?, time = MAX(0, time - ?) WHERE meeting_id = ? AND time >= ?", newId, cut, id, cut);
+
+        bool Speaks(long meetingId, int idx) =>
+            (long)db.Scalar("SELECT EXISTS (SELECT 1 FROM segments WHERE meeting_id = ? AND speaker = ?)", meetingId, idx)! != 0;
+        foreach (var speaker in db.Query("SELECT * FROM speakers WHERE meeting_id = ?", id).Select(ToSpeaker).ToList())
+        {
+            if (!Speaks(id, speaker.Idx) && Speaks(newId, speaker.Idx))
+                db.Execute("UPDATE voiceprints SET meeting_id = ? WHERE meeting_id = ? AND speaker_idx = ?", newId, id, speaker.Idx);
+            speaker.MeetingId = newId;
+            InsertSpeakerRow(db, speaker);
+        }
+        RemoveEmptySpeakers(db, id);
+        RemoveEmptySpeakers(db, newId);
+
+        original.DurationSeconds = cutSeconds;
+        if (audioExtension is not null && original.AudioFile.Length > 0
+            && !string.Equals(System.IO.Path.GetExtension(original.AudioFile).TrimStart('.'), audioExtension, StringComparison.OrdinalIgnoreCase))
+            original.AudioFile = System.IO.Path.ChangeExtension(original.AudioFile, audioExtension);
+        original.UpdatedAt = Clock.Now();
+        UpdateMeetingRow(db, original);
+        // 段落換了，說話者的復原對不上（M§24.2）
+        db.Execute("DELETE FROM speaker_undo WHERE meeting_id = ?", id);
+        return meeting;
+    });
+
+    /// <summary>這場會議有沒有排隊中或執行中的工作（任何種類，含壓縮、校正這些輔助工作；M§64）</summary>
+    public bool HasActiveJobs(long meetingId) => Read(db =>
+        (long)db.Scalar("SELECT COUNT(*) FROM jobs WHERE meeting_id = ? AND status IN ('queued', 'running')", meetingId)! > 0);
+
     /// <summary>移到垃圾桶或還原（R9.3）</summary>
     public void SetTrashed(long id, bool trashed) =>
         Write(db => db.Execute("UPDATE meetings SET deleted_at = ? WHERE id = ?", trashed ? Clock.Now() : null, id));

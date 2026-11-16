@@ -396,17 +396,27 @@ public sealed class TranscriptTab
         menu.Items.Add(Ui.Item(L.T("從這裡播放"), () => host.Player.Seek(segment.Start), enabled: host.Player.IsLoaded));
         menu.Items.Add(Ui.Item(L.T("編輯這一段"), () => StartEdit(segment)));
         menu.Items.Add(Ui.Item(L.T("拷貝"), () => Copy.Text(segment.Text)));
-        // 改這句的說話者（M§24.3、R23.2）
-        if (segment.Id is long id && segment.Kind == "final" && detail!.Speakers.Count > 0)
+        if (segment.Id is long id && segment.Kind == "final")
         {
+            var d = detail!;
+            var meeting = d.Meeting.Id!.Value;
             menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(Ui.Item(L.T("拆成兩句…"), () => _ = Dialogs.SplitSegment(window, detail, segment)));   // R70
-            menu.Items.Add(SpeakerChoices(L.T("這句是誰說的"), [id], segment.Speaker));
-            var run = detail.SpeakerRun(id);
-            if (run.Count > 1) menu.Items.Add(SpeakerChoices(L.F("這段連續的話是誰說的（%lld 句）", run.Count), run, segment.Speaker));
-            // 復原最近一次說話者的調整（R44.4，原本在「更多」）：有東西可復原才出現
-            if (detail.SpeakerUndoLabel is { } label)
-                menu.Items.Add(Ui.Item(L.F("復原：%@", label), () => host.Controller.UndoSpeakerEdit(detail.Meeting.Id!.Value), icon: Symbol.Undo));
+            // 改這句的說話者（M§24.3、R23.2）：有辨識說話者才有
+            if (d.Speakers.Count > 0)
+            {
+                menu.Items.Add(Ui.Item(L.T("拆成兩句…"), () => _ = Dialogs.SplitSegment(window, d, segment)));   // R70
+                menu.Items.Add(SpeakerChoices(L.T("這句是誰說的"), [id], segment.Speaker));
+                var run = d.SpeakerRun(id);
+                if (run.Count > 1) menu.Items.Add(SpeakerChoices(L.F("這段連續的話是誰說的（%lld 句）", run.Count), run, segment.Speaker));
+            }
+            // 分割會議（R90、M§64）：第一句之前沒有東西，不能從第一句分
+            if (d.Segments.FirstOrDefault(s => s.Kind == "final")?.Id != id)
+                menu.Items.Add(Ui.Item(L.T("從這裡分成兩場…"), () => _ = window.ConfirmSplitMeeting(meeting, segment)));
+            // 刪除這句（R89、M§63）：不用確認，可以復原（D171）；沒辨識說話者的會議也有
+            menu.Items.Add(Ui.Item(L.T("刪除這句"), () => host.Controller.DeleteSegment(meeting, id), icon: Symbol.Delete));
+            // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
+            if (d.SpeakerUndoLabel is { } label)
+                menu.Items.Add(Ui.Item(L.F("復原：%@", label), () => host.Controller.UndoSpeakerEdit(meeting), icon: Symbol.Undo));
         }
         return menu;
     }

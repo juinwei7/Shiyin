@@ -17,7 +17,8 @@ public sealed class MediaFoundationDecoder : IAudioDecoder
 
     static bool IsWav(string path) => Importer.Extension(path) == "wav";
 
-    static WaveStream OpenReader(string path)
+    /// <summary>WAV 以外的錄音：Media Foundation 讀成浮點（原本的取樣率、聲道），AIFF 用 AiffFileReader；解不開時說明怎麼辦</summary>
+    internal static WaveStream OpenReader(string path)
     {
         var ext = Importer.Extension(path);
         try
@@ -124,6 +125,69 @@ public sealed class MediaFoundationDecoder : IAudioDecoder
         }
 
         public void Dispose() => reader.Dispose();
+    }
+}
+
+/// <summary>
+/// 分割會議的錄音（R90、design-windows §11.23、D172）：WAV 直接切位元組（AudioSplit.SplitWav，格式不變）；其他格式用 Media Foundation 解碼，
+/// 切開後各自壓成 m4a（AAC）：聲道數不變，取樣率不是 44.1／48 kHz 時升到 48 kHz（AAC 編碼器只收這兩種），位元率照原檔的平均取最接近的
+/// </summary>
+public sealed class MediaFoundationSplitter : IAudioSplitter
+{
+    static readonly int[] Bitrates = [96000, 128000, 160000, 192000];
+
+    public Task<AudioSplit.Parts?> Split(string path, double seconds, string directory, CancellationToken cancel) => Task.Run(() =>
+    {
+        if (Importer.Extension(path) == "wav") return AudioSplit.SplitWav(path, seconds, directory);
+        using var source = MediaFoundationDecoder.OpenReader(path);
+        var total = source.TotalTime.TotalSeconds;
+        if (seconds <= 0 || seconds >= total) return null;
+        var channels = source.WaveFormat.Channels;
+        var rate = source.WaveFormat.SampleRate is 44100 or 48000 ? source.WaveFormat.SampleRate : 48000;
+        using var pcm = new MediaFoundationResampler(new MediaFoundationCompressor.StandardFormat(source), new WaveFormat(rate, 16, channels)) { ResamplerQuality = 60 };
+        // 原檔的平均位元率（影片檔會偏大，最多 192 kbps）
+        var average = total > 0 ? new FileInfo(path).Length * 8 / total : 0;
+        var bitrate = Bitrates.OrderBy(b => Math.Abs(b - average)).First();
+        var head = Path.Combine(directory, "head.m4a");
+        var tail = Path.Combine(directory, "tail.m4a");
+        // 前段讀到切點就停（同一個解碼器接著讀後段，不用重新找位置）
+        Encode(new Limited(pcm, (long)Math.Floor(seconds * rate) * pcm.WaveFormat.BlockAlign, cancel), head, bitrate, cancel);
+        Encode(new Limited(pcm, long.MaxValue, cancel), tail, bitrate, cancel);
+        return (AudioSplit.Parts?)new AudioSplit.Parts(head, tail, "m4a");
+    }, cancel);
+
+    /// <summary>Media Foundation 照副檔名選容器：先寫成 .mp4 再改名（同壓縮）</summary>
+    static void Encode(IWaveProvider provider, string m4aPath, int bitrate, CancellationToken cancel)
+    {
+        var temp = m4aPath + ".tmp.mp4";
+        try
+        {
+            MediaFoundationEncoder.EncodeToAac(provider, temp, bitrate);
+            cancel.ThrowIfCancellationRequested();
+            File.Move(temp, m4aPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temp)) File.Delete(temp);
+        }
+    }
+
+    /// <summary>最多讀 bytes 個位元組（取消時讀到結尾）</summary>
+    sealed class Limited(IWaveProvider inner, long bytes, CancellationToken cancel) : IWaveProvider
+    {
+        long remaining = bytes;
+        public WaveFormat WaveFormat => inner.WaveFormat;
+
+        public int Read(Span<byte> buffer)
+        {
+            if (remaining <= 0 || cancel.IsCancellationRequested) return 0;
+            var want = (int)Math.Min(buffer.Length, remaining);
+            want -= want % WaveFormat.BlockAlign;
+            if (want <= 0) return 0;
+            var n = inner.Read(buffer[..want]);
+            remaining -= n;
+            return n;
+        }
     }
 }
 
