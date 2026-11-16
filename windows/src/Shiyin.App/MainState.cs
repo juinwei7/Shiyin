@@ -215,8 +215,18 @@ public sealed class MainState
     }
 
     /// <summary>列表上的會議（R97、M§71）：資料夾或定期會議、篩選（垃圾桶不篩選）、排序</summary>
-    public List<MeetingRow> FilteredMeetings =>
-        MeetingList.Filtered(ShowTrash ? Trash : Meetings, ShowTrash, FolderFilter, SeriesFilter, Filter, Sort, MeetingPeople, MyName);
+    public List<MeetingRow> FilteredMeetings
+    {
+        get
+        {
+            var rows = MeetingList.Filtered(ShowTrash ? Trash : Meetings, ShowTrash, FolderFilter, SeriesFilter, Filter, Sort, MeetingPeople, MyName);
+            // 只放資料夾、定期會議以外的會議（R101.6）
+            return ListShowsOthersOnly ? rows.Where(r => !SidebarCollapse.InFolderOrSeries(r)).ToList() : rows;
+        }
+    }
+
+    /// <summary>下面的列表是「其他會議」（R101.6）：只放不在資料夾、不在定期會議的會議</summary>
+    public bool ListShowsOthersOnly => SidebarCollapse.ShowsOthersOnly(Meetings, ShowTrash, FolderFilter, SeriesFilter, Filter, Grouping);
 
     /// <summary>列表的排序、分組（R97.2）：記在 settings.json</summary>
     public MeetingSort Sort => host.Settings.MeetingSort;
@@ -333,6 +343,25 @@ public sealed class MainState
         ShowTrash = Trash.Any(m => m.Id == id);
         Selection = null;
         Select(id);
+        ExpandToShow(id);
+    }
+
+    /// <summary>
+    /// 程式帶你去某場會議時（reveal、搜尋結果點進去）：展開側欄的會議列表和那場所在的那一組（R101.1、design-windows §11.34）。
+    /// 設定改了主視窗會重畫
+    /// </summary>
+    public void ExpandToShow(long id) => SidebarCollapse.ExpandToShow(host.Settings, id, Groups, Meetings);
+
+    /// <summary>
+    /// 點了資料夾、定期會議在原地展開的那一場（R101.2）：人物模式換回會議、選那場；下面的列表不換（同 Mac 的 openFromSidebar）
+    /// </summary>
+    public void OpenFromSidebar(long id)
+    {
+        var changed = Sidebar != SidebarMode.Meetings || multiSelection.Count > 0;
+        Sidebar = SidebarMode.Meetings;
+        multiSelection.Clear();
+        if (Selection != id) Select(id);
+        else if (changed) Changed?.Invoke();
     }
 
     /// <summary>還原了好幾場（R88、M§62）：回到會議列表、選取那幾場，目前這場是第一場</summary>

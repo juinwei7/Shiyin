@@ -111,9 +111,9 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
         menu.Items.Add(Ui.Item(L.T("重新命名…"), () => rename.ShowAt(button, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
         {
             Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
-        }), icon: Symbol.Rename));
+        }), icon: Symbol.Edit));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Ui.Item(L.T("刪除定期會議…"), () => _ = window.ConfirmDeleteSeries(series.Id ?? 0), icon: Symbol.Delete));
+        menu.Items.Add(Ui.DangerItem(L.T("刪除定期會議…"), () => _ = window.ConfirmDeleteSeries(series.Id ?? 0)));
         return button;
     }
 
@@ -256,9 +256,9 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
             // 右鍵、「⋯」（R100）：打開這場會議、移出「系列」
             list.Children.Add(PersonPage.MeetingLinkRow(button, menu =>
             {
-                menu.Items.Add(Ui.Item(L.T("打開這場會議"), () => window.State.Select(id)));
+                menu.Items.Add(Ui.Item(L.T("打開這場會議"), () => window.State.Select(id), glyph: Ui.OpenGlyph));
                 menu.Items.Add(new MenuFlyoutSeparator());
-                menu.Items.Add(Ui.Item(L.F("移出「%@」", seriesName), () => host.Controller.SetSeries([id], null)));
+                menu.Items.Add(Ui.Item(L.F("移出「%@」", seriesName), () => host.Controller.SetSeries([id], null), icon: Symbol.Remove));
             }));
         }
         return list;

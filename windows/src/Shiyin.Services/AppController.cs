@@ -201,11 +201,17 @@ public sealed partial class AppController
     {
         var name = newName.Trim();
         if (name.Length == 0 || name == old) return;
+        // 側欄展開的資料夾跟著改名（R101、design-windows §11.34）
+        SidebarCollapse.RenameFolder(Settings, old, name);
         Perform(null, () => Db.RenameFolder(old, name));
     }
 
-    /// <summary>刪除資料夾：會議留著，移回「不在資料夾」</summary>
-    public void DeleteFolder(string name) => Perform(null, () => Db.RenameFolder(name, ""));
+    /// <summary>刪除資料夾：會議留著，移回「不在資料夾」；側欄展開的鍵拿掉（R101）</summary>
+    public void DeleteFolder(string name)
+    {
+        SidebarCollapse.SetRow(Settings, SidebarCollapse.FolderKey(name), false);
+        Perform(null, () => Db.RenameFolder(name, ""));
+    }
 
     // MARK: 匯入（R3）
 

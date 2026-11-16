@@ -2393,36 +2393,19 @@
         }
       }
     },
-    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。正在看某個資料夾時，新錄的和匯入的會議都會放進去。": {
+    "會議多了可以整理：會議列表上方那一行右邊的漏斗按鈕可以照日期、標題、長度排序，依月份或資料夾分組，只看有待確認、有你的待辦、某個人參加或某個範本的會議。資料夾按右鍵選「自動加入的條件…」，例如標題有「週會」、某幾個人都參加，新的會議整理完就自動放進去。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meetings can go in folders: right-click a meeting (or use More) and choose Move to folder → New folder…. While you're viewing a folder, new recordings and imports go into it."
+            "value": "To organize lots of meetings, use the funnel button at the right of the meeting list heading: sort by date, title or length, group by month or folder, and show only meetings that need review, have your action items, include a certain person or use a certain template. Right-click a folder and choose Auto-Add Rules… (for example, the title contains “weekly” or certain people all attend), and new meetings are moved there once their notes are ready."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "会议可以分文件夹：在会议上按右键（或“更多”）选“移到文件夹”→“新文件夹…”。正在看某个文件夹时，新录的和导入的会议都会放进去。"
-          }
-        }
-      }
-    },
-    "會議多了可以整理：會議列表上方「所有會議」那一行右邊的漏斗按鈕可以照日期、標題、長度排序，依月份或資料夾分組，只看有待確認、有你的待辦、某個人參加或某個範本的會議。資料夾按右鍵選「自動加入的條件…」，例如標題有「週會」、某幾個人都參加，新的會議整理完就自動放進去。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "To organize lots of meetings, use the funnel button to the right of “All Meetings” above the meeting list: sort by date, title or length, group by month or folder, and show only meetings that need review, have your action items, include a certain person or use a certain template. Right-click a folder and choose Auto-Add Rules… (for example, the title contains “weekly” or certain people all attend), and new meetings are moved there once their notes are ready."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会议多了可以整理：会议列表上方“所有会议”那一行右边的漏斗按钮可以照日期、标题、长度排序，依月份或文件夹分组，只看有待确认、有你的待办、某个人参加或某个模板的会议。文件夹按右键选“自动加入的条件…”，例如标题有“周会”、某几个人都参加，新的会议整理完就自动放进去。"
+            "value": "会议多了可以整理：会议列表上方那一行右边的漏斗按钮可以照日期、标题、长度排序，依月份或文件夹分组，只看有待确认、有你的待办、某个人参加或某个模板的会议。文件夹按右键选“自动加入的条件…”，例如标题有“周会”、某几个人都参加，新的会议整理完就自动放进去。"
           }
         }
       }

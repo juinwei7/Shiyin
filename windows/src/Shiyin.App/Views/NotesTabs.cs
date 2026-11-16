@@ -123,7 +123,7 @@ public sealed class NotesTabs
         menu.Items.Add(new MenuFlyoutSeparator());
         var editable = CanEdit(detail);
         menu.Items.Add(Ui.Item(L.T("編輯這一條"), () => BeginEdit(detail, r), editable, Symbol.Edit));
-        menu.Items.Add(Ui.Item(L.T("刪除這一條"), () => host.Controller.DeleteNoteItem(detail.Meeting.Id!.Value, r), editable, Symbol.Delete));
+        menu.Items.Add(Ui.DangerItem(L.T("刪除這一條"), () => host.Controller.DeleteNoteItem(detail.Meeting.Id!.Value, r), editable));
     }
 
     /// <summary>時間點、待確認的標記後面接「⋯」</summary>
@@ -573,9 +573,9 @@ public sealed class NotesTabs
                 var bookmark = b;
                 var sub = new MenuFlyoutSubItem { Text = $"{TimeFormat.String(b.Time)} {b.Label}" };
                 sub.Items.Add(Ui.Item(L.T("跳到這裡"), () => Seek(bookmark.Time), icon: Symbol.Play));
-                sub.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Dialogs.RenameBookmark(window, bookmark), icon: Symbol.Rename));
+                sub.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = Dialogs.RenameBookmark(window, bookmark), icon: Symbol.Edit));
                 sub.Items.Add(new MenuFlyoutSeparator());
-                sub.Items.Add(Ui.Item(L.T("刪除"), () => host.Controller.DeleteBookmark(bookmark.MeetingId, bookmark.Id ?? 0), icon: Symbol.Delete));
+                sub.Items.Add(Ui.DangerItem(L.T("刪除"), () => host.Controller.DeleteBookmark(bookmark.MeetingId, bookmark.Id ?? 0)));
                 menu.Items.Add(sub);
             }
             marks = new DropDownButton { Content = L.F("重點標記 %lld", detail.Bookmarks.Count), Flyout = menu, VerticalAlignment = VerticalAlignment.Top };
@@ -819,7 +819,7 @@ public sealed class AskTab
             var more = new DropDownButton { Content = new SymbolIcon(Symbol.More) };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(more, L.T("更多"));
             var menu = new MenuFlyout();
-            menu.Items.Add(Ui.Item(L.T("清除問答紀錄"), clear));
+            menu.Items.Add(Ui.DangerItem(L.T("清除問答紀錄"), clear, icon: null));
             more.Flyout = menu;
             right = Ui.Row(8, ask, more);
         }

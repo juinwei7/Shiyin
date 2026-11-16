@@ -337,6 +337,29 @@ public sealed class AppTests : IDisposable
         Assert.Equal(["Redis", "Kubernetes", "Claude Code"], db.Glossary().Select(t => t.Term));
     }
 
+    /// <summary>側欄展開的資料夾、定期會議（R101、design-windows §11.34）：資料夾改名時鍵跟著改，刪除資料夾、定期會議時拿掉</summary>
+    [Fact]
+    public void SidebarKeysFollowFolderRenameAndDelete()
+    {
+        var settings = AppSettings.InMemory();
+        var controller = Controller(settings, out _);
+        var a = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
+        var b = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
+        db.SetFolder([a, b], "客戶");
+        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [] }, [a, b]).Id!.Value;
+        SidebarCollapse.SetRow(settings, "folder:客戶", true);
+        SidebarCollapse.SetRow(settings, SidebarCollapse.SeriesKey(series), true);
+        SidebarCollapse.SetSection(settings, "folders", false);
+        controller.RenameFolder("客戶", "客戶 A");
+        Assert.Equal(["客戶 A"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
+        Assert.Equal(["folder:客戶 A", $"series:{series}"], settings.StringList(AppSettings.SidebarExpandedKey));
+        controller.DeleteFolder("客戶 A");
+        controller.DeleteSeries(series);
+        Assert.Empty(settings.StringList(AppSettings.SidebarExpandedKey));
+        // 段落的收合不受影響
+        Assert.Equal(["folders"], settings.StringList(AppSettings.SidebarCollapsedKey));
+    }
+
     /// <summary>
     /// 每一種東西都能直接改、刪（R100、M§74）：就地改一條紀錄（待辦只改事項、時間點不變、留一個版本、空的和沒改的不存）、
     /// 刪除一條（不確認、提示怎麼復原、復原上一版拿回來）；標記重新命名；詞改成已經有的詞時合併

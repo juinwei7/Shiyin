@@ -61,6 +61,9 @@ public sealed class AppSettings
     /// <summary>會議列表的排序、分組（R97、M§71、design-windows §11.30）：dateDesc／dateAsc／title／duration、none／month／folder／series</summary>
     public const string MeetingSortKey = "meetingSort";
     public const string MeetingGroupingKey = "meetingGrouping";
+    /// <summary>側欄收起來的段落、在原地展開的資料夾和定期會議（R101、M§75、design-windows §11.34）：字串陣列，鍵同 Mac</summary>
+    public const string SidebarCollapsedKey = "sidebarCollapsed";
+    public const string SidebarExpandedKey = "sidebarExpanded";
     /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
     public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>

@@ -523,11 +523,32 @@ public static class Ui
         BorderBrush = Divider, BorderThickness = new Thickness(1),
     };
 
-    public static MenuFlyoutItem Item(string text, Action click, bool enabled = true, Symbol? icon = null)
+    /// <summary>選單的一項。icon／glyph：圖示（R101.4：側欄和物件的選單每一項都有，跟字同色；Symbol 沒有的用 Segoe Fluent 的 glyph）</summary>
+    public static MenuFlyoutItem Item(string text, Action click, bool enabled = true, Symbol? icon = null, string? glyph = null)
     {
         var item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
         if (icon is Symbol s) item.Icon = new SymbolIcon(s);
+        else if (glyph is not null) item.Icon = new FontIcon { Glyph = glyph };
         item.Click += (_, _) => click();
+        return item;
+    }
+
+    /// <summary>Segoe Fluent 的 OpenInNewWindow（「打開」：打開定期會議、打開這場會議）、BlockContact（移除這個人）</summary>
+    public const string OpenGlyph = "\uE8A7";
+    public const string RemovePersonGlyph = "\uE8F8";
+
+    /// <summary>
+    /// 會刪掉、移除東西的選單項目（R101.4，參考 ChatGPT 桌面版）：紅字、紅圖示，滑過、按下也是紅的（範本各狀態讀的主題資源換掉）。
+    /// 對比主題時照平台的顏色（§11.3：滑過去是反白的底，自己的顏色會看不見）。icon 是 null 時只有紅字（本來沒有圖示的選單）
+    /// </summary>
+    public static MenuFlyoutItem DangerItem(string text, Action click, bool enabled = true, Symbol? icon = Symbol.Delete, string? glyph = null)
+    {
+        var item = Item(text, click, enabled, icon, glyph);
+        if (HighContrast) return item;
+        var red = Danger;
+        item.Foreground = red;
+        foreach (var key in new[] { "MenuFlyoutItemForeground", "MenuFlyoutItemForegroundPointerOver", "MenuFlyoutItemForegroundPressed" }) item.Resources[key] = red;
+        if (enabled && item.Icon is { } i) i.Foreground = red;
         return item;
     }
 

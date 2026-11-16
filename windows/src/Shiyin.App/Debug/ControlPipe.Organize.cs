@@ -40,6 +40,26 @@ public static partial class ControlPipe
                 return Ok;
             case "sidebarkey" when args.Length > 1 && main is not null:
                 return new JsonObject { ["handled"] = args[1] == "return" ? main.SidebarRename() : main.SidebarDelete() };
+            // 側欄的收合（R101、design-windows §11.34，同 Mac）：sidebarsection <folders|meetings|people|group:…> on|off（on 是展開）、
+            // sidebarexpand <folder:名稱|series:id> on|off
+            case "sidebarsection" when args.Length > 2:
+                SidebarCollapse.SetSection(host.Settings, args[1], args[2] == "on");
+                return Ok;
+            case "sidebarexpand" when args.Length > 2:
+                SidebarCollapse.SetRow(host.Settings, args[1], args[2] == "on");
+                return Ok;
+            // folder <會議 id> <資料夾|->：移到資料夾（- 是移出，同 Mac；準備示範資料用）
+            case "folder" when args.Length > 2 && Id(1) is long folderMeeting:
+                host.Controller.MoveToFolder(folderMeeting, args[2] == "-" ? "" : args[2]);
+                return Ok;
+            // seriesnew <名稱> <會議 id,…>：直接建一個定期會議（每週一 10:00，不經過建議；Windows 才有，準備示範資料用：建議要真的錄音的開始時間）
+            case "seriesnew" when args.Length > 2:
+            {
+                var ids = args[2].Split(',').Select(x => long.TryParse(x, out var v) ? v : -1).Where(v => v > 0).ToList();
+                var made = host.Db.CreateSeries(new MeetingSeries { Name = args[1], Weekday = 2, Minute = 600, People = [] }, ids);
+                state?.Reload();
+                return new JsonObject { ["id"] = made.Id };
+            }
             // noteitem <editui|edit|delete|cancel> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]：
             // 選取中的會議的一條紀錄（editui 打開就地改的輸入框、edit 直接存、delete 刪掉）
             case "noteitem" when args.Length > 3 && main?.State.Detail is { } noteDetail:

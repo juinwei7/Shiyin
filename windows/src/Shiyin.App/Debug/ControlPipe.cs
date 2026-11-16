@@ -501,6 +501,9 @@ public static partial class ControlPipe
             ["editingNoteItem"] = main?.NotesTabs.EditingItem(main.State.Detail)?.ToString() ?? "",
             ["bookmarks"] = new JsonArray([.. (main?.State.Detail?.Bookmarks ?? []).Select(b => (JsonNode)new JsonObject { ["id"] = b.Id, ["time"] = b.Time, ["label"] = b.Label })]),
             ["personRenameOpen"] = main?.PersonRenameOpen,
+            // 側欄的收合（R101，同 Mac）：收起來的段落、在原地展開的資料夾和定期會議
+            ["sidebarCollapsed"] = new JsonArray([.. SidebarCollapse.Collapsed(host.Settings).Order(StringComparer.Ordinal).Select(x => (JsonNode)x)]),
+            ["sidebarExpanded"] = new JsonArray([.. SidebarCollapse.Expanded(host.Settings).Order(StringComparer.Ordinal).Select(x => (JsonNode)x)]),
             ["folderRuleDialog"] = Dialogs.EditingFolderRule,
             // 會議結束的倒數（R95、M§69）：剩幾秒，沒在倒數是 -1（同 Mac 的 meetingprompts 的 countdown）
             ["meetingEndCountdown"] = host.MeetingEnd.Remaining(DateTime.UtcNow),
