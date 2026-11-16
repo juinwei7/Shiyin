@@ -121,13 +121,15 @@ struct SidebarFolderRows: View {
     var body: some View {
         let people = model.sidebarMode == .people
         if !model.seriesCandidates.isEmpty {
-            Button { model.showSeriesSuggestions = true } label: {
-                Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
-                    .labelStyle(SidebarLabelStyle())
-                    .foregroundStyle(Color.celadon)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            // 不用 Button：List 裡的 SwiftUI 按鈕會讓整個表格的點擊卡住（見 sidebarClick）
+            Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
+                .labelStyle(SidebarLabelStyle())
+                .foregroundStyle(Color.celadon)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .sidebarClick { model.showSeriesSuggestions = true }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default) { model.showSeriesSuggestions = true }
             .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
         }
         ForEach(model.sidebarFolderItems) { item in
@@ -177,7 +179,8 @@ struct SidebarFolderRows: View {
 /// 拖動超過 4 點開始系統的拖曳（放的地方跟下面列表、Finder 的拖曳同一套 onDrop），沒拖就當成點一下；
 /// 右鍵、滑過照舊交給下面的 SwiftUI（右鍵選單、滑過的底）
 struct SidebarDragHandle: NSViewRepresentable {
-    let type: UTType
+    /// nil：只接點一下（不能拖的列、段落標題）
+    let type: UTType?
     let data: () -> Data
     let label: String
     let onClick: () -> Void
@@ -192,7 +195,7 @@ struct SidebarDragHandle: NSViewRepresentable {
     }
 
     final class HandleView: NSView, NSDraggingSource {
-        var type: UTType = .data
+        var type: UTType?
         var data: (() -> Data)?
         var label = ""
         var onClick: (() -> Void)?
@@ -211,7 +214,7 @@ struct SidebarDragHandle: NSViewRepresentable {
         }
 
         override func mouseDragged(with event: NSEvent) {
-            guard let down = downPoint, !dragging, let data = data?(),
+            guard let type, let down = downPoint, !dragging, let data = data?(),
                   hypot(event.locationInWindow.x - down.x, event.locationInWindow.y - down.y) > 4 else { return }
             dragging = true
             let item = NSPasteboardItem()
@@ -262,5 +265,12 @@ extension View {
     /// 蓋上拖曳把手（只接左鍵；沒拖就是點一下）
     func sidebarDragHandle(type: UTType, label: String, data: @escaping () -> Data, onClick: @escaping () -> Void) -> some View {
         overlay { SidebarDragHandle(type: type, data: data, label: label, onClick: onClick) }
+    }
+
+    /// 側欄 List 裡「點一下」一律用這個，不要用 `onTapGesture`：List 裡只要有一個 onTapGesture，SwiftUI 就在整個表格加上
+    /// 會延後滑鼠事件的單擊、雙擊辨識器，點下面列表的會議時，按下被延後送進表格、放開被扣在辨識器那邊，表格一直等放開，
+    /// 整個 app 卡住到下一次按滑鼠（2026-11-17 使用者：「點進去就會當機約 1～5 秒」，用 sample 抓到）
+    func sidebarClick(_ action: @escaping () -> Void) -> some View {
+        overlay { SidebarDragHandle(type: nil, data: { Data() }, label: "", onClick: action) }
     }
 }

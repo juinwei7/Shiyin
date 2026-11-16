@@ -327,11 +327,15 @@ struct SidebarView: View {
                 // 段落標題跟「+」在輔助使用裡併成一個元件，按下去要是「+」，收合改成有名字的動作（同會議列表的標題）
                 SidebarSectionHeader(title: String(localized: "資料夾"), key: "folders", besideMenu: true)
                 Spacer(minLength: 4)
-                Button { model.renameTarget = .newFolder([]) } label: { SidebarHeaderIcon(systemName: "plus") }
-                    .buttonStyle(.plain)
+                // 不用 Button：List 裡的 SwiftUI 按鈕會讓整個表格的點擊卡住（見 sidebarClick）
+                SidebarHeaderIcon(systemName: "plus")
+                    .sidebarClick { model.renameTarget = .newFolder([]) }
                     .padding(.trailing, SidebarHeaderIcon.trailing)
                     .help("新資料夾")
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(Text("新資料夾"))
+                    .accessibilityAction { model.renameTarget = .newFolder([]) }
             }
         }
     }
@@ -497,7 +501,8 @@ struct FolderRow: View {
                 Spacer()
             }
             .contentShape(Rectangle())
-            // 可以拖的列（資料夾、定期會議）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）
+            // 可以拖的列（資料夾、定期會議）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）；其他列（所有會議、人物）
+            // 蓋只接點一下的 view，不用 onTapGesture（會讓整個表格的點擊卡住，見 sidebarClick）
             .modifier(FolderRowHandle(name: name, dragKey: dragKey, action: action))
             // 右邊不放場數（ChatGPT 的專案列表），滑過或選到時「⋯」
             if let menu {
@@ -507,7 +512,6 @@ struct FolderRow: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture(perform: action)
         .modifier(FolderRowContextMenu(menu: menu))
         .onHover { hovering = $0 }
         .sidebarHover(selected: selected)
@@ -550,7 +554,7 @@ private struct FolderRowHandle: ViewModifier {
         if let dragKey {
             content.sidebarDragHandle(type: .shiyinSidebarItem, label: name, data: { Data(dragKey.utf8) }, onClick: action)
         } else {
-            content
+            content.sidebarClick(action)
         }
     }
 }

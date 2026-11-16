@@ -615,6 +615,15 @@ enum DebugControl {
                 if let event = NSEvent(cgEvent: cg) { deliver(event) }
             }
             switch args[1] {
+            case "clickq":
+                // 按下、放開都排進事件佇列，同真的點一下：經過手勢辨識、NSApp.currentEvent 是這一下，
+                // 表格按下後自己從佇列拿放開（直接 sendEvent 的話這些都不一樣，2026-11-17 驗側欄點擊卡住時發現）
+                for (type, pressure) in [(NSEvent.EventType.leftMouseDown, Float(1)), (.leftMouseUp, 0)] {
+                    if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                      windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: pressure) {
+                        NSApp.postEvent(event, atStart: false)
+                    }
+                }
             case "right": send(.rightMouseDown, clicks: 1); send(.rightMouseUp, clicks: 1)
             case "cgright": sendCG(.rightMouseDown, .right, clicks: 1); sendCG(.rightMouseUp, .right, clicks: 1)
             case "cgleft": sendCG(.leftMouseDown, .left, clicks: 1); sendCG(.leftMouseUp, .left, clicks: 1)

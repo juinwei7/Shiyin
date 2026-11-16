@@ -117,14 +117,17 @@ struct SidebarSectionHeader: View {
         let help = expanded ? String(localized: "收起這一段") : String(localized: "展開這一段")
         if besideMenu {
             label
-                .onTapGesture(perform: toggle)
+                .sidebarClick(toggle)
                 .help(help)
                 .accessibilityAction(named: Text(help), toggle)
         } else {
-            Button(action: toggle) { label }
-                .buttonStyle(.plain)
+            // 不用 Button：List 裡的 SwiftUI 按鈕會讓整個表格的點擊卡住（見 sidebarClick）
+            label
+                .sidebarClick(toggle)
                 .help(help)
-                .accessibilityAddTraits(.isHeader)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits([.isHeader, .isButton])
+                .accessibilityAction(.default, toggle)
                 .accessibilityValue(Text(expanded ? "已展開" : "已收起"))
         }
     }
@@ -234,7 +237,7 @@ struct SidebarPeek: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .onTapGesture(perform: showAll)
+            .sidebarClick(showAll)
             .sidebarHover()
             .selectionDisabled()
         }
