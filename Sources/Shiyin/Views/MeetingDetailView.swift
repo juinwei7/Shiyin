@@ -83,12 +83,6 @@ struct MeetingHeader: View {
                     }
                 Spacer(minLength: 0)
             }
-            // 側欄的「重新命名…」、Return（R100）：打開「編輯」
-            .task(id: model.renameMeetingRequest) {
-                guard model.renameMeetingRequest == meeting.id else { return }
-                model.renameMeetingRequest = nil
-                editing = true
-            }
             // 範本和語言選單放在資訊列右邊，標題才能用整行的寬度（英文標題比較長，design §16.3）；
             // 資訊列放不下時（說話者多、英文字比較長），選單改到下一行，說話者名字才不會被截斷
             ViewThatFits(in: .horizontal) {

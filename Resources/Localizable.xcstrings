@@ -3780,6 +3780,35 @@
         }
       }
     },
+    "例如專案名稱或客戶名稱。這 %lld 場會議會移進新資料夾。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如项目名称或客户名称。这 %lld 场会议会移进新文件夹。"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "For example, a project or client name. This meeting will be moved into the new folder."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "For example, a project or client name. These %lld meetings will be moved into the new folder."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "例如專案名稱或客戶名稱。這場會議會移進新資料夾。": {
       "extractionState": "manual",
       "localizations": {
@@ -4009,6 +4038,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "By Folder"
+          }
+        }
+      }
+    },
+    "保持簡短、容易辨識。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持简短、容易识别。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep it short and easy to recognize."
+          }
+        }
+      }
+    },
+    "保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持简短、容易识别。日期和与会者在会议页的“编辑”改。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep it short and easy to recognize. Change the date and participants with Edit on the meeting page."
           }
         }
       }
@@ -6235,6 +6298,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "参考了 %lld 场会议"
+          }
+        }
+      }
+    },
+    "參考文件請拖到會議頁，會加進那場會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参考文档请拖到会议页，会加进那场会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag documents onto a meeting page to add them to that meeting"
           }
         }
       }
@@ -8681,6 +8761,23 @@
         }
       }
     },
+    "已移出定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已移出定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed from the recurring meeting"
+          }
+        }
+      }
+    },
     "已移出資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -8796,6 +8893,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "已经带入的名字会留着，之后的会议不会再自动带入。"
+          }
+        }
+      }
+    },
+    "已經有「%@」，儲存後會合併成一個。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经有“%@”，保存后会合并成一个。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” already exists. Saving will merge them into one."
+          }
+        }
+      }
+    },
+    "已經有「%@」，會議會移進那個資料夾。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经有“%@”，会议会移进那个文件夹。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” already exists. The meetings will be moved into that folder."
           }
         }
       }
@@ -9643,6 +9774,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有会议"
+          }
+        }
+      }
+    },
+    "所有會議裡的這個人都會跟著改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有会议里的这个人都会跟着改。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person will be renamed in every meeting."
           }
         }
       }
@@ -22207,6 +22355,23 @@
         }
       }
     },
+    "重新命名會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Meeting"
+          }
+        }
+      }
+    },
     "重新命名標記": {
       "extractionState": "manual",
       "localizations": {
@@ -22237,6 +22402,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新命名文件夹"
+          }
+        }
+      }
+    },
+    "重新命名這個人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名这个人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Person"
           }
         }
       }

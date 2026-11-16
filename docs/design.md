@@ -2712,6 +2712,28 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`sidebarsection <鍵> on|off`（on 是展開）、`sidebarexpand <folder:名稱|series:id> on|off`；state 的 `sidebarCollapsed`、`sidebarExpanded`。
 - Windows：design-windows §11.34。
 
+## 76. 重新命名的彈窗（R102）
+
+- 狀態：`AppModel.renameTarget: RenameTarget?`（`meeting(id)`、`folder(名稱)`、`newFolder([會議 id])`、`series(id)`、`person(id)`、`bookmark(id)`）。原本各自的 `renameMeetingRequest`（打開會議頁的「編輯」）、`folderPrompt`、`renamingSeries`、`personRenameRequest`（人物頁的鉛筆 popover）、`renamingBookmark`（alert）都改成設這一個；主視窗一個 `.sheet(item:)` 顯示 `RenameSheet`。
+- `RenameSheet`（寬 420）：標題（`.title3` 粗體）「重新命名會議」「重新命名資料夾」「新資料夾」「重新命名定期會議」「重新命名這個人」「重新命名標記」；說明一行灰字（R102.2；標記是「12:34 的標記」；新資料夾「例如專案名稱或客戶名稱。這場會議會移進新資料夾。」，好幾場時「這 N 場會議會移進新資料夾。」）；輸入框（`.roundedBorder`，出現時拿到焦點、全選）；右下「取消」（`.cancelAction`）「儲存」或「建立並移入」（`.defaultAction`，名字空白、沒改時停用）。輸入時說明即時換成合併的提醒（資料夾：跟別的資料夾同名；人物：跟別的人同名，大小寫不分）。儲存走原本的動作（`renameMeeting`、`renameFolder`、`moveToFolder`、`renameSeries`、`renamePerson`（同名時合併、選那個人）、`renameBookmark`）。
+- 會議頁標題旁的「編輯」照舊打開 `EditInfoForm`（標題、日期、與會者）。側欄的 Return、右鍵「重新命名…」改成彈窗（§74 的「會議的重新命名」改掉）。
+- DEBUG：`renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>`（打開彈窗），state 的 `renameTarget`；`menupick <項目>`（接下來打開的選單選這一項，子選單用「移到資料夾 ▸ 新資料夾…」，等於使用者在右鍵選單點了它）。
+- Windows：design-windows §11.35（`ContentDialog`）。
+
+## 77. 拖曳（R103）
+
+- 拖的東西：會議（`MeetingDragItem`，型別 `com.weiwei.shiyin.meeting-ids`，`Info.plist` 宣告，只在這個 app 裡）帶會議 id；拖的那場在多選裡時帶整個多選（列表的順序）。資料夾、定期會議列（`SidebarItemDrag`，型別 `com.weiwei.shiyin.sidebar-item`）帶鍵（`folder:名稱`、`series:id`）。從 Finder 來的是檔案網址。
+- 放的地方（`SidebarDropDelegate`）：
+  - 資料夾列：會議 → `moveToFolder`；檔案（錄音、影片、逐字稿）→ 匯入到這個資料夾（`requestImport(urls, folder:)`，跟拖到右邊一樣，只是資料夾先設好）；側欄項目 → 排序。
+  - 定期會議列：會議 → `setSeries`（加進去，不檢查條件，同右鍵）；側欄項目 → 排序；檔案不收。
+  - 「其他會議」的標題（`MeetingListHeader`，只在 `listShowsOthersOnly` 時）：會議 → 移出資料夾、移出定期會議。
+  - 「垃圾桶」按鈕：會議 → `moveToTrash`（不確認，同 ⌘⌫；可以從垃圾桶還原，提示訊息照舊）。
+- 回饋：會議、檔案拖到資料夾或定期會議上時，整列一塊青瓷綠 18% 的圓角底（同 `sidebarHover` 的大小），資料夾圖示換成打開的；排序時，看放開的位置在那一列的上半或下半，在上緣或下緣畫一條 2 點的青瓷綠線。拖到「其他會議」標題、垃圾桶時標題、按鈕換成青瓷綠。
+- 排序：`sidebarOrder: [String]`（UserDefaults `sidebarOrder`，鍵同 `sidebarExpanded`）；「資料夾」那一段的順序：有在 `sidebarOrder` 的照它，沒有的（新的）排在後面（定期會議在前、資料夾照名稱，同原本的預設）。放開時把拖的那個移到目標的前面或後面，整段的順序寫回 `sidebarOrder`。資料夾改名、刪除，定期會議刪除時跟著改。VoiceOver：資料夾、定期會議列有「往上移」「往下移」的動作。
+- 拖的來源：下面列表的會議用 `onDrag`（List 有 tag 的列，系統的拖曳）。資料夾、定期會議、展開的會議不在 List 的選取裡（沒有 tag），List 不會讓它們開始拖曳，列上的 `DragGesture` 也收不到（滑鼠拖動被 List 吃掉；2026-11-16 自己驗收時發現），所以蓋一層 AppKit 的 `SidebarDragHandle`：`hitTest` 只接左鍵（右鍵選單、滑過的底照舊交給下面的 SwiftUI），拖動超過 4 點就 `beginDraggingSession`（貼上同樣的型別，放的地方用同一套 `onDrop`），拖的圖是名稱的圓角標籤；沒拖就是點一下（展開、打開）。資料夾列的把手只蓋名稱那一段，不蓋數量和「⋯」；展開的會議的把手蓋在「⋯」以外。
+- DEBUG：`importinto <資料夾> <檔案>`（等於從 Finder 把檔案拖到資料夾），state 的 `sidebarOrder`、`showImportSheet`。
+- Windows：design-windows §11.36。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

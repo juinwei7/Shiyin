@@ -350,7 +350,7 @@ struct UserNotesDisclosure: View {
                         ForEach(detail.bookmarks) { bookmark in
                             Menu("\(TimeFormat.string(bookmark.time)) \(bookmark.label)") {
                                 Button("跳到這裡") { model.player.seek(to: bookmark.time) }
-                                Button("重新命名…") { model.renamingBookmark = bookmark }
+                                Button("重新命名…") { if let id = bookmark.id { model.renameTarget = .bookmark(id) } }
                                 Divider()
                                 DestructiveMenuButton(String(localized: "刪除")) { if let id = bookmark.id { model.deleteBookmark(id) } }
                             }

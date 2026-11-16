@@ -39,6 +39,7 @@ enum AppSettings {
     static let meetingGroupingKey = "meetingGrouping"   // 會議列表的分組（design §71）
     static let sidebarCollapsedKey = "sidebarCollapsed"   // 側欄收起來的段落（design §75）
     static let sidebarExpandedKey = "sidebarExpanded"   // 側欄在原地展開的資料夾、定期會議（design §75）
+    static let sidebarOrderKey = "sidebarOrder"   // 側欄資料夾、定期會議拖曳排好的順序（design §77）
 
     private static var d: UserDefaults { .standard }
 

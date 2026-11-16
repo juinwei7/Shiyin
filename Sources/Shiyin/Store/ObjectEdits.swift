@@ -2,11 +2,9 @@ import Foundation
 
 /// 每一種東西都能直接改、刪（R100、design §74）
 extension AppModel {
-    /// 重新命名一場會議：選那場、打開會議頁「編輯」的輸入框
+    /// 重新命名一場會議：打開重新命名的彈窗（R102；日期、與會者照舊在會議頁的「編輯」改）
     func requestRenameMeeting(_ id: Int64) {
-        sidebarMode = .meetings
-        if selection != id { selection = id }
-        renameMeetingRequest = id
+        renameTarget = .meeting(id)
     }
 
     /// 紀錄能不能就地改：有紀錄、不在垃圾桶、沒在錄這場、沒在整理（同「編輯」按鈕）
@@ -47,16 +45,16 @@ extension AppModel {
         guard !showTrash else { return false }
         if sidebarMode == .people {
             guard let id = selectedPerson else { return false }
-            personRenameRequest = id
+            renameTarget = .person(id)
             return true
         }
         if selectedMeetings.count > 1 { return false }
         if let id = selection {
             requestRenameMeeting(id)
         } else if let id = seriesFilter {
-            renamingSeries = id
+            renameTarget = .series(id)
         } else if let folder = folderFilter {
-            folderPrompt = .rename(folder)
+            renameTarget = .folder(folder)
         } else {
             return false
         }

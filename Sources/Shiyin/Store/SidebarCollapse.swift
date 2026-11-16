@@ -3,9 +3,9 @@ import Foundation
 // MARK: - 側欄的收合（R101、design §75）
 
 extension AppModel {
-    static func folderKey(_ name: String) -> String { "folder:" + name }
-    static func seriesKey(_ id: Int64) -> String { "series:\(id)" }
-    static func groupKey(_ group: MeetingGroup) -> String { "group:" + group.id }
+    nonisolated static func folderKey(_ name: String) -> String { "folder:" + name }
+    nonisolated static func seriesKey(_ id: Int64) -> String { "series:\(id)" }
+    nonisolated static func groupKey(_ group: MeetingGroup) -> String { "group:" + group.id }
 
     /// 段落（series、folders、meetings、people、group:…）展開了沒；預設展開
     func isSectionExpanded(_ key: String) -> Bool { !sidebarCollapsed.contains(key) }

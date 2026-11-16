@@ -196,7 +196,9 @@ private struct SidebarPeekRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .onTapGesture(perform: open)
+        // 拖到別的資料夾、定期會議、其他會議的標題、垃圾桶（R103.1）：不在 List 的選取裡，蓋拖曳把手；沒拖就是點一下
+        .sidebarDragHandle(type: .shiyinMeetingIDs, label: row.meeting.displayTitle,
+                           data: { Data(model.dragIDs(for: row.id).map(String.init).joined(separator: ",").utf8) }, onClick: open)
         .contextMenu { MeetingMenuItems(ids: [row.id]) }
         .rowMenu(selected: selected) { MeetingMenuItems(ids: [row.id]) }
         .sidebarHover()

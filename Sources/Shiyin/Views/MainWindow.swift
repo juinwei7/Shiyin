@@ -171,10 +171,9 @@ struct MainView: View {
                 openWindow(id: "guide")
             }
         }
-        .modifier(FolderPromptModifier())
-        .modifier(SeriesRenameModifier())
+        // 重新命名、新資料夾的彈窗（R102、design §76）
+        .sheet(item: Binding(get: { model.renameTarget }, set: { model.renameTarget = $0 })) { RenameSheet(target: $0) }
         .modifier(OrganizeConfirmations())
-        .modifier(BookmarkRenameModifier())
         // 可能的定期會議（design §73）、資料夾的自動加入條件（design §72）
         .sheet(isPresented: $model.showSeriesSuggestions) { SeriesSuggestionSheet() }
         .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.name })) {
@@ -273,6 +272,7 @@ struct MultiSelectionView: View {
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var trashTargeted = false
 
     var body: some View {
         @Bindable var model = model
@@ -306,7 +306,9 @@ struct SidebarView: View {
                           systemImage: model.showTrash ? "chevron.backward" : "trash")
                 }
                 .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(trashTargeted ? Color.celadon : .secondary)
+                // 會議拖到這裡＝移到垃圾桶（R103.1，可以還原）
+                .meetingDrop(enabled: !model.showTrash, targeted: $trashTargeted) { model.moveToTrash($0) }
                 Spacer()
                 // 匯入放這裡：側邊欄的工具列放不下，會被收進「>>」（design §22.2、R21.5）；垃圾桶裡換成清空（R88.3）
                 if model.showTrash {
@@ -367,23 +369,7 @@ struct SidebarView: View {
             // 放在同一段的最上面，不另外一段（R101、design §75）
             Section {
                 if model.isSectionExpanded("folders") {
-                    SeriesSidebarRows()
-                    ForEach(model.folders, id: \.name) { folder in
-                        // 有自動加入條件的資料夾加齒輪標記，滑過去看條件（design §72）
-                        let rule = model.folderRule(folder.name)
-                        let key = AppModel.folderKey(folder.name)
-                        let expanded = model.isRowExpanded(key)
-                        FolderRow(name: folder.name, count: folder.count, symbol: "folder",
-                                  selected: !people && model.folderFilter == folder.name,
-                                  folder: .init(expanded: expanded, badge: rule == nil ? nil : "gearshape.fill"),
-                                  menu: { AnyView(FolderMenuItems(folder: folder.name)) }) {
-                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) }
-                        }
-                        .help(rule.map { model.folderRuleSummary($0) } ?? "")
-                        if expanded {
-                            SidebarPeek(rows: model.peekRows(folder: folder.name)) { model.showFolder(folder.name) }
-                        }
-                    }
+                    SidebarFolderRows()
                 }
             } header: {
                 SidebarSectionHeader(title: String(localized: "資料夾"), key: "folders")
@@ -399,6 +385,8 @@ struct SidebarView: View {
                 MeetingMenuItems(ids: selected && model.multiSelected.count > 1 ? model.multiSelected : [row.id])
             }
             .sidebarHover()
+            // 拖到資料夾、定期會議、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選
+            .onDrag { model.meetingDragProvider(for: row.id) }
             .tag(row.id)
     }
 
@@ -496,15 +484,22 @@ struct SidebarView: View {
 /// 數量的位置換成「⋯」。整列用點擊手勢，不用 Button：List 裡的按鈕會把右鍵當成點擊，右鍵選單出不來
 /// （2026-11-16 自己驗收時發現）
 struct FolderRow: View {
+    @Environment(AppModel.self) private var model
     let name: String
     let count: Int
     let symbol: String
     let selected: Bool
     /// 資料夾、定期會議（R101）：點了在原地展開、收起，圖示換成打開或關著的資料夾（nil 是所有會議、人物這種一般的列）
     var folder: FolderState? = nil
+    /// 拖曳排序用的鍵（R103.2）；nil 不能拖
+    var dragKey: String? = nil
+    /// 收拖過來的會議、資料夾（排序）、檔案（R103）
+    var drop: SidebarRowDrop? = nil
     var menu: (() -> AnyView)? = nil
     let action: () -> Void
     @State private var hovering = false
+    @State private var dropState: SidebarDropState?
+    @State private var height: CGFloat = 28
 
     struct FolderState {
         var expanded: Bool
@@ -514,19 +509,33 @@ struct FolderRow: View {
 
     var body: some View {
         let showMenu = menu != nil && (hovering || selected)
+        let state = dropState
+        let into = state == .into
         HStack {
-            Label {
-                Text(name)
-            } icon: {
-                if let folder { FolderGlyph(open: folder.expanded, badge: folder.badge) } else { Image(systemName: symbol) }
+            HStack {
+                Label {
+                    Text(name)
+                } icon: {
+                    // 拖東西進來時也是打開的資料夾
+                    if let folder { FolderGlyph(open: folder.expanded || into, badge: folder.badge) } else { Image(systemName: symbol) }
+                }
+                .foregroundStyle(selected || into ? Color.celadon : .primary)
+                .fontWeight(selected ? .semibold : .regular)
+                // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）；資料夾的值是展開了沒，可以往上、往下移（R103.2）
+                .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                .accessibilityValue(folder.map { Text($0.expanded ? "已展開" : "已收起") } ?? Text(""))
+                .accessibilityAction(.default, action)
+                .accessibilityActions {
+                    if let dragKey {
+                        Button("往上移") { model.moveSidebarItem(dragKey, by: -1) }
+                        Button("往下移") { model.moveSidebarItem(dragKey, by: 1) }
+                    }
+                }
+                Spacer()
             }
-            .foregroundStyle(selected ? Color.celadon : .primary)
-            .fontWeight(selected ? .semibold : .regular)
-            // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）；資料夾的值是展開了沒
-            .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-            .accessibilityValue(folder.map { Text($0.expanded ? "已展開" : "已收起") } ?? Text(""))
-            .accessibilityAction(.default, action)
-            Spacer()
+            .contentShape(Rectangle())
+            // 可以拖的列（資料夾、定期會議）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）
+            .modifier(FolderRowHandle(name: name, dragKey: dragKey, action: action))
             ZStack(alignment: .trailing) {
                 Text("\(count)").monospacedDigit().foregroundStyle(.secondary)
                     .opacity(showMenu ? 0 : 1)
@@ -542,6 +551,55 @@ struct FolderRow: View {
         .contextMenu { if let menu { menu() } }
         .onHover { hovering = $0 }
         .sidebarHover()
+        // 拖進來：整列一塊青瓷綠的底；排序：上緣或下緣一條線（design §77）
+        .background {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.celadon.opacity(into ? 0.18 : 0))
+                .padding(.horizontal, -SidebarHoverModifier.inset.width)
+                .padding(.vertical, -SidebarHoverModifier.inset.height)
+        }
+        .overlay(alignment: state == .after ? .bottom : .top) {
+            if state == .before || state == .after {
+                Capsule().fill(Color.celadon).frame(height: 2)
+                    .padding(.horizontal, -SidebarHoverModifier.inset.width)
+                    .offset(y: (state == .before ? -1 : 1) * (SidebarHoverModifier.inset.height + 1))
+                    .allowsHitTesting(false)
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        .modifier(FolderRowDragModifier(drop: drop, height: height, state: $dropState))
+    }
+}
+
+/// 有鍵的列蓋拖曳把手
+private struct FolderRowHandle: ViewModifier {
+    let name: String
+    let dragKey: String?
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        if let dragKey {
+            content.sidebarDragHandle(type: .shiyinSidebarItem, label: name, data: { Data(dragKey.utf8) }, onClick: action)
+        } else {
+            content
+        }
+    }
+}
+
+/// 有 drop 的列收拖過來的會議、資料夾（排序）、檔案
+private struct FolderRowDragModifier: ViewModifier {
+    let drop: SidebarRowDrop?
+    let height: CGFloat
+    @Binding var state: SidebarDropState?
+
+    func body(content: Content) -> some View {
+        if let drop {
+            let types = [drop.meetings != nil ? UTType.shiyinMeetingIDs : nil, drop.item != nil ? .shiyinSidebarItem : nil,
+                         drop.files != nil ? .fileURL : nil].compactMap { $0 }
+            content.onDrop(of: types, delegate: SidebarRowDropDelegate(drop: drop, height: height, state: $state))
+        } else {
+            content
+        }
     }
 }
 
@@ -564,59 +622,19 @@ struct FolderMenu: View {
                     Button(item.name) { model.moveToFolder(targets, folder: item.name) }
                 }
                 if !model.folders.isEmpty { Divider() }
-                Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
+                Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.renameTarget = .newFolder(targets) } }
                 Button("移出資料夾", systemImage: "minus.circle") { model.moveToFolder(targets, folder: "") }
             } else if let folder = current {
                 ForEach(model.folders.filter { $0.name != folder }, id: \.name) { item in
                     Button(item.name) { model.moveToFolder(targets, folder: item.name) }
                 }
                 if !model.folders.filter({ $0.name != folder }).isEmpty { Divider() }
-                Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.folderPrompt = .create(targets) } }
+                Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.renameTarget = .newFolder(targets) } }
                 if !folder.isEmpty {
                     Button("移出「\(folder)」", systemImage: "minus.circle") { model.moveToFolder(targets, folder: "") }
                 }
             }
         }
-    }
-}
-
-/// 新資料夾、資料夾改名的輸入框
-struct FolderPromptModifier: ViewModifier {
-    @Environment(AppModel.self) private var model
-    @State private var name = ""
-
-    func body(content: Content) -> some View {
-        content.alert(title, isPresented: Binding(get: { model.folderPrompt != nil }, set: { if !$0 { model.folderPrompt = nil } })) {
-            TextField("資料夾名稱", text: $name)
-            Button("取消", role: .cancel) { model.folderPrompt = nil }
-            Button(confirmTitle) {
-                let value = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                switch model.folderPrompt {
-                case .create(let ids)?: if !value.isEmpty { model.moveToFolder(ids, folder: value) }
-                case .rename(let old)?: model.renameFolder(old, to: value)
-                case nil: break
-                }
-                model.folderPrompt = nil
-            }
-        } message: {
-            Text(message)
-        }
-        .onChange(of: model.folderPrompt) { _, prompt in
-            if case .rename(let old)? = prompt { name = old } else { name = "" }
-        }
-    }
-
-    private var title: String {
-        if case .rename? = model.folderPrompt { return String(localized: "重新命名資料夾") }
-        return String(localized: "新資料夾")
-    }
-    private var confirmTitle: String {
-        if case .rename? = model.folderPrompt { return String(localized: "重新命名") }
-        return String(localized: "建立並移入")
-    }
-    private var message: String {
-        if case .rename? = model.folderPrompt { return String(localized: "資料夾裡的會議都會跟著改。") }
-        return String(localized: "例如專案名稱或客戶名稱。這場會議會移進新資料夾。")
     }
 }
 

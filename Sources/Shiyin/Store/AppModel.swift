@@ -256,6 +256,13 @@ final class AppModel {
     var sidebarExpanded = Set(UserDefaults.standard.stringArray(forKey: AppSettings.sidebarExpandedKey) ?? []) {
         didSet { if oldValue != sidebarExpanded { UserDefaults.standard.set(sidebarExpanded.sorted(), forKey: AppSettings.sidebarExpandedKey) } }
     }
+    /// 資料夾、定期會議拖曳排好的順序（R103.2、design §77），鍵同 sidebarExpanded
+    var sidebarOrder = UserDefaults.standard.stringArray(forKey: AppSettings.sidebarOrderKey) ?? [] {
+        didSet { if oldValue != sidebarOrder { UserDefaults.standard.set(sidebarOrder, forKey: AppSettings.sidebarOrderKey) } }
+    }
+    /// 從 Finder 拖到資料夾上的檔案要匯入到哪個資料夾（R103.3）：逐字稿、封包當下就用，錄音等匯入的對話框按下去才用
+    var importFolderOverride: String?
+    var pendingImportFolder: String?
     /// 每場會議連到哪些人物（「有誰參加」篩選），跟人物總覽一起讀
     var meetingPeople: [Int64: Set<Int64>] = [:]
     /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）。跟定期會議互斥
@@ -279,12 +286,10 @@ final class AppModel {
             if seriesFilter != nil { folderFilter = nil }
         }
     }
-    /// 打開「可能的定期會議」確認；正在改名的定期會議
+    /// 打開「可能的定期會議」確認
     var showSeriesSuggestions = false
-    var renamingSeries: Int64?
-    /// 正在輸入名稱的資料夾動作：新增（要移入的會議）或改名（舊名稱）
-    var folderPrompt: FolderPrompt?
-    enum FolderPrompt: Equatable { case create([Int64]), rename(String) }
+    /// 重新命名的彈窗（R102、design §76）：會議、資料夾、新資料夾、定期會議、人物、標記都用這一個
+    var renameTarget: RenameTarget?
     var glossary: [GlossaryTerm] = []
     var glossarySuggestions: [GlossarySuggestion] = []
     /// 公司詞彙表（R53）：設定頁顯示、建議的新詞要排除
@@ -513,7 +518,7 @@ final class AppModel {
     }
 
     /// 新會議要放進的資料夾：正在看某個資料夾時就放那裡
-    var currentFolder: String { showTrash ? "" : folderFilter ?? "" }
+    var currentFolder: String { importFolderOverride ?? (showTrash ? "" : folderFilter ?? "") }
 
     func moveToFolder(_ id: Int64, folder: String) { moveToFolder([id], folder: folder) }
 
@@ -552,6 +557,10 @@ final class AppModel {
             sidebarExpanded.remove(Self.folderKey(old))
             sidebarExpanded.insert(Self.folderKey(name))
         }
+        if let i = sidebarOrder.firstIndex(of: Self.folderKey(old)) {
+            // 改成已經有的資料夾（合併）時留原本那個的位置
+            if sidebarOrder.contains(Self.folderKey(name)) { sidebarOrder.remove(at: i) } else { sidebarOrder[i] = Self.folderKey(name) }
+        }
         perform { try db.renameFolder(old, to: name) }
     }
 
@@ -560,6 +569,7 @@ final class AppModel {
         perform { try db.renameFolder(name, to: "") }
         if folderFilter == name { folderFilter = nil }
         setRow(Self.folderKey(name), expanded: false)
+        sidebarOrder.removeAll { $0 == Self.folderKey(name) }
     }
 
     func reloadDetail(forceAudio: Bool = false) {
@@ -730,8 +740,11 @@ final class AppModel {
         let urls = pendingImport
         pendingImport = []
         showImportSheet = false
+        var options = options
+        if let folder = pendingImportFolder, options.folder.isEmpty { options.folder = folder }
+        pendingImportFolder = nil
         importFiles(urls, options: urls.count == 1 ? options : ImportOptions(participants: options.participants, templateId: options.templateId,
-                                                                              language: options.language))
+                                                                              folder: options.folder, language: options.language))
     }
 
     /// 從 Dock 或 Finder 匯入：不跳對話框，直接用預設值
@@ -1714,16 +1727,12 @@ final class AppModel {
     var sidebarMode: SidebarMode = .meetings
     var selectedPerson: Int64?
     var peopleOverview: [PersonOverview] = []
-    /// 移除一個人的確認、從側欄右鍵要改名的人（R85.7、design §60.2）
+    /// 移除一個人的確認（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
-    var personRenameRequest: Int64?
-    /// 每一種東西都能直接改、刪（R100、design §74）：要重新命名的會議、刪除資料夾／定期會議的確認、
-    /// 正在就地改的那一條紀錄、正在重新命名的標記
-    var renameMeetingRequest: Int64?
+    /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾／定期會議的確認、正在就地改的那一條紀錄
     var confirmDeleteFolder: String?
     var confirmDeleteSeries: Int64?
     var editingNoteItem: NoteItemRef?
-    var renamingBookmark: Bookmark?
 
     func reloadPeople() {
         people = (try? db.peopleSummaries()) ?? []

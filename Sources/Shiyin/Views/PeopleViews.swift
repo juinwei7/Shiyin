@@ -22,9 +22,6 @@ struct PersonPage: View {
     let person: PersonOverview
     @State private var meetings: [PersonMeeting] = []
     @State private var items: [PersonActionItem] = []
-    /// 名字旁的鉛筆打開的改名（R85.6）；「更多 → 改名…」、側欄右鍵的改名也打開這一個（R85.7）
-    @State private var editingName = false
-    @State private var renameText = ""
 
     var body: some View {
         ReadingColumn {
@@ -68,13 +65,6 @@ struct PersonPage: View {
         // 改名、合併、刪除放在工具列右上角的「更多」，跟會議頁同一個位置
         .toolbar { ToolbarItem(placement: .primaryAction) { moreMenu } }
         .task(id: person) { load() }
-        // 「改名…」（更多、側欄右鍵）：打開鉛筆下面的輸入框
-        .task(id: model.personRenameRequest) {
-            guard model.personRenameRequest == person.id else { return }
-            model.personRenameRequest = nil
-            renameText = person.name
-            editingName = true
-        }
     }
 
     /// 頭像、名字、摘要；改名、合併、刪除收在右邊的「更多」（同會議頁的「更多」，破壞性的動作不跟其他並排）
@@ -84,12 +74,11 @@ struct PersonPage: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(person.name).contentTitleFont(26).textSelection(.enabled).lineLimit(1)
-                    Button { renameText = person.name; editingName = true } label: { Image(systemName: "pencil") }
+                    Button { model.renameTarget = .person(person.id) } label: { Image(systemName: "pencil") }
                         .buttonStyle(.borderless)
                         .foregroundStyle(Color.celadon)
                         .help("重新命名")
                         .accessibilityLabel(Text("重新命名"))
-                        .popover(isPresented: $editingName, arrowEdge: .bottom) { renameForm }
                     if person.isMe {
                         Text("我").font(.callout).foregroundStyle(.secondary)
                     }
@@ -137,29 +126,6 @@ struct PersonPage: View {
         }
         .accessibilityLabel(Text("更多"))
         .help("重新命名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人")
-    }
-
-    private var renameForm: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            TextField("名字", text: $renameText).textFieldStyle(.roundedBorder).frame(width: 220)
-                .onSubmit(saveRename)
-            HStack {
-                Spacer()
-                Button("取消") { editingName = false }.keyboardShortcut(.cancelAction)
-                Button("儲存", action: saveRename).keyboardShortcut(.defaultAction)
-                    .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
-        .padding(16)
-    }
-
-    private func saveRename() {
-        let name = renameText.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
-        model.renamePerson(person.id, to: name)
-        editingName = false
-        // 改成已經有的名字時合併過去，選那個人
-        model.selectedPerson = model.peopleOverview.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?.id
     }
 
     /// 他負責的待辦：事項、期限、哪一場會議和時間點（點了打開那場、從那裡播放）
@@ -225,7 +191,7 @@ struct PersonMenuItems: View {
             let others = model.peopleOverview.filter { $0.id != person.id }
             Button("重新命名…", systemImage: "pencil") {
                 model.selectedPerson = person.id
-                model.personRenameRequest = person.id
+                model.renameTarget = .person(person.id)
             }
             if !others.isEmpty {
                 Menu("合併到", systemImage: "person.2") {

@@ -2,41 +2,6 @@ import SwiftUI
 
 // MARK: - 定期會議（R99、design §73）
 
-/// 側欄「資料夾」那一段裡的定期會議（R101：樣子、操作都跟資料夾一樣，不另外一段）：有建議時第一列
-/// 「發現 N 組可能的定期會議」，再來每個定期會議一列（資料夾圖示加 ↻ 標記）
-struct SeriesSidebarRows: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        if !model.seriesCandidates.isEmpty {
-            Button { model.showSeriesSuggestions = true } label: {
-                Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
-                    .foregroundStyle(Color.celadon)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
-        }
-        ForEach(model.series) { series in
-            let id = series.id ?? 0
-            let key = AppModel.seriesKey(id)
-            let expanded = model.isRowExpanded(key)
-            // 定期會議也是資料夾的樣子，右上角 ↻ 標記（R101）
-            FolderRow(name: series.name, count: model.seriesCount(id), symbol: "folder",
-                      selected: model.sidebarMode == .meetings && model.seriesFilter == id,
-                      folder: .init(expanded: expanded, badge: "arrow.triangle.2.circlepath"),
-                      menu: { AnyView(SeriesMenuItems(series: series, inSidebar: true)) }) {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) }
-            }
-            .help(series.frequencyText)
-            if expanded {
-                SidebarPeek(rows: model.peekRows(series: id)) { model.openSeries(id) }
-            }
-        }
-    }
-}
-
 /// 確認可能的定期會議：一次一組（design §73）
 struct SeriesSuggestionSheet: View {
     @Environment(AppModel.self) private var model
@@ -219,7 +184,7 @@ struct SeriesPage: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(series.name).contentTitleFont(26).textSelection(.enabled).lineLimit(1)
-                    Button { model.renamingSeries = series.id } label: { Image(systemName: "pencil") }
+                    Button { if let id = series.id { model.renameTarget = .series(id) } } label: { Image(systemName: "pencil") }
                         .buttonStyle(.borderless)
                         .foregroundStyle(Color.celadon)
                         .help("重新命名")
@@ -340,25 +305,6 @@ struct SeriesMenu: View {
         if let current, let series = model.seriesById(current) {
             Button("移出「\(series.name)」", systemImage: "minus.circle") { model.setSeries(meetingIds, series: nil) }
         }
-    }
-}
-
-/// 定期會議改名的輸入框（側欄右鍵、系列頁）
-struct SeriesRenameModifier: ViewModifier {
-    @Environment(AppModel.self) private var model
-    @State private var name = ""
-
-    func body(content: Content) -> some View {
-        content.alert(String(localized: "重新命名定期會議"), isPresented: Binding(get: { model.renamingSeries != nil },
-                                                                     set: { if !$0 { model.renamingSeries = nil } })) {
-            TextField("名稱", text: $name)
-            Button("取消", role: .cancel) { model.renamingSeries = nil }
-            Button("重新命名") {
-                if let id = model.renamingSeries { model.renameSeries(id, to: name) }
-                model.renamingSeries = nil
-            }
-        }
-        .onChange(of: model.renamingSeries) { _, id in name = model.seriesById(id)?.name ?? "" }
     }
 }
 

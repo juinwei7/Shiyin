@@ -115,7 +115,21 @@ enum DebugControl {
                 }
             }
         case "bookmarkrename": if let id { model.renameBookmark(id, label: args[2]) }
-        case "bookmarkrenameui": model.renamingBookmark = model.detail?.bookmarks.first { $0.id == id }
+        case "bookmarkrenameui": if let id { model.renameTarget = .bookmark(id) }
+        case "menupick": if args.count > 1 { pickNextMenu(args.dropFirst().joined(separator: " ")) }   // menupick <項目>：接下來打開的選單選這一項
+        case "importinto": if args.count > 2 { model.importDropped([URL(fileURLWithPath: args[2])], into: args[1]) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
+        // 重新命名的彈窗（R102、design §76）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
+        case "renameui":
+            guard args.count > 2 else { break }
+            switch args[1] {
+            case "meeting": if let i = Int64(args[2]) { model.renameTarget = .meeting(i) }
+            case "folder": model.renameTarget = .folder(args[2])
+            case "series": if let i = Int64(args[2]) { model.renameTarget = .series(i) }
+            case "person": if let i = Int64(args[2]) { model.renameTarget = .person(i) }
+            case "bookmark": if let i = Int64(args[2]) { model.renameTarget = .bookmark(i) }
+            case "newfolder": model.renameTarget = .newFolder(args[2].split(separator: ",").compactMap { Int64($0) })
+            default: break
+            }
         case "termrename": if let id { model.renameTerm(id, to: args[2]) }
         // 定期會議（design §73）
         case "seriescandidates":   // seriescandidates <輸出.json>
@@ -351,7 +365,7 @@ enum DebugControl {
         case "personrenameui":   // 等於選了「改名…」（更多、側欄右鍵，R85.7）：選那個人、打開鉛筆下面的輸入框
             model.sidebarMode = .people
             model.selectedPerson = id
-            model.personRenameRequest = id
+            if let id { model.renameTarget = .person(id) }
         case "peopledeleteall": model.deleteAllPeople()
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
@@ -977,10 +991,10 @@ enum DebugControl {
             "seriesCandidates": model.seriesCandidates.count, "seriesFilter": model.seriesFilter ?? -1,
             "confirmRemovePerson": model.confirmRemovePerson ?? -1,
             "confirmDeleteFolder": model.confirmDeleteFolder ?? "", "confirmDeleteSeries": model.confirmDeleteSeries ?? -1,
-            "renameMeetingRequest": model.renameMeetingRequest ?? -1, "personRenameRequest": model.personRenameRequest ?? -1,
-            "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "", "renamingFolder": model.folderPrompt.map { "\($0)" } ?? "",
-            "renamingSeries": model.renamingSeries ?? -1,
+            "renameTarget": model.renameTarget?.id ?? "",
+            "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "",
             "sidebarCollapsed": model.sidebarCollapsed.sorted(), "sidebarExpanded": model.sidebarExpanded.sorted(),
+            "sidebarOrder": model.sidebarFolderItems.map(\.key), "showImportSheet": model.showImportSheet,
             "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
                      "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
                                 "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],
@@ -1158,6 +1172,34 @@ enum DebugControl {
     private static var menuObserver: NSObjectProtocol?
     private static var eventMonitor: Any?
     /// keep：選單留著幾秒再關（給外面截圖）
+    /// 接下來打開的選單（右鍵、「⋯」）直接選標題是 title 的那一項（子選單用「移到資料夾 ▸ 客戶」），等於使用者點了它
+    private static func pickNextMenu(_ title: String) {
+        if let menuObserver { NotificationCenter.default.removeObserver(menuObserver) }
+        menuObserver = NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { note in
+            guard let menu = note.object as? NSMenu, menu.supermenu == nil, menu != NSApp.mainMenu else { return }
+            if let observer = menuObserver { NotificationCenter.default.removeObserver(observer); menuObserver = nil }
+            nonisolated(unsafe) let tracked = menu
+            RunLoop.main.perform(inModes: [.common]) {
+                MainActor.assumeIsolated {
+                    tracked.update()
+                    var current: NSMenu? = tracked
+                    let path = title.components(separatedBy: " ▸ ")
+                    for (i, part) in path.enumerated() {
+                        guard let m = current, let index = m.items.firstIndex(where: { $0.title == part }) else { break }
+                        if i == path.count - 1 {
+                            tracked.cancelTracking()
+                            m.performActionForItem(at: index)
+                        } else {
+                            m.items[index].submenu?.update()
+                            current = m.items[index].submenu
+                        }
+                    }
+                    tracked.cancelTracking()
+                }
+            }
+        }
+    }
+
     private static func captureNextMenu(to path: String, keep: Double = 0) {
         if let menuObserver { NotificationCenter.default.removeObserver(menuObserver) }
         menuObserver = NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { note in

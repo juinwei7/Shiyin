@@ -74,11 +74,14 @@ struct MeetingListMenu: View {
 /// 會議那一段的標題：「所有會議」或資料夾名稱、分組方式，右邊「顯示方式」按鈕；篩選中按鈕變實心（design §71）
 struct MeetingListHeader: View {
     @Environment(AppModel.self) private var model
+    @State private var dropTargeted = false
 
     var body: some View {
         HStack(spacing: 6) {
-            // 名稱是收合的按鈕（R101、design §75）；右邊的「顯示方式」不動
+            // 名稱是收合的按鈕（R101、design §75）；右邊的「顯示方式」不動。會議拖到這裡＝移進現在看的地方，
+            // 「其他會議」是移出資料夾和定期會議（R103.1）
             SidebarSectionHeader(title: title, key: "meetings", besideMenu: true)
+                .foregroundStyle(dropTargeted ? Color.celadon : Color.secondary)
             Spacer(minLength: 4)
             Menu {
                 MeetingListMenu(model: model)
@@ -94,6 +97,8 @@ struct MeetingListHeader: View {
             .help("排序、分組、篩選會議")
             .accessibilityLabel(Text("顯示方式"))
         }
+        .contentShape(Rectangle())
+        .meetingDrop(enabled: model.listHeaderAcceptsMeetings, targeted: $dropTargeted) { model.dropOnListHeader($0) }
     }
 
     private var title: String {

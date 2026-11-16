@@ -111,7 +111,7 @@ struct FolderMenuItems: View {
             // 點資料夾是展開、收起（R101），只看這個資料夾從這裡
             Button("只看這個資料夾", systemImage: "line.3.horizontal.decrease") { model.showFolder(folder) }
             Divider()
-            Button("重新命名…", systemImage: "pencil") { model.folderPrompt = .rename(folder) }
+            Button("重新命名…", systemImage: "pencil") { model.renameTarget = .folder(folder) }
             Button(model.folderRule(folder) == nil ? "自動加入的條件…" : "編輯自動加入的條件…", systemImage: "gearshape") {
                 model.editingFolderRule = folder
             }
@@ -135,7 +135,7 @@ struct SeriesMenuItems: View {
                 Button("打開定期會議", systemImage: "arrow.up.forward.app") { model.openSeries(id) }
                 Divider()
             }
-            Button("重新命名…", systemImage: "pencil") { model.renamingSeries = series.id }
+            Button("重新命名…", systemImage: "pencil") { if let id = series.id { model.renameTarget = .series(id) } }
             Divider()
             DestructiveMenuButton(String(localized: "刪除定期會議…")) { model.confirmDeleteSeries = series.id }
         }
@@ -189,28 +189,6 @@ struct OrganizeConfirmations: ViewModifier {
             } message: {
                 Text("會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。")
             }
-    }
-}
-
-/// 重新命名一個重點標記（R100）：標記選單的「重新命名…」
-struct BookmarkRenameModifier: ViewModifier {
-    @Environment(AppModel.self) private var model
-    @State private var label = ""
-
-    func body(content: Content) -> some View {
-        content
-            .alert(String(localized: "重新命名標記"), isPresented: Binding(get: { model.renamingBookmark != nil },
-                                                                     set: { if !$0 { model.renamingBookmark = nil } })) {
-                TextField("名稱", text: $label)
-                Button("取消", role: .cancel) { model.renamingBookmark = nil }
-                Button("重新命名") {
-                    if let id = model.renamingBookmark?.id { model.renameBookmark(id, label: label) }
-                    model.renamingBookmark = nil
-                }
-            } message: {
-                Text("\(TimeFormat.string(model.renamingBookmark?.time ?? 0)) 的標記")
-            }
-            .onChange(of: model.renamingBookmark?.id) { _, _ in label = model.renamingBookmark?.label ?? "" }
     }
 }
 

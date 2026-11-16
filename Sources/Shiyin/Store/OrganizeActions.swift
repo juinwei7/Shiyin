@@ -48,6 +48,7 @@ extension AppModel {
     func deleteSeries(_ id: Int64) {
         if seriesFilter == id { seriesFilter = nil }
         setRow(Self.seriesKey(id), expanded: false)
+        sidebarOrder.removeAll { $0 == Self.seriesKey(id) }
         perform { try db.deleteSeries(id) }
     }
 
