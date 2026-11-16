@@ -38,6 +38,26 @@ extension View {
     }
 }
 
+/// 段落標題右邊的小按鈕（「+」、顯示方式）：細線、跟字差不多高、灰色，滑過一塊淡淡的圓角底，跟列的「⋯」對齊（ChatGPT）
+struct SidebarHeaderIcon: View {
+    let systemName: String
+    var active = false
+    @State private var hovering = false
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 15, weight: .light))
+            .foregroundStyle(active ? Color.celadon : hovering ? Color.primary : Color.secondary)
+            .frame(width: 26, height: 24)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.primary.opacity(hovering ? 0.08 : 0)))
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+    }
+
+    /// 跟列右邊的「⋯」對齊：段落標題比列寬一點
+    static let trailing: CGFloat = 6
+}
+
 /// 側欄的圖示、名字：自己排，不用系統側欄的排法（系統會用強調色畫圖示）；圖示跟字同色（ChatGPT）
 struct SidebarLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {

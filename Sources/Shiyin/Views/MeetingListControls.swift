@@ -86,14 +86,14 @@ struct MeetingListHeader: View {
             Menu {
                 MeetingListMenu(model: model)
             } label: {
-                Image(systemName: model.meetingFilter.isActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                    .foregroundStyle(model.meetingFilter.isActive ? Color.celadon : .secondary)
+                // 細線的滑桿圖示，跟「資料夾」的「+」同一種樣子（ChatGPT）；篩選中是青瓷綠
+                SidebarHeaderIcon(systemName: "slider.horizontal.3", active: model.meetingFilter.isActive)
             }
-            .menuStyle(.borderlessButton)
+            .menuStyle(.button)
+            .buttonStyle(.plain)
             .menuIndicator(.hidden)
-            // 無邊框的選單按鈕用強調色畫圖示：沒篩選時是灰的，篩選中才是青瓷綠
-            .tint(model.meetingFilter.isActive ? Color.celadon : Color.secondary)
             .fixedSize()
+            .padding(.trailing, SidebarHeaderIcon.trailing)
             .help("排序、分組、篩選會議")
             .accessibilityLabel(Text("顯示方式"))
         }

@@ -378,9 +378,9 @@ struct SidebarView: View {
                 // 段落標題跟「+」在輔助使用裡併成一個元件，按下去要是「+」，收合改成有名字的動作（同會議列表的標題）
                 SidebarSectionHeader(title: String(localized: "資料夾"), key: "folders", besideMenu: true)
                 Spacer(minLength: 4)
-                Button { model.renameTarget = .newFolder([]) } label: { Image(systemName: "plus") }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
+                Button { model.renameTarget = .newFolder([]) } label: { SidebarHeaderIcon(systemName: "plus") }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, SidebarHeaderIcon.trailing)
                     .help("新資料夾")
                     .accessibilityLabel(Text("新資料夾"))
             }
