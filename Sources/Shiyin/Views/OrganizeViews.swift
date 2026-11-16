@@ -470,6 +470,29 @@ struct FolderSuggestionBanner: View {
     }
 }
 
+/// 紀錄分頁頂端：這場可能是某個定期會議的一場（R99.3）：證據不夠自動加入時
+struct SeriesJoinBanner: View {
+    @Environment(AppModel.self) private var model
+    let meetingId: Int64
+    let series: MeetingSeries
+    let shared: [Int64]
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Label(model.seriesJoinText(series, shared: shared), systemImage: "arrow.triangle.2.circlepath")
+                .lineLimit(2)
+            Spacer(minLength: 8)
+            Button("不是") { model.dismissSeriesJoin(meetingId, series: series.id ?? 0) }
+            Button("加進去") { model.setSeries([meetingId], series: series.id) }
+                .buttonStyle(.borderedProminent)
+        }
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.celadon.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
 // MARK: - 上次的待辦（R99.5）
 
 /// 紀錄分頁「上次的待辦」：狀態、事項、負責人、時間點

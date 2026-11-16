@@ -122,13 +122,38 @@ public sealed class OrganizeTests : IDisposable
     public void FollowUpsValidateMatchesMac()
     {
         var expected = Golden.ExpectedJson("util/followups-validate.json");
-        var previous = new PreviousMeeting("t", "2026-11-09", expected.Strings("previous")!.Select(t => new MeetingNotes.ActionItem("", t, "")).ToList(), []);
+        var previous = new PreviousMeeting("t", "2026-11-09", expected.GetProperty("previousItems").EnumerateArray()
+            .Select(i => new MeetingNotes.ActionItem(i.Str("owner")!, i.Str("task")!, "")).ToList(), []);
         static List<MeetingNotes.FollowUp> Decode(JsonElement list) => list.EnumerateArray()
             .Select(f => new MeetingNotes.FollowUp(f.Str("task")!, f.Str("owner")!, FollowUpStatuses.Parse(f.Str("status"))!.Value)).ToList();
         static IEnumerable<(string, string, string)> Key(IEnumerable<MeetingNotes.FollowUp> list) => list.Select(f => (f.Task, f.Owner, f.Status.Code()));
         var raw = Decode(expected.GetProperty("input"));
         Assert.Equal(Key(Decode(expected.GetProperty("valid"))), Key(PreviousMeeting.ValidFollowUps(raw, previous)));
         Assert.Equal(Key(Decode(expected.GetProperty("withoutPrevious"))), Key(PreviousMeeting.ValidFollowUps(raw, null)));
+    }
+
+    /// <summary>新的一場要不要加入定期會議（M§73）：自動加入、建議、都不是</summary>
+    [Fact]
+    public void SeriesJoinMatchesMac()
+    {
+        foreach (var c in Golden.ExpectedJson("util/series-join.json").EnumerateArray())
+        {
+            var minute = c.GetProperty("minute").ValueKind == JsonValueKind.Null ? (int?)null : c.GetProperty("minute").GetInt32();
+            var time = new MeetingTime(c.GetProperty("day").GetInt32(), minute);
+            var attended = c.GetProperty("attended").EnumerateArray().Select(x => x.GetInt64()).ToHashSet();
+            var infos = c.GetProperty("series").EnumerateArray().Select(s => new SeriesDetector.SeriesInfo(
+                s.GetProperty("id").GetInt64(), s.GetProperty("weekday").GetInt32(),
+                s.GetProperty("minute").ValueKind == JsonValueKind.Null ? null : s.GetProperty("minute").GetInt32(),
+                s.GetProperty("people").EnumerateArray().Select(x => x.GetInt64()).ToHashSet(),
+                s.GetProperty("lastDay").ValueKind == JsonValueKind.Null ? null : s.GetProperty("lastDay").GetInt32())).ToList();
+            var decision = SeriesDetector.Decide(time, attended, infos);
+            var d = c.GetProperty("decision");
+            var name = c.Str("name");
+            Assert.True((d.TryGetProperty("join", out var j) ? j.GetInt64() : (long?)null) == decision.Join, name);
+            Assert.True((d.TryGetProperty("suggest", out var sg) ? sg.GetInt64() : (long?)null) == decision.Suggest, name);
+            var shared = d.TryGetProperty("shared", out var sh) ? sh.EnumerateArray().Select(x => x.GetInt64()).ToList() : [];
+            Assert.Equal(shared, decision.Shared);
+        }
     }
 
     /// <summary>資料夾的條件（R98.1）、建議（R98.3）</summary>

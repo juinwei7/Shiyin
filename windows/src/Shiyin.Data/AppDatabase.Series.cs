@@ -141,19 +141,17 @@ public sealed partial class AppDatabase
         if (Meeting(meetingId) is not { } meeting || meeting.SeriesId is not null || meeting.DeletedAt is not null
             || MeetingTime.Of(meeting, timeZone) is not { } time) return null;
         var attended = MeetingPeople().GetValueOrDefault(meetingId) ?? [];
-        (MeetingSeries Series, int Gap)? best = null;
-        foreach (var series in Series())
+        var all = Series();
+        var infos = all.Where(s => s.Id is long).Select(s =>
         {
-            if (series.Weekday != time.Weekday || !SeriesDetector.CloseInTime(series.Minute, time.Minute)
-                || !SeriesDetector.SamePeople(attended, series.People.ToHashSet())) continue;
-            if (series.Id is not long sid || SeriesMeetings(sid).FirstOrDefault(m => m.Id != meetingId) is not { } last
-                || MeetingTime.Of(last, timeZone) is not { } lastTime) continue;
-            var gap = Math.Abs(time.Day - lastTime.Day);
-            if (gap is >= 1 and <= 35 && (best is null || gap < best.Value.Gap)) best = (series, gap);
-        }
-        if (best is not { } chosen) return null;
-        SetSeries([meetingId], chosen.Series.Id);
-        return chosen.Series;
+            var last = SeriesMeetings(s.Id!.Value).FirstOrDefault(m => m.Id != meetingId);
+            return new SeriesDetector.SeriesInfo(s.Id!.Value, s.Weekday, s.Minute, s.People.ToHashSet(),
+                last is null ? null : MeetingTime.Of(last, timeZone)?.Day);
+        });
+        // 證據不夠（只認出一位）時不加，會議頁建議（M§73）
+        if (SeriesDetector.Decide(time, attended, infos).Join is not long id || all.FirstOrDefault(s => s.Id == id) is not { } chosen) return null;
+        SetSeries([meetingId], id);
+        return chosen;
     }
 
     // MARK: 與會的人物

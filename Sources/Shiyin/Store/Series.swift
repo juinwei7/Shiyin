@@ -157,6 +157,43 @@ enum SeriesDetector {
                                name: defaultName(titles: group.map(\.title), weekday: weekday, minute: minute))
     }
 
+    // MARK: 新的一場要不要加入（design §73）
+
+    /// 一個定期會議比對用的資料：最近一場（不算這場）的第幾天
+    struct SeriesInfo: Hashable {
+        var id: Int64
+        var weekday: Int
+        var minute: Int?
+        var people: Set<Int64>
+        var lastDay: Int?
+    }
+
+    enum JoinDecision: Hashable {
+        /// 自動加入
+        case join(Int64)
+        /// 證據不夠：建議加入（星期幾、時間、相隔天數對得上，至少一位系列的人有參加）；shared 是共同的人
+        case suggest(Int64, shared: [Int64])
+        case none
+    }
+
+    /// 星期幾相同、時間差不到 60 分鐘、跟最近一場相隔 1～35 天的系列裡：同一群人 → 自動加入（相隔最近的）；
+    /// 不然至少一位共同的人 → 建議（共同的人最多、再來相隔最近的）
+    static func joinDecision(time: MeetingTime, attended: Set<Int64>, series: [SeriesInfo]) -> JoinDecision {
+        let eligible = series.compactMap { s -> (SeriesInfo, Int)? in
+            guard s.weekday == time.weekday, closeInTime(s.minute, time.minute), let last = s.lastDay else { return nil }
+            let gap = abs(time.day - last)
+            return (1...35).contains(gap) ? (s, gap) : nil
+        }
+        if let strong = eligible.filter({ samePeople(attended, $0.0.people) }).min(by: { ($0.1, $0.0.id) < ($1.1, $1.0.id) }) {
+            return .join(strong.0.id)
+        }
+        let weak = eligible.map { ($0.0, $0.1, attended.intersection($0.0.people).count) }.filter { $0.2 > 0 }
+        guard let best = weak.min(by: { (-$0.2, $0.1, $0.0.id) < (-$1.2, $1.1, $1.0.id) }) else { return .none }
+        return .suggest(best.0.id, shared: attended.intersection(best.0.people).sorted())
+    }
+
+    static func joinKey(meeting: Int64, series: Int64) -> String { "join|\(meeting)|\(series)" }
+
     static func key(weekday: Int, minute: Int?, people: [Int64]) -> String {
         "\(weekday)|\(minute.map { $0 / 60 } ?? -1)|" + people.sorted().map(String.init).joined(separator: ",")
     }
@@ -347,15 +384,19 @@ struct PreviousMeeting: Hashable {
         self.init(title: meeting.displayTitle, date: meeting.meetingDate, items: items, openQuestions: notes.openQuestions)
     }
 
-    /// 整理後的驗證：task 對不到給的待辦的丟掉、同一條只留第一個；沒給上一場（nil）時清空
+    /// 整理後的驗證：task 對不到給的待辦的丟掉、同一條只留第一個；沒給上一場（nil）時清空。
+    /// 對到的那一條，task 和 owner 換成上一場原本寫的（模型會把沒有負責人時提示詞寫的「(unassigned)」抄進 owner）
     static func validFollowUps(_ followUps: [MeetingNotes.FollowUp], previous: PreviousMeeting?) -> [MeetingNotes.FollowUp] {
         guard let previous else { return [] }
         var used = Set<Int>()
-        return followUps.filter { followUp in
+        return followUps.compactMap { followUp in
             guard let i = previous.items.indices.first(where: { !used.contains($0) && SeriesOpenItems.sameTask(previous.items[$0].task, followUp.task) })
-            else { return false }
+            else { return nil }
             used.insert(i)
-            return true
+            var fixed = followUp
+            fixed.task = previous.items[i].task
+            fixed.owner = previous.items[i].owner
+            return fixed
         }
     }
 }
@@ -457,16 +498,16 @@ extension AppDatabase {
         guard let meeting = try meeting(meetingId), meeting.seriesId == nil, meeting.deletedAt == nil,
               let time = MeetingTime(meeting) else { return nil }
         let attended = try meetingPeople()[meetingId] ?? []
-        var best: (series: MeetingSeries, gap: Int)?
-        for series in try series() where series.weekday == time.weekday && SeriesDetector.closeInTime(series.minute, time.minute)
-            && SeriesDetector.samePeople(attended, Set(series.people)) {
-            guard let id = series.id, let last = try seriesMeetings(id).first(where: { $0.id != meetingId }),
-                  let lastTime = MeetingTime(last) else { continue }
-            let gap = abs(time.day - lastTime.day)
-            if (1...35).contains(gap), best == nil || gap < best!.gap { best = (series, gap) }
+        let all = try series()
+        let infos = try all.compactMap { s -> SeriesDetector.SeriesInfo? in
+            guard let id = s.id else { return nil }
+            let last = try seriesMeetings(id).first(where: { $0.id != meetingId }).flatMap { MeetingTime($0) }
+            return SeriesDetector.SeriesInfo(id: id, weekday: s.weekday, minute: s.minute, people: Set(s.people), lastDay: last?.day)
         }
-        guard let chosen = best?.series else { return nil }
-        try setSeries([meetingId], series: chosen.id)
+        // 證據不夠（只認出一位）時不加，會議頁建議（AppModel.seriesJoinSuggestion）
+        guard case .join(let id) = SeriesDetector.joinDecision(time: time, attended: attended, series: infos),
+              let chosen = all.first(where: { $0.id == id }) else { return nil }
+        try setSeries([meetingId], series: id)
         return chosen
     }
 

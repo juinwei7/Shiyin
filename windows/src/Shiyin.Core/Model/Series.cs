@@ -113,6 +113,33 @@ public static partial class SeriesDetector
     /// <summary>開始時間差不到 60 分鐘；任一邊不知道時算符合</summary>
     public static bool CloseInTime(int? a, int? b) => a is not int x || b is not int y || Math.Abs(x - y) < 60;
 
+    /// <summary>一個定期會議比對用的資料：最近一場（不算這場）的第幾天</summary>
+    public sealed record SeriesInfo(long Id, int Weekday, int? Minute, IReadOnlySet<long> People, int? LastDay);
+
+    /// <summary>新的一場要不要加入（M§73）：Join 自動加入、Suggest 建議（Shared 是共同的人）、都不是時兩個都是 null</summary>
+    public sealed record JoinDecision(long? Join, long? Suggest, IReadOnlyList<long> Shared);
+
+    /// <summary>
+    /// 星期幾相同、時間差不到 60 分鐘、跟最近一場相隔 1～35 天的系列裡：同一群人 → 自動加入（相隔最近的）；
+    /// 不然至少一位共同的人 → 建議（共同的人最多、再來相隔最近的）。2026-11-16 用 AMI 真人錄音驗收時加的：
+    /// 聲紋只認出一位時原本直接漏掉
+    /// </summary>
+    public static JoinDecision Decide(MeetingTime time, IReadOnlySet<long> attended, IEnumerable<SeriesInfo> series)
+    {
+        var eligible = series
+            .Where(s => s.Weekday == time.Weekday && CloseInTime(s.Minute, time.Minute) && s.LastDay is int)
+            .Select(s => (Info: s, Gap: Math.Abs(time.Day - s.LastDay!.Value)))
+            .Where(x => x.Gap is >= 1 and <= 35).ToList();
+        var strong = eligible.Where(x => SamePeople(attended, x.Info.People)).OrderBy(x => x.Gap).ThenBy(x => x.Info.Id).FirstOrDefault();
+        if (strong.Info is not null) return new JoinDecision(strong.Info.Id, null, []);
+        var weak = eligible.Select(x => (x.Info, x.Gap, Shared: x.Info.People.Count(attended.Contains))).Where(x => x.Shared > 0)
+            .OrderByDescending(x => x.Shared).ThenBy(x => x.Gap).ThenBy(x => x.Info.Id).FirstOrDefault();
+        if (weak.Info is null) return new JoinDecision(null, null, []);
+        return new JoinDecision(null, weak.Info.Id, attended.Where(weak.Info.People.Contains).Order().ToList());
+    }
+
+    public static string JoinKey(long meeting, long series) => $"join|{meeting}|{series}";
+
     public static List<SeriesCandidate> Candidates(IEnumerable<Input> meetings, IReadOnlySet<string> rejected)
     {
         var groups = new List<List<Input>>();
@@ -307,7 +334,10 @@ public sealed record PreviousMeeting(string Title, string Date, List<MeetingNote
         return new PreviousMeeting(meeting.DisplayTitle, meeting.MeetingDate, items, notes.OpenQuestions);
     }
 
-    /// <summary>整理後的驗證：task 對不到給的待辦的丟掉、同一條只留第一個；沒給上一場（null）時清空</summary>
+    /// <summary>
+    /// 整理後的驗證：task 對不到給的待辦的丟掉、同一條只留第一個；沒給上一場（null）時清空。
+    /// 對到的那一條，task 和 owner 換成上一場原本寫的（模型會把沒有負責人時提示詞寫的「(unassigned)」抄進 owner，M§73）
+    /// </summary>
     public static List<MeetingNotes.FollowUp> ValidFollowUps(IEnumerable<MeetingNotes.FollowUp> followUps, PreviousMeeting? previous)
     {
         if (previous is null) return [];
@@ -319,7 +349,7 @@ public sealed record PreviousMeeting(string Title, string Date, List<MeetingNote
                 .Select(i => (int?)i).FirstOrDefault();
             if (i is not int index) continue;
             used.Add(index);
-            result.Add(f);
+            result.Add(f with { Task = previous.Items[index].Task, Owner = previous.Items[index].Owner });
         }
         return result;
     }

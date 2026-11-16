@@ -298,6 +298,10 @@ struct NotesPage: View {
         if let id = detail.meeting.id, model.documentsChanged.contains(id) {
             DocumentsBanner().environment(\.textScale, 1)
         }
+        // 這場可能是某個定期會議的一場（R99.3）
+        if let id = detail.meeting.id, let suggestion = model.seriesJoinSuggestion(for: detail.meeting) {
+            SeriesJoinBanner(meetingId: id, series: suggestion.series, shared: suggestion.shared).environment(\.textScale, 1)
+        }
         // 這場很像某個資料夾裡的會議（R98.3）
         if let id = detail.meeting.id, let suggestion = model.folderSuggestion(for: detail.meeting) {
             FolderSuggestionBanner(meetingId: id, suggestion: suggestion).environment(\.textScale, 1)

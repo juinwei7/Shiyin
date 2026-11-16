@@ -264,6 +264,8 @@ final class AppModel {
     /// 定期會議（R99、design §73）、可能的定期會議、側欄只看哪一個（還沒選會議時右邊是系列頁）
     var series: [MeetingSeries] = []
     var seriesCandidates: [SeriesCandidate] = []
+    /// 按過「不是定期會議」的組、建議加入按過「不是」的（design §73）
+    var seriesRejected: Set<String> = []
     var seriesFilter: Int64? {
         didSet {
             if oldValue != seriesFilter { selectedMeetings = [] }
@@ -455,7 +457,8 @@ final class AppModel {
             meetingPeople = try db.meetingPeople()
             folderRules = try db.folderRules()
             series = try db.series()
-            seriesCandidates = SeriesDetector.candidates(seriesInputs, rejected: try db.rejectedSeriesKeys())
+            seriesRejected = try db.rejectedSeriesKeys()
+            seriesCandidates = SeriesDetector.candidates(seriesInputs, rejected: seriesRejected)
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
             errorMessage = error.localizedDescription

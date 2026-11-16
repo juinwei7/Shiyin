@@ -762,6 +762,33 @@ enum GoldenDump {
                   "intervalWeeks": $0.intervalWeeks, "people": $0.people, "name": $0.name, "frequency": $0.frequencyText] as Object
              }] as Object
         })
+        // 新的一場要不要加入（自動加入／建議／都不是）
+        let monday = MeetingTime.dayNumber(year: 2026, month: 11, day: 16)
+        func info(_ id: Int64, _ weekday: Int, _ minute: Int?, _ people: [Int64], _ gap: Int?) -> SeriesDetector.SeriesInfo {
+            SeriesDetector.SeriesInfo(id: id, weekday: weekday, minute: minute, people: Set(people), lastDay: gap.map { monday - $0 })
+        }
+        let joinCases: [(String, Int?, [Int64], [SeriesDetector.SeriesInfo])] = [
+            ("strong", 600, [1, 2], [info(1, 2, 610, [1, 2, 3, 4], 7)]),
+            ("weakOnePerson", nil, [2], [info(1, 2, nil, [1, 2, 3, 4], 7)]),
+            ("wrongWeekday", nil, [1, 2], [info(1, 3, nil, [1, 2], 6)]),
+            ("tooLongAgo", nil, [1, 2], [info(1, 2, nil, [1, 2], 42)]),
+            ("noLastMeeting", nil, [1, 2], [info(1, 2, nil, [1, 2], nil)]),
+            ("timeFar", 600, [1, 2], [info(1, 2, 700, [1, 2], 7)]),
+            ("nobodyShared", nil, [5], [info(1, 2, nil, [1, 2], 7)]),
+            ("pickMoreShared", nil, [1, 2, 9], [info(1, 2, nil, [1, 5, 6, 7], 7), info(2, 2, nil, [1, 2, 6, 7, 8], 14)]),
+            ("pickNearestStrong", nil, [1, 2], [info(1, 2, nil, [1, 2], 14), info(2, 2, nil, [1, 2], 7)]),
+        ]
+        w.json("util/series-join.json", joinCases.map { name, minute, attended, infos -> Object in
+            let decision: Object = switch SeriesDetector.joinDecision(time: MeetingTime(day: monday, minute: minute), attended: Set(attended), series: infos) {
+            case .join(let id): ["join": id]
+            case .suggest(let id, let shared): ["suggest": id, "shared": shared]
+            case .none: [:]
+            }
+            return ["name": name, "day": monday, "minute": minute.map { $0 as Any } ?? NSNull(), "attended": attended,
+                    "series": infos.map { ["id": $0.id, "weekday": $0.weekday, "minute": $0.minute.map { $0 as Any } ?? NSNull(),
+                                           "people": $0.people.sorted(), "lastDay": $0.lastDay.map { $0 as Any } ?? NSNull()] as Object },
+                    "decision": decision] as Object
+        })
         let titleSets: [[String]] = [["產品週會 10/19", "產品週會 10/26"], ["11月3日 設計討論", "11月10日 設計討論"], ["Q3 Sync 1", "Q3 Sync 2"],  // l10n-skip
                                      ["A", "B"], ["週會", "週會"], ["Weekly Sync", "Sync with Bob", "Bob 1:1"], ["ab 1", "ab 2"]]  // l10n-skip
         w.json("util/series-common-word.json", titleSets.map { ["titles": $0, "word": SeriesDetector.commonWord($0) ?? NSNull()] as Object })
@@ -828,7 +855,8 @@ enum GoldenDump {
                    MeetingNotes.FollowUp(task: "SSO", owner: "b", status: .done)]
         func encode(_ list: [MeetingNotes.FollowUp]) -> [Object] { list.map { ["task": $0.task, "owner": $0.owner, "status": $0.status.rawValue] as Object } }
         w.json("util/followups-validate.json", [
-            "previous": previous.items.map(\.task), "input": encode(raw),
+            "previous": previous.items.map(\.task), "previousItems": previous.items.map { ["owner": $0.owner, "task": $0.task] as Object },
+            "input": encode(raw),
             "valid": encode(PreviousMeeting.validFollowUps(raw, previous: previous)),
             "withoutPrevious": encode(PreviousMeeting.validFollowUps(raw, previous: nil))] as Object)
     }

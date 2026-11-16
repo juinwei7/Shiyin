@@ -104,6 +104,33 @@ extension AppModel {
         return String(localized: "自動加入：\(joined)")
     }
 
+    // MARK: 建議加入定期會議（R99.3、design §73）
+
+    /// 證據不夠自動加入時（星期幾、時間對得上，只認出一位系列的人）：會議頁建議。回傳系列和共同的人
+    func seriesJoinSuggestion(for meeting: Meeting) -> (series: MeetingSeries, shared: [Int64])? {
+        guard let id = meeting.id, meeting.seriesId == nil, meeting.deletedAt == nil, recorder.meetingId != id,
+              let time = MeetingTime(meeting), let attended = meetingPeople[id], !attended.isEmpty else { return nil }
+        let infos = series.compactMap { s -> SeriesDetector.SeriesInfo? in
+            guard let sid = s.id, !seriesRejected.contains(SeriesDetector.joinKey(meeting: id, series: sid)) else { return nil }
+            let last = meetings.first { $0.meeting.seriesId == sid && $0.id != id }.flatMap { MeetingTime($0.meeting) }
+            return SeriesDetector.SeriesInfo(id: sid, weekday: s.weekday, minute: s.minute, people: Set(s.people), lastDay: last?.day)
+        }
+        guard case .suggest(let sid, let shared) = SeriesDetector.joinDecision(time: time, attended: attended, series: infos),
+              let chosen = seriesById(sid) else { return nil }
+        return (chosen, shared)
+    }
+
+    func seriesJoinText(_ series: MeetingSeries, shared: [Int64]) -> String {
+        let names = shared.compactMap { id in peopleOverview.first { $0.id == id }?.name }
+            .joined(separator: MeetingLanguage.ui(zh: "、", en: ", "))
+        return String(localized: "這場可能是定期會議「\(series.name)」的一場：\(SeriesDetector.weekdayName(series.weekday))、\(names) 有參加")
+    }
+
+    /// 「不是」：之後不再建議這場加入這個系列
+    func dismissSeriesJoin(_ meetingId: Int64, series: Int64) {
+        perform { try db.rejectSeries(SeriesDetector.joinKey(meeting: meetingId, series: series)) }
+    }
+
     // MARK: 建議放進資料夾（R98.3）
 
     /// 會議不在資料夾、還沒決定過、已經有會議紀錄、不在錄音中、不在垃圾桶時，跟各個資料夾比

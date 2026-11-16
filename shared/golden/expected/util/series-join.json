@@ -1,0 +1,253 @@
+[
+  {
+    "attended" : [
+      1,
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+      "join" : 1
+    },
+    "minute" : 600,
+    "name" : "strong",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20766,
+        "minute" : 610,
+        "people" : [
+          1,
+          2,
+          3,
+          4
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+      "shared" : [
+        2
+      ],
+      "suggest" : 1
+    },
+    "minute" : null,
+    "name" : "weakOnePerson",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20766,
+        "minute" : null,
+        "people" : [
+          1,
+          2,
+          3,
+          4
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      1,
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+
+    },
+    "minute" : null,
+    "name" : "wrongWeekday",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20767,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 3
+      }
+    ]
+  },
+  {
+    "attended" : [
+      1,
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+
+    },
+    "minute" : null,
+    "name" : "tooLongAgo",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20731,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      1,
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+
+    },
+    "minute" : null,
+    "name" : "noLastMeeting",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : null,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      1,
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+
+    },
+    "minute" : 600,
+    "name" : "timeFar",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20766,
+        "minute" : 700,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      5
+    ],
+    "day" : 20773,
+    "decision" : {
+
+    },
+    "minute" : null,
+    "name" : "nobodyShared",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20766,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      1,
+      2,
+      9
+    ],
+    "day" : 20773,
+    "decision" : {
+      "shared" : [
+        1,
+        2
+      ],
+      "suggest" : 2
+    },
+    "minute" : null,
+    "name" : "pickMoreShared",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20766,
+        "minute" : null,
+        "people" : [
+          1,
+          5,
+          6,
+          7
+        ],
+        "weekday" : 2
+      },
+      {
+        "id" : 2,
+        "lastDay" : 20759,
+        "minute" : null,
+        "people" : [
+          1,
+          2,
+          6,
+          7,
+          8
+        ],
+        "weekday" : 2
+      }
+    ]
+  },
+  {
+    "attended" : [
+      1,
+      2
+    ],
+    "day" : 20773,
+    "decision" : {
+      "join" : 2
+    },
+    "minute" : null,
+    "name" : "pickNearestStrong",
+    "series" : [
+      {
+        "id" : 1,
+        "lastDay" : 20759,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      },
+      {
+        "id" : 2,
+        "lastDay" : 20766,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      }
+    ]
+  }
+]

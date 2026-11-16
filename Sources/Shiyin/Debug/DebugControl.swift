@@ -135,6 +135,16 @@ enum DebugControl {
         case "autojoin":
             if let id, let series = try? model.db.autoJoinSeries(id) { model.organized(id, folder: nil, series: series) }
         case "seriessheet": model.showSeriesSuggestions = true
+        case "seriessuggest":   // seriessuggest <會議 id> <輸出.json>：會議頁建議加入的定期會議（R99.3）
+            if let id, let meeting = try? model.db.meeting(id) {
+                let s = model.seriesJoinSuggestion(for: meeting)
+                write(["series": s?.series.id ?? -1, "shared": s?.shared ?? [], "text": s.map { model.seriesJoinText($0.series, shared: $0.shared) } ?? ""],
+                      to: args[2])
+            }
+        case "seriessuggestion":   // seriessuggestion accept|dismiss <會議 id>
+            if let mid = Int64(args[2]), let meeting = try? model.db.meeting(mid), let s = model.seriesJoinSuggestion(for: meeting) {
+                if args[1] == "accept" { model.setSeries([mid], series: s.series.id) } else { model.dismissSeriesJoin(mid, series: s.series.id ?? 0) }
+            }
         case "seriesopenitems":   // seriesopenitems <系列 id> <輸出.json>
             if let id {
                 write(["items": model.seriesOpenItems(id).map {

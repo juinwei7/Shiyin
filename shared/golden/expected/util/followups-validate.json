@@ -30,16 +30,26 @@
     "Fix login",
     "Confirm SSO"
   ],
+  "previousItems" : [
+    {
+      "owner" : "a",
+      "task" : "Fix login"
+    },
+    {
+      "owner" : "b",
+      "task" : "Confirm SSO"
+    }
+  ],
   "valid" : [
     {
       "owner" : "a",
       "status" : "ongoing",
-      "task" : "Fix login (frontend)"
+      "task" : "Fix login"
     },
     {
       "owner" : "b",
       "status" : "done",
-      "task" : " confirm sso "
+      "task" : "Confirm SSO"
     }
   ],
   "withoutPrevious" : [

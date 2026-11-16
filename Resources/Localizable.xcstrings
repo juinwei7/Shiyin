@@ -5722,6 +5722,23 @@
         }
       }
     },
+    "加進去": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加进去"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
     "包含時間點": {
       "extractionState": "manual",
       "localizations": {
@@ -20462,6 +20479,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这台服务器自称“%@”。"
+          }
+        }
+      }
+    },
+    "這場可能是定期會議「%@」的一場：%@、%@ 有參加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场可能是定期会议“%@”的一场：%@、%@ 有参加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This may be part of the recurring meeting “%1$@”: %2$@, %3$@ attended"
           }
         }
       }
