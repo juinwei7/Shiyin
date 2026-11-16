@@ -3888,7 +3888,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "依定期会议"
+            "value": "按定期会议"
           }
         },
         "en": {
@@ -3922,7 +3922,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "依月份"
+            "value": "按月份"
           }
         },
         "en": {
@@ -3985,7 +3985,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "依文件夹"
+            "value": "按文件夹"
           }
         },
         "en": {
@@ -8932,7 +8932,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "建立"
+            "value": "创建"
           }
         },
         "en": {
@@ -12892,7 +12892,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "会从“人物”拿掉，也会删掉他的声音特征。会议里已经带入的名字会留着，之后的会议不会再自动认出他。"
+            "value": "会从“人物”中移除，并删除其声音特征。会议中已经填入的名字会保留，之后的会议不会再自动识别此人。"
           }
         },
         "en": {

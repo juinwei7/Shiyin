@@ -609,7 +609,12 @@ struct TemplateSettings: View {
 
     private func create(from source: TemplateRecord?, definition edited: TemplateDefinition? = nil) {
         let id = "custom-\(UUID().uuidString.prefix(8))"
-        let definition = edited ?? source.map { $0.definition(for: .interface) }
+        // 沒給編輯中的內容（右鍵的「複製」）時，複製畫面上看到的：簡體介面的內建範本轉成簡體（同 select，Windows 巡檢時發現）
+        let shown = source.map { template -> TemplateDefinition in
+            let definition = template.definition(for: .interface)
+            return template.builtin && MeetingLanguage.simplifiedInterface ? definition.mappingText(ChineseScript.toSimplifiedUI) : definition
+        }
+        let definition = edited ?? shown
             ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems"], custom: [], instruction: "")
         model.saveTemplate(TemplateRecord(id: id, name: source.map { String(localized: "\($0.displayName)（副本）") } ?? String(localized: "新範本"), builtin: false,
                                           definition: definition.jsonString()))
