@@ -20,12 +20,37 @@ public static partial class ControlPipe
         switch (args[0])
         {
             // 移除一個人（R85.7、M§60.2，同 Mac）：personremove <id>（等於選了「移除這個人…」，打開確認）；
-            // personrenameui <id>（等於選了「改名…」：選那個人、打開鉛筆下面的輸入框）
+            // personrenameui <id>（等於選了「重新命名…」：選那個人、打開重新命名的對話框）
             case "personremove" when Id(1) is long removeId && main is not null:
                 _ = main.ConfirmRemovePerson(removeId);
                 return Ok;
             case "personrenameui" when Id(1) is long renameId && main is not null:
                 main.RenamePersonUi(renameId);
+                return Ok;
+            // 重新命名的對話框（R102、design-windows §11.35，同 Mac）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
+            case "renameui" when args.Length > 2 && main is not null:
+            {
+                RenameTarget? target = args[1] switch
+                {
+                    "meeting" when Id(2) is long m => new RenameTarget.Meeting(m),
+                    "folder" => new RenameTarget.Folder(args[2]),
+                    "series" when Id(2) is long s => new RenameTarget.Series(s),
+                    "person" when Id(2) is long p => new RenameTarget.Person(p),
+                    "bookmark" when Id(2) is long b => new RenameTarget.Bookmark(b),
+                    "newfolder" => new RenameTarget.NewFolder(SidebarDrag.Decode(args[2])),
+                    _ => null,
+                };
+                if (target is null) return new JsonObject { ["error"] = "target" };
+                main.RenameUi(target);
+                return Ok;
+            }
+            // foldernew <名稱>：等於按「資料夾」標題的「+」建立（R104，同 Mac）
+            case "foldernew" when args.Length > 1:
+                host.Controller.CreateFolder(args[1]);
+                return Ok;
+            // importinto <資料夾> <檔案>：等於從檔案總管把檔案拖到側欄的資料夾（R103.3，同 Mac）
+            case "importinto" when args.Length > 2 && main is not null:
+                main.ImportInto([args[2]], args[1]);
                 return Ok;
             // 每一種東西都能直接改、刪（R100、M§74，同 Mac 的名稱）：renamemeetingui <id>（等於側欄右鍵「重新命名…」、Enter／F2）；
             // folderdeleteui <名稱>、seriesdeleteui <id>（打開刪除的確認）；sidebarkey return|delete（等於在側欄的會議列表按 Enter、Delete）
@@ -88,8 +113,8 @@ public static partial class ControlPipe
             case "bookmarkrename" when args.Length > 2 && Id(1) is long bookmarkId && main?.State.Detail is { } bookmarkDetail:
                 host.Controller.RenameBookmark(bookmarkDetail.Meeting.Id!.Value, bookmarkId, args[2]);
                 return Ok;
-            case "bookmarkrenameui" when Id(1) is long uiBookmark && main?.State.Detail?.Bookmarks.FirstOrDefault(m => m.Id == uiBookmark) is { } shownBookmark:
-                _ = Dialogs.RenameBookmark(main, shownBookmark);
+            case "bookmarkrenameui" when Id(1) is long uiBookmark && main is not null:
+                main.RenameUi(new RenameTarget.Bookmark(uiBookmark));
                 return Ok;
             case "termrename" when args.Length > 2 && Id(1) is long termId:
                 host.Controller.RenameTerm(termId, args[2]);

@@ -423,6 +423,9 @@ public sealed partial class AppDatabase
     public List<Bookmark> Bookmarks(long meetingId) =>
         Read(db => db.Query("SELECT * FROM bookmarks WHERE meeting_id = ? ORDER BY time", meetingId).Select(ToBookmark).ToList());
 
+    /// <summary>一個重點標記（重新命名的對話框讀目前的名字，R102）</summary>
+    public Bookmark? Bookmark(long id) => Read(db => db.QueryOne("SELECT * FROM bookmarks WHERE id = ?", id) is { } r ? ToBookmark(r) : null);
+
     public void AddBookmark(long meetingId, double time, string label = "") =>
         Write(db => db.Execute("INSERT INTO bookmarks (meeting_id, time, label) VALUES (?, ?, ?)", meetingId, time, label));
 

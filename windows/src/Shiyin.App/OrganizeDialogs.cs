@@ -8,7 +8,7 @@ using Shiyin.Services;
 
 namespace Shiyin.App;
 
-/// <summary>定期會議的確認、改名，資料夾的自動加入條件（R98、R99、M§72、§73、design-windows §11.31、§11.32）</summary>
+/// <summary>定期會議的確認，資料夾的自動加入條件（R98、R99、M§72、§73、design-windows §11.31、§11.32）</summary>
 public static partial class Dialogs
 {
     /// <summary>DEBUG 的 state：可能的定期會議的確認開著時，正在看的那一組（沒有其他組時是空字串）；沒開是 null</summary>
@@ -141,36 +141,6 @@ public static partial class Dialogs
         Load();
         try { await Show(dialog); }
         finally { SeriesSuggestionKey = null; }
-    }
-
-    /// <summary>重新命名定期會議（側欄的右鍵）：名稱選好，空的不存</summary>
-    public static async Task RenameSeries(MainWindow window, long id)
-    {
-        if (window.State.SeriesById(id) is not { } series) return;
-        var name = new TextBox { Text = series.Name };
-        AutomationProperties.SetName(name, L.T("名稱"));
-        name.Loaded += (_, _) => { name.Focus(FocusState.Programmatic); name.SelectAll(); };
-        if (await Show(Dialog(window, L.T("重新命名定期會議"), name, L.T("重新命名"))) != ContentDialogResult.Primary) return;
-        AppHost.Current.Controller.RenameSeries(id, name.Text);
-    }
-
-    /// <summary>DEBUG 的 state：重新命名中的標記</summary>
-    public static long? RenamingBookmark { get; private set; }
-
-    /// <summary>重新命名一個重點標記（R100、同 Mac 的 BookmarkRenameModifier）：說明「mm:ss 的標記」</summary>
-    public static async Task RenameBookmark(MainWindow window, Bookmark bookmark)
-    {
-        if (RenamingBookmark is not null) return;
-        var name = new TextBox { Text = bookmark.Label, Header = L.F("%@ 的標記", TimeFormat.String(bookmark.Time)) };
-        AutomationProperties.SetName(name, L.T("名稱"));
-        name.Loaded += (_, _) => { name.Focus(FocusState.Programmatic); name.SelectAll(); };
-        RenamingBookmark = bookmark.Id;
-        try
-        {
-            if (await Show(Dialog(window, L.T("重新命名標記"), name, L.T("重新命名"))) != ContentDialogResult.Primary) return;
-            AppHost.Current.Controller.RenameBookmark(bookmark.MeetingId, bookmark.Id ?? 0, name.Text);
-        }
-        finally { RenamingBookmark = null; }
     }
 
     /// <summary>

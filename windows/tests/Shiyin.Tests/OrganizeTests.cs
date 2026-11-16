@@ -431,6 +431,98 @@ public sealed class OrganizeTests : IDisposable
         Assert.False(SidebarCollapse.ShowsOthersOnly([Row(4, "d", "2026-11-03")], false, null, null, none, MeetingGrouping.None));
     }
 
+    /// <summary>
+    /// 拖曳排序（R103.2、M§77、design-windows §11.36）：排過的照 sidebarOrder、新的排最後（照預設）；拖到前面、後面；往上往下移到頭了不動；
+    /// 資料夾改名換鍵（合併時拿掉舊的、留那個的位置）、刪除拿掉；拖一場會議時帶的會議；標題收不收會議
+    /// </summary>
+    [Fact]
+    public void SidebarOrderMovesAndFollowsRename()
+    {
+        var settings = AppSettings.InMemory();
+        var writes = 0;
+        settings.Changed += key => { if (key == AppSettings.SidebarOrderKey) writes++; };
+        string[] defaults = ["series:1", "folder:客戶", "folder:設計", "folder:例會"];
+        // 沒排過：照預設
+        Assert.Equal(defaults, SidebarDrag.Sorted(settings, defaults));
+        // 「設計」拖到「產品週會」（series:1）上半：排到最前面，整段寫回
+        Assert.True(SidebarDrag.Move(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", "series:1", before: true));
+        Assert.Equal(["folder:設計", "series:1", "folder:客戶", "folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
+        // 新的資料夾、定期會議排在最後，照預設的順序（定期會議在前、資料夾照名稱）
+        string[] more = ["series:1", "series:2", "folder:客戶", "folder:設計", "folder:例會", "folder:新專案"];
+        Assert.Equal(["folder:設計", "series:1", "folder:客戶", "folder:例會", "series:2", "folder:新專案"], SidebarDrag.Sorted(settings, more));
+        // 拖到下半＝放在後面；拖到自己、拖到不在這一段的不動
+        Assert.True(SidebarDrag.Move(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", "folder:客戶", before: false));
+        Assert.Equal(["series:1", "folder:客戶", "folder:設計", "folder:例會"], SidebarDrag.Sorted(settings, defaults));
+        Assert.False(SidebarDrag.Move(settings, defaults, "folder:設計", "folder:設計", before: true));
+        Assert.False(SidebarDrag.Move(settings, defaults, "folder:設計", "folder:不見了", before: true));
+        // 往上、往下移一格（Alt+↑／↓）；到頭了不動、不寫
+        writes = 0;
+        Assert.True(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:例會", -1));
+        Assert.Equal(["series:1", "folder:客戶", "folder:例會", "folder:設計"], SidebarDrag.Sorted(settings, defaults));
+        Assert.True(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:客戶", 1));
+        Assert.Equal(["series:1", "folder:例會", "folder:客戶", "folder:設計"], SidebarDrag.Sorted(settings, defaults));
+        Assert.False(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "series:1", -1));
+        Assert.False(SidebarDrag.MoveBy(settings, SidebarDrag.Sorted(settings, defaults), "folder:設計", 1));
+        Assert.Equal(2, writes);
+        // 資料夾改名：鍵換掉、位置不變；改成已經有的資料夾（合併）時拿掉舊的；刪除拿掉；沒排過的資料夾改名不寫
+        SidebarDrag.RenameFolder(settings, "例會", "週例會");
+        Assert.Equal(["series:1", "folder:週例會", "folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
+        SidebarDrag.RenameFolder(settings, "週例會", "設計");
+        Assert.Equal(["series:1", "folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
+        SidebarDrag.Remove(settings, "series:1");
+        Assert.Equal(["folder:客戶", "folder:設計"], settings.StringList(AppSettings.SidebarOrderKey));
+        writes = 0;
+        SidebarDrag.RenameFolder(settings, "沒排過", "還是沒排過");
+        SidebarDrag.Remove(settings, "series:9");
+        Assert.Equal(0, writes);
+
+        // 拖一場會議：在多選裡就是整個多選，不然只有它
+        Assert.Equal([5L, 3L, 8L], SidebarDrag.DragIds(3, [5, 3, 8]));
+        Assert.Equal([4L], SidebarDrag.DragIds(4, [5, 3, 8]));
+        Assert.Equal([4L], SidebarDrag.DragIds(4, []));
+        Assert.Equal([5L, 3L], SidebarDrag.Decode(SidebarDrag.Encode([5, 3])));
+        Assert.Empty(SidebarDrag.Decode("x,"));
+        // 列表的標題：看資料夾、定期會議、「其他會議」時收；看所有會議、垃圾桶、人物時不收
+        Assert.True(SidebarDrag.HeaderAccepts(false, false, "客戶", null, false));
+        Assert.True(SidebarDrag.HeaderAccepts(false, false, null, 1, false));
+        Assert.True(SidebarDrag.HeaderAccepts(false, false, null, null, true));
+        Assert.False(SidebarDrag.HeaderAccepts(false, false, null, null, false));
+        Assert.False(SidebarDrag.HeaderAccepts(true, false, "客戶", null, false));
+        Assert.False(SidebarDrag.HeaderAccepts(false, true, null, null, true));
+    }
+
+    /// <summary>重新命名的規則（R102、M§76）：空白、沒改不能存（新資料夾有字就能建立）；資料夾同名、人物同名（大小寫不分）是合併；鍵同 Mac</summary>
+    [Fact]
+    public void RenameRules()
+    {
+        Assert.False(Renaming.CanSave(new RenameTarget.Folder("客戶"), "客戶", " 客戶 "));
+        Assert.False(Renaming.CanSave(new RenameTarget.Meeting(1), "週會", "  "));
+        Assert.True(Renaming.CanSave(new RenameTarget.Meeting(1), "週會", "週會 2"));
+        Assert.True(Renaming.CanSave(new RenameTarget.NewFolder([1]), "", "客戶"));
+        Assert.False(Renaming.CanSave(new RenameTarget.NewFolder([1]), "", " "));
+        string[] folders = ["客戶", "設計"];
+        (long, string)[] people = [(1, "王小明"), (2, "Amy")];
+        Assert.Equal("設計", Renaming.Conflict(new RenameTarget.Folder("客戶"), " 設計", folders, people));
+        Assert.Null(Renaming.Conflict(new RenameTarget.Folder("客戶"), "客戶", folders, people));
+        Assert.Null(Renaming.Conflict(new RenameTarget.Folder("客戶"), "新專案", folders, people));
+        Assert.Equal("客戶", Renaming.Conflict(new RenameTarget.NewFolder([3]), "客戶", folders, people));
+        Assert.Equal("Amy", Renaming.Conflict(new RenameTarget.Person(1), "amy", folders, people));
+        Assert.Null(Renaming.Conflict(new RenameTarget.Person(2), "AMY", folders, people));
+        Assert.Null(Renaming.Conflict(new RenameTarget.Series(1), "設計", folders, people));
+        // 「+」建空的資料夾（R104）：同名的已經有就不能建；從會議的選單建的照舊可以（移進那個資料夾）
+        Assert.True(Renaming.IsEmptyNewFolder(new RenameTarget.NewFolder([])));
+        Assert.False(Renaming.IsEmptyNewFolder(new RenameTarget.NewFolder([3])));
+        Assert.Equal("客戶", Renaming.Conflict(new RenameTarget.NewFolder([]), "客戶", folders, people));
+        Assert.False(Renaming.CanSave(new RenameTarget.NewFolder([]), "", "客戶", "客戶"));
+        Assert.True(Renaming.CanSave(new RenameTarget.NewFolder([]), "", "新專案", null));
+        Assert.True(Renaming.CanSave(new RenameTarget.NewFolder([3]), "", "客戶", "客戶"));
+        Assert.Equal("newFolder([])", new RenameTarget.NewFolder([]).Key);
+        Assert.Equal("meeting(42)", new RenameTarget.Meeting(42).Key);
+        Assert.Equal("folder(\"客戶\")", new RenameTarget.Folder("客戶").Key);
+        Assert.Equal("newFolder([1, 2])", new RenameTarget.NewFolder([1, 2]).Key);
+        Assert.Equal("bookmark(5)", new RenameTarget.Bookmark(5).Key);
+    }
+
     /// <summary>側欄的資料夾（有條件的沒有會議也列出來）、可能的定期會議的輸入、建議的文字、條件的說明（M§72、§73）</summary>
     [Fact]
     public void OrganizingHelpers()
@@ -440,6 +532,11 @@ public sealed class OrganizeTests : IDisposable
         Assert.Equal(2, folders.Count);
         Assert.Contains(("空的資料夾", 0), folders);
         Assert.Contains(("產品", 1), folders);
+        // 資料夾表（R104：自己建的空資料夾、會議都移走了的資料夾）也列出來，不重複
+        var withTable = Organizing.Folders(rows, [new FolderRule { Folder = "空的資料夾", Keywords = ["x"] }], ["新專案", "產品", ""]);
+        Assert.Equal(3, withTable.Count);
+        Assert.Contains(("新專案", 0), withTable);
+        Assert.Contains(("產品", 1), withTable);
         Assert.Equal([1L], Organizing.SeriesInputs(rows, new Dictionary<long, HashSet<long>>()).Select(i => i.Id));
         Assert.Equal(3, Organizing.CommonSeries(rows, [2]));
         Assert.Null(Organizing.CommonSeries(rows, [1, 2]));

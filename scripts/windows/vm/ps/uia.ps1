@@ -12,7 +12,9 @@
 #                                         再點選單裡的選項（沒給就列出選單）。同一次做完：下一個 PowerShell 會搶到焦點，選單會被關掉
 #   uia.ps1 lclick <視窗> <名稱> [第幾個] [選項] [子選項]  真的滑鼠左鍵點（DropDownButton 用 Invoke 打不開選單時）
 #   uia.ps1 ctrlclick <視窗> <名稱> [第幾個] 按住 Ctrl 點（清單多選）
-#   uia.ps1 key <視窗> <虛擬鍵碼（十六進位）> [ctrl]  按一個鍵（2E 是 Delete）。這四個是虛擬機桌面上真的輸入，不會送到 Mac
+#   uia.ps1 key <視窗> <虛擬鍵碼（十六進位）> [ctrl|alt]  按一個鍵（2E 是 Delete、26 是 ↑）
+#   uia.ps1 drag <視窗> <來源> <目標> [top|center|bottom] [停留秒數]  真的滑鼠拖曳（來源可以是「檔案總管的視窗標題::檔名」）。
+#                                         這五個是虛擬機桌面上真的輸入，不會送到 Mac
 param([string]$Action, [string]$Window, [string]$Target, [string]$Extra, [string]$Item1, [string]$Item2)
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 Add-Type -TypeDefinition @'
@@ -35,11 +37,19 @@ public static class RealInput {
     if (fg != 0 && fg != me) AttachThreadInput(me, fg, false);
     return ok;
   }
+  [DllImport("user32.dll")] static extern int GetSystemMetrics(int i);
+  // 拖曳用：真的滑鼠移動（MOUSEEVENTF_MOVE | ABSOLUTE，0～65535 的座標），WinUI 的指標事件才收得到；SetCursorPos 只搬游標
+  public static void MoveTo(int x, int y) {
+    int w = GetSystemMetrics(0), h = GetSystemMetrics(1);
+    mouse_event(0x8001, (int)((x * 65535L + w / 2) / Math.Max(1, w - 1)), (int)((y * 65535L + h / 2) / Math.Max(1, h - 1)), 0, UIntPtr.Zero);
+  }
   public static void Click(int x, int y, bool right, bool ctrl) {
     SetCursorPos(x, y); System.Threading.Thread.Sleep(80);
-    if (ctrl) keybd_event(0x11, 0, 0, UIntPtr.Zero);
-    mouse_event(right ? 8u : 2u, 0, 0, 0, UIntPtr.Zero); mouse_event(right ? 16u : 4u, 0, 0, 0, UIntPtr.Zero);
-    if (ctrl) keybd_event(0x11, 0, 2, UIntPtr.Zero);
+    // Ctrl 按住久一點：清單可以拖曳時（CanDragItems）選取在放開時才決定，那時 Ctrl 要還按著
+    if (ctrl) { keybd_event(0x11, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(100); }
+    mouse_event(right ? 8u : 2u, 0, 0, 0, UIntPtr.Zero); if (ctrl) System.Threading.Thread.Sleep(100);
+    mouse_event(right ? 16u : 4u, 0, 0, 0, UIntPtr.Zero);
+    if (ctrl) { System.Threading.Thread.Sleep(250); keybd_event(0x11, 0, 2, UIntPtr.Zero); }
   }
 }
 '@
@@ -140,6 +150,22 @@ switch ($Action) {
         $p.ScrollIntoView(); "shown $(Describe $e)"
     }
     'close' { $p = Try-Pattern (Find-Window $Window) ([System.Windows.Automation.WindowPattern]::Pattern); $p.Close(); "closed '$Window'" }
+    'focus' {
+        # 鍵盤焦點給那個元件（UI Automation 的 SetFocus），接著用 key 按鍵
+        $w = Find-Window $Window
+        [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle) | Out-Null
+        Start-Sleep -Milliseconds 300
+        $e = Find-Element $w $Target ([int]$(if ($Extra) { $Extra } else { 0 }))
+        $e.SetFocus(); Start-Sleep -Milliseconds 300
+        "focus $(Describe $e)"
+    }
+    'focused' {
+        # 拾音的視窗拉到前面之後，鍵盤焦點在哪個元件
+        $w = Find-Window $Window
+        [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle) | Out-Null
+        Start-Sleep -Milliseconds 400
+        $e = $A::FocusedElement; if ($e) { "focused: $(Describe $e)" } else { 'focused: (none)' }
+    }
     { $_ -in 'rclick', 'lclick', 'ctrlclick' } {
         $w = Find-Window $Window
         $e = Find-Element $w $Target ([int]$(if ($Extra) { $Extra } else { 0 }))
@@ -165,16 +191,74 @@ switch ($Action) {
         if (-not $Item1) { @(Windows | ForEach-Object { $_.FindAll($T::Descendants, $cond) }) | ForEach-Object { "  $(Describe $_)" } }
     }
     'key' {
-        # 對拾音的視窗按一個鍵（虛擬鍵碼，十六進位，例如 2E 是 Delete）；Extra 給 ctrl 時按住 Ctrl。焦點在哪個元件就送到哪裡
+        # 對拾音的視窗按一個鍵（虛擬鍵碼，十六進位，例如 2E 是 Delete、26 是 ↑）；Extra 給 ctrl、alt 時按住 Ctrl、Alt。焦點在哪個元件就送到哪裡
         $w = Find-Window $Window
         $front = [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle)
         Start-Sleep -Milliseconds 400
         $vk = [Convert]::ToByte($Target, 16)
-        if ($Extra -eq 'ctrl') { [RealInput]::keybd_event(0x11, 0, 0, [UIntPtr]::Zero) }
-        [RealInput]::keybd_event($vk, 0, 0, [UIntPtr]::Zero); [RealInput]::keybd_event($vk, 0, 2, [UIntPtr]::Zero)
-        if ($Extra -eq 'ctrl') { [RealInput]::keybd_event(0x11, 0, 2, [UIntPtr]::Zero) }
+        $mod = switch ($Extra) { 'ctrl' { 0x11 } 'alt' { 0x12 } default { 0 } }
+        # ↑↓←→ 這些是延伸鍵（KEYEVENTF_EXTENDEDKEY），不然會被當成數字鍵盤的鍵
+        $ext = if ($vk -ge 0x21 -and $vk -le 0x28) { 1 } else { 0 }
+        if ($mod) { [RealInput]::keybd_event($mod, 0, 0, [UIntPtr]::Zero) }
+        [RealInput]::keybd_event($vk, 0, $ext, [UIntPtr]::Zero); [RealInput]::keybd_event($vk, 0, $ext -bor 2, [UIntPtr]::Zero)
+        if ($mod) { [RealInput]::keybd_event($mod, 0, 2, [UIntPtr]::Zero) }
         Start-Sleep -Milliseconds 800
         "key $Target$(if ($Extra) { "+$Extra" })$(if (-not $front) { '（拉到前面失敗）' })"
+    }
+    'drag' {
+        # 真的滑鼠拖曳（R103、design-windows §11.36）：drag <視窗> <來源> <目標> [top|center|bottom] [停留秒數]
+        # 來源、目標是元件名稱（「名稱#2」第幾個、有 * 時萬用字元比對）；「視窗標題::名稱」是別的視窗裡的元件（檔案總管的檔案）。
+        # 按下、移動超過拖曳的門檻、分段移到目標、停一下（停留時每 0.3 秒動 1 像素，DragOver 才會一直來；這時可以從 Mac 截圖）、放開，最後把滑鼠移開
+        function Find-Target([string]$spec, $default) {
+            $win = $default
+            if ($spec.Contains('::')) {
+                $parts = $spec -split '::', 2
+                $win = $A::RootElement.FindAll($T::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -like $parts[0] } | Select-Object -First 1
+                if (-not $win) { throw "找不到視窗：$($parts[0])" }
+                $spec = $parts[1]
+            }
+            if ($spec.Contains('*')) {
+                $index = 0
+                if ($spec -match '^(.*)#(\d+)$') { $spec = $Matches[1]; $index = [int]$Matches[2] }
+                $all = @($win.FindAll($T::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -like $spec -and $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::ListItem })
+                if ($all.Count -le $index) { throw "找不到「$spec」" }
+                return $all[$index]
+            }
+            Find-Element $win $spec 0
+        }
+        $w = Find-Window $Window
+        $src = Find-Target $Target $w
+        $dst = Find-Target $Extra $w
+        # 清單裡沒捲到的項目沒有位置：先捲進畫面；還是沒有位置就不拖（不然會按在桌面的角落）
+        foreach ($e in @($src, $dst)) { if ($p = Try-Pattern $e ([System.Windows.Automation.ScrollItemPattern]::Pattern)) { try { $p.ScrollIntoView() } catch { } } }
+        Start-Sleep -Milliseconds 300
+        $sr = $src.Current.BoundingRectangle; $dr = $dst.Current.BoundingRectangle
+        if ($sr.IsEmpty -or $dr.IsEmpty -or [double]::IsInfinity($sr.X) -or [double]::IsInfinity($dr.X)) { throw "來源或目標不在畫面上：$sr → $dr" }
+        $sx = [int]($sr.X + [Math]::Min($sr.Width / 2, 60)); $sy = [int]($sr.Y + $sr.Height / 2)
+        $fy = switch ($Item1) { 'top' { 0.25 } 'bottom' { 0.75 } default { 0.5 } }
+        $dx = [int]($dr.X + [Math]::Min($dr.Width / 2, 80)); $dy = [int]($dr.Y + $dr.Height * $fy)
+        # 來源在別的視窗（檔案總管）時把那個視窗拉到前面，拾音的側欄要露在外面
+        $srcWin = if ($Target.Contains('::')) { $A::RootElement.FindAll($T::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -like ($Target -split '::', 2)[0] } | Select-Object -First 1 } else { $w }
+        $front = [RealInput]::Front([IntPtr]$srcWin.Current.NativeWindowHandle)
+        Start-Sleep -Milliseconds 400
+        "$(Get-Date -Format HH:mm:ss.fff) press ($sx,$sy) -> ($dx,$dy)"
+        [RealInput]::SetCursorPos($sx, $sy) | Out-Null; [RealInput]::MoveTo($sx, $sy); Start-Sleep -Milliseconds 200
+        [RealInput]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 200
+        # 先慢慢移出拖曳的門檻（4 像素），拖曳開始了再移過去
+        for ($i = 1; $i -le 6; $i++) { [RealInput]::MoveTo($sx, $sy + $i * 2); Start-Sleep -Milliseconds 40 }
+        Start-Sleep -Milliseconds 300
+        $steps = 25
+        for ($i = 1; $i -le $steps; $i++) {
+            [RealInput]::MoveTo([int]($sx + ($dx - $sx) * $i / $steps), [int]($sy + 12 + ($dy - $sy - 12) * $i / $steps))
+            Start-Sleep -Milliseconds 40
+        }
+        $hold = [double]$(if ($Item2) { $Item2 } else { 0.6 })
+        $until = (Get-Date).AddSeconds($hold); $jiggle = 0
+        while ((Get-Date) -lt $until) { $jiggle = 1 - $jiggle; [RealInput]::MoveTo($dx + $jiggle, $dy); Start-Sleep -Milliseconds 300 }
+        [RealInput]::MoveTo($dx, $dy); Start-Sleep -Milliseconds 150
+        [RealInput]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 700
+        [RealInput]::MoveTo(3000, 2000)
+        "$(Get-Date -Format HH:mm:ss.fff) dragged $(Describe $src) -> $(Describe $dst) ($Item1)$(if (-not $front) { '（拉到前面失敗）' })"
     }
     default { throw "不認得的動作：$Action" }
 }

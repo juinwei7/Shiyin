@@ -1259,6 +1259,23 @@
         }
       }
     },
+    "加到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加到“%@”"
+          }
+        }
+      }
+    },
     "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開拾音、跳到那個時間點。": {
       "extractionState": "manual",
       "localizations": {
@@ -1272,6 +1289,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加好之后在 AI 工具里直接问，例如“列出我这周的会议”“上周所有会议的待办有哪些”“找出提到预算的会议，整理成一段给主管”，也可以跟其他工具一起用（把待办开成工单、写周报）。回答里的会议链接点了会打开拾音、跳到那个时间点。"
+          }
+        }
+      }
+    },
+    "匯入到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import into “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入到“%@”"
           }
         }
       }
@@ -1998,6 +2032,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "拾音：录音中 %@，%@"
+          }
+        }
+      }
+    },
+    "按 Alt+↑、Alt+↓ 可以往上移、往下移": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press Alt+Up or Alt+Down to move up or down"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按 Alt+↑、Alt+↓ 可以往上移、往下移"
           }
         }
       }
@@ -2848,6 +2899,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前不整理：录音、转录、逐字稿全部留在这台电脑。"
+          }
+        }
+      }
+    },
+    "移出資料夾和定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from folders and recurring meetings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移出文件夹和定期会议"
+          }
+        }
+      }
+    },
+    "移到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移到“%@”"
           }
         }
       }

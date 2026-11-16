@@ -361,6 +361,107 @@ public sealed class AppTests : IDisposable
     }
 
     /// <summary>
+    /// 重新命名的對話框（R102、M§76）：目前的名字從資料庫讀（沒取過標題的會議是檔名、人物和標記不靠畫面的列表）；儲存走原本的動作
+    /// （會議只改標題、鎖住標題，沒改不存；資料夾改名排序的鍵跟著改；新資料夾移進去；人物同名合併；標記）
+    /// </summary>
+    [Fact]
+    public void RenameDialogReadsAndCommits()
+    {
+        var settings = AppSettings.InMemory();
+        var controller = Controller(settings, out _);
+        var a = db.InsertMeeting(new Meeting { SourceFilename = "2026-11-02 週會.m4a", MeetingDate = "2026-11-02", Participants = "王小明" }, null).Id!.Value;
+        var b = db.InsertMeeting(new Meeting { SourceFilename = "b.m4a", Title = "客戶訪談", MeetingDate = "2026-11-09" }, null).Id!.Value;
+        Assert.Equal("2026-11-02 週會", controller.CurrentName(new RenameTarget.Meeting(a)));
+        Assert.Equal("客戶訪談", controller.CurrentName(new RenameTarget.Meeting(b)));
+        // 沒改不存（標題不會被鎖住）；改了只改標題，日期、與會者照舊
+        controller.CommitRename(new RenameTarget.Meeting(a), "2026-11-02 週會");
+        Assert.False(db.Meeting(a)!.TitleLocked);
+        controller.CommitRename(new RenameTarget.Meeting(a), " 產品週會 ");
+        var renamed = db.Meeting(a)!;
+        Assert.Equal(("產品週會", "2026-11-02", "王小明", true), (renamed.Title, renamed.MeetingDate, renamed.Participants, renamed.TitleLocked));
+
+        // 新資料夾：會議移進去；資料夾改名時排序的鍵跟著改
+        controller.CommitRename(new RenameTarget.NewFolder([a, b]), "客戶");
+        Assert.Equal(["客戶"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
+        settings.Set(AppSettings.SidebarOrderKey, ["folder:客戶", "series:9"]);
+        controller.CommitRename(new RenameTarget.Folder("客戶"), "客戶 A");
+        Assert.Equal(["客戶 A"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
+        Assert.Equal(["folder:客戶 A", "series:9"], settings.StringList(AppSettings.SidebarOrderKey));
+        controller.DeleteFolder("客戶 A");
+        Assert.Equal(["series:9"], settings.StringList(AppSettings.SidebarOrderKey));
+
+        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [] }, [a]).Id!.Value;
+        Assert.Equal("產品週會", controller.CurrentName(new RenameTarget.Series(series)));
+        controller.CommitRename(new RenameTarget.Series(series), "產品例會");
+        Assert.Equal("產品例會", db.Series().Single().Name);
+
+        long amy = 0, ming = 0;
+        db.Write(d =>
+        {
+            d.Execute("INSERT INTO people (name, created_at) VALUES (?, ?)", "Amy", Clock.Now());
+            amy = d.LastInsertRowId;
+            d.Execute("INSERT INTO people (name, created_at) VALUES (?, ?)", "王小明", Clock.Now());
+            ming = d.LastInsertRowId;
+        });
+        Assert.Equal("王小明", controller.CurrentName(new RenameTarget.Person(ming)));
+        controller.CommitRename(new RenameTarget.Person(ming), "AMY");
+        Assert.Equal([(amy, "Amy")], db.PeopleOverview().Select(p => (p.Id, p.Name)));
+
+        // 「+」建空的資料夾（R104）：資料夾表多一個、提示；同名的不建；會議都移走了還在
+        var notices = new List<string>();
+        controller.Notice += notices.Add;
+        controller.CommitRename(new RenameTarget.NewFolder([]), " 空的資料夾 ");
+        Assert.Contains("空的資料夾", db.FolderNames());
+        Assert.Equal("已建立資料夾「空的資料夾」", notices[^1]);
+        controller.MoveToFolder([b], "設計");
+        notices.Clear();
+        controller.CreateFolder("設計");
+        Assert.Empty(notices);
+        controller.MoveToFolder([b], "");
+        Assert.Contains("設計", db.FolderNames());
+
+        db.AddBookmark(b, 754, "");
+        var mark = db.Bookmarks(b).Single();
+        Assert.Equal("", controller.CurrentName(new RenameTarget.Bookmark(mark.Id!.Value)));
+        controller.CommitRename(new RenameTarget.Bookmark(mark.Id!.Value), "報價");
+        Assert.Equal("報價", db.Bookmark(mark.Id!.Value)!.Label);
+        // 空白不存
+        controller.CommitRename(new RenameTarget.Bookmark(mark.Id!.Value), "  ");
+        Assert.Equal("報價", db.Bookmark(mark.Id!.Value)!.Label);
+    }
+
+    /// <summary>
+    /// 會議拖到列表的標題（R103.1、M§77）：在看資料夾＝移進去、在看定期會議＝加進去、「其他會議」＝移出資料夾和定期會議；
+    /// 都不在資料夾裡時說一聲，只移出定期會議時「已移出定期會議」
+    /// </summary>
+    [Fact]
+    public void DropOnListHeaderMovesMeetings()
+    {
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var notices = new List<string>();
+        controller.Notice += notices.Add;
+        var a = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
+        var b = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
+        var series = db.CreateSeries(new MeetingSeries { Name = "產品週會", Weekday = 2, Minute = 600, People = [] }, []).Id!.Value;
+        controller.DropOnListHeader([a, b], "客戶", null, othersOnly: false);
+        Assert.Equal(["客戶", "客戶"], new[] { a, b }.Select(id => db.Meeting(id)!.Folder));
+        controller.DropOnListHeader([b], null, series, othersOnly: false);
+        Assert.Equal(series, db.Meeting(b)!.SeriesId);
+        controller.DropOnListHeader([a, b], null, null, othersOnly: true);
+        Assert.All(new[] { a, b }.Select(id => db.Meeting(id)!), m => Assert.True(m.Folder.Length == 0 && m.SeriesId is null));
+        Assert.Equal("已把 2 場會議移出資料夾", notices[^1]);
+        controller.DropOnListHeader([a], null, null, othersOnly: true);
+        Assert.Equal("這場會議沒有在任何資料夾裡", notices[^1]);
+        controller.SetSeries([a], series);
+        controller.DropOnListHeader([a], null, null, othersOnly: true);
+        Assert.Null(db.Meeting(a)!.SeriesId);
+        Assert.Equal("已移出定期會議", notices[^1]);
+        // 看所有會議時（不是其他會議）不動
+        controller.DropOnListHeader([a], null, null, othersOnly: false);
+        Assert.Equal("", db.Meeting(a)!.Folder);
+    }
+
+    /// <summary>
     /// 每一種東西都能直接改、刪（R100、M§74）：就地改一條紀錄（待辦只改事項、時間點不變、留一個版本、空的和沒改的不存）、
     /// 刪除一條（不確認、提示怎麼復原、復原上一版拿回來）；標記重新命名；詞改成已經有的詞時合併
     /// </summary>
