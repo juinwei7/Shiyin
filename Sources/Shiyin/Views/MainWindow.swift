@@ -391,9 +391,8 @@ struct SidebarView: View {
     private func meetingRow(_ row: MeetingRow) -> some View {
         let selected = model.listSelection.contains(row.id)
         return MeetingRowView(row: row, status: model.status(row))
-            .rowMenu(selected: selected) {
-                MeetingMenuItems(ids: selected && model.multiSelected.count > 1 ? model.multiSelected : [row.id])
-            }
+            // 「⋯」和右鍵：自己畫的選單（R105）；選到的是多選裡的一場時，選單對整個多選
+            .floatingRowMenu(selected: selected) { model.meetingMenu(model.dragIDs(for: row.id)) }
             .sidebarSelectableRow(selected: selected)
             // 拖到資料夾、定期會議、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選
             .onDrag { model.meetingDragProvider(for: row.id) }
@@ -409,10 +408,9 @@ struct SidebarView: View {
                 if model.isSectionExpanded("people") {
                     ForEach(model.peopleOverview) { person in
                         PersonRow(person: person)
-                            .rowMenu(selected: model.selectedPerson == person.id) { PersonMenuItems(person: person) }
+                            .floatingRowMenu(selected: model.selectedPerson == person.id) { model.personMenu(person) }
                             .sidebarSelectableRow(selected: model.selectedPerson == person.id)
                             .tag(person.id)
-                            .contextMenu { PersonMenuItems(person: person) }
                     }
                     if model.peopleOverview.isEmpty {
                         Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
@@ -476,9 +474,6 @@ struct SidebarView: View {
                 }
             }
         }
-        .contextMenu(forSelectionType: Int64.self) { selected in
-            MeetingMenuItems(ids: model.filteredMeetings.map(\.id).filter { selected.contains($0) })
-        }
         // 鍵盤（R100）：Return 重新命名、Delete 移到垃圾桶（垃圾桶裡是永久刪除），都照現在選到的
         .onKeyPress(.return) { model.sidebarReturn() ? .handled : .ignored }
         .onDeleteCommand { model.sidebarDelete() }
@@ -505,7 +500,7 @@ struct FolderRow: View {
     var dragKey: String? = nil
     /// 收拖過來的會議、資料夾（排序）、檔案（R103）
     var drop: SidebarRowDrop? = nil
-    var menu: (() -> AnyView)? = nil
+    var menu: (() -> [MenuEntry])? = nil
     let action: () -> Void
     @State private var hovering = false
     @State private var dropState: SidebarDropState?
@@ -557,14 +552,14 @@ struct FolderRow: View {
             .modifier(FolderRowHandle(name: name, dragKey: dragKey, action: action))
             // 右邊不放場數（ChatGPT 的專案列表），滑過或選到時「⋯」
             if let menu {
-                RowMenuButton { menu() }
+                FloatingMenuButton(entries: menu)
                     .opacity(showMenu ? 1 : 0)
                     .allowsHitTesting(showMenu)
             }
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: action)
-        .contextMenu { if let menu { menu() } }
+        .modifier(FolderRowContextMenu(menu: menu))
         .onHover { hovering = $0 }
         .sidebarHover(selected: selected)
         // 拖進來：整列一塊青瓷綠的底；排序：上緣或下緣一條線（design §77）
@@ -584,6 +579,15 @@ struct FolderRow: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         .modifier(FolderRowDragModifier(drop: drop, height: height, state: $dropState))
+    }
+}
+
+/// 有選單的列：右鍵打開自己畫的選單（R105）
+private struct FolderRowContextMenu: ViewModifier {
+    let menu: (() -> [MenuEntry])?
+
+    func body(content: Content) -> some View {
+        if let menu { content.floatingContextMenu(menu) } else { content }
     }
 }
 

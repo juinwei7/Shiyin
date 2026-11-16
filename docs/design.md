@@ -2745,6 +2745,18 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`foldernew <名稱>`；state 的 `folders`（名稱、場數）。
 - Windows：design-windows §11.37。
 
+## 79. 自己畫的選單（R105）
+
+- `MenuEntry`（動作、子選單、分隔線；標題、圖示、快捷鍵提示、紅色、停用）。每一種東西一份內容：`AppModel.meetingMenu(ids)`（重新命名… ↩、移到資料夾 ›、加到定期會議 ›、移出「X」、移到垃圾桶 ⌘⌫；多選時「把 N 場會議移到垃圾桶…」；垃圾桶裡是還原、永久刪除…）、`folderMenu`、`seriesMenu`（打開定期會議、重新命名…、刪除定期會議…）、`personMenu`（重新命名… ↩、合併到 ›、移除這個人…）、`meetingLinkMenu`、`noteItemMenu`。快捷鍵只是提示，不註冊（「⋯」一直存在，註冊的話每一列都會搶同一個快捷鍵）。原本的 SwiftUI 選單內容（MeetingMenuItems 這些）拿掉；工具列「更多」用的 `FolderMenu`、`SeriesMenu`、`SeriesMenuItems`、`PersonMenuItems` 照舊是系統選單。
+- `FloatingMenuController`：`NSPanel`（無邊框、`nonactivatingPanel`：不搶焦點，主視窗照樣是作用中的，同系統選單），層級 `popUpMenu`（主視窗在桌面層時跟著放低，DEBUG 驗收用），內容是 `FloatingMenuView` 的 `NSHostingView`；子選單畫在右邊、面板跟著變寬，左上角不動。外面留 12 點畫陰影，看得到的選單左上角對齊游標（右鍵）或「⋯」的左下（往下 4 點）。超出螢幕時往上、往左挪。
+- 樣子：面板圓角 14、深色 `white 0.17`／淺色白色、`primary` 10% 的細框、陰影；每一項高 30、左右內距 9、圖示 14 點 light 寬 18、字 14 點、快捷鍵 13 點、「›」11 點，快捷鍵和「›」一律 `secondaryLabelColor`（紅色那一項的快捷鍵也是灰的）；滑過或鍵盤選到一塊圓角 8 的 `primary` 9%；分隔線 `primary` 10%、上下 4 點。
+- 滑過：面板不是作用中的視窗，SwiftUI 的 `onHover` 會慢半拍，所以選單開著時讓作用中的視窗送滑鼠移動事件（關掉時改回原本的），app 的事件監看收到就用事件的位置換算成面板裡的位置，照每一列回報的框（`onGeometryChange`）找在哪一列。子選單開著時滑到別的列，等 0.45 秒才換；這段時間游標進了子選單就不換（快速斜著移到子選單會經過下面那一列，2026-11-17 自己驗收時發現）。
+- 右鍵：列上蓋一個不接任何事件的透明 view（`RightClickCatcher`）只記位置，app 的事件監看收到右鍵（或 Control-點一下）時找游標下面最小的那一個（展開的會議在資料夾列裡面時取會議），打開選單、吃掉這一下。不用 `hitTest` 看 `NSApp.currentEvent`：送給視窗的事件不一定是 currentEvent。
+- 關：選了一項、Esc、點選單外面（app 裡的點擊吃掉，同系統選單）、點別的 app（全域監看）、app 不在前面（`hidesOnDeactivate`）。
+- 「⋯」：`FloatingMenuButton`（`ellipsis`，滑過或選到時顯示），按了在按鈕下面打開；`floatingRowMenu(selected:)` 一次加「⋯」和右鍵。
+- DEBUG：`floatpick <項目>`（子選單「移到資料夾 ▸ 客戶」）、`floatclose`、`floatothers off`（驗收時使用者在用別的 app，點別的 app 不關選單）；`keyat` 加 down、up、right、left 和第四個參數 `app`（走 `NSApp.sendEvent`，經過事件監看）；`mouseat` 最後一個參數 `app` 同樣；state 的 `floatingMenu`（項目）、`floatingMenuState`、`floatingMenuWindow`（面板的視窗編號，`mouseat move … <編號> app` 用）。
+- Windows：design-windows §11.38。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

@@ -146,7 +146,7 @@ struct SidebarFolderRows: View {
                           folder: .init(expanded: expanded, badge: "arrow.triangle.2.circlepath"),
                           dragKey: key,
                           drop: SidebarRowDrop(meetings: { model.setSeries($0, series: id) }, item: reorder),
-                          menu: { AnyView(SeriesMenuItems(series: series, inSidebar: true)) }, action: toggle)
+                          menu: { model.seriesMenu(series) }, action: toggle)
                 .help(series.frequencyText)
                 if expanded {
                     SidebarPeek(rows: model.peekRows(series: id)) { model.openSeries(id) }
@@ -160,7 +160,7 @@ struct SidebarFolderRows: View {
                           dragKey: key,
                           drop: SidebarRowDrop(meetings: { model.moveToFolder($0, folder: name) }, item: reorder,
                                                files: { model.importDropped($0, into: name) }),
-                          menu: { AnyView(FolderMenuItems(folder: name)) }, action: toggle)
+                          menu: { model.folderMenu(name) }, action: toggle)
                 .help(rule.map { model.folderRuleSummary($0) } ?? "")
                 if expanded {
                     SidebarPeek(rows: model.peekRows(folder: name)) { model.showFolder(name) }

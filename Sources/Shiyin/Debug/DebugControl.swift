@@ -117,6 +117,10 @@ enum DebugControl {
         case "bookmarkrename": if let id { model.renameBookmark(id, label: args[2]) }
         case "bookmarkrenameui": if let id { model.renameTarget = .bookmark(id) }
         case "menupick": if args.count > 1 { pickNextMenu(args.dropFirst().joined(separator: " ")) }   // menupick <項目>：接下來打開的選單選這一項
+        // 自己畫的選單（R105）：floatpick <項目>（子選單「移到資料夾 ▸ 客戶」）選開著的那一項；floatclose 關掉
+        case "floatpick": if args.count > 1 { FloatingMenuController.shared.debugPick(args.dropFirst().joined(separator: " ")) }
+        case "floatclose": FloatingMenuController.shared.close()
+        case "floatothers": FloatingMenuController.shared.ignoreOtherApps = args.count > 1 && args[1] == "off"   // floatothers off：點別的 app 不關選單
         case "foldernew": if args.count > 1 { model.createFolder(args[1]) }   // 等於按「資料夾」標題的「+」建立（R104）
         case "importinto": if args.count > 2 { model.importDropped([URL(fileURLWithPath: args[2])], into: args[1]) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
         // 重新命名的彈窗（R102、design §76）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
@@ -590,12 +594,15 @@ enum DebugControl {
             guard args.count > 4, let x = Double(args[2]), let y = Double(args[3]),
                   let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == args[4] || "\($0.windowNumber)" == args[4]) })
             else { break }
-            if args.count > 5 { captureNextMenu(to: args[5], keep: args.count > 6 ? Double(args[6]) ?? 0 : 0) }
+            // 最後一個參數 app：走 NSApp.sendEvent（經過 app 的事件監看、NSApp.currentEvent 是這一下；自己畫的選單的右鍵靠它）
+            let viaApp = args.last == "app"
+            if args.count > 5, args[5] != "app" { captureNextMenu(to: args[5], keep: args.count > 6 ? Double(args[6]) ?? 0 : 0) }
             let point = NSPoint(x: x, y: window.frame.height - y)
+            func deliver(_ event: NSEvent) { if viaApp { NSApp.sendEvent(event) } else { window.sendEvent(event) } }
             func send(_ type: NSEvent.EventType, clicks: Int) {
                 if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
                                                   windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: clicks, pressure: 1) {
-                    window.sendEvent(event)
+                    deliver(event)
                 }
             }
             // 從 CGEvent 產生：帶按鍵編號（右鍵是 1；NSEvent.mouseEvent 做的右鍵按鍵編號是 0，SwiftUI 會當成左鍵點擊）。
@@ -605,7 +612,7 @@ enum DebugControl {
                 guard let cg = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: CGPoint(x: point.x, y: height - point.y),
                                        mouseButton: button) else { return }
                 cg.setIntegerValueField(.mouseEventClickState, value: clicks)
-                if let event = NSEvent(cgEvent: cg) { window.sendEvent(event) }
+                if let event = NSEvent(cgEvent: cg) { deliver(event) }
             }
             switch args[1] {
             case "right": send(.rightMouseDown, clicks: 1); send(.rightMouseUp, clicks: 1)
@@ -640,13 +647,19 @@ enum DebugControl {
             case "delete": (51, "\u{7f}")
             case "escape": (53, "\u{1b}")
             case "f2": (120, String(UnicodeScalar(NSF2FunctionKey)!))
+            case "down": (125, String(UnicodeScalar(NSDownArrowFunctionKey)!))
+            case "up": (126, String(UnicodeScalar(NSUpArrowFunctionKey)!))
+            case "right": (124, String(UnicodeScalar(NSRightArrowFunctionKey)!))
+            case "left": (123, String(UnicodeScalar(NSLeftArrowFunctionKey)!))
             default: (36, "\r")
             }
+            // 第四個參數 app：走 NSApp.sendEvent（會經過 app 的事件監看，自己畫的選單的鍵盤靠它）
+            let throughApp = args.count > 3 && args[3] == "app"
             for type in [NSEvent.EventType.keyDown, .keyUp] {
                 if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
                                                 windowNumber: window.windowNumber, context: nil, characters: chars, charactersIgnoringModifiers: chars,
                                                 isARepeat: false, keyCode: code) {
-                    window.sendEvent(event)
+                    if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
                 }
             }
         // pressbutton <按鈕的字> [視窗編號]：按 AppKit 的按鈕（確認對話框的 NSAlert 在桌面層時 AX 看不到、clickat 點不到）
@@ -996,6 +1009,8 @@ enum DebugControl {
             "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "",
             "sidebarCollapsed": model.sidebarCollapsed.sorted(), "sidebarExpanded": model.sidebarExpanded.sorted(),
             "sidebarOrder": model.sidebarFolderItems.map(\.key), "showImportSheet": model.showImportSheet,
+            "floatingMenu": FloatingMenuController.shared.debugTitles, "floatingMenuState": FloatingMenuController.shared.debugState,
+            "floatingMenuWindow": FloatingMenuController.shared.debugWindowNumber,
             "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
                      "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
                                 "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],
