@@ -531,6 +531,22 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **DEBUG 控制通道**（同 Mac 的名稱；會議 id 都寫在參數裡，不看目前選的）：`selectmany <id,id,…>`（等於 Ctrl 點選）、`trashmany`、`restoremany`、`purgemany <id,id,…>`（不經過確認）、`showtrash 0|1`、`confirmemptytrash`（打開確認對話框）、`emptytrash`（不經過確認）、`deletesegment <會議 id> <段落 id>`、`splitmeeting <會議 id> <段落 id>`（不經過確認）、`splitconfirm <會議 id> <段落 id>`（打開確認對話框，等於右鍵「從這裡分成兩場…」）。`state` 加 `multiSelected`、`showTrash`、`trashCount`、`confirmDelete`、`deleteTargets`、`confirmPurge`、`confirmEmptyTrash`、`splitMeetingRequest`、`splittingMeeting`（對話框開著時是要處理的那幾場、那一句）。
 - 虛擬機驗證：`uia.ps1` 加 `rclick`（真的滑鼠右鍵點那個元件，打開 `ContextFlyout`，可以接著點選單的選項）、`lclick`（真的左鍵點，`DropDownButton` 用 UIA 的 Invoke 打不開選單時）、`ctrlclick`（按住 Ctrl 點，多選）、`key`（按一個鍵，例如 Delete）；虛擬機裡的輸入不會送到 Mac。要點：送鍵盤之前用 `AttachThreadInput`＋`SetForegroundWindow` 把拾音拉到前面（排程工作開的 PowerShell 會搶到前景，Ctrl 送不到拾音）；打開選單和點選項要在同一個腳本裡（下一個 PowerShell 開起來會搶焦點，選單被關掉）；in-session 的腳本丟出錯誤時只看得到 TIMEOUT。
 
+### 11.24 心智圖放大縮小（R91，M§65）
+
+- 倍數同 Mac：`(zoom ?? fit) × 文字大小`。`fit` 照舊（§11.10：比畫面寬時縮到放得下，最小 0.6、最大 1，在左右捲的 `ScrollViewer` 的 `SizeChanged` 算）；`zoom` 是使用者選的倍數（null 是預設），放在 `NotesTabs` 的欄位：主視窗每次資料改了都整頁重畫，放在元件上會被清掉。縮放時只改 `Viewbox` 的 `Width`、`Height`、百分比的字和按鈕的停用，不整頁重畫（同 §11.10，不用 `ZoomFactor`）。
+- 心智圖上方靠右一排三個按鈕（Mac 是 borderless）：平台的 `Button` 加 `Ui.Borderless` 的輕量樣式覆寫（平常透明、滑過去 `SubtleFillColorSecondaryBrush`，不換 ControlTemplate），字和圖示用次要文字的顏色（同 Mac 的 `.secondary`；「會議設定」那種強調色的字是選單，這裡不是）：「縮小」（Segoe Fluent Icons 的 ZoomOut `E71F`）、目前的百分比（最小寬 44；按了回到預設，`ToolTip`「回到符合寬度」）、「放大」（ZoomIn `E8A3`）。一次 ±25%，對齊到 25% 的格子（預設的倍數不在格子上時，第一下就對齊），範圍 25%～300%，到頭時那一顆停用。百分比是倍數本身，不乘文字大小（同 Mac）。無障礙名稱：「縮小」「符合寬度」「放大」（同 Mac），按鈕的 `ToolTip` 是「縮小」「回到符合寬度」「放大」。
+- Ctrl＋滾輪（Mac 是觸控板兩指開合，R91.2）：接在整個心智圖頁（上下捲的 `ScrollViewer`）上，不只心智圖本身（跟 Mac 不同：縮到 25% 時圖只有一小塊，2026-11-16 在虛擬機上只接在圖上時，滑鼠很難剛好在圖上）。用 `AddHandler(PointerWheelChangedEvent, …, handledEventsToo: true)`（滾輪事件可能已經被 `ScrollViewer` 標成處理過），按著 Ctrl 時累積 `MouseWheelDelta`，每 120（滑鼠滾輪的一格）±25%（同按鈕，對齊格子），`Handled = true`（整頁不會跟著上下捲）。精確式觸控板的捏合送給 app 的也是 Ctrl＋滾輪（一次的量比較小，累積到 120 才動一格）。
+- 上下捲（R91.3：比畫面高時跟著整頁上下捲）：左右捲的 `ScrollViewer` 不能上下捲時，會把一般的滾輪拿去左右捲，放大後圖比畫面寬、滑鼠在圖上就捲不動整頁（2026-11-16 虛擬機）。所以 `Viewbox` 先接住滾輪：一般的滾輪標成處理過、自己捲整頁（`ChangeView`，一格 100，同瀏覽器）；Shift＋滾輪、橫向的滾輪（`IsHorizontalMouseWheel`）照舊交給左右捲；Ctrl 的標成處理過（左右捲的不要動），縮放照樣收得到（handledEventsToo）。觸控板的兩指捲動走 DirectManipulation，不經過這裡（上下的會串到整頁）。
+- 回到預設（R91.3）：換一場會議、切到逐字稿或提問（`DetailView.Show`）、切回條列、按「編輯」（`NotesTabs.Page`）。匯出、複製的 PNG、SVG、PDF 用 `MindMapView.Build`，不經過縮放（同 Mac）。
+- DEBUG：`state` 加 `mindMapZoom`（使用者選的倍數，null 是預設）、`mindMapScale`（畫面上用的倍數，不含文字大小）。`ps/wheel.ps1` 加第 6 個參數 `ctrl`（按住 Ctrl 捲）。
+
+### 11.25 每個人的重點（R92，M§66）
+
+- Core 同 Mac：`MeetingNotes.People`（`Person(Name, Points)`）；解碼同 Mac 的寬鬆規則（陣列裡有不是物件的，整個 `people` 當作沒有；`name`、`points` 型別不對當作空的）；`People` 是空的時 `ToJson` 不寫（同 Mac 的 `encode`：以前的紀錄存起來、放進提示詞一字不差）。`MappingText`（改說話者名字、合併、全文取代、簡體）、`PlainText`（搜尋）、`IsEmpty`、`JsonSchema`、`TemplateDefinition.BuiltinSectionIds`（`summary` 後面）、`SectionLabel`、內建範本「一般會議」（中英日）、`NotesPrompt`（中英日的規則、一般語言的 Output language、校稿說明）、`NotesExporter`（Markdown、純文字、HTML；Word 從 HTML 轉，`h3` 本來就有）、`MindMap.Tree`（`Labels.People`，「名字：重點」的一支）、`ReviewLinks`（`NoteSection.Person`，排序值 6）、MCP 工具的說明都照 Mac 加上，標準答案（Mac 重新產生的）逐字比。
+- 紀錄分頁（`NotesTabs.Page`）：摘要下面「每個人的重點」（`Section`，同其他段落）；每個人一組（組和組間距 18）：上面一列是頭像＋名字（`Ui.Avatar` 22、名字 `Ui.Heading` 16，都跟著文字大小 `Ui.C`；用 `Ui.Split`，名字長時換行），下面是重點（同其他段落的 `Items`：時間點按了播放、待確認的標記、就地展開的卡片）。頭像的顏色：名字是這場的說話者（`MeetingDetail.SpeakerIdx`，同待辦的負責人：不分大小寫、去掉頭尾空白；Mac 是字串完全相同）時用說話者的顏色，是「我」時有外圈；對不到時照名字算（`Ui.Person`，同人物頁）。沒有重點的人不顯示，全部都沒有時整段不顯示（同 Mac）。
+- 編輯器（`NotesEditor`）：摘要後面「每個人的重點」，同議題的編輯器：每個人一列名字欄（`TextBox`，標題字型、14，提示文字「名字」）＋右邊「刪除這個人的重點」（`Ui.IconButton(Symbol.Delete)`），下面是重點的 `ItemsEditor`；最後「新增一個人」（`Ui.Link`，同「新增議題」）。名字欄的字級照議題標題欄的 14（Mac 是 16）。
+- DEBUG：`reviewexpand`、`reviewsubmit` 的段落加 `person <第幾個人> <第幾條>`（同 Mac）；`editnotes <會議 id> <會議紀錄 JSON 或 JSON 檔的路徑>`（同 Mac 的 `editnotes`，存成新的一版，同按「完成」；Windows 從 SSH 傳中文的 JSON 不方便，所以也收檔案路徑）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

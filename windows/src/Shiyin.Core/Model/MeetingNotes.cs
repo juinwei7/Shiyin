@@ -16,6 +16,8 @@ public sealed record MeetingNotes
     public sealed record CustomSection(string Title, List<Item> Items);
     /// <summary>YesNo：能用是或否回答（R32、M§27），畫面上給「是」「不是」的按鈕</summary>
     public sealed record ReviewItem(string Time, string Question, bool YesNo = false);
+    /// <summary>每個人的重點（R92、M§66）：Name 是逐字稿裡的說話者名稱</summary>
+    public sealed record Person(string Name, List<Item> Points);
 
     public string Title { get; init; } = "";
     public List<Item> Summary { get; init; } = [];
@@ -25,9 +27,10 @@ public sealed record MeetingNotes
     public List<Topic> Topics { get; init; } = [];
     public List<CustomSection> Custom { get; init; } = [];
     public List<ReviewItem> ReviewItems { get; init; } = [];
+    public List<Person> People { get; init; } = [];
 
     public bool IsEmpty => Summary.Count == 0 && Decisions.Count == 0 && ActionItems.Count == 0 && OpenQuestions.Count == 0
-                           && Topics.Count == 0 && Custom.Count == 0;
+                           && Topics.Count == 0 && Custom.Count == 0 && People.Count == 0;
 
     // MARK: 讀取
 
@@ -48,6 +51,7 @@ public sealed record MeetingNotes
         Custom = List(root.Get("custom"), DecodeCustom) ?? [],
         ReviewItems = List(root.Get("reviewItems"), DecodeReview) ?? [],
         Topics = List(root.Get("topics"), DecodeTopic) ?? [],
+        People = List(root.Get("people"), DecodePerson) ?? [],
     };
 
     /// <summary>陣列裡任何一個元素解不開，整個陣列就是 null（Swift 的 <c>try? decode([T].self)</c>）</summary>
@@ -86,6 +90,10 @@ public sealed record MeetingNotes
         return new CustomSection(title, items);
     }
 
+    /// <summary>每個人的重點（同 Mac 的 Person.init(from:)）：name、points 型別不對就當作沒有；不是物件時整個陣列解不開</summary>
+    static Person? DecodePerson(JsonElement e) => e.ValueKind != JsonValueKind.Object ? null
+        : new Person(e.Str("name") ?? "", Items(e.Get("points")) ?? []);
+
     static ReviewItem? DecodeReview(JsonElement e) => e.ValueKind != JsonValueKind.Object ? null
         : new ReviewItem(TimeFormat.Clean(e.Str("time") ?? ""), e.Str("question") ?? "", e.Bool("yesNo") ?? false);
 
@@ -101,7 +109,7 @@ public sealed record MeetingNotes
     {
         static JNode ItemNode(Item i) => new JNode.Obj().Add("text", i.Text).Add("time", i.Time);
         static JNode Items(IEnumerable<Item> items) => new JNode.Arr(items.Select(ItemNode));
-        return new JNode.Obj()
+        var obj = new JNode.Obj()
             .Add("title", Title)
             .Add("summary", Items(Summary))
             .Add("decisions", Items(Decisions))
@@ -118,6 +126,10 @@ public sealed record MeetingNotes
                 var item = new JNode.Obj().Add("time", r.Time).Add("question", r.Question);
                 return (JNode)(r.YesNo ? item.Add("yesNo", JNode.Of(true)) : item);
             })));
+        // people 是空的時不寫（同 Mac 的 MeetingNotes.encode，M§66）：以前的會議紀錄、沒有這一段的會議紀錄存起來跟以前一字不差
+        if (People.Count > 0)
+            obj.Add("people", new JNode.Arr(People.Select(p => (JNode)new JNode.Obj().Add("name", p.Name).Add("points", Items(p.Points)))));
+        return obj;
     }
 
     // MARK: 修改
@@ -150,6 +162,7 @@ public sealed record MeetingNotes
             Topics = Topics.Select(t => new Topic(r(t.Title), t.Start, t.Points.Select(Ri).ToList())).ToList(),
             Custom = Custom.Select(c => new CustomSection(r(c.Title), c.Items.Select(Ri).ToList())).ToList(),
             ReviewItems = ReviewItems.Select(x => new ReviewItem(x.Time, r(x.Question), x.YesNo)).ToList(),
+            People = People.Select(p => new Person(r(p.Name), p.Points.Select(Ri).ToList())).ToList(),
         };
     }
 
@@ -162,6 +175,7 @@ public sealed record MeetingNotes
             lines.AddRange(Summary.Select(i => i.Text));
             lines.AddRange(Decisions.Select(i => i.Text));
             lines.AddRange(OpenQuestions.Select(i => i.Text));
+            foreach (var p in People) { lines.Add(p.Name); lines.AddRange(p.Points.Select(i => i.Text)); }
             lines.AddRange(ActionItems.Select(a => $"{a.Owner} {a.Task} {a.Due}"));
             foreach (var t in Topics) { lines.Add(t.Title); lines.AddRange(t.Points.Select(i => i.Text)); }
             foreach (var c in Custom) { lines.Add(c.Title); lines.AddRange(c.Items.Select(i => i.Text)); }
@@ -177,7 +191,8 @@ public sealed record MeetingNotes
     const string ItemsSchema = """{"type":"array","items":{"type":"object","additionalProperties":false,"required":["text","time"],"properties":{"text":{"type":"string"},"time":{"type":"string"}}}}""";
 
     public static readonly string JsonSchema =
-        """{"type":"object","additionalProperties":false,"required":["title","summary","decisions","actionItems","openQuestions","topics","custom","reviewItems"],"properties":{"title":{"type":"string"},"summary":""" + ItemsSchema
+        """{"type":"object","additionalProperties":false,"required":["title","summary","people","decisions","actionItems","openQuestions","topics","custom","reviewItems"],"properties":{"title":{"type":"string"},"summary":""" + ItemsSchema
+        + ""","people":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","points"],"properties":{"name":{"type":"string"},"points":""" + ItemsSchema + "}}}"
         + ""","decisions":""" + ItemsSchema
         + ""","actionItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["owner","task","due","time"],"properties":{"owner":{"type":"string"},"task":{"type":"string"},"due":{"type":"string"},"time":{"type":"string"}}}}"""
         + ""","openQuestions":""" + ItemsSchema

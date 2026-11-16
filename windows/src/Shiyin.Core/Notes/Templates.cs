@@ -10,8 +10,8 @@ public sealed record TemplateDefinition(string Description, List<string> Section
 {
     public sealed record CustomSpec(string Title, string Instruction);
 
-    /// <summary>內建段落：summary、decisions、actionItems、openQuestions、topics</summary>
-    public static readonly string[] BuiltinSectionIds = ["summary", "decisions", "actionItems", "openQuestions", "topics"];
+    /// <summary>內建段落：summary、people（每個人的重點，R92）、decisions、actionItems、openQuestions、topics</summary>
+    public static readonly string[] BuiltinSectionIds = ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"];
 
     /// <summary>段落名稱：介面用介面語言，提示詞用會議語言；prompt：提示詞裡用（一般語言不查字串表，M§41.1）</summary>
     public static string SectionLabel(string id, MeetingLanguage language, bool prompt = false)
@@ -20,6 +20,7 @@ public sealed record TemplateDefinition(string Description, List<string> Section
         return id switch
         {
             "summary" => pick("摘要", "Summary", "要約"),
+            "people" => pick("每個人的重點", "Key points by person", "参加者ごとの要点"),
             "decisions" => pick("決議", "Decisions", "決定事項"),
             "actionItems" => pick("待辦", "Action items", "ToDo"),
             "openQuestions" => pick("未決問題", "Open questions", "未決事項"),
@@ -67,8 +68,8 @@ public static class BuiltinTemplates
 
     public static readonly Builtin[] All =
     [
-        new("general", "一般會議", T("週會、專案會議、討論會：摘要、決議、待辦、未決問題、議題",
-            ["summary", "decisions", "actionItems", "openQuestions", "topics"], [], "")),
+        new("general", "一般會議", T("週會、專案會議、討論會：摘要、每個人的重點、決議、待辦、未決問題、議題",
+            ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"], [], "")),
         new("one-on-one", "一對一", T("主管與成員的一對一會談",
             ["summary", "actionItems", "openQuestions"],
             [("近況與進展", "對方最近在做的事、進度與卡關的地方"),
@@ -96,8 +97,8 @@ public static class BuiltinTemplates
     /// <summary>英文版：英文會議整理時用，英文介面也顯示這裡的名稱和說明</summary>
     public static readonly Dictionary<string, (string Name, TemplateDefinition Definition)> English = new()
     {
-        ["general"] = ("General meeting", T("Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics",
-            ["summary", "decisions", "actionItems", "openQuestions", "topics"], [], "")),
+        ["general"] = ("General meeting", T("Team meetings, project meetings, discussions: summary, key points by person, decisions, action items, open questions, topics",
+            ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"], [], "")),
         ["one-on-one"] = ("One-on-one", T("A one-on-one between a manager and a team member",
             ["summary", "actionItems", "openQuestions"],
             [("Updates and progress", "What they have been working on, progress and blockers"),
@@ -125,8 +126,8 @@ public static class BuiltinTemplates
     /// <summary>日文版：日文會議整理時用（沒有日文介面，名稱不會顯示）</summary>
     public static readonly Dictionary<string, TemplateDefinition> Japanese = new()
     {
-        ["general"] = T("定例会議、プロジェクト会議、打ち合わせ：要約、決定事項、ToDo、未決事項、議題",
-            ["summary", "decisions", "actionItems", "openQuestions", "topics"], [], ""),
+        ["general"] = T("定例会議、プロジェクト会議、打ち合わせ：要約、参加者ごとの要点、決定事項、ToDo、未決事項、議題",
+            ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"], [], ""),
         ["one-on-one"] = T("上司とメンバーの1on1",
             ["summary", "actionItems", "openQuestions"],
             [("近況と進捗", "相手が最近取り組んでいること、進捗、困っていること"),

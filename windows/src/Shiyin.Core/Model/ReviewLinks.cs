@@ -1,9 +1,9 @@
 namespace Shiyin.Model;
 
 /// <summary>一條紀錄在會議紀錄裡的段落（同 Mac 的 NoteItemRef，M§31.1）。順序就是標準答案裡的排序</summary>
-public enum NoteSection { Summary, Decisions, ActionItems, OpenQuestions, TopicPoint, Custom }
+public enum NoteSection { Summary, Decisions, ActionItems, OpenQuestions, TopicPoint, Custom, Person }
 
-/// <summary>一條紀錄的位置：段落加位置；議題的要點、自訂段落的條目多一個 Sub（第幾個議題／段落的第幾條）</summary>
+/// <summary>一條紀錄的位置：段落加位置；議題的要點、自訂段落的條目、每個人的重點多一個 Sub（第幾個議題／段落／人的第幾條）</summary>
 public readonly record struct NoteItemRef(NoteSection Section, int Index, int Sub = 0)
 {
     public static NoteItemRef Summary(int i) => new(NoteSection.Summary, i);
@@ -12,6 +12,8 @@ public readonly record struct NoteItemRef(NoteSection Section, int Index, int Su
     public static NoteItemRef OpenQuestions(int i) => new(NoteSection.OpenQuestions, i);
     public static NoteItemRef TopicPoint(int topic, int point) => new(NoteSection.TopicPoint, topic, point);
     public static NoteItemRef Custom(int section, int item) => new(NoteSection.Custom, section, item);
+    /// <summary>每個人的重點：第幾個人的第幾條（M§66；排序值 6，排在自訂段落後面，舊的標準答案不變）</summary>
+    public static NoteItemRef Person(int person, int point) => new(NoteSection.Person, person, point);
 
     /// <summary>標準答案用的名稱（同 Mac 的 GoldenDump）</summary>
     public string SectionName => Section switch
@@ -21,6 +23,7 @@ public readonly record struct NoteItemRef(NoteSection Section, int Index, int Su
         NoteSection.ActionItems => "actionItems",
         NoteSection.OpenQuestions => "openQuestions",
         NoteSection.TopicPoint => "topicPoint",
+        NoteSection.Person => "person",
         _ => "custom",
     };
 }
@@ -47,6 +50,7 @@ public static class ReviewLinks
         Add(notes.OpenQuestions, NoteItemRef.OpenQuestions);
         for (var t = 0; t < notes.Topics.Count; t++) { var topic = t; Add(notes.Topics[t].Points, i => NoteItemRef.TopicPoint(topic, i)); }
         for (var c = 0; c < notes.Custom.Count; c++) { var section = c; Add(notes.Custom[c].Items, i => NoteItemRef.Custom(section, i)); }
+        for (var p = 0; p < notes.People.Count; p++) { var person = p; Add(notes.People[p].Points, i => NoteItemRef.Person(person, i)); }
 
         var links = new Dictionary<NoteItemRef, List<int>>();
         void Link(NoteItemRef r, int question)

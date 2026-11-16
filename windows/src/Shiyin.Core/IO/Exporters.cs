@@ -116,6 +116,16 @@ public static class NotesExporter
             output.AddRange(items.Select(i => $"- {i.Text}{T(i.Time)}"));
         }
         Section(x.Section("summary"), notes.Summary);
+        // 每個人的重點（R92、M§66）：一個人一個小標題
+        if (notes.People.Any(p => p.Points.Count > 0))
+        {
+            output.AddRange(["", $"## {x.Section("people")}"]);
+            foreach (var person in notes.People.Where(p => p.Points.Count > 0))
+            {
+                output.AddRange(["", $"### {person.Name}"]);
+                output.AddRange(person.Points.Select(i => $"- {i.Text}{T(i.Time)}"));
+            }
+        }
         Section(x.Section("decisions"), notes.Decisions);
         if (notes.ActionItems.Count > 0)
         {
@@ -163,6 +173,12 @@ public static class NotesExporter
             body += $"<h2>{HtmlText.Escape(title)}</h2>\n<ul>" + string.Concat(items.Select(i => $"<li>{HtmlText.Escape(i.Text)}{T(i.Time)}</li>")) + "</ul>\n";
         }
         List(x.Section("summary"), notes.Summary);
+        if (notes.People.Any(p => p.Points.Count > 0))
+        {
+            body += $"<h2>{HtmlText.Escape(x.Section("people"))}</h2>\n";
+            foreach (var person in notes.People.Where(p => p.Points.Count > 0))
+                body += $"<h3>{HtmlText.Escape(person.Name)}</h3>\n<ul>" + string.Concat(person.Points.Select(i => $"<li>{HtmlText.Escape(i.Text)}{T(i.Time)}</li>")) + "</ul>\n";
+        }
         List(x.Section("decisions"), notes.Decisions);
         if (notes.ActionItems.Count > 0)
         {

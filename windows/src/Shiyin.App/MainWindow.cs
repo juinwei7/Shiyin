@@ -49,6 +49,7 @@ public sealed class MainWindow : Window
     readonly DetailView detailView;
     /// <summary>待確認的回答（M§31.2）：DEBUG 的控制通道用</summary>
     public Views.ReviewDraft ReviewDraft => detailView.ReviewDraft;
+    public MindMapZoom MindMapZoom => detailView.MindMapZoom;
     /// <summary>主視窗目前是前景（Activated 事件）</summary>
     public bool IsForeground { get; private set; }
     bool updatingSelection;
