@@ -126,7 +126,19 @@ public sealed class Notifier
     public void IdleStopped(long meetingId, string title) =>
         Show(NotificationLinks.OpenMeeting(meetingId), L.T("已自動停止錄音"), L.F("%@：30 分鐘沒有人說話", title));
 
-    /// <summary>偵測到會議（M§21.7）：開始錄音、不要再提醒這個 app；停止並轉錄、繼續錄</summary>
+    /// <summary>會議結束、倒數完自動停止錄音（R95、M§69）：點了打開那場會議</summary>
+    public void MeetingEndStopped(long meetingId, string title) =>
+        Show(NotificationLinks.OpenMeeting(meetingId), L.T("會議結束，已自動停止錄音"), title);
+
+    /// <summary>企業伺服器連不上太久，自動改在這台電腦轉錄（R93、M§67）：內文是會議標題，點了打開那場會議</summary>
+    public void ServerFallback(long meetingId)
+    {
+        if (host.Db.Meeting(meetingId) is not { } meeting) return;
+        Show(NotificationLinks.OpenMeeting(meetingId), L.T("企業伺服器連不上，已改在這台電腦轉錄"), meeting.DisplayTitle);
+    }
+
+    /// <summary>偵測到會議（M§21.7）：開始錄音、不要再提醒這個 app；停止並轉錄、繼續錄。
+    /// 會議結束在倒數時（R95）內文寫「60 秒後自動停止錄音並轉錄」</summary>
     public bool MeetingPrompt(MeetingDetector.Prompt prompt)
     {
         if (!Enabled) return false;
@@ -135,7 +147,8 @@ public sealed class Notifier
             Show(NotificationLinks.Scheme + ":open", L.F("%@ 正在開會", prompt.App.Name), L.T("要開始錄音嗎？"),
                 (L.T("開始錄音"), Links.Prompt("start", app)), (L.T("不要再提醒這個 app"), Links.Prompt("mute", app)));
         else
-            Show(NotificationLinks.Scheme + ":open", L.T("會議好像結束了"), L.T("要停止錄音並轉錄嗎？"),
+            Show(NotificationLinks.Scheme + ":open", L.T("會議好像結束了"),
+                host.MeetingEnd.Active ? L.F("%lld 秒後自動停止錄音並轉錄", (long)host.MeetingEnd.Seconds) : L.T("要停止錄音並轉錄嗎？"),
                 (L.T("停止並轉錄"), Links.Prompt("stop", app)), (L.T("繼續錄"), Links.Prompt("continue", app)));
         return true;
     }
@@ -147,9 +160,11 @@ public sealed class Notifier
         {
             case NotificationLinks.Link.Prompt { Action: "start" }: host.Controller.StartRecording(""); break;
             case NotificationLinks.Link.Prompt { Action: "mute", App: var app }: host.Detector.Mute(app); break;
-            case NotificationLinks.Link.Prompt { Action: "stop" }: host.Recorder.Stop(); break;
+            // 「停止並轉錄」「繼續錄」都取消會議結束的倒數（R95）
+            case NotificationLinks.Link.Prompt { Action: "stop" }: host.MeetingEnd.Cancel(); host.Recorder.Stop(); break;
             case NotificationLinks.Link.Prompt { Action: "continue", App: "idle" }: host.Recorder.ContinueAfterIdle(); break;   // 忘了停止錄音（R48.1）
-            case NotificationLinks.Link.Prompt: break;   // 繼續錄
+            case NotificationLinks.Link.Prompt { Action: "continue" }: host.MeetingEnd.Cancel(); break;   // 繼續錄
+            case NotificationLinks.Link.Prompt: break;
             // AI 工具給的會議連結有時間點（M§44.5）：切到逐字稿、從那裡開始
             case NotificationLinks.Link.Open { MeetingId: long id, Seconds: double at } when host.ShowMeetingAt is { } show: show(id, at); break;
             case NotificationLinks.Link.Open { MeetingId: var id }: host.ShowMain?.Invoke(id); break;

@@ -61,6 +61,23 @@ public sealed partial class AppDatabase
     public Job? LatestJob(long meetingId) => Read(db =>
         db.QueryOne($"SELECT * FROM jobs WHERE meeting_id = ? AND kind NOT IN ({AuxiliaryKinds}) ORDER BY id DESC LIMIT 1", meetingId) is { } r ? ToJob(r) : null);
 
+    /// <summary>某種工作最後一次的紀錄（輔助工作也算；精簡逐字稿失敗時要說明，R96、M§70）</summary>
+    public Job? LastJob(long meetingId, JobKind kind) => Read(db =>
+        db.QueryOne("SELECT * FROM jobs WHERE meeting_id = ? AND kind = ? ORDER BY id DESC LIMIT 1", meetingId, kind.Code()) is { } r ? ToJob(r) : null);
+
+    /// <summary>精簡逐字稿（R96、M§70）：段落 id → 精簡後的文字（空字串是整句都是贅字）；沒產生過是空的</summary>
+    public Dictionary<long, string> CleanLines(long meetingId) => Read(db =>
+        db.Query("SELECT c.segment_id, c.text FROM clean_lines c JOIN segments s ON s.id = c.segment_id WHERE s.meeting_id = ?", meetingId)
+            .ToDictionary(r => r.Long("segment_id"), r => r.Str("text")));
+
+    /// <summary>存精簡逐字稿：這場會議原本的精簡版整份換掉；段落已經不在（整理期間被刪、重新轉錄）的跳過（同 Mac）</summary>
+    public void SaveCleanLines(long meetingId, IReadOnlyDictionary<long, string> lines) => Write(db =>
+    {
+        db.Execute("DELETE FROM clean_lines WHERE segment_id IN (SELECT id FROM segments WHERE meeting_id = ?)", meetingId);
+        foreach (var (id, text) in lines)
+            db.Execute("INSERT INTO clean_lines (segment_id, text) SELECT id, ? FROM segments WHERE id = ? AND meeting_id = ?", text, id, meetingId);
+    });
+
     /// <summary>最後一次完成的轉錄的 payload（M§35.3：until 是只轉錄到第幾秒）；沒有就是 null</summary>
     public string? LastTranscribePayload(long meetingId) => Read(db =>
         db.Scalar("SELECT payload FROM jobs WHERE meeting_id = ? AND kind = 'transcribe' AND status = 'done' ORDER BY id DESC LIMIT 1", meetingId) as string);

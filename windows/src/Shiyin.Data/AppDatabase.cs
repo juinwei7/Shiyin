@@ -168,7 +168,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11"];
 
     void Migrate(string? backupsDir)
     {
@@ -228,6 +228,7 @@ public sealed partial class AppDatabase : IDisposable
             case "v8": db.Execute(MigrationSql.V8); break;
             case "v9": db.Execute(MigrationSql.V9); break;
             case "v10": db.Execute(MigrationSql.V10); break;
+            case "v11": db.Execute(MigrationSql.V11); break;
         }
     }
 

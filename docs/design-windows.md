@@ -507,6 +507,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 會議頁上方：同 M§59，`MeetingSettingsMenu` 是一個 `DropDownButton`＋`MenuFlyout`（三段用 `MenuFlyoutSeparator` 和停用的標題項目隔開）。「會議設定」和文件選單沒有框（2026-11-15 照 Mac 改）：平台的 `DropDownButton` 加輕量的樣式覆寫 `Ui.Borderless`（不換 ControlTemplate，範本讀的 `Button*` 主題資源換成 subtle 那一組：平常透明、滑過去 `SubtleFillColorSecondaryBrush`，文字 `AccentTextFillColorPrimaryBrush`）。第二列是 `LeadingTrailing`（`Ui.cs`，同 Mac 的 `ViewThatFits`）：放得下時選單靠右同一列，放不下時換到下一行。
 - 側欄（2026-11-15 照 M§60.2 改，拿掉 `SelectorBar`）：搜尋框下面一個平台的 `ListView`（`scopes`，同 Outlook、檔案總管的資料夾窗格；不自訂 ControlTemplate）：「所有會議（數量）」「人物（數量）」，有資料夾時一個不能選的「資料夾」標題項目、每個資料夾（數量、右鍵選單）。選到的那一列是平台的選取樣子（強調色＝青瓷綠）。下面一行是下面那一段的標題（所有會議、資料夾名稱或人物），再下面是會議或人物的 `ListView`。點所有會議、資料夾：`MainState.ShowMeetings(folder)`（回到會議模式）；點人物：`SetSidebar(People)`。垃圾桶裡、搜尋中整組不顯示。名字、數量沒變時只換選取、不重建。微軟的對照表裡 2～3 種模式是 `SelectorBar`，但這裡的三種項目（所有會議、人物、資料夾）是同一層的導覽目的地、數量不固定，照資料夾窗格的做法比較對。
 - 人物頁：資料用 `AppDatabase.PeopleOverview`、`PersonMeetings`、`PersonActionItems`（同 M§60.1 的 SQL，標準答案 `db/43～48`；同一天的人照名字排用介面語言的排序，兩邊的語系不一定一樣，標準答案避開同一天）；右邊的 `PersonPage` 同 M§60.2（沒有「加到提醒事項」）。上面是不跟著捲動的標題列（同會議頁：左邊頭像 52、名字、摘要，右上角「更多」）；「我」只留細的外圈（最多 2，`AccentFillColorDefaultBrush`）和名字旁的灰字「我」。「更多」是 `DropDownButton`＋`MenuFlyout`（同會議頁，無障礙名稱「更多」）：「改名…」（`Flyout` 接在「更多」下面，名字選好）、「合併到」（子選單）、分隔線、「刪除聲音特徵…」（`ContentDialog`：主要按鈕「刪除」、預設按鈕是取消、標題和內文都寫出是哪個人）。內容跟標題列同樣的左右邊距、整欄寬，負責的待辦那張表（事項那一欄撐滿）右邊跟「更多」對齊（Windows 沒有「加到提醒事項」，對齊的是「更多」）。主視窗每次資料改了都重畫，人物頁內容一樣時留著原本的元件（轉錄的進度一直更新時捲動位置才不會跳回最上面）。「會議」那一段的英文用 Meetings（「會議」這個鍵的英文是單數的 Meeting）。視窗標題照舊是「拾音」（會議頁也是），人名在頁面的標題列。設定「說話者與詞彙」的認識的人下面加一行「也可以在側欄的「人物」管理」（R85.5）。
+- 名字旁的鉛筆（R85.6、M§60.2 最後一條，2026-11-16）：名字右邊一顆平台的 `Button`＋`Ui.Borderless`（平常透明、滑過去才有底色，字和圖示是強調色的文字＝青瓷綠，同 Mac 的 borderless、celadon），內容是 `SymbolIcon(Symbol.Edit)`；`ToolTip` 和無障礙名稱都是「改名」。按了打開同一個改名的 `Flyout`（「更多 → 改名…」那一個），`ShowAt` 給位置：鉛筆是 `BottomEdgeAlignedLeft`（接在鉛筆下面），「更多」照舊 `BottomEdgeAlignedRight`；取消、儲存、Enter、改成已經有的名字時合併過去，都同「更多 → 改名…」。
 - DEBUG：控制通道 `sidebar people|meetings`、`person <id>`，state 的 `sidebarMode`、`selectedPerson`、`peopleOverview`（同 Mac）。
 
 ### 11.23 會議多選、清空垃圾桶、刪除一句、分割會議（R88～R90，M§62～§64）
@@ -555,6 +556,48 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 只補上（R92.4）：`AppController.GeneratePeopleNotes`：擋下來的條件和訊息同「重新整理」（`ReadyForAction`、整理工具是「不整理」、整理工具還沒準備好）；排 `Summarize`，payload `JobRunner.Encode(new SummarizePayload(People: true))` = `{"draft":false,"people":true}`。`people` 是 false 時不寫：草稿的 `{"draft":true}`、自動排的 `{"draft":false}` 跟以前一字不差。`JobRunner.Summarize(peopleOnly)`：沒有紀錄時不做；範本的說明、額外指示照舊，段落只有 `people`、沒有自訂段落；簡體照舊整理完才轉；結果讀現在的紀錄（整理期間被改過也不會蓋掉）只換掉 `People`，`SaveNotes(by: null, 「補上每個人的重點」, NotesSource.Edit)`（整理工具、標題不變，舊的那一版可以「復原上一版」），不發通知。
 - 編輯器（`NotesEditor`）：打開時紀錄有 people 才顯示「每個人的重點」（`showsPeople`，刪光了也留著，可以再新增），放在自訂段落後面（同 Mac；原本的編輯器不變）：同議題的編輯器，每個人一列名字欄（`TextBox`，標題字型、14，提示文字「名字」）＋右邊「刪除這個人的重點」（`Ui.IconButton(Symbol.Delete)`），下面是重點的 `ItemsEditor`；最後「新增一個人」（`Ui.Link`，同「新增議題」）。名字欄的字級照議題標題欄的 14（Mac 是 16）。
 - DEBUG：`notesview list|mindmap|people`；`peoplenotes <會議 id>`（等於按「產生每個人的重點」，同 Mac）；`state` 加 `peopleCards`（選取中的會議每一張的 `index`、`name`、`speaker`、`seconds`、`percent`、`points`（幾條）、`owned`（負責的待辦原本的位置）；Mac 沒有）。`reviewexpand`、`reviewsubmit` 的段落 `person <第幾個人> <第幾條>`（同 Mac）；`editnotes <會議 id> <會議紀錄 JSON 或 JSON 檔的路徑>`（同 Mac 的 `editnotes`，存成新的一版，同按「完成」；Windows 從 SSH 傳中文的 JSON 不方便，所以也收檔案路徑）。
+
+### 11.26 企業伺服器連不上時自動改在這台電腦轉錄（R93，M§67）
+
+- `ServerTranscriber.Transcribe` 記「連續連不上」的開始時間（同 M§67）：`EnterpriseFailure.Unreachable`（連線被拒、逾時）、`Server` 的 `server_error`（5xx）記下第一次的時間；查狀態成功（`Status`，建工作、上傳成功後的下一圈都會查）就清掉；伺服器忙（`busy`）、登入失效（`IsSetupProblem`）也清掉（照舊等）。連續 `AutoLocalAfter`（預設 `DefaultAutoLocalAfter`，10 分鐘）就刪掉伺服器上的工作、清掉 payload 的 `remoteId`，丟 `SwitchToLocalException(automatic: true)`。快到時 `WaitForServer` 只等到那時候（無條件進位到秒、至少 1 秒，同 Mac）。
+- `JobRunner.Transcribe` 照「改在這台電腦轉錄」的路（R50.5）改本機；`Automatic` 時發 `ServerFallback(meetingId)`，`AppHost` 交給 `Notifier.ServerFallback`：標題「企業伺服器連不上，已改在這台電腦轉錄」、內文是會議標題，點了打開那場（`NotificationLinks.OpenMeeting`）。轉完照常有「轉錄完成」。
+- 等多久：`JobRunner.ServerAutoLocalAfter`（init）；`AppHost` 在 DEBUG 讀 `--set serverAutoLocalSeconds=20`（同 Mac 的 `-serverAutoLocalSeconds`），正式版固定 10 分鐘（R93 不做「等多久可以改」）。
+- DEBUG 模擬「登入了但連不上」：`--set debugEnterpriseUnreachable=YES`（`EnterpriseServer.DebugUnreachable`，同 Mac 的 `-debugEnterpriseUnreachable`）：`Account` 是假的帳號（`debug@example.invalid`）、`IsSignedIn`、`SavedUrl` 是 `http://127.0.0.1:9`、`AccessToken` 回 `debug`；只在記憶體，不寫 settings.json、不讀認證管理員。轉錄要交給伺服器再加 `--set transcriptionEngine=server`（`--set` 都只在這次執行有效）。
+- 測試：`EnterpriseTests.UnreachableTooLongSwitchesToThisComputerAutomatically`（500 `server_error`、連線被拒都會自動改，`Automatic`；使用者按的不是）、`BusyServerKeepsWaiting`（伺服器忙不算，好了照樣在伺服器轉完）、`JobRunnerReportsAutomaticFallback`。
+
+### 11.27 詞彙表：一次加好幾個、搜尋、批次刪除（R94，M§68）
+
+- Core 的 `GlossaryInput.Split`（同 Mac，標準答案 `util/glossary-split.json`）：換行（`\n`、`\r`；WinUI 的 `TextBox` 把換行存成 `\r`）、逗號（半形、全形）、頓號、分號（半形、全形）分開，去頭尾空白、拿掉空的和重複的（小寫後比，留第一個）。
+- `AppDatabase.AddTerms`（`INSERT OR IGNORE`，回傳實際加了幾個；`term` 是 UNIQUE，一字不差的才算已經有，同 Mac）、`DeleteTerms`。`AppController.AddTerms(text)`：說明同 Mac（一個詞而且已經有時「「X」已經在詞彙表裡了」；好幾個時「已加入 N 個詞彙」或「已加入 N 個詞彙，M 個已經有了」；一個新詞不說），走 `Notice`（主視窗下方的提示），也回傳同一句。
+- 設定「說話者與詞彙」（`SettingsWindow.Glossary`）：
+  - 新增：`TextBox`（`Header`「新增詞彙」、提示字「產品名、人名；可以一次貼上好幾個」、`AcceptsReturn`、自動換行、最高 140（約 4 行，再多就捲動））＋「新增」（空的時候停用，對齊輸入框底部）。`AcceptsReturn` 是為了貼上好幾行（單行的 `TextBox` 貼上時只留第一行）；Enter 送出、Shift+Enter 換行（`PreviewKeyDown`，同 Mac 的 Return 送出）；按 Enter 加完焦點回到輸入框，可以接著打。跟 Mac 不同：加完的說明也寫在輸入框下面（12、次要文字，顯示一次）：設定視窗常蓋在主視窗上，看不到主視窗的提示。
+  - 超過 10 個詞時「搜尋詞彙」（`TextBox`，`Header`「搜尋詞彙」、提示字「輸入要找的字」；`Contains(…, OrdinalIgnoreCase)`，同 Mac 的 caseInsensitive）。打字只重畫列表那一塊（整頁重畫時焦點會跑掉）；詞彙減到 10 個以下時清掉搜尋字（Mac 會留著看不到的搜尋字，列表還是篩過的）。
+  - 列表上面一列：左邊 `HyperlinkButton`「全選」（搜尋時「全選搜到的 N 個」；列出來的都勾了變「取消勾選」），右邊「刪除勾選的 N 個…」（平台的 `Button`，有勾才出現）。每個詞一列：`CheckBox`（內容是那個詞，同 Mac 的 checkbox 樣式的 Toggle）＋右邊刪除這一個（`Ui.IconButton(Symbol.Delete)`，照舊）。勾選只換上面那一列的字，勾選框不重建（焦點不會跑掉）；勾了之後被單獨刪掉的詞不算在 N 裡（同 Mac）。搜不到時「沒有含「X」的詞彙」。勾選、搜尋字在整頁重畫（新增、刪除一個）時留著，存在 `SettingsWindow` 的欄位。
+  - 確認：`ContentDialog`（設定視窗的 `XamlRoot`），標題「刪除勾選的 N 個詞彙？」（Mac 的確認也只有標題）、主要按鈕「刪除」、預設按鈕是「取消」（沒辦法還原，WinUI 準則，同 §11.23）；開著時不會再開第二個（`confirmingTerms`）。刪完清掉勾選。
+- DEBUG：控制通道 `addterm <文字>`（同 Mac：`\n` 當換行，走 `AddTerms`，回傳 `message`）；state 加 `glossary`（自己的詞，照加入的順序）。
+
+### 11.28 會議結束時倒數自動停止錄音（R95，M§69）
+
+- 設定 `autoStopOnMeetingEnd`（settings.json，預設 true）：「錄音與轉錄 → 提醒與快捷鍵」的 `ToggleSwitch`「會議結束時自動停止錄音」，放在「偵測到線上會議時提醒錄音」下面，偵測會議關掉時停用（`IsEnabled`，切偵測的開關時跟著變）。偵測會議的說明換成 Mac 的新句子，從「很久沒人說話」那一組後面搬到這兩個開關下面（「不提醒：X」接在說明後面）。
+- `MeetingEndCountdown`（Services，同 Mac 的 `startMeetingEndCountdown`；`AppHost.MeetingEnd`）：`Start()` 記錄音中的那場和期限（`Seconds`，預設 60），`System.Threading.Timer` 每秒 `Tick`：錄音停了或換了一場就收起（`Ended`）；到期限時收起，還在錄同一場、`MeetingDetector.MeetingAppActive`（有會議 app 在用麥克風，同 Mac 的 `meetingAppActive`）是 false 就停止。停止的動作 `AppHost` 給：先拿會議標題、`Recorder.Stop()`（同自動停止的錄音，從計時器的執行緒呼叫）、`Notifier.MeetingEndStopped`（「會議結束，已自動停止錄音」，內文是會議標題，點了打開那場）。`Cancel()` 給「繼續錄」「停止並轉錄」。`Remaining(now)` 無條件進位（同 Mac 的 `TimelineView`）。單元測試 `ServicesTests.MeetingEndCountdownStopsOnlyTheSameRecording` 直接呼叫 `Tick`。
+- `App.ShowMeetingPrompt`：`Stop` 的提醒、設定開著時先 `MeetingEnd.Start()`，再交給島、通知或小視窗（同 §11.21 的分流）：
+  - 錄音島：`PromptState` 多 `Deadline`；訊息跟著島的 0.5 秒計時器換成「會議好像結束了，N 秒後自動停止錄音」，只改那個 `TextBlock` 的字、不重建（重建時按到一半的「繼續錄」會按不到，同即時逐字稿那一句）；期限後 2 秒才過期（倒數收起時 `Ended` 會先收）。「繼續錄」「停止並轉錄」都 `Cancel()`。
+  - 通知（島關掉）：內文「60 秒後自動停止錄音並轉錄」；通知按鈕的 `shiyin:` 網址 `continue`、`stop` 都 `Cancel()`。
+  - 小視窗 `MeetingPromptWindow`（島關掉、通知也關掉）：寫同一句、不倒數，30 秒後照舊收起（同 Mac 的浮動視窗）；兩個按鈕都 `Cancel()`。
+  - `Ended`：島上、小視窗開著的「會議好像結束了」收起來。
+  - 設定關掉時照舊只問、30 秒後收起來（R95.2）。
+- DEBUG：`--set meetingEndCountdownSeconds=8`（同 Mac 的 `-meetingEndCountdownSeconds`）；state 加 `meetingEndCountdown`（剩幾秒，沒在倒數是 -1；同 Mac 的 `meetingprompts` 的 `countdown`）、`island.promptText`（島上現在寫的字）。模擬：`record-sim` 錄音中 `meetingapp zoom.exe on`、過幾秒 `meetingapp zoom.exe off`（停 10 秒才算結束），`meetingaction continue|stop` 等於按島上的按鈕。
+
+### 11.29 去掉贅字的逐字稿（R96，M§70）
+
+- 資料：migration v11（`MigrationSql.V11`，SQL 同 Mac，標準答案 `db/schema.sql`）：`clean_lines`、觸發器 `clean_lines_text`。`AppDatabase.CleanLines`、`SaveCleanLines`（這場原本的整份換掉、段落已經不在的跳過）、`LastJob(id, kind)`（輔助工作也算）。Windows 的連線一直開著外鍵（`ForeignKeys = true`），重新轉錄（`SaveTranscript` 刪段落）、刪除一句的 `ON DELETE CASCADE` 會跟著刪；拆句、編輯、接受或還原校正、用詞修正改了 `text` 時觸發器刪掉那一句（只改 `seq` 的 UPDATE 不會觸發）。
+- 工作：`JobKind.Clean`（`clean`；輔助線、`UsesSummarizer`、`IsAuxiliary`：不發通知、不改會議的狀態、列表照舊是完成）。Core 的 `TranscriptCleanup`（提示詞中英日、粵語接 `transcriptNote.correction`、schema、`Format`、每次 120 句、`Validate`，同 Mac；字數用 `SwiftText.Count`（字形叢集）；標準答案 `prompts/<語言>/clean-system.txt`、`clean-prompt.txt`、`schemas/clean.json`、`formats.json` 的 clean、`util/validate-clean.json`）。`JobRunner.Clean`：沒選整理工具時失敗（「還沒設定整理工具，請到設定選擇 Claude、Codex 或 API」），每一句都存（改過的用改過的、中文會議用簡體時轉簡體；沒改的存原文；整句贅字存空字串）；失敗照一般的工作記原因。系統匣的工作寫「整理中：…」（同 Mac 選單列的 default）。
+- `AppController.GenerateCleanTranscript(id)`：擋法和訊息同「產生每個人的重點」（`ReadyForAction`、整理工具是「不整理」、還沒準備好），已經在排或在跑的不重複排；`CleaningProgress(id)`（在不在產生、進度）。`MeetingDetail.CleanLines`、`CleanFailure`（最後一次 clean 失敗的原因，可能是空字串）。
+- 畫面（`TranscriptTab`）：搜尋列在說話者篩選後面加平台的 `SelectorBar`「原文｜精簡」（同紀錄分頁的「條列｜心智圖｜人物」；無障礙名稱「逐字稿」、`ToolTip` 同 Mac 的 help；沒有逐字稿時停用；存在 settings.json 的 `transcriptView`）。
+  - 精簡、有精簡版：每一句顯示 `CleanLines[id] ?? 原文`，不標校正建議、不畫搜尋的底色（都對原文）；空字串的句子不列（說話者篩選照舊）。播放跟隨、點時間點、搜尋（找原文、捲到那一句）、用詞修正、右鍵的「拷貝」（原文，同 Mac）、匯出照舊用原文；列的無障礙名稱用畫面上的字。
+  - 精簡、還沒有精簡版：列表的 `Header` 放說明（次要文字、跟著文字大小，最寬 760）、上次失敗時「上次產生精簡版失敗：原因」（琥珀色、`L.Ui`、可以選取）、按鈕「產生精簡版」（失敗過是「再試一次」；`SymbolIcon(Symbol.Filter)`＋字，Mac 是 text.badge.minus；`ToolTip`「會用整理工具的額度；長的會議要幾分鐘」；這場在處理時停用；按鈕不跟文字大小，R59.2）。產生中是 `ProgressRing`＋「正在產生精簡版 N%」（排隊、第一批還沒回來是「正在產生精簡版…」）：主視窗每秒的 `DetailView.UpdateStatus` 呼叫 `TranscriptTab.UpdateClean`，樣子變了才重建那一塊；做完、失敗時 `JobRunner.Changed` 整份重讀。
+  - 編輯一句之後：主視窗本來就整份重讀，觸發器刪掉的那一句回到原文（M§70 的「只重讀幾句」是 Mac 才有的）。
+- DEBUG：`cleantranscript <會議 id>`（等於按「產生精簡版」）、`transcriptview original|clean`（同 Mac）；state 加 `transcriptView`、`cleanLines`（選取的會議有幾句精簡版，0 是還沒產生）、`cleanEmpty`（幾句是空字串）、`cleanFailure`、`cleaning`（產生中的進度；Mac 沒有）。
 
 ## 12. 系統整合
 

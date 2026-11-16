@@ -194,4 +194,19 @@ static class MigrationSql
         );
         CREATE INDEX documents_meeting ON documents(meeting_id, id);
         """;
+
+    /// <summary>
+    /// 精簡逐字稿（R96、M§70）：一句一列；句子刪掉（重新轉錄、刪除一句）時跟著刪，
+    /// 句子的文字改了（編輯、校正、用詞修正、拆句）時觸發器刪掉那一句的精簡版，畫面上回到原文
+    /// </summary>
+    public const string V11 = """
+        CREATE TABLE clean_lines (
+          segment_id INTEGER PRIMARY KEY REFERENCES segments(id) ON DELETE CASCADE,
+          text       TEXT NOT NULL
+        );
+        CREATE TRIGGER clean_lines_text AFTER UPDATE OF text ON segments
+        BEGIN
+          DELETE FROM clean_lines WHERE segment_id = NEW.id;
+        END;
+        """;
 }

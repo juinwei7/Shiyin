@@ -516,18 +516,62 @@ public sealed class SettingsWindow : Window
 
     // MARK: 詞彙表
 
+    // 搜尋、勾選（R94.2、R94.3、design-windows §11.27）：整頁重畫時留著；打字搜尋、勾選只重畫列表那一塊（整頁重畫時焦點會跑掉）
+    string glossaryQuery = "";
+    readonly HashSet<long> glossaryChecked = [];
+    readonly Dictionary<long, CheckBox> glossaryBoxes = [];
+    List<GlossaryTerm> glossaryTerms = [];
+    StackPanel? glossaryList;
+    HyperlinkButton? glossarySelect;
+    Button? glossaryDelete;
+    /// <summary>剛加完詞彙的說明（同主視窗的提示；設定視窗蓋在主視窗上面時看不到那邊，所以輸入框下面也寫）：顯示一次</summary>
+    string? glossaryNotice;
+    bool focusGlossaryInput;
+    bool settingGlossaryChecks;
+    bool confirmingTerms;
+
     FrameworkElement Glossary()
     {
         var column = Ui.Column(12, Ui.Text(L.T("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。"), 13, color: Ui.Secondary));
-        var input = new TextBox { PlaceholderText = L.T("新增詞彙，例如產品名或人名") };
-        void Add()
+        // 一次貼上好幾個也可以（R94.1）：換行、逗號、頓號、分號分開。多行的輸入框（最多約 4 行高，貼上好幾行才不會只留第一行），
+        // Enter 送出、Shift+Enter 換行（同 Mac 的 Return 送出）
+        var input = new TextBox
+        {
+            Header = L.T("新增詞彙"), PlaceholderText = L.T("產品名、人名；可以一次貼上好幾個"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
+            MaxHeight = 140,
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(input, ScrollBarVisibility.Auto);
+        var add = Ui.Button(L.T("新增"), () => { });
+        add.IsEnabled = false;
+        add.VerticalAlignment = VerticalAlignment.Bottom;
+        input.TextChanged += (_, _) => add.IsEnabled = input.Text.Trim().Length > 0;
+        void Add(bool focus)
         {
             if (input.Text.Trim().Length == 0) return;
-            host.Controller.AddTerm(input.Text.Trim());
+            glossaryNotice = host.Controller.AddTerms(input.Text);
+            focusGlossaryInput = focus;
             Show();
         }
-        input.KeyDown += (_, e) => { if (e.Key == Windows.System.VirtualKey.Enter) Add(); };
-        column.Children.Add(Ui.Bar(null, input, Ui.Button(L.T("新增"), Add)));
+        add.Click += (_, _) => Add(focus: false);
+        input.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Windows.System.VirtualKey.Enter
+                || Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Shift).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down)) return;
+            e.Handled = true;
+            Add(focus: true);
+        };
+        // 按 Enter 加完之後焦點留在輸入框，可以接著打下一個
+        if (focusGlossaryInput)
+        {
+            focusGlossaryInput = false;
+            input.Loaded += (_, _) => input.Focus(FocusState.Programmatic);
+        }
+        column.Children.Add(Ui.Bar(null, input, add));
+        if (glossaryNotice is { } notice)
+        {
+            glossaryNotice = null;
+            column.Children.Add(Ui.Text(notice, 12, color: Ui.Secondary));
+        }
         var suggestions = host.Db.GlossarySuggestions();
         if (suggestions.Count > 0)
         {
@@ -537,10 +581,24 @@ public sealed class SettingsWindow : Window
                     Ui.Row(8, Ui.Link(L.T("忽略"), () => { host.Controller.DismissGlossarySuggestion(s.Term); Show(); }), Ui.Link(L.T("加入"), () => { host.Controller.AddTerm(s.Term); Show(); }))));
             column.Children.Add(Ui.Card(new ScrollViewer { Content = list, MaxHeight = 160 }));
         }
-        var terms = host.Db.Glossary();
+        var terms = glossaryTerms = host.Db.Glossary();
         if (terms.Count == 0) column.Children.Add(Ui.Text(L.T("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。"), 13, color: Ui.Secondary));
-        foreach (var term in terms)
-            column.Children.Add(Ui.Bar(null, Ui.Text(term.Term, 14), Ui.IconButton(Symbol.Delete, L.F("刪除「%@」", term.Term), () => { host.Controller.DeleteTerm(term.Id!.Value); Show(); })));
+        // 搜尋（R94.2）：超過 10 個才出現，不分大小寫
+        if (terms.Count > 10)
+        {
+            var search = new TextBox { Header = L.T("搜尋詞彙"), PlaceholderText = L.T("輸入要找的字"), Text = glossaryQuery };
+            search.TextChanged += (_, _) =>
+            {
+                if (search.Text == glossaryQuery) return;
+                glossaryQuery = search.Text;
+                FillGlossaryList();
+            };
+            column.Children.Add(search);
+        }
+        else glossaryQuery = "";
+        glossaryList = Ui.Column(6);
+        column.Children.Add(glossaryList);
+        FillGlossaryList();
         // 公司詞彙表（R53.3）：唯讀，接在自己的詞後面；打開這頁時更新
         var company = host.Enterprise.Glossary.Terms;
         if (company.Count > 0)
@@ -558,6 +616,102 @@ public sealed class SettingsWindow : Window
         var prompt = Ui.Text(L.F("目前的轉錄提示：%@", WhisperRules.Prompt(CompanyGlossary.Merge(terms.Select(t => t.Term), company), S.DefaultMeetingLanguage)), 12, color: Ui.Tertiary, select: true);
         column.Children.Add(prompt);
         return column;
+    }
+
+    /// <summary>目前列出來的詞（搜尋時只有搜到的，不分大小寫）</summary>
+    List<GlossaryTerm> ShownTerms()
+    {
+        var q = glossaryQuery.Trim();
+        return q.Length == 0 ? glossaryTerms : glossaryTerms.Where(t => t.Term.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    /// <summary>勾選裡還在詞彙表的（勾了之後被單獨刪掉的不算，同 Mac）</summary>
+    List<long> CheckedTerms() => glossaryTerms.Where(t => t.Id is long id && glossaryChecked.Contains(id)).Select(t => t.Id!.Value).ToList();
+
+    /// <summary>
+    /// 詞彙的列表（R94.3）：上面一列「全選」（搜尋時「全選搜到的 N 個」；都勾了變「取消勾選」）和「刪除勾選的 N 個…」，
+    /// 每個詞前面是勾選框、右邊是刪除這一個
+    /// </summary>
+    void FillGlossaryList()
+    {
+        if (glossaryList is null) return;
+        glossaryList.Children.Clear();
+        glossaryBoxes.Clear();
+        glossarySelect = null;
+        glossaryDelete = null;
+        var shown = ShownTerms();
+        if (shown.Count > 0)
+        {
+            glossarySelect = new HyperlinkButton { Padding = new Thickness(0) };
+            glossarySelect.Click += (_, _) =>
+            {
+                var ids = ShownTerms().Select(t => t.Id!.Value).ToList();
+                SetGlossaryChecks(ids, !ids.All(glossaryChecked.Contains));
+            };
+            glossaryDelete = Ui.Button("", () => _ = ConfirmDeleteTerms());
+            glossaryList.Children.Add(Ui.Bar(glossarySelect, null, glossaryDelete));
+            UpdateGlossaryBar();
+        }
+        foreach (var term in shown)
+        {
+            var id = term.Id!.Value;
+            var box = new CheckBox { Content = term.Term, IsChecked = glossaryChecked.Contains(id) };
+            box.Checked += (_, _) => CheckTerm(id, true);
+            box.Unchecked += (_, _) => CheckTerm(id, false);
+            glossaryBoxes[id] = box;
+            glossaryList.Children.Add(Ui.Bar(null, box, Ui.IconButton(Symbol.Delete, L.F("刪除「%@」", term.Term), () => { host.Controller.DeleteTerm(id); Show(); })));
+        }
+        if (shown.Count == 0 && glossaryTerms.Count > 0) glossaryList.Children.Add(Ui.Text(L.F("沒有含「%@」的詞彙", glossaryQuery.Trim()), 13, color: Ui.Secondary));
+    }
+
+    /// <summary>勾選改了：只換上面那一列的字（勾選框留著，焦點不會跑掉）</summary>
+    void UpdateGlossaryBar()
+    {
+        if (glossarySelect is null || glossaryDelete is null) return;
+        var ids = ShownTerms().Select(t => t.Id!.Value).ToList();
+        glossarySelect.Content = ids.All(glossaryChecked.Contains) ? L.T("取消勾選")
+            : glossaryQuery.Trim().Length == 0 ? L.T("全選") : L.F("全選搜到的 %lld 個", (long)ids.Count);
+        var count = CheckedTerms().Count;
+        glossaryDelete.Content = L.F("刪除勾選的 %lld 個…", (long)count);
+        glossaryDelete.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    void CheckTerm(long id, bool on)
+    {
+        if (settingGlossaryChecks) return;
+        if (on) glossaryChecked.Add(id); else glossaryChecked.Remove(id);
+        UpdateGlossaryBar();
+    }
+
+    /// <summary>「全選」「取消勾選」：列出來的那幾個一起勾或取消</summary>
+    void SetGlossaryChecks(List<long> ids, bool on)
+    {
+        if (on) glossaryChecked.UnionWith(ids); else glossaryChecked.ExceptWith(ids);
+        settingGlossaryChecks = true;
+        foreach (var id in ids) if (glossaryBoxes.TryGetValue(id, out var box)) box.IsChecked = on;
+        settingGlossaryChecks = false;
+        UpdateGlossaryBar();
+    }
+
+    /// <summary>「刪除勾選的 N 個…」：確認對話框（沒辦法還原，預設按鈕是「取消」）</summary>
+    async Task ConfirmDeleteTerms()
+    {
+        var ids = CheckedTerms();
+        if (ids.Count == 0 || confirmingTerms || Content.XamlRoot is null) return;
+        confirmingTerms = true;
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("刪除勾選的 %lld 個詞彙？", (long)ids.Count)),
+                PrimaryButtonText = L.T("刪除"), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Close,
+            };
+            if (await Ui.InterfaceLanguage(dialog).ShowAsync() != ContentDialogResult.Primary) return;
+            host.Controller.DeleteTerms(ids);
+            glossaryChecked.Clear();
+            Show();
+        }
+        finally { confirmingTerms = false; }
     }
 
     // MARK: 說話者（M§21.4、R19.3）
@@ -776,16 +930,24 @@ public sealed class SettingsWindow : Window
         transcription.Children.Add(ModelRows());
 
         var alerts = Ui.Column(12);
-        alerts.Children.Add(Ui.Toggle(L.T("偵測到線上會議時提醒錄音"), S.MeetingDetection, on => S.Set(AppSettings.MeetingDetectionKey, on)));
+        // 會議結束時倒數自動停止（R95、M§69）：偵測會議關掉時停用
+        var autoStop = Ui.Toggle(L.T("會議結束時自動停止錄音"), S.AutoStopOnMeetingEnd, on => S.Set(AppSettings.AutoStopOnMeetingEndKey, on));
+        autoStop.IsEnabled = S.MeetingDetection;
+        alerts.Children.Add(Ui.Toggle(L.T("偵測到線上會議時提醒錄音"), S.MeetingDetection, on =>
+        {
+            S.Set(AppSettings.MeetingDetectionKey, on);
+            autoStop.IsEnabled = on;
+        }));
+        alerts.Children.Add(autoStop);
+        alerts.Children.Add(Note(L.T("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你，不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。")));
+        foreach (var app in host.Detector.Muted)
+            alerts.Children.Add(Ui.Bar(null, Ui.Text(L.F("不提醒：%@", MeetingDetector.DisplayName(app)), 13), Ui.Link(L.T("恢復提醒"), () => { host.Detector.Unmute(app); Show(); })));
         // 錄音島（M§57、R81.8、design-windows §11.21）
         alerts.Children.Add(Ui.Toggle(L.T("在螢幕上方顯示錄音島"), S.RecordingIsland, on => S.Set(AppSettings.RecordingIslandKey, on)));
         alerts.Children.Add(Note(L.T("錄音中在螢幕上方正中間顯示錄音的時間和提醒，全螢幕開會、分享畫面時也看得到，分享畫面拍不到它。偵測到線上會議時的「要開始錄音嗎？」也在這裡。")));
         // 忘了停止錄音（M§35、R48.5）
         alerts.Children.Add(Ui.Toggle(L.T("很久沒人說話時提醒，30 分鐘後自動停止"), S.IdleStop, on => S.Set(AppSettings.IdleStopKey, on)));
         alerts.Children.Add(Note(L.T("錄音中 15 分鐘沒人說話時提醒你；再 15 分鐘還是沒人說話就自動停止，只轉錄到最後有人說話的地方，錄音檔完整保留。")));
-        alerts.Children.Add(Note(L.T("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你；會議結束時提醒停止。只提醒，不會自動錄音。")));
-        foreach (var app in host.Detector.Muted)
-            alerts.Children.Add(Ui.Bar(null, Ui.Text(L.F("不提醒：%@", MeetingDetector.DisplayName(app)), 13), Ui.Link(L.T("恢復提醒"), () => { host.Detector.Unmute(app); Show(); })));
         alerts.Children.Add(Ui.Toggle(L.T("全域快捷鍵 Ctrl+Alt+Shift+R：在其他 app 裡也能開始或停止錄音"), S.GlobalHotKey, on =>
         {
             S.Set(AppSettings.GlobalHotKeyKey, on);

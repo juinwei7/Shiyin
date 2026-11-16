@@ -47,6 +47,8 @@ public sealed class EnterpriseTests : IDisposable
         /// <summary>收到第一塊之後伺服器忙（代理、伺服器出狀況）：之後的請求都回 503，直到測試清掉 Busy</summary>
         public bool DropAfterFirstChunk;
         public bool Busy;
+        /// <summary>之後的請求都回 500 server_error（伺服器出錯，R93 算「連不上」）</summary>
+        public bool ServerError;
         public string? LastLlmAuth;
         public int LlmRejectsLeft;
         /// <summary>整理要回的錯誤（R51.6）：伺服器自己的（有 kind）或轉送的模型的</summary>
@@ -139,6 +141,7 @@ public sealed class EnterpriseTests : IDisposable
             }
             if (!Authorized()) { await Error(c, Disabled ? 403 : 401, Disabled ? "forbidden" : "unauthorized"); return; }
             if (Busy) { await Error(c, 503, "busy", "伺服器忙"); return; }
+            if (ServerError) { await Error(c, 500, "server_error", "伺服器出錯"); return; }
             if (method == "GET" && path == "/api/v1/glossary")
             {
                 if (GlossaryTerms is null) { await Error(c, 404, "not_found"); return; }
@@ -700,6 +703,94 @@ public sealed class EnterpriseTests : IDisposable
         local = true;
         await Assert.ThrowsAsync<ServerTranscriber.SwitchToLocalException>(() => run);
         Assert.Null(notes[^1]);
+    }
+
+    /// <summary>
+    /// 連不上（網路不通、伺服器出錯）連續太久（R93、M§67）：自動改在這台電腦轉錄（Automatic）；
+    /// 伺服器忙（在排隊）不算，等到伺服器好了照樣在伺服器轉完
+    /// </summary>
+    [Fact]
+    public async Task UnreachableTooLongSwitchesToThisComputerAutomatically()
+    {
+        var server = await SignedIn();
+        var (wav, bytes, sha) = Wav(2);
+        _ = await server.AccessToken();
+        // 伺服器出錯（500 server_error）也算連不上
+        fake.ServerError = true;
+        var notes = new List<ServerNote?>();
+        var started = DateTime.UtcNow;
+        var transcriber = new ServerTranscriber(server)
+        {
+            OnServer = note => { lock (notes) notes.Add(note); },
+            RetryDelay = _ => TimeSpan.FromMilliseconds(50), AutoLocalAfter = TimeSpan.FromMilliseconds(400),
+        };
+        var error = await Assert.ThrowsAsync<ServerTranscriber.SwitchToLocalException>(() =>
+            transcriber.Transcribe(wav, bytes, sha, new TranscriptionOptions(), null, CancellationToken.None));
+        Assert.True(error.Automatic);
+        Assert.True(DateTime.UtcNow - started >= TimeSpan.FromMilliseconds(400));
+        Assert.Contains(notes, n => n?.Waiting == true && n.Text.Contains("伺服器出錯"));
+        Assert.Null(notes[^1]);
+        // 網路不通（連線被拒）
+        fake.ServerError = false;
+        settings.Set(EnterpriseServer.UrlKey, "http://127.0.0.1:9");
+        error = await Assert.ThrowsAsync<ServerTranscriber.SwitchToLocalException>(() =>
+            transcriber.Transcribe(wav, bytes, sha, new TranscriptionOptions(), null, CancellationToken.None));
+        Assert.True(error.Automatic);
+        // 使用者自己按的不是 Automatic
+        Assert.False(new ServerTranscriber.SwitchToLocalException().Automatic);
+    }
+
+    [Fact]
+    public async Task BusyServerKeepsWaiting()
+    {
+        var server = await SignedIn();
+        var (wav, bytes, sha) = Wav(2);
+        fake.Busy = true;
+        var notes = new List<ServerNote?>();
+        var transcriber = new ServerTranscriber(server)
+        {
+            OnServer = note => { lock (notes) notes.Add(note); },
+            RetryDelay = _ => TimeSpan.FromMilliseconds(50), AutoLocalAfter = TimeSpan.FromMilliseconds(200),
+            PollQueued = TimeSpan.FromMilliseconds(10), PollRunning = TimeSpan.FromMilliseconds(10),
+        };
+        var run = transcriber.Transcribe(wav, bytes, sha, new TranscriptionOptions(), null, CancellationToken.None);
+        await Task.Delay(800);
+        Assert.False(run.IsCompleted);
+        lock (notes) Assert.Contains(notes, n => n?.Waiting == true && n.Text.Contains("伺服器忙"));
+        fake.Busy = false;
+        Assert.NotNull(await run);
+    }
+
+    /// <summary>JobRunner：連不上太久自動改本機時發 ServerFallback（App 發通知「企業伺服器連不上，已改在這台電腦轉錄」）</summary>
+    [Fact]
+    public async Task JobRunnerReportsAutomaticFallback()
+    {
+        var server = await SignedIn();
+        _ = await server.AccessToken();
+        settings.Set(EnterpriseServer.UrlKey, "http://127.0.0.1:9");
+        var paths = new ShiyinPaths(home.Path);
+        paths.EnsureDirectories();
+        var db = new AppDatabase(paths.Database, paths.Backups);
+        settings.Set(AppSettings.TranscriptionEngineKey, "server");
+        settings.Set(AppSettings.ProviderKey, "none");
+        var models = new ModelStore(paths.Models, http, new Dictionary<ModelStore.Model, ModelStore.ModelInfo>());
+        var llm = new LLMClient(new MemoryKeys(), new NoTools(), new ProcessRunner(), http);
+        var runner = new JobRunner(db, settings, paths, models, llm, new WavDecoder(), new NoEngines(), new NoCompressor(), NoPower.Instance)
+        {
+            IdleDelay = TimeSpan.FromMilliseconds(100), Enterprise = server, ServerAutoLocalAfter = TimeSpan.FromMilliseconds(300),
+        };
+        var fallbacks = new List<long>();
+        runner.ServerFallback += id => { lock (fallbacks) fallbacks.Add(id); };
+        var source = Path.Combine(home.Path, "會議.wav");
+        File.Copy(Wav(2).Wav, source);
+        var id = Importer.ImportFile(source, new ImportOptions(), db, paths, settings).Id!.Value;
+        runner.Start();
+        try
+        {
+            for (var i = 0; i < 400 && (fallbacks.Count == 0 || db.LatestJob(id)?.Status is JobStatus.Queued or JobStatus.Running); i++) await Task.Delay(25);
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.Equal([id], fallbacks);
     }
 
     [Fact]

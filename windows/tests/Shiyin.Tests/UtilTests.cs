@@ -374,6 +374,33 @@ public class UtilTests
             Assert.Equal(e.Str("applied"), applied);
             Assert.Equal(e.Str("reverted"), applied is null ? null : TranscriptCorrection.Revert(s.Original, s.Suggestion, applied));
         }
+
+        // 精簡逐字稿的驗證（R96、M§70）：輸入同 Mac 的 GoldenDump（去頭尾空白、重複的留第一個、跟原文一樣的丟、空字串留、比原文長太多的丟、範圍外的丟）
+        var clean = new TranscriptCleanup.Context(MeetingLanguage.Zh, zh.Segments.Select(s => (s.Text, (string?)null)).ToList());
+        var first = zh.Segments[0].Text;
+        TranscriptCleanup.Line[] cleanRaw =
+        [
+            new(0, "  " + SwiftText.Prefix(first, SwiftText.Count(first) - 1) + " "), new(0, "重複的第二個"), new(1, zh.Segments[1].Text),
+            new(2, ""), new(3, zh.Segments[3].Text + new string('補', 40)), new(9, "範圍外"),
+        ];
+        var validClean = TranscriptCleanup.Validate(cleanRaw, clean, 0, 4);
+        var expectedClean = Items("util/validate-clean.json").ToList();
+        Assert.Equal(expectedClean.Count, validClean.Count);
+        for (var i = 0; i < validClean.Count; i++)
+        {
+            Assert.Equal(expectedClean[i].Long("segment"), validClean[i].Segment);
+            Assert.Equal(expectedClean[i].Str("text"), validClean[i].Text);
+        }
+    }
+
+    /// <summary>一次貼上好幾個詞彙（R94.1、M§68）：分隔、去空白、去重複同 Mac 的 GlossaryInput.split</summary>
+    [Fact]
+    public void GlossarySplitMatchesMac()
+    {
+        var expected = Items("util/glossary-split.json").ToList();
+        Assert.NotEmpty(expected);
+        foreach (var e in expected)
+            Assert.Equal(e.Strings("terms") ?? [], GlossaryInput.Split(e.Str("input")!));
     }
 }
 

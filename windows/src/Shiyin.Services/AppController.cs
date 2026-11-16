@@ -947,6 +947,33 @@ public sealed class AppController
     }
 
     /// <summary>「人物」的「產生每個人的重點」（R92、M§66）：只補上這一段，摘要、決議、待辦這些段落不動</summary>
+    /// <summary>
+    /// 逐字稿「精簡」的「產生精簡版」（R96、M§70）：擋法和訊息同「產生每個人的重點」；在輔助線跑，不發通知。
+    /// 已經在產生（排隊或進行中）時不再排
+    /// </summary>
+    public void GenerateCleanTranscript(long id)
+    {
+        if (!ReadyForAction(id)) return;
+        if (Settings.Provider == LLMProvider.None)
+        {
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
+            return;
+        }
+        if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
+        if (Db.HasActiveJob(id, JobKind.Clean)) return;
+        Perform(id, () => Db.Enqueue(id, JobKind.Clean));
+        Runner.Wake();
+    }
+
+    /// <summary>正在產生這場會議的精簡版（Active）和進度（0～1，排隊中、第一批還沒回來是 null）</summary>
+    public (bool Active, double? Progress) CleaningProgress(long meetingId)
+    {
+        if (Runner.Running(JobLane.Assist) is { } running && running.Job.Kind == JobKind.Clean && running.Job.MeetingId == meetingId)
+            return (true, running.Progress);
+        return (Db.HasActiveJob(meetingId, JobKind.Clean), null);
+    }
+
     public void GeneratePeopleNotes(long id)
     {
         if (!ReadyForAction(id)) return;
@@ -1190,6 +1217,30 @@ public sealed class AppController
     }
 
     public void AddTerm(string term) => Perform(null, () => Db.AddTerm(term));
+
+    /// <summary>
+    /// 新增詞彙（R94.1、M§68）：一次貼上好幾個時用換行、逗號、頓號、分號分開，已經有的跳過。
+    /// 一個詞而且已經有、或一次好幾個時說明結果（Notice，同 Mac 的 noticeMessage）；回傳同一句（設定頁也寫在輸入框下面），沒有要說的是 null
+    /// </summary>
+    public string? AddTerms(string text)
+    {
+        var terms = GlossaryInput.Split(text);
+        if (terms.Count == 0) return null;
+        var added = 0;
+        Perform(null, () => added = Db.AddTerms(terms));
+        string? message = null;
+        if (terms.Count == 1 && added == 0) message = L.F("「%@」已經在詞彙表裡了", terms[0]);
+        else if (terms.Count > 1)
+            message = added == terms.Count ? L.F("已加入 %lld 個詞彙", (long)added) : L.F("已加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
+        if (message is not null) Notice?.Invoke(message);
+        return message;
+    }
+
+    /// <summary>刪除勾選的詞彙（R94.3）</summary>
+    public void DeleteTerms(IReadOnlyCollection<long> ids)
+    {
+        if (ids.Count > 0) Perform(null, () => Db.DeleteTerms(ids));
+    }
     public void DismissGlossarySuggestion(string term) => Perform(null, () => Db.DismissGlossarySuggestion(term));
     public void DeleteTerm(long id) => Perform(null, () => Db.DeleteTerm(id));
     public void SaveTemplate(TemplateRecord template) => Perform(null, () => Db.SaveTemplate(template));

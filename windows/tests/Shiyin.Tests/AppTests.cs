@@ -278,6 +278,64 @@ public sealed class AppTests : IDisposable
         Assert.Null(db.Meeting(id));
     }
 
+    /// <summary>
+    /// 「產生精簡版」（R96.2、M§70）：沒設整理工具、整理工具還沒準備好時不排、說原因；排的是輔助線的 clean（不改會議的狀態），
+    /// 已經在排時不重複排；失敗的原因帶到 MeetingDetail.CleanFailure
+    /// </summary>
+    [Fact]
+    public void GenerateCleanTranscriptQueuesAuxiliaryJob()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var controller = Controller(settings, out _);
+        var errors = new List<string>();
+        controller.Error += errors.Add;
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a" }, null).Id!.Value;
+        db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 2, Text = "嗯，好" }], 2, 0);
+        controller.GenerateCleanTranscript(id);
+        Assert.Equal(["整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"], errors);
+        Assert.Null(db.LastJob(id, JobKind.Clean));
+        settings.Set(AppSettings.ProviderKey, "anthropic");
+        settings.HasKey = _ => false;
+        controller.GenerateCleanTranscript(id);
+        Assert.Equal(2, errors.Count);
+        Assert.Null(db.LastJob(id, JobKind.Clean));
+        settings.HasKey = _ => true;
+        controller.GenerateCleanTranscript(id);
+        controller.GenerateCleanTranscript(id);
+        Assert.Equal(1L, db.Read(d => d.Scalar("SELECT COUNT(*) FROM jobs WHERE meeting_id = ? AND kind = 'clean'", id)));
+        Assert.Equal((JobKind.Clean, JobStatus.Queued), (db.LastJob(id, JobKind.Clean)!.Kind, db.LastJob(id, JobKind.Clean)!.Status));
+        Assert.Equal((true, (double?)null), controller.CleaningProgress(id));
+        // 輔助工作：會議的狀態照舊是完成（列表不顯示排隊中）
+        Assert.Null(db.LatestJob(id));
+        Assert.Equal(JobLane.Assist, JobKind.Clean.Lane());
+        Assert.True(JobKind.Clean.IsAuxiliary() && JobKind.Clean.UsesSummarizer());
+        Assert.Equal(JobKind.Clean, JobKinds.Parse("clean"));
+        Assert.Null(MeetingDetail.Load(db, id)!.CleanFailure);
+        var job = db.ClaimNext(JobLane.Assist)!;
+        db.Finish(job.Id!.Value, JobStatus.Failed, "額度用完了", null);
+        Assert.Equal("額度用完了", MeetingDetail.Load(db, id)!.CleanFailure);
+        Assert.Equal((false, (double?)null), controller.CleaningProgress(id));
+    }
+
+    /// <summary>新增詞彙（R94.1、M§68）：一次好幾個、已經有的跳過，說明同 Mac；勾選後一起刪除</summary>
+    [Fact]
+    public void AddTermsExplainsWhatWasAdded()
+    {
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var notices = new List<string>();
+        controller.Notice += notices.Add;
+        Assert.Null(controller.AddTerms("Redis"));
+        Assert.Equal("「Redis」已經在詞彙表裡了", controller.AddTerms(" Redis "));
+        Assert.Equal("已加入 3 個詞彙", controller.AddTerms("Kubernetes、拾音\nSendGrid,kubernetes"));
+        Assert.Equal("已加入 1 個詞彙，1 個已經有了", controller.AddTerms("Redis；Claude Code"));
+        Assert.Null(controller.AddTerms(" ，、\n "));
+        Assert.Equal(["「Redis」已經在詞彙表裡了", "已加入 3 個詞彙", "已加入 1 個詞彙，1 個已經有了"], notices);
+        Assert.Equal(["Redis", "Kubernetes", "拾音", "SendGrid", "Claude Code"], db.Glossary().Select(t => t.Term));
+        var ids = db.Glossary().Where(t => t.Term is "拾音" or "SendGrid").Select(t => t.Id!.Value).ToList();
+        controller.DeleteTerms(ids);
+        Assert.Equal(["Redis", "Kubernetes", "Claude Code"], db.Glossary().Select(t => t.Term));
+    }
+
     /// <summary>「人物」的「產生每個人的重點」（R92.4、M§66）：排 summarize，payload 只多 people；沒設整理工具時不排、說原因。草稿的 payload 跟以前一字不差</summary>
     [Fact]
     public void GeneratePeopleNotesQueuesPeopleOnlySummarize()

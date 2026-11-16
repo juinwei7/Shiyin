@@ -588,9 +588,10 @@ public sealed class MeetingPromptWindow : Window
         }
         else
         {
-            message = L.T("會議好像結束了，要停止錄音嗎？");
-            buttons.Children.Add(Ui.Button(L.T("繼續錄"), () => Do(() => { })));
-            buttons.Children.Add(Ui.Button(L.T("停止並轉錄"), () => Do(host.Recorder.Stop), accent: true));
+            // 會議結束在倒數時（R95、M§69）寫同一句、不倒數（同 Mac 的浮動視窗）；兩個按鈕都取消倒數
+            message = host.MeetingEnd.Active ? L.F("會議好像結束了，%lld 秒後自動停止錄音", (long)host.MeetingEnd.Seconds) : L.T("會議好像結束了，要停止錄音嗎？");
+            buttons.Children.Add(Ui.Button(L.T("繼續錄"), () => Do(host.MeetingEnd.Cancel)));
+            buttons.Children.Add(Ui.Button(L.T("停止並轉錄"), () => Do(() => { host.MeetingEnd.Cancel(); host.Recorder.Stop(); }), accent: true));
         }
         buttons.HorizontalAlignment = HorizontalAlignment.Right;
         Content = Ui.WindowBackground(new Border { Padding = new Thickness(16), Child = Ui.Column(12, Ui.Text(message, 14), buttons) });

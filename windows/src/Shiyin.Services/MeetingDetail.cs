@@ -108,6 +108,10 @@ public sealed class MeetingDetail
     public Dictionary<int, List<string>> SpeakerCandidates { get; set; } = [];
     /// <summary>「我」是哪一位說話者（M§58.2）：載入時算一次</summary>
     public int? SelfIdx { get; set; }
+    /// <summary>精簡逐字稿（R96、M§70）：段落 id → 精簡後的文字（空字串是整句都是贅字）；空的是還沒產生</summary>
+    public Dictionary<long, string> CleanLines { get; set; } = [];
+    /// <summary>最後一次產生精簡版失敗的原因（可能是空字串）；沒失敗是 null</summary>
+    public string? CleanFailure { get; set; }
 
     /// <summary>名字（不分大小寫、去掉頭尾空白）是這場哪一位說話者：待辦的負責人放頭像用（M§58.2）</summary>
     public int? SpeakerIdx(string name)
@@ -190,6 +194,8 @@ public sealed class MeetingDetail
         if (db.Enrollment() is { } me) detail.SelfIdx = speakers.FirstOrDefault(s => s.PersonId == me.PersonId)?.Idx;
         detail.LoadDocuments(db.Documents(id));
         detail.SpeakerCandidates = db.VoiceprintCandidates(id);
+        detail.CleanLines = db.CleanLines(id);
+        detail.CleanFailure = db.LastJob(id, JobKind.Clean) is { Status: JobStatus.Failed } failed ? failed.Error ?? "" : null;
         if (JobRunner.TranscribedUntil(db.LastTranscribePayload(id)) is double until && meeting.DurationSeconds is int duration && duration - until >= 60)
             detail.UntranscribedMinutes = (int)Math.Round((duration - until) / 60, MidpointRounding.AwayFromZero);
         detail.BuildIndexes();

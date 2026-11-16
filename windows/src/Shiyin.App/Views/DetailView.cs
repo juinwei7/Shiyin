@@ -143,6 +143,8 @@ public sealed class DetailView
     public void UpdateStatus()
     {
         if (detail is null || IsTrashed) return;
+        // 逐字稿「精簡」產生中的進度（R96）
+        if (window.State.Tab == DetailTab.Transcript && !IsRecordingThis) transcript.UpdateClean();
         if (StatusKey() == statusKey)
         {
             if (statusLiveText is not null && host.Controller.Status(Detail) is MeetingStatus.Transcribing t)

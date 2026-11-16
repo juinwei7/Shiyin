@@ -54,6 +54,10 @@ public sealed class AppSettings
     public const string HideFromScreenSharingKey = "hideFromScreenSharing";
     /// <summary>在螢幕上方顯示錄音島，預設開（M§57.2、R81.8、design-windows §11.21）</summary>
     public const string RecordingIslandKey = "recordingIsland";
+    /// <summary>會議結束時倒數後自動停止錄音，預設開（R95、M§69、design-windows §11.28）</summary>
+    public const string AutoStopOnMeetingEndKey = "autoStopOnMeetingEnd";
+    /// <summary>逐字稿：original（原文）／clean（精簡，R96、M§70）</summary>
+    public const string TranscriptViewKey = "transcriptView";
     /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
     public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
@@ -325,6 +329,10 @@ public sealed class AppSettings
     public bool MeetingDetection => Flag(MeetingDetectionKey, true);
     /// <summary>在螢幕上方顯示錄音島（M§57、R81.8）</summary>
     public bool RecordingIsland => Flag(RecordingIslandKey, true);
+    /// <summary>會議結束時倒數 60 秒自動停止錄音（R95.2）</summary>
+    public bool AutoStopOnMeetingEnd => Flag(AutoStopOnMeetingEndKey, true);
+    /// <summary>逐字稿顯示原文還是精簡版（R96.1）</summary>
+    public string TranscriptView => String(TranscriptViewKey) == "clean" ? "clean" : "original";
     public bool BookmarkHotKey => Flag(BookmarkHotKeyKey, true);
     public bool IdleStop => Flag(IdleStopKey, true);
     /// <summary>正式轉錄用快速辨識（Mac 的「macOS 內建」，D45）：設定值同 Mac 是 system</summary>

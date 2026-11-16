@@ -79,6 +79,18 @@ public static class ControlPipe
             case "peoplenotes" when args.Length > 1 && long.TryParse(args[1], out var peopleMeeting):
                 host.Controller.GeneratePeopleNotes(peopleMeeting);
                 return Ok;
+            // cleantranscript <會議 id>：等於按逐字稿「精簡」的「產生精簡版」（M§70、design-windows §11.29，同 Mac）；
+            // transcriptview original|clean：逐字稿的「原文｜精簡」（寫進測試家目錄的 settings.json）
+            case "cleantranscript" when args.Length > 1 && long.TryParse(args[1], out var cleanMeeting):
+                host.Controller.GenerateCleanTranscript(cleanMeeting);
+                return Ok;
+            case "transcriptview" when args.Length > 1:
+                host.Settings.Set(AppSettings.TranscriptViewKey, args[1] == "clean" ? "clean" : "original");
+                main?.Refresh();
+                return Ok;
+            // addterm <文字>：新增詞彙（R94.1，同 Mac 的 addterm：「\n」當換行、一次好幾個），回傳說明（沒有要說的是空的）
+            case "addterm" when args.Length > 1:
+                return new JsonObject { ["message"] = host.Controller.AddTerms(args[1].Replace("\\n", "\n")) ?? "" };
             // seek <秒> [play]、toggle：播放（同 Mac）
             case "seek" when args.Length > 1 && double.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out var seekTo):
                 host.Player.Seek(seekTo, args.Length > 2 && args[2] == "play");
@@ -461,6 +473,17 @@ public static class ControlPipe
                 ? MindMap.TopicRanges(topicNotes, Math.Max(host.Player.Duration, topicDetail.Meeting.DurationSeconds ?? 0), MindMap.TopicLabel(MeetingLanguages.Interface))
                 : []).Select(r => (JsonNode)new JsonObject { ["branch"] = r.Branch, ["title"] = r.Title, ["start"] = r.Start, ["end"] = r.End })]),
             ["userNotesExpanded"] = main?.State.UserNotesExpanded,
+            // 精簡逐字稿（M§70、design-windows §11.29）：原文｜精簡、選取中的會議有幾句精簡版（0 是還沒產生）、上次失敗的原因、產生中的進度
+            ["transcriptView"] = host.Settings.TranscriptView,
+            ["cleanLines"] = main?.State.Detail?.CleanLines.Count,
+            ["cleanEmpty"] = main?.State.Detail?.CleanLines.Count(p => p.Value.Length == 0),
+            ["cleanFailure"] = main?.State.Detail?.CleanFailure,
+            ["cleaning"] = main?.State.Detail?.Meeting.Id is long cleaningId && host.Controller.CleaningProgress(cleaningId) is { Active: true } cleaning
+                ? new JsonObject { ["progress"] = cleaning.Progress } : null,
+            // 詞彙表（R94）
+            ["glossary"] = new JsonArray([.. host.Db.Glossary().Select(t => (JsonNode)t.Term)]),
+            // 會議結束的倒數（R95、M§69）：剩幾秒，沒在倒數是 -1（同 Mac 的 meetingprompts 的 countdown）
+            ["meetingEndCountdown"] = host.MeetingEnd.Remaining(DateTime.UtcNow),
             ["reviewInline"] = main?.ReviewDraft.Expanded?.ToString(),
             // 會議的參考文件（M§39.7）：選取中的會議
             ["documents"] = new JsonArray([.. (main?.State.Detail?.Documents ?? []).Select(d =>
@@ -499,7 +522,7 @@ public static class ControlPipe
             {
                 ["enabled"] = island.Enabled, ["visible"] = island.AppWindow.IsVisible, ["mode"] = island.Mode,
                 ["frame"] = new JsonArray(island.Frame.X, island.Frame.Y, island.Frame.W, island.Frame.H),
-                ["hintKey"] = island.HintKey ?? "", ["prompt"] = island.Prompt?.Message ?? "",
+                ["hintKey"] = island.HintKey ?? "", ["prompt"] = island.Prompt?.Message ?? "", ["promptText"] = island.PromptText ?? "",
                 ["actions"] = new JsonArray([.. (island.Prompt?.Actions ?? []).Select(a => (JsonNode)a.Id)]),
             } : null,
             // 人物頁（M§60.2）

@@ -1295,6 +1295,167 @@ public sealed class ServicesTests : IDisposable
     }
 
     /// <summary>
+    /// 精簡逐字稿（R96、M§70）：每次 120 句、「[編號] 說話者：文字」；只用驗證過的改動（重複、跟原文一樣、範圍外的丟掉），
+    /// 每一句都存（沒改的存原文、整句贅字存空字串），中文會議用簡體時改過的句子轉簡體；不發通知。
+    /// 改了一句的文字（觸發器）那一句的精簡版刪掉；重新轉錄整份跟著刪
+    /// </summary>
+    [Fact]
+    public async Task CleanTranscriptSavesEveryLine()
+    {
+        var prompts = new List<string>();
+        var systems = new List<string>();
+        server.Handle = async c =>
+        {
+            using var reader = new StreamReader(c.Request.InputStream);
+            var body = JsonNode.Parse(await reader.ReadToEndAsync())!;
+            var prompt = body["messages"]![0]!["content"]!.GetValue<string>();
+            lock (prompts)
+            {
+                prompts.Add(prompt);
+                systems.Add(body["system"]!.GetValue<string>());
+            }
+            // 第一批：0 改過、1 整句贅字、2 跟原文一樣（丟掉）、0 重複（丟掉）、130 不在這一批（丟掉）；第二批：121 改過
+            var lines = prompt.Contains("[120]")
+                ? """[{"segment":121,"text":"第二批改過的這個"}]"""
+                : """[{"segment":0,"text":" 好，開始。 "},{"segment":1,"text":""},{"segment":2,"text":"第三句"},{"segment":0,"text":"重複"},{"segment":130,"text":"範圍外"}]""";
+            var reply = new JsonObject
+            {
+                ["content"] = new JsonArray(new JsonObject { ["type"] = "tool_use", ["name"] = "save_clean_transcript", ["input"] = JsonNode.Parse($$"""{"lines":{{lines}}}""") }),
+            };
+            var bytes = Encoding.UTF8.GetBytes(reply.ToJsonString());
+            c.Response.ContentType = "application/json";
+            await c.Response.OutputStream.WriteAsync(bytes);
+            c.Response.Close();
+        };
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic", ["chineseScript"] = "simplified" });
+        var (runner, _, _) = Runner(settings);
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a", Title = "週會" }, null).Id!.Value;
+        var segments = Enumerable.Range(0, 125).Select(i => new Segment
+        {
+            MeetingId = id, Seq = i, Start = i, End = i + 1, Text = i switch { 0 => "嗯，好，開始。", 1 => "嗯。", 2 => "第三句", _ => $"第 {i} 句" }, Speaker = i % 2 + 1,
+        }).ToList();
+        db.SaveTranscript(id, segments, 125, 2);
+        db.RenameSpeaker(id, 1, "小明");
+        db.Enqueue(id, JobKind.Clean);
+        var finished = new List<JobKind>();
+        runner.Finished += (job, _) => { lock (finished) finished.Add(job.Kind); };
+        runner.Start();
+        try { await Until(() => db.LastJob(id, JobKind.Clean)?.Status is JobStatus.Done or JobStatus.Failed); }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.Equal(JobStatus.Done, db.LastJob(id, JobKind.Clean)!.Status);
+        Assert.Equal(2, prompts.Count);
+        Assert.StartsWith("逐字稿（每行開頭的數字是句子編號，segment 欄位填這個數字）：\n[0] 小明：嗯，好，開始。\n[1] 說話者 2：嗯。\n", prompts[0]);
+        Assert.EndsWith("[119] 說話者 2：第 119 句", prompts[0]);
+        Assert.Contains("\n[120] 小明：第 120 句\n", prompts[1]);
+        Assert.All(systems, s => Assert.Equal(Notes.TranscriptCleanup.System(MeetingLanguage.Zh), s));
+        var ids = db.Segments(id).Select(s => s.Id!.Value).ToList();
+        var clean = db.CleanLines(id);
+        Assert.Equal(125, clean.Count);
+        Assert.Equal("好，开始。", clean[ids[0]]);
+        Assert.Equal("", clean[ids[1]]);
+        Assert.Equal("第三句", clean[ids[2]]);
+        Assert.Equal("第 3 句", clean[ids[3]]);
+        Assert.Equal("第二批改过的这个", clean[ids[121]]);
+        Assert.Empty(finished);
+        var detail = MeetingDetail.Load(db, id)!;
+        Assert.Equal(125, detail.CleanLines.Count);
+        Assert.Null(detail.CleanFailure);
+        // 改了一句的文字（編輯、接受校正、用詞修正、拆句）：那一句回到原文
+        db.UpdateSegmentText(ids[0], "大家好");
+        Assert.False(db.CleanLines(id).ContainsKey(ids[0]));
+        Assert.Equal(124, db.CleanLines(id).Count);
+        // 刪除一句：跟著刪；重新轉錄：整份跟著刪
+        db.DeleteSegment(id, ids[5], "刪除一句");
+        Assert.Equal(123, db.CleanLines(id).Count);
+        db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 1, Text = "重新轉錄" }], 1, 0);
+        Assert.Empty(db.CleanLines(id));
+    }
+
+    /// <summary>精簡逐字稿失敗（R96.2）：工作記下原因，逐字稿的「精簡」寫「上次產生精簡版失敗：…」；精簡版不存</summary>
+    [Fact]
+    public async Task CleanTranscriptFailureIsRemembered()
+    {
+        server.Handle = async c =>
+        {
+            c.Response.StatusCode = 400;
+            var bytes = Encoding.UTF8.GetBytes("""{"error":{"message":"prompt is too long"}}""");
+            c.Response.ContentType = "application/json";
+            await c.Response.OutputStream.WriteAsync(bytes);
+            c.Response.Close();
+        };
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic" });
+        var (runner, _, _) = Runner(settings);
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a" }, null).Id!.Value;
+        db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 1, Text = "嗯，好" }], 1, 0);
+        db.Enqueue(id, JobKind.Clean);
+        runner.Start();
+        try { await Until(() => db.LastJob(id, JobKind.Clean)?.Status is JobStatus.Done or JobStatus.Failed); }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.Equal(JobStatus.Failed, db.LastJob(id, JobKind.Clean)!.Status);
+        var detail = MeetingDetail.Load(db, id)!;
+        Assert.Empty(detail.CleanLines);
+        Assert.False(string.IsNullOrEmpty(detail.CleanFailure));
+        // 輔助工作失敗不改會議的狀態、不暫停自動整理
+        Assert.Null(db.LatestJob(id));
+        Assert.True(settings.SummarizerReady);
+    }
+
+    /// <summary>
+    /// 會議結束的倒數（R95、M§69）：時間到還在錄同一場、會議 app 沒有又開始用麥克風就停止；錄音先停了、換了一場、
+    /// 會議又開始了都不停；取消後不停；沒在錄音時不開始
+    /// </summary>
+    [Fact]
+    public void MeetingEndCountdownStopsOnlyTheSameRecording()
+    {
+        long? recording = 7;
+        var active = false;
+        var stopped = new List<long>();
+        var ended = 0;
+        var countdown = new MeetingEndCountdown(() => recording, () => active, stopped.Add) { Seconds = 60 };
+        countdown.Ended += () => ended++;
+        var t0 = new DateTime(2026, 11, 16, 10, 0, 0, DateTimeKind.Utc);
+        countdown.Start(t0);
+        Assert.Equal(60, countdown.Remaining(t0));
+        Assert.Equal(1, countdown.Remaining(t0.AddSeconds(59.2)));
+        countdown.Tick(t0.AddSeconds(30));
+        Assert.True(countdown.Active);
+        countdown.Tick(t0.AddSeconds(60));
+        Assert.Equal([7L], stopped);
+        Assert.Equal(1, ended);
+        Assert.False(countdown.Active);
+        Assert.Equal(-1, countdown.Remaining(t0));
+        // 會議 app 又開始用麥克風：時間到也不停，倒數照樣收起
+        countdown.Start(t0);
+        active = true;
+        countdown.Tick(t0.AddSeconds(61));
+        Assert.Single(stopped);
+        Assert.Equal(2, ended);
+        // 錄音先停了（或換了一場）：馬上收起，不停
+        active = false;
+        countdown.Start(t0);
+        recording = null;
+        countdown.Tick(t0.AddSeconds(5));
+        Assert.Equal(3, ended);
+        Assert.False(countdown.Active);
+        recording = 8;
+        countdown.Start(t0);
+        recording = 9;
+        countdown.Tick(t0.AddSeconds(61));
+        Assert.Single(stopped);
+        // 「繼續錄」：取消，時間到也不停
+        recording = 9;
+        countdown.Start(t0);
+        countdown.Cancel();
+        countdown.Tick(t0.AddSeconds(61));
+        Assert.Single(stopped);
+        Assert.Equal(4, ended);
+        // 沒在錄音時不開始
+        recording = null;
+        countdown.Start(t0);
+        Assert.False(countdown.Active);
+    }
+
+    /// <summary>
     /// 只補上每個人的重點（R92.4、M§66）：提示詞的段落只有 people、沒有自訂段落（範本的說明、額外指示照舊）；整理完只換掉 people，
     /// 標題、摘要、待辦這些段落和整理工具都不動，存一版「補上每個人的重點」，不發通知
     /// </summary>

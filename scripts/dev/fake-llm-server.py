@@ -20,7 +20,7 @@ json_schema 時把 schema 交給 codex 的 --output-schema；退回 JSON 模式�
   {"delay": 20}                    每個請求等 20 秒再回（測同時進行、取消，design §21.2、§21.14）
   {"fail_once": 503, "retry_after": 2}   設定之後的第一個請求回這個狀態碼，之後正常（測自動重試）；
                                    可以加 "fail_message"（例如帳戶沒有額度的 429）
-  {"responses": {"corrections": {…}}}    換掉某種回應的內容：notes、corrections、speakerNames、keywords、answer
+  {"responses": {"corrections": {…}}}    換掉某種回應的內容：notes、corrections、speakerNames、keywords、answer、clean
   {}                               改回預設
 """
 import threading
@@ -51,6 +51,7 @@ NOTES = {
     "reviewItems": [],
 }
 CORRECTIONS = {"corrections": []}
+CLEAN = {"lines": []}   # 精簡逐字稿（design §70）：預設什麼都不改
 SPEAKER_NAMES = {"speakerNames": []}
 KEYWORDS = {"keywords": ["假伺服器"]}
 ANSWER = {"answer": "假伺服器的回答。", "found": True, "citations": [{"time": "00:05", "quote": "這是假伺服器回傳的摘要。"}]}
@@ -76,12 +77,13 @@ def ask_codex(messages, schema):
 
 
 def answer_for(text):
-    """依工具名稱、schema 或提示詞判斷要回哪一種（會議紀錄、逐字稿校正、猜說話者、搜尋關鍵詞、回答）"""
+    """依工具名稱、schema 或提示詞判斷要回哪一種（會議紀錄、逐字稿校正、猜說話者、搜尋關鍵詞、回答、精簡逐字稿）"""
     custom = MODE.get("responses", {})
     for key, default, marks in (("speakerNames", SPEAKER_NAMES, ("speaker_names", "speakerNames")),
                                 ("keywords", KEYWORDS, ("search_keywords", '"keywords"')),
                                 ("answer", ANSWER, ("save_answer", '"citations"')),
-                                ("corrections", CORRECTIONS, ("corrections",))):
+                                ("corrections", CORRECTIONS, ("corrections",)),
+                                ("clean", CLEAN, ("save_clean_transcript", '"lines"'))):
         if any(m in text for m in marks):
             return custom.get(key, default)
     return custom.get("notes", NOTES)

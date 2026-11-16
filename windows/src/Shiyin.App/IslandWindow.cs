@@ -37,7 +37,8 @@ public sealed partial class IslandWindow : Window
     // 狀態（M§57.2）
     public bool Hover { get; private set; }
     public sealed record PromptAction(string Id, string Title, Action Run);
-    public sealed record PromptState(MeetingDetector.Prompt Prompt, string Message, List<PromptAction> Actions, DateTime Expires);
+    /// <summary>Deadline：會議結束的倒數（R95、M§69）到什麼時候，訊息每秒換成剩下的秒數；null 是一般的提醒</summary>
+    public sealed record PromptState(MeetingDetector.Prompt Prompt, string Message, List<PromptAction> Actions, DateTime Expires, DateTime? Deadline = null);
     public PromptState? Prompt { get; private set; }
     /// <summary>目前的提醒是哪一個；換了就展開 10 秒（R81.2），之後收回成琥珀色的點</summary>
     public string? HintKey { get; private set; }
@@ -48,6 +49,8 @@ public sealed partial class IslandWindow : Window
     TextBlock? clock;
     /// <summary>滑過去時最新一句即時逐字稿：一直在變，只改文字不重建（重建時按到一半的按鈕會按不到）</summary>
     TextBlock? latest;
+    /// <summary>提醒那一句：倒數時每秒只改文字，不重建（重建時按到一半的「繼續錄」會按不到）</summary>
+    TextBlock? promptText;
     (int X, int Y, int W, int H) placed;
 
     public IslandWindow(AppHost host)
@@ -100,11 +103,15 @@ public sealed partial class IslandWindow : Window
 
     // MARK: 偵測會議的提醒（R81.3）
 
-    /// <summary>「&lt;app&gt; 正在開會，要開始錄音嗎？」、「會議好像結束了，要停止錄音嗎？」：按鈕同右下角的小視窗，30 秒沒按就收起來</summary>
+    /// <summary>
+    /// 「&lt;app&gt; 正在開會，要開始錄音嗎？」、「會議好像結束了，要停止錄音嗎？」：按鈕同右下角的小視窗，30 秒沒按就收起來。
+    /// 會議結束在倒數時（R95、M§69）：每秒寫「會議好像結束了，N 秒後自動停止錄音」，倒數完才收起（期限後 2 秒，倒數收起時 App 會先收）
+    /// </summary>
     public void ShowPrompt(MeetingDetector.Prompt prompt)
     {
         List<PromptAction> actions;
         string message;
+        DateTime? deadline = null;
         if (prompt is MeetingDetector.Prompt.Start)
         {
             message = L.F("%@ 正在開會，要開始錄音嗎？", prompt.App.Name);
@@ -117,12 +124,23 @@ public sealed partial class IslandWindow : Window
         }
         else
         {
-            message = L.T("會議好像結束了，要停止錄音嗎？");
-            actions = [new("continue", L.T("繼續錄"), () => { }), new("stop", L.T("停止並轉錄"), host.Recorder.Stop)];
+            deadline = host.MeetingEnd.Deadline;
+            message = deadline is null ? L.T("會議好像結束了，要停止錄音嗎？") : CountdownText(host.MeetingEnd.Seconds);
+            // 「繼續錄」「停止並轉錄」都取消倒數（R95）
+            actions =
+            [
+                new("continue", L.T("繼續錄"), host.MeetingEnd.Cancel),
+                new("stop", L.T("停止並轉錄"), () => { host.MeetingEnd.Cancel(); host.Recorder.Stop(); }),
+            ];
         }
-        Prompt = new PromptState(prompt, message, actions, DateTime.UtcNow.AddSeconds(30));
+        Prompt = new PromptState(prompt, message, actions, deadline?.AddSeconds(2) ?? DateTime.UtcNow.AddSeconds(30), deadline);
         Update();
     }
+
+    static string CountdownText(int seconds) => L.F("會議好像結束了，%lld 秒後自動停止錄音", (long)seconds);
+
+    /// <summary>提醒現在寫的字（倒數時是剩下的秒數；DEBUG 的 state 讀）</summary>
+    public string? PromptText => Prompt is { } p ? p.Deadline is DateTime d ? CountdownText(Math.Max(0, (int)Math.Ceiling((d - DateTime.UtcNow).TotalSeconds))) : p.Message : null;
 
     /// <summary>按島上偵測會議的按鈕（DEBUG 的 meetingaction 也走這裡）</summary>
     public void Perform(string id)
@@ -212,10 +230,12 @@ public sealed partial class IslandWindow : Window
         {
             if (clock is not null) clock.Text = TimeFormat.String(recorder.ElapsedSeconds);
             if (latest is not null && line is not null && latest.Text != line) latest.Text = line;
+            if (promptText is not null && PromptText is { } text && promptText.Text != text) promptText.Text = text;
             return;
         }
         shownKey = key;
         latest = null;
+        promptText = null;
         UIElement content = mode switch
         {
             "prompt" => Expanded(PromptHeader(), PromptBody(Prompt!)),
@@ -378,7 +398,8 @@ public sealed partial class IslandWindow : Window
 
     FrameworkElement PromptBody(PromptState prompt)
     {
-        var message = Ui.Text(prompt.Message, 14, color: new SolidColorBrush(Colors.White));
+        var message = Ui.Text(PromptText ?? prompt.Message, 14, color: new SolidColorBrush(Colors.White));
+        promptText = message;
         var row = Ui.Row(8, [.. prompt.Actions.Select((a, i) => (UIElement)IslandButton(a.Title, null, i == prompt.Actions.Count - 1 ? Role.Primary : Role.Normal, () => Perform(a.Id)))]);
         row.HorizontalAlignment = HorizontalAlignment.Right;
         return Ui.Column(12, message, row);
