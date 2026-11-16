@@ -3,8 +3,8 @@ Existing title: Lumio 주간 회의
 Participants: 김민준, 이서연
 Glossary (correct spellings): Lumio, Redis, Kubernetes
 
-Template: Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics
-Sections to produce: summary (Summary), decisions (Decisions), actionItems (Action items), openQuestions (Open questions), topics (Topics)
+Template: Team meetings, project meetings, discussions: summary, key points by person, decisions, action items, open questions, topics
+Sections to produce: summary (Summary), people (Key points by person), decisions (Decisions), actionItems (Action items), openQuestions (Open questions), topics (Topics)
 
 Reference documents (added by the user; [Page N] marks page numbers):
 Document: 견적서
@@ -27,6 +27,6 @@ The user's answers to the review questions:
    Answer: 예
 
 Revise the meeting notes according to the user's answers and return the complete notes:
-- Fix everything related to each answer (check the summary, decisions, action items, open questions, topics, custom sections and title), keeping the times unchanged.
+- Fix everything related to each answer (check the summary, key points by person, decisions, action items, open questions, topics, custom sections and title), keeping the times unchanged.
 - Remove answered questions from reviewItems; keep unanswered questions from the current notes as they are.
 - Do not add new questions unless an answer raises a new doubt.

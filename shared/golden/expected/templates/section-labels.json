@@ -2,6 +2,7 @@
   {
     "labels" : [
       "摘要",
+      "每個人的重點",
       "決議",
       "待辦",
       "未決問題",
@@ -12,6 +13,7 @@
   {
     "labels" : [
       "Summary",
+      "Key points by person",
       "Decisions",
       "Action items",
       "Open questions",
@@ -22,6 +24,7 @@
   {
     "labels" : [
       "要約",
+      "参加者ごとの要点",
       "決定事項",
       "ToDo",
       "未決事項",
@@ -32,6 +35,7 @@
   {
     "labels" : [
       "摘要",
+      "每個人的重點",
       "決議",
       "待辦",
       "未決問題",
@@ -42,6 +46,7 @@
   {
     "labels" : [
       "요약",
+      "Key points by person",
       "결정 사항",
       "할 일",
       "미결 사항",

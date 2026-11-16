@@ -151,6 +151,38 @@
       "time": ""
      }
     ],
+    "people": [
+     {
+      "name": "王小明",
+      "points": [
+       {
+        "text": "回報 Redis 快取下週三完成",
+        "time": "00:04"
+       },
+       {
+        "text": "負責確認 <admin> 權限 | 部署",
+        "time": "1:02:05"
+       }
+      ]
+     },
+     {
+      "name": "說話者 2",
+      "points": [
+       {
+        "text": "建議部署腳本路徑維持 /deploy/k8s",
+        "time": "00:15"
+       },
+       {
+        "text": "想先確認 Kubernetes 版本",
+        "time": ""
+       }
+      ]
+     },
+     {
+      "name": "說話者 3",
+      "points": []
+     }
+    ],
     "decisions": [
      {
       "text": "部署腳本路徑維持 /deploy/k8s",
@@ -2412,6 +2444,26 @@
      {
       "text": "摘要不畫，因為有議題",
       "time": "00:00"
+     }
+    ],
+    "people": [
+     {
+      "name": "Alice",
+      "points": [
+       {
+        "text": "Proposed moving the launch to the first week of next quarter so QA has two more sprints",
+        "time": "03:10"
+       }
+      ]
+     },
+     {
+      "name": "Bob",
+      "points": [
+       {
+        "text": "Will draft the migration plan",
+        "time": "12:40"
+       }
+      ]
      }
     ],
     "decisions": [

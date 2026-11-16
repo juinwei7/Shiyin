@@ -3,8 +3,8 @@
 與會者：王小明、李大華、Amy、陳美玲
 詞彙表（正確寫法）：Redis、Kubernetes、拾音、SendGrid
 
-範本：週會、專案會議、討論會：摘要、決議、待辦、未決問題、議題
-要產生的段落：summary（摘要）、decisions（決議）、actionItems（待辦）、openQuestions（未決問題）、topics（議題詳細）
+範本：週會、專案會議、討論會：摘要、每個人的重點、決議、待辦、未決問題、議題
+要產生的段落：summary（摘要）、people（每個人的重點）、decisions（決議）、actionItems（待辦）、openQuestions（未決問題）、topics（議題詳細）
 
 使用者筆記（[時間] 是做筆記時的錄音時間）：
 [00:30] 確認上線日期

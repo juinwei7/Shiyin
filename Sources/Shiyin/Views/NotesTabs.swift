@@ -225,6 +225,26 @@ struct NotesPage: View {
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
                 }
+                // 每個人的重點（R92、design §66）：頭像的顏色跟逐字稿的說話者一樣（對不到說話者時照名字算，同人物頁）
+                if notes.people.contains(where: { !$0.points.isEmpty }) {
+                    NotesSection(title: String(localized: "每個人的重點")) {
+                        VStack(alignment: .leading, spacing: 18) {
+                            ForEach(Array(notes.people.enumerated()), id: \.offset) { p, person in
+                                if !person.points.isEmpty {
+                                    let idx = detail.speakers.first { $0.value == person.name }?.key
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            PersonAvatar(name: person.name, color: idx.map(Color.speaker) ?? Color.person(person.name),
+                                                         size: 22, isMe: idx != nil && idx == detail.selfIdx)
+                                            Text(person.name).contentTitleFont(16)
+                                        }
+                                        ItemList(items: person.points, detail: detail) { .person(p, $0) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 if !notes.decisions.isEmpty {
                     NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions, detail: detail) { .decisions($0) } }
                 }
@@ -500,6 +520,25 @@ struct NotesEditor: View {
                 VStack(alignment: .leading, spacing: 22) {
                     TextField("標題", text: $notes.title).contentTitleFont(18)
                     EditorSection(title: String(localized: "摘要")) { ItemsEditor(items: $notes.summary) }
+                    // 每個人的重點（R92）：同議題的編輯器，名字欄＋重點
+                    EditorSection(title: String(localized: "每個人的重點")) {
+                        ForEach(notes.people.indices, id: \.self) { i in
+                            let person = $notes.people.safe(i, fallback: .init(name: "", points: []))
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    TextField("名字", text: person.name).contentTitleFont(16)
+                                    Button { if notes.people.indices.contains(i) { notes.people.remove(at: i) } } label: { Image(systemName: "trash") }
+                                        .buttonStyle(.borderless).help("刪除這個人的重點")
+                                }
+                                ItemsEditor(items: person.points)
+                            }
+                        }
+                        Button("新增一個人", systemImage: "plus") {
+                            notes.people.append(.init(name: "", points: []))
+                        }
+                        .buttonStyle(.borderless)
+                        .contentFont(.callout)
+                    }
                     EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
                     EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
                     EditorSection(title: String(localized: "未決問題")) { ItemsEditor(items: $notes.openQuestions) }

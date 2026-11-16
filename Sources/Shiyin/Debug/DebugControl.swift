@@ -63,7 +63,7 @@ enum DebugControl {
         case "splitmeeting": model.selection = id; model.splitMeeting(at: Int64(args[2]) ?? 0)
         case "splitconfirm": model.selection = id; model.tab = .transcript; model.splitMeetingRequest = Int64(args[2])
         case "reviewexpand":
-            // reviewexpand <會議 id> <summary|decisions|actionItems|openQuestions|topic|custom> <位置> [第二個位置]：
+            // reviewexpand <會議 id> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置]：
             // 等於點那一條紀錄旁的待確認標記（R41.2）；位置給 - 就收合。視窗不在目前的桌面時 press 按不到標記，用這個
             model.selection = id
             let a = Int(args.count > 3 ? args[3] : "") ?? 0, b = Int(args.count > 4 ? args[4] : "") ?? 0
@@ -74,6 +74,7 @@ enum DebugControl {
             case "openQuestions": .openQuestions(a)
             case "topic": .topicPoint(a, b)
             case "custom": .custom(a, b)
+            case "person": .person(a, b)
             default: nil
             }
             model.reviewDraft?.expanded = ref
@@ -88,6 +89,7 @@ enum DebugControl {
                 case "openQuestions": .openQuestions(a)
                 case "topic": .topicPoint(a, b)
                 case "custom": .custom(a, b)
+                case "person": .person(a, b)
                 default: nil
                 }
                 model.submitReviewDraft(only: Set(ref.flatMap { model.detail?.reviewLinks[$0] } ?? []))

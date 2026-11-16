@@ -138,7 +138,7 @@
       "meeting_id" : 1,
       "ref" : 0,
       "rowid" : 1125899906842630,
-      "text" : "v3.6 上線週會\n確認 v3.6 上線時程\nValkey 快取下週三完成\n部署腳本路徑維持 /deploy/k8s\nKubernetes 版本？\n王小明 確認 <admin> 權限 | 部署 2026-10-21\n Valkey 快取測試\n第二行 \n上線時程\n目標 10/21\n快取 & 部署\n近況與進展\n部署 \"腳本\" OK"
+      "text" : "v3.6 上線週會\n確認 v3.6 上線時程\nValkey 快取下週三完成\n部署腳本路徑維持 /deploy/k8s\nKubernetes 版本？\n王小明\n回報 Valkey 快取下週三完成\n負責確認 <admin> 權限 | 部署\n說話者 2\n建議部署腳本路徑維持 /deploy/k8s\n想先確認 Kubernetes 版本\n說話者 3\n王小明 確認 <admin> 權限 | 部署 2026-10-21\n Valkey 快取測試\n第二行 \n上線時程\n目標 10/21\n快取 & 部署\n近況與進展\n部署 \"腳本\" OK"
     },
     {
       "kind" : "user_notes",

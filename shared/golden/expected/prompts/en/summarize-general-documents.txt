@@ -3,8 +3,8 @@ Existing title: Weekly Sync
 Participants: Alice, Bob
 Glossary (correct spellings): none
 
-Template: Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics
-Sections to produce: summary (Summary), decisions (Decisions), actionItems (Action items), openQuestions (Open questions), topics (Topics)
+Template: Team meetings, project meetings, discussions: summary, key points by person, decisions, action items, open questions, topics
+Sections to produce: summary (Summary), people (Key points by person), decisions (Decisions), actionItems (Action items), openQuestions (Open questions), topics (Topics)
 
 Reference documents (added by the user; [Page N] marks page numbers):
 Document: Q3 Roadmap

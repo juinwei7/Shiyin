@@ -1,42 +1,56 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1044" height="243" viewBox="0 0 1044 243" font-family="&quot;PingFang TC&quot;, -apple-system, &quot;Microsoft JhengHei&quot;, &quot;Segoe UI&quot;, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1171" height="305" viewBox="0 0 1171 305" font-family="&quot;PingFang TC&quot;, -apple-system, &quot;Microsoft JhengHei&quot;, &quot;Segoe UI&quot;, sans-serif">
 <rect width="100%" height="100%" fill="#FFFFFF"/>
-<path d="M 644.5 121.5 C 672.5 121.5 672.5 69.5 700.5 69.5" fill="none" stroke="#C0563F" stroke-width="2"/>
-<path d="M 815 69.5 C 831 69.5 831 69.5 847 69.5" fill="none" stroke="#C0563F" stroke-width="1.5"/>
-<path d="M 644.5 121.5 C 672.5 121.5 672.5 121.5 700.5 121.5" fill="none" stroke="#3E6FA8" stroke-width="2"/>
-<path d="M 644.5 121.5 C 672.5 121.5 672.5 173.5 700.5 173.5" fill="none" stroke="#B7862A" stroke-width="2"/>
-<path d="M 750.5 173.5 C 766.5 173.5 766.5 173.5 782.5 173.5" fill="none" stroke="#B7862A" stroke-width="1.5"/>
-<path d="M 422.5 121.5 C 394.5 121.5 394.5 49 366.5 49" fill="none" stroke="#B5517A" stroke-width="2"/>
-<path d="M 271.5 49 C 255.5 49 255.5 49 239.5 49" fill="none" stroke="#B5517A" stroke-width="1.5"/>
-<path d="M 422.5 121.5 C 394.5 121.5 394.5 101 366.5 101" fill="none" stroke="#2F8A7E" stroke-width="2"/>
-<path d="M 286.5 101 C 270.5 101 270.5 101 254.5 101" fill="none" stroke="#2F8A7E" stroke-width="1.5"/>
-<path d="M 422.5 121.5 C 394.5 121.5 394.5 173.5 366.5 173.5" fill="none" stroke="#7A5BA6" stroke-width="2"/>
-<path d="M 316.5 173.5 C 300.5 173.5 300.5 158 284.5 158" fill="none" stroke="#7A5BA6" stroke-width="1.5"/>
-<path d="M 316.5 173.5 C 300.5 173.5 300.5 198.5 284.5 198.5" fill="none" stroke="#7A5BA6" stroke-width="1.5"/>
-<rect x="422.5" y="97" width="222" height="49" rx="12" fill="#2D6A5D"/>
-<text font-size="20" fill="#FFFFFF" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="533.5" y="121.5">2026-10-15 產品週會</tspan></text>
-<rect x="700.5" y="52.5" width="114.5" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
-<text x="710.5" y="69.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:00</text>
-<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="745" y="69.5">上線時程</tspan></text>
-<text x="853" y="69.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">1:02:05</text>
-<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="897.5" y="69.5">目標 10/21</tspan></text>
-<rect x="700.5" y="104.5" width="129" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
-<text x="710.5" y="121.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:04</text>
-<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="745" y="121.5">快取 &amp; 部署</tspan></text>
-<rect x="700.5" y="156.5" width="50" height="34" rx="8" fill="#FFFFFF" stroke="#B7862A" stroke-width="1.5"/>
-<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="710.5" y="173.5">決議</tspan></text>
-<text x="788.5" y="173.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:15</text>
-<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="823" y="173.5">部署腳本路徑維持 /deploy/k8s</tspan></text>
-<rect x="271.5" y="32" width="95" height="34" rx="8" fill="#FFFFFF" stroke="#B5517A" stroke-width="1.5"/>
-<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="49">近況與進展</tspan></text>
-<text x="233.5" y="49" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:15</text>
-<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="199" y="49">部署 &quot;腳本&quot; OK</tspan></text>
-<rect x="286.5" y="84" width="80" height="34" rx="8" fill="#FFFFFF" stroke="#2F8A7E" stroke-width="1.5"/>
-<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="101">未決問題</tspan></text>
-<text x="248.5" y="101" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:09</text>
-<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="214" y="101">Kubernetes 版本？</tspan></text>
-<rect x="316.5" y="156.5" width="50" height="34" rx="8" fill="#FFFFFF" stroke="#7A5BA6" stroke-width="1.5"/>
-<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="173.5">待辦</tspan></text>
-<text x="278.5" y="148.5" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">1:02:05</text>
-<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="234" y="148.5">王小明：確認 &lt;admin&gt; 權限 | 部署</tspan><tspan x="234" y="167.5">（2026-10-21）</tspan></text>
-<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="278.5" y="198.5">Redis 快取測試 第二行</tspan></text>
+<path d="M 644.5 152.5 C 672.5 152.5 672.5 49 700.5 49" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 815 49 C 831 49 831 49 847 49" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 644.5 152.5 C 672.5 152.5 672.5 101 700.5 101" fill="none" stroke="#3E6FA8" stroke-width="2"/>
+<path d="M 644.5 152.5 C 672.5 152.5 672.5 204.5 700.5 204.5" fill="none" stroke="#B7862A" stroke-width="2"/>
+<path d="M 810.5 204.5 C 826.5 204.5 826.5 148.5 842.5 148.5" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<path d="M 810.5 204.5 C 826.5 204.5 826.5 179.5 842.5 179.5" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<path d="M 810.5 204.5 C 826.5 204.5 826.5 220 842.5 220" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<path d="M 810.5 204.5 C 826.5 204.5 826.5 260.5 842.5 260.5" fill="none" stroke="#B7862A" stroke-width="1.5"/>
+<path d="M 422.5 152.5 C 394.5 152.5 394.5 54 366.5 54" fill="none" stroke="#C0563F" stroke-width="2"/>
+<path d="M 271.5 54 C 255.5 54 255.5 54 239.5 54" fill="none" stroke="#C0563F" stroke-width="1.5"/>
+<path d="M 422.5 152.5 C 394.5 152.5 394.5 106 366.5 106" fill="none" stroke="#B5517A" stroke-width="2"/>
+<path d="M 286.5 106 C 270.5 106 270.5 106 254.5 106" fill="none" stroke="#B5517A" stroke-width="1.5"/>
+<path d="M 422.5 152.5 C 394.5 152.5 394.5 178.5 366.5 178.5" fill="none" stroke="#2F8A7E" stroke-width="2"/>
+<path d="M 316.5 178.5 C 300.5 178.5 300.5 163 284.5 163" fill="none" stroke="#2F8A7E" stroke-width="1.5"/>
+<path d="M 316.5 178.5 C 300.5 178.5 300.5 203.5 284.5 203.5" fill="none" stroke="#2F8A7E" stroke-width="1.5"/>
+<path d="M 422.5 152.5 C 394.5 152.5 394.5 251 366.5 251" fill="none" stroke="#7A5BA6" stroke-width="2"/>
+<path d="M 316.5 251 C 300.5 251 300.5 251 284.5 251" fill="none" stroke="#7A5BA6" stroke-width="1.5"/>
+<rect x="422.5" y="128" width="222" height="49" rx="12" fill="#2D6A5D"/>
+<text font-size="20" fill="#FFFFFF" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="middle" dominant-baseline="central"><tspan x="533.5" y="152.5">2026-10-15 產品週會</tspan></text>
+<rect x="700.5" y="32" width="114.5" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text x="710.5" y="49" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:00</text>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="745" y="49">上線時程</tspan></text>
+<text x="853" y="49" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">1:02:05</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="897.5" y="49">目標 10/21</tspan></text>
+<rect x="700.5" y="84" width="129" height="34" rx="8" fill="#FFFFFF" stroke="#3E6FA8" stroke-width="1.5"/>
+<text x="710.5" y="101" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:04</text>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="745" y="101">快取 &amp; 部署</tspan></text>
+<rect x="700.5" y="187.5" width="110" height="34" rx="8" fill="#FFFFFF" stroke="#B7862A" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="start" dominant-baseline="central"><tspan x="710.5" y="204.5">每個人的重點</tspan></text>
+<text x="848.5" y="148.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:04</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="883" y="148.5">王小明：回報 Redis 快取下週三完成</tspan></text>
+<text x="848.5" y="179.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">1:02:05</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="893" y="179.5">王小明：負責確認 &lt;admin&gt; 權限 | 部署</tspan></text>
+<text x="848.5" y="210.5" font-size="11" fill="#68726F" text-anchor="start" dominant-baseline="central">00:15</text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="883" y="210.5">說話者 2：建議部署腳本路徑維持 /deploy/</tspan><tspan x="883" y="229.5">k8s</tspan></text>
+<text font-size="13" fill="#1E2625" text-anchor="start" dominant-baseline="central"><tspan x="848.5" y="260.5">說話者 2：想先確認 Kubernetes 版本</tspan></text>
+<rect x="271.5" y="37" width="95" height="34" rx="8" fill="#FFFFFF" stroke="#C0563F" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="54">近況與進展</tspan></text>
+<text x="233.5" y="54" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:15</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="199" y="54">部署 &quot;腳本&quot; OK</tspan></text>
+<rect x="286.5" y="89" width="80" height="34" rx="8" fill="#FFFFFF" stroke="#B5517A" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="106">未決問題</tspan></text>
+<text x="248.5" y="106" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:09</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="214" y="106">Kubernetes 版本？</tspan></text>
+<rect x="316.5" y="161.5" width="50" height="34" rx="8" fill="#FFFFFF" stroke="#2F8A7E" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="178.5">待辦</tspan></text>
+<text x="278.5" y="153.5" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">1:02:05</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="234" y="153.5">王小明：確認 &lt;admin&gt; 權限 | 部署</tspan><tspan x="234" y="172.5">（2026-10-21）</tspan></text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="278.5" y="203.5">Redis 快取測試 第二行</tspan></text>
+<rect x="316.5" y="234" width="50" height="34" rx="8" fill="#FFFFFF" stroke="#7A5BA6" stroke-width="1.5"/>
+<text font-size="15" fill="#1E2625" font-family="&quot;Songti TC&quot;, PMingLiU, &quot;Microsoft JhengHei&quot;, serif" font-weight="600" text-anchor="end" dominant-baseline="central"><tspan x="356.5" y="251">決議</tspan></text>
+<text x="278.5" y="251" font-size="11" fill="#68726F" text-anchor="end" dominant-baseline="central">00:15</text>
+<text font-size="13" fill="#1E2625" text-anchor="end" dominant-baseline="central"><tspan x="244" y="251">部署腳本路徑維持 /deploy/k8s</tspan></text>
 </svg>

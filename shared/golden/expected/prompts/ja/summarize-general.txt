@@ -3,8 +3,8 @@
 参加者：田中、佐藤
 用語集（正しい表記）：拾音
 
-テンプレート：定例会議、プロジェクト会議、打ち合わせ：要約、決定事項、ToDo、未決事項、議題
-作成するセクション：summary（要約）、decisions（決定事項）、actionItems（ToDo）、openQuestions（未決事項）、topics（議題ごとの詳細）
+テンプレート：定例会議、プロジェクト会議、打ち合わせ：要約、参加者ごとの要点、決定事項、ToDo、未決事項、議題
+作成するセクション：summary（要約）、people（参加者ごとの要点）、decisions（決定事項）、actionItems（ToDo）、openQuestions（未決事項）、topics（議題ごとの詳細）
 
 ユーザーのメモ（[時刻] はメモを取ったときの録音時刻）：
 アイデアを全部メモ

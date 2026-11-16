@@ -1,10 +1,10 @@
 [
   {
-    "englishJSON" : "{\"custom\":[],\"description\":\"Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
+    "englishJSON" : "{\"custom\":[],\"description\":\"Team meetings, project meetings, discussions: summary, key points by person, decisions, action items, open questions, topics\",\"instruction\":\"\",\"sections\":[\"summary\",\"people\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
     "englishName" : "General meeting",
     "id" : "general",
-    "japaneseJSON" : "{\"custom\":[],\"description\":\"定例会議、プロジェクト会議、打ち合わせ：要約、決定事項、ToDo、未決事項、議題\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
-    "jsonString" : "{\"custom\":[],\"description\":\"週會、專案會議、討論會：摘要、決議、待辦、未決問題、議題\",\"instruction\":\"\",\"sections\":[\"summary\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
+    "japaneseJSON" : "{\"custom\":[],\"description\":\"定例会議、プロジェクト会議、打ち合わせ：要約、参加者ごとの要点、決定事項、ToDo、未決事項、議題\",\"instruction\":\"\",\"sections\":[\"summary\",\"people\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
+    "jsonString" : "{\"custom\":[],\"description\":\"週會、專案會議、討論會：摘要、每個人的重點、決議、待辦、未決問題、議題\",\"instruction\":\"\",\"sections\":[\"summary\",\"people\",\"decisions\",\"actionItems\",\"openQuestions\",\"topics\"]}",
     "name" : "一般會議"
   },
   {

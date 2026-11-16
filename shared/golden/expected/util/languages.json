@@ -32,6 +32,7 @@
     ],
     "promptSections" : [
       "摘要",
+      "每個人的重點",
       "決議",
       "待辦",
       "未決問題",
@@ -42,6 +43,7 @@
     "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
     "sections" : [
       "摘要",
+      "每個人的重點",
       "決議",
       "待辦",
       "未決問題",
@@ -100,6 +102,7 @@
     ],
     "promptSections" : [
       "Summary",
+      "Key points by person",
       "Decisions",
       "Action items",
       "Open questions",
@@ -110,6 +113,7 @@
     "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
     "sections" : [
       "Summary",
+      "Key points by person",
       "Decisions",
       "Action items",
       "Open questions",
@@ -169,6 +173,7 @@
     ],
     "promptSections" : [
       "要約",
+      "参加者ごとの要点",
       "決定事項",
       "ToDo",
       "未決事項",
@@ -179,6 +184,7 @@
     "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
     "sections" : [
       "要約",
+      "参加者ごとの要点",
       "決定事項",
       "ToDo",
       "未決事項",
@@ -239,6 +245,7 @@
     ],
     "promptSections" : [
       "摘要",
+      "每個人的重點",
       "決議",
       "待辦",
       "未決問題",
@@ -249,6 +256,7 @@
     "script" : "我係陳家豪，唔係好穩定，系統同關係都冇問題，唔該晒，聯繫我，曬太陽",
     "sections" : [
       "摘要",
+      "每個人的重點",
       "決議",
       "待辦",
       "未決問題",
@@ -308,6 +316,7 @@
     ],
     "promptSections" : [
       "Summary",
+      "Key points by person",
       "Decisions",
       "Action items",
       "Open questions",
@@ -318,6 +327,7 @@
     "script" : "我係陳家豪，唔繫好穩定，系統同關係都冇問題，唔該曬，聯繫我，曬太陽",
     "sections" : [
       "요약",
+      "Key points by person",
       "결정 사항",
       "할 일",
       "미결 사항",

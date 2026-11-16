@@ -4766,6 +4766,23 @@
         }
       }
     },
+    "刪除這個人的重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除这个人的重点"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete This Person’s Key Points"
+          }
+        }
+      }
+    },
     "刪除這個議題": {
       "extractionState": "manual",
       "localizations": {
@@ -11136,6 +11153,23 @@
         }
       }
     },
+    "新增一個人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加一个人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Person"
+          }
+        }
+      }
+    },
     "新增一條": {
       "extractionState": "manual",
       "localizations": {
@@ -13434,6 +13468,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "段落名称"
+          }
+        }
+      }
+    },
+    "每個人的重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个人的重点"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key points by person"
           }
         }
       }

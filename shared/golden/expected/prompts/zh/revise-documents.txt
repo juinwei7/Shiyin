@@ -3,8 +3,8 @@
 與會者：王小明、李大華、Amy、陳美玲
 詞彙表（正確寫法）：Redis、Kubernetes、拾音、SendGrid
 
-範本：週會、專案會議、討論會：摘要、決議、待辦、未決問題、議題
-要產生的段落：summary（摘要）、decisions（決議）、actionItems（待辦）、openQuestions（未決問題）、topics（議題詳細）
+範本：週會、專案會議、討論會：摘要、每個人的重點、決議、待辦、未決問題、議題
+要產生的段落：summary（摘要）、people（每個人的重點）、decisions（決議）、actionItems（待辦）、openQuestions（未決問題）、topics（議題詳細）
 
 使用者筆記（[時間] 是做筆記時的錄音時間）：
 [00:30] 確認上線日期
@@ -47,13 +47,13 @@ Amazon SES | US$ 0.10／千封
 [1:02:11] 說話者 2：嗯
 
 目前的會議紀錄（JSON）：
-{"actionItems":[{"due":"2026-10-21","owner":"王小明","task":"確認 <admin> 權限 | 部署","time":"1:02:05"},{"due":"","owner":"","task":"Redis 快取測試\n第二行","time":""}],"custom":[{"items":[{"text":"部署 \"腳本\" OK","time":"00:15"}],"title":"近況與進展"}],"decisions":[{"text":"部署腳本路徑維持 /deploy/k8s","time":"00:15"}],"openQuestions":[{"text":"Kubernetes 版本？","time":"00:09"}],"reviewItems":[{"question":"「Kubernetes」的寫法對嗎？","time":"00:09"},{"question":"負責人是誰？","time":""}],"summary":[{"text":"確認 v3.6 上線時程","time":"00:00"},{"text":"Redis 快取下週三完成","time":""}],"title":"v3.6 上線週會","topics":[{"points":[{"text":"目標 10/21","time":"1:02:05"}],"start":"00:00","title":"上線時程"},{"points":[],"start":"00:04","title":"快取 & 部署"}]}
+{"actionItems":[{"due":"2026-10-21","owner":"王小明","task":"確認 <admin> 權限 | 部署","time":"1:02:05"},{"due":"","owner":"","task":"Redis 快取測試\n第二行","time":""}],"custom":[{"items":[{"text":"部署 \"腳本\" OK","time":"00:15"}],"title":"近況與進展"}],"decisions":[{"text":"部署腳本路徑維持 /deploy/k8s","time":"00:15"}],"openQuestions":[{"text":"Kubernetes 版本？","time":"00:09"}],"people":[{"name":"王小明","points":[{"text":"回報 Redis 快取下週三完成","time":"00:04"},{"text":"負責確認 <admin> 權限 | 部署","time":"1:02:05"}]},{"name":"說話者 2","points":[{"text":"建議部署腳本路徑維持 /deploy/k8s","time":"00:15"},{"text":"想先確認 Kubernetes 版本","time":""}]},{"name":"說話者 3","points":[]}],"reviewItems":[{"question":"「Kubernetes」的寫法對嗎？","time":"00:09"},{"question":"負責人是誰？","time":""}],"summary":[{"text":"確認 v3.6 上線時程","time":"00:00"},{"text":"Redis 快取下週三完成","time":""}],"title":"v3.6 上線週會","topics":[{"points":[{"text":"目標 10/21","time":"1:02:05"}],"start":"00:00","title":"上線時程"},{"points":[],"start":"00:04","title":"快取 & 部署"}]}
 
 使用者對待確認題目的回答：
 1. [00:09] 「Kubernetes」的寫法對嗎？
    回答：對，K8s 也可以
 
 請依使用者的回答修正會議紀錄後，回傳完整的會議紀錄：
-- 依回答修正所有相關內容（摘要、決議、待辦、未決問題、議題、自訂段落、標題都要一併檢查），時間點維持不變。
+- 依回答修正所有相關內容（摘要、每個人的重點、決議、待辦、未決問題、議題、自訂段落、標題都要一併檢查），時間點維持不變。
 - 已回答的題目從 reviewItems 移除；目前會議紀錄裡沒被回答的題目原樣保留。
 - 除非回答本身帶出新的疑點，否則不要新增題目。

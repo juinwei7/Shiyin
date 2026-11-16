@@ -7,8 +7,8 @@ struct TemplateDefinition: Codable, Hashable {
         var instruction: String
     }
 
-    /// 內建段落：summary、decisions、actionItems、openQuestions、topics
-    static let builtinSectionIDs = ["summary", "decisions", "actionItems", "openQuestions", "topics"]
+    /// 內建段落：summary、people（每個人的重點，R92）、decisions、actionItems、openQuestions、topics
+    static let builtinSectionIDs = ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"]
 
     /// 段落名稱：介面用介面語言，提示詞用會議語言（design §16.5）
     /// prompt：提示詞裡用（一般語言不查字串表，design §41.1）
@@ -16,6 +16,7 @@ struct TemplateDefinition: Codable, Hashable {
         let pick = prompt ? language.prompt : language.text
         switch id {
         case "summary": return pick("摘要", "Summary", "要約")
+        case "people": return pick("每個人的重點", "Key points by person", "参加者ごとの要点")
         case "decisions": return pick("決議", "Decisions", "決定事項")
         case "actionItems": return pick("待辦", "Action items", "ToDo")
         case "openQuestions": return pick("未決問題", "Open questions", "未決事項")
@@ -55,8 +56,8 @@ struct TemplateDefinition: Codable, Hashable {
 enum BuiltinTemplates {
     static let all: [(id: String, name: String, definition: TemplateDefinition)] = [
         ("general", "一般會議", TemplateDefinition(
-            description: "週會、專案會議、討論會：摘要、決議、待辦、未決問題、議題",
-            sections: ["summary", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: "")),
+            description: "週會、專案會議、討論會：摘要、每個人的重點、決議、待辦、未決問題、議題",
+            sections: ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: "")),
         ("one-on-one", "一對一", TemplateDefinition(
             description: "主管與成員的一對一會談",
             sections: ["summary", "actionItems", "openQuestions"],
@@ -88,8 +89,8 @@ enum BuiltinTemplates {
     /// 英文版：英文會議整理時用，英文介面也顯示這裡的名稱和說明
     static let english: [String: (name: String, definition: TemplateDefinition)] = [
         "general": ("General meeting", TemplateDefinition(
-            description: "Team meetings, project meetings, discussions: summary, decisions, action items, open questions, topics",
-            sections: ["summary", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: "")),
+            description: "Team meetings, project meetings, discussions: summary, key points by person, decisions, action items, open questions, topics",
+            sections: ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: "")),
         "one-on-one": ("One-on-one", TemplateDefinition(
             description: "A one-on-one between a manager and a team member",
             sections: ["summary", "actionItems", "openQuestions"],
@@ -121,8 +122,8 @@ enum BuiltinTemplates {
     /// 日文版：日文會議整理時用（沒有日文介面，名稱不會顯示）
     static let japanese: [String: TemplateDefinition] = [
         "general": TemplateDefinition(
-            description: "定例会議、プロジェクト会議、打ち合わせ：要約、決定事項、ToDo、未決事項、議題",
-            sections: ["summary", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: ""),
+            description: "定例会議、プロジェクト会議、打ち合わせ：要約、参加者ごとの要点、決定事項、ToDo、未決事項、議題",
+            sections: ["summary", "people", "decisions", "actionItems", "openQuestions", "topics"], custom: [], instruction: ""),
         "one-on-one": TemplateDefinition(
             description: "上司とメンバーの1on1",
             sections: ["summary", "actionItems", "openQuestions"],
