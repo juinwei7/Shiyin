@@ -36,6 +36,9 @@ public sealed class MainWindow : Window
     readonly ListView scopes = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(4, 0, 4, 0) };
     readonly TextBlock sectionTitle = Ui.Caption("");
     readonly StackPanel folders = new() { Spacing = 2, Margin = new Thickness(0, 0, 0, 2) };
+    /// <summary>垃圾桶裡列表上方的一行：說明和「清空垃圾桶…」（R88.3）。放在列表外面：停用的 ListViewItem 裡的按鈕按不了</summary>
+    readonly Grid trashHeader;
+    readonly Button emptyTrash;
     readonly PersonPage personPage;
     readonly StackPanel footer = new() { Spacing = 6, Margin = new Thickness(12, 6, 12, 10) };
     readonly Border detailHost = new();
@@ -60,6 +63,11 @@ public sealed class MainWindow : Window
         Ui.ContentScale = TextSizes.Scale(host.Settings.TextSize);   // 會議內容的文字大小（R59）
         detailView = new DetailView(host, this);
         personPage = new PersonPage(host, this);
+        emptyTrash = Ui.Button(L.T("清空垃圾桶…"), () => _ = ConfirmEmptyTrash());
+        emptyTrash.VerticalAlignment = VerticalAlignment.Center;
+        trashHeader = Ui.Bar(null, Ui.Caption(L.T("垃圾桶裡的會議 30 天後會永久刪除")), emptyTrash);
+        trashHeader.Margin = new Thickness(16, 0, 12, 6);
+        trashHeader.Visibility = Visibility.Collapsed;
         Build();
         // 關掉主視窗只是藏起來（R13.3）
         AppWindow.Closing += (_, e) =>
@@ -98,6 +106,8 @@ public sealed class MainWindow : Window
         host.Controller.Notice += m => host.Post(() => ShowNotice(m));
         host.Controller.Error += m => host.Post(() => ShowError(m));
         host.Controller.Reveal += id => host.Post(() => Reveal(id));
+        // 一次還原好幾場（R88）：回到會議列表、選取那幾場
+        host.Controller.RevealMany += ids => host.Post(() => State.RevealMany(ids));
         host.Recorder.Changed += () => host.Post(ShowRecorderAlerts);
         // 更新下載的進度只重畫側欄底部（R10.6）
         if (host.Updater is { } updater) updater.Changed += () => host.Post(BuildFooter);
@@ -125,6 +135,7 @@ public sealed class MainWindow : Window
         sectionTitle.Margin = new Thickness(16, 8, 16, 2);
         folders.Children.Add(sectionTitle);
         Place(sidebar, folders, 2);
+        Place(sidebar, trashHeader, 2);
         AutomationProperties.SetName(scopes, L.T("資料夾"));
         scopes.SelectionChanged += (_, _) =>
         {
@@ -146,9 +157,25 @@ public sealed class MainWindow : Window
         list.SelectionChanged += (_, _) =>
         {
             if (updatingSelection) return;
+            // 會議列表可以多選（R88.1、design-windows §11.23）：Ctrl、Shift 點選
+            if (list.SelectionMode == ListViewSelectionMode.Extended)
+            {
+                State.SetListSelection(list.SelectedItems.OfType<ListViewItem>().Select(i => i.Tag).OfType<long>().ToList());
+                return;
+            }
             if (list.SelectedItem is ListViewItem { Tag: long id }) State.Select(id);
             else if (list.SelectedItem is ListViewItem { Tag: SearchHit hit }) OpenSearchHit(hit);
             else if (list.SelectedItem is ListViewItem { Tag: PersonOverview person }) State.SelectPerson(person.Id);
+        };
+        // 會議列表有焦點時按 Delete：選取的全部移到垃圾桶，垃圾桶裡是永久刪除（同檔案總管；都要確認，R88.2）。Ctrl+Delete 是整個視窗的快捷鍵
+        list.KeyDown += (_, e) =>
+        {
+            if (e.Key != VirtualKey.Delete || list.SelectionMode != ListViewSelectionMode.Extended
+                || InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down)) return;
+            var ids = SelectedMeetings();
+            if (ids.Count == 0) return;
+            _ = State.ShowTrash ? ConfirmPurge(ids) : ConfirmTrash(ids);
+            e.Handled = true;
         };
 
         // 拖放匯入（R3.1）
@@ -181,7 +208,11 @@ public sealed class MainWindow : Window
             var i = (int)tab;
             Accelerator(VirtualKey.Number1 + i, VirtualKeyModifiers.Control, () => { if (State.Detail is not null) State.SetTab(tab); });
         }
-        Accelerator(VirtualKey.Delete, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d && !State.ShowTrash) _ = ConfirmTrash(d.Meeting.Id!.Value); });
+        // Ctrl+Delete：選取的會議（多選時是全部，R88.1）移到垃圾桶
+        Accelerator(VirtualKey.Delete, VirtualKeyModifiers.Control, () =>
+        {
+            if (!State.ShowTrash && !State.ShowsPeople && SelectedMeetings() is { Count: > 0 } ids) _ = ConfirmTrash(ids);
+        });
         // 會議內容的文字大小（R59.1）：Ctrl+=（加號那顆，按不按 Shift 都算）、數字鍵盤的 +；Ctrl+-；Ctrl+0。
         // 不用 KeyboardAccelerator：游標在輸入框（搜尋框、筆記）時，TextBox 會把 Ctrl+- 當成「插入選擇性連字號」吃掉，
         // 加速鍵收不到（2026-11-02 虛擬機：Ctrl+=、Ctrl+0 有用，只有 Ctrl+- 沒反應）。PreviewKeyDown 比輸入框先收到
@@ -261,9 +292,73 @@ public sealed class MainWindow : Window
             if (!ReferenceEquals(detailHost.Child, page)) detailHost.Child = page;
             return;
         }
+        // 選了兩場以上（R88.1）：右邊是「已選取 N 場會議」和能一起做的事
+        if (!State.SearchActive && State.MultiSelected is { Count: > 1 } multi)
+        {
+            if (ReferenceEquals(detailHost.Child, detailView.Root)) detailView.FlushDrafts();
+            var signature = $"{State.ShowTrash}\u001F{string.Join(',', multi)}";
+            if (signature != multiSignature || multiPane is null)
+            {
+                multiSignature = signature;
+                multiPane = MultiSelectionPane(multi);
+            }
+            if (!ReferenceEquals(detailHost.Child, multiPane)) detailHost.Child = multiPane;
+            return;
+        }
+        multiPane = null;
         if (State.Detail is { } detail) detailView.Show(detail);
         else detailView.Clear();
         detailHost.Child = State.Detail is null ? EmptyDetail() : detailView.Root;
+    }
+
+    string? multiSignature;
+    FrameworkElement? multiPane;
+
+    /// <summary>選取的會議：多選時是那幾場（列表的順序），不然是目前這場（要在列表裡）</summary>
+    public List<long> SelectedMeetings()
+    {
+        if (State.MultiSelected is { Count: > 1 } multi) return multi;
+        return State.Selection is long id && State.FilteredMeetings.Any(m => m.Id == id) ? [id] : [];
+    }
+
+    /// <summary>
+    /// 選了兩場以上的會議（R88、M§62、design-windows §11.23）：置中的圖示、「已選取 N 場會議」、說明、能一起做的事
+    /// （移到資料夾、移到垃圾桶…；垃圾桶裡是還原、永久刪除…）。排法同沒選會議時的畫面
+    /// </summary>
+    FrameworkElement MultiSelectionPane(List<long> ids)
+    {
+        var icon = new FontIcon { Glyph = "", FontSize = 40, Foreground = Ui.Secondary, HorizontalAlignment = HorizontalAlignment.Center };
+        var title = Ui.Text(L.F("已選取 %lld 場會議", ids.Count), 20, bold: true);
+        title.TextAlignment = TextAlignment.Center;
+        var hint = Ui.Text(L.T("按住 Ctrl 點選可以加入或取消，按住 Shift 點選一次選一段。"), color: Ui.Secondary);
+        hint.TextAlignment = TextAlignment.Center;
+        StackPanel buttons;
+        if (State.ShowTrash)
+            buttons = Ui.Row(8, Ui.Button(L.T("還原"), () => host.Controller.Restore(ids)), Ui.Button(L.T("永久刪除…"), () => _ = ConfirmPurge(ids)));
+        else
+        {
+            var folder = new DropDownButton { Content = Ui.Row(8, new SymbolIcon(Symbol.Folder), Ui.Text(L.T("移到資料夾"), wrap: false)) };
+            AutomationProperties.SetName(folder, L.T("移到資料夾"));
+            var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Bottom };
+            void Fill()
+            {
+                menu.Items.Clear();
+                foreach (var item in FolderMenuItems(ids, CommonFolder(ids))) menu.Items.Add(item);
+            }
+            Fill();
+            // 打開時才重建：資料夾可能改了
+            menu.Opening += (_, _) => Ui.Guard(Fill);
+            folder.Flyout = menu;
+            buttons = Ui.Row(8, folder, Ui.Button(L.T("移到垃圾桶…"), () => _ = ConfirmTrash(ids)));
+        }
+        buttons.HorizontalAlignment = HorizontalAlignment.Center;
+        buttons.Margin = new Thickness(0, 8, 0, 0);
+        var content = Ui.Column(10, icon, title, hint, buttons);
+        content.HorizontalAlignment = HorizontalAlignment.Center;
+        content.VerticalAlignment = VerticalAlignment.Center;
+        content.MaxWidth = 440;
+        content.Padding = new Thickness(24);
+        return new Grid { Children = { content } };
     }
 
     void BuildToolbar()
@@ -355,6 +450,9 @@ public sealed class MainWindow : Window
     {
         var hidden = State.ShowTrash || State.SearchActive;
         folders.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        // 垃圾桶裡：說明和「清空垃圾桶…」，垃圾桶是空的時停用（R88.3）
+        trashHeader.Visibility = State.ShowTrash && !State.SearchActive ? Visibility.Visible : Visibility.Collapsed;
+        emptyTrash.IsEnabled = State.Trash.Count > 0;
         if (hidden) return;
         var people = State.Sidebar == SidebarMode.People;
         var all = AppController.Folders(State.Meetings);
@@ -433,6 +531,9 @@ public sealed class MainWindow : Window
         rowViews.Clear();
         updatingSelection = true;
         list.Items.Clear();
+        // 會議列表可以多選（Ctrl、Shift 點選，R88.1）；搜尋結果、人物只能選一個
+        var mode = State.ShowsPeople || State.SearchActive ? ListViewSelectionMode.Single : ListViewSelectionMode.Extended;
+        if (list.SelectionMode != mode) list.SelectionMode = mode;
         if (State.ShowsPeople) BuildPeopleList();
         else if (State.SearchActive)
         {
@@ -453,7 +554,6 @@ public sealed class MainWindow : Window
         }
         else
         {
-            if (State.ShowTrash) list.Items.Add(new ListViewItem { Content = Ui.Caption(L.T("垃圾桶裡的會議 30 天後會永久刪除")), IsEnabled = false });
             var rows = State.FilteredMeetings;
             if (rows.Count == 0 && State.ShowTrash) list.Items.Add(new ListViewItem { Content = Ui.Text(L.T("垃圾桶是空的"), color: Ui.Secondary), IsEnabled = false });
             foreach (var row in rows)
@@ -461,12 +561,31 @@ public sealed class MainWindow : Window
                 var view = MeetingRow(row);
                 rowViews[row.Id] = view;
                 SetStatus(view, row);
-                view.Item.ContextFlyout = RowMenu(row);
+                view.Item.ContextFlyout = RowMenu(row.Id);
                 list.Items.Add(view.Item);
-                if (row.Id == State.Selection) list.SelectedItem = view.Item;
             }
+            SyncSelection();
         }
         updatingSelection = false;
+    }
+
+    /// <summary>列表的選取跟著 State：多選時是那幾場，不然是目前這場；一樣時不動（滑鼠、鍵盤焦點不會跳）</summary>
+    void SyncSelection()
+    {
+        var multi = State.MultiSelected;
+        var wanted = multi.Count > 1 ? multi.ToHashSet() : State.Selection is long id && rowViews.ContainsKey(id) ? [id] : new HashSet<long>();
+        var current = list.SelectedItems.OfType<ListViewItem>().Select(i => i.Tag).OfType<long>().ToHashSet();
+        if (current.SetEquals(wanted)) return;
+        var was = updatingSelection;
+        updatingSelection = true;
+        if (wanted.Count == 1 && rowViews.TryGetValue(wanted.First(), out var only)) list.SelectedItem = only.Item;
+        else
+        {
+            list.SelectedItems.Clear();
+            foreach (var row in State.FilteredMeetings)
+                if (wanted.Contains(row.Id) && rowViews.TryGetValue(row.Id, out var view)) list.SelectedItems.Add(view.Item);
+        }
+        updatingSelection = was;
     }
 
     /// <summary>人物列表（M§60.2、R85.1）：頭像、名字（我的話後面「（我）」）、「N 場會議・最近 &lt;日期&gt;」</summary>
@@ -524,8 +643,7 @@ public sealed class MainWindow : Window
         updatingSelection = true;
         foreach (var row in State.FilteredMeetings)
             if (rowViews.TryGetValue(row.Id, out var view)) SetStatus(view, row);
-        var selected = State.Selection is long id && rowViews.TryGetValue(id, out var current) ? current.Item : null;
-        if (!ReferenceEquals(list.SelectedItem, selected)) list.SelectedItem = selected;
+        SyncSelection();
         updatingSelection = false;
     }
 
@@ -588,33 +706,62 @@ public sealed class MainWindow : Window
         return parts[0] == DateTime.Now.Year.ToString() ? $"{parts[1]}/{parts[2]}" : $"{parts[0]}/{parts[1]}/{parts[2]}";
     }
 
-    MenuFlyout RowMenu(MeetingRow row)
+    /// <summary>
+    /// 一列會議的右鍵選單（R88.1、M§62）：打開時才決定是哪幾場：在多選裡的列是全部，不在多選裡只有那一列（WinUI 的右鍵不改選取）
+    /// </summary>
+    MenuFlyout RowMenu(long id)
     {
         var menu = new MenuFlyout();
-        if (State.ShowTrash)
-        {
-            menu.Items.Add(Ui.Item(L.T("還原"), () => host.Controller.Restore(row.Id)));
-            menu.Items.Add(Ui.Item(L.T("永久刪除…"), () => _ = ConfirmPurge(row.Id)));
-        }
-        else
-        {
-            menu.Items.Add(FolderMenu(row.Id, row.Meeting.Folder));
-            menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(Ui.Item(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(row.Id), icon: Symbol.Delete));
-        }
+        FillRowMenu(menu, id);
+        menu.Opening += (_, _) => Ui.Guard(() => FillRowMenu(menu, id));
         return menu;
     }
 
+    void FillRowMenu(MenuFlyout menu, long id)
+    {
+        menu.Items.Clear();
+        var multi = State.MultiSelected;
+        List<long> ids = multi.Count > 1 && multi.Contains(id) ? multi : [id];
+        if (State.ShowTrash)
+        {
+            menu.Items.Add(Ui.Item(L.T("還原"), () => host.Controller.Restore(ids)));
+            menu.Items.Add(Ui.Item(L.T("永久刪除…"), () => _ = ConfirmPurge(ids)));
+            return;
+        }
+        menu.Items.Add(FolderSubMenu(ids, CommonFolder(ids)));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        // 一場直接移（可以還原）；好幾場先確認（M§62）
+        menu.Items.Add(ids.Count == 1 ? Ui.Item(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(ids), icon: Symbol.Delete)
+            : Ui.Item(L.F("把 %lld 場會議移到垃圾桶…", ids.Count), () => _ = ConfirmTrash(ids), icon: Symbol.Delete));
+    }
+
+    /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null</summary>
+    string? CommonFolder(IReadOnlyList<long> ids) => AppController.CommonFolder(State.ShowTrash ? State.Trash : State.Meetings, ids);
+
     /// <summary>「移到資料夾」選單：既有的資料夾、新資料夾、移出資料夾（R9.2）</summary>
-    public MenuFlyoutSubItem FolderMenu(long id, string current)
+    public MenuFlyoutSubItem FolderMenu(long id, string current) => FolderSubMenu([id], current);
+
+    MenuFlyoutSubItem FolderSubMenu(IReadOnlyList<long> ids, string? current)
     {
         var sub = new MenuFlyoutSubItem { Text = L.T("移到資料夾"), Icon = new SymbolIcon(Symbol.Folder) };
-        var others = AppController.Folders(State.Meetings).Where(f => f.Name != current).ToList();
-        foreach (var (name, _) in others) sub.Items.Add(Ui.Item(name, () => host.Controller.MoveToFolder(id, name)));
-        if (others.Count > 0) sub.Items.Add(new MenuFlyoutSeparator());
-        sub.Items.Add(Ui.Item(L.T("新資料夾…"), () => _ = Dialogs.NewFolder(this, id)));
-        if (current.Length > 0) sub.Items.Add(Ui.Item(L.F("移出「%@」", current), () => host.Controller.MoveToFolder(id, "")));
+        foreach (var item in FolderMenuItems(ids, current)) sub.Items.Add(item);
         return sub;
+    }
+
+    /// <summary>
+    /// 「移到資料夾」的項目（同 Mac 的 FolderMenu，M§62）：都在同一個資料夾（current）時不列那個資料夾、最後是「移出「名稱」」；
+    /// 在不同的資料夾（current 是 null，多選時）列全部、最後是「移出資料夾」
+    /// </summary>
+    List<MenuFlyoutItemBase> FolderMenuItems(IReadOnlyList<long> ids, string? current)
+    {
+        var items = new List<MenuFlyoutItemBase>();
+        var others = AppController.Folders(State.Meetings).Where(f => f.Name != current).ToList();
+        foreach (var (name, _) in others) items.Add(Ui.Item(name, () => host.Controller.MoveToFolder(ids, name)));
+        if (others.Count > 0) items.Add(new MenuFlyoutSeparator());
+        items.Add(Ui.Item(L.T("新資料夾…"), () => _ = Dialogs.NewFolder(this, ids)));
+        if (current is null) items.Add(Ui.Item(L.T("移出資料夾"), () => host.Controller.MoveToFolder(ids, "")));
+        else if (current.Length > 0) items.Add(Ui.Item(L.F("移出「%@」", current), () => host.Controller.MoveToFolder(ids, "")));
+        return items;
     }
 
     void BuildFooter()
@@ -705,18 +852,77 @@ public sealed class MainWindow : Window
         if (media.Count > 0) _ = Dialogs.Import(this, media);
     }
 
-    public async Task ConfirmTrash(long id)
+    // 確認對話框開著時要處理的會議、那一句（DEBUG 的 state，同 Mac 的 deleteTargets、confirmPurge、confirmEmptyTrash、splitMeetingRequest）
+    public List<long> DeleteTargets { get; private set; } = [];
+    public List<long> PurgeTargets { get; private set; } = [];
+    public bool ConfirmingEmptyTrash { get; private set; }
+    public long? SplitMeetingRequest { get; private set; }
+
+    public Task ConfirmTrash(long id) => ConfirmTrash([id]);
+
+    /// <summary>移到垃圾桶前確認，寫出場數（R88.2）；可以還原，主要按鈕是預設</summary>
+    public async Task ConfirmTrash(IReadOnlyList<long> ids)
     {
-        if (await Dialogs.Confirm(this, L.T("把這場會議移到垃圾桶？"), L.T("30 天內都可以從垃圾桶還原。"), L.T("移到垃圾桶"))) host.Controller.MoveToTrash(id);
+        if (ids.Count == 0) return;
+        DeleteTargets = [.. ids];
+        bool ok;
+        try
+        {
+            ok = await Dialogs.Confirm(this, ids.Count > 1 ? L.F("把 %lld 場會議移到垃圾桶？", ids.Count) : L.T("把這場會議移到垃圾桶？"),
+                L.T("30 天內都可以從垃圾桶還原。"), L.T("移到垃圾桶"));
+        }
+        finally { DeleteTargets = []; }
+        if (ok) host.Controller.MoveToTrash(ids);
     }
 
-    public async Task ConfirmPurge(long id)
+    public Task ConfirmPurge(long id) => ConfirmPurge([id]);
+
+    /// <summary>永久刪除前確認，寫出場數（R88.2）；沒辦法還原，預設按鈕是「取消」</summary>
+    public async Task ConfirmPurge(IReadOnlyList<long> ids)
     {
-        if (await Dialogs.Confirm(this, L.T("永久刪除這場會議？"), L.T("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。"), L.T("永久刪除")))
+        if (ids.Count == 0) return;
+        PurgeTargets = [.. ids];
+        bool ok;
+        try
         {
-            if (State.Selection == id) host.Player.Unload();
-            host.Controller.DeletePermanently(id);
+            ok = await Dialogs.Confirm(this, ids.Count > 1 ? L.F("永久刪除 %lld 場會議？", ids.Count) : L.T("永久刪除這場會議？"),
+                L.T("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。"), L.T("永久刪除"), destructive: true);
         }
+        finally { PurgeTargets = []; }
+        // 正在播的那場：AppController 先發 ReleasingAudio，MainState 停止播放
+        if (ok) host.Controller.DeletePermanently(ids);
+    }
+
+    /// <summary>「清空垃圾桶…」（R88.3）：沒辦法還原，預設按鈕是「取消」</summary>
+    public async Task ConfirmEmptyTrash()
+    {
+        var count = State.Trash.Count;
+        if (count == 0) return;
+        ConfirmingEmptyTrash = true;
+        bool ok;
+        try
+        {
+            ok = await Dialogs.Confirm(this, L.F("永久刪除垃圾桶裡的 %lld 場會議？", count), L.T("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。"),
+                L.T("清空垃圾桶"), destructive: true);
+        }
+        finally { ConfirmingEmptyTrash = false; }
+        if (ok) host.Controller.EmptyTrash();
+    }
+
+    /// <summary>「從這裡分成兩場…」（R90.1、M§64）：寫出從幾分幾秒開始、會怎麼分；分開後沒辦法合併回來（D170），預設按鈕是「取消」</summary>
+    public async Task ConfirmSplitMeeting(long meetingId, Segment segment)
+    {
+        if (segment.Id is not long segmentId) return;
+        SplitMeetingRequest = segmentId;
+        bool ok;
+        try
+        {
+            ok = await Dialogs.Confirm(this, L.F("從 %@ 這句開始分成另一場會議？", TimeFormat.String(segment.Start)),
+                L.T("這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。分開後沒辦法合併回來。"),
+                L.T("分成兩場"), destructive: true);
+        }
+        finally { SplitMeetingRequest = null; }
+        if (ok) await host.Controller.SplitMeeting(meetingId, segmentId);
     }
 
     public void ShowNotice(string message)

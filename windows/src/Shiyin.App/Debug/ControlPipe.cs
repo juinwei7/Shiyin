@@ -245,6 +245,33 @@ public static class ControlPipe
                 return Ok;
             case "splitcaret" when args.Length > 1 && int.TryParse(args[1], out var caret): Dialogs.SplitBox?.Select(caret, 0); return Ok;
             case "undospeaker" when main?.State.Selection is long undoMeeting: host.Controller.UndoSpeakerEdit(undoMeeting); return Ok;
+            // 多選（R88、M§62、design-windows §11.23）：selectmany <id,id,…>（等於 Ctrl 點選）；trashmany、restoremany、purgemany <id,id,…>（不經過確認）；
+            // showtrash 0|1；confirmemptytrash（打開確認對話框）；emptytrash（不經過確認）
+            case "selectmany" when args.Length > 1 && main is not null: main.State.SetListSelection(Ids(args[1])); return Ok;
+            case "trashmany" when args.Length > 1: host.Controller.MoveToTrash(Ids(args[1])); return Ok;
+            case "restoremany" when args.Length > 1: host.Controller.Restore(Ids(args[1])); return Ok;
+            case "purgemany" when args.Length > 1: host.Controller.DeletePermanently(Ids(args[1])); return Ok;
+            case "showtrash" when main is not null: main.State.ShowTrashList(args.Length > 1 && args[1] == "1"); return Ok;
+            case "confirmemptytrash" when main is not null: _ = main.ConfirmEmptyTrash(); return Ok;
+            case "emptytrash": host.Controller.EmptyTrash(); return Ok;
+            // 刪除一句（R89、M§63）：deletesegment <會議 id> <段落 id>；分割會議（R90、M§64）：splitmeeting <會議 id> <段落 id>（不經過確認），
+            // splitconfirm <會議 id> <段落 id>（打開確認對話框，等於右鍵「從這裡分成兩場…」）
+            case "deletesegment" when args.Length > 2 && long.TryParse(args[1], out var deleteMeeting) && long.TryParse(args[2], out var deleteId):
+                main?.State.Reveal(deleteMeeting);
+                host.Controller.DeleteSegment(deleteMeeting, deleteId);
+                return Ok;
+            case "splitmeeting" when args.Length > 2 && long.TryParse(args[1], out var splitWhole) && long.TryParse(args[2], out var splitAt):
+                main?.State.Reveal(splitWhole);
+                _ = host.Controller.SplitMeeting(splitWhole, splitAt);
+                return Ok;
+            case "splitconfirm" when args.Length > 2 && main is not null && long.TryParse(args[1], out var confirmMeeting) && long.TryParse(args[2], out var confirmAt):
+            {
+                main.State.Reveal(confirmMeeting);
+                main.State.SetTab(DetailTab.Transcript);
+                if (main.State.Detail?.Segments.FirstOrDefault(s => s.Id == confirmAt) is not { } confirmSegment) return new JsonObject { ["error"] = "no such segment" };
+                _ = main.ConfirmSplitMeeting(confirmMeeting, confirmSegment);
+                return Ok;
+            }
             case "purge" when args.Length > 1 && long.TryParse(args[1], out var purge): host.Controller.DeletePermanently(purge); return Ok;
             // export <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的]：同 Mac 的 shiyinctl export。
             // 在 UI 執行緒上跑（PDF 要建 WebView2），所以不等它：失敗時寫 <路徑>.error（同 Mac）
@@ -359,6 +386,10 @@ public static class ControlPipe
 
     static string? enterpriseError;
 
+    /// <summary>「1,3,4」這種逗號分隔的會議 id</summary>
+    static List<long> Ids(string text) =>
+        text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => long.TryParse(s, out var v) ? v : -1).Where(v => v >= 0).ToList();
+
     /// <summary>state 的 tools：執行檔、桌面版的名稱和啟動用的 id、子程序的 PATH</summary>
     static JsonObject? ToolState(ToolCommand? tool) => tool is null ? null : new JsonObject
     {
@@ -384,6 +415,16 @@ public static class ControlPipe
             ["version"] = host.Version,
             ["home"] = host.Paths.Home,
             ["selection"] = main?.State.Selection,
+            // 多選、清空垃圾桶、分割會議（M§62、§64）：對話框開著時是要處理的那幾場、那一句
+            ["multiSelected"] = new JsonArray([.. (main?.State.MultiSelected ?? []).Select(x => (JsonNode)x)]),
+            ["showTrash"] = main?.State.ShowTrash,
+            ["trashCount"] = main?.State.Trash.Count,
+            ["confirmDelete"] = main?.DeleteTargets.Count > 0,
+            ["deleteTargets"] = new JsonArray([.. (main?.DeleteTargets ?? []).Select(x => (JsonNode)x)]),
+            ["confirmPurge"] = new JsonArray([.. (main?.PurgeTargets ?? []).Select(x => (JsonNode)x)]),
+            ["confirmEmptyTrash"] = main?.ConfirmingEmptyTrash,
+            ["splitMeetingRequest"] = main?.SplitMeetingRequest ?? -1,
+            ["splittingMeeting"] = host.Controller.SplittingMeeting ?? -1,
             ["tab"] = main?.State.Tab.ToString().ToLowerInvariant(),
             ["reviewExpanded"] = main?.State.ReviewExpanded,
             ["notesView"] = host.Settings.NotesView,

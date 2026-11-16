@@ -21,6 +21,13 @@ public sealed class MainState
     public List<GlossaryTerm> Glossary { get; private set; } = [];
     public List<GlossarySuggestion> GlossarySuggestions { get; private set; } = [];
     public long? Selection { get; private set; }
+    /// <summary>
+    /// 會議列表的多選（R88、M§62）：兩場以上時右邊顯示「已選取 N 場會議」；Selection 照舊是目前這場（會議頁、播放）。
+    /// 換資料夾、進出垃圾桶、搜尋時清掉；重讀列表時拿掉已經不在列表裡的
+    /// </summary>
+    HashSet<long> multiSelection = [];
+    /// <summary>選了兩場以上時的那幾場（列表的順序），不然是空的</summary>
+    public List<long> MultiSelected => multiSelection.Count > 1 ? FilteredMeetings.Select(m => m.Id).Where(multiSelection.Contains).ToList() : [];
     public MeetingDetail? Detail { get; private set; }
     public DetailTab Tab { get; private set; } = DetailTab.Summary;
     /// <summary>紀錄頂部「還有 N 題待確認」有沒有展開（R44.2）；換會議就收起</summary>
@@ -66,6 +73,24 @@ public sealed class MainState
             if (time > 0 || playing) host.Player.Seek(time, playing);
             Changed?.Invoke();
         });
+        // 分割會議、永久刪除要換掉或刪掉錄音檔（design-windows §11.23）：正在播的那場先放掉檔案。
+        // 要在搬檔案之前做完，所以不在 UI 執行緒上時等它做完（最多 5 秒）
+        var dispatcher = DispatcherQueue.GetForCurrentThread();
+        host.Controller.ReleasingAudio += id =>
+        {
+            void Release() { if (Selection == id || Detail?.Meeting.Id == id) host.Player.Unload(); }
+            if (dispatcher.HasThreadAccess) { Release(); return; }
+            // 不 Dispose：超過 5 秒才跑到時還要 Set
+            var done = new ManualResetEventSlim();
+            if (dispatcher.TryEnqueue(() => { try { Ui.Guard(Release); } finally { done.Set(); } })) done.Wait(TimeSpan.FromSeconds(5));
+        };
+        // 分割會議換好錄音檔：重新載入播放器（檔名可能沒變，要強制重新載入）
+        host.Controller.AudioReplaced += id => host.Post(() =>
+        {
+            if (Selection != id) return;
+            ReloadDetail(forceAudio: true);
+            Changed?.Invoke();
+        });
     }
 
     void MarkDirty(long? meetingId)
@@ -106,6 +131,13 @@ public sealed class MainState
         if (Selection is long id && !Meetings.Any(m => m.Id == id) && !Trash.Any(m => m.Id == id)) Selection = null;
         // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議
         if (FolderFilter is { } folder && !Meetings.Any(m => m.Meeting.Folder == folder)) FolderFilter = null;
+        // 多選裡已經不在列表的（移到垃圾桶、永久刪除、還原之後）拿掉，剩不到兩場就清掉（M§62）
+        if (multiSelection.Count > 0)
+        {
+            var listed = FilteredMeetings.Select(m => m.Id).ToHashSet();
+            multiSelection.IntersectWith(listed);
+            if (multiSelection.Count < 2) multiSelection.Clear();
+        }
         if (SearchActive) SearchResults = host.Controller.Search(SearchQuery);
         LoadPeople();
     }
@@ -123,6 +155,7 @@ public sealed class MainState
     {
         if (Sidebar == mode) return;
         Sidebar = mode;
+        multiSelection.Clear();
         if (mode == SidebarMode.People) LoadPeople();
         Changed?.Invoke();
     }
@@ -176,12 +209,39 @@ public sealed class MainState
 
     public void Select(long? id, bool keepSearch = true)
     {
-        if (Selection == id) return;
+        // 程式換到多選以外的會議（還原、錄音停止後跳到那場、點通知）時，多選換成那一場（M§62）
+        var clearedMulti = false;
+        if (multiSelection.Count > 0 && (id is not long target || !multiSelection.Contains(target)))
+        {
+            multiSelection.Clear();
+            clearedMulti = true;
+        }
+        if (Selection == id)
+        {
+            if (clearedMulti) Changed?.Invoke();
+            return;
+        }
         Selection = id;
         ReviewExpanded = false;
         UserNotesExpanded = false;
         ReloadDetail();
         Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// 會議列表的選取改了（Ctrl、Shift 點選，R88.1）：兩場以上存進多選、目前這場不變；只剩一場時選那一場；都沒選時清掉（同 Mac 的 listSelection）
+    /// </summary>
+    public void SetListSelection(IReadOnlyCollection<long> ids)
+    {
+        if (ids.Count > 1)
+        {
+            if (multiSelection.SetEquals(ids)) return;
+            multiSelection = [.. ids];
+            Changed?.Invoke();
+            return;
+        }
+        multiSelection.Clear();
+        Select(ids.Count == 1 ? ids.First() : null);
     }
 
     public void Reveal(long id)
@@ -192,6 +252,24 @@ public sealed class MainState
         ShowTrash = Trash.Any(m => m.Id == id);
         Selection = null;
         Select(id);
+    }
+
+    /// <summary>還原了好幾場（R88、M§62）：回到會議列表、選取那幾場，目前這場是第一場</summary>
+    public void RevealMany(IReadOnlyList<long> ids)
+    {
+        LoadLists();
+        Sidebar = SidebarMode.Meetings;
+        ShowTrash = false;
+        FolderFilter = null;
+        Selection = null;
+        multiSelection.Clear();
+        var restored = ids.Where(id => Meetings.Any(m => m.Id == id)).ToList();
+        Select(restored.Count > 0 ? restored[0] : null);
+        if (restored.Count > 1)
+        {
+            multiSelection = [.. restored];
+            Changed?.Invoke();
+        }
     }
 
     public void SetTab(DetailTab tab)
@@ -212,6 +290,7 @@ public sealed class MainState
 
     public void SetFolder(string? folder)
     {
+        if (FolderFilter != folder) multiSelection.Clear();
         FolderFilter = folder;
         Changed?.Invoke();
     }
@@ -219,21 +298,28 @@ public sealed class MainState
     /// <summary>側欄點「所有會議」或資料夾（M§60.2）：回到會議模式、只看那個資料夾，畫面重畫一次</summary>
     public void ShowMeetings(string? folder)
     {
+        if (FolderFilter != folder) multiSelection.Clear();
         Sidebar = SidebarMode.Meetings;
         FolderFilter = folder;
         Changed?.Invoke();
     }
 
-    public void ToggleTrash()
+    public void ToggleTrash() => ShowTrashList(!ShowTrash);
+
+    /// <summary>進出垃圾桶（DEBUG 的 showtrash）：選取、多選清掉</summary>
+    public void ShowTrashList(bool trash)
     {
-        ShowTrash = !ShowTrash;
+        if (ShowTrash == trash) return;
+        ShowTrash = trash;
         Selection = null;
+        multiSelection.Clear();
         ReloadDetail();
         Changed?.Invoke();
     }
 
     public void SetSearch(string query)
     {
+        multiSelection.Clear();
         SearchQuery = query;
         SearchResults = host.Controller.Search(query);
         Changed?.Invoke();

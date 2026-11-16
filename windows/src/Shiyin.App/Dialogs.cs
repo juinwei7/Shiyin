@@ -278,12 +278,15 @@ public static class Dialogs
 
     // MARK: 資料夾（R9.2）
 
-    public static async Task NewFolder(MainWindow window, long meetingId)
+    /// <summary>新資料夾：選的會議（多選時是全部，R88）移進去</summary>
+    public static async Task NewFolder(MainWindow window, IReadOnlyList<long> meetingIds)
     {
+        if (meetingIds.Count == 0) return;
         var name = new TextBox { PlaceholderText = L.T("資料夾名稱") };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(name, L.T("資料夾名稱"));
         var form = Ui.Column(10, Ui.Text(L.T("例如專案名稱或客戶名稱。這場會議會移進新資料夾。"), color: Ui.Secondary), name);
         if (await Show(Dialog(window, L.T("新資料夾"), form, L.T("建立並移入"))) != ContentDialogResult.Primary) return;
-        if (name.Text.Trim().Length > 0) AppHost.Current.Controller.MoveToFolder(meetingId, name.Text);
+        if (name.Text.Trim().Length > 0) AppHost.Current.Controller.MoveToFolder(meetingIds, name.Text);
     }
 
     public static async Task RenameFolder(MainWindow window, string old)

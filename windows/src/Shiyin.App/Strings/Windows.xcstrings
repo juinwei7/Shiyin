@@ -1866,6 +1866,23 @@
         }
       }
     },
+    "按住 Ctrl 點選可以加入或取消，按住 Shift 點選一次選一段。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ctrl-click to add or remove a meeting. Shift-click to select a range."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住 Ctrl 点击可以加入或取消，按住 Shift 点击一次选一段。"
+          }
+        }
+      }
+    },
     "按側欄上方的「錄音」（Ctrl+R）開始錄；點按鈕旁的箭頭可以選錄音來源和麥克風，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。錄音畫面會寫出正在用哪一支麥克風，點一下可以換；藍牙耳機連著時 Windows 可能自動改用耳機的麥克風，拾音會提醒你。已經有錄音檔的話，拖進視窗、按「匯入」（Ctrl+O），或在檔案總管按右鍵用拾音開啟都可以。": {
       "extractionState": "manual",
       "localizations": {
