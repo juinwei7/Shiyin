@@ -47,6 +47,17 @@ enum DebugControl {
         case "peoplenotes": model.selection = id; model.generatePeopleNotes()   // 「人物」的「產生每個人的重點」（design §66）
         case "cleantranscript": model.selection = id; model.generateCleanTranscript()   // 逐字稿「精簡」的「產生精簡版」（design §70）
         case "transcriptview": UserDefaults.standard.set(args[1] == "clean" ? "clean" : "original", forKey: AppSettings.transcriptViewKey)
+        // 會議列表的排序、分組、篩選（design §71）
+        case "listsort": if let sort = MeetingSort(rawValue: args[1]) { model.meetingSort = sort }
+        case "listgroup": if let grouping = MeetingGrouping(rawValue: args[1]) { model.meetingGrouping = grouping }
+        case "listfilter":
+            switch args[1] {
+            case "review": model.meetingFilter.needsReview.toggle()
+            case "mine": model.meetingFilter.myActionItems.toggle()
+            case "person": model.meetingFilter.personId = args.count > 2 ? Int64(args[2]) : nil
+            case "template": model.meetingFilter.templateId = args.count > 2 ? args[2] : nil
+            default: model.meetingFilter = MeetingFilter()
+            }
         case "undo": model.selection = id; model.undoNotes()
         case "trash": if let id { model.moveToTrash(id) }
         case "restore": if let id { model.restore(id) }
@@ -775,6 +786,12 @@ enum DebugControl {
             "splittingMeeting": model.splittingMeeting ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
+            "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
+                     "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
+                                "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],
+                     "filterSummary": model.filterSummary, "myName": model.myName ?? "",
+                     "ids": model.filteredMeetings.map(\.id),
+                     "groups": model.meetingGroups.map { ["title": $0.title, "count": $0.rows.count] as [String: Any] }] as [String: Any],
             // 本地 MCP（design §44.6）：開關、啟動檔
             "mcp": ["enabled": AppSettings.mcpEnabled, "launcher": MCPSetup.launcherURL.path,
                     "launcherExists": FileManager.default.fileExists(atPath: MCPSetup.launcherURL.path)] as [String: Any],

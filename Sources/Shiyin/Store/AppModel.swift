@@ -241,6 +241,16 @@ final class AppModel {
     /// 已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體
     var documentsChanged: Set<Int64> = []
     var filter = ""
+    /// 列表的排序、分組（R97、design §71）：記住；篩選只記這次，換篩選時取消多選
+    var meetingSort = MeetingSort(rawValue: UserDefaults.standard.string(forKey: AppSettings.meetingSortKey) ?? "") ?? .dateDesc {
+        didSet { UserDefaults.standard.set(meetingSort.rawValue, forKey: AppSettings.meetingSortKey) }
+    }
+    var meetingGrouping = MeetingGrouping(rawValue: UserDefaults.standard.string(forKey: AppSettings.meetingGroupingKey) ?? "") ?? .none {
+        didSet { UserDefaults.standard.set(meetingGrouping.rawValue, forKey: AppSettings.meetingGroupingKey) }
+    }
+    var meetingFilter = MeetingFilter() { didSet { if oldValue != meetingFilter { selectedMeetings = [] } } }
+    /// 每場會議連到哪些人物（「有誰參加」篩選），跟人物總覽一起讀
+    var meetingPeople: [Int64: Set<Int64>] = [:]
     /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
     var folderFilter: String? { didSet { if oldValue != folderFilter { selectedMeetings = [] } } }
     /// 正在輸入名稱的資料夾動作：新增（要移入的會議）或改名（舊名稱）
@@ -421,6 +431,7 @@ final class AppModel {
             // 公司已經有的詞不再建議（R53.3）
             glossarySuggestions = try db.glossarySuggestions().filter { !CompanyGlossary.contains($0.term) }
             templates = try db.templates()
+            meetingPeople = try db.meetingPeople()
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
             errorMessage = error.localizedDescription
@@ -547,12 +558,14 @@ final class AppModel {
         }
     }
 
+    /// 列表上的會議：資料夾、篩選（垃圾桶不篩選）、排序（R97、design §71）
     var filteredMeetings: [MeetingRow] {
         var source = showTrash ? trash : meetings
         if !showTrash, let folderFilter { source = source.filter { $0.meeting.folder == folderFilter } }
+        if !showTrash, meetingFilter.isActive { source = source.filter { matches($0, meetingFilter) } }
         let keyword = filter.trimmingCharacters(in: .whitespaces)
-        guard !keyword.isEmpty else { return source }
-        return source.filter { $0.meeting.displayTitle.localizedCaseInsensitiveContains(keyword) }
+        if !keyword.isEmpty { source = source.filter { $0.meeting.displayTitle.localizedCaseInsensitiveContains(keyword) } }
+        return sorted(source)
     }
 
     func status(_ row: MeetingRow) -> MeetingStatus {

@@ -376,10 +376,35 @@ struct SidebarView: View {
             } else {
                 scopeSections
             }
-            Section(model.showTrash ? "" : (model.folderFilter ?? String(localized: "所有會議"))) {
-                ForEach(model.filteredMeetings) { row in
-                    MeetingRowView(row: row, status: model.status(row))
-                        .tag(row.id)
+            if model.showTrash {
+                Section {
+                    ForEach(model.filteredMeetings) { row in
+                        MeetingRowView(row: row, status: model.status(row)).tag(row.id)
+                    }
+                }
+            } else {
+                // 排序、分組、篩選（R97、design §71）：標題那一列有「顯示方式」，分組時每組一段
+                let groups = model.meetingGroups
+                let grouped = model.effectiveGrouping != .none
+                Section {
+                    if model.meetingFilter.isActive { MeetingFilterBar() }
+                    if model.meetingFilter.isActive && model.filteredMeetings.isEmpty { MeetingFilterEmpty() }
+                    if !grouped, let rows = groups.first?.rows {
+                        ForEach(rows) { row in
+                            MeetingRowView(row: row, status: model.status(row)).tag(row.id)
+                        }
+                    }
+                } header: {
+                    MeetingListHeader()
+                }
+                if grouped {
+                    ForEach(groups) { group in
+                        Section(group.title) {
+                            ForEach(group.rows) { row in
+                                MeetingRowView(row: row, status: model.status(row)).tag(row.id)
+                            }
+                        }
+                    }
                 }
             }
         }

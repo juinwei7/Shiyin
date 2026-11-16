@@ -102,6 +102,10 @@ struct AppCommands: Commands {
         // 會議內容的文字大小（design §38.5、R59）：「顯示」選單；⌘= 不用按 Shift 也算放大（AppDelegate 攔下來）
         CommandGroup(after: .toolbar) {
             Divider()
+            // 會議列表的排序、分組、篩選（R97、design §71）；人物模式時用不到
+            MeetingListMenu(model: model, submenus: true)
+                .disabled(model.sidebarMode == .people && !model.showTrash)
+            Divider()
             Button("放大文字") { TextSize.change(1) }
                 .keyboardShortcut("+")
                 .disabled(textSize >= TextSize.levels.upperBound)

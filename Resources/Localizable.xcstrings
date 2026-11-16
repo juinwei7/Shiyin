@@ -75,6 +75,23 @@
         }
       }
     },
+    "%@ 有參加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 有参加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ attended"
+          }
+        }
+      }
+    },
     "%@ 正在開會": {
       "extractionState": "manual",
       "localizations": {
@@ -2663,6 +2680,40 @@
         }
       }
     },
+    "不分組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不分组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Grouping"
+          }
+        }
+      }
+    },
+    "不在資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在文件夹"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in a Folder"
+          }
+        }
+      }
+    },
     "不提醒：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -2863,6 +2914,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "不要再提醒这个 app"
+          }
+        }
+      }
+    },
+    "不限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any"
           }
         }
       }
@@ -3615,6 +3683,23 @@
         }
       }
     },
+    "依定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Recurring Meeting"
+          }
+        }
+      }
+    },
     "依會議紀錄畫成心智圖。PNG 適合貼到聊天軟體、簡報；SVG 可以再用其他軟體編輯。": {
       "extractionState": "manual",
       "localizations": {
@@ -3628,6 +3713,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "依会议记录画成心智图。PNG 适合贴到聊天软件、演示文稿；SVG 可以再用其他软件编辑。"
+          }
+        }
+      }
+    },
+    "依月份": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依月份"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Month"
           }
         }
       }
@@ -3674,6 +3776,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "依词处理（%lld 组）"
+          }
+        }
+      }
+    },
+    "依資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依文件夹"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Folder"
           }
         }
       }
@@ -4684,6 +4803,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't split the meeting: %@"
+          }
+        }
+      }
+    },
+    "分組方式": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分组方式"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group By"
           }
         }
       }
@@ -10203,6 +10339,40 @@
         }
       }
     },
+    "排序、分組、篩選會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序、分组、筛选会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort, group and filter meetings"
+          }
+        }
+      }
+    },
+    "排序方式": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序方式"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort By"
+          }
+        }
+      }
+    },
     "排隊中": {
       "extractionState": "manual",
       "localizations": {
@@ -11689,6 +11859,40 @@
         }
       }
     },
+    "日期（新到舊）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期（新到旧）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date (Newest First)"
+          }
+        }
+      }
+    },
+    "日期（舊到新）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期（旧到新）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date (Oldest First)"
+          }
+        }
+      }
+    },
     "是": {
       "extractionState": "manual",
       "localizations": {
@@ -12733,6 +12937,74 @@
         }
       }
     },
+    "有待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有待确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "needs review"
+          }
+        }
+      }
+    },
+    "有待確認的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有待确认的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs Review"
+          }
+        }
+      }
+    },
+    "有我的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有我的待办"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "my action items"
+          }
+        }
+      }
+    },
+    "有我的待辦的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有我的待办的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has My Action Items"
+          }
+        }
+      }
+    },
     "有新版本 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -12746,6 +13018,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "有新版本 %@"
+          }
+        }
+      }
+    },
+    "有誰參加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有谁参加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attended By"
           }
         }
       }
@@ -14384,6 +14673,23 @@
         }
       }
     },
+    "沒有符合篩選的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有符合筛选的会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meetings match the filter"
+          }
+        }
+      }
+    },
     "沒有逐字稿。": {
       "extractionState": "manual",
       "localizations": {
@@ -14635,6 +14941,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除问答记录"
+          }
+        }
+      }
+    },
+    "清除篩選": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除筛选"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Filter"
           }
         }
       }
@@ -16065,6 +16388,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "模板："
+          }
+        }
+      }
+    },
+    "範本：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模板：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "template: %@"
+          }
+        }
+      }
+    },
+    "篩選": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "筛选"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        }
+      }
+    },
+    "篩選：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "筛选：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter: %@"
           }
         }
       }
@@ -21565,6 +21939,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "钥匙串里已经有旧的 key，macOS 没有让拾音取代它。请打开“钥匙串访问”，删除“拾音 API key（%@）”后再存一次。"
+          }
+        }
+      }
+    },
+    "長度（長的在前）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "长度（长的在前）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Length (Longest First)"
           }
         }
       }

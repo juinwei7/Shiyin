@@ -2636,6 +2636,18 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`cleantranscript <會議 id>`（等於按「產生精簡版」）、`transcriptview original|clean`。
 - Windows：design-windows §11.29。
 
+## 71. 會議列表的排序、分組、篩選（R97）
+
+- 狀態（`Store/MeetingListOptions.swift`）：`MeetingSort`（dateDesc、dateAsc、title、duration）、`MeetingGrouping`（none、month、folder、series）存在 UserDefaults 的 `meetingSort`、`meetingGrouping`；`MeetingFilter`（needsReview、myActionItems、personId、templateId）只放記憶體，打開拾音時是空的。換篩選時取消多選。
+- 資料：排序在記憶體做（資料庫照舊 `meeting_date DESC, id DESC`；舊到新是反過來，標題用 `localizedStandardCompare`，長度沒有的排最後）。「有誰參加」要每場會議連到哪些人物：`AppDatabase.meetingPeople()`（`speakers.person_id` 不是 null 的），跟人物總覽一起讀（`reloadPeopleOverview`，列表 `reload` 也讀）。「有我的待辦」：負責人包含「我」的名字（不分大小寫，同人物頁 §60），「我」是錄過自己聲音的人物；沒有「我」時選單不出現這一項。「有待確認」是列表的待確認題數 > 0。
+- 分組：依月份照 `meeting_date` 的年月，順序跟著排序（舊到新時舊的月份在前）；依資料夾照名稱，最後是「不在資料夾」。看某個資料夾時不能依資料夾分組（選單不出現，存的值是資料夾時當成不分組）。依定期會議在 §73 之後才出現。垃圾桶只照排序，不分組、不篩選。
+- 會議那一段的標題（`MeetingListHeader`，取代原本的段落標題「所有會議」；放在 List 裡，因為上面還有所有會議、人物、資料夾那幾列）：左邊「所有會議」（或資料夾名稱），分組時接「・依月份」；右邊「顯示方式」按鈕（`line.3.horizontal.decrease.circle`，篩選中變成實心、青瓷綠）。選單三段：排序方式（打勾）、分組方式（打勾）、篩選（打勾、可以多選；有誰參加、範本是子選單），篩選中最後多「清除篩選」。篩選中這一段第一列「篩選：有待確認、王小明 有參加」，右邊 ✕ 清掉。分組時標題那一段只放篩選那一列，下面每組一段，標題是月份或資料夾名稱。
+- 篩選後沒有會議：篩選那一列下面「沒有符合篩選的會議」和「清除篩選」。
+- 選單列：「顯示方式」選單（`CommandGroup(after: .toolbar)`）加「排序方式 ▸」「分組方式 ▸」「篩選 ▸」三個子選單，內容同上。
+- 多選（§62）、右鍵選單照舊用 `filteredMeetings` 的順序（排序後的順序）。
+- DEBUG：`listsort <dateDesc|dateAsc|title|duration>`、`listgroup <none|month|folder|series>`、`listfilter <review|mine|person <id>|template <id>|clear>`；state 加 `list.sort`、`list.group`、`list.filter`、`list.ids`（目前列表的順序）、`list.groups`（每組的標題和場數）。
+- Windows：design-windows §11.30。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

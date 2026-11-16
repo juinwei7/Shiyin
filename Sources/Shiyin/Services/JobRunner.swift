@@ -35,6 +35,8 @@ enum AppSettings {
     static let recordingIslandKey = "recordingIsland"   // 在螢幕上方顯示錄音島，預設開（design §57.2）
     static let autoStopOnMeetingEndKey = "autoStopOnMeetingEnd"   // 會議結束時倒數後自動停止錄音，預設開（design §69）
     static let transcriptViewKey = "transcriptView"   // 逐字稿：original（原文）／clean（精簡，design §70）
+    static let meetingSortKey = "meetingSort"   // 會議列表的排序（design §71）
+    static let meetingGroupingKey = "meetingGrouping"   // 會議列表的分組（design §71）
 
     private static var d: UserDefaults { .standard }
 

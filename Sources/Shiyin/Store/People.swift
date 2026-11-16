@@ -50,6 +50,17 @@ extension AppDatabase {
         }
     }
 
+    /// 每場會議連到哪些人物（說話者對到的人；列表的「有誰參加」篩選，design §71）
+    func meetingPeople() throws -> [Int64: Set<Int64>] {
+        try pool.read { db in
+            var result: [Int64: Set<Int64>] = [:]
+            for row in try Row.fetchAll(db, sql: "SELECT DISTINCT meeting_id, person_id FROM speakers WHERE person_id IS NOT NULL") {
+                result[row["meeting_id"], default: []].insert(row["person_id"])
+            }
+            return result
+        }
+    }
+
     /// 他出現過的會議（不在垃圾桶），說了多久是那場他的說話者的正式逐字稿加總；照日期由新到舊
     func personMeetings(_ personId: Int64) throws -> [PersonMeeting] {
         try pool.read { db in
@@ -96,6 +107,8 @@ enum SidebarMode: String {
 extension AppModel {
     func reloadPeopleOverview() {
         peopleOverview = (try? db.peopleOverview()) ?? []
+        meetingPeople = (try? db.meetingPeople()) ?? [:]
+        if let filtered = meetingFilter.personId, !peopleOverview.contains(where: { $0.id == filtered }) { meetingFilter.personId = nil }
         if let selected = selectedPerson, !peopleOverview.contains(where: { $0.id == selected }) { selectedPerson = nil }
     }
 
