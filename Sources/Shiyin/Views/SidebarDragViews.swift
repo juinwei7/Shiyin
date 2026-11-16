@@ -123,6 +123,7 @@ struct SidebarFolderRows: View {
         if !model.seriesCandidates.isEmpty {
             Button { model.showSeriesSuggestions = true } label: {
                 Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
+                    .labelStyle(SidebarLabelStyle())
                     .foregroundStyle(Color.celadon)
                     .contentShape(Rectangle())
             }

@@ -5,25 +5,66 @@ import SwiftUI
 /// 側欄的列滑鼠移上去時，整列一塊淡淡的圓角底（R101，參考 ChatGPT 桌面版）：跟系統選取的那一塊一樣大，
 /// 選到的列被系統的選取蓋過去
 struct SidebarHoverModifier: ViewModifier {
+    /// 選到的列（側欄自己畫選取的列：資料夾、展開的會議）一直有一塊比較深的灰底，同 ChatGPT 選到的對話
+    var selected = false
     @State private var hovering = false
 
     func body(content: Content) -> some View {
         content
             .background {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.primary.opacity(hovering ? 0.08 : 0))
+                RoundedRectangle(cornerRadius: SidebarHoverModifier.radius, style: .continuous)
+                    .fill(Color.primary.opacity(selected ? 0.11 : hovering ? 0.06 : 0))
                     .padding(.horizontal, -SidebarHoverModifier.inset.width)
                     .padding(.vertical, -SidebarHoverModifier.inset.height)
             }
             .onHover { hovering = $0 }
     }
 
+    static let radius: CGFloat = 8
+
     /// 內容到系統選取那一塊的邊的距離
     static let inset = CGSize(width: 6, height: 3)
 }
 
 extension View {
-    func sidebarHover() -> some View { modifier(SidebarHoverModifier()) }
+    func sidebarHover(selected: Bool = false) -> some View { modifier(SidebarHoverModifier(selected: selected)) }
+
+    /// 側欄 List 裡有選取的列（下面的會議、人物）：不畫系統的選取（青瓷綠的一整塊），選到的列改成灰底（ChatGPT）；
+    /// 選取、多選、鍵盤照舊。選到時字照常的顏色（不然系統把字換成白的，淺色模式在灰底上看不見）
+    func sidebarSelectableRow(selected: Bool) -> some View {
+        environment(\.backgroundProminence, .standard)
+            .sidebarHover(selected: selected)
+            .background(NoNativeSelection())
+    }
+}
+
+/// 側欄的圖示、名字：自己排，不用系統側欄的排法（系統會用強調色畫圖示）；圖示跟字同色（ChatGPT）
+struct SidebarLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 9) {
+            configuration.icon
+                .font(.system(size: 15))
+                .frame(width: 22, alignment: .center)
+            configuration.title
+        }
+    }
+}
+
+/// 找到側欄 List 背後的 NSTableView，關掉系統畫的選取（選取的狀態照舊，由列自己畫灰底）
+private struct NoNativeSelection: NSViewRepresentable {
+    func makeNSView(context: Context) -> Finder { Finder() }
+    func updateNSView(_ view: Finder, context: Context) {}
+
+    final class Finder: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            DispatchQueue.main.async { [weak self] in
+                var view = self?.superview
+                while let current = view, !(current is NSTableView) { view = current.superview }
+                if let table = view as? NSTableView, table.selectionHighlightStyle != .none { table.selectionHighlightStyle = .none }
+            }
+        }
+    }
 }
 
 /// 可以收合的段落標題：標題後面一個小箭頭（滑過標題或收起來時才出現，參考 ChatGPT 桌面版），標題和箭頭是同一顆按鈕
@@ -43,9 +84,10 @@ struct SidebarSectionHeader: View {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.setSection(key, expanded: !expanded) }
         }
         let label = HStack(spacing: 4) {
-            Text(title).lineLimit(1)
+            // 跟列一樣大的灰字、不加粗（ChatGPT 的「專案」「最近項目」），不用 macOS 側欄預設的小粗體
+            Text(title).lineLimit(1).font(.body).fontWeight(.regular).foregroundStyle(.secondary)
             Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                .font(.caption2.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.tertiary)
                 .opacity(hovering || !expanded ? 1 : 0)
                 .accessibilityHidden(true)
@@ -189,8 +231,6 @@ private struct SidebarPeekRow: View {
         let open = { model.openFromSidebar(row.id) }
         SidebarPeekLine {
             Text(row.meeting.displayTitle).lineLimit(1)
-                .foregroundStyle(selected ? Color.celadon : .primary)
-                .fontWeight(selected ? .semibold : .regular)
                 .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
                 .accessibilityAction(.default, open)
         }
@@ -201,7 +241,8 @@ private struct SidebarPeekRow: View {
                            data: { Data(model.dragIDs(for: row.id).map(String.init).joined(separator: ",").utf8) }, onClick: open)
         .contextMenu { MeetingMenuItems(ids: [row.id]) }
         .rowMenu(selected: selected) { MeetingMenuItems(ids: [row.id]) }
-        .sidebarHover()
+        // 選到時一塊灰底（同 ChatGPT），不用 List 的選取（下面的列表也有這場，兩邊都亮會像多選）
+        .sidebarHover(selected: selected)
         .help("\(row.meeting.meetingDate)・\(row.meeting.displayTitle)")
         .selectionDisabled()
     }
@@ -213,5 +254,6 @@ private struct SidebarPeekLine<Content: View>: View {
 
     var body: some View {
         Label { content } icon: { Image(systemName: "folder").hidden() }
+            .labelStyle(SidebarLabelStyle())
     }
 }

@@ -353,8 +353,8 @@ struct SidebarView: View {
     private var scopeSections: some View {
         let people = model.sidebarMode == .people
         Section {
-            FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full",
-                      selected: !people && model.folderFilter == nil && model.seriesFilter == nil) {
+            // 所有會議是回到預設的畫面，不畫選到的樣子（ChatGPT 上面的「新對話」「搜尋」也不亮）；人物模式時人物亮
+            FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: false) {
                 model.sidebarMode = .meetings
                 model.folderFilter = nil
                 model.seriesFilter = nil
@@ -394,7 +394,7 @@ struct SidebarView: View {
             .rowMenu(selected: selected) {
                 MeetingMenuItems(ids: selected && model.multiSelected.count > 1 ? model.multiSelected : [row.id])
             }
-            .sidebarHover()
+            .sidebarSelectableRow(selected: selected)
             // 拖到資料夾、定期會議、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選
             .onDrag { model.meetingDragProvider(for: row.id) }
             .tag(row.id)
@@ -410,7 +410,7 @@ struct SidebarView: View {
                     ForEach(model.peopleOverview) { person in
                         PersonRow(person: person)
                             .rowMenu(selected: model.selectedPerson == person.id) { PersonMenuItems(person: person) }
-                            .sidebarHover()
+                            .sidebarSelectableRow(selected: model.selectedPerson == person.id)
                             .tag(person.id)
                             .contextMenu { PersonMenuItems(person: person) }
                     }
@@ -511,6 +511,13 @@ struct FolderRow: View {
     @State private var dropState: SidebarDropState?
     @State private var height: CGFloat = 28
 
+    /// 輔助使用的值：展開了沒、幾場（右邊不顯示場數）
+    private var accessibilityState: String {
+        let meetings = String(localized: "\(count) 場")
+        guard let folder else { return meetings }
+        return String(localized: "\(folder.expanded ? String(localized: "已展開") : String(localized: "已收起"))、\(meetings)")
+    }
+
     struct FolderState {
         var expanded: Bool
         /// 右上角的標記：齒輪（有自動加入條件）、↻（定期會議）
@@ -529,11 +536,13 @@ struct FolderRow: View {
                     // 拖東西進來時也是打開的資料夾
                     if let folder { FolderGlyph(open: folder.expanded || into, badge: folder.badge) } else { Image(systemName: symbol) }
                 }
-                .foregroundStyle(selected || into ? Color.celadon : .primary)
-                .fontWeight(selected ? .semibold : .regular)
+                // 圖示跟字同色（不用側欄預設的主色）；選到時一塊灰底（ChatGPT），拖東西進來時青瓷綠
+                .labelStyle(SidebarLabelStyle())
+                .foregroundStyle(into ? Color.celadon : .primary)
                 // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）；資料夾的值是展開了沒，可以往上、往下移（R103.2）
                 .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-                .accessibilityValue(folder.map { Text($0.expanded ? "已展開" : "已收起") } ?? Text(""))
+                // 右邊不顯示場數，輔助使用照樣唸得到
+                .accessibilityValue(Text(accessibilityState))
                 .accessibilityAction(.default, action)
                 .accessibilityActions {
                     if let dragKey {
@@ -546,24 +555,21 @@ struct FolderRow: View {
             .contentShape(Rectangle())
             // 可以拖的列（資料夾、定期會議）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）
             .modifier(FolderRowHandle(name: name, dragKey: dragKey, action: action))
-            ZStack(alignment: .trailing) {
-                Text("\(count)").monospacedDigit().foregroundStyle(.secondary)
-                    .opacity(showMenu ? 0 : 1)
-                if let menu {
-                    RowMenuButton { menu() }
-                        .opacity(showMenu ? 1 : 0)
-                        .allowsHitTesting(showMenu)
-                }
+            // 右邊不放場數（ChatGPT 的專案列表），滑過或選到時「⋯」
+            if let menu {
+                RowMenuButton { menu() }
+                    .opacity(showMenu ? 1 : 0)
+                    .allowsHitTesting(showMenu)
             }
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: action)
         .contextMenu { if let menu { menu() } }
         .onHover { hovering = $0 }
-        .sidebarHover()
+        .sidebarHover(selected: selected)
         // 拖進來：整列一塊青瓷綠的底；排序：上緣或下緣一條線（design §77）
         .background {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: SidebarHoverModifier.radius, style: .continuous)
                 .fill(Color.celadon.opacity(into ? 0.18 : 0))
                 .padding(.horizontal, -SidebarHoverModifier.inset.width)
                 .padding(.vertical, -SidebarHoverModifier.inset.height)

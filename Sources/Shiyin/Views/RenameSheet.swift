@@ -14,26 +14,45 @@ struct RenameSheet: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         // 「+」建空的資料夾時，同名的已經有就不能建（R104）
         let canSave = !trimmed.isEmpty && (isNewFolder || trimmed != original) && !(isEmptyNewFolder && model.renameConflict(for: target, name: trimmed) != nil)
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.title3).fontWeight(.semibold)
-                Text(hint(trimmed)).font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        // 樣子照 ChatGPT 的「重新命名對話」：大標題、右上角 ✕、細框的輸入框、白底黑字的主要按鈕（深色模式；淺色反過來）
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title).font(.title2).fontWeight(.bold)
+                    Text(hint(trimmed)).font(.body).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Button { dismiss() } label: { Image(systemName: "xmark").font(.system(size: 14, weight: .medium)) }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("取消")
+                    .accessibilityLabel(Text("取消"))
             }
             TextField(placeholder, text: $name)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .font(.system(size: 15))
                 .focused($focused)
+                .focusEffectDisabled()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.04)))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(focused ? 0.75 : 0.25), lineWidth: focused ? 1.5 : 1))
                 .onSubmit { if canSave { save() } }
-            HStack {
+            HStack(spacing: 10) {
                 Spacer()
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("取消") { dismiss() }
+                    .buttonStyle(SheetPillButtonStyle(prominent: false))
+                    .keyboardShortcut(.cancelAction)
                 Button(isEmptyNewFolder ? String(localized: "建立") : isNewFolder ? String(localized: "建立並移入") : String(localized: "儲存")) { save() }
+                    .buttonStyle(SheetPillButtonStyle(prominent: true))
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
             }
         }
-        .padding(20)
-        .frame(width: 420)
+        .padding(24)
+        .frame(width: 440)
         .onAppear {
             original = model.currentName(for: target)
             name = original
@@ -90,5 +109,24 @@ struct RenameSheet: View {
             let time = model.detail?.bookmarks.first { $0.id == id }?.time ?? 0
             return String(localized: "\(TimeFormat.string(time)) 的標記")
         }
+    }
+}
+
+/// 彈窗的按鈕（ChatGPT 的樣子）：圓角、主要按鈕是字的顏色當底（深色模式白底黑字），次要按鈕淡淡的底加細框
+struct SheetPillButtonStyle: ButtonStyle {
+    var prominent: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        configuration.label
+            .font(.body.weight(.medium))
+            .padding(.horizontal, 18)
+            .frame(minWidth: 68, minHeight: 34)
+            .foregroundStyle(prominent ? Color(nsColor: .windowBackgroundColor) : Color.primary)
+            .background(shape.fill(prominent ? Color.primary : Color.primary.opacity(0.06)))
+            .overlay(shape.strokeBorder(prominent ? Color.clear : Color.primary.opacity(0.18)))
+            .contentShape(shape)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.35)
     }
 }
