@@ -274,6 +274,8 @@ final class AppModel {
     }
     /// 資料夾的自動加入條件（R98、design §72）；正在編輯哪個資料夾的條件
     var folderRules: [FolderRule] = []
+    /// 資料夾表裡的名字（R104：空的資料夾也在）
+    var folderNames: [String] = []
     var editingFolderRule: String?
     /// 定期會議（R99、design §73）、可能的定期會議、側欄只看哪一個（還沒選會議時右邊是系列頁）
     var series: [MeetingSeries] = []
@@ -468,6 +470,7 @@ final class AppModel {
             templates = try db.templates()
             meetingPeople = try db.meetingPeople()
             folderRules = try db.folderRules()
+            folderNames = try db.folderNames()
             series = try db.series()
             seriesRejected = try db.rejectedSeriesKeys()
             seriesCandidates = SeriesDetector.candidates(seriesInputs, rejected: seriesRejected)
@@ -512,8 +515,9 @@ final class AppModel {
     /// 現有的資料夾和各自的場數（不含垃圾桶），依名稱排序
     var folders: [(name: String, count: Int)] {
         var counts = Dictionary(grouping: meetings.filter { !$0.meeting.folder.isEmpty }, by: \.meeting.folder).mapValues(\.count)
-        // 有自動加入條件的資料夾沒有會議也列出來（design §72）
+        // 有自動加入條件的資料夾、資料夾表裡的（R104：自己建的空資料夾）沒有會議也列出來（design §72、§78）
         for rule in folderRules where counts[rule.folder] == nil { counts[rule.folder] = 0 }
+        for name in folderNames where counts[name] == nil { counts[name] = 0 }
         return counts.map { (name: $0.key, count: $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
@@ -521,6 +525,14 @@ final class AppModel {
     var currentFolder: String { importFolderOverride ?? (showTrash ? "" : folderFilter ?? "") }
 
     func moveToFolder(_ id: Int64, folder: String) { moveToFolder([id], folder: folder) }
+
+    /// 建一個空的資料夾（R104，「資料夾」標題的「+」、⇧⌘N）
+    func createFolder(_ name: String) {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !folders.contains(where: { $0.name == name }) else { return }
+        perform { try db.createFolder(name) }
+        noticeMessage = String(localized: "已建立資料夾「\(name)」")
+    }
 
     /// 移到資料夾（R9.2）；多選時一起移（R88），已經在那裡的跳過
     func moveToFolder(_ ids: [Int64], folder: String) {

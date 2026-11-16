@@ -2705,7 +2705,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 「資料夾」一段（R101.3）：最上面「發現 N 組可能的定期會議」，再來定期會議（`SeriesSidebarRows`，名稱排序），再來資料夾。有資料夾、定期會議或建議其中一樣就顯示。
 - 資料夾、定期會議的列（`FolderRow` 的 `folder: FolderState`）：點整列＝`toggleRow`（在原地展開、收起，不換下面的列表、不打開系列頁）。圖示（`FolderGlyph`）：收起是系統的 `folder`，展開是自己畫的打開的資料夾（`OpenFolderShape`，系統圖示沒有；畫在看不見的 `folder` 圖示的框裡，線寬是框高的 0.085，跟系統的粗細一樣）；右上角的標記：有自動加入條件 `gearshape.fill`、定期會議 `arrow.triangle.2.circlepath`，標記底下用 even-odd 挖一個圓（`BadgeHole`），線不穿過標記。遮罩一定要填明確的顏色（`Color.black`）：側欄的預設前景色是半透明的，拿來當遮罩整個圖示會不見（2026-11-16 在側欄上才看到）。輔助使用：列是按鈕，值「已展開」「已收起」。選到（`folderFilter`、`seriesFilter`，從「顯示全部」或選單來）時照舊青瓷綠、粗體。
 - 展開的內容（`SidebarPeek`）：ForEach 的 id 用字串（`peek:<id>`）並且 `selectionDisabled`：ForEach 會把 id 當成列的 tag，用會議 id 的話 List 會把這幾列當成選取，跟下面的列表一起亮成一整條、字被蓋掉（2026-11-16 自己驗收時發現）。那個資料夾或定期會議裡最近 5 場（不含垃圾桶，`MeetingSort.dateDesc` 的順序），每場一列：標題一行（太長截斷），縮排到跟資料夾名稱對齊（看不見的資料夾圖示佔位）；滑過去看「日期・標題」。點了打開那場（`openFromSidebar`：人物模式換回會議、選那場；下面的列表不換），選到時青瓷綠、粗體（不用 List 的選取：同一場會議也在下面的列表，兩邊都用 List 的選取會像多選）。右鍵、「⋯」用 `MeetingMenuItems(ids: [id])`（R100）。選到時側欄的 Return、Delete 照「選到一場會議」（§74）。超過 5 場時最後一列「顯示全部 N 場」（次要顏色）：資料夾 `showFolder`（下面的列表只看這個資料夾），定期會議 `openSeries`。沒有會議時一列「沒有會議」（次要顏色）。
-- 選單：資料夾的第一項「只看這個資料夾」（`showFolder`），定期會議在側欄的第一項「打開定期會議」（`SeriesMenuItems(inSidebar: true)`；系列頁自己的「更多」不用）。
+- 選單：定期會議在側欄的第一項「打開定期會議」（`SeriesMenuItems(inSidebar: true)`；系列頁自己的「更多」不用）。資料夾的選單沒有「只看這個資料夾」（使用者說不用），只看一個資料夾從展開後的「顯示全部」。
 - 滑過的底（`sidebarHover()`，R101.4）：側欄每一列（資料夾、定期會議、展開的會議、「顯示全部」、會議列表、人物）滑鼠移上去時，背景一塊圓角 6 的 `primary` 8% 透明度，往外擴 6×3 點，跟系統選取的那一塊一樣大；選到的列被系統的選取蓋過去。
 - 選單的樣子（R101.4）：「⋯」（`RowMenuButton`）改成 `ellipsis`（沒有圈）。選單內容（`MeetingMenuItems`、`FolderMenuItems`、`SeriesMenuItems`、`MeetingLinkMenuItems`、`NoteItemMenuItems`、`PersonMenuItems`，和「⋯」）加 `menuIcons()`：`labelStyle(.titleAndIcon)`（macOS 的選單預設只顯示文字）＋ `tint(.primary)`（選單的圖示用主色畫，不設的話是青瓷綠）。每一項用 `Button(_:systemImage:)`：重新命名 `pencil`、移到資料夾 `folder`、加到定期會議 `arrow.triangle.2.circlepath`、移出 `minus.circle`、新資料夾 `folder.badge.plus`、只看這個資料夾 `line.3.horizontal.decrease`、自動加入的條件 `gearshape`、打開 `arrow.up.forward.app`、還原 `arrow.uturn.backward`、拷貝 `doc.on.doc`、從這裡播放 `play`、合併到 `person.2`。會刪掉、移除東西的項目用 `DestructiveMenuButton`：字 `foregroundStyle(.red)`、圖示 `tint(.red)`（macOS 的選單不會照 `role: .destructive` 變色）；其他沒有圖示的選單（逐字稿的右鍵、重點標記、詞彙、提問的「⋯」）裡的刪除也用它，只是紅字。不在選單上顯示快速鍵：「⋯」是一直存在的 `Menu`，裡面的 `keyboardShortcut` 會變成每一列都註冊一次的快速鍵。
 - 不用系統的 `Section(isExpanded:)`：macOS 的箭頭在標題最右邊，會跟會議列表標題的「顯示方式」擠在一起；Windows 沒有一樣的元件。自己畫的箭頭放在標題後面，兩邊一樣（D175）。
@@ -2733,6 +2733,15 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 拖的來源：下面列表的會議用 `onDrag`（List 有 tag 的列，系統的拖曳）。資料夾、定期會議、展開的會議不在 List 的選取裡（沒有 tag），List 不會讓它們開始拖曳，列上的 `DragGesture` 也收不到（滑鼠拖動被 List 吃掉；2026-11-16 自己驗收時發現），所以蓋一層 AppKit 的 `SidebarDragHandle`：`hitTest` 只接左鍵（右鍵選單、滑過的底照舊交給下面的 SwiftUI），拖動超過 4 點就 `beginDraggingSession`（貼上同樣的型別，放的地方用同一套 `onDrop`），拖的圖是名稱的圓角標籤；沒拖就是點一下（展開、打開）。資料夾列的把手只蓋名稱那一段，不蓋數量和「⋯」；展開的會議的把手蓋在「⋯」以外。
 - DEBUG：`importinto <資料夾> <檔案>`（等於從 Finder 把檔案拖到資料夾），state 的 `sidebarOrder`、`showImportSheet`。
 - Windows：design-windows §11.36。
+
+## 78. 新增空的資料夾（R104，D176）
+
+- 資料（migration v13）：`folders(name TEXT PRIMARY KEY, created_at TEXT NOT NULL)`，建立時把現有會議的資料夾、有自動加入條件的資料夾都放進去。`setFolder`（移進資料夾、新資料夾）同時 `INSERT OR IGNORE` 那個名字；`renameFolder` 改名時跟著改（改成已經有的名字時刪掉舊的那一列），刪除（改成空字串）時刪掉；`createFolder(name)` 只建資料夾。
+- 側欄的資料夾（`AppModel.folders`）是這張表、會議的 `folder`、`folder_rules` 三者的聯集（舊的路徑寫進會議的資料夾也看得到），沒有會議的是 0 場。
+- 「資料夾」那一段一直顯示；標題（`SidebarSectionHeader`，`besideMenu`：跟「+」併成一個輔助使用元件時，按下去是「+」，收合是有名字的動作）右邊一顆無邊框的 `plus` 按鈕（次要顏色，說明「新資料夾」），打開 `RenameSheet(.newFolder([]))`：標題「新資料夾」、說明「例如專案名稱或客戶名稱。」、按鈕「建立」；名字跟已經有的資料夾一樣時說明「已經有「X」。」、「建立」停用。沒有資料夾、定期會議、建議時，段落裡一行次要顏色「按 + 新增資料夾」。
+- 選單列「檔案」的「匯入…」下面「新資料夾…」（⇧⌘N），一樣打開這個彈窗（主視窗關著時先打開）。
+- DEBUG：`foldernew <名稱>`；state 的 `folders`（名稱、場數）。
+- Windows：design-windows §11.37。
 
 ## 14. 決策紀錄
 
@@ -2856,3 +2865,4 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D173 | 定期會議用與會者、星期幾、時間找，不靠標題；先建議、使用者確認才建立 | 用標題找：同一個週會每次的標題不一樣（整理工具取的、帶日期），反而不同會議會有「週會」這種共同詞；用行事曆：要多一個權限，而且很多會議不在行事曆上（R99 不做）。直接自動建立：猜錯時使用者要自己拆掉，而且會把不相干的待辦接進下一場的會議紀錄 |
 | D174 | 「上次的待辦」放在使用者提示詞，system 提示詞不變 | 改 system 提示詞：每一場會議（不在系列裡的也是）都多一條用不到的規則，整理品質要重新評估；放在使用者提示詞只影響系列裡的會議。schema 還是一律多 followUps（OpenAI 的 strict 模式每個欄位都要列在 required，不能只有系列的會議才有） |
 | D175 | 側欄照 ChatGPT 桌面版：點資料夾在原地展開最近 5 場（圖示換成打開的資料夾），其餘到下面的列表看；定期會議併進資料夾那一段；段落標題的箭頭滑過才出現 | 列前面加箭頭、點名稱換列表（第一版）：使用者看了說「前面的箭頭不用」，要用兩種圖示表示。點資料夾＝只看這個資料夾＋展開：展開的會議跟下面的列表重複。資料夾展開全部的會議（樹狀）：會議多的資料夾把整個側欄撐長。系統的 `Section(isExpanded:)`：箭頭在標題最右邊，跟「顯示方式」擠在一起，Windows 沒有一樣的 |
+| D176 | 資料夾存在資料庫的一張表（migration v13），跟會議的資料夾欄位、自動加入條件取聯集 | 存在 UserDefaults：資料夾是使用者的資料，換電腦、複製資料庫時要跟著走；Windows 的設定檔也要另外存一份。借用 `folder_rules`（沒有條件的規則）：側欄會把它當成有條件的資料夾（齒輪標記），自動歸類也要特別排除。照舊只從會議推：空的資料夾存不住，會議都移走時資料夾跟著不見 |

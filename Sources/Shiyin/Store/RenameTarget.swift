@@ -56,7 +56,9 @@ extension AppModel {
             guard let meeting = try? db.meeting(id), name != currentName(for: target) else { return }
             perform { try db.updateInfo(id, title: name, date: meeting.meetingDate, participants: meeting.participants) }
         case .folder(let old): renameFolder(old, to: name)
-        case .newFolder(let ids): moveToFolder(ids, folder: name)
+        case .newFolder(let ids):
+            // 「+」建的是空的資料夾（R104），從會議的選單建的會把會議移進去
+            if ids.isEmpty { createFolder(name) } else { moveToFolder(ids, folder: name) }
         case .series(let id): renameSeries(id, to: name)
         case .person(let id):
             renamePerson(id, to: name)

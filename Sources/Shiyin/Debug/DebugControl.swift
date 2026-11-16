@@ -117,6 +117,7 @@ enum DebugControl {
         case "bookmarkrename": if let id { model.renameBookmark(id, label: args[2]) }
         case "bookmarkrenameui": if let id { model.renameTarget = .bookmark(id) }
         case "menupick": if args.count > 1 { pickNextMenu(args.dropFirst().joined(separator: " ")) }   // menupick <項目>：接下來打開的選單選這一項
+        case "foldernew": if args.count > 1 { model.createFolder(args[1]) }   // 等於按「資料夾」標題的「+」建立（R104）
         case "importinto": if args.count > 2 { model.importDropped([URL(fileURLWithPath: args[2])], into: args[1]) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
         // 重新命名的彈窗（R102、design §76）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
         case "renameui":

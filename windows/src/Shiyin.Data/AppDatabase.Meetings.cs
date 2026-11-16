@@ -112,8 +112,15 @@ public sealed partial class AppDatabase
         Write(db =>
         {
             foreach (var id in ids) db.Execute("UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", folder, Clock.Now(), id);
+            if (folder.Length > 0) db.Execute("INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", folder, Clock.Now());
         });
     }
+
+    /// <summary>建一個空的資料夾（R104、M§78）</summary>
+    public void CreateFolder(string name) => Write(db => db.Execute("INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", name, Clock.Now()));
+
+    /// <summary>資料夾表裡的名字（會議都移走了也還在；側欄跟會議的資料夾、條件取聯集，M§78）</summary>
+    public List<string> FolderNames() => Read(db => db.Query("SELECT name FROM folders").Select(r => r.Str("name")).ToList());
 
     /// <summary>
     /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改。
@@ -125,6 +132,10 @@ public sealed partial class AppDatabase
         var targetHasRule = db.Scalar("SELECT 1 FROM folder_rules WHERE folder = ?", newName) is not null;
         if (newName.Length == 0 || targetHasRule) db.Execute("DELETE FROM folder_rules WHERE folder = ?", old);
         else db.Execute("UPDATE folder_rules SET folder = ? WHERE folder = ?", newName, old);
+        // 資料夾表（R104、M§78）：刪除、改成已經有的名字時拿掉舊的，不然改名
+        var targetExists = db.Scalar("SELECT 1 FROM folders WHERE name = ?", newName) is not null;
+        if (newName.Length == 0 || targetExists) db.Execute("DELETE FROM folders WHERE name = ?", old);
+        else db.Execute("UPDATE folders SET name = ? WHERE name = ?", newName, old);
     });
 
     /// <summary>錄音中途當掉、連錄音檔都沒有的會議（M§20.6）</summary>

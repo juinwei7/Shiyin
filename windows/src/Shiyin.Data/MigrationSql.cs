@@ -240,4 +240,12 @@ static class MigrationSql
         ALTER TABLE meetings ADD COLUMN series_id INTEGER REFERENCES series(id) ON DELETE SET NULL;
         CREATE INDEX meetings_series ON meetings(series_id);
         """;
+
+    /// <summary>資料夾自己存在，可以是空的（R104、M§78）；建立時把現有會議的資料夾、有條件的資料夾放進去</summary>
+    public const string V13 = """
+        CREATE TABLE folders (
+          name       TEXT PRIMARY KEY,
+          created_at TEXT NOT NULL
+        );
+        """;
 }

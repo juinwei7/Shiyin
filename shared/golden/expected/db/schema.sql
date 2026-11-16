@@ -51,6 +51,10 @@ CREATE TABLE folder_rules (
   series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
   created_at  TEXT NOT NULL
 );
+CREATE TABLE folders (
+  name       TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE glossary (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   term       TEXT NOT NULL UNIQUE,

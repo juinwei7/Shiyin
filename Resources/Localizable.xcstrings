@@ -3780,6 +3780,23 @@
         }
       }
     },
+    "例如專案名稱或客戶名稱。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如项目名称或客户名称。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example, a project or client name."
+          }
+        }
+      }
+    },
     "例如專案名稱或客戶名稱。這 %lld 場會議會移進新資料夾。": {
       "extractionState": "manual",
       "localizations": {
@@ -6472,23 +6489,6 @@
         }
       }
     },
-    "只看這個資料夾": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只看这个文件夹"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show Only This Folder"
-          }
-        }
-      }
-    },
     "只能匯入錄音、影片、逐字稿（srt、vtt、txt）、Markdown 或 .shiyin 檔": {
       "extractionState": "manual",
       "localizations": {
@@ -8339,6 +8339,23 @@
         }
       }
     },
+    "已建立資料夾「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已建立文件夹“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Created folder “%@”"
+          }
+        }
+      }
+    },
     "已復原：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -8893,6 +8910,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已经带入的名字会留着，之后的会议不会再自动带入。"
+          }
+        }
+      }
+    },
+    "已經有「%@」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经有“%@”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” already exists."
           }
         }
       }
@@ -10983,6 +11017,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "拾音：正在打开浏览器登录 %@。登录完成后，回到拾音按“重试”或“测试整理工具”。"
+          }
+        }
+      }
+    },
+    "按 + 新增資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按 + 添加文件夹"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click + to add a folder"
           }
         }
       }
@@ -13306,19 +13357,19 @@
         }
       }
     },
-    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄的資料夾點一下就在原地展開最近 5 場，下面的「其他會議」只列不在資料夾裡的會議。資料夾按右鍵選「只看這個資料夾」，下面的列表就只看它，這時新錄的和匯入的會議都會放進去；右鍵也可以重新命名或刪除（會議會保留）。": {
+    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄的資料夾點一下就在原地展開最近 5 場，下面的「其他會議」只列不在資料夾裡的會議。展開後點「顯示全部」，下面的列表就只看這個資料夾，這時新錄的和匯入的會議都會放進去。資料夾按右鍵可以重新命名或刪除（會議會保留）。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "会议可以分文件夹：在会议上按右键（或“更多”）选“移到文件夹”→“新文件夹…”。侧边栏的文件夹点一下就在原地展开最近 5 场，下面的“其他会议”只列不在文件夹里的会议。文件夹按右键选“只看这个文件夹”，下面的列表就只看它，这时新录的和导入的会议都会放进去；右键也可以重新命名或删除（会议会保留）。"
+            "value": "会议可以分文件夹：在会议上按右键（或“更多”）选“移到文件夹”→“新文件夹…”。侧边栏的文件夹点一下就在原地展开最近 5 场，下面的“其他会议”只列不在文件夹里的会议。展开后点“显示全部”，下面的列表就只看这个文件夹，这时新录的和导入的会议都会放进去。文件夹按右键可以重新命名或删除（会议会保留）。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can sort meetings into folders: right-click a meeting (or use More) and choose Move to Folder → New Folder…. Click a folder in the sidebar to show its 5 most recent meetings right there; Other Meetings below lists only meetings that aren't in a folder. Right-click a folder and choose Show Only This Folder to show just that folder in the list; new recordings and imports then go into it. You can also rename or delete a folder from the right-click menu (the meetings are kept)."
+            "value": "You can sort meetings into folders: right-click a meeting (or use More) and choose Move to Folder → New Folder…. Click a folder in the sidebar to show its 5 most recent meetings right there; Other Meetings below lists only meetings that aren't in a folder. Click Show All under a folder to show just that folder in the list; new recordings and imports then go into it. Right-click a folder to rename or delete it (the meetings are kept)."
           }
         }
       }

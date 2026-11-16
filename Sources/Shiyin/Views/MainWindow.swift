@@ -364,15 +364,25 @@ struct SidebarView: View {
                 model.reloadPeopleOverview()
             }
         }
-        if !model.folders.isEmpty || !model.series.isEmpty || !model.seriesCandidates.isEmpty {
-            // 段落可以收起；每個資料夾、定期會議可以在原地展開最近的會議。定期會議的樣子、操作都跟資料夾一樣，
-            // 放在同一段的最上面，不另外一段（R101、design §75）
-            Section {
-                if model.isSectionExpanded("folders") {
-                    SidebarFolderRows()
+        // 段落可以收起；每個資料夾、定期會議可以在原地展開最近的會議。定期會議的樣子、操作都跟資料夾一樣，
+        // 放在同一段的最上面，不另外一段（R101、design §75）。一直顯示，標題右邊「+」建空的資料夾（R104、design §78）
+        Section {
+            if model.isSectionExpanded("folders") {
+                SidebarFolderRows()
+                if model.folders.isEmpty && model.series.isEmpty && model.seriesCandidates.isEmpty {
+                    Text("按 + 新增資料夾").font(.callout).foregroundStyle(.secondary).selectionDisabled()
                 }
-            } header: {
-                SidebarSectionHeader(title: String(localized: "資料夾"), key: "folders")
+            }
+        } header: {
+            HStack(spacing: 6) {
+                // 段落標題跟「+」在輔助使用裡併成一個元件，按下去要是「+」，收合改成有名字的動作（同會議列表的標題）
+                SidebarSectionHeader(title: String(localized: "資料夾"), key: "folders", besideMenu: true)
+                Spacer(minLength: 4)
+                Button { model.renameTarget = .newFolder([]) } label: { Image(systemName: "plus") }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .help("新資料夾")
+                    .accessibilityLabel(Text("新資料夾"))
             }
         }
     }
@@ -480,7 +490,7 @@ struct SidebarView: View {
     }
 }
 
-/// 側欄的資料夾列（R9.2）：點了就只看這個資料夾。有選單時（資料夾、定期會議，R100）滑過或選到時
+/// 側欄的資料夾列（R9.2）：所有會議、人物點了換下面的列表；資料夾、定期會議點了在原地展開（R101）。有選單時（資料夾、定期會議，R100）滑過或選到時
 /// 數量的位置換成「⋯」。整列用點擊手勢，不用 Button：List 裡的按鈕會把右鍵當成點擊，右鍵選單出不來
 /// （2026-11-16 自己驗收時發現）
 struct FolderRow: View {

@@ -81,6 +81,9 @@ struct AppCommands: Commands {
             // 主視窗關著時先打開，不然對話框要等到下次打開主視窗才會跳出來
             Button("匯入…") { model.openMainWindow?(); model.showFileImporter = true }
                 .keyboardShortcut("o")
+            // 建一個空的資料夾（R104、design §78）
+            Button("新資料夾…") { model.openMainWindow?(); model.renameTarget = .newFolder([]) }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
             Button(model.recorder.isRecording ? "停止錄音" : "開始錄音") { model.toggleRecording() }
                 .keyboardShortcut("r")
             Button(model.recorder.isPaused ? "繼續錄音" : "暫停錄音") {

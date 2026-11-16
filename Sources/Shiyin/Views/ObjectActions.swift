@@ -108,9 +108,6 @@ struct FolderMenuItems: View {
 
     var body: some View {
         Group {
-            // 點資料夾是展開、收起（R101），只看這個資料夾從這裡
-            Button("只看這個資料夾", systemImage: "line.3.horizontal.decrease") { model.showFolder(folder) }
-            Divider()
             Button("重新命名…", systemImage: "pencil") { model.renameTarget = .folder(folder) }
             Button(model.folderRule(folder) == nil ? "自動加入的條件…" : "編輯自動加入的條件…", systemImage: "gearshape") {
                 model.editingFolderRule = folder

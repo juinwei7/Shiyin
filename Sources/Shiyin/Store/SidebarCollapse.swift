@@ -27,7 +27,7 @@ extension AppModel {
     /// 點資料夾、定期會議：在原地展開或收起（R101.2）
     func toggleRow(_ key: String) { setRow(key, expanded: !isRowExpanded(key)) }
 
-    /// 下面的列表只看這個資料夾（「顯示全部 N 場」、右鍵「只看這個資料夾」）
+    /// 下面的列表只看這個資料夾（展開後的「顯示全部 N 場」）
     func showFolder(_ name: String) {
         sidebarMode = .meetings
         folderFilter = name

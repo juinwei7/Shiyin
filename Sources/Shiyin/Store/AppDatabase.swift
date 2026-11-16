@@ -329,6 +329,17 @@ final class AppDatabase: @unchecked Sendable {
                 CREATE INDEX meetings_series ON meetings(series_id);
                 """)
         }
+        // 資料夾自己存在，可以是空的（R104、design §78）：現有會議的資料夾、有自動加入條件的資料夾都放進去
+        migrator.registerMigration("v13") { db in
+            try db.execute(sql: """
+                CREATE TABLE folders (
+                  name       TEXT PRIMARY KEY,
+                  created_at TEXT NOT NULL
+                );
+                INSERT OR IGNORE INTO folders (name, created_at) SELECT DISTINCT folder, ? FROM meetings WHERE folder <> '';
+                INSERT OR IGNORE INTO folders (name, created_at) SELECT folder, created_at FROM folder_rules;
+                """, arguments: [Clock.now()])
+        }
         return migrator
     }
 
@@ -420,7 +431,22 @@ final class AppDatabase: @unchecked Sendable {
                 // 自己移進、移出資料夾後不再自動放、不再建議（design §72）
                 try db.execute(sql: "UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", arguments: [folder, Clock.now(), id])
             }
+            if !folder.isEmpty {
+                try db.execute(sql: "INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", arguments: [folder, Clock.now()])
+            }
         }
+    }
+
+    /// 建一個空的資料夾（R104）
+    func createFolder(_ name: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", arguments: [name, Clock.now()])
+        }
+    }
+
+    /// 資料夾表裡的名字（會議都移走了也還在）
+    func folderNames() throws -> [String] {
+        try pool.read { db in try String.fetchAll(db, sql: "SELECT name FROM folders") }
     }
 
     /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改
@@ -433,6 +459,13 @@ final class AppDatabase: @unchecked Sendable {
                 try db.execute(sql: "DELETE FROM folder_rules WHERE folder = ?", arguments: [old])
             } else {
                 try db.execute(sql: "UPDATE folder_rules SET folder = ? WHERE folder = ?", arguments: [newName, old])
+            }
+            // 資料夾表（R104）：刪除、改成已經有的名字時拿掉舊的，不然改名
+            let targetExists = try Bool.fetchOne(db, sql: "SELECT 1 FROM folders WHERE name = ?", arguments: [newName]) ?? false
+            if newName.isEmpty || targetExists {
+                try db.execute(sql: "DELETE FROM folders WHERE name = ?", arguments: [old])
+            } else {
+                try db.execute(sql: "UPDATE folders SET name = ? WHERE name = ?", arguments: [newName, old])
             }
         }
     }

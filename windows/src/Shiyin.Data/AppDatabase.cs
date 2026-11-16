@@ -168,7 +168,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13"];
 
     void Migrate(string? backupsDir)
     {
@@ -230,6 +230,11 @@ public sealed partial class AppDatabase : IDisposable
             case "v10": db.Execute(MigrationSql.V10); break;
             case "v11": db.Execute(MigrationSql.V11); break;
             case "v12": db.Execute(MigrationSql.V12); break;
+            case "v13":
+                db.Execute(MigrationSql.V13);
+                db.Execute("INSERT OR IGNORE INTO folders (name, created_at) SELECT DISTINCT folder, ? FROM meetings WHERE folder <> ''", Clock.Now());
+                db.Execute("INSERT OR IGNORE INTO folders (name, created_at) SELECT folder, created_at FROM folder_rules");
+                break;
         }
     }
 

@@ -12,7 +12,8 @@ struct RenameSheet: View {
 
     var body: some View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let canSave = !trimmed.isEmpty && (isNewFolder || trimmed != original)
+        // 「+」建空的資料夾時，同名的已經有就不能建（R104）
+        let canSave = !trimmed.isEmpty && (isNewFolder || trimmed != original) && !(isEmptyNewFolder && model.renameConflict(for: target, name: trimmed) != nil)
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.title3).fontWeight(.semibold)
@@ -26,7 +27,7 @@ struct RenameSheet: View {
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(isNewFolder ? String(localized: "建立並移入") : String(localized: "儲存")) { save() }
+                Button(isEmptyNewFolder ? String(localized: "建立") : isNewFolder ? String(localized: "建立並移入") : String(localized: "儲存")) { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
             }
@@ -41,6 +42,7 @@ struct RenameSheet: View {
     }
 
     private var isNewFolder: Bool { if case .newFolder = target { true } else { false } }
+    private var isEmptyNewFolder: Bool { if case .newFolder(let ids) = target { ids.isEmpty } else { false } }
 
     private func save() {
         model.commitRename(target, to: name)
@@ -70,6 +72,7 @@ struct RenameSheet: View {
     private func hint(_ name: String) -> String {
         if let other = model.renameConflict(for: target, name: name) {
             switch target {
+            case .newFolder(let ids) where ids.isEmpty: return String(localized: "已經有「\(other)」。")
             case .newFolder: return String(localized: "已經有「\(other)」，會議會移進那個資料夾。")
             default: return String(localized: "已經有「\(other)」，儲存後會合併成一個。")
             }
@@ -77,6 +80,7 @@ struct RenameSheet: View {
         switch target {
         case .meeting: return String(localized: "保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。")
         case .folder: return String(localized: "資料夾裡的會議都會跟著改。")
+        case .newFolder(let ids) where ids.isEmpty: return String(localized: "例如專案名稱或客戶名稱。")
         case .newFolder(let ids):
             return ids.count > 1 ? String(localized: "例如專案名稱或客戶名稱。這 \(ids.count) 場會議會移進新資料夾。")
                                  : String(localized: "例如專案名稱或客戶名稱。這場會議會移進新資料夾。")
