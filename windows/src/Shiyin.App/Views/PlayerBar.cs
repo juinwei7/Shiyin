@@ -146,7 +146,7 @@ public sealed class Timeline
     {
         canvas.Children.Clear();
         var (width, height) = (Root.ActualWidth, Root.ActualHeight);
-        canvas.Children.Add(new Rectangle { Width = Math.Max(width, 0), Height = 1, Fill = Ui.Subtle, Margin = new Thickness(0, height / 2, 0, 0) });
+        canvas.Children.Add(new Rectangle { Width = Math.Max(width, 0), Height = 1, Fill = Ui.Track, Margin = new Thickness(0, height / 2, 0, 0) });
         if (duration <= 0 || width <= 0) return;
         var scale = width / duration;
         // 說話密度（每秒字數）決定格子高度，看起來像波形；上方留給待確認的三角形、下方留給重點的圓點

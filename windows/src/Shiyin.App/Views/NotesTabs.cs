@@ -470,12 +470,9 @@ public sealed class NotesTabs
         var right = Ui.Row(8, dismiss, accept);
         left.VerticalAlignment = VerticalAlignment.Center;
         right.VerticalAlignment = VerticalAlignment.Center;
-        var c = Ui.CeladonColor;
-        return new Border
-        {
-            Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8),
-            Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(Ui.IsDark ? (byte)36 : (byte)20, c.R, c.G, c.B)),
-        };
+        // 對比主題時沒有底色、一圈細框（Ui.Tinted）
+        return Ui.Tinted(new Border { Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) },
+            Ui.Tint(Ui.CeladonColor, (Ui.IsDark ? 36 : 20) / 255.0));
     }
 
     /// <summary>
@@ -516,10 +513,7 @@ public sealed class NotesTabs
             Ui.Button(L.T("重新整理會議紀錄"), () => host.Controller.Resummarize(id), accent: true));
         left.VerticalAlignment = VerticalAlignment.Center;
         right.VerticalAlignment = VerticalAlignment.Center;
-        return new Border
-        {
-            Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8), Background = Ui.Subtle,
-        };
+        return Ui.Tinted(new Border { Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) }, Ui.Subtle);
     }
 
     /// <summary>紀錄頂部的「還有 N 題待確認」（R44.2，同 Mac 的 ReviewBanner）：點了在下面展開待確認的題目，再點收起；展開的狀態換會議就重設</summary>
@@ -856,13 +850,13 @@ public sealed class AskTab
                 }
                 var label = c.MeetingId is long mid && onMeetingCitation is not null ? $"{meetingTitle?.Invoke(mid) ?? L.T("會議")} {c.Time}" : c.Time;
                 var link = Ui.Link(label, () => { if (c.MeetingId is long m && onMeetingCitation is not null) onMeetingCitation(m, c.Time); else onCitation(c.Time); });
-                link.Foreground = Ui.Celadon;
+                if (!Ui.HighContrast) link.Foreground = Ui.Celadon;   // 對比主題時照平台的超連結顏色
                 link.FontSize = Ui.C(14);
                 panel.Children.Add(Ui.Split(link, Ui.Text(c.Quote, Ui.C(13), color: Ui.Secondary, maxLines: 2), 8));
             }
             if (answer.MeetingIds is { } ids && record.MeetingId is null)
                 panel.Children.Add(Ui.Text(ids.Count == 0 ? L.T("沒有找到相關的會議") : L.F("參考了 %lld 場會議", ids.Count), Ui.C(12), color: Ui.Tertiary));
         }
-        return new Border { Child = panel, Padding = new Thickness(14), CornerRadius = new CornerRadius(10), Background = Ui.Subtle };
+        return Ui.Tinted(new Border { Child = panel, Padding = new Thickness(14), CornerRadius = new CornerRadius(10) }, Ui.Subtle);
     }
 }

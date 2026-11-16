@@ -26,21 +26,135 @@ public static class Ui
     public static Color HexColor(string hex) => Hex(Convert.ToUInt32(hex.TrimStart('#'), 16));
 
     static Color Hex(uint rgb) => Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
-    static SolidColorBrush Brush(uint light, uint darkColor) => new(Hex(dark ? darkColor : light));
 
-    public static SolidColorBrush Celadon => Brush(0x2D6A5D, 0x6DB2A1);
-    public static SolidColorBrush Signal => Brush(0xB97F06, 0xE2AD3B);
-    public static SolidColorBrush Danger => Brush(0xC0392B, 0xEE8E8E);
-    public static Brush Primary => Resource("TextFillColorPrimaryBrush", 0x1A, 0x1A, 0x1A, 0xFF, 0xFF, 0xFF);
-    public static Brush Secondary => Resource("TextFillColorSecondaryBrush", 0x5F, 0x5F, 0x5F, 0xC5, 0xC5, 0xC5);
-    public static Brush Tertiary => Resource("TextFillColorTertiaryBrush", 0x8A, 0x8A, 0x8A, 0x9A, 0x9A, 0x9A);
-    public static Brush CardBackground => Resource("CardBackgroundFillColorDefaultBrush", 0xFB, 0xFB, 0xFB, 0x2B, 0x2B, 0x2B);
-    public static Brush Subtle => Resource("SubtleFillColorSecondaryBrush", 0xEE, 0xEE, 0xEE, 0x33, 0x33, 0x33);
-    public static Brush Divider => Resource("DividerStrokeColorDefaultBrush", 0xE5, 0xE5, 0xE5, 0x3A, 0x3A, 0x3A);
-    /// <summary>強調色的文字（強調色＝青瓷綠，ApplyAccent）：淺色、深色、高對比都由平台給對的顏色</summary>
-    public static Brush AccentText => Resource("AccentTextFillColorPrimaryBrush", 0x24, 0x55, 0x49, 0x8F, 0xC6, 0xB8);
+    /// <summary>
+    /// 自己的顏色（青瓷綠、琥珀、紅、說話者 8 色）：對比主題（高對比）時換成系統色（design-windows §11.3）。
+    /// 對比主題只有幾個系統色（視窗底、文字、反白、反白的字、超連結、停用的字、按鈕），使用者選的主題就是要這幾個顏色，
+    /// 自己的顏色在「夜空」的黑底上看不見（深的青瓷綠），在「沙漠」的米色底上對比不夠
+    /// </summary>
+    static SolidColorBrush Brush(uint light, uint darkColor, Windows.UI.ViewManagement.UIElementType contrast) =>
+        HighContrast ? SystemBrush(contrast) : new(Hex(dark ? darkColor : light));
+
+    /// <summary>青瓷綠：主要的動作、完成、目前的段落。對比主題時是反白的顏色（同 WinUI 的強調色在對比主題的做法）</summary>
+    public static SolidColorBrush Celadon => Brush(0x2D6A5D, 0x6DB2A1, Windows.UI.ViewManagement.UIElementType.Highlight);
+    /// <summary>琥珀：低信心、待確認、進行中。對比主題時是文字的顏色（靠圖形、文字分辨，不靠顏色）</summary>
+    public static SolidColorBrush Signal => Brush(0xB97F06, 0xE2AD3B, Windows.UI.ViewManagement.UIElementType.WindowText);
+    /// <summary>紅：失敗、刪除、錄音中。對比主題時是文字的顏色</summary>
+    public static SolidColorBrush Danger => Brush(0xC0392B, 0xEE8E8E, Windows.UI.ViewManagement.UIElementType.WindowText);
+    public static Brush Primary => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText) : Resource("TextFillColorPrimaryBrush", 0x1A, 0x1A, 0x1A, 0xFF, 0xFF, 0xFF);
+    public static Brush Secondary => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText) : Resource("TextFillColorSecondaryBrush", 0x5F, 0x5F, 0x5F, 0xC5, 0xC5, 0xC5);
+    public static Brush Tertiary => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText) : Resource("TextFillColorTertiaryBrush", 0x8A, 0x8A, 0x8A, 0x9A, 0x9A, 0x9A);
+    public static Brush CardBackground => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.Window) : Resource("CardBackgroundFillColorDefaultBrush", 0xFB, 0xFB, 0xFB, 0x2B, 0x2B, 0x2B);
+    /// <summary>淡淡的底色（滑過的按鈕、狀態條、「自動」的膠囊）。對比主題時透明（看得到視窗的底色）：系統色的底上再疊一層，字就不是系統色配系統色了</summary>
+    public static Brush Subtle => HighContrast ? new SolidColorBrush(Microsoft.UI.Colors.Transparent) : Resource("SubtleFillColorSecondaryBrush", 0xEE, 0xEE, 0xEE, 0x33, 0x33, 0x33);
+    /// <summary>圖形沒亮的部分（音量條沒亮的格子、引導還沒到的步驟、播放列的底線）：平常是 Subtle，對比主題時是停用的字的顏色（透明的話看不見）</summary>
+    public static Brush Track => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.GrayText) : Subtle;
+    public static Brush Divider => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText) : Resource("DividerStrokeColorDefaultBrush", 0xE5, 0xE5, 0xE5, 0x3A, 0x3A, 0x3A);
+    /// <summary>強調色的文字（強調色＝青瓷綠，ApplyAccent）。對比主題時是反白的顏色</summary>
+    public static Brush AccentText => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.Highlight) : Resource("AccentTextFillColorPrimaryBrush", 0x24, 0x55, 0x49, 0x8F, 0xC6, 0xB8);
     /// <summary>強調色的填色（「我」的外圈）</summary>
-    public static Brush AccentFill => Resource("AccentFillColorDefaultBrush", 0x2D, 0x6A, 0x5D, 0x6D, 0xB2, 0xA1);
+    public static Brush AccentFill => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.Highlight) : Resource("AccentFillColorDefaultBrush", 0x2D, 0x6A, 0x5D, 0x6D, 0xB2, 0xA1);
+    /// <summary>畫在青瓷綠實心上面的字、打勾：內容的底色（淺色白、深色 #202020，同 Mac 鏤空的 checkmark.circle.fill）；對比主題時是反白的字的顏色</summary>
+    public static Brush OnCeladon => HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.HighlightText) : new SolidColorBrush(dark ? Hex(0x202020) : Hex(0xFFFFFF));
+
+    /// <summary>系統色（對比主題的那幾個顏色；UISettings 跟 GetSysColor 同一份）</summary>
+    public static Color SystemColor(Windows.UI.ViewManagement.UIElementType type)
+    {
+        try { return ColorSettings.UIElementColor(type); }
+        catch (System.Runtime.InteropServices.COMException) { return type == Windows.UI.ViewManagement.UIElementType.Window ? Hex(0xFFFFFF) : Hex(0x000000); }
+    }
+
+    public static SolidColorBrush SystemBrush(Windows.UI.ViewManagement.UIElementType type) => new(SystemColor(type));
+
+    /// <summary>
+    /// 一層淡淡的顏色（建議條、狀態條、系列頁圖示的圓底、待確認的標記）。對比主題時透明：字、圖示是系統色，底也要是系統色（視窗的底色）
+    /// </summary>
+    public static Brush Tint(Color color, double opacity) =>
+        HighContrast ? new SolidColorBrush(Microsoft.UI.Colors.Transparent) : new SolidColorBrush(Color.FromArgb((byte)Math.Round(255 * opacity), color.R, color.G, color.B));
+
+    /// <summary>
+    /// 有底色的一塊（建議條、狀態條、提問的回答）：平常是 background；對比主題時沒有底色，改成一圈文字顏色的細框，
+    /// 才分得出是一塊（同 Windows 設定的卡片在對比主題的樣子）
+    /// </summary>
+    public static Border Tinted(Border border, Brush background)
+    {
+        if (HighContrast)
+        {
+            border.Background = null;
+            border.BorderBrush = SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText);
+            border.BorderThickness = new Thickness(1);
+        }
+        else border.Background = background;
+        return border;
+    }
+
+    /// <summary>
+    /// 對比主題時，element 裡的字和圖示不用自己給的顏色，跟著外面的元件：清單的列（選到、滑過時是反白的字，其他是文字的顏色）、
+    /// 超連結按鈕（超連結的顏色）。自己給的系統色（文字的顏色）在選到的列（反白的底）上對比不夠。
+    /// 按鈕這類控制項自己會處理對比主題，有自己底色的一小塊（頭像、資料夾齒輪的小圓）留著自己的顏色。不是對比主題時什麼都不做
+    /// </summary>
+    public static T FollowForeground<T>(T element) where T : UIElement
+    {
+        if (HighContrast) ClearForeground(element);
+        return element;
+    }
+
+    static void ClearForeground(UIElement element)
+    {
+        switch (element)
+        {
+            case TextBlock t: t.ClearValue(TextBlock.ForegroundProperty); break;
+            case IconElement i: i.ClearValue(IconElement.ForegroundProperty); break;
+            case Control: break;
+            case Border { Background: not null }: break;
+            case Border b: if (b.Child is not null) ClearForeground(b.Child); break;
+            case Panel p: foreach (var child in p.Children) ClearForeground(child); break;
+        }
+    }
+
+    /// <summary>
+    /// 對比主題開關、換了一個對比主題時（系統色換了）：在 UI 執行緒做 action（重畫、重新給顏色）。一般的深淺色換了看 ActualThemeChanged，這裡不管
+    ///（ContrastKey 沒變時不做）。AccessibilitySettings.HighContrastChanged 在沒打包的桌面 app 訂閱時丟 0x80070490（2026-11-15 虛擬機啟動就當掉），
+    /// 改聽 UISettings.ColorValuesChanged（不在 UI 執行緒）。訂閱失敗就算了，重新開啟拾音時照樣對；元件從畫面拿掉就不再聽
+    /// </summary>
+    public static void OnContrastChanged(FrameworkElement root, Action action)
+    {
+        var last = ContrastKey;
+        var queue = root.DispatcherQueue;
+        Windows.Foundation.TypedEventHandler<Windows.UI.ViewManagement.UISettings, object> changed = (_, _) => queue?.TryEnqueue(() => Guard(() =>
+        {
+            var key = ContrastKey;
+            if (key == last) return;
+            last = key;
+            action();
+        }));
+        try
+        {
+            ColorSettings.ColorValuesChanged += changed;
+            root.Unloaded += (_, _) => { try { ColorSettings.ColorValuesChanged -= changed; } catch (System.Runtime.InteropServices.COMException) { } };
+        }
+        catch (System.Runtime.InteropServices.COMException e) { Services.Log.Error($"color settings subscribe failed: 0x{e.HResult:X8}"); }
+    }
+
+    /// <summary>對比主題的樣子：沒開時空字串，開著時是用到的系統色（換了一個對比主題也要重畫）</summary>
+    public static string ContrastKey
+    {
+        get
+        {
+            highContrast = ReadHighContrast();
+            if (!HighContrast) return "";
+            var types = new[]
+            {
+                Windows.UI.ViewManagement.UIElementType.Window, Windows.UI.ViewManagement.UIElementType.WindowText, Windows.UI.ViewManagement.UIElementType.Highlight,
+                Windows.UI.ViewManagement.UIElementType.HighlightText, Windows.UI.ViewManagement.UIElementType.Hotlight, Windows.UI.ViewManagement.UIElementType.GrayText,
+                Windows.UI.ViewManagement.UIElementType.ButtonText,
+            };
+            return "hc" + string.Join(',', types.Select(t => SystemColor(t).ToString()));
+        }
+    }
+
+    /// <summary>畫面的顏色跟著什麼：深淺色和對比主題（列表、人物頁、系列頁的「內容一樣時不重建」要算進去）</summary>
+    public static string ThemeKey => (dark ? "dark" : "light") + ContrastKey;
 
     static object? Lookup(string key)
     {
@@ -63,6 +177,7 @@ public static class Ui
         return new SolidColorBrush(dark ? Color.FromArgb(255, dr, dg, db) : Color.FromArgb(255, lr, lg, lb));
     }
     public static Color CeladonColor => Hex(0x2D6A5D);
+    public static Color SignalColor => Hex(0xB97F06);
 
     /// <summary>
     /// 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase）。WinUI 的視窗沒設底色時深色模式是純黑
@@ -73,18 +188,25 @@ public static class Ui
     /// <summary>主視窗的側欄：淺色 #F7F7F7、深色 #2B2B2B，跟內容區分得出來（同 Mac 的側欄）</summary>
     public static T SidebarBackground<T>(T root) where T : FrameworkElement => Surface(root, 0xF7F7F7, 0x2B2B2B);
 
+    /// <summary>側欄的底色（建好之後會重建的小元件用，例如資料夾齒輪的小圓）：對比主題時是系統的視窗底色</summary>
+    public static SolidColorBrush SidebarColor =>
+        HighContrast ? SystemBrush(Windows.UI.ViewManagement.UIElementType.Window) : new(Hex(dark ? 0x2B2B2Bu : 0xF7F7F7u));
+
     static readonly Windows.UI.ViewManagement.AccessibilitySettings Accessibility = new();
     /// <summary>要一直留著同一個實例，ColorValuesChanged 才會一直收到</summary>
     static readonly Windows.UI.ViewManagement.UISettings ColorSettings = new();
 
-    /// <summary>Windows 的對比主題（高對比）開著</summary>
-    public static bool HighContrast
+    /// <summary>
+    /// Windows 的對比主題（高對比）開著。每個顏色都會問（建一頁要問上千次），記住讀到的值；ContrastKey 每次重讀
+    ///（OnContrastChanged 先算 ContrastKey 再重畫，重畫時就是新的值）
+    /// </summary>
+    public static bool HighContrast => highContrast ??= ReadHighContrast();
+    static bool? highContrast;
+
+    static bool ReadHighContrast()
     {
-        get
-        {
-            try { return Accessibility.HighContrast; }
-            catch (Exception e) when (e is System.Runtime.InteropServices.COMException or InvalidCastException) { return false; }
-        }
+        try { return Accessibility.HighContrast; }
+        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or InvalidCastException) { return false; }
     }
 
     /// <summary>
@@ -95,7 +217,7 @@ public static class Ui
     {
         void Apply()
         {
-            var color = HighContrast ? ColorSettings.UIElementColor(Windows.UI.ViewManagement.UIElementType.Window)
+            var color = HighContrast ? SystemColor(Windows.UI.ViewManagement.UIElementType.Window)
                 : root.ActualTheme == ElementTheme.Dark ? Hex(darkColor) : Hex(light);
             var brush = new SolidColorBrush(color);
             switch (root)
@@ -107,16 +229,8 @@ public static class Ui
         }
         Apply();
         root.ActualThemeChanged += (_, _) => Apply();
-        // 對比主題開、關：AccessibilitySettings.HighContrastChanged 在沒打包的桌面 app 訂閱時丟 0x80070490（2026-11-15 虛擬機啟動就當掉），
-        // 改聽 UISettings.ColorValuesChanged（系統顏色換了；不在 UI 執行緒）。訂閱失敗就算了，重新開啟拾音時照樣對；視窗關掉就不再聽
-        var queue = root.DispatcherQueue;
-        Windows.Foundation.TypedEventHandler<Windows.UI.ViewManagement.UISettings, object> changed = (_, _) => queue?.TryEnqueue(() => Guard(Apply));
-        try
-        {
-            ColorSettings.ColorValuesChanged += changed;
-            root.Unloaded += (_, _) => { try { ColorSettings.ColorValuesChanged -= changed; } catch (System.Runtime.InteropServices.COMException) { } };
-        }
-        catch (System.Runtime.InteropServices.COMException e) { Services.Log.Error($"color settings subscribe failed: 0x{e.HResult:X8}"); }
+        // 對比主題開、關，換了一個對比主題
+        OnContrastChanged(root, Apply);
         return root;
     }
 
@@ -149,7 +263,8 @@ public static class Ui
     public static SolidColorBrush Speaker(int idx)
     {
         var (light, d) = Avatars.Speaker(idx);
-        return Brush(light, d);
+        // 對比主題：說話者都是文字的顏色（分辨靠名字）
+        return Brush(light, d, Windows.UI.ViewManagement.UIElementType.WindowText);
     }
 
     /// <summary>人物頁、側欄的頭像顏色（M§58.1）：照名字算，同一個名字每次都一樣</summary>
@@ -176,6 +291,15 @@ public static class Ui
             Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(255 * 0.18), c.R, c.G, c.B)),
             BorderBrush = isMe ? AccentFill : null, BorderThickness = new Thickness(ring),
         };
+        if (HighContrast)
+        {
+            // 對比主題：視窗底色的圓、文字顏色的字和外圈（「我」的外圈粗一點）。釉色 18% 的底在黑底上看不見；
+            // 底色不透明，放在選到的列（反白的底）上也看得清楚（FollowForeground 跳過有底色的一塊）
+            text.Foreground = SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText);
+            avatar.Background = SystemBrush(Windows.UI.ViewManagement.UIElementType.Window);
+            avatar.BorderBrush = text.Foreground;
+            avatar.BorderThickness = new Thickness(isMe ? 2 : 1);
+        }
         // 名字就在旁邊，螢幕閱讀器不用再唸一次頭像
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(avatar, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
         return avatar;
@@ -289,6 +413,17 @@ public static class Ui
     /// </summary>
     public static T Borderless<T>(T button, Brush? foreground = null) where T : Button
     {
+        if (HighContrast)
+        {
+            // 對比主題：照平台的按鈕（按鈕的底色、字、框，滑過去反白）。沒有框的按鈕在對比主題裡看起來跟一般的字一樣，
+            // 滑過去的底（Subtle）和字（反白的顏色）也不是成對的系統色。開著 app 打開對比主題時拿掉原本的覆寫
+            foreach (var key in BorderlessKeys) button.Resources.Remove(key);
+            button.ClearValue(Control.BackgroundProperty);
+            button.ClearValue(Control.ForegroundProperty);
+            button.ClearValue(Control.BorderThicknessProperty);
+            button.Padding = new Thickness(6, 3, 6, 3);
+            return button;
+        }
         // 平台的按鈕加輕量的樣式覆寫（不換 ControlTemplate）：範本各狀態讀的主題資源換成「subtle」那一組
         //（跟 ListView 的列、NavigationView 的項目同樣的透明底，滑過去、按下才有底色），文字是強調色的文字
         var clear = Resource("SubtleFillColorTransparentBrush", 0, 0, 0, 0, 0, 0);
@@ -304,6 +439,12 @@ public static class Ui
         button.Padding = new Thickness(6, 3, 6, 3);
         return button;
     }
+
+    static readonly string[] BorderlessKeys =
+    [
+        "ButtonBackground", "ButtonBackgroundDisabled", "ButtonBorderBrush", "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed", "ButtonBorderBrushDisabled",
+        "ButtonBackgroundPointerOver", "ButtonBackgroundPressed", "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed", "ButtonForegroundDisabled",
+    ];
 
     public static HyperlinkButton Link(string text, Action click)
     {
@@ -413,7 +554,9 @@ public static class Ui
         if (time.Length == 0) return new TextBlock();
         if (seek is not null && (at ?? TimeFormat.Seconds(time)) is double seconds)
         {
-            var b = new HyperlinkButton { Content = time, Padding = new Thickness(0), FontSize = size, Foreground = Celadon };
+            // 對比主題時照平台的超連結顏色（青瓷綠換成的反白顏色不是給超連結用的）
+            var b = new HyperlinkButton { Content = time, Padding = new Thickness(0), FontSize = size };
+            if (!HighContrast) b.Foreground = Celadon;
             ToolTipService.SetToolTip(b, Localization.L.F("從 %@ 開始播放", time));
             b.Click += (_, _) => seek(seconds);
             return b;

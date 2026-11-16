@@ -350,7 +350,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.3 外觀、字型
 
 - 顏色（celadon、signal、說話者 8 色）在 `Ui/Ui.cs`，每個顏色有淺色、深色兩個值，跟著視窗的主題換（Mac 是 `Views/Theme.swift`）。
-- 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase），每個視窗的最外層用 `Ui.WindowBackground` 設、跟著深淺色換。沒設時深色模式是純黑。主視窗的側欄淺色 #F7F7F7、深色 #2B2B2B（跟內容區分得出來，同 Mac 的側欄）。對比主題（高對比）開著時兩種都換成系統的視窗底色（`UISettings.UIElementColor(Window)`）：不然平台的控制項是對比主題的顏色、底色還是淺色，每段文字都被加上底板；開、關對比主題時聽 `UISettings.ColorValuesChanged` 重畫（`AccessibilitySettings.HighContrastChanged` 在沒打包的桌面 app 訂閱時丟 0x80070490，2026-11-15 虛擬機啟動就當掉）。
+- 視窗的底色：淺色白、深色 #202020（Windows 11 的 SolidBackgroundFillColorBase），每個視窗的最外層用 `Ui.WindowBackground` 設、跟著深淺色換。沒設時深色模式是純黑。主視窗的側欄淺色 #F7F7F7、深色 #2B2B2B（跟內容區分得出來，同 Mac 的側欄）。對比主題（高對比）開著時兩種都換成系統的視窗底色（`UISettings.UIElementColor(Window)`）。
+- 對比主題（高對比，設定 → 協助工具 → 對比佈景主題；2026-11-16 在虛擬機用「夜空」「沙漠」巡檢）：畫面只用系統色（視窗底、文字、反白／反白的字、超連結、停用的字、按鈕），做法如下。
+  - `Application.HighContrastAdjustment = None`（`App` 的建構式）：預設 Auto 時 WinUI 把不是系統色的字換成文字的顏色、後面墊一塊視窗底色的底板，選到的列（反白的底）、強調色的按鈕上每段字都是一塊黑底（「夜空」）。關掉之後顏色由拾音自己負責。
+  - `Ui` 的顏色在對比主題時直接給系統色（`Ui.SystemColor`／`SystemBrush`，`UISettings.UIElementColor`）：`Celadon`、`AccentText`、`AccentFill` 是反白的顏色（同 WinUI 的強調色在對比主題的做法）；`Signal`、`Danger`、說話者 8 色、`Primary`／`Secondary`／`Tertiary`、`Divider` 是文字的顏色（琥珀、紅靠圖形和文字分辨）；`CardBackground` 是視窗底色；`Subtle`（淡淡的底）透明，畫圖形沒亮的部分改用 `Ui.Track`（停用的字的顏色；音量條、引導的步驟、播放列的底線）；青瓷綠實心上面的打勾、數字用 `Ui.OnCeladon`（反白的字）。
+  - 淡淡上色的一塊（建議條、狀態條、待確認展開的那一塊、提問的回答、錄自己聲音的那段文字、系列頁圖示的圓底）：`Ui.Tint` 在對比主題時透明，`Ui.Tinted(border, 底色)` 改成沒有底色、一圈文字顏色的細框（同 Windows 設定的卡片在對比主題的樣子）。逐字稿目前播放、跳過來的段落改成一圈框（播放的是反白的顏色），標起來的字（搜尋、校正建議）是反白的底配反白的字。
+  - 清單的列、超連結按鈕、整列是按鈕的會議列裡的字和圖示不自己給顏色：`Ui.FollowForeground(內容)` 在對比主題時把 `TextBlock`、圖示的 `Foreground` 清掉，跟著列或按鈕的前景色（平常是按鈕的字或文字的顏色，選到、滑過去是反白的字，超連結是超連結的顏色）；跳過控制項（「⋯」這些按鈕自己處理）和有自己底色的一小塊（頭像、資料夾齒輪的小圓）。會議列的狀態文字（失敗、待確認）每秒更新時也不上色。用在側欄的導覽、會議、人物、搜尋結果的列，會議頁上方和逐字稿的說話者，人物頁、系列頁的會議列和待辦表的會議連結、常參加的人，定期會議確認的每一場。
+  - 頭像：視窗底色的圓、文字顏色的字和外圈（「我」的外圈 2）；底色不透明，放在選到的列上也看得清楚。
+  - `Ui.Borderless`（沒有框的按鈕：會議設定、文件、資訊列的定期會議、鉛筆、合併到、移除這個人、刪除定期會議、篩選的漏斗和 ✕、「⋯」）在對比主題時照平台的按鈕（按鈕色的字和框，滑過去反白）：沒有框的按鈕看起來跟一般的字一樣，原本覆寫的滑過底色（`Subtle`）和字（反白的顏色）也不是成對的系統色。紅字的按鈕（移除這個人…、刪除定期會議…）也是按鈕色。待確認的標記「？」同樣不上琥珀色。時間點（`Ui.Time`）、提問的出處連結不給青瓷綠，照平台的超連結顏色。
+  - 開著 app 開關對比主題、換一個對比主題（`ActualTheme` 不變）：`Ui.OnContrastChanged(元件, 動作)` 聽 `UISettings.ColorValuesChanged`（不在 UI 執行緒，排回元件的 `DispatcherQueue`），`Ui.ContrastKey`（沒開時空字串，開著時是用到的系統色；每次重讀對比主題開了沒，`Ui.HighContrast` 平常用記住的值，建一頁要問上千次）變了才做：主視窗重新給顏色（`restyle`）、重建列表、重畫；列表、人物頁、系列頁「內容一樣時不重建」的比對加上 `Ui.ThemeKey`（深淺色＋`ContrastKey`）。`AccessibilitySettings.HighContrastChanged` 在沒打包的桌面 app 訂閱時丟 0x80070490（2026-11-15 虛擬機啟動就當掉），不用。已知：從一個對比主題直接換成另一個時，平台的 `SelectorBar`（紀錄／逐字稿／提問、條列／心智圖）選取的那一條底線留著前一個主題的反白顏色，重開拾音才換（一般→對比、對比→一般會換）；設定、引導這些另外開的視窗開著時換主題，自己的顏色要重開視窗才換（底色會換）。
+  - 驗證：虛擬機用 `Start-Process` 開 `C:\Windows\Resources\Ease of Access Themes\hc2.theme`（夜空）、`hcwhite.theme`（沙漠）套用（`hc1` 黃昏、`hcblack` 水生），等 `CurrentTheme` 換好再關掉跳出來的設定視窗；改回原本的主題是同樣開 `%LOCALAPPDATA%\Microsoft\Windows\Themes\Custom.theme`，`HKCU\Control Panel\Accessibility\HighContrast` 的「High Contrast Scheme」、`Themes` 的 `LastHighContrastTheme` 會記成剛剛用過的對比主題，測前 `reg export`、測完改回（原本是「High Contrast Black」、`hcblack.theme`）；剛開機時第一次開 `.theme` 可能等不到套用（設定 app 還在啟動），再開一次。停虛擬機見 §15.2（不要強制斷電）。
 - 介面字型用系統預設（Segoe UI Variable、微軟正黑體）。會議標題的明體：Mac 用宋體，Windows 中文、英文用新細明體（`PMingLiU`，沒有時退回 `Microsoft JhengHei UI`），日文用 `Yu Mincho`，都是粗體（`Ui.TitleFont`、`Ui.Heading`）。
 - 會議內容依會議語言設定 `Language`（ja-JP 時日文字形，對應 D20）。
 - 匯出（PDF、docx）的字型：中文 Microsoft JhengHei／PMingLiU、日文 Yu Gothic／Yu Mincho、英文 Segoe UI／Georgia（Mac 是 New York）。
@@ -815,6 +824,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 從 Mac 操作：`sync.sh` 把工作目錄（git 追蹤和還沒加的檔案）同步到 `C:\src`（不用共用資料夾：桌面有 iCloud）；`ssh.sh`、`run.sh` 在 SSH 的工作階段跑 PowerShell（建置、測試）；`ps/rebuild.ps1` 重建 DEBUG 版；`ctl.sh` 送控制通道的指令。Mac 上的本機伺服器（假的整理工具、更新檔）用 `ssh -R <埠>:127.0.0.1:<埠>` 讓虛擬機從 127.0.0.1 連過來。
 - 虛擬機**沒有音效裝置**：WASAPI 的錄音、換裝置、播放的聲音都測不到，錄音用 `record-sim`；真的麥克風、電腦聲音要使用者的電腦（W0.3）。
 - 磁碟：虛擬機裡刪檔案不會讓 Mac 上的磁碟檔變小，刪完要 `Optimize-Volume -DriveLetter C -ReTrim`。
+- 停虛擬機用 `utmctl stop --request "Shiyin Windows"`（請 Windows 自己關機）：`utmctl stop` 預設是強制斷電，還沒寫回磁碟的登錄檔、檔案的改動會不見（2026-11-16 對比主題巡檢：改回原本的佈景主題、刪掉測試資料夾後強制斷電，重開機又是「夜空」、資料夾還在）。
 - 使用者在用拾音錄會議時（Mac 的 `audio/recording/` 有檔案）不開虛擬機、不跑重的工作。UTM 的視窗會出現在使用者的螢幕上（不會搶前景）。
 
 ### 15.3 控制通道

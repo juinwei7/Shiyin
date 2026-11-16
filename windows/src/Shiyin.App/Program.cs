@@ -97,6 +97,9 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
     {
         Current = this;
         this.args = args;
+        // 對比主題（高對比）：不要讓 WinUI 自動在字後面加底板、把字換成文字的顏色（預設 Auto）。拾音的顏色在對比主題時自己換成系統色
+        //（Ui 的 Celadon、Secondary…，design-windows §11.3）；自動調整時選到的列、強調色的按鈕上每段字都是一塊黑底（2026-11-16 虛擬機「夜空」）
+        HighContrastAdjustment = ApplicationHighContrastAdjustment.None;
         UnhandledException += (_, e) => { Log.Error($"unhandled: {e.Exception.GetType().Name}"); e.Handled = true; };
     }
 

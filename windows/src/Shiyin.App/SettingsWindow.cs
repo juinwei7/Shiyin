@@ -901,11 +901,11 @@ public sealed class SettingsWindow : Window
         var nameBox = new TextBox { Header = L.T("名字"), Text = name ?? Environment.UserName };
         var status = Ui.Text("", 13, color: Ui.Secondary);
         var warning = Ui.Text("", 13, color: Ui.Signal);
-        var passage = new Border
+        var passage = Ui.Tinted(new Border
         {
-            Background = Ui.Subtle, CornerRadius = new CornerRadius(8), Padding = new Thickness(14),
+            CornerRadius = new CornerRadius(8), Padding = new Thickness(14),
             Child = new TextBlock { Text = MyVoicePassage, TextWrapping = TextWrapping.Wrap, FontSize = 17, LineHeight = 28 },
-        };
+        }, Ui.Subtle);
         var content = Ui.Column(12,
             Ui.Text(L.T("按「開始」，用平常開會說話的音量唸下面這段（約 20～30 秒），唸完按「完成」。拾音只用這段聲音算出你的聲音特徵，算完就刪掉錄音。"), 13, color: Ui.Secondary),
             nameBox, passage, status, warning);
