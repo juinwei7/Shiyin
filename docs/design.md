@@ -2692,7 +2692,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 重點標記（逐字稿上方的「重點標記 N」選單）：每個標記一個子選單「跳到這裡」「重新命名…」「刪除」；`AppDatabase.renameBookmark`。
 - 詞彙（設定）：雙擊詞變成輸入框改字（`AppDatabase.renameTerm`，改成已經有的詞時合併）；右鍵：重新命名…、刪除。範本列表右鍵：複製、設為預設、刪除（自訂的才有）。設定「認識的人」的「改名」改叫「重新命名」，垃圾桶的說明改成「移除「X」」。
 - 用詞：「改名…」全部改成「重新命名…」（人物、說話者的選單），鉛筆的說明也是「重新命名」。
-- DEBUG：`capturemenu <輸出.json>`（接下來打開的選單把項目寫出來再關掉，配合 AX 的 AXShowMenu 檢查右鍵選單的內容）、`mouseat <left|right|double|move> <x> <y> <視窗> [選單輸出]`、`keyat <return|delete|escape|f2> <視窗>`、`renamemeetingui <id>`、`folderdeleteui <名稱>`、`seriesdeleteui <id>`（打開確認）、`sidebarkey return|delete`（等於在側欄按鍵）、`noteitem editui|edit|delete <section> <i> [<j>] [文字]`、`bookmarkrename[ui] <id> [名稱]`、`termrename <id> <詞>`；state 的 `confirmDeleteFolder`、`confirmDeleteSeries`、`renameMeetingRequest`、`personRenameRequest`、`editingNoteItem`、`renamingFolder`、`renamingSeries`。
+- DEBUG：`capturemenu <輸出.json>`（接下來打開的選單把項目寫出來再關掉，配合 AX 的 AXShowMenu 檢查右鍵選單的內容）、`mouseat <cgleft|cgright|cgdouble|move|left|right|double> <x> <y> <視窗> [選單輸出]`、`keyat <return|delete|escape|f2> <視窗>`、`eventlog <輸出|off>`（收到的滑鼠、按鍵事件）、`renamemeetingui <id>`、`folderdeleteui <名稱>`、`seriesdeleteui <id>`（打開確認）、`sidebarkey return|delete`（等於在側欄按鍵）、`noteitem editui|edit|delete <section> <i> [<j>] [文字]`、`bookmarkrename[ui] <id> [名稱]`、`termrename <id> <詞>`；state 的 `confirmDeleteFolder`、`confirmDeleteSeries`、`renameMeetingRequest`、`personRenameRequest`、`editingNoteItem`、`renamingFolder`、`renamingSeries`。
 - Windows：design-windows §11.33。
 
 ## 14. 決策紀錄

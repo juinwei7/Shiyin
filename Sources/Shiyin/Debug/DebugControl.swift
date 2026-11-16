@@ -570,14 +570,13 @@ enum DebugControl {
                     window.sendEvent(event)
                 }
             }
-            // 從 CGEvent 產生（同真的滑鼠：帶按鍵編號、螢幕座標、底下的視窗），NSEvent.mouseEvent 做的右鍵跟真的不一樣
+            // 從 CGEvent 產生：帶按鍵編號（右鍵是 1；NSEvent.mouseEvent 做的右鍵按鍵編號是 0，SwiftUI 會當成左鍵點擊）。
+            // NSEvent(cgEvent:) 沒有視窗時 locationInWindow 是螢幕座標，所以把位置放成「數值等於視窗座標」，交給 sendEvent 時落在同一點
             func sendCG(_ type: CGEventType, _ button: CGMouseButton, clicks: Int64) {
-                let screen = window.convertPoint(toScreen: point)
-                let flipped = CGPoint(x: screen.x, y: (NSScreen.screens.first?.frame.height ?? 0) - screen.y)
-                guard let cg = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: flipped, mouseButton: button) else { return }
+                let height = NSScreen.screens.first?.frame.height ?? 0
+                guard let cg = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: CGPoint(x: point.x, y: height - point.y),
+                                       mouseButton: button) else { return }
                 cg.setIntegerValueField(.mouseEventClickState, value: clicks)
-                cg.setIntegerValueField(.mouseEventWindowUnderMousePointer, value: Int64(window.windowNumber))
-                cg.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent, value: Int64(window.windowNumber))
                 if let event = NSEvent(cgEvent: cg) { window.sendEvent(event) }
             }
             switch args[1] {
@@ -590,6 +589,17 @@ enum DebugControl {
             case "double": send(.leftMouseDown, clicks: 1); send(.leftMouseUp, clicks: 1); send(.leftMouseDown, clicks: 2); send(.leftMouseUp, clicks: 2)
             case "move": send(.mouseMoved, clicks: 0)
             default: send(.leftMouseDown, clicks: 1); send(.leftMouseUp, clicks: 1)
+            }
+        case "eventlog":   // eventlog <輸出檔|off>：把收到的滑鼠、按鍵事件寫下來（查外面送的事件有沒有進來）
+            if let eventMonitor { NSEvent.removeMonitor(eventMonitor); self.eventMonitor = nil }
+            if args[1] != "off" {
+                let path = args[1]
+                FileManager.default.createFile(atPath: path, contents: nil)
+                eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .rightMouseDown, .mouseMoved, .keyDown]) { event in
+                    let line = "\(event.type.rawValue) win=\(event.windowNumber) loc=\(Int(event.locationInWindow.x)),\(Int(event.locationInWindow.y)) clicks=\(event.type == .keyDown ? 0 : event.clickCount) key=\(event.type == .keyDown ? Int(event.keyCode) : -1)\n"
+                    if let handle = FileHandle(forWritingAtPath: path) { handle.seekToEndOfFile(); handle.write(Data(line.utf8)); try? handle.close() }
+                    return event
+                }
             }
         case "capturemenu": captureNextMenu(to: args[1])   // capturemenu <輸出.json>：接下來打開的選單寫出項目後關掉（配合外面送的真的滑鼠事件）
         // keyat <return|delete|escape|f2> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
@@ -1130,6 +1140,7 @@ enum DebugControl {
 
     /// 下一個開始追蹤的選單（右鍵選單、「⋯」）：項目寫到 path（子選單展開成「父 ▸ 子」），然後關掉，不留在使用者畫面上
     private static var menuObserver: NSObjectProtocol?
+    private static var eventMonitor: Any?
     private static func captureNextMenu(to path: String) {
         if let menuObserver { NotificationCenter.default.removeObserver(menuObserver) }
         menuObserver = NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { note in

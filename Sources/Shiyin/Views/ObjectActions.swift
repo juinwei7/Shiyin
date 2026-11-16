@@ -178,7 +178,9 @@ private struct NoteItemActions: ViewModifier {
     func body(content: Content) -> some View {
         if let ref {
             content
-                // 整行（含行尾空白）都可以右鍵、雙擊；文字不當成可選取（selectableUnlessEditable），右鍵才是這一份
+                // 整行（含行尾空白）都可以右鍵、雙擊：先撐滿整行再設可點的範圍（反過來的話只有字的範圍收得到；
+                // 2026-11-16 自己驗收時發現）。文字不當成可選取（selectableUnlessEditable），右鍵才是這一份
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { if model.canEditNotes { model.editingNoteItem = ref } }
                 .contextMenu { NoteItemMenuItems(ref: ref, text: text, time: time) }
