@@ -2564,7 +2564,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 - 入口：逐字稿的正式段落（不是第一句）右鍵「從這裡分成兩場…」→ 確認對話框（`AppModel.splitMeetingRequest`；`splitRequest` 是拆句用的）。切開的時間 `cut` 是那一句的開始時間（四捨五入到 0.01 秒）。
 - 先擋：正在錄音、這場有排隊或進行中的工作、在垃圾桶裡（R90.4）。
-- 錄音（`AudioSplit.split(url, at:)`，背景執行）：用 `AVAudioFile` 讀，前段、後段各寫一個暫存檔，格式照原本的檔（`fileFormat.settings`：WAV 還是 WAV、m4a 重新編碼成同樣設定的 AAC），聲道數不變。錄音檔不見的會議跳過這一步。
+- 錄音（`AudioTrim.split(url, at:)`，背景執行），前段、後段各寫一個暫存檔，聲道數不變：WAV 用 `AVAudioFile` 照原本的格式（`fileFormat.settings`）逐個取樣切；其他格式（壓縮好的 m4a、匯入的 mp3、mp4、mov、aiff…）用 `AVAssetExportSession`（`AppleM4A`，`timeRange`）各自壓成 m4a，原本那場的錄音檔也換成 `<id>.m4a`（D172，同 Windows：`AVAudioFile` 寫不了 mp3、影片）。錄音檔不見的會議跳過這一步。
 - 資料庫（`AppDatabase.splitMeeting`，一個交易）：
   1. 新增一場：複製原本那場的欄位（日期、會議語言、範本、資料夾、收音來源、`channels`、`transcribed_with`、`min_speakers`、與會者），標題是原本的 `displayTitle` 加「（2）」（`title_locked` 照原本的），`created_at` 是原本的加 `cut` 秒，`duration_seconds` 是原本的減 `cut`；`notes` 空的；錄音檔名 `<新 id>.<副檔名>`。
   2. 開始時間 ≥ `cut` 的段落（正式、即時都算）搬到新的一場，時間減 `cut`，`seq` 重新從 0 編；校正建議、搜尋索引的 `meeting_id` 跟著改。

@@ -1110,14 +1110,20 @@ final class AppModel {
         Task {
             defer { splittingMeeting = nil }
             do {
-                let parts = hasAudio ? try await Task.detached(priority: .userInitiated) { try AudioTrim.split(audio, at: cut) }.value : nil
+                let parts = hasAudio ? try await Task.detached(priority: .userInitiated) { try await AudioTrim.split(audio, at: cut) }.value : nil
                 defer { if let parts { try? FileManager.default.removeItem(at: parts.head.deletingLastPathComponent()) } }
-                guard let created = try db.splitMeeting(id, at: cut, title: title, audioExtension: parts == nil ? nil : audio.pathExtension.lowercased())
-                else { return }
+                guard let created = try db.splitMeeting(id, at: cut, title: title, audioExtension: parts?.head.pathExtension) else { return }
                 if let parts {
                     if selection == id { player.unload() }
                     try FileManager.default.moveItem(at: parts.tail, to: created.audioURL)
-                    _ = try FileManager.default.replaceItemAt(audio, withItemAt: parts.head)
+                    // 原本不是 WAV、m4a（匯入的 mp3、mp4…）時換成 m4a，檔名跟著換（D172）
+                    let head = Paths.audioDir.appendingPathComponent("\(id).\(parts.head.pathExtension)")
+                    if head == audio {
+                        _ = try FileManager.default.replaceItemAt(audio, withItemAt: parts.head)
+                    } else {
+                        try FileManager.default.moveItem(at: parts.head, to: head)
+                        try? FileManager.default.removeItem(at: audio)
+                    }
                 }
                 let message: String
                 if AppSettings.summarizerReady {

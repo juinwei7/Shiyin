@@ -31,9 +31,32 @@ enum AudioTrim {
         return output
     }
 
-    /// 從 seconds 切成前段、後段兩個暫存檔（design §64，分割會議）：格式照原本的檔（WAV 還是 WAV，m4a 重新編碼成同樣設定的 AAC），
-    /// 聲道數不變。切點不在錄音裡面時回傳 nil
-    static func split(_ url: URL, at seconds: Double) throws -> (head: URL, tail: URL)? {
+    /// 從 seconds 切成前段、後段兩個暫存檔（design §64，分割會議）：WAV 照原本的格式逐個取樣切；其他格式（錄音壓縮成的 m4a、
+    /// 匯入的 mp3、mp4、aiff…）各自壓成 m4a（D172，同 Windows：AVAudioFile 寫不了 mp3、影片）。聲道數不變。切點不在錄音裡面時回傳 nil
+    static func split(_ url: URL, at seconds: Double) async throws -> (head: URL, tail: URL)? {
+        if url.pathExtension.lowercased() == "wav" { return try splitWAV(url, at: seconds) }
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration)
+        let cut = CMTime(seconds: seconds, preferredTimescale: 48_000)
+        guard seconds > 0, cut < duration else { return nil }
+        let dir = try Paths.makeTempDirectory()
+        let head = dir.appendingPathComponent("head.m4a"), tail = dir.appendingPathComponent("tail.m4a")
+        do {
+            for (output, range) in [(head, CMTimeRange(start: .zero, end: cut)), (tail, CMTimeRange(start: cut, end: duration))] {
+                guard let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+                export.timeRange = range
+                try await export.export(to: output, as: .m4a)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: dir)
+            throw error
+        }
+        return (head, tail)
+    }
+
+    private static func splitWAV(_ url: URL, at seconds: Double) throws -> (head: URL, tail: URL)? {
         let input = try AVAudioFile(forReading: url)
         let format = input.processingFormat
         let cut = AVAudioFramePosition(seconds * format.sampleRate)

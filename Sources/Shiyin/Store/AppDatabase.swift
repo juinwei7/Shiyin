@@ -407,7 +407,8 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// 從 cut 秒分成兩場（R90、design §64）：開始時間 ≥ cut 的段落、標記重點搬到新的一場，時間減 cut；說話者兩邊各留有段落的，
-    /// 只在新的一場說話的人，聲紋改指新的一場。回傳新的一場（錄音檔名已經給好，檔案由呼叫的人搬）
+    /// 只在新的一場說話的人，聲紋改指新的一場。audioExtension 是切好的錄音的副檔名（兩場相同，原本那場的檔名跟著換，D172）。
+    /// 回傳新的一場（錄音檔名已經給好，檔案由呼叫的人搬）
     func splitMeeting(_ id: Int64, at cut: Double, title: String, audioExtension: String?) throws -> Meeting? {
         try pool.write { db in
             guard var original = try Meeting.fetchOne(db, key: id) else { return nil }
@@ -459,6 +460,7 @@ final class AppDatabase: @unchecked Sendable {
             try Self.removeEmptySpeakers(db, meetingId: newId)
 
             original.durationSeconds = Int(cut.rounded())
+            if let audioExtension { original.audioFile = "\(id).\(audioExtension)" }
             original.updatedAt = Clock.now()
             try original.update(db)
             // 段落換了，說話者的復原對不上（design §24.2）
