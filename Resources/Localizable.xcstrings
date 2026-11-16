@@ -7798,19 +7798,19 @@
         }
       }
     },
-    "已刪除一條紀錄，可以用「會議 → 復原上一版會議紀錄」還原": {
+    "已刪除一條紀錄，按「編輯」旁的「復原上一版」可以還原": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已删除一条记录，可以用“会议 → 恢复上一版会议记录”还原"
+            "value": "已删除一条记录，按“编辑”旁的“恢复上一版”可以还原"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deleted the item. To bring it back, choose Meeting → Revert to Previous Notes."
+            "value": "Deleted the item. To bring it back, click Restore previous version next to Edit."
           }
         }
       }

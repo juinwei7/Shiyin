@@ -611,6 +611,8 @@ enum DebugControl {
                     return event
                 }
             }
+        case "appearance":   // appearance light|dark|system：只改這個 app 的外觀（巡檢淺色、深色用，不動系統設定）
+            NSApp.appearance = args[1] == "light" ? NSAppearance(named: .aqua) : args[1] == "dark" ? NSAppearance(named: .darkAqua) : nil
         case "capturemenu": captureNextMenu(to: args[1])   // capturemenu <輸出.json>：接下來打開的選單寫出項目後關掉（配合外面送的真的滑鼠事件）
         // keyat <return|delete|escape|f2> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
         case "keyat":

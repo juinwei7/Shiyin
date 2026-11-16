@@ -31,7 +31,7 @@ extension AppModel {
         if editingNoteItem == ref { editingNoteItem = nil }
         notes.remove(at: ref)
         saveEditedNotes(notes, meetingId: id)
-        noticeMessage = String(localized: "已刪除一條紀錄，可以用「會議 → 復原上一版會議紀錄」還原")
+        noticeMessage = String(localized: "已刪除一條紀錄，按「編輯」旁的「復原上一版」可以還原")
     }
 
     func renameBookmark(_ id: Int64, label: String) {
