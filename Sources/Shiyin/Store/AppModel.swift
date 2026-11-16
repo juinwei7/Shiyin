@@ -249,6 +249,13 @@ final class AppModel {
         didSet { UserDefaults.standard.set(meetingGrouping.rawValue, forKey: AppSettings.meetingGroupingKey) }
     }
     var meetingFilter = MeetingFilter() { didSet { if oldValue != meetingFilter { selectedMeetings = [] } } }
+    /// 側欄的收合（R101、design §75）：收起來的段落、在原地展開的資料夾和定期會議；記住
+    var sidebarCollapsed = Set(UserDefaults.standard.stringArray(forKey: AppSettings.sidebarCollapsedKey) ?? []) {
+        didSet { if oldValue != sidebarCollapsed { UserDefaults.standard.set(sidebarCollapsed.sorted(), forKey: AppSettings.sidebarCollapsedKey) } }
+    }
+    var sidebarExpanded = Set(UserDefaults.standard.stringArray(forKey: AppSettings.sidebarExpandedKey) ?? []) {
+        didSet { if oldValue != sidebarExpanded { UserDefaults.standard.set(sidebarExpanded.sorted(), forKey: AppSettings.sidebarExpandedKey) } }
+    }
     /// 每場會議連到哪些人物（「有誰參加」篩選），跟人物總覽一起讀
     var meetingPeople: [Int64: Set<Int64>] = [:]
     /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）。跟定期會議互斥
@@ -541,6 +548,10 @@ final class AppModel {
         guard !name.isEmpty, name != old else { return }
         // 先切換篩選，reload 時才不會因為舊名稱不存在而跳回所有會議
         if folderFilter == old { folderFilter = name }
+        if sidebarExpanded.contains(Self.folderKey(old)) {
+            sidebarExpanded.remove(Self.folderKey(old))
+            sidebarExpanded.insert(Self.folderKey(name))
+        }
         perform { try db.renameFolder(old, to: name) }
     }
 
@@ -548,6 +559,7 @@ final class AppModel {
     func deleteFolder(_ name: String) {
         perform { try db.renameFolder(name, to: "") }
         if folderFilter == name { folderFilter = nil }
+        setRow(Self.folderKey(name), expanded: false)
     }
 
     func reloadDetail(forceAudio: Bool = false) {
@@ -940,6 +952,7 @@ final class AppModel {
         reload()
         showTrash = trash.contains { $0.id == id }
         selection = id
+        expandToShow(id)
         openMainWindow?()
     }
 

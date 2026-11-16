@@ -8,25 +8,39 @@ struct SeriesSidebarSection: View {
 
     var body: some View {
         if !model.series.isEmpty || !model.seriesCandidates.isEmpty {
-            Section("定期會議") {
-                if !model.seriesCandidates.isEmpty {
-                    Button { model.showSeriesSuggestions = true } label: {
-                        Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
-                            .foregroundStyle(Color.celadon)
+            // 段落可以收起；每個定期會議可以在原地展開最近的會議（R101、design §75）
+            Section {
+                if model.isSectionExpanded("series") {
+                    if !model.seriesCandidates.isEmpty {
+                        Button { model.showSeriesSuggestions = true } label: {
+                            HStack(spacing: 2) {
+                                Color.clear.frame(width: SidebarMetrics.chevron, height: 1)
+                                Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
+                                    .foregroundStyle(Color.celadon)
+                            }
                             .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
                     }
-                    .buttonStyle(.plain)
-                    .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
-                }
-                ForEach(model.series) { series in
-                    let id = series.id ?? 0
-                    FolderRow(name: series.name, count: model.seriesCount(id), symbol: "arrow.triangle.2.circlepath",
-                              selected: model.sidebarMode == .meetings && model.seriesFilter == id,
-                              menu: { AnyView(SeriesMenuItems(series: series)) }) {
-                        model.openSeries(id)
+                    ForEach(model.series) { series in
+                        let id = series.id ?? 0
+                        let key = AppModel.seriesKey(id)
+                        let count = model.seriesCount(id)
+                        FolderRow(name: series.name, count: count, symbol: "arrow.triangle.2.circlepath",
+                                  selected: model.sidebarMode == .meetings && model.seriesFilter == id,
+                                  disclosure: SidebarDisclosure(key: key, enabled: count > 0),
+                                  menu: { AnyView(SeriesMenuItems(series: series)) }) {
+                            model.openSeries(id)
+                        }
+                        .help(series.frequencyText)
+                        if count > 0 && model.isRowExpanded(key) {
+                            SidebarPeek(rows: model.peekRows(series: id)) { model.openSeries(id) }
+                        }
                     }
-                    .help(series.frequencyText)
                 }
+            } header: {
+                SidebarSectionHeader(title: String(localized: "定期會議"), key: "series")
             }
         }
     }

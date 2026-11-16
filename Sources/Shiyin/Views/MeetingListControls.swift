@@ -77,7 +77,8 @@ struct MeetingListHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(title).lineLimit(1)
+            // 名稱是收合的按鈕（R101、design §75）；右邊的「顯示方式」不動
+            SidebarSectionHeader(title: title, key: "meetings", besideMenu: true)
             Spacer(minLength: 4)
             Menu {
                 MeetingListMenu(model: model)

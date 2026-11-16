@@ -4132,6 +4132,23 @@
         }
       }
     },
+    "側欄太長時可以收起來：點「定期會議」「資料夾」「所有會議」這些標題就收起或展開。資料夾、定期會議前面的箭頭可以在原地展開最近 5 場，點一場直接打開；點名稱照舊只看那個資料夾。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "侧边栏太长时可以收起来：点“定期会议”“文件夹”“所有会议”这些标题就收起或展开。文件夹、定期会议前面的箭头可以在原地展开最近 5 场，点一场直接打开；点名称照旧只看那个文件夹。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the sidebar gets long, collapse it: click a heading such as Recurring Meetings, Folders, or All Meetings to hide or show that section. The arrow in front of a folder or recurring meeting shows its 5 most recent meetings right there; click one to open it. Clicking the name still shows only that folder."
+          }
+        }
+      }
+    },
     "偵測到線上會議時提醒錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -7594,6 +7611,57 @@
         }
       }
     },
+    "展開「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand “%@”"
+          }
+        }
+      }
+    },
+    "展開最近的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开最近的会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show recent meetings"
+          }
+        }
+      }
+    },
+    "展開這一段": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开这一段"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand section"
+          }
+        }
+      }
+    },
     "屬於定期會議": {
       "extractionState": "manual",
       "localizations": {
@@ -8174,6 +8242,23 @@
         }
       }
     },
+    "已展開": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已展开"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expanded"
+          }
+        }
+      }
+    },
     "已復原：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -8337,6 +8422,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已拆成两句。要撤销的话，在逐字稿按右键选“撤销”。"
+          }
+        }
+      }
+    },
+    "已收起": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已收起"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapsed"
           }
         }
       }
@@ -11335,6 +11437,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "收起"
+          }
+        }
+      }
+    },
+    "收起「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse “%@”"
+          }
+        }
+      }
+    },
+    "收起最近的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起最近的会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide recent meetings"
+          }
+        }
+      }
+    },
+    "收起這一段": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起这一段"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse section"
           }
         }
       }
@@ -23614,6 +23767,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示"
+          }
+        }
+      }
+    },
+    "顯示全部 %lld 場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示全部 %lld 场"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Show all %lld meeting"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Show all %lld meetings"
+                }
+              }
+            }
           }
         }
       }

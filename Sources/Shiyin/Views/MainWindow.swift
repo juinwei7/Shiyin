@@ -363,18 +363,29 @@ struct SidebarView: View {
         }
         SeriesSidebarSection()
         if !model.folders.isEmpty {
-            Section("資料夾") {
-                ForEach(model.folders, id: \.name) { folder in
-                    // 有自動加入條件的資料夾換圖示，滑過去看條件（design §72）
-                    let rule = model.folderRule(folder.name)
-                    FolderRow(name: folder.name, count: folder.count, symbol: rule == nil ? "folder" : "folder.badge.gearshape",
-                              selected: !people && model.folderFilter == folder.name,
-                              menu: { AnyView(FolderMenuItems(folder: folder.name)) }) {
-                        model.sidebarMode = .meetings
-                        model.folderFilter = folder.name
+            // 段落可以收起；每個資料夾可以在原地展開最近的會議（R101、design §75）
+            Section {
+                if model.isSectionExpanded("folders") {
+                    ForEach(model.folders, id: \.name) { folder in
+                        // 有自動加入條件的資料夾換圖示，滑過去看條件（design §72）
+                        let rule = model.folderRule(folder.name)
+                        let key = AppModel.folderKey(folder.name)
+                        let show = {
+                            model.sidebarMode = .meetings
+                            model.folderFilter = folder.name
+                        }
+                        FolderRow(name: folder.name, count: folder.count, symbol: rule == nil ? "folder" : "folder.badge.gearshape",
+                                  selected: !people && model.folderFilter == folder.name,
+                                  disclosure: SidebarDisclosure(key: key, enabled: folder.count > 0),
+                                  menu: { AnyView(FolderMenuItems(folder: folder.name)) }, action: show)
+                        .help(rule.map { model.folderRuleSummary($0) } ?? "")
+                        if folder.count > 0 && model.isRowExpanded(key) {
+                            SidebarPeek(rows: model.peekRows(folder: folder.name), showAll: show)
+                        }
                     }
-                    .help(rule.map { model.folderRuleSummary($0) } ?? "")
                 }
+            } header: {
+                SidebarSectionHeader(title: String(localized: "資料夾"), key: "folders")
             }
         }
     }
@@ -394,18 +405,22 @@ struct SidebarView: View {
         @Bindable var model = model
         return List(selection: $model.selectedPerson) {
             scopeSections
-            Section("人物") {
-                ForEach(model.peopleOverview) { person in
-                    PersonRow(person: person)
-                        .rowMenu(selected: model.selectedPerson == person.id) { PersonMenuItems(person: person) }
-                        .tag(person.id)
-                        .contextMenu { PersonMenuItems(person: person) }
+            Section {
+                if model.isSectionExpanded("people") {
+                    ForEach(model.peopleOverview) { person in
+                        PersonRow(person: person)
+                            .rowMenu(selected: model.selectedPerson == person.id) { PersonMenuItems(person: person) }
+                            .tag(person.id)
+                            .contextMenu { PersonMenuItems(person: person) }
+                    }
+                    if model.peopleOverview.isEmpty {
+                        Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
+                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .selectionDisabled()
+                    }
                 }
-                if model.peopleOverview.isEmpty {
-                    Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
-                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        .selectionDisabled()
-                }
+            } header: {
+                SidebarSectionHeader(title: String(localized: "人物"), key: "people")
             }
         }
         // 選到一個人時按 Return 重新命名、Delete 移除（R85.7、R100）
@@ -428,21 +443,30 @@ struct SidebarView: View {
                 }
             } else {
                 // 排序、分組、篩選（R97、design §71）：標題那一列有「顯示方式」，分組時每組一段
+                // 會議列表、分組的每一組都可以收起（R101、design §75）
                 let groups = model.meetingGroups
                 let grouped = model.effectiveGrouping != .none
+                let expanded = model.isSectionExpanded("meetings")
                 Section {
-                    if model.meetingFilter.isActive { MeetingFilterBar() }
-                    if model.meetingFilter.isActive && model.filteredMeetings.isEmpty { MeetingFilterEmpty() }
-                    if !grouped, let rows = groups.first?.rows {
-                        ForEach(rows) { row in meetingRow(row) }
+                    if expanded {
+                        if model.meetingFilter.isActive { MeetingFilterBar() }
+                        if model.meetingFilter.isActive && model.filteredMeetings.isEmpty { MeetingFilterEmpty() }
+                        if !grouped, let rows = groups.first?.rows {
+                            ForEach(rows) { row in meetingRow(row) }
+                        }
                     }
                 } header: {
                     MeetingListHeader()
                 }
-                if grouped {
+                if grouped && expanded {
                     ForEach(groups) { group in
-                        Section(group.title) {
-                            ForEach(group.rows) { row in meetingRow(row) }
+                        let key = AppModel.groupKey(group)
+                        Section {
+                            if model.isSectionExpanded(key) {
+                                ForEach(group.rows) { row in meetingRow(row) }
+                            }
+                        } header: {
+                            SidebarSectionHeader(title: group.title, key: key)
                         }
                     }
                 }
@@ -470,6 +494,8 @@ struct FolderRow: View {
     let count: Int
     let symbol: String
     let selected: Bool
+    /// 資料夾、定期會議：最前面的箭頭在原地展開最近的會議（R101）；沒有的列留同樣的空位，圖示才對齊
+    var disclosure: SidebarDisclosure? = nil
     var menu: (() -> AnyView)? = nil
     let action: () -> Void
     @State private var hovering = false
@@ -477,12 +503,15 @@ struct FolderRow: View {
     var body: some View {
         let showMenu = menu != nil && (hovering || selected)
         HStack {
-            Label(name, systemImage: symbol)
-                .foregroundStyle(selected ? Color.celadon : .primary)
-                .fontWeight(selected ? .semibold : .regular)
-                // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）
-                .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-                .accessibilityAction(.default, action)
+            HStack(spacing: 2) {
+                SidebarChevron(disclosure: disclosure, name: name)
+                Label(name, systemImage: symbol)
+                    .foregroundStyle(selected ? Color.celadon : .primary)
+                    .fontWeight(selected ? .semibold : .regular)
+                    // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）
+                    .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                    .accessibilityAction(.default, action)
+            }
             Spacer()
             ZStack(alignment: .trailing) {
                 Text("\(count)").monospacedDigit().foregroundStyle(.secondary)

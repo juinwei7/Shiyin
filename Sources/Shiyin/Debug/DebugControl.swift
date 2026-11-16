@@ -86,6 +86,9 @@ enum DebugControl {
         case "renamemeetingui": if let id { model.requestRenameMeeting(id) }   // 等於側欄右鍵「重新命名…」、Return
         case "folderdeleteui": model.confirmDeleteFolder = args[1]              // 等於資料夾的「刪除資料夾…」、Delete，打開確認
         case "seriesdeleteui": model.confirmDeleteSeries = id                    // 等於定期會議的「刪除定期會議…」，打開確認
+        // 側欄的收合（R101、design §75）
+        case "sidebarsection": if args.count > 2 { model.setSection(args[1], expanded: args[2] == "on") }   // sidebarsection <series|folders|meetings|people|group:…> on|off
+        case "sidebarexpand": if args.count > 2 { model.setRow(args[1], expanded: args[2] == "on") }     // sidebarexpand <folder:名稱|series:id> on|off
         case "sidebarkey":   // sidebarkey return|delete：等於在側欄按 Return、Delete（照現在選到的）
             if args[1] == "return" { _ = model.sidebarReturn() } else { model.sidebarDelete() }
         case "noteitem":   // noteitem <editui|edit|delete> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]
@@ -977,6 +980,7 @@ enum DebugControl {
             "renameMeetingRequest": model.renameMeetingRequest ?? -1, "personRenameRequest": model.personRenameRequest ?? -1,
             "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "", "renamingFolder": model.folderPrompt.map { "\($0)" } ?? "",
             "renamingSeries": model.renamingSeries ?? -1,
+            "sidebarCollapsed": model.sidebarCollapsed.sorted(), "sidebarExpanded": model.sidebarExpanded.sorted(),
             "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
                      "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
                                 "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],

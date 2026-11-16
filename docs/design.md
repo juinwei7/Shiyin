@@ -2696,6 +2696,17 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`capturemenu <輸出.json>`（接下來打開的選單把項目寫出來再關掉，配合 AX 的 AXShowMenu 檢查右鍵選單的內容）、`mouseat <cgleft|cgright|cgdouble|move|left|right|double> <x> <y> <視窗> [選單輸出]`、`keyat <return|delete|escape|f2> <視窗>`、`eventlog <輸出|off>`（收到的滑鼠、按鍵事件）、`renamemeetingui <id>`、`folderdeleteui <名稱>`、`seriesdeleteui <id>`（打開確認）、`sidebarkey return|delete`（等於在側欄按鍵）、`noteitem editui|edit|delete <section> <i> [<j>] [文字]`、`bookmarkrename[ui] <id> [名稱]`、`termrename <id> <詞>`；state 的 `confirmDeleteFolder`、`confirmDeleteSeries`、`renameMeetingRequest`、`personRenameRequest`、`editingNoteItem`、`renamingFolder`、`renamingSeries`。
 - Windows：design-windows §11.33。
 
+## 75. 側欄的段落、資料夾可以收合（R101，D175）
+
+- 狀態（`AppModel`）：`sidebarCollapsed: Set<String>` 收起來的段落：`series`（定期會議）、`folders`（資料夾）、`meetings`（會議列表）、`people`（人物模式的人物）、`group:<MeetingGroup.id>`（分組的每一組，例如 `group:month-2026-11`）；`sidebarExpanded: Set<String>` 在原地展開的列：`folder:<名稱>`、`series:<id>`。存在 UserDefaults 的 `sidebarCollapsed`、`sidebarExpanded`（字串陣列），值真的變了才寫。資料夾改名時鍵跟著改，刪除資料夾、定期會議時拿掉。
+- 段落標題（`SidebarSectionHeader`）：標題文字後面接一個小箭頭（展開 `chevron.down`、收起 `chevron.right`，`.caption2`、次要顏色），標題和箭頭是同一顆無邊框按鈕，點了切換（有動畫；系統設定「減少動態效果」時不動畫）。輔助使用：標題（`isHeader`），值是「展開」「收起」，預設動作切換。收起時段落裡只剩標題（`Section { if 展開 { … } } header: { … }`）。會議列表的標題（`MeetingListHeader`）左邊的名稱換成這個標題，右邊的「顯示方式」不動；收起時篩選列、空的提示、分組的每一組都不顯示。List 的段落標題在輔助使用裡會把裡面的東西併成一個元件（「所有會議, 顯示方式」的選單按鈕），會議列表的標題要是按鈕的話，按下去是收合、選單打不開，所以這一個（`besideMenu`）用點擊手勢，收合是有名字的動作「收起這一段」「展開這一段」。
+- 程式帶你去某場會議（`reveal(_:)`：錄音開始、會議連結、通知、搜尋結果）時，拿掉 `meetings` 和那場所在的 `group:` 鍵，看得到它在列表的哪裡。
+- 資料夾、定期會議的列（`FolderRow` 加 `expansion`）：最前面一個箭頭（`chevron.right`／`chevron.down`，寬 12，次要顏色），自己的點擊手勢（不觸發整列的「只看這個資料夾」）；沒有會議時箭頭位置留空，名稱照樣對齊。輔助使用：另一顆按鈕「展開「客戶」」「收起「客戶」」。
+- 展開的內容（`SidebarPeek`）：ForEach 的 id 用字串（`peek:<id>`）並且 `selectionDisabled`：ForEach 會把 id 當成列的 tag，用會議 id 的話 List 會把這幾列當成選取，跟下面的列表一起亮成一整條、字被蓋掉（2026-11-16 自己驗收時發現）。那個資料夾或定期會議裡最近 5 場（不含垃圾桶，`MeetingSort.dateDesc` 的順序），每場一列：標題一行（太長截斷），縮排到跟資料夾名稱對齊；滑過去看「日期・標題」。點了打開那場（`openFromSidebar`：人物模式換回會議、選那場；下面的列表不換），選到時青瓷綠、粗體（同 `FolderRow`，不用 List 的選取：同一場會議也在下面的列表，兩邊都用 List 的選取會像多選）。右鍵、「⋯」用 `MeetingMenuItems(ids: [id])`（R100）。選到時側欄的 Return、Delete 照「選到一場會議」（§74）。超過 5 場時最後一列「顯示全部 N 場」（次要顏色），點了等於點資料夾名稱。
+- 不用系統的 `Section(isExpanded:)`：macOS 的箭頭只在滑過標題時出現、放在標題最右邊，會跟會議列表標題的「顯示方式」擠在一起；Windows 沒有一樣的元件。自己畫的箭頭放在標題後面（使用者給的參考圖也是），兩邊一樣（D175）。
+- DEBUG：`sidebarsection <鍵> on|off`（on 是展開）、`sidebarexpand <folder:名稱|series:id> on|off`；state 的 `sidebarCollapsed`、`sidebarExpanded`。
+- Windows：design-windows §11.34。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2817,3 +2828,4 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D171 | 刪除一句跟說話者的修正共用「復原」（只復原最近一次，§63） | 另外做「最近刪除的句子」：要新的表和畫面。刪除前確認：一次刪一句，確認比復原麻煩 |
 | D173 | 定期會議用與會者、星期幾、時間找，不靠標題；先建議、使用者確認才建立 | 用標題找：同一個週會每次的標題不一樣（整理工具取的、帶日期），反而不同會議會有「週會」這種共同詞；用行事曆：要多一個權限，而且很多會議不在行事曆上（R99 不做）。直接自動建立：猜錯時使用者要自己拆掉，而且會把不相干的待辦接進下一場的會議紀錄 |
 | D174 | 「上次的待辦」放在使用者提示詞，system 提示詞不變 | 改 system 提示詞：每一場會議（不在系列裡的也是）都多一條用不到的規則，整理品質要重新評估；放在使用者提示詞只影響系列裡的會議。schema 還是一律多 followUps（OpenAI 的 strict 模式每個欄位都要列在 required，不能只有系列的會議才有） |
+| D175 | 側欄的收合用自己畫的箭頭（標題後面），資料夾展開最近 5 場、其餘到下面的列表看 | 系統的 `Section(isExpanded:)`：箭頭只在滑過時出現、在標題最右邊，跟「顯示方式」擠在一起，Windows 沒有一樣的。資料夾展開全部的會議（樹狀）：會議多的資料夾把整個側欄撐長，下面的列表本來就能只看一個資料夾。點資料夾名稱改成展開（完全照參考圖）：只看一個資料夾要多一步，現在的用法會變 |

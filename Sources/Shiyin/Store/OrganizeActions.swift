@@ -47,6 +47,7 @@ extension AppModel {
     /// 會議留著；之後不再建議同一組
     func deleteSeries(_ id: Int64) {
         if seriesFilter == id { seriesFilter = nil }
+        setRow(Self.seriesKey(id), expanded: false)
         perform { try db.deleteSeries(id) }
     }
 
