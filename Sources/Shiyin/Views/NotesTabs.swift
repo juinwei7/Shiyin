@@ -219,31 +219,17 @@ struct NotesPage: View {
                 .onDisappear { finish(true, automatically: true) }   // 切到別的分頁、別場會議：自動存，不丟掉打的字
         } else if let notes = detail.notes, !notes.isEmpty, notesView == "mindMap" {
             mindMapPage(notes)
+        } else if let notes = detail.notes, !notes.isEmpty, notesView == "people" {
+            // 人物（R92、design §66）：條列、心智圖不變，依人整理的另外一頁
+            ReadingColumn {
+                header(notes)
+                PeopleNotes(detail: detail, notes: notes)
+            }
         } else if let notes = detail.notes, !notes.isEmpty {
             ReadingColumn {
                 header(notes)
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
-                }
-                // 每個人的重點（R92、design §66）：頭像的顏色跟逐字稿的說話者一樣（對不到說話者時照名字算，同人物頁）
-                if notes.people.contains(where: { !$0.points.isEmpty }) {
-                    NotesSection(title: String(localized: "每個人的重點")) {
-                        VStack(alignment: .leading, spacing: 18) {
-                            ForEach(Array(notes.people.enumerated()), id: \.offset) { p, person in
-                                if !person.points.isEmpty {
-                                    let idx = detail.speakers.first { $0.value == person.name }?.key
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            PersonAvatar(name: person.name, color: idx.map(Color.speaker) ?? Color.person(person.name),
-                                                         size: 22, isMe: idx != nil && idx == detail.selfIdx)
-                                            Text(person.name).contentTitleFont(16)
-                                        }
-                                        ItemList(items: person.points, detail: detail) { .person(p, $0) }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
                 if !notes.decisions.isEmpty {
                     NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions, detail: detail) { .decisions($0) } }
@@ -387,8 +373,93 @@ struct ReviewBanner: View {
 }
 
 /// 右上角的「編輯」按鈕；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）；左邊是「條列｜心智圖」（R67）
+/// 人物（R92、design §66）：每個人一張：頭像、名字、說了多久，重點（時間點、待確認的標記）、負責的待辦。
+/// 這場的紀錄還沒有每個人的重點時說明原因；有兩位以上說話者時可以只補上這一段（其他段落不動）
+struct PeopleNotes: View {
+    @Environment(AppModel.self) private var model
+    let detail: MeetingDetail
+    let notes: MeetingNotes
+
+    var body: some View {
+        if notes.people.contains(where: { !$0.points.isEmpty }) {
+            let spoken = spokenSeconds
+            let total = spoken.values.reduce(0, +)
+            VStack(alignment: .leading, spacing: 30) {
+                ForEach(Array(notes.people.enumerated()), id: \.offset) { p, person in
+                    if !person.points.isEmpty { card(p, person, spoken: spoken, total: total) }
+                }
+            }
+            .padding(.top, 10)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                if detail.speakers.count < 2 {
+                    Text("這場會議只有一位說話者（或沒有辨識說話者），沒有依人物整理的重點。").foregroundStyle(.secondary)
+                } else {
+                    Text("這場的會議紀錄還沒有每個人的重點。").foregroundStyle(.secondary)
+                    Button("產生每個人的重點", systemImage: "person.2") { model.generatePeopleNotes() }
+                        .disabled(model.detailStatus?.isActive == true)
+                        .help("用整理工具依說話者整理每個人的重點；摘要、決議、待辦這些段落不會變")
+                }
+            }
+            .contentFont()
+            .padding(.top, 10)
+        }
+    }
+
+    private func card(_ p: Int, _ person: MeetingNotes.Person, spoken: [Int: Double], total: Double) -> some View {
+        let idx = speakerIdx(person.name)
+        let owned = notes.actionItems.enumerated().filter { owns($0.element.owner, person.name) }
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                PersonAvatar(name: person.name, color: idx.map(Color.speaker) ?? Color.person(person.name),
+                             size: 30, isMe: idx != nil && idx == detail.selfIdx)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(person.name).contentTitleFont(18)
+                    if let idx, let seconds = spoken[idx], total > 0 {
+                        Text("說了 \(TimeFormat.duration(Int(seconds.rounded())))（\(Int((seconds / total * 100).rounded()))%）")
+                            .contentFont(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            ItemList(items: person.points, detail: detail) { .person(p, $0) }
+            if !owned.isEmpty {
+                Text("負責的待辦").contentFont(.callout).foregroundStyle(.secondary).padding(.top, 4)
+                ItemList(items: owned.map { MeetingNotes.Item(text: dueText($0.element), time: $0.element.time) }, detail: detail) {
+                    .actionItems(owned[$0].offset)
+                }
+            }
+        }
+    }
+
+    /// 每位說話者在正式逐字稿裡說了幾秒
+    private var spokenSeconds: [Int: Double] {
+        var seconds: [Int: Double] = [:]
+        for s in detail.segments where s.kind == "final" {
+            if let idx = s.speaker { seconds[idx, default: 0] += max(0, s.end - s.start) }
+        }
+        return seconds
+    }
+
+    /// 名字對到哪一位說話者（不分大小寫、去頭尾空白）；對不到是 nil，頭像照名字算顏色（同人物頁）
+    private func speakerIdx(_ name: String) -> Int? {
+        let target = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return detail.speakers.first { $0.value.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(target) == .orderedSame }?.key
+    }
+
+    /// 負責人跟名字一樣或包含名字（不分大小寫，同人物頁的待辦，R85.3）
+    private func owns(_ owner: String, _ name: String) -> Bool {
+        let target = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !target.isEmpty && owner.range(of: target, options: .caseInsensitive) != nil
+    }
+
+    private func dueText(_ item: MeetingNotes.ActionItem) -> String {
+        item.due.isEmpty ? item.task : String(localized: "\(item.task)（期限 \(item.due)）")
+    }
+}
+
 struct EditBar: View {
-    /// list／mindMap；nil 不顯示切換
+    /// list／mindMap／people；nil 不顯示切換
     var viewMode: Binding<String>? = nil
     /// 轉錄或整理中不能編輯：工作完成時會整份寫回，手動改的會被蓋掉
     var disabled = false
@@ -402,11 +473,12 @@ struct EditBar: View {
                 Picker("顯示方式", selection: viewMode) {
                     Text("條列").tag("list")
                     Text("心智圖").tag("mindMap")
+                    Text("人物").tag("people")
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
-                .help("把會議紀錄切換成條列或心智圖")
+                .help("把會議紀錄切換成條列、心智圖或依人物整理")
             }
             Spacer()
             if let onUndo {
@@ -501,6 +573,14 @@ struct NotesEditor: View {
     @Environment(\.textScale) private var scale
     @Binding var notes: MeetingNotes
     let onFinish: (Bool) -> Void
+    /// 打開時有每個人的重點才顯示那一段（刪光了也留著，可以再新增）
+    @State private var showsPeople: Bool
+
+    init(notes: Binding<MeetingNotes>, onFinish: @escaping (Bool) -> Void) {
+        _notes = notes
+        self.onFinish = onFinish
+        _showsPeople = State(initialValue: !notes.wrappedValue.people.isEmpty)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -520,25 +600,6 @@ struct NotesEditor: View {
                 VStack(alignment: .leading, spacing: 22) {
                     TextField("標題", text: $notes.title).contentTitleFont(18)
                     EditorSection(title: String(localized: "摘要")) { ItemsEditor(items: $notes.summary) }
-                    // 每個人的重點（R92）：同議題的編輯器，名字欄＋重點
-                    EditorSection(title: String(localized: "每個人的重點")) {
-                        ForEach(notes.people.indices, id: \.self) { i in
-                            let person = $notes.people.safe(i, fallback: .init(name: "", points: []))
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    TextField("名字", text: person.name).contentTitleFont(16)
-                                    Button { if notes.people.indices.contains(i) { notes.people.remove(at: i) } } label: { Image(systemName: "trash") }
-                                        .buttonStyle(.borderless).help("刪除這個人的重點")
-                                }
-                                ItemsEditor(items: person.points)
-                            }
-                        }
-                        Button("新增一個人", systemImage: "plus") {
-                            notes.people.append(.init(name: "", points: []))
-                        }
-                        .buttonStyle(.borderless)
-                        .contentFont(.callout)
-                    }
                     EditorSection(title: String(localized: "決議")) { ItemsEditor(items: $notes.decisions) }
                     EditorSection(title: String(localized: "待辦")) { ActionItemsEditor(items: $notes.actionItems) }
                     EditorSection(title: String(localized: "未決問題")) { ItemsEditor(items: $notes.openQuestions) }
@@ -565,6 +626,27 @@ struct NotesEditor: View {
                     ForEach(notes.custom.indices, id: \.self) { i in
                         let section = $notes.custom.safe(i, fallback: .init(title: "", items: []))
                         EditorSection(title: section.wrappedValue.title) { ItemsEditor(items: section.items) }
+                    }
+                    // 每個人的重點（R92，「人物」顯示的那一段）：有這一段時才出現，原本的編輯器不變；同議題，名字欄＋重點
+                    if showsPeople {
+                        EditorSection(title: String(localized: "每個人的重點")) {
+                            ForEach(notes.people.indices, id: \.self) { i in
+                                let person = $notes.people.safe(i, fallback: .init(name: "", points: []))
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        TextField("名字", text: person.name).contentTitleFont(16)
+                                        Button { if notes.people.indices.contains(i) { notes.people.remove(at: i) } } label: { Image(systemName: "trash") }
+                                            .buttonStyle(.borderless).help("刪除這個人的重點")
+                                    }
+                                    ItemsEditor(items: person.points)
+                                }
+                            }
+                            Button("新增一個人", systemImage: "plus") {
+                                notes.people.append(.init(name: "", points: []))
+                            }
+                            .buttonStyle(.borderless)
+                            .contentFont(.callout)
+                        }
                     }
                     if !notes.reviewItems.isEmpty {
                         EditorSection(title: String(localized: "待確認")) {

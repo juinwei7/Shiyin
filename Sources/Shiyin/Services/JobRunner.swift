@@ -138,9 +138,27 @@ struct RevisePayload: Codable {
     var answers: [ReviewAnswer]
 }
 
-/// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）
+/// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）；people 是只補上每個人的重點，其他段落不動（design §66）
 struct SummarizePayload: Codable {
     var draft = false
+    var people = false
+
+    init(draft: Bool = false, people: Bool = false) { (self.draft, self.people) = (draft, people) }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        draft = (try? c.decode(Bool.self, forKey: .draft)) ?? false
+        people = (try? c.decode(Bool.self, forKey: .people)) ?? false
+    }
+
+    /// people 是 false 時不寫：草稿的 payload 跟以前一字不差
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(draft, forKey: .draft)
+        if people { try c.encode(true, forKey: .people) }
+    }
+
+    private enum CodingKeys: String, CodingKey { case draft, people }
 }
 
 /// 轉錄工作的 payload（design §35.3）：until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）；
@@ -273,7 +291,7 @@ final class JobRunner {
             case .transcribe: try await transcribe(job, lane: lane)
             case .summarize:
                 let payload = (try? JSONDecoder().decode(SummarizePayload.self, from: Data((job.payload ?? "{}").utf8))) ?? SummarizePayload()
-                notify = try await summarize(job, lane: lane, answers: nil, draft: payload.draft)
+                notify = try await summarize(job, lane: lane, answers: nil, draft: payload.draft, peopleOnly: payload.people)
             case .revise:
                 let payload = try JSONDecoder().decode(RevisePayload.self, from: Data((job.payload ?? "{}").utf8))
                 notify = try await summarize(job, lane: lane, answers: payload.answers)
@@ -645,7 +663,7 @@ final class JobRunner {
     // MARK: 整理（design §8）
 
     /// 回傳要不要發通知：草稿沒做（正式逐字稿已經好了）、正式版取代了草稿時不發
-    private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?, draft: Bool = false) async throws -> Bool {
+    private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?, draft: Bool = false, peopleOnly: Bool = false) async throws -> Bool {
         guard let meeting = try db.meeting(job.meetingId) else { return false }
         // 草稿（design §21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
         if try draft && !db.segments(job.meetingId).isEmpty { return false }
@@ -661,11 +679,17 @@ final class JobRunner {
         guard !segments.isEmpty || !meeting.userNotes.isEmpty else { throw LLMError.failed(String(localized: "還沒有逐字稿，請先完成轉錄")) }
         let templates = try db.templates()
         let template = templates.first { $0.id == meeting.templateId } ?? templates.first { $0.id == "general" }
+        var definition = template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}")
+        // 只補上每個人的重點（design §66）：範本只要 people，整理完只換掉 people，其他段落不動
+        if peopleOnly {
+            guard meeting.decodedNotes != nil else { return false }
+            definition = TemplateDefinition(description: definition.description, sections: ["people"], custom: [], instruction: definition.instruction)
+        }
         let context = NotesContext(
             meeting: meeting, segments: segments,
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
             bookmarks: try db.bookmarks(job.meetingId), glossary: try glossaryTerms(),
-            template: template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}"),
+            template: definition,
             documents: try db.documents(job.meetingId).map(DocumentText.init))
         let prompt: String
         if let answers {
@@ -681,6 +705,13 @@ final class JobRunner {
         guard isStillRunning(job) else { return false }
         // 中文會議用簡體時，整理完才轉（提示詞照舊，design §47.2、D154）
         if AppSettings.simplifiedChinese(for: meeting.meetingLanguage) { notes = notes.simplified() }
+        if peopleOnly {
+            // 整理的期間紀錄可能被改過：用現在的紀錄，只換掉 people
+            guard var current = try db.meeting(job.meetingId)?.decodedNotes else { return false }
+            current.people = notes.people
+            try db.saveNotes(job.meetingId, notes: current, by: nil, reason: String(localized: "補上每個人的重點"), source: .edit)
+            return false
+        }
         if draft {
             // 整理草稿的期間正式逐字稿好了、或已經有會議紀錄：丟掉草稿
             guard try db.segments(job.meetingId).isEmpty, try db.meeting(job.meetingId)?.notes == nil else { return false }

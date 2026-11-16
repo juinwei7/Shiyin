@@ -146,13 +146,6 @@ enum NotesExporter {
             out += ["", "## \(title)"] + items.map { "- \($0.text)\(t($0.time))" }
         }
         section(x.section("summary"), notes.summary)
-        // 每個人的重點（R92、design §66）：一個人一個小標題
-        if notes.people.contains(where: { !$0.points.isEmpty }) {
-            out += ["", "## \(x.section("people"))"]
-            for person in notes.people where !person.points.isEmpty {
-                out += ["", "### \(person.name)"] + person.points.map { "- \($0.text)\(t($0.time))" }
-            }
-        }
         section(x.section("decisions"), notes.decisions)
         if !notes.actionItems.isEmpty {
             out += ["", "## \(x.section("actionItems"))", "| \(x.owner) | \(x.task) | \(x.due) | \(x.time) |", "|---|---|---|---|"]
@@ -194,12 +187,6 @@ enum NotesExporter {
             body += "<h2>\(HTML.escape(title))</h2>\n<ul>" + items.map { "<li>\(HTML.escape($0.text))\(t($0.time))</li>" }.joined() + "</ul>\n"
         }
         list(x.section("summary"), notes.summary)
-        if notes.people.contains(where: { !$0.points.isEmpty }) {
-            body += "<h2>\(HTML.escape(x.section("people")))</h2>\n"
-            for person in notes.people where !person.points.isEmpty {
-                body += "<h3>\(HTML.escape(person.name))</h3>\n<ul>" + person.points.map { "<li>\(HTML.escape($0.text))\(t($0.time))</li>" }.joined() + "</ul>\n"
-            }
-        }
         list(x.section("decisions"), notes.decisions)
         if !notes.actionItems.isEmpty {
             body += "<h2>\(x.section("actionItems"))</h2>\n<table><tr><th class=\"nowrap\">\(x.owner)</th><th>\(x.task)</th><th class=\"nowrap\">\(x.due)</th></tr>"

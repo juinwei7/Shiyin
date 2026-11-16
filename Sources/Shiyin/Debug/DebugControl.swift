@@ -30,9 +30,10 @@ enum DebugControl {
         let id = args.count > 1 ? Int64(args[1]) : nil
         switch name {
         case "select": model.showTrash = false; model.selection = id
-        // notesview list|mindmap：紀錄分頁切換成條列或心智圖（design §42.5；寫進共用設定，測完 defaults delete com.weiwei.shiyin notesView）
+        // notesview list|mindmap|people：紀錄分頁切換成條列、心智圖或人物（design §42.5；寫進共用設定，測完 defaults delete com.weiwei.shiyin notesView）
         case "notesview":
-            UserDefaults.standard.set(args.count > 1 && args[1].lowercased() == "mindmap" ? "mindMap" : "list", forKey: AppSettings.notesViewKey)
+            let view = args.count > 1 ? args[1].lowercased() : "list"
+            UserDefaults.standard.set(view == "mindmap" ? "mindMap" : view == "people" ? "people" : "list", forKey: AppSettings.notesViewKey)
         case "tab":   // tab <summary|transcript|ask>；舊名稱 topics、review、notes 當別名（review 順便展開待確認、notes 展開我的筆記，design §33.1）
             if let r = DetailTab.resolve(args[1]) {
                 model.tab = r.tab
@@ -43,6 +44,7 @@ enum DebugControl {
         case "retry": model.selection = id; model.retry()
         case "retranscribe": model.selection = id; model.retranscribe()
         case "resummarize": model.selection = id; model.resummarize()
+        case "peoplenotes": model.selection = id; model.generatePeopleNotes()   // 「人物」的「產生每個人的重點」（design §66）
         case "undo": model.selection = id; model.undoNotes()
         case "trash": if let id { model.moveToTrash(id) }
         case "restore": if let id { model.restore(id) }

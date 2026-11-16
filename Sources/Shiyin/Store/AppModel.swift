@@ -1250,6 +1250,21 @@ final class AppModel {
         runner.wake()
     }
 
+    /// 「人物」的「產生每個人的重點」（R92、design §66）：只補上這一段，摘要、決議、待辦這些段落不動
+    func generatePeopleNotes() {
+        guard let id = selection, readyForAction(id) else { return }
+        guard AppSettings.provider != .none else {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        let payload = String(decoding: (try? JSONEncoder().encode(SummarizePayload(people: true))) ?? Data(), as: UTF8.self)
+        perform { try db.enqueue(id, kind: .summarize, payload: payload) }
+        runner.wake()
+    }
+
     func undoNotes() {
         guard let id = selection, readyForAction(id) else { return }
         perform {

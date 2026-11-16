@@ -12,14 +12,13 @@ enum MindMap {
 
     /// 段落名稱和標點：畫面上用介面語言（同條列），匯出用會議語言（同 ExportText）
     struct Labels {
-        let summary, people, decisions, actionItems, openQuestions, topics, untitled, colon: String
+        let summary, decisions, actionItems, openQuestions, topics, untitled, colon: String
         let paren: (String) -> String
 
         /// script：中文會議用簡體時轉成簡體（同匯出，design §47.2）
         init(_ language: MeetingLanguage, script: @escaping (String) -> String = { $0 }) {
             let x = ExportText(language)
             summary = script(x.section("summary"))
-            people = script(x.section("people"))
             decisions = script(x.section("decisions"))
             actionItems = script(x.section("actionItems"))
             openQuestions = script(x.section("openQuestions"))
@@ -62,16 +61,6 @@ enum MindMap {
                 branches.append(Node(text: name.isEmpty ? labels.topics : name, time: clean(topic.start), children: leaves(topic.points)))
             }
         }
-        // 每個人的重點（R92、design §66）：葉子是「名字：重點」，同待辦的「負責人：事項」
-        let people: [Node] = notes.people.flatMap { person in
-            let name = clean(person.name)
-            return person.points.compactMap { point -> Node? in
-                let text = clean(point.text)
-                guard !text.isEmpty else { return nil }
-                return Node(text: name.isEmpty ? text : name + labels.colon + text, time: clean(point.time))
-            }
-        }
-        if !people.isEmpty { branches.append(Node(text: labels.people, time: "", children: people)) }
         let decisions = leaves(notes.decisions)
         if !decisions.isEmpty { branches.append(Node(text: labels.decisions, time: "", children: decisions)) }
         let actions: [Node] = notes.actionItems.compactMap { a in

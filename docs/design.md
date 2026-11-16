@@ -2585,15 +2585,21 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 匯出、複製、snapshot 不用 `zoom`（同現在）。
 - Windows：design-windows §11.24。
 
-## 66. 每個人的重點（R92）
+## 66. 依人物整理的重點（R92）
 
-- 資料：`MeetingNotes.people: [Person]`，`Person { name: String, points: [Item] }`。JSON schema 加 `people`（required，同其他段落；沒產生時是空陣列）；解碼舊的紀錄沒有 `people` 時是空陣列。
-- 段落：`TemplateDefinition.builtinSectionIDs` 加 `people`，放在 `summary` 後面（提示詞的「要產生的段落」、設定畫面的勾選都照這個順序）。名稱：每個人的重點／Key points by person／参加者ごとの要点。內建範本只有「一般會議」（中英日三份）加上。
-- 提示詞（中英日三份的規則）：第 3 條「每一條紀錄」加上 people 的 points；新增一條：「people 依說話者整理每個人在會議中的主要意見、提議、報告和答應要做的事，每人 1～4 條；name 用逐字稿裡的說話者名稱，同一人只列一次；只有一位說話者或逐字稿沒有標說話者時給空陣列。」一般語言（韓文）的 Output language 那句加上 people。校稿的說明（reviseInstructions）列舉的段落加上「每個人的重點」。
-- 畫面（`NotesTabs`）：摘要下面「每個人的重點」，每個人一列：頭像（`Avatar`，用名字，跟人物頁一樣的釉色）＋名字，下面是重點（`ItemList`，時間點按了播放）。編輯器同議題：名字欄、重點清單、刪除、「新增一個人」。
-- 改說話者的名字、合併（`replacingSpeakerName`、`replacing`、`mappingText`）、簡體（`simplified`）、搜尋的純文字、匯出（Markdown、純文字、Word、剪貼簿：段落標題下每個人一個小標題、下面是重點）、心智圖（`MindMap.tree`：議題／摘要後面一支「每個人的重點」，葉子是「名字：重點」，同待辦的「負責人：事項」）都加上 people。
-- 待確認的連結（`NoteItemRef.person(人, 條)`）：`sortKey` 是 6（排在 custom 後面，舊的標準答案不變）。
-- 標準答案：`fixtures.json` 加一場有 people 的會議；重跑 dump-golden（提示詞、schema、匯出、心智圖、範本都會變）。
+- 資料：`MeetingNotes.people: [Person]`，`Person { name: String, points: [Item] }`。JSON schema 加 `people`（required，同其他段落；沒產生時是空陣列）；解碼舊的紀錄沒有 `people` 時是空陣列；`people` 是空的時不寫進 JSON（以前的紀錄存起來、放進提示詞跟以前一字不差）。
+- 段落：`TemplateDefinition.builtinSectionIDs` 加 `people`，放在 `summary` 後面（提示詞的「要產生的段落」、設定畫面的勾選照這個順序）。名稱：每個人的重點／Key points by person／参加者ごとの要点。內建範本只有「一般會議」（中英日三份）加上。
+- 提示詞（中英日三份的規則）：第 3 條「每一條紀錄」加上 people 的 points；最後一條：「範本要產生 people 時，依說話者整理每個人在會議中的主要意見、提議、報告和答應要做的事，每人 1～4 條；name 用逐字稿裡的說話者名稱，同一個人只列一次；只有一位說話者或逐字稿沒有標說話者時給空陣列。」一般語言（韓文）的 Output language 那句、校稿說明（reviseInstructions）列舉的段落加上 people。
+- 畫面：條列、心智圖、匯出不變（使用者「原本摘要不用動」）。`EditBar` 的切換多「人物」（`notesView = "people"`）：`PeopleNotes` 每個人一張：
+  - 頭像（`PersonAvatar`，名字對到說話者（不分大小寫、去頭尾空白）用 `Color.speaker(idx)`，對不到照名字算，同人物頁）、名字、「說了 N 分鐘（P%）」（正式逐字稿每位說話者 `end - start` 的總和，佔全部說話者的比例；對不到說話者不顯示）。
+  - 重點：`ItemList`（時間點、待確認的標記 `NoteItemRef.person(人, 條)`）。
+  - 負責的待辦：負責人跟名字一樣或包含名字（不分大小寫，同人物頁 R85.3），`ItemList`（「事項（期限 日期）」、時間點，待確認的標記連到 `.actionItems(原本的位置)`）。
+  - 沒有 people 時：兩位以上說話者寫「這場的會議紀錄還沒有每個人的重點。」和「產生每個人的重點」；不到兩位寫「只有一位說話者…」。
+- 只補上（`AppModel.generatePeopleNotes`）：排 `summarize`，payload `{"draft": false, "people": true}`（`people` 是 false 時不寫，草稿的 payload 不變）。`JobRunner.summarize` 用範本的說明和額外指示、`sections: ["people"]`、沒有自訂段落整理，結果只取 `people` 換進現在的紀錄（整理期間紀錄被改過也不會蓋掉），`saveNotes(..., reason: 「補上每個人的重點」, source: .edit)`，不發通知。
+- 編輯器：打開時紀錄有 people 才顯示「每個人的重點」（放在自訂段落後面），同議題：名字欄、重點、刪除、「新增一個人」。
+- 改說話者的名字、合併（`replacingSpeakerName`、`replacing`、`mappingText`）、簡體、搜尋的純文字都加上 people；待確認的連結 `sortKey` 是 6（排在 custom 後面，舊的標準答案不變）。
+- 標準答案：`fixtures.json` 的 zh 會議加 people（測解碼、改名、資料庫、提示詞）；匯出、心智圖跟以前一樣。
+- DEBUG：`notesview people`；`peoplenotes <會議 id>`（等於按「產生每個人的重點」）。
 - Windows：design-windows §11.25。
 
 ## 14. 決策紀錄

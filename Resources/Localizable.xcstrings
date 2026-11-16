@@ -544,6 +544,23 @@
         }
       }
     },
+    "%@（期限 %@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（期限 %@）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (due %2$@)"
+          }
+        }
+      }
+    },
     "%@（正式轉錄完成後會自動更新）": {
       "extractionState": "manual",
       "localizations": {
@@ -9174,19 +9191,19 @@
         }
       }
     },
-    "把會議紀錄切換成條列或心智圖": {
+    "把會議紀錄切換成條列、心智圖或依人物整理": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show the meeting notes as a list or a mind map"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "把会议记录切换成条列或心智图"
+            "value": "把会议记录切换成条列、心智图或依人物整理"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the meeting notes as a list, a mind map or by person"
           }
         }
       }
@@ -14511,6 +14528,23 @@
         }
       }
     },
+    "產生每個人的重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "产生每个人的重点"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Key Points by Person"
+          }
+        }
+      }
+    },
     "用企業伺服器整理會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -14558,6 +14592,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "用你的订阅，不另外收费"
+          }
+        }
+      }
+    },
+    "用整理工具依說話者整理每個人的重點；摘要、決議、待辦這些段落不會變": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用整理工具依说话者整理每个人的重点；摘要、决议、待办这些段落不会变"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the summarizer to write each speaker's key points. The summary, decisions, action items and other sections stay the same"
           }
         }
       }
@@ -16320,6 +16371,23 @@
         }
       }
     },
+    "補上每個人的重點": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "补上每个人的重点"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added key points by person"
+          }
+        }
+      }
+    },
     "裝好之後在終端機執行 claude 登入，再按「重新檢查」。": {
       "extractionState": "manual",
       "localizations": {
@@ -16860,6 +16928,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "语言检测模型还没下载，下载好之前录音不会自动检测"
+          }
+        }
+      }
+    },
+    "說了 %@（%lld%%）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说了 %@（%lld%%）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spoke for %1$@ (%2$lld%%)"
           }
         }
       }
@@ -18481,6 +18566,23 @@
         }
       }
     },
+    "這場會議只有一位說話者（或沒有辨識說話者），沒有依人物整理的重點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场会议只有一位说话者（或没有识别说话者），没有依人物整理的重点。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has only one speaker (or speakers weren't identified), so there are no key points by person."
+          }
+        }
+      }
+    },
     "這場會議在垃圾桶裡，30 天後會永久刪除": {
       "extractionState": "manual",
       "localizations": {
@@ -18817,6 +18919,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "This meeting's to-dos are already in Reminders"
+          }
+        }
+      }
+    },
+    "這場的會議紀錄還沒有每個人的重點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场的会议记录还没有每个人的重点。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These meeting notes don't have key points by person yet."
           }
         }
       }
