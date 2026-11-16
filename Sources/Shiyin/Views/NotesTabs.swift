@@ -210,6 +210,8 @@ struct NotesPage: View {
     let detail: MeetingDetail
     @State private var editing: MeetingNotes?
     @State private var base: MeetingNotes?
+    /// 心智圖的縮放（design §65）：換會議時這個 view 跟著換，回到預設；切回條列時清掉
+    @State private var mindMapZoom: Double?
 
     var body: some View {
         if let current = editing {
@@ -303,7 +305,7 @@ struct NotesPage: View {
                     .padding(.bottom, 26)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 MindMapView(layout: layout, language: detail.meeting.meetingLanguage, availableWidth: width,
-                            onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil)
+                            onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil, zoom: $mindMapZoom)
             }
         }
         return Group {
@@ -315,6 +317,7 @@ struct NotesPage: View {
                 }
             }
         }
+        .onDisappear { mindMapZoom = nil }   // 切回條列、編輯、換分頁時回到預設（R91.3）
     }
 
     private func finish(_ save: Bool, automatically: Bool = false) {

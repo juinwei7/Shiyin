@@ -6043,6 +6043,23 @@
         }
       }
     },
+    "回到符合寬度": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回到符合宽度"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fit to Width"
+          }
+        }
+      }
+    },
     "回報問題": {
       "extractionState": "manual",
       "localizations": {
@@ -10384,6 +10401,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "改用 %@"
+          }
+        }
+      }
+    },
+    "放大": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放大"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom In"
           }
         }
       }
@@ -15215,6 +15249,23 @@
         }
       }
     },
+    "符合寬度": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符合宽度"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fit to Width"
+          }
+        }
+      }
+    },
     "第一次使用下載模型時需要（約 1.7 GB）；整理會議紀錄時需要。錄音、轉錄不需要": {
       "extractionState": "manual",
       "localizations": {
@@ -15806,6 +15857,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "编辑这一段"
+          }
+        }
+      }
+    },
+    "縮小": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩小"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom Out"
           }
         }
       }

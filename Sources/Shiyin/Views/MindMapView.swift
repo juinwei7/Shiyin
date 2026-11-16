@@ -14,20 +14,42 @@ struct MindMapView: View {
     var exporting = false
     /// 點時間點（畫面上、有錄音時才有）
     var onSeek: ((Double) -> Void)? = nil
+    /// 使用者選的倍數（design §65、R91）；nil 是預設（符合寬度）。沒給就沒有縮放的按鈕
+    var zoom: Binding<Double?>? = nil
+    /// 兩指開合開始時的倍數
+    @State private var pinchBase: Double?
+
+    static let zoomRange = 0.25...3.0
 
     var body: some View {
         if exporting || snapshotMode {
             canvas
         } else {
-            // 比畫面寬時縮小到放得下（最小 0.6 倍），再乘上文字大小（⌘＋／⌘－）；還是比畫面寬時左右捲，上下跟著整頁捲
+            // 預設：比畫面寬時縮小到放得下（最小 0.6 倍）；使用者縮放過就用他選的。再乘上文字大小（⌘＋／⌘－）；
+            // 比畫面寬時左右捲，上下跟著整頁捲
             let fit = max(0.6, min(1, (availableWidth - 16) / layout.width))
-            let zoom = fit * textScale
-            ScrollView(.horizontal) {
-                canvas
-                    .scaleEffect(zoom, anchor: .topLeading)
-                    .frame(width: layout.width * zoom, height: layout.height * zoom, alignment: .topLeading)
+            let scale = zoom?.wrappedValue ?? fit
+            let total = scale * textScale
+            VStack(alignment: .trailing, spacing: 4) {
+                if let zoom {
+                    MindMapZoomControl(zoom: zoom, current: scale)
+                        .padding(.horizontal, 24)
+                }
+                ScrollView(.horizontal) {
+                    canvas
+                        .scaleEffect(total, anchor: .topLeading)
+                        .frame(width: layout.width * total, height: layout.height * total, alignment: .topLeading)
+                }
+                .frame(height: layout.height * total)
+                .simultaneousGesture(MagnifyGesture()
+                    .onChanged { value in
+                        guard let zoom else { return }
+                        let base = pinchBase ?? scale
+                        pinchBase = base
+                        zoom.wrappedValue = min(max(base * value.magnification, Self.zoomRange.lowerBound), Self.zoomRange.upperBound)
+                    }
+                    .onEnded { _ in pinchBase = nil })
             }
-            .frame(height: layout.height * zoom)
         }
     }
 
@@ -54,6 +76,38 @@ struct MindMapView: View {
         .frame(width: layout.width, height: layout.height, alignment: .topLeading)
         .background(exporting ? Color.white : Color.clear)
         .environment(\.colorScheme, exporting ? .light : colorScheme)
+    }
+}
+
+/// 心智圖的縮放（design §65、R91）：縮小、目前的百分比（按了回到符合寬度）、放大，一次 25%
+private struct MindMapZoomControl: View {
+    @Binding var zoom: Double?
+    let current: Double
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button { set(current - 0.25) } label: { Image(systemName: "minus.magnifyingglass") }
+                .help("縮小")
+                .accessibilityLabel(Text("縮小"))
+                .disabled(current <= MindMapView.zoomRange.lowerBound + 0.001)
+            Button { zoom = nil } label: {
+                Text(verbatim: "\(Int((current * 100).rounded()))%").monospacedDigit().frame(minWidth: 40)
+            }
+            .help("回到符合寬度")
+            .accessibilityLabel(Text("符合寬度"))
+            Button { set(current + 0.25) } label: { Image(systemName: "plus.magnifyingglass") }
+                .help("放大")
+                .accessibilityLabel(Text("放大"))
+                .disabled(current >= MindMapView.zoomRange.upperBound - 0.001)
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .font(.callout)
+    }
+
+    /// 對齊到 25% 的格子（預設的倍數不是整數格時，第一下就對齊）
+    private func set(_ value: Double) {
+        zoom = min(max((value * 4).rounded() / 4, MindMapView.zoomRange.lowerBound), MindMapView.zoomRange.upperBound)
     }
 }
 
