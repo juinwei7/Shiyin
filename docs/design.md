@@ -2516,7 +2516,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 側欄是 source list（2026-11-15 改，使用者覺得分段控制醜；照 Apple 的 Mac 介面準則：側欄是導覽清單，切換內容的分段控制放工具列、不放側欄，標準控制項不套品牌色）：搜尋框下面一直有一組「所有會議（數量）」「人物（數量）」，跟資料夾同一種列（`FolderRow`：圖示 `tray.full`／`person.2`、名字、數量，選到的那一列青瓷綠）；有資料夾時下面是「資料夾」那一組；再下面一段照選的項目列會議或人物，段落標題是那一項的名字。點「所有會議」或資料夾：`sidebarMode = .meetings`、設 `folderFilter`；點「人物」：`sidebarMode = .people`。在垃圾桶、搜尋中時不顯示這幾組（搜尋的結果是會議）。
 - 人物模式：`List(selection: $model.selectedPerson)`，上面同樣是那幾組，下面「人物」一段，每一列（`PersonRow`）頭像（26 pt）、名字（我的話後面「（我）」）、第二行「N 場會議・最近 <日期>」。沒有人時那一段寫說明（同 R85.4）。
 - 右邊：`sidebarMode == .people` 時顯示 `PersonPage`（沒選人時是說明）。視窗標題是人名。`ReadingColumn` 裡：頭像（52 pt；我的話外圈細的青瓷綠，名字旁邊灰字「我」）、名字、「一起開過 N 場會議，最近 <日期>」；動作放在工具列右上角的「更多」（同會議頁的「更多」，輔助使用的名字是「更多」）：「改名…」（popover 接在「更多」下面，同設定頁）、「合併到」（子選單：其他認識的人，選了 `renamePerson(id, to: 那個人的名字)`，同名合併）、分隔線、「刪除聲音特徵…」（確認對話框，同設定頁）；「負責的待辦」：同樣的格線（事項、期限、會議的標題和時間點按鈕），事項那一欄撐滿，表格跟段落同寬，右上角「加到提醒事項」（只加還沒加的；同 §52，但跨會議：每一項的 url 照它自己的會議）；「會議」：每列日期、標題、「說了 N 分鐘」，點了 `reveal(meetingId)`（切回「會議」、選那場）。點待辦的時間點：切回會議、選那場、從那裡播放。
-- DEBUG：`sidebar people|meetings`、`person <id>`；state 的 `sidebarMode`、`selectedPerson`、`personPage`（待辦、會議的數目）。
+- 移除一個人（R85.7）：「更多」和側欄人物列的右鍵選單用同一份（`PersonMenuItems`）：「改名…」（選那個人、`personRenameRequest` 打開名字旁鉛筆的輸入框）、「合併到 ▸」、分隔線、「移除這個人…」（`confirmRemovePerson`）。人物列表 `.onDeleteCommand` 也設 `confirmRemovePerson`。確認對話框放在主視窗：「移除「X」？」，說明「會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。」，按鈕「移除」（`deletePerson`，跟原本的「刪除聲音特徵」同一個動作）；移除的是正在看的人時回到沒選人。設定頁「認識的人」照舊叫「刪除聲音特徵」。
+- DEBUG：`sidebar people|meetings`、`person <id>`、`personremove <id>`（等於選了「移除這個人…」，打開確認）、`personrenameui <id>`（等於選了「改名…」）；state 的 `sidebarMode`、`selectedPerson`、`personPage`（待辦、會議的數目）、`confirmRemovePerson`。
 
 - 名字旁的鉛筆（R85.6）：`pencil`、borderless、青瓷綠，說明和輔助使用的名字是「改名」；點了打開同一個改名輸入框（popover 接在鉛筆下面，`editingName`），取消、儲存同「更多 → 改名…」。
 

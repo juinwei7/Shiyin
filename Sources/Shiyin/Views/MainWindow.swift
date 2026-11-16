@@ -117,6 +117,10 @@ struct MainView: View {
     @AppStorage("hasSeenGuide") private var hasSeenGuide = false
     @State private var dropTargeted = false
 
+    private var removingPersonName: String {
+        model.peopleOverview.first { $0.id == model.confirmRemovePerson }?.name ?? ""
+    }
+
     /// 「從這裡分成兩場…」那一句的開始時間（R90）
     private var splitTime: String {
         guard let id = model.splitMeetingRequest, let segment = model.detail?.segments.first(where: { $0.id == id }) else { return "" }
@@ -199,6 +203,18 @@ struct MainView: View {
             }
         } message: {
             Text("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。")
+        }
+        // 移除一個人（R85.7）：「更多」、側欄右鍵、Delete
+        .confirmationDialog(String(localized: "移除「\(removingPersonName)」？"),
+                            isPresented: Binding(get: { model.confirmRemovePerson != nil }, set: { if !$0 { model.confirmRemovePerson = nil } })) {
+            Button("移除", role: .destructive) {
+                if let id = model.confirmRemovePerson {
+                    if model.selectedPerson == id { model.selectedPerson = nil }
+                    model.deletePerson(id)
+                }
+            }
+        } message: {
+            Text("會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。")
         }
         // 清空垃圾桶（R88.3）
         .confirmationDialog(String(localized: "永久刪除垃圾桶裡的 \(model.trash.count) 場會議？"), isPresented: $model.confirmEmptyTrash) {
@@ -374,6 +390,7 @@ struct SidebarView: View {
             Section("人物") {
                 ForEach(model.peopleOverview) { person in
                     PersonRow(person: person).tag(person.id)
+                        .contextMenu { PersonMenuItems(person: person) }
                 }
                 if model.peopleOverview.isEmpty {
                     Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
@@ -382,6 +399,8 @@ struct SidebarView: View {
                 }
             }
         }
+        // 選到一個人時按 Delete：移除（R85.7）
+        .onDeleteCommand { if let id = model.selectedPerson { model.confirmRemovePerson = id } }
     }
 
     private var meetingList: some View {

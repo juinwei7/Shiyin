@@ -1697,6 +1697,9 @@ final class AppModel {
     var sidebarMode: SidebarMode = .meetings
     var selectedPerson: Int64?
     var peopleOverview: [PersonOverview] = []
+    /// 移除一個人的確認、從側欄右鍵要改名的人（R85.7、design §60.2）
+    var confirmRemovePerson: Int64?
+    var personRenameRequest: Int64?
 
     func reloadPeople() {
         people = (try? db.peopleSummaries()) ?? []

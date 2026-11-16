@@ -302,6 +302,11 @@ enum DebugControl {
                                                  "lastTitle": $0.lastMeetingTitle ?? "", "lastDate": $0.lastMeetingDate ?? ""] }], to: args[1])
         case "personrename": if let id { model.renamePerson(id, to: args[2]) }
         case "persondelete": if let id { model.deletePerson(id) }
+        case "personremove": model.confirmRemovePerson = id   // 等於選了「移除這個人…」（R85.7），打開確認
+        case "personrenameui":   // 等於選了「改名…」（更多、側欄右鍵，R85.7）：選那個人、打開鉛筆下面的輸入框
+            model.sidebarMode = .people
+            model.selectedPerson = id
+            model.personRenameRequest = id
         case "peopledeleteall": model.deleteAllPeople()
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
@@ -860,6 +865,7 @@ enum DebugControl {
             "series": model.series.map { ["id": $0.id ?? 0, "name": $0.name, "weekday": $0.weekday, "minute": $0.minute ?? -1,
                                           "intervalWeeks": $0.intervalWeeks, "people": $0.people, "count": model.seriesCount($0.id ?? 0)] as [String: Any] },
             "seriesCandidates": model.seriesCandidates.count, "seriesFilter": model.seriesFilter ?? -1,
+            "confirmRemovePerson": model.confirmRemovePerson ?? -1,
             "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
                      "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
                                 "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],

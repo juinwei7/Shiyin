@@ -5091,23 +5091,6 @@
         }
       }
     },
-    "刪除「%@」的聲音特徵？": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除“%@”的声音特征？"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete the voice profile of “%@”?"
-          }
-        }
-      }
-    },
     "刪除「%@」？": {
       "extractionState": "manual",
       "localizations": {
@@ -5298,23 +5281,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除第二版的 Python 环境和旧模型"
-          }
-        }
-      }
-    },
-    "刪除聲音特徵…": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除声音特征…"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete Voice Profile…"
           }
         }
       }
@@ -11271,19 +11237,19 @@
         }
       }
     },
-    "改名、跟另一個名字合併（同一個人被記成兩個名字時）、刪除聲音特徵": {
+    "改名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "改名、跟另一个名字合并（同一个人被记成两个名字时）、删除声音特征"
+            "value": "改名、跟另一个名字合并（同一个人被记成两个名字时）、移除这个人"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rename, merge with another name (when one person was saved under two names), or delete the voice profile"
+            "value": "Rename, merge with another name (when the same person was saved under two names), or remove this person"
           }
         }
       }
@@ -12814,6 +12780,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会参考词汇表，多人会议的漏字和同音字比 Breeze 少、速度快三成；阿里巴巴开源的模型，全程在这台 Mac 上跑、不连网，输出会转成台湾繁体；需要下载约 2.5 GB 的模型。"
+          }
+        }
+      }
+    },
+    "會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会从“人物”拿掉，也会删掉他的声音特征。会议里已经带入的名字会留着，之后的会议不会再自动认出他。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They’ll be removed from People and their voice profile will be deleted. Names already filled in your meetings stay, but future meetings won’t recognize them automatically."
           }
         }
       }
@@ -16746,6 +16729,23 @@
         }
       }
     },
+    "移除「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除“%@”？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove “%@”?"
+          }
+        }
+      }
+    },
     "移除條件": {
       "extractionState": "manual",
       "localizations": {
@@ -16759,6 +16759,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove Rules"
+          }
+        }
+      }
+    },
+    "移除這個人…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除这个人…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove This Person…"
           }
         }
       }
