@@ -1294,6 +1294,71 @@ public sealed class ServicesTests : IDisposable
         Assert.Empty(original.Assets);
     }
 
+    /// <summary>
+    /// 只補上每個人的重點（R92.4、M§66）：提示詞的段落只有 people、沒有自訂段落（範本的說明、額外指示照舊）；整理完只換掉 people，
+    /// 標題、摘要、待辦這些段落和整理工具都不動，存一版「補上每個人的重點」，不發通知
+    /// </summary>
+    [Fact]
+    public async Task PeopleOnlySummarizeReplacesOnlyPeople()
+    {
+        var prompts = new List<string>();
+        server.Handle = async c =>
+        {
+            using var reader = new StreamReader(c.Request.InputStream);
+            var body = JsonNode.Parse(await reader.ReadToEndAsync())!;
+            lock (prompts) prompts.Add(body["messages"]![0]!["content"]!.GetValue<string>());
+            // 整理工具回的其他段落也有東西：只能取 people
+            var input = JsonNode.Parse("""
+                {"title":"別的標題","summary":[{"text":"不該出現","time":""}],
+                 "people":[{"name":"小明","points":[{"text":"回報進度","time":"00:01"}]},{"name":"說話者 2","points":[{"text":"提議延後","time":"00:03"}]}],
+                 "decisions":[{"text":"不該出現","time":""}],"actionItems":[],"openQuestions":[],"topics":[],"custom":[],"reviewItems":[]}
+                """);
+            var reply = new JsonObject { ["content"] = new JsonArray(new JsonObject { ["type"] = "tool_use", ["name"] = "save_meeting_notes", ["input"] = input }) };
+            var bytes = Encoding.UTF8.GetBytes(reply.ToJsonString());
+            c.Response.ContentType = "application/json";
+            await c.Response.OutputStream.WriteAsync(bytes);
+            c.Response.Close();
+        };
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic" });
+        var (runner, _, _) = Runner(settings);
+        db.SaveTemplate(new TemplateRecord
+        {
+            Id = "custom-1", Name = "客戶會議",
+            Definition = """{"description":"客戶會議","sections":["summary","actionItems"],"custom":[{"title":"客戶需求","instruction":"列出客戶提的需求"}],"instruction":"用條列"}""",
+        });
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a", Title = "週會" }, null).Id!.Value;
+        db.SetTemplate(id, "custom-1");
+        db.SaveTranscript(id, [
+            new Segment { MeetingId = id, Seq = 0, Start = 0, End = 2, Text = "快取下週好", Speaker = 1 },
+            new Segment { MeetingId = id, Seq = 1, Start = 2, End = 4, Text = "延後一週吧", Speaker = 2 },
+        ], 4, 2);
+        db.RenameSpeaker(id, 1, "小明");
+        var before = new MeetingNotes
+        {
+            Title = "週會", Summary = [new("決定省錢", "00:01")], ActionItems = [new("小明", "寄信", "2026-11-20")],
+            Custom = [new("近況", [new("部署 OK")])],
+        };
+        db.SaveNotes(id, before, "codex", "整理", NotesSource.Generated);
+        db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload(People: true)));
+        var finished = new List<JobKind>();
+        runner.Finished += (job, _) => { lock (finished) finished.Add(job.Kind); };
+        runner.Start();
+        try { await Until(() => db.LatestJob(id)?.Status is JobStatus.Done or JobStatus.Failed); }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+        Assert.Equal(JobStatus.Done, db.LatestJob(id)!.Status);
+        var prompt = Assert.Single(prompts);
+        Assert.Contains("範本：客戶會議\n要產生的段落：people（每個人的重點）\n額外指示：用條列\n", prompt);
+        Assert.DoesNotContain("客戶需求", prompt);
+        var meeting = db.Meeting(id)!;
+        var after = meeting.DecodedNotes!;
+        Assert.Equal((before with { People = after.People }).JsonString(), after.JsonString());
+        Assert.Equal(["小明", "說話者 2"], after.People.Select(p => p.Name));
+        Assert.Equal(("週會", "codex"), (meeting.Title, meeting.NotesBy));
+        Assert.Equal("補上每個人的重點", db.Read(d => d.Scalar("SELECT reason FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id)));
+        Assert.Equal(before.JsonString(), db.Read(d => d.Scalar("SELECT notes FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id)));
+        Assert.Empty(finished);
+    }
+
     [Fact]
     public async Task SetupFailurePausesAutoSummarize()
     {

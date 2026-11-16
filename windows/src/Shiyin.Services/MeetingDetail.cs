@@ -119,6 +119,52 @@ public sealed class MeetingDetail
         return null;
     }
 
+    /// <summary>
+    /// 「人物」的一張（R92、M§66）：Index 是第幾個人（待確認的標記 NoteItemRef.Person 用）、Speaker 是對到的說話者（頭像的顏色）、
+    /// Seconds、Percent 是正式逐字稿裡說了幾秒、佔全部說話者的百分比（對不到說話者時 null，不顯示）、Owned 是負責的待辦和原本的位置
+    /// </summary>
+    public sealed record PersonCard(int Index, MeetingNotes.Person Person, int? Speaker, int? Seconds, int? Percent,
+                                    List<(int Index, MeetingNotes.ActionItem Item)> Owned);
+
+    /// <summary>每位說話者在正式逐字稿裡說了幾秒（end − start 的總和）</summary>
+    public Dictionary<int, double> SpokenSeconds()
+    {
+        var seconds = new Dictionary<int, double>();
+        foreach (var s in Segments)
+            if (s.Kind == "final" && s.Speaker is int idx) seconds[idx] = seconds.GetValueOrDefault(idx) + Math.Max(0, s.End - s.Start);
+        return seconds;
+    }
+
+    /// <summary>負責人跟名字一樣或包含名字（不分大小寫，同人物頁的待辦，R85.3）</summary>
+    public static bool Owns(string owner, string name)
+    {
+        var target = name.Trim();
+        return target.Length > 0 && owner.Contains(target, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>「人物」的每一張（同 Mac 的 PeopleNotes）：有重點的人才有，順序同會議紀錄</summary>
+    public List<PersonCard> PeopleCards(MeetingNotes notes)
+    {
+        var spoken = SpokenSeconds();
+        var total = spoken.Values.Sum();
+        var cards = new List<PersonCard>();
+        for (var p = 0; p < notes.People.Count; p++)
+        {
+            var person = notes.People[p];
+            if (person.Points.Count == 0) continue;
+            var speaker = SpeakerIdx(person.Name);
+            int? seconds = null, percent = null;
+            if (speaker is int idx && spoken.TryGetValue(idx, out var s) && total > 0)
+            {
+                seconds = (int)Shiyin.Text.SwiftText.Round(s);
+                percent = (int)Shiyin.Text.SwiftText.Round(s / total * 100);
+            }
+            var owned = notes.ActionItems.Select((item, index) => (index, item)).Where(x => Owns(x.item.Owner, person.Name)).ToList();
+            cards.Add(new PersonCard(p, person, speaker, seconds, percent, owned));
+        }
+        return cards;
+    }
+
     /// <summary>待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）</summary>
     public int ReviewCount => (Notes?.ReviewItems.Count ?? 0) + SpeakerSuggestions.Count;
     /// <summary>待確認的題目對應到哪一條紀錄（R41.1、M§31.1）：載入時算一次（Windows 每次都整份重讀）</summary>

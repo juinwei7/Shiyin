@@ -540,12 +540,21 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 回到預設（R91.3）：換一場會議、切到逐字稿或提問（`DetailView.Show`）、切回條列、按「編輯」（`NotesTabs.Page`）。匯出、複製的 PNG、SVG、PDF 用 `MindMapView.Build`，不經過縮放（同 Mac）。
 - DEBUG：`state` 加 `mindMapZoom`（使用者選的倍數，null 是預設）、`mindMapScale`（畫面上用的倍數，不含文字大小）。`ps/wheel.ps1` 加第 6 個參數 `ctrl`（按住 Ctrl 捲）。
 
-### 11.25 每個人的重點（R92，M§66）
+### 11.25 依人物整理的重點（R92，M§66）
 
-- Core 同 Mac：`MeetingNotes.People`（`Person(Name, Points)`）；解碼同 Mac 的寬鬆規則（陣列裡有不是物件的，整個 `people` 當作沒有；`name`、`points` 型別不對當作空的）；`People` 是空的時 `ToJson` 不寫（同 Mac 的 `encode`：以前的紀錄存起來、放進提示詞一字不差）。`MappingText`（改說話者名字、合併、全文取代、簡體）、`PlainText`（搜尋）、`IsEmpty`、`JsonSchema`、`TemplateDefinition.BuiltinSectionIds`（`summary` 後面）、`SectionLabel`、內建範本「一般會議」（中英日）、`NotesPrompt`（中英日的規則、一般語言的 Output language、校稿說明）、`NotesExporter`（Markdown、純文字、HTML；Word 從 HTML 轉，`h3` 本來就有）、`MindMap.Tree`（`Labels.People`，「名字：重點」的一支）、`ReviewLinks`（`NoteSection.Person`，排序值 6）、MCP 工具的說明都照 Mac 加上，標準答案（Mac 重新產生的）逐字比。
-- 紀錄分頁（`NotesTabs.Page`）：摘要下面「每個人的重點」（`Section`，同其他段落）；每個人一組（組和組間距 18）：上面一列是頭像＋名字（`Ui.Avatar` 22、名字 `Ui.Heading` 16，都跟著文字大小 `Ui.C`；用 `Ui.Split`，名字長時換行），下面是重點（同其他段落的 `Items`：時間點按了播放、待確認的標記、就地展開的卡片）。頭像的顏色：名字是這場的說話者（`MeetingDetail.SpeakerIdx`，同待辦的負責人：不分大小寫、去掉頭尾空白；Mac 是字串完全相同）時用說話者的顏色，是「我」時有外圈；對不到時照名字算（`Ui.Person`，同人物頁）。沒有重點的人不顯示，全部都沒有時整段不顯示（同 Mac）。
-- 編輯器（`NotesEditor`）：摘要後面「每個人的重點」，同議題的編輯器：每個人一列名字欄（`TextBox`，標題字型、14，提示文字「名字」）＋右邊「刪除這個人的重點」（`Ui.IconButton(Symbol.Delete)`），下面是重點的 `ItemsEditor`；最後「新增一個人」（`Ui.Link`，同「新增議題」）。名字欄的字級照議題標題欄的 14（Mac 是 16）。
-- DEBUG：`reviewexpand`、`reviewsubmit` 的段落加 `person <第幾個人> <第幾條>`（同 Mac）；`editnotes <會議 id> <會議紀錄 JSON 或 JSON 檔的路徑>`（同 Mac 的 `editnotes`，存成新的一版，同按「完成」；Windows 從 SSH 傳中文的 JSON 不方便，所以也收檔案路徑）。
+2026-11-16 第一版（febacfe）把「每個人的重點」放在條列的摘要下面，匯出、心智圖、MCP 的說明也加上這一段；使用者看了 Mac 的第一版後說明要的是紀錄分頁的切換多一類「人物」、原本的摘要不用動，跟著 Mac 08758c9 改成下面這樣。
+
+- Core 同 Mac：`MeetingNotes.People`（`Person(Name, Points)`）；解碼同 Mac 的寬鬆規則（陣列裡有不是物件的，整個 `people` 當作沒有；`name`、`points` 型別不對當作空的）；`People` 是空的時 `ToJson` 不寫（同 Mac 的 `encode`：以前的紀錄存起來、放進提示詞一字不差）。`MappingText`（改說話者名字、合併、全文取代、簡體）、`PlainText`（搜尋，MCP 的搜尋節錄也找得到）、`IsEmpty`、`JsonSchema`、`TemplateDefinition.BuiltinSectionIds`（`summary` 後面）、`SectionLabel`、內建範本「一般會議」（中英日）、`NotesPrompt`（中英日的規則、一般語言的 Output language、校稿說明）、`ReviewLinks`（`NoteSection.Person`，排序值 6）照 Mac 加上。`NotesExporter`（Markdown、純文字、HTML、Word）、`MindMap.Tree`、MCP 工具的說明跟 R92 之前一樣（R92.1）。標準答案（Mac 重新產生的）逐字比。
+- 切換：編輯列左邊的 `SelectorBar` 多一個「人物」（`notesView = "people"`；`ToolTip`「把會議紀錄切換成條列、心智圖或依人物整理」）。條列、心智圖不變。切到人物時心智圖的縮放回到預設（同切回條列，§11.24）。
+- 人物（`NotesTabs.PeopleNotes`，同 Mac 的 `PeopleNotes`）：上面照舊是提示條、編輯列，下面每位說話者一張（張和張間距 30，上面多 10）：
+  - 一列 `Ui.Split`：左邊頭像（`Ui.Avatar` 30），右邊名字（`Ui.Heading` 18）和「說了 N 分鐘（P%）」（12、次要文字；`TimeFormat.Duration(秒, 介面語言)`，簡體介面經過 `L.Ui`），都跟著文字大小（`Ui.C`）。頭像的顏色：名字對到這場的說話者（`MeetingDetail.SpeakerIdx`：不分大小寫、去掉頭尾空白，同 Mac）時用說話者的顏色，是「我」時有外圈；對不到時照名字算（`Ui.Person`，同人物頁）。
+  - 下面是重點（同其他段落的 `Items`：時間點按了播放、待確認的標記 `NoteItemRef.Person(人, 條)`、就地展開的卡片）。
+  - 有負責的待辦時：「負責的待辦」（13、次要文字，上面多 4）＋`Items`：「事項（期限 日期）」（`L.F("%@（期限 %@）")`，沒有期限只寫事項）、時間點；待確認的標記連到 `NoteItemRef.ActionItems(原本的位置)`。
+  - 計算放在 Services 的 `MeetingDetail.PeopleCards`（單元測試測得到）：有重點的人才有一張，順序同紀錄；`SpokenSeconds` 是正式逐字稿（`kind = final`）每位說話者 `end − start` 的總和，秒數和百分比（佔全部說話者）照 Swift 的 `rounded()`（`SwiftText.Round`）；對不到說話者、全部都是 0 時不顯示那一行；`Owns`：負責人包含去掉頭尾空白的名字（不分大小寫，同人物頁的 `PersonActionItems`，R85.3）。
+  - 沒有 people 時：說話者不到兩位寫「這場會議只有一位說話者（或沒有辨識說話者），沒有依人物整理的重點。」；兩位以上寫「這場的會議紀錄還沒有每個人的重點。」和按鈕「產生每個人的重點」（平台的 `Button`，內容是 `Symbol.People`＋字，同 Mac 的 person.2；無障礙名稱同字；`ToolTip`「用整理工具依說話者整理每個人的重點；摘要、決議、待辦這些段落不會變」；這場正在處理時停用）。說明的字跟著文字大小，按鈕不跟（同其他按鈕，R59.2；Mac 的整段用 `contentFont`）。
+- 只補上（R92.4）：`AppController.GeneratePeopleNotes`：擋下來的條件和訊息同「重新整理」（`ReadyForAction`、整理工具是「不整理」、整理工具還沒準備好）；排 `Summarize`，payload `JobRunner.Encode(new SummarizePayload(People: true))` = `{"draft":false,"people":true}`。`people` 是 false 時不寫：草稿的 `{"draft":true}`、自動排的 `{"draft":false}` 跟以前一字不差。`JobRunner.Summarize(peopleOnly)`：沒有紀錄時不做；範本的說明、額外指示照舊，段落只有 `people`、沒有自訂段落；簡體照舊整理完才轉；結果讀現在的紀錄（整理期間被改過也不會蓋掉）只換掉 `People`，`SaveNotes(by: null, 「補上每個人的重點」, NotesSource.Edit)`（整理工具、標題不變，舊的那一版可以「復原上一版」），不發通知。
+- 編輯器（`NotesEditor`）：打開時紀錄有 people 才顯示「每個人的重點」（`showsPeople`，刪光了也留著，可以再新增），放在自訂段落後面（同 Mac；原本的編輯器不變）：同議題的編輯器，每個人一列名字欄（`TextBox`，標題字型、14，提示文字「名字」）＋右邊「刪除這個人的重點」（`Ui.IconButton(Symbol.Delete)`），下面是重點的 `ItemsEditor`；最後「新增一個人」（`Ui.Link`，同「新增議題」）。名字欄的字級照議題標題欄的 14（Mac 是 16）。
+- DEBUG：`notesview list|mindmap|people`；`peoplenotes <會議 id>`（等於按「產生每個人的重點」，同 Mac）；`state` 加 `peopleCards`（選取中的會議每一張的 `index`、`name`、`speaker`、`seconds`、`percent`、`points`（幾條）、`owned`（負責的待辦原本的位置）；Mac 沒有）。`reviewexpand`、`reviewsubmit` 的段落 `person <第幾個人> <第幾條>`（同 Mac）；`editnotes <會議 id> <會議紀錄 JSON 或 JSON 檔的路徑>`（同 Mac 的 `editnotes`，存成新的一版，同按「完成」；Windows 從 SSH 傳中文的 JSON 不方便，所以也收檔案路徑）。
 
 ## 12. 系統整合
 
