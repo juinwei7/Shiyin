@@ -209,6 +209,23 @@ public static class Ui
         return element;
     }
 
+    /// <summary>
+    /// SplitButton 放開 Enter、空白鍵就執行（不管有沒有在它上面按下）。別的地方按 Enter 存檔、那個輸入框被拿掉時，焦點落到視窗的第一個元件
+    /// （錄音按鈕），放開的 Enter 就開始錄音（2026-11-16 虛擬機上就地改紀錄時發生）。只有按下也在這個按鈕上時才讓放開生效
+    /// </summary>
+    public static T IgnoreStrayKeyUp<T>(T button) where T : Control
+    {
+        var down = Windows.System.VirtualKey.None;
+        button.PreviewKeyDown += (_, e) => down = e.Key;
+        button.PreviewKeyUp += (_, e) =>
+        {
+            if (e.Key is Windows.System.VirtualKey.Enter or Windows.System.VirtualKey.Space && down != e.Key) e.Handled = true;
+            down = Windows.System.VirtualKey.None;
+        };
+        button.LostFocus += (_, _) => down = Windows.System.VirtualKey.None;
+        return button;
+    }
+
     public static TextBlock Text(string text, double size = 14, bool bold = false, Brush? color = null, bool wrap = true, int maxLines = 0,
                                  bool select = false)
     {

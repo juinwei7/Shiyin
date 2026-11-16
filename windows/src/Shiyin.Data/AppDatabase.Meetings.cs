@@ -417,6 +417,9 @@ public sealed partial class AppDatabase
 
     public void DeleteBookmark(long id) => Write(db => db.Execute("DELETE FROM bookmarks WHERE id = ?", id));
 
+    /// <summary>重新命名一個重點標記（R100、M§74）</summary>
+    public void RenameBookmark(long id, string label) => Write(db => db.Execute("UPDATE bookmarks SET label = ? WHERE id = ?", label, id));
+
     public void UpdateUserNotes(long meetingId, string text) => Write(db =>
     {
         db.Execute("UPDATE meetings SET user_notes = ?, updated_at = ? WHERE id = ?", text, Clock.Now(), meetingId);

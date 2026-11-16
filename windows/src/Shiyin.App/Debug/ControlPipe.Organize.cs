@@ -27,6 +27,53 @@ public static partial class ControlPipe
             case "personrenameui" when Id(1) is long renameId && main is not null:
                 main.RenamePersonUi(renameId);
                 return Ok;
+            // 每一種東西都能直接改、刪（R100、M§74，同 Mac 的名稱）：renamemeetingui <id>（等於側欄右鍵「重新命名…」、Enter／F2）；
+            // folderdeleteui <名稱>、seriesdeleteui <id>（打開刪除的確認）；sidebarkey return|delete（等於在側欄的會議列表按 Enter、Delete）
+            case "renamemeetingui" when Id(1) is long renameMeeting && main is not null:
+                main.RenameMeetingUi(renameMeeting);
+                return Ok;
+            case "folderdeleteui" when args.Length > 1 && main is not null:
+                _ = main.ConfirmDeleteFolder(args[1]);
+                return Ok;
+            case "seriesdeleteui" when Id(1) is long deleteSeries && main is not null:
+                _ = main.ConfirmDeleteSeries(deleteSeries);
+                return Ok;
+            case "sidebarkey" when args.Length > 1 && main is not null:
+                return new JsonObject { ["handled"] = args[1] == "return" ? main.SidebarRename() : main.SidebarDelete() };
+            // noteitem <editui|edit|delete|cancel> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]：
+            // 選取中的會議的一條紀錄（editui 打開就地改的輸入框、edit 直接存、delete 刪掉）
+            case "noteitem" when args.Length > 3 && main?.State.Detail is { } noteDetail:
+            {
+                var a = int.TryParse(args[3], out var x) ? x : 0;
+                var twoLevel = args[2] is "topic" or "custom" or "person";
+                var b = twoLevel && args.Length > 4 && int.TryParse(args[4], out var y) ? y : 0;
+                NoteItemRef? item = args[2] switch
+                {
+                    "summary" => NoteItemRef.Summary(a), "decisions" => NoteItemRef.Decisions(a), "actionItems" => NoteItemRef.ActionItems(a),
+                    "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b),
+                    "person" => NoteItemRef.Person(a, b), _ => null,
+                };
+                if (item is not { } r) return new JsonObject { ["error"] = "section" };
+                var textIndex = twoLevel ? 5 : 4;
+                switch (args[1])
+                {
+                    case "editui": main.NotesTabs.BeginEdit(noteDetail, r); break;
+                    case "edit": host.Controller.EditNoteItem(noteDetail.Meeting.Id!.Value, r, args.Length > textIndex ? args[textIndex] : ""); break;
+                    case "delete": host.Controller.DeleteNoteItem(noteDetail.Meeting.Id!.Value, r); break;
+                    default: main.NotesTabs.BeginEdit(noteDetail, null); break;
+                }
+                return Ok;
+            }
+            // bookmarkrename <標記 id> <名稱>、bookmarkrenameui <標記 id>（打開重新命名的對話框）；termrename <詞的 id> <詞>（改成已經有的詞時合併）
+            case "bookmarkrename" when args.Length > 2 && Id(1) is long bookmarkId && main?.State.Detail is { } bookmarkDetail:
+                host.Controller.RenameBookmark(bookmarkDetail.Meeting.Id!.Value, bookmarkId, args[2]);
+                return Ok;
+            case "bookmarkrenameui" when Id(1) is long uiBookmark && main?.State.Detail?.Bookmarks.FirstOrDefault(m => m.Id == uiBookmark) is { } shownBookmark:
+                _ = Dialogs.RenameBookmark(main, shownBookmark);
+                return Ok;
+            case "termrename" when args.Length > 2 && Id(1) is long termId:
+                host.Controller.RenameTerm(termId, args[2]);
+                return Ok;
             // reload：直接改資料庫之後重讀
             case "reload":
                 state?.Reload();

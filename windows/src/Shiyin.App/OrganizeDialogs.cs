@@ -154,13 +154,23 @@ public static partial class Dialogs
         AppHost.Current.Controller.RenameSeries(id, name.Text);
     }
 
-    /// <summary>刪除定期會議（系列頁的「更多」）：會議會保留；預設按鈕是取消</summary>
-    public static async Task DeleteSeries(MainWindow window, long id)
+    /// <summary>DEBUG 的 state：重新命名中的標記</summary>
+    public static long? RenamingBookmark { get; private set; }
+
+    /// <summary>重新命名一個重點標記（R100、同 Mac 的 BookmarkRenameModifier）：說明「mm:ss 的標記」</summary>
+    public static async Task RenameBookmark(MainWindow window, Bookmark bookmark)
     {
-        if (window.State.SeriesById(id) is not { } series) return;
-        if (!await Confirm(window, L.F("刪除定期會議「%@」？", series.Name), L.T("會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。"),
-                L.T("刪除"), destructive: true)) return;
-        AppHost.Current.Controller.DeleteSeries(id);
+        if (RenamingBookmark is not null) return;
+        var name = new TextBox { Text = bookmark.Label, Header = L.F("%@ 的標記", TimeFormat.String(bookmark.Time)) };
+        AutomationProperties.SetName(name, L.T("名稱"));
+        name.Loaded += (_, _) => { name.Focus(FocusState.Programmatic); name.SelectAll(); };
+        RenamingBookmark = bookmark.Id;
+        try
+        {
+            if (await Show(Dialog(window, L.T("重新命名標記"), name, L.T("重新命名"))) != ContentDialogResult.Primary) return;
+            AppHost.Current.Controller.RenameBookmark(bookmark.MeetingId, bookmark.Id ?? 0, name.Text);
+        }
+        finally { RenamingBookmark = null; }
     }
 
     /// <summary>

@@ -337,6 +337,58 @@ public sealed class AppTests : IDisposable
         Assert.Equal(["Redis", "Kubernetes", "Claude Code"], db.Glossary().Select(t => t.Term));
     }
 
+    /// <summary>
+    /// 每一種東西都能直接改、刪（R100、M§74）：就地改一條紀錄（待辦只改事項、時間點不變、留一個版本、空的和沒改的不存）、
+    /// 刪除一條（不確認、提示怎麼復原、復原上一版拿回來）；標記重新命名；詞改成已經有的詞時合併
+    /// </summary>
+    [Fact]
+    public void EditAndDeleteThingsInPlace()
+    {
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var notices = new List<string>();
+        controller.Notice += notices.Add;
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a", Title = "週會" }, null).Id!.Value;
+        var notes = new MeetingNotes
+        {
+            Summary = [new("決定省錢", "00:01"), new("下週上線", "00:05")], ActionItems = [new("小明", "寄信", "2026-11-20", "00:10")],
+            Topics = [new("進度", "00:00", [new("快取", "00:02")])], People = [new("小明", [new("報告進度", "00:03")])],
+        };
+        db.SaveNotes(id, notes, "claude", "整理", NotesSource.Generated);
+        Assert.Equal("寄信", notes.TextAt(NoteItemRef.ActionItems(0)));
+        Assert.Null(notes.TextAt(NoteItemRef.Summary(5)));
+        Assert.Same(notes, notes.WithText(NoteItemRef.TopicPoint(1, 0), "x"));
+
+        controller.EditNoteItem(id, NoteItemRef.ActionItems(0), " 寄信給客戶\r ");
+        controller.EditNoteItem(id, NoteItemRef.TopicPoint(0, 0), "Redis 快取");
+        controller.EditNoteItem(id, NoteItemRef.Summary(0), "  ");
+        controller.EditNoteItem(id, NoteItemRef.Person(0, 0), "報告進度");
+        var edited = db.Meeting(id)!.DecodedNotes!;
+        Assert.Equal(new MeetingNotes.ActionItem("小明", "寄信給客戶", "2026-11-20", "00:10"), edited.ActionItems[0]);
+        Assert.Equal(("Redis 快取", "00:02"), (edited.Topics[0].Points[0].Text, edited.Topics[0].Points[0].Time));
+        Assert.Equal("決定省錢", edited.Summary[0].Text);
+        Assert.Equal(2, db.VersionCount(id));
+
+        controller.DeleteNoteItem(id, NoteItemRef.Summary(0));
+        Assert.Equal(["下週上線"], db.Meeting(id)!.DecodedNotes!.Summary.Select(i => i.Text));
+        Assert.Equal(["已刪除一條紀錄，可以按紀錄分頁「編輯」旁的「復原上一版」還原"], notices);
+        controller.DeleteNoteItem(id, NoteItemRef.Summary(9));
+        Assert.Single(notices);
+        controller.UndoNotes(id);
+        Assert.Equal(["決定省錢", "下週上線"], db.Meeting(id)!.DecodedNotes!.Summary.Select(i => i.Text));
+
+        db.AddBookmark(id, 12, "重點");
+        var bookmark = db.Bookmarks(id)[0];
+        controller.RenameBookmark(id, bookmark.Id!.Value, " 決議 ");
+        Assert.Equal("決議", db.Bookmarks(id)[0].Label);
+
+        controller.AddTerms("Redis\nRedls\nKubernetes");
+        long Term(string t) => db.Glossary().First(x => x.Term == t).Id!.Value;
+        controller.RenameTerm(Term("Kubernetes"), " K8s ");
+        controller.RenameTerm(Term("Redls"), "Redis");
+        controller.RenameTerm(Term("K8s"), "  ");
+        Assert.Equal(["Redis", "K8s"], db.Glossary().Select(t => t.Term));
+    }
+
     /// <summary>「人物」的「產生每個人的重點」（R92.4、M§66）：排 summarize，payload 只多 people；沒設整理工具時不排、說原因。草稿的 payload 跟以前一字不差</summary>
     [Fact]
     public void GeneratePeopleNotesQueuesPeopleOnlySummarize()

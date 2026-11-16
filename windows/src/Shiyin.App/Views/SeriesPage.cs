@@ -73,14 +73,20 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
         var pencil = Ui.Borderless(new Button { Content = new SymbolIcon(Symbol.Edit) });
         pencil.Padding = new Thickness(6);
         pencil.VerticalAlignment = VerticalAlignment.Center;
-        ToolTipService.SetToolTip(pencil, L.T("改名"));
-        AutomationProperties.SetName(pencil, L.T("改名"));
+        ToolTipService.SetToolTip(pencil, L.T("重新命名"));
+        AutomationProperties.SetName(pencil, L.T("重新命名"));
         pencil.Click += (_, _) => rename.ShowAt(pencil, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
         {
             Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
         });
         var title = Ui.Row(8, name, pencil);
-        var info = Ui.Column(4, title, Ui.Text(Organizing.SeriesSummaryLine(series, rows), 14, color: Ui.Secondary));
+        // 看得到的動作（R100）：「刪除定期會議…」（紅字）；重新命名是名字旁的鉛筆，右上角「更多」照舊
+        var delete = Ui.Borderless(new Button { Content = Ui.Row(6, new SymbolIcon(Symbol.Delete), Ui.Text(L.T("刪除定期會議…"), 13, wrap: false)) }, Ui.Danger);
+        delete.HorizontalAlignment = HorizontalAlignment.Left;
+        delete.Margin = new Thickness(-6, 2, 0, 0);
+        AutomationProperties.SetName(delete, L.T("刪除定期會議…"));
+        delete.Click += (_, _) => _ = window.ConfirmDeleteSeries(series.Id ?? 0);
+        var info = Ui.Column(4, title, Ui.Text(Organizing.SeriesSummaryLine(series, rows), 14, color: Ui.Secondary), delete);
         info.VerticalAlignment = VerticalAlignment.Center;
         var c = Ui.CeladonColor;
         var icon = new Border
@@ -108,7 +114,7 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
             Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
         }), icon: Symbol.Rename));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Ui.Item(L.T("刪除定期會議…"), () => _ = Dialogs.DeleteSeries(window, series.Id ?? 0), icon: Symbol.Delete));
+        menu.Items.Add(Ui.Item(L.T("刪除定期會議…"), () => _ = window.ConfirmDeleteSeries(series.Id ?? 0), icon: Symbol.Delete));
         return button;
     }
 
@@ -244,7 +250,14 @@ public sealed class SeriesPage(AppHost host, MainWindow window)
             AutomationProperties.SetName(button, string.Join(MeetingLanguages.Ui("，", ", "), meeting.MeetingDate, meeting.DisplayTitle));
             var id = row.Id;
             button.Click += (_, _) => window.State.Select(id);
-            list.Children.Add(button);
+            var seriesName = window.State.SeriesById(row.Meeting.SeriesId)?.Name ?? "";
+            // 右鍵、「⋯」（R100）：打開這場會議、移出「系列」
+            list.Children.Add(PersonPage.MeetingLinkRow(button, menu =>
+            {
+                menu.Items.Add(Ui.Item(L.T("打開這場會議"), () => window.State.Select(id)));
+                menu.Items.Add(new MenuFlyoutSeparator());
+                menu.Items.Add(Ui.Item(L.F("移出「%@」", seriesName), () => host.Controller.SetSeries([id], null)));
+            }));
         }
         return list;
     }

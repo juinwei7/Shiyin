@@ -493,6 +493,13 @@ public static partial class ControlPipe
             ["seriesDialog"] = Dialogs.SeriesSuggestionKey,
             // 移除一個人的確認開著時是誰（R85.7，同 Mac；沒有是 -1）、人物頁改名的輸入框開著沒（Mac 沒有）
             ["confirmRemovePerson"] = main?.RemovingPerson ?? -1,
+            // 每一種東西都能直接改、刪（R100，同 Mac）：刪除資料夾、定期會議的確認開著時是哪個；重新命名中的會議、標記；就地改的那一條
+            ["confirmDeleteFolder"] = main?.DeletingFolder ?? "",
+            ["confirmDeleteSeries"] = main?.DeletingSeries ?? -1,
+            ["renameMeetingRequest"] = main?.RenamingMeeting ?? -1,
+            ["renamingBookmark"] = Dialogs.RenamingBookmark ?? -1,
+            ["editingNoteItem"] = main?.NotesTabs.EditingItem(main.State.Detail)?.ToString() ?? "",
+            ["bookmarks"] = new JsonArray([.. (main?.State.Detail?.Bookmarks ?? []).Select(b => (JsonNode)new JsonObject { ["id"] = b.Id, ["time"] = b.Time, ["label"] = b.Label })]),
             ["personRenameOpen"] = main?.PersonRenameOpen,
             ["folderRuleDialog"] = Dialogs.EditingFolderRule,
             // 會議結束的倒數（R95、M§69）：剩幾秒，沒在倒數是 -1（同 Mac 的 meetingprompts 的 countdown）
