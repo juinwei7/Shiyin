@@ -10,7 +10,9 @@ extension SnakeCaseRecord {
 }
 
 enum Clock {
-    static func now() -> String { ISO8601DateFormatter().string(from: Date()) }
+    /// 格式同 ISO8601DateFormatter 的預設（2026-11-17T01:02:03Z）。不要每次新建 ISO8601DateFormatter：
+    /// 資料表的預設值（createdAt = Clock.now()）讀每一筆都會跑一次，長會議的校正建議光建格式器就要 0.1 秒（2026-11-17 量到）
+    static func now() -> String { Date().ISO8601Format() }
 }
 
 struct Meeting: SnakeCaseRecord, Identifiable, Hashable {

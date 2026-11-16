@@ -958,6 +958,7 @@ enum DebugControl {
             NSGraphicsContext.restoreGraphicsState()
             try? output.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[2]))
         case "exportui": model.openExportSheet()   // 等於按工具列的「匯出」
+        case "mousehold": model.debugMouseHeld = args.count > 1 && args[1] == "on"   // mousehold on|off：當成左鍵按著（選取會議時先不換會議頁，design §77）
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -1082,6 +1083,15 @@ enum DebugControl {
             "menuBarSymbol": model.menuBarSymbol,
             "micStatus": AVCaptureDevice.authorizationStatus(for: .audio).rawValue,
             "openMainWindowReady": model.openMainWindow != nil,
+            "detailMeeting": model.detail?.meeting.id ?? -1,
+            // 側欄的表格（拖曳，design §77）：直直往上下拖會不會開始拖曳
+            "sidebarTables": NSApp.windows.filter { $0.identifier?.rawValue == "main" }.flatMap { window -> [[String: Any]] in
+                func tables(_ view: NSView) -> [NSTableView] { (view as? NSTableView).map { [$0] } ?? view.subviews.flatMap(tables) }
+                return window.contentView.map(tables)?.map {
+                    ["class": String(describing: type(of: $0)), "verticalMotionCanBeginDrag": $0.verticalMotionCanBeginDrag,
+                     "allowsMultipleSelection": $0.allowsMultipleSelection, "rows": $0.numberOfRows]
+                } ?? []
+            },
             "running": model.runner.running.map { lane, r in
                 ["lane": lane.rawValue, "job": r.job.id ?? 0, "kind": r.job.kind.rawValue, "stage": r.stage, "progress": r.progress ?? -1,
                  "remaining": r.remaining ?? -1, "server": r.server.map { ["text": $0.text, "waiting": $0.waiting] } as Any] },

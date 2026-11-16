@@ -499,11 +499,16 @@ private struct FloatingRowMenuModifier: ViewModifier {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.trailing, 22)
             .floatingContextMenu(entries)
+            // 「⋯」滑過或選到時才建：每一列都放一顆（含定位用的 NSView）時，長會議的紀錄一次幾百顆，
+            // 換會議時多花約 0.08 秒（2026-11-17 用使用者資料的複本量到；使用者覺得「卡卡的」）
             .overlay(alignment: .trailing) {
-                FloatingMenuButton(entries: entries)
-                    .opacity(hovering || selected ? 1 : 0)
-                    .allowsHitTesting(hovering || selected)
+                if hovering || selected { FloatingMenuButton(entries: entries) }
             }
             .onHover { hovering = $0 }
+            // VoiceOver 的「顯示選單」（VO-Shift-M）：同右鍵，在游標的位置打開
+            .accessibilityAction(.showMenu) {
+                guard let window = NSApp.keyWindow else { return }
+                FloatingMenuController.shared.show(entries(), at: NSEvent.mouseLocation, from: window)
+            }
     }
 }

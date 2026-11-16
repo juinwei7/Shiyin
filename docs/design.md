@@ -2733,7 +2733,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 回饋：會議、檔案拖到資料夾或定期會議上時，整列一塊青瓷綠 18% 的圓角底（同 `sidebarHover` 的大小），資料夾圖示換成打開的；排序時，看放開的位置在那一列的上半或下半，在上緣或下緣畫一條 2 點的青瓷綠線。拖到「其他會議」標題、垃圾桶時標題、按鈕換成青瓷綠。
 - 排序：`sidebarOrder: [String]`（UserDefaults `sidebarOrder`，鍵同 `sidebarExpanded`）；「資料夾」那一段的順序：有在 `sidebarOrder` 的照它，沒有的（新的）排在後面（定期會議在前、資料夾照名稱，同原本的預設）。放開時把拖的那個移到目標的前面或後面，整段的順序寫回 `sidebarOrder`。資料夾改名、刪除，定期會議刪除時跟著改。VoiceOver：資料夾、定期會議列有「往上移」「往下移」的動作。
 - 拖的來源：下面列表的會議用 `onDrag`（List 有 tag 的列，系統的拖曳）。資料夾、定期會議、展開的會議不在 List 的選取裡（沒有 tag），List 不會讓它們開始拖曳，列上的 `DragGesture` 也收不到（滑鼠拖動被 List 吃掉；2026-11-16 自己驗收時發現），所以蓋一層 AppKit 的 `SidebarDragHandle`：`hitTest` 只接左鍵（右鍵選單、滑過的底照舊交給下面的 SwiftUI），拖動超過 4 點就 `beginDraggingSession`（貼上同樣的型別，放的地方用同一套 `onDrop`），拖的圖是名稱的圓角標籤；沒拖就是點一下（展開、打開）。資料夾列的把手只蓋名稱那一段，不蓋數量和「⋯」；展開的會議的把手蓋在「⋯」以外。
-- DEBUG：`importinto <資料夾> <檔案>`（等於從 Finder 把檔案拖到資料夾），state 的 `sidebarOrder`、`showImportSheet`。
+- 拖的時候不換會議頁：List 在按下去時就選取那一列，原本選取一變就載入右邊的會議頁，長會議載入、重畫要 0.3 秒左右（DEBUG 版，用使用者資料的複本量），主執行緒卡住時拖曳開始得慢、跟不上游標（2026-11-17 使用者：「拖不太動」）。`selection` 變了而左鍵還按著時，先不載入，等放開才載入（每 0.05 秒看一次的計時器，排在一般模式：拖曳中的事件追蹤模式不會跑）；按著時又換了選取只載入最後一場。按著時選取只要約 40 毫秒（側欄的選取底）。鍵盤、程式換的選取照舊馬上載入。
+- DEBUG：`importinto <資料夾> <檔案>`（等於從 Finder 把檔案拖到資料夾），state 的 `sidebarOrder`、`showImportSheet`、`detailMeeting`（右邊是哪一場）、`sidebarTables`；`mousehold on|off`（當成左鍵按著）。
 - Windows：design-windows §11.36。
 
 ## 78. 新增空的資料夾（R104，D176）
@@ -2753,7 +2754,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 滑過：面板不是作用中的視窗，SwiftUI 的 `onHover` 會慢半拍，所以選單開著時讓作用中的視窗送滑鼠移動事件（關掉時改回原本的），app 的事件監看收到就用事件的位置換算成面板裡的位置，照每一列回報的框（`onGeometryChange`）找在哪一列。子選單開著時滑到別的列，等 0.45 秒才換；這段時間游標進了子選單就不換（快速斜著移到子選單會經過下面那一列，2026-11-17 自己驗收時發現）。
 - 右鍵：列上蓋一個不接任何事件的透明 view（`RightClickCatcher`）只記位置，app 的事件監看收到右鍵（或 Control-點一下）時找游標下面最小的那一個（展開的會議在資料夾列裡面時取會議），打開選單、吃掉這一下。不用 `hitTest` 看 `NSApp.currentEvent`：送給視窗的事件不一定是 currentEvent。
 - 關：選了一項、Esc、點選單外面（app 裡的點擊吃掉，同系統選單）、點別的 app（全域監看）、app 不在前面（`hidesOnDeactivate`）。
-- 「⋯」：`FloatingMenuButton`（`ellipsis`，滑過或選到時顯示），按了在按鈕下面打開；`floatingRowMenu(selected:)` 一次加「⋯」和右鍵。
+- 「⋯」：`FloatingMenuButton`（`ellipsis`，滑過或選到時顯示），按了在按鈕下面打開；`floatingRowMenu(selected:)` 一次加「⋯」和右鍵。「⋯」滑過或選到時才建（不是一直放著、透明度 0）：每一顆帶一個定位用的 NSView，長會議的紀錄一次幾百顆，換會議時多花約 0.06 秒（2026-11-17 用使用者資料的複本量：選長會議主執行緒最長卡 365 → 309 毫秒，4.8.1 是 257）。VoiceOver 的「顯示選單」（`accessibilityAction(.showMenu)`）在游標位置打開同一份選單。
 - DEBUG：`floatpick <項目>`（子選單「移到資料夾 ▸ 客戶」）、`floatclose`、`floatothers off`（驗收時使用者在用別的 app，點別的 app 不關選單）；`keyat` 加 down、up、right、left 和第四個參數 `app`（走 `NSApp.sendEvent`，經過事件監看）；`mouseat` 最後一個參數 `app` 同樣；state 的 `floatingMenu`（項目）、`floatingMenuState`、`floatingMenuWindow`（面板的視窗編號，`mouseat move … <編號> app` 用）。
 - Windows：design-windows §11.38。
 

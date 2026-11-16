@@ -211,9 +211,38 @@ final class AppModel {
             if oldValue != selection {
                 reviewExpanded = false
                 userNotesExpanded = false
-                reloadDetail()
+                reloadDetailAfterMouseUp()
             }
         }
+    }
+    @ObservationIgnored private var pendingDetailReload: Timer?
+    #if DEBUG
+    /// 驗證用：當成左鍵按著（`mousehold on|off`）
+    @ObservationIgnored var debugMouseHeld = false
+    #endif
+
+    /// 側欄的列按下去就選取，接著可能是拖曳：按著滑鼠時先不換右邊的會議頁，放開才載入（design §77）。
+    /// 長會議載入、重畫要 0.3 秒左右，主執行緒卡住時拖曳會頓一下、拖不太動（2026-11-17 使用者回報）。
+    /// 計時器排在一般模式：拖曳中（事件追蹤模式）不會跑，放開後才換
+    private func reloadDetailAfterMouseUp() {
+        pendingDetailReload?.invalidate()
+        pendingDetailReload = nil
+        guard leftMouseHeld else { reloadDetail(); return }
+        pendingDetailReload = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self, !self.leftMouseHeld else { return }
+                timer.invalidate()
+                self.pendingDetailReload = nil
+                self.reloadDetail()
+            }
+        }
+    }
+
+    private var leftMouseHeld: Bool {
+        #if DEBUG
+        if debugMouseHeld { return true }
+        #endif
+        return NSEvent.pressedMouseButtons & 1 != 0
     }
     /// 會議列表的多選（R88、design §62）：兩場以上時右邊顯示「已選取 N 場會議」；`selection` 照舊是目前這場
     var selectedMeetings: Set<Int64> = []
