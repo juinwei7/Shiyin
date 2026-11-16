@@ -231,6 +231,10 @@ struct NotesPage: View {
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
                 }
+                // 定期會議的上一場的待辦（R99.5、design §73）
+                if !notes.followUps.isEmpty {
+                    NotesSection(title: String(localized: "上次的待辦")) { FollowUpsList(followUps: notes.followUps) }
+                }
                 if !notes.decisions.isEmpty {
                     NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions, detail: detail) { .decisions($0) } }
                 }
@@ -287,6 +291,10 @@ struct NotesPage: View {
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
         if let id = detail.meeting.id, model.documentsChanged.contains(id) {
             DocumentsBanner().environment(\.textScale, 1)
+        }
+        // 這場很像某個資料夾裡的會議（R98.3）
+        if let id = detail.meeting.id, let suggestion = model.folderSuggestion(for: detail.meeting) {
+            FolderSuggestionBanner(meetingId: id, suggestion: suggestion).environment(\.textScale, 1)
         }
         if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
         EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true,

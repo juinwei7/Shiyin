@@ -251,8 +251,28 @@ final class AppModel {
     var meetingFilter = MeetingFilter() { didSet { if oldValue != meetingFilter { selectedMeetings = [] } } }
     /// 每場會議連到哪些人物（「有誰參加」篩選），跟人物總覽一起讀
     var meetingPeople: [Int64: Set<Int64>] = [:]
-    /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
-    var folderFilter: String? { didSet { if oldValue != folderFilter { selectedMeetings = [] } } }
+    /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）。跟定期會議互斥
+    var folderFilter: String? {
+        didSet {
+            if oldValue != folderFilter { selectedMeetings = [] }
+            if folderFilter != nil { seriesFilter = nil }
+        }
+    }
+    /// 資料夾的自動加入條件（R98、design §72）；正在編輯哪個資料夾的條件
+    var folderRules: [FolderRule] = []
+    var editingFolderRule: String?
+    /// 定期會議（R99、design §73）、可能的定期會議、側欄只看哪一個（還沒選會議時右邊是系列頁）
+    var series: [MeetingSeries] = []
+    var seriesCandidates: [SeriesCandidate] = []
+    var seriesFilter: Int64? {
+        didSet {
+            if oldValue != seriesFilter { selectedMeetings = [] }
+            if seriesFilter != nil { folderFilter = nil }
+        }
+    }
+    /// 打開「可能的定期會議」確認；正在改名的定期會議
+    var showSeriesSuggestions = false
+    var renamingSeries: Int64?
     /// 正在輸入名稱的資料夾動作：新增（要移入的會議）或改名（舊名稱）
     var folderPrompt: FolderPrompt?
     enum FolderPrompt: Equatable { case create([Int64]), rename(String) }
@@ -321,6 +341,7 @@ final class AppModel {
         environment = EnvironmentStatus(items: [])
         runner.onChange = { [weak self] in self?.reload() }
         runner.onFinished = { [weak self] job, error in self?.jobFinished(job, error: error) }
+        runner.onOrganized = { [weak self] id, folder, series in self?.organized(id, folder: folder, series: series) }
         recorder.onLiveFinished = { [weak self] id, duration in self?.enqueueDraftNotes(meetingId: id, duration: duration) }
         runner.onRediarized = { [weak self] id, result in
             guard let self, self.selection == id else { return }
@@ -432,6 +453,9 @@ final class AppModel {
             glossarySuggestions = try db.glossarySuggestions().filter { !CompanyGlossary.contains($0.term) }
             templates = try db.templates()
             meetingPeople = try db.meetingPeople()
+            folderRules = try db.folderRules()
+            series = try db.series()
+            seriesCandidates = SeriesDetector.candidates(seriesInputs, rejected: try db.rejectedSeriesKeys())
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
             errorMessage = error.localizedDescription
@@ -440,7 +464,10 @@ final class AppModel {
             self.selection = nil
         }
         // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議
-        if let folderFilter, !meetings.contains(where: { $0.meeting.folder == folderFilter }) { self.folderFilter = nil }
+        // 有自動加入條件的資料夾沒有會議也留著（design §72）
+        if let folderFilter, !meetings.contains(where: { $0.meeting.folder == folderFilter }),
+           !folderRules.contains(where: { $0.folder == folderFilter }) { self.folderFilter = nil }
+        if let seriesFilter, !series.contains(where: { $0.id == seriesFilter }) { self.seriesFilter = nil }
         reloadDetail()
     }
 
@@ -469,7 +496,9 @@ final class AppModel {
 
     /// 現有的資料夾和各自的場數（不含垃圾桶），依名稱排序
     var folders: [(name: String, count: Int)] {
-        let counts = Dictionary(grouping: meetings.filter { !$0.meeting.folder.isEmpty }, by: \.meeting.folder).mapValues(\.count)
+        var counts = Dictionary(grouping: meetings.filter { !$0.meeting.folder.isEmpty }, by: \.meeting.folder).mapValues(\.count)
+        // 有自動加入條件的資料夾沒有會議也列出來（design §72）
+        for rule in folderRules where counts[rule.folder] == nil { counts[rule.folder] = 0 }
         return counts.map { (name: $0.key, count: $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
@@ -562,6 +591,7 @@ final class AppModel {
     var filteredMeetings: [MeetingRow] {
         var source = showTrash ? trash : meetings
         if !showTrash, let folderFilter { source = source.filter { $0.meeting.folder == folderFilter } }
+        if !showTrash, let seriesFilter { source = source.filter { $0.meeting.seriesId == seriesFilter } }
         if !showTrash, meetingFilter.isActive { source = source.filter { matches($0, meetingFilter) } }
         let keyword = filter.trimmingCharacters(in: .whitespaces)
         if !keyword.isEmpty { source = source.filter { $0.meeting.displayTitle.localizedCaseInsensitiveContains(keyword) } }

@@ -1,0 +1,67 @@
+[
+  {
+    "attended" : [
+
+    ],
+    "matches" : true,
+    "seriesId" : null,
+    "templateId" : "general",
+    "title" : "產品週會"
+  },
+  {
+    "attended" : [
+
+    ],
+    "matches" : true,
+    "seriesId" : null,
+    "templateId" : "general",
+    "title" : "Weekly SYNC"
+  },
+  {
+    "attended" : [
+      1
+    ],
+    "matches" : false,
+    "seriesId" : null,
+    "templateId" : "general",
+    "title" : "x"
+  },
+  {
+    "attended" : [
+      1,
+      2,
+      5
+    ],
+    "matches" : true,
+    "seriesId" : null,
+    "templateId" : "general",
+    "title" : "x"
+  },
+  {
+    "attended" : [
+
+    ],
+    "matches" : true,
+    "seriesId" : null,
+    "templateId" : "one-on-one",
+    "title" : "x"
+  },
+  {
+    "attended" : [
+
+    ],
+    "matches" : true,
+    "seriesId" : 3,
+    "templateId" : "general",
+    "title" : "x"
+  },
+  {
+    "attended" : [
+
+    ],
+    "matches" : false,
+    "seriesId" : null,
+    "templateId" : "general",
+    "title" : "x"
+  }
+]

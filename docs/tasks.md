@@ -24,9 +24,8 @@
 ## 會議的分類、排序（R97～R99，design §71～；2026-11-16 使用者：「會議分類、排序等都幫我規劃一下」，規劃照建議）
 
 - [~] **LS1 Mac 排序、分組、篩選**（R97，§71）：程式完成，DEBUG 指令、選單列的 AX、真的視窗截圖驗過（2026-11-16，見 commit 訊息）。還差（要把視窗拉到使用者畫面上）：列表上方「顯示方式」按鈕打開的選單（三段、打勾、有誰參加和範本的子選單）
-- [ ] **LS2 Windows 排序、分組、篩選**（design-windows §11.30）
-- [ ] **AF1、AF2 資料夾自動歸類**（R98）：Mac、Windows
-- [ ] **RS1、RS2 定期會議**（R99）：Mac、Windows
+- [~] **AF1、RS1 Mac 資料夾自動歸類、定期會議**（R98、R99，§72、§73）：程式完成，DEBUG 指令、假的整理工具、真的視窗截圖驗過（2026-11-16，見 commit 訊息）。還差（要把視窗拉到使用者畫面上，或要真的會議）：會議列表右鍵的「加到定期會議 ▸」「移出「…」」、定期會議和資料夾右鍵的選單；真的錄一場週會，轉錄完自動加入、整理時用 Claude 接上上一場（看 followUps 準不準）
+- [ ] **LS2、AF2、RS2 Windows 排序、分組、篩選、資料夾自動歸類、定期會議**（design-windows §11.30～§11.32）：跟著 Mac 做；標準答案已經有 `util/series-*.json`、`util/folder-*.json`、`util/meeting-time.json`、`util/followups-validate.json`、`prompts/*/summarize-followups.txt`、`export/*/notes-followups.*`、新的 schema 和 `db/schema.sql`，`llm/mac-requests.jsonl` 已重錄
 
 ## 沒人講話時編出整句（design §6.2；2026-11-16 驗 GitHub #9 時發現）
 

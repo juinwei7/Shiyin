@@ -1,0 +1,114 @@
+{
+  "cases" : [
+    {
+      "count" : 2,
+      "folder" : "客戶",
+      "id" : 10,
+      "people" : [
+        2,
+        3
+      ],
+      "reason" : {
+        "people" : [
+          2,
+          3
+        ]
+      },
+      "title" : "需求確認"
+    },
+    {
+      "count" : 2,
+      "folder" : "設計",
+      "id" : 11,
+      "people" : [
+        1
+      ],
+      "reason" : {
+        "title" : "設計評審"
+      },
+      "title" : "設計評審 11/5"
+    },
+    {
+      "count" : 0,
+      "folder" : null,
+      "id" : 12,
+      "people" : [
+        9
+      ],
+      "reason" : {
+
+      },
+      "title" : "會議 11/5"
+    },
+    {
+      "count" : 2,
+      "folder" : "客戶",
+      "id" : 13,
+      "people" : [
+        2,
+        3
+      ],
+      "reason" : {
+        "people" : [
+          2,
+          3
+        ]
+      },
+      "title" : "客戶 A 結案"
+    }
+  ],
+  "others" : [
+    {
+      "folder" : "客戶",
+      "id" : 1,
+      "people" : [
+        2,
+        3
+      ],
+      "title" : "客戶 A 需求訪談"
+    },
+    {
+      "folder" : "客戶",
+      "id" : 2,
+      "people" : [
+        1,
+        2,
+        3
+      ],
+      "title" : "客戶 A 追蹤"
+    },
+    {
+      "folder" : "設計",
+      "id" : 3,
+      "people" : [
+        4
+      ],
+      "title" : "設計評審 10/1"
+    },
+    {
+      "folder" : "設計",
+      "id" : 4,
+      "people" : [
+        5
+      ],
+      "title" : "設計評審 10/8"
+    },
+    {
+      "folder" : "設計",
+      "id" : 5,
+      "people" : [
+        4
+      ],
+      "title" : "Kickoff"
+    },
+    {
+      "folder" : "單場",
+      "id" : 6,
+      "people" : [
+        2,
+        3
+      ],
+      "title" : "單場會議"
+    }
+  ]
+}

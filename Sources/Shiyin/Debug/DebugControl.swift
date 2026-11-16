@@ -47,6 +47,75 @@ enum DebugControl {
         case "peoplenotes": model.selection = id; model.generatePeopleNotes()   // 「人物」的「產生每個人的重點」（design §66）
         case "cleantranscript": model.selection = id; model.generateCleanTranscript()   // 逐字稿「精簡」的「產生精簡版」（design §70）
         case "transcriptview": UserDefaults.standard.set(args[1] == "clean" ? "clean" : "original", forKey: AppSettings.transcriptViewKey)
+        case "reload": model.reloadPeopleOverview(); model.reload()   // 直接改資料庫之後重讀
+        // 資料夾自動歸類（design §72）
+        case "folderrule":   // folderrule <資料夾> <JSON|-> [apply]：JSON 是 {"keywords":[…],"people":[id…],"templateId":…,"seriesId":…}
+            var rule = FolderRule(folder: args[1])
+            if args[2] != "-", let data = args[2].data(using: .utf8),
+               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                rule.keywords = object["keywords"] as? [String] ?? []
+                rule.people = (object["people"] as? [NSNumber] ?? []).map(\.int64Value)
+                rule.templateId = object["templateId"] as? String
+                rule.seriesId = (object["seriesId"] as? NSNumber)?.int64Value
+            }
+            model.saveFolderRule(rule, applyNow: args.count > 3 && args[3] == "apply")
+        case "editfolderrule": model.editingFolderRule = args[1]   // 打開條件的編輯
+        case "autofile":
+            if let id, let folder = try? model.db.autoFile(id) { model.organized(id, folder: folder, series: nil) }
+        case "foldersuggest":   // foldersuggest <會議 id> <輸出.json>
+            if let id, let meeting = try? model.db.meeting(id) {
+                let s = model.folderSuggestion(for: meeting)
+                var reason: [String: Any] = [:]
+                switch s?.reason {
+                case .people(let ids)?: reason = ["people": ids]
+                case .title(let word)?: reason = ["title": word]
+                case nil: break
+                }
+                write(["folder": s?.folder ?? "", "count": s?.count ?? 0, "reason": reason,
+                       "text": s.map { model.folderSuggestionText($0) } ?? ""], to: args[2])
+            }
+        case "foldersuggestion":   // foldersuggestion accept|dismiss <會議 id>
+            if let mid = Int64(args[2]), let meeting = try? model.db.meeting(mid) {
+                if args[1] == "accept", let s = model.folderSuggestion(for: meeting) {
+                    model.acceptFolderSuggestion(mid, folder: s.folder)
+                } else if args[1] == "dismiss" {
+                    model.dismissFolderSuggestion(mid)
+                }
+            }
+        // 定期會議（design §73）
+        case "seriescandidates":   // seriescandidates <輸出.json>
+            write(["candidates": model.seriesCandidates.map {
+                ["key": $0.key, "name": $0.name, "meetingIds": $0.meetingIds, "weekday": $0.weekday, "minute": $0.minute ?? -1,
+                 "intervalWeeks": $0.intervalWeeks, "people": $0.people, "frequency": $0.frequencyText] as [String: Any]
+            }], to: args[1])
+        case "seriescreate":   // seriescreate <候選的 key> <名稱|-> [會議 id,…]：等於確認時按建立
+            if let candidate = model.seriesCandidates.first(where: { $0.key == args[1] }) {
+                let ids = args.count > 3 ? args[3].split(separator: ",").compactMap { Int64($0) } : candidate.meetingIds
+                model.createSeries(candidate, name: args[2] == "-" ? "" : args[2], meetingIds: ids)
+            }
+        case "seriesreject": if let candidate = model.seriesCandidates.first(where: { $0.key == args[1] }) { model.rejectSeriesCandidate(candidate) }
+        case "seriesjoin":   // seriesjoin <會議 id> <系列 id|->
+            if let id { model.setSeries([id], series: Int64(args[2])) }
+        case "seriesfilter":
+            if let id { model.openSeries(id) } else { model.seriesFilter = nil }
+        case "seriesrename": if let id { model.renameSeries(id, to: args[2]) }
+        case "seriesdelete": if let id { model.deleteSeries(id) }
+        case "autojoin":
+            if let id, let series = try? model.db.autoJoinSeries(id) { model.organized(id, folder: nil, series: series) }
+        case "seriessheet": model.showSeriesSuggestions = true
+        case "seriesopenitems":   // seriesopenitems <系列 id> <輸出.json>
+            if let id {
+                write(["items": model.seriesOpenItems(id).map {
+                    ["meeting": $0.meeting.id ?? 0, "index": $0.index, "task": $0.item.task, "owner": $0.item.owner] as [String: Any]
+                }], to: args[2])
+            }
+        case "previousmeeting":   // previousmeeting <會議 id> <輸出.json>：整理時會接上的上一場（R99.5）
+            if let id, let meeting = try? model.db.meeting(id) {
+                let previous = (try? model.db.previousSeriesMeeting(meeting)).flatMap { $0 }
+                let p = previous.flatMap(PreviousMeeting.init)
+                write(["meeting": previous?.id ?? -1, "items": p?.items.map(\.task) ?? [],
+                       "block": p.map { NotesPrompt.previousBlock($0, language: meeting.meetingLanguage) } ?? ""], to: args[2])
+            }
         // 會議列表的排序、分組、篩選（design §71）
         case "listsort": if let sort = MeetingSort(rawValue: args[1]) { model.meetingSort = sort }
         case "listgroup": if let grouping = MeetingGrouping(rawValue: args[1]) { model.meetingGrouping = grouping }
@@ -786,6 +855,11 @@ enum DebugControl {
             "splittingMeeting": model.splittingMeeting ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
+            "folderRules": model.folderRules.map { ["folder": $0.folder, "keywords": $0.keywords, "people": $0.people,
+                                                    "templateId": $0.templateId ?? "", "seriesId": $0.seriesId ?? -1] as [String: Any] },
+            "series": model.series.map { ["id": $0.id ?? 0, "name": $0.name, "weekday": $0.weekday, "minute": $0.minute ?? -1,
+                                          "intervalWeeks": $0.intervalWeeks, "people": $0.people, "count": model.seriesCount($0.id ?? 0)] as [String: Any] },
+            "seriesCandidates": model.seriesCandidates.count, "seriesFilter": model.seriesFilter ?? -1,
             "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
                      "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
                                 "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],

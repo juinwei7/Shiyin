@@ -208,6 +208,8 @@ final class JobRunner {
     @ObservationIgnored private var sleepers: [JobLane: Task<Void, Never>] = [:]
     @ObservationIgnored var onChange: (() -> Void)?
     @ObservationIgnored var onFinished: ((Job, Error?) -> Void)?
+    /// 自動放進資料夾、加入定期會議了（design §72、§73）：會議 id、資料夾、定期會議
+    @ObservationIgnored var onOrganized: ((Int64, String?, MeetingSeries?) -> Void)?
     @ObservationIgnored var onAudioReplaced: ((Int64) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
@@ -453,6 +455,10 @@ final class JobRunner {
             let matched = try db.matchVoiceprints(job.meetingId)
             if matched > 0 { log.info("voiceprints matched \(matched) speakers") }
         }
+        // 說話者對到人物之後：加入定期會議（整理時才接得上上一場）、照資料夾的條件放（design §72、§73）
+        let joined = try db.autoJoinSeries(job.meetingId)
+        let filed = try db.autoFile(job.meetingId)
+        if joined != nil || filed != nil { onOrganized?(job.meetingId, filed, joined) }
         if AppSettings.compressAudio && meeting.audioURL.pathExtension.lowercased() == "wav" {
             try db.enqueue(job.meetingId, kind: .compress)
         }
@@ -735,7 +741,8 @@ final class JobRunner {
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
             bookmarks: try db.bookmarks(job.meetingId), glossary: try glossaryTerms(),
             template: definition,
-            documents: try db.documents(job.meetingId).map(DocumentText.init))
+            documents: try db.documents(job.meetingId).map(DocumentText.init),
+            previous: try db.previousSeriesMeeting(meeting).flatMap(PreviousMeeting.init))
         let prompt: String
         if let answers {
             guard let notes = meeting.decodedNotes else { return false }
@@ -748,6 +755,8 @@ final class JobRunner {
             try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
         }
         guard isStillRunning(job) else { return false }
+        // 上次的待辦（design §73）：沒給上一場時清空，對不到給的待辦的丟掉
+        notes.followUps = PreviousMeeting.validFollowUps(notes.followUps, previous: context.previous)
         // 中文會議用簡體時，整理完才轉（提示詞照舊，design §47.2、D154）
         if AppSettings.simplifiedChinese(for: meeting.meetingLanguage) { notes = notes.simplified() }
         if peopleOnly {
@@ -768,6 +777,8 @@ final class JobRunner {
                                               reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
                                               source: answers == nil ? .generated : .revised)
         if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
+        // 整理完有標題了，照資料夾的條件放（design §72）
+        if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder, nil) }
         return answers != nil || hadDraft == 0
     }
 }

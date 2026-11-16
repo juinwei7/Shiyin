@@ -1,0 +1,30 @@
+[
+  {
+    "defaultName" : "週一 10:00 的會議",
+    "intervalWeeks" : 1,
+    "minute" : 600,
+    "text" : "每週一 10:00",
+    "weekday" : 2
+  },
+  {
+    "defaultName" : "週四 15:00 的會議",
+    "intervalWeeks" : 2,
+    "minute" : 900,
+    "text" : "每兩週的週四 15:00",
+    "weekday" : 5
+  },
+  {
+    "defaultName" : "週日的會議",
+    "intervalWeeks" : 1,
+    "minute" : null,
+    "text" : "每週日",
+    "weekday" : 1
+  },
+  {
+    "defaultName" : "週六 1:05 的會議",
+    "intervalWeeks" : 2,
+    "minute" : 65,
+    "text" : "每兩週的週六 1:05",
+    "weekday" : 7
+  }
+]

@@ -138,6 +138,9 @@ struct MainView: View {
                 }
             } else if model.multiSelected.count > 1 {
                 MultiSelectionView(ids: model.multiSelected)
+            } else if model.selection == nil, !model.showTrash, let series = model.seriesById(model.seriesFilter) {
+                // 系列頁（design §73）：側欄點了定期會議、還沒選會議
+                SeriesPage(series: series).id(series.id)
             } else if let detail = model.detail {
                 MeetingDetailView(detail: detail)
                     .id(detail.meeting.id)
@@ -165,6 +168,12 @@ struct MainView: View {
             }
         }
         .modifier(FolderPromptModifier())
+        .modifier(SeriesRenameModifier())
+        // 可能的定期會議（design §73）、資料夾的自動加入條件（design §72）
+        .sheet(isPresented: $model.showSeriesSuggestions) { SeriesSuggestionSheet() }
+        .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.name })) {
+            FolderRuleSheet(folder: $0.name)
+        }
         // 有新版時詢問（R10.6）
         .alert(String(localized: "拾音 \(model.updater.prompt?.version ?? "") 可以更新了"), isPresented: Binding(
             get: { model.updater.prompt != nil }, set: { if !$0 { model.updater.prompt = nil } })) {
@@ -324,23 +333,31 @@ struct SidebarView: View {
         let people = model.sidebarMode == .people
         Section {
             FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full",
-                      selected: !people && model.folderFilter == nil) {
+                      selected: !people && model.folderFilter == nil && model.seriesFilter == nil) {
                 model.sidebarMode = .meetings
                 model.folderFilter = nil
+                model.seriesFilter = nil
             }
             FolderRow(name: String(localized: "人物"), count: model.peopleOverview.count, symbol: "person.2", selected: people) {
                 model.sidebarMode = .people
                 model.reloadPeopleOverview()
             }
         }
+        SeriesSidebarSection()
         if !model.folders.isEmpty {
             Section("資料夾") {
                 ForEach(model.folders, id: \.name) { folder in
-                    FolderRow(name: folder.name, count: folder.count, symbol: "folder", selected: !people && model.folderFilter == folder.name) {
+                    // 有自動加入條件的資料夾換圖示，滑過去看條件（design §72）
+                    let rule = model.folderRule(folder.name)
+                    FolderRow(name: folder.name, count: folder.count, symbol: rule == nil ? "folder" : "folder.badge.gearshape",
+                              selected: !people && model.folderFilter == folder.name) {
                         model.sidebarMode = .meetings
                         model.folderFilter = folder.name
                     }
+                    .help(rule.map { model.folderRuleSummary($0) } ?? "")
                     .contextMenu {
+                        Button(rule == nil ? "自動加入的條件…" : "編輯自動加入的條件…") { model.editingFolderRule = folder.name }
+                        Divider()
                         Button("重新命名…") { model.folderPrompt = .rename(folder.name) }
                         Button("刪除資料夾（會議會保留）", role: .destructive) { model.deleteFolder(folder.name) }
                     }
@@ -416,6 +433,7 @@ struct SidebarView: View {
                     Button("永久刪除…", role: .destructive) { model.confirmPurge = ids }
                 } else {
                     FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
+                    SeriesMenu(meetingIds: ids)
                     Divider()
                     if ids.count == 1 {
                         Button("移到垃圾桶", role: .destructive) { model.moveToTrash(ids) }
@@ -801,4 +819,10 @@ struct ImportSheet: View {
             }
         }
     }
+}
+
+/// 正在編輯條件的資料夾（sheet(item:) 要 Identifiable）
+struct EditingFolder: Identifiable {
+    let name: String
+    var id: String { name }
 }

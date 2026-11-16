@@ -1,0 +1,316 @@
+[
+  {
+    "candidates" : [
+      {
+        "frequency" : "每週一 10:00",
+        "intervalWeeks" : 1,
+        "key" : "2|10|1,2,4",
+        "meetingIds" : [
+          1,
+          2,
+          3,
+          4
+        ],
+        "minute" : 600,
+        "name" : "產品週會",
+        "people" : [
+          1,
+          2,
+          4
+        ],
+        "weekday" : 2
+      }
+    ],
+    "input" : [
+      {
+        "day" : 20745,
+        "id" : 1,
+        "minute" : 600,
+        "people" : [
+          1,
+          2,
+          4
+        ],
+        "title" : "產品週會 10/19"
+      },
+      {
+        "day" : 20752,
+        "id" : 2,
+        "minute" : 605,
+        "people" : [
+          1,
+          2,
+          4
+        ],
+        "title" : "產品週會 10/26"
+      },
+      {
+        "day" : 20759,
+        "id" : 3,
+        "minute" : 595,
+        "people" : [
+          1,
+          2,
+          4,
+          5
+        ],
+        "title" : "Lumio 產品週會"
+      },
+      {
+        "day" : 20766,
+        "id" : 4,
+        "minute" : 600,
+        "people" : [
+          1,
+          2,
+          4
+        ],
+        "title" : "產品週會 11/09"
+      },
+      {
+        "day" : 20767,
+        "id" : 5,
+        "minute" : 600,
+        "people" : [
+          1,
+          2,
+          4
+        ],
+        "title" : "週二"
+      },
+      {
+        "day" : 20773,
+        "id" : 6,
+        "minute" : 700,
+        "people" : [
+          1,
+          2,
+          4
+        ],
+        "title" : "時間差太多"
+      }
+    ],
+    "name" : "weekly",
+    "rejected" : [
+
+    ]
+  },
+  {
+    "candidates" : [
+      {
+        "frequency" : "每兩週的週四 15:00",
+        "intervalWeeks" : 2,
+        "key" : "5|15|1,3",
+        "meetingIds" : [
+          1,
+          2,
+          3
+        ],
+        "minute" : 900,
+        "name" : "週四 15:00 的會議",
+        "people" : [
+          1,
+          3
+        ],
+        "weekday" : 5
+      }
+    ],
+    "input" : [
+      {
+        "day" : 20741,
+        "id" : 1,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "Weekly Sync"
+      },
+      {
+        "day" : 20755,
+        "id" : 2,
+        "minute" : 910,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "Sync with Bob"
+      },
+      {
+        "day" : 20769,
+        "id" : 3,
+        "minute" : null,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "Bob 1:1"
+      }
+    ],
+    "name" : "biweekly",
+    "rejected" : [
+
+    ]
+  },
+  {
+    "candidates" : [
+
+    ],
+    "input" : [
+      {
+        "day" : 20741,
+        "id" : 1,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "A"
+      },
+      {
+        "day" : 20748,
+        "id" : 2,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "B"
+      },
+      {
+        "day" : 20755,
+        "id" : 3,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "C"
+      }
+    ],
+    "name" : "rejected",
+    "rejected" : [
+      "5|15|1,3"
+    ]
+  },
+  {
+    "candidates" : [
+
+    ],
+    "input" : [
+      {
+        "day" : 20741,
+        "id" : 1,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "A"
+      },
+      {
+        "day" : 20748,
+        "id" : 2,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "B"
+      },
+      {
+        "day" : 20783,
+        "id" : 3,
+        "minute" : 900,
+        "people" : [
+          1,
+          3
+        ],
+        "title" : "C"
+      },
+      {
+        "day" : 20748,
+        "id" : 4,
+        "minute" : 900,
+        "people" : [
+          1
+        ],
+        "title" : "D"
+      }
+    ],
+    "name" : "tooFew",
+    "rejected" : [
+
+    ]
+  },
+  {
+    "candidates" : [
+      {
+        "frequency" : "每週一",
+        "intervalWeeks" : 1,
+        "key" : "2|-1|1,2",
+        "meetingIds" : [
+          1,
+          3,
+          4
+        ],
+        "minute" : null,
+        "name" : "Standup",
+        "people" : [
+          1,
+          2
+        ],
+        "weekday" : 2
+      }
+    ],
+    "input" : [
+      {
+        "day" : 20731,
+        "id" : 1,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "title" : "Standup"
+      },
+      {
+        "day" : 20738,
+        "id" : 2,
+        "minute" : null,
+        "people" : [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "title" : "Standup"
+      },
+      {
+        "day" : 20745,
+        "id" : 3,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "title" : "Standup"
+      },
+      {
+        "day" : 20752,
+        "id" : 4,
+        "minute" : null,
+        "people" : [
+          1,
+          2
+        ],
+        "title" : "Standup 4"
+      }
+    ],
+    "name" : "differentPeople",
+    "rejected" : [
+
+    ]
+  }
+]

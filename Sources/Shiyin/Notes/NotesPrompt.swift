@@ -17,6 +17,8 @@ struct NotesContext {
     var template: TemplateDefinition
     /// 會議參考資料（design §39.3、R61.5）；沒有文件時提示詞跟以前一字不差
     var documents: [DocumentText] = []
+    /// 定期會議的上一場（R99.5、design §73）；沒有時提示詞跟以前一字不差
+    var previous: PreviousMeeting? = nil
 }
 
 /// 整理與校稿的提示詞（design §8.3），規則沿用第二版；依會議語言分成中文、英文、日文三份（design §16.5、§18.4）
@@ -191,6 +193,10 @@ enum NotesPrompt {
             lines.append("\(l.bookmarks)\(l.colon)" + c.bookmarks.map { TimeFormat.string($0.time) + ($0.label.isEmpty ? "" : " \($0.label)") }
                 .joined(separator: l.listSeparator))
         }
+        if let previous = c.previous {
+            lines.append("")
+            lines.append(previousBlock(previous, language: language))
+        }
         if !c.documents.isEmpty {
             lines.append("")
             lines.append(DocumentPrompt.block(c.documents, language: language))
@@ -201,6 +207,29 @@ enum NotesPrompt {
             let speaker = s.speaker.map { (c.speakers[$0] ?? language.defaultSpeaker($0)) + l.colon } ?? ""
             lines.append("[\(TimeFormat.string(s.start))] \(speaker)\(s.lowConfidence ? "(?) " : "")\(s.text)")
         }
+        return lines.joined(separator: "\n")
+    }
+
+    /// 上一場的待辦、未決問題和怎麼填 followUps（design §73、D174）
+    static func previousBlock(_ p: PreviousMeeting, language: MeetingLanguage) -> String {
+        let l = language
+        let colon = l.prompt(zh: "：", en: ": ", ja: "：")
+        let title = p.title.isEmpty ? "" : l.prompt(zh: "「\(p.title)」", en: ", \"\(p.title)\"", ja: "「\(p.title)」")
+        var lines = [l.prompt(zh: "上次會議（\(p.date)\(title)）的待辦：", en: "Action items from the last meeting (\(p.date)\(title)):",
+                              ja: "前回の会議（\(p.date)\(title)）のアクションアイテム：")]
+        for item in p.items {
+            let owner = item.owner.isEmpty ? l.prompt(zh: "（未指定）", en: "(unassigned)", ja: "（未定）") : item.owner
+            let due = item.due.isEmpty ? "" : l.prompt(zh: "（期限 \(item.due)）", en: " (due \(item.due))", ja: "（期限 \(item.due)）")
+            lines.append("- \(owner)\(colon)\(item.task)\(due)")
+        }
+        if !p.openQuestions.isEmpty {
+            lines.append(l.prompt(zh: "上次的未決問題：", en: "Open questions from the last meeting:", ja: "前回の未決事項："))
+            lines += p.openQuestions.map { "- \($0.text)" }
+        }
+        lines.append(l.prompt(
+            zh: "請在 followUps 逐條列出上次的待辦：task、owner 照上面抄；status 填 done（這次會議說完成了）、ongoing（還在進行或延後）或 notMentioned（這次沒提到）；time 填這次會議提到它的時間點，沒提到就給空字串。上次的未決問題這次有結論的寫進 decisions。",
+            en: "In followUps, list every action item from the last meeting: copy task and owner as written above; set status to done (this meeting said it is finished), ongoing (still in progress or postponed) or notMentioned (not mentioned this time); time is when this meeting mentions it, or an empty string. If an open question from the last meeting was settled this time, put the outcome in decisions.",
+            ja: "followUps に前回のアクションアイテムを 1 件ずつ入れること。task と owner は上の記載をそのまま写し、status は done（今回の会議で完了と言われた）、ongoing（進行中または延期）、notMentioned（今回は触れられていない）のいずれかにする。time は今回の会議で触れられた時刻、触れられていなければ空文字列。前回の未決事項に今回結論が出たものは decisions に入れる。"))
         return lines.joined(separator: "\n")
     }
 

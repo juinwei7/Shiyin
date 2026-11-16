@@ -95,7 +95,7 @@ struct MeetingListHeader: View {
     }
 
     private var title: String {
-        let scope = model.folderFilter ?? String(localized: "所有會議")
+        let scope = model.seriesById(model.seriesFilter)?.name ?? model.folderFilter ?? String(localized: "所有會議")
         let grouping = model.effectiveGrouping
         return grouping == .none ? scope : scope + "・" + grouping.label
     }

@@ -2,6 +2,7 @@ CREATE INDEX corrections_meeting ON corrections(meeting_id);
 CREATE INDEX documents_meeting ON documents(meeting_id, id);
 CREATE INDEX jobs_meeting ON jobs(meeting_id, id);
 CREATE INDEX jobs_status ON jobs(status, id);
+CREATE INDEX meetings_series ON meetings(series_id);
 CREATE INDEX questions_meeting ON questions(meeting_id, id);
 CREATE INDEX segments_meeting ON segments(meeting_id, seq);
 CREATE INDEX voiceprints_person ON voiceprints(person_id);
@@ -42,6 +43,14 @@ CREATE TABLE drafts (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (meeting_id, key)
 );
+CREATE TABLE folder_rules (
+  folder      TEXT PRIMARY KEY,
+  keywords    TEXT NOT NULL DEFAULT '[]',
+  people      TEXT NOT NULL DEFAULT '[]',
+  template_id TEXT,
+  series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
+  created_at  TEXT NOT NULL
+);
 CREATE TABLE glossary (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   term       TEXT NOT NULL UNIQUE,
@@ -73,7 +82,7 @@ CREATE TABLE meetings (
   notes_by         TEXT,
   created_at       TEXT NOT NULL,
   updated_at       TEXT NOT NULL
-, template_id TEXT NOT NULL DEFAULT 'general', user_notes  TEXT NOT NULL DEFAULT '', source      TEXT NOT NULL DEFAULT 'import', channels    TEXT NOT NULL DEFAULT 'mic', deleted_at  TEXT, folder      TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT 'zh', notes_draft INTEGER NOT NULL DEFAULT 0, transcribed_with TEXT NOT NULL DEFAULT '', min_speakers INTEGER, speaker_check REAL, speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0);
+, template_id TEXT NOT NULL DEFAULT 'general', user_notes  TEXT NOT NULL DEFAULT '', source      TEXT NOT NULL DEFAULT 'import', channels    TEXT NOT NULL DEFAULT 'mic', deleted_at  TEXT, folder      TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT 'zh', notes_draft INTEGER NOT NULL DEFAULT 0, transcribed_with TEXT NOT NULL DEFAULT '', min_speakers INTEGER, speaker_check REAL, speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0, folder_decided INTEGER NOT NULL DEFAULT 0, series_id INTEGER REFERENCES series(id) ON DELETE SET NULL);
 CREATE TABLE notes_versions (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
@@ -110,6 +119,19 @@ CREATE TABLE segments (
   text           TEXT NOT NULL,
   low_confidence INTEGER NOT NULL DEFAULT 0
 , speaker INTEGER, kind TEXT NOT NULL DEFAULT 'final', channel INTEGER, speaker_manual INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE series (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  name           TEXT NOT NULL,
+  weekday        INTEGER NOT NULL,
+  minute         INTEGER,
+  interval_weeks INTEGER NOT NULL DEFAULT 1,
+  people         TEXT NOT NULL DEFAULT '[]',
+  created_at     TEXT NOT NULL
+);
+CREATE TABLE series_rejected (
+  key        TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE speaker_undo (
   meeting_id INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
   snapshot   TEXT NOT NULL,

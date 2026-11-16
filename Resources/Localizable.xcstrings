@@ -143,6 +143,23 @@
         }
       }
     },
+    "%@ 都參加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 都参加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ attended"
+          }
+        }
+      }
+    },
     "%@ 附的 codex": {
       "extractionState": "manual",
       "localizations": {
@@ -812,6 +829,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 份声音特征"
+          }
+        }
+      }
+    },
+    "%lld 場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 场"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meeting"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meetings"
+                }
+              }
+            }
           }
         }
       }
@@ -2141,6 +2187,40 @@
         }
       }
     },
+    "「%@」已加到定期會議「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”已加到定期会议“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@” was added to the recurring meeting “%2$@”"
+          }
+        }
+      }
+    },
+    "「%@」已放進「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”已放进“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@” was moved to “%2$@”"
+          }
+        }
+      }
+    },
     "「%@」已經加過了": {
       "extractionState": "manual",
       "localizations": {
@@ -2188,6 +2268,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”有密码保护，拾音读不了。请先移除密码再加入。"
+          }
+        }
+      }
+    },
+    "「%@」自動加入的條件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”自动加入的条件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-add rules for “%@”"
           }
         }
       }
@@ -2489,6 +2586,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "The last attempt to create the clean version failed: %@"
+          }
+        }
+      }
+    },
+    "上次的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次的待办"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action Items from Last Time"
           }
         }
       }
@@ -2850,6 +2964,23 @@
         }
       }
     },
+    "不是定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不是定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Recurring"
+          }
+        }
+      }
+    },
     "不用": {
       "extractionState": "manual",
       "localizations": {
@@ -2999,6 +3130,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "之前选的麦克风（没有接上，会用系统默认）"
+          }
+        }
+      }
+    },
+    "之後不再建議這一組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之后不再建议这一组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don’t suggest this group again"
           }
         }
       }
@@ -3645,6 +3793,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如：小明"
+          }
+        }
+      }
+    },
+    "例如：週會、sync（任一個詞）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：周会、sync（任一个词）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. weekly, sync (any of the words)"
           }
         }
       }
@@ -5035,6 +5200,57 @@
         }
       }
     },
+    "刪除定期會議…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除定期会议…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Recurring Meeting…"
+          }
+        }
+      }
+    },
+    "刪除定期會議「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除定期会议“%@”？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the recurring meeting “%@”?"
+          }
+        }
+      }
+    },
+    "刪除定期會議（會議會保留）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除定期会议（会议会保留）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Recurring Meeting (Keep Meetings)"
+          }
+        }
+      }
+    },
     "刪除所有認識的人的聲音特徵？": {
       "extractionState": "manual",
       "localizations": {
@@ -5400,6 +5616,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加到 Codex"
+          }
+        }
+      }
+    },
+    "加到定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加到定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Recurring Meeting"
           }
         }
       }
@@ -6193,6 +6426,23 @@
         }
       }
     },
+    "可能的定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可能的定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Possible Recurring Meeting"
+          }
+        }
+      }
+    },
     "合併到": {
       "extractionState": "manual",
       "localizations": {
@@ -6274,6 +6524,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "同一个词的每一处一起接受或忽略"
+          }
+        }
+      }
+    },
+    "同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一群人、每周同一天同一个时间开的会议。确认之后，下次的会议会自动加进去，整理时接上上次的待办"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meetings with the same people on the same day and time each week. Once you confirm, the next meeting is added automatically and its notes follow up on last time’s action items"
           }
         }
       }
@@ -7089,6 +7356,57 @@
         }
       }
     },
+    "定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring Meetings"
+          }
+        }
+      }
+    },
+    "定期會議・%@。點了打開系列頁": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定期会议・%@。点了打开系列页"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring meeting · %@. Click to open it"
+          }
+        }
+      }
+    },
+    "定期會議：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定期会议：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recurring meeting: %@"
+          }
+        }
+      }
+    },
     "實際大小": {
       "extractionState": "manual",
       "localizations": {
@@ -7170,6 +7488,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "展开"
+          }
+        }
+      }
+    },
+    "屬於定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "属于定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring meeting"
           }
         }
       }
@@ -7733,6 +8068,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "已撤销：%@"
+          }
+        }
+      }
+    },
+    "已把 %lld 場會議放進「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已把 %lld 场会议放进“%@”"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meeting to “%@”"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meetings to “%@”"
+                }
+              }
+            }
           }
         }
       }
@@ -8409,6 +8773,23 @@
         }
       }
     },
+    "常參加的人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常参加的人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regulars"
+          }
+        }
+      }
+    },
     "常用": {
       "extractionState": "manual",
       "localizations": {
@@ -8422,6 +8803,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "常用"
+          }
+        }
+      }
+    },
+    "建立": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建立"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create"
           }
         }
       }
@@ -9109,6 +9507,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开“终端”，粘贴这一行安装："
+          }
+        }
+      }
+    },
+    "打開人物頁": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开人物页"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open this person’s page"
           }
         }
       }
@@ -10975,6 +11390,23 @@
         }
       }
     },
+    "放進去": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放进去"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        }
+      }
+    },
     "整場會議（.shiyin）": {
       "extractionState": "manual",
       "localizations": {
@@ -12318,6 +12750,23 @@
         }
       }
     },
+    "最近 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last %@"
+          }
+        }
+      }
+    },
     "最近 30 天": {
       "extractionState": "manual",
       "localizations": {
@@ -12581,6 +13030,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议日期"
+          }
+        }
+      }
+    },
+    "會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议会保留，之后的会议不会再自动加进来，也不会再建议这一组。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meetings are kept. New meetings won’t be added automatically, and this group won’t be suggested again."
           }
         }
       }
@@ -13273,6 +13739,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "标题"
+          }
+        }
+      }
+    },
+    "標題包含": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标题包含"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title contains"
+          }
+        }
+      }
+    },
+    "標題包含 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标题包含 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "title contains %@"
           }
         }
       }
@@ -14469,6 +14969,23 @@
         }
       }
     },
+    "沒有其他可能的定期會議了。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有其他可能的定期会议了。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no other possible recurring meetings."
+          }
+        }
+      }
+    },
     "沒有加到 Claude Code：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -15263,6 +15780,35 @@
         }
       }
     },
+    "現在不在資料夾裡的會議也套用（%lld 場）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现在不在文件夹里的会议也套用（%lld 场）"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Also apply to meetings not in a folder now (%lld meeting)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Also apply to meetings not in a folder now (%lld meetings)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "琥珀色是辨識信心低的段落": {
       "extractionState": "manual",
       "localizations": {
@@ -15484,6 +16030,23 @@
         }
       }
     },
+    "用這個範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用这个模板"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses template"
+          }
+        }
+      }
+    },
     "由 %@ 整理．%@": {
       "extractionState": "manual",
       "localizations": {
@@ -15611,6 +16174,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "略过待确认"
+          }
+        }
+      }
+    },
+    "略過的那幾組下次打開還會在。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "略过的那几组下次打开还会在。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The groups you skipped will be here next time."
           }
         }
       }
@@ -15768,6 +16348,35 @@
         }
       }
     },
+    "發現 %lld 組可能的定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发现 %lld 组可能的定期会议"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld possible recurring meeting"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld possible recurring meetings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "目前不整理：錄音、轉錄、逐字稿全部留在這台 Mac。": {
       "extractionState": "manual",
       "localizations": {
@@ -15815,6 +16424,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前没有进行中的工作"
+          }
+        }
+      }
+    },
+    "目前沒有還沒完成的待辦。之後每一場整理時，會對照上一場的待辦標出完成了沒。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前没有还没完成的待办。之后每一场整理时，会对照上一场的待办标出完成了没。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No open action items. Each new meeting’s notes will check last time’s action items and mark which are done."
           }
         }
       }
@@ -16120,6 +16746,23 @@
         }
       }
     },
+    "移除條件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除条件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Rules"
+          }
+        }
+      }
+    },
     "稍後": {
       "extractionState": "manual",
       "localizations": {
@@ -16154,6 +16797,23 @@
         }
       }
     },
+    "符合任一個條件的新會議，會自動放進這個資料夾。已經在別的資料夾的會議不會移動。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符合任一个条件的新会议，会自动放进这个文件夹。已经在别的文件夹的会议不会移动。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New meetings that match any rule are moved to this folder automatically. Meetings already in another folder stay where they are."
+          }
+        }
+      }
+    },
     "符合寬度": {
       "extractionState": "manual",
       "localizations": {
@@ -16167,6 +16827,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fit to Width"
+          }
+        }
+      }
+    },
+    "第 %lld 組，共 %lld 組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第 %lld 组，共 %lld 组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld"
           }
         }
       }
@@ -16851,6 +17528,23 @@
         }
       }
     },
+    "編輯自動加入的條件…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑自动加入的条件…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Auto-Add Rules…"
+          }
+        }
+      }
+    },
     "編輯這一段": {
       "extractionState": "manual",
       "localizations": {
@@ -17170,6 +17864,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "自动判断"
+          }
+        }
+      }
+    },
+    "自動加入的條件…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动加入的条件…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-Add Rules…"
+          }
+        }
+      }
+    },
+    "自動加入：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动加入：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-add: %@"
           }
         }
       }
@@ -19148,6 +19876,23 @@
         }
       }
     },
+    "這些人都參加": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些人都参加"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All of these people attend"
+          }
+        }
+      }
+    },
     "這些待辦都已經在提醒事項了": {
       "extractionState": "manual",
       "localizations": {
@@ -19467,6 +20212,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "这台服务器自称“%@”。"
+          }
+        }
+      }
+    },
+    "這場很像「%@」裡的會議：%@ 都參加（%lld 場）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场很像“%@”里的会议：%@ 都参加（%lld 场）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This looks like the meetings in “%1$@”: %2$@ attended (%3$lld meetings)"
+          }
+        }
+      }
+    },
+    "這場很像「%@」裡的會議：標題都有「%@」（%lld 場）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场很像“%@”里的会议：标题都有“%@”（%lld 场）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This looks like the meetings in “%1$@”: the titles include “%2$@” (%3$lld meetings)"
           }
         }
       }
@@ -19879,6 +20658,23 @@
         }
       }
     },
+    "這幾場會議是同一群人開的（%@）。確認之後，下次的會議會自動加進來，整理時會接上上次的待辦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这几场会议是同一群人开的（%@）。确认之后，下次的会议会自动加进来，整理时会接上上次的待办。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These meetings have the same people (%@). Once you confirm, the next meeting is added automatically and its notes follow up on last time’s action items."
+          }
+        }
+      }
+    },
     "這是 %@ 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。": {
       "extractionState": "manual",
       "localizations": {
@@ -19909,6 +20705,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "这次不用"
+          }
+        }
+      }
+    },
+    "這次先不處理，下次打開還會在": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这次先不处理，下次打开还会在"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decide later; it will be here next time"
+          }
+        }
+      }
+    },
+    "這次沒提到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这次没提到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not mentioned"
           }
         }
       }
@@ -20180,6 +21010,23 @@
         }
       }
     },
+    "還在進行": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还在进行"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In progress"
+          }
+        }
+      }
+    },
     "還在錄音的那場會議沒有移到垃圾桶，請先停止錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -20307,6 +21154,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没回答的题目都标成略过，送出后直接移除"
+          }
+        }
+      }
+    },
+    "還沒完成的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没完成的待办"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Action Items"
           }
         }
       }
@@ -20834,6 +21698,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新命名…"
+          }
+        }
+      }
+    },
+    "重新命名、刪除定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名、删除定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename or delete the recurring meeting"
+          }
+        }
+      }
+    },
+    "重新命名定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Recurring Meeting"
           }
         }
       }

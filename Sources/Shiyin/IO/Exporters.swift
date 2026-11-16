@@ -39,6 +39,15 @@ struct ExportText {
     var due: String { language.text(zh: "期限", en: "Due", ja: "期限") }
     var time: String { language.text(zh: "時間點", en: "Time", ja: "時刻") }
     var unassigned: String { language.text(zh: "未指定", en: "Unassigned", ja: "未定") }
+    /// 定期會議的「上次的待辦」（design §73）
+    var followUps: String { language.text(zh: "上次的待辦", en: "Action items from last time", ja: "前回のアクションアイテム") }
+    func status(_ status: MeetingNotes.FollowUp.Status) -> String {
+        switch status {
+        case .done: return language.text(zh: "完成", en: "Done", ja: "完了")
+        case .ongoing: return language.text(zh: "還在進行", en: "In progress", ja: "進行中")
+        case .notMentioned: return language.text(zh: "這次沒提到", en: "Not mentioned", ja: "今回は言及なし")
+        }
+    }
     var colon: String { language.text(zh: "：", en: ": ", ja: "：") }
     var listSeparator: String { language.text(zh: "、", en: ", ", ja: "、") }
     func speaker(_ idx: Int) -> String { language.defaultSpeaker(idx) }
@@ -146,6 +155,11 @@ enum NotesExporter {
             out += ["", "## \(title)"] + items.map { "- \($0.text)\(t($0.time))" }
         }
         section(x.section("summary"), notes.summary)
+        if !notes.followUps.isEmpty {
+            out += ["", "## \(x.followUps)"] + notes.followUps.map {
+                "- \(x.status($0.status))\(x.colon)\($0.task)\($0.owner.isEmpty ? "" : x.paren($0.owner))\(t($0.time))"
+            }
+        }
         section(x.section("decisions"), notes.decisions)
         if !notes.actionItems.isEmpty {
             out += ["", "## \(x.section("actionItems"))", "| \(x.owner) | \(x.task) | \(x.due) | \(x.time) |", "|---|---|---|---|"]
@@ -187,6 +201,12 @@ enum NotesExporter {
             body += "<h2>\(HTML.escape(title))</h2>\n<ul>" + items.map { "<li>\(HTML.escape($0.text))\(t($0.time))</li>" }.joined() + "</ul>\n"
         }
         list(x.section("summary"), notes.summary)
+        if !notes.followUps.isEmpty {
+            body += "<h2>\(HTML.escape(x.followUps))</h2>\n<ul>" + notes.followUps.map {
+                "<li><strong>\(HTML.escape(x.status($0.status)))</strong>\(x.colon)\(HTML.escape($0.task))"
+                    + ($0.owner.isEmpty ? "" : HTML.escape(x.paren($0.owner))) + "\(t($0.time))</li>"
+            }.joined() + "</ul>\n"
+        }
         list(x.section("decisions"), notes.decisions)
         if !notes.actionItems.isEmpty {
             body += "<h2>\(x.section("actionItems"))</h2>\n<table><tr><th class=\"nowrap\">\(x.owner)</th><th>\(x.task)</th><th class=\"nowrap\">\(x.due)</th></tr>"

@@ -1,0 +1,111 @@
+{
+  "meetings" : [
+    {
+      "id" : 1,
+      "meetingDate" : "2026-10-19",
+      "notes" : "{\"actionItems\":[{\"due\":\"\",\"owner\":\"o\",\"task\":\"Compare competitors\",\"time\":\"\"},{\"due\":\"\",\"owner\":\"o\",\"task\":\"Update checklist\",\"time\":\"\"}],\"custom\":[],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[],\"title\":\"t1\",\"topics\":[]}"
+    },
+    {
+      "id" : 2,
+      "meetingDate" : "2026-10-26",
+      "notes" : "{\"actionItems\":[{\"due\":\"\",\"owner\":\"o\",\"task\":\"Confirm SSO\",\"time\":\"\"}],\"custom\":[],\"decisions\":[],\"followUps\":[{\"owner\":\"o\",\"status\":\"done\",\"task\":\"compare competitors\",\"time\":\"\"},{\"owner\":\"o\",\"status\":\"ongoing\",\"task\":\"Update checklist\",\"time\":\"\"}],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[],\"title\":\"t2\",\"topics\":[]}"
+    },
+    {
+      "id" : 3,
+      "meetingDate" : "2026-11-02",
+      "notes" : "{\"actionItems\":[{\"due\":\"\",\"owner\":\"o\",\"task\":\"Prepare deck\",\"time\":\"\"}],\"custom\":[],\"decisions\":[],\"followUps\":[{\"owner\":\"o\",\"status\":\"notMentioned\",\"task\":\"Confirm SSO\",\"time\":\"\"},{\"owner\":\"o\",\"status\":\"done\",\"task\":\"Update the checklist\",\"time\":\"\"}],\"openQuestions\":[{\"text\":\"q\",\"time\":\"00:01\"}],\"reviewItems\":[],\"summary\":[],\"title\":\"t3\",\"topics\":[]}"
+    },
+    {
+      "id" : 4,
+      "meetingDate" : "2026-11-09",
+      "notes" : "{\"actionItems\":[{\"due\":\"\",\"owner\":\"o\",\"task\":\"Fix login\",\"time\":\"\"},{\"due\":\"\",\"owner\":\"o\",\"task\":\"Confirm SSO\",\"time\":\"\"}],\"custom\":[],\"decisions\":[],\"followUps\":[{\"owner\":\"o\",\"status\":\"done\",\"task\":\"Prepare deck\",\"time\":\"\"}],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[],\"title\":\"t4\",\"topics\":[]}"
+    }
+  ],
+  "open" : [
+    {
+      "index" : 0,
+      "meeting" : 4,
+      "task" : "Fix login"
+    },
+    {
+      "index" : 1,
+      "meeting" : 4,
+      "task" : "Confirm SSO"
+    },
+    {
+      "index" : 1,
+      "meeting" : 1,
+      "task" : "Update checklist"
+    }
+  ],
+  "previous" : [
+    {
+      "items" : [
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Compare competitors"
+        },
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Update checklist"
+        }
+      ],
+      "openQuestions" : [
+
+      ]
+    },
+    {
+      "items" : [
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Confirm SSO"
+        },
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Update checklist"
+        }
+      ],
+      "openQuestions" : [
+
+      ]
+    },
+    {
+      "items" : [
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Prepare deck"
+        },
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Confirm SSO"
+        }
+      ],
+      "openQuestions" : [
+        "q"
+      ]
+    },
+    {
+      "items" : [
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Fix login"
+        },
+        {
+          "due" : "",
+          "owner" : "o",
+          "task" : "Confirm SSO"
+        }
+      ],
+      "openQuestions" : [
+
+      ]
+    }
+  ]
+}

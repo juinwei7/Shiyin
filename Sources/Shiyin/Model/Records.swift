@@ -44,6 +44,9 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     // v9（design §24.1）：說話者辨識的自我檢查分數（越大越可能把不同的人併在一起），nil 是沒算過；使用者按了「不用了」
     var speakerCheck: Double?
     var speakerHintDismissed: Bool = false
+    // v12（design §72、§73）：資料夾已經決定了（自動放過、自己移過、建議按了不用）；屬於哪個定期會議
+    var folderDecided: Bool = false
+    var seriesId: Int64?
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
 

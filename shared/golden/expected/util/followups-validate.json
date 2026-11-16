@@ -1,0 +1,48 @@
+{
+  "input" : [
+    {
+      "owner" : "a",
+      "status" : "ongoing",
+      "task" : "Fix login (frontend)"
+    },
+    {
+      "owner" : "a",
+      "status" : "done",
+      "task" : "fix login"
+    },
+    {
+      "owner" : "c",
+      "status" : "done",
+      "task" : "Write tests"
+    },
+    {
+      "owner" : "b",
+      "status" : "done",
+      "task" : " confirm sso "
+    },
+    {
+      "owner" : "b",
+      "status" : "done",
+      "task" : "SSO"
+    }
+  ],
+  "previous" : [
+    "Fix login",
+    "Confirm SSO"
+  ],
+  "valid" : [
+    {
+      "owner" : "a",
+      "status" : "ongoing",
+      "task" : "Fix login (frontend)"
+    },
+    {
+      "owner" : "b",
+      "status" : "done",
+      "task" : " confirm sso "
+    }
+  ],
+  "withoutPrevious" : [
+
+  ]
+}

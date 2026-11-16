@@ -2648,6 +2648,35 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`listsort <dateDesc|dateAsc|title|duration>`、`listgroup <none|month|folder|series>`、`listfilter <review|mine|person <id>|template <id>|clear>`；state 加 `list.sort`、`list.group`、`list.filter`、`list.ids`（目前列表的順序）、`list.groups`（每組的標題和場數）。
 - Windows：design-windows §11.30。
 
+## 72. 資料夾自動歸類（R98）
+
+- 資料（migration v12，跟 §73 一起）：`folder_rules(folder TEXT PRIMARY KEY, keywords TEXT NOT NULL DEFAULT '[]', people TEXT NOT NULL DEFAULT '[]', template_id TEXT, series_id INTEGER REFERENCES series(id) ON DELETE SET NULL, created_at)`，keywords、people 是 JSON 陣列（人物 id）；`meetings.folder_decided INTEGER NOT NULL DEFAULT 0`：這場的資料夾已經決定了（自動放過、使用者自己移過、建議按了「不用」），之後不再自動放、不再建議。資料夾改名時條件跟著改名，刪除資料夾時條件一起刪。
+- 有條件的資料夾一直列在側欄（沒有會議時場數 0），圖示換成 `folder.badge.gearshape`，滑過去看條件（「標題包含 週會、sync；陳家豪、王小明都參加」）。
+- 條件（`FolderRule.matches`）：標題包含任一個詞（不分大小寫）；或選的人都有參加（`meetingPeople`，至少選一個人）；或用這個範本；或屬於這個定期會議。四種有任一個符合就算。
+- 編輯（資料夾右鍵「自動加入的條件…」，`FolderRuleSheet`）：說明「符合任一個條件的新會議，會自動放進這個資料夾。已經在別的資料夾的會議不會移動。」；標題包含（一行，用、，, 或換行分隔，同詞彙表的 `GlossaryInput.split`）；有這些人都參加（人物的勾選清單，最多高 160，超過捲動）；用這個範本（不限／範本）；屬於定期會議（有定期會議才出現）。下面「現在不在資料夾裡的會議也套用（N 場）」，N 跟著條件即時算（不在垃圾桶、`folder = ''`）；N 是 0 時停用。按鈕：取消、移除條件（已經有條件時）、儲存（條件都空時當成移除）。
+- 自動放（`AppModel.autoFile(_:)`）：轉錄完（說話者對到人物之後）、整理完各檢查一次；只看 `folder = ''`、`folder_decided = 0`、不在垃圾桶的會議；好幾個資料夾符合時放名稱排第一的。放了之後 `folder_decided = 1`，提示「「標題」已放進「資料夾」」。使用者把會議移進、移出資料夾時 `folder_decided = 1`。
+- 建議（R98.3，`FolderSuggestion.best`）：會議不在資料夾、`folder_decided = 0`、已經有會議紀錄、不在錄音中時，跟每個資料夾（至少 2 場）比：與會者（同 §73 的「同一群人」：共同的人物至少 2 位、Jaccard ≥ 0.5）相同的場數，或標題有共同的詞（兩邊標題最長的共同子字串，去掉數字、日期、標點後至少 2 個字，拉丁字母至少 3 個字母；「會議」「meeting」這類通用詞不算）的場數；至少 2 場才建議，取場數最多的資料夾。紀錄分頁頂端（待確認條的上面）一條：「這場很像「產品」裡的會議：陳家豪、王小明都參加（3 場）」或「…：標題都有「產品週會」（4 場）」，按鈕「放進去」「不用」（`folder_decided = 1`）。用不到整理工具。
+- DEBUG：`folderrule <資料夾> <JSON> [apply]`（等於按儲存）、`folderrule <資料夾> -`（移除）、`autofile <會議 id>`、`foldersuggest <會議 id> <輸出.json>`、`foldersuggestion accept|dismiss <會議 id>`；state 的 `folderRules`。
+- Windows：design-windows §11.31。
+
+## 73. 定期會議（R99，D173、D174）
+
+- 資料（migration v12）：`series(id, name, weekday INTEGER NOT NULL, minute INTEGER, interval_weeks INTEGER NOT NULL DEFAULT 1, people TEXT NOT NULL DEFAULT '[]', created_at)`：weekday 1～7（週日～週六，同 `Calendar` 的 weekday），minute 是當地時間的開始時間（從 0 點算的分鐘，不知道時 null），people 是建立時那一群人（人物 id 的 JSON 陣列，自動加入時比對）；`meetings.series_id INTEGER REFERENCES series(id) ON DELETE SET NULL`；`series_rejected(key TEXT PRIMARY KEY, created_at)`：按了「不是定期會議」的那一組。
+- 會議的時間（`MeetingTime`）：星期幾看 `meeting_date`；開始時間只有錄音的會議才知道（`created_at` 換成當地時間、跟 `meeting_date` 同一天時），匯入的會議是 null（比對時當成符合）。
+- 找可能的定期會議（`SeriesDetector.candidates`，純函式，每次讀列表時算）：不在垃圾桶、不在定期會議裡、至少對到 2 個人物的會議，依星期幾分開，照日期由舊到新逐場放進第一個符合的組：開始時間跟組裡最近一場差不到 60 分鐘（任一邊不知道時算符合）、跟組裡最近一場相隔 7～28 天、「同一群人」：跟組的核心人物（組裡過半數場次都有的人）共同至少 2 位而且 Jaccard ≥ 0.5；都不符合就開新的一組。至少 3 場的組才算；間隔取相隔天數的中位數（偶數個時取小的那個；開始時間也是），14 天以上是每兩週，不然每週。組的 key 是「星期幾｜開始的小時（不知道是 -1）｜核心人物 id 排序」，在 `series_rejected` 裡的不算。
+- 預設名稱：標題先拿掉數字和跟著的日期單位（前面接英文字母的數字像 Q3 留著）、空白合併成一個，再取所有標題最長的共同子字串（頭尾去掉空白、標點，至少 2 個字；只有拉丁字母時至少 3 個字母）；沒有時「週一 10:00 的會議」（不知道時間時「週一的會議」）。頻率的說明「每週一 10:00」「每兩週的週一 10:00」「每週一」。
+- 側欄（§60.2 那一段下面、資料夾上面）一段「定期會議」：有建議時第一列「發現 N 組可能的定期會議」（`sparkles`，青瓷綠），點了打開確認；每個定期會議一列（`arrow.triangle.2.circlepath`、名稱、場數，滑過去看頻率），點了只看這個定期會議的會議（`seriesFilter`，跟 `folderFilter` 互斥），還沒選會議時右邊是系列頁；右鍵「重新命名…」「刪除定期會議（會議會保留）」。沒有定期會議也沒有建議時整段不出現。
+- 確認（`SeriesSuggestionSheet`）：一次一組，「第 1 組，共 2 組」；名稱（輸入框，預設名稱）；「每週一 10:00・5 場」；與會者頭像；會議的勾選清單（日期、標題，預設全勾，至少 2 場才能建立）；按鈕「不是定期會議」（記進 `series_rejected`，換下一組）、「略過」（這次不處理，換下一組；下次打開還在）、「建立」。建立時 weekday、minute（組裡已知時間的中位數）、interval、people（核心人物）照這一組；勾的會議 `series_id` 設成它。
+- 自動加入（`AppModel.autoJoinSeries(_:)`）：轉錄完（說話者對到人物之後、整理之前，這樣整理時就接得上上一場）檢查還不在定期會議的會議：星期幾相同、開始時間差不到 60 分鐘（任一邊不知道時算符合）、跟系列的 people 是「同一群人」、跟系列最近一場相隔 1～35 天；符合好幾個時取最近一場最近的。加入後會議頁的資訊列多一個「↻ 產品週會」，點了打開系列頁。
+- 會議的右鍵選單（多選時全部）：「加到定期會議 ▸」列出全部系列；在系列裡的會議多「移出「產品週會」」。手動加入不檢查條件。
+- 系列頁（`SeriesPage`，同人物頁的 `ReadingColumn`）：名稱（標題字型，旁邊鉛筆改名）、「每週一 10:00・6 場・最近 2026-11-10」、常參加的人（過半數場次都有的人物，頭像＋名字，點了打開人物頁）；「還沒完成的待辦」（下面的算法，表格同人物頁：事項、負責人、期限、會議和時間點，「加到提醒事項」）；「會議」（每一場的日期、標題、長度，點了打開）。右上「更多」：重新命名…、刪除定期會議…。
+- 還沒完成的待辦：照日期由舊到新走過每一場，先用這一場的 `followUps` 更新（status 是 done 的拿掉，其他留著），再加入這一場的 `actionItems`（同一件事以新的為準）；最後留下的就是，新的會議在前、同一場照紀錄裡的順序。用事項的文字比對（去掉頭尾空白、不分大小寫）。
+- 接上一場（R99.5）：整理系列裡的會議時，上一場（同系列、日期比這場早或同一天 id 比較小、有會議紀錄的最近一場）的待辦（它的 actionItems＋它的 followUps 裡不是 done 的）、未決問題接在使用者提示詞的逐字稿前面，加上怎麼填 `followUps` 的說明；沒有上一場時提示詞跟以前一字不差（system 提示詞不變，D174）。會議紀錄多一個欄位 `followUps: [{task, owner, status, time}]`（status：done、ongoing、notMentioned），schema 一律有（空陣列），存的時候空的不寫（同 people）。整理後驗證：沒給上一場時清空；task 對不到給的待辦（同上的比對，或一邊包含另一邊）的丟掉。
+- 顯示：紀錄分頁條列模式在摘要下面一段「上次的待辦」（只有 followUps 不是空的才有）：每一條前面是狀態（完成：`checkmark.circle.fill` 青瓷綠；還在進行：`circle.lefthalf.filled` 琥珀；這次沒提到：`minus.circle` 灰），後面事項、負責人、時間點。匯出（Markdown、HTML、Word、PDF）同樣在摘要後面，Markdown 寫「- 完成：事項（負責人）（時間）」。編輯器不能改這一段（重新整理會重算）。心智圖不畫。
+- DEBUG：`seriescandidates <輸出.json>`、`seriescreate <JSON>`（等於確認時按建立）、`seriesreject <key>`、`seriesjoin <會議 id> <系列 id|->`、`seriesfilter <系列 id|->`、`autojoin <會議 id>`、`seriessheet`（打開確認）、`seriesopenitems <系列 id> <輸出.json>`；state 的 `series`、`seriesCandidates`。
+- 標準答案：`util/series-detect.json`（detector 的輸入和結果）、`util/series-open-items.json`、`util/folder-suggest.json`、`prompts/<語言>/notes-prompt-followups.txt`、`schemas/notes.json`、`db/schema.sql`、`formats/` 的 followUps。
+- Windows：design-windows §11.32。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -2767,3 +2796,5 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D169 | Nemotron-3 分人、聲紋借用標準流程裡重疊最多的那位，兩個都跑（§61.2） | 升級 FluidAudio 到有 `embedSpans` 的版本、另外算聲紋：整個說話者辨識的行為會跟著變，要重新評估；而且標準流程本來就要跑（品質檢查、超過 8 人時比較）。只用 Nemotron：沒有聲紋就不能自動帶入名字 |
 | D170 | 分割會議不能復原、不能合併回來；確認對話框寫清楚（§64） | 存一份完整的快照（錄音、每個表）讓它能復原：要另外管理一份錄音大小的副本，所有相關的表都要記。分割前把原本那場放進垃圾桶當備份：垃圾桶多一場看不懂的會議，錄音佔兩倍 |
 | D171 | 刪除一句跟說話者的修正共用「復原」（只復原最近一次，§63） | 另外做「最近刪除的句子」：要新的表和畫面。刪除前確認：一次刪一句，確認比復原麻煩 |
+| D173 | 定期會議用與會者、星期幾、時間找，不靠標題；先建議、使用者確認才建立 | 用標題找：同一個週會每次的標題不一樣（整理工具取的、帶日期），反而不同會議會有「週會」這種共同詞；用行事曆：要多一個權限，而且很多會議不在行事曆上（R99 不做）。直接自動建立：猜錯時使用者要自己拆掉，而且會把不相干的待辦接進下一場的會議紀錄 |
+| D174 | 「上次的待辦」放在使用者提示詞，system 提示詞不變 | 改 system 提示詞：每一場會議（不在系列裡的也是）都多一條用不到的規則，整理品質要重新評估；放在使用者提示詞只影響系列裡的會議。schema 還是一律多 followUps（OpenAI 的 strict 模式每個欄位都要列在 required，不能只有系列的會議才有） |

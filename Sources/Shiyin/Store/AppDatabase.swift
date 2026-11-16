@@ -300,6 +300,35 @@ final class AppDatabase: @unchecked Sendable {
                 END;
                 """)
         }
+        // 資料夾自動歸類、定期會議（design §72、§73）
+        migrator.registerMigration("v12") { db in
+            try db.execute(sql: """
+                CREATE TABLE series (
+                  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                  name           TEXT NOT NULL,
+                  weekday        INTEGER NOT NULL,
+                  minute         INTEGER,
+                  interval_weeks INTEGER NOT NULL DEFAULT 1,
+                  people         TEXT NOT NULL DEFAULT '[]',
+                  created_at     TEXT NOT NULL
+                );
+                CREATE TABLE series_rejected (
+                  key        TEXT PRIMARY KEY,
+                  created_at TEXT NOT NULL
+                );
+                CREATE TABLE folder_rules (
+                  folder      TEXT PRIMARY KEY,
+                  keywords    TEXT NOT NULL DEFAULT '[]',
+                  people      TEXT NOT NULL DEFAULT '[]',
+                  template_id TEXT,
+                  series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
+                  created_at  TEXT NOT NULL
+                );
+                ALTER TABLE meetings ADD COLUMN folder_decided INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE meetings ADD COLUMN series_id INTEGER REFERENCES series(id) ON DELETE SET NULL;
+                CREATE INDEX meetings_series ON meetings(series_id);
+                """)
+        }
         return migrator
     }
 
@@ -388,15 +417,23 @@ final class AppDatabase: @unchecked Sendable {
         guard !ids.isEmpty else { return }
         try pool.write { db in
             for id in ids {
-                try db.execute(sql: "UPDATE meetings SET folder = ?, updated_at = ? WHERE id = ?", arguments: [folder, Clock.now(), id])
+                // 自己移進、移出資料夾後不再自動放、不再建議（design §72）
+                try db.execute(sql: "UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", arguments: [folder, Clock.now(), id])
             }
         }
     }
 
     /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改
+    /// 改名時條件跟著改名；newName 是空的（刪除資料夾）時條件一起刪（design §72）
     func renameFolder(_ old: String, to newName: String) throws {
         try pool.write { db in
             try db.execute(sql: "UPDATE meetings SET folder = ?, updated_at = ? WHERE folder = ?", arguments: [newName, Clock.now(), old])
+            let targetHasRule = try Bool.fetchOne(db, sql: "SELECT 1 FROM folder_rules WHERE folder = ?", arguments: [newName]) ?? false
+            if newName.isEmpty || targetHasRule {
+                try db.execute(sql: "DELETE FROM folder_rules WHERE folder = ?", arguments: [old])
+            } else {
+                try db.execute(sql: "UPDATE folder_rules SET folder = ? WHERE folder = ?", arguments: [newName, old])
+            }
         }
     }
 

@@ -1,0 +1,52 @@
+[
+  {
+    "titles" : [
+      "產品週會 10/19",
+      "產品週會 10/26"
+    ],
+    "word" : "產品週會"
+  },
+  {
+    "titles" : [
+      "11月3日 設計討論",
+      "11月10日 設計討論"
+    ],
+    "word" : "設計討論"
+  },
+  {
+    "titles" : [
+      "Q3 Sync 1",
+      "Q3 Sync 2"
+    ],
+    "word" : "Q3 Sync"
+  },
+  {
+    "titles" : [
+      "A",
+      "B"
+    ],
+    "word" : null
+  },
+  {
+    "titles" : [
+      "週會",
+      "週會"
+    ],
+    "word" : "週會"
+  },
+  {
+    "titles" : [
+      "Weekly Sync",
+      "Sync with Bob",
+      "Bob 1:1"
+    ],
+    "word" : null
+  },
+  {
+    "titles" : [
+      "ab 1",
+      "ab 2"
+    ],
+    "word" : null
+  }
+]
