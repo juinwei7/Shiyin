@@ -2518,6 +2518,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 右邊：`sidebarMode == .people` 時顯示 `PersonPage`（沒選人時是說明）。視窗標題是人名。`ReadingColumn` 裡：頭像（52 pt；我的話外圈細的青瓷綠，名字旁邊灰字「我」）、名字、「一起開過 N 場會議，最近 <日期>」；動作放在工具列右上角的「更多」（同會議頁的「更多」，輔助使用的名字是「更多」）：「改名…」（popover 接在「更多」下面，同設定頁）、「合併到」（子選單：其他認識的人，選了 `renamePerson(id, to: 那個人的名字)`，同名合併）、分隔線、「刪除聲音特徵…」（確認對話框，同設定頁）；「負責的待辦」：同樣的格線（事項、期限、會議的標題和時間點按鈕），事項那一欄撐滿，表格跟段落同寬，右上角「加到提醒事項」（只加還沒加的；同 §52，但跨會議：每一項的 url 照它自己的會議）；「會議」：每列日期、標題、「說了 N 分鐘」，點了 `reveal(meetingId)`（切回「會議」、選那場）。點待辦的時間點：切回會議、選那場、從那裡播放。
 - DEBUG：`sidebar people|meetings`、`person <id>`；state 的 `sidebarMode`、`selectedPerson`、`personPage`（待辦、會議的數目）。
 
+- 名字旁的鉛筆（R85.6）：`pencil`、borderless、青瓷綠，說明和輔助使用的名字是「改名」；點了打開同一個改名輸入框（popover 接在鉛筆下面，`editingName`），取消、儲存同「更多 → 改名…」。
+
 ## 61. 整理失敗的線索、說話者辨識選 Nemotron-3（R86、R87，D168、D169）
 
 ### 61.1 「其他」的種類（R86）

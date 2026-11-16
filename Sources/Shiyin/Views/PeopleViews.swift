@@ -23,6 +23,8 @@ struct PersonPage: View {
     @State private var meetings: [PersonMeeting] = []
     @State private var items: [PersonActionItem] = []
     @State private var renaming = false
+    /// 名字旁的鉛筆打開的改名（R85.6；同「更多 → 改名…」的輸入框，接在鉛筆下面）
+    @State private var editingName = false
     @State private var renameText = ""
     @State private var confirmDelete = false
 
@@ -75,6 +77,12 @@ struct PersonPage: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(person.name).contentTitleFont(26).textSelection(.enabled).lineLimit(1)
+                    Button { renameText = person.name; editingName = true } label: { Image(systemName: "pencil") }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(Color.celadon)
+                        .help("改名")
+                        .accessibilityLabel(Text("改名"))
+                        .popover(isPresented: $editingName, arrowEdge: .bottom) { renameForm }
                     if person.isMe {
                         Text("我").font(.callout).foregroundStyle(.secondary)
                     }
@@ -124,7 +132,7 @@ struct PersonPage: View {
                 .onSubmit(saveRename)
             HStack {
                 Spacer()
-                Button("取消") { renaming = false }.keyboardShortcut(.cancelAction)
+                Button("取消") { renaming = false; editingName = false }.keyboardShortcut(.cancelAction)
                 Button("儲存", action: saveRename).keyboardShortcut(.defaultAction)
                     .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
@@ -137,6 +145,7 @@ struct PersonPage: View {
         guard !name.isEmpty else { return }
         model.renamePerson(person.id, to: name)
         renaming = false
+        editingName = false
         // 改成已經有的名字時合併過去，選那個人
         model.selectedPerson = model.peopleOverview.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?.id
     }
