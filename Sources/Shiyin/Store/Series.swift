@@ -221,10 +221,24 @@ enum SeriesDetector {
                 let piece = String(shortest[start..<(start + length)])
                 guard lowered.allSatisfy({ $0.contains(piece.lowercased()) }) else { continue }
                 let cleaned = clean(piece)
-                if isSignificant(cleaned) { return cleaned }
+                if isSignificant(cleaned), lowered.allSatisfy({ isWholeWord(cleaned.lowercased(), in: $0) }) { return cleaned }
             }
         }
         return nil
+    }
+
+    /// 英文要是完整的單字：頭尾是英文字母或數字時，前後不能接著英文字母或數字（「Control」「Conceptual」不會取出「Con」；
+    /// 2026-11-16 用 AMI 真人錄音驗收時發現）。中文沒有空格，頭尾是中文時不檢查
+    static func isWholeWord(_ word: String, in text: String) -> Bool {
+        let w = Array(word), t = Array(text)
+        guard let first = w.first, let last = w.last, w.count <= t.count else { return false }
+        func latin(_ c: Character) -> Bool { c.isASCII && (c.isLetter || c.isNumber) }
+        for i in 0...(t.count - w.count) where Array(t[i..<(i + w.count)]) == w {
+            let before = !latin(first) || i == 0 || !latin(t[i - 1])
+            let after = !latin(last) || i + w.count == t.count || !latin(t[i + w.count])
+            if before && after { return true }
+        }
+        return false
     }
 
     private static let edgeCharacters = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters).union(.symbols)

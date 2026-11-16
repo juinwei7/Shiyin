@@ -48,5 +48,28 @@
       "ab 2"
     ],
     "word" : null
+  },
+  {
+    "titles" : [
+      "Remote Control Project Kickoff Meeting",
+      "Remote Control Design: Recap",
+      "Conceptual Design Meeting: Recap"
+    ],
+    "word" : null
+  },
+  {
+    "titles" : [
+      "Sprint Review 3",
+      "Sprint Review 4",
+      "Sprint review"
+    ],
+    "word" : "Sprint review"
+  },
+  {
+    "titles" : [
+      "產品週會A",
+      "產品週會B"
+    ],
+    "word" : "產品週會"
   }
 ]

@@ -212,9 +212,29 @@ public static partial class SeriesDetector
                 var lower = SwiftText.Lower(piece);
                 if (!lowered.All(t => t.Contains(lower, StringComparison.Ordinal))) continue;
                 var cleaned = Clean(piece);
-                if (IsSignificant(cleaned)) return cleaned;
+                if (IsSignificant(cleaned) && lowered.All(t => IsWholeWord(SwiftText.Lower(cleaned), t))) return cleaned;
             }
         return null;
+    }
+
+    /// <summary>
+    /// 英文要是完整的單字：頭尾是英文字母或數字時，前後不能接著英文字母或數字（「Control」「Conceptual」不會取出「Con」，M§73）。
+    /// 中文沒有空格，頭尾是中文時不檢查。字照 Swift 的 Character
+    /// </summary>
+    public static bool IsWholeWord(string word, string text)
+    {
+        var w = SwiftText.Characters(word);
+        var t = SwiftText.Characters(text);
+        if (w.Count == 0 || w.Count > t.Count) return false;
+        static bool Latin(string c) => c.Length == 1 && c[0] < 128 && char.IsLetterOrDigit(c[0]);
+        for (var i = 0; i <= t.Count - w.Count; i++)
+        {
+            if (!w.Select((c, k) => c == t[i + k]).All(x => x)) continue;
+            var before = !Latin(w[0]) || i == 0 || !Latin(t[i - 1]);
+            var after = !Latin(w[^1]) || i + w.Count == t.Count || !Latin(t[i + w.Count]);
+            if (before && after) return true;
+        }
+        return false;
     }
 
     /// <summary>前面接英文字母的數字（Q3、v2）留著</summary>

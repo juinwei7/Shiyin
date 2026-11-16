@@ -790,7 +790,9 @@ enum GoldenDump {
                     "decision": decision] as Object
         })
         let titleSets: [[String]] = [["產品週會 10/19", "產品週會 10/26"], ["11月3日 設計討論", "11月10日 設計討論"], ["Q3 Sync 1", "Q3 Sync 2"],  // l10n-skip
-                                     ["A", "B"], ["週會", "週會"], ["Weekly Sync", "Sync with Bob", "Bob 1:1"], ["ab 1", "ab 2"]]  // l10n-skip
+                                     ["A", "B"], ["週會", "週會"], ["Weekly Sync", "Sync with Bob", "Bob 1:1"], ["ab 1", "ab 2"],  // l10n-skip
+                                     ["Remote Control Project Kickoff Meeting", "Remote Control Design: Recap", "Conceptual Design Meeting: Recap"],
+                                     ["Sprint Review 3", "Sprint Review 4", "Sprint review"], ["產品週會A", "產品週會B"]]  // l10n-skip
         w.json("util/series-common-word.json", titleSets.map { ["titles": $0, "word": SeriesDetector.commonWord($0) ?? NSNull()] as Object })
         w.json("util/series-frequency.json", [(2, 600, 1), (5, 900, 2), (1, nil, 1), (7, 65, 2)].map { (d: Int, m: Int?, i: Int) -> Object in
             ["weekday": d, "minute": m.map { $0 as Any } ?? NSNull(), "intervalWeeks": i,
