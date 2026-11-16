@@ -374,6 +374,8 @@ public sealed class NotesTabs
         var column = Column();
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
         if (host.Controller.DocumentsChanged.Contains(detail.Meeting.Id!.Value)) column.Children.Add(DocumentsBanner(detail.Meeting.Id!.Value));
+        // 這場可能是某個定期會議的一場（R99.3、M§73）：資料夾的建議上面（同 Mac）
+        if (window.State.SeriesJoinSuggestion(detail.Meeting) is { } join) column.Children.Add(SeriesJoinBanner(detail.Meeting.Id!.Value, join));
         // 這場很像某個資料夾裡的會議（R98.3、M§72）：待確認條的上面
         if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId) is { } suggestion)
             column.Children.Add(FolderSuggestionBanner(detail.Meeting.Id!.Value, suggestion));
@@ -442,12 +444,30 @@ public sealed class NotesTabs
     /// 這場很像某個資料夾裡的會議（R98.3、同 Mac 的 FolderSuggestionBanner）：「這場很像「客戶」裡的會議：陳家豪、Bob 都參加（2 場）」，
     /// 「不用」（之後不再建議這場）、「放進去」。提示列不跟著文字大小（R59.2），底色是淡淡的青瓷綠
     /// </summary>
-    FrameworkElement FolderSuggestionBanner(long id, FolderSuggestion suggestion)
-    {
-        var text = Ui.Text(Organizing.SuggestionText(suggestion, window.State.People), 13, maxLines: 2);
-        var left = Ui.Split(new FontIcon { Glyph = "\uE8F4", FontSize = 15, Foreground = Ui.Celadon, VerticalAlignment = VerticalAlignment.Center }, text);
-        var right = Ui.Row(8, Ui.Button(L.T("不用"), () => host.Controller.DismissFolderSuggestion(id)),
+    FrameworkElement FolderSuggestionBanner(long id, FolderSuggestion suggestion) =>
+        SuggestionBanner("\uE8F4", Organizing.SuggestionText(suggestion, window.State.People),
+            Ui.Button(L.T("不用"), () => host.Controller.DismissFolderSuggestion(id)),
             Ui.Button(L.T("放進去"), () => host.Controller.AcceptFolderSuggestion(id, suggestion.Folder), accent: true));
+
+    /// <summary>
+    /// 這場可能是某個定期會議的一場（R99.3、同 Mac 的 SeriesJoinBanner）：星期幾、時間對得上，聲紋只認出一位系列的人、證據不夠自動加入時。
+    /// 「這場可能是定期會議「產品週會」的一場：週一、陳家豪 有參加」，「不是」（記進 series_rejected，之後不再建議）、「加進去」。
+    /// 圖示同資訊列的定期會議（E895，Mac 是 arrow.triangle.2.circlepath）
+    /// </summary>
+    FrameworkElement SeriesJoinBanner(long id, SeriesJoinSuggestion suggestion)
+    {
+        var seriesId = suggestion.Series.Id!.Value;
+        return SuggestionBanner("\uE895", Organizing.JoinSuggestionText(suggestion, window.State.People),
+            Ui.Button(L.T("不是"), () => host.Controller.DismissSeriesJoin(id, seriesId)),
+            Ui.Button(L.T("加進去"), () => host.Controller.AcceptSeriesJoin(id, seriesId), accent: true));
+    }
+
+    /// <summary>紀錄分頁頂端的建議（資料夾、定期會議）：青瓷綠的圖示、最多兩行的說明、右邊兩顆按鈕；底色是淡淡的青瓷綠（淺色 8%、深色 14%）</summary>
+    static Border SuggestionBanner(string glyph, string message, Button dismiss, Button accept)
+    {
+        var text = Ui.Text(message, 13, maxLines: 2);
+        var left = Ui.Split(new FontIcon { Glyph = glyph, FontSize = 15, Foreground = Ui.Celadon, VerticalAlignment = VerticalAlignment.Center }, text);
+        var right = Ui.Row(8, dismiss, accept);
         left.VerticalAlignment = VerticalAlignment.Center;
         right.VerticalAlignment = VerticalAlignment.Center;
         var c = Ui.CeladonColor;

@@ -173,6 +173,9 @@ public static class MeetingList
     }
 }
 
+/// <summary>會議頁建議加入的定期會議（R99.3、M§73）：Shared 是這場和系列共同的人物（照 id 排序）</summary>
+public sealed record SeriesJoinSuggestion(MeetingSeries Series, IReadOnlyList<long> Shared);
+
 /// <summary>資料夾自動歸類、定期會議的畫面用的計算（R98、R99、M§72、§73，同 Mac 的 Store/OrganizeActions.swift）</summary>
 public static class Organizing
 {
@@ -218,6 +221,41 @@ public static class Organizing
         var input = new FolderSuggester.Input(id, "", meeting.DisplayTitle, meetingPeople.GetValueOrDefault(id) ?? []);
         var others = meetings.Select(r => new FolderSuggester.Input(r.Id, r.Meeting.Folder, r.Meeting.DisplayTitle, meetingPeople.GetValueOrDefault(r.Id) ?? []));
         return FolderSuggester.Best(input, others, NaturalComparer.Instance);
+    }
+
+    /// <summary>
+    /// 建議加入定期會議（R99.3、M§73，同 Mac 的 seriesJoinSuggestion）：會議不在定期會議、不在垃圾桶、沒在錄這場、已經有說話者對到人物時，
+    /// 照 <see cref="SeriesDetector.Decide"/>：證據不夠自動加入（星期幾、時間對得上，只認出一位系列的人）時建議。
+    /// 系列的最近一場是同系列、不是這場、日期最新的（同列表的 meeting_date DESC, id DESC）；按過「不是」（series_rejected 的 join|會議|系列）的系列不算。
+    /// timeZone 是 null 時用這台電腦的時區
+    /// </summary>
+    public static SeriesJoinSuggestion? JoinSuggestion(Meeting meeting, IEnumerable<MeetingRow> meetings, IReadOnlyDictionary<long, HashSet<long>> meetingPeople,
+        IEnumerable<MeetingSeries> series, IReadOnlySet<string> rejected, long? recordingId, TimeZoneInfo? timeZone = null)
+    {
+        if (meeting.Id is not long id || meeting.SeriesId is not null || meeting.DeletedAt is not null || recordingId == id
+            || MeetingTime.Of(meeting, timeZone) is not { } time || meetingPeople.GetValueOrDefault(id) is not { Count: > 0 } attended) return null;
+        var candidates = series.Where(s => s.Id is long sid && !rejected.Contains(SeriesDetector.JoinKey(id, sid))).ToList();
+        if (candidates.Count == 0) return null;
+        var rows = meetings.ToList();
+        var infos = candidates.Select(s =>
+        {
+            var last = rows.Where(r => r.Meeting.SeriesId == s.Id && r.Id != id)
+                .OrderByDescending(r => r.Meeting.MeetingDate, StringComparer.Ordinal).ThenByDescending(r => r.Id).FirstOrDefault();
+            return new SeriesDetector.SeriesInfo(s.Id!.Value, s.Weekday, s.Minute, s.People.ToHashSet(),
+                last is null ? null : MeetingTime.Of(last.Meeting, timeZone)?.Day);
+        }).ToList();
+        var decision = SeriesDetector.Decide(time, attended, infos);
+        if (decision.Suggest is not long chosen || candidates.FirstOrDefault(s => s.Id == chosen) is not { } found) return null;
+        return new SeriesJoinSuggestion(found, decision.Shared);
+    }
+
+    /// <summary>「這場可能是定期會議「產品週會」的一場：週一、陳家豪 有參加」</summary>
+    public static string JoinSuggestionText(SeriesJoinSuggestion s, IEnumerable<PersonOverview> people)
+    {
+        var list = people.ToList();
+        var names = s.Shared.Select(id => list.FirstOrDefault(p => p.Id == id)?.Name).OfType<string>();
+        return L.F("這場可能是定期會議「%@」的一場：%@、%@ 有參加", s.Series.Name, SeriesDetector.WeekdayName(s.Series.Weekday),
+            string.Join(MeetingLanguages.Ui("、", ", "), names));
     }
 
     /// <summary>「這場很像「產品」裡的會議：陳家豪、王小明 都參加（3 場）」或「…：標題都有「產品週會」（4 場）」</summary>

@@ -42,6 +42,15 @@ public sealed partial class AppController
         Perform(null, () => Db.SetSeries(ids, series));
     }
 
+    // MARK: 建議加入定期會議（R99.3、M§73）
+
+    /// <summary>「加進去」：設成那個系列（同右鍵「加到定期會議」）</summary>
+    public void AcceptSeriesJoin(long meetingId, long seriesId) => SetSeries([meetingId], seriesId);
+
+    /// <summary>「不是」：記進 series_rejected（join|會議|系列），之後不再建議這場加入這個系列</summary>
+    public void DismissSeriesJoin(long meetingId, long seriesId) =>
+        Perform(meetingId, () => Db.RejectSeries(SeriesDetector.JoinKey(meetingId, seriesId)));
+
     // MARK: 資料夾的條件
 
     /// <summary>儲存條件（都空時移除）；applyNow：現在不在資料夾裡的會議也套用</summary>

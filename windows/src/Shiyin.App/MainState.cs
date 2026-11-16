@@ -48,6 +48,8 @@ public sealed class MainState
     /// <summary>定期會議、可能的定期會議（R99、M§73）：每次讀列表時算</summary>
     public List<MeetingSeries> Series { get; private set; } = [];
     public List<SeriesCandidate> SeriesCandidates { get; private set; } = [];
+    /// <summary>按過「不是定期會議」的組、建議加入按過「不是」的（series_rejected，M§73）</summary>
+    public HashSet<string> SeriesRejected { get; private set; } = [];
     public string SearchQuery { get; private set; } = "";
     public List<SearchHit> SearchResults { get; private set; } = [];
     public bool SearchActive => SearchQuery.Trim().Length > 0;
@@ -141,7 +143,8 @@ public sealed class MainState
             MeetingPeople = host.Db.MeetingPeople();
             FolderRules = host.Db.FolderRules();
             Series = host.Db.Series();
-            SeriesCandidates = SeriesDetector.Candidates(Organizing.SeriesInputs(Meetings, MeetingPeople), host.Db.RejectedSeriesKeys());
+            SeriesRejected = host.Db.RejectedSeriesKeys();
+            SeriesCandidates = SeriesDetector.Candidates(Organizing.SeriesInputs(Meetings, MeetingPeople), SeriesRejected);
         }
         catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"reload failed: {e.SqliteErrorCode}"); }
         if (Selection is long id && !Meetings.Any(m => m.Id == id) && !Trash.Any(m => m.Id == id)) Selection = null;
@@ -234,6 +237,10 @@ public sealed class MainState
     public MeetingSeries? SeriesById(long? id) => id is long x ? Series.FirstOrDefault(s => s.Id == x) : null;
 
     public int SeriesCount(long id) => Meetings.Count(m => m.Meeting.SeriesId == id);
+
+    /// <summary>會議頁紀錄分頁頂端建議加入的定期會議（R99.3、M§73）；沒有時 null</summary>
+    public SeriesJoinSuggestion? SeriesJoinSuggestion(Meeting meeting) =>
+        Organizing.JoinSuggestion(meeting, Meetings, MeetingPeople, Series, SeriesRejected, host.Recorder.MeetingId);
 
     public FolderRule? RuleFor(string folder) => FolderRules.FirstOrDefault(r => r.Folder == folder);
 
