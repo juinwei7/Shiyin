@@ -107,7 +107,7 @@ public static class ControlPipe
             case "quit": _ = app.Quit(confirmed: true); return Ok;
             // openlink <shiyin:…>：等於點了這個網址（AI 工具給的會議連結 shiyin://open?meeting=…&t=…，M§44.5）
             case "openlink" when args.Length > 1: { var link = args[1]; host.Post(() => App.Current.OpenLink(link)); } return Ok;
-            // 待確認就地回答（R41，M§31.2）：reviewexpand <summary|decisions|actionItems|openQuestions|topic|custom> <位置> [第二個位置]（- 收合）；
+            // 待確認就地回答（R41，M§31.2）：reviewexpand <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置]（- 收合）；
             // reviewsubmit（送目前的草稿）；reviewskipall（全部略過）；review <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>（直接送 SubmitReview）
             case "reviewexpand" when args.Length > 1 && main is not null:
             {
@@ -116,7 +116,8 @@ public static class ControlPipe
                 main.ReviewDraft.Expanded = args[1] switch
                 {
                     "summary" => NoteItemRef.Summary(a), "decisions" => NoteItemRef.Decisions(a), "actionItems" => NoteItemRef.ActionItems(a),
-                    "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b), _ => null,
+                    "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b),
+                    "person" => NoteItemRef.Person(a, b), _ => null,
                 };
                 main.Refresh();
                 return Ok;
@@ -131,12 +132,21 @@ public static class ControlPipe
                     NoteItemRef? r = args[1] switch
                     {
                         "summary" => NoteItemRef.Summary(a), "decisions" => NoteItemRef.Decisions(a), "actionItems" => NoteItemRef.ActionItems(a),
-                        "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b), _ => null,
+                        "openQuestions" => NoteItemRef.OpenQuestions(a), "topic" => NoteItemRef.TopicPoint(a, b), "custom" => NoteItemRef.Custom(a, b),
+                        "person" => NoteItemRef.Person(a, b), _ => null,
                     };
                     only = r is { } rr && submitDetail.ReviewLinks.TryGetValue(rr, out var list) ? list.ToHashSet() : new HashSet<int>();
                 }
                 main.ReviewDraft.Submit(only);
                 main.Refresh();
+                return Ok;
+            }
+            // editnotes <會議 id> <會議紀錄 JSON 或 JSON 檔的路徑>：存成新的一版，同按「完成」（同 Mac 的 editnotes；design-windows §11.25）
+            case "editnotes" when args.Length > 2 && long.TryParse(args[1], out var notesId):
+            {
+                var json = File.Exists(args[2]) ? File.ReadAllText(args[2]) : args[2];
+                if (MeetingNotes.Decode(json) is not { } edited) return new JsonObject { ["error"] = "not notes JSON" };
+                host.Controller.SaveEditedNotes(edited, notesId);
                 return Ok;
             }
             case "reviewskipall" when main?.State.Detail is { } skipDetail:
@@ -428,6 +438,9 @@ public static class ControlPipe
             ["tab"] = main?.State.Tab.ToString().ToLowerInvariant(),
             ["reviewExpanded"] = main?.State.ReviewExpanded,
             ["notesView"] = host.Settings.NotesView,
+            // 心智圖的縮放（R91、design-windows §11.24）：使用者選的倍數（null 是預設）、畫面上用的倍數（不含文字大小）
+            ["mindMapZoom"] = main?.MindMapZoom.Value,
+            ["mindMapScale"] = main?.MindMapZoom.Scale,
             // 播放（同 Mac 的 player）、播放條上的議題帶（M§43.3）：選取中的會議，長度同播放條
             ["player"] = new JsonObject
             {

@@ -267,9 +267,10 @@ public static class Ui
 
     /// <summary>
     /// 沒有框和底色的按鈕（同 Mac 的 .menuStyle(.borderlessButton)，M§59）：文字、圖示青瓷綠，滑過去才有淡淡的底色。
-    /// 會議頁上方的「會議設定」、文件選單用：跟資訊列同一層，不比標題搶眼
+    /// 會議頁上方的「會議設定」、文件選單用：跟資訊列同一層，不比標題搶眼。
+    /// foreground：字的顏色換掉（心智圖的縮放用次要文字的顏色，同 Mac 的 .secondary，design-windows §11.24）
     /// </summary>
-    public static T Borderless<T>(T button) where T : Button
+    public static T Borderless<T>(T button, Brush? foreground = null) where T : Button
     {
         // 平台的按鈕加輕量的樣式覆寫（不換 ControlTemplate）：範本各狀態讀的主題資源換成「subtle」那一組
         //（跟 ListView 的列、NavigationView 的項目同樣的透明底，滑過去、按下才有底色），文字是強調色的文字
@@ -278,11 +279,11 @@ public static class Ui
             button.Resources[key] = clear;
         button.Resources["ButtonBackgroundPointerOver"] = Subtle;
         button.Resources["ButtonBackgroundPressed"] = Resource("SubtleFillColorTertiaryBrush", 0xE8, 0xE8, 0xE8, 0x2E, 0x2E, 0x2E);
-        foreach (var key in new[] { "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" }) button.Resources[key] = AccentText;
+        foreach (var key in new[] { "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" }) button.Resources[key] = foreground ?? AccentText;
         button.Resources["ButtonForegroundDisabled"] = Resource("TextFillColorDisabledBrush", 0xA0, 0xA0, 0xA0, 0x78, 0x78, 0x78);
         button.Background = clear;
         button.BorderThickness = new Thickness(0);
-        button.Foreground = AccentText;
+        button.Foreground = foreground ?? AccentText;
         button.Padding = new Thickness(6, 3, 6, 3);
         return button;
     }

@@ -35,6 +35,8 @@ public sealed class DetailView
     readonly AskTab ask;
     /// <summary>待確認的回答（M§31.2）：待確認分頁和紀錄旁的就地回答共用；跟著目前的會議（Show 時同步）</summary>
     public ReviewDraft ReviewDraft { get; }
+    /// <summary>心智圖的縮放（R91，DEBUG 的 state 讀）</summary>
+    public MindMapZoom MindMapZoom => notes.MindMapZoom;
     bool switchingTabs;
 
     public DetailView(AppHost host, MainWindow window)
@@ -93,6 +95,8 @@ public sealed class DetailView
     {
         var changed = detail?.Meeting.Id != value.Meeting.Id;
         if (changed) FlushDrafts();
+        // 心智圖的縮放：換一場會議、切到逐字稿或提問時回到預設（R91.3）
+        if (changed || window.State.Tab != DetailTab.Summary) notes.ResetMindMapZoom();
         detail = value;
         ReviewDraft.Sync(value);
         BuildTop();

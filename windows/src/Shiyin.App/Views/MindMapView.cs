@@ -4,9 +4,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Documents;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
+using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
 using Windows.Graphics.Imaging;
@@ -112,10 +114,13 @@ public static class MindMapView
     }
 
     /// <summary>
-    /// 畫面上：比畫面寬時縮小到放得下（最小 0.6 倍），再乘上文字大小（R59）；還是比畫面寬時左右捲，上下跟著整頁捲（同 Mac）。
-    /// 縮放用 Viewbox（不用 ScrollViewer 的 ZoomFactor：放在上下捲的頁面裡，高度會照沒縮放的算，下面空一大塊）
+    /// 畫面上：預設比畫面寬時縮小到放得下（最小 0.6 倍）；使用者縮放過（R91）就用他選的。再乘上文字大小（R59）；
+    /// 比畫面寬時左右捲，上下跟著整頁捲（同 Mac）。上方靠右是縮放的按鈕，Ctrl＋滾輪也能縮放（design-windows §11.24）。
+    /// 縮放用 Viewbox（不用 ScrollViewer 的 ZoomFactor：放在上下捲的頁面裡，高度會照沒縮放的算，下面空一大塊）；
+    /// 縮放時只改 Viewbox 的大小和按鈕，不整頁重畫。page：整個心智圖頁的 ScrollViewer（Ctrl＋滾輪在整頁都有作用；滑鼠在圖上時一般的滾輪捲整頁）
     /// </summary>
-    public static FrameworkElement Scrolling(MindMap.Layout layout, MeetingLanguage language, Action<double>? seek)
+    public static FrameworkElement Scrolling(MindMap.Layout layout, MeetingLanguage language, Action<double>? seek, MindMapZoom zoom,
+                                             ScrollViewer? page = null)
     {
         var box = new Viewbox
         {
@@ -128,15 +133,96 @@ public static class MindMapView
             Content = box, HorizontalScrollMode = ScrollMode.Enabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollMode = ScrollMode.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
+        // 縮小、目前的百分比（按了回到符合寬度）、放大（同 Mac 的 MindMapZoomControl）：沒有框，字是次要文字的顏色
+        var minus = ZoomButton(new FontIcon { Glyph = "\uE71F", FontSize = 14 }, L.T("縮小"), L.T("縮小"));
+        var percent = ZoomButton("100%", L.T("符合寬度"), L.T("回到符合寬度"));
+        percent.MinWidth = 44;
+        percent.FontSize = 13;
+        var plus = ZoomButton(new FontIcon { Glyph = "\uE8A3", FontSize = 14 }, L.T("放大"), L.T("放大"));
+        void Apply()
+        {
+            var total = zoom.Scale * Ui.ContentScale;
+            box.Width = layout.Width * total;
+            box.Height = layout.Height * total;
+            var text = $"{(int)Math.Round(zoom.Scale * 100, MidpointRounding.AwayFromZero)}%";
+            if (percent.Content as string != text) percent.Content = text;
+            minus.IsEnabled = zoom.Scale > MindMapZoom.Min + 0.001;
+            plus.IsEnabled = zoom.Scale < MindMapZoom.Max - 0.001;
+        }
+        void Step(int steps)
+        {
+            zoom.Value = MindMapZoom.Snap(zoom.Scale + steps * MindMapZoom.StepSize);
+            Apply();
+        }
+        minus.Click += (_, _) => Step(-1);
+        plus.Click += (_, _) => Step(1);
+        percent.Click += (_, _) => { zoom.Value = null; Apply(); };
         scroll.SizeChanged += (_, e) =>
         {
             if (e.NewSize.Width <= 0) return;
-            var zoom = Math.Max(0.6, Math.Min(1, (e.NewSize.Width - 16) / layout.Width)) * Ui.ContentScale;
-            box.Width = layout.Width * zoom;
-            box.Height = layout.Height * zoom;
+            zoom.Fit = Math.Max(0.6, Math.Min(1, (e.NewSize.Width - 16) / layout.Width));
+            Apply();
         };
-        return scroll;
+        // Ctrl＋滾輪（Mac 是觸控板兩指開合，R91.2）：滑鼠滾輪一格（120）縮放一次；精確式觸控板的捏合送的量比較小，累積到一格才動。
+        // 接在整個心智圖頁上：縮小後心智圖只有一小塊，滑鼠不在圖上也要能放大（2026-11-16 虛擬機上只接在圖上時，25% 之後很難捲到）。
+        // ScrollViewer 可能已經把滾輪事件標成處理過，所以 handledEventsToo；標成處理過，整頁的 ScrollViewer 才不會跟著上下捲
+        var wheel = 0;
+        UIElement area = page is not null ? page : scroll;
+        area.AddHandler(UIElement.PointerWheelChangedEvent, new PointerEventHandler((_, e) =>
+        {
+            if ((e.KeyModifiers & Windows.System.VirtualKeyModifiers.Control) == 0) return;
+            e.Handled = true;
+            wheel += e.GetCurrentPoint(area).Properties.MouseWheelDelta;
+            var steps = wheel / 120;
+            if (steps == 0) return;
+            wheel -= steps * 120;
+            Step(steps);
+        }), true);
+        // 滑鼠在圖上時（R91.3：上下跟著整頁捲）：左右捲的 ScrollViewer 不能上下捲，會把一般的滾輪拿去左右捲（放大之後圖比畫面寬，
+        // 滑鼠在圖上就捲不動整頁，2026-11-16 虛擬機）。在圖上先接住：一般的滾輪自己捲整頁（一格 100，同瀏覽器），
+        // Shift＋滾輪、橫向的滾輪照舊左右捲；Ctrl 的交給上面的縮放（handledEventsToo 收得到）
+        box.PointerWheelChanged += (_, e) =>
+        {
+            var wheelPoint = e.GetCurrentPoint(box).Properties;
+            if ((e.KeyModifiers & Windows.System.VirtualKeyModifiers.Control) != 0) { e.Handled = true; return; }
+            if (page is null || (e.KeyModifiers & Windows.System.VirtualKeyModifiers.Shift) != 0 || wheelPoint.IsHorizontalMouseWheel) return;
+            e.Handled = true;
+            page.ChangeView(null, Math.Max(0, page.VerticalOffset - wheelPoint.MouseWheelDelta * 100.0 / 120), null);
+        };
+        Apply();
+        var bar = Ui.Row(2, minus, percent, plus);
+        bar.HorizontalAlignment = HorizontalAlignment.Right;
+        bar.Margin = new Thickness(24, 0, 24, 4);
+        var column = new StackPanel();
+        column.Children.Add(bar);
+        column.Children.Add(scroll);
+        return column;
     }
+
+    static Button ZoomButton(object content, string name, string tooltip)
+    {
+        var b = Ui.Borderless(new Button { Content = content, MinHeight = 0 }, Ui.Secondary);
+        b.Padding = new Thickness(8, 4, 8, 4);
+        ToolTipService.SetToolTip(b, tooltip);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, name);
+        return b;
+    }
+}
+
+/// <summary>
+/// 心智圖的縮放（R91、design-windows §11.24，同 Mac 的 MindMapView.zoom）：Value 是使用者選的倍數（null 是預設＝符合寬度），
+/// Fit 是畫面上算出來的符合寬度。放在 NotesTabs（主視窗整頁重畫時留著）；換會議、換分頁、切回條列、編輯時回到預設
+/// </summary>
+public sealed class MindMapZoom
+{
+    public const double Min = 0.25, Max = 3, StepSize = 0.25;
+
+    public double? Value { get; set; }
+    public double Fit { get; set; } = 1;
+    public double Scale => Value ?? Fit;
+
+    /// <summary>對齊到 25% 的格子、夾在 25%～300%（預設的倍數不在格子上時，第一下就對齊；同 Mac 的 rounded()，0.5 進位）</summary>
+    public static double Snap(double value) => Math.Clamp(Math.Round(value * 4, MidpointRounding.AwayFromZero) / 4, Min, Max);
 }
 
 /// <summary>匯出、複製心智圖的 PNG（design-windows §11.10）：匯出模式的 Canvas 放進看不到的 Popup，RenderTargetBitmap 畫成 2 倍</summary>
@@ -147,7 +233,7 @@ public static class MindMapImage
 
     public static async Task<byte[]> Png(MindMap.Layout layout, MeetingLanguage language)
     {
-        var root = Root() ?? throw new Services.AppController.ExportException(Localization.L.T("匯出失敗"));
+        var root = Root() ?? throw new Services.AppController.ExportException(L.T("匯出失敗"));
         var canvas = MindMapView.Build(layout, language, exporting: true, seek: null);
         var popup = new Popup { Child = canvas, XamlRoot = root, HorizontalOffset = -layout.Width - 100000, IsHitTestVisible = false };
         popup.IsOpen = true;

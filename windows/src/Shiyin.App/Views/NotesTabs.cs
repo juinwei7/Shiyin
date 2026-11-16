@@ -20,6 +20,9 @@ public sealed class NotesTabs
     NotesEditor? editor;
     readonly TextBox userNotes = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap };
     readonly UserNotesBox notesBox;
+    /// <summary>心智圖的縮放（R91、design-windows §11.24）：整頁重畫時留著；mindMapMeeting 是哪一場的</summary>
+    public MindMapZoom MindMapZoom { get; } = new();
+    long? mindMapMeeting;
 
     public NotesTabs(AppHost host, MainWindow window, ReviewDraft draft)
     {
@@ -41,6 +44,9 @@ public sealed class NotesTabs
     }
 
     public void SaveUserNotes() => notesBox.Save();
+
+    /// <summary>心智圖回到預設的倍數（R91.3）：換會議、換分頁、切回條列、編輯</summary>
+    public void ResetMindMapZoom() => MindMapZoom.Value = null;
 
     static StackPanel Column() => new() { Spacing = 26 };
 
@@ -118,6 +124,28 @@ public sealed class NotesTabs
             if (ExpandedCard(detail, r) is { } card) Add(card, rows++, 0, 3);
         }
         return grid;
+    }
+
+    /// <summary>
+    /// 每個人的重點（R92、design-windows §11.25，同 Mac）：每個人一組，頭像＋名字，下面是重點（時間點、待確認的標記同其他段落）。
+    /// 頭像的顏色跟逐字稿的說話者一樣，對不到說話者時照名字算（同人物頁）；沒有重點的人不顯示
+    /// </summary>
+    UIElement People(List<MeetingNotes.Person> people, MeetingLanguage language, MeetingDetail detail)
+    {
+        var panel = new StackPanel { Spacing = 18 };
+        for (var p = 0; p < people.Count; p++)
+        {
+            var person = people[p];
+            if (person.Points.Count == 0) continue;
+            var index = p;
+            var speaker = detail.SpeakerIdx(person.Name);
+            var avatar = Ui.Avatar(person.Name, speaker is int idx ? Ui.Speaker(idx) : Ui.Person(person.Name), Ui.C(22), speaker is not null && speaker == detail.SelfIdx);
+            var name = Ui.Heading(person.Name, language, Ui.C(16));
+            avatar.VerticalAlignment = VerticalAlignment.Center;
+            name.VerticalAlignment = VerticalAlignment.Center;
+            panel.Children.Add(Ui.Column(8, Ui.Split(avatar, name, 8), Items(person.Points, language, detail, i => NoteItemRef.Person(index, i))));
+        }
+        return panel;
     }
 
     /// <summary>沒有會議紀錄時的說明與動作</summary>
@@ -203,10 +231,14 @@ public sealed class NotesTabs
         return bar;
     }
 
-    /// <summary>紀錄（R44.1）：摘要、決議、待辦、未決問題、議題、自訂段落由上而下一頁；有待確認時頂部一條可以展開（R44.2）</summary>
+    /// <summary>紀錄（R44.1）：摘要、每個人的重點、決議、待辦、未決問題、議題、自訂段落由上而下一頁；有待確認時頂部一條可以展開（R44.2）</summary>
     public FrameworkElement Page(MeetingDetail detail, ReviewTab review)
     {
-        if (editor is { } e && e.MeetingId == detail.Meeting.Id) return e.Root;
+        if (editor is { } e && e.MeetingId == detail.Meeting.Id)
+        {
+            ResetMindMapZoom();
+            return e.Root;
+        }
         if (detail.Notes is not { IsEmpty: false } notes) return Placeholder(detail);
         var language = detail.Meeting.MeetingLanguage;
         var column = Column();
@@ -215,7 +247,9 @@ public sealed class NotesTabs
         if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
         column.Children.Add(EditBar(detail));
         if (host.Settings.NotesView == "mindMap") return MindMapPage(detail, notes, column);
+        ResetMindMapZoom();
         if (notes.Summary.Count > 0) column.Children.Add(Section(L.T("摘要"), language, Items(notes.Summary, language, detail, NoteItemRef.Summary)));
+        if (notes.People.Any(p => p.Points.Count > 0)) column.Children.Add(Section(L.T("每個人的重點"), language, People(notes.People, language, detail)));
         if (notes.Decisions.Count > 0) column.Children.Add(Section(L.T("決議"), language, Items(notes.Decisions, language, detail, NoteItemRef.Decisions)));
         if (notes.ActionItems.Count > 0) column.Children.Add(Section(L.T("待辦"), language, ActionItems(notes.ActionItems, language, detail)));
         if (notes.OpenQuestions.Count > 0) column.Children.Add(Section(L.T("未決問題"), language, Items(notes.OpenQuestions, language, detail, NoteItemRef.OpenQuestions)));
@@ -252,10 +286,17 @@ public sealed class NotesTabs
     FrameworkElement MindMapPage(MeetingDetail detail, MeetingNotes notes, StackPanel header)
     {
         var layout = MindMap.LayoutOf(MindMap.Tree(notes, detail.Meeting.DisplayTitle, MindMap.Labels.For(MeetingLanguages.Interface, L.Ui)));
+        if (mindMapMeeting != detail.Meeting.Id)
+        {
+            mindMapMeeting = detail.Meeting.Id;
+            ResetMindMapZoom();
+        }
         var page = new StackPanel();
+        var scroller = new ScrollViewer { Content = page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         page.Children.Add(new Border { Child = new ReadingColumn(header, Ui.C(680)), Padding = new Thickness(32, 24, 32, 16) });
-        page.Children.Add(MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded));
-        return new ScrollViewer { Content = page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        // Ctrl＋滾輪在整頁都能縮放、滑鼠在圖上時一般的滾輪捲整頁（design-windows §11.24）
+        page.Children.Add(MindMapView.Scrolling(layout, detail.Meeting.MeetingLanguage, SeekIfLoaded, MindMapZoom, page: scroller));
+        return scroller;
     }
 
     /// <summary>文件有變動（R61.8，同 Mac 的 DocumentsBanner）：不用、重新整理會議紀錄</summary>
@@ -368,7 +409,7 @@ public sealed class NotesEditor
     {
         Summary = [.. n.Summary], Decisions = [.. n.Decisions], ActionItems = [.. n.ActionItems], OpenQuestions = [.. n.OpenQuestions],
         Topics = n.Topics.Select(t => t with { Points = [.. t.Points] }).ToList(), Custom = n.Custom.Select(c => c with { Items = [.. c.Items] }).ToList(),
-        ReviewItems = [.. n.ReviewItems],
+        ReviewItems = [.. n.ReviewItems], People = n.People.Select(p => p with { Points = [.. p.Points] }).ToList(),
     };
 
     void Rebuild()
@@ -378,6 +419,7 @@ public sealed class NotesEditor
         titleBox.TextChanged += (_, _) => notes = notes with { Title = titleBox.Text };
         body.Children.Add(titleBox);
         body.Children.Add(Section(L.T("摘要"), ItemsEditor(notes.Summary)));
+        body.Children.Add(Section(L.T("每個人的重點"), PeopleEditor()));
         body.Children.Add(Section(L.T("決議"), ItemsEditor(notes.Decisions)));
         body.Children.Add(Section(L.T("待辦"), ActionsEditor(notes.ActionItems)));
         body.Children.Add(Section(L.T("未決問題"), ItemsEditor(notes.OpenQuestions)));
@@ -415,6 +457,22 @@ public sealed class NotesEditor
             panel.Children.Add(Ui.Column(8, Ui.Bar(start, title, delete), ItemsEditor(notes.Topics[index].Points)));
         }
         panel.Children.Add(Ui.Link(L.T("新增議題"), () => { notes.Topics.Add(new MeetingNotes.Topic("", "", [])); Rebuild(); }));
+        return panel;
+    }
+
+    /// <summary>每個人的重點（R92、design-windows §11.25）：同議題的編輯器，每個人有名字和幾條重點</summary>
+    UIElement PeopleEditor()
+    {
+        var panel = Ui.Column(14);
+        for (var i = 0; i < notes.People.Count; i++)
+        {
+            var index = i;
+            var name = new TextBox { Text = notes.People[i].Name, PlaceholderText = L.T("名字"), FontFamily = Ui.TitleFont(language), FontSize = Ui.C(14) };
+            name.TextChanged += (_, _) => notes.People[index] = notes.People[index] with { Name = name.Text };
+            var delete = Ui.IconButton(Symbol.Delete, L.T("刪除這個人的重點"), () => { notes.People.RemoveAt(index); Rebuild(); });
+            panel.Children.Add(Ui.Column(8, Ui.Bar(null, name, delete), ItemsEditor(notes.People[index].Points)));
+        }
+        panel.Children.Add(Ui.Link(L.T("新增一個人"), () => { notes.People.Add(new MeetingNotes.Person("", [])); Rebuild(); }));
         return panel;
     }
 
