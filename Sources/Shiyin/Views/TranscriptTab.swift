@@ -436,15 +436,15 @@ struct TranscriptTab: View {
             } else if editingId == segment.id {
                 VStack(alignment: .trailing, spacing: 6) {
                     TextField("段落內容", text: $editText, axis: .vertical).meetingText()
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.sheet)
                         .onSubmit { saveEdit(segment) }
-                    HStack {
+                    HStack(spacing: 8) {
                         Button("取消") { cancelEdit() }
+                            .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
                             .keyboardShortcut(.cancelAction)
                         Button("儲存") { saveEdit(segment) }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                     }
-                    .controlSize(.small)
                 }
             } else {
                 // 每一段的校正建議（design §17.4）：待確認的標在文字上並列出，已接受的可以還原，已拒絕的不顯示
@@ -538,9 +538,7 @@ struct TranscriptTab: View {
             Text("在文字裡點一下要拆開的地方").font(.caption).foregroundStyle(.secondary)
             SplitTextView(text: segment.text, scale: scale, offset: $splitOffset)
                 .frame(minHeight: 40)
-                .padding(4)
-                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 5))
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.secondary.opacity(0.3)))
+                .sheetFieldBox(focused: true)
             if let parts {
                 Text("前半句：…\(String(parts.head.suffix(8)))｜後半句：\(String(parts.tail.prefix(8)))…")
                     .font(.caption).foregroundStyle(.secondary).meetingText()
@@ -555,18 +553,19 @@ struct TranscriptTab: View {
                     Text("新的說話者").tag(Int?.none)
                 }
                 .fixedSize()
+                .controlSize(.small)
                 Spacer()
                 Button("取消") { splittingId = nil }
+                    .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
                     .keyboardShortcut(.cancelAction)
                 Button("拆開") {
                     guard let id = segment.id, let offset = splitOffset else { return }
                     splittingId = nil
                     model.splitSegment(id, at: offset, to: splitTarget)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                 .disabled(parts == nil)
             }
-            .controlSize(.small)
         }
     }
 
@@ -674,11 +673,10 @@ struct RenameSpeakerForm: View {
     let onSave: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("說話者名字").font(.headline)
-            TextField("例如：小明", text: $name)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit(onSave)
+        // 同彈窗的元件（R106、design §80），小視窗裡小一號
+        VStack(alignment: .leading, spacing: 12) {
+            Text("說話者名字").font(.title3).fontWeight(.bold)
+            SheetTextField(placeholder: String(localized: "例如：小明"), text: $name, focusOnAppear: true, onSubmit: onSave)
             if automatic {
                 Text("這個名字是拾音認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。")
                     .font(.caption)
@@ -689,19 +687,28 @@ struct RenameSpeakerForm: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                if automatic, let onReject { Button("不是他", action: onReject) }
+            HStack(spacing: 8) {
+                if automatic, let onReject {
+                    Button("不是他", action: onReject).buttonStyle(SheetPillButtonStyle(.secondary))
+                }
                 if !mergeTargets.isEmpty, let onMerge {
-                    Menu("合併到…") {
+                    Menu {
                         ForEach(mergeTargets, id: \.idx) { target in
                             Button(target.name) { onMerge(target.idx) }
                         }
+                    } label: {
+                        Text("合併到…")
                     }
+                    .menuStyle(.button)
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
+                    .menuIndicator(.hidden)
                     .fixedSize()
                     .help("同一個人被分成兩位時，把這位說的話全部算到另一位")
                 }
                 Spacer()
-                Button("儲存", action: onSave).keyboardShortcut(.defaultAction)
+                Button("儲存", action: onSave)
+                    .buttonStyle(SheetPillButtonStyle(.primary))
+                    .keyboardShortcut(.defaultAction)
             }
             if let undoLabel, let onUndo {
                 Button("復原：\(undoLabel)", systemImage: "arrow.uturn.backward", action: onUndo)
@@ -710,8 +717,8 @@ struct RenameSpeakerForm: View {
                     .help("復原最近一次合併或改句子的說話者")
             }
         }
-        .padding(14)
-        .frame(width: 280)
+        .padding(18)
+        .frame(width: 320)
     }
 }
 
@@ -735,37 +742,41 @@ struct ReplaceSheet: View {
     @State private var result: ReplaceResult?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("用詞修正").font(.title3.weight(.semibold))
-            Text("把逐字稿裡的錯字換成正確寫法，會議紀錄裡同樣的字也會一起改。區分大小寫。")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Form {
-                TextField("錯誤寫法", text: $find)
-                TextField("正確寫法", text: $replacement)
-                Toggle("把正確寫法加進詞彙表，之後轉錄比較容易一次轉對", isOn: $addToGlossary)
+        // 同其他彈窗的樣子（R106、design §80）
+        VStack(alignment: .leading, spacing: 16) {
+            SheetHeader(title: String(localized: "用詞修正"),
+                        subtitle: String(localized: "把逐字稿裡的錯字換成正確寫法，會議紀錄裡同樣的字也會一起改。區分大小寫。"))
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "錯誤寫法"))
+                    SheetTextField(placeholder: String(localized: "錯誤寫法"), text: $find, focusOnAppear: true)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "正確寫法"))
+                    SheetTextField(placeholder: String(localized: "正確寫法"), text: $replacement)
+                }
             }
-            .formStyle(.columns)
+            Toggle("把正確寫法加進詞彙表，之後轉錄比較容易一次轉對", isOn: $addToGlossary)
+                .toggleStyle(.checkbox)
             if let result {
                 Text(resultText(result))
                     .font(.callout)
                     .foregroundStyle(Color.celadon)
             }
-            HStack {
+            HStack(spacing: 10) {
                 Spacer()
-                Button(result == nil ? "取消" : "完成", role: .cancel) { dismiss() }
+                Button(result == nil ? "取消" : "完成") { dismiss() }
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
                     .keyboardShortcut(.cancelAction)
                 Button("全部取代") {
                     result = model.replace(find: find, with: replacement, addToGlossary: addToGlossary)
                 }
+                .buttonStyle(SheetPillButtonStyle(.primary))
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
                 .disabled(find.isEmpty || find == replacement)
             }
         }
-        .padding(20)
-        .frame(width: 440)
+        .sheetChrome(width: 480)
         .onAppear { find = initialFind }
     }
 

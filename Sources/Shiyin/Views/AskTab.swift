@@ -85,11 +85,11 @@ struct AskInputBar: View {
             }
             HStack(spacing: 10) {
                 TextField(placeholder, text: $question, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.sheet)
                     .lineLimit(1...4)
                     .onSubmit(submit)
                 Button("提問", action: submit)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(SheetPillButtonStyle(.primary))
                     .disabled(busy || question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.askUnavailableReason != nil)
                 if let onClear {
                     Menu {

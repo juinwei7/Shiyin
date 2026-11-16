@@ -2757,6 +2757,18 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`floatpick <項目>`（子選單「移到資料夾 ▸ 客戶」）、`floatclose`、`floatothers off`（驗收時使用者在用別的 app，點別的 app 不關選單）；`keyat` 加 down、up、right、left 和第四個參數 `app`（走 `NSApp.sendEvent`，經過事件監看）；`mouseat` 最後一個參數 `app` 同樣；state 的 `floatingMenu`（項目）、`floatingMenuState`、`floatingMenuWindow`（面板的視窗編號，`mouseat move … <編號> app` 用）。
 - Windows：design-windows §11.38。
 
+## 80. 彈窗、輸入框的共用樣子（R106）
+
+- 元件在 `Views/SheetStyle.swift`：`SheetHeader`（標題 title2 粗體、說明 body 灰字、右邊小字、右上角 ✕）、`SheetTextField`（單行、15 點、可以 `focusOnAppear`：等外面的 `onAppear` 填好字再給焦點，字才會全選）、`sheetFieldBox(focused:compact:)`（圓角 10、`primary` 4% 底、25% 細框，有焦點時 75%、1.5 點；compact 圓角 8、內距小一號）、`.textFieldStyle(.sheet)`／`.sheetCompact`（把 TextField 包進那個框，自己追蹤焦點，多行的也能用）、`SheetMenuField`（選單式的欄位，外框同輸入框、右邊上下箭頭）、`SheetDateField`（沒有框的 `NSDatePicker` 放進同一個框，右邊日曆按鈕打開月曆；系統的日期欄位自己有框，放進來會框中框）、`SheetFieldLabel`、`SheetPillButtonStyle(.primary|.secondary|.destructive, compact:)`（圓角 10、高 34；compact 圓角 8、高 26）、`sheetChrome(width:)`（內距 24、寬度）。
+- 確認：`ConfirmRequest`（標題、說明、確認按鈕的字、是不是刪除類、動作）＋`ConfirmSheet`。`AppModel.activeConfirmation`（`Store/Confirmations.swift`）從原本的狀態（`confirmDeleteFolder`、`confirmDeleteSeries`、`confirmRemovePerson`、`confirmPurge`、`confirmEmptyTrash`、`splitMeetingRequest`、`confirmDelete`）組出來，主視窗只掛一個 `.sheet(item:)`；關掉時 `clearConfirmations()` 全部清掉。同時只會有一個（各自的入口都是使用者一次按一個）。垃圾桶橫幅的「永久刪除」改用 `confirmPurge`，不另外留一份確認。
+- 編輯會議資訊（`EditInfoForm`）從 popover 改成 sheet：標題、會議日期（`DatePicker` 的 `.field` 放進 `sheetFieldBox`）、與會者。
+- 就地編輯用 compact：逐字稿改句子（`.sheet` 的框、內文字級照文字大小）、拆句（文字放進有焦點的框）、紀錄的條目、說話者改名的小視窗（標題 title3 粗體、「不是他」「合併到…」是次要按鈕）、待確認的回答和「收合」「送出」、提問的輸入列、編輯會議紀錄的欄位和「取消」「完成」。
+- 沒有「取消」的彈窗（可能的定期會議全部處理完）`SheetHeader(escCloses: true)`：Esc 等於 ✕。
+- 匯出的「分享…」改成次要按鈕，分享選單掛在按鈕的 `MenuAnchor` 下面（原本是撐滿整列的系統按鈕）。
+- 頁面的提示條、空白頁的按鈕照舊（R106.5）。
+- DEBUG：`windowshot <視窗 id 或編號> <輸出.png>`（app 自己把視窗畫成圖，螢幕上鎖時也能截彈窗；主視窗的字、側欄畫不出來）、`exportui`、`preview editinfo|replace|rediarize|noteseditor`（桌面層的視窗）。
+- Windows：design-windows §11.39。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

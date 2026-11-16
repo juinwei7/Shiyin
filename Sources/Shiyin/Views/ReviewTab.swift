@@ -44,7 +44,7 @@ struct ReviewTab: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 Button(draft.submitTitle) { model.submitReviewDraft() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                     .disabled(!draft.hasSomethingToSubmit || model.detailStatus?.isActive == true)
             }
             .padding(.horizontal, embedded ? 0 : 32)
@@ -64,6 +64,7 @@ struct ReviewTab: View {
             Spacer(minLength: 0)
             // 全部略過（R41.5）：還沒回答的都標成略過，已經有回答的不動
             Button("全部略過") { draft.skipAllUnanswered(questionCount: items.count, speakers: speakerIdxs) }
+                .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
                 .disabled(!draft.hasUnanswered(questionCount: items.count, speakers: speakerIdxs))
                 .help("還沒回答的題目都標成略過，送出後直接移除")
         }
@@ -129,7 +130,7 @@ struct ReviewTab: View {
                         TextField("是誰？（可以不填）", text: Binding(get: { choice.correction }, set: { text in
                             draft.speakerAnswers[idx] = YesNoAnswer(isYes: false, correction: text).text(language)
                         }))
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.sheetCompact)
                     }
                     .padding(.leading, 22)
                 }
@@ -188,13 +189,13 @@ struct ReviewQuestionRow: View {
                     TextField("正確的是…（可以不填）", text: Binding(get: { choice.correction }, set: { text in
                         draft.answers[index] = YesNoAnswer(isYes: false, correction: text).text(language)
                     }))
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.sheetCompact)
                     .padding(.leading, 22)
                 }
             } else {
                 HStack(spacing: 12) {
                     TextField("你的回答", text: Binding(get: { draft.answers[index] ?? "" }, set: { draft.answers[index] = $0 }))
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.sheetCompact)
                     SkipButton(skipped: false) { draft.dismissed.insert(index) }
                 }
                 .padding(.leading, 22)

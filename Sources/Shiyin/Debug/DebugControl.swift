@@ -937,6 +937,27 @@ enum DebugControl {
         case "windowlevel":   // windowlevel <視窗 id 開頭> desktop|normal：放到桌面層（被所有視窗蓋住，screencapture -l 照樣截得到），不出現在使用者的畫面上
             let level = args.count > 2 && args[2] == "desktop" ? NSWindow.Level(Int(CGWindowLevelForKey(.desktopWindow))) : .normal
             NSApp.windows.filter { $0.identifier?.rawValue.hasPrefix(args[1]) == true }.forEach { $0.level = level }
+        // windowshot <視窗 id 或編號> <輸出.png>：app 自己把視窗的內容畫成圖（螢幕上鎖、視窗在桌面層或別的桌面也畫得出來，
+        // 輸入框這些 AppKit 元件照樣畫；snapshot 的 ImageRenderer 畫不出來）
+        case "windowshot":
+            guard args.count > 2, let window = NSApp.windows.first(where: { $0.identifier?.rawValue == args[1] || "\($0.windowNumber)" == args[1] }),
+                  let view = window.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { break }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            // 畫出來的內容沒有視窗的底色（材質、背景是視窗伺服器畫的），先鋪上視窗的底色再疊上去
+            let output = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: rep.pixelsWide, pixelsHigh: rep.pixelsHigh,
+                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                          colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+            output.size = view.bounds.size
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: output)
+            window.effectiveAppearance.performAsCurrentDrawingAppearance {
+                NSColor.windowBackgroundColor.setFill()
+                view.bounds.fill()
+            }
+            rep.draw(in: view.bounds, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            NSGraphicsContext.restoreGraphicsState()
+            try? output.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[2]))
+        case "exportui": model.openExportSheet()   // 等於按工具列的「匯出」
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -961,13 +982,24 @@ enum DebugControl {
             window.identifier = NSUserInterfaceItemIdentifier(onboarding ? "onboarding-preview" : detailPage ? "detail-preview" : "settings-preview")
             window.title = window.identifier!.rawValue
             window.isReleasedWhenClosed = false
-            if args.count > 1 && (args[1] == "import" || args[1] == "rename") {
+            // editinfo、replace：會議頁裡自己打開的彈窗（編輯會議資訊、用詞修正，design §80），用目前選取的會議
+            if args.count > 1, ["import", "rename", "editinfo", "replace", "rediarize", "noteseditor"].contains(args[1]) {
                 window.identifier = NSUserInterfaceItemIdentifier("\(args[1])-preview")
                 window.title = window.identifier!.rawValue
-                let view = args[1] == "import"
-                    ? AnyView(ImportSheet(urls: [URL(fileURLWithPath: "/tmp/週會 0827.m4a")]).environment(model))   // l10n-skip
-                    : AnyView(RenameSpeakerForm(name: .constant("說話者 2"), mergeTargets: [(1, "小明"), (3, "說話者 3")],   // l10n-skip
-                                                onMerge: { _ in }, onSave: {}))
+                let view: AnyView = switch args[1] {
+                case "import": AnyView(ImportSheet(urls: [URL(fileURLWithPath: "/tmp/週會 0827.m4a")]).environment(model))   // l10n-skip
+                case "editinfo":
+                    if let meeting = model.detail?.meeting { AnyView(EditInfoForm(meeting: meeting) {}.environment(model)) } else { AnyView(EmptyView()) }
+                case "replace": AnyView(ReplaceSheet(initialFind: "Lumeo").environment(model))
+                case "noteseditor":   // 編輯會議紀錄（紀錄分頁的「編輯」，R6.6）
+                    if let notes = model.detail?.notes {
+                        AnyView(NotesEditor(notes: .constant(notes)) { _ in }.frame(width: 900, height: 560).environment(model))
+                    } else { AnyView(EmptyView()) }
+                case "rediarize":   // 重新辨識說話者（示範會議沒有錄音，requestRediarize 打不開）
+                    { model.rediarizeMeetingId = model.selection; return AnyView(RediarizeSheet().environment(model)) }()
+                default: AnyView(RenameSpeakerForm(name: .constant("說話者 2"), automatic: true, onReject: {},   // l10n-skip
+                                                   mergeTargets: [(1, "小明"), (3, "說話者 3")], onMerge: { _ in }, onSave: {}))   // l10n-skip
+                }
                 window.contentView = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)))
                 window.setContentSize(window.contentView!.fittingSize)
             } else if detailPage {

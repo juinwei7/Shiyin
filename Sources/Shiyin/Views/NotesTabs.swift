@@ -149,9 +149,10 @@ struct InlineReviewCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     Button("收合") { draft.expanded = nil }
+                        .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
                     // 只送這一條對到的題目（R41.2），題數也只算這幾題
                     Button(draft.submitTitle(only: shown)) { model.submitReviewDraft(only: shown) }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                         .disabled(!draft.hasSomethingToSubmit(only: shown) || model.detailStatus?.isActive == true)
                 }
             }
@@ -608,13 +609,14 @@ struct NotesEditor: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("編輯會議紀錄").font(.headline)
+                Text("編輯會議紀錄").font(.title3).fontWeight(.bold)
                 Spacer()
                 Button("取消") { onFinish(false) }
+                    .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
                     .keyboardShortcut(.cancelAction)
                 Button("完成") { onFinish(true) }
+                    .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
             }
             .padding(.horizontal, 32)
             .padding(.vertical, 10)
@@ -685,7 +687,7 @@ struct NotesEditor: View {
                         }
                     }
                 }
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.sheetCompact)
                 .contentFont()   // 文字大小（design §38.5）
                 .frame(maxWidth: 720 * scale, alignment: .leading)
                 .padding(.horizontal, 32)

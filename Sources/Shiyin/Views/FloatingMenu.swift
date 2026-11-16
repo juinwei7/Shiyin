@@ -398,12 +398,12 @@ struct FloatingMenuView: View {
 
 // MARK: - 「⋯」和右鍵
 
-/// 抓一個 NSView 當選單的位置
-private final class MenuAnchorBox {
+/// 抓一個 NSView 當選單的位置（匯出的「分享…」也用它放分享選單）
+final class MenuAnchorBox {
     weak var view: NSView?
 }
 
-private struct MenuAnchor: NSViewRepresentable {
+struct MenuAnchor: NSViewRepresentable {
     let box: MenuAnchorBox
     func makeNSView(context: Context) -> NSView {
         let view = NSView()

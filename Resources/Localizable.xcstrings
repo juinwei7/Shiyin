@@ -5887,6 +5887,23 @@
         }
       }
     },
+    "包含哪幾場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含哪几场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meetings Included"
+          }
+        }
+      }
+    },
     "包含時間點": {
       "extractionState": "manual",
       "localizations": {
@@ -13556,23 +13573,6 @@
         }
       }
     },
-    "會議紀錄、逐字稿和錄音檔都會刪除，沒辦法復原。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The meeting notes, transcript and recording will be deleted. This can't be undone."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会议记录、逐字稿和录音文件都会删除，没办法撤销。"
-          }
-        }
-      }
-    },
     "會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。": {
       "extractionState": "manual",
       "localizations": {
@@ -14193,6 +14193,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "标题"
+          }
+        }
+      }
+    },
+    "標題、日期、與會者。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标题、日期、与会者。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title, date, and participants."
           }
         }
       }
@@ -18050,6 +18067,23 @@
         }
       }
     },
+    "編輯會議資訊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑会议信息"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Meeting Info"
+          }
+        }
+      }
+    },
     "編輯期間會議紀錄有更新，已用你改的版本存檔；按「編輯」旁的「復原上一版」可以找回更新的內容": {
       "extractionState": "manual",
       "localizations": {
@@ -21642,6 +21676,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择会议中一起讨论的文档（PDF、Word、PowerPoint、纯文本、图片）"
+          }
+        }
+      }
+    },
+    "選日期": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选日期"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose date"
           }
         }
       }

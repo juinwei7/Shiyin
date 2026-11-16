@@ -78,7 +78,8 @@ struct MeetingHeader: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.celadon)
                     .font(.callout)
-                    .popover(isPresented: $editing, arrowEdge: .bottom) {
+                    // 同其他彈窗的樣子（R106、design §80）
+                    .sheet(isPresented: $editing) {
                         EditInfoForm(meeting: meeting) { editing = false }
                     }
                 Spacer(minLength: 0)
@@ -168,13 +169,19 @@ struct MeetingHeader: View {
         }
         .contextMenu { speakerMenu(idx) }
         .popover(isPresented: Binding(get: { renamingSpeaker == idx }, set: { if !$0 { renamingSpeaker = nil } }), arrowEdge: .bottom) {
+            // 同彈窗的元件（R106、design §80）
             VStack(alignment: .leading, spacing: 12) {
-                TextField("名字", text: $speakerName).textFieldStyle(.roundedBorder).frame(width: 220)
-                    .onSubmit { saveSpeakerName(idx) }
-                HStack {
+                Text("說話者名字").font(.title3).fontWeight(.bold)
+                SheetTextField(placeholder: String(localized: "名字"), text: $speakerName, focusOnAppear: true) { saveSpeakerName(idx) }
+                    .frame(width: 260)
+                HStack(spacing: 8) {
                     Spacer()
-                    Button("取消") { renamingSpeaker = nil }.keyboardShortcut(.cancelAction)
-                    Button("儲存") { saveSpeakerName(idx) }.keyboardShortcut(.defaultAction)
+                    Button("取消") { renamingSpeaker = nil }
+                        .buttonStyle(SheetPillButtonStyle(.secondary))
+                        .keyboardShortcut(.cancelAction)
+                    Button("儲存") { saveSpeakerName(idx) }
+                        .buttonStyle(SheetPillButtonStyle(.primary))
+                        .keyboardShortcut(.defaultAction)
                         .disabled(speakerName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
@@ -279,16 +286,24 @@ struct EditInfoForm: View {
     @State private var participants = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Form {
-                TextField("標題", text: $title)
-                DatePicker("會議日期", selection: $date, displayedComponents: .date)
-                TextField("與會者", text: $participants, prompt: Text("用逗號分隔"))
+        VStack(alignment: .leading, spacing: 18) {
+            SheetHeader(title: String(localized: "編輯會議資訊"), subtitle: String(localized: "標題、日期、與會者。"), onClose: onDone)
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "標題"))
+                SheetTextField(placeholder: String(localized: "標題"), text: $title, focusOnAppear: true)
             }
-            .formStyle(.columns)
-            HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "會議日期"))
+                SheetDateField(label: String(localized: "會議日期"), date: $date)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "與會者"))
+                SheetTextField(placeholder: String(localized: "用逗號分隔"), text: $participants)
+            }
+            HStack(spacing: 10) {
                 Spacer()
-                Button("取消", role: .cancel, action: onDone)
+                Button("取消", action: onDone)
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
                     .keyboardShortcut(.cancelAction)
                 Button("儲存") {
                     // 標題欄預先填的是顯示用的標題（還沒命名時是檔名）；沒動過就照原樣存，不然會被當成自訂標題鎖住，整理時不會再取名
@@ -297,12 +312,11 @@ struct EditInfoForm: View {
                                      date: DateText.string(date), participants: participants)
                     onDone()
                 }
+                .buttonStyle(SheetPillButtonStyle(.primary))
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
             }
         }
-        .padding(16)
-        .frame(width: 380)
+        .sheetChrome()
         .onAppear {
             title = meeting.displayTitle
             date = DateText.date(meeting.meetingDate) ?? Date()
@@ -314,24 +328,18 @@ struct EditInfoForm: View {
 struct TrashBanner: View {
     @Environment(AppModel.self) private var model
     let meetingId: Int64
-    @State private var confirm = false
 
     var body: some View {
         HStack(spacing: 12) {
             Label("這場會議在垃圾桶裡，30 天後會永久刪除", systemImage: "trash")
             Spacer()
             Button("還原") { model.restore(meetingId) }
-            Button("永久刪除", role: .destructive) { confirm = true }
+            Button("永久刪除", role: .destructive) { model.confirmPurge = [meetingId] }
         }
         .font(.callout)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-        .confirmationDialog("永久刪除這場會議？", isPresented: $confirm) {
-            Button("永久刪除", role: .destructive) { model.deletePermanently(meetingId) }
-        } message: {
-            Text("會議紀錄、逐字稿和錄音檔都會刪除，沒辦法復原。")
-        }
     }
 }
 
@@ -617,7 +625,7 @@ private struct SpeakerSuggestionsBanner: View {
             Button("查看") { showing = true }
                 .popover(isPresented: $showing, arrowEdge: .bottom) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("猜到的說話者名字").font(.headline)
+                        Text("猜到的說話者名字").font(.title3).fontWeight(.bold)
                         ForEach(suggestions, id: \.key) { idx, suggestion in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(spacing: 8) {
@@ -640,10 +648,10 @@ private struct SpeakerSuggestionsBanner: View {
                             Text("套用後，逐字稿和會議紀錄都會換成名字。").font(.caption).foregroundStyle(.secondary)
                             Spacer()
                             Button("全部套用") { model.applyAllSpeakerSuggestions(); showing = false }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                         }
                     }
-                    .padding(16)
+                    .padding(18)
                     .frame(width: 420)
                 }
         }

@@ -44,35 +44,6 @@ struct SeriesMenuItems: View {
     }
 }
 
-/// 刪除資料夾、定期會議的確認（R100）：側欄的右鍵、「⋯」、Delete 都走這裡
-struct OrganizeConfirmations: ViewModifier {
-    @Environment(AppModel.self) private var model
-
-    func body(content: Content) -> some View {
-        let folder = model.confirmDeleteFolder ?? ""
-        let count = model.meetings.filter { $0.meeting.folder == folder }.count
-        let series = model.seriesById(model.confirmDeleteSeries)
-        content
-            .confirmationDialog(String(localized: "刪除資料夾「\(folder)」？"),
-                                isPresented: Binding(get: { model.confirmDeleteFolder != nil }, set: { if !$0 { model.confirmDeleteFolder = nil } })) {
-                Button("刪除資料夾", role: .destructive) {
-                    if let name = model.confirmDeleteFolder { model.deleteFolder(name) }
-                }
-            } message: {
-                Text(count > 0 ? String(localized: "裡面的 \(count) 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。")
-                               : String(localized: "自動加入的條件也會刪掉。"))
-            }
-            .confirmationDialog(String(localized: "刪除定期會議「\(series?.name ?? "")」？"),
-                                isPresented: Binding(get: { model.confirmDeleteSeries != nil }, set: { if !$0 { model.confirmDeleteSeries = nil } })) {
-                Button("刪除定期會議", role: .destructive) {
-                    if let id = model.confirmDeleteSeries { model.deleteSeries(id) }
-                }
-            } message: {
-                Text("會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。")
-            }
-    }
-}
-
 // MARK: - 紀錄的條目（R100、design §74）
 
 /// 一條紀錄的動作：雙擊就地改、右鍵、滑過時行尾的「⋯」。ref 是 nil（不是這場會議的紀錄）時什麼都不加
@@ -113,7 +84,7 @@ struct NoteItemEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("", text: $text, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.sheet)
                 .focused($focused)
                 .onSubmit { model.editNoteItem(ref, text: text) }
                 .onExitCommand { model.editingNoteItem = nil }
@@ -121,11 +92,11 @@ struct NoteItemEditor: View {
                 Text("Return 儲存、Esc 取消").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("取消") { model.editingNoteItem = nil }
+                    .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
                 Button("儲存") { model.editNoteItem(ref, text: text) }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(SheetPillButtonStyle(.primary, compact: true))
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .font(.callout)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {

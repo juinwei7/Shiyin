@@ -17,21 +17,23 @@ struct SeriesSuggestionSheet: View {
     private var candidates: [SeriesCandidate] { model.seriesCandidates.filter { !skipped.contains($0.key) } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             if let candidate = candidates.first {
                 content(candidate)
             } else {
-                Text(skipped.isEmpty ? String(localized: "沒有其他可能的定期會議了。")
-                                     : String(localized: "略過的那幾組下次打開還會在。"))
-                    .foregroundStyle(.secondary)
+                SheetHeader(title: String(localized: "可能的定期會議"),
+                            subtitle: skipped.isEmpty ? String(localized: "沒有其他可能的定期會議了。")
+                                                      : String(localized: "略過的那幾組下次打開還會在。"),
+                            escCloses: true)
                 HStack {
                     Spacer()
-                    Button("完成") { dismiss() }.keyboardShortcut(.defaultAction)
+                    Button("完成") { dismiss() }
+                        .buttonStyle(SheetPillButtonStyle(.primary))
+                        .keyboardShortcut(.defaultAction)
                 }
             }
         }
-        .padding(20)
-        .frame(width: 460)
+        .sheetChrome(width: 480)
         .onAppear { load(candidates.first) }
         .onChange(of: candidates.first?.key) { _, _ in load(candidates.first) }
     }
@@ -39,15 +41,13 @@ struct SeriesSuggestionSheet: View {
     @ViewBuilder
     private func content(_ candidate: SeriesCandidate) -> some View {
         let total = handled + candidates.count
-        HStack(alignment: .firstTextBaseline) {
-            Text("可能的定期會議").font(.title3).fontWeight(.semibold)
-            Spacer()
-            if total > 1 { Text("第 \(handled + 1) 組，共 \(total) 組").font(.callout).foregroundStyle(.secondary) }
-        }
-        Text("這幾場會議是同一群人開的（\(candidate.frequencyText)）。確認之後，下次的會議會自動加進來，整理時會接上上次的待辦。")
-            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-        LabeledContent("名稱") {
-            TextField("名稱", text: $name).textFieldStyle(.roundedBorder).labelsHidden()
+        // 同其他彈窗的樣子（R106、design §80）
+        SheetHeader(title: String(localized: "可能的定期會議"),
+                    subtitle: String(localized: "這幾場會議是同一群人開的（\(candidate.frequencyText)）。確認之後，下次的會議會自動加進來，整理時會接上上次的待辦。"),
+                    trailing: total > 1 ? String(localized: "第 \(handled + 1) 組，共 \(total) 組") : nil)
+        VStack(alignment: .leading, spacing: 6) {
+            SheetFieldLabel(String(localized: "名稱"))
+            SheetTextField(placeholder: String(localized: "名稱"), text: $name)
         }
         let people = model.peopleOverview.filter { candidate.people.contains($0.id) }
         if !people.isEmpty {
@@ -61,29 +61,35 @@ struct SeriesSuggestionSheet: View {
             }
             .font(.callout)
         }
-        ScrollView {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(candidate.meetingIds.reversed(), id: \.self) { id in
-                    if let row = model.meetings.first(where: { $0.id == id }) {
-                        Toggle(isOn: Binding(get: { chosen.contains(id) }, set: { if $0 { chosen.insert(id) } else { chosen.remove(id) } })) {
-                            HStack(spacing: 12) {
-                                Text(row.meeting.meetingDate).monospacedDigit().foregroundStyle(.secondary)
-                                Text(row.meeting.displayTitle).meetingText().lineLimit(1)
+        VStack(alignment: .leading, spacing: 6) {
+            SheetFieldLabel(String(localized: "包含哪幾場"))
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(candidate.meetingIds.reversed(), id: \.self) { id in
+                        if let row = model.meetings.first(where: { $0.id == id }) {
+                            Toggle(isOn: Binding(get: { chosen.contains(id) }, set: { if $0 { chosen.insert(id) } else { chosen.remove(id) } })) {
+                                HStack(spacing: 12) {
+                                    Text(row.meeting.meetingDate).monospacedDigit().foregroundStyle(.secondary)
+                                    Text(row.meeting.displayTitle).meetingText().lineLimit(1)
+                                }
                             }
+                            .toggleStyle(.checkbox)
                         }
-                        .toggleStyle(.checkbox)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: 200)
+            .fixedSize(horizontal: false, vertical: true)
+            .sheetFieldBox()
         }
-        .frame(maxHeight: 200)
-        .fixedSize(horizontal: false, vertical: true)
-        HStack {
+        HStack(spacing: 10) {
             Button("不是定期會議") { handled += 1; model.rejectSeriesCandidate(candidate) }
+                .buttonStyle(SheetPillButtonStyle(.secondary))
                 .help("之後不再建議這一組")
             Spacer()
             Button("略過") { handled += 1; skipped.insert(candidate.key) }
+                .buttonStyle(SheetPillButtonStyle(.secondary))
                 .keyboardShortcut(.cancelAction)
                 .help("這次先不處理，下次打開還會在")
             Button("建立") {
@@ -91,6 +97,7 @@ struct SeriesSuggestionSheet: View {
                 handled += 1
                 model.createSeries(candidate, name: name, meetingIds: ids)
             }
+            .buttonStyle(SheetPillButtonStyle(.primary))
             .keyboardShortcut(.defaultAction)
             .disabled(chosen.count < 2)
         }
@@ -327,66 +334,72 @@ struct FolderRuleSheet: View {
 
     var body: some View {
         let matching = (try? model.db.meetingsMatching(rule).count) ?? 0
-        VStack(alignment: .leading, spacing: 14) {
-            Text("「\(folder)」自動加入的條件").font(.title3).fontWeight(.semibold)
-            Text("符合任一個條件的新會議，會自動放進這個資料夾。已經在別的資料夾的會議不會移動。")
-                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Form {
-                TextField("標題包含", text: $keywords, prompt: Text("例如：週會、sync（任一個詞）"))
-                if !model.peopleOverview.isEmpty {
-                    LabeledContent("這些人都參加") {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 4) {
-                                ForEach(model.peopleOverview) { person in
-                                    Toggle(person.isMe ? String(localized: "\(person.name)（我）") : person.name, isOn: Binding(
-                                        get: { people.contains(person.id) },
-                                        set: { if $0 { people.insert(person.id) } else { people.remove(person.id) } }))
-                                    .toggleStyle(.checkbox)
-                                }
+        VStack(alignment: .leading, spacing: 16) {
+            // 同其他彈窗的樣子（R106、design §80）
+            SheetHeader(title: String(localized: "「\(folder)」自動加入的條件"),
+                        subtitle: String(localized: "符合任一個條件的新會議，會自動放進這個資料夾。已經在別的資料夾的會議不會移動。"))
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "標題包含"))
+                SheetTextField(placeholder: String(localized: "例如：週會、sync（任一個詞）"), text: $keywords)
+            }
+            if !model.peopleOverview.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "這些人都參加"))
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(model.peopleOverview) { person in
+                                Toggle(person.isMe ? String(localized: "\(person.name)（我）") : person.name, isOn: Binding(
+                                    get: { people.contains(person.id) },
+                                    set: { if $0 { people.insert(person.id) } else { people.remove(person.id) } }))
+                                .toggleStyle(.checkbox)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(maxHeight: 160)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(maxHeight: 140)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .sheetFieldBox()
                 }
-                Picker("用這個範本", selection: $templateId) {
-                    Text("不限").tag(String?.none)
-                    Divider()
-                    ForEach(model.templates) { Text($0.displayName).tag(Optional($0.id)) }
+            }
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "用這個範本"))
+                    SheetMenuField(options: [(String?.none, String(localized: "不限"))] + model.templates.map { (Optional($0.id), $0.displayName) },
+                                   selection: $templateId)
                 }
                 if !model.series.isEmpty {
-                    Picker("屬於定期會議", selection: $seriesId) {
-                        Text("不限").tag(Int64?.none)
-                        Divider()
-                        ForEach(model.series) { Text($0.name).tag($0.id) }
+                    VStack(alignment: .leading, spacing: 6) {
+                        SheetFieldLabel(String(localized: "屬於定期會議"))
+                        SheetMenuField(options: [(Int64?.none, String(localized: "不限"))] + model.series.map { ($0.id, $0.name) },
+                                       selection: $seriesId)
                     }
                 }
             }
-            .formStyle(.grouped)
-            .scrollDisabled(true)
-            .fixedSize(horizontal: false, vertical: true)
             Toggle(String(localized: "現在不在資料夾裡的會議也套用（\(matching) 場）"), isOn: $applyNow)
                 .toggleStyle(.checkbox)
                 .disabled(matching == 0 || rule.isEmpty)
-            HStack {
+            HStack(spacing: 10) {
                 if existing {
-                    Button("移除條件", role: .destructive) {
+                    Button("移除條件") {
                         model.saveFolderRule(FolderRule(folder: folder), applyNow: false)
                         dismiss()
                     }
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
+                    .foregroundStyle(.red)
                 }
                 Spacer()
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("取消") { dismiss() }
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
+                    .keyboardShortcut(.cancelAction)
                 Button("儲存") {
                     model.saveFolderRule(rule, applyNow: applyNow && matching > 0)
                     dismiss()
                 }
+                .buttonStyle(SheetPillButtonStyle(.primary))
                 .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(20)
-        .frame(width: 480)
+        .sheetChrome(width: 480)
         .onAppear {
             guard let rule = model.folderRule(folder) else { return }
             existing = true

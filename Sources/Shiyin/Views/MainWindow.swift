@@ -117,16 +117,6 @@ struct MainView: View {
     @AppStorage("hasSeenGuide") private var hasSeenGuide = false
     @State private var dropTargeted = false
 
-    private var removingPersonName: String {
-        model.peopleOverview.first { $0.id == model.confirmRemovePerson }?.name ?? ""
-    }
-
-    /// 「從這裡分成兩場…」那一句的開始時間（R90）
-    private var splitTime: String {
-        guard let id = model.splitMeetingRequest, let segment = model.detail?.segments.first(where: { $0.id == id }) else { return "" }
-        return TimeFormat.string(segment.start)
-    }
-
     var body: some View {
         @Bindable var model = model
         NavigationSplitView {
@@ -173,7 +163,6 @@ struct MainView: View {
         }
         // 重新命名、新資料夾的彈窗（R102、design §76）
         .sheet(item: Binding(get: { model.renameTarget }, set: { model.renameTarget = $0 })) { RenameSheet(target: $0) }
-        .modifier(OrganizeConfirmations())
         // 可能的定期會議（design §73）、資料夾的自動加入條件（design §72）
         .sheet(isPresented: $model.showSeriesSuggestions) { SeriesSuggestionSheet() }
         .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.name })) {
@@ -196,48 +185,8 @@ struct MainView: View {
                   String(localized: "目前是 \(Updater.currentVersion)。更新時拾音會結束並重新打開，會議資料都會保留。")]
                 .filter { !$0.isEmpty }.joined(separator: "\n\n"))
         }
-        .confirmationDialog((model.confirmPurge?.count ?? 0) > 1 ? String(localized: "永久刪除 \(model.confirmPurge?.count ?? 0) 場會議？")
-                                                                 : String(localized: "永久刪除這場會議？"),
-                            isPresented: Binding(get: { model.confirmPurge != nil }, set: { if !$0 { model.confirmPurge = nil } })) {
-            Button("永久刪除", role: .destructive) {
-                if let ids = model.confirmPurge { model.deletePermanently(ids) }
-            }
-        } message: {
-            Text("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。")
-        }
-        // 移除一個人（R85.7）：「更多」、側欄右鍵、Delete
-        .confirmationDialog(String(localized: "移除「\(removingPersonName)」？"),
-                            isPresented: Binding(get: { model.confirmRemovePerson != nil }, set: { if !$0 { model.confirmRemovePerson = nil } })) {
-            Button("移除", role: .destructive) {
-                if let id = model.confirmRemovePerson {
-                    if model.selectedPerson == id { model.selectedPerson = nil }
-                    model.deletePerson(id)
-                }
-            }
-        } message: {
-            Text("會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。")
-        }
-        // 清空垃圾桶（R88.3）
-        .confirmationDialog(String(localized: "永久刪除垃圾桶裡的 \(model.trash.count) 場會議？"), isPresented: $model.confirmEmptyTrash) {
-            Button("清空垃圾桶", role: .destructive) { model.emptyTrash() }
-        } message: {
-            Text("會議紀錄、逐字稿和錄音都會刪掉，沒辦法還原。")
-        }
-        // 從某一句分成兩場（R90、design §64）：分開後沒辦法合併回來（D170）
-        .confirmationDialog(String(localized: "從 \(splitTime) 這句開始分成另一場會議？"),
-                            isPresented: Binding(get: { model.splitMeetingRequest != nil }, set: { if !$0 { model.splitMeetingRequest = nil } })) {
-            Button("分成兩場") {
-                if let id = model.splitMeetingRequest { model.splitMeeting(at: id) }
-            }
-        } message: {
-            Text("這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。分開後沒辦法合併回來。")
-        }
-        .confirmationDialog(model.deleteTargets.count > 1 ? String(localized: "把 \(model.deleteTargets.count) 場會議移到垃圾桶？")
-                                                          : String(localized: "把這場會議移到垃圾桶？"), isPresented: $model.confirmDelete) {
-            Button("移到垃圾桶", role: .destructive) { model.moveToTrash(model.deleteTargets) }
-        } message: {
-            Text("30 天內都可以從垃圾桶還原。")
-        }
+        // 刪除、移除、分成兩場的確認（R106、design §80）：同一種彈窗，取代系統的確認對話框
+        .sheet(item: Binding(get: { model.activeConfirmation }, set: { if $0 == nil { model.clearConfirmations() } })) { ConfirmSheet(request: $0) }
     }
 }
 
@@ -868,55 +817,74 @@ struct ImportSheet: View {
     @State private var speakerCount = 0
 
     var body: some View {
+        // 同其他彈窗的樣子（R106、design §80）
         VStack(alignment: .leading, spacing: 16) {
-            Text(urls.count == 1 ? "匯入錄音" : "匯入 \(urls.count) 個錄音檔").font(.title3.weight(.semibold))
+            SheetHeader(title: urls.count == 1 ? String(localized: "匯入錄音") : String(localized: "匯入 \(urls.count) 個錄音檔"),
+                        onClose: { model.pendingImport = []; dismiss() })
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(urls, id: \.self) { url in
                     Label(url.lastPathComponent, systemImage: "waveform").lineLimit(1).truncationMode(.middle)
                 }
             }
             .foregroundStyle(.secondary)
-            Form {
-                if urls.count == 1 {
-                    TextField("標題", text: $title, prompt: Text("選填，沒填就由整理時命名"))
-                    DatePicker("會議日期", selection: $date, displayedComponents: .date)
-                } else {
-                    LabeledContent(String(localized: "會議日期"), value: String(localized: "依各檔案的檔名或修改日期"))
+            if urls.count == 1 {
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "標題"))
+                    SheetTextField(placeholder: String(localized: "選填，沒填就由整理時命名"), text: $title)
                 }
-                TextField("與會者", text: $participants, prompt: Text("選填，用逗號分隔"))
-                Picker("範本", selection: $templateId) {
-                    ForEach(model.templates) { Text($0.displayName).tag($0.id) }
-                }
-                Picker("會議語言", selection: $language) {
-                    ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
-                }
-                .help("決定轉錄和會議紀錄用的語言")
-                // 先填人數（design §26.2）
-                Picker("大約幾個人", selection: $speakerCount) {
-                    Text("自動判斷").tag(0)
-                    ForEach(2...12, id: \.self) { n in Text("\(n) 人").tag(n) }
-                }
-                .help("人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
             }
-            .formStyle(.columns)
-            HStack {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "會議日期"))
+                    if urls.count == 1 {
+                        SheetDateField(label: String(localized: "會議日期"), date: $date)
+                    } else {
+                        Text("依各檔案的檔名或修改日期").font(.system(size: 15)).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .sheetFieldBox()
+                    }
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "大約幾個人"))
+                    // 先填人數（design §26.2）
+                    SheetMenuField(options: [(0, String(localized: "自動判斷"))] + (2...12).map { ($0, String(localized: "\($0) 人")) },
+                                   selection: $speakerCount)
+                        .help("人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準")
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "與會者"))
+                SheetTextField(placeholder: String(localized: "選填，用逗號分隔"), text: $participants)
+            }
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "範本"))
+                    SheetMenuField(options: model.templates.map { ($0.id, $0.displayName) }, selection: $templateId)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    SheetFieldLabel(String(localized: "會議語言"))
+                    SheetMenuField(options: MeetingLanguage.allCases.map { ($0, $0.name) }, selection: $language)
+                        .help("決定轉錄和會議紀錄用的語言")
+                }
+            }
+            HStack(spacing: 10) {
                 Spacer()
-                Button("取消", role: .cancel) {
+                Button("取消") {
                     model.pendingImport = []
                     dismiss()
                 }
+                .buttonStyle(SheetPillButtonStyle(.secondary))
                 .keyboardShortcut(.cancelAction)
                 Button("匯入並開始轉錄") {
                     model.confirmImport(ImportOptions(title: title, date: urls.count == 1 ? DateText.string(date) : nil,
                                                       participants: participants, templateId: templateId, language: language,
                                                       minSpeakers: speakerCount == 0 ? nil : speakerCount))
                 }
+                .buttonStyle(SheetPillButtonStyle(.primary))
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
             }
         }
-        .padding(20)
-        .frame(width: 460)
+        .sheetChrome(width: 480)
         .onAppear {
             if let first = urls.first,
                let inferred = DateText.date(Importer.inferDate(filename: first.lastPathComponent, modified: Importer.modificationDate(first))) {
