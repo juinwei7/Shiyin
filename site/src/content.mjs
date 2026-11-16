@@ -74,11 +74,11 @@ export const content = {
     notes: {
       h2: '整理成會議紀錄，不確定的地方會問你',
       ps: [
-        '停止錄音後，先用即時逐字稿整理出一份草稿，正式轉錄完自動換成正式版：摘要、決議、待辦和未決問題。每一條後面都有時間點，覺得不對就點一下，從錄音那裡開始聽。',
+        '停止錄音後，先用即時逐字稿整理出一份草稿，正式轉錄完自動換成正式版：摘要、每個人的重點、決議、待辦和未決問題。每一條後面都有時間點，覺得不對就點一下，從錄音那裡開始聽。',
         'AI 不確定的人名、專有名詞、負責人和期限，會列在「待確認」讓你回答，回答後再依你的答案修正紀錄。逐字稿裡可能聽錯的字也會標出來，你按「接受」才會改。',
         '想找某件事，可以直接問會議：「預算最後決定多少？」回答會附上時間點；也可以一次問所有會議。',
       ],
-      note: '範本有一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自己做。紀錄可以直接編輯，每次修改都留版本；也可以切換成心智圖，匯出成圖片。播放條上會標出每個議題從哪裡講到哪裡，點了就從那裡開始聽。待辦可以一鍵加到 Mac 的「提醒事項」，附上回到會議的連結。',
+      note: '範本有一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自己做。紀錄可以直接編輯，每次修改都留版本；也可以切換成心智圖，放大縮小、匯出成圖片。播放條上會標出每個議題從哪裡講到哪裡，點了就從那裡開始聽。待辦可以一鍵加到 Mac 的「提醒事項」，附上回到會議的連結。',
     },
     privacy: {
       h2: '錄音不會離開你的 Mac',
@@ -322,11 +322,11 @@ export const content = {
     notes: {
       h2: 'Meeting notes that ask when they’re unsure',
       ps: [
-        'As soon as you stop, draft notes are written from the live transcript, then replaced when the final transcript is ready: a summary, decisions, action items and open questions. Each item has a timestamp: if something looks wrong, click it and listen from that point.',
+        'As soon as you stop, draft notes are written from the live transcript, then replaced when the final transcript is ready: a summary, key points by person, decisions, action items and open questions. Each item has a timestamp: if something looks wrong, click it and listen from that point.',
         'Names, terms, owners and due dates the summarizer isn’t sure about are listed under “To confirm”. Answer them and the notes are revised. Words in the transcript that were probably misheard are marked too, and nothing changes until you click Accept.',
         'Looking for something? Ask the meeting, like “What budget did we settle on?”, and the answer comes with timestamps. You can ask all your meetings at once, too.',
       ],
-      note: 'Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own. You can edit the notes directly, and every change is versioned. Switch to a mind map and export it as an image. The playback bar marks where each topic starts and ends; click one to listen from there. Add the action items to Apple Reminders with one click, each with a link back to the meeting.',
+      note: 'Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own. You can edit the notes directly, and every change is versioned. Switch to a mind map, zoom in and out, and export it as an image. The playback bar marks where each topic starts and ends; click one to listen from there. Add the action items to Apple Reminders with one click, each with a link back to the meeting.',
     },
     privacy: {
       h2: 'Your recordings stay on your Mac',
@@ -567,11 +567,11 @@ export const content = {
     notes: {
       h2: '議事録にまとめ、不確かな点は質問してくれる',
       ps: [
-        '録音を止めるとすぐ、リアルタイムの文字起こしから下書きをまとめ、正式な文字起こしが終わると正式版に置き換えます。要約、決定事項、ToDo、未解決の課題に分かれています。各項目にはタイムスタンプが付いていて、気になったらクリックしてその場面から聞き直せます。',
+        '録音を止めるとすぐ、リアルタイムの文字起こしから下書きをまとめ、正式な文字起こしが終わると正式版に置き換えます。要約、参加者ごとの要点、決定事項、ToDo、未解決の課題に分かれています。各項目にはタイムスタンプが付いていて、気になったらクリックしてその場面から聞き直せます。',
         'AI が確信を持てない人名、固有名詞、担当者、期限は「To confirm」に一覧され、答えるとその内容で議事録が修正されます。聞き間違えた可能性のある語も文字起こしに印が付き、「Accept」を押すまで変更されません。',
         '探したいことがあれば、「予算はいくらに決まった？」のように会議に質問できます（「Ask」タブ）。答えにはタイムスタンプが付き、すべての会議にまとめて質問することもできます。',
       ],
-      note: 'テンプレートは一般的な会議、1on1、インタビュー、講義・講演、ブレインストーミングのほか、自分で作ることもできます。議事録は直接編集でき、変更のたびに版が残ります。マインドマップに切り替えて画像として書き出すこともできます。再生バーには議題ごとの区間が表示され、クリックするとその議題から聞けます。ToDo はワンクリックで Mac の「リマインダー」に追加でき、会議へ戻るリンクも付きます。',
+      note: 'テンプレートは一般的な会議、1on1、インタビュー、講義・講演、ブレインストーミングのほか、自分で作ることもできます。議事録は直接編集でき、変更のたびに版が残ります。マインドマップに切り替えて、拡大・縮小したり画像として書き出したりすることもできます。再生バーには議題ごとの区間が表示され、クリックするとその議題から聞けます。ToDo はワンクリックで Mac の「リマインダー」に追加でき、会議へ戻るリンクも付きます。',
     },
     privacy: {
       h2: '録音は Mac の外に出ません',
