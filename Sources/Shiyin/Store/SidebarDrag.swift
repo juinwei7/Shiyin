@@ -6,28 +6,23 @@ import UniformTypeIdentifiers
 extension UTType {
     /// 拖的會議（id 用逗號分開），只在拾音裡面（Info.plist 宣告）
     static let shiyinMeetingIDs = UTType(exportedAs: "com.weiwei.shiyin.meeting-ids")
-    /// 拖的資料夾、定期會議（鍵：folder:名稱、series:id）
+    /// 拖的資料夾（鍵：folder:名稱）
     static let shiyinSidebarItem = UTType(exportedAs: "com.weiwei.shiyin.sidebar-item")
 }
 
-/// 側欄「資料夾」那一段的一列：定期會議或資料夾
-enum SidebarFolderItem: Identifiable {
-    case series(MeetingSeries)
-    case folder(name: String, count: Int)
+/// 側欄「資料夾」那一段的一列
+struct SidebarFolderItem: Identifiable {
+    var name: String
+    var count: Int
 
-    var key: String {
-        switch self {
-        case .series(let series): AppModel.seriesKey(series.id ?? 0)
-        case .folder(let name, _): AppModel.folderKey(name)
-        }
-    }
+    var key: String { AppModel.folderKey(name) }
     var id: String { key }
 }
 
 extension AppModel {
-    /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照預設（定期會議在前、資料夾照名稱）
+    /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照名稱
     var sidebarFolderItems: [SidebarFolderItem] {
-        let defaults = series.map(SidebarFolderItem.series) + folders.map { .folder(name: $0.name, count: $0.count) }
+        let defaults = folders.map { SidebarFolderItem(name: $0.name, count: $0.count) }
         let rank = Dictionary(sidebarOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
         return defaults.enumerated().sorted { a, b in
             switch (rank[a.element.key], rank[b.element.key]) {
@@ -39,7 +34,7 @@ extension AppModel {
         }.map(\.element)
     }
 
-    /// 把一個資料夾或定期會議拖到另一個的前面或後面
+    /// 把一個資料夾拖到另一個的前面或後面
     func moveSidebarItem(_ key: String, to target: String, before: Bool) {
         var keys = sidebarFolderItems.map(\.key)
         guard key != target, let from = keys.firstIndex(of: key) else { return }
@@ -63,6 +58,9 @@ extension AppModel {
     }
 
     func meetingDragProvider(for id: Int64) -> NSItemProvider {
+        #if DEBUG
+        DebugControl.note("list onDrag: meeting \(id)")
+        #endif
         let data = Data(dragIDs(for: id).map(String.init).joined(separator: ",").utf8)
         let provider = NSItemProvider()
         provider.registerDataRepresentation(forTypeIdentifier: UTType.shiyinMeetingIDs.identifier, visibility: .ownProcess) { done in
@@ -72,28 +70,23 @@ extension AppModel {
         return provider
     }
 
-    /// 會議拖到下面列表的標題：移進現在看的地方（資料夾、定期會議）；「其他會議」是移出資料夾和定期會議
+    /// 會議拖到下面列表的標題：移進現在看的資料夾；「其他會議」是移出資料夾
     func dropOnListHeader(_ ids: [Int64]) {
         if let folder = folderFilter {
             moveToFolder(ids, folder: folder)
-        } else if let id = seriesFilter {
-            setSeries(ids, series: id)
         } else if listShowsOthersOnly {
-            let inSeries = ids.filter { id in meetings.first { $0.id == id }?.meeting.seriesId != nil }
             let inFolder = ids.filter { id in !(meetings.first { $0.id == id }?.meeting.folder.isEmpty ?? true) }
-            if !inSeries.isEmpty { setSeries(inSeries, series: nil) }
-            if !inFolder.isEmpty { moveToFolder(inFolder, folder: "") }
-            if inSeries.isEmpty && inFolder.isEmpty {
+            if inFolder.isEmpty {
                 noticeMessage = ids.count == 1 ? String(localized: "這場會議沒有在任何資料夾裡") : String(localized: "這些會議都沒有在資料夾裡")
-            } else if inFolder.isEmpty {
-                noticeMessage = String(localized: "已移出定期會議")
+            } else {
+                moveToFolder(inFolder, folder: "")
             }
         }
     }
 
     /// 下面列表的標題能不能收會議（看所有會議、有篩選時不行）
     var listHeaderAcceptsMeetings: Bool {
-        !showTrash && (folderFilter != nil || seriesFilter != nil || listShowsOthersOnly)
+        !showTrash && (folderFilter != nil || listShowsOthersOnly)
     }
 
     /// 從 Finder 拖到資料夾上的檔案：匯入到那個資料夾（R103.3）；參考文件（PDF 這類）要拖到會議頁

@@ -6,7 +6,6 @@ enum RenameTarget: Identifiable, Equatable {
     case folder(String)
     /// 新資料夾：建立後把這幾場會議移進去
     case newFolder([Int64])
-    case series(Int64)
     case person(Int64)
     case bookmark(Int64)
 
@@ -22,7 +21,6 @@ extension AppModel {
             return meeting.title.isEmpty ? meeting.displayTitle : meeting.title
         case .folder(let name): return name
         case .newFolder: return ""
-        case .series(let id): return seriesById(id)?.name ?? ""
         case .person(let id):
             // 人物總覽只在打開過人物列表後才有；沒有時從資料庫讀
             return peopleOverview.first { $0.id == id }?.name ?? ((try? db.peopleSummaries()) ?? people).first { $0.id == id }?.name ?? ""
@@ -59,7 +57,6 @@ extension AppModel {
         case .newFolder(let ids):
             // 「+」建的是空的資料夾（R104），從會議的選單建的會把會議移進去
             if ids.isEmpty { createFolder(name) } else { moveToFolder(ids, folder: name) }
-        case .series(let id): renameSeries(id, to: name)
         case .person(let id):
             renamePerson(id, to: name)
             // 改成已經有的名字時合併過去，選那個人

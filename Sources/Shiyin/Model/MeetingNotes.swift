@@ -85,32 +85,6 @@ struct MeetingNotes: Codable, Hashable {
         }
     }
 
-    /// 上一場的待辦這次怎麼了（R99.5、design §73）：只有定期會議裡、有上一場的會議才有
-    struct FollowUp: Codable, Hashable {
-        enum Status: String, Codable, CaseIterable {
-            case done, ongoing, notMentioned
-        }
-        var task: String
-        var owner: String
-        var status: Status
-        var time: String
-
-        init(task: String, owner: String, status: Status, time: String = "") {
-            self.task = task
-            self.owner = owner
-            self.status = status
-            self.time = time
-        }
-
-        init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            task = (try? c.decode(String.self, forKey: .task)) ?? ""
-            owner = (try? c.decode(String.self, forKey: .owner)) ?? ""
-            status = (try? c.decode(Status.self, forKey: .status)) ?? .notMentioned
-            time = TimeFormat.clean((try? c.decode(String.self, forKey: .time)) ?? "")
-        }
-    }
-
     struct ReviewItem: Codable, Hashable {
         var time: String
         var question: String
@@ -150,11 +124,10 @@ struct MeetingNotes: Codable, Hashable {
     var custom: [CustomSection]
     var reviewItems: [ReviewItem]
     var people: [Person]
-    var followUps: [FollowUp]
 
     init(title: String = "", summary: [Item] = [], decisions: [Item] = [], actionItems: [ActionItem] = [],
          openQuestions: [Item] = [], topics: [Topic] = [], custom: [CustomSection] = [], reviewItems: [ReviewItem] = [],
-         people: [Person] = [], followUps: [FollowUp] = []) {
+         people: [Person] = []) {
         self.title = title
         self.summary = summary
         self.decisions = decisions
@@ -164,10 +137,9 @@ struct MeetingNotes: Codable, Hashable {
         self.custom = custom
         self.reviewItems = reviewItems
         self.people = people
-        self.followUps = followUps
     }
 
-    private enum CodingKeys: String, CodingKey { case title, summary, decisions, actionItems, openQuestions, topics, custom, reviewItems, people, followUps }
+    private enum CodingKeys: String, CodingKey { case title, summary, decisions, actionItems, openQuestions, topics, custom, reviewItems, people }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -180,10 +152,10 @@ struct MeetingNotes: Codable, Hashable {
         reviewItems = (try? c.decode([ReviewItem].self, forKey: .reviewItems)) ?? []
         topics = (try? c.decode([Topic].self, forKey: .topics)) ?? []
         people = (try? c.decode([Person].self, forKey: .people)) ?? []
-        followUps = (try? c.decode([FollowUp].self, forKey: .followUps)) ?? []
     }
 
-    /// people、followUps 是空的時不寫（design §66、§73）：以前的會議紀錄、沒有這一段的會議紀錄存起來跟以前一字不差
+    /// people 是空的時不寫（design §66）：以前的會議紀錄、沒有這一段的會議紀錄存起來跟以前一字不差。
+    /// 以前定期會議的 followUps（design §73，D177 拿掉）不讀不寫
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(title, forKey: .title)
@@ -195,7 +167,6 @@ struct MeetingNotes: Codable, Hashable {
         try c.encode(custom, forKey: .custom)
         try c.encode(reviewItems, forKey: .reviewItems)
         if !people.isEmpty { try c.encode(people, forKey: .people) }
-        if !followUps.isEmpty { try c.encode(followUps, forKey: .followUps) }
     }
 
     func jsonString() -> String {
@@ -206,7 +177,6 @@ struct MeetingNotes: Codable, Hashable {
 
     var isEmpty: Bool {
         summary.isEmpty && decisions.isEmpty && actionItems.isEmpty && openQuestions.isEmpty && topics.isEmpty && custom.isEmpty && people.isEmpty
-            && followUps.isEmpty
     }
 
     /// 全文取代：對每一個字串值做區分大小寫的單純取代
@@ -239,8 +209,7 @@ struct MeetingNotes: Codable, Hashable {
             topics: topics.map { Topic(title: r($0.title), start: $0.start, points: $0.points.map(ri)) },
             custom: custom.map { CustomSection(title: r($0.title), items: $0.items.map(ri)) },
             reviewItems: reviewItems.map { ReviewItem(time: $0.time, question: r($0.question), yesNo: $0.yesNo) },
-            people: people.map { Person(name: r($0.name), points: $0.points.map(ri)) },
-            followUps: followUps.map { FollowUp(task: r($0.task), owner: r($0.owner), status: $0.status, time: $0.time) })
+            people: people.map { Person(name: r($0.name), points: $0.points.map(ri)) })
     }
 
     /// 給搜尋索引用的純文字
@@ -249,7 +218,6 @@ struct MeetingNotes: Codable, Hashable {
         lines += summary.map(\.text) + decisions.map(\.text) + openQuestions.map(\.text)
         for person in people { lines.append(person.name); lines += person.points.map(\.text) }
         lines += actionItems.map { "\($0.owner) \($0.task) \($0.due)" }
-        lines += followUps.map { "\($0.owner) \($0.task)" }
         for topic in topics { lines.append(topic.title); lines += topic.points.map(\.text) }
         for section in custom { lines.append(section.title); lines += section.items.map(\.text) }
         lines += reviewItems.map(\.question)
@@ -260,9 +228,8 @@ struct MeetingNotes: Codable, Hashable {
     // 不用 $ref／$defs：不是每個服務都支援，條目的定義直接展開
     static let jsonSchema: String = {
         let items = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["text","time"],"properties":{"text":{"type":"string"},"time":{"type":"string"}}}}"#
-        return #"{"type":"object","additionalProperties":false,"required":["title","summary","people","followUps","decisions","actionItems","openQuestions","topics","custom","reviewItems"],"properties":{"title":{"type":"string"},"summary":"# + items
+        return #"{"type":"object","additionalProperties":false,"required":["title","summary","people","decisions","actionItems","openQuestions","topics","custom","reviewItems"],"properties":{"title":{"type":"string"},"summary":"# + items
             + #","people":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","points"],"properties":{"name":{"type":"string"},"points":"# + items + #"}}}"#
-            + #","followUps":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["task","owner","status","time"],"properties":{"task":{"type":"string"},"owner":{"type":"string"},"status":{"type":"string","enum":["done","ongoing","notMentioned"]},"time":{"type":"string"}}}}"#
             + #","decisions":"# + items
             + #","actionItems":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["owner","task","due","time"],"properties":{"owner":{"type":"string"},"task":{"type":"string"},"due":{"type":"string"},"time":{"type":"string"}}}}"#
             + #","openQuestions":"# + items

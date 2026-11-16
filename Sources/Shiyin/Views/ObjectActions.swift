@@ -29,21 +29,6 @@ extension View {
     func menuIcons() -> some View { labelStyle(.titleAndIcon).tint(.primary) }
 }
 
-/// 定期會議：系列頁工具列的「更多」（系統選單；側欄的「⋯」、右鍵是 AppModel.seriesMenu）
-struct SeriesMenuItems: View {
-    @Environment(AppModel.self) private var model
-    let series: MeetingSeries
-
-    var body: some View {
-        Group {
-            Button("重新命名…", systemImage: "pencil") { if let id = series.id { model.renameTarget = .series(id) } }
-            Divider()
-            DestructiveMenuButton(String(localized: "刪除定期會議…")) { model.confirmDeleteSeries = series.id }
-        }
-        .menuIcons()
-    }
-}
-
 // MARK: - 紀錄的條目（R100、design §74）
 
 /// 一條紀錄的動作：雙擊就地改、右鍵、滑過時行尾的「⋯」。ref 是 nil（不是這場會議的紀錄）時什麼都不加

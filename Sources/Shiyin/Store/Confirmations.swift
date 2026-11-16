@@ -10,11 +10,6 @@ extension AppModel {
                                                      : String(localized: "自動加入的條件也會刪掉。"),
                                   confirmTitle: String(localized: "刪除資料夾")) { self.deleteFolder(folder) }
         }
-        if let id = confirmDeleteSeries {
-            return ConfirmRequest(id: "series:\(id)", title: String(localized: "刪除定期會議「\(seriesById(id)?.name ?? "")」？"),
-                                  message: String(localized: "會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。"),
-                                  confirmTitle: String(localized: "刪除定期會議")) { self.deleteSeries(id) }
-        }
         if let id = confirmRemovePerson {
             let name = peopleOverview.first { $0.id == id }?.name ?? ""
             return ConfirmRequest(id: "person:\(id)", title: String(localized: "移除「\(name)」？"),
@@ -54,7 +49,6 @@ extension AppModel {
     /// 確認彈窗關掉（取消或做完）
     func clearConfirmations() {
         if confirmDeleteFolder != nil { confirmDeleteFolder = nil }
-        if confirmDeleteSeries != nil { confirmDeleteSeries = nil }
         if confirmRemovePerson != nil { confirmRemovePerson = nil }
         if confirmPurge != nil { confirmPurge = nil }
         if confirmEmptyTrash { confirmEmptyTrash = false }

@@ -203,12 +203,6 @@ enum GoldenDump {
                 w.text(dir + "summarize-custom.txt", NotesPrompt.summarize(context(record.definition(for: l))))
             }
             let general = TemplateRecord(id: "general", name: "", builtin: true, definition: BuiltinTemplates.all[0].definition.jsonString())
-            // 定期會議接上一場（R99.5、design §73）：上一場用這場的紀錄，加上一條上次還在進行的
-            if let notes = fx.notes {
-                var c = context(general.definition(for: l))
-                c.previous = followUpsPrevious(notes)
-                w.text(dir + "summarize-followups.txt", NotesPrompt.summarize(c))
-            }
             if let notes = fx.notes {
                 w.text(dir + "revise.txt", NotesPrompt.revise(context(general.definition(for: l)), notes: notes, answers: fx.answers))
             }
@@ -399,14 +393,6 @@ enum GoldenDump {
                 w.text(dir + "simplified/notes.txt", ChineseScript.toSimplified(NotesExporter.plain(bundle)))
                 w.text(dir + "simplified/transcript-tt.txt", ChineseScript.toSimplified(TranscriptExporter.text(bundle, format: "txt", times: true, speakers: true)))
                 w.text(dir + "simplified/transcript-t.srt", ChineseScript.toSimplified(TranscriptExporter.text(bundle, format: "srt", times: true, speakers: true)))
-            }
-            // 上次的待辦（design §73）：三種狀態、有沒有負責人、時間點
-            if var notes = fx.notes {
-                notes.followUps = followUpsSample(notes)
-                var withFollowUps = bundle
-                withFollowUps.notes = notes
-                w.text(dir + "notes-followups.md", NotesExporter.markdown(withFollowUps))
-                w.text(dir + "notes-followups.html", NotesExporter.html(withFollowUps))
             }
             // 沒有會議紀錄、空的會議紀錄
             var empty = bundle
@@ -702,112 +688,22 @@ enum GoldenDump {
         })
     }
 
-    // MARK: 分類（design §72、§73）：輸入和結果寫在同一個檔案，Windows 讀輸入算一次比對結果
-
-    nonisolated private static func followUpsPrevious(_ notes: MeetingNotes) -> PreviousMeeting {
-        var items = notes.actionItems
-        items.append(MeetingNotes.ActionItem(owner: "", task: "Carried over item", due: ""))  // l10n-skip
-        return PreviousMeeting(title: notes.title, date: "2026-11-02", items: items, openQuestions: notes.openQuestions)
-    }
-
-    nonisolated private static func followUpsSample(_ notes: MeetingNotes) -> [MeetingNotes.FollowUp] {
-        var result = notes.actionItems.enumerated().map { i, item in
-            MeetingNotes.FollowUp(task: item.task, owner: item.owner, status: i % 2 == 0 ? .done : .ongoing, time: i == 0 ? "00:05" : "")
-        }
-        result.append(MeetingNotes.FollowUp(task: "Carried over item", owner: "", status: .notMentioned))  // l10n-skip
-        return result
-    }
+    // MARK: 分類（design §72）：輸入和結果寫在同一個檔案，Windows 讀輸入算一次比對結果
 
     private static func organize(_ w: inout Writer) {
-        // 會議的時間：錄音才有開始時間、要跟會議日期同一天（時區固定台北）
-        let taipei = TimeZone(identifier: "Asia/Taipei")!
-        let times: [(String, String, String)] = [
-            ("2026-11-16", "2026-11-16T02:05:00Z", "recording"), ("2026-11-16", "2026-11-16T02:05:00Z", "import"),
-            ("2026-11-16", "2026-11-15T17:30:00Z", "recording"), ("2026-11-17", "2026-11-16T17:30:00Z", "recording"),
-            ("1970-01-01", "1970-01-01T00:00:00Z", "recording"), ("2024-02-29", "bad", "recording")]
-        w.json("util/meeting-time.json", times.map { date, created, source -> Object in
-            var m = Meeting(meetingDate: date, sourceFilename: "x.wav")
-            m.createdAt = created
-            m.source = source
-            let t = MeetingTime(m, timeZone: taipei)
-            return ["input": ["meetingDate": date, "createdAt": created, "source": source, "timeZone": "Asia/Taipei"],
-                    "day": t?.day ?? NSNull(), "weekday": t?.weekday ?? NSNull(), "minute": (t?.minute).map { $0 as Any } ?? NSNull()]
-        })
-
-        // 找可能的定期會議：每週一、隔週四、時間差太多、人不同、不到三場、已經拒絕過
-        func input(_ id: Int64, _ date: String, _ minute: Int?, _ people: [Int64], _ title: String) -> SeriesDetector.Input {
-            let p = date.split(separator: "-").compactMap { Int($0) }
-            return SeriesDetector.Input(id: id, time: MeetingTime(day: MeetingTime.dayNumber(year: p[0], month: p[1], day: p[2]), minute: minute),
-                                        people: Set(people), title: title)
-        }
-        let cases: [(String, [SeriesDetector.Input], [String])] = [
-            ("weekly", [input(1, "2026-10-19", 600, [1, 2, 4], "產品週會 10/19"), input(2, "2026-10-26", 605, [1, 2, 4], "產品週會 10/26"),  // l10n-skip
-                        input(3, "2026-11-02", 595, [1, 2, 4, 5], "Lumio 產品週會"), input(4, "2026-11-09", 600, [1, 2, 4], "產品週會 11/09"),  // l10n-skip
-                        input(5, "2026-11-10", 600, [1, 2, 4], "週二"), input(6, "2026-11-16", 700, [1, 2, 4], "時間差太多")], []),  // l10n-skip
-            ("biweekly", [input(1, "2026-10-15", 900, [1, 3], "Weekly Sync"), input(2, "2026-10-29", 910, [1, 3], "Sync with Bob"),
-                          input(3, "2026-11-12", nil, [1, 3], "Bob 1:1")], []),
-            ("rejected", [input(1, "2026-10-15", 900, [1, 3], "A"), input(2, "2026-10-22", 900, [1, 3], "B"), input(3, "2026-10-29", 900, [1, 3], "C")],
-             ["5|15|1,3"]),
-            ("tooFew", [input(1, "2026-10-15", 900, [1, 3], "A"), input(2, "2026-10-22", 900, [1, 3], "B"),
-                        input(3, "2026-11-26", 900, [1, 3], "C"), input(4, "2026-10-22", 900, [1], "D")], []),
-            ("differentPeople", [input(1, "2026-10-05", nil, [1, 2], "Standup"), input(2, "2026-10-12", nil, [1, 2, 3, 4, 5], "Standup"),
-                                 input(3, "2026-10-19", nil, [1, 2], "Standup"), input(4, "2026-10-26", nil, [1, 2], "Standup 4")], []),
-        ]
-        w.json("util/series-detect.json", cases.map { name, inputs, rejected -> Object in
-            ["name": name, "rejected": rejected,
-             "input": inputs.map { ["id": $0.id, "day": $0.time.day, "minute": $0.time.minute.map { $0 as Any } ?? NSNull(),
-                                   "people": $0.people.sorted(), "title": $0.title] as Object },
-             "candidates": SeriesDetector.candidates(inputs, rejected: Set(rejected)).map {
-                 ["key": $0.key, "meetingIds": $0.meetingIds, "weekday": $0.weekday, "minute": $0.minute.map { $0 as Any } ?? NSNull(),
-                  "intervalWeeks": $0.intervalWeeks, "people": $0.people, "name": $0.name, "frequency": $0.frequencyText] as Object
-             }] as Object
-        })
-        // 新的一場要不要加入（自動加入／建議／都不是）
-        let monday = MeetingTime.dayNumber(year: 2026, month: 11, day: 16)
-        func info(_ id: Int64, _ weekday: Int, _ minute: Int?, _ people: [Int64], _ gap: Int?) -> SeriesDetector.SeriesInfo {
-            SeriesDetector.SeriesInfo(id: id, weekday: weekday, minute: minute, people: Set(people), lastDay: gap.map { monday - $0 })
-        }
-        let joinCases: [(String, Int?, [Int64], [SeriesDetector.SeriesInfo])] = [
-            ("strong", 600, [1, 2], [info(1, 2, 610, [1, 2, 3, 4], 7)]),
-            ("weakOnePerson", nil, [2], [info(1, 2, nil, [1, 2, 3, 4], 7)]),
-            ("wrongWeekday", nil, [1, 2], [info(1, 3, nil, [1, 2], 6)]),
-            ("tooLongAgo", nil, [1, 2], [info(1, 2, nil, [1, 2], 42)]),
-            ("noLastMeeting", nil, [1, 2], [info(1, 2, nil, [1, 2], nil)]),
-            ("timeFar", 600, [1, 2], [info(1, 2, 700, [1, 2], 7)]),
-            ("nobodyShared", nil, [5], [info(1, 2, nil, [1, 2], 7)]),
-            ("pickMoreShared", nil, [1, 2, 9], [info(1, 2, nil, [1, 5, 6, 7], 7), info(2, 2, nil, [1, 2, 6, 7, 8], 14)]),
-            ("pickNearestStrong", nil, [1, 2], [info(1, 2, nil, [1, 2], 14), info(2, 2, nil, [1, 2], 7)]),
-        ]
-        w.json("util/series-join.json", joinCases.map { name, minute, attended, infos -> Object in
-            let decision: Object = switch SeriesDetector.joinDecision(time: MeetingTime(day: monday, minute: minute), attended: Set(attended), series: infos) {
-            case .join(let id): ["join": id]
-            case .suggest(let id, let shared): ["suggest": id, "shared": shared]
-            case .none: [:]
-            }
-            return ["name": name, "day": monday, "minute": minute.map { $0 as Any } ?? NSNull(), "attended": attended,
-                    "series": infos.map { ["id": $0.id, "weekday": $0.weekday, "minute": $0.minute.map { $0 as Any } ?? NSNull(),
-                                           "people": $0.people.sorted(), "lastDay": $0.lastDay.map { $0 as Any } ?? NSNull()] as Object },
-                    "decision": decision] as Object
-        })
         let titleSets: [[String]] = [["產品週會 10/19", "產品週會 10/26"], ["11月3日 設計討論", "11月10日 設計討論"], ["Q3 Sync 1", "Q3 Sync 2"],  // l10n-skip
                                      ["A", "B"], ["週會", "週會"], ["Weekly Sync", "Sync with Bob", "Bob 1:1"], ["ab 1", "ab 2"],  // l10n-skip
                                      ["Remote Control Project Kickoff Meeting", "Remote Control Design: Recap", "Conceptual Design Meeting: Recap"],
                                      ["Sprint Review 3", "Sprint Review 4", "Sprint review"], ["產品週會A", "產品週會B"]]  // l10n-skip
-        w.json("util/series-common-word.json", titleSets.map { ["titles": $0, "word": SeriesDetector.commonWord($0) ?? NSNull()] as Object })
-        w.json("util/series-frequency.json", [(2, 600, 1), (5, 900, 2), (1, nil, 1), (7, 65, 2)].map { (d: Int, m: Int?, i: Int) -> Object in
-            ["weekday": d, "minute": m.map { $0 as Any } ?? NSNull(), "intervalWeeks": i,
-             "text": SeriesDetector.frequencyText(weekday: d, minute: m, intervalWeeks: i),
-             "defaultName": SeriesDetector.defaultName(titles: ["A", "B"], weekday: d, minute: m)] as Object
-        })
-
+        w.json("util/common-word.json", titleSets.map { ["titles": $0, "word": MeetingSimilarity.commonWord($0) ?? NSNull()] as Object })
         // 資料夾的條件、建議
-        let rule = FolderRule(folder: "產品", keywords: ["週會", "sync"], people: [1, 2], templateId: "one-on-one", seriesId: 3)  // l10n-skip
-        let ruleCases: [(String, [Int64], String, Int64?)] = [
-            ("產品週會", [], "general", nil), ("Weekly SYNC", [], "general", nil), ("x", [1], "general", nil), ("x", [1, 2, 5], "general", nil),  // l10n-skip
-            ("x", [], "one-on-one", nil), ("x", [], "general", 3), ("x", [], "general", nil)]
-        w.json("util/folder-rule-match.json", ruleCases.map { title, people, template, series -> Object in
-            ["title": title, "attended": people, "templateId": template, "seriesId": series.map { $0 as Any } ?? NSNull(),
-             "matches": rule.matches(title: title, attended: Set(people), templateId: template, seriesId: series)] as Object
+        let rule = FolderRule(folder: "產品", keywords: ["週會", "sync"], people: [1, 2], templateId: "one-on-one")  // l10n-skip
+        let ruleCases: [(String, [Int64], String)] = [
+            ("產品週會", [], "general"), ("Weekly SYNC", [], "general"), ("x", [1], "general"), ("x", [1, 2, 5], "general"),  // l10n-skip
+            ("x", [], "one-on-one"), ("x", [], "general")]
+        w.json("util/folder-rule-match.json", ruleCases.map { title, people, template -> Object in
+            ["title": title, "attended": people, "templateId": template,
+             "matches": rule.matches(title: title, attended: Set(people), templateId: template)] as Object
         })
         func folderInput(_ id: Int64, _ folder: String, _ title: String, _ people: [Int64]) -> FolderSuggester.Input {
             FolderSuggester.Input(id: id, folder: folder, title: title, people: Set(people))
@@ -830,37 +726,6 @@ enum GoldenDump {
                 return ["id": c.id, "title": c.title, "people": c.people.sorted(), "folder": s?.folder ?? NSNull(), "count": s?.count ?? 0, "reason": reason]
             }] as Object)
 
-        // 還沒完成的待辦、上一場、followUps 的驗證
-        func seriesMeeting(_ id: Int64, _ date: String, _ items: [String], _ followUps: [(String, MeetingNotes.FollowUp.Status)]) -> Meeting {
-            var m = Meeting(meetingDate: date, sourceFilename: "x.wav")
-            m.id = id
-            m.notes = MeetingNotes(title: "t\(id)", actionItems: items.map { MeetingNotes.ActionItem(owner: "o", task: $0, due: "") },
-                                   openQuestions: id == 3 ? [MeetingNotes.Item(text: "q", time: "00:01")] : [],
-                                   followUps: followUps.map { MeetingNotes.FollowUp(task: $0.0, owner: "o", status: $0.1) }).jsonString()
-            return m
-        }
-        let series = [seriesMeeting(1, "2026-10-19", ["Compare competitors", "Update checklist"], []),
-                      seriesMeeting(2, "2026-10-26", ["Confirm SSO"], [("compare competitors", .done), ("Update checklist", .ongoing)]),
-                      seriesMeeting(3, "2026-11-02", ["Prepare deck"], [("Confirm SSO", .notMentioned), ("Update the checklist", .done)]),
-                      seriesMeeting(4, "2026-11-09", ["Fix login", "Confirm SSO"], [("Prepare deck", .done)])]
-        w.json("util/series-open-items.json", [
-            "meetings": series.map { ["id": $0.id ?? 0, "meetingDate": $0.meetingDate, "notes": $0.notes ?? ""] as Object },
-            "open": SeriesOpenItems.compute(series).map { ["meeting": $0.meeting.id ?? 0, "index": $0.index, "task": $0.item.task] as Object },
-            "previous": series.map { m -> Any in
-                guard let p = PreviousMeeting(m) else { return NSNull() }
-                return ["items": p.items.map { ["owner": $0.owner, "task": $0.task, "due": $0.due] }, "openQuestions": p.openQuestions.map(\.text)] as Object
-            }] as Object)
-        let previous = PreviousMeeting(title: "t", date: "2026-11-09", items: [MeetingNotes.ActionItem(owner: "a", task: "Fix login", due: ""),
-                                                                               MeetingNotes.ActionItem(owner: "b", task: "Confirm SSO", due: "")], openQuestions: [])
-        let raw = [MeetingNotes.FollowUp(task: "Fix login (frontend)", owner: "a", status: .ongoing), MeetingNotes.FollowUp(task: "fix login", owner: "a", status: .done),
-                   MeetingNotes.FollowUp(task: "Write tests", owner: "c", status: .done), MeetingNotes.FollowUp(task: " confirm sso ", owner: "b", status: .done),
-                   MeetingNotes.FollowUp(task: "SSO", owner: "b", status: .done)]
-        func encode(_ list: [MeetingNotes.FollowUp]) -> [Object] { list.map { ["task": $0.task, "owner": $0.owner, "status": $0.status.rawValue] as Object } }
-        w.json("util/followups-validate.json", [
-            "previous": previous.items.map(\.task), "previousItems": previous.items.map { ["owner": $0.owner, "task": $0.task] as Object },
-            "input": encode(raw),
-            "valid": encode(PreviousMeeting.validFollowUps(raw, previous: previous)),
-            "withoutPrevious": encode(PreviousMeeting.validFollowUps(raw, previous: nil))] as Object)
     }
 
     // MARK: 轉錄流程的規則

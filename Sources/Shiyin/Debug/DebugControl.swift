@@ -49,19 +49,18 @@ enum DebugControl {
         case "transcriptview": UserDefaults.standard.set(args[1] == "clean" ? "clean" : "original", forKey: AppSettings.transcriptViewKey)
         case "reload": model.reloadPeopleOverview(); model.reload()   // 直接改資料庫之後重讀
         // 資料夾自動歸類（design §72）
-        case "folderrule":   // folderrule <資料夾> <JSON|-> [apply]：JSON 是 {"keywords":[…],"people":[id…],"templateId":…,"seriesId":…}
+        case "folderrule":   // folderrule <資料夾> <JSON|-> [apply]：JSON 是 {"keywords":[…],"people":[id…],"templateId":…}
             var rule = FolderRule(folder: args[1])
             if args[2] != "-", let data = args[2].data(using: .utf8),
                let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 rule.keywords = object["keywords"] as? [String] ?? []
                 rule.people = (object["people"] as? [NSNumber] ?? []).map(\.int64Value)
                 rule.templateId = object["templateId"] as? String
-                rule.seriesId = (object["seriesId"] as? NSNumber)?.int64Value
             }
             model.saveFolderRule(rule, applyNow: args.count > 3 && args[3] == "apply")
         case "editfolderrule": model.editingFolderRule = args[1]   // 打開條件的編輯
         case "autofile":
-            if let id, let folder = try? model.db.autoFile(id) { model.organized(id, folder: folder, series: nil) }
+            if let id, let folder = try? model.db.autoFile(id) { model.organized(id, folder: folder) }
         case "foldersuggest":   // foldersuggest <會議 id> <輸出.json>
             if let id, let meeting = try? model.db.meeting(id) {
                 let s = model.folderSuggestion(for: meeting)
@@ -85,10 +84,9 @@ enum DebugControl {
         // 每一種東西都能直接改、刪（R100、design §74）
         case "renamemeetingui": if let id { model.requestRenameMeeting(id) }   // 等於側欄右鍵「重新命名…」、Return
         case "folderdeleteui": model.confirmDeleteFolder = args[1]              // 等於資料夾的「刪除資料夾…」、Delete，打開確認
-        case "seriesdeleteui": model.confirmDeleteSeries = id                    // 等於定期會議的「刪除定期會議…」，打開確認
         // 側欄的收合（R101、design §75）
-        case "sidebarsection": if args.count > 2 { model.setSection(args[1], expanded: args[2] == "on") }   // sidebarsection <series|folders|meetings|people|group:…> on|off
-        case "sidebarexpand": if args.count > 2 { model.setRow(args[1], expanded: args[2] == "on") }     // sidebarexpand <folder:名稱|series:id> on|off
+        case "sidebarsection": if args.count > 2 { model.setSection(args[1], expanded: args[2] == "on") }   // sidebarsection <folders|meetings|people|group:…> on|off
+        case "sidebarexpand": if args.count > 2 { model.setRow(args[1], expanded: args[2] == "on") }     // sidebarexpand <folder:名稱> on|off
         case "sidebarkey":   // sidebarkey return|delete：等於在側欄按 Return、Delete（照現在選到的）
             if args[1] == "return" { _ = model.sidebarReturn() } else { model.sidebarDelete() }
         case "noteitem":   // noteitem <editui|edit|delete> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]
@@ -123,63 +121,18 @@ enum DebugControl {
         case "floatothers": FloatingMenuController.shared.ignoreOtherApps = args.count > 1 && args[1] == "off"   // floatothers off：點別的 app 不關選單
         case "foldernew": if args.count > 1 { model.createFolder(args[1]) }   // 等於按「資料夾」標題的「+」建立（R104）
         case "importinto": if args.count > 2 { model.importDropped([URL(fileURLWithPath: args[2])], into: args[1]) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
-        // 重新命名的彈窗（R102、design §76）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
+        // 重新命名的彈窗（R102、design §76）：renameui <meeting|folder|person|bookmark|newfolder> <id、名稱或會議 id,…>
         case "renameui":
             guard args.count > 2 else { break }
             switch args[1] {
             case "meeting": if let i = Int64(args[2]) { model.renameTarget = .meeting(i) }
             case "folder": model.renameTarget = .folder(args[2])
-            case "series": if let i = Int64(args[2]) { model.renameTarget = .series(i) }
             case "person": if let i = Int64(args[2]) { model.renameTarget = .person(i) }
             case "bookmark": if let i = Int64(args[2]) { model.renameTarget = .bookmark(i) }
             case "newfolder": model.renameTarget = .newFolder(args[2].split(separator: ",").compactMap { Int64($0) })
             default: break
             }
         case "termrename": if let id { model.renameTerm(id, to: args[2]) }
-        // 定期會議（design §73）
-        case "seriescandidates":   // seriescandidates <輸出.json>
-            write(["candidates": model.seriesCandidates.map {
-                ["key": $0.key, "name": $0.name, "meetingIds": $0.meetingIds, "weekday": $0.weekday, "minute": $0.minute ?? -1,
-                 "intervalWeeks": $0.intervalWeeks, "people": $0.people, "frequency": $0.frequencyText] as [String: Any]
-            }], to: args[1])
-        case "seriescreate":   // seriescreate <候選的 key> <名稱|-> [會議 id,…]：等於確認時按建立
-            if let candidate = model.seriesCandidates.first(where: { $0.key == args[1] }) {
-                let ids = args.count > 3 ? args[3].split(separator: ",").compactMap { Int64($0) } : candidate.meetingIds
-                model.createSeries(candidate, name: args[2] == "-" ? "" : args[2], meetingIds: ids)
-            }
-        case "seriesreject": if let candidate = model.seriesCandidates.first(where: { $0.key == args[1] }) { model.rejectSeriesCandidate(candidate) }
-        case "seriesjoin":   // seriesjoin <會議 id> <系列 id|->
-            if let id { model.setSeries([id], series: Int64(args[2])) }
-        case "seriesfilter":
-            if let id { model.openSeries(id) } else { model.seriesFilter = nil }
-        case "seriesrename": if let id { model.renameSeries(id, to: args[2]) }
-        case "seriesdelete": if let id { model.deleteSeries(id) }
-        case "autojoin":
-            if let id, let series = try? model.db.autoJoinSeries(id) { model.organized(id, folder: nil, series: series) }
-        case "seriessheet": model.showSeriesSuggestions = true
-        case "seriessuggest":   // seriessuggest <會議 id> <輸出.json>：會議頁建議加入的定期會議（R99.3）
-            if let id, let meeting = try? model.db.meeting(id) {
-                let s = model.seriesJoinSuggestion(for: meeting)
-                write(["series": s?.series.id ?? -1, "shared": s?.shared ?? [], "text": s.map { model.seriesJoinText($0.series, shared: $0.shared) } ?? ""],
-                      to: args[2])
-            }
-        case "seriessuggestion":   // seriessuggestion accept|dismiss <會議 id>
-            if let mid = Int64(args[2]), let meeting = try? model.db.meeting(mid), let s = model.seriesJoinSuggestion(for: meeting) {
-                if args[1] == "accept" { model.setSeries([mid], series: s.series.id) } else { model.dismissSeriesJoin(mid, series: s.series.id ?? 0) }
-            }
-        case "seriesopenitems":   // seriesopenitems <系列 id> <輸出.json>
-            if let id {
-                write(["items": model.seriesOpenItems(id).map {
-                    ["meeting": $0.meeting.id ?? 0, "index": $0.index, "task": $0.item.task, "owner": $0.item.owner] as [String: Any]
-                }], to: args[2])
-            }
-        case "previousmeeting":   // previousmeeting <會議 id> <輸出.json>：整理時會接上的上一場（R99.5）
-            if let id, let meeting = try? model.db.meeting(id) {
-                let previous = (try? model.db.previousSeriesMeeting(meeting)).flatMap { $0 }
-                let p = previous.flatMap(PreviousMeeting.init)
-                write(["meeting": previous?.id ?? -1, "items": p?.items.map(\.task) ?? [],
-                       "block": p.map { NotesPrompt.previousBlock($0, language: meeting.meetingLanguage) } ?? ""], to: args[2])
-            }
         // 會議列表的排序、分組、篩選（design §71）
         case "listsort": if let sort = MeetingSort(rawValue: args[1]) { model.meetingSort = sort }
         case "listgroup": if let grouping = MeetingGrouping(rawValue: args[1]) { model.meetingGrouping = grouping }
@@ -634,14 +587,16 @@ enum DebugControl {
             case "move": send(.mouseMoved, clicks: 0)
             default: send(.leftMouseDown, clicks: 1); send(.leftMouseUp, clicks: 1)
             }
-        case "eventlog":   // eventlog <輸出檔|off>：把收到的滑鼠、按鍵事件寫下來（查外面送的事件有沒有進來）
+        case "eventlog":   // eventlog <輸出檔|off>：把收到的滑鼠、按鍵事件寫下來（查外面送的事件有沒有進來；三指拖移的事件、拖曳開始了沒）
             if let eventMonitor { NSEvent.removeMonitor(eventMonitor); self.eventMonitor = nil }
+            eventLogPath = nil
             if args[1] != "off" {
                 let path = args[1]
                 FileManager.default.createFile(atPath: path, contents: nil)
-                eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .rightMouseDown, .mouseMoved, .keyDown]) { event in
-                    let line = "\(event.type.rawValue) win=\(event.windowNumber) loc=\(Int(event.locationInWindow.x)),\(Int(event.locationInWindow.y)) clicks=\(event.type == .keyDown ? 0 : event.clickCount) key=\(event.type == .keyDown ? Int(event.keyCode) : -1)\n"
-                    if let handle = FileHandle(forWritingAtPath: path) { handle.seekToEndOfFile(); handle.write(Data(line.utf8)); try? handle.close() }
+                eventLogPath = path
+                eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .rightMouseDown, .mouseMoved, .keyDown, .pressure]) { event in
+                    let mouse = event.type != .keyDown
+                    note("\(event.type.rawValue) win=\(event.windowNumber) loc=\(Int(event.locationInWindow.x)),\(Int(event.locationInWindow.y)) clicks=\(mouse && event.type != .pressure ? event.clickCount : 0) key=\(mouse ? -1 : Int(event.keyCode)) subtype=\(mouse ? Int(event.subtype.rawValue) : -1) pressure=\(mouse ? event.pressure : 0) buttons=\(NSEvent.pressedMouseButtons)")
                     return event
                 }
             }
@@ -1041,12 +996,9 @@ enum DebugControl {
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
             "folderRules": model.folderRules.map { ["folder": $0.folder, "keywords": $0.keywords, "people": $0.people,
-                                                    "templateId": $0.templateId ?? "", "seriesId": $0.seriesId ?? -1] as [String: Any] },
-            "series": model.series.map { ["id": $0.id ?? 0, "name": $0.name, "weekday": $0.weekday, "minute": $0.minute ?? -1,
-                                          "intervalWeeks": $0.intervalWeeks, "people": $0.people, "count": model.seriesCount($0.id ?? 0)] as [String: Any] },
-            "seriesCandidates": model.seriesCandidates.count, "seriesFilter": model.seriesFilter ?? -1,
+                                                    "templateId": $0.templateId ?? ""] as [String: Any] },
             "confirmRemovePerson": model.confirmRemovePerson ?? -1,
-            "confirmDeleteFolder": model.confirmDeleteFolder ?? "", "confirmDeleteSeries": model.confirmDeleteSeries ?? -1,
+            "confirmDeleteFolder": model.confirmDeleteFolder ?? "",
             "renameTarget": model.renameTarget?.id ?? "",
             "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "",
             "sidebarCollapsed": model.sidebarCollapsed.sorted(), "sidebarExpanded": model.sidebarExpanded.sorted(),
@@ -1238,6 +1190,15 @@ enum DebugControl {
     /// 下一個開始追蹤的選單（右鍵選單、「⋯」）：項目寫到 path（子選單展開成「父 ▸ 子」），然後關掉，不留在使用者畫面上
     private static var menuObserver: NSObjectProtocol?
     private static var eventMonitor: Any?
+    private static var eventLogPath: String?
+    private static let eventLogStart = ProcessInfo.processInfo.systemUptime
+
+    /// eventlog 開著時寫一行（拖曳開始了沒這類，事件以外的東西也寫進同一份）
+    static func note(_ text: String) {
+        guard let path = eventLogPath else { return }
+        let line = String(format: "%.3f ", ProcessInfo.processInfo.systemUptime - eventLogStart) + text + "\n"
+        if let handle = FileHandle(forWritingAtPath: path) { handle.seekToEndOfFile(); handle.write(Data(line.utf8)); try? handle.close() }
+    }
     /// keep：選單留著幾秒再關（給外面截圖）
     /// 接下來打開的選單（右鍵、「⋯」）直接選標題是 title 的那一項（子選單用「移到資料夾 ▸ 客戶」），等於使用者點了它
     private static func pickNextMenu(_ title: String) {

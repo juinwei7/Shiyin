@@ -134,7 +134,7 @@ struct SidebarSectionHeader: View {
 }
 
 /// 側欄的資料夾圖示（R101）：關著、打開兩種表示有沒有展開（參考 ChatGPT 桌面版的專案列表）；系統圖示沒有打開的資料夾，
-/// 自己畫（`OpenFolderShape`），大小、粗細照系統的 `folder`。標記在右上角：齒輪是有自動加入條件，↻ 是定期會議
+/// 自己畫（`OpenFolderShape`），大小、粗細照系統的 `folder`。標記在右上角：齒輪是有自動加入條件
 struct FolderGlyph: View {
     var open: Bool
     var badge: String? = nil
@@ -214,7 +214,7 @@ struct OpenFolderShape: Shape {
     }
 }
 
-/// 資料夾、定期會議在原地展開的最近 5 場；超過時最後一列「顯示全部 N 場」（下面的列表只看這個資料夾、打開系列頁）；
+/// 資料夾在原地展開的最近 5 場；超過時最後一列「顯示全部 N 場」（下面的列表只看這個資料夾）；
 /// 沒有會議時一列「沒有會議」
 struct SidebarPeek: View {
     let rows: [MeetingRow]
@@ -259,7 +259,7 @@ private struct SidebarPeekRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        // 拖到別的資料夾、定期會議、其他會議的標題、垃圾桶（R103.1）：不在 List 的選取裡，蓋拖曳把手；沒拖就是點一下
+        // 拖到別的資料夾、其他會議的標題、垃圾桶（R103.1）：不在 List 的選取裡，蓋拖曳把手；沒拖就是點一下
         .sidebarDragHandle(type: .shiyinMeetingIDs, label: row.meeting.displayTitle,
                            data: { Data(model.dragIDs(for: row.id).map(String.init).joined(separator: ",").utf8) }, onClick: open)
         .floatingRowMenu(selected: selected) { model.meetingMenu([row.id]) }

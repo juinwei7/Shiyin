@@ -15,15 +15,6 @@ extension AppModel {
             entries += [.action(String(localized: "重新命名…"), icon: "pencil", shortcut: "↩") { self.requestRenameMeeting(id) }, .divider]
         }
         entries.append(.submenu(String(localized: "移到資料夾"), icon: "folder", folderMoveEntries(ids)))
-        let current = commonSeries(ids)
-        let others = series.filter { $0.id != current }
-        if !others.isEmpty {
-            entries.append(.submenu(String(localized: "加到定期會議"), icon: "arrow.triangle.2.circlepath",
-                                    others.map { s in .action(s.name) { self.setSeries(ids, series: s.id) } }))
-        }
-        if let current, let s = seriesById(current) {
-            entries.append(.action(String(localized: "移出「\(s.name)」"), icon: "minus.circle") { self.setSeries(ids, series: nil) })
-        }
         entries.append(.divider)
         if ids.count == 1 {
             entries.append(.action(String(localized: "移到垃圾桶"), icon: "trash", shortcut: "⌘⌫", destructive: true) { self.moveToTrash(ids) })
@@ -60,16 +51,6 @@ extension AppModel {
          .action(String(localized: "刪除資料夾…"), icon: "trash", destructive: true) { self.confirmDeleteFolder = folder }]
     }
 
-    /// 定期會議：側欄多一項「打開定期會議」（點定期會議是展開、收起）
-    func seriesMenu(_ series: MeetingSeries) -> [MenuEntry] {
-        guard let id = series.id else { return [] }
-        return [.action(String(localized: "打開定期會議"), icon: "arrow.up.forward.app") { self.openSeries(id) },
-                .divider,
-                .action(String(localized: "重新命名…"), icon: "pencil") { self.renameTarget = .series(id) },
-                .divider,
-                .action(String(localized: "刪除定期會議…"), icon: "trash", destructive: true) { self.confirmDeleteSeries = id }]
-    }
-
     func personMenu(_ person: PersonOverview) -> [MenuEntry] {
         let others = peopleOverview.filter { $0.id != person.id }
         var entries: [MenuEntry] = [.action(String(localized: "重新命名…"), icon: "pencil", shortcut: "↩") {
@@ -89,16 +70,10 @@ extension AppModel {
         return entries
     }
 
-    /// 人物頁、系列頁裡的一場會議：打開；在定期會議裡的可以移出
-    func meetingLinkMenu(_ meeting: Meeting, series: MeetingSeries? = nil) -> [MenuEntry] {
+    /// 人物頁裡的一場會議：打開
+    func meetingLinkMenu(_ meeting: Meeting) -> [MenuEntry] {
         guard let id = meeting.id else { return [] }
-        var entries: [MenuEntry] = [.action(String(localized: "打開這場會議"), icon: "arrow.up.forward.app") {
-            if series != nil { self.selection = id } else { self.openFromPersonPage(id) }
-        }]
-        if let series {
-            entries += [.divider, .action(String(localized: "移出「\(series.name)」"), icon: "minus.circle") { self.setSeries([id], series: nil) }]
-        }
-        return entries
+        return [.action(String(localized: "打開這場會議"), icon: "arrow.up.forward.app") { self.openFromPersonPage(id) }]
     }
 
     /// 會議紀錄的一條：拷貝、從這裡播放、編輯、刪除

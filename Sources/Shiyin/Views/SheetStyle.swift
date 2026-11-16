@@ -110,7 +110,7 @@ extension View {
     }
 }
 
-/// 選單式的欄位（範本、定期會議這類選一個）：外框同輸入框，右邊上下箭頭
+/// 選單式的欄位（範本這類選一個）：外框同輸入框，右邊上下箭頭
 struct SheetMenuField<Value: Hashable>: View {
     let options: [(value: Value, title: String)]
     @Binding var selection: Value

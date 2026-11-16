@@ -132,9 +132,6 @@ struct MainView: View {
                 }
             } else if model.multiSelected.count > 1 {
                 MultiSelectionView(ids: model.multiSelected)
-            } else if model.selection == nil, !model.showTrash, let series = model.seriesById(model.seriesFilter) {
-                // 系列頁（design §73）：側欄點了定期會議、還沒選會議
-                SeriesPage(series: series).id(series.id)
             } else if let detail = model.detail {
                 MeetingDetailView(detail: detail)
                     .id(detail.meeting.id)
@@ -163,8 +160,7 @@ struct MainView: View {
         }
         // 重新命名、新資料夾的彈窗（R102、design §76）
         .sheet(item: Binding(get: { model.renameTarget }, set: { model.renameTarget = $0 })) { RenameSheet(target: $0) }
-        // 可能的定期會議（design §73）、資料夾的自動加入條件（design §72）
-        .sheet(isPresented: $model.showSeriesSuggestions) { SeriesSuggestionSheet() }
+        // 資料夾的自動加入條件（design §72）
         .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.name })) {
             FolderRuleSheet(folder: $0.name)
         }
@@ -306,19 +302,17 @@ struct SidebarView: View {
             FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: false) {
                 model.sidebarMode = .meetings
                 model.folderFilter = nil
-                model.seriesFilter = nil
             }
             FolderRow(name: String(localized: "人物"), count: model.peopleOverview.count, symbol: "person.2", selected: people) {
                 model.sidebarMode = .people
                 model.reloadPeopleOverview()
             }
         }
-        // 段落可以收起；每個資料夾、定期會議可以在原地展開最近的會議。定期會議的樣子、操作都跟資料夾一樣，
-        // 放在同一段的最上面，不另外一段（R101、design §75）。一直顯示，標題右邊「+」建空的資料夾（R104、design §78）
+        // 段落可以收起；每個資料夾可以在原地展開最近的會議（R101、design §75）。一直顯示，標題右邊「+」建空的資料夾（R104、design §78）
         Section {
             if model.isSectionExpanded("folders") {
                 SidebarFolderRows()
-                if model.folders.isEmpty && model.series.isEmpty && model.seriesCandidates.isEmpty {
+                if model.folders.isEmpty {
                     Text("按 + 新增資料夾").font(.callout).foregroundStyle(.secondary).selectionDisabled()
                 }
             }
@@ -347,7 +341,7 @@ struct SidebarView: View {
             // 「⋯」和右鍵：自己畫的選單（R105）；選到的是多選裡的一場時，選單對整個多選
             .floatingRowMenu(selected: selected) { model.meetingMenu(model.dragIDs(for: row.id)) }
             .sidebarSelectableRow(selected: selected)
-            // 拖到資料夾、定期會議、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選
+            // 拖到資料夾、其他會議的標題、垃圾桶（R103.1）；在多選裡時拖整個多選
             .onDrag { model.meetingDragProvider(for: row.id) }
             .tag(row.id)
     }
@@ -438,7 +432,7 @@ struct SidebarView: View {
     }
 }
 
-/// 側欄的資料夾列（R9.2）：所有會議、人物點了換下面的列表；資料夾、定期會議點了在原地展開（R101）。有選單時（資料夾、定期會議，R100）滑過或選到時
+/// 側欄的資料夾列（R9.2）：所有會議、人物點了換下面的列表；資料夾點了在原地展開（R101）。有選單時（資料夾，R100）滑過或選到時
 /// 數量的位置換成「⋯」。整列用點擊手勢，不用 Button：List 裡的按鈕會把右鍵當成點擊，右鍵選單出不來
 /// （2026-11-16 自己驗收時發現）
 struct FolderRow: View {
@@ -447,7 +441,7 @@ struct FolderRow: View {
     let count: Int
     let symbol: String
     let selected: Bool
-    /// 資料夾、定期會議（R101）：點了在原地展開、收起，圖示換成打開或關著的資料夾（nil 是所有會議、人物這種一般的列）
+    /// 資料夾（R101）：點了在原地展開、收起，圖示換成打開或關著的資料夾（nil 是所有會議、人物這種一般的列）
     var folder: FolderState? = nil
     /// 拖曳排序用的鍵（R103.2）；nil 不能拖
     var dragKey: String? = nil
@@ -468,7 +462,7 @@ struct FolderRow: View {
 
     struct FolderState {
         var expanded: Bool
-        /// 右上角的標記：齒輪（有自動加入條件）、↻（定期會議）
+        /// 右上角的標記：齒輪（有自動加入條件）
         var badge: String?
     }
 
@@ -501,7 +495,7 @@ struct FolderRow: View {
                 Spacer()
             }
             .contentShape(Rectangle())
-            // 可以拖的列（資料夾、定期會議）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）；其他列（所有會議、人物）
+            // 可以拖的列（資料夾）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）；其他列（所有會議、人物）
             // 蓋只接點一下的 view，不用 onTapGesture（會讓整個表格的點擊卡住，見 sidebarClick）
             .modifier(FolderRowHandle(name: name, dragKey: dragKey, action: action))
             // 右邊不放場數（ChatGPT 的專案列表），滑過或選到時「⋯」

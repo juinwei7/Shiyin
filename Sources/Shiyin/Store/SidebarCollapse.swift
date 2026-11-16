@@ -4,10 +4,9 @@ import Foundation
 
 extension AppModel {
     nonisolated static func folderKey(_ name: String) -> String { "folder:" + name }
-    nonisolated static func seriesKey(_ id: Int64) -> String { "series:\(id)" }
     nonisolated static func groupKey(_ group: MeetingGroup) -> String { "group:" + group.id }
 
-    /// 段落（series、folders、meetings、people、group:…）展開了沒；預設展開
+    /// 段落（folders、meetings、people、group:…）展開了沒；預設展開
     func isSectionExpanded(_ key: String) -> Bool { !sidebarCollapsed.contains(key) }
 
     func setSection(_ key: String, expanded: Bool) {
@@ -16,7 +15,7 @@ extension AppModel {
         if !expanded, !sidebarCollapsed.contains(key) { sidebarCollapsed.insert(key) }
     }
 
-    /// 資料夾、定期會議在原地展開了沒；預設收起
+    /// 資料夾在原地展開了沒；預設收起
     func isRowExpanded(_ key: String) -> Bool { sidebarExpanded.contains(key) }
 
     func setRow(_ key: String, expanded: Bool) {
@@ -24,7 +23,7 @@ extension AppModel {
         if !expanded, sidebarExpanded.contains(key) { sidebarExpanded.remove(key) }
     }
 
-    /// 點資料夾、定期會議：在原地展開或收起（R101.2）
+    /// 點資料夾：在原地展開或收起（R101.2）
     func toggleRow(_ key: String) { setRow(key, expanded: !isRowExpanded(key)) }
 
     /// 下面的列表只看這個資料夾（展開後的「顯示全部 N 場」）
@@ -33,9 +32,8 @@ extension AppModel {
         folderFilter = name
     }
 
-    /// 資料夾、定期會議裡的會議（不含垃圾桶），日期新到舊（資料庫讀出來的順序）
+    /// 資料夾裡的會議（不含垃圾桶），日期新到舊（資料庫讀出來的順序）
     func peekRows(folder: String) -> [MeetingRow] { meetings.filter { $0.meeting.folder == folder } }
-    func peekRows(series id: Int64) -> [MeetingRow] { meetings.filter { $0.meeting.seriesId == id } }
 
     /// 點了展開的那一場：人物模式換回會議、選那場；下面的列表不換
     func openFromSidebar(_ id: Int64) {
@@ -43,25 +41,23 @@ extension AppModel {
         selection = id
     }
 
-    /// 下面的列表只放資料夾、定期會議以外的會議（R101.6，參考 ChatGPT 的「最近項目」：專案裡的對話不在下面）。
+    /// 下面的列表只放資料夾以外的會議（R101.6，參考 ChatGPT 的「最近項目」：專案裡的對話不在下面）。
     /// 沒有看某個資料夾、沒有篩選、不是依資料夾分組時才這樣：篩選、依資料夾分組是要跨資料夾找東西。
-    /// 還沒有資料夾、定期會議時就是所有會議
+    /// 還沒有資料夾時就是所有會議
     var listShowsOthersOnly: Bool {
-        !showTrash && folderFilter == nil && seriesFilter == nil && !meetingFilter.isActive
-            && meetingGrouping != .folder && (meetings.contains { !$0.meeting.folder.isEmpty || $0.meeting.seriesId != nil })
+        !showTrash && folderFilter == nil && !meetingFilter.isActive
+            && meetingGrouping != .folder && (meetings.contains { !$0.meeting.folder.isEmpty })
     }
 
     /// 程式帶你去某場會議時（reveal），看得到它在哪裡：在下面的列表就展開列表和那一組；
-    /// 在資料夾、定期會議裡（下面的列表沒有）就展開那個資料夾
+    /// 在資料夾裡（下面的列表沒有）就展開那個資料夾
     func expandToShow(_ id: Int64) {
         if let group = meetingGroups.first(where: { group in group.rows.contains { $0.id == id } }) {
             setSection("meetings", expanded: true)
             setSection(Self.groupKey(group), expanded: true)
         } else if let meeting = meetings.first(where: { $0.id == id })?.meeting {
             setSection("folders", expanded: true)
-            if let series = meeting.seriesId {
-                setRow(Self.seriesKey(series), expanded: true)
-            } else if !meeting.folder.isEmpty {
+            if !meeting.folder.isEmpty {
                 setRow(Self.folderKey(meeting.folder), expanded: true)
             }
         }

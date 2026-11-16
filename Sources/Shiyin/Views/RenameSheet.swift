@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 重新命名的彈窗（R102、design §76，參考 ChatGPT 的「重新命名對話」）：標題、一行說明、帶目前名字的輸入框、取消／儲存。
-/// 會議、資料夾、新資料夾、定期會議、人物、標記都用這一個
+/// 會議、資料夾、新資料夾、人物、標記都用這一個
 struct RenameSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -48,7 +48,6 @@ struct RenameSheet: View {
         case .meeting: String(localized: "重新命名會議")
         case .folder: String(localized: "重新命名資料夾")
         case .newFolder: String(localized: "新資料夾")
-        case .series: String(localized: "重新命名定期會議")
         case .person: String(localized: "重新命名這個人")
         case .bookmark: String(localized: "重新命名標記")
         }
@@ -78,7 +77,6 @@ struct RenameSheet: View {
         case .newFolder(let ids):
             return ids.count > 1 ? String(localized: "例如專案名稱或客戶名稱。這 \(ids.count) 場會議會移進新資料夾。")
                                  : String(localized: "例如專案名稱或客戶名稱。這場會議會移進新資料夾。")
-        case .series: return String(localized: "保持簡短、容易辨識。")
         case .person: return String(localized: "所有會議裡的這個人都會跟著改。")
         case .bookmark(let id):
             let time = model.detail?.bookmarks.first { $0.id == id }?.time ?? 0

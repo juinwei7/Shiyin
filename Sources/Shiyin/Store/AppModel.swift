@@ -278,14 +278,14 @@ final class AppModel {
         didSet { UserDefaults.standard.set(meetingGrouping.rawValue, forKey: AppSettings.meetingGroupingKey) }
     }
     var meetingFilter = MeetingFilter() { didSet { if oldValue != meetingFilter { selectedMeetings = [] } } }
-    /// 側欄的收合（R101、design §75）：收起來的段落、在原地展開的資料夾和定期會議；記住
+    /// 側欄的收合（R101、design §75）：收起來的段落、在原地展開的資料夾；記住
     var sidebarCollapsed = Set(UserDefaults.standard.stringArray(forKey: AppSettings.sidebarCollapsedKey) ?? []) {
         didSet { if oldValue != sidebarCollapsed { UserDefaults.standard.set(sidebarCollapsed.sorted(), forKey: AppSettings.sidebarCollapsedKey) } }
     }
     var sidebarExpanded = Set(UserDefaults.standard.stringArray(forKey: AppSettings.sidebarExpandedKey) ?? []) {
         didSet { if oldValue != sidebarExpanded { UserDefaults.standard.set(sidebarExpanded.sorted(), forKey: AppSettings.sidebarExpandedKey) } }
     }
-    /// 資料夾、定期會議拖曳排好的順序（R103.2、design §77），鍵同 sidebarExpanded
+    /// 資料夾拖曳排好的順序（R103.2、design §77），鍵同 sidebarExpanded
     var sidebarOrder = UserDefaults.standard.stringArray(forKey: AppSettings.sidebarOrderKey) ?? [] {
         didSet { if oldValue != sidebarOrder { UserDefaults.standard.set(sidebarOrder, forKey: AppSettings.sidebarOrderKey) } }
     }
@@ -294,32 +294,16 @@ final class AppModel {
     var pendingImportFolder: String?
     /// 每場會議連到哪些人物（「有誰參加」篩選），跟人物總覽一起讀
     var meetingPeople: [Int64: Set<Int64>] = [:]
-    /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）。跟定期會議互斥
+    /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
     var folderFilter: String? {
-        didSet {
-            if oldValue != folderFilter { selectedMeetings = [] }
-            if folderFilter != nil { seriesFilter = nil }
-        }
+        didSet { if oldValue != folderFilter { selectedMeetings = [] } }
     }
     /// 資料夾的自動加入條件（R98、design §72）；正在編輯哪個資料夾的條件
     var folderRules: [FolderRule] = []
     /// 資料夾表裡的名字（R104：空的資料夾也在）
     var folderNames: [String] = []
     var editingFolderRule: String?
-    /// 定期會議（R99、design §73）、可能的定期會議、側欄只看哪一個（還沒選會議時右邊是系列頁）
-    var series: [MeetingSeries] = []
-    var seriesCandidates: [SeriesCandidate] = []
-    /// 按過「不是定期會議」的組、建議加入按過「不是」的（design §73）
-    var seriesRejected: Set<String> = []
-    var seriesFilter: Int64? {
-        didSet {
-            if oldValue != seriesFilter { selectedMeetings = [] }
-            if seriesFilter != nil { folderFilter = nil }
-        }
-    }
-    /// 打開「可能的定期會議」確認
-    var showSeriesSuggestions = false
-    /// 重新命名的彈窗（R102、design §76）：會議、資料夾、新資料夾、定期會議、人物、標記都用這一個
+    /// 重新命名的彈窗（R102、design §76）：會議、資料夾、新資料夾、人物、標記都用這一個
     var renameTarget: RenameTarget?
     var glossary: [GlossaryTerm] = []
     var glossarySuggestions: [GlossarySuggestion] = []
@@ -370,6 +354,9 @@ final class AppModel {
         do {
             try Paths.ensureDirectories()
             db = try AppDatabase(path: Paths.database.path, documentsRoot: Paths.documentsDir)
+            // migration v14 可能把側欄的鍵換過（定期會議換成資料夾，design §73）：重讀
+            sidebarExpanded = Set(UserDefaults.standard.stringArray(forKey: AppSettings.sidebarExpandedKey) ?? [])
+            sidebarOrder = UserDefaults.standard.stringArray(forKey: AppSettings.sidebarOrderKey) ?? []
         } catch {
             // 遷移在交易裡進行，失敗時原本的資料不會被改到（N3）；說明清楚後結束，不要直接閃退
             let alert = NSAlert()
@@ -386,7 +373,7 @@ final class AppModel {
         environment = EnvironmentStatus(items: [])
         runner.onChange = { [weak self] in self?.reload() }
         runner.onFinished = { [weak self] job, error in self?.jobFinished(job, error: error) }
-        runner.onOrganized = { [weak self] id, folder, series in self?.organized(id, folder: folder, series: series) }
+        runner.onOrganized = { [weak self] id, folder in self?.organized(id, folder: folder) }
         recorder.onLiveFinished = { [weak self] id, duration in self?.enqueueDraftNotes(meetingId: id, duration: duration) }
         runner.onRediarized = { [weak self] id, result in
             guard let self, self.selection == id else { return }
@@ -500,9 +487,6 @@ final class AppModel {
             meetingPeople = try db.meetingPeople()
             folderRules = try db.folderRules()
             folderNames = try db.folderNames()
-            series = try db.series()
-            seriesRejected = try db.rejectedSeriesKeys()
-            seriesCandidates = SeriesDetector.candidates(seriesInputs, rejected: seriesRejected)
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
             errorMessage = error.localizedDescription
@@ -514,7 +498,6 @@ final class AppModel {
         // 有自動加入條件的資料夾沒有會議也留著（design §72）
         if let folderFilter, !meetings.contains(where: { $0.meeting.folder == folderFilter }),
            !folderRules.contains(where: { $0.folder == folderFilter }) { self.folderFilter = nil }
-        if let seriesFilter, !series.contains(where: { $0.id == seriesFilter }) { self.seriesFilter = nil }
         reloadDetail()
     }
 
@@ -656,9 +639,8 @@ final class AppModel {
     /// 列表上的會議：資料夾、篩選（垃圾桶不篩選）、排序（R97、design §71）
     var filteredMeetings: [MeetingRow] {
         var source = showTrash ? trash : meetings
-        if listShowsOthersOnly { source = source.filter { $0.meeting.folder.isEmpty && $0.meeting.seriesId == nil } }
+        if listShowsOthersOnly { source = source.filter { $0.meeting.folder.isEmpty } }
         if !showTrash, let folderFilter { source = source.filter { $0.meeting.folder == folderFilter } }
-        if !showTrash, let seriesFilter { source = source.filter { $0.meeting.seriesId == seriesFilter } }
         if !showTrash, meetingFilter.isActive { source = source.filter { matches($0, meetingFilter) } }
         let keyword = filter.trimmingCharacters(in: .whitespaces)
         if !keyword.isEmpty { source = source.filter { $0.meeting.displayTitle.localizedCaseInsensitiveContains(keyword) } }
@@ -1770,9 +1752,8 @@ final class AppModel {
     var peopleOverview: [PersonOverview] = []
     /// 移除一個人的確認（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
-    /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾／定期會議的確認、正在就地改的那一條紀錄
+    /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾的確認、正在就地改的那一條紀錄
     var confirmDeleteFolder: String?
-    var confirmDeleteSeries: Int64?
     var editingNoteItem: NoteItemRef?
 
     func reloadPeople() {

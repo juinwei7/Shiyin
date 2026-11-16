@@ -1,80 +1,7 @@
 import Foundation
 
-/// 資料夾自動歸類、定期會議（R98、R99、design §72、§73）
+/// 資料夾自動歸類（R98、design §72）
 extension AppModel {
-    /// 找可能的定期會議：不在垃圾桶、不在定期會議裡的會議
-    var seriesInputs: [SeriesDetector.Input] {
-        meetings.compactMap { row in
-            guard row.meeting.seriesId == nil, let time = MeetingTime(row.meeting) else { return nil }
-            return SeriesDetector.Input(id: row.id, time: time, people: meetingPeople[row.id] ?? [], title: row.meeting.displayTitle)
-        }
-    }
-
-    func seriesById(_ id: Int64?) -> MeetingSeries? {
-        guard let id else { return nil }
-        return series.first { $0.id == id }
-    }
-
-    func seriesCount(_ id: Int64) -> Int { meetings.filter { $0.meeting.seriesId == id }.count }
-
-    /// 側欄點了定期會議：只看它的會議，右邊是系列頁
-    func openSeries(_ id: Int64) {
-        sidebarMode = .meetings
-        showTrash = false
-        seriesFilter = id
-        selection = nil
-    }
-
-    // MARK: 定期會議
-
-    func createSeries(_ candidate: SeriesCandidate, name: String, meetingIds: [Int64]) {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let series = MeetingSeries(name: trimmed.isEmpty ? candidate.name : trimmed, weekday: candidate.weekday, minute: candidate.minute,
-                                   intervalWeeks: candidate.intervalWeeks, people: candidate.people)
-        perform { try db.createSeries(series, meetingIds: meetingIds) }
-    }
-
-    func rejectSeriesCandidate(_ candidate: SeriesCandidate) {
-        perform { try db.rejectSeries(candidate.key) }
-    }
-
-    func renameSeries(_ id: Int64, to name: String) {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        perform { try db.renameSeries(id, to: trimmed) }
-    }
-
-    /// 會議留著；之後不再建議同一組
-    func deleteSeries(_ id: Int64) {
-        if seriesFilter == id { seriesFilter = nil }
-        setRow(Self.seriesKey(id), expanded: false)
-        sidebarOrder.removeAll { $0 == Self.seriesKey(id) }
-        perform { try db.deleteSeries(id) }
-    }
-
-    /// 加到定期會議、移出（series 是 nil）；多選時一起（手動加入不檢查條件）
-    func setSeries(_ ids: [Int64], series: Int64?) {
-        guard !ids.isEmpty else { return }
-        perform { try db.setSeries(ids, series: series) }
-    }
-
-    /// 這幾場共同的定期會議；不同或都沒有時 nil
-    func commonSeries(_ ids: [Int64]) -> Int64? {
-        let values = Set(ids.map { id in meetings.first { $0.id == id }?.meeting.seriesId })
-        return values.count == 1 ? values.first ?? nil : nil
-    }
-
-    /// 系列頁：還沒完成的待辦、常參加的人
-    func seriesOpenItems(_ id: Int64) -> [PersonActionItem] {
-        SeriesOpenItems.compute((try? db.seriesMeetings(id)) ?? [])
-    }
-
-    func seriesRegulars(_ id: Int64) -> [PersonOverview] {
-        let ids = meetings.filter { $0.meeting.seriesId == id }.map(\.id)
-        let core = SeriesDetector.core(ids.map { meetingPeople[$0] ?? [] })
-        return peopleOverview.filter { core.contains($0.id) }
-    }
-
     // MARK: 資料夾的條件
 
     func folderRule(_ folder: String) -> FolderRule? { folderRules.first { $0.folder == folder } }
@@ -91,7 +18,7 @@ extension AppModel {
         }
     }
 
-    /// 側欄滑過去看的條件：「標題包含 週會、sync；陳家豪、王小明都參加；範本：一對一；定期會議：產品週會」
+    /// 側欄滑過去看的條件：「標題包含 週會、sync；陳家豪、王小明都參加；範本：一對一」
     func folderRuleSummary(_ rule: FolderRule) -> String {
         let separator = MeetingLanguage.ui(zh: "、", en: ", ")
         var parts: [String] = []
@@ -101,36 +28,8 @@ extension AppModel {
         if let id = rule.templateId, let template = templates.first(where: { $0.id == id }) {
             parts.append(String(localized: "範本：\(template.displayName)"))
         }
-        if let series = seriesById(rule.seriesId) { parts.append(String(localized: "定期會議：\(series.name)")) }
         let joined = parts.joined(separator: MeetingLanguage.ui(zh: "；", en: "; "))
         return String(localized: "自動加入：\(joined)")
-    }
-
-    // MARK: 建議加入定期會議（R99.3、design §73）
-
-    /// 證據不夠自動加入時（星期幾、時間對得上，只認出一位系列的人）：會議頁建議。回傳系列和共同的人
-    func seriesJoinSuggestion(for meeting: Meeting) -> (series: MeetingSeries, shared: [Int64])? {
-        guard let id = meeting.id, meeting.seriesId == nil, meeting.deletedAt == nil, recorder.meetingId != id,
-              let time = MeetingTime(meeting), let attended = meetingPeople[id], !attended.isEmpty else { return nil }
-        let infos = series.compactMap { s -> SeriesDetector.SeriesInfo? in
-            guard let sid = s.id, !seriesRejected.contains(SeriesDetector.joinKey(meeting: id, series: sid)) else { return nil }
-            let last = meetings.first { $0.meeting.seriesId == sid && $0.id != id }.flatMap { MeetingTime($0.meeting) }
-            return SeriesDetector.SeriesInfo(id: sid, weekday: s.weekday, minute: s.minute, people: Set(s.people), lastDay: last?.day)
-        }
-        guard case .suggest(let sid, let shared) = SeriesDetector.joinDecision(time: time, attended: attended, series: infos),
-              let chosen = seriesById(sid) else { return nil }
-        return (chosen, shared)
-    }
-
-    func seriesJoinText(_ series: MeetingSeries, shared: [Int64]) -> String {
-        let names = shared.compactMap { id in peopleOverview.first { $0.id == id }?.name }
-            .joined(separator: MeetingLanguage.ui(zh: "、", en: ", "))
-        return String(localized: "這場可能是定期會議「\(series.name)」的一場：\(SeriesDetector.weekdayName(series.weekday))、\(names) 有參加")
-    }
-
-    /// 「不是」：之後不再建議這場加入這個系列
-    func dismissSeriesJoin(_ meetingId: Int64, series: Int64) {
-        perform { try db.rejectSeries(SeriesDetector.joinKey(meeting: meetingId, series: series)) }
     }
 
     // MARK: 建議放進資料夾（R98.3）
@@ -167,13 +66,9 @@ extension AppModel {
 
     // MARK: 自動（轉錄完、整理完）
 
-    func organized(_ meetingId: Int64, folder: String?, series: MeetingSeries?) {
+    func organized(_ meetingId: Int64, folder: String?) {
         reload()
         let title = (try? db.meeting(meetingId))?.displayTitle ?? ""
-        if let folder {
-            noticeMessage = String(localized: "「\(title)」已放進「\(folder)」")
-        } else if let series {
-            noticeMessage = String(localized: "「\(title)」已加到定期會議「\(series.name)」")
-        }
+        if let folder { noticeMessage = String(localized: "「\(title)」已放進「\(folder)」") }
     }
 }

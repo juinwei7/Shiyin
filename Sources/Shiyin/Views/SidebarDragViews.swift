@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 /// 拖到側欄一列上的位置：放進去（會議、檔案）、放在前面或後面（排序）
 enum SidebarDropState: Equatable { case into, before, after }
 
-/// 一列收什麼：會議、資料夾或定期會議（排序）、Finder 的檔案
+/// 一列收什麼：會議、資料夾（排序）、Finder 的檔案
 struct SidebarRowDrop {
     var meetings: (([Int64]) -> Void)? = nil
     /// 拖過來的鍵、放在前面（true）或後面
@@ -39,6 +39,9 @@ struct SidebarRowDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         let current = kind(info)
+        #if DEBUG
+        DebugControl.note("drop: \(String(describing: current))")
+        #endif
         state = nil
         switch current {
         case .before?, .after?:
@@ -113,60 +116,33 @@ extension View {
     }
 }
 
-/// 「資料夾」那一段（R101.3、R103）：「發現 N 組可能的定期會議」、再來定期會議和資料夾（照拖曳排好的順序）
+/// 「資料夾」那一段（R101.3、R103）：資料夾（照拖曳排好的順序）
 struct SidebarFolderRows: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let people = model.sidebarMode == .people
-        if !model.seriesCandidates.isEmpty {
-            // 不用 Button：List 裡的 SwiftUI 按鈕會讓整個表格的點擊卡住（見 sidebarClick）
-            Label(String(localized: "發現 \(model.seriesCandidates.count) 組可能的定期會議"), systemImage: "sparkles")
-                .labelStyle(SidebarLabelStyle())
-                .foregroundStyle(Color.celadon)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .sidebarClick { model.showSeriesSuggestions = true }
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction(.default) { model.showSeriesSuggestions = true }
-            .help("同一群人、每週同一天同一個時間開的會議。確認之後，下次的會議會自動加進去，整理時接上上次的待辦")
-        }
         ForEach(model.sidebarFolderItems) { item in
+            let name = item.name
             let key = item.key
             let expanded = model.isRowExpanded(key)
             let toggle = { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) } }
             let reorder: (String, Bool) -> Void = { dragged, before in
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.moveSidebarItem(dragged, to: key, before: before) }
             }
-            switch item {
-            case .series(let series):
-                let id = series.id ?? 0
-                // 定期會議也是資料夾的樣子，右上角 ↻ 標記（R101.3）
-                FolderRow(name: series.name, count: model.seriesCount(id), symbol: "folder",
-                          selected: !people && model.seriesFilter == id,
-                          folder: .init(expanded: expanded, badge: "arrow.triangle.2.circlepath"),
-                          dragKey: key,
-                          drop: SidebarRowDrop(meetings: { model.setSeries($0, series: id) }, item: reorder),
-                          menu: { model.seriesMenu(series) }, action: toggle)
-                .help(series.frequencyText)
-                if expanded {
-                    SidebarPeek(rows: model.peekRows(series: id)) { model.openSeries(id) }
-                }
-            case .folder(let name, let count):
-                // 有自動加入條件的資料夾加齒輪標記，滑過去看條件（design §72）
-                let rule = model.folderRule(name)
-                FolderRow(name: name, count: count, symbol: "folder",
-                          selected: !people && model.folderFilter == name,
-                          folder: .init(expanded: expanded, badge: rule == nil ? nil : "gearshape.fill"),
-                          dragKey: key,
-                          drop: SidebarRowDrop(meetings: { model.moveToFolder($0, folder: name) }, item: reorder,
-                                               files: { model.importDropped($0, into: name) }),
-                          menu: { model.folderMenu(name) }, action: toggle)
-                .help(rule.map { model.folderRuleSummary($0) } ?? "")
-                if expanded {
-                    SidebarPeek(rows: model.peekRows(folder: name)) { model.showFolder(name) }
-                }
+            // 有自動加入條件的資料夾加齒輪標記，滑過去看條件（design §72）
+            let rule = model.folderRule(name)
+            FolderRow(name: name, count: item.count, symbol: "folder",
+                      selected: !people && model.folderFilter == name,
+                      folder: .init(expanded: expanded, badge: rule == nil ? nil : "gearshape.fill"),
+                      dragKey: key,
+                      drop: SidebarRowDrop(meetings: { model.moveToFolder($0, folder: name) }, item: reorder,
+                                           files: { model.importDropped($0, into: name) }),
+                      menu: { model.folderMenu(name) }, action: toggle)
+            .help(rule.map { model.folderRuleSummary($0) } ?? "")
+            if expanded {
+                SidebarPeek(rows: model.peekRows(folder: name)) { model.showFolder(name) }
             }
         }
     }
@@ -174,7 +150,7 @@ struct SidebarFolderRows: View {
 
 // MARK: - 側欄的拖曳把手
 
-/// 側欄裡不在 List 選取範圍的列（資料夾、定期會議、展開的會議）：List 只讓有 tag 的列開始拖曳，列上的 DragGesture
+/// 側欄裡不在 List 選取範圍的列（資料夾、展開的會議）：List 只讓有 tag 的列開始拖曳，列上的 DragGesture
 /// 也收不到拖曳（滑鼠拖動被 List 吃掉；2026-11-16 自己驗收時發現）。在列上蓋一層只接左鍵的 AppKit view：
 /// 拖動超過 4 點開始系統的拖曳（放的地方跟下面列表、Finder 的拖曳同一套 onDrop），沒拖就當成點一下；
 /// 右鍵、滑過照舊交給下面的 SwiftUI（右鍵選單、滑過的底）
@@ -224,6 +200,9 @@ struct SidebarDragHandle: NSViewRepresentable {
             let at = convert(event.locationInWindow, from: nil)
             dragItem.setDraggingFrame(NSRect(x: at.x - 12, y: at.y - image.size.height / 2, width: image.size.width, height: image.size.height),
                                       contents: image)
+            #if DEBUG
+            DebugControl.note("drag handle: begin dragging \(label)")
+            #endif
             beginDraggingSession(with: [dragItem], event: event, source: self)
         }
 
@@ -238,6 +217,9 @@ struct SidebarDragHandle: NSViewRepresentable {
         }
 
         func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+            #if DEBUG
+            DebugControl.note("drag handle: ended operation=\(operation.rawValue)")
+            #endif
             dragging = false
             downPoint = nil
         }

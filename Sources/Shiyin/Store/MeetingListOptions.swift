@@ -15,9 +15,9 @@ enum MeetingSort: String, CaseIterable, Identifiable {
     }
 }
 
-/// 會議列表的分組（R97.2）：記住；依定期會議要有定期會議才出現（R99）
+/// 會議列表的分組（R97.2）：記住（以前存的 series 讀成不分組）
 enum MeetingGrouping: String, CaseIterable, Identifiable {
-    case none, month, folder, series
+    case none, month, folder
     var id: String { rawValue }
 
     var label: String {
@@ -25,7 +25,6 @@ enum MeetingGrouping: String, CaseIterable, Identifiable {
         case .none: return String(localized: "不分組")
         case .month: return String(localized: "依月份")
         case .folder: return String(localized: "依資料夾")
-        case .series: return String(localized: "依定期會議")
         }
     }
 }
@@ -51,17 +50,17 @@ extension AppModel {
     /// 「我」的名字（R80）：「有我的待辦的」用；沒有設定「我」是 nil
     var myName: String? { peopleOverview.first(where: \.isMe)?.name }
 
-    /// 實際用的分組：看某個資料夾時不依資料夾分組；依定期會議要等 R99（design §71）
+    /// 實際用的分組：看某個資料夾時不依資料夾分組（design §71）
     var effectiveGrouping: MeetingGrouping {
         switch meetingGrouping {
-        case .folder where folderFilter != nil, .series: return .none
+        case .folder where folderFilter != nil: return .none
         default: return meetingGrouping
         }
     }
 
     /// 選單裡可以選的分組
     var availableGroupings: [MeetingGrouping] {
-        MeetingGrouping.allCases.filter { $0 != .series && ($0 != .folder || folderFilter == nil) }
+        MeetingGrouping.allCases.filter { $0 != .folder || folderFilter == nil }
     }
 
     func matches(_ row: MeetingRow, _ filter: MeetingFilter) -> Bool {
@@ -93,7 +92,7 @@ extension AppModel {
         let rows = filteredMeetings
         guard !showTrash else { return [MeetingGroup(id: "all", title: "", rows: rows)] }
         switch effectiveGrouping {
-        case .none, .series:
+        case .none:
             return [MeetingGroup(id: "all", title: "", rows: rows)]
         case .month:
             let keys = Set(rows.map { String($0.meeting.meetingDate.prefix(7)) }).sorted(by: meetingSort == .dateAsc ? (<) : (>))

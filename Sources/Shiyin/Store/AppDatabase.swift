@@ -300,7 +300,7 @@ final class AppDatabase: @unchecked Sendable {
                 END;
                 """)
         }
-        // 資料夾自動歸類、定期會議（design §72、§73）
+        // 資料夾自動歸類、定期會議（design §72、§73；定期會議 v14 拿掉）
         migrator.registerMigration("v12") { db in
             try db.execute(sql: """
                 CREATE TABLE series (
@@ -340,7 +340,43 @@ final class AppDatabase: @unchecked Sendable {
                 INSERT OR IGNORE INTO folders (name, created_at) SELECT folder, created_at FROM folder_rules;
                 """, arguments: [Clock.now()])
         }
+        // 拿掉定期會議（R99、design §73、D177）：每個定期會議換成同名的資料夾，裡面不在資料夾的會議移進去；
+        // 資料夾條件的定期會議拿掉（條件都空了就刪掉）。表、欄位留著不用（拿掉有外鍵的欄位要重建整張 meetings）
+        migrator.registerMigration("v14") { db in
+            var names: [Int64: String] = [:]
+            for row in try Row.fetchAll(db, sql: "SELECT id, name FROM series ORDER BY id") {
+                let id: Int64 = row["id"]
+                let name = (row["name"] as String? ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { continue }
+                names[id] = name
+                try db.execute(sql: "INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", arguments: [name, Clock.now()])
+                try db.execute(sql: "UPDATE meetings SET folder = ?, folder_decided = 1 WHERE series_id = ? AND folder = ''",
+                               arguments: [name, id])
+            }
+            try db.execute(sql: """
+                UPDATE folder_rules SET series_id = NULL;
+                DELETE FROM folder_rules WHERE keywords = '[]' AND people = '[]' AND template_id IS NULL;
+                UPDATE meetings SET series_id = NULL WHERE series_id IS NOT NULL;
+                DELETE FROM series;
+                DELETE FROM series_rejected;
+                """)
+            if !names.isEmpty { Self.replaceSeriesKeys(names) }
+        }
         return migrator
+    }
+
+    /// 側欄展開、排序的鍵（UserDefaults）：series:<id> 換成 folder:<名稱>（migration v14）；換完跟原本的資料夾重複時留前面的
+    nonisolated static func replaceSeriesKeys(_ names: [Int64: String]) {
+        let defaults = UserDefaults.standard
+        for key in [AppSettings.sidebarExpandedKey, AppSettings.sidebarOrderKey] {
+            guard let list = defaults.stringArray(forKey: key), list.contains(where: { $0.hasPrefix("series:") }) else { continue }
+            var seen = Set<String>()
+            let replaced = list.compactMap { item -> String? in
+                guard item.hasPrefix("series:") else { return item }
+                return Int64(item.dropFirst("series:".count)).flatMap { names[$0] }.map { "folder:" + $0 }
+            }.filter { seen.insert($0).inserted }
+            defaults.set(replaced, forKey: key)
+        }
     }
 
     // MARK: 會議

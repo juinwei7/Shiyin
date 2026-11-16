@@ -79,7 +79,7 @@ struct MeetingListHeader: View {
     var body: some View {
         HStack(spacing: 6) {
             // 名稱是收合的按鈕（R101、design §75）；右邊的「顯示方式」不動。會議拖到這裡＝移進現在看的地方，
-            // 「其他會議」是移出資料夾和定期會議（R103.1）
+            // 「其他會議」是移出資料夾（R103.1）
             SidebarSectionHeader(title: title, key: "meetings", besideMenu: true)
                 .foregroundStyle(dropTargeted ? Color.celadon : Color.secondary)
             Spacer(minLength: 4)
@@ -103,7 +103,7 @@ struct MeetingListHeader: View {
 
     private var title: String {
         // 下面只放資料夾以外的會議時叫「其他會議」（R101.6）
-        let scope = model.seriesById(model.seriesFilter)?.name ?? model.folderFilter
+        let scope = model.folderFilter
             ?? (model.listShowsOthersOnly ? String(localized: "其他會議") : String(localized: "所有會議"))
         let grouping = model.effectiveGrouping
         return grouping == .none ? scope : scope + "・" + grouping.label

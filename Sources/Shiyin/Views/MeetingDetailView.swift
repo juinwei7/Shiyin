@@ -105,15 +105,6 @@ struct MeetingHeader: View {
             if !meeting.folder.isEmpty {
                 Label(meeting.folder, systemImage: "folder").help("這場會議所在的資料夾")
             }
-            // 定期會議（design §73）：點了打開系列頁
-            if let series = model.seriesById(meeting.seriesId) {
-                Button { model.openSeries(series.id ?? 0) } label: {
-                    Label(series.name, systemImage: "arrow.triangle.2.circlepath")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.celadon)
-                .help(String(localized: "定期會議・\(series.frequencyText)。點了打開系列頁"))
-            }
             Text("\(meeting.meetingDate) \(DateText.weekday(meeting.meetingDate))")
             if meeting.durationSeconds != nil { Text(TimeFormat.duration(meeting.durationSeconds)) }
             if let minutes = detail.untranscribedMinutes {

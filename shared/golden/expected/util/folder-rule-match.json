@@ -4,7 +4,6 @@
 
     ],
     "matches" : true,
-    "seriesId" : null,
     "templateId" : "general",
     "title" : "產品週會"
   },
@@ -13,7 +12,6 @@
 
     ],
     "matches" : true,
-    "seriesId" : null,
     "templateId" : "general",
     "title" : "Weekly SYNC"
   },
@@ -22,7 +20,6 @@
       1
     ],
     "matches" : false,
-    "seriesId" : null,
     "templateId" : "general",
     "title" : "x"
   },
@@ -33,7 +30,6 @@
       5
     ],
     "matches" : true,
-    "seriesId" : null,
     "templateId" : "general",
     "title" : "x"
   },
@@ -42,7 +38,6 @@
 
     ],
     "matches" : true,
-    "seriesId" : null,
     "templateId" : "one-on-one",
     "title" : "x"
   },
@@ -50,17 +45,7 @@
     "attended" : [
 
     ],
-    "matches" : true,
-    "seriesId" : 3,
-    "templateId" : "general",
-    "title" : "x"
-  },
-  {
-    "attended" : [
-
-    ],
     "matches" : false,
-    "seriesId" : null,
     "templateId" : "general",
     "title" : "x"
   }

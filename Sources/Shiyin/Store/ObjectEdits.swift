@@ -51,8 +51,6 @@ extension AppModel {
         if selectedMeetings.count > 1 { return false }
         if let id = selection {
             requestRenameMeeting(id)
-        } else if let id = seriesFilter {
-            renameTarget = .series(id)
         } else if let folder = folderFilter {
             renameTarget = .folder(folder)
         } else {
@@ -75,8 +73,6 @@ extension AppModel {
                 deleteTargets = ids
                 confirmDelete = true
             }
-        } else if !showTrash, let id = seriesFilter {
-            confirmDeleteSeries = id
         } else if !showTrash, let folder = folderFilter {
             confirmDeleteFolder = folder
         }
