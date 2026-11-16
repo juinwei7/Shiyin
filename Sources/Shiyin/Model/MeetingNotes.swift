@@ -272,6 +272,49 @@ struct MeetingNotes: Codable, Hashable {
     }()
 }
 
+extension MeetingNotes {
+    /// 一條紀錄的文字（待辦是事項）；位置不在了是 nil（R100、design §74）
+    func text(at ref: NoteItemRef) -> String? {
+        switch ref {
+        case .summary(let i): return summary.indices.contains(i) ? summary[i].text : nil
+        case .decisions(let i): return decisions.indices.contains(i) ? decisions[i].text : nil
+        case .actionItems(let i): return actionItems.indices.contains(i) ? actionItems[i].task : nil
+        case .openQuestions(let i): return openQuestions.indices.contains(i) ? openQuestions[i].text : nil
+        case .topicPoint(let t, let p): return topics.indices.contains(t) && topics[t].points.indices.contains(p) ? topics[t].points[p].text : nil
+        case .custom(let c, let i): return custom.indices.contains(c) && custom[c].items.indices.contains(i) ? custom[c].items[i].text : nil
+        case .person(let p, let i): return people.indices.contains(p) && people[p].points.indices.contains(i) ? people[p].points[i].text : nil
+        }
+    }
+
+    /// 改一條紀錄的文字（時間點不變）
+    mutating func setText(_ text: String, at ref: NoteItemRef) {
+        guard self.text(at: ref) != nil else { return }
+        switch ref {
+        case .summary(let i): summary[i].text = text
+        case .decisions(let i): decisions[i].text = text
+        case .actionItems(let i): actionItems[i].task = text
+        case .openQuestions(let i): openQuestions[i].text = text
+        case .topicPoint(let t, let p): topics[t].points[p].text = text
+        case .custom(let c, let i): custom[c].items[i].text = text
+        case .person(let p, let i): people[p].points[i].text = text
+        }
+    }
+
+    /// 刪掉一條紀錄
+    mutating func remove(at ref: NoteItemRef) {
+        guard text(at: ref) != nil else { return }
+        switch ref {
+        case .summary(let i): summary.remove(at: i)
+        case .decisions(let i): decisions.remove(at: i)
+        case .actionItems(let i): actionItems.remove(at: i)
+        case .openQuestions(let i): openQuestions.remove(at: i)
+        case .topicPoint(let t, let p): topics[t].points.remove(at: p)
+        case .custom(let c, let i): custom[c].items.remove(at: i)
+        case .person(let p, let i): people[p].points.remove(at: i)
+        }
+    }
+}
+
 /// 一條紀錄的位置（design §31.1）：待確認的題目對應到哪一條
 enum NoteItemRef: Hashable {
     case summary(Int), decisions(Int), actionItems(Int), openQuestions(Int)

@@ -492,6 +492,19 @@ struct TemplateSettings: View {
                             if template.id == defaultTemplate { Text("預設").font(.caption).foregroundStyle(.secondary) }
                         }
                         .tag(template.id)
+                        // 右鍵（R100）：複製、設為預設、刪除（自訂的才有）
+                        .contextMenu {
+                            Button("複製") { create(from: template) }
+                            Button("設為預設範本") { defaultTemplate = template.id }.disabled(defaultTemplate == template.id)
+                            if !template.builtin {
+                                Divider()
+                                Button("刪除", role: .destructive) {
+                                    if defaultTemplate == template.id { defaultTemplate = "general" }
+                                    model.deleteTemplate(template.id)
+                                    if selection == template.id { selection = model.templates.first?.id }
+                                }
+                            }
+                        }
                     }
                 }
                 HStack {
@@ -625,6 +638,8 @@ struct SpeakerSettings: View {
     @State private var renaming: Int64?
     @State private var renameText = ""
     @State private var confirmDeleteAll = false
+    /// 移除一個人的確認（R100：會丟聲音特徵，要確認；同人物頁）
+    @State private var removing: PersonSummary?
 
     var body: some View {
         Toggle("記住說話者的聲音，之後的會議自動帶入名字", isOn: $voiceprints)
@@ -655,11 +670,22 @@ struct SpeakerSettings: View {
                         Text(detailLine(person)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
-                    Button("改名") { renameText = person.name; renaming = person.id }.buttonStyle(.link)
-                    Button { model.deletePerson(person.id) } label: { Image(systemName: "trash") }
-                        .buttonStyle(.borderless).help("刪除「\(person.name)」的聲音特徵（已經帶入的名字留著）")
+                    Button("重新命名") { renameText = person.name; renaming = person.id }.buttonStyle(.link)
+                    Button { removing = person } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless).help("移除「\(person.name)」（會議裡的名字留著）")
                 }
             }
+            .contextMenu {
+                Button("重新命名…") { renameText = person.name; renaming = person.id }
+                Divider()
+                Button("移除這個人…", role: .destructive) { removing = person }
+            }
+        }
+        .confirmationDialog(String(localized: "移除「\(removing?.name ?? "")」？"),
+                            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
+            Button("移除", role: .destructive) { if let id = removing?.id { model.deletePerson(id) } }
+        } message: {
+            Text("會從「人物」拿掉，也會刪掉他的聲音特徵。會議裡已經帶入的名字會留著，之後的會議不會再自動認出他。")
         }
         .onAppear { model.reloadPeople() }
         .confirmationDialog("刪除所有認識的人的聲音特徵？", isPresented: $confirmDeleteAll) {
@@ -807,6 +833,10 @@ struct GlossarySettings: View {
     @State private var query = ""
     @State private var selected: Set<Int64> = []
     @State private var confirmDelete = false
+    /// 就地改一個詞（R100）：雙擊、右鍵「重新命名…」
+    @State private var editingTerm: Int64?
+    @State private var termText = ""
+    @FocusState private var termFocused: Bool
 
     /// 勾選裡還在詞彙表的（勾了之後被單獨刪掉的不算）
     private var checked: Set<Int64> { selected.intersection(model.glossary.compactMap(\.id)) }
@@ -870,12 +900,33 @@ struct GlossarySettings: View {
         }
         ForEach(shown) { term in
             HStack {
-                Toggle(term.term, isOn: Binding(get: { selected.contains(term.id ?? -1) },
-                                                set: { if let id = term.id { if $0 { selected.insert(id) } else { selected.remove(id) } } }))
+                if editingTerm == term.id {
+                    TextField("詞彙", text: $termText)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($termFocused)
+                        .onSubmit { saveTerm(term) }
+                        .onExitCommand { editingTerm = nil }
+                    Button("取消") { editingTerm = nil }.buttonStyle(.link)
+                    Button("儲存") { saveTerm(term) }.buttonStyle(.link)
+                } else {
+                    Toggle(isOn: Binding(get: { selected.contains(term.id ?? -1) },
+                                         set: { if let id = term.id { if $0 { selected.insert(id) } else { selected.remove(id) } } })) {
+                        Text(term.term)
+                            .onTapGesture(count: 2) { startEditing(term) }
+                            .help("雙擊可以修改")
+                    }
                     .toggleStyle(.checkbox)
-                Spacer()
-                Button { model.deleteTerm(term.id!) } label: { Image(systemName: "trash") }
-                    .buttonStyle(.borderless).help("刪除「\(term.term)」")
+                    Spacer()
+                    Button { startEditing(term) } label: { Image(systemName: "pencil") }
+                        .buttonStyle(.borderless).help("修改「\(term.term)」")
+                    Button { model.deleteTerm(term.id!) } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless).help("刪除「\(term.term)」")
+                }
+            }
+            .contextMenu {
+                Button("重新命名…") { startEditing(term) }
+                Divider()
+                Button("刪除", role: .destructive) { model.deleteTerm(term.id!) }
             }
         }
         if shown.isEmpty && !model.glossary.isEmpty {
@@ -909,6 +960,20 @@ struct GlossarySettings: View {
     private func add() {
         model.addTerms(newTerm)
         newTerm = ""
+    }
+
+    private func startEditing(_ term: GlossaryTerm) {
+        termText = term.term
+        editingTerm = term.id
+        termFocused = true
+    }
+
+    /// 改成已經有的詞時合併（R100）
+    private func saveTerm(_ term: GlossaryTerm) {
+        let text = termText.trimmingCharacters(in: .whitespacesAndNewlines)
+        editingTerm = nil
+        guard let id = term.id, !text.isEmpty, text != term.term else { return }
+        model.renameTerm(id, to: text)
     }
 }
 

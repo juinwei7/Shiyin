@@ -345,9 +345,15 @@ struct UserNotesDisclosure: View {
                 }
                 .buttonStyle(.plain)
                 if !detail.bookmarks.isEmpty {
+                    // 每個標記：跳過去、重新命名、刪除（R100）
                     Menu("重點標記 \(detail.bookmarks.count)") {
                         ForEach(detail.bookmarks) { bookmark in
-                            Button("\(TimeFormat.string(bookmark.time)) \(bookmark.label)") { model.player.seek(to: bookmark.time) }
+                            Menu("\(TimeFormat.string(bookmark.time)) \(bookmark.label)") {
+                                Button("跳到這裡") { model.player.seek(to: bookmark.time) }
+                                Button("重新命名…") { model.renamingBookmark = bookmark }
+                                Divider()
+                                Button("刪除", role: .destructive) { if let id = bookmark.id { model.deleteBookmark(id) } }
+                            }
                         }
                     }
                     .fixedSize()

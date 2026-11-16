@@ -62,6 +62,9 @@ struct MeetingHeader: View {
     @Environment(AppModel.self) private var model
     let detail: MeetingDetail
     @State private var editing = false
+    /// 會議頁上方的說話者：點名字重新命名（R100，同逐字稿點說話者）
+    @State private var renamingSpeaker: Int?
+    @State private var speakerName = ""
 
     var body: some View {
         let meeting = detail.meeting
@@ -79,6 +82,12 @@ struct MeetingHeader: View {
                         EditInfoForm(meeting: meeting) { editing = false }
                     }
                 Spacer(minLength: 0)
+            }
+            // 側欄的「重新命名…」、Return（R100）：打開「編輯」
+            .task(id: model.renameMeetingRequest) {
+                guard model.renameMeetingRequest == meeting.id else { return }
+                model.renameMeetingRequest = nil
+                editing = true
             }
             // 範本和語言選單放在資訊列右邊，標題才能用整行的寬度（英文標題比較長，design §16.3）；
             // 資訊列放不下時（說話者多、英文字比較長），選單改到下一行，說話者名字才不會被截斷
@@ -157,9 +166,51 @@ struct MeetingHeader: View {
             if detail.speakerSources[idx] == "voiceprint" {
                 AutoSpeakerName(idx: idx, name: name, others: detail.speakerCandidates[idx] ?? [])
             } else {
-                Text(name).foregroundStyle(Color.speaker(idx))
+                Button { startRenaming(idx) } label: { Text(name).foregroundStyle(Color.speaker(idx)) }
+                    .buttonStyle(.plain)
+                    .help("重新命名「\(name)」，整場的逐字稿和會議紀錄都會跟著改")
             }
         }
+        .contextMenu { speakerMenu(idx) }
+        .popover(isPresented: Binding(get: { renamingSpeaker == idx }, set: { if !$0 { renamingSpeaker = nil } }), arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 12) {
+                TextField("名字", text: $speakerName).textFieldStyle(.roundedBorder).frame(width: 220)
+                    .onSubmit { saveSpeakerName(idx) }
+                HStack {
+                    Spacer()
+                    Button("取消") { renamingSpeaker = nil }.keyboardShortcut(.cancelAction)
+                    Button("儲存") { saveSpeakerName(idx) }.keyboardShortcut(.defaultAction)
+                        .disabled(speakerName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    /// 說話者的右鍵（R100）：重新命名、合併到別的說話者（同逐字稿）
+    @ViewBuilder
+    private func speakerMenu(_ idx: Int) -> some View {
+        Button("重新命名…") { startRenaming(idx) }
+        let others = detail.speakers.keys.sorted().filter { $0 != idx }
+        if !others.isEmpty {
+            Menu("合併到") {
+                ForEach(others, id: \.self) { other in
+                    Button(detail.speakers[other] ?? "") { model.mergeSpeaker(idx, into: other) }
+                }
+            }
+        }
+    }
+
+    private func startRenaming(_ idx: Int) {
+        speakerName = detail.speakers[idx] ?? ""
+        renamingSpeaker = idx
+    }
+
+    private func saveSpeakerName(_ idx: Int) {
+        let name = speakerName.trimmingCharacters(in: .whitespaces)
+        renamingSpeaker = nil
+        guard !name.isEmpty, name != detail.speakers[idx] else { return }
+        model.renameSpeaker(idx, to: name)
     }
 
     /// 「會議設定」：範本、會議語言、大約幾個人放在一起（design §59、R84.2）；文件選單照舊

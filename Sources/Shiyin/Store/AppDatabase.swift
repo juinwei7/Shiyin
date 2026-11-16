@@ -847,6 +847,10 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    func renameBookmark(_ id: Int64, label: String) throws {
+        try pool.write { db in try db.execute(sql: "UPDATE bookmarks SET label = ? WHERE id = ?", arguments: [label, id]) }
+    }
+
     func deleteBookmark(_ id: Int64) throws {
         _ = try pool.write { db in try Bookmark.deleteOne(db, key: id) }
     }
@@ -1227,6 +1231,19 @@ final class AppDatabase: @unchecked Sendable {
                 added += db.changesCount
             }
             return added
+        }
+    }
+
+    /// 改一個詞（R100）：改成已經有的詞時合併（刪掉這一個）
+    func renameTerm(_ id: Int64, to term: String) throws {
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try pool.write { db in
+            if try Int64.fetchOne(db, sql: "SELECT id FROM glossary WHERE term = ? AND id != ?", arguments: [trimmed, id]) != nil {
+                try db.execute(sql: "DELETE FROM glossary WHERE id = ?", arguments: [id])
+            } else {
+                try db.execute(sql: "UPDATE glossary SET term = ? WHERE id = ?", arguments: [trimmed, id])
+            }
         }
     }
 

@@ -58,6 +58,8 @@ struct PersonPage: View {
                         }
                         .buttonStyle(.plain)
                         .help("打開這場會議")
+                        .rowMenu { MeetingLinkMenuItems(meeting: entry.meeting) }
+                        .contextMenu { MeetingLinkMenuItems(meeting: entry.meeting) }
                     }
                 }
             }
@@ -85,18 +87,46 @@ struct PersonPage: View {
                     Button { renameText = person.name; editingName = true } label: { Image(systemName: "pencil") }
                         .buttonStyle(.borderless)
                         .foregroundStyle(Color.celadon)
-                        .help("改名")
-                        .accessibilityLabel(Text("改名"))
+                        .help("重新命名")
+                        .accessibilityLabel(Text("重新命名"))
                         .popover(isPresented: $editingName, arrowEdge: .bottom) { renameForm }
                     if person.isMe {
                         Text("我").font(.callout).foregroundStyle(.secondary)
                     }
                 }
                 Text(Self.summaryLine(person, long: true)).font(.callout).foregroundStyle(.secondary)
+                actions
             }
             Spacer(minLength: 0)
         }
         .padding(.bottom, 4)
+    }
+
+    /// 標題下面看得到的動作（R100）：合併到、移除這個人；重新命名是名字旁的鉛筆，右上角「更多」照舊
+    private var actions: some View {
+        let others = model.peopleOverview.filter { $0.id != person.id }
+        return HStack(spacing: 16) {
+            if !others.isEmpty {
+                Menu {
+                    ForEach(others) { other in
+                        Button(other.name) {
+                            model.renamePerson(person.id, to: other.name)
+                            model.selectedPerson = other.id
+                        }
+                    }
+                } label: {
+                    Label("合併到", systemImage: "arrow.triangle.merge")
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("同一個人被記成兩個名字時，合併成一個")
+            }
+            Button("移除這個人…", systemImage: "person.badge.minus", role: .destructive) { model.confirmRemovePerson = person.id }
+                .foregroundStyle(.red)
+        }
+        .buttonStyle(.borderless)
+        .font(.callout)
+        .padding(.top, 4)
     }
 
     private var moreMenu: some View {
@@ -106,7 +136,7 @@ struct PersonPage: View {
             Label("更多", systemImage: "ellipsis.circle")
         }
         .accessibilityLabel(Text("更多"))
-        .help("改名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人")
+        .help("重新命名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人")
     }
 
     private var renameForm: some View {
@@ -192,7 +222,7 @@ struct PersonMenuItems: View {
 
     var body: some View {
         let others = model.peopleOverview.filter { $0.id != person.id }
-        Button("改名…") {
+        Button("重新命名…") {
             model.selectedPerson = person.id
             model.personRenameRequest = person.id
         }

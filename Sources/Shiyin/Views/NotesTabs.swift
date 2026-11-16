@@ -73,13 +73,19 @@ struct ItemList: View {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 let ref = ref(index)
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("•").foregroundStyle(.secondary)
-                        (Text(item.text)).meetingText()
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
-                        if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }
+                    if let ref, detail != nil, model.editingNoteItem == ref {
+                        // 就地改這一條（R100、design §74）
+                        NoteItemEditor(ref: ref)
+                    } else {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("•").foregroundStyle(.secondary)
+                            (Text(item.text)).meetingText()
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
+                            if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }
+                        }
+                        .noteItemActions(ref: detail == nil ? nil : ref, text: item.text, time: item.time)
                     }
                     if let ref, let detail, model.reviewDraft?.expanded == ref {
                         InlineReviewCard(detail: detail, indexes: detail.reviewLinks[ref] ?? [])
@@ -537,6 +543,9 @@ struct ActionItemsTable: View {
                             .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if let ref, detail != nil, model.editingNoteItem == ref {
+                            NoteItemEditor(ref: ref)
+                        } else {
                         Text(item.task).meetingText()
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
@@ -549,7 +558,9 @@ struct ActionItemsTable: View {
                                 .contentFont(.caption)
                                 .help(done ? "已在提醒事項裡完成" : "已加到提醒事項")
                         }
+                        }
                     }
+                    .noteItemActions(ref: detail == nil || model.editingNoteItem == ref ? nil : ref, text: item.task, time: item.time)
                     .gridColumnAlignment(.leading)
                     Text(item.due.isEmpty ? "—" : item.due)
                         .monospacedDigit()

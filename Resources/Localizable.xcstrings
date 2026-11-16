@@ -126,6 +126,23 @@
         }
       }
     },
+    "%@ 的標記": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的标记"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmark at %@"
+          }
+        }
+      }
+    },
     "%@ 還沒登入，登入之後才會用它整理。": {
       "extractionState": "manual",
       "localizations": {
@@ -1885,6 +1902,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qwen3-ASR（阿里巴巴开源）"
+          }
+        }
+      }
+    },
+    "Return 儲存、Esc 取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return 保存、Esc 取消"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return to save, Esc to cancel"
           }
         }
       }
@@ -3962,6 +3996,23 @@
         }
       }
     },
+    "修改「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit “%@”"
+          }
+        }
+      }
+    },
     "停止": {
       "extractionState": "manual",
       "localizations": {
@@ -4047,19 +4098,19 @@
         }
       }
     },
-    "側欄上方切到「人物」，可以看拾音認識的每個人：一起開過哪些會議、每場說了多久、負責哪些待辦（點了就打開那場會議、從那裡播放）。在人物頁也可以改名、把被記成兩個名字的同一個人合併，或刪除聲音特徵。": {
+    "側欄上方切到「人物」，可以看拾音認識的每個人：一起開過哪些會議、每場說了多久、負責哪些待辦（點了就打開那場會議、從那裡播放）。人物頁的名字下面可以重新命名、把被記成兩個名字的同一個人合併，或移除這個人；側欄的人按右鍵或滑過時右邊的「⋯」也一樣。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "侧边栏上方切到“人物”，可以看拾音认识的每个人：一起开过哪些会议、每场说了多久、负责哪些待办（点了就打开那场会议、从那里播放）。在人物页也可以改名、把被记成两个名字的同一个人合并，或删除声音特征。"
+            "value": "侧边栏上方切到“人物”，可以看拾音认识的每个人：一起开过哪些会议、每场说了多久、负责哪些待办（点了就打开那场会议、从那里播放）。人物页的名字下面可以重新命名、把被记成两个名字的同一个人合并，或移除这个人；侧边栏的人按右键或滑过时右边的“⋯”也一样。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Switch to People at the top of the sidebar to see everyone Shiyin knows: the meetings you had together, how long they spoke in each, and the action items they own (click one to open that meeting and play from there). On a person's page you can also rename them, merge two names that are really the same person, or delete their voice profile."
+            "value": "Switch to People at the top of the sidebar to see everyone Shiyin knows: the meetings you had together, how long they spoke in each, and the action items they own (click one to open that meeting and play from there). Below a person’s name you can rename them, merge two names that are the same person, or remove them; right-click a person in the sidebar, or use the “⋯” that appears when you hover, to do the same."
           }
         }
       }
@@ -5074,23 +5125,6 @@
         }
       }
     },
-    "刪除「%@」的聲音特徵（已經帶入的名字留著）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete the voice samples for “%@” (names already filled in stay)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除“%@”的声音特征（已经带入的名字留着）"
-          }
-        }
-      }
-    },
     "刪除「%@」？": {
       "extractionState": "manual",
       "localizations": {
@@ -5183,6 +5217,23 @@
         }
       }
     },
+    "刪除定期會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除定期会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Recurring Meeting"
+          }
+        }
+      }
+    },
     "刪除定期會議…": {
       "extractionState": "manual",
       "localizations": {
@@ -5213,23 +5264,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete the recurring meeting “%@”?"
-          }
-        }
-      }
-    },
-    "刪除定期會議（會議會保留）": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除定期会议（会议会保留）"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete Recurring Meeting (Keep Meetings)"
           }
         }
       }
@@ -5285,19 +5319,70 @@
         }
       }
     },
-    "刪除資料夾（會議會保留）": {
+    "刪除資料夾": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete Folder (keeps its meetings)"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除文件夹（会议会保留）"
+            "value": "删除文件夹"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Folder"
+          }
+        }
+      }
+    },
+    "刪除資料夾…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除文件夹…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Folder…"
+          }
+        }
+      }
+    },
+    "刪除資料夾「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除文件夹“%@”？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the folder “%@”?"
+          }
+        }
+      }
+    },
+    "刪除這一條": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除这一条"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete This Item"
           }
         }
       }
@@ -6477,6 +6562,23 @@
         }
       }
     },
+    "同一個人被記成兩個名字時，合併成一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一个人被记成两个名字时，合并成一个"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the same person was saved under two names, merge them into one"
+          }
+        }
+      }
+    },
     "同一個詞的每一處一起接受或忽略": {
       "extractionState": "manual",
       "localizations": {
@@ -6507,6 +6609,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meetings with the same people on the same day and time each week. Once you confirm, the next meeting is added automatically and its notes follow up on last time’s action items"
+          }
+        }
+      }
+    },
+    "同一群人每週固定時間開的會，拾音會在側欄問你要不要設成「定期會議」。設好之後，下一場會自動加進去，整理時對照上一場的待辦，在會議紀錄寫「上次的待辦」哪些完成了；系列頁列出還沒完成的待辦。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一群人每周固定时间开的会，拾音会在侧边栏问你要不要设成“定期会议”。设好之后，下一场会自动加进去，整理时对照上一场的待办，在会议记录写“上次的待办”哪些完成了；系列页列出还没完成的待办。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the same people meet at the same time every week, Shiyin asks in the sidebar whether to make it a recurring meeting. After that, each new meeting joins automatically, and its notes check last time’s action items under “Action Items from Last Time”; the recurring meeting’s page lists the open action items."
           }
         }
       }
@@ -7658,6 +7777,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Split into two meetings: “%@”. Both need to be summarized again. Set up a summarizer, then click Summarize Again"
+          }
+        }
+      }
+    },
+    "已刪除一條紀錄，可以用「會議 → 復原上一版會議紀錄」還原": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除一条记录，可以用“会议 → 恢复上一版会议记录”还原"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted the item. To bring it back, choose Meeting → Revert to Previous Notes."
           }
         }
       }
@@ -11203,57 +11339,6 @@
         }
       }
     },
-    "改名": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rename"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "改名"
-          }
-        }
-      }
-    },
-    "改名…": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "改名…"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rename…"
-          }
-        }
-      }
-    },
-    "改名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "改名、跟另一个名字合并（同一个人被记成两个名字时）、移除这个人"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rename, merge with another name (when the same person was saved under two names), or remove this person"
-          }
-        }
-      }
-    },
     "改回%@": {
       "extractionState": "manual",
       "localizations": {
@@ -12933,6 +13018,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议可以分文件夹：在会议上按右键（或“更多”）选“移到文件夹”→“新文件夹…”。侧边栏上方的“文件夹”可以切换只看某个文件夹；正在看某个文件夹时，新录的和导入的会议都会放进去。文件夹按右键可以重新命名或删除（会议会保留）。"
+          }
+        }
+      }
+    },
+    "會議多了可以整理：列表上方「所有會議」那一行右邊的「顯示方式」（選單列的「顯示方式」也有）可以照日期、標題、長度排序，依月份或資料夾分組，只看有待確認、有你的待辦、某個人參加或某個範本的會議。資料夾按右鍵選「自動加入的條件…」，例如標題有「週會」、某幾個人都參加，新的會議整理完就自動放進去。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议多了可以整理：列表上方“所有会议”那一行右边的“显示方式”（菜单栏的“显示方式”也有）可以照日期、标题、长度排序，依月份或文件夹分组，只看有待确认、有你的待办、某个人参加或某个模板的会议。文件夹按右键选“自动加入的条件…”，例如标题有“周会”、某几个人都参加，新的会议整理完就自动放进去。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To organize lots of meetings, use the view options button to the right of “All Meetings” above the list (also in the View menu): sort by date, title or length, group by month or folder, and show only meetings that need review, have your action items, include a certain person or use a certain template. Right-click a folder and choose Auto-Add Rules… (for example, the title contains “weekly” or certain people all attend), and new meetings are moved there once their notes are ready."
           }
         }
       }
@@ -14686,6 +14788,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "段落名称"
+          }
+        }
+      }
+    },
+    "每一種東西都可以直接改：側欄的會議、資料夾、定期會議、人物按右鍵，或滑鼠移上去時右邊的「⋯」；選到時按 Return 重新命名、按 Delete 刪除。會議紀錄的每一條雙擊就能改，按右鍵可以刪掉那一條（改錯了用「會議 → 復原上一版會議紀錄」）。會議頁上方的說話者點名字就能重新命名。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每一种东西都可以直接改：侧边栏的会议、文件夹、定期会议、人物按右键，或鼠标移上去时右边的“⋯”；选到时按 Return 重新命名、按 Delete 删除。会议记录的每一条双击就能改，按右键可以删掉那一条（改错了用“会议 → 恢复上一版会议记录”）。会议页上方的说话者点名字就能重新命名。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can change anything in place: right-click a meeting, folder, recurring meeting or person in the sidebar, or use the “⋯” that appears when you hover; with one selected, press Return to rename it or Delete to delete it. Double-click any item in the meeting notes to edit it, or right-click to delete it (if you make a mistake, choose Meeting → Revert to Previous Notes). Click a speaker’s name at the top of a meeting to rename them."
           }
         }
       }
@@ -16729,6 +16848,23 @@
         }
       }
     },
+    "移除「%@」（會議裡的名字留著）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除“%@”（会议里的名字留着）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove “%@” (names in meetings are kept)"
+          }
+        }
+      }
+    },
     "移除「%@」？": {
       "extractionState": "manual",
       "localizations": {
@@ -17562,6 +17698,23 @@
         }
       }
     },
+    "編輯這一條": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑这一条"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit This Item"
+          }
+        }
+      }
+    },
     "編輯這一段": {
       "extractionState": "manual",
       "localizations": {
@@ -17902,6 +18055,23 @@
         }
       }
     },
+    "自動加入的條件也會刪掉。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动加入的条件也会删掉。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its auto-add rules are deleted too."
+          }
+        }
+      }
+    },
     "自動加入：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -18051,6 +18221,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "装好之后在终端运行 claude 登录，再按“重新检查”。"
+          }
+        }
+      }
+    },
+    "裡面的 %lld 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "里面的 %lld 场会议会留着，移到“不在文件夹”。自动加入的条件也会删掉。"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The %lld meeting in it is kept and moves to Not in a Folder. Its auto-add rules are deleted too."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The %lld meetings in it are kept and move to Not in a Folder. Its auto-add rules are deleted too."
+                }
+              }
+            }
           }
         }
       }
@@ -18459,6 +18658,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "设为默认模板"
+          }
+        }
+      }
+    },
+    "詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Term"
           }
         }
       }
@@ -19253,6 +19469,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳到第一处"
+          }
+        }
+      }
+    },
+    "跳到這裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳到这里"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go Here"
           }
         }
       }
@@ -21736,6 +21969,40 @@
         }
       }
     },
+    "重新命名、跟另一個名字合併（同一個人被記成兩個名字時）、移除這個人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名、跟另一个名字合并（同一个人被记成两个名字时）、移除这个人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename, merge with another name (when the same person was saved under two names), or remove this person"
+          }
+        }
+      }
+    },
+    "重新命名「%@」，整場的逐字稿和會議紀錄都會跟著改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名“%@”，整场的逐字稿和会议记录都会跟着改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename “%@” throughout the transcript and notes"
+          }
+        }
+      }
+    },
     "重新命名定期會議": {
       "extractionState": "manual",
       "localizations": {
@@ -21749,6 +22016,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rename Recurring Meeting"
+          }
+        }
+      }
+    },
+    "重新命名標記": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名标记"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Bookmark"
           }
         }
       }
@@ -23092,6 +23376,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "随时可以到设置选"
+          }
+        }
+      }
+    },
+    "雙擊可以修改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双击可以修改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-click to edit"
           }
         }
       }

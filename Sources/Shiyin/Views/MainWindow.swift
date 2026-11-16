@@ -173,6 +173,8 @@ struct MainView: View {
         }
         .modifier(FolderPromptModifier())
         .modifier(SeriesRenameModifier())
+        .modifier(OrganizeConfirmations())
+        .modifier(BookmarkRenameModifier())
         // 可能的定期會議（design §73）、資料夾的自動加入條件（design §72）
         .sheet(isPresented: $model.showSeriesSuggestions) { SeriesSuggestionSheet() }
         .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.name })) {
@@ -366,20 +368,26 @@ struct SidebarView: View {
                     // 有自動加入條件的資料夾換圖示，滑過去看條件（design §72）
                     let rule = model.folderRule(folder.name)
                     FolderRow(name: folder.name, count: folder.count, symbol: rule == nil ? "folder" : "folder.badge.gearshape",
-                              selected: !people && model.folderFilter == folder.name) {
+                              selected: !people && model.folderFilter == folder.name,
+                              menu: { AnyView(FolderMenuItems(folder: folder.name)) }) {
                         model.sidebarMode = .meetings
                         model.folderFilter = folder.name
                     }
                     .help(rule.map { model.folderRuleSummary($0) } ?? "")
-                    .contextMenu {
-                        Button(rule == nil ? "自動加入的條件…" : "編輯自動加入的條件…") { model.editingFolderRule = folder.name }
-                        Divider()
-                        Button("重新命名…") { model.folderPrompt = .rename(folder.name) }
-                        Button("刪除資料夾（會議會保留）", role: .destructive) { model.deleteFolder(folder.name) }
-                    }
+                    .contextMenu { FolderMenuItems(folder: folder.name) }
                 }
             }
         }
+    }
+
+    /// 一場會議的列：右邊的「⋯」跟右鍵同一份（R100）；選到的是多選裡的一場時，選單對整個多選
+    private func meetingRow(_ row: MeetingRow) -> some View {
+        let selected = model.listSelection.contains(row.id)
+        return MeetingRowView(row: row, status: model.status(row))
+            .rowMenu(selected: selected) {
+                MeetingMenuItems(ids: selected && model.multiSelected.count > 1 ? model.multiSelected : [row.id])
+            }
+            .tag(row.id)
     }
 
     /// 人物模式：上面同樣是所有會議、人物、資料夾，下面是認識的人（design §60.2）
@@ -389,7 +397,9 @@ struct SidebarView: View {
             scopeSections
             Section("人物") {
                 ForEach(model.peopleOverview) { person in
-                    PersonRow(person: person).tag(person.id)
+                    PersonRow(person: person)
+                        .rowMenu(selected: model.selectedPerson == person.id) { PersonMenuItems(person: person) }
+                        .tag(person.id)
                         .contextMenu { PersonMenuItems(person: person) }
                 }
                 if model.peopleOverview.isEmpty {
@@ -399,8 +409,9 @@ struct SidebarView: View {
                 }
             }
         }
-        // 選到一個人時按 Delete：移除（R85.7）
-        .onDeleteCommand { if let id = model.selectedPerson { model.confirmRemovePerson = id } }
+        // 選到一個人時按 Return 重新命名、Delete 移除（R85.7、R100）
+        .onKeyPress(.return) { model.sidebarReturn() ? .handled : .ignored }
+        .onDeleteCommand { model.sidebarDelete() }
     }
 
     private var meetingList: some View {
@@ -414,9 +425,7 @@ struct SidebarView: View {
             }
             if model.showTrash {
                 Section {
-                    ForEach(model.filteredMeetings) { row in
-                        MeetingRowView(row: row, status: model.status(row)).tag(row.id)
-                    }
+                    ForEach(model.filteredMeetings) { row in meetingRow(row) }
                 }
             } else {
                 // 排序、分組、篩選（R97、design §71）：標題那一列有「顯示方式」，分組時每組一段
@@ -426,9 +435,7 @@ struct SidebarView: View {
                     if model.meetingFilter.isActive { MeetingFilterBar() }
                     if model.meetingFilter.isActive && model.filteredMeetings.isEmpty { MeetingFilterEmpty() }
                     if !grouped, let rows = groups.first?.rows {
-                        ForEach(rows) { row in
-                            MeetingRowView(row: row, status: model.status(row)).tag(row.id)
-                        }
+                        ForEach(rows) { row in meetingRow(row) }
                     }
                 } header: {
                     MeetingListHeader()
@@ -436,35 +443,18 @@ struct SidebarView: View {
                 if grouped {
                     ForEach(groups) { group in
                         Section(group.title) {
-                            ForEach(group.rows) { row in
-                                MeetingRowView(row: row, status: model.status(row)).tag(row.id)
-                            }
+                            ForEach(group.rows) { row in meetingRow(row) }
                         }
                     }
                 }
             }
         }
         .contextMenu(forSelectionType: Int64.self) { selected in
-            let ids = model.filteredMeetings.map(\.id).filter { selected.contains($0) }
-            if !ids.isEmpty {
-                if model.showTrash {
-                    Button("還原") { model.restore(ids) }
-                    Button("永久刪除…", role: .destructive) { model.confirmPurge = ids }
-                } else {
-                    FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
-                    SeriesMenu(meetingIds: ids)
-                    Divider()
-                    if ids.count == 1 {
-                        Button("移到垃圾桶", role: .destructive) { model.moveToTrash(ids) }
-                    } else {
-                        Button("把 \(ids.count) 場會議移到垃圾桶…", role: .destructive) {
-                            model.deleteTargets = ids
-                            model.confirmDelete = true
-                        }
-                    }
-                }
-            }
+            MeetingMenuItems(ids: model.filteredMeetings.map(\.id).filter { selected.contains($0) })
         }
+        // 鍵盤（R100）：Return 重新命名、Delete 移到垃圾桶（垃圾桶裡是永久刪除），都照現在選到的
+        .onKeyPress(.return) { model.sidebarReturn() ? .handled : .ignored }
+        .onDeleteCommand { model.sidebarDelete() }
         .overlay {
             if model.filteredMeetings.isEmpty && model.showTrash {
                 Text("垃圾桶是空的").foregroundStyle(.secondary)
@@ -473,27 +463,42 @@ struct SidebarView: View {
     }
 }
 
-/// 側欄的資料夾列（R9.2）：點了就只看這個資料夾
+/// 側欄的資料夾列（R9.2）：點了就只看這個資料夾。有選單時（資料夾、定期會議，R100）滑過或選到時
+/// 數量的位置換成「⋯」
 struct FolderRow: View {
     let name: String
     let count: Int
     let symbol: String
     let selected: Bool
+    var menu: (() -> AnyView)? = nil
     let action: () -> Void
+    @State private var hovering = false
 
     var body: some View {
-        Button(action: action) {
-            HStack {
-                Label(name, systemImage: symbol)
-                    .foregroundStyle(selected ? Color.celadon : .primary)
-                    .fontWeight(selected ? .semibold : .regular)
-                Spacer()
-                Text("\(count)").monospacedDigit().foregroundStyle(.secondary)
+        let showMenu = menu != nil && (hovering || selected)
+        HStack {
+            Button(action: action) {
+                HStack {
+                    Label(name, systemImage: symbol)
+                        .foregroundStyle(selected ? Color.celadon : .primary)
+                        .fontWeight(selected ? .semibold : .regular)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(selected ? .isSelected : [])
+            ZStack(alignment: .trailing) {
+                Text("\(count)").monospacedDigit().foregroundStyle(.secondary)
+                    .opacity(showMenu ? 0 : 1)
+                if let menu {
+                    RowMenuButton { menu() }
+                        .opacity(showMenu ? 1 : 0)
+                        .allowsHitTesting(showMenu)
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .onHover { hovering = $0 }
     }
 }
 

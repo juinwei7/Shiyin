@@ -1700,6 +1700,13 @@ final class AppModel {
     /// 移除一個人的確認、從側欄右鍵要改名的人（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
     var personRenameRequest: Int64?
+    /// 每一種東西都能直接改、刪（R100、design §74）：要重新命名的會議、刪除資料夾／定期會議的確認、
+    /// 正在就地改的那一條紀錄、正在重新命名的標記
+    var renameMeetingRequest: Int64?
+    var confirmDeleteFolder: String?
+    var confirmDeleteSeries: Int64?
+    var editingNoteItem: NoteItemRef?
+    var renamingBookmark: Bookmark?
 
     func reloadPeople() {
         people = (try? db.peopleSummaries()) ?? []

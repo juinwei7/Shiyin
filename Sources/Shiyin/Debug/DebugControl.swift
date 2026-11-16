@@ -82,6 +82,38 @@ enum DebugControl {
                     model.dismissFolderSuggestion(mid)
                 }
             }
+        // 每一種東西都能直接改、刪（R100、design §74）
+        case "renamemeetingui": if let id { model.requestRenameMeeting(id) }   // 等於側欄右鍵「重新命名…」、Return
+        case "folderdeleteui": model.confirmDeleteFolder = args[1]              // 等於資料夾的「刪除資料夾…」、Delete，打開確認
+        case "seriesdeleteui": model.confirmDeleteSeries = id                    // 等於定期會議的「刪除定期會議…」，打開確認
+        case "sidebarkey":   // sidebarkey return|delete：等於在側欄按 Return、Delete（照現在選到的）
+            if args[1] == "return" { _ = model.sidebarReturn() } else { model.sidebarDelete() }
+        case "noteitem":   // noteitem <editui|edit|delete> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]
+            let a = Int(args.count > 3 ? args[3] : "") ?? 0
+            let twoLevel = ["topic", "custom", "person"].contains(args[2])
+            let b = twoLevel ? Int(args.count > 4 ? args[4] : "") ?? 0 : 0
+            let ref: NoteItemRef? = switch args[2] {
+            case "summary": .summary(a)
+            case "decisions": .decisions(a)
+            case "actionItems": .actionItems(a)
+            case "openQuestions": .openQuestions(a)
+            case "topic": .topicPoint(a, b)
+            case "custom": .custom(a, b)
+            case "person": .person(a, b)
+            default: nil
+            }
+            let textIndex = twoLevel ? 5 : 4
+            if let ref {
+                switch args[1] {
+                case "editui": model.editingNoteItem = ref
+                case "edit": model.editNoteItem(ref, text: args.count > textIndex ? args[textIndex] : "")
+                case "delete": model.deleteNoteItem(ref)
+                default: model.editingNoteItem = nil
+                }
+            }
+        case "bookmarkrename": if let id { model.renameBookmark(id, label: args[2]) }
+        case "bookmarkrenameui": model.renamingBookmark = model.detail?.bookmarks.first { $0.id == id }
+        case "termrename": if let id { model.renameTerm(id, to: args[2]) }
         // 定期會議（design §73）
         case "seriescandidates":   // seriescandidates <輸出.json>
             write(["candidates": model.seriesCandidates.map {
@@ -866,6 +898,10 @@ enum DebugControl {
                                           "intervalWeeks": $0.intervalWeeks, "people": $0.people, "count": model.seriesCount($0.id ?? 0)] as [String: Any] },
             "seriesCandidates": model.seriesCandidates.count, "seriesFilter": model.seriesFilter ?? -1,
             "confirmRemovePerson": model.confirmRemovePerson ?? -1,
+            "confirmDeleteFolder": model.confirmDeleteFolder ?? "", "confirmDeleteSeries": model.confirmDeleteSeries ?? -1,
+            "renameMeetingRequest": model.renameMeetingRequest ?? -1, "personRenameRequest": model.personRenameRequest ?? -1,
+            "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "", "renamingFolder": model.folderPrompt.map { "\($0)" } ?? "",
+            "renamingSeries": model.renamingSeries ?? -1,
             "list": ["sort": model.meetingSort.rawValue, "group": model.effectiveGrouping.rawValue,
                      "filter": ["review": model.meetingFilter.needsReview, "mine": model.meetingFilter.myActionItems,
                                 "person": model.meetingFilter.personId ?? -1, "template": model.meetingFilter.templateId ?? ""] as [String: Any],

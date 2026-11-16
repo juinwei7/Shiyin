@@ -21,14 +21,12 @@ struct SeriesSidebarSection: View {
                 ForEach(model.series) { series in
                     let id = series.id ?? 0
                     FolderRow(name: series.name, count: model.seriesCount(id), symbol: "arrow.triangle.2.circlepath",
-                              selected: model.sidebarMode == .meetings && model.seriesFilter == id) {
+                              selected: model.sidebarMode == .meetings && model.seriesFilter == id,
+                              menu: { AnyView(SeriesMenuItems(series: series)) }) {
                         model.openSeries(id)
                     }
                     .help(series.frequencyText)
-                    .contextMenu {
-                        Button("重新命名…") { model.renamingSeries = id }
-                        Button("刪除定期會議（會議會保留）", role: .destructive) { model.deleteSeries(id) }
-                    }
+                    .contextMenu { SeriesMenuItems(series: series) }
                 }
             }
         }
@@ -141,7 +139,6 @@ struct SeriesPage: View {
     @Environment(AppModel.self) private var model
     let series: MeetingSeries
     @State private var items: [PersonActionItem] = []
-    @State private var confirmDelete = false
 
     var body: some View {
         let id = series.id ?? 0
@@ -183,6 +180,7 @@ struct SeriesPage: View {
             NotesSection(title: MeetingLanguage.ui(zh: "會議", en: "Meetings")) {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(rows) { row in
+                        let rowSeries = series
                         Button { model.selection = row.id } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 14) {
                                 Text(row.meeting.meetingDate).monospacedDigit().foregroundStyle(.secondary)
@@ -196,6 +194,8 @@ struct SeriesPage: View {
                         }
                         .buttonStyle(.plain)
                         .help("打開這場會議")
+                        .rowMenu { MeetingLinkMenuItems(meeting: row.meeting, series: rowSeries) }
+                        .contextMenu { MeetingLinkMenuItems(meeting: row.meeting, series: rowSeries) }
                     }
                 }
             }
@@ -203,11 +203,6 @@ struct SeriesPage: View {
         .navigationTitle(series.name)
         .toolbar { ToolbarItem(placement: .primaryAction) { moreMenu } }
         .task(id: rows.map(\.meeting)) { items = model.seriesOpenItems(id) }
-        .confirmationDialog("刪除定期會議「\(series.name)」？", isPresented: $confirmDelete) {
-            Button("刪除", role: .destructive) { model.deleteSeries(id) }
-        } message: {
-            Text("會議會保留，之後的會議不會再自動加進來，也不會再建議這一組。")
-        }
     }
 
     private func header(_ rows: [MeetingRow]) -> some View {
@@ -223,10 +218,18 @@ struct SeriesPage: View {
                     Button { model.renamingSeries = series.id } label: { Image(systemName: "pencil") }
                         .buttonStyle(.borderless)
                         .foregroundStyle(Color.celadon)
-                        .help("改名")
-                        .accessibilityLabel(Text("改名"))
+                        .help("重新命名")
+                        .accessibilityLabel(Text("重新命名"))
                 }
                 Text(Self.summaryLine(series, rows: rows)).font(.callout).foregroundStyle(.secondary)
+                // 看得到的動作（R100）：重新命名是名字旁的鉛筆；右上角「更多」照舊
+                HStack(spacing: 16) {
+                    Button("刪除定期會議…", systemImage: "trash", role: .destructive) { model.confirmDeleteSeries = series.id }
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.borderless)
+                .font(.callout)
+                .padding(.top, 4)
             }
             Spacer(minLength: 0)
         }
@@ -242,9 +245,7 @@ struct SeriesPage: View {
 
     private var moreMenu: some View {
         Menu {
-            Button("重新命名…") { model.renamingSeries = series.id }
-            Divider()
-            Button("刪除定期會議…", role: .destructive) { confirmDelete = true }
+            SeriesMenuItems(series: series)
         } label: {
             Label("更多", systemImage: "ellipsis.circle")
         }
