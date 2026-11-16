@@ -605,6 +605,7 @@ final class AppModel {
     /// 列表上的會議：資料夾、篩選（垃圾桶不篩選）、排序（R97、design §71）
     var filteredMeetings: [MeetingRow] {
         var source = showTrash ? trash : meetings
+        if listShowsOthersOnly { source = source.filter { $0.meeting.folder.isEmpty && $0.meeting.seriesId == nil } }
         if !showTrash, let folderFilter { source = source.filter { $0.meeting.folder == folderFilter } }
         if !showTrash, let seriesFilter { source = source.filter { $0.meeting.seriesId == seriesFilter } }
         if !showTrash, meetingFilter.isActive { source = source.filter { matches($0, meetingFilter) } }

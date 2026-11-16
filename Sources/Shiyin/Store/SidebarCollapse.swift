@@ -43,11 +43,27 @@ extension AppModel {
         selection = id
     }
 
-    /// 程式帶你去某場會議時（reveal），展開會議列表和那場所在的那一組，看得到它在哪裡
+    /// 下面的列表只放資料夾、定期會議以外的會議（R101.6，參考 ChatGPT 的「最近項目」：專案裡的對話不在下面）。
+    /// 沒有看某個資料夾、沒有篩選、不是依資料夾分組時才這樣：篩選、依資料夾分組是要跨資料夾找東西。
+    /// 還沒有資料夾、定期會議時就是所有會議
+    var listShowsOthersOnly: Bool {
+        !showTrash && folderFilter == nil && seriesFilter == nil && !meetingFilter.isActive
+            && meetingGrouping != .folder && (meetings.contains { !$0.meeting.folder.isEmpty || $0.meeting.seriesId != nil })
+    }
+
+    /// 程式帶你去某場會議時（reveal），看得到它在哪裡：在下面的列表就展開列表和那一組；
+    /// 在資料夾、定期會議裡（下面的列表沒有）就展開那個資料夾
     func expandToShow(_ id: Int64) {
-        setSection("meetings", expanded: true)
         if let group = meetingGroups.first(where: { group in group.rows.contains { $0.id == id } }) {
+            setSection("meetings", expanded: true)
             setSection(Self.groupKey(group), expanded: true)
+        } else if let meeting = meetings.first(where: { $0.id == id })?.meeting {
+            setSection("folders", expanded: true)
+            if let series = meeting.seriesId {
+                setRow(Self.seriesKey(series), expanded: true)
+            } else if !meeting.folder.isEmpty {
+                setRow(Self.folderKey(meeting.folder), expanded: true)
+            }
         }
     }
 }

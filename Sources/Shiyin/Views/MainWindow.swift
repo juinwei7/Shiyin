@@ -454,6 +454,9 @@ struct SidebarView: View {
                     if expanded {
                         if model.meetingFilter.isActive { MeetingFilterBar() }
                         if model.meetingFilter.isActive && model.filteredMeetings.isEmpty { MeetingFilterEmpty() }
+                        if model.listShowsOthersOnly && model.filteredMeetings.isEmpty {
+                            Text("不在資料夾裡的會議會列在這裡").font(.callout).foregroundStyle(.secondary).selectionDisabled()
+                        }
                         if !grouped, let rows = groups.first?.rows {
                             ForEach(rows) { row in meetingRow(row) }
                         }

@@ -2862,6 +2862,23 @@
         }
       }
     },
+    "不在資料夾裡的會議會列在這裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在文件夹里的会议会列在这里"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meetings that aren't in a folder appear here"
+          }
+        }
+      }
+    },
     "不提醒：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -4132,19 +4149,19 @@
         }
       }
     },
-    "側欄太長時可以收起來：點「資料夾」「所有會議」這些標題就收起或展開。點資料夾（定期會議也在這裡，圖示上有 ↻）會在原地展開最近 5 場，圖示換成打開的資料夾，點一場直接打開；要讓下面的列表只看某個資料夾，按右鍵選「只看這個資料夾」。": {
+    "側欄太長時可以收起來：點「資料夾」「其他會議」這些標題就收起或展開。定期會議也在「資料夾」裡（圖示上有 ↻），一樣點一下展開；展開的會議點一下直接打開。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "侧边栏太长时可以收起来：点“文件夹”“所有会议”这些标题就收起或展开。点文件夹（定期会议也在这里，图标上有 ↻）会在原地展开最近 5 场，图标换成打开的文件夹，点一场直接打开；要让下面的列表只看某个文件夹，按右键选“只看这个文件夹”。"
+            "value": "侧边栏太长时可以收起来：点“文件夹”“其他会议”这些标题就收起或展开。定期会议也在“文件夹”里（图标上有 ↻），一样点一下展开；展开的会议点一下直接打开。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When the sidebar gets long, collapse it: click a heading such as Folders or All Meetings to hide or show that section. Clicking a folder (recurring meetings are here too, marked with ↻) shows its 5 most recent meetings right there and the icon changes to an open folder; click one to open it. To show only one folder in the list below, right-click it and choose Show Only This Folder."
+            "value": "When the sidebar gets long, collapse it: click a heading such as Folders or Other Meetings to hide or show that section. Recurring meetings are under Folders too (marked with ↻) and expand the same way; click a meeting to open it."
           }
         }
       }
@@ -4866,6 +4883,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "其他人…（到逐字稿改名）"
+          }
+        }
+      }
+    },
+    "其他會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other Meetings"
           }
         }
       }
@@ -13124,36 +13158,36 @@
         }
       }
     },
-    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄上方的「資料夾」可以切換只看某個資料夾；正在看某個資料夾時，新錄的和匯入的會議都會放進去。資料夾按右鍵可以重新命名或刪除（會議會保留）。": {
+    "會議可以分資料夾：在會議上按右鍵（或「更多」）選「移到資料夾」→「新資料夾…」。側欄的資料夾點一下就在原地展開最近 5 場，下面的「其他會議」只列不在資料夾裡的會議。資料夾按右鍵選「只看這個資料夾」，下面的列表就只看它，這時新錄的和匯入的會議都會放進去；右鍵也可以重新命名或刪除（會議會保留）。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organize meetings in folders: right-click a meeting (or use “More”) and choose “Move to Folder” → “New Folder…”. Use “Folders” at the top of the sidebar to show one folder; while you're in a folder, new recordings and imports go into it. Right-click a folder to rename or delete it (its meetings are kept)."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "会议可以分文件夹：在会议上按右键（或“更多”）选“移到文件夹”→“新文件夹…”。侧边栏上方的“文件夹”可以切换只看某个文件夹；正在看某个文件夹时，新录的和导入的会议都会放进去。文件夹按右键可以重新命名或删除（会议会保留）。"
+            "value": "会议可以分文件夹：在会议上按右键（或“更多”）选“移到文件夹”→“新文件夹…”。侧边栏的文件夹点一下就在原地展开最近 5 场，下面的“其他会议”只列不在文件夹里的会议。文件夹按右键选“只看这个文件夹”，下面的列表就只看它，这时新录的和导入的会议都会放进去；右键也可以重新命名或删除（会议会保留）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can sort meetings into folders: right-click a meeting (or use More) and choose Move to Folder → New Folder…. Click a folder in the sidebar to show its 5 most recent meetings right there; Other Meetings below lists only meetings that aren't in a folder. Right-click a folder and choose Show Only This Folder to show just that folder in the list; new recordings and imports then go into it. You can also rename or delete a folder from the right-click menu (the meetings are kept)."
           }
         }
       }
     },
-    "會議多了可以整理：列表上方「所有會議」那一行右邊的「顯示方式」（選單列的「顯示方式」也有）可以照日期、標題、長度排序，依月份或資料夾分組，只看有待確認、有你的待辦、某個人參加或某個範本的會議。資料夾按右鍵選「自動加入的條件…」，例如標題有「週會」、某幾個人都參加，新的會議整理完就自動放進去。": {
+    "會議多了可以整理：列表上方那一行右邊的「顯示方式」（選單列的「顯示方式」也有）可以照日期、標題、長度排序，依月份或資料夾分組，只看有待確認、有你的待辦、某個人參加或某個範本的會議。資料夾按右鍵選「自動加入的條件…」，例如標題有「週會」、某幾個人都參加，新的會議整理完就自動放進去。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "会议多了可以整理：列表上方“所有会议”那一行右边的“显示方式”（菜单栏的“显示方式”也有）可以照日期、标题、长度排序，依月份或文件夹分组，只看有待确认、有你的待办、某个人参加或某个模板的会议。文件夹按右键选“自动加入的条件…”，例如标题有“周会”、某几个人都参加，新的会议整理完就自动放进去。"
+            "value": "会议多了可以整理：列表上方那一行右边的“显示方式”（菜单栏的“显示方式”也有）可以照日期、标题、长度排序，依月份或文件夹分组，只看有待确认、有你的待办、某个人参加或某个模板的会议。文件夹按右键选“自动加入的条件…”，例如标题有“周会”、某几个人都参加，新的会议整理完就自动放进去。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To organize lots of meetings, use the view options button to the right of “All Meetings” above the list (also in the View menu): sort by date, title or length, group by month or folder, and show only meetings that need review, have your action items, include a certain person or use a certain template. Right-click a folder and choose Auto-Add Rules… (for example, the title contains “weekly” or certain people all attend), and new meetings are moved there once their notes are ready."
+            "value": "To organize lots of meetings, use the view options button at the right of the list heading (also in the View menu): sort by date, title or length, group by month or folder, and show only meetings that need review, have your action items, include a certain person or use a certain template. Right-click a folder and choose Auto-Add Rules… (for example, the title contains “weekly” or certain people all attend), and new meetings are moved there once their notes are ready."
           }
         }
       }
