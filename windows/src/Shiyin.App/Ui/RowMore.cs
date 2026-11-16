@@ -8,14 +8,15 @@ namespace Shiyin.App;
 
 /// <summary>
 /// 列右邊的「⋯」（R100、M§74 的 RowMenuButton）：滑鼠在列上、或那一列選到時才看得到（沒顯示時透明、照樣佔位，列的寬度不跳），
-/// 點了打開跟右鍵同一份選單（fill 建選單的內容，打開時才建）。無障礙名稱、ToolTip 是「更多動作」
+/// 點了打開跟右鍵同一份選單（fill 建選單的內容，打開時才建）。無障礙名稱、ToolTip 是「更多動作」。
+/// 兩種選單都照 ChatGPT 的樣子（MenuLook，R105、design-windows §11.38）；「⋯」的選單左上角對齊「⋯」的左下（同 Mac）
 /// </summary>
 public static class RowMore
 {
     public static Button Button(Action<MenuFlyout> fill)
     {
-        var menu = new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
-        menu.Opening += (_, _) => Ui.Guard(() => { menu.Items.Clear(); fill(menu); });
+        var menu = MenuLook.Apply(new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
+        menu.Opening += (_, _) => Ui.Guard(() => { menu.Items.Clear(); fill(menu); MenuLook.Apply(menu); });
         var button = Ui.Borderless(new Button { Content = new FontIcon { Glyph = "", FontSize = 14 }, Flyout = menu }, Ui.Secondary);
         button.Padding = new Thickness(5, 2, 5, 2);
         button.MinWidth = 0;
@@ -31,7 +32,8 @@ public static class RowMore
     {
         var menu = new MenuFlyout();
         fill(menu);
-        menu.Opening += (_, _) => Ui.Guard(() => { menu.Items.Clear(); fill(menu); });
+        MenuLook.Apply(menu);
+        menu.Opening += (_, _) => Ui.Guard(() => { menu.Items.Clear(); fill(menu); MenuLook.Apply(menu); });
         return menu;
     }
 

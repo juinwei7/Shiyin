@@ -27,6 +27,31 @@ public static partial class ControlPipe
             case "personrenameui" when Id(1) is long renameId && main is not null:
                 main.RenamePersonUi(renameId);
                 return Ok;
+            // 照 Sheet 樣子的對話框（R106、design-windows §11.39；同 Mac 的 exportui、preview editinfo|replace|rediarize）：
+            // dialogui <export|rediarize|editinfo|replace|split|trash|purge> <會議 id[,…]> [段落 id（split）或錯誤寫法（replace）]，
+            // 開著的是哪一個看 state 的 sheet（標題）
+            case "dialogui" when args.Length > 2 && main is not null:
+            {
+                var ids = Ids(args[2]);
+                if (ids.Count == 0) return new JsonObject { ["error"] = "no meeting id" };
+                var first = ids[0];
+                switch (args[1])
+                {
+                    case "export": _ = Dialogs.Export(main, first); break;
+                    case "rediarize": _ = Dialogs.Rediarize(main, first); break;
+                    case "editinfo" when host.Db.Meeting(first) is { } meeting: _ = Dialogs.EditInfo(main, meeting); break;
+                    case "replace": _ = Dialogs.Replace(main, first, args.Length > 3 ? args[3] : ""); break;
+                    case "split" when Id(3) is long segmentId:
+                        main.State.Reveal(first);
+                        if (main.State.Detail?.Segments.FirstOrDefault(s => s.Id == segmentId) is not { } segment) return new JsonObject { ["error"] = "no such segment" };
+                        _ = Dialogs.SplitSegment(main, main.State.Detail, segment);
+                        break;
+                    case "trash": _ = main.ConfirmTrash(ids); break;
+                    case "purge": _ = main.ConfirmPurge(ids); break;
+                    default: return new JsonObject { ["error"] = "unknown dialog" };
+                }
+                return Ok;
+            }
             // 重新命名的對話框（R102、design-windows §11.35，同 Mac）：renameui <meeting|folder|series|person|bookmark|newfolder> <id、名稱或會議 id,…>
             case "renameui" when args.Length > 2 && main is not null:
             {

@@ -537,23 +537,24 @@ public sealed class TranscriptTab
         var d = detail!;
         var meeting = d.Meeting.Id!.Value;
         var flyout = new Flyout();
-        var name = new TextBox { Text = d.SpeakerName(idx) ?? "", PlaceholderText = L.T("例如：小明") };
+        // 同彈窗的元件（R106.4、design-windows §11.39）：標題粗體、同一種框、圓角按鈕
+        var name = Sheet.TextField(d.SpeakerName(idx) ?? "", L.T("例如：小明"));
         void Save()
         {
             flyout.Hide();
             host.Controller.RenameSpeaker(meeting, idx, name.Text);
         }
         name.KeyDown += (_, e) => { if (e.Key == Windows.System.VirtualKey.Enter) Save(); };
-        var panel = Ui.Column(10, Ui.Text(L.T("說話者名字"), 15, bold: true), name);
+        var panel = Ui.Column(12, Ui.Text(L.T("說話者名字"), 18, bold: true), name);
         var automatic = d.SpeakerSources.GetValueOrDefault(idx) == "voiceprint";
         if (automatic) panel.Children.Add(Ui.Caption(L.T("這個名字是拾音認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。")));
         panel.Children.Add(Ui.Caption(L.T("整場逐字稿和之後的會議紀錄都會用這個名字；拾音也會記住這個人的聲音，之後的會議自動帶入。")));
         var buttons = Ui.Row(8);
-        if (automatic) buttons.Children.Add(Ui.Button(L.T("不是他"), () => { flyout.Hide(); host.Controller.RejectVoiceprintMatch(meeting, idx); }));
+        if (automatic) buttons.Children.Add(Sheet.Pill(L.T("不是他"), click: () => { flyout.Hide(); host.Controller.RejectVoiceprintMatch(meeting, idx); }));
         var others = d.Speakers.Keys.Order().Where(k => k != idx).ToList();
         if (others.Count > 0)
         {
-            var merge = new DropDownButton { Content = L.T("合併到…") };
+            var merge = Sheet.Pill(new DropDownButton { Content = L.T("合併到…") });
             var menu = new MenuFlyout();
             foreach (var other in others) menu.Items.Add(Ui.Item(d.SpeakerName(other) ?? "", () => { flyout.Hide(); host.Controller.MergeSpeaker(meeting, idx, other); }));
             merge.Flyout = menu;
@@ -561,10 +562,10 @@ public sealed class TranscriptTab
             buttons.Children.Add(merge);
         }
         if (d.SpeakerUndoLabel is { } undo)
-            buttons.Children.Add(Ui.Button(L.F("復原：%@", undo), () => { flyout.Hide(); host.Controller.UndoSpeakerEdit(meeting); },
-                tooltip: L.T("復原最近一次合併或改句子的說話者")));
-        panel.Children.Add(Ui.Bar(buttons, null, Ui.Button(L.T("儲存"), Save, accent: true)));
-        panel.Width = 300;
+            buttons.Children.Add(Sheet.Pill(Ui.Button(L.F("復原：%@", undo), () => { flyout.Hide(); host.Controller.UndoSpeakerEdit(meeting); },
+                tooltip: L.T("復原最近一次合併或改句子的說話者"))));
+        panel.Children.Add(Ui.Bar(buttons, null, Sheet.Pill(L.T("儲存"), Sheet.Kind.Primary, click: Save)));
+        panel.Width = 320;
         flyout.Content = panel;
         flyout.Opened += (_, _) => { name.Focus(FocusState.Programmatic); name.SelectAll(); };
         return flyout;
@@ -574,7 +575,9 @@ public sealed class TranscriptTab
 
     FrameworkElement Editor(Segment segment)
     {
-        var box = new TextBox { Text = editText, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(Language), FontSize = Ui.C(14) };
+        // 同彈窗的框（R106.4）：字照會議內容的文字大小，按鈕小一號
+        var box = Sheet.Field(new TextBox { Text = editText, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, Language = Ui.ContentLanguage(Language) });
+        box.FontSize = Ui.C(14);
         box.TextChanged += (_, _) => { editText = box.Text; draftTimer.Stop(); draftTimer.Start(); };
         box.KeyDown += (_, e) =>
         {
@@ -582,7 +585,7 @@ public sealed class TranscriptTab
             else if (e.Key == Windows.System.VirtualKey.Escape) { CancelEdit(); e.Handled = true; }
         };
         box.Loaded += (_, _) => box.Focus(FocusState.Programmatic);
-        var buttons = Ui.Row(8, Ui.Button(L.T("取消"), CancelEdit), Ui.Button(L.T("儲存"), () => SaveEdit(segment), accent: true));
+        var buttons = Ui.Row(8, Sheet.Pill(L.T("取消"), compact: true, click: CancelEdit), Sheet.Pill(L.T("儲存"), Sheet.Kind.Primary, compact: true, click: () => SaveEdit(segment)));
         buttons.HorizontalAlignment = HorizontalAlignment.Right;
         return Ui.Column(6, box, buttons);
     }

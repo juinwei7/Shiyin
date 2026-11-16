@@ -1353,11 +1353,11 @@ public sealed class MainWindow : Window
     {
         // 點資料夾是在原地展開（R101.2）；只看它從展開後的「顯示全部」（選單不放「只看這個資料夾」，R101.2、M§75）
         // 每一項有圖示、刪除是紅字（R101.4，同 Mac 的 FolderMenuItems）
-        menu.Items.Add(Ui.Item(L.T("重新命名…"), () => RenameUi(new RenameTarget.Folder(folder)), icon: Symbol.Edit));
+        menu.Items.Add(MenuLook.Hint(Ui.Item(L.T("重新命名…"), () => RenameUi(new RenameTarget.Folder(folder)), icon: Symbol.Edit), MenuLook.Rename));
         menu.Items.Add(Ui.Item(State.RuleFor(folder) is null ? L.T("自動加入的條件…") : L.T("編輯自動加入的條件…"),
             () => _ = Dialogs.FolderRule(this, folder), icon: Symbol.Setting));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Ui.DangerItem(L.T("刪除資料夾…"), () => _ = ConfirmDeleteFolder(folder)));
+        menu.Items.Add(MenuLook.Hint(Ui.DangerItem(L.T("刪除資料夾…"), () => _ = ConfirmDeleteFolder(folder)), MenuLook.Delete));
     }
 
     /// <summary>定期會議的動作（R100、同 Mac 的 SeriesMenuItems）：側欄的右鍵、「⋯」</summary>
@@ -1366,9 +1366,9 @@ public sealed class MainWindow : Window
         // 點定期會議是在原地展開（R101.2），打開系列頁從這裡（或展開後的「顯示全部」）
         menu.Items.Add(Ui.Item(L.T("打開定期會議"), () => ShowSeries(id), glyph: Ui.OpenGlyph));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Ui.Item(L.T("重新命名…"), () => RenameUi(new RenameTarget.Series(id)), icon: Symbol.Edit));
+        menu.Items.Add(MenuLook.Hint(Ui.Item(L.T("重新命名…"), () => RenameUi(new RenameTarget.Series(id)), icon: Symbol.Edit), MenuLook.Rename));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Ui.DangerItem(L.T("刪除定期會議…"), () => _ = ConfirmDeleteSeries(id)));
+        menu.Items.Add(MenuLook.Hint(Ui.DangerItem(L.T("刪除定期會議…"), () => _ = ConfirmDeleteSeries(id)), MenuLook.Delete));
     }
 
     // MARK: 顯示方式（R97、M§71）
@@ -1596,7 +1596,7 @@ public sealed class MainWindow : Window
             void Fill(MenuFlyout menu)
             {
                 if (State.People.FirstOrDefault(p => p.Id == personId) is { } current)
-                    foreach (var entry in personPage.MenuItems(current)) menu.Items.Add(entry);
+                    foreach (var entry in personPage.MenuItems(current, sidebar: true)) menu.Items.Add(entry);
             }
             var more = RowMore.Button(Fill);
             var row = new Grid { ColumnSpacing = 10, Padding = new Thickness(0, 4, 0, 4) };
@@ -1741,7 +1741,9 @@ public sealed class MainWindow : Window
     {
         var menu = new MenuFlyout();
         FillRowMenu(menu, id);
-        menu.Opening += (_, _) => Ui.Guard(() => FillRowMenu(menu, id));
+        MenuLook.Apply(menu);
+        // 照 ChatGPT 的樣子（R105、design-windows §11.38）
+        menu.Opening += (_, _) => Ui.Guard(() => { FillRowMenu(menu, id); MenuLook.Apply(menu); });
         return menu;
     }
 
@@ -1754,21 +1756,21 @@ public sealed class MainWindow : Window
         if (State.ShowTrash)
         {
             menu.Items.Add(Ui.Item(L.T("還原"), () => host.Controller.Restore(ids), icon: Symbol.Undo));
-            menu.Items.Add(Ui.DangerItem(L.T("永久刪除…"), () => _ = ConfirmPurge(ids)));
+            menu.Items.Add(MenuLook.Hint(Ui.DangerItem(L.T("永久刪除…"), () => _ = ConfirmPurge(ids)), MenuLook.Delete));
             return;
         }
         // 一場：重新命名…（重新命名的對話框，R100、R102）
         if (ids.Count == 1)
         {
-            menu.Items.Add(Ui.Item(L.T("重新命名…"), () => RenameMeetingUi(id), icon: Symbol.Edit));
+            menu.Items.Add(MenuLook.Hint(Ui.Item(L.T("重新命名…"), () => RenameMeetingUi(id), icon: Symbol.Edit), MenuLook.Rename));
             menu.Items.Add(new MenuFlyoutSeparator());
         }
         menu.Items.Add(FolderSubMenu(ids, CommonFolder(ids)));
         foreach (var item in SeriesMenuItems(ids)) menu.Items.Add(item);
         menu.Items.Add(new MenuFlyoutSeparator());
         // 一場直接移（可以還原）；好幾場先確認（M§62）
-        menu.Items.Add(ids.Count == 1 ? Ui.DangerItem(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(ids))
-            : Ui.DangerItem(L.F("把 %lld 場會議移到垃圾桶…", ids.Count), () => _ = ConfirmTrash(ids)));
+        menu.Items.Add(MenuLook.Hint(ids.Count == 1 ? Ui.DangerItem(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(ids))
+            : Ui.DangerItem(L.F("把 %lld 場會議移到垃圾桶…", ids.Count), () => _ = ConfirmTrash(ids)), MenuLook.Delete));
     }
 
     /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null</summary>
@@ -1963,7 +1965,7 @@ public sealed class MainWindow : Window
 
     public Task ConfirmTrash(long id) => ConfirmTrash([id]);
 
-    /// <summary>移到垃圾桶前確認，寫出場數（R88.2）；可以還原，主要按鈕是預設</summary>
+    /// <summary>移到垃圾桶前確認，寫出場數（R88.2）；確認的按鈕紅底（R106.2，同 Mac），Enter 是確認</summary>
     public async Task ConfirmTrash(IReadOnlyList<long> ids)
     {
         if (ids.Count == 0) return;
@@ -1972,7 +1974,7 @@ public sealed class MainWindow : Window
         try
         {
             ok = await Dialogs.Confirm(this, ids.Count > 1 ? L.F("把 %lld 場會議移到垃圾桶？", ids.Count) : L.T("把這場會議移到垃圾桶？"),
-                L.T("30 天內都可以從垃圾桶還原。"), L.T("移到垃圾桶"));
+                L.T("30 天內都可以從垃圾桶還原。"), L.T("移到垃圾桶"), destructive: true);
         }
         finally { DeleteTargets = []; }
         if (ok) host.Controller.MoveToTrash(ids);
@@ -1980,7 +1982,7 @@ public sealed class MainWindow : Window
 
     public Task ConfirmPurge(long id) => ConfirmPurge([id]);
 
-    /// <summary>永久刪除前確認，寫出場數（R88.2）；沒辦法還原，預設按鈕是「取消」</summary>
+    /// <summary>永久刪除前確認，寫出場數（R88.2）；沒辦法還原，確認的按鈕紅底、Enter 是確認（R106.2）</summary>
     public async Task ConfirmPurge(IReadOnlyList<long> ids)
     {
         if (ids.Count == 0) return;
@@ -1996,7 +1998,7 @@ public sealed class MainWindow : Window
         if (ok) host.Controller.DeletePermanently(ids);
     }
 
-    /// <summary>「清空垃圾桶…」（R88.3）：沒辦法還原，預設按鈕是「取消」</summary>
+    /// <summary>「清空垃圾桶…」（R88.3）：沒辦法還原，確認的按鈕紅底、Enter 是確認（R106.2）</summary>
     public async Task ConfirmEmptyTrash()
     {
         var count = State.Trash.Count;
@@ -2017,7 +2019,7 @@ public sealed class MainWindow : Window
 
     /// <summary>
     /// 移除一個人（R85.7、M§60.2）：人物頁的「更多」、側欄人物列的右鍵、Delete。會從「人物」拿掉、刪掉聲音特徵，會議裡已經帶入的名字留著
-    /// （跟設定頁的「刪除聲音特徵」同一個動作）；預設按鈕是「取消」。移除的是正在看的人時回到沒選人
+    /// （跟設定頁的「刪除聲音特徵」同一個動作）；確認的按鈕紅底、Enter 是確認（R106.2）。移除的是正在看的人時回到沒選人
     /// </summary>
     public async Task ConfirmRemovePerson(long id)
     {
@@ -2136,7 +2138,7 @@ public sealed class MainWindow : Window
     public long? DeletingSeries { get; private set; }
 
     /// <summary>
-    /// 刪除資料夾（R100）：會議留著（移到「不在資料夾」），自動加入的條件一起刪；預設按鈕是「取消」。
+    /// 刪除資料夾（R100）：會議留著（移到「不在資料夾」），自動加入的條件一起刪；確認的按鈕紅底、Enter 是確認（R106.2）。
     /// 側欄的右鍵、「⋯」、Delete 都走這裡
     /// </summary>
     public async Task ConfirmDeleteFolder(string folder)
@@ -2157,7 +2159,7 @@ public sealed class MainWindow : Window
         host.Controller.DeleteFolder(folder);
     }
 
-    /// <summary>刪除定期會議（R100）：會議留著；之後不再自動加入、不再建議同一組；預設按鈕是「取消」</summary>
+    /// <summary>刪除定期會議（R100）：會議留著；之後不再自動加入、不再建議同一組；確認的按鈕紅底、Enter 是確認（R106.2）</summary>
     public async Task ConfirmDeleteSeries(long id)
     {
         if (DeletingSeries is not null || State.SeriesById(id) is not { } series) return;
@@ -2179,7 +2181,7 @@ public sealed class MainWindow : Window
         RenameUi(new RenameTarget.Person(id));
     }
 
-    /// <summary>「從這裡分成兩場…」（R90.1、M§64）：寫出從幾分幾秒開始、會怎麼分；分開後沒辦法合併回來（D170），預設按鈕是「取消」</summary>
+    /// <summary>「從這裡分成兩場…」（R90.1、M§64）：寫出從幾分幾秒開始、會怎麼分；分開後沒辦法合併回來（D170）。確認的按鈕是主要按鈕（不是刪除類，R106.2，同 Mac）</summary>
     public async Task ConfirmSplitMeeting(long meetingId, Segment segment)
     {
         if (segment.Id is not long segmentId) return;
@@ -2189,7 +2191,7 @@ public sealed class MainWindow : Window
         {
             ok = await Dialogs.Confirm(this, L.F("從 %@ 這句開始分成另一場會議？", TimeFormat.String(segment.Start)),
                 L.T("這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。分開後沒辦法合併回來。"),
-                L.T("分成兩場"), destructive: true);
+                L.T("分成兩場"));
         }
         finally { SplitMeetingRequest = null; }
         if (ok) await host.Controller.SplitMeeting(meetingId, segmentId);

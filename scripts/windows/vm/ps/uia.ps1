@@ -13,6 +13,8 @@
 #   uia.ps1 lclick <視窗> <名稱> [第幾個] [選項] [子選項]  真的滑鼠左鍵點（DropDownButton 用 Invoke 打不開選單時）
 #   uia.ps1 ctrlclick <視窗> <名稱> [第幾個] 按住 Ctrl 點（清單多選）
 #   uia.ps1 key <視窗> <虛擬鍵碼（十六進位）> [ctrl|alt]  按一個鍵（2E 是 Delete、26 是 ↑）
+#   uia.ps1 menukeys <視窗> <名稱> <鍵,鍵,…|-> [right|left|more]  真的滑鼠點那個元件打開選單（right 右鍵、left 左鍵、more 點列最右邊的「⋯」），
+#                                         接著按那幾個鍵（十六進位，逗號分隔，例如 28,27,0D；- 不按），印出有焦點的選項。選單照樣開著（截圖用）
 #   uia.ps1 drag <視窗> <來源> <目標> [top|center|bottom] [停留秒數]  真的滑鼠拖曳（來源可以是「檔案總管的視窗標題::檔名」）。
 #                                         這五個是虛擬機桌面上真的輸入，不會送到 Mac
 param([string]$Action, [string]$Window, [string]$Target, [string]$Extra, [string]$Item1, [string]$Item2)
@@ -189,6 +191,30 @@ switch ($Action) {
             "chose $(Describe $item)"
         }
         if (-not $Item1) { @(Windows | ForEach-Object { $_.FindAll($T::Descendants, $cond) }) | ForEach-Object { "  $(Describe $_)" } }
+    }
+    'menukeys' {
+        # 選單的鍵盤（R105、design-windows §11.38）：打開選單和按鍵要在同一個程序裡（下一個 PowerShell 會搶到焦點，選單會被關掉）
+        $w = Find-Window $Window
+        $e = Find-Element $w $Target 0
+        $r = $e.Current.BoundingRectangle
+        $front = [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle)
+        Start-Sleep -Milliseconds 400
+        $how = if ($Item1) { $Item1 } else { 'right' }
+        $x = if ($how -eq 'more') { [int]($r.X + $r.Width - 18) } else { [int]($r.X + [Math]::Min($r.Width / 2, 60)) }
+        [RealInput]::Click($x, [int]($r.Y + $r.Height / 2), $how -eq 'right', $false)
+        Start-Sleep -Milliseconds 900
+        if ($Extra -and $Extra -ne '-') {
+            foreach ($k in $Extra.Split(',')) {
+                $vk = [Convert]::ToByte($k, 16)
+                $ext = if ($vk -ge 0x21 -and $vk -le 0x28) { 1 } else { 0 }
+                [RealInput]::keybd_event($vk, 0, $ext, [UIntPtr]::Zero); [RealInput]::keybd_event($vk, 0, $ext -bor 2, [UIntPtr]::Zero)
+                Start-Sleep -Milliseconds 600
+            }
+        }
+        "menukeys $how $(Describe $e) keys=$Extra$(if (-not $front) { '（拉到前面失敗）' })"
+        $f = $A::FocusedElement; if ($f) { "focused: $(Describe $f)" }
+        $cond = New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem)
+        @(Windows | ForEach-Object { $_.FindAll($T::Descendants, $cond) }) | ForEach-Object { "  $(Describe $_)" }
     }
     'key' {
         # 對拾音的視窗按一個鍵（虛擬鍵碼，十六進位，例如 2E 是 Delete、26 是 ↑）；Extra 給 ctrl、alt 時按住 Ctrl、Alt。焦點在哪個元件就送到哪裡
