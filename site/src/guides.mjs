@@ -261,7 +261,7 @@ ${table(['步驟', '在哪裡做', '要網路嗎'], [
 
 <h2>完全不連網的設定</h2>
 <ol>
-<li>在有網路的時候先把轉錄模型下載好（第一次打開的引導，或設定的「錄音與轉錄」）。</li>
+<li>在有網路的時候先把轉錄模型下載好（第一次打開的引導，或設定的「模型與空間」）。</li>
 <li>在 Mac 上裝好 Ollama 或 LM Studio，下載一個本機模型。</li>
 <li>拾音的設定 → 整理工具，選「OpenAI 相容 API」，網址填 Ollama 或 LM Studio 的本機網址（不用 key）。</li>
 <li>或者整理工具選「不整理」，只留逐字稿。</li>
@@ -307,7 +307,7 @@ ${table(['Step', 'Where', 'Internet?'], [
 
 <h2>A fully offline setup</h2>
 <ol>
-<li>Download the transcription models while you’re online (during first launch, or in Settings → Recording & Transcription).</li>
+<li>Download the transcription models while you’re online (during first launch, or in Settings → Models & Storage).</li>
 <li>Install Ollama or LM Studio and download a local model.</li>
 <li>In Shiyin, open Settings → Summarizer, choose “OpenAI-compatible API” and enter the local Ollama or LM Studio address (no key needed).</li>
 <li>Or choose “Don’t summarize” and keep just the transcript.</li>

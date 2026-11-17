@@ -69,7 +69,7 @@ export const content = {
       ps: [
         '停止錄音後，拾音會在你的 Mac 上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。人多、吵雜時分錯了也好改：可以先告訴拾音大約幾個人，也可以把兩位說話者合併成一位，或直接改某一句是誰說的。',
         '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過，「deploy」「Redis」這種詞不會被聽成別的字；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
-        '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；錄音忘了停、兩場會議錄在一起時，可以從某一句分成兩場。逐字稿也可以切換成「精簡」，用整理工具去掉嗯、呃、重複和說到一半改口的地方。',
+        '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；用「編輯會議」可以裁掉開頭、結尾的閒聊，刪掉中間離題的一段，把忘了停的錄音分成兩場，或把分開錄的兩場合併，30 天內都能還原。逐字稿也可以切換成「精簡」，用整理工具去掉嗯、呃、重複和說到一半改口的地方。',
       ],
     },
     notes: {
@@ -97,7 +97,7 @@ export const content = {
       sent: { h3: '送到你選的整理工具', items: ['逐字稿文字', '你的筆記、詞彙表', '會議標題、日期'] },
       tools: '整理工具可以選 Claude Code 或 Codex，直接用你已經有的 Claude、ChatGPT 訂閱；也可以用 Anthropic、OpenAI 的 API，或選「不整理」只留逐字稿。',
       // 匿名使用統計（design §30.8、R40.4）：Mac 首頁和 Windows 頁的隱私區塊都顯示
-      usage: '另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 進階可以關掉。',
+      usage: '另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 一般可以關掉。',
       // 企業伺服器（R52.1、design §36）：Mac 首頁和 Windows 頁的隱私區塊都顯示
       enterprise: '公司架了拾音的企業伺服器、你也登入時：錄音送到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；整理工具選「公司」時，逐字稿送到公司的伺服器，由公司選的模型整理。聲紋只存在你的電腦，公司的後台只看得到用量，看不到會議內容。沒登入的話，一切跟上面一樣。',
     },
@@ -137,8 +137,8 @@ export const content = {
         ['支援哪些語言？', '介面有繁體中文、簡體中文和英文；會議可以是中文、英文、日文、廣東話或韓文（實驗性）。開始錄音後會自動判斷中文、英文、日文、韓文。'],
         ['用 Safari 開 Google Meet 時，為什麼錄不到我自己的聲音？', 'Safari 會用 macOS 的回音消除佔住麥克風，這段時間其他 app 從同一支麥克風幾乎收不到聲音，這是 macOS 的限制；對方的聲音不受影響。改用 Chrome 開會，或讓會議和拾音用不同的麥克風（例如會議用耳機、拾音用內建麥克風）就錄得到。'],
         ['可以轉錄已經錄好的檔案嗎？', '可以。把錄音或影片拖進視窗就會轉錄，也可以匯入 srt、vtt、txt 逐字稿。'],
-        ['錄音忘了停，兩場會議錄在一起怎麼辦？', '在逐字稿裡第二場開始的那一句按右鍵，選「從這裡分成兩場…」。錄音、逐字稿、標記重點會從那裡切開，變成兩場會議，各自重新整理會議紀錄。另外，線上會議結束時拾音會倒數 60 秒後自動停止錄音（按「繼續錄」就不停）；錄音中 15 分鐘沒人說話時會提醒你，30 分鐘會自動停止。'],
-        ['可以在 Claude Code、Codex 裡問我的會議嗎？', '可以。在設定 → 進階打開「讓 AI 工具讀取會議」，按一下就加到 Claude Code、Codex 或 Claude Desktop（MCP），拾音不用開著。在 AI 工具裡問「上週的待辦有哪些」，回答會附上會議和時間點的連結。只能讀、不能改；讀到的內容會交給那個 AI 工具處理。'],
+        ['錄音忘了停，兩場會議錄在一起怎麼辦？', '在逐字稿裡第二場開始的那一句按右鍵，選「從這裡分成兩場…」。錄音、逐字稿、標記重點會從那裡切開，變成兩場會議，各自重新整理會議紀錄；30 天內可以從「更多」還原。另外，線上會議結束時拾音會倒數 60 秒後自動停止錄音（按「繼續錄」就不停）；錄音中 15 分鐘沒人說話時會提醒你，30 分鐘會自動停止。'],
+        ['可以在 Claude Code、Codex 裡問我的會議嗎？', '可以。在設定 → AI 工具打開「讓 AI 工具讀取會議」，按一下就加到 Claude Code、Codex 或 Claude Desktop（MCP），拾音不用開著。在 AI 工具裡問「上週的待辦有哪些」，回答會附上會議和時間點的連結。只能讀、不能改；讀到的內容會交給那個 AI 工具處理。'],
       ],
       windows: {
         q: '有 Windows 版或手機版嗎？',
@@ -176,7 +176,7 @@ export const content = {
         ps: [
           '停止錄音後，拾音會在你的電腦上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。',
           '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
-          '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；錄音忘了停、兩場會議錄在一起時，可以從某一句分成兩場。逐字稿也可以切換成「精簡」，用整理工具去掉嗯、呃、重複和說到一半改口的地方。',
+          '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；用「編輯會議」可以裁掉開頭、結尾的閒聊，刪掉中間離題的一段，把忘了停的錄音分成兩場，或把分開錄的兩場合併，30 天內都能還原。逐字稿也可以切換成「精簡」，用整理工具去掉嗯、呃、重複和說到一半改口的地方。',
         ],
         gpu: '有 NVIDIA 顯示卡的電腦，拾音會自動下載顯示卡加速（約 685 MB），之後正式轉錄就用顯示卡：40 分鐘的會議用 RTX 3060 約 8 分鐘轉完，只用 CPU 時約 30 分鐘。有 AMD 顯示卡（含 Radeon 內顯）的電腦，拾音會自動下載 AMD 顯示卡加速（約 20 MB），一樣用顯示卡轉錄。沒有這兩種顯示卡也能用，只是比較慢。',
       },
@@ -202,7 +202,7 @@ export const content = {
             '<b>有 NVIDIA 顯示卡最快</b>：40 分鐘的會議用 RTX 3060 約 8 分鐘轉完。顯示記憶體建議 4 GB 以上（轉錄模型約 1.7 GB），NVIDIA 的驅動要 527 版以後，太舊時會改用 CPU 轉錄。',
             '<b>AMD 顯示卡</b>（含 Radeon 內顯）：拾音會自動下載 AMD 顯示卡加速（約 20 MB），之後正式轉錄就用顯示卡。驅動太舊時會改用 CPU 轉錄。',
             '<b>只用 CPU 比較慢</b>：同一場會議在同一台桌機只用 CPU 約 30 分鐘；筆電或比較舊的 CPU 會更久，可能比會議本身還長。轉錄最多用 8 個執行緒，核心越多越快。Intel 顯示卡、Snapdragon 等 ARM 的電腦只用 CPU。',
-            '<b>等不及的話</b>：到「設定 → 錄音與轉錄」把「正式轉錄」改成「快速辨識」，轉錄快很多，但比較不準、不會參考詞彙表。',
+            '<b>等不及的話</b>：到「設定 → 轉錄」把「正式轉錄」改成「快速辨識」，轉錄快很多，但比較不準、不會參考詞彙表。',
             '<b>錄音時很輕</b>：即時逐字稿大約只用一個 CPU 核心的三分之一；正式轉錄在背景進行，轉錄時可以繼續用電腦。',
           ],
         },
@@ -230,7 +230,7 @@ export const content = {
       updates: { h2: '最近更新', release: 'GitHub Release' },
       faq: [
         ['要付費嗎？', '拾音免費。整理會議紀錄用的是你自己的 Claude、ChatGPT 訂閱或 API 額度；選「不整理」就只有逐字稿，不會有任何費用。'],
-        ['沒有 NVIDIA 顯示卡可以用嗎？', '可以。有 AMD 顯示卡（含 Radeon 內顯）時，拾音會自動下載 AMD 顯示卡加速（約 20 MB），用顯示卡轉錄。其他電腦（包括 Intel 顯示卡）轉錄用 CPU，比較慢：40 分鐘的會議在一台桌機約 30 分鐘，筆電會更久。等不及的話，可以在「設定 → 錄音與轉錄」把「正式轉錄」改成「快速辨識」，快很多但比較不準。'],
+        ['沒有 NVIDIA 顯示卡可以用嗎？', '可以。有 AMD 顯示卡（含 Radeon 內顯）時，拾音會自動下載 AMD 顯示卡加速（約 20 MB），用顯示卡轉錄。其他電腦（包括 Intel 顯示卡）轉錄用 CPU，比較慢：40 分鐘的會議在一台桌機約 30 分鐘，筆電會更久。等不及的話，可以在「設定 → 轉錄」把「正式轉錄」改成「快速辨識」，快很多但比較不準。'],
         ['為什麼 Windows 會擋下來？', '拾音還沒有程式碼簽章，SmartScreen 對新的、沒有簽章的程式都會先擋一次，按「其他資訊」→「仍要執行」就能安裝。開著「智慧型應用程式控制」時沒有「仍要執行」可以按，要先關掉它，或等有正式簽章的版本。'],
         ['Mac 和 Windows 的會議可以互通嗎？', '可以。在一邊匯出 .shiyin 封包，另一邊匯入，錄音、逐字稿、說話者的名字、會議紀錄和筆記都會帶過去。記住的說話者聲音不會帶過去，兩邊用的辨識模型不一樣。'],
         ['需要網路嗎？', '錄音、轉錄、說話者辨識都不需要。第一次下載模型、整理會議紀錄和對會議提問時需要。'],
@@ -328,7 +328,7 @@ export const content = {
       ps: [
         'After you stop, Shiyin transcribes the recording again on your Mac. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings. Crowded or noisy room? Tell Shiyin roughly how many people there are, merge two speakers into one, or change who said a line.',
         'English and Chinese meetings use Breeze ASR 25, which is tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product names and people to the glossary and transcription takes them into account.',
-        'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript, and if you forgot to stop recording and two meetings ended up in one, split it into two from any line. Switch the transcript to Clean to have your summarizer remove ums, repeats and false starts.',
+        'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript. With Edit Meeting, trim small talk at the start or end, cut out an off-topic section, split a recording you forgot to stop, or merge two meetings into one; you can restore the original within 30 days. Switch the transcript to Clean to have your summarizer remove ums, repeats and false starts.',
       ],
     },
     notes: {
@@ -355,7 +355,7 @@ export const content = {
       local: { h3: 'Stays on your Mac', items: ['Recordings', 'Transcription and speaker identification', 'The voices of speakers Shiyin remembers', 'All your meetings and notes'] },
       sent: { h3: 'Sent to the summarizer you choose', items: ['The transcript text', 'Your notes and glossary', 'Meeting title and date'] },
       tools: 'The summarizer can be Claude Code or Codex, using the Claude or ChatGPT subscription you already have, or the Anthropic or OpenAI API. Or choose “Don’t summarize” and keep just the transcript.',
-      usage: 'Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → Advanced.',
+      usage: 'Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → General.',
       enterprise: 'If your company runs a Shiyin enterprise server and you sign in to it, recordings are sent to your company’s own server for transcription, without passing through any other cloud service, and deleted once transcribed. With the “Company” summarizer, the transcript goes to your company’s server and is summarized by the model your company chose. Voiceprints stay on your computer, and the company’s admin console shows usage only, never meeting content. If you don’t sign in, everything works as described above.',
     },
     download: {
@@ -394,8 +394,8 @@ export const content = {
         ['Which languages does it support?', 'The interface is in English, Traditional Chinese and Simplified Chinese. Meetings can be in English, Chinese, Japanese, Cantonese or Korean (experimental); Shiyin detects English, Chinese, Japanese and Korean after you start recording.'],
         ['Why is my own voice missing when I use Google Meet in Safari?', 'Safari holds the microphone for macOS echo cancellation, and while it does, other apps get almost nothing from the same microphone. This is a macOS limitation; the other participants are still recorded. Join the meeting in Chrome instead, or use different microphones for the meeting and Shiyin (for example a headset for the meeting and the built-in microphone for Shiyin).'],
         ['Can it transcribe a recording I already have?', 'Yes. Drag the audio or video file into the window and it’s transcribed. You can also import srt, vtt or txt transcripts.'],
-        ['I forgot to stop recording and two meetings ended up in one. What can I do?', 'In the transcript, right-click the line where the second meeting starts and choose Split Meeting Here…. The recording, transcript and bookmarks are split there into two meetings, and each gets its own notes. Shiyin also stops recording 60 seconds after an online meeting ends (click Keep Recording to continue), reminds you after 15 minutes without anyone speaking, and stops recording after 30.'],
-        ['Can I ask about my meetings in Claude Code or Codex?', 'Yes. Turn on “Let AI tools read meetings” in Settings → Advanced and add Shiyin to Claude Code, Codex or Claude Desktop with one click (MCP); Shiyin doesn’t need to be open. Ask “What are last week’s action items?” and the answer links to the meetings and timestamps. AI tools can only read, not change anything, and what they read is handled by that AI tool.'],
+        ['I forgot to stop recording and two meetings ended up in one. What can I do?', 'In the transcript, right-click the line where the second meeting starts and choose Split Meeting Here…. The recording, transcript and bookmarks are split there into two meetings, and each gets its own notes; you can undo it from More within 30 days. Shiyin also stops recording 60 seconds after an online meeting ends (click Keep Recording to continue), reminds you after 15 minutes without anyone speaking, and stops recording after 30.'],
+        ['Can I ask about my meetings in Claude Code or Codex?', 'Yes. Turn on “Let AI tools read meetings” in Settings → AI Tools and add Shiyin to Claude Code, Codex or Claude Desktop with one click (MCP); Shiyin doesn’t need to be open. Ask “What are last week’s action items?” and the answer links to the meetings and timestamps. AI tools can only read, not change anything, and what they read is handled by that AI tool.'],
       ],
       windows: {
         q: 'Is there a Windows or phone version?',
@@ -432,7 +432,7 @@ export const content = {
         ps: [
           'After you stop, Shiyin transcribes the recording again on your PC. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings.',
           'Chinese and English use Breeze ASR 25, tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product and people’s names to the glossary and transcription takes them into account.',
-          'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript, and if you forgot to stop recording and two meetings ended up in one, split it into two from any line. Switch the transcript to Clean to have your summarizer remove ums, repeats and false starts.',
+          'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript. With Edit Meeting, trim small talk at the start or end, cut out an off-topic section, split a recording you forgot to stop, or merge two meetings into one; you can restore the original within 30 days. Switch the transcript to Clean to have your summarizer remove ums, repeats and false starts.',
         ],
         gpu: 'With an NVIDIA graphics card, Shiyin downloads GPU acceleration automatically (about 685 MB) and transcribes on the GPU: a 40-minute meeting took about 8 minutes on an RTX 3060, versus about 30 minutes on the CPU alone. With AMD graphics (including Radeon integrated graphics), Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and transcribes on the GPU as well. Without either it still works, just more slowly.',
       },
@@ -457,7 +457,7 @@ export const content = {
             '<b>Fastest with an NVIDIA graphics card</b>: a 40-minute meeting took about 8 minutes on an RTX 3060. 4 GB of video memory or more is recommended (the transcription model is about 1.7 GB), and the NVIDIA driver needs to be version 527 or later; with an older driver Shiyin transcribes on the CPU.',
             '<b>AMD graphics</b> (including Radeon integrated graphics): Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and then transcribes on the GPU. With an older driver it transcribes on the CPU.',
             '<b>Slower on the CPU alone</b>: the same meeting took about 30 minutes on the same desktop without the GPU; laptops and older CPUs take longer, possibly longer than the meeting itself. Transcription uses up to 8 threads, so more cores help. Intel graphics and ARM PCs such as Snapdragon use the CPU only.',
-            '<b>In a hurry?</b> In Settings → Recording & Transcription, set “Transcription” to “Quick recognition”. It’s much faster, but less accurate and doesn’t use the glossary.',
+            '<b>In a hurry?</b> In Settings → Transcription, set “Transcription” to “Quick recognition”. It’s much faster, but less accurate and doesn’t use the glossary.',
             '<b>Light while recording</b>: the live transcript uses about a third of one CPU core; full transcription runs in the background and you can keep using the PC.',
           ],
         },
@@ -485,7 +485,7 @@ export const content = {
       updates: { h2: 'What’s new', release: 'GitHub Release' },
       faq: [
         ['Does it cost anything?', 'Shiyin is free. Meeting notes are written with your own Claude or ChatGPT subscription or API credit. Choose “Don’t summarize” and you get just the transcript, at no cost.'],
-        ['Does it work without an NVIDIA graphics card?', 'Yes. With AMD graphics (including Radeon integrated graphics), Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and transcribes on the GPU. Other PCs, including those with Intel graphics, transcribe on the CPU, which is slower: a 40-minute meeting took about 30 minutes on a desktop, and laptops take longer. In a hurry? Set “Transcription” to “Quick recognition” in Settings → Recording & Transcription: much faster, but less accurate.'],
+        ['Does it work without an NVIDIA graphics card?', 'Yes. With AMD graphics (including Radeon integrated graphics), Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and transcribes on the GPU. Other PCs, including those with Intel graphics, transcribe on the CPU, which is slower: a 40-minute meeting took about 30 minutes on a desktop, and laptops take longer. In a hurry? Set “Transcription” to “Quick recognition” in Settings → Transcription: much faster, but less accurate.'],
         ['Why does Windows block it?', 'Shiyin isn’t code-signed yet, and SmartScreen holds back new, unsigned apps. Click “More info” → “Run anyway” to install. With Smart App Control on there’s no “Run anyway”; turn it off first, or wait for a signed release.'],
         ['Can I move meetings between Mac and Windows?', 'Yes. Export a .shiyin package on one and import it on the other: the recording, transcript, speaker names, meeting notes and your notes all come along. Remembered voices don’t, because the two versions use different recognition models.'],
         ['Does it need the internet?', 'Recording, transcription and speaker identification don’t. Downloading the models the first time, writing the notes and asking your meetings questions do.'],
@@ -584,7 +584,7 @@ export const content = {
       ps: [
         '録音を止めると、拾音が Mac の中で録音をもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も聞き分けます。「Speaker 1」を名前に変えれば、会議全体に反映されます。拾音はその人の声を覚え、次の会議から自動で名前を入れます。人が多い会議や騒がしい場所で話者を間違えても、すぐに直せます。おおよその人数を拾音に伝えたり、2 人の話者を 1 人にまとめたり（Merge Into…）、ある発言の話者を変えたり（Who Said This Line?）できます。',
         '日本語と韓国語の会議は Whisper large-v3-turbo、広東語の会議は Qwen3-ASR で文字起こしします。英語と中国語の会議には、台湾華語と英語の混ざった会話に合わせて調整された Breeze ASR 25 を使います。製品名や人名を用語集に登録しておくと、文字起こしのときに参考にされます。',
-        'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除したり、録音を止め忘れて 2 つの会議が 1 つになったときに、ある一文から 2 つの会議に分けたりもできます。文字起こしを「Clean」に切り替えると、まとめツールで「えー」「あの」や言い直しを取り除いた版を表示できます。',
+        'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除することもできます。「Edit Meeting」では、最初と最後の雑談を切り取る、途中の脱線した部分を削除する、止め忘れた録音を 2 つの会議に分ける、2 つの会議を 1 つにまとめる、といった編集ができ、30 日以内なら元に戻せます。文字起こしを「Clean」に切り替えると、まとめツールで「えー」「あの」や言い直しを取り除いた版を表示できます。',
       ],
     },
     notes: {
@@ -611,7 +611,7 @@ export const content = {
       local: { h3: 'Mac に残るもの', items: ['録音ファイル', '文字起こし、話者の識別', '覚えた話者の声', 'すべての会議と議事録'] },
       sent: { h3: '選んだまとめツールに送られるもの', items: ['文字起こしのテキスト', '自分のメモ、用語集', '会議のタイトル、日付'] },
       tools: 'まとめツールに Claude Code か Codex を選べば、お使いの Claude や ChatGPT のサブスクリプションをそのまま使えます。Anthropic や OpenAI の API も使えます。「Don’t summarize」を選べば文字起こしだけを残します。',
-      usage: 'また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → Advanced でオフにできます。',
+      usage: 'また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → General でオフにできます。',
       enterprise: '会社が拾音のエンタープライズサーバーを用意していてサインインした場合は、録音は会社自身のサーバーに送られて文字起こしされ（ほかのクラウドサービスは経由しません）、終わると削除されます。まとめツールに「Company」を選ぶと、文字起こしは会社のサーバーに送られ、会社が選んだモデルでまとめられます。声紋は PC に残り、会社の管理画面で見られるのは利用量だけで、会議の内容は見られません。サインインしなければ、上に書いたとおりです。',
     },
     download: {
@@ -651,8 +651,8 @@ export const content = {
         ['どの言語に対応していますか？', '会議は日本語、英語、中国語、広東語、韓国語（試験的）に対応し、録音を始めると日本語・英語・中国語・韓国語を自動で判別します。アプリの表示は英語、繁体字中国語、簡体字中国語で、日本語表示には対応していません。'],
         ['Safari で Google Meet を開くと、自分の声が録音されないのはなぜですか？', 'Safari は macOS のエコーキャンセルでマイクを占有するため、その間はほかのアプリが同じマイクからほとんど音を拾えません。macOS の制限で、相手の声は録音されます。Chrome で会議に参加するか、会議と拾音で別のマイクを使ってください（会議はヘッドセット、拾音は内蔵マイクなど）。'],
         ['録音済みのファイルも文字起こしできますか？', 'できます。音声や動画のファイルをウインドウにドラッグすると文字起こしされます。srt、vtt、txt の文字起こしも読み込めます。'],
-        ['録音を止め忘れて、2 つの会議が 1 つの録音になってしまったら？', '文字起こしで 2 つ目の会議が始まる一文を右クリックし、「Split Meeting Here…」を選びます。録音、文字起こし、Bookmark がそこで分かれて 2 つの会議になり、それぞれ議事録をまとめ直します。また、オンライン会議が終わると 60 秒のカウントダウンのあと録音を止めます（「Keep Recording」で続行）。録音中に 15 分間だれも話さないとお知らせし、30 分で自動的に録音を止めます。'],
-        ['Claude Code や Codex から会議について質問できますか？', 'できます。設定 → Advanced で「Let AI tools read meetings」をオンにすると、ワンクリックで Claude Code、Codex、Claude Desktop に追加できます（MCP）。拾音を開いておく必要はありません。「先週のアクションアイテムは？」と聞くと、会議と時刻へのリンク付きで答えます。読み取り専用で、読んだ内容はその AI ツールで処理されます。'],
+        ['録音を止め忘れて、2 つの会議が 1 つの録音になってしまったら？', '文字起こしで 2 つ目の会議が始まる一文を右クリックし、「Split Meeting Here…」を選びます。録音、文字起こし、Bookmark がそこで分かれて 2 つの会議になり、それぞれ議事録をまとめ直します。30 日以内なら「More」から元に戻せます。また、オンライン会議が終わると 60 秒のカウントダウンのあと録音を止めます（「Keep Recording」で続行）。録音中に 15 分間だれも話さないとお知らせし、30 分で自動的に録音を止めます。'],
+        ['Claude Code や Codex から会議について質問できますか？', 'できます。設定 → AI Tools で「Let AI tools read meetings」をオンにすると、ワンクリックで Claude Code、Codex、Claude Desktop に追加できます（MCP）。拾音を開いておく必要はありません。「先週のアクションアイテムは？」と聞くと、会議と時刻へのリンク付きで答えます。読み取り専用で、読んだ内容はその AI ツールで処理されます。'],
       ],
       windows: {
         q: 'Windows 版やスマートフォン版はありますか？',
@@ -689,7 +689,7 @@ export const content = {
         ps: [
           '録音を止めると、拾音が PC の中でもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も区別します。「Speaker 1」を名前に変えれば会議全体に反映され、その声を覚えて次の会議から名前を自動で入れます。',
           '日本語と韓国語の会議は Whisper、広東語は Qwen3-ASR、中国語と英語は Breeze ASR 25 を使います。製品名や人名を用語集に入れておくと、文字起こしで参考にします。',
-          'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除したり、録音を止め忘れて 2 つの会議が 1 つになったときに、ある一文から 2 つの会議に分けたりもできます。文字起こしを「Clean」に切り替えると、まとめツールで「えー」「あの」や言い直しを取り除いた版を表示できます。',
+          'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除することもできます。「Edit Meeting」では、最初と最後の雑談を切り取る、途中の脱線した部分を削除する、止め忘れた録音を 2 つの会議に分ける、2 つの会議を 1 つにまとめる、といった編集ができ、30 日以内なら元に戻せます。文字起こしを「Clean」に切り替えると、まとめツールで「えー」「あの」や言い直しを取り除いた版を表示できます。',
         ],
         gpu: 'NVIDIA のグラフィックスカードがある PC では、GPU アクセラレーション（約 685 MB）を自動でダウンロードし、GPU で文字起こしします。40 分の会議が RTX 3060 で約 8 分（CPU だけでは約 30 分）でした。AMD のグラフィックス（Radeon の内蔵グラフィックスを含む）がある PC では、AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、同じく GPU で文字起こしします。どちらもなくても使えますが、時間がかかります。',
       },
@@ -715,7 +715,7 @@ export const content = {
             '<b>NVIDIA のグラフィックスカードがあれば最速</b>：40 分の会議が RTX 3060 で約 8 分でした。ビデオメモリは 4 GB 以上を推奨します（文字起こしモデルは約 1.7 GB）。NVIDIA のドライバーは 527 以降が必要で、古い場合は CPU で文字起こしします。',
             '<b>AMD のグラフィックス</b>（Radeon の内蔵グラフィックスを含む）：AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、その後は GPU で文字起こしします。ドライバーが古い場合は CPU で文字起こしします。',
             '<b>CPU だけだと時間がかかります</b>：同じ会議が同じデスクトップの CPU だけで約 30 分でした。ノート PC や古い CPU ではさらに長く、会議そのものより長くなることもあります。文字起こしは最大 8 スレッドを使うので、コアが多いほど速くなります。Intel のグラフィックスや、Snapdragon などの ARM の PC は CPU だけを使います。',
-            '<b>急ぐときは</b>：「Settings → Recording & Transcription」で「Transcription」を「Quick recognition」にすると、ずっと速くなりますが、精度が下がり、用語集も使いません。',
+            '<b>急ぐときは</b>：「Settings → Transcription」で「Transcription」を「Quick recognition」にすると、ずっと速くなりますが、精度が下がり、用語集も使いません。',
             '<b>録音中は軽い</b>：リアルタイムの文字起こしは CPU コア 1 つの約 3 分の 1 しか使いません。正式な文字起こしはバックグラウンドで行うので、その間も PC を使えます。',
           ],
         },
@@ -743,7 +743,7 @@ export const content = {
       updates: { h2: '最近のアップデート', release: 'GitHub Release' },
       faq: [
         ['料金はかかりますか？', '拾音は無料です。議事録のまとめには、ご自身の Claude、ChatGPT のサブスクリプションか API の利用枠を使います。「Don’t summarize」を選べば文字起こしだけになり、費用はかかりません。'],
-        ['NVIDIA のグラフィックスカードがなくても使えますか？', '使えます。AMD のグラフィックス（Radeon の内蔵グラフィックスを含む）があれば、AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、GPU で文字起こしします。それ以外の PC（Intel のグラフィックスを含む）は CPU で文字起こしするので時間がかかり、40 分の会議がデスクトップで約 30 分、ノート PC ではさらにかかります。急ぐときは「Settings → Recording & Transcription」で「Transcription」を「Quick recognition」にすると、ずっと速くなりますが精度は下がります。'],
+        ['NVIDIA のグラフィックスカードがなくても使えますか？', '使えます。AMD のグラフィックス（Radeon の内蔵グラフィックスを含む）があれば、AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、GPU で文字起こしします。それ以外の PC（Intel のグラフィックスを含む）は CPU で文字起こしするので時間がかかり、40 分の会議がデスクトップで約 30 分、ノート PC ではさらにかかります。急ぐときは「Settings → Transcription」で「Transcription」を「Quick recognition」にすると、ずっと速くなりますが精度は下がります。'],
         ['Windows にブロックされるのはなぜですか？', '拾音にはまだコード署名がなく、SmartScreen は署名のない新しいアプリを一度止めます。「詳細情報」→「実行」でインストールできます。「スマート アプリ コントロール」がオンのときは「実行」が出ないので、先にオフにするか、署名付きのバージョンをお待ちください。'],
         ['Mac と Windows で会議を移せますか？', 'はい。片方で .shiyin パッケージを書き出し、もう片方で読み込むと、録音、文字起こし、話者の名前、議事録、メモがそのまま移ります。覚えた話者の声は移りません。両者で認識モデルが違うためです。'],
         ['インターネット接続は必要ですか？', '録音、文字起こし、話者の識別には不要です。モデルの初回ダウンロード、議事録のまとめ、会議への質問には必要です。'],
