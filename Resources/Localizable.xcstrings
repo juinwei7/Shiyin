@@ -1307,19 +1307,19 @@
         }
       }
     },
-    "AI 工具（MCP）": {
+    "AI 工具": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI tools (MCP)"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI 工具（MCP）"
+            "value": "AI 工具"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Tools"
           }
         }
       }
@@ -2580,6 +2580,23 @@
     },
     "・": {
       "extractionState": "manual"
+    },
+    "一般": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一般"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
+          }
+        }
+      }
     },
     "一般會議": {
       "extractionState": "manual",
@@ -12048,6 +12065,23 @@
         }
       }
     },
+    "搜尋設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索设置"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search settings"
+          }
+        }
+      }
+    },
     "搜尋詞彙": {
       "extractionState": "manual",
       "localizations": {
@@ -14979,6 +15013,23 @@
         }
       }
     },
+    "模型與空間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型与空间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models & Storage"
+          }
+        }
+      }
+    },
     "模擬錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -15094,6 +15145,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "检查登录状态…"
+          }
+        }
+      }
+    },
+    "檢查與更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查与更新"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status & Updates"
           }
         }
       }
@@ -20340,23 +20408,6 @@
         }
       }
     },
-    "說話者與詞彙": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speakers & Glossary"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "说话者与词汇"
-          }
-        }
-      }
-    },
     "說話者辨識模型": {
       "extractionState": "manual",
       "localizations": {
@@ -22450,23 +22501,6 @@
         }
       }
     },
-    "進階": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Advanced"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高级"
-          }
-        }
-      }
-    },
     "遇到問題，可以從「輔助說明」選單選「回報問題…」，會附上版本和環境（不含會議內容）。": {
       "extractionState": "manual",
       "localizations": {
@@ -24493,23 +24527,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音结束、转录完成后，会议记录会出现在这里。"
-          }
-        }
-      }
-    },
-    "錄音與轉錄": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recording & Transcription"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "录音与转录"
           }
         }
       }

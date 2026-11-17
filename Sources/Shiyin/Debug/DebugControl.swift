@@ -1030,12 +1030,18 @@ enum DebugControl {
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
             let onboarding = args.count > 1 && args[1] == "onboarding"
             let detailPage = args.count > 1 && args[1] == "detail"
-            // preview settings <分頁編號>：預覽視窗一開始停在那個分頁（0 整理工具 … 4 錄音、5 模型與儲存空間）
-            SettingsView.previewTab = args.count > 2 && args[1] == "settings" ? Int(args[2]) ?? 0 : 0
+            // preview settings <頁面代號或 0～10>：預覽視窗一開始停在那一頁（provider、templates、recording、transcription、models、
+            // speakers、glossary、general、ai、enterprise、status，R108）
+            let settingsPreview = args.count > 1 && args[1] == "settings"
+            let pageArg = args.count > 2 && !args[2].hasPrefix("height=") && args[2] != "front" ? args[2] : ""
+            SettingsView.previewPage = settingsPreview
+                ? SettingsPage(rawValue: pageArg) ?? Int(pageArg).flatMap { SettingsPage.allCases.indices.contains($0) ? SettingsPage.allCases[$0] : nil } ?? .provider
+                : nil
             // height=<點>：設定頁要看下面的段落時拉高（桌面層的視窗捲不了）
             let height = args.first { $0.hasPrefix("height=") }.flatMap { Double($0.dropFirst(7)) }
-            SettingsView.previewHeight = height.map { CGFloat($0) - 40 } ?? 520
-            let size = detailPage ? NSSize(width: 1100, height: 760) : NSSize(width: 640, height: height ?? 560)
+            SettingsView.previewHeight = height.map { CGFloat($0) }
+            let size = detailPage ? NSSize(width: 1100, height: 760)
+                : settingsPreview ? NSSize(width: 820, height: height ?? 620) : NSSize(width: 640, height: height ?? 560)
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
                                   backing: .buffered, defer: false)
             // 加 front：放在一般視窗層（會出現在使用者畫面上），輔助使用才看得到、按得到裡面的按鈕

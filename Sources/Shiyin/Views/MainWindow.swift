@@ -117,27 +117,33 @@ struct MainView: View {
     @AppStorage("hasSeenGuide") private var hasSeenGuide = false
     @State private var dropTargeted = false
 
+    /// 右邊那一欄：人物頁、多選、會議頁或空白頁
+    @ViewBuilder
+    private var detailContent: some View {
+        if model.sidebarMode == .people && !model.showTrash && model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+            // 人物頁（design §60.2）
+            if let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) {
+                PersonPage(person: person).id(person.id)
+            } else {
+                PeopleEmptyView().toolbar { SettingsToolbarItem() }
+            }
+        } else if model.multiSelected.count > 1 {
+            MultiSelectionView(ids: model.multiSelected).toolbar { SettingsToolbarItem() }
+        } else if let detail = model.detail {
+            MeetingDetailView(detail: detail)
+                .id(detail.meeting.id)
+        } else {
+            EmptyDetailView().toolbar { SettingsToolbarItem() }
+        }
+    }
+
     var body: some View {
         @Bindable var model = model
         NavigationSplitView {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 380)
         } detail: {
-            if model.sidebarMode == .people && !model.showTrash && model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
-                // 人物頁（design §60.2）
-                if let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) {
-                    PersonPage(person: person).id(person.id)
-                } else {
-                    PeopleEmptyView()
-                }
-            } else if model.multiSelected.count > 1 {
-                MultiSelectionView(ids: model.multiSelected)
-            } else if let detail = model.detail {
-                MeetingDetailView(detail: detail)
-                    .id(detail.meeting.id)
-            } else {
-                EmptyDetailView()
-            }
+            detailContent
         }
         .dropDestination(for: URL.self) { urls, _ in
             model.requestImport(urls)
@@ -190,6 +196,17 @@ struct MainView: View {
 }
 
 /// 選了兩場以上的會議（R88、design §62）：能一起做的事
+/// 工具列最右邊的齒輪：打開設定（R108.1，同選單列的「設定⋯」、⌘,）。每一種頁面在自己工具列的最後放一個：
+/// 掛在外層的話會排到「匯出」「更多」前面
+struct SettingsToolbarItem: ToolbarContent {
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            SettingsLink { Label("設定", systemImage: "gearshape") }
+                .help("設定（⌘,）")
+        }
+    }
+}
+
 struct MultiSelectionView: View {
     @Environment(AppModel.self) private var model
     let ids: [Int64]

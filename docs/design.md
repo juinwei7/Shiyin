@@ -2856,7 +2856,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 ## 82. 設定：工具列的齒輪、側欄的版面（R108，D184）
 
 - 齒輪（R108.1）：主視窗工具列最右邊、「更多」的右邊，`SettingsLink`（圖示 `gearshape`，說明「設定（⌘,）」，輔助使用名稱「設定」）。
-- 版面（R108.2）：`Settings` 場景裡 `NavigationSplitView`，側欄 `List(selection:)`，寬 200（180～240），拿掉側欄的收合鈕；右邊是那一頁的 `Form`（`.grouped`），`navigationTitle` 是那一頁的名稱。視窗 820×620，最小 720×500，可以拉大（`.windowResizability(.contentMinSize)`）。
+- 版面（R108.2）：`Settings` 場景裡 `NavigationSplitView`，側欄 `List(selection:)`，寬 220（210～260，英文的「Models & Storage」放得下），拿掉側欄的收合鈕；右邊是那一頁的 `Form`（`.grouped`），`navigationTitle` 是那一頁的名稱。視窗 820×620，最小 720×500，可以拉大（`.windowResizability(.contentMinSize)`）。
 - 側欄：每一項是 20×20、圓角 5 的彩色方塊加白色 SF Symbol（同系統設定），分四組（組和組之間空一點，不加標題）：
 
 | 組 | 項目 | 圖示、顏色 | 內容（原本在哪） |
@@ -2876,7 +2876,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 搜尋（R108.4）：側欄的 `.searchable`。每一頁有一串關鍵字（就是那一頁項目的名稱，用介面語言；另外加 API key、MCP、快捷鍵這類常用說法），打的字在名稱或關鍵字裡就留那一項；只剩一項時直接選它。
 - 記住頁面（R108.5）：`settingsPage`（UserDefaults，存頁面的代號），預設整理工具。
 - 程式：原本的 `ProviderSettings`（拿掉範本段）、`TemplateSettings`、`SpeakerSettings`、`GlossarySettings` 直接當一頁；`RecordingSettings`、`AdvancedSettings` 加 `part` 參數（同一份狀態，只畫那一頁的段落），項目和存的鍵都沒變（R108.6）。
-- DEBUG：`preview settings <頁面代號或編號>`（0 整理工具…10 檢查與更新）；`settingspage <代號>`。
+- DEBUG：`preview settings <頁面代號或編號>`（0 整理工具…10 檢查與更新，只當預覽的起始頁，不寫進設定）。
 - Windows：design-windows（ST2）。
 
 ## 14. 決策紀錄

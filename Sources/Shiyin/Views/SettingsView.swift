@@ -1,39 +1,200 @@
 import SwiftUI
 
-/// 設定視窗（T-F2）：整理工具與金鑰、範本、詞彙表、錄音、模型與儲存空間、進階
+/// 設定的每一頁（R108、design §82、D184）：側欄的順序、分組、圖示和顏色、搜尋用的關鍵字
+enum SettingsPage: String, CaseIterable, Identifiable {
+    case provider, templates, recording, transcription, models, speakers, glossary, general, ai, enterprise, status
+
+    var id: String { rawValue }
+    static let storageKey = "settingsPage"
+
+    var title: String {
+        switch self {
+        case .provider: String(localized: "整理工具")
+        case .templates: MeetingLanguage.ui(zh: "範本", en: "Templates")
+        case .recording: MeetingLanguage.ui(zh: "錄音", en: "Recording")
+        case .transcription: MeetingLanguage.ui(zh: "轉錄", en: "Transcription")   // 「轉錄」在別處是動詞（Transcribing）
+        case .models: String(localized: "模型與空間")
+        case .speakers: MeetingLanguage.ui(zh: "說話者", en: "Speakers")
+        case .glossary: String(localized: "詞彙表")
+        case .general: String(localized: "一般")
+        case .ai: String(localized: "AI 工具")
+        case .enterprise: String(localized: "企業伺服器")
+        case .status: String(localized: "檢查與更新")
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .provider: "sparkles"
+        case .templates: "doc.text.fill"
+        case .recording: "mic.fill"
+        case .transcription: "waveform"
+        case .models: "internaldrive.fill"
+        case .speakers: "person.2.fill"
+        case .glossary: "character.book.closed.fill"
+        case .general: "gearshape.fill"
+        case .ai: "puzzlepiece.extension.fill"
+        case .enterprise: "building.2.fill"
+        case .status: "checkmark.seal.fill"
+        }
+    }
+
+    /// 圖示的底色（同系統設定的彩色方塊，深淺色都用同一個）
+    var color: Color {
+        switch self {
+        case .provider: Color(red: 0.55, green: 0.36, blue: 0.85)
+        case .templates: Color(red: 0.95, green: 0.55, blue: 0.16)
+        case .recording: Color(red: 0.92, green: 0.26, blue: 0.26)
+        case .transcription: Color(red: 0.16, green: 0.48, blue: 0.95)
+        case .models, .general: Color(red: 0.52, green: 0.53, blue: 0.57)
+        case .speakers: Color(red: 0.11, green: 0.66, blue: 0.68)
+        case .glossary: Color(red: 0.62, green: 0.44, blue: 0.28)
+        case .ai: Color(red: 0.35, green: 0.35, blue: 0.86)
+        case .enterprise: Color(red: 0.33, green: 0.45, blue: 0.62)
+        case .status: Color(red: 0.2, green: 0.68, blue: 0.36)
+        }
+    }
+
+    /// 側欄的分組（組和組之間空一點）
+    static let groups: [[SettingsPage]] = [[.provider, .templates], [.recording, .transcription, .models], [.speakers, .glossary],
+                                           [.general, .ai, .enterprise, .status]]
+
+    /// 搜尋用（R108.4）：那一頁項目的名稱，加上常用的說法
+    var keywords: [String] {
+        switch self {
+        case .provider:
+            [String(localized: "轉錄完成後自動整理成會議紀錄"), String(localized: "轉錄完成後檢查可能聽錯的字"), String(localized: "模型"),
+             String(localized: "測試整理工具"), "Claude", "Codex", "ChatGPT", "OpenAI", "Gemini", "Anthropic", "API key"]
+        case .templates: [String(localized: "要產生的段落"), String(localized: "自訂段落"), String(localized: "設為預設範本")]
+        case .recording:
+            [String(localized: "錄音來源"), String(localized: "麥克風"), String(localized: "麥克風權限設定"), String(localized: "系統錄音權限設定"),
+             String(localized: "偵測到線上會議時提醒錄音"), String(localized: "會議結束時自動停止錄音"), String(localized: "在螢幕上方顯示錄音島"),
+             String(localized: "提醒與快捷鍵"), "Zoom", "Teams", "Google Meet"]
+        case .transcription:
+            [String(localized: "正式轉錄"), String(localized: "轉錄時辨識說話者"), String(localized: "說話者辨識的模型"),
+             String(localized: "錄音中顯示即時逐字稿"), String(localized: "預設會議語言"), String(localized: "中文的字"),
+             String(localized: "自動偵測會議語言"), "Breeze", "Qwen", "Whisper", "Nemotron"]
+        case .models:
+            [String(localized: "模型"), String(localized: "儲存空間"), String(localized: "資料位置"),
+             String(localized: "轉錄完成後把錄音壓縮成 m4a（約每小時 10～30 MB）"), "Breeze", "Qwen", "Whisper"]
+        case .speakers: [String(localized: "記住說話者的聲音，之後的會議自動帶入名字"), String(localized: "我的聲音"), String(localized: "認識的人")]
+        case .glossary: [String(localized: "新增詞彙")]
+        case .general:
+            [String(localized: "會議內容的文字大小"), String(localized: "分享畫面時藏起拾音的視窗"), String(localized: "重新顯示首次使用引導"),
+             String(localized: "重建搜尋索引"), String(localized: "匿名使用統計")]
+        case .ai: [String(localized: "讓 AI 工具讀取會議"), "MCP", "Claude Code", "Claude Desktop", "Codex"]
+        case .enterprise: [String(localized: "網址"), String(localized: "登入")]
+        case .status: [String(localized: "更新"), String(localized: "檢查更新"), String(localized: "目前版本"), String(localized: "環境檢查")]
+        }
+    }
+
+    func matches(_ query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return q.isEmpty || ([title] + keywords).contains { $0.localizedCaseInsensitiveContains(q) }
+    }
+}
+
+/// 設定視窗（R108、design §82）：左邊側欄、右邊那一頁
 struct SettingsView: View {
     #if DEBUG
-    /// shiyinctl preview settings <分頁>：預覽視窗一開始停在哪個分頁（0 整理工具、1 錄音與轉錄、2 說話者與詞彙、3 進階）
-    nonisolated(unsafe) static var previewTab = 0
-    /// shiyinctl preview settings <分頁> height=<點>：拉高看下面的段落（桌面層的預覽視窗捲不了）
-    nonisolated(unsafe) static var previewHeight: CGFloat = 520
+    /// shiyinctl preview settings <頁面>：預覽視窗一開始停在哪一頁（代號或 0～10）
+    nonisolated(unsafe) static var previewPage: SettingsPage?
+    /// shiyinctl preview settings <頁面> height=<點>：拉高看下面的段落（桌面層的預覽視窗捲不了）
+    nonisolated(unsafe) static var previewHeight: CGFloat?
     #endif
-    @State private var tab: Int = {
-        #if DEBUG
-        return SettingsView.previewTab
-        #else
-        return 0
-        #endif
-    }()
+    @AppStorage(SettingsPage.storageKey) private var storedPage = SettingsPage.provider.rawValue
+    @State private var page: SettingsPage
+    @State private var query = ""
 
-    private static var height: CGFloat {
+    init() {
+        // 上次停在哪一頁（R108.5）；DEBUG 的預覽指定起始頁，不寫進設定
+        var start = SettingsPage(rawValue: UserDefaults.standard.string(forKey: SettingsPage.storageKey) ?? "") ?? .provider
         #if DEBUG
-        return previewHeight
-        #else
-        return 520
+        if let previewPage = Self.previewPage { start = previewPage }
         #endif
+        _page = State(initialValue: start)
+    }
+
+    private func select(_ value: SettingsPage) {
+        page = value
+        storedPage = value.rawValue
     }
 
     var body: some View {
-        // 四個分頁（R44.5，design §33.3、D110）：只搬位置、加分組，每個項目和存的鍵都沒變
-        TabView(selection: $tab) {
-            ProviderSettings().tabItem { Label("整理工具", systemImage: "sparkles") }.tag(0)
-            RecordingSettings().tabItem { Label("錄音與轉錄", systemImage: "mic") }.tag(1)
-            NamesSettings().tabItem { Label("說話者與詞彙", systemImage: "person.text.rectangle") }.tag(2)
-            AdvancedSettings().tabItem { Label("進階", systemImage: "gearshape.2") }.tag(3)
+        NavigationSplitView {
+            List(selection: Binding(get: { page }, set: { if let value = $0 { select(value) } })) {
+                ForEach(Array(SettingsPage.groups.enumerated()), id: \.offset) { _, group in
+                    let pages = group.filter { $0.matches(query) }
+                    if !pages.isEmpty {
+                        Section {
+                            ForEach(pages) { item in
+                                Label { Text(item.title) } icon: { SettingsIcon(page: item) }
+                                    .tag(item)
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.sidebar)
+            .searchable(text: $query, placement: .sidebar, prompt: Text("搜尋設定"))
+            .onChange(of: query) { _, value in
+                // 只剩一頁時直接選它（R108.4）
+                let found = SettingsPage.allCases.filter { $0.matches(value) }
+                if !value.isEmpty, found.count == 1, let only = found.first { select(only) }
+            }
+            .navigationSplitViewColumnWidth(min: 210, ideal: 220, max: 260)
+            .frame(minWidth: 210)   // 欄寬有時候不生效（設定視窗第一次打開），清單自己也要撐開
+            .toolbar(removing: .sidebarToggle)
+        } detail: {
+            SettingsPageView(page: page)
+                .navigationTitle(page.title)
         }
-        .frame(width: 640, height: Self.height)
+        .frame(minWidth: 720, idealWidth: 820, minHeight: 500, idealHeight: Self.idealHeight)
         .tint(.celadon)
+    }
+
+    private static var idealHeight: CGFloat {
+        #if DEBUG
+        return previewHeight ?? 620
+        #else
+        return 620
+        #endif
+    }
+}
+
+/// 側欄的圖示：彩色圓角方塊加白色符號（同系統設定）
+struct SettingsIcon: View {
+    let page: SettingsPage
+
+    var body: some View {
+        Image(systemName: page.symbol)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 20, height: 20)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(page.color.gradient))
+            .accessibilityHidden(true)
+    }
+}
+
+/// 右邊的那一頁：原本的段落照搬（R108.6，項目和存的鍵都沒變）
+struct SettingsPageView: View {
+    let page: SettingsPage
+
+    var body: some View {
+        switch page {
+        case .provider: ProviderSettings()
+        case .templates:
+            Form { Section { TemplateSettings().frame(minHeight: 460) } }.formStyle(.grouped)
+        case .recording: RecordingSettings(part: .recording)
+        case .transcription: RecordingSettings(part: .transcription)
+        case .models: ModelsSettings()
+        case .speakers: Form { Section { SpeakerSettings() } }.formStyle(.grouped)
+        case .glossary: Form { Section { GlossarySettings() } }.formStyle(.grouped)
+        case .general: AdvancedSettings(part: .general)
+        case .ai: Form { Section { MCPSettings() } }.formStyle(.grouped)
+        case .enterprise: Form { Section { EnterpriseServerSettings() } }.formStyle(.grouped)
+        case .status: AdvancedSettings(part: .status)
+        }
     }
 }
 
@@ -206,10 +367,6 @@ struct ProviderSettings: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-            }
-            // 範本是整理的一部分（R44.5、D110）：原本自己一個分頁
-            Section(MeetingLanguage.ui(zh: "範本", en: "Templates")) {
-                TemplateSettings().frame(height: 420)
             }
         }
         .formStyle(.grouped)
@@ -622,18 +779,7 @@ struct TemplateSettings: View {
     }
 }
 
-// MARK: 詞彙表（沿用第二版）
-
-/// 說話者與詞彙（R44.5，design §33.3）：原本的「說話者」和「詞彙表」兩個分頁合成一頁，各一個 Section
-struct NamesSettings: View {
-    var body: some View {
-        Form {
-            Section(MeetingLanguage.ui(zh: "說話者", en: "Speakers")) { SpeakerSettings() }
-            Section("詞彙表") { GlossarySettings() }
-        }
-        .formStyle(.grouped)
-    }
-}
+// MARK: 說話者、詞彙表（各自一頁，R108）
 
 /// 說話者（design §21.4、R19.3）：記住說話者的聲音，之後的會議自動帶入名字；認識的人可以改名、刪除。
 /// 是 Form 的一個 Section 的內容（R44.5）：認識的人一人一列，不用 List
@@ -985,6 +1131,9 @@ struct GlossarySettings: View {
 // MARK: 錄音與轉錄（R1、R4、R10.3；R44.5 分成四組）
 
 struct RecordingSettings: View {
+    /// 錄音一頁（錄音來源、提醒與快捷鍵）、轉錄一頁（轉錄、語言），同一份狀態（R108）
+    enum Part { case recording, transcription }
+    let part: Part
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.transcriptionEngineKey) private var engine = "breeze"
 
@@ -1030,132 +1179,7 @@ struct RecordingSettings: View {
 
     var body: some View {
         Form {
-            Section("錄音來源") {
-                Picker("錄音來源", selection: $source) {
-                    Text("只錄麥克風").tag("mic")
-                    Text("麥克風＋電腦聲音（線上會議）").tag("both")
-                    Text("只錄電腦聲音").tag("system")
-                }
-                Picker("麥克風", selection: $device) {
-                    MicrophoneOptions(saved: device)
-                }
-                .disabled(source == "system")
-                // R58.6：其他換麥克風的地方、藍牙耳機會把系統預設換掉
-                Text("錄音按鈕旁的箭頭、錄音畫面也可以換麥克風。藍牙耳機連著時，系統預設可能會自動變成耳機的麥克風，現場會議請選這台 Mac 的麥克風。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Text("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。第一次錄電腦聲音時，macOS 會詢問「錄製系統音訊」的權限。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                HStack {
-                    Button("麥克風權限設定") { Recorder.openPrivacySettings() }
-                    Button("系統錄音權限設定") { Recorder.openPrivacySettings("Privacy_AudioCapture") }
-                }
-            }
-            Section("語言") {
-                // 會議語言（R12.4、design §16.3）
-                Picker("預設會議語言", selection: $meetingLanguage) {
-                    ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
-                }
-                Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                // 中文的字（R71、design §47.3）
-                Picker("中文的字", selection: $chineseScript) {
-                    Text("繁體（台灣）").tag("traditional")
-                    Text("簡體").tag("simplified")
-                }
-                Text("只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Toggle("自動偵測會議語言", isOn: $autoDetect)
-                    .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }
-                if autoDetect && !model.models.isInstalled(.languageDetection) {
-                    // 模型沒下載好（下載失敗、暫停）就不會偵測，要讓人知道
-                    HStack {
-                        Text(model.models.state(.languageDetection).isBusy ? "正在下載語言偵測模型…" : "語言偵測模型還沒下載，下載好之前錄音不會自動偵測")
-                            .font(.caption).foregroundStyle(Color.signal)
-                        Spacer()
-                        if !model.models.state(.languageDetection).isBusy {
-                            Button("下載") { model.models.start(.languageDetection) }.controlSize(.small)
-                        }
-                    }
-                }
-                Text("開始錄音後聽約 10 秒，判斷是哪一種語言（\(MeetingLanguage.uiNames(MeetingLanguage.detectable))）；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-            Section("轉錄") {
-                // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
-                Picker("正式轉錄", selection: $engine) {
-                    // 企業伺服器（R50.1）：登入過才有
-                    if let account = EnterpriseServer.shared.account {
-                        Text("企業伺服器（\(account.serverName)）").tag("server")
-                    }
-                    Text("Breeze ASR 25（聯發科，建議）").tag("breeze")
-                    Text("Qwen3-ASR 1.7B（阿里巴巴）").tag("qwen")
-                    Text("macOS 內建").tag("system")
-                }
-                .onChange(of: engine) { _, _ in
-                    model.runner.wake()
-                    model.refreshEnvironment()
-                }
-                Text(verbatim: engineDescription)
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Toggle("轉錄時辨識說話者", isOn: $diarize)
-                // 說話者辨識的模型（design §61.2、R87）
-                Picker("說話者辨識的模型", selection: $diarizationModel) {
-                    Text("標準").tag(Diarizer.Model.standard.rawValue)
-                    Text("Nemotron-3（實驗性，英文會議比較準）").tag(Diarizer.Model.nemotron.rawValue)
-                }
-                .disabled(!diarize)
-                .onChange(of: diarizationModel) { _, value in
-                    if value == Diarizer.Model.nemotron.rawValue { model.models.prepareNemotron() }
-                }
-                if diarizationModel == Diarizer.Model.nemotron.rawValue {
-                    Text("NVIDIA 的模型，最多分 8 人。英文會議的測試（AMI）中，沒被插話的句子標對 77% → 90%；中文會議會分出比較多人，還在觀察。超過 8 人的會議、模型還沒下載好時用標準的。")
-                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
-                Toggle("錄音中顯示即時逐字稿", isOn: $live)
-                // 模型清單（原「模型與儲存空間」分頁，R44.5）
-                ModelRows()
-            }
-            Section("提醒與快捷鍵") {
-                // 偵測線上會議（design §21.7、R19.4）
-                Toggle("偵測到線上會議時提醒錄音", isOn: $meetingDetection)
-                // 會議結束時倒數自動停止（design §69、R95）
-                Toggle("會議結束時自動停止錄音", isOn: $autoStopOnMeetingEnd)
-                    .disabled(!meetingDetection)
-                // 錄音島（design §57、R81.8）
-                Toggle("在螢幕上方顯示錄音島", isOn: $recordingIsland)
-                Text("錄音中在螢幕上方正中間（有瀏海的 Mac 接在瀏海兩側）顯示錄音的時間和提醒，全螢幕開會、分享畫面時也看得到，分享畫面拍不到它。偵測到線上會議時的「要開始錄音嗎？」也在這裡。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你，不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                ForEach(mutedApps, id: \.self) { bundle in
-                    HStack {
-                        Text("不提醒：\(MeetingDetector.displayName(bundle))").font(.callout)
-                        Spacer()
-                        Button("恢復提醒") {
-                            MeetingDetector.unmute(bundle)
-                            mutedApps = MeetingDetector.muted
-                        }
-                        .buttonStyle(.link)
-                    }
-                }
-                // 忘了停止錄音（design §35、R48.5）
-                Toggle("很久沒人說話時提醒，30 分鐘後自動停止", isOn: $idleStop)
-                Text("錄音中 15 分鐘沒人說話時提醒你；再 15 分鐘還是沒人說話就自動停止，只轉錄到最後有人說話的地方，錄音檔完整保留。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
-                    .onChange(of: hotKey) { _, enabled in
-                        GlobalHotKey.shared.setEnabled(enabled)
-                        hotKeyFailed = enabled && !GlobalHotKey.shared.isRegistered
-                    }
-                if hotKeyFailed {
-                    Text("沒辦法註冊 \(GlobalHotKey.display)，可能已經被其他 app 使用。")
-                        .font(.caption).foregroundStyle(.red)
-                }
-                Toggle("錄音中按 \(GlobalHotKey.bookmarkDisplay) 標記重點（在其他 app 裡也能用）", isOn: $bookmarkHotKey)
-                    .onChange(of: bookmarkHotKey) { _, enabled in
-                        GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
-                    }
-            }
+            if part == .recording { recordingSections } else { transcriptionSections }
         }
         .formStyle(.grouped)
         .onAppear {
@@ -1163,9 +1187,161 @@ struct RecordingSettings: View {
             mutedApps = MeetingDetector.muted
         }
     }
+
+    @ViewBuilder
+    private var recordingSections: some View {
+        Section("錄音來源") {
+            Picker("錄音來源", selection: $source) {
+                Text("只錄麥克風").tag("mic")
+                Text("麥克風＋電腦聲音（線上會議）").tag("both")
+                Text("只錄電腦聲音").tag("system")
+            }
+            Picker("麥克風", selection: $device) {
+                MicrophoneOptions(saved: device)
+            }
+            .disabled(source == "system")
+            // R58.6：其他換麥克風的地方、藍牙耳機會把系統預設換掉
+            Text("錄音按鈕旁的箭頭、錄音畫面也可以換麥克風。藍牙耳機連著時，系統預設可能會自動變成耳機的麥克風，現場會議請選這台 Mac 的麥克風。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。第一次錄電腦聲音時，macOS 會詢問「錄製系統音訊」的權限。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("麥克風權限設定") { Recorder.openPrivacySettings() }
+                Button("系統錄音權限設定") { Recorder.openPrivacySettings("Privacy_AudioCapture") }
+            }
+        }
+        Section("提醒與快捷鍵") {
+            // 偵測線上會議（design §21.7、R19.4）
+            Toggle("偵測到線上會議時提醒錄音", isOn: $meetingDetection)
+            // 會議結束時倒數自動停止（design §69、R95）
+            Toggle("會議結束時自動停止錄音", isOn: $autoStopOnMeetingEnd)
+                .disabled(!meetingDetection)
+            // 錄音島（design §57、R81.8）
+            Toggle("在螢幕上方顯示錄音島", isOn: $recordingIsland)
+            Text("錄音中在螢幕上方正中間（有瀏海的 Mac 接在瀏海兩側）顯示錄音的時間和提醒，全螢幕開會、分享畫面時也看得到，分享畫面拍不到它。偵測到線上會議時的「要開始錄音嗎？」也在這裡。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text("Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、拾音沒在錄音時提醒你，不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            ForEach(mutedApps, id: \.self) { bundle in
+                HStack {
+                    Text("不提醒：\(MeetingDetector.displayName(bundle))").font(.callout)
+                    Spacer()
+                    Button("恢復提醒") {
+                        MeetingDetector.unmute(bundle)
+                        mutedApps = MeetingDetector.muted
+                    }
+                    .buttonStyle(.link)
+                }
+            }
+            // 忘了停止錄音（design §35、R48.5）
+            Toggle("很久沒人說話時提醒，30 分鐘後自動停止", isOn: $idleStop)
+            Text("錄音中 15 分鐘沒人說話時提醒你；再 15 分鐘還是沒人說話就自動停止，只轉錄到最後有人說話的地方，錄音檔完整保留。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Toggle("全域快捷鍵 \(GlobalHotKey.display)：在其他 app 裡也能開始或停止錄音", isOn: $hotKey)
+                .onChange(of: hotKey) { _, enabled in
+                    GlobalHotKey.shared.setEnabled(enabled)
+                    hotKeyFailed = enabled && !GlobalHotKey.shared.isRegistered
+                }
+            if hotKeyFailed {
+                Text("沒辦法註冊 \(GlobalHotKey.display)，可能已經被其他 app 使用。")
+                    .font(.caption).foregroundStyle(.red)
+            }
+            Toggle("錄音中按 \(GlobalHotKey.bookmarkDisplay) 標記重點（在其他 app 裡也能用）", isOn: $bookmarkHotKey)
+                .onChange(of: bookmarkHotKey) { _, enabled in
+                    GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var transcriptionSections: some View {
+        Section("轉錄") {
+            // 正式轉錄引擎（R4.1、design §6.2.1、D11；Qwen3-ASR 見 §32.6）
+            Picker("正式轉錄", selection: $engine) {
+                // 企業伺服器（R50.1）：登入過才有
+                if let account = EnterpriseServer.shared.account {
+                    Text("企業伺服器（\(account.serverName)）").tag("server")
+                }
+                Text("Breeze ASR 25（聯發科，建議）").tag("breeze")
+                Text("Qwen3-ASR 1.7B（阿里巴巴）").tag("qwen")
+                Text("macOS 內建").tag("system")
+            }
+            .onChange(of: engine) { _, _ in
+                model.runner.wake()
+                model.refreshEnvironment()
+            }
+            Text(verbatim: engineDescription)
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Toggle("轉錄時辨識說話者", isOn: $diarize)
+            // 說話者辨識的模型（design §61.2、R87）
+            Picker("說話者辨識的模型", selection: $diarizationModel) {
+                Text("標準").tag(Diarizer.Model.standard.rawValue)
+                Text("Nemotron-3（實驗性，英文會議比較準）").tag(Diarizer.Model.nemotron.rawValue)
+            }
+            .disabled(!diarize)
+            .onChange(of: diarizationModel) { _, value in
+                if value == Diarizer.Model.nemotron.rawValue { model.models.prepareNemotron() }
+            }
+            if diarizationModel == Diarizer.Model.nemotron.rawValue {
+                Text("NVIDIA 的模型，最多分 8 人。英文會議的測試（AMI）中，沒被插話的句子標對 77% → 90%；中文會議會分出比較多人，還在觀察。超過 8 人的會議、模型還沒下載好時用標準的。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Toggle("錄音中顯示即時逐字稿", isOn: $live)
+        }
+        Section("語言") {
+            // 會議語言（R12.4、design §16.3）
+            Picker("預設會議語言", selection: $meetingLanguage) {
+                ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
+            }
+            Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            // 中文的字（R71、design §47.3）
+            Picker("中文的字", selection: $chineseScript) {
+                Text("繁體（台灣）").tag("traditional")
+                Text("簡體").tag("simplified")
+            }
+            Text("只影響中文會議的逐字稿、會議紀錄和匯出，介面文字不變。已經做好的會議不會變，重新轉錄或重新整理後才會換。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Toggle("自動偵測會議語言", isOn: $autoDetect)
+                .onChange(of: autoDetect) { _, on in if on { model.models.autoStart(.languageDetection) } }
+            if autoDetect && !model.models.isInstalled(.languageDetection) {
+                // 模型沒下載好（下載失敗、暫停）就不會偵測，要讓人知道
+                HStack {
+                    Text(model.models.state(.languageDetection).isBusy ? "正在下載語言偵測模型…" : "語言偵測模型還沒下載，下載好之前錄音不會自動偵測")
+                        .font(.caption).foregroundStyle(Color.signal)
+                    Spacer()
+                    if !model.models.state(.languageDetection).isBusy {
+                        Button("下載") { model.models.start(.languageDetection) }.controlSize(.small)
+                    }
+                }
+            }
+            Text("開始錄音後聽約 10 秒，判斷是哪一種語言（\(MeetingLanguage.uiNames(MeetingLanguage.detectable))）；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
 }
 
-/// 模型清單（R10.3；R44.5 從「模型與儲存空間」搬到「錄音與轉錄 → 轉錄」）
+/// 模型與空間（R108）：模型清單、儲存空間、第二版留下的檔案
+struct ModelsSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Form {
+            Section("模型") { ModelRows() }
+            Section("儲存空間") { StorageSection() }
+            if model.legacyBytes > 0 {
+                Section("第二版留下的檔案") {
+                    Text("第二版用的 Python 環境和舊模型已經用不到了，佔用 \(ByteCountFormatter.string(fromByteCount: model.legacyBytes, countStyle: .file))。")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("刪除第二版的 Python 環境和舊模型", role: .destructive) { model.deleteLegacyItems() }
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// 模型清單（R10.3；R108 在「模型與空間」一頁）
 struct ModelRows: View {
     @Environment(AppModel.self) private var model
 
@@ -1283,6 +1459,9 @@ struct ModelRow: View {
 // MARK: 進階：環境檢查
 
 struct AdvancedSettings: View {
+    /// 一般一頁（顯示、引導、搜尋索引、匿名統計）、檢查與更新一頁（更新、環境檢查），同一份狀態（R108）
+    enum Part { case general, status }
+    let part: Part
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.textSizeKey) private var textSize = 0
     @AppStorage(AppSettings.hideFromScreenSharingKey) private var hideFromScreenSharing = false
@@ -1293,84 +1472,76 @@ struct AdvancedSettings: View {
 
     var body: some View {
         Form {
-            // 企業伺服器（R49、design §36.3）：放在最上面，公司的人照「進階 → 企業伺服器」找得到
-            Section("企業伺服器") { EnterpriseServerSettings() }
-            // 會議內容的文字大小（design §38.5、R59）
-            Section("顯示") {
-                Picker("會議內容的文字大小", selection: $textSize) {
-                    ForEach(TextSize.levels, id: \.self) { Text(TextSize.label($0)).tag($0) }
-                }
-                Text("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 ⌘＋、⌘－ 調整，⌘0 回到標準大小。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                // 分享畫面時藏起拾音的視窗（design §53、R77）
-                Toggle("分享畫面時藏起拾音的視窗", isOn: $hideFromScreenSharing)
-                Text("打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-            // 讓 AI 工具讀取會議（本地 MCP，design §44.4、R69）
-            Section("AI 工具（MCP）") { MCPSettings() }
-            // app 內更新（R10.6）
-            Section("更新") {
-                LabeledContent("目前版本", value: Updater.currentVersion)
-                TextField("更新網址", text: $updateURL,
-                          prompt: Text(Bundle.main.object(forInfoDictionaryKey: "ShiyinUpdateURL") as? String ?? "https://…/shiyin-update.json"))
-                Text("發布拾音的人會給你這個網址（shiyin-update.json）。留空就用安裝版本內建的網址；都沒有的話不會檢查更新。")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                HStack {
-                    Button("檢查更新") { Task { await model.updater.check(userInitiated: true) } }
-                        .disabled(model.updater.state == .checking || model.updater.state == .downloading || model.updater.state == .installing)
-                    if case .available(let manifest) = model.updater.state {
-                        Button("下載並更新到 \(manifest.version)") { Task { await model.updater.install(manifest, model: model) } }
-                            .buttonStyle(.borderedProminent)
+            switch part {
+            case .general:
+                // 會議內容的文字大小（design §38.5、R59）
+                Section("顯示") {
+                    Picker("會議內容的文字大小", selection: $textSize) {
+                        ForEach(TextSize.levels, id: \.self) { Text(TextSize.label($0)).tag($0) }
                     }
-                    Text(model.updater.progress?.text ?? model.updater.state.label)
-                        .font(.callout)
-                        .foregroundStyle(isFailure ? .red : .secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 ⌘＋、⌘－ 調整，⌘0 回到標準大小。")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    // 分享畫面時藏起拾音的視窗（design §53、R77）
+                    Toggle("分享畫面時藏起拾音的視窗", isOn: $hideFromScreenSharing)
+                    Text("打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                // 下載的進度（design §12，4.7.1）
-                if let progress = model.updater.progress {
-                    if let fraction = progress.fraction { ProgressView(value: fraction).tint(.signal) } else { ProgressView().progressViewStyle(.linear) }
+                Section {
+                    Button("重新顯示首次使用引導") {
+                        hasCompletedOnboarding = false
+                        openWindow(id: "onboarding")
+                    }
+                    Button("重建搜尋索引") {
+                        model.perform { try model.db.rebuildSearchIndex() }
+                        model.noticeMessage = String(localized: "搜尋索引已重建")
+                    }
                 }
-            }
-            Section("環境檢查") {
-                ForEach(model.environment.items) { item in
-                    HStack(alignment: .firstTextBaseline) {
-                        Image(systemName: item.ok ? "checkmark.circle.fill" : "minus.circle")
-                            .foregroundStyle(item.ok ? Color.celadon : .secondary)
-                        VStack(alignment: .leading) {
-                            Text(item.name)
-                            Text(item.ok ? item.detail : item.fix).font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                // 匿名使用統計（design §30.5、R40.4）：有統計網址的版本才有。放在最下面、只留一行，開關收在「詳細…」裡
+                if UsageStats.isOffered {
+                    Section {
+                        LabeledContent("匿名使用統計") {
+                            Button("詳細…") { showingUsageStats = true }
                         }
                     }
                 }
-                Button("重新檢查") { model.refreshEnvironment() }
-            }
-            Section("儲存空間") { StorageSection() }
-            if model.legacyBytes > 0 {
-                Section("第二版留下的檔案") {
-                    Text("第二版用的 Python 環境和舊模型已經用不到了，佔用 \(ByteCountFormatter.string(fromByteCount: model.legacyBytes, countStyle: .file))。")
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("刪除第二版的 Python 環境和舊模型", role: .destructive) { model.deleteLegacyItems() }
-                }
-            }
-            Section {
-                Button("重新顯示首次使用引導") {
-                    hasCompletedOnboarding = false
-                    openWindow(id: "onboarding")
-                }
-                Button("重建搜尋索引") {
-                    model.perform { try model.db.rebuildSearchIndex() }
-                    model.noticeMessage = String(localized: "搜尋索引已重建")
-                }
-            }
-            // 匿名使用統計（design §30.5、R40.4）：有統計網址的版本才有。放在最下面、只留一行，開關收在「詳細…」裡
-            if UsageStats.isOffered {
-                Section {
-                    LabeledContent("匿名使用統計") {
-                        Button("詳細…") { showingUsageStats = true }
+            case .status:
+                // app 內更新（R10.6）
+                Section("更新") {
+                    LabeledContent("目前版本", value: Updater.currentVersion)
+                    TextField("更新網址", text: $updateURL,
+                              prompt: Text(Bundle.main.object(forInfoDictionaryKey: "ShiyinUpdateURL") as? String ?? "https://…/shiyin-update.json"))
+                    Text("發布拾音的人會給你這個網址（shiyin-update.json）。留空就用安裝版本內建的網址；都沒有的話不會檢查更新。")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        Button("檢查更新") { Task { await model.updater.check(userInitiated: true) } }
+                            .disabled(model.updater.state == .checking || model.updater.state == .downloading || model.updater.state == .installing)
+                        if case .available(let manifest) = model.updater.state {
+                            Button("下載並更新到 \(manifest.version)") { Task { await model.updater.install(manifest, model: model) } }
+                                .buttonStyle(.borderedProminent)
+                        }
+                        Text(model.updater.progress?.text ?? model.updater.state.label)
+                            .font(.callout)
+                            .foregroundStyle(isFailure ? .red : .secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    // 下載的進度（design §12，4.7.1）
+                    if let progress = model.updater.progress {
+                        if let fraction = progress.fraction { ProgressView(value: fraction).tint(.signal) } else { ProgressView().progressViewStyle(.linear) }
+                    }
+                }
+                Section("環境檢查") {
+                    ForEach(model.environment.items) { item in
+                        HStack(alignment: .firstTextBaseline) {
+                            Image(systemName: item.ok ? "checkmark.circle.fill" : "minus.circle")
+                                .foregroundStyle(item.ok ? Color.celadon : .secondary)
+                            VStack(alignment: .leading) {
+                                Text(item.name)
+                                Text(item.ok ? item.detail : item.fix).font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    Button("重新檢查") { model.refreshEnvironment() }
                 }
             }
         }

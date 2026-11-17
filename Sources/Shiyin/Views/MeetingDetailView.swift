@@ -54,6 +54,7 @@ struct MeetingDetailView: View {
                     }
                 }
             }
+            SettingsToolbarItem()
         }
     }
 }

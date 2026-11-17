@@ -55,6 +55,8 @@ struct ShiyinApp: App {
                 .environment(AppModel.shared)
                 .chineseGlyphs()
         }
+        // 側欄的設定可以拉大（R108.5）
+        .windowResizability(.contentMinSize)
 
         MenuBarExtra {
             MenuBarContent()
