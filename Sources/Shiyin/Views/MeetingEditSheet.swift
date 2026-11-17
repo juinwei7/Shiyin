@@ -120,7 +120,7 @@ struct MeetingEditSheet: View {
             Button { editor.setEnd(editor.playhead) } label: { Label("設成結尾", systemImage: "arrow.left.to.line") }
                 .help("把結尾的把手移到播放頭：後面的部分裁掉")
             Button { editor.deleteSelection() } label: { Label("刪掉選取的範圍", systemImage: "trash") }
-                .disabled(editor.selection == nil)
+                .disabled(editor.selection == nil && editor.selectedLines.isEmpty)
                 .help("在波形上拖曳選一段，再按這裡（或 Delete）刪掉")
             Button { editor.toggleCut() } label: {
                 Label(editor.cut == nil ? String(localized: "在這裡分成兩場") : String(localized: "拿掉切點"), systemImage: "scissors")

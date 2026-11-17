@@ -243,8 +243,10 @@ final class MeetingEditor {
         stopPlaying()
     }
 
+    /// Delete 鍵、「刪掉選取的範圍」：波形上選的那段；沒有的話是逐字稿選到的句子（同 Windows）
     func deleteSelection() {
         if let selection { deleteRange(selection) }
+        else if !selectedLines.isEmpty { deleteLines(lines.filter { selectedLines.contains($0.id) }) }
     }
 
     func restore(_ range: ClosedRange<Double>) {
