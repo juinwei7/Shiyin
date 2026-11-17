@@ -64,7 +64,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
   You can also share straight to AirDrop, Mail or Messages when exporting.
 - **Ask your meetings**: ask a question in plain language in a meeting’s Ask tab (“What budget did we settle on?”) and get an answer with timestamps you can click. Ask in the toolbar searches all meetings, the current folder or the last 30 days, and tells you which meeting each answer came from
 - **Let AI tools read meetings (MCP)**: turn on “Let AI tools read meetings” in Settings → Advanced and add Shiyin to Claude Code, Codex or Claude Desktop with one click (other MCP tools can use the copied settings). AI tools can list and search your meetings and read the notes, transcripts and action items across meetings; answers link to the meeting and timestamp, which opens Shiyin right there. It works together with your other tools (turning action items into tickets, writing a weekly report). Read-only, and Shiyin doesn’t need to be open; a company’s enterprise server can turn it off
-- **Organize**: folders (by project or client), full-text search across all meetings, Trash (restore within 30 days)
+- **Organize**: folders (by project or client) that open in place in the sidebar; drag meetings in or right-click to move them, or let rules file them automatically; full-text search across all meetings; Trash (restore within 30 days)
 - **Also**: playback at 0.75×–2×, Fix Wording (corrects a term in the transcript and the notes at once), recordings compressed to m4a after transcription, notifications when a meeting is done or fails, in-app updates, Help → Report a Problem… (includes the version and setup, never meeting content)
 
 ![Transcript and speakers](../docs/images/en/transcript.png)
@@ -72,6 +72,8 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 <sub>The demo meetings in these screenshots are excerpts from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/) (ES2004a, CC BY 4.0).</sub>
 
 ![Recording](../docs/images/en/recording.png)
+
+![Folders](../docs/images/en/organize.png)
 
 ## System requirements
 

@@ -276,6 +276,14 @@ ${paragraphs(c.notes.ps)}
 ${shot(lang, 'mindmap', c.shots.mindmap)}
 </figure>
 
+<section class="col part">
+<h2>${c.organize.h2}</h2>
+${paragraphs(c.organize.ps)}
+</section>
+<figure class="wide part">
+${shot(lang, 'organize', c.shots.organize)}
+</figure>
+
 <section class="col part" id="privacy">
 <h2>${c.privacy.h2}</h2>
 <p>${c.privacy.lead}</p>
@@ -374,6 +382,14 @@ ${paragraphs(c.notes.ps)}
 </section>
 <figure class="wide part">
 ${shot(lang, 'mindmap', w.shots.mindmap, { win: true, size: [1656, 962] })}
+</figure>
+
+<section class="col part">
+<h2>${c.organize.h2}</h2>
+${paragraphs(c.organize.ps)}
+</section>
+<figure class="wide part">
+${shot(lang, 'organize', w.shots.organize, { win: true })}
 </figure>
 
 <section class="col part" id="privacy">

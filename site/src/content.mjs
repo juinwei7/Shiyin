@@ -12,7 +12,7 @@ export const content = {
     ogLocale: 'zh_TW',
     prefix: '',
     images: '/images',
-    og: 'og.png?v=4',
+    og: 'og.png?v=5',
     ogAlt: 'Mac 和 Windows 的會議紀錄 app',
     notesLang: 'zh',
     appName: '拾音',
@@ -26,7 +26,7 @@ export const content = {
     seo: {
       appName: '拾音 Shiyin',
       category: '會議記錄、逐字稿',
-      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議', '錄音島：開會時在螢幕上方看得到、控制錄音', '人物：跟每個人開過的會、他負責的待辦', '定期會議：自動找出週會，接上上次的待辦'],
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議', '錄音島：開會時在螢幕上方看得到、控制錄音', '人物：跟每個人開過的會、他負責的待辦', '資料夾：拖曳整理，設條件自動歸類'],
     },
     nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -53,6 +53,7 @@ export const content = {
       recording: '錄音中的畫面：左邊是即時逐字稿，右邊是我的筆記',
       transcript: '逐字稿畫面：每一段都標上說話者和時間點',
       mindmap: '心智圖：會議標題在中間，議題、決議、待辦、未決問題往兩邊展開；下面的播放條標出每個議題從哪裡講到哪裡',
+      organize: '側欄的資料夾在原地展開，不在資料夾裡的會議列在「其他會議」；在會議上按右鍵，選「移到資料夾」',
       credit: `逐字稿截圖的示範錄音取自 <a href="${AMI}">AMI Meeting Corpus</a>（ES2004a，CC BY 4.0）`,
     },
     live: {
@@ -77,10 +78,17 @@ export const content = {
         '停止錄音後，先用即時逐字稿整理出一份草稿，正式轉錄完自動換成正式版：摘要、決議、待辦和未決問題。每一條後面都有時間點，覺得不對就點一下，從錄音那裡開始聽。',
         'AI 不確定的人名、專有名詞、負責人和期限，會列在「待確認」讓你回答，回答後再依你的答案修正紀錄。逐字稿裡可能聽錯的字也會標出來，你按「接受」才會改。',
         '想找某件事，可以直接問會議：「預算最後決定多少？」回答會附上時間點；也可以一次問所有會議。',
-        '會議多了，側欄可以照日期、標題、長度排序，依月份或資料夾分組，只看有待確認、有你的待辦或某個人參加的會議。資料夾可以設條件（標題有「週會」、某幾個人都參加），新的會議整理完自動放進去。同一群人每週固定時間開的會，拾音會發現並問你要不要設成定期會議；之後每一場自動加進來，整理時對照上一場的待辦，標出完成了沒。',
-        '每一樣東西都能直接改：會議、資料夾、定期會議、人物按右鍵，或滑鼠移上去時右邊的「⋯」；選到時按 Return（Windows 是 Enter 或 F2）重新命名、按 Delete 刪除。會議紀錄的每一條雙擊就能改，按右鍵可以刪掉那一條，改錯了可以復原上一版。',
       ],
-      note: '範本有一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自己做。紀錄可以直接編輯，每次修改都留版本；也可以切換成心智圖，放大縮小、匯出成圖片；或切換成「人物」，看每個人說了多久、提了什麼、負責哪些待辦。播放條上會標出每個議題從哪裡講到哪裡，點了就從那裡開始聽。待辦可以一鍵加到 Mac 的「提醒事項」，附上回到會議的連結。',
+      note: '範本有一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自己做。紀錄的每一條雙擊就能改、按右鍵可以刪掉，每次修改都留版本，改錯了可以復原上一版；也可以切換成心智圖，放大縮小、匯出成圖片；或切換成「人物」，看每個人說了多久、提了什麼、負責哪些待辦。播放條上會標出每個議題從哪裡講到哪裡，點了就從那裡開始聽。待辦可以一鍵加到 Mac 的「提醒事項」，附上回到會議的連結。',
+    },
+    organize: {
+      h2: '會議多了，用資料夾整理',
+      ps: [
+        '側欄的資料夾點一下就在原地展開，不在資料夾裡的會議列在下面的「其他會議」。列表可以照日期、標題、長度排序，依月份或資料夾分組，也可以只看有待確認、有你的待辦或某個人參加的會議。',
+        '把會議拖進資料夾，或按右鍵選「移到資料夾」；按住 ⌘ 或 ⇧ 點選（Windows 是 Ctrl、Shift）可以一次選好幾場一起搬。錄音檔直接拖到資料夾上，就匯入到那個資料夾。',
+        '資料夾可以設自動加入的條件：標題有「週會」、某幾個人都參加，或用了某個範本，新的會議整理完就自動放進去。沒設條件時，拾音發現某場會議跟資料夾裡的很像（同一群人參加、標題有共同的詞），會問你要不要放進去。',
+        '每一樣東西都能直接改：會議、資料夾、人物按右鍵，或滑鼠移上去時右邊的「⋯」；選到時按 Return（Windows 是 Enter 或 F2）重新命名、按 Delete 刪除。',
+      ],
     },
     privacy: {
       h2: '錄音不會離開你的 Mac',
@@ -153,6 +161,7 @@ export const content = {
         recording: '拾音 Windows 版錄音中的畫面：左邊是即時逐字稿，右邊是我的筆記',
         transcript: '拾音 Windows 版的逐字稿畫面：每一段都標上說話者和時間點',
         mindmap: '拾音 Windows 版的心智圖：會議標題在中間，議題、決議、待辦、未決問題往兩邊展開；下面的播放條標出每個議題從哪裡講到哪裡',
+        organize: '拾音 Windows 版的側欄：資料夾在原地展開，不在資料夾裡的會議列在「其他會議」；在會議上按右鍵，選「移到資料夾」',
       },
       live: {
         h2: '開會時，邊錄邊看逐字稿',
@@ -263,7 +272,7 @@ export const content = {
     ogLocale: 'en_US',
     prefix: '/en',
     images: '/images/en',
-    og: 'og-en.png?v=4',
+    og: 'og-en.png?v=5',
     ogAlt: 'A meeting-notes app for Mac and Windows',
     notesLang: 'en',
     appName: 'Shiyin',
@@ -277,7 +286,7 @@ export const content = {
     seo: {
       appName: 'Shiyin',
       category: 'Meeting notes, transcription',
-      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings', 'The recording island: see and control the recording at the top of the screen', 'People: every meeting with someone and the action items they own', 'Recurring meetings: weekly meetings found for you, following up on last time’s action items'],
+      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings', 'The recording island: see and control the recording at the top of the screen', 'People: every meeting with someone and the action items they own', 'Folders: drag meetings in, or file them automatically with rules'],
     },
     nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -303,6 +312,7 @@ export const content = {
       recording: 'Recording: the live transcript on the left, my notes on the right',
       transcript: 'The transcript: every segment labeled with its speaker and time',
       mindmap: 'The mind map: the meeting title in the middle, with topics, decisions, action items and open questions branching out; the playback bar below shows where each topic starts and ends',
+      organize: 'Folders open in place in the sidebar, and meetings that aren’t in a folder are listed under Other Meetings; right-click a meeting and choose Move to Folder',
       credit: `The demo meetings in these screenshots are excerpts from the <a href="${AMI}">AMI Meeting Corpus</a> (ES2004a, CC BY 4.0).`,
     },
     live: {
@@ -327,10 +337,17 @@ export const content = {
         'As soon as you stop, draft notes are written from the live transcript, then replaced when the final transcript is ready: a summary, decisions, action items and open questions. Each item has a timestamp: if something looks wrong, click it and listen from that point.',
         'Names, terms, owners and due dates the summarizer isn’t sure about are listed under “To confirm”. Answer them and the notes are revised. Words in the transcript that were probably misheard are marked too, and nothing changes until you click Accept.',
         'Looking for something? Ask the meeting, like “What budget did we settle on?”, and the answer comes with timestamps. You can ask all your meetings at once, too.',
-        'As meetings pile up, sort the sidebar by date, title or length, group it by month or folder, and show only meetings that need review, have your action items or include a certain person. Folders can have rules (the title contains “weekly”, certain people all attend), and new meetings are filed automatically once their notes are ready. When the same people meet at the same time every week, Shiyin notices and asks whether it’s a recurring meeting; after that, each new one joins automatically and its notes check last time’s action items and mark which are done.',
-        'Change anything in place: right-click a meeting, folder, recurring meeting or person, or use the “⋯” that appears when you hover; with one selected, press Return (Enter or F2 on Windows) to rename it or Delete to delete it. Double-click any item in the notes to edit it, or right-click to delete it, and revert to the previous version if you change your mind.',
       ],
-      note: 'Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own. You can edit the notes directly, and every change is versioned. Switch to a mind map, zoom in and out, and export it as an image, or switch to People to see how long each person spoke, what they raised and which action items they own. The playback bar marks where each topic starts and ends; click one to listen from there. Add the action items to Apple Reminders with one click, each with a link back to the meeting.',
+      note: 'Templates: General meeting, One-on-one, Interview, Lecture / talk, Brainstorm, or your own. Double-click any item in the notes to edit it, or right-click to delete it; every change is versioned, so you can revert to the previous version. Switch to a mind map, zoom in and out, and export it as an image, or switch to People to see how long each person spoke, what they raised and which action items they own. The playback bar marks where each topic starts and ends; click one to listen from there. Add the action items to Apple Reminders with one click, each with a link back to the meeting.',
+    },
+    organize: {
+      h2: 'Lots of meetings? Keep them in folders',
+      ps: [
+        'Click a folder in the sidebar and it opens in place; meetings that aren’t in a folder are listed below under Other Meetings. Sort the list by date, title or length, group them by month or folder, or show only meetings that need review, have your action items or include a certain person.',
+        'Drag meetings into a folder, or right-click and choose Move to Folder. ⌘-click or ⇧-click (Ctrl or Shift on Windows) to select several meetings and move them together. Drop a recording on a folder to import it straight into that folder.',
+        'Folders can file meetings for you: give one a rule (the title contains “weekly”, certain people all attend, or a certain template is used) and new meetings go in once their notes are ready. Without a rule, when a meeting looks like the ones in a folder (the same people, or a word their titles share), Shiyin asks whether to put it there.',
+        'Change anything in place: right-click a meeting, folder or person, or use the “⋯” that appears when you hover; with one selected, press Return (Enter or F2 on Windows) to rename it or Delete to delete it.',
+      ],
     },
     privacy: {
       h2: 'Your recordings stay on your Mac',
@@ -400,6 +417,7 @@ export const content = {
         recording: 'Recording in Shiyin for Windows: the live transcript on the left, My notes on the right',
         transcript: 'The transcript in Shiyin for Windows: every line has a speaker and a timestamp',
         mindmap: 'The mind map in Shiyin for Windows: the meeting title in the middle, with topics, decisions, action items and open questions branching out; the playback bar below shows where each topic starts and ends',
+        organize: 'The sidebar in Shiyin for Windows: folders open in place, and meetings that aren’t in a folder are listed under Other Meetings; right-click a meeting and choose Move to Folder',
       },
       live: {
         h2: 'Follow the transcript while you record',
@@ -510,7 +528,7 @@ export const content = {
     ogLocale: 'ja_JP',
     prefix: '/ja',
     images: '/images/en',
-    og: 'og-ja.png?v=4',
+    og: 'og-ja.png?v=5',
     ogAlt: 'Mac と Windows の議事録アプリ',
     notesLang: 'en',
     appName: '拾音',
@@ -550,6 +568,7 @@ export const content = {
       recording: '録音中の画面：左がリアルタイムの文字起こし、右が自分のメモ',
       transcript: '文字起こしの画面：段落ごとに話者と時間が付いている',
       mindmap: 'マインドマップ：中央に会議名、まわりに議題・決定事項・ToDo・未解決の問題が広がる。下の再生バーには議題ごとの区間が表示される',
+      organize: 'サイドバーのフォルダはその場で開き、フォルダに入っていない会議は「Other Meetings」に並ぶ。会議を右クリックして「Move to Folder」を選ぶ',
       credit: `画面のデモ会議は <a href="${AMI}">AMI Meeting Corpus</a>（ES2004a、CC BY 4.0）の抜粋です`,
     },
     live: {
@@ -574,10 +593,17 @@ export const content = {
         '録音を止めるとすぐ、リアルタイムの文字起こしから下書きをまとめ、正式な文字起こしが終わると正式版に置き換えます。要約、決定事項、ToDo、未解決の課題に分かれています。各項目にはタイムスタンプが付いていて、気になったらクリックしてその場面から聞き直せます。',
         'AI が確信を持てない人名、固有名詞、担当者、期限は「To confirm」に一覧され、答えるとその内容で議事録が修正されます。聞き間違えた可能性のある語も文字起こしに印が付き、「Accept」を押すまで変更されません。',
         '探したいことがあれば、「予算はいくらに決まった？」のように会議に質問できます（「Ask」タブ）。答えにはタイムスタンプが付き、すべての会議にまとめて質問することもできます。',
-        '会議が増えたら、サイドバーを日付、タイトル、長さで並べ替えたり、月やフォルダごとにまとめたり、要確認のある会議、自分の ToDo がある会議、特定の人が参加した会議だけを表示したりできます。フォルダには条件（タイトルに「定例」を含む、特定の人が全員参加など）を付けられ、新しい会議は議事録ができると自動でそのフォルダに入ります。同じメンバーが毎週同じ時間に開く会議は拾音が見つけて、定例会議にするか確認します。以降の会議は自動で加わり、議事録では前回の ToDo が終わったかどうかを確認します。',
-        '何でもその場で直せます。会議、フォルダ、定例会議、人物は右クリック、またはマウスを乗せると右側に出る「⋯」から。選択して Return（Windows では Enter または F2）で名前を変更、Delete で削除できます。議事録の各項目はダブルクリックで直接編集でき、右クリックで削除もできます（前の版に戻すこともできます）。',
       ],
-      note: 'テンプレートは一般的な会議、1on1、インタビュー、講義・講演、ブレインストーミングのほか、自分で作ることもできます。議事録は直接編集でき、変更のたびに版が残ります。マインドマップに切り替えて、拡大・縮小したり画像として書き出したりすることもできます。「People」に切り替えると、参加者ごとの発言時間、主な発言、担当の ToDo が見られます。再生バーには議題ごとの区間が表示され、クリックするとその議題から聞けます。ToDo はワンクリックで Mac の「リマインダー」に追加でき、会議へ戻るリンクも付きます。',
+      note: 'テンプレートは一般的な会議、1on1、インタビュー、講義・講演、ブレインストーミングのほか、自分で作ることもできます。議事録の各項目はダブルクリックで直接編集でき、右クリックで削除もできます。変更のたびに版が残り、前の版に戻すこともできます。マインドマップに切り替えて、拡大・縮小したり画像として書き出したりすることもできます。「People」に切り替えると、参加者ごとの発言時間、主な発言、担当の ToDo が見られます。再生バーには議題ごとの区間が表示され、クリックするとその議題から聞けます。ToDo はワンクリックで Mac の「リマインダー」に追加でき、会議へ戻るリンクも付きます。',
+    },
+    organize: {
+      h2: '会議が増えたら、フォルダで整理',
+      ps: [
+        'サイドバーのフォルダはクリックするとその場で開き、フォルダに入っていない会議は下の「Other Meetings」に並びます。リストは日付、タイトル、長さで並べ替えたり、月やフォルダごとにまとめたり、要確認のある会議、自分の ToDo がある会議、特定の人が参加した会議だけを表示したりできます。',
+        '会議をフォルダにドラッグするか、右クリックして「Move to Folder」を選びます。⌘ または ⇧ を押しながらクリックすると（Windows では Ctrl、Shift）、複数の会議をまとめて移動できます。録音ファイルをフォルダの上にドロップすると、そのフォルダに読み込まれます。',
+        'フォルダには自動で入れる条件を付けられます。タイトルに「定例」を含む、特定の人が全員参加している、特定のテンプレートを使っている、のどれかに当てはまる新しい会議は、議事録ができると自動でそのフォルダに入ります。条件がなくても、フォルダの中の会議とよく似た会議（同じメンバー、タイトルに共通の語）があると、そのフォルダに入れるか拾音が確認します。',
+        '何でもその場で直せます。会議、フォルダ、人物は右クリック、またはマウスを乗せると右側に出る「⋯」から。選択して Return（Windows では Enter または F2）で名前を変更、Delete で削除できます。',
+      ],
     },
     privacy: {
       h2: '録音は Mac の外に出ません',
@@ -648,6 +674,7 @@ export const content = {
         recording: '拾音 Windows 版の録音中の画面：左がリアルタイムの文字起こし、右が自分のメモ',
         transcript: '拾音 Windows 版の文字起こしの画面：各段落に話者とタイムスタンプが付きます',
         mindmap: '拾音 Windows 版のマインドマップ：中央に会議名、まわりに議題・決定事項・ToDo・未解決の問題が広がります。下の再生バーには議題ごとの区間が表示されます',
+        organize: '拾音 Windows 版のサイドバー：フォルダはその場で開き、フォルダに入っていない会議は「Other Meetings」に並びます。会議を右クリックして「Move to Folder」を選びます',
       },
       live: {
         h2: '会議中は、文字起こしを見ながら録音',
