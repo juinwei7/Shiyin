@@ -289,8 +289,8 @@ struct EditTimelinePanel: View {
         .onKeyPress(.rightArrow, phases: [.down, .repeat]) { press in
             editor.seek(editor.playhead + (press.modifiers.contains(.shift) ? 10 : 1)); return .handled
         }
-        .onKeyPress(.delete) { editor.deleteSelection(); return .handled }
-        .onKeyPress(.deleteForward) { editor.deleteSelection(); return .handled }
+        // Delete 鍵走 onDeleteCommand（同側欄）：onKeyPress(.delete) 對的是 U+0008，Mac 的 Delete 鍵送的是 U+007F，接不到
+        .onDeleteCommand { editor.deleteSelection() }
         .gesture(MagnifyGesture()
             .onChanged { value in
                 if zoomBase == nil { zoomBase = editor.zoom }
@@ -744,7 +744,8 @@ private struct EditTranscriptList: View {
     }
 
     private func click(_ line: MeetingEditor.Line) {
-        let flags = NSEvent.modifierFlags
+        // 這一下點擊帶的修飾鍵（NSEvent.modifierFlags 是鍵盤現在的狀態）
+        let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags
         if flags.contains(.command) {
             if editor.selectedLines.contains(line.id) { editor.selectedLines.remove(line.id) } else { editor.selectedLines.insert(line.id) }
             anchor = line.id

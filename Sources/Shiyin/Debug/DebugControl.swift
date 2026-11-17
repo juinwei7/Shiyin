@@ -631,6 +631,14 @@ enum DebugControl {
                 if let event = NSEvent(cgEvent: cg) { deliver(event) }
             }
             switch args[1] {
+            case "rightq":
+                // 右鍵的按下、放開排進事件佇列（經過 app 的事件監看，自己畫的選單的右鍵靠它）
+                for type in [NSEvent.EventType.rightMouseDown, .rightMouseUp] {
+                    if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                      windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                        NSApp.postEvent(event, atStart: false)
+                    }
+                }
             case "clickq", "clickqcmd", "clickqshift":
                 // 按下、放開都排進事件佇列，同真的點一下：經過手勢辨識、NSApp.currentEvent 是這一下，
                 // 表格按下後自己從佇列拿放開（直接 sendEvent 的話這些都不一樣，2026-11-17 驗側欄點擊卡住時發現）
@@ -1005,6 +1013,13 @@ enum DebugControl {
             NSGraphicsContext.restoreGraphicsState()
             try? output.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[2]))
         case "exportui": model.openExportSheet()   // 等於按工具列的「匯出」
+        case "togglesidebar":   // togglesidebar [show|hide]：等於按工具列的側欄按鈕（不用座標點，工具列的按鈕位置會跟著畫面變）
+            guard let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" }) else { break }
+            func split(_ view: NSView) -> NSSplitView? { (view as? NSSplitView) ?? view.subviews.lazy.compactMap(split).first }
+            guard let controller = window.contentView.flatMap(split)?.delegate as? NSSplitViewController,
+                  let sidebar = controller.splitViewItems.first else { break }
+            let want = args.count > 1 ? args[1] == "show" : sidebar.isCollapsed
+            if want == sidebar.isCollapsed { controller.toggleSidebar(nil) }
         case "mousehold": model.debugMouseHeld = args.count > 1 && args[1] == "on"   // mousehold on|off：當成左鍵按著（選取會議時先不換會議頁，design §77）
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
