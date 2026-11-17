@@ -1245,8 +1245,9 @@ enum DebugControl {
                                             "minSizeW": $0.minSize.width, "minSizeH": $0.minSize.height,
                                             "width": $0.frame.width, "height": $0.frame.height,
                                             "number": $0.windowNumber, "sharing": $0.sharingType.rawValue,
-                                            "resizable": $0.styleMask.contains(.resizable), "maxW": $0.maxSize.width, "maxH": $0.maxSize.height,
-                                            "contentMaxW": $0.contentMaxSize.width, "contentMaxH": $0.contentMaxSize.height] },
+                                            // 最大尺寸可能是無限大（錄音島），JSON 寫不進去會當掉：寫 -1
+                                            "resizable": $0.styleMask.contains(.resizable), "maxW": finite($0.maxSize.width), "maxH": finite($0.maxSize.height),
+                                            "contentMaxW": finite($0.contentMaxSize.width), "contentMaxH": finite($0.contentMaxSize.height)] },
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         if let detail = model.detail {
@@ -1375,8 +1376,12 @@ enum DebugControl {
         }
     }
 
+    /// 無限大、NaN 寫成 -1（JSONSerialization 遇到會丟 Objective-C 例外，整個 app 當掉）
+    private static func finite(_ x: CGFloat) -> CGFloat { x.isFinite ? x : -1 }
+
     private static func write(_ object: [String: Any], to path: String) {
-        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) else { return }
+        guard JSONSerialization.isValidJSONObject(object),
+              let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) else { return }
         try? data.write(to: URL(fileURLWithPath: path))
     }
 
