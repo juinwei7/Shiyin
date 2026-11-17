@@ -14,12 +14,15 @@ using Shiyin.Services;
 using Windows.Foundation;
 using Windows.System;
 using Windows.UI;
+using UIType = Windows.UI.ViewManagement.UIElementType;
 
 namespace Shiyin.App.Views;
 
 /// <summary>
-/// 可以用鍵盤、輔助工具調整的元件（R107.9）：時間軸的播放位置、開頭和結尾的把手。UI Automation 是 RangeValue（Slider 類型），
-/// 螢幕閱讀器唸名稱和說明（「開頭」「00:12，剩下 02:15」）；UIA 的 SetValue 也能直接調（虛擬機驗證用）
+/// 可以用鍵盤、輔助工具調整的元件（R107.9）：時間軸的播放位置、開頭和結尾的把手。UI Automation 是 Slider 類型：
+/// RangeValue（秒數，UIA 的 SetValue 也能直接調，虛擬機驗證用）和 Value（「00:12」這種時間的字：朗讀程式唸的是這個，
+/// 不然唸「12.4」這種秒數），說明是 Describe（「00:12，剩下 02:15」）。值變了（唸出來的字變了才算）發 PropertyChanged，
+/// 朗讀程式在按 ← → 時唸新的時間
 /// </summary>
 sealed partial class Adjustable : ContentControl
 {
@@ -30,6 +33,7 @@ sealed partial class Adjustable : ContentControl
     public double LargeChange { get; init; } = 10;
     /// <summary>給螢幕閱讀器的說明（AutomationProperties.HelpText），值改了跟著換</summary>
     public required Func<string> Describe { get; init; }
+    string? spoken;
 
     public Adjustable(InputSystemCursorShape? cursor = null)
     {
@@ -39,15 +43,29 @@ sealed partial class Adjustable : ContentControl
         if (cursor is { } shape) ProtectedCursor = InputSystemCursor.Create(shape);
     }
 
-    public void Refresh() => AutomationProperties.SetHelpText(this, Describe());
+    /// <summary>朗讀程式唸的值：時間（「00:12」）</summary>
+    public string Spoken => TimeFormat.String(Value());
+
+    public void Refresh()
+    {
+        AutomationProperties.SetHelpText(this, Describe());
+        var text = Spoken;
+        if (text == spoken) return;
+        var old = spoken;
+        spoken = text;
+        if (old is null || !AutomationPeer.ListenerExists(AutomationEvents.PropertyChanged) || FrameworkElementAutomationPeer.FromElement(this) is not Peer peer) return;
+        peer.RaisePropertyChangedEvent(ValuePatternIdentifiers.ValueProperty, old, text);
+        peer.RaisePropertyChangedEvent(RangeValuePatternIdentifiers.ValueProperty, TimeFormat.Seconds(old) ?? 0d, Value());
+    }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new Peer(this);
 
-    sealed partial class Peer(Adjustable owner) : FrameworkElementAutomationPeer(owner), IRangeValueProvider
+    sealed partial class Peer(Adjustable owner) : FrameworkElementAutomationPeer(owner), IRangeValueProvider, IValueProvider
     {
         protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Slider;
         protected override string GetClassNameCore() => nameof(Adjustable);
-        protected override object GetPatternCore(PatternInterface pattern) => pattern == PatternInterface.RangeValue ? this : base.GetPatternCore(pattern);
+        protected override object GetPatternCore(PatternInterface pattern) =>
+            pattern is PatternInterface.RangeValue or PatternInterface.Value ? this : base.GetPatternCore(pattern);
 
         public bool IsReadOnly => false;
         public double LargeChange => owner.LargeChange;
@@ -56,6 +74,15 @@ sealed partial class Adjustable : ContentControl
         public double SmallChange => owner.SmallChange;
         public double Value => owner.Value();
         public void SetValue(double value) => owner.Set(value);
+
+        string IValueProvider.Value => owner.Spoken;
+        /// <summary>「01:30」或秒數</summary>
+        void IValueProvider.SetValue(string value)
+        {
+            double? seconds = value.Contains(':') ? TimeFormat.Seconds(value)
+                : double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var s) ? s : null;
+            if (seconds is double t) owner.Set(t);
+        }
     }
 }
 
@@ -93,6 +120,7 @@ sealed class EditTimeline
     readonly Rectangle playheadLine = new() { Width = 2, Height = TrackHeight - 8 };
     readonly Ellipse playheadDot = new() { Width = 10, Height = 10 };
     readonly Border loading;
+    readonly Border focusRing = new() { CornerRadius = new CornerRadius(9), BorderThickness = new Thickness(2), IsHitTestVisible = false };
     /// <summary>波形的表面：拖曳選一段、點一下移播放頭；鍵盤（空白鍵、← →、Delete）；UI Automation 的播放位置</summary>
     public Adjustable Surface { get; }
     public Adjustable StartHandle { get; }
@@ -108,7 +136,12 @@ sealed class EditTimeline
         this.editor = editor;
         this.seek = seek;
         this.revealPlayhead = revealPlayhead;
-        Root = new Border { CornerRadius = new CornerRadius(10), Child = scroll };
+        // 焦點框另外一層（不佔位置）：時間軸的表面拿到鍵盤焦點時一圈 2 點的框（平常是字的顏色，對比主題是反白的顏色），
+        // 改框線粗細的話裡面的寬度會變、整條時間軸重畫
+        var grid = new Grid();
+        grid.Children.Add(scroll);
+        grid.Children.Add(focusRing);
+        Root = new Border { CornerRadius = new CornerRadius(10), Child = grid, BorderThickness = new Thickness(1) };
         AutomationProperties.SetName(Root, L.T("編輯的時間軸"));
         scroll.Content = content;
         var column = new StackPanel { Spacing = 4 };
@@ -148,9 +181,9 @@ sealed class EditTimeline
         fixedLayer.Children.Add(playhead);
         scroll.SizeChanged += (_, _) => Ui.Guard(() => Update(force: true));
         scroll.ViewChanged += (_, _) => Ui.Guard(DrawVisibleBars);
-        Surface.GotFocus += (_, _) => Root.BorderBrush = SidebarLook.Gray(0.35);
-        Surface.LostFocus += (_, _) => Root.BorderBrush = SidebarLook.Gray(0);
-        Root.BorderThickness = new Thickness(1);
+        // 用鍵盤（Tab、按了 ← →）時 2 點字的顏色；滑鼠點、打開時程式給的焦點是原本那圈淡灰的細框（滑鼠用的人不用一直看到粗框）
+        Surface.GotFocus += (_, _) => Ring(Surface.FocusState == FocusState.Keyboard);
+        Surface.LostFocus += (_, _) => focusRing.BorderBrush = null;
 
         // 在波形上拖曳選一段；不是拖曳（4 點以內）就是移播放頭、逐字稿捲到那一句（同 Mac）
         Surface.PointerPressed += (_, e) => Ui.Guard(() =>
@@ -205,6 +238,7 @@ sealed class EditTimeline
         Surface.KeyDown += (_, e) => Ui.Guard(() =>
         {
             var shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+            Ring(strong: true);
             switch (e.Key)
             {
                 case VirtualKey.Left: seek(editor.Playhead - (shift ? 10 : 1)); break;
@@ -219,12 +253,13 @@ sealed class EditTimeline
     /// <summary>開頭、結尾的把手：拖曳、焦點在把手上時 ← → 微調 0.1 秒（Shift 1 秒），螢幕閱讀器唸時間和剩下的長度（R107.9）</summary>
     Adjustable Handle(bool isStart)
     {
-        var grip = new Rectangle { Width = 2, Height = 22, RadiusX = 1, RadiusY = 1, Fill = new SolidColorBrush(Color.FromArgb(90, 0, 0, 0)),
+        // 對比主題：反白的顏色的把手（MoveHandles）、反白的字的握把
+        var grip = new Rectangle { Width = 2, Height = 22, RadiusX = 1, RadiusY = 1, Fill = HighContrast ? Sys(UIType.HighlightText) : new SolidColorBrush(Color.FromArgb(90, 0, 0, 0)),
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         var body = new Border
         {
             Width = 9, Height = TrackHeight - 4, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(77, 0, 0, 0)), Child = grip, HorizontalAlignment = HorizontalAlignment.Center,
+            BorderBrush = HandleBorder(false), Child = grip, HorizontalAlignment = HorizontalAlignment.Center,
         };
         // 兩邊各多 4 點也抓得到（同 Mac 的 contentShape inset -4）
         var area = new Grid { Width = 17, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), Children = { body } };
@@ -261,10 +296,25 @@ sealed class EditTimeline
             if (isStart) editor.SetStart(editor.Start + step); else editor.SetEnd(editor.End + step);
             e.Handled = true;
         });
-        handle.GotFocus += (_, _) => body.BorderBrush = Ui.Primary;
-        handle.LostFocus += (_, _) => body.BorderBrush = new SolidColorBrush(Color.FromArgb(77, 0, 0, 0));
+        // 鍵盤焦點：外框變成 2 點、字的顏色（原本 1 點深一點的框，跟沒焦點時分不太出來）
+        handle.GotFocus += (_, _) => { body.BorderBrush = HandleBorder(true); body.BorderThickness = new Thickness(2); };
+        handle.LostFocus += (_, _) => { body.BorderBrush = HandleBorder(false); body.BorderThickness = new Thickness(1); };
         return handle;
     }
+
+    void Ring(bool strong)
+    {
+        strong |= HighContrast;
+        focusRing.BorderBrush = HighContrast ? Sys(UIType.Highlight) : strong ? Ui.Primary : SidebarLook.Gray(0.35);
+        focusRing.BorderThickness = new Thickness(strong ? 2 : 1);
+    }
+
+    static Brush HandleBorder(bool focused) =>
+        focused ? HighContrast ? Sys(UIType.WindowText) : Ui.Primary
+        : HighContrast ? Sys(UIType.Highlight) : new SolidColorBrush(Color.FromArgb(77, 0, 0, 0));
+
+    static bool HighContrast => Ui.HighContrast;
+    static SolidColorBrush Sys(UIType type) => Ui.SystemBrush(type);
 
     double Total => Math.Max(1, editor.Total);
     double TimeAt(double x) => Math.Clamp(x, 0, width) / Math.Max(1, width) * editor.Total;
@@ -318,7 +368,9 @@ sealed class EditTimeline
     {
         var merged = editor.MergedPart is not null;
         scroll.HorizontalScrollBarVisibility = editor.Zoom > 1.01 ? ScrollBarVisibility.Auto : ScrollBarVisibility.Hidden;
-        Root.Background = Ink(Ui.IsDark ? 0.12 : 0.05);
+        // 對比主題：視窗底色、一圈字的顏色的框（同 Ui.Tinted）
+        Root.Background = HighContrast ? Ui.CardBackground : Ink(Ui.IsDark ? 0.12 : 0.05);
+        Root.BorderBrush = HighContrast ? Sys(UIType.WindowText) : null;
         content.Width = width + 24;
         labels.Width = width;
         labels.Height = merged ? 38 : 18;
@@ -326,7 +378,10 @@ sealed class EditTimeline
         ruler.Width = width;
         playheadLine.Fill = Ui.Primary;
         playheadDot.Fill = Ui.Primary;
-        loading.Background = Ui.IsDark ? new SolidColorBrush(Color.FromArgb(230, 0x33, 0x33, 0x33)) : new SolidColorBrush(Color.FromArgb(230, 0xF4, 0xF4, 0xF4));
+        loading.Background = HighContrast ? Sys(UIType.Window)
+            : Ui.IsDark ? new SolidColorBrush(Color.FromArgb(230, 0x33, 0x33, 0x33)) : new SolidColorBrush(Color.FromArgb(230, 0xF4, 0xF4, 0xF4));
+        loading.BorderBrush = HighContrast ? Sys(UIType.WindowText) : null;
+        loading.BorderThickness = new Thickness(HighContrast ? 1 : 0);
         loading.Visibility = editor.IsLoadingPeaks ? Visibility.Visible : Visibility.Collapsed;
         DrawLabels(merged);
         DrawWave();
@@ -363,12 +418,12 @@ sealed class EditTimeline
         // 合併時多一行：每一場從哪裡開始、叫什麼
         foreach (var part in editor.Parts)
         {
-            var box = new Border
+            var box = Ui.Tinted(new Border
             {
-                CornerRadius = new CornerRadius(4), Background = Ink(0.12), Padding = new Thickness(6, 0, 6, 0),
+                CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 0, 6, 0),
                 MaxWidth = Math.Max(40, part.Length / Total * width - 8),
                 Child = new TextBlock { Text = part.Title, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap },
-            };
+            }, Ink(0.12));
             Canvas.SetLeft(box, part.Offset / Total * width + 2);
             labels.Children.Add(box);
         }
@@ -395,22 +450,27 @@ sealed class EditTimeline
         // 保留 bars（第一個子元件），其他重建
         while (wave.Children.Count > 1) wave.Children.RemoveAt(1);
         var dark = Ui.IsDark;
-        var veil = dark ? new SolidColorBrush(Color.FromArgb(140, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(153, 255, 255, 255));
+        // 對比主題不蓋半透明的一層（系統色疊出來的就不是系統色）：裁掉、刪掉的地方的波形、議題、標記改用停用的字的顏色
+        Brush? veil = HighContrast ? null : dark ? new SolidColorBrush(Color.FromArgb(140, 0, 0, 0)) : new SolidColorBrush(Color.FromArgb(153, 255, 255, 255));
         // 議題帶（同 M§43 的顏色）
         foreach (var topic in editor.Topics)
         {
             var w = Math.Max(2, (topic.End - topic.Start) / Total * width - 2);
-            var alpha = editor.Kept((topic.Start + topic.End) / 2) ? 1 : 0.45;
+            var kept = editor.Kept((topic.Start + topic.End) / 2);
+            var alpha = kept ? 1 : 0.45;
             var color = Ui.HexColor(MindMap.Color(topic.Branch, dark));
-            var box = new Border
+            var box = new Border { Width = w, Height = 18, CornerRadius = new CornerRadius(4) };
+            if (HighContrast)
             {
-                Width = w, Height = 18, CornerRadius = new CornerRadius(4),
-                Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(255 * 0.3 * alpha), color.R, color.G, color.B)),
-            };
+                box.BorderBrush = Sys(kept ? UIType.WindowText : UIType.GrayText);
+                box.BorderThickness = new Thickness(1);
+            }
+            else box.Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(255 * 0.3 * alpha), color.R, color.G, color.B));
             if (w >= 40)
                 box.Child = new TextBlock
                 {
-                    Text = topic.Title, FontSize = 11, Foreground = Ui.Primary, Opacity = alpha, Margin = new Thickness(5, 0, 5, 0),
+                    Text = topic.Title, FontSize = 11, Foreground = HighContrast ? Sys(kept ? UIType.WindowText : UIType.GrayText) : Ui.Primary,
+                    Opacity = HighContrast ? 1 : alpha, Margin = new Thickness(5, 0, 5, 0),
                     TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.Clip, VerticalAlignment = VerticalAlignment.Center,
                 };
             Canvas.SetLeft(box, topic.Start / Total * width);
@@ -420,14 +480,16 @@ sealed class EditTimeline
         foreach (var t in editor.Marks)
         {
             var x = X(t);
+            var kept = editor.Kept(t);
             wave.Children.Add(new Polygon
             {
-                Fill = Ui.Signal, Opacity = editor.Kept(t) ? 1 : 0.35,
+                Fill = HighContrast && !kept ? Sys(UIType.GrayText) : Ui.Signal, Opacity = kept || HighContrast ? 1 : 0.35,
                 Points = { new Point(x, 120), new Point(x + 4, 124), new Point(x, 128), new Point(x - 4, 124) },
             });
         }
-        Rectangle Rect(double x, double w, Brush fill, double top = 0, double height = FullHeight)
+        Rectangle? Rect(double x, double w, Brush? fill, double top = 0, double height = FullHeight)
         {
+            if (fill is null) return null;
             var r = new Rectangle { Width = Math.Max(0, w), Height = height, Fill = fill };
             Canvas.SetLeft(r, x);
             Canvas.SetTop(r, top);
@@ -447,24 +509,24 @@ sealed class EditTimeline
                 stripes.Children.Add(new LineGeometry { StartPoint = new Point(sx, FullHeight), EndPoint = new Point(sx + FullHeight, 0) });
             wave.Children.Add(new Microsoft.UI.Xaml.Shapes.Path
             {
-                Data = stripes, Stroke = Ink(0.16), StrokeThickness = 3,
+                Data = stripes, Stroke = HighContrast ? Sys(UIType.GrayText) : Ink(0.16), StrokeThickness = HighContrast ? 1.5 : 3,
                 Clip = new RectangleGeometry { Rect = new Rect(x0, 0, Math.Max(0, x1 - x0), FullHeight) },
             });
             foreach (var x in new[] { x0, x1 })
-                wave.Children.Add(new Line { X1 = x, X2 = x, Y1 = 0, Y2 = FullHeight, Stroke = Ink(0.45), StrokeThickness = 1, StrokeDashArray = [3, 3] });
+                wave.Children.Add(new Line { X1 = x, X2 = x, Y1 = 0, Y2 = FullHeight, Stroke = HighContrast ? Sys(UIType.WindowText) : Ink(0.45), StrokeThickness = 1, StrokeDashArray = [3, 3] });
         }
-        // 選取：藍色（把手、時間點是青瓷綠，同色分不出來）
+        // 選取：藍色（把手、時間點是青瓷綠，同色分不出來）。對比主題：沒有底色、2 點反白顏色的框
         if (editor.Selection is { } sel)
         {
             double x0 = X(sel.Lower), x1 = X(sel.Upper);
-            var rect = Rect(x0, Math.Max(1, x1 - x0), Blue(0.22));
-            rect.Stroke = Blue(0.9);
-            rect.StrokeThickness = 1;
+            var rect = Rect(x0, Math.Max(1, x1 - x0), HighContrast ? new SolidColorBrush(Microsoft.UI.Colors.Transparent) : Blue(0.22))!;
+            rect.Stroke = HighContrast ? Sys(UIType.Highlight) : Blue(0.9);
+            rect.StrokeThickness = HighContrast ? 2 : 1;
             rect.RadiusX = rect.RadiusY = 3;
         }
         // 合併的分隔線
         if (editor.MergedPart is { } other && editor.OwnPart is { } own)
-            Rect(X(Math.Max(own.Offset, other.Offset)) - 1, 2, Ink(0.75), -4, FullHeight + 8);
+            Rect(X(Math.Max(own.Offset, other.Offset)) - 1, 2, HighContrast ? Sys(UIType.WindowText) : Ink(0.75), -4, FullHeight + 8);
         // 切點
         if (editor.Cut is double cut)
             wave.Children.Add(new Line { X1 = X(cut), X2 = X(cut), Y1 = 0, Y2 = FullHeight + 8, Stroke = Ui.Signal, StrokeThickness = 2, StrokeDashArray = [2.5, 1.5] });
@@ -512,6 +574,12 @@ sealed class EditTimeline
         }
         foreach (var ((speaker, kept), group) in groups)
         {
+            // 對比主題：留下的是字的顏色、裁掉刪掉的是停用的字的顏色（不用透明度）
+            if (HighContrast)
+            {
+                bars.Children.Add(new Microsoft.UI.Xaml.Shapes.Path { Data = group, Fill = Sys(kept ? UIType.WindowText : UIType.GrayText) });
+                continue;
+            }
             var color = speaker >= 0 ? Ui.Speaker(speaker).Color : ((SolidColorBrush)Ink(0.5)).Color;
             bars.Children.Add(new Microsoft.UI.Xaml.Shapes.Path { Data = group, Fill = new SolidColorBrush(color) { Opacity = kept ? 0.9 : 0.25 } });
         }
@@ -530,8 +598,12 @@ sealed class EditTimeline
         {
             var chip = new Border
             {
-                CornerRadius = new CornerRadius(6), Background = Blue(1), Padding = new Thickness(7, 2, 7, 2), IsHitTestVisible = false,
-                Child = new TextBlock { Text = L.F("選取 %@", TimeFormat.String(sel.Upper - sel.Lower)), FontSize = 11, Foreground = new SolidColorBrush(Microsoft.UI.Colors.White) },
+                CornerRadius = new CornerRadius(6), Background = HighContrast ? Sys(UIType.Highlight) : Blue(1), Padding = new Thickness(7, 2, 7, 2), IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = L.F("選取 %@", TimeFormat.String(sel.Upper - sel.Lower)), FontSize = 11,
+                    Foreground = HighContrast ? Sys(UIType.HighlightText) : new SolidColorBrush(Microsoft.UI.Colors.White),
+                },
             };
             var mid = X((sel.Lower + sel.Upper) / 2);
             Canvas.SetTop(chip, 36);
@@ -544,7 +616,7 @@ sealed class EditTimeline
             var scissors = new Button
             {
                 Width = 22, Height = 22, MinWidth = 0, MinHeight = 0, Padding = new Thickness(0), CornerRadius = new CornerRadius(11), BorderThickness = new Thickness(0),
-                Background = Ui.Signal, Content = new FontIcon { Glyph = "", FontSize = 11, Foreground = new SolidColorBrush(Ui.IsDark ? Ui.HexColor("#202020") : Microsoft.UI.Colors.White) },
+                Background = Ui.Signal, Content = new FontIcon { Glyph = "", FontSize = 11, Foreground = HighContrast ? Sys(UIType.Window) : new SolidColorBrush(Ui.IsDark ? Ui.HexColor("#202020") : Microsoft.UI.Colors.White) },
             };
             scissors.Resources["ButtonBackgroundPointerOver"] = Ui.Signal;
             scissors.Resources["ButtonBackgroundPressed"] = Ui.Signal;
@@ -582,9 +654,14 @@ sealed class EditTimeline
         var chip = new Button
         {
             Content = content, FontSize = 11, Padding = new Thickness(7, 2, 7, 2), MinWidth = 0, MinHeight = 0, CornerRadius = new CornerRadius(10),
-            Background = new SolidColorBrush(Ui.IsDark ? Color.FromArgb(235, 0x2B, 0x2B, 0x2B) : Color.FromArgb(235, 255, 255, 255)),
-            BorderBrush = Ink(0.25), BorderThickness = new Thickness(1),
+            BorderThickness = new Thickness(1),
         };
+        // 對比主題照平台的按鈕（按鈕色的底、字、框）：自己的白底配上對比主題的白字就看不到字了（2026-11-17 虛擬機「水生」）
+        if (!HighContrast)
+        {
+            chip.Background = new SolidColorBrush(Ui.IsDark ? Color.FromArgb(235, 0x2B, 0x2B, 0x2B) : Color.FromArgb(235, 255, 255, 255));
+            chip.BorderBrush = Ink(0.25);
+        }
         chip.Click += (_, _) => editor.Restore(range);
         ToolTipService.SetToolTip(chip, L.F("刪掉的段落 %@–%@，按一下恢復", TimeFormat.String(range.Lower), TimeFormat.String(range.Upper)));
         AutomationProperties.SetName(chip, L.F("刪掉的段落 %@ 到 %@，按一下恢復", TimeFormat.String(range.Lower), TimeFormat.String(range.Upper)));

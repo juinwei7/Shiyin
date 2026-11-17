@@ -36,7 +36,8 @@ public static class Sheet
         var heading = Ui.DialogTitle(title);
         heading.FontSize = 22;
         var x = SidebarLook.HeaderIcon(new Button(), "");
-        x.Margin = new Thickness(0, -2, -6, 0);
+        // 往右上多出去一點讓 ✕ 跟右邊對齊；對比主題的按鈕有框，多出去的那段被欄位切掉、框缺一角（2026-11-17 虛擬機「水生」），不移
+        x.Margin = Ui.HighContrast ? new Thickness(0) : new Thickness(0, -2, -6, 0);
         x.VerticalAlignment = VerticalAlignment.Top;
         x.IsTabStop = false;
         ToolTipService.SetToolTip(x, L.T("關閉"));

@@ -45,7 +45,7 @@ public sealed class TranscriptTab
     string? cleanKey;
 
     static readonly Lazy<DataTemplate> RowTemplate = new(() => (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
-        "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ContentControl HorizontalContentAlignment=\"Stretch\" HorizontalAlignment=\"Stretch\"/></DataTemplate>"));
+        "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ContentControl IsTabStop=\"False\" HorizontalContentAlignment=\"Stretch\" HorizontalAlignment=\"Stretch\"/></DataTemplate>"));
 
     public TranscriptTab(AppHost host, MainWindow window)
     {

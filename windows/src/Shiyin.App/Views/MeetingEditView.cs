@@ -31,6 +31,16 @@ public sealed class MeetingEditView : IDisposable
     public MeetingEditor Editor { get; }
     public long MeetingId { get; }
     public Grid Root { get; } = new() { RowSpacing = 12 };
+    /// <summary>
+    /// 放進卡片的是這個：卡片夠高時跟原本一樣（Root 的高度＝卡片），太矮時（150% 縮放的筆電、視窗拉到最小）Root 撐到逐字稿至少留
+    /// ListMinHeight、整張卡片上下捲，套用、取消不會被切掉（2026-11-17 虛擬機 150%：逐字稿剩 0、下面的按鈕被切掉一半）
+    /// </summary>
+    public ScrollViewer Host { get; } = new()
+    {
+        HorizontalScrollMode = ScrollMode.Disabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ZoomMode = ZoomMode.Disabled,
+    };
+    const double ListMinHeight = 112;
     readonly EditTimeline timeline;
     readonly EditPreview preview;
     readonly TextBlock subtitle = Sheet.Subtitle("");
@@ -44,7 +54,7 @@ public sealed class MeetingEditView : IDisposable
     readonly Dictionary<long, Row> rows = [];
     readonly TextBlock summary = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
     readonly Button apply;
-    readonly CancellationTokenSource peaksCancel = new();
+    readonly CancellationTokenSource peaksCancel;
     long? currentLine, hovered;
     string? rowsKey, footerKey, legendKey;
     bool updatingZoom, updatingSelection, closed;
@@ -58,14 +68,19 @@ public sealed class MeetingEditView : IDisposable
     sealed record Row(ListViewItem Item, Grid Grid, TextBlock Time, TextBlock Text, Button Action);
 
     static readonly Lazy<DataTemplate> RowTemplate = new(() => (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
-        "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ContentControl HorizontalContentAlignment=\"Stretch\" HorizontalAlignment=\"Stretch\"/></DataTemplate>"));
+        "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ContentControl IsTabStop=\"False\" HorizontalContentAlignment=\"Stretch\" HorizontalAlignment=\"Stretch\"/></DataTemplate>"));
 
     public MeetingEditView(AppHost host, MainWindow window, long meetingId)
+        : this(host, window, meetingId, new MeetingEditor(host.Controller, meetingId), new CancellationTokenSource(), load: true) { }
+
+    /// <summary>load false：接手另一個畫面的編輯狀態（Rebuilt，換深淺色、對比主題時重建畫面）</summary>
+    MeetingEditView(AppHost host, MainWindow window, long meetingId, MeetingEditor editor, CancellationTokenSource peaks, bool load)
     {
         this.host = host;
         this.window = window;
         MeetingId = meetingId;
-        Editor = new MeetingEditor(host.Controller, meetingId);
+        Editor = editor;
+        peaksCancel = peaks;
         preview = new EditPreview(Editor, host.Settings);
         Editor.StopPlayback = preview.Stop;
         timeline = new EditTimeline(Editor, Seek, RevealPlayhead);
@@ -79,11 +94,15 @@ public sealed class MeetingEditView : IDisposable
 
         // 播放列：試聽、播放頭的時間、說明、說話者、縮放
         play.Click += (_, _) => preview.Toggle();
-        play.Resources["ButtonBackground"] = SidebarLook.Gray(0.1);
-        play.Resources["ButtonBackgroundPointerOver"] = SidebarLook.Gray(0.16);
-        play.Resources["ButtonBackgroundPressed"] = SidebarLook.Gray(0.22);
-        play.Background = SidebarLook.Gray(0.1);
-        play.BorderThickness = new Thickness(0);
+        // 對比主題照平台的按鈕（有框）：灰色的圓在對比主題看不出是按鈕
+        if (!Ui.HighContrast)
+        {
+            play.Resources["ButtonBackground"] = SidebarLook.Gray(0.1);
+            play.Resources["ButtonBackgroundPointerOver"] = SidebarLook.Gray(0.16);
+            play.Resources["ButtonBackgroundPressed"] = SidebarLook.Gray(0.22);
+            play.Background = SidebarLook.Gray(0.1);
+            play.BorderThickness = new Thickness(0);
+        }
         zoomOut = Ui.GlyphButton("", L.T("縮小時間軸"), () => SetZoom(Editor.Zoom / 1.5));
         zoomIn = Ui.GlyphButton("", L.T("放大時間軸（也可以在時間軸上按住 Ctrl 滾動滑鼠滾輪）"), () => SetZoom(Editor.Zoom * 1.5));
         AutomationProperties.SetName(zoom, L.T("時間軸的縮放"));
@@ -183,9 +202,21 @@ public sealed class MeetingEditView : IDisposable
             e.Handled = true;
         })), handledEventsToo: false);
 
+        Host.Content = Root;
+        Host.SizeChanged += (_, _) => Ui.Guard(FitHeight);
+        // 動作列換行、合併多一行標籤、字變大：別的列變高了，重新算一次（值變了才設，不會一直重排）
+        Root.LayoutUpdated += (_, _) => Ui.Guard(FitHeight);
+
         Editor.Changed += Refresh;
-        Editor.Load();
+        if (load) Editor.Load();
         list.ItemsSource = Editor.Lines;
+        // 重建的畫面：逐字稿選了的句子照舊選著
+        if (!load && Editor.SelectedLines.Count > 0)
+        {
+            updatingSelection = true;
+            foreach (var line in Editor.Lines.Where(l => Editor.SelectedLines.Contains(l.Id))) list.SelectedItems.Add(line);
+            updatingSelection = false;
+        }
         LoadPeaks();
         Refresh();
     }
@@ -196,6 +227,16 @@ public sealed class MeetingEditView : IDisposable
         Root.Children.Add(element);
     }
 
+    /// <summary>Root 的高度：卡片的高度，或是逐字稿以外的列加上逐字稿至少 ListMinHeight（比卡片高時卡片可以捲）</summary>
+    void FitHeight()
+    {
+        var viewport = Host.ViewportHeight;
+        if (viewport <= 0 || closed) return;
+        var others = Root.Children.OfType<FrameworkElement>().Where(e => !ReferenceEquals(e, list)).Sum(e => e.DesiredSize.Height);
+        var height = Math.Max(viewport, others + Root.RowSpacing * (Root.RowDefinitions.Count - 1) + ListMinHeight);
+        if (Math.Abs(height - (double.IsNaN(Root.Height) ? 0 : Root.Height)) > 0.5) Root.Height = height;
+    }
+
     static bool Down(VirtualKey key) => InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
 
     static FontIcon Glyph(string glyph) => new() { Glyph = glyph, FontSize = 13 };
@@ -204,7 +245,8 @@ public sealed class MeetingEditView : IDisposable
     static FrameworkElement EdgeIcon(bool start)
     {
         var arrow = new FontIcon { Glyph = start ? "" : "", FontSize = 11 };
-        var bar = new Rectangle { Width = 1.5, Height = 12, Fill = Ui.Primary, VerticalAlignment = VerticalAlignment.Center };
+        // 直線用 PathIcon：跟著按鈕的字色（停用時變灰、對比主題、滑過），Rectangle 的話一直是 Ui.Primary
+        var bar = new PathIcon { Data = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, 1.5, 12) }, VerticalAlignment = VerticalAlignment.Center };
         return start ? Ui.Row(1, arrow, bar) : Ui.Row(1, bar, arrow);
     }
 
@@ -273,7 +315,8 @@ public sealed class MeetingEditView : IDisposable
                 try { values = await host.Controller.Peaks(path, MeetingEditor.PeakStep, peaksCancel.Token); }
                 catch (OperationCanceledException) { return; }
                 catch (Exception e) when (e is IOException or InvalidDataException or System.Runtime.InteropServices.COMException) { Log.Error($"edit peaks failed: {e.GetType().Name}"); }
-                host.Post(() => { if (!closed) Editor.SetPeaks(id, values); });
+                // 看 peaksCancel 不看 closed：換主題重建畫面時（Rebuilt）新的畫面接手同一個 peaksCancel
+                host.Post(() => { if (!peaksCancel.IsCancellationRequested) Editor.SetPeaks(id, values); });
             });
         }
     }
@@ -344,7 +387,8 @@ public sealed class MeetingEditView : IDisposable
         var stamp = Ui.Text(TimeFormat.String(line.Start), 13, color: Ui.Celadon, wrap: false);
         stamp.HorizontalAlignment = HorizontalAlignment.Right;
         var who = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
-        if (line.Speaker is int idx) who.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = Ui.Speaker(idx), VerticalAlignment = VerticalAlignment.Center });
+        // 對比主題：說話者的顏色都是字的顏色，點不畫（選到的列是反白的底，字的顏色的點看不清楚）
+        if (line.Speaker is int idx && !Ui.HighContrast) who.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = Ui.Speaker(idx), VerticalAlignment = VerticalAlignment.Center });
         var name = Ui.Text(line.SpeakerName, 13, wrap: false);
         name.TextTrimming = TextTrimming.CharacterEllipsis;
         who.Children.Add(name);
@@ -370,7 +414,8 @@ public sealed class MeetingEditView : IDisposable
             if (hovered == line.Id) hovered = null;
             if (!Editor.SelectedLines.Contains(line.Id)) action.Visibility = Visibility.Collapsed;
         };
-        slot.Content = grid;
+        // 對比主題：列裡的字跟著列的前景色（選到時是反白的字；自己給的青瓷綠、字的顏色在反白的底上看不見）
+        slot.Content = Ui.FollowForeground(grid);
         rows[line.Id] = row;
         // 右鍵：從這裡播放、刪掉／恢復這幾句、設成開頭結尾、從這句分成兩場（打開時才建：對象是選取的那幾句）
         var menu = new MenuFlyout();
@@ -388,12 +433,6 @@ public sealed class MeetingEditView : IDisposable
         else if (line.Mid < Editor.Start) Editor.SetStart(line.Start);
         else if (line.Mid > Editor.End) Editor.SetEnd(line.End);
         else Editor.RestoreLines(Editor.TargetLines(line));
-        if (Editor.SelectedLines.Count == 0 && list.SelectedItems.Count > 0)
-        {
-            updatingSelection = true;
-            list.SelectedItems.Clear();
-            updatingSelection = false;
-        }
     }
 
     void FillMenu(MenuFlyout menu, MeetingEditor.Line line)
@@ -424,13 +463,21 @@ public sealed class MeetingEditView : IDisposable
     {
         var kept = Editor.Kept(line.Mid);
         row.Text.TextDecorations = kept ? Windows.UI.Text.TextDecorations.None : Windows.UI.Text.TextDecorations.Strikethrough;
-        row.Text.Foreground = kept ? Ui.Primary : Ui.Secondary;
+        // 對比主題靠刪除線分（字的顏色跟著列，FollowForeground）
+        if (!Ui.HighContrast) row.Text.Foreground = kept ? Ui.Primary : Ui.Secondary;
         var title = ActionTitle(line);
         row.Action.Content = title;
         AutomationProperties.SetName(row.Action, title);
         var selected = Editor.SelectedLines.Contains(line.Id);
         row.Action.Visibility = selected || hovered == line.Id ? Visibility.Visible : Visibility.Collapsed;
-        row.Grid.Background = line.Id == currentLine && !selected ? SidebarLook.Gray(0.07) : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        var playing = line.Id == currentLine && !selected;
+        if (Ui.HighContrast)
+        {
+            // 對比主題：播放到的那句一圈反白顏色的框（同逐字稿分頁，§11.3）
+            row.Grid.BorderBrush = playing ? Ui.SystemBrush(Windows.UI.ViewManagement.UIElementType.Highlight) : null;
+            row.Grid.BorderThickness = new Thickness(playing ? 1 : 0);
+        }
+        else row.Grid.Background = playing ? SidebarLook.Gray(0.07) : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         AutomationProperties.SetName(row.Item, $"{TimeFormat.String(line.Start)} {line.SpeakerName} {line.Text}" + (kept ? "" : L.T("（刪掉）")));
     }
 
@@ -440,6 +487,14 @@ public sealed class MeetingEditView : IDisposable
         {
             rows.Clear();
             list.ItemsSource = Editor.Lines;
+        }
+        // 刪掉句子後編輯狀態清掉了選取（同 Mac）：清單的選取也拿掉（按鈕、右鍵、Delete 都一樣），不然清單看起來還選著、再按 Delete 沒反應
+        if (Editor.SelectedLines.Count == 0 && list.SelectedItems.Count > 0)
+        {
+            updatingSelection = true;
+            list.SelectedItems.Clear();
+            updatingSelection = false;
+            force = true;
         }
         var current = CurrentLine()?.Id;
         var key = string.Join(",", Editor.Deleted) + $"|{Editor.Start}|{Editor.End}|{current}|{Ui.ThemeKey}";
@@ -495,14 +550,28 @@ public sealed class MeetingEditView : IDisposable
         Closed?.Invoke();
     }
 
-    public void Dispose()
+    public void Dispose() => Release(cancelPeaks: true);
+
+    void Release(bool cancelPeaks)
     {
         if (closed) return;
         closed = true;
-        peaksCancel.Cancel();
+        if (cancelPeaks) peaksCancel.Cancel();
         preview.Dispose();
         Editor.Changed -= Refresh;
         if (Current == this) Current = null;
+    }
+
+    /// <summary>
+    /// 換了深淺色、對比主題：用同一份編輯狀態（把手、刪掉的段落、選取、切點、合併、縮放、讀好的波形）重建畫面，這個畫面收掉。
+    /// 畫面的顏色是建的時候決定的（平台的按鈕、Sheet.Pill 在對比主題另有一套），只重畫時間軸的話說明文字、按鈕會留在舊的顏色
+    /// </summary>
+    public MeetingEditView Rebuilt()
+    {
+        preview.Stop();
+        var view = new MeetingEditView(host, window, MeetingId, Editor, peaksCancel, load: false);
+        Release(cancelPeaks: false);
+        return view;
     }
 
     /// <summary>打開後焦點給時間軸（空白鍵、← → 馬上能用）</summary>

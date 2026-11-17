@@ -405,6 +405,7 @@ public sealed class MainWindow : Window
         editorCard.Shadow = new ThemeShadow();
         editorCard.Translation = new System.Numerics.Vector3(0, 0, 32);
         restyle.Add(StyleEditorLayer);
+        restyle.Add(RestyleEditor);
         var outer = new Grid();
         outer.Children.Add(root);
         outer.Children.Add(editorLayer);
@@ -420,6 +421,8 @@ public sealed class MainWindow : Window
         HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
     };
     MeetingEditView? editor;
+    /// <summary>編輯畫面開著時有 Refresh 沒重建會議頁：關掉時補一次</summary>
+    bool detailStale;
 
     /// <summary>打開的編輯畫面是哪一場（DEBUG 的 state editingMeeting）</summary>
     public long? EditingMeeting => editor?.MeetingId;
@@ -428,16 +431,32 @@ public sealed class MainWindow : Window
     {
         editorLayer.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(Ui.IsDark ? (byte)140 : (byte)90, 0, 0, 0));
         editorCard.Background = Ui.HighContrast ? Ui.CardBackground : new SolidColorBrush(Ui.IsDark ? Ui.HexColor("#2B2B2B") : Microsoft.UI.Colors.White);
-        editorCard.BorderBrush = SidebarLook.Gray(0.12);
+        // 對比主題：一圈字的顏色的框（卡片和變暗的主視窗都是深色，12% 的灰框分不出卡片的邊）
+        editorCard.BorderBrush = Ui.HighContrast ? Ui.SystemBrush(Windows.UI.ViewManagement.UIElementType.WindowText) : SidebarLook.Gray(0.12);
     }
 
-    /// <summary>卡片的大小跟著視窗（同 Mac 的 sheet：寬 880 左右、最小 720×520、最大 1100×900），視窗小的時候留 16 的邊</summary>
+    /// <summary>開著編輯畫面時換了深淺色、對比主題：用同一份編輯狀態重建畫面（顏色是建的時候決定的），焦點給時間軸</summary>
+    void RestyleEditor()
+    {
+        if (editor is not { } old) return;
+        old.Closed -= CloseEditor;
+        var view = old.Rebuilt();
+        editor = view;
+        view.Closed += CloseEditor;
+        editorCard.Child = view.Host;
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => Ui.Guard(view.FocusTimeline));
+    }
+
+    /// <summary>
+    /// 卡片的大小跟著視窗（同 Mac 的 sheet：寬 880 左右、最小 720×520、最大 1100×900），視窗小的時候留 16 的邊。
+    /// 上下只留 24（左右 48）：150% 縮放的 1080p 筆電視窗內容只有 640 左右高，逐字稿要多一點地方
+    /// </summary>
     void SizeEditorCard()
     {
         double w = editorLayer.ActualWidth, h = editorLayer.ActualHeight;
         if (w <= 0 || h <= 0) return;
         editorCard.Width = Math.Max(Math.Min(720, w - 32), Math.Min(1100, w - 96));
-        editorCard.Height = Math.Max(Math.Min(520, h - 32), Math.Min(900, h - 80));
+        editorCard.Height = Math.Max(Math.Min(520, h - 32), Math.Min(900, h - 48));
     }
 
     /// <summary>「編輯會議…」（右鍵、「⋯」、更多）：不能編輯時說原因；選到那場、停止播放、打開編輯畫面</summary>
@@ -450,7 +469,7 @@ public sealed class MainWindow : Window
         var view = new MeetingEditView(host, this, id);
         editor = view;
         view.Closed += CloseEditor;
-        editorCard.Child = view.Root;
+        editorCard.Child = view.Host;
         StyleEditorLayer();
         editorLayer.Visibility = Visibility.Visible;
         SizeEditorCard();
@@ -466,6 +485,12 @@ public sealed class MainWindow : Window
         editorLayer.Visibility = Visibility.Collapsed;
         editorCard.Child = null;
         foreach (var a in root.KeyboardAccelerators) a.IsEnabled = true;
+        // 開著時沒重建的會議頁補一次（Refresh 開著時只更新側欄）
+        if (detailStale)
+        {
+            detailStale = false;
+            Refresh();
+        }
         // 焦點回到會議列表選到的那一列（沒有就是列表）：覆蓋層收起來後焦點不會自己回來
         if (list.SelectedItem is { } selected && list.ContainerFromItem(selected) is ListViewItem row) row.Focus(FocusState.Programmatic);
         else list.Focus(FocusState.Programmatic);
@@ -491,7 +516,8 @@ public sealed class MainWindow : Window
         if (scale == Ui.ContentScale) return;
         Ui.ContentScale = scale;
         Refresh();
-        detailView.Rescale();
+        // 編輯會議開著時，會議頁等關掉時才重建（Refresh），那時已經是新的大小
+        if (editor is null) detailView.Rescale();
     }
 
     static void Place(Grid grid, FrameworkElement element, int row)
@@ -515,6 +541,13 @@ public sealed class MainWindow : Window
         BuildFolders();
         BuildList();
         BuildFooter();
+        // 編輯會議開著時不重建右邊的會議頁，關掉時補一次（design-windows §11.40）：覆蓋層底下重建的分頁列（SelectorBar）
+        // 會畫到覆蓋層上面、跟著每次重建跳來跳去（2026-11-17 虛擬機：下載模型時每個進度都重讀會議、重建會議頁）
+        if (editor is not null)
+        {
+            detailStale = true;
+            return;
+        }
         if (State.ShowsPeople)
         {
             // 人物頁（M§60.2）：會議的內容先收起來（編輯中的存草稿），播放照常

@@ -50,6 +50,8 @@ public sealed class SettingsWindow : Window
         {
             PaneDisplayMode = NavigationViewPaneDisplayMode.Left, IsPaneToggleButtonVisible = false, IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed,
             IsSettingsVisible = false, IsTitleBarAutoPaddingEnabled = false, AlwaysShowHeader = false, OpenPaneLength = 248, AutoSuggestBox = search,
+            // ↑ ↓ 換頁（同 Windows 設定、Mac 的側欄）；預設只移焦點，要再按 Enter 或空白鍵
+            SelectionFollowsFocus = NavigationViewSelectionFollowsFocus.Enabled,
         };
         for (var g = 0; g < SettingsPages.Groups.Count; g++)
         {
@@ -84,7 +86,12 @@ public sealed class SettingsWindow : Window
         Content = Ui.SidebarBackground(Ui.InterfaceLanguage(root));
         // 開著設定時換了深淺色、對比主題：圖示的顏色、這一頁重畫
         root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); ColorIcons(); Show(); };
-        root.Loaded += (_, _) => ColorIcons();   // 放進視窗之前 ActualTheme 不一定是視窗的
+        root.Loaded += (_, _) =>
+        {
+            ColorIcons();   // 放進視窗之前 ActualTheme 不一定是視窗的
+            // 記住的頁面在導覽的下面（視窗矮、150% 縮放時「檢查與更新」在捲動範圍外）：捲到看得到選到的那一項
+            items[current].StartBringIntoView();
+        };
         Ui.OnContrastChanged(root, () => { ColorIcons(); Show(); });
         host.Models.Changed += _ => host.Post(() => { if (current is "models" or "transcription") Show(); });
         // 企業伺服器的登入狀態變了（登入、失效、登出）：整理工具的選單、正式轉錄的選單、AI 工具（公司可以關掉）
@@ -133,7 +140,12 @@ public sealed class SettingsWindow : Window
         var changed = id != current;
         current = id;
         if (!ReferenceEquals(nav.SelectedItem, item)) nav.SelectedItem = item;
-        if (changed) Show();
+        if (changed)
+        {
+            Show();
+            // 從別的地方指定頁面（App.ShowSettings、搜尋只剩一項）：導覽捲到看得到那一項
+            if (item.IsLoaded) item.StartBringIntoView();
+        }
     }
 
     /// <summary>搜尋（R108.4）：留下對得上的頁面，分隔線只留在兩組看得到的項目中間；只剩一頁時直接選它</summary>
@@ -553,7 +565,8 @@ public sealed class SettingsWindow : Window
             var item = new ListViewItem
             {
                 Tag = t.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Content = Ui.Bar(null, Ui.Text(t.DisplayName(), 14, wrap: false), t.Id == S.DefaultTemplate ? Ui.Caption(L.T("預設")) : null),
+                // 對比主題：「預設」跟著列的前景色（選到時是反白的字，次要文字的顏色在反白的底上看不見）
+                Content = Ui.FollowForeground(Ui.Bar(null, Ui.Text(t.DisplayName(), 14, wrap: false), t.Id == S.DefaultTemplate ? Ui.Caption(L.T("預設")) : null)),
             };
             ToolTipService.SetToolTip(item, t.DisplayName());
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, t.DisplayName());
