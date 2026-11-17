@@ -2877,7 +2877,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 記住頁面（R108.5）：`settingsPage`（UserDefaults，存頁面的代號），預設整理工具。
 - 程式：原本的 `ProviderSettings`（拿掉範本段）、`TemplateSettings`、`SpeakerSettings`、`GlossarySettings` 直接當一頁；`RecordingSettings`、`AdvancedSettings` 加 `part` 參數（同一份狀態，只畫那一頁的段落），項目和存的鍵都沒變（R108.6）。
 - DEBUG：`preview settings <頁面代號或編號>`（0 整理工具…10 檢查與更新，只當預覽的起始頁，不寫進設定）。
-- Windows：design-windows（ST2）。
+- Windows：design-windows §11.41（`NavigationView`，同樣十一項、四組、搜尋、記住頁面；圖示是彩色的字、沒有底色方塊，同 Windows 11 的設定）。
 
 ## 14. 決策紀錄
 

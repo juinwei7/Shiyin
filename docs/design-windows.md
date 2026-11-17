@@ -310,7 +310,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 | 主視窗（NavigationSplitView：側欄、搜尋、會議內容） | 主視窗：左邊會議清單（含資料夾、搜尋框、垃圾桶、匯入），右邊會議內容 |
 | 會議頁的分頁（紀錄、逐字稿、提問，R44.1） | `SelectorBar`，Ctrl+1～3；待確認是紀錄頂部的 `Expander`、我的筆記是逐字稿頂部的 `Expander`（§11.6） |
 | 錄音中的畫面、播放列、時間軸 | 同樣的排版；時間軸用 Canvas 放矩形、三角形、圓點 |
-| Settings（4 個分頁，R44.5） | 獨立的設定視窗，上方 `SelectorBar` 4 頁（整理工具、錄音與轉錄、說話者與詞彙、進階）；「進階」頁多一個介面語言（R26.4、D57） |
+| Settings（左邊側欄十一項，R108、M§82） | 獨立的設定視窗，左邊 `NavigationView` 十一項分四組、上方搜尋（§11.41）；「一般」頁多一個介面語言（R26.4、D57） |
 | 引導、使用說明、回報問題、問所有會議 | 各自的視窗 |
 | MenuBarExtra | 系統匣圖示（WinUIEx 的 TrayIcon）：左鍵打開主視窗，右鍵選單有錄音狀態、暫停、停止、進行中的工作、打開、說明、設定、結束。Windows 11 預設把新圖示收進「^」，引導的最後一步說明 |
 | 偵測會議的浮動視窗（NSPanel） | 右下角、最上層、不搶焦點的小視窗（`WS_EX_NOACTIVATE`），30 秒收起 |
@@ -339,7 +339,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 粗體用 `FontWeights.Bold`（`Ui.Text(bold: true)`），不要用 SemiBold：中文、日文沒有 SemiBold 的字重，Windows 會換成明體的假粗體，跟其他文字不一樣。ContentDialog 內建的標題也是 SemiBold，標題要用 `Ui.DialogTitle`。
 - 文字加按鈕的一列（狀態列、範本的說明、錄音列）用 `Ui.Bar`：長的文字或會被截的東西放中間那欄（左欄寬度跟著內容、不會換行），按鈕放右邊照內容寬。全部放在橫的 StackPanel 裡時，英文的按鈕比較寬，會被擠出視窗。放不下時整個藏起來、不要切一半的（錄音列的兩個音量條）用 `FitRow`。逐字稿的搜尋列是 Grid：搜尋框最寬 300、可以縮。
 - `TextHighlighter` 要給 `Foreground`：預設是黑色，深色模式下標起來的字看不見。
-- 視窗的最小尺寸同 Mac（主視窗 960×620、設定 600×480、其他 520×440，`WindowPlacement.MinimumSize`，不超過螢幕的工作區）。
+- 視窗的最小尺寸同 Mac（主視窗 960×620、設定 720×500（§11.41）、其他 520×440，`WindowPlacement.MinimumSize`，不超過螢幕的工作區）。
 - 介面巡檢的做法：虛擬機用 `ctl.sh open settings|guide|report|ask|onboarding`、`uia.sh` 按分頁和選單、`shot.sh` 截圖，淺色、深色（改 `AppsUseLightTheme` 再廣播 `ImmersiveColorSet`，app 不用重開）、中文、英文（`--set interfaceLanguage=en`）、最小視窗（`SetWindowPos` 拉到比最小還小）各走一次；測試資料夾裡有各種狀態的會議（整理失敗、猜到名字、校正建議、分不準的提醒、待確認、日文）。
 - 可以選取的 `TextBlock` 有自己的右鍵選單（拷貝、全選），會蓋掉外層的 `ContextFlyout`：文字上也要設同一個選單。
 - 快捷鍵掛在整個視窗時設 `KeyboardAcceleratorPlacementMode = Hidden`，不然滑鼠停在視窗裡會跳出快捷鍵提示。
@@ -383,7 +383,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - `DetailTab` 剩 Summary（「紀錄」）、Transcript、Ask；`NotesTabs` 的摘要和議題合成一頁；`ReviewTab` 的內容變成紀錄頂部可展開的一條（`ReviewBanner`，有待確認才顯示）；我的筆記收進逐字稿頂部的 Expander。控制通道 `tab` 接受舊名稱當別名。
 - `MoreMenu` 分組同 M§33.2；復原上一版放編輯列、復原說話者的調整放改名視窗和右鍵選單（有東西可復原才顯示）。
-- 設定頁四頁、引導三步，分法同 M§33.3、§33.4（Windows 沒有 CLI 時「你平常用哪個 AI？」的第二段只列 API）。
+- 引導三步，分法同 M§33.4（Windows 沒有 CLI 時「你平常用哪個 AI？」的第二段只列 API）。設定原本是四頁（M§33.3），R108 改成左邊導覽十一項（§11.41）。
 - 標準答案不變；介面文字跑 `l10n.py windows-check`。
 
 ### 11.7 麥克風看得到、換得到，文字大小，匯出（R58～R60，M§38）
@@ -442,8 +442,8 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 開關是 `settings.json` 的 `mcpEnabled`（每次 `tools/call` 重讀檔案）；`--set 鍵=值` 只對那次執行有效（測試用）。企業伺服器的 `mcp: false` 同 Mac：`EnterpriseInfo`、`EnterpriseAccount` 的 `Mcp`，`EnterpriseServer.McpBlocked(settings)` 直接讀存著的帳號。log 寫進 `logs\shiyin-<日期>.log`（同 app，只寫工具名稱、筆數、花多久）。
 - 路徑：安裝版是 `%LOCALAPPDATA%\ShiyinApp\current\shiyin-mcp.exe`（Velopack 更新後路徑不變），不需要 Mac 的啟動檔。`SHIYIN_HOME` 是用環境變數指定的（DEBUG、示範資料）時，登記時一起帶（Claude Code `-e SHIYIN_HOME=…`，要放在名稱後面：`-e` 可以接好幾個值，放前面會把名稱也吃掉；Codex `--env SHIYIN_HOME=…`；Claude Desktop 的 `env`）。
 - 加到 Claude Code、Codex（`Mcp/McpSetup.cs`）：`IToolLocator` 找到的 claude、codex（真正的 exe，或 node 加套件的 js；不會經過 cmd.exe），`ProcessRunner`（`ArgumentList`）；先 `mcp remove` 再 `mcp add`。Claude Desktop：寫法同 Mac（先備份成 `.bak`、只改 `mcpServers.shiyin`，Windows 的 `JsonObject` 保留其他鍵的順序）；設定檔的位置：MSIX 版（Store、官網的安裝檔都是 MSIX，`Claude_pzs8sxrjxfjjc`）的 AppData 被虛擬化，只讀 `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`（寫到 `%APPDATA%\Claude` 它讀不到，連它自己的「Edit Config」都開錯檔，anthropics/claude-code#26073、#29100）。偵測到 MSIX 套件（`Packages.ByFamily`；裝了還沒開過、資料夾還不在也算）或那個資料夾在就寫那裡（資料夾不在就建），都沒有才寫 `%APPDATA%\Claude\claude_desktop_config.json`。有沒有裝看 `WindowsToolLocator.HasClaudeDesktop()`。
-- 設定頁（進階）同 Mac 的一組「AI 工具（MCP）」：開關、三個按鈕、「複製」下拉選單（英文是 Copy，用 `MeetingLanguages.Ui`；翻譯表的「複製」是 Duplicate）。DEBUG：`SHIYIN_MCP_SERVER` 指到 `dotnet build` 出來的 shiyin-mcp（DEBUG 的 app 資料夾裡沒有）、`SHIYIN_CLAUDE_DESKTOP_CONFIG` 指到別的設定檔。
-- DEBUG 控制通道：`open settings <provider|recording|names|advanced>` 打開設定的那一頁、`openlink <網址>` 等於點了那個 shiyin: 網址。
+- 設定的「AI 工具」那一頁（原本在進階，§11.41）同 Mac：開關、三個按鈕、「複製」下拉選單（英文是 Copy，用 `MeetingLanguages.Ui`；翻譯表的「複製」是 Duplicate）。DEBUG：`SHIYIN_MCP_SERVER` 指到 `dotnet build` 出來的 shiyin-mcp（DEBUG 的 app 資料夾裡沒有）、`SHIYIN_CLAUDE_DESKTOP_CONFIG` 指到別的設定檔。
+- DEBUG 控制通道：`open settings <頁面>` 打開設定的那一頁（§11.41）、`openlink <網址>` 等於點了那個 shiyin: 網址。
 - 會議連結：`NotificationLinks.Parse` 也認得 `shiyin://open?meeting=…&t=…`（`open` 是主機名稱、路徑是空的；通知用的 `shiyin:open?…` 照舊），`Link.Open` 多了 `Seconds`。有時間點時 `AppHost.ShowMeetingAt`：打開那場、切到逐字稿、從那裡開始（同「問所有會議」點出處）；沒有時同點通知（選到那場，分頁不變）。會議已經永久刪掉了（舊的連結、舊的通知）：打開主視窗、提示「找不到這場會議，可能已經刪掉了」（同 Mac），不選那個 id。
 - 驗證：`dotnet test`（標準答案、協定、開關、唯讀、企業伺服器的 `mcp`、`McpSetup` 的參數和設定檔）；Mac 上 `shiyin-mcp.dll` 用 stdin 送協定訊息、跟 Mac 的 `Shiyin --mcp` 讀同一份資料庫逐字比；虛擬機裡 Claude Code 沒有登入時只驗設定檔寫對。
 
@@ -821,6 +821,35 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 驗證：Mac 上 `dotnet test`（標準答案；`MeetingEditTests` 的裁切加刪段、合併、裁切加分成兩場的套用和還原逐欄比對、錄音逐個取樣比對、30 天清除、擋下來、`PlanPcmStream` 的換取樣率和補安靜、編輯畫面的狀態和說明文字）；虛擬機用控制通道、UI Automation、真的滑鼠和鍵盤（`uia.sh`）操作，截圖淺色、深色、英文。`uia.ps1` 多了 `dragat <視窗> <名稱> <橫向的位置 0～1> <往右幾個像素> [ctrl|shift]`（真的滑鼠在元件裡按下、橫著拖、放開；0 是點一下：拖把手、在波形上選一段、點波形移播放頭）、`range <視窗> <名稱> [值]`（讀、設 RangeValue）、`key` 的 `shift`。
 - 跟 Mac 不同、還沒在真的 Windows 電腦上確認的：試聽真的出聲音時跳過刪掉的段落聽起來對不對（虛擬機沒有音效裝置，用 `debugMutePreview` 的時鐘驗播放頭）；精確式觸控板的捏合（虛擬機只送得出 Ctrl＋滾輪）；朗讀程式唸把手、播放位置；對比主題、150% 的編輯畫面沒巡檢。
 
+### 11.41 設定：左邊導覽十一項（R108.7，M§82、D184）
+
+- **版面**：`NavigationView`（`PaneDisplayMode = Left`，拿掉收合鈕、上一頁、內建的「設定」，`OpenPaneLength` 248），十一項分四組，組和組之間 `NavigationViewItemSeparator`（Mac 是組和組之間空一點）。右邊：上面是那一頁的名稱（24 號粗體，不跟著捲，同 Windows 設定），下面捲動的內容（左右 28 的邊，靠上：只有一張卡片的頁面不會被拉到視窗底）。代號、順序、分組、名稱、搜尋的關鍵字在 `Shiyin.Services/SettingsPages.cs`（測試讀 Mac 的 `SettingsView.swift` 比對代號和分組）。
+- **每一頁**（R108.6：原本四頁的段落照搬，項目、存的鍵、說明文字不變；只有一段的頁面不再放段落標題，同 Mac）：
+
+| 頁（代號） | 內容（原本在哪） |
+|---|---|
+| 整理工具（provider） | 原「整理工具」去掉範本 |
+| 範本（templates） | 原「整理工具」的範本 |
+| 錄音（recording） | 錄音來源、提醒與快捷鍵（原「錄音與轉錄」） |
+| 轉錄（transcription） | 轉錄（正式轉錄、說話者辨識、即時逐字稿）、語言（原「錄音與轉錄」，順序同 Mac） |
+| 模型與空間（models） | 模型清單（原「錄音與轉錄 → 轉錄」，含顯示卡加速的元件）、儲存空間（原「進階」） |
+| 說話者（speakers）、詞彙表（glossary） | 原「說話者與詞彙」的兩段 |
+| 一般（general） | 介面（介面語言）、顯示、其他（重新顯示首次使用引導、重建搜尋索引）、匿名使用統計（原「進階」） |
+| AI 工具（ai）、企業伺服器（enterprise） | 原「進階」的那一段 |
+| 檢查與更新（status） | 更新（目前版本、檢查更新）、其他（回報問題…、關於拾音）（原「進階」） |
+
+- **圖示**：Segoe Fluent Icons 的字（整理工具 E8BD Message、範本 E8A5 Document、錄音 E720 Microphone、轉錄 E9D9 Diagnostic、模型與空間 EDA2 HardDrive、說話者 E716 People、詞彙表 E82D Dictionary、一般 E713 Setting、AI 工具 EA86 Puzzle、企業伺服器 E825 Bank、檢查與更新 E895 Sync），上 Mac 那一項的顏色，**沒有底色方塊**：Windows 11 的設定是彩色的圖示加文字，WinUI 的 `NavigationViewItem` 本來也是一個圖示加文字；Mac 的彩色方塊是 macOS 系統設定的樣子。淺色調深、深色調亮，在導覽的底色上對比 3.8:1 以上（Mac 的橘、青、綠直接放在淺色底上不到 3:1）。對比主題時不上色，跟著項目的文字顏色。開著設定時換深淺色、對比主題：圖示重新上色、這一頁重畫（原本設定開著時換主題，自己的顏色要重開視窗才換）。
+- **底色**：導覽是主視窗側欄的顏色（`Ui.SidebarBackground`，淺色 #F7F7F7、深色 #2B2B2B），右邊是 NavigationView 自己的內容層（左上角圓角、細框），卡片照舊。
+- **搜尋**（R108.4）：`NavigationView.AutoSuggestBox`（導覽上方，無障礙名稱「搜尋設定」，沒有建議清單）。打字時只留名稱或關鍵字對得上的項目（`SettingsPages.Find`，不分大小寫），分隔線只留在兩組看得到的項目中間；只剩一項時直接選它；Enter 選第一項。關鍵字同 Mac，只列 Windows 有的項目：Mac 才有的系統錄音權限、說話者辨識的模型、環境檢查不列；Windows 才有的介面語言、顯示卡加速、回報問題、關於拾音加上。選到的那一項被篩掉、再出現時，NavigationView 的選取條不見了（2026-11-17 虛擬機），排好之後重新選一次。
+- **記住頁面**（R108.5）：`settings.json` 的 `settingsPage`（鍵、值同 Mac 的 UserDefaults），換頁就記（值變了才寫）；存的不是十一頁的代號時是整理工具。
+- **視窗**：900×660（Mac 820×620），最小 720×500（同 Mac）、可以拉大。比 Mac 大：Windows 的下拉選單、開關的標題在控制項上面、字 14（Mac 13），同樣的內容要比較高；導覽 248 比 Mac 的側欄 220 寬（上面有搜尋框）。最小的時候範本的編輯欄很窄（範本清單固定 200 寬），照樣能用。
+- **跟 Mac 不同的地方**：
+  - 一般多了「介面」（介面語言，D57）；檢查與更新沒有環境檢查、更新網址（Windows 本來就沒有），多了回報問題…、關於拾音（Windows 沒有選單列，原本放在進階的「其他」）。轉錄沒有「說話者辨識的模型」（Windows 沒有 Nemotron）；模型與空間沒有「第二版留下的檔案」。
+  - 從別的地方打開設定時指定頁面（`App.ShowSettings(頁面)`）：會議頁的「設定整理工具」「打開設定」打開整理工具（公司的伺服器沒登入時打開企業伺服器，`SummarizerProblem.SettingsPage`）；企業伺服器的加入連結、瀏覽器登入完回來打開企業伺服器（原本是進階）。設定會記住上次的頁面，不指定的話會停在別頁。Mac 的 `openSettings()` 不能指定頁面，目前停在上次那頁。
+  - 說明文字、使用說明裡的舊頁名（「設定 → 錄音與轉錄」「進階 → 企業伺服器」）照 R108.6 不改，同 Mac。
+- **DEBUG**：`open settings [頁面]`（代號、0～10、4.8 以前的 `names`／`advanced`／`storage` 當別名；沒給頁面時停在上次那頁）、`closewindow settings`、`settingssearch [文字]`（等於在搜尋框打字，沒給文字是清掉；回傳留下的頁面）；state 的 `settingsPage`（開著時目前的頁面）、`settingsSearch`、`settingsVisible`（導覽看得到的頁面）、`settingsPageStored`（settings.json 記住的）。
+- 驗證：Mac 上 `dotnet test`（`SettingsPagesTests`：代號和分組同 Mac、搜尋「麥克風」「API key」「快捷鍵」各只剩一頁、英文的名稱和搜尋、關鍵字都是設定視窗裡的字、舊頁名、記住的頁面寫進 settings.json）；虛擬機用 UI Automation 和真的滑鼠點導覽換頁、`uia.sh set 設定 '搜尋設定#1' <字>` 搜尋（同名的「搜尋設定」有三個元件，`#1` 是輸入框）、`uia.sh close` 關掉再按主視窗的齒輪、重開 app 停在上次那頁，`snapwin.ps1 place` 拉大、縮到比最小還小，淺色、深色、英文截圖。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔
@@ -990,7 +1019,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 15.3 控制通道
 
 - DEBUG 版開 named pipe `\\.\pipe\shiyin-debug`（`Debug/ControlPipe.cs`）；`shiyinctl.exe <指令> <參數…>`（`Shiyin.Ctl`）把結果的 JSON 印到標準輸出（Mac 是寫成檔案；從 SSH 用時直接讀輸出比較方便）。named pipe 不分工作階段，從 SSH 也連得到桌面上的拾音。
-- 指令：`state`、`select`、`tab`、`open`、`closewindow`、`quit`、`record-sim`、`recordstop`、`recordpause`、`recordstall`、`recordinterrupt`、`recordlang`、`import`、`export`、`purge`、`rediarize`、`language`、`llmprovider`、`llmkey`、`llmurl`、`modelurl`、`model`、`hotkey`、`meetingapp`、`metrics`。名稱和參數跟 Mac 的 `Debug/DebugControl.swift` 相同（例如 `export <項目> <格式> <路徑> [times] [speakers] [會議 id]`、`import [lang=ja] <檔案…>`），Mac 的測試方法可以直接照用。
+- 指令：`state`、`select`、`tab`、`open`（`open settings [頁面]`，§11.41）、`closewindow`（`main`、`settings`）、`settingssearch`、`quit`、`record-sim`、`recordstop`、`recordpause`、`recordstall`、`recordinterrupt`、`recordlang`、`import`、`export`、`purge`、`rediarize`、`language`、`llmprovider`、`llmkey`、`llmurl`、`modelurl`、`model`、`hotkey`、`meetingapp`、`metrics`。名稱和參數跟 Mac 的 `Debug/DebugControl.swift` 相同（例如 `export <項目> <格式> <路徑> [times] [speakers] [會議 id]`、`import [lang=ja] <檔案…>`），Mac 的測試方法可以直接照用。
 - 評估（`transcribe-eval`、`voiceprint-eval`、`detect-eval`、`diarize-eval`、`fast-eval`、`live-eval`）不在 app 裡，用 `Shiyin.Eval` 命令列在 Mac 或 Windows 上跑，輸出格式跟 Mac 相同，例如用 `scripts/dev/asr-score.swift` 算錯字率（R28.4）。
 
 ### 15.4 真的畫面：排程工作和 UI Automation

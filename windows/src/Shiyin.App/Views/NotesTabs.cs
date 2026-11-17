@@ -289,9 +289,9 @@ public sealed class NotesTabs
         else if (detail.Segments.Count == 0 && detail.Meeting.UserNotes.Length == 0) panel.Children.Add(Ui.Text(L.T("還沒有逐字稿。"), color: Ui.Secondary));
         else if (host.Settings.NeedsProviderSetup)
         {
-            // 沒選過整理工具、也沒有 claude、codex（R35.2）：說還沒設定，給打開設定的按鈕（設定一打開就是整理工具）
+            // 沒選過整理工具、也沒有 claude、codex（R35.2）：說還沒設定，給打開設定的按鈕（打開整理工具那一頁）
             panel.Children.Add(Ui.Text(L.T("還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。"), color: Ui.Secondary));
-            panel.Children.Add(Ui.Button(L.T("設定整理工具"), () => App.Current.ShowSettings()));
+            panel.Children.Add(Ui.Button(L.T("設定整理工具"), () => App.Current.ShowSettings(SettingsPages.Provider)));
         }
         else if (host.Settings.Provider != LLMProvider.None && host.Settings.SummarizerProblem is { } problem)
         {
@@ -299,7 +299,7 @@ public sealed class NotesTabs
             panel.Children.Add(Ui.Text(L.F("整理工具還沒設定好：%@", problem.Message), color: Ui.Secondary));
             panel.Children.Add(Ui.Button(problem.ActionTitle, () =>
             {
-                if (problem.OffersLogin) CliLogin.Open(host, problem.Provider); else App.Current.ShowSettings();
+                if (problem.OffersLogin) CliLogin.Open(host, problem.Provider); else App.Current.ShowSettings(problem.SettingsPage);
             }));
         }
         else

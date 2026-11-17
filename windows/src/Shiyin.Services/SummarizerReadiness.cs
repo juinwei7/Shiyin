@@ -36,6 +36,9 @@ public sealed record SummarizerProblem(SummarizerProblemKind Kind, LLMProvider P
         : DesktopApp is { } app ? L.F("打開 %@ 登入", app)
         : L.F("登入 %@", Provider == LLMProvider.Codex ? "Codex" : "Claude Code");
 
+    /// <summary>「打開設定」打開哪一頁（R108，設定會記住上次的頁面）：公司的伺服器沒登入時是企業伺服器，其他是整理工具</summary>
+    public string SettingsPage => Kind == SummarizerProblemKind.EnterpriseSignedOut ? "enterprise" : SettingsPages.Provider;
+
     /// <summary>用 Codex 桌面版附的 codex 時是那個 app 的名稱（R55.3）</summary>
     string? DesktopApp => Provider == LLMProvider.Codex ? DesktopApps.CodexAppName() : null;
 }

@@ -70,6 +70,8 @@ public sealed class AppSettings
     public const string ChineseScriptKey = "chineseScript";
     /// <summary>Windows 才有：介面語言（空的是跟著 Windows 的顯示語言，zh、en）</summary>
     public const string InterfaceLanguageKey = "interfaceLanguage";
+    /// <summary>設定視窗上次停在哪一頁（R108.5、M§82）：SettingsPages 的代號，鍵同 Mac</summary>
+    public const string SettingsPageKey = "settingsPage";
 
     readonly string? path;
     readonly object gate = new();

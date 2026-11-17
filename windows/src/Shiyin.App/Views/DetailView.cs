@@ -508,7 +508,7 @@ public sealed class DetailView
                     // 設定問題（沒登入、key 錯誤…）而且還沒修好（R46.2、M§34.4）：給修的按鈕，不放「重試」（重試也一樣會失敗）
                     actions.Children.Add(Ui.Button(problem.ActionTitle, () =>
                     {
-                        if (problem.OffersLogin) CliLogin.Open(host, problem.Provider); else App.Current.ShowSettings();
+                        if (problem.OffersLogin) CliLogin.Open(host, problem.Provider); else App.Current.ShowSettings(problem.SettingsPage);
                     }));
                 }
                 else

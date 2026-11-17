@@ -197,20 +197,18 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         }
     }
 
-    /// <summary>加入連結（R49.7）：打開設定的「進階」，等畫面好了再問要不要加入</summary>
+    /// <summary>加入連結（R49.7）：打開設定的「企業伺服器」，等畫面好了再問要不要加入</summary>
     void Join(string server)
     {
-        ShowSettings();
-        settings?.Open("advanced");
+        ShowSettings("enterprise");
         var window = settings;
         window?.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => window.ConfirmJoin(server));
     }
 
-    /// <summary>瀏覽器登入完回到拾音：拉到前面、打開設定的「進階」，失敗時說明原因</summary>
+    /// <summary>瀏覽器登入完回到拾音：拉到前面、打開設定的「企業伺服器」，失敗時說明原因</summary>
     public void EnterpriseSignedIn(string? error)
     {
-        ShowSettings();
-        settings?.Open("advanced");
+        ShowSettings("enterprise");
         settings?.Refresh();
         Notice(error ?? L.T("已登入企業伺服器"));
     }
@@ -253,10 +251,14 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         window.Activate();
     }
 
-    /// <summary>DEBUG 控制通道：設定視窗切到這一頁</summary>
-    public void OpenSettingsPage(string page) => settings?.Open(page);
+    /// <summary>開著的設定視窗（DEBUG 控制通道的 state、settingssearch 用）</summary>
+    public SettingsWindow? Settings => settings;
 
-    public void ShowSettings()
+    /// <summary>
+    /// 打開設定（R108）。page：要直接打開的那一頁（SettingsPages 的代號、0～10、舊的頁名）；沒給時停在上次那一頁（R108.5）。
+    /// 從會議頁「設定整理工具」「打開設定」來的給整理工具（或企業伺服器），不然會停在上次看的別頁
+    /// </summary>
+    public void ShowSettings(string? page = null)
     {
         if (host is null) return;
         if (settings is null)
@@ -264,8 +266,12 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             settings = new SettingsWindow(host);
             settings.Closed += (_, _) => settings = null;
         }
+        if (page is not null) settings.Open(page);
         settings.Activate();
     }
+
+    /// <summary>DEBUG 控制通道的 closewindow settings</summary>
+    public void CloseSettings() => settings?.Close();
 
     public void ShowOnboarding()
     {
@@ -452,7 +458,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         menu.Items.Add(Ui.Item(L.T("打開拾音"), ShowMain));
         menu.Items.Add(Ui.Item(L.T("使用說明"), ShowGuide));
         menu.Items.Add(Ui.Item(L.T("關於拾音"), ShowAbout));
-        menu.Items.Add(Ui.Item(L.T("設定"), ShowSettings));
+        menu.Items.Add(Ui.Item(L.T("設定"), () => ShowSettings()));
         menu.Items.Add(Ui.Item(L.T("結束拾音"), () => _ = Quit()));
         return menu;
     }

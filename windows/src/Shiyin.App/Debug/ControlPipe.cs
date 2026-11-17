@@ -110,11 +110,14 @@ public static partial class ControlPipe
                 return Ok;
             case "closewindow" when args.Length > 1:
                 if (args[1] == "main") main?.AppWindow.Hide();
+                else if (args[1] == "settings") app.CloseSettings();
                 return Ok;
             case "open" when args.Length > 1:
                 switch (args[1])
                 {
-                    case "settings": app.ShowSettings(); if (args.Length > 2) app.OpenSettingsPage(args[2]); break;   // open settings [provider|recording|names|advanced]
+                    // open settings [頁面]：provider、templates、recording、transcription、models、speakers、glossary、general、ai、enterprise、status
+                    // 或 0～10（R108、design-windows §11.41）；4.8 以前的 names、advanced、storage 當別名。沒給頁面時停在上次那頁
+                    case "settings": app.ShowSettings(args.Length > 2 ? args[2] : null); break;
                     case "guide": app.ShowGuide(); break;
                     case "report": app.ShowReport(); break;
                     case "ask": app.ShowAskAll(); break;
@@ -122,6 +125,10 @@ public static partial class ControlPipe
                     default: app.ShowMain(); break;
                 }
                 return Ok;
+            // settingssearch [文字]：等於在設定視窗的搜尋框打字（沒給文字是清掉）；回傳留下的頁面和目前的頁面
+            case "settingssearch" when app.Settings is { } searching:
+                searching.Search(args.Length > 1 ? args[1] : "");
+                return new JsonObject { ["page"] = searching.CurrentPage, ["visible"] = new JsonArray([.. searching.VisiblePages.Select(x => (JsonNode)x)]) };
             case "quit": _ = app.Quit(confirmed: true); return Ok;
             // openlink <shiyin:…>：等於點了這個網址（AI 工具給的會議連結 shiyin://open?meeting=…&t=…，M§44.5）
             case "openlink" when args.Length > 1: { var link = args[1]; host.Post(() => App.Current.OpenLink(link)); } return Ok;
@@ -596,6 +603,11 @@ public static partial class ControlPipe
             ["renameTarget"] = Dialogs.RenamingTarget?.Key ?? "",
             // 照 Sheet 樣子的對話框（R106、design-windows §11.39）開著時是它的標題，沒開是空字串
             ["sheet"] = Dialogs.OpenSheet ?? "",
+            // 設定視窗（R108、design-windows §11.41）：開著時目前的頁面、搜尋的字、側欄看得到的頁面；沒開是空字串。settingsPageStored 是 settings.json 記住的頁面
+            ["settingsPage"] = App.Current.Settings?.CurrentPage ?? "",
+            ["settingsSearch"] = App.Current.Settings?.SearchText ?? "",
+            ["settingsVisible"] = new JsonArray([.. (App.Current.Settings?.VisiblePages ?? []).Select(x => (JsonNode)x)]),
+            ["settingsPageStored"] = host.Settings.String(AppSettings.SettingsPageKey) ?? "",
             ["editingNoteItem"] = main?.NotesTabs.EditingItem(main.State.Detail)?.ToString() ?? "",
             ["bookmarks"] = new JsonArray([.. (main?.State.Detail?.Bookmarks ?? []).Select(b => (JsonNode)new JsonObject { ["id"] = b.Id, ["time"] = b.Time, ["label"] = b.Label })]),
             // 側欄的收合（R101，同 Mac）：收起來的段落、在原地展開的資料夾和定期會議

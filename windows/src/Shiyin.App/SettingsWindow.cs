@@ -17,69 +17,201 @@ using Shiyin.Whisper;
 namespace Shiyin.App;
 
 /// <summary>
-/// 設定視窗（同 Mac 的 SettingsView，design-windows §12.8）：整理工具與金鑰、範本、詞彙表、說話者、錄音、模型與儲存空間、進階。
-/// 設定存在 SHIYIN_HOME\settings.json，改了馬上生效
+/// 設定視窗（R108、M§82、design-windows §11.41）：左邊導覽（NavigationView）十一頁分四組、上方搜尋，右邊那一頁（標題、捲動的內容）。
+/// 原本四頁的段落照搬（R108.6），設定存在 SHIYIN_HOME\settings.json，改了馬上生效；上次停在哪一頁存在 settingsPage
 /// </summary>
 public sealed class SettingsWindow : Window
 {
     readonly AppHost host;
-    readonly SelectorBar bar = new() { Margin = new Thickness(12, 8, 12, 0) };
-    readonly Border page = new();
-    string current = "provider";
+    readonly NavigationView nav;
+    readonly AutoSuggestBox search;
+    readonly Dictionary<string, NavigationViewItem> items = [];
+    /// <summary>組和組之間的分隔線，跟著後面那一組（第 1～3 組）</summary>
+    readonly List<(NavigationViewItemSeparator Line, int Group)> separators = [];
+    readonly TextBlock heading = Ui.Text("", 24, bold: true, wrap: false);
+    readonly Border body = new();
+    readonly Grid root = new();
+    string current;
 
     public SettingsWindow(AppHost host)
     {
         this.host = host;
         Title = L.T("設定");
-        WindowPlacement.Center(this, 760, 640);
-        WindowPlacement.MinimumSize(this, 600, 480);
-        // 四頁（R44.5、M§33.3）：範本併進整理工具、模型併進錄音與轉錄、說話者和詞彙表合成一頁、儲存空間併進進階
-        (string Id, string Label)[] pages =
-        [
-            ("provider", L.T("整理工具")), ("recording", L.T("錄音與轉錄")), ("names", L.T("說話者與詞彙")), ("advanced", L.T("進階")),
-        ];
-        foreach (var (id, label) in pages)
+        // R108.5：比原本的四頁（760×640）大、可以拉大；最小同 Mac（720×500）
+        WindowPlacement.Center(this, 900, 660);
+        WindowPlacement.MinimumSize(this, 720, 500);
+        current = SettingsPages.Stored(S);
+        search = new AutoSuggestBox { PlaceholderText = L.T("搜尋設定"), QueryIcon = new SymbolIcon(Symbol.Find) };
+        AutomationProperties.SetName(search, L.T("搜尋設定"));
+        // 打字留下名稱或關鍵字對得上的頁面，只剩一頁時直接選它（R108.4）；Enter 選第一頁
+        search.TextChanged += (_, _) => Filter();
+        search.QuerySubmitted += (_, _) => { if (ListedPages().FirstOrDefault() is { } first) Select(first); };
+        nav = new NavigationView
         {
-            var item = new SelectorBarItem { Text = label, Tag = id };
-            bar.Items.Add(item);
-            if (id == current) bar.SelectedItem = item;
+            PaneDisplayMode = NavigationViewPaneDisplayMode.Left, IsPaneToggleButtonVisible = false, IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed,
+            IsSettingsVisible = false, IsTitleBarAutoPaddingEnabled = false, AlwaysShowHeader = false, OpenPaneLength = 248, AutoSuggestBox = search,
+        };
+        for (var g = 0; g < SettingsPages.Groups.Count; g++)
+        {
+            if (g > 0)
+            {
+                var line = new NavigationViewItemSeparator();
+                separators.Add((line, g));
+                nav.MenuItems.Add(line);
+            }
+            foreach (var id in SettingsPages.Groups[g])
+            {
+                var item = new NavigationViewItem { Content = SettingsPages.Title(id), Tag = id, Icon = new FontIcon { Glyph = Look(id).Glyph } };
+                AutomationProperties.SetName(item, SettingsPages.Title(id));
+                items[id] = item;
+                nav.MenuItems.Add(item);
+            }
         }
-        bar.SelectionChanged += (_, _) => { if (bar.SelectedItem?.Tag is string id) { current = id; Show(); } };
-        var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.Children.Add(bar);
-        Grid.SetRow(page, 1);
-        root.Children.Add(page);
-        Content = Ui.WindowBackground(root);
-        host.Models.Changed += _ => host.Post(() => { if (current == "recording") Show(); });
-        // 企業伺服器的登入狀態變了（登入、失效、登出）
-        host.Enterprise.Changed += () => host.Post(() => { if (current is "advanced" or "provider" or "recording") Show(); });
-        host.Enterprise.Glossary.Changed += () => host.Post(() => { if (current is "names") Show(); });
+        ColorIcons();
+        nav.SelectedItem = items[current];
+        nav.SelectionChanged += (_, e) => { if (e.SelectedItem is NavigationViewItem { Tag: string id }) Select(id); };
+        // 右邊：標題固定在上面，下面的內容捲動（同 Windows 設定）
+        heading.Margin = new Thickness(28, 20, 28, 10);
+        var page = new Grid();
+        page.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        page.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        page.Children.Add(heading);
+        Grid.SetRow(body, 1);
+        page.Children.Add(body);
+        nav.Content = page;
+        // 導覽的底色同主視窗的側欄（淺色 #F7F7F7、深色 #2B2B2B），右邊是 NavigationView 自己的內容層（左上角圓角、細框）
+        root.Children.Add(nav);
+        Content = Ui.SidebarBackground(Ui.InterfaceLanguage(root));
+        // 開著設定時換了深淺色、對比主題：圖示的顏色、這一頁重畫
+        root.ActualThemeChanged += (_, _) => { Ui.SetTheme(root.ActualTheme); ColorIcons(); Show(); };
+        root.Loaded += (_, _) => ColorIcons();   // 放進視窗之前 ActualTheme 不一定是視窗的
+        Ui.OnContrastChanged(root, () => { ColorIcons(); Show(); });
+        host.Models.Changed += _ => host.Post(() => { if (current is "models" or "transcription") Show(); });
+        // 企業伺服器的登入狀態變了（登入、失效、登出）：整理工具的選單、正式轉錄的選單、AI 工具（公司可以關掉）
+        host.Enterprise.Changed += () => host.Post(() => { if (current is "enterprise" or "provider" or "transcription" or "ai") Show(); });
+        host.Enterprise.Glossary.Changed += () => host.Post(() => { if (current is "glossary") Show(); });
         // 更新的進度、結果：只重畫更新那一塊（整頁重畫會捲回頂端）
-        if (host.Updater is { } updater) updater.Changed += () => host.Post(() => { if (current == "advanced") FillUpdate(updater); });
+        if (host.Updater is { } updater) updater.Changed += () => host.Post(() => { if (current == "status") FillUpdate(updater); });
         Show();
     }
+
+    /// <summary>
+    /// 側欄的圖示（同 Windows 11 設定：彩色的圖示，沒有底色的方塊）：Segoe Fluent Icons 的字對應 Mac 的 SF Symbol，顏色是 Mac 的那一色，
+    /// 淺色調深、深色調亮（在側欄的底色上對比 3.8:1 以上）。對比主題時不上色，跟著項目的文字顏色（選到、滑過時是反白的字）
+    /// </summary>
+    static (string Glyph, uint Light, uint Dark) Look(string id) => id switch
+    {
+        "provider" => ("\uE8BD", 0x7B49C9, 0xA585E8),        // Message（同引導的「整理成紀錄」）；Mac sparkles、紫
+        "templates" => ("\uE8A5", 0xC0650E, 0xF5A04D),       // Document；doc.text.fill、橘
+        "recording" => ("\uE720", 0xD13438, 0xF06A6A),       // Microphone；mic.fill、紅
+        "transcription" => ("\uE9D9", 0x1F6FD8, 0x5C9BF5),   // Diagnostic（波形）；waveform、藍
+        "models" => ("\uEDA2", 0x6E7079, 0xA3A5AD),          // HardDrive；internaldrive.fill、灰
+        "speakers" => ("\uE716", 0x0E8A8F, 0x3CC4C9),        // People；person.2.fill、青
+        "glossary" => ("\uE82D", 0x8A5D36, 0xC29A72),        // Dictionary；character.book.closed.fill、棕
+        "general" => ("\uE713", 0x6E7079, 0xA3A5AD),         // Setting；gearshape.fill、灰
+        "ai" => ("\uEA86", 0x4F4FCF, 0x8C8CEB),              // Puzzle；puzzlepiece.extension.fill、靛
+        "enterprise" => ("\uE825", 0x4A6890, 0x8AA3C7),      // Bank（建築）；building.2.fill、藍灰
+        _ => ("\uE895", 0x23884A, 0x4CC777),                 // Sync（同 Windows Update）；checkmark.seal.fill、綠
+    };
+
+    void ColorIcons()
+    {
+        foreach (var (id, item) in items)
+        {
+            if (item.Icon is not FontIcon icon) continue;
+            if (Ui.HighContrast) { icon.ClearValue(IconElement.ForegroundProperty); continue; }
+            var (_, light, dark) = Look(id);
+            icon.Foreground = new SolidColorBrush(Ui.HexColor((root.ActualTheme == ElementTheme.Dark ? dark : light).ToString("X6")));
+        }
+    }
+
+    /// <summary>換到這一頁、記住（R108.5）</summary>
+    void Select(string id)
+    {
+        if (!items.TryGetValue(id, out var item)) return;
+        SettingsPages.Remember(S, id);
+        var changed = id != current;
+        current = id;
+        if (!ReferenceEquals(nav.SelectedItem, item)) nav.SelectedItem = item;
+        if (changed) Show();
+    }
+
+    /// <summary>搜尋（R108.4）：留下對得上的頁面，分隔線只留在兩組看得到的項目中間；只剩一頁時直接選它</summary>
+    void Filter()
+    {
+        var found = SettingsPages.Find(search.Text);
+        var wasHidden = items[current].Visibility == Visibility.Collapsed;
+        foreach (var (id, item) in items) item.Visibility = found.Contains(id) ? Visibility.Visible : Visibility.Collapsed;
+        // 選到的那一項藏起來過：再出現時 NavigationView 的選取條（左邊那一小條）不見了（2026-11-17 虛擬機），排好之後重新選一次
+        if (wasHidden && found.Contains(current))
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (items[current].Visibility != Visibility.Visible) return;
+                nav.SelectedItem = null;
+                nav.SelectedItem = items[current];
+            });
+        var shownBefore = false;
+        for (var g = 0; g < SettingsPages.Groups.Count; g++)
+        {
+            var any = SettingsPages.Groups[g].Any(found.Contains);
+            foreach (var (line, group) in separators)
+                if (group == g) line.Visibility = any && shownBefore ? Visibility.Visible : Visibility.Collapsed;
+            shownBefore |= any;
+        }
+        if (search.Text.Trim().Length > 0 && found.Count == 1) Select(found[0]);
+    }
+
+    List<string> ListedPages() => [.. SettingsPages.All.Where(id => items[id].Visibility == Visibility.Visible)];
 
     /// <summary>重畫目前這一頁</summary>
     public void Refresh() => Show();
 
-    /// <summary>DEBUG 的 settings 指令：直接打開某一頁；3.x 的頁名當別名（templates → 整理工具、glossary、speakers → 說話者與詞彙、storage → 進階）</summary>
-    public void Open(string id)
+    /// <summary>打開某一頁：十一頁的代號、0～10、4.8 以前的頁名（Resolve）。認不得就不換</summary>
+    public void Open(string name)
     {
-        id = id switch { "templates" => "provider", "glossary" or "speakers" => "names", "storage" => "advanced", _ => id };
-        foreach (var item in bar.Items) if ((string)item.Tag == id) bar.SelectedItem = item;
+        if (SettingsPages.Resolve(name) is { } id) Select(id);
     }
 
-    // 每一頁都用卡片分組（同 Mac 設定的 Form）
-    void Show() => page.Child = Ui.Scroll(current switch
+    /// <summary>DEBUG 的 state：目前的頁面、搜尋的字、側欄看得到的頁面</summary>
+    public string CurrentPage => current;
+    public string SearchText => search.Text;
+    public List<string> VisiblePages => ListedPages();
+
+    /// <summary>DEBUG 的 settingssearch：等於在搜尋框打字（AutoSuggestBox 的 TextChanged 晚一點才發，這裡先篩，回傳的才是篩好的）</summary>
+    public void Search(string text)
     {
-        "recording" => Recording(),
-        "names" => Ui.Column(16, Section(MeetingLanguages.Ui("說話者", "Speakers"), Speakers()), Section(L.T("詞彙表"), Glossary())),
-        "advanced" => Advanced(),
-        // 範本是整理的一部分（R44.5、D110）：原本自己一頁
-        _ => Ui.Column(16, Ui.Card(Provider()), Section(MeetingLanguages.Ui("範本", "Templates"), Templates())),
-    }, 24);
+        search.Text = text;
+        Filter();
+    }
+
+    // 每一頁的段落（R108.6：原本四頁的段落照搬，項目、存的鍵、說明文字不變）。只有一段的頁面不再放段落標題（同 Mac）
+    void Show()
+    {
+        heading.Text = SettingsPages.Title(current);
+        body.Child = new ScrollViewer
+        {
+            // 靠上：只有一張卡片的頁面（說話者、詞彙表…），卡片照內容的高度，不要被拉到視窗底
+            Content = new Border { Padding = new Thickness(28, 4, 28, 28), Child = PageContent(current), VerticalAlignment = VerticalAlignment.Top },
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+    }
+
+    FrameworkElement PageContent(string id) => id switch
+    {
+        // 範本原本在整理工具的下面（R44.5、D110），R108.3 自己一頁
+        "templates" => Ui.Card(Templates()),
+        "recording" => Ui.Column(16, Section(L.T("錄音來源"), RecordingSource()), Section(L.T("提醒與快捷鍵"), Alerts())),
+        "transcription" => Ui.Column(16, Section(L.T("轉錄"), Transcription()), Section(L.T("語言"), Languages())),
+        // 模型清單原本在「錄音與轉錄 → 轉錄」、儲存空間原本在「進階」
+        "models" => Ui.Column(16, Section(L.T("模型"), ModelRows()), Section(L.T("儲存空間"), StorageRows())),
+        "speakers" => Ui.Card(Speakers()),
+        "glossary" => Ui.Card(Glossary()),
+        "general" => General(),
+        "ai" => Ui.Card(Mcp()),
+        "enterprise" => Ui.Card(Enterprise()),
+        "status" => Status(),
+        _ => Ui.Card(Provider()),
+    };
 
     AppSettings S => host.Settings;
 
@@ -89,7 +221,7 @@ public sealed class SettingsWindow : Window
     TextBlock? updateLabel;
     ProgressBar? updateBar;
 
-    /// <summary>「進階」的更新那一行：狀態、檢查、下載並更新；下載中加進度條（R10.6、design-windows §14.2，Velopack 只給百分比）</summary>
+    /// <summary>「檢查與更新」的更新那一行：狀態、檢查、下載並更新；下載中加進度條（R10.6、design-windows §14.2，Velopack 只給百分比）</summary>
     void FillUpdate(Updater updater)
     {
         if (updateRows is null) return;
@@ -101,7 +233,7 @@ public sealed class SettingsWindow : Window
             if (updateBar.IsTabStop) AutomationProperties.SetName(updateBar, d.Label);
             return;
         }
-        // 第一次畫（Advanced() 裡）還沒放進視窗，XamlRoot 是 null：GetFocusedElement(null) 會丟例外，整頁打不開
+        // 第一次畫（Status() 裡）還沒放進視窗，XamlRoot 是 null：GetFocusedElement(null) 會丟例外，整頁打不開
         var hadFocus = updateRows.XamlRoot is { } root && FocusManager.GetFocusedElement(root) is DependencyObject focused && Inside(focused, updateRows);
         updateRows.Children.Clear();
         updateLabel = Ui.Text(updater.Current.Label, 13, color: updater.Current is Updater.State.Failed ? Ui.Danger : Ui.Secondary);
@@ -159,7 +291,7 @@ public sealed class SettingsWindow : Window
         // 選單顯示實際用的整理工具；這台電腦沒有 claude、codex 時多「之後再設定」，選它等於清掉設定（R35.3、M§19.6）
         // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
         bool Missing(LLMProvider p) => p is LLMProvider.Claude or LLMProvider.Codex && !S.HasTool(p == LLMProvider.Claude ? "claude" : "codex");
-        // 公司：登入了企業伺服器、公司有提供整理才出現（R51.1、M D124；登入在進階）
+        // 公司：登入了企業伺服器、公司有提供整理才出現（R51.1、M D124；登入在「企業伺服器」那一頁）
         var options = LLMProviders.All.Where(p => p != LLMProvider.Enterprise || host.Enterprise.Account?.Llm == true || p == provider)
             .Select(p => ((LLMProvider?)p, Missing(p) ? L.F("%@（沒有安裝）", p.Label()) : p == LLMProvider.Enterprise ? CompanyLabel() : p.Label())).ToList();
         if (S.DetectedProvider == LLMProvider.None) options.Insert(0, (null, L.T("之後再設定（先不整理）")));
@@ -976,9 +1108,9 @@ public sealed class SettingsWindow : Window
     /// <summary>要唸的文字（R80.1，同 Mac 的 VoiceEnrollment.passage，「Mac」換成「電腦」）</summary>
     static string MyVoicePassage => L.T("拾音會在這台電腦上把會議錄下來，轉成逐字稿，再整理成會議紀錄。我現在唸這一段，是要讓拾音記住我的聲音。之後開會的時候，拾音聽到這個聲音，就會在逐字稿上標出我的名字。聲音特徵只存在這台電腦裡，不會上傳。下午三點，我們要討論下一季的計畫，請大家先看一下上週的數字。");
 
-    // MARK: 錄音與轉錄（R1、R4、R44.5）：錄音來源、語言、轉錄（含模型）、提醒與快捷鍵四組
+    // MARK: 錄音（R1、R108）：錄音來源、提醒與快捷鍵（原本「錄音與轉錄」的第一、四組）
 
-    FrameworkElement Recording()
+    FrameworkElement RecordingSource()
     {
         var source = Ui.Column(12);
         source.Children.Add(Ui.Combo(new[] { "mic", "both", "system" }.Select(s => (s, MainWindow.SourceLabel(s))), S.RecordSource,
@@ -993,7 +1125,13 @@ public sealed class SettingsWindow : Window
         source.Children.Add(Note(L.T("錄線上會議時選「麥克風＋電腦聲音」：你的聲音和對方的聲音會分別錄在左右聲道。")));
         source.Children.Add(Note(L.T("錄音按鈕旁的箭頭、錄音畫面的麥克風名稱也可以換麥克風。藍牙耳機連著時，Windows 可能自動改用耳機的麥克風，人不在旁邊就錄不到現場的聲音。")));
         source.Children.Add(Ui.Button(L.T("麥克風權限設定"), Shell.OpenMicrophonePrivacy));
+        return source;
+    }
 
+    // MARK: 轉錄（R4、R12.4、R108）：正式轉錄、說話者辨識、即時逐字稿；語言（原本「錄音與轉錄」的第三、二組，模型清單搬到「模型與空間」）
+
+    FrameworkElement Languages()
+    {
         var language = Ui.Column(12);
         language.Children.Add(Ui.Combo(MeetingLanguages.All.Select(l => (l, l.Name())), S.DefaultMeetingLanguage, l => S.Set(AppSettings.DefaultMeetingLanguageKey, l.Code()), L.T("預設會議語言")));
         language.Children.Add(Note(L.T("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")));
@@ -1014,7 +1152,11 @@ public sealed class SettingsWindow : Window
                 busy ? null : Ui.Button(L.T("下載"), () => host.Models.Start(ModelStore.Model.LanguageDetection))));
         }
         language.Children.Add(Note(L.F("開始錄音後聽約 10 秒，判斷是哪一種語言（%@）；跟會議語言不同而且有把握時會自動切換，錄音畫面可以改回來。需要 60 MB 的語言偵測模型。", MeetingLanguages.UiNames(MeetingLanguages.Detectable))));
+        return language;
+    }
 
+    FrameworkElement Transcription()
+    {
         var transcription = Ui.Column(12);
         // 正式轉錄引擎（R4.1、M§32.3；Qwen3-ASR 見 design-windows §8.4）
         var engine = S.TranscriptionEngine;
@@ -1041,9 +1183,11 @@ public sealed class SettingsWindow : Window
         }));
         transcription.Children.Add(Ui.Toggle(L.T("轉錄時辨識說話者"), S.Diarize, on => S.Set(AppSettings.DiarizeKey, on)));
         transcription.Children.Add(Ui.Toggle(L.T("錄音中顯示即時逐字稿"), S.LiveTranscription, on => S.Set(AppSettings.LiveTranscriptionKey, on)));
-        // 模型清單（原「模型與儲存空間」頁，R44.5）
-        transcription.Children.Add(ModelRows());
+        return transcription;
+    }
 
+    FrameworkElement Alerts()
+    {
         var alerts = Ui.Column(12);
         // 會議結束時倒數自動停止（R95、M§69）：偵測會議關掉時停用
         var autoStop = Ui.Toggle(L.T("會議結束時自動停止錄音"), S.AutoStopOnMeetingEnd, on => S.Set(AppSettings.AutoStopOnMeetingEndKey, on));
@@ -1075,10 +1219,10 @@ public sealed class SettingsWindow : Window
             S.Set(AppSettings.BookmarkHotKeyKey, on);
             host.HotKeys.SetBookmarkEnabled(on && host.Recorder.IsRecording);
         }));
-        return Ui.Column(16, Section(L.T("錄音來源"), source), Section(L.T("語言"), language), Section(L.T("轉錄"), transcription), Section(L.T("提醒與快捷鍵"), alerts));
+        return alerts;
     }
 
-    // MARK: 模型（R9.4）：在「錄音與轉錄」的轉錄那一組；儲存空間（R10.3）在「進階」
+    // MARK: 模型與空間（R9.4、R10.3、R108）：模型清單、儲存空間
 
     FrameworkElement ModelRows()
     {
@@ -1217,17 +1361,15 @@ public sealed class SettingsWindow : Window
         return button;
     }
 
-    // MARK: 進階
+    // MARK: 一般（R108）：介面語言、顯示、引導和搜尋索引、匿名使用統計（原本「進階」的一部分）
 
-    FrameworkElement Advanced()
+    FrameworkElement General()
     {
         var column = Ui.Column(16);
         // 介面語言（D57）：Windows 沒有替桌面 app 個別設定語言的地方
         // 語言的名稱用各自的語言寫
         var language = Ui.Combo(new[] { ("", L.T("跟著 Windows")), ("zh", "繁體中文"), ("zh-Hans", "简体中文"), ("en", "English") }, S.String(AppSettings.InterfaceLanguageKey) ?? "",  // l10n-skip
             v => { S.Set(AppSettings.InterfaceLanguageKey, v.Length == 0 ? null : v); App.Current.Notice(L.T("重新打開拾音後換成新的介面語言")); }, L.T("介面語言"));
-        // 企業伺服器（R49、M§36.3）：放在最上面，公司的人照「進階 → 企業伺服器」找得到
-        column.Children.Add(Section(L.T("企業伺服器"), Enterprise()));
         column.Children.Add(Section(L.T("介面"), language));
         // 會議內容的文字大小（R59.1）：快捷鍵改的也是這個設定
         var levels = Enumerable.Range(TextSizes.Min, TextSizes.Max - TextSizes.Min + 1);
@@ -1236,8 +1378,20 @@ public sealed class SettingsWindow : Window
         var hide = Ui.Toggle(L.T("分享畫面時藏起拾音的視窗"), S.HideFromScreenSharing, on => { S.Set(AppSettings.HideFromScreenSharingKey, on); WindowCapture.Set(on); });
         column.Children.Add(Section(L.T("顯示"), textSize, Note(L.T("紀錄、逐字稿、提問、即時逐字稿和我的筆記的文字。也可以用 Ctrl+加號、Ctrl+減號調整，Ctrl+0 回到標準大小。")),
             hide, Note(L.T("打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到拾音（例如其他會議的紀錄）。截圖、螢幕錄影也拍不到拾音。"))));
-        // 讓 AI 工具讀取會議（本地 MCP，R69、design-windows §11.12）
-        column.Children.Add(Section(L.T("AI 工具（MCP）"), Mcp()));
+        column.Children.Add(Section(L.T("其他"),
+            Ui.Button(L.T("重新顯示首次使用引導"), () => { S.Set(AppSettings.OnboardingKey, false); App.Current.ShowOnboarding(); }),
+            Ui.Button(L.T("重建搜尋索引"), () => { host.Db.RebuildSearchIndex(); App.Current.Notice(L.T("搜尋索引已重建")); })));
+        // 匿名使用統計（M§30.5、R40.4）：有統計網址的版本才有。放在最下面、只留一行，開關收在「詳細…」裡
+        if (host.Usage.IsOffered)
+            column.Children.Add(Ui.Card(Ui.Bar(Ui.Text(L.T("匿名使用統計"), 14), null, Ui.Button(L.T("詳細…"), ShowUsageStats))));
+        return column;
+    }
+
+    // MARK: 檢查與更新（R10.6、R108）：目前版本、更新；回報問題、關於拾音（原本「進階」的更新、其他）
+
+    FrameworkElement Status()
+    {
+        var column = Ui.Column(16);
         var update = Ui.Column(8, Ui.Bar(Ui.Text(L.T("目前版本"), 14), null, Ui.Text(host.Version, 14, color: Ui.Secondary)));
         if (host.Updater is { } updater)
         {
@@ -1247,15 +1401,9 @@ public sealed class SettingsWindow : Window
         }
         else update.Children.Add(Note(L.T("這個版本沒有更新金鑰（開發版），不會檢查更新。")));
         column.Children.Add(Section(L.T("更新"), update));
-        column.Children.Add(Section(L.T("儲存空間"), StorageRows()));
         column.Children.Add(Section(L.T("其他"),
-            Ui.Button(L.T("重新顯示首次使用引導"), () => { S.Set(AppSettings.OnboardingKey, false); App.Current.ShowOnboarding(); }),
-            Ui.Button(L.T("重建搜尋索引"), () => { host.Db.RebuildSearchIndex(); App.Current.Notice(L.T("搜尋索引已重建")); }),
             Ui.Button(L.T("回報問題…"), () => App.Current.ShowReport()),
             Ui.Button(L.T("關於拾音"), () => App.Current.ShowAbout())));
-        // 匿名使用統計（M§30.5、R40.4）：有統計網址的版本才有。放在最下面、只留一行，開關收在「詳細…」裡
-        if (host.Usage.IsOffered)
-            column.Children.Add(Ui.Card(Ui.Bar(Ui.Text(L.T("匿名使用統計"), 14), null, Ui.Button(L.T("詳細…"), ShowUsageStats))));
         return column;
     }
 
