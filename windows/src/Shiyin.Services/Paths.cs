@@ -32,6 +32,11 @@ public sealed class ShiyinPaths
     public string Audio => Path.Combine(Home, "audio");
     /// <summary>錄音中的檔案：&lt;會議 id&gt;-&lt;uuid&gt;.wav，當掉後由復原流程接回（M§20.6）</summary>
     public string Recording => Path.Combine(Audio, "recording");
+    /// <summary>編輯會議前的錄音，留 30 天（M§81.3）：audio\edits\&lt;會議 id&gt;.&lt;副檔名&gt;</summary>
+    public string EditsAudio => Path.Combine(Audio, "edits");
+
+    /// <summary>audio 底下的相對路徑（資料庫裡用 /，同 Mac：edits/3.m4a）換成檔案的位置</summary>
+    public string AudioRelative(string relative) => Path.Combine([Audio, .. relative.Split('/')]);
     public string Database => Path.Combine(Home, "shiyin.sqlite");
     /// <summary>會議的參考文件的原始檔（M§39.1）</summary>
     public string Documents => Path.Combine(Home, "documents");

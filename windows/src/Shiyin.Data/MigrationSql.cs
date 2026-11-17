@@ -261,4 +261,17 @@ static class MigrationSql
         DELETE FROM series;
         DELETE FROM series_rejected;
         """;
+
+    /// <summary>編輯會議的快照（R107.8、M§81.3）：第一次編輯前的樣子，最後一次編輯後留 30 天</summary>
+    public const string V15 = """
+        CREATE TABLE meeting_edits (
+          meeting_id  INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
+          snapshot    TEXT NOT NULL,
+          audio_file  TEXT NOT NULL,
+          split_into  TEXT NOT NULL DEFAULT '[]',
+          merged_from TEXT NOT NULL DEFAULT '[]',
+          created_at  TEXT NOT NULL,
+          edited_at   TEXT NOT NULL
+        );
+        """;
 }

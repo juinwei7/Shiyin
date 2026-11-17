@@ -18,7 +18,7 @@ public sealed class DatabaseTests : IDisposable
         try { Directory.Delete(dir, recursive: true); } catch (IOException) { }
     }
 
-    static readonly HashSet<string> TimeColumns = ["created_at", "updated_at", "started_at", "finished_at", "deleted_at"];
+    static readonly HashSet<string> TimeColumns = ["created_at", "updated_at", "started_at", "finished_at", "deleted_at", "edited_at"];
 
     /// <summary>跟 Mac 的 GoldenDump.dumpTable 一樣：時間欄位有值時是 "&lt;time&gt;"，BLOB 是 base64</summary>
     static string DumpTable(AppDatabase db, string table)
@@ -35,7 +35,8 @@ public sealed class DatabaseTests : IDisposable
                     null => JNode.NullValue,
                     long l => TimeColumns.Contains(name) ? new JNode.Str("<time>") : new JNode.Int(l),
                     double x => new JNode.Number(x),
-                    string s => new JNode.Str(TimeColumns.Contains(name) ? "<time>" : s),
+                    // 編輯會議的快照是程式自己的格式（裡面還有時間），同 Mac 只比套用、還原之後的資料表
+                    string s => new JNode.Str(TimeColumns.Contains(name) ? "<time>" : table == "meeting_edits" && name == "snapshot" ? "<snapshot>" : s),
                     byte[] b => new JNode.Str(Convert.ToBase64String(b)),
                     _ => new JNode.Str(value.ToString() ?? ""),
                 });
@@ -60,7 +61,7 @@ public sealed class DatabaseTests : IDisposable
                 {
                     var where = $"{file} {table.Name}[{i}].{col.Name}";
                     Assert.True(rows[i].TryGetProperty(col.Name, out var v), $"{where}：沒有這個欄位");
-                    if (col.Name is "snapshot" or "definition" && col.Value.ValueKind == JsonValueKind.String)
+                    if (col.Name is "snapshot" or "definition" && table.Name != "meeting_edits" && col.Value.ValueKind == JsonValueKind.String)
                         Golden.SameEmbeddedJson(col.Value.GetString()!, v.GetString()!, where);
                     else Golden.SameJson(col.Value, v, where);
                 }
@@ -239,6 +240,26 @@ public sealed class DatabaseTests : IDisposable
                     break;
                 }
                 case "deleteMeeting": db.DeleteMeeting(Id(op)); break;
+                // 編輯會議（M§81.1）：pieces 是 [會議的 key, 開始, 結束]，cut 是新時間軸上的切點
+                case "applyEdit":
+                {
+                    var pieces = op.GetProperty("pieces").EnumerateArray().Select(p => new EditPlan.Piece(ids[p[0].GetString()!], p[1].GetDouble(), p[2].GetDouble())).ToList();
+                    double? cut = op.Get("cut") is { ValueKind: JsonValueKind.Number } c ? c.GetDouble() : null;
+                    var outcome = db.ApplyEdit(Id(op), new EditPlan(pieces), cut, op.Str("splitTitle") ?? "", null);
+                    Result(op, new JNode.Obj().Add("created", outcome?.Created?.Id is long created ? new JNode.Int(created) : JNode.NullValue)
+                        .Add("firstEdit", JNode.Of(outcome?.FirstEdit ?? false))
+                        .Add("documentCopies", new JNode.Arr((outcome?.DocumentCopies ?? []).Select(d => (JNode)new JNode.Arr(new List<JNode> { new JNode.Str(d.From), new JNode.Str(d.To) })))));
+                    break;
+                }
+                case "restoreEdit":   // 還原成編輯前的樣子（M§81.3）
+                {
+                    var r = db.RestoreEdit(Id(op));
+                    static JNode Longs(IEnumerable<long> xs) => new JNode.Arr(xs.Select(x => (JNode)new JNode.Int(x)));
+                    Result(op, r is null ? JNode.NullValue : new JNode.Obj().Add("trashed", Longs(r.Trashed)).Add("untrashed", Longs(r.Untrashed))
+                        .Add("removedDocuments", new JNode.Arr(r.RemovedDocuments.Select(d => (JNode)new JNode.Str(d)))).Add("editsAudio", r.EditsAudio)
+                        .Add("restoredAudio", r.RestoredAudio));
+                    break;
+                }
                 // 人物頁（M§60.1、design-windows §11.22）：「我」、一起開過的會議、負責的待辦
                 case "enrollVoiceprint":
                     db.EnrollVoiceprint(op.Str("name")!, [.. op.GetProperty("embedding").EnumerateArray().Select(x => (float)x.GetDouble())]);

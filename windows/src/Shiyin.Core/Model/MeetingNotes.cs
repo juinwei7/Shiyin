@@ -147,6 +147,26 @@ public sealed record MeetingNotes
         return MappingText(s => regex.Replace(s, replacement.Replace("$", "$$")));
     }
 
+    /// <summary>
+    /// 每個時間點（條目、待辦、議題的開始、待確認）換成 f 算出來的時間；不是時間的照留（編輯會議，M§81.1、同 Mac 的 mappingTimes）
+    /// </summary>
+    public MeetingNotes MappingTimes(Func<double, double> f)
+    {
+        string Time(string text) => TimeFormat.Seconds(text) is double s ? TimeFormat.String(f(s)) : text;
+        List<Item> Items(List<Item> list) => list.Select(i => new Item(i.Text, Time(i.Time))).ToList();
+        return this with
+        {
+            Summary = Items(Summary),
+            Decisions = Items(Decisions),
+            OpenQuestions = Items(OpenQuestions),
+            ActionItems = ActionItems.Select(a => a with { Time = Time(a.Time) }).ToList(),
+            Topics = Topics.Select(t => new Topic(t.Title, Time(t.Start), Items(t.Points))).ToList(),
+            Custom = Custom.Select(c => c with { Items = Items(c.Items) }).ToList(),
+            People = People.Select(p => p with { Points = Items(p.Points) }).ToList(),
+            ReviewItems = ReviewItems.Select(r => r with { Time = Time(r.Time) }).ToList(),
+        };
+    }
+
     /// <summary>每一個文字欄位轉成簡體（M§47.2）</summary>
     public MeetingNotes Simplified() => MappingText(Text.ChineseScript.ToSimplified);
 

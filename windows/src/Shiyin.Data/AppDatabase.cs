@@ -169,7 +169,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15"];
 
     /// <summary>
     /// 這次開資料庫時 migration v14 換掉的定期會議（id → 資料夾名稱，D177）；沒跑 v14 時是空的。
@@ -261,6 +261,7 @@ public sealed partial class AppDatabase : IDisposable
                 db.Execute(MigrationSql.V14);
                 return names;
             }
+            case "v15": db.Execute(MigrationSql.V15); break;
         }
         return null;
     }

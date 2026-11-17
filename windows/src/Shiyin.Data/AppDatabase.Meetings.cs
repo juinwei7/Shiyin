@@ -164,7 +164,10 @@ public sealed partial class AppDatabase
     /// audioExtension：切好的錄音的副檔名（null 是沒有錄音）；跟原本那場的不同時（匯入的 mp3 切成 m4a，design-windows §11.23）
     /// 原本那場的錄音檔名一起改。回傳新的一場（錄音檔名已經給好，檔案由呼叫的人搬）
     /// </summary>
-    public Meeting? SplitMeeting(long id, double cut, string title, string? audioExtension) => Write(db =>
+    public Meeting? SplitMeeting(long id, double cut, string title, string? audioExtension) => Write(db => SplitMeeting(db, id, cut, title, audioExtension));
+
+    /// <summary>同上，在呼叫的人的交易裡（編輯會議套用時一起分，M§81.1）</summary>
+    internal static Meeting? SplitMeeting(Db db, long id, double cut, string title, string? audioExtension)
     {
         if (FetchMeeting(db, id) is not { } original) return null;
         var meeting = original.Clone();
@@ -219,7 +222,7 @@ public sealed partial class AppDatabase
         // 段落換了，說話者的復原對不上（M§24.2）
         db.Execute("DELETE FROM speaker_undo WHERE meeting_id = ?", id);
         return meeting;
-    });
+    }
 
     /// <summary>這場會議有沒有排隊中或執行中的工作（任何種類，含壓縮、校正這些輔助工作；M§64）</summary>
     public bool HasActiveJobs(long meetingId) => Read(db =>

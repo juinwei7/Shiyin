@@ -48,13 +48,33 @@ public static partial class Dialogs
             sheet.Close();
         }
         ok.Click += (_, _) => Accept();
-        sheet.Form.Children.Add(Sheet.Header(title, sheet.Cancel, Sheet.Subtitle(message)));
+        sheet.Form.Children.Add(Bullets(message) is { } list
+            ? Ui.Column(10, Sheet.Header(title, sheet.Cancel), list)
+            : Sheet.Header(title, sheet.Cancel, Sheet.Subtitle(message)));
         sheet.Form.Children.Add(Sheet.Buttons(null, Sheet.Pill(L.T("取消"), click: sheet.Cancel), ok));
         sheet.Submit = Accept;
         sheet.Primary = ok;
         sheet.Focus = ok;
         await sheet.Show();
         return confirmed;
+    }
+
+    /// <summary>
+    /// 說明是「・」開頭的好幾行時畫成條列，換行對齊在點的後面（編輯會議的套用、還原，M§81.5、同 Mac 的 ConfirmSheet）；不是條列回傳 null
+    /// </summary>
+    static StackPanel? Bullets(string message)
+    {
+        var lines = message.Split('\n');
+        if (lines.Length < 2 || !lines.All(l => l.StartsWith('・'))) return null;  // l10n-skip
+        var list = new StackPanel { Spacing = 6 };
+        foreach (var line in lines)
+        {
+            var dot = Ui.Text("・", 14, color: Ui.Secondary, wrap: false);  // l10n-skip
+            var text = Ui.Text(line[1..], 14, color: Ui.Secondary);
+            list.Children.Add(Ui.Split(dot, text, 2, GridLength.Auto));
+        }
+        AutomationProperties.SetName(list, message);
+        return list;
     }
 
     /// <summary>同時只能開一個 ContentDialog：前一個還開著時等它關掉</summary>

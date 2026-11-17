@@ -1395,6 +1395,23 @@
         }
       }
     },
+    "可以合併的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meetings you can merge"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以合并的会议"
+          }
+        }
+      }
+    },
     "同一個人被記成兩個名字時，合併成一個": {
       "extractionState": "manual",
       "localizations": {
@@ -2202,6 +2219,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "放大、缩小会议内容的文字"
+          }
+        }
+      }
+    },
+    "放大時間軸（也可以在時間軸上按住 Ctrl 滾動滑鼠滾輪）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom in (you can also hold Ctrl and scroll the mouse wheel on the timeline)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放大时间轴（也可以在时间轴上按住 Ctrl 滚动鼠标滚轮）"
           }
         }
       }
@@ -4373,6 +4407,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "麦克风：%@"
+          }
+        }
+      }
+    },
+    "點一句從那裡播放；按住 Ctrl、Shift 選好幾句，按右鍵刪掉、設成開頭或結尾、從這句分成兩場": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click a line to play from there. Ctrl- or Shift-click to select several, then right-click to delete them, set the start or end, or split from there"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点一句从那里播放；按住 Ctrl、Shift 选好几句，按右键删掉、设成开头或结尾、从这句分成两场"
+          }
+        }
+      }
+    },
+    "（刪掉）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (deleted)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（删掉）"
           }
         }
       }

@@ -203,6 +203,7 @@ public sealed class MainWindow : Window
     }
 
     public XamlRoot? XamlRoot => root.XamlRoot;
+    public AppHost Host => host;
     public IntPtr Handle => WinRT.Interop.WindowNative.GetWindowHandle(this);
 
     void Build()
@@ -396,8 +397,82 @@ public sealed class MainWindow : Window
             host.Player.Toggle();
             e.Handled = true;
         };
-        Content = Ui.WindowBackground(root);
+        // 編輯會議的覆蓋層（R107、design-windows §11.40）：蓋住整個視窗、中間一張卡片；跟 root 同一層，root 的快捷鍵、空白鍵不會收到裡面的按鍵
+        editorLayer.Children.Add(editorCard);
+        editorLayer.TabFocusNavigation = KeyboardNavigationMode.Cycle;
+        editorLayer.SizeChanged += (_, _) => Ui.Guard(SizeEditorCard);
+        editorLayer.PointerPressed += (_, e) => e.Handled = true;
+        editorCard.Shadow = new ThemeShadow();
+        editorCard.Translation = new System.Numerics.Vector3(0, 0, 32);
+        restyle.Add(StyleEditorLayer);
+        var outer = new Grid();
+        outer.Children.Add(root);
+        outer.Children.Add(editorLayer);
+        Content = Ui.WindowBackground(outer);
     }
+
+    // MARK: 編輯會議（R107、M§81.5、design-windows §11.40）
+
+    readonly Grid editorLayer = new() { Visibility = Visibility.Collapsed };
+    readonly Border editorCard = new()
+    {
+        CornerRadius = new CornerRadius(12), Padding = new Thickness(24), BorderThickness = new Thickness(1),
+        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+    };
+    MeetingEditView? editor;
+
+    /// <summary>打開的編輯畫面是哪一場（DEBUG 的 state editingMeeting）</summary>
+    public long? EditingMeeting => editor?.MeetingId;
+
+    void StyleEditorLayer()
+    {
+        editorLayer.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(Ui.IsDark ? (byte)140 : (byte)90, 0, 0, 0));
+        editorCard.Background = Ui.HighContrast ? Ui.CardBackground : new SolidColorBrush(Ui.IsDark ? Ui.HexColor("#2B2B2B") : Microsoft.UI.Colors.White);
+        editorCard.BorderBrush = SidebarLook.Gray(0.12);
+    }
+
+    /// <summary>卡片的大小跟著視窗（同 Mac 的 sheet：寬 880 左右、最小 720×520、最大 1100×900），視窗小的時候留 16 的邊</summary>
+    void SizeEditorCard()
+    {
+        double w = editorLayer.ActualWidth, h = editorLayer.ActualHeight;
+        if (w <= 0 || h <= 0) return;
+        editorCard.Width = Math.Max(Math.Min(720, w - 32), Math.Min(1100, w - 96));
+        editorCard.Height = Math.Max(Math.Min(520, h - 32), Math.Min(900, h - 80));
+    }
+
+    /// <summary>「編輯會議…」（右鍵、「⋯」、更多）：不能編輯時說原因；選到那場、停止播放、打開編輯畫面</summary>
+    public void OpenEditor(long id)
+    {
+        if (editor is not null || !host.Controller.RequestEditMeeting(id)) return;
+        if (State.Selection != id) State.Reveal(id);
+        if (host.Player.IsPlaying) host.Player.Toggle();
+        detailView.FlushDrafts();
+        var view = new MeetingEditView(host, this, id);
+        editor = view;
+        view.Closed += CloseEditor;
+        editorCard.Child = view.Root;
+        StyleEditorLayer();
+        editorLayer.Visibility = Visibility.Visible;
+        SizeEditorCard();
+        // 編輯畫面開著時主視窗的快捷鍵（Ctrl+Delete 移到垃圾桶、Ctrl+R 錄音…）不作用（同 Mac 的 sheet）
+        foreach (var a in root.KeyboardAccelerators) a.IsEnabled = false;
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => Ui.Guard(view.FocusTimeline));
+    }
+
+    void CloseEditor()
+    {
+        if (editor is null) return;
+        editor = null;
+        editorLayer.Visibility = Visibility.Collapsed;
+        editorCard.Child = null;
+        foreach (var a in root.KeyboardAccelerators) a.IsEnabled = true;
+        // 焦點回到會議列表選到的那一列（沒有就是列表）：覆蓋層收起來後焦點不會自己回來
+        if (list.SelectedItem is { } selected && list.ContainerFromItem(selected) is ListViewItem row) row.Focus(FocusState.Programmatic);
+        else list.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>「還原成編輯前的樣子…」（右鍵、「⋯」、更多）</summary>
+    public Task ConfirmRestoreEdit(long id) => Dialogs.ConfirmRestoreEdit(this, id);
 
     /// <summary>放大、縮小一級，null 是實際大小（R59.1）；到頭了不動。Windows 沒有選單列，下方提示目前的大小</summary>
     void ChangeTextSize(int? delta)
@@ -1675,6 +1750,8 @@ public sealed class MainWindow : Window
         if (ids.Count == 1)
         {
             menu.Items.Add(MenuLook.Hint(Ui.Item(L.T("重新命名…"), () => RenameMeetingUi(id), icon: Symbol.Edit), MenuLook.Rename));
+            // 編輯會議（R107.1）；編輯過的會議多一項還原，右邊寫還剩幾天（R107.8）
+            foreach (var item in EditMenuItems(id)) menu.Items.Add(item);
             menu.Items.Add(new MenuFlyoutSeparator());
         }
         menu.Items.Add(FolderSubMenu(ids, CommonFolder(ids)));
@@ -1682,6 +1759,15 @@ public sealed class MainWindow : Window
         // 一場直接移（可以還原）；好幾場先確認（M§62）
         menu.Items.Add(MenuLook.Hint(ids.Count == 1 ? Ui.DangerItem(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(ids))
             : Ui.DangerItem(L.F("把 %lld 場會議移到垃圾桶…", ids.Count), () => _ = ConfirmTrash(ids)), MenuLook.Delete));
+    }
+
+    /// <summary>「編輯會議…」、編輯過的會議多「還原成編輯前的樣子…」（右邊「還有 N 天」）：右鍵、「⋯」、會議頁的「更多」共用</summary>
+    public List<MenuFlyoutItem> EditMenuItems(long id)
+    {
+        var items = new List<MenuFlyoutItem> { Ui.Item(L.T("編輯會議…"), () => OpenEditor(id), icon: Symbol.Cut) };
+        if (host.Db.EditRecord(id) is { } record)
+            items.Add(MenuLook.Hint(Ui.Item(L.T("還原成編輯前的樣子…"), () => _ = ConfirmRestoreEdit(id), icon: Symbol.Undo), L.F("還有 %lld 天", record.DaysLeft())));
+        return items;
     }
 
     /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null</summary>
@@ -2051,7 +2137,7 @@ public sealed class MainWindow : Window
         RenameUi(new RenameTarget.Person(id));
     }
 
-    /// <summary>「從這裡分成兩場…」（R90.1、M§64）：寫出從幾分幾秒開始、會怎麼分；分開後沒辦法合併回來（D170）。確認的按鈕是主要按鈕（不是刪除類，R106.2，同 Mac）</summary>
+    /// <summary>「從這裡分成兩場…」（R90.1、M§64）：寫出從幾分幾秒開始、會怎麼分；30 天內可以還原（D180）。確認的按鈕是主要按鈕（不是刪除類，R106.2，同 Mac）</summary>
     public async Task ConfirmSplitMeeting(long meetingId, Segment segment)
     {
         if (segment.Id is not long segmentId) return;
@@ -2060,7 +2146,7 @@ public sealed class MainWindow : Window
         try
         {
             ok = await Dialogs.Confirm(this, L.F("從 %@ 這句開始分成另一場會議？", TimeFormat.String(segment.Start)),
-                L.T("這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。分開後沒辦法合併回來。"),
+                L.T("這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。30 天內可以從「更多」還原。"),
                 L.T("分成兩場"));
         }
         finally { SplitMeetingRequest = null; }

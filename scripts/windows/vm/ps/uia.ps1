@@ -16,7 +16,10 @@
 #   uia.ps1 menukeys <視窗> <名稱> <鍵,鍵,…|-> [right|left|more]  真的滑鼠點那個元件打開選單（right 右鍵、left 左鍵、more 點列最右邊的「⋯」），
 #                                         接著按那幾個鍵（十六進位，逗號分隔，例如 28,27,0D；- 不按），印出有焦點的選項。選單照樣開著（截圖用）
 #   uia.ps1 drag <視窗> <來源> <目標> [top|center|bottom] [停留秒數]  真的滑鼠拖曳（來源可以是「檔案總管的視窗標題::檔名」）。
-#                                         這五個是虛擬機桌面上真的輸入，不會送到 Mac
+#   uia.ps1 dragat <視窗> <名稱> <橫向的位置 0～1> <往右幾個像素，負的往左；0 是點一下> [ctrl|shift]  真的滑鼠在元件裡按下、橫著拖、放開
+#                                         （編輯會議的把手、在波形上拖曳選一段、點一下移播放頭，design-windows §11.40）。
+#                                         這六個是虛擬機桌面上真的輸入，不會送到 Mac
+#   uia.ps1 range <視窗> <名稱> [值]        讀 RangeValue（把手、播放位置的秒數）；給了值就設成那個值
 param([string]$Action, [string]$Window, [string]$Target, [string]$Extra, [string]$Item1, [string]$Item2)
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 Add-Type -TypeDefinition @'
@@ -217,12 +220,12 @@ switch ($Action) {
         @(Windows | ForEach-Object { $_.FindAll($T::Descendants, $cond) }) | ForEach-Object { "  $(Describe $_)" }
     }
     'key' {
-        # 對拾音的視窗按一個鍵（虛擬鍵碼，十六進位，例如 2E 是 Delete、26 是 ↑）；Extra 給 ctrl、alt 時按住 Ctrl、Alt。焦點在哪個元件就送到哪裡
+        # 對拾音的視窗按一個鍵（虛擬鍵碼，十六進位，例如 2E 是 Delete、26 是 ↑）；Extra 給 ctrl、alt、shift 時按住 Ctrl、Alt、Shift。焦點在哪個元件就送到哪裡
         $w = Find-Window $Window
         $front = [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle)
         Start-Sleep -Milliseconds 400
         $vk = [Convert]::ToByte($Target, 16)
-        $mod = switch ($Extra) { 'ctrl' { 0x11 } 'alt' { 0x12 } default { 0 } }
+        $mod = switch ($Extra) { 'ctrl' { 0x11 } 'alt' { 0x12 } 'shift' { 0x10 } default { 0 } }
         # ↑↓←→ 這些是延伸鍵（KEYEVENTF_EXTENDEDKEY），不然會被當成數字鍵盤的鍵
         $ext = if ($vk -ge 0x21 -and $vk -le 0x28) { 1 } else { 0 }
         if ($mod) { [RealInput]::keybd_event($mod, 0, 0, [UIntPtr]::Zero) }
@@ -285,6 +288,33 @@ switch ($Action) {
         [RealInput]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 700
         [RealInput]::MoveTo(3000, 2000)
         "$(Get-Date -Format HH:mm:ss.fff) dragged $(Describe $src) -> $(Describe $dst) ($Item1)$(if (-not $front) { '（拉到前面失敗）' })"
+    }
+    'dragat' {
+        $w = Find-Window $Window
+        $e = Find-Element $w $Target 0
+        $r = $e.Current.BoundingRectangle
+        if ($r.IsEmpty -or [double]::IsInfinity($r.X)) { throw "「$Target」不在畫面上" }
+        $sx = [int]($r.X + $r.Width * [double]$Extra); $sy = [int]($r.Y + $r.Height / 2); $dx = [int]$Item1
+        $front = [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle)
+        Start-Sleep -Milliseconds 400
+        $mod = switch ($Item2) { 'ctrl' { 0x11 } 'shift' { 0x10 } default { 0 } }
+        if ($mod) { [RealInput]::keybd_event($mod, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 100 }
+        [RealInput]::SetCursorPos($sx, $sy) | Out-Null; [RealInput]::MoveTo($sx, $sy); Start-Sleep -Milliseconds 200
+        [RealInput]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 150
+        $steps = if ($dx -eq 0) { 0 } else { 20 }
+        for ($i = 1; $i -le $steps; $i++) { [RealInput]::MoveTo([int]($sx + $dx * $i / $steps), $sy); Start-Sleep -Milliseconds 30 }
+        Start-Sleep -Milliseconds 150
+        [RealInput]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 300
+        if ($mod) { [RealInput]::keybd_event($mod, 0, 2, [UIntPtr]::Zero) }
+        Start-Sleep -Milliseconds 400
+        "dragat $(Describe $e) ($sx,$sy) +$dx$(if (-not $front) { '（拉到前面失敗）' })"
+    }
+    'range' {
+        $e = Find-Element (Find-Window $Window) $Target 0
+        $p = Try-Pattern $e ([System.Windows.Automation.RangeValuePattern]::Pattern)
+        if (-not $p) { throw "「$Target」沒有 RangeValue：$(Describe $e)" }
+        if ($Extra) { $p.SetValue([double]$Extra); Start-Sleep -Milliseconds 300 }
+        "range $(Describe $e) value=$($p.Current.Value) max=$($p.Current.Maximum) help=$($e.Current.HelpText)"
     }
     default { throw "不認得的動作：$Action" }
 }
