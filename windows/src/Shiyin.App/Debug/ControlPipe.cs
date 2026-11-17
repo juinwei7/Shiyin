@@ -300,6 +300,73 @@ public static partial class ControlPipe
                 _ = main.ConfirmSplitMeeting(confirmMeeting, confirmSegment);
                 return Ok;
             }
+            // 編輯會議（R107、M§81.6，同 Mac 的名稱）：editmeeting <會議 id> keep=<開始>-<結束>[,…] [split=<秒>] [merge=<會議 id>[:<開始>-<結束>,…]]
+            //（不經過畫面和確認；merge 沒給範圍是整場，照會議開始的先後接）；restoreedit <會議 id>（不經過確認）、confirmrestoreedit <會議 id>；
+            // editage <會議 id> <天數>（把最後編輯的時間改早，接著清一次過期的）；openedit <會議 id>（打開編輯畫面）
+            case "editmeeting" when args.Length > 1 && long.TryParse(args[1], out var editId) && host.Db.Meeting(editId) is { } editMeeting:
+            {
+                static List<(double, double)> Ranges(string text) => text.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(r => r.Split('-')).Where(p => p.Length == 2 && Num(p[0]) is not null && Num(p[1]) is not null)
+                    .Select(p => (Num(p[0])!.Value, Num(p[1])!.Value)).ToList();
+                List<(double, double)> Whole(Meeting m) => [(0, Math.Max(m.DurationSeconds ?? 0, host.Db.Segments(m.Id!.Value).Select(x => x.End).DefaultIfEmpty(0).Max()))];
+                var mine = Whole(editMeeting);
+                double? cut = null;
+                (Meeting Meeting, List<(double, double)> Ranges)? merged = null;
+                foreach (var arg in args[2..])
+                {
+                    var value = arg.Split('=', 2) is { Length: 2 } kv ? kv[1] : "";
+                    if (arg.StartsWith("keep=")) mine = Ranges(value);
+                    else if (arg.StartsWith("split=")) cut = Num(value);
+                    else if (arg.StartsWith("merge=") && long.TryParse(value.Split(':')[0], out var otherId) && host.Db.Meeting(otherId) is { } other)
+                        merged = (other, value.Split(':', 2) is { Length: 2 } parts ? Ranges(parts[1]) : Whole(other));
+                }
+                var pieces = mine.Select(r => new EditPlan.Piece(editId, r.Item1, r.Item2)).ToList();
+                if (merged is { } m2)
+                {
+                    var theirs = m2.Ranges.Select(r => new EditPlan.Piece(m2.Meeting.Id!.Value, r.Item1, r.Item2)).ToList();
+                    pieces = string.CompareOrdinal(m2.Meeting.CreatedAt, editMeeting.CreatedAt) < 0 ? [.. theirs, .. pieces] : [.. pieces, .. theirs];
+                }
+                _ = host.Controller.ApplyMeetingEdit(editId, new EditPlan(pieces), cut);
+                return Ok;
+            }
+            case "restoreedit" when args.Length > 1 && long.TryParse(args[1], out var restoreId): _ = host.Controller.RestoreMeetingEdit(restoreId); return Ok;
+            case "confirmrestoreedit" when args.Length > 1 && main is not null && long.TryParse(args[1], out var confirmRestore): _ = main.ConfirmRestoreEdit(confirmRestore); return Ok;
+            case "editage" when args.Length > 1 && long.TryParse(args[1], out var ageId):
+                host.Db.AgeEdit(ageId, args.Length > 2 ? Num(args[2]) ?? 31 : 31);
+                host.Controller.PurgeExpiredEdits();
+                return Ok;
+            case "openedit" when args.Length > 1 && main is not null && long.TryParse(args[1], out var openId): main.OpenEditor(openId); return Ok;
+            // editorstate start=<秒> end=<秒> del=<a-b,…> sel=<a-b|none> cut=<秒|none> playhead=<秒> zoom=<倍> merge=<會議 id|none> lines=<id,…> play apply cancel：
+            // 直接改打開的編輯畫面（同 Mac；apply、cancel 等於按「套用…」「取消」，會打開確認）
+            case "editorstate" when Views.MeetingEditView.Current is { } view:
+            {
+                var e = view.Editor;
+                static (double, double)? Range(string text) => text.Split('-') is { Length: 2 } p && Num(p[0]) is double a && Num(p[1]) is double b ? (Math.Min(a, b), Math.Max(a, b)) : null;
+                foreach (var arg in args[1..])
+                {
+                    var parts = arg.Split('=', 2);
+                    var value = parts.Length > 1 ? parts[1] : "";
+                    switch (parts[0])
+                    {
+                        case "start": e.DebugSetRange(Num(value), null); break;
+                        case "end": e.DebugSetRange(null, Num(value)); break;
+                        case "del": e.DebugSetDeleted(value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Range).OfType<(double, double)>()); break;
+                        case "sel": e.SetSelection(Range(value)); break;
+                        case "cut": e.DebugSetCut(Num(value)); break;
+                        case "playhead": e.Seek(Num(value) ?? 0); break;
+                        case "zoom": view.SetZoomForDebug(Num(value) ?? 1); break;
+                        case "lines": view.SelectLinesForDebug(value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(long.Parse)); break;
+                        case "merge":
+                            if (long.TryParse(value, out var mergeId) && host.Db.Meeting(mergeId) is { } mergeMeeting) view.MergeForDebug(mergeMeeting);
+                            else e.Unmerge();
+                            break;
+                        case "play": view.TogglePlayForDebug(); break;
+                        case "apply": _ = view.ConfirmApply(); break;
+                        case "cancel": _ = view.Cancel(); break;
+                    }
+                }
+                return Ok;
+            }
             case "purge" when args.Length > 1 && long.TryParse(args[1], out var purge): host.Controller.DeletePermanently(purge); return Ok;
             // export <notes|transcript|audio|package> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的]：同 Mac 的 shiyinctl export。
             // 在 UI 執行緒上跑（PDF 要建 WebView2），所以不等它：失敗時寫 <路徑>.error（同 Mac）
@@ -425,6 +492,29 @@ public static partial class ControlPipe
         ["pathEnv"] = tool.Environment?.GetValueOrDefault("PATH")?.Split(';').FirstOrDefault(),
     };
 
+    static double? Num(string text) => double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null;
+
+    /// <summary>打開的編輯畫面（同 Mac 的 editor）：把手、刪掉的段落、片段、試聽的時間；沒打開是空的物件</summary>
+    static JsonObject EditorState()
+    {
+        if (Views.MeetingEditView.Current is not { } view) return new JsonObject();
+        var e = view.Editor;
+        var plan = e.Plan;
+        var (time, simulated) = view.PreviewState;
+        return new JsonObject
+        {
+            ["meetingId"] = e.MeetingId, ["start"] = e.Start, ["end"] = e.End, ["total"] = e.Total, ["playhead"] = e.Playhead, ["zoom"] = e.Zoom,
+            ["deleted"] = new JsonArray([.. e.Deleted.Select(r => (JsonNode)new JsonArray(r.Lower, r.Upper))]),
+            ["selection"] = e.Selection is { } sel ? new JsonArray(sel.Lower, sel.Upper) : null, ["cut"] = e.Cut ?? -1, ["planCut"] = e.PlanCut ?? -1,
+            ["merged"] = e.MergedPart?.Id ?? -1, ["isPlaying"] = e.IsPlaying, ["hasChanges"] = e.HasChanges, ["planDuration"] = plan.Duration,
+            ["pieces"] = new JsonArray([.. plan.Pieces.Select(p => (JsonNode)new JsonArray(p.MeetingId, p.Start, p.End))]),
+            ["selectedLines"] = new JsonArray([.. e.SelectedLines.Order().Select(x => (JsonNode)x)]), ["lines"] = e.Lines.Count, ["removedLines"] = e.RemovedLines,
+            ["loadingPeaks"] = e.IsLoadingPeaks, ["peaks"] = new JsonArray([.. e.Peaks.Select(p => (JsonNode)new JsonArray(p.Key, p.Value.Length))]),
+            ["summary"] = e.Summary.Main + e.Summary.Detail,
+            ["preview"] = new JsonObject { ["time"] = time, ["simulated"] = simulated },
+        };
+    }
+
     static JsonNode State(AppHost host, MainWindow? main)
     {
         var r = host.Recorder;
@@ -452,7 +542,18 @@ public static partial class ControlPipe
             ["confirmPurge"] = new JsonArray([.. (main?.PurgeTargets ?? []).Select(x => (JsonNode)x)]),
             ["confirmEmptyTrash"] = main?.ConfirmingEmptyTrash,
             ["splitMeetingRequest"] = main?.SplitMeetingRequest ?? -1,
-            ["splittingMeeting"] = host.Controller.SplittingMeeting ?? -1,
+            ["splittingMeeting"] = host.Controller.ApplyingEdit ?? -1,
+            // 編輯會議（M§81.6，同 Mac）：正在套用的那場、打開的編輯畫面、選取中的會議的快照（剩幾天）、合併時選會議的彈窗、還原的確認
+            ["applyingEdit"] = host.Controller.ApplyingEdit ?? -1,
+            ["editingMeeting"] = main?.EditingMeeting ?? -1,
+            ["editor"] = EditorState(),
+            ["meetingEdit"] = main?.State.Selection is long editSelection && host.Db.EditRecord(editSelection) is { } record ? new JsonObject
+            {
+                ["audioFile"] = record.AudioFile, ["daysLeft"] = record.DaysLeft(), ["editedAt"] = record.EditedAt,
+                ["splitInto"] = new JsonArray([.. record.SplitIds.Select(x => (JsonNode)x)]), ["mergedFrom"] = new JsonArray([.. record.MergedIds.Select(x => (JsonNode)x)]),
+            } : new JsonObject(),
+            ["mergePickerOpen"] = Dialogs.MergePickerOpen,
+            ["confirmRestoreEdit"] = Dialogs.RestoringEdit ?? -1,
             ["tab"] = main?.State.Tab.ToString().ToLowerInvariant(),
             ["reviewExpanded"] = main?.State.ReviewExpanded,
             ["notesView"] = host.Settings.NotesView,

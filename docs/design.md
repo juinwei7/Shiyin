@@ -2851,7 +2851,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - 標準答案：`util/edit-plan.json`（片段 → 句子、標記、筆記、紀錄的時間，含跨切口的句子、刪光、合併的先後、切點在刪掉的段落裡）；`db/` 加編輯、合併、還原的結果（同 35～38 的分割）。
 - DEBUG：`editmeeting <會議 id> keep=<開始>-<結束>[,…] [split=<秒>] [merge=<會議 id>[:<開始>-<結束>,…]]`（不經過畫面和確認）、`restoreedit`、`confirmrestoreedit <會議 id>`、`editage <會議 id> <天數>`（把 `edited_at` 改早，接著清一次）、`openedit <會議 id>`（打開編輯畫面）、`editorstate start= end= del= sel= cut= playhead= zoom= merge= lines= play`（直接改打開的編輯畫面：背景的視窗第一下點擊只會叫出視窗，不會交給按鈕和手勢）、`mouseat dragq <x> <y> <視窗> <x2> <y2>`（拖曳手勢）、`keyat space`；啟動參數 `-debugMutePreview YES`（試聽不出聲）。`state` 加 `meetingEdit`（快照、剩幾天）、`editor`（打開的編輯畫面：把手、刪掉的段落、片段、試聽的時間）、`applyingEdit`、`editingMeeting`。
 - 逐字稿右鍵「從這裡分成兩場…」（§64）改走 `applyMeetingEdit`：片段是整場（會議長度、錄音長度、最後一句的結尾取大的）、切點是那一句的開始；整場保留時不動會議紀錄、不多存一版（`EditPlan.keepsWhole`）。
-- Windows：design-windows 加一節（ED2）：同一套 `EditPlan`、migration v15、還原；錄音用 Media Foundation 解碼、寫 m4a（同 Windows 的分割），WAV 照原本的格式。
+- Windows：design-windows §11.40：同一套 `EditPlan`、migration v15、還原；錄音用 Media Foundation 解碼、寫 m4a（同 Windows 的分割），WAV 照原本的格式；編輯畫面是主視窗上的覆蓋層（裡面還要開 ContentDialog）。
 
 ## 14. 決策紀錄
 

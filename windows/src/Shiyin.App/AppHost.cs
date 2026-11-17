@@ -147,7 +147,7 @@ public sealed class AppHost
             if (double.TryParse(Settings.String("idleRemindSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var remind) && remind > 0) Recorder.IdleRemindSeconds = remind;
             if (double.TryParse(Settings.String("idleStopSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var stop) && stop > 0) Recorder.IdleStopSeconds = stop;
         }
-        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage, Ocr = new WindowsOcr(), Splitter = new MediaFoundationSplitter() };
+        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage, Ocr = new WindowsOcr(), AudioEditor = new MediaFoundationAudioEditor() };
         Detector = new MeetingDetector(new ConsentStoreMicrophoneUsage(), Settings) { IsRecording = () => Recorder.IsRecording };
         // 會議結束的倒數（R95）：時間到時停止錄音，通知「會議結束，已自動停止錄音」（內文是會議標題，停止前先拿）
         MeetingEnd = new MeetingEndCountdown(() => Recorder.IsRecording ? Recorder.MeetingId : null, () => Detector.MeetingAppActive, id =>

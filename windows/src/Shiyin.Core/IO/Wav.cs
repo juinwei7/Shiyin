@@ -60,6 +60,9 @@ public sealed class WavReader : IDisposable
 
     public void Dispose() => file.Dispose();
 
+    /// <summary>接下來從第 frame 個音框讀（超出時讀不到東西）</summary>
+    public void Seek(long frame) => position = Math.Clamp(frame, 0, Frames) * BlockAlign;
+
     /// <summary>讀最多 frames 個音框，每個聲道一個陣列（-1～1）；讀完回傳空的</summary>
     public float[][] Read(int frames)
     {

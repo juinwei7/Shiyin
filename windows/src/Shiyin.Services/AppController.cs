@@ -75,15 +75,10 @@ public sealed partial class AppController
     public event Action<long>? Reveal;
     /// <summary>一次還原了好幾場（R88、M§62）：回到會議列表、選取那幾場</summary>
     public event Action<IReadOnlyList<long>>? RevealMany;
-    /// <summary>要換掉、刪掉這場會議的錄音檔（分割會議、永久刪除）：畫面先停止播放、放掉檔案。在呼叫的執行緒上同步觸發</summary>
+    /// <summary>要換掉、刪掉這場會議的錄音檔（編輯會議、分成兩場、還原、永久刪除）：畫面先停止播放、放掉檔案。在呼叫的執行緒上同步觸發</summary>
     public event Action<long>? ReleasingAudio;
-    /// <summary>錄音檔換了（分割會議，design-windows §11.23）：畫面重新載入播放器</summary>
+    /// <summary>錄音檔換了（編輯會議、分成兩場、還原，design-windows §11.40）：畫面重新載入播放器</summary>
     public event Action<long>? AudioReplaced;
-
-    /// <summary>分割會議的錄音（design-windows §11.23、D172）：Windows 是 Media Foundation（Platform）；沒給（測試）只切 WAV</summary>
-    public IAudioSplitter Splitter { get; init; } = new AudioSplit.WavOnly();
-    /// <summary>正在分割的會議（錄音切檔要幾秒，M§64）；同時只分一場</summary>
-    public long? SplittingMeeting { get; private set; }
 
     /// <summary>正在匯入的檔案數，側邊欄下方顯示（M§21.13、R20.4）</summary>
     public int ImportingCount => Volatile.Read(ref importing);
@@ -126,6 +121,7 @@ public sealed partial class AppController
         Db.SeedTemplates();
         CleanUpPreviousRun();
         PurgeExpiredTrash();
+        PurgeExpiredEdits();
         RecoverRecordings();
         Runner.Start();
         // 語言偵測模型很小（60 MB），開著自動偵測就先下載好
@@ -619,6 +615,8 @@ public sealed partial class AppController
                 Db.DeleteMeeting(meeting.Id!.Value);
                 if (Paths.HasAudio(meeting)) try { File.Delete(Paths.AudioPath(meeting)); } catch (IOException) { }
             }
+            // 編輯前的錄音（M§81.3）跟著快照刪掉
+            PurgeExpiredEdits();
         });
     }
 
@@ -734,78 +732,19 @@ public sealed partial class AppController
     }
 
     /// <summary>
-    /// 從某一句分成兩場（R90、M§64、design-windows §11.23）：先在背景切錄音，再一個交易搬資料庫，最後換檔案、排重新整理。
-    /// 分開後不能復原（D170）。選取留在原本那場
+    /// 從某一句分成兩場（R90、M§64）：走編輯會議的套用（整場保留、在這句切開，M§81.6），所以一樣能還原（D180）。
+    /// 片段是整場（會議長度、錄音長度、最後一句的結尾取大的）、切點是那一句的開始（四捨五入到 0.01 秒）。選取留在原本那場
     /// </summary>
     public async Task SplitMeeting(long id, long segmentId)
     {
         if (MeetingDetail.Load(Db, id) is not { } detail || detail.Segments.FirstOrDefault(s => s.Id == segmentId) is not { } segment) return;
-        var meeting = detail.Meeting;
-        if (Recorder.IsRecording && Recorder.MeetingId == id)
-        {
-            Error?.Invoke(L.T("這場會議還在錄音，請先停止錄音再分成兩場"));
-            return;
-        }
-        if (meeting.DeletedAt is not null)
-        {
-            Notice?.Invoke(L.T("垃圾桶裡的會議要先還原才能操作"));
-            return;
-        }
-        if (SplittingMeeting is not null || Db.HasActiveJobs(id) || Runner.RunningJob(id) is not null)
-        {
-            Notice?.Invoke(L.T("正在處理這場會議，完成後才能分成兩場"));
-            return;
-        }
-        // 切在那一句的開始，四捨五入到 0.01 秒（同 Mac 的 rounded()）
         var cut = Math.Round(segment.Start * 100, MidpointRounding.AwayFromZero) / 100;
         if (cut <= 0) return;
-        var title = L.F("%@（2）", meeting.DisplayTitle);
-        var audio = Paths.HasAudio(meeting) ? Paths.AudioPath(meeting) : null;
-        SplittingMeeting = id;
-        string? directory = null;
-        try
-        {
-            AudioSplit.Parts? parts = null;
-            if (audio is not null)
-            {
-                directory = Paths.MakeTempDirectory();
-                parts = await Splitter.Split(audio, cut, directory, CancellationToken.None);
-            }
-            // 錄音檔不見的會議只分逐字稿（R90.4）
-            if (Db.SplitMeeting(id, cut, title, parts?.Extension) is not { } created) return;
-            if (parts is not null && audio is not null)
-            {
-                ReleasingAudio?.Invoke(id);
-                await MoveWithRetry(parts.Tail, Paths.AudioPath(created));
-                var target = Db.Meeting(id) is { } updated ? Paths.AudioPath(updated) : audio;
-                await MoveWithRetry(parts.Head, target);
-                // 匯入的 mp3 這類格式切成 m4a：舊的檔案刪掉（D172）
-                if (!string.Equals(target, audio, StringComparison.OrdinalIgnoreCase)) try { File.Delete(audio); } catch (IOException) { }
-                AudioReplaced?.Invoke(id);
-            }
-            string message;
-            if (Settings.SummarizerReady)
-            {
-                Db.Enqueue(id, JobKind.Summarize);
-                Db.Enqueue(created.Id!.Value, JobKind.Summarize);
-                Runner.Wake();
-                message = L.F("已分成兩場：「%@」。兩場都在重新整理會議紀錄", created.DisplayTitle);
-            }
-            else message = L.F("已分成兩場：「%@」。兩場都要重新整理會議紀錄，設定好整理工具後按「重新整理」", created.DisplayTitle);
-            Changed?.Invoke(null);
-            Notice?.Invoke(message);
-        }
-        catch (Exception e) when (e is not OutOfMemoryException)
-        {
-            Log.Error($"split meeting failed: {e.GetType().Name}");
-            Error?.Invoke(L.F("分成兩場失敗：%@", e.Message));
-            Changed?.Invoke(null);
-        }
-        finally
-        {
-            SplittingMeeting = null;
-            if (directory is not null) try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
-        }
+        var meeting = detail.Meeting;
+        var audio = Paths.HasAudio(meeting) ? AudioSeconds(Paths.AudioPath(meeting)) ?? 0 : 0;
+        var end = new[] { meeting.DurationSeconds ?? 0, audio, Db.Segments(id).Select(s => s.End).DefaultIfEmpty(0).Max(),
+            Db.Segments(id, "live").Select(s => s.End).DefaultIfEmpty(0).Max() }.Max();
+        await ApplyMeetingEdit(id, new EditPlan([new EditPlan.Piece(id, 0, end)]), cut);
     }
 
     /// <summary>搬檔案、取代舊的；播放器剛放掉的檔案可能還被系統開著一下子：遇到 IOException 每 0.2 秒重試，最多 2 秒</summary>

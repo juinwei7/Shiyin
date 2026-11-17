@@ -40,7 +40,7 @@ public sealed partial class AppDatabase
     }
 
     /// <summary>原始檔放在 documents/&lt;id&gt;/ 底下，整個資料夾刪掉。DocumentsRoot 是 null 時不碰檔案</summary>
-    void RemoveDocumentFile(string file)
+    public void RemoveDocumentFile(string file)
     {
         if (DocumentsRoot is null) return;
         var folder = file.Split('/')[0];

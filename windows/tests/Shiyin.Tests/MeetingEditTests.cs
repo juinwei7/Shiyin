@@ -168,7 +168,7 @@ public sealed class MeetingEditTests : IDisposable
 
         await controller.SplitMeeting(id, cutSegment.Id!.Value);
         Assert.Empty(errors);
-        Assert.Null(controller.SplittingMeeting);
+        Assert.Null(controller.ApplyingEdit);
         var created = db.MeetingRows().Select(r => r.Meeting).Single(m => m.Id != id);
         var newId = created.Id!.Value;
 
@@ -233,7 +233,10 @@ public sealed class MeetingEditTests : IDisposable
 
         // 整理工具沒設定好：不排工作，說明怎麼重新整理
         Assert.Null(db.LatestJob(newId));
-        Assert.Equal("已分成兩場：「ami-stereo（2）」。兩場都要重新整理會議紀錄，設定好整理工具後按「重新整理」", notices[^1]);
+        Assert.Equal("已分成兩場：「ami-stereo（2）」。會議紀錄要重新整理，設定好整理工具後按「重新整理」", notices[^1]);
+        // 分成兩場也能還原（R107.8、D180）：原本的錄音搬到 audio\edits\、快照記著分出去的那場
+        Assert.True(File.Exists(Path.Combine(paths.EditsAudio, $"{id}.wav")));
+        Assert.Equal([newId], db.EditRecord(id)!.SplitIds);
     }
 
     /// <summary>整理工具設定好時兩場都排重新整理（R90.3）；錄音檔不見的會議只分逐字稿（R90.4）</summary>
@@ -247,7 +250,7 @@ public sealed class MeetingEditTests : IDisposable
         Assert.Equal("", db.Meeting(newId)!.AudioFile);
         Assert.Equal(JobKind.Summarize, db.LatestJob(id)!.Kind);
         Assert.Equal(JobKind.Summarize, db.LatestJob(newId)!.Kind);
-        Assert.Equal("已分成兩場：「ami-stereo（2）」。兩場都在重新整理會議紀錄", notices[^1]);
+        Assert.Equal("已分成兩場：「ami-stereo（2）」。會議紀錄正在重新整理", notices[^1]);
     }
 
     /// <summary>擋下來（R90.4）：垃圾桶裡、有工作在排、第一句；會議數不變</summary>
@@ -260,7 +263,7 @@ public sealed class MeetingEditTests : IDisposable
         await controller.SplitMeeting(id, segments[0].Id!.Value);   // 第一句：切點是 0，不分
         db.Enqueue(id, JobKind.Correct);
         await controller.SplitMeeting(id, segments[4].Id!.Value);
-        Assert.Equal("正在處理這場會議，完成後才能分成兩場", notices[^1]);
+        Assert.Equal("正在處理這場會議，完成後才能編輯", notices[^1]);
         db.Write(d => d.Execute("DELETE FROM jobs"));
         db.SetTrashed(id, true);
         await controller.SplitMeeting(id, segments[4].Id!.Value);
@@ -270,9 +273,9 @@ public sealed class MeetingEditTests : IDisposable
         Assert.Equal(8, db.Segments(id).Count);
     }
 
-    /// <summary>WAV 照位元組切：浮點、有 LIST 區段的檔案格式不變；切點不在錄音裡時是 null</summary>
+    /// <summary>一場的 WAV 照位元組接（M§81.2）：浮點、有 LIST 區段的檔案格式不變；片段超出錄音的部分當成沒有</summary>
     [Fact]
-    public async Task SplitWavKeepsFormat()
+    public async Task ComposeWavKeepsFormat()
     {
         // 32 位元浮點、單聲道、8 kHz，fmt 18 位元組（cbSize），data 前面有 LIST 區段
         var frames = 8000 * 3;
@@ -302,20 +305,322 @@ public sealed class MeetingEditTests : IDisposable
         var source = Path.Combine(home.Path, "float.wav");
         File.WriteAllBytes(source, file.ToArray());
 
+        // 0.5～1.25 秒、2～5 秒（錄音只到 3 秒）
         var dir = paths.MakeTempDirectory();
-        var parts = AudioSplit.SplitWav(source, 1.25, dir)!;
-        Assert.Equal("wav", parts.Extension);
-        using (var head = new WavReader(parts.Head)) Assert.Equal((1, 8000, 32, true, 10_000L), (head.Channels, head.SampleRate, head.BitsPerSample, head.IsFloat, head.Frames));
-        using (var tail = new WavReader(parts.Tail)) Assert.Equal(14_000L, tail.Frames);
-        Assert.True(data.AsSpan(0, 40_000).SequenceEqual(WavData(parts.Head)));
-        Assert.True(data.AsSpan(40_000).SequenceEqual(WavData(parts.Tail)));
+        var output = AudioEdit.ComposeWav(new EditPlan([new(1, 0.5, 1.25), new(1, 2, 5)]), source, dir);
+        using (var reader = new WavReader(output)) Assert.Equal((1, 8000, 32, true, 6_000L + 8_000L), (reader.Channels, reader.SampleRate, reader.BitsPerSample, reader.IsFloat, reader.Frames));
+        Assert.True(data.AsSpan(4_000 * 4, 6_000 * 4).ToArray().Concat(data.AsSpan(16_000 * 4).ToArray()).SequenceEqual(WavData(output)));
         // fmt 區段原樣（18 位元組）
-        Assert.True(File.ReadAllBytes(parts.Head).AsSpan(20, 18).SequenceEqual(fmt));
-        Assert.Null(AudioSplit.SplitWav(source, 0, dir));
-        Assert.Null(AudioSplit.SplitWav(source, 3, dir));
-        Assert.Null(AudioSplit.SplitWav(source, 5, dir));
-        // 只切 WAV 的版本：其他格式說不支援
-        await Assert.ThrowsAsync<IOException>(() => new AudioSplit.WavOnly().Split(Path.Combine(home.Path, "a.mp3"), 1, dir, default));
+        Assert.True(File.ReadAllBytes(output).AsSpan(20, 18).SequenceEqual(fmt));
+        // 只接 WAV 的版本：其他格式說不支援
+        await Assert.ThrowsAsync<IOException>(() => new AudioEdit.WavOnly().Compose(new EditPlan([new(1, 0, 1), new(2, 0, 1)]),
+            new Dictionary<long, string> { [1] = source, [2] = Path.Combine(home.Path, "a.mp3") }, dir, default));
+    }
+
+    // MARK: 編輯會議（R107、M§81、design-windows §11.40）
+
+    /// <summary>單聲道 16 位元的 WAV，每個取樣都不同（接好後逐個比對）</summary>
+    static void WriteMono(string path, double seconds, int rate = 16000, float offset = 0)
+    {
+        var count = (int)Math.Round(seconds * rate);
+        using var writer = new WavWriter(path, 1, rate);
+        writer.Write([Enumerable.Range(0, count).Select(i => offset + 0.4f * MathF.Sin(i * 0.0037f) + (i % 11) / 20000f).ToArray()], count);
+    }
+
+    /// <summary>資料表的內容（不含 id、更新時間：還原時句子用新的 id 放回，同 Mac）</summary>
+    string Snapshot(long id)
+    {
+        var m = db.Meeting(id)!;
+        var lines = new List<string> { $"{m.Title}|{m.DurationSeconds}|{m.AudioFile}|{m.UserNotes}|{m.Notes}|{m.NotesBy}|{m.NotesDraft}|{m.CreatedAt}|{m.MeetingDate}|{m.Participants}|{m.DeletedAt is null}" };
+        foreach (var kind in new[] { "final", "live" })
+            lines.AddRange(db.Segments(id, kind).Select(s => $"{s.Kind}|{s.Seq}|{s.Start}|{s.End}|{s.Text}|{s.Speaker}|{s.LowConfidence}|{s.Channel}|{s.SpeakerManual}"));
+        lines.AddRange(db.Bookmarks(id).Select(b => $"b|{b.Time}|{b.Label}"));
+        lines.AddRange(db.Speakers(id).Select(s => $"s|{s.Idx}|{s.Name}|{s.NameSource}|{s.PersonId}|{Convert.ToBase64String(s.Embedding ?? [])}|{s.SpeechSeconds}|{s.AudioSource}"));
+        lines.AddRange(db.Corrections(id).Select(c => $"c|{db.Segments([c.SegmentId]).Single().Text}|{c.Original}|{c.Suggestion}|{c.Status}"));
+        lines.AddRange(db.Documents(id).Select(d => $"d|{d.Name}|{d.File}"));
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>59 秒的會議（同 Mac 驗證的樣子）：五句、兩位說話者、標記重點 10／30／50、我的筆記有時間點、會議紀錄有時間點</summary>
+    long SeedTrimMeeting()
+    {
+        var meeting = db.InsertMeeting(new Meeting
+        {
+            Title = "包裝會議", SourceFilename = "a.wav", MeetingDate = "2026-11-16", CreatedAt = "2026-11-16T02:00:00Z", DurationSeconds = 59,
+            Language = "zh", UserNotes = "[00:08] 包裝\n[00:20] 預算\n沒有時間的一行\n[00:50] 結論",
+        }, "wav");
+        var id = meeting.Id!.Value;
+        WriteMono(paths.AudioPath(meeting), 59);
+        (double, double, int, string)[] lines = [(0, 6.26, 1, "開場"), (14.98, 20.78, 2, "包裝"), (20.78, 24.96, 1, "閒聊"), (29.6, 34, 2, "預算"), (54, 58, 1, "散會")];
+        db.SaveTranscript(id, lines.Select((l, i) => new Segment { MeetingId = id, Seq = i, Start = l.Item1, End = l.Item2, Speaker = l.Item3, Text = l.Item4 }).ToList(),
+            59, 2, new Dictionary<int, SpeakerVoice> { [1] = new(OneHot(1), 20, "mix"), [2] = new(OneHot(2), 10, "mix") });
+        db.RenameSpeaker(id, 2, "小美");
+        foreach (var t in new[] { 10.0, 30, 50 }) db.AddBookmark(id, t);
+        db.SaveNotes(id, new MeetingNotes { Title = "包裝會議", Summary = [new("包裝定案", "00:15")], Topics = [new("預算", "00:25", [new("先抓五萬", "00:31")])] },
+            "claude", "整理", NotesSource.Generated);
+        db.SaveCorrections(id, [new Correction { MeetingId = id, SegmentId = db.Segments(id)[3].Id!.Value, Original = "預算", Suggestion = "預算表", Reason = "r" }]);
+        return id;
+    }
+
+    /// <summary>裁掉開頭、結尾，刪掉中間一段（R107.3、R107.4）：時間、錄音、標記、筆記、會議紀錄都跟著移；還原後一字不差（R107.8）</summary>
+    [Fact]
+    public async Task TrimDeleteAndRestore()
+    {
+        var controller = Controller();
+        var id = SeedTrimMeeting();
+        var before = Snapshot(id);
+        var audioBefore = File.ReadAllBytes(paths.AudioPath(db.Meeting(id)!));
+        var released = new List<long>();
+        controller.ReleasingAudio += released.Add;
+
+        await controller.ApplyMeetingEdit(id, new EditPlan([new(id, 2, 20), new(id, 30, 55)]), null);
+        Assert.Empty(errors);
+        Assert.Null(controller.ApplyingEdit);
+        Assert.Equal("已編輯「包裝會議」。會議紀錄要重新整理，設定好整理工具後按「重新整理」", notices[^1]);
+        var m = db.Meeting(id)!;
+        Assert.Equal((43, $"{id}.wav", "2026-11-16T02:00:02Z"), (m.DurationSeconds, m.AudioFile, m.CreatedAt));
+        // 句子看中點：閒聊（中點 22.87）、散會（56）刪掉，其他夾在片段裡再對應
+        var segments = db.Segments(id);
+        Assert.Equal(["開場", "包裝", "預算"], segments.Select(s => s.Text));
+        Assert.Equal([(0.0, 4.26), (12.98, 18.0), (18.0, 22.0)], segments.Select(s => (Math.Round(s.Start, 6), Math.Round(s.End, 6))));
+        Assert.Equal([0, 1, 2], segments.Select(s => s.Seq));
+        Assert.Equal([8.0, 18, 38], db.Bookmarks(id).Select(b => Math.Round(b.Time, 6)));
+        Assert.Equal("[00:06] 包裝\n[00:18] 預算\n沒有時間的一行\n[00:38] 結論", m.UserNotes);
+        // 會議紀錄的時間點移到切口，舊的存成「編輯會議前」
+        Assert.Equal(("00:13", "00:18", "00:19"), (m.DecodedNotes!.Summary[0].Time, m.DecodedNotes.Topics[0].Start, m.DecodedNotes.Topics[0].Points[0].Time));
+        Assert.Equal("編輯會議前", db.Read(d => d.Scalar("SELECT reason FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id)));
+        Assert.Single(db.Corrections(id));
+        Assert.DoesNotContain(db.Search("閒聊"), h => h.Kind == SearchKind.Segment);
+        // 錄音：2～20、30～55 秒的取樣接起來（16 位元單聲道，格式不變）；原本的搬到 audio\edits\
+        var source = WavData(Path.Combine(paths.EditsAudio, $"{id}.wav"));
+        var edited = WavData(paths.AudioPath(m));
+        Assert.True(source.AsSpan(32_000 * 2, 288_000 * 2).ToArray().Concat(source.AsSpan(480_000 * 2, 400_000 * 2).ToArray()).SequenceEqual(edited));
+        Assert.Equal(audioBefore, File.ReadAllBytes(Path.Combine(paths.EditsAudio, $"{id}.wav")));
+        Assert.Equal([id], released);
+        var record = db.EditRecord(id)!;
+        Assert.Equal(("edits/" + id + ".wav", 30), (record.AudioFile, record.DaysLeft()));
+
+        // 再編輯一次（再裁 1 秒）：快照不變、舊的錄音直接刪
+        await controller.ApplyMeetingEdit(id, new EditPlan([new(id, 1, 43)]), null);
+        Assert.Equal(42, db.Meeting(id)!.DurationSeconds);
+        Assert.Equal(record.Snapshot, db.EditRecord(id)!.Snapshot);
+        Assert.Equal(audioBefore, File.ReadAllBytes(Path.Combine(paths.EditsAudio, $"{id}.wav")));
+
+        // 還原：說明寫原本多長；句子、欄位、標記、說話者、校正建議、錄音跟原本一字不差
+        Assert.True(controller.RequestRestoreEdit(id));
+        Assert.Equal("・會議會回到編輯前的樣子（原本 00:59），錄音、逐字稿、標記重點、會議紀錄都換回來。\n・編輯之後對逐字稿、說話者、筆記的修改會不見。",
+            controller.RestoreEditMessage(id));
+        await controller.RestoreMeetingEdit(id);
+        Assert.Empty(errors);
+        Assert.Equal("已還原成編輯前的樣子", notices[^1]);
+        Assert.Equal(before, Snapshot(id));
+        Assert.Equal(audioBefore, File.ReadAllBytes(paths.AudioPath(db.Meeting(id)!)));
+        Assert.Null(db.EditRecord(id));
+        Assert.Empty(Directory.GetFiles(paths.EditsAudio));
+        Assert.Contains(db.Search("閒聊"), h => h.Kind == SearchKind.Segment && h.MeetingId == id);
+        Assert.Equal("還原編輯前", db.Read(d => d.Scalar("SELECT reason FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id)));
+        Assert.False(controller.RequestRestoreEdit(id));
+        Assert.Equal("這場會議沒有編輯過。編輯會議後 30 天內可以從這裡還原。", notices[^1]);
+    }
+
+    /// <summary>
+    /// 合併兩場（R107.6、M§81.4）：先開的那場在前；另一場的句子、標記、參考文件複製過來，說話者照名字、聲紋對，那場移到垃圾桶；
+    /// 錄音取樣率取高的、聲道取多的；還原後兩場都跟原本一樣、那場拿出垃圾桶
+    /// </summary>
+    [Fact]
+    public async Task MergeAndRestore()
+    {
+        var controller = Controller("anthropic");
+        var id = SeedTrimMeeting();
+        // 早一點開的另一場：8 kHz 單聲道 37 秒，「小美」同名、說話者 1 的聲紋對不上
+        var other = db.InsertMeeting(new Meeting
+        {
+            Title = "包裝會議（前半）", SourceFilename = "b.wav", MeetingDate = "2026-11-16", CreatedAt = "2026-11-16T01:00:00Z", DurationSeconds = 37,
+            Language = "zh", UserNotes = "[00:10] 前半的筆記", Participants = "阿傑",
+        }, "wav");
+        var otherId = other.Id!.Value;
+        WriteMono(paths.AudioPath(other), 37, 8000, 0.1f);
+        db.SaveTranscript(otherId, [
+            new Segment { MeetingId = otherId, Seq = 0, Start = 0, End = 10, Speaker = 1, Text = "前半一" },
+            new Segment { MeetingId = otherId, Seq = 1, Start = 30, End = 36.88, Speaker = 2, Text = "前半二" },
+        ], 37, 2, new Dictionary<int, SpeakerVoice> { [1] = new(OneHot(7), 10, "mix"), [2] = new(OneHot(8), 6.88, "mix") });
+        db.RenameSpeaker(otherId, 2, "小美");
+        db.AddBookmark(otherId, 12, "前半");
+        var document = db.AddDocument(otherId, "議程.txt", DocumentKind.Text, ["議程"], false);
+        Directory.CreateDirectory(Path.GetDirectoryName(paths.DocumentPath(document))!);
+        File.WriteAllText(paths.DocumentPath(document), "議程");
+        var otherBefore = Snapshot(otherId);
+        var before = Snapshot(id);
+
+        await controller.ApplyMeetingEdit(id, new EditPlan([new(otherId, 0, 37), new(id, 0, 59)]), null);
+        Assert.Empty(errors);
+        Assert.Equal("已合併「包裝會議（前半）」，那場移到垃圾桶。會議紀錄正在重新整理", notices[^1]);
+        var m = db.Meeting(id)!;
+        Assert.Equal((96, "2026-11-16T01:00:00Z", "阿傑"), (m.DurationSeconds, m.CreatedAt, m.Participants));
+        Assert.Equal("[00:10] 前半的筆記\n\n[00:45] 包裝\n[00:57] 預算\n沒有時間的一行\n[01:27] 結論", m.UserNotes);
+        Assert.Equal(["前半一", "前半二", "開場", "包裝", "閒聊", "預算", "散會"], db.Segments(id).Select(s => s.Text));
+        // 「小美」同名對到這場的 2；前半的說話者 1 聲紋對不上，接在後面變成說話者 3
+        Assert.Equal([3, 2, 1, 2, 1, 2, 1], db.Segments(id).Select(s => s.Speaker ?? 0));
+        Assert.Equal(["說話者 1", "小美", "說話者 3"], db.Speakers(id).Select(s => s.Name));
+        Assert.Equal([12.0, 47, 67, 87], db.Bookmarks(id).Select(b => Math.Round(b.Time, 6)));
+        var copied = db.Documents(id).Single();
+        Assert.Equal("議程", File.ReadAllText(paths.DocumentPath(copied)));
+        Assert.NotNull(db.Meeting(otherId)!.DeletedAt);
+        Assert.Equal(otherBefore.Replace("|True", "|False"), Snapshot(otherId).Replace("|True", "|False"));
+        Assert.Equal(JobKind.Summarize, db.LatestJob(id)!.Kind);
+        // 錄音：16 kHz（取高的）單聲道 16 位元，長度 96 秒
+        using (var reader = new WavReader(paths.AudioPath(m))) Assert.Equal((1, 16000, 96L * 16000), (reader.Channels, reader.SampleRate, reader.Frames));
+        Assert.Equal([otherId], db.EditRecord(id)!.MergedIds);
+
+        Assert.Contains("合併進來的「包裝會議（前半）」會從垃圾桶還原。", controller.RestoreEditMessage(id));
+        // 重新整理還在排隊時不能還原（同編輯）
+        Assert.False(controller.RequestRestoreEdit(id));
+        Assert.Equal("正在處理這場會議，完成後才能編輯", notices[^1]);
+        db.Write(d => d.Execute("DELETE FROM jobs"));
+        await controller.RestoreMeetingEdit(id);
+        Assert.Equal("已還原成編輯前的樣子，合併進來的會議已從垃圾桶拿出來", notices[^1]);
+        Assert.Equal(before, Snapshot(id));
+        Assert.Equal(otherBefore, Snapshot(otherId));
+    }
+
+    /// <summary>裁切加分成兩場（R107.5）：5～80、100～170 秒保留，在新時間軸的 50 秒切開 → 50＋95 秒；還原後分出去的那場移到垃圾桶</summary>
+    [Fact]
+    public async Task TrimSplitAndRestore()
+    {
+        var controller = Controller();
+        var id = SeedSplitMeeting();
+        var before = Snapshot(id);
+        var plan = new EditPlan([new(id, 5, 80), new(id, 100, 170)]);
+        await controller.ApplyMeetingEdit(id, plan, 50);
+        Assert.Empty(errors);
+        var created = db.MeetingRows().Select(r => r.Meeting).Single(r => r.Id != id);
+        Assert.Equal((50, 95), (db.Meeting(id)!.DurationSeconds, created.DurationSeconds));
+        using (var reader = new WavReader(paths.AudioPath(db.Meeting(id)!))) Assert.Equal(50L * 16000, reader.Frames);
+        using (var reader = new WavReader(paths.AudioPath(created))) Assert.Equal(95L * 16000, reader.Frames);
+        Assert.Equal([created.Id!.Value], db.EditRecord(id)!.SplitIds);
+        Assert.Contains($"分出去的「{created.DisplayTitle}」會移到垃圾桶。", controller.RestoreEditMessage(id));
+
+        await controller.RestoreMeetingEdit(id);
+        Assert.Equal("已還原成編輯前的樣子，分出去的會議移到垃圾桶", notices[^1]);
+        Assert.Equal(before, Snapshot(id));
+        Assert.NotNull(db.Meeting(created.Id!.Value)!.DeletedAt);
+    }
+
+    /// <summary>最後一次編輯 30 天後清掉快照和編輯前的錄音（R107.8）；沒人用的檔（會議永久刪除了）一起刪</summary>
+    [Fact]
+    public async Task PurgeExpiredEdits()
+    {
+        var controller = Controller();
+        var id = SeedTrimMeeting();
+        await controller.ApplyMeetingEdit(id, new EditPlan([new(id, 2, 50)]), null);
+        var kept = Path.Combine(paths.EditsAudio, $"{id}.wav");
+        var orphan = Path.Combine(paths.EditsAudio, "999.m4a");
+        File.WriteAllText(orphan, "x");
+        db.AgeEdit(id, 29);
+        controller.PurgeExpiredEdits();
+        Assert.NotNull(db.EditRecord(id));
+        Assert.Equal(1, db.EditRecord(id)!.DaysLeft());
+        Assert.True(File.Exists(kept));
+        Assert.False(File.Exists(orphan));
+        db.AgeEdit(id, 31);
+        controller.PurgeExpiredEdits();
+        Assert.Null(db.EditRecord(id));
+        Assert.False(File.Exists(kept));
+    }
+
+    /// <summary>不能編輯的時候說原因（R107.1）：垃圾桶裡、有工作在排</summary>
+    [Fact]
+    public void EditProblems()
+    {
+        var controller = Controller();
+        var id = SeedTrimMeeting();
+        Assert.True(controller.RequestEditMeeting(id));
+        db.Enqueue(id, JobKind.Correct);
+        Assert.False(controller.RequestEditMeeting(id));
+        Assert.Equal("正在處理這場會議，完成後才能編輯", notices[^1]);
+        db.Write(d => d.Execute("DELETE FROM jobs"));
+        db.SetTrashed(id, true);
+        Assert.False(controller.RequestEditMeeting(id));
+        Assert.Equal("垃圾桶裡的會議要先還原才能操作", notices[^1]);
+        Assert.Equal("", controller.EditProblem(12345));
+    }
+
+    /// <summary>照片段依序讀（M§81.2）：換取樣率、補安靜（沒有錄音、錄音比片段短），長度是每段 round(長度 × 取樣率) 的和；可以跳到中間</summary>
+    [Fact]
+    public void PlanStreamResamplesAndFillsSilence()
+    {
+        var a = Path.Combine(home.Path, "a.wav");
+        WriteMono(a, 2, 8000, 0.5f);
+        using var reader = new AudioEdit.WavPcmReader(a);
+        var plan = new EditPlan([new(1, 0, 1), new(2, 0, 0.5), new(1, 1.5, 2.5)]);
+        using var stream = new PlanPcmStream(plan, id => id == 1 ? reader : null, 16000, 2);
+        Assert.Equal(16000 + 8000 + 16000, stream.TotalFrames);
+        var all = new List<float>();
+        var buffer = new float[3000 * 2];
+        int n;
+        while ((n = stream.Read(buffer, 3000)) > 0) all.AddRange(buffer[..(n * 2)]);
+        Assert.Equal(40000 * 2, all.Count);
+        // 第一段有聲音、兩個聲道一樣；第二段（沒有錄音）安靜；第三段後半（錄音只到 2 秒）安靜
+        Assert.True(all.Skip(2000 * 2).Take(2000).All(v => v > 0.05f));
+        Assert.Equal(all[4000], all[4001]);
+        Assert.True(all.Skip(16000 * 2).Take(8000 * 2).All(v => v == 0));
+        Assert.True(all.Skip((24000 + 9000) * 2).All(v => v == 0));
+        Assert.Contains(all.Skip(24000 * 2).Take(6000 * 2), v => v > 0.05f);
+        stream.Seek(1.25);
+        Assert.Equal(1.25, stream.Position, 6);
+        Assert.Equal(1000, stream.Read(buffer, 1000));
+        Assert.True(buffer.Take(2000).All(v => v == 0));
+    }
+
+    /// <summary>編輯畫面的狀態（M§81.5）：把手、刪掉的段落、切點換成片段；合併、取消合併；摘要和套用前的說明</summary>
+    [Fact]
+    public void EditorState()
+    {
+        var controller = Controller();
+        var id = SeedTrimMeeting();
+        var editor = new MeetingEditor(controller, id);
+        editor.Load();
+        Assert.Equal((59.0, 0.0, 59.0, false), (editor.Total, editor.Start, editor.End, editor.HasChanges));
+        Assert.Equal("包裝會議・原本 00:59", editor.Subtitle);
+        Assert.Equal(("剩 00:59", "（拖兩端的把手裁切，或在波形上選一段刪掉）"), editor.Summary);
+        Assert.Equal([("說話者 1", 1), ("小美", 2)], editor.Legend());
+        editor.SetStart(2);
+        editor.SetEnd(55);
+        editor.SetSelection((30, 20));
+        editor.DeleteSelection();
+        Assert.Null(editor.Selection);
+        Assert.Equal([(id, 2.0, 20.0), (id, 30.0, 55.0)], editor.Plan.Pieces.Select(p => (p.MeetingId, p.Start, p.End)));
+        Assert.Equal(("剩 00:43", "（刪掉 00:16、2 句、0 個標記重點）".Replace("、0 個標記重點", "")), editor.Summary);
+        Assert.Equal(2, editor.RemovedLines);
+        Assert.Equal(
+            "・會議從 00:59 變成 00:43：裁掉開頭 00:02，結尾 00:04，刪掉中間 1 段（00:10）。\n・刪掉 2 句逐字稿；我的筆記都留著。\n" +
+            "・會議紀錄要重新整理：設定好整理工具後按「重新整理」。\n・30 天內可以從「更多」還原成編輯前的樣子。", editor.ApplyMessage(false));
+        // 切點：不能在刪掉的段落裡、不能太靠近把手
+        editor.CutAt(25);
+        Assert.Null(editor.Cut);
+        editor.CutAt(40);
+        Assert.Equal(28.0, editor.PlanCut);
+        Assert.Equal(("分成兩場：00:28 和 00:15", "（刪掉 00:16、2 句）"), editor.Summary);
+        // 逐字稿的句子：刪掉、恢復
+        var line = editor.Lines.Single(l => l.Text == "開場");
+        editor.DeleteLines([line]);
+        Assert.False(editor.Kept(line.Mid));
+        editor.RestoreLines([line]);
+        Assert.True(editor.Kept(line.Mid));
+        editor.ToggleCut();
+        Assert.Null(editor.Cut);
+        // 合併：先開的那場在前，這場的裁切變成刪掉的段落；取消合併回到把手
+        var other = db.InsertMeeting(new Meeting { Title = "前一場", SourceFilename = "b.wav", MeetingDate = "2026-11-15", CreatedAt = "2026-11-15T01:00:00Z", DurationSeconds = 30 }, null);
+        Assert.Equal([other.Id!.Value], controller.MergeCandidates(id).Near.Select(r => r.Id));
+        editor.Merge(other);
+        Assert.Equal((89.0, 0.0, 89.0), (editor.Total, editor.Start, editor.End));
+        Assert.Equal([(30.0, 32.0), (50.0, 60.0), (85.0, 89.0)], editor.Deleted);
+        Assert.Equal([(other.Id!.Value, 0.0, 30.0), (id, 2.0, 20.0), (id, 30.0, 55.0)], editor.Plan.Pieces.Select(p => (p.MeetingId, p.Start, p.End)));
+        Assert.Equal("包裝會議・原本 00:59（合併「前一場」00:30）", editor.Subtitle);
+        Assert.Equal(("合併後 01:13", "（這場 00:43＋「前一場」00:30）"), editor.Summary);
+        editor.Unmerge();
+        Assert.Equal((59.0, 2.0, 55.0), (editor.Total, editor.Start, editor.End));
+        Assert.Equal([(20.0, 30.0)], editor.Deleted);
     }
 
     // MARK: 刪除一句（R89、M§63、D171）
