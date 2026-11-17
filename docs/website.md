@@ -99,7 +99,7 @@
 │   開會時，邊錄邊看逐字稿（兩段說明）＋錄音中截圖               │
 │   停止後，在 Mac 上正式轉錄（兩段說明）＋逐字稿截圖            │
 │   整理成會議紀錄，不確定的地方會問你＋心智圖截圖（4.6）        │
-│   會議多了，用資料夾整理＋側欄資料夾和右鍵選單的截圖（4.9）     │
+│   會議多了，用資料夾整理＋側欄資料夾和右鍵選單的截圖（5.0）     │
 │   錄音不會離開你的 Mac（留在 Mac／送到整理工具 兩欄清單；      │
 │     整理工具、匿名使用統計、企業伺服器各一段）                 │
 │   下載（版本、系統、空間、費用；DMG 按鈕；第一次打開 1-2-3；    │
@@ -425,7 +425,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 | 最近更新 | 最新的 Windows 版（版本說明從 GitHub Release 讀，§7） |
 | 常見問題 | 要付費嗎、沒有 NVIDIA 顯示卡可以用嗎（AMD 也會用顯示卡，其他用 CPU）、為什麼 Windows 會擋下來、Mac 和 Windows 的會議可以互通嗎（.shiyin 封包，聲紋不互通）、需要網路嗎、支援 Windows 10 嗎 |
 
-- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），五張 summary、recording、transcript、mindmap、organize（4.9）。虛擬機調成 150%（桌面 1728×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。心智圖（mindmap）例外：Windows 的側欄不能收，960 寬放不下整張圖，改在 125% 拍 1340×780 的視窗，裁成 1656×962（`pages.mjs` 的 `shot()` 帶 `size`）。
+- 截圖（Windows 版真的畫面，深色模式，跟 Mac 的截圖同一份示範資料）：`docs/images/windows/`、`docs/images/en/windows/`（日文版用英文的），五張 summary、recording、transcript、mindmap、organize（5.0）。虛擬機調成 150%（桌面 1728×1044，§16.4），視窗 960×640，截出來 1422×951，裁掉四周 2 px 的視窗邊框，成為 1418×946，四角照 Windows 11 的圓角（8 DIP）改成透明。AVIF 1418、960 寬兩種。**整個視窗要在工作列上面**（`snapwin.ps1 place` 的 `-Top`，預設 6）：壓到工作列時底部會被蓋住，裁掉之後播放鍵像被切掉。**長寬要是偶數（960 寬的版本也是，1418×946 → 960×640）**：sips 轉奇數尺寸的圖會產生壞掉的 AVIF（grid 不對），Chrome 看得到，Safari 和用 libavif 的瀏覽器一片空白。`make-images.sh` 遇到奇數尺寸會停下來。心智圖（mindmap）例外：Windows 的側欄不能收，960 寬放不下整張圖，改在 125% 拍 1340×780 的視窗，裁成 1656×962（`pages.mjs` 的 `shot()` 帶 `size`）。
 - 結構化資料：`SoftwareApplication`（operatingSystem 是 Windows 11、下載網址是 x64 的安裝檔、截圖是 Windows 的）、`FAQPage`。sitemap 加這三頁（lastmod 用 Windows 版的發布日期）。
 - 分享預覽圖全站共用一張（`og.png`、`og-en.png`、`og-ja.png`，`site/og.html` 截的）：標題「Mac 和 Windows 的會議紀錄 app」（英文 A meeting-notes app for Mac and Windows、日文 Mac と Windows の議事録アプリ），右邊 Mac 的截圖在後面露出紅黃綠、Windows 的截圖在前面露出視窗按鈕。首頁的標題、說明照樣以 Mac 為主（搜尋只看那些），預覽圖是貼到 Threads、LINE 時給人看的，兩個平台都要看得到。換圖時 `content.mjs` 的網址把 `?v=` 加一：Threads、Facebook 依圖片網址快取，同一個網址不會重抓。
 
@@ -452,10 +452,10 @@ Windows 使用者最容易卡住的是第一次執行時的 SmartScreen（拾音
 - 心智圖（4.6）：`notesview mindmap`，`dpi.ps1 125`、`snapwin.ps1 place … -Width 1340 -Height 780`（125% 時視窗最高約 780），中文 `select 3`、英文 `select 2`，`seek 100`；點「心智圖」（英文 Mind map）讓焦點離開搜尋框，`ps/wheel.ps1 1620 450 -6 1722 600` 捲到底（整張圖露出來，滑鼠移到視窗外，捲軸和提示框才會收起來），截完 `dpi.ps1 150` 或 100。裁切：`python3 scripts/windows/vm/crop-shot.py <截圖> <輸出> 1.25`（150% 的不用給縮放；會自動湊成偶數、四角透明）。拍完把兩個示範資料夾的 `notesView` 改回 list。
 - 解析度（2026-11-17 起）：UTM 的視窗變小後虛擬機只有 1280×908，150% 放不下，拍之前 `display.ps1 set 1920 1200`（第一次有時會被釘回 908 高，再設一次並確認）；150% 時工作區底在 1128、125% 在 1140。拍完改回：先 `set 1280 1024` 才會變回 1280×908（直接 `set 1280 908` 回 -1）。（以前桌面是 1728×1044，`-Top 6` 整個在工作列上面。）OneDrive 的「開啟 Windows 備份」提示框會蓋在右下角、被截進去：`Stop-Process -Name OneDrive`，並把 `HKCU\…\Run` 的 OneDrive 拿掉（2026-10-25 已拿掉）。
 - Mac 的截圖（`docs/images/`、`docs/images/en/`，1920×1344）：DEBUG 版用示範資料的複本啟動（中文的要把 12、14 兩場連同 segments、speakers 等有 meeting_id 的資料表一起刪掉，不然 FOREIGN KEY 開不了資料庫），`shiyinctl windowsize 960 672` 把視窗調成截圖的大小（視窗在別的桌面時 AX 改不了），`screencapture -x -o -l <視窗編號>` 在別的桌面也截得到（視窗編號用 CGWindowList 依 pid 找，標題是會議名稱）；系統要先在深色模式。紀錄：`select 2`、`tab summary`、`seek 27.5`（英文 125）；逐字稿：`select 3`（英文 1）、`tab transcript`、`seek 24.5`（英文 23.5，讓 00:24／00:22 那一段反白）。接了滑鼠時系統會一直顯示捲軸：啟動參數加 `-AppleShowScrollBars WhenScrolling`（只對這次執行）。心智圖（4.6）：`notesview mindmap`，`togglesidebar hide` 收起側欄（`togglesidebar show` 打開；**不要用 `clickat` 點工具列**，座標偏一點就按到錄音，曾經真的開始錄麥克風），中文 `select 3`、英文 `select 2`，`livescroll 1` 捲到底讓整張圖露出來，`seek 100`；拍完 `notesview list`、打開側欄，共用設定的視窗大小、側欄照拍之前的還原。
-- 4.9 的截圖（資料夾）：示範資料用 `ShiyinDemo/home`、`ShiyinDemoEN/home` 的複本（`…/shoot`），套 `scripts/dev/site-shots/organize-zh.sql`、`organize-en.sql`：原本三場分進資料夾，另外加七場（四場在資料夾、三場在「其他會議」），加的那幾場清掉待確認。紀錄、逐字稿那場所在的資料夾展開、那場被選到（側欄有資料夾和「其他會議」）。啟動後先 `closewindow onboarding`、`windowlevel main desktop`、`floatothers off`、`appearance dark`、`windowsize 960 672`；錄音的截圖用 `fakemic "MacBook Pro Microphone" 0` 把麥克風名稱換成一般的（只在記憶體）。
+- 5.0 的截圖（資料夾）：示範資料用 `ShiyinDemo/home`、`ShiyinDemoEN/home` 的複本（`…/shoot`），套 `scripts/dev/site-shots/organize-zh.sql`、`organize-en.sql`：原本三場分進資料夾，另外加七場（四場在資料夾、三場在「其他會議」），加的那幾場清掉待確認。紀錄、逐字稿那場所在的資料夾展開、那場被選到（側欄有資料夾和「其他會議」）。啟動後先 `closewindow onboarding`、`windowlevel main desktop`、`floatothers off`、`appearance dark`、`windowsize 960 672`；錄音的截圖用 `fakemic "MacBook Pro Microphone" 0` 把麥克風名稱換成一般的（只在記憶體）。
 - organize（資料夾）：展開「Lumio 新品上市」（英文 Remote control project），選紀錄那場、`seek 27.5`（英文 125）；在「其他會議」最上面那場 `mouseat rightq <x> <y> <主視窗> app` 打開右鍵選單，`keyat down`、`down`、`right`、`down`、`down` 打開「移到資料夾」的子選單、反白其中一個資料夾。選單是另一個視窗（`state` 的 `floatingMenuWindow`），主視窗、選單各截一張，照 CGWindowList 的位置（點 ×2）把選單疊到主視窗上；存成 RGBA，四角保持透明。截完 `floatclose`。
 - 截完檢查每張的透明度：視窗剛出現、切換時有淡入，太早截會截到半透明（幾乎全白）的畫面（中間的像素 alpha 要是 255）。
-- 4.9 的 Windows 截圖（跟上面不一樣的地方）：
+- 5.0 的 Windows 截圖（跟上面不一樣的地方）：
   - 資料：Mac 拍攝用的複本（`ShiyinDemo/shoot`、`ShiyinDemoEN/shoot`）`sqlite3 .backup` 加 `audio/` 放進 `C:\ShiyinShoot`、`C:\ShiyinShootEN`（模型硬連結），Windows 版直接開得起來；拍完刪掉。
   - 深色：虛擬機平常是淺色，開 app 前 `ps/theme.ps1 dark`（`AppsUseLightTheme`、`SystemUsesLightTheme` 設 0、廣播 `ImmersiveColorSet`），拍完 `light`。
   - 標題列要是使用中的樣子：點擊和 `snapwin snap` 要在同一次 `insession` 裡跑（下一個 PowerShell 一開就搶走前景，標題列變灰）；捲動之後點標題列空白處（150% 點 (700,25)、125% 點 (700,20)），等約 6 秒讓捲軸收起來再截。
