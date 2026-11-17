@@ -524,6 +524,33 @@ enum GoldenDump {
     // MARK: 小工具
 
     private static func utilities(_ f: Fixtures, _ w: inout Writer) {
+        // 編輯會議的片段（design §81.1）：時間對應、句子留不留、試聽的反查、分成兩場、我的筆記
+        w.json("util/edit-plan.json", (f["editPlanCases"] as? [Object] ?? []).map { c -> Object in
+            let plan = EditPlan(pieces: (c["pieces"] as? [[Any]] ?? []).map {
+                EditPlan.Piece(meetingId: Int64(double($0[0])), start: double($0[1]), end: double($0[2]))
+            })
+            let points = (c["points"] as? [[Any]] ?? []).map { (Int64(double($0[0])), double($0[1])) }
+            let sentences = (c["sentences"] as? [[Any]] ?? []).map { (Int64(double($0[0])), double($0[1]), double($0[2])) }
+            let split = c["cut"].flatMap { plan.split(at: double($0)) }
+            let pieces = { (p: EditPlan) in p.pieces.map { [$0.meetingId, $0.start, $0.end] as [Any] } }
+            var out: Object = [
+                "key": c["key"] as? String ?? "", "duration": plan.duration,
+                "map": points.map { plan.map($0.0, $0.1).map { $0 as Any } ?? NSNull() },
+                "snap": points.map { plan.snap($0.0, $0.1) },
+                "sentences": sentences.map { s -> Any in plan.mapSentence(s.0, start: s.1, end: s.2).map { [$0.start, $0.end] } ?? NSNull() },
+                "sources": (c["sources"] as? [Any] ?? []).map { t -> Any in plan.source(at: double(t)).map { [$0.meetingId, $0.time] as [Any] } ?? NSNull() },
+                "split": split.map { ["head": pieces($0.head), "tail": pieces($0.tail)] as Object } ?? NSNull(),
+            ]
+            if let notes = c["userNotes"] as? Object {
+                out["userNotes"] = plan.remapUserNotes(notes["text"] as? String ?? "", meetingId: Int64(double(notes["meetingId"])))
+            }
+            if let deleted = c["keeping"] as? Object {
+                let kept = EditPlan.keeping(Int64(double(deleted["meetingId"])), start: double(deleted["start"]), end: double(deleted["end"]),
+                                            deleted: (deleted["deleted"] as? [[Any]] ?? []).map { double($0[0])...double($0[1]) })
+                out["keeping"] = kept.map { [$0.meetingId, $0.start, $0.end] as [Any] }
+            }
+            return out
+        })
         // 語言檔推出來的東西（design §41.8）：每種語言的名稱、預設說話者、轉錄的參數、給人看的字、提示詞的字
         let glossarySample = ["Lumio", "Redis", "Kubernetes"]
         w.json("util/languages.json", MeetingLanguage.allCases.map { l -> Object in
@@ -1079,6 +1106,18 @@ enum GoldenDump {
                 if let file { w.json(file, ["deleted": deleted.map { $0.name as Any } ?? NSNull()]) }
             case "deleteMeeting":
                 try db.deleteMeeting(id(op))
+            case "applyEdit":   // 編輯會議（design §81.1）：pieces 是 [會議的 key, 開始, 結束]，cut 是新時間軸上的切點
+                let pieces = (op["pieces"] as? [[Any]] ?? []).map {
+                    EditPlan.Piece(meetingId: ids[$0[0] as? String ?? ""] ?? 0, start: double($0[1]), end: double($0[2]))
+                }
+                let outcome = try db.applyEdit(id(op), plan: EditPlan(pieces: pieces), cut: op["cut"].flatMap { $0 is NSNull ? nil : double($0) },
+                                               splitTitle: op["splitTitle"] as? String ?? "", audioExtension: nil)
+                w.json(file!, ["created": outcome?.created?.id.map { $0 as Any } ?? NSNull(), "firstEdit": outcome?.firstEdit ?? false,
+                               "documentCopies": outcome?.documentCopies.map { [$0.from, $0.to] } ?? []] as Object)
+            case "restoreEdit":   // 還原成編輯前的樣子（§81.3）
+                let r = try db.restoreEdit(id(op))
+                w.json(file!, r.map { ["trashed": $0.trashed, "untrashed": $0.untrashed, "removedDocuments": $0.removedDocuments,
+                                       "editsAudio": $0.editsAudio, "restoredAudio": $0.restoredAudio] as Object } ?? NSNull())
             case "enrollVoiceprint":   // 我的聲音（design §56.1）：人物頁的「我」（§60.1）
                 _ = try db.enrollVoiceprint(name: op["name"] as? String ?? "", embedding: (op["embedding"] as? [Double] ?? []).map { Float($0) })
             case "peopleOverview":   // 人物頁（design §60.1）：側欄的人物列表
@@ -1124,7 +1163,7 @@ enum GoldenDump {
 
     /// 一張表的所有列：時間欄位（每次跑都不同）有值時寫成 "<time>"，BLOB 寫成 base64
     private static func dumpTable(_ db: AppDatabase, _ table: String) throws -> [Object] {
-        let timeColumns: Set<String> = ["created_at", "updated_at", "started_at", "finished_at", "deleted_at"]
+        let timeColumns: Set<String> = ["created_at", "updated_at", "started_at", "finished_at", "deleted_at", "edited_at"]
         let sql = table == "search" ? "SELECT rowid, meeting_id, kind, ref, text FROM search ORDER BY rowid"
             : "SELECT * FROM \(table) ORDER BY rowid"
         return try db.pool.read { d in
@@ -1136,7 +1175,9 @@ enum GoldenDump {
                     case .int64(let n): object[column] = timeColumns.contains(column) ? "<time>" : n
                     case .double(let x): object[column] = x
                     case .string(let s):
-                        object[column] = timeColumns.contains(column) ? "<time>" : ["snapshot", "definition"].contains(column) ? canonical(s) : s
+                        // 編輯會議的快照是程式自己的格式（裡面還有時間），只比套用、還原之後的資料表
+                        object[column] = timeColumns.contains(column) ? "<time>" : table == "meeting_edits" && column == "snapshot" ? "<snapshot>"
+                            : ["snapshot", "definition"].contains(column) ? canonical(s) : s
                     case .blob(let data): object[column] = data.base64EncodedString()
                     }
                 }

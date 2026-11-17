@@ -268,8 +268,27 @@ struct ConfirmSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        // 說明是「・」開頭的好幾行時畫成條列，換行對齊在點的後面（編輯會議的套用、還原，design §81.5）
+        let bullets = request.message.components(separatedBy: "\n")
+        let isList = bullets.count > 1 && bullets.allSatisfy { $0.hasPrefix("・") }  // l10n-skip
         VStack(alignment: .leading, spacing: 22) {
-            SheetHeader(title: request.title, subtitle: request.message)
+            if isList {
+                VStack(alignment: .leading, spacing: 10) {
+                    SheetHeader(title: request.title)
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(bullets.enumerated()), id: \.offset) { _, line in
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("・")  // l10n-skip
+                                Text(line.dropFirst()).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                }
+            } else {
+                SheetHeader(title: request.title, subtitle: request.message)
+            }
             HStack(spacing: 10) {
                 Spacer()
                 Button("取消") { dismiss() }

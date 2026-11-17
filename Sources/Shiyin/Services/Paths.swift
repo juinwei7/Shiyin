@@ -19,6 +19,8 @@ enum Paths {
     }
     static var audioDir: URL { home.appendingPathComponent("audio", isDirectory: true) }
     static var recordingDir: URL { audioDir.appendingPathComponent("recording", isDirectory: true) }
+    /// 編輯會議前的錄音，留 30 天（design §81.3）
+    static var editsAudioDir: URL { audioDir.appendingPathComponent("edits", isDirectory: true) }
     static var database: URL { home.appendingPathComponent("shiyin.sqlite") }
     /// 會議的參考文件的原始檔（design §39.1）
     static var documentsDir: URL { home.appendingPathComponent("documents", isDirectory: true) }

@@ -341,7 +341,19 @@ struct StatusBanner: View {
     let detail: MeetingDetail
 
     var body: some View {
-        if let status = model.detailStatus, status != .recording, let content = content(status) {
+        if model.applyingEdit == detail.meeting.id {
+            // 編輯會議、分成兩場、還原：接錄音要幾秒（design §81.5）
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text("正在套用編輯…")
+                Spacer(minLength: 12)
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+        } else if let status = model.detailStatus, status != .recording, let content = content(status) {
             HStack(spacing: 12) {
                 content
                 Spacer(minLength: 12)
@@ -512,6 +524,9 @@ struct MoreMenu: View {
                 Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
                 Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
             }
+            // 編輯會議（R107.1）。選單建立一次就不更新，「還原」一直在，沒編輯過時按了說明（R107.8）
+            Button("編輯會議…", systemImage: "scissors") { if let id = model.selection { model.requestEditMeeting(id) } }
+            Button("還原成編輯前的樣子…", systemImage: "arrow.uturn.backward") { if let id = model.selection { model.requestRestoreEdit(id) } }
             Divider()
             // 工具列的選單建立一次就不會更新（停用狀態、按鈕記住的會議），動作一律在按下時才看目前選取的會議
             FolderMenu()

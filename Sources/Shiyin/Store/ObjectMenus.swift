@@ -12,7 +12,14 @@ extension AppModel {
         guard !ids.isEmpty else { return [] }
         var entries: [MenuEntry] = []
         if ids.count == 1, let id = ids.first {
-            entries += [.action(String(localized: "重新命名…"), icon: "pencil", shortcut: "↩") { self.requestRenameMeeting(id) }, .divider]
+            entries.append(.action(String(localized: "重新命名…"), icon: "pencil", shortcut: "↩") { self.requestRenameMeeting(id) })
+            // 編輯會議（R107.1）；編輯過的會議多一項還原，寫還剩幾天（R107.8）
+            entries.append(.action(String(localized: "編輯會議…"), icon: "scissors") { self.requestEditMeeting(id) })
+            if let record = try? db.editRecord(id) {
+                entries.append(.action(String(localized: "還原成編輯前的樣子…"), icon: "arrow.uturn.backward",
+                                       shortcut: String(localized: "還有 \(record.daysLeft()) 天")) { self.requestRestoreEdit(id) })
+            }
+            entries.append(.divider)
         }
         entries.append(.submenu(String(localized: "移到資料夾"), icon: "folder", folderMoveEntries(ids)))
         entries.append(.divider)

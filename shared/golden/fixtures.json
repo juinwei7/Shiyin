@@ -2091,7 +2091,32 @@
     "search",
     "documents"
    ]
-  }
+  },
+  {"op": "dumpTables", "file": "db/49-before-edit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "applyEdit", "key": "zh", "pieces": [["zh", 2, 20], ["zh", 60, 3726]], "cut": null, "file": "db/50-edit-result.json"},
+  {"op": "dumpTables", "file": "db/51-edit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "restoreEdit", "key": "zh", "file": "db/52-restore-result.json"},
+  {"op": "dumpTables", "file": "db/53-restore.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "applyEdit", "key": "zh", "pieces": [["zh", 0, 30], ["en", 0, 16.5]], "cut": null, "file": "db/54-merge-result.json"},
+  {"op": "dumpTables", "file": "db/55-merge.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "restoreEdit", "key": "zh", "file": "db/56-unmerge-result.json"},
+  {"op": "dumpTables", "file": "db/57-unmerge.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "applyEdit", "key": "en", "pieces": [["en", 0, 16.5]], "cut": 8, "splitTitle": "Q4 roadmap (2)", "file": "db/58-edit-split-result.json"},
+  {"op": "dumpTables", "file": "db/59-edit-split.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "restoreEdit", "key": "en", "file": "db/60-unsplit-result.json"},
+  {"op": "dumpTables", "file": "db/61-unsplit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]}
+ ],
+ "editPlanCases": [
+  {"key": "trim-and-delete", "pieces": [[1, 2, 20], [1, 30, 55]],
+   "points": [[1, 0], [1, 2], [1, 10], [1, 20], [1, 25], [1, 30], [1, 50], [1, 55], [1, 59], [2, 10]],
+   "sentences": [[1, 0, 6.26], [1, 14.98, 20.78], [1, 20.78, 24.96], [1, 29.6, 34], [1, 54, 58], [1, 12, 12]],
+   "sources": [0, 5, 18, 18.5, 43, 50], "cut": 25,
+   "userNotes": {"meetingId": 1, "text": "[00:08] 包裝\n[00:20] 預算\n沒有時間的一行\n[00:25] 刪掉的段落\n[01:05] 超過結尾\n[1:02:03] 一小時"}},
+  {"key": "merge-other-first", "pieces": [[2, 0, 37], [1, 0, 59]],
+   "points": [[1, 0], [1, 59], [2, 0], [2, 37], [2, 40]], "sentences": [[2, 30, 36.88], [1, 0, 4]], "sources": [0, 36.99, 37, 96], "cut": 37},
+  {"key": "split-invalid", "pieces": [[1, 0, 10]], "points": [], "sentences": [], "sources": [], "cut": 0.01},
+  {"key": "keeping", "pieces": [], "points": [], "sentences": [], "sources": [],
+   "keeping": {"meetingId": 1, "start": 2, "end": 60, "deleted": [[50, 70], [10, 20], [15, 25], [30, 30.02], [0, 1]]}}
  ],
  "releaseNotesCases": [
   {

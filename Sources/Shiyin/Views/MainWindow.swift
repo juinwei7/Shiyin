@@ -183,6 +183,9 @@ struct MainView: View {
         }
         // 刪除、移除、分成兩場的確認（R106、design §80）：同一種彈窗，取代系統的確認對話框
         .sheet(item: Binding(get: { model.activeConfirmation }, set: { if $0 == nil { model.clearConfirmations() } })) { ConfirmSheet(request: $0) }
+        .sheet(item: Binding(get: { model.editingMeeting.map(EditingMeeting.init) }, set: { model.editingMeeting = $0?.id })) {
+            MeetingEditSheet(meetingId: $0.id)
+        }
     }
 }
 

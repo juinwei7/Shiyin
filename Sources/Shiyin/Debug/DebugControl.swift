@@ -163,6 +163,69 @@ enum DebugControl {
         case "deletesegment": model.selection = id; model.deleteSegment(Int64(args[2]) ?? 0)
         case "splitmeeting": model.selection = id; model.splitMeeting(at: Int64(args[2]) ?? 0)
         case "splitconfirm": model.selection = id; model.tab = .transcript; model.splitMeetingRequest = Int64(args[2])
+        // 編輯會議（R107、design §81.6）：editmeeting <會議 id> keep=<開始>-<結束>[,…] [split=<秒>] [merge=<會議 id>[:<開始>-<結束>,…]]
+        // （不經過畫面和確認；merge 沒給範圍是整場，照會議開始的先後接）；restoreedit <會議 id>（不經過確認）、confirmrestoreedit <會議 id>；
+        // editage <會議 id> <天數>（把最後編輯的時間改早，接著清一次過期的）；openedit <會議 id>（打開編輯畫面）
+        case "editmeeting":
+            guard let id, let meeting = try? model.db.meeting(id) else { break }
+            func ranges(_ text: Substring) -> [(Double, Double)] {
+                text.split(separator: ",").compactMap { r in
+                    let p = r.split(separator: "-").compactMap { Double($0) }
+                    return p.count == 2 ? (p[0], p[1]) : nil
+                }
+            }
+            func whole(_ m: Meeting) -> [(Double, Double)] {
+                [(0, max(Double(m.durationSeconds ?? 0), ((try? model.db.segments(m.id!)) ?? []).map(\.end).max() ?? 0))]
+            }
+            var mine = whole(meeting)
+            var cut: Double?
+            var merged: (meeting: Meeting, ranges: [(Double, Double)])?
+            for arg in args.dropFirst(2) {
+                let value = arg.split(separator: "=", maxSplits: 1).last ?? ""
+                if arg.hasPrefix("keep=") { mine = ranges(value) }
+                else if arg.hasPrefix("split=") { cut = Double(value) }
+                else if arg.hasPrefix("merge="), let other = Int64(value.split(separator: ":")[0]), let m = try? model.db.meeting(other) {
+                    let parts = value.split(separator: ":", maxSplits: 1)
+                    merged = (m, parts.count > 1 ? ranges(parts[1]) : whole(m))
+                }
+            }
+            var pieces = mine.map { EditPlan.Piece(meetingId: id, start: $0.0, end: $0.1) }
+            if let merged {
+                let theirs = merged.ranges.map { EditPlan.Piece(meetingId: merged.meeting.id!, start: $0.0, end: $0.1) }
+                pieces = merged.meeting.createdAt < meeting.createdAt ? theirs + pieces : pieces + theirs
+            }
+            model.applyMeetingEdit(id, plan: EditPlan(pieces: pieces), cut: cut)
+        case "restoreedit": if let id { model.restoreMeetingEdit(id) }
+        case "confirmrestoreedit": if let id { model.requestRestoreEdit(id) }
+        case "editage": if let id { try? model.db.ageEdit(id, days: Double(args[2]) ?? 31); model.purgeExpiredEdits() }
+        case "openedit": if let id { model.requestEditMeeting(id) }
+        // editorstate start=<秒> end=<秒> del=<a-b,…> sel=<a-b|none> cut=<秒|none> playhead=<秒> zoom=<倍> merge=<會議 id|none> play lines=<id,…>：
+        // 直接改打開的編輯畫面（背景的視窗收不到點擊，截圖、驗畫面用）
+        case "editorstate":
+            guard let editor = MeetingEditor.debugCurrent else { break }
+            func range(_ text: Substring) -> ClosedRange<Double>? {
+                let p = text.split(separator: "-").compactMap { Double($0) }
+                return p.count == 2 ? min(p[0], p[1])...max(p[0], p[1]) : nil
+            }
+            for arg in args.dropFirst() {
+                let parts = arg.split(separator: "=", maxSplits: 1)
+                let key = parts[0], value = parts.count > 1 ? parts[1] : ""
+                switch key {
+                case "start": editor.debugSet(start: Double(value), end: nil, deleted: nil, selection: nil, cut: nil)
+                case "end": editor.debugSet(start: nil, end: Double(value), deleted: nil, selection: nil, cut: nil)
+                case "del": editor.debugSet(start: nil, end: nil, deleted: value.split(separator: ",").compactMap(range), selection: nil, cut: nil)
+                case "sel": editor.debugSet(start: nil, end: nil, deleted: nil, selection: .some(range(value)), cut: nil)
+                case "cut": editor.debugSet(start: nil, end: nil, deleted: nil, selection: nil, cut: .some(Double(value)))
+                case "playhead": editor.playhead = Double(value) ?? 0
+                case "zoom": editor.zoom = Double(value) ?? 1
+                case "lines": editor.selectedLines = Set(value.split(separator: ",").compactMap { Int64($0) })
+                case "merge":
+                    if let other = Int64(value), let m = try? model.db.meeting(other) { editor.merge(with: m, db: model.db) }
+                    else { editor.unmerge(db: model.db) }
+                case "play": editor.togglePlay()
+                default: break
+                }
+            }
         case "reviewexpand":
             // reviewexpand <會議 id> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置]：
             // 等於點那一條紀錄旁的待確認標記（R41.2）；位置給 - 就收合。視窗不在目前的桌面時 press 按不到標記，用這個
@@ -578,6 +641,24 @@ enum DebugControl {
                         NSApp.postEvent(event, atStart: false)
                     }
                 }
+            case "dragq":
+                // mouseat dragq <x> <y> <視窗> <x2> <y2>：按下、分 12 步拖到 (x2, y2)、放開，都排進事件佇列（SwiftUI 的拖曳手勢；
+                // 不是拖放：beginDraggingSession 讀真的游標，拖放只能用真的滑鼠）
+                guard args.count > 6, let x2 = Double(args[5]), let y2 = Double(args[6]) else { break }
+                let end = NSPoint(x: x2, y: window.frame.height - y2)
+                let steps = 12
+                var events: [(NSEvent.EventType, NSPoint, Float)] = [(.leftMouseDown, point, 1)]
+                for i in 1...steps {
+                    let f = CGFloat(i) / CGFloat(steps)
+                    events.append((.leftMouseDragged, NSPoint(x: point.x + (end.x - point.x) * f, y: point.y + (end.y - point.y) * f), 1))
+                }
+                events.append((.leftMouseUp, end, 0))
+                for (type, location, pressure) in events {
+                    if let event = NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                      windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: pressure) {
+                        NSApp.postEvent(event, atStart: false)
+                    }
+                }
             case "right": send(.rightMouseDown, clicks: 1); send(.rightMouseUp, clicks: 1)
             case "cgright": sendCG(.rightMouseDown, .right, clicks: 1); sendCG(.rightMouseUp, .right, clicks: 1)
             case "cgleft": sendCG(.leftMouseDown, .left, clicks: 1); sendCG(.leftMouseUp, .left, clicks: 1)
@@ -610,6 +691,7 @@ enum DebugControl {
             else { break }
             let (code, chars): (UInt16, String) = switch args[1] {
             case "delete": (51, "\u{7f}")
+            case "space": (49, " ")
             case "escape": (53, "\u{1b}")
             case "f2": (120, String(UnicodeScalar(NSF2FunctionKey)!))
             case "down": (125, String(UnicodeScalar(NSDownArrowFunctionKey)!))
@@ -993,7 +1075,7 @@ enum DebugControl {
             "multiSelected": model.multiSelected, "showTrash": model.showTrash, "trashCount": model.trash.count,
             "confirmDelete": model.confirmDelete, "deleteTargets": model.deleteTargets, "confirmPurge": model.confirmPurge ?? [],
             "confirmEmptyTrash": model.confirmEmptyTrash, "splitMeetingRequest": model.splitMeetingRequest ?? -1,
-            "splittingMeeting": model.splittingMeeting ?? -1,
+            "splittingMeeting": model.applyingEdit ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
             "folderRules": model.folderRules.map { ["folder": $0.folder, "keywords": $0.keywords, "people": $0.people,
@@ -1046,6 +1128,16 @@ enum DebugControl {
             "micStatus": AVCaptureDevice.authorizationStatus(for: .audio).rawValue,
             "openMainWindowReady": model.openMainWindow != nil,
             "detailMeeting": model.detail?.meeting.id ?? -1,
+            "applyingEdit": model.applyingEdit ?? -1,
+            "editingMeeting": model.editingMeeting ?? -1,
+            "editor": MeetingEditor.debugCurrent.map { e -> [String: Any] in
+                ["start": e.start, "end": e.end, "deleted": e.deleted.map { [$0.lowerBound, $0.upperBound] }, "cut": e.cut ?? -1,
+                 "playhead": e.playhead, "zoom": e.zoom, "total": e.total, "isPlaying": e.isPlaying, "hasChanges": e.hasChanges,
+                 "planDuration": e.plan.duration, "preview": e.debugPreview, "pieces": e.plan.pieces.map { [$0.meetingId, $0.start, $0.end] as [Any] }]
+            } ?? [:],
+            "meetingEdit": model.detail.flatMap { try? model.db.editRecord($0.meeting.id!) }.map { r -> [String: Any] in
+                ["audioFile": r.audioFile, "daysLeft": r.daysLeft(), "splitInto": r.splitIds, "mergedFrom": r.mergedIds, "editedAt": r.editedAt]
+            } ?? [:],
             // 側欄的表格（拖曳，design §77）：直直往上下拖會不會開始拖曳
             "sidebarTables": NSApp.windows.filter { $0.identifier?.rawValue == "main" }.flatMap { window -> [[String: Any]] in
                 func tables(_ view: NSView) -> [NSTableView] { (view as? NSTableView).map { [$0] } ?? view.subviews.flatMap(tables) }

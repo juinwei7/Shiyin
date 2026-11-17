@@ -73,6 +73,15 @@ CREATE TABLE jobs (
   started_at  TEXT,
   finished_at TEXT
 , crashes INTEGER NOT NULL DEFAULT 0, error_kind TEXT);
+CREATE TABLE meeting_edits (
+  meeting_id  INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
+  snapshot    TEXT NOT NULL,
+  audio_file  TEXT NOT NULL,
+  split_into  TEXT NOT NULL DEFAULT '[]',
+  merged_from TEXT NOT NULL DEFAULT '[]',
+  created_at  TEXT NOT NULL,
+  edited_at   TEXT NOT NULL
+);
 CREATE TABLE meetings (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   title            TEXT NOT NULL DEFAULT '',
