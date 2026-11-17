@@ -14,9 +14,14 @@ struct MeetingEditSheet: View {
     @State private var showMergePicker = false
     @FocusState private var timelineFocused: Bool
 
+    /// sheet 照內容的最小尺寸開：依主視窗的大小給，比主視窗小一點（時間軸越寬越好拖），最寬 1000、最高 760
+    private let size: CGSize
+
     init(meetingId: Int64) {
         self.meetingId = meetingId
         _editor = State(initialValue: MeetingEditor(meetingId: meetingId))
+        let parent = (NSApp.windows.first { $0.identifier?.rawValue == "main" } ?? NSApp.mainWindow)?.frame.size ?? CGSize(width: 1200, height: 800)
+        size = CGSize(width: min(1000, max(760, parent.width - 80)), height: min(760, max(580, parent.height - 60)))
     }
 
     var body: some View {
@@ -29,7 +34,7 @@ struct MeetingEditSheet: View {
             footer
         }
         .padding(24)
-        .frame(minWidth: 760, idealWidth: 900, maxWidth: 1400, minHeight: 580, idealHeight: 680, maxHeight: 1100)
+        .frame(width: size.width, height: size.height)
         .onAppear {
             if model.player.isPlaying { model.player.toggle() }
             editor.load(db: model.db)
@@ -68,6 +73,7 @@ struct MeetingEditSheet: View {
             Text("試聽時跳過刪掉、裁掉的部分")
                 .font(.callout).foregroundStyle(.secondary)
                 .lineLimit(1)
+                .layoutPriority(-1)   // 窄的時候先縮這句，說話者的名字留完整
             Spacer(minLength: 8)
             speakerLegend
             zoomControl
@@ -83,7 +89,7 @@ struct MeetingEditSheet: View {
             ForEach(speakers.prefix(4), id: \.name) { s in
                 HStack(spacing: 5) {
                     Circle().fill(Color.speaker(s.idx)).frame(width: 8, height: 8)
-                    Text(s.name).font(.callout).lineLimit(1)
+                    Text(s.name).font(.callout).lineLimit(1).fixedSize()
                 }
             }
             if speakers.count > 4 { Text("+\(speakers.count - 4)").font(.callout).foregroundStyle(.secondary) }
@@ -360,9 +366,10 @@ struct EditTimelinePanel: View {
         let label = String(localized: "刪掉 \(TimeFormat.string(range.upperBound - range.lowerBound))・恢復")
         return Button { editor.restore(range) } label: {
             Group {
-                if x1 - x0 >= 120 { Text(label) }
-                else if x1 - x0 >= 50 { Label("恢復", systemImage: "arrow.uturn.backward").labelStyle(EditActionLabelStyle()) }
-                else { Image(systemName: "arrow.uturn.backward") }
+                if x1 - x0 >= 130 { Text(label) }
+                else if x1 - x0 >= 56 {
+                    HStack(spacing: 4) { Image(systemName: "arrow.uturn.backward"); Text("恢復") }
+                } else { Image(systemName: "arrow.uturn.backward") }
             }
             .font(.system(size: 11))
             .padding(.horizontal, 7)
