@@ -50,13 +50,16 @@ struct ShiyinApp: App {
         .defaultSize(width: 680, height: 720)
         .defaultLaunchBehavior(.suppressed)
 
-        Settings {
+        // 設定（R108、design §82）：一般視窗才拉得大，SwiftUI 的 Settings 視窗固定大小（D185）
+        Window("設定", id: SettingsPage.windowID) {
             SettingsView()
                 .environment(AppModel.shared)
                 .chineseGlyphs()
         }
-        // 側欄的設定可以拉大（R108.5）
         .windowResizability(.contentMinSize)
+        .defaultSize(width: 820, height: 620)
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {
             MenuBarContent()
@@ -78,6 +81,11 @@ struct AppCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .appInfo) {
             Button("檢查更新…") { Task { await model.checkForUpdatesFromMenu() } }
+        }
+        // 設定是一般視窗（D185），選單列的「設定⋯」、⌘, 自己接
+        CommandGroup(replacing: .appSettings) {
+            Button("設定⋯") { openWindow.settings() }
+                .keyboardShortcut(",")
         }
         CommandGroup(replacing: .newItem) {
             // 主視窗關著時先打開，不然對話框要等到下次打開主視窗才會跳出來

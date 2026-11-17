@@ -1023,7 +1023,7 @@ enum DebugControl {
         case "mousehold": model.debugMouseHeld = args.count > 1 && args[1] == "on"   // mousehold on|off：當成左鍵按著（選取會議時先不換會議頁，design §77）
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
-        case "settings": NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        case "settings": model.openWindowById?(SettingsPage.windowID)
         case "preview":   // preview <settings|onboarding [步驟]|import|rename> [front] [height=<點>]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
@@ -1244,7 +1244,9 @@ enum DebugControl {
                                             "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,
                                             "minSizeW": $0.minSize.width, "minSizeH": $0.minSize.height,
                                             "width": $0.frame.width, "height": $0.frame.height,
-                                            "number": $0.windowNumber, "sharing": $0.sharingType.rawValue] },
+                                            "number": $0.windowNumber, "sharing": $0.sharingType.rawValue,
+                                            "resizable": $0.styleMask.contains(.resizable), "maxW": $0.maxSize.width, "maxH": $0.maxSize.height,
+                                            "contentMaxW": $0.contentMaxSize.width, "contentMaxH": $0.contentMaxSize.height] },
         ]
         if let status = model.detailStatus { out["detailStatus"] = status.label }
         if let detail = model.detail {

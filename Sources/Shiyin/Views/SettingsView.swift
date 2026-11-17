@@ -6,6 +6,8 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
     static let storageKey = "settingsPage"
+    /// 設定視窗的 id（D185）
+    static let windowID = "settings"
 
     var title: String {
         switch self {
@@ -94,11 +96,11 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     }
 }
 
-extension OpenSettingsAction {
-    /// 打開設定並停在那一頁（設定會記住上次的頁面，R108.5；已經開著時跟著換頁）
-    func callAsFunction(page: SettingsPage) {
-        UserDefaults.standard.set(page.rawValue, forKey: SettingsPage.storageKey)
-        callAsFunction()
+extension OpenWindowAction {
+    /// 打開設定（R108；設定是一般視窗，D185）。給頁面就停在那一頁（設定會記住上次的頁面，R108.5；已經開著時跟著換頁）
+    func settings(_ page: SettingsPage? = nil) {
+        if let page { UserDefaults.standard.set(page.rawValue, forKey: SettingsPage.storageKey) }
+        callAsFunction(id: SettingsPage.windowID)
     }
 }
 
@@ -137,6 +139,9 @@ struct SettingsView: View {
                         Section {
                             ForEach(pages) { item in
                                 Label { Text(item.title) } icon: { SettingsIcon(page: item) }
+                                    // 選到的列灰底、字照常（同主視窗的側欄，R101.4），不用系統青瓷綠的一整塊
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .sidebarSelectableRow(selected: item == page)
                                     .tag(item)
                             }
                         }
@@ -152,7 +157,11 @@ struct SettingsView: View {
             }
             .onChange(of: storedPage) { _, value in
                 // 從會議頁的「打開設定」指定頁面時，開著的設定視窗跟著換
-                if let target = SettingsPage(rawValue: value), target != page { page = target }
+                // 側欄還留著搜尋的字、篩掉了要去的那頁時清掉搜尋
+                if let target = SettingsPage(rawValue: value), target != page {
+                    page = target
+                    if !target.matches(query) { query = "" }
+                }
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 220, max: 260)
             .frame(minWidth: 210)   // 欄寬有時候不生效（設定視窗第一次打開），清單自己也要撐開

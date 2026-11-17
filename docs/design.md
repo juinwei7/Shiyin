@@ -2855,9 +2855,10 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ## 82. 設定：工具列的齒輪、側欄的版面（R108，D184）
 
-- 齒輪（R108.1）：主視窗工具列最右邊、「更多」的右邊，`SettingsLink`（圖示 `gearshape`，說明「設定（⌘,）」，輔助使用名稱「設定」）。
-- 版面（R108.2）：`Settings` 場景裡 `NavigationSplitView`，側欄 `List(selection:)`，寬 220（210～260，英文的「Models & Storage」放得下），拿掉側欄的收合鈕；右邊是那一頁的 `Form`（`.grouped`），`navigationTitle` 是那一頁的名稱。視窗 820×620，最小 720×500，可以拉大（`.windowResizability(.contentMinSize)`）。
-- 側欄：每一項是 20×20、圓角 5 的彩色方塊加白色 SF Symbol（同系統設定），分四組（組和組之間空一點，不加標題）：
+- 齒輪（R108.1）：主視窗工具列最右邊、「更多」的右邊，按了 `openWindow.settings()`（圖示 `gearshape`，說明「設定（⌘,）」，輔助使用名稱「設定」）。
+- 視窗（D185）：一般的 `Window` 場景（id `settings`），不是 SwiftUI 的 `Settings` 場景；選單列的「設定⋯」、⌘, 用 `CommandGroup(replacing: .appSettings)` 自己接，`openWindow.settings(_:)` 打開。
+- 版面（R108.2）：`NavigationSplitView`，側欄 `List(selection:)`，寬 220（210～260，英文的「Models & Storage」放得下），拿掉側欄的收合鈕；右邊是那一頁的 `Form`（`.grouped`），`navigationTitle` 是那一頁的名稱。視窗 820×620（`.defaultSize`），最小 720×500，可以拉大（`.windowResizability(.contentMinSize)`）。
+- 側欄：每一項是 20×20、圓角 5 的彩色方塊加白色 SF Symbol（同系統設定），分四組（組和組之間空一點，不加標題）。選到的列灰底、字照常（`sidebarSelectableRow`，同主視窗的側欄 R101.4，不用系統青瓷綠的一整塊）：
 
 | 組 | 項目 | 圖示、顏色 | 內容（原本在哪） |
 |---|---|---|---|
@@ -2874,7 +2875,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | 4 | 檢查與更新 | `checkmark.seal.fill`、綠 | 更新、環境檢查 |
 
 - 搜尋（R108.4）：側欄的 `.searchable`。每一頁有一串關鍵字（就是那一頁項目的名稱，用介面語言；另外加 API key、MCP、快捷鍵這類常用說法），打的字在名稱或關鍵字裡就留那一項；只剩一項時直接選它。
-- 記住頁面（R108.5）：`settingsPage`（UserDefaults，存頁面的代號），預設整理工具。從別處打開設定時指定頁面（`openSettings(page:)` 先寫 `settingsPage` 再打開；已經開著的視窗跟著換）：會議頁、紀錄分頁的「設定整理工具」「打開設定」開整理工具，公司伺服器沒登入時開企業伺服器（`SummarizerProblem.settingsPage`）。
+- 記住頁面（R108.5）：`settingsPage`（UserDefaults，存頁面的代號），預設整理工具。從別處打開設定時指定頁面（`openWindow.settings(_:)` 先寫 `settingsPage` 再打開；已經開著的視窗跟著換，搜尋的字篩掉了那一頁時清掉搜尋）：會議頁、紀錄分頁的「設定整理工具」「打開設定」開整理工具，公司伺服器沒登入時開企業伺服器（`SummarizerProblem.settingsPage`）。
 - 說明文字裡的頁名跟著改（「設定 → 錄音與轉錄」→「錄音」或「模型與空間」、「進階 → 企業伺服器」→「企業伺服器」、「說話者與詞彙」→「說話者」、「進階」→「一般」或「檢查與更新」；使用說明介紹設定各頁的段落照新的十一頁寫）：位置變了，照舊寫會帶錯地方；其他說明文字不變（R108.6）。
 - 程式：原本的 `ProviderSettings`（拿掉範本段）、`TemplateSettings`、`SpeakerSettings`、`GlossarySettings` 直接當一頁；`RecordingSettings`、`AdvancedSettings` 加 `part` 參數（同一份狀態，只畫那一頁的段落），項目和存的鍵都沒變（R108.6）。
 - DEBUG：`preview settings <頁面代號或編號>`（0 整理工具…10 檢查與更新，只當預覽的起始頁，不寫進設定）。
@@ -3011,3 +3012,4 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D182 | 合併時留下打開編輯畫面的那場，另一場複製過來後移到垃圾桶（§81.4） | 合併成新的第三場：原本兩場的連結、資料夾、提醒事項都斷掉。把另一場的資料搬過來：垃圾桶裡那場變成空殼，還原時要一筆一筆搬回去 |
 | D183 | 編輯畫面是 sheet（§81.5） | 獨立的視窗：編輯時同一場會議可能在別的地方被改（開始整理、改名、移到垃圾桶），要處理衝突；sheet 期間這場會議不會有其他操作 |
 | D184 | 設定改成側欄十一項（§82），取代 D110 的四個分頁 | 保留四頁、只整理版面：「錄音與轉錄」「進階」兩頁還是很長要一直捲，模型清單、環境檢查這種長的東西跟常用開關擠在一起。D110 怕「七個分頁看起來很難」是因為上方的分頁一字排開；側欄分組、每項有圖示，十一項也好找，每頁短，加上搜尋 |
+| D185 | 設定用一般的 `Window` 場景（§82） | SwiftUI 的 `Settings` 場景：視窗沒有可以拉大的樣式，`.windowResizability(.contentMinSize)`、內容給最大尺寸、自己補 `styleMask` 都會被改回去（macOS 26 實測），R108.5 的「可以拉大」做不到。代價：選單列的「設定⋯」、⌘, 要自己接，視窗會出現在「視窗」選單 |

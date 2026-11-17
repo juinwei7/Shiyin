@@ -338,7 +338,7 @@ struct TrashBanner: View {
 /// 工作進度、失敗原因
 struct StatusBanner: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     let detail: MeetingDetail
 
     var body: some View {
@@ -444,7 +444,7 @@ struct StatusBanner: View {
                let problem = model.summarizerProblem {
                 Button(problem.actionTitle) {
                     switch problem.action {
-                    case .openSettings: openSettings(page: problem.settingsPage)
+                    case .openSettings: openWindow.settings(problem.settingsPage)
                     case .login(let provider): CLILogin.openLogin(provider)
                     }
                 }

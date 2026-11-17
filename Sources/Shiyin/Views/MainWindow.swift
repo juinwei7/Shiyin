@@ -200,8 +200,14 @@ struct MainView: View {
 /// 掛在外層的話會排到「匯出」「更多」前面
 struct SettingsToolbarItem: ToolbarContent {
     var body: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            SettingsLink { Label("設定", systemImage: "gearshape") }
+        ToolbarItem(placement: .primaryAction) { SettingsButton() }
+    }
+
+    private struct SettingsButton: View {
+        @Environment(\.openWindow) private var openWindow
+
+        var body: some View {
+            Button { openWindow.settings() } label: { Label("設定", systemImage: "gearshape") }
                 .help("設定（⌘,）")
         }
     }

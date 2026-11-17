@@ -19937,6 +19937,23 @@
         }
       }
     },
+    "設定⋯": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置⋯"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings…"
+          }
+        }
+      }
+    },
     "設定好之前不會自動整理。": {
       "extractionState": "manual",
       "localizations": {
