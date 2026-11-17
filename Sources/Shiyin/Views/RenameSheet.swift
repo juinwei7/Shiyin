@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 重新命名的彈窗（R102、design §76，參考 ChatGPT 的「重新命名對話」）：標題、一行說明、帶目前名字的輸入框、取消／儲存。
+/// 重新命名的彈窗（R102、design §76）：標題、一行說明、帶目前名字的輸入框、取消／儲存。
 /// 會議、資料夾、新資料夾、人物、標記都用這一個
 struct RenameSheet: View {
     @Environment(AppModel.self) private var model
@@ -13,7 +13,7 @@ struct RenameSheet: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         // 「+」建空的資料夾時，同名的已經有就不能建（R104）
         let canSave = !trimmed.isEmpty && (isNewFolder || trimmed != original) && !(isEmptyNewFolder && model.renameConflict(for: target, name: trimmed) != nil)
-        // 樣子照 ChatGPT 的「重新命名對話」（共用的彈窗元件，design §80）
+        // 共用的彈窗元件（design §80）
         VStack(alignment: .leading, spacing: 18) {
             SheetHeader(title: title, subtitle: hint(trimmed))
             SheetTextField(placeholder: placeholder, text: $name, focusOnAppear: true) { if canSave { save() } }

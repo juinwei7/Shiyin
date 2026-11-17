@@ -298,7 +298,7 @@ struct SidebarView: View {
     private var scopeSections: some View {
         let people = model.sidebarMode == .people
         Section {
-            // 所有會議是回到預設的畫面，不畫選到的樣子（ChatGPT 上面的「新對話」「搜尋」也不亮）；人物模式時人物亮
+            // 所有會議是回到預設的畫面，不畫選到的樣子；人物模式時人物亮
             FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: false) {
                 model.sidebarMode = .meetings
                 model.folderFilter = nil
@@ -484,7 +484,7 @@ struct FolderRow: View {
                     // 拖東西進來時也是打開的資料夾
                     if let folder { FolderGlyph(open: folder.expanded || into, badge: folder.badge) } else { Image(systemName: symbol) }
                 }
-                // 圖示跟字同色（不用側欄預設的主色）；選到時一塊灰底（ChatGPT），拖東西進來時青瓷綠
+                // 圖示跟字同色（不用側欄預設的主色）；選到時一塊灰底，拖東西進來時青瓷綠
                 .labelStyle(SidebarLabelStyle())
                 .foregroundStyle(into ? Color.celadon : .primary)
                 // 輔助使用照舊是一顆按鈕（「⋯」另外一顆）；資料夾的值是展開了沒，可以往上、往下移（R103.2）
@@ -504,7 +504,7 @@ struct FolderRow: View {
             // 可以拖的列（資料夾）蓋拖曳把手：拖了排序，沒拖就是點一下（R103.2、design §77）；其他列（所有會議、人物）
             // 蓋只接點一下的 view，不用 onTapGesture（會讓整個表格的點擊卡住，見 sidebarClick）
             .modifier(FolderRowHandle(name: name, dragKey: dragKey, action: action))
-            // 右邊不放場數（ChatGPT 的專案列表），滑過或選到時「⋯」
+            // 右邊不放場數，滑過或選到時「⋯」
             if let menu {
                 FloatingMenuButton(entries: menu)
                     .opacity(showMenu ? 1 : 0)

@@ -10,7 +10,7 @@ using Windows.UI;
 namespace Shiyin.App;
 
 /// <summary>
-/// 彈窗、輸入框的共用樣子（R106、M§80、design-windows §11.39；同 Mac 的 Views/SheetStyle.swift，照 ChatGPT 的「重新命名對話」）：
+/// 彈窗、輸入框的共用樣子（R106、M§80、design-windows §11.39；同 Mac 的 Views/SheetStyle.swift）：
 /// 大標題、灰字說明、右上角 ✕；欄位上面灰色小標籤；細框圓角的輸入框（有焦點時框變亮，不用強調色的焦點線）；右下圓角按鈕
 ///（主要的字色當底、次要的淡底細框、刪除類紅底白字）。§11.35 的重新命名對話框抽出來的。對比主題時照平台（§11.3）
 /// </summary>

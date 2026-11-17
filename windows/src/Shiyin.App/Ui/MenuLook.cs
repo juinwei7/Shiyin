@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Media;
 namespace Shiyin.App;
 
 /// <summary>
-/// 右鍵和「⋯」的選單照 ChatGPT（R105、M§79、design-windows §11.38）：平台的 MenuFlyout 加輕量的樣式覆寫（不換 ControlTemplate）。
+/// 右鍵和「⋯」的選單（R105、M§79、design-windows §11.38）：平台的 MenuFlyout 加輕量的樣式覆寫（不換 ControlTemplate）。
 /// 面板圓角 14、不透明的底（深色 #2B2B2B、淺色白）、細框；每一項比平台高一點（滑過的底 32）、圓角 8、滑過一塊字色 9% 的底；
 /// 快捷鍵提示、子選單的「›」灰色；分隔線字色 10%。圖示（Segoe Fluent 的細線圖示）、紅字（Ui.DangerItem）、子選單在右邊、
 /// 鍵盤（↑↓→←、Enter、Esc）、點外面就關、UI Automation 都照平台。對比主題時不覆寫（照平台的系統色，§11.3）

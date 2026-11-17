@@ -659,12 +659,12 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - DEBUG（同 Mac 的名稱）：`renamemeetingui <id>`、`folderdeleteui <名稱>`（打開確認）、`sidebarkey return|delete`（等於在會議列表按 Enter、Delete，回傳 `handled`）、`noteitem editui|edit|delete|cancel <section> <i> [<j>] [文字]`、`bookmarkrename <id> <名稱>`、`bookmarkrenameui <id>`、`termrename <id> <詞>`；state 加 `confirmDeleteFolder`、`editingNoteItem`、`bookmarks`（選取中的會議的標記；Mac 沒有）。
 - 測試：`AppTests.EditAndDeleteThingsInPlace`（就地改：待辦只改事項、時間點不變、留版本、空的和沒改的不存；刪除一條的提示、復原上一版拿回來；標記重新命名；詞改字、改成已經有的詞時合併）。
 
-### 11.34 側欄的段落、資料夾可以收合，側欄和選單照 ChatGPT，下面只放其他會議（R101，M§75、D175）
+### 11.34 側欄的段落、資料夾可以收合，側欄和選單的樣子，下面只放其他會議（R101，M§75、D175）
 
 - 狀態：Services 的 `SidebarCollapse`（同 Mac 的 `Store/SidebarCollapse.swift`）讀寫 settings.json 的 `sidebarCollapsed`（收起來的段落：`folders`、`meetings`、`people`、`group:<分組 id>`，分組 id 同 Mac 的 `month-2026-11`、`folder-客戶`）和 `sidebarExpanded`（在原地展開的列：`folder:<名稱>`；以前的 `series:<id>` 在 migration v14 換成同名資料夾的鍵，§11.32），字串陣列、照 Ordinal 排序，值真的變了才寫。資料夾改名、刪除資料夾時由 `AppController.RenameFolder`／`DeleteFolder` 跟著改鍵（Mac 在 AppModel；Windows 的這幾個動作都在 AppController，對話框、確認、控制通道都走這裡）。主視窗聽 `Settings.Changed` 的這兩個鍵重畫（控制通道改的也一樣）。
 - 用了哪些元件：Windows 的側欄是兩個 `ListView`（上面的導覽 `scopes`：所有會議、人物、資料夾那一段；下面的會議列表 `list`），中間是標題列（§11.30）。**不用 `TreeView`、`Expander`**：TreeView 的子節點是可以選的節點，選到展開的那場就把目前的範圍（所有會議／資料夾）的選取換掉，跟「下面的列表不換」衝突；Expander 不能放進 ListView 的一列，上下鍵也不能從一段走到下一段。所以照 Mac 自己畫，放在原本的清單裡。ListViewItem 本來就有滑過時一塊圓角的淡底、跟選取那一塊一樣大（R101.4 要的樣子，Mac 要自己畫 `sidebarHover`），不用另外做。
 - `Ui/SidebarItem`（`ListViewItem` 的子類別）：段落標題、資料夾的列、展開的會議、「顯示全部 N 場」、分組的標題都是這個。上下鍵走得到、滑過有底色，但點了不會變成選取：左鍵、觸控按下時不交給 ListViewItem（`OnPointerPressed`／`OnPointerReleased` 自己處理、自己拿焦點，從列裡的按鈕來的、右鍵照舊）——交給它的話會先選到這一列，清單把選取還原時焦點跳回選到的那一列、整個清單捲走（2026-11-16 虛擬機：點下面的資料夾展開的會議，上面捲回最上面）；上下鍵選到時清單馬上把選取還原（`scopes`；`list` 是 Extended，拿掉被選到的標題，只選到標題時還原原本選的會議，Shift 點選跨過標題時照舊選那一段）。動作只在點一下（`Tapped`，`handledEventsToo`；從「⋯」來的不算）、Enter／空白鍵（`PreviewKeyDown`，焦點在這一列本身時）、UI Automation 的 Invoke 時做：自己的 AutomationPeer（`ListViewItemAutomationPeer` 加 `IInvokeProvider`，可以收合的多 `IExpandCollapseProvider`；ListView 的項目 peer 把不認得的 pattern 交給容器的 peer，虛擬機上 `uia.sh click` 用 Invoke 按得到）。原本停用的標題項目（資料夾、分組的每一組）換成這個：停用的項目不能點、不能有焦點。
-- 段落標題（資料夾、分組的每一組）：標題（14 號、不加粗、次要文字的顏色：跟列一樣大的灰字，ChatGPT 的「專案」；85e6998 起，原本 12 號）後面一個小箭頭（Segoe Fluent 的 `E70D` 展開／`E76C` 收起，10 號，第三層文字的顏色），收起來時一直顯示，展開時只在滑過、有鍵盤焦點時出現（opacity，位置留著；R101.1，參考 ChatGPT）；滑過去沒有底色（`ListViewItemBackgroundPointerOver`／`Pressed` 換成透明；對比主題時照平台，不然反白的字落在透明的底上看不見）。點標題、Enter、空白鍵切換；收起時那一段只剩標題。無障礙名稱是標題，`ItemStatus`「已展開」「已收起」，`HeadingLevel` 2，`ToolTip`「收起這一段」「展開這一段」。
+- 段落標題（資料夾、分組的每一組）：標題（14 號、不加粗、次要文字的顏色：跟列一樣大的灰字）後面一個小箭頭（Segoe Fluent 的 `E70D` 展開／`E76C` 收起，10 號，第三層文字的顏色），收起來時一直顯示，展開時只在滑過、有鍵盤焦點時出現（opacity，位置留著；R101.1）；滑過去沒有底色（`ListViewItemBackgroundPointerOver`／`Pressed` 換成透明；對比主題時照平台，不然反白的字落在透明的底上看不見）。點標題、Enter、空白鍵切換；收起時那一段只剩標題。無障礙名稱是標題，`ItemStatus`「已展開」「已收起」，`HeadingLevel` 2，`ToolTip`「收起這一段」「展開這一段」。
 - 會議列表的標題列（`sectionHeader`）：左邊的名稱換成沒有框的按鈕（`Ui.Borderless`、次要文字，滑過去沒有底色、只出現箭頭，對比主題時照平台的按鈕）：名稱、後面同樣的箭頭（`Ui.Inline`：短的時候箭頭緊接在字後面，長的時候名稱省略號、箭頭留著），點了切換 `meetings`（人物模式是「人物」、`people`）；右邊的「顯示方式」不動。Windows 的兩個是分開的按鈕，沒有 Mac 段落標題併成一個元件、選單打不開的問題（M§75），所以標題是一般的按鈕（名稱是標題、`ItemStatus`）。收起時篩選列、篩選後空的提示、列表（人物模式是人物列表）都不顯示；垃圾桶、搜尋結果不收合。
 - 「資料夾」一段（R101.3）：資料夾（照拖曳排的順序，§11.36）；R104 起一直顯示，標題右邊「+」（§11.37）。
 - 資料夾的列（`FolderRow`，R101.2）：點整列（Enter、空白鍵、UI Automation 的 Invoke）是在原地展開、收起，不換下面的列表；沒有箭頭，圖示就是狀態：收起時關著的資料夾（Segoe Fluent 的 Folder `E8B7`）、展開時打開的資料夾（FolderOpen `E838`），20 號（跟所有會議、人物的 `SymbolIcon` 同寬，圖示照舊對齊）。有自動加入條件的資料夾右下角一個小齒輪（`E713` 11 號，M§72），標記放在側欄底色的 13×13 小圓上、青瓷綠（墊底色，資料夾的線不會穿過標記；Mac 是挖空。已知：滑過、選到時列的底色跟小圓的底色不一樣，看得出一個小圓），關著、打開兩種圖示都有。無障礙：名稱「客戶」，`ItemStatus`「已展開、8 場」（右邊不放場數，§11.34 的單色），ExpandCollapse。只看某個資料夾（「顯示全部」）時那一列照舊是選到的樣子：`SyncScopeSelection` 照 `FolderFilter` 選它（程式選的不還原）。鍵盤：F2 重新命名、Delete 刪除（先確認，R100）、→ 展開、← 收起（TreeView 的習慣）；Enter 是展開收起（這一列是按鈕；原本 §11.33 的 Enter 重新命名改成只有 F2）。資料夾的選單沒有「只看這個資料夾」（fa12d60 拿掉，使用者：「不用只看這個」），只看一個資料夾從展開後的「顯示全部」。
@@ -677,9 +677,9 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 顏色照 §11.3：標題、箭頭、資料夾圖示是文字的顏色（對比主題時 `FollowForeground` 清掉，跟著列的前景色）；小標記的圓底是側欄的底色（對比主題時是視窗底色，`FollowForeground` 跳過有底色的一小塊）。
 - 單色（85e6998，R101.4 使用者：「你可以學一下嗎？他這美觀多了」，同 M§75「單色」）：`Ui/SidebarLook`。
   - 圖示跟字同色：資料夾的小標記（齒輪）不再是青瓷綠，跟著列的字。
-  - 選到的列一塊灰色圓角底、字照常，滑過一塊更淡的灰：`SidebarLook.Row` 在建列時（範本套上之前）覆寫這一列的資源：`ListViewItemBackgroundPointerOver`／`Pressed` 是字色 6%，`ListViewItemBackgroundSelected`／`SelectedPointerOver`／`SelectedPressed` 是 11%，`ListViewItemSelectionIndicator*Brush` 透明（拿掉左邊那條強調色的線），`CornerRadius` 8（同 Mac 的 `sidebarHover(selected:)`）。用在所有會議、人物、資料夾、展開的會議、「顯示全部」、下面的會議、人物、搜尋結果。「所有會議」選到也不畫（`showSelected: false`，ChatGPT 上面的「新對話」不亮；人物模式時「人物」亮）。
+  - 選到的列一塊灰色圓角底、字照常，滑過一塊更淡的灰：`SidebarLook.Row` 在建列時（範本套上之前）覆寫這一列的資源：`ListViewItemBackgroundPointerOver`／`Pressed` 是字色 6%，`ListViewItemBackgroundSelected`／`SelectedPointerOver`／`SelectedPressed` 是 11%，`ListViewItemSelectionIndicator*Brush` 透明（拿掉左邊那條強調色的線），`CornerRadius` 8（同 Mac 的 `sidebarHover(selected:)`）。用在所有會議、人物、資料夾、展開的會議、「顯示全部」、下面的會議、人物、搜尋結果。「所有會議」選到也不畫（`showSelected: false`；人物模式時「人物」亮）。
   - 不在清單選取裡的列要自己畫底（展開的會議選到時的灰底、拖東西進來時的青瓷綠，§11.36）：`SidebarItem.Backplate(brush)`。平常的狀態畫的是 `ListViewItem.Background`，滑過、選到的狀態是 `ListViewItemPresenter` 的 `PointerOverBackground`、`SelectedBackground`、`SelectedPointerOverBackground`，兩邊都要換，換完切一次視覺狀態（`GoToState` 到另一個再回來）才會重畫。踩到的（2026-11-17 虛擬機）：只改 presenter 的 `Background` 畫面沒變；只改 `ListViewItem.Background` 的話滑過時（拖曳經過也算滑過）被滑過的灰蓋掉；`ClearValue` 拿掉之後畫面停在原本的顏色，要切一次狀態。範本套上之後才有 presenter，`Loaded` 時套一次、再排一個低優先順序的再套一次。
-  - 右邊不放場數（ChatGPT 的專案列表），滑過或選到時「⋯」；無障礙的值（`ItemStatus`）唸得到：資料夾「已展開、4 場」，所有會議「47 場」，人物「2 人」。
+  - 右邊不放場數，滑過或選到時「⋯」；無障礙的值（`ItemStatus`）唸得到：資料夾「已展開、4 場」，所有會議「47 場」，人物「2 人」。
   - 段落標題、會議列表的標題（「其他會議」）14 號灰字、不加粗（上面「段落標題」）。
   - 段落標題右邊的小按鈕（7fb4224，使用者：「你可不可以學一下他的＋，目前的有夠醜」）：`SidebarLook.HeaderIcon`：細線的圖示 15 號（Segoe Fluent 的字形只有一種粗細）、次要文字的顏色、26×24 的點擊範圍、圓角 6，滑過變成文字的顏色加字色 8% 的底，右邊留 6 跟列的「⋯」對齊。「資料夾」的「+」（`E710`）和會議列表、垃圾桶的「顯示方式」都用它；「顯示方式」從有圈的漏斗（`E71C`）改成 Equalizer（`E9E9`，橫的三條滑桿，同 Mac 的 `slider.horizontal.3`），篩選中是強調色的字（原本是實心的強調色按鈕）。
   - 對比主題照平台的系統色（不覆寫；「所有會議」選到時底透明、字是文字的顏色），小按鈕照 `Ui.Borderless`。
@@ -690,7 +690,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.35 重新命名的對話框（R102，M§76）
 
 - 狀態、規則在 Services（`Renaming.cs`，同 Mac 的 `Store/RenameTarget.swift`）：`RenameTarget`（record：`Meeting(id)`、`Folder(名稱)`、`NewFolder(會議 id)`、`Person(id)`、`Bookmark(id)`；`Key` 同 Mac 的 `"\(self)"`：`meeting(42)`、`folder("客戶")`、`newFolder([1, 2])`）；`Renaming.CanSave`（名字空白、沒改不能存，新資料夾有字就能建立）、`Renaming.Conflict`（資料夾同名、人物同名大小寫不分時是合併）；`AppController.CurrentName`（從資料庫讀：沒取過標題的會議是檔名；人物、標記不靠畫面上的列表，Mac 驗收時人物列表沒打開過、輸入框是空的）、`CommitRename`（走原本的動作）。
-- 對話框 `Dialogs.Rename`（`RenameDialog.cs`）。樣子照 ChatGPT 的「重新命名對話」（85e6998，R102.1，同 M§76 的 `RenameSheet`）：
+- 對話框 `Dialogs.Rename`（`RenameDialog.cs`）。樣子同 M§76 的 `RenameSheet`（R102.1）：
   - 內容寬 392（`ContentDialog` 自己的內距 24）：上面一列是大標題（`Ui.DialogTitle`，22 號粗體：重新命名會議／資料夾／這個人／標記、新資料夾）和右上角的 ✕（`SidebarLook.HeaderIcon` 的 `E711`，`ToolTip` 和無障礙名稱「取消」（R106 起「關閉」、不能 Tab，§11.39），等於取消），標題下面一行灰字說明（14 號、`Ui.Secondary`，文字同 Mac：會議「保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。」、資料夾「資料夾裡的會議都會跟著改。」、新資料夾「例如專案名稱或客戶名稱。這場會議會移進新資料夾。」（好幾場時「這 N 場會議」）、「+」的新資料夾「例如專案名稱或客戶名稱。」、人物「所有會議裡的這個人都會跟著改。」、標記「12:34 的標記」）；再來是輸入框；右下兩顆圓角按鈕「取消」「儲存」（新資料夾「建立並移入」、「+」是「建立」）。
   - 輸入框（`RenameBox`）：細框、沒有強調色的焦點線：覆寫 `TextControlBorderBrush`（字色 25%）、`PointerOver`（40%）、`Focused`（75%），`TextControlBorderThemeThickness` 1、`Focused` 1.5（原本是底下一條 2 的強調色），底色字色 4%，圓角 10、字 15、內距 12×8。`PlaceholderText` 和無障礙名稱：資料夾名稱、名字、名稱。
   - 按鈕（`PillButton`，同 Mac 的 `SheetPillButtonStyle`）：圓角 10、高 34、最寬 68 起、左右 18。主要按鈕是字的顏色當底、視窗底色的字（淺色黑底白字、深色白底黑字），滑過 85%、按下 75%、停用 35%（覆寫 `ButtonBackground*`、`ButtonForeground*`、`ButtonBorderBrush*`）；取消是字色 6% 的底加 18% 的細框。
@@ -732,7 +732,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - DEBUG（同 Mac）：`foldernew <名稱>`；state 的 `folders`（名稱、場數，同 Mac）。
 - 測試：`OrganizeTests.OrganizingHelpers`（資料夾表的名字也列出來、不重複）、`OrganizeTests.RenameRules`（「+」同名不能建）、`AppTests.RenameDialogReadsAndCommits`（「+」建立、提示、同名不建、會議都移走了還在）。
 
-### 11.38 選單照 ChatGPT（R105，M§79）
+### 11.38 選單的樣子（R105，M§79）
 
 - 用什麼做（評估後）：**平台的 `MenuFlyout` 加輕量的樣式覆寫**（`Ui/MenuLook`），不像 Mac 自己畫面板。Mac 自己畫是因為 macOS 的 NSMenu 換不了樣子（圓角、列高、底色、圖示顏色都固定）；WinUI 的 MenuFlyout 本來就是圓角面板、Segoe Fluent 的細線圖示（`Icon`）、右邊灰色的快捷鍵提示（`KeyboardAcceleratorTextOverride`，範本裡的 `KeyboardAcceleratorTextBlock`）、子選單的「›」（`E974`）、滑過一塊圓角底，子選單開在右邊（滑鼠移過去的延遲照系統的選單延遲），↑↓→←、Enter、Esc、點外面和切到別的 app 就關、UI Automation（`uia.sh rclick` 照樣按得到）、對比主題都由平台處理；差的只是尺寸和顏色，都有主題資源或屬性可以換（`MenuFlyoutPresenterStyle`、項目的 `Resources`、`CornerRadius`、`MinHeight`），不用換 ControlTemplate。自己用 `Popup` 畫的話鍵盤、焦點、無障礙、對比主題、螢幕邊緣、子選單的斜移都要自己做（winui-design 的「自己做元件」要全部做到），沒有必要。
 - 樣子（數字照 M§79）：

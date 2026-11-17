@@ -86,7 +86,7 @@ struct MeetingListHeader: View {
             Menu {
                 MeetingListMenu(model: model)
             } label: {
-                // 細線的滑桿圖示，跟「資料夾」的「+」同一種樣子（ChatGPT）；篩選中是青瓷綠
+                // 細線的滑桿圖示，跟「資料夾」的「+」同一種樣子；篩選中是青瓷綠
                 SidebarHeaderIcon(systemName: "slider.horizontal.3", active: model.meetingFilter.isActive)
             }
             .menuStyle(.button)

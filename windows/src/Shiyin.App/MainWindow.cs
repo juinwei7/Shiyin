@@ -36,7 +36,7 @@ public sealed class MainWindow : Window
     /// 選到的那一列是平台的選取樣子（強調色＝青瓷綠）。下面一段的標題在 sectionTitle
     /// </summary>
     readonly ListView scopes = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(4, 0, 4, 0) };
-    /// <summary>會議列表的標題（「其他會議」）：跟列一樣大的灰字、不加粗（R101.4、ChatGPT 的「專案」）</summary>
+    /// <summary>會議列表的標題（「其他會議」）：跟列一樣大的灰字、不加粗（R101.4）</summary>
     readonly TextBlock sectionTitle = Ui.Text("", 14, color: Ui.Secondary, wrap: false);
     /// <summary>
     /// 會議那一段的標題列（R97.1、M§71）：左邊「所有會議」（或資料夾、定期會議的名稱）・分組方式，右邊「顯示方式」（排序、分組、篩選）；
@@ -841,7 +841,7 @@ public sealed class MainWindow : Window
     /// </summary>
     SidebarItem SectionItem(string key, string title, bool expanded, double top = 8, FrameworkElement? trailing = null)
     {
-        // 跟列一樣大的灰字、不加粗（R101.4，ChatGPT 的「專案」；分組的每一組也一樣）
+        // 跟列一樣大的灰字、不加粗（R101.4）
         var text = Ui.Text(title, 14, color: Ui.Secondary, wrap: false);
         var chevron = ChevronIcon(expanded, Ui.Tertiary);
         var label = Ui.Row(6, text, chevron);
@@ -851,7 +851,7 @@ public sealed class MainWindow : Window
             Content = Ui.FollowForeground<FrameworkElement>(trailing is null ? label : Ui.Bar(label, null, trailing, 4)),
             MinHeight = 28, Padding = new Thickness(12, top, trailing is null ? 12 : 4, 0),
         };
-        // 標題不是一列：滑過去沒有底色，箭頭出現（R101.1，參考 ChatGPT 桌面版）。對比主題時照平台（滑過去反白，字是反白的字）
+        // 標題不是一列：滑過去沒有底色，箭頭出現（R101.1）。對比主題時照平台（滑過去反白，字是反白的字）
         if (!Ui.HighContrast)
             foreach (var resource in new[] { "ListViewItemBackgroundPointerOver", "ListViewItemBackgroundPressed" })
                 item.Resources[resource] = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
@@ -897,7 +897,7 @@ public sealed class MainWindow : Window
     SidebarItem FolderRow(string name, int count, Scope scope, string key, bool expanded, string? badge, RowDrop drop, Action<MenuFlyout> fill,
                           Action rename, Func<Task> delete)
     {
-        // 右邊不放場數（R101.4、ChatGPT 的專案列表），滑過或選到時「⋯」；場數在無障礙的值
+        // 右邊不放場數（R101.4），滑過或選到時「⋯」；場數在無障礙的值
         var more = RowMore.Button(fill);
         more.HorizontalAlignment = HorizontalAlignment.Right;
         var icon = FolderIcon(expanded, badge, out var glyph);
@@ -1248,7 +1248,7 @@ public sealed class MainWindow : Window
                 peek.Frame.BorderBrush = selected ? Ui.Celadon : null;
                 peek.Frame.BorderThickness = new Thickness(selected ? 1 : 0);
             }
-            // 選到時一塊灰底、字照常（R101.4、ChatGPT；同下面列表選到的樣子）
+            // 選到時一塊灰底、字照常（R101.4；同下面列表選到的樣子）
             else peek.Item.Backplate(selected ? SidebarLook.Selected : null);
             peek.UpdateMore();
         }
@@ -1256,7 +1256,7 @@ public sealed class MainWindow : Window
 
     /// <summary>
     /// 一列：圖示、名字（所有會議、人物：點了換下面的列表）。右邊不放數量（R101.4），無障礙的值唸得到；
-    /// 「所有會議」是回到預設的畫面，不畫選到的樣子（ChatGPT 上面的「新對話」也不亮），人物模式時「人物」亮
+    /// 「所有會議」是回到預設的畫面，不畫選到的樣子，人物模式時「人物」亮
     /// </summary>
     ListViewItem ScopeRow(string name, int count, Scope scope, FrameworkElement icon)
     {
@@ -1654,7 +1654,7 @@ public sealed class MainWindow : Window
         var menu = new MenuFlyout();
         FillRowMenu(menu, id);
         MenuLook.Apply(menu);
-        // 照 ChatGPT 的樣子（R105、design-windows §11.38）
+        // 選單的樣子（R105、design-windows §11.38）
         menu.Opening += (_, _) => Ui.Guard(() => { FillRowMenu(menu, id); MenuLook.Apply(menu); });
         return menu;
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 彈窗的共用樣子（R106、design §80；照 ChatGPT 的「重新命名對話」）
+// MARK: - 彈窗的共用樣子（R106、design §80）
 
 /// 彈窗的標題：大標題、一行灰字說明、右上角 ✕
 struct SheetHeader: View {

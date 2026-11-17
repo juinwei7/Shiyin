@@ -2,7 +2,7 @@ import SwiftUI
 
 // 每一種東西都能直接改、刪（R100、design §74）：畫面上的「⋯」、右鍵、「更多」用同一份選單內容
 
-/// 選單裡會刪掉、移除東西的項目：紅色的字和圖示（R101，參考 ChatGPT 桌面版）。macOS 的選單不會照 role 變色，
+/// 選單裡會刪掉、移除東西的項目：紅色的字和圖示（R101）。macOS 的選單不會照 role 變色，
 /// 要自己上色；title 已經查過字串表（呼叫的地方用 `String(localized:)`）
 struct DestructiveMenuButton: View {
     let title: String
@@ -25,7 +25,7 @@ struct DestructiveMenuButton: View {
 }
 
 extension View {
-    /// 選單項目顯示圖示（macOS 的選單預設只顯示文字；R101，參考 ChatGPT 桌面版的選單）；圖示跟字同色，不用 app 的主色
+    /// 選單項目顯示圖示（macOS 的選單預設只顯示文字；R101）；圖示跟字同色，不用 app 的主色
     func menuIcons() -> some View { labelStyle(.titleAndIcon).tint(.primary) }
 }
 

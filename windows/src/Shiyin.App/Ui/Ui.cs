@@ -538,7 +538,7 @@ public static class Ui
     public const string RemovePersonGlyph = "\uE8F8";
 
     /// <summary>
-    /// 會刪掉、移除東西的選單項目（R101.4，參考 ChatGPT 桌面版）：紅字、紅圖示，滑過、按下也是紅的（範本各狀態讀的主題資源換掉）。
+    /// 會刪掉、移除東西的選單項目（R101.4）：紅字、紅圖示，滑過、按下也是紅的（範本各狀態讀的主題資源換掉）。
     /// 對比主題時照平台的顏色（§11.3：滑過去是反白的底，自己的顏色會看不見）。icon 是 null 時只有紅字（本來沒有圖示的選單）
     /// </summary>
     public static MenuFlyoutItem DangerItem(string text, Action click, bool enabled = true, Symbol? icon = Symbol.Delete, string? glyph = null)

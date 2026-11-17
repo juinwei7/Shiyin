@@ -8,14 +8,14 @@ using Shiyin.Services;
 
 namespace Shiyin.App;
 
-/// <summary>重新命名的對話框（R102、M§76、design-windows §11.35，同 Mac 的 Views/RenameSheet.swift，參考 ChatGPT 的「重新命名對話」）</summary>
+/// <summary>重新命名的對話框（R102、M§76、design-windows §11.35，同 Mac 的 Views/RenameSheet.swift）</summary>
 public static partial class Dialogs
 {
     /// <summary>DEBUG 的 state（renameTarget）：開著的重新命名對話框要改的東西</summary>
     public static RenameTarget? RenamingTarget { get; private set; }
 
     /// <summary>
-    /// 樣子照 ChatGPT 的「重新命名對話」（R102.1、M§76）：大標題、右上角 ✕、一行灰字說明、細框的輸入框（帶目前的名字並全選）、
+    /// 樣子（R102.1、M§76）：大標題、右上角 ✕、一行灰字說明、細框的輸入框（帶目前的名字並全選）、
     /// 右下兩顆圓角按鈕「取消」（淡底細框）「儲存」（新資料夾「建立並移入」、「+」是「建立」；字的顏色當底：淺色黑底白字、深色白底黑字）。
     /// 名字空白、沒改時「儲存」停用（Enter 也不會存）；改成已經有的資料夾、人物名字時說明換成合併的提醒。Enter 儲存、Esc 取消。
     /// R106 起元件是共用的 Sheet、SheetDialog（design-windows §11.39），樣子不變。會議、資料夾、新資料夾、人物、標記都用這一個；同時只開一個

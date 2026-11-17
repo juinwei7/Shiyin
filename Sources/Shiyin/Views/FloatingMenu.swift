@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - 自己畫的選單（R105、design §79）
 
-/// 「⋯」和右鍵選單的一項（樣子照 ChatGPT 的選單：圓角深色面板、細線圖示、右邊灰色的快捷鍵、子選單「›」）
+/// 「⋯」和右鍵選單的一項（自己畫的選單：圓角深色面板、細線圖示、右邊灰色的快捷鍵、子選單「›」）
 struct MenuEntry: Identifiable {
     enum Kind {
         case action(() -> Void)

@@ -9,7 +9,7 @@ namespace Shiyin.App;
 /// <summary>
 /// 列右邊的「⋯」（R100、M§74 的 RowMenuButton）：滑鼠在列上、或那一列選到時才看得到（沒顯示時透明、照樣佔位，列的寬度不跳），
 /// 點了打開跟右鍵同一份選單（fill 建選單的內容，打開時才建）。無障礙名稱、ToolTip 是「更多動作」。
-/// 兩種選單都照 ChatGPT 的樣子（MenuLook，R105、design-windows §11.38）；「⋯」的選單左上角對齊「⋯」的左下（同 Mac）
+/// 兩種選單同一種樣子（MenuLook，R105、design-windows §11.38）；「⋯」的選單左上角對齊「⋯」的左下（同 Mac）
 /// </summary>
 public static class RowMore
 {

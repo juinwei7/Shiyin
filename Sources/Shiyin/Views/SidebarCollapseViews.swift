@@ -2,10 +2,10 @@ import SwiftUI
 
 // MARK: - 側欄的收合（R101、design §75）
 
-/// 側欄的列滑鼠移上去時，整列一塊淡淡的圓角底（R101，參考 ChatGPT 桌面版）：跟系統選取的那一塊一樣大，
+/// 側欄的列滑鼠移上去時，整列一塊淡淡的圓角底（R101）：跟系統選取的那一塊一樣大，
 /// 選到的列被系統的選取蓋過去
 struct SidebarHoverModifier: ViewModifier {
-    /// 選到的列（側欄自己畫選取的列：資料夾、展開的會議）一直有一塊比較深的灰底，同 ChatGPT 選到的對話
+    /// 選到的列（側欄自己畫選取的列：資料夾、展開的會議）一直有一塊比較深的灰底
     var selected = false
     @State private var hovering = false
 
@@ -29,7 +29,7 @@ struct SidebarHoverModifier: ViewModifier {
 extension View {
     func sidebarHover(selected: Bool = false) -> some View { modifier(SidebarHoverModifier(selected: selected)) }
 
-    /// 側欄 List 裡有選取的列（下面的會議、人物）：不畫系統的選取（青瓷綠的一整塊），選到的列改成灰底（ChatGPT）；
+    /// 側欄 List 裡有選取的列（下面的會議、人物）：不畫系統的選取（青瓷綠的一整塊），選到的列改成灰底；
     /// 選取、多選、鍵盤照舊。選到時字照常的顏色（不然系統把字換成白的，淺色模式在灰底上看不見）
     func sidebarSelectableRow(selected: Bool) -> some View {
         environment(\.backgroundProminence, .standard)
@@ -38,7 +38,7 @@ extension View {
     }
 }
 
-/// 段落標題右邊的小按鈕（「+」、顯示方式）：細線、跟字差不多高、灰色，滑過一塊淡淡的圓角底，跟列的「⋯」對齊（ChatGPT）
+/// 段落標題右邊的小按鈕（「+」、顯示方式）：細線、跟字差不多高、灰色，滑過一塊淡淡的圓角底，跟列的「⋯」對齊
 struct SidebarHeaderIcon: View {
     let systemName: String
     var active = false
@@ -58,7 +58,7 @@ struct SidebarHeaderIcon: View {
     static let trailing: CGFloat = 6
 }
 
-/// 側欄的圖示、名字：自己排，不用系統側欄的排法（系統會用強調色畫圖示）；圖示跟字同色（ChatGPT）
+/// 側欄的圖示、名字：自己排，不用系統側欄的排法（系統會用強調色畫圖示）；圖示跟字同色
 struct SidebarLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 9) {
@@ -87,7 +87,7 @@ private struct NoNativeSelection: NSViewRepresentable {
     }
 }
 
-/// 可以收合的段落標題：標題後面一個小箭頭（滑過標題或收起來時才出現，參考 ChatGPT 桌面版），標題和箭頭是同一顆按鈕
+/// 可以收合的段落標題：標題後面一個小箭頭（滑過標題或收起來時才出現），標題和箭頭是同一顆按鈕
 struct SidebarSectionHeader: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -104,7 +104,7 @@ struct SidebarSectionHeader: View {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.setSection(key, expanded: !expanded) }
         }
         let label = HStack(spacing: 4) {
-            // 跟列一樣大的灰字、不加粗（ChatGPT 的「專案」「最近項目」），不用 macOS 側欄預設的小粗體
+            // 跟列一樣大的灰字、不加粗，不用 macOS 側欄預設的小粗體
             Text(title).lineLimit(1).font(.body).fontWeight(.regular).foregroundStyle(.secondary)
             Image(systemName: expanded ? "chevron.down" : "chevron.right")
                 .font(.caption.weight(.medium))
@@ -133,7 +133,7 @@ struct SidebarSectionHeader: View {
     }
 }
 
-/// 側欄的資料夾圖示（R101）：關著、打開兩種表示有沒有展開（參考 ChatGPT 桌面版的專案列表）；系統圖示沒有打開的資料夾，
+/// 側欄的資料夾圖示（R101）：關著、打開兩種表示有沒有展開；系統圖示沒有打開的資料夾，
 /// 自己畫（`OpenFolderShape`），大小、粗細照系統的 `folder`。標記在右上角：齒輪是有自動加入條件
 struct FolderGlyph: View {
     var open: Bool
@@ -263,7 +263,7 @@ private struct SidebarPeekRow: View {
         .sidebarDragHandle(type: .shiyinMeetingIDs, label: row.meeting.displayTitle,
                            data: { Data(model.dragIDs(for: row.id).map(String.init).joined(separator: ",").utf8) }, onClick: open)
         .floatingRowMenu(selected: selected) { model.meetingMenu([row.id]) }
-        // 選到時一塊灰底（同 ChatGPT），不用 List 的選取（下面的列表也有這場，兩邊都亮會像多選）
+        // 選到時一塊灰底，不用 List 的選取（下面的列表也有這場，兩邊都亮會像多選）
         .sidebarHover(selected: selected)
         .help("\(row.meeting.meetingDate)・\(row.meeting.displayTitle)")
         .selectionDisabled()

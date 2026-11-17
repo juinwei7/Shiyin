@@ -6,7 +6,7 @@ using Microsoft.UI.Xaml.Media;
 namespace Shiyin.App;
 
 /// <summary>
-/// 側欄的樣子照 ChatGPT（R101.4、M§75「單色」、design-windows §11.34）：滑過一塊淡灰、選到一塊深一點的灰（圓角 8），字照常；
+/// 側欄的樣子（R101.4、M§75「單色」、design-windows §11.34）：滑過一塊淡灰、選到一塊深一點的灰（圓角 8），字照常；
 /// 不用平台的強調色選取（左邊那條青瓷綠的線）。段落標題右邊的小按鈕（「+」、顯示方式）是細線的圖示。對比主題時照平台（§11.3）
 /// </summary>
 public static class SidebarLook
@@ -30,7 +30,7 @@ public static class SidebarLook
 
     /// <summary>
     /// 側欄的一列：滑過、選到的底換成灰色，拿掉左邊的強調色的線（輕量的樣式覆寫，要在範本套上之前設，所以建列時就呼叫）。
-    /// showSelected false：選到也不畫（「所有會議」是回到預設的畫面，同 ChatGPT 的「新對話」）
+    /// showSelected false：選到也不畫（「所有會議」是回到預設的畫面）
     /// </summary>
     public static T Row<T>(T item, bool showSelected = true) where T : ListViewItem
     {
@@ -57,7 +57,7 @@ public static class SidebarLook
     }
 
     /// <summary>
-    /// 段落標題右邊的小按鈕（同 Mac 的 SidebarHeaderIcon，ChatGPT「專案」右邊的「+」）：細線的圖示（15）、灰色、26×24 的點擊範圍，
+    /// 段落標題右邊的小按鈕（同 Mac 的 SidebarHeaderIcon）：細線的圖示（15）、灰色、26×24 的點擊範圍，
     /// 滑過變亮加淡淡的圓角底；右邊留 6 跟列的「⋯」對齊。active：篩選中，圖示是強調色的字。rotate：轉 90 度（Equalizer 轉成橫的三條滑桿）
     /// </summary>
     public static Button HeaderIcon(Button button, string glyph, bool active = false, bool rotate = false)
