@@ -173,7 +173,12 @@ struct MeetingEditSheet: View {
                                                     : String(localized: "（刪掉 \(TimeFormat.string(editor.total - kept))、\(removed) 句）"))
                                        : String(localized: "（拖兩端的把手裁切，或在波形上選一段刪掉）")
         }
-        return (Text(main).fontWeight(.semibold) + Text(detail).foregroundStyle(.secondary))
+        // 前半粗體、後半灰字（Text 用 + 接起來在 macOS 26 不建議用）
+        var head = AttributedString(main)
+        head.font = .body.weight(.semibold)
+        var tail = AttributedString(detail)
+        tail.foregroundColor = .secondary
+        return Text(head + tail)
             .font(.body)
             .lineLimit(2)
     }
