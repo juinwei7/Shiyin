@@ -94,6 +94,14 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     }
 }
 
+extension OpenSettingsAction {
+    /// 打開設定並停在那一頁（設定會記住上次的頁面，R108.5；已經開著時跟著換頁）
+    func callAsFunction(page: SettingsPage) {
+        UserDefaults.standard.set(page.rawValue, forKey: SettingsPage.storageKey)
+        callAsFunction()
+    }
+}
+
 /// 設定視窗（R108、design §82）：左邊側欄、右邊那一頁
 struct SettingsView: View {
     #if DEBUG
@@ -141,6 +149,10 @@ struct SettingsView: View {
                 // 只剩一頁時直接選它（R108.4）
                 let found = SettingsPage.allCases.filter { $0.matches(value) }
                 if !value.isEmpty, found.count == 1, let only = found.first { select(only) }
+            }
+            .onChange(of: storedPage) { _, value in
+                // 從會議頁的「打開設定」指定頁面時，開著的設定視窗跟著換
+                if let target = SettingsPage(rawValue: value), target != page { page = target }
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 220, max: 260)
             .frame(minWidth: 210)   // 欄寬有時候不生效（設定視窗第一次打開），清單自己也要撐開
@@ -464,7 +476,7 @@ struct ProviderSettings: View {
         case .notInstalled?, .notLoggedIn?: return String(localized: "設定好之前不會自動整理。")
         case .missingKey?: return String(localized: "還沒有存 API key：貼上之後按「儲存 key」。設定好之前不會自動整理。")
         case .incomplete?: return String(localized: "還沒有填網址或模型。設定好之前不會自動整理。")
-        case .enterpriseSignedOut?: return String(localized: "公司的伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。")
+        case .enterpriseSignedOut?: return String(localized: "公司的伺服器還沒登入或登入已失效：到「企業伺服器」那一頁登入。設定好之前不會自動整理。")
         case .enterpriseNoModels?: return String(localized: "公司的伺服器還沒有提供整理用的模型：請管理者在伺服器後台的「整理模型」加上模型。")
         case .paused(_, let detail)?:
             let reason = MeetingLanguage.uiStored(detail.trimmingCharacters(in: CharacterSet(charactersIn: "。. ")))   // l10n-skip

@@ -1506,19 +1506,19 @@
         }
       }
     },
-    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → 進階 → AI 工具（MCP）」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。": {
+    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → AI 工具」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your Shiyin meetings directly: in Settings › Advanced › AI tools (MCP), turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. Shiyin doesn't need to be open."
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your Shiyin meetings directly: in Settings › AI Tools, turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. Shiyin doesn't need to be open."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以直接读拾音的会议：到“设置 → 高级 → AI 工具（MCP）”打开“让 AI 工具读取会议”，再按“加到 Claude Code”“加到 Codex”或“加到 Claude Desktop”。其他工具用“复制”自己粘贴设置。拾音不用开着。"
+            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以直接读拾音的会议：到“设置 → AI 工具”打开“让 AI 工具读取会议”，再按“加到 Claude Code”“加到 Codex”或“加到 Claude Desktop”。其他工具用“复制”自己粘贴设置。拾音不用开着。"
           }
         }
       }
@@ -2476,104 +2476,104 @@
         }
       }
     },
-    "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。最下面的「範本」內建五種；也可以複製一份來改，或自己新增段落與指示。": {
+    "「一般」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Summarizer: choose Claude or Codex (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summarizing feels slow, enter a faster model under Model, such as sonnet. Templates are at the bottom: five built in; copy one to customize it, or add your own sections and instructions."
+            "value": "General, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“整理工具”：选 Claude、Codex（需要先安装并登录对应的 CLI），或填 Anthropic、OpenAI 的 API key。觉得整理太慢，可以在“模型”填比较快的模型，例如 sonnet。最下面的“模板”内建五种；也可以复制一份来改，或自己添加段落与指示。"
+            "value": "“一般”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
           }
         }
       }
     },
-    "「說話者與詞彙」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。": {
+    "「企業伺服器」：公司的伺服器、你的帳號，可以選要不要用它轉錄、整理，或登出。整理工具選「公司」就用公司設定的模型。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Speakers & Glossary: the people Shiyin recognizes and their voiceprints, which you can rename or delete, or turn off remembering voices; the glossary holds the correct spelling of system names, product names and people's names, which greatly improves proper-noun accuracy."
+            "value": "“Enterprise server”: your company’s server and your account. Choose whether to use it for transcription and summaries, or sign out. With the “Company” summarizer, notes are written by the model your company set up."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“说话者与词汇”：拾音认识的人和他们的声纹，可以改名、删除，或关掉记住声音的功能；词汇表加入系统名、产品名、人名的正确写法，这对专有名词的正确率影响很大。"
+            "value": "“企业服务器”：公司的服务器、你的账号，可以选要不要用它转录、整理，或退出登录。整理工具选“公司”就用公司设置的模型。"
           }
         }
       }
     },
-    "「進階 → 企業伺服器」：公司的伺服器、你的帳號，可以選要不要用它轉錄、整理，或登出。整理工具選「公司」就用公司設定的模型。": {
+    "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。「範本」那一頁內建五種；也可以複製一份來改，或自己新增段落與指示。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Advanced → Enterprise server”: your company’s server and your account. Choose whether to use it for transcription and summaries, or sign out. With the “Company” summarizer, notes are written by the model your company set up."
+            "value": "Summarizer: choose Claude or Codex (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summarizing feels slow, enter a faster model under Model, such as sonnet. The Templates page has five built in; copy one to customize it, or add your own sections and instructions."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“高级 → 企业服务器”：公司的服务器、你的账号，可以选要不要用它转录、整理，或退出登录。整理工具选“公司”就用公司设置的模型。"
+            "value": "“整理工具”：选 Claude、Codex（需要先安装并登录对应的 CLI），或填 Anthropic、OpenAI 的 API key。觉得整理太慢，可以在“模型”填比较快的模型，例如 sonnet。“模板”那一页内建五种；也可以复制一份来改，或自己添加段落与指示。"
           }
         }
       }
     },
-    "「進階 → 顯示」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
+    "「檢查與更新」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查；錄音和模型佔用的空間在「模型與空間」。": {
       "extractionState": "manual",
       "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“高级 → 显示”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Advanced → Display, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
+            "value": "Status & Updates: check for updates (when a new version is available Shiyin asks, then downloads, verifies and relaunches; also available from the Shiyin menu → Check for Updates…), and the environment check; the space used by recordings and models is under Models & Storage."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“检查与更新”：检查更新（有新版时拾音会询问，同意后自动下载、验证并重新打开；也可以从“拾音”菜单选“检查更新…”）、环境检查；录音和模型占用的空间在“模型与空间”。"
           }
         }
       }
     },
-    "「進階」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查、錄音和模型佔用的空間。": {
+    "「說話者」「詞彙表」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Advanced: check for updates (when a new version is available Shiyin asks, then downloads, verifies and relaunches; also available from the Shiyin menu → Check for Updates…), environment check, and the space used by recordings and models."
+            "value": "Speakers and Glossary: the people Shiyin recognizes and their voiceprints, which you can rename or delete, or turn off remembering voices; the glossary holds the correct spelling of system names, product names and people's names, which greatly improves proper-noun accuracy."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“高级”：检查更新（有新版时拾音会询问，同意后自动下载、验证并重新打开；也可以从“拾音”菜单选“检查更新…”）、环境检查、录音和模型占用的空间。"
+            "value": "“说话者”“词汇表”：拾音认识的人和他们的声纹，可以改名、删除，或关掉记住声音的功能；词汇表加入系统名、产品名、人名的正确写法，这对专有名词的正确率影响很大。"
           }
         }
       }
     },
-    "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。「說話者辨識的模型」可以選 Nemotron-3（實驗性，英文會議分得比較準，最多分 8 人）。": {
+    "「錄音」「轉錄」：錄音來源和麥克風、線上會議的提醒和快捷鍵；會議語言、正式轉錄的引擎、要不要即時逐字稿和說話者辨識（轉錄模型在「模型與空間」下載）。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。「說話者辨識的模型」可以選 Nemotron-3（實驗性，英文會議分得比較準，最多分 8 人）。": {
       "extractionState": "manual",
       "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“录音与转录”：录音来源和麦克风、会议语言、正式转录的引擎和模型、要不要实时逐字稿和说话者识别、线上会议的提醒和快捷键。“正式转录”可以选 Breeze ASR 25（建议，联发科的台湾模型，会参考词汇表）、Qwen3-ASR（阿里巴巴开源，多人会议漏字少，全程本地）或 macOS 内建（不用下载模型、速度快，但英文专有名词比较容易错）。“说话者识别的模型”可以选 Nemotron-3（实验性，英文会议分得比较准，最多分 8 人）。"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recording & Transcription: audio source and microphone, meeting language, the final-transcription engine and models, live transcript and speaker identification, online-meeting alerts and shortcuts. Final transcription can use Breeze ASR 25 (recommended; MediaTek's Taiwanese model, uses your glossary), Qwen3-ASR (open-sourced by Alibaba; drops fewer words in multi-speaker meetings, runs entirely on this Mac), or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong). Speaker recognition model can be set to Nemotron-3 (experimental; tells speakers apart more accurately in English meetings, up to 8 people)."
+            "value": "Recording and Transcription: audio source and microphone, online-meeting alerts and shortcuts; meeting language, the final-transcription engine, live transcript and speaker identification (download transcription models under Models & Storage). Final transcription can use Breeze ASR 25 (recommended; MediaTek's Taiwanese model, uses your glossary), Qwen3-ASR (open-sourced by Alibaba; drops fewer words in multi-speaker meetings, runs entirely on this Mac), or the macOS built-in recognizer (no model download and fast, but English terms are more often wrong). Speaker recognition model can be set to Nemotron-3 (experimental; tells speakers apart more accurately in English meetings, up to 8 people)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“录音”“转录”：录音来源和麦克风、线上会议的提醒和快捷键；会议语言、正式转录的引擎、要不要实时逐字稿和说话者识别（转录模型在“模型与空间”下载）。“正式转录”可以选 Breeze ASR 25（建议，联发科的台湾模型，会参考词汇表）、Qwen3-ASR（阿里巴巴开源，多人会议漏字少，全程本地）或 macOS 内建（不用下载模型、速度快，但英文专有名词比较容易错）。“说话者识别的模型”可以选 Nemotron-3（实验性，英文会议分得比较准，最多分 8 人）。"
           }
         }
       }
@@ -3273,19 +3273,19 @@
         }
       }
     },
-    "之後可以在「設定 → 進階」重新顯示這個引導。": {
+    "之後可以在「設定 → 一般」重新顯示這個引導。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can show this again from Settings → Advanced."
+            "value": "You can show this again from Settings → General."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "之后可以在“设置 → 高级”重新显示这个引导。"
+            "value": "之后可以在“设置 → 一般”重新显示这个引导。"
           }
         }
       }
@@ -4822,36 +4822,36 @@
         }
       }
     },
-    "公司的伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入": {
+    "公司的伺服器還沒登入或登入已失效，請到設定 → 企業伺服器登入": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Settings → Advanced → Enterprise Server."
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Settings → Enterprise server."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "公司的服务器还没登录或登录已失效，请到设置 → 高级 → 企业服务器登录"
+            "value": "公司的服务器还没登录或登录已失效，请到设置 → 企业服务器登录"
           }
         }
       }
     },
-    "公司的伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。": {
+    "公司的伺服器還沒登入或登入已失效：到「企業伺服器」那一頁登入。設定好之前不會自動整理。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Advanced → Enterprise Server. Meetings won't be summarized automatically until this is fixed."
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under the Enterprise server page. Meetings won't be summarized automatically until this is fixed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "公司的服务器还没登录或登录已失效：到“高级 → 企业服务器”登录。设置好之前不会自动整理。"
+            "value": "公司的服务器还没登录或登录已失效：到“企业服务器”那一页登录。设置好之前不会自动整理。"
           }
         }
       }
@@ -5846,53 +5846,53 @@
         }
       }
     },
-    "到「設定 → 說話者與詞彙 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。": {
+    "到「設定 → 說話者 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。": {
       "extractionState": "manual",
       "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "到“设置 → 说话者与词汇 → 我的声音”录一段自己的声音（照着画面上的文字念约 20 秒），第一场会议就认得你：声音像你的说话者会直接带入你的名字，没把握时在待确认问你。录音只用来算声音特征，算完就删掉。"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record your own voice in Settings → Speakers & Glossary → My voice (read the passage on screen for about 20 seconds), and Shiyin recognizes you from your first meeting: a speaker who sounds like you gets your name, or Shiyin asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
+            "value": "Record your own voice in Settings → Speakers → My voice (read the passage on screen for about 20 seconds), and Shiyin recognizes you from your first meeting: a speaker who sounds like you gets your name, or Shiyin asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到“设置 → 说话者 → 我的声音”录一段自己的声音（照着画面上的文字念约 20 秒），第一场会议就认得你：声音像你的说话者会直接带入你的名字，没把握时在待确认问你。录音只用来算声音特征，算完就删掉。"
           }
         }
       }
     },
-    "到設定的「錄音與轉錄」下載": {
+    "到設定的「模型與空間」下載": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download it in Settings → Recording & Transcription"
+            "value": "Download it in Settings → Models & Storage"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "到设置的“录音与转录”下载"
+            "value": "到设置的“模型与空间”下载"
           }
         }
       }
     },
-    "到設定的「錄音與轉錄」下載，或把正式轉錄改成 macOS 內建": {
+    "到設定的「模型與空間」下載，或在「轉錄」把正式轉錄改成 macOS 內建": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download it in Settings → Recording & Transcription, or set transcription to macOS there"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "到设置的“录音与转录”下载，或把正式转录改成 macOS 内建"
+            "value": "到设置的“模型与空间”下载，或在“转录”把正式转录改成 macOS 内建"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download it in Settings → Models & Storage, or set transcription to macOS under Transcription"
           }
         }
       }
@@ -7531,19 +7531,19 @@
         }
       }
     },
-    "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音與轉錄關掉）": {
+    "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start or stop recording from any app (you can turn this off in Settings → Recording & Transcription)"
+            "value": "Start or stop recording from any app (you can turn this off in Settings → Recording)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在其他 app 里也能开始或停止录音（可以在设置 → 录音与转录关掉）"
+            "value": "在其他 app 里也能开始或停止录音（可以在设置 → 录音关掉）"
           }
         }
       }
@@ -16011,19 +16011,19 @@
         }
       }
     },
-    "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。": {
+    "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 一般可以關掉。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind) that never includes meeting content. You can turn it off in Settings → Advanced."
+            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind) that never includes meeting content. You can turn it off in Settings → General."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "每天送一份匿名的使用统计（版本、系统、录音和转录的分钟数、用了哪些功能、失败的次数和种类），不含任何会议内容。在设置 → 高级可以关掉。"
+            "value": "每天送一份匿名的使用统计（版本、系统、录音和转录的分钟数、用了哪些功能、失败的次数和种类），不含任何会议内容。在设置 → 一般可以关掉。"
           }
         }
       }
@@ -17567,19 +17567,19 @@
         }
       }
     },
-    "登入已失效：到「進階 → 企業伺服器」重新登入": {
+    "登入已失效：到「設定 → 企業伺服器」重新登入": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign-in expired: sign in again under Advanced → Enterprise Server"
+            "value": "Sign-in expired: sign in again under Settings → Enterprise server"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "登录已失效：到“高级 → 企业服务器”重新登录"
+            "value": "登录已失效：到“设置 → 企业服务器”重新登录"
           }
         }
       }
@@ -21275,19 +21275,19 @@
         }
       }
     },
-    "轉錄模型還沒下載好，會先用 macOS 內建辨識轉錄；可以到「設定 → 錄音與轉錄」下載，用模型轉錄比較準。": {
+    "轉錄模型還沒下載好，會先用 macOS 內建辨識轉錄；可以到「設定 → 模型與空間」下載，用模型轉錄比較準。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The transcription model is not downloaded yet, so the macOS built-in recognizer is used for now. Download it in Settings → Recording & Transcription for better accuracy."
+            "value": "The transcription model is not downloaded yet, so the macOS built-in recognizer is used for now. Download it in Settings → Models & Storage for better accuracy."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "转录模型还没下载好，会先用 macOS 内建识别转录；可以到“设置 → 录音与转录”下载，用模型转录比较准。"
+            "value": "转录模型还没下载好，会先用 macOS 内建识别转录；可以到“设置 → 模型与空间”下载，用模型转录比较准。"
           }
         }
       }
@@ -22933,19 +22933,19 @@
         }
       }
     },
-    "還沒有下載轉錄模型，請到設定 → 錄音與轉錄下載": {
+    "還沒有下載轉錄模型，請到設定 → 模型與空間下載": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The transcription model hasn't been downloaded. Download it in Settings → Recording & Transcription."
+            "value": "The transcription model hasn't been downloaded. Download it in Settings → Models & Storage."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还没有下载转录模型，请到设置 → 录音与转录下载"
+            "value": "还没有下载转录模型，请到设置 → 模型与空间下载"
           }
         }
       }
@@ -24242,19 +24242,19 @@
         }
       }
     },
-    "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回拾音。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音與轉錄」關掉「在螢幕上方顯示錄音島」。": {
+    "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回拾音。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音」關掉「在螢幕上方顯示錄音島」。": {
       "extractionState": "manual",
       "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "录音中屏幕上方正中间会出现录音岛（有浏海的 Mac 接在浏海两侧），显示录了多久、音量和收音提醒；鼠标移上去可以暂停、标记重点、停止并转录，不用切回拾音。全屏开会、换桌面都看得到，分享画面时对方看不到。不想要的话到“设置 → 录音与转录”关掉“在屏幕上方显示录音岛”。"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While recording, the recording island appears at the top center of the screen (on Macs with a notch, on either side of it), showing how long you've recorded, the level and any audio alerts. Hover over it to Pause, Bookmark or Stop & Transcribe without switching back to Shiyin. It stays visible in full-screen meetings and on every desktop, and others can't see it when you share your screen. To turn it off, go to Settings → Recording & Transcription and turn off “Show the recording island at the top of the screen”."
+            "value": "While recording, the recording island appears at the top center of the screen (on Macs with a notch, on either side of it), showing how long you've recorded, the level and any audio alerts. Hover over it to Pause, Bookmark or Stop & Transcribe without switching back to Shiyin. It stays visible in full-screen meetings and on every desktop, and others can't see it when you share your screen. To turn it off, go to Settings → Recording and turn off “Show the recording island at the top of the screen”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中屏幕上方正中间会出现录音岛（有浏海的 Mac 接在浏海两侧），显示录了多久、音量和收音提醒；鼠标移上去可以暂停、标记重点、停止并转录，不用切回拾音。全屏开会、换桌面都看得到，分享画面时对方看不到。不想要的话到“设置 → 录音”关掉“在屏幕上方显示录音岛”。"
           }
         }
       }
@@ -24429,19 +24429,19 @@
         }
       }
     },
-    "錄音會交給公司的伺服器轉錄。要改回這台 Mac，到「設定 → 進階 → 企業伺服器」。": {
+    "錄音會交給公司的伺服器轉錄。要改回這台 Mac，到「設定 → 企業伺服器」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recordings will be transcribed on your company's server. To switch back to this Mac, go to Settings → Advanced → Enterprise Server."
+            "value": "Recordings will be transcribed on your company's server. To switch back to this Mac, go to Settings → Enterprise server."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音会交给公司的服务器转录。要改回这台 Mac，到“设置 → 高级 → 企业服务器”。"
+            "value": "录音会交给公司的服务器转录。要改回这台 Mac，到“设置 → 企业服务器”。"
           }
         }
       }
@@ -25291,19 +25291,19 @@
         }
       }
     },
-    "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音與轉錄」換一個。": {
+    "麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The microphone isn’t picking up any sound. It may be muted, in use by another app, or the wrong microphone. You can choose another one in Settings → Recording & Transcription."
+            "value": "The microphone isn’t picking up any sound. It may be muted, in use by another app, or the wrong microphone. You can choose another one in Settings → Recording."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "麦克风没有收到声音：可能被静音、被其他 app 占用，或选错了麦克风。可以在设置的“录音与转录”换一个。"
+            "value": "麦克风没有收到声音：可能被静音、被其他 app 占用，或选错了麦克风。可以在设置的“录音”换一个。"
           }
         }
       }

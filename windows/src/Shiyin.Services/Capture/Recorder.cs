@@ -955,7 +955,7 @@ public static class LevelHints
     /// <summary>app：錄不到電腦聲音的那兩種要寫出是哪個 app、哪個裝置（R75.3）</summary>
     public static string Text(this Recorder.LevelHint hint, Recorder.PlayingApp? app = null) => hint switch
     {
-        Recorder.LevelHint.Silent => L.T("麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音與轉錄」換一個。"),
+        Recorder.LevelHint.Silent => L.T("麥克風沒有收到聲音：可能被靜音、被其他 app 佔用，或選錯了麥克風。可以在設定的「錄音」換一個。"),
         Recorder.LevelHint.Quiet => L.T("聲音有點小：手機或筆電放近說話的人一點。"),
         Recorder.LevelHint.SystemElsewhere when app is not null =>
             L.F("%1$@ 的聲音從「%2$@」播出，拾音錄的是預設的「%3$@」，所以錄不到。請把 Windows 的預設輸出裝置改成「%2$@」（設定 → 系統 → 音效 → 輸出），或在 %1$@ 裡把喇叭改成預設的裝置。", app.Name, app.DeviceName, app.DefaultDeviceName),

@@ -2874,7 +2874,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | 4 | 檢查與更新 | `checkmark.seal.fill`、綠 | 更新、環境檢查 |
 
 - 搜尋（R108.4）：側欄的 `.searchable`。每一頁有一串關鍵字（就是那一頁項目的名稱，用介面語言；另外加 API key、MCP、快捷鍵這類常用說法），打的字在名稱或關鍵字裡就留那一項；只剩一項時直接選它。
-- 記住頁面（R108.5）：`settingsPage`（UserDefaults，存頁面的代號），預設整理工具。
+- 記住頁面（R108.5）：`settingsPage`（UserDefaults，存頁面的代號），預設整理工具。從別處打開設定時指定頁面（`openSettings(page:)` 先寫 `settingsPage` 再打開；已經開著的視窗跟著換）：會議頁、紀錄分頁的「設定整理工具」「打開設定」開整理工具，公司伺服器沒登入時開企業伺服器（`SummarizerProblem.settingsPage`）。
+- 說明文字裡的頁名跟著改（「設定 → 錄音與轉錄」→「錄音」或「模型與空間」、「進階 → 企業伺服器」→「企業伺服器」、「說話者與詞彙」→「說話者」、「進階」→「一般」或「檢查與更新」；使用說明介紹設定各頁的段落照新的十一頁寫）：位置變了，照舊寫會帶錯地方；其他說明文字不變（R108.6）。
 - 程式：原本的 `ProviderSettings`（拿掉範本段）、`TemplateSettings`、`SpeakerSettings`、`GlossarySettings` 直接當一頁；`RecordingSettings`、`AdvancedSettings` 加 `part` 參數（同一份狀態，只畫那一頁的段落），項目和存的鍵都沒變（R108.6）。
 - DEBUG：`preview settings <頁面代號或編號>`（0 整理工具…10 檢查與更新，只當預覽的起始頁，不寫進設定）。
 - Windows：design-windows §11.41（`NavigationView`，同樣十一項、四組、搜尋、記住頁面；圖示是彩色的字、沒有底色方塊，同 Windows 11 的設定）。

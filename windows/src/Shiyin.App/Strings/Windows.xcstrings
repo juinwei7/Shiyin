@@ -273,19 +273,19 @@
         }
       }
     },
-    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → 進階 → AI 工具（MCP）」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。": {
+    "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → AI 工具」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your Shiyin meetings directly: in Settings › Advanced › AI tools (MCP), turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. Shiyin doesn't need to be open."
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your Shiyin meetings directly: in Settings › AI Tools, turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. Shiyin doesn't need to be open."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以直接读拾音的会议：到“设置 → 高级 → AI 工具（MCP）”打开“让 AI 工具读取会议”，再按“加到 Claude Code”“加到 Codex”或“加到 Claude Desktop”。其他工具用“复制”自己粘贴设置。拾音不用开着。"
+            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以直接读拾音的会议：到“设置 → AI 工具”打开“让 AI 工具读取会议”，再按“加到 Claude Code”“加到 Codex”或“加到 Claude Desktop”。其他工具用“复制”自己粘贴设置。拾音不用开着。"
           }
         }
       }
@@ -562,6 +562,23 @@
         }
       }
     },
+    "「一般」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“一般”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
+          }
+        }
+      }
+    },
     "「待確認」列出整理時沒把握的人名、專有名詞、負責人和期限。在「你的回答」欄位直接回答，按「送出」，會議紀錄就會依你的答案修正；看不懂或不重要的勾「略過」。也可以在「摘要」按「編輯」直接改。改錯了可以從「更多」選「復原上一版會議紀錄」。": {
       "extractionState": "manual",
       "localizations": {
@@ -596,36 +613,19 @@
         }
       }
     },
-    "「設定 → 進階 → 顯示」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
+    "「設定 → 一般」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Settings → Advanced → Display, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
+            "value": "Settings → General, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“设置 → 高级 → 显示”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
-          }
-        }
-      }
-    },
-    "「進階 → 顯示」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Advanced → Display, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“高级 → 显示”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
+            "value": "“设置 → 一般”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
           }
         }
       }
@@ -1072,36 +1072,36 @@
         }
       }
     },
-    "公司的伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入": {
+    "公司的伺服器還沒登入或登入已失效，請到設定 → 企業伺服器登入": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Settings → Advanced → Enterprise Server."
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Settings → Enterprise server."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "公司的服务器还没登录或登录已失效，请到设置 → 高级 → 企业服务器登录"
+            "value": "公司的服务器还没登录或登录已失效，请到设置 → 企业服务器登录"
           }
         }
       }
     },
-    "公司的伺服器還沒登入或登入已失效：到「進階 → 企業伺服器」登入。設定好之前不會自動整理。": {
+    "公司的伺服器還沒登入或登入已失效：到「企業伺服器」那一頁登入。設定好之前不會自動整理。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under Advanced → Enterprise Server. Meetings won't be summarized automatically until this is fixed."
+            "value": "You're not signed in to the company server, or your sign-in has expired. Sign in under the Enterprise server page. Meetings won't be summarized automatically until this is fixed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "公司的服务器还没登录或登录已失效：到“高级 → 企业服务器”登录。设置好之前不会自动整理。"
+            "value": "公司的服务器还没登录或登录已失效：到“企业服务器”那一页登录。设置好之前不会自动整理。"
           }
         }
       }
@@ -1208,19 +1208,19 @@
         }
       }
     },
-    "到「設定 → 說話者與詞彙 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。": {
+    "到「設定 → 說話者 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record your own voice in Settings → Speakers & Glossary → My voice (read the passage on screen for about 20 seconds), and Shiyin recognizes you from your first meeting: a speaker who sounds like you gets your name, or Shiyin asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
+            "value": "Record your own voice in Settings → Speakers → My voice (read the passage on screen for about 20 seconds), and Shiyin recognizes you from your first meeting: a speaker who sounds like you gets your name, or Shiyin asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "到“设置 → 说话者与词汇 → 我的声音”录一段自己的声音（照着画面上的文字念约 20 秒），第一场会议就认得你：声音像你的说话者会直接带入你的名字，没把握时在待确认问你。录音只用来算声音特征，算完就删掉。"
+            "value": "到“设置 → 说话者 → 我的声音”录一段自己的声音（照着画面上的文字念约 20 秒），第一场会议就认得你：声音像你的说话者会直接带入你的名字，没把握时在待确认问你。录音只用来算声音特征，算完就删掉。"
           }
         }
       }
@@ -3510,19 +3510,19 @@
         }
       }
     },
-    "轉錄模型還沒下載好，會先用快速辨識轉錄；可以到「設定 → 錄音與轉錄」下載，用模型轉錄比較準。": {
+    "轉錄模型還沒下載好，會先用快速辨識轉錄；可以到「設定 → 模型與空間」下載，用模型轉錄比較準。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The transcription model is not downloaded yet, so fast recognition is used for now. You can download it in Settings → Recording & Transcription; the model is more accurate."
+            "value": "The transcription model is not downloaded yet, so fast recognition is used for now. You can download it in Settings → Models & Storage; the model is more accurate."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "转录模型还没下载好，会先用快速识别转录；可以到“设置 → 录音与转录”下载，用模型转录比较准。"
+            "value": "转录模型还没下载好，会先用快速识别转录；可以到“设置 → 模型与空间”下载，用模型转录比较准。"
           }
         }
       }
@@ -3935,19 +3935,19 @@
         }
       }
     },
-    "遇到問題，可以從設定的「進階」選「回報問題…」，會附上版本和環境（不含會議內容）。": {
+    "遇到問題，可以從設定的「檢查與更新」選「回報問題…」，會附上版本和環境（不含會議內容）。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If something goes wrong, choose Report a problem… in Settings → Advanced; it includes the version and environment (no meeting content)."
+            "value": "If something goes wrong, choose Report a problem… in Settings → Status & Updates; it includes the version and environment (no meeting content)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "遇到问题，可以从设置的“高级”选“反馈问题…”，会附上版本和环境（不含会议内容）。"
+            "value": "遇到问题，可以从设置的“检查与更新”选“反馈问题…”，会附上版本和环境（不含会议内容）。"
           }
         }
       }
@@ -4190,19 +4190,19 @@
         }
       }
     },
-    "錄音中螢幕上方正中間會有一個小小的錄音島，顯示錄音的時間；收音有問題（麥克風沒收到聲音、用的是藍牙耳機的麥克風、好像沒人在說話）時會往下展開那一句提醒和按鈕。滑鼠移上去可以看音量和最新一句逐字稿，直接按「暫停」「標記重點」「打開拾音」「停止並轉錄」，不用切回拾音。全螢幕開會、分享畫面時也看得到，分享畫面拍不到它；偵測到線上會議時的「要開始錄音嗎？」也在這裡。不想要的話，到「設定 → 錄音與轉錄 → 提醒與快捷鍵」關掉「在螢幕上方顯示錄音島」。": {
+    "錄音中螢幕上方正中間會有一個小小的錄音島，顯示錄音的時間；收音有問題（麥克風沒收到聲音、用的是藍牙耳機的麥克風、好像沒人在說話）時會往下展開那一句提醒和按鈕。滑鼠移上去可以看音量和最新一句逐字稿，直接按「暫停」「標記重點」「打開拾音」「停止並轉錄」，不用切回拾音。全螢幕開會、分享畫面時也看得到，分享畫面拍不到它；偵測到線上會議時的「要開始錄音嗎？」也在這裡。不想要的話，到「設定 → 錄音 → 提醒與快捷鍵」關掉「在螢幕上方顯示錄音島」。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While you record, a small recording island at the top center of the screen shows the elapsed time. When something is wrong with the audio (the microphone hears nothing, you're using a Bluetooth headset's microphone, or nobody seems to be talking), it expands to show the alert and its buttons. Hover over it to see the levels and the latest line of the transcript, and use Pause, Bookmark, Open Shiyin, or Stop & Transcribe without switching back to Shiyin. You can see it in full-screen meetings and while sharing your screen, and screen sharing doesn't capture it. “Start recording?” for online meetings shows up here too. If you don't want it, turn off “Show the recording island at the top of the screen” in Settings → Recording & Transcription → Alerts & Shortcuts."
+            "value": "While you record, a small recording island at the top center of the screen shows the elapsed time. When something is wrong with the audio (the microphone hears nothing, you're using a Bluetooth headset's microphone, or nobody seems to be talking), it expands to show the alert and its buttons. Hover over it to see the levels and the latest line of the transcript, and use Pause, Bookmark, Open Shiyin, or Stop & Transcribe without switching back to Shiyin. You can see it in full-screen meetings and while sharing your screen, and screen sharing doesn't capture it. “Start recording?” for online meetings shows up here too. If you don't want it, turn off “Show the recording island at the top of the screen” in Settings → Recording → Alerts & Shortcuts."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音中屏幕上方正中间会有一个小小的录音岛，显示录音的时间；收音有问题（麦克风没收到声音、用的是蓝牙耳机的麦克风、好像没人在说话）时会往下展开那一句提醒和按钮。鼠标移上去可以看音量和最新一句逐字稿，直接按“暂停”“标记重点”“打开拾音”“停止并转录”，不用切回拾音。全屏开会、分享画面时也看得到，分享画面拍不到它；检测到线上会议时的“要开始录音吗？”也在这里。不想要的话，到“设置 → 录音与转录 → 提醒与快捷键”关掉“在屏幕上方显示录音岛”。"
+            "value": "录音中屏幕上方正中间会有一个小小的录音岛，显示录音的时间；收音有问题（麦克风没收到声音、用的是蓝牙耳机的麦克风、好像没人在说话）时会往下展开那一句提醒和按钮。鼠标移上去可以看音量和最新一句逐字稿，直接按“暂停”“标记重点”“打开拾音”“停止并转录”，不用切回拾音。全屏开会、分享画面时也看得到，分享画面拍不到它；检测到线上会议时的“要开始录音吗？”也在这里。不想要的话，到“设置 → 录音 → 提醒与快捷键”关掉“在屏幕上方显示录音岛”。"
           }
         }
       }

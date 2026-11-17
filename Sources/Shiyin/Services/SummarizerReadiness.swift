@@ -34,7 +34,7 @@ enum SummarizerProblem: Equatable {
                 : String(localized: "Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。")
         case .missingKey(let provider): return String(localized: "還沒有填 \(provider.shortLabel) 的 API key，請到設定 → 整理工具填寫")
         case .incomplete: return String(localized: "還沒有填 OpenAI 相容 API 的網址或模型，請到設定 → 整理工具填寫")
-        case .enterpriseSignedOut: return String(localized: "公司的伺服器還沒登入或登入已失效，請到設定 → 進階 → 企業伺服器登入")
+        case .enterpriseSignedOut: return String(localized: "公司的伺服器還沒登入或登入已失效，請到設定 → 企業伺服器登入")
         case .enterpriseNoModels: return String(localized: "公司的伺服器還沒有提供整理用的模型，請通知管理者")
         case .paused(_, let detail): return detail
         }
@@ -48,6 +48,9 @@ enum SummarizerProblem: Equatable {
         default: return .openSettings
         }
     }
+
+    /// 「打開設定」開到哪一頁（設定會記住上次的頁面，R108.5）：公司伺服器沒登入時是企業伺服器，其他是整理工具
+    var settingsPage: SettingsPage { self == .enterpriseSignedOut ? .enterprise : .provider }
 
     var actionTitle: String {
         switch action {

@@ -48,7 +48,7 @@ enum EnterpriseJoin {
             try await server.completeSignIn(attempt, callback: callback)
             AppModel.shared.applyEnterpriseDefaults(llm: attempt.info.llm)
             notice(String(localized: "已加入「\(attempt.info.name)」"),
-                   String(localized: "錄音會交給公司的伺服器轉錄。要改回這台 Mac，到「設定 → 進階 → 企業伺服器」。"))
+                   String(localized: "錄音會交給公司的伺服器轉錄。要改回這台 Mac，到「設定 → 企業伺服器」。"))
         } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {
         } catch let failure as EnterpriseServer.Failure where failure == .cancelled {
         } catch {

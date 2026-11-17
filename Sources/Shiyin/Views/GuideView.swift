@@ -77,11 +77,11 @@ struct GuideView: View {
                 // 人物頁（design §60、R85）
                 GuideBullet(String(localized: "側欄上方切到「人物」，可以看拾音認識的每個人：一起開過哪些會議、每場說了多久、負責哪些待辦（點了就打開那場會議、從那裡播放）。人物頁的名字下面可以重新命名、把被記成兩個名字的同一個人合併，或移除這個人；側欄的人按右鍵或滑過時右邊的「⋯」也一樣。"))
                 // 我的聲音（design §56、R80.6）
-                GuideBullet(String(localized: "到「設定 → 說話者與詞彙 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。"))
+                GuideBullet(String(localized: "到「設定 → 說話者 → 我的聲音」錄一段自己的聲音（照著畫面上的文字唸約 20 秒），第一場會議就認得你：聲音像你的說話者會直接帶入你的名字，沒把握時在待確認問你。錄音只用來算聲音特徵，算完就刪掉。"))
                 // 待辦加進提醒事項（design §52、R76.8）
                 GuideBullet(String(localized: "待辦可以加到 macOS 的「提醒事項」：在紀錄的「待辦」右邊按「加到提醒事項」，會加進「拾音」列表；期限是日期的會設成到期日，點提醒裡的連結就回到這場會議的那個時間點。加過的不會重複加，在提醒事項裡完成的，紀錄裡那一條會打勾。"))
                 // 錄音島（design §57、R81.10）
-                GuideBullet(String(localized: "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回拾音。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音與轉錄」關掉「在螢幕上方顯示錄音島」。"))
+                GuideBullet(String(localized: "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回拾音。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音」關掉「在螢幕上方顯示錄音島」。"))
                 GuideBullet(String(localized: "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音（打開錄音島時提醒出現在島上）；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。"))
                 GuideBullet(String(localized: "遇到問題，可以從「輔助說明」選單選「回報問題…」，會附上版本和環境（不含會議內容）。"))
             }
@@ -95,20 +95,20 @@ struct GuideView: View {
 
             // 讓 AI 工具讀取會議（本地 MCP，design §44.4、R69）
             GuideSection(title: String(localized: "讓 AI 工具讀取會議")) {
-                GuideBullet(String(localized: "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → 進階 → AI 工具（MCP）」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。"))
+                GuideBullet(String(localized: "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀拾音的會議：到「設定 → AI 工具」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。拾音不用開著。"))
                 GuideBullet(String(localized: "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開拾音、跳到那個時間點。"))
                 GuideBullet(String(localized: "只能讀、不能改；垃圾桶裡的會議、正在錄的會議讀不到。讀到的會議內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台 Mac；關掉開關就讀不到了。"))
             }
 
             GuideSection(title: String(localized: "設定（⌘,）")) {
-                GuideBullet(String(localized: "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。最下面的「範本」內建五種；也可以複製一份來改，或自己新增段落與指示。"))
-                GuideBullet(String(localized: "「錄音與轉錄」：錄音來源和麥克風、會議語言、正式轉錄的引擎和模型、要不要即時逐字稿和說話者辨識、線上會議的提醒和快捷鍵。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。「說話者辨識的模型」可以選 Nemotron-3（實驗性，英文會議分得比較準，最多分 8 人）。"))
-                GuideBullet(String(localized: "「說話者與詞彙」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。"))
-                GuideBullet(String(localized: "「進階」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查、錄音和模型佔用的空間。"))
+                GuideBullet(String(localized: "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。「範本」那一頁內建五種；也可以複製一份來改，或自己新增段落與指示。"))
+                GuideBullet(String(localized: "「錄音」「轉錄」：錄音來源和麥克風、線上會議的提醒和快捷鍵；會議語言、正式轉錄的引擎、要不要即時逐字稿和說話者辨識（轉錄模型在「模型與空間」下載）。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。「說話者辨識的模型」可以選 Nemotron-3（實驗性，英文會議分得比較準，最多分 8 人）。"))
+                GuideBullet(String(localized: "「說話者」「詞彙表」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。"))
+                GuideBullet(String(localized: "「檢查與更新」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查；錄音和模型佔用的空間在「模型與空間」。"))
                 // 分享畫面時藏起拾音的視窗（design §53、R77.2）
-                GuideBullet(String(localized: "「進階 → 顯示」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。"))
+                GuideBullet(String(localized: "「一般」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。"))
                 if EnterpriseServer.shared.hasAccount {
-                    GuideBullet(String(localized: "「進階 → 企業伺服器」：公司的伺服器、你的帳號，可以選要不要用它轉錄、整理，或登出。整理工具選「公司」就用公司設定的模型。"))
+                    GuideBullet(String(localized: "「企業伺服器」：公司的伺服器、你的帳號，可以選要不要用它轉錄、整理，或登出。整理工具選「公司」就用公司設定的模型。"))
                 }
             }
 
@@ -124,7 +124,7 @@ struct GuideView: View {
                 }
                 // 匿名使用統計（design §30.5）：有統計網址的版本才寫
                 if UsageStats.isOffered {
-                    GuideBullet(String(localized: "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 進階可以關掉。"))
+                    GuideBullet(String(localized: "每天送一份匿名的使用統計（版本、系統、錄音和轉錄的分鐘數、用了哪些功能、失敗的次數和種類），不含任何會議內容。在設定 → 一般可以關掉。"))
                 }
             }
 
@@ -142,7 +142,7 @@ struct GuideView: View {
             GuideSection(title: String(localized: "快捷鍵")) {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 18, verticalSpacing: 7) {
                     shortcut("⌘R", String(localized: "開始或停止錄音"))
-                    shortcut("⌃⌥⌘R", String(localized: "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音與轉錄關掉）"))
+                    shortcut("⌃⌥⌘R", String(localized: "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）"))
                     shortcut("⇧⌘P", String(localized: "暫停或繼續錄音"))
                     shortcut("⌘B", String(localized: "錄音中標記重點"))
                     shortcut("⌃⌥⌘B", String(localized: "錄音中在其他 app 裡也能標記重點"))

@@ -444,7 +444,7 @@ struct StatusBanner: View {
                let problem = model.summarizerProblem {
                 Button(problem.actionTitle) {
                     switch problem.action {
-                    case .openSettings: openSettings()
+                    case .openSettings: openSettings(page: problem.settingsPage)
                     case .login(let provider): CLILogin.openLogin(provider)
                     }
                 }
