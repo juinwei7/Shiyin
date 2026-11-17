@@ -57,19 +57,6 @@ extension AppModel {
         return multi.count > 1 && multi.contains(id) ? multi : [id]
     }
 
-    func meetingDragProvider(for id: Int64) -> NSItemProvider {
-        #if DEBUG
-        DebugControl.note("list onDrag: meeting \(id)")
-        #endif
-        let data = Data(dragIDs(for: id).map(String.init).joined(separator: ",").utf8)
-        let provider = NSItemProvider()
-        provider.registerDataRepresentation(forTypeIdentifier: UTType.shiyinMeetingIDs.identifier, visibility: .ownProcess) { done in
-            done(data, nil)
-            return nil
-        }
-        return provider
-    }
-
     /// 點下面列表的會議（design §77）：一般是只選這場；⌘ 加入或拿掉；⇧ 從上一次點的那場選到這場（照列表看到的順序）
     func clickMeetingRow(_ id: Int64, modifiers: NSEvent.ModifierFlags) {
         if modifiers.contains(.command) {
