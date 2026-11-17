@@ -174,7 +174,7 @@ public static class Sheet
     }
 
     /// <summary>
-    /// 一塊同樣框的底（勾選清單、唯讀的文字：Mac 的 .sheetFieldBox() 包住 ScrollView）。Border 的框線佔內容的寬度（CLAUDE.md），內距照輸入框
+    /// 一塊同樣框的底（勾選清單、唯讀的文字：Mac 的 .sheetFieldBox() 包住 ScrollView）。Border 的框線佔內容的寬度，內距照輸入框
     /// </summary>
     public static Border Box(UIElement child, bool focused = false)
     {

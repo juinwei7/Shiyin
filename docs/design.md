@@ -1405,7 +1405,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 
 - Windows（design-windows §10.1）照同一份規則：`Settings.SummarizerProblem`、引導、設定視窗、`JobRunner` 的暫停、`LLMError` 的四種、統計的 `errorDetail`。
 - DEBUG：`shiyinctl summarizer <state.json>` 寫出 `summarizerProblem`、`pause`、登入快取；`-debugNoCLI YES` 和 `llmprovider`、`llmkey`（只在記憶體）組合出各種沒準備好的狀態；`-debugCLILogin no` 讓登入快取當成沒登入。
-- 驗證：沒選過、沒裝 CLI、選了 API 沒存 key、OpenAI 相容沒填模型、CLI 沒登入（`-debugCLILogin no`）、假伺服器回 401 各匯入一場，都不出現「整理失敗」或只失敗一次後暫停；引導和設定頁在真的畫面上用 AX 按過（CLAUDE.md：對話框的按鈕要真的按）；統計用 `shiyinctl usage` 看 `errorDetail`，後台用 `wrangler dev --local` 收一份。
+- 驗證：沒選過、沒裝 CLI、選了 API 沒存 key、OpenAI 相容沒填模型、CLI 沒登入（`-debugCLILogin no`）、假伺服器回 401 各匯入一場，都不出現「整理失敗」或只失敗一次後暫停；引導和設定頁在真的畫面上用 AX 按過（對話框的按鈕要真的按）；統計用 `shiyinctl usage` 看 `errorDetail`，後台用 `wrangler dev --local` 收一份。
 
 ## 35. 忘了停止錄音（R48，D115、D116）
 

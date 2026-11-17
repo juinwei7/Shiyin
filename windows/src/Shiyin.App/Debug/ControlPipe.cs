@@ -13,7 +13,7 @@ namespace Shiyin.App.Debug;
 
 /// <summary>
 /// DEBUG 的控制通道（design-windows §15.3，對應 Mac 的 DebugControl）：named pipe「shiyin-debug」，一行一個指令（JSON 陣列），回一行 JSON。
-/// 驗證時用 shiyinctl.exe 送指令，不送鍵盤事件（CLAUDE.md）。只在 DEBUG 建置裡有
+/// 驗證時用 shiyinctl.exe 送指令，不送鍵盤事件。只在 DEBUG 建置裡有
 /// </summary>
 public static partial class ControlPipe
 {

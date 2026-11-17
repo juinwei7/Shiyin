@@ -17,7 +17,7 @@ $publish = Join-Path ([System.IO.Path]::GetTempPath()) "shiyin-publish-$Arch"
 if (Test-Path $publish) { Remove-Item -Recurse -Force $publish }
 
 if ($env:SHIYIN_USAGE_URL) { Write-Host '匿名使用統計：有網址' } else { Write-Host '匿名使用統計：沒有網址（不送統計的版本）' }
-# 「-」開頭的參數裡的變數要整串加雙引號才會展開（CLAUDE.md）
+# 「-」開頭的參數裡的變數要整串加雙引號才會展開
 dotnet publish (Join-Path $root 'windows\src\Shiyin.App\Shiyin.App.csproj') -c Release -r "win-$Arch" --self-contained `
     -p:Version=$Version -p:WindowsAppSDKSelfContained=true -p:ShiyinUpdateTest=$($UpdateTest.IsPresent.ToString().ToLowerInvariant()) `
     "-p:ShiyinUsageUrl=$env:SHIYIN_USAGE_URL" -o $publish

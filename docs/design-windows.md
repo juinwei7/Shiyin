@@ -86,7 +86,7 @@ shared/golden/                  Mac 產生的標準答案（§4）
 scripts/windows/                build-whisper.ps1、pack.ps1、update-key.cs、make-third-party-licenses.py；vm/ 驗證用虛擬機的工具（§15.2）
 ```
 
-建置輸出不能放在專案裡（桌面有 iCloud 同步，同 CLAUDE.md）。
+建置輸出不能放在專案裡（桌面有 iCloud 同步）。
 
 **資料**（`%LOCALAPPDATA%\Shiyin`，環境變數 `SHIYIN_HOME` 可以改；預設的 ACL 只有這個使用者讀得到）：
 
@@ -144,7 +144,7 @@ Mac 的 DEBUG 控制通道加 `shiyinctl dump-golden <fixtures.json> <輸出資�
 
 ### 4.3 以後 Mac 改了提示詞或匯出
 
-Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測試就會失敗，照著改 C#。CI 每次推送都跑，所以不會漏掉。這條規則寫進 CLAUDE.md。
+Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測試就會失敗，照著改 C#。CI 每次推送都跑，所以不會漏掉。
 
 ## 5. 資料庫
 
@@ -277,7 +277,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
   - npm 的全域資料夾：官方安裝檔是 `%APPDATA%\npm`；zip 版的 Node、nvm、scoop、Volta 在別的地方，所以也找 PATH 裡有 `claude.cmd`、`codex.cmd` 的資料夾（只拿來定位套件，不執行 .cmd）。
   - 套件的樣子（2026-10-21，claude-code 2.1.306、codex 最新版）：claude-code 的 npm 套件直接帶 `bin\claude.exe`（已經沒有 `cli.js`，舊版才用 node 跑 cli.js）；codex 的執行檔在平台子套件 `@openai/codex-win32-<arm64|x64>/vendor/<平台>/bin/codex.exe`，旁邊的 `codex-path`（有 rg.exe）加進子程序的 PATH（同 codex.js）。
   - 長度：逐字稿和提示詞走標準輸入（claude 的 `-p`、codex 的 `exec -`），命令列只放系統提示詞和 JSON schema（標準答案裡最長的約 2,400 字和 1,800 字），遠低於 Windows 命令列 32,767 字元的上限。
-- 參數一律用 `ProcessStartInfo.ArgumentList`（同 CLAUDE.md 的規則）；子程序的 PATH 用 `;` 接上找到的資料夾；工作目錄是 `tmp` 下的空資料夾。
+- 參數一律用 `ProcessStartInfo.ArgumentList`（同 Mac 的規則）；子程序的 PATH 用 `;` 接上找到的資料夾；工作目錄是 `tmp` 下的空資料夾。
 - 子程序放進 Job Object（`KILL_ON_JOB_CLOSE`）：拾音當掉時子程序一起結束；逾時時整棵程序樹一起結束。
 - 登入：用固定參數開 Windows Terminal（沒有就用 `cmd.exe /k`）執行 `claude` 或 `codex login`，參數裡不放任何使用者內容。
 - **還沒設定整理工具**（R35、M§19.6、D95）：同 Mac。`AppSettings.DetectCli` 由 App 用 `WindowsToolLocator` 找 claude、codex（要掃過 PATH 的每個資料夾，快取 30 秒）；Services、測試裡沒給就是找不到。DEBUG 加 `--set debugNoCli=YES` 當成找不到。
@@ -840,7 +840,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 12.9 log
 
-`logs\shiyin-<日期>.log`，保留 7 天；不寫逐字稿和會議紀錄的內容、不寫 key（同 CLAUDE.md 的規則）。
+`logs\shiyin-<日期>.log`，保留 7 天；不寫逐字稿和會議紀錄的內容、不寫 key（同 Mac 的規則）。
 
 ### 12.10 匿名使用統計（R40.7，M§30）
 
@@ -918,7 +918,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - Windows 的更新來源（Velopack 的 GithubSource 讀 GitHub 的 release 清單）要能跳過沒有 Windows 檔案的 Mac release：只有 Mac 的 release 時顯示「已是最新版本」、沒有錯誤。
 - **release 清單讀 100 筆**（D94）：Velopack 的 GithubSource 只讀最新的 10 筆（`releases?per_page=10&page=1`）。Windows 使用者一段時間沒開、這期間 Mac 發了 10 版以上，Windows 的新版就不在這 10 筆裡，顯示「已是最新版本」，要等下一個 Windows 版發布才看得到。`Services/WindowsReleaseSource.cs` 繼承 GithubSource、只換掉讀清單的那一步：讀 100 筆（GitHub 一次最多），只留有 Velopack 更新說明（`releases.*.json`）的最新 10 個，找新版、下載照 Velopack 原本的做法。測試：12 個 Mac 版之後才有 1 個 Windows 版的清單找得到（`ServicesTests.ReleaseSourceFindsWindowsBehindManyMacReleases`）。
 - 新的工作流程 `.github/workflows/release-windows.yml`：推 `win-v*` 時在 `windows-latest`（x64）、`windows-11-arm`（ARM64）建置，跑測試、whisper 從固定 commit 建（檢查沒有匯入 VC++ 的 DLL、印出每個 DLL 的 SHA-256）、`vpk pack`、簽更新金鑰、建立 Release（不設成 latest）。手動執行只產出 artifact（同 Mac）。
-- Release 說明的格式同 CLAUDE.md 的規定，標題改成「拾音 Windows X.Y.Z：…」「Shiyin for Windows X.Y.Z: …」。
+- Release 說明的格式同 Mac（docs/website.md §7），標題改成「拾音 Windows X.Y.Z：…」「Shiyin for Windows X.Y.Z: …」。
 
 ### 14.4 官網
 
@@ -979,12 +979,12 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 | D45 | 「macOS 內建」換成「快速辨識」（SenseVoice） | 拿掉這個選項：第一場會議要等 1.7 GB 下載（D35 的理由）；即時逐字稿本來就要這個模型，不用多下載 |
 | D46 | whisper.cpp 自己從 Mac 同一版建，P/Invoke | Whisper.net：包的 whisper.cpp 比較舊、同一段錄音結果會跟 Mac 不一樣（R28.4）；語言偵測只給最高的那一個，拿不到中英日三個機率（R16 的門檻要用）；Vulkan 版只有 x64。執行 whisper-cli 子程序：進度、取消、token 機率都要從文字輸出解析 |
 | D47 | 說話者辨識用 sherpa-onnx（分群改成自己做，見 D58） | 把 FluidAudio 的流程（pyannote community-1＋VBx）整個搬到 ONNX：community-1 沒有官方 ONNX 版，要自己轉模型。pyannote（Python）：違反 D2。取捨：模型和 Mac 不同，聲紋不能共用、門檻要重新調（R28.6）；「至少 N 人」、聲紋、分不準的判斷要自己補（§9） |
-| D48 | 資料放 `%LOCALAPPDATA%\Shiyin`，設定放在裡面的 settings.json | 登錄（Registry）：換 `SHIYIN_HOME` 時設定還是同一份，測試會改到正式的設定（Mac 的 UserDefaults 就踩過，見 CLAUDE.md）。`%APPDATA%`（漫遊）：錄音和模型很大，不該跟著帳號漫遊 |
+| D48 | 資料放 `%LOCALAPPDATA%\Shiyin`，設定放在裡面的 settings.json | 登錄（Registry）：換 `SHIYIN_HOME` 時設定還是同一份，測試會改到正式的設定（Mac 的 UserDefaults 就踩過）。`%APPDATA%`（漫遊）：錄音和模型很大，不該跟著帳號漫遊 |
 | D49 | API key 存在認證管理員 | DPAPI 加密後存檔案：N6 規定 key 不寫進檔案。WinRT 的 PasswordVault：底層也是認證管理員，不打包的 app 用起來比較麻煩 |
 | D50 | 用 Velopack 安裝和更新，加上自己的更新金鑰（ECDSA）驗證發布者 | MSIX：自簽的 MSIX 要先用系統管理員把憑證裝進「受信任的人」，一般使用者裝不起來。Inno Setup 加自己寫更新器：要自己處理替換、重開、解除安裝，Velopack 都有，還有差異更新。只靠自簽的 Authenticode 比對簽署者：做得到（`CERT_E_UNTRUSTEDROOT` 表示簽章完整只是不受信任），但對 SmartScreen、Smart App Control 沒有幫助，還要多保管一張憑證；更新金鑰的驗證只要幾行標準的密碼學程式。Microsoft Store：要開發者帳號和審核，之後再說 |
 | D51 | Windows 的 release 用 `win-v*` tag，不設成 latest | 同一個 release 放兩邊的檔案、版號一樣：兩邊一定要同時發布，但 Windows 修自己的問題、Mac 加新功能的時間不會一樣。Windows 的 release 標成 prerelease：官網、Velopack 預設都會略過它，使用者看不到也更新不到。另外開一個 repo：星星、issue、官網的資料來源都要分開。取捨：官網的 `releases.mjs` 要改成認兩種 tag，而且要在第一個 Windows release 之前改好 |
 | D52 | Windows 的版號對齊 Mac 的功能版本，第一版 4.0.0（跟 Mac 一起發布） | 從 1.0.0 開始：使用者看不出 Windows 版有哪些 Mac 的功能 |
-| D53 | 驗證用排程工作在桌面跑 PowerShell 的 UI Automation，加上 named pipe 的控制通道（§15.4；原本規劃的桌面代理 app 用不到） | 在使用者的電腦上送鍵盤事件：CLAUDE.md 禁止。WinAppDriver：微軟已經不維護。從 SSH 直接開 app：不會出現在桌面，截不到圖 |
+| D53 | 驗證用排程工作在桌面跑 PowerShell 的 UI Automation，加上 named pipe 的控制通道（§15.4；原本規劃的桌面代理 app 用不到） | 在使用者的電腦上送鍵盤事件：會送進使用者正在用的 app，不行。WinAppDriver：微軟已經不維護。從 SSH 直接開 app：不會出現在桌面，截不到圖 |
 | D54 | 複製富文字只放純文字和 HTML | 再放 RTF：要自己從 HTML 產生 RTF；Windows 上常用的貼上目標都吃 HTML |
 | D55 | 偵測會議讀隱私設定的麥克風使用紀錄（ConsentStore） | audio session 清單（IAudioSessionManager2）：要一個一個裝置列，瀏覽器和 WebView2 用另一個程序收音，容易漏。取捨：ConsentStore 沒有官方文件，Windows 改版時可能變；它是系統「麥克風使用中」指示的資料來源，改了也比較容易發現 |
 | D56 | whisper 外面包一層小的 C shim | 在 C# 宣告整個 `whisper_full_params`：傳值、1 byte 的 bool、巢狀 struct 和 callback，對錯了不會報錯、只會結果怪；每次升級 whisper.cpp 都要重新對一次 struct |

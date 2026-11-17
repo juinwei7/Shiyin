@@ -4,7 +4,7 @@ using Xunit;
 namespace Shiyin.Tests;
 
 /// <summary>
-/// 用使用者資料庫的複本測（W1.4，CLAUDE.md：用 sqlite3 .backup 複製、刪掉錄音中的會議）。只在設定了 SHIYIN_REAL_DB 時跑，
+/// 用使用者資料庫的複本測（W1.4：用 sqlite3 .backup 複製、刪掉錄音中的會議）。只在設定了 SHIYIN_REAL_DB 時跑，
 /// 結果只印筆數，不印內容。SHIYIN_REAL_DB_COUNTS 給「表=筆數,…」時逐表比對
 /// </summary>
 public class RealDatabaseTests

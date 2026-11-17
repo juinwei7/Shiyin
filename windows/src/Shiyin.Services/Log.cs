@@ -1,7 +1,7 @@
 namespace Shiyin.Services;
 
 /// <summary>
-/// log（design-windows §12.9）：logs\shiyin-&lt;日期&gt;.log，保留 7 天。不寫逐字稿、會議紀錄的內容和 key（CLAUDE.md）
+/// log（design-windows §12.9）：logs\shiyin-&lt;日期&gt;.log，保留 7 天。不寫逐字稿、會議紀錄的內容和 key
 /// </summary>
 public static class Log
 {

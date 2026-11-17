@@ -143,7 +143,7 @@ struct MeetingHeader: View {
     /// 會議頁上方最多顯示幾位與會者（design §59）
     private static let visibleSpeakers = 4
 
-    /// 一位與會者：頭像加名字。選單按鈕只畫得出文字，頭像放在選單外面（CLAUDE.md）
+    /// 一位與會者：頭像加名字。選單按鈕只畫得出文字，頭像放在選單外面
     @ViewBuilder
     private func speakerChip(_ idx: Int) -> some View {
         let name = detail.speakers[idx] ?? ""

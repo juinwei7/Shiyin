@@ -283,7 +283,7 @@ public static class Ui
             TextTrimming = TextTrimming.Clip, MaxLines = 1,
         };
         var c = color.Color;
-        // Border 的框線畫在裡面（不佔外面的寬度，CLAUDE.md）：外圈用 BorderThickness，大小照樣是直徑
+        // Border 的框線畫在裡面（不佔外面的寬度）：外圈用 BorderThickness，大小照樣是直徑
         var ring = isMe ? Math.Min(2, Math.Max(1.5, size / 14)) : 0;   // 細的一圈，最多 2（同 Mac）
         var avatar = new Border
         {

@@ -74,7 +74,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # tag 的說明文字當成 Release 的內容（CLAUDE.md：中文一段、空一行、英文一段）
+          # tag 的說明文字當成 Release 的內容（中文一段、空一行、英文一段，docs/website.md §7）
           git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
           git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" > notes.txt
           version="${GITHUB_REF_NAME#win-v}"

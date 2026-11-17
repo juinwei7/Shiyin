@@ -76,7 +76,7 @@ public sealed class GlobalHotKeys : IDisposable
     public string? SetRecordEnabled(bool on) => OnThread(() => Register(RecordId, VkR, on));
     public string? SetBookmarkEnabled(bool on) => OnThread(() => Register(BookmarkId, VkB, on));
 
-    /// <summary>DEBUG 的 hotkey：模擬按下（不能用送按鍵測，CLAUDE.md）</summary>
+    /// <summary>DEBUG 的 hotkey：模擬按下（不能用送按鍵測）</summary>
     public void Simulate(string which)
     {
         if (which == "bookmark") BookmarkPressed?.Invoke(); else RecordPressed?.Invoke();

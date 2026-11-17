@@ -17,7 +17,7 @@ public sealed record ProcessResult(int ExitCode, string Stdout, string Stderr)
 }
 
 /// <summary>
-/// 執行外部程式（同 Mac 的 Subprocess）：一律用參數陣列，不經過 shell 或 cmd.exe（CLAUDE.md、design-windows §10）。
+/// 執行外部程式（同 Mac 的 Subprocess）：一律用參數陣列，不經過 shell 或 cmd.exe（design-windows §10）。
 /// 取消、逾時時結束整棵程序樹。Windows 另外用 <see cref="OnStarted"/> 把程序放進 Job Object，拾音當掉時子程序一起結束
 /// </summary>
 public sealed class ProcessRunner

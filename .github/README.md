@@ -245,7 +245,6 @@ The project follows spec-driven development: requirements, design and tasks come
 | [`docs/design-windows.md`](../docs/design-windows.md) | How the Windows version differs from the Mac, the golden files, the test setup |
 | [`docs/website.md`](../docs/website.md) | Requirements and design of the website |
 | [`docs/tasks.md`](../docs/tasks.md) | Tasks still to do |
-| [`CLAUDE.md`](../CLAUDE.md) | Things to watch out for when developing and verifying |
 
 ### Project layout
 

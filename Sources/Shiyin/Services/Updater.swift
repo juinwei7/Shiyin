@@ -79,7 +79,7 @@ final class Updater {
     private(set) var progress: Progress?
     @ObservationIgnored private var progressUpdated = Date.distantPast
 
-    /// 百分比變了、或離上次超過 1 秒才更新：一直變的屬性會讓整個視窗重排（CLAUDE.md 錄音中的效能）
+    /// 百分比變了、或離上次超過 1 秒才更新：一直變的屬性會讓整個視窗重排（錄音中的效能，design §21.12）
     private func report(_ received: Int64, _ total: Int64) {
         guard var current = progress else { return }
         let next = Progress(version: current.version, received: received, total: total)
