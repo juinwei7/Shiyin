@@ -1706,7 +1706,7 @@ public sealed class MainWindow : Window
         var items = new List<MenuFlyoutItemBase>();
         // 有自動加入條件的資料夾沒有會議也列出來（M§72）
         var others = State.Folders.Where(f => f.Name != current).ToList();
-        foreach (var (name, _) in others) items.Add(Ui.Item(name, () => host.Controller.MoveToFolder(ids, name)));
+        foreach (var (name, _) in others) items.Add(Ui.Item(name, () => host.Controller.MoveToFolder(ids, name), icon: Symbol.Folder));
         if (others.Count > 0) items.Add(new MenuFlyoutSeparator());
         items.Add(Ui.Item(L.T("新資料夾…"), () => { if (ids.Count > 0) RenameUi(new RenameTarget.NewFolder([.. ids])); }, icon: Symbol.NewFolder));
         if (current is null) items.Add(Ui.Item(L.T("移出資料夾"), () => host.Controller.MoveToFolder(ids, ""), icon: Symbol.Remove));

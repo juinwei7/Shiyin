@@ -696,6 +696,9 @@ public sealed class RecordingPanel
     int shownLines;
     bool followLatest = true;
     long? meetingId;
+    // 標記重點的那一句後面的星號（同 Mac：每個標記落在它之前最後一句），跟已經出現的句子一一對應
+    readonly List<FontIcon> stars = [];
+    List<double> bookmarkTimes = [];
 
     public RecordingPanel(AppHost host, MainWindow window)
     {
@@ -783,11 +786,13 @@ public sealed class RecordingPanel
         {
             meetingId = detail.Meeting.Id;
             lines.Children.Clear();
+            stars.Clear();
             shownLines = 0;
             followLatest = true;
             notesBox.Load(detail.Meeting.Id!.Value, detail.Meeting.UserNotes);
             volatileText.Language = Ui.ContentLanguage(detail.Meeting.MeetingLanguage);
         }
+        bookmarkTimes = [.. detail.Bookmarks.Select(b => b.Time)];
         Update();
     }
 
@@ -858,7 +863,7 @@ public sealed class RecordingPanel
         }
 
         var all = r.LiveLines;
-        if (all.Count < shownLines) { lines.Children.Clear(); shownLines = 0; }
+        if (all.Count < shownLines) { lines.Children.Clear(); stars.Clear(); shownLines = 0; }
         if (lines.Children.Count == 0 && all.Count == 0 && r.VolatileText.Length == 0)
             lines.Children.Add(Ui.Text(host.Settings.LiveTranscription ? L.T("開始說話後，逐字稿會即時出現在這裡。") : L.T("即時逐字稿已在設定中關閉，錄音結束後會正式轉錄。"), color: Ui.Secondary));
         else if (shownLines == 0 && lines.Children.Count > 0 && all.Count > 0) lines.Children.Clear();
@@ -872,8 +877,21 @@ public sealed class RecordingPanel
             var time = Ui.Text(TimeFormat.String(line.Start), Ui.C(13), color: Ui.Celadon, wrap: false);
             time.Width = Ui.C(52);
             time.TextAlignment = TextAlignment.Right;
-            lines.Children.Add(Ui.Split(time, text, 12));
+            // 星號跟文字在同一格：收起來時不佔寬度（左邊的間距只在出現時算），沒標記的句子照樣用滿整行（同 Mac）
+            var star = new FontIcon { Glyph = "\uE735", FontSize = Ui.C(11), Foreground = Ui.Signal, VerticalAlignment = VerticalAlignment.Top,
+                                      Margin = new Thickness(12, 4, 0, 0), Visibility = Visibility.Collapsed };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(star, L.T("標記重點"));
+            var body = new Grid();
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(star, 1);
+            body.Children.Add(text);
+            body.Children.Add(star);
+            stars.Add(star);
+            lines.Children.Add(Ui.Split(time, body, 12));
         }
+        var starred = bookmarkTimes.Select(t => { var i = all.Count - 1; while (i >= 0 && all[i].Start > t) i--; return i; }).ToHashSet();
+        for (var i = 0; i < stars.Count; i++) stars[i].Visibility = starred.Contains(i) ? Visibility.Visible : Visibility.Collapsed;
         volatileText.Text = r.VolatileText;
         volatileText.Foreground = Ui.Secondary;
         if (r.VolatileText.Length > 0) lines.Children.Add(volatileRow);
@@ -886,6 +904,7 @@ public sealed class RecordingPanel
     {
         ApplyScale();
         lines.Children.Clear();
+        stars.Clear();
         shownLines = 0;
         if (meetingId is not null) Update();
     }

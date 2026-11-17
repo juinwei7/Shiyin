@@ -745,6 +745,9 @@ public sealed partial class FlowPanel : Panel
 {
     public double Spacing { get; set; } = 8;
     public double LineSpacing { get; set; } = 8;
+    // 外面常照量出來的寬度（widest）排；150% 這種縮放下寬度是浮點數，加總的誤差會讓最後一個「差一點點」放不下而換行，
+    // 高度卻只留一行，跟下一排疊在一起（會議頁的資訊列）
+    const double WidthTolerance = 0.5;
 
     protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size available)
     {
@@ -753,7 +756,7 @@ public sealed partial class FlowPanel : Panel
         {
             child.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
             var size = child.DesiredSize;
-            if (x > 0 && x + size.Width > available.Width) { x = 0; y += line + LineSpacing; line = 0; }
+            if (x > 0 && x + size.Width > available.Width + WidthTolerance) { x = 0; y += line + LineSpacing; line = 0; }
             x += size.Width + Spacing;
             line = Math.Max(line, size.Height);
             widest = Math.Max(widest, x - Spacing);
@@ -770,7 +773,7 @@ public sealed partial class FlowPanel : Panel
         for (var i = 0; i < Children.Count; i++)
         {
             var size = Children[i].DesiredSize;
-            if (x > 0 && x + size.Width > final.Width) { lines.Add((start, i - start, line)); start = i; x = 0; line = 0; }
+            if (x > 0 && x + size.Width > final.Width + WidthTolerance) { lines.Add((start, i - start, line)); start = i; x = 0; line = 0; }
             x += size.Width + Spacing;
             line = Math.Max(line, size.Height);
         }
