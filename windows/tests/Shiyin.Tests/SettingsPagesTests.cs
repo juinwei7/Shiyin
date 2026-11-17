@@ -16,7 +16,8 @@ public sealed class SettingsPagesTests
     public void PagesAndGroupsMatchMac()
     {
         // 代號、順序、分組照 Mac 的 SettingsPage（Sources/Shiyin/Views/SettingsView.swift）
-        var swift = File.ReadAllText(Repo("Sources", "Shiyin", "Views", "SettingsView.swift"));
+        // Windows 的 git 取出 .swift 時換行是 CRLF（.gitattributes 只把 .cs 固定成 LF），下面的正規表示式照 LF 寫
+        var swift = File.ReadAllText(Repo("Sources", "Shiyin", "Views", "SettingsView.swift")).Replace("\r\n", "\n");
         var cases = Regex.Match(swift, @"enum SettingsPage[^{]*\{\s*case ([a-z, ]+)\n").Groups[1].Value.Split(',', StringSplitOptions.TrimEntries);
         Assert.Equal(cases, SettingsPages.All);
         var groups = Regex.Match(swift, @"static let groups: \[\[SettingsPage\]\] = \[(.*?)\]\n", RegexOptions.Singleline).Groups[1].Value;
