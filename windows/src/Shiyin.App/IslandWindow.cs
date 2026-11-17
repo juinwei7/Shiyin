@@ -92,6 +92,7 @@ public sealed partial class IslandWindow : Window
         // 每 0.5 秒看要不要出現、提醒換了沒、偵測會議的提醒過期沒、前景視窗換到別的螢幕沒（便宜：只比對幾個值）
         timer.Tick += (_, _) => Ui.Guard(Update);
         timer.Start();
+        Closed += (_, _) => { timer.Stop(); leave.Stop(); };
         host.Recorder.Changed += () => host.Post(Update);
         // 開始錄音（不管從哪裡）時，偵測會議的「要開始錄音嗎？」收起來
         host.Recorder.Started += () => host.Post(() => { if (Prompt?.Prompt is MeetingDetector.Prompt.Start) ClosePrompt(); });
@@ -179,6 +180,8 @@ public sealed partial class IslandWindow : Window
 
     public void Update()
     {
+        // 結束 app 時視窗已經關了（AppWindow 是 null），錄音的事件還可能排進來
+        if (AppWindow is null) return;
         var recorder = host.Recorder;
         var now = DateTime.UtcNow;
         if (Prompt is { } p && p.Expires < now) Prompt = null;
