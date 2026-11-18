@@ -393,7 +393,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 - **2026-11-18 的狀況**（上線 4 週）：
   - Google：sitemap 讀取成功、23 個網址都知道，**編入索引 0 個**（「已檢索 - 目前尚未建立索引」10 個，含三種語言的首頁；「已找到 - 目前尚未建立索引」13 個），曝光 0。網址審查：允許檢索、擷取成功、允許編入索引、標準網址是自己，沒有技術問題。Googlebot 10-27 之後沒再來抓頁面，4 週只抓了 72 次。
   - 原因在網域：`weibuilds.com` 是 2026-04-21 註冊的新網域，Search Console 的網域資源顯示**外部連結 0**，整個網域 34 個網址只收了 2 個（都是 www）。GitHub 上的連結（repo 首頁、README、awesome-mac）都是 `nofollow`，Google 不算。
-  - 所以 Google 這邊要靠 §14.4 的站外連結和在 Search Console 手動「要求建立索引」（一天約 10 個，先送三種語言的首頁、Windows 頁、指南列表），再改站內的字幫助不大。
+  - 所以 Google 這邊要靠 §14.4 的站外連結和在 Search Console 手動「要求建立索引」（一天約 10 個），再改站內的字幫助不大。2026-11-18 送了 7 個：三種語言的首頁、Windows 頁、指南列表、比較（中文）、Google Meet 逐字稿。
   - Bing 這邊（ChatGPT 搜尋、Copilot、DuckDuckGo 用它的索引）：DuckDuckGo 搜 `site:shiyin.weibuilds.com` 有首頁、英日文首頁、Windows 頁和 5 篇指南，IndexNow 有用。
   - 用各家爬蟲的 User-Agent（Googlebot、bingbot、GPTBot、OAI-SearchBot、ClaudeBot、PerplexityBot、ChatGPT-User、Claude-User）抓首頁、指南、llms.txt 都是 200，Cloudflare 沒有擋。
 - **Bing**：使用者到 Bing Webmaster Tools 從 Search Console 匯入網站（ChatGPT 搜尋、Copilot 用 Bing 的索引）。
