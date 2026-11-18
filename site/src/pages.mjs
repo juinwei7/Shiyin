@@ -2,7 +2,7 @@
 
 import { content, LANGS, GITHUB, KOFI } from './content.mjs';
 import { demoSection } from './demo-markup.mjs';
-import { homeSchema, pageSchema, guideSchema, windowsSchema } from './seo.mjs';
+import { homeSchema, pageSchema, guideSchema, windowsSchema, AUTHOR_SITE } from './seo.mjs';
 import { GUIDES } from './guides.mjs';
 
 export const ROUTES = {
@@ -86,6 +86,7 @@ ${alternates.filter((l) => l !== lang).map((l) => `<meta property="og:locale:alt
 ${seo}
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
@@ -108,6 +109,7 @@ ${body}
   <div class="wide">
     <span>${c.footer.tagline}</span>
     <a href="${GITHUB}">GitHub</a>
+    <a href="${AUTHOR_SITE}">Wei Builds</a>
     <a href="${KOFI}">${c.footer.sponsor}</a>
     <a href="${ROUTES.changelog(lang)}">${c.nav.changelog}</a>
 ${windows ? `    <a href="${platformHref}">${route === 'windows' ? c.footer.mac : c.footer.windows}</a>\n` : ''}${guidesLangs().includes(lang) ? `    <a href="${ROUTES.guides(lang)}">${c.guides.nav}</a>\n` : ''}${others.map((l) => `    <a href="${href(l)}" lang="${content[l].lang}" hreflang="${content[l].lang}">${content[l].label}</a>`).join('\n')}

@@ -32,6 +32,8 @@ done
 shasum -a 256 docs/images/{,en/,windows/,en/windows/}{summary,recording,transcript,mindmap,organize}.png > "$out/images/sources.sha256"
 
 sips -z 64 64 docs/images/icon.png --out "$out/favicon.png" >/dev/null
+# 搜尋引擎會直接抓 /favicon.ico（docs/website.md §14.1）
+sips -z 48 48 -s format ico docs/images/icon.png --out "$out/favicon.ico" >/dev/null
 sips -z 180 180 docs/images/icon.png --out "$out/apple-touch-icon.png" >/dev/null
 
 chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

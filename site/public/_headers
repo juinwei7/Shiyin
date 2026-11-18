@@ -3,6 +3,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
+# Pages 專案自己的網址（*.pages.dev）內容跟正式網域一樣，不讓搜尋引擎收（docs/website.md §14.1）
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex
+
+https://:version.:project.pages.dev/*
+  X-Robots-Tag: noindex
+
 /images/*
   Cache-Control: public, max-age=86400
 

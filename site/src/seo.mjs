@@ -6,7 +6,9 @@ import { ROUTES } from './pages.mjs';
 // IndexNow（docs/website.md §14.1）：金鑰是公開的，建置時放在根目錄，讓搜尋引擎確認網站是我們的
 export const INDEXNOW_KEY = 'fb4f61486ebf3a373e2b3da60a37f158';
 
-const AUTHOR = { '@type': 'Person', name: 'juinwei7', url: 'https://github.com/juinwei7' };
+// 作者的網站（docs/website.md §14.1）：結構化資料和頁尾都連過去，讓搜尋引擎知道拾音是誰做的
+export const AUTHOR_SITE = 'https://www.weibuilds.com/';
+const AUTHOR = { '@type': 'Person', '@id': `${AUTHOR_SITE}#weiwei`, name: 'juinwei7', alternateName: 'weiwei', url: AUTHOR_SITE, sameAs: ['https://github.com/juinwei7'] };
 
 // JSON-LD 是資料區塊，不會執行；把 < 換掉，內容裡的 </script> 才不會提前關掉標籤
 export function jsonLd(data) {
@@ -50,7 +52,7 @@ export function homeSchema({ lang, site, latest, faq = content[lang].faq.items }
         releaseNotes: `${site}${ROUTES.changelog(lang)}`,
         softwareRequirements: 'macOS 26, Apple Silicon (M1 or later), 8 GB RAM',
         featureList: c.seo.features,
-        inLanguage: ['zh-Hant', 'en'],
+        inLanguage: ['zh-Hant', 'zh-Hans', 'en'],
         isAccessibleForFree: true,
         license: 'https://opensource.org/licenses/MIT',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
@@ -110,7 +112,7 @@ export function windowsSchema({ lang, site, win }) {
         installUrl: `${site}${c.prefix}/download/windows`,
         softwareRequirements: 'Windows 11 (x64 or ARM64), 8 GB RAM; an NVIDIA or AMD graphics card is optional and is used for transcription',
         featureList: c.seo.features,
-        inLanguage: ['zh-Hant', 'en'],
+        inLanguage: ['zh-Hant', 'zh-Hans', 'en'],
         isAccessibleForFree: true,
         license: 'https://opensource.org/licenses/MIT',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
@@ -194,22 +196,32 @@ export function llmsTxt({ site, latest, windows = null, guides = [] }) {
     : 'A Windows version is in development.';
   const windowsPage = windows ? `- [Shiyin for Windows](${site}/en/windows/): requirements, download and install steps for Windows 11\n- [Download the latest Windows installer (x64)](${site}/download/windows)\n` : '';
   const windowsZh = windows ? `也有 Windows 版（Windows 11，x64 和 ARM）：${site}/windows/。` : 'Windows 版開發中。';
+  const platforms = windows ? 'macOS and Windows' : 'macOS';
   return `# Shiyin (拾音)
 
-> Shiyin is a free, open-source (MIT) meeting-notes app for macOS. It records in-person and online meetings (Zoom, Google Meet, Microsoft Teams) without a bot joining the call, shows a live transcript, transcribes the recording locally on the Mac, identifies speakers, and writes meeting notes where every item has a timestamp that plays the original audio. Recordings never leave the Mac.
+> Shiyin is a free, open-source (MIT) meeting-notes app for ${platforms}. It records in-person and online meetings (Zoom, Google Meet, Microsoft Teams) without a bot joining the call, shows a live transcript, transcribes the recording locally on your computer, identifies speakers, and writes meeting notes where every item has a timestamp that plays the original audio. Recordings never leave your computer.
 
-Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later on Apple Silicon (M1 or later) and 8 GB of RAM. ${windowsLine} Made by an independent developer in Taiwan.
+Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later on Apple Silicon (M1 or later) and 8 GB of RAM. ${windowsLine} Made by an independent developer in Taiwan (${AUTHOR_SITE}).
 
 ## What makes it different
 
-- Local transcription: recordings are transcribed on the Mac with whisper.cpp. No audio is uploaded, and transcription works offline.
+- Local transcription: recordings are transcribed on your own computer with whisper.cpp. No audio is uploaded, and transcription works offline.
 - No meeting bot: it records the microphone and the computer's audio directly, so the other side of Zoom, Meet or Teams is captured without a bot joining.
 - Built for Taiwanese Mandarin mixed with English: Chinese and English meetings use Breeze ASR 25 (MediaTek Research), tuned for code-switching such as "deploy" or "Redis" inside Mandarin sentences. Japanese and Korean meetings use Whisper large-v3-turbo, and Cantonese meetings use Qwen3-ASR. The meeting language is detected automatically.
-- Bring your own AI: notes are written by the Claude or ChatGPT subscription you already have (through Claude Code or Codex), or with an Anthropic, OpenAI, Gemini or OpenAI-compatible API key (Groq, OpenRouter). For a fully offline setup, point it at a local model in Ollama or LM Studio, and nothing leaves the Mac at all. Only transcript text is sent, and only to the provider you pick. You can also choose not to summarize and keep just the transcript.
+- Bring your own AI: notes are written by the Claude or ChatGPT subscription you already have (through Claude Code or Codex), or with an Anthropic, OpenAI, Gemini or OpenAI-compatible API key (Groq, OpenRouter). For a fully offline setup, point it at a local model in Ollama or LM Studio, and nothing leaves your computer at all. Only transcript text is sent, and only to the provider you pick. You can also choose not to summarize and keep just the transcript.
 - Notes you can check: a summary, decisions, action items and open questions, each with a timestamp. Names and terms the AI is unsure about are listed under "To confirm" instead of being guessed.
 - Speaker identification with voiceprints: name a speaker once and Shiyin recognizes the voice in later meetings. Speakers can be merged or reassigned line by line.
 - Ask your meetings: ask a question about one meeting or all meetings and get answers with timestamps.
+- Works inside AI tools (MCP): a built-in local MCP server lets Claude Code, Codex and Claude Desktop read your meetings, added with one click in Settings. Ask "what were last week's action items?" there and the answer links back to the meeting and the timestamp. Read-only, and Shiyin doesn't need to be open.
+- Keeps meetings organized: folders (drag meetings in, or file them automatically with rules) and people (every meeting with someone and the action items they own).
 - Price: free. No account, no subscription, no usage limits. The only cost is your own AI subscription or API usage, if you use one.
+
+## Limits
+
+- Needs macOS 26 on Apple Silicon, or Windows 11. There is no Linux, iPhone or Android version.
+- Meeting languages: Chinese (Mandarin), English, Japanese, Cantonese and Korean (experimental). Taiwanese Hokkien is not supported.
+- The interface is in English, Traditional Chinese and Simplified Chinese.
+- macOS and Windows block the app the first time it is opened (it is not notarized by Apple, and Windows SmartScreen does not recognize it yet). The home page and the Windows page show the one extra step to open it.
 
 ## Pages
 

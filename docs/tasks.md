@@ -164,6 +164,8 @@
 ## 官網
 
 - [~] **首屏示範**（docs/website.md W10、§10）：還差：使用者用真的 iPhone 看手機版（自動播放、整段播完、沒有左右捲動）
+- [~] **Google 還沒收官網**（docs/website.md §14.4、§14.5；2026-11-18 查到編入索引 0／23、整個網域外部連結 0）：要使用者同意才能做的：在 Search Console 對三種語言的首頁、Windows 頁、指南列表「要求建立索引」；§14.4 的站外收錄（AlternativeTo、OpenAlternative、Product Hunt、Show HN、台灣媒體和社群）；Bing Webmaster Tools 匯入
+  - 驗證：Search Console「網頁」的已建立索引大於 0、「連結」的外部連結大於 0；之後照 §14.5 每週看曝光
 
 ## Windows 版（R26～R28，design-windows.md；2026-10-20 使用者決定方向）
 
