@@ -91,7 +91,7 @@ A meeting-notes app for macOS. Record a meeting (in person or online) and watch 
 ### From the DMG
 
 1. Get `Shiyin-<version>.dmg` (from the [website](https://shiyin.weibuilds.com/en/), this repo’s Releases, or from whoever maintains your copy), open it and drag Shiyin to Applications.
-2. Shiyin isn’t notarized by Apple, so macOS blocks it the first time: go to System Settings → Privacy & Security and click Open Anyway (once). “Install Guide.pdf” in the DMG has the full steps.
+2. Shiyin isn’t notarized by Apple, so macOS blocks it the first time: click Done (not Move to Trash), then go to System Settings → Privacy & Security and click Open Anyway (once). “Install Guide.pdf” in the DMG has the full steps.
 3. On first launch, a guide walks you through allowing the microphone, downloading the transcription model (about 1.7 GB) and choosing a summarizer. You can skip any step and finish it later in Settings.
 4. From 3.1.1 on, Shiyin checks this repo’s Releases for new versions and, after asking you, updates itself.
 

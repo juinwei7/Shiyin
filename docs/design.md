@@ -324,13 +324,13 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 ## 12. 發布（R10）
 
 - `scripts/make-signing-cert.sh`：建立一張自簽的程式簽章憑證「Shiyin Self-Signed」，只要做一次。放在獨立的鑰匙圈 `~/Library/Application Support/ShiyinSigning/shiyin-signing.keychain-db`（密碼在同一個資料夾），有效到 2036-10-12。codesign 只肯用受信任的憑證，本機要用的話加 `--trust`（要輸入登入密碼）；沒有信任時 `build-app.sh` 用 ad-hoc。用這張憑證簽章時 designated requirement 是 `identifier "com.weiwei.shiyin" and certificate leaf = H"75f7e2a8…"`，固定不變，TCC 權限在更新後才會保留（R10.7）。
-  - 使用者的 Mac 不信任這張憑證：Gatekeeper 照樣擋（第一次要按「仍要打開」），但簽章檢查（`codesign --verify`、app 內更新的 `SecStaticCodeCheckValidity`）不看信任，會通過。
+  - 使用者的 Mac 不信任這張憑證：Gatekeeper 照樣擋（第一次要按「強制打開」），但簽章檢查（`codesign --verify`、app 內更新的 `SecStaticCodeCheckValidity`）不看信任，會通過。
   - 從 ad-hoc 換成這張憑證（2026-10-19 起 CI 用它簽）：ad-hoc 版的 designated requirement 只看 identifier，所以舊版可以用 app 內更新升到憑證版；升級之後就鎖定這張憑證，之後每一版都要用它簽，ad-hoc 或別的憑證簽的會被擋下。
   - 憑證到期：已經裝好的 app 照常打開、權限不受影響（使用者的 Mac 本來就不信任它），但到期後不能再用它簽新版，換新憑證會被舊版的 app 內更新擋下。到期前（2034 年左右）先出一版過渡版本，designated requirement 寫成 `identifier "com.weiwei.shiyin" and (certificate leaf = H"舊" or certificate leaf = H"新")`，大部分人升級後再改用新憑證。
 - `scripts/make-dmg.sh`：用 hdiutil 建立 DMG，裡面有 Shiyin.app、Applications 資料夾的捷徑、`安裝說明.pdf` 和 `Install Guide.pdf`（3.1 起，§16.7）。
 - 安裝說明的內容：
   - 拖進「應用程式」
-  - 第一次打開時被擋的話，到「系統設定 → 隱私權與安全性」按「仍要打開」（macOS 15 之後已經不能按右鍵開啟）
+  - 第一次打開時被擋的話，先按「完成」（預設的藍色按鈕是「丟到垃圾桶」），再到「系統設定 → 隱私權與安全性」的「安全性」按「強制打開」（macOS 26 的字；macOS 15 之後已經不能按右鍵開啟）
   - 進階做法：`xattr -dr com.apple.quarantine /Applications/Shiyin.app`
 - 更新（R10.6，D10）：
   - 更新資訊是一個 JSON 檔（`shiyin-update.json`）：`{"version": "3.0.1", "url": "Shiyin-3.0.1.dmg", "sha256": "…", "notes": "…"}`，`url` 可以是相對於這個 JSON 的路徑。`make-dmg.sh` 會跟 DMG 一起產生，發布時兩個檔案放在同一個位置

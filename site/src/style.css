@@ -109,6 +109,42 @@ figcaption a { color: inherit; text-decoration: underline; }
 .steps { margin: 8px 0 0; padding-left: 1.4em; }
 .steps li { padding-left: 4px; }
 .steps li + li { margin-top: 8px; }
+/* 第一次打開被擋時的示範（docs/website.md §6.1）：兩個畫面輪流（10 秒一輪），游標移過去按、按的地方亮框 */
+.gk { margin: 20px 0 0; padding: 20px 16px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--soft); }
+.gk-stage { position: relative; height: 330px; }
+.gk-frame { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; animation: 10s linear infinite; }
+.gk-a { animation-name: gk-a; }
+.gk-b { opacity: 0; animation-name: gk-b; }
+.gk-pic { position: relative; }
+.gk-dialog { width: 270px; }
+.gk-settings { width: min(505px, 100%); }
+.gk-pic img { display: block; width: 100%; height: auto; border-radius: 12px; }
+.gk-settings img { box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
+.gk-ring { position: absolute; border: 3px solid #FFB020; border-radius: 999px; box-shadow: 0 0 0 4px rgba(255, 176, 32, .25), 0 0 18px rgba(255, 176, 32, .55); opacity: 0; }
+.gk-settings .gk-ring { border-radius: 10px; }
+.gk-a .gk-ring { animation: gk-ring-a 10s linear infinite; }
+.gk-b .gk-ring { animation: gk-ring-b 10s linear infinite; }
+.gk-no { position: absolute; border: 2px dashed #FF453A; border-radius: 999px; }
+.gk-no b { position: absolute; left: 50%; top: calc(100% + 5px); transform: translateX(-50%); padding: 2px 10px; border-radius: 999px; background: #FF453A; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.gk-cursor { position: absolute; width: 20px; height: 28px; margin: -2px 0 0 -2px; fill: #fff; stroke: #000; stroke-width: 1.4; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .5)); opacity: 0; }
+.gk-a .gk-cursor { animation: gk-cur-a 10s ease-in-out infinite; }
+.gk-b .gk-cursor { animation: gk-cur-b 10s ease-in-out infinite; }
+.gk-cap, .gk figcaption { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; justify-content: center; text-align: left; }
+.gk figcaption { margin-top: 12px; color: var(--muted); }
+.gk-cap span, .gk figcaption span { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 600; }
+@keyframes gk-a { 0%, 46% { opacity: 1; } 50%, 96% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes gk-b { 0%, 46% { opacity: 0; } 50%, 96% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gk-cur-a { 0% { left: 82%; top: 112%; opacity: 0; } 6% { opacity: 1; } 22% { left: 29.3%; top: 83.6%; transform: scale(1); } 24% { transform: scale(.85); } 26% { transform: scale(1); } 44% { left: 29.3%; top: 83.6%; opacity: 1; } 46%, 100% { left: 29.3%; top: 83.6%; opacity: 0; } }
+@keyframes gk-cur-b { 0%, 50% { left: 60%; top: 135%; opacity: 0; } 54% { opacity: 1; } 70% { left: 86.4%; top: 61%; transform: scale(1); } 72% { transform: scale(.85); } 74% { transform: scale(1); } 94% { left: 86.4%; top: 61%; opacity: 1; } 96%, 100% { left: 86.4%; top: 61%; opacity: 0; } }
+@keyframes gk-ring-a { 0%, 23% { opacity: 0; } 25%, 44% { opacity: 1; } 46%, 100% { opacity: 0; } }
+@keyframes gk-ring-b { 0%, 71% { opacity: 0; } 73%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+/* 減少動態效果：兩個畫面上下排、框一直亮著、不要游標 */
+@media (prefers-reduced-motion: reduce) {
+  .gk-stage { height: auto; display: grid; gap: 22px; }
+  .gk-frame { position: static; opacity: 1; animation: none; }
+  .gk .gk-ring { opacity: 1; animation: none; }
+  .gk .gk-cursor { display: none; }
+}
 /* Windows 版（docs/website.md §16）：有 Windows 版的 release 才出現 */
 .intro .also a { color: var(--accent); }
 .on-windows { max-width: 1000px; margin: 0 auto; padding: 0 20px; text-align: center; }

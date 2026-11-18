@@ -130,6 +130,36 @@ function shot(lang, name, alt, { first = false, caption = '', win = false, size 
 </picture>${caption ? `\n<figcaption>${caption}</figcaption>` : ''}`;
 }
 
+// 第一次打開被擋時的示範（docs/website.md §6.1）：真的 macOS 26 畫面（警告、系統設定的「安全性」），
+// 游標依序按「完成」「強制打開」，純 CSS 循環（不用 script），減少動態效果時兩張並排不動。框和游標的位置是圖上的百分比
+function gatekeeperDemo(lang) {
+  const g = content[lang].download.gatekeeper;
+  if (!g) return '';
+  const pic = (name, w, h, alt) => `<picture><source type="image/avif" srcset="/images/${name}.avif"><img src="/images/${name}.png" width="${w}" height="${h}" alt="${escape(alt)}" loading="lazy" decoding="async"></picture>`;
+  const cursor = '<svg class="gk-cursor" viewBox="0 0 22 30" aria-hidden="true"><path d="M2 2v22l6-5.5 4 9 3.6-1.6-4-8.8H19z"/></svg>';
+  return `<figure class="gk" aria-label="${escape(g.label)}">
+  <div class="gk-stage">
+    <div class="gk-frame gk-a">
+      <div class="gk-pic gk-dialog">${pic('gatekeeper-dialog', 570, 518, g.alt1)}
+        <span class="gk-ring" style="left:10%;top:78.4%;width:38.6%;height:10.8%"></span>
+        <span class="gk-no" style="left:51.4%;top:78.4%;width:38.4%;height:10.8%"><b>${g.no}</b></span>
+        ${cursor}
+      </div>
+      <p class="gk-cap"><span>1</span>${g.step1}</p>
+    </div>
+    <div class="gk-frame gk-b">
+      <div class="gk-pic gk-settings">${pic('gatekeeper-settings', 1010, 330, g.alt2)}
+        <span class="gk-ring" style="left:78.6%;top:53%;width:15.6%;height:16%"></span>
+        ${cursor}
+      </div>
+      <p class="gk-cap"><span>2</span>${g.step2}</p>
+    </div>
+  </div>
+  <figcaption><span>3</span>${g.step3}</figcaption>
+</figure>
+`;
+}
+
 // 介紹影片（docs/website.md §15）：不自動播放、不先下載，按了才載入。
 // versions：各影片的雜湊（build.mjs 算），接在網址後面，換了影片瀏覽器才不會用快取裡的舊檔
 export const videoPath = (lang) => `/videos/shiyin-promo-${content[lang].video.file}`;
@@ -307,7 +337,7 @@ ${c.download.rows.map(([k, v]) => `  <div><dt>${k}</dt><dd>${v}</dd></div>`).joi
 <ol class="steps">
 ${c.download.steps.map((s) => `  <li>${s}</li>`).join('\n')}
 </ol>
-<p class="note">${c.download.note}</p>
+${gatekeeperDemo(lang)}<p class="note">${c.download.note}</p>
 ${windowsDownload(lang, windows)}<div class="star-ask">
   <p>${c.download.starAsk}</p>
   <div class="asks">

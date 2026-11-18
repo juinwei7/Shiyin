@@ -12,7 +12,7 @@
 
 - W1 一眼看懂：首頁第一屏就要說清楚「Mac 上的會議紀錄 app，錄音不出電腦，每一條紀錄都點得回原話」，並且可以直接下載。
 - W2 說清楚跟其他工具哪裡不同：錄音留在本機、台灣中文夾英文、AI 會標出它沒把握的地方、用你已經有的 Claude 或 ChatGPT 訂閱。
-- W3 下載：按鈕永遠指向最新版的 DMG；旁邊寫清楚系統需求（macOS 26、Apple Silicon）和第一次打開要怎麼做（沒有 Apple 開發者簽章，要到隱私權與安全性按「仍要打開」）。
+- W3 下載：按鈕永遠指向最新版的 DMG；旁邊寫清楚系統需求（macOS 26、Apple Silicon）和第一次打開要怎麼做（沒有 Apple 開發者簽章，要先按「完成」、再到隱私權與安全性按「強制打開」；中文首頁有真畫面的示範，§6.1）。
 - W4 版本說明：每一版的更新內容，最新的在最上面。**發布新版後自動出現在網站上，不用另外改網站。**
 - W5 隱私說明：哪些東西留在這台 Mac、哪些文字會送到你選的整理工具，講清楚。登入公司的企業伺服器時錄音、逐字稿送到哪裡另寫一段（R52.1，Mac 首頁和 Windows 頁共用）。
 - W6 繁體中文、英文、日文三種語言，預設繁體中文；頁首用下拉選單切換。app 介面有繁中、簡中、英文（日本的 macOS 會顯示英文），會議可以是中英日文，所以日文版要寫清楚介面是英文。
@@ -148,6 +148,13 @@
 - SEO：每頁的標題和說明、canonical、`hreflang`（三種語言互相指向，x-default 指中文）、`sitemap.xml`、分享預覽（Open Graph、1200×630 的圖）。網站網址從環境變數 `SITE_URL` 讀，預設 `https://shiyin.weibuilds.com`。
 - Google Search Console：用 HTML 檔驗證網站擁有權，驗證通過後也要一直留著，刪掉會失去驗證。檔名要多一個 `.html`（`site/public/google<代碼>.html.html`）：Cloudflare Pages 會把 `.html` 結尾的網址 308 轉址到沒有副檔名的網址，而且不能關；多一個副檔名，`/google<代碼>.html` 才會直接回 200。sitemap 在 Search Console 送出 `/sitemap.xml`。
 - `_headers`：`nosniff`、Referrer-Policy、CSP（script 只允許自己網站的檔案，也就是 `/demo.js`、`/platform.js`；不允許 inline script）、圖片快取一天。
+
+### 6.1 第一次打開被擋的示範
+
+- 中文首頁下載區的三個步驟下面，放 macOS 26 真的畫面輪流示範（`gatekeeperDemo`，`site/src/pages.mjs`）：① 警告「未打開『拾音』」，游標按「完成」，「丟到垃圾桶」（預設的藍色按鈕）標「不要按」；② 系統設定「隱私權與安全性」的「安全性」，游標按「強制打開」；③ 文字：再按一次「強制打開」、輸入密碼。
+- 純 CSS 循環（10 秒一輪，script 只能用自己網站的，CSP 也不讓 `data:` 圖），減少動態效果時兩張上下排、框一直亮著。框和游標的位置是圖上的百分比，換圖要重量。
+- 圖：`site/public/images/gatekeeper-dialog`、`gatekeeper-settings`（AVIF＋PNG 備援），2026-11-18 在這台 Mac 用隔離過的拾音複本觸發、`screencapture -l` 截的（深色）；系統設定只裁「安全性」那塊（側欄有使用者的名字和 Apple 帳號）。
+- 英文、日文首頁只有步驟文字（畫面上的字是中文）：Done／Move to Trash、Open Anyway；完了／ゴミ箱に入れる、このまま開く。
 
 ## 7. 版本說明自動更新
 

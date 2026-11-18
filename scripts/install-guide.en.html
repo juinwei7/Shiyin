@@ -14,11 +14,11 @@ code { font-family: Menlo, monospace; font-size: 10.5pt; background: #EEF1EF; pa
 <p>Drag Shiyin from the DMG into the Applications folder next to it.</p>
 
 <h2>2. First launch</h2>
-<p>Shiyin isn’t notarized by Apple, so macOS blocks it the first time you open it, saying the developer can’t be verified or that Apple can’t check it for malicious software. Allow it once:</p>
+<p>Shiyin isn’t notarized by Apple, so macOS blocks it the first time you open it, saying “Shiyin” Not Opened because Apple can’t verify it’s free of malware. Allow it once:</p>
 <ol>
-<li>Double-click Shiyin in Applications. When the warning appears, click Done or OK.</li>
+<li>Double-click Shiyin in Applications. When the warning appears, click Done (not Move to Trash).</li>
 <li>Open System Settings → Privacy &amp; Security and scroll down to Security.</li>
-<li>Next to “Shiyin was blocked”, click Open Anyway and enter your password.</li>
+<li>Next to “Shiyin was blocked”, click Open Anyway, then click Open Anyway again and enter your password.</li>
 </ol>
 <p>If you’re comfortable with Terminal, you can run this instead: <code>xattr -dr com.apple.quarantine /Applications/Shiyin.app</code></p>
 

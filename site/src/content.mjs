@@ -117,9 +117,19 @@ export const content = {
       coffee: '請我喝杯咖啡',
       steps: [
         '打開 DMG，把拾音拖進「應用程式」。',
-        '第一次打開時 macOS 會擋下來，因為拾音沒有 Apple 開發者簽章。',
-        '到「系統設定 → 隱私權與安全性」，按「仍要打開」。',
+        '第一次打開時 macOS 會擋下來（拾音沒有 Apple 開發者簽章）：按「完成」，不要按「丟到垃圾桶」。',
+        '到「系統設定 → 隱私權與安全性」，往下捲到「安全性」，按「強制打開」，再按一次「強制打開」並輸入密碼。',
       ],
+      // 第一次打開被擋時的示範（真的 macOS 26 畫面，只有中文版：警告和系統設定的字是中文）
+      gatekeeper: {
+        label: '第一次打開被擋的時候',
+        alt1: 'macOS 的警告「未打開『拾音』」，下面有「完成」和「丟到垃圾桶」兩個按鈕',
+        alt2: '系統設定的「隱私權與安全性」：已阻擋「拾音」以保護你的 Mac，旁邊有「強制打開」按鈕',
+        step1: '按「完成」',
+        no: '不要按',
+        step2: '系統設定的「安全性」，按「強制打開」',
+        step3: '再按一次「強制打開」，輸入密碼或用 Touch ID，就打得開了。只要做一次。',
+      },
       note: '之後有新版時，拾音會在 app 裡問你要不要更新。',
       windows: {
         h3: 'Windows 版',
@@ -374,8 +384,8 @@ export const content = {
       coffee: 'Buy me a coffee',
       steps: [
         'Open the DMG and drag Shiyin to Applications.',
-        'macOS blocks Shiyin the first time you open it, because it isn’t notarized by Apple.',
-        'Go to System Settings → Privacy & Security and click Open Anyway.',
+        'macOS blocks Shiyin the first time you open it, because it isn’t notarized by Apple: click Done, not Move to Trash.',
+        'Go to System Settings → Privacy & Security, scroll down to Security and click Open Anyway, then click Open Anyway again and enter your password.',
       ],
       note: 'When a new version is out, Shiyin asks you in the app whether to update.',
       windows: {
@@ -631,8 +641,8 @@ export const content = {
       coffee: 'コーヒーをおごる',
       steps: [
         'DMG を開き、拾音を「アプリケーション」フォルダにドラッグします。',
-        '拾音は Apple の公証を受けていないため、初めて開くときは macOS にブロックされます。',
-        '「システム設定」→「プライバシーとセキュリティ」で「このまま開く」をクリックします。',
+        '拾音は Apple の公証を受けていないため、初めて開くときは macOS にブロックされます。「完了」をクリックしてください（「ゴミ箱に入れる」は押さないでください）。',
+        '「システム設定」→「プライバシーとセキュリティ」の「セキュリティ」で「このまま開く」をクリックし、もう一度「このまま開く」を押してパスワードを入力します。',
       ],
       note: '新しいバージョンが出ると、アプリの中で更新するかどうか確認されます。',
       windows: {
