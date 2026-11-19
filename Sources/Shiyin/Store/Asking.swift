@@ -114,9 +114,10 @@ extension AppModel {
         }
         let history = meetingQuestions.suffix(3).compactMap { q in q.decoded.map { (q.question, $0.answer) } }
         let documents = ((try? db.documents(id)) ?? []).map(DocumentText.init)
+        let screens = ((try? db.screens(id)) ?? []).map(ScreenText.init)
         let prompt = AskPrompt.meetingPrompt(meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: history, question: question,
-                                             documents: documents)
-        let system = AskPrompt.meetingSystem(language, documents: !documents.isEmpty)
+                                             documents: documents, screens: screens)
+        let system = AskPrompt.meetingSystem(language, documents: !documents.isEmpty, screens: !screens.isEmpty)
         run(.meeting(id)) {
             let raw = try await AskPrompt.generate(AskPrompt.Answer.self, provider: provider, model: model, system: system,
                                                    prompt: prompt, format: AskPrompt.meetingFormat, onStart: { self.askProcess = $0 })

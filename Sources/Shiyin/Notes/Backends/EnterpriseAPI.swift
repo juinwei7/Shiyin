@@ -19,17 +19,17 @@ struct EnterpriseAPI: LLMBackend {
                                    name: String(localized: "公司的伺服器"), plainServerErrors: true, session: EnterpriseServer.session)
     }
 
-    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat, images: [LLMImage],
                       onStart: (Subprocess) -> Void) async throws -> Data {
         guard EnterpriseServer.shared.hasAccount else { throw LLMError.notConfigured(SummarizerProblem.enterpriseSignedOut.message) }
         do {
             do {
-                return try await inner.generateJSON(system: system, prompt: prompt, format: format, onStart: onStart)
+                return try await inner.generateJSON(system: system, prompt: prompt, format: format, images: [], onStart: onStart)
             } catch LLMError.rejected {
                 // access token 被撤銷或過期（401、403）：換一次 token 再送；換不到就是登入失效、帳號被停用（R49.4）
                 EnterpriseServer.shared.invalidateAccess()
                 _ = try await EnterpriseServer.shared.validAccessToken()
-                return try await inner.generateJSON(system: system, prompt: prompt, format: format, onStart: onStart)
+                return try await inner.generateJSON(system: system, prompt: prompt, format: format, images: [], onStart: onStart)
             }
         } catch let failure as EnterpriseServer.Failure {
             // 登入失效、帳號被停用：設定問題，暫停自動整理到重新登入（R51.3）

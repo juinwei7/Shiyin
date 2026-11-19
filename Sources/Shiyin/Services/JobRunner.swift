@@ -26,6 +26,7 @@ enum AppSettings {
     static let meetingDetectionKey = "meetingDetection"
     static let bookmarkHotKeyKey = "bookmarkHotKey"
     static let screenshotHotKeyKey = "screenshotHotKey"
+    static let compatibleSendsImagesKey = "compatibleSendsImages"
     static let idleStopKey = "idleStop"
     static let textSizeKey = "contentTextSize"   // 會議內容的文字大小，−1～5，0 是 100%（design §38.5）
     static let notesViewKey = "notesView"   // 紀錄分頁：list（條列）／mindMap（心智圖，design §42.4）
@@ -123,6 +124,8 @@ enum AppSettings {
     static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
     /// 錄音中按 ⌃⌥⌘S 截圖（R109.1、design §83.2）
     static var screenshotHotKey: Bool { flag(screenshotHotKeyKey, default: true) }
+    /// OpenAI 相容 API 整理時附上會議中的畫面（design §83.5），預設關
+    static var compatibleSendsImages: Bool { flag(compatibleSendsImagesKey, default: false) }
     /// 很久沒人說話時提醒，30 分鐘後自動停止（design §35、R48.5）
     static var idleStop: Bool { flag(idleStopKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
@@ -745,7 +748,8 @@ final class JobRunner {
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
             bookmarks: try db.bookmarks(job.meetingId), glossary: try glossaryTerms(),
             template: definition,
-            documents: try db.documents(job.meetingId).map(DocumentText.init))
+            documents: try db.documents(job.meetingId).map(DocumentText.init),
+            screens: try db.screens(job.meetingId).map(ScreenText.init))
         let prompt: String
         if let answers {
             guard let notes = meeting.decodedNotes else { return false }
@@ -753,9 +757,13 @@ final class JobRunner {
         } else {
             prompt = NotesPrompt.summarize(context)
         }
-        let system = NotesPrompt.system(meeting.meetingLanguage, documents: !context.documents.isEmpty)
+        let system = NotesPrompt.system(meeting.meetingLanguage, documents: !context.documents.isEmpty, screens: !context.screens.isEmpty)
+        // 會議中的畫面的圖片本身（design §83.5、D188）：能看圖的整理工具才送，縮圖在背景做
+        let screens = context.screens, language = meeting.meetingLanguage
+        let images = provider.sendsScreenImages && !screens.isEmpty
+            ? await Task.detached(priority: .userInitiated) { ScreenPrompt.images(screens, language: language) }.value : []
         var notes = try await callLLM(lane) { onStart in
-            try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
+            try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, images: images, onStart: onStart)
         }
         guard isStillRunning(job) else { return false }
         // 中文會議用簡體時，整理完才轉（提示詞照舊，design §47.2、D154）

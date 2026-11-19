@@ -17,19 +17,22 @@ struct NotesContext {
     var template: TemplateDefinition
     /// 會議參考資料（design §39.3、R61.5）；沒有文件時提示詞跟以前一字不差
     var documents: [DocumentText] = []
+    /// 會議中的畫面（design §83.5、R109.6）；沒有畫面時提示詞跟以前一字不差
+    var screens: [ScreenText] = []
 }
 
 /// 整理與校稿的提示詞（design §8.3），規則沿用第二版；依會議語言分成中文、英文、日文三份（design §16.5、§18.4）
 enum NotesPrompt {
     /// documents：有參考文件時接上文件的規則（design §39.3、D133）。語言的兩級（design §41.2、D140、D141）：
     /// 共用別的語言那份的精調語言（粵語）最後接一段逐字稿的說明；一般語言（韓文）用英文那份、改成用那個語言寫
-    static func system(_ language: MeetingLanguage, documents: Bool = false) -> String {
+    static func system(_ language: MeetingLanguage, documents: Bool = false, screens: Bool = false) -> String {
         var text = language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
         if language.profile.tier == .general, let name = language.profile.outputName {
             text = text.replacingOccurrences(of: "written entirely in English.", with: "written entirely in \(name).")
                 .replacingOccurrences(of: "(translated into English if it is not in English)", with: "(translated into \(name) if it is not in \(name))")
         }
         if documents { text += "\n" + DocumentPrompt.notesRules(language) }
+        if screens { text += "\n" + ScreenPrompt.notesRules(language, start: ScreenPrompt.nextRuleNumber(after: text)) }
         if let note = language.profile.transcriptNote?.notes { text += "\n\n" + note }
         if language.profile.tier == .general, let name = language.profile.outputName {
             text += "\n\nOutput language: \(name). Every text value in the JSON (title, summary, key points by person, decisions, action items, "
@@ -190,6 +193,10 @@ enum NotesPrompt {
             lines.append("")
             lines.append("\(l.bookmarks)\(l.colon)" + c.bookmarks.map { TimeFormat.string($0.time) + ($0.label.isEmpty ? "" : " \($0.label)") }
                 .joined(separator: l.listSeparator))
+        }
+        if !c.screens.isEmpty {
+            lines.append("")
+            lines.append(ScreenPrompt.block(c.screens, language: language))
         }
         if !c.documents.isEmpty {
             lines.append("")

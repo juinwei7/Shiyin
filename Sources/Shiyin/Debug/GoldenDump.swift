@@ -93,6 +93,8 @@ enum GoldenDump {
         var knownPeople: [String]
         /// 參考文件（design §39.7）：fixtures 的 meetingDocuments，name 含副檔名，直接給每頁的文字
         var documents: [MeetingDocument]
+        /// 會議中的畫面（design §83.5）：fixtures 的 meetingScreens，直接給時間和辨識出的文字
+        var screens: [ScreenText] = []
         var language: MeetingLanguage { meeting.meetingLanguage }
 
         /// 資料庫裡的說話者表：1 到最大編號，沒改名的是預設名稱（跟 saveTranscript 一樣）
@@ -114,9 +116,11 @@ enum GoldenDump {
             self.root = root
             // 參考文件放在 meetingDocuments（會議的 key → 文件），不動原本的會議資料
             let documents = root["meetingDocuments"] as? Object ?? [:]
+            let screens = root["meetingScreens"] as? Object ?? [:]
             meetings = (root["meetings"] as? [Object] ?? []).map { o in
                 var fx = GoldenDump.meetingFixture(o)
                 fx.documents = (documents[fx.key] as? [Object] ?? []).map(GoldenDump.documentFixture)
+                fx.screens = (screens[fx.key] as? [Object] ?? []).map { ScreenText(at: GoldenDump.double($0["at"]), text: $0["text"] as? String ?? "") }
                 return fx
             }
         }
@@ -267,6 +271,25 @@ enum GoldenDump {
                 w.text(dir + "ask-meeting-prompt-documents.txt", AskPrompt.meetingPrompt(
                     meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: Array(fx.history.suffix(3)), question: fx.question,
                     documents: texts))
+            }
+            // 有會議中的畫面時（design §83.5）：沒有畫面的檔案不變（R109.6）；跟參考文件同時有時規則的編號接下去
+            if !fx.screens.isEmpty {
+                var withScreens = context(general.definition(for: l))
+                withScreens.screens = fx.screens
+                w.text(dir + "notes-system-screens.txt", NotesPrompt.system(l, screens: true))
+                w.text(dir + "summarize-general-screens.txt", NotesPrompt.summarize(withScreens))
+                if !fx.documents.isEmpty {
+                    var both = withScreens
+                    both.documents = fx.documents.map(DocumentText.init)
+                    w.text(dir + "notes-system-documents-screens.txt", NotesPrompt.system(l, documents: true, screens: true))
+                    w.text(dir + "summarize-general-documents-screens.txt", NotesPrompt.summarize(both))
+                    w.text(dir + "ask-meeting-system-documents-screens.txt", AskPrompt.meetingSystem(l, documents: true, screens: true))
+                }
+                w.text(dir + "ask-meeting-system-screens.txt", AskPrompt.meetingSystem(l, screens: true))
+                w.text(dir + "ask-meeting-prompt-screens.txt", AskPrompt.meetingPrompt(
+                    meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: Array(fx.history.suffix(3)), question: fx.question,
+                    screens: fx.screens))
+                w.json(dir + "screen-image-labels.json", fx.screens.map { ScreenPrompt.imageLabel($0.at, language: l) })
             }
         }
 
@@ -435,6 +458,10 @@ enum GoldenDump {
             }
         }
         // 長度分配和組好的區塊
+        // 會議中的畫面一次最多送幾張圖片、超過時挑哪幾張（design §83.5）
+        w.json("screens/pick.json", (f["screenPickCounts"] as? [Int] ?? []).map { n -> Object in
+            ["count": n, "picked": ScreenPrompt.pick((0..<n).map { ScreenText(at: Double($0), text: "") }).map { Int($0.at) }]
+        })
         w.json("documents/budget.json", (f["documentBudget"] as? [Object] ?? []).map { c -> Object in
             let limit = c["limit"] as? Int ?? DocumentPrompt.limit
             let docs = texts(c["documents"])

@@ -6,7 +6,7 @@ struct AnthropicAPI: LLMBackend {
 
     private var base: String { LLMClient.apiBase(.anthropic, "https://api.anthropic.com") }
 
-    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat, images: [LLMImage],
                       onStart: (Subprocess) -> Void) async throws -> Data {
         guard let key = try Keychain.read("anthropic"), !key.isEmpty else { throw LLMError.missingKey("Anthropic") }
         let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
@@ -14,7 +14,7 @@ struct AnthropicAPI: LLMBackend {
             "model": model,
             "max_tokens": 16_000,
             "system": system,
-            "messages": [["role": "user", "content": prompt]],
+            "messages": [["role": "user", "content": images.isEmpty ? prompt as Any : Self.content(prompt, images: images)]],
             "tools": [["name": format.toolName, "description": format.toolDescription, "input_schema": schema]],
             "tool_choice": ["type": "tool", "name": format.toolName],
         ]
@@ -30,6 +30,16 @@ struct AnthropicAPI: LLMBackend {
             throw LLMError.badOutput(String(localized: "回應裡沒有會議紀錄（stop_reason：\(object["stop_reason"] as? String ?? String(localized: "未知"))）"))
         }
         return try JSONSerialization.data(withJSONObject: input)
+    }
+
+    /// 提示詞，再來每張畫面的說明和圖片（design §83.5）
+    static func content(_ prompt: String, images: [LLMImage]) -> [[String: Any]] {
+        var content: [[String: Any]] = [["type": "text", "text": prompt]]
+        for image in images {
+            content.append(["type": "text", "text": image.label])
+            content.append(["type": "image", "source": ["type": "base64", "media_type": "image/jpeg", "data": image.jpeg.base64EncodedString()]])
+        }
+        return content
     }
 
     func listModels() async -> [String] {

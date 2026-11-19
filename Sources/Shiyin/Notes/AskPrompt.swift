@@ -88,9 +88,12 @@ enum AskPrompt {
     // MARK: 提示詞（中文、英文、日文各一份）
 
     /// documents：有參考文件時加一條（design §39.3、R61.6）
-    static func meetingSystem(_ l: MeetingLanguage, documents: Bool = false) -> String {
-        let base = meetingSystemBase(l)
-        return documents ? base + "\n" + DocumentPrompt.askRule(l) : base
+    static func meetingSystem(_ l: MeetingLanguage, documents: Bool = false, screens: Bool = false) -> String {
+        var text = meetingSystemBase(l)
+        if documents { text += "\n" + DocumentPrompt.askRule(l) }
+        // 會議中的畫面（design §83.5、R109.7）：只帶文字，不送圖片
+        if screens { text += "\n" + ScreenPrompt.askRule(l, number: ScreenPrompt.nextRuleNumber(after: text)) }
+        return text
     }
 
     private static func meetingSystemBase(_ l: MeetingLanguage) -> String {
@@ -175,7 +178,7 @@ enum AskPrompt {
     }
 
     static func meetingPrompt(meeting: Meeting, notes: MeetingNotes?, lines: [String], history: [(question: String, answer: String)],
-                              question: String, documents: [DocumentText] = []) -> String {
+                              question: String, documents: [DocumentText] = [], screens: [ScreenText] = []) -> String {
         let l = meeting.meetingLanguage
         let colon = l.prompt(zh: "：", en: ": ", ja: "：")
         var out: [String] = []
@@ -188,6 +191,10 @@ enum AskPrompt {
             out.append("")
             out.append(l.prompt(zh: "會議紀錄（JSON）", en: "Meeting notes (JSON)", ja: "議事録（JSON）") + colon)
             out.append(notes.jsonString())
+        }
+        if !screens.isEmpty {
+            out.append("")
+            out.append(ScreenPrompt.block(screens, language: l))
         }
         if !documents.isEmpty {
             out.append("")

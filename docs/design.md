@@ -2940,7 +2940,7 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
 
 ### 83.5 整理、提問（R109.6、R109.7，D188）
 
-- `NotesContext.screens: [ScreenText]`（`at`、辨識出的文字、圖檔路徑）。使用者提示詞在重點標記之後、參考文件之前加一段（沒有畫面時沒有這一段，提示詞一字不差）：
+- `Notes/ScreenPrompt.swift`。`NotesContext.screens: [ScreenText]`（`at`、辨識出的文字、圖檔路徑）。使用者提示詞在重點標記之後、參考文件之前加一段（沒有畫面時沒有這一段，提示詞一字不差）：
 
   ```
   會議中的畫面（[時間] 是加入畫面時的錄音時間）：
@@ -2951,16 +2951,16 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
   ```
 
   英文「Screens shown during the meeting ([time] is the recording time when the screen was added):」「(no text recognized)」，日文照語言檔的做法（`language.profile` 的 `prompt(…)`，不寫死語言）。
-- 長度：每張最多 1,500 字，全部最多 20,000 字（跟參考文件的 40,000 分開算）；照時間先後放，放不下的那張截斷、後面的只放時間和「（文字太長，沒有放進來）」。
-- 系統提示詞（只有有畫面時加，同 `DocumentPrompt.notesRules`）：「「會議中的畫面」是會議當時螢幕上的內容（分享的簡報、表格、照片）。以會議中實際討論的內容為準，畫面用來看懂當時在講什麼、補上正確的數字和名稱；畫面上有、但會議沒有討論的，不要寫進紀錄。用到畫面上的資訊時，句尾註明時間，例如「（12:34 的畫面）」。」英文、日文各一份。
-- 圖片本身（D188）：`LLMBackend.generateJSON` 多一個參數 `images: [LLMImage]`（預設空的；`LLMImage` 是時間和 JPEG 資料）。送之前縮成長邊最多 1568 px、JPEG 0.8；一次最多 20 張，超過時照時間平均挑 20 張（文字照樣全部送）。每張前面放一段文字「[12:34] 的畫面」，讓模型對得上時間。
-  - Claude Code：有圖片時改用 `--input-format stream-json --output-format stream-json --verbose`，stdin 寫一行使用者訊息（`content`：提示詞文字，再來每張的說明文字和 `image`（base64））；結果照舊讀最後一行 `type` 是 `result` 的 `structured_output`。沒有圖片時參數跟現在一樣。
-  - Codex：圖片寫進暫存資料夾，每張加 `--image <檔案>`（參數名稱實作前用真的 codex 確認）；提示詞最後列出「第 N 張是 [12:34] 的畫面」。
-  - Anthropic API：`content` 是文字和 `image`（`source.type = base64`）交錯；OpenAI API（`/v1/responses`）：`input_image`（`data:image/jpeg;base64,…`）；Gemini：`inline_data`。
-  - OpenAI 相容 API：設定加開關「整理時附上會議中的畫面（模型要能看圖）」（`compatibleSendsImages`，預設關：Ollama、LM Studio 的很多模型不能看圖，送了會失敗）；打開時用 `image_url` 的 data URL。企業伺服器：先只送文字（伺服器那邊要另外支援，私人專案）。
-  - 失敗：模型不支援圖片（API 回 400 且訊息提到 image）時，同一次整理自動改成只送文字再試一次，紀錄照常產生，log 記一筆。
-- 草稿、校稿（重新整理）同整理。提問：只帶畫面的文字（不送圖片，每問一題都送圖太貴），系統提示詞加一條「回答用到畫面時寫出時間，例如 12:34」，回答裡的時間點本來就可以點（§21.8）。
-- 標準答案：`shared/golden/fixtures.json` 加一場有畫面的會議（三張：有字、沒字、太長），`expected/` 的提示詞多 `*-screens`；`mac-requests.jsonl` 用 `fake-llm-server.py` 重錄四種 API 有圖片的請求（圖片用固定的小 JPEG，比對時 base64 照樣比）。沒有畫面的舊情境完全不變。
+- 長度：每張最多 1,500 字（多的截掉、接「…」），全部最多 20,000 字（跟參考文件的 40,000 分開算）；照時間先後放，額度用完之後的只放時間和「（文字太長，沒有放進來）」。
+- 系統提示詞（只有有畫面時加，接在參考文件的規則後面）：三條，編號接著前面最後一條（`ScreenPrompt.nextRuleNumber`：中文、英文沒有文件時是 13～15、有文件時 17～19，日文多一）。內容：「會議中的畫面」是會議當時螢幕上的內容、[時間] 是那時候的錄音時間、有附圖時圖片前面的「[12:34] 的畫面」說明是哪一張，用來看懂討論、補正確的數字和名稱；以會議中實際討論的為準，畫面上有但沒討論的不寫，說法不一致時照會議說的寫並列進 reviewItems；用到畫面的資訊時句尾註明「（12:34 的畫面）」，time 仍填討論到它的時間。英文、日文各一份。
+- 圖片本身（D188）：`LLMBackend.generateJSON` 多一個參數 `images: [LLMImage]`（`LLMImage` 是說明「[12:34] 的畫面」和 JPEG）。`ScreenPrompt.images`：縮成長邊最多 1568 px、JPEG 0.8；一次最多 20 張，超過時照時間平均挑（`pick`，第一張、最後一張一定在；文字照樣全部送），在背景做。哪些整理工具送（`LLMProvider.sendsScreenImages`）：Claude Code、Codex、三家 API 送；OpenAI 相容 API 看設定；企業伺服器不送。
+  - Claude Code：有圖片時改用 `--input-format stream-json --output-format stream-json --verbose`，stdin 寫一行使用者訊息（`content`：提示詞，再來每張的說明文字和 `image`（base64））；結果照舊讀最後一行（`type` 是 `result`）的 `structured_output`（2026-11-19 用 claude 2.1.311 試過）。沒有圖片時參數跟以前一樣。
+  - Codex：圖片寫進暫存資料夾，每張加 `--image <檔案>`（參數名稱還沒用真的 codex 確認）；提示詞最後列出「[1] [12:34] 的畫面」。
+  - Anthropic API：`content` 是提示詞、每張的說明和 `image`（`source.type = base64`）；OpenAI API（`/v1/responses`）：`input` 是一則使用者訊息，`input_text`、`input_image`（`data:image/jpeg;base64,…`）；Gemini（Interactions）：`input` 是 `text`、`image`（`data`、`mime_type`）的陣列（還沒用真的 Gemini 確認）。
+  - OpenAI 相容 API：設定「整理工具」在網址下面加開關「整理時附上會議中的畫面（模型要能看圖）」（`compatibleSendsImages`，預設關），說明「關掉時只送畫面上辨識出的文字。模型不能看圖時拾音會自動改成只送文字。」；打開時 `content` 是 `text`、`image_url`（data URL）。企業伺服器：先只送文字（伺服器那邊要另外支援，私人專案）。
+  - 失敗：模型不能看圖（`LLMError.rejectsImages`：失敗、格式不對，訊息提到 image、vision、multimodal、圖片）時，`LLMClient.generateJSON` 同一次整理改成只送文字再試一次，紀錄照常產生。
+- 草稿、校稿（重新整理）同整理。提問：只帶畫面的文字（不送圖片，每問一題都送圖太貴），系統提示詞加一條（編號接著最後一條）「用到畫面時寫出時間，例如 12:34 的畫面，citations 的 time 填那個時間」，回答裡的時間點本來就可以點（§21.8）。
+- 標準答案：`fixtures.json` 加 `meetingScreens`（每種會議語言；中文、英文、日文各三張：有字、沒字、太長，超過一小時的時間）和 `screenPickCounts`；`expected/prompts/<語言>/` 多 `notes-system-screens`、`summarize-general-screens`、有參考文件的會議再多 `notes-system-documents-screens`、`summarize-general-documents-screens`、`ask-meeting-system-documents-screens`，以及 `ask-meeting-system-screens`、`ask-meeting-prompt-screens`、`screen-image-labels.json`；`expected/screens/pick.json`。沒有畫面的舊情境完全不變。`mac-requests.jsonl`（四種 API 的請求）先不加有圖片的：JPEG 的位元組 Mac、Windows 編出來不一樣，Windows 要比的話先把圖片換成「<image N>」再比（SC4 一起做）。
 
 ### 83.6 匯出（R109.8，D189）
 

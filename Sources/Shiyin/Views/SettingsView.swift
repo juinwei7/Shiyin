@@ -222,6 +222,7 @@ struct SettingsPageView: View {
 // MARK: 整理工具與金鑰（R6.1）
 
 struct ProviderSettings: View {
+    @AppStorage(AppSettings.compatibleSendsImagesKey) private var compatibleSendsImages = false
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.providerKey) private var storedProvider = ""
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
@@ -325,6 +326,10 @@ struct ProviderSettings: View {
                 if !baseURL.trimmingCharacters(in: .whitespaces).isEmpty && OpenAICompatibleAPI.normalized(baseURL) == nil {
                     Text("網址要以 http:// 或 https:// 開頭").font(.caption).foregroundStyle(.red)
                 }
+                // 會議中的畫面（design §83.5、D188）：很多本機模型不能看圖，預設只送畫面上辨識出的文字
+                Toggle("整理時附上會議中的畫面（模型要能看圖）", isOn: $compatibleSendsImages)
+                Text("關掉時只送畫面上辨識出的文字。模型不能看圖時拾音會自動改成只送文字。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             // 公司：模型由公司的後台決定，這裡只顯示（R51.1）
             if current == .enterprise && EnterpriseServer.shared.isSignedIn && EnterpriseServer.shared.account?.llm == true {

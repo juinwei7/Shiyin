@@ -5,6 +5,16 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     case claude, codex, anthropic, openai, gemini, openaiCompatible, enterprise, none
     var id: String { rawValue }
 
+    /// 整理時送會議中的畫面的圖片本身（design §83.5、D188）：OpenAI 相容 API 看設定（很多本機模型不能看圖），企業伺服器先只送文字
+    @MainActor
+    var sendsScreenImages: Bool {
+        switch self {
+        case .claude, .codex, .anthropic, .openai, .gemini: true
+        case .openaiCompatible: AppSettings.compatibleSendsImages
+        case .enterprise, .none: false
+        }
+    }
+
     var label: String {
         switch self {
         case .claude: return String(localized: "Claude（claude CLI）")
@@ -225,8 +235,8 @@ extension Error {
 /// 一種整理工具的呼叫方式（design §19.1、D22）。每種整理工具一個實作，放在 Notes/Backends/
 @MainActor
 protocol LLMBackend {
-    /// 回傳符合 format.schema 的 JSON
-    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+    /// 回傳符合 format.schema 的 JSON；images 是會議中的畫面（design §83.5），不支援看圖的整理工具不會收到
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat, images: [LLMImage],
                       onStart: (Subprocess) -> Void) async throws -> Data
     /// 可用的模型，給設定頁選；不支援或失敗回空陣列
     func listModels() async -> [String]
@@ -280,21 +290,27 @@ enum LLMClient {
         }
     }
 
-    static func generate(provider: LLMProvider, model: String, system: String, prompt: String,
+    static func generate(provider: LLMProvider, model: String, system: String, prompt: String, images: [LLMImage] = [],
                          onStart: (Subprocess) -> Void) async throws -> MeetingNotes {
         let data = try await generateJSON(provider: provider, model: model, system: system, prompt: prompt,
-                                          format: .meetingNotes, onStart: onStart)
+                                          format: .meetingNotes, images: images, onStart: onStart)
         do { return try JSONDecoder().decode(MeetingNotes.self, from: data) }
         catch { throw LLMError.badOutput(error.localizedDescription + provider.badOutputHint) }
     }
 
     /// 回傳符合 format.schema 的 JSON
     static func generateJSON(provider: LLMProvider, model: String, system: String, prompt: String,
-                             format: OutputFormat, onStart: (Subprocess) -> Void) async throws -> Data {
+                             format: OutputFormat, images: [LLMImage] = [], onStart: (Subprocess) -> Void) async throws -> Data {
         guard let backend = provider.backend(model: model) else {
             throw LLMError.failed(String(localized: "整理工具設定為「不整理」"))
         }
-        return try await backend.generateJSON(system: system, prompt: prompt, format: format, onStart: onStart)
+        do {
+            return try await backend.generateJSON(system: system, prompt: prompt, format: format, images: images, onStart: onStart)
+        } catch let error as LLMError where !images.isEmpty && error.rejectsImages {
+            // 模型不能看圖（design §83.5）：同一次整理改成只送文字，畫面辨識出的文字照樣在提示詞裡
+            log.info("model rejected images, retrying with text only")
+            return try await backend.generateJSON(system: system, prompt: prompt, format: format, images: [], onStart: onStart)
+        }
     }
 
     /// 列出可用的模型，給設定頁選（失敗就回空陣列）

@@ -6,14 +6,14 @@ struct GeminiAPI: LLMBackend {
 
     private var base: String { LLMClient.apiBase(.gemini, "https://generativelanguage.googleapis.com") }
 
-    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat, images: [LLMImage],
                       onStart: (Subprocess) -> Void) async throws -> Data {
         guard let key = try Keychain.read("gemini"), !key.isEmpty else { throw LLMError.missingKey("Gemini") }
         let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let body: [String: Any] = [
             "model": model,
             "system_instruction": system,
-            "input": prompt,
+            "input": images.isEmpty ? prompt as Any : Self.input(prompt, images: images),
             "response_format": ["type": "text", "mime_type": "application/json", "schema": schema],
             "store": false,
         ]
@@ -55,5 +55,15 @@ struct GeminiAPI: LLMBackend {
             .filter { $0.hasPrefix("models/gemini-") }
             .map { String($0.dropFirst("models/".count)) }
             .filter { name in !excluded.contains { name.contains($0) } }
+    }
+
+    /// 提示詞，再來每張畫面的說明和圖片（design §83.5）
+    static func input(_ prompt: String, images: [LLMImage]) -> [[String: Any]] {
+        var content: [[String: Any]] = [["type": "text", "text": prompt]]
+        for image in images {
+            content.append(["type": "text", "text": image.label])
+            content.append(["type": "image", "data": image.jpeg.base64EncodedString(), "mime_type": "image/jpeg"])
+        }
+        return content
     }
 }

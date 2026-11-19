@@ -13391,6 +13391,23 @@
         }
       }
     },
+    "整理時附上會議中的畫面（模型要能看圖）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理时附上会议中的画面（模型要能看图）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include meeting screens when summarizing (the model must support images)"
+          }
+        }
+      }
+    },
     "整理會議紀錄、提問時，文件讀出來的文字會一起送給整理工具，幫忙看懂討論、寫對數字和名稱。紀錄還是以會議中講的為準，用到文件的地方會註明出處，會議說的跟文件不一樣時會列成待確認。已經整理好的會議加了文件，按紀錄上方的「重新整理會議紀錄」。": {
       "extractionState": "manual",
       "localizations": {
@@ -25513,6 +25530,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "关"
+          }
+        }
+      }
+    },
+    "關掉時只送畫面上辨識出的文字。模型不能看圖時拾音會自動改成只送文字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关掉时只送画面上识别出的文字。模型不能看图时拾音会自动改成只送文字。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When off, only the text recognized on screens is sent. If the model can’t read images, Shiyin automatically sends text only."
           }
         }
       }

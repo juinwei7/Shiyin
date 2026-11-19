@@ -46,7 +46,7 @@ struct OpenAICompatibleAPI: LLMBackend {
         return ["localhost", "127.0.0.1", "::1"].contains(host)
     }
 
-    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat, images: [LLMImage],
                       onStart: (Subprocess) -> Void) async throws -> Data {
         guard !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw LLMError.notConfigured(String(localized: "還沒有填 OpenAI 相容 API 的網址，請到設定 → 整理工具填寫"))
@@ -61,12 +61,12 @@ struct OpenAICompatibleAPI: LLMBackend {
         let schema = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let strict: [String: Any] = ["type": "json_schema",
                                      "json_schema": ["name": format.toolName, "schema": schema, "strict": true]]
-        var response = try await complete(base, provider: provider, system: system, prompt: prompt, responseFormat: strict)
+        var response = try await complete(base, provider: provider, system: system, prompt: prompt, images: images, responseFormat: strict)
         if Self.rejectsSchema(response) {
             // 模型不支援 json_schema：改用 JSON 模式，schema 放進系統提示詞（D24）
             let fallback = system + "\n\nRespond with only a JSON object that matches this JSON schema, with no other text:\n"  // l10n-skip
                 + format.schema
-            response = try await complete(base, provider: provider, system: fallback, prompt: prompt,
+            response = try await complete(base, provider: provider, system: fallback, prompt: prompt, images: images,
                                           responseFormat: ["type": "json_object"])
         }
         guard response.status == 200 else {
@@ -101,11 +101,17 @@ struct OpenAICompatibleAPI: LLMBackend {
         return list.compactMap { $0["id"] as? String }.sorted()
     }
 
-    private func complete(_ base: URL, provider: String, system: String, prompt: String,
+    private func complete(_ base: URL, provider: String, system: String, prompt: String, images: [LLMImage],
                           responseFormat: [String: Any]) async throws -> APIRequest.Response {
+        // 會議中的畫面（design §83.5）：提示詞，再來每張的說明和圖片（data URL）
+        var content: [[String: Any]] = [["type": "text", "text": prompt]]
+        for image in images {
+            content.append(["type": "text", "text": image.label])
+            content.append(["type": "image_url", "image_url": ["url": "data:image/jpeg;base64," + image.jpeg.base64EncodedString()]])
+        }
         let body: [String: Any] = [
             "model": model,
-            "messages": [["role": "system", "content": system], ["role": "user", "content": prompt]],
+            "messages": [["role": "system", "content": system], ["role": "user", "content": images.isEmpty ? prompt as Any : content]],
             "response_format": responseFormat,
         ]
         var request = URLRequest(url: base.appendingPathComponent("chat/completions"), timeoutInterval: LLMClient.timeout)

@@ -6,14 +6,14 @@ struct OpenAIAPI: LLMBackend {
 
     private var base: String { LLMClient.apiBase(.openai, "https://api.openai.com") }
 
-    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat,
+    func generateJSON(system: String, prompt: String, format: LLMClient.OutputFormat, images: [LLMImage],
                       onStart: (Subprocess) -> Void) async throws -> Data {
         guard let key = try Keychain.read("openai"), !key.isEmpty else { throw LLMError.missingKey("OpenAI") }
         let schemaObject = try JSONSerialization.jsonObject(with: Data(format.schema.utf8))
         let body: [String: Any] = [
             "model": model,
             "instructions": system,
-            "input": prompt,
+            "input": images.isEmpty ? prompt as Any : Self.input(prompt, images: images),
             "text": ["format": ["type": "json_schema", "name": format.toolName, "schema": schemaObject, "strict": true]],
         ]
         var request = URLRequest(url: URL(string: base + "/v1/responses")!, timeoutInterval: LLMClient.timeout)
@@ -38,5 +38,15 @@ struct OpenAIAPI: LLMBackend {
               let list = object["data"] as? [[String: Any]] else { return [] }
         let ids = list.compactMap { $0["id"] as? String }
         return ids.filter { $0.hasPrefix("gpt-") || $0.hasPrefix("o") }.sorted(by: >)
+    }
+
+    /// 提示詞，再來每張畫面的說明和圖片（design §83.5）
+    static func input(_ prompt: String, images: [LLMImage]) -> [[String: Any]] {
+        var content: [[String: Any]] = [["type": "input_text", "text": prompt]]
+        for image in images {
+            content.append(["type": "input_text", "text": image.label])
+            content.append(["type": "input_image", "image_url": "data:image/jpeg;base64," + image.jpeg.base64EncodedString()])
+        }
+        return [["role": "user", "content": content]]
     }
 }
