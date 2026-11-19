@@ -2964,18 +2964,19 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
 
 ### 83.6 匯出（R109.8，D189）
 
-- 會議紀錄的 md、PDF、docx 最後加一節，標題跟著會議語言（「會議中的畫面」「Screens shown during the meeting」「会議中の画面」）；每張一小節：時間（`### 12:34`），下面是圖片。
-  - md：`![12:34](<檔名> 的畫面/12-34.jpg)`，圖片寫進 md 旁邊的資料夾「<檔名> 的畫面」（英文「<name> screens」）；同一個時間第二張起加 `-2`。
-  - PDF：HTML 裡用 `data:image/jpeg;base64,…`，寬度最多版面寬，每張不跨頁（`break-inside: avoid`）。
-  - docx：`NSAttributedString` 加 `NSTextAttachment`。實作前先確認 officeOpenXML 的寫出會不會帶圖片；不會的話這兩種 docx 改成自己組 OOXML（`word/media/`、`document.xml` 的 `w:drawing`），D189 補上。
-- 逐字稿的 md、docx：在第一個 `start ≥ at` 的段落前面插入圖片（md 的圖片同上另存資料夾）。txt、srt、vtt、複製到剪貼簿不放。
-- 封包：沿用參考文件（`documents.json` 和 `documents/` 的檔案），`documents.json` 每一份多 `at`（沒有就是 null）；舊版的拾音讀到 `at` 會忽略，畫面變成一般的參考文件。
-- 沒有畫面時每一種匯出逐位元組跟現在相同（標準答案 `export/` 不變）；有畫面的加新的情境。
+- `ExportBundle.screens`；`IO/ScreenExport.swift`。會議紀錄的 md、PDF、docx 最後加一節，標題跟著會議語言（`ExportText.screens`：「會議中的畫面」「Screens shown during the meeting」「会議中の画面」）；每張一小節：時間（`### 12:34`），下面是圖片。沒有會議紀錄時（「尚未整理成會議紀錄」）也照樣放這一節。
+  - md：`![12:34](<<檔名> 的畫面/12-34.jpg>)`（路徑有空白，用角括號包起來），圖片複製到 md 旁邊的資料夾「<檔名> 的畫面」（英文「<name> screens」、日文「<name> の画面」，`ScreenExport.folderName`）；檔名 `12-34.jpg`，同一個時間第二張起加 `-2`（`fileNames`）。
+  - HTML（PDF、docx 的來源）：先放位置標記 `<p class="screen">SHIYINSCREEN0001</p>`，簡體轉換（`ExportScript.html`）做完才換成圖片：幾 MB 的圖片資料不經過轉換。
+  - PDF：標記換成 `<img src="data:image/jpeg;base64,…">`（`inlineImages`）；HTML 讀進 `NSAttributedString` 的圖片是原本的像素大小，印之前縮到版面寬度、高度不超過半頁（`HTML.fitImages`，換成新的附件；不縮時一張 2560 px 的圖被切成好幾頁，2026-11-19 實測 7 頁 → 4 頁）。
+  - docx：`NSAttributedString` 寫出的 officeOpenXML 不帶圖片（2026-11-19 試過，`word/media/` 是空的），所以照常轉，標記那一段寫成文字，再由 `DocxImages.embed` 解開 docx（`/usr/bin/unzip`）、把標記所在的 `<w:p>` 換成 `w:drawing`（inline 圖片，寬度最多 15 公分、等比例；`a`、`pic` 命名空間寫在元素上，根元素本來就有 `r`、`wp`）、圖片放 `word/media/screenN.jpg`、`document.xml.rels` 加 image 關聯、`[Content_Types].xml` 加 jpg，再用 `/usr/bin/zip -X` 壓回去（`[Content_Types].xml` 放第一個）。圖檔不見時拿掉那一段，不留標記。
+- 逐字稿的 md、docx：在第一個 `start ≥ at` 的段落前面插入（`TranscriptExporter.interleave`，同畫面上的放法）；HTML 是一段時間加一段標記。txt、srt、vtt、複製到剪貼簿不放。
+- 封包：參考文件和畫面一起放（`documents.json` 和 `documents/` 的檔案），`DocumentJSON` 多選填的 `at`（一般的文件不寫這個鍵）；匯入時有 `at` 的用 `addScreen` 放回原本的時間和文字。舊版的拾音讀到會忽略 `at`，畫面變成一般的參考文件。
+- 沒有畫面時每一種匯出逐位元組跟以前相同（標準答案 `export/`、`package/` 不變）；有畫面的加 `export/<語言>/notes-screens.md`、`notes-screens.html`、`transcript-screens.md`、`transcript-screens.html`、`screen-files.json`、`package/<語言>/documents-screens.json`。
 
 ### 83.7 編輯會議、MCP（R109.9、R109.10）
 
-- 編輯會議（§81）：`at` 跟 `user_notes` 的時間點一樣用 `snap`（落在刪掉那段裡的移到切口，D190）；分成兩場時 `at` 在切點之後的搬到新的那場（檔案一起搬）；合併時另一場的畫面複製過來、時間照 §81.1 對應；`snapshot` 記下每張的 `at`，還原時放回去。標準答案 `util/edit-plan.json` 加畫面。
-- MCP：`get_transcript` 在對應的時間插入一行 `[12:34] [Screen] <辨識出的文字，換行換成空格>`（沒有字是 `[Screen]`）；`get_meeting_notes` 多 `screens` 陣列（`time`、`text`）。標準答案 `mcp/calls.json` 加一場有畫面的。
+- 編輯會議（§81）：這場的畫面 `at` 跟 `user_notes` 的時間點一樣用 `plan.snap`（落在刪掉那段裡的移到切口，D190）；合併時另一場的畫面跟參考文件一起複製過來，`at` 用 `snap(另一場, at)`，進搜尋索引；分成兩場（`splitMeeting`，逐字稿右鍵的分割也一樣）時 `at ≥ 切點` 的搬到新的那場、減掉切點，索引跟著搬（檔案在 `documents/<id>/`，id 不變不用搬）；分割的確認說明改成「這句和之後的逐字稿、錄音、標記重點、畫面變成新的一場…」。`EditSnapshot.screens`（每張的 id 和 `at`；沒有畫面時不寫，舊的快照、標準答案不變）：還原時搬回這場、改回原本的時間（被刪掉的就算了），編輯後才加的照參考文件的規則刪掉（連索引）。
+- MCP：`get_transcript` 在對應的時間插入一行 `[12:34] [Screen] <辨識出的文字，換行換成空格>`（沒有字是 `[Screen]`；只列 start～end 範圍內的，截斷時從下一行的時間接著讀）；`get_meeting_notes` 在我的筆記後面加「## 會議中的畫面」，每張一行 `- [12:34] 文字`；`search_meetings` 見 §83.1。
 
 ### 83.8 DEBUG、驗證
 
@@ -3118,5 +3119,5 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
 | D186 | 畫面放在 `documents`，加一欄 `at`（§83.1） | 另開一張表：存檔、文字辨識、永久刪除、合併時複製、封包都要再寫一次（Mac、Windows 各一份）。畫面跟參考文件不同的地方（有時間、顯示在逐字稿、送圖片）都看 `at`，「文件」選單和參考文件的長度分配只看 `at IS NULL` 的，原本的行為不變 |
 | D187 | 截圖用 ScreenCaptureKit 截游標所在的整個螢幕、排除拾音自己（§83.2；使用者選了截整個螢幕） | 每次框選範圍：比較精準，但開會中多一個動作，使用者選了一鍵截。`screencapture` 指令：排除不了拾音自己的視窗，權限也算在拾音身上。`CGWindowListCreateImage`：macOS 15 起不能用。只截會議 app 的視窗：分享的畫面不一定在會議 app 裡（投影片放映、另一個螢幕），也要多判斷哪個是會議 app |
 | D188 | 整理時送畫面的文字，支援看圖的整理工具同時送圖片本身（§83.5；使用者選了也送圖片） | 只送文字：四種工具都能用，但沒有字的圖表、照片、白板看不到。只送圖片：不能搜尋，不能看圖的工具就什麼都沒有。取捨：一次最多 20 張、縮到 1568 px（大約每張 1,600 token）；OpenAI 相容 API 預設不送（很多本機模型不能看圖）；企業伺服器先只送文字；提問不送圖片（每一題都送太貴） |
-| D189 | 匯出的會議紀錄把畫面集中在最後一節，逐字稿插在時間點（§83.6） | 插進會議紀錄的條目裡：紀錄是整理工具寫的，對不準哪一條講的是哪張畫面，硬插會放錯地方。只放在封包：使用者要把紀錄（含畫面）寄給沒有拾音的人 |
+| D189 | 匯出的會議紀錄把畫面集中在最後一節，逐字稿插在時間點；Word 檔先照常用 NSAttributedString 寫，再解開補上圖片（§83.6） | 插進會議紀錄的條目裡：紀錄是整理工具寫的，對不準哪一條講的是哪張畫面，硬插會放錯地方。只放在封包：使用者要把紀錄（含畫面）寄給沒有拾音的人。Word 整份自己組 OOXML：要重做標題、表格、字型這些 NSAttributedString 本來就處理好的東西，風險比補圖片大；取捨：多用系統的 unzip、zip 兩個指令 |
 | D190 | 編輯會議時，落在刪掉那段裡的畫面移到切口，不刪（§83.7） | 跟重點標記一樣刪掉：畫面是使用者自己加的資料，同我的筆記（D181）留下來；要刪的話可以在逐字稿上刪 |

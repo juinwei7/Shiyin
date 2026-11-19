@@ -1,0 +1,21 @@
+[
+  {
+    "file" : "documents/1-견적서.pdf",
+    "kind" : "pdf",
+    "name" : "견적서.pdf",
+    "ocr" : false,
+    "pages" : [
+      "견적서\n라이선스 4,800만 원"
+    ]
+  },
+  {
+    "at" : 20,
+    "file" : "documents/2-screen.jpg",
+    "kind" : "image",
+    "name" : "screen.jpg",
+    "ocr" : true,
+    "pages" : [
+      "출시 일정\n11월 5일 정식 출시"
+    ]
+  }
+]

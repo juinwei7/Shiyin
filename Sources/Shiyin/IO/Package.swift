@@ -34,13 +34,14 @@ enum MeetingPackage {
     struct SpeakerJSON: Codable { var idx: Int; var name: String }
     struct BookmarkJSON: Codable { var time: Double; var label: String }
     struct SegmentJSON: Codable { var start: Double; var end: Double; var text: String; var lowConfidence: Bool; var speaker: Int? }
-    /// 參考文件（design §39.5）：documents.json 的一項，file 是封包裡原始檔的位置
-    struct DocumentJSON: Codable { var name: String; var file: String; var kind: String; var pages: [String]; var ocr: Bool }
+    /// 參考文件（design §39.5）：documents.json 的一項，file 是封包裡原始檔的位置。
+    /// at：會議中的畫面的錄音時間（design §83.6）；一般的文件沒有這個鍵，舊版拾音讀到會忽略（畫面變成一般的文件）
+    struct DocumentJSON: Codable { var name: String; var file: String; var kind: String; var pages: [String]; var ocr: Bool; var at: Double? }
 
     /// documents.json 的內容：原始檔放 documents/<序號>-<檔名>，序號從 1
     static func documentEntries(_ documents: [MeetingDocument]) -> [DocumentJSON] {
         documents.enumerated().map { i, d in
-            DocumentJSON(name: d.name, file: "documents/\(i + 1)-\(d.name)", kind: d.kind, pages: d.pageTexts, ocr: d.ocr)
+            DocumentJSON(name: d.name, file: "documents/\(i + 1)-\(d.name)", kind: d.kind, pages: d.pageTexts, ocr: d.ocr, at: d.at)
         }
     }
 
@@ -85,8 +86,8 @@ enum MeetingPackage {
             .write(to: dir.appendingPathComponent("meeting.json"))
         try encoder.encode(b.segments.map { SegmentJSON(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence, speaker: $0.speaker) })
             .write(to: dir.appendingPathComponent("transcript.json"))
-        // 參考文件：原始檔不在了的那份不放（不然匯入時會被當成壞掉的封包）
-        let documents = b.documents.filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }
+        // 參考文件、會議中的畫面（design §83.6）：原始檔不在了的那份不放（不然匯入時會被當成壞掉的封包）
+        let documents = (b.documents + b.screens).filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }
         if !documents.isEmpty {
             try FileManager.default.createDirectory(at: dir.appendingPathComponent("documents"), withIntermediateDirectories: true)
             let entries = documentEntries(documents)
@@ -166,6 +167,15 @@ enum MeetingPackage {
             if let notes = info.notes { try db.saveNotes(id, notes: notes, by: info.notesBy, reason: String(localized: "匯入")) }
             try db.updateUserNotes(id, info.userNotes)
             for entry in documents {
+                if let at = entry.at {
+                    // 會議中的畫面：照原本的時間和讀出來的文字放回去
+                    let screen = try db.addScreen(id, at: at)
+                    let destination = Paths.documentsDir.appendingPathComponent(screen.file)
+                    try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try FileManager.default.copyItem(at: dir.appendingPathComponent(entry.file), to: destination)
+                    try db.setScreenText(screen.id!, text: entry.pages.joined(separator: "\n"))
+                    continue
+                }
                 _ = try DocumentStore.save(dir.appendingPathComponent(entry.file), name: entry.name, kind: DocumentKind(rawValue: entry.kind)!,
                                            pages: entry.pages, ocr: entry.ocr, meetingId: id, db: db)
             }

@@ -1909,13 +1909,14 @@ final class AppModel {
         guard let meeting = try db.meeting(meetingId) else { throw ExportError.meetingGone }
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
-                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId))
+                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId),
+                            screens: try db.screens(meetingId))
     }
 
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
         return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes,
-                            documents: d.documents)
+                            documents: d.documents, screens: d.screens)
     }
 
     /// 寫出檔案
@@ -1923,10 +1924,14 @@ final class AppModel {
         let b = try exportBundle(meetingId: meetingId)
         switch item {
         case .notes:
+            // 會議中的畫面（design §83.6）：最後一節；沒有畫面時跟以前一字不差
             switch format {
-            case "pdf": try await HTML.pdf(ExportScript.html(NotesExporter.html(b), b), to: url)
-            case "docx": try await HTML.docx(ExportScript.html(NotesExporter.html(b), b)).write(to: url)
-            default: try ExportScript.text(NotesExporter.markdown(b), b).write(to: url, atomically: true, encoding: .utf8)
+            case "pdf": try await HTML.pdf(ScreenExport.inlineImages(ExportScript.html(NotesExporter.html(b, screens: true), b), b.screens), to: url)
+            case "docx": try await Self.docxWithScreens(ExportScript.html(NotesExporter.html(b, screens: true), b), b.screens).write(to: url)
+            default:
+                let folder = ScreenExport.folderName(for: url, language: b.meeting.meetingLanguage)
+                try ExportScript.text(NotesExporter.markdown(b, screenFolder: folder), b).write(to: url, atomically: true, encoding: .utf8)
+                try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
             }
         case .mindMap:
             // 心智圖（design §42.4）：段落名稱跟著會議語言，同其他匯出
@@ -1940,12 +1945,17 @@ final class AppModel {
                 try data.write(to: url)
             }
         case .transcript:
-            if format == "docx" { try await HTML.docx(ExportScript.html(TranscriptExporter.html(b, times: times, speakers: speakers), b)).write(to: url) }
-            else {
-                // 文字格式、封包在背景寫，長會議不卡住畫面（design §21.13）；Word、PDF 用非同步的 HTML 轉換
+            if format == "docx" {
+                try await Self.docxWithScreens(ExportScript.html(TranscriptExporter.html(b, times: times, speakers: speakers, screens: true), b), b.screens)
+                    .write(to: url)
+            } else {
+                // 文字格式、封包在背景寫，長會議不卡住畫面（design §21.13）；Word、PDF 用非同步的 HTML 轉換。
+                // md 在時間點插畫面、圖片放旁邊的資料夾（design §83.6）；txt、srt、vtt 不放
+                let folder = format == "md" ? ScreenExport.folderName(for: url, language: b.meeting.meetingLanguage) : nil
                 try await Task.detached(priority: .userInitiated) {
-                    try ExportScript.text(TranscriptExporter.text(b, format: format, times: times, speakers: speakers), b)
+                    try ExportScript.text(TranscriptExporter.text(b, format: format, times: times, speakers: speakers, screenFolder: folder), b)
                         .write(to: url, atomically: true, encoding: .utf8)
+                    if folder != nil { try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage) }
                 }.value
             }
         case .audio:
@@ -1953,6 +1963,16 @@ final class AppModel {
         case .package:
             try await Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url) }.value
         }
+    }
+
+    /// Word：照常轉，有畫面時再把位置標記換成圖片（DocxImages，design §83.6）
+    private static func docxWithScreens(_ html: String, _ screens: [MeetingDocument]) async throws -> Data {
+        let data = try await HTML.docx(html)
+        guard !screens.isEmpty else { return data }
+        let markers = screens.indices.map(ScreenExport.marker)
+        return try await Task.detached(priority: .userInitiated) {
+            try DocxImages.embed(data, markers: markers, images: screens.map { (try? Data(contentsOf: $0.fileURL)) ?? Data() })
+        }.value
     }
 
     func suggestedFilename(_ item: ExportItem, format: String, meeting: Meeting?) -> String {

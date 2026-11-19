@@ -1,0 +1,22 @@
+[
+  {
+    "file" : "documents/1-報價單.pdf",
+    "kind" : "pdf",
+    "name" : "報價單.pdf",
+    "ocr" : false,
+    "pages" : [
+      "報價單\n授權費 NT$ 480,000",
+      "付款條件\n維護費每年 18%"
+    ]
+  },
+  {
+    "at" : 20,
+    "file" : "documents/2-screen.jpg",
+    "kind" : "image",
+    "name" : "screen.jpg",
+    "ocr" : true,
+    "pages" : [
+      "上線時間表\n11 月 5 號正式上線"
+    ]
+  }
+]

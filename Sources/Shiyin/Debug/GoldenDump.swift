@@ -422,6 +422,22 @@ enum GoldenDump {
             empty.notes = MeetingNotes(title: "x")
             w.text(dir + "notes-empty.md", NotesExporter.markdown(empty))
             w.text(dir + "notes-empty.html", NotesExporter.html(empty))
+            // 會議中的畫面（design §83.6）：會議紀錄最後一節、逐字稿插在時間點；HTML 是換成圖片之前的位置標記
+            let screens = fx.screens.enumerated().map { i, screen in
+                MeetingDocument(id: Int64(i + 1), meetingId: 0, name: MeetingDocument.screenFileName, file: "\(i + 1)/\(MeetingDocument.screenFileName)",
+                                kind: DocumentKind.image.rawValue, pages: MeetingDocument.encodePages(screen.text.isEmpty ? [] : [screen.text]),
+                                ocr: true, at: screen.at)
+            }
+            if !screens.isEmpty {
+                var withScreens = bundle
+                withScreens.screens = screens
+                let folder = ScreenExport.folderName(for: URL(fileURLWithPath: "/tmp/notes.md"), language: fx.language)
+                w.text(dir + "notes-screens.md", NotesExporter.markdown(withScreens, screenFolder: folder))
+                w.text(dir + "notes-screens.html", NotesExporter.html(withScreens, screens: true))
+                w.text(dir + "transcript-screens.md", TranscriptExporter.text(withScreens, format: "md", times: true, speakers: true, screenFolder: folder))
+                w.text(dir + "transcript-screens.html", TranscriptExporter.html(withScreens, times: true, speakers: true, screens: true))
+                w.json(dir + "screen-files.json", ScreenExport.fileNames(screens))
+            }
 
             // .shiyin 封包的 JSON（design §10）：跟 MeetingPackage.export 一樣的編碼
             let encoder = JSONEncoder()
@@ -444,6 +460,10 @@ enum GoldenDump {
             // 參考文件（design §39.5）
             if !fx.documents.isEmpty, let data = try? encoder.encode(MeetingPackage.documentEntries(fx.documents)) {
                 w.text("package/\(fx.key)/documents.json", String(decoding: data, as: UTF8.self))
+            }
+            // 會議中的畫面跟參考文件一起放，多一個 at（design §83.6）
+            if !screens.isEmpty, let data = try? encoder.encode(MeetingPackage.documentEntries(fx.documents + screens)) {
+                w.text("package/\(fx.key)/documents-screens.json", String(decoding: data, as: UTF8.self))
             }
         }
     }

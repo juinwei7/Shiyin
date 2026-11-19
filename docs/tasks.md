@@ -11,7 +11,7 @@
 
 - [~] **SC1 Mac 資料、截圖、貼上、回看、搜尋**（§83.1～§83.4）：程式完成，DEBUG 版驗過（2026-11-19，見 commit 訊息）。還差（要使用者在電腦前，或借前景）：第一次按 ⌃⌥⌘S 跳出「錄製螢幕」的詢問、拒絕時錄音島和錄音畫面的提示、「打開系統設定」；真的 Zoom／Teams／Meet 分享畫面時截到的是對方的畫面、沒有拾音的視窗，兩個螢幕時截游標那個；剛允許權限時沒重開拾音的提示；點一下畫面那一列選到後按 Return、Delete、⌘C（背景的測試版第一下點擊收不到）；在「我的筆記」裡按 ⌘V 貼上 ⌃⌘⇧4 截的圖；從 Finder 拖圖片到錄音畫面；設定「錄音」頁下方的 ⌃⌥⌘S 開關（要捲動，沒截到）
 - [~] **SC2 Mac 整理、提問送畫面**（§83.5）：程式完成，標準答案和假伺服器、真的 Claude Code 驗過（2026-11-19，見 commit 訊息）。還差：codex 的 `--image` 參數名稱和整理一場（這台沒有裝 codex）；Gemini Interactions 的圖片格式用真的 Gemini key 試一次；OpenAI 相容 API 接一個真的不能看圖的本機模型（Ollama）打開開關，自動退回只送文字
-- [ ] **SC3 Mac 匯出、封包、編輯會議、MCP**（§83.6、§83.7）：驗證：先確認 `NSAttributedString` 寫 docx 會不會帶圖片（不會就照 §83.6 自己組 OOXML，補 D189）；有畫面的會議匯出 md（旁邊的圖片資料夾）、PDF、docx 用預覽程式和 Word 打開看；沒有畫面的會議 `export/` 標準答案逐位元組不變；封包匯出再匯入，畫面和時間都在，舊版的封包照常匯入；編輯會議裁掉、刪中間、分成兩場、合併、還原後 `at` 對（`util/edit-plan.json`）；`Shiyin --mcp` 的 `get_transcript`、`get_meeting_notes` 有畫面
+- [~] **SC3 Mac 匯出、封包、編輯會議、MCP**（§83.6、§83.7）：程式完成，DEBUG 版驗過（2026-11-19，見 commit 訊息）。還差（要使用者）：有畫面的 Word 檔用真的 Microsoft Word 打開（這次用 Quick Look 的縮圖和 xmllint 驗的）；md 用 Typora、Obsidian 之類的編輯器打開看圖片
 - [ ] **SC4 Windows**（design-windows §11.42；migration v16、`MeetingDocument.At`、`Documents` 不含畫面在 SC1 一起做了，標準答案的 `db/` 通過）：驗證：`dotnet test` 標準答案全部通過（提示詞、請求、匯出、編輯、MCP）；虛擬機用控制通道和 UI Automation 走錄音中截圖（`debugFakeScreenshot` 和真的 `Windows.Graphics.Capture` 各一次）、Ctrl+Alt+Shift+S、貼上、回看、刪除、改時間，匯出的 docx、PDF 打開看。要真的 Windows 電腦：真的 Teams／Zoom 分享畫面時截圖、兩個螢幕、150% 縮放
 - [ ] **SC5 使用說明、官網**：Mac、Windows 的使用說明加「會議中的畫面」和快捷鍵 ⌘⇧S、⌃⌥⌘S（Windows Ctrl+Shift+S、Ctrl+Alt+Shift+S）；官網功能列表加一條（website.md 先寫）。驗證：`l10n.py check`、`windows-check` 沒有缺的英文；官網 `node site/build.mjs` 建得起來
 

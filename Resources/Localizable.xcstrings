@@ -2008,6 +2008,23 @@
         }
       }
     },
+    "Word 檔加圖片失敗（%@ 結束代碼 %d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word 文件加图片失败（%@ 退出代码 %d）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t add images to the Word file (%@ exit code %d)"
+          }
+        }
+      }
+    },
     "Word（docx）": {
       "extractionState": "manual",
       "localizations": {
@@ -22302,19 +22319,19 @@
         }
       }
     },
-    "這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。30 天內可以從「更多」還原。": {
+    "這句和之後的逐字稿、錄音、標記重點、畫面變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。30 天內可以從「更多」還原。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这句和之后的逐字稿、录音、标记重点变成新的一场，前面的留在这场；我的笔记、参考文档、提问留在这场。两场都要重新整理会议记录。30 天内可以从“更多”还原。"
+            "value": "这句和之后的逐字稿、录音、标记重点、画面变成新的一场，前面的留在这场；我的笔记、参考文档、提问留在这场。两场都要重新整理会议记录。30 天内可以从“更多”还原。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This line and everything after it in the transcript, recording and bookmarks becomes a new meeting; everything before stays here, along with My Notes, documents and questions. Both meetings need their notes rewritten. You can restore it from More within 30 days."
+            "value": "This line and everything after it in the transcript, recording, bookmarks and screens becomes a new meeting; everything before stays here, along with My Notes, documents and questions. Both meetings need their notes rewritten. You can restore it from More within 30 days."
           }
         }
       }

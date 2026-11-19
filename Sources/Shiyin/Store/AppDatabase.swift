@@ -591,6 +591,11 @@ final class AppDatabase: @unchecked Sendable {
         }
         try db.execute(sql: "UPDATE bookmarks SET meeting_id = ?, time = MAX(0, time - ?) WHERE meeting_id = ? AND time >= ?",
                        arguments: [newId, cut, id, cut])
+        // 會議中的畫面（design §83.7）：切點之後的搬到新的一場（檔案在 documents/<id>/，id 不變不用搬）
+        try db.execute(sql: "UPDATE documents SET meeting_id = ?, at = MAX(0, at - ?) WHERE meeting_id = ? AND at IS NOT NULL AND at >= ?",
+                       arguments: [newId, cut, id, cut])
+        try db.execute(sql: "UPDATE search SET meeting_id = ? WHERE rowid IN (SELECT ? + id FROM documents WHERE meeting_id = ? AND at IS NOT NULL)",
+                       arguments: [newId, screenRowidBase, newId])
 
         func speaks(_ meetingId: Int64, _ idx: Int) throws -> Bool {
             try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM segments WHERE meeting_id = ? AND speaker = ?)", arguments: [meetingId, idx]) ?? false

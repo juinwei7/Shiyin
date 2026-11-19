@@ -1,0 +1,41 @@
+[
+  {
+    "file" : "documents/1-Q3 Roadmap.pdf",
+    "kind" : "pdf",
+    "name" : "Q3 Roadmap.pdf",
+    "ocr" : false,
+    "pages" : [
+      "Q3 Roadmap\nLaunch: October 30\nBudget: $12,000"
+    ]
+  },
+  {
+    "at" : 42,
+    "file" : "documents/2-screen.jpg",
+    "kind" : "image",
+    "name" : "screen.jpg",
+    "ocr" : true,
+    "pages" : [
+      "Q3 Roadmap\nLaunch: October 30\nBudget: $12,000"
+    ]
+  },
+  {
+    "at" : 90.5,
+    "file" : "documents/3-screen.jpg",
+    "kind" : "image",
+    "name" : "screen.jpg",
+    "ocr" : true,
+    "pages" : [
+
+    ]
+  },
+  {
+    "at" : 400,
+    "file" : "documents/4-screen.jpg",
+    "kind" : "image",
+    "name" : "screen.jpg",
+    "ocr" : true,
+    "pages" : [
+      "Launch checklist\nItem 1: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 2: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 3: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 4: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 5: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 6: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 7: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 8: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 9: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 10: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 11: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 12: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 13: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 14: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 15: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 16: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 17: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 18: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 19: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 20: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 21: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 22: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 23: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 24: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 25: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 26: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 27: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 28: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday\nItem 29: confirm the payment page, email service, Kubernetes nodes and rollback steps by Wednesday"
+    ]
+  }
+]
