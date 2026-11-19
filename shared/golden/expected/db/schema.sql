@@ -35,7 +35,7 @@ CREATE TABLE documents (
   pages      TEXT NOT NULL,
   ocr        INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
-);
+, at REAL);
 CREATE TABLE drafts (
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
   key        TEXT NOT NULL,

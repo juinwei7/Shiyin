@@ -1,6 +1,7 @@
 {
   "documents" : [
     {
+      "at" : null,
       "created_at" : "<time>",
       "file" : "2/規格書.docx",
       "id" : 2,
@@ -11,6 +12,7 @@
       "pages" : "[\"寄信服務改用 SendGrid。\"]"
     },
     {
+      "at" : null,
       "created_at" : "<time>",
       "file" : "3/見積書.png",
       "id" : 3,

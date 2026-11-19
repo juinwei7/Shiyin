@@ -33,6 +33,7 @@ struct PlayerBar: View {
                 TimelineBar(segments: detail.segments,
                             reviewTimes: (detail.notes?.reviewItems ?? []).compactMap { TimeFormat.seconds($0.time) },
                             bookmarkTimes: detail.bookmarks.map(\.time),
+                            screenTimes: detail.screens.compactMap(\.at),
                             duration: duration,
                             currentTime: player.currentTime,
                             onSeek: { seconds, play in player.seek(to: seconds, play: play) })
@@ -133,6 +134,8 @@ struct TimelineBar: View {
     let segments: [Segment]
     let reviewTimes: [Double]
     var bookmarkTimes: [Double] = []
+    /// 會議中的畫面（design §83.4）
+    var screenTimes: [Double] = []
     let duration: Double
     let currentTime: Double
     let onSeek: (Double, Bool) -> Void
@@ -202,6 +205,13 @@ struct TimelineBar: View {
         for t in bookmarkTimes {
             let x = CGFloat(t) * scale
             context.fill(Path(ellipseIn: CGRect(x: x - 2.5, y: height - 5, width: 5, height: 5)), with: .color(.celadon))
+        }
+
+        // 會議中的畫面：下方的小方框（像一張相片），跟重點的圓點分得開
+        for t in screenTimes {
+            let x = CGFloat(t) * scale
+            let frame = CGRect(x: x - 3, y: height - 5.5, width: 6, height: 5)
+            context.stroke(Path(roundedRect: frame, cornerRadius: 1), with: .color(.primary.opacity(0.55)), lineWidth: 1)
         }
 
         // 目前播放位置

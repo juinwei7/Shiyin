@@ -807,6 +807,22 @@ enum DebugControl {
         // docread <檔案> <zh|en|ja> <輸出.json>（只讀出文字，不寫資料庫）；docbanner <會議 id> dismiss|resummarize（文件有變動的提示條）
         case "adddoc": if let id { model.addDocuments(args.dropFirst(2).map { URL(fileURLWithPath: $0) }, to: id) }
         case "drop": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) })
+        // 會議中的畫面（design §83.8）：screenadd <圖檔> [秒數]：同貼上（錄音中用當下時間；給秒數時加到選取的會議的那個時間）
+        case "screenadd":
+            guard args.count > 1, let image = ScreenImages.load(URL(fileURLWithPath: args[1])) else { break }
+            if args.count > 2, let seconds = Double(args[2]), let id = model.selection { model.addScreens([image], at: seconds, to: id) }
+            else { model.addScreensHere([image]) }
+        case "screenshot": GlobalHotKey.shared.fireScreenshot()   // 同按 ⌃⌥⌘S
+        case "screenmove": if args.count > 2, let screen = Int64(args[1]), let seconds = Double(args[2]) { model.moveScreen(screen, to: seconds) }
+        case "screendelete": if args.count > 1, let screen = Int64(args[1]) { model.deleteScreen(screen) }
+        case "screenpreview":   // screenpreview <id>：放大（Quick Look）；screenpreview off 關掉
+            if args.count > 1, args[1] == "off" { model.screenPreview = nil }
+            else if args.count > 1, let screen = Int64(args[1]), let document = model.detail?.screens.first(where: { $0.id == screen }) {
+                model.previewScreen(document)
+            }
+        case "screenmenu":   // screenmenu <id> <項目>：選單的某一項（改時間…、刪除…會開彈窗）
+            if args.count > 2, let screen = Int64(args[1]), let document = model.detail?.screens.first(where: { $0.id == screen }),
+               let entry = model.screenMenu(document).first(where: { $0.title == args[2] }), case .action(let action) = entry.kind { action() }
         case "removedoc":
             if let docId = Int64(args[1]), let document = try? model.db.document(docId) { model.removeDocument(document) }
         case "docread":
@@ -1132,6 +1148,17 @@ enum DebugControl {
             },
             "readingDocuments": Dictionary(uniqueKeysWithValues: model.readingDocuments.map { (String($0.key), $0.value) }),
             "documentsChanged": model.documentsChanged.sorted(),
+            // 會議中的畫面（design §83.8）：選取中的會議
+            "screens": (model.detail?.screens ?? []).map { s -> [String: Any] in
+                ["id": s.id ?? 0, "at": s.at ?? 0, "file": s.file, "reading": model.readingScreens.contains(s.id ?? 0),
+                 "chars": s.screenText.count, "text": String(s.screenText.prefix(80)),
+                 "exists": FileManager.default.fileExists(atPath: s.fileURL.path)]
+            },
+            "screensChanged": model.screensChanged.sorted(),
+            "screenshotProblem": model.screenshotProblem.map { "\($0)" } ?? "",
+            "screenPreview": model.screenPreview?.lastPathComponent ?? "",
+            "movingScreen": model.movingScreen ?? 0,
+            "screenshotHotKey": GlobalHotKey.shared.isScreenshotRegistered,
             // 選中的會議：說話者的名字、來源、建議、最像的幾位認識的人（R33，「自動」名字的選單）
             "speakers": (model.detail?.speakers ?? [:]).keys.sorted().map { idx -> [String: Any] in
                 ["idx": idx, "name": model.detail?.speakers[idx] ?? "", "source": model.detail?.speakerSources[idx] ?? "",

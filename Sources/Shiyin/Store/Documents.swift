@@ -85,7 +85,10 @@ extension AppModel {
     }
 
     func dismissDocumentsChanged() {
-        if let id = selection { documentsChanged.remove(id) }
+        if let id = selection {
+            documentsChanged.remove(id)
+            screensChanged.remove(id)
+        }
     }
 }
 

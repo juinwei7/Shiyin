@@ -52,6 +52,17 @@ final class RecordingIsland {
 
     func perform(_ id: String) { state.prompt?.actions.first { $0.id == id }?.run() }
 
+    // MARK: 截圖（design §83.2）
+
+    /// 截好了：展開 1.5 秒顯示縮圖和「已截圖 12:34」
+    func flashScreen(_ image: NSImage, at: Double) {
+        state.flash = IslandState.Flash(image: image, at: at, until: Date().addingTimeInterval(1.5))
+        update()
+    }
+
+    /// 截不到（沒有權限、要重新打開拾音）：當成提醒展開 10 秒
+    func showScreenshotProblem() { update() }
+
     func closePrompt() {
         state.prompt = nil
         update()
@@ -61,7 +72,7 @@ final class RecordingIsland {
 
     func update() {
         guard let model else { return }
-        state.tick(model.recorder)
+        state.tick(model.recorder, screenshotProblem: model.screenshotProblem)
         let show = Self.isEnabled && (model.recorder.isRecording || state.prompt != nil)
         if show {
             let panel = ensurePanel(model)
@@ -158,19 +169,28 @@ final class IslandState {
         var countdown: ((Int) -> String)? = nil
     }
 
+    struct Flash {
+        var image: NSImage
+        var at: Double
+        var until: Date
+    }
+
     var hover = false
     var prompt: Prompt?
+    /// 剛截好的畫面（design §83.2）
+    var flash: Flash?
     /// 新的提醒出現後展開 10 秒（R81.2），之後收回成琥珀色的點
     private(set) var hintExpanded = false
     private(set) var hintKey: String?
     @ObservationIgnored private var expandedUntil = Date.distantPast
     var notch = IslandNotch.none
 
-    /// 每 0.5 秒：提醒換了就展開 10 秒；偵測會議的提醒 30 秒沒按就收起來
-    func tick(_ recorder: Recorder) {
+    /// 每 0.5 秒：提醒換了就展開 10 秒；偵測會議的提醒 30 秒沒按就收起來；截圖的縮圖 1.5 秒後收起來
+    func tick(_ recorder: Recorder, screenshotProblem: ScreenShot.Failure? = nil) {
         let now = Date()
         if let prompt, prompt.expires < now { self.prompt = nil }
-        let key = Self.hintKey(recorder)
+        if let flash, flash.until < now { self.flash = nil }
+        let key = Self.hintKey(recorder, screenshotProblem: screenshotProblem)
         if key != hintKey {
             hintKey = key
             if key != nil { expandedUntil = now.addingTimeInterval(10) }
@@ -179,10 +199,11 @@ final class IslandState {
         if expanded != hintExpanded { hintExpanded = expanded }
     }
 
-    /// 目前的提醒是哪一個（順序同錄音畫面的提示列）：沒人說話 → 藍牙 → 收音 → 重新連接
-    static func hintKey(_ recorder: Recorder) -> String? {
+    /// 目前的提醒是哪一個（順序同錄音畫面的提示列）：沒人說話 → 截不到圖 → 藍牙 → 收音 → 重新連接
+    static func hintKey(_ recorder: Recorder, screenshotProblem: ScreenShot.Failure? = nil) -> String? {
         guard recorder.isRecording else { return nil }
         if recorder.idlePrompt { return "idle" }
+        if let screenshotProblem { return "screenshot:\(screenshotProblem)" }
         if let mic = recorder.micHint { return "mic:\(mic.name)" }
         if let hint = recorder.levelHint { return "level:\(hint.rawValue)" }
         if let warning = recorder.deviceWarning { return "device:\(warning)" }
@@ -194,6 +215,7 @@ final class IslandState {
         if prompt != nil { return "prompt" }
         guard recorder?.isRecording == true else { return "hidden" }
         if hover { return "hover" }
+        if flash != nil { return "flash" }
         if hintExpanded { return "hint" }
         return "collapsed"
     }

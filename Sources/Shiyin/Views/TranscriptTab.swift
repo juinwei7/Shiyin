@@ -82,6 +82,18 @@ struct TranscriptTab: View {
                     .foregroundStyle(.secondary)
                     .padding(32)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                // 還沒有逐字稿時，錄音中截的畫面照樣看得到（design §83.4）
+                if !detail.screens.isEmpty {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 2) {
+                            ForEach(detail.screens) { ScreenRow(screen: $0, highlighted: $0.id == model.highlightScreen) }
+                        }
+                        .contentFont()
+                        .frame(maxWidth: 760 * scale, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 Spacer()
             } else if cleanMode && detail.cleanLines.isEmpty {
                 cleanPlaceholder
@@ -96,13 +108,20 @@ struct TranscriptTab: View {
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
+                let segments = visibleSegments
+                // 會議中的畫面夾在逐字稿裡（design §83.4）
+                let placement = ScreenPlacement.place(detail.screens, starts: segments.map(\.start))
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 2) {
-                            ForEach(visibleSegments) { segment in
+                            ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
+                                if let screens = placement.before[index] {
+                                    ForEach(screens) { screenRow($0) }
+                                }
                                 row(segment)
                                     .id(segment.id)
                             }
+                            ForEach(placement.trailing) { screenRow($0) }
                         }
                         .contentFont()   // 文字大小（design §38.5）
                         .frame(maxWidth: 760 * scale, alignment: .leading)
@@ -146,6 +165,13 @@ struct TranscriptTab: View {
                         Task { @MainActor in
                             try? await Task.sleep(for: .milliseconds(150))
                             proxy.scrollTo(id, anchor: .center)
+                        }
+                    }
+                    .onChange(of: model.highlightScreen, initial: true) { _, id in
+                        guard let id else { return }
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(150))
+                            proxy.scrollTo("screen-\(id)", anchor: .center)
                         }
                     }
                     .onChange(of: model.highlightSegment, initial: true) { _, id in
@@ -388,6 +414,11 @@ struct TranscriptTab: View {
             }
         }
         .contentFont(.caption)
+    }
+
+    private func screenRow(_ screen: MeetingDocument) -> some View {
+        ScreenRow(screen: screen, highlighted: screen.id == model.highlightScreen)
+            .id("screen-\(screen.id ?? 0)")
     }
 
     @ViewBuilder

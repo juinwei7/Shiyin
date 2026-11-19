@@ -107,6 +107,10 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("b")
             .disabled(!model.recorder.isRecording)
+            // 會議中的畫面（R109.1、design §83.2）
+            Button("截圖") { model.captureScreen() }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(!model.recorder.isRecording)
             Divider()
             Button("匯出…") { model.openMainWindow?(); model.openExportSheet() }
                 .keyboardShortcut("e")

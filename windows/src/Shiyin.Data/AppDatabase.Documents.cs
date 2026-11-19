@@ -5,8 +5,9 @@ namespace Shiyin.Data;
 /// <summary>會議的參考文件（M§39.1、R61）</summary>
 public sealed partial class AppDatabase
 {
+    /// <summary>一般的參考文件（不含會議中的畫面，M§83.1）</summary>
     public List<MeetingDocument> Documents(long meetingId) =>
-        Read(db => db.Query("SELECT * FROM documents WHERE meeting_id = ? ORDER BY id", meetingId).Select(ToDocument).ToList());
+        Read(db => db.Query("SELECT * FROM documents WHERE meeting_id = ? AND at IS NULL ORDER BY id", meetingId).Select(ToDocument).ToList());
 
     public MeetingDocument? Document(long id) =>
         Read(db => db.Query("SELECT * FROM documents WHERE id = ?", id).Select(ToDocument).FirstOrDefault());
@@ -52,6 +53,6 @@ public sealed partial class AppDatabase
     internal static MeetingDocument ToDocument(Row r) => new()
     {
         Id = r.Long("id"), MeetingId = r.Long("meeting_id"), Name = r.Str("name"), File = r.Str("file"), Kind = r.Str("kind"),
-        Pages = r.Str("pages"), Ocr = r.Bool("ocr"), CreatedAt = r.Str("created_at"),
+        Pages = r.Str("pages"), Ocr = r.Bool("ocr"), CreatedAt = r.Str("created_at"), At = r.DoubleOrNull("at"),
     };
 }

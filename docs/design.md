@@ -2908,9 +2908,9 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
 ```
 
 - 畫面就是 `kind = 'image'`、`at` 有值的文件：檔案、文字辨識、永久刪除、合併時複製、封包都沿用 §39。`MeetingDocument.at`；`MeetingDetail.documents` 只放 `at IS NULL` 的（「文件」選單、§39.3 的長度分配不變），`MeetingDetail.screens` 放有 `at` 的，照 `at`、`id` 排。
-- 存檔：`documents/<id>/畫面 12-34.jpg`（`name` 是「畫面 12:34」，跟著介面語言；英文「Screen 12:34」）。先用原圖做文字辨識（§39.2 的圖片），再縮成長邊最多 2560 px、JPEG 品質 0.85 存起來（R109.11）；heic、png 也轉成 JPEG（Windows 讀不了 heic）。
-- `AppDatabase.addScreen(meetingId:at:jpeg:pages:)`（先插入、再填 `file`，同 `addDocument`）、`setScreenTime(id, at)`、刪除用 `deleteDocument`。同一場、同一張（內容的 SHA-256 一樣）不再加，提示已經加過了。
-- 搜尋（R109.5）：`search` 加 `kind = 'screen'`、`ref` 是文件 id、`text` 是辨識出的文字（參考文件照舊不進索引）；搜尋結果點了打開那場、跳到 `at`。
+- 存檔：`documents/<id>/screen.jpg`（`name` 固定是 `screen.jpg`）；畫面上的名稱照時間現算（「畫面 12:34」「Screen 12:34」），改時間不用改檔名。先用原圖做文字辨識（§39.2 的 `recognize`），再縮成長邊最多 2560 px、JPEG 品質 0.85 存起來（`ScreenImages.jpeg`，有透明的先鋪白底，R109.11）；heic、png 也轉成 JPEG（Windows 讀不了 heic）。讀檔用 `ScreenImages.load`（照 EXIF 轉正）。
+- `AppDatabase.addScreen(meetingId, at:)`（先插入、再填 `file`，同 `addDocument`；`ScreenStore.save` 寫檔，寫不進去就刪掉那一列）、`setScreenText(id, text:)`（文字辨識完寫回 `pages`、更新索引）、`setScreenTime(id, at:)`、刪除用 `deleteDocument`（一起刪索引）。同一場、同一張（JPEG 的 SHA-256 一樣）不再加，提示「這張畫面已經加過了」。
+- 搜尋（R109.5）：`search` 加 `kind = 'screen'`、rowid 是 2^51 + 文件 id、`ref` 是文件 id、`text` 是辨識出的文字（參考文件照舊不進索引）；重建索引時 `at` 欄位存在才讀（更早的 migration 裡還沒有）。搜尋結果的種類寫「會議中的畫面」，點了打開那場、逐字稿捲到那張、跳到 `at`；本地 MCP 的 `search_meetings` 列成 `- screen 12:34: …`。
 
 ### 83.2 截圖（`Capture/ScreenShot.swift`，D187）
 
@@ -2921,21 +2921,22 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
   - 全域快捷鍵：`GlobalHotKey` 第 3 組 ⌃⌥⌘S（`kVK_ANSI_S`），跟標記重點一樣只在錄音中註冊。設定「錄音」頁的快捷鍵那一組加開關「錄音中按 ⌃⌥⌘S 截圖」（`screenshotHotKey`，預設開）。註冊不到（別的 app 佔了）時設定頁那一列寫「這組按鍵被別的 app 佔用了」。
   - 錄音島：展開（滑過去）時的按鈕列在「標記重點」右邊加「截圖」（`camera.viewfinder`）。按島上的按鈕時島本身不會被截到（不在畫面裡）。
   - 錄音畫面：「標記重點」旁邊加「截圖」按鈕；「檔案」選單「標記重點」（⌘B）下面加「截圖」（⌘⇧S）。使用說明的快捷鍵列表加 ⌘⇧S、⌃⌥⌘S。
-- 回饋：`NSSound(named: "Pop")`；錄音島展開 1.5 秒顯示縮圖和「已截圖 12:34」（`IslandState.flash`），之後收回；選單列圖示換成相機 1 秒（同標記重點的星號）。
+- 回饋：`NSSound(named: "Pop")`；錄音島展開 1.5 秒顯示縮圖、「已截圖」和「12:34 的畫面，整理時會一起參考」（`IslandState.flash`），之後收回；選單列圖示換成 `camera.circle.fill` 1 秒（同標記重點的星號）。島滑過去時的按鈕列（暫停、標記重點、截圖、打開拾音、停止並轉錄）放不下時，先讓「暫停」「打開拾音」只留圖示，再不夠就只有「停止並轉錄」留字（`ViewThatFits`；滑過提示、VoiceOver 照樣是完整的字）。
 - 讀字：存好圖（`at`、`pages` 先是空的）就顯示在逐字稿、時間軸上，文字辨識在背景做，完成後更新 `pages`、搜尋索引。辨識不到字照樣留著（跟參考文件不同：畫面的圖片本身就有用）。
 
 ### 83.3 貼上、拖進來（R109.2）
 
-- 錄音畫面：`onPasteCommand(of: [.image, .fileURL])`、`dropDestination` 收圖片，時間是當下的 `recorder.elapsed`。「我的筆記」是純文字：焦點在筆記框、剪貼簿只有圖片（沒有文字）時，⌘V 改成加畫面（`UserNotesEditor` 背後的 NSTextView 攔 `paste:`）；剪貼簿有文字時照舊貼文字。
-- 會議頁：逐字稿、會議紀錄分頁的 `onPasteCommand`，時間是 `player.currentTime`（沒有錄音的會議是 0）。拖進主視窗的圖片照舊是參考文件（§39）；錄音中，拖到錄音畫面上的才是畫面。
+- ⌘V（`AppModel.handlePasteKey`，掛在 `AppDelegate` 的按鍵監看上）：主視窗（沒有開著的彈窗）裡按 ⌘V、剪貼簿沒有文字但有圖片時，加成畫面，不管焦點在哪裡（「我的筆記」是純文字，圖片本來就貼不進去）；剪貼簿有文字時照舊交給輸入框。要加到哪裡（`screenTarget`）：錄音中、正在看錄音的那場時是當下的 `recorder.elapsed`；其他時候是選取的會議（逐字稿、會議紀錄分頁）的播放位置（沒有錄音的會議是 0）；垃圾桶裡的、其他分頁不接手。選單的「編輯 → 貼上」不攔。
+- 拖進來：即時逐字稿那一塊的 `dropDestination`，圖片（`DocumentReader.kind == .image`）加成畫面，其他檔案照主視窗的規則（`requestImport`：參考文件、匯入）；拖到上面時一圈虛線框和「放開就加到 12:34 的畫面」。拖進主視窗其他地方的圖片照舊是參考文件（§39）。
 - 剪貼簿：`NSPasteboard` 的 `NSImage`（png、tiff）或圖片檔的網址（png、jpg、heic）；好幾張時照順序加，時間都一樣。
 
 ### 83.4 回看（R109.4）
 
-- 逐字稿：在第一個 `start ≥ at` 的段落前面插一列 `ScreenRow`：時間（可以點，跳播）、縮圖（寬 200 pt，圓角，跟著文字大小）、辨識出的第一行字（次要文字，一行）；讀取中寫「正在讀取…」。同一個時間的好幾張橫著排。點縮圖：`QLPreviewPanel` 放大（← → 看同一場的其他張），錄音跳到 `at`。
-- 時間軸（`TimelineBar`）：在 `at` 畫一個小的 `photo` 圖示（同重點標記的星號），點了跳播。
-- 三條路（同 R105 的選單樣子）：縮圖滑過時右上角的「⋯」；右鍵；選到時鍵盤（Return 放大、Delete 刪除、⌘C 複製圖片）。選單：「放大」「用預覽程式打開」「複製圖片」「改時間…」「刪除…」（紅字）。改時間用共用的彈窗（§80）：輸入 `mm:ss` 或 `h:mm:ss`，旁邊「用目前播放的位置」；超出會議長度時不能按。刪除確認：「刪除這張畫面？」「會議紀錄要重新整理才會拿掉這張的內容。」
-- 有新的畫面而會議紀錄已經整理過時，同參考文件的提示（§39 的 `documentsChanged`）：「畫面有變動，會議紀錄還沒用上。」＋「重新整理會議紀錄」。
+- 逐字稿（`Views/ScreenViews.swift`，選了「夾在逐字稿裡一列」）：`ScreenPlacement` 把每張放在第一個 `start ≥ at` 的段落前面，比最後一段晚的放最後；一張一列 `ScreenRow`：時間（可以點，跳播）、縮圖（寬 220 pt × 文字大小，圓角 8、`primary` 12% 細框；背景讀檔縮成 720 px，記在 `ScreenThumbnailCache`）、辨識出的第一行字（次要文字，兩行）、「畫面 12:34」（更淡的小字）；讀取中寫「正在讀取畫面上的字…」，沒字寫「畫面上沒有辨識出文字」。還沒有逐字稿時（轉錄中）畫面照樣列出來。點縮圖、點兩下那一列：放大（SwiftUI 的 `quickLookPreview`，← → 看同一場的其他張），錄音跳到 `at`；給 Quick Look、預覽程式的是暫存資料夾裡名為「<會議> 12-34.jpg」的硬連結（標題才是看得懂的名字）。
+- 錄音中的即時逐字稿（選了「插在即時逐字稿裡」）：同樣的放法，小一號（縮圖寬 168、時間對齊即時逐字稿的時間欄），寫「畫面」和第一行字，沒有選單；加了畫面時跟著捲到最新。
+- 時間軸（`TimelineBar`）：在 `at` 畫一個 6×5 的小方框（像一張相片，`primary` 55%，跟重點標記的青瓷綠圓點分得開）。
+- 三條路（同 R105 的選單樣子）：滑過或選到時右邊的「⋯」；右鍵；點一下那一列選到（淡灰圓角底，不用強調色的焦點環），選到時鍵盤 Return 放大、Delete 刪除（先確認）、⌘C 複製圖片。選單：「放大 ↩」「從這裡播放」（有錄音時）「用預覽程式打開」「複製圖片 ⌘C」、分隔線、「改時間…」「刪除… ⌫」（紅字）。改時間用共用的彈窗（§80）：「改這張畫面的時間」、說明行、「錄音時間」欄位（帶目前的值、全選），左下「用目前播放的位置」；格式不對、超過會議長度時說明行改成原因、「儲存」不能按，沒改也不能按。刪除確認：「刪除 12:34 的畫面？」「圖片和辨識出的文字都會刪掉。已經整理好的會議紀錄要重新整理才會拿掉這張的內容。」
+- 已經有會議紀錄時加入、刪除畫面或改時間：`screensChanged`（同參考文件的 `documentsChanged`），紀錄分頁頂部同一條提示：只有畫面變動寫「畫面有變動，會議紀錄還沒用上。」，兩種都有寫「文件和畫面有變動，會議紀錄還沒用上。」；「不用」「重新整理會議紀錄」兩種一起清掉。
 
 ### 83.5 整理、提問（R109.6、R109.7，D188）
 
@@ -2978,7 +2979,7 @@ ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是�
 
 ### 83.8 DEBUG、驗證
 
-- `shiyinctl screenadd <圖檔> [秒數]`（同貼上：錄音中用當下時間，不然用給的秒數或播放位置）、`screenshot`（同按快捷鍵）、`screenmove <id> <秒數>`、`screendelete <id>`；`-debugFakeScreenshot <png>`：截圖不呼叫 ScreenCaptureKit、直接用這張（DEBUG 版是 ad-hoc 簽章，不要讓它跳權限詢問）。`state` 多 `screens`（id、at、讀取中、文字長度）。
+- `shiyinctl screenadd <圖檔> [秒數]`（同貼上：錄音中用當下時間；給秒數時加到選取的會議的那個時間）、`screenshot`（同按 ⌃⌥⌘S）、`screenmove <id> <秒數>`、`screendelete <id>`、`screenpreview <id>|off`（放大；Quick Look 的視窗在最上層，會出現在使用者的畫面上，非必要不用）、`screenmenu <id> <項目>`（選單的某一項）；`-debugFakeScreenshot <png>`：截圖不呼叫 ScreenCaptureKit、直接用這張（DEBUG 版是 ad-hoc 簽章，不要讓它跳權限詢問）。`state` 多 `screens`（id、at、file、讀取中、文字長度、前 80 字、檔案在不在）、`screensChanged`、`screenshotProblem`、`screenPreview`、`movingScreen`、`screenshotHotKey`；`island.mode` 多 `flash`。
 - 自動驗證：`record-sim` 錄音中 `screenshot`（假的截圖）、`screenadd` 兩張；停止、整理用 `fake-llm-server.py` 的四種 API 看請求裡的文字和圖片；匯出四種格式打開看；編輯會議裁掉、分成兩場、合併、還原後的 `at`；`Shiyin --mcp` 讀出來的內容。
 - 要使用者：真的權限詢問、拒絕後的提示和「打開系統設定」；真的 Zoom、Teams、Meet 分享畫面時按 ⌃⌥⌘S，截到的是對方分享的畫面、沒有拾音的視窗；全螢幕的會議 app 上按錄音島的「截圖」；真的 Claude Code、Codex 整理一場有截圖的會議，紀錄用得到圖表的內容。
 

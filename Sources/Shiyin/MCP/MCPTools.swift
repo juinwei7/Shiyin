@@ -161,6 +161,9 @@ enum MCPTools {
                 case .title: out.append("- title: \(hit.snippet)")
                 case .notes: out.append("- notes: \(hit.snippet)")
                 case .userNotes: out.append("- my notes: \(hit.snippet)")
+                case .screen:
+                    guard let at = try db.document(hit.ref)?.at else { continue }
+                    out.append("- screen \(TimeFormat.string(at)): \(hit.snippet) · \(link(id, at: at))")
                 case .segment:
                     guard let s = segments[hit.ref] else { continue }
                     let who = s.speaker.map { " " + speakerName(names[$0] ?? "", idx: $0, m) } ?? ""

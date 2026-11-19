@@ -57,9 +57,19 @@ struct DocumentsMenu: View {
 struct DocumentsBanner: View {
     @Environment(AppModel.self) private var model
 
+    /// 文件、會議中的畫面（design §83.4）哪一種有變動
+    private var message: String {
+        let id = model.detail?.meeting.id ?? -1
+        switch (model.documentsChanged.contains(id), model.screensChanged.contains(id)) {
+        case (true, true): return String(localized: "文件和畫面有變動，會議紀錄還沒用上。")
+        case (false, true): return String(localized: "畫面有變動，會議紀錄還沒用上。")
+        default: return String(localized: "文件有變動，會議紀錄還沒用上。")
+        }
+    }
+
     var body: some View {
         HStack(spacing: 10) {
-            Label("文件有變動，會議紀錄還沒用上。", systemImage: "paperclip")
+            Label(message, systemImage: "paperclip")
             Spacer()
             Button("不用") { model.dismissDocumentsChanged() }
             Button("重新整理會議紀錄") { model.resummarize() }

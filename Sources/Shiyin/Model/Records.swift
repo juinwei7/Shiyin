@@ -269,9 +269,15 @@ struct MeetingDocument: SnakeCaseRecord, Identifiable, Hashable {
     var pages: String                    // JSON 字串陣列
     var ocr: Bool = false
     var createdAt: String = Clock.now()
+    /// 會議中的畫面（design §83.1、R109）：錄音時間（秒）；nil 是一般的參考文件
+    var at: Double?
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 
+    var isScreen: Bool { at != nil }
+    static let screenFileName = "screen.jpg"
+    /// 畫面辨識出的文字（沒有字是空字串）
+    var screenText: String { pageTexts.joined(separator: "\n") }
     var documentKind: DocumentKind { DocumentKind(rawValue: kind) ?? .text }
     var pageTexts: [String] { (try? JSONDecoder().decode([String].self, from: Data(pages.utf8))) ?? [] }
     var fileURL: URL { Paths.documentsDir.appendingPathComponent(file) }

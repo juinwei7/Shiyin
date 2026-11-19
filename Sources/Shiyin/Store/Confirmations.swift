@@ -40,6 +40,11 @@ extension AppModel {
             return ConfirmRequest(id: "restoreEdit:\(id)", title: String(localized: "還原成編輯前的樣子？"), message: restoreEditMessage(id),
                                   confirmTitle: String(localized: "還原"), destructive: false) { self.restoreMeetingEdit(id) }
         }
+        if let id = confirmDeleteScreen, let at = detail?.screens.first(where: { $0.id == id })?.at {
+            return ConfirmRequest(id: "screen:\(id)", title: String(localized: "刪除 \(TimeFormat.string(at)) 的畫面？"),
+                                  message: String(localized: "圖片和辨識出的文字都會刪掉。已經整理好的會議紀錄要重新整理才會拿掉這張的內容。"),
+                                  confirmTitle: String(localized: "刪除")) { self.deleteScreen(id) }
+        }
         if confirmDelete {
             let ids = deleteTargets
             return ConfirmRequest(id: "trash:\(ids)", title: ids.count > 1 ? String(localized: "把 \(ids.count) 場會議移到垃圾桶？")
@@ -59,5 +64,6 @@ extension AppModel {
         if splitMeetingRequest != nil { splitMeetingRequest = nil }
         if confirmRestoreEdit != nil { confirmRestoreEdit = nil }
         if confirmDelete { confirmDelete = false }
+        if confirmDeleteScreen != nil { confirmDeleteScreen = nil }
     }
 }

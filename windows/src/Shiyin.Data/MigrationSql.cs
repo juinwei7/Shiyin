@@ -274,4 +274,7 @@ static class MigrationSql
           edited_at   TEXT NOT NULL
         );
         """;
+
+    /// <summary>會議中的畫面（R109、M§83.1）：有錄音時間的文件</summary>
+    public const string V16 = "ALTER TABLE documents ADD COLUMN at REAL";
 }

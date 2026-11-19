@@ -7,6 +7,7 @@ struct RecordingPanel: View {
     @Environment(\.textScale) private var scale
     let detail: MeetingDetail
     @State private var followLatest = true
+    @State private var screenDropTargeted = false
 
     var body: some View {
         #if DEBUG
@@ -35,6 +36,24 @@ struct RecordingPanel: View {
                     Spacer()
                     Button("繼續錄") { recorder.continueAfterIdle() }
                     Button("停止錄音") { recorder.stop() }
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
+            if let problem = model.screenshotProblem {
+                // 截不到圖（design §83.2、R109.3）
+                HStack(spacing: 12) {
+                    Label(problem == .denied ? "要允許拾音「錄製螢幕」才能截圖。貼上、拖進來的圖片不需要這個權限。"
+                                             : "剛允許的權限要重新打開拾音才會生效，錄完這場再重新打開。",
+                          systemImage: "camera.viewfinder")
+                    Spacer()
+                    if problem == .denied {
+                        Button("打開系統設定") { Recorder.openPrivacySettings("Privacy_ScreenCapture") }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    Button("知道了") { model.screenshotProblem = nil }
                 }
                 .font(.callout)
                 .padding(.horizontal, 16)
@@ -84,6 +103,29 @@ struct RecordingPanel: View {
             HStack(spacing: 0) {
                 Isolated { liveTranscript(recorder) }
                     .frame(minWidth: 300, maxWidth: .infinity)
+                    // 拖進來的圖片是這個時間點的畫面（design §83.3）；其他檔案照主視窗的規則（參考文件、匯入）
+                    .dropDestination(for: URL.self) { urls, _ in
+                        let images = urls.filter { DocumentReader.kind(of: $0) == .image }
+                        let others = urls.filter { DocumentReader.kind(of: $0) != .image }
+                        if !images.isEmpty { model.addScreensHere(images.compactMap(ScreenImages.load)) }
+                        if !others.isEmpty { model.requestImport(others) }
+                        return true
+                    } isTargeted: { screenDropTargeted = $0 }
+                    .overlay {
+                        if screenDropTargeted {
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.celadon, style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+                                .overlay(alignment: .bottom) {
+                                    Label("放開就加到 \(TimeFormat.string(model.recorder.elapsed)) 的畫面", systemImage: "photo.badge.plus")
+                                        .font(.callout)
+                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                        .background(.regularMaterial, in: Capsule())
+                                        .padding(16)
+                                }
+                                .padding(6)
+                                .allowsHitTesting(false)
+                        }
+                    }
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
                     Text("我的筆記").font(.songti(16))
@@ -125,7 +167,7 @@ struct RecordingPanel: View {
             ViewThatFits(in: .horizontal) {
                 actionButtons(recorder).labelStyle(.titleAndIcon)
                 HStack(spacing: 14) {
-                    HStack(spacing: 14) { pauseButton(recorder); bookmarkButton(recorder) }.labelStyle(.iconOnly)
+                    HStack(spacing: 14) { pauseButton(recorder); bookmarkButton(recorder); screenshotButton }.labelStyle(.iconOnly)
                     stopButton(recorder).labelStyle(.titleAndIcon)
                 }
                 .fixedSize()
@@ -149,6 +191,7 @@ struct RecordingPanel: View {
         HStack(spacing: 14) {
             pauseButton(recorder)
             bookmarkButton(recorder)
+            screenshotButton
             stopButton(recorder)
         }
         .fixedSize()
@@ -167,6 +210,12 @@ struct RecordingPanel: View {
             model.noticeMessage = String(localized: "已標記 \(TimeFormat.string(recorder.elapsed)) 為重點")
         }
         .help("標記這個時間點（⌘B），整理時會被當成重點")
+    }
+
+    /// 會議中的畫面（R109.1）：截游標所在的螢幕，拾音自己的視窗不會進去
+    private var screenshotButton: some View {
+        Button("截圖", systemImage: "camera.viewfinder") { model.captureScreen() }
+            .help("截下游標所在的螢幕（⇧⌘S；在其他 app 裡按 \(GlobalHotKey.screenshotDisplay)），整理時會一起參考")
     }
 
     private func stopButton(_ recorder: Recorder) -> some View {
@@ -191,6 +240,8 @@ struct RecordingPanel: View {
         #endif
         // 每個重點只標在一段上：開始時間不晚於它的最後一段
         let starred = Set(detail.bookmarks.compactMap { mark in recorder.liveLines.last(where: { $0.start <= mark.time })?.id })
+        // 截好的畫面插在當下的位置（選了「插在即時逐字稿裡」，design §83.4）
+        let placement = ScreenPlacement.place(detail.screens, starts: recorder.liveLines.map(\.start))
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8) {
@@ -198,7 +249,10 @@ struct RecordingPanel: View {
                         Text(AppSettings.liveTranscription ? "開始說話後，逐字稿會即時出現在這裡。" : "即時逐字稿已在設定中關閉，錄音結束後會正式轉錄。")
                             .foregroundStyle(.secondary)
                     }
-                    ForEach(recorder.liveLines) { line in
+                    ForEach(Array(recorder.liveLines.enumerated()), id: \.element.id) { index, line in
+                        if let screens = placement.before[index] {
+                            ForEach(screens) { ScreenRow(screen: $0, compact: true) }
+                        }
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text(TimeFormat.string(line.start)).contentFont(.callout, monospacedDigit: true).foregroundStyle(Color.celadon)
                                 .frame(width: 52 * scale, alignment: .trailing)
@@ -209,6 +263,7 @@ struct RecordingPanel: View {
                         }
                         .id(line.id)
                     }
+                    ForEach(placement.trailing) { ScreenRow(screen: $0, compact: true) }
                     // 還沒定稿的文字一直在變，只讓這一行重算，不拖著整份即時逐字稿（design §21.12）
                     Isolated {
                         if !recorder.volatileText.isEmpty {
@@ -241,7 +296,7 @@ struct RecordingPanel: View {
                     if followLatest { followLatest = false }
                 }
             }
-            .onChange(of: recorder.liveLines.count) { _, _ in
+            .onChange(of: recorder.liveLines.count + detail.screens.count) { _, _ in
                 guard followLatest else { return }
                 if reduceMotion { proxy.scrollTo("bottom", anchor: .bottom) }
                 else { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) } }

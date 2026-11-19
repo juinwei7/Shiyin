@@ -1195,6 +1195,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.recordingIslandKey) private var recordingIsland = true
     @AppStorage(AppSettings.idleStopKey) private var idleStop = true
     @AppStorage(AppSettings.bookmarkHotKeyKey) private var bookmarkHotKey = true
+    @AppStorage(AppSettings.screenshotHotKeyKey) private var screenshotHotKey = true
     @State private var mutedApps: [String] = []
     @State private var hotKeyFailed = false
 
@@ -1271,6 +1272,15 @@ struct RecordingSettings: View {
                 .onChange(of: bookmarkHotKey) { _, enabled in
                     GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
                 }
+            // 會議中的畫面（R109.1、design §83.2）
+            Toggle("錄音中按 \(GlobalHotKey.screenshotDisplay) 截圖（在其他 app 裡也能用）", isOn: $screenshotHotKey)
+                .onChange(of: screenshotHotKey) { _, enabled in
+                    GlobalHotKey.shared.setScreenshotEnabled(enabled && model.recorder.isRecording)
+                }
+            if screenshotHotKey && model.recorder.isRecording && !GlobalHotKey.shared.isScreenshotRegistered {
+                Text("這組按鍵被別的 app 佔用了，可以用錄音島或錄音畫面上的「截圖」。")
+                    .font(.caption).foregroundStyle(.red)
+            }
         }
     }
 

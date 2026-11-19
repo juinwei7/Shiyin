@@ -192,6 +192,7 @@ struct MainView: View {
         .sheet(item: Binding(get: { model.editingMeeting.map(EditingMeeting.init) }, set: { model.editingMeeting = $0?.id })) {
             MeetingEditSheet(meetingId: $0.id)
         }
+        .modifier(ScreenSheets())
     }
 }
 
@@ -673,6 +674,7 @@ struct SearchResultsList: View {
         case .segment: return String(localized: "逐字稿")
         case .notes: return String(localized: "會議紀錄")
         case .userNotes: return String(localized: "我的筆記")
+        case .screen: return String(localized: "會議中的畫面")
         }
     }
 }

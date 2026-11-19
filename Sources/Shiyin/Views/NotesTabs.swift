@@ -292,7 +292,7 @@ struct NotesPage: View {
     /// 提示條和編輯列：條列、心智圖共用
     @ViewBuilder private func header(_ notes: MeetingNotes) -> some View {
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
-        if let id = detail.meeting.id, model.documentsChanged.contains(id) {
+        if let id = detail.meeting.id, model.documentsChanged.contains(id) || model.screensChanged.contains(id) {
             DocumentsBanner().environment(\.textScale, 1)
         }
         // 這場很像某個資料夾裡的會議（R98.3）

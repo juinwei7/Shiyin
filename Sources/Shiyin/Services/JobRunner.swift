@@ -25,6 +25,7 @@ enum AppSettings {
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
     static let bookmarkHotKeyKey = "bookmarkHotKey"
+    static let screenshotHotKeyKey = "screenshotHotKey"
     static let idleStopKey = "idleStop"
     static let textSizeKey = "contentTextSize"   // 會議內容的文字大小，−1～5，0 是 100%（design §38.5）
     static let notesViewKey = "notesView"   // 紀錄分頁：list（條列）／mindMap（心智圖，design §42.4）
@@ -120,6 +121,8 @@ enum AppSettings {
     static var hideFromScreenSharing: Bool { flag(hideFromScreenSharingKey, default: false) }
     /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）
     static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
+    /// 錄音中按 ⌃⌥⌘S 截圖（R109.1、design §83.2）
+    static var screenshotHotKey: Bool { flag(screenshotHotKeyKey, default: true) }
     /// 很久沒人說話時提醒，30 分鐘後自動停止（design §35、R48.5）
     static var idleStop: Bool { flag(idleStopKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）

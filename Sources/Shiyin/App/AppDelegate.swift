@@ -111,6 +111,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// ⌘=（美式鍵盤上 + 的那個鍵，不按 Shift）也算「放大文字」：選單的 ⌘+ 要按 Shift 才對得上（design §38.5）
     private func installSpaceKey() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // ⌘V 貼上只有圖片的剪貼簿：加成會議中的畫面（design §83.3）
+            guard AppModel.shared.handlePasteKey(event) != nil else { return nil }
             if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
                event.charactersIgnoringModifiers == "=" {
                 TextSize.change(1)

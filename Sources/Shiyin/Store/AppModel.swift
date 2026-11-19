@@ -77,6 +77,8 @@ struct MeetingDetail: Equatable {
     /// 會議的參考文件（design §39.1）和照長度分配後每一份用了多少（§39.3，選單顯示「太長，只用前 N 頁」）
     var documents: [MeetingDocument] = []
     var documentUse: [Int64: DocumentPrompt.Allocated] = [:]
+    /// 會議中的畫面（design §83.1），照時間排
+    var screens: [MeetingDocument] = []
     /// 逐字稿分頁用的索引，載入時算一次，不要每次畫面更新都重算（design §21.12）：
     /// 每段的校正（不含已忽略的）、依開始時間排好的段落
     var correctionsBySegment: [Int64: [Correction]] = [:]
@@ -271,6 +273,22 @@ final class AppModel {
     var readingDocuments: [Int64: [String]] = [:]
     /// 已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體
     var documentsChanged: Set<Int64> = []
+    /// 會議中的畫面（design §83）：同上，畫面加入、刪除、改時間後
+    var screensChanged: Set<Int64> = []
+    /// 正在文字辨識的畫面（文件 id）
+    var readingScreens: Set<Int64> = []
+    /// 用快捷鍵截圖後，選單列圖示換成相機 1 秒
+    var screenFlash = false
+    /// 截圖失敗的原因（沒有權限、要重新打開拾音）：錄音畫面的提示列、錄音島顯示；下次截成功就清掉
+    var screenshotProblem: ScreenShot.Failure?
+    /// 搜尋結果點到的畫面：逐字稿捲過去、亮一下
+    var highlightScreen: Int64?
+    /// 要刪除的畫面（確認彈窗）、要改時間的畫面（彈窗）
+    var confirmDeleteScreen: Int64?
+    var movingScreen: Int64?
+    /// 放大（Quick Look）：目前這張、可以 ← → 的全部
+    var screenPreview: URL?
+    var screenPreviewItems: [URL] = []
     var filter = ""
     /// 列表的排序、分組（R97、design §71）：記住；篩選只記這次，換篩選時取消多選
     var meetingSort = MeetingSort(rawValue: UserDefaults.standard.string(forKey: AppSettings.meetingSortKey) ?? "") ?? .dateDesc {
@@ -460,7 +478,11 @@ final class AppModel {
         if AppSettings.autoDetectLanguage { models.autoStart(.languageDetection) }
         GlobalHotKey.shared.onPress = { [weak self] in self?.toggleRecording() }
         GlobalHotKey.shared.onBookmark = { [weak self] in self?.bookmarkFromHotKey() }
-        recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
+        GlobalHotKey.shared.onScreenshot = { [weak self] in self?.captureScreen() }
+        recorder.onStarted = {
+            GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey)
+            GlobalHotKey.shared.setScreenshotEnabled(AppSettings.screenshotHotKey)
+        }
         recorder.onLevelHint = { [weak self] hint in self?.levelHintAppeared(hint) }
         recorder.microphoneUser = { [weak self] in self?.meetingDetector.microphoneUser() }
         recorder.onMicHint = { [weak self] hint in self?.micHintAppeared(hint) }
@@ -624,6 +646,7 @@ final class AppModel {
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
         loaded.loadSpeakers(speakerRows)
         loaded.loadDocuments((try? db.documents(id)) ?? [])
+        loaded.screens = (try? db.screens(id)) ?? []
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
         loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
@@ -696,6 +719,7 @@ final class AppModel {
 
     var menuBarSymbol: String {
         if bookmarkFlash { return "star.circle.fill" }
+        if screenFlash { return "camera.circle.fill" }
         // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來。
         // 圖示同提示列（mic.badge.exclamationmark 不是系統有的 SF Symbol，4.1～4.8.1 選單列在這時是空白的）
         if recorder.isRecording {
@@ -872,7 +896,8 @@ final class AppModel {
     /// 錄音結束：把錄音檔接到會議上並排轉錄（R2.5）
     private func recordingFinished(_ result: Recorder.Result) {
         MeetingPromptPanel.shared.close()   // 還開著的「要停止錄音嗎？」不用了
-        GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B
+        GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B、⌃⌥⌘S
+        GlobalHotKey.shared.setScreenshotEnabled(false)
         do {
             if let error = result.error {
                 errorMessage = error
@@ -1307,6 +1332,7 @@ final class AppModel {
         // 沒登入、沒有 key…：不排，說原因（R45.4、design §34.2）
         if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
         documentsChanged.remove(id)
+        screensChanged.remove(id)
         perform { try db.enqueue(id, kind: .summarize) }
         runner.wake()
     }
@@ -1999,6 +2025,11 @@ final class AppModel {
             if let segment = detail?.segments.first(where: { $0.id == hit.ref }) { player.seek(to: segment.start, play: false) }
         case .notes, .title: tab = .summary
         case .userNotes: tab = .transcript; userNotesExpanded = true
+        case .screen:
+            // 會議中的畫面（design §83.1）：逐字稿捲到那張、跳到那個時間
+            tab = .transcript
+            flashScreen(hit.ref)
+            if let screen = detail?.screens.first(where: { $0.id == hit.ref }), let at = screen.at { player.seek(to: at, play: false) }
         }
     }
 
@@ -2076,7 +2107,10 @@ final class AppModel {
             updated.cleanLines = (try? db.cleanLines(id)) ?? [:]
         }
         if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }
-        if parts.contains(.documents) { updated.loadDocuments((try? db.documents(id)) ?? []) }
+        if parts.contains(.documents) {
+            updated.loadDocuments((try? db.documents(id)) ?? [])
+            updated.screens = (try? db.screens(id)) ?? []
+        }
         if parts.contains(.meeting), let meeting = try? db.meeting(id) {
             updated.meeting = meeting
             updated.notes = meeting.decodedNotes

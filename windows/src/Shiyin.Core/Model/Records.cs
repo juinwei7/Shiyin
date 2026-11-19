@@ -268,6 +268,8 @@ public sealed class MeetingDocument
     public string Pages { get; set; } = "[]";
     public bool Ocr { get; set; }
     public string CreatedAt { get; set; } = Clock.Now();
+    /// <summary>會議中的畫面（M§83.1、R109）：錄音時間（秒）；null 是一般的參考文件</summary>
+    public double? At { get; set; }
 
     public DocumentKind DocumentKind => DocumentKinds.Parse(Kind) ?? DocumentKind.Text;
 

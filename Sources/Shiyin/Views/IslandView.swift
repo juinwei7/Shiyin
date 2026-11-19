@@ -7,6 +7,7 @@ struct IslandRoot: View {
     @Environment(AppModel.self) private var model
     let state: IslandState
     @State private var bookmarked = false
+    @State private var captured = false
     @State private var leaveTask: Task<Void, Never>?
 
     /// 瀏海兩側各放多寬（紅點、時間）
@@ -29,6 +30,8 @@ struct IslandRoot: View {
             expanded(header: promptHeader) { promptBody(prompt) }
         } else if state.hover && recorder.isRecording {
             expanded(header: recordingHeader) { controls }
+        } else if let flash = state.flash, recorder.isRecording {
+            expanded(header: recordingHeader) { flashBody(flash) }
         } else if state.hintExpanded, let hint = currentHint {
             expanded(header: recordingHeader) { hintBody(hint) }
         } else {
@@ -161,24 +164,60 @@ struct IslandRoot: View {
                 // 提醒的按鈕也放這裡：展開的提醒一滑過去就換成這個畫面，不放的話「知道了」「繼續錄」永遠按不到
                 hintButtons(hint)
             }
-            HStack(spacing: 8) {
-                IslandButton(title: recorder.isPaused ? String(localized: "繼續") : String(localized: "暫停"),
-                             symbol: recorder.isPaused ? "play.fill" : "pause.fill") {
-                    recorder.isPaused ? recorder.resume() : recorder.pause()
-                }
-                IslandButton(title: bookmarked ? String(localized: "已標記") : String(localized: "標記重點"),
-                             symbol: bookmarked ? "star.fill" : "star") {
-                    model.addBookmark(at: recorder.elapsed, meetingId: recorder.meetingId)
-                    bookmarked = true
-                    Task { try? await Task.sleep(for: .seconds(1.5)); bookmarked = false }
-                }
-                IslandButton(title: String(localized: "打開拾音"), symbol: "macwindow") {
-                    if let id = recorder.meetingId { model.reveal(id) }
-                    NSApp.activate()
-                }
-                Spacer(minLength: 0)
-                IslandButton(title: String(localized: "停止並轉錄"), symbol: "stop.fill", role: .destructive) { recorder.stop() }
+            // 按鈕放不下時（加了「截圖」、英文比較長）：先讓「暫停」「打開拾音」只留圖示，再不夠就只有「停止並轉錄」留字
+            ViewThatFits(in: .horizontal) {
+                controlButtons(iconOnly: [])
+                controlButtons(iconOnly: [.pause, .open])
+                controlButtons(iconOnly: [.pause, .bookmark, .screenshot, .open])
             }
+        }
+    }
+
+    /// 截好的畫面：縮圖和時間（design §83.2）
+    private func flashBody(_ flash: IslandState.Flash) -> some View {
+        HStack(spacing: 12) {
+            Image(nsImage: flash.image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 120, maxHeight: 68)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(.white.opacity(0.15)))
+            VStack(alignment: .leading, spacing: 3) {
+                Label("已截圖", systemImage: "camera.viewfinder").font(.system(size: 13, weight: .semibold))
+                Text("\(TimeFormat.string(flash.at)) 的畫面，整理時會一起參考").foregroundStyle(.white.opacity(0.65))
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private enum ControlButton { case pause, bookmark, screenshot, open }
+
+    private func controlButtons(iconOnly: Set<ControlButton>) -> some View {
+        let recorder = model.recorder
+        return HStack(spacing: 8) {
+            IslandButton(title: recorder.isPaused ? String(localized: "繼續") : String(localized: "暫停"),
+                         symbol: recorder.isPaused ? "play.fill" : "pause.fill", iconOnly: iconOnly.contains(.pause)) {
+                recorder.isPaused ? recorder.resume() : recorder.pause()
+            }
+            IslandButton(title: bookmarked ? String(localized: "已標記") : String(localized: "標記重點"),
+                         symbol: bookmarked ? "star.fill" : "star", iconOnly: iconOnly.contains(.bookmark)) {
+                model.addBookmark(at: recorder.elapsed, meetingId: recorder.meetingId)
+                bookmarked = true
+                Task { try? await Task.sleep(for: .seconds(1.5)); bookmarked = false }
+            }
+            // 會議中的畫面（R109.1）：島本身不會被截進去
+            IslandButton(title: captured ? String(localized: "已截圖") : String(localized: "截圖"),
+                         symbol: captured ? "checkmark" : "camera.viewfinder", iconOnly: iconOnly.contains(.screenshot)) {
+                model.captureScreen()
+                captured = true
+                Task { try? await Task.sleep(for: .seconds(1.5)); captured = false }
+            }
+            IslandButton(title: String(localized: "打開拾音"), symbol: "macwindow", iconOnly: iconOnly.contains(.open)) {
+                if let id = recorder.meetingId { model.reveal(id) }
+                NSApp.activate()
+            }
+            Spacer(minLength: 0)
+            IslandButton(title: String(localized: "停止並轉錄"), symbol: "stop.fill", role: .destructive) { recorder.stop() }
         }
     }
 
@@ -242,6 +281,20 @@ struct IslandRoot: View {
                 .init(title: String(localized: "停止錄音"), primary: true) { recorder.stop() },
             ])
         }
+        if let problem = model.screenshotProblem {
+            // 截不到圖（design §83.2）
+            switch problem {
+            case .denied:
+                // 按鈕的順序同收音提醒（打開系統設定、知道了）
+                return IslandHint(text: String(localized: "要允許拾音「錄製螢幕」才能截圖。"), symbol: "camera.viewfinder", buttons: [
+                    .init(title: String(localized: "打開系統設定"), primary: true) { Recorder.openPrivacySettings("Privacy_ScreenCapture") },
+                    .init(title: String(localized: "知道了"), primary: false) { model.screenshotProblem = nil },
+                ])
+            case .needsRelaunch:
+                return IslandHint(text: String(localized: "剛允許的權限要重新打開拾音才會生效，錄完這場再重新打開。"), symbol: "camera.viewfinder",
+                                  buttons: [.init(title: String(localized: "知道了"), primary: false) { model.screenshotProblem = nil }])
+            }
+        }
         if let hint = recorder.micHint {
             var buttons: [IslandHint.Button] = []
             if let builtIn = hint.builtIn {
@@ -297,22 +350,26 @@ private struct IslandButton: View {
     let title: String
     var symbol: String?
     var role: Role = .normal
+    /// 放不下時只留圖示（滑過提示和 VoiceOver 照樣是完整的字）
+    var iconOnly = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 if let symbol { Image(systemName: symbol).font(.system(size: 11)) }
-                Text(title).lineLimit(1)
+                if !iconOnly || symbol == nil { Text(title).lineLimit(1) }
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.white)
-            .padding(.horizontal, 11)
+            .padding(.horizontal, iconOnly ? 9 : 11)
             .padding(.vertical, 6)
             .background(Capsule().fill(background))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .help(iconOnly ? title : "")
+        .accessibilityLabel(Text(title))
     }
 
     private var background: Color {
