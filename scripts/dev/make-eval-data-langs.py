@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""產生粵語、韓文的轉錄評估資料（design §41.7），加進 ~/Library/Caches/ShiyinSpike/eval32/datasets.json。資料不放進 repo。
+"""產生粵語、韓文、中文的轉錄評估資料（design §41.7、§17.1），加進 ~/Library/Caches/ShiyinSpike/eval32/datasets.json。資料不放進 repo。
 
-  scripts/dev/make-eval-data-langs.py
+  scripts/dev/make-eval-data-langs.py [yue ko zh]   # 沒給就全部
 
-- yue-fleurs、ko-fleurs：FLEURS 粵語（yue_hant_hk）、韓文（ko_kr）測試集的前 60 句（朗讀維基百科，CC BY 4.0），
-  接成一個檔案，句子之間空 0.8 秒。只串流下載到第 60 句就停，不存整個壓縮檔
-- yue-synth、ko-synth：用 macOS 的語音合成的開發團隊週會（夾英文產品名、人名），附詞彙表和關鍵詞。
-  粵語只有一個聲音（善怡），韓文用三個聲音
+- yue-fleurs、ko-fleurs、zh-fleurs：FLEURS 粵語（yue_hant_hk）、韓文（ko_kr）、普通話（cmn_hans_cn）測試集的前 60 句
+  （朗讀維基百科，CC BY 4.0），接成一個檔案，句子之間空 0.8 秒。只串流下載到第 60 句就停，不存整個壓縮檔
+- yue-synth、ko-synth、zh-synth：用 macOS 的語音合成的開發團隊週會（夾英文產品名、人名），附詞彙表和關鍵詞。
+  粵語只有一個聲音（善怡），韓文、中文（台灣）用三個聲音
 """
+import sys
 import json
 import re
 import subprocess
@@ -65,7 +66,28 @@ LANGS = {
             ("A", "Yuna", "그럼 출시일은 예정대로 십일월 오일로 하겠습니다. 오늘은 여기까지 하겠습니다. 수고하셨습니다."),
         ],
     },
+    "zh": {
+        "fleurs": "cmn_hans_cn", "say": "zh_TW",
+        "glossary": ["Lumio", "Redis", "Kubernetes", "GitHub Actions", "陳冠宇", "林雅婷"],
+        "keywords": ["Lumio", "Redis", "Kubernetes", "GitHub Actions", "陳冠宇", "林雅婷", "Slack"],
+        "script": [
+            ("A", "Meijia", "大家好，我是陳冠宇。今天主要確認 Lumio 下一版的進度。"),
+            ("B", "Eddy", "我是林雅婷。上週五已經部署到測試環境，目前沒有看到大問題。"),
+            ("A", "Meijia", "謝謝。上次說 API 回應很慢，現在怎麼樣？"),
+            ("B", "Eddy", "我們加了 Redis 做快取，平均回應時間降到兩百毫秒左右，尖峰時段也在五百毫秒以內。"),
+            ("C", "Flo", "測試的部分，自動測試都在 GitHub Actions 上跑，不過付款頁面有一個測試不太穩定。"),
+            ("A", "Meijia", "那個測試可以在上線前修好嗎？"),
+            ("C", "Flo", "應該是逾時設定的問題，我想這週之內可以處理好。"),
+            ("B", "Eddy", "另外我想在 Kubernetes 多加一台機器，因為下個月有活動，流量估計會多三倍。"),
+            ("A", "Meijia", "大概要多花多少錢？"),
+            ("B", "Eddy", "每個月大約多八千塊，活動結束就可以減回來。"),
+            ("A", "Meijia", "好，我會跟經理討論。還有，雅婷可以在週三之前寫好回復步驟，再放到 Slack 上嗎？"),
+            ("B", "Eddy", "沒問題，週三之前完成。"),
+            ("A", "Meijia", "那上線日期一樣訂在十一月五號。今天就先到這裡，謝謝大家。"),
+        ],
+    },
 }
+NAMES = {"yue": "粵語", "ko": "韓文", "zh": "中文"}
 
 
 def read_wav(path):
@@ -156,12 +178,14 @@ def synth(code, spec, out):
     speakers = len({s for s, _, _ in spec["script"]})
     return {"name": f"{code}-synth", "audio": str(out / "synth.wav"), "ref": str(out / "synth.ref.json"), "language": code,
             "glossary": spec["glossary"], "keywords": spec["keywords"],
-            "note": f"合成的{'粵語' if code == 'yue' else '韓文'}開發週會（{len(audio) / RATE:.0f} 秒、{speakers} 人的台詞，夾英文產品名）"}
+            "note": f"合成的{NAMES[code]}開發週會（{len(audio) / RATE:.0f} 秒、{speakers} 人的台詞，夾英文產品名）"}
 
 
 def main():
     new = []
     for code, spec in LANGS.items():
+        if sys.argv[1:] and code not in sys.argv[1:]:
+            continue
         out = EVAL / code
         out.mkdir(parents=True, exist_ok=True)
         new += [synth(code, spec, out), fleurs(code, spec, out)]

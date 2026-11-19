@@ -57,12 +57,15 @@ enum DebugMetrics {
     }
 }
 
-/// 只在 DEBUG：量轉錄各階段的記憶體（design §21.16）。背景執行緒每 50 毫秒讀一次 phys_footprint，記下每個階段的最大值
+/// 只在 DEBUG：量轉錄各階段的記憶體（design §21.16）。背景執行緒每 50 毫秒讀一次 phys_footprint，記下每個階段的最大值；
+/// 也記每個階段花的秒數（同一個階段出現好幾次時加起來）
 final class MemoryMeter: @unchecked Sendable {
     private let lock = NSLock()
     private var stage = "開始"   // l10n-skip
     private var order: [String] = []
     private var peaks: [String: UInt64] = [:]
+    private var seconds: [String: Double] = [:]
+    private var stageStarted = Date()
     private var running = true
     let baseline = MemoryMeter.footprint()
 
@@ -79,14 +82,28 @@ final class MemoryMeter: @unchecked Sendable {
         }
     }
 
-    func set(stage: String) { lock.withLock { self.stage = stage } }
+    func set(stage: String) {
+        lock.withLock {
+            guard stage != self.stage else { return }
+            closeStage()
+            self.stage = stage
+        }
+    }
 
-    /// 停止量測，回傳各階段的峰值（MB，依出現順序）和整個程序到目前為止的峰值
+    /// 在鎖裡呼叫
+    private func closeStage() {
+        let now = Date()
+        seconds[stage, default: 0] += now.timeIntervalSince(stageStarted)
+        stageStarted = now
+    }
+
+    /// 停止量測，回傳各階段的峰值（MB，依出現順序）、秒數和整個程序到目前為止的峰值
     func stop() -> [String: Any] {
-        lock.withLock { running = false }
+        lock.withLock { running = false; closeStage() }
         let mb = { (value: UInt64) in Double(value) / 1_048_576 }
         return lock.withLock {
-            ["baselineMB": mb(baseline), "stages": order.map { ["stage": $0, "peakMB": mb(peaks[$0] ?? 0)] },
+            ["baselineMB": mb(baseline),
+             "stages": order.map { ["stage": $0, "peakMB": mb(peaks[$0] ?? 0), "seconds": seconds[$0] ?? 0] },
              "peakMB": mb(peaks.values.max() ?? 0), "processPeakMB": mb(Self.lifetimePeak())]
         }
     }
