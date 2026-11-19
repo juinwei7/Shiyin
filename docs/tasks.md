@@ -7,6 +7,14 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 會議中的畫面（R109，design §83、design-windows §11.42、D186～D190、D173；2026-11-19 Threads 上的使用者建議，使用者選了截整個螢幕、也送圖片、匯出也放）
+
+- [ ] **SC1 Mac 資料、截圖、貼上、回看、搜尋**（§83.1～§83.4）：migration v16、`ScreenShot`、⌃⌥⌘S、錄音島和錄音畫面的「截圖」、貼上和拖進來、逐字稿的縮圖列、時間軸、三條路、搜尋。驗證：DEBUG 版 `record-sim` 錄音中 `screenshot`（`-debugFakeScreenshot`）、`screenadd` 兩張、筆記框貼上只有圖片的剪貼簿，`state` 的 `screens` 時間對、讀到字；逐字稿、時間軸截圖看位置；`clickat`／`keyat` 走右鍵、「⋯」、Delete、Return、改時間；搜尋圖上的字跳到那個時間；永久刪除後 `documents/<id>/` 不見了。真的權限（要使用者）：第一次截圖跳出詢問、拒絕時的提示和「打開系統設定」、真的 Zoom／Teams／Meet 分享畫面時截到的內容沒有拾音的視窗
+- [ ] **SC2 Mac 整理、提問送畫面**（§83.5）：提示詞的畫面區塊和規則、`LLMImage`、六種整理工具送圖片、不支援圖片時退回只送文字、提問只帶文字。驗證：`dump-golden` 跑兩次相同，沒有畫面的舊情境 `expected/` 完全沒變；`fake-llm-server.py` 重錄四種 API 有圖片的請求；先用真的 claude CLI 確認 `stream-json` 帶圖片拿得到 `structured_output`、真的 codex 確認 `--image` 的參數名；真的 Claude Code、Codex 各整理一場有圖表截圖的會議，紀錄寫出圖表裡才有的數字、註明「（mm:ss 的畫面）」；OpenAI 相容 API 接一個不能看圖的本機模型，打開開關時自動退回只送文字
+- [ ] **SC3 Mac 匯出、封包、編輯會議、MCP**（§83.6、§83.7）：驗證：先確認 `NSAttributedString` 寫 docx 會不會帶圖片（不會就照 §83.6 自己組 OOXML，補 D189）；有畫面的會議匯出 md（旁邊的圖片資料夾）、PDF、docx 用預覽程式和 Word 打開看；沒有畫面的會議 `export/` 標準答案逐位元組不變；封包匯出再匯入，畫面和時間都在，舊版的封包照常匯入；編輯會議裁掉、刪中間、分成兩場、合併、還原後 `at` 對（`util/edit-plan.json`）；`Shiyin --mcp` 的 `get_transcript`、`get_meeting_notes` 有畫面
+- [ ] **SC4 Windows**（design-windows §11.42）：驗證：`dotnet test` 標準答案全部通過（提示詞、請求、匯出、編輯、MCP）；虛擬機用控制通道和 UI Automation 走錄音中截圖（`debugFakeScreenshot` 和真的 `Windows.Graphics.Capture` 各一次）、Ctrl+Alt+Shift+S、貼上、回看、刪除、改時間，匯出的 docx、PDF 打開看。要真的 Windows 電腦：真的 Teams／Zoom 分享畫面時截圖、兩個螢幕、150% 縮放
+- [ ] **SC5 使用說明、官網**：Mac、Windows 的使用說明加「會議中的畫面」和快捷鍵 ⌘⇧S、⌃⌥⌘S（Windows Ctrl+Shift+S、Ctrl+Alt+Shift+S）；官網功能列表加一條（website.md 先寫）。驗證：`l10n.py check`、`windows-check` 沒有缺的英文；官網 `node site/build.mjs` 建得起來
+
 ## 使用者回報：多選、刪除一句、分割會議（R88～R90，design §62～§64、design-windows §11.23、D170、D171；2026-11-16，GitHub #9、#10）
 
 - [~] **MS1、DS1、SP1 Mac 多選、清空垃圾桶、刪除一句、分割會議**（§62～§64）：程式完成，DEBUG 指令和真的視窗驗過（2026-11-16，見 commit 訊息）。還差（AX 要把視窗拉到使用者畫面上）：真的滑鼠 ⌘ 點選、Shift 點選；會議列表的右鍵選單（多選時是全部、資料夾列的右鍵照舊）；逐字稿右鍵的「刪除這句」「從這裡分成兩場…」（第一句沒有）「復原：刪除一句…」，沒辨識說話者的會議也有前兩項

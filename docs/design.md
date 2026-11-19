@@ -2897,6 +2897,91 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`preview settings <頁面代號或編號>`（0 整理工具…10 檢查與更新，只當預覽的起始頁，不寫進設定）。
 - Windows：design-windows §11.41（`NavigationView`，同樣十一項、四組、搜尋、記住頁面；圖示是彩色的字、沒有底色方塊，同 Windows 11 的設定）。
 
+## 83. 會議中的畫面：截圖、照片對到時間點（R109，D186～D190）
+
+Windows 的做法在 design-windows §11.42。
+
+### 83.1 資料（migration `v16`，D186）
+
+```sql
+ALTER TABLE documents ADD COLUMN at REAL;   -- 錄音時間（秒）；NULL 是一般的參考文件（§39），有值是那個時間點的畫面
+```
+
+- 畫面就是 `kind = 'image'`、`at` 有值的文件：檔案、文字辨識、永久刪除、合併時複製、封包都沿用 §39。`MeetingDocument.at`；`MeetingDetail.documents` 只放 `at IS NULL` 的（「文件」選單、§39.3 的長度分配不變），`MeetingDetail.screens` 放有 `at` 的，照 `at`、`id` 排。
+- 存檔：`documents/<id>/畫面 12-34.jpg`（`name` 是「畫面 12:34」，跟著介面語言；英文「Screen 12:34」）。先用原圖做文字辨識（§39.2 的圖片），再縮成長邊最多 2560 px、JPEG 品質 0.85 存起來（R109.11）；heic、png 也轉成 JPEG（Windows 讀不了 heic）。
+- `AppDatabase.addScreen(meetingId:at:jpeg:pages:)`（先插入、再填 `file`，同 `addDocument`）、`setScreenTime(id, at)`、刪除用 `deleteDocument`。同一場、同一張（內容的 SHA-256 一樣）不再加，提示已經加過了。
+- 搜尋（R109.5）：`search` 加 `kind = 'screen'`、`ref` 是文件 id、`text` 是辨識出的文字（參考文件照舊不進索引）；搜尋結果點了打開那場、跳到 `at`。
+
+### 83.2 截圖（`Capture/ScreenShot.swift`，D187）
+
+- ScreenCaptureKit：`SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)` → 找游標（`NSEvent.mouseLocation`）所在的 `SCDisplay`；`SCContentFilter(display:excludingApplications: [拾音自己], exceptingWindows: [])`（主視窗、錄音島、浮動視窗都不會進去，不管 R77 的設定）；`SCStreamConfiguration` 的寬高是那個螢幕的像素（`frame` × `backingScaleFactor`）、`showsCursor = false`；`SCScreenshotManager.captureImage(contentFilter:configuration:)`。
+- 時間：按下去的那一刻的 `recorder.elapsed`（截圖、讀字要一點時間，不能用存好的時間）。錄音暫停時一樣可以截，時間是暫停的位置。
+- 權限（R109.3）：截之前 `CGPreflightScreenCaptureAccess()`；false 時 `CGRequestScreenCaptureAccess()`（只有第一次會跳出系統的詢問）。還是 false：不截，錄音島展開提醒「要允許拾音「錄製螢幕」才能截圖。」＋「打開系統設定」（`x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture`）＋「知道了」；錄音畫面的提示列寫同一句。剛允許時 ScreenCaptureKit 可能要重新打開拾音才拿得到畫面：截圖失敗、權限是 true 時提示「重新打開拾音後才能截圖。」（錄音中不自動重開）。
+- 入口（R109.1）：
+  - 全域快捷鍵：`GlobalHotKey` 第 3 組 ⌃⌥⌘S（`kVK_ANSI_S`），跟標記重點一樣只在錄音中註冊。設定「錄音」頁的快捷鍵那一組加開關「錄音中按 ⌃⌥⌘S 截圖」（`screenshotHotKey`，預設開）。註冊不到（別的 app 佔了）時設定頁那一列寫「這組按鍵被別的 app 佔用了」。
+  - 錄音島：展開（滑過去）時的按鈕列在「標記重點」右邊加「截圖」（`camera.viewfinder`）。按島上的按鈕時島本身不會被截到（不在畫面裡）。
+  - 錄音畫面：「標記重點」旁邊加「截圖」按鈕；「檔案」選單「標記重點」（⌘B）下面加「截圖」（⌘⇧S）。使用說明的快捷鍵列表加 ⌘⇧S、⌃⌥⌘S。
+- 回饋：`NSSound(named: "Pop")`；錄音島展開 1.5 秒顯示縮圖和「已截圖 12:34」（`IslandState.flash`），之後收回；選單列圖示換成相機 1 秒（同標記重點的星號）。
+- 讀字：存好圖（`at`、`pages` 先是空的）就顯示在逐字稿、時間軸上，文字辨識在背景做，完成後更新 `pages`、搜尋索引。辨識不到字照樣留著（跟參考文件不同：畫面的圖片本身就有用）。
+
+### 83.3 貼上、拖進來（R109.2）
+
+- 錄音畫面：`onPasteCommand(of: [.image, .fileURL])`、`dropDestination` 收圖片，時間是當下的 `recorder.elapsed`。「我的筆記」是純文字：焦點在筆記框、剪貼簿只有圖片（沒有文字）時，⌘V 改成加畫面（`UserNotesEditor` 背後的 NSTextView 攔 `paste:`）；剪貼簿有文字時照舊貼文字。
+- 會議頁：逐字稿、會議紀錄分頁的 `onPasteCommand`，時間是 `player.currentTime`（沒有錄音的會議是 0）。拖進主視窗的圖片照舊是參考文件（§39）；錄音中，拖到錄音畫面上的才是畫面。
+- 剪貼簿：`NSPasteboard` 的 `NSImage`（png、tiff）或圖片檔的網址（png、jpg、heic）；好幾張時照順序加，時間都一樣。
+
+### 83.4 回看（R109.4）
+
+- 逐字稿：在第一個 `start ≥ at` 的段落前面插一列 `ScreenRow`：時間（可以點，跳播）、縮圖（寬 200 pt，圓角，跟著文字大小）、辨識出的第一行字（次要文字，一行）；讀取中寫「正在讀取…」。同一個時間的好幾張橫著排。點縮圖：`QLPreviewPanel` 放大（← → 看同一場的其他張），錄音跳到 `at`。
+- 時間軸（`TimelineBar`）：在 `at` 畫一個小的 `photo` 圖示（同重點標記的星號），點了跳播。
+- 三條路（同 R105 的選單樣子）：縮圖滑過時右上角的「⋯」；右鍵；選到時鍵盤（Return 放大、Delete 刪除、⌘C 複製圖片）。選單：「放大」「用預覽程式打開」「複製圖片」「改時間…」「刪除…」（紅字）。改時間用共用的彈窗（§80）：輸入 `mm:ss` 或 `h:mm:ss`，旁邊「用目前播放的位置」；超出會議長度時不能按。刪除確認：「刪除這張畫面？」「會議紀錄要重新整理才會拿掉這張的內容。」
+- 有新的畫面而會議紀錄已經整理過時，同參考文件的提示（§39 的 `documentsChanged`）：「畫面有變動，會議紀錄還沒用上。」＋「重新整理會議紀錄」。
+
+### 83.5 整理、提問（R109.6、R109.7，D188）
+
+- `NotesContext.screens: [ScreenText]`（`at`、辨識出的文字、圖檔路徑）。使用者提示詞在重點標記之後、參考文件之前加一段（沒有畫面時沒有這一段，提示詞一字不差）：
+
+  ```
+  會議中的畫面（[時間] 是加入畫面時的錄音時間）：
+  [12:34]
+  （辨識出的文字）
+  [18:02]
+  （沒有辨識出文字）
+  ```
+
+  英文「Screens shown during the meeting ([time] is the recording time when the screen was added):」「(no text recognized)」，日文照語言檔的做法（`language.profile` 的 `prompt(…)`，不寫死語言）。
+- 長度：每張最多 1,500 字，全部最多 20,000 字（跟參考文件的 40,000 分開算）；照時間先後放，放不下的那張截斷、後面的只放時間和「（文字太長，沒有放進來）」。
+- 系統提示詞（只有有畫面時加，同 `DocumentPrompt.notesRules`）：「「會議中的畫面」是會議當時螢幕上的內容（分享的簡報、表格、照片）。以會議中實際討論的內容為準，畫面用來看懂當時在講什麼、補上正確的數字和名稱；畫面上有、但會議沒有討論的，不要寫進紀錄。用到畫面上的資訊時，句尾註明時間，例如「（12:34 的畫面）」。」英文、日文各一份。
+- 圖片本身（D188）：`LLMBackend.generateJSON` 多一個參數 `images: [LLMImage]`（預設空的；`LLMImage` 是時間和 JPEG 資料）。送之前縮成長邊最多 1568 px、JPEG 0.8；一次最多 20 張，超過時照時間平均挑 20 張（文字照樣全部送）。每張前面放一段文字「[12:34] 的畫面」，讓模型對得上時間。
+  - Claude Code：有圖片時改用 `--input-format stream-json --output-format stream-json --verbose`，stdin 寫一行使用者訊息（`content`：提示詞文字，再來每張的說明文字和 `image`（base64））；結果照舊讀最後一行 `type` 是 `result` 的 `structured_output`。沒有圖片時參數跟現在一樣。
+  - Codex：圖片寫進暫存資料夾，每張加 `--image <檔案>`（參數名稱實作前用真的 codex 確認）；提示詞最後列出「第 N 張是 [12:34] 的畫面」。
+  - Anthropic API：`content` 是文字和 `image`（`source.type = base64`）交錯；OpenAI API（`/v1/responses`）：`input_image`（`data:image/jpeg;base64,…`）；Gemini：`inline_data`。
+  - OpenAI 相容 API：設定加開關「整理時附上會議中的畫面（模型要能看圖）」（`compatibleSendsImages`，預設關：Ollama、LM Studio 的很多模型不能看圖，送了會失敗）；打開時用 `image_url` 的 data URL。企業伺服器：先只送文字（伺服器那邊要另外支援，私人專案）。
+  - 失敗：模型不支援圖片（API 回 400 且訊息提到 image）時，同一次整理自動改成只送文字再試一次，紀錄照常產生，log 記一筆。
+- 草稿、校稿（重新整理）同整理。提問：只帶畫面的文字（不送圖片，每問一題都送圖太貴），系統提示詞加一條「回答用到畫面時寫出時間，例如 12:34」，回答裡的時間點本來就可以點（§21.8）。
+- 標準答案：`shared/golden/fixtures.json` 加一場有畫面的會議（三張：有字、沒字、太長），`expected/` 的提示詞多 `*-screens`；`mac-requests.jsonl` 用 `fake-llm-server.py` 重錄四種 API 有圖片的請求（圖片用固定的小 JPEG，比對時 base64 照樣比）。沒有畫面的舊情境完全不變。
+
+### 83.6 匯出（R109.8，D189）
+
+- 會議紀錄的 md、PDF、docx 最後加一節，標題跟著會議語言（「會議中的畫面」「Screens shown during the meeting」「会議中の画面」）；每張一小節：時間（`### 12:34`），下面是圖片。
+  - md：`![12:34](<檔名> 的畫面/12-34.jpg)`，圖片寫進 md 旁邊的資料夾「<檔名> 的畫面」（英文「<name> screens」）；同一個時間第二張起加 `-2`。
+  - PDF：HTML 裡用 `data:image/jpeg;base64,…`，寬度最多版面寬，每張不跨頁（`break-inside: avoid`）。
+  - docx：`NSAttributedString` 加 `NSTextAttachment`。實作前先確認 officeOpenXML 的寫出會不會帶圖片；不會的話這兩種 docx 改成自己組 OOXML（`word/media/`、`document.xml` 的 `w:drawing`），D189 補上。
+- 逐字稿的 md、docx：在第一個 `start ≥ at` 的段落前面插入圖片（md 的圖片同上另存資料夾）。txt、srt、vtt、複製到剪貼簿不放。
+- 封包：沿用參考文件（`documents.json` 和 `documents/` 的檔案），`documents.json` 每一份多 `at`（沒有就是 null）；舊版的拾音讀到 `at` 會忽略，畫面變成一般的參考文件。
+- 沒有畫面時每一種匯出逐位元組跟現在相同（標準答案 `export/` 不變）；有畫面的加新的情境。
+
+### 83.7 編輯會議、MCP（R109.9、R109.10）
+
+- 編輯會議（§81）：`at` 跟 `user_notes` 的時間點一樣用 `snap`（落在刪掉那段裡的移到切口，D190）；分成兩場時 `at` 在切點之後的搬到新的那場（檔案一起搬）；合併時另一場的畫面複製過來、時間照 §81.1 對應；`snapshot` 記下每張的 `at`，還原時放回去。標準答案 `util/edit-plan.json` 加畫面。
+- MCP：`get_transcript` 在對應的時間插入一行 `[12:34] [Screen] <辨識出的文字，換行換成空格>`（沒有字是 `[Screen]`）；`get_meeting_notes` 多 `screens` 陣列（`time`、`text`）。標準答案 `mcp/calls.json` 加一場有畫面的。
+
+### 83.8 DEBUG、驗證
+
+- `shiyinctl screenadd <圖檔> [秒數]`（同貼上：錄音中用當下時間，不然用給的秒數或播放位置）、`screenshot`（同按快捷鍵）、`screenmove <id> <秒數>`、`screendelete <id>`；`-debugFakeScreenshot <png>`：截圖不呼叫 ScreenCaptureKit、直接用這張（DEBUG 版是 ad-hoc 簽章，不要讓它跳權限詢問）。`state` 多 `screens`（id、at、讀取中、文字長度）。
+- 自動驗證：`record-sim` 錄音中 `screenshot`（假的截圖）、`screenadd` 兩張；停止、整理用 `fake-llm-server.py` 的四種 API 看請求裡的文字和圖片；匯出四種格式打開看；編輯會議裁掉、分成兩場、合併、還原後的 `at`；`Shiyin --mcp` 讀出來的內容。
+- 要使用者：真的權限詢問、拒絕後的提示和「打開系統設定」；真的 Zoom、Teams、Meet 分享畫面時按 ⌃⌥⌘S，截到的是對方分享的畫面、沒有拾音的視窗；全螢幕的會議 app 上按錄音島的「截圖」；真的 Claude Code、Codex 整理一場有截圖的會議，紀錄用得到圖表的內容。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3029,3 +3114,8 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 | D183 | 編輯畫面是 sheet（§81.5） | 獨立的視窗：編輯時同一場會議可能在別的地方被改（開始整理、改名、移到垃圾桶），要處理衝突；sheet 期間這場會議不會有其他操作 |
 | D184 | 設定改成側欄十一項（§82），取代 D110 的四個分頁 | 保留四頁、只整理版面：「錄音與轉錄」「進階」兩頁還是很長要一直捲，模型清單、環境檢查這種長的東西跟常用開關擠在一起。D110 怕「七個分頁看起來很難」是因為上方的分頁一字排開；側欄分組、每項有圖示，十一項也好找，每頁短，加上搜尋 |
 | D185 | 設定用一般的 `Window` 場景（§82） | SwiftUI 的 `Settings` 場景：視窗沒有可以拉大的樣式，`.windowResizability(.contentMinSize)`、內容給最大尺寸、自己補 `styleMask` 都會被改回去（macOS 26 實測），R108.5 的「可以拉大」做不到。代價：選單列的「設定⋯」、⌘, 要自己接，視窗會出現在「視窗」選單 |
+| D186 | 畫面放在 `documents`，加一欄 `at`（§83.1） | 另開一張表：存檔、文字辨識、永久刪除、合併時複製、封包都要再寫一次（Mac、Windows 各一份）。畫面跟參考文件不同的地方（有時間、顯示在逐字稿、送圖片）都看 `at`，「文件」選單和參考文件的長度分配只看 `at IS NULL` 的，原本的行為不變 |
+| D187 | 截圖用 ScreenCaptureKit 截游標所在的整個螢幕、排除拾音自己（§83.2；使用者選了截整個螢幕） | 每次框選範圍：比較精準，但開會中多一個動作，使用者選了一鍵截。`screencapture` 指令：排除不了拾音自己的視窗，權限也算在拾音身上。`CGWindowListCreateImage`：macOS 15 起不能用。只截會議 app 的視窗：分享的畫面不一定在會議 app 裡（投影片放映、另一個螢幕），也要多判斷哪個是會議 app |
+| D188 | 整理時送畫面的文字，支援看圖的整理工具同時送圖片本身（§83.5；使用者選了也送圖片） | 只送文字：四種工具都能用，但沒有字的圖表、照片、白板看不到。只送圖片：不能搜尋，不能看圖的工具就什麼都沒有。取捨：一次最多 20 張、縮到 1568 px（大約每張 1,600 token）；OpenAI 相容 API 預設不送（很多本機模型不能看圖）；企業伺服器先只送文字；提問不送圖片（每一題都送太貴） |
+| D189 | 匯出的會議紀錄把畫面集中在最後一節，逐字稿插在時間點（§83.6） | 插進會議紀錄的條目裡：紀錄是整理工具寫的，對不準哪一條講的是哪張畫面，硬插會放錯地方。只放在封包：使用者要把紀錄（含畫面）寄給沒有拾音的人 |
+| D190 | 編輯會議時，落在刪掉那段裡的畫面移到切口，不刪（§83.7） | 跟重點標記一樣刪掉：畫面是使用者自己加的資料，同我的筆記（D181）留下來；要刪的話可以在逐字稿上刪 |
