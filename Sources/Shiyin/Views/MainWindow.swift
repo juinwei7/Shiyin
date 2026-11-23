@@ -28,6 +28,7 @@ struct RootView: View {
             .sheet(isPresented: $model.showImportSheet) { ImportSheet(urls: model.pendingImport) }
             .sheet(isPresented: $model.showExportSheet) { ExportSheet() }
             .sheet(isPresented: $model.showRediarizeSheet) { RediarizeSheet() }
+            .sheet(isPresented: $model.showStopTimerSheet) { StopTimerSheet() }
             .alert("出了一點問題", isPresented: Binding(get: { model.errorMessage != nil },
                                                    set: { if !$0 { model.errorMessage = nil } })) {
                 Button("好") {}

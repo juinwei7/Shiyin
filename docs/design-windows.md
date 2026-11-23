@@ -869,6 +869,17 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **DEBUG 控制通道**：`screenadd <檔案> [秒數]`、`screenshot`、`screenmove <id> <秒數>`、`screendelete <id>`；`--set debugFakeScreenshot=<png>`；`state` 多 `screens`。
 - **驗證**：`dotnet test`（標準答案、`ScreenTests` 用假的截圖和假的剪貼簿）；虛擬機用控制通道和 UI Automation 走一遍錄音中截圖、貼上、回看、刪除、改時間、匯出打開看。要真的 Windows 電腦：真的 Teams、Zoom 分享畫面時按 Ctrl+Alt+Shift+S，截到的是分享的畫面、沒有拾音的視窗；兩個螢幕時截的是游標那個；150% 縮放時圖片的解析度對。
 
+### 11.43 定時停止錄音（R110，M§84、D191）
+
+- **Core**：`StopTimer`（`Shiyin.Core`，同 Mac 的 `StopTimer`）：`Presets`、`Next`、`Parse`、`Label`、`Remaining`、`DefaultTime`，規則、字跟 Mac 相同；單元測試 `StopTimerTests` 用 M§84 的例子（沒有標準答案：時間的字串由各自的程式產生，兩邊寫同樣的例子）。
+- **錄音**：`Recorder.StopAt`（本機時間的 `DateTime?`）、`SetStopTimer(DateTime?)`（錄音中才有作用，觸發 `Changed`）；`Tick`（每 0.05 秒）先看 `StopAt`，到了就停止、`Result.Scheduled = true`，暫停中也停；停止時清掉。`AppController.TimerStopped`（會議 id、標題）→ `Notifier.TimerStopped`（「已到設定的時間，自動停止錄音」、內文是會議標題，點了打開那場；同 `MeetingEndStopped`）。
+- **錄音畫面**：計時右邊一個 `DropDownButton`（同麥克風那個的樣子，碼錶圖示加「定時停止」，設定了寫「15:30 停止」），`MenuFlyout` 打開時才列（`StopTimerMenu.Fill`，系統匣共用）：設定了時不能按的「15:30 自動停止錄音」、分隔線、五個選項、「指定時間…」、設定了時分隔線和「取消定時停止」。
+- **系統匣**：錄音中的選單在「停止」下面加子選單「定時停止」（`MenuFlyoutSubItem`，同一份內容）；設定了時子選單的標題寫「15:30 自動停止錄音」。Windows 沒有「檔案」選單，入口是錄音畫面和系統匣（鍵盤：Tab 到錄音畫面的下拉按鈕）。
+- **錄音島**：滑過去的畫面在最新一句下面加一行「15:30 自動停止錄音」（次要文字）。
+- **指定時間…**：共用的彈窗（§11.39；同時只能一個 `ContentDialog`，先收起舊的）：標題、說明行、欄位「停止的時間」、「取消」「設定」同 Mac；`TextBox.TextChanged` 更新說明行和「設定」能不能按，說明行每秒照目前時間更新；錄音停了就收起。
+- **DEBUG**：控制通道 `stoptimer <秒數|off>`；`state` 的 `recorder.stopTimer`（`remaining`，沒設定是 -1；`label`）。
+- **驗證**：`dotnet test`（`StopTimerTests`、`Recorder` 到時間停止的測試）；虛擬機 `record-sim` 錄音中 `stoptimer 20` → 停止、轉錄、通知；UI Automation 打開錄音畫面的下拉選單選「30 分鐘後」→ 寫「HH:mm 停止」、「取消定時停止」；「指定時間…」輸入錯的、對的時間；系統匣的子選單；島滑過去的那一行。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

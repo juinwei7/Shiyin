@@ -13,6 +13,8 @@ final class Recorder {
         var error: String?
         /// 沒人說話太久而自動停止（R48.2）：最後有人說話的秒數
         var idleSince: Double? = nil
+        /// 到了定時停止的時間（R110.3）
+        var scheduled = false
     }
 
     struct LiveLine: Identifiable, Hashable {
@@ -136,6 +138,8 @@ final class Recorder {
     private(set) var idlePrompt = false
     /// 提醒出現（AppModel 送通知）
     @ObservationIgnored var onIdlePrompt: (() -> Void)?
+    /// 定時停止（design §84、R110）：到這個時間就停止錄音；跟著時鐘走，暫停也照算
+    private(set) var stopAt: Date?
     /// 15 分鐘提醒、30 分鐘自動停止；DEBUG 可以用啟動參數縮短（design §35.2）
     static var idleRemindSeconds: Double { debugSeconds("idleRemindSeconds") ?? 900 }
     static var idleStopSeconds: Double { debugSeconds("idleStopSeconds") ?? 1800 }
@@ -153,6 +157,10 @@ final class Recorder {
     var idleInfo: [String: Any] {
         ["idleSeconds": isRecording ? elapsed - lastSpeechAt : 0, "lastSpeechAt": lastSpeechAt, "prompt": idlePrompt,
          "liveActive": liveActive, "remindAfter": Self.idleRemindSeconds, "stopAfter": Self.idleStopSeconds]
+    }
+    /// 定時停止（design §84）：shiyinctl state 的 recorder.stopTimer
+    var stopTimerInfo: [String: Any] {
+        ["remaining": stopAt.map { max(0, $0.timeIntervalSinceNow) } ?? -1, "label": stopAt.map { StopTimer.label($0) } ?? ""]
     }
     #endif
 
@@ -285,6 +293,13 @@ final class Recorder {
         markSpeech()
     }
 
+    /// 定時停止（R110.1）：錄音中才有作用；nil 是取消。選了新的時間就取代原本的
+    func setStopTimer(_ date: Date?) {
+        guard isRecording, date != stopAt else { return }
+        stopAt = date
+        if let date { log.info("stop timer set, \(Int(date.timeIntervalSinceNow))s from now") } else { log.info("stop timer cancelled") }
+    }
+
     /// 有人在說話：重新計時，提醒收掉
     private func markSpeech() {
         lastSpeechAt = elapsed
@@ -375,7 +390,7 @@ final class Recorder {
         self.levelHint = nil
     }
 
-    func stop(idleSince: Double? = nil) {
+    func stop(idleSince: Double? = nil, scheduled: Bool = false) {
         guard isRecording, let meetingId else { return }
         // 在重新連接的佇列上停：等正在進行的重新連接做完，不會同時動 AVAudioEngine（design §50.2）
         let stopping = Array(sources.values)
@@ -395,7 +410,7 @@ final class Recorder {
         }
         cleanup()
         log.info("recording stopped, \(Int(duration))s")
-        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil, idleSince: idleSince))
+        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil, idleSince: idleSince, scheduled: scheduled))
     }
 
     static func openPrivacySettings(_ pane: String = "Privacy_Microphone") {
@@ -587,6 +602,12 @@ final class Recorder {
         guard let writer else { return }
         if writer.writeFailed {
             stop()
+            return
+        }
+        // 定時停止（design §84）：放在整秒的判斷外面，暫停時 elapsed 不走也要停
+        if let stopAt, Date() >= stopAt {
+            log.info("recording stopped at the scheduled time")
+            stop(scheduled: true)
             return
         }
         // 觀察的屬性只在值真的變了才設（@Observable 設成同樣的值也會讓畫面重算，design §25）
@@ -871,6 +892,7 @@ final class Recorder {
         micHint = nil
         micDevice = nil
         idlePrompt = false
+        stopAt = nil
         liveActive = false
         meetingId = nil
         startedAt = nil

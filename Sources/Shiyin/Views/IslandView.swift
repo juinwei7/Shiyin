@@ -158,6 +158,10 @@ struct IslandRoot: View {
             if let line = latestLine {
                 Text(line).foregroundStyle(.secondary).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
             }
+            if let stopAt = recorder.stopAt {
+                // 定時停止（design §84、R110.2）
+                Label("\(StopTimer.label(stopAt)) 自動停止錄音", systemImage: "timer").foregroundStyle(.secondary)
+            }
             if let hint = currentHint {
                 Label(hint.text, systemImage: hint.symbol).foregroundStyle(Color.signal).lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)

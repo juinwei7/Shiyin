@@ -111,6 +111,19 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(content)
     }
 
+    /// 到了定時停止的時間（R110.3、design §84）
+    func timerStopped(meetingId: Int64, title: String) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "已到設定的時間，自動停止錄音")
+        content.body = title
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meetingId)]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "timer": "stopped"]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
     /// 企業伺服器連不上太久，自動改在這台電腦轉錄（R93、design §67）
     func serverFallback(meeting: Meeting) {
         let content = UNMutableNotificationContent()

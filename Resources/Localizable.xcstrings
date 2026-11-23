@@ -58,6 +58,23 @@
     "%@ %@": {
       "extractionState": "manual"
     },
+    "%@ 停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 停止"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stops at %@"
+          }
+        }
+      }
+    },
     "%@ 回傳 HTTP %lld%@：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -156,6 +173,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Screen at %@ will be used when summarizing"
+          }
+        }
+      }
+    },
+    "%@ 自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 自动停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stops at %@"
+          }
+        }
+      }
+    },
+    "%@ 自動停止錄音（還有 %@），點一下可以改或取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 自动停止录音（还有 %@），点一下可以改或取消"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stops at %@ (%@ left). Click to change or cancel."
           }
         }
       }
@@ -1256,6 +1307,40 @@
         }
       }
     },
+    "1 小時 30 分鐘後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 小时 30 分钟后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 Hour 30 Minutes"
+          }
+        }
+      }
+    },
+    "1 小時後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 小时后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 Hour"
+          }
+        }
+      }
+    },
     "100%（標準）": {
       "extractionState": "manual",
       "localizations": {
@@ -1269,6 +1354,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "100%（标准）"
+          }
+        }
+      }
+    },
+    "2 小時後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 小时后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 2 Hours"
+          }
+        }
+      }
+    },
+    "3 小時後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 小时后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 3 Hours"
+          }
+        }
+      }
+    },
+    "30 分鐘後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 分钟后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 30 Minutes"
           }
         }
       }
@@ -3511,6 +3647,23 @@
         }
       }
     },
+    "今天 %@ 自動停止錄音並轉錄（%@後）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天 %@ 自动停止录音并转录（%@后）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording will stop and be transcribed today at %@ (in %@)."
+          }
+        }
+      }
+    },
     "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。": {
       "extractionState": "manual",
       "localizations": {
@@ -4194,6 +4347,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止并转录"
+          }
+        }
+      }
+    },
+    "停止的時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止的时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop at"
           }
         }
       }
@@ -6817,6 +6987,23 @@
         }
       }
     },
+    "取消定時停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消定时停止"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel Stop Timer"
+          }
+        }
+      }
+    },
     "取消略過": {
       "extractionState": "manual",
       "localizations": {
@@ -8172,6 +8359,40 @@
         }
       }
     },
+    "定時停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定时停止"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Timer"
+          }
+        }
+      }
+    },
+    "定時停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定时停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a Stop Time"
+          }
+        }
+      }
+    },
     "實際大小": {
       "extractionState": "manual",
       "localizations": {
@@ -8508,6 +8729,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Line deleted. To undo, right-click in the transcript and choose Undo."
+          }
+        }
+      }
+    },
+    "已到設定的時間，自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已到设置的时间，自动停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stopped at the time you set"
           }
         }
       }
@@ -11854,6 +12092,23 @@
         }
       }
     },
+    "指定時間…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定时间…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At a Specific Time…"
+          }
+        }
+      }
+    },
     "按 + 新增資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -13748,6 +14003,40 @@
         }
       }
     },
+    "明天 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明天 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomorrow %@"
+          }
+        }
+      }
+    },
+    "明天 %@ 自動停止錄音並轉錄（%@後）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明天 %@ 自动停止录音并转录（%@后）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording will stop and be transcribed tomorrow at %@ (in %@)."
+          }
+        }
+      }
+    },
     "是": {
       "extractionState": "manual",
       "localizations": {
@@ -13829,6 +14118,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "时间"
+          }
+        }
+      }
+    },
+    "時間到自動停止錄音並轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间到自动停止录音并转录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop and transcribe the recording automatically at a set time"
           }
         }
       }
@@ -21122,6 +21428,23 @@
         }
       }
     },
+    "請輸入像 15:30 的時間。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入像 15:30 的时间。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a time like 15:30."
+          }
+        }
+      }
+    },
     "議題": {
       "extractionState": "manual",
       "localizations": {
@@ -21526,6 +21849,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Go Here"
+          }
+        }
+      }
+    },
+    "輸入幾點幾分，到時間自動停止錄音並轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入几点几分，到时间自动停止录音并转录。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a time. Recording will stop and be transcribed then."
           }
         }
       }
@@ -24493,6 +24833,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "重点标记 %lld"
+          }
+        }
+      }
+    },
+    "錄一場不會一直守著的線上分享、講座時，按錄音畫面計時旁邊的「定時停止」，選 1 小時後、2 小時後或「指定時間…」（例如 16:00），時間到拾音會自己停止並轉錄，暫停也照算。選單列的拾音圖示、「檔案」選單也可以設定或取消。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录一场不会一直守着的线上分享、讲座时，按录音画面计时旁边的“定时停止”，选 1 小时后、2 小时后或“指定时间…”（例如 16:00），时间到拾音会自己停止并转录，暂停也照算。菜单栏的拾音图标、“文件”菜单也可以设置或取消。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you record an online talk or lecture you won't be watching the whole time, click Stop Timer next to the clock on the recording screen and choose In 1 Hour, In 2 Hours, or At a Specific Time… (for example 16:00). Shiyin stops and transcribes the recording at that time, even while paused. You can also set or cancel it from the Shiyin icon in the menu bar or the File menu."
           }
         }
       }

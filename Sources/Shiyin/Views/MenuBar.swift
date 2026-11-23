@@ -59,6 +59,19 @@ struct MenuBarContent: View {
                     Button(recorder.isPaused ? "繼續" : "暫停") { recorder.isPaused ? recorder.resume() : recorder.pause() }
                     Button("停止") { recorder.stop() }
                 }
+                // 定時停止（design §84、R110）
+                Menu {
+                    StopTimerMenuItems(model: model)
+                } label: {
+                    Label {
+                        if let stopAt = recorder.stopAt { Text("\(StopTimer.label(stopAt)) 自動停止錄音") } else { Text("定時停止") }
+                    } icon: {
+                        Image(systemName: "timer")
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .controlSize(.small)
+                .fixedSize()
                 if recorder.hasMic {
                     RecorderMeter(recorder: recorder, system: false, segments: 24)
                     // 正在用哪一支麥克風（design §38.3）

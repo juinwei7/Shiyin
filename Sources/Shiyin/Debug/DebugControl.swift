@@ -744,6 +744,8 @@ enum DebugControl {
             model.recorder.simulateFlapping(times: Int(args[1]) ?? 0, seconds: args.count > 2 ? Double(args[2]) ?? 0 : 0)
         case "recordlang":   // recordlang <語言代碼>：錄音中換會議語言（等於按「改回」；zh、en、ja、yue、ko…）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
+        case "stoptimer":   // stoptimer <秒數|off>：從現在起幾秒後定時停止（design §84）
+            model.recorder.setStopTimer(args.count > 1 && args[1] != "off" ? Date().addingTimeInterval(Double(args[1]) ?? 0) : nil)
         case "record-sim":
             // record-sim <音檔> <倍速> <both: 1/0/2>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）
             let channels = args.count > 3 ? args[3] : "0"
@@ -1040,7 +1042,7 @@ enum DebugControl {
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": model.openWindowById?(SettingsPage.windowID)
-        case "preview":   // preview <settings|onboarding [步驟]|import|rename> [front] [height=<點>]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
+        case "preview":   // preview <settings|onboarding [步驟]|import|rename|stoptimer|menubar> [front] [height=<點>]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
@@ -1068,7 +1070,7 @@ enum DebugControl {
             window.title = window.identifier!.rawValue
             window.isReleasedWhenClosed = false
             // editinfo、replace：會議頁裡自己打開的彈窗（編輯會議資訊、用詞修正，design §80），用目前選取的會議
-            if args.count > 1, ["import", "rename", "editinfo", "replace", "rediarize", "noteseditor"].contains(args[1]) {
+            if args.count > 1, ["import", "rename", "editinfo", "replace", "rediarize", "noteseditor", "stoptimer", "menubar"].contains(args[1]) {
                 window.identifier = NSUserInterfaceItemIdentifier("\(args[1])-preview")
                 window.title = window.identifier!.rawValue
                 let view: AnyView = switch args[1] {
@@ -1076,6 +1078,8 @@ enum DebugControl {
                 case "editinfo":
                     if let meeting = model.detail?.meeting { AnyView(EditInfoForm(meeting: meeting) {}.environment(model)) } else { AnyView(EmptyView()) }
                 case "replace": AnyView(ReplaceSheet(initialFind: "Lumeo").environment(model))
+                case "stoptimer": AnyView(StopTimerSheet().environment(model))   // 定時停止的「指定時間…」（design §84）
+                case "menubar": AnyView(MenuBarContent().environment(model).tint(.celadon))   // 選單列的小視窗（snapshot 畫不出裡面的 Menu）
                 case "noteseditor":   // 編輯會議紀錄（紀錄分頁的「編輯」，R6.6）
                     if let notes = model.detail?.notes {
                         AnyView(NotesEditor(notes: .constant(notes)) { _ in }.frame(width: 900, height: 560).environment(model))
@@ -1232,6 +1236,7 @@ enum DebugControl {
                          "permissionRestarts": model.recorder.permissionRestarts,   // 允許了權限而重新接上電腦聲音（design §51.1）
                          "systemSilent": model.recorder.systemSilent,
                          "idle": model.recorder.idleInfo,   // 忘了停止錄音（design §35）
+                         "stopTimer": model.recorder.stopTimerInfo,   // 定時停止（design §84）
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? "",

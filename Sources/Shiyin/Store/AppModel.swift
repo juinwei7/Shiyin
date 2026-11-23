@@ -880,6 +880,20 @@ final class AppModel {
         }
     }
 
+    /// 定時停止（design §84、R110）：從現在起幾分鐘後
+    func setStopTimer(minutes: Int) {
+        recorder.setStopTimer(Date().addingTimeInterval(TimeInterval(minutes * 60)))
+    }
+
+    /// 「指定時間…」的彈窗（design §84）：從選單列、「檔案」選單打開時先打開主視窗
+    var showStopTimerSheet = false
+
+    func openStopTimerSheet() {
+        guard recorder.isRecording else { return }
+        openMainWindow?()
+        showStopTimerSheet = true
+    }
+
     #if DEBUG
     /// 只在 DEBUG：用音訊檔模擬錄音（shiyinctl record-sim）
     func startSimulatedRecording(file: URL, speed: Double, both: Bool, systemSilent: Bool = false) {
@@ -926,6 +940,7 @@ final class AppModel {
                 let payload = until.flatMap { try? JSONEncoder().encode(TranscribePayload(until: $0)) }.map { String(decoding: $0, as: UTF8.self) }
                 try db.enqueue(result.meetingId, kind: .transcribe, payload: payload)
                 if result.idleSince != nil { notifier.idleStopped(meetingId: result.meetingId, title: meeting.displayTitle) }
+                if result.scheduled { notifier.timerStopped(meetingId: result.meetingId, title: meeting.displayTitle) }
                 UsageStats.shared.recorded(seconds: result.duration)
             } catch {
                 // 資料庫寫不進去（磁碟滿時常一起發生）：搬回 recording/，下次開啟由復原流程接回（design §20.3）。

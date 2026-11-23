@@ -149,6 +149,9 @@ struct RecordingPanel: View {
                 RecorderClock(recorder: recorder).foregroundStyle(.secondary)
             }
             .font(.title3)
+            // 定時停止（design §84、R110）：跟麥克風選單一起先縮（放不下時只留圖示），按鈕的字留到最後
+            StopTimerMenu()
+                .layoutPriority(-1)
             if recorder.hasMic {
                 Label { RecorderMeter(recorder: recorder, system: false) } icon: { Image(systemName: "mic") }
                     .help("麥克風音量")
@@ -501,5 +504,116 @@ struct MicrophoneMenu: View {
         .menuStyle(.borderlessButton)
         .help(current.map { String(localized: "正在用「\($0.name)」收音，點一下可以換") } ?? String(localized: "點一下可以換麥克風"))
         .accessibilityLabel(String(localized: "麥克風：\(current?.name ?? "")"))
+    }
+}
+
+// MARK: - 定時停止（design §84、R110）
+
+/// 定時停止的選單內容：錄音畫面、「檔案」選單、選單列的小視窗共用
+struct StopTimerMenuItems: View {
+    let model: AppModel
+    /// 「指定時間…」要先打開主視窗（從選單列、「檔案」選單）；錄音畫面本來就在主視窗裡，不用（也不搶前景）
+    var opensWindow = true
+
+    var body: some View {
+        let recorder = model.recorder
+        if let stopAt = recorder.stopAt {
+            Text("\(StopTimer.label(stopAt)) 自動停止錄音")
+            Divider()
+        }
+        ForEach(StopTimer.presets, id: \.minutes) { preset in
+            Button(preset.title) { model.setStopTimer(minutes: preset.minutes) }
+        }
+        Button("指定時間…") {
+            if opensWindow { model.openStopTimerSheet() } else { model.showStopTimerSheet = true }
+        }
+        if recorder.stopAt != nil {
+            Divider()
+            Button("取消定時停止") { recorder.setStopTimer(nil) }
+        }
+    }
+}
+
+/// 錄音畫面計時旁邊的選單：沒設定時寫「定時停止」，設定了寫「15:30 停止」；放不下時只留圖示（說明在滑過提示）
+struct StopTimerMenu: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            menu.labelStyle(.titleAndIcon)
+            menu.labelStyle(.iconOnly)
+        }
+    }
+
+    private var menu: some View {
+        let stopAt = model.recorder.stopAt
+        return Menu {
+            StopTimerMenuItems(model: model, opensWindow: false)
+        } label: {
+            Label {
+                if let stopAt { Text("\(StopTimer.label(stopAt)) 停止") } else { Text("定時停止") }
+            } icon: {
+                Image(systemName: "timer")
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(stopAt.map { String(localized: "\(StopTimer.label($0)) 自動停止錄音（還有 \(StopTimer.remaining($0))），點一下可以改或取消") }
+              ?? String(localized: "時間到自動停止錄音並轉錄"))
+        .accessibilityLabel(stopAt.map { String(localized: "\(StopTimer.label($0)) 自動停止錄音") } ?? String(localized: "定時停止"))
+    }
+}
+
+/// 「指定時間…」：輸入幾點幾分（共用的彈窗，design §80）
+struct StopTimerSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+
+    var body: some View {
+        let time = StopTimer.parse(text)
+        VStack(alignment: .leading, spacing: 18) {
+            // 說明行寫還有多久，跟著時間走
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                SheetHeader(title: String(localized: "定時停止錄音"), subtitle: hint(time, now: context.date))
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "停止的時間"))
+                SheetTextField(placeholder: "15:30", text: $text, focusOnAppear: true) { if let time { save(time) } }
+            }
+            HStack(spacing: 10) {
+                Spacer()
+                Button("取消") { dismiss() }
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
+                    .keyboardShortcut(.cancelAction)
+                // 「設定」在別處是名詞（Settings），這裡是動詞
+                Button(MeetingLanguage.ui(zh: "設定", en: "Set")) { if let time { save(time) } }
+                    .buttonStyle(SheetPillButtonStyle(.primary))
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(time == nil)
+            }
+        }
+        .sheetChrome()
+        .onAppear { text = model.recorder.stopAt.map { StopTimer.clock($0) } ?? StopTimer.defaultTime() }
+        // 彈窗開著時錄音停了（按了停止、時間到）：不用設了
+        .onChange(of: model.recorder.isRecording) { _, recording in if !recording { dismiss() } }
+    }
+
+    /// 說明行：幾點停、還有多久；格式不對時說要怎麼寫
+    private func hint(_ time: (hour: Int, minute: Int)?, now: Date) -> String {
+        guard let time else {
+            return text.trimmingCharacters(in: .whitespaces).isEmpty
+                ? String(localized: "輸入幾點幾分，到時間自動停止錄音並轉錄。") : String(localized: "請輸入像 15:30 的時間。")
+        }
+        let date = StopTimer.next(hour: time.hour, minute: time.minute, after: now)
+        let clock = StopTimer.clock(date), remaining = StopTimer.remaining(date, now: now)
+        return Calendar.current.isDate(date, inSameDayAs: now)
+            ? String(localized: "今天 \(clock) 自動停止錄音並轉錄（\(remaining)後）。")
+            : String(localized: "明天 \(clock) 自動停止錄音並轉錄（\(remaining)後）。")
+    }
+
+    private func save(_ time: (hour: Int, minute: Int)) {
+        model.recorder.setStopTimer(StopTimer.next(hour: time.hour, minute: time.minute, after: Date()))
+        dismiss()
     }
 }
