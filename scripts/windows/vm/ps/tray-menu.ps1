@@ -1,6 +1,7 @@
-﻿# 在桌面工作階段裡按系統匣的拾音圖示右鍵、選選單裡的一項（design-windows §15.4）：tray-menu.ps1 [選項，預設「結束拾音」]
+﻿# 在桌面工作階段裡按系統匣的拾音圖示右鍵、選選單裡的一項（design-windows §15.4）：tray-menu.ps1 [選項，預設「結束拾音」] [子選單的項目或 ?]
+# 有給子選單的項目時：按選項展開子選單、列出選單裡的項目，再按那一項（? 只列出來）
 # 圖示通常在「顯示隱藏的圖示」裡：先找，找不到才打開（已經開著時再按會關掉）。右鍵沒有 UIA 的模式，用 SetCursorPos＋mouse_event（虛擬機裡的滑鼠，不是 Mac 的）
-param([string]$Item = '結束拾音')   # PowerShell 的變數不分大小寫：下面不能再用 $item
+param([string]$Item = '結束拾音', [string]$SubItem = '')   # PowerShell 的變數不分大小寫：下面不能再用 $item、$subitem
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 Add-Type @'
 using System; using System.Runtime.InteropServices;
@@ -45,5 +46,26 @@ foreach ($w in $A::RootElement.FindAll($T::Children, [System.Windows.Automation.
 }
 if (-not $found) { "no menu item: $Item"; return }
 "item: $($found.Current.ControlType.ProgrammaticName)"
+if ($SubItem) {
+  # 子選單按一下就展開（ExpandCollapsePattern 的 Expand 會把整個選單關掉；只移游標不會展開）：虛擬機裡的滑鼠按那一項
+  $b = $found.Current.BoundingRectangle
+  [M]::SetCursorPos([int]($b.X + $b.Width / 2), [int]($b.Y + $b.Height / 2)) | Out-Null
+  Start-Sleep -Milliseconds 300
+  [M]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 80; [M]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+  Start-Sleep -Milliseconds 1200
+  $target = $null
+  foreach ($w in $A::RootElement.FindAll($T::Children, [System.Windows.Automation.Condition]::TrueCondition)) {
+    if ($procs -notcontains $w.Current.ProcessId) { continue }
+    foreach ($m in $w.FindAll($T::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem)))) {
+      "  $($m.Current.Name)$(if (-not $m.Current.IsEnabled) { '（停用）' })"
+      if ($m.Current.Name -eq $SubItem) { $target = $m }
+    }
+  }
+  if ($SubItem -eq '?') { return }
+  if (-not $target) { "no submenu item: $SubItem"; return }
+  $target.GetCurrentPattern($P::Pattern).Invoke()
+  "invoked $Item ▸ $SubItem"
+  return
+}
 $found.GetCurrentPattern($P::Pattern).Invoke()
 "invoked $Item"

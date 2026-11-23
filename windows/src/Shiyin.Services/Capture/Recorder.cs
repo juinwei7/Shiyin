@@ -11,8 +11,8 @@ namespace Shiyin.Services.Capture;
 /// </summary>
 public sealed class Recorder
 {
-    /// <summary>IdleSince：沒人說話太久而自動停止（R48.2）時，最後有人說話的秒數</summary>
-    public sealed record Result(long MeetingId, string? File, double Duration, string? Error, double? IdleSince = null);
+    /// <summary>IdleSince：沒人說話太久而自動停止（R48.2）時，最後有人說話的秒數；Scheduled：到了定時停止的時間（R110.3）</summary>
+    public sealed record Result(long MeetingId, string? File, double Duration, string? Error, double? IdleSince = null, bool Scheduled = false);
     public sealed record LiveLine(double Start, double End, string Text);
 
     /// <summary>收音提醒（M§26.1、R24.1、R24.3）</summary>
@@ -105,6 +105,9 @@ public sealed class Recorder
     /// <summary>15 分鐘提醒、30 分鐘自動停止；DEBUG 用 --set idleRemindSeconds=…、idleStopSeconds=… 縮短（AppHost 設）</summary>
     public double IdleRemindSeconds { get; set; } = 900;
     public double IdleStopSeconds { get; set; } = 1800;
+    /// <summary>定時停止（R110、M§84）：到這個時間（本機時間）就停止錄音；跟著時鐘走，暫停也照算</summary>
+    public DateTime? StopAt { get { lock (gate) return stopAt; } }
+    DateTime? stopAt;
     /// <summary>沒人說話多久（DEBUG 的 state）</summary>
     public double IdleSeconds { get { lock (gate) return IsRecording ? Elapsed - lastSpeechAt : 0; } }
     public double LastSpeechAt { get { lock (gate) return lastSpeechAt; } }
@@ -250,6 +253,18 @@ public sealed class Recorder
         Notify();
     }
 
+    /// <summary>定時停止（R110.1）：錄音中才有作用；null 是取消。選了新的時間就取代原本的</summary>
+    public void SetStopTimer(DateTime? at)
+    {
+        lock (gate)
+        {
+            if (!IsRecording || stopAt == at) return;
+            stopAt = at;
+        }
+        Log.Info(at is DateTime t ? $"stop timer set, {(int)(t - DateTime.Now).TotalSeconds}s from now" : "stop timer cancelled");
+        Notify();
+    }
+
     /// <summary>有人在說話：重新計時、提醒收掉。回傳提醒有沒有收掉（畫面要重畫）</summary>
     bool MarkSpeechLocked()
     {
@@ -366,8 +381,8 @@ public sealed class Recorder
 
     public void Stop() => Stop(null);
 
-    /// <summary>idleSince：沒人說話太久而自動停止（R48.2），最後有人說話的秒數</summary>
-    public void Stop(double? idleSince)
+    /// <summary>idleSince：沒人說話太久而自動停止（R48.2），最後有人說話的秒數；scheduled：到了定時停止的時間（R110.3）</summary>
+    public void Stop(double? idleSince, bool scheduled = false)
     {
         Result result;
         ILiveTranscriber? finishing;
@@ -389,7 +404,7 @@ public sealed class Recorder
             }
             finishing = live;
             Cleanup();
-            result = new Result(meetingId, file, duration, null, idleSince);
+            result = new Result(meetingId, file, duration, null, idleSince, scheduled);
         }
         Log.Info($"recording stopped, {(int)duration}s");
         _ = Task.Run(() =>
@@ -623,11 +638,18 @@ public sealed class Recorder
     {
         var changed = false;
         var stop = false;
+        var scheduled = false;
         double? idleSince = null;
         lock (gate)
         {
             if (generation != current || writer is not { } w) return;
             if (w.WriteFailed) stop = true;
+            // 定時停止（M§84）：放在整秒的判斷外面，暫停時 Elapsed 不走也要停
+            else if (stopAt is DateTime at && DateTime.Now >= at)
+            {
+                Log.Info("recording stopped at the scheduled time");
+                (stop, scheduled) = (true, true);
+            }
             else
             {
                 Elapsed = w.RecordedSeconds;
@@ -667,7 +689,7 @@ public sealed class Recorder
                 if (DateTime.UtcNow - lastDiskCheck >= TimeSpan.FromSeconds(30)) changed |= CheckDiskSpace(w, starting: false);
             }
         }
-        if (stop) Stop(idleSince);
+        if (stop) Stop(idleSince, scheduled);
         else if (changed) Notify();
     }
 
@@ -911,6 +933,7 @@ public sealed class Recorder
         live = null;
         liveActive = false;
         IdlePrompt = false;
+        stopAt = null;
         simulation = null;
         tap.SetLive(null);
         tap.SetDetector(null);

@@ -690,6 +690,10 @@ public sealed class RecordingPanel
     /// <summary>正在收音的麥克風（R58.2）：點了從清單換一支，錄音不中斷</summary>
     readonly DropDownButton micName = new() { MaxWidth = 180, Padding = new Thickness(8, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center };
     readonly TextBlock micNameText = Ui.Text("", 13, wrap: false);
+    /// <summary>定時停止（R110、M§84）：計時旁邊，沒設定時寫「定時停止」，設定了寫「15:30 停止」</summary>
+    readonly DropDownButton stopTimer = new() { Padding = new Thickness(8, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center };
+    readonly TextBlock stopTimerText = Ui.Text("", 13, wrap: false);
+    string? stopTimerTip;
     // 音量條各自一列，一開始就建好，之後只切換顯示：每次更新都重建 Row 的話，音量條還在舊的 Row 裡，
     // 再放進新的 Row 會丟出「已經是別的元件的子元件」（0x800F1000，2026-10-21 在虛擬機錄音時當掉）
     readonly StackPanel micRow, systemRow;
@@ -737,6 +741,15 @@ public sealed class RecordingPanel
             })) micMenu.Items.Add(item);
         });
         micName.Flyout = micMenu;
+        stopTimer.Content = Ui.Row(6, new FontIcon { Glyph = "\uE916", FontSize = 14 }, stopTimerText);
+        var stopTimerMenu = new MenuFlyout();
+        // 打開時才列：設定了時多了最上面幾點停、最下面取消
+        stopTimerMenu.Opening += (_, _) => Ui.Guard(() =>
+        {
+            stopTimerMenu.Items.Clear();
+            foreach (var item in StopTimerMenu.Items(host, () => _ = Dialogs.PickStopTime(window))) stopTimerMenu.Items.Add(item);
+        });
+        stopTimer.Flyout = stopTimerMenu;
         meters.Children.Add(micRow);
         meters.Children.Add(micName);
         meters.Children.Add(systemRow);
@@ -751,7 +764,7 @@ public sealed class RecordingPanel
         // 音量條放中間那欄：視窗不夠寬時截掉音量條，按鈕一直看得到（英文的「Stop & Transcribe」比較寬，原本會被擠出視窗，2026-10-22 介面巡檢）
         meters.HorizontalAlignment = HorizontalAlignment.Left;
         meters.VerticalAlignment = VerticalAlignment.Center;
-        var controls = Ui.Bar(Ui.Row(8, dot, state, clock), meters, Ui.Row(10, pause, bookmark, stop), 14);
+        var controls = Ui.Bar(Ui.Row(8, dot, state, clock, stopTimer), meters, Ui.Row(10, pause, bookmark, stop), 14);
         warning.Foreground = Ui.Signal;
         var head = Ui.Column(4, controls, warning);
         head.Padding = new Thickness(20, 12, 20, 8);
@@ -826,6 +839,7 @@ public sealed class RecordingPanel
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(micName, L.F("麥克風：%@", name));
         }
         systemRow.Visibility = r.HasSystem ? Visibility.Visible : Visibility.Collapsed;
+        UpdateStopTimer(r);
         mic.Running = r.HasMic;
         system.Running = r.HasSystem;
         warning.Text = r.DeviceWarning
@@ -911,6 +925,24 @@ public sealed class RecordingPanel
     }
 
 
+    /// <summary>定時停止的按鈕：字、無障礙名稱、滑過提示（還有幾分鐘）只在變了時才設，打開著的提示不會閃</summary>
+    void UpdateStopTimer(Recorder r)
+    {
+        var now = DateTime.Now;
+        var at = r.StopAt;
+        var label = at is DateTime a ? L.F("%@ 停止", StopTimer.Label(a, now)) : L.T("定時停止");
+        if (stopTimerText.Text != label)
+        {
+            stopTimerText.Text = label;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(stopTimer, at is DateTime b ? StopTimerMenu.Status(b) : L.T("定時停止"));
+        }
+        var tip = at is DateTime c ? L.F("%@ 自動停止錄音（還有 %@），點一下可以改或取消", StopTimer.Label(c, now), StopTimer.Remaining(c, now))
+            : L.T("時間到自動停止錄音並轉錄");
+        if (tip == stopTimerTip) return;
+        stopTimerTip = tip;
+        ToolTipService.SetToolTip(stopTimer, tip);
+    }
+
     /// <summary>文字大小改了（R59）：即時逐字稿、正在講的那句、我的筆記換成新的大小，已經出現的句子重建</summary>
     public void Rescale()
     {
@@ -961,6 +993,35 @@ public static class MicrophoneMenu
     /// <summary>某一支的名稱；空的是系統預設的那支</summary>
     public static string Name(AppHost host, string id) =>
         id.Length == 0 ? host.DefaultMicrophone()?.Name ?? L.T("系統預設") : host.MicrophoneList().FirstOrDefault(d => d.Id == id)?.Name ?? id;
+}
+
+/// <summary>
+/// 定時停止的選單（R110、M§84，同 Mac 的 StopTimerMenuItems）：錄音畫面的下拉按鈕、系統匣的子選單共用。
+/// 設定了時最上面是不能按的「15:30 自動停止錄音」、最下面「取消定時停止」；選了選項就從現在算起，取代原本的
+/// </summary>
+public static class StopTimerMenu
+{
+    public static List<MenuFlyoutItemBase> Items(AppHost host, Action pickTime)
+    {
+        var recorder = host.Recorder;
+        var items = new List<MenuFlyoutItemBase>();
+        if (recorder.StopAt is DateTime at)
+        {
+            items.Add(new MenuFlyoutItem { Text = Status(at), IsEnabled = false });
+            items.Add(new MenuFlyoutSeparator());
+        }
+        foreach (var (minutes, title) in StopTimer.Presets) items.Add(Ui.Item(title, () => recorder.SetStopTimer(DateTime.Now.AddMinutes(minutes))));
+        items.Add(Ui.Item(L.T("指定時間…"), pickTime));
+        if (recorder.StopAt is not null)
+        {
+            items.Add(new MenuFlyoutSeparator());
+            items.Add(Ui.Item(L.T("取消定時停止"), () => recorder.SetStopTimer(null)));
+        }
+        return items;
+    }
+
+    /// <summary>「15:30 自動停止錄音」：選單最上面、系統匣的子選單標題、錄音島</summary>
+    public static string Status(DateTime at) => L.F("%@ 自動停止錄音", StopTimer.Label(at, DateTime.Now));
 }
 
 /// <summary>

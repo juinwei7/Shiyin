@@ -192,6 +192,10 @@ public static partial class ControlPipe
                 var both = args.Length > 3 && args[3] is "1" or "2";
                 return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder ?? "", args.Length > 3 && args[3] == "2") };
             case "recordstop": host.Recorder.Stop(); return Ok;
+            // stoptimer <秒數|off>：從現在起幾秒後定時停止（M§84）
+            case "stoptimer" when args.Length > 1:
+                host.Recorder.SetStopTimer(args[1] != "off" && double.TryParse(args[1], out var after) ? DateTime.Now.AddSeconds(after) : null);
+                return Ok;
             case "recordpause": if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause(); return Ok;
             case "recordstall" when args.Length > 1 && int.TryParse(args[1], out var channel):
                 host.Recorder.SimulateStall(channel, args.Length > 2 && double.TryParse(args[2], out var seconds) ? seconds : null);
@@ -687,6 +691,12 @@ public static partial class ControlPipe
                 {
                     ["idleSeconds"] = r.IdleSeconds, ["lastSpeechAt"] = r.LastSpeechAt, ["prompt"] = r.IdlePrompt, ["liveActive"] = r.LiveActive,
                     ["remindAfter"] = r.IdleRemindSeconds, ["stopAfter"] = r.IdleStopSeconds,
+                },
+                // 定時停止（M§84）：剩幾秒，沒設定是 -1
+                ["stopTimer"] = new JsonObject
+                {
+                    ["remaining"] = r.StopAt is DateTime stopAt ? Math.Max(0, (stopAt - DateTime.Now).TotalSeconds) : -1,
+                    ["label"] = r.StopAt is DateTime stopLabel ? StopTimer.Label(stopLabel, DateTime.Now) : "",
                 },
             },
             ["hotKeyError"] = host.HotKeyError,

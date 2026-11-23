@@ -389,6 +389,60 @@ public static partial class Dialogs
         AppHost.Current.Controller.UpdateInfo(meeting.Id!.Value, edited == meeting.DisplayTitle ? meeting.Title : edited, dateText, participants.Text);
     }
 
+    // MARK: 定時停止（R110、M§84）
+
+    /// <summary>
+    /// 「指定時間…」（同 Mac 的 StopTimerSheet）：輸入幾點幾分（帶目前設定的時間，沒有時是一小時後、取到 5 分鐘）；
+    /// 說明行寫今天／明天幾點、還有多久，每秒更新；格式不對時「設定」不能按；錄音停了就收起
+    /// </summary>
+    public static async Task PickStopTime(MainWindow window)
+    {
+        var recorder = AppHost.Current.Recorder;
+        if (window.XamlRoot is null || !recorder.IsRecording) return;
+        var field = Sheet.TextField(recorder.StopAt is DateTime at ? StopTimer.Clock(at) : StopTimer.DefaultTime(DateTime.Now), "15:30");
+        var heading = L.T("定時停止錄音");
+        var sheet = new SheetDialog(window, heading);
+        var subtitle = Sheet.Subtitle("");
+        // 「設定」在別處是名詞（Settings），這裡是動詞
+        var primary = Sheet.Pill(MeetingLanguages.Ui("設定", "Set"), Sheet.Kind.Primary);
+        void Update()
+        {
+            primary.IsEnabled = StopTimer.Parse(field.Text) is not null;
+            if (StopTimer.Parse(field.Text) is not (int hour, int minute))
+            {
+                subtitle.Text = field.Text.Trim().Length == 0 ? L.T("輸入幾點幾分，到時間自動停止錄音並轉錄。") : L.T("請輸入像 15:30 的時間。");
+                return;
+            }
+            var now = DateTime.Now;
+            var date = StopTimer.Next(hour, minute, now);
+            subtitle.Text = date.Date == now.Date
+                ? L.F("今天 %@ 自動停止錄音並轉錄（%@後）。", StopTimer.Clock(date), StopTimer.Remaining(date, now))
+                : L.F("明天 %@ 自動停止錄音並轉錄（%@後）。", StopTimer.Clock(date), StopTimer.Remaining(date, now));
+        }
+        void Save()
+        {
+            if (StopTimer.Parse(field.Text) is not (int hour, int minute)) return;
+            recorder.SetStopTimer(StopTimer.Next(hour, minute, DateTime.Now));
+            sheet.Close();
+        }
+        primary.Click += (_, _) => Save();
+        field.TextChanged += (_, _) => Update();
+        Update();
+        // 說明行跟著時間走；錄音停了（按了停止、時間到）就不用設了
+        var tick = window.DispatcherQueue.CreateTimer();
+        tick.Interval = TimeSpan.FromSeconds(1);
+        tick.Tick += (_, _) => Ui.Guard(() => { if (!recorder.IsRecording) sheet.Close(); else Update(); });
+        sheet.Dialog.Opened += (_, _) => tick.Start();
+        sheet.Dialog.Closed += (_, _) => tick.Stop();
+        sheet.Form.Children.Add(Sheet.Header(heading, sheet.Cancel, subtitle));
+        sheet.Form.Children.Add(Sheet.Labeled(L.T("停止的時間"), field));
+        sheet.Form.Children.Add(Sheet.Buttons(null, Sheet.Pill(L.T("取消"), click: sheet.Cancel), primary));
+        sheet.Submit = Save;
+        sheet.Primary = primary;
+        sheet.Focus = field;
+        await sheet.Show();
+    }
+
     // MARK: 用詞修正（R4.5）
 
     /// <summary>同 Mac 的 ReplaceSheet：錯誤寫法、正確寫法兩欄；「全部取代」（Enter）留在對話框裡顯示結果，之後「取消」換成「完成」</summary>

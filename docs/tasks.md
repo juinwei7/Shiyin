@@ -10,7 +10,6 @@
 ## 定時停止錄音（R110，design §84、design-windows §11.43、D191；2026-11-23 使用者轉來的許願，使用者：「可以」）
 
 - [~] **TS1 Mac**（§84）：程式完成，DEBUG 版驗過（2026-11-23，見 commit 訊息）。還差（要使用者）：真的選單列圖示點開小視窗、在裡面打開「定時停止」選單（這次用 `preview menubar` 看的）；「指定時間…」打一個錯的時間（例如 25:00）看說明行和「設定」不能按（背景的測試版打不了字，規則用小程式驗過）
-- [ ] **TS2 Windows**（design-windows §11.43）：驗證：`dotnet test`（`StopTimerTests`、錄音器到時間停止）；虛擬機 `record-sim` 錄音中 `stoptimer 20` → 停止、轉錄、通知；UI Automation 走錄音畫面的下拉選單、「指定時間…」彈窗、系統匣的子選單、島滑過去的那一行；`l10n.py windows-check` 沒有缺的英文
 
 ## 會議中的畫面（R109，design §83、design-windows §11.42、D186～D190、D173；2026-11-19 Threads 上的使用者建議，使用者選了截整個螢幕、也送圖片、匯出也放）
 

@@ -69,6 +69,8 @@ public sealed partial class AppController
     public event Action<string>? Error;
     /// <summary>沒人說話太久，自動停止了錄音（R48.2）：App 送通知（會議 id、標題）</summary>
     public event Action<long, string>? IdleStopped;
+    /// <summary>到了定時停止的時間，自動停止了（R110.3）：會議 id、標題</summary>
+    public event Action<long, string>? TimerStopped;
     /// <summary>資料改了：會議 id（null 是列表也要重讀）</summary>
     public event Action<long?>? Changed;
     /// <summary>要顯示這場會議（匯入完、錄音開始、點了通知）</summary>
@@ -441,6 +443,7 @@ public sealed partial class AppController
                 Db.Enqueue(result.MeetingId, JobKind.Transcribe, until is double u ? JobRunner.Encode(new TranscribePayload(u)) : null);
                 Usage?.Recorded(result.Duration);
                 if (result.IdleSince is not null) IdleStopped?.Invoke(result.MeetingId, meeting.DisplayTitle);
+                if (result.Scheduled) TimerStopped?.Invoke(result.MeetingId, meeting.DisplayTitle);
             }
             catch
             {

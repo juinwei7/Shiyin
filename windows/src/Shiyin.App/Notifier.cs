@@ -126,6 +126,10 @@ public sealed class Notifier
     public void IdleStopped(long meetingId, string title) =>
         Show(NotificationLinks.OpenMeeting(meetingId), L.T("已自動停止錄音"), L.F("%@：30 分鐘沒有人說話", title));
 
+    /// <summary>到了定時停止的時間（R110.3、M§84）：內文是會議標題，點了打開那場會議</summary>
+    public void TimerStopped(long meetingId, string title) =>
+        Show(NotificationLinks.OpenMeeting(meetingId), L.T("已到設定的時間，自動停止錄音"), title);
+
     /// <summary>會議結束、倒數完自動停止錄音（R95、M§69）：點了打開那場會議</summary>
     public void MeetingEndStopped(long meetingId, string title) =>
         Show(NotificationLinks.OpenMeeting(meetingId), L.T("會議結束，已自動停止錄音"), title);

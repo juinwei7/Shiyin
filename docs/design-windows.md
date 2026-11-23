@@ -873,10 +873,10 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 - **Core**：`StopTimer`（`Shiyin.Core`，同 Mac 的 `StopTimer`）：`Presets`、`Next`、`Parse`、`Label`、`Remaining`、`DefaultTime`，規則、字跟 Mac 相同；單元測試 `StopTimerTests` 用 M§84 的例子（沒有標準答案：時間的字串由各自的程式產生，兩邊寫同樣的例子）。
 - **錄音**：`Recorder.StopAt`（本機時間的 `DateTime?`）、`SetStopTimer(DateTime?)`（錄音中才有作用，觸發 `Changed`）；`Tick`（每 0.05 秒）先看 `StopAt`，到了就停止、`Result.Scheduled = true`，暫停中也停；停止時清掉。`AppController.TimerStopped`（會議 id、標題）→ `Notifier.TimerStopped`（「已到設定的時間，自動停止錄音」、內文是會議標題，點了打開那場；同 `MeetingEndStopped`）。
-- **錄音畫面**：計時右邊一個 `DropDownButton`（同麥克風那個的樣子，碼錶圖示加「定時停止」，設定了寫「15:30 停止」），`MenuFlyout` 打開時才列（`StopTimerMenu.Fill`，系統匣共用）：設定了時不能按的「15:30 自動停止錄音」、分隔線、五個選項、「指定時間…」、設定了時分隔線和「取消定時停止」。
+- **錄音畫面**：計時右邊一個 `DropDownButton`（同麥克風那個的樣子，碼錶圖示 `\uE916` 加「定時停止」，設定了寫「15:30 停止」；無障礙名稱設定了時是「15:30 自動停止錄音」；滑過提示寫還有多久，字變了才重設），放在計時那一組（不會被截掉；音量條那欄照舊先截），`MenuFlyout` 打開時才列（`StopTimerMenu.Items`，系統匣共用）：設定了時不能按的「15:30 自動停止錄音」、分隔線、五個選項、「指定時間…」、設定了時分隔線和「取消定時停止」。
 - **系統匣**：錄音中的選單在「停止」下面加子選單「定時停止」（`MenuFlyoutSubItem`，同一份內容）；設定了時子選單的標題寫「15:30 自動停止錄音」。Windows 沒有「檔案」選單，入口是錄音畫面和系統匣（鍵盤：Tab 到錄音畫面的下拉按鈕）。
 - **錄音島**：滑過去的畫面在最新一句下面加一行「15:30 自動停止錄音」（次要文字）。
-- **指定時間…**：共用的彈窗（§11.39；同時只能一個 `ContentDialog`，先收起舊的）：標題、說明行、欄位「停止的時間」、「取消」「設定」同 Mac；`TextBox.TextChanged` 更新說明行和「設定」能不能按，說明行每秒照目前時間更新；錄音停了就收起。
+- **指定時間…**：`Dialogs.PickStopTime`，共用的彈窗（§11.39；同時只能一個 `ContentDialog`，先收起舊的；從系統匣按時先 `ShowMain`）：「設定」用 `MeetingLanguages.Ui("設定", "Set")`（別處的「設定」是名詞）；標題、說明行、欄位「停止的時間」、「取消」「設定」同 Mac；`TextBox.TextChanged` 更新說明行和「設定」能不能按，說明行每秒照目前時間更新；錄音停了就收起。
 - **DEBUG**：控制通道 `stoptimer <秒數|off>`；`state` 的 `recorder.stopTimer`（`remaining`，沒設定是 -1；`label`）。
 - **驗證**：`dotnet test`（`StopTimerTests`、`Recorder` 到時間停止的測試）；虛擬機 `record-sim` 錄音中 `stoptimer 20` → 停止、轉錄、通知；UI Automation 打開錄音畫面的下拉選單選「30 分鐘後」→ 寫「HH:mm 停止」、「取消定時停止」；「指定時間…」輸入錯的、對的時間；系統匣的子選單；島滑過去的那一行。
 
@@ -1061,6 +1061,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `shot.sh <檔案>`：在 Mac 上用 `screencapture -l` 截 UTM 的視窗（整個虛擬機的畫面）。
 - UI Automation 做不到時（開著選單、存檔對話框時 UI Automation 會卡住）：用 UTM 的 AppleScript `input scan code` 送按鍵，只會送進虛擬機，不會到 Mac 前景的 app。
 - 系統的視窗（SmartScreen、系統匣）不屬於拾音：直接從桌面的根元件找（例如系統匣在 `Shell_TrayWnd`，隱藏的圖示先按「顯示隱藏的圖示」）。
+- `ps/tray-menu.ps1 [選項] [子選單的項目或 ?]`：右鍵系統匣的拾音圖示、按選單裡的一項；子選單（`MenuFlyoutSubItem`）用虛擬機的滑鼠按一下才展開（UIA 的 Expand 會把整個選單關掉，只移游標也不會展開），`?` 只列出項目。主視窗開著時先 `closewindow main`：主視窗裡同名的元件（錄音畫面的定時停止按鈕）會先被找到。Windows 的「通知建議」（要不要關掉拾音的通知）會蓋住隱藏圖示的面板，右鍵會打到它：按「現在不要執行此動作」，不要按「關閉」（2026-11-23）。
 
 ## 16. 決策紀錄（接著 design.md 的 D41）
 

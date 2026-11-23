@@ -378,6 +378,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         // 忘了停止錄音（R48.1、R48.2）：提醒一出現就送通知（人多半不在電腦前）；自動停止了也通知（錄音已經停了，島打開時也送）
         host.Recorder.IdlePromptAppeared += () => host.Post(() => { if (host.Recorder.MeetingId is long id && !IslandShowsAlerts) host.Notifier.IdlePrompt(id); });
         host.Controller.IdleStopped += (id, title) => host.Post(() => host.Notifier.IdleStopped(id, title));
+        host.Controller.TimerStopped += (id, title) => host.Post(() => host.Notifier.TimerStopped(id, title));
     }
 
     void UpdateTray()
@@ -411,6 +412,14 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             menu.Items.Add(new MenuFlyoutItem { Text = (recorder.IsPaused ? L.T("已暫停") : L.T("錄音中")) + " " + TimeFormat.String(recorder.ElapsedSeconds), IsEnabled = false });
             menu.Items.Add(Ui.Item(recorder.IsPaused ? L.T("繼續") : L.T("暫停"), () => { if (recorder.IsPaused) recorder.Resume(); else recorder.Pause(); }));
             menu.Items.Add(Ui.Item(L.T("停止"), recorder.Stop));
+            // 定時停止（R110、M§84）：設定了時子選單的標題寫幾點停
+            var stopTimer = new MenuFlyoutSubItem { Text = recorder.StopAt is DateTime at ? Views.StopTimerMenu.Status(at) : L.T("定時停止") };
+            foreach (var item in Views.StopTimerMenu.Items(host, () =>
+            {
+                ShowMain();
+                if (main is not null) _ = Dialogs.PickStopTime(main);
+            })) stopTimer.Items.Add(item);
+            menu.Items.Add(stopTimer);
             // 正在收音的麥克風（R58.2、M§38.3）
             if (recorder.MicDevice is { } device) menu.Items.Add(new MenuFlyoutItem { Text = L.F("麥克風：%@", device.Name), IsEnabled = false });
             if (recorder.IdlePrompt)

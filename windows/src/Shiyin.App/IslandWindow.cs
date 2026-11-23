@@ -228,7 +228,7 @@ public sealed partial class IslandWindow : Window
         var mode = Prompt is not null ? "prompt" : Hover && recorder.IsRecording ? "hover" : hintExpanded ? "hint" : "collapsed";
         var line = mode == "hover" ? LatestLine(recorder) : null;
         var key = string.Join('\u001F', mode, HintKey, Prompt?.Message, recorder.IsPaused, bookmarked, recorder.HasMic, recorder.HasSystem,
-            recorder.MicHint?.BuiltIn?.Name, line is not null);
+            recorder.MicHint?.BuiltIn?.Name, line is not null, recorder.StopAt);
         if (key == shownKey)
         {
             if (clock is not null) clock.Text = TimeFormat.String(recorder.ElapsedSeconds);
@@ -319,6 +319,9 @@ public sealed partial class IslandWindow : Window
             latest.Language = Ui.ContentLanguage(recorder.Language);
             column.Children.Add(latest);
         }
+        // 定時停止（R110.2、M§84）
+        if (recorder.StopAt is DateTime stopAt)
+            column.Children.Add(Ui.Row(8, Icon("\uE916", null), Ui.Text(StopTimerMenu.Status(stopAt), 13, color: Secondary, wrap: false)));
         if (CurrentHint() is { } hint)
         {
             column.Children.Add(Ui.Split(Icon(hint.Glyph, 0xE2AD3B), Ui.Text(hint.Text, 13, color: Brush(0xE2AD3B), maxLines: 3), 8));

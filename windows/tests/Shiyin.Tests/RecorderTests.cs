@@ -512,6 +512,33 @@ public sealed class RecorderTests : IDisposable
     }
 
     [Fact]
+    public async Task StopTimerStopsEvenWhilePaused()
+    {
+        // 定時停止（R110、M§84）：跟著時鐘走，暫停中到時間也停；停止就取消，下一場沒有定時
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        Recorder.Result? result = null;
+        recorder.Finished += r => result = r;
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(1));
+        Assert.Null(recorder.StopAt);   // 沒在錄音：沒作用
+        recorder.StartSimulated(9, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(30));
+        recorder.SetStopTimer(null);
+        Assert.Null(recorder.StopAt);
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(1.5));
+        recorder.Pause();
+        await Until(() => result is not null, 10);
+        Assert.True(result!.Scheduled);
+        Assert.Null(result.IdleSince);
+        Assert.False(recorder.IsRecording);
+        Assert.Null(recorder.StopAt);
+        result = null;
+        recorder.StartSimulated(10, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
+        Assert.Null(recorder.StopAt);
+        recorder.Stop();
+        Assert.False(result!.Scheduled);
+    }
+
+    [Fact]
     public async Task ContinueAfterIdleRestartsTheTimer()
     {
         var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
