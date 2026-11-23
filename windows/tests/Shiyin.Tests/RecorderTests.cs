@@ -529,8 +529,9 @@ public sealed class RecorderTests : IDisposable
         Assert.Null(recorder.StopAt);
         recorder.SetStopTimer(DateTime.Now.AddSeconds(0.5));
         recorder.Pause();
-        await Until(() => recorder.StopCountdown is not null, 10);
-        Assert.Equal(1, due);
+        // StopTimerDue 在鎖外面、倒數設好之後才發：等事件，不是等 StopCountdown（CI 的機器慢時兩者之間有空檔，win-v5.1.0 第一次建置失敗在這裡）
+        await Until(() => Volatile.Read(ref due) == 1, 10);
+        Assert.NotNull(recorder.StopCountdown);
         Assert.True(recorder.IsRecording);   // 倒數中還在錄
         await Until(() => result is not null, 10);
         Assert.True(result!.Scheduled);
