@@ -42,6 +42,23 @@ struct RecordingPanel: View {
                 .padding(.vertical, 8)
                 .background(Color.signal.opacity(0.12))
             }
+            if let countdown = recorder.stopCountdown {
+                // 定時停止的時間到了、倒數中（design §84、R110.3）
+                HStack(spacing: 12) {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Label(String(localized: "已到設定的時間，\(StopTimer.secondsLeft(countdown, now: context.date)) 秒後停止錄音"),
+                              systemImage: "timer")
+                    }
+                    Spacer()
+                    Button("繼續錄") { model.continueAfterStopTimer() }
+                        .help("取消定時停止，照常錄下去")
+                    Button("停止並轉錄") { recorder.stop() }
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
             if let problem = model.screenshotProblem {
                 // 截不到圖（design §83.2、R109.3）
                 HStack(spacing: 12) {
@@ -529,7 +546,7 @@ struct StopTimerMenuItems: View {
         }
         if recorder.stopAt != nil {
             Divider()
-            Button("取消定時停止") { recorder.setStopTimer(nil) }
+            Button("取消定時停止") { model.setStopTimer(nil) }
         }
     }
 }
@@ -613,7 +630,7 @@ struct StopTimerSheet: View {
     }
 
     private func save(_ time: (hour: Int, minute: Int)) {
-        model.recorder.setStopTimer(StopTimer.next(hour: time.hour, minute: time.minute, after: Date()))
+        model.setStopTimer(StopTimer.next(hour: time.hour, minute: time.minute, after: Date()))
         dismiss()
     }
 }

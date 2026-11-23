@@ -7004,6 +7004,23 @@
         }
       }
     },
+    "取消定時停止，照常錄下去": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消定时停止，照常录下去"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel the stop timer and keep recording"
+          }
+        }
+      }
+    },
     "取消略過": {
       "extractionState": "manual",
       "localizations": {
@@ -8729,6 +8746,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Line deleted. To undo, right-click in the transcript and choose Undo."
+          }
+        }
+      }
+    },
+    "已到設定的時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已到设置的时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's the time you set"
+          }
+        }
+      }
+    },
+    "已到設定的時間，%lld 秒後停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已到设置的时间，%lld 秒后停止录音"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "It's the time you set. Recording stops in %lld second"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "It's the time you set. Recording stops in %lld seconds"
+                }
+              }
+            }
           }
         }
       }

@@ -140,6 +140,12 @@ final class Recorder {
     @ObservationIgnored var onIdlePrompt: (() -> Void)?
     /// 定時停止（design §84、R110）：到這個時間就停止錄音；跟著時鐘走，暫停也照算
     private(set) var stopAt: Date?
+    /// 時間到了先倒數（R110.3、D192）：到這個時間才停止；nil 是沒在倒數
+    private(set) var stopCountdown: Date?
+    /// 倒數開始了（AppModel 顯示提醒）
+    @ObservationIgnored var onStopTimerDue: (() -> Void)?
+    /// 倒數 30 秒；DEBUG 可以用啟動參數縮短
+    static var stopCountdownSeconds: Double { debugSeconds("stopTimerCountdownSeconds") ?? 30 }
     /// 15 分鐘提醒、30 分鐘自動停止；DEBUG 可以用啟動參數縮短（design §35.2）
     static var idleRemindSeconds: Double { debugSeconds("idleRemindSeconds") ?? 900 }
     static var idleStopSeconds: Double { debugSeconds("idleStopSeconds") ?? 1800 }
@@ -160,7 +166,8 @@ final class Recorder {
     }
     /// 定時停止（design §84）：shiyinctl state 的 recorder.stopTimer
     var stopTimerInfo: [String: Any] {
-        ["remaining": stopAt.map { max(0, $0.timeIntervalSinceNow) } ?? -1, "label": stopAt.map { StopTimer.label($0) } ?? ""]
+        ["remaining": stopAt.map { max(0, $0.timeIntervalSinceNow) } ?? -1, "label": stopAt.map { StopTimer.label($0) } ?? "",
+         "countdown": stopCountdown.map { max(0, $0.timeIntervalSinceNow) } ?? -1]
     }
     #endif
 
@@ -293,10 +300,11 @@ final class Recorder {
         markSpeech()
     }
 
-    /// 定時停止（R110.1）：錄音中才有作用；nil 是取消。選了新的時間就取代原本的
+    /// 定時停止（R110.1）：錄音中才有作用；nil 是取消（倒數中的「繼續錄」也是）。選了新的時間就取代原本的，倒數也收起
     func setStopTimer(_ date: Date?) {
         guard isRecording, date != stopAt else { return }
         stopAt = date
+        if stopCountdown != nil { stopCountdown = nil }
         if let date { log.info("stop timer set, \(Int(date.timeIntervalSinceNow))s from now") } else { log.info("stop timer cancelled") }
     }
 
@@ -604,11 +612,19 @@ final class Recorder {
             stop()
             return
         }
-        // 定時停止（design §84）：放在整秒的判斷外面，暫停時 elapsed 不走也要停
+        // 定時停止（design §84）：放在整秒的判斷外面，暫停時 elapsed 不走也要停。時間到先倒數，倒數完才停（R110.3）
         if let stopAt, Date() >= stopAt {
-            log.info("recording stopped at the scheduled time")
-            stop(scheduled: true)
-            return
+            if let stopCountdown {
+                if Date() >= stopCountdown {
+                    log.info("recording stopped at the scheduled time")
+                    stop(scheduled: true)
+                    return
+                }
+            } else {
+                stopCountdown = Date().addingTimeInterval(Self.stopCountdownSeconds)
+                log.info("stop timer reached, counting down")
+                onStopTimerDue?()
+            }
         }
         // 觀察的屬性只在值真的變了才設（@Observable 設成同樣的值也會讓畫面重算，design §25）
         elapsed = writer.recordedSeconds
@@ -893,6 +909,7 @@ final class Recorder {
         micDevice = nil
         idlePrompt = false
         stopAt = nil
+        stopCountdown = nil
         liveActive = false
         meetingId = nil
         startedAt = nil

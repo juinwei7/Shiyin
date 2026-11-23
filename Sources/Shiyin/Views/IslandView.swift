@@ -83,16 +83,18 @@ struct IslandRoot: View {
     @ViewBuilder
     private var promptHeader: some View {
         let notch = state.notch
+        // 定時停止的倒數（R110.3）用計時器的圖示，會議 app 的提醒用聲波
+        let symbol = state.prompt.map { $0.prompt == nil } == true ? "timer" : "waveform"
         if notch.hasNotch {
             HStack(spacing: 0) {
-                Image(systemName: "waveform").foregroundStyle(Color.celadon).frame(width: Self.wing)
+                Image(systemName: symbol).foregroundStyle(Color.celadon).frame(width: Self.wing)
                 Color.clear.frame(width: notch.width)
                 Color.clear.frame(width: Self.wing)
             }
             .frame(height: notch.height)
         } else {
             HStack {
-                Image(systemName: "waveform").foregroundStyle(Color.celadon)
+                Image(systemName: symbol).foregroundStyle(Color.celadon)
                 Spacer(minLength: 0)
             }
             .frame(height: 30)

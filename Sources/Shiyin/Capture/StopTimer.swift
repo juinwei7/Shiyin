@@ -50,6 +50,11 @@ enum StopTimer {
         TimeFormat.duration(Int((max(0, date.timeIntervalSince(now)) / 60).rounded(.up)) * 60)
     }
 
+    /// 倒數還剩幾秒（R110.3）：無條件進位，同錄音島的倒數
+    static func secondsLeft(_ deadline: Date, now: Date = Date()) -> Int {
+        max(0, Int(deadline.timeIntervalSince(now).rounded(.up)))
+    }
+
     /// 「指定時間…」沒設定過時帶的值：一小時後，分鐘往上取到 5 的倍數
     static func defaultTime(now: Date = Date(), calendar: Calendar = .current) -> String {
         let c = calendar.dateComponents([.hour, .minute], from: now.addingTimeInterval(3600))

@@ -9,6 +9,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     var onMeetingAction: ((String, String) -> Void)?
     /// 忘了停止錄音的通知按鈕（design §35.2）：stop、continue
     var onIdleAction: ((String) -> Void)?
+    /// 定時停止倒數的通知按鈕（design §84）：stop、continue
+    var onStopTimerAction: ((String) -> Void)?
     #if DEBUG
     /// 驗證用：最近要發的通知內容（沒有通知權限時也記錄）
     private(set) var recent: [[String: Any]] = []
@@ -28,7 +30,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             UNNotificationAction(identifier: "stop", title: String(localized: "停止錄音"), options: []),
             UNNotificationAction(identifier: "continue", title: String(localized: "繼續錄"), options: []),
         ], intentIdentifiers: [])
-        UNUserNotificationCenter.current().setNotificationCategories([start, stop, idle])
+        let stopTimer = UNNotificationCategory(identifier: "STOP_TIMER", actions: [
+            UNNotificationAction(identifier: "stop", title: String(localized: "停止並轉錄"), options: []),
+            UNNotificationAction(identifier: "continue", title: String(localized: "繼續錄"), options: []),
+        ], intentIdentifiers: [])
+        UNUserNotificationCenter.current().setNotificationCategories([start, stop, idle, stopTimer])
     }
 
     func isAuthorized() async -> Bool {
@@ -111,7 +117,21 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(content)
     }
 
-    /// 到了定時停止的時間（R110.3、design §84）
+    /// 定時停止的時間到了、開始倒數（R110.3、design §84）：按鈕「停止並轉錄」「繼續錄」，點通知本身打開錄音中的會議
+    func stopTimerPrompt(meetingId: Int64, seconds: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "已到設定的時間")
+        content.body = String(localized: "\(seconds) 秒後自動停止錄音並轉錄")
+        content.categoryIdentifier = "STOP_TIMER"
+        content.sound = .default
+        content.userInfo = ["meetingId": NSNumber(value: meetingId), "stopTimer": true]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "meetingId": meetingId, "timer": "countdown"]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
+    /// 倒數完、自動停止了（R110.4、design §84）
     func timerStopped(meetingId: Int64, title: String) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "已到設定的時間，自動停止錄音")
@@ -184,6 +204,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let id = (response.notification.request.content.userInfo["meetingId"] as? NSNumber)?.int64Value
         let bundle = response.notification.request.content.userInfo["bundle"] as? String
         let idle = response.notification.request.content.userInfo["idle"] as? Bool ?? false
+        let stopTimer = response.notification.request.content.userInfo["stopTimer"] as? Bool ?? false
         let action = response.actionIdentifier
         Task { @MainActor in
             let button = action != UNNotificationDefaultActionIdentifier && action != UNNotificationDismissActionIdentifier
@@ -191,6 +212,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                 self.onMeetingAction?(action, bundle)
             } else if idle, button {
                 self.onIdleAction?(action)
+            } else if stopTimer, button {
+                self.onStopTimerAction?(action)
             } else if let id, id > 0 { self.onOpen?(id) }
             completionHandler()
         }

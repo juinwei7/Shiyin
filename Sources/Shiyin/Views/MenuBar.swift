@@ -94,6 +94,22 @@ struct MenuBarContent: View {
                         .font(.caption)
                     }
                 }
+                if let countdown = recorder.stopCountdown {
+                    // 定時停止的倒數（R110.3）：同錄音畫面
+                    VStack(alignment: .leading, spacing: 6) {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Label(String(localized: "已到設定的時間，\(StopTimer.secondsLeft(countdown, now: context.date)) 秒後停止錄音"),
+                                  systemImage: "timer")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(Color.signal)
+                        HStack {
+                            Button("繼續錄") { model.continueAfterStopTimer() }
+                            Button("停止並轉錄") { recorder.stop() }
+                        }
+                        .font(.caption)
+                    }
+                }
                 if let hint = recorder.micHint {
                     // 用藍牙耳機的麥克風錄現場會議（design §38.4）：同錄音畫面
                     VStack(alignment: .leading, spacing: 6) {

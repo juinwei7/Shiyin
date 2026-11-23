@@ -3001,11 +3001,17 @@ Windows 的做法在 design-windows §11.43。
 - 選單列的小視窗：錄音那一塊、狀態列下面一列小一號（`controlSize(.small)`；`.font` 改不到選單的字）的選單（同錄音畫面的圖示和字，設定了寫「15:30 自動停止錄音」）。
 - 錄音島：滑過去的畫面，最新一句下面一行次要文字「15:30 自動停止錄音」（`timer` 圖示）；收起時不顯示。
 - 「指定時間…」（`model.showStopTimerSheet`，主視窗的彈窗，§80 的共用樣子；從選單列、「檔案」選單打開時先打開主視窗）：標題「定時停止錄音」；說明行「今天 15:30 自動停止錄音並轉錄（1 小時 25 分鐘後）。」（明天時寫「明天 09:00 …」），欄位是空的時「輸入幾點幾分，到時間自動停止錄音並轉錄。」，格式不對時「請輸入像 15:30 的時間。」；欄位「停止的時間」（帶目前設定的時間，沒有時是 `defaultTime`，全選）；「取消」「設定」（格式不對不能按，Return 等於「設定」；「設定」在別處是名詞 Settings，這裡用 `MeetingLanguage.ui(zh:en:)` 寫 Set）。說明行照目前時間每秒更新。彈窗開著時錄音停了：自己收起來。
-- 時間到：`recordingFinished` 照一般的停止處理（整場轉錄，沒有 `until`）；`result.scheduled` 時 `notifier.timerStopped`：標題「已到設定的時間，自動停止錄音」、內文是會議標題，點了打開那場（同 `meetingEndStopped`）。
+- 時間到先倒數（R110.3、D192）：`tick()` 看到 `stopAt` 到了、還沒在倒數，就設 `stopCountdown = 現在 + 30 秒`（觀察的屬性；DEBUG `-stopTimerCountdownSeconds` 改秒數）、呼叫 `onStopTimerDue`；`stopCountdown` 到了才 `stop(scheduled: true)`。倒數中暫停照算。`continueAfterStopTimer()`：`stopAt`、`stopCountdown` 都清掉（取消定時，照常錄下去）；`setStopTimer` 換了時間、取消，也清掉倒數。
+- 倒數的提醒（`AppModel.showStopTimerPrompt`，分流同 R95 的 `showMeetingPrompt`）：
+  - 錄音島打開時：`RecordingIsland.showPrompt`，`deadline` 是 `stopCountdown`，訊息每秒換成「已到設定的時間，N 秒後停止錄音」，按鈕「繼續錄」「停止並轉錄」（最後一個是主要的）。島的 `IslandState.Prompt.prompt`（會議 app 的提醒）改成可以是 nil：nil 就是定時停止的提醒。
+  - 島關掉、有通知權限：`notifier.stopTimerPrompt`（類別 `STOP_TIMER`，按鈕「停止並轉錄」「繼續錄」；標題「已到設定的時間」，內文「30 秒後停止錄音並轉錄」；userInfo 有 `stopTimer`）。沒有權限：右上角的小視窗（`MeetingPromptPanel`，提醒的種類同樣可以是 nil）寫「已到設定的時間，30 秒後停止錄音」，不倒數。
+  - 錄音畫面的提示列（跟「好像沒人在說話了」同一種）、選單列的小視窗：倒數中寫同一句（`TimelineView` 每秒換秒數）和「繼續錄」「停止並轉錄」。
+  - 所有的「繼續錄」「停止並轉錄」、選單裡改定時或取消、錄音停了：走 `AppModel`（`continueAfterStopTimer`、`setStopTimer`、`recordingFinished`），同時收起島上、小視窗裡定時停止的提醒（會議 app 的提醒不動）。
+- 倒數完：`recordingFinished` 照一般的停止處理（整場轉錄，沒有 `until`）；`result.scheduled` 時 `notifier.timerStopped`：標題「已到設定的時間，自動停止錄音」、內文是會議標題，點了打開那場（同 `meetingEndStopped`）。
 - 跟 R48（`checkIdle`）、R95（`startMeetingEndCountdown`）各自判斷，先到先停；停了之後其他的跟著錄音停止收起（原本就是）。
 - 使用說明：「線上會議」那一條後面加一條定時停止的說明。
-- DEBUG：`shiyinctl stoptimer <秒數|off>`（從現在起幾秒後停止）；`state` 的 `recorder.stopTimer`（`remaining` 剩幾秒，沒設定是 -1；`label`）；通知的 `recent` 多 `"timer": "stopped"`；`preview stoptimer`（指定時間的彈窗）、`preview menubar`（選單列的小視窗；`snapshot menubar` 畫不出裡面的選單）。
-- 驗證：`record-sim` 錄音中 `stoptimer 20` → 20 秒後停止、轉錄整場、通知；暫停中到時間也停；`stoptimer off` 取消；停了再開始一場沒有定時；跟 `-idleStopSeconds` 一起時先到的先停；`StopTimer` 的規則用 `swift` 小程式跑例子。
+- DEBUG：`shiyinctl stoptimer <秒數|off>`（從現在起幾秒後停止）；`state` 的 `recorder.stopTimer`（`remaining` 剩幾秒，沒設定是 -1；`label`；`countdown` 倒數剩幾秒，沒在倒數是 -1）；`meetingprompts` 的種類寫 `stoptimer`，`meetingaction continue|stop` 等於按島上、小視窗的按鈕；通知的 `recent` 多 `"timer": "stopped"`；`preview stoptimer`（指定時間的彈窗）、`preview menubar`（選單列的小視窗；`snapshot menubar` 畫不出裡面的選單）。
+- 驗證：`record-sim` 錄音中 `stoptimer 20` → 20 秒後開始倒數、島上寫「已到設定的時間，N 秒後停止錄音」，再 30 秒停止、轉錄整場、通知；倒數中 `meetingaction continue` → 定時取消、照常錄；錄音畫面的「繼續錄」「停止並轉錄」；島關掉時的通知、小視窗；暫停中到時間也停；`stoptimer off` 取消；停了再開始一場沒有定時；跟 `-idleStopSeconds` 一起時先到的先停；`StopTimer` 的規則用 `swift` 小程式跑例子。
 
 ## 14. 決策紀錄
 
@@ -3145,3 +3151,4 @@ Windows 的做法在 design-windows §11.43。
 | D189 | 匯出的會議紀錄把畫面集中在最後一節，逐字稿插在時間點；Word 檔先照常用 NSAttributedString 寫，再解開補上圖片（§83.6） | 插進會議紀錄的條目裡：紀錄是整理工具寫的，對不準哪一條講的是哪張畫面，硬插會放錯地方。只放在封包：使用者要把紀錄（含畫面）寄給沒有拾音的人。Word 整份自己組 OOXML：要重做標題、表格、字型這些 NSAttributedString 本來就處理好的東西，風險比補圖片大；取捨：多用系統的 unzip、zip 兩個指令 |
 | D190 | 編輯會議時，落在刪掉那段裡的畫面移到切口，不刪（§83.7） | 跟重點標記一樣刪掉：畫面是使用者自己加的資料，同我的筆記（D181）留下來；要刪的話可以在逐字稿上刪 |
 | D191 | 定時停止跟著時鐘走、時間到整場轉錄、每場各自設定（§84） | 照錄音的長度算（錄滿 1 小時）：暫停時停止的時間會往後跑，人不在旁邊時看不出幾點會停；使用者的情境是「線上分享幾點結束」，用時鐘比較直接（「1 小時後」也是從按下去的那一刻算）。時間到只轉錄到最後說話（同 R48）：時間是使用者自己定的，不猜哪裡結束。記住上次的選擇：下一場忘了取消會被誤停，錄音不能重來 |
+| D192 | 定時停止的時間到了先倒數 30 秒，按「繼續錄」就取消定時（§84、R110.3；使用者要緩衝） | 時間到直接停：人在旁邊時（分享延長了）錄音被切掉，後面的錄不回來。倒數 60 秒（同 R95）：定時是使用者自己設的，不用猜會議是不是真的結束，30 秒夠看到、按下（使用者說的）。「繼續錄」改成延長幾分鐘：多一種狀態和選項；要停的人自己再設一次 |

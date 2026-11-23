@@ -306,7 +306,10 @@ enum DebugControl {
             switch current {
             case .start(let app): text = "start:\(app.bundleID)"
             case .stop(let app): text = "stop:\(app.bundleID)"
-            case nil: text = ""
+            case nil:
+                // 會議的提醒以外，開著的是定時停止的倒數（R110.3）
+                let stopTimer = RecordingIsland.isEnabled ? RecordingIsland.shared.state.prompt != nil : MeetingPromptPanel.shared.showsStopTimer
+                text = stopTimer ? "stoptimer" : ""
             }
             let actions = RecordingIsland.isEnabled ? (RecordingIsland.shared.state.prompt?.actions.map(\.id) ?? []).sorted()
                 : MeetingPromptPanel.shared.actions.keys.sorted()
@@ -745,7 +748,7 @@ enum DebugControl {
         case "recordlang":   // recordlang <語言代碼>：錄音中換會議語言（等於按「改回」；zh、en、ja、yue、ko…）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
         case "stoptimer":   // stoptimer <秒數|off>：從現在起幾秒後定時停止（design §84）
-            model.recorder.setStopTimer(args.count > 1 && args[1] != "off" ? Date().addingTimeInterval(Double(args[1]) ?? 0) : nil)
+            model.setStopTimer(args.count > 1 && args[1] != "off" ? Date().addingTimeInterval(Double(args[1]) ?? 0) : nil)
         case "record-sim":
             // record-sim <音檔> <倍速> <both: 1/0/2>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）
             let channels = args.count > 3 ? args[3] : "0"

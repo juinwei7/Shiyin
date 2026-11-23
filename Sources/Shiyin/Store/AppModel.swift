@@ -445,6 +445,11 @@ final class AppModel {
             guard let self else { return }
             if action == "stop" { self.recorder.stop() } else if action == "continue" { self.recorder.continueAfterIdle() }
         }
+        // 定時停止倒數的通知按鈕（R110.3）
+        notifier.onStopTimerAction = { [weak self] action in
+            guard let self else { return }
+            if action == "stop" { self.recorder.stop() } else if action == "continue" { self.continueAfterStopTimer() }
+        }
         meetingDetector.start()
         BuiltinTemplates.seed(db)
         // 本地 MCP 的啟動檔指到目前這份拾音（design §44.3）：搬家、更新後 AI 工具的設定不用動
@@ -491,6 +496,8 @@ final class AppModel {
             guard let self, let id = self.recorder.meetingId, !RecordingIsland.isEnabled else { return }
             self.notifier.idlePrompt(meetingId: id)
         }
+        // 定時停止的時間到了，開始倒數（R110.3）
+        recorder.onStopTimerDue = { [weak self] in self?.showStopTimerPrompt() }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
         UsageStats.shared.touch()
@@ -882,7 +889,45 @@ final class AppModel {
 
     /// 定時停止（design §84、R110）：從現在起幾分鐘後
     func setStopTimer(minutes: Int) {
-        recorder.setStopTimer(Date().addingTimeInterval(TimeInterval(minutes * 60)))
+        setStopTimer(Date().addingTimeInterval(TimeInterval(minutes * 60)))
+    }
+
+    /// 設定、取消（nil）定時停止；倒數中改了時間也收起倒數的提醒
+    func setStopTimer(_ date: Date?) {
+        recorder.setStopTimer(date)
+        closeStopTimerPrompt()
+    }
+
+    /// 倒數中的「繼續錄」（R110.3）：取消定時，照常錄下去
+    func continueAfterStopTimer() { setStopTimer(nil) }
+
+    /// 時間到了、開始倒數（R110.3、design §84）：分流同 showMeetingPrompt。錄音島打開時由島倒數；
+    /// 島關掉時有通知權限用通知（帶按鈕），沒有用右上角的小視窗（不倒數）
+    private func showStopTimerPrompt() {
+        guard let deadline = recorder.stopCountdown, let meetingId = recorder.meetingId else { return }
+        let actions: [(id: String, title: String, action: () -> Void)] = [
+            ("continue", String(localized: "繼續錄"), { [weak self] in self?.continueAfterStopTimer() }),
+            ("stop", String(localized: "停止並轉錄"), { [weak self] in self?.recorder.stop() }),
+        ]
+        let countdown: (Int) -> String = { String(localized: "已到設定的時間，\($0) 秒後停止錄音") }
+        let seconds = Int(Recorder.stopCountdownSeconds)
+        if RecordingIsland.isEnabled {
+            RecordingIsland.shared.showPrompt(nil, actions: actions, message: countdown(seconds), deadline: deadline, countdown: countdown)
+            return
+        }
+        Task {
+            if await notifier.isAuthorized() {
+                notifier.stopTimerPrompt(meetingId: meetingId, seconds: seconds)
+            } else if recorder.stopCountdown != nil {
+                MeetingPromptPanel.shared.show(nil, actions: actions, message: countdown(seconds))
+            }
+        }
+    }
+
+    /// 收起島上、小視窗裡定時停止的提醒（會議 app 的提醒不動）
+    private func closeStopTimerPrompt() {
+        if let prompt = RecordingIsland.shared.state.prompt, prompt.prompt == nil { RecordingIsland.shared.closePrompt() }
+        if MeetingPromptPanel.shared.showsStopTimer { MeetingPromptPanel.shared.close() }
     }
 
     /// 「指定時間…」的彈窗（design §84）：從選單列、「檔案」選單打開時先打開主視窗
@@ -910,6 +955,7 @@ final class AppModel {
     /// 錄音結束：把錄音檔接到會議上並排轉錄（R2.5）
     private func recordingFinished(_ result: Recorder.Result) {
         MeetingPromptPanel.shared.close()   // 還開著的「要停止錄音嗎？」不用了
+        closeStopTimerPrompt()   // 定時停止的倒數（按了停止、倒數完）
         GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B、⌃⌥⌘S
         GlobalHotKey.shared.setScreenshotEnabled(false)
         do {

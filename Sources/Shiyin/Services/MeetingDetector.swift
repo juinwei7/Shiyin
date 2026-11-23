@@ -225,9 +225,13 @@ final class MeetingPromptPanel {
     #endif
     /// 目前提醒的按鈕動作（DEBUG 的 meetingaction 也用）
     private(set) var actions: [String: () -> Void] = [:]
+    /// 開著的是定時停止的倒數（R110.3）：按鈕、改定時時收起
+    private(set) var showsStopTimer = false
 
-    func show(_ prompt: MeetingDetector.Prompt, actions: [(id: String, title: String, action: () -> Void)], message: String) {
+    /// prompt 是 nil：定時停止的倒數（R110.3）
+    func show(_ prompt: MeetingDetector.Prompt?, actions: [(id: String, title: String, action: () -> Void)], message: String) {
         close()
+        showsStopTimer = prompt == nil
         var map: [String: () -> Void] = [:]
         for item in actions { map[item.id] = { [weak self] in self?.close(); item.action() } }
         self.actions = map
@@ -268,6 +272,7 @@ final class MeetingPromptPanel {
         panel?.orderOut(nil)
         panel = nil
         actions = [:]
+        showsStopTimer = false
         #if DEBUG
         current = nil
         #endif
