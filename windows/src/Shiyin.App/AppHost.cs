@@ -146,6 +146,9 @@ public sealed class AppHost
         {
             if (double.TryParse(Settings.String("idleRemindSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var remind) && remind > 0) Recorder.IdleRemindSeconds = remind;
             if (double.TryParse(Settings.String("idleStopSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var stop) && stop > 0) Recorder.IdleStopSeconds = stop;
+            // 定時停止的倒數（R110.3）：--set stopTimerCountdownSeconds=8（同 Mac 的 -stopTimerCountdownSeconds）
+            if (double.TryParse(Settings.String("stopTimerCountdownSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var stopCountdown) && stopCountdown > 0)
+                Recorder.StopCountdownSeconds = stopCountdown;
         }
         Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage, Ocr = new WindowsOcr(), AudioEditor = new MediaFoundationAudioEditor() };
         Detector = new MeetingDetector(new ConsentStoreMicrophoneUsage(), Settings) { IsRecording = () => Recorder.IsRecording };

@@ -512,30 +512,62 @@ public sealed class RecorderTests : IDisposable
     }
 
     [Fact]
-    public async Task StopTimerStopsEvenWhilePaused()
+    public async Task StopTimerCountsDownThenStopsEvenWhilePaused()
     {
-        // 定時停止（R110、M§84）：跟著時鐘走，暫停中到時間也停；停止就取消，下一場沒有定時
+        // 定時停止（R110、M§84）：跟著時鐘走；時間到先倒數（R110.3），倒數完才停，暫停中也停；停止就取消，下一場沒有定時
         var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        recorder.StopCountdownSeconds = 1.5;
         Recorder.Result? result = null;
+        var due = 0;
         recorder.Finished += r => result = r;
+        recorder.StopTimerDue += () => Interlocked.Increment(ref due);
         recorder.SetStopTimer(DateTime.Now.AddSeconds(1));
         Assert.Null(recorder.StopAt);   // 沒在錄音：沒作用
         recorder.StartSimulated(9, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
         recorder.SetStopTimer(DateTime.Now.AddSeconds(30));
         recorder.SetStopTimer(null);
         Assert.Null(recorder.StopAt);
-        recorder.SetStopTimer(DateTime.Now.AddSeconds(1.5));
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(0.5));
         recorder.Pause();
+        await Until(() => recorder.StopCountdown is not null, 10);
+        Assert.Equal(1, due);
+        Assert.True(recorder.IsRecording);   // 倒數中還在錄
         await Until(() => result is not null, 10);
         Assert.True(result!.Scheduled);
         Assert.Null(result.IdleSince);
+        Assert.Equal(1, due);
         Assert.False(recorder.IsRecording);
         Assert.Null(recorder.StopAt);
+        Assert.Null(recorder.StopCountdown);
         result = null;
         recorder.StartSimulated(10, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
         Assert.Null(recorder.StopAt);
         recorder.Stop();
         Assert.False(result!.Scheduled);
+    }
+
+    [Fact]
+    public async Task ContinueDuringStopTimerCountdownKeepsRecording()
+    {
+        // 倒數中按「繼續錄」（R110.3）：定時取消、照常錄下去，倒數過了也不停
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        recorder.StopCountdownSeconds = 1;
+        recorder.StartSimulated(11, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(0.3));
+        await Until(() => recorder.StopCountdown is not null, 10);
+        recorder.SetStopTimer(null);
+        Assert.Null(recorder.StopCountdown);
+        Assert.Null(recorder.StopAt);
+        await Task.Delay(1800);
+        Assert.True(recorder.IsRecording);
+        // 倒數中換成新的時間：倒數收起、等新的時間
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(0.3));
+        await Until(() => recorder.StopCountdown is not null, 10);
+        recorder.SetStopTimer(DateTime.Now.AddMinutes(30));
+        Assert.Null(recorder.StopCountdown);
+        await Task.Delay(1500);
+        Assert.True(recorder.IsRecording);
+        recorder.Stop();
     }
 
     [Fact]

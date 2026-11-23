@@ -697,6 +697,7 @@ public static partial class ControlPipe
                 {
                     ["remaining"] = r.StopAt is DateTime stopAt ? Math.Max(0, (stopAt - DateTime.Now).TotalSeconds) : -1,
                     ["label"] = r.StopAt is DateTime stopLabel ? StopTimer.Label(stopLabel, DateTime.Now) : "",
+                    ["countdown"] = r.StopCountdown is DateTime stopCountdown ? Math.Max(0, (stopCountdown - DateTime.Now).TotalSeconds) : -1,
                 },
             },
             ["hotKeyError"] = host.HotKeyError,

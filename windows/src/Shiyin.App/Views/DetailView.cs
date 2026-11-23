@@ -694,6 +694,13 @@ public sealed class RecordingPanel
     readonly DropDownButton stopTimer = new() { Padding = new Thickness(8, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center };
     readonly TextBlock stopTimerText = Ui.Text("", 13, wrap: false);
     string? stopTimerTip;
+    /// <summary>
+    /// 定時停止的倒數（R110.3）：提示列的那一條一開始就建好、只換字（每秒自己換秒數）。
+    /// 其他提示每次更新都重建，按鈕按到一半被換掉會按不到（同錄音島的倒數）
+    /// </summary>
+    readonly Border countdownRow;
+    readonly TextBlock countdownText = Ui.Text("", 13);
+    readonly DispatcherTimer countdownTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     // 音量條各自一列，一開始就建好，之後只切換顯示：每次更新都重建 Row 的話，音量條還在舊的 Row 裡，
     // 再放進新的 Row 會丟出「已經是別的元件的子元件」（0x800F1000，2026-10-21 在虛擬機錄音時當掉）
     readonly StackPanel micRow, systemRow;
@@ -741,6 +748,14 @@ public sealed class RecordingPanel
             })) micMenu.Items.Add(item);
         });
         micName.Flyout = micMenu;
+        countdownRow = new Border
+        {
+            Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 0xB9, 0x7F, 0x06)), Padding = new Thickness(16, 8, 16, 8),
+            Child = Ui.Bar(null, countdownText, Ui.Row(8,
+                Ui.Button(L.T("繼續錄"), () => host.Recorder.SetStopTimer(null), tooltip: L.T("取消定時停止，照常錄下去")),
+                Ui.Button(L.T("停止並轉錄"), host.Recorder.Stop))),
+        };
+        countdownTimer.Tick += (_, _) => Ui.Guard(UpdateCountdown);
         stopTimer.Content = Ui.Row(6, new FontIcon { Glyph = "\uE916", FontSize = 14 }, stopTimerText);
         var stopTimerMenu = new MenuFlyout();
         // 打開時才列：設定了時多了最上面幾點停、最下面取消
@@ -865,6 +880,10 @@ public sealed class RecordingPanel
                 Child = Ui.Bar(null, Ui.Text(L.T("好像沒人在說話了，要停止錄音嗎？再 15 分鐘沒人說話會自動停止。"), 13),
                     Ui.Row(8, Ui.Button(L.T("繼續錄"), r.ContinueAfterIdle), Ui.Button(L.T("停止錄音"), r.Stop))),
             });
+        if (r.StopCountdown is not null)
+            // 定時停止的時間到了、倒數中（M§84、R110.3）
+            hints.Children.Add(countdownRow);
+        UpdateCountdown();
         if (r.Hint is Recorder.LevelHint hint)
             hints.Children.Add(new Border
             {
@@ -924,6 +943,19 @@ public sealed class RecordingPanel
         if (followLatest) scroll.ChangeView(null, double.MaxValue, null, disableAnimation: true);
     }
 
+
+    /// <summary>倒數的那一句換成剩下的秒數；沒在倒數時停掉計時器</summary>
+    void UpdateCountdown()
+    {
+        if (host.Recorder.StopCountdown is not DateTime end)
+        {
+            countdownTimer.Stop();
+            return;
+        }
+        var text = IslandWindow.StopTimerText(Math.Max(0, (int)Math.Ceiling((end - DateTime.Now).TotalSeconds)));
+        if (countdownText.Text != text) countdownText.Text = text;
+        if (!countdownTimer.IsEnabled) countdownTimer.Start();
+    }
 
     /// <summary>定時停止的按鈕：字、無障礙名稱、滑過提示（還有幾分鐘）只在變了時才設，打開著的提示不會閃</summary>
     void UpdateStopTimer(Recorder r)

@@ -108,6 +108,13 @@ public sealed class Recorder
     /// <summary>定時停止（R110、M§84）：到這個時間（本機時間）就停止錄音；跟著時鐘走，暫停也照算</summary>
     public DateTime? StopAt { get { lock (gate) return stopAt; } }
     DateTime? stopAt;
+    /// <summary>時間到了先倒數（R110.3、D192）：到這個時間（本機時間）才停止；null 是沒在倒數</summary>
+    public DateTime? StopCountdown { get { lock (gate) return stopCountdown; } }
+    DateTime? stopCountdown;
+    /// <summary>倒數幾秒；DEBUG 用 --set stopTimerCountdownSeconds=… 縮短（AppHost 設）</summary>
+    public double StopCountdownSeconds { get; set; } = 30;
+    /// <summary>定時停止的時間到了、開始倒數（App 顯示提醒）。在背景執行緒觸發</summary>
+    public event Action? StopTimerDue;
     /// <summary>沒人說話多久（DEBUG 的 state）</summary>
     public double IdleSeconds { get { lock (gate) return IsRecording ? Elapsed - lastSpeechAt : 0; } }
     public double LastSpeechAt { get { lock (gate) return lastSpeechAt; } }
@@ -253,13 +260,14 @@ public sealed class Recorder
         Notify();
     }
 
-    /// <summary>定時停止（R110.1）：錄音中才有作用；null 是取消。選了新的時間就取代原本的</summary>
+    /// <summary>定時停止（R110.1）：錄音中才有作用；null 是取消（倒數中的「繼續錄」也是）。選了新的時間就取代原本的，倒數也收起</summary>
     public void SetStopTimer(DateTime? at)
     {
         lock (gate)
         {
             if (!IsRecording || stopAt == at) return;
             stopAt = at;
+            stopCountdown = null;
         }
         Log.Info(at is DateTime t ? $"stop timer set, {(int)(t - DateTime.Now).TotalSeconds}s from now" : "stop timer cancelled");
         Notify();
@@ -639,19 +647,26 @@ public sealed class Recorder
         var changed = false;
         var stop = false;
         var scheduled = false;
+        var due = false;
         double? idleSince = null;
         lock (gate)
         {
             if (generation != current || writer is not { } w) return;
             if (w.WriteFailed) stop = true;
-            // 定時停止（M§84）：放在整秒的判斷外面，暫停時 Elapsed 不走也要停
-            else if (stopAt is DateTime at && DateTime.Now >= at)
+            // 定時停止（M§84）：放在整秒的判斷外面，暫停時 Elapsed 不走也要停。時間到先倒數，倒數完才停（R110.3）
+            else if (stopCountdown is DateTime end && DateTime.Now >= end)
             {
                 Log.Info("recording stopped at the scheduled time");
                 (stop, scheduled) = (true, true);
             }
             else
             {
+                if (stopAt is DateTime at && stopCountdown is null && DateTime.Now >= at)
+                {
+                    stopCountdown = DateTime.Now.AddSeconds(StopCountdownSeconds);
+                    (due, changed) = (true, true);
+                    Log.Info("stop timer reached, counting down");
+                }
                 Elapsed = w.RecordedSeconds;
                 var seconds = (int)Elapsed;
                 if (seconds != ElapsedSeconds)
@@ -690,7 +705,11 @@ public sealed class Recorder
             }
         }
         if (stop) Stop(idleSince, scheduled);
-        else if (changed) Notify();
+        else
+        {
+            if (changed) Notify();
+            if (due) StopTimerDue?.Invoke();
+        }
     }
 
     /// <summary>收音提醒（M§26.1）：每秒看麥克風最近 30 秒的音量。第 90 百分位是說話的音量、第 10 百分位是背景</summary>
@@ -934,6 +953,7 @@ public sealed class Recorder
         liveActive = false;
         IdlePrompt = false;
         stopAt = null;
+        stopCountdown = null;
         simulation = null;
         tap.SetLive(null);
         tap.SetDetector(null);

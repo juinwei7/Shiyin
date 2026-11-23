@@ -126,7 +126,16 @@ public sealed class Notifier
     public void IdleStopped(long meetingId, string title) =>
         Show(NotificationLinks.OpenMeeting(meetingId), L.T("已自動停止錄音"), L.F("%@：30 分鐘沒有人說話", title));
 
-    /// <summary>到了定時停止的時間（R110.3、M§84）：內文是會議標題，點了打開那場會議</summary>
+    /// <summary>定時停止的時間到了、開始倒數（R110.3、M§84）：停止並轉錄、繼續錄；點通知本身打開錄音中的會議</summary>
+    public bool StopTimerPrompt(long meetingId, int seconds)
+    {
+        if (!Enabled) return false;
+        Show(NotificationLinks.OpenMeeting(meetingId), L.T("已到設定的時間"), L.F("%lld 秒後自動停止錄音並轉錄", (long)seconds),
+            (L.T("停止並轉錄"), Links.Prompt("stop", "stoptimer")), (L.T("繼續錄"), Links.Prompt("continue", "stoptimer")));
+        return true;
+    }
+
+    /// <summary>倒數完、自動停止了（R110.4、M§84）：內文是會議標題，點了打開那場會議</summary>
     public void TimerStopped(long meetingId, string title) =>
         Show(NotificationLinks.OpenMeeting(meetingId), L.T("已到設定的時間，自動停止錄音"), title);
 
@@ -164,6 +173,9 @@ public sealed class Notifier
         {
             case NotificationLinks.Link.Prompt { Action: "start" }: host.Controller.StartRecording(""); break;
             case NotificationLinks.Link.Prompt { Action: "mute", App: var app }: host.Detector.Mute(app); break;
+            // 定時停止的倒數（R110.3）：「繼續錄」取消定時，「停止並轉錄」馬上停
+            case NotificationLinks.Link.Prompt { Action: "continue", App: "stoptimer" }: host.Recorder.SetStopTimer(null); break;
+            case NotificationLinks.Link.Prompt { Action: "stop", App: "stoptimer" }: host.Recorder.Stop(); break;
             // 「停止並轉錄」「繼續錄」都取消會議結束的倒數（R95）
             case NotificationLinks.Link.Prompt { Action: "stop" }: host.MeetingEnd.Cancel(); host.Recorder.Stop(); break;
             case NotificationLinks.Link.Prompt { Action: "continue", App: "idle" }: host.Recorder.ContinueAfterIdle(); break;   // 忘了停止錄音（R48.1）
