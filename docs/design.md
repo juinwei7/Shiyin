@@ -2195,7 +2195,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 ### 45.2 是哪個 app
 
 - 提示出現的那一刻讀一次 Core Audio 的程序物件（同 §21.7：`kAudioProcessPropertyIsRunningInput`），加讀 `kAudioProcessPropertyPID`。拾音自己不算。
-- 名稱依序找：已知的會議 app、瀏覽器（§21.7 的名單，helper 歸到主程式；瀏覽器只寫名稱，不加「可能是 Google Meet」）→ `com.apple.WebKit.GPU`（Safari 的網頁是這個程序在收音，GitHub #4 的 log）寫 Safari → 其他一般的 app（`NSRunningApplication` 的 `activationPolicy == .regular`）用它的名稱 → 都沒有就寫「其他 app」（R57.2）。系統的背景程序（語音喚醒等）不算。
+- 名稱依序找：Mac 上的通話（§45.5，最優先）→ 已知的會議 app、瀏覽器（§21.7 的名單，helper 歸到主程式；瀏覽器只寫名稱，不加「可能是 Google Meet」）→ `com.apple.WebKit.GPU`（Safari 的網頁是這個程序在收音，GitHub #4 的 log）寫 Safari → 其他一般的 app（`NSRunningApplication` 的 `activationPolicy == .regular`）用它的名稱 → 都沒有就寫「其他 app」（R57.2）。系統的背景程序（語音喚醒等）不算。
 - 名稱在提示出現時決定，之後不跟著變（提示列的字不要跳）。
 
 ### 45.3 顯示
@@ -2211,8 +2211,16 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ### 45.4 驗證
 
-- DEBUG：state 的 `recorder.levelCheck` 加 `nearSilent`、`floor`（稍早的背景）、`suppressedApp`；`record-sim` 的麥克風不是真的裝置，啟動參數 `-debugMicBuiltIn YES` 當成內建麥克風；哪個 app 在用麥克風用 `meetingapp <bundleID> on` 模擬。
+- DEBUG：state 的 `recorder.levelCheck` 加 `nearSilent`、`floor`（稍早的背景）、`suppressedApp`；`record-sim` 的麥克風不是真的裝置，啟動參數 `-debugMicBuiltIn YES` 當成內建麥克風；哪個 app 在用麥克風用 `meetingapp <bundleID> start` 模擬。
 - 離線：`afconvert` 加 numpy（§26.1 的做法）。實際的語音處理：`scripts/dev/vpio-hold.swift` 對內建麥克風開語音處理時用真的麥克風錄音（要使用者在電腦前）。
+
+### 45.5 Mac 上的通話（R57.7；GitHub #11）
+
+- 在 Mac 上接 iPhone 轉接的電話、打 FaceTime 時，收音的是系統的 `avconferenced`（#11 的 log：它建立 VoiceProcessor、把內建麥克風接進語音處理）。它在 Core Audio 的程序物件裡是 bundle ID `com.apple.avconferenced`（2026-11-24 在這台 Mac 列出來看過；`callservicesd` 是 `com.apple.TelephonyUtilities`、`MacInCallService` 是 `com.apple.InCallService`，它們不收音，不看）。
+- `MicrophoneUser` 加 `isCall`。`microphoneUser()` 看到正在收音的 `com.apple.avconferenced` 就回傳通話，比會議 app、瀏覽器優先（通話開的語音處理才是聲音變 0 的原因，同時開著 Chrome 的會議也一樣）。
+- 讀的時機：§45.2 只在「被佔住」出現時讀；現在「沒有收到聲音」（`.silent`，#11 是整段 0）出現時也讀一次，存在同一個地方（同樣出現時決定、之後不變）。
+- 文字：是通話時，`.silent`、`.suppressed` 都換成 R57.7 那一句；不是通話時照舊（`.silent` 是原本那句，`.suppressed` 照 §45.3）。提示的種類不變，所以「知道了」、通知一場一次、圖示都照舊。
+- 驗證：DEBUG 用 `meetingapp com.apple.avconferenced start` 模擬通話，`record-sim` 送整段 0 的錄音（`.silent`）和 −85 dBFS 的雜訊加 `-debugMicBuiltIn YES`（`.suppressed`），state 的 `recorder.levelCheck.text` 是通話那句；關掉模擬時是原本的兩句。真的通話要使用者：在 Mac 上接一通 iPhone 轉接的電話或 FaceTime 錄音。
 
 ## 46. 把一句拆成兩句（R70，D152；GitHub #6）
 

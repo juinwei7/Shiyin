@@ -134,15 +134,19 @@ final class MeetingDetector {
     struct MicrophoneUser: Equatable {
         var name: String
         var isBrowser: Bool
+        /// Mac 上的通話（iPhone 轉接的電話、FaceTime，design §45.5、R57.7）
+        var isCall = false
     }
 
-    /// 已知的會議 app、瀏覽器優先，其次是其他一般的 app；拾音自己、系統的背景程序不算。都沒有回傳 nil
+    /// Mac 上的通話最優先，其次是已知的會議 app、瀏覽器，再其次是其他一般的 app；拾音自己、系統的背景程序不算。都沒有回傳 nil
     func microphoneUser() -> MicrophoneUser? {
-        var other: MicrophoneUser?
+        var known: MicrophoneUser?, other: MicrophoneUser?
         #if DEBUG
         // 模擬的 app（meetingapp）
         for (bundle, on) in simulated.sorted(by: { $0.key < $1.key }) where on {
-            if let user = Self.microphoneUser(bundle: bundle) { return user }
+            guard let user = Self.microphoneUser(bundle: bundle) else { continue }
+            if user.isCall { return user }
+            if known == nil { known = user }
         }
         #endif
         let own = ProcessInfo.processInfo.processIdentifier
@@ -150,17 +154,22 @@ final class MeetingDetector {
             guard Self.isRunningInput(object), let pid = Self.pid(object), pid != own else { continue }
             let bundle = Self.bundleID(object) ?? ""
             guard bundle != Bundle.main.bundleIdentifier else { continue }   // 另一份拾音
-            if let user = Self.microphoneUser(bundle: bundle) { return user }
-            if other == nil, let app = NSRunningApplication(processIdentifier: pid), app.activationPolicy == .regular,
-               let name = app.localizedName {
+            if let user = Self.microphoneUser(bundle: bundle) {
+                // 聲音變 0 是通話開的語音處理，同時開著會議 app 也一樣（design §45.5）
+                if user.isCall { return user }
+                if known == nil { known = user }
+            } else if other == nil, let app = NSRunningApplication(processIdentifier: pid), app.activationPolicy == .regular,
+                      let name = app.localizedName {
                 other = MicrophoneUser(name: name, isBrowser: false)
             }
         }
-        return other
+        return known ?? other
     }
 
-    /// 已知的會議 app、瀏覽器；Safari 的網頁由 WebKit 的 GPU 程序收音（GitHub #4 的 log）
+    /// Mac 上的通話、已知的會議 app、瀏覽器。通話由系統的 avconferenced 收音（GitHub #11 的 log）；
+    /// Safari 的網頁由 WebKit 的 GPU 程序收音（GitHub #4 的 log）
     static func microphoneUser(bundle: String) -> MicrophoneUser? {
+        if bundle == "com.apple.avconferenced" { return MicrophoneUser(name: "avconferenced", isBrowser: false, isCall: true) }
         if bundle == "com.apple.WebKit.GPU" { return MicrophoneUser(name: "Safari", isBrowser: true) }
         guard let known = known(bundle) else { return nil }
         if let name = meetingApps[known] { return MicrophoneUser(name: name, isBrowser: false) }

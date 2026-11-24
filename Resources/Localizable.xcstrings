@@ -26476,6 +26476,23 @@
         }
       }
     },
+    "麥克風被 Mac 上的通話（iPhone 轉接的電話、FaceTime）佔住，拾音收不到你的聲音。請讓通話用 AirPods 或其他耳機的麥克風，或在 iPhone 上接聽。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风被 Mac 上的通话（iPhone 转接的电话、FaceTime）占住，拾音收不到你的声音。请让通话用 AirPods 或其他耳机的麦克风，或在 iPhone 上接听。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A call on this Mac (an iPhone call or FaceTime) is using the microphone, so Shiyin can’t hear you. Use AirPods or another headset’s microphone for the call, or answer it on your iPhone."
+          }
+        }
+      }
+    },
     "麥克風音量": {
       "extractionState": "manual",
       "localizations": {

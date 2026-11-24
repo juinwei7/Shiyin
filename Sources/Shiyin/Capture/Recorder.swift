@@ -85,13 +85,19 @@ final class Recorder {
             }
             return String(localized: "麥克風幾乎收不到聲音：\(user.name) 可能正在用這支麥克風做回音消除，拾音收不到你的聲音。請讓 \(user.name) 和拾音用不同的麥克風。")
         }
+
+        /// Mac 上的通話佔住麥克風（design §45.5、R57.7）：沒有收到聲音、幾乎收不到聲音都換成這句
+        static var callText: String {
+            String(localized: "麥克風被 Mac 上的通話（iPhone 轉接的電話、FaceTime）佔住，拾音收不到你的聲音。請讓通話用 AirPods 或其他耳機的麥克風，或在 iPhone 上接聽。")
+        }
     }
     private(set) var levelHint: LevelHint?
     /// 提示的文字（錄音畫面、選單列、通知共用，R42）
     func text(for hint: LevelHint) -> String {
-        hint == .suppressed ? LevelHint.suppressedText(suppressedBy) : hint.text
+        if hint == .silent || hint == .suppressed, suppressedBy?.isCall == true { return LevelHint.callText }
+        return hint == .suppressed ? LevelHint.suppressedText(suppressedBy) : hint.text
     }
-    /// 被佔住的提示出現時，正在用麥克風的 app（design §45.2）；AppModel 接到 MeetingDetector
+    /// 沒有收到聲音、被佔住的提示出現時，正在用麥克風的 app（design §45.2、§45.5）；AppModel 接到 MeetingDetector
     @ObservationIgnored var microphoneUser: (() -> MeetingDetector.MicrophoneUser?)?
     @ObservationIgnored private var suppressedBy: MeetingDetector.MicrophoneUser?
     /// 這場錄音稍早的背景音量（最低值）；晚 10 秒才算數，還沒算數的放 pendingFloor（design §45.1）
@@ -712,8 +718,8 @@ final class Recorder {
     private func updateLevelHint(_ hint: LevelHint?) {
         let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
         guard shown != levelHint else { return }
-        // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）
-        if shown == .suppressed { suppressedBy = microphoneUser?() }
+        // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）；沒有收到聲音時也看是不是 Mac 上的通話（§45.5）
+        if shown == .suppressed || shown == .silent { suppressedBy = microphoneUser?() }
         levelHint = shown
         // 第一次出現才通知（R42.1）；提示消失又出現不再通知
         if let shown, notifiedLevelHints.insert(shown).inserted { onLevelHint?(shown) }

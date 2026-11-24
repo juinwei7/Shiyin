@@ -56,9 +56,9 @@
 
 - [~] **ST2 Windows**（R108.7，design-windows §11.41）：程式完成，單元測試通過，虛擬機用 UI Automation 和真的滑鼠點過導覽換頁、搜尋「麥克風」「API key」「快捷鍵」、關掉重開和重開 app 停在上次那頁、拉大和縮到最小，十一頁淺色、深色、英文截圖看過；150%、對比主題（水生十一頁、沙漠）、只用鍵盤（Tab、↑ ↓ 換頁、Enter 選第一項）、導覽的 UI Automation 名稱 2026-11-17 巡檢過（見 commit 訊息）。還差：真的開朗讀程式聽導覽和搜尋框（UI Automation 的名稱都對）
 
-## Mac 上的通話佔住麥克風（R57.7；GitHub #11，2026-11-17 已回覆會做）
+## Mac 上的通話佔住麥克風（R57.7，design §45.5；GitHub #11，2026-11-17 已回覆會做）
 
-- [ ] **MC1 Mac 通話佔住麥克風時說清楚原因**（R57.7，design §45 要先寫）：麥克風沒有收到聲音或幾乎收不到聲音時，讀 Core Audio 的程序物件，正在收音的是系統的通話服務（avconferenced 這類，先用使用者 #11 的 log 和自己的 FaceTime／接續互通通話確認程序名稱）就換成通話的提示。驗證：真的在 Mac 上接一通 iPhone 轉接的電話或 FaceTime 錄音，10 秒內出現新的提示、通知；一般錄音、Safari Meet（#4）的提示不變；做好在 #11 回覆
+- [~] **MC1 Mac 通話佔住麥克風時說清楚原因**（R57.7、§45.5）：程式完成，DEBUG 版用 `meetingapp com.apple.avconferenced` 模擬通話驗過（2026-11-24，見 commit 訊息）。還差（要使用者）：真的在 Mac 上接一通 iPhone 轉接的電話或 FaceTime，用內建麥克風錄音，10 秒內出現通話的提示、通知（看 Core Audio 回報的真的是 `com.apple.avconferenced` 在收音）；發布後在 #11 回覆
 
 ## 沒人講話時編出整句（design §6.2；2026-11-16 驗 GitHub #9 時發現）
 
