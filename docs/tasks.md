@@ -58,7 +58,7 @@
 
 ## Mac 上的通話佔住麥克風（R57.7，design §45.5；GitHub #11，2026-11-17 已回覆會做）
 
-- [~] **MC1 Mac 通話佔住麥克風時說清楚原因**（R57.7、§45.5）：程式完成，DEBUG 版用 `meetingapp com.apple.avconferenced` 模擬通話驗過（2026-11-24，見 commit 訊息）。還差（要使用者）：真的在 Mac 上接一通 iPhone 轉接的電話或 FaceTime，用內建麥克風錄音，10 秒內出現通話的提示、通知（看 Core Audio 回報的真的是 `com.apple.avconferenced` 在收音）；發布後在 #11 回覆
+- [~] **MC1 Mac 通話佔住麥克風時說清楚原因**（R57.7、§45.5）：程式完成，DEBUG 版用 `meetingapp com.apple.avconferenced` 模擬通話驗過（2026-11-24，見 commit 訊息）。還差（要使用者）：真的在 Mac 上接一通 iPhone 轉接的電話或 FaceTime，用內建麥克風錄音，10 秒內出現通話的提示、通知（看 Core Audio 回報的真的是 `com.apple.avconferenced` 在收音）。5.1.1 已發布、#11 已回覆並關閉（2026-11-24），回報的人試過再看
 
 ## 沒人講話時編出整句（design §6.2；2026-11-16 驗 GitHub #9 時發現）
 
