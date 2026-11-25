@@ -805,6 +805,8 @@ enum DebugControl {
         case "importsheet": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) })   // 只打開匯入對話框
         case "recordstall":   // recordstall <秒數|off> [聲道]：模擬錄音的音源停止送資料（design §20.2）
             model.recorder.simulateStall(channel: args.count > 2 ? Int(args[2]) ?? 0 : 0, seconds: args[1] == "off" ? nil : Double(args[1]) ?? 5)
+        case "recordzero":   // recordzero：麥克風那一聲道照常送資料但全是 0，重新連接才恢復（看門狗看不到，靠全是 0 的重新連接）
+            model.recorder.simulateZeros()
         case "recordinterrupt":   // recordinterrupt [聲道]：等於音源發現裝置變了，Recorder 會重新開始這個音源
             model.recorder.simulateInterruption(channel: args.count > 1 ? Int(args[1]) ?? 0 : 0)
         case "recordflap":   // recordflap <次數> [秒數]：麥克風接下來幾次開始收音後都說裝置變了，每次重新開始花幾秒（design §50.4）

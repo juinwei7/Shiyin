@@ -286,6 +286,8 @@ final class FileSource: MicrophoneInput {
     /// recordflap（design §50.4）：接下來幾次開始收音後 0.5 秒送出「裝置變了」；在背景重新開始時要花幾秒（模擬藍牙）
     private var flapsLeft = 0
     private var slowStart: Double = 0
+    /// recordzero：麥克風那一聲道照常送資料、但全是 0，直到下一次 start()（模擬裝置那頭斷了、重新連接才好）
+    private var zeroMic = false
 
     init(url: URL, speed: Double) {
         self.url = url
@@ -299,6 +301,7 @@ final class FileSource: MicrophoneInput {
         current = Thread.isMainThread ? MainActor.assumeIsolated { MicrophoneMonitor.shared.resolve(uid) } : MicrophoneMonitor.resolveSnapshot(uid)
         let (flap, slow) = lock.withLock { () -> (Bool, Double) in
             defer { flapsLeft = max(0, flapsLeft - 1) }
+            zeroMic = false
             return (flapsLeft > 0, slowStart)
         }
         if slow > 0 && !Thread.isMainThread { Thread.sleep(forTimeInterval: slow) }
@@ -314,9 +317,9 @@ final class FileSource: MicrophoneInput {
             self.lock.withLock { self.samples = samples }
             let chunk = Int(CaptureFormat.sampleRate / 10)    // 0.1 秒一段
             while !Task.isCancelled {
-                let (start, stalled) = self.lock.withLock { () -> (Int, Set<Int>) in
+                let (start, stalled, zeroMic) = self.lock.withLock { () -> (Int, Set<Int>, Bool) in
                     let now = ProcessInfo.processInfo.systemUptime
-                    return (self.position, Set(self.stalledUntil.filter { $0.value > now }.keys))
+                    return (self.position, Set(self.stalledUntil.filter { $0.value > now }.keys), self.zeroMic)
                 }
                 guard start < samples.count else {
                     self.onEnded?()
@@ -327,7 +330,7 @@ final class FileSource: MicrophoneInput {
                 // 先記下位置再送：restart() 時新的 task 不會重送同一段
                 self.lock.withLock { self.position = end }
                 // 停住的聲道照樣往前走（時間在過），只是沒有送出資料，跟真的裝置停了一樣
-                if !stalled.contains(0) { self.onSamples?(chunk) }
+                if !stalled.contains(0) { self.onSamples?(zeroMic ? [Float](repeating: 0, count: chunk.count) : chunk) }
                 if !stalled.contains(1), let mirror = self.mirror {
                     // 電腦聲音那一聲道全是 0：模擬「錄製系統音訊」被拒絕（design §51.1）
                     mirror.onSamples?(mirror.silent ? [Float](repeating: 0, count: chunk.count) : chunk)
@@ -345,6 +348,11 @@ final class FileSource: MicrophoneInput {
     /// recordstall：這個聲道停止送資料幾秒（nil 是馬上恢復）。restart() 不會提早恢復，模擬裝置真的停了（design §20.2）
     func stall(channel: Int, seconds: Double?) {
         lock.withLock { stalledUntil[channel] = seconds.map { ProcessInfo.processInfo.systemUptime + $0 } }
+    }
+
+    /// recordzero：麥克風那一聲道從現在起全是 0，下一次 start()（重新連接）才恢復
+    func sendZeros() {
+        lock.withLock { zeroMic = true }
     }
 
     /// recordflap：接下來 times 次開始收音後都送出「裝置變了」，每次在背景重新開始花 seconds 秒；馬上先送一次（design §50.4）
