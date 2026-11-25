@@ -2814,6 +2814,40 @@
         }
       }
     },
+    "上一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous"
+          }
+        }
+      }
+    },
+    "上一個（⇧Return）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个（⇧Return）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous (⇧Return)"
+          }
+        }
+      }
+    },
     "上一步": {
       "extractionState": "manual",
       "localizations": {
@@ -2895,6 +2929,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "The last attempt to create the clean version failed: %@"
+          }
+        }
+      }
+    },
+    "下一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        }
+      }
+    },
+    "下一個（Return）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个（Return）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next (Return)"
           }
         }
       }
@@ -12685,6 +12753,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜索逐字稿"
+          }
+        }
+      }
+    },
+    "搜尋逐字稿時跳到下一個、上一個（也可以按 Return、⇧Return）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索逐字稿时跳到下一个、上一个（也可以按 Return、⇧Return）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next or previous match when searching the transcript (Return and ⇧Return also work)"
           }
         }
       }

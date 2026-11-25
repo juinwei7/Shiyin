@@ -10,6 +10,10 @@ struct TranscriptTab: View {
 
     @State private var query = ""
     @State private var matchCursor = 0
+    /// 按一次上一個、下一個加一（design §85）：只有一段符合時游標不變，捲動要看這個
+    @State private var matchJump = 0
+    /// 目前跳到的那一段（R111.3）：游標換了才設，每一列不用重算 matches
+    @State private var currentMatch: Int64?
     @State private var editingId: Int64?
     @State private var editText = ""
     @State private var draftTask: Task<Void, Never>?
@@ -134,11 +138,12 @@ struct TranscriptTab: View {
                         if reduceMotion { proxy.scrollTo(id, anchor: .center) }
                         else { withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(id, anchor: .center) } }
                     }
-                    .onChange(of: matchCursor) { _, cursor in
-                        if matches.indices.contains(cursor) { proxy.scrollTo(matches[cursor], anchor: .center) }
+                    .onChange(of: matchJump) { _, _ in
+                        if let currentMatch { proxy.scrollTo(currentMatch, anchor: .center) }
                     }
                     .onChange(of: query) { _, _ in
                         matchCursor = 0
+                        currentMatch = matches.first
                         if let first = matches.first { proxy.scrollTo(first, anchor: .center) }
                     }
                     // 單段編輯的草稿（design §21.15、R20.6）：換分頁、換會議、結束拾音都還在
@@ -202,12 +207,25 @@ struct TranscriptTab: View {
                 TextField("搜尋逐字稿", text: $query)
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
-                    .onSubmit { if !matches.isEmpty { matchCursor = (matchCursor + 1) % matches.count } }
+                    // ⇧Return 是上一個（R111.2）：onSubmit 拿不到修飾鍵，看送來的這個事件
+                    .onSubmit { step(NSApp.currentEvent?.modifierFlags.contains(.shift) == true ? -1 : 1) }
                 if !query.isEmpty {
                     Text(matches.isEmpty ? "找不到" : "\(min(matchCursor + 1, matches.count))／\(matches.count) 段")
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
+                    // 上一個、下一個（R111.1）
+                    HStack(spacing: 2) {
+                        Button { step(-1) } label: { Image(systemName: "chevron.up").font(.system(size: 11, weight: .semibold)).frame(width: 18, height: 16) }
+                            .help("上一個（⇧Return）")
+                            .accessibilityLabel("上一個")
+                        Button { step(1) } label: { Image(systemName: "chevron.down").font(.system(size: 11, weight: .semibold)).frame(width: 18, height: 16) }
+                            .help("下一個（Return）")
+                            .accessibilityLabel("下一個")
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .disabled(matches.isEmpty)
                     Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
@@ -220,6 +238,17 @@ struct TranscriptTab: View {
             // ⌘F 聚焦搜尋框（design §9.4）
             Button("搜尋") { searchFocused = true }
                 .keyboardShortcut("f")
+                .hidden()
+                .frame(width: 0)
+            // ⌘G、⇧⌘G（R111.2）：沒有符合的段落時停用，不吃掉快捷鍵
+            Button("下一個") { step(1) }
+                .keyboardShortcut("g")
+                .disabled(matches.isEmpty)
+                .hidden()
+                .frame(width: 0)
+            Button("上一個") { step(-1) }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+                .disabled(matches.isEmpty)
                 .hidden()
                 .frame(width: 0)
             if !detail.speakers.isEmpty {
@@ -483,7 +512,8 @@ struct TranscriptTab: View {
                 let clean = cleanMode ? segment.id.flatMap { detail.cleanLines[$0] } : nil
                 let corrections = clean == nil ? (segment.id.flatMap { detail.correctionsBySegment[$0] } ?? []) : []
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(clean.map { AttributedString($0) } ?? highlighted(segment.text, corrections: corrections)).meetingText()
+                    Text(clean.map { AttributedString($0) } ?? highlighted(segment.text, corrections: corrections,
+                                                                         current: segment.id != nil && segment.id == currentMatch)).meetingText()
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -614,7 +644,8 @@ struct TranscriptTab: View {
         Button("新的說話者") { model.reassignSegments(ids, to: nil) }
     }
 
-    private func highlighted(_ text: String, corrections: [Correction] = []) -> AttributedString {
+    /// current：目前跳到的那一段，搜尋到的字底色深一點（R111.3）
+    private func highlighted(_ text: String, corrections: [Correction] = [], current: Bool = false) -> AttributedString {
         var attributed = AttributedString(text)
         // 待確認的校正建議：原文加底線和底色
         for c in corrections where c.status == "pending" {
@@ -627,10 +658,19 @@ struct TranscriptTab: View {
         guard !q.isEmpty else { return attributed }
         var searchRange = attributed.startIndex..<attributed.endIndex
         while let range = attributed[searchRange].range(of: q, options: .caseInsensitive) {
-            attributed[range].backgroundColor = Color.signal.opacity(0.35)
+            attributed[range].backgroundColor = Color.signal.opacity(current ? 0.7 : 0.35)
             searchRange = range.upperBound..<attributed.endIndex
         }
         return attributed
+    }
+
+    /// 跳到上一個（-1）、下一個（1）符合的段落，到頭繞回（R111.1）
+    private func step(_ delta: Int) {
+        let found = matches
+        guard !found.isEmpty else { return }
+        matchCursor = ((matchCursor + delta) % found.count + found.count) % found.count
+        currentMatch = found[matchCursor]
+        matchJump += 1
     }
 
     private func startEdit(_ segment: Segment) {

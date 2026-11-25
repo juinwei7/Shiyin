@@ -360,6 +360,9 @@ public sealed class MainWindow : Window
         });
         Accelerator(VirtualKey.E, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d) _ = Dialogs.Export(this, d.Meeting.Id!.Value); });
         Accelerator(VirtualKey.F, VirtualKeyModifiers.Control, () => detailView.FocusSearch());
+        // F3、Shift+F3：逐字稿搜尋的下一個、上一個（R111.2），在逐字稿分頁才有作用
+        Accelerator(VirtualKey.F3, VirtualKeyModifiers.None, () => { if (State.Detail is not null && State.Tab == DetailTab.Transcript) detailView.StepSearch(1); });
+        Accelerator(VirtualKey.F3, VirtualKeyModifiers.Shift, () => { if (State.Detail is not null && State.Tab == DetailTab.Transcript) detailView.StepSearch(-1); });
         foreach (var tab in Enum.GetValues<DetailTab>())
         {
             var i = (int)tab;

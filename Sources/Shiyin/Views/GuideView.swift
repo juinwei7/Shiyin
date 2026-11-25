@@ -154,6 +154,7 @@ struct GuideView: View {
                     shortcut(String(localized: "⌘1～⌘3"), String(localized: "切換紀錄、逐字稿、提問"))
                     shortcut("⌘+ / ⌘−", String(localized: "放大、縮小會議內容的文字（⌘0 回到標準大小）"))
                     shortcut("⌘F", String(localized: "搜尋逐字稿（在「逐字稿」）"))
+                    shortcut("⌘G / ⇧⌘G", String(localized: "搜尋逐字稿時跳到下一個、上一個（也可以按 Return、⇧Return）"))
                     shortcut("⌘,", String(localized: "設定"))
                     shortcut("⌘?", String(localized: "打開這份說明"))
                 }

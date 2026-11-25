@@ -881,6 +881,14 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **DEBUG**：控制通道 `stoptimer <秒數|off>`；`state` 的 `recorder.stopTimer`（`remaining`，沒設定是 -1；`label`；`countdown`，沒在倒數是 -1）；`meetingaction continue|stop` 等於按島上的按鈕。
 - **驗證**：`dotnet test`（`StopTimerTests`、`Recorder` 到時間停止的測試）；虛擬機 `record-sim` 錄音中 `stoptimer 20` → 停止、轉錄、通知；UI Automation 打開錄音畫面的下拉選單選「30 分鐘後」→ 寫「HH:mm 停止」、「取消定時停止」；「指定時間…」輸入錯的、對的時間；系統匣的子選單；島滑過去的那一行。
 
+### 11.44 逐字稿搜尋：上一個、下一個（R111，M§85）
+
+- 搜尋列在 `matchLabel` 右邊加兩顆無邊框的小按鈕（`` ChevronUp、`` ChevronDown），有搜尋字時才顯示，沒有符合的段落時停用；ToolTip「上一個（Shift+Enter）」「下一個（Enter）」，無障礙名稱「上一個」「下一個」。
+- `Step(int delta)`：游標繞回（同 Mac），更新「N／M 段」、重畫看得到的列（目前那一段的底色換了）、捲過去。搜尋框的 Enter：按著 Shift 是上一個。F3、Shift+F3 是主視窗的加速鍵（同 Ctrl+F），在逐字稿分頁才有作用。
+- 目前那一段：搜尋到的字底色的透明度 90 → 170（其他段落照舊）；對比主題照舊用系統的反白色。
+- 使用說明的快捷鍵：Ctrl+F 下面加「F3／Shift+F3：搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）」。
+- **驗證**：虛擬機示範資料搜尋常見字，UI Automation 按兩顆按鈕、Enter、Shift+Enter、F3，看「N／M 段」和捲動。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

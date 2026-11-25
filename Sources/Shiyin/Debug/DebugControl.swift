@@ -456,6 +456,17 @@ enum DebugControl {
             textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
             textView.insertText(args[1], replacementRange: textView.selectedRange())
         case "notesvalue": write(["found": notesTextView() != nil, "text": notesTextView()?.string ?? ""], to: args[1])
+        // fieldtype <提示字> <文字>：提示字相符的單行輸入框（例如「搜尋逐字稿」）換成這段文字。走欄位編輯器的 insertText，
+        // 不經過輸入法（逐字稿搜尋的上一個、下一個，design §85）
+        case "fieldtype":
+            func find(_ view: NSView) -> NSTextField? {
+                if let field = view as? NSTextField, field.isEditable, field.placeholderString == args[1] { return field }
+                return view.subviews.lazy.compactMap(find).first
+            }
+            guard args.count > 2, let field = NSApp.windows.lazy.filter(\.isVisible).compactMap({ $0.contentView.flatMap(find) }).first,
+                  field.window?.makeFirstResponder(field) == true, let editor = field.currentEditor() as? NSTextView else { break }
+            editor.selectAll(nil)
+            editor.insertText(args[2], replacementRange: editor.selectedRange())
         // press <標籤> [第幾個，從 0 開始] [結果.json]：在 app 內走輔助使用的元件樹，按下標籤相符的按鈕。
         // 跟從外面用 AX 按的是同一條路，螢幕上鎖、視窗在別的桌面時也能用
         case "metrics":   // metrics <輸出.json> [reset]：效能計數（design §21.12）；加 reset 讀完歸零
@@ -696,11 +707,25 @@ enum DebugControl {
         case "appearance":   // appearance light|dark|system：只改這個 app 的外觀（巡檢淺色、深色用，不動系統設定）
             NSApp.appearance = args[1] == "light" ? NSAppearance(named: .aqua) : args[1] == "dark" ? NSAppearance(named: .darkAqua) : nil
         case "capturemenu": captureNextMenu(to: args[1])   // capturemenu <輸出.json>：接下來打開的選單寫出項目後關掉（配合外面送的真的滑鼠事件）
-        // keyat <return|delete|escape|f2> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
+        // keyat [shift+|cmd+…]<return|delete|escape|f2|…|g> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
         case "keyat":
             guard args.count > 2, let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == args[2] || "\($0.windowNumber)" == args[2]) })
             else { break }
-            let (code, chars): (UInt16, String) = switch args[1] {
+            // 修飾鍵寫在前面：shift+return、cmd+g、cmd+shift+g（逐字稿搜尋的上一個、下一個，design §85）
+            var keyName = Substring(args[1])
+            var flags: NSEvent.ModifierFlags = []
+            while let plus = keyName.firstIndex(of: "+"), plus != keyName.startIndex {
+                switch keyName[..<plus] {
+                case "shift": flags.insert(.shift)
+                case "cmd": flags.insert(.command)
+                case "option": flags.insert(.option)
+                case "ctrl": flags.insert(.control)
+                default: break
+                }
+                keyName = keyName[keyName.index(after: plus)...]
+            }
+            let (code, chars): (UInt16, String) = switch keyName {
+            case "g": (5, "g")
             case "delete": (51, "\u{7f}")
             case "space": (49, " ")
             case "escape": (53, "\u{1b}")
@@ -711,13 +736,15 @@ enum DebugControl {
             case "left": (123, String(UnicodeScalar(NSLeftArrowFunctionKey)!))
             default: (36, "\r")
             }
-            // 第四個參數 app：走 NSApp.sendEvent（會經過 app 的事件監看，自己畫的選單的鍵盤靠它）
+            // 第四個參數 app：走 NSApp.sendEvent（會經過 app 的事件監看，自己畫的選單的鍵盤靠它）；
+            // queue：排進事件佇列，NSApp.currentEvent 是這一下（同 mouseat clickq；onSubmit 看 ⇧ 要這個）
             let throughApp = args.count > 3 && args[3] == "app"
+            let queued = args.count > 3 && args[3] == "queue"
             for type in [NSEvent.EventType.keyDown, .keyUp] {
-                if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                                                 windowNumber: window.windowNumber, context: nil, characters: chars, charactersIgnoringModifiers: chars,
                                                 isARepeat: false, keyCode: code) {
-                    if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
+                    if queued { NSApp.postEvent(event, atStart: false) } else if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
                 }
             }
         // pressbutton <按鈕的字> [視窗編號]：按 AppKit 的按鈕（確認對話框的 NSAlert 在桌面層時 AX 看不到、clickat 點不到）

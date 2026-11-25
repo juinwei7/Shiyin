@@ -20,6 +20,10 @@ public sealed class TranscriptTab
     readonly Grid root = new();
     readonly TextBox search = new() { PlaceholderText = L.T("搜尋逐字稿"), MinWidth = 120 };
     readonly TextBlock matchLabel = Ui.Text("", 12, color: null, wrap: false);
+    /// <summary>上一個、下一個（R111.1、design-windows §11.44）：有搜尋字時才顯示</summary>
+    readonly Button previousMatch = MatchButton("\uE70E", L.T("上一個"), L.T("上一個（Shift+Enter）"));
+    readonly Button nextMatch = MatchButton("\uE70D", L.T("下一個"), L.T("下一個（Enter）"));
+    readonly StackPanel matchButtons = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     readonly ComboBox speakerFilter = new() { Width = 160 };
     /// <summary>原文｜精簡（R96、M§70、design-windows §11.29）：存在設定的 transcriptView</summary>
     readonly SelectorBar viewBar = new();
@@ -89,11 +93,15 @@ public sealed class TranscriptTab
         search.TextChanged += (_, _) => { matchCursor = 0; UpdateMatches(); RefreshRows(); ScrollToMatch(); };
         search.KeyDown += (_, e) =>
         {
-            if (e.Key != Windows.System.VirtualKey.Enter || matches.Count == 0) return;
-            matchCursor = (matchCursor + 1) % matches.Count;
-            UpdateMatchLabel();
-            ScrollToMatch();
+            if (e.Key != Windows.System.VirtualKey.Enter) return;
+            // Shift+Enter 是上一個（R111.2）
+            var shift = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Shift).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+            Step(shift ? -1 : 1);
         };
+        matchButtons.Children.Add(previousMatch);
+        matchButtons.Children.Add(nextMatch);
+        previousMatch.Click += (_, _) => Step(-1);
+        nextMatch.Click += (_, _) => Step(1);
         speakerFilter.SelectionChanged += (_, _) =>
         {
             if (updating || detail is null) return;
@@ -106,6 +114,25 @@ public sealed class TranscriptTab
     }
 
     public void FocusSearch() => search.Focus(FocusState.Programmatic);
+
+    /// <summary>跳到上一個（-1）、下一個（1）符合的段落，到頭繞回（R111.1）；F3、Shift+F3 也走這裡</summary>
+    public void Step(int delta)
+    {
+        if (matches.Count == 0) return;
+        matchCursor = ((matchCursor + delta) % matches.Count + matches.Count) % matches.Count;
+        UpdateMatchLabel();
+        RefreshRows();
+        ScrollToMatch();
+    }
+
+    static Button MatchButton(string glyph, string name, string tooltip)
+    {
+        var b = Ui.Borderless(new Button { Content = new FontIcon { Glyph = glyph, FontSize = 11 }, Padding = new Thickness(6) }, Ui.Secondary);
+        ToolTipService.SetToolTip(b, tooltip);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, name);
+        b.VerticalAlignment = VerticalAlignment.Center;
+        return b;
+    }
 
     /// <summary>文字大小改了（R59）：看得到的那幾段重建；其他的捲到時才建，本來就會用新的大小</summary>
     public void Rescale()
@@ -157,6 +184,7 @@ public sealed class TranscriptTab
         searchRow.ColumnDefinitions.Clear();
         AddToSearchRow(search, new GridLength(1, GridUnitType.Star), 300);
         AddToSearchRow(matchLabel, GridLength.Auto);
+        AddToSearchRow(matchButtons, GridLength.Auto);
         if (detail!.Speakers.Count > 0)
         {
             updating = true;
@@ -327,6 +355,8 @@ public sealed class TranscriptTab
     {
         matchLabel.Foreground = Ui.Secondary;
         matchLabel.Text = search.Text.Trim().Length == 0 ? "" : matches.Count == 0 ? L.T("找不到") : L.F("%lld／%lld 段", Math.Min(matchCursor + 1, matches.Count), matches.Count);
+        previousMatch.Visibility = nextMatch.Visibility = search.Text.Trim().Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        previousMatch.IsEnabled = nextMatch.IsEnabled = matches.Count > 0;
     }
 
     void ScrollToMatch()
@@ -454,9 +484,11 @@ public sealed class TranscriptTab
             if (at >= 0) text.TextHighlighters.Add(Highlighter(at, c.Original.Length, Microsoft.UI.ColorHelper.FromArgb(52, 0xB9, 0x7F, 0x06)));
         }
         var q = clean is null ? search.Text.Trim() : "";
+        // 目前跳到的那一段底色深一點（R111.3）
+        var current = segment.Id is long sid && matchCursor < matches.Count && matches[matchCursor] == sid;
         if (q.Length > 0)
             for (var at = segment.Text.IndexOf(q, StringComparison.CurrentCultureIgnoreCase); at >= 0; at = segment.Text.IndexOf(q, at + q.Length, StringComparison.CurrentCultureIgnoreCase))
-                text.TextHighlighters.Add(Highlighter(at, q.Length, Microsoft.UI.ColorHelper.FromArgb(90, 0xB9, 0x7F, 0x06)));
+                text.TextHighlighters.Add(Highlighter(at, q.Length, Microsoft.UI.ColorHelper.FromArgb((byte)(current ? 170 : 90), 0xB9, 0x7F, 0x06)));
         text.DoubleTapped += (_, _) => StartEdit(segment);
         var panel = Ui.Column(4, text);
         foreach (var c in corrections) panel.Children.Add(CorrectionLine(c));

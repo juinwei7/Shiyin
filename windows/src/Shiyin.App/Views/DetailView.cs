@@ -183,6 +183,9 @@ public sealed class DetailView
 
     public void FocusSearch() => transcript.FocusSearch();
 
+    /// <summary>F3、Shift+F3（R111.2）：逐字稿搜尋的下一個、上一個</summary>
+    public void StepSearch(int delta) => transcript.Step(delta);
+
     /// <summary>捲到這一段並暫時加底色（搜尋結果、出處、校正的「跳到第一處」）</summary>
     public void Flash(long segmentId, bool seek = false)
     {

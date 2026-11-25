@@ -426,6 +426,7 @@ public static class OtherWindows
             L.F("%@：%@", L.T("空白鍵"), L.T("播放或暫停")),
             L.F("%@：%@", "Ctrl+1～Ctrl+3", L.T("切換紀錄、逐字稿、提問")),  // l10n-skip
             L.F("%@：%@", "Ctrl+F", L.T("搜尋逐字稿（在「逐字稿」）")),
+            L.F("%@：%@", "F3／Shift+F3", L.T("搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）")),  // l10n-skip：只有快捷鍵
             L.F("%@：%@", "Ctrl+＋／Ctrl+－", L.T("放大、縮小會議內容的文字")),  // l10n-skip：只有快捷鍵
             L.F("%@：%@", "Ctrl+0", L.T("會議內容的文字回到實際大小"))));
         window.Content = Ui.WindowBackground(Ui.Scroll(new ReadingColumn(column, 680), 36));

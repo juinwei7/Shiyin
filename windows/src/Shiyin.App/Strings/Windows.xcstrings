@@ -681,6 +681,74 @@
         }
       }
     },
+    "上一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个"
+          }
+        }
+      }
+    },
+    "上一個（Shift+Enter）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous (Shift+Enter)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个（Shift+Enter）"
+          }
+        }
+      }
+    },
+    "下一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个"
+          }
+        }
+      }
+    },
+    "下一個（Enter）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next (Enter)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个（Enter）"
+          }
+        }
+      }
+    },
     "下載的壓縮檔裡少了需要的檔案，請重新下載": {
       "extractionState": "manual",
       "localizations": {
@@ -2168,6 +2236,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "扫描的 PDF、图片用 Windows 的文字识别读出文字（要有会议语言的识别：设置 → 时间与语言 → 语言与地区）。一场会议的文档合计最多 4 万字，太长的只送前面的部分。Keynote、Pages 请先导出成 PDF。"
+          }
+        }
+      }
+    },
+    "搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next or previous match when searching the transcript (Enter and Shift+Enter also work)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索逐字稿时跳到下一个、上一个（也可以按 Enter、Shift+Enter）"
           }
         }
       }

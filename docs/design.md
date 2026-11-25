@@ -3021,6 +3021,17 @@ Windows 的做法在 design-windows §11.43。
 - DEBUG：`shiyinctl stoptimer <秒數|off>`（從現在起幾秒後停止）；`state` 的 `recorder.stopTimer`（`remaining` 剩幾秒，沒設定是 -1；`label`；`countdown` 倒數剩幾秒，沒在倒數是 -1）；`meetingprompts` 的種類寫 `stoptimer`，`meetingaction continue|stop` 等於按島上、小視窗的按鈕；通知的 `recent` 多 `"timer": "stopped"`；`preview stoptimer`（指定時間的彈窗）、`preview menubar`（選單列的小視窗；`snapshot menubar` 畫不出裡面的選單）。
 - 驗證：`record-sim` 錄音中 `stoptimer 20` → 20 秒後開始倒數、島上寫「已到設定的時間，N 秒後停止錄音」，再 30 秒停止、轉錄整場、通知；倒數中 `meetingaction continue` → 定時取消、照常錄；錄音畫面的「繼續錄」「停止並轉錄」；島關掉時的通知、小視窗；暫停中到時間也停；`stoptimer off` 取消；停了再開始一場沒有定時；跟 `-idleStopSeconds` 一起時先到的先停；`StopTimer` 的規則用 `swift` 小程式跑例子。
 
+## 85. 逐字稿搜尋：上一個、下一個（R111）
+
+Windows 的做法在 design-windows §11.44。
+
+- 搜尋框（`TranscriptTab.searchBar`）有搜尋字時，「3／12 段」和 ✕ 之間多兩顆無邊框的按鈕：`chevron.up`、`chevron.down`（11 點、次要顏色，同 ✕），說明「上一個（⇧Return）」「下一個（Return）」，輔助使用的名稱「上一個」「下一個」；沒有符合的段落時停用。
+- `step(_ delta: Int)`：`matchCursor = (matchCursor + delta + 數量) % 數量`，再捲過去。捲動改看 `matchJump`（每按一次加一）：只有一段符合時游標不變，原本的 `onChange(of: matchCursor)` 不會觸發，捲走之後按「下一個」回不來。
+- 鍵盤：搜尋框的 `onSubmit` 看 `NSApp.currentEvent` 有沒有按著 ⇧，有就是上一個、沒有是下一個（`onSubmit` 拿不到修飾鍵；不讀 `NSEvent.modifierFlags`，同 CLAUDE.md）。⌘G、⇧⌘G 用兩顆隱藏的按鈕（同 ⌘F 那顆），沒有符合的段落時停用（不吃掉快捷鍵）。
+- 目前那一段：`highlighted` 多傳 `current`，搜尋到的字底色 `Color.signal.opacity(0.7)`（其他段落照舊 0.35）。
+- 使用說明的快捷鍵：⌘F 下面加「⌘G／⇧⌘G：搜尋逐字稿時跳到下一個、上一個（也可以按 Return、⇧Return）」。
+- 驗證：DEBUG 版搜尋示範會議的常見字，`keyat return`、按鈕（`mouseat clickq`，借前景）、⇧Return 的游標和計數；只有一段符合時捲走再按「下一個」會捲回來；`snapshot` 看目前那一段的底色。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
