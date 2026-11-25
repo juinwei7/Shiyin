@@ -606,7 +606,8 @@ public sealed class SettingsWindow : Window
     {
         var id = "custom-" + Guid.NewGuid().ToString("N")[..8];
         // 複製內建範本：跟畫面上看到的一樣（簡體介面是簡體，同 Mac 的「複製」按鈕用畫面上的 draft）
-        var definition = edited ?? (source is null ? null : Shown(source)) ?? new TemplateDefinition("", ["summary", "decisions", "actionItems"], [], "");
+        // 新範本預設有議題（R113.1）：沒有議題時播放條上沒有議題帶
+        var definition = edited ?? (source is null ? null : Shown(source)) ?? new TemplateDefinition("", ["summary", "decisions", "actionItems", "topics"], [], "");
         host.Controller.SaveTemplate(new TemplateRecord
         {
             Id = id, Name = source is null ? L.T("新範本") : L.F("%@（副本）", source.DisplayName()), Builtin = false, Definition = definition.JsonString(),
@@ -652,6 +653,7 @@ public sealed class SettingsWindow : Window
             box.Click += (_, _) => { if (box.IsChecked == true) { if (!sections.Contains(id)) sections.Add(id); } else sections.Remove(id); };
             toggles.Children.Add(box);
         }
+        toggles.Children.Add(Note(L.T("關掉「議題詳細」時，紀錄裡沒有議題：播放條上沒有議題帶，心智圖改用摘要。")));
         column.Children.Add(toggles);
         // 自訂段落一個一塊（R112.4）：段落名稱、要寫什麼（多行）、右上角移除
         var customs = Ui.Column(8, Ui.Text(L.T("自訂段落"), 14, bold: true),

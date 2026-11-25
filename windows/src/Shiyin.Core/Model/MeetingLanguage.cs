@@ -150,9 +150,12 @@ public static class MeetingLanguages
     public static IEnumerable<MeetingLanguage> Detectable => All.Where(l => l.Profile.Detect is not null);
 
     /// <summary>介面上列出幾種語言：「中文、英文、日文和韓文」「Chinese, English, Japanese, and Korean」</summary>
-    public static string UiNames(IEnumerable<MeetingLanguage> languages)
+    public static string UiNames(IEnumerable<MeetingLanguage> languages) => UiList([.. languages.Select(l => l.UiName())]);
+
+    /// <summary>介面語言的清單：「王小明、陳家豪和林美玲」「A, B, and C」（議題帶的卡片列說話者，M§87）</summary>
+    public static string UiList(IReadOnlyList<string> items)
     {
-        var names = languages.Select(l => l.UiName()).ToList();
+        var names = items.ToList();
         if (names.Count < 2) return names.FirstOrDefault() ?? "";
         if (Interface == MeetingLanguage.En)
             return names.Count == 2 ? $"{names[0]} and {names[1]}" : string.Join(", ", names[..^1]) + ", and " + names[^1];

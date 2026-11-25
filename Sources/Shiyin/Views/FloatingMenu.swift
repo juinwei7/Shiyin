@@ -358,14 +358,7 @@ struct FloatingMenuView: View {
         .padding(5)
         .frame(minWidth: 200, alignment: .leading)
         .fixedSize()
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(nsColor: NSColor(name: nil) { appearance in
-                    appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.17, alpha: 1) : NSColor(white: 1, alpha: 1)
-                }))
-                .shadow(color: .black.opacity(0.28), radius: 10, y: 4)
-        }
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
+        .floatingPanelChrome()
     }
 
     private func row(_ entry: MenuEntry, highlighted: Bool) -> some View {
@@ -510,5 +503,19 @@ private struct FloatingRowMenuModifier: ViewModifier {
                 guard let window = NSApp.keyWindow else { return }
                 FloatingMenuController.shared.show(entries(), at: NSEvent.mouseLocation, from: window)
             }
+    }
+}
+
+extension View {
+    /// 浮出的面板的外框（自己畫的選單、議題帶的卡片，design §79、§87）：圓角 14、深色 white 0.17／淺色白色、細框、陰影
+    func floatingPanelChrome() -> some View {
+        background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: NSColor(name: nil) { appearance in
+                    appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.17, alpha: 1) : NSColor(white: 1, alpha: 1)
+                }))
+                .shadow(color: .black.opacity(0.28), radius: 10, y: 4)
+        }
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
     }
 }

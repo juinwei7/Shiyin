@@ -21661,6 +21661,23 @@
         }
       }
     },
+    "說話者：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说话者：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers: %@"
+          }
+        }
+      }
+    },
     "請到「系統設定 → 隱私權與安全性 → 提醒事項」允許拾音，再按一次「加到提醒事項」。": {
       "extractionState": "manual",
       "localizations": {
@@ -24072,6 +24089,23 @@
         }
       }
     },
+    "還有 %lld 條": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还有 %lld 条"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld more"
+          }
+        }
+      }
+    },
     "還有 %lld 題待確認": {
       "extractionState": "manual",
       "localizations": {
@@ -26209,6 +26243,23 @@
         }
       }
     },
+    "關掉「議題詳細」時，紀錄裡沒有議題：播放條上沒有議題帶，心智圖改用摘要。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关掉“议题详细”时，记录里没有议题：播放条上没有议题带，心智图改用摘要。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With Topics off, the notes have no topics: the player has no topic band and the mind map uses the summary instead."
+          }
+        }
+      }
+    },
     "關掉時只送畫面上辨識出的文字。模型不能看圖時拾音會自動改成只送文字。": {
       "extractionState": "manual",
       "localizations": {
@@ -26812,6 +26863,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "点一下帮这位说话者改名"
+          }
+        }
+      }
+    },
+    "點一下從這裡播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点一下从这里播放"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to play from here"
           }
         }
       }

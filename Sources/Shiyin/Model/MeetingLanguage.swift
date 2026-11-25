@@ -195,10 +195,13 @@ struct MeetingLanguage: RawRepresentable, Hashable, Codable, Identifiable, CaseI
     static var detectable: [MeetingLanguage] { allCases.filter { $0.profile.detect != nil } }
 
     /// 介面上列出幾種語言：「中文、英文、日文和韓文」「Chinese, English, Japanese, and Korean」
-    static func uiNames(_ languages: [MeetingLanguage]) -> String {
+    static func uiNames(_ languages: [MeetingLanguage]) -> String { uiList(languages.map(\.uiName)) }
+
+    /// 介面語言的清單：「王小明、陳家豪和林美玲」「A, B, and C」（議題帶的卡片列說話者，design §87）
+    static func uiList(_ items: [String]) -> String {
         let formatter = ListFormatter()
         formatter.locale = Locale(identifier: interface == .en ? "en" : simplifiedInterface ? "zh-Hans" : "zh-Hant")  // l10n-skip
-        return formatter.string(from: languages.map(\.uiName)) ?? ""
+        return formatter.string(from: items) ?? ""
     }
 
     /// 同一個中文詞在英文要用不同說法的少數地方（例如「錄音」：按鈕是 Record、分頁是 Recording），

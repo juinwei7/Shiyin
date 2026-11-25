@@ -754,7 +754,7 @@ struct TemplateSettings: View {
                     }
                 }
                 .disabled(template.builtin)
-                Section("要產生的段落") {
+                Section {
                     ForEach(TemplateDefinition.builtinSections, id: \.id) { section in
                         Toggle(section.label, isOn: Binding(
                             get: { binding.wrappedValue.sections.contains(section.id) },
@@ -763,6 +763,12 @@ struct TemplateSettings: View {
                                 else { binding.wrappedValue.sections.removeAll { $0 == section.id } }
                             }))
                     }
+                } header: {
+                    Text("要產生的段落")
+                } footer: {
+                    Text("關掉「議題詳細」時，紀錄裡沒有議題：播放條上沒有議題帶，心智圖改用摘要。")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .disabled(template.builtin)
                 Section {
@@ -850,7 +856,8 @@ struct TemplateSettings: View {
             return template.builtin && MeetingLanguage.simplifiedInterface ? definition.mappingText(ChineseScript.toSimplifiedUI) : definition
         }
         let definition = edited ?? shown
-            ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems"], custom: [], instruction: "")
+            // 新範本預設有議題（R113.1）：沒有議題時播放條上沒有議題帶
+            ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems", "topics"], custom: [], instruction: "")
         model.saveTemplate(TemplateRecord(id: id, name: source.map { String(localized: "\($0.displayName)（副本）") } ?? String(localized: "新範本"), builtin: false,
                                           definition: definition.jsonString()))
         selection = id

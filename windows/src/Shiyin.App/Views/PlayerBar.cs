@@ -7,6 +7,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Services;
+using Shiyin.Text;
 
 namespace Shiyin.App.Views;
 
@@ -62,6 +63,22 @@ public sealed class PlayerBar
 
     static string Label(double rate) => rate == 1 ? "1×" : $"{rate:0.##}×";
 
+    /// <summary>議題帶滑過的卡片（M§87、R113.3）：那個議題的重點、這段時間說話的人（說得多的在前），卡片打開時才算</summary>
+    static Func<MindMap.TopicRange, (List<string> Points, List<string> Speakers)> CardInfo(MeetingDetail detail) => range =>
+    {
+        var points = (detail.Notes is { } notes ? MindMap.ShownTopic(notes, range.Branch)?.Points : null)?
+            .Select(p => p.Text.Trim()).Where(t => t.Length > 0).ToList() ?? [];
+        var talk = new Dictionary<int, double>();
+        foreach (var segment in detail.Segments)
+        {
+            if (segment.Speaker is not int speaker) continue;
+            var overlap = Math.Min(segment.End, range.End) - Math.Max(segment.Start, range.Start);
+            if (overlap > 0) talk[speaker] = talk.GetValueOrDefault(speaker) + overlap;
+        }
+        var speakers = talk.OrderByDescending(p => p.Value).ThenBy(p => p.Key).Select(p => detail.SpeakerName(p.Key) ?? "").ToList();
+        return (points, speakers);
+    };
+
     public FrameworkElement Show(MeetingDetail value)
     {
         detail = value;
@@ -91,7 +108,8 @@ public sealed class PlayerBar
         if (duration != topicsDuration)
         {
             topicsDuration = duration;
-            topics.Show(detail.Notes is { } notes ? MindMap.TopicRanges(notes, duration, L.Ui(MindMap.TopicLabel(MeetingLanguages.Interface))) : [], duration);
+            topics.Show(detail.Notes is { } notes ? MindMap.TopicRanges(notes, duration, L.Ui(MindMap.TopicLabel(MeetingLanguages.Interface))) : [], duration,
+                CardInfo(detail));
         }
         topics.Update(player.CurrentTime);
         root.Opacity = player.IsLoaded ? 1 : 0.5;
@@ -190,6 +208,7 @@ public sealed class TopicBand
     readonly Action<double> seek;
     readonly List<(TextBlock Text, SolidColorBrush Fill, SolidColorBrush Hover, Windows.UI.Color Color)> boxes = [];
     List<MindMap.TopicRange> ranges = [];
+    Func<MindMap.TopicRange, (List<string> Points, List<string> Speakers)>? card;
     double duration, time;
     int current = -2;
 
@@ -199,10 +218,11 @@ public sealed class TopicBand
         Root.SizeChanged += (_, _) => Draw();
     }
 
-    public void Show(List<MindMap.TopicRange> value, double total)
+    public void Show(List<MindMap.TopicRange> value, double total, Func<MindMap.TopicRange, (List<string> Points, List<string> Speakers)>? cardInfo = null)
     {
         ranges = value;
         duration = total;
+        card = cardInfo;
         Root.Visibility = value.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         Draw();
     }
@@ -258,12 +278,35 @@ public sealed class TopicBand
             box.Resources["ButtonBorderBrushPressed"] = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
             var start = r.Start;
             box.Click += (_, _) => seek(start);
-            ToolTipService.SetToolTip(box, label);
+            // 滑過的卡片（M§87、R113.3）：工具提示放卡片的內容，打開時才算
+            var range = r;
+            var tip = new ToolTip { MaxWidth = 320 };
+            tip.Opened += (_, _) => tip.Content ??= Card(range);
+            ToolTipService.SetToolTip(box, tip);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, label);
             Canvas.SetLeft(box, r.Start * scale);
             Root.Children.Add(box);
             boxes.Add((text, fill, hover, color));
         }
         Update(time);
+    }
+
+    /// <summary>卡片：議題名稱、時間（開始–結束・多久）、說話者、前 3 條重點、「還有 N 條」、「點一下從這裡播放」</summary>
+    UIElement Card(MindMap.TopicRange r)
+    {
+        var (points, speakers) = card?.Invoke(r) ?? ([], []);
+        var column = Ui.Column(6, Ui.Text(r.Title, 13, bold: true, maxLines: 3),
+            Ui.Text($"{TimeFormat.String(r.Start)}–{TimeFormat.String(r.End)}・{L.Ui(TimeFormat.Duration((int)SwiftText.Round(r.End - r.Start), MeetingLanguages.Interface))}", 12, color: Ui.Secondary));  // l10n-skip：時間
+        if (speakers.Count > 0) column.Children.Add(Ui.Text(L.F("說話者：%@", MeetingLanguages.UiList(speakers)), 12, color: Ui.Secondary, maxLines: 2));
+        if (points.Count > 0)
+        {
+            var list = Ui.Column(3);
+            foreach (var point in points.Take(3)) list.Children.Add(Ui.Text("・" + point, 12, maxLines: 2));  // l10n-skip：條列的點
+            if (points.Count > 3) list.Children.Add(Ui.Text(L.F("還有 %lld 條", points.Count - 3), 12, color: Ui.Secondary));
+            list.Margin = new Thickness(0, 2, 0, 0);
+            column.Children.Add(list);
+        }
+        column.Children.Add(Ui.Text(L.T("點一下從這裡播放"), 11, color: Ui.Tertiary));
+        return column;
     }
 }

@@ -897,6 +897,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 範本頁原本就跟著視窗高度捲動，不用改。
 - **驗證**：虛擬機開設定的範本頁：內建範本的說明和「複製一份來改」、自訂範本兩個段落；中文、簡體、英文截圖。
 
+### 11.46 議題帶：新範本預設有議題、滑過的卡片（R113，M§87、D193）
+
+- 新範本（`CreateTemplate(null, null)`）的段落加 `topics`；「要產生的段落」的勾選下面一行次要文字（同 Mac 的 footer）。
+- 議題帶每一段的 `ToolTip` 改成卡片的內容（`ToolTip.Content` 放 StackPanel，`MaxWidth` 300）：同 Mac 的名稱（粗體，`FontWeights.Bold`）、時間、說話者、前 3 條重點、「還有 N 條」、「點一下從這裡播放」。WinUI 的工具提示本來就是滑過一下出現、移開收起，不另外做浮動視窗。無障礙名稱照舊。
+- `TopicBand.Show` 多傳紀錄、逐字稿、說話者名稱（`MindMap.ShownTopic`、說話者的重疊秒數同 Mac）。`MeetingLanguages.UiList`：`UiNames` 改用它。
+- **驗證**：`dotnet test`；虛擬機示範資料滑過議題帶（UI Automation 讀不到工具提示，用 `shot.sh` 截圖）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

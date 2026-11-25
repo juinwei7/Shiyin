@@ -42,6 +42,13 @@ public static class MindMap
     static List<MeetingNotes.Topic> ShownTopics(MeetingNotes notes) =>
         [.. notes.Topics.Where(t => Clean(t.Title).Length > 0 || t.Points.Any(p => Clean(p.Text).Length > 0))];
 
+    /// <summary>議題帶的一段（TopicRange.Branch）是哪個議題：滑過的卡片列它的重點（M§87）</summary>
+    public static MeetingNotes.Topic? ShownTopic(MeetingNotes notes, int branch)
+    {
+        var topics = ShownTopics(notes);
+        return branch >= 0 && branch < topics.Count ? topics[branch] : null;
+    }
+
     public static Node Tree(MeetingNotes notes, string title, Labels labels)
     {
         var branches = new List<Node>();

@@ -455,6 +455,7 @@ enum DebugControl {
             guard let textView = notesTextView() else { break }
             textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
             textView.insertText(args[1], replacementRange: textView.selectedRange())
+        case "topichover": model.debugTopicHover = args.count > 1 ? Int(args[1]) : nil   // topichover <第幾段|off>：當成滑過議題帶的那一段（design §87）
         case "notesvalue": write(["found": notesTextView() != nil, "text": notesTextView()?.string ?? ""], to: args[1])
         // fieldtype <提示字> <文字>：提示字相符的單行輸入框（例如「搜尋逐字稿」）換成這段文字。走欄位編輯器的 insertText，
         // 不經過輸入法（逐字稿搜尋的上一個、下一個，design §85）
@@ -1173,6 +1174,7 @@ enum DebugControl {
                 d.notes.map { MindMap.topicRanges(notes: $0, duration: max(model.player.duration, Double(d.meeting.durationSeconds ?? 0)),
                                                   untitled: MindMap.topicLabel(.interface)) }
             }.map { $0.map { ["branch": $0.branch, "title": $0.title, "start": $0.start, "end": $0.end] } } ?? [],
+            "topicHover": model.debugTopicHover ?? -1,   // 當成滑過的議題帶那一段（design §87），沒有是 -1
             // 會議的參考文件（design §39.7）：選取中的會議
             "documents": (model.detail?.documents ?? []).map { d -> [String: Any] in
                 let use = model.detail?.documentUse[d.id ?? 0]

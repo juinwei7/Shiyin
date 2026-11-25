@@ -46,6 +46,12 @@ enum MindMap {
         notes.topics.filter { !clean($0.title).isEmpty || $0.points.contains { !clean($0.text).isEmpty } }
     }
 
+    /// 議題帶的一段（`TopicRange.branch`）是哪個議題：滑過的卡片列它的重點（design §87）
+    static func shownTopic(_ notes: MeetingNotes, branch: Int) -> MeetingNotes.Topic? {
+        let topics = shownTopics(notes)
+        return topics.indices.contains(branch) ? topics[branch] : nil
+    }
+
     static func tree(notes: MeetingNotes, title: String, labels: Labels) -> Node {
         func leaves(_ items: [MeetingNotes.Item]) -> [Node] {
             items.map { Node(text: clean($0.text), time: clean($0.time)) }.filter { !$0.text.isEmpty }

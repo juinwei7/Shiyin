@@ -221,6 +221,8 @@ final class AppModel {
     #if DEBUG
     /// 驗證用：當成左鍵按著（`mousehold on|off`）
     @ObservationIgnored var debugMouseHeld = false
+    /// 驗證用：當成滑過議題帶的第幾段（`topichover <第幾段|off>`，design §87）
+    var debugTopicHover: Int?
     #endif
 
     /// 側欄的列按下去就選取，接著可能是拖曳：按著滑鼠時先不換右邊的會議頁，放開才載入（design §77）。
