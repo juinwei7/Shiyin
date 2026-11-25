@@ -15,6 +15,7 @@
       "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"people\":[{\"name\":\"王小明\",\"points\":[{\"text\":\"回報 Valkey 快取下週三完成\",\"time\":\"00:04\"},{\"text\":\"負責確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"}]},{\"name\":\"說話者 2\",\"points\":[{\"text\":\"建議部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"},{\"text\":\"想先確認 Kubernetes 版本\",\"time\":\"\"}]},{\"name\":\"說話者 3\",\"points\":[]}],\"reviewItems\":[{\"question\":\"「Kubernetes」的寫法對嗎？\",\"time\":\"00:09\"}],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
       "notes_by" : "claude",
       "notes_draft" : 0,
+      "notes_template" : null,
       "participants" : "王小明, 李大華、Amy，陳美玲",
       "series_id" : null,
       "source" : "import",
@@ -43,6 +44,7 @@
       "notes" : "{\"actionItems\":[{\"due\":\"2026-10-23\",\"owner\":\"Bob\",\"task\":\"Send the email via SendGrid\",\"time\":\"00:03\"}],\"custom\":[{\"items\":[{\"text\":\"Roadmap on track\",\"time\":\"00:00\"}],\"title\":\"Updates and progress\"}],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[{\"question\":\"Is \\\"beta\\\" the right term?\",\"time\":\"00:08\"}],\"summary\":[{\"text\":\"Reviewed the Q4 roadmap\",\"time\":\"00:00\"}],\"title\":\"Q4 roadmap\",\"topics\":[]}",
       "notes_by" : "claude",
       "notes_draft" : 0,
+      "notes_template" : null,
       "participants" : "Alice, Bob",
       "series_id" : null,
       "source" : "import",
@@ -71,6 +73,7 @@
       "notes" : "{\"actionItems\":[],\"custom\":[],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[{\"text\":\"下書き（編集）\",\"time\":\"00:01\"}],\"title\":\"草稿\",\"topics\":[]}",
       "notes_by" : "claude",
       "notes_draft" : 0,
+      "notes_template" : null,
       "participants" : "田中, 佐藤",
       "series_id" : null,
       "source" : "import",
@@ -91,21 +94,24 @@
       "id" : 2,
       "meeting_id" : 1,
       "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Redis 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"people\":[{\"name\":\"王小明\",\"points\":[{\"text\":\"回報 Redis 快取下週三完成\",\"time\":\"00:04\"},{\"text\":\"負責確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"}]},{\"name\":\"說話者 2\",\"points\":[{\"text\":\"建議部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"},{\"text\":\"想先確認 Kubernetes 版本\",\"time\":\"\"}]},{\"name\":\"說話者 3\",\"points\":[]}],\"reviewItems\":[{\"question\":\"「Kubernetes」的寫法對嗎？\",\"time\":\"00:09\"},{\"question\":\"負責人是誰？\",\"time\":\"\"}],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Redis 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
-      "reason" : "取代「Redis」→「Valkey」"
+      "reason" : "取代「Redis」→「Valkey」",
+      "template_id" : null
     },
     {
       "created_at" : "<time>",
       "id" : 3,
       "meeting_id" : 3,
       "notes" : "{\"actionItems\":[],\"custom\":[],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[{\"text\":\"下書き\",\"time\":\"00:01\"}],\"title\":\"草稿\",\"topics\":[]}",
-      "reason" : "手動編輯"
+      "reason" : "手動編輯",
+      "template_id" : null
     },
     {
       "created_at" : "<time>",
       "id" : 5,
       "meeting_id" : 1,
       "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"people\":[{\"name\":\"王小明\",\"points\":[{\"text\":\"回報 Valkey 快取下週三完成\",\"time\":\"00:04\"},{\"text\":\"負責確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"}]},{\"name\":\"說話者 2\",\"points\":[{\"text\":\"建議部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"},{\"text\":\"想先確認 Kubernetes 版本\",\"time\":\"\"}]},{\"name\":\"說話者 3\",\"points\":[]}],\"reviewItems\":[{\"question\":\"「Kubernetes」的寫法對嗎？\",\"time\":\"00:09\"},{\"question\":\"負責人是誰？\",\"time\":\"\"}],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
-      "reason" : "略過待確認"
+      "reason" : "略過待確認",
+      "template_id" : null
     }
   ]
 }

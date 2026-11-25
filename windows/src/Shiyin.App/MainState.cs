@@ -32,6 +32,8 @@ public sealed class MainState
     public DetailTab Tab { get; private set; } = DetailTab.Summary;
     /// <summary>紀錄頂部「還有 N 題待確認」有沒有展開（R44.2）；換會議就收起</summary>
     public bool ReviewExpanded { get; set; }
+    /// <summary>正在看以前的哪一版會議紀錄（R115.2、M§89）：null 是目前的；換會議、紀錄變了就回到目前的</summary>
+    public NotesHistoryEntry? ViewingNotes { get; set; }
     /// <summary>逐字稿頂部「我的筆記」有沒有展開（R44.3）；換會議就收起</summary>
     public bool UserNotesExpanded { get; set; }
     public bool ShowTrash { get; private set; }
@@ -191,7 +193,10 @@ public sealed class MainState
     public void ReloadDetail(bool forceAudio = false)
     {
         var previous = Detail?.Meeting;
+        var previousNotes = Detail?.Meeting.Notes;
         Detail = Selection is long id ? MeetingDetail.Load(host.Db, id) : null;
+        // 紀錄變了（整理完、改用某一版、編輯）：回到目前的版本（R115.6）
+        if (ViewingNotes is not null && (Detail is null || previous?.Id != Detail.Meeting.Id || previousNotes != Detail.Meeting.Notes)) ViewingNotes = null;
         if (Detail is null)
         {
             host.Player.Unload();
@@ -287,6 +292,7 @@ public sealed class MainState
         Selection = id;
         ReviewExpanded = false;
         UserNotesExpanded = false;
+        ViewingNotes = null;
         host.Controller.ReviewFinished.Clear();
         ReloadDetail();
         Changed?.Invoke();

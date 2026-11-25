@@ -277,4 +277,7 @@ static class MigrationSql
 
     /// <summary>會議中的畫面（R109、M§83.1）：有錄音時間的文件</summary>
     public const string V16 = "ALTER TABLE documents ADD COLUMN at REAL";
+
+    /// <summary>版本紀錄記下用的範本（R115、M§89）</summary>
+    public static readonly string[] V17 = ["ALTER TABLE meetings ADD COLUMN notes_template TEXT", "ALTER TABLE notes_versions ADD COLUMN template_id TEXT"];
 }

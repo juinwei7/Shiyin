@@ -292,6 +292,42 @@ public sealed class DatabaseTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// 版本紀錄（R115、M§89）：整理記下範本，舊的那一版帶著它的範本進版本紀錄；清單是目前的在前、由新到舊，
+    /// 每一版怎麼來的看比它舊的那一列（最舊的不知道）。改用某一版：目前的存成一版、會議的範本換過去（範本還在時）；復原時範本也回去
+    /// </summary>
+    [Fact]
+    public void NotesHistoryAndUseVersionCarryTemplates()
+    {
+        using var db = new AppDatabase(Path.Combine(dir, "history.sqlite"), Path.Combine(dir, "backups"));
+        db.SeedTemplates();
+        var id = db.InsertMeeting(new Meeting { MeetingDate = "2026-11-25", SourceFilename = "a.m4a" }, "m4a").Id!.Value;
+        db.SaveNotes(id, new MeetingNotes { Title = "一般" }, "claude", "整理", NotesSource.Generated, "general");
+        db.SetTemplate(id, "one-on-one");
+        db.SaveNotes(id, new MeetingNotes { Title = "一對一" }, "claude", "重新整理", NotesSource.Generated, "one-on-one");
+        db.SaveNotes(id, new MeetingNotes { Title = "一對一（改過）" }, null, "手動編輯");
+        Assert.Equal("one-on-one", db.Meeting(id)!.NotesTemplate);
+        var history = db.NotesHistory(id);
+        Assert.Equal(["one-on-one", "one-on-one", "general"], history.Select(e => e.TemplateId));   // 手動編輯不改範本
+        Assert.Equal(["手動編輯", "重新整理", null], history.Select(e => e.Origin));
+        Assert.Equal(["一對一（改過）", "一對一", "一般"], history.Select(e => e.Notes.Title));
+        Assert.True(history[0].IsCurrent);
+        Assert.Null(history[2].Time);
+
+        // 改用一般會議那一版：目前的存成一版（原因「改用以前的版本」、帶一對一），會議的範本換回 general
+        Assert.True(db.UseNotesVersion(id, history[2].VersionId!.Value));
+        var meeting = db.Meeting(id)!;
+        Assert.Equal(("一般", "general", "general", 0), (meeting.DecodedNotes!.Title, meeting.NotesTemplate, meeting.TemplateId, meeting.NotesDraft));
+        Assert.Equal(("改用以前的版本", (string?)"one-on-one"), ((string)db.Read(d => d.Scalar("SELECT reason FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id))!,
+            (string?)db.Read(d => d.Scalar("SELECT template_id FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id))));
+        Assert.Equal(4, db.NotesHistory(id).Count);
+        Assert.False(db.UseNotesVersion(id + 1, history[1].VersionId!.Value));   // 別場會議的版本
+
+        // 復原：範本跟著回到上一版的
+        Assert.True(db.UndoNotes(id));
+        Assert.Equal(("一對一（改過）", (string?)"one-on-one"), (db.Meeting(id)!.DecodedNotes!.Title, db.Meeting(id)!.NotesTemplate));
+    }
+
     [Fact]
     public void ReopenDoesNotMigrateAgainAndBacksUpBeforeMigration()
     {

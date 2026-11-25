@@ -169,7 +169,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17"];
 
     /// <summary>
     /// 這次開資料庫時 migration v14 換掉的定期會議（id → 資料夾名稱，D177）；沒跑 v14 時是空的。
@@ -263,6 +263,7 @@ public sealed partial class AppDatabase : IDisposable
             }
             case "v15": db.Execute(MigrationSql.V15); break;
             case "v16": db.Execute(MigrationSql.V16); break;
+            case "v17": foreach (var sql in MigrationSql.V17) db.Execute(sql); break;
         }
         return null;
     }
@@ -273,7 +274,7 @@ public sealed partial class AppDatabase : IDisposable
     {
         Id = r.Long("id"), Title = r.Str("title"), TitleLocked = r.Bool("title_locked"), MeetingDate = r.Str("meeting_date"),
         Participants = r.Str("participants"), SourceFilename = r.Str("source_filename"), AudioFile = r.Str("audio_file"),
-        DurationSeconds = r.IntOrNull("duration_seconds"), Notes = r.StrOrNull("notes"), NotesBy = r.StrOrNull("notes_by"),
+        DurationSeconds = r.IntOrNull("duration_seconds"), Notes = r.StrOrNull("notes"), NotesBy = r.StrOrNull("notes_by"), NotesTemplate = r.StrOrNull("notes_template"),
         CreatedAt = r.Str("created_at"), UpdatedAt = r.Str("updated_at"), TemplateId = r.Str("template_id"),
         UserNotes = r.Str("user_notes"), Source = r.Str("source"), Channels = r.Str("channels"), DeletedAt = r.StrOrNull("deleted_at"),
         Folder = r.Str("folder"), Language = r.Str("language"), NotesDraft = r.Int("notes_draft"), TranscribedWith = r.Str("transcribed_with"),
@@ -320,24 +321,25 @@ public sealed partial class AppDatabase : IDisposable
     internal static NotesVersion ToVersion(Row r) => new()
     {
         Id = r.Long("id"), MeetingId = r.Long("meeting_id"), Notes = r.Str("notes"), Reason = r.Str("reason"), CreatedAt = r.Str("created_at"),
+        TemplateId = r.StrOrNull("template_id"),
     };
 
     // 整列寫入（對應 GRDB 的 insert、update）
 
     static readonly string MeetingColumns = "title, title_locked, meeting_date, participants, source_filename, audio_file, duration_seconds, notes, notes_by, "
         + "created_at, updated_at, template_id, user_notes, source, channels, deleted_at, folder, language, notes_draft, transcribed_with, "
-        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided";
+        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided, notes_template";
 
     static object?[] MeetingValues(Meeting m) =>
     [
         m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.AudioFile, m.DurationSeconds, m.Notes, m.NotesBy,
         m.CreatedAt, m.UpdatedAt, m.TemplateId, m.UserNotes, m.Source, m.Channels, m.DeletedAt, m.Folder, m.Language, m.NotesDraft,
-        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided,
+        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided, m.NotesTemplate,
     ];
 
     internal static long InsertMeetingRow(Db db, Meeting m)
     {
-        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 24))})", MeetingValues(m));
+        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 25))})", MeetingValues(m));
         return db.LastInsertRowId;
     }
 

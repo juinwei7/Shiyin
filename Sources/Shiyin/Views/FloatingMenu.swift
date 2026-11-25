@@ -406,6 +406,26 @@ struct MenuAnchor: NSViewRepresentable {
     func updateNSView(_ view: NSView, context: Context) { box.view = view }
 }
 
+/// 有字的按鈕打開自己畫的選單，掛在按鈕下面（紀錄分頁的「版本紀錄」，design §89）；樣子同旁邊的「復原上一版」「編輯」
+struct FloatingMenuLabelButton: View {
+    let title: String
+    let systemImage: String
+    var help: String?
+    let entries: () -> [MenuEntry]
+    @State private var box = MenuAnchorBox()
+
+    var body: some View {
+        Button {
+            if let view = box.view { FloatingMenuController.shared.show(entries(), below: view) }
+        } label: {
+            Label(title, systemImage: systemImage).background(MenuAnchor(box: box))
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(Color.celadon)
+        .help(help ?? "")
+    }
+}
+
 /// 列右邊的「⋯」：打開自己畫的選單，掛在按鈕下面
 struct FloatingMenuButton: View {
     let entries: () -> [MenuEntry]

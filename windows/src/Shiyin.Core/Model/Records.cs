@@ -22,6 +22,8 @@ public sealed class Meeting
     public int? DurationSeconds { get; set; }
     public string? Notes { get; set; }
     public string? NotesBy { get; set; }
+    /// <summary>目前的會議紀錄是用哪個範本整理的（v17、M§89）：整理、草稿時記下，舊的紀錄是 null</summary>
+    public string? NotesTemplate { get; set; }
     public string CreatedAt { get; set; } = Clock.Now();
     public string UpdatedAt { get; set; } = Clock.Now();
     public string TemplateId { get; set; } = "general";
@@ -130,8 +132,17 @@ public sealed class NotesVersion
     public long? Id { get; set; }
     public long MeetingId { get; set; }
     public string Notes { get; set; } = "";
+    /// <summary>換掉這一版的那次存檔是什麼（重新整理、校稿、手動編輯…）</summary>
     public string Reason { get; set; } = "";
     public string CreatedAt { get; set; } = Clock.Now();
+    /// <summary>這一版是用哪個範本整理的（v17、M§89）；不知道是 null</summary>
+    public string? TemplateId { get; set; }
+}
+
+/// <summary>版本紀錄的一版（R115、M§89）：VersionId 是 null 的是目前的紀錄；Origin、Time 是這一版怎麼來的、什麼時候（最舊的一版不知道）</summary>
+public sealed record NotesHistoryEntry(long? VersionId, MeetingNotes Notes, string? TemplateId, string? Origin, string? Time)
+{
+    public bool IsCurrent => VersionId is null;
 }
 
 public enum JobKind { Transcribe, Summarize, Revise, Compress, Correct, NameSpeakers, Rediarize, Clean }

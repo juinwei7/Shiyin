@@ -179,6 +179,16 @@ public sealed class MeetingDetail
 
     public void LinkReviewItems() => ReviewLinks = Notes is null ? [] : Model.ReviewLinks.Compute(Notes);
 
+    /// <summary>看以前的某一版會議紀錄時，畫面用的副本（R115.2、M§89）：紀錄換成那一版，不帶待確認的對應、說話者的建議</summary>
+    public MeetingDetail ShowingNotesVersion(MeetingNotes notes)
+    {
+        var copy = (MeetingDetail)MemberwiseClone();
+        copy.Notes = notes;
+        copy.ReviewLinks = [];
+        copy.SpeakerSuggestions = [];
+        return copy;
+    }
+
     public static MeetingDetail? Load(AppDatabase db, long id)
     {
         if (db.Meeting(id) is not { } meeting) return null;

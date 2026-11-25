@@ -244,7 +244,7 @@ extension AppDatabase {
 
             // 會議紀錄：舊的存成版本，時間點先移到切口（重新整理之前議題時間軸大致對得上）
             if !plan.keepsWhole(id), let notes = meeting.decodedNotes, let old = meeting.notes {
-                var version = NotesVersion(meetingId: id, notes: old, reason: String(localized: "編輯會議前"))
+                var version = NotesVersion(meetingId: id, notes: old, reason: String(localized: "編輯會議前"), templateId: meeting.notesTemplate)
                 try version.insert(db)
                 let mapped = notes.mappingTimes { plan.snap(id, $0) }
                 meeting.notes = mapped.jsonString()
@@ -333,7 +333,7 @@ extension AppDatabase {
             }
 
             if let notes = meeting.notes, notes != snapshot.notes {
-                var version = NotesVersion(meetingId: id, notes: notes, reason: String(localized: "還原編輯前"))
+                var version = NotesVersion(meetingId: id, notes: notes, reason: String(localized: "還原編輯前"), templateId: meeting.notesTemplate)
                 try version.insert(db)
             }
             meeting.notes = snapshot.notes

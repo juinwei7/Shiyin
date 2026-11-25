@@ -3090,6 +3090,22 @@ Windows 的做法在 design-windows §11.47。
 - DEBUG：`morereview <會議 id>`（等於按「再找不確定的地方」）；`state` 的 `reviewFinished`。
 - 驗證：標準答案 `prompts/<語言>/review-more.txt`（fixtures 的紀錄、問過的題目用 `answers` 的題目）；DEBUG 用 `fake-llm-server.py` 回固定的 reviewItems：按「再找不確定的地方」→ 題目接在後面、版本多一筆、提示、展開；回空的 → 「沒有找到」、沒有新版本；回跟問過一樣的題目 → 濾掉；全部略過後出現處理完的那一行、按 ✕ 收起。
 
+## 89. 版本紀錄：看以前的版本、改用某一版（R115，D195）
+
+Windows 的做法在 design-windows §11.48。
+
+- 資料（migration v17）：`meetings.notes_template TEXT`（目前的紀錄是用哪個範本整理的）、`notes_versions.template_id TEXT`（這一版是用哪個範本整理的）；以前的資料都是 NULL（不知道）。
+  - `saveNotes(…, template:)`：舊的那一版存進版本紀錄時帶 `m.notesTemplate`；`.generated`、`.draft` 時 `m.notesTemplate = template`（`JobRunner.summarize` 給 `template?.id`：實際用的範本，會議的範本不在時是一般會議）；校稿、編輯、補每個人的重點、再找不確定的地方不動。
+  - `undoNotes`：`m.notesTemplate = version.templateId`。編輯會議（§81）存「編輯會議前」「還原編輯前」的版本時帶 `meeting.notesTemplate`。
+- 版本清單（`AppDatabase.notesHistory`，`NotesHistoryEntry`）：目前的在最前面，再來由新到舊。`notes_versions` 的一列是「被換掉的那一版」，`reason`、`created_at` 是換掉它的那次存檔，所以每一版「怎麼來的、什麼時候」看比它舊的那一列；最舊的一版不知道（nil）。
+- 改用某一版（`AppDatabase.useNotesVersion`）：目前的存成一版（原因「改用以前的版本」、帶目前的範本），那一版變成目前的紀錄（那一列不刪，同一份內容可能出現兩次，換來換去都找得到）、`notesTemplate` 換成那一版的、`notes_draft = 0`；那一版的範本還在範本表裡時，會議的範本（`template_id`）也換過去；標題（沒鎖住時）、搜尋索引跟著換。
+- 畫面：
+  - 編輯列（`EditBar`）：有以前的版本（`canUndoNotes`）時「復原上一版」左邊多「版本紀錄」（`clock.arrow.circlepath`，`FloatingMenuLabelButton`：自己畫的選單，掛在按鈕下面）。每一項：「範本名稱・怎麼來的」（範本不在了寫「已刪除的範本」，不知道就不寫；最舊的一版寫「第一版」），目前的那一項後面「（目前）」，右邊灰字是時間（系統格式的月日時分）；正在顯示的那一項打勾。選目前的就回到目前的版本。
+  - 看以前的版本（`AppModel.viewingNotes`）：會議頁把 detail 換成 `showingNotesVersion(notes)`（紀錄換成那一版，`reviewLinks`、`speakerSuggestions` 清空）傳給紀錄分頁和播放條（議題帶也是那一版）。紀錄頂部原本的待確認條、處理完的那一行換成 `NotesVersionBanner`：`clock.arrow.circlepath`「正在看以前的版本：一對一・重新整理」＋灰字時間、「回到目前的版本」、「改用這一版」（主要的；處理中不能按）。編輯列的「編輯」停用、「復原上一版」不顯示。
+  - 換會議、紀錄變了（`reloadDetail` 時 notes 不同）就回到目前的版本。改用之後提示「已改用這一版，原本的版本留在版本紀錄裡」。
+- DEBUG：`notesversion <會議 id> <版本 id|current>`（等於選那一版）、`usenotesversion`（等於按「改用這一版」）；`state` 的 `notesHistory`（versionId、templateId、label、time、title）、`viewingNotesVersion`。
+- 驗證：dump-golden 的資料庫標準答案只多 `notes_template`、`template_id` 兩欄（範例都是 null）；DEBUG 示範資料換範本重新整理（假伺服器）→ 版本紀錄的說明、看舊版本（說明條、編輯停用、議題帶）、選單、改用（版本多一列、會議的範本跟著換、提示）。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3231,3 +3247,4 @@ Windows 的做法在 design-windows §11.47。
 | D192 | 定時停止的時間到了先倒數 30 秒，按「繼續錄」就取消定時（§84、R110.3；使用者要緩衝） | 時間到直接停：人在旁邊時（分享延長了）錄音被切掉，後面的錄不回來。倒數 60 秒（同 R95）：定時是使用者自己設的，不用猜會議是不是真的結束，30 秒夠看到、按下（使用者說的）。「繼續錄」改成延長幾分鐘：多一種狀態和選項；要停的人自己再設一次 |
 | D193 | 議題帶照舊來自範本的「議題詳細」，新範本預設勾上、說明關掉會怎樣（§87、R113；GitHub #13） | 不管範本有沒有勾都產生議題、沒勾時只給議題帶用：紀錄要多一個「只給時間軸」的標記，提示詞、匯出、MCP、心智圖、編輯、兩邊的標準答案都要跟著改，風險大；回報的情況是「新增」的範本預設沒勾，預設勾上就解決，看使用者回饋再決定要不要做 |
 | D194 | 「再找不確定的地方」用整理的提示詞（範本不要任何段落）加上目前的紀錄和問過的題目，只把新題目接在待確認後面（§88、R114；GitHub #15） | 校稿時也讓整理工具出新題目：回答完就自動一直問下去，沒完沒了、每次都花整理工具的額度，也改到校稿的提示詞和標準答案。另外寫一份只檢查的系統提示詞：待確認的規則（最多 8 題、是非題、問什麼）要寫兩份，容易不一致。整份紀錄重新整理再比對：會改到使用者確認、修正過的內容 |
+| D195 | 會議同時只有一份紀錄，以前的版本記下範本、可以看和改用（§89、R115；GitHub #16） | 一場會議同時存好幾份紀錄、每個範本一個分頁：紀錄表、匯出、MCP、提問、待確認、標準答案都要改成多份，工程大；換範本重新整理前的紀錄本來就留在版本紀錄，記下範本、能看能換回來，就不用重新產生。改用時刪掉那一列：版本紀錄的「怎麼來的、什麼時候」是看前一列推的，刪中間的一列會讓後面一版的說明跑掉；留著，同一份內容出現兩次比較好懂 |

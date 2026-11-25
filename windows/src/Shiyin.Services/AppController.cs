@@ -961,6 +961,13 @@ public sealed partial class AppController
         Runner.Wake();
     }
 
+    /// <summary>「改用這一版」（R115.3、M§89）：那一版變成目前的紀錄，原本的留成一版</summary>
+    public void UseNotesVersion(long id, long versionId)
+    {
+        if (!ReadyForAction(id)) return;
+        Perform(id, () => { if (Db.UseNotesVersion(id, versionId)) Notice?.Invoke(L.T("已改用這一版，原本的版本留在版本紀錄裡")); });
+    }
+
     /// <summary>「再找不確定的地方」（R114、M§88）：整理工具再找一次要確認的地方，只加待確認，其他段落不動</summary>
     public void FindMoreReview(long id)
     {

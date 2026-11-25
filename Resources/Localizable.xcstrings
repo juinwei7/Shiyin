@@ -748,6 +748,23 @@
         }
       }
     },
+    "%@（目前）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（目前）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (current)"
+          }
+        }
+      }
+    },
     "%@（逐字稿）.%@": {
       "extractionState": "manual",
       "localizations": {
@@ -7786,6 +7803,23 @@
         }
       }
     },
+    "回到目前的版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回到目前的版本"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Current"
+          }
+        }
+      }
+    },
     "回到符合寬度": {
       "extractionState": "manual",
       "localizations": {
@@ -8881,6 +8915,23 @@
         }
       }
     },
+    "已刪除的範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除的模板"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted template"
+          }
+        }
+      }
+    },
     "已刪除第二版的 Python 環境和舊模型": {
       "extractionState": "manual",
       "localizations": {
@@ -9653,6 +9704,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已改用系统默认的麦克风（%@），之后的录音也用系统默认"
+          }
+        }
+      }
+    },
+    "已改用這一版，原本的版本留在版本紀錄裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已改用这一版，原本的版本留在版本记录里"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switched to this version. The previous one is kept in Version History."
           }
         }
       }
@@ -13177,6 +13245,40 @@
         }
       }
     },
+    "改用以前的版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改用以前的版本"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switched to an earlier version"
+          }
+        }
+      }
+    },
+    "改用這一版": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改用这一版"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use This Version"
+          }
+        }
+      }
+    },
     "改這張畫面的時間": {
       "extractionState": "manual",
       "localizations": {
@@ -16528,6 +16630,23 @@
         }
       }
     },
+    "正在看以前的版本：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在看以前的版本：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viewing an earlier version: %@"
+          }
+        }
+      }
+    },
     "正在算聲音特徵…第一次要先下載說話者辨識的模型": {
       "extractionState": "manual",
       "localizations": {
@@ -17997,6 +18116,23 @@
         }
       }
     },
+    "版本紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version History"
+          }
+        }
+      }
+    },
     "狀態": {
       "extractionState": "manual",
       "localizations": {
@@ -18883,6 +19019,23 @@
         }
       }
     },
+    "看以前的版本、改用某一版（換範本整理前的紀錄都在這裡）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看以前的版本、改用某一版（换模板整理前的记录都在这里）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View earlier versions or switch to one (notes from before you changed templates are kept here)"
+          }
+        }
+      }
+    },
     "看使用說明": {
       "extractionState": "manual",
       "localizations": {
@@ -19299,6 +19452,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "第一次录音时会询问；被拒绝的话到“系统设置 → 隐私与安全性 → 麦克风”打开拾音"
+          }
+        }
+      }
+    },
+    "第一版": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一版"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First version"
           }
         }
       }
@@ -22883,6 +23053,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这一段已经改过，没办法还原"
+          }
+        }
+      }
+    },
+    "這一版變成目前的會議紀錄，原本的留在版本紀錄裡，可以再換回來": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这一版变成目前的会议记录，原本的留在版本记录里，可以再换回来"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make this the current notes. The current notes are kept in Version History, so you can switch back."
           }
         }
       }

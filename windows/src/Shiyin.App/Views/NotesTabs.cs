@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Shiyin.LLM;
@@ -316,7 +317,8 @@ public sealed class NotesTabs
     /// <summary>右上角的「編輯」；有上一版時旁邊多一顆「復原上一版」（R44.4，原本在「更多」）；左邊是「條列｜心智圖｜人物」（R67、R92）</summary>
     FrameworkElement EditBar(MeetingDetail detail)
     {
-        var busy = window.State.DetailStatus?.IsActive == true;
+        var viewing = window.State.ViewingNotes is not null;
+        var busy = window.State.DetailStatus?.IsActive == true || viewing;   // 看以前的版本時不能編輯（R115.2）
         var row = Ui.Row(8);
         row.HorizontalAlignment = HorizontalAlignment.Right;
         var mode = new SelectorBar();
@@ -334,7 +336,8 @@ public sealed class NotesTabs
             host.Settings.Set(AppSettings.NotesViewKey, code);
             window.Refresh();
         };
-        if (detail.CanUndoNotes)
+        if (detail.CanUndoNotes) row.Children.Add(VersionsButton(detail.Meeting.Id!.Value));
+        if (detail.CanUndoNotes && !viewing)
         {
             var undo = Ui.Button(L.T("復原上一版"), () => host.Controller.UndoNotes(detail.Meeting.Id!.Value), tooltip: L.T("換回上一版會議紀錄（再按一次換回更早的）"));
             undo.IsEnabled = !busy;
@@ -378,7 +381,8 @@ public sealed class NotesTabs
         // 這場很像某個資料夾裡的會議（R98.3、M§72）：待確認條的上面
         if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId) is { } suggestion)
             column.Children.Add(FolderSuggestionBanner(detail.Meeting.Id!.Value, suggestion));
-        if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
+        if (window.State.ViewingNotes is { } viewing) column.Children.Add(VersionBanner(detail.Meeting.Id!.Value, viewing));
+        else if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
         else if (host.Controller.ReviewFinished.Contains(detail.Meeting.Id!.Value) && window.State.DetailStatus?.IsActive != true)
             column.Children.Add(ReviewDoneBanner(detail.Meeting.Id!.Value));
         column.Children.Add(EditBar(detail));
@@ -457,6 +461,65 @@ public sealed class NotesTabs
         left.VerticalAlignment = VerticalAlignment.Center;
         right.VerticalAlignment = VerticalAlignment.Center;
         // 對比主題時沒有底色、一圈細框（Ui.Tinted）
+        return Ui.Tinted(new Border { Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) },
+            Ui.Tint(Ui.CeladonColor, (Ui.IsDark ? 36 : 20) / 255.0));
+    }
+
+    /// <summary>「版本紀錄」（R115.1、M§89）：打開時才列；目前的在最上面，再來由新到舊，正在顯示的那一項打勾</summary>
+    FrameworkElement VersionsButton(long id)
+    {
+        var flyout = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
+        flyout.Opening += (_, _) =>
+        {
+            flyout.Items.Clear();
+            foreach (var entry in host.Db.NotesHistory(id))
+            {
+                var label = entry.IsCurrent ? L.F("%@（目前）", VersionLabel(entry)) : VersionLabel(entry);
+                if (VersionTime(entry) is { } time) label += "　" + time;  // l10n-skip：全形空白加時間
+                var item = new ToggleMenuFlyoutItem
+                {
+                    Text = label,
+                    IsChecked = window.State.ViewingNotes is { } v ? v.VersionId == entry.VersionId : entry.IsCurrent,
+                };
+                item.Click += (_, _) => { window.State.ViewingNotes = entry.IsCurrent ? null : entry; window.Refresh(); };
+                flyout.Items.Add(item);
+            }
+        };
+        var button = new DropDownButton { Content = L.T("版本紀錄"), Flyout = flyout };
+        ToolTipService.SetToolTip(button, L.T("看以前的版本、改用某一版（換範本整理前的紀錄都在這裡）"));
+        return button;
+    }
+
+    /// <summary>一版的說明：用的範本（知道的話；不在了寫「已刪除的範本」）・怎麼來的（最舊的一版寫「第一版」）</summary>
+    string VersionLabel(NotesHistoryEntry entry)
+    {
+        var template = entry.TemplateId is { } id ? host.Db.Templates().FirstOrDefault(t => t.Id == id)?.DisplayName() ?? L.T("已刪除的範本") : null;
+        return string.Join("・", new[] { template, entry.Origin ?? L.T("第一版") }.OfType<string>());
+    }
+
+    /// <summary>一版是什麼時候的（本機時間的月/日 時:分），最舊的一版不知道</summary>
+    static string? VersionTime(NotesHistoryEntry entry) =>
+        entry.Time is { } time && DateTimeOffset.TryParse(time, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var at)
+            ? at.ToLocalTime().ToString("M/d HH:mm", CultureInfo.InvariantCulture) : null;
+
+    /// <summary>正在看以前的版本（R115.2、M§89，同 Mac 的 NotesVersionBanner）：哪一版、什麼時候；「回到目前的版本」「改用這一版」</summary>
+    FrameworkElement VersionBanner(long id, NotesHistoryEntry entry)
+    {
+        var time = VersionTime(entry) is { } at ? "　" + at : "";  // l10n-skip：全形空白加時間
+        var text = L.F("正在看以前的版本：%@", VersionLabel(entry)) + time;
+        var left = Ui.Row(8, new FontIcon { Glyph = "\uE81C", FontSize = 14 }, Ui.Text(text, 13, maxLines: 2));
+        var back = Ui.Button(L.T("回到目前的版本"), () => { window.State.ViewingNotes = null; window.Refresh(); });
+        var use = Ui.Button(L.T("改用這一版"), () =>
+        {
+            if (entry.VersionId is not long versionId) return;
+            window.State.ViewingNotes = null;
+            host.Controller.UseNotesVersion(id, versionId);
+            window.Refresh();
+        }, accent: true, tooltip: L.T("這一版變成目前的會議紀錄，原本的留在版本紀錄裡，可以再換回來"));
+        use.IsEnabled = window.State.DetailStatus?.IsActive != true;
+        var right = Ui.Row(8, back, use);
+        left.VerticalAlignment = VerticalAlignment.Center;
+        right.VerticalAlignment = VerticalAlignment.Center;
         return Ui.Tinted(new Border { Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) },
             Ui.Tint(Ui.CeladonColor, (Ui.IsDark ? 36 : 20) / 255.0));
     }

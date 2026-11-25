@@ -116,13 +116,15 @@ public sealed class DetailView
             if ((DetailTab)item.Tag == window.State.Tab) tabs.SelectedItem = item;
         switchingTabs = false;
         // 三個分頁（R44.1）：待確認的題數顯示在紀錄頂部的那一條，不放分頁名稱；我的筆記在逐字稿頂部
+        // 看以前的某一版會議紀錄時（R115.2），紀錄分頁和播放條的議題帶用那一版
+        var shown = window.State.ViewingNotes is { } viewing ? value.ShowingNotesVersion(viewing.Notes) : value;
         content.Child = window.State.Tab switch
         {
-            DetailTab.Summary => notes.Page(value, review),
+            DetailTab.Summary => notes.Page(shown, review),
             DetailTab.Transcript => transcript.Show(value, changed, notes.UserNotesDisclosure(value)),
             _ => ask.Show(value, changed),
         };
-        player.Child = host.Paths.HasAudio(value.Meeting) ? playerBar.Show(value) : null;
+        player.Child = host.Paths.HasAudio(value.Meeting) ? playerBar.Show(shown) : null;
     }
 
     /// <summary>文字大小改了（R59）：逐字稿看得到的那幾段、錄音中的即時逐字稿重建（其他分頁由主視窗重畫）</summary>

@@ -808,13 +808,13 @@ final class JobRunner {
         if draft {
             // 整理草稿的期間正式逐字稿好了、或已經有會議紀錄：丟掉草稿
             guard try db.segments(job.meetingId).isEmpty, try db.meeting(job.meetingId)?.notes == nil else { return false }
-            try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: String(localized: "草稿"), source: .draft)
+            try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: String(localized: "草稿"), source: .draft, template: template?.id)
             return true
         }
         let hadDraft = try db.meeting(job.meetingId)?.notesDraft ?? 0
         let replacedEdited = try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue,
                                               reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
-                                              source: answers == nil ? .generated : .revised)
+                                              source: answers == nil ? .generated : .revised, template: template?.id)
         if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
         // 整理完有標題了，照資料夾的條件放（design §72）
         if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder) }

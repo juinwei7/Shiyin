@@ -446,10 +446,12 @@ public sealed partial class AppDatabase
     // MARK: 會議紀錄
 
     /// <summary>寫入新的會議紀錄，舊的那一版存進 notes_versions（R6.7）。回傳是否取代了使用者改過的草稿（M§21.3）</summary>
-    public bool SaveNotes(long meetingId, MeetingNotes notes, string? by, string reason, NotesSource source = NotesSource.Edit) =>
-        Write(db => SaveNotes(db, meetingId, notes, by, reason, source));
+    /// <remarks>template：整理、草稿用的範本（M§89），記在會議上；舊的那一版帶著它原本的範本存進版本紀錄</remarks>
+    public bool SaveNotes(long meetingId, MeetingNotes notes, string? by, string reason, NotesSource source = NotesSource.Edit, string? template = null) =>
+        Write(db => SaveNotes(db, meetingId, notes, by, reason, source, template));
 
-    internal static bool SaveNotes(Db db, long meetingId, MeetingNotes notes, string? by, string reason, NotesSource source = NotesSource.Edit)
+    internal static bool SaveNotes(Db db, long meetingId, MeetingNotes notes, string? by, string reason, NotesSource source = NotesSource.Edit,
+                                   string? template = null)
     {
         if (FetchMeeting(db, meetingId) is not { } m) return false;
         var wasDraft = m.NotesDraft;
@@ -470,7 +472,9 @@ public sealed partial class AppDatabase
             case NotesSource.Revised: if (wasDraft != 0) m.NotesDraft = 2; break;
         }
         if (keepVersion && m.Notes is { } old)
-            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at) VALUES (?, ?, ?, ?)", meetingId, old, versionReason, Clock.Now());
+            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at, template_id) VALUES (?, ?, ?, ?, ?)",
+                meetingId, old, versionReason, Clock.Now(), m.NotesTemplate);
+        if (source is NotesSource.Generated or NotesSource.Draft) m.NotesTemplate = template;
         m.Notes = notes.JsonString();
         if (by is not null) m.NotesBy = by;
         var title = SwiftText.TrimSpaces(notes.Title);
@@ -484,6 +488,47 @@ public sealed partial class AppDatabase
 
     /// <summary>復原上一版：成功回傳 true</summary>
     public bool UndoNotes(long meetingId) => Write(db => UndoNotes(db, meetingId));
+
+    /// <summary>
+    /// 版本紀錄（R115、M§89）：目前的在最前面，再來由新到舊。notes_versions 的一列是「被換掉的那一版」，reason、created_at 是換掉它的那次存檔，
+    /// 所以每一版怎麼來的、什麼時候，看比它舊的那一列；最舊的一版不知道（null）
+    /// </summary>
+    public List<NotesHistoryEntry> NotesHistory(long meetingId) => Read(db =>
+    {
+        if (FetchMeeting(db, meetingId) is not { DecodedNotes: { } current } meeting) return [];
+        var rows = db.Query("SELECT * FROM notes_versions WHERE meeting_id = ? ORDER BY id", meetingId).Select(ToVersion).ToList();
+        var entries = new List<NotesHistoryEntry>();
+        for (var k = 0; k < rows.Count; k++)
+            if (MeetingNotes.Decode(rows[k].Notes) is { } notes)
+                entries.Add(new(rows[k].Id, notes, rows[k].TemplateId, k > 0 ? rows[k - 1].Reason : null, k > 0 ? rows[k - 1].CreatedAt : null));
+        entries.Add(new(null, current, meeting.NotesTemplate, rows.Count > 0 ? rows[^1].Reason : null, rows.Count > 0 ? rows[^1].CreatedAt : null));
+        entries.Reverse();
+        return entries;
+    });
+
+    /// <summary>
+    /// 改用以前的某一版（R115.3）：目前的存成一版（原因「改用以前的版本」），那一版變成目前的紀錄（不刪，可以再換回來）；
+    /// 會議的範本換成那一版的範本（範本還在的話）。回傳是否換了
+    /// </summary>
+    public bool UseNotesVersion(long meetingId, long versionId) => Write(db =>
+    {
+        if (db.QueryOne("SELECT * FROM notes_versions WHERE id = ?", versionId) is not { } vr || FetchMeeting(db, meetingId) is not { } m) return false;
+        var version = ToVersion(vr);
+        if (version.MeetingId != meetingId) return false;
+        if (m.Notes is { } old)
+            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at, template_id) VALUES (?, ?, ?, ?, ?)",
+                meetingId, old, L.T("改用以前的版本"), Clock.Now(), m.NotesTemplate);
+        m.Notes = version.Notes;
+        m.NotesTemplate = version.TemplateId;
+        m.NotesDraft = 0;
+        if (version.TemplateId is { } template && db.QueryOne("SELECT id FROM templates WHERE id = ?", template) is not null) m.TemplateId = template;
+        if (!m.TitleLocked && m.DecodedNotes?.Title is { } t && SwiftText.TrimSpaces(t) is { Length: > 0 } title) m.Title = title;
+        m.UpdatedAt = Clock.Now();
+        UpdateMeetingRow(db, m);
+        Index(db, meetingId, SearchKind.Notes, m.DecodedNotes?.PlainText ?? "");
+        Index(db, meetingId, SearchKind.Title, m.DisplayTitle);
+        return true;
+    });
 
     /// <summary>已經問過的待確認題目（M§88）：版本紀錄（舊到新）和目前紀錄的題目，去掉前後空白、去重複，最多最近的 60 題</summary>
     public List<string> AskedReviewQuestions(long meetingId) => Read(db =>
@@ -507,6 +552,7 @@ public sealed partial class AppDatabase
             || FetchMeeting(db, meetingId) is not { } m) return false;
         var version = ToVersion(vr);
         m.Notes = version.Notes;
+        m.NotesTemplate = version.TemplateId;
         m.NotesDraft = 0;   // 復原的是之前的某一版，不再當草稿自動更新
         if (!m.TitleLocked && m.DecodedNotes?.Title is { Length: > 0 } title) m.Title = title;
         m.UpdatedAt = Clock.Now();

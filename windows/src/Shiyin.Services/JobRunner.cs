@@ -810,12 +810,12 @@ public sealed class JobRunner
         {
             // 整理草稿的期間正式逐字稿好了、或已經有會議紀錄：丟掉草稿
             if (db.Segments(job.MeetingId).Count > 0 || db.Meeting(job.MeetingId)?.Notes is not null) return false;
-            db.SaveNotes(job.MeetingId, notes, provider.Code(), L.T("草稿"), NotesSource.Draft);
+            db.SaveNotes(job.MeetingId, notes, provider.Code(), L.T("草稿"), NotesSource.Draft, template?.Id);
             return true;
         }
         var hadDraft = db.Meeting(job.MeetingId)?.NotesDraft ?? 0;
         var replacedEdited = db.SaveNotes(job.MeetingId, notes, provider.Code(), answers is null ? L.T("重新整理") : L.T("校稿"),
-            answers is null ? NotesSource.Generated : NotesSource.Revised);
+            answers is null ? NotesSource.Generated : NotesSource.Revised, template?.Id);
         if (replacedEdited) EditedDraftReplaced?.Invoke(job.MeetingId);
         // 整理完有標題了，照資料夾的條件放（M§72）
         if (db.AutoFile(job.MeetingId) is { } folder) Organized?.Invoke(job.MeetingId, folder);

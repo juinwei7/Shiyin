@@ -380,6 +380,11 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("v16") { db in
             try db.execute(sql: "ALTER TABLE documents ADD COLUMN at REAL")
         }
+        // 版本紀錄記下用的範本（R115、design §89）
+        migrator.registerMigration("v17") { db in
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN notes_template TEXT")
+            try db.execute(sql: "ALTER TABLE notes_versions ADD COLUMN template_id TEXT")
+        }
         return migrator
     }
 
@@ -1018,13 +1023,15 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 回傳是否取代了使用者改過的草稿（畫面要提示，design §21.3）
     @discardableResult
-    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String, source: NotesSource = .edit) throws -> Bool {
-        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason, source: source) }
+    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String, source: NotesSource = .edit,
+                   template: String? = nil) throws -> Bool {
+        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason, source: source, template: template) }
     }
 
+    /// template：整理、草稿用的範本（design §89），記在會議上；舊的那一版帶著它原本的範本存進版本紀錄
     @discardableResult
     static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String,
-                                  source: NotesSource = .edit) throws -> Bool {
+                                  source: NotesSource = .edit, template: String? = nil) throws -> Bool {
         guard var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
         let wasDraft = m.notesDraft
         var keepVersion = true
@@ -1041,9 +1048,10 @@ final class AppDatabase: @unchecked Sendable {
         case .revised: if wasDraft != 0 { m.notesDraft = 2 }
         }
         if keepVersion, let old = m.notes {
-            var version = NotesVersion(meetingId: meetingId, notes: old, reason: versionReason)
+            var version = NotesVersion(meetingId: meetingId, notes: old, reason: versionReason, templateId: m.notesTemplate)
             try version.insert(db)
         }
+        if source == .generated || source == .draft { m.notesTemplate = template }
         m.notes = notes.jsonString()
         if let provider { m.notesBy = provider }
         if !m.titleLocked && !notes.title.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -1054,6 +1062,49 @@ final class AppDatabase: @unchecked Sendable {
         try index(db, meetingId: meetingId, kind: .notes, ref: 0, text: notes.plainText)
         try index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
         return source == .generated && wasDraft == 2
+    }
+
+    /// 版本紀錄（R115、design §89）：目前的在最前面，再來由新到舊。
+    /// notes_versions 的一列是「被換掉的那一版」，reason、created_at 是換掉它的那次存檔，
+    /// 所以每一版怎麼來的、什麼時候，看比它舊的那一列；最舊的一版不知道（nil）
+    func notesHistory(_ meetingId: Int64) throws -> [NotesHistoryEntry] {
+        try pool.read { db in
+            guard let meeting = try Meeting.fetchOne(db, key: meetingId), let current = meeting.decodedNotes else { return [] }
+            let rows = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db)
+            var entries: [NotesHistoryEntry] = []
+            for (k, row) in rows.enumerated() {
+                guard let notes = try? JSONDecoder().decode(MeetingNotes.self, from: Data(row.notes.utf8)) else { continue }
+                entries.append(NotesHistoryEntry(versionId: row.id, notes: notes, templateId: row.templateId,
+                                                 origin: k > 0 ? rows[k - 1].reason : nil, time: k > 0 ? rows[k - 1].createdAt : nil))
+            }
+            entries.append(NotesHistoryEntry(versionId: nil, notes: current, templateId: meeting.notesTemplate,
+                                             origin: rows.last?.reason, time: rows.last?.createdAt))
+            return entries.reversed()
+        }
+    }
+
+    /// 改用以前的某一版（R115.3）：目前的存成一版（原因「改用以前的版本」），那一版變成目前的紀錄（不刪，可以再換回來）；
+    /// 會議的範本換成那一版的範本（範本還在的話）。回傳是否換了
+    @discardableResult
+    func useNotesVersion(_ meetingId: Int64, versionId: Int64) throws -> Bool {
+        try pool.write { db in
+            guard let version = try NotesVersion.fetchOne(db, key: versionId), version.meetingId == meetingId,
+                  var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
+            if let old = m.notes {
+                var archived = NotesVersion(meetingId: meetingId, notes: old, reason: String(localized: "改用以前的版本"), templateId: m.notesTemplate)
+                try archived.insert(db)
+            }
+            m.notes = version.notes
+            m.notesTemplate = version.templateId
+            m.notesDraft = 0
+            if let template = version.templateId, try TemplateRecord.fetchOne(db, key: template) != nil { m.templateId = template }
+            if !m.titleLocked, let title = m.decodedNotes?.title.trimmingCharacters(in: .whitespaces), !title.isEmpty { m.title = title }
+            m.updatedAt = Clock.now()
+            try m.update(db)
+            try Self.index(db, meetingId: meetingId, kind: .notes, ref: 0, text: m.decodedNotes?.plainText ?? "")
+            try Self.index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
+            return true
+        }
     }
 
     /// 已經問過的待確認題目（design §88）：版本紀錄（舊到新）和目前紀錄的題目，去掉前後空白、去重複，最多最近的 60 題
@@ -1082,6 +1133,7 @@ final class AppDatabase: @unchecked Sendable {
         guard let version = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id").desc).fetchOne(db),
               var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
         m.notes = version.notes
+        m.notesTemplate = version.templateId
         m.notesDraft = 0   // 復原的是之前的某一版，不再當草稿自動更新
         if !m.titleLocked, let title = m.decodedNotes?.title, !title.isEmpty { m.title = title }
         m.updatedAt = Clock.now()

@@ -271,6 +271,12 @@ enum DebugControl {
             let dismissed = Set(args[3].split(separator: ",").compactMap { Int($0) })
             model.submitReview(answers: Dictionary(uniqueKeysWithValues: answers.compactMap { k, v in Int(k).map { ($0, v) } }),
                                dismissed: dismissed)
+        // notesversion <會議 id> <版本 id|current>：等於在「版本紀錄」選那一版；usenotesversion：等於按「改用這一版」（design §89）
+        case "notesversion":
+            model.selection = id
+            let versionId = args.count > 2 ? Int64(args[2]) : nil
+            model.viewingNotes = versionId.flatMap { v in ((try? model.db.notesHistory(id ?? 0)) ?? []).first { $0.versionId == v } }
+        case "usenotesversion": model.useViewedNotesVersion()
         case "morereview": model.selection = id; model.findMoreReview()   // morereview <會議 id>：等於按「再找不確定的地方」（design §88）
         case "replace":
             model.selection = id
@@ -1304,7 +1310,13 @@ enum DebugControl {
             "highlightSegment": model.highlightSegment ?? -1,
             "errorMessage": model.errorMessage ?? "",
             "noticeMessage": model.noticeMessage ?? "",
-            "reviewFinished": model.reviewFinished.sorted(),   // 紀錄頂部可以顯示「待確認都處理完了」的會議（design §88）
+            "reviewFinished": model.reviewFinished.sorted(),
+            // 版本紀錄（design §89）：選取中的會議，目前的在最前面；viewingNotesVersion 是正在看的那一版（-1 是目前的）
+            "notesHistory": model.selection.flatMap { try? model.db.notesHistory($0) }.map { $0.map { e -> [String: Any] in
+                ["versionId": e.versionId ?? -1, "templateId": e.templateId ?? "", "label": model.notesVersionLabel(e),
+                 "time": e.time ?? "", "title": e.notes.title]
+            } } ?? [],
+            "viewingNotesVersion": model.viewingNotes?.versionId ?? -1,   // 紀錄頂部可以顯示「待確認都處理完了」的會議（design §88）
             // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用；sharing 是分享畫面時藏不藏（0 none、1 readOnly，design §53）
             "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible,
                                             "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,

@@ -104,6 +104,15 @@ struct MeetingDetail: Equatable {
         guard !trimmed.isEmpty else { return nil }
         return speakers.first { $0.value.caseInsensitiveCompare(trimmed) == .orderedSame }?.key
     }
+    /// 看以前的某一版會議紀錄時，畫面用的副本（R115.2、design §89）：紀錄換成那一版，不帶待確認的標記、說話者的建議
+    func showingNotesVersion(_ notes: MeetingNotes) -> MeetingDetail {
+        var copy = self
+        copy.notes = notes
+        copy.reviewLinks = [:]
+        copy.speakerSuggestions = [:]
+        return copy
+    }
+
     /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
     var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
     /// 可以復原的說話者調整（合併、改句子）的說明，沒有就是 nil；顯示在改名小視窗和逐字稿右鍵選單（R44.4）
@@ -214,6 +223,7 @@ final class AppModel {
                 reviewExpanded = false
                 userNotesExpanded = false
                 reviewFinished = []
+                viewingNotes = nil
                 reloadDetailAfterMouseUp()
             }
         }
@@ -274,6 +284,8 @@ final class AppModel {
     var userNotesExpanded = false
     /// 這次選取期間送出過待確認的會議（R114.5、design §88）：題目都處理完時紀錄頂部顯示「再找不確定的地方」，換會議就清掉
     var reviewFinished: Set<Int64> = []
+    /// 正在看以前的哪一版會議紀錄（R115.2、design §89）：nil 是目前的；換會議、紀錄變了就回到目前的
+    var viewingNotes: NotesHistoryEntry?
     /// 正在讀取的參考文件：會議 id → 檔名（design §39.4）
     var readingDocuments: [Int64: [String]] = [:]
     /// 已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體
@@ -679,6 +691,8 @@ final class AppModel {
         }
         loaded.buildIndexes()
         loaded.linkReviewItems()
+        // 紀錄變了（整理完、改用某一版、編輯）：回到目前的版本（R115.6）
+        if viewingNotes != nil, previous?.id != meeting.id || detail?.notes != loaded.notes { viewingNotes = nil }
         detail = loaded
         syncReviewDraft()
         if previous?.id != meeting.id { refreshReminderStatus() }
@@ -1467,6 +1481,40 @@ final class AppModel {
         let payload = String(decoding: (try? JSONEncoder().encode(SummarizePayload(review: true))) ?? Data(), as: UTF8.self)
         perform { try db.enqueue(id, kind: .summarize, payload: payload) }
         runner.wake()
+    }
+
+    // MARK: 版本紀錄（R115、design §89）
+
+    /// 「版本紀錄」選單：目前的在最上面，再來由新到舊；正在看的那一版打勾
+    func notesVersionMenu() -> [MenuEntry] {
+        guard let id = selection else { return [] }
+        return ((try? db.notesHistory(id)) ?? []).map { entry in
+            let shown = viewingNotes.map { $0.versionId == entry.versionId } ?? entry.isCurrent
+            let label = entry.isCurrent ? String(localized: "\(notesVersionLabel(entry))（目前）") : notesVersionLabel(entry)
+            return MenuEntry.action(label, icon: shown ? "checkmark" : nil, shortcut: notesVersionTime(entry)) { [weak self] in
+                self?.viewingNotes = entry.isCurrent ? nil : entry
+            }
+        }
+    }
+
+    /// 一版的說明：用的範本（知道的話）・怎麼來的（最舊的一版寫「第一版」）
+    func notesVersionLabel(_ entry: NotesHistoryEntry) -> String {
+        let template = entry.templateId.map { id in templates.first { $0.id == id }?.displayName ?? String(localized: "已刪除的範本") }
+        return [template, entry.origin ?? String(localized: "第一版")].compactMap { $0 }.joined(separator: "・")
+    }
+
+    /// 一版是什麼時候的：「11月24日 下午3:30」這類（系統的格式），最舊的一版不知道
+    func notesVersionTime(_ entry: NotesHistoryEntry) -> String? {
+        entry.time.flatMap { try? Date($0, strategy: .iso8601) }?.formatted(.dateTime.month().day().hour().minute())
+    }
+
+    /// 「改用這一版」（R115.3）：那一版變成目前的紀錄，原本的留成一版
+    func useViewedNotesVersion() {
+        guard let id = selection, let versionId = viewingNotes?.versionId, readyForAction(id) else { return }
+        viewingNotes = nil
+        perform {
+            if try db.useNotesVersion(id, versionId: versionId) { noticeMessage = String(localized: "已改用這一版，原本的版本留在版本紀錄裡") }
+        }
     }
 
     func undoNotes() {

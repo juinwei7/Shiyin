@@ -235,7 +235,8 @@ public sealed partial class AppDatabase
         // 會議紀錄：舊的存成版本，時間點先移到切口（重新整理之前議題時間軸大致對得上）
         if (!plan.KeepsWhole(id) && meeting.DecodedNotes is { } notes && meeting.Notes is { } old)
         {
-            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at) VALUES (?, ?, ?, ?)", id, old, L.T("編輯會議前"), Clock.Now());
+            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at, template_id) VALUES (?, ?, ?, ?, ?)", id, old, L.T("編輯會議前"), Clock.Now(),
+                meeting.NotesTemplate);
             meeting.Notes = notes.MappingTimes(t => plan.Snap(id, t)).JsonString();
         }
         meeting.UserNotes = string.Join("\n\n", notesParts.OrderBy(p => p.Order).Select(p => p.Text).Where(t => !string.IsNullOrWhiteSpace(t)));
@@ -324,7 +325,8 @@ public sealed partial class AppDatabase
 
         var snapshotNotes = snapshot.Str("notes");
         if (meeting.Notes is { } current && current != snapshotNotes)
-            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at) VALUES (?, ?, ?, ?)", id, current, L.T("還原編輯前"), Clock.Now());
+            db.Execute("INSERT INTO notes_versions (meeting_id, notes, reason, created_at, template_id) VALUES (?, ?, ?, ?, ?)", id, current, L.T("還原編輯前"), Clock.Now(),
+                meeting.NotesTemplate);
         meeting.Notes = snapshotNotes;
         meeting.NotesBy = snapshot.Str("notesBy");
         meeting.NotesDraft = (int)(snapshot.Long("notesDraft") ?? 0);

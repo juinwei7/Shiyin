@@ -18,16 +18,18 @@ struct MeetingDetailView: View {
             if isRecordingThis {
                 RecordingPanel(detail: detail)
             } else {
+                // 看以前的某一版會議紀錄時（R115.2），紀錄分頁和播放條的議題帶用那一版
+                let shown = model.viewingNotes.map { detail.showingNotesVersion($0.notes) } ?? detail
                 Group {
                     switch model.tab {
-                    case .summary: NotesPage(detail: detail)
+                    case .summary: NotesPage(detail: shown)
                     // 換會議時重新建立：編輯中的狀態、草稿是每場會議自己的（design §21.15）
                     case .transcript: TranscriptTab(detail: detail).id(detail.meeting.id)
                     case .ask: AskTab(detail: detail).id(detail.meeting.id)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                if detail.meeting.hasAudio { PlayerBar(detail: detail) }
+                if detail.meeting.hasAudio { PlayerBar(detail: shown) }
             }
         }
         .environment(\.meetingLanguage, detail.meeting.meetingLanguage)   // 內容的字形、標題字型（design §18.6）
