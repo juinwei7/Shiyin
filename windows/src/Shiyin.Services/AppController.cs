@@ -81,6 +81,10 @@ public sealed partial class AppController
     public event Action<long>? ReleasingAudio;
     /// <summary>錄音檔換了（編輯會議、分成兩場、還原，design-windows §11.40）：畫面重新載入播放器</summary>
     public event Action<long>? AudioReplaced;
+    /// <summary>再找不確定的地方做完（M§88）：會議 id、多找到幾題</summary>
+    public event Action<long, int>? MoreReviewFound;
+    /// <summary>這次選取期間送出過待確認的會議（R114.5、M§88）：題目都處理完時紀錄頂部顯示「再找不確定的地方」；App 換會議時清掉</summary>
+    public HashSet<long> ReviewFinished { get; } = [];
 
     /// <summary>正在匯入的檔案數，側邊欄下方顯示（M§21.13、R20.4）</summary>
     public int ImportingCount => Volatile.Read(ref importing);
@@ -115,6 +119,12 @@ public sealed partial class AppController
         runner.Changed += () => Changed?.Invoke(null);
         // 自動放進資料夾了（M§72）
         runner.Organized += Organized;
+        // 再找不確定的地方做完（M§88）：找到時 App 展開待確認
+        runner.MoreReviewFound += (id, count) =>
+        {
+            Notice?.Invoke(count > 0 ? L.F("多找到 %lld 個不確定的地方", count) : L.T("沒有找到其他不確定的地方"));
+            MoreReviewFound?.Invoke(id, count);
+        };
     }
 
     /// <summary>啟動時：內建範本、清掉上次的暫存、過期的垃圾桶、復原錄音、開始工作佇列（同 Mac 的 AppModel.start）</summary>
@@ -951,6 +961,23 @@ public sealed partial class AppController
         Runner.Wake();
     }
 
+    /// <summary>「再找不確定的地方」（R114、M§88）：整理工具再找一次要確認的地方，只加待確認，其他段落不動</summary>
+    public void FindMoreReview(long id)
+    {
+        if (!ReadyForAction(id)) return;
+        if (Db.Meeting(id)?.DecodedNotes is null) { Notice?.Invoke(L.T("還沒有會議紀錄，整理完才能再找不確定的地方")); return; }
+        if (Settings.Provider == LLMProvider.None)
+        {
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
+            return;
+        }
+        if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
+        ReviewFinished.Remove(id);
+        Perform(id, () => Db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload(Review: true))));
+        Runner.Wake();
+    }
+
     // MARK: 參考文件（R61，M§39.4）
 
     /// <summary>拖進主視窗的文件：加到選取中的會議（R61.1）</summary>
@@ -1086,6 +1113,8 @@ public sealed partial class AppController
             if (answered.Count > 0) Db.Enqueue(id, JobKind.Revise, JobRunner.Encode(new RevisePayload(answered)));
         });
         Runner.Wake();
+        // 題目都處理完時紀錄頂部可以接著再找（R114.5）；還有題目、校稿還沒好時畫面不顯示
+        ReviewFinished.Add(id);
         Usage?.Reviewed(answered.Count, confirmed.Count, skipped);   // 匿名統計（R41.7）：只記題數
         return true;
     }

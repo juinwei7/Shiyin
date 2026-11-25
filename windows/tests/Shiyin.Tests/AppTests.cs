@@ -534,6 +534,38 @@ public sealed class AppTests : IDisposable
     }
 
     /// <summary>
+    /// 「再找不確定的地方」（R114、M§88）：排 summarize，payload 多 review；沒有紀錄、沒設整理工具時不排、說原因；
+    /// 送出待確認後記進 ReviewFinished，排了之後拿掉
+    /// </summary>
+    [Fact]
+    public void FindMoreReviewQueuesReviewOnlySummarize()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
+        var controller = Controller(settings, out _);
+        var errors = new List<string>();
+        var notices = new List<string>();
+        controller.Error += errors.Add;
+        controller.Notice += notices.Add;
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a" }, null).Id!.Value;
+        db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 2, Text = "一", Speaker = 1 }], 2, 1);
+        controller.FindMoreReview(id);
+        Assert.Equal(["還沒有會議紀錄，整理完才能再找不確定的地方"], notices);
+        db.SaveNotes(id, new MeetingNotes { Title = "週會", Summary = [new("決定省錢")], ReviewItems = [new("00:01", "省多少？")] },
+            "anthropic", "整理", NotesSource.Generated);
+        controller.FindMoreReview(id);
+        Assert.Equal(["整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"], errors);
+        Assert.Null(db.LatestJob(id));
+        Assert.True(controller.SubmitReview(id, new Dictionary<int, string>(), new HashSet<int> { 0 }));
+        Assert.Contains(id, controller.ReviewFinished);
+        settings.Set(AppSettings.ProviderKey, "anthropic");
+        settings.HasKey = _ => true;
+        controller.FindMoreReview(id);
+        var job = db.LatestJob(id)!;
+        Assert.Equal((JobKind.Summarize, JobStatus.Queued, """{"draft":false,"review":true}"""), (job.Kind, job.Status, job.Payload));
+        Assert.DoesNotContain(id, controller.ReviewFinished);
+    }
+
+    /// <summary>
     /// 「人物」的每一張（R92.2、M§66）：有重點的人才有；名字不分大小寫、去頭尾空白對說話者；說了幾秒、百分比只算正式逐字稿、
     /// 對不到說話者時沒有；負責人跟名字一樣或包含名字（不分大小寫）的待辦和原本的位置
     /// </summary>

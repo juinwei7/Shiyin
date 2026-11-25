@@ -5378,6 +5378,23 @@
         }
       }
     },
+    "再找不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再找不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find More to Confirm"
+          }
+        }
+      }
+    },
     "再試一次": {
       "extractionState": "manual",
       "localizations": {
@@ -8240,6 +8257,35 @@
         }
       }
     },
+    "多找到 %lld 個不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "多找到 %lld 个不确定的地方"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Found %lld more thing to confirm"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Found %lld more things to confirm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "大約幾個人": {
       "extractionState": "manual",
       "localizations": {
@@ -10412,6 +10458,23 @@
         }
       }
     },
+    "待確認都處理完了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待确认都处理完了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All questions handled"
+          }
+        }
+      }
+    },
     "待辦": {
       "extractionState": "manual",
       "localizations": {
@@ -11452,6 +11515,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "找不到音频数据区段"
+          }
+        }
+      }
+    },
+    "找不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding things to confirm"
           }
         }
       }
@@ -17301,6 +17381,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有找到“%@”。"
+          }
+        }
+      }
+    },
+    "沒有找到其他不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到其他不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found nothing else to confirm"
           }
         }
       }
@@ -24403,6 +24500,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有会议记录可以复制"
+          }
+        }
+      }
+    },
+    "還沒有會議紀錄，整理完才能再找不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有会议记录，整理完才能再找不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no notes yet. Once the notes are summarized, you can look for more to confirm."
           }
         }
       }

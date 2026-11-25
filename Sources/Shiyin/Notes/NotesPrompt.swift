@@ -100,6 +100,8 @@ enum NotesPrompt {
     private struct Labels {
         var meetingDate, existingTitle, participants, notProvided, glossary, none, template, sections, custom, extra: String
         var userNotes, bookmarks, transcript, currentNotes, answers, answer, reviseInstructions, listSeparator, colon: String
+        /// 再找不確定的地方（design §88）
+        var asked, moreReviewInstructions: String
         var section: (String, String) -> String
 
         static let zh = Labels(
@@ -117,6 +119,15 @@ enum NotesPrompt {
             - 除非回答本身帶出新的疑點，否則不要新增題目。
             """,
             listSeparator: "、", colon: "：",
+            asked: "已經問過的題目（含使用者回答過、略過的）",
+            moreReviewInstructions: """
+
+            這次只要找出目前的會議紀錄裡還不確定、需要使用者確認的地方，寫在 reviewItems（規則 6）：
+            - 用逐字稿檢查目前的會議紀錄：專有名詞、人名、負責人、期限、數字、方案內容；紀錄裡寫得含糊、或可能漏掉的重要內容也可以問。
+            - 不要重複已經問過的題目，也不要問目前的會議紀錄已經寫清楚的事。
+            - 所有段落都給空陣列，title 給空字串。
+            - 沒有值得問的地方就給空的 reviewItems。
+            """,
             section: { id, label in "\(id)（\(label)）" })
 
         static let en = Labels(
@@ -134,6 +145,15 @@ enum NotesPrompt {
             - Do not add new questions unless an answer raises a new doubt.
             """,
             listSeparator: ", ", colon: ": ",
+            asked: "Questions already asked (including ones the user answered or skipped)",
+            moreReviewInstructions: """
+
+            This time, only find the places in the current meeting notes that are still uncertain and need the user to confirm, and put them in reviewItems (rule 6):
+            - Check the current notes against the transcript: proper nouns, names, owners, deadlines, numbers, details of a proposal; you may also ask about important content that is vague or may be missing.
+            - Do not repeat questions already asked, and do not ask about things the current notes already state clearly.
+            - Give empty arrays for all sections and an empty string for title.
+            - If nothing is worth asking, give an empty reviewItems.
+            """,
             section: { id, label in "\(id) (\(label))" })
 
         static let ja = Labels(
@@ -151,6 +171,15 @@ enum NotesPrompt {
             - 回答そのものが新しい疑問を生まない限り、質問を追加しない。
             """,
             listSeparator: "、", colon: "：",
+            asked: "すでにした質問（ユーザーが回答した・スキップしたものを含む）",
+            moreReviewInstructions: """
+
+            今回は、現在の議事録の中でまだ確かでなく、ユーザーに確認が必要な箇所だけを探し、reviewItems に入れてください（規則 6）：
+            - 文字起こしと照らし合わせて現在の議事録を確認する：固有名詞、人名、担当者、期限、数字、案の内容。議事録の曖昧な箇所や、抜けているかもしれない重要な内容について質問してもよい。
+            - すでにした質問を繰り返さない。現在の議事録にはっきり書かれていることも質問しない。
+            - すべてのセクションは空配列、title は空文字列にする。
+            - 質問すべき箇所がなければ reviewItems を空にする。
+            """,
             section: { id, label in "\(id)（\(label)）" })
 
         static func of(_ language: MeetingLanguage) -> Labels {
@@ -209,6 +238,19 @@ enum NotesPrompt {
             lines.append("[\(TimeFormat.string(s.start))] \(speaker)\(s.lowConfidence ? "(?) " : "")\(s.text)")
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// 再找不確定的地方（design §88、R114）：c 的範本只剩說明和額外指示（所有段落給空陣列），
+    /// 後面接目前的紀錄、已經問過的題目和這次只找待確認的說明
+    static func moreReview(_ c: NotesContext, notes: MeetingNotes, asked: [String]) -> String {
+        let l = Labels.of(c.meeting.meetingLanguage)
+        var text = summarize(c)
+        text += "\n\n\(l.currentNotes)\(l.colon)\n" + notes.jsonString()
+        if !asked.isEmpty {
+            text += "\n\n\(l.asked)\(l.colon)\n" + asked.map { "- \($0)" }.joined(separator: "\n")
+        }
+        text += "\n" + l.moreReviewInstructions
+        return text
     }
 
     static func revise(_ c: NotesContext, notes: MeetingNotes, answers: [ReviewAnswer]) -> String {

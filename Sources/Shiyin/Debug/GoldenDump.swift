@@ -209,6 +209,11 @@ enum GoldenDump {
             let general = TemplateRecord(id: "general", name: "", builtin: true, definition: BuiltinTemplates.all[0].definition.jsonString())
             if let notes = fx.notes {
                 w.text(dir + "revise.txt", NotesPrompt.revise(context(general.definition(for: l)), notes: notes, answers: fx.answers))
+                // 再找不確定的地方（design §88）：範本只剩說明和額外指示，問過的題目用 answers 的題目
+                let base = general.definition(for: l)
+                w.text(dir + "review-more.txt", NotesPrompt.moreReview(
+                    context(TemplateDefinition(description: base.description, sections: [], custom: [], instruction: base.instruction)),
+                    notes: notes, asked: fx.answers.map(\.question)))
             }
 
             // 逐字稿校正：跟 JobRunner.correct 一樣組 Context

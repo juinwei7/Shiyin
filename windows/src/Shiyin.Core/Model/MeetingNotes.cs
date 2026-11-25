@@ -32,6 +32,9 @@ public sealed record MeetingNotes
     public bool IsEmpty => Summary.Count == 0 && Decisions.Count == 0 && ActionItems.Count == 0 && OpenQuestions.Count == 0
                            && Topics.Count == 0 && Custom.Count == 0 && People.Count == 0;
 
+    /// <summary>比對待確認的題目是不是問過了用（M§88）：去掉所有空白</summary>
+    public static string QuestionKey(string question) => new([.. question.Where(c => !char.IsWhiteSpace(c))]);
+
     // MARK: 讀取
 
     /// <summary>解析失敗（不是 JSON 物件）回傳 null，跟 Swift 的 <c>try? JSONDecoder().decode</c> 一樣</summary>

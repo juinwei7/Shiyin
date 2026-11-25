@@ -1456,6 +1456,69 @@ public sealed class ServicesTests : IDisposable
     }
 
     /// <summary>
+    /// 再找不確定的地方（R114、M§88）：提示詞的段落是空的、有目前的紀錄和問過的題目（版本紀錄舊到新、再來目前的）；
+    /// 整理完去掉空的、問過的（不管空白），新題目接在目前的待確認後面，其他段落不動，存一版「再找不確定的地方」，發 MoreReviewFound、不發通知。
+    /// 沒找到時不存
+    /// </summary>
+    [Fact]
+    public async Task MoreReviewAppendsOnlyNewQuestions()
+    {
+        var prompts = new List<string>();
+        var reply = """
+            {"title":"別的標題","summary":[{"text":"不該出現","time":""}],"people":[],"decisions":[],"actionItems":[],"openQuestions":[],"topics":[],"custom":[],
+             "reviewItems":[{"question":"預算 5 萬含稅嗎？","time":"00:02","yesNo":true},{"question":" 省 多少？","time":"00:01","yesNo":false},
+                            {"question":"  ","time":"","yesNo":false},{"question":"預算5萬含稅嗎？","time":"00:02","yesNo":true}]}
+            """;
+        server.Handle = async c =>
+        {
+            using var reader = new StreamReader(c.Request.InputStream);
+            var body = JsonNode.Parse(await reader.ReadToEndAsync())!;
+            lock (prompts) prompts.Add(body["messages"]![0]!["content"]!.GetValue<string>());
+            var answer = new JsonObject { ["content"] = new JsonArray(new JsonObject { ["type"] = "tool_use", ["name"] = "save_meeting_notes", ["input"] = JsonNode.Parse(reply) }) };
+            var bytes = Encoding.UTF8.GetBytes(answer.ToJsonString());
+            c.Response.ContentType = "application/json";
+            await c.Response.OutputStream.WriteAsync(bytes);
+            c.Response.Close();
+        };
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic" });
+        var (runner, _, _) = Runner(settings);
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a", Title = "週會" }, null).Id!.Value;
+        db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 2, Text = "預算抓五萬", Speaker = 1 }], 2, 1);
+        db.SaveNotes(id, new MeetingNotes { Title = "週會", ReviewItems = [new("00:00", "王小明是負責人嗎？", true)] }, "codex", "整理", NotesSource.Generated);
+        var before = new MeetingNotes { Title = "週會", Summary = [new("決定省錢", "00:01")], ReviewItems = [new("00:01", "省多少？")] };
+        db.SaveNotes(id, before, "codex", "整理", NotesSource.Generated);
+        var found = new List<(long, int)>();
+        runner.MoreReviewFound += (m, n) => { lock (found) found.Add((m, n)); };
+        var finished = new List<JobKind>();
+        runner.Finished += (job, _) => { lock (finished) finished.Add(job.Kind); };
+        db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload(Review: true)));
+        runner.Start();
+        try
+        {
+            await Until(() => db.LatestJob(id)?.Status is JobStatus.Done or JobStatus.Failed);
+            Assert.Equal(JobStatus.Done, db.LatestJob(id)!.Status);
+            var prompt = Assert.Single(prompts);
+            Assert.Contains("要產生的段落：\n", prompt);
+            Assert.Contains("\n\n已經問過的題目（含使用者回答過、略過的）：\n- 王小明是負責人嗎？\n- 省多少？\n\n這次只要找出", prompt);
+            var after = db.Meeting(id)!.DecodedNotes!;
+            Assert.Equal((before with { ReviewItems = [.. before.ReviewItems, new("00:02", "預算 5 萬含稅嗎？", true)] }).JsonString(), after.JsonString());
+            Assert.Equal("再找不確定的地方", db.Read(d => d.Scalar("SELECT reason FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", id)));
+            Assert.Equal([(id, 1)], found);
+            Assert.Empty(finished);
+
+            // 沒找到新的：不存、題數 0
+            reply = reply.Replace("預算 5 萬含稅嗎？", "省多少？").Replace("預算5萬含稅嗎？", "王小明是負責人嗎？");
+            var versions = db.VersionCount(id);
+            db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload(Review: true)));
+            runner.Wake();
+            await Until(() => found.Count == 2);
+            Assert.Equal((id, 0), found[1]);
+            Assert.Equal(versions, db.VersionCount(id));
+        }
+        finally { runner.TerminateAll(TimeSpan.FromSeconds(5)); }
+    }
+
+    /// <summary>
     /// 只補上每個人的重點（R92.4、M§66）：提示詞的段落只有 people、沒有自訂段落（範本的說明、額外指示照舊）；整理完只換掉 people，
     /// 標題、摘要、待辦這些段落和整理工具都不動，存一版「補上每個人的重點」，不發通知
     /// </summary>

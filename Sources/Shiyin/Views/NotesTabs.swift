@@ -299,7 +299,11 @@ struct NotesPage: View {
         if let id = detail.meeting.id, let suggestion = model.folderSuggestion(for: detail.meeting) {
             FolderSuggestionBanner(meetingId: id, suggestion: suggestion).environment(\.textScale, 1)
         }
-        if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
+        if detail.reviewCount > 0 {
+            ReviewBanner(detail: detail)
+        } else if let id = detail.meeting.id, model.reviewFinished.contains(id), model.detailStatus?.isActive != true {
+            ReviewDoneBanner(meetingId: id).environment(\.textScale, 1)
+        }
         EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true,
                 onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
             base = notes; editing = notes
@@ -380,6 +384,29 @@ struct ReviewBanner: View {
             }
         }
         .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+/// 待確認都處理完了（R114.5、design §88）：可以接著再找不確定的地方；✕ 收起
+struct ReviewDoneBanner: View {
+    @Environment(AppModel.self) private var model
+    let meetingId: Int64
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Label("待確認都處理完了", systemImage: "checkmark.circle")
+            Spacer(minLength: 8)
+            Button("再找不確定的地方") { model.findMoreReview() }
+            Button { model.reviewFinished.remove(meetingId) } label: { Image(systemName: "xmark") }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("不用了")
+                .accessibilityLabel("不用了")
+        }
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.celadon.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

@@ -271,6 +271,7 @@ enum DebugControl {
             let dismissed = Set(args[3].split(separator: ",").compactMap { Int($0) })
             model.submitReview(answers: Dictionary(uniqueKeysWithValues: answers.compactMap { k, v in Int(k).map { ($0, v) } }),
                                dismissed: dismissed)
+        case "morereview": model.selection = id; model.findMoreReview()   // morereview <會議 id>：等於按「再找不確定的地方」（design §88）
         case "replace":
             model.selection = id
             let result = model.replace(find: args[2], with: args[3], addToGlossary: args[4] == "1")
@@ -1303,6 +1304,7 @@ enum DebugControl {
             "highlightSegment": model.highlightSegment ?? -1,
             "errorMessage": model.errorMessage ?? "",
             "noticeMessage": model.noticeMessage ?? "",
+            "reviewFinished": model.reviewFinished.sorted(),   // 紀錄頂部可以顯示「待確認都處理完了」的會議（design §88）
             // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用；sharing 是分享畫面時藏不藏（0 none、1 readOnly，design §53）
             "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible,
                                             "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,

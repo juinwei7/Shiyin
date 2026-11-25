@@ -96,7 +96,7 @@ public static class NotesPrompt
         string MeetingDate, string ExistingTitle, string Participants, string NotProvided, string Glossary, string None,
         string Template, string Sections, string Custom, string Extra, string UserNotes, string Bookmarks, string Transcript,
         string CurrentNotes, string Answers, string Answer, string ReviseInstructions, string ListSeparator, string Colon,
-        Func<string, string, string> Section)
+        string Asked, string MoreReviewInstructions, Func<string, string, string> Section)
     {
         public static readonly Labels Zh = new(
             "會議日期", "現有標題", "與會者", "未提供", "詞彙表（正確寫法）", "無", "範本", "要產生的段落",
@@ -111,7 +111,17 @@ public static class NotesPrompt
             - 已回答的題目從 reviewItems 移除；目前會議紀錄裡沒被回答的題目原樣保留。
             - 除非回答本身帶出新的疑點，否則不要新增題目。
             """,
-            "、", "：", (id, label) => $"{id}（{label}）");
+            "、", "：",
+            "已經問過的題目（含使用者回答過、略過的）",
+            """
+
+            這次只要找出目前的會議紀錄裡還不確定、需要使用者確認的地方，寫在 reviewItems（規則 6）：
+            - 用逐字稿檢查目前的會議紀錄：專有名詞、人名、負責人、期限、數字、方案內容；紀錄裡寫得含糊、或可能漏掉的重要內容也可以問。
+            - 不要重複已經問過的題目，也不要問目前的會議紀錄已經寫清楚的事。
+            - 所有段落都給空陣列，title 給空字串。
+            - 沒有值得問的地方就給空的 reviewItems。
+            """,
+            (id, label) => $"{id}（{label}）");
 
         public static readonly Labels En = new(
             "Meeting date", "Existing title", "Participants", "not provided", "Glossary (correct spellings)", "none", "Template",
@@ -126,7 +136,17 @@ public static class NotesPrompt
             - Remove answered questions from reviewItems; keep unanswered questions from the current notes as they are.
             - Do not add new questions unless an answer raises a new doubt.
             """,
-            ", ", ": ", (id, label) => $"{id} ({label})");
+            ", ", ": ",
+            "Questions already asked (including ones the user answered or skipped)",
+            """
+
+            This time, only find the places in the current meeting notes that are still uncertain and need the user to confirm, and put them in reviewItems (rule 6):
+            - Check the current notes against the transcript: proper nouns, names, owners, deadlines, numbers, details of a proposal; you may also ask about important content that is vague or may be missing.
+            - Do not repeat questions already asked, and do not ask about things the current notes already state clearly.
+            - Give empty arrays for all sections and an empty string for title.
+            - If nothing is worth asking, give an empty reviewItems.
+            """,
+            (id, label) => $"{id} ({label})");
 
         public static readonly Labels Ja = new(
             "会議日", "既存のタイトル", "参加者", "未記入", "用語集（正しい表記）", "なし", "テンプレート", "作成するセクション",
@@ -141,7 +161,17 @@ public static class NotesPrompt
             - 回答済みの質問は reviewItems から削除し、現在の議事録にある未回答の質問はそのまま残す。
             - 回答そのものが新しい疑問を生まない限り、質問を追加しない。
             """,
-            "、", "：", (id, label) => $"{id}（{label}）");
+            "、", "：",
+            "すでにした質問（ユーザーが回答した・スキップしたものを含む）",
+            """
+
+            今回は、現在の議事録の中でまだ確かでなく、ユーザーに確認が必要な箇所だけを探し、reviewItems に入れてください（規則 6）：
+            - 文字起こしと照らし合わせて現在の議事録を確認する：固有名詞、人名、担当者、期限、数字、案の内容。議事録の曖昧な箇所や、抜けているかもしれない重要な内容について質問してもよい。
+            - すでにした質問を繰り返さない。現在の議事録にはっきり書かれていることも質問しない。
+            - すべてのセクションは空配列、title は空文字列にする。
+            - 質問すべき箇所がなければ reviewItems を空にする。
+            """,
+            (id, label) => $"{id}（{label}）");
 
         public static Labels Of(MeetingLanguage l) => l.Base() switch { PromptBase.En => En, PromptBase.Ja => Ja, _ => Zh };
     }
@@ -195,6 +225,20 @@ public static class NotesPrompt
             lines.Add($"[{TimeFormat.String(s.Start)}] {speaker}{(s.LowConfidence ? "(?) " : "")}{s.Text}");
         }
         return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// 再找不確定的地方（M§88、R114）：c 的範本只剩說明和額外指示（所有段落給空陣列），
+    /// 後面接目前的紀錄、已經問過的題目和這次只找待確認的說明
+    /// </summary>
+    public static string MoreReview(NotesContext c, MeetingNotes notes, IReadOnlyList<string> asked)
+    {
+        var l = Labels.Of(c.Meeting.MeetingLanguage);
+        var text = Summarize(c);
+        text += $"\n\n{l.CurrentNotes}{l.Colon}\n" + notes.JsonString();
+        if (asked.Count > 0) text += $"\n\n{l.Asked}{l.Colon}\n" + string.Join("\n", asked.Select(q => $"- {q}"));
+        text += "\n" + l.MoreReviewInstructions;
+        return text;
     }
 
     public static string Revise(NotesContext c, MeetingNotes notes, IReadOnlyList<ReviewAnswer> answers)

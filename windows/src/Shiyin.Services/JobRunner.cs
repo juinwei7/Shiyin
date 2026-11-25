@@ -13,8 +13,11 @@ namespace Shiyin.Services;
 /// <summary>校稿工作的 payload（JSON 跟 Mac 相同）</summary>
 public sealed record RevisePayload(List<ReviewAnswerJson> Answers);
 public sealed record ReviewAnswerJson(string Time, string Question, string Answer);
-/// <summary>整理工作的 payload：draft 是用即時逐字稿整理草稿（M§21.3）；people 是只補上每個人的重點，其他段落不動（M§66）</summary>
-public sealed record SummarizePayload(bool Draft = false, bool People = false);
+/// <summary>
+/// 整理工作的 payload：draft 是用即時逐字稿整理草稿（M§21.3）；people 是只補上每個人的重點，其他段落不動（M§66）；
+/// review 是再找不確定的地方，只加待確認（M§88）
+/// </summary>
+public sealed record SummarizePayload(bool Draft = false, bool People = false, bool Review = false);
 /// <summary>轉錄工作的 payload（M§35.3）：Until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）</summary>
 /// <summary>until：只轉錄到第幾秒（M§35.3）；remoteId：企業伺服器上還沒拿到結果的工作（M§36.3），app 重開時接著傳、接著等</summary>
 public sealed record TranscribePayload(double? Until, string? RemoteId = null);
@@ -77,6 +80,8 @@ public sealed class JobRunner
     public event Action<long>? ServerFallback;
     /// <summary>自動放進資料夾了（M§72）：會議 id、資料夾；App 提示「「X」已放進「Y」」</summary>
     public event Action<long, string?>? Organized;
+    /// <summary>再找不確定的地方做完（M§88）：會議 id、多找到幾題</summary>
+    public event Action<long, int>? MoreReviewFound;
 
     /// <summary>匿名使用統計（design-windows §12.10）；沒給（測試）就不累計</summary>
     public UsageStats? Usage { get; init; }
@@ -208,7 +213,7 @@ public sealed class JobRunner
                     case JobKind.Transcribe: await Task.Run(() => Transcribe(job, state, cancel.Token)); break;
                     case JobKind.Summarize:
                         var payload = Decode<SummarizePayload>(job.Payload) ?? new SummarizePayload();
-                        notify = await Summarize(job, state, null, payload.Draft, cancel.Token, peopleOnly: payload.People);
+                        notify = await Summarize(job, state, null, payload.Draft, cancel.Token, peopleOnly: payload.People, review: payload.Review);
                         break;
                     case JobKind.Revise:
                         var answers = Decode<RevisePayload>(job.Payload)?.Answers ?? throw LLMException.Failed("payload");
@@ -292,7 +297,8 @@ public sealed class JobRunner
                     root.TryGetProperty("remoteId", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null) as T;
             if (typeof(T) == typeof(SummarizePayload))
                 return new SummarizePayload(root.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True,
-                    root.TryGetProperty("people", out var p) && p.ValueKind == JsonValueKind.True) as T;
+                    root.TryGetProperty("people", out var p) && p.ValueKind == JsonValueKind.True,
+                    root.TryGetProperty("review", out var rv) && rv.ValueKind == JsonValueKind.True) as T;
             if (typeof(T) == typeof(RevisePayload))
                 return new RevisePayload(root.GetProperty("answers").EnumerateArray().Select(a => new ReviewAnswerJson(
                     a.GetProperty("time").GetString() ?? "", a.GetProperty("question").GetString() ?? "", a.GetProperty("answer").GetString() ?? "")).ToList()) as T;
@@ -306,6 +312,7 @@ public sealed class JobRunner
     {
         var json = new System.Text.Json.Nodes.JsonObject { ["draft"] = payload.Draft };
         if (payload.People) json["people"] = true;
+        if (payload.Review) json["review"] = true;
         return json.ToJsonString();
     }
 
@@ -737,7 +744,8 @@ public sealed class JobRunner
     // MARK: 整理（M§8）
 
     /// <summary>回傳要不要發通知：草稿沒做（正式逐字稿已經好了）、正式版取代了草稿、只補上每個人的重點時不發</summary>
-    async Task<bool> Summarize(Job job, RunningJob state, List<ReviewAnswer>? answers, bool draft, CancellationToken cancel, bool peopleOnly = false)
+    async Task<bool> Summarize(Job job, RunningJob state, List<ReviewAnswer>? answers, bool draft, CancellationToken cancel, bool peopleOnly = false,
+                               bool review = false)
     {
         if (db.Meeting(job.MeetingId) is not { } meeting) return false;
         // 草稿（M§21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
@@ -747,7 +755,7 @@ public sealed class JobRunner
             throw LLMException.NotConfigured(settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
                 : L.T("整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"));
         state.Provider = provider;
-        state.Stage = draft ? L.T("整理草稿") : answers is null ? L.T("整理") : L.T("校稿");
+        state.Stage = draft ? L.T("整理草稿") : review ? L.T("找不確定的地方") : answers is null ? L.T("整理") : L.T("校稿");
         var segments = db.Segments(job.MeetingId, draft ? "live" : "final");
         if (segments.Count == 0 && meeting.UserNotes.Length == 0) throw LLMException.Failed(L.T("還沒有逐字稿，請先完成轉錄"));
         var templates = db.Templates();
@@ -759,6 +767,13 @@ public sealed class JobRunner
             if (meeting.DecodedNotes is null) return false;
             definition = new TemplateDefinition(definition.Description, ["people"], [], definition.Instruction);
         }
+        // 再找不確定的地方（M§88）：範本不要任何段落，只剩待確認
+        if (review)
+        {
+            if (meeting.DecodedNotes is null) return false;
+            definition = new TemplateDefinition(definition.Description, [], [], definition.Instruction);
+        }
+        var asked = review ? db.AskedReviewQuestions(job.MeetingId) : [];
         var context = new NotesContext(meeting, segments, db.Speakers(job.MeetingId).ToDictionary(s => s.Idx, s => s.Name),
             db.Bookmarks(job.MeetingId), GlossaryTerms(), definition,
             db.Documents(job.MeetingId).Select(DocumentText.From).ToList());
@@ -768,6 +783,7 @@ public sealed class JobRunner
             if (meeting.DecodedNotes is not { } current) return false;
             prompt = NotesPrompt.Revise(context, current, answers);
         }
+        else if (review && meeting.DecodedNotes is { } shown) prompt = NotesPrompt.MoreReview(context, shown, asked);
         else prompt = NotesPrompt.Summarize(context);
         var notes = await llm.Generate(provider, settings.Model, NotesPrompt.System(meeting.MeetingLanguage, context.Documents is { Count: > 0 }), prompt, cancel);
         if (!IsStillRunning(job)) return false;
@@ -778,6 +794,16 @@ public sealed class JobRunner
             // 整理的期間紀錄可能被改過：用現在的紀錄，只換掉 people
             if (db.Meeting(job.MeetingId)?.DecodedNotes is not { } current) return false;
             db.SaveNotes(job.MeetingId, current with { People = notes.People }, null, L.T("補上每個人的重點"), NotesSource.Edit);
+            return false;
+        }
+        if (review)
+        {
+            // 去掉空的、問過的（同一題只留一次），接在現在的紀錄後面；其他段落不動
+            var seen = asked.Select(MeetingNotes.QuestionKey).ToHashSet();
+            var found = notes.ReviewItems.Where(item => MeetingNotes.QuestionKey(item.Question) is { Length: > 0 } key && seen.Add(key)).ToList();
+            if (found.Count > 0 && db.Meeting(job.MeetingId)?.DecodedNotes is { } latest)
+                db.SaveNotes(job.MeetingId, latest with { ReviewItems = [.. latest.ReviewItems, .. found] }, null, L.T("再找不確定的地方"), NotesSource.Edit);
+            MoreReviewFound?.Invoke(job.MeetingId, found.Count);
             return false;
         }
         if (draft)

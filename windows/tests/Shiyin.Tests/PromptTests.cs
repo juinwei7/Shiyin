@@ -31,7 +31,13 @@ public class PromptTests
         Golden.Text(dir + "summarize-custom.txt", NotesPrompt.Summarize(Context(fx, custom.DefinitionFor(fx.Language))));
         var general = new TemplateRecord { Id = "general", Builtin = true, Definition = BuiltinTemplates.All[0].Definition.JsonString() };
         if (fx.Notes is { } notes)
+        {
             Golden.Text(dir + "revise.txt", NotesPrompt.Revise(Context(fx, general.DefinitionFor(fx.Language)), notes, fx.Answers));
+            // 再找不確定的地方（M§88）：範本只剩說明和額外指示，問過的題目用 answers 的題目
+            var d = general.DefinitionFor(fx.Language);
+            Golden.Text(dir + "review-more.txt", NotesPrompt.MoreReview(Context(fx, new TemplateDefinition(d.Description, [], [], d.Instruction)), notes,
+                fx.Answers.Select(a => a.Question).ToList()));
+        }
 
         // 有參考文件時（M§39.3）：沒有文件的檔案不變（R61.5）
         if (fx.Documents.Count > 0)

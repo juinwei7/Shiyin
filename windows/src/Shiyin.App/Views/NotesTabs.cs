@@ -379,6 +379,8 @@ public sealed class NotesTabs
         if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId) is { } suggestion)
             column.Children.Add(FolderSuggestionBanner(detail.Meeting.Id!.Value, suggestion));
         if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
+        else if (host.Controller.ReviewFinished.Contains(detail.Meeting.Id!.Value) && window.State.DetailStatus?.IsActive != true)
+            column.Children.Add(ReviewDoneBanner(detail.Meeting.Id!.Value));
         column.Children.Add(EditBar(detail));
         if (host.Settings.NotesView == "mindMap") return MindMapPage(detail, notes, column);
         ResetMindMapZoom();
@@ -455,6 +457,21 @@ public sealed class NotesTabs
         left.VerticalAlignment = VerticalAlignment.Center;
         right.VerticalAlignment = VerticalAlignment.Center;
         // 對比主題時沒有底色、一圈細框（Ui.Tinted）
+        return Ui.Tinted(new Border { Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) },
+            Ui.Tint(Ui.CeladonColor, (Ui.IsDark ? 36 : 20) / 255.0));
+    }
+
+    /// <summary>待確認都處理完了（R114.5、M§88，同 Mac 的 ReviewDoneBanner）：可以接著再找不確定的地方；✕ 收起</summary>
+    FrameworkElement ReviewDoneBanner(long id)
+    {
+        var left = Ui.Row(8, new FontIcon { Glyph = "\uE73E", FontSize = 14 }, Ui.Text(L.T("待確認都處理完了"), 13));
+        var close = Ui.Borderless(new Button { Content = new FontIcon { Glyph = "\uE711", FontSize = 11 }, Padding = new Thickness(6) }, Ui.Secondary);
+        ToolTipService.SetToolTip(close, L.T("不用了"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(close, L.T("不用了"));
+        close.Click += (_, _) => { host.Controller.ReviewFinished.Remove(id); window.Refresh(); };
+        var right = Ui.Row(8, Ui.Button(L.T("再找不確定的地方"), () => host.Controller.FindMoreReview(id)), close);
+        left.VerticalAlignment = VerticalAlignment.Center;
+        right.VerticalAlignment = VerticalAlignment.Center;
         return Ui.Tinted(new Border { Child = Ui.Bar(null, left, right, 12), Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(8) },
             Ui.Tint(Ui.CeladonColor, (Ui.IsDark ? 36 : 20) / 255.0));
     }

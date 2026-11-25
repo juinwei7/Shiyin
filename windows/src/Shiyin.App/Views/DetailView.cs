@@ -617,6 +617,7 @@ public sealed class DetailView
             var redo = Ui.Sub(L.T("重新處理"),
                 Ui.Item(L.T("重新整理會議紀錄"), () => c.Resummarize(id), icon: Symbol.Refresh),
                 Ui.Item(L.T("檢查可能聽錯的字"), () => c.CheckTranscript(id), icon: Symbol.Find),
+                Ui.Item(L.T("再找不確定的地方"), () => c.FindMoreReview(id), glyph: "\uE9CE"),
                 Ui.Item(L.T("重新轉錄（含說話者辨識）"), () => c.Retranscribe(id), icon: Symbol.Microphone),
                 Ui.Item(L.T("重新辨識說話者…"), () => { if (c.RequestRediarize(id)) _ = Dialogs.Rediarize(window, id); }, icon: Symbol.People));
             redo.Icon = new SymbolIcon(Symbol.Sync);

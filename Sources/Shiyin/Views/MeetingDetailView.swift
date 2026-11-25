@@ -522,6 +522,7 @@ struct MoreMenu: View {
             Menu("重新處理", systemImage: "arrow.clockwise") {
                 Button("重新整理會議紀錄", systemImage: "arrow.clockwise") { model.resummarize() }
                 Button("檢查可能聽錯的字", systemImage: "text.magnifyingglass") { model.checkTranscript() }
+                Button("再找不確定的地方", systemImage: "questionmark.bubble") { model.findMoreReview() }
                 Button("重新轉錄（含說話者辨識）", systemImage: "waveform") { model.retranscribe() }
                 Button("重新辨識說話者…", systemImage: "person.2.wave.2") { model.requestRediarize() }
             }

@@ -485,6 +485,22 @@ public sealed partial class AppDatabase
     /// <summary>復原上一版：成功回傳 true</summary>
     public bool UndoNotes(long meetingId) => Write(db => UndoNotes(db, meetingId));
 
+    /// <summary>已經問過的待確認題目（M§88）：版本紀錄（舊到新）和目前紀錄的題目，去掉前後空白、去重複，最多最近的 60 題</summary>
+    public List<string> AskedReviewQuestions(long meetingId) => Read(db =>
+    {
+        var all = db.Query("SELECT notes FROM notes_versions WHERE meeting_id = ? ORDER BY id", meetingId).Select(r => MeetingNotes.Decode(r.Str("notes"))).ToList();
+        all.Add(FetchMeeting(db, meetingId)?.DecodedNotes);
+        var seen = new HashSet<string>();
+        var asked = new List<string>();
+        foreach (var notes in all.OfType<MeetingNotes>())
+            foreach (var item in notes.ReviewItems)
+            {
+                var question = item.Question.Trim();
+                if (question.Length > 0 && seen.Add(MeetingNotes.QuestionKey(question))) asked.Add(question);
+            }
+        return asked.Count > 60 ? asked[^60..] : asked;
+    });
+
     internal static bool UndoNotes(Db db, long meetingId)
     {
         if (db.QueryOne("SELECT * FROM notes_versions WHERE meeting_id = ? ORDER BY id DESC LIMIT 1", meetingId) is not { } vr

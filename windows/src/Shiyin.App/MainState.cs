@@ -287,6 +287,7 @@ public sealed class MainState
         Selection = id;
         ReviewExpanded = false;
         UserNotesExpanded = false;
+        host.Controller.ReviewFinished.Clear();
         ReloadDetail();
         Changed?.Invoke();
     }

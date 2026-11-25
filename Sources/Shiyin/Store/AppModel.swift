@@ -213,6 +213,7 @@ final class AppModel {
             if oldValue != selection {
                 reviewExpanded = false
                 userNotesExpanded = false
+                reviewFinished = []
                 reloadDetailAfterMouseUp()
             }
         }
@@ -271,6 +272,8 @@ final class AppModel {
     /// 紀錄頂部「還有 N 題待確認」、逐字稿頂部「我的筆記」展開了沒（design §33.1）：只記這次選取期間，換會議就收起
     var reviewExpanded = false
     var userNotesExpanded = false
+    /// 這次選取期間送出過待確認的會議（R114.5、design §88）：題目都處理完時紀錄頂部顯示「再找不確定的地方」，換會議就清掉
+    var reviewFinished: Set<Int64> = []
     /// 正在讀取的參考文件：會議 id → 檔名（design §39.4）
     var readingDocuments: [Int64: [String]] = [:]
     /// 已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體
@@ -408,6 +411,15 @@ final class AppModel {
                 self.noticeMessage = String(localized: "已重新辨識說話者：分出 \(count) 位。名字請再確認一下；會議紀錄要更新的話，請重新整理會議紀錄。")
             case .failure(let error):
                 if !(error is CancellationError) { self.errorMessage = String(localized: "重新辨識說話者失敗：\(error.localizedDescription)") }
+            }
+        }
+        runner.onMoreReview = { [weak self] id, count in
+            guard let self, self.selection == id else { return }
+            if count > 0 {
+                self.noticeMessage = String(localized: "多找到 \(count) 個不確定的地方")
+                self.reviewExpanded = true
+            } else {
+                self.noticeMessage = String(localized: "沒有找到其他不確定的地方")
             }
         }
         runner.onEditedDraftReplaced = { [weak self] id in
@@ -1437,6 +1449,26 @@ final class AppModel {
         runner.wake()
     }
 
+    /// 「再找不確定的地方」（R114、design §88）：整理工具再找一次要確認的地方，只加待確認，其他段落不動
+    func findMoreReview() {
+        guard let id = selection, readyForAction(id) else { return }
+        guard detail?.notes != nil else {
+            noticeMessage = String(localized: "還沒有會議紀錄，整理完才能再找不確定的地方")
+            return
+        }
+        guard AppSettings.provider != .none else {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        reviewFinished.remove(id)
+        let payload = String(decoding: (try? JSONEncoder().encode(SummarizePayload(review: true))) ?? Data(), as: UTF8.self)
+        perform { try db.enqueue(id, kind: .summarize, payload: payload) }
+        runner.wake()
+    }
+
     func undoNotes() {
         guard let id = selection, readyForAction(id) else { return }
         perform {
@@ -1503,6 +1535,8 @@ final class AppModel {
             }
         }
         runner.wake()
+        // 題目都處理完時紀錄頂部可以接著再找（R114.5）；還有題目、校稿還沒好時畫面不顯示
+        reviewFinished.insert(id)
         // 匿名統計（R41.7）：只記題數
         UsageStats.shared.reviewed(answered: answered.count, confirmed: confirmed.count,
                                    skipped: dismissed.filter { notes.reviewItems.indices.contains($0) }.count)

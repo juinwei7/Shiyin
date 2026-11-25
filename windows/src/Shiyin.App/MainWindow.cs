@@ -187,6 +187,8 @@ public sealed class MainWindow : Window
         host.Controller.Notice += m => host.Post(() => ShowNotice(m));
         host.Controller.Error += m => host.Post(() => ShowError(m));
         host.Controller.Reveal += id => host.Post(() => Reveal(id));
+        // 再找不確定的地方找到了（M§88）：選取中的那場展開待確認（紀錄存檔後畫面會跟著重畫）
+        host.Controller.MoreReviewFound += (id, count) => host.Post(() => { if (count > 0 && State.Selection == id) State.ReviewExpanded = true; });
         // 一次還原好幾場（R88）：回到會議列表、選取那幾場
         host.Controller.RevealMany += ids => host.Post(() => State.RevealMany(ids));
         host.Recorder.Changed += () => host.Post(ShowRecorderAlerts);

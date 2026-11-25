@@ -904,6 +904,14 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `TopicBand.Show` 多傳紀錄、逐字稿、說話者名稱（`MindMap.ShownTopic`、說話者的重疊秒數同 Mac）。`MeetingLanguages.UiList`：`UiNames` 改用它。
 - **驗證**：`dotnet test`；虛擬機示範資料滑過議題帶（UI Automation 讀不到工具提示，用 `shot.sh` 截圖）。
 
+### 11.47 再找不確定的地方（R114，M§88、D194）
+
+- **Core**：`NotesPrompt.MoreReview`、`Labels` 的 `Asked`、`MoreReviewInstructions`，跟 Mac 一字不差（標準答案 `prompts/<語言>/review-more.txt`，`PromptTests`）。
+- **工作**：`SummarizePayload(Review: true)`，`JobRunner.Encode` 只在 true 時寫 `review`；`Summarize(…, review:)` 同 Mac：範本只剩說明和額外指示、提示詞、濾掉問過的、接在現在的紀錄後面、`SaveNotes(… "再找不確定的地方", NotesSource.Edit)`、`MoreReviewFound` 事件（會議 id、題數）。`AppDatabase.AskedReviewQuestions` 同 Mac。
+- **AppController.FindMoreReview**：檢查、提示同 Mac；`MoreReviewFound`：N > 0 時提示並展開待確認，0 時「沒有找到其他不確定的地方」。`ReviewFinished`（會議 id 的集合）同 Mac 的規則。
+- **畫面**：「更多 → 重新處理」加「再找不確定的地方」；紀錄頂部處理完的那一行（勾、文字、按鈕、✕），樣子同資料夾建議。
+- **驗證**：`dotnet test`（`PromptTests`、payload 的 JSON、`AskedReviewQuestions`、接在後面和濾掉問過的）；虛擬機接 `fake-llm-server.py` 按一次。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

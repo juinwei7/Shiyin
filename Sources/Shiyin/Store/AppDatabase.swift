@@ -1056,6 +1056,23 @@ final class AppDatabase: @unchecked Sendable {
         return source == .generated && wasDraft == 2
     }
 
+    /// 已經問過的待確認題目（design §88）：版本紀錄（舊到新）和目前紀錄的題目，去掉前後空白、去重複，最多最近的 60 題
+    func askedReviewQuestions(_ meetingId: Int64) throws -> [String] {
+        try pool.read { db in
+            let versions = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db)
+            let current = try Meeting.fetchOne(db, key: meetingId)?.decodedNotes
+            var seen = Set<String>()
+            var asked: [String] = []
+            for notes in versions.compactMap({ try? JSONDecoder().decode(MeetingNotes.self, from: Data($0.notes.utf8)) }) + [current].compactMap({ $0 }) {
+                for item in notes.reviewItems {
+                    let question = item.question.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !question.isEmpty, seen.insert(MeetingNotes.questionKey(question)).inserted { asked.append(question) }
+                }
+            }
+            return Array(asked.suffix(60))
+        }
+    }
+
     /// 復原上一版：成功回傳 true
     func undoNotes(_ meetingId: Int64) throws -> Bool {
         try pool.write { db in try Self.undoNotes(db, meetingId) }

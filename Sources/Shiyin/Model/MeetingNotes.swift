@@ -22,6 +22,11 @@ struct MeetingNotes: Codable, Hashable {
         }
     }
 
+    /// 比對待確認的題目是不是問過了用（design §88）：去掉所有空白
+    static func questionKey(_ question: String) -> String {
+        question.filter { !$0.isWhitespace }
+    }
+
     struct Topic: Codable, Hashable {
         var title: String
         var start: String
