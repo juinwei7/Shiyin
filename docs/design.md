@@ -3032,6 +3032,21 @@ Windows 的做法在 design-windows §11.44。
 - 使用說明的快捷鍵：⌘F 下面加「⌘G／⇧⌘G：搜尋逐字稿時跳到下一個、上一個（也可以按 Return、⇧Return）」。
 - 驗證：DEBUG 版搜尋示範會議的常見字，`keyat return`、按鈕（`mouseat clickq`，借前景）、⇧Return 的游標和計數；只有一段符合時捲走再按「下一個」會捲回來；`snapshot` 看目前那一段的底色。
 
+## 86. 範本編輯器（R112）
+
+Windows 的做法在 design-windows §11.45。
+
+- 範本頁（`SettingsPageView` 的 `.templates`）：外層的 Form 量頁面的高度（`GeometryReader`），`TemplateSettings` 的高度是「頁面高度減掉外層 Form 的上下留白」，最少 460（原本固定最少 460，編輯區在小框裡捲）。
+- 編輯區照舊是 `Form(.grouped)`，欄位改成「`SheetFieldLabel` 在上、框在下」：單行的用 `.textFieldStyle(.sheetCompact)`（`TextField("", text:, prompt:)`，標籤不放在 Form 的左邊），多行的用 `SheetTextEditor`。不用 Form 預設的「左邊標籤、字靠右」。
+- **內建範本**：最上面一個 Section：`lock` 圖示、「內建範本不能修改。按「複製一份來改」，就能改段落、加自訂段落。」、按鈕「複製一份來改」（`SheetPillButtonStyle(.secondary, compact: true)`；同列表下面的「複製」：簡體介面複製畫面上的簡體，選到新的那份）。下面的欄位照舊停用；最下面那行「內建範本不能修改，可以按「複製」…」拿掉。
+- **名稱、用途說明**：一個 Section。名稱單行；用途說明 `SheetTextEditor`（高 54）。
+- **要產生的段落**：不變。
+- **自訂段落**：Section 的說明（footer）「每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列。」每一個是一列：上面「段落名稱」標籤和右邊無邊框的 `trash`（說明「移除這個段落」）、單行框（例子「例如：風險」）、「要寫什麼」標籤、`SheetTextEditor`（高 72，例子「例如：列出討論中提到的風險、負責人和期限。可以分行，用 - 條列。」）。沒有自訂段落時一行次要文字「還沒有自訂段落。」最後「新增自訂段落」。
+- **額外指示**：Section 標題「額外指示（選填）」，`SheetTextEditor`（高 72，例子「給整理工具的其他要求，例如：金額、數字照原文寫。可以分行。」）。
+- `SheetTextEditor`（`SheetStyle.swift`）：`TextEditor`（`.scrollContentBackground(.hidden)`、`.focusEffectDisabled()`），沒有字時左上角次要顏色的例子（不擋點擊），外面 `sheetFieldBox(focused:compact: true)`，高度固定（超過捲動），Return 換行；停用時字變淡。
+- 存的格式（`TemplateDefinition`）、提示詞都不變：多行的指示原本就照原樣放進提示詞。
+- 驗證：DEBUG `preview settings templates height=…`：內建範本（上方說明、按「複製一份來改」選到新的那份）、有兩個自訂段落（一個空的）的自訂範本；淺色、深色、簡體、英文截圖。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |

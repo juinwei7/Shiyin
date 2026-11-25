@@ -200,12 +200,17 @@ struct SettingsIcon: View {
 /// 右邊的那一頁：原本的段落照搬（R108.6，項目和存的鍵都沒變）
 struct SettingsPageView: View {
     let page: SettingsPage
+    /// 範本頁外層 Form 的上下留白（量的：再多會出現外層的捲軸）
+    static let templatePageInset: CGFloat = 60
 
     var body: some View {
         switch page {
         case .provider: ProviderSettings()
         case .templates:
-            Form { Section { TemplateSettings().frame(minHeight: 460) } }.formStyle(.grouped)
+            // 高度跟著視窗（R112.5）：減掉外層 Form 的上下留白，最少 460（原本固定最少 460，編輯區在小框裡捲）
+            GeometryReader { page in
+                Form { Section { TemplateSettings().frame(height: max(460, page.size.height - Self.templatePageInset)) } }.formStyle(.grouped)
+            }
         case .recording: RecordingSettings(part: .recording)
         case .transcription: RecordingSettings(part: .transcription)
         case .models: ModelsSettings()
@@ -716,10 +721,39 @@ struct TemplateSettings: View {
 
     @ViewBuilder
     private var editor: some View {
-        if let template = model.templates.first(where: { $0.id == selection }), let binding = Binding($draft) {
+        if let template = model.templates.first(where: { $0.id == selection }), let shown = draft {
+            // 不用 Binding($draft)：點清單的空白處清掉選取時 draft 先變 nil，還在畫面上的多行輸入框更新綁定時
+            // 會強制解開而當掉（2026-11-25 驗 design §86 時發現）
+            let binding = Binding<TemplateDefinition>(get: { draft ?? shown }, set: { draft = $0 })
+            // 欄位的名稱寫在框的上面、字靠左（design §86、R112.2）：不用 Form 預設的「左邊標籤、字靠右」
             Form {
-                TextField("名稱", text: $draftName).disabled(template.builtin)
-                TextField("用途說明", text: binding.description, axis: .vertical).disabled(template.builtin)
+                // 內建範本不能改：說明放最上面、給一顆複製的按鈕（R112.1；原本在最下面，要捲才看得到）
+                if template.builtin {
+                    Section {
+                        HStack(alignment: .center, spacing: 10) {
+                            Image(systemName: "lock").foregroundStyle(.secondary).accessibilityHidden(true)
+                            Text("內建範本不能修改。按「複製一份來改」，就能改段落、加自訂段落。")
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
+                            Button("複製一份來改") { create(from: template, definition: draft) }
+                                .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
+                        }
+                    }
+                }
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        SheetFieldLabel(String(localized: "名稱"))
+                        // 分組的 Form 裡單行輸入框的字預設靠右
+                        TextField("", text: $draftName, prompt: Text("範本名稱")).textFieldStyle(.sheetCompact)
+                            .labelsHidden().multilineTextAlignment(.leading)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        SheetFieldLabel(String(localized: "用途說明"))
+                        SheetTextEditor(placeholder: String(localized: "例如：週會、專案會議用"), text: binding.description, height: 54)
+                    }
+                }
+                .disabled(template.builtin)
                 Section("要產生的段落") {
                     ForEach(TemplateDefinition.builtinSections, id: \.id) { section in
                         Toggle(section.label, isOn: Binding(
@@ -731,26 +765,44 @@ struct TemplateSettings: View {
                     }
                 }
                 .disabled(template.builtin)
-                Section("自訂段落") {
+                Section {
+                    if binding.wrappedValue.custom.isEmpty {
+                        Text("還沒有自訂段落。").foregroundStyle(.secondary)
+                    }
                     ForEach(binding.wrappedValue.custom.indices, id: \.self) { i in
                         let custom = binding.custom.safe(i, fallback: .init(title: "", instruction: ""))
-                        HStack(alignment: .top) {
-                            VStack {
-                                TextField("段落名稱", text: custom.title)
-                                TextField("要寫什麼", text: custom.instruction, axis: .vertical)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                SheetFieldLabel(String(localized: "段落名稱"))
+                                Spacer()
+                                Button { binding.custom.remove(i) } label: { Image(systemName: "trash") }
+                                    .buttonStyle(.borderless)
+                                    .foregroundStyle(.secondary)
+                                    .help("移除這個段落")
+                                    .accessibilityLabel("移除這個段落")
                             }
-                            Button { binding.custom.remove(i) } label: { Image(systemName: "trash") }
-                                .buttonStyle(.borderless)
+                            TextField("", text: custom.title, prompt: Text("例如：風險")).textFieldStyle(.sheetCompact)
+                                .labelsHidden().multilineTextAlignment(.leading)
+                            SheetFieldLabel(String(localized: "要寫什麼")).padding(.top, 4)
+                            SheetTextEditor(placeholder: String(localized: "例如：列出討論中提到的風險、負責人和期限。可以分行，用 - 條列。"),
+                                            text: custom.instruction)
                         }
+                        .padding(.vertical, 4)
                     }
                     Button("新增自訂段落", systemImage: "plus") { binding.wrappedValue.custom.append(.init(title: "", instruction: "")) }
+                } header: {
+                    Text("自訂段落")
+                } footer: {
+                    Text("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列。")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .disabled(template.builtin)
-                TextField("額外指示（選填）", text: binding.instruction, axis: .vertical).disabled(template.builtin)
+                Section("額外指示（選填）") {
+                    SheetTextEditor(placeholder: String(localized: "給整理工具的其他要求，例如：金額、數字照原文寫。可以分行。"), text: binding.instruction)
+                }
+                .disabled(template.builtin)
                 HStack {
-                    if template.builtin {
-                        Text("內建範本不能修改，可以按「複製」做一份自己的。").font(.caption).foregroundStyle(.secondary)
-                    }
                     Spacer()
                     Button("設為預設範本") { defaultTemplate = template.id }.disabled(defaultTemplate == template.id)
                     if !template.builtin {

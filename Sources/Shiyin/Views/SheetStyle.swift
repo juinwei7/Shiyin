@@ -80,6 +80,36 @@ extension TextFieldStyle where Self == SheetFieldStyle {
     static var sheetCompact: SheetFieldStyle { SheetFieldStyle(compact: true) }
 }
 
+/// 多行的輸入框（範本的說明、指示，design §86）：Return 換行，同一種框（小一號），高度固定、超過的捲動；
+/// 沒有字時左上角灰字的例子
+struct SheetTextEditor: View {
+    let placeholder: String
+    @Binding var text: String
+    var height: CGFloat = 72
+    @FocusState private var focused: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        TextEditor(text: $text)
+            .font(.body)
+            .scrollContentBackground(.hidden)
+            .focused($focused)
+            .focusEffectDisabled()
+            .opacity(isEnabled ? 1 : 0.55)
+            .overlay(alignment: .topLeading) {
+                if text.isEmpty {
+                    // TextEditor 的字左邊有 5 點的行內距
+                    Text(placeholder).font(.body).foregroundStyle(.tertiary).padding(.leading, 5)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(height: height)
+            .sheetFieldBox(focused: focused, compact: true)
+            .accessibilityHint(Text(placeholder))
+    }
+}
+
 private struct FocusedFieldBox<Content: View>: View {
     let compact: Bool
     @ViewBuilder let content: Content

@@ -889,6 +889,14 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - 使用說明的快捷鍵：Ctrl+F 下面加「F3／Shift+F3：搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）」。
 - **驗證**：虛擬機示範資料搜尋常見字，UI Automation 按兩顆按鈕、Enter、Shift+Enter、F3，看「N／M 段」和捲動。
 
+### 11.45 範本編輯器（R112，M§86）
+
+- 輸入框原本就是 `TextBox.Header` 在上，不用改；多行的三個（用途說明、要寫什麼、額外指示）`MinHeight` 約 3 行、`MaxHeight` 約 6 行，超過捲動，`PlaceholderText` 寫同 Mac 的例子。
+- **內建範本**：編輯區最上面一塊 `Ui.Card`：鎖的圖示（`\uE72E`）、同 Mac 的說明（會換行）、按鈕「複製一份來改」（`CreateTemplate(template, null)`）；最下面那行說明拿掉。
+- **自訂段落**：標題「自訂段落」下面一行次要文字（同 Mac 的 footer）；每一個是一塊（`Ui.Card`）：「段落名稱」TextBox（Header）、「要寫什麼」TextBox（Header、多行）、右上角刪除（工具提示「移除這個段落」）。沒有自訂段落時一行次要文字「還沒有自訂段落。」
+- 範本頁原本就跟著視窗高度捲動，不用改。
+- **驗證**：虛擬機開設定的範本頁：內建範本的說明和「複製一份來改」、自訂範本兩個段落；中文、簡體、英文截圖。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

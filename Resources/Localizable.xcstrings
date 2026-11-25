@@ -4186,6 +4186,23 @@
         }
       }
     },
+    "例如：列出討論中提到的風險、負責人和期限。可以分行，用 - 條列。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：列出讨论中提到的风险、负责人和期限。可以分行，用 - 条列。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: list the risks raised, with owners and deadlines. You can use several lines and - for bullets."
+          }
+        }
+      }
+    },
     "例如：小明": {
       "extractionState": "manual",
       "localizations": {
@@ -4216,6 +4233,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "e.g. weekly, sync (any of the words)"
+          }
+        }
+      }
+    },
+    "例如：週會、專案會議用": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：周会、项目会议用"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: weekly and project meetings"
+          }
+        }
+      }
+    },
+    "例如：風險": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：风险"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: Risks"
           }
         }
       }
@@ -4759,19 +4810,19 @@
         }
       }
     },
-    "內建範本不能修改，可以按「複製」做一份自己的。": {
+    "內建範本不能修改。按「複製一份來改」，就能改段落、加自訂段落。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Built-in templates can't be changed. Click “Duplicate” to make your own copy."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "内建模板不能修改，可以按“复制”做一份自己的。"
+            "value": "内建模板不能修改。按“复制一份来改”，就能改段落、加自定义段落。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in templates can't be changed. Click Duplicate to Edit to change the sections or add custom ones."
           }
         }
       }
@@ -16822,6 +16873,23 @@
         }
       }
     },
+    "每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个自定义段落是会议记录里的一节，整理工具照“要写什么”写成条列。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each custom section becomes a section of the notes, written as a list following What to write."
+          }
+        }
+      }
+    },
     "每天送一份匿名的使用統計給拾音的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次和哪一種失敗。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。": {
       "extractionState": "manual",
       "localizations": {
@@ -19019,6 +19087,23 @@
         }
       }
     },
+    "移除這個段落": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除这个段落"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove This Section"
+          }
+        }
+      }
+    },
     "稍後": {
       "extractionState": "manual",
       "localizations": {
@@ -19270,6 +19355,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Template, meeting language and about how many people. When there are many people, it's noisy, or the phone is on the table, tell Shiyin about how many people there are so speakers are separated better"
+          }
+        }
+      }
+    },
+    "範本名稱": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模板名称"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template name"
           }
         }
       }
@@ -19678,6 +19780,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "退出拾音"
+          }
+        }
+      }
+    },
+    "給整理工具的其他要求，例如：金額、數字照原文寫。可以分行。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "给整理工具的其他要求，例如：金额、数字照原文写。可以分行。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anything else for the summarizer, for example: keep amounts and numbers as spoken. You can use several lines."
           }
         }
       }
@@ -20591,6 +20710,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "复制 Claude Code 命令"
+          }
+        }
+      }
+    },
+    "複製一份來改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制一份来改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate to Edit"
           }
         }
       }
@@ -24250,6 +24386,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有正式逐字稿，转录完成后再试一次"
+          }
+        }
+      }
+    },
+    "還沒有自訂段落。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有自定义段落。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No custom sections yet."
           }
         }
       }
