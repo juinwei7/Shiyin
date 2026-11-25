@@ -609,7 +609,6 @@ struct TranscriptTab: View {
         detail.speakers.keys.sorted().filter { $0 != idx }.map { ($0, detail.speakerName($0) ?? "") }
     }
 
-    @ViewBuilder
     /// 一句的右鍵選單（R105.4）：播放、編輯、拷貝；正式逐字稿再加拆句、改說話者、分成兩場、刪除、復原
     private func segmentMenu(_ segment: Segment) -> [MenuEntry] {
         var entries: [MenuEntry] = [
