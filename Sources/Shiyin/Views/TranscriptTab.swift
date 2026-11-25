@@ -517,7 +517,7 @@ struct TranscriptTab: View {
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .onTapGesture(count: 2) { startEdit(segment) }
+                        .onDoubleClick { startEdit(segment) }
                     ForEach(corrections) { correctionLine($0) }
                 }
             }
@@ -932,3 +932,54 @@ private struct SplitTextView: NSViewRepresentable {
     }
 }
 
+// MARK: 雙擊（可以選取的文字上也收得到）
+
+extension View {
+    /// 雙擊做某件事：可以選取的文字自己處理雙擊（選一個詞），SwiftUI 的 onTapGesture(count: 2) 收不到（逐字稿雙擊進編輯，design §79）。
+    /// 蓋一層不接事件的透明 view，app 層級的事件監看收到第二下時交給游標下面的那一個、吃掉這一下；第一下、拖曳選字照舊給文字
+    func onDoubleClick(_ action: @escaping () -> Void) -> some View {
+        overlay(DoubleClickCatcher(action: action))
+    }
+}
+
+private struct DoubleClickCatcher: NSViewRepresentable {
+    let action: () -> Void
+
+    func makeNSView(context: Context) -> CatcherView { CatcherView() }
+    func updateNSView(_ view: CatcherView, context: Context) { view.action = action }
+
+    final class CatcherView: NSView {
+        var action: (() -> Void)?
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window != nil { DoubleClickRegistry.shared.add(self) }
+        }
+    }
+}
+
+@MainActor
+private final class DoubleClickRegistry {
+    static let shared = DoubleClickRegistry()
+    private let views = NSHashTable<DoubleClickCatcher.CatcherView>.weakObjects()
+    private var monitor: Any?
+
+    func add(_ view: DoubleClickCatcher.CatcherView) {
+        views.add(view)
+        guard monitor == nil else { return }
+        // 只接沒按修飾鍵的第二下（⌘、⇧ 點是多選、延伸選取）
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard event.clickCount == 2, event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty,
+                  let self, let window = event.window else { return event }
+            let hit = self.views.allObjects.first { view in
+                view.window === window && !view.isHiddenOrHasHiddenAncestor
+                    && view.bounds.contains(view.convert(event.locationInWindow, from: nil))
+            }
+            guard let action = hit?.action else { return event }
+            action()
+            return nil
+        }
+    }
+}

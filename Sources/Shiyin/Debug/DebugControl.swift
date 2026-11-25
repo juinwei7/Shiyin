@@ -661,6 +661,16 @@ enum DebugControl {
                         NSApp.postEvent(event, atStart: false)
                     }
                 }
+            case "doubleq":
+                // 雙擊排進事件佇列（clickCount 1、2）：經過 app 的事件監看（逐字稿雙擊進編輯，design §79）
+                for clicks in [1, 2] {
+                    for (type, pressure) in [(NSEvent.EventType.leftMouseDown, Float(1)), (.leftMouseUp, 0)] {
+                        if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                          windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: clicks, pressure: pressure) {
+                            NSApp.postEvent(event, atStart: false)
+                        }
+                    }
+                }
             case "clickq", "clickqcmd", "clickqshift":
                 // 按下、放開都排進事件佇列，同真的點一下：經過手勢辨識、NSApp.currentEvent 是這一下，
                 // 表格按下後自己從佇列拿放開（直接 sendEvent 的話這些都不一樣，2026-11-17 驗側欄點擊卡住時發現）

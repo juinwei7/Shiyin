@@ -2772,6 +2772,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`floatpick <項目>`（子選單「移到資料夾 ▸ 客戶」）、`floatclose`、`floatothers off`（驗收時使用者在用別的 app，點別的 app 不關選單）；`keyat` 加 down、up、right、left 和第四個參數 `app`（走 `NSApp.sendEvent`，經過事件監看）；`mouseat` 最後一個參數 `app` 同樣；state 的 `floatingMenu`（項目）、`floatingMenuState`、`floatingMenuWindow`（面板的視窗編號，`mouseat move … <編號> app` 用）。
 - Windows：design-windows §11.38。
 - 逐字稿的每一句（R105.4、D196；2026-11-25 GitHub #19）：`TranscriptTab.row` 的系統 `.contextMenu` 換成 `floatingContextMenu { segmentMenu(segment) }`。可以選取的文字（`textSelection(.enabled)`）自己處理右鍵、跳出系統的文字選單，app 層級的事件監看比它先收到，所以文字上、文字右邊的空白按右鍵也是這一句的選單。項目和順序不變，加圖示：從這裡播放 `play`、編輯這一段 `pencil`、拷貝 `doc.on.doc`、拆成兩句… `arrow.triangle.branch`、這句是誰說的 › `person`、這段連續的話是誰說的 › `person.2`、從這裡分成兩場… `rectangle.split.2x1`、刪除這句 `trash`（紅色）、復原：… `arrow.uturn.backward`；說話者的子選單是其他說話者、分隔線、新的說話者。Windows 不用改（可以選取的文字的 `ContextFlyout` 本來就設成這一句的選單）。
+- 雙擊這一句的文字進編輯：可以選取的文字自己吃掉雙擊（選一個詞），`onTapGesture(count: 2)` 收不到（改之前就是這樣）。`View.onDoubleClick`（`TranscriptTab.swift`）同右鍵的做法：不接事件的透明 view＋app 層級的事件監看，只接沒按修飾鍵的第二下；第一下、拖曳選字照舊給文字。DEBUG：`mouseat doubleq <x> <y> <視窗> app`（雙擊排進事件佇列）。
 
 
 ## 80. 彈窗、輸入框的共用樣子（R106）
