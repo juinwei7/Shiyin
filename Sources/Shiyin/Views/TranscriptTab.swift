@@ -531,35 +531,9 @@ struct TranscriptTab: View {
                 RoundedRectangle(cornerRadius: 1).fill(Color.signal).frame(width: 3).padding(.vertical, 6)
             }
         }
-        .contextMenu {
-            Button("從這裡播放") { model.player.seek(to: segment.start) }
-            Button("編輯這一段") { startEdit(segment) }
-            Button("拷貝") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(segment.text, forType: .string)
-            }
-            if let id = segment.id, segment.kind == "final" {
-                Divider()
-                // 改這句的說話者（design §24.3、R23.2）
-                if !detail.speakers.isEmpty {
-                    Button("拆成兩句…") { startSplit(id) }   // R70
-                    Menu("這句是誰說的") { speakerChoices(for: [id], current: segment.speaker) }
-                    let run = detail.speakerRun(around: id)
-                    if run.count > 1 {
-                        Menu("這段連續的話是誰說的（\(run.count) 句）") { speakerChoices(for: run, current: segment.speaker) }
-                    }
-                }
-                // 分割會議（R90、design §64）：第一句之前沒有東西，不能從第一句分
-                if detail.segments.first(where: { $0.kind == "final" })?.id != id {
-                    Button("從這裡分成兩場…") { model.splitMeetingRequest = id }
-                }
-                DestructiveMenuButton(String(localized: "刪除這句")) { model.deleteSegment(id) }   // R89
-                // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
-                if let label = detail.speakerUndoLabel {
-                    Button("復原：\(label)") { model.undoSpeakerEdit() }
-                }
-            }
-        }
+        // 自己畫的選單（R105.4、design §79）：可以選取的文字上按右鍵原本跳出系統的文字選單，空白處沒有選單（GitHub #19）；
+        // app 層級的事件監看比文字先收到右鍵，這一句的任何地方都是同一份
+        .floatingContextMenu { segmentMenu(segment) }
         .help(segment.lowConfidence ? "辨識信心低，建議對照錄音確認" : "")
     }
 
@@ -636,12 +610,44 @@ struct TranscriptTab: View {
     }
 
     @ViewBuilder
-    private func speakerChoices(for ids: [Int64], current: Int?) -> some View {
-        ForEach(otherSpeakers(than: current), id: \.idx) { speaker in
-            Button(speaker.name) { model.reassignSegments(ids, to: speaker.idx) }
+    /// 一句的右鍵選單（R105.4）：播放、編輯、拷貝；正式逐字稿再加拆句、改說話者、分成兩場、刪除、復原
+    private func segmentMenu(_ segment: Segment) -> [MenuEntry] {
+        var entries: [MenuEntry] = [
+            .action(String(localized: "從這裡播放"), icon: "play") { model.player.seek(to: segment.start) },
+            .action(String(localized: "編輯這一段"), icon: "pencil") { startEdit(segment) },
+            .action(String(localized: "拷貝"), icon: "doc.on.doc") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(segment.text, forType: .string)
+            },
+        ]
+        guard let id = segment.id, segment.kind == "final" else { return entries }
+        entries.append(.divider)
+        // 改這句的說話者（design §24.3、R23.2）
+        if !detail.speakers.isEmpty {
+            entries.append(.action(String(localized: "拆成兩句…"), icon: "arrow.triangle.branch") { startSplit(id) })   // R70
+            entries.append(.submenu(String(localized: "這句是誰說的"), icon: "person", speakerChoices(for: [id], current: segment.speaker)))
+            let run = detail.speakerRun(around: id)
+            if run.count > 1 {
+                entries.append(.submenu(String(localized: "這段連續的話是誰說的（\(run.count) 句）"), icon: "person.2",
+                                        speakerChoices(for: run, current: segment.speaker)))
+            }
         }
-        Divider()
-        Button("新的說話者") { model.reassignSegments(ids, to: nil) }
+        // 分割會議（R90、design §64）：第一句之前沒有東西，不能從第一句分
+        if detail.segments.first(where: { $0.kind == "final" })?.id != id {
+            entries.append(.action(String(localized: "從這裡分成兩場…"), icon: "rectangle.split.2x1") { model.splitMeetingRequest = id })
+        }
+        entries.append(.action(String(localized: "刪除這句"), icon: "trash", destructive: true) { model.deleteSegment(id) })   // R89
+        // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
+        if let label = detail.speakerUndoLabel {
+            entries.append(.action(String(localized: "復原：\(label)"), icon: "arrow.uturn.backward") { model.undoSpeakerEdit() })
+        }
+        return entries
+    }
+
+    private func speakerChoices(for ids: [Int64], current: Int?) -> [MenuEntry] {
+        otherSpeakers(than: current).map { speaker in
+            MenuEntry.action(speaker.name) { model.reassignSegments(ids, to: speaker.idx) }
+        } + [.divider, .action(String(localized: "新的說話者")) { model.reassignSegments(ids, to: nil) }]
     }
 
     /// current：目前跳到的那一段，搜尋到的字底色深一點（R111.3）
