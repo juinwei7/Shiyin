@@ -200,6 +200,8 @@ final class Recorder {
     /// 重新連接在背景佇列做（design §50.2）：正在做的聲道、做完要再做一次的聲道（中途換了麥克風）
     @ObservationIgnored private var restarting: Set<Int> = []
     @ObservationIgnored private var restartAgain: Set<Int> = []
+    /// 麥克風還在送資料、但一直完全是 0：上次因為這樣重新連接的時間
+    @ObservationIgnored private var zeroRestartAt: Date?
     @ObservationIgnored private let deviceQueue = DispatchQueue(label: "com.weiwei.shiyin.devices", qos: .userInitiated)
     /// 磁碟空間（design §20.3）：上次檢查的時間；錄音中不到 300 MB 只提醒一次
     @ObservationIgnored private var lastDiskCheck = Date.distantPast
@@ -274,6 +276,11 @@ final class Recorder {
     /// 只在 DEBUG：recordstall，某個聲道停止送資料幾秒，nil 是馬上恢復（design §20.2）
     func simulateStall(channel: Int, seconds: Double?) {
         (sources[0] as? FileSource)?.stall(channel: channel, seconds: seconds)
+    }
+
+    /// 只在 DEBUG：recordzero，麥克風那一聲道照常送資料但全是 0，重新連接才恢復
+    func simulateZeros() {
+        (sources[0] as? FileSource)?.sendZeros()
     }
 
     /// 只在 DEBUG：recordinterrupt，等於音源發現裝置變了。連續送幾次，驗證只會重新開始一次
@@ -891,6 +898,27 @@ final class Recorder {
                 updateDeviceWarning()
             }
         }
+        restartIfMicSendsZeros(writer, now: now)
+    }
+
+    /// 麥克風超過幾秒完全是 0 就重新連接
+    nonisolated static let zeroRestartSeconds: Double = 10
+
+    /// 麥克風還在送資料、但送的完全是 0（這場稍早有過聲音）：重新連接一次。真的麥克風一定有底噪，
+    /// 完全是 0 是裝置那頭斷了（藍牙耳機換協定、別的 app 搶走、裝置睡著）但 engine 沒停、看門狗看不到。
+    /// 收音提醒（R24.3）照舊出現；還是 0 就至少隔 30 秒再試，一開始就是 0 的（硬體靜音）不重試
+    private func restartIfMicSendsZeros(_ writer: RecordingWriter, now: Date) {
+        guard hasMic, !isPaused, sources[0] != nil, writer.hasHeard(0),
+              writer.silence(0) > Self.zeroRestartSeconds else {
+            zeroRestartAt = nil
+            return
+        }
+        guard !restarting.contains(0), pendingRestarts[0] == nil, reconnecting[0] == nil else { return }
+        if let last = zeroRestartAt,
+           now.timeIntervalSince(last) < max(30, Self.restartDelay(recentRestarts(0, now: now))) { return }
+        zeroRestartAt = now
+        log.info("microphone sent only zeros for \(Int(writer.silence(0)), privacy: .public) s, reconnecting")
+        restartSource(0)
     }
 
     /// 提示列（design §50.1）：重新連接失敗的原因 ＞ 一直在重新連接（60 秒內 3 次以上）＞ 正在重新連接…
@@ -926,6 +954,7 @@ final class Recorder {
         restartedAt = [:]
         restarting = []
         restartAgain = []
+        zeroRestartAt = nil
         reconnecting = [:]
         reconnectErrors = [:]
         deviceWarning = nil

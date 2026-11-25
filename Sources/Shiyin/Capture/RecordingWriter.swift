@@ -13,6 +13,7 @@ final class RecordingWriter: @unchecked Sendable {
     private var pending: [[Float]]
     private var levels: [Float]
     private var silentSeconds: [Double]
+    private var heard: [Bool]           // 各聲道這場錄音收到過不是 0 的聲音（麥克風一直是 0 時重新連接用）
     private var paused = false
     private var micMuted = false        // 單獨暫停麥克風（design §90）：左聲道寫 0
     private var acceptedFrames: [Int] // 各聲道累計收到的音框（不含暫停）
@@ -32,6 +33,7 @@ final class RecordingWriter: @unchecked Sendable {
         pending = Array(repeating: [], count: channels)
         levels = Array(repeating: 0, count: channels)
         silentSeconds = Array(repeating: 0, count: channels)
+        heard = Array(repeating: false, count: channels)
         acceptedFrames = Array(repeating: 0, count: channels)
         frameEnergy = Array(repeating: 0, count: channels)
         frameSamples = Array(repeating: 0, count: channels)
@@ -69,6 +71,7 @@ final class RecordingWriter: @unchecked Sendable {
             let muted = micMuted && channel == 0
             levels[channel] = muted ? 0 : rms
             silentSeconds[channel] = muted || rms != 0 ? 0 : silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate
+            if rms > 0 { heard[channel] = true }
             guard !paused else { return }
             pending[channel].append(contentsOf: muted ? [Float](repeating: 0, count: samples.count) : samples)
             acceptedFrames[channel] += samples.count
@@ -117,6 +120,9 @@ final class RecordingWriter: @unchecked Sendable {
     var writeFailed: Bool { lock.withLock { failed } }
 
     func silence(_ channel: Int) -> Double { lock.withLock { channel < channels ? silentSeconds[channel] : 0 } }
+
+    /// 這場錄音這個聲道收到過不是 0 的聲音
+    func hasHeard(_ channel: Int) -> Bool { lock.withLock { channel < channels ? heard[channel] : false } }
 
     /// 最近 30 秒（不含暫停）每 100 毫秒的音量，dBFS（design §26.1）
     func recentLevels(_ channel: Int) -> [Float] { lock.withLock { channel < channels ? recent[channel] : [] } }
