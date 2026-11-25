@@ -20,6 +20,7 @@
 #                                         （編輯會議的把手、在波形上拖曳選一段、點一下移播放頭，design-windows §11.40）。
 #                                         這六個是虛擬機桌面上真的輸入，不會送到 Mac
 #   uia.ps1 range <視窗> <名稱> [值]        讀 RangeValue（把手、播放位置的秒數）；給了值就設成那個值
+#   uia.ps1 hover <視窗> <名稱> [秒]       真的游標移到元件中間停著（工具提示、滑過才出現的東西）
 param([string]$Action, [string]$Window, [string]$Target, [string]$Extra, [string]$Item1, [string]$Item2)
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 Add-Type -TypeDefinition @'
@@ -170,6 +171,20 @@ switch ($Action) {
         [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle) | Out-Null
         Start-Sleep -Milliseconds 400
         $e = $A::FocusedElement; if ($e) { "focused: $(Describe $e)" } else { 'focused: (none)' }
+    }
+    'hover' {
+        # 真的游標移到元件中間停著（工具提示、滑過才出現的東西；議題帶的卡片，design-windows §11.46）：hover <視窗> <名稱> [停幾秒，預設 2]
+        $w = Find-Window $Window
+        $e = Find-Element $w $Target 0
+        $r = $e.Current.BoundingRectangle
+        $front = [RealInput]::Front([IntPtr]$w.Current.NativeWindowHandle)
+        Start-Sleep -Milliseconds 400
+        # 真的滑鼠移動（MoveTo）：SetCursorPos 只搬游標，WinUI 收不到指標事件、不會出現工具提示
+        [RealInput]::MoveTo([int]($r.X + $r.Width / 2) - 8, [int]($r.Y + $r.Height / 2))
+        Start-Sleep -Milliseconds 200
+        [RealInput]::MoveTo([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
+        Start-Sleep -Seconds $(if ($Extra) { [double]$Extra } else { 2 })
+        "hover $(Describe $e)$(if (-not $front) { '（拉到前面失敗）' })"
     }
     { $_ -in 'rclick', 'lclick', 'ctrlclick' } {
         $w = Find-Window $Window

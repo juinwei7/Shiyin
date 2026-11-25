@@ -733,7 +733,7 @@ enum DebugControl {
                 keyName = keyName[keyName.index(after: plus)...]
             }
             let (code, chars): (UInt16, String) = switch keyName {
-            case "g": (5, "g")
+            case "g": (5, flags.contains(.shift) ? "G" : "g")   // 真的 ⇧⌘G 送的字元是大寫
             case "delete": (51, "\u{7f}")
             case "space": (49, " ")
             case "escape": (53, "\u{1b}")
@@ -745,14 +745,33 @@ enum DebugControl {
             default: (36, "\r")
             }
             // 第四個參數 app：走 NSApp.sendEvent（會經過 app 的事件監看，自己畫的選單的鍵盤靠它）；
-            // queue：排進事件佇列，NSApp.currentEvent 是這一下（同 mouseat clickq；onSubmit 看 ⇧ 要這個）
+            // queue：排進事件佇列，NSApp.currentEvent 是這一下（同 mouseat clickq；onSubmit 看 ⇧ 要這個）；
+            // equiv：當成快捷鍵交給視窗（performKeyEquivalent，⌘G 這類；背景的 app 沒有 key window，排進佇列也收不到）
             let throughApp = args.count > 3 && args[3] == "app"
             let queued = args.count > 3 && args[3] == "queue"
+            let equivalent = args.count > 3 && args[3] == "equiv"
+            // equivcg：同 equiv，但事件由 CGEvent 做（字元照目前的鍵盤配置和修飾鍵轉出來，同實體按鍵）
+            if args.count > 3, args[3] == "equivcg" {
+                if let cg = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(code), keyDown: true) {
+                    var cgFlags: CGEventFlags = []
+                    if flags.contains(.command) { cgFlags.insert(.maskCommand) }
+                    if flags.contains(.shift) { cgFlags.insert(.maskShift) }
+                    if flags.contains(.option) { cgFlags.insert(.maskAlternate) }
+                    if flags.contains(.control) { cgFlags.insert(.maskControl) }
+                    cg.flags = cgFlags
+                    if let event = NSEvent(cgEvent: cg) {
+                        log.info("keyat equivcg chars=\(event.characters ?? "", privacy: .public) ignoring=\(event.charactersIgnoringModifiers ?? "", privacy: .public)")
+                        _ = window.performKeyEquivalent(with: event)
+                    }
+                }
+                break
+            }
             for type in [NSEvent.EventType.keyDown, .keyUp] {
                 if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                                                 windowNumber: window.windowNumber, context: nil, characters: chars, charactersIgnoringModifiers: chars,
                                                 isARepeat: false, keyCode: code) {
-                    if queued { NSApp.postEvent(event, atStart: false) } else if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
+                    if equivalent { if type == .keyDown { _ = window.performKeyEquivalent(with: event) } }
+                    else if queued { NSApp.postEvent(event, atStart: false) } else if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
                 }
             }
         // pressbutton <按鈕的字> [視窗編號]：按 AppKit 的按鈕（確認對話框的 NSAlert 在桌面層時 AX 看不到、clickat 點不到）

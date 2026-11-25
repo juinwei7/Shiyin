@@ -3100,7 +3100,7 @@ Windows 的做法在 design-windows §11.48。
 - 版本清單（`AppDatabase.notesHistory`，`NotesHistoryEntry`）：目前的在最前面，再來由新到舊。`notes_versions` 的一列是「被換掉的那一版」，`reason`、`created_at` 是換掉它的那次存檔，所以每一版「怎麼來的、什麼時候」看比它舊的那一列；最舊的一版不知道（nil）。
 - 改用某一版（`AppDatabase.useNotesVersion`）：目前的存成一版（原因「改用以前的版本」、帶目前的範本），那一版變成目前的紀錄（那一列不刪，同一份內容可能出現兩次，換來換去都找得到）、`notesTemplate` 換成那一版的、`notes_draft = 0`；那一版的範本還在範本表裡時，會議的範本（`template_id`）也換過去；標題（沒鎖住時）、搜尋索引跟著換。
 - 畫面：
-  - 編輯列（`EditBar`）：有以前的版本（`canUndoNotes`）時「復原上一版」左邊多「版本紀錄」（`clock.arrow.circlepath`，`FloatingMenuLabelButton`：自己畫的選單，掛在按鈕下面）。每一項：「範本名稱・怎麼來的」（範本不在了寫「已刪除的範本」，不知道就不寫；最舊的一版寫「第一版」），目前的那一項後面「（目前）」，右邊灰字是時間（系統格式的月日時分）；正在顯示的那一項打勾。選目前的就回到目前的版本。
+  - 編輯列（`EditBar`）：有以前的版本（`canUndoNotes`）時「復原上一版」左邊多「版本紀錄」（`clock.arrow.circlepath`，`FloatingMenuLabelButton`：自己畫的選單，掛在按鈕下面）。每一項：「範本名稱・怎麼來的」（範本不在了寫「已刪除的範本」，不知道就不寫；最舊的一版寫「第一版」；怎麼來的是存檔當時的文字，簡體介面轉成簡體），目前的那一項後面「（目前）」，右邊灰字是時間（系統格式的月日時分）；正在顯示的那一項打勾。選目前的就回到目前的版本。
   - 看以前的版本（`AppModel.viewingNotes`）：會議頁把 detail 換成 `showingNotesVersion(notes)`（紀錄換成那一版，`reviewLinks`、`speakerSuggestions` 清空）傳給紀錄分頁和播放條（議題帶也是那一版）。紀錄頂部原本的待確認條、處理完的那一行換成 `NotesVersionBanner`：`clock.arrow.circlepath`「正在看以前的版本：一對一・重新整理」＋灰字時間、「回到目前的版本」、「改用這一版」（主要的；處理中不能按）。編輯列的「編輯」停用、「復原上一版」不顯示。
   - 換會議、紀錄變了（`reloadDetail` 時 notes 不同）就回到目前的版本。改用之後提示「已改用這一版，原本的版本留在版本紀錄裡」。
 - DEBUG：`notesversion <會議 id> <版本 id|current>`（等於選那一版）、`usenotesversion`（等於按「改用這一版」）；`state` 的 `notesHistory`（versionId、templateId、label、time、title）、`viewingNotesVersion`。

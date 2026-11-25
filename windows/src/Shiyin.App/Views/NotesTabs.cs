@@ -490,11 +490,14 @@ public sealed class NotesTabs
         return button;
     }
 
-    /// <summary>一版的說明：用的範本（知道的話；不在了寫「已刪除的範本」）・怎麼來的（最舊的一版寫「第一版」）</summary>
+    /// <summary>
+    /// 一版的說明：用的範本（知道的話；不在了寫「已刪除的範本」）・怎麼來的（最舊的一版寫「第一版」）。
+    /// 怎麼來的是存檔當時的文字（資料庫裡的原因）：簡體介面轉成簡體（M§48.2）
+    /// </summary>
     string VersionLabel(NotesHistoryEntry entry)
     {
         var template = entry.TemplateId is { } id ? host.Db.Templates().FirstOrDefault(t => t.Id == id)?.DisplayName() ?? L.T("已刪除的範本") : null;
-        return string.Join("・", new[] { template, entry.Origin ?? L.T("第一版") }.OfType<string>());
+        return string.Join("・", new[] { template, entry.Origin is { } origin ? L.Ui(origin) : L.T("第一版") }.OfType<string>());
     }
 
     /// <summary>一版是什麼時候的（本機時間的月/日 時:分），最舊的一版不知道</summary>

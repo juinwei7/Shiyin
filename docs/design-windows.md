@@ -915,7 +915,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.48 版本紀錄：看以前的版本、改用某一版（R115，M§89、D195）
 
 - **資料**：`MigrationSql.V17`（兩句 ALTER）；`Meeting.NotesTemplate`、`NotesVersion.TemplateId`、`NotesHistoryEntry`；`SaveNotes(…, template)`、`UndoNotes`、編輯會議的兩處、`NotesHistory`、`UseNotesVersion` 同 Mac（資料庫標準答案逐欄比）。`JobRunner.Summarize` 給 `template?.Id`。
-- **畫面**：紀錄分頁的編輯列多「版本紀錄」（`DropDownButton`＋`MenuFlyout`，打開時才列；每一項 `ToggleMenuFlyoutItem`，正在顯示的那一項打勾，文字「範本名稱・怎麼來的」，目前的加「（目前）」，時間放在文字後面灰字不好做，寫在同一行用「　」隔開）。看以前的版本：`MainState.ViewingNotes`，紀錄分頁、播放條用 `MeetingDetail` 的副本（紀錄換成那一版、待確認的對應清空），頂部的說明條同 Mac（同資料夾建議的樣子），編輯停用、復原不顯示；換會議、紀錄變了就回到目前的。
+- **畫面**：紀錄分頁的編輯列多「版本紀錄」（`DropDownButton`＋`MenuFlyout`，打開時才列；每一項 `ToggleMenuFlyoutItem`，正在顯示的那一項打勾，文字「範本名稱・怎麼來的」（怎麼來的在簡體介面經過 `L.Ui`），目前的加「（目前）」，時間放在文字後面灰字不好做，寫在同一行用「　」隔開）。看以前的版本：`MainState.ViewingNotes`，紀錄分頁、播放條用 `MeetingDetail` 的副本（紀錄換成那一版、待確認的對應清空），頂部的說明條同 Mac（同資料夾建議的樣子），編輯停用、復原不顯示；換會議、紀錄變了就回到目前的。
 - **驗證**：`dotnet test`（資料庫標準答案、`NotesHistory` 的順序和說明、`UseNotesVersion` 換範本）；虛擬機示範資料換範本重新整理、打開版本紀錄、看舊版本、改用。
 
 ## 12. 系統整合

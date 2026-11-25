@@ -1497,10 +1497,12 @@ final class AppModel {
         }
     }
 
-    /// 一版的說明：用的範本（知道的話）・怎麼來的（最舊的一版寫「第一版」）
+    /// 一版的說明：用的範本（知道的話）・怎麼來的（最舊的一版寫「第一版」）。
+    /// 怎麼來的是存檔當時的文字（資料庫裡的原因）：簡體介面轉成簡體（design §48.2）
     func notesVersionLabel(_ entry: NotesHistoryEntry) -> String {
         let template = entry.templateId.map { id in templates.first { $0.id == id }?.displayName ?? String(localized: "已刪除的範本") }
-        return [template, entry.origin ?? String(localized: "第一版")].compactMap { $0 }.joined(separator: "・")
+        let origin = entry.origin.map { MeetingLanguage.simplifiedInterface ? ChineseScript.toSimplifiedUI($0) : $0 } ?? String(localized: "第一版")
+        return [template, origin].compactMap { $0 }.joined(separator: "・")
     }
 
     /// 一版是什麼時候的：「11月24日 下午3:30」這類（系統的格式），最舊的一版不知道
