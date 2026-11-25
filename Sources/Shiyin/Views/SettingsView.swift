@@ -799,7 +799,7 @@ struct TemplateSettings: View {
                 } header: {
                     Text("自訂段落")
                 } footer: {
-                    Text("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列。")
+                    Text("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列；負責人、期限這類待辦，請打開上面的「待辦」。")
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

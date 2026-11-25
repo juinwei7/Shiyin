@@ -657,7 +657,7 @@ public sealed class SettingsWindow : Window
         column.Children.Add(toggles);
         // 自訂段落一個一塊（R112.4）：段落名稱、要寫什麼（多行）、右上角移除
         var customs = Ui.Column(8, Ui.Text(L.T("自訂段落"), 14, bold: true),
-            Ui.Text(L.T("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列。"), 12, color: Ui.Secondary));
+            Ui.Text(L.T("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列；負責人、期限這類待辦，請打開上面的「待辦」。"), 12, color: Ui.Secondary));
         if (custom.Count == 0) customs.Children.Add(Ui.Text(L.T("還沒有自訂段落。"), 13, color: Ui.Secondary));
         for (var i = 0; i < custom.Count; i++)
         {

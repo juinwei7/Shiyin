@@ -17072,19 +17072,19 @@
         }
       }
     },
-    "每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列。": {
+    "每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列；負責人、期限這類待辦，請打開上面的「待辦」。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "每个自定义段落是会议记录里的一节，整理工具照“要写什么”写成条列。"
+            "value": "每个自定义段落是会议记录里的一节，整理工具照“要写什么”写成条列；负责人、期限这类待办，请打开上面的“待办”。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Each custom section becomes a section of the notes, written as a list following What to write."
+            "value": "Each custom section becomes a section of the notes, written as a list following What to write. For action items with owners and due dates, turn on Action items above."
           }
         }
       }
