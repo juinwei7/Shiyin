@@ -291,7 +291,10 @@ public sealed class TopicBand
         Update(time);
     }
 
-    /// <summary>卡片：議題名稱、時間（開始–結束・多久）、說話者、前 3 條重點、「還有 N 條」、「點一下從這裡播放」</summary>
+    /// <summary>列出幾條重點（同 Mac：原本 3 條，卡片點不到「還有 N 條」，2026-11-25 #19 改成直接列出來）</summary>
+    const int MaxPoints = 8;
+
+    /// <summary>卡片：議題名稱、時間（開始–結束・多久）、說話者、最多 8 條重點、「還有 N 條，在「紀錄」分頁的這個議題裡」、「點一下從這裡播放」</summary>
     UIElement Card(MindMap.TopicRange r)
     {
         var (points, speakers) = card?.Invoke(r) ?? ([], []);
@@ -301,8 +304,9 @@ public sealed class TopicBand
         if (points.Count > 0)
         {
             var list = Ui.Column(3);
-            foreach (var point in points.Take(3)) list.Children.Add(Ui.Text("・" + point, 12, maxLines: 2));  // l10n-skip：條列的點
-            if (points.Count > 3) list.Children.Add(Ui.Text(L.F("還有 %lld 條", points.Count - 3), 12, color: Ui.Secondary));
+            foreach (var point in points.Take(MaxPoints)) list.Children.Add(Ui.Text("・" + point, 12, maxLines: 2));  // l10n-skip：條列的點
+            // 卡片不能點、移開就收起：多的指到紀錄分頁（#19）
+            if (points.Count > MaxPoints) list.Children.Add(Ui.Text(L.F("還有 %lld 條，在「紀錄」分頁的這個議題裡", points.Count - MaxPoints), 12, color: Ui.Secondary));
             list.Margin = new Thickness(0, 2, 0, 0);
             column.Children.Add(list);
         }

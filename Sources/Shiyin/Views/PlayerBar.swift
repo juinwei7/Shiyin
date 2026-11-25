@@ -195,6 +195,8 @@ struct TopicCard: View {
     }
 
     static let width: CGFloat = 300
+    /// 列出幾條重點（原本 3 條，卡片點不到「還有 N 條」，2026-11-25 #19 改成直接列出來）
+    static let maxPoints = 8
     let range: MindMap.TopicRange
     let info: Info
 
@@ -216,14 +218,15 @@ struct TopicCard: View {
             }
             if !info.points.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
-                    ForEach(Array(info.points.prefix(3).enumerated()), id: \.offset) { _, point in
+                    ForEach(Array(info.points.prefix(Self.maxPoints).enumerated()), id: \.offset) { _, point in
                         HStack(alignment: .firstTextBaseline, spacing: 2) {
                             Text(verbatim: "・")
                             Text(verbatim: point).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    if info.points.count > 3 {
-                        Text("還有 \(info.points.count - 3) 條").foregroundStyle(.secondary)
+                    // 卡片不接點擊、移開就收起：多的指到紀錄分頁（#19）
+                    if info.points.count > Self.maxPoints {
+                        Text("還有 \(info.points.count - Self.maxPoints) 條，在「紀錄」分頁的這個議題裡").foregroundStyle(.secondary)
                     }
                 }
                 .font(.system(size: 12))

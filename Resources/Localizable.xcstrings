@@ -24373,19 +24373,31 @@
         }
       }
     },
-    "還有 %lld 條": {
+    "還有 %lld 條，在「紀錄」分頁的這個議題裡": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还有 %lld 条"
+            "value": "还有 %lld 条，在“记录”标签页的这个议题里"
           }
         },
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld more"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more in this topic on the Notes tab"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more in this topic on the Notes tab"
+                }
+              }
+            }
           }
         }
       }

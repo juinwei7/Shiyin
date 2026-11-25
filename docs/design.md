@@ -3060,7 +3060,7 @@ Windows 的做法在 design-windows §11.46。
   - 滑過一段 0.3 秒後出現；卡片開著時移到另一段馬上換；移開收起。原本的 `.help`（「名稱　開始–結束」）拿掉，不跟卡片重複；輔助使用的名稱照舊。
   - 位置：議題帶上面 6 點，左邊對齊那一段的開頭，超出議題帶右邊時往左挪；寬 300。畫在 `TopicBand` 的 overlay 裡（播放列在會議頁的最下面、比內容晚畫，卡片蓋在逐字稿上面）。
   - 樣子同自己畫的選單的面板（§79：圓角 14、深色 `white 0.17`／淺色白色、`primary` 10% 細框、陰影），內距 12，不接點擊（`allowsHitTesting(false)`，不擋議題帶）。
-  - 內容：議題名稱（13 點粗體，最多 3 行）；時間「03:15–08:40・5 分鐘」（次要顏色、等寬數字，長度用 `TimeFormat.duration`）；說話者「說話者：王小明、陳家豪」（這段時間有說話的人，依重疊的秒數多到少，`MeetingLanguage.uiList`；沒有說話者時不寫）；重點（那一支的 points，前 3 條，每條最多 2 行，前面「・」；超過時「還有 N 條」）；最後一行 tertiary「點一下從這裡播放」。
+  - 內容：議題名稱（13 點粗體，最多 3 行）；時間「03:15–08:40・5 分鐘」（次要顏色、等寬數字，長度用 `TimeFormat.duration`）；說話者「說話者：王小明、陳家豪」（這段時間有說話的人，依重疊的秒數多到少，`MeetingLanguage.uiList`；沒有說話者時不寫）；重點（那一支的 points，最多 8 條，每條最多 2 行，前面「・」；超過時「還有 N 條，在「紀錄」分頁的這個議題裡」。原本是前 3 條＋「還有 N 條」，卡片不接點擊、移開就收起，看不到其他的（#19），2026-11-25 改）；最後一行 tertiary「點一下從這裡播放」。
   - 資料：`MindMap.shownTopic(notes, branch:)` 拿那一支（`TopicRange.branch` 就是 `shownTopics` 的位置）；說話者從 `detail.segments` 算，卡片出現時才算。
 - `MeetingLanguage.uiList(_:)`：介面語言的清單（「A、B 和 C」「A, B, and C」），`uiNames` 改用它。
 - DEBUG：`topichover <第幾段|off>`（等於滑過那一段，卡片馬上出現）；`state` 的 `topicHover`。
