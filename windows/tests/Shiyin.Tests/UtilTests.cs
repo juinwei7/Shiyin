@@ -402,6 +402,21 @@ public class UtilTests
         foreach (var e in expected)
             Assert.Equal(e.Strings("terms") ?? [], GlossaryInput.Split(e.Str("input")!));
     }
+
+    /// <summary>詞彙表的檔案（R117、M§91）：匯入的分法、匯出的格式、文字編碼同 Mac 的 GlossaryFile</summary>
+    [Fact]
+    public void GlossaryFileMatchesMac()
+    {
+        var expected = Golden.ExpectedJson("util/glossary-file.json");
+        var parse = expected.GetProperty("parse").EnumerateArray().ToList();
+        Assert.NotEmpty(parse);
+        foreach (var e in parse)
+            Assert.Equal(e.Strings("terms") ?? [], GlossaryFile.TermsFromFile(e.Str("input")!));
+        foreach (var e in expected.GetProperty("export").EnumerateArray())
+            Assert.Equal(e.Str("text"), GlossaryFile.Export(e.Strings("terms") ?? []));
+        foreach (var e in expected.GetProperty("decode").EnumerateArray())
+            Assert.Equal(e.Str("text"), GlossaryFile.Decode(Convert.FromBase64String(e.Str("base64")!)));
+    }
 }
 
 /// <summary>翻譯表（design-windows §11.4）：直接讀 Mac 的 Localizable.xcstrings</summary>

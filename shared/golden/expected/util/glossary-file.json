@@ -1,0 +1,103 @@
+{
+  "decode" : [
+    {
+      "base64" : "UmVkaXMK5ou+6Z+zCg==",
+      "text" : "Redis\n拾音\n"
+    },
+    {
+      "base64" : "77u/5ou+6Z+zCg==",
+      "text" : "拾音\n"
+    },
+    {
+      "base64" : "//7+YvOXATBeillfaIg=",
+      "text" : "拾音、詞彙表"
+    },
+    {
+      "base64" : "/v9i/pfz",
+      "text" : "拾音"
+    },
+    {
+      "base64" : "rEKttaFCtfy3SqrtLFJlZGlz",
+      "text" : "拾音、詞彙表,Redis"
+    },
+    {
+      "base64" : "pA==",
+      "text" : null
+    }
+  ],
+  "export" : [
+    {
+      "terms" : [
+
+      ],
+      "text" : ""
+    },
+    {
+      "terms" : [
+        "Redis"
+      ],
+      "text" : "Redis\n"
+    },
+    {
+      "terms" : [
+        "拾音",
+        "Claude Code",
+        "SendGrid"
+      ],
+      "text" : "拾音\nClaude Code\nSendGrid\n"
+    }
+  ],
+  "parse" : [
+    {
+      "input" : "Redis\nKubernetes\n",
+      "terms" : [
+        "Redis",
+        "Kubernetes"
+      ]
+    },
+    {
+      "input" : "﻿拾音\r\nClaude Code\r\n",
+      "terms" : [
+        "拾音",
+        "Claude Code"
+      ]
+    },
+    {
+      "input" : "\"產品名\",\"客戶名\"\n\"Redis\",\"拾音\"",
+      "terms" : [
+        "產品名",
+        "客戶名",
+        "Redis",
+        "拾音"
+      ]
+    },
+    {
+      "input" : "甲\t乙\t丙\n丁",
+      "terms" : [
+        "甲",
+        "乙",
+        "丙",
+        "丁"
+      ]
+    },
+    {
+      "input" : "",
+      "terms" : [
+
+      ]
+    },
+    {
+      "input" : "  \n\n",
+      "terms" : [
+
+      ]
+    },
+    {
+      "input" : "A；B、a，\"b\"",
+      "terms" : [
+        "A",
+        "B"
+      ]
+    }
+  ]
+}

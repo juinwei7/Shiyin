@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Shiyin.Localization;
 using Shiyin.Model;
@@ -190,5 +191,43 @@ public static class GlossaryInput
             if (term.Length > 0 && seen.Add(SwiftText.Lower(term))) result.Add(term);
         }
         return result;
+    }
+}
+
+/// <summary>
+/// 詞彙表的檔案（R117、M§91、D199，同 Mac 的 GlossaryFile）：匯出一行一個詞；匯入跟貼上同一套分法，再加上 Tab、拿掉 CSV 的雙引號。
+/// 標準答案 util/glossary-file.json
+/// </summary>
+public static class GlossaryFile
+{
+    /// <summary>匯入時最多讀多大的檔案</summary>
+    public const int MaxBytes = 1_000_000;
+
+    public static string Export(IReadOnlyList<string> terms) => terms.Count == 0 ? "" : string.Join("\n", terms) + "\n";
+
+    /// <summary>UTF-8（開頭的 BOM 拿掉）→ 有 BOM 的 UTF-16 → Big5（繁中 Windows 的 Excel 存的 CSV，950）；都不是時 null</summary>
+    public static string? Decode(byte[] data)
+    {
+        try
+        {
+            if (data.Length >= 2 && data[0] == 0xFF && data[1] == 0xFE) return new UnicodeEncoding(false, false, true).GetString(data, 2, data.Length - 2);
+            if (data.Length >= 2 && data[0] == 0xFE && data[1] == 0xFF) return new UnicodeEncoding(true, false, true).GetString(data, 2, data.Length - 2);
+        }
+        catch (ArgumentException) { return null; }
+        var start = data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF ? 3 : 0;
+        try { return new UTF8Encoding(false, true).GetString(data, start, data.Length - start); }
+        catch (ArgumentException) { }
+        try
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            return Encoding.GetEncoding(950, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback).GetString(data);
+        }
+        catch (ArgumentException) { return null; }
+    }
+
+    public static List<string> TermsFromFile(string text)
+    {
+        if (text.StartsWith('\uFEFF')) text = text[1..];
+        return GlossaryInput.Split(text.Replace("\t", "\n").Replace("\"", ""));
     }
 }

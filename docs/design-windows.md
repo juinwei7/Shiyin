@@ -925,6 +925,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **畫面**：錄音畫面的麥克風圖示變成按鈕（`Button`，暫停時圖示換成斜線的麥克風 `\uE720`→`\uF781`、音量條換成「麥克風已暫停」）；麥克風選單第一項；錄音島展開時的麥克風；系統匣選單「暫停麥克風」；Ctrl+Shift+M。
 - **驗證**：`dotnet test`（寫檔：暫停的那段麥克風是 0、電腦聲音照常、秒數不變）；虛擬機 `record-sim` 錄音中按麥克風圖示、錄音島、系統匣，停止後看 WAV。
 
+### 11.50 詞彙表匯出、匯入（R117，M§91、D199）
+
+- **格式**：`GlossaryFile`（`Shiyin.Core/Notes/Templates.cs`）同 Mac 的 `export`、`Decode`、`TermsFromFile`；Big5 用 `CodePagesEncodingProvider` 的 950。標準答案 `util/glossary-file.json`。
+- **AppController**：`ExportGlossary(path)`、`ImportGlossary(path)`，提示文字同 Mac。
+- **畫面**：設定「詞彙表」新增詞彙的欄位下面一列「從檔案匯入…」「匯出…」（`HyperlinkButton`）；`FileOpenPicker`（.txt、.csv、.tsv）、`FileSavePicker`（預設檔名「拾音詞彙表」、.txt）。沒有詞時「匯出…」停用、工具提示「還沒有詞彙可以匯出」。
+- **驗證**：`dotnet test`（標準答案）；虛擬機用控制通道 `glossaryexport`、`glossaryimport` 走一次，設定頁截圖；挑選器打開看一次（取消）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

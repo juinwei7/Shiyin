@@ -7,6 +7,11 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 詞彙表匯出、匯入（R117，design §91、design-windows §11.50、D199；2026-11-26 GitHub #25，使用者：做）
+
+- [ ] **GI1 Mac**（§91）：驗證：標準答案 `util/glossary-file.json`；DEBUG 版 `glossaryexport`、`glossaryimport`（UTF-8、UTF-16、Big5、CSV、空檔、太大的檔），提示和詞彙表對；設定頁截圖（淺色、深色、英文）；`l10n.py check` 沒有缺的英文
+- [ ] **GI2 Windows**（design-windows §11.50）：驗證：`dotnet test` 標準答案通過；虛擬機控制通道匯出、匯入，設定頁截圖；`l10n.py windows-check`
+
 ## GitHub #13～#17 的使用者回報（R111～R115；2026-11-24 VIA7 開的 issue，2026-11-25 使用者：「先把可以處理的先處理掉」；2026-11-25 跟 5.2.0（Mac、Windows）發布，#13、#15、#16、#17 已回覆並關閉，#14 等回報者說「無法使用」是哪一種）
 
 - [~] **GS5 Mac 議題帶滑過的卡片**（R113，§87）：程式完成，DEBUG 版驗過（2026-11-25，見 commit 訊息）。還差（要使用者用真的滑鼠）：滑過 0.3 秒出現、移到隔壁那段馬上換、移開收起（模擬的滑鼠移動觸發不了 SwiftUI 的滑過；卡片的內容和位置用 topichover 驗過）

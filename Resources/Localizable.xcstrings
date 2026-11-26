@@ -6572,6 +6572,23 @@
         }
       }
     },
+    "加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加进文本文件里的词（.txt、.csv），已经有的跳过，原本的词不会被删掉"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds the terms in a text file (.txt, .csv). Terms you already have are skipped, and none of your existing terms are removed"
+          }
+        }
+      }
+    },
     "包含時間點": {
       "extractionState": "manual",
       "localizations": {
@@ -8507,6 +8524,23 @@
         }
       }
     },
+    "存成文字檔，一行一個詞": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存成文本文件，一行一个词"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as a text file, one term per line"
+          }
+        }
+      }
+    },
     "存檔…": {
       "extractionState": "manual",
       "localizations": {
@@ -9303,6 +9337,23 @@
         }
       }
     },
+    "已匯出 %lld 個詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导出 %lld 个词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported %lld terms"
+          }
+        }
+      }
+    },
     "已取消": {
       "extractionState": "manual",
       "localizations": {
@@ -9435,6 +9486,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Created folder “%@”"
+          }
+        }
+      }
+    },
+    "已從檔案加入 %lld 個詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从文件加入 %lld 个词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld terms from the file"
+          }
+        }
+      }
+    },
+    "已從檔案加入 %lld 個詞彙，%lld 個已經有了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从文件加入 %lld 个词汇，%lld 个已经有了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld terms from the file; %lld were already in the glossary"
           }
         }
       }
@@ -10675,6 +10760,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "从左边选一场会议"
+          }
+        }
+      }
+    },
+    "從檔案匯入…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文件导入…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import from File…"
           }
         }
       }
@@ -12265,6 +12367,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "拾音系统声音"
+          }
+        }
+      }
+    },
+    "拾音詞彙表.txt": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音词汇表.txt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin Glossary.txt"
           }
         }
       }
@@ -16155,6 +16274,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "模拟录音"
+          }
+        }
+      }
+    },
+    "檔案太大：詞彙表的文字檔通常只有幾 KB": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件太大：词汇表的文本文件通常只有几 KB"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is too large. A glossary text file is usually only a few KB"
+          }
+        }
+      }
+    },
+    "檔案裡沒有詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件里没有词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file has no terms"
+          }
+        }
+      }
+    },
+    "檔案裡的 %lld 個詞彙都已經在詞彙表裡了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件里的 %lld 个词汇都已经在词汇表里了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All %lld terms in the file are already in the glossary"
           }
         }
       }
@@ -22217,6 +22387,23 @@
         }
       }
     },
+    "讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读不懂这个文件的文字编码，请另存成 UTF-8 的文本文件再导入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read this file’s text encoding. Save it as a UTF-8 text file and import it again"
+          }
+        }
+      }
+    },
     "讀取中斷": {
       "extractionState": "manual",
       "localizations": {
@@ -24886,6 +25073,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有词汇。用词修正时勾选“加进词汇表”也会加到这里。"
+          }
+        }
+      }
+    },
+    "還沒有詞彙可以匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有词汇可以导出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no terms to export yet"
           }
         }
       }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// 設定的每一頁（R108、design §82、D184）：側欄的順序、分組、圖示和顏色、搜尋用的關鍵字
 enum SettingsPage: String, CaseIterable, Identifiable {
@@ -1094,6 +1095,16 @@ struct GlossarySettings: View {
                 .onSubmit(add)
             Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+        // 匯入、匯出（R117、design §91）：匯入一律合併
+        HStack(spacing: 14) {
+            Button("從檔案匯入…", action: importFile).buttonStyle(.link)
+                .help("加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉")
+            Button("匯出…", action: exportFile).buttonStyle(.link)
+                .disabled(model.glossary.isEmpty)
+                .help(model.glossary.isEmpty ? String(localized: "還沒有詞彙可以匯出") : String(localized: "存成文字檔，一行一個詞"))
+            Spacer()
+        }
+        .font(.callout)
         // 詞彙表建議（design §17.5）：最多 12 個
         if !model.glossarySuggestions.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
@@ -1196,6 +1207,22 @@ struct GlossarySettings: View {
     private func add() {
         model.addTerms(newTerm)
         newTerm = ""
+    }
+
+    private func importFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.plainText, .commaSeparatedText, .tabSeparatedText]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.importGlossary(from: url)
+    }
+
+    private func exportFile() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = String(localized: "拾音詞彙表.txt")
+        panel.allowedContentTypes = [.plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.exportGlossary(to: url)
     }
 
     private func startEditing(_ term: GlossaryTerm) {

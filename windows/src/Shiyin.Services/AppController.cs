@@ -1,3 +1,4 @@
+using System.Text;
 using Shiyin.Data;
 using Shiyin.IO;
 using Shiyin.LLM;
@@ -1232,6 +1233,50 @@ public sealed partial class AppController
         else if (terms.Count > 1)
             message = added == terms.Count ? L.F("已加入 %lld 個詞彙", (long)added) : L.F("已加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
         if (message is not null) Notice?.Invoke(message);
+        return message;
+    }
+
+    /// <summary>
+    /// 詞彙表匯出成文字檔（R117.1、M§91）：只有自己的詞，順序同畫面。成功時 Notice、失敗時 Error，回傳同一句（設定頁寫在輸入框下面）
+    /// </summary>
+    public string ExportGlossary(string path)
+    {
+        var terms = Db.Glossary().Select(t => t.Term).ToList();
+        try { File.WriteAllText(path, GlossaryFile.Export(terms), new UTF8Encoding(false)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Error?.Invoke(e.Message);
+            return e.Message;
+        }
+        var message = L.F("已匯出 %lld 個詞彙", (long)terms.Count);
+        Notice?.Invoke(message);
+        return message;
+    }
+
+    /// <summary>從文字檔匯入詞彙（R117.2、R117.3，同 Mac 的 importGlossary）：一律合併，已經有的跳過，不刪原本的</summary>
+    public string ImportGlossary(string path)
+    {
+        string Fail(string message)
+        {
+            Error?.Invoke(message);
+            return message;
+        }
+        byte[] data;
+        try
+        {
+            if (new FileInfo(path).Length > GlossaryFile.MaxBytes) return Fail(L.T("檔案太大：詞彙表的文字檔通常只有幾 KB"));
+            data = File.ReadAllBytes(path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return Fail(e.Message); }
+        if (GlossaryFile.Decode(data) is not { } text) return Fail(L.T("讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入"));
+        var terms = GlossaryFile.TermsFromFile(text);
+        if (terms.Count == 0) return Fail(L.T("檔案裡沒有詞彙"));
+        var added = 0;
+        Perform(null, () => added = Db.AddTerms(terms));
+        var message = added == 0 ? L.F("檔案裡的 %lld 個詞彙都已經在詞彙表裡了", (long)terms.Count)
+            : added == terms.Count ? L.F("已從檔案加入 %lld 個詞彙", (long)added)
+            : L.F("已從檔案加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
+        Notice?.Invoke(message);
         return message;
     }
 

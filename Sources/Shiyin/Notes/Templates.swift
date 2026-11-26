@@ -196,3 +196,29 @@ enum GlossaryInput {
             .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
     }
 }
+
+/// 詞彙表的檔案（R117、design §91、D199）：匯出一行一個詞；匯入跟貼上同一套分法，再加上 Tab、拿掉 CSV 的雙引號。標準答案 util/glossary-file.json
+enum GlossaryFile {
+    /// 匯入時最多讀多大的檔案
+    static let maxBytes = 1_000_000
+
+    static func export(_ terms: [String]) -> String {
+        terms.isEmpty ? "" : terms.joined(separator: "\n") + "\n"
+    }
+
+    /// UTF-8（開頭的 BOM 拿掉）→ 有 BOM 的 UTF-16 → Big5（繁中 Windows 的 Excel 存的 CSV）；都不是時 nil
+    static func decode(_ data: Data) -> String? {
+        let bytes = [UInt8](data)
+        if bytes.starts(with: [0xFF, 0xFE]) { return String(data: data.dropFirst(2), encoding: .utf16LittleEndian) }
+        if bytes.starts(with: [0xFE, 0xFF]) { return String(data: data.dropFirst(2), encoding: .utf16BigEndian) }
+        if let text = String(data: bytes.starts(with: [0xEF, 0xBB, 0xBF]) ? data.dropFirst(3) : data, encoding: .utf8) { return text }
+        let big5 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.big5.rawValue)))
+        return String(data: data, encoding: big5)
+    }
+
+    static func terms(fromFile text: String) -> [String] {
+        var text = text
+        if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
+        return GlossaryInput.split(text.replacingOccurrences(of: "\t", with: "\n").replacingOccurrences(of: "\"", with: ""))
+    }
+}

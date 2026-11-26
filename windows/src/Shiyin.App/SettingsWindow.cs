@@ -735,6 +735,36 @@ public sealed class SettingsWindow : Window
     /// <summary>正在就地改的詞（R100）</summary>
     long? editingTerm;
 
+    /// <summary>詞彙表從檔案匯入（R117.2）：.txt、.csv、.tsv，一律合併；結果寫在輸入框下面</summary>
+    async Task ImportGlossaryFile()
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            foreach (var ext in new[] { ".txt", ".csv", ".tsv" }) picker.FileTypeFilter.Add(ext);
+            if (await picker.PickSingleFileAsync() is not { } file) return;
+            glossaryNotice = host.Controller.ImportGlossary(file.Path);
+        }
+        catch (System.Runtime.InteropServices.COMException e) { glossaryNotice = e.Message; }
+        Show();
+    }
+
+    /// <summary>詞彙表匯出成文字檔（R117.1）</summary>
+    async Task ExportGlossaryFile()
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = L.T("拾音詞彙表") };
+            picker.FileTypeChoices.Add(L.T("純文字（txt）"), [".txt"]);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            if (await picker.PickSaveFileAsync() is not { } file) return;
+            glossaryNotice = host.Controller.ExportGlossary(file.Path);
+        }
+        catch (System.Runtime.InteropServices.COMException e) { glossaryNotice = e.Message; }
+        Show();
+    }
+
     FrameworkElement Glossary()
     {
         var column = Ui.Column(12, Ui.Text(L.T("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。"), 13, color: Ui.Secondary));
@@ -772,6 +802,14 @@ public sealed class SettingsWindow : Window
             input.Loaded += (_, _) => input.Focus(FocusState.Programmatic);
         }
         column.Children.Add(Ui.Bar(null, input, add));
+        // 匯入、匯出（R117、M§91）：匯入一律合併
+        var importLink = Ui.Link(L.T("從檔案匯入…"), () => _ = ImportGlossaryFile());
+        ToolTipService.SetToolTip(importLink, L.T("加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉"));
+        var exportLink = Ui.Link(L.T("匯出…"), () => _ = ExportGlossaryFile());
+        var hasTerms = host.Db.Glossary().Count > 0;
+        exportLink.IsEnabled = hasTerms;
+        ToolTipService.SetToolTip(exportLink, hasTerms ? L.T("存成文字檔，一行一個詞") : L.T("還沒有詞彙可以匯出"));
+        column.Children.Add(Ui.Row(14, importLink, exportLink));
         if (glossaryNotice is { } notice)
         {
             glossaryNotice = null;

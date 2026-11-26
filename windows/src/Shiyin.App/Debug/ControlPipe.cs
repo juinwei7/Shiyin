@@ -93,6 +93,11 @@ public static partial class ControlPipe
             // addterm <文字>：新增詞彙（R94.1，同 Mac 的 addterm：「\n」當換行、一次好幾個），回傳說明（沒有要說的是空的）
             case "addterm" when args.Length > 1:
                 return new JsonObject { ["message"] = host.Controller.AddTerms(args[1].Replace("\\n", "\n")) ?? "" };
+            // glossaryexport <路徑>、glossaryimport <路徑>：詞彙表匯出、匯入（R117，同 Mac），不開挑選器，回傳說明
+            case "glossaryexport" when args.Length > 1:
+                return new JsonObject { ["message"] = host.Controller.ExportGlossary(args[1]) };
+            case "glossaryimport" when args.Length > 1:
+                return new JsonObject { ["message"] = host.Controller.ImportGlossary(args[1]) };
             // seek <秒> [play]、toggle：播放（同 Mac）
             case "seek" when args.Length > 1 && double.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out var seekTo):
                 host.Player.Seek(seekTo, args.Length > 2 && args[2] == "play");

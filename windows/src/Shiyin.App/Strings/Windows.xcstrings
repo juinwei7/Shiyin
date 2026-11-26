@@ -1985,6 +1985,23 @@
         }
       }
     },
+    "拾音詞彙表": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin Glossary"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音词汇表"
+          }
+        }
+      }
+    },
     "拾音錄音島": {
       "extractionState": "manual",
       "localizations": {

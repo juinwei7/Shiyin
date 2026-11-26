@@ -3160,6 +3160,22 @@ Windows 的做法在 design-windows §11.49。
 - DEBUG：`micpause on|off`（等於按麥克風圖示）；`state` 的 `micPaused`。
 - 驗證：`record-sim <音檔> 1 1`（兩聲道同一個音檔）錄音中 `micpause on`、約 50 秒後 `off`，停止後讀 WAV：暫停的那段左聲道全是 0、右聲道照常，長度跟錄音秒數一樣；暫停期間 `levelCheck` 沒有提醒、`micLevel` 是 0。「檔案」選單的項目用 AX 按（沒在錄音時停用）。錄音畫面（淺色、深色、窄視窗）、錄音島、選單列（`preview menubar`）截圖。
 
+## 91. 詞彙表匯出、匯入（R117，D199；GitHub #25）
+
+Windows 的做法在 design-windows §11.50。
+
+- 格式（`GlossaryFile`，`Notes/Templates.swift`，跟 `GlossaryInput` 放一起）：
+  - `export(_ terms:)`：一行一個詞、`\n` 換行、最後一行也換行；沒有詞時是空字串。UTF-8、不加 BOM。
+  - `decode(_ data:)`：UTF-8（嚴格；開頭的 BOM 拿掉）→ 有 BOM 的 UTF-16（LE、BE）→ Big5（`CFStringEncodings.big5`，Windows 用 950）；都失敗回 nil。
+  - `terms(fromFile:)`：拿掉開頭的 U+FEFF、Tab 換成換行、拿掉所有半形雙引號，再交給 `GlossaryInput.split`（同 R94.1：換行、逗號、頓號、分號分開，去頭尾空白、拿掉空的和不分大小寫重複的）。
+  - 標準答案 `util/glossary-file.json`：`parse`（文字 → 詞）、`export`（詞 → 文字）、`decode`（位元組的 base64 → 文字或 null）。
+- `AppModel`：
+  - `exportGlossary(to:)`：只寫自己的詞（`model.glossary` 的順序，同畫面），原子寫入；成功時提示「已匯出 N 個詞彙」，失敗時錯誤訊息。
+  - `importGlossary(from:)`：超過 1 MB 不讀（「檔案太大：詞彙表的文字檔通常只有幾 KB」）；`decode` 失敗（「讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入」）；沒有詞（「檔案裡沒有詞彙」）。有詞時 `db.addTerms`（`INSERT OR IGNORE`，同貼上），提示「已從檔案加入 N 個詞彙」，有跳過的加「，M 個已經有了」；全部都有時「檔案裡的 N 個詞彙都已經在詞彙表裡了」。
+- 畫面（設定「詞彙表」，新增詞彙的欄位下面一列，`callout` 的連結按鈕）：「從檔案匯入…」「匯出…」。`NSOpenPanel`（`.plainText`、`.commaSeparatedText`、`.tabSeparatedText`，一次一個）；`NSSavePanel` 預設檔名「拾音詞彙表.txt」（英文介面「Shiyin Glossary.txt」）、類型 `.plainText`。沒有詞時「匯出…」停用，滑鼠提示「還沒有詞彙可以匯出」。
+- DEBUG：`glossaryexport <路徑>`、`glossaryimport <路徑>`（不開面板，直接呼叫上面兩個）。
+- 驗證：標準答案；DEBUG 版暫存的 `SHIYIN_HOME` 先 `addterm` 幾個詞，`glossaryexport` 出來的檔案內容對；刪掉其中一個、再 `glossaryimport` 回來只加回那一個、提示對；UTF-16、Big5、CSV（有雙引號）、空檔、2 MB 的檔各匯入一次；設定頁截圖（淺色、深色、英文，有詞和沒詞）。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3306,3 +3322,4 @@ Windows 的做法在 design-windows §11.49。
 | D196 | 逐字稿每一句的右鍵一律是這一句的選單，文字上也是（§79、R105.4；GitHub #19） | 保留文字上的系統選單（查詢、翻譯、字體…）：使用者在文字上按右鍵找不到「編輯這一段」「刪除這句」，看起來像選單壞了；這一句的選單裡有「拷貝」，選一段字還是能 ⌘C。拿掉文字的可以選取：只拷貝幾個字的人就做不到了 |
 | D197 | 即時逐字稿跟不跟最新的判斷放在 `onScrollGeometryChange` 的轉換裡，只有結果變了才觸發動作，狀態等排版結束再改（§25.4、R25.3；GitHub #23） | 只照回報者的建議把改狀態延後：回報的呼叫堆疊是 SwiftUI 跑完動作就要求立刻更新，位置一變還是會觸發，排版可能照樣一直重來。改看捲動階段（`onScrollPhaseChange`）：一般滑鼠的滾輪不確定算不算捲動中，可能往上捲了還被拉回最新。拿掉 `LazyVStack`：長錄音幾千行每次都要全部排版，錄音中的 CPU 會再升高（§25） |
 | D198 | 暫停麥克風時檔案裡那一聲道寫 0，不是不寫（§90、R116；GitHub #21） | 暫停時不寫麥克風那一聲道、只寫電腦聲音：兩聲道的時間會錯開，筆記、重點的時間點、說話者辨識都要另外處理。改成只錄電腦聲音的單聲道檔：一場錄音中途換格式，轉錄、播放、匯出都要改。自動偵測會議軟體的靜音：系統看不出來（R116 的「不做」） |
+| D199 | 詞彙表的檔案用一行一個詞的純文字，匯入一律合併（§91、R117；GitHub #25） | CSV 或 JSON：詞彙表只有一欄，純文字用任何編輯器都能改、Excel 另存的 CSV 照樣讀得懂；要記建立時間、來源再說。匯入時讓使用者選「合併／取代」：多一個選擇，選錯會把整份詞彙表洗掉；要取代的人可以先全選刪除（R94.3） |

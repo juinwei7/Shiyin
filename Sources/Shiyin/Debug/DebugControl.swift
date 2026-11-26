@@ -827,6 +827,8 @@ enum DebugControl {
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerms(args[1].replacingOccurrences(of: "\\n", with: "\n"))   // 一次好幾個（R94.1）：「\n」當換行
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
+        case "glossaryexport": model.exportGlossary(to: URL(fileURLWithPath: args[1]))   // 詞彙表匯出、匯入（R117），不開面板
+        case "glossaryimport": model.importGlossary(from: URL(fileURLWithPath: args[1]))
         case "record":
             switch args[1] {
             case "start": model.startRecording()

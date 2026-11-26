@@ -348,6 +348,18 @@ enum GoldenDump {
         let pasted = ["Redis", "Redis、Kubernetes、拾音", "Redis, kubernetes\nKubernetes；SendGrid;  \n\n  拾音 ", "  ", "A，B，a",  // l10n-skip
                       "Claude Code\r\nCodex", "第一行\n第二行、第三行"]  // l10n-skip
         w.json("util/glossary-split.json", pasted.map { ["input": $0, "terms": GlossaryInput.split($0)] as Object })
+        // 詞彙表的檔案（R117、§91）：匯入的分法、匯出的格式、文字編碼
+        let files = ["Redis\nKubernetes\n", "\u{FEFF}拾音\r\nClaude Code\r\n", "\"產品名\",\"客戶名\"\n\"Redis\",\"拾音\"", "甲\t乙\t丙\n丁", "", "  \n\n", "A；B、a，\"b\""]  // l10n-skip
+        let exports: [[String]] = [[], ["Redis"], ["拾音", "Claude Code", "SendGrid"]]  // l10n-skip
+        let big5 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.big5.rawValue)))
+        let encoded: [Data] = [Data("Redis\n拾音\n".utf8), Data([0xEF, 0xBB, 0xBF]) + Data("拾音\n".utf8),  // l10n-skip
+                               Data([0xFF, 0xFE]) + "拾音、詞彙表".data(using: .utf16LittleEndian)!, Data([0xFE, 0xFF]) + "拾音".data(using: .utf16BigEndian)!,  // l10n-skip
+                               "拾音、詞彙表,Redis".data(using: big5)!, Data([0xA4])]  // l10n-skip
+        w.json("util/glossary-file.json", [
+            "parse": files.map { ["input": $0, "terms": GlossaryFile.terms(fromFile: $0)] as Object },
+            "export": exports.map { ["terms": $0, "text": GlossaryFile.export($0)] as Object },
+            "decode": encoded.map { ["base64": $0.base64EncodedString(), "text": GlossaryFile.decode($0).map { $0 as Any } ?? NSNull()] as Object },
+        ] as Object)
         let abc = ["甲", "乙", "丙"], redis = glossaries.count > 1 ? glossaries[1] : [], claude = ["Claude", "Claude Code"]  // l10n-skip
         let echoes: [(String, [String], MeetingLanguage)] = [
             ("甲、乙、丙。", abc, .zh), ("詞彙：甲、乙、丙。", abc, .zh), ("甲。", abc, .zh), ("乙、丙", abc, .zh), ("丙、甲", abc, .zh),  // l10n-skip

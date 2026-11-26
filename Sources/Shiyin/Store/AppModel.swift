@@ -1962,6 +1962,47 @@ final class AppModel {
         }
     }
 
+    /// 詞彙表匯出成文字檔（R117.1、design §91）：只有自己的詞，順序同畫面
+    func exportGlossary(to url: URL) {
+        let terms = glossary.map(\.term)
+        do {
+            try GlossaryFile.export(terms).write(to: url, atomically: true, encoding: .utf8)
+            noticeMessage = String(localized: "已匯出 \(terms.count) 個詞彙")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 從文字檔匯入詞彙（R117.2、R117.3）：一律合併，已經有的跳過，不刪原本的
+    func importGlossary(from url: URL) {
+        let data: Data
+        do {
+            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+            guard size <= GlossaryFile.maxBytes else {
+                errorMessage = String(localized: "檔案太大：詞彙表的文字檔通常只有幾 KB")
+                return
+            }
+            data = try Data(contentsOf: url)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        guard let text = GlossaryFile.decode(data) else {
+            errorMessage = String(localized: "讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入")
+            return
+        }
+        let terms = GlossaryFile.terms(fromFile: text)
+        guard !terms.isEmpty else {
+            errorMessage = String(localized: "檔案裡沒有詞彙")
+            return
+        }
+        var added = 0
+        perform { added = try db.addTerms(terms) }
+        noticeMessage = added == 0 ? String(localized: "檔案裡的 \(terms.count) 個詞彙都已經在詞彙表裡了")
+            : added == terms.count ? String(localized: "已從檔案加入 \(added) 個詞彙")
+            : String(localized: "已從檔案加入 \(added) 個詞彙，\(terms.count - added) 個已經有了")
+    }
+
     func deleteTerms(_ ids: [Int64]) { perform { try db.deleteTerms(ids) } }
 
     func saveTemplate(_ template: TemplateRecord) { perform { try db.saveTemplate(template) } }
