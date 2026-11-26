@@ -9,8 +9,7 @@
 
 ## 詞彙表匯出、匯入（R117，design §91、design-windows §11.50、D199；2026-11-26 GitHub #25，使用者：做）
 
-- [ ] **GI1 Mac**（§91）：驗證：標準答案 `util/glossary-file.json`；DEBUG 版 `glossaryexport`、`glossaryimport`（UTF-8、UTF-16、Big5、CSV、空檔、太大的檔），提示和詞彙表對；設定頁截圖（淺色、深色、英文）；`l10n.py check` 沒有缺的英文
-- [ ] **GI2 Windows**（design-windows §11.50）：驗證：`dotnet test` 標準答案通過；虛擬機控制通道匯出、匯入，設定頁截圖；`l10n.py windows-check`
+- [~] **GI3 真的選檔、存檔**（§91、design-windows §11.50）：程式完成，Mac DEBUG 和 Windows 虛擬機用控制通道匯出、匯入驗過（UTF-8、UTF-16、Big5 的 CSV、Tab、空檔、太大的檔），兩邊的設定頁截圖看過，Windows 的挑選器打開過（2026-11-26，見 commit 訊息）。還差（要使用者，測試時不能開系統的存檔面板）：Mac 按「匯出…」存一個檔、「從檔案匯入…」選一個 Excel 存的 CSV；Windows 一樣用挑選器各走一次，結果寫在輸入框下面
 
 ## GitHub #13～#17 的使用者回報（R111～R115；2026-11-24 VIA7 開的 issue，2026-11-25 使用者：「先把可以處理的先處理掉」；2026-11-25 跟 5.2.0（Mac、Windows）發布，#13、#15、#16、#17 已回覆並關閉，#14 等回報者說「無法使用」是哪一種）
 
