@@ -97,7 +97,7 @@ export const content = {
       lead: '轉錄和說話者辨識都在本機完成，不需要網路。只有整理會議紀錄、對會議提問時，文字會送到你選的整理工具。',
       local: { h3: '留在你的 Mac', items: ['錄音檔', '轉錄、說話者辨識', '記住的說話者聲音', '所有會議和紀錄'] },
       sent: { h3: '送到你選的整理工具', items: ['逐字稿文字', '你的筆記、詞彙表', '會議標題、日期'] },
-      tools: '整理工具可以選 Claude Code 或 Codex，直接用你已經有的 Claude、ChatGPT 訂閱；也可以用 Anthropic、OpenAI 的 API，或選「不整理」只留逐字稿。',
+      tools: '整理工具可以選 Claude Code 或 Codex，直接用你已經有的 Claude、ChatGPT 訂閱；或選 Antigravity，用你的 Google 帳號；也可以用 Anthropic、OpenAI 的 API，或選「不整理」只留逐字稿。',
       // 匿名使用統計（design §30.8、R40.4）：Mac 首頁和 Windows 頁的隱私區塊都顯示
       usage: '另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 一般可以關掉。',
       // 企業伺服器（R52.1、design §36）：Mac 首頁和 Windows 頁的隱私區塊都顯示
@@ -367,7 +367,7 @@ export const content = {
       lead: 'Transcription and speaker identification run locally and don’t need the internet. Only when the notes are written or you ask a meeting a question is text sent to the summarizer you choose.',
       local: { h3: 'Stays on your Mac', items: ['Recordings', 'Transcription and speaker identification', 'The voices of speakers Shiyin remembers', 'All your meetings and notes'] },
       sent: { h3: 'Sent to the summarizer you choose', items: ['The transcript text', 'Your notes and glossary', 'Meeting title and date'] },
-      tools: 'The summarizer can be Claude Code or Codex, using the Claude or ChatGPT subscription you already have, or the Anthropic or OpenAI API. Or choose “Don’t summarize” and keep just the transcript.',
+      tools: 'The summarizer can be Claude Code or Codex, using the Claude or ChatGPT subscription you already have, Antigravity with your Google account, or the Anthropic or OpenAI API. Or choose “Don’t summarize” and keep just the transcript.',
       usage: 'Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → General.',
       enterprise: 'If your company runs a Shiyin enterprise server and you sign in to it, recordings are sent to your company’s own server for transcription, without passing through any other cloud service, and deleted once transcribed. With the “Company” summarizer, the transcript goes to your company’s server and is summarized by the model your company chose. Voiceprints stay on your computer, and the company’s admin console shows usage only, never meeting content. If you don’t sign in, everything works as described above.',
       enterpriseContact: `To set up a Shiyin enterprise server for your company, email <a href="mailto:${CONTACT}">${CONTACT}</a>.`,
@@ -624,7 +624,7 @@ export const content = {
       lead: '文字起こしと話者の識別は Mac の中で行われ、インターネット接続は不要です。議事録をまとめるときと会議に質問するときだけ、選んだまとめツールにテキストが送られます。',
       local: { h3: 'Mac に残るもの', items: ['録音ファイル', '文字起こし、話者の識別', '覚えた話者の声', 'すべての会議と議事録'] },
       sent: { h3: '選んだまとめツールに送られるもの', items: ['文字起こしのテキスト', '自分のメモ、用語集', '会議のタイトル、日付'] },
-      tools: 'まとめツールに Claude Code か Codex を選べば、お使いの Claude や ChatGPT のサブスクリプションをそのまま使えます。Anthropic や OpenAI の API も使えます。「Don’t summarize」を選べば文字起こしだけを残します。',
+      tools: 'まとめツールに Claude Code か Codex を選べば、お使いの Claude や ChatGPT のサブスクリプションをそのまま使えます。Antigravity なら Google アカウントで使えます。Anthropic や OpenAI の API も使えます。「Don’t summarize」を選べば文字起こしだけを残します。',
       usage: 'また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → General でオフにできます。',
       enterprise: '会社が拾音のエンタープライズサーバーを用意していてサインインした場合は、録音は会社自身のサーバーに送られて文字起こしされ（ほかのクラウドサービスは経由しません）、終わると削除されます。まとめツールに「Company」を選ぶと、文字起こしは会社のサーバーに送られ、会社が選んだモデルでまとめられます。声紋は PC に残り、会社の管理画面で見られるのは利用量だけで、会議の内容は見られません。サインインしなければ、上に書いたとおりです。',
       enterpriseContact: `会社でエンタープライズサーバーを導入したい場合は、<a href="mailto:${CONTACT}">${CONTACT}</a> までメールでご連絡ください。`,

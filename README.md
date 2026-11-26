@@ -34,7 +34,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - 錄音中在任何 app 按 ⌃⌥⌘B 標記重點，有音效和選單列圖示的回饋
   - 磁碟空間不夠時會提醒；寫不進磁碟時自動停止，已經錄到的部分會保留、照常轉錄
   - app 當掉或電腦突然關機，下次開啟會自動復原錄音
-- **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」
+- **匯入**：音訊和影片（m4a、mp3、wav、aac、flac、caf、aiff、mp4、mov）、逐字稿（srt、vtt、txt）、Markdown 筆記、整場會議封包（.shiyin）。可以拖進視窗、⌘O、拖到 Dock 圖示，或在 Finder 用「打開方式」。一次匯入好幾場時一場一場轉錄，排隊中的會議可以按右鍵選「先轉錄這場」排到下一個
 - **本機轉錄**：whisper.cpp + Breeze ASR 25（聯發科），詞彙表會當成提示詞；設定裡可以改選 llama.cpp + Qwen3-ASR 1.7B（阿里巴巴開源，多人會議漏字少，輸出轉成台灣繁體，全程本機）；日文、韓文會議用 Whisper large-v3-turbo（第一次轉錄時才下載）；廣東話會議一律用 Qwen3-ASR，照粵語口語轉成繁體（第一次轉錄時才下載）。也可以改用 macOS 內建辨識（不用下載模型、速度快很多，但不參考詞彙表）。模型還沒下載好時，先用 macOS 內建辨識轉錄，下載好之後可以一鍵重新轉錄。長錄音分段轉錄，4 小時的會議也不會吃掉太多記憶體
 - **會議語言**：每場會議可以選中文、英文、日文、廣東話或韓文，轉錄、會議紀錄、匯出的標題都跟著這個語言；日文、韓文會議的內容用各自的字形，PDF、Word 用各自的字型。廣東話的逐字稿照粵語口語寫（係、唔、咗），會議紀錄寫成繁體中文的書面語。韓文是實驗性的：會議紀錄、匯出都是韓文，但提示詞沒有像中文、英文、日文那樣逐字調過。預設語言在設定裡改。每種語言的做法寫在一份語言檔（`Resources/languages.json`），Mac、Windows 共用
 - **自動偵測語言**：開始錄音後聽約 10 秒，判斷是中文、英文、日文還是韓文；跟會議語言不同而且有把握時，自動切換即時逐字稿和會議語言，錄音畫面可以改回來。廣東話會判成中文，兩者之間不會自動切換，廣東話會議要自己選
@@ -48,7 +48,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   - 拾音覺得可能把不同的人當成同一位時（人多、吵雜），逐字稿上方會提醒你重新辨識說話者
 - **會議紀錄**
   - 範本：一般會議、一對一、訪談、課堂／演講、腦力激盪，也可以自訂
-  - 整理工具：Claude Code、Codex CLI、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API（Groq、OpenRouter、本機的 Ollama、LM Studio），或「不整理」只要逐字稿
+  - 整理工具：Claude Code、Codex CLI、Antigravity（agy CLI，用 Google 帳號）、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API（Groq、OpenRouter、本機的 Ollama、LM Studio），或「不整理」只要逐字稿
   - 只裝了 Codex 桌面版（Mac 上新版叫 ChatGPT）也可以：拾音會用它附的 codex。只有 Claude 桌面版時，引導和設定會說明怎麼另外裝 Claude Code，附上可以複製的安裝指令
   - 停止錄音後先用即時逐字稿整理一份草稿（標「草稿」），正式轉錄完成後自動換成正式版
   - 可以直接編輯；每次修改都留版本，可以復原
@@ -65,7 +65,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
   | 錄音 | m4a、wav |
   | 整場會議 | .shiyin 封包（錄音、逐字稿、說話者、紀錄、筆記、重點、參考文件），對方雙擊就能匯入 |
 
-  匯出時也可以直接用 AirDrop、Mail、訊息分享。
+  匯出時也可以直接用 AirDrop、Mail、訊息分享。匯出錄音、整場會議封包時看得到完成的百分比，可以中途取消。
 - **對會議提問**：在會議的「提問」分頁用自然語言問（例如「預算最後決定多少？」），回答附錄音時間點，點了跳過去。工具列的「提問」可以問所有會議、目前的資料夾或最近 30 天，回答附上是哪一場會議
 - **讓 AI 工具讀取會議（MCP）**：設定 → AI 工具打開「讓 AI 工具讀取會議」，一鍵加到 Claude Code、Codex 或 Claude Desktop（其他支援 MCP 的工具可以複製設定）。AI 工具可以列出、搜尋會議，讀會議紀錄、逐字稿和跨會議的待辦，回答附上會議和時間點的連結，點了打開拾音跳過去；可以跟其他工具一起用（把待辦開成工單、寫週報）。只能讀、不能改，拾音不用開著；公司的企業伺服器可以關掉這個功能
 - **管理**：資料夾（依專案或客戶分類，在側欄原地展開；拖曳或右鍵移進去，可以設條件自動歸類）、全文搜尋所有會議、垃圾桶（30 天內可還原）
@@ -90,7 +90,7 @@ macOS 的會議紀錄 app。錄下會議（現場或線上），錄音中就能�
 | 系統 | macOS 26 以上 |
 | 記憶體 | 8 GB 以上。轉錄加說話者辨識的峰值約 2.9 GB，長錄音分段轉錄，會議長短影響不大（4 小時的會議 2.9 GB，M3 Pro 實測） |
 | 磁碟空間 | 模型約 1.7 GB（第一次使用時下載；改用 macOS 內建辨識就不用），日文、韓文會議另外 574 MB、自動偵測語言 60 MB、改選 Qwen3-ASR 或開廣東話會議另外約 2.5 GB，加上錄音：m4a 約每小時 10～30 MB |
-| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`，只裝了 Codex 桌面版也可以）、Anthropic API key、OpenAI API key、Gemini API key，或 OpenAI 相容 API（Groq、OpenRouter 填 key；本機的 Ollama、LM Studio 不用 key）。也可以選「不整理」 |
+| 整理工具 | 擇一：已登入的 [Claude Code](https://claude.com/claude-code)（`claude`）、Codex CLI（`codex`，只裝了 Codex 桌面版也可以）、Antigravity CLI（`agy`）、Anthropic API key、OpenAI API key、Gemini API key，或 OpenAI 相容 API（Groq、OpenRouter 填 key；本機的 Ollama、LM Studio 不用 key）。也可以選「不整理」 |
 | 網路 | 第一次下載模型、整理會議紀錄時需要；錄音、轉錄、說話者辨識都不需要 |
 
 ## 安裝
@@ -242,7 +242,7 @@ app 會檢查新版的簽章是否跟目前的 app 相符。執行過 `make-sign
 
 | 頁面 | 內容 |
 |---|---|
-| 整理工具 | Claude、Codex、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API 或不整理；登入狀態、測試整理工具；API key；OpenAI 相容 API 的網址（有常用服務可選）；模型；轉錄完是否自動整理、是否檢查可能聽錯的字 |
+| 整理工具 | Claude、Codex、Antigravity、Anthropic API、OpenAI API、Gemini API、OpenAI 相容 API 或不整理；登入狀態、測試整理工具；API key；OpenAI 相容 API 的網址（有常用服務可選）；模型；轉錄完是否自動整理、是否檢查可能聽錯的字 |
 | 範本 | 內建和自訂的範本、預設範本 |
 | 錄音 | 錄音來源、麥克風、權限設定；偵測線上會議和不提醒的 app、全域快捷鍵（開始停止錄音、標記重點） |
 | 轉錄 | 正式轉錄引擎（Breeze、Qwen3-ASR 或 macOS 內建）、說話者辨識、即時逐字稿；預設會議語言、中文的字、自動偵測會議語言 |
