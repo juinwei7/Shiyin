@@ -867,6 +867,33 @@ public sealed class ServicesTests : IDisposable
     ExportBundle Bundle(Meeting m) => new(m, db.Segments(m.Id!.Value), db.Speakers(m.Id!.Value).ToDictionary(s => s.Idx, s => s.Name),
         db.Bookmarks(m.Id!.Value), m.DecodedNotes) { FolderName = db.FolderName(m.FolderId) };
 
+    /// <summary>封包的進度（R120）：一路往前、最後是 1；中途取消時丟 OperationCanceledException、不留下檔案</summary>
+    [Fact]
+    public void PackageProgressAndCancel()
+    {
+        var original = SampleMeeting();
+        WriteWav(paths.AudioPath(original), 2, 60);   // 約 3.8 MB：錄音分好幾段放進 zip
+        var file = Path.Combine(home.Path, "進度.shiyin");
+        var values = new List<double>();
+        MeetingPackage.Export(Bundle(original), file, paths, "3.6.0", new Reporter(values.Add));
+        Assert.True(values.Count >= 4);
+        Assert.True(values.Zip(values.Skip(1)).All(p => p.Second >= p.First));
+        Assert.Equal(1, values[^1]);
+        Assert.True(File.Exists(file));
+
+        var cancelled = Path.Combine(home.Path, "取消.shiyin");
+        using var cancel = new CancellationTokenSource();
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            MeetingPackage.Export(Bundle(original), cancelled, paths, "3.6.0", new Reporter(v => { if (v > 0.3) cancel.Cancel(); }), cancel.Token));
+        Assert.False(File.Exists(cancelled));
+        Assert.False(File.Exists(cancelled + ".tmp"));
+    }
+
+    sealed class Reporter(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
+    }
+
     [Fact]
     public void PackageRoundTrip()
     {

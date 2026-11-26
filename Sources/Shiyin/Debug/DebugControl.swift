@@ -3,6 +3,7 @@ import FluidAudio
 import AVFoundation
 import CoreAudio
 import AppKit
+import os
 import SwiftUI
 import UserNotifications
 
@@ -14,6 +15,8 @@ enum DebugControl {
     static let separator: Character = "\u{1F}"
     /// quit 指令：結束時不跳確認對話框，直接當成按了「結束」
     static var confirmQuit = false
+    /// DEBUG 的 export 指令進行中的匯出（exportcancel 取消，design §94）
+    static var debugExport: Task<Void, Never>?
 
     static func install() {
         DistributedNotificationCenter.default().addObserver(forName: notificationName, object: nil, queue: .main) { note in
@@ -894,14 +897,25 @@ enum DebugControl {
             let item = ExportItem(rawValue: args[1]) ?? .notes
             let url = URL(fileURLWithPath: args[3])
             let meetingId = args.count > 6 ? Int64(args[6]) : model.selection
-            Task {
+            // 收到的每一次進度寫進 <路徑>.progress.json（R120、design §94）；exportcancel 取消進行中的這一個
+            let values = OSAllocatedUnfairLock(initialState: [Double]())
+            debugExport = Task {
+                var result = "ok"
                 do {
                     guard let meetingId else { throw AppModel.ExportError.meetingGone }
                     try await model.export(item, format: args[2], times: args.count <= 4 || args[4] == "1",
-                                           speakers: args.count <= 5 || args[5] == "1", meetingId: meetingId, to: url)
+                                           speakers: args.count <= 5 || args[5] == "1", meetingId: meetingId, to: url,
+                                           progress: { p in values.withLock { $0.append(p) } })
+                } catch is CancellationError {
+                    result = "cancelled"
+                } catch {
+                    result = "error"
+                    try? "ERROR \(error.localizedDescription)".write(to: url.appendingPathExtension("error"), atomically: true, encoding: .utf8)
                 }
-                catch { try? "ERROR \(error.localizedDescription)".write(to: url.appendingPathExtension("error"), atomically: true, encoding: .utf8) }
+                write(["result": result, "values": values.withLock { $0 }, "exists": FileManager.default.fileExists(atPath: url.path)],
+                      to: url.path + ".progress.json")
             }
+        case "exportcancel": debugExport?.cancel()
         case "import":   // import [lang=ja] [minSpeakers=6] <檔案>…（minSpeakers：匯入對話框的「大約幾個人」，design §26.2）
             var files = Array(args.dropFirst()), options = ImportOptions()
             while let first = files.first, first.hasPrefix("lang=") || first.hasPrefix("minSpeakers=") {

@@ -254,15 +254,26 @@ public static partial class Dialogs
                 picker.FileTypeChoices.Add(FormatLabel(format), ["." + format]);
                 WinRT.Interop.InitializeWithWindow.Initialize(picker, window.Handle);
                 if (await picker.PickSaveFileAsync() is not { } file) return;
-                window.ShowNotice(L.T("正在匯出…"));
-                await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, file.Path);
-                window.ShowNotice(L.F("已匯出 %@", file.Name));
+                // 匯出的進度、取消（R120、design-windows §11.53）：側欄下方常駐一條，做完換成「已匯出 …」
+                using var cancel = new CancellationTokenSource();
+                var progress = window.StartExport(file.Name, cancel);
+                try
+                {
+                    await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, file.Path, cancel.Token, progress: progress);
+                    window.ShowNotice(L.F("已匯出 %@", file.Name));
+                }
+                catch (OperationCanceledException) { }   // 取消了：不是錯誤
+                finally { window.EndExport(); }
             }
             else
             {
                 var dir = host.Paths.MakeTempDirectory();
                 var path = Path.Combine(dir, filename);
-                await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, path);
+                using var cancel = new CancellationTokenSource();
+                var progress = window.StartExport(filename, cancel);
+                try { await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, path, cancel.Token, progress: progress); }
+                catch (OperationCanceledException) { return; }
+                finally { window.EndExport(); }
                 await Share.File(window, path, bundle.Meeting.DisplayTitle);
             }
         }

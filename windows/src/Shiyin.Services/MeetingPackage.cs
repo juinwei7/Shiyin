@@ -19,7 +19,12 @@ public static class MeetingPackage
         public static PackageException TooNew(int version) => new(L.F("這個封包是新版拾音匯出的（格式 %lld），請先更新拾音再匯入", version));
     }
 
-    public static void Export(ExportBundle b, string destination, ShiyinPaths paths, string appVersion)
+    /// <summary>
+    /// progress：完成的比例（R120、design-windows §11.53）：錄音一段一段放進 zip（每 1 MB），照寫了多少位元組回報；
+    /// 取消時停下來、刪掉寫到一半的檔案（丟 OperationCanceledException）
+    /// </summary>
+    public static void Export(ExportBundle b, string destination, ShiyinPaths paths, string appVersion,
+        IProgress<double>? progress = null, CancellationToken cancel = default)
     {
         var m = b.Meeting;
         string? audioName = paths.HasAudio(m) ? "audio." + Importer.Extension(m.AudioFile) : null;
@@ -35,8 +40,10 @@ public static class MeetingPackage
                     b.Speakers.Select(s => (s.Key, s.Value)).ToList(), b.Bookmarks.Select(x => (x.Time, x.Label)).ToList())));
                 Add(zip, "transcript.json", PackageJson.Write(b.Segments.Select(s =>
                     new PackageJson.SegmentInfo(s.Start, s.End, s.Text, s.LowConfidence, s.Speaker))));
-                // 錄音已經壓縮過，不再壓
-                if (audioName is not null) zip.CreateEntryFromFile(paths.AudioPath(m), audioName, CompressionLevel.NoCompression);
+                // 錄音已經壓縮過，不再壓；自己一段一段複製，才回報得了進度、取消得了
+                progress?.Report(0.05);
+                if (audioName is not null) CopyIntoZip(zip, paths.AudioPath(m), audioName, progress, cancel);
+                cancel.ThrowIfCancellationRequested();
                 // 參考文件（M§39.5）：原始檔不在了的那份不放（不然匯入時會被當成壞掉的封包）
                 var documents = b.Documents.Where(d => File.Exists(paths.DocumentPath(d))).ToList();
                 if (documents.Count > 0)
@@ -47,11 +54,32 @@ public static class MeetingPackage
                     Add(zip, "documents.json", PackageJson.Write(entries));
                 }
             }
+            cancel.ThrowIfCancellationRequested();
             File.Move(temp, destination, overwrite: true);
+            progress?.Report(1);
         }
         finally
         {
             if (File.Exists(temp)) File.Delete(temp);
+        }
+    }
+
+    /// <summary>錄音放進 zip（不壓縮）：每 1 MB 回報 5～95%、看一次取消</summary>
+    static void CopyIntoZip(ZipArchive zip, string source, string name, IProgress<double>? progress, CancellationToken cancel)
+    {
+        var entry = zip.CreateEntry(name, CompressionLevel.NoCompression);
+        entry.LastWriteTime = File.GetLastWriteTime(source);
+        using var input = File.OpenRead(source);
+        using var output = entry.Open();
+        var buffer = new byte[1 << 20];
+        long done = 0, total = Math.Max(1, input.Length);
+        int n;
+        while ((n = input.Read(buffer)) > 0)
+        {
+            cancel.ThrowIfCancellationRequested();
+            output.Write(buffer, 0, n);
+            done += n;
+            progress?.Report(0.05 + 0.9 * done / total);
         }
     }
 

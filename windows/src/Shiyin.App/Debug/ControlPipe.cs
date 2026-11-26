@@ -19,6 +19,15 @@ public static partial class ControlPipe
 {
     public const string Name = "shiyin-debug";
 
+    /// <summary>控制通道的 export 進行中的匯出（exportcancel 取消，R120）</summary>
+    static CancellationTokenSource? debugExport;
+
+    /// <summary>直接在回報的執行緒呼叫（Progress&lt;T&gt; 會排到 UI 執行緒，順序、時間不好比）</summary>
+    sealed class SyncProgress(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
+    }
+
     public static void Start(AppHost host, App app)
     {
         var thread = new Thread(() => Loop(host, app)) { IsBackground = true, Name = "debug-control" };
@@ -392,16 +401,34 @@ public static partial class ControlPipe
             {
                 var path = args[3];
                 var exportId = args.Length > 6 && long.TryParse(args[6], out var given) ? given : main?.State.Selection;
+                // 收到的每一次進度寫進 <路徑>.progress.json（R120，同 Mac）；exportcancel 取消進行中的這一個
+                var values = new List<double>();
+                debugExport = new CancellationTokenSource();
+                var token = debugExport.Token;
                 _ = ExportAsync();
                 async Task ExportAsync()
                 {
+                    var result = "ok";
                     try
                     {
                         if (exportId is not long id) throw new InvalidOperationException("no meeting selected");  // l10n-skip
-                        await host.Controller.Export(item, args[2], args.Length <= 4 || args[4] == "1", args.Length <= 5 || args[5] == "1", id, path);
+                        await host.Controller.Export(item, args[2], args.Length <= 4 || args[4] == "1", args.Length <= 5 || args[5] == "1", id, path,
+                            token, progress: new SyncProgress(v => { lock (values) values.Add(v); }));
                     }
-                    catch (Exception e) { File.WriteAllText(path + ".error", $"ERROR {e.Message}"); }
+                    catch (OperationCanceledException) { result = "cancelled"; }
+                    catch (Exception e) { result = "error"; File.WriteAllText(path + ".error", $"ERROR {e.Message}"); }
+                    double[] seen;
+                    lock (values) seen = [.. values];
+                    File.WriteAllText(path + ".progress.json", new JsonObject
+                    {
+                        ["result"] = result, ["values"] = new JsonArray([.. seen.Select(v => (JsonNode)v)]), ["exists"] = File.Exists(path),
+                    }.ToJsonString());
                 }
+                return Ok;
+            }
+            case "exportcancel":
+            {
+                debugExport?.Cancel();
                 return Ok;
             }
             // metrics [reset]：UI 執行緒最長卡住多久（同 Mac 的 metrics，M§21.12）；加 reset 讀完歸零

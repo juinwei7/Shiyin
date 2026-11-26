@@ -1841,9 +1841,50 @@ public sealed class MainWindow : Window
         return items;
     }
 
+    // MARK: 匯出的進度、取消（R120、design-windows §11.53）
+
+    (string Name, CancellationTokenSource Cancel, TextBlock Text, ProgressBar Bar, double? Value, DateTime Updated)? exporting;
+
+    /// <summary>開始匯出：側欄下方常駐「正在匯出 … 45%」、進度條、「取消」；回傳給匯出用的回報（在背景呼叫也可以）</summary>
+    public IProgress<double> StartExport(string name, CancellationTokenSource cancel)
+    {
+        exporting = (name, cancel, Ui.Text(L.F("正在匯出 %@…", name), 12, color: Ui.Secondary, maxLines: 1),
+            new ProgressBar { Maximum = 1, IsIndeterminate = true }, null, DateTime.MinValue);
+        BuildFooter();
+        return new ExportReporter(this);
+    }
+
+    public void EndExport()
+    {
+        exporting = null;
+        BuildFooter();
+    }
+
+    /// <summary>百分比變了 1% 以上、或離上次超過 0.2 秒才更新畫面；只往前</summary>
+    void ReportExport(double value)
+    {
+        if (exporting is not { } e) return;
+        var v = Math.Min(1, Math.Max(e.Value ?? 0, value));
+        if (e.Value is double old && v - old < 0.01 && (DateTime.UtcNow - e.Updated).TotalSeconds < 0.2) return;
+        exporting = e with { Value = v, Updated = DateTime.UtcNow };
+        e.Bar.IsIndeterminate = false;
+        e.Bar.Value = v;
+        e.Text.Text = L.F("正在匯出 %@… %lld%%", e.Name, (long)Math.Floor(v * 100));
+    }
+
+    sealed class ExportReporter(MainWindow window) : IProgress<double>
+    {
+        public void Report(double value) => window.host.Post(() => window.ReportExport(value));
+    }
+
     void BuildFooter()
     {
         footer.Children.Clear();
+        if (exporting is { } export)
+        {
+            var cancel = Ui.Link(L.T("取消"), () => export.Cancel.Cancel());
+            footer.Children.Add(Ui.Column(2, Ui.Row(8, export.Text, cancel), export.Bar));
+        }
         if (host.Controller.ImportingCount > 0)
             footer.Children.Add(Ui.Row(8, new ProgressRing { Width = 16, Height = 16, IsActive = true },
                 Ui.Text(L.F("正在匯入 %lld 個檔案…", host.Controller.ImportingCount), 13, color: Ui.Secondary)));

@@ -63,7 +63,9 @@ enum MeetingPackage {
         }
     }
 
-    static func export(_ b: ExportBundle, to url: URL) throws {
+    /// progress：完成的比例（R120、design §94）：複製錄音 0～10%，壓縮時照寫出來的大小估 10～99%；
+    /// 在 Task 裡跑時每一步看取消，壓縮中取消就停掉 ditto、刪掉寫到一半的檔案
+    static func export(_ b: ExportBundle, to url: URL, progress: ((Double) -> Void)? = nil) throws {
         let dir = try Paths.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let m = b.meeting
@@ -97,7 +99,13 @@ enum MeetingPackage {
             try encoder.encode(entries).write(to: dir.appendingPathComponent("documents.json"))
         }
         try? FileManager.default.removeItem(at: url)
-        try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path])
+        try Task.checkCancellation()
+        progress?(0.1)
+        let total = folderSize(dir)
+        try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path], watching: url) { written in
+            progress?(0.1 + 0.89 * min(1, Double(written) / Double(max(1, total))))
+        }
+        progress?(1)
     }
 
     /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）。封包帶的是名字（R118），找同名的、沒有就建一個。在背景執行（design §21.13）
@@ -188,14 +196,33 @@ enum MeetingPackage {
         return meeting
     }
 
-    private static func ditto(_ arguments: [String]) throws {
+    /// watching：每 0.2 秒回報這個檔案寫了多大（匯出封包的進度）；在 Task 裡跑時取消就停掉 ditto、刪掉這個檔案
+    private static func ditto(_ arguments: [String], watching output: URL? = nil, written: ((Int64) -> Void)? = nil) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
         process.arguments = arguments
         process.standardError = FileHandle.nullDevice
         try process.run()
+        if let output {
+            while process.isRunning {
+                if Task.isCancelled {
+                    process.terminate()
+                    process.waitUntilExit()
+                    try? FileManager.default.removeItem(at: output)
+                    throw CancellationError()
+                }
+                written?(Int64((try? output.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0))
+                Thread.sleep(forTimeInterval: 0.2)
+            }
+        }
         process.waitUntilExit()
         guard process.terminationStatus == 0 else { throw PackageError.invalid(String(localized: "壓縮檔讀寫失敗")) }
+    }
+
+    /// 資料夾裡所有檔案的大小（封包的進度用）
+    private static func folderSize(_ dir: URL) -> Int64 {
+        let files = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: [.fileSizeKey])?.allObjects as? [URL] ?? []
+        return files.reduce(0) { $0 + Int64((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
     }
 }
 
