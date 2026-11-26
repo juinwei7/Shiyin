@@ -240,6 +240,12 @@ final class Recorder {
     }
 
     #if DEBUG
+    /// 只在 DEBUG：直接塞假的即時文字，壓力測試即時逐字稿的捲動（design §25）。final 是定稿的一行，volatile 是還沒定稿的字
+    func injectLive(final text: String?, volatile: String) {
+        if let text { liveLines.append(LiveLine(start: elapsed, end: elapsed, text: text)) }
+        volatileText = volatile
+    }
+
     /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）
     func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, systemSilent: Bool = false, language: MeetingLanguage) {
         guard !isRecording else { return }

@@ -595,6 +595,37 @@ enum DebugControl {
                     scroll.reflectScrolledClipView(scroll.contentView)
                 }
             }
+        case "livestress":   // livestress <秒> <每秒幾行>：錄音中一直塞長短不一（4～300 字）的假即時文字、偶爾一次好幾行，未定稿的字每秒變 20 次，偶爾往上捲再回到底部（design §25）
+            let seconds = Double(args[1]) ?? 60, perSecond = max(Double(args.count > 2 ? args[2] : "") ?? 3, 0.5)
+            let recorder = model.recorder
+            Task { @MainActor in
+                let words = Array("今天的會議先確認上週的進度然後討論下一季的預算分配和人力安排還有新產品的上市時間表")
+                func sentence() -> String {
+                    let length = Bool.random() ? Int.random(in: 4...30) : Int.random(in: 30...300)
+                    return String((0..<length).map { _ in words.randomElement()! })
+                }
+                let start = Date()
+                var nextLine = Date(), nextScroll = Date().addingTimeInterval(7), volatile = ""
+                while Date().timeIntervalSince(start) < seconds && recorder.isRecording {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    if Date() >= nextLine {
+                        for _ in 0..<(Int.random(in: 0..<6) == 0 ? Int.random(in: 2...5) : 1) {
+                            recorder.injectLive(final: volatile + sentence(), volatile: "")
+                        }
+                        volatile = ""
+                        nextLine = Date().addingTimeInterval(1 / perSecond)
+                    } else {
+                        volatile += String((0..<Int.random(in: 1...8)).map { _ in words.randomElement()! })
+                        recorder.injectLive(final: nil, volatile: volatile)
+                    }
+                    if Date() >= nextScroll {   // 往上捲一點，2 秒後回到底部（同「回到最新」前使用者自己捲回去）
+                        Self.handle(["livescroll", String(Double.random(in: 0.3...0.95))])
+                        try? await Task.sleep(for: .seconds(2))
+                        Self.handle(["livescroll", "1"])
+                        nextScroll = Date().addingTimeInterval(Double.random(in: 3...9))
+                    }
+                }
+            }
         case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
             var lines: [String] = []
             func dump(_ element: NSAccessibilityProtocol, depth: Int) {

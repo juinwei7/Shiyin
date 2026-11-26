@@ -7,6 +7,7 @@ struct RecordingPanel: View {
     @Environment(\.textScale) private var scale
     let detail: MeetingDetail
     @State private var followLatest = true
+    @State private var liveFollow = LiveFollow()
     @State private var screenDropTargeted = false
 
     var body: some View {
@@ -305,16 +306,19 @@ struct RecordingPanel: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             // 使用者往回看時不要自動捲動（R2.2）：看捲動的位置。往上捲（內容沒有變短）就不跟了，回到底部再跟。
-            // 不用「底部的標記出現／消失」改狀態：那是在排版途中改，可能讓排版一直重來（design §25）
-            .onScrollGeometryChange(for: LivePosition.self) { geometry in
-                LivePosition(offset: geometry.contentOffset.y, content: geometry.contentSize.height,
-                             bottom: geometry.visibleRect.maxY)
-            } action: { old, new in
-                if new.bottom >= new.content - 40 {
-                    if !followLatest { followLatest = true }
-                } else if new.offset < old.offset - 1 && new.content >= old.content {
-                    if followLatest { followLatest = false }
-                }
+            // 位置每一點變化都在排版途中算，只有「跟不跟」變了才觸發動作，狀態等這一輪排版結束再改：
+            // 每次都觸發、當下改狀態，長逐字稿的排版會一直重來，AppKit 丟例外整個 app 結束（design §25.4）
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                #if DEBUG
+                DebugMetrics.bump("liveScrollTransform")
+                #endif
+                return liveFollow.update(offset: geometry.contentOffset.y, content: geometry.contentSize.height,
+                                         bottom: geometry.visibleRect.maxY)
+            } action: { _, follow in
+                #if DEBUG
+                DebugMetrics.bump("liveScrollAction")
+                #endif
+                DispatchQueue.main.async { if followLatest != follow { followLatest = follow } }
             }
             .onChange(of: recorder.liveLines.count + detail.screens.count) { _, _ in
                 guard followLatest else { return }
@@ -325,6 +329,7 @@ struct RecordingPanel: View {
                 if !followLatest {
                     Button("回到最新", systemImage: "arrow.down") {
                         proxy.scrollTo("bottom", anchor: .bottom)
+                        liveFollow.following = true
                         followLatest = true
                     }
                     .padding(12)
@@ -456,11 +461,22 @@ struct UserNotesDisclosure: View {
     }
 }
 
-/// 即時逐字稿捲動的位置：捲了多少、內容多高、看得到的底部在哪
-struct LivePosition: Equatable {
-    var offset: CGFloat
-    var content: CGFloat
-    var bottom: CGFloat
+/// 即時逐字稿要不要跟著最新（R2.2、design §25）：捲動的位置一變就算一次，記著上一次的位置；
+/// 不是 @Observable，在排版途中改它不會讓畫面重算
+final class LiveFollow {
+    var following = true
+    private var last: (offset: CGFloat, content: CGFloat)?
+
+    /// offset 捲了多少、content 內容多高、bottom 看得到的底部在哪
+    func update(offset: CGFloat, content: CGFloat, bottom: CGFloat) -> Bool {
+        defer { last = (offset, content) }
+        if bottom >= content - 40 {
+            following = true
+        } else if let last, offset < last.offset - 1, content >= last.content {
+            following = false
+        }
+        return following
+    }
 }
 
 /// 錄音的經過時間：在自己的 body 裡讀，整秒變了只重算這一個 Text（design §25）
