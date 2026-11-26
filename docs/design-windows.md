@@ -932,6 +932,13 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **畫面**：設定「詞彙表」新增詞彙的欄位下面一列「從檔案匯入…」「匯出…」（`HyperlinkButton`）；`FileOpenPicker`（.txt、.csv、.tsv）、`FileSavePicker`（預設檔名「拾音詞彙表」、.txt）。沒有詞時「匯出…」停用、工具提示「還沒有詞彙可以匯出」。
 - **驗證**：`dotnet test`（標準答案）；虛擬機用控制通道 `glossaryexport`、`glossaryimport` 走一次，設定頁截圖；挑選器打開看一次（取消）。
 
+### 11.51 資料夾用 id 辨識（R118，M§92、D200）
+
+- **資料**：`MigrationSql.V18` 同 Mac §92.1 那一段 SQL（逐字相同）；`RunMigration` 的 v18 先讀出 `folders` 的名字（`ORDER BY` 同 SQL），跑完回傳名字 → id 的對照（同 v14 的 `MigratedSeries`），`SidebarCollapse` 把 settings.json 的 `folder:<名稱>` 換成 `folderid:<id>`（對照是空的不動）。確認內建的 SQLite 支援 `ALTER TABLE … DROP COLUMN`（3.35 以上）。
+- **資料庫、狀態**：同 Mac §92.2、§92.3（`Meeting.FolderId`、`AppDatabase.Folders()`、`CreateFolder`、`SetFolder`、`RenameFolder`、`DeleteFolder`、`FolderRule.FolderId`、`MainState` 的 `FolderFilter`、`CurrentFolder` 是 `long?`、`FolderName(id)`）。
+- **對外**：封包、MCP、控制通道的參數照舊用名字（§92.4）。
+- **驗證**：`dotnet test`（標準答案 `db/schema.sql`、`db/*.json`、`db/migrate-v18.json`，OrganizeTests 改成 id）；虛擬機：改名、合併、刪除、拖曳、自動加入、匯入封包各走一次，側欄截圖。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

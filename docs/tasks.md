@@ -7,6 +7,11 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 資料夾用 id 辨識（R118，design §92、design-windows §11.51、D200；2026-11-26 使用者：「現在先改成用 id」）
+
+- [ ] **FI1 Mac**（§92）：驗證：§92.5（標準答案、正式資料庫的複本跑 migration、改名合併刪除拖曳自動加入匯入錄音各走一次）
+- [ ] **FI2 Windows**（design-windows §11.51）：驗證：`dotnet test` 標準答案全部通過；虛擬機各走一次
+
 ## 詞彙表匯出、匯入（R117，design §91、design-windows §11.50、D199；2026-11-26 GitHub #25，使用者：做）
 
 - [~] **GI3 真的選檔、存檔**（§91、design-windows §11.50）：程式完成，Mac DEBUG 和 Windows 虛擬機用控制通道匯出、匯入驗過（UTF-8、UTF-16、Big5 的 CSV、Tab、空檔、太大的檔），兩邊的設定頁截圖看過，Windows 的挑選器打開過（2026-11-26，見 commit 訊息）。還差（要使用者，測試時不能開系統的存檔面板）：Mac 按「匯出…」存一個檔、「從檔案匯入…」選一個 Excel 存的 CSV；Windows 一樣用挑選器各走一次，結果寫在輸入框下面

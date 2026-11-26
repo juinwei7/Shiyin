@@ -309,7 +309,7 @@ CREATE VIRTUAL TABLE search USING fts5(meeting_id UNINDEXED, kind UNINDEXED, ref
 - 全文搜尋：側欄上方的搜尋框，結果依會議分組並顯示摘錄。點逐字稿的結果會打開逐字稿並跳到該段；點紀錄的結果會打開紀錄分頁。
 - 垃圾桶：側欄最下面加一個「垃圾桶」。啟動時清掉 `deleted_at` 超過 30 天的會議。
 - 資料夾（R9.2）：
-  - 資料就是 `meetings.folder` 欄位（migration v2 已經有），空字串表示不在任何資料夾。不另外建資料夾表：資料夾在至少有一場會議時才存在，最後一場移走就消失
+  - （v18 起資料夾有自己的 id，會議記 `folder_id`，見 §92；下面是當初的做法）資料就是 `meetings.folder` 欄位（migration v2 已經有），空字串表示不在任何資料夾。不另外建資料夾表：資料夾在至少有一場會議時才存在，最後一場移走就消失
   - 側欄會議列表上方有「資料夾」區塊：「所有會議」和每個資料夾（附場數），點了就只看那個資料夾（`AppModel.folderFilter`）。資料夾的右鍵選單可以改名、刪除（會議移回「不在資料夾」）
   - 會議的右鍵選單和「更多」選單有「移到資料夾」：既有的資料夾、「新資料夾…」、「移出資料夾」
   - 正在看某個資料夾時，新錄的會議和匯入的會議都放進那個資料夾
@@ -2785,7 +2785,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 
 ## 78. 新增空的資料夾（R104，D176）
 
-- 資料（migration v13）：`folders(name TEXT PRIMARY KEY, created_at TEXT NOT NULL)`，建立時把現有會議的資料夾、有自動加入條件的資料夾都放進去。`setFolder`（移進資料夾、新資料夾）同時 `INSERT OR IGNORE` 那個名字；`renameFolder` 改名時跟著改（改成已經有的名字時刪掉舊的那一列），刪除（改成空字串）時刪掉；`createFolder(name)` 只建資料夾。
+- 資料（migration v13；v18 起改成 id，§92）：`folders(name TEXT PRIMARY KEY, created_at TEXT NOT NULL)`，建立時把現有會議的資料夾、有自動加入條件的資料夾都放進去。`setFolder`（移進資料夾、新資料夾）同時 `INSERT OR IGNORE` 那個名字；`renameFolder` 改名時跟著改（改成已經有的名字時刪掉舊的那一列），刪除（改成空字串）時刪掉；`createFolder(name)` 只建資料夾。
 - 側欄的資料夾（`AppModel.folders`）是這張表、會議的 `folder`、`folder_rules` 三者的聯集（舊的路徑寫進會議的資料夾也看得到），沒有會議的是 0 場。
 - 「資料夾」那一段一直顯示；標題（`SidebarSectionHeader`，`besideMenu`：跟「+」併成一個輔助使用元件時，按下去是「+」，收合是有名字的動作）右邊一顆「+」（`SidebarHeaderIcon`：`plus` 15 點 light 細線、次要顏色、26×24 的點擊範圍、滑過變亮加淡底，往左留 6 點跟列的「⋯」對齊；說明「新資料夾」），打開 `RenameSheet(.newFolder([]))`：標題「新資料夾」、說明「例如專案名稱或客戶名稱。」、按鈕「建立」；名字跟已經有的資料夾一樣時說明「已經有「X」。」、「建立」停用。沒有資料夾、定期會議、建議時，段落裡一行次要顏色「按 + 新增資料夾」。
 - 選單列「檔案」的「匯入…」下面「新資料夾…」（⇧⌘N），一樣打開這個彈窗（主視窗關著時先打開）。
@@ -3176,6 +3176,78 @@ Windows 的做法在 design-windows §11.50。
 - DEBUG：`glossaryexport <路徑>`、`glossaryimport <路徑>`（不開面板，直接呼叫上面兩個）。
 - 驗證：標準答案；DEBUG 版暫存的 `SHIYIN_HOME` 先 `addterm` 幾個詞，`glossaryexport` 出來的檔案內容對；刪掉其中一個、再 `glossaryimport` 回來只加回那一個、提示對；UTF-16、Big5、CSV（有雙引號）、空檔、2 MB 的檔各匯入一次；設定頁截圖（淺色、深色、英文，有詞和沒詞）。
 
+## 92. 資料夾用 id 辨識（R118，D200）
+
+以前資料夾就是名字（`meetings.folder` 文字、`folders`、`folder_rules` 的主鍵是名字、側欄的鍵 `folder:<名稱>`），這一節取代 §9 的資料夾資料、§72、§78 裡「名字就是識別」的部分，看得到的行為不變。Windows 的做法在 design-windows §11.51。
+
+### 92.1 資料（migration v18，兩平台同一段 SQL）
+
+```sql
+ALTER TABLE folders RENAME TO folders_old;
+ALTER TABLE folder_rules RENAME TO folder_rules_old;
+CREATE TABLE folders (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+-- id 的順序要兩平台一樣：先資料夾表，再會議用到的、條件的（照建立時間、名字）
+INSERT INTO folders (name, created_at) SELECT name, created_at FROM folders_old ORDER BY created_at, name;
+INSERT OR IGNORE INTO folders (name, created_at)
+  SELECT folder, MIN(created_at) FROM meetings WHERE folder <> '' GROUP BY folder ORDER BY MIN(created_at), folder;
+INSERT OR IGNORE INTO folders (name, created_at) SELECT folder, created_at FROM folder_rules_old ORDER BY created_at, folder;
+CREATE TABLE folder_rules (
+  folder_id   INTEGER PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
+  keywords    TEXT NOT NULL DEFAULT '[]',
+  people      TEXT NOT NULL DEFAULT '[]',
+  template_id TEXT,
+  series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
+  created_at  TEXT NOT NULL
+);
+INSERT INTO folder_rules (folder_id, keywords, people, template_id, series_id, created_at)
+  SELECT f.id, r.keywords, r.people, r.template_id, r.series_id, r.created_at FROM folder_rules_old r JOIN folders f ON f.name = r.folder;
+ALTER TABLE meetings ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL;
+UPDATE meetings SET folder_id = (SELECT id FROM folders WHERE name = meetings.folder) WHERE folder <> '';
+ALTER TABLE meetings DROP COLUMN folder;
+DROP TABLE folders_old;
+DROP TABLE folder_rules_old;
+CREATE INDEX meetings_folder ON meetings(folder_id);
+```
+
+- `meetings.folder` 整欄拿掉（不留不用的欄位，免得又有人照名字寫）。`folder_rules.series_id` 照舊留著不用（§73）。
+- 側欄的狀態（Mac 的 UserDefaults `sidebarExpanded`、`sidebarOrder`；Windows 的 settings.json）：migration 讀出名字 → id 的對照，`folder:<名稱>` 換成 `folderid:<id>`（新的前綴，免得名字剛好是數字時跟 id 混在一起）；對照是空的（新的資料庫、測試用的暫存資料夾）時不動，同 v14 的 `replaceSeriesKeys`。換完重複的留前面的。
+
+### 92.2 資料庫的操作（`AppDatabase`，Windows 同名）
+
+- `folders() -> [Folder]`（`id`、`name`、`createdAt`，依 id）。
+- `createFolder(name) -> Int64`：已經有這個名字就回傳那一個的 id。
+- `setFolder(ids, folderId: Int64?)`：nil 是移出資料夾；同時 `folder_decided = 1`。
+- `renameFolder(id, to name)`：名字是空的不做；沒有同名的就只改 `folders.name`；跟別的資料夾同名時合併：會議的 `folder_id` 換成目標、目標沒有條件就把這個的條件改掛到目標（`UPDATE folder_rules SET folder_id = 目標`），目標有就刪掉這個的，最後刪掉這個資料夾。回傳最後留下的 id。
+- `deleteFolder(id)`：會議 `folder_id = NULL`（`folder_decided` 不動），刪資料夾（條件跟著 `ON DELETE CASCADE`）。
+- 自動加入（§72）：`FolderRule.folderId`；`autoFile` 回傳放進的資料夾 id；多條規則同時符合時照資料夾名稱（`localizedStandardCompare`）挑第一個，同以前。
+- 資料夾建議（§72 的 `FolderSuggestion`）：帶 `folderId`，照名稱排序同以前。
+
+### 92.3 app 的狀態
+
+- 會議：`Meeting.folderId: Int64?`（欄位 `folder_id`）。要顯示名字一律問 `AppModel.folderName(id)`（找不到、nil 是空字串）。
+- `AppModel`：`folderList: [Folder]`（取代 `folderNames`）；`folders: [(folder: Folder, count: Int)]`（資料夾表裡的每一個和場數，依名稱排序，同以前；以前的三者聯集不用了，因為每個資料夾一定在表裡）；`folderFilter: Int64?`；`currentFolder: Int64?`；`importFolderOverride`、`pendingImportFolder`、`editingFolderRule` 都是 `Int64?`；`folderKey(id)` 是 `folderid:<id>`。
+- `reload` 後 `folderFilter` 指到不存在的資料夾時回到所有會議（只看資料夾表）。
+- 改名：只呼叫 `db.renameFolder`；合併時（回傳的 id 不是原本的）篩選換成目標、側欄拿掉原本那個的鍵（目標留原本的位置）。不用再搬鍵。
+- 刪除：`db.deleteFolder`，篩選是它時回到所有會議，拿掉它的鍵。
+
+### 92.4 對外照舊用名字
+
+- .shiyin 封包：匯出時 `folder` 寫名字；匯入時用名字 `createFolder` 拿 id（封包沒帶時放進目前的資料夾）。
+- 本地 MCP：`list_meetings` 的 `folder` 參數用名字比（`JOIN folders`），輸出的 `folder` 是名字。
+- 跨會議提問「目前的資料夾」：用 id 比。
+- DEBUG 指令（`movefolder`、`renamefolder`、`foldernew`、`importinto`、`folderrule`…）照舊收名字，進來就換成 id；`state` 的會議、資料夾照舊輸出名字（另外多 `folderId`）。
+
+### 92.5 驗證
+
+- 標準答案：`db/schema.sql`、`db/*.json` 裡會議、資料夾、條件換成 id。另外加 `db/migrate-v18.json`：
+  - 輸入是 `fixtures.json` 的 `migrateV18`（資料夾表 3 個、名字是數字的「2026」、只出現在會議的、只差大小寫的「專案 a」、只有條件的、垃圾桶裡的會議）。新的資料庫只跑到 v17，照順序寫入：`folders`（name、created_at）、`meetings`（title、folder、deleted_at、created_at，`meeting_date`、`updated_at` 同 created_at，`source_filename`、`audio_file` 是空字串）、`folder_rules`（folder、keywords、people、template_id、created_at），再跑 v18。
+  - 輸出 `{"folders": SELECT id, name, created_at FROM folders ORDER BY id, "folder_rules": SELECT folder_id, keywords, people, template_id, created_at FROM folder_rules ORDER BY folder_id, "meetings": SELECT id, title, folder_id, deleted_at FROM meetings ORDER BY id}`，Windows 逐筆比對。
+- Mac DEBUG：用使用者正式資料庫的複本（`sqlite3 .backup`）跑 migration：每場會議轉換前後的資料夾名字一樣、條件一樣多、側欄展開的資料夾還是展開（測前存 defaults、測後還原）。改名、合併、刪除、移進移出、新資料夾、拖曳、自動加入、匯入封包到資料夾、在資料夾裡錄音（`record-sim`）各走一次，看 state 和側欄截圖。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3323,3 +3395,4 @@ Windows 的做法在 design-windows §11.50。
 | D197 | 即時逐字稿跟不跟最新的判斷放在 `onScrollGeometryChange` 的轉換裡，只有結果變了才觸發動作，狀態等排版結束再改（§25.4、R25.3；GitHub #23） | 只照回報者的建議把改狀態延後：回報的呼叫堆疊是 SwiftUI 跑完動作就要求立刻更新，位置一變還是會觸發，排版可能照樣一直重來。改看捲動階段（`onScrollPhaseChange`）：一般滑鼠的滾輪不確定算不算捲動中，可能往上捲了還被拉回最新。拿掉 `LazyVStack`：長錄音幾千行每次都要全部排版，錄音中的 CPU 會再升高（§25） |
 | D198 | 暫停麥克風時檔案裡那一聲道寫 0，不是不寫（§90、R116；GitHub #21） | 暫停時不寫麥克風那一聲道、只寫電腦聲音：兩聲道的時間會錯開，筆記、重點的時間點、說話者辨識都要另外處理。改成只錄電腦聲音的單聲道檔：一場錄音中途換格式，轉錄、播放、匯出都要改。自動偵測會議軟體的靜音：系統看不出來（R116 的「不做」） |
 | D199 | 詞彙表的檔案用一行一個詞的純文字，匯入一律合併（§91、R117；GitHub #25） | CSV 或 JSON：詞彙表只有一欄，純文字用任何編輯器都能改、Excel 另存的 CSV 照樣讀得懂；要記建立時間、來源再說。匯入時讓使用者選「合併／取代」：多一個選擇，選錯會把整份詞彙表洗掉；要取代的人可以先全選刪除（R94.3） |
+| D200 | 資料夾改用整數 id 辨識，名字只顯示，對外的格式（封包、MCP）照舊用名字（§92、R118） | 繼續用名字：改名要同時改會議、條件、資料夾表、側欄的鍵，漏一處就對不上，也做不了巢狀。路徑當名字（「A/B」）做巢狀：在名字上再疊一層，改上層的名字要改所有子資料夾和會議。保留 `meetings.folder` 欄位不用：之後的人容易照名字寫回去 |
