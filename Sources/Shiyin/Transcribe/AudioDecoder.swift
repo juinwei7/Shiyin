@@ -16,31 +16,46 @@ enum AudioDecoderError: LocalizedError {
 enum AudioDecoder {
     static let sampleRate: Double = 16_000
 
-    static func decode(_ url: URL) async throws -> [Float] {
-        try await read(url, channels: 1)
+    /// progress：讀到第幾秒 ÷ 總長度（匯出的進度，design §94）；有給時每約 10 秒看一次取消
+    static func decode(_ url: URL, progress: ((Double) -> Void)? = nil) async throws -> [Float] {
+        try await read(url, channels: 1, progress: progress)
     }
 
     /// 保留聲道解碼（design §17.3）：雙聲道錄音的麥克風、電腦聲音分開轉錄用。每個聲道一個陣列；單聲道的檔案回傳一個
-    static func decodeChannels(_ url: URL) async throws -> [[Float]] {
+    static func decodeChannels(_ url: URL, progress: ((Double) -> Void)? = nil) async throws -> [[Float]] {
         let asset = AVURLAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw AudioDecoderError.noAudioTrack }
         let formats = try await track.load(.formatDescriptions)
         let count = formats.first.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee.mChannelsPerFrame }
             .map(Int.init) ?? 1
-        guard count > 1 else { return [try await decode(url)] }
-        let interleaved = try await read(url, channels: count)
+        guard count > 1 else { return [try await decode(url, progress: progress)] }
+        let interleaved = try await read(url, channels: count, progress: progress)
         var channels = [[Float]](repeating: [], count: count)
         for c in 0..<count { channels[c].reserveCapacity(interleaved.count / count) }
         for (i, sample) in interleaved.enumerated() { channels[i % count].append(sample) }
         return channels
     }
 
+    /// 解碼成 16 kHz、交錯排列（左右左右…）的 Float32，不拆成各聲道（匯出時直接拿來混音，省一次複製，design §94）
+    static func decodeInterleaved(_ url: URL, channels: Int, progress: ((Double) -> Void)? = nil) async throws -> [Float] {
+        try await read(url, channels: channels, progress: progress)
+    }
+
     /// 解碼成 16 kHz Float32；channels 大於 1 時是交錯排列（左右左右…）
-    private static func read(_ url: URL, channels: Int) async throws -> [Float] {
+    private static func read(_ url: URL, channels: Int, progress: ((Double) -> Void)? = nil) async throws -> [Float] {
         let stream = try await Stream(url, channels: channels)
         var samples: [Float] = []
         samples.reserveCapacity((stream.estimatedCount + 16_000) * channels)
-        try stream.fill(&samples, upTo: .max)
+        guard let progress else {
+            try stream.fill(&samples, upTo: .max)
+            return samples
+        }
+        let chunk = Int(sampleRate) * 10 * channels
+        while !stream.finished {
+            try Task.checkCancellation()
+            try stream.fill(&samples, upTo: samples.count + chunk)
+            progress(min(1, Double(samples.count / channels) / Double(max(1, stream.estimatedCount))))
+        }
         return samples
     }
 
@@ -101,7 +116,8 @@ enum AudioDecoder {
     }
 
     /// 寫成 16 kHz 單聲道 16-bit WAV（匯出 wav、macOS 內建辨識的暫存檔都用這個）
-    static func writeWAV(_ samples: [Float], to url: URL) throws {
+    /// progress：寫了多少 ÷ 全部（匯出的進度，design §94）；有給時每一段看取消，取消時刪掉寫到一半的檔案
+    static func writeWAV(_ samples: [Float], to url: URL, progress: ((Double) -> Void)? = nil) throws {
         let file = try AVAudioFile(forWriting: url, settings: [
             AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: sampleRate, AVNumberOfChannelsKey: 1,
             AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false,
@@ -116,6 +132,14 @@ enum AudioDecoder {
             }
             try file.write(from: buffer)
             index += count
+            if let progress {
+                if Task.isCancelled {
+                    file.close()
+                    try? FileManager.default.removeItem(at: url)
+                    throw CancellationError()
+                }
+                progress(Double(index) / Double(max(1, samples.count)))
+            }
         }
         file.close()
     }

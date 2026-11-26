@@ -2784,6 +2784,40 @@
         }
       }
     },
+    "正在匯出 %@…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting %@…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导出 %@…"
+          }
+        }
+      }
+    },
+    "正在匯出 %@… %lld%%": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting %@… %lld%%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导出 %@… %lld%%"
+          }
+        }
+      }
+    },
     "正在檢查顯示卡。": {
       "extractionState": "manual",
       "localizations": {

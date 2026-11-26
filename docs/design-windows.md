@@ -944,6 +944,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **測試**：`OrganizeTests.MigrationV18MatchesMac`（`db/migrate-v18.json`）、`ReplaceFolderKeysWithIds`、`FolderIdsCreateRenameMergeDelete`（同名、大小寫、合併時條件的兩種情況、垃圾桶裡的會議、刪除）、`MigrationV14TurnsSeriesIntoFolders`（改成從 v13 的結構接著跑 v14～v18）、`FolderRulesInDatabase`、列表、側欄、重新命名的測試改成 id；`AppTests.SidebarKeysFollowFolderRenameAndDelete`（合併拿掉鍵、留下的照舊位置）、`RenameDialogReadsAndCommits`；`ServicesTests.PackageRoundTrip`（封包寫名字、匯入到新的資料庫建出同名資料夾）；標準答案的會議寫入前先 `CreateFolder`（`Golden.WithFolder`，同 Mac 的 GoldenDump）。
 - **驗證**：`dotnet test`（標準答案 `db/schema.sql`、`db/*.json`、`db/migrate-v18.json`、`util/folder-suggest.json`）；虛擬機：舊版的資料開新版（側欄展開、排序的狀態接上）、改名、合併、刪除、拖曳、自動加入、匯入封包各走一次，側欄截圖。
 
+### 11.53 匯出的進度和取消（R120，M§94）
+
+- 進度：`AppController.Export(…, IProgress<double>? progress, CancellationToken cancel)`；`IExportPlatform.Audio` 多一個 progress。
+  - m4a：壓縮讀的是 `Cancellable`（包著重新取樣的音源），每讀一段就用讀到的位置 ÷ 原檔長度回報。
+  - wav：解碼（`DecodeChannels`／`Decode`）沒有中間的進度：開始 2%、解碼完 70%、寫完 100%；每一步之間看取消。
+  - 封包：錄音放進 zip 時自己一段一段複製（`entry.Open()`，每 1 MB），照已經寫的位元組 ÷ 總大小回報，每一段看取消。
+- 取消：已經有 `CancellationToken`；取消時刪掉寫到一半的檔案（`.tmp` 和輸出檔），`OperationCanceledException` 不顯示錯誤。
+- 畫面：存檔、分享時對話框已經關了，側欄下方（同匯入、模型下載、更新下載那一塊，`BuildFooter`）常駐「正在匯出 <檔名>… 45%」、「取消」、進度條（還沒回報前是不定進度）；做完換成「已匯出 …」，取消了什麼都不顯示。
+- 驗證：單元測試（封包的進度一路往前、取消時檔案刪掉）；虛擬機匯出 1 小時的錄音看提示列。
+
 ### 11.54 整理工具：Antigravity（agy CLI）（R121，M§95、D204）
 
 行為同 M§95；以下是 Windows 的做法和不一樣的地方。

@@ -3253,6 +3253,22 @@ CREATE INDEX meetings_folder ON meetings(folder_id);
   - 輸出 `{"folders": SELECT id, name, created_at FROM folders ORDER BY id, "folder_rules": SELECT folder_id, keywords, people, template_id, created_at FROM folder_rules ORDER BY folder_id, "meetings": SELECT id, title, folder_id, deleted_at FROM meetings ORDER BY id}`，Windows 逐筆比對。
 - Mac DEBUG：用使用者正式資料庫的複本（`sqlite3 .backup`）跑 migration：每場會議轉換前後的資料夾名字一樣、條件一樣多、側欄展開的資料夾還是展開（測前存 defaults、測後還原）。改名、合併、刪除、移進移出、新資料夾、拖曳、自動加入、匯入封包到資料夾、在資料夾裡錄音（`record-sim`）各走一次，看 state 和側欄截圖。
 
+## 94. 匯出的進度和取消（R120）
+
+Windows 的做法在 design-windows §11.53。
+
+- 進度：`AppModel.export(…, progress: (Double) -> Void)`，0～1；只有錄音、封包會回報，其他項目不回報（畫面照舊轉圈）。百分比變了 1% 以上、或離上次超過 0.2 秒才更新畫面。
+  - m4a：`AVAssetExportSession.states(updateInterval: 0.2)` 的 `.exporting(progress)`，跟 `export(to:as:)` 同時跑。
+  - wav：`AudioDecoder.Stream` 一次讀約 10 秒、照 `estimatedCount` 算；寫檔（`writeWAV`）每 10 秒一段回報、看取消：解碼 0～70%、寫檔 70～100%。原本解碼、寫檔都是一次做完，沒有中間的進度、取消也要等寫完，所以拆成一段一段。
+  - 封包：複製錄音到暫存資料夾算 0～10%；`ditto` 壓縮時每 0.2 秒看寫出來的檔案多大 ÷（錄音＋參考文件的大小），算 10～99%（錄音已經壓過，壓縮檔跟原檔差不多大）；完成 100%。
+  - 錄音同格式直接複製時不回報（很快）。
+- 取消：匯出在一個 `Task` 裡跑，取消就 `cancel()`。
+  - `AVAssetExportSession.export` 本身會跟著取消；解碼的迴圈、`ditto` 的等待每一輪看 `Task.isCancelled`，`ditto` 用 `terminate()` 停掉。
+  - 丟 `CancellationError`；`AppModel.export` 收到時刪掉寫到一半的輸出檔再往外丟，`ExportSheet` 收到時什麼都不顯示（不是錯誤）。
+- 畫面（`ExportSheet`）：匯出中原本的轉圈換成「正在匯出… 45%」加一條進度條（不回報百分比的項目是不定進度、不寫百分比），旁邊一個「取消」；按了停下來、留在對話框裡可以重來。原本的「取消」（關掉對話框）在匯出中也是取消匯出、再關掉。
+- DEBUG：`export` 指令多寫一個 `<輸出>.progress.json`（收到的每一次進度），`exportcancel` 取消進行中的匯出。
+- 驗證：1.5 小時的錄音匯出 m4a、wav、封包，`progress.json` 一路往前、最後是 1；匯出中 `exportcancel`，輸出檔不在、沒有錯誤訊息。
+
 ## 95. 整理工具：Antigravity（agy CLI）（R121，D204）
 
 Antigravity CLI（`agy`）是 Google 的代理式命令列工具，用使用者的 Google 帳號登入。接法同 claude、codex（§8.4、§19.1），多一層「不讓它動手」和「不留紀錄」。以下行為都是 agy 1.5.18（2026-11-27）實測的；`--settings`、對話的存放位置不在官網文件裡。Windows 的做法在 design-windows §11.54。

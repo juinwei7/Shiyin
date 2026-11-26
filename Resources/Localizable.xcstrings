@@ -7368,6 +7368,23 @@
         }
       }
     },
+    "取消匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消导出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel Export"
+          }
+        }
+      }
+    },
     "取消合併": {
       "extractionState": "manual",
       "localizations": {
@@ -16917,6 +16934,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在导出…"
+          }
+        }
+      }
+    },
+    "正在匯出… %lld%%": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导出… %lld%%"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting… %lld%%"
           }
         }
       }

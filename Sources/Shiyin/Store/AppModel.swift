@@ -2164,7 +2164,24 @@ final class AppModel {
     }
 
     /// 寫出檔案
-    func export(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL) async throws {
+    /// progress：完成的比例（R120、design §94），只有錄音、封包會回報，在背景的執行緒呼叫。
+    /// 取消（Task.cancel）時刪掉寫到一半的檔案，丟 CancellationError
+    func export(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL,
+                progress: (@Sendable (Double) -> Void)? = nil) async throws {
+        do {
+            try await exportItem(item, format: format, times: times, speakers: speakers, meetingId: meetingId, to: url, progress: progress)
+            try Task.checkCancellation()
+        } catch {
+            if error is CancellationError || Task.isCancelled {
+                try? FileManager.default.removeItem(at: url)
+                throw CancellationError()
+            }
+            throw error
+        }
+    }
+
+    private func exportItem(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL,
+                            progress: (@Sendable (Double) -> Void)?) async throws {
         let b = try exportBundle(meetingId: meetingId)
         switch item {
         case .notes:
@@ -2203,9 +2220,11 @@ final class AppModel {
                 }.value
             }
         case .audio:
-            try await AudioExporter.export(b, format: format, to: url)
+            try await AudioExporter.export(b, format: format, to: url, progress: progress)
         case .package:
-            try await Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url) }.value
+            // 在背景的 Task 裡做：外面取消時把取消傳進去（ditto 會被停掉）
+            let work = Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url, progress: progress) }
+            try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
         }
     }
 
