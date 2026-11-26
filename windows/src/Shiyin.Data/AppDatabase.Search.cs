@@ -205,13 +205,16 @@ public sealed partial class AppDatabase
     /// <summary>工作的 payload 換掉（企業伺服器的工作 id，M§36.3）</summary>
     public void SetJobPayload(long jobId, string? payload) => Write(db => db.Execute("UPDATE jobs SET payload = ? WHERE id = ?", payload, jobId));
 
+    /// <summary>這條線排隊中的工作，照拿的順序：priority 大的先，一樣的照 id（M§96.1）</summary>
+    static string QueuedSql(JobLane lane) =>
+        $"SELECT * FROM jobs WHERE status = 'queued' AND kind IN ({string.Join(", ", JobKinds.All.Where(k => k.Lane() == lane).Select(k => $"'{k.Code()}'"))}) ORDER BY priority DESC, id";
+
     /// <summary>取出下一個排隊的工作，改成 running</summary>
     public Job? ClaimNext(JobLane lane)
     {
-        var kinds = string.Join(", ", JobKinds.All.Where(k => k.Lane() == lane).Select(k => $"'{k.Code()}'"));
         return Write(db =>
         {
-            if (db.QueryOne($"SELECT * FROM jobs WHERE status = 'queued' AND kind IN ({kinds}) ORDER BY id LIMIT 1") is not { } r) return null;
+            if (db.QueryOne(QueuedSql(lane) + " LIMIT 1") is not { } r) return null;
             var job = ToJob(r);
             job.Status = JobStatus.Running;
             job.StartedAt = Clock.Now();
@@ -225,17 +228,45 @@ public sealed partial class AppDatabase
         Write(db => db.Execute("UPDATE jobs SET status = ?, error = ?, error_kind = ?, finished_at = ? WHERE id = ?",
             status.Code(), error, errorKind, Clock.Now(), jobId));
 
+    /// <summary>轉錄線排隊中的工作（轉錄、壓縮、重新辨識說話者），照拿的順序（M§96.1）</summary>
+    public List<Job> TranscriptionQueue() => Read(db => db.Query(QueuedSql(JobLane.Transcribe)).Select(ToJob).ToList());
+
+    /// <summary>
+    /// 先轉錄這場（R122、M§96.1）：這幾場會議排隊中的轉錄排到轉錄線最前面，彼此照原本的先後；執行中的不動。
+    /// 回傳挑出的工作 id（新的順序），沒有排隊的轉錄時是空的
+    /// </summary>
+    public List<long> PrioritizeTranscription(IEnumerable<long> meetingIds)
+    {
+        var wanted = meetingIds.ToHashSet();
+        return Write(db =>
+        {
+            var queue = db.Query(QueuedSql(JobLane.Transcribe)).Select(ToJob).ToList();
+            var picked = queue.Where(j => j.Kind == JobKind.Transcribe && wanted.Contains(j.MeetingId)).Select(j => j.Id!.Value).ToList();
+            if (picked.Count == 0) return picked;
+            var top = queue.Max(j => j.Priority);
+            for (var i = 0; i < picked.Count; i++) db.Execute("UPDATE jobs SET priority = ? WHERE id = ?", top + picked.Count - i, picked[i]);
+            return picked;
+        });
+    }
+
+    /// <summary>執行中的工作改回排隊，排在所有排隊中的工作前面：下次打開先跑它（M§96.1、R122.4）</summary>
+    static void Requeue(Db db)
+    {
+        var top = (long)db.Scalar("SELECT COALESCE(MAX(priority), 0) FROM jobs WHERE status = 'queued'")!;
+        db.Execute("UPDATE jobs SET status = 'queued', started_at = NULL, priority = ? WHERE status = 'running'", top + 1);
+    }
+
     /// <summary>啟動時：還是 running 的工作表示上次意外結束（M§20.5、D26）；累計 2 次就標成失敗，不到 2 次改回排隊</summary>
     public void RequeueRunning() => Write(db =>
     {
         db.Execute("UPDATE jobs SET crashes = crashes + 1 WHERE status = 'running'");
         db.Execute("UPDATE jobs SET status = 'failed', error = ?, finished_at = ? WHERE status = 'running' AND crashes >= 2",
             L.T("執行這個工作時拾音意外結束了 2 次，已經停止自動重試。可以按「重試」再試一次。"), Clock.Now());
-        db.Execute("UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'");
+        Requeue(db);
     });
 
     /// <summary>正常結束拾音時：執行中的工作改回排隊，不算意外結束</summary>
-    public void ReleaseRunning() => Write(db => db.Execute("UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'"));
+    public void ReleaseRunning() => Write(db => Requeue(db));
 
     /// <summary>取消這場會議所有排隊中、執行中的工作，回傳原本執行中的工作 id</summary>
     public List<long> CancelJobs(long meetingId) => Write(db =>

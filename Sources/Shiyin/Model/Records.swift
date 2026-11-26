@@ -254,6 +254,8 @@ struct Job: SnakeCaseRecord, Identifiable, Hashable {
     var crashes = 0
     /// 失敗的種類（Error.logSummary，design §21.9）
     var errorKind: String?
+    /// 排隊的順序（migration v19、design §96.1）：大的先拿，一樣的照 id；平常是 0
+    var priority = 0
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }

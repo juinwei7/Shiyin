@@ -770,7 +770,7 @@ CREATE TABLE drafts (meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELE
 
 ### 21.2 工作線（R20.1）
 
-- 工作線從兩條變三條：`transcribe`（轉錄、壓縮）、`llm`（整理、校稿、草稿）、`assist`（逐字稿校正、猜說話者）。`JobKind.lane` 對應，`claimNext` 依線挑工作，`JobRunner` 每條線一個迴圈。
+- 工作線從兩條變三條：`transcribe`（轉錄、壓縮）、`llm`（整理、校稿、草稿）、`assist`（逐字稿校正、猜說話者）。`JobKind.lane` 對應，`claimNext` 依線挑工作（先看 `priority`、再照 `id`，§96），`JobRunner` 每條線一個迴圈。
 - 轉錄完排工作的順序不變（壓縮、校正、整理），但校正和整理在不同線上，會同時開始。整理讀的是 `final` 段落的原文（沿用），還沒接受的校正本來就不會進會議紀錄，所以內容跟以前一樣。
 - 畫面上的「執行中」取同一場會議的工作時，`llm` 線優先（使用者在等的是會議紀錄）。
 
@@ -3310,6 +3310,62 @@ Antigravity CLI（`agy`）是 Google 的代理式命令列工具，用使用者�
 - 統計（§30.4、§34.5）：`summarizer.antigravity`、`errorDetail.summarizeProvider.antigravity`；後台的欄 `summarizer_antigravity`、`summarize_err_antigravity`（`workers/usage/migrate-antigravity.sql`：先跑 migration 再部署 worker，舊版 app 沒有這個鍵就當 0）。
 - DEBUG：`-debugNoCLI YES` 也當成沒有 agy；`state` 的 `tools.agy`；`summarizer` 的 `loggedIn.antigravity`；`loginrefresh` 也查 agy。
 
+## 96. 先轉錄這場（R122，D205）
+
+排隊的轉錄照 `jobs.id` 先進先出（§21.2）；這一節加上「插隊」。Windows 的做法在 design-windows §11.55。
+
+### 96.1 資料（migration v19，兩平台同一段 SQL）
+
+```sql
+ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
+```
+
+- 拿工作的順序：`priority` 大的先，一樣的照 `id`（先排的先）。平常都是 0，跟以前一樣先進先出。三條線都這樣排，只有轉錄線的工作會被調。
+- `AppDatabase`（Windows 同名）：
+  - `claimNext(lane:)`：`ORDER BY priority DESC, id`。
+  - `transcriptionQueue() -> [Job]`：轉錄線（`JobKind.lane == .transcribe`：轉錄、壓縮、重新辨識說話者）排隊中的工作，照拿的順序。
+  - `prioritizeTranscription(_ meetingIds:) -> [Int64]`（一個交易）：
+    1. 從 `transcriptionQueue()` 挑出這幾場會議 `kind = 'transcribe'` 的工作（照目前的順序）；沒有就回傳空的、不改。
+    2. `top` ＝ 轉錄線排隊中的工作的 `MAX(priority)`（沒有是 0）。
+    3. 挑出的第 i 個（從 0 算，共 n 個）`priority` 設成 `top + n - i`：全部比原本排隊的都大，彼此照原本的先後。後按的比先按的大，所以排到更前面（R122.1）。
+    4. 回傳挑出的工作 id（新的順序）。執行中的工作不在排隊裡，不受影響。
+  - `requeueRunning()`、`releaseRunning()`：改回排隊的工作 `priority` 設成「所有排隊中的工作的 `MAX(priority)` + 1」（先讀出來再 UPDATE），下次打開先跑它（R122.4）。以前都是 0、照 id，放回去的那個本來就是最前面；有人插隊之後才看得出差別。意外結束 2 次標成失敗的規則不變（§20.5）。
+- 重試、重新轉錄、匯入、錄完的轉錄都是新的工作（`enqueue`，`priority` 0），排在最後（R122.5）。轉錄完排的壓縮、校正、整理也是 0，照 id，所以先轉完的先整理。移到垃圾桶照舊取消工作（`cancelJobs`），永久刪除時工作跟著會議刪掉。
+- 企業伺服器（§36）：轉錄線一次送一場、等結果才拿下一個，所以排隊的順序就是送出的順序；伺服器自己的隊伍不變（R122.6）。
+- 不加索引：`jobs` 平常只有幾百、幾千筆，排隊中的更少；`jobs_status(status, id)` 已經先篩掉不是排隊中的。
+
+### 96.2 app 的狀態（`AppModel`）
+
+- `transcribeQueue: [Int64]`：`transcriptionQueue()` 裡 `kind = transcribe` 的會議 id（照順序），`reload()` 時跟 `queuedCount` 一起讀（工作開始、結束、排工作都會 reload）。
+- `queuePosition(_ meetingId) -> Int?`：在 `transcribeQueue` 的第幾個（0 是下一個），不在是 nil。只算轉錄，不算壓縮、重新辨識說話者（幾秒到一兩分鐘），也不算正在轉的那場。
+- `prioritizeTargets(_ ids) -> [Int64]`：`ids` 裡在 `transcribeQueue` 的會議；它們剛好就是 `transcribeQueue` 的前 n 個時（按了也不會變）回傳空的。
+- `prioritizeTranscription(_ ids, announce:)`：`targets` 是空的就不做；`db.prioritizeTranscription(targets)`、`reload()`、`runner.wake()`。`announce` 時提示（選單來的才提示；會議頁的按鈕按了，那一條本身就會變）：一場「「%@」排在下一個轉錄」（`displayTitle`），好幾場「這 %lld 場排到最前面，接著轉錄」。
+
+### 96.3 畫面
+
+- 字由 `AppModel.prioritizeTitle(ids) -> String?`（不能做是 nil）決定，選單和多選畫面共用。
+- 會議列表的選單（`meetingMenu(ids)`，右鍵和「⋯」同一份；資料夾展開的會議是 `meetingMenu([id])`）：`prioritizeTargets(ids)` 不是空的時，第一項加上，後面一條分隔線，圖示 `arrow.up.to.line`：
+  - `ids` 只有一場：「先轉錄這場」
+  - 好幾場、都在排隊：「先轉錄這 %lld 場」
+  - 好幾場、只有部分在排隊：「先轉錄其中排隊的 %lld 場」（數字是排隊的場數）
+  - 垃圾桶的選單不變（垃圾桶裡的會議沒有排隊的工作）。
+- 多選畫面（`MultiSelectionView`，「已選取 N 場會議」）：有字時按鈕列最前面加同一個按鈕（`announce: true`），在「移到資料夾」前面。
+- 會議頁上方的狀態列（`.queued`、最近的工作是轉錄）：
+  - 位置 0：「排隊等待轉錄，下一個就輪到這場」，右邊只有「取消」。
+  - 位置 n ≥ 1：「排隊等待轉錄，前面還有 %lld 場在排隊」，右邊「先轉錄這場」「取消」（`prioritizeTranscription([id], announce: false)`）。
+  - 找不到位置（狀態剛好在變）：「排隊等待轉錄」，同以前。
+- 選單列的「排隊中 N 項」不變。
+
+### 96.4 DEBUG
+
+- `shiyinctl prioritize <會議 id>[,<會議 id>…]`：同選單的動作（`announce: true`）。`state` 多 `transcribeQueue`（會議 id，照順序）。
+- 標準答案（`db/` 那一串，接在 `db/31-jobs.json` 後面）：`prioritizeTranscription`（輸出挑出的工作 id）、`transcriptionQueue`（輸出 `{id, kind, meetingId}` 照順序）；三場會議各排一個轉錄、再排一個壓縮，拿走第一個之後插隊一場、再一次選三場（含執行中的那場）、`requeueRunning`、照順序拿完，最後 `dumpTables jobs`。
+
+### 96.5 驗證
+
+- 標準答案兩平台相同（`db/schema.sql`、`db/31*.json`）。
+- Mac DEBUG（暫存的 `SHIYIN_HOME`、Breeze）：一次匯入 4 個幾分鐘長的錄音檔，第一場轉錄中用 `prioritize` 把第 4 場排到前面、再一次選第 2、3 場，看 `state` 的 `transcribeQueue` 和資料庫 `jobs.started_at` 的先後；正在轉的那場進度不中斷。轉錄中結束拾音（`quit`）、再打開：先轉原本那場，再照排好的順序。右鍵選單（`mouseat cgright`＋`capturemenu`）、「⋯」、多選、會議頁的按鈕（`clickq`／AX）各走一次；淺色、深色截圖。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3460,3 +3516,4 @@ Antigravity CLI（`agy`）是 Google 的代理式命令列工具，用使用者�
 | D200 | 資料夾改用整數 id 辨識，名字只顯示，對外的格式（封包、MCP）照舊用名字（§92、R118） | 繼續用名字：改名要同時改會議、條件、資料夾表、側欄的鍵，漏一處就對不上，也做不了巢狀。路徑當名字（「A/B」）做巢狀：在名字上再疊一層，改上層的名字要改所有子資料夾和會議。保留 `meetings.folder` 欄位不用：之後的人容易照名字寫回去 |
 | D201 | Mac 內建辨識的繁體字依詞改正之後，再套語言檔的 `scriptFixes`（粵語的「系」「繫」→「係」、「曬」→「晒」）（§6.2.2、§41.3、R14.8） | 粵語不做依詞改正：zh_HK 的辨識一樣會選錯「麵」「裏」這類字，就沒改到。從要改正的字拿掉「係」：中文的「係列」「聯係」就不改了。另外列一份粵語的例外詞：跟正式轉錄（Qwen3-ASR）的粵語規則分成兩份，要各自維護。代價：粵語即時逐字稿裡真的該寫「系」「曬」、又不在 `keep` 的詞（例如沒列的科系名稱）會被換成「係」「晒」，跟 Qwen3-ASR 的粵語結果一樣（2026-11-26，5.3.0 打開依詞改正後「唔係」變成「唔系」） |
 | D204 | 整理工具接 Antigravity（agy CLI）：每次用 `--settings` 帶只在這次有效的拒絕規則擋掉所有工具，跑完刪掉這次的對話檔（§95、R121） | 換 `HOME` 隔離：登入綁在家目錄，換了就是沒登入。改使用者的 `settings.json` 加拒絕規則：會改到使用者自己在專案裡用 agy 的行為。用 `--mode plan`：只是在提示詞前面加「先規劃」，不擋任何工具。不刪對話：每場會議的逐字稿會一直留在 agy 的歷史裡（claude、codex 都有不留紀錄的參數）。代價：`--settings` 和存放位置都不是官網文件寫的，agy 改版可能要跟著改（拿掉參數會直接失敗、改了位置就刪不到）；使用者 `~/.gemini/` 的規則檔擋不掉 |
+| D205 | 排隊的順序存在 `jobs.priority`（大的先，再照 `id`），插隊時設成比排隊中的都大；被放回排隊的執行中工作也設成最大（§96、R122） | 刪掉再排一個新的工作（拿到比較小的順序）：`id` 只會變大，做不到排到前面；改 `id` 本身：執行中的工作、「改在這台電腦轉錄」都用 `id` 記，還要搬 `crashes`、`payload`（企業伺服器的工作 id）。只在記憶體記插隊：關掉拾音就忘了，使用者要再按一次（R122.4）。另外一張「隊伍」表記完整順序：每次排工作、拿工作都要維護兩邊，壞掉時兩邊對不上；一個欄位就能排。插隊的只排在下一個、不排在執行中的前面（打斷）：已經轉的要整個重來（R122 的「不做」） |

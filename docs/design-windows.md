@@ -960,6 +960,15 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **DEBUG**：`--set debugNoCli=YES` 也當成沒有 agy；`debugOnlyDesktopCli` 時找不到 agy（沒有桌面版附的）；`state` 的 `tools.agy`、`summarizer` 的 `loggedIn.antigravity`；`loginrefresh` 也查 agy。
 - **驗證**：`dotnet test`（`LLMTests.AgySettingsArgumentsAndMessage`、`AgyParsesTheResultLine`、`AgyModelsAreTheSlugs`、`AgyRemovesOnlyThisConversation`、`AgyCliRunsLikeTheMac`（假的 agy 腳本：參數、stdin、工作目錄、刪對話、各種錯誤、模型清單）、`AgyNotInstalled`；`ServicesTests.AntigravityIsACliLikeTheOthers`；`UsageStatsTests`、`SettingsPagesTests`）。要真的 Windows（虛擬機）：官方安裝程式裝的位置、`agy models` 的輸出和沒登入時的訊息、登入（Windows Terminal 開 agy、瀏覽器登入、授權碼貼回）、整理一場、對話檔和 brain 資料夾真的刪掉、`--settings` 的拒絕規則在 Windows 一樣擋得住（要它建檔、執行指令）、設定頁和引導的畫面。
 
+### 11.55 先轉錄這場（R122，M§96、D205）
+
+- **資料**：`MigrationSql.V19` 同 Mac §96.1（`ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0`，逐字相同）；`Job.Priority`。`AppDatabase`：`ClaimNext` 改成 `ORDER BY priority DESC, id`（`QueuedSql(lane)` 共用）、`TranscriptionQueue()`、`PrioritizeTranscription(meetingIds)`、`RequeueRunning`／`ReleaseRunning` 放回排隊的設成「排隊中的 `MAX(priority)` + 1」，規則同 Mac。
+- **Services**：`AppController.TranscribeQueue()`（排隊中 `transcribe` 的會議 id，照順序）、`PrioritizeTargets(queue, ids)`（static，同 Mac 的 `prioritizeTargets`）、`PrioritizeTranscription(ids, announce)`（`Changed(null)`、`Runner.Wake()`；`announce` 時 `Notice` 同 Mac 的兩句）。
+- **App**：`MainState.TranscribeQueue`（`LoadLists` 時讀）、`QueuePosition(id)`。右鍵和「⋯」（`FillRowMenu`，多選時是整組、資料夾展開的會議只那一場）：有目標時第一項「先轉錄這場」／「先轉錄這 N 場」／「先轉錄其中排隊的 N 場」（`Symbol.Up`），後面一條分隔線；字由 `MainWindow.PrioritizeTitle(ids)` 決定，「已選取 N 場會議」的按鈕列（`MultiSelectionPane`）最前面也放同一個按鈕（重建的條件加上這個字）。會議頁狀態列（`StatusBanner`，最近的工作是轉錄時）：位置 0「排隊等待轉錄，下一個就輪到這場」＋「取消」；n ≥ 1「排隊等待轉錄，前面還有 N 場在排隊」＋「先轉錄這場」「取消」；找不到時「排隊等待轉錄」。`StatusKey` 加上位置，排第幾變了才重建那一條。
+- **控制通道**：`prioritize <會議 id>[,…]`（同選單）；state 多 `transcribeQueue`。
+- **測試**：標準答案 `db/schema.sql`、`db/31a`～`31i`（`DatabaseTests` 的 `prioritizeTranscription`、`transcriptionQueue`）；`AppTests.PrioritizeTranscriptionMovesQueuedMeetingsAhead`（目標的判斷、提示、新排的在最後、結束時執行中的放回最前面）。
+- **驗證**：`dotnet test`；虛擬機匯入幾個檔案，用控制通道 `prioritize`、UI Automation 打開右鍵選單和會議頁的按鈕按一次，看 state 的 `transcribeQueue` 和轉錄的先後，重開照舊；淺色、深色截圖。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

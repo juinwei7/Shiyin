@@ -207,6 +207,8 @@ public sealed class Job
     public int Crashes { get; set; }
     /// <summary>失敗的種類，不含內容（M§21.9）</summary>
     public string? ErrorKind { get; set; }
+    /// <summary>排隊的順序（migration v19、M§96.1）：大的先拿，一樣的照 id；平常是 0</summary>
+    public int Priority { get; set; }
 }
 
 public sealed class GlossaryTerm

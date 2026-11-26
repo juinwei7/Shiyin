@@ -1,0 +1,17 @@
+[
+  {
+    "id" : 7,
+    "kind" : "transcribe",
+    "meetingId" : 3
+  },
+  {
+    "id" : 6,
+    "kind" : "transcribe",
+    "meetingId" : 2
+  },
+  {
+    "id" : 8,
+    "kind" : "compress",
+    "meetingId" : 2
+  }
+]

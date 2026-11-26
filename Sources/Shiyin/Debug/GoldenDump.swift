@@ -1162,6 +1162,10 @@ enum GoldenDump {
                 w.json(file!, job.map { ["id": $0.id ?? 0, "kind": $0.kind.rawValue, "meetingId": $0.meetingId] as Object } ?? NSNull())
             case "requeueRunning":
                 try db.requeueRunning()
+            case "prioritizeTranscription":   // 先轉錄這場（design §96.4）：keys 是會議
+                w.json(file!, ["moved": try db.prioritizeTranscription((op["keys"] as? [String] ?? []).map { ids[$0] ?? 0 })])
+            case "transcriptionQueue":
+                w.json(file!, try db.transcriptionQueue().map { ["id": $0.id ?? 0, "kind": $0.kind.rawValue, "meetingId": $0.meetingId] as Object })
             case "cancelJobs":
                 w.json(file!, ["running": try db.cancelJobs(id(op))])
             case "setTrashed":

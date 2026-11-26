@@ -20,6 +20,8 @@ public sealed class MainState
     public List<TemplateRecord> Templates { get; private set; } = [];
     public List<GlossaryTerm> Glossary { get; private set; } = [];
     public List<GlossarySuggestion> GlossarySuggestions { get; private set; } = [];
+    /// <summary>排隊等轉錄的會議 id，照轉錄的順序（M§96.2）</summary>
+    public List<long> TranscribeQueue { get; private set; } = [];
     public long? Selection { get; private set; }
     /// <summary>
     /// 會議列表的多選（R88、M§62）：兩場以上時右邊顯示「已選取 N 場會議」；Selection 照舊是目前這場（會議頁、播放）。
@@ -55,6 +57,8 @@ public sealed class MainState
     public long? SelectedPerson { get; private set; }
     /// <summary>右邊顯示人物頁：選了「人物」，而且不在垃圾桶、沒在搜尋（搜尋的結果是會議）</summary>
     public bool ShowsPeople => Sidebar == SidebarMode.People && !ShowTrash && !SearchActive;
+    /// <summary>這場會議排在轉錄隊伍的第幾個（0 是下一個；不算正在轉的那場）；沒有在排隊等轉錄是 null</summary>
+    public int? QueuePosition(long meetingId) => TranscribeQueue.IndexOf(meetingId) is var i and >= 0 ? i : null;
 
     /// <summary>畫面要重畫（在 UI 執行緒）</summary>
     public event Action? Changed;
@@ -138,6 +142,7 @@ public sealed class MainState
             MeetingPeople = host.Db.MeetingPeople();
             FolderRules = host.Db.FolderRules();
             FolderList = host.Db.Folders();
+            TranscribeQueue = host.Controller.TranscribeQueue();
         }
         catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"reload failed: {e.SqliteErrorCode}"); }
         if (Selection is long id && !Meetings.Any(m => m.Id == id) && !Trash.Any(m => m.Id == id)) Selection = null;

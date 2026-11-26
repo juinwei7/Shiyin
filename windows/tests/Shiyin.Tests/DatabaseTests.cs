@@ -226,6 +226,14 @@ public sealed class DatabaseTests : IDisposable
                     break;
                 }
                 case "requeueRunning": db.RequeueRunning(); break;
+                case "prioritizeTranscription":   // 先轉錄這場（M§96.4）：keys 是會議
+                    Result(op, new JNode.Obj().Add("moved", new JNode.Arr(db.PrioritizeTranscription(op.GetProperty("keys").EnumerateArray()
+                        .Select(k => ids[k.GetString()!])).Select(x => (JNode)new JNode.Int(x)))));
+                    break;
+                case "transcriptionQueue":
+                    Result(op, new JNode.Arr(db.TranscriptionQueue().Select(j => (JNode)new JNode.Obj().Add("id", new JNode.Int(j.Id!.Value))
+                        .Add("kind", j.Kind.Code()).Add("meetingId", new JNode.Int(j.MeetingId)))));
+                    break;
                 case "cancelJobs": Result(op, new JNode.Obj().Add("running", new JNode.Arr(db.CancelJobs(Id(op)).Select(x => (JNode)new JNode.Int(x))))); break;
                 case "setTrashed": db.SetTrashed(Id(op), op.Bool("trashed") ?? false); break;
                 case "rebuildSearchIndex": db.RebuildSearchIndex(); break;

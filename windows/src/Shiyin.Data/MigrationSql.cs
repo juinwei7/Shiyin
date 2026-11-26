@@ -317,4 +317,7 @@ static class MigrationSql
         DROP TABLE folder_rules_old;
         CREATE INDEX meetings_folder ON meetings(folder_id);
         """;
+
+    /// <summary>先轉錄這場（R122、M§96.1、D205）：排隊的順序，大的先、一樣的照 id（同 Mac 的 AppDatabase.jobPrioritySQL）</summary>
+    public const string V19 = "ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0";
 }

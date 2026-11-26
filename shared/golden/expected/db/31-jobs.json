@@ -10,6 +10,7 @@
       "kind" : "transcribe",
       "meeting_id" : 1,
       "payload" : null,
+      "priority" : 1,
       "started_at" : "<time>",
       "status" : "failed"
     },
@@ -23,6 +24,7 @@
       "kind" : "summarize",
       "meeting_id" : 1,
       "payload" : "{\"draft\":true}",
+      "priority" : 1,
       "started_at" : null,
       "status" : "queued"
     },
@@ -36,6 +38,7 @@
       "kind" : "correct",
       "meeting_id" : 2,
       "payload" : null,
+      "priority" : 1,
       "started_at" : null,
       "status" : "cancelled"
     },
@@ -49,6 +52,7 @@
       "kind" : "compress",
       "meeting_id" : 2,
       "payload" : null,
+      "priority" : 0,
       "started_at" : null,
       "status" : "cancelled"
     }

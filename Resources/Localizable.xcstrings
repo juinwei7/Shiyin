@@ -2697,6 +2697,23 @@
         }
       }
     },
+    "「%@」排在下一個轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”排在下一个转录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” will be transcribed next"
+          }
+        }
+      }
+    },
     "「%@」有密碼保護，拾音讀不了。請先移除密碼再加入。": {
       "extractionState": "manual",
       "localizations": {
@@ -4925,6 +4942,81 @@
           "stringUnit": {
             "state": "translated",
             "value": "先把拾音拖进“应用程序”文件夹再打开，AI 工具才找得到它。"
+          }
+        }
+      }
+    },
+    "先轉錄其中排隊的 %lld 場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先转录其中排队的 %lld 场"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Transcribe the %lld Queued Meeting Next"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Transcribe the %lld Queued Meetings Next"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "先轉錄這 %lld 場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先转录这 %lld 场"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Transcribe %lld Meeting Next"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Transcribe %lld Meetings Next"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "先轉錄這場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先转录这场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe Next"
           }
         }
       }
@@ -12991,6 +13083,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "排队等待转录"
+          }
+        }
+      }
+    },
+    "排隊等待轉錄，下一個就輪到這場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排队等待转录，下一个就轮到这场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting to transcribe. This meeting is next."
+          }
+        }
+      }
+    },
+    "排隊等待轉錄，前面還有 %lld 場在排隊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排队等待转录，前面还有 %lld 场在排队"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Waiting to transcribe. %lld meeting is ahead in the queue."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Waiting to transcribe. %lld meetings are ahead in the queue."
+                }
+              }
+            }
           }
         }
       }
@@ -23512,6 +23650,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "逐字稿里琥珀色的段落识别置信度比较低，值得回头听；时间轴上的三角形是待确认题目、圆点是你标的重点；时间轴上面的色块是议题，点了从那个议题开始听。"
+          }
+        }
+      }
+    },
+    "這 %lld 場排到最前面，接著轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这 %lld 场排到最前面，接着转录"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meeting to the front. It will be transcribed next."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld meetings to the front. They will be transcribed next."
+                }
+              }
+            }
           }
         }
       }

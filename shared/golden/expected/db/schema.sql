@@ -74,7 +74,7 @@ CREATE TABLE jobs (
   created_at  TEXT NOT NULL,
   started_at  TEXT,
   finished_at TEXT
-, crashes INTEGER NOT NULL DEFAULT 0, error_kind TEXT);
+, crashes INTEGER NOT NULL DEFAULT 0, error_kind TEXT, priority INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE meeting_edits (
   meeting_id  INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
   snapshot    TEXT NOT NULL,

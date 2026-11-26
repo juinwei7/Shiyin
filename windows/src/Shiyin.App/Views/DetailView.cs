@@ -179,7 +179,7 @@ public sealed class DetailView
         {
             MeetingStatus.Transcribing t => $"transcribing|{t.Stage}|{t.Progress is null}|{running?.Server is not null}|{running?.Server?.Waiting}",
             MeetingStatus.Failed f => $"failed|{f.Kind}|{f.Error}",
-            _ => $"{state.GetType().Name}|{running?.Job.Kind}|{running?.Provider}|{Detail.LatestJob?.Kind}",
+            _ => $"{state.GetType().Name}|{running?.Job.Kind}|{running?.Provider}|{Detail.LatestJob?.Kind}|{window.State.QueuePosition(id)}",
         } + "|" + helpers;
     }
 
@@ -492,8 +492,17 @@ public sealed class DetailView
         var warm = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 0xB9, 0x7F, 0x06));
         switch (state)
         {
+            case MeetingStatus.Queued when Detail.LatestJob?.Kind == JobKind.Transcribe:
+                // 排第幾、先轉錄這場（R122.3、M§96.3）：不算正在轉的那場；已經是下一個時不放按鈕
+                return window.State.QueuePosition(id) switch
+                {
+                    0 => Banner(Ui.Text(L.T("排隊等待轉錄，下一個就輪到這場"), 13), Cancel(), warm),
+                    int ahead => Banner(Ui.Text(L.F("排隊等待轉錄，前面還有 %lld 場在排隊", ahead), 13),
+                        Ui.Row(8, Ui.Button(L.T("先轉錄這場"), () => host.Controller.PrioritizeTranscription([id], announce: false)), Cancel()), warm),
+                    null => Banner(Ui.Text(L.T("排隊等待轉錄"), 13), Cancel(), warm),
+                };
             case MeetingStatus.Queued:
-                return Banner(Ui.Text(Detail.LatestJob?.Kind == JobKind.Transcribe ? L.T("排隊等待轉錄") : L.T("排隊等待整理"), 13), Cancel(), warm);
+                return Banner(Ui.Text(L.T("排隊等待整理"), 13), Cancel(), warm);
             case MeetingStatus.Transcribing when running?.Server is { Waiting: true } waiting:
                 // 在等企業伺服器（連不上、登入失效，R50.5）：不顯示百分比，可以改在這台電腦轉錄
                 statusLiveText = Ui.Text(waiting.Text, 13, maxLines: 2);

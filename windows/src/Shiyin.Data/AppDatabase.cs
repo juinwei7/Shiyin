@@ -172,7 +172,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19"];
 
     /// <summary>
     /// 這次開資料庫時 migration v14 換掉的定期會議（id → 資料夾名稱，D177）；沒跑 v14 時是空的。
@@ -286,6 +286,7 @@ public sealed partial class AppDatabase : IDisposable
                 foreach (var row in db.Query("SELECT id, name FROM folders")) folders[row.Str("name")] = row.Long("id");
                 return new MigrationResult(Folders: folders);
             }
+            case "v19": db.Execute(MigrationSql.V19); break;
         }
         return null;
     }
@@ -332,7 +333,7 @@ public sealed partial class AppDatabase : IDisposable
         Id = r.Long("id"), MeetingId = r.Long("meeting_id"), Kind = JobKinds.Parse(r.Str("kind")) ?? JobKind.Transcribe,
         Status = JobKinds.ParseStatus(r.Str("status")), Payload = r.StrOrNull("payload"), Error = r.StrOrNull("error"),
         CreatedAt = r.Str("created_at"), StartedAt = r.StrOrNull("started_at"), FinishedAt = r.StrOrNull("finished_at"),
-        Crashes = r.Int("crashes"), ErrorKind = r.StrOrNull("error_kind"),
+        Crashes = r.Int("crashes"), ErrorKind = r.StrOrNull("error_kind"), Priority = r.Int("priority"),
     };
 
     internal static TemplateRecord ToTemplate(Row r) => new()

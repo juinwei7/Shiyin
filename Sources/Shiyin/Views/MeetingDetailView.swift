@@ -393,8 +393,13 @@ struct StatusBanner: View {
         let running = model.runner.runningJob(for: detail.meeting.id!)
         switch status {
         case .queued:
-            let kind = detail.latestJob?.kind
-            return AnyView(Label(kind == .transcribe ? "排隊等待轉錄" : "排隊等待整理", systemImage: "clock"))
+            guard detail.latestJob?.kind == .transcribe else { return AnyView(Label("排隊等待整理", systemImage: "clock")) }
+            // 排第幾（R122.3、design §96.3）：不算正在轉的那場
+            switch model.queuePosition(detail.meeting.id!) {
+            case 0?: return AnyView(Label("排隊等待轉錄，下一個就輪到這場", systemImage: "clock"))
+            case let ahead?: return AnyView(Label("排隊等待轉錄，前面還有 \(ahead) 場在排隊", systemImage: "clock"))
+            case nil: return AnyView(Label("排隊等待轉錄", systemImage: "clock"))
+            }
         case .transcribing(_, _) where running?.server?.waiting == true:
             // 在等企業伺服器（連不上、登入失效，R50.5）：不顯示百分比
             return AnyView(Label(running?.server?.text ?? "", systemImage: "clock").lineLimit(2))
@@ -438,6 +443,10 @@ struct StatusBanner: View {
         case .transcribing where model.runner.runningJob(for: detail.meeting.id!)?.server != nil:
             // 企業伺服器在排隊、連不上時，可以改在這台 Mac 轉錄（R50.5）
             Button("改在這台電腦轉錄") { model.runner.transcribeLocally(meetingId: detail.meeting.id!) }
+            Button("取消") { model.cancelJobs() }
+        case .queued where (model.queuePosition(detail.meeting.id!) ?? 0) > 0:
+            // 先轉錄這場（R122.3、design §96.3）：已經是下一個時不放
+            Button("先轉錄這場") { model.prioritizeTranscription([detail.meeting.id!], announce: false) }
             Button("取消") { model.cancelJobs() }
         case .queued, .transcribing, .summarizing: Button("取消") { model.cancelJobs() }
         case .failed(let kind, let message):

@@ -44,6 +44,7 @@ enum DebugControl {
                 if r.expandNotes { model.userNotesExpanded = true }
             }
         case "cancel": model.selection = id; model.cancelJobs()
+        case "prioritize": model.prioritizeTranscription(args[1].split(separator: ",").compactMap { Int64($0) }, announce: true)   // prioritize <會議 id>[,…]：等於選單的「先轉錄這場」（design §96.4）
         case "retry": model.selection = id; model.retry()
         case "retranscribe": model.selection = id; model.retranscribe()
         case "resummarize": model.selection = id; model.resummarize()
@@ -1290,6 +1291,7 @@ enum DebugControl {
                                                "status": model.status($0).label, "audio": $0.meeting.audioFile,
                                                "template": $0.meeting.templateId, "folder": model.folderName($0.meeting.folderId), "folderId": $0.meeting.folderId.map { $0 as Any } ?? NSNull()] },
             "queuedCount": model.queuedCount,
+            "transcribeQueue": model.transcribeQueue,
             "filteredCount": model.filteredMeetings.count,
             "menuBarSymbol": model.menuBarSymbol,
             "micStatus": AVCaptureDevice.authorizationStatus(for: .audio).rawValue,

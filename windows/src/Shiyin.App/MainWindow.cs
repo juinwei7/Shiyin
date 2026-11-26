@@ -567,7 +567,8 @@ public sealed class MainWindow : Window
         if (!State.SearchActive && State.MultiSelected is { Count: > 1 } multi)
         {
             if (ReferenceEquals(detailHost.Child, detailView.Root)) detailView.FlushDrafts();
-            var signature = $"{State.ShowTrash}\u001F{string.Join(',', multi)}";
+            // 「先轉錄這幾場」出不出現、字（M§96.3）變了也重建
+            var signature = $"{State.ShowTrash}\u001F{string.Join(',', multi)}\u001F{PrioritizeTitle(multi)}";
             if (signature != multiSignature || multiPane is null)
             {
                 multiSignature = signature;
@@ -621,6 +622,9 @@ public sealed class MainWindow : Window
             menu.Opening += (_, _) => Ui.Guard(Fill);
             folder.Flyout = menu;
             buttons = Ui.Row(8, folder, Ui.Button(L.T("移到垃圾桶…"), () => _ = ConfirmTrash(ids)));
+            // 先轉錄這幾場（R122.3、M§96.3）：同選單的第一項
+            if (PrioritizeTitle(ids) is { } prioritize)
+                buttons.Children.Insert(0, Ui.Button(prioritize, () => host.Controller.PrioritizeTranscription(ids, announce: true)));
         }
         buttons.HorizontalAlignment = HorizontalAlignment.Center;
         buttons.Margin = new Thickness(0, 8, 0, 0);
@@ -1786,6 +1790,12 @@ public sealed class MainWindow : Window
             menu.Items.Add(MenuLook.Hint(Ui.DangerItem(L.T("永久刪除…"), () => _ = ConfirmPurge(ids)), MenuLook.Delete));
             return;
         }
+        // 先轉錄這場（R122、M§96.3）：有排隊等轉錄、還不在最前面時才有，放第一項
+        if (PrioritizeTitle(ids) is { } prioritize)
+        {
+            menu.Items.Add(Ui.Item(prioritize, () => host.Controller.PrioritizeTranscription(ids, announce: true), icon: Symbol.Up));
+            menu.Items.Add(new MenuFlyoutSeparator());
+        }
         // 一場：重新命名…（重新命名的對話框，R100、R102）
         if (ids.Count == 1)
         {
@@ -1799,6 +1809,15 @@ public sealed class MainWindow : Window
         // 一場直接移（可以還原）；好幾場先確認（M§62）
         menu.Items.Add(MenuLook.Hint(ids.Count == 1 ? Ui.DangerItem(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(ids))
             : Ui.DangerItem(L.F("把 %lld 場會議移到垃圾桶…", ids.Count), () => _ = ConfirmTrash(ids)), MenuLook.Delete));
+    }
+
+    /// <summary>「先轉錄這場」的字（選單、多選畫面的按鈕，同 Mac 的 prioritizeTitle）；不能做（沒有排隊的、已經在最前面）是 null</summary>
+    string? PrioritizeTitle(IReadOnlyList<long> ids)
+    {
+        var targets = AppController.PrioritizeTargets(State.TranscribeQueue, ids);
+        if (targets.Count == 0) return null;
+        if (ids.Count == 1) return L.T("先轉錄這場");
+        return targets.Count == ids.Count ? L.F("先轉錄這 %lld 場", targets.Count) : L.F("先轉錄其中排隊的 %lld 場", targets.Count);
     }
 
     /// <summary>「編輯會議…」、編輯過的會議多「還原成編輯前的樣子…」（右邊「還有 N 天」）：右鍵、「⋯」、會議頁的「更多」共用</summary>

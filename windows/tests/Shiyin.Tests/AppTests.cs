@@ -917,6 +917,43 @@ public sealed class AppTests : IDisposable
     }
 
     [Fact]
+    public void PrioritizeTranscriptionMovesQueuedMeetingsAhead()
+    {
+        // 先轉錄這場（R122、M§96）：執行中的不動；選到的排到最前面、彼此照原本的先後；後按的更前面；已經在最前面時選單不出現
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var notices = new List<string>();
+        controller.Notice += notices.Add;
+        var (a, b, c, d) = (Meet("A"), Meet("B"), Meet("C"), Meet("D"));
+        long Meet(string title) => db.InsertMeeting(new Meeting { Title = title }, null).Id!.Value;
+        foreach (var id in new[] { a, b, c, d }) db.Enqueue(id, JobKind.Transcribe);
+        Assert.Equal(a, db.ClaimNext(JobLane.Transcribe)!.MeetingId);
+        Assert.Equal([b, c, d], controller.TranscribeQueue());
+
+        Assert.Equal([d], AppController.PrioritizeTargets([b, c, d], [d]));
+        Assert.Empty(AppController.PrioritizeTargets([b, c, d], [b]));            // 已經是下一個
+        Assert.Empty(AppController.PrioritizeTargets([b, c, d], [c, b]));         // 已經是最前面兩場
+        Assert.Equal([c, d], AppController.PrioritizeTargets([b, c, d], [a, d, c]));   // 照隊伍的順序，執行中的不算
+        Assert.Empty(AppController.PrioritizeTargets([b, c, d], [a]));
+
+        controller.PrioritizeTranscription([d], announce: true);
+        Assert.Equal([d, b, c], controller.TranscribeQueue());
+        Assert.Equal("「D」排在下一個轉錄", notices[^1]);
+        controller.PrioritizeTranscription([c, b], announce: true);
+        Assert.Equal([b, c, d], controller.TranscribeQueue());
+        Assert.Equal("這 2 場排到最前面，接著轉錄", notices[^1]);
+        controller.PrioritizeTranscription([b], announce: true);              // 已經是下一個：不改、不提示
+        Assert.Equal(2, notices.Count);
+
+        // 新排的（重試、匯入）在最後；結束拾音時執行中的放回最前面，下次先轉它
+        var e = Meet("E");
+        db.Enqueue(e, JobKind.Transcribe);
+        db.ReleaseRunning();
+        Assert.Equal([a, b, c, d, e], controller.TranscribeQueue());
+        Assert.Equal(a, db.ClaimNext(JobLane.Transcribe)!.MeetingId);
+        Assert.Equal(b, db.ClaimNext(JobLane.Transcribe)!.MeetingId);
+    }
+
+    [Fact]
     public void ProblemReportHasNoMeetingContent()
     {
         var id = db.InsertMeeting(new Meeting { Title = "機密的併購會議" }, null).Id!.Value;

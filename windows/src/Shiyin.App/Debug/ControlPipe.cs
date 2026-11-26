@@ -295,6 +295,8 @@ public static partial class ControlPipe
             // showtrash 0|1；confirmemptytrash（打開確認對話框）；emptytrash（不經過確認）
             case "selectmany" when args.Length > 1 && main is not null: main.State.SetListSelection(Ids(args[1])); return Ok;
             case "trashmany" when args.Length > 1: host.Controller.MoveToTrash(Ids(args[1])); return Ok;
+            // prioritize <會議 id>[,…]：等於右鍵選單的「先轉錄這場」（M§96.4）
+            case "prioritize" when args.Length > 1: host.Controller.PrioritizeTranscription(Ids(args[1]), announce: true); return Ok;
             case "restoremany" when args.Length > 1: host.Controller.Restore(Ids(args[1])); return Ok;
             case "purgemany" when args.Length > 1: host.Controller.DeletePermanently(Ids(args[1])); return Ok;
             case "showtrash" when main is not null: main.State.ShowTrashList(args.Length > 1 && args[1] == "1"); return Ok;
@@ -559,6 +561,8 @@ public static partial class ControlPipe
             ["selection"] = main?.State.Selection,
             // 多選、清空垃圾桶、分割會議（M§62、§64）：對話框開著時是要處理的那幾場、那一句
             ["multiSelected"] = new JsonArray([.. (main?.State.MultiSelected ?? []).Select(x => (JsonNode)x)]),
+            // 排隊等轉錄的會議，照轉錄的順序（M§96.4）
+            ["transcribeQueue"] = new JsonArray([.. host.Controller.TranscribeQueue().Select(x => (JsonNode)x)]),
             ["showTrash"] = main?.State.ShowTrash,
             ["trashCount"] = main?.State.Trash.Count,
             ["confirmDelete"] = main?.DeleteTargets.Count > 0,

@@ -11,6 +11,11 @@ extension AppModel {
         }
         guard !ids.isEmpty else { return [] }
         var entries: [MenuEntry] = []
+        // 先轉錄這場（R122、design §96.3）：有排隊等轉錄、還不在最前面時才有，放第一項
+        if let title = prioritizeTitle(ids) {
+            entries.append(.action(title, icon: "arrow.up.to.line") { self.prioritizeTranscription(ids, announce: true) })
+            entries.append(.divider)
+        }
         if ids.count == 1, let id = ids.first {
             entries.append(.action(String(localized: "重新命名…"), icon: "pencil", shortcut: "↩") { self.requestRenameMeeting(id) })
             // 編輯會議（R107.1）；編輯過的會議多一項還原，寫還剩幾天（R107.8）

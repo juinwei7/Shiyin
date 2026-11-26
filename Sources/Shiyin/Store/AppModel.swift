@@ -380,6 +380,8 @@ final class AppModel {
     /// 確認對話框要刪的會議：按下 ⌘⌫ 時就決定，不然確認前選取的會議變了（例如錄音停止後跳到那場）會刪到別場
     var deleteTargets: [Int64] = []
     var queuedCount = 0
+    /// 排隊等轉錄的會議 id，照轉錄的順序（design §96.2）
+    var transcribeQueue: [Int64] = []
     var errorMessage: String?
     var noticeMessage: String?
     /// 目前這場會議的待辦哪些在提醒事項裡：item 鍵 → 完成了沒（design §52.2）
@@ -550,6 +552,8 @@ final class AppModel {
             folderRules = try db.folderRules()
             folderList = try db.folders()
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
+            let queue = try db.transcriptionQueue().filter { $0.kind == .transcribe }.map(\.meetingId)
+            if queue != transcribeQueue { transcribeQueue = queue }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -1246,6 +1250,46 @@ final class AppModel {
     func cancelJobs() {
         guard let id = selection else { return }
         runner.cancel(meetingId: id)
+    }
+
+    // MARK: 先轉錄這場（design §96.2、R122）
+
+    /// 這場會議排在轉錄隊伍的第幾個（0 是下一個；不算正在轉的那場）；沒有在排隊等轉錄是 nil
+    func queuePosition(_ meetingId: Int64) -> Int? { transcribeQueue.firstIndex(of: meetingId) }
+
+    /// 選到的會議裡排隊等轉錄的那幾場；它們已經是隊伍最前面那幾場（按了也不會變）時是空的
+    func prioritizeTargets(_ ids: [Int64]) -> [Int64] {
+        let wanted = Set(ids)
+        let targets = transcribeQueue.filter { wanted.contains($0) }
+        return Set(transcribeQueue.prefix(targets.count)) == Set(targets) ? [] : targets
+    }
+
+    /// 選單、多選畫面的按鈕上的字（design §96.3）；不能做（沒有排隊的、已經在最前面）是 nil
+    func prioritizeTitle(_ ids: [Int64]) -> String? {
+        let targets = prioritizeTargets(ids)
+        if targets.isEmpty { return nil }
+        if ids.count == 1 { return String(localized: "先轉錄這場") }
+        return targets.count == ids.count ? String(localized: "先轉錄這 \(targets.count) 場") : String(localized: "先轉錄其中排隊的 \(targets.count) 場")
+    }
+
+    /// 選到的會議排隊中的轉錄排到最前面：目前正在轉的不中斷，轉完接著轉這幾場。announce：選單來的才提示（會議頁那一條本身會變）
+    func prioritizeTranscription(_ ids: [Int64], announce: Bool) {
+        let targets = prioritizeTargets(ids)
+        guard !targets.isEmpty else { return }
+        do {
+            try db.prioritizeTranscription(targets)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        reload()
+        runner.wake()
+        guard announce else { return }
+        if targets.count == 1, let meeting = meetings.first(where: { $0.id == targets[0] })?.meeting {
+            noticeMessage = String(localized: "「\(meeting.displayTitle)」排在下一個轉錄")
+        } else {
+            noticeMessage = String(localized: "這 \(targets.count) 場排到最前面，接著轉錄")
+        }
     }
 
     func retry() {

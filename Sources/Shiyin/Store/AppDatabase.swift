@@ -395,8 +395,15 @@ final class AppDatabase: @unchecked Sendable {
                 .reduce(into: [String: Int64]()) { $0[$1["name"]] = $1["id"] }
             if sidebarKeys && !ids.isEmpty { Self.replaceFolderKeys(ids) }
         }
+        // 先轉錄這場（design §96.1、R122）：排隊的順序，大的先、一樣的照 id
+        migrator.registerMigration("v19") { db in
+            try db.execute(sql: Self.jobPrioritySQL)
+        }
         return migrator
     }
+
+    /// migration v19 的 SQL（design §96.1；Windows 的 MigrationSql.V19 逐字相同）
+    nonisolated static let jobPrioritySQL = "ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0"
 
     /// migration v18 的 SQL（design §92.1；Windows 的 MigrationSql.V18 逐字相同）
     nonisolated static let folderIdsSQL = """
@@ -1432,17 +1439,50 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
+    /// 這條線排隊中的工作，照拿的順序：priority 大的先，一樣的照 id（design §96.1）
+    private static func queued(_ lane: JobLane) -> QueryInterfaceRequest<Job> {
+        let kinds = JobKind.allCases.filter { $0.lane == lane }.map(\.rawValue)
+        return Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
+            .order(Column("priority").desc, Column("id"))
+    }
+
     /// 取出下一個排隊的工作，改成 running。模型還沒下載好的語言也照樣轉錄（先用 macOS 內建辨識，design §21.17）
     func claimNext(lane: JobLane) throws -> Job? {
-        let kinds = JobKind.allCases.filter { $0.lane == lane }.map(\.rawValue)
-        return try pool.write { db in
-            guard var job = try Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
-                .order(Column("id")).fetchOne(db) else { return nil }
+        try pool.write { db in
+            guard var job = try Self.queued(lane).fetchOne(db) else { return nil }
             job.status = .running
             job.startedAt = Clock.now()
             try job.update(db)
             return job
         }
+    }
+
+    /// 轉錄線排隊中的工作（轉錄、壓縮、重新辨識說話者），照拿的順序（design §96.1）
+    func transcriptionQueue() throws -> [Job] {
+        try pool.read { db in try Self.queued(.transcribe).fetchAll(db) }
+    }
+
+    /// 先轉錄這場（design §96.1、R122）：這幾場會議排隊中的轉錄排到轉錄線最前面，彼此照原本的先後；
+    /// 執行中的不動。回傳挑出的工作 id（新的順序），沒有排隊的轉錄時是空的
+    @discardableResult
+    func prioritizeTranscription(_ meetingIds: [Int64]) throws -> [Int64] {
+        let wanted = Set(meetingIds)
+        return try pool.write { db in
+            let queue = try Self.queued(.transcribe).fetchAll(db)
+            let picked = queue.filter { $0.kind == .transcribe && wanted.contains($0.meetingId) }.compactMap(\.id)
+            guard !picked.isEmpty else { return [] }
+            let top = queue.map(\.priority).max() ?? 0
+            for (i, id) in picked.enumerated() {
+                try db.execute(sql: "UPDATE jobs SET priority = ? WHERE id = ?", arguments: [top + picked.count - i, id])
+            }
+            return picked
+        }
+    }
+
+    /// 執行中的工作改回排隊，排在所有排隊中的工作前面：下次打開先跑它（design §96.1、R122.4）
+    private static func requeue(_ db: Database) throws {
+        let top = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(priority), 0) FROM jobs WHERE status = 'queued'") ?? 0
+        try db.execute(sql: "UPDATE jobs SET status = 'queued', started_at = NULL, priority = ? WHERE status = 'running'", arguments: [top + 1])
     }
 
     /// errorKind：錯誤的種類（Error.logSummary），回報問題時用，不含內容（design §21.9）
@@ -1468,15 +1508,13 @@ final class AppDatabase: @unchecked Sendable {
             try db.execute(sql: "UPDATE jobs SET crashes = crashes + 1 WHERE status = 'running'")
             try db.execute(sql: "UPDATE jobs SET status = 'failed', error = ?, finished_at = ? WHERE status = 'running' AND crashes >= 2",
                            arguments: [String(localized: "執行這個工作時拾音意外結束了 2 次，已經停止自動重試。可以按「重試」再試一次。"), Clock.now()])
-            try db.execute(sql: "UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'")
+            try Self.requeue(db)
         }
     }
 
     /// 正常結束拾音時：執行中的工作改回排隊，下次開啟從頭重跑，不算意外結束（design §20.5）
     func releaseRunning() throws {
-        try pool.write { db in
-            try db.execute(sql: "UPDATE jobs SET status = 'queued', started_at = NULL WHERE status = 'running'")
-        }
+        try pool.write { db in try Self.requeue(db) }
     }
 
     /// 取消這場會議所有排隊中、執行中的工作，回傳原本執行中的工作 id

@@ -668,6 +668,36 @@ public sealed partial class AppController
 
     public void CancelJobs(long id) => Runner.Cancel(id);
 
+    // MARK: 先轉錄這場（R122、M§96.2）
+
+    /// <summary>排隊等轉錄的會議 id，照轉錄的順序（不含正在轉的那場）</summary>
+    public List<long> TranscribeQueue() => Db.TranscriptionQueue().Where(j => j.Kind == JobKind.Transcribe).Select(j => j.MeetingId).ToList();
+
+    /// <summary>選到的會議裡排隊等轉錄的那幾場（照隊伍的順序）；它們已經是隊伍最前面那幾場（按了也不會變）時是空的（同 Mac 的 prioritizeTargets）</summary>
+    public static List<long> PrioritizeTargets(IReadOnlyList<long> queue, IEnumerable<long> ids)
+    {
+        var wanted = ids.ToHashSet();
+        var targets = queue.Where(wanted.Contains).ToList();
+        return queue.Take(targets.Count).ToHashSet().SetEquals(targets) ? [] : targets;
+    }
+
+    /// <summary>
+    /// 選到的會議排隊中的轉錄排到最前面：目前正在轉的不中斷，轉完接著轉這幾場。
+    /// announce：選單來的才提示（會議頁那一條本身會變）
+    /// </summary>
+    public void PrioritizeTranscription(IReadOnlyList<long> ids, bool announce)
+    {
+        var targets = PrioritizeTargets(TranscribeQueue(), ids);
+        if (targets.Count == 0) return;
+        try { Db.PrioritizeTranscription(targets); }
+        catch (Microsoft.Data.Sqlite.SqliteException e) { Error?.Invoke(e.Message); return; }
+        Changed?.Invoke(null);
+        Runner.Wake();
+        if (!announce) return;
+        Notice?.Invoke(targets.Count == 1 && Db.Meeting(targets[0]) is { } meeting
+            ? L.F("「%@」排在下一個轉錄", meeting.DisplayTitle) : L.F("這 %lld 場排到最前面，接著轉錄", targets.Count));
+    }
+
     public void Retry(long id)
     {
         if (Db.LatestJob(id) is not { Status: JobStatus.Failed or JobStatus.Cancelled } job) return;

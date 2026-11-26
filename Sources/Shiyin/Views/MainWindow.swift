@@ -230,6 +230,10 @@ struct MultiSelectionView: View {
                     Button("還原") { model.restore(ids) }
                     Button("永久刪除…", role: .destructive) { model.confirmPurge = ids }
                 } else {
+                    // 先轉錄這幾場（R122.3、design §96.3）：同選單的第一項
+                    if let title = model.prioritizeTitle(ids) {
+                        Button(title) { model.prioritizeTranscription(ids, announce: true) }
+                    }
                     FolderMenu(meetingIds: ids, current: model.commonFolder(ids))
                         .fixedSize()
                     Button("移到垃圾桶…", role: .destructive) {
