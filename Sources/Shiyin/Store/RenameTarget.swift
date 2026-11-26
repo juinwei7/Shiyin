@@ -3,7 +3,7 @@ import Foundation
 /// 重新命名的彈窗要改的東西（R102、design §76）
 enum RenameTarget: Identifiable, Equatable {
     case meeting(Int64)
-    case folder(String)
+    case folder(Int64)
     /// 新資料夾：建立後把這幾場會議移進去
     case newFolder([Int64])
     case person(Int64)
@@ -19,7 +19,7 @@ extension AppModel {
         case .meeting(let id):
             guard let meeting = (meetings + trash).first(where: { $0.id == id })?.meeting ?? (try? db.meeting(id)) else { return "" }
             return meeting.title.isEmpty ? meeting.displayTitle : meeting.title
-        case .folder(let name): return name
+        case .folder(let id): return folderName(id)
         case .newFolder: return ""
         case .person(let id):
             // 人物總覽只在打開過人物列表後才有；沒有時從資料庫讀
@@ -33,8 +33,8 @@ extension AppModel {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return nil }
         switch target {
-        case .folder(let old):
-            return name != old && folders.contains { $0.name == name } ? name : nil
+        case .folder(let id):
+            return folders.contains { $0.name == name && $0.id != id } ? name : nil
         case .newFolder:
             return folders.contains { $0.name == name } ? name : nil
         case .person(let id):
@@ -53,10 +53,10 @@ extension AppModel {
         case .meeting(let id):
             guard let meeting = try? db.meeting(id), name != currentName(for: target) else { return }
             perform { try db.updateInfo(id, title: name, date: meeting.meetingDate, participants: meeting.participants) }
-        case .folder(let old): renameFolder(old, to: name)
+        case .folder(let id): renameFolder(id, to: name)
         case .newFolder(let ids):
             // 「+」建的是空的資料夾（R104），從會議的選單建的會把會議移進去
-            if ids.isEmpty { createFolder(name) } else { moveToFolder(ids, folder: name) }
+            if ids.isEmpty { createFolder(name) } else { moveToNewFolder(ids, name: name) }
         case .person(let id):
             renamePerson(id, to: name)
             // 改成已經有的名字時合併過去，選那個人

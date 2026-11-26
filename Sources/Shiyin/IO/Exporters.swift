@@ -14,6 +14,8 @@ struct ExportBundle {
     var documents: [MeetingDocument] = []
     /// 會議中的畫面（design §83.6）：匯出的會議紀錄最後一節、逐字稿插在時間點、封包
     var screens: [MeetingDocument] = []
+    /// 會議所在資料夾的名字（R118：封包對外照舊寫名字）；不在資料夾是空字串
+    var folderName: String = ""
 
     func speakerName(_ idx: Int?) -> String? { idx.map { speakers[$0] ?? text.speaker($0) } }
 

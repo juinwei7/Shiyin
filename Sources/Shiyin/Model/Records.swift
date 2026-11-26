@@ -37,7 +37,8 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var source: String = "import"        // recording / import / package / transcript
     var channels: String = "mic"         // mic / system / both
     var deletedAt: String?
-    var folder: String = ""
+    // v18（design §92、R118）：在哪個資料夾，nil 是不在資料夾；名字問 AppModel.folderName
+    var folderId: Int64?
     // v3（design §16.3）
     var language: String = "zh"
     // v7（design §21.1）：1 是用即時逐字稿整理的草稿，2 是使用者改過的草稿；轉錄引擎（breeze / japanese / system）
@@ -253,6 +254,16 @@ struct Job: SnakeCaseRecord, Identifiable, Hashable {
     var crashes = 0
     /// 失敗的種類（Error.logSummary，design §21.9）
     var errorKind: String?
+
+    mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
+}
+
+/// 資料夾（migration v18、design §92、R118）：其他地方都記 id，名字只用來顯示
+struct Folder: SnakeCaseRecord, Identifiable, Hashable {
+    static let databaseTableName = "folders"
+    var id: Int64?
+    var name: String
+    var createdAt: String = Clock.now()
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }

@@ -168,8 +168,8 @@ struct MainView: View {
         // 重新命名、新資料夾的彈窗（R102、design §76）
         .sheet(item: Binding(get: { model.renameTarget }, set: { model.renameTarget = $0 })) { RenameSheet(target: $0) }
         // 資料夾的自動加入條件（design §72）
-        .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.name })) {
-            FolderRuleSheet(folder: $0.name)
+        .sheet(item: Binding(get: { model.editingFolderRule.map(EditingFolder.init) }, set: { model.editingFolderRule = $0?.id })) {
+            FolderRuleSheet(folderId: $0.id)
         }
         // 有新版時詢問（R10.6）
         .alert(String(localized: "拾音 \(model.updater.prompt?.version ?? "") 可以更新了"), isPresented: Binding(
@@ -609,30 +609,31 @@ struct FolderMenu: View {
     @Environment(AppModel.self) private var model
     /// nil：目前選取的會議。工具列的選單可能沿用之前建立的，按下時才決定是哪一場，不然會移到上一場會議
     var meetingIds: [Int64]? = nil
-    /// 這幾場現在在的資料夾（空字串是不在資料夾裡）；多選而且在不同資料夾時是 nil
-    var current: String? = nil
+    /// 這幾場現在在的資料夾；nil：工具列的選單（按下時才決定是哪幾場）
+    var current: CommonFolder? = nil
 
     private var targets: [Int64] { meetingIds ?? [model.selection].compactMap { $0 } }
 
     var body: some View {
         Menu("移到資料夾", systemImage: "folder") {
-            if meetingIds == nil || current == nil {
+            if meetingIds == nil || current == nil || current == .mixed {
                 // 工具列的選單內容不會更新，列出全部資料夾和固定的「移出資料夾」，選到原本的資料夾時 AppModel 會說明；
                 // 多選而且在不同資料夾時也是這樣
-                ForEach(model.folders, id: \.name) { item in
-                    Button(item.name) { model.moveToFolder(targets, folder: item.name) }
+                ForEach(model.folders, id: \.id) { item in
+                    Button(item.name) { model.moveToFolder(targets, folderId: item.id) }
                 }
                 if !model.folders.isEmpty { Divider() }
                 Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.renameTarget = .newFolder(targets) } }
-                Button("移出資料夾", systemImage: "minus.circle") { model.moveToFolder(targets, folder: "") }
-            } else if let folder = current {
-                ForEach(model.folders.filter { $0.name != folder }, id: \.name) { item in
-                    Button(item.name) { model.moveToFolder(targets, folder: item.name) }
+                Button("移出資料夾", systemImage: "minus.circle") { model.moveToFolder(targets, folderId: nil) }
+            } else if case .same(let folder) = current {
+                let others = model.folders.filter { $0.id != folder }
+                ForEach(others, id: \.id) { item in
+                    Button(item.name) { model.moveToFolder(targets, folderId: item.id) }
                 }
-                if !model.folders.filter({ $0.name != folder }).isEmpty { Divider() }
+                if !others.isEmpty { Divider() }
                 Button("新資料夾…", systemImage: "folder.badge.plus") { if !targets.isEmpty { model.renameTarget = .newFolder(targets) } }
-                if !folder.isEmpty {
-                    Button("移出「\(folder)」", systemImage: "minus.circle") { model.moveToFolder(targets, folder: "") }
+                if let folder {
+                    Button("移出「\(model.folderName(folder))」", systemImage: "minus.circle") { model.moveToFolder(targets, folderId: nil) }
                 }
             }
         }
@@ -929,6 +930,5 @@ struct ImportSheet: View {
 
 /// 正在編輯條件的資料夾（sheet(item:) 要 Identifiable）
 struct EditingFolder: Identifiable {
-    let name: String
-    var id: String { name }
+    let id: Int64
 }

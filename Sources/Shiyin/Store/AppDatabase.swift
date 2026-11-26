@@ -76,7 +76,10 @@ final class AppDatabase: @unchecked Sendable {
         if !completed { throw ReadOnlyError.needsUpgrade }
     }
 
-    private static var migrator: DatabaseMigrator {
+    private static var migrator: DatabaseMigrator { makeMigrator() }
+
+    /// sidebarKeys：v18 要不要換 UserDefaults 裡側欄的鍵（標準答案在記憶體裡跑 migration 時不能動使用者的設定）
+    static func makeMigrator(sidebarKeys: Bool = true) -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in
             try db.execute(sql: """
@@ -385,7 +388,72 @@ final class AppDatabase: @unchecked Sendable {
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN notes_template TEXT")
             try db.execute(sql: "ALTER TABLE notes_versions ADD COLUMN template_id TEXT")
         }
+        // 資料夾用 id 辨識（R118、design §92.1、D200）：會議、條件記 folder_id，名字只在 folders；兩平台同一段 SQL
+        migrator.registerMigration("v18") { db in
+            try db.execute(sql: Self.folderIdsSQL)
+            let ids = try Row.fetchAll(db, sql: "SELECT id, name FROM folders")
+                .reduce(into: [String: Int64]()) { $0[$1["name"]] = $1["id"] }
+            if sidebarKeys && !ids.isEmpty { Self.replaceFolderKeys(ids) }
+        }
         return migrator
+    }
+
+    /// migration v18 的 SQL（design §92.1；Windows 的 MigrationSql.V18 逐字相同）
+    nonisolated static let folderIdsSQL = """
+        ALTER TABLE folders RENAME TO folders_old;
+        ALTER TABLE folder_rules RENAME TO folder_rules_old;
+        CREATE TABLE folders (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          name       TEXT NOT NULL UNIQUE,
+          created_at TEXT NOT NULL
+        );
+        INSERT INTO folders (name, created_at) SELECT name, created_at FROM folders_old ORDER BY created_at, name;
+        INSERT INTO folders (name, created_at)
+          SELECT folder, MIN(created_at) FROM meetings WHERE folder <> '' AND folder NOT IN (SELECT name FROM folders)
+          GROUP BY folder ORDER BY MIN(created_at), folder;
+        INSERT INTO folders (name, created_at)
+          SELECT folder, created_at FROM folder_rules_old WHERE folder NOT IN (SELECT name FROM folders) ORDER BY created_at, folder;
+        CREATE TABLE folder_rules (
+          folder_id   INTEGER PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
+          keywords    TEXT NOT NULL DEFAULT '[]',
+          people      TEXT NOT NULL DEFAULT '[]',
+          template_id TEXT,
+          series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
+          created_at  TEXT NOT NULL
+        );
+        INSERT INTO folder_rules (folder_id, keywords, people, template_id, series_id, created_at)
+          SELECT f.id, r.keywords, r.people, r.template_id, r.series_id, r.created_at FROM folder_rules_old r JOIN folders f ON f.name = r.folder;
+        ALTER TABLE meetings ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL;
+        UPDATE meetings SET folder_id = (SELECT id FROM folders WHERE name = meetings.folder) WHERE folder <> '';
+        ALTER TABLE meetings DROP COLUMN folder;
+        DROP TABLE folders_old;
+        DROP TABLE folder_rules_old;
+        CREATE INDEX meetings_folder ON meetings(folder_id);
+        """
+
+    /// 側欄展開、排序的鍵（UserDefaults）：folder:<名稱> 換成 folderid:<id>（migration v18、design §92.1）；
+    /// 找不到的名字留著不動（可能是別的 SHIYIN_HOME 的資料夾），換完重複的留前面的
+    nonisolated static func replaceFolderKeys(_ ids: [String: Int64]) {
+        let defaults = UserDefaults.standard
+        for key in [AppSettings.sidebarExpandedKey, AppSettings.sidebarOrderKey] {
+            guard let list = defaults.stringArray(forKey: key), list.contains(where: { $0.hasPrefix("folder:") }) else { continue }
+            var seen = Set<String>()
+            let replaced = list.map { item -> String in
+                guard item.hasPrefix("folder:"), let id = ids[String(item.dropFirst("folder:".count))] else { return item }
+                return "folderid:\(id)"
+            }.filter { seen.insert($0).inserted }
+            defaults.set(replaced, forKey: key)
+        }
+        // 依資料夾分組時每一組的收合（group:folder-<名稱> → group:folder-<id>；不在資料夾的那組 group:folder- → group:folder-none）
+        if let list = defaults.stringArray(forKey: AppSettings.sidebarCollapsedKey), list.contains(where: { $0.hasPrefix("group:folder-") }) {
+            let replaced = list.map { item -> String in
+                guard item.hasPrefix("group:folder-") else { return item }
+                let name = String(item.dropFirst("group:folder-".count))
+                if name.isEmpty { return "group:folder-none" }
+                return ids[name].map { "group:folder-\($0)" } ?? item
+            }
+            defaults.set(Array(Set(replaced)).sorted(), forKey: AppSettings.sidebarCollapsedKey)
+        }
     }
 
     /// 側欄展開、排序的鍵（UserDefaults）：series:<id> 換成 folder:<名稱>（migration v14）；換完跟原本的資料夾重複時留前面的
@@ -482,50 +550,66 @@ final class AppDatabase: @unchecked Sendable {
         }
     }
 
-    /// 資料夾（R9.2）：資料夾就是 meetings.folder 的值，空字串表示不在任何資料夾
-    func setFolder(_ ids: [Int64], folder: String) throws {
+    /// 移進資料夾（R9.2）；folderId 是 nil 時移出資料夾
+    func setFolder(_ ids: [Int64], folderId: Int64?) throws {
         guard !ids.isEmpty else { return }
         try pool.write { db in
             for id in ids {
                 // 自己移進、移出資料夾後不再自動放、不再建議（design §72）
-                try db.execute(sql: "UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", arguments: [folder, Clock.now(), id])
-            }
-            if !folder.isEmpty {
-                try db.execute(sql: "INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", arguments: [folder, Clock.now()])
+                try db.execute(sql: "UPDATE meetings SET folder_id = ?, folder_decided = 1, updated_at = ? WHERE id = ?", arguments: [folderId, Clock.now(), id])
             }
         }
     }
 
-    /// 建一個空的資料夾（R104）
-    func createFolder(_ name: String) throws {
-        try pool.write { db in
-            try db.execute(sql: "INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", arguments: [name, Clock.now()])
+    /// 建一個資料夾（R104）：已經有這個名字就回傳那一個的 id
+    @discardableResult
+    func createFolder(_ name: String) throws -> Int64 {
+        try pool.write { db in try Self.folderId(db, creating: name) }
+    }
+
+    nonisolated static func folderId(_ db: Database, creating name: String) throws -> Int64 {
+        if let id = try Int64.fetchOne(db, sql: "SELECT id FROM folders WHERE name = ?", arguments: [name]) { return id }
+        try db.execute(sql: "INSERT INTO folders (name, created_at) VALUES (?, ?)", arguments: [name, Clock.now()])
+        return db.lastInsertedRowID
+    }
+
+    /// 資料夾的名字（MCP、背景工作用；畫面用 AppModel.folderName）；nil、找不到時 nil
+    func folderName(_ id: Int64?) throws -> String? {
+        guard let id else { return nil }
+        return try pool.read { db in try String.fetchOne(db, sql: "SELECT name FROM folders WHERE id = ?", arguments: [id]) }
+    }
+
+    /// 所有資料夾（會議都移走了也還在，R104）
+    func folders() throws -> [Folder] {
+        try pool.read { db in try Folder.order(Column("id")).fetchAll(db) }
+    }
+
+    /// 重新命名（design §92.2）：跟別的資料夾同名時合併進那一個（會議移過去；那一個沒有條件就帶過去，有就用它的），
+    /// 回傳最後留下的資料夾 id
+    @discardableResult
+    func renameFolder(_ id: Int64, to name: String) throws -> Int64 {
+        guard !name.isEmpty else { return id }
+        return try pool.write { db in
+            guard let target = try Int64.fetchOne(db, sql: "SELECT id FROM folders WHERE name = ? AND id <> ?", arguments: [name, id]) else {
+                try db.execute(sql: "UPDATE folders SET name = ? WHERE id = ?", arguments: [name, id])
+                return id
+            }
+            try db.execute(sql: "UPDATE meetings SET folder_id = ?, updated_at = ? WHERE folder_id = ?", arguments: [target, Clock.now(), id])
+            let targetHasRule = try Bool.fetchOne(db, sql: "SELECT 1 FROM folder_rules WHERE folder_id = ?", arguments: [target]) ?? false
+            if !targetHasRule {
+                try db.execute(sql: "UPDATE folder_rules SET folder_id = ? WHERE folder_id = ?", arguments: [target, id])
+            }
+            // 條件還掛在這個資料夾上的話跟著刪（ON DELETE CASCADE）
+            try db.execute(sql: "DELETE FROM folders WHERE id = ?", arguments: [id])
+            return target
         }
     }
 
-    /// 資料夾表裡的名字（會議都移走了也還在）
-    func folderNames() throws -> [String] {
-        try pool.read { db in try String.fetchAll(db, sql: "SELECT name FROM folders") }
-    }
-
-    /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改
-    /// 改名時條件跟著改名；newName 是空的（刪除資料夾）時條件一起刪（design §72）
-    func renameFolder(_ old: String, to newName: String) throws {
+    /// 刪除資料夾：會議留著、移回「不在資料夾」（垃圾桶裡的也是），條件一起刪
+    func deleteFolder(_ id: Int64) throws {
         try pool.write { db in
-            try db.execute(sql: "UPDATE meetings SET folder = ?, updated_at = ? WHERE folder = ?", arguments: [newName, Clock.now(), old])
-            let targetHasRule = try Bool.fetchOne(db, sql: "SELECT 1 FROM folder_rules WHERE folder = ?", arguments: [newName]) ?? false
-            if newName.isEmpty || targetHasRule {
-                try db.execute(sql: "DELETE FROM folder_rules WHERE folder = ?", arguments: [old])
-            } else {
-                try db.execute(sql: "UPDATE folder_rules SET folder = ? WHERE folder = ?", arguments: [newName, old])
-            }
-            // 資料夾表（R104）：刪除、改成已經有的名字時拿掉舊的，不然改名
-            let targetExists = try Bool.fetchOne(db, sql: "SELECT 1 FROM folders WHERE name = ?", arguments: [newName]) ?? false
-            if newName.isEmpty || targetExists {
-                try db.execute(sql: "DELETE FROM folders WHERE name = ?", arguments: [old])
-            } else {
-                try db.execute(sql: "UPDATE folders SET name = ? WHERE name = ?", arguments: [newName, old])
-            }
+            try db.execute(sql: "UPDATE meetings SET folder_id = NULL, updated_at = ? WHERE folder_id = ?", arguments: [Clock.now(), id])
+            try db.execute(sql: "DELETE FROM folders WHERE id = ?", arguments: [id])
         }
     }
 

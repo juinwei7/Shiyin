@@ -10,7 +10,8 @@ struct ImportOptions {
     var sourceName: String? = nil
     var templateId: String? = nil
     /// 放進哪個資料夾（R9.2）；空字串是不放
-    var folder: String = ""
+    /// 放進哪個資料夾（R118：id），nil 是不放
+    var folderId: Int64?
     /// 會議語言（design §16.3）
     var language: MeetingLanguage = AppSettings.defaultMeetingLanguage
     /// 大約幾個人（design §26.2）：nil 是自動判斷
@@ -93,7 +94,7 @@ enum Importer {
             meetingDate: options.date ?? inferDate(filename: url.lastPathComponent, modified: modificationDate(url)),
             participants: options.participants.trimmingCharacters(in: .whitespacesAndNewlines),
             sourceFilename: options.sourceName ?? url.lastPathComponent,
-            templateId: options.templateId ?? AppSettings.defaultTemplate, source: "import", folder: options.folder,
+            templateId: options.templateId ?? AppSettings.defaultTemplate, source: "import", folderId: options.folderId,
             language: options.language.rawValue)
         draft.minSpeakers = options.minSpeakers
         let meeting = try db.insertMeeting(draft, audioExtension: safeExtension(url))

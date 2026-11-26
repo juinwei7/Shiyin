@@ -37,19 +37,21 @@ extension AppModel {
     /// 「移到資料夾 ›」：別的資料夾、新資料夾、移出
     private func folderMoveEntries(_ ids: [Int64]) -> [MenuEntry] {
         let current = commonFolder(ids)
-        let targets = folders.filter { current == nil || $0.name != current }
-        var entries: [MenuEntry] = targets.map { f in .action(f.name, icon: "folder") { self.moveToFolder(ids, folder: f.name) } }
+        let targets = folders.filter { current != .same($0.id) }
+        var entries: [MenuEntry] = targets.map { f in .action(f.name, icon: "folder") { self.moveToFolder(ids, folderId: f.id) } }
         if !entries.isEmpty { entries.append(.divider) }
         entries.append(.action(String(localized: "新資料夾…"), icon: "folder.badge.plus") { self.renameTarget = .newFolder(ids) })
-        if current == nil {
-            entries.append(.action(String(localized: "移出資料夾"), icon: "minus.circle") { self.moveToFolder(ids, folder: "") })
-        } else if let current, !current.isEmpty {
-            entries.append(.action(String(localized: "移出「\(current)」"), icon: "minus.circle") { self.moveToFolder(ids, folder: "") })
+        switch current {
+        case .mixed:
+            entries.append(.action(String(localized: "移出資料夾"), icon: "minus.circle") { self.moveToFolder(ids, folderId: nil) })
+        case .same(let id?):
+            entries.append(.action(String(localized: "移出「\(folderName(id))」"), icon: "minus.circle") { self.moveToFolder(ids, folderId: nil) })
+        case .same(nil): break
         }
         return entries
     }
 
-    func folderMenu(_ folder: String) -> [MenuEntry] {
+    func folderMenu(_ folder: Int64) -> [MenuEntry] {
         [.action(String(localized: "重新命名…"), icon: "pencil") { self.renameTarget = .folder(folder) },
          .action(folderRule(folder) == nil ? String(localized: "自動加入的條件…") : String(localized: "編輯自動加入的條件…"), icon: "gearshape") {
              self.editingFolderRule = folder

@@ -163,7 +163,7 @@ extension AppModel {
     }
 
     /// 用每個關鍵詞搜尋，依命中數、日期挑最多 8 場會議；每場帶摘要、決議和命中的段落（前後各一段），總長 40,000 字以內
-    func askBlocks(keywords: [String], scope: AskScope, folder: String?) -> [AskPrompt.MeetingBlock] {
+    func askBlocks(keywords: [String], scope: AskScope, folder: Int64?) -> [AskPrompt.MeetingBlock] {
         var hits: [Int64: [SearchHit]] = [:]
         for keyword in keywords {
             for hit in (try? db.search(keyword, limit: 300)) ?? [] { hits[hit.meetingId, default: []].append(hit) }
@@ -173,7 +173,7 @@ extension AppModel {
             guard let meeting = try? db.meeting(id), meeting.deletedAt == nil else { return nil }
             switch scope {
             case .all: break
-            case .folder: guard let folder, meeting.folder == folder else { return nil }
+            case .folder: guard let folder, meeting.folderId == folder else { return nil }
             case .recent: guard meeting.meetingDate >= cutoff else { return nil }
             }
             return (meeting, list)

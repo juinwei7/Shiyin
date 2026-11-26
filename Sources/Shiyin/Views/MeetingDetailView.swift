@@ -105,8 +105,8 @@ struct MeetingHeader: View {
 
     private func infoRow(_ meeting: Meeting) -> some View {
         HStack(spacing: 16) {
-            if !meeting.folder.isEmpty {
-                Label(meeting.folder, systemImage: "folder").help("這場會議所在的資料夾")
+            if meeting.folderId != nil {
+                Label(model.folderName(meeting.folderId), systemImage: "folder").help("這場會議所在的資料夾")
             }
             Text("\(meeting.meetingDate) \(DateText.weekday(meeting.meetingDate))")
             if meeting.durationSeconds != nil { Text(TimeFormat.duration(meeting.durationSeconds)) }

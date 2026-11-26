@@ -4,8 +4,8 @@ import Foundation
 extension AppModel {
     var activeConfirmation: ConfirmRequest? {
         if let folder = confirmDeleteFolder {
-            let count = meetings.filter { $0.meeting.folder == folder }.count
-            return ConfirmRequest(id: "folder:" + folder, title: String(localized: "刪除資料夾「\(folder)」？"),
+            let count = meetings.filter { $0.meeting.folderId == folder }.count
+            return ConfirmRequest(id: "folder:\(folder)", title: String(localized: "刪除資料夾「\(folderName(folder))」？"),
                                   message: count > 0 ? String(localized: "裡面的 \(count) 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。")
                                                      : String(localized: "自動加入的條件也會刪掉。"),
                                   confirmTitle: String(localized: "刪除資料夾")) { self.deleteFolder(folder) }

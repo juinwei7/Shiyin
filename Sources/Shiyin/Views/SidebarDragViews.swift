@@ -125,6 +125,7 @@ struct SidebarFolderRows: View {
         let people = model.sidebarMode == .people
         ForEach(model.sidebarFolderItems) { item in
             let name = item.name
+            let folderId = item.folderId
             let key = item.key
             let expanded = model.isRowExpanded(key)
             let toggle = { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) } }
@@ -132,17 +133,17 @@ struct SidebarFolderRows: View {
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.moveSidebarItem(dragged, to: key, before: before) }
             }
             // 有自動加入條件的資料夾加齒輪標記，滑過去看條件（design §72）
-            let rule = model.folderRule(name)
+            let rule = model.folderRule(folderId)
             FolderRow(name: name, count: item.count, symbol: "folder",
-                      selected: !people && model.folderFilter == name,
+                      selected: !people && model.folderFilter == folderId,
                       folder: .init(expanded: expanded, badge: rule == nil ? nil : "gearshape.fill"),
                       dragKey: key,
-                      drop: SidebarRowDrop(meetings: { model.moveToFolder($0, folder: name) }, item: reorder,
-                                           files: { model.importDropped($0, into: name) }),
-                      menu: { model.folderMenu(name) }, action: toggle)
+                      drop: SidebarRowDrop(meetings: { model.moveToFolder($0, folderId: folderId) }, item: reorder,
+                                           files: { model.importDropped($0, into: folderId) }),
+                      menu: { model.folderMenu(folderId) }, action: toggle)
             .help(rule.map { model.folderRuleSummary($0) } ?? "")
             if expanded {
-                SidebarPeek(rows: model.peekRows(folder: name)) { model.showFolder(name) }
+                SidebarPeek(rows: model.peekRows(folderId: folderId)) { model.showFolder(folderId) }
             }
         }
     }

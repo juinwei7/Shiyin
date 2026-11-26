@@ -4,7 +4,8 @@ import GRDB
 /// 資料夾的自動加入條件（R98、design §72）：任一個條件符合就放進去
 struct FolderRule: SnakeCaseRecord, Hashable {
     static let databaseTableName = "folder_rules"
-    var folder: String
+    /// 哪個資料夾的條件（migration v18、design §92）
+    var folderId: Int64
     var keywords: [String] = []
     /// 人物 id：選的人都有參加才算
     var people: [Int64] = []
@@ -19,6 +20,13 @@ struct FolderRule: SnakeCaseRecord, Hashable {
         if let id = self.templateId, id == templateId { return true }
         return false
     }
+}
+
+/// 選取的會議所在的資料夾（「移到資料夾」選單打勾、「移出」用）
+enum CommonFolder: Equatable {
+    /// 都在同一個資料夾；nil 是都不在資料夾
+    case same(Int64?)
+    case mixed
 }
 
 /// 會議像不像（資料夾的建議用，R98.3、design §72）：同一群人、核心人物、標題的共同詞
@@ -101,6 +109,8 @@ struct FolderSuggestion: Hashable {
         /// 標題都有這個詞
         case title(String)
     }
+    var folderId: Int64
+    /// 資料夾的名字（顯示、排序用）
     var folder: String
     var reason: Reason
     var count: Int
@@ -109,6 +119,8 @@ struct FolderSuggestion: Hashable {
 enum FolderSuggester {
     struct Input: Hashable {
         var id: Int64
+        var folderId: Int64?
+        /// 資料夾的名字：好幾個資料夾都像時照名字挑（同以前）
         var folder: String
         var title: String
         var people: Set<Int64>
@@ -119,15 +131,16 @@ enum FolderSuggester {
 
     static func best(for meeting: Input, among others: [Input]) -> FolderSuggestion? {
         var best: FolderSuggestion?
-        let byFolder = Dictionary(grouping: others.filter { !$0.folder.isEmpty && $0.id != meeting.id }, by: \.folder)
-        for folder in byFolder.keys.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending }) {
-            let members = byFolder[folder]!
+        let byFolder = Dictionary(grouping: others.filter { $0.folderId != nil && $0.id != meeting.id }, by: { $0.folderId! })
+        for folderId in byFolder.keys.sorted(by: { byFolder[$0]![0].folder.localizedStandardCompare(byFolder[$1]![0].folder) == .orderedAscending }) {
+            let members = byFolder[folderId]!
+            let folder = members[0].folder
             guard members.count >= 2 else { continue }
             var options: [FolderSuggestion] = []
             let samePeople = members.filter { MeetingSimilarity.samePeople(meeting.people, $0.people) }
             if samePeople.count >= 2 {
                 let core = MeetingSimilarity.core(samePeople.map(\.people)).intersection(meeting.people)
-                options.append(FolderSuggestion(folder: folder, reason: .people(core.sorted()), count: samePeople.count))
+                options.append(FolderSuggestion(folderId: folderId, folder: folder, reason: .people(core.sorted()), count: samePeople.count))
             }
             var words: [String: Int] = [:]
             for member in members {
@@ -137,7 +150,7 @@ enum FolderSuggester {
             }
             // 場數最多的詞；一樣多時照字串排序取第一個
             if let (word, count) = words.sorted(by: { ($1.value, $0.key) < ($0.value, $1.key) }).first, count >= 2 {
-                options.append(FolderSuggestion(folder: folder, reason: .title(word), count: count))
+                options.append(FolderSuggestion(folderId: folderId, folder: folder, reason: .title(word), count: count))
             }
             // 同一個資料夾：人的比較準，場數一樣時用人
             for option in options where best == nil || option.count > best!.count {
@@ -152,14 +165,14 @@ enum FolderSuggester {
 
 extension AppDatabase {
     func folderRules() throws -> [FolderRule] {
-        try pool.read { db in try FolderRule.order(Column("folder")).fetchAll(db) }
+        try pool.read { db in try FolderRule.order(Column("folder_id")).fetchAll(db) }
     }
 
     /// 條件都空時當成移除
     func saveFolderRule(_ rule: FolderRule) throws {
         try pool.write { db in
             if rule.isEmpty {
-                try db.execute(sql: "DELETE FROM folder_rules WHERE folder = ?", arguments: [rule.folder])
+                try db.execute(sql: "DELETE FROM folder_rules WHERE folder_id = ?", arguments: [rule.folderId])
             } else {
                 var rule = rule
                 try rule.save(db)
@@ -171,26 +184,27 @@ extension AppDatabase {
         try pool.write { db in try db.execute(sql: "UPDATE meetings SET folder_decided = 1 WHERE id = ?", arguments: [id]) }
     }
 
-    /// 自動放進資料夾（design §72）：不在資料夾、還沒決定過、不在垃圾桶；符合好幾個時放名稱排第一的。回傳資料夾名稱
-    func autoFile(_ meetingId: Int64) throws -> String? {
-        guard let meeting = try meeting(meetingId), meeting.folder.isEmpty, !meeting.folderDecided, meeting.deletedAt == nil else { return nil }
+    /// 自動放進資料夾（design §72）：不在資料夾、還沒決定過、不在垃圾桶；符合好幾個時放名稱排第一的。回傳資料夾 id
+    func autoFile(_ meetingId: Int64) throws -> Int64? {
+        guard let meeting = try meeting(meetingId), meeting.folderId == nil, !meeting.folderDecided, meeting.deletedAt == nil else { return nil }
         let attended = try meetingPeople()[meetingId] ?? []
-        let rules = try folderRules().sorted { $0.folder.localizedStandardCompare($1.folder) == .orderedAscending }
+        let names = Dictionary(uniqueKeysWithValues: try folders().compactMap { f in f.id.map { ($0, f.name) } })
+        let rules = try folderRules().sorted { (names[$0.folderId] ?? "").localizedStandardCompare(names[$1.folderId] ?? "") == .orderedAscending }
         guard let rule = rules.first(where: {
             $0.matches(title: meeting.displayTitle, attended: attended, templateId: meeting.templateId)
         }) else { return nil }
         try pool.write { db in
-            try db.execute(sql: "UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?",
-                           arguments: [rule.folder, Clock.now(), meetingId])
+            try db.execute(sql: "UPDATE meetings SET folder_id = ?, folder_decided = 1, updated_at = ? WHERE id = ?",
+                           arguments: [rule.folderId, Clock.now(), meetingId])
         }
-        return rule.folder
+        return rule.folderId
     }
 
     /// 「現在不在資料夾裡的會議也套用」：符合條件的會議（不在資料夾、不在垃圾桶）
     func meetingsMatching(_ rule: FolderRule) throws -> [Int64] {
         let people = try meetingPeople()
         return try pool.read { db in
-            try Meeting.filter(Column("deleted_at") == nil && Column("folder") == "").fetchAll(db)
+            try Meeting.filter(Column("deleted_at") == nil && Column("folder_id") == nil).fetchAll(db)
         }
         .filter { meeting in
             rule.matches(title: meeting.displayTitle, attended: people[meeting.id ?? 0] ?? [], templateId: meeting.templateId)

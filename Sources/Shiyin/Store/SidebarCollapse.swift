@@ -3,7 +3,8 @@ import Foundation
 // MARK: - 側欄的收合（R101、design §75）
 
 extension AppModel {
-    nonisolated static func folderKey(_ name: String) -> String { "folder:" + name }
+    /// 資料夾那一列的鍵（R118、design §92.1）：用 id，改名不用搬
+    nonisolated static func folderKey(_ id: Int64) -> String { "folderid:\(id)" }
     nonisolated static func groupKey(_ group: MeetingGroup) -> String { "group:" + group.id }
 
     /// 段落（folders、meetings、people、group:…）展開了沒；預設展開
@@ -27,13 +28,13 @@ extension AppModel {
     func toggleRow(_ key: String) { setRow(key, expanded: !isRowExpanded(key)) }
 
     /// 下面的列表只看這個資料夾（展開後的「顯示全部 N 場」）
-    func showFolder(_ name: String) {
+    func showFolder(_ id: Int64) {
         sidebarMode = .meetings
-        folderFilter = name
+        folderFilter = id
     }
 
     /// 資料夾裡的會議（不含垃圾桶），日期新到舊（資料庫讀出來的順序）
-    func peekRows(folder: String) -> [MeetingRow] { meetings.filter { $0.meeting.folder == folder } }
+    func peekRows(folderId: Int64) -> [MeetingRow] { meetings.filter { $0.meeting.folderId == folderId } }
 
     /// 點了展開的那一場：人物模式換回會議、選那場；下面的列表不換
     func openFromSidebar(_ id: Int64) {
@@ -46,7 +47,7 @@ extension AppModel {
     /// 還沒有資料夾時就是所有會議
     var listShowsOthersOnly: Bool {
         !showTrash && folderFilter == nil && !meetingFilter.isActive
-            && meetingGrouping != .folder && (meetings.contains { !$0.meeting.folder.isEmpty })
+            && meetingGrouping != .folder && (meetings.contains { $0.meeting.folderId != nil })
     }
 
     /// 程式帶你去某場會議時（reveal），看得到它在哪裡：在下面的列表就展開列表和那一組；
@@ -57,8 +58,8 @@ extension AppModel {
             setSection(Self.groupKey(group), expanded: true)
         } else if let meeting = meetings.first(where: { $0.id == id })?.meeting {
             setSection("folders", expanded: true)
-            if !meeting.folder.isEmpty {
-                setRow(Self.folderKey(meeting.folder), expanded: true)
+            if let folderId = meeting.folderId {
+                setRow(Self.folderKey(folderId), expanded: true)
             }
         }
     }

@@ -4,7 +4,7 @@ import Foundation
 extension AppModel {
     // MARK: 資料夾的條件
 
-    func folderRule(_ folder: String) -> FolderRule? { folderRules.first { $0.folder == folder } }
+    func folderRule(_ folderId: Int64) -> FolderRule? { folderRules.first { $0.folderId == folderId } }
 
     /// 儲存條件（都空時移除）；applyNow：現在不在資料夾裡的會議也套用
     func saveFolderRule(_ rule: FolderRule, applyNow: Bool) {
@@ -13,8 +13,8 @@ extension AppModel {
             guard applyNow && !rule.isEmpty else { return }
             let ids = try db.meetingsMatching(rule)
             guard !ids.isEmpty else { return }
-            try db.setFolder(ids, folder: rule.folder)
-            noticeMessage = String(localized: "已把 \(ids.count) 場會議放進「\(rule.folder)」")
+            try db.setFolder(ids, folderId: rule.folderId)
+            noticeMessage = String(localized: "已把 \(ids.count) 場會議放進「\(folderName(rule.folderId))」")
         }
     }
 
@@ -36,10 +36,10 @@ extension AppModel {
 
     /// 會議不在資料夾、還沒決定過、已經有會議紀錄、不在錄音中、不在垃圾桶時，跟各個資料夾比
     func folderSuggestion(for meeting: Meeting) -> FolderSuggestion? {
-        guard let id = meeting.id, meeting.folder.isEmpty, !meeting.folderDecided, meeting.deletedAt == nil,
+        guard let id = meeting.id, meeting.folderId == nil, !meeting.folderDecided, meeting.deletedAt == nil,
               meeting.notes != nil, recorder.meetingId != id else { return nil }
-        let input = FolderSuggester.Input(id: id, folder: "", title: meeting.displayTitle, people: meetingPeople[id] ?? [])
-        let others = meetings.map { FolderSuggester.Input(id: $0.id, folder: $0.meeting.folder, title: $0.meeting.displayTitle,
+        let input = FolderSuggester.Input(id: id, folderId: nil, folder: "", title: meeting.displayTitle, people: meetingPeople[id] ?? [])
+        let others = meetings.map { FolderSuggester.Input(id: $0.id, folderId: $0.meeting.folderId, folder: folderName($0.meeting.folderId), title: $0.meeting.displayTitle,
                                                           people: meetingPeople[$0.id] ?? []) }
         return FolderSuggester.best(for: input, among: others)
     }
@@ -55,8 +55,8 @@ extension AppModel {
         }
     }
 
-    func acceptFolderSuggestion(_ meetingId: Int64, folder: String) {
-        moveToFolder([meetingId], folder: folder)
+    func acceptFolderSuggestion(_ meetingId: Int64, folderId: Int64) {
+        moveToFolder([meetingId], folderId: folderId)
     }
 
     /// 「不用」：之後不再建議這場
@@ -66,9 +66,9 @@ extension AppModel {
 
     // MARK: 自動（轉錄完、整理完）
 
-    func organized(_ meetingId: Int64, folder: String?) {
+    func organized(_ meetingId: Int64, folderId: Int64?) {
         reload()
         let title = (try? db.meeting(meetingId))?.displayTitle ?? ""
-        if let folder { noticeMessage = String(localized: "「\(title)」已放進「\(folder)」") }
+        if let folderId { noticeMessage = String(localized: "「\(title)」已放進「\(folderName(folderId))」") }
     }
 }

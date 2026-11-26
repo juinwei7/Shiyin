@@ -6,7 +6,7 @@ import SwiftUI
 struct FolderRuleSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    let folder: String
+    let folderId: Int64
     @State private var keywords = ""
     @State private var people: Set<Int64> = []
     @State private var templateId: String?
@@ -14,14 +14,14 @@ struct FolderRuleSheet: View {
     @State private var existing = false
 
     private var rule: FolderRule {
-        FolderRule(folder: folder, keywords: GlossaryInput.split(keywords), people: people.sorted(), templateId: templateId)
+        FolderRule(folderId: folderId, keywords: GlossaryInput.split(keywords), people: people.sorted(), templateId: templateId)
     }
 
     var body: some View {
         let matching = (try? model.db.meetingsMatching(rule).count) ?? 0
         VStack(alignment: .leading, spacing: 16) {
             // 同其他彈窗的樣子（R106、design §80）
-            SheetHeader(title: String(localized: "「\(folder)」自動加入的條件"),
+            SheetHeader(title: String(localized: "「\(model.folderName(folderId))」自動加入的條件"),
                         subtitle: String(localized: "符合任一個條件的新會議，會自動放進這個資料夾。已經在別的資料夾的會議不會移動。"))
             VStack(alignment: .leading, spacing: 6) {
                 SheetFieldLabel(String(localized: "標題包含"))
@@ -57,7 +57,7 @@ struct FolderRuleSheet: View {
             HStack(spacing: 10) {
                 if existing {
                     Button("移除條件") {
-                        model.saveFolderRule(FolderRule(folder: folder), applyNow: false)
+                        model.saveFolderRule(FolderRule(folderId: folderId), applyNow: false)
                         dismiss()
                     }
                     .buttonStyle(SheetPillButtonStyle(.secondary))
@@ -77,7 +77,7 @@ struct FolderRuleSheet: View {
         }
         .sheetChrome(width: 480)
         .onAppear {
-            guard let rule = model.folderRule(folder) else { return }
+            guard let rule = model.folderRule(folderId) else { return }
             existing = true
             keywords = rule.keywords.joined(separator: MeetingLanguage.ui(zh: "、", en: ", "))
             people = Set(rule.people)
@@ -98,7 +98,7 @@ struct FolderSuggestionBanner: View {
                 .lineLimit(2)
             Spacer(minLength: 8)
             Button("不用") { model.dismissFolderSuggestion(meetingId) }
-            Button("放進去") { model.acceptFolderSuggestion(meetingId, folder: suggestion.folder) }
+            Button("放進去") { model.acceptFolderSuggestion(meetingId, folderId: suggestion.folderId) }
                 .buttonStyle(.borderedProminent)
         }
         .font(.callout)

@@ -1,0 +1,82 @@
+{
+  "folder_rules" : [
+    {
+      "created_at" : "2026-10-10T01:00:00Z",
+      "folder_id" : 2,
+      "keywords" : "[]",
+      "people" : "[\"王大明\"]",
+      "template_id" : "general"
+    },
+    {
+      "created_at" : "2026-10-09T01:00:00Z",
+      "folder_id" : 6,
+      "keywords" : "[\"站會\"]",
+      "people" : "[]",
+      "template_id" : null
+    }
+  ],
+  "folders" : [
+    {
+      "created_at" : "2026-10-01T09:00:00Z",
+      "id" : 1,
+      "name" : "2026"
+    },
+    {
+      "created_at" : "2026-10-02T09:00:00Z",
+      "id" : 2,
+      "name" : "專案 A"
+    },
+    {
+      "created_at" : "2026-10-03T09:00:00Z",
+      "id" : 3,
+      "name" : "空的資料夾"
+    },
+    {
+      "created_at" : "2026-10-04T01:00:00Z",
+      "id" : 4,
+      "name" : "專案 a"
+    },
+    {
+      "created_at" : "2026-10-06T01:00:00Z",
+      "id" : 5,
+      "name" : "只在會議"
+    },
+    {
+      "created_at" : "2026-10-09T01:00:00Z",
+      "id" : 6,
+      "name" : "只有條件"
+    }
+  ],
+  "meetings" : [
+    {
+      "deleted_at" : null,
+      "folder_id" : 2,
+      "id" : 1,
+      "title" : "週會"
+    },
+    {
+      "deleted_at" : null,
+      "folder_id" : 5,
+      "id" : 2,
+      "title" : "客戶訪談"
+    },
+    {
+      "deleted_at" : null,
+      "folder_id" : null,
+      "id" : 3,
+      "title" : "沒有資料夾"
+    },
+    {
+      "deleted_at" : "2026-11-01T01:00:00Z",
+      "folder_id" : 1,
+      "id" : 4,
+      "title" : "垃圾桶裡的"
+    },
+    {
+      "deleted_at" : null,
+      "folder_id" : 4,
+      "id" : 5,
+      "title" : "大小寫"
+    }
+  ]
+}

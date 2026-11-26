@@ -28,6 +28,9 @@ enum DebugControl {
         let model = AppModel.shared
         guard let name = args.first else { return }
         let id = args.count > 1 ? Int64(args[1]) : nil
+        // 指令照舊收資料夾的名字（R118、design §92.4），進來就換成 id；named 找不到是 nil，creating 找不到就建
+        func named(_ folder: String) -> Int64? { model.folders.first { $0.name == folder }?.id }
+        func creating(_ folder: String) -> Int64? { named(folder) ?? (try? model.db.createFolder(folder)) }
         switch name {
         case "select": model.showTrash = false; model.selection = id
         // notesview list|mindmap|people：紀錄分頁切換成條列、心智圖或人物（design §42.5；寫進共用設定，測完 defaults delete com.weiwei.shiyin notesView）
@@ -50,7 +53,8 @@ enum DebugControl {
         case "reload": model.reloadPeopleOverview(); model.reload()   // 直接改資料庫之後重讀
         // 資料夾自動歸類（design §72）
         case "folderrule":   // folderrule <資料夾> <JSON|-> [apply]：JSON 是 {"keywords":[…],"people":[id…],"templateId":…}
-            var rule = FolderRule(folder: args[1])
+            guard let folderId = creating(args[1]) else { break }
+            var rule = FolderRule(folderId: folderId)
             if args[2] != "-", let data = args[2].data(using: .utf8),
                let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 rule.keywords = object["keywords"] as? [String] ?? []
@@ -58,9 +62,9 @@ enum DebugControl {
                 rule.templateId = object["templateId"] as? String
             }
             model.saveFolderRule(rule, applyNow: args.count > 3 && args[3] == "apply")
-        case "editfolderrule": model.editingFolderRule = args[1]   // 打開條件的編輯
+        case "editfolderrule": model.editingFolderRule = named(args[1])   // 打開條件的編輯
         case "autofile":
-            if let id, let folder = try? model.db.autoFile(id) { model.organized(id, folder: folder) }
+            if let id, let folder = try? model.db.autoFile(id) { model.organized(id, folderId: folder) }
         case "foldersuggest":   // foldersuggest <會議 id> <輸出.json>
             if let id, let meeting = try? model.db.meeting(id) {
                 let s = model.folderSuggestion(for: meeting)
@@ -76,14 +80,14 @@ enum DebugControl {
         case "foldersuggestion":   // foldersuggestion accept|dismiss <會議 id>
             if let mid = Int64(args[2]), let meeting = try? model.db.meeting(mid) {
                 if args[1] == "accept", let s = model.folderSuggestion(for: meeting) {
-                    model.acceptFolderSuggestion(mid, folder: s.folder)
+                    model.acceptFolderSuggestion(mid, folderId: s.folderId)
                 } else if args[1] == "dismiss" {
                     model.dismissFolderSuggestion(mid)
                 }
             }
         // 每一種東西都能直接改、刪（R100、design §74）
         case "renamemeetingui": if let id { model.requestRenameMeeting(id) }   // 等於側欄右鍵「重新命名…」、Return
-        case "folderdeleteui": model.confirmDeleteFolder = args[1]              // 等於資料夾的「刪除資料夾…」、Delete，打開確認
+        case "folderdeleteui": model.confirmDeleteFolder = named(args[1])              // 等於資料夾的「刪除資料夾…」、Delete，打開確認
         // 側欄的收合（R101、design §75）
         case "sidebarsection": if args.count > 2 { model.setSection(args[1], expanded: args[2] == "on") }   // sidebarsection <folders|meetings|people|group:…> on|off
         case "sidebarexpand": if args.count > 2 { model.setRow(args[1], expanded: args[2] == "on") }     // sidebarexpand <folder:名稱> on|off
@@ -120,13 +124,13 @@ enum DebugControl {
         case "floatclose": FloatingMenuController.shared.close()
         case "floatothers": FloatingMenuController.shared.ignoreOtherApps = args.count > 1 && args[1] == "off"   // floatothers off：點別的 app 不關選單
         case "foldernew": if args.count > 1 { model.createFolder(args[1]) }   // 等於按「資料夾」標題的「+」建立（R104）
-        case "importinto": if args.count > 2 { model.importDropped([URL(fileURLWithPath: args[2])], into: args[1]) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
+        case "importinto": if args.count > 2, let folder = creating(args[1]) { model.reload(); model.importDropped([URL(fileURLWithPath: args[2])], into: folder) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
         // 重新命名的彈窗（R102、design §76）：renameui <meeting|folder|person|bookmark|newfolder> <id、名稱或會議 id,…>
         case "renameui":
             guard args.count > 2 else { break }
             switch args[1] {
             case "meeting": if let i = Int64(args[2]) { model.renameTarget = .meeting(i) }
-            case "folder": model.renameTarget = .folder(args[2])
+            case "folder": if let folder = named(args[2]) { model.renameTarget = .folder(folder) }
             case "person": if let i = Int64(args[2]) { model.renameTarget = .person(i) }
             case "bookmark": if let i = Int64(args[2]) { model.renameTarget = .bookmark(i) }
             case "newfolder": model.renameTarget = .newFolder(args[2].split(separator: ",").compactMap { Int64($0) })
@@ -1042,10 +1046,15 @@ enum DebugControl {
         case "snapshot": snapshot(to: args[1], scheme: args.count > 2 ? args[2] : "light", target: args.count > 3 ? args[3] : "detail")
         case "filter": model.filter = args.count > 1 ? args[1] : ""
         // 資料夾（R9.2）：名稱用「-」表示空的
-        case "folder": if let id { model.moveToFolder(id, folder: args[2] == "-" ? "" : args[2]) }
-        case "folderfilter": model.folderFilter = args.count > 1 && args[1] != "-" ? args[1] : nil
-        case "renamefolder": model.renameFolder(args[1], to: args[2])
-        case "deletefolder": model.deleteFolder(args[1])
+        case "folder":   // folder <會議 id> <資料夾名稱|->：沒有這個資料夾就建一個（同以前）
+            if let id {
+                if args[2] == "-" { model.moveToFolder(id, folderId: nil) }
+                else if let folder = named(args[2]) { model.moveToFolder(id, folderId: folder) }
+                else { model.moveToNewFolder([id], name: args[2]) }
+            }
+        case "folderfilter": model.folderFilter = args.count > 1 && args[1] != "-" ? named(args[1]) : nil
+        case "renamefolder": if let folder = named(args[1]) { model.renameFolder(folder, to: args[2]) }
+        case "deletefolder": if let folder = named(args[1]) { model.deleteFolder(folder) }
         // 更新（R10.6）
         case "setupdateurl": UserDefaults.standard.set(args.count > 1 && args[1] != "-" ? args[1] : nil, forKey: Updater.urlKey)
         case "checkupdate": Task { await model.updater.check(userInitiated: true) }
@@ -1222,10 +1231,10 @@ enum DebugControl {
             "splittingMeeting": model.applyingEdit ?? -1,
             "tab": model.tab.rawValue, "reviewExpanded": model.reviewExpanded, "userNotesExpanded": model.userNotesExpanded,
             "notesView": UserDefaults.standard.string(forKey: AppSettings.notesViewKey) ?? "list",
-            "folderRules": model.folderRules.map { ["folder": $0.folder, "keywords": $0.keywords, "people": $0.people,
+            "folderRules": model.folderRules.map { ["folder": model.folderName($0.folderId), "folderId": $0.folderId, "keywords": $0.keywords, "people": $0.people,
                                                     "templateId": $0.templateId ?? ""] as [String: Any] },
             "confirmRemovePerson": model.confirmRemovePerson ?? -1,
-            "confirmDeleteFolder": model.confirmDeleteFolder ?? "",
+            "confirmDeleteFolder": model.folderName(model.confirmDeleteFolder),
             "renameTarget": model.renameTarget?.id ?? "",
             "editingNoteItem": model.editingNoteItem.map { "\($0)" } ?? "",
             "sidebarCollapsed": model.sidebarCollapsed.sorted(), "sidebarExpanded": model.sidebarExpanded.sorted(),
@@ -1277,7 +1286,7 @@ enum DebugControl {
             "environment": model.environment.items.map { ["name": $0.name, "ok": $0.ok, "detail": $0.detail, "fix": $0.fix] },
             "meetings": model.meetings.map { ["id": $0.id, "title": $0.meeting.displayTitle, "date": $0.meeting.meetingDate,
                                                "status": model.status($0).label, "audio": $0.meeting.audioFile,
-                                               "template": $0.meeting.templateId, "folder": $0.meeting.folder] },
+                                               "template": $0.meeting.templateId, "folder": model.folderName($0.meeting.folderId), "folderId": $0.meeting.folderId.map { $0 as Any } ?? NSNull()] },
             "queuedCount": model.queuedCount,
             "filteredCount": model.filteredMeetings.count,
             "menuBarSymbol": model.menuBarSymbol,
@@ -1362,8 +1371,8 @@ enum DebugControl {
             "search": ["query": model.searchQuery, "results": model.searchResults.map { ["meeting": $0.meetingId, "kind": $0.kind.rawValue, "ref": $0.ref, "snippet": $0.snippet] }],
             "trash": model.trash.map { $0.id },
             "templates": model.templates.map { $0.id },
-            "folders": model.folders.map { ["name": $0.name, "count": $0.count] },
-            "folderFilter": model.folderFilter ?? "",
+            "folders": model.folders.map { ["name": $0.name, "count": $0.count, "id": $0.id] },
+            "folderFilter": model.folderName(model.folderFilter),
             "update": ["state": model.updater.state.label, "prompt": model.updater.prompt?.version ?? "",
                        "received": model.updater.progress?.received ?? -1, "total": model.updater.progress?.total ?? -1,
                        "progressText": model.updater.progress?.text ?? "",
@@ -1731,10 +1740,10 @@ enum DebugControl {
             content = AnyView(VStack(alignment: .leading, spacing: 8) {
                 Text("資料夾").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 FolderRow(name: "所有會議", count: model.meetings.count, symbol: "tray.full", selected: model.folderFilter == nil) {}
-                ForEach(model.folders, id: \.name) { folder in
-                    FolderRow(name: folder.name, count: folder.count, symbol: "folder", selected: model.folderFilter == folder.name) {}
+                ForEach(model.folders, id: \.id) { folder in
+                    FolderRow(name: folder.name, count: folder.count, symbol: "folder", selected: model.folderFilter == folder.id) {}
                 }
-                Text(model.folderFilter ?? "所有會議").font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.top, 8)
+                Text(model.folderFilter.map { model.folderName($0) } ?? "所有會議").font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.top, 8)
                 ForEach(model.filteredMeetings) { row in MeetingRowView(row: row, status: model.status(row)) }
             }
             .padding(14).frame(width: 280))

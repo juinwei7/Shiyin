@@ -222,7 +222,7 @@ final class JobRunner {
     @ObservationIgnored var onChange: (() -> Void)?
     @ObservationIgnored var onFinished: ((Job, Error?) -> Void)?
     /// 自動放進資料夾了（design §72）：會議 id、資料夾
-    @ObservationIgnored var onOrganized: ((Int64, String?) -> Void)?
+    @ObservationIgnored var onOrganized: ((Int64, Int64?) -> Void)?
     @ObservationIgnored var onAudioReplaced: ((Int64) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?

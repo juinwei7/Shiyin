@@ -3190,11 +3190,13 @@ CREATE TABLE folders (
   name       TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL
 );
--- id 的順序要兩平台一樣：先資料夾表，再會議用到的、條件的（照建立時間、名字）
+-- id 的順序要兩平台一樣：先資料夾表，再會議用到的、條件的（照建立時間、名字）；用 NOT IN 跳過已經有的（INSERT OR IGNORE 會把 id 用掉，留下空號）
 INSERT INTO folders (name, created_at) SELECT name, created_at FROM folders_old ORDER BY created_at, name;
-INSERT OR IGNORE INTO folders (name, created_at)
-  SELECT folder, MIN(created_at) FROM meetings WHERE folder <> '' GROUP BY folder ORDER BY MIN(created_at), folder;
-INSERT OR IGNORE INTO folders (name, created_at) SELECT folder, created_at FROM folder_rules_old ORDER BY created_at, folder;
+INSERT INTO folders (name, created_at)
+  SELECT folder, MIN(created_at) FROM meetings WHERE folder <> '' AND folder NOT IN (SELECT name FROM folders)
+  GROUP BY folder ORDER BY MIN(created_at), folder;
+INSERT INTO folders (name, created_at)
+  SELECT folder, created_at FROM folder_rules_old WHERE folder NOT IN (SELECT name FROM folders) ORDER BY created_at, folder;
 CREATE TABLE folder_rules (
   folder_id   INTEGER PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
   keywords    TEXT NOT NULL DEFAULT '[]',
@@ -3214,7 +3216,7 @@ CREATE INDEX meetings_folder ON meetings(folder_id);
 ```
 
 - `meetings.folder` 整欄拿掉（不留不用的欄位，免得又有人照名字寫）。`folder_rules.series_id` 照舊留著不用（§73）。
-- 側欄的狀態（Mac 的 UserDefaults `sidebarExpanded`、`sidebarOrder`；Windows 的 settings.json）：migration 讀出名字 → id 的對照，`folder:<名稱>` 換成 `folderid:<id>`（新的前綴，免得名字剛好是數字時跟 id 混在一起）；對照是空的（新的資料庫、測試用的暫存資料夾）時不動，同 v14 的 `replaceSeriesKeys`。換完重複的留前面的。
+- 側欄的狀態（Mac 的 UserDefaults `sidebarExpanded`、`sidebarOrder`、`sidebarCollapsed`；Windows 的 settings.json）：migration 讀出名字 → id 的對照，`folder:<名稱>` 換成 `folderid:<id>`（新的前綴，免得名字剛好是數字時跟 id 混在一起），依資料夾分組的收合 `group:folder-<名稱>` 換成 `group:folder-<id>`（不在資料夾的那組 `group:folder-` → `group:folder-none`）；找不到的名字留著不動（可能是別的 SHIYIN_HOME 的），換完重複的留前面的；對照是空的（新的資料庫、測試用的暫存資料夾）時整個不動，同 v14 的 `replaceSeriesKeys`。
 
 ### 92.2 資料庫的操作（`AppDatabase`，Windows 同名）
 

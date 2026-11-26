@@ -117,7 +117,7 @@ enum MCPTools {
             var info: [String] = []
             if let seconds = m.durationSeconds, seconds > 0 { info.append("duration \(TimeFormat.string(Double(seconds)))") }
             info.append("language \(m.language)")
-            if !m.folder.isEmpty { info.append("folder \(m.folder)") }
+            if let name = try db.folderName(m.folderId) { info.append("folder \(name)") }
             if !m.participantList.isEmpty { info.append("participants \(m.participantList.joined(separator: ", "))") }
             let speakers = try db.speakers(id).map { speakerName($0.name, idx: $0.idx, m) }
             if !speakers.isEmpty { info.append("speakers \(speakers.joined(separator: ", "))") }
@@ -324,7 +324,7 @@ enum MCPTools {
         var arguments: [any DatabaseValueConvertible] = []
         if let from = filter.from { sql += " AND substr(meeting_date, 1, 10) >= ?"; arguments.append(from) }
         if let to = filter.to { sql += " AND substr(meeting_date, 1, 10) <= ?"; arguments.append(to) }
-        if let folder = filter.folder { sql += " AND folder = ?"; arguments.append(folder) }
+        if let folder = filter.folder { sql += " AND folder_id = (SELECT id FROM folders WHERE name = ?)"; arguments.append(folder) }
         sql += " ORDER BY meeting_date DESC, id DESC"
         return try db.pool.read { try Meeting.fetchAll($0, sql: sql, arguments: StatementArguments(arguments)) }
     }

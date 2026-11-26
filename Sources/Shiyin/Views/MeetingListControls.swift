@@ -103,7 +103,7 @@ struct MeetingListHeader: View {
 
     private var title: String {
         // 下面只放資料夾以外的會議時叫「其他會議」（R101.6）
-        let scope = model.folderFilter
+        let scope = model.folderFilter.map { model.folderName($0) }
             ?? (model.listShowsOthersOnly ? String(localized: "其他會議") : String(localized: "所有會議"))
         let grouping = model.effectiveGrouping
         return grouping == .none ? scope : scope + "・" + grouping.label

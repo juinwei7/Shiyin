@@ -327,19 +327,19 @@ final class AppModel {
         didSet { if oldValue != sidebarOrder { UserDefaults.standard.set(sidebarOrder, forKey: AppSettings.sidebarOrderKey) } }
     }
     /// 從 Finder 拖到資料夾上的檔案要匯入到哪個資料夾（R103.3）：逐字稿、封包當下就用，錄音等匯入的對話框按下去才用
-    var importFolderOverride: String?
-    var pendingImportFolder: String?
+    var importFolderOverride: Int64?
+    var pendingImportFolder: Int64?
     /// 每場會議連到哪些人物（「有誰參加」篩選），跟人物總覽一起讀
     var meetingPeople: [Int64: Set<Int64>] = [:]
-    /// 側欄目前只看的資料夾；nil 是所有會議（R9.2）
-    var folderFilter: String? {
+    /// 側欄目前只看的資料夾（id，R118）；nil 是所有會議（R9.2）
+    var folderFilter: Int64? {
         didSet { if oldValue != folderFilter { selectedMeetings = [] } }
     }
     /// 資料夾的自動加入條件（R98、design §72）；正在編輯哪個資料夾的條件
     var folderRules: [FolderRule] = []
-    /// 資料夾表裡的名字（R104：空的資料夾也在）
-    var folderNames: [String] = []
-    var editingFolderRule: String?
+    /// 所有資料夾（R104：空的也在；R118：其他地方都記 id，名字問 folderName）
+    var folderList: [Folder] = []
+    var editingFolderRule: Int64?
     /// 重新命名的彈窗（R102、design §76）：會議、資料夾、新資料夾、人物、標記都用這一個
     var renameTarget: RenameTarget?
     var glossary: [GlossaryTerm] = []
@@ -414,7 +414,7 @@ final class AppModel {
         environment = EnvironmentStatus(items: [])
         runner.onChange = { [weak self] in self?.reload() }
         runner.onFinished = { [weak self] job, error in self?.jobFinished(job, error: error) }
-        runner.onOrganized = { [weak self] id, folder in self?.organized(id, folder: folder) }
+        runner.onOrganized = { [weak self] id, folder in self?.organized(id, folderId: folder) }
         recorder.onLiveFinished = { [weak self] id, duration in self?.enqueueDraftNotes(meetingId: id, duration: duration) }
         runner.onRediarized = { [weak self] id, result in
             guard let self, self.selection == id else { return }
@@ -548,7 +548,7 @@ final class AppModel {
             templates = try db.templates()
             meetingPeople = try db.meetingPeople()
             folderRules = try db.folderRules()
-            folderNames = try db.folderNames()
+            folderList = try db.folders()
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
         } catch {
             errorMessage = error.localizedDescription
@@ -556,10 +556,8 @@ final class AppModel {
         if let selection, !meetings.contains(where: { $0.id == selection }), !trash.contains(where: { $0.id == selection }) {
             self.selection = nil
         }
-        // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議
-        // 有自動加入條件的資料夾沒有會議也留著（design §72）
-        if let folderFilter, !meetings.contains(where: { $0.meeting.folder == folderFilter }),
-           !folderRules.contains(where: { $0.folder == folderFilter }) { self.folderFilter = nil }
+        // 看的資料夾被刪掉、合併掉了：回到所有會議
+        if let folderFilter, !folderList.contains(where: { $0.id == folderFilter }) { self.folderFilter = nil }
         reloadDetail()
     }
 
@@ -586,32 +584,48 @@ final class AppModel {
 
     // MARK: 資料夾（R9.2）
 
-    /// 現有的資料夾和各自的場數（不含垃圾桶），依名稱排序
-    var folders: [(name: String, count: Int)] {
-        var counts = Dictionary(grouping: meetings.filter { !$0.meeting.folder.isEmpty }, by: \.meeting.folder).mapValues(\.count)
-        // 有自動加入條件的資料夾、資料夾表裡的（R104：自己建的空資料夾）沒有會議也列出來（design §72、§78）
-        for rule in folderRules where counts[rule.folder] == nil { counts[rule.folder] = 0 }
-        for name in folderNames where counts[name] == nil { counts[name] = 0 }
-        return counts.map { (name: $0.key, count: $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    /// 現有的資料夾（資料夾表裡的每一個，R104 的空資料夾也在）和各自的場數（不含垃圾桶），依名稱排序
+    var folders: [(id: Int64, name: String, count: Int)] {
+        let counts = Dictionary(grouping: meetings.compactMap(\.meeting.folderId), by: { $0 }).mapValues(\.count)
+        return folderList.compactMap { f in f.id.map { (id: $0, name: f.name, count: counts[$0] ?? 0) } }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// 資料夾的名字（R118：只用來顯示）；nil、找不到是空字串
+    func folderName(_ id: Int64?) -> String {
+        guard let id else { return "" }
+        return folderList.first { $0.id == id }?.name ?? ""
     }
 
     /// 新會議要放進的資料夾：正在看某個資料夾時就放那裡
-    var currentFolder: String { importFolderOverride ?? (showTrash ? "" : folderFilter ?? "") }
+    var currentFolder: Int64? { importFolderOverride ?? (showTrash ? nil : folderFilter) }
 
-    func moveToFolder(_ id: Int64, folder: String) { moveToFolder([id], folder: folder) }
+    func moveToFolder(_ id: Int64, folderId: Int64?) { moveToFolder([id], folderId: folderId) }
 
-    /// 建一個空的資料夾（R104，「資料夾」標題的「+」、⇧⌘N）
-    func createFolder(_ name: String) {
+    /// 建一個空的資料夾（R104，「資料夾」標題的「+」、⇧⌘N）；回傳新資料夾的 id
+    @discardableResult
+    func createFolder(_ name: String) -> Int64? {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, !folders.contains(where: { $0.name == name }) else { return }
-        perform { try db.createFolder(name) }
+        guard !name.isEmpty, !folders.contains(where: { $0.name == name }) else { return nil }
+        var id: Int64?
+        perform { id = try db.createFolder(name) }
         noticeMessage = String(localized: "已建立資料夾「\(name)」")
+        return id
     }
 
-    /// 移到資料夾（R9.2）；多選時一起移（R88），已經在那裡的跳過
-    func moveToFolder(_ ids: [Int64], folder: String) {
-        let name = folder.trimmingCharacters(in: .whitespacesAndNewlines)
-        let targets = ids.filter { (try? db.meeting($0))?.folder != name }
+    /// 「新資料夾…」建好後把會議移進去（R102）
+    func moveToNewFolder(_ ids: [Int64], name: String) {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        var id: Int64?
+        perform { id = try db.createFolder(name) }
+        if let id { moveToFolder(ids, folderId: id) }
+    }
+
+    /// 移到資料夾（R9.2）；folderId 是 nil 時移出資料夾。多選時一起移（R88），已經在那裡的跳過
+    func moveToFolder(_ ids: [Int64], folderId: Int64?) {
+        let name = folderName(folderId)
+        let targets = ids.filter { (try? db.meeting($0))?.folderId != folderId }
         if targets.isEmpty {
             if ids.count == 1 {
                 noticeMessage = name.isEmpty ? String(localized: "這場會議沒有在任何資料夾裡") : String(localized: "這場會議已經在「\(name)」")
@@ -620,7 +634,7 @@ final class AppModel {
             }
             return
         }
-        perform { try db.setFolder(targets, folder: name) }
+        perform { try db.setFolder(targets, folderId: folderId) }
         if targets.count == 1 {
             noticeMessage = name.isEmpty ? String(localized: "已移出資料夾") : String(localized: "已移到「\(name)」")
         } else {
@@ -628,34 +642,32 @@ final class AppModel {
         }
     }
 
-    /// 這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 nil
-    func commonFolder(_ ids: [Int64]) -> String? {
-        let folders = Set((showTrash ? trash : meetings).filter { ids.contains($0.id) }.map(\.meeting.folder))
-        return folders.count == 1 ? folders.first : nil
+    /// 這幾場會議所在的資料夾：都一樣時是 `.same(資料夾 id，nil 是都不在資料夾)`，不一樣時是 `.mixed`
+    func commonFolder(_ ids: [Int64]) -> CommonFolder {
+        let folders = Set((showTrash ? trash : meetings).filter { ids.contains($0.id) }.map(\.meeting.folderId))
+        return folders.count == 1 ? .same(folders.first!) : .mixed
     }
 
-    func renameFolder(_ old: String, to newName: String) {
+    /// 重新命名（R118：只改資料夾那一筆）；改成已經有的名字時合併進那一個（design §92.2）
+    func renameFolder(_ id: Int64, to newName: String) {
         let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, name != old else { return }
-        // 先切換篩選，reload 時才不會因為舊名稱不存在而跳回所有會議
-        if folderFilter == old { folderFilter = name }
-        if sidebarExpanded.contains(Self.folderKey(old)) {
-            sidebarExpanded.remove(Self.folderKey(old))
-            sidebarExpanded.insert(Self.folderKey(name))
-        }
-        if let i = sidebarOrder.firstIndex(of: Self.folderKey(old)) {
-            // 改成已經有的資料夾（合併）時留原本那個的位置
-            if sidebarOrder.contains(Self.folderKey(name)) { sidebarOrder.remove(at: i) } else { sidebarOrder[i] = Self.folderKey(name) }
-        }
-        perform { try db.renameFolder(old, to: name) }
+        guard !name.isEmpty, name != folderName(id) else { return }
+        let wasFiltering = folderFilter == id
+        var kept = id
+        perform { kept = try db.renameFolder(id, to: name) }
+        guard kept != id else { return }
+        // 合併：看的是原本那個時換成留下的那個；側欄拿掉原本那個（留下的那個照舊的位置）
+        if wasFiltering { folderFilter = kept }
+        setRow(Self.folderKey(id), expanded: false)
+        sidebarOrder.removeAll { $0 == Self.folderKey(id) }
     }
 
-    /// 刪除資料夾：會議留著，移回「不在資料夾」
-    func deleteFolder(_ name: String) {
-        perform { try db.renameFolder(name, to: "") }
-        if folderFilter == name { folderFilter = nil }
-        setRow(Self.folderKey(name), expanded: false)
-        sidebarOrder.removeAll { $0 == Self.folderKey(name) }
+    /// 刪除資料夾：會議留著，移回「不在資料夾」，條件一起刪
+    func deleteFolder(_ id: Int64) {
+        perform { try db.deleteFolder(id) }
+        if folderFilter == id { folderFilter = nil }
+        setRow(Self.folderKey(id), expanded: false)
+        sidebarOrder.removeAll { $0 == Self.folderKey(id) }
     }
 
     func reloadDetail(forceAudio: Bool = false) {
@@ -704,8 +716,8 @@ final class AppModel {
     /// 列表上的會議：資料夾、篩選（垃圾桶不篩選）、排序（R97、design §71）
     var filteredMeetings: [MeetingRow] {
         var source = showTrash ? trash : meetings
-        if listShowsOthersOnly { source = source.filter { $0.meeting.folder.isEmpty } }
-        if !showTrash, let folderFilter { source = source.filter { $0.meeting.folder == folderFilter } }
+        if listShowsOthersOnly { source = source.filter { $0.meeting.folderId == nil } }
+        if !showTrash, let folderFilter { source = source.filter { $0.meeting.folderId == folderFilter } }
         if !showTrash, meetingFilter.isActive { source = source.filter { matches($0, meetingFilter) } }
         let keyword = filter.trimmingCharacters(in: .whitespaces)
         if !keyword.isEmpty { source = source.filter { $0.meeting.displayTitle.localizedCaseInsensitiveContains(keyword) } }
@@ -830,10 +842,10 @@ final class AppModel {
         pendingImport = []
         showImportSheet = false
         var options = options
-        if let folder = pendingImportFolder, options.folder.isEmpty { options.folder = folder }
+        if let folder = pendingImportFolder, options.folderId == nil { options.folderId = folder }
         pendingImportFolder = nil
         importFiles(urls, options: urls.count == 1 ? options : ImportOptions(participants: options.participants, templateId: options.templateId,
-                                                                              folder: options.folder, language: options.language))
+                                                                              folderId: options.folderId, language: options.language))
     }
 
     /// 從 Dock 或 Finder 匯入：不跳對話框，直接用預設值
@@ -851,7 +863,7 @@ final class AppModel {
     private func importFiles(_ urls: [URL], options: ImportOptions) {
         guard !urls.isEmpty else { return }
         var options = options
-        if options.folder.isEmpty { options.folder = currentFolder }
+        if options.folderId == nil { options.folderId = currentFolder }
         let db = db
         importingCount += urls.count
         Task {
@@ -903,7 +915,7 @@ final class AppModel {
             let meeting = try db.insertMeeting(Meeting(
                 meetingDate: DateText.string(now), sourceFilename: String(localized: "錄音 \(formatter.string(from: now))"),
                 templateId: AppSettings.defaultTemplate, source: "recording", channels: AppSettings.recordSource,
-                folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
+                folderId: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil)
             recorder.start(meetingId: meeting.id!, language: meeting.meetingLanguage)
             reload()
@@ -972,7 +984,7 @@ final class AppModel {
     func startSimulatedRecording(file: URL, speed: Double, both: Bool, systemSilent: Bool = false) {
         guard !recorder.isRecording, let meeting = try? db.insertMeeting(Meeting(
             meetingDate: DateText.string(Date()), sourceFilename: String(localized: "模擬錄音"), source: "recording",
-            channels: both ? "both" : "mic", folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
+            channels: both ? "both" : "mic", folderId: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
             audioExtension: nil) else { return }
         recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both, systemSilent: systemSilent, language: meeting.meetingLanguage)
         reload()
@@ -1886,7 +1898,7 @@ final class AppModel {
     /// 移除一個人的確認（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
     /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾的確認、正在就地改的那一條紀錄
-    var confirmDeleteFolder: String?
+    var confirmDeleteFolder: Int64?
     var editingNoteItem: NoteItemRef?
 
     func reloadPeople() {
@@ -2046,7 +2058,7 @@ final class AppModel {
             let meeting = try db.insertMeeting(Meeting(
                 meetingDate: Importer.inferDate(filename: url.lastPathComponent, modified: Importer.modificationDate(url)),
                 sourceFilename: url.lastPathComponent, templateId: AppSettings.defaultTemplate, source: "transcript",
-                folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
+                folderId: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil)
             let id = meeting.id!
             try db.saveTranscript(id, segments: parsed.segments.enumerated().map { i, s in
@@ -2075,7 +2087,7 @@ final class AppModel {
                 userNotesExpanded = true
             } else if let meeting = try? db.insertMeeting(Meeting(
                 meetingDate: DateText.string(Date()), sourceFilename: url.lastPathComponent, userNotes: text, source: "transcript",
-                folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
+                folderId: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil) {
                 perform { try db.updateUserNotes(meeting.id!, text) }
                 selection = meeting.id
@@ -2098,13 +2110,13 @@ final class AppModel {
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
                             bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId),
-                            screens: try db.screens(meetingId))
+                            screens: try db.screens(meetingId), folderName: folderName(meeting.folderId))
     }
 
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
         return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes,
-                            documents: d.documents, screens: d.screens)
+                            documents: d.documents, screens: d.screens, folderName: folderName(d.meeting.folderId))
     }
 
     /// 寫出檔案

@@ -100,12 +100,13 @@ extension AppModel {
                 MeetingGroup(id: "month-" + key, title: Self.monthTitle(key), rows: rows.filter { $0.meeting.meetingDate.hasPrefix(key) })
             }
         case .folder:
-            let folders = Set(rows.map(\.meeting.folder)).sorted { a, b in
-                a.isEmpty != b.isEmpty ? !a.isEmpty : a.localizedStandardCompare(b) == .orderedAscending
+            // 不在資料夾的放最後，其他照名字；組的 id 用資料夾 id（R118，改名不會讓收合的狀態跑掉）
+            let folders = Set(rows.map(\.meeting.folderId)).sorted { a, b in
+                (a == nil) != (b == nil) ? a != nil : folderName(a).localizedStandardCompare(folderName(b)) == .orderedAscending
             }
             return folders.map { folder in
-                MeetingGroup(id: "folder-" + folder, title: folder.isEmpty ? String(localized: "不在資料夾") : folder,
-                             rows: rows.filter { $0.meeting.folder == folder })
+                MeetingGroup(id: folder.map { "folder-\($0)" } ?? "folder-none", title: folder == nil ? String(localized: "不在資料夾") : folderName(folder),
+                             rows: rows.filter { $0.meeting.folderId == folder })
             }
         }
     }

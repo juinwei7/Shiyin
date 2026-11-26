@@ -34,6 +34,7 @@ enum GoldenDump {
             pipeline(fixtures, &dump)
             server(fixtures, &dump)
             try database(fixtures, &dump)
+            try migrateV18(fixtures, &dump)
             try mcp(fixtures, &dump)
             result["ok"] = true
             result["files"] = dump.count
@@ -91,6 +92,8 @@ enum GoldenDump {
         var history: [(question: String, answer: String)]
         var question: String
         var knownPeople: [String]
+        /// 會議所在資料夾的名字（R118：寫進資料庫時才建資料夾、拿 id）
+        var folderName: String = ""
         /// 參考文件（design §39.7）：fixtures 的 meetingDocuments，name 含副檔名，直接給每頁的文字
         var documents: [MeetingDocument]
         /// 會議中的畫面（design §83.5）：fixtures 的 meetingScreens，直接給時間和辨識出的文字
@@ -139,7 +142,6 @@ enum GoldenDump {
         meeting.templateId = m["templateId"] as? String ?? "general"
         meeting.userNotes = m["userNotes"] as? String ?? ""
         meeting.language = m["language"] as? String ?? "zh"
-        meeting.folder = m["folder"] as? String ?? ""
         meeting.channels = m["channels"] as? String ?? "mic"
         meeting.createdAt = "2026-10-20T00:00:00Z"
         meeting.updatedAt = "2026-10-20T00:00:00Z"
@@ -168,7 +170,7 @@ enum GoldenDump {
         return MeetingFixture(key: o["key"] as? String ?? "", raw: o, meeting: meeting, segments: segments, speakers: speakers,
                               voices: voices, bookmarks: bookmarks, glossary: o["glossary"] as? [String] ?? [], notes: notes,
                               answers: answers, history: history, question: o["question"] as? String ?? "",
-                              knownPeople: o["knownPeople"] as? [String] ?? [], documents: [])
+                              knownPeople: o["knownPeople"] as? [String] ?? [], folderName: m["folder"] as? String ?? "", documents: [])
     }
 
     nonisolated private static func documentFixture(_ o: Object) -> MeetingDocument {
@@ -463,7 +465,7 @@ enum GoldenDump {
             let info = MeetingPackage.MeetingJSON(
                 title: m.title, titleLocked: m.titleLocked, meetingDate: m.meetingDate, participants: m.participants,
                 sourceFilename: m.sourceFilename, durationSeconds: m.durationSeconds, templateId: m.templateId,
-                userNotes: m.userNotes, channels: m.channels, folder: m.folder, language: m.language, notes: fx.notes, notesBy: "claude",
+                userNotes: m.userNotes, channels: m.channels, folder: fx.folderName, language: m.language, notes: fx.notes, notesBy: "claude",
                 speakers: bundle.speakers.map { MeetingPackage.SpeakerJSON(idx: $0.key, name: $0.value) }.sorted { $0.idx < $1.idx },
                 bookmarks: fx.bookmarks.map { MeetingPackage.BookmarkJSON(time: $0.time, label: $0.label) })
             if let data = try? encoder.encode(info) { w.text("package/\(fx.key)/meeting.json", String(decoding: data, as: UTF8.self)) }
@@ -788,7 +790,7 @@ enum GoldenDump {
                                      ["Sprint Review 3", "Sprint Review 4", "Sprint review"], ["產品週會A", "產品週會B"]]  // l10n-skip
         w.json("util/common-word.json", titleSets.map { ["titles": $0, "word": MeetingSimilarity.commonWord($0) ?? NSNull()] as Object })
         // 資料夾的條件、建議
-        let rule = FolderRule(folder: "產品", keywords: ["週會", "sync"], people: [1, 2], templateId: "one-on-one")  // l10n-skip
+        let rule = FolderRule(folderId: 1, keywords: ["週會", "sync"], people: [1, 2], templateId: "one-on-one")  // l10n-skip
         let ruleCases: [(String, [Int64], String)] = [
             ("產品週會", [], "general"), ("Weekly SYNC", [], "general"), ("x", [1], "general"), ("x", [1, 2, 5], "general"),  // l10n-skip
             ("x", [], "one-on-one"), ("x", [], "general")]
@@ -796,8 +798,10 @@ enum GoldenDump {
             ["title": title, "attended": people, "templateId": template,
              "matches": rule.matches(title: title, attended: Set(people), templateId: template)] as Object
         })
+        // 資料夾的 id：客戶 1、設計 2、單場 3（R118）
+        let suggestIds: [String: Int64] = ["客戶": 1, "設計": 2, "單場": 3]  // l10n-skip
         func folderInput(_ id: Int64, _ folder: String, _ title: String, _ people: [Int64]) -> FolderSuggester.Input {
-            FolderSuggester.Input(id: id, folder: folder, title: title, people: Set(people))
+            FolderSuggester.Input(id: id, folderId: suggestIds[folder], folder: folder, title: title, people: Set(people))
         }
         let others = [folderInput(1, "客戶", "客戶 A 需求訪談", [2, 3]), folderInput(2, "客戶", "客戶 A 追蹤", [1, 2, 3]),  // l10n-skip
                       folderInput(3, "設計", "設計評審 10/1", [4]), folderInput(4, "設計", "設計評審 10/8", [5]), folderInput(5, "設計", "Kickoff", [4]),  // l10n-skip
@@ -805,7 +809,7 @@ enum GoldenDump {
         let suggestCases = [folderInput(10, "", "需求確認", [2, 3]), folderInput(11, "", "設計評審 11/5", [1]),  // l10n-skip
                             folderInput(12, "", "會議 11/5", [9]), folderInput(13, "", "客戶 A 結案", [2, 3])]  // l10n-skip
         w.json("util/folder-suggest.json", [
-            "others": others.map { ["id": $0.id, "folder": $0.folder, "title": $0.title, "people": $0.people.sorted()] as Object },
+            "others": others.map { ["id": $0.id, "folderId": $0.folderId ?? NSNull(), "folder": $0.folder, "title": $0.title, "people": $0.people.sorted()] as Object },
             "cases": suggestCases.map { c -> Object in
                 let s = FolderSuggester.best(for: c, among: others)
                 var reason: Object = [:]
@@ -814,7 +818,8 @@ enum GoldenDump {
                 case .title(let word)?: reason = ["title": word]
                 case nil: break
                 }
-                return ["id": c.id, "title": c.title, "people": c.people.sorted(), "folder": s?.folder ?? NSNull(), "count": s?.count ?? 0, "reason": reason]
+                return ["id": c.id, "title": c.title, "people": c.people.sorted(), "folder": s?.folder ?? NSNull(), "folderId": s?.folderId ?? NSNull(),
+                        "count": s?.count ?? 0, "reason": reason]
             }] as Object)
 
     }
@@ -986,7 +991,9 @@ enum GoldenDump {
 
     /// 把一場 fixture 的會議寫進資料庫（逐字稿、說話者、重點、會議紀錄、筆記、詞彙），回傳會議 id
     private static func insertFixture(_ db: AppDatabase, _ fx: MeetingFixture, audioExtension: String? = "m4a") throws -> Int64 {
-        let meeting = try db.insertMeeting(fx.meeting, audioExtension: audioExtension)
+        var draft = fx.meeting
+        if !fx.folderName.isEmpty { draft.folderId = try db.createFolder(fx.folderName) }
+        let meeting = try db.insertMeeting(draft, audioExtension: audioExtension)
         let mid = meeting.id!
         let segments = fx.segments.map { s -> Segment in var s = s; s.meetingId = mid; return s }
         try db.saveTranscript(mid, segments: segments, duration: fx.meeting.durationSeconds ?? 0,
@@ -1223,6 +1230,45 @@ enum GoldenDump {
             }
             return hex
         }
+    }
+
+    /// 資料夾用 id 辨識的 migration（R118、design §92.5）：只跑到 v17 的資料庫寫入 fixtures 的 migrateV18，再跑 v18
+    private static func migrateV18(_ f: Fixtures, _ w: inout Writer) throws {
+        guard let fx = f["migrateV18"] as? Object else { return }
+        let queue = try DatabaseQueue()
+        let migrator = AppDatabase.makeMigrator(sidebarKeys: false)
+        try migrator.migrate(queue, upTo: "v17")
+        try queue.write { db in
+            for o in fx["folders"] as? [Object] ?? [] {
+                try db.execute(sql: "INSERT INTO folders (name, created_at) VALUES (?, ?)", arguments: [o["name"] as? String, o["created_at"] as? String])
+            }
+            for o in fx["meetings"] as? [Object] ?? [] {
+                let created = o["created_at"] as? String
+                try db.execute(sql: """
+                    INSERT INTO meetings (title, folder, deleted_at, created_at, meeting_date, updated_at, source_filename, audio_file)
+                    VALUES (?, ?, ?, ?, ?, ?, '', '')
+                    """, arguments: [o["title"] as? String, o["folder"] as? String, o["deleted_at"] as? String, created, created, created])
+            }
+            for o in fx["folder_rules"] as? [Object] ?? [] {
+                try db.execute(sql: "INSERT INTO folder_rules (folder, keywords, people, template_id, created_at) VALUES (?, ?, ?, ?, ?)",
+                               arguments: [o["folder"] as? String, o["keywords"] as? String, o["people"] as? String, o["template_id"] as? String, o["created_at"] as? String])
+            }
+        }
+        try migrator.migrate(queue)
+        func rows(_ sql: String) throws -> [Object] {
+            try queue.read { db in
+                try Row.fetchAll(db, sql: sql).map { row in
+                    var object: Object = [:]
+                    for (column, value) in row { object[column] = value.storage.value ?? NSNull() }
+                    return object
+                }
+            }
+        }
+        w.json("db/migrate-v18.json", [
+            "folders": try rows("SELECT id, name, created_at FROM folders ORDER BY id"),
+            "folder_rules": try rows("SELECT folder_id, keywords, people, template_id, created_at FROM folder_rules ORDER BY folder_id"),
+            "meetings": try rows("SELECT id, title, folder_id, deleted_at FROM meetings ORDER BY id"),
+        ] as Object)
     }
 
     /// 一張表的所有列：時間欄位（每次跑都不同）有值時寫成 "<time>"，BLOB 寫成 base64

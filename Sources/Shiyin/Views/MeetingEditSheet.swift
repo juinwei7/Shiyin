@@ -860,7 +860,7 @@ struct MergePickerSheet: View {
         let own = model.meetings.first { $0.id == meetingId }?.meeting
         let otherLanguage = own.map { $0.language != meeting.language } ?? false
         var meta = [meeting.meetingDate, TimeFormat.string(Double(meeting.durationSeconds ?? 0))]
-        if !meeting.folder.isEmpty { meta.append(meeting.folder) }
+        if meeting.folderId != nil { meta.append(model.folderName(meeting.folderId)) }
         return Button { picked = row.id } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {

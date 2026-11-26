@@ -80,7 +80,7 @@ enum MeetingPackage {
         try encoder.encode(MeetingJSON(
             title: m.title, titleLocked: m.titleLocked, meetingDate: m.meetingDate, participants: m.participants,
             sourceFilename: m.sourceFilename, durationSeconds: m.durationSeconds, templateId: m.templateId,
-            userNotes: m.userNotes, channels: m.channels, folder: m.folder, language: m.language, notes: b.notes, notesBy: m.notesBy,
+            userNotes: m.userNotes, channels: m.channels, folder: b.folderName, language: m.language, notes: b.notes, notesBy: m.notesBy,
             speakers: b.speakers.map { SpeakerJSON(idx: $0.key, name: $0.value) }.sorted { $0.idx < $1.idx },
             bookmarks: b.bookmarks.map { BookmarkJSON(time: $0.time, label: $0.label) }))
             .write(to: dir.appendingPathComponent("meeting.json"))
@@ -100,8 +100,8 @@ enum MeetingPackage {
         try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path])
     }
 
-    /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）。在背景執行（design §21.13）
-    static func importPackage(_ url: URL, db: AppDatabase, folder: String = "") throws -> Meeting {
+    /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）。封包帶的是名字（R118），找同名的、沒有就建一個。在背景執行（design §21.13）
+    static func importPackage(_ url: URL, db: AppDatabase, folder: Int64? = nil) throws -> Meeting {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         let dir = try Paths.makeTempDirectory()
@@ -151,7 +151,7 @@ enum MeetingPackage {
             title: info.title, titleLocked: info.titleLocked, meetingDate: info.meetingDate, participants: info.participants,
             sourceFilename: info.sourceFilename, durationSeconds: info.durationSeconds, notesBy: info.notesBy,
             templateId: info.templateId, userNotes: info.userNotes, source: "package", channels: info.channels,
-            folder: info.folder.flatMap { $0.isEmpty ? nil : $0 } ?? folder, language: info.language ?? "zh"),
+            folderId: try info.folder.flatMap { $0.isEmpty ? nil : $0 }.map { try db.createFolder($0) } ?? folder, language: info.language ?? "zh"),
             audioExtension: audioExt)
         do {
             if let audioName {

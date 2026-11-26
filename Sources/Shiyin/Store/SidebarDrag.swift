@@ -6,23 +6,24 @@ import UniformTypeIdentifiers
 extension UTType {
     /// 拖的會議（id 用逗號分開），只在拾音裡面（Info.plist 宣告）
     static let shiyinMeetingIDs = UTType(exportedAs: "com.weiwei.shiyin.meeting-ids")
-    /// 拖的資料夾（鍵：folder:名稱）
+    /// 拖的資料夾（鍵：folderid:<id>）
     static let shiyinSidebarItem = UTType(exportedAs: "com.weiwei.shiyin.sidebar-item")
 }
 
 /// 側欄「資料夾」那一段的一列
 struct SidebarFolderItem: Identifiable {
+    var folderId: Int64
     var name: String
     var count: Int
 
-    var key: String { AppModel.folderKey(name) }
+    var key: String { AppModel.folderKey(folderId) }
     var id: String { key }
 }
 
 extension AppModel {
     /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照名稱
     var sidebarFolderItems: [SidebarFolderItem] {
-        let defaults = folders.map { SidebarFolderItem(name: $0.name, count: $0.count) }
+        let defaults = folders.map { SidebarFolderItem(folderId: $0.id, name: $0.name, count: $0.count) }
         let rank = Dictionary(sidebarOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
         return defaults.enumerated().sorted { a, b in
             switch (rank[a.element.key], rank[b.element.key]) {
@@ -80,13 +81,13 @@ extension AppModel {
     /// 會議拖到下面列表的標題：移進現在看的資料夾；「其他會議」是移出資料夾
     func dropOnListHeader(_ ids: [Int64]) {
         if let folder = folderFilter {
-            moveToFolder(ids, folder: folder)
+            moveToFolder(ids, folderId: folder)
         } else if listShowsOthersOnly {
-            let inFolder = ids.filter { id in !(meetings.first { $0.id == id }?.meeting.folder.isEmpty ?? true) }
+            let inFolder = ids.filter { id in meetings.first { $0.id == id }?.meeting.folderId != nil }
             if inFolder.isEmpty {
                 noticeMessage = ids.count == 1 ? String(localized: "這場會議沒有在任何資料夾裡") : String(localized: "這些會議都沒有在資料夾裡")
             } else {
-                moveToFolder(inFolder, folder: "")
+                moveToFolder(inFolder, folderId: nil)
             }
         }
     }
@@ -97,7 +98,7 @@ extension AppModel {
     }
 
     /// 從 Finder 拖到資料夾上的檔案：匯入到那個資料夾（R103.3）；參考文件（PDF 這類）要拖到會議頁
-    func importDropped(_ urls: [URL], into folder: String) {
+    func importDropped(_ urls: [URL], into folder: Int64) {
         let files = urls.filter { !DocumentReader.isDroppedDocument($0) }
         if files.isEmpty {
             errorMessage = String(localized: "參考文件請拖到會議頁，會加進那場會議")
