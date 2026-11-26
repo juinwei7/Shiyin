@@ -17,7 +17,7 @@ DICTS = Path(sys.argv[1]) if len(sys.argv) > 1 else \
 OUT = ROOT / "Sources/Shiyin/Transcribe/ChineseVariantsData.swift"
 
 # 系統的中文辨識常選錯的字：同一個簡體字有好幾個繁體寫法時，選了不對的那個（design §6.2.2）
-TARGETS = "麵裏迴隻註錶係製韆癥穀鑒鉆閑殭紮輓復闆發幹"
+TARGETS = "麵裏迴隻註錶係製韆癥穀鑒鉆閑殭紮輓復闆發幹鞦"
 
 
 def entries(name):
