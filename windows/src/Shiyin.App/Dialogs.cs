@@ -201,7 +201,7 @@ public static partial class Dialogs
         var twoTrack = bundle.Meeting.Channels == "both";
         var noRegions = bundle.MicRegions.Count == 0;
         var micOnly = new CheckBox { Content = L.T("麥克風只保留建議收錄"), IsChecked = host.Settings.ExportMicRegionsOnly, IsEnabled = !noRegions };
-        ToolTipService.SetToolTip(micOnly, noRegions ? L.T("這場還沒有建議收錄的區塊") : L.T("其餘的麥克風會是沒有聲音，電腦聲音全部保留"));
+        ToolTipService.SetToolTip(micOnly, noRegions ? L.T("這場還沒有建議收錄的區塊（在播放列上方的麥克風時間軸偵測或新增）") : L.T("其餘的麥克風會是沒有聲音，電腦聲音全部保留"));
         var hint = Ui.Text("", 13, color: Ui.Secondary);
         void Sync()
         {

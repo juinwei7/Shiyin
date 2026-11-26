@@ -48,7 +48,7 @@ public sealed class DetailView
         ReviewDraft = new ReviewDraft(host);
         transcript = new TranscriptTab(host, window);
         recording = new RecordingPanel(host, window);
-        playerBar = new PlayerBar(host);
+        playerBar = new PlayerBar(host, window);
         notes = new NotesTabs(host, window, ReviewDraft);
         review = new ReviewTab(host, window, ReviewDraft);
         ask = new AskTab(host, window);

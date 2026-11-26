@@ -78,7 +78,7 @@ public class PipelineTests
         var output = new System.Text.Json.Nodes.JsonArray();
         foreach (var c in Golden.Fixtures.GetProperty("micRegionCases").EnumerateArray())
         {
-            var r = MicRegions.Detect(Golden.MicLevels(c.GetProperty("levels")));
+            var r = MicRegions.Detect(Golden.MicLevels(c.GetProperty("levels")), c.TryGetProperty("threshold", out var t) ? t.GetDouble() : null);
             output.Add(new System.Text.Json.Nodes.JsonObject
             {
                 ["key"] = c.Str("key"), ["floorDb"] = r.FloorDb, ["thresholdDb"] = r.ThresholdDb,

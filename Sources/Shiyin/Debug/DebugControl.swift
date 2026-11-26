@@ -604,6 +604,18 @@ enum DebugControl {
             }
         case "micpause": model.recorder.setMicPaused(args.count > 1 && args[1] == "on")   // micpause on|off：等於按錄音畫面的麥克風圖示（design §90）
         case "micregions": micRegions(args)
+        case "mictrack":   // mictrack collapse|expand [秒]：等於按麥克風時間軸的收合鍵（design §93.5）；給秒數時放慢，截得到滑到一半的畫面
+            let seconds = args.count > 2 ? Double(args[2]) ?? MicTrackView.slide : MicTrackView.slide
+            withAnimation(.easeInOut(duration: seconds)) { model.micTrackCollapsed = args.count > 1 && args[1] == "collapse" }
+        case "miczoom":   // miczoom <倍數> <中心秒數>|pan <秒>|reset：等於 ⌃+／⌃−、左右捲動、⌃0（design §93.5）；目前選取的會議
+            let duration = max(model.player.duration, Double(model.detail?.meeting.durationSeconds ?? 0))
+            if args.count > 2, args[1] == "pan" { model.micZoom = model.micZoom?.panned(duration: duration, by: Double(args[2]) ?? 0) }
+            else if args.count > 2, let factor = Double(args[1]) {
+                model.micZoom = MicZoom.zoomed(model.micZoom, duration: duration, factor: factor, anchor: Double(args[2]) ?? 0)
+            } else { model.micZoom = nil }
+        case "micthreshold":   // micthreshold <dB>|auto：等於拖門檻線放開、右鍵「門檻改回自動」（R119.12）；目前選取的會議
+            model.setMicThreshold(args.count > 1 ? Double(args[1]) : nil)
+        case "micdetectui": model.detectMicRegions()   // 等於按時間軸的「偵測」「重新偵測」（目前選取的會議，design §93.5）
         case "playmode":   // playmode <both|mic|system> [gate on|off]：等於選播放列的「兩邊 ▾」（design §93.7）；峰值歸零重新算
             if args.count > 1, let channels = PlayChannels(rawValue: args[1]) { model.setPlayChannels(channels) }
             if args.count > 3, args[2] == "gate" { model.setPlayMicRegions(args[3] == "on") }
@@ -1362,6 +1374,7 @@ enum DebugControl {
                        "mix": ChannelMix.stats.withLock { ["frames": $0.frames, "sourcePeaks": $0.sourcePeaks, "mixedPeak": $0.mixedPeak,
                                                             "micPeak": $0.micPeak, "systemPeak": $0.systemPeak, "gateMic": $0.gateMic,
                                                             "lastTime": $0.lastTime] },
+                       "micZoom": model.micZoom.map { ["start": $0.start, "span": $0.span] as Any } ?? NSNull(),
                        "channels": model.playChannels.rawValue, "micRegionsOnly": model.detail?.meeting.playMicRegions ?? false],
             "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused, "micPaused": model.recorder.micPaused,
                          "meetingId": model.recorder.meetingId ?? -1, "elapsed": model.recorder.elapsed,
@@ -1569,7 +1582,9 @@ enum DebugControl {
                     guard let meeting = try db.meeting(id) else { throw LLMError.badOutput("no meeting") }
                     let levels = try MicRegions.levels(meeting.audioURL)
                     result["frames"] = levels.count
-                    result["voiced"] = levels.compactMap { $0 }.count
+                    // 有聲音：同偵測的規則（不是 0、> −80 dBFS）；靜音：整格是 0 或 −80 以下（design §93.2）
+                    result["voiced"] = levels.compactMap { $0 }.filter { $0 > MicRegions.Rules.mutedDb }.count
+                    result["muted"] = levels.count - (result["voiced"] as? Int ?? 0)
                     try db.saveMicDetection(id, MicRegions.detect(levels))
                 case "add": try db.addMicRegion(id, start: n[0], end: n[1])
                 case "update": if let rid { try db.updateMicRegion(rid, start: n[1], end: n[2]) }

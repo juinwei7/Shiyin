@@ -947,13 +947,15 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 ### 11.52 麥克風、電腦聲音分開聽，麥克風的「建議收錄」（R119，M§93、D201）
 
 - **檔案**：不拆，同 M§93.1。
-- **偵測**：`Shiyin.Core/Transcribe/MicRegions.cs`：`Detect(float?[] levels) -> MicRegionResult`，規則、常數同 M§93.2（`MicRegions.Rules`），比對標準答案 `pipeline/mic-regions.json`。讀檔 `Shiyin.Services` 的 `MicLevels.Read(path)`：NAudio 讀左聲道、每 100 ms 一格算 RMS 轉 dBFS（下限 −90），整格是 0 記成 null。時機同 M§93.2（錄音停止後轉錄線的第一步、匯入沒有區塊的封包）。
+- **偵測**：`Shiyin.Core/Transcribe/MicRegions.cs`：`Detect(float?[] levels) -> MicRegionResult`，規則、常數同 M§93.2（`MicRegions.Rules`），比對標準答案 `pipeline/mic-regions.json`。讀檔 `Shiyin.Services` 的 `MicLevels.Read(path)`：NAudio 讀左聲道、每 100 ms 一格算 RMS 轉 dBFS（下限 −90），整格是 0 記成 null。時機同 M§93.2（錄音停止後轉錄線的第一步、匯入沒有區塊的封包、時間軸的「重新偵測」「偵測」）。
 - **資料**：`MigrationSql.V19`（同 M§93.3，`db/schema.sql` 一致）；`AppDatabase.MicRegions.cs`（同名方法，重疊合併、`origin` 的規則同 Mac）。編輯會議（§11.23 分割、`EditTimeline`、合併、還原的快照）照 M§93.3；`.shiyin` 的 `micRegions`、`micFloorDb`、`micThresholdDb` 同 Mac（雙向匯入的測試加區塊）。
 - **播放**：`MixedAudioSource`（§11.16）加 `MicGain`、`SystemGain`、`GateMic`、`Regions`（`lock` 保護，UI 執行緒寫、`SampleRequested` 讀）。每次送 0.1 秒時用這批的開始時間算 `gate(t)`（10 ms 淡入淡出），`m = (L × MicGain × gate + R × SystemGain) × 0.7071`，同 M§93.4；算法放 `ChannelMix.MixGated`（單元測試在 `UtilTests`）。`Player.SetChannels(...)` 只改狀態，不重建 `MediaStreamSource`。`MainState` 讀寫 `play_channels`、`play_mic_regions`。
-- **畫面**：播放列的「兩邊 ▾」`DropDownButton`，選單裡三個選項、分隔線、「麥克風只播建議收錄」`ToggleMenuFlyoutItem`（同 M§93.4）。
+- **畫面**：`Shiyin.App/Views/MicTrackView.cs`（不用 Win2D，`Canvas` 加 `Rectangle`／`Polyline`，跟 `PlayerBar` 同一條時間軸），放在 `PlayerBar` 上方；內容、互動同 M§93.5（拖曳新增、拖邊界調整、Delete、右鍵 `MenuFlyout`、雙擊播放、收合）。播放列的「兩邊 ▾」`DropDownButton`，選單裡三個選項、分隔線、「麥克風只播建議收錄」`ToggleMenuFlyoutItem`（同 M§93.5）。
+- **自己調門檻**（R119.12、M§93.5）：migration v20、`MicRegions.Detect(levels, threshold)`、`MicDetection.Run` 讀 `MicThresholdUser`；`MicTrackView` 在門檻線上按下時拖門檻（`SizeNorthSouth`），放開時 `AppController.SetMicThreshold` 用時間軸已經讀好的波形重算；右鍵「門檻改回自動」；封包 `micThresholdUser`。
+- **放大縮小**（R119.10、M§93.5）：`MicZoom` 在 `Shiyin.Core`；`MicTrackView` 的 `PointerWheelChanged`（Ctrl 放大縮小、捏合也是這個；Shift 或水平滾輪左右移動），鍵盤 Ctrl＋＋／−／0 用主視窗內容的 `KeyDown`（`AddHandler`，含已處理的）加上滑鼠在時間軸上的判斷；`Timeline` 畫範圍的框。
 - **匯出**：`MediaFoundationCompressor.Export(…, mixChannels, micRegions)`：勾「麥克風只保留建議收錄」時在 `ChannelMix.ToMono` 前對左聲道乘 `gate(t)`（`MixGated`），m4a、wav 照舊（§11.16）。`ExportDialog` 的勾選同 M§93.6，設定 `Settings.ExportMicRegionsOnly`。
 - **DEBUG**：控制通道的 `micregions`、`playmode`，名稱和參數同 Mac；`state` 的 `player.mix` 同 Mac。
-- **驗證**：`dotnet test`（標準答案 `pipeline/mic-regions.json`、`db/`、封包、`MixGated` 的取樣、編輯會議後的區塊）；虛擬機 `record-sim` 錄一段 6 分鐘以上，`micregions list`、匯出 m4a／wav 讀回取樣（勾的時候區塊外的麥克風是 0）。虛擬機沒有音效裝置，播放的切換要真的 Windows 電腦（`[~]`）。
+- **驗證**：`dotnet test`（標準答案 `pipeline/mic-regions.json`、`db/`、封包、`MixGated` 的取樣、編輯會議後的區塊）；虛擬機 `record-sim` 錄一段 6 分鐘以上，`micregions list`、匯出 m4a／wav 讀回取樣（勾的時候區塊外的麥克風是 0），時間軸截圖。虛擬機沒有音效裝置，播放的切換要真的 Windows 電腦（`[~]`）。
 
 ### 11.53 匯出的進度和取消（R120，M§94）
 

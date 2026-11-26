@@ -44,6 +44,10 @@ public sealed partial class AppDatabase
     public void SetPlayMicRegions(long meetingId, bool on) =>
         Write(db => db.Execute("UPDATE meetings SET play_mic_regions = ? WHERE id = ?", on, meetingId));
 
+    /// <summary>使用者自己設的門檻（R119.12）；null 是自動</summary>
+    public void SetMicThresholdUser(long meetingId, double? value) =>
+        Write(db => db.Execute("UPDATE meetings SET mic_threshold_user = ? WHERE id = ?", value, meetingId));
+
     public void ClearMicRegions(long meetingId) => Write(db => db.Execute("DELETE FROM mic_regions WHERE meeting_id = ?", meetingId));
 
     static MicRegion? PlaceMicRegion(Db db, long meetingId, long? replacing, double start, double end)

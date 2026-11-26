@@ -20,6 +20,8 @@ public static class MicRegions
         public const double MarginDb = 6;
         public const double MinThresholdDb = -50;
         public const double SilentDb = -90;
+        /// <summary>這以下當成麥克風靜音（硬體、系統靜音、m4a 裡暫停那段的雜訊）：不算進基準、不算有聲音（M§93.2）</summary>
+        public const double MutedDb = -80;
         public const int JoinGapFrames = 50;
         public const int MinLengthFrames = 4;
         public const int PadBeforeFrames = 3;
@@ -28,18 +30,19 @@ public static class MicRegions
         public const float ZeroSample = 1e-6f;
     }
 
-    public static MicRegionResult Detect(IReadOnlyList<double?> levels)
+    /// <summary>threshold：使用者自己設的門檻（R119.12），給了就用它、不套 −50 的下限；基準照算</summary>
+    public static MicRegionResult Detect(IReadOnlyList<double?> levels, double? threshold = null)
     {
-        var voiced = levels.Where(l => l is not null).Select(l => l!.Value).ToList();
+        var voiced = levels.Where(l => l is double v && v > Rules.MutedDb).Select(l => l!.Value).ToList();
         if (voiced.Count < Rules.MinVoicedFrames)
             return new(voiced.Count == 0 ? Rules.SilentDb : Mean(voiced), null, []);
         var floor = Mean(voiced.Take(Rules.BaselineFrames).ToList());
-        var threshold = Math.Max(floor + Rules.MarginDb, Rules.MinThresholdDb);
+        var cut = threshold ?? Math.Max(floor + Rules.MarginDb, Rules.MinThresholdDb);
 
         var runs = new List<(int S, int E)>();
         for (var i = 0; i < levels.Count; i++)
         {
-            if (levels[i] is not double level || !(level > threshold)) continue;
+            if (levels[i] is not double level || !(level > cut)) continue;
             if (runs.Count > 0 && runs[^1].E == i) runs[^1] = (runs[^1].S, i + 1);
             else runs.Add((i, i + 1));
         }
@@ -56,7 +59,7 @@ public static class MicRegions
             if (padded.Count > 0 && s <= padded[^1].E) padded[^1] = (padded[^1].S, Math.Max(padded[^1].E, e));
             else padded.Add((s, e));
         }
-        return new(floor, threshold, [.. padded.Select(r => (r.S / 10.0, r.E / 10.0))]);
+        return new(floor, cut, [.. padded.Select(r => (r.S / 10.0, r.E / 10.0))]);
     }
 
     static double Mean(List<double> values)

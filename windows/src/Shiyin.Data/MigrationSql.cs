@@ -336,4 +336,7 @@ static class MigrationSql
         "ALTER TABLE meetings ADD COLUMN play_channels TEXT NOT NULL DEFAULT 'both'",
         "ALTER TABLE meetings ADD COLUMN play_mic_regions INTEGER NOT NULL DEFAULT 0",
     ];
+
+    /// <summary>麥克風「建議收錄」的門檻自己調（R119.12、M§93.5）</summary>
+    public const string V20 = "ALTER TABLE meetings ADD COLUMN mic_threshold_user REAL";
 }

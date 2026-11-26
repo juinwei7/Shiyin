@@ -41,7 +41,7 @@
     "thresholdDb" : -50
   },
   {
-    "floorDb" : -85,
+    "floorDb" : -75,
     "key" : "quiet-room",
     "regions" : [
       [
@@ -50,6 +50,47 @@
       ]
     ],
     "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -60,
+    "key" : "muted-start",
+    "regions" : [
+      [
+        109.7,
+        113.5
+      ]
+    ],
+    "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -40,
+    "key" : "muted-too-little",
+    "regions" : [
+
+    ],
+    "thresholdDb" : null
+  },
+  {
+    "floorDb" : -60,
+    "key" : "user-threshold-low",
+    "regions" : [
+      [
+        59.700000000000003,
+        68.5
+      ]
+    ],
+    "thresholdDb" : -57.5
+  },
+  {
+    "floorDb" : -60,
+    "key" : "user-threshold-high",
+    "regions" : [
+      [
+        72.700000000000003,
+        76.5
+      ]
+    ],
+    "thresholdDb" : -25
   },
   {
     "floorDb" : -40,

@@ -85,6 +85,7 @@ public static class Golden
         /// <summary>麥克風的「建議收錄」（M§93.3）：fixtures 的 meetingMicRegions，同 Mac 的 GoldenDump</summary>
         public double? MicFloorDb { get; init; }
         public double? MicThresholdDb { get; init; }
+        public double? MicThresholdUser { get; init; }
         public List<MicRegion> MicRegions { get; init; } = [];
 
         /// <summary>資料庫裡的說話者表：1 到最大編號，沒改名的是預設名稱</summary>
@@ -140,6 +141,7 @@ public static class Golden
             {
                 MicFloorDb = Number(mic.Get("floorDb")),
                 MicThresholdDb = mic.Get("thresholdDb") is { ValueKind: JsonValueKind.Number } t ? t.GetDouble() : null,
+                MicThresholdUser = mic.Get("thresholdUser") is { ValueKind: JsonValueKind.Number } u ? u.GetDouble() : null,
                 MicRegions = [.. mic.GetProperty("regions").EnumerateArray().Select(r => new MicRegion
                 {
                     Start = r[0].GetDouble(), End = r[1].GetDouble(), Origin = r[2].GetString() ?? MicRegion.Auto,

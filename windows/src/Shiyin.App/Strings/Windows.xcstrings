@@ -1497,6 +1497,23 @@
         }
       }
     },
+    "回到整場（Ctrl+0）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the whole meeting (Ctrl+0)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回到整场（Ctrl+0）"
+          }
+        }
+      }
+    },
     "在打開的網頁登入，登入完會回到拾音": {
       "extractionState": "manual",
       "localizations": {
@@ -4050,23 +4067,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "这场会议是在模型下载好之前，用快速识别转录的。可以用日文转录模型重新转录，通常比较准。"
-          }
-        }
-      }
-    },
-    "這場還沒有建議收錄的區塊": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This meeting has no suggested parts yet"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这场还没有建议收录的区块"
           }
         }
       }

@@ -64,6 +64,8 @@ public sealed class AppSettings
     /// <summary>側欄收起來的段落、在原地展開的資料夾（R101、M§75、design-windows §11.34）：字串陣列，鍵同 Mac</summary>
     public const string SidebarCollapsedKey = "sidebarCollapsed";
     public const string SidebarExpandedKey = "sidebarExpanded";
+    /// <summary>播放列上方的麥克風時間軸收合（M§93.5）</summary>
+    public const string MicTrackCollapsedKey = "micTrackCollapsed";
     /// <summary>匯出錄音時麥克風只保留建議收錄（R119.6、M§93.6）</summary>
     public const string ExportMicRegionsOnlyKey = "exportMicRegionsOnly";
     /// <summary>側欄「資料夾」那一段拖曳排好的順序（R103.2、M§77、design-windows §11.36）：字串陣列（照順序），鍵同 sidebarExpanded</summary>

@@ -2098,6 +2098,7 @@
   {"op": "updateMicRegion", "key": "en", "index": 0, "start": 1, "end": 6, "comment": "碰到自動的那塊就合併成一塊（使用者的）"},
   {"op": "addMicRegion", "key": "en", "start": 15, "end": 15, "comment": "長度 0 的不加"},
   {"op": "saveMicDetection", "key": "en", "levels": [[60, -60], [30, -30], [20, -60], [30, -30], [25, -60]], "comment": "重新偵測：跟使用者的重疊的捨棄"},
+  {"op": "saveMicDetection", "key": "en", "levels": [[60, -60], [30, -30], [20, -60], [30, -30], [25, -60]], "threshold": -35, "comment": "自己設的門檻（R119.12）：記在 mic_threshold_user"},
   {"op": "addMicRegion", "key": "zh", "start": 27, "end": 26, "comment": "開始、結束反過來也可以"},
   {"op": "deleteMicRegion", "key": "zh", "index": 1},
   {"op": "dumpTables", "file": "db/63-mic-regions.json", "tables": ["mic_regions", "meetings"]},
@@ -3276,7 +3277,11 @@
   {"key": "normal", "levels": [[600, -60], [30, -30], [20, -60], [30, -30], [100, -60], [3, -30], [100, -60], [10, -30]]},
   {"key": "speech-first-minute", "levels": [[300, -30], [300, -60], [200, -60], [50, -35]]},
   {"key": "paused", "levels": [[200, null], [400, -58], [300, null], [400, -58], [40, -40], [60, -58]]},
-  {"key": "quiet-room", "levels": [[700, -85], [20, -55], [30, -85], [20, -45], [30, -85]]},
+  {"key": "quiet-room", "levels": [[700, -75], [20, -55], [30, -75], [20, -45], [30, -75]]},
+  {"key": "muted-start", "levels": [[300, -90], [200, -85], [600, -60], [30, -30], [50, -82], [20, -60]], "comment": "麥克風靜音（−80 以下）不算進基準：基準是 −60，不是被靜音那段拉低"},
+  {"key": "muted-too-little", "levels": [[2000, -88], [50, -40]]},
+  {"key": "user-threshold-low", "levels": [[600, -60], [30, -30], [20, -60], [30, -56], [100, -60]], "threshold": -57.5, "comment": "自己設的門檻（R119.12）：比 −50 的下限低也照用"},
+  {"key": "user-threshold-high", "levels": [[600, -60], [30, -30], [100, -60], [30, -20], [100, -60]], "threshold": -25},
   {"key": "too-little", "levels": [[50, null], [80, -40], [2000, null]]},
   {"key": "all-null", "levels": [[100, null]]},
   {"key": "short-recording", "levels": [[150, -60], [10, -20]]},
@@ -3288,7 +3293,16 @@
    "times": [0, 0.99, 1, 1.0025, 1.005, 1.01, 1.5, 1.995, 1.999, 2, 2.2, 2.5, 2.5025, 2.505, 9.9999, 10.004, 15, 19.996, 20, 25]},
   {"key": "empty", "regions": [], "times": [0, 5]}
  ],
+ "micZoomCases": [
+  {"key": "zoom-in-out", "duration": 420,
+   "steps": [["zoom", 2, 100], ["zoom", 2, 100], ["zoom", 0.5, 100], ["zoom", 0.5, 300], ["zoom", 0.5, 300]]},
+  {"key": "edges", "duration": 420,
+   "steps": [["zoom", 4, 0], ["zoom", 4, 420], ["pan", -1000], ["pan", 30], ["pan", 1000], ["zoom", 100, 400], ["zoom", 2, 400]]},
+  {"key": "follow", "duration": 420,
+   "steps": [["zoom", 7, 30], ["follow", 40], ["follow", 70], ["follow", 415], ["follow", 0], ["zoom", 1.5, 10]]},
+  {"key": "short", "duration": 6, "steps": [["zoom", 2, 3], ["pan", 1]]}
+ ],
  "meetingMicRegions": {
-  "zh": {"floorDb": -52.5, "thresholdDb": -46.5, "regions": [[1.2, 9.8, "auto"], [15, 25.5, "user"], [50, 70, "auto"], [3000, 3100.5, "auto"]]}
+  "zh": {"floorDb": -52.5, "thresholdDb": -46.5, "thresholdUser": -44, "regions": [[1.2, 9.8, "auto"], [15, 25.5, "user"], [50, 70, "auto"], [3000, 3100.5, "auto"]]}
  }
 }

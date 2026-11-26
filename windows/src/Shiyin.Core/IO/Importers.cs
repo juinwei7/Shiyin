@@ -136,6 +136,8 @@ public static class PackageJson
         /// <summary>麥克風的「建議收錄」（M§93.3）；沒偵測過就不寫，舊封包沒有這些欄位（匯入後自動偵測）</summary>
         public double? MicFloorDb { get; init; }
         public double? MicThresholdDb { get; init; }
+        /// <summary>使用者自己設的門檻（R119.12）；自動的不寫</summary>
+        public double? MicThresholdUser { get; init; }
         public List<(double Start, double End, string Origin)>? MicRegions { get; init; }
     }
 
@@ -165,6 +167,7 @@ public static class PackageJson
             (JNode)new JNode.Obj().Add("time", JNode.Of(b.Time)).Add("label", b.Label))));
         if (i.MicFloorDb is double floor) o.Add("micFloorDb", JNode.Of(floor));
         if (i.MicThresholdDb is double threshold) o.Add("micThresholdDb", JNode.Of(threshold));
+        if (i.MicThresholdUser is double user) o.Add("micThresholdUser", JNode.Of(user));
         if (i.MicRegions is { } regions)
             o.Add("micRegions", new JNode.Arr(regions.Select(r =>
                 (JNode)new JNode.Obj().Add("start", JNode.Of(r.Start)).Add("end", JNode.Of(r.End)).Add("origin", r.Origin))));
@@ -232,7 +235,8 @@ public static class PackageJson
         return new MeetingInfo(title, locked, date, participants, source, (int?)r.Long("durationSeconds"), template, userNotes, channels,
             r.Str("folder"), r.Str("language"), notes, r.Str("notesBy"), speakers, bookmarks)
         {
-            MicFloorDb = r.Double("micFloorDb"), MicThresholdDb = r.Double("micThresholdDb"), MicRegions = micRegions,
+            MicFloorDb = r.Double("micFloorDb"), MicThresholdDb = r.Double("micThresholdDb"), MicThresholdUser = r.Double("micThresholdUser"),
+            MicRegions = micRegions,
         };
     }
 

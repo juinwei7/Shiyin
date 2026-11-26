@@ -26,23 +26,40 @@ public sealed class PlayerBar
     readonly DropDownButton channels = new();
     readonly Timeline timeline;
     readonly TopicBand topics;
+    /// <summary>麥克風時間軸（R119.4、M§93.5）：跟錄音時間軸同一欄，時間對齊；只有「麥克風＋電腦聲音」的會議</summary>
+    readonly MicTrackView mic;
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     MeetingDetail? detail;
     double topicsDuration = -1;
 
     public event Action<double>? Tick;
 
-    public PlayerBar(AppHost host)
+    public PlayerBar(AppHost host, MainWindow window)
     {
         this.host = host;
+        mic = new MicTrackView(host, window);
+        mic.ZoomChanged += zoom => timeline.SetZoom(zoom);
         timeline = new Timeline((seconds, playNow) => host.Player.Seek(seconds, playNow));
         topics = new TopicBand(seconds => host.Player.Seek(seconds, true));
         foreach (var w in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto })
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = w });
-        // 議題帶在第一列（沒有議題時收起來，高度是 0），其他元件在第二列，跟時間軸對齊
+        // 麥克風時間軸在第一列、議題帶在第二列（沒有時收起來，高度是 0），其他元件在第三列，跟時間軸對齊
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        // 麥克風時間軸在第一列（錄音時間軸那一欄）；收合鈕、段數放在議題帶那一列的左邊、右邊，不比議題帶高
+        // （使用者：「放在議題帶的左邊跟右邊」）：時間軸收、開時那一列不動，收合鈕一直在同一個位置
+        Grid.SetColumnSpan(mic.Toggle, 2);
+        Grid.SetRow(mic.Toggle, 1);
+        Grid.SetColumn(mic.Content, 2);
+        Grid.SetColumn(mic.Info, 3);
+        Grid.SetColumnSpan(mic.Info, 3);
+        Grid.SetRow(mic.Info, 1);
+        Grid.SetColumn(mic.ThresholdLabel, 3);
+        Grid.SetColumnSpan(mic.ThresholdLabel, 3);
+        foreach (var part in mic.Parts) root.Children.Add(part);
         Grid.SetColumn(topics.Root, 2);
+        Grid.SetRow(topics.Root, 1);
         root.Children.Add(topics.Root);
         play.Click += (_, _) => host.Player.Toggle();
         current.Width = 52;
@@ -57,7 +74,7 @@ public sealed class PlayerBar
         for (var i = 0; i < items.Length; i++)
         {
             Grid.SetColumn((FrameworkElement)items[i], i);
-            Grid.SetRow((FrameworkElement)items[i], 1);
+            Grid.SetRow((FrameworkElement)items[i], 2);
             root.Children.Add(items[i]);
         }
         root.BorderThickness = new Thickness(0, 1, 0, 0);
@@ -123,6 +140,10 @@ public sealed class PlayerBar
         topicsDuration = -1;   // 紀錄可能改了（編輯、回答待確認、重新整理）：下一次 Update 重算議題帶
         speed.Content = Label(host.Player.Rate <= 0 ? 1 : host.Player.Rate);
         ShowChannels(value);
+        var both = value.Meeting.Channels == "both" && host.Paths.HasAudio(value.Meeting);
+        foreach (var part in mic.Parts) part.Visibility = both ? Visibility.Visible : Visibility.Collapsed;
+        if (both) mic.Show(value, Math.Max(host.Player.Duration, value.Meeting.DurationSeconds ?? 0));
+        timeline.SetZoom(both ? mic.VisibleZoom : null);
         timer.Start();
         Update();
         return root;
@@ -139,6 +160,7 @@ public sealed class PlayerBar
         current.Text = TimeFormat.String(player.CurrentTime);
         total.Text = TimeFormat.String(duration);
         timeline.Update(player.CurrentTime, duration);
+        if (mic.Content.Visibility == Visibility.Visible) mic.Update(player.CurrentTime, duration);
         if (duration != topicsDuration)
         {
             topicsDuration = duration;
@@ -164,6 +186,8 @@ public sealed class Timeline
     List<Segment> segments = [];
     List<double> reviews = [], bookmarks = [];
     double duration;
+    /// <summary>麥克風時間軸放大看的範圍（M§93.5）：框出來</summary>
+    MicZoom? zoom;
     bool dragging;
 
     public Timeline(Action<double, bool> seek)
@@ -184,6 +208,13 @@ public sealed class Timeline
         segments = value;
         reviews = reviewTimes;
         bookmarks = bookmarkTimes;
+        Draw();
+    }
+
+    public void SetZoom(MicZoom? value)
+    {
+        if (value == zoom) return;
+        zoom = value;
         Draw();
     }
 
@@ -227,6 +258,17 @@ public sealed class Timeline
             Canvas.SetLeft(dot, t * scale - 2.5);
             Canvas.SetTop(dot, height - 5);
             canvas.Children.Add(dot);
+        }
+        if (zoom is { } z)
+        {
+            var frame = new Rectangle
+            {
+                Width = Math.Max(2, z.Span * scale), Height = height - 1, RadiusX = 3, RadiusY = 3, Stroke = Ui.Celadon, StrokeThickness = 1,
+                Fill = new SolidColorBrush(Ui.Celadon.Color) { Opacity = 0.08 },
+            };
+            Canvas.SetLeft(frame, z.Start * scale);
+            Canvas.SetTop(frame, 0.5);
+            canvas.Children.Add(frame);
         }
         canvas.Children.Add(cursor);
     }

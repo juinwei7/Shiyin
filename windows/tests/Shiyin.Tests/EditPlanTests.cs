@@ -48,6 +48,32 @@ public sealed class EditPlanTests
         Golden.Json("util/edit-plan.json", output.ToJsonString());
     }
 
+    /// <summary>麥克風時間軸放大縮小（M§93.5）：每一步之後的範圍，跟 Mac 的 util/mic-zoom.json 比對</summary>
+    [Fact]
+    public void MicZoomSameAsMac()
+    {
+        var output = new JsonArray();
+        foreach (var c in Golden.Fixtures.GetProperty("micZoomCases").EnumerateArray())
+        {
+            var duration = D(c.GetProperty("duration"));
+            MicZoom? zoom = null;
+            var steps = new JsonArray();
+            foreach (var step in c.GetProperty("steps").EnumerateArray())
+            {
+                zoom = step[0].GetString() switch
+                {
+                    "zoom" => MicZoom.Zoomed(zoom, duration, D(step[1]), D(step[2])),
+                    "pan" => zoom?.Panned(duration, D(step[1])),
+                    "follow" => zoom?.Following(duration, D(step[1])),
+                    _ => zoom,
+                };
+                steps.Add(zoom is { } z ? new JsonArray(z.Start, z.Span) : null);
+            }
+            output.Add(new JsonObject { ["key"] = c.GetProperty("key").GetString(), ["steps"] = steps });
+        }
+        Golden.Json("util/mic-zoom.json", output.ToJsonString());
+    }
+
     /// <summary>會議紀錄的時間點換成 Snap 的時間：條目、待辦、議題開始、待確認、每個人的重點；不是時間的照留</summary>
     [Fact]
     public void NotesMappingTimes()

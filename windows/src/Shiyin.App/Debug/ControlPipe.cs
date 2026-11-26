@@ -112,6 +112,33 @@ public static partial class ControlPipe
                 host.Player.Seek(seekTo, args.Length > 2 && args[2] == "play");
                 return Ok;
             case "toggle": host.Player.Toggle(); return Ok;
+            // micregions <會議 id> list|detect|add <開始> <結束>|update <區塊 id> <開始> <結束>|delete <區塊 id>|clear：同 Mac（M§93.7），
+            // 先做動作再回傳基準、門檻、所有區塊（Mac 寫到檔案，這裡直接回傳）
+            case "micregions" when args.Length > 2 && long.TryParse(args[1], out var micMeeting):
+            {
+                double N(int i) => args.Length > i && double.TryParse(args[i], System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
+                var result = new JsonObject { ["action"] = args[2] };
+                switch (args[2])
+                {
+                    case "detect":
+                        Services.MicDetection.Run(micMeeting, host.Db, host.Paths, host.Decoder);
+                        break;
+                    case "add": host.Db.AddMicRegion(micMeeting, N(3), N(4)); break;
+                    case "update" when args.Length > 3 && long.TryParse(args[3], out var rid): host.Db.UpdateMicRegion(rid, N(4), N(5)); break;
+                    case "delete" when args.Length > 3 && long.TryParse(args[3], out var did): host.Db.DeleteMicRegion(did); break;
+                    case "clear": host.Db.ClearMicRegions(micMeeting); break;
+                }
+                var micInfo = host.Db.Meeting(micMeeting);
+                result["floorDb"] = micInfo?.MicFloorDb;
+                result["thresholdDb"] = micInfo?.MicThresholdDb;
+                result["channels"] = micInfo?.Channels ?? "";
+                result["regions"] = new JsonArray([.. host.Db.MicRegions(micMeeting).Select(r => (JsonNode)new JsonObject
+                {
+                    ["id"] = r.Id, ["start"] = r.Start, ["end"] = r.End, ["origin"] = r.Origin,
+                })]);
+                host.Controller.Refresh(micMeeting);
+                return result;
+            }
             // playmode <both|mic|system> [gate on|off]：等於選播放列的「兩邊 ▾」（同 Mac，M§93.7）
             case "playmode" when args.Length > 1 && main?.State.Selection is long playMeeting:
                 host.Controller.SetPlayChannels(playMeeting, Services.Capture.PlayChannelsText.Parse(args[1]));

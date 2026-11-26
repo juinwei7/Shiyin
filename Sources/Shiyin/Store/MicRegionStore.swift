@@ -61,6 +61,11 @@ extension AppDatabase {
         try pool.write { db in try db.execute(sql: "UPDATE meetings SET play_mic_regions = ? WHERE id = ?", arguments: [on, meetingId]) }
     }
 
+    /// 使用者自己設的門檻（R119.12）；nil 是自動
+    func setMicThresholdUser(_ meetingId: Int64, _ value: Double?) throws {
+        try pool.write { db in try db.execute(sql: "UPDATE meetings SET mic_threshold_user = ? WHERE id = ?", arguments: [value, meetingId]) }
+    }
+
     func clearMicRegions(_ meetingId: Int64) throws {
         try pool.write { db in try db.execute(sql: "DELETE FROM mic_regions WHERE meeting_id = ?", arguments: [meetingId]) }
     }

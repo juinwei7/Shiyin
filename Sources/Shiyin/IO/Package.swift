@@ -33,6 +33,8 @@ enum MeetingPackage {
         var micRegions: [MicRegionJSON]? = nil
         var micFloorDb: Double? = nil
         var micThresholdDb: Double? = nil
+        /// 使用者自己設的門檻（R119.12）；自動的不寫
+        var micThresholdUser: Double? = nil
     }
 
     struct SpeakerJSON: Codable { var idx: Int; var name: String }
@@ -44,6 +46,7 @@ enum MeetingPackage {
         guard let floor = m.micFloorDb else { return }
         info.micFloorDb = floor
         info.micThresholdDb = m.micThresholdDb
+        info.micThresholdUser = m.micThresholdUser
         info.micRegions = regions.map { MicRegionJSON(start: $0.start, end: $0.end, origin: $0.origin) }
     }
     struct SegmentJSON: Codable { var start: Double; var end: Double; var text: String; var lowConfidence: Bool; var speaker: Int? }
@@ -188,6 +191,7 @@ enum MeetingPackage {
             for bookmark in info.bookmarks { try db.addBookmark(id, time: bookmark.time, label: bookmark.label) }
             if let floor = info.micFloorDb {
                 try db.saveMicDetection(id, MicRegions.Result(floorDb: floor, thresholdDb: info.micThresholdDb, regions: []))
+                if let user = info.micThresholdUser { try db.setMicThresholdUser(id, user) }
                 for r in info.micRegions ?? [] where r.end > r.start {
                     try db.importMicRegion(id, start: r.start, end: r.end, origin: r.origin == MicRegion.user ? MicRegion.user : MicRegion.auto)
                 }

@@ -4606,6 +4606,23 @@
         }
       }
     },
+    "偵測": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect"
+          }
+        }
+      }
+    },
     "偵測到線上會議時提醒錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -5005,6 +5022,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部接受"
+          }
+        }
+      }
+    },
+    "全部清除": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部清除"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear All"
+          }
+        }
+      }
+    },
+    "全部清除…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部清除…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear All…"
           }
         }
       }
@@ -6267,6 +6318,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete Line"
+          }
+        }
+      }
+    },
+    "刪除這段": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除这段"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete This Part"
           }
         }
       }
@@ -7888,6 +7956,23 @@
         }
       }
     },
+    "回到整場（⌘0）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回到整场（⌘0）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the whole meeting (⌘0)"
+          }
+        }
+      }
+    },
     "回到最新": {
       "extractionState": "manual",
       "localizations": {
@@ -8826,6 +8911,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Expand section"
+          }
+        }
+      }
+    },
+    "展開麥克風時間軸": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开麦克风时间轴"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the microphone timeline"
           }
         }
       }
@@ -10616,6 +10718,35 @@
         }
       }
     },
+    "建議收錄 %lld 段": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建议收录 %lld 段"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld suggested part"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld suggested parts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "往上移": {
       "extractionState": "manual",
       "localizations": {
@@ -10913,6 +11044,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start Here (Set as Start)"
+          }
+        }
+      }
+    },
+    "從這段開頭播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从这段开头播放"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play from Start of This Part"
           }
         }
       }
@@ -13364,6 +13512,23 @@
         }
       }
     },
+    "收起麥克風時間軸": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起麦克风时间轴"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide the microphone timeline"
+          }
+        }
+      }
+    },
     "收音提醒": {
       "extractionState": "manual",
       "localizations": {
@@ -13632,6 +13797,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Drop to add as the screen at %@"
+          }
+        }
+      }
+    },
+    "整場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole Meeting"
           }
         }
       }
@@ -16635,6 +16817,23 @@
         }
       }
     },
+    "正在偵測建議收錄…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检测建议收录…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding suggested parts…"
+          }
+        }
+      }
+    },
     "正在匯入 %lld 個檔案…": {
       "extractionState": "manual",
       "localizations": {
@@ -18214,6 +18413,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除问答记录"
+          }
+        }
+      }
+    },
+    "清除所有建議收錄？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除所有建议收录？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear all suggested parts?"
           }
         }
       }
@@ -21152,6 +21368,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auto-add: %@"
+          }
+        }
+      }
+    },
+    "自動算出的門檻；上下拖門檻線可以自己調": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动算出的门槛；上下拖门槛线可以自己调"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic threshold. Drag the threshold line up or down to set your own"
+          }
+        }
+      }
+    },
+    "自己設的門檻；右鍵時間軸的空白處可以改回自動": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自己设的门槛；右键时间轴的空白处可以改回自动"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your own threshold. Right-click an empty part of the timeline to go back to automatic"
           }
         }
       }
@@ -24298,19 +24548,19 @@
         }
       }
     },
-    "這場還沒有建議收錄的區塊": {
+    "這場還沒有建議收錄的區塊（在播放列上方的麥克風時間軸偵測或新增）": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这场还没有建议收录的区块"
+            "value": "这场还没有建议收录的区块（在播放列上方的麦克风时间轴检测或添加）"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This meeting has no suggested parts yet"
+            "value": "This meeting has no suggested parts yet (detect or add them on the microphone timeline above the player)"
           }
         }
       }
@@ -24941,6 +25191,23 @@
         }
       }
     },
+    "還沒偵測建議收錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没检测建议收录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested parts haven’t been found yet"
+          }
+        }
+      }
+    },
     "還沒回答的題目都標成略過，送出後直接移除": {
       "extractionState": "manual",
       "localizations": {
@@ -25498,6 +25765,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "重建搜索索引"
+          }
+        }
+      }
+    },
+    "重新偵測": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新检测"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect Again"
           }
         }
       }
@@ -26777,6 +27061,40 @@
         }
       }
     },
+    "門檻 %@ dB": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "门槛 %@ dB"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Threshold %@ dB"
+          }
+        }
+      }
+    },
+    "門檻改回自動": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "门槛改回自动"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset Threshold to Automatic"
+          }
+        }
+      }
+    },
     "開": {
       "extractionState": "manual",
       "localizations": {
@@ -27499,6 +27817,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "麦克风几乎收不到声音：%@ 可能正在用这个麦克风做回音消除，拾音收不到你的声音。请让 %@ 和拾音用不同的麦克风。"
+          }
+        }
+      }
+    },
+    "麥克風幾乎沒有錄到聲音，沒辦法偵測": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风几乎没有录到声音，没办法检测"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone recorded almost nothing, so there’s nothing to detect"
+          }
+        }
+      }
+    },
+    "麥克風時間軸": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风时间轴"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone timeline"
+          }
+        }
+      }
+    },
+    "麥克風時間軸上的區塊都會拿掉（包括自己新增、調整過的）。之後可以按「重新偵測」再找一次。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风时间轴上的区块都会拿掉（包括自己添加、调整过的）。之后可以按“重新检测”再找一次。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All parts on the microphone timeline will be removed, including ones you added or adjusted. You can choose “Detect Again” later to find them again."
           }
         }
       }

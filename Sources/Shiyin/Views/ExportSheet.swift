@@ -44,7 +44,7 @@ struct ExportSheet: View {
                 Toggle("麥克風只保留建議收錄", isOn: $micRegionsOnly)
                     .toggleStyle(.checkbox)
                     .disabled(noRegions)
-                    .help(noRegions ? "這場還沒有建議收錄的區塊" : "其餘的麥克風會是沒有聲音，電腦聲音全部保留")
+                    .help(noRegions ? "這場還沒有建議收錄的區塊（在播放列上方的麥克風時間軸偵測或新增）" : "其餘的麥克風會是沒有聲音，電腦聲音全部保留")
             }
             if item == .transcript {
                 HStack(spacing: 18) {

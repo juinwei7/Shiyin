@@ -113,6 +113,7 @@ public sealed class DatabaseTests : IDisposable
                     if (fx.MicFloorDb is double floor)
                     {
                         db.SaveMicDetection(mid, new MicRegionResult(floor, fx.MicThresholdDb, []));
+                        if (fx.MicThresholdUser is double user) db.SetMicThresholdUser(mid, user);
                         foreach (var r in fx.MicRegions) db.ImportMicRegion(mid, r.Start, r.End, r.Origin);
                     }
                     if (fx.Notes is { } notes) db.SaveNotes(mid, notes, "claude", "整理", NotesSource.Generated);
@@ -247,7 +248,13 @@ public sealed class DatabaseTests : IDisposable
                 }
                 case "deleteMeeting": db.DeleteMeeting(Id(op)); break;
                 // 麥克風的「建議收錄」（M§93.3）：偵測（levels 同 micRegionCases）、新增、調整、刪除；index 是照開始排的第幾塊
-                case "saveMicDetection": db.SaveMicDetection(Id(op), MicRegions.Detect(Golden.MicLevels(op.GetProperty("levels")))); break;
+                case "saveMicDetection":   // threshold：使用者自己設的門檻（R119.12），同時記在這場
+                {
+                    double? user = op.TryGetProperty("threshold", out var t) ? t.GetDouble() : null;
+                    if (user is not null) db.SetMicThresholdUser(Id(op), user);
+                    db.SaveMicDetection(Id(op), MicRegions.Detect(Golden.MicLevels(op.GetProperty("levels")), user));
+                    break;
+                }
                 case "addMicRegion": db.AddMicRegion(Id(op), op.GetProperty("start").GetDouble(), op.GetProperty("end").GetDouble()); break;
                 case "updateMicRegion":
                 {

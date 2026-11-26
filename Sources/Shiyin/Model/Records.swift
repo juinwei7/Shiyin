@@ -57,6 +57,8 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var micThresholdDb: Double?
     var playChannels: String = "both"
     var playMicRegions: Bool = false
+    // v20（design §93.5、R119.12）：使用者自己設的門檻；nil 是自動
+    var micThresholdUser: Double?
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
 

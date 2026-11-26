@@ -412,6 +412,10 @@ final class AppDatabase: @unchecked Sendable {
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN play_channels TEXT NOT NULL DEFAULT 'both'")
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN play_mic_regions INTEGER NOT NULL DEFAULT 0")
         }
+        // 麥克風「建議收錄」的門檻自己調（R119.12、design §93.5）
+        migrator.registerMigration("v20") { db in
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN mic_threshold_user REAL")
+        }
         return migrator
     }
 

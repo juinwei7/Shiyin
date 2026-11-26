@@ -3,6 +3,11 @@ import SwiftUI
 /// 底部播放列：播放鍵、時間、錄音時間軸（R5.3），有議題時上面加議題帶（R68）
 struct PlayerBar: View {
     @Environment(AppModel.self) private var model
+    /// 麥克風時間軸收起來時，錄音時間軸不框放大的範圍（看不到放大的那條）
+    private var micCollapsed: Bool { model.micTrackCollapsed }
+    /// 錄音時間軸在播放列裡的位置：麥克風時間軸照這個對齊（design §93.5）
+    @State private var timelineFrame: CGRect = .zero
+    private static let space = "playerBar"
     let detail: MeetingDetail
 
     var body: some View {
@@ -11,6 +16,37 @@ struct PlayerBar: View {
         let topics = detail.notes.map {
             MindMap.topicRanges(notes: $0, duration: duration, untitled: MeetingLanguage.ui(zh: MindMap.topicLabel(.zh), en: MindMap.topicLabel(.en)))
         } ?? []
+        let mic = detail.meeting.channels == "both" && detail.meeting.hasAudio
+        VStack(spacing: 4) {
+        // 麥克風時間軸（R119.4、design §93.5）：自己一列，跟錄音時間軸對齊
+        if mic {
+            MicTrackView(detail: detail, duration: duration, currentTime: player.currentTime,
+                         leading: timelineFrame.minX, timelineWidth: timelineFrame.width)
+        }
+        // 議題帶那一列：收合鈕在左邊、段數在右邊，不比議題帶高（使用者：「放在議題帶的左邊跟右邊」）；
+        // 時間軸收、開時這一列不動，收合鈕一直在同一個位置
+        if mic || !topics.isEmpty {
+            HStack(spacing: 0) {
+                Group {
+                    if mic { MicTrackView(detail: detail, duration: duration, currentTime: player.currentTime, part: .toggle) }
+                }
+                .frame(width: max(0, timelineFrame.minX), alignment: .leading)
+                Group {
+                    if !topics.isEmpty {
+                        TopicBand(ranges: topics, duration: duration, currentTime: player.currentTime,
+                                  card: topicCardInfo, onSeek: { seconds in player.seek(to: seconds, play: true) })
+                    } else {
+                        Color.clear.frame(height: 1)
+                    }
+                }
+                .frame(width: max(0, timelineFrame.width))
+                Group {
+                    if mic { MicTrackView(detail: detail, duration: duration, currentTime: player.currentTime, part: .info) }
+                }
+                .padding(.leading, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
         HStack(alignment: .timelineCenter, spacing: 14) {
             Button { player.toggle() } label: {
                 Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
@@ -26,19 +62,17 @@ struct PlayerBar: View {
                 .frame(width: 52, alignment: .trailing)
 
             VStack(spacing: 4) {
-                if !topics.isEmpty {
-                    TopicBand(ranges: topics, duration: duration, currentTime: player.currentTime,
-                              card: topicCardInfo, onSeek: { seconds in player.seek(to: seconds, play: true) })
-                }
                 TimelineBar(segments: detail.segments,
                             reviewTimes: (detail.notes?.reviewItems ?? []).compactMap { TimeFormat.seconds($0.time) },
                             bookmarkTimes: detail.bookmarks.map(\.time),
                             screenTimes: detail.screens.compactMap(\.at),
+                            zoom: detail.meeting.channels == "both" && !micCollapsed ? model.micZoom : nil,
                             duration: duration,
                             currentTime: player.currentTime,
                             onSeek: { seconds, play in player.seek(to: seconds, play: play) })
                     .frame(height: 30)
                     .alignmentGuide(.timelineCenter) { $0[VerticalAlignment.center] }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { timelineFrame = $0 }
             }
 
             Text(TimeFormat.string(duration))
@@ -63,6 +97,10 @@ struct PlayerBar: View {
 
             if detail.meeting.channels == "both" { channelsMenu }
         }
+        }
+        .coordinateSpace(.named(Self.space))
+        // 麥克風時間軸收、開時播放列（含底色）的高度一起滑（design §93.5）
+        .animation(.easeInOut(duration: MicTrackView.slide), value: micCollapsed)
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(.bar)
@@ -276,6 +314,8 @@ struct TimelineBar: View {
     var bookmarkTimes: [Double] = []
     /// 會議中的畫面（design §83.4）
     var screenTimes: [Double] = []
+    /// 麥克風時間軸放大看的範圍（design §93.5）：框出來
+    var zoom: MicZoom?
     let duration: Double
     let currentTime: Double
     let onSeek: (Double, Bool) -> Void
@@ -352,6 +392,13 @@ struct TimelineBar: View {
             let x = CGFloat(t) * scale
             let frame = CGRect(x: x - 3, y: height - 5.5, width: 6, height: 5)
             context.stroke(Path(roundedRect: frame, cornerRadius: 1), with: .color(.primary.opacity(0.55)), lineWidth: 1)
+        }
+
+        // 麥克風時間軸放大看的範圍
+        if let zoom {
+            let frame = CGRect(x: CGFloat(zoom.start) * scale, y: 0.5, width: max(2, CGFloat(zoom.span) * scale), height: height - 1)
+            context.fill(Path(roundedRect: frame, cornerRadius: 3), with: .color(Color.celadon.opacity(0.08)))
+            context.stroke(Path(roundedRect: frame, cornerRadius: 3), with: .color(Color.celadon.opacity(0.7)), lineWidth: 1)
         }
 
         // 目前播放位置

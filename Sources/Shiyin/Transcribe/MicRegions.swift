@@ -12,6 +12,8 @@ enum MicRegions {
         static let marginDb = 6.0
         static let minThresholdDb = -50.0
         static let silentDb = -90.0           // 每格音量的下限
+        /// 這以下當成麥克風靜音（硬體、系統靜音、m4a 裡暫停那段的雜訊）：不算進基準、不算有聲音（design §93.2）
+        static let mutedDb = -80.0
         static let joinGapFrames = 50         // 間隔不到 5 秒的接起來
         static let minLengthFrames = 4        // 接起來後（補之前）短於 0.4 秒的丟掉
         static let padBeforeFrames = 3
@@ -62,13 +64,14 @@ enum MicRegions {
         return out
     }
 
-    nonisolated static func detect(_ levels: [Double?]) -> Result {
-        let voiced = levels.compactMap { $0 }
+    /// threshold：使用者自己設的門檻（R119.12），給了就用它、不套 −50 的下限；基準照算
+    nonisolated static func detect(_ levels: [Double?], threshold userThreshold: Double? = nil) -> Result {
+        let voiced = levels.compactMap { $0 }.filter { $0 > Rules.mutedDb }
         guard voiced.count >= Rules.minVoicedFrames else {
             return Result(floorDb: voiced.isEmpty ? Rules.silentDb : mean(voiced), thresholdDb: nil, regions: [])
         }
         let floor = mean(Array(voiced.prefix(Rules.baselineFrames)))
-        let threshold = max(floor + Rules.marginDb, Rules.minThresholdDb)
+        let threshold = userThreshold ?? max(floor + Rules.marginDb, Rules.minThresholdDb)
 
         // 超過門檻的格子連成一段（[開始, 結束)，單位是格）
         var runs: [(Int, Int)] = []
@@ -112,7 +115,7 @@ enum MicRegions {
     /// 不是「麥克風＋電腦聲音」、沒有錄音時不做
     nonisolated static func run(_ meetingId: Int64, db: AppDatabase) throws {
         guard let meeting = try db.meeting(meetingId), meeting.channels == "both", meeting.hasAudio else { return }
-        let result = detect(try levels(meeting.audioURL))
+        let result = detect(try levels(meeting.audioURL), threshold: meeting.micThresholdUser)
         try db.saveMicDetection(meetingId, result)
     }
 }

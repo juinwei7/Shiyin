@@ -14,7 +14,7 @@ public static class MicDetection
         if (db.Meeting(meetingId) is not { Channels: "both" } meeting || !paths.HasAudio(meeting)) return false;
         var channels = decoder.DecodeChannels(paths.AudioPath(meeting), cancel);
         if (channels.Length == 0) return false;
-        db.SaveMicDetection(meetingId, MicRegions.Detect(MicRegions.Levels(channels[0], 16_000)));
+        db.SaveMicDetection(meetingId, MicRegions.Detect(MicRegions.Levels(channels[0], 16_000), meeting.MicThresholdUser));
         return true;
     }
 }

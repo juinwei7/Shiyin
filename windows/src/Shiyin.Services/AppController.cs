@@ -1232,6 +1232,58 @@ public sealed partial class AppController
 
     public void SetPlayMicRegions(long meetingId, bool on) => Perform(meetingId, () => Db.SetPlayMicRegions(meetingId, on));
 
+    // MARK: 麥克風時間軸（R119.4、M§93.5）
+
+    /// <summary>時間軸的波形：麥克風每 100 ms 的音量（背景讀錄音）；不是兩軌的會議、沒有錄音是空的</summary>
+    public Task<List<double?>> MicLevels(long meetingId) => Task.Run(() =>
+    {
+        if (Db.Meeting(meetingId) is not { Channels: "both" } meeting || !Paths.HasAudio(meeting)) return new List<double?>();
+        var channels = decoder.DecodeChannels(Paths.AudioPath(meeting));
+        return channels.Length == 0 ? [] : Transcribe.MicRegions.Levels(channels[0], 16_000);
+    });
+
+    readonly HashSet<long> micDetecting = [];
+
+    public bool IsDetectingMic(long meetingId) { lock (micDetecting) return micDetecting.Contains(meetingId); }
+
+    /// <summary>偵測、重新偵測（只換掉自動產生的，自己新增、調整過的留著）</summary>
+    public async Task DetectMicRegions(long meetingId)
+    {
+        lock (micDetecting) if (!micDetecting.Add(meetingId)) return;
+        Changed?.Invoke(meetingId);
+        try { await Task.Run(() => MicDetection.Run(meetingId, Db, Paths, decoder)); }
+        catch (Exception e) when (e is not OutOfMemoryException) { Error?.Invoke(e.Message); }
+        finally { lock (micDetecting) micDetecting.Remove(meetingId); }
+        Changed?.Invoke(meetingId);
+    }
+
+    /// <summary>自己設門檻（R119.12）；null 是改回自動。用時間軸已經讀好的波形重算（沒有就讀檔），使用者的區塊留著</summary>
+    public async Task SetMicThreshold(long meetingId, double? value, IReadOnlyList<double?> levels)
+    {
+        lock (micDetecting) if (!micDetecting.Add(meetingId)) return;
+        Changed?.Invoke(meetingId);
+        try
+        {
+            await Task.Run(() =>
+            {
+                Db.SetMicThresholdUser(meetingId, value);
+                if (levels.Count == 0) MicDetection.Run(meetingId, Db, Paths, decoder);
+                else Db.SaveMicDetection(meetingId, Transcribe.MicRegions.Detect(levels, value));
+            });
+        }
+        catch (Exception e) when (e is not OutOfMemoryException) { Error?.Invoke(e.Message); }
+        finally { lock (micDetecting) micDetecting.Remove(meetingId); }
+        Changed?.Invoke(meetingId);
+    }
+
+    public void AddMicRegion(long meetingId, double start, double end) => Perform(meetingId, () => Db.AddMicRegion(meetingId, start, end));
+    public void UpdateMicRegion(long meetingId, long regionId, double start, double end) => Perform(meetingId, () => Db.UpdateMicRegion(regionId, start, end));
+    public void DeleteMicRegion(long meetingId, long regionId) => Perform(meetingId, () => Db.DeleteMicRegion(regionId));
+    public void ClearMicRegions(long meetingId) => Perform(meetingId, () => Db.ClearMicRegions(meetingId));
+
+    /// <summary>資料在外面改了（控制通道直接寫資料庫）：讓畫面重讀那場</summary>
+    public void Refresh(long meetingId) => Changed?.Invoke(meetingId);
+
     public void AddBookmark(long meetingId, double time, string label = "") => Perform(meetingId, () => Db.AddBookmark(meetingId, time, label));
     public void DeleteBookmark(long meetingId, long id) => Perform(meetingId, () => Db.DeleteBookmark(id));
 

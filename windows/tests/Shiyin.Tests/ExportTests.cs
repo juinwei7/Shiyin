@@ -75,6 +75,7 @@ public class ExportTests
         var mic = m.Clone();
         mic.MicFloorDb = fx.MicFloorDb;
         mic.MicThresholdDb = fx.MicThresholdDb;
+        mic.MicThresholdUser = fx.MicThresholdUser;
         info = MeetingPackage.WithMicRegions(info, mic, fx.MicRegions);
         Golden.Json($"package/{key}/meeting.json", IO.PackageJson.Write(info));
         Golden.Json($"package/{key}/transcript.json", IO.PackageJson.Write(fx.Segments.Select(s =>

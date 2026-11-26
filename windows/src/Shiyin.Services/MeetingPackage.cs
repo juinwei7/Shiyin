@@ -24,7 +24,7 @@ public static class MeetingPackage
     public static PackageJson.MeetingInfo WithMicRegions(PackageJson.MeetingInfo info, Meeting m, IEnumerable<MicRegion> regions) =>
         m.MicFloorDb is not double floor ? info : info with
         {
-            MicFloorDb = floor, MicThresholdDb = m.MicThresholdDb, MicRegions = [.. regions.Select(r => (r.Start, r.End, r.Origin))],
+            MicFloorDb = floor, MicThresholdDb = m.MicThresholdDb, MicThresholdUser = m.MicThresholdUser, MicRegions = [.. regions.Select(r => (r.Start, r.End, r.Origin))],
         };
 
     /// <summary>
@@ -163,6 +163,7 @@ public static class MeetingPackage
                 if (info.MicFloorDb is double floor)
                 {
                     db.SaveMicDetection(id, new MicRegionResult(floor, info.MicThresholdDb, []));
+                    if (info.MicThresholdUser is double user) db.SetMicThresholdUser(id, user);
                     foreach (var (start, end, origin) in info.MicRegions ?? [])
                         if (end > start) db.ImportMicRegion(id, start, end, origin == MicRegion.User ? MicRegion.User : MicRegion.Auto);
                 }

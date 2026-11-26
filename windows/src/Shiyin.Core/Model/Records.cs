@@ -51,6 +51,8 @@ public sealed class Meeting
     /// <summary>播放時聽哪一邊（both / mic / system）、麥克風只播建議收錄（R119.2、R119.5）</summary>
     public string PlayChannels { get; set; } = "both";
     public bool PlayMicRegions { get; set; }
+    /// <summary>v20（R119.12）：使用者自己設的門檻；null 是自動</summary>
+    public double? MicThresholdUser { get; set; }
 
     public MeetingLanguage MeetingLanguage => MeetingLanguages.Parse(Language) ?? MeetingLanguage.Zh;
 

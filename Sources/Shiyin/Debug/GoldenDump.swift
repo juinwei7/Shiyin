@@ -101,6 +101,7 @@ enum GoldenDump {
         /// 麥克風的「建議收錄」（design §93.3）：fixtures 的 meetingMicRegions（基準、門檻、區塊）
         var micFloorDb: Double?
         var micThresholdDb: Double?
+        var micThresholdUser: Double?
         var micRegions: [MicRegion] = []
         var language: MeetingLanguage { meeting.meetingLanguage }
 
@@ -132,6 +133,7 @@ enum GoldenDump {
                 if let mic = mics[fx.key] as? Object {
                     fx.micFloorDb = GoldenDump.double(mic["floorDb"])
                     fx.micThresholdDb = mic["thresholdDb"].flatMap { $0 is NSNull ? nil : GoldenDump.double($0) }
+                    fx.micThresholdUser = mic["thresholdUser"].map { GoldenDump.double($0) }
                     fx.micRegions = (mic["regions"] as? [[Any]] ?? []).map {
                         MicRegion(meetingId: 0, start: GoldenDump.double($0[0]), end: GoldenDump.double($0[1]), origin: $0[2] as? String ?? MicRegion.auto)
                     }
@@ -483,6 +485,7 @@ enum GoldenDump {
             var micMeeting = m
             micMeeting.micFloorDb = fx.micFloorDb
             micMeeting.micThresholdDb = fx.micThresholdDb
+            micMeeting.micThresholdUser = fx.micThresholdUser
             MeetingPackage.micFields(&info, meeting: micMeeting, regions: fx.micRegions)
             if let data = try? encoder.encode(info) { w.text("package/\(fx.key)/meeting.json", String(decoding: data, as: UTF8.self)) }
             let segments = fx.segments.map {
@@ -643,6 +646,21 @@ enum GoldenDump {
         w.json("util/mic-gate.json", (f["micGateCases"] as? [Object] ?? []).map { c -> Object in
             let regions = (c["regions"] as? [[Any]] ?? []).map { MicRegions.Range(start: double($0[0]), end: double($0[1])) }
             return ["key": c["key"] as? String ?? "", "gates": (c["times"] as? [Any] ?? []).map { ChannelMix.gate(double($0), regions) }]
+        })
+        // 麥克風時間軸放大縮小（design §93.5）：每一步 [zoom 倍數 中心]、[pan 秒]、[follow 時間]，寫出每一步之後的範圍（null 是整場）
+        w.json("util/mic-zoom.json", (f["micZoomCases"] as? [Object] ?? []).map { c -> Object in
+            let duration = double(c["duration"])
+            var zoom: MicZoom?
+            let steps = (c["steps"] as? [[Any]] ?? []).map { step -> Any in
+                switch step[0] as? String {
+                case "zoom": zoom = MicZoom.zoomed(zoom, duration: duration, factor: double(step[1]), anchor: double(step[2]))
+                case "pan": zoom = zoom?.panned(duration: duration, by: double(step[1]))
+                case "follow": zoom = zoom?.following(duration: duration, time: double(step[1]))
+                default: break
+                }
+                return zoom.map { [$0.start, $0.span] as Any } ?? NSNull()
+            }
+            return ["key": c["key"] as? String ?? "", "steps": steps]
         })
         // 語言檔推出來的東西（design §41.8）：每種語言的名稱、預設說話者、轉錄的參數、給人看的字、提示詞的字
         let glossarySample = ["Lumio", "Redis", "Kubernetes"]
@@ -948,7 +966,7 @@ enum GoldenDump {
 
         // 麥克風的「建議收錄」（design §93.2）：levels 是 [格數, 音量或 null] 一段一段接起來
         w.json("pipeline/mic-regions.json", (f["micRegionCases"] as? [Object] ?? []).map { c -> Object in
-            let r = MicRegions.detect(micLevels(c["levels"]))
+            let r = MicRegions.detect(micLevels(c["levels"]), threshold: c["threshold"].map { double($0) })
             return ["key": c["key"] as? String ?? "", "floorDb": r.floorDb, "thresholdDb": r.thresholdDb.map { $0 as Any } ?? NSNull(),
                     "regions": r.regions.map { [$0.start, $0.end] }]
         })
@@ -1043,6 +1061,7 @@ enum GoldenDump {
         for b in fx.bookmarks { try db.addBookmark(mid, time: b.time, label: b.label) }
         if let floor = fx.micFloorDb {
             try db.saveMicDetection(mid, MicRegions.Result(floorDb: floor, thresholdDb: fx.micThresholdDb, regions: []))
+            if let user = fx.micThresholdUser { try db.setMicThresholdUser(mid, user) }
             for r in fx.micRegions { try db.importMicRegion(mid, start: r.start, end: r.end, origin: r.origin) }
         }
         if let notes = fx.notes { try db.saveNotes(mid, notes: notes, by: "claude", reason: "整理", source: .generated) }  // l10n-skip
@@ -1111,8 +1130,10 @@ enum GoldenDump {
                 let fx = f.meeting(op["key"] as? String ?? "")
                 ids[fx.key] = try insertFixture(db, fx)
             // 麥克風的「建議收錄」（design §93.3）：偵測（levels 同 micRegionCases）、新增、調整、刪除；index 是照開始排的第幾塊
-            case "saveMicDetection":
-                try db.saveMicDetection(id(op), MicRegions.detect(micLevels(op["levels"])))
+            case "saveMicDetection":   // threshold：使用者自己設的門檻（R119.12），同時記在這場
+                let user = op["threshold"].map { double($0) }
+                if op["threshold"] != nil { try db.setMicThresholdUser(id(op), user) }
+                try db.saveMicDetection(id(op), MicRegions.detect(micLevels(op["levels"]), threshold: user))
             case "addMicRegion":
                 try db.addMicRegion(id(op), start: double(op["start"]), end: double(op["end"]))
             case "updateMicRegion":

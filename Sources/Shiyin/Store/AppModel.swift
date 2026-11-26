@@ -714,7 +714,10 @@ final class AppModel {
         if viewingNotes != nil, previous?.id != meeting.id || detail?.notes != loaded.notes { viewingNotes = nil }
         detail = loaded
         syncReviewDraft()
-        if previous?.id != meeting.id { refreshReminderStatus() }
+        if previous?.id != meeting.id {
+            refreshReminderStatus()
+            micZoom = nil
+        }
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL, mixChannels: meeting.channels == "both") } else { player.unload() }
         }
@@ -739,6 +742,90 @@ final class AppModel {
     func applyPlayChannels() {
         guard let detail else { return }
         player.setChannels(playChannels, gateMic: detail.meeting.playMicRegions, regions: detail.micRegions)
+        loadMicLevels()
+    }
+
+    // MARK: 麥克風時間軸（R119.4、design §93.5）
+
+    /// 時間軸的波形：目前這場麥克風每 100 ms 的音量（背景讀錄音，換會議、換錄音檔時重讀）
+    private(set) var micLevels: [Double?] = []
+    private(set) var micDetecting = false
+    /// 麥克風時間軸放大後看的範圍（R119.10、design §93.5）；nil 是整場，換會議時清掉
+    var micZoom: MicZoom?
+    /// 麥克風時間軸收起來了（design §93.5）：放在這裡、不用 @AppStorage，改的時候 withAnimation 才帶得到整個畫面
+    /// （播放列的底色、上面內容區的大小跟著一起滑）；照舊存在設定裡，下次打開還記得
+    var micTrackCollapsed = UserDefaults.standard.bool(forKey: AppSettings.micTrackCollapsedKey) {
+        didSet { UserDefaults.standard.set(micTrackCollapsed, forKey: AppSettings.micTrackCollapsedKey) }
+    }
+    @ObservationIgnored private var micLevelsSource: URL?
+
+    private func loadMicLevels() {
+        guard let meeting = detail?.meeting, meeting.channels == "both", meeting.hasAudio else {
+            micLevelsSource = nil
+            if !micLevels.isEmpty { micLevels = [] }
+            return
+        }
+        let url = meeting.audioURL
+        guard url != micLevelsSource else { return }
+        micLevelsSource = url
+        micLevels = []
+        Task {
+            let levels = (try? await Task.detached(priority: .utility) { try MicRegions.levels(url) }.value) ?? []
+            if micLevelsSource == url { micLevels = levels }
+        }
+    }
+
+    /// 偵測、重新偵測（只換掉自動產生的，自己新增、調整過的留著）
+    func detectMicRegions() {
+        guard let id = detail?.meeting.id, !micDetecting else { return }
+        let db = db
+        micDetecting = true
+        Task {
+            do {
+                try await Task.detached(priority: .userInitiated) { try MicRegions.run(id, db: db) }.value
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            micDetecting = false
+            if selection == id { reloadDetail([.meeting, .micRegions]) }
+        }
+    }
+
+    /// 自己設門檻（R119.12）；nil 是改回自動。用記憶體裡的波形重算（還沒讀好就讀檔），使用者的區塊留著
+    func setMicThreshold(_ value: Double?) {
+        guard let id = detail?.meeting.id, !micDetecting else { return }
+        let db = db, levels = micLevels
+        micDetecting = true
+        Task {
+            do {
+                try await Task.detached(priority: .userInitiated) {
+                    try db.setMicThresholdUser(id, value)
+                    if levels.isEmpty { try MicRegions.run(id, db: db) } else { try db.saveMicDetection(id, MicRegions.detect(levels, threshold: value)) }
+                }.value
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            micDetecting = false
+            if selection == id { reloadDetail([.meeting, .micRegions]) }
+        }
+    }
+
+    func addMicRegion(start: Double, end: Double) {
+        guard let id = detail?.meeting.id else { return }
+        perform(.detail([.micRegions])) { try db.addMicRegion(id, start: start, end: end) }
+    }
+
+    func updateMicRegion(_ regionId: Int64, start: Double, end: Double) {
+        perform(.detail([.micRegions])) { try db.updateMicRegion(regionId, start: start, end: end) }
+    }
+
+    func deleteMicRegion(_ regionId: Int64) {
+        perform(.detail([.micRegions])) { try db.deleteMicRegion(regionId) }
+    }
+
+    func clearMicRegions() {
+        guard let id = detail?.meeting.id else { return }
+        perform(.detail([.micRegions])) { try db.clearMicRegions(id) }
     }
 
     /// 列表上的會議：資料夾、篩選（垃圾桶不篩選）、排序（R97、design §71）

@@ -38,6 +38,7 @@
     }
   ],
   "micThresholdDb" : -46.5,
+  "micThresholdUser" : -44,
   "notes" : {
     "actionItems" : [
       {
