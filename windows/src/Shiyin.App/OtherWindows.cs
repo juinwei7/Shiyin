@@ -109,18 +109,18 @@ public static class OtherWindows
     sealed record ProviderOption(LLMProvider Provider, string Title, string Cost);
 
     /// <summary>還沒選第一段時：照目前的整理工具推回去（有 claude CLI 就是 Claude…），沒有就「先不用」</summary>
-    static string GuessedUsual(LLMProvider? stored, bool hasClaude, bool hasCodex) =>
-        (stored ?? (hasClaude ? LLMProvider.Claude : hasCodex ? LLMProvider.Codex : LLMProvider.None)) switch
+    static string GuessedUsual(LLMProvider? stored, LLMProvider? detected) =>
+        (stored ?? detected ?? LLMProvider.None) switch
         {
             LLMProvider.Claude or LLMProvider.Anthropic => "claude",
             LLMProvider.Codex or LLMProvider.OpenAI => "chatgpt",
-            LLMProvider.Gemini => "gemini",
+            LLMProvider.Antigravity or LLMProvider.Gemini => "gemini",
             LLMProvider.OpenAICompatible => "other",
             _ => "none",
         };
 
-    /// <summary>第二段的選項：每個一行寫要不要錢（D111）；這台電腦有 claude、codex 時才列 CLI</summary>
-    static List<ProviderOption> ProviderOptions(string usual, bool hasClaude, bool hasCodex)
+    /// <summary>第二段的選項：每個一行寫要不要錢（D111）；這台電腦有 claude、codex、agy 時才列 CLI</summary>
+    static List<ProviderOption> ProviderOptions(string usual, bool hasClaude, bool hasCodex, bool hasAgy)
     {
         var subscription = L.T("用你的訂閱，不另外收費");
         var api = L.T("要 API key，依用量計費，一小時的會議通常不到台幣 10 元（2026-10 估）");
@@ -142,7 +142,14 @@ public static class OtherWindows
                 list.Add(new(LLMProvider.OpenAI, L.T("OpenAI API"), api));
                 return list;
             }
-            case "gemini": return [new(LLMProvider.Gemini, L.T("Gemini API"), api)];
+            case "gemini":
+            {
+                // 裝了 agy 就排在 Gemini API 前面（R121.2）
+                List<ProviderOption> list = [];
+                if (hasAgy) list.Add(new(LLMProvider.Antigravity, L.T("Antigravity（這台電腦已經裝了 agy CLI）"), L.T("用你的 Google 帳號，不另外收費（每週有用量額度）")));
+                list.Add(new(LLMProvider.Gemini, L.T("Gemini API"), api));
+                return list;
+            }
             case "other": return [new(LLMProvider.OpenAICompatible, L.T("OpenAI 相容 API"), L.T("Groq、OpenRouter、Ollama、LM Studio；網址和 key 到設定填"))];
             default: return [new(LLMProvider.None, L.T("不整理，只要逐字稿"), L.T("隨時可以到設定選"))];
         }
@@ -166,11 +173,14 @@ public static class OtherWindows
         var settings = host.Settings;
         var hasClaude = host.Tools.Find("claude") is not null;
         var hasCodex = host.Tools.Find("codex") is not null;
+        var hasAgy = host.Tools.Find("agy") is not null;
+        // 沒選過時自動選到的 CLI：claude、codex、agy 的順序（R35.1、R121.3）
+        LLMProvider? detected = hasClaude ? LLMProvider.Claude : hasCodex ? LLMProvider.Codex : hasAgy ? LLMProvider.Antigravity : null;
         var stored = settings.DebugProvider ?? settings.ChosenProvider;
-        var chosenUsual = step.Usual ?? GuessedUsual(stored, hasClaude, hasCodex);
-        var options = ProviderOptions(chosenUsual, hasClaude, hasCodex);
+        var chosenUsual = step.Usual ?? GuessedUsual(stored, detected);
+        var options = ProviderOptions(chosenUsual, hasClaude, hasCodex, hasAgy);
         // 還沒選第二段時顯示設定裡的（沒選過就是自動選到的 CLI）；沒選過也沒有 CLI 時不選（不是「不整理」）
-        var current = step.Pending ?? stored ?? (hasClaude ? LLMProvider.Claude : hasCodex ? LLMProvider.Codex : null);
+        var current = step.Pending ?? stored ?? detected;
         if (current is { } shown && options.All(o => o.Provider != shown)) current = null;
         void Choose(LLMProvider provider)
         {
@@ -194,7 +204,7 @@ public static class OtherWindows
         {
             if (segments.SelectedItem?.Tag is not string code || code == chosenUsual) return;
             step.Usual = code;
-            Choose(ProviderOptions(code, hasClaude, hasCodex)[0].Provider);
+            Choose(ProviderOptions(code, hasClaude, hasCodex, hasAgy)[0].Provider);
         };
         column.Children.Add(segments);
         // 只有 Claude 桌面版：說明怎麼裝 Claude Code（R56.2）
@@ -238,10 +248,9 @@ public static class OtherWindows
             if (api.ApiKeyUrl() is { } url)
                 column.Children.Add(Ui.Link(L.T("取得 API key"), () => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url))));
         }
-        else if (current is LLMProvider.Claude or LLMProvider.Codex)
+        else if (current is { } cli && cli.IsCli())
         {
-            var cli = current.Value;
-            var name = cli == LLMProvider.Codex ? "Codex" : "Claude Code";
+            var name = cli.CliProductName();
             if (state == ProviderSetup.CheckingLogin) column.Children.Add(Ui.Text(L.T("檢查登入狀態…"), 13, color: Ui.Secondary));
             else if (state == ProviderSetup.NotLoggedIn)
             {
@@ -272,7 +281,7 @@ public static class OtherWindows
                 settings.Set(AppSettings.ProviderKey, provider.Code());
                 render();
                 break;
-            case LLMProvider.Claude or LLMProvider.Codex:
+            case LLMProvider.Claude or LLMProvider.Codex or LLMProvider.Antigravity:
                 step.State = ProviderSetup.CheckingLogin;
                 render();
                 var status = await CliLogin.Refresh(provider);

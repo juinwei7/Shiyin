@@ -520,7 +520,7 @@ public sealed class DetailView
                 else
                 {
                     // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
-                    if (f.Kind != JobKind.Transcribe && LLMException.IsLoginMessage(f.Error) && host.Settings.Provider is LLMProvider.Claude or LLMProvider.Codex)
+                    if (f.Kind != JobKind.Transcribe && LLMException.IsLoginMessage(f.Error) && host.Settings.Provider.IsCli())
                     {
                         // 桌面版附的 codex：打開那個 app 登入（R55.3）
                         var app = host.Settings.Provider == LLMProvider.Codex ? DesktopApps.CodexAppName() : null;

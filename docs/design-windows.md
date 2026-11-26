@@ -944,6 +944,22 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **測試**：`OrganizeTests.MigrationV18MatchesMac`（`db/migrate-v18.json`）、`ReplaceFolderKeysWithIds`、`FolderIdsCreateRenameMergeDelete`（同名、大小寫、合併時條件的兩種情況、垃圾桶裡的會議、刪除）、`MigrationV14TurnsSeriesIntoFolders`（改成從 v13 的結構接著跑 v14～v18）、`FolderRulesInDatabase`、列表、側欄、重新命名的測試改成 id；`AppTests.SidebarKeysFollowFolderRenameAndDelete`（合併拿掉鍵、留下的照舊位置）、`RenameDialogReadsAndCommits`；`ServicesTests.PackageRoundTrip`（封包寫名字、匯入到新的資料庫建出同名資料夾）；標準答案的會議寫入前先 `CreateFolder`（`Golden.WithFolder`，同 Mac 的 GoldenDump）。
 - **驗證**：`dotnet test`（標準答案 `db/schema.sql`、`db/*.json`、`db/migrate-v18.json`、`util/folder-suggest.json`）；虛擬機：舊版的資料開新版（側欄展開、排序的狀態接上）、改名、合併、刪除、拖曳、自動加入、匯入封包各走一次，側欄截圖。
 
+### 11.54 整理工具：Antigravity（agy CLI）（R121，M§95、D204）
+
+行為同 M§95；以下是 Windows 的做法和不一樣的地方。
+
+- **找 agy**（`WindowsToolLocator.Agy`）：官方安裝程式放在 `%LOCALAPPDATA%\agy\bin\agy.exe`，沒有再找 PATH（加上 `%USERPROFILE%\.local\bin`、WinGet 的 Links）裡的 `agy.exe`；只找 exe，不經過 .cmd（§10）。子程序的 PATH 前面補上 agy 的資料夾。有沒有裝同另外兩個 CLI 快取 30 秒（`CachedToolCheck`、`CachedCliDetector`）；自動選整理工具的順序是 claude、codex、agy（`AppHost.Detect`，R121.3）。
+- **判斷**：`LLMProvider.CliName()`（`claude`、`codex`、`agy`）、`IsCli()`、`CliProductName()` 同 Mac 的 `cliName`、`isCLI`、`cliProductName`，取代設定頁、引導、`SummarizerProblem`、失敗橫幅、`CliLogin` 裡原本的「Claude 或 Codex」判斷。
+- **呼叫**（`Shiyin.LLM/Backends.cs` 的 `AgyCli`）：參數、stdin、結果、錯誤的分法同 M§95.1、§95.3；參數用 `ArgumentList`。stdin 那一行用 `JsonObject.ToJsonString()`，中文寫成 `\uXXXX`，標準輸入只有 ASCII。暫存資料夾是 `SHIYIN_HOME\tmp\<guid>\`，`schema.json`、`settings.json`（UTF-8，沒有 BOM）放在裡面，agy 的工作目錄是空的 `workspace\`，用完整個刪掉。結果從最後一行往前找 `event` 是 `result` 的那一行（行尾的 `\r` 不影響）；`structured_output` 只收 JSON 物件或陣列，是字串、null 時改從 `response` 找。`AgyCli.SessionSettings` 跟 Mac 一字不差（測試讀 Mac 的 `CLIBackends.swift` 比對）。
+- **對話紀錄**（M§95.4）：刪 `%USERPROFILE%\.gemini\antigravity-cli\conversations\<id>.db` 和 `brain\<id>\`。id 要是 8-4-4-4-12 的 UUID（`Guid.TryParseExact(id, "D")`：大括號、沒有連字號的寫法都不算，路徑裡不會出現 `..`、`\`）。資料夾是 `LLMClient.AgyDataDirectory`，測試換成暫存資料夾，不碰家目錄。agy 在 Windows 上是不是存在同一個相對位置，還沒在真的 Windows 看過；位置不對時只是刪不到（同 Mac「agy 改了存放方式時什麼都不做」）。
+- **登入狀態**（`CliLogin.Check`）：`agy models`（20 秒）。列得出代號是已登入；stderr 有登入字樣（`IsLoginProblem`）是沒登入；其他（連不上、執行不了）是看不出來，當作準備好（D112）。
+- **登入**：`Shell.OpenLoginTerminal(agy, [])`，同 §10 開 Windows Terminal（`wt.exe -- agy.exe`），沒有就 `cmd.exe /k`。說明用通知（`Notifier.Notice`）顯示，文字同 Mac 的 `AntigravityCLI.loginIntro`（「拾音：正在打開 Antigravity CLI。照畫面在瀏覽器登入，完成後輸入 /quit 離開，再回到拾音按「重試」或「測試整理工具」。」）。Windows Terminal 的分頁在 agy 結束時關掉。第一次開 agy 問要不要信任的資料夾：Windows Terminal 是它預設的起始資料夾（使用者資料夾），`cmd.exe` 是拾音自己的工作目錄。
+- **介面**：設定頁（選單的「沒有安裝」、狀態那一列、登入按鈕、「選擇」列 `agy models` 的代號、隱私說明）、引導（選 Gemini 時裝了 agy 排在 Gemini API 前面）、失敗橫幅的登入按鈕、`SummarizerProblem` 的訊息和按鈕同 Mac。「這台 Mac」換成「這台電腦」的三條在 `Windows.xcstrings`，其他用 Mac 的翻譯。Windows 沒有環境檢查、使用說明的那兩條（M§95.5）。設定的搜尋多「Antigravity」。
+- **圖片**：Windows 的整理工具還沒送會議中的畫面（§11.42、SC4）；做的時候 Antigravity 不送（R121.5）。
+- **統計**：`summarizer`、`summarizeErrorProviders` 多 `antigravity`（R121.8），鍵同 Mac。
+- **DEBUG**：`--set debugNoCli=YES` 也當成沒有 agy；`debugOnlyDesktopCli` 時找不到 agy（沒有桌面版附的）；`state` 的 `tools.agy`、`summarizer` 的 `loggedIn.antigravity`；`loginrefresh` 也查 agy。
+- **驗證**：`dotnet test`（`LLMTests.AgySettingsArgumentsAndMessage`、`AgyParsesTheResultLine`、`AgyModelsAreTheSlugs`、`AgyRemovesOnlyThisConversation`、`AgyCliRunsLikeTheMac`（假的 agy 腳本：參數、stdin、工作目錄、刪對話、各種錯誤、模型清單）、`AgyNotInstalled`；`ServicesTests.AntigravityIsACliLikeTheOthers`；`UsageStatsTests`、`SettingsPagesTests`）。要真的 Windows（虛擬機）：官方安裝程式裝的位置、`agy models` 的輸出和沒登入時的訊息、登入（Windows Terminal 開 agy、瀏覽器登入、授權碼貼回）、整理一場、對話檔和 brain 資料夾真的刪掉、`--settings` 的拒絕規則在 Windows 一樣擋得住（要它建檔、執行指令）、設定頁和引導的畫面。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

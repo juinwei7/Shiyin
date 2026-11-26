@@ -205,6 +205,23 @@
         }
       }
     },
+    "Antigravity（這台電腦已經裝了 agy CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity (agy CLI is installed on this PC)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity（这台电脑已经装了 agy CLI）"
+          }
+        }
+      }
+    },
     "Breeze ASR 25（建議）": {
       "extractionState": "manual",
       "localizations": {
@@ -3833,6 +3850,23 @@
         }
       }
     },
+    "這台電腦找不到 agy。沒有在用 Antigravity 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy wasn’t found on this PC. If you don’t use Antigravity, switch to an API (enter an API key) or choose Don’t Summarize in Settings → Summarizer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台电脑找不到 agy。没有在用 Antigravity 的话，请到设置 → 整理工具改用 API（填 API key）或选“不整理”"
+          }
+        }
+      }
+    },
     "這台電腦找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
       "extractionState": "manual",
       "localizations": {
@@ -3897,6 +3931,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这台电脑没有安装 Claude Code（命令行版），安装方法在下面"
+          }
+        }
+      }
+    },
+    "這台電腦沒有安裝 agy：沒有在用 Antigravity 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy isn't installed on this PC. If you don't use Antigravity, choose an API instead"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台电脑没有安装 agy：没有在用 Antigravity 的话，请改选 API"
           }
         }
       }

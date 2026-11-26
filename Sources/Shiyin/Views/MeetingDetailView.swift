@@ -453,7 +453,7 @@ struct StatusBanner: View {
             } else {
                 // 登入問題（3.1.2）：先引導重新登入，登入完再按重試
                 if kind != .transcribe, LLMError.isLoginMessage(message),
-                   AppSettings.provider == .claude || AppSettings.provider == .codex {
+                   AppSettings.provider.isCLI {
                     // 桌面版附的 codex：打開那個 app 登入（R55.3）
                     let title = CLILogin.desktopApp(AppSettings.provider).map { String(localized: "打開 \($0) 登入") }
                         ?? String(localized: "重新登入 \(AppSettings.provider.shortLabel)")

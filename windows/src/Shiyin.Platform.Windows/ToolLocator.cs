@@ -3,7 +3,7 @@ using Shiyin.LLM;
 namespace Shiyin.Platform;
 
 /// <summary>
-/// 找 claude、codex（design-windows §10、T-W6）：一定要找到真正的執行檔，不能透過 npm 的 .cmd 執行
+/// 找 claude、codex、agy（design-windows §10、§11.54、T-W6）：一定要找到真正的執行檔，不能透過 npm 的 .cmd 執行
 /// （cmd.exe 的命令列只有 8191 個字元、跳脫規則不同，--system-prompt、--json-schema 會被截斷或解讀錯，還有參數注入的風險）。
 /// 找不到 exe 時用 node.exe 加套件裡的 js。子程序的 PATH 補上找到的資料夾
 /// </summary>
@@ -18,7 +18,7 @@ public sealed class WindowsToolLocator : IToolLocator
     /// <summary>Claude 桌面版（Store 和官網的安裝檔都是 MSIX）的 package family（R56）</summary>
     public const string ClaudeFamily = "Claude_pzs8sxrjxfjjc";
 
-    /// <summary>DEBUG 的 debugOnlyDesktopCli：不看使用者自己裝的 claude、codex，只找桌面版附的（M§37.4）</summary>
+    /// <summary>DEBUG 的 debugOnlyDesktopCli：不看使用者自己裝的 claude、codex、agy，只找桌面版附的（M§37.4）</summary>
     public bool SkipInstalled { get; init; }
     /// <summary>DEBUG 的 debugCodexApp：把這個資料夾當成 Codex 桌面版的安裝資料夾（不問系統）</summary>
     public string? CodexAppOverride { get; init; }
@@ -29,6 +29,7 @@ public sealed class WindowsToolLocator : IToolLocator
     {
         "claude" => SkipInstalled ? null : Claude(),
         "codex" => (SkipInstalled ? null : Codex()) ?? CodexDesktop(),
+        "agy" => SkipInstalled ? null : Agy(),
         _ => Exe(name + ".exe") is { } exe ? new ToolCommand(exe, []) : null,
     };
 
@@ -159,6 +160,14 @@ public sealed class WindowsToolLocator : IToolLocator
             if (File.Exists(js) && Node() is { } node) return With(node, [js], Path.GetDirectoryName(js)!);
         }
         return null;
+    }
+
+    /// <summary>Antigravity CLI（R121、design-windows §11.54）：官方安裝程式放在 %LOCALAPPDATA%\agy\bin，再找 PATH（只找 agy.exe）</summary>
+    static ToolCommand? Agy()
+    {
+        var installed = Path.Combine(Local, "agy", "bin", "agy.exe");
+        if (File.Exists(installed)) return With(installed, []);
+        return Exe("agy.exe") is { } onPath ? With(onPath, []) : null;
     }
 
     /// <summary>

@@ -156,6 +156,65 @@ public sealed class ServicesTests : IDisposable
         Assert.True(changes >= 5);
     }
 
+    /// <summary>Antigravity（agy CLI，R121、M§95）：跟另外兩個 CLI 一樣的準備狀態、訊息、登入按鈕（R121.2）</summary>
+    [Fact]
+    public void AntigravityIsACliLikeTheOthers()
+    {
+        Assert.Equal(LLMProvider.Antigravity, LLMProviders.Parse("antigravity"));
+        Assert.Equal(("antigravity", "agy", true, "Antigravity", "Antigravity", "antigravityModel"),
+            (LLMProvider.Antigravity.Code(), LLMProvider.Antigravity.CliName(), LLMProvider.Antigravity.IsCli(),
+             LLMProvider.Antigravity.ShortLabel(), LLMProvider.Antigravity.CliProductName(), LLMProvider.Antigravity.ModelKey()));
+        Assert.Equal("Antigravity（agy CLI）", LLMProvider.Antigravity.Label());
+        Assert.Equal("", LLMProvider.Antigravity.DefaultModel());   // 不填用 agy 自己的預設（R121.6）
+        Assert.False(LLMProvider.Antigravity.UsesApiKey());
+        // 選單的順序：Codex 後面（同 Mac 的 allCases）
+        Assert.Equal(["claude", "codex", "antigravity", "anthropic"], LLMProviders.All.Take(4).Select(p => p.Code()));
+        Assert.Equal(["claude", "codex", "agy"], LLMProviders.All.Select(p => p.CliName()).OfType<string>());
+        Assert.Equal("Claude Code", LLMProvider.Claude.CliProductName());
+
+        var settings = AppSettings.InMemory();
+        var tools = new HashSet<string>();
+        bool? loggedIn = null;
+        settings.HasTool = tools.Contains;
+        settings.CliLoggedIn = p => p == LLMProvider.Antigravity ? loggedIn : null;
+        settings.Set(AppSettings.ProviderKey, "antigravity");
+        var problem = settings.SummarizerProblem!;
+        Assert.Equal(SummarizerProblemKind.NotInstalled, problem.Kind);
+        Assert.Equal("這台電腦找不到 agy。沒有在用 Antigravity 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」", problem.Message);
+        Assert.Equal("打開設定", problem.ActionTitle);
+        tools.Add("agy");
+        Assert.True(settings.SummarizerReady);   // 看不出登入狀態：當作準備好（D112）
+        loggedIn = false;
+        problem = settings.SummarizerProblem!;
+        Assert.Equal(SummarizerProblemKind.NotLoggedIn, problem.Kind);
+        Assert.Equal("Antigravity 還沒登入，登入之後才能整理（終端機指令：agy）。", problem.Message);
+        Assert.Equal("登入 Antigravity", problem.ActionTitle);
+        loggedIn = true;
+        Assert.True(settings.SummarizerReady);
+        // 整理時發現沒登入（工作紀錄存的是拾音的說明，裡面沒有英文的登入字樣）：暫停、按鈕是登入
+        var notLoggedIn = LLMException.NotLoggedIn("agy");
+        Assert.Equal("Antigravity 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：agy）。", notLoggedIn.Message);
+        Assert.Equal("LLMError.notLoggedIn(agy)", notLoggedIn.LogSummary);
+        Assert.False(LLMException.IsLoginProblem(notLoggedIn.Message));
+        Assert.True(LLMException.IsLoginMessage(notLoggedIn.Message));
+        settings.PauseSummarizer(LLMProvider.Antigravity, notLoggedIn.Message);
+        Assert.True(settings.SummarizerProblem!.OffersLogin);
+        Assert.Equal("登入 Antigravity", settings.SummarizerProblem!.ActionTitle);
+        settings.PauseSummarizer(LLMProvider.Antigravity, "invalid model selection: \"x\" is not recognized");
+        Assert.False(settings.SummarizerProblem!.OffersLogin);
+
+        // agy 自己的登入訊息（M§95.3）
+        foreach (var text in new[] { "Error: authentication required. Run 'agy' to log in, then retry.", "authentication failed or timed out",
+                     "Please sign in to view available models" })
+            Assert.True(LLMException.IsLoginProblem(text), text);
+        // 額度用完：說是 Antigravity、建議先換 Gemini API 或其他整理工具，下一行附原文（R62）
+        Assert.Equal("Antigravity 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Gemini API 或其他整理工具。",
+            LLMException.CliLimited(LLMProvider.Antigravity, "").Message);
+        Assert.Equal("Antigravity 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Gemini API 或其他整理工具。\n"
+            + "Antigravity 的訊息：429 Too Many Requests: quota exhausted",
+            LLMException.CliLimited(LLMProvider.Antigravity, "some log\n429 Too Many Requests: quota exhausted\n").Message);
+    }
+
     [Fact]
     public void LLMErrorKindsSeparateSetupProblems()
     {
@@ -1197,7 +1256,7 @@ public sealed class ServicesTests : IDisposable
         var counted = JsonNode.Parse(usage.PreviewJson())!["usage"]!.AsObject();
         // 實際花的秒數看機器快慢，只確認有這一欄
         Assert.True(counted.Remove("transcribeWallSeconds"));
-        Assert.Equal("""{"diarizationRuns":1,"engines":{"breeze":9,"builtin":0,"qwen":0,"server":0,"whisperJa":0},"importedSeconds":9,"meetingLanguages":{"en":0,"ja":0,"zh":1},"meetingsImported":1,"meetingsRecorded":0,"questionsAsked":0,"recordedSeconds":0,"review":{"answered":0,"confirmed":0,"skipped":0},"summarizer":{"api":1,"claudeCode":0,"codex":0,"enterprise":0,"local":0},"transcribedSeconds":9}""",
+        Assert.Equal("""{"diarizationRuns":1,"engines":{"breeze":9,"builtin":0,"qwen":0,"server":0,"whisperJa":0},"importedSeconds":9,"meetingLanguages":{"en":0,"ja":0,"zh":1},"meetingsImported":1,"meetingsRecorded":0,"questionsAsked":0,"recordedSeconds":0,"review":{"answered":0,"confirmed":0,"skipped":0},"summarizer":{"antigravity":0,"api":1,"claudeCode":0,"codex":0,"enterprise":0,"local":0},"transcribedSeconds":9}""",
             counted.ToJsonString());
     }
 

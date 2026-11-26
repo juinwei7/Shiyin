@@ -1027,11 +1027,13 @@ enum DebugControl {
                    "action": problem?.actionTitle ?? "",
                    "shown": model.summarizerProblem.map { String(describing: $0) } ?? "",
                    "loggedIn": ["claude": CLILoginCache.loggedIn(.claude).map { $0 ? "yes" : "no" } ?? "unknown",
-                                "codex": CLILoginCache.loggedIn(.codex).map { $0 ? "yes" : "no" } ?? "unknown"]], to: args[1])
-        case "loginrefresh":   // loginrefresh：重新查 claude、codex 的登入狀態
+                                "codex": CLILoginCache.loggedIn(.codex).map { $0 ? "yes" : "no" } ?? "unknown",
+                                "antigravity": CLILoginCache.loggedIn(.antigravity).map { $0 ? "yes" : "no" } ?? "unknown"]], to: args[1])
+        case "loginrefresh":   // loginrefresh：重新查 claude、codex、agy 的登入狀態
             Task {
                 await CLILogin.refresh(.claude)
                 await CLILogin.refresh(.codex)
+                await CLILogin.refresh(.antigravity)
             }
         case "listmodels":  // listmodels <整理工具> <結果.json>：設定頁「選擇」用的模型清單
             if let provider = LLMProvider(rawValue: args[1]) {
@@ -1315,10 +1317,11 @@ enum DebugControl {
                 ["lane": lane.rawValue, "job": r.job.id ?? 0, "kind": r.job.kind.rawValue, "stage": r.stage, "progress": r.progress ?? -1,
                  "remaining": r.remaining ?? -1, "server": r.server.map { ["text": $0.text, "waiting": $0.waiting] } as Any] },
             "enterprise": EnterpriseServer.shared.debugState,
-            // 找到的 claude、codex：使用者自己裝的，或桌面版附的（design §37.4）
+            // 找到的 claude、codex、agy：使用者自己裝的，或桌面版附的（design §37.4）
             "tools": ["claude": Paths.locateTool("claude").map { ["path": $0.url.path, "desktopApp": $0.desktopApp ?? ""] } as Any,
                       "codex": Paths.locateTool("codex").map { ["path": $0.url.path, "desktopApp": $0.desktopApp ?? "",
                                                                 "extraPath": $0.extraPath] } as Any,
+                      "agy": Paths.findTool("agy")?.path as Any,
                       "claudeDesktop": DesktopApps.hasClaude],
             "transcriptionEngine": AppSettings.transcriptionEngine,
             "textSize": TextSize.level,   // 會議內容的文字大小（design §38.5）

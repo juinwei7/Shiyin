@@ -15,12 +15,15 @@ public sealed record SummarizerProblem(SummarizerProblemKind Kind, LLMProvider P
     {
         SummarizerProblemKind.NotChosen => L.T("還沒設定整理工具，請到設定選擇 Claude、Codex 或 API"),
         SummarizerProblemKind.Off => L.T("整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"),
-        SummarizerProblemKind.NotInstalled => LLMException.NotInstalled(Provider == LLMProvider.Codex ? "codex" : "claude").Message,
+        SummarizerProblemKind.NotInstalled => LLMException.NotInstalled(Provider.CliName() ?? "claude").Message,
         // 用桌面版附的 codex：到那個 app 登入（R55.3）
         SummarizerProblemKind.NotLoggedIn when DesktopApp is { } app => L.F("Codex 還沒登入，請打開 %@ 登入之後再整理。", app),
-        SummarizerProblemKind.NotLoggedIn => Provider == LLMProvider.Codex
-            ? L.T("Codex 還沒登入，登入之後才能整理（終端機指令：codex login）。")
-            : L.T("Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。"),
+        SummarizerProblemKind.NotLoggedIn => Provider switch
+        {
+            LLMProvider.Codex => L.T("Codex 還沒登入，登入之後才能整理（終端機指令：codex login）。"),
+            LLMProvider.Antigravity => L.T("Antigravity 還沒登入，登入之後才能整理（終端機指令：agy）。"),
+            _ => L.T("Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。"),
+        },
         SummarizerProblemKind.MissingKey => L.F("還沒有填 %@ 的 API key，請到設定 → 整理工具填寫", Provider.ShortLabel()),
         SummarizerProblemKind.Incomplete => L.T("還沒有填 OpenAI 相容 API 的網址或模型，請到設定 → 整理工具填寫"),
         SummarizerProblemKind.EnterpriseSignedOut => L.T("公司的伺服器還沒登入或登入已失效，請到設定 → 企業伺服器登入"),
@@ -30,11 +33,11 @@ public sealed record SummarizerProblem(SummarizerProblemKind Kind, LLMProvider P
 
     /// <summary>修的按鈕是「登入」（不是「打開設定」）</summary>
     public bool OffersLogin => Kind == SummarizerProblemKind.NotLoggedIn
-        || (Kind == SummarizerProblemKind.Paused && Provider is LLMProvider.Claude or LLMProvider.Codex && LLMException.IsLoginMessage(Detail));
+        || (Kind == SummarizerProblemKind.Paused && Provider.IsCli() && LLMException.IsLoginMessage(Detail));
 
     public string ActionTitle => !OffersLogin ? L.T("打開設定")
         : DesktopApp is { } app ? L.F("打開 %@ 登入", app)
-        : L.F("登入 %@", Provider == LLMProvider.Codex ? "Codex" : "Claude Code");
+        : L.F("登入 %@", Provider.CliProductName());
 
     /// <summary>「打開設定」打開哪一頁（R108，設定會記住上次的頁面）：公司的伺服器沒登入時是企業伺服器，其他是整理工具</summary>
     public string SettingsPage => Kind == SummarizerProblemKind.EnterpriseSignedOut ? "enterprise" : SettingsPages.Provider;

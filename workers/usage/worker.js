@@ -26,6 +26,8 @@ const USAGE_DICTS = {
   summarizer: {
     claudeCode: 'summarizer_claude_code', codex: 'summarizer_codex', api: 'summarizer_api', local: 'summarizer_local',
     enterprise: 'summarizer_enterprise',
+    // 5.4 加（R121.8）：整理工具是 Antigravity（agy CLI）；舊版 app 沒有就當 0
+    antigravity: 'summarizer_antigravity',
   },
   // 2026-10-23 加（R41.7、§31.3）：舊版 app 沒有這組就全部當 0
   review: { answered: 'review_answered', confirmed: 'review_confirmed', skipped: 'review_skipped' },
@@ -41,7 +43,7 @@ const ERROR_DETAIL_DICTS = {
   },
   summarizeProvider: {
     claudeCode: 'summarize_err_claude_code', codex: 'summarize_err_codex', api: 'summarize_err_api', local: 'summarize_err_local',
-    enterprise: 'summarize_err_enterprise',
+    enterprise: 'summarize_err_enterprise', antigravity: 'summarize_err_antigravity',
   },
 };
 const ERROR_DETAIL_NUMBERS = { summarizeDraft: 'summarize_err_draft' };

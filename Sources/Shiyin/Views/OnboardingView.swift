@@ -154,13 +154,13 @@ struct OnboardingView: View {
     /// 選了不等於設定好（R45.2）：準備好才寫進設定，寫進去時測一次
     private var providers: some View {
         _ = toolRecheck
-        let claude = Paths.findTool("claude"), codex = Paths.findTool("codex")
-        let usualValue = usual ?? guessedUsual(claude: claude, codex: codex)
-        let list = options(for: usualValue, claude: claude, codex: codex)
+        let claude = Paths.findTool("claude"), codex = Paths.findTool("codex"), agy = Paths.findTool("agy")
+        let usualValue = usual ?? guessedUsual(claude: claude, codex: codex, agy: agy)
+        let list = options(for: usualValue, claude: claude, codex: codex, agy: agy)
         let shown = pending ?? shownProvider(in: list)
         return VStack(alignment: .leading, spacing: 14) {
             Text("會議紀錄要用哪個 AI 整理？之後可以在設定裡更改。").foregroundStyle(.secondary)
-            Picker("你平常用哪個 AI？", selection: Binding(get: { usualValue }, set: { pick($0, claude: claude, codex: codex) })) {
+            Picker("你平常用哪個 AI？", selection: Binding(get: { usualValue }, set: { pick($0, claude: claude, codex: codex, agy: agy) })) {
                 Text("Claude").tag("claude")
                 Text("ChatGPT").tag("chatgpt")
                 Text("Gemini").tag("gemini")
@@ -214,8 +214,8 @@ struct OnboardingView: View {
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if let url = provider.apiKeyURL { Link("取得 API key", destination: url) }
-        } else if provider == .claude || provider == .codex {
-            let name = provider == .codex ? "Codex" : "Claude Code"
+        } else if provider.isCLI {
+            let name = provider.cliProductName
             if state == .checkingLogin {
                 Text("檢查登入狀態…").foregroundStyle(.secondary)
             } else if state == .notLoggedIn {
@@ -246,11 +246,11 @@ struct OnboardingView: View {
     private struct ProviderOption { var provider: LLMProvider; var title: String; var cost: String }
 
     /// 還沒選第一段時：照目前的整理工具推回去（有 claude CLI 就是 Claude…），沒有就「先不用」
-    private func guessedUsual(claude: URL?, codex: URL?) -> String {
-        switch LLMProvider(rawValue: storedProvider) ?? (claude != nil ? .claude : codex != nil ? .codex : .none) {
+    private func guessedUsual(claude: URL?, codex: URL?, agy: URL?) -> String {
+        switch LLMProvider(rawValue: storedProvider) ?? (claude != nil ? .claude : codex != nil ? .codex : agy != nil ? .antigravity : .none) {
         case .claude, .anthropic: return "claude"
         case .codex, .openai: return "chatgpt"
-        case .gemini: return "gemini"
+        case .antigravity, .gemini: return "gemini"
         case .openaiCompatible, .enterprise: return "other"
         case .none: return "none"
         }
@@ -264,9 +264,9 @@ struct OnboardingView: View {
     }
 
     /// 選了第一段：只篩第二段的選項，第一個選項當作選了（不直接寫設定，R45.2）
-    private func pick(_ value: String, claude: URL?, codex: URL?) {
+    private func pick(_ value: String, claude: URL?, codex: URL?, agy: URL?) {
         usual = value
-        choose(options(for: value, claude: claude, codex: codex).first?.provider)
+        choose(options(for: value, claude: claude, codex: codex, agy: agy).first?.provider)
     }
 
     private func choose(_ provider: LLMProvider?) {
@@ -282,7 +282,7 @@ struct OnboardingView: View {
         switch provider {
         case .none:
             storedProvider = LLMProvider.none.rawValue
-        case .claude, .codex:
+        case .claude, .codex, .antigravity:
             setup = .checkingLogin
             let status = await CLILogin.refresh(provider)
             guard pending == provider else { return }
@@ -330,7 +330,7 @@ struct OnboardingView: View {
         else if keyError == nil && pending == nil { choose(provider) }
     }
 
-    private func options(for usual: String, claude: URL?, codex: URL?) -> [ProviderOption] {
+    private func options(for usual: String, claude: URL?, codex: URL?, agy: URL?) -> [ProviderOption] {
         let subscription = String(localized: "用你的訂閱，不另外收費")
         let api = String(localized: "要 API key，依用量計費，一小時的會議通常不到台幣 10 元（2026-10 估）")
         switch usual {
@@ -350,7 +350,14 @@ struct OnboardingView: View {
             list.append(.init(provider: .openai, title: String(localized: "OpenAI API"), cost: api))
             return list
         case "gemini":
-            return [.init(provider: .gemini, title: String(localized: "Gemini API"), cost: api)]
+            // 裝了 agy 就排在 Gemini API 前面（R121.2）
+            var list: [ProviderOption] = []
+            if agy != nil {
+                list.append(.init(provider: .antigravity, title: String(localized: "Antigravity（這台 Mac 已經裝了 agy CLI）"),
+                                  cost: String(localized: "用你的 Google 帳號，不另外收費（每週有用量額度）")))
+            }
+            list.append(.init(provider: .gemini, title: String(localized: "Gemini API"), cost: api))
+            return list
         case "other":
             // 登入了企業伺服器、伺服器有提供整理：排第一個（R51.1）
             let enterprise: [ProviderOption] = EnterpriseServer.shared.account?.llm == true

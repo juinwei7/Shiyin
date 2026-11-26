@@ -38,8 +38,8 @@ public static class Shell
     }
 
     /// <summary>
-    /// 開終端機登入 claude 或 codex（design-windows §10）：Windows Terminal，沒有就用 cmd.exe /k。
-    /// 參數是固定的，不放任何使用者的內容
+    /// 開終端機登入 claude、codex 或 agy（design-windows §10、§11.54）：Windows Terminal，沒有就用 cmd.exe /k。
+    /// 參數是固定的，不放任何使用者的內容（agy 沒有登入的子指令，參數是空的）
     /// </summary>
     public static void OpenLoginTerminal(Shiyin.LLM.ToolCommand tool, IReadOnlyList<string> arguments)
     {

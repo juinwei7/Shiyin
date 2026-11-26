@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-/// Claude Code、Codex 的登入狀態與重新登入（3.1.2，使用者回報：登入過期時只看到英文錯誤，不知道怎麼辦）
+/// Claude Code、Codex、Antigravity 的登入狀態與重新登入（3.1.2，使用者回報：登入過期時只看到英文錯誤，不知道怎麼辦）
 @MainActor
 enum CLILogin {
     struct Status: Equatable {
@@ -15,7 +15,7 @@ enum CLILogin {
     static func status(_ provider: LLMProvider) async -> Status? {
         #if DEBUG
         // -debugCLILogin no：當成沒登入，不執行 CLI（design §34.6）
-        if UserDefaults.standard.string(forKey: "debugCLILogin") == "no", provider == .claude || provider == .codex {
+        if UserDefaults.standard.string(forKey: "debugCLILogin") == "no", provider.isCLI {
             return Status(loggedIn: false, detail: "")
         }
         #endif
@@ -39,6 +39,12 @@ enum CLILogin {
                 .map(String.init) ?? ""
             let loggedIn = line.localizedCaseInsensitiveContains("logged in") && !line.localizedCaseInsensitiveContains("not logged in")
             return Status(loggedIn: loggedIn, detail: line)
+        case .antigravity:
+            // agy 沒有查登入的子指令：用 agy models（不花額度）。沒登入時結束代碼 1、「Please sign in to view available models」（design §95.3）
+            guard let exe = Paths.findTool("agy"),
+                  let output = await run(exe, ["models"], environment: Paths.subprocessEnvironment()) else { return nil }
+            if !AntigravityCLI.models(output.stdout).isEmpty { return Status(loggedIn: true, detail: "") }
+            return LLMError.isLoginProblem(output.stderr) ? Status(loggedIn: false, detail: "") : nil
         default:
             return nil
         }
@@ -52,25 +58,25 @@ enum CLILogin {
         return status
     }
 
-    /// 目前的整理工具是 claude、codex 時，距離上次查超過 60 秒才再查（app 啟動、回到前景）
+    /// 目前的整理工具是 CLI 時，距離上次查超過 60 秒才再查（app 啟動、回到前景）
     static func refreshIfStale() async {
         let provider = AppSettings.provider
-        guard provider == .claude || provider == .codex, CLILoginCache.isStale(provider, after: 60) else { return }
+        guard provider.isCLI, CLILoginCache.isStale(provider, after: 60) else { return }
         await refresh(provider)
     }
 
     /// 打開「終端機」執行登入指令（會開瀏覽器登入頁）。用 .command 檔案打開，不需要自動化權限
     static func openLogin(_ provider: LLMProvider) {
-        let tool = provider == .codex ? "codex" : "claude"
-        guard let location = Paths.locateTool(tool) else { return }
+        guard let tool = provider.cliName, let location = Paths.locateTool(tool) else { return }
         // 桌面版附的 codex：打開那個 app 登入（R55.3），不開終端機
         if let app = location.appURL {
             NSWorkspace.shared.open(app)
             return
         }
         let exe = location.url
-        let arguments = provider == .codex ? "login" : "auth login"
-        let intro = String(localized: "拾音：正在打開瀏覽器登入 \(provider.shortLabel)。登入完成後，回到拾音按「重試」或「測試整理工具」。")
+        let arguments = provider == .codex ? "login" : provider == .antigravity ? AntigravityCLI.loginArguments : "auth login"
+        let intro = provider == .antigravity ? AntigravityCLI.loginIntro
+            : String(localized: "拾音：正在打開瀏覽器登入 \(provider.shortLabel)。登入完成後，回到拾音按「重試」或「測試整理工具」。")
         let done = String(localized: "完成後可以關掉這個視窗。")
         let script = """
             #!/bin/zsh

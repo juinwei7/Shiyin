@@ -456,11 +456,17 @@ public static partial class ControlPipe
                     {
                         ["claude"] = CliLogin.Cached(LLMProvider.Claude) is { } c ? (c ? "yes" : "no") : "unknown",
                         ["codex"] = CliLogin.Cached(LLMProvider.Codex) is { } x ? (x ? "yes" : "no") : "unknown",
+                        ["antigravity"] = CliLogin.Cached(LLMProvider.Antigravity) is { } a ? (a ? "yes" : "no") : "unknown",
                     },
                 };
             }
-            case "loginrefresh":   // 重新查 claude、codex 的登入狀態
-                host.Post(async () => { await CliLogin.Refresh(LLMProvider.Claude); await CliLogin.Refresh(LLMProvider.Codex); });
+            case "loginrefresh":   // 重新查 claude、codex、agy 的登入狀態
+                host.Post(async () =>
+                {
+                    await CliLogin.Refresh(LLMProvider.Claude);
+                    await CliLogin.Refresh(LLMProvider.Codex);
+                    await CliLogin.Refresh(LLMProvider.Antigravity);
+                });
                 return Ok;
             case "llmurl" when args.Length > 2 && LLMProviders.Parse(args[1]) is { } provider: host.Llm.BaseUrlOverrides[provider] = args[2]; return Ok;
             case "modelurl" when args.Length > 2 && Enum.TryParse<ModelStore.Model>(args[1], true, out var model): host.Models.DebugUrls[model] = args[2]; return Ok;
@@ -651,11 +657,12 @@ public static partial class ControlPipe
             ["models"] = models,
             ["transcriptionEngine"] = host.Settings.TranscriptionEngine,
             ["provider"] = host.Settings.Provider.Code(),
-            // 找到的 claude、codex：使用者自己裝的，或桌面版附的（M§37.4、design-windows §10）
+            // 找到的 claude、codex、agy：使用者自己裝的，或桌面版附的（M§37.4、design-windows §10）
             ["tools"] = new JsonObject
             {
                 ["claude"] = ToolState(host.Tools.Find("claude")),
                 ["codex"] = ToolState(host.Tools.Find("codex")),
+                ["agy"] = ToolState(host.Tools.Find("agy")),
                 ["claudeDesktop"] = DesktopApps.HasClaude(),
             },
             ["enterprise"] = new JsonObject

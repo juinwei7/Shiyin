@@ -103,7 +103,7 @@ struct GuideView: View {
             }
 
             GuideSection(title: String(localized: "設定（⌘,）")) {
-                GuideBullet(String(localized: "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。「範本」那一頁內建五種；也可以複製一份來改，或自己新增段落與指示。"))
+                GuideBullet(String(localized: "「整理工具」：選 Claude、Codex、Antigravity（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。「範本」那一頁內建五種；也可以複製一份來改，或自己新增段落與指示。"))
                 GuideBullet(String(localized: "「錄音」「轉錄」：錄音來源和麥克風、線上會議的提醒和快捷鍵；會議語言、正式轉錄的引擎、要不要即時逐字稿和說話者辨識（轉錄模型在「模型與空間」下載）。「正式轉錄」可以選 Breeze ASR 25（建議，聯發科的台灣模型，會參考詞彙表）、Qwen3-ASR（阿里巴巴開源，多人會議漏字少，全程本機）或 macOS 內建（不用下載模型、速度快，但英文專有名詞比較容易錯）。「說話者辨識的模型」可以選 Nemotron-3（實驗性，英文會議分得比較準，最多分 8 人）。"))
                 GuideBullet(String(localized: "「說話者」「詞彙表」：拾音認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。"))
                 GuideBullet(String(localized: "「檢查與更新」：檢查更新（有新版時拾音會詢問，同意後自動下載、驗證並重新打開；也可以從「拾音」選單選「檢查更新…」）、環境檢查；錄音和模型佔用的空間在「模型與空間」。"))
@@ -136,7 +136,7 @@ struct GuideView: View {
                     requirement(String(localized: "系統"), String(localized: "macOS 26 以上"))
                     requirement(String(localized: "記憶體"), String(localized: "8 GB 以上。轉錄加說話者辨識時最高約 2.9 GB，長錄音分段轉錄，會議長短影響不大（4 小時的會議 2.9 GB，M3 Pro 實測）"))
                     requirement(String(localized: "磁碟空間"), String(localized: "約 1.7 GB 給模型（轉錄 1.66 GB、說話者辨識 21 MB；開\(MeetingLanguage.uiNames(model: "turbo"))會議另外 574 MB、自動偵測語言 60 MB），另外加上錄音：轉錄完會壓縮成 m4a，每小時約 10～30 MB"))
-                    requirement(String(localized: "先安裝"), String(localized: "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude 或 codex，或準備 Anthropic、OpenAI 的 API key"))
+                    requirement(String(localized: "先安裝"), String(localized: "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude、codex 或 agy，或準備 Anthropic、OpenAI 的 API key"))
                     requirement(String(localized: "網路"), String(localized: "第一次使用下載模型時需要（約 1.7 GB）；整理會議紀錄時需要。錄音、轉錄不需要"))
                 }
             }

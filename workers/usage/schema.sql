@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarizer_api INTEGER NOT NULL DEFAULT 0,
   summarizer_local INTEGER NOT NULL DEFAULT 0,
   summarizer_enterprise INTEGER NOT NULL DEFAULT 0,   -- 4.2（R52.2）：整理工具是「公司」
+  summarizer_antigravity INTEGER NOT NULL DEFAULT 0,  -- 5.4（R121.8）：整理工具是 Antigravity；已經建好的資料庫跑 migrate-antigravity.sql
   questions_asked INTEGER NOT NULL DEFAULT 0,
   review_answered INTEGER NOT NULL DEFAULT 0,   -- 2026-10-23 加（R41.7）：待確認送出的題數；已經建好的資料庫跑 migrate-review.sql
   review_confirmed INTEGER NOT NULL DEFAULT 0,
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   summarize_err_api INTEGER NOT NULL DEFAULT 0,
   summarize_err_local INTEGER NOT NULL DEFAULT 0,
   summarize_err_enterprise INTEGER NOT NULL DEFAULT 0,   -- 4.2（R52.2）
+  summarize_err_antigravity INTEGER NOT NULL DEFAULT 0,  -- 5.4（R121.8）
   summarize_err_draft INTEGER NOT NULL DEFAULT 0,
   summarize_err_other_detail TEXT,                       -- 2026-11-15（R86）：「其他」的種類 {"http404": 2, …}
   diarization_nemotron INTEGER NOT NULL DEFAULT 0,       -- 2026-11-15（R87.4）：說話者辨識用了 Nemotron-3 的次數

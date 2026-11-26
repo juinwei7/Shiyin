@@ -44,7 +44,7 @@ public static class SettingsPages
         "provider" =>
         [
             L.T("轉錄完成後自動整理成會議紀錄"), L.T("轉錄完成後檢查可能聽錯的字"), L.T("模型"), L.T("測試整理工具"),
-            "Claude", "Codex", "ChatGPT", "OpenAI", "Gemini", "Anthropic", "API key",
+            "Claude", "Codex", "Antigravity", "ChatGPT", "OpenAI", "Gemini", "Anthropic", "API key",
         ],
         "templates" => [L.T("要產生的段落"), L.T("自訂段落"), L.T("設為預設範本")],
         "recording" =>

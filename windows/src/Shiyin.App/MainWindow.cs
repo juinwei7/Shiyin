@@ -159,7 +159,7 @@ public sealed class MainWindow : Window
         Activated += (_, e) =>
         {
             IsForeground = e.WindowActivationState != WindowActivationState.Deactivated;
-            // 回到前景時更新 claude、codex 的登入狀態（使用者可能剛在終端機登入，M§34.1）
+            // 回到前景時更新 claude、codex、agy 的登入狀態（使用者可能剛在終端機登入，M§34.1）
             if (IsForeground) _ = CliLogin.RefreshIfStale();
         };
         // 整理工具準備好了沒變了（登入狀態、key、暫停、設定）：會議頁的提示和失敗橫幅跟著變（M§34.2）

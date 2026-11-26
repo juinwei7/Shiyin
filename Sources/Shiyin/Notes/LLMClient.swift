@@ -2,8 +2,21 @@ import Foundation
 
 enum LLMProvider: String, CaseIterable, Identifiable {
     /// enterprise：公司的企業伺服器（R51、design §36.3），選單一直有（D124），模型由公司的後台設定
-    case claude, codex, anthropic, openai, gemini, openaiCompatible, enterprise, none
+    case claude, codex, antigravity, anthropic, openai, gemini, openaiCompatible, enterprise, none
     var id: String { rawValue }
+
+    /// 使用者自己安裝、登入的命令列工具（claude、codex、agy）的執行檔名稱；API、公司、不整理是 nil
+    var cliName: String? {
+        switch self {
+        case .claude: return "claude"
+        case .codex: return "codex"
+        case .antigravity: return "agy"
+        default: return nil
+        }
+    }
+    var isCLI: Bool { cliName != nil }
+    /// CLI 的產品名稱：登入按鈕、說明用（「登入 Claude Code」）
+    var cliProductName: String { self == .claude ? "Claude Code" : shortLabel }
 
     /// 整理時送會議中的畫面的圖片本身（design §83.5、D188）：OpenAI 相容 API 看設定（很多本機模型不能看圖），企業伺服器先只送文字
     @MainActor
@@ -11,7 +24,8 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .claude, .codex, .anthropic, .openai, .gemini: true
         case .openaiCompatible: AppSettings.compatibleSendsImages
-        case .enterprise, .none: false
+        // agy 一次跑完的模式不能附圖（R121.5）
+        case .antigravity, .enterprise, .none: false
         }
     }
 
@@ -19,6 +33,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .claude: return String(localized: "Claude（claude CLI）")
         case .codex: return String(localized: "Codex（codex CLI）")
+        case .antigravity: return String(localized: "Antigravity（agy CLI）")
         case .anthropic: return "Anthropic API"
         case .openai: return "OpenAI API"
         case .gemini: return "Gemini API"
@@ -33,6 +48,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .claude: return "Claude"
         case .codex: return "Codex"
+        case .antigravity: return "Antigravity"
         case .anthropic: return "Anthropic API"
         case .openai: return "OpenAI API"
         case .gemini: return "Gemini API"
@@ -135,17 +151,21 @@ enum LLMError: LocalizedError {
                 // 只有 Claude 桌面版：說明要另外裝 Claude Code（R56.3）
                 return String(localized: "這台 Mac 找不到 Claude Code（命令列版）。Claude 桌面版不能直接用，請到設定 → 整理工具照說明安裝 Claude Code；或改用 API（填 API key）、選「不整理」")
             }
-            return name == "codex"
-                ? String(localized: "這台 Mac 找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
-                : String(localized: "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
+            switch name {
+            case "codex": return String(localized: "這台 Mac 找不到 codex。沒有在用 Codex 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
+            case "agy": return String(localized: "這台 Mac 找不到 agy。沒有在用 Antigravity 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
+            default: return String(localized: "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」")
+            }
         case .notLoggedIn(let name):
             // 用桌面版附的 codex：到那個 app 登入（R55.3）
             if name == "codex", let app = CLILogin.desktopApp(.codex) {
                 return String(localized: "Codex 還沒登入或登入已過期，請打開 \(app) 重新登入後再試一次。")
             }
-            return name == "codex"
-                ? String(localized: "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
-                : String(localized: "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。")
+            switch name {
+            case "codex": return String(localized: "Codex 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：codex login）。")
+            case "agy": return String(localized: "Antigravity 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：agy）。")
+            default: return String(localized: "Claude Code 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：claude auth login）。")
+            }
         case .missingKey(let name): return String(localized: "還沒有填 \(name) 的 API key，請到設定 → 整理工具填寫")
         case .rejected(let detail), .limited(let detail), .unreachable(let detail), .notConfigured(let detail): return detail
         case .failed(let detail, _): return detail
@@ -182,30 +202,38 @@ enum LLMError: LocalizedError {
 
     /// claude、codex 的額度用完（R62.2、design §40.2）：說是哪個工具、怎麼辦，下一行附上 CLI 的原文（裡面有什麼時候恢復，D137）
     static func cliLimited(_ provider: LLMProvider, output: String) -> LLMError {
-        let advice = provider == .codex
-            ? String(localized: "Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。")
-            : String(localized: "Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。")
+        let advice = switch provider {
+        case .codex: String(localized: "Codex 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Claude Code 或 API。")
+        case .antigravity: String(localized: "Antigravity 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Gemini API 或其他整理工具。")
+        default: String(localized: "Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。")
+        }
         // 最後一行符合的：codex 的 stderr 前面可能有別的 log，錯誤在最後
         guard let line = output.split(whereSeparator: \.isNewline)
             .map({ $0.trimmingCharacters(in: .whitespaces) })
             .last(where: { isLimitProblem($0) }) else { return .limited(advice) }
         let original = String(line.prefix(300))
-        let source = provider == .codex
-            ? String(localized: "Codex 的訊息：\(original)")
-            : String(localized: "Claude Code 的訊息：\(original)")
+        let source = switch provider {
+        case .codex: String(localized: "Codex 的訊息：\(original)")
+        case .antigravity: String(localized: "Antigravity 的訊息：\(original)")
+        default: String(localized: "Claude Code 的訊息：\(original)")
+        }
         return .limited(advice + "\n" + source)
     }
 
-    /// 工作紀錄的失敗訊息是不是登入問題：CLI 的訊息（isLoginProblem），加上桌面版附的 codex 的「打開 ChatGPT 重新登入」（沒有終端機指令，R55.3）
+    /// 工作紀錄的失敗訊息是不是登入問題：CLI 的訊息（isLoginProblem），加上桌面版附的 codex 的「打開 ChatGPT 重新登入」（沒有終端機指令，R55.3）、agy 的說明
     static func isLoginMessage(_ text: String) -> Bool {
         isLoginProblem(text) || (CLILogin.desktopApp(.codex) != nil && text.contains(LLMError.notLoggedIn("codex").localizedDescription))
+            // agy 的說明文字裡沒有英文的登入字樣（登入就是直接開 agy）
+            || text.contains(LLMError.notLoggedIn("agy").localizedDescription)
     }
 
-    /// CLI 的錯誤訊息是不是登入問題，例如「Not logged in · Please run /login」「Failed to authenticate: OAuth session expired」
+    /// CLI 的錯誤訊息是不是登入問題，例如「Not logged in · Please run /login」「Failed to authenticate: OAuth session expired」、
+    /// agy 的「authentication required. Run 'agy' to log in」「Please sign in to view available models」
     static func isLoginProblem(_ text: String) -> Bool {
         let t = text.lowercased()
         // 自己的說明文字裡有「claude auth login」「codex login」，存在工作紀錄的失敗訊息也要認得
         return ["not logged in", "/login", "auth login", "codex login", "failed to authenticate", "oauth", "login required",
+                "authentication required", "authentication failed", "please sign in",
                 "invalid api key", "unauthorized", "401"].contains { t.contains($0) }
     }
 }
@@ -249,6 +277,7 @@ extension LLMProvider {
         switch self {
         case .claude: return ClaudeCLI(model: model)
         case .codex: return CodexCLI(model: model)
+        case .antigravity: return AntigravityCLI(model: model)
         case .anthropic: return AnthropicAPI(model: model.isEmpty ? defaultModel : model)
         case .openai: return OpenAIAPI(model: model.isEmpty ? defaultModel : model)
         case .gemini: return GeminiAPI(model: model.isEmpty ? defaultModel : model)

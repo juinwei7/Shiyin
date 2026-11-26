@@ -218,7 +218,7 @@ public sealed class AppSettings
 
     /// <summary>使用者選過的整理工具；沒選過（或不是認得的值）是 null（R35）</summary>
     public LLMProvider? ChosenProvider => LLMProviders.Parse(String(ProviderKey));
-    /// <summary>找這台電腦上的 CLI（先 claude 再 codex）：App 用 WindowsToolLocator 給（快取 30 秒，design-windows §10）；沒給就是找不到</summary>
+    /// <summary>找這台電腦上的 CLI（先 claude、再 codex、最後 agy，R121.3）：App 用 WindowsToolLocator 給（快取 30 秒，design-windows §10）；沒給就是找不到</summary>
     public Func<LLMProvider?> DetectCli { get; set; } = () => null;
     /// <summary>沒選過時自動用找得到的 CLI，都沒有就先不整理（R35.1、M§19.6）</summary>
     public LLMProvider DetectedProvider => DetectCli() ?? LLMProvider.None;
@@ -233,7 +233,7 @@ public sealed class AppSettings
     public Func<string, bool> HasTool { get; set; } = _ => true;
     /// <summary>認證管理員有沒有這個 key（只看有沒有，不讀出來）；沒給當作有</summary>
     public Func<string, bool> HasKey { get; set; } = _ => true;
-    /// <summary>claude、codex 的登入狀態快取（App 的 CliLogin 給）；null 是還沒查或看不出來，當作準備好</summary>
+    /// <summary>claude、codex、agy 的登入狀態快取（App 的 CliLogin 給）；null 是還沒查或看不出來，當作準備好</summary>
     public Func<LLMProvider, bool?> CliLoggedIn { get; set; } = _ => null;
     /// <summary>存或刪 key 的次數（只在記憶體）：整理工具設定的指紋，換了 key 就解除暫停</summary>
     public int KeyGeneration { get; private set; }
@@ -287,8 +287,8 @@ public sealed class AppSettings
             switch (provider)
             {
                 case LLMProvider.None: return new(SummarizerProblemKind.Off, provider);
-                case LLMProvider.Claude or LLMProvider.Codex:
-                    if (!HasTool(provider == LLMProvider.Claude ? "claude" : "codex")) return new(SummarizerProblemKind.NotInstalled, provider);
+                case LLMProvider.Claude or LLMProvider.Codex or LLMProvider.Antigravity:
+                    if (!HasTool(provider.CliName()!)) return new(SummarizerProblemKind.NotInstalled, provider);
                     if (CliLoggedIn(provider) == false) return new(SummarizerProblemKind.NotLoggedIn, provider);
                     break;
                 case LLMProvider.Anthropic or LLMProvider.OpenAI or LLMProvider.Gemini:

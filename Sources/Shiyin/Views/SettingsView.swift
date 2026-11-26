@@ -67,7 +67,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .provider:
             [String(localized: "轉錄完成後自動整理成會議紀錄"), String(localized: "轉錄完成後檢查可能聽錯的字"), String(localized: "模型"),
-             String(localized: "測試整理工具"), "Claude", "Codex", "ChatGPT", "OpenAI", "Gemini", "Anthropic", "API key"]
+             String(localized: "測試整理工具"), "Claude", "Codex", "Antigravity", "ChatGPT", "OpenAI", "Gemini", "Anthropic", "API key"]
         case .templates: [String(localized: "要產生的段落"), String(localized: "自訂段落"), String(localized: "設為預設範本")]
         case .recording:
             [String(localized: "錄音來源"), String(localized: "麥克風"), String(localized: "麥克風權限設定"), String(localized: "系統錄音權限設定"),
@@ -262,12 +262,12 @@ struct ProviderSettings: View {
     var body: some View {
         Form {
             Picker("整理工具", selection: Binding(get: { provider }, set: { storedProvider = $0 })) {
-                // 這台 Mac 沒有 claude、codex 時才有：選它等於清掉設定，回到「還沒設定」
+                // 這台 Mac 沒有 claude、codex、agy 時才有：選它等於清掉設定，回到「還沒設定」
                 if AppSettings.detectedProvider == .none { Text("之後再設定（先不整理）").tag("") }
-                // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
+                // 沒安裝的 CLI 不能選（R45.3）；目前選的就是它時照樣顯示
                 // 公司：登入了企業伺服器、公司有提供整理才出現（R51.1、D124；登入在進階）
                 ForEach(LLMProvider.allCases.filter { $0 != .enterprise || EnterpriseServer.shared.account?.llm == true || $0 == current }) { item in
-                    let missing = (item == .claude || item == .codex) && Paths.findTool(item == .claude ? "claude" : "codex") == nil
+                    let missing = item.cliName.map { Paths.findTool($0) == nil } ?? false
                     Text(missing ? String(localized: "\(item.label)（沒有安裝）") : item == .enterprise ? companyLabel : item.label).tag(item.rawValue)
                         .selectionDisabled(missing && item != current)
                 }
@@ -276,11 +276,12 @@ struct ProviderSettings: View {
             if current != .none, let notice = problemNotice {
                 Text(notice).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
             }
-            if current == .claude || current == .codex {
+            if let cliName = current.cliName {
                 LabeledContent("狀態") {
                     HStack(spacing: 8) {
-                        if Paths.findTool(current == .claude ? "claude" : "codex") == nil {
+                        if Paths.findTool(cliName) == nil {
                             Text(current == .codex ? "這台 Mac 沒有安裝 codex：沒有在用 Codex 的話，請改選 API"
+                                 : current == .antigravity ? "這台 Mac 沒有安裝 agy：沒有在用 Antigravity 的話，請改選 API"
                                  : showClaudeHint ? "這台 Mac 沒有安裝 Claude Code（命令列版），安裝方法在下面"
                                  : "這台 Mac 沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API")
                                 .foregroundStyle(.secondary)
@@ -479,7 +480,7 @@ struct ProviderSettings: View {
 
     /// userInitiated：使用者按了「重新檢查」，查到已登入就測一次（R45.3）；打開設定頁時的自動檢查不測（不花額度）
     private func checkLogin(userInitiated: Bool = false) async {
-        guard current == .claude || current == .codex else { login = nil; return }
+        guard current.isCLI else { login = nil; return }
         checkingLogin = true
         let checked = current
         let status = await CLILogin.refresh(checked)
@@ -561,8 +562,13 @@ struct ProviderSettings: View {
 
     /// 可以從清單選模型：API 要有存 key，OpenAI 相容 API 要有網址
     private var canListModels: Bool {
-        current == .openaiCompatible ? OpenAICompatibleAPI.normalized(baseURL) != nil
-            : current == .enterprise ? EnterpriseServer.shared.isSignedIn : current.usesAPIKey && keySaved
+        switch current {
+        case .openaiCompatible: OpenAICompatibleAPI.normalized(baseURL) != nil
+        case .enterprise: EnterpriseServer.shared.isSignedIn
+        // agy 的模型清單問它自己（agy models，R121.6）
+        case .antigravity: Paths.findTool("agy") != nil
+        default: current.usesAPIKey && keySaved
+        }
     }
 
     /// 「選擇」用的模型清單；取的時候換了整理工具就不用。
@@ -640,6 +646,8 @@ struct ProviderSettings: View {
             return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。")
         case .gemini:
             return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。")
+        case .antigravity:
+            return String(localized: "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Antigravity）。錄音檔不會送出。")
         case .enterprise:
             // 送到公司的伺服器，再由公司設定的模型整理（R51.4、design §36.5）
             let host = EnterpriseServer.shared.host

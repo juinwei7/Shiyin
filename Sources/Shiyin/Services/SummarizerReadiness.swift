@@ -2,7 +2,7 @@ import Foundation
 
 /// 整理工具還沒準備好的原因（R45.1、design §34.1、D112）。判斷不送請求、不花額度、不讀鑰匙圈的內容
 enum SummarizerProblem: Equatable {
-    /// 沒選過、也沒有 claude、codex（R35）
+    /// 沒選過、也沒有 claude、codex、agy（R35、R121.3）
     case notChosen
     /// 使用者選了「不整理」
     case off
@@ -25,13 +25,15 @@ enum SummarizerProblem: Equatable {
         switch self {
         case .notChosen: return String(localized: "還沒設定整理工具，請到設定選擇 Claude、Codex 或 API")
         case .off: return String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API")
-        case .notInstalled(let provider): return LLMError.notInstalled(provider == .codex ? "codex" : "claude").localizedDescription
+        case .notInstalled(let provider): return LLMError.notInstalled(provider.cliName ?? "claude").localizedDescription
         case .notLoggedIn(let provider):
             // 用桌面版附的 codex：到那個 app 登入（R55.3）
             if let app = CLILogin.desktopApp(provider) { return String(localized: "Codex 還沒登入，請打開 \(app) 登入之後再整理。") }
-            return provider == .codex
-                ? String(localized: "Codex 還沒登入，登入之後才能整理（終端機指令：codex login）。")
-                : String(localized: "Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。")
+            switch provider {
+            case .codex: return String(localized: "Codex 還沒登入，登入之後才能整理（終端機指令：codex login）。")
+            case .antigravity: return String(localized: "Antigravity 還沒登入，登入之後才能整理（終端機指令：agy）。")
+            default: return String(localized: "Claude Code 還沒登入，登入之後才能整理（終端機指令：claude auth login）。")
+            }
         case .missingKey(let provider): return String(localized: "還沒有填 \(provider.shortLabel) 的 API key，請到設定 → 整理工具填寫")
         case .incomplete: return String(localized: "還沒有填 OpenAI 相容 API 的網址或模型，請到設定 → 整理工具填寫")
         case .enterpriseSignedOut: return String(localized: "公司的伺服器還沒登入或登入已失效，請到設定 → 企業伺服器登入")
@@ -43,7 +45,7 @@ enum SummarizerProblem: Equatable {
     var action: Action {
         switch self {
         case .notLoggedIn(let provider): return .login(provider)
-        case .paused(let provider, let detail) where (provider == .claude || provider == .codex) && LLMError.isLoginMessage(detail):
+        case .paused(let provider, let detail) where provider.isCLI && LLMError.isLoginMessage(detail):
             return .login(provider)
         default: return .openSettings
         }
@@ -57,7 +59,7 @@ enum SummarizerProblem: Equatable {
         case .openSettings: return String(localized: "打開設定")
         case .login(let provider):
             if let app = CLILogin.desktopApp(provider) { return String(localized: "打開 \(app) 登入") }
-            return String(localized: "登入 \(provider == .codex ? "Codex" : "Claude Code")")
+            return String(localized: "登入 \(provider.cliProductName)")
         }
     }
 }
@@ -69,8 +71,8 @@ extension AppSettings {
         let provider = self.provider
         switch provider {
         case .none: return .off
-        case .claude, .codex:
-            if Paths.findTool(provider == .claude ? "claude" : "codex") == nil { return .notInstalled(provider) }
+        case .claude, .codex, .antigravity:
+            if Paths.findTool(provider.cliName ?? "") == nil { return .notInstalled(provider) }
             if CLILoginCache.loggedIn(provider) == false { return .notLoggedIn(provider) }
         case .anthropic, .openai, .gemini:
             if !Keychain.exists(provider.keychainAccount) { return .missingKey(provider) }
@@ -88,7 +90,7 @@ extension AppSettings {
     @MainActor static var summarizerReady: Bool { summarizerProblem == nil }
 }
 
-/// claude、codex 登入狀態的快取（§34.1）。只有明確查到「沒有登入」才算沒準備好；還沒查或看不出來是 nil
+/// claude、codex、agy 登入狀態的快取（§34.1）。只有明確查到「沒有登入」才算沒準備好；還沒查或看不出來是 nil
 @MainActor
 enum CLILoginCache {
     private static var values: [LLMProvider: Bool] = [:]

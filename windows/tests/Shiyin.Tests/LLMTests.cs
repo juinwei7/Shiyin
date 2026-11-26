@@ -440,6 +440,197 @@ public sealed class LLMTests : IDisposable
         finally { TempDirectory.Delete(dir); }
     }
 
+    /// <summary>agy 這次的設定（M§95.2、D204）跟 Mac 的 AntigravityCLI.sessionSettings 一字不差；參數、stdin 的那一行（M§95.1）</summary>
+    [Fact]
+    public void AgySettingsArgumentsAndMessage()
+    {
+        var swift = File.ReadAllText(Path.Combine(Golden.Root, "..", "..", "Sources", "Shiyin", "Notes", "Backends", "CLIBackends.swift")).Replace("\r\n", "\n");
+        var mac = System.Text.RegularExpressions.Regex.Match(swift, "static let sessionSettings = #\"(.*?)\"#").Groups[1].Value;
+        Assert.NotEmpty(mac);
+        Assert.Equal(mac, AgyCli.SessionSettings);
+        var settings = JsonNode.Parse(AgyCli.SessionSettings)!;
+        Assert.Equal("strict", (string)settings["toolPermission"]!);
+        Assert.Equal(8, settings["permissions"]!["deny"]!.AsArray().Count);
+
+        Assert.Equal(["--input-format", "stream-json", "--output-format", "stream-json", "--json-schema", @"C:\t\schema.json",
+            "--settings", @"C:\t\settings.json", "--disable-slash-commands"], AgyCli.Arguments(@"C:\t\schema.json", @"C:\t\settings.json", ""));
+        Assert.Equal(["--model", "gemini-3.8-flash-high"], AgyCli.Arguments("a", "b", "gemini-3.8-flash-high")[^2..]);
+
+        // 一行 JSON（結尾換行）；內容是系統提示詞、提示詞、schema 說明，中間空一行；只有 ASCII（中文寫成 \uXXXX）
+        var line = AgyCli.Message("系統 \"提示\"\n第二行", "逐字稿", """{"type":"object"}""");
+        Assert.EndsWith("\n", line);
+        Assert.DoesNotContain("\n", line[..^1]);
+        Assert.True(line.All(c => c < 128));
+        var obj = JsonNode.Parse(line)!.AsObject();
+        Assert.Equal(["event", "message"], obj.Select(p => p.Key));
+        Assert.Equal("user", (string)obj["event"]!);
+        Assert.Equal("系統 \"提示\"\n第二行\n\n逐字稿\n\nRespond with only a JSON object that matches this JSON schema, with no other text:\n{\"type\":\"object\"}",
+            (string)obj["message"]!["content"]!);
+    }
+
+    /// <summary>agy 的結果（M§95.1）：最後一行 result；SUCCESS 取 structured_output，沒有就從 response 取 JSON；其他狀態取 error</summary>
+    [Fact]
+    public void AgyParsesTheResultLine()
+    {
+        const string id = "0b5c6c9e-6f7e-4a59-9d2a-3f4f1f0c2b11";
+        var success = AgyCli.Parse("{\"event\":\"start\"}\r\nnot json\n"
+            + "{\"event\":\"result\",\"result\":{\"status\":\"ERROR\",\"error\":\"old\"}}\n"
+            + "{\"event\":\"result\",\"result\":{\"status\":\"SUCCESS\",\"conversation_id\":\"" + id + "\",\"structured_output\":{\"title\":\"週會\"},\"response\":\"x\"}}\r\n");
+        Assert.Equal(new AgyCli.Parsed("{\"title\":\"\\u9031\\u6703\"}", null, id), success);
+        Assert.Equal("週會", (string)JsonNode.Parse(success.Output!)!["title"]!);
+        // structured_output 沒有：從 response 取第一個 { 到最後一個 }
+        var fromResponse = AgyCli.Parse("""{"event":"result","result":{"status":"SUCCESS","conversation_id":"","response":"好的：\n```json\n{\"title\":\"t\"}\n```"}}""");
+        Assert.Equal(new AgyCli.Parsed("{\"title\":\"t\"}", null, null), fromResponse);
+        // 不是 JSON 物件（字串、null）都不算
+        Assert.Equal(new AgyCli.Parsed(null, "agy 沒有回傳 JSON", null),
+            AgyCli.Parse("""{"event":"result","result":{"status":"SUCCESS","structured_output":"{}","response":"沒有 JSON"}}"""));
+        Assert.Equal(new AgyCli.Parsed(null, "agy 沒有回傳 JSON", null),
+            AgyCli.Parse("""{"event":"result","result":{"status":"SUCCESS","structured_output":null}}"""));
+        // 失敗：error，空的時候是 status
+        Assert.Equal(new AgyCli.Parsed(null, "authentication failed or timed out", id),
+            AgyCli.Parse("{\"event\":\"result\",\"result\":{\"status\":\"ERROR\",\"error\":\"authentication failed or timed out\",\"conversation_id\":\"" + id + "\"}}"));
+        Assert.Equal(new AgyCli.Parsed(null, "CANCELLED", null), AgyCli.Parse("""{"event":"result","result":{"status":"CANCELLED","error":""}}"""));
+        Assert.Equal(new AgyCli.Parsed(), AgyCli.Parse("""{"event":"result","result":{"error":7}}"""));
+        // 沒有 result 那一行、event 不是字串、result 不是物件
+        Assert.Equal(new AgyCli.Parsed(), AgyCli.Parse(""));
+        Assert.Equal(new AgyCli.Parsed(), AgyCli.Parse("Error: authentication required. Run 'agy' to log in, then retry.\n"));
+        Assert.Equal(new AgyCli.Parsed(), AgyCli.Parse("""{"event":1,"result":{"status":"SUCCESS"}}""" + "\n" + """{"event":"result","result":"x"}"""));
+    }
+
+    /// <summary>agy models（M§95.3）：一行「代號&lt;Tab&gt;名稱」，列代號；其他的行不算</summary>
+    [Fact]
+    public void AgyModelsAreTheSlugs()
+    {
+        Assert.Equal(["gemini-4-hydrogen-high", "claude-sonnet-4-6", "gpt-oss-120b-medium"],
+            AgyCli.Models("gemini-4-hydrogen-high\tGemini 4 Hydrogen High\r\nclaude-sonnet-4-6\tClaude Sonnet 4.6\n\n"
+                + "Available models:\n\tno slug\nslug-only\t\n gpt-oss-120b-medium \tGPT-OSS 120B (Medium)\n"));
+        Assert.Empty(AgyCli.Models("Please sign in to view available models\n"));
+        Assert.Empty(AgyCli.Models(""));
+    }
+
+    /// <summary>跑完刪掉這次的對話（M§95.4、D204）：只刪 conversations/&lt;id&gt;.db 和 brain/&lt;id&gt;/；id 不是 UUID 就不刪</summary>
+    [Fact]
+    public void AgyRemovesOnlyThisConversation()
+    {
+        var root = TempDirectory.Create();
+        try
+        {
+            string Conversation(string id)
+            {
+                Directory.CreateDirectory(Path.Combine(root, "conversations"));
+                Directory.CreateDirectory(Path.Combine(root, "brain", id));
+                File.WriteAllText(Path.Combine(root, "brain", id, "note.md"), "x");
+                var db = Path.Combine(root, "conversations", id + ".db");
+                File.WriteAllText(db, "x");
+                return db;
+            }
+            const string mine = "0b5c6c9e-6f7e-4a59-9d2a-3f4f1f0c2b11", other = "7d1f0a52-3c1b-4f0e-8a77-0c3d2e1b4a90";
+            var mineDb = Conversation(mine);
+            var otherDb = Conversation(other);
+            foreach (var bad in new[] { "..", "../x", "conversations", "{" + other + "}", other.Replace("-", ""), "" })
+                AgyCli.RemoveConversation(root, bad);
+            Assert.True(File.Exists(otherDb) && Directory.Exists(Path.Combine(root, "brain", other)) && Directory.Exists(Path.Combine(root, "conversations")));
+            AgyCli.RemoveConversation(root, mine);
+            Assert.False(File.Exists(mineDb));
+            Assert.False(Directory.Exists(Path.Combine(root, "brain", mine)));
+            Assert.True(File.Exists(otherDb) && Directory.Exists(Path.Combine(root, "brain", other)));
+            AgyCli.RemoveConversation(root, mine);   // 已經沒有了：不會丟例外
+            AgyCli.RemoveConversation(Path.Combine(root, "沒有這個資料夾"), mine);
+        }
+        finally { TempDirectory.Delete(root); }
+    }
+
+    /// <summary>
+    /// 假的 agy（只在有 /bin/sh 的機器跑）：參數陣列、stdin 一行、工作目錄是空的 workspace、schema 和設定檔在它外面、
+    /// 跑完刪掉暫存資料夾和這次的對話；沒登入、額度用完、模型不對、沒有輸出各是哪一種錯誤
+    /// </summary>
+    [Fact]
+    public async Task AgyCliRunsLikeTheMac()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var dir = TempDirectory.Create();
+        try
+        {
+            const string id = "0b5c6c9e-6f7e-4a59-9d2a-3f4f1f0c2b11";
+            var data = Path.Combine(dir, "antigravity-cli");
+            Directory.CreateDirectory(Path.Combine(data, "conversations"));
+            Directory.CreateDirectory(Path.Combine(data, "brain", id));
+            await File.WriteAllTextAsync(Path.Combine(data, "conversations", id + ".db"), "x");
+            var log = Path.Combine(dir, "log");
+            async Task<LLMClient> Agy(string body)
+            {
+                var script = Path.Combine(dir, $"agy-{Guid.NewGuid():N}");
+                await File.WriteAllTextAsync(script, "#!/bin/sh\nprev=''\nfor a in \"$@\"; do printf '%s\\n' \"$a\" >> '" + log + "'\n"
+                    + "  [ \"$prev\" = --json-schema ] && cp \"$a\" '" + log + ".schema'\n"
+                    + "  [ \"$prev\" = --settings ] && cp \"$a\" '" + log + ".settings'\n  prev=\"$a\"\ndone\n"
+                    + "pwd > '" + log + ".cwd'\nls -A > '" + log + ".ls'\n[ \"$1\" = models ] || cat > '" + log + ".stdin'\n" + body + "\n");
+                File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                return new LLMClient(new MemoryKeys([]), new FixedTool(script), new ProcessRunner(), http) { AgyDataDirectory = data };
+            }
+
+            var ok = await Agy("echo '{\"event\":\"assistant\",\"text\":\"…\"}'\n"
+                + "echo '{\"event\":\"result\",\"result\":{\"status\":\"SUCCESS\",\"conversation_id\":\"" + id + "\",\"structured_output\":" + NotesJson + "}}'");
+            var notes = await ok.Generate(LLMProvider.Antigravity, "gemini-3.8-flash-high", "系統", "逐字稿", CancellationToken.None);
+            Assert.Equal("t", notes.Title);
+            var args = (await File.ReadAllTextAsync(log)).TrimEnd('\n').Split('\n');
+            Assert.Equal(["--input-format", "stream-json", "--output-format", "stream-json", "--json-schema"], args[..5]);
+            Assert.Equal(["--settings"], args[6..7]);
+            Assert.Equal(["--disable-slash-commands", "--model", "gemini-3.8-flash-high"], args[8..]);
+            var temp = Path.GetDirectoryName(args[5])!;
+            Assert.Equal((Path.Combine(temp, "schema.json"), Path.Combine(temp, "settings.json")), (args[5], args[7]));
+            Assert.Equal(MeetingNotesSchema, await File.ReadAllTextAsync(log + ".schema"));
+            Assert.Equal(AgyCli.SessionSettings, await File.ReadAllTextAsync(log + ".settings"));
+            // 工作目錄是暫存資料夾裡空的 workspace（設定、schema 不在裡面）；用完整個刪掉
+            Assert.EndsWith(Path.Combine(Path.GetFileName(temp), "workspace"), (await File.ReadAllTextAsync(log + ".cwd")).Trim());
+            Assert.Equal("", await File.ReadAllTextAsync(log + ".ls"));
+            Assert.False(Directory.Exists(temp));
+            Assert.Equal(AgyCli.Message("系統", "逐字稿", MeetingNotesSchema), await File.ReadAllTextAsync(log + ".stdin"));
+            // 這次的對話刪掉了
+            Assert.False(File.Exists(Path.Combine(data, "conversations", id + ".db")));
+            Assert.False(Directory.Exists(Path.Combine(data, "brain", id)));
+
+            var cases = new (string Body, LLMErrorKind Kind, string Summary, string Message)[]
+            {
+                ("echo \"Error: authentication required. Run 'agy' to log in, then retry.\" >&2\n"
+                    + "echo '{\"event\":\"result\",\"result\":{\"status\":\"ERROR\",\"error\":\"authentication failed or timed out\"}}'\nexit 1",
+                    LLMErrorKind.NotLoggedIn, "LLMError.notLoggedIn(agy)", "Antigravity 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：agy）。"),
+                ("echo '{\"event\":\"result\",\"result\":{\"status\":\"ERROR\",\"error\":\"RESOURCE_EXHAUSTED: 429 Too Many Requests\"}}'\nexit 1",
+                    LLMErrorKind.Limited, "LLMError.limited",
+                    "Antigravity 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Gemini API 或其他整理工具。\nAntigravity 的訊息：RESOURCE_EXHAUSTED: 429 Too Many Requests"),
+                ("echo '{\"event\":\"result\",\"result\":{\"status\":\"ERROR\",\"error\":\"invalid model selection: x is not recognized\"}}'\nexit 1",
+                    LLMErrorKind.Failed, "LLMError.failed.cliError", "invalid model selection: x is not recognized"),
+                ("echo '{\"event\":\"result\",\"result\":{\"status\":\"SUCCESS\",\"response\":\"沒有 JSON\"}}'",
+                    LLMErrorKind.Failed, "LLMError.failed.cliError", "agy 沒有回傳 JSON"),
+                ("echo 'panic: boom' >&2\nexit 3", LLMErrorKind.Failed, "LLMError.failed.cliExitOther", "panic: boom"),
+                ("exit 0", LLMErrorKind.Failed, "LLMError.failed.cliNoOutput", "agy 沒有回傳結果（結束代碼 0）"),
+            };
+            foreach (var (body, kind, summary, message) in cases)
+            {
+                var client = await Agy(body);
+                var e = await Assert.ThrowsAsync<LLMException>(() => client.Generate(LLMProvider.Antigravity, "", "S", "P", CancellationToken.None));
+                Assert.Equal((kind, summary, message), (e.Kind, e.LogSummary, e.Message));
+            }
+
+            // 模型清單：agy models；沒登入（結束代碼 1）是空的
+            var models = await Agy("printf 'gemini-4-hydrogen-high\\tGemini 4 Hydrogen High\\nclaude-sonnet-4-6\\tClaude Sonnet 4.6\\n'");
+            Assert.Equal(["gemini-4-hydrogen-high", "claude-sonnet-4-6"], await models.ListModels(LLMProvider.Antigravity, CancellationToken.None));
+            Assert.Equal("models", (await File.ReadAllTextAsync(log)).TrimEnd('\n').Split('\n')[^1]);
+            var signedOut = await Agy("echo 'Please sign in to view available models' >&2\nexit 1");
+            Assert.Empty(await signedOut.ListModels(LLMProvider.Antigravity, CancellationToken.None));
+        }
+        finally { TempDirectory.Delete(dir); }
+    }
+
+    /// <summary>沒有 agy：NotInstalled("agy")（R35.4），訊息說怎麼辦</summary>
+    [Fact]
+    public async Task AgyNotInstalled()
+    {
+        var e = await Assert.ThrowsAsync<LLMException>(() => Client().Generate(LLMProvider.Antigravity, "", "S", "P", CancellationToken.None));
+        Assert.Equal(("LLMError.notInstalled(agy)", "這台電腦找不到 agy。沒有在用 Antigravity 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」"),
+            (e.LogSummary, e.Message));
+        Assert.Empty(await Client().ListModels(LLMProvider.Antigravity, CancellationToken.None));
+    }
+
     static string MeetingNotesSchema => Model.MeetingNotes.JsonSchema;
 
     sealed class FixedTool(string path) : IToolLocator

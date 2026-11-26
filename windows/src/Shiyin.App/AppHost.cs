@@ -102,7 +102,7 @@ public sealed class AppHost
         var children = new ChildProcesses();
         var runner = new ProcessRunner { OnStarted = children.Add };
         Processes = runner;
-        // 找 claude、codex：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）；
+        // 找 claude、codex、agy：DEBUG 加 --set debugNoCli=YES 當成沒有安裝（M§19.6）；
         // debugOnlyDesktopCli、debugCodexApp、debugClaudeDesktop 測桌面版（R55、R56，M§37.4）
         Locator = new WindowsToolLocator
         {
@@ -324,7 +324,7 @@ public sealed class AppHost
         Runner.Finished += (job, error) => Post(() => Notifier.JobFinished(job, error));
         // 企業伺服器連不上太久，自動改在這台電腦轉錄了（R93）
         Runner.ServerFallback += id => Post(() => Notifier.ServerFallback(id));
-        // claude、codex 的登入狀態（M§34.1）：沒登入時不自動整理
+        // claude、codex、agy 的登入狀態（M§34.1）：沒登入時不自動整理
         Post(() => _ = CliLogin.RefreshIfStale());
         // 企業伺服器：公司在後台加了模型、改了設定，不用重新登入（R51.5）
         _ = Enterprise.RefreshInfo();
@@ -336,13 +336,13 @@ public sealed class AppHost
 
     /// <summary>找工具的本體：桌面版的快取、有沒有 Claude 桌面版（R55、R56）</summary>
     public WindowsToolLocator Locator { get; }
-    /// <summary>執行 claude、codex 等外部程式（子程序放進 Job Object）</summary>
+    /// <summary>執行 claude、codex、agy 等外部程式（子程序放進 Job Object）</summary>
     public ProcessRunner Processes { get; }
 
-    /// <summary>找 claude、codex（設定頁、引導、整理工具共用；DEBUG 的 debugNoCli 會換掉）</summary>
+    /// <summary>找 claude、codex、agy（設定頁、引導、整理工具共用；DEBUG 的 debugNoCli 會換掉）</summary>
     public IToolLocator Tools { get; }
 
-    /// <summary>找這台電腦上的 CLI，先 claude 再 codex（R35.1）；30 秒內不重找</summary>
+    /// <summary>找這台電腦上的 CLI，先 claude、再 codex、最後 agy（R35.1、R121.3）；30 秒內不重找</summary>
     static Func<LLMProvider?> CachedCliDetector(IToolLocator tools)
     {
         var gate = new object();
@@ -354,7 +354,7 @@ public sealed class AppHost
             {
                 if (DateTime.UtcNow - checkedAt > TimeSpan.FromSeconds(30))
                 {
-                    found = tools.Find("claude") is not null ? LLMProvider.Claude : tools.Find("codex") is not null ? LLMProvider.Codex : null;
+                    found = Detect(tools);
                     checkedAt = DateTime.UtcNow;
                 }
                 return found;
@@ -362,7 +362,15 @@ public sealed class AppHost
         };
     }
 
-    /// <summary>某個 CLI 在不在（claude、codex）；30 秒內不重找</summary>
+    /// <summary>找得到的第一個 CLI：claude、codex、agy 的順序（R35.1、R121.3）</summary>
+    static LLMProvider? Detect(IToolLocator tools)
+    {
+        foreach (var provider in new[] { LLMProvider.Claude, LLMProvider.Codex, LLMProvider.Antigravity })
+            if (tools.Find(provider.CliName()!) is not null) return provider;
+        return null;
+    }
+
+    /// <summary>某個 CLI 在不在（claude、codex、agy）；30 秒內不重找</summary>
     static Func<string, bool> CachedToolCheck(IToolLocator tools)
     {
         var gate = new object();
@@ -468,10 +476,10 @@ public sealed class AppHost
     }
 }
 
-/// <summary>當成沒有安裝 claude、codex（DEBUG 的 debugNoCli，M§19.6）</summary>
+/// <summary>當成沒有安裝 claude、codex、agy（DEBUG 的 debugNoCli，M§19.6）</summary>
 sealed class NoCliTools(IToolLocator inner) : IToolLocator
 {
-    public ToolCommand? Find(string name) => name is "claude" or "codex" ? null : inner.Find(name);
+    public ToolCommand? Find(string name) => name is "claude" or "codex" or "agy" ? null : inner.Find(name);
 }
 
 /// <summary>更新金鑰的公鑰（design-windows §14.2）：scripts/windows/update-key.cs keygen 產生（2026-10-22）；空的時候不檢查更新。

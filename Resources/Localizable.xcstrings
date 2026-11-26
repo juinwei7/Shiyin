@@ -1517,6 +1517,108 @@
     "Anthropic API": {
       "extractionState": "manual"
     },
+    "Antigravity 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Gemini API 或其他整理工具。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity 的用量额度用完了，等恢复后再试，或到设置 → 整理工具先换成 Gemini API 或其他整理工具。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity is out of usage until it resets. Try again then, or switch to Gemini API or another summarizer in Settings → Summarizer."
+          }
+        }
+      }
+    },
+    "Antigravity 的訊息：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity 的消息：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity says: %@"
+          }
+        }
+      }
+    },
+    "Antigravity 還沒登入或登入已過期，請重新登入後再試一次（終端機指令：agy）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity 还没登录或登录已过期，请重新登录后再试一次（终端命令：agy）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity isn’t signed in, or its sign-in has expired. Sign in again and try once more (Terminal command: agy)."
+          }
+        }
+      }
+    },
+    "Antigravity 還沒登入，登入之後才能整理（終端機指令：agy）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity 还没登录，登录之后才能整理（终端命令：agy）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity isn’t signed in. Sign in to summarize (Terminal command: agy)."
+          }
+        }
+      }
+    },
+    "Antigravity（agy CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity（agy CLI）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity (agy CLI)"
+          }
+        }
+      }
+    },
+    "Antigravity（這台 Mac 已經裝了 agy CLI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity（这台 Mac 已经装了 agy CLI）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity (agy CLI is installed on this Mac)"
+          }
+        }
+      }
+    },
     "Apple Silicon（M1 以上）": {
       "extractionState": "manual",
       "localizations": {
@@ -2212,6 +2314,40 @@
         }
       }
     },
+    "agy 沒有回傳 JSON": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy 没有返回 JSON"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy returned no JSON"
+          }
+        }
+      }
+    },
+    "agy 沒有回傳結果（結束代碼 %d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy 没有返回结果（退出代码 %d）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy returned no result (exit code %d)"
+          }
+        }
+      }
+    },
     "claude 沒有回傳結果（結束代碼 %d）": {
       "extractionState": "manual",
       "localizations": {
@@ -2697,19 +2833,19 @@
         }
       }
     },
-    "「整理工具」：選 Claude、Codex（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。「範本」那一頁內建五種；也可以複製一份來改，或自己新增段落與指示。": {
+    "「整理工具」：選 Claude、Codex、Antigravity（需要先安裝並登入對應的 CLI），或填 Anthropic、OpenAI 的 API key。覺得整理太慢，可以在「模型」填比較快的模型，例如 sonnet。「範本」那一頁內建五種；也可以複製一份來改，或自己新增段落與指示。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Summarizer: choose Claude or Codex (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summarizing feels slow, enter a faster model under Model, such as sonnet. The Templates page has five built in; copy one to customize it, or add your own sections and instructions."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“整理工具”：选 Claude、Codex（需要先安装并登录对应的 CLI），或填 Anthropic、OpenAI 的 API key。觉得整理太慢，可以在“模型”填比较快的模型，例如 sonnet。“模板”那一页内建五种；也可以复制一份来改，或自己添加段落与指示。"
+            "value": "“整理工具”：选 Claude、Codex、Antigravity（需要先安装并登录对应的 CLI），或填 Anthropic、OpenAI 的 API key。觉得整理太慢，可以在“模型”填比较快的模型，例如 sonnet。“模板”那一页内建五种；也可以复制一份来改，或自己添加段落与指示。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarizer: choose Claude, Codex, or Antigravity (install and sign in to the CLI first), or enter an Anthropic or OpenAI API key. If summarizing feels slow, enter a faster model under Model, such as sonnet. The Templates page has five built in; copy one to customize it, or add your own sections and instructions."
           }
         }
       }
@@ -3443,19 +3579,19 @@
         }
       }
     },
-    "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude 或 codex，或準備 Anthropic、OpenAI 的 API key": {
+    "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude、codex 或 agy，或準備 Anthropic、OpenAI 的 API key": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing else to install. To summarize meetings, install and sign in to claude or codex, or have an Anthropic or OpenAI API key"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "不需要另外安装任何工具。要整理会议记录的话，安装并登录 claude 或 codex，或准备 Anthropic、OpenAI 的 API key"
+            "value": "不需要另外安装任何工具。要整理会议记录的话，安装并登录 claude、codex 或 agy，或准备 Anthropic、OpenAI 的 API key"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing else to install. To summarize meetings, install and sign in to claude, codex, or agy, or have an Anthropic or OpenAI API key"
           }
         }
       }
@@ -12507,6 +12643,23 @@
         }
       }
     },
+    "拾音：正在打開 Antigravity CLI。照畫面在瀏覽器登入，完成後輸入 /quit 離開，再回到拾音按「重試」或「測試整理工具」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音：正在打开 Antigravity CLI。照画面在浏览器登录，完成后输入 /quit 离开，再回到拾音按“重试”或“测试整理工具”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin: opening Antigravity CLI. Follow the prompts to sign in in your browser, then type /quit and go back to Shiyin and click Retry or Test Summarizer."
+          }
+        }
+      }
+    },
     "拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。": {
       "extractionState": "manual",
       "localizations": {
@@ -13687,6 +13840,23 @@
         }
       }
     },
+    "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Antigravity）。錄音檔不會送出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理、提问、猜说话者时会把逐字稿文字、你的笔记、词汇表和会议基本资料送到 Google（Antigravity）。录音文件不会送出。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When summarizing, answering questions, or guessing speakers, the transcript text, your notes, glossary, and basic meeting details are sent to Google (Antigravity). Audio files are not sent."
+          }
+        }
+      }
+    },
     "整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。": {
       "extractionState": "manual",
       "localizations": {
@@ -13972,6 +14142,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "整理工具选 Anthropic API 时需要"
+          }
+        }
+      }
+    },
+    "整理工具選 Antigravity 時需要：安裝 Antigravity CLI 並在終端機執行 agy 登入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工具选 Antigravity 时需要：安装 Antigravity CLI 并在终端运行 agy 登录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needed for the Antigravity summarizer: install Antigravity CLI and run agy in Terminal to sign in"
           }
         }
       }
@@ -18612,6 +18799,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "用企业服务器转录"
+          }
+        }
+      }
+    },
+    "用你的 Google 帳號，不另外收費（每週有用量額度）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用你的 Google 账号，不另外收费（每周有用量额度）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses your Google account, no extra charge (weekly usage limit)"
           }
         }
       }
@@ -23618,6 +23822,23 @@
         }
       }
     },
+    "這台 Mac 找不到 agy。沒有在用 Antigravity 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 Mac 找不到 agy。没有在用 Antigravity 的话，请到设置 → 整理工具改用 API（填 API key）或选“不整理”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy wasn’t found on this Mac. If you don’t use Antigravity, switch to an API (enter an API key) or choose Don’t Summarize in Settings → Summarizer"
+          }
+        }
+      }
+    },
     "這台 Mac 找不到 claude。沒有在用 Claude Code 的話，請到設定 → 整理工具改用 API（填 API key）或選「不整理」": {
       "extractionState": "manual",
       "localizations": {
@@ -23665,6 +23886,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这台 Mac 没有安装 Claude Code（命令行版），安装方法在下面"
+          }
+        }
+      }
+    },
+    "這台 Mac 沒有安裝 agy：沒有在用 Antigravity 的話，請改選 API": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 Mac 没有安装 agy：没有在用 Antigravity 的话，请改选 API"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy isn't installed on this Mac. If you don't use Antigravity, choose an API instead"
           }
         }
       }

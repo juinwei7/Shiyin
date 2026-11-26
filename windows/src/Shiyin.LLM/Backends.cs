@@ -180,6 +180,9 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
 
     public const string BaseUrlKey = "openaiCompatibleBaseURL";
 
+    /// <summary>模型不支援 JSON schema 時寫進提示詞的說明，後面接 schema（D24）；agy 也用（M§95.1）</summary>
+    public const string SchemaInstruction = "Respond with only a JSON object that matches this JSON schema, with no other text:\n";
+
     /// <summary>設定頁「常用」選單</summary>
     public static readonly (string Name, string Url)[] Presets =
     [
@@ -231,7 +234,7 @@ public sealed class OpenAICompatibleApi(LLMClient client, string model, string b
         if (RejectsSchema(response.Status, response.Message))
         {
             // 模型不支援 json_schema：改用 JSON 模式，schema 放進系統提示詞（D24）
-            var fallback = system + "\n\nRespond with only a JSON object that matches this JSON schema, with no other text:\n" + format.Schema;
+            var fallback = system + "\n\n" + SchemaInstruction + format.Schema;
             response = await Complete(baseText, provider, fallback, prompt, new JsonObject { ["type"] = "json_object" }, cancel);
         }
         if (response.Status != 200) throw (PlainServerErrors ? ApiRequest.ServerError(response) : null) ?? ApiRequest.Error(response, provider);
@@ -389,6 +392,125 @@ sealed class CodexCli(LLMClient client, string model) : ILLMBackend
     }
 
     public Task<List<string>> ListModels(CancellationToken cancel) => Task.FromResult(new List<string>());
+}
+
+/// <summary>
+/// Antigravity CLI（agy，R121、M§95、design-windows §11.54）。agy 是會自己讀寫檔案、執行指令的代理：每次用 --settings 帶只在這次有效的設定，
+/// 把讀寫檔案、指令、連網、MCP 都擋掉（D204），使用者自己的設定檔不動；工作目錄是空的暫存資料夾，用完就刪
+/// </summary>
+public sealed class AgyCli(LLMClient client, string model) : ILLMBackend
+{
+    /// <summary>只在這次有效的設定（--settings，不會存檔）：每個工具動作都要核准，拒絕規則擋掉所有會碰到檔案、指令、網路、MCP 的動作；
+    /// 背景模式沒有人核准，等於全部不能用（M§95.2）。跟 Mac 一字不差</summary>
+    public const string SessionSettings = """{"toolPermission":"strict","agentMode":"","permissions":{"deny":["read_file(*)","write_file(*)","command(*)","unsandboxed(*)","read_url(*)","execute_url(*)","download_url(*)","mcp(*)"]}}""";
+
+    public async Task<string> GenerateJson(string system, string prompt, OutputFormat format, CancellationToken cancel)
+    {
+        var tool = client.Tools.Find("agy") ?? throw LLMException.NotInstalled("agy");
+        var dir = TempDirectory.Create();
+        try
+        {
+            // 設定、schema 放在工作目錄外面；工作目錄是空的
+            var workspace = Path.Combine(dir, "workspace");
+            Directory.CreateDirectory(workspace);
+            var schemaFile = Path.Combine(dir, "schema.json");
+            var settingsFile = Path.Combine(dir, "settings.json");
+            await File.WriteAllTextAsync(schemaFile, format.Schema, cancel);
+            await File.WriteAllTextAsync(settingsFile, SessionSettings, cancel);
+            // 提示詞從 stdin 送（stream-json 一行一則），不放在命令列參數（R121.4）
+            var result = await client.Runner.Run(tool, Arguments(schemaFile, settingsFile, model), Message(system, prompt, format.Schema),
+                workspace, LLMClient.Timeout, cancel);
+            var parsed = Parse(result.Stdout);
+            if (parsed.ConversationId is { } id) RemoveConversation(client.AgyDataDirectory, id);
+            if (parsed.Output is { } output) return output;
+            var detail = string.Join("\n", new[] { parsed.Error ?? "", result.StderrTail(500) }.Where(t => t.Length > 0));
+            if (LLMException.IsLoginProblem(detail)) throw LLMException.NotLoggedIn("agy");
+            if (LLMException.IsLimitProblem(detail)) throw LLMException.CliLimited(LLMProvider.Antigravity, detail);
+            if (detail.Length == 0) throw LLMException.Failed(L.F("agy 沒有回傳結果（結束代碼 %d）", result.ExitCode), FailureCauses.Cli(result));
+            throw LLMException.Failed(detail.Length > 500 ? detail[..500] : detail, parsed.Error is null ? FailureCauses.Cli(result) : FailureCause.CliError);
+        }
+        finally { TempDirectory.Delete(dir); }
+    }
+
+    /// <summary>agy 的參數：stream-json 進出、schema 和這次的設定用檔案給、不認斜線指令；有填模型才加 --model</summary>
+    public static List<string> Arguments(string schemaFile, string settingsFile, string model)
+    {
+        var args = new List<string> { "--input-format", "stream-json", "--output-format", "stream-json", "--json-schema", schemaFile,
+            "--settings", settingsFile, "--disable-slash-commands" };
+        if (model.Length > 0) args.AddRange(["--model", model]);
+        return args;
+    }
+
+    /// <summary>stream-json 的一行使用者訊息。agy 沒有系統提示詞參數，放在前面；--json-schema 只在最後整理格式，
+    /// 不在提示詞裡寫出 schema 時第一輪會自己發明格式（M§95.1 實測），所以照 OpenAI 相容 API 的退回做法把 schema 也寫進去（D24）。
+    /// 非 ASCII 的字寫成 \uXXXX（JSON 的預設），標準輸入只有 ASCII</summary>
+    public static string Message(string system, string prompt, string schema)
+    {
+        var text = system + "\n\n" + prompt + "\n\n" + OpenAICompatibleApi.SchemaInstruction + schema;
+        return new JsonObject { ["event"] = "user", ["message"] = new JsonObject { ["content"] = text } }.ToJsonString() + "\n";
+    }
+
+    /// <summary>Output：結果的 JSON；Error：失敗的說明；ConversationId：這次的對話（要刪掉）</summary>
+    public sealed record Parsed(string? Output = null, string? Error = null, string? ConversationId = null);
+
+    /// <summary>最後一行 result：status 是 SUCCESS 時取 structured_output（沒有就從 response 取 JSON）；其他狀態取 error</summary>
+    public static Parsed Parse(string stdout)
+    {
+        JsonObject? result = null;
+        var lines = stdout.Split('\n');
+        for (var i = lines.Length - 1; i >= 0 && result is null; i--)
+            if (Json(lines[i].Trim()) is { } obj && Str(obj["event"]) == "result" && obj["result"] is JsonObject r) result = r;
+        if (result is null) return new Parsed();
+        var conversation = Str(result["conversation_id"]) is { Length: > 0 } c ? c : null;
+        var status = Str(result["status"]);
+        if (status != "SUCCESS")
+            return new Parsed(Error: Str(result["error"]) is { Length: > 0 } e ? e : status, ConversationId: conversation);
+        string? output = null;
+        if (result["structured_output"] is JsonObject or JsonArray) output = result["structured_output"]!.ToJsonString();
+        else if (Str(result["response"]) is { } response)
+        {
+            var json = OpenAICompatibleApi.ExtractJson(response);
+            if (Json(json) is not null) output = json;
+        }
+        return new Parsed(output, output is null ? L.T("agy 沒有回傳 JSON") : null, conversation);
+    }
+
+    /// <summary>agy 沒有不留紀錄的參數，每次都會把整段對話存進 %USERPROFILE%\.gemini\antigravity-cli（D204）：只刪這次的對話檔和 brain 資料夾。
+    /// id 一定要是 UUID（8-4-4-4-12）才刪；agy 改了存放方式時這裡什麼都不做</summary>
+    public static void RemoveConversation(string root, string id)
+    {
+        if (!Guid.TryParseExact(id, "D", out _)) return;
+        try { File.Delete(Path.Combine(root, "conversations", id + ".db")); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        try { Directory.Delete(Path.Combine(root, "brain", id), recursive: true); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
+
+    /// <summary>agy models：一行一個「代號&lt;Tab&gt;名稱」，沒登入時結束代碼 1</summary>
+    public async Task<List<string>> ListModels(CancellationToken cancel)
+    {
+        if (client.Tools.Find("agy") is not { } tool) return [];
+        try
+        {
+            var result = await client.Runner.Run(tool, ["models"], null, Path.GetTempPath(), TimeSpan.FromSeconds(30), cancel);
+            return result.Succeeded ? Models(result.Stdout) : [];
+        }
+        catch (Exception e) when (e is IOException or TimeoutException or OperationCanceledException
+                                  or System.ComponentModel.Win32Exception or InvalidOperationException) { return []; }
+    }
+
+    /// <summary>「代號&lt;Tab&gt;名稱」的代號；Tab 前後是空的行不算（同 Mac 的 split）</summary>
+    public static List<string> Models(string output) =>
+        [.. output.Split('\n').Select(l => l.TrimEnd('\r')).Select(l => (Line: l, Tab: l.IndexOf('\t')))
+            .Where(x => x.Tab > 0 && x.Tab < x.Line.Length - 1).Select(x => x.Line[..x.Tab].Trim())];
+
+    static JsonObject? Json(string text)
+    {
+        if (text.Length == 0) return null;
+        try { return JsonNode.Parse(text) as JsonObject; } catch (JsonException) { return null; }
+    }
+
+    static string? Str(JsonNode? node) => node is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
 }
 
 /// <summary>暫存資料夾（SHIYIN_HOME\tmp 下，用完即刪）</summary>

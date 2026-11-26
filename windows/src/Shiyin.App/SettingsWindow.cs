@@ -300,9 +300,9 @@ public sealed class SettingsWindow : Window
     {
         var provider = S.Provider;
         var column = Ui.Column(14);
-        // 選單顯示實際用的整理工具；這台電腦沒有 claude、codex 時多「之後再設定」，選它等於清掉設定（R35.3、M§19.6）
-        // 沒安裝的 claude、codex 不能選（R45.3）；目前選的就是它時照樣顯示
-        bool Missing(LLMProvider p) => p is LLMProvider.Claude or LLMProvider.Codex && !S.HasTool(p == LLMProvider.Claude ? "claude" : "codex");
+        // 選單顯示實際用的整理工具；這台電腦沒有 claude、codex、agy 時多「之後再設定」，選它等於清掉設定（R35.3、M§19.6）
+        // 沒安裝的 CLI 不能選（R45.3）；目前選的就是它時照樣顯示
+        bool Missing(LLMProvider p) => p.CliName() is { } name && !S.HasTool(name);
         // 公司：登入了企業伺服器、公司有提供整理才出現（R51.1、M D124；登入在「企業伺服器」那一頁）
         var options = LLMProviders.All.Where(p => p != LLMProvider.Enterprise || host.Enterprise.Account?.Llm == true || p == provider)
             .Select(p => ((LLMProvider?)p, Missing(p) ? L.F("%@（沒有安裝）", p.Label()) : p == LLMProvider.Enterprise ? CompanyLabel() : p.Label())).ToList();
@@ -324,7 +324,7 @@ public sealed class SettingsWindow : Window
 
         // 只有 Claude 桌面版：說明怎麼裝 Claude Code（R56.2、R56.3）；已經在用別的整理工具的人不顯示
         var claudeHint = (provider == LLMProvider.Claude || S.NeedsProviderSetup) && ClaudeCodeHint.Applies(host);
-        if (provider is LLMProvider.Claude or LLMProvider.Codex)
+        if (provider.CliName() is { } cliName)
         {
             // 桌面版附的 codex：寫出來，登入是打開那個 app（R55.3）
             var desktopApp = provider == LLMProvider.Codex ? host.Tools.Find("codex")?.DesktopApp : null;
@@ -334,9 +334,10 @@ public sealed class SettingsWindow : Window
             async void Check(bool userInitiated)
             {
                 if (userInitiated) host.Locator.ClearCache();
-                if (host.Tools.Find(provider == LLMProvider.Claude ? "claude" : "codex") is null)
+                if (host.Tools.Find(cliName) is null)
                 {
                     status.Text = provider == LLMProvider.Codex ? L.T("這台電腦沒有安裝 codex：沒有在用 Codex 的話，請改選 API")
+                        : provider == LLMProvider.Antigravity ? L.T("這台電腦沒有安裝 agy：沒有在用 Antigravity 的話，請改選 API")
                         : claudeHint ? L.T("這台電腦沒有安裝 Claude Code（命令列版），安裝方法在下面")
                         : L.T("這台電腦沒有安裝 claude：沒有在用 Claude Code 的話，請改選 API");
                     if (userInitiated) Show();
@@ -418,9 +419,14 @@ public sealed class SettingsWindow : Window
                     : provider.DefaultModel().Length == 0 ? L.T("留空使用預設模型") : L.F("預設：%@", provider.DefaultModel()),
             };
             model.TextChanged += (_, _) => S.Set(provider.ModelKey(), model.Text);
-            var canList = provider == LLMProvider.OpenAICompatible ? OpenAICompatibleApi.Normalized(S.CompatibleBaseUrl) is not null
-                : provider == LLMProvider.Enterprise ? host.Enterprise.IsSignedIn
-                : provider.UsesApiKey() && host.Keys.Exists(provider.KeyAccount());
+            var canList = provider switch
+            {
+                LLMProvider.OpenAICompatible => OpenAICompatibleApi.Normalized(S.CompatibleBaseUrl) is not null,
+                LLMProvider.Enterprise => host.Enterprise.IsSignedIn,
+                // agy 的模型清單問它自己（agy models，R121.6）
+                LLMProvider.Antigravity => S.HasTool("agy"),
+                _ => provider.UsesApiKey() && host.Keys.Exists(provider.KeyAccount()),
+            };
             if (canList)
             {
                 var pick = new DropDownButton { Content = L.T("選擇"), VerticalAlignment = VerticalAlignment.Bottom };
@@ -537,6 +543,7 @@ public sealed class SettingsWindow : Window
         LLMProvider.Claude or LLMProvider.Anthropic => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Anthropic（Claude）。錄音檔不會送出。"),
         LLMProvider.Codex or LLMProvider.OpenAI => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 OpenAI。錄音檔不會送出。"),
         LLMProvider.Gemini => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Gemini）。錄音檔不會送出。"),
+        LLMProvider.Antigravity => L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到 Google（Antigravity）。錄音檔不會送出。"),
         // 送到公司的伺服器，再由公司設定的模型整理（R51.4、M§36.5）
         LLMProvider.Enterprise => host.Enterprise.Host.Length == 0
             ? L.T("整理、提問、猜說話者時會把逐字稿文字、你的筆記、詞彙表和會議基本資料送到公司的伺服器，再由公司設定的模型整理。錄音檔不會因為整理而送出。")

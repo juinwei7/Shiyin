@@ -16,14 +16,14 @@ final class UsageStats: @unchecked Sendable {
         var diarizationRuns = 0
         /// 其中用 Nemotron-3 分的（R87.4）
         var diarizationNemotron = 0
-        var summarizer = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0, "enterprise": 0]
+        var summarizer = ["claudeCode": 0, "codex": 0, "antigravity": 0, "api": 0, "local": 0, "enterprise": 0]
         var questionsAsked = 0
         /// 待確認送出的題數（R41.7、§31.3）：回答（打字或「不是」）、確認（「是」）、略過
         var review = ["answered": 0, "confirmed": 0, "skipped": 0]
         var errors = ["recording": 0, "transcribe": 0, "diarize": 0, "summarize": 0]
         /// 整理失敗的種類、當時的整理工具、其中幾次是草稿（R47、§34.5）：只有次數
         var summarizeErrors = Counters.summarizeErrorKinds.reduce(into: [String: Int]()) { $0[$1] = 0 }
-        var summarizeErrorProviders = ["claudeCode": 0, "codex": 0, "api": 0, "local": 0, "enterprise": 0]
+        var summarizeErrorProviders = ["claudeCode": 0, "codex": 0, "antigravity": 0, "api": 0, "local": 0, "enterprise": 0]
         var summarizeDraftErrors = 0
         /// 「其他」是哪一種（R86、§61.1）：FailureCause 的鍵 → 次數
         var summarizeOther: [String: Int] = [:]
@@ -165,12 +165,13 @@ final class UsageStats: @unchecked Sendable {
         }
     }
 
-    /// 整理工具的種類：claudeCode、codex、api、local（本機的 OpenAI 相容服務）、enterprise（公司，R52.2）；none 是 nil
+    /// 整理工具的種類：claudeCode、codex、antigravity（R121.8）、api、local（本機的 OpenAI 相容服務）、enterprise（公司，R52.2）；none 是 nil
     @MainActor
     static func providerKind(_ provider: LLMProvider) -> String? {
         switch provider {
         case .claude: return "claudeCode"
         case .codex: return "codex"
+        case .antigravity: return "antigravity"
         case .openaiCompatible:
             let local = URL(string: OpenAICompatibleAPI.savedBaseURL).map(OpenAICompatibleAPI.isLocal) ?? false
             return local ? "local" : "api"

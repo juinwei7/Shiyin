@@ -40,6 +40,7 @@ public sealed class SettingsPagesTests
         Assert.Equal(["provider"], SettingsPages.Find("  api KEY "));   // 不分大小寫、去掉前後空白
         Assert.Equal(["ai"], SettingsPages.Find("mcp"));
         Assert.Equal(["provider", "ai"], SettingsPages.Find("Codex"));
+        Assert.Equal(["provider"], SettingsPages.Find("antigravity"));
         Assert.Equal(["models"], SettingsPages.Find("顯示卡"));
         Assert.Equal(["general"], SettingsPages.Find("介面語言"));
         Assert.Equal(["status"], SettingsPages.Find("關於"));

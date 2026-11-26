@@ -60,11 +60,12 @@ enum AppSettings {
     /// 使用者選過的整理工具；沒選過（或不是認得的值）是 nil（R35）
     static var chosenProvider: LLMProvider? { LLMProvider(rawValue: d.string(forKey: providerKey) ?? "") }
 
-    /// 沒選過時自動用這台 Mac 上有的 CLI（先 claude 再 codex），都沒有就先不整理（R35.1、design §19.6）。
+    /// 沒選過時自動用這台 Mac 上有的 CLI（先 claude、再 codex、最後 agy），都沒有就先不整理（R35.1、R121.3、design §19.6）。
     /// 每次都重新找：之後裝了 CLI 就自動用上
     static var detectedProvider: LLMProvider {
         if Paths.findTool("claude") != nil { return .claude }
         if Paths.findTool("codex") != nil { return .codex }
+        if Paths.findTool("agy") != nil { return .antigravity }
         return .none
     }
 

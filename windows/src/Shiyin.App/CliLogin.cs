@@ -5,13 +5,13 @@ using Shiyin.Platform;
 
 namespace Shiyin.App;
 
-/// <summary>Claude Code、Codex 的登入狀態與重新登入（同 Mac 的 CLILogin，design-windows §10）</summary>
+/// <summary>Claude Code、Codex、Antigravity 的登入狀態與重新登入（同 Mac 的 CLILogin，design-windows §10、§11.54）</summary>
 public static class CliLogin
 {
     public sealed record Status(bool LoggedIn, string Detail);
 
     static ToolCommand? Tool(LLMProvider provider) =>
-        AppHost.Current.Tools.Find(provider == LLMProvider.Codex ? "codex" : "claude");
+        provider.CliName() is { } name ? AppHost.Current.Tools.Find(name) : null;
 
     /// <summary>DEBUG 的 --set debugCliLogin=NO：當成沒登入、不執行 CLI（M§34.6）</summary>
     static bool DebugLoggedOut => AppHost.Current.Debug && !AppHost.Current.Settings.Flag("debugCliLogin", true);
@@ -42,11 +42,11 @@ public static class CliLogin
         return status;
     }
 
-    /// <summary>目前的整理工具是 claude、codex 時，距離上次查超過 60 秒才再查（app 啟動、視窗回到前景）</summary>
+    /// <summary>目前的整理工具是 CLI 時，距離上次查超過 60 秒才再查（app 啟動、視窗回到前景）</summary>
     public static async Task RefreshIfStale()
     {
         var provider = AppHost.Current.Settings.Provider;
-        if (provider is not (LLMProvider.Claude or LLMProvider.Codex)) return;
+        if (!provider.IsCli()) return;
         lock (gate)
             if (cache.TryGetValue(provider, out var v) && DateTime.UtcNow - v.CheckedAt < TimeSpan.FromSeconds(60)) return;
         await Refresh(provider);
@@ -55,8 +55,8 @@ public static class CliLogin
     /// <summary>查登入狀態，不會送出請求、不消耗額度。找不到指令或看不懂輸出時回傳 null</summary>
     public static async Task<Status?> Check(LLMProvider provider)
     {
-        if (provider is (LLMProvider.Claude or LLMProvider.Codex) && DebugLoggedOut) return new Status(false, "");
-        if (provider is not (LLMProvider.Claude or LLMProvider.Codex) || Tool(provider) is not { } tool) return null;
+        if (provider.IsCli() && DebugLoggedOut) return new Status(false, "");
+        if (!provider.IsCli() || Tool(provider) is not { } tool) return null;
         var runner = new ProcessRunner();
         try
         {
@@ -71,6 +71,13 @@ public static class CliLogin
                     detail += L.F("（%@ 方案）", char.ToUpperInvariant(p[0]) + p[1..]);
                 return new Status(loggedIn.GetBoolean(), detail);
             }
+            if (provider == LLMProvider.Antigravity)
+            {
+                // agy 沒有查登入的子指令：用 agy models（不花額度）。沒登入時結束代碼 1、「Please sign in to view available models」（M§95.3）
+                var r = await runner.Run(tool, ["models"], null, Path.GetTempPath(), TimeSpan.FromSeconds(20), CancellationToken.None);
+                if (AgyCli.Models(r.Stdout).Count > 0) return new Status(true, "");
+                return LLMException.IsLoginProblem(r.StderrTail(500)) ? new Status(false, "") : null;
+            }
             var result = await runner.Run(tool, ["login", "status"], null, Path.GetTempPath(), TimeSpan.FromSeconds(20), CancellationToken.None);
             // codex 把狀態印在 stdout 或 stderr，兩個都看
             var line = (result.Stdout + "\n" + result.Stderr).Split('\n').FirstOrDefault(l => l.Trim().Length > 0)?.Trim() ?? "";
@@ -83,12 +90,15 @@ public static class CliLogin
         }
     }
 
+    /// <summary>登入 agy 的說明（同 Mac 的 AntigravityCLI.loginIntro）：照畫面登入，完成後輸入 /quit 離開</summary>
+    static string AgyLoginIntro => L.T("拾音：正在打開 Antigravity CLI。照畫面在瀏覽器登入，完成後輸入 /quit 離開，再回到拾音按「重試」或「測試整理工具」。");
+
     /// <summary>開終端機執行登入指令（會開瀏覽器登入頁）</summary>
     public static void Open(AppHost host, LLMProvider provider)
     {
         if (Tool(provider) is not { } tool)
         {
-            host.Notifier.Notice(LLMException.NotInstalled(provider == LLMProvider.Codex ? "codex" : "claude").Message);
+            host.Notifier.Notice(LLMException.NotInstalled(provider.CliName() ?? "claude").Message);
             return;
         }
         // 桌面版附的 codex：打開那個 app 登入（R55.3），不開終端機
@@ -98,7 +108,9 @@ public static class CliLogin
             host.Notifier.Notice(L.F("拾音：正在打開 %@。在那裡登入之後，回到拾音按「重新檢查」。", app));
             return;
         }
-        Shell.OpenLoginTerminal(tool, provider == LLMProvider.Codex ? ["login"] : ["auth", "login"]);
-        host.Notifier.Notice(L.F("拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。", provider.ShortLabel()));
+        // agy 沒有登入的子指令：直接開 agy（第一次會問配色、信任資料夾，接著在瀏覽器登入，M§95.3）
+        Shell.OpenLoginTerminal(tool, provider switch { LLMProvider.Codex => ["login"], LLMProvider.Antigravity => [], _ => ["auth", "login"] });
+        host.Notifier.Notice(provider == LLMProvider.Antigravity ? AgyLoginIntro
+            : L.F("拾音：正在打開瀏覽器登入 %@。登入完成後，回到拾音按「重試」或「測試整理工具」。", provider.ShortLabel()));
     }
 }

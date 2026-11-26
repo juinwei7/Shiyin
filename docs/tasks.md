@@ -7,6 +7,15 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 整理工具 Antigravity（R121，design §95、design-windows §11.54、D204；2026-11-27 Threads 上的使用者許願：「也要能支援 Antigravity cli」，使用者：接）
+
+Mac 用 agy 1.5.18 實際整理過（示範會議 42 秒、格式對、對話檔有刪掉），拒絕規則擋得住建檔、指令、讀檔，登入狀態、模型清單、設定頁都看過。
+
+- [~] **Windows 實機**（AG-W）：官方安裝程式裝在 `%LOCALAPPDATA%\agy\bin\agy.exe`；Windows Terminal 開 agy 登入、授權碼貼回；真的整理一場（stdin、`--json-schema`、`--settings` 帶 Windows 路徑）；拒絕規則擋得住；`%USERPROFILE%\.gemini\antigravity-cli\conversations` 的這次對話有刪掉；設定頁、引導的樣子
+  - 驗證：整理成功、`conversations` 的檔案數不變、要它建檔時回 Permission denied
+- [~] **額度用完的訊息**（AG2）：agy 用完每週額度時的原文還沒看過（文件沒寫）
+  - 驗證：遇到時失敗橫幅寫「Antigravity 的用量額度用完了…」並附 agy 的原文；不是的話把那句加進 `isLimitProblem`
+
 ## GitHub #13～#17 的使用者回報（R111～R115；2026-11-24 VIA7 開的 issue，2026-11-25 使用者：「先把可以處理的先處理掉」；2026-11-25 跟 5.2.0（Mac、Windows）發布，#13、#15、#16、#17 已回覆並關閉，#14 等回報者說「無法使用」是哪一種）
 
 - [~] **GS5 Mac 議題帶滑過的卡片**（R113，§87）：程式完成，DEBUG 版驗過（2026-11-25，見 commit 訊息）。還差（要使用者用真的滑鼠）：滑過 0.3 秒出現、移到隔壁那段馬上換、移開收起（模擬的滑鼠移動觸發不了 SwiftUI 的滑過；卡片的內容和位置用 topichover 驗過）

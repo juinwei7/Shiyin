@@ -19,6 +19,7 @@ struct EnvironmentStatus: Equatable {
         let claude = Paths.findTool("claude")
         let codexTool = Paths.locateTool("codex")
         let codex = codexTool?.url
+        let agy = Paths.findTool("agy")
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
         // 正式轉錄用企業伺服器：這台 Mac 不用轉錄模型（R50.7）
         let server = AppSettings.usesEnterpriseTranscription
@@ -65,6 +66,8 @@ struct EnvironmentStatus: Equatable {
             Item(name: "codex CLI", ok: codex != nil,
                  detail: codexTool?.desktopApp.map { String(localized: "\($0) 附的 codex") } ?? codex?.path ?? String(localized: "找不到"),
                  fix: String(localized: "整理工具選 Codex 時需要：安裝 Codex CLI 並執行 codex login"), required: false),
+            Item(name: "agy CLI", ok: agy != nil, detail: agy?.path ?? String(localized: "找不到"),
+                 fix: String(localized: "整理工具選 Antigravity 時需要：安裝 Antigravity CLI 並在終端機執行 agy 登入"), required: false),
             Item(name: "Anthropic API key", ok: Keychain.exists("anthropic"),
                  detail: Keychain.exists("anthropic") ? String(localized: "已儲存在鑰匙圈") : String(localized: "沒有填"), fix: String(localized: "整理工具選 Anthropic API 時需要"), required: false),
             Item(name: "OpenAI API key", ok: Keychain.exists("openai"),

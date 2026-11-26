@@ -3253,6 +3253,63 @@ CREATE INDEX meetings_folder ON meetings(folder_id);
   - 輸出 `{"folders": SELECT id, name, created_at FROM folders ORDER BY id, "folder_rules": SELECT folder_id, keywords, people, template_id, created_at FROM folder_rules ORDER BY folder_id, "meetings": SELECT id, title, folder_id, deleted_at FROM meetings ORDER BY id}`，Windows 逐筆比對。
 - Mac DEBUG：用使用者正式資料庫的複本（`sqlite3 .backup`）跑 migration：每場會議轉換前後的資料夾名字一樣、條件一樣多、側欄展開的資料夾還是展開（測前存 defaults、測後還原）。改名、合併、刪除、移進移出、新資料夾、拖曳、自動加入、匯入封包到資料夾、在資料夾裡錄音（`record-sim`）各走一次，看 state 和側欄截圖。
 
+## 95. 整理工具：Antigravity（agy CLI）（R121，D204）
+
+Antigravity CLI（`agy`）是 Google 的代理式命令列工具，用使用者的 Google 帳號登入。接法同 claude、codex（§8.4、§19.1），多一層「不讓它動手」和「不留紀錄」。以下行為都是 agy 1.5.18（2026-11-27）實測的；`--settings`、對話的存放位置不在官網文件裡。Windows 的做法在 design-windows §11.54。
+
+### 95.1 呼叫方式（`Notes/Backends/CLIBackends.swift` 的 `AntigravityCLI`）
+
+| 項目 | 內容 |
+|---|---|
+| 執行檔 | `Paths.findTool("agy")`：官方安裝程式裝在 `~/.local/bin/agy`（已經在 `toolDirectories`） |
+| 參數 | `--input-format stream-json --output-format stream-json --json-schema <schema.json> --settings <settings.json> --disable-slash-commands`，有填模型加 `--model <代號>` |
+| 輸入 | stdin 一行 `{"event":"user","message":{"content":…}}`，內容是系統提示詞、空一行、提示詞、空一行、schema 說明；送完關掉 stdin，agy 跑完這一輪就結束（結束代碼 0）。逐字稿不放在命令列參數（R121.4；Windows 的命令列也放不下） |
+| schema | 只給 `--json-schema`、提示詞裡沒寫格式時，第一輪模型自己發明欄位，最後一輪才硬塞進 schema（欄位裡塞 JSON 字串，實測）。所以照 OpenAI 相容 API 的退回做法（D24）在最後加「Respond with only a JSON object that matches this JSON schema…」和 schema 本身 |
+| 結果 | 最後一行 `{"event":"result","result":{…}}`：`status` 是 `SUCCESS` 取 `structured_output`，沒有時從 `response` 取第一個 `{` 到最後一個 `}`；其他狀態（`ERROR`…）取 `error` |
+| 檔案 | 暫存資料夾裡放 `schema.json`、`settings.json`，agy 的工作目錄是裡面空的 `workspace/`；用完整個刪掉 |
+| 圖片 | 不送（`sendsScreenImages` 是 false，R121.5）：一次跑完的模式不能附圖，畫面辨識出的文字照樣在提示詞 |
+| 逾時 | 同其他整理工具 20 分鐘，不用 agy 的 `--print-timeout` |
+
+- agy 自己的系統提示詞約 1.1 萬 token（工具說明），每次都算在使用者的額度裡；一個很短的整理約 8 秒。
+
+### 95.2 不讓它動手（D204）
+
+- `--settings`：只在這次有效、不存檔的設定（`agy --help` 有，官網文件沒寫）。拾音帶：
+
+  ```json
+  {"toolPermission":"strict","agentMode":"","permissions":{"deny":["read_file(*)","write_file(*)","command(*)","unsandboxed(*)","read_url(*)","execute_url(*)","download_url(*)","mcp(*)"]}}
+  ```
+
+  `strict` 是每個工具動作都要核准，背景模式沒有人核准就當成拒絕；deny 規則在任何模式都最優先，使用者自己的 allow 規則也蓋不過。`agentMode` 空字串是一般模式（背景模式預設是會自動核准改檔、指令的 auto）。
+- 實測：要它在工作目錄建檔、執行 `echo`、讀 `/etc/hosts`，三個都回「Permission denied … Matches user-configured deny rule」，工作目錄沒有多出檔案。
+- agy 以後拿掉 `--settings` 時會因為不認得的參數直接失敗，不會變成沒有限制地執行。
+- 擋不掉的：`~/.gemini/` 的規則檔（`AGENTS.md`、`GEMINI.md`、`config/rules/`）照樣會讀，使用者自己寫的規則可能影響整理結果；agy 沒有參數關掉。
+- 不改使用者的 `~/.gemini/antigravity-cli/settings.json`；暫存的工作目錄不會被加進 `trustedWorkspaces`（實測）。
+- 不能換 `HOME` 來隔離：登入綁在使用者的家目錄，換了就是沒登入（實測）；也不複製 agy 的登入資料（同 R55.2）。
+
+### 95.3 登入、錯誤
+
+- 登入狀態（`CLILogin.status`）：agy 沒有查登入的子指令，用 `agy models`（不花額度，要連網）。列得出模型是已登入；stderr 有「Please sign in to view available models」是沒登入；其他（連不上、看不懂）是 nil，當作準備好（D112）。
+- 登入按鈕：打開終端機執行 `agy`（沒有登入的子指令），說明「照畫面在瀏覽器登入，完成後輸入 /quit 離開」。第一次開會問配色、要不要信任資料夾（`.command` 的工作目錄）；瀏覽器登入後給一段授權碼，要貼回終端機。
+- 沒登入：結束代碼 1，stderr「Error: authentication required. Run 'agy' to log in, then retry.」，result 的 `error` 是「authentication failed or timed out」→ `LLMError.notLoggedIn("agy")`。`isLoginProblem` 多 `authentication required`、`authentication failed`、`please sign in`；工作紀錄裡存的是拾音自己的說明，`isLoginMessage` 直接比對那一句（裡面沒有英文的登入字樣）。
+- 額度用完：agy 的訊息還沒看過、文件也沒寫，沿用 `isLimitProblem` 的字樣（rate limit、quota…）；`cliLimited(.antigravity)` 建議等恢復或先換 Gemini API、其他整理工具（Gemini API 的免費額度跟 agy 分開算）。
+- 模型不對：結束代碼 1，`error` 是「invalid model selection … is not recognized」，照原文顯示。
+- 模型清單（設定頁「選擇」，R121.6）：`agy models` 一行「代號<Tab>名稱」，列代號。2026-11 免費帳號有 `gemini-4-hydrogen-*`、`gemini-3.8-flash-*`、`claude-sonnet-4-6`、`gpt-oss-120b-medium` 等；不填用 agy 自己的預設（Gemini 4 Hydrogen High）。
+
+### 95.4 對話紀錄（D204）
+
+- agy 沒有不留紀錄的參數（claude 用 `--no-session-persistence`、codex 用 `--ephemeral`）。每次執行會在 `~/.gemini/antigravity-cli/` 留下：`conversations/<id>.db`（整段對話，一次約 480 KB）、`brain/<id>/`、`conversation_summaries.db` 的一列（標題空白；`preview` 是訊息開頭約 100 字，拾音的訊息開頭是系統提示詞，不是會議內容）、`implicit/` 的一個小檔。
+- 跑完（成功或失敗）照 result 的 `conversation_id` 刪 `conversations/<id>.db` 和 `brain/<id>/`；id 不是 UUID 就不刪。`conversation_summaries.db` 不動：是 agy 的 SQLite，使用者可能同時開著 agy。agy 改了存放方式時這段什麼都不做。
+- `/resume` 只列同一個工作目錄的對話，拾音的工作目錄用完就刪，使用者在自己的專案裡看不到這些對話。
+
+### 95.5 其他
+
+- 自動選擇整理工具：claude、codex、agy 的順序（R121.3）。`LLMProvider.cliName`、`isCLI`、`cliProductName` 取代原本各處的「claude 或 codex」判斷。
+- 引導（§33.4）：「你平常用哪個 AI？」選 Gemini 時，裝了 agy 就排在 Gemini API 前面，寫「用你的 Google 帳號，不另外收費（每週有用量額度）」；設定頁沒安裝時寫「沒有安裝」、不能選（§34.3）。
+- 環境檢查多「agy CLI」；隱私說明「送到 Google（Antigravity）」。
+- 統計（§30.4、§34.5）：`summarizer.antigravity`、`errorDetail.summarizeProvider.antigravity`；後台的欄 `summarizer_antigravity`、`summarize_err_antigravity`（`workers/usage/migrate-antigravity.sql`：先跑 migration 再部署 worker，舊版 app 沒有這個鍵就當 0）。
+- DEBUG：`-debugNoCLI YES` 也當成沒有 agy；`state` 的 `tools.agy`；`summarizer` 的 `loggedIn.antigravity`；`loginrefresh` 也查 agy。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3402,3 +3459,4 @@ CREATE INDEX meetings_folder ON meetings(folder_id);
 | D199 | 詞彙表的檔案用一行一個詞的純文字，匯入一律合併（§91、R117；GitHub #25） | CSV 或 JSON：詞彙表只有一欄，純文字用任何編輯器都能改、Excel 另存的 CSV 照樣讀得懂；要記建立時間、來源再說。匯入時讓使用者選「合併／取代」：多一個選擇，選錯會把整份詞彙表洗掉；要取代的人可以先全選刪除（R94.3） |
 | D200 | 資料夾改用整數 id 辨識，名字只顯示，對外的格式（封包、MCP）照舊用名字（§92、R118） | 繼續用名字：改名要同時改會議、條件、資料夾表、側欄的鍵，漏一處就對不上，也做不了巢狀。路徑當名字（「A/B」）做巢狀：在名字上再疊一層，改上層的名字要改所有子資料夾和會議。保留 `meetings.folder` 欄位不用：之後的人容易照名字寫回去 |
 | D201 | Mac 內建辨識的繁體字依詞改正之後，再套語言檔的 `scriptFixes`（粵語的「系」「繫」→「係」、「曬」→「晒」）（§6.2.2、§41.3、R14.8） | 粵語不做依詞改正：zh_HK 的辨識一樣會選錯「麵」「裏」這類字，就沒改到。從要改正的字拿掉「係」：中文的「係列」「聯係」就不改了。另外列一份粵語的例外詞：跟正式轉錄（Qwen3-ASR）的粵語規則分成兩份，要各自維護。代價：粵語即時逐字稿裡真的該寫「系」「曬」、又不在 `keep` 的詞（例如沒列的科系名稱）會被換成「係」「晒」，跟 Qwen3-ASR 的粵語結果一樣（2026-11-26，5.3.0 打開依詞改正後「唔係」變成「唔系」） |
+| D204 | 整理工具接 Antigravity（agy CLI）：每次用 `--settings` 帶只在這次有效的拒絕規則擋掉所有工具，跑完刪掉這次的對話檔（§95、R121） | 換 `HOME` 隔離：登入綁在家目錄，換了就是沒登入。改使用者的 `settings.json` 加拒絕規則：會改到使用者自己在專案裡用 agy 的行為。用 `--mode plan`：只是在提示詞前面加「先規劃」，不擋任何工具。不刪對話：每場會議的逐字稿會一直留在 agy 的歷史裡（claude、codex 都有不留紀錄的參數）。代價：`--settings` 和存放位置都不是官網文件寫的，agy 改版可能要跟著改（拿掉參數會直接失敗、改了位置就刪不到）；使用者 `~/.gemini/` 的規則檔擋不掉 |
