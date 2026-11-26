@@ -280,4 +280,41 @@ static class MigrationSql
 
     /// <summary>版本紀錄記下用的範本（R115、M§89）</summary>
     public static readonly string[] V17 = ["ALTER TABLE meetings ADD COLUMN notes_template TEXT", "ALTER TABLE notes_versions ADD COLUMN template_id TEXT"];
+
+    /// <summary>
+    /// 資料夾用 id 辨識（R118、M§92.1、D200）：folders 有自己的 id，會議、條件記 folder_id，meetings.folder 整欄拿掉。
+    /// id 的順序兩平台一樣：先資料夾表，再會議用到的、條件的（照建立時間、名字）。ALTER TABLE … DROP COLUMN 要 SQLite 3.35 以上
+    /// </summary>
+    public const string V18 = """
+        ALTER TABLE folders RENAME TO folders_old;
+        ALTER TABLE folder_rules RENAME TO folder_rules_old;
+        CREATE TABLE folders (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          name       TEXT NOT NULL UNIQUE,
+          created_at TEXT NOT NULL
+        );
+        -- id 的順序要兩平台一樣：先資料夾表，再會議用到的、條件的（照建立時間、名字）；用 NOT IN 跳過已經有的（INSERT OR IGNORE 會把 id 用掉，留下空號）
+        INSERT INTO folders (name, created_at) SELECT name, created_at FROM folders_old ORDER BY created_at, name;
+        INSERT INTO folders (name, created_at)
+          SELECT folder, MIN(created_at) FROM meetings WHERE folder <> '' AND folder NOT IN (SELECT name FROM folders)
+          GROUP BY folder ORDER BY MIN(created_at), folder;
+        INSERT INTO folders (name, created_at)
+          SELECT folder, created_at FROM folder_rules_old WHERE folder NOT IN (SELECT name FROM folders) ORDER BY created_at, folder;
+        CREATE TABLE folder_rules (
+          folder_id   INTEGER PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
+          keywords    TEXT NOT NULL DEFAULT '[]',
+          people      TEXT NOT NULL DEFAULT '[]',
+          template_id TEXT,
+          series_id   INTEGER REFERENCES series(id) ON DELETE SET NULL,
+          created_at  TEXT NOT NULL
+        );
+        INSERT INTO folder_rules (folder_id, keywords, people, template_id, series_id, created_at)
+          SELECT f.id, r.keywords, r.people, r.template_id, r.series_id, r.created_at FROM folder_rules_old r JOIN folders f ON f.name = r.folder;
+        ALTER TABLE meetings ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL;
+        UPDATE meetings SET folder_id = (SELECT id FROM folders WHERE name = meetings.folder) WHERE folder <> '';
+        ALTER TABLE meetings DROP COLUMN folder;
+        DROP TABLE folders_old;
+        DROP TABLE folder_rules_old;
+        CREATE INDEX meetings_folder ON meetings(folder_id);
+        """;
 }

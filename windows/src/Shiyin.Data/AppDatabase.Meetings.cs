@@ -103,39 +103,64 @@ public sealed partial class AppDatabase
     });
 
     /// <summary>
-    /// 資料夾（R9.2）：資料夾就是 meetings.folder 的值，空字串表示不在任何資料夾。
+    /// 移進資料夾（R9.2）；folderId 是 null 時移出資料夾。
     /// 自己移進、移出資料夾後不再自動放、不再建議（folder_decided，M§72）
     /// </summary>
-    public void SetFolder(IReadOnlyList<long> ids, string folder)
+    public void SetFolder(IReadOnlyList<long> ids, long? folderId)
     {
         if (ids.Count == 0) return;
         Write(db =>
         {
-            foreach (var id in ids) db.Execute("UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", folder, Clock.Now(), id);
-            if (folder.Length > 0) db.Execute("INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", folder, Clock.Now());
+            foreach (var id in ids) db.Execute("UPDATE meetings SET folder_id = ?, folder_decided = 1, updated_at = ? WHERE id = ?", folderId, Clock.Now(), id);
         });
     }
 
-    /// <summary>建一個空的資料夾（R104、M§78）</summary>
-    public void CreateFolder(string name) => Write(db => db.Execute("INSERT OR IGNORE INTO folders (name, created_at) VALUES (?, ?)", name, Clock.Now()));
+    /// <summary>建一個資料夾（R104、M§78、§92.2）：已經有這個名字（區分大小寫）就回傳那一個的 id</summary>
+    public long CreateFolder(string name) => Write(db => FolderId(db, name));
 
-    /// <summary>資料夾表裡的名字（會議都移走了也還在；側欄跟會議的資料夾、條件取聯集，M§78）</summary>
-    public List<string> FolderNames() => Read(db => db.Query("SELECT name FROM folders").Select(r => r.Str("name")).ToList());
+    internal static long FolderId(Db db, string name)
+    {
+        if (db.Scalar("SELECT id FROM folders WHERE name = ?", name) is long id) return id;
+        db.Execute("INSERT INTO folders (name, created_at) VALUES (?, ?)", name, Clock.Now());
+        return db.LastInsertRowId;
+    }
+
+    /// <summary>所有資料夾（會議都移走了也還在，R104），依 id</summary>
+    public List<Folder> Folders() => Read(db => db.Query("SELECT id, name, created_at FROM folders ORDER BY id")
+        .Select(r => new Folder(r.Long("id"), r.Str("name"), r.Str("created_at"))).ToList());
+
+    /// <summary>資料夾的名字（封包、MCP、提示用；畫面上問 MainState.FolderName）：null、找不到時是空字串</summary>
+    public string FolderName(long? id) =>
+        id is long folderId ? Read(db => db.Scalar("SELECT name FROM folders WHERE id = ?", folderId) as string) ?? "" : "";
 
     /// <summary>
-    /// 改名或刪除（newName 為空字串）一個資料夾，垃圾桶裡的會議也一起改。
-    /// 改名時自動加入的條件跟著改名；刪除資料夾（或新名稱已經有條件）時條件一起刪（M§72）
+    /// 重新命名（M§92.2）：名字是空的不做；沒有同名的就只改資料夾表。跟別的資料夾同名時合併進那一個：會議（垃圾桶裡的也是）移過去、
+    /// 那一個沒有條件就把這個的條件帶過去，有就用它的（這個的條件跟著資料夾刪掉，ON DELETE CASCADE），最後刪掉這個資料夾。
+    /// 回傳最後留下的資料夾 id
     /// </summary>
-    public void RenameFolder(string old, string newName) => Write(db =>
+    public long RenameFolder(long id, string name)
     {
-        db.Execute("UPDATE meetings SET folder = ?, updated_at = ? WHERE folder = ?", newName, Clock.Now(), old);
-        var targetHasRule = db.Scalar("SELECT 1 FROM folder_rules WHERE folder = ?", newName) is not null;
-        if (newName.Length == 0 || targetHasRule) db.Execute("DELETE FROM folder_rules WHERE folder = ?", old);
-        else db.Execute("UPDATE folder_rules SET folder = ? WHERE folder = ?", newName, old);
-        // 資料夾表（R104、M§78）：刪除、改成已經有的名字時拿掉舊的，不然改名
-        var targetExists = db.Scalar("SELECT 1 FROM folders WHERE name = ?", newName) is not null;
-        if (newName.Length == 0 || targetExists) db.Execute("DELETE FROM folders WHERE name = ?", old);
-        else db.Execute("UPDATE folders SET name = ? WHERE name = ?", newName, old);
+        if (name.Length == 0) return id;
+        return Write(db =>
+        {
+            if (db.Scalar("SELECT id FROM folders WHERE name = ? AND id <> ?", name, id) is not long target)
+            {
+                db.Execute("UPDATE folders SET name = ? WHERE id = ?", name, id);
+                return id;
+            }
+            db.Execute("UPDATE meetings SET folder_id = ?, updated_at = ? WHERE folder_id = ?", target, Clock.Now(), id);
+            if (db.Scalar("SELECT 1 FROM folder_rules WHERE folder_id = ?", target) is null)
+                db.Execute("UPDATE folder_rules SET folder_id = ? WHERE folder_id = ?", target, id);
+            db.Execute("DELETE FROM folders WHERE id = ?", id);
+            return target;
+        });
+    }
+
+    /// <summary>刪除資料夾：會議留著、移回「不在資料夾」（垃圾桶裡的也是；folder_decided 不動），條件跟著刪（ON DELETE CASCADE）</summary>
+    public void DeleteFolder(long id) => Write(db =>
+    {
+        db.Execute("UPDATE meetings SET folder_id = NULL, updated_at = ? WHERE folder_id = ?", Clock.Now(), id);
+        db.Execute("DELETE FROM folders WHERE id = ?", id);
     });
 
     /// <summary>錄音中途當掉、連錄音檔都沒有的會議（M§20.6）</summary>

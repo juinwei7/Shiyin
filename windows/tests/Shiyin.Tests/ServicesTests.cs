@@ -809,9 +809,11 @@ public sealed class ServicesTests : IDisposable
         var settings = AppSettings.InMemory();
         var source = Path.Combine(home.Path, "週會 2026-08-27.wav");
         WriteWav(source, 1, 2);
-        var meeting = Importer.ImportFile(source, new ImportOptions { Title = "  週會  ", Folder = "專案", Language = MeetingLanguage.En, MinSpeakers = 3 },
+        var project = db.CreateFolder("專案");
+        var meeting = Importer.ImportFile(source, new ImportOptions { Title = "  週會  ", FolderId = project, Language = MeetingLanguage.En, MinSpeakers = 3 },
             db, paths, settings);
         Assert.Equal("週會", meeting.Title);
+        Assert.Equal(project, meeting.FolderId);
         Assert.True(meeting.TitleLocked);
         Assert.Equal("2026-08-27", meeting.MeetingDate);
         Assert.Equal("en", meeting.Language);
@@ -833,13 +835,13 @@ public sealed class ServicesTests : IDisposable
         var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "none" });
         var file = Path.Combine(home.Path, "0827.srt");
         File.WriteAllText(file, "1\n00:00:01,000 --> 00:00:03,500\n大家好\n\n2\n00:00:04,000 --> 00:00:06,000\n開始吧\n");
-        var meeting = Importer.ImportTranscript(file, "", db, settings);
+        var meeting = Importer.ImportTranscript(file, null, db, settings);
         var segments = db.Segments(meeting.Id!.Value);
         Assert.Equal(["大家好", "開始吧"], segments.Select(s => s.Text));
         Assert.Equal(6, meeting.DurationSeconds);
         Assert.Null(db.LatestJob(meeting.Id!.Value));
         File.WriteAllText(file, "\n\n");
-        Assert.Throws<ImportException>(() => Importer.ImportTranscript(file, "", db, settings));
+        Assert.Throws<ImportException>(() => Importer.ImportTranscript(file, null, db, settings));
     }
 
     Meeting SampleMeeting(bool audio = true)
@@ -847,7 +849,7 @@ public sealed class ServicesTests : IDisposable
         var meeting = db.InsertMeeting(new Meeting
         {
             Title = "預算會議", TitleLocked = true, MeetingDate = "2026-10-01", Participants = "小明、小華", SourceFilename = "a.wav",
-            Folder = "財務", Language = "zh", UserNotes = "記得帶發票", Channels = "both",
+            FolderId = db.CreateFolder("財務"), Language = "zh", UserNotes = "記得帶發票", Channels = "both",
         }, audio ? "wav" : null);
         var id = meeting.Id!.Value;
         if (audio) WriteWav(paths.AudioPath(meeting), 2, 1);
@@ -863,7 +865,7 @@ public sealed class ServicesTests : IDisposable
     }
 
     ExportBundle Bundle(Meeting m) => new(m, db.Segments(m.Id!.Value), db.Speakers(m.Id!.Value).ToDictionary(s => s.Idx, s => s.Name),
-        db.Bookmarks(m.Id!.Value), m.DecodedNotes);
+        db.Bookmarks(m.Id!.Value), m.DecodedNotes) { FolderName = db.FolderName(m.FolderId) };
 
     [Fact]
     public void PackageRoundTrip()
@@ -873,11 +875,22 @@ public sealed class ServicesTests : IDisposable
         MeetingPackage.Export(Bundle(original), file, paths, "3.6.0");
         using (var zip = ZipFile.OpenRead(file))
             Assert.Equal(["audio.wav", "manifest.json", "meeting.json", "transcript.json"], zip.Entries.Select(e => e.FullName).Order(StringComparer.Ordinal));
-        var imported = MeetingPackage.Import(file, db, paths, "別的資料夾");
+        // 封包寫的是資料夾的名字（R118.4）；匯入時用名字找（已經有就是同一個），沒有就建
+        using (var zip = ZipFile.OpenRead(file))
+        using (var reader = new StreamReader(zip.GetEntry("meeting.json")!.Open()))
+            Assert.Equal("財務", IO.PackageJson.ReadMeeting(reader.ReadToEnd())!.Folder);
+        var other = db.CreateFolder("別的資料夾");
+        var imported = MeetingPackage.Import(file, db, paths, other);
         Assert.NotEqual(original.Id, imported.Id);
-        Assert.Equal(("預算會議", true, "2026-10-01", "小明、小華", "財務", "package", "both", "記得帶發票", "claude"),
-            (imported.Title, imported.TitleLocked, imported.MeetingDate, imported.Participants, imported.Folder, imported.Source, imported.Channels,
+        Assert.Equal(("預算會議", true, "2026-10-01", "小明、小華", original.FolderId, "package", "both", "記得帶發票", "claude"),
+            (imported.Title, imported.TitleLocked, imported.MeetingDate, imported.Participants, imported.FolderId, imported.Source, imported.Channels,
              imported.UserNotes, imported.NotesBy));
+        using (var fresh = new AppDatabase(Path.Combine(home.Path, "fresh.sqlite")))
+        {
+            var elsewhere = MeetingPackage.Import(file, fresh, paths);
+            Assert.Equal(["財務"], fresh.Folders().Select(f => f.Name));
+            Assert.Equal("財務", fresh.FolderName(elsewhere.FolderId));
+        }
         Assert.Equal(File.ReadAllBytes(paths.AudioPath(original)), File.ReadAllBytes(paths.AudioPath(imported)));
         var segments = db.Segments(imported.Id!.Value);
         Assert.Equal([("第一句", 1, false), ("第二句", 2, true)], segments.Select(s => (s.Text, s.Speaker ?? 0, s.LowConfidence)));
@@ -919,8 +932,9 @@ public sealed class ServicesTests : IDisposable
         Assert.Equal(before, db.MeetingRows().Count);
         // 只有逐字稿的舊封包（沒有 language、folder）
         WriteZip(file, new() { ["manifest.json"] = """{"format":1,"app":"3.0.0","exportedAt":"x"}""", ["meeting.json"] = meeting });
-        var imported = MeetingPackage.Import(file, db, paths, "目前的資料夾");
-        Assert.Equal(("zh", "目前的資料夾", ""), (imported.Language, imported.Folder, imported.AudioFile));
+        var current = db.CreateFolder("目前的資料夾");
+        var imported = MeetingPackage.Import(file, db, paths, current);
+        Assert.Equal(("zh", (long?)current, ""), (imported.Language, imported.FolderId, imported.AudioFile));
     }
 
     // MARK: 轉錄流程
@@ -1613,11 +1627,12 @@ public sealed class ServicesTests : IDisposable
         var current = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
         db.SaveNotes(previous, new MeetingNotes { Title = "產品週會 11/02", ActionItems = [new("小明", "寄信給客戶", "2026-11-05")] },
             "claude", "整理", NotesSource.Generated);
-        db.SetFolder([previous], "產品");
-        db.SaveFolderRule(new FolderRule { Folder = "產品", Keywords = ["週會"] });
+        var product = db.CreateFolder("產品");
+        db.SetFolder([previous], product);
+        db.SaveFolderRule(new FolderRule { FolderId = product, Keywords = ["週會"] });
         db.SaveTranscript(current, [new Segment { MeetingId = current, Seq = 0, Start = 0, End = 2, Text = "信寄了", Speaker = 1 }], 2, 1);
         db.Enqueue(current, JobKind.Summarize, JobRunner.Encode(new SummarizePayload()));
-        var organized = new List<(long, string?)>();
+        var organized = new List<(long, long?)>();
         runner.Organized += (id, folder) => { lock (organized) organized.Add((id, folder)); };
         runner.Start();
         try { await Until(() => db.LatestJob(current)?.Status is JobStatus.Done or JobStatus.Failed); }
@@ -1627,8 +1642,8 @@ public sealed class ServicesTests : IDisposable
         Assert.DoesNotContain("followUps", prompt);
         Assert.DoesNotContain("followUps", db.Meeting(current)!.Notes!);
         // 標題有「週會」：整理完自動放進「產品」
-        Assert.Equal("產品", db.Meeting(current)!.Folder);
-        Assert.Equal([(current, "產品")], organized.Select(o => (o.Item1, (string?)o.Item2)));
+        Assert.Equal(product, db.Meeting(current)!.FolderId);
+        Assert.Equal([(current, (long?)product)], organized);
     }
 
     [Fact]

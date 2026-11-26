@@ -26,7 +26,7 @@ public sealed class McpTests : IDisposable
     /// <summary>跟 Mac 的 GoldenDump.insertFixture 一樣</summary>
     static long InsertFixture(AppDatabase db, Golden.MeetingFixture fx, Meeting? meeting = null, string? audioExtension = "m4a")
     {
-        var inserted = db.InsertMeeting(meeting ?? fx.Meeting, audioExtension);
+        var inserted = db.InsertMeeting(Golden.WithFolder(db, fx, meeting), audioExtension);
         var mid = inserted.Id!.Value;
         var segments = fx.Segments.Select(s => { var c = s.Clone(); c.MeetingId = mid; return c; }).ToList();
         db.SaveTranscript(mid, segments, fx.Meeting.DurationSeconds ?? 0, segments.Select(s => s.Speaker ?? 0).DefaultIfEmpty(0).Max(), fx.Voices, "breeze");

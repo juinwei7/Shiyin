@@ -5,7 +5,7 @@ namespace Shiyin.Services;
 
 /// <summary>
 /// 側欄的拖曳（R103、M§77、design-windows §11.36，同 Mac 的 Store/SidebarDrag.swift）：「資料夾」那一段拖曳排好的順序，
-/// 存在 settings.json 的 sidebarOrder（字串陣列，照順序；鍵同 sidebarExpanded：folder:名稱）；拖一場會議時帶哪幾場
+/// 存在 settings.json 的 sidebarOrder（字串陣列，照順序；鍵同 sidebarExpanded：folderid:&lt;id&gt;，R118）；拖一場會議時帶哪幾場
 /// </summary>
 public static class SidebarDrag
 {
@@ -53,18 +53,7 @@ public static class SidebarDrag
         return Move(settings, current, key, current[i + offset], before: offset < 0);
     }
 
-    /// <summary>資料夾改名：排序的鍵跟著改；改成已經有的資料夾（合併）時拿掉舊的、留那個的位置</summary>
-    public static void RenameFolder(AppSettings settings, string old, string name)
-    {
-        var keys = Order(settings);
-        var i = keys.IndexOf(SidebarCollapse.FolderKey(old));
-        if (old == name || i < 0) return;
-        if (keys.Contains(SidebarCollapse.FolderKey(name))) keys.RemoveAt(i);
-        else keys[i] = SidebarCollapse.FolderKey(name);
-        Save(settings, keys);
-    }
-
-    /// <summary>刪除資料夾：拿掉它的鍵</summary>
+    /// <summary>刪除資料夾、改名時合併進別的資料夾（留下的那個照舊的位置，R118）：拿掉它的鍵。鍵是 id，改名不用搬</summary>
     public static void Remove(AppSettings settings, string key)
     {
         var keys = Order(settings);
@@ -80,7 +69,7 @@ public static class SidebarDrag
         text.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => long.TryParse(x, out var v) ? v : 0).Where(v => v > 0).ToList();
 
     /// <summary>下面列表的標題能不能收會議（R103.1）：在看資料夾，或是「其他會議」；看所有會議、篩選中、垃圾桶、人物時不行</summary>
-    public static bool HeaderAccepts(bool trash, bool people, string? folderFilter, bool othersOnly) =>
+    public static bool HeaderAccepts(bool trash, bool people, long? folderFilter, bool othersOnly) =>
         !trash && !people && (folderFilter is not null || othersOnly);
 
     static bool Save(AppSettings settings, List<string> keys)
@@ -96,14 +85,14 @@ public sealed partial class AppController
     /// <summary>
     /// 會議拖到下面列表的標題（R103.1，同 Mac 的 dropOnListHeader）：在看資料夾＝移進去、「其他會議」＝移出資料夾（提示照 MoveToFolder）
     /// </summary>
-    public void DropOnListHeader(IReadOnlyList<long> ids, string? folderFilter, bool othersOnly)
+    public void DropOnListHeader(IReadOnlyList<long> ids, long? folderFilter, bool othersOnly)
     {
         if (ids.Count == 0) return;
-        if (folderFilter is not null) MoveToFolder(ids, folderFilter);
+        if (folderFilter is long folder) MoveToFolder(ids, folder);
         else if (othersOnly)
         {
-            var inFolder = ids.Select(Db.Meeting).OfType<Model.Meeting>().Where(m => m.Folder.Length > 0).Select(m => m.Id!.Value).ToList();
-            if (inFolder.Count > 0) MoveToFolder(inFolder, "");
+            var inFolder = ids.Select(Db.Meeting).OfType<Model.Meeting>().Where(m => m.FolderId is not null).Select(m => m.Id!.Value).ToList();
+            if (inFolder.Count > 0) MoveToFolder(inFolder, null);
             else Notice?.Invoke(ids.Count == 1 ? L.T("這場會議沒有在任何資料夾裡") : L.T("這些會議都沒有在資料夾裡"));
         }
     }

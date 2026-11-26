@@ -73,7 +73,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
     }
 
     /// <summary>問所有會議：抽關鍵詞 → 全文搜尋挑會議和片段 → 回答（M§21.8）</summary>
-    public async Task<QuestionRecord> AskAll(string question, AskScope scope, string? folder, CancellationToken cancel)
+    public async Task<QuestionRecord> AskAll(string question, AskScope scope, long? folder, CancellationToken cancel)
     {
         question = question.Trim();
         var (provider, model) = (settings.Provider, settings.Model);
@@ -114,7 +114,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
     }
 
     /// <summary>用每個關鍵詞搜尋，依命中數、日期挑最多 8 場會議；每場帶摘要、決議和命中的段落（前後各一段），總長 40,000 字以內</summary>
-    public List<AskPrompt.MeetingBlock> Blocks(IReadOnlyList<string> keywords, AskScope scope, string? folder)
+    public List<AskPrompt.MeetingBlock> Blocks(IReadOnlyList<string> keywords, AskScope scope, long? folder)
     {
         var hits = new Dictionary<long, List<SearchHit>>();
         foreach (var keyword in keywords)
@@ -124,7 +124,7 @@ public sealed class AskService(AppDatabase db, AppSettings settings, LLMClient l
         var candidates = hits.Select(p => (Meeting: db.Meeting(p.Key), Hits: p.Value))
             .Where(c => c.Meeting is { DeletedAt: null } m && scope switch
             {
-                AskScope.Folder => folder is not null && m.Folder == folder,
+                AskScope.Folder => folder is not null && m.FolderId == folder,
                 AskScope.Recent => string.CompareOrdinal(m.MeetingDate, cutoff) >= 0,
                 _ => true,
             })

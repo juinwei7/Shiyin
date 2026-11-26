@@ -97,7 +97,7 @@ public static partial class Dialogs
     public static bool ImportOpen { get; private set; }
 
     /// <param name="folder">匯入到哪個資料夾：從檔案總管拖到側欄的資料夾上時是那個資料夾（R103.3），不然是目前看的資料夾</param>
-    public static async Task Import(MainWindow window, IReadOnlyList<string> files, string? folder = null)
+    public static async Task Import(MainWindow window, IReadOnlyList<string> files, long? folder = null)
     {
         if (window.XamlRoot is null) return;
         var host = AppHost.Current;

@@ -17,14 +17,14 @@ public sealed partial class AppController
             if (!applyNow || rule.IsEmpty) return;
             var ids = Db.MeetingsMatching(rule);
             if (ids.Count == 0) return;
-            Db.SetFolder(ids, rule.Folder);
-            Notice?.Invoke(L.F("已把 %lld 場會議放進「%@」", ids.Count, rule.Folder));
+            Db.SetFolder(ids, rule.FolderId);
+            Notice?.Invoke(L.F("已把 %lld 場會議放進「%@」", ids.Count, Db.FolderName(rule.FolderId)));
         });
     }
 
     // MARK: 建議放進資料夾（R98.3）
 
-    public void AcceptFolderSuggestion(long meetingId, string folder) => MoveToFolder([meetingId], folder);
+    public void AcceptFolderSuggestion(long meetingId, long folderId) => MoveToFolder([meetingId], folderId);
 
     /// <summary>「不用」：之後不再建議這場</summary>
     public void DismissFolderSuggestion(long meetingId) => Perform(meetingId, () => Db.SetFolderDecided(meetingId));
@@ -55,10 +55,10 @@ public sealed partial class AppController
     // MARK: 自動（轉錄完、整理完）
 
     /// <summary>自動放進資料夾之後的提示（M§72）；DEBUG 的 autofile 也走這裡</summary>
-    public void Organized(long meetingId, string? folder)
+    public void Organized(long meetingId, long? folderId)
     {
         Changed?.Invoke(null);
         var title = Db.Meeting(meetingId)?.DisplayTitle ?? "";
-        if (folder is not null) Notice?.Invoke(L.F("「%@」已放進「%@」", title, folder));
+        if (folderId is not null) Notice?.Invoke(L.F("「%@」已放進「%@」", title, Db.FolderName(folderId)));
     }
 }

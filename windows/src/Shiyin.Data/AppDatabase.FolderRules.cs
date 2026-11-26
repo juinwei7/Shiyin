@@ -22,33 +22,33 @@ public sealed partial class AppDatabase
 
     static FolderRule ToFolderRule(Row r) => new()
     {
-        Folder = r.Str("folder"), Keywords = ParseStrings(r.Str("keywords")), People = ParseIds(r.Str("people")),
+        FolderId = r.Long("folder_id"), Keywords = ParseStrings(r.Str("keywords")), People = ParseIds(r.Str("people")),
         TemplateId = r.StrOrNull("template_id"), CreatedAt = r.Str("created_at"),
     };
 
     // MARK: 資料夾的條件
 
-    public List<FolderRule> FolderRules() => Read(db => db.Query("SELECT * FROM folder_rules ORDER BY folder").Select(ToFolderRule).ToList());
+    public List<FolderRule> FolderRules() => Read(db => db.Query("SELECT * FROM folder_rules ORDER BY folder_id").Select(ToFolderRule).ToList());
 
     /// <summary>儲存條件；條件都空時當成移除。series_id 欄位留著不用（D177），一律 null</summary>
     public void SaveFolderRule(FolderRule rule) => Write(db =>
     {
         if (rule.IsEmpty)
         {
-            db.Execute("DELETE FROM folder_rules WHERE folder = ?", rule.Folder);
+            db.Execute("DELETE FROM folder_rules WHERE folder_id = ?", rule.FolderId);
             return;
         }
-        db.Execute("INSERT INTO folder_rules (folder, keywords, people, template_id, series_id, created_at) VALUES (?, ?, ?, ?, NULL, ?) "
-            + "ON CONFLICT(folder) DO UPDATE SET keywords = excluded.keywords, people = excluded.people, template_id = excluded.template_id, "
+        db.Execute("INSERT INTO folder_rules (folder_id, keywords, people, template_id, series_id, created_at) VALUES (?, ?, ?, ?, NULL, ?) "
+            + "ON CONFLICT(folder_id) DO UPDATE SET keywords = excluded.keywords, people = excluded.people, template_id = excluded.template_id, "
             + "series_id = NULL, created_at = excluded.created_at",
-            rule.Folder, JsonStrings(rule.Keywords), JsonIds(rule.People), rule.TemplateId, rule.CreatedAt);
+            rule.FolderId, JsonStrings(rule.Keywords), JsonIds(rule.People), rule.TemplateId, rule.CreatedAt);
     });
 
     /// <summary>「現在不在資料夾裡的會議也套用」：符合條件的會議（不在資料夾、不在垃圾桶）</summary>
     public List<long> MeetingsMatching(FolderRule rule)
     {
         var people = MeetingPeople();
-        var meetings = Read(db => db.Query("SELECT * FROM meetings WHERE deleted_at IS NULL AND folder = '' ORDER BY rowid").Select(ToMeeting).ToList());
+        var meetings = Read(db => db.Query("SELECT * FROM meetings WHERE deleted_at IS NULL AND folder_id IS NULL ORDER BY rowid").Select(ToMeeting).ToList());
         return meetings.Where(m => rule.Matches(m.DisplayTitle, people.GetValueOrDefault(m.Id ?? 0) ?? [], m.TemplateId))
             .Select(m => m.Id ?? 0).ToList();
     }
@@ -58,17 +58,18 @@ public sealed partial class AppDatabase
 
     /// <summary>
     /// 自動放進資料夾（M§72）：不在資料夾、還沒決定過、不在垃圾桶；符合好幾個時放名稱排第一的（同 Mac 的 localizedStandardCompare）。
-    /// 回傳資料夾名稱
+    /// 回傳資料夾 id（R118、M§92.2）
     /// </summary>
-    public string? AutoFile(long meetingId)
+    public long? AutoFile(long meetingId)
     {
-        if (Meeting(meetingId) is not { } meeting || meeting.Folder.Length > 0 || meeting.FolderDecided || meeting.DeletedAt is not null) return null;
+        if (Meeting(meetingId) is not { } meeting || meeting.FolderId is not null || meeting.FolderDecided || meeting.DeletedAt is not null) return null;
         var attended = MeetingPeople().GetValueOrDefault(meetingId) ?? [];
-        var rule = FolderRules().OrderBy(r => r.Folder, NaturalComparer.Instance)
+        var names = Folders().ToDictionary(f => f.Id, f => f.Name);
+        var rule = FolderRules().OrderBy(r => names.GetValueOrDefault(r.FolderId) ?? "", NaturalComparer.Instance)
             .FirstOrDefault(r => r.Matches(meeting.DisplayTitle, attended, meeting.TemplateId));
         if (rule is null) return null;
-        Write(db => db.Execute("UPDATE meetings SET folder = ?, folder_decided = 1, updated_at = ? WHERE id = ?", rule.Folder, Clock.Now(), meetingId));
-        return rule.Folder;
+        Write(db => db.Execute("UPDATE meetings SET folder_id = ?, folder_decided = 1, updated_at = ? WHERE id = ?", rule.FolderId, Clock.Now(), meetingId));
+        return rule.FolderId;
     }
 
     // MARK: 與會的人物

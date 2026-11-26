@@ -195,7 +195,7 @@ public static partial class ControlPipe
                 var speed = args.Length > 2 && double.TryParse(args[2], out var s) ? s : 1;
                 // 第三個參數：1 是雙聲道，2 是雙聲道、電腦聲音全是 0（design-windows §11.18）
                 var both = args.Length > 3 && args[3] is "1" or "2";
-                return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder ?? "", args.Length > 3 && args[3] == "2") };
+                return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder, args.Length > 3 && args[3] == "2") };
             case "recordstop": host.Recorder.Stop(); return Ok;
             // stoptimer <秒數|off>：從現在起幾秒後定時停止（M§84）
             case "stoptimer" when args.Length > 1:
@@ -275,7 +275,7 @@ public static partial class ControlPipe
                     options = options with { Language = importLanguage };
                     files.RemoveAt(0);
                 }
-                var folder = main?.State.CurrentFolder ?? "";
+                var folder = main?.State.CurrentFolder;
                 var media = host.Controller.RequestImport(files, folder, main?.State.Selection);
                 _ = host.Controller.ImportFiles(media, options, folder);
                 return Ok;
@@ -609,8 +609,8 @@ public static partial class ControlPipe
             // 移除一個人的確認開著時是誰（R85.7，同 Mac；沒有是 -1）、人物頁改名的輸入框開著沒（Mac 沒有）
             ["confirmRemovePerson"] = main?.RemovingPerson ?? -1,
             // 每一種東西都能直接改、刪（R100，同 Mac）：刪除資料夾的確認開著時是哪個；就地改的那一條
-            ["confirmDeleteFolder"] = main?.DeletingFolder ?? "",
-            // 重新命名的對話框開著時要改的東西（R102，同 Mac：meeting(42)、folder("客戶")、newFolder([1, 2])…；沒開是空字串）
+            ["confirmDeleteFolder"] = main?.DeletingFolder is long deleting ? main.State.FolderName(deleting) : "",
+            // 重新命名的對話框開著時要改的東西（R102，同 Mac：meeting(42)、folder(3)、newFolder([1, 2])…；沒開是空字串）
             ["renameTarget"] = Dialogs.RenamingTarget?.Key ?? "",
             // 照 Sheet 樣子的對話框（R106、design-windows §11.39）開著時是它的標題，沒開是空字串
             ["sheet"] = Dialogs.OpenSheet ?? "",
@@ -627,9 +627,9 @@ public static partial class ControlPipe
             // 「資料夾」那一段實際的順序（R103.2，同 Mac）、匯入的對話框開著沒
             ["sidebarOrder"] = new JsonArray([.. (main?.SidebarKeys() ?? []).Select(x => (JsonNode)x)]),
             ["showImportSheet"] = Dialogs.ImportOpen,
-            // 側欄的資料夾（R104，同 Mac）：資料夾表、會議的資料夾、自動加入條件的聯集和場數
-            ["folders"] = new JsonArray([.. (main?.State.Folders ?? []).Select(f => (JsonNode)new JsonObject { ["name"] = f.Name, ["count"] = f.Count })]),
-            ["folderRuleDialog"] = Dialogs.EditingFolderRule,
+            // 側欄的資料夾（R104，同 Mac）：資料夾表裡的每一個和場數（名字，另外多 folderId，R118）
+            ["folders"] = new JsonArray([.. (main?.State.Folders ?? []).Select(f => (JsonNode)new JsonObject { ["name"] = f.Name, ["count"] = f.Count, ["folderId"] = f.Id })]),
+            ["folderRuleDialog"] = Dialogs.EditingFolderRule is long editing ? main?.State.FolderName(editing) : null,
             // 會議結束的倒數（R95、M§69）：剩幾秒，沒在倒數是 -1（同 Mac 的 meetingprompts 的 countdown）
             ["meetingEndCountdown"] = host.MeetingEnd.Remaining(DateTime.UtcNow),
             ["reviewInline"] = main?.ReviewDraft.Expanded?.ToString(),

@@ -55,7 +55,7 @@ public static partial class Dialogs
         {
             var m = row.Meeting;
             var meta = new List<string> { m.MeetingDate, TimeFormat.String(m.DurationSeconds ?? 0) };
-            if (m.Folder.Length > 0) meta.Add(m.Folder);
+            if (window.State.FolderName(m.FolderId) is { Length: > 0 } folder) meta.Add(folder);
             var warning = Ui.Text(L.T("兩場的會議語言不同，合併後照這場的語言整理"), 13, color: Ui.Signal);
             warning.Visibility = Visibility.Collapsed;
             var check = new FontIcon { Glyph = "", FontSize = 14, Foreground = Ui.Celadon, Visibility = Visibility.Collapsed, VerticalAlignment = VerticalAlignment.Center };

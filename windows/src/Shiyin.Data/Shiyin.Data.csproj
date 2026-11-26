@@ -8,4 +8,8 @@
     <ProjectReference Include="../Shiyin.Core/Shiyin.Core.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- 測試用的入口：migration 只跑到某一版（標準答案 db/migrate-v18.json） -->
+    <InternalsVisibleTo Include="Shiyin.Tests" />
+  </ItemGroup>
 </Project>

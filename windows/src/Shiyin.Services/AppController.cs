@@ -26,6 +26,9 @@ public interface IExportPlatform
 
 public enum ExportItem { Notes, MindMap, Transcript, Audio, Package }
 
+/// <summary>幾場會議都在同一個資料夾（「移到資料夾」的選單，M§62）：FolderId 是那個資料夾，null 是都不在資料夾裡（R118）</summary>
+public sealed record CommonFolder(long? FolderId);
+
 public static class ExportItems
 {
     public static string Label(this ExportItem item) => item switch
@@ -174,65 +177,82 @@ public sealed partial class AppController
         meeting.TranscribedWith == "system" && !Settings.UseFastTranscriber && Paths.HasAudio(meeting) && meeting.DeletedAt is null
         && Models.IsInstalled(meeting.MeetingLanguage.Profile.Transcription.Model == "qwen" ? ModelStore.Model.Qwen : ModelStore.Transcription(meeting.MeetingLanguage));
 
-    // MARK: 資料夾（R9.2）
+    // MARK: 資料夾（R9.2；R118 起用 id 辨識，名字只用來顯示）
 
-    /// <summary>現有的資料夾和各自的場數（不含垃圾桶），依名稱排序</summary>
-    public static List<(string Name, int Count)> Folders(IEnumerable<MeetingRow> meetings) =>
-        meetings.Where(m => m.Meeting.Folder.Length > 0).GroupBy(m => m.Meeting.Folder)
-            .Select(g => (g.Key, g.Count())).OrderBy(f => f.Key, NaturalComparer.Instance).ToList();
+    public void MoveToFolder(long id, long? folderId) => MoveToFolder([id], folderId);
 
-    public void MoveToFolder(long id, string folder) => MoveToFolder([id], folder);
-
-    /// <summary>移到資料夾（R9.2）；多選時一起移（R88、M§62），已經在那裡的跳過</summary>
-    public void MoveToFolder(IReadOnlyList<long> ids, string folder)
+    /// <summary>移到資料夾（R9.2）；folderId 是 null 時移出資料夾。多選時一起移（R88、M§62），已經在那裡的跳過</summary>
+    public void MoveToFolder(IReadOnlyList<long> ids, long? folderId)
     {
-        var name = folder.Trim();
-        var targets = ids.Where(id => Db.Meeting(id)?.Folder != name).ToList();
+        var name = Db.FolderName(folderId);
+        var targets = ids.Where(id => Db.Meeting(id)?.FolderId != folderId).ToList();
         if (targets.Count == 0)
         {
-            if (ids.Count == 1) Notice?.Invoke(name.Length == 0 ? L.T("這場會議沒有在任何資料夾裡") : L.F("這場會議已經在「%@」", name));
-            else if (ids.Count > 1) Notice?.Invoke(name.Length == 0 ? L.T("這些會議都沒有在資料夾裡") : L.F("這些會議都已經在「%@」", name));
+            if (ids.Count == 1) Notice?.Invoke(folderId is null ? L.T("這場會議沒有在任何資料夾裡") : L.F("這場會議已經在「%@」", name));
+            else if (ids.Count > 1) Notice?.Invoke(folderId is null ? L.T("這些會議都沒有在資料夾裡") : L.F("這些會議都已經在「%@」", name));
             return;
         }
-        Perform(null, () => Db.SetFolder(targets, name));
-        if (targets.Count == 1) Notice?.Invoke(name.Length == 0 ? L.T("已移出資料夾") : L.F("已移到「%@」", name));
-        else Notice?.Invoke(name.Length == 0 ? L.F("已把 %lld 場會議移出資料夾", targets.Count) : L.F("已把 %lld 場會議移到「%@」", targets.Count, name));
+        Perform(null, () => Db.SetFolder(targets, folderId));
+        if (targets.Count == 1) Notice?.Invoke(folderId is null ? L.T("已移出資料夾") : L.F("已移到「%@」", name));
+        else Notice?.Invoke(folderId is null ? L.F("已把 %lld 場會議移出資料夾", targets.Count) : L.F("已把 %lld 場會議移到「%@」", targets.Count, name));
     }
 
-    /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null（「移到資料夾」的選單，M§62）</summary>
-    public static string? CommonFolder(IEnumerable<MeetingRow> rows, IReadOnlyCollection<long> ids)
+    /// <summary>「新資料夾…」（從會議的選單建的）：建好後把會議移進去；同名的已經有就移進那一個（R102）</summary>
+    public void MoveToNewFolder(IReadOnlyList<long> ids, string name)
     {
-        var folders = rows.Where(r => ids.Contains(r.Id)).Select(r => r.Meeting.Folder).Distinct().ToList();
-        return folders.Count == 1 ? folders[0] : null;
-    }
-
-    public void RenameFolder(string old, string newName)
-    {
-        var name = newName.Trim();
-        if (name.Length == 0 || name == old) return;
-        // 側欄展開的資料夾、排序的鍵跟著改名（R101、R103，design-windows §11.34、§11.36）
-        SidebarCollapse.RenameFolder(Settings, old, name);
-        SidebarDrag.RenameFolder(Settings, old, name);
-        Perform(null, () => Db.RenameFolder(old, name));
+        var trimmed = name.Trim();
+        if (trimmed.Length == 0) return;
+        long? id = null;
+        Perform(null, () => id = Db.CreateFolder(trimmed));
+        if (id is long folderId) MoveToFolder(ids, folderId);
     }
 
     /// <summary>
-    /// 建一個空的資料夾（R104、M§78，「資料夾」標題的「+」、DEBUG 的 foldernew）：已經有同名的資料夾（資料夾表、會議的資料夾、自動加入條件）時不建
+    /// 這幾場會議都在同一個資料夾時是那個資料夾（FolderId 是 null：都不在資料夾裡），不一樣時是 null（「移到資料夾」的選單，M§62）
     /// </summary>
-    public void CreateFolder(string name)
+    public static CommonFolder? CommonFolderOf(IEnumerable<MeetingRow> rows, IReadOnlyCollection<long> ids)
     {
-        var trimmed = name.Trim();
-        if (trimmed.Length == 0 || Organizing.Folders(Db.MeetingRows(), Db.FolderRules(), Db.FolderNames()).Any(f => f.Name == trimmed)) return;
-        Perform(null, () => Db.CreateFolder(trimmed));
-        Notice?.Invoke(L.F("已建立資料夾「%@」", trimmed));
+        var folders = rows.Where(r => ids.Contains(r.Id)).Select(r => r.Meeting.FolderId).Distinct().ToList();
+        return folders.Count == 1 ? new CommonFolder(folders[0]) : null;
     }
 
-    /// <summary>刪除資料夾：會議留著，移回「不在資料夾」；側欄展開、排序的鍵拿掉（R101、R103）</summary>
-    public void DeleteFolder(string name)
+    /// <summary>
+    /// 重新命名（R118：只改資料夾那一筆）；改成已經有的名字時合併進那一個（M§92.2）。合併時側欄拿掉原本那個的鍵（留下的那個照舊的位置）。
+    /// 回傳最後留下的資料夾 id（正在看原本那個時，畫面換成看留下的那個）
+    /// </summary>
+    public long RenameFolder(long id, string newName)
     {
-        SidebarCollapse.SetRow(Settings, SidebarCollapse.FolderKey(name), false);
-        SidebarDrag.Remove(Settings, SidebarCollapse.FolderKey(name));
-        Perform(null, () => Db.RenameFolder(name, ""));
+        var name = newName.Trim();
+        if (name.Length == 0 || name == Db.FolderName(id)) return id;
+        var kept = id;
+        Perform(null, () => kept = Db.RenameFolder(id, name));
+        if (kept != id)
+        {
+            SidebarCollapse.SetRow(Settings, SidebarCollapse.FolderKey(id), false);
+            SidebarDrag.Remove(Settings, SidebarCollapse.FolderKey(id));
+        }
+        return kept;
+    }
+
+    /// <summary>
+    /// 建一個空的資料夾（R104、M§78，「資料夾」標題的「+」、DEBUG 的 foldernew）：已經有同名的資料夾時不建。回傳新資料夾的 id
+    /// </summary>
+    public long? CreateFolder(string name)
+    {
+        var trimmed = name.Trim();
+        if (trimmed.Length == 0 || Db.Folders().Any(f => f.Name == trimmed)) return null;
+        long? id = null;
+        Perform(null, () => id = Db.CreateFolder(trimmed));
+        Notice?.Invoke(L.F("已建立資料夾「%@」", trimmed));
+        return id;
+    }
+
+    /// <summary>刪除資料夾：會議留著，移回「不在資料夾」，條件一起刪；側欄展開、排序的鍵拿掉（R101、R103）</summary>
+    public void DeleteFolder(long id)
+    {
+        SidebarCollapse.SetRow(Settings, SidebarCollapse.FolderKey(id), false);
+        SidebarDrag.Remove(Settings, SidebarCollapse.FolderKey(id));
+        Perform(null, () => Db.DeleteFolder(id));
     }
 
     // MARK: 匯入（R3）
@@ -241,7 +261,7 @@ public sealed partial class AppController
     /// 拖進來或選的檔案：封包、逐字稿、Markdown 直接匯入；回傳要問匯入選項的錄音、影片（R1.2）。
     /// selected：目前選的會議（Markdown 筆記加到那一場）
     /// </summary>
-    public List<string> RequestImport(IReadOnlyList<string> files, string folder, long? selected)
+    public List<string> RequestImport(IReadOnlyList<string> files, long? folder, long? selected)
     {
         // 文件加到選取中的會議（R61.1、R61.3）；其他照舊匯入
         var documents = files.Where(DocumentReader.IsDroppedDocument).ToList();
@@ -264,12 +284,12 @@ public sealed partial class AppController
     }
 
     /// <summary>匯入選項按「匯入」：多個檔案時標題、日期各自推算</summary>
-    public Task ConfirmImport(IReadOnlyList<string> files, ImportOptions options, string folder) =>
+    public Task ConfirmImport(IReadOnlyList<string> files, ImportOptions options, long? folder) =>
         ImportFiles(files, files.Count == 1 ? options
             : new ImportOptions { Participants = options.Participants, TemplateId = options.TemplateId, Language = options.Language }, folder);
 
     /// <summary>從檔案總管開、拖到圖示上：不跳對話框，直接用預設值</summary>
-    public Task ImportDirectly(IReadOnlyList<string> files, string folder, long? selected)
+    public Task ImportDirectly(IReadOnlyList<string> files, long? folder, long? selected)
     {
         var other = files.Where(f => !Importer.IsMedia(f)).ToList();
         if (other.Count > 0) RequestImport(other, folder, selected);
@@ -277,10 +297,10 @@ public sealed partial class AppController
     }
 
     /// <summary>複製檔案在背景做，大檔案（或從外接硬碟複製）時不卡住畫面（M§21.13、R20.4）</summary>
-    public async Task ImportFiles(IReadOnlyList<string> files, ImportOptions options, string folder)
+    public async Task ImportFiles(IReadOnlyList<string> files, ImportOptions options, long? folder)
     {
         if (files.Count == 0) return;
-        if (options.Folder.Length == 0) options = options with { Folder = folder };
+        if (options.FolderId is null) options = options with { FolderId = folder };
         Interlocked.Add(ref importing, files.Count);
         Changed?.Invoke(null);
         Meeting? last = null;
@@ -301,7 +321,7 @@ public sealed partial class AppController
     }
 
     /// <summary>解開封包、複製錄音在背景做（M§21.13、R20.4）</summary>
-    public async void ImportPackage(string file, string folder)
+    public async void ImportPackage(string file, long? folder)
     {
         Interlocked.Increment(ref importing);
         Changed?.Invoke(null);
@@ -323,7 +343,7 @@ public sealed partial class AppController
         }
     }
 
-    public void ImportTranscript(string file, string folder)
+    public void ImportTranscript(string file, long? folder)
     {
         try
         {
@@ -339,7 +359,7 @@ public sealed partial class AppController
     }
 
     /// <summary>Markdown 當成使用者筆記：有選會議就加到那場，沒有就建一場新的（R3.5）。回傳要顯示的會議</summary>
-    public long? ImportMarkdownNotes(IReadOnlyList<string> files, string folder, long? selected)
+    public long? ImportMarkdownNotes(IReadOnlyList<string> files, long? folder, long? selected)
     {
         long? shown = null;
         foreach (var file in files)
@@ -359,7 +379,7 @@ public sealed partial class AppController
                     var created = Db.InsertMeeting(new Meeting
                     {
                         MeetingDate = DateText.String(Importer.Today), SourceFilename = Path.GetFileName(file), UserNotes = text,
-                        Source = "transcript", Folder = folder, Language = Settings.DefaultMeetingLanguage.Code(),
+                        Source = "transcript", FolderId = folder, Language = Settings.DefaultMeetingLanguage.Code(),
                     }, null);
                     Perform(null, () => Db.UpdateUserNotes(created.Id!.Value, text));
                     shown = selected = created.Id;
@@ -374,7 +394,7 @@ public sealed partial class AppController
     // MARK: 錄音（R1、R2）
 
     /// <summary>開始錄音：建一場會議、開始錄。回傳會議 id（沒開始回傳 null）</summary>
-    public long? StartRecording(string folder)
+    public long? StartRecording(long? folder)
     {
         if (Recorder.IsRecording) return null;
         var now = DateTime.Now;
@@ -384,7 +404,7 @@ public sealed partial class AppController
             {
                 MeetingDate = DateText.String(DateOnly.FromDateTime(now)),
                 SourceFilename = L.F("錄音 %@", now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)),
-                TemplateId = Settings.DefaultTemplate, Source = "recording", Channels = Settings.RecordSource, Folder = folder,
+                TemplateId = Settings.DefaultTemplate, Source = "recording", Channels = Settings.RecordSource, FolderId = folder,
                 Language = Settings.DefaultMeetingLanguage.Code(),
             }, null);
             Recorder.Start(meeting.Id!.Value, meeting.MeetingLanguage);
@@ -400,13 +420,13 @@ public sealed partial class AppController
     }
 
     /// <summary>DEBUG：用音訊檔模擬錄音（record-sim）</summary>
-    public long? StartSimulatedRecording(string file, double speed, bool both, string folder, bool systemSilent = false)
+    public long? StartSimulatedRecording(string file, double speed, bool both, long? folder, bool systemSilent = false)
     {
         if (Recorder.IsRecording) return null;
         var meeting = Db.InsertMeeting(new Meeting
         {
             MeetingDate = DateText.String(Importer.Today), SourceFilename = L.T("模擬錄音"), Source = "recording",
-            Channels = both ? "both" : "mic", Folder = folder, Language = Settings.DefaultMeetingLanguage.Code(),
+            Channels = both ? "both" : "mic", FolderId = folder, Language = Settings.DefaultMeetingLanguage.Code(),
         }, null);
         Recorder.StartSimulated(meeting.Id!.Value, file, speed, both, meeting.MeetingLanguage, decoder, systemSilent);
         Changed?.Invoke(null);
@@ -414,7 +434,7 @@ public sealed partial class AppController
         return meeting.Id;
     }
 
-    public void ToggleRecording(string folder)
+    public void ToggleRecording(long? folder)
     {
         if (Recorder.IsRecording) Recorder.Stop();
         else StartRecording(folder);
@@ -1324,7 +1344,7 @@ public sealed partial class AppController
     {
         if (Db.Meeting(meetingId) is not { } meeting) throw new ExportException(L.T("這場會議已經被刪除，沒辦法匯出"));
         return new ExportBundle(meeting, Db.Segments(meetingId), Db.Speakers(meetingId).ToDictionary(s => s.Idx, s => s.Name),
-            Db.Bookmarks(meetingId), meeting.DecodedNotes) { Documents = Db.Documents(meetingId) };
+            Db.Bookmarks(meetingId), meeting.DecodedNotes) { Documents = Db.Documents(meetingId), FolderName = Db.FolderName(meeting.FolderId) };
     }
 
     /// <summary>寫出檔案；文字格式、封包在背景寫，長會議不卡住畫面（M§21.13）</summary>

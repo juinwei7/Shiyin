@@ -17,6 +17,9 @@ public static partial class ControlPipe
         if (args.Length == 0) return null;
         long? Id(int i) => args.Length > i && long.TryParse(args[i], out var v) ? v : null;
         var state = main?.State;
+        // 資料夾的參數照舊收名字（R118、M§92.4），進來就換成 id：Named 只找已經有的，Ensure 沒有就建（同以前移進不存在的資料夾時會建）
+        long? Named(string name) => host.Db.Folders().FirstOrDefault(f => f.Name == name)?.Id;
+        long Ensure(string name) => host.Db.CreateFolder(name);
         switch (args[0])
         {
             // 移除一個人（R85.7、M§60.2，同 Mac）：personremove <id>（等於選了「移除這個人…」，打開確認）；
@@ -58,7 +61,7 @@ public static partial class ControlPipe
                 RenameTarget? target = args[1] switch
                 {
                     "meeting" when Id(2) is long m => new RenameTarget.Meeting(m),
-                    "folder" => new RenameTarget.Folder(args[2]),
+                    "folder" when Named(args[2]) is long f => new RenameTarget.Folder(f),
                     "person" when Id(2) is long p => new RenameTarget.Person(p),
                     "bookmark" when Id(2) is long b => new RenameTarget.Bookmark(b),
                     "newfolder" => new RenameTarget.NewFolder(SidebarDrag.Decode(args[2])),
@@ -74,7 +77,7 @@ public static partial class ControlPipe
                 return Ok;
             // importinto <資料夾> <檔案>：等於從檔案總管把檔案拖到側欄的資料夾（R103.3，同 Mac）
             case "importinto" when args.Length > 2 && main is not null:
-                main.ImportInto([args[2]], args[1]);
+                main.ImportInto([args[2]], Ensure(args[1]));
                 return Ok;
             // 每一種東西都能直接改、刪（R100、M§74，同 Mac 的名稱）：renamemeetingui <id>（等於側欄右鍵「重新命名…」、Enter／F2）；
             // folderdeleteui <名稱>（打開刪除的確認）；sidebarkey return|delete（等於在側欄的會議列表按 Enter、Delete）
@@ -82,21 +85,30 @@ public static partial class ControlPipe
                 main.RenameMeetingUi(renameMeeting);
                 return Ok;
             case "folderdeleteui" when args.Length > 1 && main is not null:
-                _ = main.ConfirmDeleteFolder(args[1]);
+                if (Named(args[1]) is not long deleteFolder) return new JsonObject { ["error"] = "folder" };
+                _ = main.ConfirmDeleteFolder(deleteFolder);
                 return Ok;
             case "sidebarkey" when args.Length > 1 && main is not null:
                 return new JsonObject { ["handled"] = args[1] == "return" ? main.SidebarRename() : main.SidebarDelete() };
             // 側欄的收合（R101、design-windows §11.34，同 Mac）：sidebarsection <folders|meetings|people|group:…> on|off（on 是展開）、
-            // sidebarexpand <folder:名稱> on|off
+            // sidebarexpand <folder:名稱|folderid:id> on|off（folder:名稱 換成那個資料夾的鍵 folderid:id，R118）
             case "sidebarsection" when args.Length > 2:
                 SidebarCollapse.SetSection(host.Settings, args[1], args[2] == "on");
                 return Ok;
             case "sidebarexpand" when args.Length > 2:
-                SidebarCollapse.SetRow(host.Settings, args[1], args[2] == "on");
+            {
+                var key = args[1];
+                if (key.StartsWith("folder:", StringComparison.Ordinal))
+                {
+                    if (Named(key["folder:".Length..]) is not long expandFolder) return new JsonObject { ["error"] = "folder" };
+                    key = SidebarCollapse.FolderKey(expandFolder);
+                }
+                SidebarCollapse.SetRow(host.Settings, key, args[2] == "on");
                 return Ok;
-            // folder <會議 id> <資料夾|->：移到資料夾（- 是移出，同 Mac；準備示範資料用）
+            }
+            // folder <會議 id> <資料夾|->：移到資料夾（- 是移出，同 Mac；準備示範資料用；沒有這個資料夾就建一個）
             case "folder" when args.Length > 2 && Id(1) is long folderMeeting:
-                host.Controller.MoveToFolder(folderMeeting, args[2] == "-" ? "" : args[2]);
+                host.Controller.MoveToFolder(folderMeeting, args[2] == "-" ? null : Ensure(args[2]));
                 return Ok;
             // noteitem <editui|edit|delete|cancel> <summary|decisions|actionItems|openQuestions|topic|custom|person> <位置> [第二個位置] [文字]：
             // 選取中的會議的一條紀錄（editui 打開就地改的輸入框、edit 直接存、delete 刪掉）
@@ -157,11 +169,11 @@ public static partial class ControlPipe
                 });
                 return Ok;
             }
-            // folderrule <資料夾> <JSON|JSON 檔的路徑|-> [apply]：等於在條件的編輯按「儲存」（- 是移除）。
+            // folderrule <資料夾> <JSON|JSON 檔的路徑|-> [apply]：等於在條件的編輯按「儲存」（- 是移除）；沒有這個資料夾就建一個。
             // JSON 是 {"keywords":[…],"people":[id…],"templateId":…}；從 SSH 傳中文不方便時給檔案路徑
             case "folderrule" when args.Length > 2:
             {
-                var rule = new FolderRule { Folder = args[1] };
+                var rule = new FolderRule { FolderId = Ensure(args[1]) };
                 if (args[2] != "-")
                 {
                     var json = File.Exists(args[2]) ? File.ReadAllText(args[2]) : args[2];
@@ -178,26 +190,27 @@ public static partial class ControlPipe
             }
             // editfolderrule <資料夾>：打開條件的編輯（等於資料夾右鍵「自動加入的條件…」）
             case "editfolderrule" when args.Length > 1 && main is not null:
-                _ = Dialogs.FolderRule(main, args[1]);
+                if (Named(args[1]) is not long ruleFolder) return new JsonObject { ["error"] = "folder" };
+                _ = Dialogs.FolderRule(main, ruleFolder);
                 return Ok;
-            // autofile <會議 id>：照資料夾的條件放（同轉錄完、整理完），回傳放進的資料夾
+            // autofile <會議 id>：照資料夾的條件放（同轉錄完、整理完），回傳放進的資料夾（名字，另外多 folderId）
             case "autofile" when Id(1) is long fileId:
             {
                 var folder = host.Db.AutoFile(fileId);
                 if (folder is not null) host.Controller.Organized(fileId, folder);
-                return new JsonObject { ["folder"] = folder };
+                return new JsonObject { ["folder"] = folder is null ? null : host.Db.FolderName(folder), ["folderId"] = folder };
             }
             // foldersuggest <會議 id>：紀錄分頁頂端的建議（沒有時 folder 是空字串）
             case "foldersuggest" when Id(1) is long suggestId && state is not null:
             {
                 var meeting = host.Db.Meeting(suggestId);
-                var s = meeting is null ? null : Organizing.Suggestion(meeting, state.Meetings, state.MeetingPeople, host.Recorder.MeetingId);
+                var s = meeting is null ? null : Organizing.Suggestion(meeting, state.Meetings, state.MeetingPeople, host.Recorder.MeetingId, state.FolderName);
                 var reason = new JsonObject();
                 if (s?.People is { } people) reason["people"] = new JsonArray([.. people.Select(p => (JsonNode)p)]);
                 if (s?.Title is { } word) reason["title"] = word;
                 return new JsonObject
                 {
-                    ["folder"] = s?.Folder ?? "", ["count"] = s?.Count ?? 0, ["reason"] = reason,
+                    ["folder"] = s?.Folder ?? "", ["folderId"] = s?.FolderId, ["count"] = s?.Count ?? 0, ["reason"] = reason,
                     ["text"] = s is null ? "" : Organizing.SuggestionText(s, state.People),
                 };
             }
@@ -205,8 +218,8 @@ public static partial class ControlPipe
             case "foldersuggestion" when args.Length > 2 && Id(2) is long accepted && state is not null:
             {
                 if (args[1] == "accept" && host.Db.Meeting(accepted) is { } meeting
-                    && Organizing.Suggestion(meeting, state.Meetings, state.MeetingPeople, host.Recorder.MeetingId) is { } s)
-                    host.Controller.AcceptFolderSuggestion(accepted, s.Folder);
+                    && Organizing.Suggestion(meeting, state.Meetings, state.MeetingPeople, host.Recorder.MeetingId, state.FolderName) is { } s)
+                    host.Controller.AcceptFolderSuggestion(accepted, s.FolderId);
                 else if (args[1] == "dismiss") host.Controller.DismissFolderSuggestion(accepted);
                 state.Reload();
                 return Ok;
@@ -234,7 +247,7 @@ public static partial class ControlPipe
 
     static JsonNode FolderRulesState(MainWindow? main) => new JsonArray([.. (main?.State.FolderRules ?? []).Select(r => (JsonNode)new JsonObject
     {
-        ["folder"] = r.Folder, ["keywords"] = new JsonArray([.. r.Keywords.Select(k => (JsonNode)k)]), ["people"] = new JsonArray([.. r.People.Select(p => (JsonNode)p)]),
+        ["folder"] = main!.State.FolderName(r.FolderId), ["folderId"] = r.FolderId, ["keywords"] = new JsonArray([.. r.Keywords.Select(k => (JsonNode)k)]), ["people"] = new JsonArray([.. r.People.Select(p => (JsonNode)p)]),
         ["templateId"] = r.TemplateId ?? "",
     })]);
 }

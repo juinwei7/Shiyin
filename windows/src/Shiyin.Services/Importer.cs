@@ -14,8 +14,8 @@ public sealed record ImportOptions
     /// <summary>顯示用的來源名稱；沒給就用檔名</summary>
     public string? SourceName { get; init; }
     public string? TemplateId { get; init; }
-    /// <summary>放進哪個資料夾（R9.2）；空字串是不放</summary>
-    public string Folder { get; init; } = "";
+    /// <summary>放進哪個資料夾（R9.2、R118：資料夾 id）；null 是不放</summary>
+    public long? FolderId { get; init; }
     /// <summary>會議語言（M§16.3）；null 用設定的預設</summary>
     public MeetingLanguage? Language { get; init; }
     /// <summary>大約幾個人（M§26.2）：null 是自動判斷</summary>
@@ -53,7 +53,7 @@ public static class Importer
             MeetingDate = options.Date ?? ImportRules.InferDate(filename, ModificationDate(path), Today),
             Participants = options.Participants.Trim(),
             SourceFilename = options.SourceName ?? filename,
-            TemplateId = options.TemplateId ?? settings.DefaultTemplate, Source = "import", Folder = options.Folder,
+            TemplateId = options.TemplateId ?? settings.DefaultTemplate, Source = "import", FolderId = options.FolderId,
             Language = (options.Language ?? settings.DefaultMeetingLanguage).Code(),
             MinSpeakers = options.MinSpeakers,
         };
@@ -88,7 +88,7 @@ public static class Importer
     }
 
     /// <summary>匯入逐字稿（srt、vtt、txt，R3.4）：建一場沒有錄音的會議</summary>
-    public static Meeting ImportTranscript(string path, string folder, AppDatabase db, AppSettings settings)
+    public static Meeting ImportTranscript(string path, long? folder, AppDatabase db, AppSettings settings)
     {
         var filename = Path.GetFileName(path);
         string text;
@@ -99,7 +99,7 @@ public static class Importer
         var meeting = db.InsertMeeting(new Meeting
         {
             MeetingDate = ImportRules.InferDate(filename, ModificationDate(path), Today), SourceFilename = filename,
-            TemplateId = settings.DefaultTemplate, Source = "transcript", Folder = folder, Language = settings.DefaultMeetingLanguage.Code(),
+            TemplateId = settings.DefaultTemplate, Source = "transcript", FolderId = folder, Language = settings.DefaultMeetingLanguage.Code(),
         }, null);
         var id = meeting.Id!.Value;
         db.SaveTranscript(id, parsed.Select((s, i) => new Segment

@@ -11,6 +11,9 @@ public sealed record ExportBundle(
     /// <summary>參考文件（M§39.5）：只有 .shiyin 封包用到</summary>
     public IReadOnlyList<MeetingDocument> Documents { get; init; } = [];
 
+    /// <summary>資料夾的名字（R118：會議只記 id，封包照舊寫名字，M§92.4）；不在資料夾是空字串。只有 .shiyin 封包用到</summary>
+    public string FolderName { get; init; } = "";
+
     public string? SpeakerName(int? idx) => idx is int i ? (Speakers.TryGetValue(i, out var n) ? n : Text.Speaker(i)) : null;
 
     /// <summary>匯出內容的標題、欄位名稱：跟著會議語言，不是介面語言（M§16.6）</summary>

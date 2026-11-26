@@ -379,7 +379,7 @@ public sealed class NotesTabs
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
         if (host.Controller.DocumentsChanged.Contains(detail.Meeting.Id!.Value)) column.Children.Add(DocumentsBanner(detail.Meeting.Id!.Value));
         // 這場很像某個資料夾裡的會議（R98.3、M§72）：待確認條的上面
-        if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId) is { } suggestion)
+        if (Organizing.Suggestion(detail.Meeting, window.State.Meetings, window.State.MeetingPeople, host.Recorder.MeetingId, window.State.FolderName) is { } suggestion)
             column.Children.Add(FolderSuggestionBanner(detail.Meeting.Id!.Value, suggestion));
         if (window.State.ViewingNotes is { } viewing) column.Children.Add(VersionBanner(detail.Meeting.Id!.Value, viewing));
         else if (detail.ReviewCount > 0) column.Children.Add(ReviewBanner(detail, review));
@@ -450,7 +450,7 @@ public sealed class NotesTabs
     FrameworkElement FolderSuggestionBanner(long id, FolderSuggestion suggestion) =>
         SuggestionBanner("\uE8F4", Organizing.SuggestionText(suggestion, window.State.People),
             Ui.Button(L.T("不用"), () => host.Controller.DismissFolderSuggestion(id)),
-            Ui.Button(L.T("放進去"), () => host.Controller.AcceptFolderSuggestion(id, suggestion.Folder), accent: true));
+            Ui.Button(L.T("放進去"), () => host.Controller.AcceptFolderSuggestion(id, suggestion.FolderId), accent: true));
 
     /// <summary>紀錄分頁頂端的建議（資料夾）：青瓷綠的圖示、最多兩行的說明、右邊兩顆按鈕；底色是淡淡的青瓷綠（淺色 8%、深色 14%）</summary>
     static Border SuggestionBanner(string glyph, string message, Button dismiss, Button accept)

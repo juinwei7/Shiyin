@@ -46,7 +46,7 @@ public static partial class Dialogs
         sheet.Form.Children.Add(Sheet.Buttons(null, Sheet.Pill(L.T("取消"), click: sheet.Cancel), primary));
 
         // 資料夾、人物（合併的提醒）：打開時的名單
-        var folders = state.Folders.Select(f => f.Name).ToList();
+        var folders = state.Folders.Select(f => (f.Id, f.Name)).ToList();
         var people = host.Db.PeopleOverview().Select(p => (p.Id, p.Name)).ToList();
         var time = target is RenameTarget.Bookmark b ? host.Db.Bookmark(b.Id)?.Time ?? 0 : 0;
         bool CanSave() => Renaming.CanSave(target, original, box.Text, Renaming.Conflict(target, box.Text, folders, people));
@@ -73,9 +73,10 @@ public static partial class Dialogs
         finally { RenamingTarget = null; }
         if (!saved) return;
         var name = box.Text.Trim();
-        // 正在看的資料夾改名：先換篩選，重讀時才不會因為舊名稱不見而回到所有會議（同 Mac 的 renameFolder）
-        if (target is RenameTarget.Folder folder && state.FolderFilter == folder.Name) state.SetFolder(name);
-        host.Controller.CommitRename(target, name);
+        var wasFiltering = target is RenameTarget.Folder f && state.FolderFilter == f.Id;
+        var kept = host.Controller.CommitRename(target, name);
+        // 資料夾改成已經有的名字（合併）：正在看原本那個時換成留下的那個（重讀在之後，篩選才不會回到所有會議；同 Mac 的 renameFolder）
+        if (wasFiltering && kept is long folderId && folderId != state.FolderFilter) state.SetFolder(folderId);
         // 人物模式：選改完的那個人（改成已經有的名字時合併過去，是那個人）
         if (target is RenameTarget.Person && state.Sidebar == SidebarMode.People) state.SelectPersonNamed(name);
     }
