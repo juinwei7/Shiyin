@@ -326,6 +326,7 @@ ${shot(lang, 'organize', c.shots.organize)}
 <p>${c.privacy.tools}</p>
 <p>${c.privacy.usage}</p>
 <p>${c.privacy.enterprise}</p>
+<p>${c.privacy.enterpriseContact}</p>
 </section>
 
 <section class="col part" id="download">
@@ -434,6 +435,7 @@ ${shot(lang, 'organize', w.shots.organize, { win: true })}
 <p>${c.privacy.tools}</p>
 <p>${c.privacy.usage}</p>
 <p>${c.privacy.enterprise}</p>
+<p>${c.privacy.enterpriseContact}</p>
 </section>
 
 <section class="col part" id="download">

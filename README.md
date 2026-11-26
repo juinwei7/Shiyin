@@ -158,6 +158,8 @@ pwsh scripts/windows/pack.ps1 -Version 4.0.0 -Arch x64 -Whisper build\whisper-x6
 
 Mac 和 Windows 都可以用。說話者的聲紋只存在自己的電腦；公司的後台只看得到用量（幾分鐘、幾次），看不到會議內容。
 
+想在公司導入、架自己的企業伺服器，寫信到 [shiyin@weibuilds.com](mailto:shiyin@weibuilds.com)。
+
 ## 發布新版
 
 ### 用 GitHub Actions（推薦）

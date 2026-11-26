@@ -3,6 +3,8 @@
 
 export const GITHUB = 'https://github.com/juinwei7/Shiyin';
 export const KOFI = 'https://ko-fi.com/weiwei_chang';
+// 公司導入企業伺服器的洽詢（website.md §17）：Cloudflare Email Routing 轉到作者的信箱
+export const CONTACT = 'shiyin@weibuilds.com';
 const AMI = 'https://groups.inf.ed.ac.uk/ami/corpus/';
 
 export const content = {
@@ -100,6 +102,7 @@ export const content = {
       usage: '另外，每天會送一份匿名的使用統計給開發者（例如版本、用了幾分鐘；不含任何會議內容），在設定 → 一般可以關掉。',
       // 企業伺服器（R52.1、design §36）：Mac 首頁和 Windows 頁的隱私區塊都顯示
       enterprise: '公司架了拾音的企業伺服器、你也登入時：錄音送到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；整理工具選「公司」時，逐字稿送到公司的伺服器，由公司選的模型整理。聲紋只存在你的電腦，公司的後台只看得到用量，看不到會議內容。沒登入的話，一切跟上面一樣。',
+      enterpriseContact: `想在公司導入、架自己的企業伺服器，寫信到 <a href="mailto:${CONTACT}">${CONTACT}</a>。`,
     },
     download: {
       h2: '下載',
@@ -367,6 +370,7 @@ export const content = {
       tools: 'The summarizer can be Claude Code or Codex, using the Claude or ChatGPT subscription you already have, or the Anthropic or OpenAI API. Or choose “Don’t summarize” and keep just the transcript.',
       usage: 'Shiyin also sends its developer a daily anonymous usage summary (such as the version and minutes used, never any meeting content). You can turn it off in Settings → General.',
       enterprise: 'If your company runs a Shiyin enterprise server and you sign in to it, recordings are sent to your company’s own server for transcription, without passing through any other cloud service, and deleted once transcribed. With the “Company” summarizer, the transcript goes to your company’s server and is summarized by the model your company chose. Voiceprints stay on your computer, and the company’s admin console shows usage only, never meeting content. If you don’t sign in, everything works as described above.',
+      enterpriseContact: `To set up a Shiyin enterprise server for your company, email <a href="mailto:${CONTACT}">${CONTACT}</a>.`,
     },
     download: {
       h2: 'Download',
@@ -623,6 +627,7 @@ export const content = {
       tools: 'まとめツールに Claude Code か Codex を選べば、お使いの Claude や ChatGPT のサブスクリプションをそのまま使えます。Anthropic や OpenAI の API も使えます。「Don’t summarize」を選べば文字起こしだけを残します。',
       usage: 'また、匿名の利用統計（バージョンや利用時間など。会議の内容は含みません）を 1 日 1 回開発者に送ります。Settings → General でオフにできます。',
       enterprise: '会社が拾音のエンタープライズサーバーを用意していてサインインした場合は、録音は会社自身のサーバーに送られて文字起こしされ（ほかのクラウドサービスは経由しません）、終わると削除されます。まとめツールに「Company」を選ぶと、文字起こしは会社のサーバーに送られ、会社が選んだモデルでまとめられます。声紋は PC に残り、会社の管理画面で見られるのは利用量だけで、会議の内容は見られません。サインインしなければ、上に書いたとおりです。',
+      enterpriseContact: `会社でエンタープライズサーバーを導入したい場合は、<a href="mailto:${CONTACT}">${CONTACT}</a> までメールでご連絡ください。`,
     },
     download: {
       h2: 'ダウンロード',
