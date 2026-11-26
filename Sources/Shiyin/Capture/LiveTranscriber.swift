@@ -103,12 +103,13 @@ final class LiveTranscriber {
         try await analyzer.start(inputSequence: stream)
         self.analyzer = analyzer
         let feeder = feeder
-        let traditional = language.profile.transcription.traditional
+        let profile = language.profile
+        let traditional = profile.transcription.traditional
         resultsTask = Task { [weak self] in
             do {
                 for try await result in transcriber.results {
-                    // 暫定和定稿結果都先依詞改正繁體字（R14.8、design §6.2.2）
-                    let content = traditional ? SystemTranscriber.fixVariants(result.text) : result.text
+                    // 暫定和定稿結果都先依詞改正繁體字、套語言檔的 scriptFixes（R14.8、design §6.2.2、D201）
+                    let content = traditional ? SystemTranscriber.fixVariants(result.text, profile: profile) : result.text
                     let text = String(content.characters).trimmingCharacters(in: .whitespaces)
                     if result.isFinal {
                         let lines = split ? feeder.splitLong(SystemTranscriber.sentences(of: content)) : []

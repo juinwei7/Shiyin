@@ -5,8 +5,8 @@ import Foundation
 /// 一個字換一個字，每個字的時間不變
 enum ChineseVariants {
     static let targets = Set(ChineseVariantsData.targets)
-    /// 台灣的寫法跟 OpenCC 不同的詞：不改
-    static let keep = ["麵線", "迴轉", "自製"]   // l10n-skip：不是介面文字
+    /// 台灣的寫法跟 OpenCC 不同的詞：不改（「客製」單獨用時沒有詞組，會被換成最常見的「制」）
+    static let keep = ["麵線", "迴轉", "自製", "客製"]   // l10n-skip：不是介面文字
 
     private struct Tables {
         var toSimplified: [Character: Character] = [:]
@@ -79,10 +79,11 @@ enum ChineseVariants {
         return String(output)
     }
 
-    /// 改正後照原本每一段（每個字的時間）重組：一個字換一個字，時間不變
-    static func fix(_ text: AttributedString) -> AttributedString {
+    /// 改正後照原本每一段（每個字的時間）重組：一個字換一個字，時間不變。
+    /// `then`：改正之後再套的規則（語言檔的 scriptFixes，粵語的「系」→「係」；design D201），也要一個字換一個字
+    static func fix(_ text: AttributedString, then: (String) -> String = { $0 }) -> AttributedString {
         let original = String(text.characters)
-        let fixed = fix(original)
+        let fixed = then(fix(original))
         guard fixed != original, fixed.unicodeScalars.count == original.unicodeScalars.count else { return text }
         var result = AttributedString()
         var rest = fixed.unicodeScalars[...]

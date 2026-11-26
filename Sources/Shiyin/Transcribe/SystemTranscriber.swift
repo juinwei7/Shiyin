@@ -17,9 +17,10 @@ enum SystemTranscriber {
         #endif
     }
 
-    /// 繁體字依詞改正（R14.8、design §6.2.2）：一個字換一個字，每個字的時間不變
-    static func fixVariants(_ text: AttributedString) -> AttributedString {
-        ChineseVariants.fix(text)
+    /// 繁體字依詞改正（R14.8、design §6.2.2），再套語言檔的 scriptFixes（粵語的「系」→「係」，D201）：
+    /// 一個字換一個字，每個字的時間不變。中文沒有 scriptFixes，只做依詞改正
+    static func fixVariants(_ text: AttributedString, profile: LanguageProfile) -> AttributedString {
+        ChineseVariants.fix(text, then: profile.fixScript)
     }
 
     static func transcribe(samples: [Float], language: MeetingLanguage,
@@ -36,12 +37,13 @@ enum SystemTranscriber {
         let transcriber = SpeechTranscriber(locale: language.speechLocale, transcriptionOptions: [],
                                             reportingOptions: [], attributeOptions: [.audioTimeRange])
         let analyzer = SpeechAnalyzer(modules: [transcriber])
-        let traditional = language.profile.transcription.traditional
+        let profile = language.profile
+        let traditional = profile.transcription.traditional
         let collector = Task { () -> [TranscribedSegment] in
             var segments: [TranscribedSegment] = []
             for try await result in transcriber.results where result.isFinal {
-                // 繁體字依詞改正（R14.8），再依句子切段、留每個字的時間（R14.7）
-                segments += sentences(of: traditional ? fixVariants(result.text) : result.text)
+                // 繁體字依詞改正（R14.8）、套語言檔的 scriptFixes（D201），再依句子切段、留每個字的時間（R14.7）
+                segments += sentences(of: traditional ? fixVariants(result.text, profile: profile) : result.text)
                 if duration > 0 { onProgress(min(1, result.range.end.seconds / duration)) }
             }
             return segments
