@@ -92,6 +92,9 @@ public sealed class Recorder
     public PlayingApp? SystemCulprit { get; private set; }
     /// <summary>電腦聲音全是 0 多久才去看有沒有 app 在出聲（R75.3 是 10 秒；測試縮短）</summary>
     public double SystemMissingSeconds { get; set; } = 10;
+    /// <summary>麥克風收到過聲音後連續幾秒完全是 0 就重新連接、還是 0 時隔幾秒再試（M§20.2、R18.8；測試改短）</summary>
+    public double ZeroRestartSeconds { get; set; } = 10;
+    public double ZeroRetrySeconds { get; set; } = 30;
     /// <summary>提示的文字（錄音畫面、系統匣、通知共用，R42）</summary>
     public string HintText(LevelHint hint) => hint.Text(SystemCulprit);
     /// <summary>正在收音的麥克風（R58.2）：實際開的那支，不是「系統預設」這幾個字；沒有麥克風時是 null</summary>
@@ -164,6 +167,8 @@ public sealed class Recorder
     /// <summary>重新連接的節奏（M§50.1）：每個聲道 60 秒內重新連接的時間、上次重新連接完的時間</summary>
     readonly Dictionary<int, List<DateTime>> restarts = [];
     readonly Dictionary<int, DateTime> restartedAt = [];
+    /// <summary>麥克風還在送資料、但一直完全是 0：上次因為這樣重新連接的時間</summary>
+    DateTime? zeroRestartAt;
     DateTime lastDiskCheck = DateTime.MinValue;
     bool warnedLowDisk;
     bool simulationEnded;
@@ -922,7 +927,29 @@ public sealed class Recorder
                 UpdateDeviceWarning();
             }
         }
+        micChanged |= RestartIfMicSendsZeros(w, now);
         return before != DeviceWarning || micChanged;
+    }
+
+    /// <summary>
+    /// 麥克風還在送資料、但送的完全是 0（這場稍早有過聲音）：重新連接一次（M§20.2、R18.8）。真的麥克風一定有底噪，
+    /// 完全是 0 是裝置那頭斷了但音源沒停、看門狗看不到。收音提醒（R24.3）照舊；還是 0 就至少隔 ZeroRetrySeconds 再試。
+    /// 一開始就是 0 的（硬體靜音）、自己暫停麥克風（寫檔那邊不累計無聲的秒數）不重試
+    /// </summary>
+    bool RestartIfMicSendsZeros(RecordingWriter w, DateTime now)
+    {
+        if (!HasMic || IsPaused || MicPaused || !sources.ContainsKey(0) || !w.HasHeard(0) || w.Silence(0) <= ZeroRestartSeconds)
+        {
+            zeroRestartAt = null;
+            return false;
+        }
+        if (pendingRestarts.ContainsKey(0) || reconnecting.ContainsKey(0)) return false;
+        var interval = TimeSpan.FromSeconds(Math.Max(ZeroRetrySeconds, RestartDelay(RecentRestarts(0, now))));
+        if (zeroRestartAt is DateTime last && now - last < interval) return false;
+        zeroRestartAt = now;
+        Log.Info($"microphone sent only zeros for {(int)w.Silence(0)} s, reconnecting");
+        RestartSource(0);
+        return UpdateMicrophone();
     }
 
     /// <summary>提示列（M§50.1）：重新連接失敗的原因 ＞ 一直在重新連接（60 秒內 3 次以上）＞ 正在重新連接…</summary>
@@ -965,6 +992,7 @@ public sealed class Recorder
         pendingRestarts.Clear();
         restarts.Clear();
         restartedAt.Clear();
+        zeroRestartAt = null;
         reconnecting.Clear();
         reconnectErrors.Clear();
         DeviceWarning = null;

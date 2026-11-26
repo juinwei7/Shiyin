@@ -21,6 +21,7 @@ public sealed class RecordingWriter : IDisposable
     readonly List<float>[] pending;
     readonly float[] levels;
     readonly double[] silentSeconds;
+    readonly bool[] heard;   // 各聲道這場錄音收到過不是 0 的聲音（麥克風一直是 0 時重新連接用，M§20.2）
     bool paused;
     bool micMuted;   // 單獨暫停麥克風（M§90）：左聲道寫 0
     readonly long[] acceptedFrames;   // 各聲道累計收到的音框（不含暫停）
@@ -44,6 +45,7 @@ public sealed class RecordingWriter : IDisposable
         pending = Enumerable.Range(0, channels).Select(_ => new List<float>()).ToArray();
         levels = new float[channels];
         silentSeconds = new double[channels];
+        heard = new bool[channels];
         acceptedFrames = new long[channels];
         frameEnergy = new float[channels];
         frameSamples = new int[channels];
@@ -81,6 +83,7 @@ public sealed class RecordingWriter : IDisposable
             var muted = micMuted && channel == 0;
             levels[channel] = muted ? 0 : rms;
             silentSeconds[channel] = muted || rms != 0 ? 0 : silentSeconds[channel] + samples.Length / SampleRate;
+            if (rms > 0) heard[channel] = true;
             if (paused) return;
             pending[channel].AddRange(muted ? new float[samples.Length] : samples);
             acceptedFrames[channel] += samples.Length;
@@ -134,6 +137,9 @@ public sealed class RecordingWriter : IDisposable
     public bool WriteFailed { get { lock (gate) return failed; } }
 
     public double Silence(int channel) { lock (gate) return channel < Channels ? silentSeconds[channel] : 0; }
+
+    /// <summary>這場錄音這個聲道收到過不是 0 的聲音</summary>
+    public bool HasHeard(int channel) { lock (gate) return channel < Channels && heard[channel]; }
 
     /// <summary>最近 30 秒（不含暫停）每 100 毫秒的音量，dBFS（M§26.1）</summary>
     public float[] RecentLevels(int channel) { lock (gate) return channel < Channels ? [.. recent[channel]] : []; }

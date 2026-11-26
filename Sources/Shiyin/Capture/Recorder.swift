@@ -908,7 +908,8 @@ final class Recorder {
     /// 完全是 0 是裝置那頭斷了（藍牙耳機換協定、別的 app 搶走、裝置睡著）但 engine 沒停、看門狗看不到。
     /// 收音提醒（R24.3）照舊出現；還是 0 就至少隔 30 秒再試，一開始就是 0 的（硬體靜音）不重試
     private func restartIfMicSendsZeros(_ writer: RecordingWriter, now: Date) {
-        guard hasMic, !isPaused, sources[0] != nil, writer.hasHeard(0),
+        // 自己暫停麥克風時寫的 0 不算（design §90；寫檔那邊也不累計無聲的秒數）
+        guard hasMic, !isPaused, !micPaused, sources[0] != nil, writer.hasHeard(0),
               writer.silence(0) > Self.zeroRestartSeconds else {
             zeroRestartAt = nil
             return
@@ -917,6 +918,8 @@ final class Recorder {
         if let last = zeroRestartAt,
            now.timeIntervalSince(last) < max(30, Self.restartDelay(recentRestarts(0, now: now))) { return }
         zeroRestartAt = now
+        // Mac 上的通話佔著麥克風（design §45.5）：重新連接也一樣是 0，提示會說是通話；隔 30 秒再看
+        if microphoneUser?()?.isCall == true { return }
         log.info("microphone sent only zeros for \(Int(writer.silence(0)), privacy: .public) s, reconnecting")
         restartSource(0)
     }

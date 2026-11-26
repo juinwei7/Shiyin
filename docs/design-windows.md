@@ -165,6 +165,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **沒有聲音在播時，電腦聲音完全不送資料**（連靜音都不送）。所以：
   - 寫檔時電腦聲音那一聲道依時間（QPC）補靜音，不是等它送資料。
   - 3 秒 watchdog（M§20.2）只看麥克風；電腦聲音沒有資料不算中斷。
+  - 麥克風有送資料、但這場收到過聲音之後連續 10 秒完全是 0：重新連接，還是 0 至少隔 30 秒再試（M§20.2、R18.8，`Recorder.RestartIfMicSendsZeros`、`RecordingWriter.HasHeard`）；一開始就是 0、暫停麥克風時不重試。Mac 的「通話佔著麥克風」那一條 Windows 沒有。秒數是 `ZeroRestartSeconds`、`ZeroRetrySeconds`（測試改短）。
   - 「電腦聲音一直沒聲音」的提醒（M§26）把沒有資料當成靜音計時。
 - **轉成 16 kHz 單聲道**：先請系統直接給 16 kHz 單聲道浮點（`AUTOCONVERTPCM`＋`SRC_DEFAULT_QUALITY`）；麥克風不接受時用裝置的格式，每個來源一個重新取樣器（NAudio 的 `WdlResampler`，純 C#，在 `Services/Capture/StreamResampler.cs`），狀態跨 buffer 保留（對應 `StreamConverter`）。NAudio 3.3 版本釘死，升級時重跑轉錄的比對。
 - **電腦聲音補靜音**：音源自己依時間（Stopwatch）補：100 毫秒沒有資料、而且送出的量落後時間超過 0.1 秒時，補到落後 50 毫秒。寫檔的對齊規則因此跟 Mac 完全相同（`RecordingWriter` 照搬）。

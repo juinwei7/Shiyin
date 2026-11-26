@@ -343,10 +343,14 @@ public sealed class RecorderTests : IDisposable
         public Action<float[]>? OnSamples { get; set; }
         public Action? OnInterruption { get; set; }
         public volatile bool Loud;
+        /// <summary>開始了幾次（第一次開始＋重新連接）</summary>
+        public int Starts => Volatile.Read(ref starts);
+        int starts;
         CancellationTokenSource? cancel;
 
         public void Start()
         {
+            Interlocked.Increment(ref starts);
             var cts = cancel = new CancellationTokenSource();
             new Thread(() =>
             {
@@ -393,6 +397,43 @@ public sealed class RecorderTests : IDisposable
         system.Loud = true;
         await Until(() => recorder.Hint is null);
         recorder.Stop();
+    }
+
+    /// <summary>
+    /// R18.8：麥克風收到過聲音後一直送完全是 0：重新連接；還是 0 隔一段時間再試；暫停麥克風時、一開始就是 0 的不重新連接
+    /// （秒數改短：1 秒是 0 就重新連接、隔 2 秒再試）
+    /// </summary>
+    [Fact]
+    public async Task MicSendingZerosReconnects()
+    {
+        var mic = new ToneSource { Loud = true };
+        var recorder = MakeBoth(Quiet(), mic, new ToneSource { Loud = true }, () => []);
+        (recorder.ZeroRestartSeconds, recorder.ZeroRetrySeconds) = (1, 2);
+        recorder.Start(14, MeetingLanguage.Zh, "both");
+        await Task.Delay(500);
+        mic.Loud = false;
+        await Until(() => mic.Starts >= 2, 5);
+        // 還是 0：2 秒內不再重新連接，之後再試一次
+        var first = mic.Starts;
+        await Task.Delay(800);
+        Assert.Equal(first, mic.Starts);
+        await Until(() => mic.Starts > first, 5);
+        // 自己暫停麥克風：寫進去的 0 不算，不重新連接
+        recorder.SetMicPaused(true);
+        await Task.Delay(300);
+        var paused = mic.Starts;
+        await Task.Delay(3500);
+        Assert.Equal(paused, mic.Starts);
+        recorder.Stop();
+
+        // 一開始就是 0（硬體靜音）：不重新連接
+        var muted = new ToneSource();
+        var quiet = MakeBoth(Quiet(), muted, new ToneSource { Loud = true }, () => []);
+        (quiet.ZeroRestartSeconds, quiet.ZeroRetrySeconds) = (1, 2);
+        quiet.Start(15, MeetingLanguage.Zh, "both");
+        await Task.Delay(3500);
+        Assert.Equal(1, muted.Starts);
+        quiet.Stop();
     }
 
     /// <summary>R75.3：app 就在預設裝置上還是錄不到 → SystemMissing；沒有 app 在出聲 → 不提示</summary>
