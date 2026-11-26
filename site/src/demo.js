@@ -159,6 +159,7 @@
   function setPlayer(t) {
     pl.t = Math.max(0, Math.min(LENGTH, t));
     $('track').style.setProperty('--p', `${(pl.t / LENGTH) * 100}%`);
+    $('mictrack').style.setProperty('--p', `${(pl.t / LENGTH) * 100}%`);
     $('pltime').textContent = pad(pl.t);
     const rows = [...$('tx').children];
     const current = rows.filter((row) => Number(row.dataset.at) <= pl.t).pop();
@@ -669,7 +670,7 @@
     const ts = e.target.closest('a.ts');
     if (ts) { setPlayer(secs(ts.textContent)); freePlay(true); return; }
     if (e.target.closest('.pl-btn')) { freePlay(!pl.playing); return; }
-    const track = e.target.closest('.track');
+    const track = e.target.closest('.track, .mictrack');
     if (track) {
       const rect = track.getBoundingClientRect();
       setPlayer(((e.clientX - rect.left) / rect.width) * LENGTH);

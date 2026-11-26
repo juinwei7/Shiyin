@@ -311,8 +311,20 @@
 .pv-foot .btn { flex: none; margin-left: auto; }
 
 /* 播放列 */
-.player { flex: none; display: none; align-items: center; height: 50px; padding: 0 20px 0 30px; border-top: 1px solid var(--w-line); font-variant-numeric: tabular-nums; }
-.win.drafted .player, .win.named .player { display: flex; }
+.player { flex: none; display: none; grid-template-columns: 22px 64px 1fr 64px auto auto; align-items: center; padding: 8px 20px 10px 30px; border-top: 1px solid var(--w-line); font-variant-numeric: tabular-nums; }
+.win.drafted .player, .win.named .player { display: grid; }
+/* 播放列三列（同 app）：麥克風時間軸、收合鈕和段數（app 的議題帶那一列）、播放列本身；時間軸跟下面的錄音時間軸同一欄 */
+.player > .pl-btn, .player > .pl-time, .player > .track, .player > .pl-rate { grid-row: 3; }
+.mictrack { grid-row: 1; grid-column: 3; position: relative; height: 30px; margin: 0 6px 4px; }
+.mic-regions i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: color-mix(in srgb, var(--cel) 18%, transparent); }
+.mic-wave { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 1px; }
+.mic-wave i { flex: 1; border-radius: 1px 1px 0 0; background: var(--w-text); opacity: .3; }
+.mic-thr { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--sig); opacity: .8; }
+.mictrack .phead { position: absolute; top: 0; bottom: 0; left: var(--p, 0%); width: 2px; margin-left: -1px; border-radius: 1px; background: var(--cel); }
+.mic-pill { grid-row: 2; grid-column: 1 / span 2; justify-self: start; display: flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; background: color-mix(in srgb, var(--w-text) 6%, transparent); }
+.mic-pill svg { width: 9px; height: 9px; transform: rotate(180deg); }
+.mic-count { grid-row: 2; grid-column: 4 / span 3; padding-left: 12px; font-size: 11.5px; color: var(--w-2); white-space: nowrap; }
+.pl-ch { margin-left: 12px; }
 .pl-btn { display: grid; place-items: center; width: 22px; height: 22px; }
 .pl-btn svg { width: 17px; height: 17px; }
 .pl-btn .i-pause, .pl-btn.playing .i-play { display: none; }
@@ -328,7 +340,7 @@
 .track .phead { position: absolute; top: 0; bottom: 0; left: var(--p, 0%); width: 2px; margin-left: -1px; border-radius: 1px; background: var(--cel); }
 .pl-rate { display: flex; align-items: center; gap: 3px; color: var(--cel); font-size: 13px; margin-left: 4px; }
 .pl-rate svg { width: 10px; height: 10px; }
-.win.free .pl-btn, .win.free .track { cursor: pointer; }
+.win.free .pl-btn, .win.free .track, .win.free .mictrack { cursor: pointer; }
 
 /* 提示訊息、游標 */
 .toast { position: absolute; left: 50%; bottom: 72px; padding: 7px 14px; border-radius: 999px; font-size: 12.5px; white-space: nowrap; background: color-mix(in srgb, var(--w-bg) 78%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 0 0 .5px var(--w-line), 0 6px 20px -6px rgba(0,0,0,.3); opacity: 0; transform: translate(-50%, 6px); transition: opacity .25s, transform .25s; pointer-events: none; }

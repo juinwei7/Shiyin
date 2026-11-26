@@ -43,6 +43,17 @@ const BLOCKS = [[3, ''], [0.5, 'gap'], [4.5, ''], [1, 'lo'], [3.5, ''], [0.5, 'g
   [3, ''], [2.5, 'lo'], [4, ''], [0.5, 'gap'], [5.5, ''], [1.5, 'lo'], [1, 'lo']];
 const LENGTH = 52;
 const blocks = BLOCKS.map(([d, c]) => `<i class="${c}" style="flex:${d} 0 0"></i>`).join('');
+// 麥克風時間軸（requirements R119、website.md §10.1）：錄音的人是說話者 1，麥克風「建議收錄」就是他說話的地方
+// （00:00～00:13、00:24～00:34，前後各補一點，同 app 的偵測）；波形照這個畫，固定不亂數，每次建出來一樣
+const MIC_REGIONS = [[0, 13.3], [23.7, 34.5]];
+const MIC_THRESHOLD = 0.36;   // 門檻線的高度（時間軸高度的比例）
+const micBars = Array.from({ length: 120 }, (_, i) => {
+  const t = ((i + 0.5) / 120) * LENGTH;
+  const speaking = MIC_REGIONS.some(([a, b]) => t >= a + 0.3 && t <= b - 0.5);
+  const h = speaking ? 0.5 + 0.42 * Math.abs(Math.sin(i * 1.37) * Math.cos(i * 0.53)) : 0.08 + 0.12 * Math.abs(Math.sin(i * 2.11));
+  return `<i style="height:${(h * 100).toFixed(0)}%"></i>`;
+}).join('');
+const micRegions = MIC_REGIONS.map(([a, b]) => `<i style="left:${((a / LENGTH) * 100).toFixed(2)}%;width:${(((b - a) / LENGTH) * 100).toFixed(2)}%"></i>`).join('');
 const seconds = (text) => { const [m, s] = text.split(':').map(Number); return m * 60 + s; };
 
 function windowMarkup(d) {
@@ -173,11 +184,15 @@ ${m.ask.cites.map(([time, quote], i) => `              <div class="cite">${ts(ti
       </div>
 
       <div class="player">
+        <span class="mictrack" data-k="mictrack"><span class="mic-regions">${micRegions}</span><span class="mic-wave">${micBars}</span><i class="mic-thr" style="top:${((1 - MIC_THRESHOLD) * 100).toFixed(0)}%"></i><i class="phead"></i></span>
+        <span class="mic-pill">${I.chevron}${esc(u.mic)}</span>
+        <span class="mic-count">${esc(u.micParts.replace('%d', MIC_REGIONS.length))}</span>
         <span class="pl-btn" data-k="plbtn">${I.play}${I.pause.replace('<svg', '<svg class="i-pause"')}</span>
         <span class="pl-time" data-k="pltime">00:00</span>
         <span class="track" data-k="track"><span class="marks">${m.questions.map(([time]) => `<i style="left:${((seconds(time) / LENGTH) * 100).toFixed(1)}%"></i>`).join('')}</span><span class="blocks">${blocks}</span><span class="blocks played">${blocks}</span><i class="phead"></i></span>
         <span class="pl-time">00:${LENGTH}</span>
         <span class="pl-rate">1x${I.chevron}</span>
+        <span class="pl-rate pl-ch">${esc(u.both)}${I.chevron}</span>
       </div>
     </div>
 
