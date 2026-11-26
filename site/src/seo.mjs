@@ -213,6 +213,7 @@ Latest version: ${latest.version} (released ${date}). Requires macOS 26 or later
 - Speaker identification with voiceprints: name a speaker once and Shiyin recognizes the voice in later meetings. Speakers can be merged or reassigned line by line.
 - Ask your meetings: ask a question about one meeting or all meetings and get answers with timestamps.
 - Works inside AI tools (MCP): a built-in local MCP server lets Claude Code, Codex and Claude Desktop read your meetings, added with one click in Settings. Ask "what were last week's action items?" there and the answer links back to the meeting and the timestamp. Read-only, and Shiyin doesn't need to be open.
+- Separate microphone and computer audio: when a meeting records both, listen to each side on its own. Shiyin marks the parts where someone is really talking into the microphone (you can adjust them or the threshold), and exports can keep only those parts, so echo from speakers and room noise are left out.
 - Keeps meetings organized: folders (drag meetings in, or file them automatically with rules) and people (every meeting with someone and the action items they own).
 - Price: free. No account, no subscription, no usage limits. The only cost is your own AI subscription or API usage, if you use one.
 

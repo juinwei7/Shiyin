@@ -28,7 +28,7 @@ export const content = {
     seo: {
       appName: '拾音 Shiyin',
       category: '會議記錄、逐字稿',
-      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議', '錄音島：開會時在螢幕上方看得到、控制錄音', '人物：跟每個人開過的會、他負責的待辦', '資料夾：拖曳整理，設條件自動歸類'],
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議', '錄音島：開會時在螢幕上方看得到、控制錄音', '人物：跟每個人開過的會、他負責的待辦', '資料夾：拖曳整理，設條件自動歸類', '麥克風和電腦聲音分開聽，只留麥克風真的有人說話的段落'],
     },
     nav: { features: '功能', privacy: '隱私', changelog: '版本說明', languages: '語言', label: '網站', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -72,6 +72,7 @@ export const content = {
         '停止錄音後，拾音會在你的 Mac 上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。人多、吵雜時分錯了也好改：可以先告訴拾音大約幾個人，也可以把兩位說話者合併成一位，或直接改某一句是誰說的。',
         '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過，「deploy」「Redis」這種詞不會被聽成別的字；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
         '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；用「編輯會議」可以裁掉開頭、結尾的閒聊，刪掉中間離題的一段，把忘了停的錄音分成兩場，或把分開錄的兩場合併，30 天內都能還原。逐字稿也可以切換成「精簡」，用整理工具去掉嗯、呃、重複和說到一半改口的地方。',
+        '麥克風和電腦聲音一起錄的會議，錄完可以分開聽，也可以只聽麥克風「建議收錄」的段落：拾音會照麥克風前 1 分鐘的環境聲，標出真的有人在說話的地方，你可以自己新增、調整、刪除這些段落，或上下拖門檻線。時間軸可以放大到看清楚每一句。匯出錄音時勾「麥克風只保留建議收錄」，用喇叭開會時錄到的回音、旁邊的雜音就不會留下來，電腦聲音全部保留。',
       ],
     },
     notes: {
@@ -190,6 +191,7 @@ export const content = {
           '停止錄音後，拾音會在你的電腦上重新轉錄一次，比即時逐字稿準，並分出不同的說話者。把「說話者 1」改成人名，整場都會跟著改；拾音會記住這個人的聲音，之後的會議自動帶入名字。',
           '中文和英文用 Breeze ASR 25，針對台灣中文和中英夾雜調過；日文、韓文會議改用 Whisper，廣東話會議用 Qwen3-ASR，照粵語口語轉成繁體字。產品名、人名可以先加進詞彙表，轉錄時會參考。',
           '側欄的「人物」列出認識的人，點進去看跟他開過的會和他負責的待辦；先錄一段自己的聲音，你說的話一開始就會標成你。逐字稿的一句可以刪掉；用「編輯會議」可以裁掉開頭、結尾的閒聊，刪掉中間離題的一段，把忘了停的錄音分成兩場，或把分開錄的兩場合併，30 天內都能還原。逐字稿也可以切換成「精簡」，用整理工具去掉嗯、呃、重複和說到一半改口的地方。',
+          '麥克風和電腦聲音一起錄的會議，錄完可以分開聽，也可以只聽麥克風「建議收錄」的段落：拾音會照麥克風前 1 分鐘的環境聲，標出真的有人在說話的地方，你可以自己新增、調整、刪除這些段落，或上下拖門檻線。時間軸可以放大到看清楚每一句。匯出錄音時勾「麥克風只保留建議收錄」，用喇叭開會時錄到的回音、旁邊的雜音就不會留下來，電腦聲音全部保留。',
         ],
         gpu: '有 NVIDIA 顯示卡的電腦，拾音會自動下載顯示卡加速（約 685 MB），之後正式轉錄就用顯示卡：40 分鐘的會議用 RTX 3060 約 8 分鐘轉完，只用 CPU 時約 30 分鐘。有 AMD 顯示卡（含 Radeon 內顯）的電腦，拾音會自動下載 AMD 顯示卡加速（約 20 MB），一樣用顯示卡轉錄。沒有這兩種顯示卡也能用，只是比較慢。',
       },
@@ -299,7 +301,7 @@ export const content = {
     seo: {
       appName: 'Shiyin',
       category: 'Meeting notes, transcription',
-      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings', 'The recording island: see and control the recording at the top of the screen', 'People: every meeting with someone and the action items they own', 'Folders: drag meetings in, or file them automatically with rules'],
+      features: ['Live transcript while recording', 'Records the microphone and computer audio (Zoom, Google Meet, Teams) with no bot', 'Local transcription on your Mac; recordings are never uploaded', 'Transcription tuned for Mandarin mixed with English (Breeze ASR 25)', 'Speaker identification with voiceprints', 'Meeting notes from your own Claude or ChatGPT subscription or API key', 'Every note has a timestamp that plays the original audio', 'Ask your meetings questions', 'English, Chinese, Japanese, Cantonese and Korean meetings', 'The recording island: see and control the recording at the top of the screen', 'People: every meeting with someone and the action items they own', 'Folders: drag meetings in, or file them automatically with rules', 'Listen to the microphone and computer audio separately, and keep only the parts where someone is really talking into the microphone'],
     },
     nav: { features: 'Features', privacy: 'Privacy', changelog: 'Release notes', languages: 'Language', label: 'Site', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -342,6 +344,7 @@ export const content = {
         'After you stop, Shiyin transcribes the recording again on your Mac. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings. Crowded or noisy room? Tell Shiyin roughly how many people there are, merge two speakers into one, or change who said a line.',
         'English and Chinese meetings use Breeze ASR 25, which is tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product names and people to the glossary and transcription takes them into account.',
         'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript. With Edit Meeting, trim small talk at the start or end, cut out an off-topic section, split a recording you forgot to stop, or merge two meetings into one; you can restore the original within 30 days. Switch the transcript to Clean to have your summarizer remove ums, repeats and false starts.',
+        'When a meeting records both the microphone and computer audio, you can listen to each side on its own, or play only the microphone’s suggested parts: Shiyin compares the microphone with the room noise in its first minute and marks where someone is really talking. You can add, adjust and delete those parts, or drag the threshold line. The timeline zooms in so you can see each sentence. Export the recording with “Keep Only Suggested Microphone Parts” and echo from speakers or noise next to you won’t be kept, while computer audio is kept in full.',
       ],
     },
     notes: {
@@ -447,6 +450,7 @@ export const content = {
           'After you stop, Shiyin transcribes the recording again on your PC. It’s more accurate than the live transcript, and it tells the speakers apart. Rename “Speaker 1” once and the whole meeting follows; Shiyin remembers the voice and fills in the name in later meetings.',
           'Chinese and English use Breeze ASR 25, tuned for Taiwanese Mandarin mixed with English; Japanese and Korean meetings use Whisper, and Cantonese meetings use Qwen3-ASR, which keeps spoken Cantonese. Add product and people’s names to the glossary and transcription takes them into account.',
           'People in the sidebar lists everyone Shiyin knows; open someone to see your meetings together and the action items they own. Record a sample of your own voice and your lines are labeled as you from the start. You can delete a line from the transcript. With Edit Meeting, trim small talk at the start or end, cut out an off-topic section, split a recording you forgot to stop, or merge two meetings into one; you can restore the original within 30 days. Switch the transcript to Clean to have your summarizer remove ums, repeats and false starts.',
+          'When a meeting records both the microphone and computer audio, you can listen to each side on its own, or play only the microphone’s suggested parts: Shiyin compares the microphone with the room noise in its first minute and marks where someone is really talking. You can add, adjust and delete those parts, or drag the threshold line. The timeline zooms in so you can see each sentence. Export the recording with “Keep Only Suggested Microphone Parts” and echo from speakers or noise next to you won’t be kept, while computer audio is kept in full.',
         ],
         gpu: 'With an NVIDIA graphics card, Shiyin downloads GPU acceleration automatically (about 685 MB) and transcribes on the GPU: a 40-minute meeting took about 8 minutes on an RTX 3060, versus about 30 minutes on the CPU alone. With AMD graphics (including Radeon integrated graphics), Shiyin downloads AMD GPU acceleration automatically (about 20 MB) and transcribes on the GPU as well. Without either it still works, just more slowly.',
       },
@@ -556,7 +560,7 @@ export const content = {
     seo: {
       appName: '拾音 Shiyin',
       category: '會議記錄、逐字稿',
-      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議'],
+      features: ['錄音中即時逐字稿', '錄麥克風和電腦聲音（Zoom、Google Meet、Teams），不用機器人進會議', '在 Mac 本機轉錄，錄音不上傳', '台灣中文夾英文的轉錄（Breeze ASR 25）', '說話者辨識、記住聲紋', '用自己的 Claude、ChatGPT 訂閱或 API 整理會議紀錄', '每一條紀錄附時間點，點了聽原話', '對會議提問', '中文、英文、日文、廣東話、韓文會議', '麥克風和電腦聲音分開聽，只留麥克風真的有人說話的段落'],
     },
     nav: { features: '機能', privacy: 'プライバシー', changelog: 'リリースノート', languages: '言語', label: 'サイト', windows: 'Windows', mac: 'Mac' },
     intro: {
@@ -599,6 +603,7 @@ export const content = {
         '録音を止めると、拾音が Mac の中で録音をもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も聞き分けます。「Speaker 1」を名前に変えれば、会議全体に反映されます。拾音はその人の声を覚え、次の会議から自動で名前を入れます。人が多い会議や騒がしい場所で話者を間違えても、すぐに直せます。おおよその人数を拾音に伝えたり、2 人の話者を 1 人にまとめたり（Merge Into…）、ある発言の話者を変えたり（Who Said This Line?）できます。',
         '日本語と韓国語の会議は Whisper large-v3-turbo、広東語の会議は Qwen3-ASR で文字起こしします。英語と中国語の会議には、台湾華語と英語の混ざった会話に合わせて調整された Breeze ASR 25 を使います。製品名や人名を用語集に登録しておくと、文字起こしのときに参考にされます。',
         'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除することもできます。「Edit Meeting」では、最初と最後の雑談を切り取る、途中の脱線した部分を削除する、止め忘れた録音を 2 つの会議に分ける、2 つの会議を 1 つにまとめる、といった編集ができ、30 日以内なら元に戻せます。文字起こしを「Clean」に切り替えると、まとめツールで「えー」「あの」や言い直しを取り除いた版を表示できます。',
+        'マイクとコンピュータの音声を両方録音した会議は、録音後にそれぞれを別々に聞いたり、マイクの「Suggested」部分だけを再生したりできます。拾音は最初の 1 分間の周囲の音を基準に、実際に誰かが話している部分を見つけます。部分は自分で追加・調整・削除でき、しきい値の線も上下にドラッグできます。タイムラインは一文ずつ見えるまで拡大できます。録音を書き出すときに「Keep Only Suggested Microphone Parts」をオンにすると、スピーカーで会議したときのエコーや周りの雑音は残らず、コンピュータの音声はすべて残ります。',
       ],
     },
     notes: {
@@ -705,6 +710,7 @@ export const content = {
           '録音を止めると、拾音が PC の中でもう一度文字起こしします。リアルタイムの文字起こしより正確で、話者も区別します。「Speaker 1」を名前に変えれば会議全体に反映され、その声を覚えて次の会議から名前を自動で入れます。',
           '日本語と韓国語の会議は Whisper、広東語は Qwen3-ASR、中国語と英語は Breeze ASR 25 を使います。製品名や人名を用語集に入れておくと、文字起こしで参考にします。',
           'サイドバーの「People」には知っている人が並び、その人と一緒に出た会議や担当の ToDo を確認できます。自分の声を少し録音しておくと、最初から自分の発言に名前が付きます。文字起こしの一文を削除することもできます。「Edit Meeting」では、最初と最後の雑談を切り取る、途中の脱線した部分を削除する、止め忘れた録音を 2 つの会議に分ける、2 つの会議を 1 つにまとめる、といった編集ができ、30 日以内なら元に戻せます。文字起こしを「Clean」に切り替えると、まとめツールで「えー」「あの」や言い直しを取り除いた版を表示できます。',
+          'マイクとコンピュータの音声を両方録音した会議は、録音後にそれぞれを別々に聞いたり、マイクの「Suggested」部分だけを再生したりできます。拾音は最初の 1 分間の周囲の音を基準に、実際に誰かが話している部分を見つけます。部分は自分で追加・調整・削除でき、しきい値の線も上下にドラッグできます。タイムラインは一文ずつ見えるまで拡大できます。録音を書き出すときに「Keep Only Suggested Microphone Parts」をオンにすると、スピーカーで会議したときのエコーや周りの雑音は残らず、コンピュータの音声はすべて残ります。',
         ],
         gpu: 'NVIDIA のグラフィックスカードがある PC では、GPU アクセラレーション（約 685 MB）を自動でダウンロードし、GPU で文字起こしします。40 分の会議が RTX 3060 で約 8 分（CPU だけでは約 30 分）でした。AMD のグラフィックス（Radeon の内蔵グラフィックスを含む）がある PC では、AMD 用の GPU アクセラレーション（約 20 MB）を自動でダウンロードし、同じく GPU で文字起こしします。どちらもなくても使えますが、時間がかかります。',
       },

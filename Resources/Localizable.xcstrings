@@ -13376,6 +13376,23 @@
         }
       }
     },
+    "播放列速度右邊的「兩邊」選單可以只聽麥克風或只聽電腦聲音，也可以勾「麥克風只播建議收錄」。匯出錄音時勾「麥克風只保留建議收錄」，麥克風在這些段落以外會是沒有聲音（用喇叭開會時錄到的回音、旁邊的雜音就不會留下來），電腦聲音全部保留。匯出錄音、整場會議封包時看得到完成的百分比，可以中途取消。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放列速度右边的“两边”菜单可以只听麦克风或只听电脑声音，也可以勾“麦克风只播建议收录”。导出录音时勾“麦克风只保留建议收录”，麦克风在这些段落以外会是没有声音（用扬声器开会时录到的回音、旁边的杂音就不会留下来），电脑声音全部保留。导出录音、整场会议文件包时看得到完成的百分比，可以中途取消。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The “Both” menu to the right of the playback speed lets you hear only the microphone or only computer audio, and you can turn on “Play Suggested Microphone Parts Only”. When you export the recording, turn on “Keep Only Suggested Microphone Parts” and the microphone is silent outside those parts (so echo from speakers and noise next to you aren’t kept), while computer audio is kept in full. Exporting a recording or a whole-meeting package shows how far along it is, and you can cancel it."
+          }
+        }
+      }
+    },
     "播放或暫停": {
       "extractionState": "manual",
       "localizations": {
@@ -18532,6 +18549,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "准备转录…"
+          }
+        }
+      }
+    },
+    "滑鼠在麥克風時間軸上時放大、縮小時間軸（⌃0 回到整場；⌘ 也可以）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鼠标在麦克风时间轴上时放大、缩小时间轴（⌃0 回到整场；⌘ 也可以）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom the microphone timeline in or out with the pointer over it (⌃0 for the whole meeting; ⌘ works too)"
           }
         }
       }
@@ -27749,6 +27783,23 @@
           "stringUnit": {
             "state": "translated",
             "value": " Only the suggested microphone parts are kept and the rest is silent. Computer audio is kept in full and the length stays the same."
+          }
+        }
+      }
+    },
+    "麥克風和電腦聲音一起錄的會議，播放列上方多一條「麥克風」時間軸：拾音會照麥克風前 1 分鐘的環境聲，標出真的有人在說話的「建議收錄」段落。在空白處拖曳可以新增，拖段落兩邊調整，選到後按 Delete 刪除；右鍵可以「從這裡播放」「從這段開頭播放」或「重新偵測」。上下拖那條虛線可以自己調門檻。滑鼠停在上面時按 ⌃+／⌃−（或 ⌘+／⌘−、觸控板捏合）放大縮小，⌃0 回到整場；按住 ⌃ 或 ⌘ 會出現一條線標出滑鼠的時間。點左邊的「麥克風」收起來。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风和电脑声音一起录的会议，播放列上方多一条“麦克风”时间轴：拾音会照麦克风前 1 分钟的环境声，标出真的有人在说话的“建议收录”段落。在空白处拖动可以添加，拖段落两边调整，选到后按 Delete 删除；右键可以“从这里播放”“从这段开头播放”或“重新检测”。上下拖那条虚线可以自己调门槛。鼠标停在上面时按 ⌃+／⌃−（或 ⌘+／⌘−、触控板捏合）放大缩小，⌃0 回到整场；按住 ⌃ 或 ⌘ 会出现一条线标出鼠标的时间。点左边的“麦克风”收起来。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For meetings that record both the microphone and computer audio, a Microphone timeline appears above the player. Shiyin compares the microphone with the room noise in its first minute and marks the “suggested” parts where someone is really talking. Drag on an empty spot to add a part, drag a part’s edges to adjust it, or select one and press Delete. Right-click for “Play from Here”, “Play from Start of This Part” or “Detect Again”. Drag the dashed line up or down to set your own threshold. With the pointer over the timeline, press ⌃+ / ⌃− (or ⌘+ / ⌘−, or pinch on the trackpad) to zoom, and ⌃0 to see the whole meeting; hold ⌃ or ⌘ to show a line at the pointer’s time. Click “Microphone” on the left to hide it."
           }
         }
       }
