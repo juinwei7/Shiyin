@@ -24,3 +24,4 @@ windows/TestResults/
 # 給 AI 的專案說明、Claude Code 的本機設定：只留在本地，不推（2026-11-17 使用者決定）
 CLAUDE.md
 .claude/
+claude-docs/
