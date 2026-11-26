@@ -26,6 +26,8 @@ final class Recorder {
 
     private(set) var isRecording = false
     private(set) var isPaused = false
+    /// 單獨暫停麥克風、電腦聲音照錄（design §90、R116）：只在麥克風＋電腦聲音時
+    private(set) var micPaused = false
     private(set) var meetingId: Int64?
     private(set) var startedAt: Date?
     /// 精確的錄音秒數（筆記的時間點、標記重點用）。每 0.05 秒變一次，畫面不要讀這個，讀 elapsedSeconds（design §25）
@@ -215,6 +217,8 @@ final class Recorder {
 
     var hasMic: Bool { source != "system" }
     var hasSystem: Bool { source != "mic" }
+    /// 可以單獨暫停麥克風：麥克風＋電腦聲音的錄音（design §90）
+    var canPauseMic: Bool { isRecording && source == "both" }
 
     func start(meetingId: Int64, source: String = AppSettings.recordSource, language: MeetingLanguage) {
         guard !isRecording else { return }
@@ -306,6 +310,18 @@ final class Recorder {
         isPaused = false
     }
 
+    /// 單獨暫停、繼續錄麥克風（design §90、R116）：麥克風那一聲道寫 0，電腦聲音照錄
+    func setMicPaused(_ value: Bool) {
+        guard canPauseMic, value != micPaused else { return }
+        writer?.setMicMuted(value)
+        micPaused = value
+        if !value {
+            resetMicFloor()
+            (noisySeconds, quietSeconds) = (0, 0)
+        }
+        log.info("microphone \(value ? "paused" : "resumed", privacy: .public)")
+    }
+
     /// 「繼續錄」：人還在，重新計時（R48.1）
     func continueAfterIdle() {
         guard isRecording else { return }
@@ -347,7 +363,8 @@ final class Recorder {
     /// 最近 1 秒有 30% 以上的音框像說話（design §35.1）：比背景（最近 30 秒的第 10 百分位）大 12 dB 而且高於 -50 dBFS，
     /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）
     private func soundsLikeSpeech(_ writer: RecordingWriter) -> Bool {
-        for channel in 0..<(source == "both" ? 2 : 1) {
+        // 暫停麥克風時只看電腦聲音：麥克風最近的音量停在暫停前（design §90）
+        for channel in source != "both" ? [0] : micPaused ? [1] : [0, 1] {
             let levels = writer.recentLevels(channel)
             guard levels.count >= 20 else { continue }
             let background = levels.sorted()[Int(Double(levels.count - 1) * 0.1)]
@@ -504,6 +521,7 @@ final class Recorder {
             volatileText = ""
             systemSilent = false
             isPaused = false
+            micPaused = false
             isRecording = true
             activity = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .userInitiated],
                                                              reason: String(localized: "拾音正在錄音"))
@@ -668,11 +686,13 @@ final class Recorder {
     private func checkLevels(_ writer: RecordingWriter) {
         guard !isPaused else { return }
         let systemDenied = checkSystemPermission(writer)
-        guard hasMic else {
+        // 暫停麥克風時也走這條：麥克風的提醒都不出現（design §90）
+        guard hasMic, !micPaused else {
             updateLevelHint(systemDenied ? .systemDenied : nil)
             #if DEBUG
             levelCheck = ["hint": levelHint?.rawValue ?? "", "systemPermission": systemPermission?.rawValue ?? "",
-                          "systemSilentSeconds": writer.silence(0), "text": levelHint.map { text(for: $0) } ?? ""]
+                          "systemSilentSeconds": writer.silence(source == "both" ? 1 : 0), "micPaused": micPaused,
+                          "text": levelHint.map { text(for: $0) } ?? ""]
             #endif
             return
         }

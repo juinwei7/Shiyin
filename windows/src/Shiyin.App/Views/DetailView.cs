@@ -710,6 +710,14 @@ public sealed class RecordingPanel
     // 音量條各自一列，一開始就建好，之後只切換顯示：每次更新都重建 Row 的話，音量條還在舊的 Row 裡，
     // 再放進新的 Row 會丟出「已經是別的元件的子元件」（0x800F1000，2026-10-21 在虛擬機錄音時當掉）
     readonly StackPanel micRow, systemRow;
+    /// <summary>單獨暫停麥克風（R116、M§90）：麥克風＋電腦聲音時麥克風圖示是按鈕；暫停時圖示有斜線、音量條換成「麥克風已暫停」</summary>
+    readonly Button micToggle = new()
+    {
+        Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0), Padding = new Thickness(4, 2, 4, 2),
+        VerticalAlignment = VerticalAlignment.Center,
+    };
+    readonly FontIcon micGlyph = new() { Glyph = MicrophoneMenu.MicGlyph, FontSize = 16 };
+    readonly TextBlock micPausedText = Ui.Text(L.T("麥克風已暫停"), 13, color: Ui.Secondary, wrap: false);
     readonly Button pause = new();
     readonly TextBlock warning = Ui.Text("", 12, maxLines: 2);
     readonly StackPanel hints = new();
@@ -737,7 +745,10 @@ public sealed class RecordingPanel
         volatileMark.TextAlignment = TextAlignment.Right;
         volatileRow = Ui.Split(volatileMark, volatileText, 12);
         ApplyScale();
-        micRow = Ui.Row(4, new SymbolIcon(Symbol.Microphone), mic.Root);
+        micToggle.Content = micGlyph;
+        micToggle.Click += (_, _) => host.Recorder.SetMicPaused(!host.Recorder.MicPaused);
+        micPausedText.VerticalAlignment = VerticalAlignment.Center;
+        micRow = Ui.Row(4, micToggle, mic.Root, micPausedText);
         systemRow = Ui.Row(4, new SymbolIcon(Symbol.Volume), system.Root);
         micName.Content = micNameText;
         ToolTipService.SetToolTip(micName, L.T("正在用這支麥克風收音，點一下可以換"));
@@ -747,6 +758,11 @@ public sealed class RecordingPanel
         {
             micMenu.Items.Clear();
             var r = host.Recorder;
+            if (r.CanPauseMic)
+            {
+                micMenu.Items.Add(Ui.Item(r.MicPaused ? L.T("繼續錄麥克風") : L.T("暫停麥克風（只錄電腦聲音）"), () => r.SetMicPaused(!r.MicPaused)));
+                micMenu.Items.Add(new MenuFlyoutSeparator());
+            }
             foreach (var item in MicrophoneMenu.Items(host, id => r.MicDevice?.Id == id, id =>
             {
                 r.SwitchMicrophone(id);
@@ -852,6 +868,14 @@ public sealed class RecordingPanel
         pause.Content = r.IsPaused ? L.T("繼續") : L.T("暫停");
         ToolTipService.SetToolTip(pause, r.IsPaused ? L.T("繼續錄音（Ctrl+Shift+P）") : L.T("暫停錄音（Ctrl+Shift+P）"));
         micRow.Visibility = r.HasMic ? Visibility.Visible : Visibility.Collapsed;
+        // 只錄麥克風時圖示不能按（用「暫停」）
+        micToggle.IsHitTestVisible = micToggle.IsTabStop = r.CanPauseMic;
+        micGlyph.Glyph = r.MicPaused ? MicrophoneMenu.MicOffGlyph : MicrophoneMenu.MicGlyph;
+        ToolTipService.SetToolTip(micToggle, !r.CanPauseMic ? L.T("麥克風音量") : r.MicPaused ? L.T("繼續錄麥克風（Ctrl+Shift+M）")
+            : L.T("暫停麥克風：只錄電腦聲音（Ctrl+Shift+M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(micToggle, r.MicPaused ? L.T("繼續錄麥克風") : L.T("暫停麥克風"));
+        mic.Root.Visibility = r.MicPaused ? Visibility.Collapsed : Visibility.Visible;
+        micPausedText.Visibility = r.MicPaused ? Visibility.Visible : Visibility.Collapsed;
         micName.Visibility = r.HasMic && r.MicDevice is not null ? Visibility.Visible : Visibility.Collapsed;
         var name = r.MicDevice?.Name ?? "";
         if (micNameText.Text != name)
@@ -1006,6 +1030,9 @@ public sealed class RecordingPanel
 /// </summary>
 public static class MicrophoneMenu
 {
+    /// <summary>麥克風、暫停的麥克風（Segoe Fluent Icons）</summary>
+    public const string MicGlyph = "\uE720", MicOffGlyph = "\uF781";
+
     public static List<MenuFlyoutItemBase> Items(AppHost host, Func<string, bool> isChecked, Action<string> select)
     {
         var devices = host.MicrophoneList();

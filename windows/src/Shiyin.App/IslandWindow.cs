@@ -249,7 +249,7 @@ public sealed partial class IslandWindow : Window
         var recorder = host.Recorder;
         var mode = Prompt is not null ? "prompt" : Hover && recorder.IsRecording ? "hover" : hintExpanded ? "hint" : "collapsed";
         var line = mode == "hover" ? LatestLine(recorder) : null;
-        var key = string.Join('\u001F', mode, HintKey, Prompt?.Message, recorder.IsPaused, bookmarked, recorder.HasMic, recorder.HasSystem,
+        var key = string.Join('\u001F', mode, HintKey, Prompt?.Message, recorder.IsPaused, recorder.MicPaused, bookmarked, recorder.HasMic, recorder.HasSystem,
             recorder.MicHint?.BuiltIn?.Name, line is not null, recorder.StopAt);
         if (key == shownKey)
         {
@@ -333,7 +333,7 @@ public sealed partial class IslandWindow : Window
         var column = Ui.Column(12);
         var colors = ((Brush)new SolidColorBrush(Color.FromArgb(46, 255, 255, 255)), (Brush)Brush(0x6DB2A1), (Brush)Brush(0xE2AD3B));
         var meters = Ui.Row(14);
-        if (recorder.HasMic) meters.Children.Add(Meter("\uE720", () => recorder.MicLevel, colors, L.T("麥克風")));
+        if (recorder.HasMic) meters.Children.Add(MicMeter(recorder, colors));
         if (recorder.HasSystem) meters.Children.Add(Meter("\uE767", () => recorder.SystemLevel, colors, L.T("電腦聲音")));
         column.Children.Add(meters);
         if (LatestLine(recorder) is { } line)
@@ -378,6 +378,25 @@ public sealed partial class IslandWindow : Window
     {
         host.ShowMain?.Invoke(meetingId);
         if (App.Current.MainHandle is { } main && main != IntPtr.Zero) SetForegroundWindow(main);
+    }
+
+    /// <summary>麥克風的音量；麥克風＋電腦聲音時整塊是按鈕，單獨暫停、繼續錄麥克風（R116、M§90）</summary>
+    FrameworkElement MicMeter(Recorder recorder, (Brush, Brush, Brush) colors)
+    {
+        var content = recorder.MicPaused
+            ? Ui.Row(6, Icon(Views.MicrophoneMenu.MicOffGlyph, null), Ui.Text(L.T("麥克風已暫停"), 13, color: Secondary, wrap: false))
+            : Meter(Views.MicrophoneMenu.MicGlyph, () => recorder.MicLevel, colors, L.T("麥克風"));
+        if (!recorder.CanPauseMic) return content;
+        var button = new Button
+        {
+            Content = content, Padding = new Thickness(0), BorderThickness = new Thickness(0),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
+        ToolTipService.SetToolTip(button, recorder.MicPaused ? L.T("繼續錄麥克風")
+            : L.T("暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到"));
+        AutomationProperties.SetName(button, recorder.MicPaused ? L.T("繼續錄麥克風") : L.T("暫停麥克風"));
+        button.Click += (_, _) => recorder.SetMicPaused(!recorder.MicPaused);
+        return button;
     }
 
     FrameworkElement Meter(string glyph, Func<float> read, (Brush, Brush, Brush) colors, string name)

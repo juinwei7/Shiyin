@@ -14,6 +14,7 @@ final class RecordingWriter: @unchecked Sendable {
     private var levels: [Float]
     private var silentSeconds: [Double]
     private var paused = false
+    private var micMuted = false        // 單獨暫停麥克風（design §90）：左聲道寫 0
     private var acceptedFrames: [Int] // 各聲道累計收到的音框（不含暫停）
     private var lastReceived: [Double]  // 各聲道最後一次收到音訊的時間（systemUptime），看門狗用（design §20.2）
     private var timer: DispatchSourceTimer?
@@ -64,11 +65,14 @@ final class RecordingWriter: @unchecked Sendable {
         let now = ProcessInfo.processInfo.systemUptime
         lock.withLock {
             lastReceived[channel] = now
-            levels[channel] = rms
-            silentSeconds[channel] = rms == 0 ? silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate : 0
+            // 暫停麥克風：照樣收（看門狗用），寫進去的是同樣長度的 0，音量、無聲的秒數、最近的音量都不算
+            let muted = micMuted && channel == 0
+            levels[channel] = muted ? 0 : rms
+            silentSeconds[channel] = muted || rms != 0 ? 0 : silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate
             guard !paused else { return }
-            pending[channel].append(contentsOf: samples)
+            pending[channel].append(contentsOf: muted ? [Float](repeating: 0, count: samples.count) : samples)
             acceptedFrames[channel] += samples.count
+            guard !muted else { return }
             frameEnergy[channel] += sum
             frameSamples[channel] += samples.count
             if frameSamples[channel] >= Int(CaptureFormat.sampleRate / 10) {
@@ -85,6 +89,15 @@ final class RecordingWriter: @unchecked Sendable {
         lock.withLock {
             paused = value
             if value { for i in 0..<channels { pending[i].removeAll() } }
+        }
+    }
+
+    /// 單獨暫停麥克風（design §90）：兩個音源時才有用。繼續時麥克風之前的音量不算
+    func setMicMuted(_ value: Bool) {
+        lock.withLock {
+            guard channels == 2, value != micMuted else { return }
+            micMuted = value
+            if !value { recent[0].removeAll(); frameEnergy[0] = 0; frameSamples[0] = 0 }
         }
     }
 

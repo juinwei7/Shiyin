@@ -22,6 +22,7 @@ public sealed class RecordingWriter : IDisposable
     readonly float[] levels;
     readonly double[] silentSeconds;
     bool paused;
+    bool micMuted;   // 單獨暫停麥克風（M§90）：左聲道寫 0
     readonly long[] acceptedFrames;   // 各聲道累計收到的音框（不含暫停）
     readonly double[] lastReceived;   // 各聲道最後一次收到音訊的時間，看門狗用（M§20.2）
     bool failed;
@@ -76,11 +77,14 @@ public sealed class RecordingWriter : IDisposable
         lock (gate)
         {
             lastReceived[channel] = now;
-            levels[channel] = rms;
-            silentSeconds[channel] = rms == 0 ? silentSeconds[channel] + samples.Length / SampleRate : 0;
+            // 暫停麥克風：照樣收（看門狗用），寫進去的是同樣長度的 0，音量、無聲的秒數、最近的音量都不算
+            var muted = micMuted && channel == 0;
+            levels[channel] = muted ? 0 : rms;
+            silentSeconds[channel] = muted || rms != 0 ? 0 : silentSeconds[channel] + samples.Length / SampleRate;
             if (paused) return;
-            pending[channel].AddRange(samples);
+            pending[channel].AddRange(muted ? new float[samples.Length] : samples);
             acceptedFrames[channel] += samples.Length;
+            if (muted) return;
             frameEnergy[channel] += sum;
             frameSamples[channel] += samples.Length;
             if (frameSamples[channel] >= (int)(SampleRate / 10))
@@ -100,6 +104,17 @@ public sealed class RecordingWriter : IDisposable
         {
             paused = value;
             if (value) foreach (var p in pending) p.Clear();
+        }
+    }
+
+    /// <summary>單獨暫停麥克風（M§90）：兩個音源時才有用。繼續時麥克風之前的音量不算</summary>
+    public void SetMicMuted(bool value)
+    {
+        lock (gate)
+        {
+            if (Channels != 2 || value == micMuted) return;
+            micMuted = value;
+            if (!value) { recent[0].Clear(); frameEnergy[0] = 0; frameSamples[0] = 0; }
         }
     }
 

@@ -595,6 +595,7 @@ enum DebugControl {
                     scroll.reflectScrolledClipView(scroll.contentView)
                 }
             }
+        case "micpause": model.recorder.setMicPaused(args.count > 1 && args[1] == "on")   // micpause on|off：等於按錄音畫面的麥克風圖示（design §90）
         case "livestress":   // livestress <秒> <每秒幾行>：錄音中一直塞長短不一（4～300 字）的假即時文字、偶爾一次好幾行，未定稿的字每秒變 20 次，偶爾往上捲再回到底部（design §25）
             let seconds = Double(args[1]) ?? 60, perSecond = max(Double(args.count > 2 ? args[2] : "") ?? 3, 0.5)
             let recorder = model.recorder
@@ -1326,7 +1327,7 @@ enum DebugControl {
                        "time": model.player.currentTime, "duration": model.player.duration, "rate": model.player.rate,
                        "mixing": model.player.isMixing,
                        "mix": ChannelMix.stats.withLock { ["frames": $0.frames, "sourcePeaks": $0.sourcePeaks, "mixedPeak": $0.mixedPeak] }],
-            "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused,
+            "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused, "micPaused": model.recorder.micPaused,
                          "meetingId": model.recorder.meetingId ?? -1, "elapsed": model.recorder.elapsed,
                          "micLevel": model.recorder.micLevel, "systemLevel": model.recorder.systemLevel,
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,

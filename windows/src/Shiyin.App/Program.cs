@@ -431,6 +431,9 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
         {
             menu.Items.Add(new MenuFlyoutItem { Text = (recorder.IsPaused ? L.T("已暫停") : L.T("錄音中")) + " " + TimeFormat.String(recorder.ElapsedSeconds), IsEnabled = false });
             menu.Items.Add(Ui.Item(recorder.IsPaused ? L.T("繼續") : L.T("暫停"), () => { if (recorder.IsPaused) recorder.Resume(); else recorder.Pause(); }));
+            // 單獨暫停麥克風（R116、M§90）
+            if (recorder.CanPauseMic)
+                menu.Items.Add(Ui.Item(recorder.MicPaused ? L.T("繼續錄麥克風") : L.T("暫停麥克風"), () => recorder.SetMicPaused(!recorder.MicPaused)));
             menu.Items.Add(Ui.Item(L.T("停止"), recorder.Stop));
             // 定時停止（R110、M§84）：設定了時子選單的標題寫幾點停
             var stopTimer = new MenuFlyoutSubItem { Text = recorder.StopAt is DateTime at ? Views.StopTimerMenu.Status(at) : L.T("定時停止") };

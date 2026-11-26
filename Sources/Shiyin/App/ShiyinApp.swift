@@ -101,6 +101,12 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
             .disabled(!model.recorder.isRecording)
+            // 單獨暫停麥克風、電腦聲音照錄（design §90、R116）
+            Button(model.recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風") {
+                model.recorder.setMicPaused(!model.recorder.micPaused)
+            }
+            .keyboardShortcut("m", modifiers: [.command, .shift])
+            .disabled(!model.recorder.canPauseMic)
             Button("標記重點") {
                 model.addBookmark(at: model.recorder.elapsed, meetingId: model.recorder.meetingId)
                 model.noticeMessage = String(localized: "已標記 \(TimeFormat.string(model.recorder.elapsed)) 為重點")

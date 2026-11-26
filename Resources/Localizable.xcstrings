@@ -14622,6 +14622,74 @@
         }
       }
     },
+    "暫停麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause Microphone"
+          }
+        }
+      }
+    },
+    "暫停麥克風（只錄電腦聲音）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风（只录电脑声音）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause Microphone (Record Computer Audio Only)"
+          }
+        }
+      }
+    },
+    "暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风：只录电脑声音。用扬声器开会时避免录到回音，同一个房间的人说话也不会录到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause the microphone and record only computer audio. Avoids recording echo when the meeting plays through speakers; people talking in the same room won't be recorded either"
+          }
+        }
+      }
+    },
+    "暫停麥克風：只錄電腦聲音（⇧⌘M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风：只录电脑声音（⇧⌘M）。用扬声器开会时避免录到回音，同一个房间的人说话也不会录到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause the microphone and record only computer audio (⇧⌘M). Avoids recording echo when the meeting plays through speakers; people talking in the same room won't be recorded either"
+          }
+        }
+      }
+    },
     "暫停（空白鍵）": {
       "extractionState": "manual",
       "localizations": {
@@ -20540,6 +20608,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "继续录音（⇧⌘P）"
+          }
+        }
+      }
+    },
+    "繼續錄麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续录麦克风"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume Microphone"
+          }
+        }
+      }
+    },
+    "繼續錄麥克風（⇧⌘M）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续录麦克风（⇧⌘M）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume microphone (⇧⌘M)"
           }
         }
       }
@@ -26921,6 +27023,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "The microphone keeps reconnecting, so the recording may have gaps. Bluetooth headset microphones often do this. Click the microphone name above to switch to the built-in microphone."
+          }
+        }
+      }
+    },
+    "麥克風已暫停": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风已暂停"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone paused"
           }
         }
       }

@@ -73,10 +73,23 @@ struct MenuBarContent: View {
                 .controlSize(.small)
                 .fixedSize()
                 if recorder.hasMic {
-                    RecorderMeter(recorder: recorder, system: false, segments: 24)
-                    // 正在用哪一支麥克風（design §38.3）
-                    if let device = recorder.micDevice {
-                        Text("麥克風：\(device.name)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if recorder.micPaused {
+                        Label("麥克風已暫停", systemImage: "mic.slash").font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        RecorderMeter(recorder: recorder, system: false, segments: 24)
+                    }
+                    HStack(spacing: 8) {
+                        // 正在用哪一支麥克風（design §38.3）
+                        if let device = recorder.micDevice {
+                            Text("麥克風：\(device.name)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        // 單獨暫停麥克風、電腦聲音照錄（design §90、R116）
+                        if recorder.canPauseMic {
+                            Button(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風") { recorder.setMicPaused(!recorder.micPaused) }
+                                .controlSize(.small)
+                                .help(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到")
+                        }
                     }
                 }
                 if recorder.hasSystem { RecorderMeter(recorder: recorder, system: true, segments: 24) }

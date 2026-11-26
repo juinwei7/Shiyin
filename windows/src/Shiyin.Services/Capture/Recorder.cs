@@ -122,6 +122,10 @@ public sealed class Recorder
 
     public bool HasMic => Source != "system";
     public bool HasSystem => Source != "mic";
+    /// <summary>單獨暫停麥克風、電腦聲音照錄（M§90、R116）</summary>
+    public bool MicPaused { get; private set; }
+    /// <summary>可以單獨暫停麥克風：麥克風＋電腦聲音的錄音</summary>
+    public bool CanPauseMic => IsRecording && Source == "both";
 
     /// <summary>畫面要重畫的狀態變了</summary>
     public event Action? Changed;
@@ -249,6 +253,20 @@ public sealed class Recorder
         Notify();
     }
 
+    /// <summary>單獨暫停、繼續錄麥克風（M§90、R116）：麥克風那一聲道寫 0，電腦聲音照錄</summary>
+    public void SetMicPaused(bool value)
+    {
+        lock (gate)
+        {
+            if (!CanPauseMic || value == MicPaused) return;
+            writer?.SetMicMuted(value);
+            MicPaused = value;
+            (noisySeconds, quietSeconds) = (0, 0);   // 暫停時不再累計，留著的秒數會讓「太小聲」「太吵」一直在
+        }
+        Log.Info(value ? "microphone paused" : "microphone resumed");
+        Notify();
+    }
+
     /// <summary>「繼續錄」：人還在，重新計時（R48.1）</summary>
     public void ContinueAfterIdle()
     {
@@ -301,7 +319,8 @@ public sealed class Recorder
     /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）</summary>
     bool SoundsLikeSpeech(RecordingWriter w)
     {
-        for (var channel = 0; channel < (Source == "both" ? 2 : 1); channel++)
+        // 暫停麥克風時只看電腦聲音：麥克風最近的音量停在暫停前（M§90）
+        for (var channel = Source == "both" && MicPaused ? 1 : 0; channel < (Source == "both" ? 2 : 1); channel++)
         {
             var levels = w.RecentLevels(channel);
             if (levels.Length < 20) continue;
@@ -495,6 +514,7 @@ public sealed class Recorder
             VolatileText = "";
             SystemSilent = false;
             IsPaused = false;
+            MicPaused = false;
             IsRecording = true;
             generation++;
             keepAwake = power.KeepAwake(L.T("拾音正在錄音"));
@@ -720,7 +740,8 @@ public sealed class Recorder
         var silent = false;
         float speech = 0, background = 0;
         var frames = 0;
-        if (HasMic)
+        // 暫停麥克風時麥克風的提醒都不出現（M§90）
+        if (HasMic && !MicPaused)
         {
             silent = w.Silence(0) > 10;
             var levels = w.RecentLevels(0);
@@ -743,6 +764,7 @@ public sealed class Recorder
             ["speech"] = speech, ["background"] = background, ["frames"] = frames, ["silentSeconds"] = HasMic ? w.Silence(0) : 0,
             ["noisySeconds"] = noisySeconds, ["quietSeconds"] = quietSeconds, ["hint"] = shown?.ToString().ToLowerInvariant() ?? "",
             ["systemSilentSeconds"] = HasSystem ? w.Silence(Source == "both" ? 1 : 0) : 0, ["playingApp"] = playing?.Name ?? "",
+            ["micPaused"] = MicPaused,
         };
         if (shown == Hint) return false;
         // 是哪個 app 在提示出現時決定，之後不跟著變（R75.4）

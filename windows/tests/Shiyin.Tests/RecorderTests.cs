@@ -137,6 +137,10 @@ public sealed class RecorderTests : IDisposable
         Recorder.Result? result = null;
         recorder.Finished += r => result = r;
         recorder.StartSimulated(1, Wav(6), 4, both: false, MeetingLanguage.Zh, new WavDecoder());
+        // 只錄麥克風時不能單獨暫停麥克風（R116.1，用「暫停」）
+        Assert.False(recorder.CanPauseMic);
+        recorder.SetMicPaused(true);
+        Assert.False(recorder.MicPaused);
         await Until(() => recorder.Elapsed >= 1);
         recorder.Pause();
         Assert.True(recorder.IsPaused);
@@ -150,6 +154,32 @@ public sealed class RecorderTests : IDisposable
         recorder.Stop();
         Assert.InRange(result!.Duration, 2.5, 4.5);
         Assert.Equal((long)Math.Round(result.Duration * 16000), Read(result.File!).Frames);
+    }
+
+    [Fact]
+    public async Task MicPauseWritesSilenceOnMicChannelOnly()
+    {
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        Recorder.Result? result = null;
+        recorder.Finished += r => result = r;
+        // 兩聲道是同一個音檔（同 Mac 的 record-sim）：沒暫停的地方兩邊一樣
+        recorder.StartSimulated(1, Wav(8), 4, both: true, MeetingLanguage.Zh, new WavDecoder());
+        Assert.True(recorder.CanPauseMic);
+        await Until(() => recorder.Elapsed >= 2);
+        recorder.SetMicPaused(true);
+        Assert.True(recorder.MicPaused);
+        await Until(() => recorder.Elapsed >= 5);
+        recorder.SetMicPaused(false);
+        await Until(() => recorder.Elapsed >= 7.95);
+        recorder.Stop();
+        var (_, frames, data) = Read(result!.File!);
+        // 長度不變：暫停麥克風時那一聲道寫 0，不是丟掉（R116.1）
+        Assert.Equal(8 * 16000, frames);
+        // 暫停的那段（3～4 秒，離切換的時間點遠一點）麥克風全是 0、電腦聲音照常
+        Assert.All(data[0][(3 * 16000)..(4 * 16000)], s => Assert.Equal(0f, s));
+        Assert.Contains(data[1][(3 * 16000)..(4 * 16000)], s => s != 0);
+        Assert.Equal(data[1][..16000], data[0][..16000]);
+        Assert.Equal(data[1][^8000..], data[0][^8000..]);
     }
 
     [Fact]

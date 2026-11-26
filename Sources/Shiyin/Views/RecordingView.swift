@@ -171,8 +171,7 @@ struct RecordingPanel: View {
             StopTimerMenu()
                 .layoutPriority(-1)
             if recorder.hasMic {
-                Label { RecorderMeter(recorder: recorder, system: false) } icon: { Image(systemName: "mic") }
-                    .help("麥克風音量")
+                micStatus(recorder)
                 // 正在用哪一支麥克風，點一下可以換（design §38.3、R58.2）；視窗窄的時候先縮這個
                 MicrophoneMenu(recorder: recorder)
                     .frame(maxWidth: 180, alignment: .leading)
@@ -205,6 +204,29 @@ struct RecordingPanel: View {
                     .padding(.leading, 20)
                     .offset(y: 14)
             }
+        }
+    }
+
+    /// 麥克風的音量；麥克風＋電腦聲音時麥克風圖示可以單獨暫停、繼續錄麥克風（design §90、R116）
+    @ViewBuilder
+    private func micStatus(_ recorder: Recorder) -> some View {
+        if recorder.canPauseMic {
+            HStack(spacing: 6) {
+                Button { recorder.setMicPaused(!recorder.micPaused) } label: {
+                    Image(systemName: recorder.micPaused ? "mic.slash" : "mic").frame(minWidth: 20, minHeight: 20).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(recorder.micPaused ? "繼續錄麥克風（⇧⌘M）" : "暫停麥克風：只錄電腦聲音（⇧⌘M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到")
+                .accessibilityLabel(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風")
+                if recorder.micPaused {
+                    Text("麥克風已暫停").foregroundStyle(.secondary).lineLimit(1)
+                } else {
+                    RecorderMeter(recorder: recorder, system: false).help("麥克風音量")
+                }
+            }
+        } else {
+            Label { RecorderMeter(recorder: recorder, system: false) } icon: { Image(systemName: "mic") }
+                .help("麥克風音量")
         }
     }
 
@@ -518,6 +540,11 @@ struct MicrophoneMenu: View {
         let monitor = MicrophoneMonitor.shared
         let current = recorder.micDevice
         Menu {
+            // 單獨暫停麥克風、電腦聲音照錄（design §90、R116）
+            if recorder.canPauseMic {
+                Button(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風（只錄電腦聲音）") { recorder.setMicPaused(!recorder.micPaused) }
+                Divider()
+            }
             Button {
                 model.switchMicrophone("")
             } label: {

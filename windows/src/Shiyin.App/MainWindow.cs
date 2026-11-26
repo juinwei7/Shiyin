@@ -356,6 +356,8 @@ public sealed class MainWindow : Window
         {
             if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause();
         });
+        // 單獨暫停麥克風（R116、M§90）
+        Accelerator(VirtualKey.M, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => host.Recorder.SetMicPaused(!host.Recorder.MicPaused));
         Accelerator(VirtualKey.B, VirtualKeyModifiers.Control, () =>
         {
             if (host.Controller.BookmarkRecording()) ShowNotice(L.F("已標記 %@ 為重點", TimeFormat.String(host.Recorder.Elapsed)));

@@ -197,6 +197,8 @@ public static partial class ControlPipe
                 host.Recorder.SetStopTimer(args[1] != "off" && double.TryParse(args[1], out var after) ? DateTime.Now.AddSeconds(after) : null);
                 return Ok;
             case "recordpause": if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause(); return Ok;
+            // micpause on|off：等於按錄音畫面的麥克風圖示（R116、M§90）
+            case "micpause": host.Recorder.SetMicPaused(args.Length > 1 && args[1] == "on"); return Ok;
             case "recordstall" when args.Length > 1 && int.TryParse(args[1], out var channel):
                 host.Recorder.SimulateStall(channel, args.Length > 2 && double.TryParse(args[2], out var seconds) ? seconds : null);
                 return Ok;
@@ -677,7 +679,7 @@ public static partial class ControlPipe
             ["selfPerson"] = host.Db.Enrollment() is { } me ? new JsonObject { ["id"] = me.PersonId, ["name"] = me.Name, ["createdAt"] = me.CreatedAt } : null,
             ["recorder"] = new JsonObject
             {
-                ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
+                ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["micPaused"] = r.MicPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
                 ["language"] = r.Language.Code(), ["liveLines"] = r.LiveLines.Count, ["volatile"] = r.VolatileText, ["liveStatus"] = r.LiveStatus,
                 ["deviceWarning"] = r.DeviceWarning, ["hint"] = r.Hint?.ToString(), ["systemSilent"] = r.SystemSilent,
                 ["hintText"] = r.Hint is { } shown ? r.HintText(shown) : null, ["systemCulprit"] = r.SystemCulprit?.Name,

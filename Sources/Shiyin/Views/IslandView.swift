@@ -145,10 +145,7 @@ struct IslandRoot: View {
         let recorder = model.recorder
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 14) {
-                HStack(spacing: 6) {
-                    Image(systemName: "mic.fill").foregroundStyle(.secondary)
-                    LevelMeter(segments: 12) { [recorder] in recorder.micLevel }
-                }
+                micStatus(recorder)
                 if recorder.hasSystem {
                     HStack(spacing: 6) {
                         Image(systemName: "speaker.wave.2.fill").foregroundStyle(.secondary)
@@ -176,6 +173,27 @@ struct IslandRoot: View {
                 controlButtons(iconOnly: [.pause, .open])
                 controlButtons(iconOnly: [.pause, .bookmark, .screenshot, .open])
             }
+        }
+    }
+
+    /// 麥克風的音量；麥克風＋電腦聲音時整塊是按鈕，單獨暫停、繼續錄麥克風（design §90、R116）
+    @ViewBuilder
+    private func micStatus(_ recorder: Recorder) -> some View {
+        let status = HStack(spacing: 6) {
+            Image(systemName: recorder.micPaused ? "mic.slash.fill" : "mic.fill").foregroundStyle(.secondary)
+            if recorder.micPaused {
+                Text("麥克風已暫停").foregroundStyle(.secondary)
+            } else {
+                LevelMeter(segments: 12) { [recorder] in recorder.micLevel }.allowsHitTesting(false)
+            }
+        }
+        if recorder.canPauseMic {
+            Button { recorder.setMicPaused(!recorder.micPaused) } label: { status.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .help(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到")
+                .accessibilityLabel(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風")
+        } else {
+            status
         }
     }
 
