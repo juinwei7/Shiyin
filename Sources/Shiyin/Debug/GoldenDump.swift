@@ -98,6 +98,10 @@ enum GoldenDump {
         var documents: [MeetingDocument]
         /// 會議中的畫面（design §83.5）：fixtures 的 meetingScreens，直接給時間和辨識出的文字
         var screens: [ScreenText] = []
+        /// 麥克風的「建議收錄」（design §93.3）：fixtures 的 meetingMicRegions（基準、門檻、區塊）
+        var micFloorDb: Double?
+        var micThresholdDb: Double?
+        var micRegions: [MicRegion] = []
         var language: MeetingLanguage { meeting.meetingLanguage }
 
         /// 資料庫裡的說話者表：1 到最大編號，沒改名的是預設名稱（跟 saveTranscript 一樣）
@@ -120,10 +124,18 @@ enum GoldenDump {
             // 參考文件放在 meetingDocuments（會議的 key → 文件），不動原本的會議資料
             let documents = root["meetingDocuments"] as? Object ?? [:]
             let screens = root["meetingScreens"] as? Object ?? [:]
+            let mics = root["meetingMicRegions"] as? Object ?? [:]
             meetings = (root["meetings"] as? [Object] ?? []).map { o in
                 var fx = GoldenDump.meetingFixture(o)
                 fx.documents = (documents[fx.key] as? [Object] ?? []).map(GoldenDump.documentFixture)
                 fx.screens = (screens[fx.key] as? [Object] ?? []).map { ScreenText(at: GoldenDump.double($0["at"]), text: $0["text"] as? String ?? "") }
+                if let mic = mics[fx.key] as? Object {
+                    fx.micFloorDb = GoldenDump.double(mic["floorDb"])
+                    fx.micThresholdDb = mic["thresholdDb"].flatMap { $0 is NSNull ? nil : GoldenDump.double($0) }
+                    fx.micRegions = (mic["regions"] as? [[Any]] ?? []).map {
+                        MicRegion(meetingId: 0, start: GoldenDump.double($0[0]), end: GoldenDump.double($0[1]), origin: $0[2] as? String ?? MicRegion.auto)
+                    }
+                }
                 return fx
             }
         }
@@ -462,12 +474,16 @@ enum GoldenDump {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             let m = meeting
-            let info = MeetingPackage.MeetingJSON(
+            var info = MeetingPackage.MeetingJSON(
                 title: m.title, titleLocked: m.titleLocked, meetingDate: m.meetingDate, participants: m.participants,
                 sourceFilename: m.sourceFilename, durationSeconds: m.durationSeconds, templateId: m.templateId,
                 userNotes: m.userNotes, channels: m.channels, folder: fx.folderName, language: m.language, notes: fx.notes, notesBy: "claude",
                 speakers: bundle.speakers.map { MeetingPackage.SpeakerJSON(idx: $0.key, name: $0.value) }.sorted { $0.idx < $1.idx },
                 bookmarks: fx.bookmarks.map { MeetingPackage.BookmarkJSON(time: $0.time, label: $0.label) })
+            var micMeeting = m
+            micMeeting.micFloorDb = fx.micFloorDb
+            micMeeting.micThresholdDb = fx.micThresholdDb
+            MeetingPackage.micFields(&info, meeting: micMeeting, regions: fx.micRegions)
             if let data = try? encoder.encode(info) { w.text("package/\(fx.key)/meeting.json", String(decoding: data, as: UTF8.self)) }
             let segments = fx.segments.map {
                 MeetingPackage.SegmentJSON(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence, speaker: $0.speaker)
@@ -610,12 +626,23 @@ enum GoldenDump {
             if let notes = c["userNotes"] as? Object {
                 out["userNotes"] = plan.remapUserNotes(notes["text"] as? String ?? "", meetingId: Int64(double(notes["meetingId"])))
             }
+            // 麥克風的區塊（design §93.3）：一段時間跟保留的片段取交集再對應
+            if let ranges = c["ranges"] as? [[Any]] {
+                out["ranges"] = ranges.map { r -> Any in
+                    plan.mapRange(Int64(double(r[0])), start: double(r[1]), end: double(r[2])).map { [$0.start, $0.end] }
+                }
+            }
             if let deleted = c["keeping"] as? Object {
                 let kept = EditPlan.keeping(Int64(double(deleted["meetingId"])), start: double(deleted["start"]), end: double(deleted["end"]),
                                             deleted: (deleted["deleted"] as? [[Any]] ?? []).map { double($0[0])...double($0[1]) })
                 out["keeping"] = kept.map { [$0.meetingId, $0.start, $0.end] as [Any] }
             }
             return out
+        })
+        // 麥克風的 gate（design §93.4）：區塊裡 1、外面 0、頭尾 10 ms 淡入淡出
+        w.json("util/mic-gate.json", (f["micGateCases"] as? [Object] ?? []).map { c -> Object in
+            let regions = (c["regions"] as? [[Any]] ?? []).map { MicRegions.Range(start: double($0[0]), end: double($0[1])) }
+            return ["key": c["key"] as? String ?? "", "gates": (c["times"] as? [Any] ?? []).map { ChannelMix.gate(double($0), regions) }]
         })
         // 語言檔推出來的東西（design §41.8）：每種語言的名稱、預設說話者、轉錄的參數、給人看的字、提示詞的字
         let glossarySample = ["Lumio", "Redis", "Kubernetes"]
@@ -919,6 +946,12 @@ enum GoldenDump {
             return ["notes": c["notes"] as? String ?? "", "english": c["english"] as? Bool ?? false, "items": r.items, "more": r.more] as Object
         })
 
+        // 麥克風的「建議收錄」（design §93.2）：levels 是 [格數, 音量或 null] 一段一段接起來
+        w.json("pipeline/mic-regions.json", (f["micRegionCases"] as? [Object] ?? []).map { c -> Object in
+            let r = MicRegions.detect(micLevels(c["levels"]))
+            return ["key": c["key"] as? String ?? "", "floorDb": r.floorDb, "thresholdDb": r.thresholdDb.map { $0 as Any } ?? NSNull(),
+                    "regions": r.regions.map { [$0.start, $0.end] }]
+        })
         w.json("pipeline/similar.json", (f["similarPairs"] as? [[String]] ?? []).map {
             ["a": $0[0], "b": $0[1], "similar": TranscriptionPipeline.similar($0[0], $0[1])] as Object
         })
@@ -978,6 +1011,14 @@ enum GoldenDump {
         })
     }
 
+    /// [[格數, 音量或 null], …] 展開成每格的音量（design §93.2 的標準答案）
+    nonisolated private static func micLevels(_ value: Any?) -> [Double?] {
+        (value as? [[Any]] ?? []).flatMap { run -> [Double?] in
+            let level: Double? = run[1] is NSNull ? nil : double(run[1])
+            return Array(repeating: level, count: Int(double(run[0])))
+        }
+    }
+
     // MARK: 資料庫（R28.5）
 
     /// shiyinctl seedfixtures <fixtures.json> [key…]：把 fixtures 的會議寫進目前的資料庫（暫存的 SHIYIN_HOME），測本地 MCP 用（design §44.6）
@@ -1000,6 +1041,10 @@ enum GoldenDump {
                               speakerCount: segments.compactMap(\.speaker).max() ?? 0, voices: fx.voices, transcribedWith: "breeze")
         for (idx, name) in fx.speakers.sorted(by: { $0.key < $1.key }) { try db.renameSpeaker(mid, idx: idx, name: name) }
         for b in fx.bookmarks { try db.addBookmark(mid, time: b.time, label: b.label) }
+        if let floor = fx.micFloorDb {
+            try db.saveMicDetection(mid, MicRegions.Result(floorDb: floor, thresholdDb: fx.micThresholdDb, regions: []))
+            for r in fx.micRegions { try db.importMicRegion(mid, start: r.start, end: r.end, origin: r.origin) }
+        }
         if let notes = fx.notes { try db.saveNotes(mid, notes: notes, by: "claude", reason: "整理", source: .generated) }  // l10n-skip
         try db.updateUserNotes(mid, fx.meeting.userNotes)
         for term in fx.glossary { try db.addTerm(term) }
@@ -1065,6 +1110,17 @@ enum GoldenDump {
             case "importFixture":
                 let fx = f.meeting(op["key"] as? String ?? "")
                 ids[fx.key] = try insertFixture(db, fx)
+            // 麥克風的「建議收錄」（design §93.3）：偵測（levels 同 micRegionCases）、新增、調整、刪除；index 是照開始排的第幾塊
+            case "saveMicDetection":
+                try db.saveMicDetection(id(op), MicRegions.detect(micLevels(op["levels"])))
+            case "addMicRegion":
+                try db.addMicRegion(id(op), start: double(op["start"]), end: double(op["end"]))
+            case "updateMicRegion":
+                let list = try db.micRegions(id(op)), i = op["index"] as? Int ?? -1
+                if list.indices.contains(i) { try db.updateMicRegion(list[i].id!, start: double(op["start"]), end: double(op["end"])) }
+            case "deleteMicRegion":
+                let list = try db.micRegions(id(op)), i = op["index"] as? Int ?? -1
+                if list.indices.contains(i) { try db.deleteMicRegion(list[i].id!) }
             case "dumpTables":
                 var tables: Object = [:]
                 for table in op["tables"] as? [String] ?? [] { tables[table] = try dumpTable(db, table) }

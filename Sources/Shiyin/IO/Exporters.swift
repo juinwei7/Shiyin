@@ -16,6 +16,8 @@ struct ExportBundle {
     var screens: [MeetingDocument] = []
     /// 會議所在資料夾的名字（R118：封包對外照舊寫名字）；不在資料夾是空字串
     var folderName: String = ""
+    /// 麥克風的「建議收錄」（design §93.3）：只有 .shiyin 封包用到
+    var micRegions: [MicRegion] = []
 
     func speakerName(_ idx: Int?) -> String? { idx.map { speakers[$0] ?? text.speaker($0) } }
 
@@ -454,15 +456,33 @@ enum HTML {
 // MARK: - 錄音（R7.1）
 
 enum AudioExporter {
+    /// micRegionsOnly：麥克風只保留建議收錄（R119.6、design §93.6）：電腦聲音全部保留、麥克風在區塊以外是沒有聲音；
+    /// 只有「麥克風＋電腦聲音」、有區塊時才有作用。時長、取樣數跟原本一樣
     /// progress：完成的比例 0～1（R120、design §94）；同格式直接複製時不回報
-    static func export(_ b: ExportBundle, format: String, to url: URL, progress: ((Double) -> Void)? = nil) async throws {
+    static func export(_ b: ExportBundle, format: String, to url: URL, micRegionsOnly: Bool = false,
+                       progress: ((Double) -> Void)? = nil) async throws {
         guard b.meeting.hasAudio else { throw ExportError.noAudio }
         let source = b.meeting.audioURL
         try? FileManager.default.removeItem(at: url)
         // 「麥克風＋電腦聲音」的錄音（design §49.1、R73.2）：m4a 兩個聲道混在一起、wav 混成單聲道，原檔是同一種格式也要重新轉
         let both = b.meeting.channels == "both"
+        let gate = both && micRegionsOnly && !b.micRegions.isEmpty
+        let regions = b.micRegions.map { MicRegions.Range(start: $0.start, end: $0.end) }
         let asset = AVURLAsset(url: source)
-        let mix = format == "m4a" && both ? await ChannelMix.audioMix(for: asset) : nil
+        // 只保留建議收錄：用播放同一個混音的 tap（區塊邊界一樣 10 ms 淡入淡出，聽起來跟「麥克風只播建議收錄」一樣）
+        let control = ChannelControl()
+        if gate { control.settings.withLock { $0 = ChannelSettings(.both, gateMic: true, regions: regions) } }
+        let mix = format == "m4a" && both ? await ChannelMix.audioMix(for: asset, control: control) : nil
+        if format == "wav" && gate {
+            // wav：兩個聲道各自解碼成 16 kHz，麥克風照區塊開關再混成單聲道（同 tap 的算法）
+            // 進度：解碼 0～50%、混音 50～80%、寫檔 80～100%（design §94）
+            let interleaved = try await AudioDecoder.decodeInterleaved(source, channels: 2, progress: progress.map { p in { p($0 * 0.5) } })
+            let mixed = try ChannelMix.mixGated(interleaved: interleaved, regions: regions, sampleRate: AudioDecoder.sampleRate,
+                                                progress: progress.map { p in { p(0.5 + $0 * 0.3) } })
+            try AudioDecoder.writeWAV(mixed, to: url, progress: progress.map { p in { p(0.8 + $0 * 0.2) } })
+            progress?(1)
+            return
+        }
         if format == source.pathExtension.lowercased() && !both {
             try FileManager.default.copyItem(at: source, to: url)
         } else if format == "m4a" {

@@ -5043,6 +5043,23 @@
         }
       }
     },
+    "兩邊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两边"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both"
+          }
+        }
+      }
+    },
     "公司": {
       "extractionState": "manual",
       "localizations": {
@@ -5374,6 +5391,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Other participants"
+          }
+        }
+      }
+    },
+    "其餘的麥克風會是沒有聲音，電腦聲音全部保留": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其余的麦克风会是没有声音，电脑声音全部保留"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rest of the microphone will be silent. Computer audio is kept in full"
           }
         }
       }
@@ -7391,6 +7425,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "只录麦克风"
+          }
+        }
+      }
+    },
+    "只電腦聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只电脑声音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer Audio Only"
+          }
+        }
+      }
+    },
+    "只麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只麦克风"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone Only"
           }
         }
       }
@@ -20918,6 +20986,23 @@
         }
       }
     },
+    "聽哪一邊：兩邊、只麥克風、只電腦聲音。勾了「麥克風只播建議收錄」時，麥克風在建議收錄以外是靜音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "听哪一边：两边、只麦克风、只电脑声音。勾了“麦克风只播建议收录”时，麦克风在建议收录以外是静音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What to listen to: both, the microphone only, or computer audio only. With “Play Suggested Microphone Parts Only” on, the microphone is silent outside the suggested parts"
+          }
+        }
+      }
+    },
     "聽起來是%@，即時逐字稿和會議語言已經改成%@": {
       "extractionState": "manual",
       "localizations": {
@@ -24213,6 +24298,40 @@
         }
       }
     },
+    "這場還沒有建議收錄的區塊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场还没有建议收录的区块"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no suggested parts yet"
+          }
+        }
+      }
+    },
+    "這場還沒有建議收錄的區塊，麥克風會全部保留。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场还没有建议收录的区块，麦克风会全部保留。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " This meeting has no suggested parts yet, so the whole microphone is kept."
+          }
+        }
+      }
+    },
     "這場錄音不再提示這件事": {
       "extractionState": "manual",
       "localizations": {
@@ -27261,6 +27380,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "The microphone keeps reconnecting, so the recording may have gaps. Bluetooth headset microphones often do this. Click the microphone name above to switch to the built-in microphone."
+          }
+        }
+      }
+    },
+    "麥克風只保留建議收錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风只保留建议收录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Only Suggested Microphone Parts"
+          }
+        }
+      }
+    },
+    "麥克風只播建議收錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风只播建议收录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play Suggested Microphone Parts Only"
+          }
+        }
+      }
+    },
+    "麥克風只留建議收錄的區塊，其餘是沒有聲音；電腦聲音全部保留，長度跟原本一樣。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风只留建议收录的区块，其余是没有声音；电脑声音全部保留，长度跟原本一样。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Only the suggested microphone parts are kept and the rest is silent. Computer audio is kept in full and the length stays the same."
+          }
+        }
+      }
+    },
+    "麥克風和電腦聲音全部混在一起。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风和电脑声音全部混在一起。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " The microphone and computer audio are mixed in full."
           }
         }
       }

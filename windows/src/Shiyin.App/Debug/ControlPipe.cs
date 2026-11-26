@@ -112,6 +112,11 @@ public static partial class ControlPipe
                 host.Player.Seek(seekTo, args.Length > 2 && args[2] == "play");
                 return Ok;
             case "toggle": host.Player.Toggle(); return Ok;
+            // playmode <both|mic|system> [gate on|off]：等於選播放列的「兩邊 ▾」（同 Mac，M§93.7）
+            case "playmode" when args.Length > 1 && main?.State.Selection is long playMeeting:
+                host.Controller.SetPlayChannels(playMeeting, Services.Capture.PlayChannelsText.Parse(args[1]));
+                if (args.Length > 3 && args[2] == "gate") host.Controller.SetPlayMicRegions(playMeeting, args[3] == "on");
+                return Ok;
             case "tab" when args.Length > 1 && DetailTabs.Resolve(args[1]) is { } resolved:
                 main?.State.OpenTab(resolved.Tab, resolved.ExpandReview, resolved.ExpandNotes);
                 return Ok;
@@ -412,8 +417,10 @@ public static partial class ControlPipe
                     try
                     {
                         if (exportId is not long id) throw new InvalidOperationException("no meeting selected");  // l10n-skip
+                        // 第 8 個參數 micregions 1/0：錄音的麥克風只保留建議收錄（R119.6，同 Mac）
                         await host.Controller.Export(item, args[2], args.Length <= 4 || args[4] == "1", args.Length <= 5 || args[5] == "1", id, path,
-                            token, progress: new SyncProgress(v => { lock (values) values.Add(v); }));
+                            token, micRegionsOnly: args.Length > 7 ? args[7] == "1" : null,
+                            progress: new SyncProgress(v => { lock (values) values.Add(v); }));
                     }
                     catch (OperationCanceledException) { result = "cancelled"; }
                     catch (Exception e) { result = "error"; File.WriteAllText(path + ".error", $"ERROR {e.Message}"); }
@@ -616,6 +623,13 @@ public static partial class ControlPipe
             ["player"] = new JsonObject
             {
                 ["loaded"] = host.Player.IsLoaded, ["mixing"] = host.Player.IsMixing, ["playing"] = host.Player.IsPlaying, ["time"] = host.Player.CurrentTime, ["duration"] = host.Player.Duration,
+                // 混音的設定（M§93.4）：播放器拿到的音量、gate、區塊數
+                ["channelSettings"] = new JsonObject
+                {
+                    ["micGain"] = host.Player.Channels.MicGain, ["systemGain"] = host.Player.Channels.SystemGain,
+                    ["gateMic"] = host.Player.Channels.GateMic, ["regions"] = host.Player.Channels.Regions.Count,
+                },
+                ["channels"] = main?.State.Detail?.Meeting.PlayChannels ?? "", ["micRegionsOnly"] = main?.State.Detail?.Meeting.PlayMicRegions ?? false,
             },
             ["topicRanges"] = new JsonArray([.. (main?.State.Detail is { Notes: { } topicNotes } topicDetail
                 ? MindMap.TopicRanges(topicNotes, Math.Max(host.Player.Duration, topicDetail.Meeting.DurationSeconds ?? 0), MindMap.TopicLabel(MeetingLanguages.Interface))

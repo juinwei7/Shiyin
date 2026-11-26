@@ -7,6 +7,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Services;
+using Shiyin.Services.Capture;
 using Shiyin.Text;
 
 namespace Shiyin.App.Views;
@@ -21,6 +22,8 @@ public sealed class PlayerBar
     readonly TextBlock current = Ui.Text("0:00", 13, wrap: false);
     readonly TextBlock total = Ui.Text("0:00", 13, wrap: false);
     readonly DropDownButton speed = new();
+    /// <summary>聽哪一邊、麥克風只播建議收錄（R119.2、R119.5、M§93.5）：只有「麥克風＋電腦聲音」的會議</summary>
+    readonly DropDownButton channels = new();
     readonly Timeline timeline;
     readonly TopicBand topics;
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(200) };
@@ -34,7 +37,7 @@ public sealed class PlayerBar
         this.host = host;
         timeline = new Timeline((seconds, playNow) => host.Player.Seek(seconds, playNow));
         topics = new TopicBand(seconds => host.Player.Seek(seconds, true));
-        foreach (var w in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto })
+        foreach (var w in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto })
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = w });
         // 議題帶在第一列（沒有議題時收起來，高度是 0），其他元件在第二列，跟時間軸對齊
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -49,7 +52,8 @@ public sealed class PlayerBar
             menu.Items.Add(Ui.Item(Label(rate), () => { host.Player.Rate = rate; speed.Content = Label(rate); }));
         speed.Flyout = menu;
         ToolTipService.SetToolTip(speed, L.T("播放速度"));
-        UIElement[] items = [play, current, timeline.Root, total, speed];
+        ToolTipService.SetToolTip(channels, L.T("聽哪一邊：兩邊、只麥克風、只電腦聲音。勾了「麥克風只播建議收錄」時，麥克風在建議收錄以外是靜音"));
+        UIElement[] items = [play, current, timeline.Root, total, speed, channels];
         for (var i = 0; i < items.Length; i++)
         {
             Grid.SetColumn((FrameworkElement)items[i], i);
@@ -59,6 +63,35 @@ public sealed class PlayerBar
         root.BorderThickness = new Thickness(0, 1, 0, 0);
         timer.Tick += (_, _) => Ui.Guard(Update);
         host.Player.StateChanged += () => host.Post(Update);
+    }
+
+    static string ChannelsLabel(PlayChannels c) => c switch
+    {
+        PlayChannels.Mic => L.T("只麥克風"),
+        PlayChannels.System => L.T("只電腦聲音"),
+        _ => L.T("兩邊"),
+    };
+
+    void ShowChannels(MeetingDetail value)
+    {
+        var meeting = value.Meeting;
+        channels.Visibility = meeting.Channels == "both" ? Visibility.Visible : Visibility.Collapsed;
+        if (meeting.Channels != "both" || meeting.Id is not long id) return;
+        var current = PlayChannelsText.Parse(meeting.PlayChannels);
+        var gating = meeting.PlayMicRegions && current != PlayChannels.System;
+        var menu = new MenuFlyout();
+        foreach (var c in new[] { PlayChannels.Both, PlayChannels.Mic, PlayChannels.System })
+            menu.Items.Add(Ui.Check(ChannelsLabel(c), c == current, () => host.Controller.SetPlayChannels(id, c)));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        var only = Ui.Check(L.T("麥克風只播建議收錄"), meeting.PlayMicRegions, () => host.Controller.SetPlayMicRegions(id, !meeting.PlayMicRegions));
+        // 只電腦聲音、還沒有區塊時停用；已經勾了的照樣能取消（同 Mac）
+        only.IsEnabled = current != PlayChannels.System && (value.MicRegions.Count > 0 || meeting.PlayMicRegions);
+        menu.Items.Add(only);
+        channels.Flyout = menu;
+        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        if (gating) content.Children.Add(new FontIcon { Glyph = "\uE71C", FontSize = 12 });   // 篩選
+        content.Children.Add(new TextBlock { Text = ChannelsLabel(current) });
+        channels.Content = content;
     }
 
     static string Label(double rate) => rate == 1 ? "1×" : $"{rate:0.##}×";
@@ -89,6 +122,7 @@ public sealed class PlayerBar
             value.Bookmarks.Select(b => b.Time).ToList());
         topicsDuration = -1;   // 紀錄可能改了（編輯、回答待確認、重新整理）：下一次 Update 重算議題帶
         speed.Content = Label(host.Player.Rate <= 0 ? 1 : host.Player.Rate);
+        ShowChannels(value);
         timer.Start();
         Update();
         return root;

@@ -13,6 +13,10 @@ public sealed class Player : IDisposable
     string? loaded;
     /// <summary>「麥克風＋電腦聲音」的錄音混成單聲道播（R73.1、design-windows §11.16）</summary>
     Platform.MixedAudioSource? mixed;
+    /// <summary>聽哪一邊、麥克風只播建議收錄（M§93.4）：換會議也是同一份，MainState 每次載入後設</summary>
+    readonly Services.Capture.ChannelControl channels = new();
+
+    public Services.Capture.ChannelSettings Channels => channels.Settings;
 
     public bool IsLoaded => loaded is not null;
     public bool IsMixing => mixed is not null;
@@ -50,7 +54,7 @@ public sealed class Player : IDisposable
         loaded = path;
         if (mixChannels)
         {
-            try { mixed = new Platform.MixedAudioSource(path); }
+            try { mixed = new Platform.MixedAudioSource(path, channels); }
             catch (Exception e) when (e is IOException or System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException or FormatException)
             {
                 Services.Log.Error($"player: can't mix {e.GetType().Name}");
@@ -60,6 +64,13 @@ public sealed class Player : IDisposable
         Do(() => player.Source = source);
         Rate = rate <= 0 ? 1 : rate;
         StateChanged?.Invoke();
+    }
+
+    /// <summary>只有「麥克風＋電腦聲音」的錄音（混音播）才有作用；其他錄音照原樣播</summary>
+    public void SetChannels(Services.Capture.PlayChannels which, bool gateMic, IEnumerable<Model.MicRegion> regions)
+    {
+        var settings = Services.Capture.ChannelSettings.For(which, gateMic, regions.Select(r => (r.Start, r.End)));
+        if (!settings.SameAs(channels.Settings)) channels.Settings = settings;
     }
 
     public void Unload()

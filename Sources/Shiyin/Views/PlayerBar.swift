@@ -60,12 +60,40 @@ struct PlayerBar: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             .help("播放速度")
+
+            if detail.meeting.channels == "both" { channelsMenu }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
         .opacity(player.isLoaded ? 1 : 0.5)
+    }
+
+    /// 聽哪一邊、麥克風只播建議收錄（R119.2、R119.5、design §93.5）：只有「麥克風＋電腦聲音」的會議
+    private var channelsMenu: some View {
+        let current = model.playChannels
+        let gating = detail.meeting.playMicRegions && current != .system
+        return Menu {
+            ForEach(PlayChannels.allCases, id: \.self) { channels in
+                Button {
+                    model.setPlayChannels(channels)
+                } label: {
+                    if channels == current { Label(channels.label, systemImage: "checkmark") } else { Text(channels.label) }
+                }
+            }
+            Divider()
+            Toggle("麥克風只播建議收錄", isOn: Binding(get: { detail.meeting.playMicRegions }, set: { model.setPlayMicRegions($0) }))
+                .disabled(current == .system || (detail.micRegions.isEmpty && !detail.meeting.playMicRegions))
+        } label: {
+            HStack(spacing: 3) {
+                if gating { Image(systemName: "line.3.horizontal.decrease") }
+                Text(current.label)
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("聽哪一邊：兩邊、只麥克風、只電腦聲音。勾了「麥克風只播建議收錄」時，麥克風在建議收錄以外是靜音")
     }
 
     private func speedLabel(_ value: Float) -> String {

@@ -17,6 +17,9 @@ final class Player {
     @ObservationIgnored private var loadedURL: URL?
     /// 雙聲道的錄音混在一起播（design §49、R73）：音軌讀到、裝好混音後才是 true
     @ObservationIgnored private(set) var isMixing = false
+    /// 聽哪一邊、麥克風只播建議收錄（design §93.4）：tap 每一批都讀這份，改了馬上生效、不中斷播放
+    @ObservationIgnored let channelControl = ChannelControl()
+    private(set) var channels = ChannelSettings()
 
     /// mixChannels：「麥克風＋電腦聲音」的錄音（左右聲道是不同的音源），兩個聲道混在一起播
     func load(_ url: URL, mixChannels: Bool = false) {
@@ -32,7 +35,8 @@ final class Player {
         isLoaded = true
         if mixChannels {
             Task {
-                guard let mix = await ChannelMix.audioMix(for: item.asset), self.player?.currentItem === item else { return }
+                guard let mix = await ChannelMix.audioMix(for: item.asset, control: self.channelControl),
+                      self.player?.currentItem === item else { return }
                 item.audioMix = mix
                 isMixing = true
             }
@@ -70,6 +74,14 @@ final class Player {
         player?.volume = value
     }
     #endif
+
+    /// 只有「麥克風＋電腦聲音」的錄音（有混音的 tap）才有作用；其他錄音照原樣播
+    func setChannels(_ channels: PlayChannels, gateMic: Bool, regions: [MicRegion]) {
+        let settings = ChannelSettings(channels, gateMic: gateMic, regions: regions.map { MicRegions.Range(start: $0.start, end: $0.end) })
+        guard settings != self.channels else { return }
+        self.channels = settings
+        channelControl.settings.withLock { $0 = settings }
+    }
 
     func setRate(_ value: Float) {
         rate = value

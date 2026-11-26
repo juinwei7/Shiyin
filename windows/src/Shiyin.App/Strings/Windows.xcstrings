@@ -4054,6 +4054,23 @@
         }
       }
     },
+    "這場還沒有建議收錄的區塊": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting has no suggested parts yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场还没有建议收录的区块"
+          }
+        }
+      }
+    },
     "這組快捷鍵已經被別的 app 用了": {
       "extractionState": "manual",
       "localizations": {
@@ -4305,6 +4322,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音、逐字稿和会议记录都只存在这台电脑上（%LOCALAPPDATA%\\Shiyin），不会跟着账号漫游。"
+          }
+        }
+      }
+    },
+    "錄音不是雙聲道，沒辦法只保留建議收錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recording isn’t stereo, so it can’t keep only the suggested parts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音不是双声道，没办法只保留建议收录"
           }
         }
       }

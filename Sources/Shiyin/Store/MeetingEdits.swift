@@ -54,6 +54,8 @@ struct EditSnapshot: Codable {
     var screens: [ScreenTime]? = nil
 
     struct ScreenTime: Codable { var id: Int64; var at: Double }
+    /// 麥克風的「建議收錄」（design §93.3）：沒有區塊時不寫（快照跟以前一樣）；還原時沒有這欄就清掉、可以重新偵測
+    var micRegions: [MicRegion]? = nil
 }
 
 extension AppDatabase {
@@ -154,6 +156,15 @@ extension AppDatabase {
                     _ = try Bookmark.deleteOne(db, key: bookmark.id!)
                 }
             }
+            // 麥克風的「建議收錄」（design §93.3）：跟保留的片段取交集再對應；合併時另一場的接在後面
+            var micRegions: [MicRegion] = []
+            func collectMicRegions(_ meetingId: Int64) throws {
+                for r in try Self.micRegions(db, meetingId) {
+                    micRegions += plan.mapRange(meetingId, start: r.start, end: r.end)
+                        .map { MicRegion(meetingId: id, start: $0.start, end: $0.end, origin: r.origin) }
+                }
+            }
+            try collectMicRegions(id)
             // 會議中的畫面（design §83.7、D190）：同我的筆記，落在刪掉那段裡的移到切口，不刪
             for screen in try MeetingDocument.filter(Column("meeting_id") == id && Column("at") != nil).fetchAll(db) {
                 try db.execute(sql: "UPDATE documents SET at = ? WHERE id = ?", arguments: [plan.snap(id, screen.at!), screen.id])
@@ -208,6 +219,7 @@ extension AppDatabase {
                     if copy.isScreen { try AppDatabase.indexScreen(db, copy) }
                     documentCopies.append((document.file, copy.file))
                 }
+                try collectMicRegions(other)
                 notesParts.append((order(other), plan.remapUserNotes(source.userNotes, meetingId: other)))
                 for name in source.participantList where !participants.contains(name) { participants.append(name) }
                 for (from, to) in speakerMap {
@@ -218,6 +230,8 @@ extension AppDatabase {
                 }
                 try db.execute(sql: "UPDATE meetings SET deleted_at = ? WHERE id = ?", arguments: [now, other])
             }
+
+            try Self.replaceMicRegions(db, id, MicRegions.normalized(micRegions, gap: 0.05))
 
             // 句子照新的時間重新編號（正式、即時各自）
             for kind in ["final", "live"] {
@@ -325,6 +339,13 @@ extension AppDatabase {
                 try db.execute(sql: "UPDATE documents SET meeting_id = ?, at = ? WHERE id = ? AND at IS NOT NULL", arguments: [id, screen.at, screen.id])
                 try db.execute(sql: "UPDATE search SET meeting_id = ? WHERE rowid = ?", arguments: [id, AppDatabase.screenRowidBase + screen.id])
             }
+            if let regions = snapshot.micRegions {
+                try Self.replaceMicRegions(db, id, regions)
+            } else {
+                try Self.replaceMicRegions(db, id, [])
+                meeting.micFloorDb = nil
+                meeting.micThresholdDb = nil
+            }
             var removedDocuments: [String] = []
             for document in try MeetingDocument.filter(Column("meeting_id") == id).fetchAll(db) where !snapshot.documentIds.contains(document.id!) {
                 _ = try MeetingDocument.deleteOne(db, key: document.id!)
@@ -383,6 +404,8 @@ extension AppDatabase {
             documentIds: try Int64.fetchAll(db, sql: "SELECT id FROM documents WHERE meeting_id = ? ORDER BY id", arguments: [id]))
         let screens = try MeetingDocument.filter(Column("meeting_id") == id && Column("at") != nil).order(Column("id")).fetchAll(db)
         snapshot.screens = screens.isEmpty ? nil : screens.map { EditSnapshot.ScreenTime(id: $0.id!, at: $0.at!) }
+        let micRegions = try micRegions(db, id)
+        snapshot.micRegions = micRegions.isEmpty ? nil : micRegions
         return String(decoding: try JSONEncoder().encode(snapshot), as: UTF8.self)
     }
 

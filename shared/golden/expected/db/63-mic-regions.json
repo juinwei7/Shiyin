@@ -1,0 +1,107 @@
+{
+  "meetings" : [
+    {
+      "audio_file" : "1.m4a",
+      "channels" : "both",
+      "created_at" : "<time>",
+      "deleted_at" : null,
+      "duration_seconds" : 3912,
+      "folder_decided" : 0,
+      "folder_id" : 1,
+      "id" : 1,
+      "language" : "zh",
+      "meeting_date" : "2026-10-15",
+      "mic_floor_db" : -52.5,
+      "mic_threshold_db" : -46.5,
+      "min_speakers" : null,
+      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-21\",\"owner\":\"王小明\",\"task\":\"確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"},{\"due\":\"\",\"owner\":\"\",\"task\":\"Valkey 快取測試\\n第二行\",\"time\":\"\"}],\"custom\":[{\"items\":[{\"text\":\"部署 \\\"腳本\\\" OK\",\"time\":\"00:15\"}],\"title\":\"近況與進展\"}],\"decisions\":[{\"text\":\"部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"}],\"openQuestions\":[{\"text\":\"Kubernetes 版本？\",\"time\":\"00:09\"}],\"people\":[{\"name\":\"王小明\",\"points\":[{\"text\":\"回報 Valkey 快取下週三完成\",\"time\":\"00:04\"},{\"text\":\"負責確認 <admin> 權限 | 部署\",\"time\":\"1:02:05\"}]},{\"name\":\"說話者 2\",\"points\":[{\"text\":\"建議部署腳本路徑維持 /deploy/k8s\",\"time\":\"00:15\"},{\"text\":\"想先確認 Kubernetes 版本\",\"time\":\"\"}]},{\"name\":\"說話者 3\",\"points\":[]}],\"reviewItems\":[],\"summary\":[{\"text\":\"確認 v3.6 上線時程\",\"time\":\"00:00\"},{\"text\":\"Valkey 快取下週三完成\",\"time\":\"\"}],\"title\":\"v3.6 上線週會\",\"topics\":[{\"points\":[{\"text\":\"目標 10/21\",\"time\":\"1:02:05\"}],\"start\":\"00:00\",\"title\":\"上線時程\"},{\"points\":[],\"start\":\"00:04\",\"title\":\"快取 & 部署\"}]}",
+      "notes_by" : "claude",
+      "notes_draft" : 0,
+      "notes_template" : null,
+      "participants" : "王小明, 李大華、Amy，陳美玲",
+      "play_channels" : "both",
+      "play_mic_regions" : 0,
+      "series_id" : null,
+      "source" : "import",
+      "source_filename" : "2026-10-15 產品週會.m4a",
+      "speaker_check" : null,
+      "speaker_hint_dismissed" : 0,
+      "template_id" : "general",
+      "title" : "v3.6 上線週會",
+      "title_locked" : 0,
+      "transcribed_with" : "breeze",
+      "updated_at" : "<time>",
+      "user_notes" : "[00:30] 確認上線日期\n[02:10] Redis 快取要再測\n"
+    },
+    {
+      "audio_file" : "2.m4a",
+      "channels" : "mic",
+      "created_at" : "<time>",
+      "deleted_at" : "<time>",
+      "duration_seconds" : 125,
+      "folder_decided" : 0,
+      "folder_id" : null,
+      "id" : 2,
+      "language" : "en",
+      "meeting_date" : "2026-10-18",
+      "mic_floor_db" : -49.090909090909093,
+      "mic_threshold_db" : -43.090909090909093,
+      "min_speakers" : null,
+      "notes" : "{\"actionItems\":[{\"due\":\"2026-10-23\",\"owner\":\"Bob\",\"task\":\"Send the email via SendGrid\",\"time\":\"00:03\"}],\"custom\":[{\"items\":[{\"text\":\"Roadmap on track\",\"time\":\"00:00\"}],\"title\":\"Updates and progress\"}],\"decisions\":[],\"openQuestions\":[],\"reviewItems\":[],\"summary\":[{\"text\":\"Reviewed the Q4 roadmap\",\"time\":\"00:00\"}],\"title\":\"Q4 roadmap\",\"topics\":[]}",
+      "notes_by" : "claude",
+      "notes_draft" : 0,
+      "notes_template" : null,
+      "participants" : "Alice, Bob",
+      "play_channels" : "both",
+      "play_mic_regions" : 0,
+      "series_id" : null,
+      "source" : "import",
+      "source_filename" : "sync.wav",
+      "speaker_check" : null,
+      "speaker_hint_dismissed" : 0,
+      "template_id" : "one-on-one",
+      "title" : "Weekly Sync",
+      "title_locked" : 1,
+      "transcribed_with" : "breeze",
+      "updated_at" : "<time>",
+      "user_notes" : ""
+    }
+  ],
+  "mic_regions" : [
+    {
+      "end" : 9.8000000000000007,
+      "id" : 1,
+      "meeting_id" : 1,
+      "origin" : "auto",
+      "start" : 1.2
+    },
+    {
+      "end" : 70,
+      "id" : 3,
+      "meeting_id" : 1,
+      "origin" : "auto",
+      "start" : 50
+    },
+    {
+      "end" : 3100.5,
+      "id" : 4,
+      "meeting_id" : 1,
+      "origin" : "auto",
+      "start" : 3000
+    },
+    {
+      "end" : 14.5,
+      "id" : 7,
+      "meeting_id" : 2,
+      "origin" : "user",
+      "start" : 1
+    },
+    {
+      "end" : 27,
+      "id" : 8,
+      "meeting_id" : 1,
+      "origin" : "user",
+      "start" : 26
+    }
+  ]
+}

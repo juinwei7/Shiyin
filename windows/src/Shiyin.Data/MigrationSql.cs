@@ -317,4 +317,23 @@ static class MigrationSql
         DROP TABLE folder_rules_old;
         CREATE INDEX meetings_folder ON meetings(folder_id);
         """;
+
+    /// <summary>麥克風的「建議收錄」、播放時聽哪一邊（R119、M§93.3）</summary>
+    public static readonly string[] V19 =
+    [
+        """
+        CREATE TABLE mic_regions (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+          start      REAL NOT NULL,
+          end        REAL NOT NULL,
+          origin     TEXT NOT NULL DEFAULT 'auto'
+        );
+        CREATE INDEX mic_regions_meeting ON mic_regions(meeting_id, start);
+        """,
+        "ALTER TABLE meetings ADD COLUMN mic_floor_db REAL",
+        "ALTER TABLE meetings ADD COLUMN mic_threshold_db REAL",
+        "ALTER TABLE meetings ADD COLUMN play_channels TEXT NOT NULL DEFAULT 'both'",
+        "ALTER TABLE meetings ADD COLUMN play_mic_regions INTEGER NOT NULL DEFAULT 0",
+    ];
 }

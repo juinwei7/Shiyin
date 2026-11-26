@@ -225,6 +225,17 @@ public sealed partial class AppDatabase
         db.Execute("UPDATE corrections SET meeting_id = ? WHERE segment_id IN (SELECT id FROM segments WHERE meeting_id = ?)", newId, newId);
         db.Execute("UPDATE search SET meeting_id = ? WHERE rowid IN (SELECT id FROM segments WHERE meeting_id = ?)", newId, newId);
         db.Execute("UPDATE bookmarks SET meeting_id = ?, time = MAX(0, time - ?) WHERE meeting_id = ? AND time >= ?", newId, cut, id, cut);
+        // 麥克風的「建議收錄」（M§93.3）：切點之後的搬到新的一場，跨過切點的切成兩塊
+        foreach (var region in MicRegions(db, id).Where(r => r.End > cut))
+        {
+            if (region.Start >= cut)
+                db.Execute("UPDATE mic_regions SET meeting_id = ?, start = ?, end = ? WHERE id = ?", newId, region.Start - cut, region.End - cut, region.Id);
+            else
+            {
+                db.Execute("UPDATE mic_regions SET end = ? WHERE id = ?", cut, region.Id);
+                InsertMicRegion(db, new MicRegion { MeetingId = newId, Start = 0, End = region.End - cut, Origin = region.Origin });
+            }
+        }
 
         bool Speaks(long meetingId, int idx) =>
             (long)db.Scalar("SELECT EXISTS (SELECT 1 FROM segments WHERE meeting_id = ? AND speaker = ?)", meetingId, idx)! != 0;

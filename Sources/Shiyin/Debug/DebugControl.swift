@@ -603,6 +603,11 @@ enum DebugControl {
                 }
             }
         case "micpause": model.recorder.setMicPaused(args.count > 1 && args[1] == "on")   // micpause on|off：等於按錄音畫面的麥克風圖示（design §90）
+        case "micregions": micRegions(args)
+        case "playmode":   // playmode <both|mic|system> [gate on|off]：等於選播放列的「兩邊 ▾」（design §93.7）；峰值歸零重新算
+            if args.count > 1, let channels = PlayChannels(rawValue: args[1]) { model.setPlayChannels(channels) }
+            if args.count > 3, args[2] == "gate" { model.setPlayMicRegions(args[3] == "on") }
+            ChannelMix.stats.withLock { $0.mixedPeak = 0; $0.micPeak = 0; $0.systemPeak = 0; $0.sourcePeaks = [0, 0] }
         case "livestress":   // livestress <秒> <每秒幾行>：錄音中一直塞長短不一（4～300 字）的假即時文字、偶爾一次好幾行，未定稿的字每秒變 20 次，偶爾往上捲再回到底部（design §25）
             let seconds = Double(args[1]) ?? 60, perSecond = max(Double(args.count > 2 ? args[2] : "") ?? 3, 0.5)
             let recorder = model.recorder
@@ -893,7 +898,7 @@ enum DebugControl {
         case "playvolume": model.player.setVolume(Float(args[1]) ?? 1)   // playvolume <0～1>（design §49.3）
         case "toggle": model.player.toggle()
         case "export":
-            // export <項目> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的]
+            // export <項目> <格式> <路徑> [times 1/0] [speakers 1/0] [會議 id，預設目前選取的] [micregions 1/0：錄音的麥克風只保留建議收錄，R119.6]
             let item = ExportItem(rawValue: args[1]) ?? .notes
             let url = URL(fileURLWithPath: args[3])
             let meetingId = args.count > 6 ? Int64(args[6]) : model.selection
@@ -905,6 +910,7 @@ enum DebugControl {
                     guard let meetingId else { throw AppModel.ExportError.meetingGone }
                     try await model.export(item, format: args[2], times: args.count <= 4 || args[4] == "1",
                                            speakers: args.count <= 5 || args[5] == "1", meetingId: meetingId, to: url,
+                                           micRegionsOnly: args.count > 7 ? args[7] == "1" : nil,
                                            progress: { p in values.withLock { $0.append(p) } })
                 } catch is CancellationError {
                     result = "cancelled"
@@ -1353,7 +1359,10 @@ enum DebugControl {
             "player": ["loaded": model.player.isLoaded, "playing": model.player.isPlaying,
                        "time": model.player.currentTime, "duration": model.player.duration, "rate": model.player.rate,
                        "mixing": model.player.isMixing,
-                       "mix": ChannelMix.stats.withLock { ["frames": $0.frames, "sourcePeaks": $0.sourcePeaks, "mixedPeak": $0.mixedPeak] }],
+                       "mix": ChannelMix.stats.withLock { ["frames": $0.frames, "sourcePeaks": $0.sourcePeaks, "mixedPeak": $0.mixedPeak,
+                                                            "micPeak": $0.micPeak, "systemPeak": $0.systemPeak, "gateMic": $0.gateMic,
+                                                            "lastTime": $0.lastTime] },
+                       "channels": model.playChannels.rawValue, "micRegionsOnly": model.detail?.meeting.playMicRegions ?? false],
             "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused, "micPaused": model.recorder.micPaused,
                          "meetingId": model.recorder.meetingId ?? -1, "elapsed": model.recorder.elapsed,
                          "micLevel": model.recorder.micLevel, "systemLevel": model.recorder.systemLevel,
@@ -1544,6 +1553,42 @@ enum DebugControl {
 
     /// 無限大、NaN 寫成 -1（JSONSerialization 遇到會丟 Objective-C 例外，整個 app 當掉）
     private static func finite(_ x: CGFloat) -> CGFloat { x.isFinite ? x : -1 }
+
+    /// 麥克風的「建議收錄」（design §93.7）：micregions <會議 id> list|detect|add <開始> <結束>|update <區塊 id> <開始> <結束>|delete <區塊 id>|clear <輸出.json>。
+    /// 先做動作再寫出基準、門檻、所有區塊；detect 另外寫每格音量的格數、有聲音的格數（讀錄音在背景）
+    private static func micRegions(_ args: [String]) {
+        guard args.count >= 4, let id = Int64(args[1]), let output = args.last else { return }
+        let db = AppModel.shared.db, action = args[2]
+        let n = (3...5).map { args.count > $0 + 1 ? Double(args[$0]) ?? 0 : 0 }
+        let rid = args.count > 4 ? Int64(args[3]) : nil
+        Task.detached {
+            var result: [String: Any] = ["action": action]
+            do {
+                switch action {
+                case "detect":
+                    guard let meeting = try db.meeting(id) else { throw LLMError.badOutput("no meeting") }
+                    let levels = try MicRegions.levels(meeting.audioURL)
+                    result["frames"] = levels.count
+                    result["voiced"] = levels.compactMap { $0 }.count
+                    try db.saveMicDetection(id, MicRegions.detect(levels))
+                case "add": try db.addMicRegion(id, start: n[0], end: n[1])
+                case "update": if let rid { try db.updateMicRegion(rid, start: n[1], end: n[2]) }
+                case "delete": if let rid { try db.deleteMicRegion(rid) }
+                case "clear": try db.clearMicRegions(id)
+                default: break
+                }
+                let meeting = try db.meeting(id)
+                result["floorDb"] = meeting?.micFloorDb ?? NSNull()
+                result["thresholdDb"] = meeting?.micThresholdDb ?? NSNull()
+                result["channels"] = meeting?.channels ?? ""
+                result["regions"] = try db.micRegions(id).map { ["id": $0.id ?? 0, "start": $0.start, "end": $0.end, "origin": $0.origin] as [String: Any] }
+            } catch {
+                result["error"] = error.localizedDescription
+            }
+            let finished = result
+            await MainActor.run { write(finished, to: output) }
+        }
+    }
 
     private static func write(_ object: [String: Any], to path: String) {
         guard JSONSerialization.isValidJSONObject(object),

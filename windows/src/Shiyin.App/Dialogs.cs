@@ -197,6 +197,11 @@ public static partial class Dialogs
         var times = new CheckBox { Content = L.T("包含時間點"), IsChecked = true };
         var speakers = new CheckBox { Content = L.T("包含說話者"), IsChecked = true };
         var checks = Ui.Row(18, times, speakers);
+        // 匯出錄音時麥克風只保留建議收錄（R119.6、M§93.6）：只有「麥克風＋電腦聲音」的會議；還沒有區塊時停用
+        var twoTrack = bundle.Meeting.Channels == "both";
+        var noRegions = bundle.MicRegions.Count == 0;
+        var micOnly = new CheckBox { Content = L.T("麥克風只保留建議收錄"), IsChecked = host.Settings.ExportMicRegionsOnly, IsEnabled = !noRegions };
+        ToolTipService.SetToolTip(micOnly, noRegions ? L.T("這場還沒有建議收錄的區塊") : L.T("其餘的麥克風會是沒有聲音，電腦聲音全部保留"));
         var hint = Ui.Text("", 13, color: Ui.Secondary);
         void Sync()
         {
@@ -208,6 +213,7 @@ public static partial class Dialogs
             formatBox.SelectedIndex = Array.IndexOf(formats, format);
             formatBox.IsEnabled = formats.Length > 1;
             checks.Visibility = item == ExportItem.Transcript ? Visibility.Visible : Visibility.Collapsed;
+            micOnly.Visibility = item == ExportItem.Audio && twoTrack ? Visibility.Visible : Visibility.Collapsed;
             times.IsEnabled = format is not ("srt" or "vtt");
             hint.Text = item switch
             {
@@ -215,12 +221,16 @@ public static partial class Dialogs
                 ExportItem.Notes => L.T("PDF 和 docx 的段落標題使用明體；Markdown 適合貼到 Notion、GitHub。"),
                 ExportItem.MindMap => L.T("依會議紀錄畫成心智圖。PNG 適合貼到聊天軟體、簡報；SVG 可以再用其他軟體編輯。"),
                 ExportItem.Transcript => L.T("srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。"),
-                ExportItem.Audio => L.T("m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。"),
+                ExportItem.Audio => L.T("m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。") + (!twoTrack ? ""
+                    : noRegions ? L.T("這場還沒有建議收錄的區塊，麥克風會全部保留。")
+                    : micOnly.IsChecked == true ? L.T("麥克風只留建議收錄的區塊，其餘是沒有聲音；電腦聲音全部保留，長度跟原本一樣。")
+                    : L.T("麥克風和電腦聲音全部混在一起。")),
                 _ => L.T("包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入拾音。"),
             };
             hint.Foreground = item == ExportItem.Notes && !hasNotes ? Ui.Signal : Ui.Secondary;
         }
         itemBox.SelectionChanged += (_, _) => Sync();
+        micOnly.Click += (_, _) => { host.Settings.Set(AppSettings.ExportMicRegionsOnlyKey, micOnly.IsChecked == true); Sync(); };
         formatBox.SelectionChanged += (_, _) =>
         {
             if (formatBox.SelectedIndex >= 0) format = item.Formats()[formatBox.SelectedIndex];
@@ -235,6 +245,7 @@ public static partial class Dialogs
         sheet.Form.Children.Add(Sheet.Header(heading, sheet.Cancel));
         sheet.Form.Children.Add(Sheet.Pair(Sheet.Labeled(L.T("項目"), itemBox), Sheet.Labeled(L.T("格式"), formatBox)));
         sheet.Form.Children.Add(checks);
+        sheet.Form.Children.Add(micOnly);
         sheet.Form.Children.Add(hint);
         sheet.Form.Children.Add(Sheet.Buttons(share, Sheet.Pill(L.T("取消"), click: sheet.Cancel), save));
         sheet.Submit = () => { action = 1; sheet.Close(); };

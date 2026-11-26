@@ -71,6 +71,8 @@ public sealed class MeetingDetail
 {
     public required Meeting Meeting { get; set; }
     public required List<Segment> Segments { get; set; }
+    /// <summary>麥克風的「建議收錄」（M§93.3），照開始排</summary>
+    public List<MicRegion> MicRegions { get; set; } = [];
     public MeetingNotes? Notes { get; set; }
     public int VersionCount { get; set; }
     /// <summary>有上一版會議紀錄可以復原（R44.4）：紀錄的「編輯」旁顯示「復原上一版」</summary>
@@ -196,7 +198,7 @@ public sealed class MeetingDetail
         {
             Meeting = meeting, Segments = db.Segments(id), Notes = meeting.DecodedNotes, VersionCount = db.VersionCount(id),
             LatestJob = db.LatestJob(id), Bookmarks = db.Bookmarks(id), Corrections = db.Corrections(id),
-            SpeakerUndoLabel = db.SpeakerUndoLabel(id),
+            SpeakerUndoLabel = db.SpeakerUndoLabel(id), MicRegions = db.MicRegions(id),
         };
         var speakers = db.Speakers(id);
         detail.LoadSpeakers(speakers);

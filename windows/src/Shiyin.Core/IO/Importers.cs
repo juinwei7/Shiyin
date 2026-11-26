@@ -131,7 +131,13 @@ public static class PackageJson
     public sealed record MeetingInfo(
         string Title, bool TitleLocked, string MeetingDate, string Participants, string SourceFilename, int? DurationSeconds,
         string TemplateId, string UserNotes, string Channels, string? Folder, string? Language, MeetingNotes? Notes, string? NotesBy,
-        List<(int Idx, string Name)> Speakers, List<(double Time, string Label)> Bookmarks);
+        List<(int Idx, string Name)> Speakers, List<(double Time, string Label)> Bookmarks)
+    {
+        /// <summary>麥克風的「建議收錄」（M§93.3）；沒偵測過就不寫，舊封包沒有這些欄位（匯入後自動偵測）</summary>
+        public double? MicFloorDb { get; init; }
+        public double? MicThresholdDb { get; init; }
+        public List<(double Start, double End, string Origin)>? MicRegions { get; init; }
+    }
 
     public sealed record SegmentInfo(double Start, double End, string Text, bool LowConfidence, int? Speaker);
 
@@ -157,6 +163,11 @@ public static class PackageJson
             (JNode)new JNode.Obj().Add("idx", new JNode.Int(s.Idx)).Add("name", s.Name))));
         o.Add("bookmarks", new JNode.Arr(i.Bookmarks.Select(b =>
             (JNode)new JNode.Obj().Add("time", JNode.Of(b.Time)).Add("label", b.Label))));
+        if (i.MicFloorDb is double floor) o.Add("micFloorDb", JNode.Of(floor));
+        if (i.MicThresholdDb is double threshold) o.Add("micThresholdDb", JNode.Of(threshold));
+        if (i.MicRegions is { } regions)
+            o.Add("micRegions", new JNode.Arr(regions.Select(r =>
+                (JNode)new JNode.Obj().Add("start", JNode.Of(r.Start)).Add("end", JNode.Of(r.End)).Add("origin", r.Origin))));
         return Pretty(o);
     }
 
@@ -208,8 +219,21 @@ public static class PackageJson
             bookmarks.Add((time, label));
         }
         MeetingNotes? notes = r.Get("notes") is { ValueKind: JsonValueKind.Object } n ? MeetingNotes.Decode(n) : null;
+        List<(double, double, string)>? micRegions = null;
+        if (r.Get("micRegions") is { ValueKind: JsonValueKind.Array } micList)
+        {
+            micRegions = [];
+            foreach (var m in micList.EnumerateArray())
+            {
+                if (m.Double("start") is not { } start || m.Double("end") is not { } end || m.Str("origin") is not { } origin) return null;
+                micRegions.Add((start, end, origin));
+            }
+        }
         return new MeetingInfo(title, locked, date, participants, source, (int?)r.Long("durationSeconds"), template, userNotes, channels,
-            r.Str("folder"), r.Str("language"), notes, r.Str("notesBy"), speakers, bookmarks);
+            r.Str("folder"), r.Str("language"), notes, r.Str("notesBy"), speakers, bookmarks)
+        {
+            MicFloorDb = r.Double("micFloorDb"), MicThresholdDb = r.Double("micThresholdDb"), MicRegions = micRegions,
+        };
     }
 
     // MARK: 參考文件（M§39.5）

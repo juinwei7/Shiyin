@@ -79,6 +79,8 @@ struct MeetingDetail: Equatable {
     var documentUse: [Int64: DocumentPrompt.Allocated] = [:]
     /// 會議中的畫面（design §83.1），照時間排
     var screens: [MeetingDocument] = []
+    /// 麥克風的「建議收錄」（design §93.3），照開始排
+    var micRegions: [MicRegion] = []
     /// 逐字稿分頁用的索引，載入時算一次，不要每次畫面更新都重算（design §21.12）：
     /// 每段的校正（不含已忽略的）、依開始時間排好的段落
     var correctionsBySegment: [Int64: [Correction]] = [:]
@@ -446,6 +448,10 @@ final class AppModel {
             self.reloadDetail(forceAudio: true)
             if time > 0 || playing { self.player.seek(to: time, play: playing) }
         }
+        runner.onMicRegions = { [weak self] id in
+            guard let self, self.selection == id else { return }
+            self.reloadDetail([.meeting, .micRegions])
+        }
         recorder.onFinished = { [weak self] result in self?.recordingFinished(result) }
         recorder.onLiveFinal = { [weak self] id, start, end, text in
             try? self?.db.appendLiveSegment(id, start: start, end: end, text: text)
@@ -692,6 +698,7 @@ final class AppModel {
         loaded.loadSpeakers(speakerRows)
         loaded.loadDocuments((try? db.documents(id)) ?? [])
         loaded.screens = (try? db.screens(id)) ?? []
+        loaded.micRegions = (try? db.micRegions(id)) ?? []
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
         loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
@@ -711,6 +718,27 @@ final class AppModel {
         if forceAudio || previous?.id != meeting.id || previous?.audioFile != meeting.audioFile {
             if meeting.hasAudio { player.load(meeting.audioURL, mixChannels: meeting.channels == "both") } else { player.unload() }
         }
+        applyPlayChannels()
+    }
+
+    // MARK: 聽哪一邊、麥克風只播建議收錄（R119.2、R119.5、design §93.4）
+
+    var playChannels: PlayChannels { detail.flatMap { PlayChannels(rawValue: $0.meeting.playChannels) } ?? .both }
+
+    func setPlayChannels(_ channels: PlayChannels) {
+        guard let id = detail?.meeting.id else { return }
+        perform(.detail([.meeting])) { try db.setPlayChannels(id, channels) }
+    }
+
+    func setPlayMicRegions(_ on: Bool) {
+        guard let id = detail?.meeting.id else { return }
+        perform(.detail([.meeting])) { try db.setPlayMicRegions(id, on) }
+    }
+
+    /// 目前這場的選擇、區塊交給播放器（載入、改了選擇、區塊變了時）
+    func applyPlayChannels() {
+        guard let detail else { return }
+        player.setChannels(playChannels, gateMic: detail.meeting.playMicRegions, regions: detail.micRegions)
     }
 
     /// 列表上的會議：資料夾、篩選（垃圾桶不篩選）、排序（R97、design §71）
@@ -2032,6 +2060,10 @@ final class AppModel {
                 let meeting = try await Task.detached(priority: .userInitiated) {
                     try MeetingPackage.importPackage(url, db: db, folder: folder)
                 }.value
+                // 舊的封包沒有麥克風的「建議收錄」：背景偵測（design §93.2）
+                if let id = meeting.id, meeting.channels == "both", (try? db.meeting(id))?.micFloorDb == nil {
+                    Task.detached(priority: .utility) { try? MicRegions.run(id, db: db) }
+                }
                 reload()
                 showTrash = false
                 selection = meeting.id
@@ -2110,7 +2142,8 @@ final class AppModel {
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
                             bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId),
-                            screens: try db.screens(meetingId), folderName: folderName(meeting.folderId))
+                            screens: try db.screens(meetingId), folderName: folderName(meeting.folderId),
+                            micRegions: try db.micRegions(meetingId))
     }
 
     func exportBundle() -> ExportBundle? {
@@ -2120,12 +2153,14 @@ final class AppModel {
     }
 
     /// 寫出檔案
+    /// micRegionsOnly：匯出錄音時麥克風只保留建議收錄（R119.6）；沒給時照設定（匯出對話框的勾選）
     /// progress：完成的比例（R120、design §94），只有錄音、封包會回報，在背景的執行緒呼叫。
     /// 取消（Task.cancel）時刪掉寫到一半的檔案，丟 CancellationError
     func export(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL,
-                progress: (@Sendable (Double) -> Void)? = nil) async throws {
+                micRegionsOnly: Bool? = nil, progress: (@Sendable (Double) -> Void)? = nil) async throws {
         do {
-            try await exportItem(item, format: format, times: times, speakers: speakers, meetingId: meetingId, to: url, progress: progress)
+            try await exportItem(item, format: format, times: times, speakers: speakers, meetingId: meetingId, to: url,
+                                 micRegionsOnly: micRegionsOnly, progress: progress)
             try Task.checkCancellation()
         } catch {
             if error is CancellationError || Task.isCancelled {
@@ -2137,7 +2172,7 @@ final class AppModel {
     }
 
     private func exportItem(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL,
-                            progress: (@Sendable (Double) -> Void)?) async throws {
+                            micRegionsOnly: Bool?, progress: (@Sendable (Double) -> Void)?) async throws {
         let b = try exportBundle(meetingId: meetingId)
         switch item {
         case .notes:
@@ -2176,7 +2211,8 @@ final class AppModel {
                 }.value
             }
         case .audio:
-            try await AudioExporter.export(b, format: format, to: url, progress: progress)
+            try await AudioExporter.export(b, format: format, to: url, micRegionsOnly: micRegionsOnly ?? AppSettings.exportMicRegionsOnly,
+                                           progress: progress)
         case .package:
             // 在背景的 Task 裡做：外面取消時把取消傳進去（ditto 會被停掉）
             let work = Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url, progress: progress) }
@@ -2308,6 +2344,7 @@ final class AppModel {
         static let corrections = DetailParts(rawValue: 1 << 3)
         static let meeting = DetailParts(rawValue: 1 << 4)   // 會議本身、會議紀錄、版本數
         static let documents = DetailParts(rawValue: 1 << 5)
+        static let micRegions = DetailParts(rawValue: 1 << 6)
     }
 
     func perform(_ scope: ReloadScope = .all, _ work: () throws -> Void) {
@@ -2356,9 +2393,11 @@ final class AppModel {
             updated.versionCount = (try? db.versionCount(id)) ?? 0
             updated.linkReviewItems()
         }
+        if parts.contains(.micRegions) { updated.micRegions = (try? db.micRegions(id)) ?? [] }
         if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }
         detail = updated
         syncReviewDraft()
+        if !parts.isDisjoint(with: [.meeting, .micRegions]) { applyPlayChannels() }
     }
 
     /// 待確認的回答跟著目前的會議（design §31.2）：換會議就換一份（舊的先存），題目或說話者的建議變了就同步

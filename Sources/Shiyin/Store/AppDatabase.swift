@@ -395,6 +395,23 @@ final class AppDatabase: @unchecked Sendable {
                 .reduce(into: [String: Int64]()) { $0[$1["name"]] = $1["id"] }
             if sidebarKeys && !ids.isEmpty { Self.replaceFolderKeys(ids) }
         }
+        // 麥克風的「建議收錄」、播放時聽哪一邊（R119、design §93.3）
+        migrator.registerMigration("v19") { db in
+            try db.execute(sql: """
+                CREATE TABLE mic_regions (
+                  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+                  start      REAL NOT NULL,
+                  end        REAL NOT NULL,
+                  origin     TEXT NOT NULL DEFAULT 'auto'
+                );
+                CREATE INDEX mic_regions_meeting ON mic_regions(meeting_id, start);
+                """)
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN mic_floor_db REAL")
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN mic_threshold_db REAL")
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN play_channels TEXT NOT NULL DEFAULT 'both'")
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN play_mic_regions INTEGER NOT NULL DEFAULT 0")
+        }
         return migrator
     }
 
@@ -681,6 +698,17 @@ final class AppDatabase: @unchecked Sendable {
         }
         try db.execute(sql: "UPDATE bookmarks SET meeting_id = ?, time = MAX(0, time - ?) WHERE meeting_id = ? AND time >= ?",
                        arguments: [newId, cut, id, cut])
+        // 麥克風的「建議收錄」（design §93.3）：切點之後的搬到新的一場，跨過切點的切成兩塊
+        for region in try micRegions(db, id) where region.end > cut {
+            if region.start >= cut {
+                try db.execute(sql: "UPDATE mic_regions SET meeting_id = ?, start = ?, end = ? WHERE id = ?",
+                               arguments: [newId, region.start - cut, region.end - cut, region.id])
+            } else {
+                try db.execute(sql: "UPDATE mic_regions SET end = ? WHERE id = ?", arguments: [cut, region.id])
+                var tail = MicRegion(meetingId: newId, start: 0, end: region.end - cut, origin: region.origin)
+                try tail.insert(db)
+            }
+        }
         // 會議中的畫面（design §83.7）：切點之後的搬到新的一場（檔案在 documents/<id>/，id 不變不用搬）
         try db.execute(sql: "UPDATE documents SET meeting_id = ?, at = MAX(0, at - ?) WHERE meeting_id = ? AND at IS NOT NULL AND at >= ?",
                        arguments: [newId, cut, id, cut])

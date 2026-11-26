@@ -45,6 +45,12 @@ public sealed class Meeting
     public bool SpeakerHintDismissed { get; set; }
     /// <summary>v12（M§72）：資料夾已經決定了（自動放過、自己移過、建議按了不用）。定期會議的 series_id 欄位留著不用（D177）</summary>
     public bool FolderDecided { get; set; }
+    /// <summary>v19（M§93.3）：麥克風「建議收錄」的基準、門檻（null 是還沒偵測；門檻 null、基準有值是有聲音的太少）</summary>
+    public double? MicFloorDb { get; set; }
+    public double? MicThresholdDb { get; set; }
+    /// <summary>播放時聽哪一邊（both / mic / system）、麥克風只播建議收錄（R119.2、R119.5）</summary>
+    public string PlayChannels { get; set; } = "both";
+    public bool PlayMicRegions { get; set; }
 
     public MeetingLanguage MeetingLanguage => MeetingLanguages.Parse(Language) ?? MeetingLanguage.Zh;
 
@@ -99,6 +105,17 @@ public sealed class SpeakerName
     public string? SuggestedName { get; set; }
     public string? SuggestionReason { get; set; }
     public string? SuggestionTime { get; set; }
+}
+
+/// <summary>麥克風的「建議收錄」區塊（R119、M§93.3）：Origin 是 auto（自動偵測）或 user（使用者新增、調整過）</summary>
+public sealed class MicRegion
+{
+    public const string Auto = "auto", User = "user";
+    public long? Id { get; set; }
+    public long MeetingId { get; set; }
+    public double Start { get; set; }
+    public double End { get; set; }
+    public string Origin { get; set; } = Auto;
 }
 
 public sealed class Bookmark

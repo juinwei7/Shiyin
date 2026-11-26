@@ -10,6 +10,8 @@ public sealed record ExportBundle(
 {
     /// <summary>參考文件（M§39.5）：只有 .shiyin 封包用到</summary>
     public IReadOnlyList<MeetingDocument> Documents { get; init; } = [];
+    /// <summary>麥克風的「建議收錄」（M§93.3）：只有 .shiyin 封包用到</summary>
+    public IReadOnlyList<MicRegion> MicRegions { get; init; } = [];
 
     /// <summary>資料夾的名字（R118：會議只記 id，封包照舊寫名字，M§92.4）；不在資料夾是空字串。只有 .shiyin 封包用到</summary>
     public string FolderName { get; init; } = "";

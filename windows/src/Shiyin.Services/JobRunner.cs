@@ -72,6 +72,8 @@ public sealed class JobRunner
     public event Action<Job, Exception?>? Finished;
     /// <summary>錄音壓縮成 m4a，換了檔案（正在播的要接著播）</summary>
     public event Action<long>? AudioReplaced;
+    /// <summary>麥克風的「建議收錄」偵測好了（M§93.2）</summary>
+    public event Action<long>? MicRegionsDetected;
     /// <summary>正式版取代了使用者改過的草稿（M§21.3）</summary>
     public event Action<long>? EditedDraftReplaced;
     /// <summary>重新辨識說話者做完（分出幾位）或失敗（M§23.3）</summary>
@@ -373,6 +375,18 @@ public sealed class JobRunner
     void Transcribe(Job job, RunningJob state, CancellationToken cancel)
     {
         if (db.Meeting(job.MeetingId) is not { } meeting) return;
+        // 麥克風的「建議收錄」（R119.3、M§93.2）：錄音停止後的第一步，讀原始的錄音；失敗不影響轉錄
+        if (meeting.Channels == "both" && meeting.MicFloorDb is null)
+        {
+            try
+            {
+                if (MicDetection.Run(job.MeetingId, db, paths, decoder, cancel)) MicRegionsDetected?.Invoke(job.MeetingId);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                Log.Error($"mic regions failed: {e.Message}");
+            }
+        }
         var startedAt = DateTime.UtcNow;
         var payload = Decode<TranscribePayload>(job.Payload) ?? new TranscribePayload(null);
         var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, GlossaryTerms(),

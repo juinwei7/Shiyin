@@ -20,8 +20,10 @@ public interface IExportPlatform
     Task MindMapPng(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
     Task MindMapPdf(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
     /// <summary>錄音轉成 m4a 或 wav（同格式時直接複製）</summary>
-    /// <summary>mixChannels：「麥克風＋電腦聲音」的錄音，m4a 兩個聲道混在一起（R73.2）</summary>
-    Task Audio(string source, string format, string path, bool mixChannels, IProgress<double>? progress, CancellationToken cancel);
+    /// <summary>mixChannels：「麥克風＋電腦聲音」的錄音，m4a 兩個聲道混在一起（R73.2）；
+    /// micRegions 有給時麥克風只保留這些區塊，其餘是沒有聲音（R119.6、M§93.6）</summary>
+    Task Audio(string source, string format, string path, bool mixChannels, IReadOnlyList<(double Start, double End)>? micRegions,
+        IProgress<double>? progress, CancellationToken cancel);
 }
 
 public enum ExportItem { Notes, MindMap, Transcript, Audio, Package }
@@ -121,6 +123,8 @@ public sealed partial class AppController
         runner.EditedDraftReplaced += _ =>
             Notice?.Invoke(L.T("正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回"));
         runner.Changed += () => Changed?.Invoke(null);
+        // 麥克風的「建議收錄」偵測好了（M§93.2）：重讀那場（時間軸、播放的區塊）
+        runner.MicRegionsDetected += id => Changed?.Invoke(id);
         // 自動放進資料夾了（M§72）
         runner.Organized += Organized;
         // 再找不確定的地方做完（M§88）：找到時 App 展開待確認
@@ -329,6 +333,16 @@ public sealed partial class AppController
         {
             var meeting = await Task.Run(() => MeetingPackage.Import(file, Db, Paths, folder));
             Changed?.Invoke(null);
+            // 舊的封包沒有麥克風的「建議收錄」：背景偵測（M§93.2）
+            if (meeting is { Channels: "both", MicFloorDb: null })
+            {
+                var id = meeting.Id!.Value;
+                _ = Task.Run(() =>
+                {
+                    try { if (MicDetection.Run(id, Db, Paths, decoder)) Changed?.Invoke(id); }
+                    catch (Exception e) { Log.Error($"mic regions failed: {e.Message}"); }
+                });
+            }
             Reveal?.Invoke(meeting.Id!.Value);
             Notice?.Invoke(L.F("已匯入「%@」", meeting.DisplayTitle));
         }
@@ -1213,6 +1227,11 @@ public sealed partial class AppController
         try { Db.UpdateUserNotes(id, text); } catch (Microsoft.Data.Sqlite.SqliteException e) { Log.Error($"save user notes failed: {e.SqliteErrorCode}"); }
     }
 
+    /// <summary>聽哪一邊、麥克風只播建議收錄（R119.2、R119.5、M§93.4）</summary>
+    public void SetPlayChannels(long meetingId, Capture.PlayChannels channels) => Perform(meetingId, () => Db.SetPlayChannels(meetingId, channels.Key()));
+
+    public void SetPlayMicRegions(long meetingId, bool on) => Perform(meetingId, () => Db.SetPlayMicRegions(meetingId, on));
+
     public void AddBookmark(long meetingId, double time, string label = "") => Perform(meetingId, () => Db.AddBookmark(meetingId, time, label));
     public void DeleteBookmark(long meetingId, long id) => Perform(meetingId, () => Db.DeleteBookmark(id));
 
@@ -1344,17 +1363,18 @@ public sealed partial class AppController
     {
         if (Db.Meeting(meetingId) is not { } meeting) throw new ExportException(L.T("這場會議已經被刪除，沒辦法匯出"));
         return new ExportBundle(meeting, Db.Segments(meetingId), Db.Speakers(meetingId).ToDictionary(s => s.Idx, s => s.Name),
-            Db.Bookmarks(meetingId), meeting.DecodedNotes) { Documents = Db.Documents(meetingId), FolderName = Db.FolderName(meeting.FolderId) };
+            Db.Bookmarks(meetingId), meeting.DecodedNotes) { Documents = Db.Documents(meetingId), FolderName = Db.FolderName(meeting.FolderId), MicRegions = Db.MicRegions(meetingId) };
     }
 
     /// <summary>寫出檔案；文字格式、封包在背景寫，長會議不卡住畫面（M§21.13）</summary>
+    /// <summary>micRegionsOnly：匯出錄音時麥克風只保留建議收錄（R119.6）；沒給時照設定（匯出對話框的勾選）</summary>
     /// <summary>progress：錄音、封包的完成比例（R120、design-windows §11.53）；取消時刪掉寫到一半的檔案、丟 OperationCanceledException</summary>
     public async Task Export(ExportItem item, string format, bool times, bool speakers, long meetingId, string path, CancellationToken cancel = default,
-        IProgress<double>? progress = null)
+        bool? micRegionsOnly = null, IProgress<double>? progress = null)
     {
         try
         {
-            await ExportWork(item, format, times, speakers, meetingId, path, cancel, progress);
+            await ExportWork(item, format, times, speakers, meetingId, path, cancel, micRegionsOnly, progress);
             cancel.ThrowIfCancellationRequested();
         }
         catch (OperationCanceledException)
@@ -1365,7 +1385,7 @@ public sealed partial class AppController
     }
 
     async Task ExportWork(ExportItem item, string format, bool times, bool speakers, long meetingId, string path, CancellationToken cancel,
-        IProgress<double>? progress)
+        bool? micRegionsOnly, IProgress<double>? progress)
     {
         var b = Bundle(meetingId);
         switch (item)
@@ -1389,7 +1409,9 @@ public sealed partial class AppController
                 break;
             case ExportItem.Audio:
                 if (!Paths.HasAudio(b.Meeting)) throw new ExportException(L.T("這場會議沒有錄音檔"));
-                await Platform().Audio(Paths.AudioPath(b.Meeting), format, path, b.Meeting.Channels == "both", progress, cancel);
+                var gate = b.Meeting.Channels == "both" && (micRegionsOnly ?? Settings.ExportMicRegionsOnly) && b.MicRegions.Count > 0;
+                await Platform().Audio(Paths.AudioPath(b.Meeting), format, path, b.Meeting.Channels == "both",
+                    gate ? [.. b.MicRegions.Select(r => (r.Start, r.End))] : null, progress, cancel);
                 break;
             case ExportItem.Package: await Task.Run(() => MeetingPackage.Export(b, path, Paths, appVersion, progress, cancel), cancel); break;
         }

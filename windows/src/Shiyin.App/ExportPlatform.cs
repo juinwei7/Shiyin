@@ -34,8 +34,9 @@ public sealed class ExportPlatform(AppHost host) : IExportPlatform
         Pdf.Print($"<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{{margin:0;padding:0}}svg{{display:block}}</style></head><body>{Notes.MindMap.Svg(layout, language)}</body></html>",
             path, cancel, layout.Width / 96, layout.Height / 96, 0);
 
-    public Task Audio(string source, string format, string path, bool mixChannels, IProgress<double>? progress, CancellationToken cancel) =>
-        host.Compressor.Export(source, format, path, cancel, mixChannels, progress);
+    public Task Audio(string source, string format, string path, bool mixChannels, IReadOnlyList<(double Start, double End)>? micRegions,
+        IProgress<double>? progress, CancellationToken cancel) =>
+        host.Compressor.Export(source, format, path, cancel, mixChannels, micRegions, progress);
 }
 
 /// <summary>

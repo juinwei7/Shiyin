@@ -137,5 +137,22 @@ public sealed record EditPlan(IReadOnlyList<EditPlan.Piece> Pieces)
     }));
 
     /// <summary>內容相同（record 的 List 只比參考）</summary>
+    /// <summary>一段時間（start～end）在新時間軸上變成哪幾段：跟每個保留的片段取交集再對應（M§93.3，同 Mac 的 mapRange）</summary>
+    public List<(double Start, double End)> MapRange(long meetingId, double start, double end)
+    {
+        var output = new List<(double, double)>();
+        var offset = 0.0;
+        foreach (var piece in Pieces)
+        {
+            if (piece.MeetingId == meetingId)
+            {
+                double s = Math.Max(start, piece.Start), e = Math.Min(end, piece.End);
+                if (e > s) output.Add((offset + s - piece.Start, offset + e - piece.Start));
+            }
+            offset += piece.Length;
+        }
+        return output;
+    }
+
     public bool SameAs(EditPlan other) => Pieces.SequenceEqual(other.Pieces);
 }

@@ -71,6 +71,11 @@ public class ExportTests
         var info = new IO.PackageJson.MeetingInfo(m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.DurationSeconds,
             m.TemplateId, m.UserNotes, m.Channels, fx.FolderName, m.Language, fx.Notes, "claude",
             b.Speakers.Select(p => (p.Key, p.Value)).ToList(), fx.Bookmarks.Select(x => (x.Time, x.Label)).ToList());
+        // 麥克風的「建議收錄」（M§93.3）：基準有值才寫
+        var mic = m.Clone();
+        mic.MicFloorDb = fx.MicFloorDb;
+        mic.MicThresholdDb = fx.MicThresholdDb;
+        info = MeetingPackage.WithMicRegions(info, mic, fx.MicRegions);
         Golden.Json($"package/{key}/meeting.json", IO.PackageJson.Write(info));
         Golden.Json($"package/{key}/transcript.json", IO.PackageJson.Write(fx.Segments.Select(s =>
             new IO.PackageJson.SegmentInfo(s.Start, s.End, s.Text, s.LowConfidence, s.Speaker))));

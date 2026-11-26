@@ -2,6 +2,7 @@ using System.Text.Json;
 using Shiyin.IO;
 using Shiyin.Model;
 using Shiyin.Notes;
+using Shiyin.Services.Capture;
 using Shiyin.Text;
 using Shiyin.Transcribe;
 using Xunit;
@@ -37,6 +38,79 @@ public class UtilTests
         var three = new float[1];
         Shiyin.Services.Capture.ChannelMix.Mix([0.3f, 0.6f, 0.9f], 3, three);
         Assert.Equal(0.6f, three[0], 5);
+    }
+
+    /// <summary>麥克風的 gate（M§93.4）：區塊裡 1、外面 0、頭尾 10 ms 淡入淡出，跟 Mac 的 util/mic-gate.json 比對</summary>
+    [Fact]
+    public void MicGateSameAsMac()
+    {
+        var output = new System.Text.Json.Nodes.JsonArray();
+        foreach (var c in Golden.Fixtures.GetProperty("micGateCases").EnumerateArray())
+        {
+            var regions = c.GetProperty("regions").EnumerateArray().Select(r => (r[0].GetDouble(), r[1].GetDouble())).ToList();
+            output.Add(new System.Text.Json.Nodes.JsonObject
+            {
+                ["key"] = c.Str("key"),
+                ["gates"] = new System.Text.Json.Nodes.JsonArray([.. c.GetProperty("times").EnumerateArray()
+                    .Select(t => (System.Text.Json.Nodes.JsonNode)Shiyin.Services.Capture.ChannelMix.Gate(t.GetDouble(), regions))]),
+            });
+        }
+        Golden.Json("util/mic-gate.json", output.ToJsonString());
+    }
+
+    /// <summary>聽哪一邊、麥克風只播建議收錄（M§93.4）：(L × 麥克風音量 × gate + R × 電腦聲音音量) × 0.7071</summary>
+    [Fact]
+    public void ChannelMixGated()
+    {
+        float[] Mix(ChannelSettings s, double start)
+        {
+            var mono = new float[4];
+            ChannelMix.MixGated([0.5f, 0.2f, 0.5f, 0.2f, 0.5f, 0.2f, 0.5f, 0.2f], mono, s, start, 10);   // 每個取樣 0.1 秒
+            return [.. mono.Select(v => MathF.Round(v, 5))];
+        }
+        float both = MathF.Round(0.7f * ChannelMix.Gain, 5), mic = MathF.Round(0.5f * ChannelMix.Gain, 5), system = MathF.Round(0.2f * ChannelMix.Gain, 5);
+        Assert.Equal([both, both, both, both], Mix(ChannelSettings.Default, 0));
+        Assert.Equal([mic, mic, mic, mic], Mix(ChannelSettings.For(PlayChannels.Mic, false, []), 0));
+        Assert.Equal([system, system, system, system], Mix(ChannelSettings.For(PlayChannels.System, true, [(0, 10)]), 0));
+        // 區塊 0.1～0.25 秒：第 2 個取樣（0.1 秒）在開頭是 0，第 3 個（0.2 秒）離結尾 0.05 秒（超過淡出的 10 ms）是 1
+        var gated = ChannelSettings.For(PlayChannels.Both, true, [(0.1, 0.25)]);
+        Assert.Equal([system, system, both, system], Mix(gated, 0));
+        Assert.True(gated.GateMic);
+        Assert.False(ChannelSettings.For(PlayChannels.System, true, [(0, 1)]).GateMic);
+    }
+
+    /// <summary>匯出 wav 的混音（R119.6、M§93.6）：區塊外麥克風是 0、電腦聲音照留，長度取兩邊較短的</summary>
+    [Fact]
+    public void MixGatedChannelsForExport()
+    {
+        float[] left = [0.5f, 0.5f, 0.5f, 0.5f, 0.5f], right = [0.2f, 0.2f, 0.2f, 0.2f];
+        var mixed = ChannelMix.MixGatedChannels(left, right, [(0.15, 0.35)], 10);   // 每個取樣 0.1 秒：第 3 個（0.2 秒）在區塊裡、離邊界超過 10 ms
+        Assert.Equal(4, mixed.Length);
+        float both = MathF.Round(0.7f * ChannelMix.Gain, 5), system = MathF.Round(0.2f * ChannelMix.Gain, 5);
+        Assert.Equal([system, system, both, both], mixed.Select(v => MathF.Round(v, 5)));
+    }
+
+    /// <summary>GatedMono 記得播到哪裡：跳播時設 Time，接著讀的取樣照那個時間篩</summary>
+    [Fact]
+    public void GatedMonoTracksTime()
+    {
+        using var home = new TempHome();
+        var path = Path.Combine(home.Path, "both.wav");
+        var count = 16000 * 3;
+        using (var writer = new WavWriter(path, 2)) writer.Write([Enumerable.Repeat(0.5f, count).ToArray(), new float[count]], count);
+        using var reader = new NAudio.Wave.WaveFileReader(path);
+        var control = new Shiyin.Services.Capture.ChannelControl();
+        control.Settings = Shiyin.Services.Capture.ChannelSettings.For(Shiyin.Services.Capture.PlayChannels.Both, true, [(1.0, 2.0)]);
+        var mono = new Shiyin.Services.Capture.ChannelMix.GatedMono(NAudio.Wave.WaveExtensionMethods.ToSampleProvider(reader), control);
+        var buffer = new float[1600];
+        float Peak() { var n = mono.Read(buffer); return buffer[..n].Max(MathF.Abs); }
+        Assert.Equal(0, Peak());                        // 0～0.1 秒：區塊外
+        reader.CurrentTime = TimeSpan.FromSeconds(1.5);
+        mono.Time = 1.5;
+        Assert.Equal(0.5f * Shiyin.Services.Capture.ChannelMix.Gain, Peak(), 4);   // 1.5～1.6 秒：區塊裡
+        Assert.Equal(1.6, mono.Time, 6);
+        control.Settings = Shiyin.Services.Capture.ChannelSettings.For(Shiyin.Services.Capture.PlayChannels.System, false, []);
+        Assert.Equal(0, Peak());                        // 改成只電腦聲音：下一批就生效
     }
 
     /// <summary>左聲道有聲音、右聲道靜音的 WAV 讀成單聲道：峰值是左聲道 × 0.7071、長度不變</summary>

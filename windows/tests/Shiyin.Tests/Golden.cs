@@ -82,6 +82,10 @@ public static class Golden
         List<(string Question, string Answer)> History, string Question, List<string> KnownPeople, List<MeetingDocument> Documents, string FolderName)
     {
         public MeetingLanguage Language => Meeting.MeetingLanguage;
+        /// <summary>麥克風的「建議收錄」（M§93.3）：fixtures 的 meetingMicRegions，同 Mac 的 GoldenDump</summary>
+        public double? MicFloorDb { get; init; }
+        public double? MicThresholdDb { get; init; }
+        public List<MicRegion> MicRegions { get; init; } = [];
 
         /// <summary>資料庫裡的說話者表：1 到最大編號，沒改名的是預設名稱</summary>
         public Dictionary<int, string> SpeakerTable
@@ -128,8 +132,21 @@ public static class Golden
         var key = o.Str("key")!;
         var documents = Fixtures.Get("meetingDocuments") is { ValueKind: JsonValueKind.Object } all && all.Get(key) is { ValueKind: JsonValueKind.Array } list
             ? list.EnumerateArray().Select(Document).ToList() : [];
-        return new MeetingFixture(key, meeting, segments, speakers, voices, bookmarks, o.Strings("glossary") ?? [], notes, answers,
+        var fixture = new MeetingFixture(key, meeting, segments, speakers, voices, bookmarks, o.Strings("glossary") ?? [], notes, answers,
             history, o.Str("question") ?? "", o.Strings("knownPeople") ?? [], documents, m.Str("folder") ?? "");
+        if (Fixtures.Get("meetingMicRegions") is { ValueKind: JsonValueKind.Object } mics && mics.Get(key) is { ValueKind: JsonValueKind.Object } mic)
+        {
+            fixture = fixture with
+            {
+                MicFloorDb = Number(mic.Get("floorDb")),
+                MicThresholdDb = mic.Get("thresholdDb") is { ValueKind: JsonValueKind.Number } t ? t.GetDouble() : null,
+                MicRegions = [.. mic.GetProperty("regions").EnumerateArray().Select(r => new MicRegion
+                {
+                    Start = r[0].GetDouble(), End = r[1].GetDouble(), Origin = r[2].GetString() ?? MicRegion.Auto,
+                })],
+            };
+        }
+        return fixture;
     }
 
     /// <summary>
@@ -142,6 +159,10 @@ public static class Golden
         m.FolderId = fx.FolderName.Length > 0 ? db.CreateFolder(fx.FolderName) : null;
         return m;
     }
+
+    /// <summary>[[格數, 音量或 null], …] 展開成每格的音量（M§93.2 的標準答案，同 Mac 的 micLevels）</summary>
+    public static List<double?> MicLevels(JsonElement runs) =>
+        [.. runs.EnumerateArray().SelectMany(r => Enumerable.Repeat(r[1].ValueKind == JsonValueKind.Null ? (double?)null : r[1].GetDouble(), (int)r[0].GetDouble()))];
 
     public static MeetingDocument Document(JsonElement d) => new()
     {

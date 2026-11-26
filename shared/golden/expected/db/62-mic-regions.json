@@ -1,0 +1,46 @@
+{
+  "mic_regions" : [
+    {
+      "end" : 9.8000000000000007,
+      "id" : 1,
+      "meeting_id" : 1,
+      "origin" : "auto",
+      "start" : 1.2
+    },
+    {
+      "end" : 25.5,
+      "id" : 2,
+      "meeting_id" : 1,
+      "origin" : "user",
+      "start" : 15
+    },
+    {
+      "end" : 70,
+      "id" : 3,
+      "meeting_id" : 1,
+      "origin" : "auto",
+      "start" : 50
+    },
+    {
+      "end" : 3100.5,
+      "id" : 4,
+      "meeting_id" : 1,
+      "origin" : "auto",
+      "start" : 3000
+    },
+    {
+      "end" : 14.5,
+      "id" : 5,
+      "meeting_id" : 2,
+      "origin" : "auto",
+      "start" : 5.7000000000000002
+    },
+    {
+      "end" : 2,
+      "id" : 6,
+      "meeting_id" : 2,
+      "origin" : "user",
+      "start" : 1
+    }
+  ]
+}

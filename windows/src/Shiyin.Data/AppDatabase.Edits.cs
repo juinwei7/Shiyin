@@ -151,6 +151,14 @@ public sealed partial class AppDatabase
             if (plan.Map(id, bookmark.Time) is double t) db.Execute("UPDATE bookmarks SET time = ? WHERE id = ?", t, bookmark.Id);
             else db.Execute("DELETE FROM bookmarks WHERE id = ?", bookmark.Id);
         }
+        // 麥克風的「建議收錄」（M§93.3）：跟保留的片段取交集再對應；合併時另一場的接在後面
+        var micRegions = new List<MicRegion>();
+        void CollectMicRegions(long meetingId)
+        {
+            foreach (var r in MicRegions(db, meetingId))
+                micRegions.AddRange(plan.MapRange(meetingId, r.Start, r.End).Select(m => new MicRegion { MeetingId = id, Start = m.Start, End = m.End, Origin = r.Origin }));
+        }
+        CollectMicRegions(id);
 
         // 合併：另一場的說話者對起來，句子、標記、參考文件複製過來（M§81.4）
         var documentCopies = new List<(string From, string To)>();
@@ -190,6 +198,7 @@ public sealed partial class AppDatabase
                 if (plan.Map(other, bookmark.Time) is not double t) continue;
                 db.Execute("INSERT INTO bookmarks (meeting_id, time, label) VALUES (?, ?, ?)", id, t, bookmark.Label);
             }
+            CollectMicRegions(other);
             foreach (var document in db.Query("SELECT * FROM documents WHERE meeting_id = ? ORDER BY id", other).Select(ToDocument).ToList())
             {
                 db.Execute("INSERT INTO documents (meeting_id, name, file, kind, pages, ocr, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -211,6 +220,8 @@ public sealed partial class AppDatabase
             }
             db.Execute("UPDATE meetings SET deleted_at = ? WHERE id = ?", now, other);
         }
+
+        ReplaceMicRegions(db, id, Shiyin.Transcribe.MicRegions.Normalized(micRegions, 0.05));
 
         // 句子照新的時間重新編號（正式、即時各自）
         foreach (var kind in new[] { "final", "live" })
@@ -314,6 +325,20 @@ public sealed partial class AppDatabase
                 SuggestionTime = s.Str("suggestionTime"),
             });
         }
+        if (snapshot.Get("micRegions") is { ValueKind: JsonValueKind.Array } mics)
+        {
+            ReplaceMicRegions(db, id, mics.EnumerateArray().Select(m => new MicRegion
+            {
+                MeetingId = id, Start = m.Double("start") ?? 0, End = m.Double("end") ?? 0, Origin = m.Str("origin") ?? MicRegion.Auto,
+            }));
+        }
+        else
+        {
+            // 快照沒有區塊：清掉，可以重新偵測
+            ReplaceMicRegions(db, id, []);
+            meeting.MicFloorDb = null;
+            meeting.MicThresholdDb = null;
+        }
         var keepDocuments = SnapshotArray(snapshot, "documentIds").Select(x => x.ValueKind == JsonValueKind.Number ? x.GetInt64() : 0).ToHashSet();
         var removedDocuments = new List<string>();
         foreach (var document in db.Query("SELECT * FROM documents WHERE meeting_id = ?", id).Select(ToDocument).ToList())
@@ -396,6 +421,11 @@ public sealed partial class AppDatabase
         if (meeting.NotesBy is { } by) snapshot.Add("notesBy", by);
         snapshot.Add("notesDraft", new JNode.Int(meeting.NotesDraft)).Add("createdAt", meeting.CreatedAt).Add("meetingDate", meeting.MeetingDate)
             .Add("participants", meeting.Participants).Add("lines", lines).Add("bookmarks", bookmarks).Add("speakers", speakers).Add("documentIds", documents);
+        // 麥克風的「建議收錄」（M§93.3）：沒有區塊時不寫（同 Mac）
+        var mics = MicRegions(db, id);
+        if (mics.Count > 0)
+            snapshot.Add("micRegions", new JNode.Arr(mics.Select(r => (JNode)new JNode.Obj().Add("id", new JNode.Int(r.Id ?? 0)).Add("meetingId", new JNode.Int(r.MeetingId))
+                .Add("start", JNode.Of(r.Start)).Add("end", JNode.Of(r.End)).Add("origin", r.Origin)).ToList()));
         return SwiftJsonWriter.Write(snapshot, sortKeys: false, escapeSlashes: true);
     }
 

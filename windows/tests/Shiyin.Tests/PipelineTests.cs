@@ -71,6 +71,36 @@ public class PipelineTests
         }
     }
 
+    /// <summary>麥克風的「建議收錄」（M§93.2）：基準、門檻、區塊</summary>
+    [Fact]
+    public void MicRegionsSameAsMac()
+    {
+        var output = new System.Text.Json.Nodes.JsonArray();
+        foreach (var c in Golden.Fixtures.GetProperty("micRegionCases").EnumerateArray())
+        {
+            var r = MicRegions.Detect(Golden.MicLevels(c.GetProperty("levels")));
+            output.Add(new System.Text.Json.Nodes.JsonObject
+            {
+                ["key"] = c.Str("key"), ["floorDb"] = r.FloorDb, ["thresholdDb"] = r.ThresholdDb,
+                ["regions"] = new System.Text.Json.Nodes.JsonArray([.. r.Regions.Select(x => (System.Text.Json.Nodes.JsonNode)new System.Text.Json.Nodes.JsonArray(x.Start, x.End))]),
+            });
+        }
+        Golden.Json("pipeline/mic-regions.json", output.ToJsonString());
+    }
+
+    /// <summary>每格的音量：整格是 0 的是 null（暫停麥克風），其餘是 dBFS，下限 −90</summary>
+    [Fact]
+    public void MicLevels()
+    {
+        var samples = Enumerable.Repeat(0f, 1600).Concat(Enumerable.Repeat(0.5f, 1600)).Concat(Enumerable.Repeat(1e-9f, 1600)).Concat(Enumerable.Repeat(0.5f, 100));
+        var levels = MicRegions.Levels(samples, 16_000);
+        Assert.Equal(4, levels.Count);
+        Assert.Null(levels[0]);
+        Assert.Equal(20 * Math.Log10(0.5), levels[1]!.Value, 9);
+        Assert.Null(levels[2]);
+        Assert.Equal(20 * Math.Log10(0.5), levels[3]!.Value, 9);
+    }
+
     [Fact]
     public void SimilarAndEcho()
     {

@@ -64,6 +64,8 @@ public sealed class AppSettings
     /// <summary>側欄收起來的段落、在原地展開的資料夾（R101、M§75、design-windows §11.34）：字串陣列，鍵同 Mac</summary>
     public const string SidebarCollapsedKey = "sidebarCollapsed";
     public const string SidebarExpandedKey = "sidebarExpanded";
+    /// <summary>匯出錄音時麥克風只保留建議收錄（R119.6、M§93.6）</summary>
+    public const string ExportMicRegionsOnlyKey = "exportMicRegionsOnly";
     /// <summary>側欄「資料夾」那一段拖曳排好的順序（R103.2、M§77、design-windows §11.36）：字串陣列（照順序），鍵同 sidebarExpanded</summary>
     public const string SidebarOrderKey = "sidebarOrder";
     /// <summary>中文的字：traditional／simplified（沒有值 = traditional，M§47.2）</summary>
@@ -347,6 +349,7 @@ public sealed class AppSettings
     public MeetingSort MeetingSort => MeetingSorts.Parse(String(MeetingSortKey)) ?? MeetingSort.DateDesc;
     public MeetingGrouping MeetingGrouping => MeetingGroupings.Parse(String(MeetingGroupingKey)) ?? MeetingGrouping.None;
     public bool BookmarkHotKey => Flag(BookmarkHotKeyKey, true);
+    public bool ExportMicRegionsOnly => Flag(ExportMicRegionsOnlyKey, false);
     public bool IdleStop => Flag(IdleStopKey, true);
     /// <summary>正式轉錄用快速辨識（Mac 的「macOS 內建」，D45）：設定值同 Mac 是 system</summary>
     public bool UseFastTranscriber => String(TranscriptionEngineKey) == "system";

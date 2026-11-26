@@ -2,6 +2,7 @@ using System.Text.Json;
 using Shiyin.Data;
 using Shiyin.Model;
 using Shiyin.Text;
+using Shiyin.Transcribe;
 using Xunit;
 
 namespace Shiyin.Tests;
@@ -109,6 +110,11 @@ public sealed class DatabaseTests : IDisposable
                         fx.Voices, "breeze");
                     foreach (var (idx, name) in fx.Speakers.OrderBy(p => p.Key)) db.RenameSpeaker(mid, idx, name);
                     foreach (var b in fx.Bookmarks) db.AddBookmark(mid, b.Time, b.Label);
+                    if (fx.MicFloorDb is double floor)
+                    {
+                        db.SaveMicDetection(mid, new MicRegionResult(floor, fx.MicThresholdDb, []));
+                        foreach (var r in fx.MicRegions) db.ImportMicRegion(mid, r.Start, r.End, r.Origin);
+                    }
                     if (fx.Notes is { } notes) db.SaveNotes(mid, notes, "claude", "整理", NotesSource.Generated);
                     db.UpdateUserNotes(mid, fx.Meeting.UserNotes);
                     foreach (var term in fx.Glossary) db.AddTerm(term);
@@ -240,6 +246,23 @@ public sealed class DatabaseTests : IDisposable
                     break;
                 }
                 case "deleteMeeting": db.DeleteMeeting(Id(op)); break;
+                // 麥克風的「建議收錄」（M§93.3）：偵測（levels 同 micRegionCases）、新增、調整、刪除；index 是照開始排的第幾塊
+                case "saveMicDetection": db.SaveMicDetection(Id(op), MicRegions.Detect(Golden.MicLevels(op.GetProperty("levels")))); break;
+                case "addMicRegion": db.AddMicRegion(Id(op), op.GetProperty("start").GetDouble(), op.GetProperty("end").GetDouble()); break;
+                case "updateMicRegion":
+                {
+                    var list = db.MicRegions(Id(op));
+                    var i = (int)op.Long("index")!;
+                    if (i >= 0 && i < list.Count) db.UpdateMicRegion(list[i].Id!.Value, op.GetProperty("start").GetDouble(), op.GetProperty("end").GetDouble());
+                    break;
+                }
+                case "deleteMicRegion":
+                {
+                    var list = db.MicRegions(Id(op));
+                    var i = (int)op.Long("index")!;
+                    if (i >= 0 && i < list.Count) db.DeleteMicRegion(list[i].Id!.Value);
+                    break;
+                }
                 // 編輯會議（M§81.1）：pieces 是 [會議的 key, 開始, 結束]，cut 是新時間軸上的切點
                 case "applyEdit":
                 {

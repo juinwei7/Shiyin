@@ -29,10 +29,23 @@ enum MeetingPackage {
         var notesBy: String?
         var speakers: [SpeakerJSON]
         var bookmarks: [BookmarkJSON]
+        /// 麥克風的「建議收錄」（design §93.3）；沒偵測過就不寫，舊封包沒有這些欄位（匯入後自動偵測）
+        var micRegions: [MicRegionJSON]? = nil
+        var micFloorDb: Double? = nil
+        var micThresholdDb: Double? = nil
     }
 
     struct SpeakerJSON: Codable { var idx: Int; var name: String }
     struct BookmarkJSON: Codable { var time: Double; var label: String }
+    struct MicRegionJSON: Codable { var start: Double; var end: Double; var origin: String }
+
+    /// meeting.json 的麥克風區塊欄位：基準有值（偵測過）才寫
+    static func micFields(_ info: inout MeetingJSON, meeting m: Meeting, regions: [MicRegion]) {
+        guard let floor = m.micFloorDb else { return }
+        info.micFloorDb = floor
+        info.micThresholdDb = m.micThresholdDb
+        info.micRegions = regions.map { MicRegionJSON(start: $0.start, end: $0.end, origin: $0.origin) }
+    }
     struct SegmentJSON: Codable { var start: Double; var end: Double; var text: String; var lowConfidence: Bool; var speaker: Int? }
     /// 參考文件（design §39.5）：documents.json 的一項，file 是封包裡原始檔的位置。
     /// at：會議中的畫面的錄音時間（design §83.6）；一般的文件沒有這個鍵，舊版拾音讀到會忽略（畫面變成一般的文件）
@@ -79,13 +92,14 @@ enum MeetingPackage {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
         try encoder.encode(Manifest(format: formatVersion, app: version, exportedAt: Clock.now(), audio: audioName))
             .write(to: dir.appendingPathComponent("manifest.json"))
-        try encoder.encode(MeetingJSON(
+        var info = MeetingJSON(
             title: m.title, titleLocked: m.titleLocked, meetingDate: m.meetingDate, participants: m.participants,
             sourceFilename: m.sourceFilename, durationSeconds: m.durationSeconds, templateId: m.templateId,
             userNotes: m.userNotes, channels: m.channels, folder: b.folderName, language: m.language, notes: b.notes, notesBy: m.notesBy,
             speakers: b.speakers.map { SpeakerJSON(idx: $0.key, name: $0.value) }.sorted { $0.idx < $1.idx },
-            bookmarks: b.bookmarks.map { BookmarkJSON(time: $0.time, label: $0.label) }))
-            .write(to: dir.appendingPathComponent("meeting.json"))
+            bookmarks: b.bookmarks.map { BookmarkJSON(time: $0.time, label: $0.label) })
+        micFields(&info, meeting: m, regions: b.micRegions)
+        try encoder.encode(info).write(to: dir.appendingPathComponent("meeting.json"))
         try encoder.encode(b.segments.map { SegmentJSON(start: $0.start, end: $0.end, text: $0.text, lowConfidence: $0.lowConfidence, speaker: $0.speaker) })
             .write(to: dir.appendingPathComponent("transcript.json"))
         // 參考文件、會議中的畫面（design §83.6）：原始檔不在了的那份不放（不然匯入時會被當成壞掉的封包）
@@ -172,6 +186,12 @@ enum MeetingPackage {
             }, duration: info.durationSeconds ?? 0, speakerCount: 0)
             for speaker in info.speakers { try db.renameSpeaker(id, idx: speaker.idx, name: speaker.name) }
             for bookmark in info.bookmarks { try db.addBookmark(id, time: bookmark.time, label: bookmark.label) }
+            if let floor = info.micFloorDb {
+                try db.saveMicDetection(id, MicRegions.Result(floorDb: floor, thresholdDb: info.micThresholdDb, regions: []))
+                for r in info.micRegions ?? [] where r.end > r.start {
+                    try db.importMicRegion(id, start: r.start, end: r.end, origin: r.origin == MicRegion.user ? MicRegion.user : MicRegion.auto)
+                }
+            }
             if let notes = info.notes { try db.saveNotes(id, notes: notes, by: info.notesBy, reason: String(localized: "匯入")) }
             try db.updateUserNotes(id, info.userNotes)
             for entry in documents {

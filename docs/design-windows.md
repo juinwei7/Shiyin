@@ -944,11 +944,22 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **測試**：`OrganizeTests.MigrationV18MatchesMac`（`db/migrate-v18.json`）、`ReplaceFolderKeysWithIds`、`FolderIdsCreateRenameMergeDelete`（同名、大小寫、合併時條件的兩種情況、垃圾桶裡的會議、刪除）、`MigrationV14TurnsSeriesIntoFolders`（改成從 v13 的結構接著跑 v14～v18）、`FolderRulesInDatabase`、列表、側欄、重新命名的測試改成 id；`AppTests.SidebarKeysFollowFolderRenameAndDelete`（合併拿掉鍵、留下的照舊位置）、`RenameDialogReadsAndCommits`；`ServicesTests.PackageRoundTrip`（封包寫名字、匯入到新的資料庫建出同名資料夾）；標準答案的會議寫入前先 `CreateFolder`（`Golden.WithFolder`，同 Mac 的 GoldenDump）。
 - **驗證**：`dotnet test`（標準答案 `db/schema.sql`、`db/*.json`、`db/migrate-v18.json`、`util/folder-suggest.json`）；虛擬機：舊版的資料開新版（側欄展開、排序的狀態接上）、改名、合併、刪除、拖曳、自動加入、匯入封包各走一次，側欄截圖。
 
+### 11.52 麥克風、電腦聲音分開聽，麥克風的「建議收錄」（R119，M§93、D201）
+
+- **檔案**：不拆，同 M§93.1。
+- **偵測**：`Shiyin.Core/Transcribe/MicRegions.cs`：`Detect(float?[] levels) -> MicRegionResult`，規則、常數同 M§93.2（`MicRegions.Rules`），比對標準答案 `pipeline/mic-regions.json`。讀檔 `Shiyin.Services` 的 `MicLevels.Read(path)`：NAudio 讀左聲道、每 100 ms 一格算 RMS 轉 dBFS（下限 −90），整格是 0 記成 null。時機同 M§93.2（錄音停止後轉錄線的第一步、匯入沒有區塊的封包）。
+- **資料**：`MigrationSql.V19`（同 M§93.3，`db/schema.sql` 一致）；`AppDatabase.MicRegions.cs`（同名方法，重疊合併、`origin` 的規則同 Mac）。編輯會議（§11.23 分割、`EditTimeline`、合併、還原的快照）照 M§93.3；`.shiyin` 的 `micRegions`、`micFloorDb`、`micThresholdDb` 同 Mac（雙向匯入的測試加區塊）。
+- **播放**：`MixedAudioSource`（§11.16）加 `MicGain`、`SystemGain`、`GateMic`、`Regions`（`lock` 保護，UI 執行緒寫、`SampleRequested` 讀）。每次送 0.1 秒時用這批的開始時間算 `gate(t)`（10 ms 淡入淡出），`m = (L × MicGain × gate + R × SystemGain) × 0.7071`，同 M§93.4；算法放 `ChannelMix.MixGated`（單元測試在 `UtilTests`）。`Player.SetChannels(...)` 只改狀態，不重建 `MediaStreamSource`。`MainState` 讀寫 `play_channels`、`play_mic_regions`。
+- **畫面**：播放列的「兩邊 ▾」`DropDownButton`，選單裡三個選項、分隔線、「麥克風只播建議收錄」`ToggleMenuFlyoutItem`（同 M§93.4）。
+- **匯出**：`MediaFoundationCompressor.Export(…, mixChannels, micRegions)`：勾「麥克風只保留建議收錄」時在 `ChannelMix.ToMono` 前對左聲道乘 `gate(t)`（`MixGated`），m4a、wav 照舊（§11.16）。`ExportDialog` 的勾選同 M§93.6，設定 `Settings.ExportMicRegionsOnly`。
+- **DEBUG**：控制通道的 `micregions`、`playmode`，名稱和參數同 Mac；`state` 的 `player.mix` 同 Mac。
+- **驗證**：`dotnet test`（標準答案 `pipeline/mic-regions.json`、`db/`、封包、`MixGated` 的取樣、編輯會議後的區塊）；虛擬機 `record-sim` 錄一段 6 分鐘以上，`micregions list`、匯出 m4a／wav 讀回取樣（勾的時候區塊外的麥克風是 0）。虛擬機沒有音效裝置，播放的切換要真的 Windows 電腦（`[~]`）。
+
 ### 11.53 匯出的進度和取消（R120，M§94）
 
 - 進度：`AppController.Export(…, IProgress<double>? progress, CancellationToken cancel)`；`IExportPlatform.Audio` 多一個 progress。
   - m4a：壓縮讀的是 `Cancellable`（包著重新取樣的音源），每讀一段就用讀到的位置 ÷ 原檔長度回報。
-  - wav：解碼（`DecodeChannels`／`Decode`）沒有中間的進度：開始 2%、解碼完 70%、寫完 100%；每一步之間看取消。
+  - wav：解碼（`DecodeChannels`／`Decode`）沒有中間的進度：開始 2%、解碼完 50%（只保留建議收錄）或 70%、混完 80%、寫完 100%；每一步之間看取消。
   - 封包：錄音放進 zip 時自己一段一段複製（`entry.Open()`，每 1 MB），照已經寫的位元組 ÷ 總大小回報，每一段看取消。
 - 取消：已經有 `CancellationToken`；取消時刪掉寫到一半的檔案（`.tmp` 和輸出檔），`OperationCanceledException` 不顯示錯誤。
 - 畫面：存檔、分享時對話框已經關了，側欄下方（同匯入、模型下載、更新下載那一塊，`BuildFooter`）常駐「正在匯出 <檔名>… 45%」、「取消」、進度條（還沒回報前是不定進度）；做完換成「已匯出 …」，取消了什麼都不顯示。

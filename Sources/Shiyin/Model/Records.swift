@@ -51,6 +51,12 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var speakerHintDismissed: Bool = false
     // v12（design §72）：資料夾已經決定了（自動放過、自己移過、建議按了不用）。定期會議的 series_id 欄位留著不用（D177）
     var folderDecided: Bool = false
+    // v19（design §93.3）：麥克風「建議收錄」的基準、門檻（nil 是還沒偵測；門檻 nil、基準有值是有聲音的太少），
+    // 播放時聽哪一邊（both / mic / system）、麥克風只播建議收錄（R119.2、R119.5）
+    var micFloorDb: Double?
+    var micThresholdDb: Double?
+    var playChannels: String = "both"
+    var playMicRegions: Bool = false
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
 
@@ -136,6 +142,19 @@ struct Bookmark: SnakeCaseRecord, Identifiable, Hashable {
     var meetingId: Int64
     var time: Double
     var label: String = ""
+
+    mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
+}
+
+/// 麥克風的「建議收錄」區塊（R119、design §93.3）：origin 是 auto（自動偵測）或 user（使用者新增、調整過）
+struct MicRegion: SnakeCaseRecord, Identifiable, Hashable {
+    static let databaseTableName = "mic_regions"
+    static let auto = "auto", user = "user"
+    var id: Int64?
+    var meetingId: Int64
+    var start: Double
+    var end: Double
+    var origin: String = MicRegion.auto
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }

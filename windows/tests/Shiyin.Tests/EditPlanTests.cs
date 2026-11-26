@@ -33,6 +33,10 @@ public sealed class EditPlanTests
             };
             if (c.TryGetProperty("userNotes", out var notes))
                 o["userNotes"] = plan.RemapUserNotes(notes.GetProperty("text").GetString()!, (long)D(notes.GetProperty("meetingId")));
+            // 麥克風的區塊（M§93.3）：一段時間跟保留的片段取交集再對應
+            if (c.TryGetProperty("ranges", out var ranges))
+                o["ranges"] = new JsonArray([.. ranges.EnumerateArray().Select(r =>
+                    (JsonNode)new JsonArray([.. plan.MapRange((long)D(r[0]), D(r[1]), D(r[2])).Select(x => (JsonNode)new JsonArray(x.Start, x.End))]))]);
             if (c.TryGetProperty("keeping", out var keeping))
             {
                 var kept = EditPlan.Keeping((long)D(keeping.GetProperty("meetingId")), D(keeping.GetProperty("start")), D(keeping.GetProperty("end")),

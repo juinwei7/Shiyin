@@ -2092,28 +2092,39 @@
     "documents"
    ]
   },
-  {"op": "dumpTables", "file": "db/49-before-edit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "saveMicDetection", "key": "en", "levels": [[60, -60], [30, -30], [20, -60], [30, -30], [25, -60]], "comment": "麥克風的「建議收錄」（M§93.2、§93.3）：基準是全部 165 格的平均（不到 600 格），兩段間隔 2 秒接起來"},
+  {"op": "addMicRegion", "key": "en", "start": 1, "end": 2},
+  {"op": "dumpTables", "file": "db/62-mic-regions.json", "tables": ["mic_regions"]},
+  {"op": "updateMicRegion", "key": "en", "index": 0, "start": 1, "end": 6, "comment": "碰到自動的那塊就合併成一塊（使用者的）"},
+  {"op": "addMicRegion", "key": "en", "start": 15, "end": 15, "comment": "長度 0 的不加"},
+  {"op": "saveMicDetection", "key": "en", "levels": [[60, -60], [30, -30], [20, -60], [30, -30], [25, -60]], "comment": "重新偵測：跟使用者的重疊的捨棄"},
+  {"op": "addMicRegion", "key": "zh", "start": 27, "end": 26, "comment": "開始、結束反過來也可以"},
+  {"op": "deleteMicRegion", "key": "zh", "index": 1},
+  {"op": "dumpTables", "file": "db/63-mic-regions.json", "tables": ["mic_regions", "meetings"]},
+  {"op": "dumpTables", "file": "db/49-before-edit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]},
   {"op": "applyEdit", "key": "zh", "pieces": [["zh", 2, 20], ["zh", 60, 3726]], "cut": null, "file": "db/50-edit-result.json"},
-  {"op": "dumpTables", "file": "db/51-edit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "dumpTables", "file": "db/51-edit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]},
   {"op": "restoreEdit", "key": "zh", "file": "db/52-restore-result.json"},
-  {"op": "dumpTables", "file": "db/53-restore.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "dumpTables", "file": "db/53-restore.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]},
   {"op": "applyEdit", "key": "zh", "pieces": [["zh", 0, 30], ["en", 0, 16.5]], "cut": null, "file": "db/54-merge-result.json"},
-  {"op": "dumpTables", "file": "db/55-merge.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "dumpTables", "file": "db/55-merge.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]},
   {"op": "restoreEdit", "key": "zh", "file": "db/56-unmerge-result.json"},
-  {"op": "dumpTables", "file": "db/57-unmerge.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "dumpTables", "file": "db/57-unmerge.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]},
   {"op": "applyEdit", "key": "en", "pieces": [["en", 0, 16.5]], "cut": 8, "splitTitle": "Q4 roadmap (2)", "file": "db/58-edit-split-result.json"},
-  {"op": "dumpTables", "file": "db/59-edit-split.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
+  {"op": "dumpTables", "file": "db/59-edit-split.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]},
   {"op": "restoreEdit", "key": "en", "file": "db/60-unsplit-result.json"},
-  {"op": "dumpTables", "file": "db/61-unsplit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]}
+  {"op": "dumpTables", "file": "db/61-unsplit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search", "mic_regions"]}
  ],
  "editPlanCases": [
   {"key": "trim-and-delete", "pieces": [[1, 2, 20], [1, 30, 55]],
    "points": [[1, 0], [1, 2], [1, 10], [1, 20], [1, 25], [1, 30], [1, 50], [1, 55], [1, 59], [2, 10]],
    "sentences": [[1, 0, 6.26], [1, 14.98, 20.78], [1, 20.78, 24.96], [1, 29.6, 34], [1, 54, 58], [1, 12, 12]],
    "sources": [0, 5, 18, 18.5, 43, 50], "cut": 25,
+   "ranges": [[1, 0, 5], [1, 10, 35], [1, 18, 32], [1, 56, 60], [2, 0, 10], [1, 25, 28], [1, 0, 100]],
    "userNotes": {"meetingId": 1, "text": "[00:08] 包裝\n[00:20] 預算\n沒有時間的一行\n[00:25] 刪掉的段落\n[01:05] 超過結尾\n[1:02:03] 一小時"}},
   {"key": "merge-other-first", "pieces": [[2, 0, 37], [1, 0, 59]],
-   "points": [[1, 0], [1, 59], [2, 0], [2, 37], [2, 40]], "sentences": [[2, 30, 36.88], [1, 0, 4]], "sources": [0, 36.99, 37, 96], "cut": 37},
+   "points": [[1, 0], [1, 59], [2, 0], [2, 37], [2, 40]], "sentences": [[2, 30, 36.88], [1, 0, 4]], "sources": [0, 36.99, 37, 96], "cut": 37,
+   "ranges": [[1, 10, 20], [2, 30, 40], [2, 36, 37]]},
   {"key": "split-invalid", "pieces": [[1, 0, 10]], "points": [], "sentences": [], "sources": [], "cut": 0.01},
   {"key": "keeping", "pieces": [], "points": [], "sentences": [], "sources": [],
    "keeping": {"meetingId": 1, "start": 2, "end": 60, "deleted": [[50, 70], [10, 20], [15, 25], [30, 30.02], [0, 1]]}}
@@ -3260,5 +3271,24 @@
    {"folder": "只有條件", "keywords": "[\"站會\"]", "people": "[]", "template_id": null, "created_at": "2026-10-09T01:00:00Z"},
    {"folder": "專案 A", "keywords": "[]", "people": "[\"王大明\"]", "template_id": "general", "created_at": "2026-10-10T01:00:00Z"}
   ]
+ },
+ "micRegionCases": [
+  {"key": "normal", "levels": [[600, -60], [30, -30], [20, -60], [30, -30], [100, -60], [3, -30], [100, -60], [10, -30]]},
+  {"key": "speech-first-minute", "levels": [[300, -30], [300, -60], [200, -60], [50, -35]]},
+  {"key": "paused", "levels": [[200, null], [400, -58], [300, null], [400, -58], [40, -40], [60, -58]]},
+  {"key": "quiet-room", "levels": [[700, -85], [20, -55], [30, -85], [20, -45], [30, -85]]},
+  {"key": "too-little", "levels": [[50, null], [80, -40], [2000, null]]},
+  {"key": "all-null", "levels": [[100, null]]},
+  {"key": "short-recording", "levels": [[150, -60], [10, -20]]},
+  {"key": "join-gap", "levels": [[600, -60], [10, -30], [49, -60], [10, -30], [50, -60], [10, -30], [20, -60]]},
+  {"key": "equal-threshold", "levels": [[600, -40], [10, -34], [10, -33.5]]}
+ ],
+ "micGateCases": [
+  {"key": "edges", "regions": [[1, 2], [2.5, 2.505], [10, 20]],
+   "times": [0, 0.99, 1, 1.0025, 1.005, 1.01, 1.5, 1.995, 1.999, 2, 2.2, 2.5, 2.5025, 2.505, 9.9999, 10.004, 15, 19.996, 20, 25]},
+  {"key": "empty", "regions": [], "times": [0, 5]}
+ ],
+ "meetingMicRegions": {
+  "zh": {"floorDb": -52.5, "thresholdDb": -46.5, "regions": [[1.2, 9.8, "auto"], [15, 25.5, "user"], [50, 70, "auto"], [3000, 3100.5, "auto"]]}
  }
 }

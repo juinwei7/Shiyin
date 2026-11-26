@@ -16,16 +16,17 @@ public sealed class MixedAudioSource : IDisposable
 {
     readonly object gate = new();
     readonly WaveStream reader;
-    readonly ISampleProvider mono;
+    readonly ChannelMix.GatedMono mono;
     readonly int rate;
     TimeSpan position;
 
     public MediaStreamSource Source { get; }
 
-    public MixedAudioSource(string path)
+    /// <summary>control：聽哪一邊、麥克風只播建議收錄（M§93.4、design-windows §11.52），播放中改了下一批就生效</summary>
+    public MixedAudioSource(string path, ChannelControl control)
     {
         reader = OpenReader(path);
-        mono = new ChannelMix.ToMono(new MediaFoundationCompressor.StandardFormat(reader).ToSampleProvider());
+        mono = new ChannelMix.GatedMono(new MediaFoundationCompressor.StandardFormat(reader).ToSampleProvider(), control);
         rate = reader.WaveFormat.SampleRate;
         Source = new MediaStreamSource(new AudioStreamDescriptor(AudioEncodingProperties.CreatePcm((uint)rate, 1, 16)))
         {
@@ -41,6 +42,7 @@ public sealed class MixedAudioSource : IDisposable
                     reader.CurrentTime = start;
                     position = start;
                 }
+                mono.Time = position.TotalSeconds;
                 e.Request.SetActualStartPosition(position);
             }
         };

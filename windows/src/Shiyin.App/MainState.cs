@@ -207,6 +207,8 @@ public sealed class MainState
         {
             if (host.Paths.HasAudio(meeting)) host.Player.Load(host.Paths.AudioPath(meeting), meeting.Channels == "both"); else host.Player.Unload();
         }
+        // 聽哪一邊、麥克風只播建議收錄（R119.2、R119.5、M§93.4）
+        host.Player.SetChannels(Services.Capture.PlayChannelsText.Parse(meeting.PlayChannels), meeting.PlayMicRegions, Detail.MicRegions);
     }
 
     /// <summary>列表上的會議（R97、M§71）：資料夾、篩選（垃圾桶不篩選）、排序</summary>

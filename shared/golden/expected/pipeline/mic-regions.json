@@ -1,0 +1,107 @@
+[
+  {
+    "floorDb" : -60,
+    "key" : "normal",
+    "regions" : [
+      [
+        59.700000000000003,
+        68.5
+      ],
+      [
+        88,
+        89.299999999999997
+      ]
+    ],
+    "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -45,
+    "key" : "speech-first-minute",
+    "regions" : [
+      [
+        0,
+        30.5
+      ],
+      [
+        79.700000000000003,
+        85
+      ]
+    ],
+    "thresholdDb" : -39
+  },
+  {
+    "floorDb" : -58,
+    "key" : "paused",
+    "regions" : [
+      [
+        129.69999999999999,
+        134.5
+      ]
+    ],
+    "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -85,
+    "key" : "quiet-room",
+    "regions" : [
+      [
+        74.700000000000003,
+        77.5
+      ]
+    ],
+    "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -40,
+    "key" : "too-little",
+    "regions" : [
+
+    ],
+    "thresholdDb" : null
+  },
+  {
+    "floorDb" : -90,
+    "key" : "all-null",
+    "regions" : [
+
+    ],
+    "thresholdDb" : null
+  },
+  {
+    "floorDb" : -57.5,
+    "key" : "short-recording",
+    "regions" : [
+      [
+        14.699999999999999,
+        16
+      ]
+    ],
+    "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -60,
+    "key" : "join-gap",
+    "regions" : [
+      [
+        59.700000000000003,
+        67.400000000000006
+      ],
+      [
+        71.599999999999994,
+        73.400000000000006
+      ]
+    ],
+    "thresholdDb" : -50
+  },
+  {
+    "floorDb" : -40,
+    "key" : "equal-threshold",
+    "regions" : [
+      [
+        60.700000000000003,
+        62
+      ]
+    ],
+    "thresholdDb" : -34
+  }
+]
