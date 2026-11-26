@@ -407,6 +407,7 @@ final class AppDatabase: @unchecked Sendable {
           name       TEXT NOT NULL UNIQUE,
           created_at TEXT NOT NULL
         );
+        -- id 的順序要兩平台一樣：先資料夾表，再會議用到的、條件的（照建立時間、名字）；用 NOT IN 跳過已經有的（INSERT OR IGNORE 會把 id 用掉，留下空號）
         INSERT INTO folders (name, created_at) SELECT name, created_at FROM folders_old ORDER BY created_at, name;
         INSERT INTO folders (name, created_at)
           SELECT folder, MIN(created_at) FROM meetings WHERE folder <> '' AND folder NOT IN (SELECT name FROM folders)
