@@ -85,6 +85,9 @@ public sealed class AppHost
         Db = new AppDatabase(Paths.Database, Paths.Backups, Paths.Documents);
         // 拿掉定期會議（D177）：migration v14 換成資料夾的定期會議，側欄展開、排序的鍵跟著換（同 Mac 的 replaceSeriesKeys）
         if (Db.MigratedSeries.Count > 0) SidebarCollapse.ReplaceSeriesKeys(Settings, Db.MigratedSeries);
+        // 資料夾改用 id（R118、M§92.1）：migration v18 之後側欄展開、排序、收合的鍵從名字換成 id（同 Mac 的 replaceFolderKeys）；
+        // 同一次升級跑了 v14 時，上一行換出來的 folder:名稱 也在這裡換掉
+        if (Db.MigratedFolders.Count > 0) SidebarCollapse.ReplaceFolderKeys(Settings, Db.MigratedFolders);
         Models = new ModelStore(Paths.Models, Http);
         // 顯示卡加速：NVIDIA 用官方的 CUDA 版（R27 R4.6）、AMD 用拾音的 Vulkan 版（R4.7）、只有 Intel 時也用 Vulkan 版但先檢查（R4.8），都只有 x64。
         // DEBUG 的 --set debugNvidia=YES、--set debugAmd=YES、--set debugIntel=YES 當作有那張顯示卡（虛擬機測自動下載）
@@ -310,7 +313,7 @@ public sealed class AppHost
         Controller.Start();
         Detector.Prompted += p => Post(() => ShowMeetingPrompt?.Invoke(p));
         Detector.Start();
-        HotKeys.RecordPressed += () => Post(() => Controller.ToggleRecording(""));
+        HotKeys.RecordPressed += () => Post(() => Controller.ToggleRecording(null));
         HotKeys.BookmarkPressed += () => Post(() =>
         {
             if (Controller.BookmarkRecording()) Notifier.Notice(L.F("已標記 %@ 為重點", TimeFormat.String(Recorder.Elapsed)));

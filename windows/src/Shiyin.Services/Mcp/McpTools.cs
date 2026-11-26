@@ -135,6 +135,8 @@ public static partial class McpTools
         var limit = Number(args["limit"], 20, 100);
         var all = Meetings(db, filter);
         if (all.Count == 0) return new Result($"No meetings found{filter.Text}.", false);
+        // 會議只記資料夾 id，輸出照舊是名字（R118、M§92.4）
+        var folders = db.Folders().ToDictionary(f => f.Id, f => f.Name);
         var output = new List<string> { $"{Count(all.Count, "meeting", "meetings")} (newest first). Read one with get_meeting_notes or get_transcript." };
         if (all.Count > limit) output.Add($"Showing the newest {limit}. Narrow with from, to or folder, or raise limit (up to 100).");
         foreach (var m in all.Take(limit))
@@ -143,7 +145,7 @@ public static partial class McpTools
             var info = new List<string>();
             if (m.DurationSeconds is int seconds && seconds > 0) info.Add($"duration {TimeFormat.String(seconds)}");
             info.Add($"language {m.Language}");
-            if (m.Folder.Length > 0) info.Add($"folder {m.Folder}");
+            if (m.FolderId is long folderId && folders.TryGetValue(folderId, out var folder)) info.Add($"folder {folder}");
             if (m.ParticipantList.Count > 0) info.Add($"participants {string.Join(", ", m.ParticipantList)}");
             var speakers = db.Speakers(id).Select(s => SpeakerName(s.Name, s.Idx, m)).ToList();
             if (speakers.Count > 0) info.Add($"speakers {string.Join(", ", speakers)}");

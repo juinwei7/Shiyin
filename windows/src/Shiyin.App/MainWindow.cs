@@ -318,7 +318,7 @@ public sealed class MainWindow : Window
             ShowHeaderDrop(accepts);
             if (!accepts) return;
             e.AcceptedOperation = DataPackageOperation.Move;
-            Caption(e, State.FolderFilter is { } folder ? L.F("移到「%@」", folder) : L.T("移出資料夾"));
+            Caption(e, State.FolderFilter is long folder ? L.F("移到「%@」", State.FolderName(folder)) : L.T("移出資料夾"));
             e.Handled = true;
         };
         sectionHeader.DragLeave += (_, _) => ShowHeaderDrop(false);
@@ -707,8 +707,8 @@ public sealed class MainWindow : Window
         _ => L.T("只錄麥克風"),
     };
 
-    /// <summary>側欄導覽的一列：人物，或所有會議（Folder 是 null）、某個資料夾</summary>
-    sealed record Scope(bool People, string? Folder);
+    /// <summary>側欄導覽的一列：人物，或所有會議（Folder 是 null）、某個資料夾（id，R118）</summary>
+    sealed record Scope(bool People, long? Folder);
 
     string? scopesSignature;
 
@@ -732,12 +732,12 @@ public sealed class MainWindow : Window
         var expanded = SidebarCollapse.Expanded(host.Settings);
         // 在原地展開的資料夾：裡面的會議也要算進樣子（改名、新的會議）
         var peeks = new Dictionary<string, List<MeetingRow>>();
-        foreach (var (name, _) in all)
-            if (expanded.Contains(SidebarCollapse.FolderKey(name))) peeks[SidebarCollapse.FolderKey(name)] = SidebarCollapse.PeekRows(State.Meetings, name);
+        foreach (var (id, _, _) in all)
+            if (expanded.Contains(SidebarCollapse.FolderKey(id))) peeks[SidebarCollapse.FolderKey(id)] = SidebarCollapse.PeekRows(State.Meetings, id);
         // 「資料夾」那一段的順序（R103.2）：拖曳排過的照 sidebarOrder，新的在後面
         var order = SidebarKeys();
         var signature = string.Join('\u001F', [State.Meetings.Count.ToString(), State.People.Count.ToString(), Ui.ThemeKey, "order", .. order,
-            .. all.Select(f => $"{f.Name}\u001E{f.Count}\u001E{(State.RuleFor(f.Name) is { } rule ? RuleTip(rule) : "")}"),
+            .. all.Select(f => $"{f.Id}\u001E{f.Name}\u001E{f.Count}\u001E{(State.RuleFor(f.Id) is { } rule ? RuleTip(rule) : "")}"),
             "collapsed", collapsed.Contains("folders").ToString(),
             .. peeks.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "\u001E" + p.Value.Count + "\u001E" + string.Join('\u001E',
                 p.Value.Take(SidebarCollapse.PeekCount).Select(r => $"{r.Id}\u001D{r.Meeting.DisplayTitle}\u001D{r.Meeting.MeetingDate}\u001D{r.Meeting.Language}")))]);
@@ -766,19 +766,19 @@ public sealed class MainWindow : Window
                         AutomationProperties.SetName(none, L.T("按 + 新增資料夾"));
                         scopes.Items.Add(none);
                     }
-                    var counts = all.ToDictionary(f => f.Name, f => f.Count);
+                    var byId = all.ToDictionary(f => f.Id);
                     foreach (var key in order)
                     {
                         var rows = peeks.GetValueOrDefault(key);
-                        if (key.StartsWith("folder:", StringComparison.Ordinal) && counts.TryGetValue(key["folder:".Length..], out var count))
+                        if (SidebarCollapse.FolderId(key) is long folder && byId.TryGetValue(folder, out var info))
                         {
                             // 有自動加入條件的資料夾右下角一個小齒輪（同 Mac 的 folder.badge.gearshape），滑過去看條件（M§72）
-                            var folder = key["folder:".Length..];
+                            var (name, count) = (info.Name, info.Count);
                             var rule = State.RuleFor(folder);
                             // 會議拖到這裡＝移進去；從檔案總管拖來的錄音＝匯入到這個資料夾（R103.3）
-                            var drop = new RowDrop(key, ids => host.Controller.MoveToFolder(ids, folder), L.F("移到「%@」", folder),
-                                files => ImportInto(files, folder), L.F("匯入到「%@」", folder));
-                            var row = FolderRow(folder, count, new Scope(false, folder), key, rows is not null, rule is null ? null : RuleBadge, drop,
+                            var drop = new RowDrop(key, ids => host.Controller.MoveToFolder(ids, folder), L.F("移到「%@」", name),
+                                files => ImportInto(files, folder), L.F("匯入到「%@」", name));
+                            var row = FolderRow(name, count, new Scope(false, folder), key, rows is not null, rule is null ? null : RuleBadge, drop,
                                 menu => FillFolderMenu(menu, folder), () => RenameUi(new RenameTarget.Folder(folder)), () => ConfirmDeleteFolder(folder));
                             if (rule is not null) ToolTipService.SetToolTip(row, RuleTip(rule));
                             scopes.Items.Add(row);
@@ -792,7 +792,7 @@ public sealed class MainWindow : Window
         SyncScopeSelection();
         // 標題：「所有會議」（或資料夾的名稱），分組時接「・依月份」；人物模式沒有「顯示方式」
         // 下面只放資料夾以外的會議時叫「其他會議」（R101.6）
-        var scope = State.FolderFilter ?? (State.ListShowsOthersOnly ? L.T("其他會議") : L.T("所有會議"));
+        var scope = State.FolderFilter is long current ? State.FolderName(current) : State.ListShowsOthersOnly ? L.T("其他會議") : L.T("所有會議");
         var grouping = State.EffectiveGrouping;
         sectionTitle.Text = people ? L.T("人物") : grouping == MeetingGrouping.None ? scope : scope + "・" + grouping.Label();
         // 名稱是收合的按鈕（R101）：會議列表（人物模式是人物列表）收起時只剩這一行
@@ -1049,7 +1049,7 @@ public sealed class MainWindow : Window
         };
         SidebarLook.Row(item);
         AutomationProperties.SetName(item, name);
-        AutomationProperties.SetAutomationId(item, "scope:folder:" + scope.Folder);
+        AutomationProperties.SetAutomationId(item, "scope:" + key);
         SidebarLook.Status(item, expanded, L.F("%lld 場", count));
         AutomationProperties.SetHelpText(item, L.T("按 Alt+↑、Alt+↓ 可以往上移、往下移"));
         item.ContextFlyout = RowMore.Context(fill);
@@ -1241,7 +1241,7 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>「資料夾」那一段的鍵，照拖曳排好的順序（新的在後面，預設照名稱）</summary>
-    public List<string> SidebarKeys() => SidebarDrag.Sorted(host.Settings, [.. State.Folders.Select(f => SidebarCollapse.FolderKey(f.Name))]);
+    public List<string> SidebarKeys() => SidebarDrag.Sorted(host.Settings, [.. State.Folders.Select(f => SidebarCollapse.FolderKey(f.Id))]);
 
     /// <summary>Alt+↑／↓：往上、往下移一格，焦點留在這一列（設定改了才重畫；到頭了不動）</summary>
     void MoveFolderRow(string key, int offset)
@@ -1387,7 +1387,7 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>資料夾的動作（R100、同 Mac 的 FolderMenuItems）：右鍵、「⋯」</summary>
-    void FillFolderMenu(MenuFlyout menu, string folder)
+    void FillFolderMenu(MenuFlyout menu, long folder)
     {
         // 點資料夾是在原地展開（R101.2）；只看它從展開後的「顯示全部」（選單不放「只看這個資料夾」，R101.2、M§75）
         // 每一項有圖示、刪除是紅字（R101.4，同 Mac 的 FolderMenuItems）
@@ -1664,10 +1664,10 @@ public sealed class MainWindow : Window
         // 收起來的段落（會議列表、分組的每一組，R101）
         text.Append('\u001D').Append(string.Join(',', SidebarCollapse.Collapsed(host.Settings).Order(StringComparer.Ordinal)));
         // 右鍵選單的「移到資料夾」列出所有資料夾：資料夾變了也要重建
-        foreach (var (name, _) in State.Folders) text.Append('\u001D').Append(name);
+        foreach (var (folderId, name, _) in State.Folders) text.Append('\u001D').Append(folderId).Append('\u001F').Append(name);
         foreach (var row in State.FilteredMeetings)
             text.Append('\u001E').Append(row.Id).Append('\u001F').Append(row.Meeting.DisplayTitle).Append('\u001F').Append(row.Meeting.MeetingDate)
-                .Append('\u001F').Append(row.Meeting.Folder).Append('\u001F').Append(row.Meeting.Language);
+                .Append('\u001F').Append(row.Meeting.FolderId).Append('\u001F').Append(row.Meeting.Language);
         return text.ToString();
     }
 
@@ -1810,13 +1810,13 @@ public sealed class MainWindow : Window
         return items;
     }
 
-    /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（空字串是不在資料夾裡），不一樣時是 null</summary>
-    string? CommonFolder(IReadOnlyList<long> ids) => AppController.CommonFolder(State.ShowTrash ? State.Trash : State.Meetings, ids);
+    /// <summary>這幾場會議都在同一個資料夾時是那個資料夾（FolderId 是 null：都不在資料夾裡），不一樣時是 null</summary>
+    CommonFolder? CommonFolder(IReadOnlyList<long> ids) => AppController.CommonFolderOf(State.ShowTrash ? State.Trash : State.Meetings, ids);
 
-    /// <summary>「移到資料夾」選單：既有的資料夾、新資料夾、移出資料夾（R9.2）</summary>
-    public MenuFlyoutSubItem FolderMenu(long id, string current) => FolderSubMenu([id], current);
+    /// <summary>「移到資料夾」選單：既有的資料夾、新資料夾、移出資料夾（R9.2）；current 是這場會議的資料夾（null 是不在資料夾）</summary>
+    public MenuFlyoutSubItem FolderMenu(long id, long? current) => FolderSubMenu([id], new CommonFolder(current));
 
-    MenuFlyoutSubItem FolderSubMenu(IReadOnlyList<long> ids, string? current)
+    MenuFlyoutSubItem FolderSubMenu(IReadOnlyList<long> ids, CommonFolder? current)
     {
         var sub = new MenuFlyoutSubItem { Text = L.T("移到資料夾"), Icon = new SymbolIcon(Symbol.Folder) };
         foreach (var item in FolderMenuItems(ids, current)) sub.Items.Add(item);
@@ -1825,18 +1825,19 @@ public sealed class MainWindow : Window
 
     /// <summary>
     /// 「移到資料夾」的項目（同 Mac 的 FolderMenu，M§62）：都在同一個資料夾（current）時不列那個資料夾、最後是「移出「名稱」」；
-    /// 在不同的資料夾（current 是 null，多選時）列全部、最後是「移出資料夾」
+    /// 在不同的資料夾（current 是 null，多選時）列全部、最後是「移出資料夾」；都不在資料夾裡時沒有「移出」
     /// </summary>
-    List<MenuFlyoutItemBase> FolderMenuItems(IReadOnlyList<long> ids, string? current)
+    List<MenuFlyoutItemBase> FolderMenuItems(IReadOnlyList<long> ids, CommonFolder? current)
     {
         var items = new List<MenuFlyoutItemBase>();
-        // 有自動加入條件的資料夾沒有會議也列出來（M§72）
-        var others = State.Folders.Where(f => f.Name != current).ToList();
-        foreach (var (name, _) in others) items.Add(Ui.Item(name, () => host.Controller.MoveToFolder(ids, name), icon: Symbol.Folder));
+        // 有自動加入條件的資料夾、空的資料夾沒有會議也列出來（M§72、§78）
+        var others = State.Folders.Where(f => current is null || f.Id != current.FolderId).ToList();
+        foreach (var (folderId, name, _) in others) items.Add(Ui.Item(name, () => host.Controller.MoveToFolder(ids, folderId), icon: Symbol.Folder));
         if (others.Count > 0) items.Add(new MenuFlyoutSeparator());
         items.Add(Ui.Item(L.T("新資料夾…"), () => { if (ids.Count > 0) RenameUi(new RenameTarget.NewFolder([.. ids])); }, icon: Symbol.NewFolder));
-        if (current is null) items.Add(Ui.Item(L.T("移出資料夾"), () => host.Controller.MoveToFolder(ids, ""), icon: Symbol.Remove));
-        else if (current.Length > 0) items.Add(Ui.Item(L.F("移出「%@」", current), () => host.Controller.MoveToFolder(ids, ""), icon: Symbol.Remove));
+        if (current is null) items.Add(Ui.Item(L.T("移出資料夾"), () => host.Controller.MoveToFolder(ids, null), icon: Symbol.Remove));
+        else if (current.FolderId is long folder)
+            items.Add(Ui.Item(L.F("移出「%@」", State.FolderName(folder)), () => host.Controller.MoveToFolder(ids, null), icon: Symbol.Remove));
         return items;
     }
 
@@ -1959,7 +1960,7 @@ public sealed class MainWindow : Window
     /// 從檔案總管拖到資料夾上的檔案（R103.3，同 Mac 的 importDropped）：匯入到那個資料夾（錄音、影片跳匯入的對話框，資料夾先設好）；
     /// 參考文件（PDF 這類）要拖到會議頁，全部是參考文件時說一聲。DEBUG 的 importinto 也走這裡
     /// </summary>
-    public void ImportInto(IReadOnlyList<string> files, string folder)
+    public void ImportInto(IReadOnlyList<string> files, long folder)
     {
         var importable = files.Where(f => !DocumentReader.IsDroppedDocument(f)).ToList();
         if (importable.Count == 0)
@@ -2069,7 +2070,7 @@ public sealed class MainWindow : Window
         }
         if (State.MultiSelected.Count > 1) return false;
         if (SelectedMeetings() is [var id]) RenameMeetingUi(id);
-        else if (State.FolderFilter is { } folder) RenameUi(new RenameTarget.Folder(folder));
+        else if (State.FolderFilter is long folder) RenameUi(new RenameTarget.Folder(folder));
         else return false;
         return true;
     }
@@ -2089,7 +2090,7 @@ public sealed class MainWindow : Window
         }
         var ids = SelectedMeetings();
         if (ids.Count > 0) _ = State.ShowTrash ? ConfirmPurge(ids) : ConfirmTrash(ids);
-        else if (!State.ShowTrash && State.FolderFilter is { } folder) _ = ConfirmDeleteFolder(folder);
+        else if (!State.ShowTrash && State.FolderFilter is long folder) _ = ConfirmDeleteFolder(folder);
         else return false;
         return true;
     }
@@ -2145,22 +2146,22 @@ public sealed class MainWindow : Window
     /// </summary>
     public void RenameMeetingUi(long id) => RenameUi(new RenameTarget.Meeting(id));
 
-    /// <summary>確認對話框開著時要刪的資料夾（DEBUG 的 state，同 Mac 的 confirmDeleteFolder）</summary>
-    public string? DeletingFolder { get; private set; }
+    /// <summary>確認對話框開著時要刪的資料夾（id；DEBUG 的 state，同 Mac 的 confirmDeleteFolder）</summary>
+    public long? DeletingFolder { get; private set; }
 
     /// <summary>
     /// 刪除資料夾（R100）：會議留著（移到「不在資料夾」），自動加入的條件一起刪；確認的按鈕紅底、Enter 是確認（R106.2）。
     /// 側欄的右鍵、「⋯」、Delete 都走這裡
     /// </summary>
-    public async Task ConfirmDeleteFolder(string folder)
+    public async Task ConfirmDeleteFolder(long folder)
     {
         if (DeletingFolder is not null) return;
-        var count = State.Meetings.Count(m => m.Meeting.Folder == folder);
+        var count = State.Meetings.Count(m => m.Meeting.FolderId == folder);
         DeletingFolder = folder;
         bool ok;
         try
         {
-            ok = await Dialogs.Confirm(this, L.F("刪除資料夾「%@」？", folder),
+            ok = await Dialogs.Confirm(this, L.F("刪除資料夾「%@」？", State.FolderName(folder)),
                 count > 0 ? L.F("裡面的 %lld 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。", count) : L.T("自動加入的條件也會刪掉。"),
                 L.T("刪除資料夾"), destructive: true);
         }

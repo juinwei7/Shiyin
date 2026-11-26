@@ -228,7 +228,8 @@ public sealed class DetailView
         // 每一項上下置中（名字是按鈕時比一般的文字高一點）。放不下時換行，不切掉：資料夾、日期、長度加上四位與會者和「自動」，
         // 英文介面在一般的視窗寬度會超出、最後一位被切一半（2026-11-16 英文巡檢；Mac 的 HStack 是把字縮成省略號）
         var info = new FlowPanel { Spacing = 16, LineSpacing = 6 };
-        if (meeting.Folder.Length > 0) info.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Folder) { Foreground = Ui.Secondary }, Ui.Text(meeting.Folder, 13, color: Ui.Secondary, wrap: false)));
+        if (window.State.FolderName(meeting.FolderId) is { Length: > 0 } folderName)
+            info.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Folder) { Foreground = Ui.Secondary }, Ui.Text(folderName, 13, color: Ui.Secondary, wrap: false)));
         info.Children.Add(Ui.Text($"{meeting.MeetingDate} {DateText.Weekday(meeting.MeetingDate, MeetingLanguages.Interface)}", 13, color: Ui.Secondary, wrap: false));
         if (meeting.DurationSeconds is not null) info.Children.Add(Ui.Text(L.Ui(TimeFormat.Duration(meeting.DurationSeconds, MeetingLanguages.Interface)), 13, color: Ui.Secondary, wrap: false));
         if (Detail.UntranscribedMinutes is int minutes)
@@ -627,7 +628,7 @@ public sealed class DetailView
             // 編輯會議（R107.1）、編輯過的會議多「還原成編輯前的樣子…」（R107.8）。Windows 的選單每次打開時重建，沒編輯過的不列「還原」
             foreach (var item in window.EditMenuItems(id)) menu.Items.Add(item);
             menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(window.FolderMenu(id, Detail.Meeting.Folder));
+            menu.Items.Add(window.FolderMenu(id, Detail.Meeting.FolderId));
             menu.Items.Add(Ui.Item(L.T("移到垃圾桶"), () => host.Controller.MoveToTrash(id), icon: Symbol.Delete));
         }
         Fill();

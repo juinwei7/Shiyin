@@ -598,7 +598,7 @@ public sealed class MeetingPromptWindow : Window
             message = L.F("%@ 正在開會，要開始錄音嗎？", prompt.App.Name);
             buttons.Children.Add(Ui.Button(L.T("這次不用"), () => Do(() => { })));
             buttons.Children.Add(Ui.Button(L.T("不要再提醒這個 app"), () => Do(() => host.Detector.Mute(prompt.App.Id))));
-            buttons.Children.Add(Ui.Button(L.T("開始錄音"), () => Do(() => host.Controller.StartRecording("")), accent: true));
+            buttons.Children.Add(Ui.Button(L.T("開始錄音"), () => Do(() => host.Controller.StartRecording(null)), accent: true));
         }
         else
         {

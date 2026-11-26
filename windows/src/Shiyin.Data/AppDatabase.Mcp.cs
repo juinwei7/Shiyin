@@ -39,14 +39,14 @@ public sealed partial class AppDatabase
         if (MigrationIds.Any(id => !applied.Contains(id))) throw new ReadOnlyDatabaseException(needsUpgrade: true);
     }
 
-    /// <summary>給 AI 讀的會議（M§44.2）：不在垃圾桶、不是正在錄的，新的在前（同列表）；日期含頭尾</summary>
+    /// <summary>給 AI 讀的會議（M§44.2）：不在垃圾桶、不是正在錄的，新的在前（同列表）；日期含頭尾；folder 是資料夾的名字（對外照舊用名字，M§92.4）</summary>
     public List<Meeting> MeetingsForAi(string? from, string? to, string? folder) => Read(db =>
     {
         var sql = "SELECT * FROM meetings WHERE deleted_at IS NULL AND NOT (source = 'recording' AND audio_file = '')";
         var args = new List<object?>();
         if (from is not null) { sql += " AND substr(meeting_date, 1, 10) >= ?"; args.Add(from); }
         if (to is not null) { sql += " AND substr(meeting_date, 1, 10) <= ?"; args.Add(to); }
-        if (folder is not null) { sql += " AND folder = ?"; args.Add(folder); }
+        if (folder is not null) { sql += " AND folder_id IN (SELECT id FROM folders WHERE name = ?)"; args.Add(folder); }
         sql += " ORDER BY meeting_date DESC, id DESC";
         return db.Query(sql, args.ToArray()).Select(ToMeeting).ToList();
     });

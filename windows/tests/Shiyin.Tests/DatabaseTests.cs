@@ -101,7 +101,7 @@ public sealed class DatabaseTests : IDisposable
                 case "importFixture":
                 {
                     var fx = Golden.Meeting(op.Str("key")!);
-                    var meeting = db.InsertMeeting(fx.Meeting, "m4a");
+                    var meeting = db.InsertMeeting(Golden.WithFolder(db, fx), "m4a");
                     var mid = meeting.Id!.Value;
                     ids[fx.Key] = mid;
                     var segments = fx.Segments.Select(s => { var c = s.Clone(); c.MeetingId = mid; return c; }).ToList();

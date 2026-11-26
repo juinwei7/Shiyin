@@ -8,7 +8,8 @@ namespace Shiyin.Model;
 /// <summary>資料夾的自動加入條件（R98、M§72，同 Mac 的 Store/FolderRules.swift 的 FolderRule）：任一個條件符合就放進去</summary>
 public sealed class FolderRule
 {
-    public string Folder { get; set; } = "";
+    /// <summary>哪個資料夾的條件（v18、R118、M§92）</summary>
+    public long FolderId { get; set; }
     public List<string> Keywords { get; set; } = [];
     /// <summary>人物 id：選的人都有參加才算</summary>
     public List<long> People { get; set; } = [];
@@ -127,27 +128,32 @@ public static partial class MeetingSimilarity
     }
 }
 
-/// <summary>不在資料夾的會議很像某個資料夾裡的會議（R98.3、M§72）：Reason 是都有這幾位參加（People）或標題都有這個詞（Title）</summary>
-public sealed record FolderSuggestion(string Folder, IReadOnlyList<long>? People, string? Title, int Count);
+/// <summary>
+/// 不在資料夾的會議很像某個資料夾裡的會議（R98.3、M§72）：Reason 是都有這幾位參加（People）或標題都有這個詞（Title）。
+/// FolderId 是那個資料夾，Folder 是它的名字（顯示用，R118、M§92.2）
+/// </summary>
+public sealed record FolderSuggestion(long FolderId, string Folder, IReadOnlyList<long>? People, string? Title, int Count);
 
 public static class FolderSuggester
 {
-    public sealed record Input(long Id, string Folder, string Title, IReadOnlySet<long> People);
+    /// <summary>FolderId 是 null 時不在資料夾；Folder 是資料夾的名字（好幾個資料夾都像時照名字挑，同以前）</summary>
+    public sealed record Input(long Id, long? FolderId, string Folder, string Title, IReadOnlySet<long> People);
 
     /// <summary>通用的詞不算共同的詞</summary>
     public static readonly HashSet<string> GenericWords = ["會議", "会议", "會議記錄", "meeting", "meetings", "討論", "讨论", "会議", "회의"];  // l10n-skip
 
     /// <summary>
     /// 跟每個資料夾（至少 2 場）比：同一群人的場數，或標題有共同的詞的場數；至少 2 場才建議，取場數最多的（一樣多時名稱排前面的、
-    /// 同一個資料夾人的比較準）。folderOrder 是資料夾名稱的排序（同 Mac 的 localizedStandardCompare）
+    /// 同一個資料夾人的比較準）。資料夾照 id 分組；folderOrder 是資料夾名稱的排序（同 Mac 的 localizedStandardCompare）
     /// </summary>
     public static FolderSuggestion? Best(Input meeting, IEnumerable<Input> others, IComparer<string> folderOrder)
     {
         FolderSuggestion? best = null;
-        var byFolder = others.Where(o => o.Folder.Length > 0 && o.Id != meeting.Id).GroupBy(o => o.Folder).ToDictionary(g => g.Key, g => g.ToList());
-        foreach (var folder in byFolder.Keys.Order(folderOrder))
+        var byFolder = others.Where(o => o.FolderId is not null && o.Id != meeting.Id).GroupBy(o => o.FolderId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+        foreach (var folderId in byFolder.Keys.OrderBy(id => byFolder[id][0].Folder, folderOrder))
         {
-            var members = byFolder[folder];
+            var members = byFolder[folderId];
+            var folder = members[0].Folder;
             if (members.Count < 2) continue;
             var options = new List<FolderSuggestion>();
             var same = members.Where(m => MeetingSimilarity.SamePeople(meeting.People, m.People)).ToList();
@@ -155,7 +161,7 @@ public static class FolderSuggester
             {
                 var core = MeetingSimilarity.Core(same.Select(m => m.People));
                 core.IntersectWith(meeting.People);
-                options.Add(new FolderSuggestion(folder, core.Order().ToList(), null, same.Count));
+                options.Add(new FolderSuggestion(folderId, folder, core.Order().ToList(), null, same.Count));
             }
             var words = new Dictionary<string, int>();
             foreach (var member in members)
@@ -163,7 +169,7 @@ public static class FolderSuggester
                     words[word] = words.GetValueOrDefault(word) + 1;
             // 場數最多的詞；一樣多時照字串排序取第一個
             var top = words.OrderByDescending(p => p.Value).ThenBy(p => p.Key, SwiftText.Comparer).FirstOrDefault();
-            if (top.Key is not null && top.Value >= 2) options.Add(new FolderSuggestion(folder, null, top.Key, top.Value));
+            if (top.Key is not null && top.Value >= 2) options.Add(new FolderSuggestion(folderId, folder, null, top.Key, top.Value));
             foreach (var option in options)
                 if (best is null || option.Count > best.Count) best = option;
         }

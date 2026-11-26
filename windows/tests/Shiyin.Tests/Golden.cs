@@ -79,7 +79,7 @@ public static class Golden
     public sealed record MeetingFixture(
         string Key, Meeting Meeting, List<Segment> Segments, Dictionary<int, string> Speakers, Dictionary<int, SpeakerVoice> Voices,
         List<Bookmark> Bookmarks, List<string> Glossary, MeetingNotes? Notes, List<ReviewAnswer> Answers,
-        List<(string Question, string Answer)> History, string Question, List<string> KnownPeople, List<MeetingDocument> Documents)
+        List<(string Question, string Answer)> History, string Question, List<string> KnownPeople, List<MeetingDocument> Documents, string FolderName)
     {
         public MeetingLanguage Language => Meeting.MeetingLanguage;
 
@@ -108,7 +108,7 @@ public static class Golden
             Title = m.Str("title") ?? "", TitleLocked = m.Bool("titleLocked") ?? false, MeetingDate = m.Str("meetingDate") ?? "",
             Participants = m.Str("participants") ?? "", SourceFilename = m.Str("sourceFilename") ?? "",
             DurationSeconds = (int?)m.Long("durationSeconds"), TemplateId = m.Str("templateId") ?? "general",
-            UserNotes = m.Str("userNotes") ?? "", Language = m.Str("language") ?? "zh", Folder = m.Str("folder") ?? "",
+            UserNotes = m.Str("userNotes") ?? "", Language = m.Str("language") ?? "zh",
             Channels = m.Str("channels") ?? "mic", CreatedAt = "2026-10-20T00:00:00Z", UpdatedAt = "2026-10-20T00:00:00Z",
         };
         var segments = o.GetProperty("segments").EnumerateArray().Select((s, i) => new Segment
@@ -129,7 +129,18 @@ public static class Golden
         var documents = Fixtures.Get("meetingDocuments") is { ValueKind: JsonValueKind.Object } all && all.Get(key) is { ValueKind: JsonValueKind.Array } list
             ? list.EnumerateArray().Select(Document).ToList() : [];
         return new MeetingFixture(key, meeting, segments, speakers, voices, bookmarks, o.Strings("glossary") ?? [], notes, answers,
-            history, o.Str("question") ?? "", o.Strings("knownPeople") ?? [], documents);
+            history, o.Str("question") ?? "", o.Strings("knownPeople") ?? [], documents, m.Str("folder") ?? "");
+    }
+
+    /// <summary>
+    /// 寫進資料庫的會議（同 Mac 的 GoldenDump）：fixtures 的 folder 是資料夾的名字，寫入前先 CreateFolder（已經有就用那個 id），
+    /// folder_id 設成它；名字是空的是 null（R118）。meeting 沒給時用 fixture 的會議
+    /// </summary>
+    public static Meeting WithFolder(Shiyin.Data.AppDatabase db, MeetingFixture fx, Meeting? meeting = null)
+    {
+        var m = (meeting ?? fx.Meeting).Clone();
+        m.FolderId = fx.FolderName.Length > 0 ? db.CreateFolder(fx.FolderName) : null;
+        return m;
     }
 
     public static MeetingDocument Document(JsonElement d) => new()

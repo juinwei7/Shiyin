@@ -33,7 +33,8 @@ public sealed class Meeting
     /// <summary>mic / system / both</summary>
     public string Channels { get; set; } = "mic";
     public string? DeletedAt { get; set; }
-    public string Folder { get; set; } = "";
+    /// <summary>在哪個資料夾（v18、R118、M§92）：null 是不在資料夾；名字問資料夾表（MainState.FolderName、AppDatabase.FolderName）</summary>
+    public long? FolderId { get; set; }
     public string Language { get; set; } = "zh";
     /// <summary>1 是用即時逐字稿整理的草稿，2 是使用者改過的草稿</summary>
     public int NotesDraft { get; set; }
@@ -57,6 +58,9 @@ public sealed class Meeting
 
     public Meeting Clone() => (Meeting)MemberwiseClone();
 }
+
+/// <summary>資料夾（資料表 folders，v18、R118、M§92）：會議、自動加入條件、側欄都記 id，名字只用來顯示（不能重複，區分大小寫）</summary>
+public sealed record Folder(long Id, string Name, string CreatedAt);
 
 public sealed class Segment
 {

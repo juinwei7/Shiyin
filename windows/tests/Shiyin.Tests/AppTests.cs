@@ -177,9 +177,10 @@ public sealed class AppTests : IDisposable
         WriteWav(source, 3);
         var revealed = new List<long>();
         controller.Reveal += revealed.Add;
-        var id = controller.StartSimulatedRecording(source, 10, false, "專案")!.Value;
+        var project = db.CreateFolder("專案");
+        var id = controller.StartSimulatedRecording(source, 10, false, project)!.Value;
         Assert.Equal("recording", db.Meeting(id)!.Source);
-        Assert.Equal("專案", db.Meeting(id)!.Folder);
+        Assert.Equal(project, db.Meeting(id)!.FolderId);
         for (var i = 0; i < 200 && recorder.Elapsed < 2.9; i++) await Task.Delay(20);
         recorder.Stop();
         var meeting = db.Meeting(id)!;
@@ -192,7 +193,7 @@ public sealed class AppTests : IDisposable
         // 太短（不到 0.5 秒）的錄音：會議刪掉
         var shortSource = Path.Combine(home.Path, "short.wav");
         WriteWav(shortSource, 0.2);
-        var shortId = controller.StartSimulatedRecording(shortSource, 10, false, "")!.Value;
+        var shortId = controller.StartSimulatedRecording(shortSource, 10, false, null)!.Value;
         await Task.Delay(300);
         recorder.Stop();
         Assert.Null(db.Meeting(shortId));
@@ -215,7 +216,7 @@ public sealed class AppTests : IDisposable
         Assert.Contains(id, controller.DocumentsChanged);
         Assert.Empty(controller.ReadingDocuments);
         // 拖放：文件加到選取中的會議，沒有選取時說明
-        Assert.Empty(controller.RequestImport([Path.Combine(samples, "規格書.docx")], "", null));
+        Assert.Empty(controller.RequestImport([Path.Combine(samples, "規格書.docx")], null, null));
         Assert.Contains("先選一場會議", errors[^1]);
         controller.DismissDocumentsChanged(id);
         Assert.DoesNotContain(id, controller.DocumentsChanged);
@@ -337,7 +338,10 @@ public sealed class AppTests : IDisposable
         Assert.Equal(["Redis", "Kubernetes", "Claude Code"], db.Glossary().Select(t => t.Term));
     }
 
-    /// <summary>側欄展開的資料夾（R101、design-windows §11.34）：資料夾改名時鍵跟著改，刪除資料夾時拿掉</summary>
+    /// <summary>
+    /// 側欄展開、排序的資料夾（R101、R103、design-windows §11.34、§11.36）：鍵是 id（R118），改名不用搬；改成已經有的名字（合併）時
+    /// 拿掉原本那個的鍵（留下的那個照舊的位置）；刪除資料夾時拿掉
+    /// </summary>
     [Fact]
     public void SidebarKeysFollowFolderRenameAndDelete()
     {
@@ -345,17 +349,28 @@ public sealed class AppTests : IDisposable
         var controller = Controller(settings, out _);
         var a = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
         var b = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
-        db.SetFolder([a], "客戶");
-        db.SetFolder([b], "設計");
-        SidebarCollapse.SetRow(settings, "folder:客戶", true);
-        SidebarCollapse.SetRow(settings, "folder:設計", true);
+        var client = db.CreateFolder("客戶");
+        var design = db.CreateFolder("設計");
+        var weekly = db.CreateFolder("例會");
+        db.SetFolder([a], client);
+        db.SetFolder([b], design);
+        SidebarCollapse.SetRow(settings, SidebarCollapse.FolderKey(client), true);
+        SidebarCollapse.SetRow(settings, SidebarCollapse.FolderKey(design), true);
         SidebarCollapse.SetSection(settings, "folders", false);
-        controller.RenameFolder("客戶", "客戶 A");
-        Assert.Equal(["客戶 A", "設計"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct().Order());
-        Assert.Equal(["folder:客戶 A", "folder:設計"], settings.StringList(AppSettings.SidebarExpandedKey));
-        controller.DeleteFolder("客戶 A");
-        controller.DeleteFolder("設計");
+        settings.Set(AppSettings.SidebarOrderKey, [SidebarCollapse.FolderKey(weekly), SidebarCollapse.FolderKey(client), SidebarCollapse.FolderKey(design)]);
+        var expanded = settings.StringList(AppSettings.SidebarExpandedKey);
+        Assert.Equal(client, controller.RenameFolder(client, "客戶 A"));
+        Assert.Equal(["客戶 A", "設計"], db.MeetingRows().Select(r => db.FolderName(r.Meeting.FolderId)).Distinct().Order());
+        Assert.Equal(expanded, settings.StringList(AppSettings.SidebarExpandedKey));
+        // 改成已經有的名字：合併進「設計」，原本那個的鍵拿掉，「設計」照舊的位置
+        Assert.Equal(design, controller.RenameFolder(client, "設計"));
+        Assert.Equal([design, design], new[] { a, b }.Select(id => db.Meeting(id)!.FolderId));
+        Assert.Equal([SidebarCollapse.FolderKey(design)], settings.StringList(AppSettings.SidebarExpandedKey));
+        Assert.Equal([SidebarCollapse.FolderKey(weekly), SidebarCollapse.FolderKey(design)], settings.StringList(AppSettings.SidebarOrderKey));
+        controller.DeleteFolder(design);
         Assert.Empty(settings.StringList(AppSettings.SidebarExpandedKey));
+        Assert.Equal([SidebarCollapse.FolderKey(weekly)], settings.StringList(AppSettings.SidebarOrderKey));
+        Assert.Equal([(long?)null, null], new[] { a, b }.Select(id => db.Meeting(id)!.FolderId));
         // 段落的收合不受影響
         Assert.Equal(["folders"], settings.StringList(AppSettings.SidebarCollapsedKey));
     }
@@ -380,15 +395,24 @@ public sealed class AppTests : IDisposable
         var renamed = db.Meeting(a)!;
         Assert.Equal(("產品週會", "2026-11-02", "王小明", true), (renamed.Title, renamed.MeetingDate, renamed.Participants, renamed.TitleLocked));
 
-        // 新資料夾：會議移進去；資料夾改名時排序的鍵跟著改
+        // 新資料夾：會議移進去；資料夾改名只改名字（id、排序的鍵不變）；目前的名字從資料庫讀
         controller.CommitRename(new RenameTarget.NewFolder([a, b]), "客戶");
-        Assert.Equal(["客戶"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
-        settings.Set(AppSettings.SidebarOrderKey, ["folder:客戶", "folder:例會"]);
-        controller.CommitRename(new RenameTarget.Folder("客戶"), "客戶 A");
-        Assert.Equal(["客戶 A"], db.MeetingRows().Select(r => r.Meeting.Folder).Distinct());
-        Assert.Equal(["folder:客戶 A", "folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
-        controller.DeleteFolder("客戶 A");
-        Assert.Equal(["folder:例會"], settings.StringList(AppSettings.SidebarOrderKey));
+        var client = db.Folders().Single(f => f.Name == "客戶").Id;
+        Assert.Equal([(long?)client], db.MeetingRows().Select(r => r.Meeting.FolderId).Distinct());
+        Assert.Equal("客戶", controller.CurrentName(new RenameTarget.Folder(client)));
+        var weekly = db.CreateFolder("例會");
+        settings.Set(AppSettings.SidebarOrderKey, [SidebarCollapse.FolderKey(client), SidebarCollapse.FolderKey(weekly)]);
+        Assert.Equal(client, controller.CommitRename(new RenameTarget.Folder(client), "客戶 A"));
+        Assert.Equal("客戶 A", db.FolderName(client));
+        Assert.Equal([(long?)client], db.MeetingRows().Select(r => r.Meeting.FolderId).Distinct());
+        Assert.Equal([SidebarCollapse.FolderKey(client), SidebarCollapse.FolderKey(weekly)], settings.StringList(AppSettings.SidebarOrderKey));
+        // 從會議的選單建「新資料夾」，名字已經有：移進那一個，不多建
+        controller.CommitRename(new RenameTarget.NewFolder([a]), "例會");
+        Assert.Equal(weekly, db.Meeting(a)!.FolderId);
+        Assert.Equal(2, db.Folders().Count);
+        controller.DeleteFolder(client);
+        Assert.Equal([SidebarCollapse.FolderKey(weekly)], settings.StringList(AppSettings.SidebarOrderKey));
+        controller.DeleteFolder(weekly);
 
         long amy = 0, ming = 0;
         db.Write(d =>
@@ -406,14 +430,16 @@ public sealed class AppTests : IDisposable
         var notices = new List<string>();
         controller.Notice += notices.Add;
         controller.CommitRename(new RenameTarget.NewFolder([]), " 空的資料夾 ");
-        Assert.Contains("空的資料夾", db.FolderNames());
+        Assert.Contains("空的資料夾", db.Folders().Select(f => f.Name));
         Assert.Equal("已建立資料夾「空的資料夾」", notices[^1]);
-        controller.MoveToFolder([b], "設計");
+        var design = db.CreateFolder("設計");
+        controller.MoveToFolder([b], design);
+        Assert.Equal("已移到「設計」", notices[^1]);
         notices.Clear();
-        controller.CreateFolder("設計");
+        Assert.Null(controller.CreateFolder("設計"));
         Assert.Empty(notices);
-        controller.MoveToFolder([b], "");
-        Assert.Contains("設計", db.FolderNames());
+        controller.MoveToFolder([b], null);
+        Assert.Contains("設計", db.Folders().Select(f => f.Name));
 
         db.AddBookmark(b, 754, "");
         var mark = db.Bookmarks(b).Single();
@@ -436,10 +462,12 @@ public sealed class AppTests : IDisposable
         controller.Notice += notices.Add;
         var a = db.InsertMeeting(new Meeting { SourceFilename = "a", MeetingDate = "2026-11-02" }, null).Id!.Value;
         var b = db.InsertMeeting(new Meeting { SourceFilename = "b", MeetingDate = "2026-11-09" }, null).Id!.Value;
-        controller.DropOnListHeader([a, b], "客戶", othersOnly: false);
-        Assert.Equal(["客戶", "客戶"], new[] { a, b }.Select(id => db.Meeting(id)!.Folder));
+        var client = db.CreateFolder("客戶");
+        controller.DropOnListHeader([a, b], client, othersOnly: false);
+        Assert.Equal([client, client], new[] { a, b }.Select(id => db.Meeting(id)!.FolderId));
+        Assert.Equal("已把 2 場會議移到「客戶」", notices[^1]);
         controller.DropOnListHeader([a, b], null, othersOnly: true);
-        Assert.All(new[] { a, b }.Select(id => db.Meeting(id)!), m => Assert.Equal("", m.Folder));
+        Assert.All(new[] { a, b }.Select(id => db.Meeting(id)!), m => Assert.Null(m.FolderId));
         Assert.Equal("已把 2 場會議移出資料夾", notices[^1]);
         controller.DropOnListHeader([a], null, othersOnly: true);
         Assert.Equal("這場會議沒有在任何資料夾裡", notices[^1]);
@@ -447,7 +475,7 @@ public sealed class AppTests : IDisposable
         Assert.Equal("這些會議都沒有在資料夾裡", notices[^1]);
         // 看所有會議時（不是其他會議）不動
         controller.DropOnListHeader([a], null, othersOnly: false);
-        Assert.Equal("", db.Meeting(a)!.Folder);
+        Assert.Null(db.Meeting(a)!.FolderId);
     }
 
     /// <summary>

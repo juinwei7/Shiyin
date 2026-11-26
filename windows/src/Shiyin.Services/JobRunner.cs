@@ -78,8 +78,8 @@ public sealed class JobRunner
     public event Action<long, int?, Exception?>? Rediarized;
     /// <summary>企業伺服器連不上太久，自動改在這台電腦轉錄了（R93、M§67）：App 發通知</summary>
     public event Action<long>? ServerFallback;
-    /// <summary>自動放進資料夾了（M§72）：會議 id、資料夾；App 提示「「X」已放進「Y」」</summary>
-    public event Action<long, string?>? Organized;
+    /// <summary>自動放進資料夾了（M§72）：會議 id、資料夾 id（R118）；App 提示「「X」已放進「Y」」</summary>
+    public event Action<long, long?>? Organized;
     /// <summary>再找不確定的地方做完（M§88）：會議 id、多找到幾題</summary>
     public event Action<long, int>? MoreReviewFound;
 

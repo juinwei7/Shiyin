@@ -69,7 +69,7 @@ public class ExportTests
         var b = Bundle(fx);
         var m = b.Meeting;
         var info = new IO.PackageJson.MeetingInfo(m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.DurationSeconds,
-            m.TemplateId, m.UserNotes, m.Channels, m.Folder, m.Language, fx.Notes, "claude",
+            m.TemplateId, m.UserNotes, m.Channels, fx.FolderName, m.Language, fx.Notes, "claude",
             b.Speakers.Select(p => (p.Key, p.Value)).ToList(), fx.Bookmarks.Select(x => (x.Time, x.Label)).ToList());
         Golden.Json($"package/{key}/meeting.json", IO.PackageJson.Write(info));
         Golden.Json($"package/{key}/transcript.json", IO.PackageJson.Write(fx.Segments.Select(s =>

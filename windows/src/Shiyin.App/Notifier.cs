@@ -171,7 +171,7 @@ public sealed class Notifier
     {
         switch (Links.Parse(url))
         {
-            case NotificationLinks.Link.Prompt { Action: "start" }: host.Controller.StartRecording(""); break;
+            case NotificationLinks.Link.Prompt { Action: "start" }: host.Controller.StartRecording(null); break;
             case NotificationLinks.Link.Prompt { Action: "mute", App: var app }: host.Detector.Mute(app); break;
             // 定時停止的倒數（R110.3）：「繼續錄」取消定時，「停止並轉錄」馬上停
             case NotificationLinks.Link.Prompt { Action: "continue", App: "stoptimer" }: host.Recorder.SetStopTimer(null); break;

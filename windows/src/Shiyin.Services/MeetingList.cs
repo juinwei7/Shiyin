@@ -69,14 +69,14 @@ public sealed record MeetingGroup(string Id, string Title, List<MeetingRow> Rows
 public static class MeetingList
 {
     /// <summary>實際用的分組：看某個資料夾時不依資料夾分組（M§71）</summary>
-    public static MeetingGrouping Effective(MeetingGrouping grouping, string? folderFilter) => grouping switch
+    public static MeetingGrouping Effective(MeetingGrouping grouping, long? folderFilter) => grouping switch
     {
         MeetingGrouping.Folder when folderFilter is not null => MeetingGrouping.None,
         _ => grouping,
     };
 
     /// <summary>選單裡可以選的分組</summary>
-    public static List<MeetingGrouping> Available(string? folderFilter) =>
+    public static List<MeetingGrouping> Available(long? folderFilter) =>
         MeetingGroupings.All.Where(g => g != MeetingGrouping.Folder || folderFilter is null).ToList();
 
     /// <summary>「我」的名字（R80）：錄過自己聲音的人物；沒有設定「我」是 null</summary>
@@ -110,10 +110,11 @@ public static class MeetingList
     };
 
     /// <summary>
-    /// 分組（R97.2）：月份照日期新到舊（舊到新排序時反過來）；資料夾照名稱，最後是「不在資料夾」；每一段裡照排序。
+    /// 分組（R97.2）：月份照日期新到舊（舊到新排序時反過來）；資料夾照名稱（folderName：id → 名字），最後是「不在資料夾」；每一段裡照排序。
+    /// 資料夾那一組的 id 是 folder-&lt;資料夾 id&gt;（不在資料夾是 folder-none），改名時收合的狀態不會跑掉（R118，同 Mac）。
     /// rows 是已經篩過、排好的列表；垃圾桶不分組
     /// </summary>
-    public static List<MeetingGroup> Groups(List<MeetingRow> rows, MeetingGrouping effective, MeetingSort sort, bool trash)
+    public static List<MeetingGroup> Groups(List<MeetingRow> rows, MeetingGrouping effective, MeetingSort sort, bool trash, Func<long?, string>? folderName = null)
     {
         if (trash) return [new MeetingGroup("all", "", rows)];
         switch (effective)
@@ -124,10 +125,11 @@ public static class MeetingList
                 if (sort != MeetingSort.DateAsc) months.Reverse();
                 return months.Select(key => new MeetingGroup("month-" + key, MonthTitle(key), rows.Where(r => Month(r.Meeting.MeetingDate) == key).ToList())).ToList();
             case MeetingGrouping.Folder:
-                var folders = rows.Select(r => r.Meeting.Folder).Distinct().Where(f => f.Length > 0).Order(NaturalComparer.Instance).ToList();
-                if (rows.Any(r => r.Meeting.Folder.Length == 0)) folders.Add("");
-                return folders.Select(folder => new MeetingGroup("folder-" + folder, folder.Length == 0 ? L.T("不在資料夾") : folder,
-                    rows.Where(r => r.Meeting.Folder == folder).ToList())).ToList();
+                var name = folderName ?? (_ => "");
+                var folders = rows.Select(r => r.Meeting.FolderId).OfType<long>().Distinct().OrderBy(id => name(id), NaturalComparer.Instance).Select(id => (long?)id).ToList();
+                if (rows.Any(r => r.Meeting.FolderId is null)) folders.Add(null);
+                return folders.Select(folder => new MeetingGroup(folder is long id ? $"folder-{id}" : "folder-none", folder is null ? L.T("不在資料夾") : name(folder),
+                    rows.Where(r => r.Meeting.FolderId == folder).ToList())).ToList();
             default:
                 return [new MeetingGroup("all", "", rows)];
         }
@@ -159,11 +161,11 @@ public static class MeetingList
     /// <summary>
     /// 列表上的會議（R97、M§71）：資料夾、篩選（垃圾桶不篩選）、排序
     /// </summary>
-    public static List<MeetingRow> Filtered(IEnumerable<MeetingRow> source, bool trash, string? folderFilter, MeetingFilter filter,
+    public static List<MeetingRow> Filtered(IEnumerable<MeetingRow> source, bool trash, long? folderFilter, MeetingFilter filter,
         MeetingSort sort, IReadOnlyDictionary<long, HashSet<long>> meetingPeople, string? myName)
     {
         var rows = source;
-        if (!trash && folderFilter is { } folder) rows = rows.Where(r => r.Meeting.Folder == folder);
+        if (!trash && folderFilter is long folder) rows = rows.Where(r => r.Meeting.FolderId == folder);
         if (!trash && filter.IsActive) rows = rows.Where(r => Matches(r, filter, meetingPeople, myName));
         return Sorted(rows, sort);
     }
@@ -173,27 +175,26 @@ public static class MeetingList
 public static class Organizing
 {
     /// <summary>
-    /// 現有的資料夾和各自的場數（不含垃圾桶），依名稱排序：會議的資料夾、有自動加入條件的資料夾（M§72）、資料夾表（names：自己建的空資料夾，
-    /// 會議都移走了也還在，R104、M§78）三者的聯集，沒有會議的是 0 場
+    /// 現有的資料夾和各自的場數（不含垃圾桶），依名稱排序：資料夾表裡的每一個（自己建的空資料夾、會議都移走了的、只有自動加入條件的都在，
+    /// R104、M§78、§92.3；v18 起每個資料夾一定在表裡，不用再跟會議、條件取聯集），沒有會議的是 0 場
     /// </summary>
-    public static List<(string Name, int Count)> Folders(IEnumerable<MeetingRow> meetings, IEnumerable<FolderRule> rules, IEnumerable<string>? names = null)
+    public static List<(long Id, string Name, int Count)> Folders(IEnumerable<MeetingRow> meetings, IEnumerable<Folder> folders)
     {
-        var counts = meetings.Where(m => m.Meeting.Folder.Length > 0).GroupBy(m => m.Meeting.Folder).ToDictionary(g => g.Key, g => g.Count());
-        foreach (var rule in rules) counts.TryAdd(rule.Folder, 0);
-        foreach (var name in names ?? []) if (name.Length > 0) counts.TryAdd(name, 0);
-        return counts.Select(p => (p.Key, p.Value)).OrderBy(f => f.Key, NaturalComparer.Instance).ToList();
+        var counts = meetings.Select(m => m.Meeting.FolderId).OfType<long>().GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
+        return folders.Select(f => (f.Id, f.Name, counts.GetValueOrDefault(f.Id))).OrderBy(f => f.Name, NaturalComparer.Instance).ToList();
     }
 
     /// <summary>
-    /// 建議放進資料夾（R98.3）：會議不在資料夾、還沒決定過、已經有會議紀錄、不在錄音中、不在垃圾桶時，跟各個資料夾比
+    /// 建議放進資料夾（R98.3）：會議不在資料夾、還沒決定過、已經有會議紀錄、不在錄音中、不在垃圾桶時，跟各個資料夾比（folderName：id → 名字）
     /// </summary>
     public static FolderSuggestion? Suggestion(Meeting meeting, IEnumerable<MeetingRow> meetings, IReadOnlyDictionary<long, HashSet<long>> meetingPeople,
-        long? recordingId)
+        long? recordingId, Func<long?, string> folderName)
     {
-        if (meeting.Id is not long id || meeting.Folder.Length > 0 || meeting.FolderDecided || meeting.DeletedAt is not null
+        if (meeting.Id is not long id || meeting.FolderId is not null || meeting.FolderDecided || meeting.DeletedAt is not null
             || meeting.Notes is null || recordingId == id) return null;
-        var input = new FolderSuggester.Input(id, "", meeting.DisplayTitle, meetingPeople.GetValueOrDefault(id) ?? []);
-        var others = meetings.Select(r => new FolderSuggester.Input(r.Id, r.Meeting.Folder, r.Meeting.DisplayTitle, meetingPeople.GetValueOrDefault(r.Id) ?? []));
+        var input = new FolderSuggester.Input(id, null, "", meeting.DisplayTitle, meetingPeople.GetValueOrDefault(id) ?? []);
+        var others = meetings.Select(r => new FolderSuggester.Input(r.Id, r.Meeting.FolderId, folderName(r.Meeting.FolderId), r.Meeting.DisplayTitle,
+            meetingPeople.GetValueOrDefault(r.Id) ?? []));
         return FolderSuggester.Best(input, others, NaturalComparer.Instance);
     }
 

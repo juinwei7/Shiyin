@@ -122,7 +122,7 @@ public sealed class MeetingEditTests : IDisposable
         var meeting = db.InsertMeeting(new Meeting
         {
             Title = "ami-stereo", SourceFilename = "ami-stereo.wav", MeetingDate = "2026-11-16", CreatedAt = "2026-11-16T01:00:00Z", DurationSeconds = 180,
-            Channels = "both", Folder = "專案", Language = "en", TemplateId = "general", Source = "recording", TranscribedWith = "breeze", MinSpeakers = 3,
+            Channels = "both", FolderId = db.CreateFolder("專案"), Language = "en", TemplateId = "general", Source = "recording", TranscribedWith = "breeze", MinSpeakers = 3,
             Participants = "Carl, Dana", UserNotes = "我的筆記", Notes = null,
         }, audio ? "wav" : null);
         var id = meeting.Id!.Value;
@@ -175,7 +175,7 @@ public sealed class MeetingEditTests : IDisposable
         // 新的一場：標題加「（2）」、其他欄位照原本的、開始時間加切點、長度相減；筆記、紀錄沒有
         Assert.Equal("ami-stereo（2）", created.Title);
         Assert.Equal(("2026-11-16", "both", "專案", "en", "recording", "breeze", (int?)3, "Carl, Dana"),
-            (created.MeetingDate, created.Channels, created.Folder, created.Language, created.Source, created.TranscribedWith, created.MinSpeakers, created.Participants));
+            (created.MeetingDate, created.Channels, db.FolderName(created.FolderId), created.Language, created.Source, created.TranscribedWith, created.MinSpeakers, created.Participants));
         Assert.Equal("2026-11-16T01:01:30Z", created.CreatedAt);
         Assert.Equal(89, created.DurationSeconds);
         Assert.Equal("", created.UserNotes);
@@ -729,27 +729,29 @@ public sealed class MeetingEditTests : IDisposable
     public void MultipleMeetingsTrashRestorePurge()
     {
         var controller = Controller();
-        var ids = Enumerable.Range(1, 4).Select(i => db.InsertMeeting(new Meeting { Title = $"m{i}", SourceFilename = $"m{i}.wav", Folder = i == 4 ? "甲" : "" }, "wav")).ToList();
+        var (jia, yi) = (db.CreateFolder("甲"), db.CreateFolder("乙"));
+        var ids = Enumerable.Range(1, 4).Select(i => db.InsertMeeting(new Meeting { Title = $"m{i}", SourceFilename = $"m{i}.wav", FolderId = i == 4 ? jia : null }, "wav")).ToList();
         foreach (var m in ids) WriteStereo(paths.AudioPath(m), 0.1);
         var all = ids.Select(m => m.Id!.Value).ToList();
 
         // 移到資料夾：已經在那裡的跳過；都在了就說明
-        controller.MoveToFolder([all[2], all[3]], "甲");
+        controller.MoveToFolder([all[2], all[3]], jia);
         Assert.Equal("已移到「甲」", notices[^1]);
-        controller.MoveToFolder([all[2], all[3]], "甲");
+        controller.MoveToFolder([all[2], all[3]], jia);
         Assert.Equal("這些會議都已經在「甲」", notices[^1]);
-        controller.MoveToFolder(all, "乙");
+        controller.MoveToFolder(all, yi);
         Assert.Equal("已把 4 場會議移到「乙」", notices[^1]);
-        Assert.Equal("乙", AppController.CommonFolder(db.MeetingRows(), all));
-        controller.MoveToFolder([all[0]], "");
-        Assert.Null(AppController.CommonFolder(db.MeetingRows(), all));
-        controller.MoveToFolder(all, "");
+        Assert.Equal(new CommonFolder(yi), AppController.CommonFolderOf(db.MeetingRows(), all));
+        controller.MoveToFolder([all[0]], null);
+        Assert.Null(AppController.CommonFolderOf(db.MeetingRows(), all));
+        controller.MoveToFolder(all, null);
         Assert.Equal("已把 3 場會議移出資料夾", notices[^1]);
+        Assert.Equal(new CommonFolder(null), AppController.CommonFolderOf(db.MeetingRows(), all));
 
         // 移到垃圾桶：正在錄音的那場跳過、說明原因
         var source = Path.Combine(home.Path, "src.wav");
         WriteStereo(source, 30);
-        var recording = controller.StartSimulatedRecording(source, 1, false, "")!.Value;
+        var recording = controller.StartSimulatedRecording(source, 1, false, null)!.Value;
         controller.MoveToTrash([all[0], all[1], all[2], recording]);
         Assert.Equal("還在錄音的那場會議沒有移到垃圾桶，請先停止錄音", errors[^1]);
         Assert.Equal("已把 3 場會議移到垃圾桶，30 天內都可以還原", notices[^1]);

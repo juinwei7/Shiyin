@@ -124,7 +124,7 @@ public sealed partial class IslandWindow : Window
             [
                 new("later", L.T("這次不用"), () => { }),
                 new("mute", L.T("不要再提醒這個 app"), () => host.Detector.Mute(prompt.App.Id)),
-                new("start", L.T("開始錄音"), () => host.Controller.StartRecording("")),
+                new("start", L.T("開始錄音"), () => host.Controller.StartRecording(null)),
             ];
         }
         else

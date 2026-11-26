@@ -473,7 +473,7 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
                 menu.Items.Add(Ui.Item(L.T("知道了"), recorder.DismissMicHint));
             }
         }
-        else menu.Items.Add(Ui.Item(L.T("開始錄音"), () => host.Controller.StartRecording(main?.State.CurrentFolder ?? "")));
+        else menu.Items.Add(Ui.Item(L.T("開始錄音"), () => host.Controller.StartRecording(main?.State.CurrentFolder)));
         menu.Items.Add(new MenuFlyoutSeparator());
         foreach (var lane in Enum.GetValues<JobLane>())
             if (host.Runner.Running(lane) is { } running)

@@ -22,7 +22,10 @@ public sealed partial class AppDatabase : IDisposable
     public string? DocumentsRoot { get; }
 
     /// <summary>開啟資料庫；有待執行的 migration 時，先把舊檔備份到 backupsDir（N3）</summary>
-    public AppDatabase(string path, string? backupsDir = null, string? documentsRoot = null)
+    public AppDatabase(string path, string? backupsDir = null, string? documentsRoot = null) : this(path, backupsDir, documentsRoot, migrateUntil: null) { }
+
+    /// <summary>只給測試用：migration 只跑到 migrateUntil（含）為止，用來在舊的結構上放資料再跑後面的 migration（標準答案 db/migrate-v18.json）</summary>
+    internal AppDatabase(string path, string? backupsDir, string? documentsRoot, string? migrateUntil)
     {
         Path = path;
         DocumentsRoot = documentsRoot;
@@ -37,7 +40,7 @@ public sealed partial class AppDatabase : IDisposable
             cmd.CommandText = "PRAGMA journal_mode = WAL";
             cmd.ExecuteNonQuery();
         }
-        Migrate(backupsDir);
+        Migrate(backupsDir, migrateUntil);
     }
 
     public void Dispose()
@@ -169,7 +172,7 @@ public sealed partial class AppDatabase : IDisposable
 
     // MARK: migration
 
-    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17"];
+    static readonly string[] MigrationIds = ["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18"];
 
     /// <summary>
     /// 這次開資料庫時 migration v14 換掉的定期會議（id → 資料夾名稱，D177）；沒跑 v14 時是空的。
@@ -177,14 +180,24 @@ public sealed partial class AppDatabase : IDisposable
     /// </summary>
     public IReadOnlyDictionary<long, string> MigratedSeries { get; private set; } = new Dictionary<long, string>();
 
-    void Migrate(string? backupsDir)
+    /// <summary>
+    /// 這次開資料庫時 migration v18 之後的資料夾（名稱 → id，R118、M§92.1）；沒跑 v18、沒有資料夾時是空的。
+    /// 設定檔裡側欄的鍵（folder:名稱）由 Services 換成 folderid:id（同 Mac 的 AppDatabase.replaceFolderKeys）
+    /// </summary>
+    public IReadOnlyDictionary<string, long> MigratedFolders { get; private set; } = new Dictionary<string, long>();
+
+    /// <summary>migration 跑完要交給 Services 的對照（v14 的定期會議、v18 的資料夾），其他是 null</summary>
+    sealed record MigrationResult(Dictionary<long, string>? Series = null, Dictionary<string, long>? Folders = null);
+
+    void Migrate(string? backupsDir, string? migrateUntil)
     {
         lock (writeLock)
         {
             var db = new Db(writer, null);
             db.Execute("CREATE TABLE IF NOT EXISTS grdb_migrations (identifier TEXT NOT NULL PRIMARY KEY)");
             var applied = db.Query("SELECT identifier FROM grdb_migrations").Select(r => r.Str("identifier")).ToHashSet();
-            var pending = MigrationIds.Where(id => !applied.Contains(id)).ToList();
+            var ids = migrateUntil is null ? MigrationIds : MigrationIds[..(Array.IndexOf(MigrationIds, migrateUntil) + 1)];
+            var pending = ids.Where(id => !applied.Contains(id)).ToList();
             if (applied.Count > 0 && pending.Count > 0 && backupsDir is not null)
             {
                 db.Query("PRAGMA wal_checkpoint(TRUNCATE)");
@@ -203,15 +216,16 @@ public sealed partial class AppDatabase : IDisposable
                     t.Execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", id);
                     if (t.Query("PRAGMA foreign_key_check").Count > 0) throw new InvalidOperationException($"foreign key violation in {id}");
                     tx.Commit();
-                    if (migrated is not null) MigratedSeries = migrated;
+                    if (migrated?.Series is { } series) MigratedSeries = series;
+                    if (migrated?.Folders is { } folders) MigratedFolders = folders;
                 }
                 db.Execute("PRAGMA foreign_keys = ON");
             }
         }
     }
 
-    /// <summary>v14 回傳換掉的定期會議（id → 資料夾名稱），其他是 null</summary>
-    static Dictionary<long, string>? RunMigration(Db db, string id)
+    /// <summary>v14 回傳換掉的定期會議（id → 資料夾名稱），v18 回傳資料夾（名稱 → id），其他是 null</summary>
+    static MigrationResult? RunMigration(Db db, string id)
     {
         switch (id)
         {
@@ -259,11 +273,19 @@ public sealed partial class AppDatabase : IDisposable
                     db.Execute("UPDATE meetings SET folder = ?, folder_decided = 1 WHERE series_id = ? AND folder = ''", name, seriesId);
                 }
                 db.Execute(MigrationSql.V14);
-                return names;
+                return new MigrationResult(Series: names);
             }
             case "v15": db.Execute(MigrationSql.V15); break;
             case "v16": db.Execute(MigrationSql.V16); break;
             case "v17": foreach (var sql in MigrationSql.V17) db.Execute(sql); break;
+            case "v18":
+            {
+                // 資料夾用 id 辨識（R118、M§92.1、D200）：跑完把名稱 → id 交給側欄的鍵（folder:名稱 → folderid:id，同 Mac 的 replaceFolderKeys）
+                db.Execute(MigrationSql.V18);
+                var folders = new Dictionary<string, long>(StringComparer.Ordinal);
+                foreach (var row in db.Query("SELECT id, name FROM folders")) folders[row.Str("name")] = row.Long("id");
+                return new MigrationResult(Folders: folders);
+            }
         }
         return null;
     }
@@ -277,7 +299,7 @@ public sealed partial class AppDatabase : IDisposable
         DurationSeconds = r.IntOrNull("duration_seconds"), Notes = r.StrOrNull("notes"), NotesBy = r.StrOrNull("notes_by"), NotesTemplate = r.StrOrNull("notes_template"),
         CreatedAt = r.Str("created_at"), UpdatedAt = r.Str("updated_at"), TemplateId = r.Str("template_id"),
         UserNotes = r.Str("user_notes"), Source = r.Str("source"), Channels = r.Str("channels"), DeletedAt = r.StrOrNull("deleted_at"),
-        Folder = r.Str("folder"), Language = r.Str("language"), NotesDraft = r.Int("notes_draft"), TranscribedWith = r.Str("transcribed_with"),
+        FolderId = r.LongOrNull("folder_id"), Language = r.Str("language"), NotesDraft = r.Int("notes_draft"), TranscribedWith = r.Str("transcribed_with"),
         MinSpeakers = r.IntOrNull("min_speakers"), SpeakerCheck = r.DoubleOrNull("speaker_check"),
         SpeakerHintDismissed = r.Bool("speaker_hint_dismissed"), FolderDecided = r.Bool("folder_decided"),
     };
@@ -327,13 +349,13 @@ public sealed partial class AppDatabase : IDisposable
     // 整列寫入（對應 GRDB 的 insert、update）
 
     static readonly string MeetingColumns = "title, title_locked, meeting_date, participants, source_filename, audio_file, duration_seconds, notes, notes_by, "
-        + "created_at, updated_at, template_id, user_notes, source, channels, deleted_at, folder, language, notes_draft, transcribed_with, "
+        + "created_at, updated_at, template_id, user_notes, source, channels, deleted_at, folder_id, language, notes_draft, transcribed_with, "
         + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided, notes_template";
 
     static object?[] MeetingValues(Meeting m) =>
     [
         m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.AudioFile, m.DurationSeconds, m.Notes, m.NotesBy,
-        m.CreatedAt, m.UpdatedAt, m.TemplateId, m.UserNotes, m.Source, m.Channels, m.DeletedAt, m.Folder, m.Language, m.NotesDraft,
+        m.CreatedAt, m.UpdatedAt, m.TemplateId, m.UserNotes, m.Source, m.Channels, m.DeletedAt, m.FolderId, m.Language, m.NotesDraft,
         m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided, m.NotesTemplate,
     ];
 
