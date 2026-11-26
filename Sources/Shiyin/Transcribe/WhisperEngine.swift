@@ -7,6 +7,14 @@ struct TranscribedSegment {
     var end: Double
     var text: String
     var lowConfidence: Bool
+    /// 每個字（詞）的時間：只有內建辨識在 iPhone 有，說話者辨識完在換人的地方切開用（design-ios §8.1、D88）
+    var words: [TranscribedWord] = []
+}
+
+struct TranscribedWord {
+    var start: Double
+    var end: Double
+    var text: String
 }
 
 enum WhisperError: LocalizedError {
@@ -178,7 +186,12 @@ enum WhisperEngine {
             _ = silenceLogs
             guard FileManager.default.fileExists(atPath: modelPath) else { throw WhisperError.modelMissing }
             var contextParams = whisper_context_default_params()
+            // 模擬器的 GPU 跑不了 whisper（design-ios §14.1）
+            #if targetEnvironment(simulator)
+            contextParams.use_gpu = false
+            #else
             contextParams.use_gpu = true
+            #endif
             contextParams.flash_attn = true
             guard let ctx = whisper_init_from_file_with_params(modelPath, contextParams) else { throw WhisperError.loadFailed }
             WhisperContexts.opened()

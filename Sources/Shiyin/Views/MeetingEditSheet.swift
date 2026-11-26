@@ -500,7 +500,11 @@ private struct EditRuler: View {
     var body: some View {
         let steps: [Double] = [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600]
         let step = steps.first { total > 0 && CGFloat($0 / total) * width >= 70 } ?? 3600
-        let ticks = stride(from: 0, through: max(0, total - step * 0.4), by: step).map { $0 }
+        // 離結尾太近、字會跟右邊的總長疊在一起的不畫（視窗窄時 0.4 格可能不到一個字寬）。
+        // 刻度的字置中（一半在右邊），總長的字靠右
+        let ticks = stride(from: 0, through: max(0, total - step * 0.4), by: step).filter { t in
+            width - CGFloat(t / max(1, total)) * width >= Self.labelWidth(t) / 2 + Self.labelWidth(total) + 4
+        }
         ZStack(alignment: .topLeading) {
             ForEach(ticks, id: \.self) { t in
                 let x = CGFloat(t / max(1, total)) * width
@@ -515,6 +519,11 @@ private struct EditRuler: View {
         .font(.system(size: 11).monospacedDigit())
         .foregroundStyle(.secondary)
         .frame(width: width, height: 16, alignment: .topLeading)
+    }
+
+    /// 11 點等寬數字的時間大約多寬：數字約 6.3 點、冒號約 3.3 點
+    private static func labelWidth(_ t: Double) -> CGFloat {
+        TimeFormat.string(t).reduce(0) { $0 + ($1 == ":" ? 3.3 : 6.3) }
     }
 }
 

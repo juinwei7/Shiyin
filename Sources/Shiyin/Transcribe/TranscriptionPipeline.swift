@@ -27,6 +27,8 @@ struct TranscriptionOptions: Codable {
     var chunkSeconds: Double = 600
     /// 說話者辨識至少分出幾個人（design §23.2），nil 自動判斷
     var minSpeakers: Int?
+    /// 內建辨識的段落在換人、停頓的地方切細（design-ios §8.1、D88）：iPhone 打開，Mac 照舊
+    var splitSegments = false
     /// 評估用：whisper 解碼參數和提示詞的寫法（design §17.1）；nil 用 app 的預設值。正式轉錄不設
     var tuning: DecoderTuning?
 
@@ -84,6 +86,7 @@ struct TranscriptionOptions: Codable {
         // 只有錄音時選了「麥克風＋電腦聲音」的會議才分聲道；匯入的雙聲道檔案（音樂、影片）照舊混成一軌
         options.splitChannels = AppSettings.splitChannels && channels == "both"
         options.audioSource = channels == "both" ? "mix" : channels
+        options.splitSegments = SystemTranscriber.phoneStyle
         return options
     }
 
@@ -100,6 +103,7 @@ struct TranscriptionOptions: Codable {
         audioSource = try c.decodeIfPresent(String.self, forKey: .audioSource) ?? "mix"
         chunkSeconds = try c.decodeIfPresent(Double.self, forKey: .chunkSeconds) ?? 600
         minSpeakers = try c.decodeIfPresent(Int.self, forKey: .minSpeakers)
+        splitSegments = try c.decodeIfPresent(Bool.self, forKey: .splitSegments) ?? false
         tuning = try c.decodeIfPresent(DecoderTuning.self, forKey: .tuning)
     }
 }
@@ -170,13 +174,18 @@ struct TranscriptionPipeline {
         let share = diarize ? 0.85 : 1.0
         let report = progress
         progress(0)
-        guard let (transcribed, seams) = try await transcribe(samples, from: 0, span: share) else { return nil }
+        guard var (transcribed, seams) = try await transcribe(samples, from: 0, span: share) else { return nil }
         var speakers: [Int?] = transcribed.map { _ in nil }
         var voices: [Int: SpeakerVoice] = [:]
         var quality: Diarizer.Quality?
         if diarize {
             stage(String(localized: "辨識說話者"))
-            (speakers, voices, quality) = await self.speakers(of: transcribed, in: samples, source: options.audioSource) { report(share + $0 * (1 - share)) }
+            (transcribed, speakers, voices, quality) = await self.speakers(of: transcribed, in: samples, source: options.audioSource) {
+                report(share + $0 * (1 - share))
+            }
+        } else {
+            transcribed = refine(transcribed, samples: samples, turns: [])
+            speakers = transcribed.map { _ in nil }
         }
         guard shouldContinue() else { return nil }
         return TranscriptionResult(segments: transcribed, speakers: speakers, channels: transcribed.map { _ in nil }, duration: duration,
@@ -255,7 +264,7 @@ struct TranscriptionPipeline {
             stage(String(localized: "辨識說話者"))
             let samples = try await AudioDecoder.decode(audio)
             guard shouldContinue() else { return nil }
-            (speakers, voices, quality) = await self.speakers(of: result.segments, in: samples, source: options.audioSource) {
+            (_, speakers, voices, quality) = await self.speakers(of: result.segments, in: samples, source: options.audioSource) {
                 report(share + $0 * (1 - share))
             }
         }
@@ -342,14 +351,17 @@ struct TranscriptionPipeline {
         for (index, (channel, samples)) in inputs.enumerated() {
             let base = Double(index) / Double(inputs.count), width = 1 / Double(inputs.count)
             let share = diarize ? 0.85 : 1.0
-            guard let (segments, _) = try await transcribe(samples, from: base, span: width * share) else { return nil }
+            guard var (segments, _) = try await transcribe(samples, from: base, span: width * share) else { return nil }
             var speakers: [Int?] = segments.map { _ in nil }
             var voices: [Int: SpeakerVoice] = [:]
             if diarize && !segments.isEmpty {
                 stage(String(localized: "辨識說話者"))
-                (speakers, voices, _) = await self.speakers(of: segments, in: samples, source: channel == 0 ? "mic" : "system") {
+                (segments, speakers, voices, _) = await self.speakers(of: segments, in: samples, source: channel == 0 ? "mic" : "system") {
                     report(base + width * (share + $0 * (1 - share)))
                 }
+            } else {
+                segments = refine(segments, samples: samples, turns: [])
+                speakers = segments.map { _ in nil }
             }
             guard shouldContinue() else { return nil }
             parts.append((channel, segments, speakers, voices))
@@ -467,11 +479,13 @@ struct TranscriptionPipeline {
     }
 
     /// 說話者辨識；失敗不影響逐字稿，回傳全部沒有說話者
-    /// 每段的說話者，以及每位說話者的聲紋（換成逐字稿上的編號）
+    /// 段落（iPhone 在換人、停頓的地方切細過）、每段的說話者，以及每位說話者的聲紋（換成逐字稿上的編號）
     private func speakers(of segments: [TranscribedSegment], in samples: [Float], source: String,
-                          onProgress: @escaping @Sendable (Double) -> Void) async -> ([Int?], [Int: SpeakerVoice], Diarizer.Quality?) {
+                          onProgress: @escaping @Sendable (Double) -> Void) async
+        -> ([TranscribedSegment], [Int?], [Int: SpeakerVoice], Diarizer.Quality?) {
         do {
             let output = try await Diarizer.diarize(samples: samples, minSpeakers: options.minSpeakers, onProgress: onProgress)
+            let segments = refine(segments, samples: samples, turns: output.turns)
             var (speakers, numbering) = Diarizer.assignNumbering(output.turns, to: segments)
             // 短句再跟每位說話者比一次（R34、design §6.3.2）；模型下載不了或算不出來就照說話者辨識的結果
             do {
@@ -485,10 +499,18 @@ struct TranscriptionPipeline {
                     voices[number] = SpeakerVoice(embedding: embedding, seconds: output.speechSeconds[raw] ?? 0, source: source)
                 }
             }
-            return (speakers, voices, output.quality)
+            return (segments, speakers, voices, output.quality)
         } catch {
             log.error("diarization failed: \(error.localizedDescription, privacy: .public)")
-            return (segments.map { _ in nil }, [:], nil)
+            let segments = refine(segments, samples: samples, turns: [])
+            return (segments, segments.map { _ in nil }, [:], nil)
         }
+    }
+
+    /// 內建辨識的段落切細（design-ios §8.1、D88）：先在換人的地方（有說話者辨識的結果時），再把太長的在最安靜的地方切開。
+    /// 其他引擎的段落沒有每個字的時間，不切；Mac 沒打開（splitSegments）
+    private func refine(_ segments: [TranscribedSegment], samples: [Float], turns: [Diarizer.Turn]) -> [TranscribedSegment] {
+        guard options.splitSegments, segments.contains(where: { !$0.words.isEmpty }) else { return segments }
+        return Segmenting.splitLong(Segmenting.splitAtTurns(segments, turns: turns), loudness: Segmenting.Loudness(samples: samples))
     }
 }

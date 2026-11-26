@@ -436,11 +436,18 @@ sealed class EditTimeline
         var total = editor.Total;
         var step = steps.FirstOrDefault(s => total > 0 && s / total * width >= 70, 3600);
         for (var t = 0.0; t <= Math.Max(0, total - step * 0.4); t += step)
+        {
+            // 離結尾太近、字會跟右邊的總長疊在一起的不畫（視窗窄時 0.4 格可能不到一個字寬；同 Mac）
+            if (width - X(t) < LabelWidth(t) / 2 + LabelWidth(total) + 4) continue;
             Place(ruler, new TextBlock { Text = TimeFormat.String(t), FontSize = 11, Foreground = Ui.Secondary }, X(t), 0, alignStart: t == 0);
+        }
         var end = new TextBlock { Text = TimeFormat.String(total), FontSize = 11, Foreground = Ui.Secondary };
         end.SizeChanged += (_, _) => Canvas.SetLeft(end, width - end.ActualWidth);
         ruler.Children.Add(end);
     }
+
+    /// <summary>11 點的時間大約多寬：數字約 6.3、冒號約 3.3（字還沒排好就要決定畫不畫）</summary>
+    static double LabelWidth(double t) => TimeFormat.String(t).Sum(c => c == ':' ? 3.3 : 6.3);
 
     // MARK: 時間軸
 

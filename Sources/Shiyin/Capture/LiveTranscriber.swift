@@ -17,17 +17,25 @@ final class LiveTranscriber {
         self.language = language
     }
 
+    /// 定稿結果依句子、停頓切成幾行（design-ios §7、D88）：iPhone 畫面窄，內建辨識又常常不加句號，一個結果 15～40 秒。
+    /// Mac 照舊一個結果一行（SystemTranscriber.phoneStyle）
+    static var splitLines: Bool { SystemTranscriber.phoneStyle }
+
     /// 送音訊的部分，可以從寫檔的執行緒呼叫
     final class Feeder: @unchecked Sendable {
         private let lock = NSLock()
         private var builder: AsyncStream<AnalyzerInput>.Continuation?
         private var converter: AVAudioConverter?
         private var format: AVAudioFormat?
+        /// 送進去的聲音的音量，時間跟定稿結果的 audioTimeRange 同一個起點（切行時找停頓用）
+        private var loudness = Segmenting.Loudness()
+        private var tracksLoudness = false
 
-        func configure(builder: AsyncStream<AnalyzerInput>.Continuation, format: AVAudioFormat) {
+        func configure(builder: AsyncStream<AnalyzerInput>.Continuation, format: AVAudioFormat, tracksLoudness: Bool = false) {
             lock.withLock {
                 self.builder = builder
                 self.format = format
+                self.tracksLoudness = tracksLoudness
                 converter = format == CaptureFormat.mono ? nil : AVAudioConverter(from: CaptureFormat.mono, to: format)
             }
         }
@@ -37,6 +45,7 @@ final class LiveTranscriber {
                 guard let builder, let format, !samples.isEmpty,
                       let input = AVAudioPCMBuffer(pcmFormat: CaptureFormat.mono, frameCapacity: AVAudioFrameCount(samples.count))
                 else { return }
+                if tracksLoudness { loudness.append(samples) }
                 input.frameLength = AVAudioFrameCount(samples.count)
                 samples.withUnsafeBufferPointer { input.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count) }
                 guard let converter else {
@@ -63,6 +72,14 @@ final class LiveTranscriber {
                 builder = nil
             }
         }
+
+        func splitLong(_ segments: [TranscribedSegment]) -> [TranscribedSegment] {
+            lock.withLock { Segmenting.splitLong(segments, loudness: loudness) }
+        }
+
+        func quietest(from: Double, to: Double) -> Double? {
+            lock.withLock { loudness.quietest(from: from, to: to) }
+        }
     }
 
     nonisolated var feedHandler: ([Float]) -> Void {
@@ -81,24 +98,50 @@ final class LiveTranscriber {
             throw CaptureError.unsupportedFormat
         }
         let (stream, builder) = AsyncStream<AnalyzerInput>.makeStream()
-        feeder.configure(builder: builder, format: format)
+        let split = Self.splitLines
+        feeder.configure(builder: builder, format: format, tracksLoudness: split)
         try await analyzer.start(inputSequence: stream)
         self.analyzer = analyzer
+        let feeder = feeder
+        let traditional = language.profile.transcription.traditional
         resultsTask = Task { [weak self] in
             do {
                 for try await result in transcriber.results {
-                    let text = String(result.text.characters).trimmingCharacters(in: .whitespaces)
+                    // 暫定和定稿結果都先依詞改正繁體字（R14.8、design §6.2.2）
+                    let content = traditional ? SystemTranscriber.fixVariants(result.text) : result.text
+                    let text = String(content.characters).trimmingCharacters(in: .whitespaces)
                     if result.isFinal {
-                        if !text.isEmpty { self?.onFinal?(result.range.start.seconds, result.range.end.seconds, text) }
+                        let lines = split ? feeder.splitLong(SystemTranscriber.sentences(of: content)) : []
+                        if !lines.isEmpty {
+                            for line in lines { self?.onFinal?(line.start, line.end, line.text) }
+                        } else if !text.isEmpty {
+                            self?.onFinal?(result.range.start.seconds, result.range.end.seconds, text)
+                        }
                         self?.onVolatile?("")
+                        self?.finalizing = nil
                     } else {
                         self?.onVolatile?(text)
+                        if split { self?.finalizeEarly(result.range, analyzer: analyzer) }
                     }
                 }
             } catch {
                 log.error("live transcription ended: \(error.localizedDescription, privacy: .public)")
             }
         }
+    }
+
+    /// 請辨識先定稿到哪裡（秒）；定稿的結果回來之前不再請
+    private var finalizing: Double?
+
+    /// 還沒定稿的文字超過 8 秒（連續講話時會長到 30 秒、一百多字）：請辨識先定稿到這 8 秒裡最安靜的地方，
+    /// 定稿的部分就照上面切成短的幾行（design-ios §7）。還沒定稿的結果只有一整段的時間，沒有每個字的時間，不能自己切
+    private func finalizeEarly(_ range: CMTimeRange, analyzer: SpeechAnalyzer) {
+        let (start, end) = (range.start.seconds, range.end.seconds)
+        guard finalizing == nil, end - start > Segmenting.maxSeconds else { return }
+        let limit = start + Segmenting.maxSeconds
+        let through = feeder.quietest(from: start + Segmenting.minPart, to: limit) ?? limit
+        finalizing = through
+        Task { try? await analyzer.finalize(through: CMTime(seconds: through, preferredTimescale: 1000)) }
     }
 
     func finish() async {
