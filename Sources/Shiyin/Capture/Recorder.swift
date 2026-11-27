@@ -142,6 +142,8 @@ final class Recorder {
     /// 忘了停止錄音（design §35、R48）：最後有人說話的錄音秒數；即時逐字稿有沒有接上音訊
     @ObservationIgnored private var lastSpeechAt: Double = 0
     @ObservationIgnored private var liveActive = false
+    /// 即時逐字稿最後一次有新的字（錄音的秒數）：太久沒有新字時改看電腦聲音（§35.1，即時辨識中途沒反應）
+    @ObservationIgnored private var lastLiveTextAt: Double = 0
     /// 好像沒人在說話了，要停止錄音嗎？（錄音畫面、選單列顯示）
     private(set) var idlePrompt = false
     /// 提醒出現（AppModel 送通知）
@@ -157,6 +159,8 @@ final class Recorder {
     /// 15 分鐘提醒、30 分鐘自動停止；DEBUG 可以用啟動參數縮短（design §35.2）
     static var idleRemindSeconds: Double { debugSeconds("idleRemindSeconds") ?? 900 }
     static var idleStopSeconds: Double { debugSeconds("idleStopSeconds") ?? 1800 }
+    /// 即時逐字稿這麼久沒有新的字，就當它沒反應了，有人說話改看聲音（§35.1）
+    static var liveStallSeconds: Double { debugSeconds("liveStallSeconds") ?? 120 }
     private static func debugSeconds(_ key: String) -> Double? {
         #if DEBUG
         let value = UserDefaults.standard.double(forKey: key)
@@ -349,11 +353,24 @@ final class Recorder {
         if idlePrompt { idlePrompt = false }
     }
 
+    /// 即時逐字稿有新的字：有人在說話，也表示即時辨識還有反應
+    private func liveHeard() {
+        lastLiveTextAt = elapsed
+        markSpeech()
+    }
+
     /// 每秒檢查沒人說話多久（design §35）：15 分鐘提醒、30 分鐘自動停止
     private func checkIdle(_ writer: RecordingWriter) {
         guard AppSettings.idleStop, !isPaused else { return }
-        // 即時逐字稿沒在跑時才看聲音（打字、關門也會算，只當備用，D115）
-        if !liveActive && soundsLikeSpeech(writer) { markSpeech() }
+        // 即時逐字稿沒在跑時才看聲音（打字、關門也會算，只當備用，D115）。
+        // 即時逐字稿在跑、但 2 分鐘沒有新的字（辨識中途沒反應）：只看電腦聲音，線上會議別人說話不會被當成沒人；
+        // 打字、關門在麥克風那一聲道，不會讓錄音停不下來
+        if !liveActive {
+            if soundsLikeSpeech(writer) { markSpeech() }
+        } else if source == "both" && elapsed - lastLiveTextAt >= Self.liveStallSeconds
+                    && soundsLikeSpeech(writer, channels: [1]) {
+            markSpeech()
+        }
         let idle = elapsed - lastSpeechAt
         if idle >= Self.idleStopSeconds {
             log.info("recording auto-stopped after \(Int(idle))s without speech")
@@ -369,9 +386,9 @@ final class Recorder {
 
     /// 最近 1 秒有 30% 以上的音框像說話（design §35.1）：比背景（最近 30 秒的第 10 百分位）大 12 dB 而且高於 -50 dBFS，
     /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）
-    private func soundsLikeSpeech(_ writer: RecordingWriter) -> Bool {
+    private func soundsLikeSpeech(_ writer: RecordingWriter, channels: [Int]? = nil) -> Bool {
         // 暫停麥克風時只看電腦聲音：麥克風最近的音量停在暫停前（design §90）
-        for channel in source != "both" ? [0] : micPaused ? [1] : [0, 1] {
+        for channel in channels ?? (source != "both" ? [0] : micPaused ? [1] : [0, 1]) {
             let levels = writer.recentLevels(channel)
             guard levels.count >= 20 else { continue }
             let background = levels.sorted()[Int(Double(levels.count - 1) * 0.1)]
@@ -522,6 +539,7 @@ final class Recorder {
             suppressedBy = nil
             resetMicFloor()
             lastSpeechAt = 0
+            lastLiveTextAt = 0
             liveActive = false
             idlePrompt = false
             liveLines = []
@@ -560,7 +578,7 @@ final class Recorder {
             // 有新的字就是有人在說話（design §35.1）
             // 中文會議用簡體時轉成簡體（design §47.2）
             let text = AppSettings.script(text, for: self.language)
-            if !text.isEmpty && text != self.volatileText { self.markSpeech() }
+            if !text.isEmpty && text != self.volatileText { self.liveHeard() }
             self.volatileText = text
         }
         // 中途重新開始時，新的辨識從 0 秒算，要加上接上音訊時已經錄了多久
@@ -570,7 +588,7 @@ final class Recorder {
             let (start, end) = (start + offset.seconds, end + offset.seconds)
             let text = AppSettings.script(text, for: self.language)
             self.liveLines.append(LiveLine(start: start, end: end, text: text))
-            if !text.isEmpty { self.markSpeech() }
+            if !text.isEmpty { self.liveHeard() }
             self.onLiveFinal?(meetingId, start, end, text)
         }
         Task {
