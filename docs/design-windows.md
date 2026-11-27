@@ -1011,6 +1011,15 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **測試**：標準答案 `util/glossary-order.json`（`UtilTests`）、`db/62`～`64`（`DatabaseTests` 加 `setFolder`、`appendLiveSegment`、`transcriptionGlossary`）。
 - **驗證**：`dotnet test`；虛擬機詞彙表放 60 個詞、兩場同資料夾的會議，控制通道 `glossaryorder` 看順序；設定頁截圖（放不下、放得下）。
 
+### 11.58 透過企業伺服器分享會議（R125，M§99、D209～D212）
+
+- **Core／Data**：`Package.Export` 的內容選擇（不帶錄音、筆記、文件），規則同 Mac §99.3；migration 同 Mac（`meetings.shared_from`、`meeting_shares`，SQL 逐字相同）。
+- **Services**：`EnterpriseShares`（`EnterpriseServer.NoRedirectClient()`、換 token、錯誤同 §12.11），端點同 M§99.2；上傳、下載的續傳跟轉錄上傳共用。查新的分享的時機同 Mac（啟動、回到前景、每 15 分鐘），通知走 §12.2 的 `ToastNotificationManager`，點了是 `shiyin:open?share=<id>`。
+- **App**：分享對話框（`ContentDialog`；同時只開一個，開之前收起別的）的三種樣子、會議頁的「分享」和資訊列、側欄「與我分享」、右鍵和「⋯」，字和 Mac 一樣。`shiyin:share?server=…&id=…&t=…` 走 §12.1 的單一執行個體轉給開著的拾音，確認對話框同 Mac。
+- **控制通道**：`share`、`shareinfo`、`sharedwithme`、`shareimport`、`shareopen`，同 Mac §99.6（直接回 JSON）。
+- **測試**：標準答案 `server/shares.json`、`package/contents-*`；`EnterpriseTests` 的假伺服器照 M§99.2 回應：建分享、續傳、更新版本、名單、連結、過期、伺服器關掉分享、不合理的回應。
+- **驗證**：`dotnet test`；虛擬機登入開發用的伺服器，收 Mac 分享的會議、匯入；分享一場給 Mac；連結在 Mac 的瀏覽器打開（虛擬機沒有瀏覽器）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

@@ -1588,6 +1588,8 @@ app                                              企業伺服器
 - `GET /api/v1/llm/models` → `{"data": [{"id": "…", "name": "…", "default": true}]}`。
 - `POST /api/v1/llm/chat/completions`：請求、回應、退回 json_object 的規則同 §19.3，伺服器轉給公司設定的模型。逾時同 §19.3（20 分鐘）。
 
+**分享會議**（R125）：端點和規則在 §99.2。
+
 ### 36.3 Mac
 
 - `Services/EnterpriseServer.swift`：網址、登入、換 token、API 呼叫（專用的 `URLSession`，不跟著轉址，§36.2）、錯誤分類（§36.2 的表）。給畫面的 `@Observable` 狀態只有 `account` 和 `status`（已登入、登入失效）。`state`、`code_verifier` 用 `SecRandomCopyBytes`，失敗就不登入。
@@ -3504,6 +3506,104 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 - 標準答案兩平台相同（`util/glossary-order.json`、`db/62`～`64`），跑兩次相同。
 - Mac DEBUG（暫存的 `SHIYIN_HOME`、`-transcriptionEngine breeze`）：詞彙表放 60 個詞（前 40 個是不相關的、後面有測試錄音裡講到的產品名），匯入同一段錄音兩次，第一場放進資料夾、轉錄完；第二場也放進那個資料夾再轉錄。`glossaryorder` 看第二場的順序（這場和同資料夾那場講過的詞在前面）、log 的 `related`；兩場的逐字稿比對那幾個產品名（排序前放不進提示、排序後放得進）。設定「詞彙表」頁截圖（放不下、放得下各一次，淺色、深色）。
 
+## 99. 透過企業伺服器分享會議（R125，D209～D212）
+
+分享的東西就是整場會議的封包（§10 的 `.shiyin`，`Package.export`）：app 打包、傳到企業伺服器，伺服器管誰拿得到，收到的人下載後照 `Package.importPackage` 匯入成自己的一份（D209）。這一節寫 app 這邊和 API 的約定；伺服器怎麼存、加密、網頁版怎麼畫、後台寫在伺服器專案自己的 design。Windows 的做法在 design-windows §11.58。
+
+### 99.1 流程
+
+```
+分享者的 app                                    企業伺服器                           收到的人
+ 分享視窗按「分享」
+  Package.export（照勾選的內容）→ tmp/
+  ─ POST /api/v1/shares ───────────────────►  建分享（標題、日期、大小、SHA-256）
+  ─ PATCH …/package（8 MB 一塊、可續傳）──►  收完、SHA-256 對了才算建好
+  ─ POST …/recipients、POST …/link ───────►  記名單、發連結代碼 ──（有設定寄信時寄通知）─►  信箱
+                                                                                    app：GET /api/v1/shared-with-me
+                                                                                    ─ GET …/package ─► Package.importPackage
+                                              瀏覽器：/s/<代碼> ─► 唯讀網頁、「用拾音打開」（shiyin://share?…）
+```
+
+### 99.2 API（第 1 版加的端點）
+
+規則同 §36.2（HTTPS、JSON、`Authorization: Bearer`、錯誤的 `kind`、不跟著轉址）。都是新加的端點，`apiVersion` 不變；舊的伺服器沒有 `sharing` 就當成沒開，app 不顯示伺服器的選項。
+
+- `GET /api/v1/info` 多一段（有開分享時才有）：
+
+```json
+"sharing": {"enabled": true, "publicLinks": false, "maxDays": 30, "maxBytes": 2147483648}
+```
+
+  `maxDays` 是 null 時可以不限期；`maxBytes` 是一場封包的上限。`enabled` 是 false 或沒有這段：R125.7。
+- `GET /api/v1/people?q=<字>` → `{"people": [{"email", "name"}]}`：補完信箱用，最多 10 筆，只回分享得到的人（範圍由伺服器決定：公司允許的網域，或伺服器已經有的員工）。
+- `POST /api/v1/shares`：
+
+```json
+{"meeting": {"title": "週會", "meetingDate": "2026-11-27", "durationSeconds": 3600, "language": "zh"},
+ "contents": {"audio": true, "userNotes": true, "documents": true},
+ "package": {"bytes": 52428800, "sha256": "…"}, "expiresInDays": 30}
+```
+
+  → `{"id": "…", "status": "uploading"}`。`expiresInDays` 是 null 是不限期（`maxDays` 不是 null 時伺服器回 `bad_request`）。`bytes` 超過 `maxBytes` 回 `too_large`。
+- 上傳：`HEAD`／`PATCH /api/v1/shares/<id>/package`，跟轉錄的錄音上傳同一套規則（`Upload-Offset`、8 MB 一塊、409 時先 `HEAD`、SHA-256 不對從頭傳、§36.2 的 4.2.1 防線）。收完、SHA-256 對了 `status` 變 `ready`，之前收件人、連結都看不到。
+- 更新內容（R125.4）：`POST /api/v1/shares/<id>/versions`（同 `POST /api/v1/shares` 的 `meeting`、`contents`、`package`）→ 再照上面上傳；收完才換掉舊的版本，`version` 加 1。
+- `GET /api/v1/shares/<id>` → `{"id", "status", "version", "createdAt", "updatedAt", "expiresAt", "meeting": {…}, "contents": {…}, "bytes", "recipients": [{"email", "name", "openedAt", "importedAt"}], "link": {"url", "access": "company|public", "createdAt"} | null}`。只有分享者自己拿得到。
+- `PATCH /api/v1/shares/<id>`：`{"expiresInDays": 7}` 改期限。
+- `POST /api/v1/shares/<id>/recipients`：`{"emails": ["…"]}` → 回整份名單；不允許的信箱回 `bad_request`，`message` 說哪幾個、為什麼。`DELETE /api/v1/shares/<id>/recipients/<email>` 移除一個人。
+- `POST /api/v1/shares/<id>/link`：`{"access": "company|public"}` → `{"url": "https://<伺服器>/s/<代碼>", "access"}`（已經有就換權限，網址不變）；`public` 在 `publicLinks` 是 false 時回 `forbidden`。`DELETE …/link` 停止連結（網址失效）。
+- `DELETE /api/v1/shares/<id>`：停止分享，伺服器刪掉封包和名單、連結。
+- `GET /api/v1/shared-with-me` → `{"shares": [{"id", "from": {"email", "name"}, "meeting": {…}, "contents": {…}, "bytes", "version", "updatedAt", "expiresAt", "importedVersion"}]}`：給我的（名單上的）、還沒過期的。`importedVersion` 是我匯入過的最新版本（沒匯入過是 null），「已更新」＝ `version > importedVersion`。
+- `DELETE /api/v1/shared-with-me/<id>`：從我的清單移除（R125.5），不影響分享本身。
+- `GET /api/v1/shares/<id>/package`（支援 `Range`，斷線可以接著下載）：分享者、名單上的人；連結的代碼也可以（`?t=<代碼>`，`public` 的連結不用登入，`company` 的要登入公司帳號）。回應標頭 `X-Shiyin-Share-Version`。
+- `GET /api/v1/shares/<id>/summary`（名單上的人、`?t=<代碼>`，權限同下載）→ `{"from": {"email", "name"}, "meeting": {…}, "contents": {…}, "bytes", "version", "expiresAt"}`：`shiyin://share` 匯入前問使用者用。
+- `POST /api/v1/shares/<id>/imported`：`{"version": 2}`，匯入完成後送（名單上的人才記；用連結匯入的不記名單）。
+- 錯誤：分享不在了、過期、被移出名單一律 `not_found`（不透露是哪一種）；伺服器關掉分享後這些端點都回 `forbidden`（`message`：「公司的伺服器關掉了分享」）。
+
+### 99.3 資料（migration，編號照整合時最新的往後排）
+
+```sql
+ALTER TABLE meetings ADD COLUMN shared_from TEXT;   -- 匯入的分享：分享者的名字（沒有名字時是信箱）；不是分享來的是 NULL
+CREATE TABLE meeting_shares (
+  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  server     TEXT NOT NULL,            -- 企業伺服器的網址（normalized）
+  share_id   TEXT NOT NULL,            -- 伺服器給的分享 id
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (server, share_id)
+);
+CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
+```
+
+- `meeting_shares` 是「這場我分享過」：會議頁要顯示「已分享給 N 人」時拿 `share_id` 問伺服器（§99.2 `GET /api/v1/shares/<id>`），名單、連結、期限都以伺服器為準，本機不存一份。伺服器回 `not_found`（過期、被管理者撤銷）就刪掉這一列。換登入別的伺服器時，別台的列不顯示、不刪。
+- `shared_from` 只是顯示用，匯入時從 `GET /api/v1/shared-with-me` 的 `from` 寫進去；封包本身不變（`Package` 的格式、`format` 都不動，舊版 app 照樣匯入）。
+- 封包的內容（R125.2）：`Package.export` 的 `ExportBundle` 加 `contents`：不帶錄音時不放 `audio.m4a`（`manifest.audio` 是 null，匯入時沒有錄音，同匯入只有逐字稿的會議）；不帶我的筆記時 `userNotes` 是空的；不帶參考文件時 `documents` 是空的。其他照舊。
+
+### 99.4 app
+
+- `EnterpriseShares`（`Services/EnterpriseShares.swift`，用 `EnterpriseServer` 的 session、換 token、錯誤處理）：§99.2 的每個端點；上傳、下載的續傳跟轉錄的上傳共用一段程式（抽出來）。暫存檔在 `tmp/`，做完、取消都刪。
+- `sharing`：`EnterpriseServer.refreshInfo()` 一起記下（同 `llm`、`mcp`）。
+- **分享視窗**（`ShareSheet`，sheet；樣子照 §80 的彈窗、輸入框規則）：
+  - 沒有 `sharing`：只有說明「整場會議（錄音、逐字稿、紀錄…）存成 .shiyin，傳給同事後點兩下就能匯入」和「用檔案分享…」（同匯出對話框的封包＋分享選單）。
+  - 有 `sharing`、這場還沒分享：「傳給同事」（信箱欄位，打字時 `GET /api/v1/people` 補完，Return 或逗號變成一顆、可以刪；不允許的網域當場標紅並說明）、「連結」（開關「同時建立連結」，誰打得開的選單，`publicLinks` 是 false 時沒有「知道連結的任何人」）、有效期限、「要帶的內容」三個勾選（錄音寫大小）、按鈕「分享」。第一次按時先跳 R125.3 的說明（記在 `AppSettings.shareNoticeShown`）。
+  - 送出時視窗裡顯示進度（打包、上傳的百分比、可以取消，同 §94 的匯出進度）；完成後切到「已分享」的樣子。
+  - 已經分享：名單（每人一列：名字、信箱、「已匯入」「已打開」「還沒打開」，右邊「移除」）、加人的欄位、連結（網址、拷貝、權限、停止連結）、期限、「更新分享的內容」、「停止分享…」（確認對話框，紅字）。
+- **會議頁**：標題下的動作列加「分享」（`square.and.arrow.up`）；這場在 `meeting_shares` 裡時，資訊列加「已分享給 N 人・連結」，點了打開分享視窗（打開會議頁時問一次伺服器，失敗時不顯示人數、只寫「已分享」）。匯入的分享在資訊列寫「來自 王小明 的分享」。
+- **側欄「與我分享」**：在資料夾那一段的下面；`sharedWithMe` 有東西時才出現，每列是標題、分享者、日期，沒匯入過或已更新的有圓點。點一列在右邊顯示預覽（標題、分享者、日期、長度、大小、帶了哪些內容、到期日，按鈕「匯入」「從清單移除」）；匯入完跳到那場會議。右鍵、「⋯」同一份選單（匯入、從清單移除）。
+- **查新的分享**：登入了、`sharing` 開著時，啟動、從背景回到前景、每 15 分鐘 `GET /api/v1/shared-with-me`；新的（id 沒看過、或 `version` 比上次看到的大）送系統通知「%@分享了「%@」給你」，點了打開那一列。看過的 id、版本記在 `AppSettings.seenShares`（只有 id 和版本）。
+- **匯入**：下載到 `tmp/`（顯示百分比）→ `Package.importPackage` → 寫 `shared_from` → `POST …/imported`。匯入進去的資料夾：側欄選著某個資料夾時放那裡，否則不放（同匯入封包）。
+- **shiyin://share?server=<網址>&id=<分享 id>&t=<代碼>**（網頁的「用拾音打開」）：`server` 照 `EnterpriseServer.normalized` 檢查；先 `GET …/summary` 拿標題、分享者，問「匯入<分享者>分享的「<標題>」？」，內文寫「來自 <主機>」（主機用 punycode，同 R49.7 的 4.2.1）；確認後下載匯入。登入的是同一台時帶 token，其他情況只帶 `t`。
+- 統計（R40）：只記次數（分享、匯入、停止分享、用連結匯入），不記標題、信箱、人數以外的東西。
+
+### 99.5 隱私說明
+
+- 設定「企業伺服器」的轉錄說明後面加（有 `sharing` 時）：「分享：你分享的會議（封包）存在 <主機>，直到你停止分享或到期；收到的人匯入後是他自己的一份。」
+- R125.3 的第一次說明、使用說明、官網的隱私段落各一句（R125.8）。
+
+### 99.6 DEBUG、驗證
+
+- `shiyinctl share <會議 id> <JSON 選項> <輸出.json>`（不開視窗，同按「分享」）、`shareinfo <會議 id> <輸出.json>`、`sharedwithme <輸出.json>`、`shareimport <分享 id>`、`shareopen <shiyin://share?…>`（等於點網頁的按鈕，會跳確認）、`preview share`（分享視窗三種樣子）。
+- 標準答案：`server/shares.json`（app 送的請求本體、解析伺服器回應的規則、不合理的回應怎麼處理：`bytes`、`version` 不是數字、`expiresAt` 不是日期、名單超過 500 人時截斷）；`package/contents-*.shiyin` 的內容（不帶錄音、筆記、文件各一）。
+- 驗證要私人伺服器專案的開發環境（§36.7）：Mac DEBUG 兩個帳號（兩個暫存的 `SHIYIN_HOME`、兩個 `SHIYIN_DEBUG_CHANNEL`）分享、收到、匯入、更新、停止分享；連結在瀏覽器打開（公司、公開各一次）；Windows 虛擬機收 Mac 分享的、反過來也一次。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3658,3 +3758,7 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 | D206 | 匯出的進度：Mac 對話框在匯出中一直開著、只有一個「取消匯出」；Windows 對話框關掉、進度在側欄下方，同時只匯出一個（§94、design-windows §11.53、R120） | Mac 也關掉對話框、在別的地方顯示進度：Mac 的匯出本來就在對話框裡等，分享要等檔案寫好才能從「分享…」的位置打開選單。「取消匯出」跟「取消」並排：兩個意思很像的按鈕，按鈕列也放不下（會換行、對話框變高）。Windows 允許同時匯出好幾個、各自一條：側欄下方的空間小，要分清楚哪一條是哪個檔案、各自取消；一次匯出一個就夠用，第二個說明原因、等第一個完成或取消 |
 | D207 | 喇叭的回音在轉錄前、離線消除：GCC-PHAT 找時間差（分段直線）、重新取樣對齊、分塊頻域 Kalman 濾波、每個頻帶不比原本的麥克風大聲；自己寫，Mac、Windows 同一套，預設開（§97、R123） | 錄音中即時做（WebRTC AEC3、SpeexDSP 這類即時回音消除）：即時只能往前看，回音比電腦聲音早（兩個聲道開始收音的先後）時做不到，時鐘漂移要邊錄邊追，錄音檔處理壞了救不回來；離線可以先看整段、找出時間差曲線再處理，以前的錄音重新轉錄也有效。系統的回音消除（macOS VoiceProcessingIO、Windows 通訊模式的 AEC）：要走它的錄音路徑，macOS 上會讓其他 app 從同一支麥克風收不到聲音（R57）、壓低其他聲音，參考訊號是自己 app 的輸出或要指定系統的輸出裝置。直接用套件：WebRTC 是大型 C++ 專案、Windows 要另外建原生 DLL，SpeexDSP 是即時的濾波器、一樣要先對齊；兩個平台要跑出一樣的結果，自己寫的可以一起對標準答案。神經網路模型（DTLN-aec 這類）：要下載模型、Windows 要多帶 ONNX Runtime，聲道錯開很多時還是要先對齊；線性濾波已經接近沒有回音時的錯字率。轉錄後刪掉跟電腦聲音重複的段落（§17.3 的 dedupe）：只有分聲道時有用，混成一軌時同一句話疊在一起、不會重複出現，錯字照樣多 |
 | D208 | 轉錄的詞彙自動排序：這場出現過的、同資料夾最近 5 場、最近 10 場出現過的排前面，不讓使用者每場選（§98、R124；GitHub #31） | 每場會議選詞彙群組（#31 的提案）：開始錄音、匯入、重新轉錄都多一個選擇，忘了選那些詞反而送不進去。只看這場和同資料夾：大部分人不用資料夾、標題也常是「錄音 14:30」，沒有線索時還是最早加的詞佔滿提示，正是 #31 說的「後面加的詞送不進去」；加上最近 10 場，最近常講的詞會先放。用出現次數排：一場講很多次的詞會蓋過別場的詞，改用「幾場出現過」。用系統的不分大小寫比對：兩平台的大小寫表不同，標準答案對不齊，只轉 ASCII |
+| D209 | 透過伺服器分享的就是 `.shiyin` 封包，收到的人匯入成自己的一份（§99、R125；2026-11-27 使用者選的） | 收到的人只能看、跟著分享者更新：要有「別人的會議」這種新的顯示方式（不能編輯、不能重新整理、停止分享就消失），而且又回到共同編輯的問題（GitHub #30）。另外定一種「分享格式」：封包已經是完整的一場、兩平台都讀得懂、舊版也能匯入 |
+| D210 | 連結預設只有登入公司帳號的人打得開，「知道連結的任何人」要管理者在伺服器打開（§99.2；2026-11-27 使用者選的） | 預設公開：連結被轉貼出去就等於會議外流，公司 IT 不會接受。完全不做公開連結：要給客戶、外部夥伴看時只能傳檔案 |
+| D211 | 網頁版唯讀檢視第一階段就做，由伺服器從同一份封包畫出紀錄、逐字稿、錄音（§99.1；2026-11-27 使用者選的） | 第二階段再做：連結只能「用拾音打開」，沒裝拾音的人（主管、其他部門）點了什麼都看不到，連結分享的用處少一半 |
+| D212 | 分享名單、連結、期限只存在伺服器，app 只記「這場分享過」的 id（`meeting_shares`）（§99.3） | app 也存一份名單：別人匯入、管理者撤銷、過期都在伺服器發生，兩份會對不上；會議頁打開時問一次就好 |

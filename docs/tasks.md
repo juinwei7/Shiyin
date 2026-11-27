@@ -7,6 +7,14 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 透過企業伺服器分享會議（R125，design §99、design-windows §11.58、D209～D212；2026-11-27 使用者：「可以分享到公司 server」「包含網址共享跟指定 mail 共享」）
+
+伺服器那邊的任務在私人的伺服器專案；app 要等伺服器的 API 做好才能端到端驗證，可以先用 `EnterpriseTests` 的假伺服器、Mac 的假伺服器腳本做。
+
+- [ ] **SH1 Mac**（§99）：migration、`Package.export` 的內容選擇、`EnterpriseShares`、分享視窗、會議頁、側欄「與我分享」、查新的分享和通知、匯入、`shiyin://share`、隱私說明、DEBUG 指令、標準答案。驗證：§99.6
+- [ ] **SH2 Windows**（design-windows §11.58）：同 SH1。驗證：`dotnet test` 標準答案通過；虛擬機收 Mac 分享的、分享一場給 Mac
+- [ ] **SH3 使用說明、官網**：使用說明加「分享會議」（企業伺服器那一段）；隱私段落改成 R125.8 的說法（website.md 先寫）。驗證：`l10n.py check`、`windows-check` 沒有缺的英文；`node site/build.mjs` 建得起來
+
 ## 消除喇叭的回音（R123，design §97、design-windows §11.56、D207；2026-11-27 使用者：「研究業界相關針對回音的處理」「並自行測試套用」）
 
 - Mac、Windows 的程式完成；模擬資料（`scripts/dev/make-eval-data-echo.py`）、Mac DEBUG 的完整流程（模擬錄音 → 工作佇列 → 壓縮後重新轉錄、關掉開關）、Windows 的 dotnet test 和虛擬機的完整流程驗過（見 commit 訊息）
