@@ -3544,20 +3544,20 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
  "package": {"bytes": 52428800, "sha256": "…"}, "expiresInDays": 30}
 ```
 
-  → `{"id": "…", "status": "uploading"}`。`expiresInDays` 是 null 是不限期（`maxDays` 不是 null 時伺服器回 `bad_request`）。`bytes` 超過 `maxBytes` 回 `too_large`。
+  → `{"id": "…", "status": "uploading"}`（`id` 是 32 個十六進位字元）。`expiresInDays` 是 null 是不限期（`maxDays` 不是 null 時伺服器回 `bad_request`）。`bytes` 超過 `maxBytes` 回 `too_large`。
 - 上傳：`HEAD`／`PATCH /api/v1/shares/<id>/package`，跟轉錄的錄音上傳同一套規則（`Upload-Offset`、8 MB 一塊、409 時先 `HEAD`、SHA-256 不對從頭傳、§36.2 的 4.2.1 防線）。收完、SHA-256 對了 `status` 變 `ready`，之前收件人、連結都看不到。
-- 更新內容（R125.4）：`POST /api/v1/shares/<id>/versions`（同 `POST /api/v1/shares` 的 `meeting`、`contents`、`package`）→ 再照上面上傳；收完才換掉舊的版本，`version` 加 1。
-- `GET /api/v1/shares/<id>` → `{"id", "status", "version", "createdAt", "updatedAt", "expiresAt", "meeting": {…}, "contents": {…}, "bytes", "recipients": [{"email", "name", "openedAt", "importedAt"}], "link": {"url", "access": "company|public", "createdAt"} | null}`。只有分享者自己拿得到。
+- 更新內容（R125.4）：`POST /api/v1/shares/<id>/versions`（同 `POST /api/v1/shares` 的 `meeting`、`contents`、`package`；期限不在這裡改）→ `{"id", "status": "uploading", "version": <新的版本>}`，再照上面上傳（`HEAD`／`PATCH` 對的是新版本）；收完才換掉舊的版本，`version` 加 1，上傳中下載拿到的照舊是舊的。
+- `GET /api/v1/shares/<id>` → `{"id", "status", "version", "createdAt", "updatedAt", "expiresAt", "meeting": {…}, "contents": {…}, "bytes", "uploading", "recipients": [{"email", "name", "openedAt", "importedAt", "importedVersion"}], "link": {"url", "access": "company|public", "createdAt"} | null}`。`uploading` 是更新內容上傳中；`name` 是伺服器上的員工名字（還沒登入過的人是 null）。只有分享者自己拿得到。`PATCH` 也回同樣的內容。
 - `PATCH /api/v1/shares/<id>`：`{"expiresInDays": 7}` 改期限。
-- `POST /api/v1/shares/<id>/recipients`：`{"emails": ["…"]}` → 回整份名單；不允許的信箱回 `bad_request`，`message` 說哪幾個、為什麼。`DELETE /api/v1/shares/<id>/recipients/<email>` 移除一個人。
+- `POST /api/v1/shares/<id>/recipients`：`{"emails": ["…"]}` → `{"recipients": [同上]}`（整份名單）；自己的信箱、重複的略過，一場最多 500 人；不允許的信箱回 `bad_request`，`message` 說哪幾個，一個都不加。`DELETE /api/v1/shares/<id>/recipients/<email>` 移除一個人。
 - `POST /api/v1/shares/<id>/link`：`{"access": "company|public"}` → `{"url": "https://<伺服器>/s/<代碼>", "access"}`（已經有就換權限，網址不變）；`public` 在 `publicLinks` 是 false 時回 `forbidden`。`DELETE …/link` 停止連結（網址失效）。
 - `DELETE /api/v1/shares/<id>`：停止分享，伺服器刪掉封包和名單、連結。
 - `GET /api/v1/shared-with-me` → `{"shares": [{"id", "from": {"email", "name"}, "meeting": {…}, "contents": {…}, "bytes", "version", "updatedAt", "expiresAt", "importedVersion"}]}`：給我的（名單上的）、還沒過期的。`importedVersion` 是我匯入過的最新版本（沒匯入過是 null），「已更新」＝ `version > importedVersion`。
 - `DELETE /api/v1/shared-with-me/<id>`：從我的清單移除（R125.5），不影響分享本身。
-- `GET /api/v1/shares/<id>/package`（支援 `Range`，斷線可以接著下載）：分享者、名單上的人；連結的代碼也可以（`?t=<代碼>`，`public` 的連結不用登入，`company` 的要登入公司帳號）。回應標頭 `X-Shiyin-Share-Version`。
+- `GET /api/v1/shares/<id>/package`（支援一段的 `Range`，斷線可以接著下載；範圍不對回 416）：分享者、名單上的人；連結的代碼也可以（`?t=<代碼>`，`public` 的連結不用登入，`company` 的沒登入回 `unauthorized`）。回應標頭 `X-Shiyin-Share-Version`。
 - `GET /api/v1/shares/<id>/summary`（名單上的人、`?t=<代碼>`，權限同下載）→ `{"from": {"email", "name"}, "meeting": {…}, "contents": {…}, "bytes", "version", "expiresAt"}`：`shiyin://share` 匯入前問使用者用。
 - `POST /api/v1/shares/<id>/imported`：`{"version": 2}`，匯入完成後送（名單上的人才記；用連結匯入的不記名單）。
-- 錯誤：分享不在了、過期、被移出名單一律 `not_found`（不透露是哪一種）；伺服器關掉分享後這些端點都回 `forbidden`（`message`：「公司的伺服器關掉了分享」）。
+- 錯誤：分享不在了、過期、被移出名單、代碼不對一律 `not_found`（不透露是哪一種）；同一個 IP 猜錯代碼太多次回 429（`busy`、`Retry-After`）；伺服器關掉分享後這些端點都回 `forbidden`（`message`：「公司的伺服器關掉了分享」）。公司只讓公司網路用時（來源 IP 的限制），公司外用連結下載一樣被擋。
 
 ### 99.3 資料（migration，編號照整合時最新的往後排）
 
