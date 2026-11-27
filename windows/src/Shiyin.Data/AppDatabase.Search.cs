@@ -4,6 +4,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Text;
+using Shiyin.Transcribe;
 
 namespace Shiyin.Data;
 
@@ -292,6 +293,31 @@ public sealed partial class AppDatabase
 
     public List<GlossaryTerm> Glossary() => Read(db => db.Query("SELECT * FROM glossary ORDER BY id")
         .Select(r => new GlossaryTerm { Id = r.Long("id"), Term = r.Str("term"), CreatedAt = r.Str("created_at") }).ToList());
+
+    /// <summary>轉錄排詞彙用的文字（R124、M§98.2）：這場、同資料夾之前最近 5 場、之前最近 10 場（不算垃圾桶），同 Mac 的 glossaryContext</summary>
+    public GlossaryContext GlossaryContext(long meetingId) => Read(db =>
+    {
+        if (FetchMeeting(db, meetingId) is not { } meeting) return Transcribe.GlossaryContext.Empty;
+        const string before = "deleted_at IS NULL AND id != ? AND (meeting_date < ? OR (meeting_date = ? AND id < ?))";
+        object?[] arguments = [meetingId, meeting.MeetingDate, meeting.MeetingDate, meetingId];
+        List<string> folder = meeting.FolderId is { } folderId
+            ? [.. db.Query($"SELECT * FROM meetings WHERE {before} AND folder_id = ? ORDER BY meeting_date DESC, id DESC LIMIT 5", [.. arguments, folderId])
+                .Select(r => GlossaryText(db, ToMeeting(r)))]
+            : [];
+        List<string> recent = [.. db.Query($"SELECT * FROM meetings WHERE {before} ORDER BY meeting_date DESC, id DESC LIMIT 10", arguments)
+            .Select(r => GlossaryText(db, ToMeeting(r)))];
+        return new GlossaryContext(GlossaryText(db, meeting), folder, recent);
+    });
+
+    /// <summary>一場會議的標題、參加者、筆記、會議紀錄、參考文件和畫面的字、即時和正式的逐字稿</summary>
+    static string GlossaryText(Db db, Meeting meeting)
+    {
+        var parts = new List<string> { meeting.DisplayTitle, meeting.Participants, meeting.UserNotes, meeting.DecodedNotes?.PlainText ?? "" };
+        foreach (var r in db.Query("SELECT pages FROM documents WHERE meeting_id = ? ORDER BY id", meeting.Id))
+            parts.AddRange(new MeetingDocument { Pages = r.Str("pages") }.PageTexts);
+        parts.AddRange(db.Query("SELECT text FROM segments WHERE meeting_id = ? ORDER BY kind, seq", meeting.Id).Select(r => r.Str("text")));
+        return string.Join("\n", parts.Where(p => p.Length > 0));
+    }
 
     public void AddTerm(string term)
     {

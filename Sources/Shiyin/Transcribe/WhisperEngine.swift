@@ -104,16 +104,26 @@ enum WhisperEngine {
             }
             return natural(picked)
         }
-        let base = p.base
-        func build(_ terms: [String]) -> String {
-            terms.isEmpty ? base : base + p.glossary.replacingOccurrences(of: "%@", with: terms.joined(separator: p.separator))
-        }
+        return build(fitting(glossary, language: language), language: language)
+    }
+
+    /// 提示放得下前幾個詞（R124.4、design §98.4）
+    static func fittingTermCount(glossary: [String], language: MeetingLanguage = .zh) -> Int {
+        fitting(glossary, language: language).count
+    }
+
+    private static func build(_ terms: [String], language: MeetingLanguage) -> String {
+        let p = language.profile.whisperPrompt
+        return terms.isEmpty ? p.base : p.base + p.glossary.replacingOccurrences(of: "%@", with: terms.joined(separator: p.separator))
+    }
+
+    private static func fitting(_ glossary: [String], language: MeetingLanguage) -> [String] {
         var picked: [String] = []
         for term in glossary {
-            if build(picked + [term]).count > limit { break }
+            if build(picked + [term], language: language).count > language.profile.whisperPrompt.limit { break }
             picked.append(term)
         }
-        return build(picked)
+        return picked
     }
 
     /// 傳給 C callback 的狀態：進度與取消

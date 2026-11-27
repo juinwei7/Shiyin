@@ -350,6 +350,14 @@ enum GoldenDump {
         let pasted = ["Redis", "Redis、Kubernetes、拾音", "Redis, kubernetes\nKubernetes；SendGrid;  \n\n  拾音 ", "  ", "A，B，a",  // l10n-skip
                       "Claude Code\r\nCodex", "第一行\n第二行、第三行"]  // l10n-skip
         w.json("util/glossary-split.json", pasted.map { ["input": $0, "terms": GlossaryInput.split($0)] as Object })
+        // 轉錄時詞彙的順序（R124、§98.1）
+        w.json("util/glossary-order.json", (f["glossaryOrderCases"] as? [Object] ?? []).map { c -> Object in
+            let terms = c["terms"] as? [String] ?? []
+            let context = GlossaryContext(meeting: c["meeting"] as? String ?? "", folder: c["folder"] as? [String] ?? [], recent: c["recent"] as? [String] ?? [])
+            let ranked = GlossaryOrder.rank(terms, context)
+            return ["comment": c["comment"] as? String ?? "", "terms": terms, "meeting": context.meeting, "folder": context.folder, "recent": context.recent,
+                    "ranked": ranked.terms, "related": ranked.related]
+        })
         // 詞彙表的檔案（R117、§91）：匯入的分法、匯出的格式、文字編碼
         let files = ["Redis\nKubernetes\n", "\u{FEFF}拾音\r\nClaude Code\r\n", "\"產品名\",\"客戶名\"\n\"Redis\",\"拾音\"", "甲\t乙\t丙\n丁", "", "  \n\n", "A；B、a，\"b\""]  // l10n-skip
         let exports: [[String]] = [[], ["Redis"], ["拾音", "Claude Code", "SendGrid"]]  // l10n-skip
@@ -1214,6 +1222,14 @@ enum GoldenDump {
                 w.json(file!, job.map { ["id": $0.id ?? 0, "kind": $0.kind.rawValue, "meetingId": $0.meetingId] as Object } ?? NSNull())
             case "requeueRunning":
                 try db.requeueRunning()
+            case "setFolder":   // 移到資料夾（名稱，沒有就建一個）
+                try db.setFolder([id(op)], folderId: try db.createFolder(op["folder"] as? String ?? ""))
+            case "appendLiveSegment":   // 即時逐字稿的一句（接在最後，0～1 秒）
+                try db.appendLiveSegment(id(op), start: 0, end: 1, text: op["text"] as? String ?? "")
+            case "transcriptionGlossary":   // 轉錄這場時詞彙的順序（design §98.5）
+                let context = try db.glossaryContext(id(op))
+                let ranked = GlossaryOrder.rank(try db.glossary().map(\.term), context)
+                w.json(file!, ["terms": ranked.terms, "related": ranked.related, "folderMeetings": context.folder.count, "recentMeetings": context.recent.count] as Object)
             case "prioritizeTranscription":   // 先轉錄這場（design §96.4）：keys 是會議
                 w.json(file!, ["moved": try db.prioritizeTranscription((op["keys"] as? [String] ?? []).map { ids[$0] ?? 0 })])
             case "transcriptionQueue":

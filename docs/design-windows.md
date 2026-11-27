@@ -1001,6 +1001,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **驗證**：`dotnet test`；虛擬機用 `record-sim` 錄一場雙聲道（M§97.5 的 `zh-echo-laptop`）、讓工作佇列轉錄，看 log 的 `echo cancellation: echo found`、逐字稿；設定頁的開關；關掉開關再轉錄時沒有那一行。
   - 2026-11-27 虛擬機（DEBUG、快速辨識）：`echo found, 323/328 windows, 2 segments, 13.9s`，錯字率 8.3%；`--set echoCancellation=NO` 再錄一次 10.5%（log 沒有那一行）。設定頁的開關、說明、`settingssearch 回音` 找到「轉錄」頁。
 
+### 11.57 轉錄時先放跟這場會議有關的詞（R124，M§98、D208）
+
+- **Core**：`GlossaryOrder.Rank(terms, context)`／`Occurs(term, text)`（`Shiyin.Core/Transcribe/GlossaryOrder.cs`），規則同 Mac §98.1：只轉 ASCII 的大小寫（不用 `ToLowerInvariant`）、`IndexOf(…, StringComparison.Ordinal)` 找、頭尾是 ASCII 英數字時檢查前後一個字元。`WhisperRules.FittingTermCount(glossary, language)` 同 Mac 的 `fittingTermCount`。
+- **Data**：`AppDatabase.GlossaryContext(meetingId)`，取的文字和之前的會議同 Mac §98.2（同一段 SQL）。
+- **Services**：`JobRunner.TranscriptionGlossary(meeting)`：0、1 個詞直接回傳；否則排過，log 只寫數字。`TranscriptionOptions.Current` 用它，猜說話者、校正、整理照舊用 `GlossaryTerms()`。
+- **App**：設定「詞彙表」頁最下面，放不下時兩行（「共 %lld 個詞，轉錄一次只放得下約 %lld 個，會先放跟那場會議有關的詞。」、「沒有相關的詞時的轉錄提示：%@」），放得下時照舊。
+- **控制通道**：`glossaryorder <會議 id>`，回傳的內容同 Mac §98.5（控制通道直接回 JSON，不寫檔）。
+- **測試**：標準答案 `util/glossary-order.json`（`UtilTests`）、`db/62`～`64`（`DatabaseTests` 加 `setFolder`、`appendLiveSegment`、`transcriptionGlossary`）。
+- **驗證**：`dotnet test`；虛擬機詞彙表放 60 個詞、兩場同資料夾的會議，控制通道 `glossaryorder` 看順序；設定頁截圖（放不下、放得下）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

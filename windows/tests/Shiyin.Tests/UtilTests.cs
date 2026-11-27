@@ -403,6 +403,21 @@ public class UtilTests
             Assert.Equal(e.Strings("terms") ?? [], GlossaryInput.Split(e.Str("input")!));
     }
 
+    /// <summary>轉錄時詞彙的順序（R124、M§98.1）：分層、幾場出現過、英數字的邊界、只轉 ASCII 的大小寫同 Mac 的 GlossaryOrder</summary>
+    [Fact]
+    public void GlossaryOrderMatchesMac()
+    {
+        var expected = Items("util/glossary-order.json").ToList();
+        Assert.NotEmpty(expected);
+        foreach (var e in expected)
+        {
+            var context = new GlossaryContext(e.Str("meeting") ?? "", e.Strings("folder") ?? [], e.Strings("recent") ?? []);
+            var ranked = GlossaryOrder.Rank(e.Strings("terms") ?? [], context);
+            Assert.Equal(e.Strings("ranked") ?? [], ranked.Terms);
+            Assert.Equal(e.Long("related"), ranked.Related);
+        }
+    }
+
     /// <summary>詞彙表的檔案（R117、M§91）：匯入的分法、匯出的格式、文字編碼同 Mac 的 GlossaryFile</summary>
     [Fact]
     public void GlossaryFileMatchesMac()

@@ -3454,6 +3454,56 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 - 完整流程（DEBUG、暫存的 `SHIYIN_HOME`）：`record-sim zh-echo-laptop 8 3` 錄成雙聲道的會議 → 工作佇列轉錄 5.7%（log：`echo found, 323/328 windows`）；壓縮成 m4a 後關掉開關重新轉錄 8.5%（沒有消除），打開再重新轉錄 5.7%。
 - 真的喇叭、真的會議還沒測（要使用者用喇叭開一場線上會議，或在安靜時用這台 Mac 的喇叭放一段、同時錄「麥克風＋電腦聲音」）。
 
+## 98. 轉錄時先放跟這場會議有關的詞（R124，D208；GitHub #31）
+
+轉錄的提示（§6.2、§32.4）照詞彙表的順序放，放不下的略過；這一節在轉錄前把詞重新排過。Windows 的做法在 design-windows §11.57。
+
+### 98.1 排序（`GlossaryOrder`，`Transcribe/GlossaryOrder.swift`）
+
+- `rank(_ terms: [String], _ context: GlossaryContext) -> Ranked`（`Ranked { terms: [String]; related: Int }`，`related` 是前三層的詞數，給 log 和標準答案）：
+  1. `context.meeting` 含這個詞的，照原本的順序。
+  2. 剩下的裡，`context.folder` 有幾段含這個詞（一段是一場會議，同一場出現幾次都算 1），大於 0 的照這個數大到小，一樣的照原本的順序。
+  3. 剩下的裡，`context.recent` 同上。
+  4. 其他的照原本的順序。
+- `occurs(_ term: String, in text: String) -> Bool`（R124.2）：
+  - 兩邊先把 ASCII 的 A–Z 換成 a–z，其他字不動。不用系統的 `lowercased()`：Swift 和 .NET 的大小寫表不一樣（ß、İ、全形字），兩平台的結果要一樣。
+  - 照 UTF-16 碼位比對（`Array(utf16)`；Windows `IndexOf(…, StringComparison.Ordinal)`），不做 Unicode 正規化。
+  - 詞的第一個碼位是 ASCII 英數字時，找到的位置前一個碼位不能是 ASCII 英數字；最後一個碼位同理。不合就從下一個位置再找。空字串不算出現。
+- 純函式，不讀資料庫；標準答案 `util/glossary-order.json`（fixtures 的 `glossaryOrderCases`：分層、分數一樣時照原本順序、大小寫、英數字的邊界、`C++`／`v3.6` 這類頭尾不是英數字、全形和非 ASCII 的大小寫不轉、沒有文字時順序不變）。
+
+### 98.2 收集文字（`AppDatabase.glossaryContext(_ meetingId) -> GlossaryContext`）
+
+- `GlossaryContext { meeting: String; folder: [String]; recent: [String] }`，一個讀取交易。
+- 一場會議的文字（`glossaryText`）：`displayTitle`、`participants`、`userNotes`、會議紀錄的 `plainText`（解不開是空的）、`documents` 每一列的每一頁（參考文件和會議中的畫面都算，`ORDER BY id`）、`segments` 每一句（即時和正式都算，`ORDER BY kind, seq`）；空的不放，用 `\n` 接起來。
+- 之前的會議：`deleted_at IS NULL AND id != ? AND (meeting_date < ? OR (meeting_date = ? AND id < ?))`，`ORDER BY meeting_date DESC, id DESC`：
+  - `folder`：這場在資料夾裡時，同一個 `folder_id` 的前 5 場；不在資料夾是空的。
+  - `recent`：不分資料夾的前 10 場（可能跟 `folder` 重複，第 2 層排過的不會再排）。
+- 會議日期是 `yyyy-MM-dd`（`DateText.string`），字串比大小就是先後。錄音中的會議沒有正式逐字稿，排在這場後面（日期一樣、id 比較大）不會被算進去。
+
+### 98.3 轉錄時（`JobRunner`）
+
+- `transcriptionGlossary(meeting) -> [String]`：`glossaryTerms()`（自己的＋公司的，§36.3）只有 0、1 個詞時直接回傳，不讀資料庫；否則在背景（`Task.detached`；`JobRunner` 在主執行緒，要讀之前十幾場的逐字稿、逐詞比對）`GlossaryOrder.rank(terms, db.glossaryContext(id))`，log 只寫數字（`transcribe glossary: 48 terms, 12 related, 35 ms`），不寫詞。
+- `transcribe` 建 `TranscriptionPipeline.Options` 時用它（Breeze、Whisper、Qwen3-ASR 的提示，企業伺服器的 `glossary` 欄位都是這份）；本機轉錄和改在這台電腦轉錄（§67）一樣。猜說話者、校正、整理照舊用 `glossaryTerms()`。
+- 只有放不放得進提示會不同，提示詞本身的寫法、上限、照抄詞彙表的過濾（§6.2）都不變。
+
+### 98.4 設定頁（「詞彙表」）
+
+- `WhisperEngine.fittingTermCount(glossary:language:) -> Int`：`prompt` 用同一段挑詞的迴圈，回傳放進去幾個。
+- `GlossarySettings` 最下面：`fitting < count`（`count` 是自己的＋公司的合併後的詞數，語言用 `AppSettings.defaultMeetingLanguage`）時兩行：
+  - 「共 %lld 個詞，轉錄一次只放得下約 %lld 個，會先放跟那場會議有關的詞。」（`caption`、`secondary`）
+  - 「沒有相關的詞時的轉錄提示：%@」（原本那行的樣子）。
+- 放得下時照舊只有「目前的轉錄提示：%@」。
+
+### 98.5 DEBUG
+
+- `shiyinctl glossaryorder <會議 id> <輸出.json>`：寫 `{"terms": […], "related": n, "folderMeetings": n, "recentMeetings": n, "prompt": "…", "ms": n}`（`prompt` 用這場的會議語言，`ms` 是收集加排序花的時間）。
+- 標準答案 `db/` 接在最後：匯入粵語、韓文會議，加幾個詞，英文會議移到垃圾桶（不該算；日文會議前面已經刪掉），把韓文會議移到中文會議的資料夾、加一句即時逐字稿，三場各 `transcriptionGlossary`（`db/62`～`64`，輸出 `terms`、`related`、`folderMeetings`、`recentMeetings`）。新的步驟 `setFolder`（`key`、`folder` 名稱）、`appendLiveSegment`（`key`、`text`）。
+
+### 98.6 驗證
+
+- 標準答案兩平台相同（`util/glossary-order.json`、`db/62`～`64`），跑兩次相同。
+- Mac DEBUG（暫存的 `SHIYIN_HOME`、`-transcriptionEngine breeze`）：詞彙表放 60 個詞（前 40 個是不相關的、後面有測試錄音裡講到的產品名），匯入同一段錄音兩次，第一場放進資料夾、轉錄完；第二場也放進那個資料夾再轉錄。`glossaryorder` 看第二場的順序（這場和同資料夾那場講過的詞在前面）、log 的 `related`；兩場的逐字稿比對那幾個產品名（排序前放不進提示、排序後放得進）。設定「詞彙表」頁截圖（放不下、放得下各一次，淺色、深色）。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3607,3 +3657,4 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 | D205 | 排隊的順序存在 `jobs.priority`（大的先，再照 `id`），插隊時設成比排隊中的都大；被放回排隊的執行中工作也設成最大（§96、R122） | 刪掉再排一個新的工作（拿到比較小的順序）：`id` 只會變大，做不到排到前面；改 `id` 本身：執行中的工作、「改在這台電腦轉錄」都用 `id` 記，還要搬 `crashes`、`payload`（企業伺服器的工作 id）。只在記憶體記插隊：關掉拾音就忘了，使用者要再按一次（R122.4）。另外一張「隊伍」表記完整順序：每次排工作、拿工作都要維護兩邊，壞掉時兩邊對不上；一個欄位就能排。插隊的只排在下一個、不排在執行中的前面（打斷）：已經轉的要整個重來（R122 的「不做」） |
 | D206 | 匯出的進度：Mac 對話框在匯出中一直開著、只有一個「取消匯出」；Windows 對話框關掉、進度在側欄下方，同時只匯出一個（§94、design-windows §11.53、R120） | Mac 也關掉對話框、在別的地方顯示進度：Mac 的匯出本來就在對話框裡等，分享要等檔案寫好才能從「分享…」的位置打開選單。「取消匯出」跟「取消」並排：兩個意思很像的按鈕，按鈕列也放不下（會換行、對話框變高）。Windows 允許同時匯出好幾個、各自一條：側欄下方的空間小，要分清楚哪一條是哪個檔案、各自取消；一次匯出一個就夠用，第二個說明原因、等第一個完成或取消 |
 | D207 | 喇叭的回音在轉錄前、離線消除：GCC-PHAT 找時間差（分段直線）、重新取樣對齊、分塊頻域 Kalman 濾波、每個頻帶不比原本的麥克風大聲；自己寫，Mac、Windows 同一套，預設開（§97、R123） | 錄音中即時做（WebRTC AEC3、SpeexDSP 這類即時回音消除）：即時只能往前看，回音比電腦聲音早（兩個聲道開始收音的先後）時做不到，時鐘漂移要邊錄邊追，錄音檔處理壞了救不回來；離線可以先看整段、找出時間差曲線再處理，以前的錄音重新轉錄也有效。系統的回音消除（macOS VoiceProcessingIO、Windows 通訊模式的 AEC）：要走它的錄音路徑，macOS 上會讓其他 app 從同一支麥克風收不到聲音（R57）、壓低其他聲音，參考訊號是自己 app 的輸出或要指定系統的輸出裝置。直接用套件：WebRTC 是大型 C++ 專案、Windows 要另外建原生 DLL，SpeexDSP 是即時的濾波器、一樣要先對齊；兩個平台要跑出一樣的結果，自己寫的可以一起對標準答案。神經網路模型（DTLN-aec 這類）：要下載模型、Windows 要多帶 ONNX Runtime，聲道錯開很多時還是要先對齊；線性濾波已經接近沒有回音時的錯字率。轉錄後刪掉跟電腦聲音重複的段落（§17.3 的 dedupe）：只有分聲道時有用，混成一軌時同一句話疊在一起、不會重複出現，錯字照樣多 |
+| D208 | 轉錄的詞彙自動排序：這場出現過的、同資料夾最近 5 場、最近 10 場出現過的排前面，不讓使用者每場選（§98、R124；GitHub #31） | 每場會議選詞彙群組（#31 的提案）：開始錄音、匯入、重新轉錄都多一個選擇，忘了選那些詞反而送不進去。只看這場和同資料夾：大部分人不用資料夾、標題也常是「錄音 14:30」，沒有線索時還是最早加的詞佔滿提示，正是 #31 說的「後面加的詞送不進去」；加上最近 10 場，最近常講的詞會先放。用出現次數排：一場講很多次的詞會蓋過別場的詞，改用「幾場出現過」。用系統的不分大小寫比對：兩平台的大小寫表不同，標準答案對不齊，只轉 ASCII |

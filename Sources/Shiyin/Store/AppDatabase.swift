@@ -1564,6 +1564,33 @@ final class AppDatabase: @unchecked Sendable {
         try pool.read { db in try GlossaryTerm.order(Column("id")).fetchAll(db) }
     }
 
+    /// 轉錄排詞彙用的文字（R124、design §98.2）：這場、同資料夾之前最近 5 場、之前最近 10 場（不算垃圾桶）
+    func glossaryContext(_ meetingId: Int64) throws -> GlossaryContext {
+        try pool.read { db in
+            guard let meeting = try Meeting.fetchOne(db, key: meetingId) else { return GlossaryContext() }
+            var context = GlossaryContext(meeting: try Self.glossaryText(db, meeting))
+            let before = "deleted_at IS NULL AND id != ? AND (meeting_date < ? OR (meeting_date = ? AND id < ?))"
+            let arguments: [any DatabaseValueConvertible] = [meetingId, meeting.meetingDate, meeting.meetingDate, meetingId]
+            if let folderId = meeting.folderId {
+                context.folder = try Meeting.fetchAll(db, sql: "SELECT * FROM meetings WHERE \(before) AND folder_id = ? ORDER BY meeting_date DESC, id DESC LIMIT 5",
+                                                      arguments: StatementArguments(arguments + [folderId])).map { try Self.glossaryText(db, $0) }
+            }
+            context.recent = try Meeting.fetchAll(db, sql: "SELECT * FROM meetings WHERE \(before) ORDER BY meeting_date DESC, id DESC LIMIT 10",
+                                                  arguments: StatementArguments(arguments)).map { try Self.glossaryText(db, $0) }
+            return context
+        }
+    }
+
+    /// 一場會議的標題、參加者、筆記、會議紀錄、參考文件和畫面的字、即時和正式的逐字稿
+    private static func glossaryText(_ db: Database, _ meeting: Meeting) throws -> String {
+        var parts = [meeting.displayTitle, meeting.participants, meeting.userNotes, meeting.decodedNotes?.plainText ?? ""]
+        for pages in try String.fetchAll(db, sql: "SELECT pages FROM documents WHERE meeting_id = ? ORDER BY id", arguments: [meeting.id]) {
+            parts += (try? JSONDecoder().decode([String].self, from: Data(pages.utf8))) ?? []
+        }
+        parts += try String.fetchAll(db, sql: "SELECT text FROM segments WHERE meeting_id = ? ORDER BY kind, seq", arguments: [meeting.id])
+        return parts.filter { !$0.isEmpty }.joined(separator: "\n")
+    }
+
     func addTerm(_ term: String) throws {
         let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }

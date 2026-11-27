@@ -5521,6 +5521,23 @@
         }
       }
     },
+    "共 %lld 個詞，轉錄一次只放得下約 %lld 個，會先放跟那場會議有關的詞。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共 %lld 个词，转录一次只放得下约 %lld 个，会先放跟那场会议有关的词。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld terms in total; the transcription hint fits about %lld, so terms related to that meeting go in first."
+          }
+        }
+      }
+    },
     "其他": {
       "extractionState": "manual",
       "localizations": {
@@ -18216,6 +18233,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有登录"
+          }
+        }
+      }
+    },
+    "沒有相關的詞時的轉錄提示：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有相关的词时的转录提示：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription hint when no terms are related: %@"
           }
         }
       }

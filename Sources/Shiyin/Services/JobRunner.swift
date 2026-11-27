@@ -397,15 +397,27 @@ final class JobRunner {
     /// 自己的詞＋公司的詞（R53.2）：轉錄、猜說話者、校正、整理共用
     private func glossaryTerms() throws -> [String] { CompanyGlossary.merged(try db.glossary().map(\.term)) }
 
+    /// 轉錄用的詞彙表（R124、design §98.3）：跟這場有關的詞排前面，提示放不下的才是不相關的詞。
+    /// 要讀之前十幾場的逐字稿、逐詞比對，在背景做；log 不寫詞
+    private func transcriptionGlossary(_ meetingId: Int64) async throws -> [String] {
+        let terms = try glossaryTerms()
+        guard terms.count > 1 else { return terms }
+        let db = self.db, started = Date()
+        let ranked = try await Task.detached(priority: .userInitiated) { GlossaryOrder.rank(terms, try db.glossaryContext(meetingId)) }.value
+        log.info("transcribe glossary: \(terms.count) terms, \(ranked.related) related, \(Int(Date().timeIntervalSince(started) * 1000)) ms")
+        return ranked.terms
+    }
+
     // MARK: 轉錄（design §6）
 
     private func transcribe(_ job: Job, lane: JobLane) async throws {
         guard let meeting = try db.meeting(job.meetingId) else { return }
         let startedAt = Date()
         let payload = (try? JSONDecoder().decode(TranscribePayload.self, from: Data((job.payload ?? "{}").utf8))) ?? TranscribePayload()
+        let glossary = try await transcriptionGlossary(job.meetingId)
         func makePipeline(local: Bool) throws -> TranscriptionPipeline {
             var pipeline = TranscriptionPipeline(options: .current(language: meeting.meetingLanguage,
-                                                                    glossary: try glossaryTerms(),
+                                                                    glossary: glossary,
                                                                     channels: meeting.channels, minSpeakers: meeting.minSpeakers, local: local))
             pipeline.stage = { [weak self] in self?.running[lane]?.stage = $0 }
             pipeline.progress = { [weak self] value in Task { @MainActor in self?.running[lane]?.progress = value } }

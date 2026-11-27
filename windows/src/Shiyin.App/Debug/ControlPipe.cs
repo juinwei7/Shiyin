@@ -8,6 +8,7 @@ using Shiyin.Model;
 using Shiyin.Notes;
 using Shiyin.Platform;
 using Shiyin.Services;
+using Shiyin.Transcribe;
 
 namespace Shiyin.App.Debug;
 
@@ -308,6 +309,18 @@ public static partial class ControlPipe
             // showtrash 0|1；confirmemptytrash（打開確認對話框）；emptytrash（不經過確認）
             case "selectmany" when args.Length > 1 && main is not null: main.State.SetListSelection(Ids(args[1])); return Ok;
             case "trashmany" when args.Length > 1: host.Controller.MoveToTrash(Ids(args[1])); return Ok;
+            // glossaryorder <會議 id>：轉錄這場時詞彙的順序（M§98.5、design-windows §11.57）
+            case "glossaryorder" when args.Length > 1 && long.TryParse(args[1], out var orderId) && host.Db.Meeting(orderId) is { } orderMeeting:
+            {
+                var context = host.Db.GlossaryContext(orderId);
+                var ranked = GlossaryOrder.Rank(host.Enterprise.Glossary.Merged(host.Db.Glossary().Select(t => t.Term)), context);
+                return new JsonObject
+                {
+                    ["terms"] = new JsonArray([.. ranked.Terms.Select(t => (JsonNode)t)]), ["related"] = ranked.Related,
+                    ["folderMeetings"] = context.Folder.Count, ["recentMeetings"] = context.Recent.Count,
+                    ["prompt"] = WhisperRules.Prompt(ranked.Terms, orderMeeting.MeetingLanguage),
+                };
+            }
             // prioritize <會議 id>[,…]：等於右鍵選單的「先轉錄這場」（M§96.4）
             case "prioritize" when args.Length > 1: host.Controller.PrioritizeTranscription(Ids(args[1]), announce: true); return Ok;
             case "restoremany" when args.Length > 1: host.Controller.Restore(Ids(args[1])); return Ok;

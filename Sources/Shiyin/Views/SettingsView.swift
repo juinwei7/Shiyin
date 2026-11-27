@@ -1093,6 +1093,26 @@ struct GlossarySettings: View {
         return q.isEmpty ? model.glossary : model.glossary.filter { $0.term.range(of: q, options: .caseInsensitive) != nil }
     }
 
+    /// 轉錄提示的預覽；放不下時說明轉錄會先放跟那場會議有關的詞（R124.4、design §98.4）
+    @ViewBuilder private var promptPreview: some View {
+        let terms = CompanyGlossary.merge(model.glossary.map(\.term), model.companyGlossary)
+        let language = AppSettings.defaultMeetingLanguage
+        let prompt = WhisperEngine.prompt(glossary: terms, language: language)
+        let fitting = WhisperEngine.fittingTermCount(glossary: terms, language: language)
+        if fitting < terms.count {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("共 \(terms.count) 個詞，轉錄一次只放得下約 \(fitting) 個，會先放跟那場會議有關的詞。")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(String(localized: "沒有相關的詞時的轉錄提示：\(prompt)"))
+                    .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(String(localized: "目前的轉錄提示：\(prompt)"))
+                .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     var body: some View {
         Text("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。")
             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -1201,8 +1221,7 @@ struct GlossarySettings: View {
                 }
             }
         }
-        Text(String(localized: "目前的轉錄提示：\(WhisperEngine.prompt(glossary: CompanyGlossary.merge(model.glossary.map(\.term), model.companyGlossary), language: AppSettings.defaultMeetingLanguage))"))
-            .font(.caption).foregroundStyle(.tertiary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+        promptPreview
             // 打開這頁時更新公司詞彙表（R53.1）
             .task { await EnterpriseServer.shared.refreshGlossary() }
             .confirmationDialog("刪除勾選的 \(checked.count) 個詞彙？", isPresented: $confirmDelete) {

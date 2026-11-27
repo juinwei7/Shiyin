@@ -2,6 +2,7 @@ using System.Text.Json;
 using Shiyin.Data;
 using Shiyin.Model;
 using Shiyin.Text;
+using Shiyin.Transcribe;
 using Xunit;
 
 namespace Shiyin.Tests;
@@ -216,6 +217,16 @@ public sealed class DatabaseTests : IDisposable
                     break;
                 }
                 case "addTerm": db.AddTerm(op.Str("term")!); break;
+                case "setFolder": db.SetFolder([Id(op)], db.CreateFolder(op.Str("folder")!)); break;   // 移到資料夾（名稱，沒有就建一個）
+                case "appendLiveSegment": db.AppendLiveSegment(Id(op), 0, 1, op.Str("text")!); break;
+                case "transcriptionGlossary":   // 轉錄這場時詞彙的順序（M§98.5）
+                {
+                    var context = db.GlossaryContext(Id(op));
+                    var ranked = GlossaryOrder.Rank([.. db.Glossary().Select(t => t.Term)], context);
+                    Result(op, new JNode.Obj().Add("terms", JNode.Of(ranked.Terms)).Add("related", new JNode.Int(ranked.Related))
+                        .Add("folderMeetings", new JNode.Int(context.Folder.Count)).Add("recentMeetings", new JNode.Int(context.Recent.Count)));
+                    break;
+                }
                 case "dismissGlossary": db.DismissGlossarySuggestion(op.Str("term")!); break;
                 case "enqueue": db.Enqueue(Id(op), JobKinds.Parse(op.Str("kind"))!.Value, op.Str("payload")); break;
                 case "claimNext":

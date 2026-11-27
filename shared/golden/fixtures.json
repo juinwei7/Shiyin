@@ -832,6 +832,16 @@
   }
  ],
  "askAllQuestion": "Redis 和 SendGrid 誰負責？",
+ "glossaryOrderCases": [
+  {"comment": "分層：這場、同資料夾（幾場出現過，多的先）、最近幾場、其他照原本的順序", "terms": ["Redis", "Kubernetes", "拾音", "SendGrid", "Lumio", "AI", "TTL"], "meeting": "今天討論 Lumio 的上線時程", "folder": ["Redis 快取還在測", "Redis 跟 SendGrid 的費用", "kubernetes 部署"], "recent": ["TTL 設 100%", "寄信改用 SendGrid"]},
+  {"comment": "英數字的邊界：前後是標點、空白、中文都算；C++、v3.6 頭尾不是英數字的那一邊不檢查；中文照字比對", "terms": ["AI", "Go", "C++", "v3.6", "拾音", "5G", "😀好"], "meeting": "He said the AI-based plan works. Go 跟 C++、v3.6 版的拾音器；45G 不是 5G。我同意😀好", "folder": [], "recent": []},
+  {"comment": "said 裡的 ai、Google 裡的 go、45G 裡的 5G 不算", "terms": ["AI", "Go", "5G", "C++"], "meeting": "He said Google has 45G and C+++", "folder": [], "recent": []},
+  {"comment": "只轉 ASCII 的大小寫：É、ß、全形字不轉", "terms": ["ÉCOLE", "Straße", "ＡＩ", "REDIS"], "meeting": "école strasse ａｉ redis", "folder": [], "recent": []},
+  {"comment": "沒有文字：順序不變", "terms": ["乙", "甲", "丙"], "meeting": "", "folder": [], "recent": []},
+  {"comment": "同資料夾排過的不再算進最近幾場；同一場出現很多次只算一場", "terms": ["A1", "B2", "C3"], "meeting": "", "folder": ["C3 C3 C3 C3", "x"], "recent": ["B2", "B2 A1", "C3"]},
+  {"comment": "分數一樣照原本的順序", "terms": ["丙", "乙", "甲"], "meeting": "", "folder": ["甲乙丙"], "recent": []},
+  {"comment": "空的詞、比文字長的詞不算出現", "terms": ["", "很長的一個詞彙", "詞"], "meeting": "詞", "folder": ["詞彙"], "recent": []}
+ ],
  "whisperGlossaries": [
   [],
   [
@@ -2146,6 +2156,20 @@
   {"op": "dumpTables", "file": "db/59-edit-split.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]},
   {"op": "restoreEdit", "key": "en", "file": "db/60-unsplit-result.json"},
   {"op": "dumpTables", "file": "db/61-unsplit.json", "tables": ["meetings", "segments", "bookmarks", "speakers", "notes_versions", "corrections", "clean_lines", "meeting_edits", "search"]}
+,
+  {"op": "importFixture", "key": "yue", "comment": "轉錄時詞彙的順序（R124、M§98.5）：日文會議刪掉了、編輯會議分出來的那場在垃圾桶，都不該算"},
+  {"op": "importFixture", "key": "ko"},
+  {"op": "addTerm", "term": "Alice"},
+  {"op": "addTerm", "term": "TTL"},
+  {"op": "addTerm", "term": "還原步驟"},
+  {"op": "addTerm", "term": "롤백"},
+  {"op": "addTerm", "term": "AI"},
+  {"op": "setTrashed", "key": "en", "trashed": true, "comment": "英文會議（Alice 只在這場）移到垃圾桶：不該算"},
+  {"op": "setFolder", "key": "ko", "folder": "專案 A", "comment": "韓文會議移到中文會議的資料夾"},
+  {"op": "appendLiveSegment", "key": "ko", "text": "SendGrid 도 확인해 주세요"},
+  {"op": "transcriptionGlossary", "key": "ko", "file": "db/62-transcription-glossary.json", "comment": "這場（含即時逐字稿）、同資料夾的中文會議、之前的粵語會議（同一天、先建的）"},
+  {"op": "transcriptionGlossary", "key": "yue", "file": "db/63-transcription-glossary.json", "comment": "不在資料夾；韓文會議同一天但比較晚建，不算"},
+  {"op": "transcriptionGlossary", "key": "zh", "file": "db/64-transcription-glossary.json", "comment": "最早的一場：前面沒有會議"}
  ],
  "editPlanCases": [
   {"key": "trim-and-delete", "pieces": [[1, 2, 20], [1, 30, 55]],

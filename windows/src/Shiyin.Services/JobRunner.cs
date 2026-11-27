@@ -348,6 +348,17 @@ public sealed class JobRunner
         return Enterprise is { } enterprise ? enterprise.Glossary.Merged(own) : [.. own];
     }
 
+    /// <summary>轉錄用的詞彙表（R124、M§98.3）：跟這場有關的詞排前面，提示放不下的才是不相關的詞；log 不寫詞</summary>
+    List<string> TranscriptionGlossary(long meetingId)
+    {
+        var terms = GlossaryTerms();
+        if (terms.Count <= 1) return terms;
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var ranked = GlossaryOrder.Rank(terms, db.GlossaryContext(meetingId));
+        Log.Info($"transcribe glossary: {terms.Count} terms, {ranked.Related} related, {started.ElapsedMilliseconds} ms");
+        return ranked.Terms;
+    }
+
     /// <summary>正式轉錄用企業伺服器（R50.1）：選了而且登入過（登入失效也算，工作停著等重新登入）</summary>
     public bool UsesEnterprise => Enterprise is { HasAccount: true } && settings.TranscriptionEngine == "server";
 
@@ -375,7 +386,7 @@ public sealed class JobRunner
         if (db.Meeting(job.MeetingId) is not { } meeting) return;
         var startedAt = DateTime.UtcNow;
         var payload = Decode<TranscribePayload>(job.Payload) ?? new TranscribePayload(null);
-        var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, GlossaryTerms(),
+        var options = TranscriptionOptions.Current(settings, models, meeting.MeetingLanguage, TranscriptionGlossary(job.MeetingId),
             meeting.Channels, meeting.MinSpeakers);
         // 沒人說話太久而自動停止的錄音：只轉錄到最後說話後 15 秒，錄音檔不動（M§35.3、R48.3）
         var until = payload.Until;

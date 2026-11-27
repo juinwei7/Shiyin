@@ -13,6 +13,12 @@
 - [~] **EC1 真的喇叭**（要使用者）：用喇叭開一場真的線上會議錄「麥克風＋電腦聲音」（或安靜時用這台 Mac 的喇叭放一段有人說話的影片，同時錄），再戴耳機錄一場
   - 驗證：log（`/usr/bin/log show --info --predicate 'subsystem == "com.weiwei.shiyin"'`）用喇叭那場有「echo cancellation: echo found」、戴耳機那場「no echo」；逐字稿裡對方的話沒有疊兩次、糊掉的地方。設定關掉、重新轉錄比一次
 
+## 轉錄時先放跟這場會議有關的詞（R124，design §98、design-windows §11.57、D208；2026-11-27 GitHub #31（smilehappy126），使用者：「先做自動排序」）
+
+- Mac 完成，DEBUG 版、標準答案驗過（2026-11-27，見 commit 訊息）
+- [~] **GO2 Windows**（design-windows §11.57）：程式完成，`dotnet test` 標準答案全部通過（`util/glossary-order.json`、`db/62`～`64`）、方案編譯過。還差（虛擬機）：控制通道 `glossaryorder` 看兩場同資料夾會議的順序；設定「詞彙表」頁放不下、放得下各截一張
+- [ ] **GO3 回覆 #31**：發布後在 #31 說做好了（分群組整理等提案的人回覆再決定）
+
 ## 整理工具 Antigravity（R121，design §95、design-windows §11.54、D204；2026-11-27 Threads 上的使用者許願：「也要能支援 Antigravity cli」，使用者：接）
 
 - [~] **Windows 實機**（AG-W）：官方安裝程式裝在 `%LOCALAPPDATA%\agy\bin\agy.exe`；Windows Terminal 開 agy 登入、授權碼貼回；真的整理一場（stdin、`--json-schema`、`--settings` 帶 Windows 路徑）；拒絕規則擋得住；`%USERPROFILE%\.gemini\antigravity-cli\conversations` 的這次對話有刪掉；設定頁、引導的樣子

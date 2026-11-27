@@ -1,0 +1,196 @@
+[
+  {
+    "comment" : "分層：這場、同資料夾（幾場出現過，多的先）、最近幾場、其他照原本的順序",
+    "folder" : [
+      "Redis 快取還在測",
+      "Redis 跟 SendGrid 的費用",
+      "kubernetes 部署"
+    ],
+    "meeting" : "今天討論 Lumio 的上線時程",
+    "ranked" : [
+      "Lumio",
+      "Redis",
+      "Kubernetes",
+      "SendGrid",
+      "TTL",
+      "拾音",
+      "AI"
+    ],
+    "recent" : [
+      "TTL 設 100%",
+      "寄信改用 SendGrid"
+    ],
+    "related" : 5,
+    "terms" : [
+      "Redis",
+      "Kubernetes",
+      "拾音",
+      "SendGrid",
+      "Lumio",
+      "AI",
+      "TTL"
+    ]
+  },
+  {
+    "comment" : "英數字的邊界：前後是標點、空白、中文都算；C++、v3.6 頭尾不是英數字的那一邊不檢查；中文照字比對",
+    "folder" : [
+
+    ],
+    "meeting" : "He said the AI-based plan works. Go 跟 C++、v3.6 版的拾音器；45G 不是 5G。我同意😀好",
+    "ranked" : [
+      "AI",
+      "Go",
+      "C++",
+      "v3.6",
+      "拾音",
+      "5G",
+      "😀好"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 7,
+    "terms" : [
+      "AI",
+      "Go",
+      "C++",
+      "v3.6",
+      "拾音",
+      "5G",
+      "😀好"
+    ]
+  },
+  {
+    "comment" : "said 裡的 ai、Google 裡的 go、45G 裡的 5G 不算",
+    "folder" : [
+
+    ],
+    "meeting" : "He said Google has 45G and C+++",
+    "ranked" : [
+      "C++",
+      "AI",
+      "Go",
+      "5G"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 1,
+    "terms" : [
+      "AI",
+      "Go",
+      "5G",
+      "C++"
+    ]
+  },
+  {
+    "comment" : "只轉 ASCII 的大小寫：É、ß、全形字不轉",
+    "folder" : [
+
+    ],
+    "meeting" : "école strasse ａｉ redis",
+    "ranked" : [
+      "REDIS",
+      "ÉCOLE",
+      "Straße",
+      "ＡＩ"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 1,
+    "terms" : [
+      "ÉCOLE",
+      "Straße",
+      "ＡＩ",
+      "REDIS"
+    ]
+  },
+  {
+    "comment" : "沒有文字：順序不變",
+    "folder" : [
+
+    ],
+    "meeting" : "",
+    "ranked" : [
+      "乙",
+      "甲",
+      "丙"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 0,
+    "terms" : [
+      "乙",
+      "甲",
+      "丙"
+    ]
+  },
+  {
+    "comment" : "同資料夾排過的不再算進最近幾場；同一場出現很多次只算一場",
+    "folder" : [
+      "C3 C3 C3 C3",
+      "x"
+    ],
+    "meeting" : "",
+    "ranked" : [
+      "C3",
+      "B2",
+      "A1"
+    ],
+    "recent" : [
+      "B2",
+      "B2 A1",
+      "C3"
+    ],
+    "related" : 3,
+    "terms" : [
+      "A1",
+      "B2",
+      "C3"
+    ]
+  },
+  {
+    "comment" : "分數一樣照原本的順序",
+    "folder" : [
+      "甲乙丙"
+    ],
+    "meeting" : "",
+    "ranked" : [
+      "丙",
+      "乙",
+      "甲"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 3,
+    "terms" : [
+      "丙",
+      "乙",
+      "甲"
+    ]
+  },
+  {
+    "comment" : "空的詞、比文字長的詞不算出現",
+    "folder" : [
+      "詞彙"
+    ],
+    "meeting" : "詞",
+    "ranked" : [
+      "詞",
+      "",
+      "很長的一個詞彙"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 1,
+    "terms" : [
+      "",
+      "很長的一個詞彙",
+      "詞"
+    ]
+  }
+]

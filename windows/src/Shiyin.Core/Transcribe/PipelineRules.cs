@@ -23,18 +23,26 @@ public static class WhisperRules
     ];
 
     /// <summary>基本提示詞＋詞彙表：寫在語言檔的 whisperPrompt（M§41.3；中文、日文 150 字、英文 400 個字元以內）</summary>
-    public static string Prompt(IReadOnlyList<string> glossary, MeetingLanguage language)
+    public static string Prompt(IReadOnlyList<string> glossary, MeetingLanguage language) => Build(Fitting(glossary, language), language);
+
+    /// <summary>提示放得下前幾個詞（R124.4、M§98.4）</summary>
+    public static int FittingTermCount(IReadOnlyList<string> glossary, MeetingLanguage language) => Fitting(glossary, language).Count;
+
+    static string Build(List<string> terms, MeetingLanguage language)
     {
         var p = language.Profile.WhisperPrompt;
-        var limit = p.Limit;
-        string Build(List<string> terms) => terms.Count == 0 ? p.Base : p.Base + p.Glossary.Replace("%@", string.Join(p.Separator, terms), StringComparison.Ordinal);
+        return terms.Count == 0 ? p.Base : p.Base + p.Glossary.Replace("%@", string.Join(p.Separator, terms), StringComparison.Ordinal);
+    }
+
+    static List<string> Fitting(IReadOnlyList<string> glossary, MeetingLanguage language)
+    {
         var picked = new List<string>();
         foreach (var term in glossary)
         {
-            if (SwiftText.Count(Build([.. picked, term])) > limit) break;
+            if (SwiftText.Count(Build([.. picked, term], language)) > language.Profile.WhisperPrompt.Limit) break;
             picked.Add(term);
         }
-        return Build(picked);
+        return picked;
     }
 
     /// <summary>下一段的提示詞：基本提示詞加上前一段最後的文字（中文、日文 120 字、英文 400 個字元以內）</summary>

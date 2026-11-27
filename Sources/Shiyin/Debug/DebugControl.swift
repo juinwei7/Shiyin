@@ -52,6 +52,14 @@ enum DebugControl {
             }
         case "cancel": model.selection = id; model.cancelJobs()
         case "prioritize": model.prioritizeTranscription(args[1].split(separator: ",").compactMap { Int64($0) }, announce: true)   // prioritize <會議 id>[,…]：等於選單的「先轉錄這場」（design §96.4）
+        case "glossaryorder":   // glossaryorder <會議 id> <輸出.json>：轉錄這場時詞彙的順序（design §98.5）
+            let started = Date()
+            if let id, let meeting = try? model.db.meeting(id), let context = try? model.db.glossaryContext(id) {
+                let ranked = GlossaryOrder.rank(CompanyGlossary.merged((try? model.db.glossary().map(\.term)) ?? []), context)
+                write(["terms": ranked.terms, "related": ranked.related, "folderMeetings": context.folder.count, "recentMeetings": context.recent.count,
+                       "prompt": WhisperEngine.prompt(glossary: ranked.terms, language: meeting.meetingLanguage),
+                       "ms": Int(Date().timeIntervalSince(started) * 1000)], to: args[2])
+            }
         case "retry": model.selection = id; model.retry()
         case "retranscribe": model.selection = id; model.retranscribe()
         case "resummarize": model.selection = id; model.resummarize()

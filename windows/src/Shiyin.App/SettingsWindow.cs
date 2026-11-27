@@ -863,8 +863,16 @@ public sealed class SettingsWindow : Window
             });
         }
         _ = host.Enterprise.RefreshGlossary();
-        var prompt = Ui.Text(L.F("目前的轉錄提示：%@", WhisperRules.Prompt(CompanyGlossary.Merge(terms.Select(t => t.Term), company), S.DefaultMeetingLanguage)), 12, color: Ui.Tertiary, select: true);
-        column.Children.Add(prompt);
+        var merged = CompanyGlossary.Merge(terms.Select(t => t.Term), company);
+        var prompt = WhisperRules.Prompt(merged, S.DefaultMeetingLanguage);
+        var fitting = WhisperRules.FittingTermCount(merged, S.DefaultMeetingLanguage);
+        // 放不下時說明轉錄會先放跟那場會議有關的詞（R124.4、M§98.4）
+        if (fitting < merged.Count)
+        {
+            column.Children.Add(Ui.Text(L.F("共 %lld 個詞，轉錄一次只放得下約 %lld 個，會先放跟那場會議有關的詞。", merged.Count, fitting), 12, color: Ui.Secondary));
+            column.Children.Add(Ui.Text(L.F("沒有相關的詞時的轉錄提示：%@", prompt), 12, color: Ui.Tertiary, select: true));
+        }
+        else column.Children.Add(Ui.Text(L.F("目前的轉錄提示：%@", prompt), 12, color: Ui.Tertiary, select: true));
         return column;
     }
 
