@@ -322,6 +322,18 @@ sqlite3 ~/Library/Application\ Support/Shiyin/shiyin.sqlite             # 看資
 - 廣東話、韓文會議的轉錄（用 macOS 語音合成的開發週會和 FLEURS 朗讀句子，2026-11-04）：廣東話用 Qwen3-ASR，字錯誤率約 2～4%，照粵語口語寫；韓文用 Whisper large-v3-turbo，約 6%。還沒有用真人會議量過。
 - 還沒有：其他會議語言（加在語言檔裡，見 design §41）、日文和韓文介面、行事曆整合、iPhone 版。
 
+## 開發筆記
+
+拾音怎麼做的、哪裡卡住，寫在作者的部落格 [Wei Builds](https://www.weibuilds.com/projects/shiyin/)：
+
+- [Mac 本機轉錄中文會議誰準：Breeze ASR 25、Qwen3-ASR、macOS 內建實測](https://www.weibuilds.com/blog/shiyin-local-asr/)
+- [語音辨識模型的官方分數和會議實測差三倍](https://www.weibuilds.com/blog/asr-benchmark-vs-meeting/)
+- [消除會議回音，拾音試過四種方法](https://www.weibuilds.com/blog/shiyin-echo/)
+- [macOS 內建語音辨識的繁體錯字，用 OpenCC 依詞改正](https://www.weibuilds.com/blog/macos-speech-traditional-chinese/)
+- [onScrollGeometryChange 讓拾音錄久了當掉](https://www.weibuilds.com/blog/swiftui-scroll-geometry-crash/)
+- [沒有顯示卡的 CI，怎麼驗拾音的 AMD 加速](https://www.weibuilds.com/blog/shiyin-vulkan-gpu/)
+- [拾音做本地 MCP，卡在 Gatekeeper 和 SQLite](https://www.weibuilds.com/blog/shiyin-local-mcp/)
+
 ## 使用的開源專案與模型
 
 | 名稱 | 用途 | 授權 |

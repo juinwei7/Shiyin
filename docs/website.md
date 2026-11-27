@@ -385,7 +385,7 @@ Ko-fi：`https://ko-fi.com/weiwei_chang`（PayPal 收款；GitHub Sponsors 沒�
 
 不做：awesome-selfhosted（只收網路服務）、Homebrew 官方 cask（要公證）、買連結、灌評論、用多個帳號推薦。
 
-已經做了的：GitHub repo 的說明和 20 個 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 放在 `.github/README.md`，GitHub 首頁顯示英文（open-source-mac-os-apps 這類清單不收 README 不是英文的專案），中文的在根目錄的 `README.md`，兩份要一起改。awesome-mac 收錄在 Audio Record and Process（jaywcjlove/awesome-mac#3711，2026-10-22 合併）。
+已經做了的：GitHub repo 的說明和 20 個 topics（local-first、offline、meeting-transcription、granola-alternative、otter-alternative…）；英文 README 放在 `.github/README.md`，GitHub 首頁顯示英文（open-source-mac-os-apps 這類清單不收 README 不是英文的專案），中文的在根目錄的 `README.md`，兩份要一起改。awesome-mac 收錄在 Audio Record and Process（jaywcjlove/awesome-mac#3711，2026-10-22 合併）。中英文 README 的「開發筆記」連到作者部落格 weibuilds.com 上拾音的技術文章（2026-11-27）。
 
 ### 14.5 量成效
 

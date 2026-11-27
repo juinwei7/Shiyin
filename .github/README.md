@@ -305,6 +305,18 @@ Interface strings are written in Traditional Chinese in the code and looked up i
 - Japanese meetings: on a public expert hearing in the Japanese Diet (6 speakers), the character error rate with Whisper large-v3-turbo is about 8–9%. The reference is the official Diet record, which drops filler words, so the real error rate is lower.
 - Not yet: languages other than English, Chinese and Japanese, a Japanese interface, calendar integration, an iPhone version.
 
+## Development notes
+
+How Shiyin was built and where it got stuck, on the author’s blog [Wei Builds](https://www.weibuilds.com/projects/shiyin/) (in Traditional Chinese):
+
+- [Local Chinese meeting transcription on a Mac: Breeze ASR 25, Qwen3-ASR and the macOS transcriber measured](https://www.weibuilds.com/blog/shiyin-local-asr/)
+- [Speech recognition models: official scores vs. real meetings](https://www.weibuilds.com/blog/asr-benchmark-vs-meeting/)
+- [Removing echo from online meetings: four approaches](https://www.weibuilds.com/blog/shiyin-echo/)
+- [Fixing the macOS speech recognizer’s Traditional Chinese characters with OpenCC](https://www.weibuilds.com/blog/macos-speech-traditional-chinese/)
+- [How onScrollGeometryChange crashed Shiyin during long recordings](https://www.weibuilds.com/blog/swiftui-scroll-geometry-crash/)
+- [Testing AMD GPU acceleration on a CI runner without a GPU](https://www.weibuilds.com/blog/shiyin-vulkan-gpu/)
+- [A local MCP server for Shiyin: Gatekeeper and SQLite](https://www.weibuilds.com/blog/shiyin-local-mcp/)
+
 ## Open-source projects and models
 
 | Name | Used for | License |
