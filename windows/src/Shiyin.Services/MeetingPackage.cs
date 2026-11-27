@@ -68,7 +68,7 @@ public static class MeetingPackage
     static void CopyIntoZip(ZipArchive zip, string source, string name, IProgress<double>? progress, CancellationToken cancel)
     {
         var entry = zip.CreateEntry(name, CompressionLevel.NoCompression);
-        entry.LastWriteTime = File.GetLastWriteTime(source);
+        entry.LastWriteTime = ZipTime(File.GetLastWriteTime(source));
         using var input = File.OpenRead(source);
         using var output = entry.Open();
         var buffer = new byte[1 << 20];
@@ -82,6 +82,12 @@ public static class MeetingPackage
             progress?.Report(0.05 + 0.9 * done / total);
         }
     }
+
+    /// <summary>
+    /// zip 記的修改時間只能是 1980～2107 年，超出的設下去會丟例外：換成 1980-01-01（同 .NET 的 CreateEntryFromFile，
+    /// 改成自己複製之前就是這樣）
+    /// </summary>
+    static DateTime ZipTime(DateTime time) => time.Year is < 1980 or > 2107 ? new DateTime(1980, 1, 1, 0, 0, 0) : time;
 
     static void Add(ZipArchive zip, string name, string text)
     {

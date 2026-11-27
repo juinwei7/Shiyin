@@ -85,6 +85,8 @@ struct GuideView: View {
                 GuideBullet(String(localized: "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音（打開錄音島時提醒出現在島上）；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。"))
                 // 定時停止（design §84、R110）
                 GuideBullet(String(localized: "錄一場不會一直守著的線上分享、講座時，按錄音畫面計時旁邊的「定時停止」，選 1 小時後、2 小時後或「指定時間…」（例如 16:00），時間到拾音會自己停止並轉錄，暫停也照算。選單列的拾音圖示、「檔案」選單也可以設定或取消。"))
+                // 匯出的進度（design §94、R120）
+                GuideBullet(String(localized: "匯出錄音、整場會議封包時看得到完成的百分比，可以中途取消。"))
                 GuideBullet(String(localized: "遇到問題，可以從「輔助說明」選單選「回報問題…」，會附上版本和環境（不含會議內容）。"))
             }
 

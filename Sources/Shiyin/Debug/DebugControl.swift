@@ -17,6 +17,8 @@ enum DebugControl {
     static var confirmQuit = false
     /// DEBUG 的 export 指令進行中的匯出（exportcancel 取消，design §94）
     static var debugExport: Task<Void, Never>?
+    /// exportcancel next：下一個 export 一開始就取消（很快做完的項目也驗得到取消後的清理）
+    static var cancelNextExport = false
 
     static func install() {
         DistributedNotificationCenter.default().addObserver(forName: notificationName, object: nil, queue: .main) { note in
@@ -916,7 +918,11 @@ enum DebugControl {
                 write(["result": result, "values": values.withLock { $0 }, "exists": FileManager.default.fileExists(atPath: url.path)],
                       to: url.path + ".progress.json")
             }
-        case "exportcancel": debugExport?.cancel()
+            if cancelNextExport {
+                cancelNextExport = false
+                debugExport?.cancel()
+            }
+        case "exportcancel": if args.count > 1 && args[1] == "next" { cancelNextExport = true } else { debugExport?.cancel() }
         case "import":   // import [lang=ja] [minSpeakers=6] <檔案>…（minSpeakers：匯入對話框的「大約幾個人」，design §26.2）
             var files = Array(args.dropFirst()), options = ImportOptions()
             while let first = files.first, first.hasPrefix("lang=") || first.hasPrefix("minSpeakers=") {
@@ -1096,7 +1102,14 @@ enum DebugControl {
         case "hotkeyenable": GlobalHotKey.shared.setEnabled(args[1] == "1")
         // 點通知後的動作（系統的點擊沒辦法模擬，直接呼叫同一個處理函式）
         case "opennotification": if let id { model.notifier.onOpen?(id) }
-        case "exportsheet": if args.count < 2 || args[1] == "1" { model.openExportSheet() } else { model.showExportSheet = false }
+        // exportsheet 1 [<項目> <格式> [<存檔路徑>]]：打開匯出對話框、選好項目和格式；給了存檔路徑時「存檔…」不開存檔面板、
+        // 直接寫到那裡（截匯出中的對話框、驗 ✕ 和 Esc 取消，design §94）。exportsheet 0：關掉（同按 ✕）
+        case "exportsheet":
+            if args.count < 2 || args[1] == "1" {
+                ExportSheet.debugChoice = args.count > 3 ? (ExportItem(rawValue: args[2]) ?? .notes, args[3]) : nil
+                ExportSheet.debugSaveURL = args.count > 4 ? URL(fileURLWithPath: args[4]) : nil
+                model.openExportSheet()
+            } else { model.showExportSheet = false }
         // quit：照正常流程結束拾音（錄音中、有工作時等於在確認對話框按「結束」）
         case "quit":
             confirmQuit = true

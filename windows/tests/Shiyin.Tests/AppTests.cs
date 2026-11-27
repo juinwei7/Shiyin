@@ -252,6 +252,42 @@ public sealed class AppTests : IDisposable
         Assert.Contains("找到上次沒有正常結束的錄音，已經復原並開始轉錄。", notices);
     }
 
+    /// <summary>
+    /// 匯出中取消（R120、design-windows §11.53）：寫到一半的檔案刪掉；存檔時選了取代的原本那份（封包寫暫存檔、最後才換掉）
+    /// 還沒被換掉，取消後留著、內容不變
+    /// </summary>
+    [Fact]
+    public async Task ExportCancelKeepsReplacedFile()
+    {
+        var controller = Controller(AppSettings.InMemory(), out _);
+        var meeting = db.InsertMeeting(new Meeting { SourceFilename = "a.wav" }, "wav");
+        WriteWav(paths.AudioPath(meeting), 120);   // 約 3.8 MB：錄音分好幾段放進 zip，取消得到一半
+        var id = meeting.Id!.Value;
+
+        var fresh = Path.Combine(home.Path, "新的.shiyin");
+        using (var cancel = new CancellationTokenSource())
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Export(ExportItem.Package, "shiyin", true, true, id, fresh,
+                cancel.Token, new Reporter(v => { if (v > 0.3) cancel.Cancel(); })));
+        Assert.False(File.Exists(fresh));
+        Assert.False(File.Exists(fresh + ".tmp"));
+
+        var existing = Path.Combine(home.Path, "原本的.shiyin");
+        File.WriteAllText(existing, "原本的封包");
+        using (var cancel = new CancellationTokenSource())
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Export(ExportItem.Package, "shiyin", true, true, id, existing,
+                cancel.Token, new Reporter(v => { if (v > 0.3) cancel.Cancel(); })));
+        Assert.Equal("原本的封包", File.ReadAllText(existing));
+
+        // 沒取消：照常換掉
+        await controller.Export(ExportItem.Package, "shiyin", true, true, id, existing);
+        Assert.NotEqual("原本的封包", File.ReadAllText(existing, Encoding.Latin1));
+    }
+
+    sealed class Reporter(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
+    }
+
     [Fact]
     public void TrashAndChecksBeforeActions()
     {

@@ -1446,6 +1446,23 @@
         }
       }
     },
+    "匯出錄音、整場會議封包時，側欄下方看得到完成的百分比，可以中途取消。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you export a recording or a .shiyin package, the bottom of the sidebar shows how far along it is, and you can cancel partway through."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出录音、整场会议文件包时，侧边栏下方看得到完成的百分比，可以中途取消。"
+          }
+        }
+      }
+    },
     "即時逐字稿和快速辨識用，約 240 MB。": {
       "extractionState": "manual",
       "localizations": {
@@ -2814,6 +2831,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在导出 %@… %lld%%"
+          }
+        }
+      }
+    },
+    "正在匯出 %@，完成或取消後再匯出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already exporting %@. Export again after it finishes or is cancelled."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导出 %@，完成或取消后再导出。"
+          }
+        }
+      }
+    },
+    "正在取消…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelling…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在取消…"
           }
         }
       }

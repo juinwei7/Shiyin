@@ -98,8 +98,9 @@ enum MeetingPackage {
             }
             try encoder.encode(entries).write(to: dir.appendingPathComponent("documents.json"))
         }
-        try? FileManager.default.removeItem(at: url)
+        // 先看取消再刪：存檔時選了取代的原本那份，取消時還在（R120.2）
         try Task.checkCancellation()
+        try? FileManager.default.removeItem(at: url)
         progress?(0.1)
         let total = folderSize(dir)
         try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path], watching: url) { written in

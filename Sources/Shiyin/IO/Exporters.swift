@@ -458,6 +458,7 @@ enum AudioExporter {
     static func export(_ b: ExportBundle, format: String, to url: URL, progress: ((Double) -> Void)? = nil) async throws {
         guard b.meeting.hasAudio else { throw ExportError.noAudio }
         let source = b.meeting.audioURL
+        try Task.checkCancellation()   // 先看取消再刪：存檔時選了取代的原本那份，取消時還在（R120.2）
         try? FileManager.default.removeItem(at: url)
         // 「麥克風＋電腦聲音」的錄音（design §49.1、R73.2）：m4a 兩個聲道混在一起、wav 混成單聲道，原檔是同一種格式也要重新轉
         let both = b.meeting.channels == "both"

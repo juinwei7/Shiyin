@@ -19,8 +19,10 @@ public interface IExportPlatform
     /// <summary>心智圖（M§42.4、design-windows §11.10）：PNG 是 2 倍、PDF 一頁跟圖一樣大</summary>
     Task MindMapPng(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
     Task MindMapPdf(Notes.MindMap.Layout layout, MeetingLanguage language, string path, CancellationToken cancel);
-    /// <summary>錄音轉成 m4a 或 wav（同格式時直接複製）</summary>
-    /// <summary>mixChannels：「麥克風＋電腦聲音」的錄音，m4a 兩個聲道混在一起（R73.2）</summary>
+    /// <summary>
+    /// 錄音轉成 m4a 或 wav（同格式時直接複製）。mixChannels：「麥克風＋電腦聲音」的錄音，m4a 兩個聲道混在一起（R73.2）；
+    /// progress：完成的比例（R120），直接複製時不回報
+    /// </summary>
     Task Audio(string source, string format, string path, bool mixChannels, IProgress<double>? progress, CancellationToken cancel);
 }
 
@@ -1377,11 +1379,15 @@ public sealed partial class AppController
             Db.Bookmarks(meetingId), meeting.DecodedNotes) { Documents = Db.Documents(meetingId), FolderName = Db.FolderName(meeting.FolderId) };
     }
 
-    /// <summary>寫出檔案；文字格式、封包在背景寫，長會議不卡住畫面（M§21.13）</summary>
-    /// <summary>progress：錄音、封包的完成比例（R120、design-windows §11.53）；取消時刪掉寫到一半的檔案、丟 OperationCanceledException</summary>
+    /// <summary>
+    /// 寫出檔案；文字格式、封包在背景寫，長會議不卡住畫面（M§21.13）。
+    /// progress：錄音、封包的完成比例（R120、design-windows §11.53）。取消時刪掉寫到一半的檔案、丟 OperationCanceledException；
+    /// 存檔時選了取代的原本那份，還沒被換掉（m4a、封包寫暫存檔、最後才換）就留著
+    /// </summary>
     public async Task Export(ExportItem item, string format, bool times, bool speakers, long meetingId, string path, CancellationToken cancel = default,
         IProgress<double>? progress = null)
     {
+        var before = Stamp(path);
         try
         {
             await ExportWork(item, format, times, speakers, meetingId, path, cancel, progress);
@@ -1389,9 +1395,17 @@ public sealed partial class AppController
         }
         catch (OperationCanceledException)
         {
-            try { File.Delete(path); } catch (IOException) { }
+            try { if (File.Exists(path) && Stamp(path) != before) File.Delete(path); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }   // 刪不掉也還是取消，不變成錯誤
             throw;
         }
+    }
+
+    /// <summary>檔案的修改時間和大小：取消時分得出是不是這次寫的</summary>
+    static (DateTime, long)? Stamp(string path)
+    {
+        var file = new FileInfo(path);
+        return file.Exists ? (file.LastWriteTimeUtc, file.Length) : null;
     }
 
     async Task ExportWork(ExportItem item, string format, bool times, bool speakers, long meetingId, string path, CancellationToken cancel,

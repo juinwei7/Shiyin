@@ -7101,6 +7101,23 @@
         }
       }
     },
+    "匯出錄音、整場會議封包時看得到完成的百分比，可以中途取消。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出录音、整场会议文件包时看得到完成的百分比，可以中途取消。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you export a recording or a .shiyin package, you can see how far along it is and cancel partway through."
+          }
+        }
+      }
+    },
     "匿名使用統計": {
       "extractionState": "manual",
       "localizations": {
@@ -16985,6 +17002,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在取得模型列表…"
+          }
+        }
+      }
+    },
+    "正在取消…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在取消…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelling…"
           }
         }
       }

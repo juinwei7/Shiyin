@@ -33,6 +33,16 @@ enum ScreenExport {
         }
     }
 
+    /// 取消匯出時收掉 writeFolder 寫的圖片（R120、design §94）：只刪這次的檔名，資料夾空了才刪資料夾
+    static func removeFolder(_ screens: [MeetingDocument], next url: URL, language: MeetingLanguage) {
+        guard !screens.isEmpty else { return }
+        let folder = url.deletingLastPathComponent().appendingPathComponent(folderName(for: url, language: language), isDirectory: true)
+        for name in fileNames(screens) { try? FileManager.default.removeItem(at: folder.appendingPathComponent(name)) }
+        if (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.isEmpty == true {
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+
     /// HTML 裡圖片的位置標記（一段只有這個字的段落）：簡繁轉換做完才換成圖片，不讓幾 MB 的圖片資料經過轉換
     static func marker(_ index: Int) -> String { String(format: "SHIYINSCREEN%04d", index + 1) }
 

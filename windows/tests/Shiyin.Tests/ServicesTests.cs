@@ -953,6 +953,82 @@ public sealed class ServicesTests : IDisposable
         public void Report(double value) => report(value);
     }
 
+    /// <summary>
+    /// 錄音的修改時間在 1980～2107 年以外（R120 起錄音自己一段一段放進 zip）：照 .NET 的 CreateEntryFromFile 記成 1980-01-01，
+    /// 不丟例外（丟了的話匯出對話框接不到，匯出就無聲無息地不見了）
+    /// </summary>
+    [Fact]
+    public void PackageClampsOddAudioTimestamp()
+    {
+        var original = SampleMeeting();
+        foreach (var year in new[] { 1975, 2110 })
+        {
+            File.SetLastWriteTime(paths.AudioPath(original), new DateTime(year, 6, 1, 12, 0, 0));
+            var file = Path.Combine(home.Path, $"{year}.shiyin");
+            MeetingPackage.Export(Bundle(original), file, paths, "5.3.0");
+            using var zip = ZipFile.OpenRead(file);
+            Assert.Equal(new DateTime(1980, 1, 1), zip.GetEntry("audio.wav")!.LastWriteTime.DateTime);
+        }
+        // 範圍內的照原本的時間（zip 只記到 2 秒）
+        File.SetLastWriteTime(paths.AudioPath(original), new DateTime(2026, 11, 27, 9, 30, 10));
+        var normal = Path.Combine(home.Path, "2026.shiyin");
+        MeetingPackage.Export(Bundle(original), normal, paths, "5.3.0");
+        using (var zip = ZipFile.OpenRead(normal))
+            Assert.Equal(new DateTime(2026, 11, 27, 9, 30, 10), zip.GetEntry("audio.wav")!.LastWriteTime.DateTime);
+    }
+
+    /// <summary>
+    /// 側欄下方匯出那一條的規則（R120、design-windows §11.53）：同時只有一個；上一次晚到的進度、結束不動這一次；
+    /// 只往前、變了 1% 以上或過了 0.2 秒才更新；按了取消換成「正在取消…」、之後的進度不算
+    /// </summary>
+    [Fact]
+    public void ExportProgressRules()
+    {
+        var time = new DateTime(2026, 11, 27, 9, 0, 0, DateTimeKind.Utc);
+        var exports = new ExportProgress(() => time);
+        using var firstCancel = new CancellationTokenSource();
+        var first = exports.TryStart("週會.m4a", firstCancel)!;
+        Assert.Equal("正在匯出 週會.m4a…", ExportProgress.Status(first));
+        // 第二個匯出：擋下來，目前的不變
+        using var otherCancel = new CancellationTokenSource();
+        Assert.Null(exports.TryStart("另一場.wav", otherCancel));
+        Assert.Same(first, exports.Current);
+
+        Assert.True(exports.Report(first.Id, 0.452));
+        Assert.Equal("正在匯出 週會.m4a… 45%", ExportProgress.Status(first));
+        Assert.False(exports.Report(first.Id, 0.455));   // 不到 1%、不到 0.2 秒
+        Assert.False(exports.Report(first.Id, 0.3));     // 往回的不算
+        Assert.Equal(0.452, first.Value);
+        time = time.AddSeconds(0.3);
+        Assert.True(exports.Report(first.Id, 0.455));    // 過了 0.2 秒
+        Assert.True(exports.Report(first.Id, 1.5));
+        Assert.Equal(1.0, first.Value);
+
+        // 取消：只取消一次，字換成「正在取消…」，之後的進度不算；還沒停下來前不能開始下一個
+        Assert.True(exports.Cancel(first.Id));
+        Assert.True(firstCancel.IsCancellationRequested);
+        Assert.False(exports.Cancel(first.Id));
+        Assert.Equal("正在取消…", ExportProgress.Status(first));
+        Assert.False(exports.Report(first.Id, 1));
+        Assert.Null(exports.TryStart("另一場.wav", otherCancel));
+        Assert.True(exports.End(first.Id));
+        Assert.Null(exports.Current);
+
+        // 下一次：編號不同，上一次晚到的進度、結束都不算
+        using var secondCancel = new CancellationTokenSource();
+        var second = exports.TryStart("另一場.wav", secondCancel)!;
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.False(exports.Report(first.Id, 0.9));
+        Assert.Null(second.Value);
+        Assert.False(exports.Cancel(first.Id));
+        Assert.False(secondCancel.IsCancellationRequested);
+        Assert.False(exports.End(first.Id));
+        Assert.Same(second, exports.Current);
+        Assert.True(exports.Report(second.Id, 0.05));
+        Assert.Equal("正在匯出 另一場.wav… 5%", ExportProgress.Status(second));
+        Assert.True(exports.End(second.Id));
+    }
+
     [Fact]
     public void PackageRoundTrip()
     {

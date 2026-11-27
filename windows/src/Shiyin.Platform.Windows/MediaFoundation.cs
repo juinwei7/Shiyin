@@ -273,11 +273,10 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
             : new WaveFormat(f.SampleRate, f.BitsPerSample, f.Channels);
     }
 
-    /// <summary>取消時讓編碼器讀到檔案結尾</summary>
     /// <summary>照原檔長度估的位元組數（壓縮讀的是重新取樣後的 PCM）</summary>
     static long Expected(TimeSpan duration, WaveFormat format) => (long)(duration.TotalSeconds * format.AverageBytesPerSecond);
 
-    /// <summary>取消時讀不到東西（編碼器就停）；progress 有給時照讀了多少 ÷ expected 回報（R120）</summary>
+    /// <summary>取消時讀不到東西，編碼器當成讀到檔案結尾就停；progress 有給時照讀了多少 ÷ expected 回報（R120）</summary>
     sealed class Cancellable(IWaveProvider inner, CancellationToken cancel, IProgress<double>? progress = null, long expected = 0) : IWaveProvider
     {
         long read;
@@ -295,9 +294,8 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
     /// <summary>
     /// 匯出錄音（R7.2）：m4a 是 m4a 時直接複製；wav 解碼成 16 kHz 的 WAV。
     /// mixChannels：「麥克風＋電腦聲音」的錄音（R73.2、design-windows §11.16）：m4a 混成單聲道再壓縮、wav 解碼成單聲道，
-    /// 原檔是同一種格式也一樣
+    /// 原檔是同一種格式也一樣。progress：完成的比例（R120、design-windows §11.53），直接複製時不回報
     /// </summary>
-    /// <summary>progress：完成的比例（R120、design-windows §11.53）；同格式直接複製時不回報</summary>
     public async Task Export(string source, string format, string destination, CancellationToken cancel, bool mixChannels = false,
         IProgress<double>? progress = null)
     {
@@ -307,14 +305,15 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
         if (format == "m4a" && ext == "wav") { await Compress(source, destination, cancel, progress); progress?.Report(1); return; }
         if (format == "m4a")
         {
-            // 其他格式（匯入的 mp3、mp4…）：先解碼成 WAV 再壓縮
+            // 其他格式（匯入的 mp3、mp4…）：先解碼成 WAV 再壓縮；進度：解碼、寫暫存檔 0～40%，壓縮 40～100%
             var temp = destination + ".tmp.wav";
             try
             {
-                await Export(source, "wav", temp, cancel);
-                await Compress(temp, destination, cancel);
+                await Export(source, "wav", temp, cancel, progress: Scaled(progress, 0, 0.4));
+                await Compress(temp, destination, cancel, Scaled(progress, 0.4, 1));
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
+            progress?.Report(1);
             return;
         }
         if (format == "wav")
@@ -329,6 +328,15 @@ public sealed class MediaFoundationCompressor : IAudioCompressor
             return;
         }
         throw new IOException(L.T("不支援這個音訊格式"));
+    }
+
+    /// <summary>分兩段做時，一段的 0～1 換成整體的 from～to</summary>
+    static IProgress<double>? Scaled(IProgress<double>? progress, double from, double to) =>
+        progress is null ? null : new Relay(v => progress.Report(from + (to - from) * v));
+
+    sealed class Relay(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
     }
 
     /// <summary>讀原檔、兩個聲道混成單聲道（ChannelMix），照壓縮的做法升頻到 48 kHz、AAC</summary>

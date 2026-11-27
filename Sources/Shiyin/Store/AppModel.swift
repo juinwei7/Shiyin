@@ -2163,26 +2163,31 @@ final class AppModel {
                             documents: d.documents, screens: d.screens, folderName: folderName(d.meeting.folderId))
     }
 
-    /// 寫出檔案
+    /// 寫出檔案。
     /// progress：完成的比例（R120、design §94），只有錄音、封包會回報，在背景的執行緒呼叫。
-    /// 取消（Task.cancel）時刪掉寫到一半的檔案，丟 CancellationError
+    /// 取消（Task.cancel）時刪掉寫到一半的檔案（md 連同旁邊的畫面資料夾），丟 CancellationError
     func export(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL,
                 progress: (@Sendable (Double) -> Void)? = nil) async throws {
+        let b = try exportBundle(meetingId: meetingId)
+        let before = ExportFileStamp(url)
         do {
-            try await exportItem(item, format: format, times: times, speakers: speakers, meetingId: meetingId, to: url, progress: progress)
+            try await exportItem(item, b, format: format, times: times, speakers: speakers, to: url, progress: progress)
             try Task.checkCancellation()
         } catch {
             if error is CancellationError || Task.isCancelled {
-                try? FileManager.default.removeItem(at: url)
+                // 這次寫的才刪：存檔時選了取代的原本那份還沒被換掉（例如封包還在複製錄音）就留著
+                if ExportFileStamp(url) != before { try? FileManager.default.removeItem(at: url) }
+                if format == "md" && (item == .notes || item == .transcript) {
+                    ScreenExport.removeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
+                }
                 throw CancellationError()
             }
             throw error
         }
     }
 
-    private func exportItem(_ item: ExportItem, format: String, times: Bool, speakers: Bool, meetingId: Int64, to url: URL,
+    private func exportItem(_ item: ExportItem, _ b: ExportBundle, format: String, times: Bool, speakers: Bool, to url: URL,
                             progress: (@Sendable (Double) -> Void)?) async throws {
-        let b = try exportBundle(meetingId: meetingId)
         switch item {
         case .notes:
             // 會議中的畫面（design §83.6）：最後一節；沒有畫面時跟以前一字不差
@@ -2225,6 +2230,17 @@ final class AppModel {
             // 在背景的 Task 裡做：外面取消時把取消傳進去（ditto 會被停掉）
             let work = Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url, progress: progress) }
             try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+        }
+    }
+
+    /// 檔案的修改時間和大小：匯出取消時分得出是不是這次寫的（R120.2）
+    private struct ExportFileStamp: Equatable {
+        let date: Date?
+        let size: Int64?
+        init?(_ url: URL) {
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path) else { return nil }
+            date = attributes[.modificationDate] as? Date
+            size = (attributes[.size] as? NSNumber)?.int64Value
         }
     }
 

@@ -1862,47 +1862,76 @@ public sealed class MainWindow : Window
 
     // MARK: 匯出的進度、取消（R120、design-windows §11.53）
 
-    (string Name, CancellationTokenSource Cancel, TextBlock Text, ProgressBar Bar, double? Value, DateTime Updated)? exporting;
+    readonly ExportProgress exports = new();
+    /// <summary>
+    /// 側欄下方匯出的那一條：開始時建一次，之後只換字和進度。BuildFooter 每次都重建其他提示，這一條也重建的話
+    /// 字和進度條還在舊的 Row 裡，放進新的會丟 0x800F1000（同錄音的音量條、提問的輸入框）
+    /// </summary>
+    (FrameworkElement Row, TextBlock Text, ProgressBar Bar, HyperlinkButton Cancel)? exportRow;
 
-    /// <summary>開始匯出：側欄下方常駐「正在匯出 … 45%」、進度條、「取消」；回傳給匯出用的回報（在背景呼叫也可以）</summary>
-    public IProgress<double> StartExport(string name, CancellationTokenSource cancel)
+    /// <summary>正在匯出的檔名；沒有在匯出時是 null（匯出對話框用來擋第二個匯出）</summary>
+    public string? ExportingName => exports.Current?.Name;
+
+    /// <summary>
+    /// 開始匯出：側欄下方常駐「正在匯出 週會.m4a… 45%」、「取消」、進度條。回傳給匯出用的回報（在背景呼叫也可以），
+    /// 用完 Dispose 拿掉那一條；已經有一個在匯出時回傳 null
+    /// </summary>
+    public ExportHandle? StartExport(string name, CancellationTokenSource cancel)
     {
-        exporting = (name, cancel, Ui.Text(L.F("正在匯出 %@…", name), 12, color: Ui.Secondary, maxLines: 1),
-            new ProgressBar { Maximum = 1, IsIndeterminate = true }, null, DateTime.MinValue);
+        if (exports.TryStart(name, cancel) is not { } run) return null;
+        var text = Ui.Text(ExportProgress.Status(run), 12, color: Ui.Secondary, wrap: false);
+        text.VerticalAlignment = VerticalAlignment.Center;
+        var link = Ui.Link(L.T("取消"), () => CancelExport(run.Id));
+        // 檔名長的時候字變成「…」，「取消」一直在右邊、不會被擠出側欄，也不會跟著百分比移動
+        var line = new Grid { ColumnSpacing = 8 };
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(link, 1);
+        line.Children.Add(text);
+        line.Children.Add(link);
+        var bar = new ProgressBar { Maximum = 1, IsIndeterminate = true };
+        exportRow = (Ui.Column(2, line, bar), text, bar, link);
         BuildFooter();
-        return new ExportReporter(this);
+        return new ExportHandle(this, run.Id);
     }
 
-    public void EndExport()
+    void ReportExport(long id, double value)
     {
-        exporting = null;
+        if (!exports.Report(id, value) || exportRow is not { } row || exports.Current is not { } run) return;
+        row.Bar.IsIndeterminate = false;
+        row.Bar.Value = run.Value ?? 0;
+        row.Text.Text = ExportProgress.Status(run);
+    }
+
+    void CancelExport(long id)
+    {
+        if (!exports.Cancel(id) || exportRow is not { } row || exports.Current is not { } run) return;
+        row.Text.Text = ExportProgress.Status(run);
+        row.Bar.IsIndeterminate = true;
+        row.Cancel.IsEnabled = false;
+    }
+
+    void EndExport(long id)
+    {
+        if (!exports.End(id)) return;
+        exportRow = null;
         BuildFooter();
     }
 
-    /// <summary>百分比變了 1% 以上、或離上次超過 0.2 秒才更新畫面；只往前</summary>
-    void ReportExport(double value)
+    /// <summary>一次匯出的回報：進度排回 UI 執行緒；Dispose（在 UI 執行緒）拿掉側欄下方那一條</summary>
+    public sealed class ExportHandle(MainWindow window, long id) : IProgress<double>, IDisposable
     {
-        if (exporting is not { } e) return;
-        var v = Math.Min(1, Math.Max(e.Value ?? 0, value));
-        if (e.Value is double old && v - old < 0.01 && (DateTime.UtcNow - e.Updated).TotalSeconds < 0.2) return;
-        exporting = e with { Value = v, Updated = DateTime.UtcNow };
-        e.Bar.IsIndeterminate = false;
-        e.Bar.Value = v;
-        e.Text.Text = L.F("正在匯出 %@… %lld%%", e.Name, (long)Math.Floor(v * 100));
-    }
-
-    sealed class ExportReporter(MainWindow window) : IProgress<double>
-    {
-        public void Report(double value) => window.host.Post(() => window.ReportExport(value));
+        public void Report(double value) => window.host.Post(() => window.ReportExport(id, value));
+        public void Dispose() => window.EndExport(id);
     }
 
     void BuildFooter()
     {
         footer.Children.Clear();
-        if (exporting is { } export)
+        if (exportRow is { } export)
         {
-            var cancel = Ui.Link(L.T("取消"), () => export.Cancel.Cancel());
-            footer.Children.Add(Ui.Column(2, Ui.Row(8, export.Text, cancel), export.Bar));
+            if (export.Row.Parent is Panel old) old.Children.Remove(export.Row);
+            footer.Children.Add(export.Row);
         }
         if (host.Controller.ImportingCount > 0)
             footer.Children.Add(Ui.Row(8, new ProgressRing { Width = 16, Height = 16, IsActive = true },

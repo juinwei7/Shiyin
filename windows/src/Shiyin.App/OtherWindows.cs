@@ -404,6 +404,8 @@ public static class OtherWindows
             // 分享畫面時藏起拾音的視窗（R77.2、design-windows §11.19）
             L.T("「設定 → 一般」的「分享畫面時藏起拾音的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到拾音，截圖、螢幕錄影也拍不到。"),
             L.T("開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音；會議好像結束時提醒停止。"),
+            // 匯出的進度（R120、design-windows §11.53）
+            L.T("匯出錄音、整場會議封包時，側欄下方看得到完成的百分比，可以中途取消。"),
             L.T("遇到問題，可以從設定的「檢查與更新」選「回報問題…」，會附上版本和環境（不含會議內容）。")));
         // 會議的參考文件（M§39.6、R61.10）
         column.Children.Add(Section(L.T("會議的參考文件"),

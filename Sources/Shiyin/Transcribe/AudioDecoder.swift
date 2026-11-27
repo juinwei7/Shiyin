@@ -22,23 +22,18 @@ enum AudioDecoder {
     }
 
     /// 保留聲道解碼（design §17.3）：雙聲道錄音的麥克風、電腦聲音分開轉錄用。每個聲道一個陣列；單聲道的檔案回傳一個
-    static func decodeChannels(_ url: URL, progress: ((Double) -> Void)? = nil) async throws -> [[Float]] {
+    static func decodeChannels(_ url: URL) async throws -> [[Float]] {
         let asset = AVURLAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw AudioDecoderError.noAudioTrack }
         let formats = try await track.load(.formatDescriptions)
         let count = formats.first.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee.mChannelsPerFrame }
             .map(Int.init) ?? 1
-        guard count > 1 else { return [try await decode(url, progress: progress)] }
-        let interleaved = try await read(url, channels: count, progress: progress)
+        guard count > 1 else { return [try await decode(url)] }
+        let interleaved = try await read(url, channels: count)
         var channels = [[Float]](repeating: [], count: count)
         for c in 0..<count { channels[c].reserveCapacity(interleaved.count / count) }
         for (i, sample) in interleaved.enumerated() { channels[i % count].append(sample) }
         return channels
-    }
-
-    /// 解碼成 16 kHz、交錯排列（左右左右…）的 Float32，不拆成各聲道（匯出時直接拿來混音，省一次複製，design §94）
-    static func decodeInterleaved(_ url: URL, channels: Int, progress: ((Double) -> Void)? = nil) async throws -> [Float] {
-        try await read(url, channels: channels, progress: progress)
     }
 
     /// 解碼成 16 kHz Float32；channels 大於 1 時是交錯排列（左右左右…）

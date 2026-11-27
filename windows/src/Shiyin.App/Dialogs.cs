@@ -181,6 +181,8 @@ public static partial class Dialogs
     public static async Task Export(MainWindow window, long meetingId)
     {
         if (window.XamlRoot is null) return;
+        // 同時只匯出一個（R120、design-windows §11.53）：進度、取消都在側欄下方同一條
+        if (window.ExportingName is { } running) { window.ShowNotice(ExportBusy(running)); return; }
         var host = AppHost.Current;
         ExportBundle bundle;
         try { bundle = host.Controller.Bundle(meetingId); }
@@ -256,24 +258,28 @@ public static partial class Dialogs
                 if (await picker.PickSaveFileAsync() is not { } file) return;
                 // 匯出的進度、取消（R120、design-windows §11.53）：側欄下方常駐一條，做完換成「已匯出 …」
                 using var cancel = new CancellationTokenSource();
-                var progress = window.StartExport(file.Name, cancel);
-                try
+                if (window.StartExport(file.Name, cancel) is not { } progress) { window.ShowNotice(ExportBusy(window.ExportingName ?? "")); return; }
+                using (progress)
                 {
-                    await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, file.Path, cancel.Token, progress: progress);
-                    window.ShowNotice(L.F("已匯出 %@", file.Name));
+                    try
+                    {
+                        await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, file.Path, cancel.Token, progress);
+                        window.ShowNotice(L.F("已匯出 %@", file.Name));
+                    }
+                    catch (OperationCanceledException) { }   // 取消了：不是錯誤
                 }
-                catch (OperationCanceledException) { }   // 取消了：不是錯誤
-                finally { window.EndExport(); }
             }
             else
             {
                 var dir = host.Paths.MakeTempDirectory();
                 var path = Path.Combine(dir, filename);
                 using var cancel = new CancellationTokenSource();
-                var progress = window.StartExport(filename, cancel);
-                try { await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, path, cancel.Token, progress: progress); }
-                catch (OperationCanceledException) { return; }
-                finally { window.EndExport(); }
+                if (window.StartExport(filename, cancel) is not { } progress) { window.ShowNotice(ExportBusy(window.ExportingName ?? "")); return; }
+                using (progress)
+                {
+                    try { await host.Controller.Export(item, format, withTimes, withSpeakers, meetingId, path, cancel.Token, progress); }
+                    catch (OperationCanceledException) { return; }
+                }
                 await Share.File(window, path, bundle.Meeting.DisplayTitle);
             }
         }
@@ -282,6 +288,8 @@ public static partial class Dialogs
             window.ShowError(e.Message);
         }
     }
+
+    static string ExportBusy(string running) => L.F("正在匯出 %@，完成或取消後再匯出。", running);
 
     // MARK: 重新辨識說話者（M§23.4、R22）
 

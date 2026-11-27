@@ -11,9 +11,12 @@ struct ExportSheet: View {
     @State private var times = true
     @State private var speakers = true
     @State private var working = false
-    /// 匯出的進度（R120、design §94）：錄音、封包才有百分比；進行中的匯出，按「取消」就停下來
+    /// 匯出的進度（R120、design §94）：錄音、封包才有百分比
     @State private var meter = ExportMeter()
+    /// 進行中的匯出：「取消匯出」、Esc 停下來留在對話框；✕、其他方式關掉對話框時也停下來（onDisappear）
     @State private var exportTask: Task<Void, Never>?
+    /// 按了「取消匯出」、還在收尾（停掉轉檔、刪掉寫到一半的檔案）
+    @State private var cancelling = false
     /// 「分享…」的位置：分享選單（Mail、AirDrop、訊息；R7.5）從按鈕下面打開
     @State private var shareAnchor = MenuAnchorBox()
     /// 打開時那一場會議的資料（design §20.9）：對話框開著時選取的會議換了也不變
@@ -36,42 +39,42 @@ struct ExportSheet: View {
                         .disabled(item.formats.count == 1)
                 }
             }
+            .disabled(working)
             if item == .transcript {
                 HStack(spacing: 18) {
                     Toggle("包含時間點", isOn: $times).disabled(format == "srt" || format == "vtt")
                     Toggle("包含說話者", isOn: $speakers)
                 }
                 .toggleStyle(.checkbox)
+                .disabled(working)
             }
+            // 匯出中：說明這一行換成進度（自己一行，在按鈕上面）。說明照樣排版、只是看不到，進度疊在上面（overlay 不佔位置），
+            // 對話框不會變高、跳動
             Text(hint)
                 .font(.callout)
                 .foregroundStyle(item == .notes && !hasNotes ? Color.signal : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(working ? 0 : 1)
+                .accessibilityHidden(working)
+                .overlay(alignment: .leading) { if working { progressRow } }
             HStack {
                 Button("分享…") { exportTask = Task { await share() } }
                     .buttonStyle(SheetPillButtonStyle(.secondary))
                     .background(MenuAnchor(box: shareAnchor))
                     .disabled(working)
-                if working {
-                    if let value = meter.value {
-                        ProgressView(value: value).frame(width: 90)
-                        Text("正在匯出… \(Int((value * 100).rounded(.down)))%").foregroundStyle(.secondary).monospacedDigit()
-                    } else {
-                        ProgressView().controlSize(.small)
-                        Text("正在匯出…").foregroundStyle(.secondary)
-                    }
-                    // 停下來、刪掉寫到一半的檔案，留在對話框裡可以重來（R120.2）
-                    Button("取消匯出") { exportTask?.cancel() }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color.celadon)
-                }
                 Spacer()
-                Button("取消") {
-                    exportTask?.cancel()   // 匯出中按「取消」：取消匯出再關掉
-                    dismiss()
+                // 匯出中只有一個取消：停下來、刪掉寫到一半的檔案，留在對話框裡可以重來（R120.2）
+                if working {
+                    Button("取消匯出") { cancelExport() }
+                        .buttonStyle(SheetPillButtonStyle(.secondary))
+                        .keyboardShortcut(.cancelAction)
+                        .disabled(cancelling)
+                } else {
+                    Button("取消") { dismiss() }
+                        .buttonStyle(SheetPillButtonStyle(.secondary))
+                        .keyboardShortcut(.cancelAction)
                 }
-                    .buttonStyle(SheetPillButtonStyle(.secondary))
-                    .keyboardShortcut(.cancelAction)
                 Button("存檔…") { exportTask = Task { await save() } }
                     .buttonStyle(SheetPillButtonStyle(.primary))
                     .keyboardShortcut(.defaultAction)
@@ -79,12 +82,54 @@ struct ExportSheet: View {
             }
         }
         .sheetChrome(width: 480)
-        .onChange(of: item) { _, newValue in format = newValue.formats[0] }
+        .onChange(of: item) { _, newValue in
+            format = newValue.formats[0]
+            #if DEBUG
+            if let (debugItem, debugFormat) = Self.debugChoice, debugItem == newValue { format = debugFormat }
+            #endif
+        }
         // 還沒有會議紀錄（整理中或整理失敗）時，預設改匯出逐字稿（使用者回報：匯出的會議紀錄只有標題）
         .onAppear {
             bundle = model.exportMeetingId.flatMap { try? model.exportBundle(meetingId: $0) }
             if !hasNotes { item = .transcript }
+            #if DEBUG
+            if let (debugItem, debugFormat) = Self.debugChoice { item = debugItem; format = debugFormat }
+            #endif
         }
+        // 匯出中關掉對話框（✕ 或其他方式，design §94）：先取消，不在看不到的地方繼續寫
+        .onDisappear { exportTask?.cancel() }
+    }
+
+    /// 進度：錄音、封包有百分比和進度條，其他項目是不定進度（通常一兩秒）
+    private var progressRow: some View {
+        HStack(spacing: 12) {
+            Group {
+                if cancelling {
+                    Text("正在取消…")
+                } else if let value = meter.value {
+                    Text("正在匯出… \(Int((value * 100).rounded(.down)))%")
+                } else {
+                    Text("正在匯出…")
+                }
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .lineLimit(1)
+            .fixedSize()
+            if let value = meter.value, !cancelling {
+                ProgressView(value: value).tint(.signal)
+            } else {
+                ProgressView().progressViewStyle(.linear)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func cancelExport() {
+        cancelling = true
+        meter.stop()
+        exportTask?.cancel()
     }
 
     private var hasNotes: Bool { bundle?.notes != nil }
@@ -116,16 +161,13 @@ struct ExportSheet: View {
     }
 
     private func save() async {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = model.suggestedFilename(item, format: format, meeting: bundle?.meeting)
-        if let type = UTType(filenameExtension: format) { panel.allowedContentTypes = [type] }
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = pickDestination() else { return }
         working = true
-        meter.reset()
-        defer { working = false; exportTask = nil }
+        let progress = meter.start()
+        defer { working = false; cancelling = false; exportTask = nil }
         do {
             try await model.export(item, format: format, times: times, speakers: speakers, meetingId: try meetingId(), to: url,
-                                   progress: meter.reporter)
+                                   progress: progress)
             model.noticeMessage = String(localized: "已匯出 \(url.lastPathComponent)")
             dismiss()
         } catch is CancellationError {
@@ -133,6 +175,17 @@ struct ExportSheet: View {
         } catch {
             model.errorMessage = error.localizedDescription
         }
+    }
+
+    /// 存檔面板（DEBUG 的 exportsheet 給了路徑時不開面板）
+    private func pickDestination() -> URL? {
+        #if DEBUG
+        if let url = Self.debugSaveURL { return url }
+        #endif
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = model.suggestedFilename(item, format: format, meeting: bundle?.meeting)
+        if let type = UTType(filenameExtension: format) { panel.allowedContentTypes = [type] }
+        return panel.runModal() == .OK ? panel.url : nil
     }
 
     private func share() async {
@@ -144,11 +197,11 @@ struct ExportSheet: View {
         guard let dir = try? Paths.makeTempDirectory() else { return nil }
         let url = dir.appendingPathComponent(model.suggestedFilename(item, format: format, meeting: bundle?.meeting))
         working = true
-        meter.reset()
-        defer { working = false; exportTask = nil }
+        let progress = meter.start()
+        defer { working = false; cancelling = false; exportTask = nil }
         do {
             try await model.export(item, format: format, times: times, speakers: speakers, meetingId: try meetingId(), to: url,
-                                   progress: meter.reporter)
+                                   progress: progress)
             return url
         } catch is CancellationError {
             return nil
@@ -159,27 +212,42 @@ struct ExportSheet: View {
     }
 }
 
-/// 匯出的進度（R120、design §94）：背景回報的比例換到主執行緒，變了 1% 以上、或離上次超過 0.2 秒才更新畫面
+/// 匯出的進度（R120、design §94）：背景回報的比例換到主執行緒，變了 1% 以上、或離上次超過 0.2 秒才更新畫面；只往前。
+/// 每一次匯出有自己的編號：上一次（取消了、做完了）晚到的回報不會動到這一次的進度條
 @MainActor
 @Observable
 final class ExportMeter {
     private(set) var value: Double?
     @ObservationIgnored private var updated = Date.distantPast
+    @ObservationIgnored private var generation = 0
 
-    func reset() {
+    /// 開始新的一次：歸零，回傳給這一次匯出用的回報（任何執行緒都可以呼叫）
+    func start() -> @Sendable (Double) -> Void {
+        generation += 1
         value = nil
         updated = .distantPast
+        let current = generation
+        return { [weak self] p in Task { @MainActor in self?.report(p, generation: current) } }
     }
 
-    /// 給匯出用的回報（任何執行緒都可以呼叫）
-    var reporter: @Sendable (Double) -> Void {
-        { [weak self] p in Task { @MainActor in self?.report(p) } }
+    /// 取消了：之後才到的回報都不算
+    func stop() {
+        generation += 1
     }
 
-    private func report(_ p: Double) {
-        let p = min(1, max(value ?? 0, p))   // 只往前
+    private func report(_ p: Double, generation: Int) {
+        guard generation == self.generation else { return }
+        let p = min(1, max(value ?? 0, p))
         guard value.map({ p - $0 >= 0.01 || Date().timeIntervalSince(updated) >= 0.2 }) ?? true else { return }
         value = p
         updated = Date()
     }
 }
+
+#if DEBUG
+extension ExportSheet {
+    /// DEBUG（exportsheet）：打開時選好的項目、格式；存檔不開存檔面板、直接寫到這裡（截匯出中的畫面、驗 ✕ 取消用）
+    nonisolated(unsafe) static var debugChoice: (ExportItem, String)?
+    nonisolated(unsafe) static var debugSaveURL: URL?
+}
+#endif
