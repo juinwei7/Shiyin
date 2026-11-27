@@ -9,7 +9,8 @@ ROOT="$(pwd)"
 BUNDLE_ID="com.weiwei.shiyin"
 # 建置暫存和 .app 都不放專案資料夾：桌面有 iCloud 同步，除了會上傳幾百 MB，
 # iCloud 加在檔案上的延伸屬性也會讓 codesign 失敗。專案裡的 build 是指過去的捷徑。
-SCRATCH="$HOME/Library/Caches/ShiyinBuild"
+# 好幾個工作同時建置時用 SHIYIN_SCRATCH 分開（例如 ~/Library/Caches/ShiyinBuild-<分支>），不會結束別人的測試版
+SCRATCH="${SHIYIN_SCRATCH:-$HOME/Library/Caches/ShiyinBuild}"
 APP="$SCRATCH/app/Shiyin.app"
 CONFIG="release"
 [ "${1:-}" = "--debug" ] && CONFIG="debug"

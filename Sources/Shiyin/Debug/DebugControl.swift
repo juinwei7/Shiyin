@@ -11,7 +11,9 @@ import UserNotifications
 /// 用 scripts/dev/shiyinctl 送指令；結果寫到指令指定的檔案。正式版（release）不會編進這段程式。
 @MainActor
 enum DebugControl {
-    static let notificationName = Notification.Name("com.weiwei.shiyin.debug")
+    /// 啟動時帶 SHIYIN_DEBUG_CHANNEL 就只收同一個值的 shiyinctl（好幾個測試版同時開著時分開）
+    static let notificationName = Notification.Name(ProcessInfo.processInfo.environment["SHIYIN_DEBUG_CHANNEL"]
+        .map { "com.weiwei.shiyin.debug." + $0 } ?? "com.weiwei.shiyin.debug")
     static let separator: Character = "\u{1F}"
     /// quit 指令：結束時不跳確認對話框，直接當成按了「結束」
     static var confirmQuit = false

@@ -8,7 +8,9 @@ guard !args.isEmpty else {
     FileHandle.standardError.write(Data("用法：shiyinctl <指令> [參數…]\n".utf8))
     exit(1)
 }
+// SHIYIN_DEBUG_CHANNEL：只送給用同一個值啟動的 DEBUG 版（好幾個測試版同時開著時分開）
+let channel = ProcessInfo.processInfo.environment["SHIYIN_DEBUG_CHANNEL"].map { "com.weiwei.shiyin.debug." + $0 } ?? "com.weiwei.shiyin.debug"
 DistributedNotificationCenter.default().postNotificationName(
-    Notification.Name("com.weiwei.shiyin.debug"), object: args.joined(separator: "\u{1F}"),
+    Notification.Name(channel), object: args.joined(separator: "\u{1F}"),
     userInfo: nil, deliverImmediately: true)
 RunLoop.current.run(until: Date().addingTimeInterval(0.2))
