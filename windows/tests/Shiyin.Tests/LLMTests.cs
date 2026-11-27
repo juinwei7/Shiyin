@@ -611,6 +611,15 @@ public sealed class LLMTests : IDisposable
                 Assert.Equal((kind, summary, message), (e.Kind, e.LogSummary, e.Message));
             }
 
+            // 取消（逾時也一樣）：沒有 result 那一行，靠第一行的 conversation_id 照樣刪掉這次的對話
+            await File.WriteAllTextAsync(Path.Combine(data, "conversations", id + ".db"), "x");
+            Directory.CreateDirectory(Path.Combine(data, "brain", id));
+            var hanging = await Agy("echo '{\"event\":\"step_update\",\"step_update\":{\"conversation_id\":\"" + id + "\",\"state\":\"ACTIVE\"}}'\nsleep 30");
+            using (var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => hanging.Generate(LLMProvider.Antigravity, "", "S", "P", cancel.Token));
+            Assert.False(File.Exists(Path.Combine(data, "conversations", id + ".db")));
+            Assert.False(Directory.Exists(Path.Combine(data, "brain", id)));
+
             // 模型清單：agy models；沒登入（結束代碼 1）是空的
             var models = await Agy("printf 'gemini-4-hydrogen-high\\tGemini 4 Hydrogen High\\nclaude-sonnet-4-6\\tClaude Sonnet 4.6\\n'");
             Assert.Equal(["gemini-4-hydrogen-high", "claude-sonnet-4-6"], await models.ListModels(LLMProvider.Antigravity, CancellationToken.None));

@@ -76,7 +76,8 @@ public static class CliLogin
                 // agy 沒有查登入的子指令：用 agy models（不花額度）。沒登入時結束代碼 1、「Please sign in to view available models」（M§95.3）
                 var r = await runner.Run(tool, ["models"], null, Path.GetTempPath(), TimeSpan.FromSeconds(20), CancellationToken.None);
                 if (AgyCli.Models(r.Stdout).Count > 0) return new Status(true, "");
-                return LLMException.IsLoginProblem(r.StderrTail(500)) ? new Status(false, "") : null;
+                // stdout、stderr 都看（同 codex）：哪一版印到哪邊不一定
+                return LLMException.IsLoginProblem(r.Stdout + "\n" + r.StderrTail(500)) ? new Status(false, "") : null;
             }
             var result = await runner.Run(tool, ["login", "status"], null, Path.GetTempPath(), TimeSpan.FromSeconds(20), CancellationToken.None);
             // codex 把狀態印在 stdout 或 stderr，兩個都看

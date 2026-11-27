@@ -3264,7 +3264,8 @@ Windows 的做法在 design-windows §11.53。
   - 錄音同格式直接複製時不回報（很快）。
 - 取消：匯出在一個 `Task` 裡跑，取消就 `cancel()`。
   - `AVAssetExportSession.export` 本身會跟著取消；解碼的迴圈、寫檔的迴圈、`ditto` 的等待每一輪看 `Task.isCancelled`，`ditto` 用 `terminate()` 停掉。
-  - 丟 `CancellationError`；`AppModel.export` 收到時刪掉寫到一半的輸出檔（md 連同旁邊的畫面資料夾：只刪這次寫的圖片，資料夾空了才刪，§83.6）再往外丟，`ExportSheet` 收到時什麼都不顯示（不是錯誤）。
+  - 錄音、封包先寫到同一個資料夾的隱藏暫存檔（`ExportFile.replacing`：`.<檔名>-<8 碼>.<副檔名>`），寫完才用 `replaceItemAt` 換掉目的地；取消、失敗時刪掉暫存檔，存檔時選了取代的原本那份照樣在（R120.2）。
+  - 丟 `CancellationError`；`AppModel.export` 收到時，輸出檔跟開始前不一樣（修改時間、大小）才刪（md 連同旁邊的畫面資料夾：只刪這次寫的圖片，資料夾空了才刪，§83.6；md 沒被改過時旁邊的圖片是原本那份的，不動），再往外丟，`ExportSheet` 收到時什麼都不顯示（不是錯誤）。
   - 不會回報百分比的項目（PDF、Word…）寫的時候停不下來，寫完才發現取消了、把檔案刪掉。
 - 畫面（`ExportSheet`，對話框在匯出中一直開著，D206）：
   - 匯出中，說明那一行換成進度：「正在匯出… 45%」加一條進度條（不回報百分比的項目是不定進度、不寫百分比）。說明照樣排版、只是看不到（`opacity`），對話框不會變高、跳動。
@@ -3320,7 +3321,7 @@ Antigravity CLI（`agy`）是 Google 的代理式命令列工具，用使用者�
 ### 95.4 對話紀錄（D204）
 
 - agy 沒有不留紀錄的參數（claude 用 `--no-session-persistence`、codex 用 `--ephemeral`）。每次執行會在 `~/.gemini/antigravity-cli/` 留下：`conversations/<id>.db`（整段對話，一次約 480 KB）、`brain/<id>/`、`conversation_summaries.db` 的一列（標題空白；`preview` 是訊息開頭約 100 字，拾音的訊息開頭是系統提示詞，不是會議內容）、`implicit/` 的一個小檔。
-- 跑完（成功或失敗）照 result 的 `conversation_id` 刪 `conversations/<id>.db` 和 `brain/<id>/`；id 不是 UUID 就不刪。`conversation_summaries.db` 不動：是 agy 的 SQLite，使用者可能同時開著 agy。agy 改了存放方式時這段什麼都不做。
+- 跑完（成功、失敗、逾時、取消都一樣）刪這次的對話：stream-json 第一行（`step_update`）就帶 `conversation_id`，用 `Subprocess` 的 `onLine` 先記下來，沒有 result 那一行也刪得到（Windows 的 `ProcessRunner.Run` 多一個 `onLine`）。照 `conversation_id` 刪 `conversations/<id>.db` 和 `brain/<id>/`；id 不是 UUID 就不刪。`conversation_summaries.db` 不動：是 agy 的 SQLite，使用者可能同時開著 agy。agy 改了存放方式時這段什麼都不做。
 - `/resume` 只列同一個工作目錄的對話，拾音的工作目錄用完就刪，使用者在自己的專案裡看不到這些對話。
 
 ### 95.5 其他
@@ -3357,7 +3358,7 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 
 ### 96.2 app 的狀態（`AppModel`）
 
-- `transcribeQueue: [Int64]`：`transcriptionQueue()` 裡 `kind = transcribe` 的會議 id（照順序），`reload()` 時跟 `queuedCount` 一起讀（工作開始、結束、排工作都會 reload）。
+- `transcribeQueue: [Int64]`：排隊中 `kind = transcribe` 的會議 id，照 `claimNext` 的順序（`priority` 大的先，再照 `id`）。`reload()` 從算 `queuedCount` 的同一次 `activeJobs()` 排出來，不另外查（工作開始、結束、排工作都會 reload）。
 - `queuePosition(_ meetingId) -> Int?`：在 `transcribeQueue` 的第幾個（0 是下一個），不在是 nil。只算轉錄，不算壓縮、重新辨識說話者（幾秒到一兩分鐘），也不算正在轉的那場。
 - `prioritizeTargets(_ ids) -> [Int64]`：`ids` 裡在 `transcribeQueue` 的會議；它們剛好就是 `transcribeQueue` 的前 n 個時（按了也不會變）回傳空的。
 - `prioritizeTranscription(_ ids, announce:)`：`targets` 是空的就不做；`db.prioritizeTranscription(targets)`、`reload()`、`runner.wake()`。`announce` 時提示（選單來的才提示；會議頁的按鈕按了，那一條本身就會變）：一場「「%@」排在下一個轉錄」（`displayTitle`），好幾場「這 %lld 場排到最前面，接著轉錄」。

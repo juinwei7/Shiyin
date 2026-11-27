@@ -98,13 +98,14 @@ enum MeetingPackage {
             }
             try encoder.encode(entries).write(to: dir.appendingPathComponent("documents.json"))
         }
-        // 先看取消再刪：存檔時選了取代的原本那份，取消時還在（R120.2）
         try Task.checkCancellation()
-        try? FileManager.default.removeItem(at: url)
         progress?(0.1)
         let total = folderSize(dir)
-        try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, url.path], watching: url) { written in
-            progress?(0.1 + 0.89 * min(1, Double(written) / Double(max(1, total))))
+        // 先寫暫存檔、成功才換掉（R120.2）：取消時存檔時選了取代的原本那份照樣在
+        try ExportFile.replacing(url) { out in
+            try ditto(["-c", "-k", "--norsrc", "--noextattr", "--noqtn", dir.path, out.path], watching: out) { written in
+                progress?(0.1 + 0.89 * min(1, Double(written) / Double(max(1, total))))
+            }
         }
         progress?(1)
     }

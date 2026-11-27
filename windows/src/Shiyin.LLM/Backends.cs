@@ -408,6 +408,8 @@ public sealed class AgyCli(LLMClient client, string model) : ILLMBackend
     {
         var tool = client.Tools.Find("agy") ?? throw LLMException.NotInstalled("agy");
         var dir = TempDirectory.Create();
+        // 第一行就帶 conversation_id：先記下來，逾時、取消、沒有 result 那一行時也刪得到這次的對話（M§95.4）
+        string? conversation = null;
         try
         {
             // 設定、schema 放在工作目錄外面；工作目錄是空的
@@ -419,9 +421,9 @@ public sealed class AgyCli(LLMClient client, string model) : ILLMBackend
             await File.WriteAllTextAsync(settingsFile, SessionSettings, cancel);
             // 提示詞從 stdin 送（stream-json 一行一則），不放在命令列參數（R121.4）
             var result = await client.Runner.Run(tool, Arguments(schemaFile, settingsFile, model), Message(system, prompt, format.Schema),
-                workspace, LLMClient.Timeout, cancel);
+                workspace, LLMClient.Timeout, cancel, line => conversation ??= ConversationIdIn(line));
             var parsed = Parse(result.Stdout);
-            if (parsed.ConversationId is { } id) RemoveConversation(client.AgyDataDirectory, id);
+            conversation ??= parsed.ConversationId;
             if (parsed.Output is { } output) return output;
             var detail = string.Join("\n", new[] { parsed.Error ?? "", result.StderrTail(500) }.Where(t => t.Length > 0));
             if (LLMException.IsLoginProblem(detail)) throw LLMException.NotLoggedIn("agy");
@@ -429,8 +431,18 @@ public sealed class AgyCli(LLMClient client, string model) : ILLMBackend
             if (detail.Length == 0) throw LLMException.Failed(L.F("agy 沒有回傳結果（結束代碼 %d）", result.ExitCode), FailureCauses.Cli(result));
             throw LLMException.Failed(detail.Length > 500 ? detail[..500] : detail, parsed.Error is null ? FailureCauses.Cli(result) : FailureCause.CliError);
         }
-        finally { TempDirectory.Delete(dir); }
+        finally
+        {
+            if (conversation is { } id) RemoveConversation(client.AgyDataDirectory, id);
+            TempDirectory.Delete(dir);
+        }
     }
+
+    /// <summary>stream-json 一行裡的 conversation_id（step_update、result 都有）</summary>
+    public static string? ConversationIdIn(string line) =>
+        line.Contains("conversation_id") && ConversationIdPattern.Match(line) is { Success: true } m ? m.Groups[1].Value : null;
+
+    static readonly System.Text.RegularExpressions.Regex ConversationIdPattern = new("\"conversation_id\"\\s*:\\s*\"([0-9A-Fa-f-]{36})\"");
 
     /// <summary>agy 的參數：stream-json 進出、schema 和這次的設定用檔案給、不認斜線指令；有填模型才加 --model</summary>
     public static List<string> Arguments(string schemaFile, string settingsFile, string model)

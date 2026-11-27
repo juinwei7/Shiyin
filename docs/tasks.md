@@ -9,8 +9,6 @@
 
 ## 整理工具 Antigravity（R121，design §95、design-windows §11.54、D204；2026-11-27 Threads 上的使用者許願：「也要能支援 Antigravity cli」，使用者：接）
 
-Mac 用 agy 1.5.18 實際整理過（示範會議 42 秒、格式對、對話檔有刪掉），拒絕規則擋得住建檔、指令、讀檔，登入狀態、模型清單、設定頁都看過。
-
 - [~] **Windows 實機**（AG-W）：官方安裝程式裝在 `%LOCALAPPDATA%\agy\bin\agy.exe`；Windows Terminal 開 agy 登入、授權碼貼回；真的整理一場（stdin、`--json-schema`、`--settings` 帶 Windows 路徑）；拒絕規則擋得住；`%USERPROFILE%\.gemini\antigravity-cli\conversations` 的這次對話有刪掉；設定頁、引導的樣子
   - 驗證：整理成功、`conversations` 的檔案數不變、要它建檔時回 Permission denied
 - [~] **額度用完的訊息**（AG2）：agy 用完每週額度時的原文還沒看過（文件沒寫）
@@ -261,6 +259,5 @@ Mac 用 agy 1.5.18 實際整理過（示範會議 42 秒、格式對、對話檔
 
 ## 先轉錄這場（R122，design §96、design-windows §11.55、D205；2026-11-27 使用者：「有時會匯入多個，但我想先轉錄某些會議」）
 
-- Mac：標準答案、DEBUG 版（Breeze，匯入、插隊、重開、右鍵、「⋯」、多選、會議頁和多選畫面的按鈕，淺色、深色、英文）驗過（2026-11-27，見 commit 訊息）
 - [~] **QP1 企業伺服器**（R122.6）：程式完成（轉錄線一次送一場，排隊的順序就是送出的順序）。還差：登入真的企業伺服器時一次匯入幾場、插隊一場，看伺服器收到的先後
 - [~] **QP2 Windows**（design-windows §11.55）：程式完成，`dotnet test` 全部通過（2026-11-27，見 commit 訊息）。還差（這次沒有虛擬機）：虛擬機用控制通道 `prioritize`、UI Automation 打開右鍵選單、「⋯」、多選畫面和會議頁的按鈕各按一次，看 state 的 `transcribeQueue` 和轉錄的先後、重開照舊；淺色、深色截圖

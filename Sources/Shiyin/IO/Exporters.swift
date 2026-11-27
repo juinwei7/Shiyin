@@ -451,6 +451,47 @@ enum HTML {
     }
 }
 
+// MARK: - 先寫暫存檔、成功才換掉（R120.2）
+
+/// 錄音、封包先寫到同一個資料夾的隱藏暫存檔，寫完才換掉目的地：取消、失敗時，存檔時選了取代的原本那份照樣在（design §94）
+enum ExportFile {
+    static func temporary(for url: URL) -> URL {
+        url.deletingLastPathComponent()
+            .appendingPathComponent(".\(url.deletingPathExtension().lastPathComponent)-\(UUID().uuidString.prefix(8)).\(url.pathExtension)")
+    }
+
+    static func replacing(_ url: URL, write: (URL) async throws -> Void) async throws {
+        let temp = temporary(for: url)
+        do {
+            try await write(temp)
+            try Task.checkCancellation()
+            try finish(temp, to: url)
+        } catch {
+            try? FileManager.default.removeItem(at: temp)
+            throw error
+        }
+    }
+
+    static func replacing(_ url: URL, write: (URL) throws -> Void) throws {
+        let temp = temporary(for: url)
+        do {
+            try write(temp)
+            try finish(temp, to: url)
+        } catch {
+            try? FileManager.default.removeItem(at: temp)
+            throw error
+        }
+    }
+
+    private static func finish(_ temp: URL, to url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            _ = try FileManager.default.replaceItemAt(url, withItemAt: temp)
+        } else {
+            try FileManager.default.moveItem(at: temp, to: url)
+        }
+    }
+}
+
 // MARK: - 錄音（R7.1）
 
 enum AudioExporter {
@@ -458,35 +499,36 @@ enum AudioExporter {
     static func export(_ b: ExportBundle, format: String, to url: URL, progress: ((Double) -> Void)? = nil) async throws {
         guard b.meeting.hasAudio else { throw ExportError.noAudio }
         let source = b.meeting.audioURL
-        try Task.checkCancellation()   // 先看取消再刪：存檔時選了取代的原本那份，取消時還在（R120.2）
-        try? FileManager.default.removeItem(at: url)
+        try Task.checkCancellation()
         // 「麥克風＋電腦聲音」的錄音（design §49.1、R73.2）：m4a 兩個聲道混在一起、wav 混成單聲道，原檔是同一種格式也要重新轉
         let both = b.meeting.channels == "both"
         let asset = AVURLAsset(url: source)
         let mix = format == "m4a" && both ? await ChannelMix.audioMix(for: asset) : nil
-        if format == source.pathExtension.lowercased() && !both {
-            try FileManager.default.copyItem(at: source, to: url)
-        } else if format == "m4a" {
-            guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A)
-            else { throw ExportError.failed(String(localized: "無法建立轉檔")) }
-            session.audioMix = mix
-            // 進度跟轉檔同時跑（design §94）；轉檔本身會跟著 Task 取消
-            let watcher = progress.map { report in
-                Task {
-                    for await state in session.states(updateInterval: 0.2) {
-                        if case .exporting(let p) = state { report(p.fractionCompleted) }
+        try await ExportFile.replacing(url) { url in
+            if format == source.pathExtension.lowercased() && !both {
+                try FileManager.default.copyItem(at: source, to: url)
+            } else if format == "m4a" {
+                guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A)
+                else { throw ExportError.failed(String(localized: "無法建立轉檔")) }
+                session.audioMix = mix
+                // 進度跟轉檔同時跑（design §94）；轉檔本身會跟著 Task 取消
+                let watcher = progress.map { report in
+                    Task {
+                        for await state in session.states(updateInterval: 0.2) {
+                            if case .exporting(let p) = state { report(p.fractionCompleted) }
+                        }
                     }
                 }
+                defer { watcher?.cancel() }
+                try await session.export(to: url, as: .m4a)
+                progress?(1)
+            } else {
+                // wav：解碼成 16 kHz 單聲道（轉錄用的格式，音質足夠聽清楚人聲）
+                // 進度：解碼 0～70%、寫檔 70～100%（design §94）
+                let samples = try await AudioDecoder.decode(source, progress: progress.map { p in { p($0 * 0.7) } })
+                try AudioDecoder.writeWAV(samples, to: url, progress: progress.map { p in { p(0.7 + $0 * 0.3) } })
+                progress?(1)
             }
-            defer { watcher?.cancel() }
-            try await session.export(to: url, as: .m4a)
-            progress?(1)
-        } else {
-            // wav：解碼成 16 kHz 單聲道（轉錄用的格式，音質足夠聽清楚人聲）
-            // 進度：解碼 0～70%、寫檔 70～100%（design §94）
-            let samples = try await AudioDecoder.decode(source, progress: progress.map { p in { p($0 * 0.7) } })
-            try AudioDecoder.writeWAV(samples, to: url, progress: progress.map { p in { p(0.7 + $0 * 0.3) } })
-            progress?(1)
         }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // claude / codex CLI（沿用第二版，design §8.4）。
 // 工作目錄是一個空的暫存資料夾：不會讀到任何專案的 CLAUDE.md，用完就刪
@@ -131,10 +132,17 @@ struct AntigravityCLI: LLMBackend {
         if !model.isEmpty { args += ["--model", model] }
         let process = Subprocess(exe, args, environment: Paths.subprocessEnvironment(), directory: workspace)
         onStart(process)
+        // 第一行就帶 conversation_id：先記下來，逾時、取消、沒有 result 那一行時也刪得到這次的對話（§95.4）
+        let conversation = OSAllocatedUnfairLock<String?>(initialState: nil)
+        defer { if let id = conversation.withLock({ $0 }) { Self.removeConversation(id) } }
         let result = try await process.run(input: try Self.message(system: system, prompt: prompt, schema: format.schema),
-                                           timeout: LLMClient.timeout)
+                                           timeout: LLMClient.timeout,
+                                           onLine: { line in
+                                               guard let id = Self.conversationID(in: line) else { return }
+                                               conversation.withLock { if $0 == nil { $0 = id } }
+                                           })
         let parsed = Self.parse(result.stdout)
-        if let id = parsed.conversationID { Self.removeConversation(id) }
+        if let id = parsed.conversationID { conversation.withLock { if $0 == nil { $0 = id } } }
         if let output = parsed.output { return output }
         let detail = [parsed.error ?? "", result.stderrTail(500)].filter { !$0.isEmpty }.joined(separator: "\n")
         if LLMError.isLoginProblem(detail) { throw LLMError.notLoggedIn("agy") }
@@ -170,8 +178,9 @@ struct AntigravityCLI: LLMBackend {
               }).first else { return Parsed() }
         var parsed = Parsed(conversationID: (object["conversation_id"] as? String).flatMap { $0.isEmpty ? nil : $0 })
         if object["status"] as? String == "SUCCESS" {
-            // 只收物件：null、字串給 JSONSerialization.data 會丟 Objective-C 例外（try? 接不到，整個 app 會當掉）
-            if let structured = object["structured_output"] as? [String: Any], JSONSerialization.isValidJSONObject(structured),
+            // 只收物件、陣列（同 Windows）：null、字串給 JSONSerialization.data 會丟 Objective-C 例外（try? 接不到，整個 app 會當掉）
+            if let structured = object["structured_output"], structured is [String: Any] || structured is [Any],
+               JSONSerialization.isValidJSONObject(structured),
                let data = try? JSONSerialization.data(withJSONObject: structured) {
                 parsed.output = data
             } else if let response = object["response"] as? String {
@@ -183,6 +192,13 @@ struct AntigravityCLI: LLMBackend {
             parsed.error = (object["error"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? (object["status"] as? String)
         }
         return parsed
+    }
+
+    /// stream-json 一行裡的 conversation_id（step_update、result 都有）
+    nonisolated static func conversationID(in line: String) -> String? {
+        guard line.contains("conversation_id"),
+              let match = line.firstMatch(of: #/"conversation_id"\s*:\s*"([0-9A-Fa-f-]{36})"/#) else { return nil }
+        return String(match.1)
     }
 
     /// agy 沒有不留紀錄的參數，每次都會把整段對話存進 ~/.gemini/antigravity-cli（D204）：只刪這次的對話檔和 brain 資料夾。

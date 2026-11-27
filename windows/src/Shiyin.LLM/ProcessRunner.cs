@@ -28,8 +28,9 @@ public sealed class ProcessRunner
     /// <summary>子程序的環境變數（補上找到 CLI 的資料夾，Mac 是 Paths.subprocessEnvironment）</summary>
     public Func<IDictionary<string, string?>, IDictionary<string, string?>>? Environment { get; set; }
 
+    /// <param name="onLine">每讀到 stdout 的一行就呼叫（同 Mac Subprocess 的 onLine）；逾時、取消時已經讀到的行照樣送過</param>
     public async Task<ProcessResult> Run(ToolCommand command, IReadOnlyList<string> arguments, string? stdin, string? directory,
-                                         TimeSpan timeout, CancellationToken cancel)
+                                         TimeSpan timeout, CancellationToken cancel, Action<string>? onLine = null)
     {
         var info = new ProcessStartInfo(command.Executable)
         {
@@ -51,7 +52,7 @@ public sealed class ProcessRunner
         using var process = new Process { StartInfo = info };
         process.Start();
         OnStarted?.Invoke(process);
-        var stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+        var stdout = onLine is null ? process.StandardOutput.ReadToEndAsync(CancellationToken.None) : ReadLines(process.StandardOutput, onLine);
         var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
         if (stdin is not null)
         {
@@ -77,5 +78,16 @@ public sealed class ProcessRunner
             throw new TimeoutException(L.F("執行超過 %lld 分鐘，已停止", (long)timeout.TotalMinutes));
         }
         return new ProcessResult(process.ExitCode, await stdout, await stderr);
+    }
+
+    static async Task<string> ReadLines(StreamReader reader, Action<string> onLine)
+    {
+        var all = new StringBuilder();
+        while (await reader.ReadLineAsync() is { } line)
+        {
+            all.Append(line).Append('\n');
+            onLine(line);
+        }
+        return all.ToString();
     }
 }

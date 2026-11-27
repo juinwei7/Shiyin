@@ -44,7 +44,8 @@ enum CLILogin {
             guard let exe = Paths.findTool("agy"),
                   let output = await run(exe, ["models"], environment: Paths.subprocessEnvironment()) else { return nil }
             if !AntigravityCLI.models(output.stdout).isEmpty { return Status(loggedIn: true, detail: "") }
-            return LLMError.isLoginProblem(output.stderr) ? Status(loggedIn: false, detail: "") : nil
+            // stdout、stderr 都看（同 codex）：哪一版印到哪邊不一定
+            return LLMError.isLoginProblem(output.stdout + "\n" + output.stderr) ? Status(loggedIn: false, detail: "") : nil
         default:
             return nil
         }

@@ -551,8 +551,12 @@ final class AppModel {
             meetingPeople = try db.meetingPeople()
             folderRules = try db.folderRules()
             folderList = try db.folders()
-            queuedCount = try db.activeJobs().filter { $0.status == .queued }.count
-            let queue = try db.transcriptionQueue().filter { $0.kind == .transcribe }.map(\.meetingId)
+            // 一次查完：排隊中的數量、轉錄線的順序（同 claimNext：priority 大的先，再照 id）
+            let queued = try db.activeJobs().filter { $0.status == .queued }
+            queuedCount = queued.count
+            let queue = queued.filter { $0.kind == .transcribe }
+                .sorted { $0.priority != $1.priority ? $0.priority > $1.priority : ($0.id ?? 0) < ($1.id ?? 0) }
+                .map(\.meetingId)
             if queue != transcribeQueue { transcribeQueue = queue }
         } catch {
             errorMessage = error.localizedDescription
@@ -2175,10 +2179,12 @@ final class AppModel {
             try Task.checkCancellation()
         } catch {
             if error is CancellationError || Task.isCancelled {
-                // 這次寫的才刪：存檔時選了取代的原本那份還沒被換掉（例如封包還在複製錄音）就留著
-                if ExportFileStamp(url) != before { try? FileManager.default.removeItem(at: url) }
-                if format == "md" && (item == .notes || item == .transcript) {
-                    ScreenExport.removeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
+                // 這次寫的才刪：存檔時選了取代的原本那份還沒被換掉就留著，連同它旁邊的畫面資料夾（圖片的檔名跟這次的一樣）
+                if ExportFileStamp(url) != before {
+                    try? FileManager.default.removeItem(at: url)
+                    if format == "md" && (item == .notes || item == .transcript) {
+                        ScreenExport.removeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
+                    }
                 }
                 throw CancellationError()
             }
