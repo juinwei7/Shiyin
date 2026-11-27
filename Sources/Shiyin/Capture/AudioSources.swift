@@ -278,9 +278,12 @@ final class FileSource: MicrophoneInput {
     var onEnded: (() -> Void)?
     private let url: URL
     private let speed: Double
+    /// 雙聲道的音檔：左邊送麥克風、右邊送 mirror（design §97.5）；false 時混成單聲道兩邊送一樣的
+    private let stereo: Bool
     private var task: Task<Void, Never>?
     private let lock = NSLock()
     private var samples: [Float]?
+    private var right: [Float]?
     private var position = 0
     private var stalledUntil: [Int: Double] = [:]   // 聲道 → 恢復送資料的時間（systemUptime）
     /// recordflap（design §50.4）：接下來幾次開始收音後 0.5 秒送出「裝置變了」；在背景重新開始時要花幾秒（模擬藍牙）
@@ -289,9 +292,10 @@ final class FileSource: MicrophoneInput {
     /// recordzero：麥克風那一聲道照常送資料、但全是 0，直到下一次 start()（模擬裝置那頭斷了、重新連接才好）
     private var zeroMic = false
 
-    init(url: URL, speed: Double) {
+    init(url: URL, speed: Double, stereo: Bool = false) {
         self.url = url
         self.speed = speed
+        self.stereo = stereo
     }
 
     /// 從上次停下的位置接著送，所以 restart()（stop 再 start）等於繼續送
@@ -308,13 +312,19 @@ final class FileSource: MicrophoneInput {
         if flap {
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.onInterruption?() }
         }
-        let url = url, speed = speed
+        let url = url, speed = speed, stereo = stereo
         task = Task.detached { [weak self] in
             guard let self else { return }
-            var decoded = self.lock.withLock { self.samples }
-            if decoded == nil { decoded = try? await AudioDecoder.decode(url) }
+            var (decoded, right) = self.lock.withLock { (self.samples, self.right) }
+            if decoded == nil {
+                if stereo, let channels = try? await AudioDecoder.decodeChannels(url), channels.count == 2 {
+                    (decoded, right) = (channels[0], channels[1])
+                } else {
+                    decoded = try? await AudioDecoder.decode(url)
+                }
+            }
             guard let samples = decoded else { return }
-            self.lock.withLock { self.samples = samples }
+            self.lock.withLock { (self.samples, self.right) = (samples, right) }
             let chunk = Int(CaptureFormat.sampleRate / 10)    // 0.1 秒一段
             while !Task.isCancelled {
                 let (start, stalled, zeroMic) = self.lock.withLock { () -> (Int, Set<Int>, Bool) in
@@ -333,7 +343,7 @@ final class FileSource: MicrophoneInput {
                 if !stalled.contains(0) { self.onSamples?(zeroMic ? [Float](repeating: 0, count: chunk.count) : chunk) }
                 if !stalled.contains(1), let mirror = self.mirror {
                     // 電腦聲音那一聲道全是 0：模擬「錄製系統音訊」被拒絕（design §51.1）
-                    mirror.onSamples?(mirror.silent ? [Float](repeating: 0, count: chunk.count) : chunk)
+                    mirror.onSamples?(mirror.silent ? [Float](repeating: 0, count: chunk.count) : right.map { Array($0[start..<min($0.count, end)]) } ?? chunk)
                 }
                 try? await Task.sleep(for: .seconds(0.1 / speed))
             }

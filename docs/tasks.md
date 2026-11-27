@@ -7,6 +7,12 @@
 > - 新任務照 SDD：先寫進 `requirements.md`、改 `design.md`，再加到這裡
 > - 需求見 `requirements.md`，設計見 `design.md`（以下簡稱 §）
 
+## 消除喇叭的回音（R123，design §97、design-windows §11.56、D207；2026-11-27 使用者：「研究業界相關針對回音的處理」「並自行測試套用」）
+
+- Mac、Windows 的程式完成；模擬資料（`scripts/dev/make-eval-data-echo.py`）、Mac DEBUG 的完整流程（模擬錄音 → 工作佇列 → 壓縮後重新轉錄、關掉開關）、Windows 的 dotnet test 和虛擬機的完整流程驗過（見 commit 訊息）
+- [~] **EC1 真的喇叭**（要使用者）：用喇叭開一場真的線上會議錄「麥克風＋電腦聲音」（或安靜時用這台 Mac 的喇叭放一段有人說話的影片，同時錄），再戴耳機錄一場
+  - 驗證：log（`/usr/bin/log show --info --predicate 'subsystem == "com.weiwei.shiyin"'`）用喇叭那場有「echo cancellation: echo found」、戴耳機那場「no echo」；逐字稿裡對方的話沒有疊兩次、糊掉的地方。設定關掉、重新轉錄比一次
+
 ## 整理工具 Antigravity（R121，design §95、design-windows §11.54、D204；2026-11-27 Threads 上的使用者許願：「也要能支援 Antigravity cli」，使用者：接）
 
 - [~] **Windows 實機**（AG-W）：官方安裝程式裝在 `%LOCALAPPDATA%\agy\bin\agy.exe`；Windows Terminal 開 agy 登入、授權碼貼回；真的整理一場（stdin、`--json-schema`、`--settings` 帶 Windows 路徑）；拒絕規則擋得住；`%USERPROFILE%\.gemini\antigravity-cli\conversations` 的這次對話有刪掉；設定頁、引導的樣子

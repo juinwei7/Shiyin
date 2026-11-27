@@ -3,6 +3,7 @@ using Shiyin.Localization;
 using Shiyin.Model;
 using Shiyin.Services;
 using Shiyin.Services.Capture;
+using Shiyin.Transcribe;
 using Shiyin.Whisper;
 
 namespace Shiyin.Platform;
@@ -80,6 +81,15 @@ public sealed class MediaFoundationDecoder : IAudioDecoder
         return channels.Select(c => c.ToArray()).ToArray();
     }
 
+    public IStereoSource? OpenStereo(string path)
+    {
+        if (IsWav(path)) return Wav.OpenStereo(path);
+        var reader = OpenReader(path);
+        if (reader.WaveFormat.Channels == 2) return new StereoStream(reader);
+        reader.Dispose();
+        return null;
+    }
+
     static float Sample(byte[] data, int offset, WaveFormat format) => format.Encoding == WaveFormatEncoding.IeeeFloat || format.BitsPerSample == 32 && format is WaveFormatExtensible
         ? BitConverter.ToSingle(data, offset)
         : format.BitsPerSample switch
@@ -88,6 +98,38 @@ public sealed class MediaFoundationDecoder : IAudioDecoder
             24 => ((data[offset + 2] << 24 | data[offset + 1] << 16 | data[offset] << 8) >> 8) / 8388608f,
             _ => 0,
         };
+
+    /// <summary>依序讀出 16 kHz 的雙聲道（回音消除，M§97）：左邊麥克風、右邊電腦聲音，各自重新取樣</summary>
+    sealed class StereoStream(WaveStream reader) : IStereoSource
+    {
+        readonly StreamResampler left = new(reader.WaveFormat.SampleRate), right = new(reader.WaveFormat.SampleRate);
+        readonly byte[] bytes = new byte[reader.WaveFormat.AverageBytesPerSecond];
+        public bool Finished { get; private set; }
+
+        public void Read(EchoCanceller.Window mic, EchoCanceller.Window reference)
+        {
+            var format = reader.WaveFormat;
+            var n = reader.Read(bytes, 0, bytes.Length - bytes.Length % format.BlockAlign);
+            if (n <= 0)
+            {
+                Finished = true;
+                return;
+            }
+            var frames = n / format.BlockAlign;
+            var width = format.BitsPerSample / 8;
+            var l = new float[frames];
+            var r = new float[frames];
+            for (var f = 0; f < frames; f++)
+            {
+                l[f] = Sample(bytes, 2 * f * width, format);
+                r[f] = Sample(bytes, (2 * f + 1) * width, format);
+            }
+            mic.Append(left.Process(l));
+            reference.Append(right.Process(r));
+        }
+
+        public void Dispose() => reader.Dispose();
+    }
 
     /// <summary>依序讀出 16 kHz 單聲道（whisper 一段一段讀）</summary>
     sealed class Stream : IAudioStream

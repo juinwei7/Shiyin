@@ -988,6 +988,19 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **測試**：標準答案 `db/schema.sql`、`db/31a`～`31i`（`DatabaseTests` 的 `prioritizeTranscription`、`transcriptionQueue`）；`AppTests.PrioritizeTranscriptionMovesQueuedMeetingsAhead`（目標的判斷、提示、新排的在最後、結束時執行中的放回最前面）。
 - **驗證**：`dotnet test`；虛擬機匯入幾個檔案，用控制通道 `prioritize`、UI Automation 打開右鍵選單和會議頁的按鈕按一次，看 state 的 `transcribeQueue` 和轉錄的先後，重開照舊；淺色、深色截圖。
 
+### 11.56 消除喇叭的回音（R123，M§97、D207）
+
+- **Core**：`Shiyin.Transcribe.EchoCanceller`（`src/Shiyin.Core/Transcribe/EchoCanceller.cs`）是 Mac `EchoCanceller` 的同一套算法，常數、門檻、步驟逐項相同（GCC-PHAT 在 8 kHz、分段直線、Kaiser sinc 對齊、分塊頻域 Kalman 濾波、每個頻帶不比原本大聲、預習 30 秒、換段前後 2 秒不學、處理區間外照原本的麥克風）。FFT 是自己寫的 radix-2（`RealFft`：用一半長度的複數 FFT 算實數 FFT，頻譜格式同 numpy 的 rfft／irfft），沒有多帶套件。
+  - `IStereoSource`：依序讀 16 kHz 的雙聲道；`Process(open, output, cancel)` 叫 `open` 三次（找時間差、預習、濾波），有回音時用 `WavWriter` 寫 16-bit 雙聲道 WAV；`Process(mic, reference)` 給測試。
+- **Services**：`TranscriptionOptions.EchoCancel`（`AppSettings.EchoCancellation`，`settings.json` 的 `echoCancellation`，預設 true，而且 `channels == "both"`）。`TranscriptionPipeline.Run` 先 `Stage("消除回音")`、在 `MakeTempDirectory()`（工作佇列給 `Paths.MakeTempDirectory`）做 `echo-free.wav`，有回音時後面都讀它；做不出來只寫 log（`echo cancellation failed: <例外類型>`）照原本的錄音轉錄，取消照樣丟 `OperationCanceledException`。log 只寫有沒有回音、視窗數、段數、秒數。
+  - `IAudioDecoder.OpenStereo(path)`：不是雙聲道時 null。`WavDecoder`（16 kHz 的 WAV，`EchoCanceller.WavStereo`）；`MediaFoundationDecoder`：WAV 走 `WavDecoder`，其他（壓縮成 m4a 的錄音）Media Foundation 讀浮點、左右聲道各一個 `StreamResampler`。
+- **App**：設定「轉錄」在「轉錄時辨識說話者」後面加開關「轉錄前消除喇叭的回音」和說明（同 Mac）；設定搜尋的關鍵字加上「轉錄前消除喇叭的回音」「回音」。
+- **測試**：標準答案 `pipeline/echo-cancel.json`（`PipelineTests.EchoCancel`：同一段合成訊號，有沒有回音、視窗數相同，找到的視窗差 1 以內，段的位置差 1 秒以內、斜率 0.5 ppm、截距 1 個取樣點以內，處理區間差 1 秒以內，每秒音量差 1.5 dB 以內；扣得很乾淨（−60 dB 以下）的秒數只看兩邊都低於 −45 dB）。
+  - 2026-11-27 在 Mac 上用 M§97.5 的模擬資料跑 C# 版：時間差、指標跟 Mac 相同，輸出跟 Mac 差 −84～−88 dB（16 位元量化的程度）；Release 建置 11 分鐘的錄音約 3.5 秒。
+- **DEBUG**：`record-sim <音檔> <倍速> 3`：雙聲道的音檔左邊送麥克風、右邊送電腦聲音（`FileSource` 的 `stereo`，同一個讀檔迴圈），同 Mac。
+- **驗證**：`dotnet test`；虛擬機用 `record-sim` 錄一場雙聲道（M§97.5 的 `zh-echo-laptop`）、讓工作佇列轉錄，看 log 的 `echo cancellation: echo found`、逐字稿；設定頁的開關；關掉開關再轉錄時沒有那一行。
+  - 2026-11-27 虛擬機（DEBUG、快速辨識）：`echo found, 323/328 windows, 2 segments, 13.9s`，錯字率 8.3%；`--set echoCancellation=NO` 再錄一次 10.5%（log 沒有那一行）。設定頁的開關、說明、`settingssearch 回音` 找到「轉錄」頁。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

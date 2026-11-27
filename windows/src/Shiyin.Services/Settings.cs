@@ -18,6 +18,7 @@ public sealed class AppSettings
     public const string CompressAudioKey = "compressAudio";
     public const string DiarizeKey = "diarize";
     public const string SplitChannelsKey = "splitChannels";
+    public const string EchoCancellationKey = "echoCancellation";
     public const string CorrectTranscriptKey = "correctTranscript";
     public const string LiveTranscriptionKey = "liveTranscription";
     public const string AutoDetectLanguageKey = "autoDetectLanguage";
@@ -319,6 +320,8 @@ public sealed class AppSettings
     public bool Diarize => Flag(DiarizeKey, true);
     /// <summary>線上會議的麥克風、電腦聲音分開轉錄（M§17.3）；還在評估，設定裡沒有開關</summary>
     public bool SplitChannels => Flag(SplitChannelsKey, false);
+    /// <summary>錄「麥克風＋電腦聲音」的會議，轉錄前消除喇叭的回音（M§97、R123）</summary>
+    public bool EchoCancellation => Flag(EchoCancellationKey, true);
     public bool CorrectTranscript => Flag(CorrectTranscriptKey, true);
     public bool LiveTranscription => Flag(LiveTranscriptionKey, true);
     public bool AutoDetectLanguage => Flag(AutoDetectLanguageKey, true);

@@ -989,12 +989,13 @@ final class AppModel {
 
     #if DEBUG
     /// 只在 DEBUG：用音訊檔模擬錄音（shiyinctl record-sim）
-    func startSimulatedRecording(file: URL, speed: Double, both: Bool, systemSilent: Bool = false) {
+    func startSimulatedRecording(file: URL, speed: Double, both: Bool, systemSilent: Bool = false, stereo: Bool = false) {
         guard !recorder.isRecording, let meeting = try? db.insertMeeting(Meeting(
             meetingDate: DateText.string(Date()), sourceFilename: String(localized: "模擬錄音"), source: "recording",
             channels: both ? "both" : "mic", folderId: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
             audioExtension: nil) else { return }
-        recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both, systemSilent: systemSilent, language: meeting.meetingLanguage)
+        recorder.startSimulated(meetingId: meeting.id!, file: file, speed: speed, both: both, systemSilent: systemSilent, stereo: stereo,
+                                language: meeting.meetingLanguage)
         reload()
         selection = meeting.id
     }

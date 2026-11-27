@@ -13,6 +13,7 @@ enum AppSettings {
     static let diarizeKey = "diarize"
     static let diarizationModelKey = "diarizationModel"
     static let splitChannelsKey = "splitChannels"
+    static let echoCancellationKey = "echoCancellation"
     static let correctTranscriptKey = "correctTranscript"
     static let liveTranscriptionKey = "liveTranscription"
     static let autoDetectLanguageKey = "autoDetectLanguage"
@@ -97,6 +98,8 @@ enum AppSettings {
     static var diarizationModel: Diarizer.Model { Diarizer.Model(rawValue: d.string(forKey: diarizationModelKey) ?? "") ?? .standard }
     /// 線上會議的麥克風、電腦聲音分開轉錄（design §17.3）；還在評估，設定裡沒有開關，測試時用 defaults 打開
     static var splitChannels: Bool { flag(splitChannelsKey, default: false) }
+    /// 錄「麥克風＋電腦聲音」的會議，轉錄前消除喇叭的回音（design §97、R123）
+    static var echoCancellation: Bool { flag(echoCancellationKey, default: true) }
     /// 轉錄完先找出可能聽錯的字（design §17.4）；評估後預設開啟（§17.6）
     static var correctTranscript: Bool { flag(correctTranscriptKey, default: true) }
     static var liveTranscription: Bool { flag(liveTranscriptionKey, default: true) }

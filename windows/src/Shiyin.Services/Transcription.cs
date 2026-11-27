@@ -19,6 +19,8 @@ public interface IAudioDecoder
     float[] Decode(string path, CancellationToken cancel = default);
     /// <summary>每個聲道各自解碼成 16 kHz（分聲道轉錄，M§17.3）</summary>
     float[][] DecodeChannels(string path, CancellationToken cancel = default);
+    /// <summary>依序讀 16 kHz 的雙聲道（回音消除，M§97）；不是雙聲道時 null</summary>
+    IStereoSource? OpenStereo(string path);
 }
 
 /// <summary>只讀 WAV（Mac 上的測試、評估）</summary>
@@ -40,6 +42,16 @@ public sealed class WavDecoder : IAudioDecoder
         }
         if (reader.SampleRate != 16000) throw new NotSupportedException("16 kHz only");  // l10n-skip
         return channels.Select(c => c.ToArray()).ToArray();
+    }
+
+    public IStereoSource? OpenStereo(string path)
+    {
+        using (var reader = new WavReader(path))
+        {
+            if (reader.Channels != 2) return null;
+            if (reader.SampleRate != 16000) throw new NotSupportedException("16 kHz only");  // l10n-skip
+        }
+        return new EchoCanceller.WavStereo(path);
     }
 }
 
@@ -187,6 +199,8 @@ public sealed record TranscriptionOptions
     public bool Diarize { get; init; } = true;
     public bool SplitChannels { get; init; }
     public EchoKind Echo { get; init; } = EchoKind.Dedupe;
+    /// <summary>轉錄前消除喇叭的回音（M§97、R123）：錄「麥克風＋電腦聲音」的會議才做</summary>
+    public bool EchoCancel { get; init; }
     /// <summary>評估用：換一個 whisper 模型檔；null 依會議語言選</summary>
     public string? Model { get; init; }
     /// <summary>沒分聲道時聲紋記成哪種收音（M§21.4）：mic、system，雙聲道混在一起是 mix</summary>
@@ -219,6 +233,7 @@ public sealed record TranscriptionOptions
         Diarize = settings.Diarize && models.IsInstalled(ModelStore.Model.Diarization),
         // 只有錄音時選了「麥克風＋電腦聲音」的會議才分聲道；匯入的雙聲道檔案（音樂、影片）照舊混成一軌
         SplitChannels = settings.SplitChannels && channels == "both",
+        EchoCancel = settings.EchoCancellation && channels == "both",
         AudioSource = channels == "both" ? "mix" : channels,
     };
 
@@ -249,8 +264,44 @@ public sealed class TranscriptionPipeline(TranscriptionOptions options, IAudioDe
     public Action<double> Progress { get; init; } = _ => { };
     /// <summary>每一步之間檢查工作是否還要繼續（使用者按了取消、工作被改成別的狀態）</summary>
     public Func<bool> ShouldContinue { get; init; } = () => true;
+    /// <summary>回音消除的暫存資料夾（app 用 SHIYIN_HOME 的 tmp）</summary>
+    public Func<string> MakeTempDirectory { get; init; } = () => Directory.CreateTempSubdirectory("shiyin-").FullName;
 
     public TranscriptionResult? Run(string audio, CancellationToken cancel)
+    {
+        if (!options.EchoCancel) return RunFile(audio, cancel);
+        // 喇叭的回音（M§97）：先做一份扣掉回音的暫存檔，後面的轉錄、說話者辨識都讀它；沒有回音時照原本的錄音
+        Stage(L.T("消除回音"));
+        var folder = MakeTempDirectory();
+        try
+        {
+            var input = audio;
+            try
+            {
+                var cleaned = Path.Combine(folder, "echo-free.wav");
+                if (decoder.OpenStereo(audio) is { } first)
+                {
+                    var opened = 0;
+                    var report = EchoCanceller.Process(() => opened++ == 0 ? first : decoder.OpenStereo(audio)!, cleaned, cancel);
+                    if (report.EchoFound) input = cleaned;
+                    Log.Info($"echo cancellation: {(report.EchoFound ? "echo found" : "no echo")}, {report.Confident}/{report.Windows} windows, {report.Segments.Count} segments, {report.Seconds:F1}s");
+                }
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // 只是輔助：做不出來就照原本的錄音轉錄
+                Log.Error($"echo cancellation failed: {e.GetType().Name}");
+            }
+            if (!ShouldContinue()) return null;
+            return RunFile(input, cancel);
+        }
+        finally
+        {
+            try { Directory.Delete(folder, true); } catch (IOException) { }
+        }
+    }
+
+    TranscriptionResult? RunFile(string audio, CancellationToken cancel)
     {
         if (options.Engine == TranscriptionOptions.EngineKind.Qwen) return RunQwen(audio, cancel);
         if (options.Engine == TranscriptionOptions.EngineKind.Breeze && !File.Exists(modelPath)) throw new WhisperException(WhisperErrorKind.ModelMissing);

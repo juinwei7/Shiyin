@@ -54,8 +54,8 @@ public static class SettingsPages
         ],
         "transcription" =>
         [
-            L.T("正式轉錄"), L.T("轉錄時辨識說話者"), L.T("錄音中顯示即時逐字稿"), L.T("預設會議語言"), L.T("中文的字"), L.T("自動偵測會議語言"),
-            "Breeze", "Qwen", "Whisper",
+            L.T("正式轉錄"), L.T("轉錄時辨識說話者"), L.T("轉錄前消除喇叭的回音"), L.T("錄音中顯示即時逐字稿"), L.T("預設會議語言"),
+            L.T("中文的字"), L.T("自動偵測會議語言"), "Breeze", "Qwen", "Whisper",
         ],
         "models" =>
         [

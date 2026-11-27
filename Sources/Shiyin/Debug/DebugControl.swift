@@ -411,6 +411,7 @@ enum DebugControl {
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
+        case "echo-eval": echoEval(audio: args[1], output: args[2], report: args[3])   // design §97.5
         case "dump-golden": GoldenDump.run(fixtures: args[1], output: args[2])   // design-windows §4.1
         case "seedfixtures": GoldenDump.seed(fixtures: args[1], keys: Array(args.dropFirst(2)), into: model)   // 本地 MCP 的示範會議（design §44.6）
         case "mcpsetup":   // mcpsetup claudecode|codex|desktop <輸出.json>：等於按設定頁的「加到…」（design §44.6）
@@ -860,10 +861,11 @@ enum DebugControl {
         case "stoptimer":   // stoptimer <秒數|off>：從現在起幾秒後定時停止（design §84）
             model.setStopTimer(args.count > 1 && args[1] != "off" ? Date().addingTimeInterval(Double(args[1]) ?? 0) : nil)
         case "record-sim":
-            // record-sim <音檔> <倍速> <both: 1/0/2>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）
+            // record-sim <音檔> <倍速> <both: 1/0/2/3>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）；
+            // 3 是雙聲道的音檔左邊送麥克風、右邊送電腦聲音（喇叭的回音，design §97.5）
             let channels = args.count > 3 ? args[3] : "0"
             model.startSimulatedRecording(file: URL(fileURLWithPath: args[1]), speed: Double(args[2]) ?? 1,
-                                          both: channels == "1" || channels == "2", systemSilent: channels == "2")
+                                          both: ["1", "2", "3"].contains(channels), systemSilent: channels == "2", stereo: channels == "3")
         case "reminders": model.selection = id; model.addActionItemsToReminders()   // reminders <會議 id>：等於按「加到提醒事項」（design §52.2）
         case "reminderdone":   // reminderdone <會議 id> <第幾項，0 開始>：假的提醒事項裡把那場會議的第幾項設成完成
             let matching = FakeReminders.shared.entries.indices.filter { Reminders.meetingAndKey(FakeReminders.shared.entries[$0].item.url)?.meetingId == id }
@@ -1692,6 +1694,25 @@ enum DebugControl {
             write(result, to: output + ".tmp")
             try? FileManager.default.removeItem(atPath: output)
             try? FileManager.default.moveItem(atPath: output + ".tmp", toPath: output)
+        }
+    }
+
+    /// echo-eval <雙聲道錄音> <輸出.wav> <報告.json>：只跑回音消除（design §97.5）。沒有回音時不寫輸出的音檔；
+    /// 報告寫完才出現（先寫暫存檔再改名）
+    private static func echoEval(audio: String, output: String, report: String) {
+        Task { @MainActor in
+            var result: [String: Any] = ["audio": audio]
+            do {
+                try? FileManager.default.removeItem(atPath: output)
+                let value = try await EchoCanceller.process(URL(fileURLWithPath: audio), to: URL(fileURLWithPath: output))
+                result["report"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
+                result["echoFound"] = value.echoFound
+            } catch {
+                result["error"] = error.localizedDescription
+            }
+            write(result, to: report + ".tmp")
+            try? FileManager.default.removeItem(atPath: report)
+            try? FileManager.default.moveItem(atPath: report + ".tmp", toPath: report)
         }
     }
 

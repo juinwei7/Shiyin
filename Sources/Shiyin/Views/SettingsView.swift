@@ -75,6 +75,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
              String(localized: "提醒與快捷鍵"), "Zoom", "Teams", "Google Meet"]
         case .transcription:
             [String(localized: "正式轉錄"), String(localized: "轉錄時辨識說話者"), String(localized: "說話者辨識的模型"),
+             String(localized: "轉錄前消除喇叭的回音"),
              String(localized: "錄音中顯示即時逐字稿"), String(localized: "預設會議語言"), String(localized: "中文的字"),
              String(localized: "自動偵測會議語言"), "Breeze", "Qwen", "Whisper", "Nemotron"]
         case .models:
@@ -1287,6 +1288,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.autoDetectLanguageKey) private var autoDetect = true
     @AppStorage(AppSettings.chineseScriptKey) private var chineseScript = AppSettings.defaultChineseScript
     @AppStorage(AppSettings.diarizeKey) private var diarize = true
+    @AppStorage(AppSettings.echoCancellationKey) private var echoCancellation = true
     @AppStorage(AppSettings.diarizationModelKey) private var diarizationModel = Diarizer.Model.standard.rawValue
     @AppStorage(AppSettings.globalHotKeyKey) private var hotKey = true
     @AppStorage(AppSettings.meetingDetectionKey) private var meetingDetection = true
@@ -1416,6 +1418,10 @@ struct RecordingSettings: View {
                 Text("NVIDIA 的模型，最多分 8 人。英文會議的測試（AMI）中，沒被插話的句子標對 77% → 90%；中文會議會分出比較多人，還在觀察。超過 8 人的會議、模型還沒下載好時用標準的。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
+            // 喇叭的回音（design §97、R123）
+            Toggle("轉錄前消除喇叭的回音", isOn: $echoCancellation)
+            Text("錄「麥克風＋電腦聲音」時，用喇叭開會的話麥克風也會收到對方的聲音。轉錄前先拿電腦聲音把這些回音扣掉，對方說的話比較不會聽錯；戴耳機、沒有回音時不會改動。錄音檔保留原本的聲音。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("錄音中顯示即時逐字稿", isOn: $live)
         }
         Section("語言") {

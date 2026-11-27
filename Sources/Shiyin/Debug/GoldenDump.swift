@@ -827,6 +827,32 @@ enum GoldenDump {
     // MARK: 轉錄流程的規則
 
     /// 跟 Windows 一樣的亂數：線性同餘，取高 16 位當 Int16
+    /// 回音的合成訊號（Windows 的 PipelineTests 用同一個算法）：電腦聲音每 5 秒響 3 秒（1 秒以後）、本地的人每 7 秒的第 4～6 秒說話，
+    /// 都是 LCG 的白噪音；回音是電腦聲音照 taps（[延遲, 大小]）疊起來乘 gain，晚 delay 個取樣點，jumpAt 秒以後再晚 jump 個
+    static func echoSignal(_ c: [String: Any]) -> (mic: [Float], ref: [Float]) {
+        let rate = EchoCanceller.rate
+        let count = (c["seconds"] as? Int ?? 0) * rate
+        var lcgRef = LCG(state: UInt32(c["seed"] as? Int ?? 1)), lcgNear = LCG(state: UInt32(c["seed"] as? Int ?? 1) &+ 1)
+        let delay = c["delay"] as? Int ?? 0, jump = c["jump"] as? Int ?? 0
+        let jumpAt = (c["jumpAt"] as? Int ?? 0) * rate
+        let gain = Float(double(c["gain"]))
+        let taps = (c["taps"] as? [[Any]] ?? []).map { (Int(double($0[0])), Float(double($0[1]))) }
+        var ref = [Float](repeating: 0, count: count), mic = ref
+        for i in 0..<count {
+            let second = i / rate
+            let a = lcgRef.next(), b = lcgNear.next()
+            ref[i] = second >= 1 && second % 5 < 3 ? a * 0.3 : 0
+            mic[i] = second % 7 >= 4 && second % 7 < 6 ? b * 0.15 : 0
+        }
+        for i in 0..<count {
+            let shift = delay + (jumpAt > 0 && i >= jumpAt ? jump : 0)
+            var echo: Float = 0
+            for (lag, size) in taps where i - shift - lag >= 0 { echo += size * ref[i - shift - lag] }
+            mic[i] += gain * echo
+        }
+        return (mic, ref)
+    }
+
     private struct LCG {
         var state: UInt32
         mutating func next() -> Float {
@@ -875,6 +901,32 @@ enum GoldenDump {
             let first: [Double] = samples.prefix(8).map { Double($0) }
             w.json("pipeline/chunks.json", ["chunks": pairs, "noChunks": nonePairs, "first": first] as Object)
         }
+        // 喇叭的回音（design §97）：合成的雙聲道（電腦聲音、本地的人各自隨機開關，回音延遲、中途跳一次）
+        var echoCases: [Object] = []
+        for c in f["echoCancelSignal"] as? [Object] ?? [] {
+            let (mic, ref) = echoSignal(c)
+            do {
+                let (report, cleaned) = try EchoCanceller.process(mic: mic, ref: ref)
+                func level(_ x: ArraySlice<Float>) -> Double {
+                    let power = x.reduce(0.0) { $0 + Double($1) * Double($1) } / Double(max(1, x.count))
+                    return (10 * log10(power + 1e-12) * 10).rounded() / 10
+                }
+                let rate = EchoCanceller.rate
+                let seconds = mic.count / rate
+                var item: Object = [
+                    "name": c["name"] as? String ?? "", "echoFound": report.echoFound, "windows": report.windows, "confident": report.confident,
+                    "segments": report.segments.map { ["start": $0.start, "end": $0.end, "slopePpm": ($0.slope * 1e9).rounded() / 1000,
+                                                       "intercept": ($0.intercept * 100).rounded() / 100] as Object },
+                    "zones": report.zones,
+                    "micLevels": (0..<seconds).map { level(mic[($0 * rate)..<(($0 + 1) * rate)]) },
+                ]
+                if let cleaned { item["cleanedLevels"] = (0..<seconds).map { level(cleaned[($0 * rate)..<(($0 + 1) * rate)]) } }
+                echoCases.append(item)
+            } catch {
+                echoCases.append(["name": c["name"] as? String ?? "", "error": "\(error)"])
+            }
+        }
+        w.json("pipeline/echo-cancel.json", echoCases)
         // 語言偵測收集有聲音的片段（design §18.8）
         var collectors: [Object] = []
         for c in f["collectorSeeds"] as? [Object] ?? [] {

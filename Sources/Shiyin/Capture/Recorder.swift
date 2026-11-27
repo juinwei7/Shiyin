@@ -253,13 +253,14 @@ final class Recorder {
     }
 
     /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）
-    func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, systemSilent: Bool = false, language: MeetingLanguage) {
+    func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, systemSilent: Bool = false, stereo: Bool = false,
+                        language: MeetingLanguage) {
         guard !isRecording else { return }
         source = both ? "both" : "mic"
         self.language = language
         simulationEnded = false
         begin(meetingId: meetingId) {
-            let source = FileSource(url: file, speed: speed)
+            let source = FileSource(url: file, speed: speed, stereo: stereo)
             source.deviceUID = AppSettings.inputDeviceUID
             source.onEnded = { [weak self] in Task { @MainActor in self?.simulationEnded = true } }
             var list: [(Int, AudioSource)] = [(0, source)]

@@ -1270,6 +1270,9 @@ public sealed class SettingsWindow : Window
             _ => L.T("會參考詞彙表，中英夾雜、專有名詞比較準；聯發科開源的台灣模型，需要下載約 1.7 GB。") + OtherEngines(),
         }));
         transcription.Children.Add(Ui.Toggle(L.T("轉錄時辨識說話者"), S.Diarize, on => S.Set(AppSettings.DiarizeKey, on)));
+        // 喇叭的回音（R123、M§97）
+        transcription.Children.Add(Ui.Toggle(L.T("轉錄前消除喇叭的回音"), S.EchoCancellation, on => S.Set(AppSettings.EchoCancellationKey, on)));
+        transcription.Children.Add(Note(L.T("錄「麥克風＋電腦聲音」時，用喇叭開會的話麥克風也會收到對方的聲音。轉錄前先拿電腦聲音把這些回音扣掉，對方說的話比較不會聽錯；戴耳機、沒有回音時不會改動。錄音檔保留原本的聲音。")));
         transcription.Children.Add(Ui.Toggle(L.T("錄音中顯示即時逐字稿"), S.LiveTranscription, on => S.Set(AppSettings.LiveTranscriptionKey, on)));
         return transcription;
     }

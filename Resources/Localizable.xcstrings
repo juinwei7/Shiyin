@@ -18458,6 +18458,23 @@
         }
       }
     },
+    "消除回音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消除回音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removing echo"
+          }
+        }
+      }
+    },
     "清空垃圾桶": {
       "extractionState": "manual",
       "localizations": {
@@ -23205,6 +23222,23 @@
         }
       }
     },
+    "轉錄前消除喇叭的回音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转录前消除扬声器的回音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove speaker echo before transcribing"
+          }
+        }
+      }
+    },
     "轉錄和整理完成後，會議紀錄會出現在這裡。": {
       "extractionState": "manual",
       "localizations": {
@@ -26260,6 +26294,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "重点标记 %lld"
+          }
+        }
+      }
+    },
+    "錄「麥克風＋電腦聲音」時，用喇叭開會的話麥克風也會收到對方的聲音。轉錄前先拿電腦聲音把這些回音扣掉，對方說的話比較不會聽錯；戴耳機、沒有回音時不會改動。錄音檔保留原本的聲音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录“麦克风＋电脑声音”时，用扬声器开会的话麦克风也会收到对方的声音。转录前先拿电脑声音把这些回音扣掉，对方说的话比较不会听错；戴耳机、没有回音时不会改动。录音文件保留原本的声音。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you record “Microphone + computer audio” and take the call on speakers, the microphone also picks up the other side. Before transcribing, Shiyin uses the computer audio to remove that echo so their words are recognized more accurately. With headphones, or when there’s no echo, nothing changes. The recording keeps the original sound."
           }
         }
       }

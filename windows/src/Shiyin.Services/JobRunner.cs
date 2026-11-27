@@ -412,6 +412,7 @@ public sealed class JobRunner
                     Stage = s => state.Stage = s,
                     Progress = p => state.Progress = p,
                     ShouldContinue = () => IsStillRunning(job),
+                    MakeTempDirectory = paths.MakeTempDirectory,
                 };
                 ran = pipeline.Run(trimmed ?? paths.AudioPath(meeting), cancel);
             }

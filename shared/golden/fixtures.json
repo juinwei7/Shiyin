@@ -1429,6 +1429,33 @@
    "quiet": 0.002
   }
  ],
+ "echoCancelSignal": [
+  {
+   "name": "speaker",
+   "seed": 2027,
+   "seconds": 40,
+   "delay": 1234,
+   "jumpAt": 24,
+   "jump": 600,
+   "gain": 0.6,
+   "taps": [
+    [0, 1.0],
+    [37, -0.4],
+    [113, 0.25],
+    [401, 0.1]
+   ]
+  },
+  {
+   "name": "headphones",
+   "seed": 2028,
+   "seconds": 20,
+   "delay": 0,
+   "jumpAt": 0,
+   "jump": 0,
+   "gain": 0.0,
+   "taps": []
+  }
+ ],
  "chunkSignal": {
   "seed": 42,
   "seconds": 400,

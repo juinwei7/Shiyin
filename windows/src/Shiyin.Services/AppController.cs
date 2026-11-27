@@ -422,7 +422,7 @@ public sealed partial class AppController
     }
 
     /// <summary>DEBUG：用音訊檔模擬錄音（record-sim）</summary>
-    public long? StartSimulatedRecording(string file, double speed, bool both, long? folder, bool systemSilent = false)
+    public long? StartSimulatedRecording(string file, double speed, bool both, long? folder, bool systemSilent = false, bool stereo = false)
     {
         if (Recorder.IsRecording) return null;
         var meeting = Db.InsertMeeting(new Meeting
@@ -430,7 +430,7 @@ public sealed partial class AppController
             MeetingDate = DateText.String(Importer.Today), SourceFilename = L.T("模擬錄音"), Source = "recording",
             Channels = both ? "both" : "mic", FolderId = folder, Language = Settings.DefaultMeetingLanguage.Code(),
         }, null);
-        Recorder.StartSimulated(meeting.Id!.Value, file, speed, both, meeting.MeetingLanguage, decoder, systemSilent);
+        Recorder.StartSimulated(meeting.Id!.Value, file, speed, both, meeting.MeetingLanguage, decoder, systemSilent, stereo);
         Changed?.Invoke(null);
         Reveal?.Invoke(meeting.Id!.Value);
         return meeting.Id;

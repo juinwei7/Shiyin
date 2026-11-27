@@ -19,6 +19,8 @@ struct TranscriptionOptions: Codable {
     /// 雙聲道錄音（麥克風、電腦聲音）分開轉錄（design §17.3）；還在評估，設定裡沒有開關
     var splitChannels = false
     var echo: Echo = .dedupe
+    /// 轉錄前消除喇叭的回音（design §97、R123）：錄「麥克風＋電腦聲音」的會議才做
+    var echoCancel = false
     /// 評估用：換一個 whisper 模型檔（design §18.2 比較日文引擎）；nil 依會議語言選
     var model: String?
     /// 沒分聲道時聲紋記成哪種收音（design §21.4）：mic、system，雙聲道混在一起是 mix
@@ -85,6 +87,7 @@ struct TranscriptionOptions: Codable {
         options.diarize = AppSettings.diarize
         // 只有錄音時選了「麥克風＋電腦聲音」的會議才分聲道；匯入的雙聲道檔案（音樂、影片）照舊混成一軌
         options.splitChannels = AppSettings.splitChannels && channels == "both"
+        options.echoCancel = AppSettings.echoCancellation && channels == "both"
         options.audioSource = channels == "both" ? "mix" : channels
         options.splitSegments = SystemTranscriber.phoneStyle
         return options
@@ -99,6 +102,7 @@ struct TranscriptionOptions: Codable {
         diarize = try c.decodeIfPresent(Bool.self, forKey: .diarize) ?? true
         splitChannels = try c.decodeIfPresent(Bool.self, forKey: .splitChannels) ?? false
         echo = try c.decodeIfPresent(Echo.self, forKey: .echo) ?? .dedupe
+        echoCancel = try c.decodeIfPresent(Bool.self, forKey: .echoCancel) ?? false
         model = try c.decodeIfPresent(String.self, forKey: .model)
         audioSource = try c.decodeIfPresent(String.self, forKey: .audioSource) ?? "mix"
         chunkSeconds = try c.decodeIfPresent(Double.self, forKey: .chunkSeconds) ?? 600
@@ -155,6 +159,30 @@ struct TranscriptionPipeline {
 
     /// 回傳 nil 表示中途被取消
     func run(_ audio: URL) async throws -> TranscriptionResult? {
+        guard options.echoCancel else { return try await runFile(audio) }
+        // 喇叭的回音（design §97）：先做一份扣掉回音的暫存檔，後面的轉錄、說話者辨識都讀它；沒有回音時照原本的錄音
+        stage(String(localized: "消除回音"))
+        let folder = try Paths.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let cleaned = folder.appendingPathComponent("echo-free.wav")
+        let task = Task.detached(priority: .userInitiated) { try await EchoCanceller.process(audio, to: cleaned) { Task.isCancelled } }
+        setCancel { task.cancel() }
+        var input = audio
+        do {
+            let report = try await task.value
+            if report.echoFound { input = cleaned }
+            log.info("echo cancellation: \(report.echoFound ? "echo found" : "no echo", privacy: .public), \(report.confident)/\(report.windows) windows, \(report.segments.count) segments, \(String(format: "%.1f", report.seconds), privacy: .public)s")
+        } catch is CancellationError {
+            return nil
+        } catch {
+            // 只是輔助：做不出來就照原本的錄音轉錄
+            log.error("echo cancellation failed: \(error.localizedDescription, privacy: .public)")
+        }
+        guard shouldContinue() else { return nil }
+        return try await runFile(input)
+    }
+
+    private func runFile(_ audio: URL) async throws -> TranscriptionResult? {
         if options.engine == .server { return try await runServer(audio) }
         if options.engine == .qwen {
             guard ModelStore.isDownloaded(.qwen) else { throw WhisperError.modelMissing }

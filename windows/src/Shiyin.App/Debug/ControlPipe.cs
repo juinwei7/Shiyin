@@ -202,9 +202,13 @@ public static partial class ControlPipe
             }
             case "record-sim" when args.Length > 1:
                 var speed = args.Length > 2 && double.TryParse(args[2], out var s) ? s : 1;
-                // 第三個參數：1 是雙聲道，2 是雙聲道、電腦聲音全是 0（design-windows §11.18）
-                var both = args.Length > 3 && args[3] is "1" or "2";
-                return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder, args.Length > 3 && args[3] == "2") };
+                // 第三個參數：1 是雙聲道，2 是雙聲道、電腦聲音全是 0（design-windows §11.18），3 是雙聲道的音檔左邊送麥克風、右邊送電腦聲音（M§97.5）
+                var both = args.Length > 3 && args[3] is "1" or "2" or "3";
+                return new JsonObject
+                {
+                    ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder, args.Length > 3 && args[3] == "2",
+                                                                            args.Length > 3 && args[3] == "3"),
+                };
             case "recordstop": host.Recorder.Stop(); return Ok;
             // stoptimer <秒數|off>：從現在起幾秒後定時停止（M§84）
             case "stoptimer" when args.Length > 1:

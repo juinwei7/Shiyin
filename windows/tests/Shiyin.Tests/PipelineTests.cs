@@ -34,6 +34,96 @@ public class PipelineTests
         Assert.Equal(expected.GetProperty("noChunks").EnumerateArray().Select(p => (p[0].GetInt32(), p[1].GetInt32())), WhisperRules.Chunks(samples, 0));
     }
 
+    /// <summary>喇叭的回音（M§97）：同一段合成訊號，找到的時間差、處理的區間跟 Mac 相同，每秒的音量差不到 1.5 dB（FFT 的實作不同，浮點數有小差異）</summary>
+    [Fact]
+    public void EchoCancel()
+    {
+        var expected = Items("pipeline/echo-cancel.json").ToList();
+        var cases = Golden.Fixtures.GetProperty("echoCancelSignal").EnumerateArray().ToList();
+        Assert.Equal(expected.Count, cases.Count);
+        for (var k = 0; k < cases.Count; k++)
+        {
+            var (mic, reference) = EchoSignal(cases[k]);
+            var e = expected[k];
+            var (report, cleaned) = EchoCanceller.Process(mic, reference);
+            Assert.Equal(e.GetProperty("echoFound").GetBoolean(), report.EchoFound);
+            Assert.Equal(e.GetProperty("windows").GetInt32(), report.Windows);
+            Assert.InRange(report.Confident, e.GetProperty("confident").GetInt32() - 1, e.GetProperty("confident").GetInt32() + 1);
+            var segments = e.GetProperty("segments").EnumerateArray().ToList();
+            Assert.Equal(segments.Count, report.Segments.Count);
+            for (var i = 0; i < segments.Count; i++)
+            {
+                var (want, got) = (segments[i], report.Segments[i]);
+                Assert.InRange(got.Start, want.GetProperty("start").GetInt32() - EchoCanceller.Rate, want.GetProperty("start").GetInt32() + EchoCanceller.Rate);
+                Assert.InRange(got.End, want.GetProperty("end").GetInt32() - EchoCanceller.Rate, want.GetProperty("end").GetInt32() + EchoCanceller.Rate);
+                Assert.InRange(got.Slope * 1e6, want.GetProperty("slopePpm").GetDouble() - 0.5, want.GetProperty("slopePpm").GetDouble() + 0.5);
+                Assert.InRange(got.Intercept, want.GetProperty("intercept").GetDouble() - 1, want.GetProperty("intercept").GetDouble() + 1);
+            }
+            var zones = e.GetProperty("zones").EnumerateArray().ToList();
+            Assert.Equal(zones.Count, report.Zones.Count);
+            for (var i = 0; i < zones.Count; i++)
+                for (var j = 0; j < 2; j++) Assert.InRange(report.Zones[i][j], zones[i][j].GetDouble() - 1, zones[i][j].GetDouble() + 1);
+            var rate = EchoCanceller.Rate;
+            Assert.Equal(e.GetProperty("micLevels").EnumerateArray().Select(x => x.GetDouble()), Enumerable.Range(0, mic.Length / rate).Select(s => Level(mic, s * rate, rate)));
+            if (!e.TryGetProperty("cleanedLevels", out var levels))
+            {
+                Assert.Null(cleaned);
+                continue;
+            }
+            Assert.NotNull(cleaned);
+            Assert.Equal(mic.Length, cleaned.Length);
+            var want2 = levels.EnumerateArray().Select(x => x.GetDouble()).ToList();
+            for (var s = 0; s < want2.Count; s++)
+            {
+                var got = Level(cleaned, s * rate, rate);
+                // 扣得很乾淨的秒數（-60 dB 以下）只看兩邊都很小
+                if (want2[s] < -60) Assert.True(got < -45, $"{s}s: {got} dB");
+                else Assert.InRange(got, want2[s] - 1.5, want2[s] + 1.5);
+            }
+        }
+    }
+
+    /// <summary>跟 Mac 的 GoldenDump.echoSignal 一樣：電腦聲音每 5 秒響 3 秒（1 秒以後）、本地的人每 7 秒的第 4～6 秒說話，回音延遲 delay、jumpAt 秒以後再晚 jump</summary>
+    static (float[] Mic, float[] Reference) EchoSignal(JsonElement c)
+    {
+        var rate = EchoCanceller.Rate;
+        var count = (int)c.Long("seconds")! * rate;
+        var seed = (uint)c.Long("seed")!;
+        var lcgRef = new Golden.Lcg(seed);
+        var lcgNear = new Golden.Lcg(unchecked(seed + 1));
+        var delay = (int)c.Long("delay")!;
+        var jump = (int)c.Long("jump")!;
+        var jumpAt = (int)c.Long("jumpAt")! * rate;
+        var gain = (float)Golden.Number(c.Get("gain"));
+        var taps = c.GetProperty("taps").EnumerateArray().Select(t => ((int)t[0].GetDouble(), (float)t[1].GetDouble())).ToList();
+        var reference = new float[count];
+        var mic = new float[count];
+        for (var i = 0; i < count; i++)
+        {
+            var second = i / rate;
+            var a = lcgRef.Next();
+            var b = lcgNear.Next();
+            reference[i] = second >= 1 && second % 5 < 3 ? a * 0.3f : 0;
+            mic[i] = second % 7 >= 4 && second % 7 < 6 ? b * 0.15f : 0;
+        }
+        for (var i = 0; i < count; i++)
+        {
+            var shift = delay + (jumpAt > 0 && i >= jumpAt ? jump : 0);
+            var echo = 0f;
+            foreach (var (lag, size) in taps)
+                if (i - shift - lag >= 0) echo += size * reference[i - shift - lag];
+            mic[i] += gain * echo;
+        }
+        return (mic, reference);
+    }
+
+    static double Level(float[] x, int start, int count)
+    {
+        var power = 0.0;
+        for (var i = start; i < start + count; i++) power += (double)x[i] * x[i];
+        return Math.Round(10 * Math.Log10(power / Math.Max(1, count) + 1e-12) * 10, MidpointRounding.AwayFromZero) / 10;
+    }
+
     [Fact]
     public void LanguageCollector()
     {

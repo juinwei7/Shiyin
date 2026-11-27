@@ -42,7 +42,8 @@ public sealed class CaptureException(string message, bool accessDenied = false) 
 /// DEBUG 的模擬錄音（同 Mac 的 FileSource、record-sim）：用音訊檔當麥克風，0.1 秒送一段，speed 是倍速。
 /// 模擬「麥克風＋電腦聲音」時同一段音訊在同一個迴圈裡也送給第二個聲道（兩個聲道各開一個的話，高倍速時兩邊的速度會不一樣）
 /// </summary>
-public sealed class FileSource(string path, double speed, IAudioDecoder decoder) : IAudioSource
+/// <param name="stereo">雙聲道的音檔：左邊送麥克風、右邊送 Mirror（M§97.5）；false 時混成單聲道兩邊送一樣的</param>
+public sealed class FileSource(string path, double speed, IAudioDecoder decoder, bool stereo = false) : IAudioSource
 {
     public Action<float[]>? OnSamples { get; set; }
     public Action? OnInterruption { get; set; }
@@ -51,7 +52,7 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
     public Action? OnEnded { get; set; }
 
     readonly object gate = new();
-    float[]? samples;
+    float[]? samples, right;
     int position;
     readonly Dictionary<int, double> stalledUntil = [];   // 聲道 → 恢復送資料的時間
     CancellationTokenSource? cancel;
@@ -66,10 +67,11 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
         // 停住 3 秒被看門狗當成裝置停了（2026-10-21 在 4 核的虛擬機看到）
         var thread = new Thread(() =>
         {
-            float[]? decoded;
-            lock (gate) decoded = samples;
+            float[]? decoded, second;
+            lock (gate) (decoded, second) = (samples, right);
+            if (decoded == null && stereo && decoder.DecodeChannels(path) is { Length: 2 } channels) (decoded, second) = (channels[0], channels[1]);
             decoded ??= decoder.Decode(path);
-            lock (gate) samples = decoded;
+            lock (gate) (samples, right) = (decoded, second);
             var chunk = 1600;   // 0.1 秒
             var clock = Stopwatch.StartNew();
             var sent = 0;
@@ -95,7 +97,8 @@ public sealed class FileSource(string path, double speed, IAudioDecoder decoder)
                 // 停住的聲道照樣往前走（時間在過），只是沒有送出資料，跟真的裝置停了一樣
                 if (!stalled.Contains(0)) OnSamples?.Invoke(piece);
                 // 電腦聲音那一聲道全是 0：模擬錄不到電腦聲音（record-sim 的第三個參數 2，design-windows §11.18）
-                if (!stalled.Contains(1)) Mirror?.OnSamples?.Invoke(Mirror.Silent ? new float[piece.Length] : piece);
+                if (!stalled.Contains(1))
+                    Mirror?.OnSamples?.Invoke(Mirror.Silent ? new float[piece.Length] : second is null ? piece : second[start..Math.Min(second.Length, end)]);
                 sent += piece.Length;
                 var wait = sent / 16000.0 / speed - clock.Elapsed.TotalSeconds;
                 if (wait > 0 && cts.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(wait))) return;
