@@ -1084,13 +1084,50 @@ struct GlossarySettings: View {
     @State private var termText = ""
     @FocusState private var termFocused: Bool
 
+    /// 群組（design §100.3、R126）：新增、改名的彈窗開在設定視窗上；刪除要確認
+    @State private var groupSheet: RenameTarget?
+    @State private var deletingGroup: Int64?
+    @AppStorage(AppSettings.glossarySortKey) private var sort = "added"
+
     /// 勾選裡還在詞彙表的（勾了之後被單獨刪掉的不算）
     private var checked: Set<Int64> { selected.intersection(model.glossary.compactMap(\.id)) }
+
+    /// 看著的群組；群組被刪掉了當成「全部」
+    private var filter: AppModel.GlossaryFilter {
+        if case .group(let id) = model.glossaryFilter, model.glossaryGroupName(id) == nil { return .all }
+        return model.glossaryFilter
+    }
+
+    private var groupId: Int64? { if case .group(let id) = filter { id } else { nil } }
+
+    private func groups(of term: GlossaryTerm) -> [Int64] { model.glossaryMemberships[term.id ?? -1] ?? [] }
+
+    private func count(_ filter: AppModel.GlossaryFilter) -> Int {
+        switch filter {
+        case .all: model.glossary.count
+        case .ungrouped: model.glossary.count { groups(of: $0).isEmpty }
+        case .group(let id): model.glossary.count { groups(of: $0).contains(id) }
+        }
+    }
+
+    /// 這一組的詞，照選的排序（R126.5）
+    private var inFilter: [GlossaryTerm] {
+        let terms: [GlossaryTerm] = switch filter {
+        case .all: model.glossary
+        case .ungrouped: model.glossary.filter { groups(of: $0).isEmpty }
+        case .group(let id): model.glossary.filter { groups(of: $0).contains(id) }
+        }
+        switch sort {
+        case "recent": return terms.reversed()
+        case "alpha": return terms.sorted { $0.term.localizedStandardCompare($1.term) == .orderedAscending }
+        default: return terms
+        }
+    }
 
     /// 目前列出來的詞（搜尋時只有搜到的）
     private var shown: [GlossaryTerm] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        return q.isEmpty ? model.glossary : model.glossary.filter { $0.term.range(of: q, options: .caseInsensitive) != nil }
+        return q.isEmpty ? inFilter : inFilter.filter { $0.term.range(of: q, options: .caseInsensitive) != nil }
     }
 
     /// 轉錄提示的預覽；放不下時說明轉錄會先放跟那場會議有關的詞（R124.4、design §98.4）
@@ -1129,11 +1166,12 @@ struct GlossarySettings: View {
             Button("從檔案匯入…", action: importFile).buttonStyle(.link)
                 .help("加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉")
             Button("匯出…", action: exportFile).buttonStyle(.link)
-                .disabled(model.glossary.isEmpty)
-                .help(model.glossary.isEmpty ? String(localized: "還沒有詞彙可以匯出") : String(localized: "存成文字檔，一行一個詞"))
+                .disabled(inFilter.isEmpty)
+                .help(inFilter.isEmpty ? String(localized: "還沒有詞彙可以匯出") : String(localized: "存成文字檔，一行一個詞"))
             Spacer()
         }
         .font(.callout)
+        groupBar
         // 詞彙表建議（design §17.5）：最多 12 個
         if !model.glossarySuggestions.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
@@ -1144,7 +1182,7 @@ struct GlossarySettings: View {
                         Text(suggestion.sourceLabel).font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         Button("忽略") { model.dismissGlossarySuggestion(suggestion.term) }.buttonStyle(.link)
-                        Button("加入") { model.addTerm(suggestion.term) }.buttonStyle(.link)
+                        Button("加入") { model.addTerms(suggestion.term, group: groupId) }.buttonStyle(.link)
                     }
                 }
             }
@@ -1154,9 +1192,17 @@ struct GlossarySettings: View {
         if model.glossary.isEmpty {
             Text("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。").font(.callout).foregroundStyle(.secondary)
         }
-        // 搜尋（R94.2）：超過 10 個才出現
+        // 搜尋（R94.2）：超過 10 個才出現；排序（R126.5）：2 個以上
         if model.glossary.count > 10 {
             TextField("搜尋詞彙", text: $query, prompt: Text("輸入要找的字")).textFieldStyle(.roundedBorder)
+        }
+        if model.glossary.count > 1 {
+            Picker("排序", selection: $sort) {
+                Text("加入順序").tag("added")
+                Text("最近加入").tag("recent")
+                Text("字母順序").tag("alpha")
+            }
+            .pickerStyle(.menu)
         }
         // 全選、刪除勾選的（R94.3）
         if !shown.isEmpty {
@@ -1169,6 +1215,11 @@ struct GlossarySettings: View {
                 }
                 Spacer()
                 if !checked.isEmpty {
+                    Menu("加到群組") { groupItems(Array(checked)) }
+                        .menuStyle(.borderlessButton).fixedSize()
+                    if let id = groupId, let name = model.glossaryGroupName(id) {
+                        Button("從「\(name)」移出") { model.setGroup(id, terms: Array(checked), on: false) }.buttonStyle(.link)
+                    }
                     Button("刪除勾選的 \(checked.count) 個…", role: .destructive) { confirmDelete = true }
                 }
             }
@@ -1187,9 +1238,19 @@ struct GlossarySettings: View {
                 } else {
                     Toggle(isOn: Binding(get: { selected.contains(term.id ?? -1) },
                                          set: { if let id = term.id { if $0 { selected.insert(id) } else { selected.remove(id) } } })) {
-                        Text(term.term)
-                            .onTapGesture(count: 2) { startEditing(term) }
-                            .help("雙擊可以修改")
+                        HStack(spacing: 6) {
+                            Text(term.term)
+                                .onTapGesture(count: 2) { startEditing(term) }
+                                .help("雙擊可以修改")
+                            // 在哪些群組（R126.3）
+                            ForEach(groups(of: term), id: \.self) { gid in
+                                if let name = model.glossaryGroupName(gid) {
+                                    Text(name).font(.caption).foregroundStyle(.secondary)
+                                        .padding(.horizontal, 6).padding(.vertical, 1)
+                                        .background(Color.primary.opacity(0.06), in: Capsule())
+                                }
+                            }
+                        }
                     }
                     .toggleStyle(.checkbox)
                     Spacer()
@@ -1201,12 +1262,17 @@ struct GlossarySettings: View {
             }
             .contextMenu {
                 Button("重新命名…") { startEditing(term) }
+                Menu("加到群組") { groupItems([term.id!]) }
+                if let id = groupId, let name = model.glossaryGroupName(id) {
+                    Button("從「\(name)」移出") { model.setGroup(id, terms: [term.id!], on: false) }
+                }
                 Divider()
                 DestructiveMenuButton(String(localized: "刪除")) { model.deleteTerm(term.id!) }
             }
         }
         if shown.isEmpty && !model.glossary.isEmpty {
-            Text("沒有含「\(query)」的詞彙").font(.callout).foregroundStyle(.secondary)
+            Text(query.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: "這一組還沒有詞彙") : String(localized: "沒有含「\(query)」的詞彙"))
+                .font(.callout).foregroundStyle(.secondary)
         }
         // 公司詞彙表（R53.3）：唯讀，接在自己的詞後面
         if !model.companyGlossary.isEmpty {
@@ -1230,10 +1296,75 @@ struct GlossarySettings: View {
                     selected = []
                 }
             }
+            .sheet(item: $groupSheet) { RenameSheet(target: $0).environment(model) }
+            .confirmationDialog(String(localized: "刪除群組「\(deletingGroup.flatMap(model.glossaryGroupName) ?? "")」？"),
+                                isPresented: Binding(get: { deletingGroup != nil }, set: { if !$0 { deletingGroup = nil } })) {
+                Button("刪除群組", role: .destructive) {
+                    if let id = deletingGroup { model.deleteGlossaryGroup(id) }
+                    deletingGroup = nil
+                }
+            } message: {
+                Text("裡面的 \(deletingGroup.map { count(.group($0)) } ?? 0) 個詞彙不會被刪除。")
+            }
+    }
+
+    // MARK: 群組（design §100.3、R126）
+
+    /// 「全部」「未分類」、每個群組、「新增群組…」；選到群組時下一行是改名、刪除
+    @ViewBuilder private var groupBar: some View {
+        FlowLayout(spacing: 6) {
+            chip(String(localized: "全部"), .all)
+            chip(String(localized: "未分類"), .ungrouped)
+            ForEach(model.glossaryGroups) { group in
+                chip(group.name, .group(group.id!))
+                    .contextMenu {
+                        Button("重新命名…") { groupSheet = .glossaryGroup(group.id!) }
+                        DestructiveMenuButton(String(localized: "刪除群組…")) { deletingGroup = group.id }
+                    }
+            }
+            Button("新增群組…") { groupSheet = .newGlossaryGroup([]) }
+                .buttonStyle(.link).font(.callout)
+                .padding(.vertical, 4)
+        }
+        if let id = groupId, let name = model.glossaryGroupName(id) {
+            HStack(spacing: 14) {
+                Text("\(name)・\(count(.group(id))) 個詞").foregroundStyle(.secondary)
+                Button("重新命名…") { groupSheet = .glossaryGroup(id) }.buttonStyle(.link)
+                Button("刪除群組…") { deletingGroup = id }.buttonStyle(.link)
+                Spacer()
+            }
+            .font(.callout)
+        }
+    }
+
+    private func chip(_ title: String, _ target: AppModel.GlossaryFilter) -> some View {
+        let on = filter == target
+        return Button { model.glossaryFilter = target } label: {
+            HStack(spacing: 4) {
+                Text(title).fontWeight(on ? .semibold : .regular)
+                Text("\(count(target))").foregroundStyle(.secondary)
+            }
+            .font(.callout)
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(on ? Color.primary.opacity(0.12) : .clear, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(on ? 0 : 0.15)))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 「加到群組 ▸」：每個群組一項，這幾個詞都在裡面的打勾（點了全部移出），否則點了全部加入；最後「新增群組…」
+    @ViewBuilder private func groupItems(_ ids: [Int64]) -> some View {
+        ForEach(model.glossaryGroups) { group in
+            let all = !ids.isEmpty && ids.allSatisfy { model.glossaryMemberships[$0]?.contains(group.id!) == true }
+            Toggle(group.name, isOn: Binding(get: { all }, set: { model.setGroup(group.id!, terms: ids, on: $0) }))
+        }
+        if !model.glossaryGroups.isEmpty { Divider() }
+        Button("新增群組…") { groupSheet = .newGlossaryGroup(ids) }
     }
 
     private func add() {
-        model.addTerms(newTerm)
+        model.addTerms(newTerm, group: groupId)
         newTerm = ""
     }
 
@@ -1242,15 +1373,21 @@ struct GlossarySettings: View {
         panel.allowedContentTypes = [.plainText, .commaSeparatedText, .tabSeparatedText]
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.importGlossary(from: url)
+        model.importGlossary(from: url, group: groupId)
     }
 
+    /// 看著某一組時只匯出那一組，檔名帶群組名（R126.4）
     private func exportFile() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = String(localized: "拾音詞彙表.txt")
+        let name: String? = switch filter {
+        case .all: nil
+        case .ungrouped: String(localized: "未分類")
+        case .group(let id): model.glossaryGroupName(id)
+        }
+        panel.nameFieldStringValue = name.map { String(localized: "拾音詞彙表 - \($0).txt") } ?? String(localized: "拾音詞彙表.txt")
         panel.allowedContentTypes = [.plainText]
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.exportGlossary(to: url)
+        model.exportGlossary(to: url, terms: inFilter)
     }
 
     private func startEditing(_ term: GlossaryTerm) {

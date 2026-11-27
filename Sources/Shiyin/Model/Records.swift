@@ -279,6 +279,16 @@ struct GlossaryTerm: SnakeCaseRecord, Identifiable, Hashable {
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
 
+/// 詞彙表的群組（design §100.1、R126）：像標籤，一個詞可以在好幾組
+struct GlossaryGroup: SnakeCaseRecord, Identifiable, Hashable {
+    static let databaseTableName = "glossary_groups"
+    var id: Int64?
+    var name: String
+    var createdAt: String = Clock.now()
+
+    mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
+}
+
 /// 會議的參考文件的種類（design §39.2）：PDF、投影片有頁碼
 enum DocumentKind: String, Codable, CaseIterable {
     case pdf, docx, pptx, text, image

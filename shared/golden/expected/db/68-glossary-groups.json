@@ -1,0 +1,116 @@
+{
+  "glossary" : [
+    {
+      "created_at" : "<time>",
+      "id" : 1,
+      "term" : "Redis"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 2,
+      "term" : "Kubernetes"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 3,
+      "term" : "拾音"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 4,
+      "term" : "SendGrid"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 6,
+      "term" : "Valkey"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 8,
+      "term" : "Lumio"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 13,
+      "term" : "Alice"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 14,
+      "term" : "TTL"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 15,
+      "term" : "還原步驟"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 16,
+      "term" : "롤백"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 17,
+      "term" : "AI"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 19,
+      "term" : "Roadmap"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 20,
+      "term" : "Beta"
+    }
+  ],
+  "glossary_group_terms" : [
+    {
+      "group_id" : 1,
+      "term_id" : 1
+    },
+    {
+      "group_id" : 1,
+      "term_id" : 2
+    },
+    {
+      "group_id" : 2,
+      "term_id" : 2
+    },
+    {
+      "group_id" : 2,
+      "term_id" : 6
+    },
+    {
+      "group_id" : 3,
+      "term_id" : 8
+    },
+    {
+      "group_id" : 3,
+      "term_id" : 19
+    },
+    {
+      "group_id" : 3,
+      "term_id" : 20
+    }
+  ],
+  "glossary_groups" : [
+    {
+      "created_at" : "<time>",
+      "id" : 1,
+      "name" : "研發"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 2,
+      "name" : "Ops"
+    },
+    {
+      "created_at" : "<time>",
+      "id" : 3,
+      "name" : "產品"
+    }
+  ]
+}

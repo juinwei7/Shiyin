@@ -354,7 +354,7 @@ public sealed class JobRunner
         var terms = GlossaryTerms();
         if (terms.Count <= 1) return terms;
         var started = System.Diagnostics.Stopwatch.StartNew();
-        var ranked = GlossaryOrder.Rank(terms, db.GlossaryContext(meetingId));
+        var ranked = GlossaryOrder.Rank(terms, db.GlossaryContext(meetingId), db.GlossaryGroupsOf(terms));
         Log.Info($"transcribe glossary: {terms.Count} terms, {ranked.Related} related, {started.ElapsedMilliseconds} ms");
         return ranked.Terms;
     }

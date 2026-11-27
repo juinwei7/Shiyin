@@ -3604,6 +3604,64 @@ CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 - 標準答案：`server/shares.json`（app 送的請求本體、解析伺服器回應的規則、不合理的回應怎麼處理：`bytes`、`version` 不是數字、`expiresAt` 不是日期、名單超過 500 人時截斷）；`package/contents-*.shiyin` 的內容（不帶錄音、筆記、文件各一）。
 - 驗證要私人伺服器專案的開發環境（§36.7）：Mac DEBUG 兩個帳號（兩個暫存的 `SHIYIN_HOME`、兩個 `SHIYIN_DEBUG_CHANNEL`）分享、收到、匯入、更新、停止分享；連結在瀏覽器打開（公司、公開各一次）；Windows 虛擬機收 Mac 分享的、反過來也一次。
 
+## 100. 詞彙表的群組和排序（R126，D213；GitHub #31）
+
+群組像標籤：一個詞可以在好幾組，只用來整理和當轉錄排序的線索（§98），不在每場會議選。Windows 的做法在 design-windows §11.59。
+
+### 100.1 資料（migration v20，兩平台同一段 SQL）
+
+```sql
+CREATE TABLE glossary_groups (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE glossary_group_terms (
+  group_id INTEGER NOT NULL REFERENCES glossary_groups(id) ON DELETE CASCADE,
+  term_id  INTEGER NOT NULL REFERENCES glossary(id) ON DELETE CASCADE,
+  PRIMARY KEY (group_id, term_id)
+);
+CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
+```
+
+- 都用 id（群組改名不用改別的表）；刪群組、刪詞時關係跟著刪（外鍵）。
+- `AppDatabase`（Windows 同名）：
+  - `glossaryGroups() -> [GlossaryGroup]`（照 id）、`glossaryMemberships() -> [Int64: [Int64]]`（詞的 id → 群組的 id，照群組 id 排）。
+  - `createGlossaryGroup(_ name) -> Int64`：去頭尾空白；同名（不分大小寫）的已經有就回傳那一個。
+  - `renameGlossaryGroup(_ id, to:) -> Int64`：跟別的群組同名（不分大小寫）時合併進那一組（關係搬過去、刪掉這一組），回傳留下的 id；同 §92.2 的資料夾。
+  - `deleteGlossaryGroup(_ id)`。
+  - `setGroup(_ groupId, terms: [Int64], on: Bool)`：加進（`INSERT OR IGNORE`）或移出。
+  - `addTerms(_ terms, group: Int64?) -> Int`：同 §68（回傳新加的個數）；`group` 不是 nil 時新加的和已經有的詞都加進這一組（已經有的照完全相同的字找）。
+  - `renameTerm` 合併時（§68、R100），先把這個詞的群組關係搬到留下的那個詞（`INSERT OR IGNORE … SELECT`），再刪掉。
+- 標準答案（`db/` 接在最後）：建三組（含大小寫不同的同名）、把詞加進去和移出、新加的詞放進一組、改名合併群組、刪群組、詞改名合併；每一步之後 `dumpTables glossary_groups glossary_group_terms`（`db/65`～），最後再 `transcriptionGlossary` 一次（群組影響排序）。
+
+### 100.2 轉錄的排序（§98.1 加一層）
+
+- `GlossaryOrder.rank(_ terms, _ context, groups: [[Int64]] = [])`：`groups[i]` 是 `terms[i]` 在哪些群組（公司的詞是空的；長度不夠當成沒有）。第 1 層（這場出現過的）排好後，加一層「跟第 1 層的詞在同一組的其他詞」（照原本的順序），再接同資料夾、最近幾場、其他。`related` 算進這一層。
+- `JobRunner.transcriptionGlossary`、DEBUG 的 `glossaryorder`、標準答案的 `transcriptionGlossary`：自己的詞照完全相同的字對到 `glossaryMemberships()`，公司的詞沒有群組。
+- 標準答案 `util/glossary-order.json` 多兩個情況（`groups`：同一組的詞往前、在好幾組的詞），舊的情況沒有 `groups`，結果不變。
+
+### 100.3 畫面（設定「詞彙表」）
+
+- 群組那一列（新增詞彙的欄位、匯入匯出下面）：膠囊按鈕自動換行（`FlowLayout`）：「全部 N」「未分類 N」、每個群組「<名稱> N」，最後「新增群組…」（連結按鈕，同「從檔案匯入…」）。選到的填滿（`Color.primary.opacity(0.12)` 底、粗體），其他是框線。群組的右鍵：重新命名…、刪除群組…（紅字）。選到某個群組時下一行寫「<名稱>・N 個詞」和「重新命名…」「刪除群組…」（連結按鈕）。
+- 篩選（`@State filter: all | ungrouped | group(id)`，不記住）：列表、搜尋、全選、匯出都只看這一組；群組被刪掉時回到「全部」。
+- 排序（搜尋框下面一列，左邊「排序」、右邊選單，詞有 2 個以上才出現）：選單「加入順序」「最近加入」「字母順序」（`localizedStandardCompare`），存 `AppSettings.glossarySortKey`（`added`／`recent`／`alpha`）。
+- 每個詞：詞後面接它的群組（`caption`、`secondary` 的小膠囊，照群組 id 排）；右鍵多「加到群組 ▸」（`Menu`：每個群組一項，在裡面的打勾；後面一條分隔線、「新增群組…」）。看著某一組時右鍵多「從「%@」移出」。
+- 勾選那一列：勾了之後「刪除勾選的 N 個…」左邊多「加到群組 ▸」（同上，對勾選的全部：全部都在的打勾，點了全部移出；否則全部加入）；看著某一組時多「從「%@」移出」。
+- 新增、改名群組：`RenameSheet`（§76）加 `RenameTarget.glossaryGroup(id)`、`.newGlossaryGroup([termId])`（建好並把這幾個詞加進去；空的就是只建群組），彈窗開在設定視窗上（`GlossarySettings` 自己的 `sheet(item:)`，不經過 `model.renameTarget`）。標題「重新命名群組」「新增群組」，說明「例如專案、客戶或部門。一個詞可以在好幾個群組。」；同名時「已經有「%@」，儲存後會合併成一個。」（新增時「已經有「%@」。」不能建）。
+- 刪除群組的確認：「刪除群組「%@」？」，說明「裡面的 %lld 個詞彙不會被刪除。」，按鈕「刪除群組」。
+- 提示：看著某一組時新增「已加入 N 個詞彙到「%@」」（有已經在詞彙表的：「已把 N 個詞彙放進「%@」，其中 M 個是新加的」）；匯入同樣的說法加「從檔案」。匯出的預設檔名「拾音詞彙表 - %@.txt」（英文「Shiyin Glossary - %@.txt」）。
+- `AppModel`：`glossaryGroups`、`glossaryMemberships`（`reload` 時跟 `glossary` 一起讀）；`createGlossaryGroup`、`renameGlossaryGroup`、`deleteGlossaryGroup`、`setGroup`、`addTerms(_:group:)`、`importGlossary(from:group:)`、`exportGlossary(to:terms:)`。
+
+### 100.4 DEBUG
+
+- `shiyinctl glossarygroup add <名稱>`、`rename <id> <名稱>`、`delete <id>`、`set <群組 id> <詞 id,…> on|off`；`glossaryfilter all|none|<群組 id>`、`glossarysort added|recent|alpha`（設定頁的預覽也跟著）；`addterm`、`glossaryimport`、`glossaryexport` 多一個參數（群組 id：等於看著那一組時新增、匯入、匯出）；`state` 多 `glossaryGroups`（id、名稱、詞數）。
+
+### 100.5 驗證
+
+- 標準答案兩平台相同（`db/65`～、`util/glossary-order.json`）、跑兩次相同。
+- Mac DEBUG（暫存的 `SHIYIN_HOME`）：建兩組、把詞加進去（右鍵選單用 `capturemenu` 看、`glossarygroup set` 做）、篩選、排序、看著一組時新增和匯入、匯出一組（看檔案內容）、改名合併、刪除群組；`glossaryorder` 看同組的詞往前；設定頁 preview 截圖（全部、某一組、勾選時的那一列），淺色、深色。
+
 ## 14. 決策紀錄
 
 | # | 決策 | 不採用的方案與原因 |
@@ -3762,3 +3820,4 @@ CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 | D210 | 連結預設只有登入公司帳號的人打得開，「知道連結的任何人」要管理者在伺服器打開（§99.2；2026-11-27 使用者選的） | 預設公開：連結被轉貼出去就等於會議外流，公司 IT 不會接受。完全不做公開連結：要給客戶、外部夥伴看時只能傳檔案 |
 | D211 | 網頁版唯讀檢視第一階段就做，由伺服器從同一份封包畫出紀錄、逐字稿、錄音（§99.1；2026-11-27 使用者選的） | 第二階段再做：連結只能「用拾音打開」，沒裝拾音的人（主管、其他部門）點了什麼都看不到，連結分享的用處少一半 |
 | D212 | 分享名單、連結、期限只存在伺服器，app 只記「這場分享過」的 id（`meeting_shares`）（§99.3） | app 也存一份名單：別人匯入、管理者撤銷、過期都在伺服器發生，兩份會對不上；會議頁打開時問一次就好 |
+| D213 | 詞彙表的群組像標籤（一個詞可以在好幾組），只用來整理和當轉錄排序的線索，不在每場會議選（§100、R126；2026-11-27 GitHub #31，使用者選的） | 像資料夾一個詞一組：同一個詞常常屬於好幾個專案、部門（提案的人舉的例子），只能放一組就要複製一份。一個固定的「通用」群組每場都用：只有每場要選群組時才需要，自動排序（§98）不用選，沒有群組的就是「未分類」 |

@@ -1,5 +1,6 @@
 CREATE INDEX corrections_meeting ON corrections(meeting_id);
 CREATE INDEX documents_meeting ON documents(meeting_id, id);
+CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
 CREATE INDEX jobs_meeting ON jobs(meeting_id, id);
 CREATE INDEX jobs_status ON jobs(status, id);
 CREATE INDEX meetings_folder ON meetings(folder_id);
@@ -63,6 +64,16 @@ CREATE TABLE glossary (
   created_at TEXT NOT NULL
 );
 CREATE TABLE glossary_dismissed (term TEXT PRIMARY KEY COLLATE NOCASE);
+CREATE TABLE glossary_group_terms (
+  group_id INTEGER NOT NULL REFERENCES glossary_groups(id) ON DELETE CASCADE,
+  term_id  INTEGER NOT NULL REFERENCES glossary(id) ON DELETE CASCADE,
+  PRIMARY KEY (group_id, term_id)
+);
+CREATE TABLE glossary_groups (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE grdb_migrations (identifier TEXT NOT NULL PRIMARY KEY);
 CREATE TABLE jobs (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,

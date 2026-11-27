@@ -9,10 +9,11 @@ public sealed record GlossaryContext(string Meeting, IReadOnlyList<string> Folde
 /// <summary>轉錄時先放跟這場會議有關的詞（R124、M§98.1），規則跟 Mac 的 GlossaryOrder 相同。標準答案 util/glossary-order.json</summary>
 public static class GlossaryOrder
 {
-    /// <param name="Related">前三層（這場、同資料夾、最近幾場出現過）的詞數</param>
+    /// <param name="Related">前幾層（這場出現過的、同組的、同資料夾、最近幾場出現過）的詞數</param>
     public sealed record Ranked(List<string> Terms, int Related);
 
-    public static Ranked Rank(IReadOnlyList<string> terms, GlossaryContext context)
+    /// <param name="groups">groups[i] 是 terms[i] 在哪些群組（M§100.2；公司的詞是空的，長度不夠當成沒有）</param>
+    public static Ranked Rank(IReadOnlyList<string> terms, GlossaryContext context, IReadOnlyList<IReadOnlyList<long>>? groups = null)
     {
         var meeting = Folded(context.Meeting);
         var folder = context.Folder.Select(Folded).ToList();
@@ -26,6 +27,16 @@ public static class GlossaryOrder
             order.Add(i);
             placed[i] = true;
         }
+        // 跟這場出現過的詞在同一組的其他詞（R126.6）
+        IReadOnlyList<long> GroupsOf(int i) => groups is not null && i < groups.Count ? groups[i] : [];
+        var hit = order.SelectMany(GroupsOf).ToHashSet();
+        if (hit.Count > 0)
+            for (var i = 0; i < terms.Count; i++)
+            {
+                if (placed[i] || !GroupsOf(i).Any(hit.Contains)) continue;
+                order.Add(i);
+                placed[i] = true;
+            }
         // 幾場出現過，大的先；一樣的照原本的順序（OrderByDescending 是穩定排序）
         foreach (var texts in new[] { folder, recent })
         {

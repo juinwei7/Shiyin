@@ -1020,6 +1020,16 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **測試**：標準答案 `server/shares.json`、`package/contents-*`；`EnterpriseTests` 的假伺服器照 M§99.2 回應：建分享、續傳、更新版本、名單、連結、過期、伺服器關掉分享、不合理的回應。
 - **驗證**：`dotnet test`；虛擬機登入開發用的伺服器，收 Mac 分享的會議、匯入；分享一場給 Mac；連結在 Mac 的瀏覽器打開（虛擬機沒有瀏覽器）。
 
+### 11.59 詞彙表的群組和排序（R126，M§100、D213）
+
+- **Data**：`MigrationSql.V20` 同 Mac §100.1（逐字相同）；`AppDatabase` 的函式同名、規則相同。
+- **Core**：`GlossaryOrder.Rank(terms, context, groups)` 加同一組的那一層（M§100.2）。
+- **Services**：`AppController` 的建立、改名、刪除群組、`SetGroup`、`AddTerms(text, group)`、`ImportGlossary(path, group)`、`ExportGlossary(path, terms)`；`JobRunner.TranscriptionGlossary` 帶群組。排序存 `settings.json` 的 `glossarySort`。
+- **App**：設定「詞彙表」頁：群組那一列（`ItemsRepeater`／換行的 `WrapPanel` 做的膠囊按鈕，右鍵 `MenuFlyout`：重新命名…、刪除群組…）、選到群組時的那一行、排序的 `ComboBox`、每個詞後面的群組、右鍵「加到群組」（`MenuFlyoutSubItem`＋`ToggleMenuFlyoutItem`）、勾選那一列的「加到群組」「從「X」移出」；新增、改名用 `RenameDialog`（加兩種目標），刪除用 `ContentDialog`（同時只開一個）。字同 Mac。
+- **控制通道**：`glossarygroup`、`glossaryfilter`、`glossarysort`，同 Mac §100.4。
+- **測試**：標準答案 `db/65`～、`util/glossary-order.json`（`DatabaseTests` 加群組的步驟）。
+- **驗證**：`dotnet test`；虛擬機用控制通道建群組、篩選、排序，UI Automation 打開右鍵選單，設定頁截圖。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔

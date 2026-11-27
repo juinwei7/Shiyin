@@ -90,6 +90,12 @@ public sealed class DatabaseTests : IDisposable
             op.TryGetProperty(name, out var array) ? array.EnumerateArray().Select(x => x.GetInt32()).ToHashSet() : [];
         long SegmentId(long meetingId, int seq) => db.Segments(meetingId).First(s => s.Seq == seq).Id!.Value;
         void Result(JsonElement op, JNode node) => Golden.Json(op.Str("file")!, SwiftJsonWriter.Write(node, true, false));
+        long GroupId(string? name) => db.GlossaryGroups().FirstOrDefault(g => string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase))?.Id ?? 0;
+        List<long> TermIds(IEnumerable<string> terms)
+        {
+            var all = db.Glossary();
+            return [.. terms.Select(t => all.FirstOrDefault(x => x.Term == t)?.Id).OfType<long>()];
+        }
 
         foreach (var op in Golden.Fixtures.GetProperty("db").EnumerateArray())
         {
@@ -219,10 +225,33 @@ public sealed class DatabaseTests : IDisposable
                 case "addTerm": db.AddTerm(op.Str("term")!); break;
                 case "setFolder": db.SetFolder([Id(op)], db.CreateFolder(op.Str("folder")!)); break;   // 移到資料夾（名稱，沒有就建一個）
                 case "appendLiveSegment": db.AppendLiveSegment(Id(op), 0, 1, op.Str("text")!); break;
+                // 詞彙表的群組（M§100.1）：群組、詞都用名字指
+                case "createGlossaryGroup":
+                {
+                    var gid = db.CreateGlossaryGroup(op.Str("name")!);
+                    if (op.Str("file") is not null) Result(op, new JNode.Obj().Add("id", new JNode.Int(gid)));
+                    break;
+                }
+                case "setGlossaryGroup": db.SetGroup(GroupId(op.Str("group")), TermIds(op.Strings("terms") ?? []), op.Bool("on") ?? true); break;
+                case "addTermsInGroup":
+                {
+                    var added = db.AddTerms(op.Strings("terms") ?? [], GroupId(op.Str("group")));
+                    if (op.Str("file") is not null) Result(op, new JNode.Obj().Add("added", new JNode.Int(added)));
+                    break;
+                }
+                case "renameGlossaryGroup":
+                {
+                    var kept = db.RenameGlossaryGroup(GroupId(op.Str("group")), op.Str("to")!);
+                    if (op.Str("file") is not null) Result(op, new JNode.Obj().Add("kept", new JNode.Int(kept)));
+                    break;
+                }
+                case "deleteGlossaryGroup": db.DeleteGlossaryGroup(GroupId(op.Str("group"))); break;
+                case "renameTerm": db.RenameTerm(TermIds([op.Str("from")!]).FirstOrDefault(), op.Str("to")!); break;
                 case "transcriptionGlossary":   // 轉錄這場時詞彙的順序（M§98.5）
                 {
                     var context = db.GlossaryContext(Id(op));
-                    var ranked = GlossaryOrder.Rank([.. db.Glossary().Select(t => t.Term)], context);
+                    List<string> terms = [.. db.Glossary().Select(t => t.Term)];
+                    var ranked = GlossaryOrder.Rank(terms, context, db.GlossaryGroupsOf(terms));
                     Result(op, new JNode.Obj().Add("terms", JNode.Of(ranked.Terms)).Add("related", new JNode.Int(ranked.Related))
                         .Add("folderMeetings", new JNode.Int(context.Folder.Count)).Add("recentMeetings", new JNode.Int(context.Recent.Count)));
                     break;

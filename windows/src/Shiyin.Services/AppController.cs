@@ -1274,14 +1274,18 @@ public sealed partial class AppController
     /// 新增詞彙（R94.1、M§68）：一次貼上好幾個時用換行、逗號、頓號、分號分開，已經有的跳過。
     /// 一個詞而且已經有、或一次好幾個時說明結果（Notice，同 Mac 的 noticeMessage）；回傳同一句（設定頁也寫在輸入框下面），沒有要說的是 null
     /// </summary>
-    public string? AddTerms(string text)
+    public string? AddTerms(string text, long? group = null)
     {
         var terms = GlossaryInput.Split(text);
         if (terms.Count == 0) return null;
         var added = 0;
-        Perform(null, () => added = Db.AddTerms(terms));
+        Perform(null, () => added = Db.AddTerms(terms, group));
         string? message = null;
-        if (terms.Count == 1 && added == 0) message = L.F("「%@」已經在詞彙表裡了", terms[0]);
+        // 看著某一組時（R126.4）：新加的和已經有的都放進這一組
+        if (group is long g && GlossaryGroupName(g) is { } name)
+            message = added == terms.Count ? L.F("已加入 %lld 個詞彙到「%@」", (long)added, name)
+                : L.F("已把 %lld 個詞彙放進「%@」，其中 %lld 個是新加的", (long)terms.Count, name, (long)added);
+        else if (terms.Count == 1 && added == 0) message = L.F("「%@」已經在詞彙表裡了", terms[0]);
         else if (terms.Count > 1)
             message = added == terms.Count ? L.F("已加入 %lld 個詞彙", (long)added) : L.F("已加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
         if (message is not null) Notice?.Invoke(message);
@@ -1291,9 +1295,10 @@ public sealed partial class AppController
     /// <summary>
     /// 詞彙表匯出成文字檔（R117.1、M§91）：只有自己的詞，順序同畫面。成功時 Notice、失敗時 Error，回傳同一句（設定頁寫在輸入框下面）
     /// </summary>
-    public string ExportGlossary(string path)
+    public string ExportGlossary(string path, IReadOnlyList<string>? only = null)
     {
-        var terms = Db.Glossary().Select(t => t.Term).ToList();
+        // 看著某一組時只匯出那一組（R126.4）
+        var terms = only?.ToList() ?? Db.Glossary().Select(t => t.Term).ToList();
         try { File.WriteAllText(path, GlossaryFile.Export(terms), new UTF8Encoding(false)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -1306,7 +1311,7 @@ public sealed partial class AppController
     }
 
     /// <summary>從文字檔匯入詞彙（R117.2、R117.3，同 Mac 的 importGlossary）：一律合併，已經有的跳過，不刪原本的</summary>
-    public string ImportGlossary(string path)
+    public string ImportGlossary(string path, long? group = null)
     {
         string Fail(string message)
         {
@@ -1324,12 +1329,46 @@ public sealed partial class AppController
         var terms = GlossaryFile.TermsFromFile(text);
         if (terms.Count == 0) return Fail(L.T("檔案裡沒有詞彙"));
         var added = 0;
-        Perform(null, () => added = Db.AddTerms(terms));
-        var message = added == 0 ? L.F("檔案裡的 %lld 個詞彙都已經在詞彙表裡了", (long)terms.Count)
+        Perform(null, () => added = Db.AddTerms(terms, group));
+        var message = group is long g && GlossaryGroupName(g) is { } name
+            ? added == terms.Count ? L.F("已從檔案加入 %lld 個詞彙到「%@」", (long)added, name)
+                : L.F("已從檔案把 %lld 個詞彙放進「%@」，其中 %lld 個是新加的", (long)terms.Count, name, (long)added)
+            : added == 0 ? L.F("檔案裡的 %lld 個詞彙都已經在詞彙表裡了", (long)terms.Count)
             : added == terms.Count ? L.F("已從檔案加入 %lld 個詞彙", (long)added)
             : L.F("已從檔案加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
         Notice?.Invoke(message);
         return message;
+    }
+
+    // MARK: 詞彙表的群組（R126、M§100、design-windows §11.59）
+
+    public string? GlossaryGroupName(long id) => Db.GlossaryGroups().FirstOrDefault(g => g.Id == id)?.Name;
+
+    /// <summary>建一組（同名的已經有就用那一組），把這幾個詞加進去；回傳群組 id</summary>
+    public long CreateGlossaryGroup(string name, IReadOnlyCollection<long>? terms = null)
+    {
+        long id = 0;
+        Perform(null, () =>
+        {
+            id = Db.CreateGlossaryGroup(name);
+            if (terms is { Count: > 0 }) Db.SetGroup(id, terms, true);
+        });
+        return id;
+    }
+
+    /// <summary>改名；跟別的群組同名時合併過去，回傳留下的 id</summary>
+    public long RenameGlossaryGroup(long id, string name)
+    {
+        var kept = id;
+        Perform(null, () => kept = Db.RenameGlossaryGroup(id, name));
+        return kept;
+    }
+
+    public void DeleteGlossaryGroup(long id) => Perform(null, () => Db.DeleteGlossaryGroup(id));
+
+    public void SetGroup(long id, IReadOnlyCollection<long> terms, bool on)
+    {
+        if (terms.Count > 0) Perform(null, () => Db.SetGroup(id, terms, on));
     }
 
     /// <summary>刪除勾選的詞彙（R94.3）</summary>

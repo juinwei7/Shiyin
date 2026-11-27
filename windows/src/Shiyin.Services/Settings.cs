@@ -59,6 +59,8 @@ public sealed class AppSettings
     public const string AutoStopOnMeetingEndKey = "autoStopOnMeetingEnd";
     /// <summary>逐字稿：original（原文）／clean（精簡，R96、M§70）</summary>
     public const string TranscriptViewKey = "transcriptView";
+    /// <summary>詞彙表的排序（R126.5、M§100.3）：added（加入順序）／recent（最近加入）／alpha（字母順序）</summary>
+    public const string GlossarySortKey = "glossarySort";
     /// <summary>會議列表的排序、分組（R97、M§71、design-windows §11.30）：dateDesc／dateAsc／title／duration、none／month／folder（以前存的 series 讀成不分組）</summary>
     public const string MeetingSortKey = "meetingSort";
     public const string MeetingGroupingKey = "meetingGrouping";
@@ -346,6 +348,7 @@ public sealed class AppSettings
     public bool AutoStopOnMeetingEnd => Flag(AutoStopOnMeetingEndKey, true);
     /// <summary>逐字稿顯示原文還是精簡版（R96.1）</summary>
     public string TranscriptView => String(TranscriptViewKey) == "clean" ? "clean" : "original";
+    public string GlossarySort => String(GlossarySortKey) is "recent" or "alpha" ? String(GlossarySortKey)! : "added";
     /// <summary>會議列表的排序、分組（R97.2）：記住；認不得的值用預設</summary>
     public MeetingSort MeetingSort => MeetingSorts.Parse(String(MeetingSortKey)) ?? MeetingSort.DateDesc;
     public MeetingGrouping MeetingGrouping => MeetingGroupings.Parse(String(MeetingGroupingKey)) ?? MeetingGrouping.None;

@@ -8,6 +8,9 @@ enum RenameTarget: Identifiable, Equatable {
     case newFolder([Int64])
     case person(Int64)
     case bookmark(Int64)
+    /// 詞彙表的群組（design §100.3）；新群組建立後把這幾個詞加進去（空的就是只建群組）
+    case glossaryGroup(Int64)
+    case newGlossaryGroup([Int64])
 
     var id: String { "\(self)" }
 }
@@ -25,6 +28,8 @@ extension AppModel {
             // 人物總覽只在打開過人物列表後才有；沒有時從資料庫讀
             return peopleOverview.first { $0.id == id }?.name ?? ((try? db.peopleSummaries()) ?? people).first { $0.id == id }?.name ?? ""
         case .bookmark(let id): return detail?.bookmarks.first { $0.id == id }?.label ?? ""
+        case .glossaryGroup(let id): return glossaryGroupName(id) ?? ""
+        case .newGlossaryGroup: return ""
         }
     }
 
@@ -37,6 +42,10 @@ extension AppModel {
             return folders.contains { $0.name == name && $0.id != id } ? name : nil
         case .newFolder:
             return folders.contains { $0.name == name } ? name : nil
+        case .glossaryGroup(let id):
+            return glossaryGroups.first { $0.id != id && $0.name.caseInsensitiveCompare(name) == .orderedSame }?.name
+        case .newGlossaryGroup:
+            return glossaryGroups.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?.name
         case .person(let id):
             let all = peopleOverview.isEmpty ? ((try? db.peopleSummaries()) ?? people).map { ($0.id, $0.name) } : peopleOverview.map { ($0.id, $0.name) }
             return all.first { $0.0 != id && $0.1.caseInsensitiveCompare(name) == .orderedSame }?.1
@@ -64,6 +73,10 @@ extension AppModel {
                 selectedPerson = peopleOverview.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?.id
             }
         case .bookmark(let id): renameBookmark(id, label: name)
+        case .glossaryGroup(let id): renameGlossaryGroup(id, to: name)
+        case .newGlossaryGroup(let ids):
+            // 從群組那一列建的空群組：建好就看那一組
+            if let id = createGlossaryGroup(name, terms: ids), ids.isEmpty { glossaryFilter = .group(id) }
         }
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 重新命名的彈窗（R102、design §76）：標題、一行說明、帶目前名字的輸入框、取消／儲存。
-/// 會議、資料夾、新資料夾、人物、標記都用這一個
+/// 會議、資料夾、新資料夾、人物、標記、詞彙表的群組都用這一個
 struct RenameSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -12,7 +12,7 @@ struct RenameSheet: View {
     var body: some View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         // 「+」建空的資料夾時，同名的已經有就不能建（R104）
-        let canSave = !trimmed.isEmpty && (isNewFolder || trimmed != original) && !(isEmptyNewFolder && model.renameConflict(for: target, name: trimmed) != nil)
+        let canSave = !trimmed.isEmpty && (isNew || trimmed != original) && !(isEmptyNew && model.renameConflict(for: target, name: trimmed) != nil)
         // 共用的彈窗元件（design §80）
         VStack(alignment: .leading, spacing: 18) {
             SheetHeader(title: title, subtitle: hint(trimmed))
@@ -22,7 +22,8 @@ struct RenameSheet: View {
                 Button("取消") { dismiss() }
                     .buttonStyle(SheetPillButtonStyle(.secondary))
                     .keyboardShortcut(.cancelAction)
-                Button(isEmptyNewFolder ? String(localized: "建立") : isNewFolder ? String(localized: "建立並移入") : String(localized: "儲存")) { save() }
+                Button(isEmptyNew ? String(localized: "建立") : isNewGlossaryGroup ? String(localized: "建立並加入")
+                       : isNew ? String(localized: "建立並移入") : String(localized: "儲存")) { save() }
                     .buttonStyle(SheetPillButtonStyle(.primary))
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
@@ -35,8 +36,15 @@ struct RenameSheet: View {
         }
     }
 
-    private var isNewFolder: Bool { if case .newFolder = target { true } else { false } }
-    private var isEmptyNewFolder: Bool { if case .newFolder(let ids) = target { ids.isEmpty } else { false } }
+    /// 新資料夾、新群組：建立後把會議移進去、把詞加進去（空的就是只建立）
+    private var isNew: Bool { switch target { case .newFolder, .newGlossaryGroup: true; default: false } }
+    private var isNewGlossaryGroup: Bool { if case .newGlossaryGroup = target { true } else { false } }
+    private var isEmptyNew: Bool {
+        switch target {
+        case .newFolder(let ids), .newGlossaryGroup(let ids): ids.isEmpty
+        default: false
+        }
+    }
 
     private func save() {
         model.commitRename(target, to: name)
@@ -50,6 +58,8 @@ struct RenameSheet: View {
         case .newFolder: String(localized: "新資料夾")
         case .person: String(localized: "重新命名這個人")
         case .bookmark: String(localized: "重新命名標記")
+        case .glossaryGroup: String(localized: "重新命名群組")
+        case .newGlossaryGroup: String(localized: "新增群組")
         }
     }
 
@@ -57,6 +67,7 @@ struct RenameSheet: View {
         switch target {
         case .folder, .newFolder: String(localized: "資料夾名稱")
         case .person: String(localized: "名字")
+        case .glossaryGroup, .newGlossaryGroup: String(localized: "群組名稱")
         default: String(localized: "名稱")
         }
     }
@@ -67,6 +78,8 @@ struct RenameSheet: View {
             switch target {
             case .newFolder(let ids) where ids.isEmpty: return String(localized: "已經有「\(other)」。")
             case .newFolder: return String(localized: "已經有「\(other)」，會議會移進那個資料夾。")
+            case .newGlossaryGroup(let ids) where ids.isEmpty: return String(localized: "已經有「\(other)」。")
+            case .newGlossaryGroup: return String(localized: "已經有「\(other)」，詞彙會加進那一組。")
             default: return String(localized: "已經有「\(other)」，儲存後會合併成一個。")
             }
         }
@@ -78,6 +91,7 @@ struct RenameSheet: View {
             return ids.count > 1 ? String(localized: "例如專案名稱或客戶名稱。這 \(ids.count) 場會議會移進新資料夾。")
                                  : String(localized: "例如專案名稱或客戶名稱。這場會議會移進新資料夾。")
         case .person: return String(localized: "所有會議裡的這個人都會跟著改。")
+        case .glossaryGroup, .newGlossaryGroup(_): return String(localized: "例如專案、客戶或部門。一個詞可以在好幾個群組。")
         case .bookmark(let id):
             let time = model.detail?.bookmarks.first { $0.id == id }?.time ?? 0
             return String(localized: "\(TimeFormat.string(time)) 的標記")

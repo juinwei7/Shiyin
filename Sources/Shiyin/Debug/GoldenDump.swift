@@ -354,9 +354,13 @@ enum GoldenDump {
         w.json("util/glossary-order.json", (f["glossaryOrderCases"] as? [Object] ?? []).map { c -> Object in
             let terms = c["terms"] as? [String] ?? []
             let context = GlossaryContext(meeting: c["meeting"] as? String ?? "", folder: c["folder"] as? [String] ?? [], recent: c["recent"] as? [String] ?? [])
-            let ranked = GlossaryOrder.rank(terms, context)
-            return ["comment": c["comment"] as? String ?? "", "terms": terms, "meeting": context.meeting, "folder": context.folder, "recent": context.recent,
-                    "ranked": ranked.terms, "related": ranked.related]
+            // 群組（design §100.2）：只有新的情況有，舊的情況結果不變
+            let groups = (c["groups"] as? [[Int]])?.map { $0.map(Int64.init) }
+            let ranked = GlossaryOrder.rank(terms, context, groups: groups ?? [])
+            var out: Object = ["comment": c["comment"] as? String ?? "", "terms": terms, "meeting": context.meeting, "folder": context.folder,
+                               "recent": context.recent, "ranked": ranked.terms, "related": ranked.related]
+            if let groups { out["groups"] = groups }
+            return out
         })
         // 詞彙表的檔案（R117、§91）：匯入的分法、匯出的格式、文字編碼
         let files = ["Redis\nKubernetes\n", "\u{FEFF}拾音\r\nClaude Code\r\n", "\"產品名\",\"客戶名\"\n\"Redis\",\"拾音\"", "甲\t乙\t丙\n丁", "", "  \n\n", "A；B、a，\"b\""]  // l10n-skip
@@ -1211,6 +1215,22 @@ enum GoldenDump {
             case "rejectCorrections":
                 let list = try db.corrections(id(op))
                 try db.rejectCorrections((op["indexes"] as? [Int] ?? []).map { list[$0].id! })
+            // 詞彙表的群組（design §100.1）：群組、詞都用名字指
+            case "createGlossaryGroup":
+                let gid = try db.createGlossaryGroup(op["name"] as? String ?? "")
+                if let file { w.json(file, ["id": gid]) }
+            case "setGlossaryGroup":
+                try db.setGroup(try glossaryGroupId(db, op["group"]), terms: try termIds(db, op["terms"]), on: op["on"] as? Bool ?? true)
+            case "addTermsInGroup":
+                let added = try db.addTerms(op["terms"] as? [String] ?? [], group: try glossaryGroupId(db, op["group"]))
+                if let file { w.json(file, ["added": added]) }
+            case "renameGlossaryGroup":
+                let kept = try db.renameGlossaryGroup(try glossaryGroupId(db, op["group"]), to: op["to"] as? String ?? "")
+                if let file { w.json(file, ["kept": kept]) }
+            case "deleteGlossaryGroup":
+                try db.deleteGlossaryGroup(try glossaryGroupId(db, op["group"]))
+            case "renameTerm":
+                try db.renameTerm(try termIds(db, [op["from"] as? String ?? ""]).first ?? 0, to: op["to"] as? String ?? "")
             case "addTerm":
                 try db.addTerm(op["term"] as? String ?? "")
             case "dismissGlossary":
@@ -1228,7 +1248,8 @@ enum GoldenDump {
                 try db.appendLiveSegment(id(op), start: 0, end: 1, text: op["text"] as? String ?? "")
             case "transcriptionGlossary":   // 轉錄這場時詞彙的順序（design §98.5）
                 let context = try db.glossaryContext(id(op))
-                let ranked = GlossaryOrder.rank(try db.glossary().map(\.term), context)
+                let terms = try db.glossary().map(\.term)
+                let ranked = GlossaryOrder.rank(terms, context, groups: try db.glossaryGroups(of: terms))
                 w.json(file!, ["terms": ranked.terms, "related": ranked.related, "folderMeetings": context.folder.count, "recentMeetings": context.recent.count] as Object)
             case "prioritizeTranscription":   // 先轉錄這場（design §96.4）：keys 是會議
                 w.json(file!, ["moved": try db.prioritizeTranscription((op["keys"] as? [String] ?? []).map { ids[$0] ?? 0 })])
@@ -1344,6 +1365,16 @@ enum GoldenDump {
     }
 
     /// 一張表的所有列：時間欄位（每次跑都不同）有值時寫成 "<time>"，BLOB 寫成 base64
+    /// 標準答案裡用名字指群組、詞（design §100.1）
+    private static func glossaryGroupId(_ db: AppDatabase, _ name: Any?) throws -> Int64 {
+        try db.glossaryGroups().first { $0.name.caseInsensitiveCompare(name as? String ?? "") == .orderedSame }?.id ?? 0
+    }
+
+    private static func termIds(_ db: AppDatabase, _ terms: Any?) throws -> [Int64] {
+        let all = try db.glossary()
+        return (terms as? [String] ?? []).compactMap { term in all.first { $0.term == term }?.id }
+    }
+
     private static func dumpTable(_ db: AppDatabase, _ table: String) throws -> [Object] {
         let timeColumns: Set<String> = ["created_at", "updated_at", "started_at", "finished_at", "deleted_at", "edited_at"]
         let sql = table == "search" ? "SELECT rowid, meeting_id, kind, ref, text FROM search ORDER BY rowid"

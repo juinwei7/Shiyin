@@ -192,5 +192,86 @@
       "很長的一個詞彙",
       "詞"
     ]
+  },
+  {
+    "comment" : "同一組的詞排在這場出現過的後面、同資料夾的前面（R126.6）",
+    "folder" : [
+      "Redis"
+    ],
+    "groups" : [
+      [
+        1
+      ],
+      [
+        2
+      ],
+      [
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+
+      ]
+    ],
+    "meeting" : "今天看 Lumio",
+    "ranked" : [
+      "Lumio",
+      "Kubernetes",
+      "Grafana",
+      "Redis",
+      "TTL"
+    ],
+    "recent" : [
+
+    ],
+    "related" : 4,
+    "terms" : [
+      "Redis",
+      "Kubernetes",
+      "Lumio",
+      "Grafana",
+      "TTL"
+    ]
+  },
+  {
+    "comment" : "一個詞在好幾組：碰到任何一組都往前；沒有群組的不受影響",
+    "folder" : [
+
+    ],
+    "groups" : [
+      [
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+
+      ],
+      [
+        2
+      ]
+    ],
+    "meeting" : "D4",
+    "ranked" : [
+      "D4",
+      "B2",
+      "A1",
+      "C3"
+    ],
+    "recent" : [
+      "A1"
+    ],
+    "related" : 3,
+    "terms" : [
+      "A1",
+      "B2",
+      "C3",
+      "D4"
+    ]
   }
 ]

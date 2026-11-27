@@ -211,6 +211,9 @@ public sealed class Job
     public int Priority { get; set; }
 }
 
+/// <summary>詞彙表的群組（R126、M§100.1）：像標籤，一個詞可以在好幾組</summary>
+public sealed record GlossaryGroup(long Id, string Name, string CreatedAt);
+
 public sealed class GlossaryTerm
 {
     public long? Id { get; set; }

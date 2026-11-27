@@ -841,6 +841,9 @@
   {"comment": "同資料夾排過的不再算進最近幾場；同一場出現很多次只算一場", "terms": ["A1", "B2", "C3"], "meeting": "", "folder": ["C3 C3 C3 C3", "x"], "recent": ["B2", "B2 A1", "C3"]},
   {"comment": "分數一樣照原本的順序", "terms": ["丙", "乙", "甲"], "meeting": "", "folder": ["甲乙丙"], "recent": []},
   {"comment": "空的詞、比文字長的詞不算出現", "terms": ["", "很長的一個詞彙", "詞"], "meeting": "詞", "folder": ["詞彙"], "recent": []}
+,
+  {"comment": "同一組的詞排在這場出現過的後面、同資料夾的前面（R126.6）", "terms": ["Redis", "Kubernetes", "Lumio", "Grafana", "TTL"], "meeting": "今天看 Lumio", "folder": ["Redis"], "recent": [], "groups": [[1], [2], [2], [2, 3], []]},
+  {"comment": "一個詞在好幾組：碰到任何一組都往前；沒有群組的不受影響", "terms": ["A1", "B2", "C3", "D4"], "meeting": "D4", "folder": [], "recent": ["A1"], "groups": [[1], [1, 2], [], [2]]}
  ],
  "whisperGlossaries": [
   [],
@@ -2170,6 +2173,21 @@
   {"op": "transcriptionGlossary", "key": "ko", "file": "db/62-transcription-glossary.json", "comment": "這場（含即時逐字稿）、同資料夾的中文會議、之前的粵語會議（同一天、先建的）"},
   {"op": "transcriptionGlossary", "key": "yue", "file": "db/63-transcription-glossary.json", "comment": "不在資料夾；韓文會議同一天但比較晚建，不算"},
   {"op": "transcriptionGlossary", "key": "zh", "file": "db/64-transcription-glossary.json", "comment": "最早的一場：前面沒有會議"}
+,
+  {"op": "createGlossaryGroup", "name": "研發", "file": "db/65-glossary-group.json", "comment": "詞彙表的群組（R126、M§100.1）：像標籤，一個詞可以在好幾組"},
+  {"op": "createGlossaryGroup", "name": "Ops"},
+  {"op": "createGlossaryGroup", "name": "ops", "file": "db/66-glossary-group-same.json", "comment": "同名（不分大小寫）回傳已經有的那一組"},
+  {"op": "createGlossaryGroup", "name": "  產品  "},
+  {"op": "setGlossaryGroup", "group": "研發", "terms": ["Redis", "Kubernetes", "TTL"], "on": true},
+  {"op": "setGlossaryGroup", "group": "Ops", "terms": ["Kubernetes", "Valkey"], "on": true},
+  {"op": "setGlossaryGroup", "group": "研發", "terms": ["TTL"], "on": false},
+  {"op": "addTermsInGroup", "group": "產品", "terms": ["Lumio", "Roadmap", "  Beta  "], "file": "db/67-add-in-group.json", "comment": "已經有的 Lumio 也放進這一組；Roadmap、Beta 是新的"},
+  {"op": "dumpTables", "file": "db/68-glossary-groups.json", "tables": ["glossary", "glossary_groups", "glossary_group_terms"]},
+  {"op": "transcriptionGlossary", "key": "en", "file": "db/69-transcription-glossary-groups.json", "comment": "英文會議講到 Beta、Roadmap（產品組）：同組的 Lumio 往前；Valkey 跟 Kubernetes 同組，但這場沒講到 Kubernetes"},
+  {"op": "renameGlossaryGroup", "group": "Ops", "to": "研發", "file": "db/70-rename-group-merge.json", "comment": "改成已經有的名字：合併進那一組"},
+  {"op": "renameTerm", "from": "Valkey", "to": "Redis", "comment": "詞改名成已經有的詞：群組合在一起"},
+  {"op": "deleteGlossaryGroup", "group": "產品", "comment": "刪群組不刪詞"},
+  {"op": "dumpTables", "file": "db/71-glossary-groups.json", "tables": ["glossary", "glossary_groups", "glossary_group_terms"]}
  ],
  "editPlanCases": [
   {"key": "trim-and-delete", "pieces": [[1, 2, 20], [1, 30, 55]],

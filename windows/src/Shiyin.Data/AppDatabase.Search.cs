@@ -328,20 +328,28 @@ public sealed partial class AppDatabase
 
     public void DeleteTerm(long id) => Write(db => db.Execute("DELETE FROM glossary WHERE id = ?", id));
 
-    /// <summary>改一個詞（R100、M§74，同 Mac 的 renameTerm）：改成已經有的詞時合併（刪掉這一個）；空的不改</summary>
+    /// <summary>改一個詞（R100、M§74，同 Mac 的 renameTerm）：改成已經有的詞時合併（刪掉這一個，群組關係搬到留下的那個，R126.7）；空的不改</summary>
     public void RenameTerm(long id, string term)
     {
         var trimmed = term.Trim();
         if (trimmed.Length == 0) return;
         Write(db =>
         {
-            if (db.Scalar("SELECT id FROM glossary WHERE term = ? AND id != ?", trimmed, id) is not null) db.Execute("DELETE FROM glossary WHERE id = ?", id);
+            if (db.Scalar("SELECT id FROM glossary WHERE term = ? AND id != ?", trimmed, id) is { } other)
+            {
+                db.Execute("INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) SELECT group_id, ? FROM glossary_group_terms WHERE term_id = ? ORDER BY group_id",
+                    Convert.ToInt64(other), id);
+                db.Execute("DELETE FROM glossary WHERE id = ?", id);
+            }
             else db.Execute("UPDATE glossary SET term = ? WHERE id = ?", trimmed, id);
         });
     }
 
-    /// <summary>一次加好幾個（R94.1、M§68，同 Mac 的 addTerms）：回傳實際加進去的個數；已經有的跳過（INSERT OR IGNORE，term 是 UNIQUE）</summary>
-    public int AddTerms(IEnumerable<string> terms) => Write(db =>
+    /// <summary>
+    /// 一次加好幾個（R94.1、M§68，同 Mac 的 addTerms）：回傳實際加進去的個數；已經有的跳過（INSERT OR IGNORE，term 是 UNIQUE）。
+    /// group 不是 null 時新加的和已經有的詞都放進這一組（R126.4、M§100.1）
+    /// </summary>
+    public int AddTerms(IEnumerable<string> terms, long? group = null) => Write(db =>
     {
         var added = 0;
         foreach (var term in terms)
@@ -349,8 +357,79 @@ public sealed partial class AppDatabase
             var trimmed = term.Trim();
             if (trimmed.Length == 0) continue;
             added += db.Execute("INSERT OR IGNORE INTO glossary (term, created_at) VALUES (?, ?)", trimmed, Clock.Now());
+            if (group is { } g)
+                db.Execute("INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) SELECT ?, id FROM glossary WHERE term = ?", g, trimmed);
         }
         return added;
+    });
+
+    // MARK: 詞彙表的群組（M§100.1、R126，同 Mac）
+
+    public List<GlossaryGroup> GlossaryGroups() => Read(db => db.Query("SELECT * FROM glossary_groups ORDER BY id")
+        .Select(r => new GlossaryGroup(r.Long("id"), r.Str("name"), r.Str("created_at"))).ToList());
+
+    /// <summary>詞的 id → 它在的群組 id（照群組 id 排）</summary>
+    public Dictionary<long, List<long>> GlossaryMemberships() => Read(db =>
+    {
+        var map = new Dictionary<long, List<long>>();
+        foreach (var r in db.Query("SELECT term_id, group_id FROM glossary_group_terms ORDER BY term_id, group_id"))
+        {
+            if (!map.TryGetValue(r.Long("term_id"), out var list)) map[r.Long("term_id")] = list = [];
+            list.Add(r.Long("group_id"));
+        }
+        return map;
+    });
+
+    /// <summary>轉錄排序用（M§100.2）：每個詞在哪些群組；自己的詞照完全相同的字對，公司的詞沒有群組</summary>
+    public List<List<long>> GlossaryGroupsOf(IReadOnlyList<string> terms)
+    {
+        var ids = new Dictionary<string, long>(StringComparer.Ordinal);
+        foreach (var t in Glossary()) if (t.Id is long id) ids.TryAdd(t.Term, id);
+        var memberships = GlossaryMemberships();
+        return [.. terms.Select(t => ids.TryGetValue(t, out var id) && memberships.TryGetValue(id, out var g) ? g : [])];
+    }
+
+    /// <summary>同名（不分大小寫）的已經有就回傳那一個</summary>
+    public long CreateGlossaryGroup(string name)
+    {
+        var trimmed = name.Trim();
+        return Write(db =>
+        {
+            if (db.Scalar("SELECT id FROM glossary_groups WHERE name = ?", trimmed) is { } existing) return Convert.ToInt64(existing);
+            db.Execute("INSERT INTO glossary_groups (name, created_at) VALUES (?, ?)", trimmed, Clock.Now());
+            return db.LastInsertRowId;
+        });
+    }
+
+    /// <summary>跟別的群組同名（不分大小寫）時合併進那一組（同資料夾，M§92.2），回傳留下的 id</summary>
+    public long RenameGlossaryGroup(long id, string name)
+    {
+        var trimmed = name.Trim();
+        if (trimmed.Length == 0) return id;
+        return Write(db =>
+        {
+            if (db.Scalar("SELECT id FROM glossary_groups WHERE name = ? AND id != ?", trimmed, id) is { } found)
+            {
+                var other = Convert.ToInt64(found);
+                db.Execute("INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) SELECT ?, term_id FROM glossary_group_terms WHERE group_id = ? ORDER BY term_id",
+                    other, id);
+                db.Execute("DELETE FROM glossary_groups WHERE id = ?", id);
+                return other;
+            }
+            db.Execute("UPDATE glossary_groups SET name = ? WHERE id = ?", trimmed, id);
+            return id;
+        });
+    }
+
+    /// <summary>刪掉群組（詞不刪，關係跟著刪）</summary>
+    public void DeleteGlossaryGroup(long id) => Write(db => db.Execute("DELETE FROM glossary_groups WHERE id = ?", id));
+
+    /// <summary>把詞加進（on）或移出一組</summary>
+    public void SetGroup(long groupId, IEnumerable<long> terms, bool on) => Write(db =>
+    {
+        foreach (var term in terms)
+            db.Execute(on ? "INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) VALUES (?, ?)"
+                          : "DELETE FROM glossary_group_terms WHERE group_id = ? AND term_id = ?", groupId, term);
     });
 
     /// <summary>批次刪除（R94.3）</summary>

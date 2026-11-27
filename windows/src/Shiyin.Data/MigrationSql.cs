@@ -320,4 +320,19 @@ static class MigrationSql
 
     /// <summary>先轉錄這場（R122、M§96.1、D205）：排隊的順序，大的先、一樣的照 id（同 Mac 的 AppDatabase.jobPrioritySQL）</summary>
     public const string V19 = "ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0";
+
+    /// <summary>詞彙表的群組（R126、M§100.1、D213）：像標籤，一個詞可以在好幾組（同 Mac 的 AppDatabase.glossaryGroupsSQL）</summary>
+    public const string V20 = """
+        CREATE TABLE glossary_groups (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE glossary_group_terms (
+          group_id INTEGER NOT NULL REFERENCES glossary_groups(id) ON DELETE CASCADE,
+          term_id  INTEGER NOT NULL REFERENCES glossary(id) ON DELETE CASCADE,
+          PRIMARY KEY (group_id, term_id)
+        );
+        CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
+        """;
 }

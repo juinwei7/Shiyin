@@ -55,7 +55,8 @@ enum DebugControl {
         case "glossaryorder":   // glossaryorder <會議 id> <輸出.json>：轉錄這場時詞彙的順序（design §98.5）
             let started = Date()
             if let id, let meeting = try? model.db.meeting(id), let context = try? model.db.glossaryContext(id) {
-                let ranked = GlossaryOrder.rank(CompanyGlossary.merged((try? model.db.glossary().map(\.term)) ?? []), context)
+                let terms = CompanyGlossary.merged((try? model.db.glossary().map(\.term)) ?? [])
+                let ranked = GlossaryOrder.rank(terms, context, groups: (try? model.db.glossaryGroups(of: terms)) ?? [])
                 write(["terms": ranked.terms, "related": ranked.related, "folderMeetings": context.folder.count, "recentMeetings": context.recent.count,
                        "prompt": WhisperEngine.prompt(glossary: ranked.terms, language: meeting.meetingLanguage),
                        "ms": Int(Date().timeIntervalSince(started) * 1000)], to: args[2])
@@ -846,10 +847,26 @@ enum DebugControl {
             let windows = NSApp.windows.filter { $0.isVisible && (args.count < 3 || "\($0.windowNumber)" == args[2]) }
             windows.lazy.compactMap { $0.contentView.flatMap(find) }.first?.performClick(nil)
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
-        case "addterm": model.addTerms(args[1].replacingOccurrences(of: "\\n", with: "\n"))   // 一次好幾個（R94.1）：「\n」當換行
+        // 一次好幾個（R94.1）：「\n」當換行；第二個參數是群組 id 時放進那一組（看著那一組時新增，design §100.4）
+        case "addterm": model.addTerms(args[1].replacingOccurrences(of: "\\n", with: "\n"), group: args.count > 2 ? Int64(args[2]) : nil)
+        // 詞彙表的群組（design §100.4）：glossarygroup add <名稱> | rename <id> <名稱> | delete <id> | set <群組 id> <詞 id,…> on|off
+        case "glossarygroup":
+            switch args[1] {
+            case "add": model.createGlossaryGroup(args[2])
+            case "rename": if let id = Int64(args[2]) { model.renameGlossaryGroup(id, to: args[3]) }
+            case "delete": if let id = Int64(args[2]) { model.deleteGlossaryGroup(id) }
+            case "set": if let id = Int64(args[2]) { model.setGroup(id, terms: args[3].split(separator: ",").compactMap { Int64($0) }, on: args[4] == "on") }
+            default: break
+            }
+        case "glossaryfilter":   // glossaryfilter all|none|<群組 id>：設定頁的詞彙表看哪一組
+            model.glossaryFilter = args[1] == "all" ? .all : args[1] == "none" ? .ungrouped : Int64(args[1]).map { .group($0) } ?? .all
+        case "glossarysort": UserDefaults.standard.set(args[1], forKey: AppSettings.glossarySortKey)   // added|recent|alpha（寫進共用設定，測完 defaults delete）
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
-        case "glossaryexport": model.exportGlossary(to: URL(fileURLWithPath: args[1]))   // 詞彙表匯出、匯入（R117），不開面板
-        case "glossaryimport": model.importGlossary(from: URL(fileURLWithPath: args[1]))
+        // 詞彙表匯出、匯入（R117），不開面板；第二個參數是群組 id 時只匯出那一組、匯入到那一組（design §100.4）
+        case "glossaryexport":
+            let group = args.count > 2 ? Int64(args[2]) : nil
+            model.exportGlossary(to: URL(fileURLWithPath: args[1]), terms: group.map { id in model.glossary.filter { model.glossaryMemberships[$0.id ?? -1]?.contains(id) == true } })
+        case "glossaryimport": model.importGlossary(from: URL(fileURLWithPath: args[1]), group: args.count > 2 ? Int64(args[2]) : nil)
         case "record":
             switch args[1] {
             case "start": model.startRecording()
@@ -1331,6 +1348,9 @@ enum DebugControl {
                                                "template": $0.meeting.templateId, "folder": model.folderName($0.meeting.folderId), "folderId": $0.meeting.folderId.map { $0 as Any } ?? NSNull()] },
             "queuedCount": model.queuedCount,
             "transcribeQueue": model.transcribeQueue,
+            "glossaryGroups": model.glossaryGroups.map { group in
+                ["id": group.id ?? 0, "name": group.name, "terms": model.glossaryMemberships.values.count { $0.contains(group.id ?? 0) }] as [String: Any]
+            },
             "filteredCount": model.filteredMeetings.count,
             "menuBarSymbol": model.menuBarSymbol,
             "micStatus": AVCaptureDevice.authorizationStatus(for: .audio).rawValue,

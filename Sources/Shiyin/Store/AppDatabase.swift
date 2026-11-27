@@ -399,8 +399,27 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("v19") { db in
             try db.execute(sql: Self.jobPrioritySQL)
         }
+        // 詞彙表的群組（design §100.1、R126）：像標籤，一個詞可以在好幾組
+        migrator.registerMigration("v20") { db in
+            try db.execute(sql: Self.glossaryGroupsSQL)
+        }
         return migrator
     }
+
+    /// migration v20 的 SQL（design §100.1；Windows 的 MigrationSql.V20 逐字相同）
+    nonisolated static let glossaryGroupsSQL = """
+        CREATE TABLE glossary_groups (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE glossary_group_terms (
+          group_id INTEGER NOT NULL REFERENCES glossary_groups(id) ON DELETE CASCADE,
+          term_id  INTEGER NOT NULL REFERENCES glossary(id) ON DELETE CASCADE,
+          PRIMARY KEY (group_id, term_id)
+        );
+        CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
+        """
 
     /// migration v19 的 SQL（design §96.1；Windows 的 MigrationSql.V19 逐字相同）
     nonisolated static let jobPrioritySQL = "ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0"
@@ -1603,9 +1622,10 @@ final class AppDatabase: @unchecked Sendable {
         _ = try pool.write { db in try GlossaryTerm.deleteOne(db, key: id) }
     }
 
-    /// 一次加好幾個（R94.1）：回傳實際加進去的個數（已經有的跳過，不分大小寫）
+    /// 一次加好幾個（R94.1）：回傳實際加進去的個數（已經有的跳過，不分大小寫）。
+    /// group 不是 nil 時新加的和已經有的詞都放進這一組（R126.4、design §100.1）
     @discardableResult
-    func addTerms(_ terms: [String]) throws -> Int {
+    func addTerms(_ terms: [String], group: Int64? = nil) throws -> Int {
         try pool.write { db in
             var added = 0
             for term in terms {
@@ -1613,17 +1633,23 @@ final class AppDatabase: @unchecked Sendable {
                 guard !trimmed.isEmpty else { continue }
                 try db.execute(sql: "INSERT OR IGNORE INTO glossary (term, created_at) VALUES (?, ?)", arguments: [trimmed, Clock.now()])
                 added += db.changesCount
+                if let group {
+                    try db.execute(sql: "INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) SELECT ?, id FROM glossary WHERE term = ?",
+                                   arguments: [group, trimmed])
+                }
             }
             return added
         }
     }
 
-    /// 改一個詞（R100）：改成已經有的詞時合併（刪掉這一個）
+    /// 改一個詞（R100）：改成已經有的詞時合併（刪掉這一個，群組關係搬到留下的那個，R126.7）
     func renameTerm(_ id: Int64, to term: String) throws {
         let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         try pool.write { db in
-            if try Int64.fetchOne(db, sql: "SELECT id FROM glossary WHERE term = ? AND id != ?", arguments: [trimmed, id]) != nil {
+            if let other = try Int64.fetchOne(db, sql: "SELECT id FROM glossary WHERE term = ? AND id != ?", arguments: [trimmed, id]) {
+                try db.execute(sql: "INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) SELECT group_id, ? FROM glossary_group_terms WHERE term_id = ? ORDER BY group_id",
+                               arguments: [other, id])
                 try db.execute(sql: "DELETE FROM glossary WHERE id = ?", arguments: [id])
             } else {
                 try db.execute(sql: "UPDATE glossary SET term = ? WHERE id = ?", arguments: [trimmed, id])
@@ -1634,6 +1660,70 @@ final class AppDatabase: @unchecked Sendable {
     /// 批次刪除（R94.3）
     func deleteTerms(_ ids: [Int64]) throws {
         _ = try pool.write { db in try GlossaryTerm.deleteAll(db, keys: ids) }
+    }
+
+    // MARK: 詞彙表的群組（design §100.1、R126）
+
+    func glossaryGroups() throws -> [GlossaryGroup] {
+        try pool.read { db in try GlossaryGroup.order(Column("id")).fetchAll(db) }
+    }
+
+    /// 詞的 id → 它在的群組 id（照群組 id 排）
+    func glossaryMemberships() throws -> [Int64: [Int64]] {
+        try pool.read { db in
+            try Row.fetchAll(db, sql: "SELECT term_id, group_id FROM glossary_group_terms ORDER BY term_id, group_id")
+                .reduce(into: [Int64: [Int64]]()) { $0[$1["term_id"], default: []].append($1["group_id"]) }
+        }
+    }
+
+    /// 轉錄排序用（design §100.2）：每個詞在哪些群組；自己的詞照完全相同的字對，公司的詞沒有群組
+    func glossaryGroups(of terms: [String]) throws -> [[Int64]] {
+        let ids = Dictionary(try glossary().compactMap { t in t.id.map { (t.term, $0) } }, uniquingKeysWith: { a, _ in a })
+        let memberships = try glossaryMemberships()
+        return terms.map { ids[$0].flatMap { memberships[$0] } ?? [] }
+    }
+
+    /// 同名（不分大小寫）的已經有就回傳那一個
+    @discardableResult
+    func createGlossaryGroup(_ name: String) throws -> Int64 {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try pool.write { db in
+            if let id = try Int64.fetchOne(db, sql: "SELECT id FROM glossary_groups WHERE name = ?", arguments: [trimmed]) { return id }
+            try db.execute(sql: "INSERT INTO glossary_groups (name, created_at) VALUES (?, ?)", arguments: [trimmed, Clock.now()])
+            return db.lastInsertedRowID
+        }
+    }
+
+    /// 跟別的群組同名（不分大小寫）時合併進那一組（同 §92.2 的資料夾），回傳留下的 id
+    @discardableResult
+    func renameGlossaryGroup(_ id: Int64, to name: String) throws -> Int64 {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return id }
+        return try pool.write { db in
+            if let other = try Int64.fetchOne(db, sql: "SELECT id FROM glossary_groups WHERE name = ? AND id != ?", arguments: [trimmed, id]) {
+                try db.execute(sql: "INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) SELECT ?, term_id FROM glossary_group_terms WHERE group_id = ? ORDER BY term_id",
+                               arguments: [other, id])
+                try db.execute(sql: "DELETE FROM glossary_groups WHERE id = ?", arguments: [id])
+                return other
+            }
+            try db.execute(sql: "UPDATE glossary_groups SET name = ? WHERE id = ?", arguments: [trimmed, id])
+            return id
+        }
+    }
+
+    /// 刪掉群組（詞不刪，關係跟著刪）
+    func deleteGlossaryGroup(_ id: Int64) throws {
+        try pool.write { db in try db.execute(sql: "DELETE FROM glossary_groups WHERE id = ?", arguments: [id]) }
+    }
+
+    /// 把詞加進（on）或移出一組
+    func setGroup(_ groupId: Int64, terms: [Int64], on: Bool) throws {
+        try pool.write { db in
+            for term in terms {
+                try db.execute(sql: on ? "INSERT OR IGNORE INTO glossary_group_terms (group_id, term_id) VALUES (?, ?)"
+                                       : "DELETE FROM glossary_group_terms WHERE group_id = ? AND term_id = ?", arguments: [groupId, term])
+            }
+        }
     }
 
     /// 詞彙表建議（design §17.5、R14.5）：從參加者、改過名字的說話者、接受過的校正、中文會議標題裡的英文詞找。

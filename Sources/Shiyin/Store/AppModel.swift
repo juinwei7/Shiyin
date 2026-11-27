@@ -343,6 +343,11 @@ final class AppModel {
     /// 重新命名的彈窗（R102、design §76）：會議、資料夾、新資料夾、人物、標記都用這一個
     var renameTarget: RenameTarget?
     var glossary: [GlossaryTerm] = []
+    /// 詞彙表的群組（design §100、R126）：群組、詞的 id → 群組的 id
+    var glossaryGroups: [GlossaryGroup] = []
+    var glossaryMemberships: [Int64: [Int64]] = [:]
+    /// 設定的詞彙表看哪一組（不記住；DEBUG 的 glossaryfilter 也改這裡）
+    var glossaryFilter: GlossaryFilter = .all
     var glossarySuggestions: [GlossarySuggestion] = []
     /// 公司詞彙表（R53）：設定頁顯示、建議的新詞要排除
     var companyGlossary: [String] = CompanyGlossary.terms
@@ -545,6 +550,8 @@ final class AppModel {
             meetings = try db.meetingRows()
             trash = try db.meetingRows(trash: true)
             glossary = try db.glossary()
+            glossaryGroups = try db.glossaryGroups()
+            glossaryMemberships = try db.glossaryMemberships()
             // 公司已經有的詞不再建議（R53.3）
             glossarySuggestions = try db.glossarySuggestions().filter { !CompanyGlossary.contains($0.term) }
             templates = try db.templates()
@@ -2009,13 +2016,17 @@ final class AppModel {
     func dismissGlossarySuggestion(_ term: String) { perform { try db.dismissGlossarySuggestion(term) } }
     func deleteTerm(_ id: Int64) { perform { try db.deleteTerm(id) } }
 
-    /// 新增詞彙（R94.1）：一次貼上好幾個時用換行、逗號、頓號、分號分開，已經有的跳過
-    func addTerms(_ text: String) {
+    /// 新增詞彙（R94.1）：一次貼上好幾個時用換行、逗號、頓號、分號分開，已經有的跳過。
+    /// 看著某一組時新加的和已經有的都放進這一組（R126.4）
+    func addTerms(_ text: String, group: Int64? = nil) {
         let terms = GlossaryInput.split(text)
         guard !terms.isEmpty else { return }
         var added = 0
-        perform { added = try db.addTerms(terms) }
-        if terms.count == 1 && added == 0 {
+        perform { added = try db.addTerms(terms, group: group) }
+        if let group, let name = glossaryGroupName(group) {
+            noticeMessage = added == terms.count ? String(localized: "已加入 \(added) 個詞彙到「\(name)」")
+                : String(localized: "已把 \(terms.count) 個詞彙放進「\(name)」，其中 \(added) 個是新加的")
+        } else if terms.count == 1 && added == 0 {
             noticeMessage = String(localized: "「\(terms[0])」已經在詞彙表裡了")
         } else if terms.count > 1 {
             noticeMessage = added == terms.count ? String(localized: "已加入 \(added) 個詞彙")
@@ -2023,9 +2034,41 @@ final class AppModel {
         }
     }
 
-    /// 詞彙表匯出成文字檔（R117.1、design §91）：只有自己的詞，順序同畫面
-    func exportGlossary(to url: URL) {
-        let terms = glossary.map(\.term)
+    // MARK: 詞彙表的群組（design §100.3、R126）
+
+    enum GlossaryFilter: Hashable { case all, ungrouped, group(Int64) }
+
+    func glossaryGroupName(_ id: Int64) -> String? { glossaryGroups.first { $0.id == id }?.name }
+
+    @discardableResult
+    func createGlossaryGroup(_ name: String, terms: [Int64] = []) -> Int64? {
+        var id: Int64?
+        perform {
+            id = try db.createGlossaryGroup(name)
+            if let id, !terms.isEmpty { try db.setGroup(id, terms: terms, on: true) }
+        }
+        return id
+    }
+
+    /// 改成已經有的名字時合併過去；看著這一組時改看留下的那一組
+    @discardableResult
+    func renameGlossaryGroup(_ id: Int64, to name: String) -> Int64 {
+        var kept = id
+        perform { kept = try db.renameGlossaryGroup(id, to: name) }
+        if glossaryFilter == .group(id) { glossaryFilter = .group(kept) }
+        return kept
+    }
+
+    func deleteGlossaryGroup(_ id: Int64) {
+        perform { try db.deleteGlossaryGroup(id) }
+        if glossaryFilter == .group(id) { glossaryFilter = .all }
+    }
+
+    func setGroup(_ id: Int64, terms: [Int64], on: Bool) { perform { try db.setGroup(id, terms: terms, on: on) } }
+
+    /// 詞彙表匯出成文字檔（R117.1、design §91）：只有自己的詞，順序同畫面；看著某一組時只有那一組（R126.4）
+    func exportGlossary(to url: URL, terms: [GlossaryTerm]? = nil) {
+        let terms = (terms ?? glossary).map(\.term)
         do {
             try GlossaryFile.export(terms).write(to: url, atomically: true, encoding: .utf8)
             noticeMessage = String(localized: "已匯出 \(terms.count) 個詞彙")
@@ -2034,8 +2077,8 @@ final class AppModel {
         }
     }
 
-    /// 從文字檔匯入詞彙（R117.2、R117.3）：一律合併，已經有的跳過，不刪原本的
-    func importGlossary(from url: URL) {
+    /// 從文字檔匯入詞彙（R117.2、R117.3）：一律合併，已經有的跳過，不刪原本的；看著某一組時都放進這一組（R126.4）
+    func importGlossary(from url: URL, group: Int64? = nil) {
         let data: Data
         do {
             let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
@@ -2058,7 +2101,12 @@ final class AppModel {
             return
         }
         var added = 0
-        perform { added = try db.addTerms(terms) }
+        perform { added = try db.addTerms(terms, group: group) }
+        if let group, let name = glossaryGroupName(group) {
+            noticeMessage = added == terms.count ? String(localized: "已從檔案加入 \(added) 個詞彙到「\(name)」")
+                : String(localized: "已從檔案把 \(terms.count) 個詞彙放進「\(name)」，其中 \(added) 個是新加的")
+            return
+        }
         noticeMessage = added == 0 ? String(localized: "檔案裡的 \(terms.count) 個詞彙都已經在詞彙表裡了")
             : added == terms.count ? String(localized: "已從檔案加入 \(added) 個詞彙")
             : String(localized: "已從檔案加入 \(added) 個詞彙，\(terms.count - added) 個已經有了")

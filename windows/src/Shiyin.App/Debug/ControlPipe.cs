@@ -309,11 +309,32 @@ public static partial class ControlPipe
             // showtrash 0|1；confirmemptytrash（打開確認對話框）；emptytrash（不經過確認）
             case "selectmany" when args.Length > 1 && main is not null: main.State.SetListSelection(Ids(args[1])); return Ok;
             case "trashmany" when args.Length > 1: host.Controller.MoveToTrash(Ids(args[1])); return Ok;
+            // 詞彙表的群組（M§100.4、design-windows §11.59）：glossarygroup add <名稱> | rename <id> <名稱> | delete <id> | set <群組 id> <詞 id,…> on|off
+            case "glossarygroup" when args.Length > 2:
+                switch (args[1])
+                {
+                    case "add": host.Controller.CreateGlossaryGroup(args[2]); break;
+                    case "rename" when args.Length > 3 && long.TryParse(args[2], out var renameId): host.Controller.RenameGlossaryGroup(renameId, args[3]); break;
+                    case "delete" when long.TryParse(args[2], out var deleteId): host.Controller.DeleteGlossaryGroup(deleteId); break;
+                    case "set" when args.Length > 4 && long.TryParse(args[2], out var setId): host.Controller.SetGroup(setId, Ids(args[3]), args[4] == "on"); break;
+                }
+                app.Settings?.Refresh();
+                return Ok;
+            // glossaryfilter all|none|<群組 id>：設定頁的詞彙表看哪一組；glossarysort added|recent|alpha
+            case "glossaryfilter" when args.Length > 1 && app.Settings is { } glossaryWindow:
+                glossaryWindow.GlossaryFilter = args[1] == "all" ? 0 : args[1] == "none" ? -1 : long.TryParse(args[1], out var filterId) ? filterId : 0;
+                glossaryWindow.Refresh();
+                return Ok;
+            case "glossarysort" when args.Length > 1:
+                host.Settings.Set(AppSettings.GlossarySortKey, args[1]);
+                app.Settings?.Refresh();
+                return Ok;
             // glossaryorder <會議 id>：轉錄這場時詞彙的順序（M§98.5、design-windows §11.57）
             case "glossaryorder" when args.Length > 1 && long.TryParse(args[1], out var orderId) && host.Db.Meeting(orderId) is { } orderMeeting:
             {
                 var context = host.Db.GlossaryContext(orderId);
-                var ranked = GlossaryOrder.Rank(host.Enterprise.Glossary.Merged(host.Db.Glossary().Select(t => t.Term)), context);
+                var terms = host.Enterprise.Glossary.Merged(host.Db.Glossary().Select(t => t.Term));
+                var ranked = GlossaryOrder.Rank(terms, context, host.Db.GlossaryGroupsOf(terms));
                 return new JsonObject
                 {
                     ["terms"] = new JsonArray([.. ranked.Terms.Select(t => (JsonNode)t)]), ["related"] = ranked.Related,
@@ -585,6 +606,16 @@ public static partial class ControlPipe
         };
     }
 
+    /// <summary>state 的 glossaryGroups（M§100.4）：id、名稱、詞數</summary>
+    static JsonArray GlossaryGroupsJson(AppHost host)
+    {
+        var memberships = host.Db.GlossaryMemberships();
+        return new JsonArray([.. host.Db.GlossaryGroups().Select(g => (JsonNode)new JsonObject
+        {
+            ["id"] = g.Id, ["name"] = g.Name, ["terms"] = memberships.Values.Count(list => list.Contains(g.Id)),
+        })]);
+    }
+
     static JsonNode State(AppHost host, MainWindow? main)
     {
         var r = host.Recorder;
@@ -607,6 +638,7 @@ public static partial class ControlPipe
             ["multiSelected"] = new JsonArray([.. (main?.State.MultiSelected ?? []).Select(x => (JsonNode)x)]),
             // 排隊等轉錄的會議，照轉錄的順序（M§96.4）
             ["transcribeQueue"] = new JsonArray([.. host.Controller.TranscribeQueue().Select(x => (JsonNode)x)]),
+            ["glossaryGroups"] = GlossaryGroupsJson(host),
             ["showTrash"] = main?.State.ShowTrash,
             ["trashCount"] = main?.State.Trash.Count,
             ["confirmDelete"] = main?.DeleteTargets.Count > 0,

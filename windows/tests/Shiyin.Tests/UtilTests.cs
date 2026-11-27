@@ -412,7 +412,10 @@ public class UtilTests
         foreach (var e in expected)
         {
             var context = new GlossaryContext(e.Str("meeting") ?? "", e.Strings("folder") ?? [], e.Strings("recent") ?? []);
-            var ranked = GlossaryOrder.Rank(e.Strings("terms") ?? [], context);
+            // 群組（M§100.2）：只有新的情況有
+            List<IReadOnlyList<long>>? groups = e.Get("groups") is { ValueKind: JsonValueKind.Array } g
+                ? [.. g.EnumerateArray().Select(a => (IReadOnlyList<long>)[.. a.EnumerateArray().Select(x => x.GetInt64())])] : null;
+            var ranked = GlossaryOrder.Rank(e.Strings("terms") ?? [], context, groups);
             Assert.Equal(e.Strings("ranked") ?? [], ranked.Terms);
             Assert.Equal(e.Long("related"), ranked.Related);
         }

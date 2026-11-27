@@ -741,6 +741,46 @@ public sealed class SettingsWindow : Window
     bool confirmingPerson;
     /// <summary>正在就地改的詞（R100）</summary>
     long? editingTerm;
+    /// <summary>詞彙表看哪一組（R126.2、M§100.3）：0 全部、-1 未分類、其他是群組 id；不記住，DEBUG 的 glossaryfilter 也改這裡</summary>
+    public long GlossaryFilter { get; set; }
+    List<GlossaryTerm> glossaryAll = [];
+    List<GlossaryGroup> glossaryGroups = [];
+    Dictionary<long, List<long>> glossaryMemberships = [];
+    DropDownButton? glossaryGroupMenu;
+    HyperlinkButton? glossaryUngroup;
+    /// <summary>群組的新增、改名、刪除對話框開著</summary>
+    bool glossaryDialog;
+
+    /// <summary>看著的群組 id；群組被刪掉了當成「全部」</summary>
+    long? GlossaryGroupId => GlossaryFilter > 0 && glossaryGroups.Any(g => g.Id == GlossaryFilter) ? GlossaryFilter : null;
+    long EffectiveGlossaryFilter => GlossaryFilter > 0 && GlossaryGroupId is null ? 0 : GlossaryFilter;
+    List<long> GroupsOf(GlossaryTerm term) => term.Id is long id && glossaryMemberships.TryGetValue(id, out var g) ? g : [];
+    string? GroupName(long id) => glossaryGroups.FirstOrDefault(g => g.Id == id)?.Name;
+
+    int GlossaryCount(long filter) => filter switch
+    {
+        0 => glossaryAll.Count,
+        -1 => glossaryAll.Count(t => GroupsOf(t).Count == 0),
+        _ => glossaryAll.Count(t => GroupsOf(t).Contains(filter)),
+    };
+
+    /// <summary>這一組的詞，照選的排序（R126.5）</summary>
+    List<GlossaryTerm> GlossaryInFilter()
+    {
+        var filter = EffectiveGlossaryFilter;
+        var terms = filter switch
+        {
+            0 => glossaryAll,
+            -1 => glossaryAll.Where(t => GroupsOf(t).Count == 0).ToList(),
+            _ => glossaryAll.Where(t => GroupsOf(t).Contains(filter)).ToList(),
+        };
+        return S.GlossarySort switch
+        {
+            "recent" => Enumerable.Reverse(terms).ToList(),
+            "alpha" => terms.OrderBy(t => t.Term, StringComparer.CurrentCultureIgnoreCase).ToList(),
+            _ => terms,
+        };
+    }
 
     /// <summary>詞彙表從檔案匯入（R117.2）：.txt、.csv、.tsv，一律合併；結果寫在輸入框下面</summary>
     async Task ImportGlossaryFile()
@@ -751,7 +791,7 @@ public sealed class SettingsWindow : Window
             WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
             foreach (var ext in new[] { ".txt", ".csv", ".tsv" }) picker.FileTypeFilter.Add(ext);
             if (await picker.PickSingleFileAsync() is not { } file) return;
-            glossaryNotice = host.Controller.ImportGlossary(file.Path);
+            glossaryNotice = host.Controller.ImportGlossary(file.Path, GlossaryGroupId);
         }
         catch (System.Runtime.InteropServices.COMException e) { glossaryNotice = e.Message; }
         Show();
@@ -762,11 +802,16 @@ public sealed class SettingsWindow : Window
     {
         try
         {
-            var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = L.T("拾音詞彙表") };
+            // 看著某一組時只匯出那一組，檔名帶群組名（R126.4）
+            var group = EffectiveGlossaryFilter switch { 0 => null, -1 => L.T("未分類"), var id => GroupName(id) };
+            var picker = new Windows.Storage.Pickers.FileSavePicker
+            {
+                SuggestedFileName = group is null ? L.T("拾音詞彙表") : Path.GetFileNameWithoutExtension(L.F("拾音詞彙表 - %@.txt", group)),
+            };
             picker.FileTypeChoices.Add(L.T("純文字（txt）"), [".txt"]);
             WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
             if (await picker.PickSaveFileAsync() is not { } file) return;
-            glossaryNotice = host.Controller.ExportGlossary(file.Path);
+            glossaryNotice = host.Controller.ExportGlossary(file.Path, EffectiveGlossaryFilter == 0 ? null : [.. glossaryTerms.Select(t => t.Term)]);
         }
         catch (System.Runtime.InteropServices.COMException e) { glossaryNotice = e.Message; }
         Show();
@@ -774,6 +819,10 @@ public sealed class SettingsWindow : Window
 
     FrameworkElement Glossary()
     {
+        glossaryAll = host.Db.Glossary();
+        glossaryGroups = host.Db.GlossaryGroups();
+        glossaryMemberships = host.Db.GlossaryMemberships();
+        glossaryTerms = GlossaryInFilter();
         var column = Ui.Column(12, Ui.Text(L.T("系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。"), 13, color: Ui.Secondary));
         // 一次貼上好幾個也可以（R94.1）：換行、逗號、頓號、分號分開。多行的輸入框（最多約 4 行高，貼上好幾行才不會只留第一行），
         // Enter 送出、Shift+Enter 換行（同 Mac 的 Return 送出）
@@ -790,7 +839,7 @@ public sealed class SettingsWindow : Window
         void Add(bool focus)
         {
             if (input.Text.Trim().Length == 0) return;
-            glossaryNotice = host.Controller.AddTerms(input.Text);
+            glossaryNotice = host.Controller.AddTerms(input.Text, GlossaryGroupId);
             focusGlossaryInput = focus;
             Show();
         }
@@ -813,10 +862,11 @@ public sealed class SettingsWindow : Window
         var importLink = Ui.Link(L.T("從檔案匯入…"), () => _ = ImportGlossaryFile());
         ToolTipService.SetToolTip(importLink, L.T("加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉"));
         var exportLink = Ui.Link(L.T("匯出…"), () => _ = ExportGlossaryFile());
-        var hasTerms = host.Db.Glossary().Count > 0;
+        var hasTerms = glossaryTerms.Count > 0;
         exportLink.IsEnabled = hasTerms;
         ToolTipService.SetToolTip(exportLink, hasTerms ? L.T("存成文字檔，一行一個詞") : L.T("還沒有詞彙可以匯出"));
         column.Children.Add(Ui.Row(14, importLink, exportLink));
+        AddGroupBar(column);
         if (glossaryNotice is { } notice)
         {
             glossaryNotice = null;
@@ -828,10 +878,10 @@ public sealed class SettingsWindow : Window
             var list = Ui.Column(6, Ui.Caption(L.T("建議加入：從參加者、說話者名字、校正過的字、會議標題找到的")));
             foreach (var s in suggestions)
                 list.Children.Add(Ui.Bar(Ui.Row(8, Ui.Text(s.Term, 14), Ui.Caption(s.SourceLabel)), null,
-                    Ui.Row(8, Ui.Link(L.T("忽略"), () => { host.Controller.DismissGlossarySuggestion(s.Term); Show(); }), Ui.Link(L.T("加入"), () => { host.Controller.AddTerm(s.Term); Show(); }))));
+                    Ui.Row(8, Ui.Link(L.T("忽略"), () => { host.Controller.DismissGlossarySuggestion(s.Term); Show(); }), Ui.Link(L.T("加入"), () => { host.Controller.AddTerms(s.Term, GlossaryGroupId); Show(); }))));
             column.Children.Add(Ui.Card(new ScrollViewer { Content = list, MaxHeight = 160 }));
         }
-        var terms = glossaryTerms = host.Db.Glossary();
+        var terms = glossaryAll;
         if (terms.Count == 0) column.Children.Add(Ui.Text(L.T("還沒有詞彙。用詞修正時勾選「加進詞彙表」也會加到這裡。"), 13, color: Ui.Secondary));
         // 搜尋（R94.2）：超過 10 個才出現，不分大小寫
         if (terms.Count > 10)
@@ -846,6 +896,10 @@ public sealed class SettingsWindow : Window
             column.Children.Add(search);
         }
         else glossaryQuery = "";
+        // 排序（R126.5）：2 個以上
+        if (terms.Count > 1)
+            column.Children.Add(Ui.Combo([("added", L.T("加入順序")), ("recent", L.T("最近加入")), ("alpha", L.T("字母順序"))], S.GlossarySort,
+                value => { S.Set(AppSettings.GlossarySortKey, value); Show(); }, L.T("排序")));
         glossaryList = Ui.Column(6);
         column.Children.Add(glossaryList);
         FillGlossaryList();
@@ -897,6 +951,8 @@ public sealed class SettingsWindow : Window
         glossaryBoxes.Clear();
         glossarySelect = null;
         glossaryDelete = null;
+        glossaryGroupMenu = null;
+        glossaryUngroup = null;
         var shown = ShownTerms();
         if (shown.Count > 0)
         {
@@ -907,7 +963,16 @@ public sealed class SettingsWindow : Window
                 SetGlossaryChecks(ids, !ids.All(glossaryChecked.Contains));
             };
             glossaryDelete = Ui.Button("", () => _ = ConfirmDeleteTerms());
-            glossaryList.Children.Add(Ui.Bar(glossarySelect, null, glossaryDelete));
+            // 勾了之後「加到群組」（R126.3）、看著某一組時「從「X」移出」
+            var groupFlyout = new MenuFlyout();
+            groupFlyout.Opening += (_, _) => FillGroupMenu(groupFlyout.Items, CheckedTerms());
+            glossaryGroupMenu = new DropDownButton { Content = L.T("加到群組"), Flyout = groupFlyout };
+            glossaryUngroup = GlossaryGroupId is long gid && GroupName(gid) is { } gname
+                ? Ui.Link(L.F("從「%@」移出", gname), () => { host.Controller.SetGroup(gid, CheckedTerms(), false); Show(); }) : null;
+            var actions = Ui.Row(10, glossaryGroupMenu);
+            if (glossaryUngroup is not null) actions.Children.Add(glossaryUngroup);
+            actions.Children.Add(glossaryDelete);
+            glossaryList.Children.Add(Ui.Bar(glossarySelect, null, actions));
             UpdateGlossaryBar();
         }
         foreach (var term in shown)
@@ -936,7 +1001,16 @@ public sealed class SettingsWindow : Window
             }
             var label = Ui.Text(term.Term, 14, wrap: false);
             ToolTipService.SetToolTip(label, L.T("雙擊可以修改"));
-            var box = new CheckBox { Content = label, IsChecked = glossaryChecked.Contains(id) };
+            // 在哪些群組（R126.3）
+            var content = Ui.Row(6, label);
+            foreach (var gid in GroupsOf(term))
+                if (GroupName(gid) is { } gname)
+                    content.Children.Add(new Border
+                    {
+                        Background = Ui.Subtle, CornerRadius = new CornerRadius(8), Padding = new Thickness(6, 0, 6, 1), VerticalAlignment = VerticalAlignment.Center,
+                        Child = Ui.Text(gname, 11, color: Ui.Secondary, wrap: false),
+                    });
+            var box = new CheckBox { Content = content, IsChecked = glossaryChecked.Contains(id) };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, term.Term);
             box.Checked += (_, _) => CheckTerm(id, true);
             box.Unchecked += (_, _) => CheckTerm(id, false);
@@ -965,13 +1039,19 @@ public sealed class SettingsWindow : Window
             // 右鍵（R100）：重新命名…、刪除
             var menu = new MenuFlyout();
             menu.Items.Add(Ui.Item(L.T("重新命名…"), StartEditing, icon: Symbol.Edit));
+            var groups = new MenuFlyoutSubItem { Text = L.T("加到群組") };
+            FillGroupMenu(groups.Items, [id]);
+            menu.Items.Add(groups);
+            if (GlossaryGroupId is long current && GroupName(current) is { } currentName)
+                menu.Items.Add(Ui.Item(L.F("從「%@」移出", currentName), () => { host.Controller.SetGroup(current, [id], false); Show(); }));
             menu.Items.Add(new MenuFlyoutSeparator());
             menu.Items.Add(Ui.DangerItem(L.T("刪除"), () => { host.Controller.DeleteTerm(id); Show(); }));
             row.ContextFlyout = menu;
             row.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);   // 整列的空白處也能右鍵
             glossaryList.Children.Add(row);
         }
-        if (shown.Count == 0 && glossaryTerms.Count > 0) glossaryList.Children.Add(Ui.Text(L.F("沒有含「%@」的詞彙", glossaryQuery.Trim()), 13, color: Ui.Secondary));
+        if (shown.Count == 0 && glossaryAll.Count > 0)
+            glossaryList.Children.Add(Ui.Text(glossaryQuery.Trim().Length == 0 ? L.T("這一組還沒有詞彙") : L.F("沒有含「%@」的詞彙", glossaryQuery.Trim()), 13, color: Ui.Secondary));
     }
 
     /// <summary>勾選改了：只換上面那一列的字（勾選框留著，焦點不會跑掉）</summary>
@@ -984,6 +1064,8 @@ public sealed class SettingsWindow : Window
         var count = CheckedTerms().Count;
         glossaryDelete.Content = L.F("刪除勾選的 %lld 個…", (long)count);
         glossaryDelete.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (glossaryGroupMenu is not null) glossaryGroupMenu.Visibility = glossaryDelete.Visibility;
+        if (glossaryUngroup is not null) glossaryUngroup.Visibility = glossaryDelete.Visibility;
     }
 
     void CheckTerm(long id, bool on)
@@ -1004,6 +1086,127 @@ public sealed class SettingsWindow : Window
     }
 
     /// <summary>「刪除勾選的 N 個…」：確認對話框（沒辦法還原，預設按鈕是「取消」）</summary>
+    // MARK: 詞彙表的群組（R126、M§100.3、design-windows §11.59）
+
+    /// <summary>「全部」「未分類」、每個群組、「新增群組…」；選到群組時下一行是改名、刪除</summary>
+    void AddGroupBar(StackPanel column)
+    {
+        var bar = new FlowPanel { Spacing = 6, LineSpacing = 6 };
+        var filter = EffectiveGlossaryFilter;
+        Button Chip(string title, long target)
+        {
+            var on = filter == target;
+            var chip = new Button
+            {
+                Content = Ui.Row(4, Ui.Text(title, 13, bold: on, wrap: false), Ui.Text(GlossaryCount(target).ToString(System.Globalization.CultureInfo.InvariantCulture), 13, color: Ui.Secondary, wrap: false)),
+                CornerRadius = new CornerRadius(12), Padding = new Thickness(10, 3, 10, 3), MinHeight = 0,
+                Background = on ? Ui.Subtle : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderBrush = Ui.Divider, BorderThickness = new Thickness(on ? 0 : 1),
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(chip, title);
+            chip.Click += (_, _) => { GlossaryFilter = target; Show(); };
+            return chip;
+        }
+        bar.Children.Add(Chip(L.T("全部"), 0));
+        bar.Children.Add(Chip(L.T("未分類"), -1));
+        foreach (var group in glossaryGroups)
+        {
+            var chip = Chip(group.Name, group.Id);
+            var menu = new MenuFlyout();
+            menu.Items.Add(Ui.Item(L.T("重新命名…"), () => _ = GroupNameDialog(group.Id, []), icon: Symbol.Edit));
+            menu.Items.Add(Ui.DangerItem(L.T("刪除群組…"), () => _ = ConfirmDeleteGroup(group.Id)));
+            chip.ContextFlyout = menu;
+            bar.Children.Add(chip);
+        }
+        bar.Children.Add(Ui.Link(L.T("新增群組…"), () => _ = GroupNameDialog(null, [])));
+        column.Children.Add(bar);
+        if (GlossaryGroupId is long id && GroupName(id) is { } name)
+            column.Children.Add(Ui.Row(14, Ui.Text(L.F("%@・%lld 個詞", name, (long)GlossaryCount(id)), 13, color: Ui.Secondary),
+                Ui.Link(L.T("重新命名…"), () => _ = GroupNameDialog(id, [])), Ui.Link(L.T("刪除群組…"), () => _ = ConfirmDeleteGroup(id))));
+    }
+
+    /// <summary>「加到群組 ▸」：每個群組一項，這幾個詞都在裡面的打勾（點了全部移出），否則點了全部加入；最後「新增群組…」</summary>
+    void FillGroupMenu(IList<MenuFlyoutItemBase> items, List<long> ids)
+    {
+        items.Clear();
+        foreach (var group in glossaryGroups)
+        {
+            var all = ids.Count > 0 && ids.All(t => glossaryMemberships.TryGetValue(t, out var g) && g.Contains(group.Id));
+            var item = new ToggleMenuFlyoutItem { Text = group.Name, IsChecked = all };
+            var gid = group.Id;
+            item.Click += (_, _) => { host.Controller.SetGroup(gid, ids, !all); Show(); };
+            items.Add(item);
+        }
+        if (glossaryGroups.Count > 0) items.Add(new MenuFlyoutSeparator());
+        items.Add(Ui.Item(L.T("新增群組…"), () => _ = GroupNameDialog(null, ids)));
+    }
+
+    /// <summary>新增（renameId 是 null；terms 是建好要加進去的詞）或重新命名群組：同名時合併（新增的空群組不能建），同 Mac 的 RenameSheet</summary>
+    async Task GroupNameDialog(long? renameId, List<long> terms)
+    {
+        if (glossaryDialog || confirmingTerms || confirmingPerson || Content.XamlRoot is null) return;
+        glossaryDialog = true;
+        try
+        {
+            var original = renameId is long rid ? GroupName(rid) ?? "" : "";
+            var box = new TextBox { Text = original, PlaceholderText = L.T("群組名稱") };
+            var hint = Ui.Text("", 13, color: Ui.Secondary);
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(renameId is null ? L.T("新增群組") : L.T("重新命名群組")),
+                Content = Ui.Column(12, hint, box), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Primary,
+                PrimaryButtonText = renameId is not null ? L.T("儲存") : terms.Count == 0 ? L.T("建立") : L.T("建立並加入"),
+            };
+            string? Conflict() => glossaryGroups.FirstOrDefault(g => g.Id != renameId && string.Equals(g.Name, box.Text.Trim(), StringComparison.OrdinalIgnoreCase))?.Name;
+            void Update()
+            {
+                var trimmed = box.Text.Trim();
+                var conflict = trimmed.Length == 0 ? null : Conflict();
+                hint.Text = conflict is null ? L.T("例如專案、客戶或部門。一個詞可以在好幾個群組。")
+                    : renameId is not null ? L.F("已經有「%@」，儲存後會合併成一個。", conflict)
+                    : terms.Count == 0 ? L.F("已經有「%@」。", conflict) : L.F("已經有「%@」，詞彙會加進那一組。", conflict);
+                dialog.IsPrimaryButtonEnabled = trimmed.Length > 0 && (renameId is null || trimmed != original) && !(renameId is null && terms.Count == 0 && conflict is not null);
+            }
+            box.TextChanged += (_, _) => Update();
+            box.Loaded += (_, _) => { box.Focus(FocusState.Programmatic); box.SelectAll(); };
+            Update();
+            if (await Ui.InterfaceLanguage(dialog).ShowAsync() != ContentDialogResult.Primary) return;
+            var name = box.Text.Trim();
+            if (renameId is long id)
+            {
+                var kept = host.Controller.RenameGlossaryGroup(id, name);
+                if (GlossaryFilter == id) GlossaryFilter = kept;
+            }
+            else
+            {
+                var created = host.Controller.CreateGlossaryGroup(name, terms);
+                if (terms.Count == 0) GlossaryFilter = created;
+            }
+        }
+        finally { glossaryDialog = false; }
+        Show();
+    }
+
+    async Task ConfirmDeleteGroup(long id)
+    {
+        if (glossaryDialog || confirmingTerms || confirmingPerson || Content.XamlRoot is null || GroupName(id) is not { } name) return;
+        glossaryDialog = true;
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Content.XamlRoot, Title = Ui.DialogTitle(L.F("刪除群組「%@」？", name)),
+                Content = Ui.Text(L.F("裡面的 %lld 個詞彙不會被刪除。", (long)GlossaryCount(id))),
+                PrimaryButtonText = L.T("刪除群組"), CloseButtonText = L.T("取消"), DefaultButton = ContentDialogButton.Close,
+            };
+            if (await Ui.InterfaceLanguage(dialog).ShowAsync() != ContentDialogResult.Primary) return;
+            host.Controller.DeleteGlossaryGroup(id);
+            if (GlossaryFilter == id) GlossaryFilter = 0;
+        }
+        finally { glossaryDialog = false; }
+        Show();
+    }
+
     async Task ConfirmDeleteTerms()
     {
         var ids = CheckedTerms();

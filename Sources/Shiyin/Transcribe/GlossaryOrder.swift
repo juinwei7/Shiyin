@@ -11,11 +11,12 @@ struct GlossaryContext {
 enum GlossaryOrder {
     struct Ranked: Equatable {
         var terms: [String]
-        /// 前三層（這場、同資料夾、最近幾場出現過）的詞數
+        /// 前幾層（這場出現過的、同組的、同資料夾、最近幾場出現過）的詞數
         var related: Int
     }
 
-    static func rank(_ terms: [String], _ context: GlossaryContext) -> Ranked {
+    /// groups[i] 是 terms[i] 在哪些群組（design §100.2；公司的詞是空的，長度不夠當成沒有）
+    static func rank(_ terms: [String], _ context: GlossaryContext, groups: [[Int64]] = []) -> Ranked {
         let meeting = folded(context.meeting), folder = context.folder.map(folded), recent = context.recent.map(folded)
         let keys = terms.map(folded)
         var placed = Array(repeating: false, count: terms.count)
@@ -23,6 +24,15 @@ enum GlossaryOrder {
         for i in terms.indices where occurs(keys[i], in: meeting) {
             order.append(i)
             placed[i] = true
+        }
+        // 跟這場出現過的詞在同一組的其他詞（R126.6）
+        func groupsOf(_ i: Int) -> [Int64] { i < groups.count ? groups[i] : [] }
+        let hit = Set(order.flatMap(groupsOf))
+        if !hit.isEmpty {
+            for i in terms.indices where !placed[i] && groupsOf(i).contains(where: hit.contains) {
+                order.append(i)
+                placed[i] = true
+            }
         }
         // 幾場出現過，大的先；一樣的照原本的順序
         for texts in [folder, recent] {

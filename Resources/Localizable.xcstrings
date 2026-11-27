@@ -299,6 +299,23 @@
         }
       }
     },
+    "%@・%lld 個詞": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@・%lld 个词"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$lld terms"
+          }
+        }
+      }
+    },
     "%@・原本 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -4259,6 +4276,23 @@
         }
       }
     },
+    "例如專案、客戶或部門。一個詞可以在好幾個群組。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如项目、客户或部门。一个词可以在好几个群组。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example, a project, client or team. A term can be in several groups."
+          }
+        }
+      }
+    },
     "例如專案名稱或客戶名稱。": {
       "extractionState": "manual",
       "localizations": {
@@ -5131,6 +5165,23 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "全部": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
           }
         }
       }
@@ -6346,6 +6397,57 @@
         }
       }
     },
+    "刪除群組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除群组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Group"
+          }
+        }
+      }
+    },
+    "刪除群組…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除群组…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Group…"
+          }
+        }
+      }
+    },
+    "刪除群組「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除群组“%@”？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the group “%@”?"
+          }
+        }
+      }
+    },
     "刪除資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -6732,6 +6834,23 @@
         }
       }
     },
+    "加入順序": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入顺序"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Order Added"
+          }
+        }
+      }
+    },
     "加到 Claude Code": {
       "extractionState": "manual",
       "localizations": {
@@ -6796,6 +6915,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add to Reminders"
+          }
+        }
+      }
+    },
+    "加到群組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加到群组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Group"
           }
         }
       }
@@ -8803,6 +8939,23 @@
         }
       }
     },
+    "字母順序": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字母顺序"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alphabetical"
+          }
+        }
+      }
+    },
     "存成文字檔，一行一個詞": {
       "extractionState": "manual",
       "localizations": {
@@ -9417,6 +9570,23 @@
         }
       }
     },
+    "已加入 %lld 個詞彙到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入 %lld 个词汇到“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld terms to “%@”"
+          }
+        }
+      }
+    },
     "已加入 %lld 個詞彙，%lld 個已經有了": {
       "extractionState": "manual",
       "localizations": {
@@ -9786,6 +9956,23 @@
         }
       }
     },
+    "已從檔案加入 %lld 個詞彙到「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从文件加入 %lld 个词汇到“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld terms from the file to “%@”"
+          }
+        }
+      }
+    },
     "已從檔案加入 %lld 個詞彙，%lld 個已經有了": {
       "extractionState": "manual",
       "localizations": {
@@ -9799,6 +9986,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Added %lld terms from the file; %lld were already in the glossary"
+          }
+        }
+      }
+    },
+    "已從檔案把 %lld 個詞彙放進「%@」，其中 %lld 個是新加的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从文件把 %lld 个词汇放进“%@”，其中 %lld 个是新加的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put %lld terms from the file into “%@”; %lld of them are new"
           }
         }
       }
@@ -9833,6 +10037,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Captured"
+          }
+        }
+      }
+    },
+    "已把 %lld 個詞彙放進「%@」，其中 %lld 個是新加的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已把 %lld 个词汇放进“%@”，其中 %lld 个是新加的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put %lld terms into “%@”; %lld of them are new"
           }
         }
       }
@@ -10446,6 +10667,23 @@
         }
       }
     },
+    "已經有「%@」，詞彙會加進那一組。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经有“%@”，词汇会加进那一组。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” already exists. The terms will be added to that group."
+          }
+        }
+      }
+    },
     "已編輯「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -10721,6 +10959,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Create"
+          }
+        }
+      }
+    },
+    "建立並加入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建立并加入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create and Add"
           }
         }
       }
@@ -11022,6 +11277,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "从 %@ 开始播放"
+          }
+        }
+      }
+    },
+    "從「%@」移出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从“%@”移出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from “%@”"
           }
         }
       }
@@ -12650,6 +12922,23 @@
         }
       }
     },
+    "拾音詞彙表 - %@.txt": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音词汇表 - %@.txt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin Glossary - %@.txt"
+          }
+        }
+      }
+    },
     "拾音詞彙表.txt": {
       "extractionState": "manual",
       "localizations": {
@@ -13020,6 +13309,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "扫描的 PDF、图片用 macOS 的文字识别读出文字。一场会议的文档合计最多 4 万字，太长的只送前面的部分。Keynote、Pages 请先导出成 PDF。"
+          }
+        }
+      }
+    },
+    "排序": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort"
           }
         }
       }
@@ -14692,6 +14998,40 @@
         }
       }
     },
+    "新增群組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加群组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Group"
+          }
+        }
+      }
+    },
+    "新增群組…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加群组…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Group…"
+          }
+        }
+      }
+    },
     "新增自訂段落": {
       "extractionState": "manual",
       "localizations": {
@@ -15470,6 +15810,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近 30 天"
+          }
+        }
+      }
+    },
+    "最近加入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近加入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recently Added"
           }
         }
       }
@@ -16310,6 +16667,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "期限"
+          }
+        }
+      }
+    },
+    "未分類": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未分类"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungrouped"
           }
         }
       }
@@ -21311,6 +21685,23 @@
         }
       }
     },
+    "群組名稱": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组名称"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group name"
+          }
+        }
+      }
+    },
     "聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台 Mac，不會放進匯出的 .shiyin 封包。": {
       "extractionState": "manual",
       "localizations": {
@@ -21647,6 +22038,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "装好之后在终端运行 claude 登录，再按“重新检查”。"
+          }
+        }
+      }
+    },
+    "裡面的 %lld 個詞彙不會被刪除。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "里面的 %lld 个词汇不会被删除。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %lld terms in it won't be deleted."
           }
         }
       }
@@ -23870,6 +24278,23 @@
         }
       }
     },
+    "這一組還沒有詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这一组还没有词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No terms in this group yet"
+          }
+        }
+      }
+    },
     "這不是有效的拾音封包：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -25988,6 +26413,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rename Bookmark"
+          }
+        }
+      }
+    },
+    "重新命名群組": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名群组"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Group"
           }
         }
       }
