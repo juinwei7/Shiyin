@@ -9,7 +9,7 @@
 
 ## 透過企業伺服器分享會議（R125，design §99、design-windows §11.58、D209～D212；2026-11-27 使用者：「可以分享到公司 server」「包含網址共享跟指定 mail 共享」）
 
-伺服器那邊的任務在私人的伺服器專案；app 要等伺服器的 API 做好才能端到端驗證，可以先用 `EnterpriseTests` 的假伺服器、Mac 的假伺服器腳本做。
+伺服器那邊的任務在私人的伺服器專案；伺服器的 API（§99.2）已經做好（2026-11-27），網頁版、通知信、後台的分享頁還沒做。app 開發時接本機跑的伺服器（§36.7），伺服器專案的 `scripts/dev/try-share.py` 走一次同樣的流程。
 
 - [ ] **SH1 Mac**（§99）：migration、`Package.export` 的內容選擇、`EnterpriseShares`、分享視窗、會議頁、側欄「與我分享」、查新的分享和通知、匯入、`shiyin://share`、隱私說明、DEBUG 指令、標準答案。驗證：§99.6
 - [ ] **SH2 Windows**（design-windows §11.58）：同 SH1。驗證：`dotnet test` 標準答案通過；虛擬機收 Mac 分享的、分享一場給 Mac
