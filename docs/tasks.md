@@ -18,7 +18,6 @@
 伺服器那邊的任務在私人的伺服器專案；伺服器的 API（§99.2）、網頁版、通知信、後台的分享頁已經做好（2026-11-27）。app 開發時接本機跑的伺服器（§36.7），伺服器專案的 `scripts/dev/try-share.py` 走一次同樣的流程。
 
 - [~] **SH1 Mac**（§99）：程式完成，標準答案、兩個 DEBUG 版接本機伺服器驗過（2026-11-29，見 commit 訊息）。還差（要使用者用真的滑鼠、app 在前景）：分享視窗裡按「分享」（第一次的說明）、打信箱跳出的補完、「改期限」「誰打得開」選單、「停止分享…」的確認；側欄「與我分享」的右鍵和「⋯」；網頁的「用拾音打開」跳出的確認（`shiyin://share`）；收到分享的系統通知點了打開那一列
-- [ ] **SH4 統計的後台**（§99.4、R125.10）：app 的程式完成（2026-11-29）。推上去時：正式的 D1 跑 `workers/usage/migrate-shares.sql`，再部署 `worker.js`（部署由使用者執行）。驗證：`wrangler d1 execute … "PRAGMA table_info(usage_daily)"` 有四欄；新版 app 送的那天 `shares_*` 有數字
 - Windows（SH2）完成：`dotnet test`、虛擬機和 Mac DEBUG 互相分享驗過（2026-11-29，見 commit 訊息）
 - [ ] **SH3 使用說明、官網**：使用說明加「分享會議」（企業伺服器那一段）；隱私段落改成 R125.8 的說法（website.md 先寫）。驗證：`l10n.py check`、`windows-check` 沒有缺的英文；`node site/build.mjs` 建得起來
 
