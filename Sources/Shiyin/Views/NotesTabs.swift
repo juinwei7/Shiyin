@@ -140,7 +140,7 @@ struct InlineReviewCard: View {
             let shown = Set(indexes.filter { items.indices.contains($0) })
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(shown.sorted(), id: \.self) { index in
-                    ReviewQuestionRow(index: index, item: items[index], language: detail.meeting.meetingLanguage, draft: draft)
+                    ReviewQuestionRow(index: index, number: detail.reviewNumber(index), item: items[index], language: detail.meeting.meetingLanguage, draft: draft)
                 }
                 HStack(spacing: 12) {
                     Text("只送這一條的題目；有回答的交給整理工具依答案修正，略過的直接移除。")

@@ -283,7 +283,8 @@ enum DebugControl {
             }
         case "reviewskipall":   // reviewskipall <會議 id>：等於按待確認分頁的「全部略過」（R41.5）
             model.selection = id
-            model.reviewDraft?.skipAllUnanswered(questionCount: model.detail?.notes?.reviewItems.count ?? 0,
+            let questions = model.detail.map { detail in (detail.notes?.reviewItems.indices ?? 0..<0).filter { !detail.revisingReviewItems.contains($0) } } ?? []
+            model.reviewDraft?.skipAllUnanswered(questions: questions,
                                                  speakers: model.detail.map { Array($0.speakerSuggestions.keys) } ?? [])
         case "review":
             // review <id> <答案 JSON：{"0":"答案"}> <略過的題號，逗號分隔>

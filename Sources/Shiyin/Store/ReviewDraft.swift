@@ -96,10 +96,10 @@ final class ReviewDraft {
         }
     }
 
-    /// 「全部略過」（R41.5）：還沒回答的題目都標成略過，已經有回答的不動
-    func skipAllUnanswered(questionCount: Int, speakers: [Int]) {
+    /// 「全部略過」（R41.5）：還沒回答的題目都標成略過，已經有回答的不動。questions 是畫面上列出來的題號（修正中的不算，R41.3）
+    func skipAllUnanswered(questions: [Int], speakers: [Int]) {
         var skipQuestions = dismissed
-        for index in 0..<max(0, questionCount) where (answers[index] ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+        for index in questions where (answers[index] ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
             skipQuestions.insert(index)
         }
         dismissed = skipQuestions
@@ -109,8 +109,8 @@ final class ReviewDraft {
     }
 
     /// 還有沒回答也沒略過的題目（「全部略過」才有東西可以略）
-    func hasUnanswered(questionCount: Int, speakers: [Int]) -> Bool {
-        (0..<max(0, questionCount)).contains { !dismissed.contains($0) && (answers[$0] ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
+    func hasUnanswered(questions: [Int], speakers: [Int]) -> Bool {
+        questions.contains { !dismissed.contains($0) && (answers[$0] ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
             || speakers.contains { !speakerSkipped.contains($0) && (speakerAnswers[$0] ?? "").isEmpty }
     }
 

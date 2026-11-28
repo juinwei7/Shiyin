@@ -10,6 +10,8 @@ struct ReviewTab: View {
     var embedded = false
 
     private var items: [MeetingNotes.ReviewItem] { detail.notes?.reviewItems ?? [] }
+    /// 列出來的題號：修正中的題目不列（R41.3、design §31.2），題號照紀錄裡的順序，送出時對得上
+    private var shownIndexes: [Int] { items.indices.filter { !detail.revisingReviewItems.contains($0) } }
     private var speakerItems: [(idx: Int, suggestion: SpeakerNaming.Suggestion)] {
         detail.speakerSuggestions.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
     }
@@ -17,7 +19,7 @@ struct ReviewTab: View {
     var body: some View {
         if detail.notes == nil && speakerItems.isEmpty {
             NotesPlaceholder(detail: detail)
-        } else if items.isEmpty && speakerItems.isEmpty {
+        } else if shownIndexes.isEmpty && speakerItems.isEmpty {
             ReadingColumn {
                 Label("沒有待確認的項目", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(Color.celadon)
@@ -55,24 +57,25 @@ struct ReviewTab: View {
     /// 說明、全部略過、說話者的題目、紀錄的題目
     @ViewBuilder private func rows(_ draft: ReviewDraft) -> some View {
         let speakerIdxs = speakerItems.map(\.idx)
+        let shown = shownIndexes
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(items.contains(where: \.yesNo) || !speakerItems.isEmpty
+            Text(shown.contains { items[$0].yesNo } || !speakerItems.isEmpty
                  ? "以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。"
                  : "以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             // 全部略過（R41.5）：還沒回答的都標成略過，已經有回答的不動
-            Button("全部略過") { draft.skipAllUnanswered(questionCount: items.count, speakers: speakerIdxs) }
+            Button("全部略過") { draft.skipAllUnanswered(questions: shown, speakers: speakerIdxs) }
                 .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
-                .disabled(!draft.hasUnanswered(questionCount: items.count, speakers: speakerIdxs))
+                .disabled(!draft.hasUnanswered(questions: shown, speakers: speakerIdxs))
                 .help("還沒回答的題目都標成略過，送出後直接移除")
         }
         ForEach(speakerItems, id: \.idx) { item in
             speakerRow(item.idx, item.suggestion, draft: draft)
         }
-        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-            ReviewQuestionRow(index: index, item: item, language: language, draft: draft)
+        ForEach(shown, id: \.self) { index in
+            ReviewQuestionRow(index: index, number: detail.reviewNumber(index), item: items[index], language: language, draft: draft)
         }
     }
 
@@ -153,6 +156,8 @@ struct ReviewTab: View {
 /// 是非題（R32）給「是」「不是」，選了「不是」才要填正確的答案；舊的草稿認不出來時照舊用輸入框
 struct ReviewQuestionRow: View {
     let index: Int
+    /// 畫面上的題號（修正中的題目不算，`MeetingDetail.reviewNumber`）
+    let number: Int
     let item: MeetingNotes.ReviewItem
     let language: MeetingLanguage
     let draft: ReviewDraft
@@ -161,7 +166,7 @@ struct ReviewQuestionRow: View {
         let isDismissed = draft.dismissed.contains(index)
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("\(index + 1)")
+                Text("\(number)")
                     .contentFont(.callout, weight: .semibold, monospacedDigit: true)
                     .foregroundStyle(Color.signal)
                 TimeButton(time: item.time)

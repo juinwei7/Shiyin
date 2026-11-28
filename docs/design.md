@@ -1236,6 +1236,7 @@ Windows 版做一樣的功能（R40.7，跟 4.0.0 一起發）：同樣的格式
 - 回答的狀態從 `ReviewTab` 的 `@State` 搬到 `ReviewDraft`（`@Observable`，掛在 `AppModel` 上，換會議就換一份）：`answers`、`dismissed`、`speakerAnswers`、`speakerSkipped`、存草稿的 debounce 都在這裡。`ReviewTab` 和 `InlineReviewCard` 觀察同一份，兩邊看到的回答一致（R41.2），存草稿的 key 不變（§21.15）。
 - 題目換了（送出一部分、依回答修正、重新整理、復原上一版）時，不再整份清掉：草稿本來就是照題目文字存的，還在的題目把回答照文字接回來，不在的題目刪掉草稿（2026-10-24 改，配合卡片只送一部分）。
 - 送出：待確認條的「送出」送全部；卡片的「送出」只送這一條對到的題目（`submitReviewDraft(only:)`，說話者題目不算），按鈕的題數也只算這幾題。送出後題目從紀錄移除，`MeetingDetail` 重新載入，標記跟著消失，其他題目的回答留著。
+- 修正中的題目（R41.3，GitHub #32）：要改內容的回答進 `revise` 工作，題目要等整理工具改完才從紀錄移除。`MeetingDetail.revisingReviewItems`：`latestJob` 是排隊或進行中的 `revise` 時，紀錄裡題目文字跟它 payload 的 `answers[].question` 相同的題號。這幾題待確認條不列、`reviewLinks` 不對應（沒有標記、卡片）、`reviewCount` 不算（剩 0 題時待確認條收起來）；「全部略過」只略看得到的題目。畫面上的題號（`reviewNumber`）跳過這幾題，待確認條和卡片一致；送出、草稿照舊用紀錄裡的題號。工作失敗、取消後 `latestJob` 不再是進行中，題目再出現（回答在送出時已經清掉，跟以前一樣要重答）。
 - 編輯模式（`NotesEditor`）、匯出（`Exporters`）不畫標記；DEBUG 的 snapshot 要畫（驗證排版用）。草稿紀錄（`notesDraft`）照樣標；垃圾桶裡的會議不標。
 
 ### 31.3 「是」不送整理工具（R41.4，D103）

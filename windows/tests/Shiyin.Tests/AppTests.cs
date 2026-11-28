@@ -630,6 +630,49 @@ public sealed class AppTests : IDisposable
     }
 
     /// <summary>
+    /// 修正中的題目（R41.3、M§31.2；GitHub #32）：送去依回答修正的題目在工作排隊、進行中時不列、不標、不算題數，
+    /// 畫面上的題號跳過它；工作失敗後再出現
+    /// </summary>
+    [Fact]
+    public void RevisingReviewItemsHiddenUntilJobEnds()
+    {
+        var settings = AppSettings.InMemory(new Dictionary<string, string> { ["llmProvider"] = "anthropic" });
+        settings.HasKey = _ => true;
+        var controller = Controller(settings, out _);
+        var id = db.InsertMeeting(new Meeting { SourceFilename = "a" }, null).Id!.Value;
+        db.SaveTranscript(id, [new Segment { MeetingId = id, Seq = 0, Start = 0, End = 30, Text = "一", Speaker = 1 }], 30, 1);
+        db.SaveNotes(id, new MeetingNotes
+        {
+            Title = "週會", Summary = [new("決定省錢", "00:01"), new("預算下週定", "00:20")],
+            ReviewItems = [new("00:01", "省多少？"), new("00:20", "誰定預算？"), new("00:25", "哪一週？")],
+        }, "anthropic", "整理", NotesSource.Generated);
+        var before = MeetingDetail.Load(db, id)!;
+        Assert.Empty(before.RevisingReviewItems);
+        Assert.Equal(3, before.ReviewCount);
+        Assert.Equal([0], before.ReviewLinks[NoteItemRef.Summary(0)]);
+
+        Assert.True(controller.SubmitReview(id, new Dictionary<int, string> { [0] = "一成" }, new HashSet<int>()));
+        var queued = MeetingDetail.Load(db, id)!;
+        Assert.Equal(JobStatus.Queued, queued.LatestJob!.Status);
+        Assert.Equal([0], queued.RevisingReviewItems);
+        Assert.Equal(2, queued.ReviewCount);
+        Assert.False(queued.ReviewLinks.ContainsKey(NoteItemRef.Summary(0)));
+        Assert.Equal([1, 2], queued.ReviewLinks[NoteItemRef.Summary(1)]);
+        Assert.Equal([1, 2], new[] { queued.ReviewNumber(1), queued.ReviewNumber(2) });
+
+        var job = db.ClaimNext(JobLane.Llm)!;
+        Assert.Equal(JobKind.Revise, job.Kind);
+        Assert.Equal([0], MeetingDetail.Load(db, id)!.RevisingReviewItems);
+
+        db.Finish(job.Id!.Value, JobStatus.Failed, "逾時");
+        var failed = MeetingDetail.Load(db, id)!;
+        Assert.Empty(failed.RevisingReviewItems);
+        Assert.Equal(3, failed.ReviewCount);
+        Assert.Equal(3, failed.ReviewNumber(2));
+        Assert.Equal([0], failed.ReviewLinks[NoteItemRef.Summary(0)]);
+    }
+
+    /// <summary>
     /// 「人物」的每一張（R92.2、M§66）：有重點的人才有；名字不分大小寫、去頭尾空白對說話者；說了幾秒、百分比只算正式逐字稿、
     /// 對不到說話者時沒有；負責人跟名字一樣或包含名字（不分大小寫）的待辦和原本的位置
     /// </summary>

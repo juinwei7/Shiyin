@@ -128,11 +128,12 @@ public sealed class ReviewDraft
         Expanded = null;
     }
 
-    /// <summary>「全部略過」（R41.5）：還沒回答的題目都標成略過，已經有回答的不動</summary>
+    /// <summary>「全部略過」（R41.5）：還沒回答的題目都標成略過，已經有回答的不動；修正中的題目看不到，不算（R41.3）</summary>
     public void SkipAllUnanswered(MeetingDetail detail)
     {
         var count = detail.Notes?.ReviewItems.Count ?? 0;
-        for (var i = 0; i < count; i++) if ((Answers.GetValueOrDefault(i) ?? "").Trim().Length == 0) Dismissed.Add(i);
+        for (var i = 0; i < count; i++)
+            if (!detail.RevisingReviewItems.Contains(i) && (Answers.GetValueOrDefault(i) ?? "").Trim().Length == 0) Dismissed.Add(i);
         foreach (var idx in detail.SpeakerSuggestions.Keys) if ((SpeakerAnswers.GetValueOrDefault(idx) ?? "").Length == 0) SpeakerSkipped.Add(idx);
     }
 
@@ -140,7 +141,7 @@ public sealed class ReviewDraft
     public bool HasUnanswered(MeetingDetail detail)
     {
         var count = detail.Notes?.ReviewItems.Count ?? 0;
-        return Enumerable.Range(0, count).Any(i => !Dismissed.Contains(i) && (Answers.GetValueOrDefault(i) ?? "").Trim().Length == 0)
+        return Enumerable.Range(0, count).Any(i => !detail.RevisingReviewItems.Contains(i) && !Dismissed.Contains(i) && (Answers.GetValueOrDefault(i) ?? "").Trim().Length == 0)
             || detail.SpeakerSuggestions.Keys.Any(idx => !SpeakerSkipped.Contains(idx) && (SpeakerAnswers.GetValueOrDefault(idx) ?? "").Length == 0);
     }
 

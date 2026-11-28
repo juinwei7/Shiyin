@@ -286,7 +286,7 @@ public sealed class JobRunner
     }
 
     /// <summary>payload 的 JSON（跟 Mac 的 Codable 相同的欄位）。不用反射的序列化，修剪過的 app 也能用</summary>
-    static T? Decode<T>(string? json) where T : class
+    internal static T? Decode<T>(string? json) where T : class
     {
         try
         {

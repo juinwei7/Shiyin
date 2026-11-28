@@ -109,12 +109,13 @@ struct MeetingDetail: Equatable {
         var copy = self
         copy.notes = notes
         copy.reviewLinks = [:]
+        copy.revisingReviewItems = []
         copy.speakerSuggestions = [:]
         return copy
     }
 
-    /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
-    var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
+    /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3），不算正在依回答修正的題目（R41.3）
+    var reviewCount: Int { (notes?.reviewItems.count ?? 0) - revisingReviewItems.count + speakerSuggestions.count }
     /// 可以復原的說話者調整（合併、改句子）的說明，沒有就是 nil；顯示在改名小視窗和逐字稿右鍵選單（R44.4）
     var speakerUndoLabel: String? = nil
     /// 有上一版會議紀錄可以復原（R44.4）：紀錄分頁的編輯列才顯示「復原上一版」
@@ -123,12 +124,29 @@ struct MeetingDetail: Equatable {
     var untranscribedMinutes: Int? = nil
     /// 待確認的題目對應到哪一條紀錄（R41.1，design §31.1）：載入時算一次，會議紀錄換了就重算（`linkReviewItems`）
     var reviewLinks: [NoteItemRef: [Int]] = [:]
+    /// 送去依回答修正、整理工具還沒改好的題號（R41.3、design §31.2；GitHub #32）：題目要等改完才從紀錄移除，
+    /// 這段期間待確認條不列、不標記、不算題數；工作失敗或取消就再出現
+    var revisingReviewItems: Set<Int> = []
 
     /// 這一條紀錄對到幾題待確認
     func reviewCount(_ ref: NoteItemRef) -> Int { reviewLinks[ref]?.count ?? 0 }
 
+    /// 畫面上的題號：跳過修正中的題目，待確認條和卡片一致
+    func reviewNumber(_ index: Int) -> Int { index + 1 - revisingReviewItems.filter { $0 < index }.count }
+
+    /// 會議紀錄或最新的工作換了就重算（載入時、紀錄更新時）
     mutating func linkReviewItems() {
-        reviewLinks = notes?.reviewLinks() ?? [:]
+        revisingReviewItems = []
+        if let job = latestJob, job.kind == .revise, job.status == .queued || job.status == .running, let items = notes?.reviewItems,
+           let payload = try? JSONDecoder().decode(RevisePayload.self, from: Data((job.payload ?? "{}").utf8)) {
+            let asked = Set(payload.answers.map(\.question))
+            revisingReviewItems = Set(items.indices.filter { asked.contains(items[$0].question) })
+        }
+        let hidden = revisingReviewItems
+        reviewLinks = (notes?.reviewLinks() ?? [:]).compactMapValues { indexes in
+            let shown = indexes.filter { !hidden.contains($0) }
+            return shown.isEmpty ? nil : shown
+        }
     }
 
     mutating func loadDocuments(_ rows: [MeetingDocument]) {

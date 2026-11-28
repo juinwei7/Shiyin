@@ -26,6 +26,8 @@ public sealed class ReviewTab
     }
 
     List<MeetingNotes.ReviewItem> Items => detail?.Notes?.ReviewItems ?? [];
+    /// <summary>列出來的題號：修正中的題目不列（R41.3、M§31.2），題號照紀錄裡的順序，送出時對得上</summary>
+    List<int> ShownIndexes => Enumerable.Range(0, Items.Count).Where(i => detail?.RevisingReviewItems.Contains(i) != true).ToList();
     List<SpeakerNaming.Suggestion> SpeakerItems => detail?.SpeakerSuggestions.OrderBy(p => p.Key).Select(p => p.Value).ToList() ?? [];
     MeetingLanguage Language => detail?.Meeting.MeetingLanguage ?? MeetingLanguage.Zh;
 
@@ -43,7 +45,8 @@ public sealed class ReviewTab
             submit.Content = draft.SubmitTitle();
             submit.IsEnabled = draft.HasSomethingToSubmit && window.State.DetailStatus?.IsActive != true;
         }
-        var intro = Ui.Text(Items.Any(i => i.YesNo) || speakerItems.Count > 0
+        var shown = ShownIndexes;
+        var intro = Ui.Text(shown.Any(i => Items[i].YesNo) || speakerItems.Count > 0
             ? L.T("以下是整理時不確定的地方。按「是」「不是」或直接回答就好；看不懂或不重要的可以略過。")
             : L.T("以下是整理時不確定的地方。直接回答就好；看不懂或不重要的可以略過。"), color: Ui.Secondary);
         // 全部略過（R41.5）：還沒回答的都標成略過，已經有回答的不動
@@ -53,8 +56,8 @@ public sealed class ReviewTab
         skipAll.VerticalAlignment = VerticalAlignment.Top;
         column.Children.Add(Ui.Bar(null, intro, skipAll, 12));
         foreach (var suggestion in speakerItems) column.Children.Add(SpeakerRow(value, suggestion, UpdateSubmit));
-        for (var i = 0; i < Items.Count; i++)
-            column.Children.Add(ReviewRows.Question(i, Items[i], Language, draft, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, window.Refresh, UpdateSubmit));
+        foreach (var i in shown)
+            column.Children.Add(ReviewRows.Question(i, value.ReviewNumber(i), Items[i], Language, draft, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, window.Refresh, UpdateSubmit));
         UpdateSubmit();
         column.Children.Add(Ui.Bar(null, Ui.Text(Footnote(speakerItems.Count > 0), 13, color: Ui.Secondary), submit, 12));
         return column;
@@ -121,8 +124,9 @@ public sealed class ReviewTab
 public static class ReviewRows
 {
     /// <summary>一題：題號、時間點、題目；是非題（R32）給「是」「不是」，選了「不是」才要填正確的答案；舊的草稿認不出來時照舊用輸入框。
-    /// 略過的收成一行加「取消略過」（R41.5）。refresh：整個畫面重畫（按鈕）；changed：只更新送出鈕（打字）</summary>
-    public static FrameworkElement Question(int index, MeetingNotes.ReviewItem item, MeetingLanguage language, ReviewDraft draft,
+    /// 略過的收成一行加「取消略過」（R41.5）。number 是畫面上的題號（修正中的題目不算，MeetingDetail.ReviewNumber）。
+    /// refresh：整個畫面重畫（按鈕）；changed：只更新送出鈕（打字）</summary>
+    public static FrameworkElement Question(int index, int number, MeetingNotes.ReviewItem item, MeetingLanguage language, ReviewDraft draft,
                                             Action<double>? seek, Action refresh, Action changed)
     {
         var dismissed = draft.Dismissed.Contains(index);
@@ -130,7 +134,7 @@ public static class ReviewRows
         question.Language = Ui.ContentLanguage(language);
         if (dismissed) { question.Foreground = Ui.Secondary; question.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough; }
         // 題目放中間那欄才會換行（放在橫的 StackPanel 裡不會換行，長的題目會被切掉）
-        var lead = Ui.Row(10, Ui.Text($"{index + 1}", Ui.C(14), bold: true, color: Ui.Signal, wrap: false), Ui.Time(item.Time, seek, size: Ui.C(13)));
+        var lead = Ui.Row(10, Ui.Text($"{number}", Ui.C(14), bold: true, color: Ui.Signal, wrap: false), Ui.Time(item.Time, seek, size: Ui.C(13)));
         lead.VerticalAlignment = VerticalAlignment.Top;   // 題號、時間對齊題目的第一行
         if (dismissed)
             return Ui.Bar(lead, question, SkipButton(true, () => { draft.Dismissed.Remove(index); draft.Flush(); refresh(); }), 10);
@@ -191,7 +195,7 @@ public static class ReviewRows
             submit.IsEnabled = draft.CanSubmit(shown) && window.State.DetailStatus?.IsActive != true;
         }
         foreach (var index in shown.Order())
-            column.Children.Add(Question(index, items[index], detail.Meeting.MeetingLanguage, draft, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, window.Refresh, UpdateSubmit));
+            column.Children.Add(Question(index, detail.ReviewNumber(index), items[index], detail.Meeting.MeetingLanguage, draft, host.Player.IsLoaded ? s => host.Player.Seek(s) : null, window.Refresh, UpdateSubmit));
         UpdateSubmit();
         var footer = Ui.Bar(null, Ui.Text(L.T("只送這一條的題目；有回答的交給整理工具依答案修正，略過的直接移除。"), 12, color: Ui.Secondary),
             Ui.Row(8, Sheet.Pill(L.T("收合"), compact: true, click: () => { draft.Expanded = null; window.Refresh(); }), submit), 12);

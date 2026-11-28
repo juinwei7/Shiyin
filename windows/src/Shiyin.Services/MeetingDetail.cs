@@ -169,15 +169,35 @@ public sealed class MeetingDetail
         return cards;
     }
 
-    /// <summary>待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）</summary>
-    public int ReviewCount => (Notes?.ReviewItems.Count ?? 0) + SpeakerSuggestions.Count;
+    /// <summary>待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3），不算正在依回答修正的題目（R41.3）</summary>
+    public int ReviewCount => (Notes?.ReviewItems.Count ?? 0) - RevisingReviewItems.Count + SpeakerSuggestions.Count;
     /// <summary>待確認的題目對應到哪一條紀錄（R41.1、M§31.1）：載入時算一次（Windows 每次都整份重讀）</summary>
     public Dictionary<NoteItemRef, List<int>> ReviewLinks { get; private set; } = [];
+    /// <summary>送去依回答修正、整理工具還沒改好的題號（R41.3、M§31.2；GitHub #32）：題目要等改完才從紀錄移除，
+    /// 這段期間待確認不列、不標記、不算題數；工作失敗或取消就再出現</summary>
+    public HashSet<int> RevisingReviewItems { get; private set; } = [];
 
     /// <summary>這一條紀錄對到幾題待確認</summary>
     public int ReviewCountOf(NoteItemRef r) => ReviewLinks.TryGetValue(r, out var list) ? list.Count : 0;
 
-    public void LinkReviewItems() => ReviewLinks = Notes is null ? [] : Model.ReviewLinks.Compute(Notes);
+    /// <summary>畫面上的題號：跳過修正中的題目，待確認和卡片一致</summary>
+    public int ReviewNumber(int index) => index + 1 - RevisingReviewItems.Count(i => i < index);
+
+    /// <summary>載入時算（Windows 每次都整份重讀，最新的工作跟著換）</summary>
+    public void LinkReviewItems()
+    {
+        RevisingReviewItems = [];
+        if (LatestJob is { Kind: JobKind.Revise, Status: JobStatus.Queued or JobStatus.Running } job && Notes is { } notes
+            && JobRunner.Decode<RevisePayload>(job.Payload) is { } payload)
+        {
+            var asked = payload.Answers.Select(a => a.Question).ToHashSet();
+            RevisingReviewItems = Enumerable.Range(0, notes.ReviewItems.Count).Where(i => asked.Contains(notes.ReviewItems[i].Question)).ToHashSet();
+        }
+        var hidden = RevisingReviewItems;
+        ReviewLinks = Notes is null ? [] : Model.ReviewLinks.Compute(Notes)
+            .Select(p => (p.Key, Shown: p.Value.Where(i => !hidden.Contains(i)).ToList()))
+            .Where(p => p.Shown.Count > 0).ToDictionary(p => p.Key, p => p.Shown);
+    }
 
     /// <summary>看以前的某一版會議紀錄時，畫面用的副本（R115.2、M§89）：紀錄換成那一版，不帶待確認的對應、說話者的建議</summary>
     public MeetingDetail ShowingNotesVersion(MeetingNotes notes)
@@ -185,6 +205,7 @@ public sealed class MeetingDetail
         var copy = (MeetingDetail)MemberwiseClone();
         copy.Notes = notes;
         copy.ReviewLinks = [];
+        copy.RevisingReviewItems = [];
         copy.SpeakerSuggestions = [];
         return copy;
     }
