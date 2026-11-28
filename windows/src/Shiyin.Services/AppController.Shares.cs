@@ -167,6 +167,7 @@ public sealed partial class AppController
                     created = id;
                     await api.Upload(id, file, bytes, value => SetShareProgress(value), cancel);
                     Db.RecordShare(meetingId, server, id);
+                    Usage?.ShareEvent("shared");
                 }
                 finally { DeleteQuietly(file); }
             }
@@ -279,6 +280,7 @@ public sealed partial class AppController
             return;
         }
         Db.ForgetShare(server, id);
+        Usage?.ShareEvent("stopped");
         SetShareDetail(meetingId, null);
         Notice?.Invoke(L.T("已停止分享"));
     }
@@ -334,13 +336,19 @@ public sealed partial class AppController
         catch (Exception e) when (e is EnterpriseException or HttpRequestException) { Log.Error($"shared-with-me failed: {e.GetType().Name}"); }
     }
 
-    /// <summary>「匯入」：下載、匯入成自己的一份、記下是誰分享的、回報伺服器</summary>
-    public async Task ImportShared(EnterpriseShares.SharedItem item, long? folder)
+    /// <summary>
+    /// 「匯入」：下載、匯入成自己的一份、記下是誰分享的、回報伺服器。replacing 是要換掉的、之前匯入的那幾場
+    /// （App 問過「取代」時傳 PreviousImports，M§99.4）
+    /// </summary>
+    public async Task ImportShared(EnterpriseShares.SharedItem item, long? folder, IReadOnlyList<long>? replacing = null)
     {
         if (Enterprise?.SavedUrl is not { } server) return;
-        await ImportShare(new EnterpriseShares.ShareLink(server, item.Id, null), item.From.Display, item.Bytes, folder);
+        await ImportShare(new EnterpriseShares.ShareLink(server, item.Id, null), item.From.Display, item.Bytes, folder, replacing ?? [], viaLink: false);
         await RefreshSharedWithMe(notify: false);
     }
+
+    /// <summary>從這個分享匯入、還不在垃圾桶裡的（再匯入時問取代或另存）</summary>
+    public List<long> PreviousImports(string shareId) => Db.MeetingsFromShare(shareId);
 
     public async Task HideShared(string id)
     {
@@ -351,8 +359,11 @@ public sealed partial class AppController
         await RefreshSharedWithMe(notify: false);
     }
 
-    /// <summary>下載到 tmp（顯示百分比）→ 匯入封包 → 寫 shared_from → 回報伺服器；下載到一半的檔案留著，再按一次「匯入」接著下載（同一個版本）</summary>
-    public async Task<bool> ImportShare(EnterpriseShares.ShareLink link, string from, long bytes, long? folder)
+    /// <summary>
+    /// 下載到 tmp（顯示百分比）→ 匯入封包 → 寫 shared_from、shared_id → 回報伺服器 → 有要取代的就移到垃圾桶（新的成功了才動舊的）；
+    /// 下載到一半的檔案留著，再按一次「匯入」接著下載（同一個版本）
+    /// </summary>
+    public async Task<bool> ImportShare(EnterpriseShares.ShareLink link, string from, long bytes, long? folder, IReadOnlyList<long> replacing, bool viaLink)
     {
         if (Shares is not { } api || ShareBusy) return false;
         var cancel = BeginShare();
@@ -363,11 +374,13 @@ public sealed partial class AppController
             var version = await api.Download(link, file, bytes, value => SetShareProgress(value), cancel);
             var meeting = await Task.Run(() => MeetingPackage.Import(file, Db, Paths, folder), cancel);
             DeleteQuietly(file);
-            if (meeting.Id is long id) Db.SetSharedFrom(id, from);
+            if (meeting.Id is long id) Db.SetSharedFrom(id, from, link.Id);
             await api.Imported(link, version);
+            Usage?.ShareEvent(viaLink ? "linkImported" : "imported");
+            if (replacing.Count > 0) MoveToTrash(replacing);
             Changed?.Invoke(null);
             if (meeting.Id is long revealed) Reveal?.Invoke(revealed);
-            Notice?.Invoke(L.F("已匯入「%@」", meeting.DisplayTitle));
+            Notice?.Invoke(replacing.Count > 0 ? L.F("已匯入「%@」，之前匯入的那份移到垃圾桶了", meeting.DisplayTitle) : L.F("已匯入「%@」", meeting.DisplayTitle));
             return true;
         }
         catch (OperationCanceledException) { return false; }

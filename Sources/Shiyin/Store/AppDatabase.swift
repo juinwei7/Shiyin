@@ -413,6 +413,7 @@ final class AppDatabase: @unchecked Sendable {
     /// migration v21 的 SQL（design §99.3；Windows 的 MigrationSql.V21 逐字相同）
     nonisolated static let meetingSharesSQL = """
         ALTER TABLE meetings ADD COLUMN shared_from TEXT;
+        ALTER TABLE meetings ADD COLUMN shared_id TEXT;
         CREATE TABLE meeting_shares (
           meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
           server     TEXT NOT NULL,
@@ -1701,8 +1702,17 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// 匯入的分享是誰分享的（顯示用）
-    func setSharedFrom(_ meetingId: Int64, _ name: String) throws {
-        try pool.write { db in try db.execute(sql: "UPDATE meetings SET shared_from = ? WHERE id = ?", arguments: [name, meetingId]) }
+    func setSharedFrom(_ meetingId: Int64, _ name: String, shareId: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET shared_from = ?, shared_id = ? WHERE id = ?", arguments: [name, shareId, meetingId])
+        }
+    }
+
+    /// 從這個分享匯入、還不在垃圾桶裡的會議（再匯入時問要不要取代，R125.5）
+    func meetingsFromShare(_ shareId: String) throws -> [Int64] {
+        try pool.read { db in
+            try Int64.fetchAll(db, sql: "SELECT id FROM meetings WHERE shared_id = ? AND deleted_at IS NULL ORDER BY id", arguments: [shareId])
+        }
     }
 
     // MARK: 詞彙表的群組（design §100.1、R126）

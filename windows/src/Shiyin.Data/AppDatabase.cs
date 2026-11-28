@@ -305,6 +305,7 @@ public sealed partial class AppDatabase : IDisposable
         FolderId = r.LongOrNull("folder_id"), Language = r.Str("language"), NotesDraft = r.Int("notes_draft"), TranscribedWith = r.Str("transcribed_with"),
         MinSpeakers = r.IntOrNull("min_speakers"), SpeakerCheck = r.DoubleOrNull("speaker_check"),
         SpeakerHintDismissed = r.Bool("speaker_hint_dismissed"), FolderDecided = r.Bool("folder_decided"), SharedFrom = r.StrOrNull("shared_from"),
+        SharedId = r.StrOrNull("shared_id"),
     };
 
     internal static Segment ToSegment(Row r) => new()
@@ -353,18 +354,18 @@ public sealed partial class AppDatabase : IDisposable
 
     static readonly string MeetingColumns = "title, title_locked, meeting_date, participants, source_filename, audio_file, duration_seconds, notes, notes_by, "
         + "created_at, updated_at, template_id, user_notes, source, channels, deleted_at, folder_id, language, notes_draft, transcribed_with, "
-        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided, notes_template, shared_from";
+        + "min_speakers, speaker_check, speaker_hint_dismissed, folder_decided, notes_template, shared_from, shared_id";
 
     static object?[] MeetingValues(Meeting m) =>
     [
         m.Title, m.TitleLocked, m.MeetingDate, m.Participants, m.SourceFilename, m.AudioFile, m.DurationSeconds, m.Notes, m.NotesBy,
         m.CreatedAt, m.UpdatedAt, m.TemplateId, m.UserNotes, m.Source, m.Channels, m.DeletedAt, m.FolderId, m.Language, m.NotesDraft,
-        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided, m.NotesTemplate, m.SharedFrom,
+        m.TranscribedWith, m.MinSpeakers, m.SpeakerCheck, m.SpeakerHintDismissed, m.FolderDecided, m.NotesTemplate, m.SharedFrom, m.SharedId,
     ];
 
     internal static long InsertMeetingRow(Db db, Meeting m)
     {
-        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", 26))})", MeetingValues(m));
+        db.Execute($"INSERT INTO meetings ({MeetingColumns}) VALUES ({string.Join(", ", Enumerable.Repeat("?", MeetingColumns.Split(", ").Length))})", MeetingValues(m));
         return db.LastInsertRowId;
     }
 

@@ -1452,7 +1452,7 @@ public sealed class MainWindow : Window
     {
         menu.Items.Clear();
         if (host.Controller.SharedWithMe.FirstOrDefault(i => i.Id == id) is not { } item) return;
-        menu.Items.Add(Ui.Item(item.ImportedVersion is null ? L.T("匯入") : L.T("再匯入一次"), () => _ = host.Controller.ImportShared(item, State.CurrentFolder), glyph: "\uE896"));
+        menu.Items.Add(Ui.Item(item.ImportedVersion is null ? L.T("匯入") : L.T("再匯入一次"), () => ImportShared(item), glyph: "\uE896"));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Ui.Item(L.T("從清單移除"), () => _ = host.Controller.HideShared(id), icon: Symbol.Remove));
     }
@@ -1493,7 +1493,7 @@ public sealed class MainWindow : Window
         if (item.ImportedVersion is not null) Row(L.T("狀態"), item.IsNew ? L.T("分享者更新過，可以再匯入一次") : L.T("已匯入"));
         var note = Ui.Text(L.T("匯入後是你自己的一份，可以編輯、重新整理，跟分享者那份無關。"), 12, color: Ui.Secondary);
         var import = Sheet.Pill(item.ImportedVersion is null ? L.T("匯入") : L.T("再匯入一次"), Sheet.Kind.Primary,
-            click: () => _ = controller.ImportShared(item, State.CurrentFolder));
+            click: () => ImportShared(item));
         var hide = Sheet.Pill(L.T("從清單移除"), click: () => _ = controller.HideShared(item.Id));
         import.IsEnabled = hide.IsEnabled = !controller.ShareBusy;
         var buttons = Ui.Row(10, import, hide);
@@ -1512,6 +1512,19 @@ public sealed class MainWindow : Window
         if (host.Controller.SharedWithMe.Any(i => i.Id == id)) State.SelectShared(id);
     }
 
+    /// <summary>「匯入」「再匯入一次」（R125.5）：之前匯入的那份還在時先問取代或另存</summary>
+    public async void ImportShared(EnterpriseShares.SharedItem item)
+    {
+        var previous = host.Controller.PreviousImports(item.Id);
+        List<long> replacing = [];
+        if (previous.Count > 0)
+        {
+            if (await Dialogs.ChooseReimport(this, L.F("再匯入「%@」？", item.Title), null) is not { } replace) return;
+            if (replace) replacing = previous;
+        }
+        await host.Controller.ImportShared(item, State.CurrentFolder, replacing);
+    }
+
     /// <summary>shiyin:share（網頁的「用拾音打開」，R125.6）：先拿標題、分享者，問過再匯入</summary>
     public async void OpenShareLink(string url)
     {
@@ -1528,9 +1541,20 @@ public sealed class MainWindow : Window
             return;
         }
         var title = summary.Meeting is { Title.Length: > 0 } m ? m.Title : L.T("未命名的會議");
-        var ok = await Dialogs.Confirm(this, L.F("匯入%@分享的「%@」？", summary.From.Display, title),
-            L.F("來自 %@。匯入後是你自己的一份，可以編輯、重新整理。", EnterpriseServer.DisplayHost(link.Server)), L.T("匯入"));
-        if (ok) await host.Controller.ImportShare(link, summary.From.Display, summary.Bytes, State.CurrentFolder);
+        var message = L.F("匯入%@分享的「%@」？", summary.From.Display, title);
+        var previous = host.Controller.PreviousImports(link.Id);
+        List<long> replacing = [];
+        if (previous.Count == 0)
+        {
+            var ok = await Dialogs.Confirm(this, message, L.F("來自 %@。匯入後是你自己的一份，可以編輯、重新整理。", EnterpriseServer.DisplayHost(link.Server)), L.T("匯入"));
+            if (!ok) return;
+        }
+        else
+        {
+            if (await Dialogs.ChooseReimport(this, message, L.F("來自 %@。", EnterpriseServer.DisplayHost(link.Server))) is not { } replace) return;
+            if (replace) replacing = previous;
+        }
+        await host.Controller.ImportShare(link, summary.From.Display, summary.Bytes, State.CurrentFolder, replacing, viaLink: true);
     }
 
     /// <summary>

@@ -6,6 +6,7 @@
 #   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-enterprise.sql   # 4.2 以前建的資料庫：加企業伺服器三欄（R52.2，部署新的 worker 之前先跑）
 #   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-summarize-other.sql   # 2026-11-15 以前建的資料庫：加「其他」的種類、Nemotron-3 的次數兩欄（R86、R87，部署新的 worker 之前先跑）
 #   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-antigravity.sql   # 5.4 以前建的資料庫：加整理工具 Antigravity 兩欄（R121.8，部署新的 worker 之前先跑；正式的資料庫 2026-11-27 已跑）
+#   npx wrangler@4 d1 execute shiyin-usage --remote --file migrate-shares.sql   # 2026-11-29 以前建的資料庫：加分享會議四欄（R125.10，部署新的 worker 之前先跑）
 #   npx wrangler@4 deploy
 # token 只用環境變數 CLOUDFLARE_API_TOKEN 帶，不寫進任何檔案。
 name = "shiyin-usage"

@@ -60,6 +60,32 @@ public static partial class Dialogs
     }
 
     /// <summary>
+    /// 再匯入分享的會議、之前匯入的那份還在（M§99.4）：「取代之前匯入的那份」（true）、「另存一份」（false）、取消／Esc／✕（null）。
+    /// detail 放在固定的說明前面（從連結匯入時寫來自哪一台）
+    /// </summary>
+    public static async Task<bool?> ChooseReimport(MainWindow window, string title, string? detail)
+    {
+        if (window.XamlRoot is null) return null;
+        var sheet = new SheetDialog(window, title, spacing: 22);
+        bool? choice = null;
+        void Pick(bool value)
+        {
+            choice = value;
+            sheet.Close();
+        }
+        var message = string.Join("\n\n", new[] { detail, L.T("之前匯入的那份還在。取代的話，舊的那份會移到垃圾桶，30 天內可以還原；你在那份改過的地方不會帶過來。") }
+            .Where(t => !string.IsNullOrEmpty(t)));
+        var replace = Sheet.Pill(L.T("取代之前匯入的那份"), Sheet.Kind.Primary, click: () => Pick(true));
+        sheet.Form.Children.Add(Sheet.Header(title, sheet.Cancel, Sheet.Subtitle(message)));
+        sheet.Form.Children.Add(Sheet.Buttons(null, Sheet.Pill(L.T("取消"), click: sheet.Cancel), Sheet.Pill(L.T("另存一份"), click: () => Pick(false)), replace));
+        sheet.Submit = () => Pick(true);
+        sheet.Primary = replace;
+        sheet.Focus = replace;
+        await sheet.Show();
+        return choice;
+    }
+
+    /// <summary>
     /// 說明是「・」開頭的好幾行時畫成條列，換行對齊在點的後面（編輯會議的套用、還原，M§81.5、同 Mac 的 ConfirmSheet）；不是條列回傳 null
     /// </summary>
     static StackPanel? Bullets(string message)

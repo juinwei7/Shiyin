@@ -3735,6 +3735,23 @@
         }
       }
     },
+    "之前匯入的那份還在。取代的話，舊的那份會移到垃圾桶，30 天內可以還原；你在那份改過的地方不會帶過來。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之前导入的那份还在。取代的话，旧的那份会移到回收站，30 天内可以还原；你在那份改过的地方不会带过来。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The copy you imported before is still here. If you replace it, the old copy moves to the Trash, where you can restore it within 30 days. Changes you made to it won’t carry over."
+          }
+        }
+      }
+    },
     "之前選的麥克風（沒有接上，會用系統預設）": {
       "extractionState": "manual",
       "localizations": {
@@ -4377,6 +4394,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shared by %@"
+          }
+        }
+      }
+    },
+    "來自 %@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@."
           }
         }
       }
@@ -5928,6 +5962,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Other participants"
+          }
+        }
+      }
+    },
+    "再匯入「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再导入“%@”？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import “%@” again?"
           }
         }
       }
@@ -7949,6 +8000,23 @@
         }
       }
     },
+    "取代之前匯入的那份": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取代之前导入的那份"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace Previous Copy"
+          }
+        }
+      }
+    },
     "取得 API key": {
       "extractionState": "manual",
       "localizations": {
@@ -8098,6 +8166,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消略过"
+          }
+        }
+      }
+    },
+    "另存一份": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另存一份"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Both"
           }
         }
       }
@@ -10397,6 +10482,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已导入“%@”"
+          }
+        }
+      }
+    },
+    "已匯入「%@」，之前匯入的那份移到垃圾桶了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入“%@”，之前导入的那份移到回收站了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported “%@”. The previous copy was moved to the Trash."
           }
         }
       }

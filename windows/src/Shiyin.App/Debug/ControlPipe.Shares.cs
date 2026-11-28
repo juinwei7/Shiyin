@@ -99,16 +99,23 @@ public static partial class ControlPipe
                 });
             // shareselect <分享 id>：側欄點那一場（右邊預覽）
             case "shareselect" when args.Length > 1 && main is not null: main.State.SelectShared(args[1]); return Ok;
-            // shareimport <分享 id>：同按「匯入」，回傳匯入的會議 id
+            // shareimport <分享 id> [replace|copy]：同按「匯入」，回傳匯入的會議 id。之前匯入過時，replace 取代、copy 另存一份；
+            // 沒給就跟按鈕一樣跳出問的對話框（不等結果）
             case "shareimport" when args.Length > 1:
             {
                 if (controller.SharedWithMe.FirstOrDefault(i => i.Id == args[1]) is not { } item) return new JsonObject { ["error"] = "no such share" };
+                if (args.Length < 3 && main is not null && controller.PreviousImports(item.Id).Count > 0)
+                {
+                    host.Post(() => main.ImportShared(item));
+                    return Ok;
+                }
+                var replacing = args.Length > 2 && args[2] == "replace" ? controller.PreviousImports(item.Id) : [];
                 return Later(async () =>
                 {
                     long? revealed = null;
                     void Capture(long id) => revealed = id;
                     controller.Reveal += Capture;
-                    try { await controller.ImportShared(item, main?.State.CurrentFolder); }
+                    try { await controller.ImportShared(item, main?.State.CurrentFolder, replacing); }
                     finally { controller.Reveal -= Capture; }
                     return new JsonObject { ["ok"] = revealed is not null, ["meetingId"] = revealed };
                 });

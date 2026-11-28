@@ -39,6 +39,7 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         ("meetingLanguages", ["zh", "en", "ja"]),
         ("summarizer", ["claudeCode", "codex", "antigravity", "api", "local", "enterprise"]),   // antigravity：R121.8
         ("review", ["answered", "confirmed", "skipped"]),   // 待確認送出的題數（R41.7、M§31.3）
+        ("shares", ["shared", "imported", "stopped", "linkImported"]),   // 分享會議（R125.10、M§99.4）
         ("errors", ["recording", "transcribe", "diarize", "summarize"]),
         // 整理失敗的種類、當時的整理工具（R47、M§34.5）；summarizeDraftErrors 在 Numbers
         ("summarizeErrors", SummarizeErrorKinds),
@@ -203,6 +204,9 @@ public sealed class UsageStats(string file, AppSettings settings, HttpClient htt
         if (answered + confirmed + skipped <= 0) return;
         Add(c => { c.Add("review", "answered", answered); c.Add("review", "confirmed", confirmed); c.Add("review", "skipped", skipped); });
     }
+
+    /// <summary>分享會議（R125.10）：shared、imported、stopped、linkImported；不記標題、信箱、人數</summary>
+    public void ShareEvent(string key) => Add(c => c.Add("shares", key, 1));
 
     public void Failed(Failure kind) => Add(c => c.Add("errors", kind.ToString().ToLowerInvariant(), 1));
 

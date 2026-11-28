@@ -1013,7 +1013,9 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 11.58 透過企業伺服器分享會議（R125，M§99、D209～D212）
 
-- **Data**：`MigrationSql.V21` 同 Mac 的 `meetingSharesSQL`（逐字相同：`meetings.shared_from`、`meeting_shares`）；`AppDatabase.Shares.cs` 的 `RecordShare`、`ShareIds`、`ForgetShare`、`SetSharedFrom`；`Meeting.SharedFrom` 跟著整列寫入（同 Mac 的 GRDB 記錄）。
+- **Data**：`MigrationSql.V21` 同 Mac 的 `meetingSharesSQL`（逐字相同：`meetings.shared_from`、`shared_id`、`meeting_shares`）；`AppDatabase.Shares.cs` 的 `RecordShare`、`ShareIds`、`ForgetShare`、`SetSharedFrom`（名字和分享 id）、`MeetingsFromShare`；`Meeting.SharedFrom`、`SharedId` 跟著整列寫入（同 Mac 的 GRDB 記錄）。
+- **再匯入**（M§99.4）：之前匯入的那份還在時問取代或另存（`ContentDialog`，字同 Mac），取代＝新的匯入成功後把舊的移到垃圾桶；控制通道 `shareimport <分享 id> replace|copy`。
+- **統計**：`UsageStats` 的 `shares`（shared、imported、stopped、linkImported），同 M§30.4。
 - **Services**：`EnterpriseShares`（同 Mac 的同名檔）：純函式 `CreateBody`、`ParseSharing`、`Positive`、`AsBool`（true／false，數字 0、1 也算，同 Mac 的 `NSNumber as? Bool`）、`ParseMeeting`／`Contents`／`Person`／`Recipients`（500 截斷）／`Link`／`Detail`／`SharedWithMe`／`Summary`、`ParseShareLink`；API 同 M§99.2，8 MB 續傳上傳（400 從頭傳一次）、Range 下載。`EnterpriseServer` 加：`EnterpriseInfo`／`EnterpriseAccount` 的 `Sharing`（帳號 JSON 存 `sharing`，公司開了才有）、`Call` 的 `expireOnForbidden`（分享的 403 不當成登入失效）、`CallRaw`（位元組、攤平的標頭，含 Content-Range）、`SendRaw`（不帶 token：用公開連結打開的分享）。
   - `AppController.Shares.cs`（同 Mac 的 Store/Shares.swift）：`ShareMeeting`（回傳沒加進名單的信箱；取消、失敗時 `DELETE` 半套的分享）、`UpdateShareContents`、名單、連結、期限、`StopSharing`、`RefreshSharedWithMe`（看過的版本存 `settings.json` 的 `seenShares`）、`ImportShared`／`ImportShare`（下載到 `tmp/shared-<id>.shiyin`，下載到一半的留著接著下載）、`HideShared`、`ShareSummary`；`CancelShare`。事件 `SharesChanged`（只重畫）、`SharedMeetingArrived`（通知）、`SharedItemGone`。第一次分享的說明記在 `shareNoticeShown`。統計（M§99.4 最後一條）同 Mac 還沒做（SH4）。
 - **App**：

@@ -482,6 +482,18 @@ public sealed partial class EnterpriseTests
         await controller.RefreshSharedWithMe();
         Assert.Equal([share.Id, share.Id], arrived);
         Assert.True(Assert.Single(controller.SharedWithMe).IsNew);
+        // 再匯入（M§99.4）：另存一份 → 兩場都在；取代 → 之前的兩場移到垃圾桶（新的成功後才動），只剩新的
+        var first = revealed.Value;
+        Assert.Equal([first], controller.PreviousImports(share.Id));
+        await controller.ImportShared(Assert.Single(controller.SharedWithMe), null);
+        var copy = revealed!.Value;
+        Assert.NotEqual(first, copy);
+        Assert.Equal([first, copy], controller.PreviousImports(share.Id));
+        await controller.ImportShared(Assert.Single(controller.SharedWithMe), null, controller.PreviousImports(share.Id));
+        var latest = revealed!.Value;
+        Assert.Equal([latest], controller.PreviousImports(share.Id));
+        Assert.All(new[] { first, copy }, m => Assert.NotNull(db.Meeting(m)!.DeletedAt));
+        Assert.Equal((share.Id, "Bob"), (db.Meeting(latest)!.SharedId, db.Meeting(latest)!.SharedFrom));
         var gone = new List<string>();
         controller.SharedItemGone += g => gone.Add(g);
         await controller.HideShared(share.Id);

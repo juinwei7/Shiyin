@@ -1112,6 +1112,7 @@ FluidAudio 的離線辨識把錄音切成 10 秒的片段（每 2 秒一個）�
 | `questionsAsked` | 提問（單場或所有會議）得到回答 | `Asking` |
 | `errors.recording`／`transcribe`／`diarize`／`summarize` | 錄音結束時有錯誤；轉錄、重新辨識、整理（含修正）的工作失敗 | `AppModel`、`JobRunner.execute` |
 | `review.answered`／`confirmed`／`skipped` | 待確認送出成功（R41.7，§31.3）：打字或「不是」的題數、「是」的題數、略過的題數 | `AppModel.submitReview` |
+| `shares.shared`／`imported`／`stopped`／`linkImported` | 透過企業伺服器分享、從「與我分享」匯入、停止分享、從連結匯入成功（R125.10，§99.4，2026-11-29 加） | `Store/Shares.swift` |
 
 校正、猜說話者、壓縮不算（是整理和轉錄的輔助工作）。
 
@@ -1170,6 +1171,7 @@ User-Agent: Shiyin/<版本>
 - 後台不要存 IP（或只用來擋濫用、不跟 `installId` 一起存）。`schema` 以後改格式時加 1，後台可以依版本解析。
 - `review`（2026-10-23 加，R41.7）：待確認的回答、確認、略過的題數。只加字典不改 `schema`：後台對不認得的字典忽略、少的鍵當 0，所以舊 app 和舊後台互相都能收。
 - Qwen3-ASR（4.1 加，R43）：`engines.qwen` 是用 Qwen3-ASR 轉錄的秒數；後台的欄是 `engine_qwen`（`workers/usage/migrate-qwen.sql`）。
+- 分享會議（2026-11-29 加，R125.10、§99.4）：`usage.shares` 的 `shared`、`imported`、`stopped`、`linkImported`；後台的欄見 §99.4。
 - 企業伺服器（4.2 加，R52.2、§36）：`engines.server` 是在企業伺服器轉錄的秒數（不分 Breeze、Qwen），`summarizer.enterprise`、`errorDetail.summarizeProvider.enterprise` 是整理工具是「公司」的次數；不記伺服器的網址、公司名稱、帳號。後台的欄是 `engine_server`、`summarizer_enterprise`、`summarize_err_enterprise`（`workers/usage/migrate-enterprise.sql`）。
 
 ### 30.5 設定頁、使用說明
@@ -3580,6 +3582,7 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 
 ```sql
 ALTER TABLE meetings ADD COLUMN shared_from TEXT;   -- 匯入的分享：分享者的名字（沒有名字時是信箱）；不是分享來的是 NULL
+ALTER TABLE meetings ADD COLUMN shared_id TEXT;     -- 匯入的是哪一個分享（再匯入時找之前那份，R125.5）
 CREATE TABLE meeting_shares (
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
   server     TEXT NOT NULL,            -- 企業伺服器的網址（normalized）
@@ -3606,9 +3609,10 @@ CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 - **會議頁**：標題下的動作列加「分享」（`square.and.arrow.up`）；這場在 `meeting_shares` 裡時，資訊列加「已分享給 N 人・連結」，點了打開分享視窗（打開會議頁時問一次伺服器，失敗時不顯示人數、只寫「已分享」）。匯入的分享在資訊列寫「來自 王小明 的分享」。
 - **側欄「與我分享」**：在資料夾那一段的下面；`sharedWithMe` 有東西時才出現，每列是標題、分享者、日期，沒匯入過或已更新的有圓點。點一列在右邊顯示預覽（標題、分享者、日期、長度、大小、帶了哪些內容、到期日，按鈕「匯入」「從清單移除」）；匯入完跳到那場會議。右鍵、「⋯」同一份選單（匯入、從清單移除）。
 - **查新的分享**：登入了、`sharing` 開著時，啟動、從背景回到前景、每 15 分鐘 `GET /api/v1/shared-with-me`；新的（id 沒看過、或 `version` 比上次看到的大）送系統通知「%@分享了「%@」給你」，點了打開那一列。看過的 id、版本記在 `AppSettings.seenShares`（只有 id 和版本）。
-- **匯入**：下載到 `tmp/`（顯示百分比）→ `Package.importPackage` → 寫 `shared_from` → `POST …/imported`。匯入進去的資料夾：側欄選著某個資料夾時放那裡，否則不放（同匯入封包）。
+- **匯入**：下載到 `tmp/`（顯示百分比）→ `Package.importPackage` → 寫 `shared_from`、`shared_id` → `POST …/imported`。匯入進去的資料夾：側欄選著某個資料夾時放那裡，否則不放（同匯入封包）。
+- **再匯入**（R125.5）：`meetingsFromShare(id)`（`shared_id` 相同、不在垃圾桶）有東西時先問：標題「再匯入「<標題>」？」（從連結時是原本的「匯入<分享者>分享的「<標題>」？」，內文前面多「來自 <主機>。」），內文「之前匯入的那份還在。取代的話，舊的那份會移到垃圾桶，30 天內可以還原；你在那份改過的地方不會帶過來。」，按鈕「取代之前匯入的那份」「另存一份」「取消」。取代＝新的匯入成功後才把舊的移到垃圾桶（`moveToTrash`，失敗時舊的不動），提示「已匯入「<標題>」，之前匯入的那份移到垃圾桶了」。沒有之前那份（從沒匯入、刪了、在垃圾桶）就照第一次匯入。DEBUG：`shareimport <分享 id> replace|copy`。
 - **shiyin://share?server=<網址>&id=<分享 id>&t=<代碼>**（網頁的「用拾音打開」）：`server` 照 `EnterpriseServer.normalized` 檢查；先 `GET …/summary` 拿標題、分享者，問「匯入<分享者>分享的「<標題>」？」，內文寫「來自 <主機>」（主機用 punycode，同 R49.7 的 4.2.1）；確認後下載匯入。登入的是同一台時帶 token，其他情況只帶 `t`。
-- 統計（R40）：只記次數（分享、匯入、停止分享、用連結匯入），不記標題、信箱、人數以外的東西。
+- 統計（R125.10、§30.4）：`usage.shares` 的 `shared`（上傳完成、記進 `meeting_shares`）、`imported`（從「與我分享」匯入成功）、`stopped`（停止分享成功）、`linkImported`（從 `shiyin://share` 匯入成功）；不記標題、信箱、人數。後台的欄 `shares_shared`、`shares_imported`、`shares_stopped`、`shares_link_imported`（`workers/usage/migrate-shares.sql`）。
 
 ### 99.5 隱私說明
 

@@ -101,6 +101,7 @@ extension AppModel {
             created = id
             try await EnterpriseShares.upload(id, file: file, bytes: bytes) { [weak self] value in Task { @MainActor in self?.shareProgress = value } }
             try db.recordShare(meetingId, server: server, shareId: id)
+            UsageStats.shared.shareEvent("shared")
         } catch {
             if let created { Task { try? await EnterpriseShares.stop(created) } }
             if !(error is CancellationError) { errorMessage = error.localizedDescription }
@@ -183,6 +184,7 @@ extension AppModel {
             return
         }
         try? db.forgetShare(server: server, shareId: id)
+        UsageStats.shared.shareEvent("stopped")
         shareDetails[meetingId] = nil
         noticeMessage = String(localized: "已停止分享")
     }
@@ -239,10 +241,35 @@ extension AppModel {
     }
 
     /// 「匯入」：下載、匯入成自己的一份、記下是誰分享的、回報伺服器
-    func importShared(_ item: EnterpriseShares.SharedItem) async {
+    /// 「匯入」「再匯入一次」：replace 是 nil 時，之前匯入的那份還在就先問（DEBUG 的 shareimport 直接指定）
+    func importShared(_ item: EnterpriseShares.SharedItem, replace: Bool? = nil) async {
         guard let server = EnterpriseServer.shared.savedURL else { return }
-        await importShare(EnterpriseShares.ShareLink(server: server, id: item.id, token: nil), from: item.from.display, bytes: item.bytes)
+        let previous = (try? db.meetingsFromShare(item.id)) ?? []
+        var replacing = false
+        if !previous.isEmpty {
+            guard let choice = replace ?? askReimport(String(localized: "再匯入「\(item.title)」？"), detail: nil) else { return }
+            replacing = choice
+        }
+        await importShare(EnterpriseShares.ShareLink(server: server, id: item.id, token: nil), from: item.from.display, bytes: item.bytes,
+                          replacing: replacing ? previous : [], viaLink: false)
         await refreshSharedWithMe(notify: false)
+    }
+
+    /// 之前匯入的那份還在（R125.5）：取代（true，舊的移到垃圾桶）、另存一份（false）、取消（nil）
+    private func askReimport(_ message: String, detail: String?) -> Bool? {
+        NSApp.activate()
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.informativeText = [detail, String(localized: "之前匯入的那份還在。取代的話，舊的那份會移到垃圾桶，30 天內可以還原；你在那份改過的地方不會帶過來。")]
+            .compactMap { $0 }.joined(separator: "\n\n")
+        alert.addButton(withTitle: String(localized: "取代之前匯入的那份"))
+        alert.addButton(withTitle: String(localized: "另存一份"))
+        alert.addButton(withTitle: String(localized: "取消"))
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return true
+        case .alertSecondButtonReturn: return false
+        default: return nil
+        }
     }
 
     func hideShared(_ id: String) async {
@@ -251,7 +278,8 @@ extension AppModel {
         await refreshSharedWithMe(notify: false)
     }
 
-    private func importShare(_ link: EnterpriseShares.ShareLink, from: String, bytes: Int64) async {
+    /// 下載、匯入；replacing 是要換掉的舊的那幾場（新的匯入成功後才移到垃圾桶）
+    private func importShare(_ link: EnterpriseShares.ShareLink, from: String, bytes: Int64, replacing: [Int64], viaLink: Bool) async {
         guard !shareBusy else { return }
         shareBusy = true
         shareProgress = 0
@@ -262,13 +290,16 @@ extension AppModel {
             let (db, folder) = (db, currentFolder)
             let meeting = try await Task.detached(priority: .userInitiated) { try MeetingPackage.importPackage(file, db: db, folder: folder) }.value
             try? FileManager.default.removeItem(at: file)
-            if let id = meeting.id { try db.setSharedFrom(id, from) }
+            if let id = meeting.id { try db.setSharedFrom(id, from, shareId: link.id) }
             await EnterpriseShares.imported(link, version: version)
+            UsageStats.shared.shareEvent(viaLink ? "linkImported" : "imported")
+            if !replacing.isEmpty { moveToTrash(replacing) }
             reload()
             showTrash = false
             selectedShared = nil
             selection = meeting.id
-            noticeMessage = String(localized: "已匯入「\(meeting.displayTitle)」")
+            noticeMessage = replacing.isEmpty ? String(localized: "已匯入「\(meeting.displayTitle)」")
+                                              : String(localized: "已匯入「\(meeting.displayTitle)」，之前匯入的那份移到垃圾桶了")
         } catch {
             // 下載到一半的檔案留著：再按一次「匯入」接著下載（同一個版本）
             errorMessage = error.localizedDescription
@@ -285,14 +316,22 @@ extension AppModel {
         NSApp.activate()
         do {
             let summary = try await EnterpriseShares.summary(link)
-            let alert = NSAlert()
             let title = summary.meeting?.title.isEmpty == false ? summary.meeting!.title : String(localized: "未命名的會議")
-            alert.messageText = String(localized: "匯入\(summary.from.display)分享的「\(title)」？")
-            alert.informativeText = String(localized: "來自 \(EnterpriseServer.displayHost(link.server))。匯入後是你自己的一份，可以編輯、重新整理。")
-            alert.addButton(withTitle: String(localized: "匯入"))
-            alert.addButton(withTitle: String(localized: "取消"))
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
-            await importShare(link, from: summary.from.display, bytes: summary.bytes)
+            let message = String(localized: "匯入\(summary.from.display)分享的「\(title)」？")
+            let previous = (try? db.meetingsFromShare(link.id)) ?? []
+            var replacing: [Int64] = []
+            if previous.isEmpty {
+                let alert = NSAlert()
+                alert.messageText = message
+                alert.informativeText = String(localized: "來自 \(EnterpriseServer.displayHost(link.server))。匯入後是你自己的一份，可以編輯、重新整理。")
+                alert.addButton(withTitle: String(localized: "匯入"))
+                alert.addButton(withTitle: String(localized: "取消"))
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+            } else {
+                guard let choice = askReimport(message, detail: String(localized: "來自 \(EnterpriseServer.displayHost(link.server))。")) else { return }
+                if choice { replacing = previous }
+            }
+            await importShare(link, from: summary.from.display, bytes: summary.bytes, replacing: replacing, viaLink: true)
         } catch EnterpriseServer.Failure.loginExpired {
             errorMessage = String(localized: "這個分享只有公司裡的人打得開，請先在「設定 → 企業伺服器」登入 \(EnterpriseServer.displayHost(link.server))")
         } catch {

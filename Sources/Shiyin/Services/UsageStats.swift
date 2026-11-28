@@ -27,6 +27,8 @@ final class UsageStats: @unchecked Sendable {
         var summarizeDraftErrors = 0
         /// 「其他」是哪一種（R86、§61.1）：FailureCause 的鍵 → 次數
         var summarizeOther: [String: Int] = [:]
+        /// 透過企業伺服器分享會議（R125.10、§99.4）：分享、從「與我分享」匯入、停止分享、從連結匯入的次數
+        var shares = ["shared": 0, "imported": 0, "stopped": 0, "linkImported": 0]
 
         static let summarizeErrorKinds = ["notInstalled", "notLoggedIn", "missingKey", "notConfigured", "keyRejected",
                                           "limited", "timeout", "unreachable", "badOutput", "other"]
@@ -55,6 +57,7 @@ final class UsageStats: @unchecked Sendable {
             summarizeErrorProviders = try c.decodeIfPresent([String: Int].self, forKey: .summarizeErrorProviders) ?? base.summarizeErrorProviders
             summarizeDraftErrors = try c.decodeIfPresent(Int.self, forKey: .summarizeDraftErrors) ?? 0
             summarizeOther = try c.decodeIfPresent([String: Int].self, forKey: .summarizeOther) ?? [:]
+            shares = try c.decodeIfPresent([String: Int].self, forKey: .shares) ?? base.shares
         }
     }
 
@@ -132,6 +135,11 @@ final class UsageStats: @unchecked Sendable {
             if imported { $0.importedSeconds += audio }
             if diarized { $0.diarizationRuns += 1 }
         }
+    }
+
+    /// 分享會議（R125.10）：shared、imported、stopped、linkImported；不記標題、信箱、人數
+    func shareEvent(_ key: String) {
+        add { $0.shares[key, default: 0] += 1 }
     }
 
     /// 重新辨識說話者完成
@@ -370,6 +378,8 @@ final class UsageStats: @unchecked Sendable {
         var summarizer: [String: Int]
         var questionsAsked: Int
         var review: [String: Int]
+        /// 2026-11-29 加（R125.10）：舊後台不認得這組就忽略
+        var shares: [String: Int]
     }
 
     static func payload(installId: String, date: String, counters c: Counters) -> Payload {
@@ -382,7 +392,7 @@ final class UsageStats: @unchecked Sendable {
                          transcribedSeconds: c.transcribedSeconds, transcribeWallSeconds: c.transcribeWallSeconds,
                          engines: c.engines, meetingLanguages: c.meetingLanguages, diarizationRuns: c.diarizationRuns,
                          diarizationNemotron: c.diarizationNemotron,
-                         summarizer: c.summarizer, questionsAsked: c.questionsAsked, review: c.review),
+                         summarizer: c.summarizer, questionsAsked: c.questionsAsked, review: c.review, shares: c.shares),
             errors: c.errors,
             errorDetail: ErrorDetail(summarize: c.summarizeErrors, summarizeProvider: c.summarizeErrorProviders,
                                      summarizeDraft: c.summarizeDraftErrors, summarizeOther: c.summarizeOther.filter { $0.value > 0 }))

@@ -885,6 +885,23 @@
         }
       }
     },
+    "之前匯入的那份還在。取代的話，舊的那份會移到垃圾桶，30 天內可以還原；你在那份改過的地方不會帶過來。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The copy you imported before is still here. If you replace it, the old copy moves to the Trash, where you can restore it within 30 days. Changes you made to it won’t carry over."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之前导入的那份还在。取代的话，旧的那份会移到回收站，30 天内可以还原；你在那份改过的地方不会带过来。"
+          }
+        }
+      }
+    },
     "之前選的麥克風（沒有接上，會用系統預設）": {
       "extractionState": "manual",
       "localizations": {
@@ -1072,6 +1089,23 @@
         }
       }
     },
+    "來自 %@。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@。"
+          }
+        }
+      }
+    },
     "依回答修正": {
       "extractionState": "manual",
       "localizations": {
@@ -1221,6 +1255,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "其他"
+          }
+        }
+      }
+    },
+    "再匯入「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import “%@” again?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再导入“%@”？"
           }
         }
       }
@@ -1497,6 +1548,40 @@
         }
       }
     },
+    "取代之前匯入的那份": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace Previous Copy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取代之前导入的那份"
+          }
+        }
+      }
+    },
+    "另存一份": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Both"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另存一份"
+          }
+        }
+      }
+    },
     "只能讀、不能改；垃圾桶裡的會議、正在錄的會議讀不到。讀到的會議內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦；關掉開關就讀不到了。": {
       "extractionState": "manual",
       "localizations": {
@@ -1629,6 +1714,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已删除一条记录，可以按记录标签页“编辑”旁的“恢复上一版”还原"
+          }
+        }
+      }
+    },
+    "已匯入「%@」，之前匯入的那份移到垃圾桶了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported “%@”. The previous copy was moved to the Trash."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入“%@”，之前导入的那份移到回收站了"
           }
         }
       }

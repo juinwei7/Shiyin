@@ -339,6 +339,7 @@ static class MigrationSql
     /// <summary>透過企業伺服器分享會議（R125、M§99.3、D212）：匯入的分享是誰分享的、這場分享過的 id（同 Mac 的 AppDatabase.meetingSharesSQL）</summary>
     public const string V21 = """
         ALTER TABLE meetings ADD COLUMN shared_from TEXT;
+        ALTER TABLE meetings ADD COLUMN shared_id TEXT;
         CREATE TABLE meeting_shares (
           meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
           server     TEXT NOT NULL,

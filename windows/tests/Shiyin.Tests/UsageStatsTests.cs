@@ -63,6 +63,7 @@ public sealed class UsageStatsTests : IDisposable
         usage.Asked();
         usage.Reviewed(answered: 1, confirmed: 3, skipped: 1);   // 待確認的題數（R41.7）
         usage.Reviewed(0, 0, 0);   // 沒有題目不算
+        foreach (var key in new[] { "shared", "shared", "imported", "stopped", "linkImported" }) usage.ShareEvent(key);   // 分享會議（R125.10）
         usage.Failed(UsageStats.Failure.Recording);
         usage.Failed(UsageStats.Failure.Summarize);
         // 整理失敗的種類、整理工具、草稿（R47、M§34.5）
@@ -81,7 +82,7 @@ public sealed class UsageStatsTests : IDisposable
         Assert.Matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", (string)payload["installId"]!);
         Assert.Equal("""{"chip":"Intel(R) Core(TM) i7-12700H","os":"Windows 11 24H2 (26100.4652)","platform":"windows","uiLanguage":"zh-Hant","version":"4.0.0"}""",
             payload["app"]!.ToJsonString());
-        Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"server":70,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":2},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"summarizer":{"antigravity":1,"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":1},"transcribeWallSeconds":45,"transcribedSeconds":820}""",
+        Assert.Equal("""{"diarizationRuns":3,"engines":{"breeze":50,"builtin":600,"qwen":0,"server":70,"whisperJa":100},"importedSeconds":600,"meetingLanguages":{"en":1,"ja":1,"zh":2},"meetingsImported":1,"meetingsRecorded":2,"questionsAsked":1,"recordedSeconds":56,"review":{"answered":1,"confirmed":3,"skipped":1},"shares":{"imported":1,"linkImported":1,"shared":2,"stopped":1},"summarizer":{"antigravity":1,"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":1},"transcribeWallSeconds":45,"transcribedSeconds":820}""",
             payload["usage"]!.ToJsonString());
         Assert.Equal("""{"diarize":0,"recording":1,"summarize":6,"transcribe":0}""", payload["errors"]!.ToJsonString());
         Assert.Equal("""{"summarize":{"badOutput":0,"keyRejected":1,"limited":1,"missingKey":0,"notConfigured":0,"notInstalled":0,"notLoggedIn":2,"other":0,"timeout":1,"unreachable":0},"summarizeDraft":1,"summarizeOther":{},"summarizeProvider":{"antigravity":1,"api":1,"claudeCode":1,"codex":1,"enterprise":1,"local":0}}""",

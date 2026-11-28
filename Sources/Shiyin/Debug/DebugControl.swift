@@ -1051,7 +1051,12 @@ enum DebugControl {
                 await model.refreshSharedWithMe()
                 write(["items": model.sharedWithMe.map { ["id": $0.id, "title": $0.title, "from": $0.from.email, "version": $0.version, "importedVersion": $0.importedVersion ?? 0, "isNew": $0.isNew] }], to: args[1])
             }
-        case "shareimport": if let item = model.sharedWithMe.first(where: { $0.id == args[1] }) { Task { await model.importShared(item) } }
+        // shareimport <分享 id> [replace|copy]：之前匯入過時，replace 取代、copy 另存一份（沒給就跳出問的視窗）
+        case "shareimport":
+            if let item = model.sharedWithMe.first(where: { $0.id == args[1] }) {
+                let replace: Bool? = args.count > 2 ? args[2] == "replace" : nil
+                Task { await model.importShared(item, replace: replace) }
+            }
         case "shareopen": if let url = URL(string: args[1]) { Task { await model.openShareLink(url) } }
         case "shareupdate": if let id { model.shareTask = Task { await model.updateShareContents(id) } }
         case "sharestop": if let id { Task { await model.stopSharing(id) } }

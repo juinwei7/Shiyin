@@ -31,6 +31,8 @@ const USAGE_DICTS = {
   },
   // 2026-10-23 加（R41.7、§31.3）：舊版 app 沒有這組就全部當 0
   review: { answered: 'review_answered', confirmed: 'review_confirmed', skipped: 'review_skipped' },
+  // 2026-11-29 加（R125.10、design §99.4）：透過企業伺服器分享、匯入分享、停止分享、從連結匯入的次數；舊版 app 沒有這組就全部當 0
+  shares: { shared: 'shares_shared', imported: 'shares_imported', stopped: 'shares_stopped', linkImported: 'shares_link_imported' },
 };
 const ERRORS = { recording: 'errors_recording', transcribe: 'errors_transcribe', diarize: 'errors_diarize', summarize: 'errors_summarize' };
 // 2026-10-25 加（R47、design §34.5）：整理失敗的種類、當時的整理工具、其中幾次是草稿；舊版 app 沒有 errorDetail 就全部當 0

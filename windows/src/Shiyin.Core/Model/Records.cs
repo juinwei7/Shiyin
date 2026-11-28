@@ -47,6 +47,8 @@ public sealed class Meeting
     public bool FolderDecided { get; set; }
     /// <summary>v21（R125、M§99.3）：匯入的分享是誰分享的（名字，沒有名字時是信箱），顯示用；不是分享來的是 null</summary>
     public string? SharedFrom { get; set; }
+    /// <summary>v21：匯入的是哪一個分享（再匯入時找之前那份，M§99.4）</summary>
+    public string? SharedId { get; set; }
 
     public MeetingLanguage MeetingLanguage => MeetingLanguages.Parse(Language) ?? MeetingLanguage.Zh;
 

@@ -116,7 +116,7 @@ CREATE TABLE meetings (
   notes_by         TEXT,
   created_at       TEXT NOT NULL,
   updated_at       TEXT NOT NULL
-, template_id TEXT NOT NULL DEFAULT 'general', user_notes  TEXT NOT NULL DEFAULT '', source      TEXT NOT NULL DEFAULT 'import', channels    TEXT NOT NULL DEFAULT 'mic', deleted_at  TEXT, language TEXT NOT NULL DEFAULT 'zh', notes_draft INTEGER NOT NULL DEFAULT 0, transcribed_with TEXT NOT NULL DEFAULT '', min_speakers INTEGER, speaker_check REAL, speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0, folder_decided INTEGER NOT NULL DEFAULT 0, series_id INTEGER REFERENCES series(id) ON DELETE SET NULL, notes_template TEXT, folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL, shared_from TEXT);
+, template_id TEXT NOT NULL DEFAULT 'general', user_notes  TEXT NOT NULL DEFAULT '', source      TEXT NOT NULL DEFAULT 'import', channels    TEXT NOT NULL DEFAULT 'mic', deleted_at  TEXT, language TEXT NOT NULL DEFAULT 'zh', notes_draft INTEGER NOT NULL DEFAULT 0, transcribed_with TEXT NOT NULL DEFAULT '', min_speakers INTEGER, speaker_check REAL, speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0, folder_decided INTEGER NOT NULL DEFAULT 0, series_id INTEGER REFERENCES series(id) ON DELETE SET NULL, notes_template TEXT, folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL, shared_from TEXT, shared_id TEXT);
 CREATE TABLE notes_versions (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
