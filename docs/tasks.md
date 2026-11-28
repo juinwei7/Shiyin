@@ -10,7 +10,7 @@
 ## 詞彙表的群組和排序（R126，design §100、design-windows §11.59、D213；2026-11-27 GitHub #31（smilehappy126），使用者選了像標籤）
 
 - [~] **GG1 Mac**（§100）：程式完成，標準答案、DEBUG 版驗過（2026-11-27，見 commit 訊息）。還差（要使用者用真的滑鼠，設定視窗要 app 在前景）：群組膠囊的右鍵（重新命名…、刪除群組…）、詞的右鍵「加到群組 ▸」打勾和「從「X」移出」、勾選幾個詞後的「加到群組」選單、新增／重新命名群組的彈窗按「建立」「儲存」、刪除群組的確認（背後的動作用 `glossarygroup` 驗過）
-- [~] **GG2 Windows**（design-windows §11.59）：程式完成，`dotnet test` 標準答案全部通過、方案編譯過。還差（虛擬機）：控制通道建群組、篩選、排序，UI Automation 打開群組膠囊和詞的右鍵、勾選後的「加到群組」、新增群組的對話框，淺色、深色截圖
+- Windows 完成：`dotnet test` 標準答案、虛擬機的控制通道和 UI Automation 驗過（2026-11-29，見 commit 訊息）
 - [ ] **GG3 回覆 #31**：發布後說做好了
 
 ## 透過企業伺服器分享會議（R125，design §99、design-windows §11.58、D209～D212；2026-11-27 使用者：「可以分享到公司 server」「包含網址共享跟指定 mail 共享」）
@@ -29,8 +29,7 @@
 
 ## 轉錄時先放跟這場會議有關的詞（R124，design §98、design-windows §11.57、D208；2026-11-27 GitHub #31（smilehappy126），使用者：「先做自動排序」）
 
-- Mac 完成，DEBUG 版、標準答案驗過（2026-11-27，見 commit 訊息）
-- [~] **GO2 Windows**（design-windows §11.57）：程式完成，`dotnet test` 標準答案全部通過（`util/glossary-order.json`、`db/62`～`64`）、方案編譯過。還差（虛擬機）：控制通道 `glossaryorder` 看兩場同資料夾會議的順序；設定「詞彙表」頁放不下、放得下各截一張
+- Mac 完成，DEBUG 版、標準答案驗過（2026-11-27）；Windows 虛擬機驗過（2026-11-29）。見 commit 訊息
 - [ ] **GO3 回覆 #31**：發布後在 #31 說做好了（分群組整理等提案的人回覆再決定）
 
 ## 整理工具 Antigravity（R121，design §95、design-windows §11.54、D204；2026-11-27 Threads 上的使用者許願：「也要能支援 Antigravity cli」，使用者：接）
