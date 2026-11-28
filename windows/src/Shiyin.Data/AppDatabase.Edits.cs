@@ -251,6 +251,8 @@ public sealed partial class AppDatabase
         }
         meeting.DurationSeconds = (int)Math.Round(plan.Duration, MidpointRounding.AwayFromZero);
         if (audioExtension is not null) meeting.AudioFile = $"{id}.{audioExtension}";
+        // 合併了別場就不再是當初匯入的那份（再匯入時「取代」不碰它，M§99.4）
+        if (others.Count > 0) meeting.SharedId = null;
         meeting.UpdatedAt = now;
         UpdateMeetingRow(db, meeting);
         db.Execute("DELETE FROM speaker_undo WHERE meeting_id = ?", id);

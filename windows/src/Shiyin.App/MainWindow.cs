@@ -1513,26 +1513,47 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>「匯入」「再匯入一次」（R125.5）：之前匯入的那份還在時先問取代或另存</summary>
+    /// async void：沒預期的例外在這裡接住顯示（WinUI 不會把 UI 執行緒上的例外交給 UnhandledException，程序直接結束）
     public async void ImportShared(EnterpriseShares.SharedItem item)
     {
-        var previous = host.Controller.PreviousImports(item.Id);
-        List<long> replacing = [];
-        if (previous.Count > 0)
+        try
         {
-            if (await Dialogs.ChooseReimport(this, L.F("再匯入「%@」？", item.Title), null) is not { } replace) return;
-            if (replace) replacing = previous;
+            if (host.Controller.IsShareBusy()) return;
+            var previous = host.Controller.PreviousImports(item.Id);
+            List<long> replacing = [];
+            if (previous.Count > 0)
+            {
+                if (await Dialogs.ChooseReimport(this, L.F("再匯入「%@」？", item.Title), null) is not { } replace) return;
+                if (replace) replacing = previous;
+            }
+            await host.Controller.ImportShared(item, State.CurrentFolder, replacing);
         }
-        await host.Controller.ImportShared(item, State.CurrentFolder, replacing);
+        catch (Exception e)
+        {
+            Log.Error($"import shared failed: {e.GetType().Name}");
+            ShowError(e.Message);
+        }
     }
 
     /// <summary>shiyin:share（網頁的「用拾音打開」，R125.6）：先拿標題、分享者，問過再匯入</summary>
     public async void OpenShareLink(string url)
+    {
+        try { await OpenShareLinkAsync(url); }
+        catch (Exception e)
+        {
+            Log.Error($"open share link failed: {e.GetType().Name}");
+            ShowError(e.Message);
+        }
+    }
+
+    async Task OpenShareLinkAsync(string url)
     {
         if (EnterpriseShares.ParseShareLink(url, host.Enterprise.AllowLocalHttp) is not { } link)
         {
             ShowError(L.T("這個分享的連結不對"));
             return;
         }
+        if (host.Controller.IsShareBusy()) return;
         EnterpriseShares.Summary summary;
         try { summary = await host.Controller.ShareSummary(link); }
         catch (Exception e) when (e is EnterpriseException or HttpRequestException)
@@ -1554,7 +1575,7 @@ public sealed class MainWindow : Window
             if (await Dialogs.ChooseReimport(this, message, L.F("來自 %@。", EnterpriseServer.DisplayHost(link.Server))) is not { } replace) return;
             if (replace) replacing = previous;
         }
-        await host.Controller.ImportShare(link, summary.From.Display, summary.Bytes, State.CurrentFolder, replacing, viaLink: true);
+        await host.Controller.ImportShare(link, summary.From.Display, summary.Bytes, summary.Version, State.CurrentFolder, replacing, viaLink: true);
     }
 
     /// <summary>

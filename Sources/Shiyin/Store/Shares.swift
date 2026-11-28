@@ -243,7 +243,7 @@ extension AppModel {
     /// 「匯入」：下載、匯入成自己的一份、記下是誰分享的、回報伺服器
     /// 「匯入」「再匯入一次」：replace 是 nil 時，之前匯入的那份還在就先問（DEBUG 的 shareimport 直接指定）
     func importShared(_ item: EnterpriseShares.SharedItem, replace: Bool? = nil) async {
-        guard let server = EnterpriseServer.shared.savedURL else { return }
+        guard let server = EnterpriseServer.shared.savedURL, !shareIsBusy() else { return }
         let previous = (try? db.meetingsFromShare(item.id)) ?? []
         var replacing = false
         if !previous.isEmpty {
@@ -251,8 +251,15 @@ extension AppModel {
             replacing = choice
         }
         await importShare(EnterpriseShares.ShareLink(server: server, id: item.id, token: nil), from: item.from.display, bytes: item.bytes,
-                          replacing: replacing ? previous : [], viaLink: false)
+                          version: item.version, replacing: replacing ? previous : [], viaLink: false)
         await refreshSharedWithMe(notify: false)
+    }
+
+    /// 正在分享、更新或匯入另一場時不開始（先說，不要等使用者選完才沒反應）
+    private func shareIsBusy() -> Bool {
+        guard shareBusy else { return false }
+        errorMessage = String(localized: "正在傳另一場會議，等它完成再試一次")
+        return true
     }
 
     /// 之前匯入的那份還在（R125.5）：取代（true，舊的移到垃圾桶）、另存一份（false）、取消（nil）
@@ -278,32 +285,46 @@ extension AppModel {
         await refreshSharedWithMe(notify: false)
     }
 
-    /// 下載、匯入；replacing 是要換掉的舊的那幾場（新的匯入成功後才移到垃圾桶）
-    private func importShare(_ link: EnterpriseShares.ShareLink, from: String, bytes: Int64, replacing: [Int64], viaLink: Bool) async {
-        guard !shareBusy else { return }
+    /// 下載、匯入；replacing 是要換掉的舊的那幾場（新的匯入成功後才移到垃圾桶）。暫存檔名帶版本：下載到一半的檔案只接同一版；
+    /// 下載失敗時留著（再按一次接著下載），封包讀不出來時刪掉（壞掉的檔案不能一直接下去）
+    private func importShare(_ link: EnterpriseShares.ShareLink, from: String, bytes: Int64, version: Int, replacing: [Int64], viaLink: Bool) async {
+        guard !shareIsBusy() else { return }
         shareBusy = true
         shareProgress = 0
         defer { shareBusy = false; shareProgress = nil }
-        let file = Paths.tmpDir.appendingPathComponent("shared-\(link.id).shiyin")
-        do {
-            let version = try await EnterpriseShares.download(link, to: file, bytes: bytes) { [weak self] value in Task { @MainActor in self?.shareProgress = value } }
-            let (db, folder) = (db, currentFolder)
-            let meeting = try await Task.detached(priority: .userInitiated) { try MeetingPackage.importPackage(file, db: db, folder: folder) }.value
-            try? FileManager.default.removeItem(at: file)
-            if let id = meeting.id { try db.setSharedFrom(id, from, shareId: link.id) }
-            await EnterpriseShares.imported(link, version: version)
-            UsageStats.shared.shareEvent(viaLink ? "linkImported" : "imported")
-            if !replacing.isEmpty { moveToTrash(replacing) }
-            reload()
-            showTrash = false
-            selectedShared = nil
-            selection = meeting.id
-            noticeMessage = replacing.isEmpty ? String(localized: "已匯入「\(meeting.displayTitle)」")
-                                              : String(localized: "已匯入「\(meeting.displayTitle)」，之前匯入的那份移到垃圾桶了")
-        } catch {
-            // 下載到一半的檔案留著：再按一次「匯入」接著下載（同一個版本）
-            errorMessage = error.localizedDescription
+        let prefix = "shared-\(link.id)-v"
+        let file = Paths.tmpDir.appendingPathComponent("\(prefix)\(version).shiyin")
+        for old in (try? FileManager.default.contentsOfDirectory(atPath: Paths.tmpDir.path)) ?? [] where old.hasPrefix(prefix) && old != file.lastPathComponent {
+            try? FileManager.default.removeItem(at: Paths.tmpDir.appendingPathComponent(old))
         }
+        let downloaded: Int
+        do {
+            downloaded = try await EnterpriseShares.download(link, to: file, bytes: bytes, version: version) { [weak self] value in Task { @MainActor in self?.shareProgress = value } }
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        let meeting: Meeting
+        do {
+            let (db, folder) = (db, currentFolder)
+            meeting = try await Task.detached(priority: .userInitiated) {
+                try MeetingPackage.importPackage(file, db: db, folder: folder, shared: (from: from, id: link.id))
+            }.value
+        } catch {
+            try? FileManager.default.removeItem(at: file)
+            errorMessage = error.localizedDescription
+            return
+        }
+        try? FileManager.default.removeItem(at: file)
+        await EnterpriseShares.imported(link, version: downloaded)
+        UsageStats.shared.shareEvent(viaLink ? "linkImported" : "imported")
+        if !replacing.isEmpty { moveToTrash(replacing) }
+        reload()
+        showTrash = false
+        selectedShared = nil
+        selection = meeting.id
+        noticeMessage = replacing.isEmpty ? String(localized: "已匯入「\(meeting.displayTitle)」")
+                                          : String(localized: "已匯入「\(meeting.displayTitle)」，之前匯入的那份移到垃圾桶了")
     }
 
     /// shiyin://share（網頁的「用拾音打開」，R125.6）：先拿標題、分享者，問過再匯入
@@ -313,6 +334,7 @@ extension AppModel {
             errorMessage = String(localized: "這個分享的連結不對")
             return
         }
+        guard !shareIsBusy() else { return }
         NSApp.activate()
         do {
             let summary = try await EnterpriseShares.summary(link)
@@ -331,7 +353,7 @@ extension AppModel {
                 guard let choice = askReimport(message, detail: String(localized: "來自 \(EnterpriseServer.displayHost(link.server))。")) else { return }
                 if choice { replacing = previous }
             }
-            await importShare(link, from: summary.from.display, bytes: summary.bytes, replacing: replacing, viaLink: true)
+            await importShare(link, from: summary.from.display, bytes: summary.bytes, version: summary.version, replacing: replacing, viaLink: true)
         } catch EnterpriseServer.Failure.loginExpired {
             errorMessage = String(localized: "這個分享只有公司裡的人打得開，請先在「設定 → 企業伺服器」登入 \(EnterpriseServer.displayHost(link.server))")
         } catch {

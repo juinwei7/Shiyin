@@ -97,9 +97,10 @@ public static class MeetingPackage
 
     /// <summary>
     /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）；封包帶的是資料夾的名字，用名字找（沒有就建）那個資料夾（R118、M§92.4）。
-    /// 在背景執行（M§21.13）。只讀根目錄的這幾個檔案，不解開整個 zip：封包可能來自別人，裡面的路徑可以指到這台電腦上的任何地方
+    /// 在背景執行（M§21.13）。只讀根目錄的這幾個檔案，不解開整個 zip：封包可能來自別人，裡面的路徑可以指到這台電腦上的任何地方。
+    /// sharedFrom、sharedId：從企業伺服器的分享匯入時的分享者和分享 id（M§99.4），跟會議一起寫進去
     /// </summary>
-    public static Meeting Import(string path, AppDatabase db, ShiyinPaths paths, long? folder = null)
+    public static Meeting Import(string path, AppDatabase db, ShiyinPaths paths, long? folder = null, string? sharedFrom = null, string? sharedId = null)
     {
         ZipArchive zip;
         try { zip = ZipFile.OpenRead(path); }
@@ -142,6 +143,7 @@ public static class MeetingPackage
                 SourceFilename = info.SourceFilename, DurationSeconds = info.DurationSeconds, NotesBy = info.NotesBy,
                 TemplateId = info.TemplateId, UserNotes = info.UserNotes, Source = "package", Channels = info.Channels,
                 FolderId = string.IsNullOrEmpty(info.Folder) ? folder : db.CreateFolder(info.Folder), Language = info.Language ?? "zh",
+                SharedFrom = sharedFrom, SharedId = sharedId,
             }, audio is null ? null : ImportRules.SafeExtension(audio.Name));
             var id = meeting.Id!.Value;
             try

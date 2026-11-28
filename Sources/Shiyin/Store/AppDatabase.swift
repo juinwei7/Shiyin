@@ -407,13 +407,16 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("v21") { db in
             try db.execute(sql: Self.meetingSharesSQL)
         }
+        // 匯入的是哪一個分享（design §99.3、R125.5）：再匯入時找之前那份
+        migrator.registerMigration("v22") { db in
+            try db.execute(sql: Self.sharedIdSQL)
+        }
         return migrator
     }
 
     /// migration v21 的 SQL（design §99.3；Windows 的 MigrationSql.V21 逐字相同）
     nonisolated static let meetingSharesSQL = """
         ALTER TABLE meetings ADD COLUMN shared_from TEXT;
-        ALTER TABLE meetings ADD COLUMN shared_id TEXT;
         CREATE TABLE meeting_shares (
           meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
           server     TEXT NOT NULL,
@@ -423,6 +426,9 @@ final class AppDatabase: @unchecked Sendable {
         );
         CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
         """
+
+    /// migration v22 的 SQL（design §99.3；Windows 的 MigrationSql.V22 逐字相同）
+    nonisolated static let sharedIdSQL = "ALTER TABLE meetings ADD COLUMN shared_id TEXT;"
 
     /// migration v20 的 SQL（design §100.1；Windows 的 MigrationSql.V20 逐字相同）
     nonisolated static let glossaryGroupsSQL = """
@@ -694,6 +700,7 @@ final class AppDatabase: @unchecked Sendable {
         guard var original = try Meeting.fetchOne(db, key: id) else { return nil }
         var meeting = original
         meeting.id = nil
+        meeting.sharedId = nil   // 分出來的是自己做的，再匯入時「取代」不碰它（design §99.4）
         meeting.title = title
         meeting.audioFile = ""
         meeting.notes = nil
@@ -1702,12 +1709,6 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// 匯入的分享是誰分享的（顯示用）
-    func setSharedFrom(_ meetingId: Int64, _ name: String, shareId: String) throws {
-        try pool.write { db in
-            try db.execute(sql: "UPDATE meetings SET shared_from = ?, shared_id = ? WHERE id = ?", arguments: [name, shareId, meetingId])
-        }
-    }
-
     /// 從這個分享匯入、還不在垃圾桶裡的會議（再匯入時問要不要取代，R125.5）
     func meetingsFromShare(_ shareId: String) throws -> [Int64] {
         try pool.read { db in

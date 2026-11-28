@@ -336,18 +336,28 @@ enum EnterpriseShares {
         return summary
     }
 
-    /// 一次 8 MB 用 Range 下載到 file（斷線時重新叫這個函式會接著下載），回傳版本
-    static func download(_ link: ShareLink, to file: URL, bytes: Int64, progress: @escaping (Double) -> Void) async throws -> Int {
+    /// 下載封包，8 MB 一段（Range），檔案裡已經有的接著下載。每一段都看 X-Shiyin-Share-Version：跟 version（檔案是哪一版）不同
+    /// 表示分享者剛更新過，前面下載的不能接，清掉從頭下載（最多重來兩次）。回傳下載到的版本
+    static func download(_ link: ShareLink, to file: URL, bytes: Int64, version expected: Int,
+                         progress: @escaping (Double) -> Void) async throws -> Int {
         if !FileManager.default.fileExists(atPath: file.path) { FileManager.default.createFile(atPath: file.path, contents: nil) }
         let handle = try FileHandle(forWritingTo: file)
         defer { try? handle.close() }
         var have = Int64(try handle.seekToEnd())
-        var version = 1
+        var version = expected
         var total = bytes
+        var restarts = 0
         repeat {
             try Task.checkCancellation()
             let end = total > 0 ? min(have + Int64(chunkSize), total) - 1 : have + Int64(chunkSize) - 1
             let (data, response) = try await linkRequest(link, "GET", "api/v1/shares/\(link.id)/package", headers: ["Range": "bytes=\(have)-\(end)"], timeout: 300)
+            if let served = response.value(forHTTPHeaderField: "X-Shiyin-Share-Version").flatMap(Int.init), served != version {
+                restarts += 1
+                guard restarts <= 2 else { throw EnterpriseServer.Failure.server(kind: "download_stalled", message: String(localized: "會議沒辦法完整下載")) }
+                try handle.truncate(atOffset: 0)
+                (have, total, version) = (0, 0, served)
+                continue
+            }
             switch response.statusCode {
             case 206, 200:
                 if response.statusCode == 200 {
@@ -360,7 +370,6 @@ enum EnterpriseShares {
                 } else if response.statusCode == 200 {
                     total = Int64(data.count)
                 }
-                version = response.value(forHTTPHeaderField: "X-Shiyin-Share-Version").flatMap(Int.init) ?? version
                 try handle.write(contentsOf: data)
                 have += Int64(data.count)
                 if data.isEmpty { throw EnterpriseServer.Failure.server(kind: "download_stalled", message: String(localized: "會議沒辦法完整下載")) }

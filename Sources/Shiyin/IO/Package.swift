@@ -111,7 +111,8 @@ enum MeetingPackage {
     }
 
     /// folder：封包沒帶資料夾時放進的資料夾（目前正在看的那個）。封包帶的是名字（R118），找同名的、沒有就建一個。在背景執行（design §21.13）
-    static func importPackage(_ url: URL, db: AppDatabase, folder: Int64? = nil) throws -> Meeting {
+    /// shared：從企業伺服器的分享匯入時，分享者和分享 id（design §99.4），跟會議一起寫進去
+    static func importPackage(_ url: URL, db: AppDatabase, folder: Int64? = nil, shared: (from: String, id: String)? = nil) throws -> Meeting {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         let dir = try Paths.makeTempDirectory()
@@ -161,7 +162,8 @@ enum MeetingPackage {
             title: info.title, titleLocked: info.titleLocked, meetingDate: info.meetingDate, participants: info.participants,
             sourceFilename: info.sourceFilename, durationSeconds: info.durationSeconds, notesBy: info.notesBy,
             templateId: info.templateId, userNotes: info.userNotes, source: "package", channels: info.channels,
-            folderId: try info.folder.flatMap { $0.isEmpty ? nil : $0 }.map { try db.createFolder($0) } ?? folder, language: info.language ?? "zh"),
+            folderId: try info.folder.flatMap { $0.isEmpty ? nil : $0 }.map { try db.createFolder($0) } ?? folder, language: info.language ?? "zh",
+            sharedFrom: shared?.from, sharedId: shared?.id),
             audioExtension: audioExt)
         do {
             if let audioName {

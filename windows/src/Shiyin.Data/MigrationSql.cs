@@ -339,7 +339,6 @@ static class MigrationSql
     /// <summary>透過企業伺服器分享會議（R125、M§99.3、D212）：匯入的分享是誰分享的、這場分享過的 id（同 Mac 的 AppDatabase.meetingSharesSQL）</summary>
     public const string V21 = """
         ALTER TABLE meetings ADD COLUMN shared_from TEXT;
-        ALTER TABLE meetings ADD COLUMN shared_id TEXT;
         CREATE TABLE meeting_shares (
           meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
           server     TEXT NOT NULL,
@@ -349,4 +348,7 @@ static class MigrationSql
         );
         CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
         """;
+
+    /// <summary>v22（M§99.3、R125.5）：匯入的是哪一個分享，再匯入時找之前那份；同 Mac 的 sharedIdSQL</summary>
+    public const string V22 = "ALTER TABLE meetings ADD COLUMN shared_id TEXT;";
 }

@@ -18357,6 +18357,23 @@
         }
       }
     },
+    "正在傳另一場會議，等它完成再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在传另一场会议，等它完成再试一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another meeting is still being transferred. Try again when it finishes."
+          }
+        }
+      }
+    },
     "正在匯入 %lld 個檔案…": {
       "extractionState": "manual",
       "localizations": {

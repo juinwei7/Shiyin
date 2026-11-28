@@ -3582,7 +3582,8 @@ ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
 
 ```sql
 ALTER TABLE meetings ADD COLUMN shared_from TEXT;   -- 匯入的分享：分享者的名字（沒有名字時是信箱）；不是分享來的是 NULL
-ALTER TABLE meetings ADD COLUMN shared_id TEXT;     -- 匯入的是哪一個分享（再匯入時找之前那份，R125.5）
+-- v22（2026-11-29 加，分開一個 migration：跑過早期 v21 的開發資料庫也補得到）
+ALTER TABLE meetings ADD COLUMN shared_id TEXT;     -- 匯入的是哪一個分享（再匯入時找之前那份，R125.5）；分成兩場分出來的、合併了別場的清掉
 CREATE TABLE meeting_shares (
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
   server     TEXT NOT NULL,            -- 企業伺服器的網址（normalized）
@@ -3609,7 +3610,7 @@ CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 - **會議頁**：標題下的動作列加「分享」（`square.and.arrow.up`）；這場在 `meeting_shares` 裡時，資訊列加「已分享給 N 人・連結」，點了打開分享視窗（打開會議頁時問一次伺服器，失敗時不顯示人數、只寫「已分享」）。匯入的分享在資訊列寫「來自 王小明 的分享」。
 - **側欄「與我分享」**：在資料夾那一段的下面；`sharedWithMe` 有東西時才出現，每列是標題、分享者、日期，沒匯入過或已更新的有圓點。點一列在右邊顯示預覽（標題、分享者、日期、長度、大小、帶了哪些內容、到期日，按鈕「匯入」「從清單移除」）；匯入完跳到那場會議。右鍵、「⋯」同一份選單（匯入、從清單移除）。
 - **查新的分享**：登入了、`sharing` 開著時，啟動、從背景回到前景、每 15 分鐘 `GET /api/v1/shared-with-me`；新的（id 沒看過、或 `version` 比上次看到的大）送系統通知「%@分享了「%@」給你」，點了打開那一列。看過的 id、版本記在 `AppSettings.seenShares`（只有 id 和版本）。
-- **匯入**：下載到 `tmp/`（顯示百分比）→ `Package.importPackage` → 寫 `shared_from`、`shared_id` → `POST …/imported`。匯入進去的資料夾：側欄選著某個資料夾時放那裡，否則不放（同匯入封包）。
+- **匯入**：下載到 `tmp/shared-<id>-v<版本>.shiyin`（顯示百分比；檔名帶版本，下載到一半的只接同一版，別的版本的先刪；每一段看 `X-Shiyin-Share-Version`，跟檔案的版本不同表示分享者剛更新過，清掉從頭下載，最多重來兩次）→ `Package.importPackage`（`shared_from`、`shared_id` 跟會議一起寫）→ `POST …/imported`。下載失敗時檔案留著（再按一次接著下載），封包讀不出來時刪掉。正在分享、更新或匯入另一場時（`shareBusy`）不開始、也不跳問的視窗，說「正在傳另一場會議，等它完成再試一次」。匯入進去的資料夾：側欄選著某個資料夾時放那裡，否則不放（同匯入封包）。
 - **再匯入**（R125.5）：`meetingsFromShare(id)`（`shared_id` 相同、不在垃圾桶）有東西時先問：標題「再匯入「<標題>」？」（從連結時是原本的「匯入<分享者>分享的「<標題>」？」，內文前面多「來自 <主機>。」），內文「之前匯入的那份還在。取代的話，舊的那份會移到垃圾桶，30 天內可以還原；你在那份改過的地方不會帶過來。」，按鈕「取代之前匯入的那份」「另存一份」「取消」。取代＝新的匯入成功後才把舊的移到垃圾桶（`moveToTrash`，失敗時舊的不動），提示「已匯入「<標題>」，之前匯入的那份移到垃圾桶了」。沒有之前那份（從沒匯入、刪了、在垃圾桶）就照第一次匯入。DEBUG：`shareimport <分享 id> replace|copy`。
 - **shiyin://share?server=<網址>&id=<分享 id>&t=<代碼>**（網頁的「用拾音打開」）：`server` 照 `EnterpriseServer.normalized` 檢查；先 `GET …/summary` 拿標題、分享者，問「匯入<分享者>分享的「<標題>」？」，內文寫「來自 <主機>」（主機用 punycode，同 R49.7 的 4.2.1）；確認後下載匯入。登入的是同一台時帶 token，其他情況只帶 `t`。
 - 統計（R125.10、§30.4）：`usage.shares` 的 `shared`（上傳完成、記進 `meeting_shares`）、`imported`（從「與我分享」匯入成功）、`stopped`（停止分享成功）、`linkImported`（從 `shiyin://share` 匯入成功）；不記標題、信箱、人數。後台的欄 `shares_shared`、`shares_imported`、`shares_stopped`、`shares_link_imported`（`workers/usage/migrate-shares.sql`）。

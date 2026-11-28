@@ -17,10 +17,6 @@ public sealed partial class AppDatabase
     public void ForgetShare(string server, string shareId) =>
         Write(db => db.Execute("DELETE FROM meeting_shares WHERE server = ? AND share_id = ?", server, shareId));
 
-    /// <summary>匯入的分享是誰分享的（顯示用）、哪一個分享</summary>
-    public void SetSharedFrom(long meetingId, string name, string shareId) =>
-        Write(db => db.Execute("UPDATE meetings SET shared_from = ?, shared_id = ? WHERE id = ?", name, shareId, meetingId));
-
     /// <summary>從這個分享匯入、還不在垃圾桶裡的會議（再匯入時問要不要取代，M§99.4）</summary>
     public List<long> MeetingsFromShare(string shareId) => Read(db =>
         db.Query("SELECT id FROM meetings WHERE shared_id = ? AND deleted_at IS NULL ORDER BY id", shareId).Select(r => r.Long("id")).ToList());

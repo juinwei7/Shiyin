@@ -343,7 +343,7 @@ public sealed partial class AppController
     public async Task ImportShared(EnterpriseShares.SharedItem item, long? folder, IReadOnlyList<long>? replacing = null)
     {
         if (Enterprise?.SavedUrl is not { } server) return;
-        await ImportShare(new EnterpriseShares.ShareLink(server, item.Id, null), item.From.Display, item.Bytes, folder, replacing ?? [], viaLink: false);
+        await ImportShare(new EnterpriseShares.ShareLink(server, item.Id, null), item.From.Display, item.Bytes, item.Version, folder, replacing ?? [], viaLink: false);
         await RefreshSharedWithMe(notify: false);
     }
 
@@ -360,22 +360,30 @@ public sealed partial class AppController
     }
 
     /// <summary>
-    /// 下載到 tmp（顯示百分比）→ 匯入封包 → 寫 shared_from、shared_id → 回報伺服器 → 有要取代的就移到垃圾桶（新的成功了才動舊的）；
-    /// 下載到一半的檔案留著，再按一次「匯入」接著下載（同一個版本）
+    /// 下載到 tmp（顯示百分比）→ 匯入封包（分享者、分享 id 一起寫）→ 回報伺服器 → 有要取代的就移到垃圾桶（新的成功了才動舊的）。
+    /// 暫存檔名帶版本，下載到一半的只接同一版；下載失敗時留著（再按一次接著下載），封包讀不出來時刪掉（同 Mac）
     /// </summary>
-    public async Task<bool> ImportShare(EnterpriseShares.ShareLink link, string from, long bytes, long? folder, IReadOnlyList<long> replacing, bool viaLink)
+    public async Task<bool> ImportShare(EnterpriseShares.ShareLink link, string from, long bytes, int version, long? folder, IReadOnlyList<long> replacing, bool viaLink)
     {
-        if (Shares is not { } api || ShareBusy) return false;
+        if (Shares is not { } api || IsShareBusy()) return false;
         var cancel = BeginShare();
-        Directory.CreateDirectory(Paths.Tmp);
-        var file = Path.Combine(Paths.Tmp, $"shared-{link.Id}.shiyin");
         try
         {
-            var version = await api.Download(link, file, bytes, value => SetShareProgress(value), cancel);
-            var meeting = await Task.Run(() => MeetingPackage.Import(file, Db, Paths, folder), cancel);
+            Directory.CreateDirectory(Paths.Tmp);
+            var prefix = $"shared-{link.Id}-v";
+            var file = Path.Combine(Paths.Tmp, $"{prefix}{version}.shiyin");
+            foreach (var old in Directory.GetFiles(Paths.Tmp, prefix + "*").Where(f => !string.Equals(f, file, StringComparison.OrdinalIgnoreCase)))
+                DeleteQuietly(old);
+            var downloaded = await api.Download(link, file, bytes, version, value => SetShareProgress(value), cancel);
+            Shiyin.Model.Meeting meeting;
+            try { meeting = await Task.Run(() => MeetingPackage.Import(file, Db, Paths, folder, from, link.Id), cancel); }
+            catch (Exception e) when (e is MeetingPackage.PackageException or InvalidDataException or System.Text.Json.JsonException)
+            {
+                DeleteQuietly(file);   // 壞掉的封包不能一直接下去
+                throw;
+            }
             DeleteQuietly(file);
-            if (meeting.Id is long id) Db.SetSharedFrom(id, from, link.Id);
-            await api.Imported(link, version);
+            await api.Imported(link, downloaded);
             Usage?.ShareEvent(viaLink ? "linkImported" : "imported");
             if (replacing.Count > 0) MoveToTrash(replacing);
             Changed?.Invoke(null);
@@ -385,12 +393,20 @@ public sealed partial class AppController
         }
         catch (OperationCanceledException) { return false; }
         catch (Exception e) when (e is EnterpriseException or MeetingPackage.PackageException or IOException or UnauthorizedAccessException
-                                      or Microsoft.Data.Sqlite.SqliteException)
+                                      or Microsoft.Data.Sqlite.SqliteException or HttpRequestException or System.Text.Json.JsonException)
         {
             Error?.Invoke(e.Message);
             return false;
         }
         finally { EndShare(); }
+    }
+
+    /// <summary>正在分享、更新或匯入另一場時不開始，先說（不要等使用者選完才沒反應）</summary>
+    public bool IsShareBusy()
+    {
+        if (!ShareBusy) return false;
+        Error?.Invoke(L.T("正在傳另一場會議，等它完成再試一次"));
+        return true;
     }
 
     /// <summary>shiyin:share（網頁的「用拾音打開」，R125.6）：先拿標題、分享者（App 問過再匯入）。只有公司裡的人打得開的連結、沒登入時換成說明</summary>

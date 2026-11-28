@@ -197,6 +197,7 @@ public sealed partial class AppDatabase
         if (FetchMeeting(db, id) is not { } original) return null;
         var meeting = original.Clone();
         meeting.Id = null;
+        meeting.SharedId = null;   // 分出來的是自己做的，再匯入時「取代」不碰它（M§99.4）
         meeting.Title = title;
         meeting.AudioFile = "";
         meeting.Notes = null;

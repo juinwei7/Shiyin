@@ -339,19 +339,30 @@ public sealed class EnterpriseShares(EnterpriseServer server)
         return ParseSummary(ParseBody(response.Body)) ?? throw BadResponse();
     }
 
-    /// <summary>一次 8 MB 用 Range 下載到 file（斷線時重新叫這個函式會接著下載），回傳版本</summary>
-    public async Task<int> Download(ShareLink link, string file, long bytes, Action<double> progress, CancellationToken cancel = default)
+    /// <summary>
+    /// 一次 8 MB 用 Range 下載到 file（斷線時重新叫這個函式會接著下載），回傳下載到的版本。每一段都看 X-Shiyin-Share-Version：
+    /// 跟 version（檔案是哪一版）不同表示分享者剛更新過，前面下載的不能接，清掉從頭下載（最多重來兩次，同 Mac）
+    /// </summary>
+    public async Task<int> Download(ShareLink link, string file, long bytes, int version, Action<double> progress, CancellationToken cancel = default)
     {
         await using var stream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.Write);
         var have = stream.Seek(0, SeekOrigin.End);
-        var version = 1;
         var total = bytes;
+        var restarts = 0;
         do
         {
             cancel.ThrowIfCancellationRequested();
             var end = total > 0 ? Math.Min(have + ChunkSize, total) - 1 : have + ChunkSize - 1;
             var response = await LinkRequest(link, HttpMethod.Get, $"api/v1/shares/{link.Id}/package",
                 headers: new Dictionary<string, string> { ["Range"] = $"bytes={have}-{end}" }, timeout: TimeSpan.FromMinutes(5), cancel: cancel);
+            if (int.TryParse(response.Header("X-Shiyin-Share-Version"), out var served) && served != version)
+            {
+                if (++restarts > 2) throw new EnterpriseException(EnterpriseFailure.Server, L.T("會議沒辦法完整下載"), "download_stalled");
+                stream.SetLength(0);
+                stream.Seek(0, SeekOrigin.Begin);
+                (have, total, version) = (0, 0, served);
+                continue;
+            }
             switch (response.Status)
             {
                 case 206 or 200:
@@ -365,7 +376,6 @@ public sealed class EnterpriseShares(EnterpriseServer server)
                     if (response.Header("Content-Range") is { } range && range.LastIndexOf('/') is var slash and >= 0 && long.TryParse(range[(slash + 1)..], out var all))
                         total = all;
                     else if (response.Status == 200) total = response.Body.Length;
-                    if (int.TryParse(response.Header("X-Shiyin-Share-Version"), out var v)) version = v;
                     await stream.WriteAsync(response.Body, cancel);
                     have += response.Body.Length;
                     if (response.Body.Length == 0) throw new EnterpriseException(EnterpriseFailure.Server, L.T("會議沒辦法完整下載"), "download_stalled");

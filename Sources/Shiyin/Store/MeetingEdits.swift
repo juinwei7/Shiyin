@@ -262,6 +262,8 @@ extension AppDatabase {
             }
             meeting.durationSeconds = Int(plan.duration.rounded())
             if let audioExtension { meeting.audioFile = "\(id).\(audioExtension)" }
+            // 合併了別場就不再是當初匯入的那份（再匯入時「取代」不碰它，design §99.4）
+            if !others.isEmpty { meeting.sharedId = nil }
             meeting.updatedAt = now
             try meeting.update(db)
             try db.execute(sql: "DELETE FROM speaker_undo WHERE meeting_id = ?", arguments: [id])

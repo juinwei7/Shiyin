@@ -520,9 +520,18 @@ public sealed partial class EnterpriseTests
         Assert.Equal(("Bob", "週會", share.Package.Length), (summary.From.Display, summary.Meeting?.Title, (int)summary.Bytes));
         var file = Path.Combine(home.Path, "下載.shiyin");
         var progress = new List<double>();
-        Assert.Equal(1, await api.Download(link, file, summary.Bytes, progress.Add));
+        Assert.Equal(1, await api.Download(link, file, summary.Bytes, summary.Version, progress.Add));
         Assert.Equal(share.Package, File.ReadAllBytes(file));
         Assert.Equal(1, progress[^1]);
+        // 下載到一半時分享者更新了（M§99.4）：伺服器送的版本不同，前面那段不能接，從頭下載新的那版
+        var stale = Path.Combine(home.Path, "一半.shiyin");
+        File.WriteAllBytes(stale, share.Package[..(share.Package.Length / 2)]);
+        var (oldPackage, oldVersion) = (share.Package, share.Version);
+        share.Package = [.. share.Package.Reverse()];
+        share.Version = 2;
+        Assert.Equal(2, await api.Download(link, stale, oldPackage.Length, 1, _ => { }));
+        Assert.Equal(share.Package, File.ReadAllBytes(stale));
+        (share.Package, share.Version) = (oldPackage, oldVersion);
         await api.Imported(link, 1);
         Assert.Equal(1, share.Imported["amy@example.com"]);
         // 只有公司裡的人打得開：沒登入的回 401，說明要先登入哪一台
