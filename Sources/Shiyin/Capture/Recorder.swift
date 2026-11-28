@@ -258,11 +258,11 @@ final class Recorder {
         volatileText = volatile
     }
 
-    /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）
+    /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）。systemOnly：當成只錄電腦聲音（一個聲道，design §35.1）
     func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, systemSilent: Bool = false, stereo: Bool = false,
-                        language: MeetingLanguage) {
+                        systemOnly: Bool = false, language: MeetingLanguage) {
         guard !isRecording else { return }
-        source = both ? "both" : "mic"
+        source = both ? "both" : systemOnly ? "system" : "mic"
         self.language = language
         simulationEnded = false
         begin(meetingId: meetingId) {
@@ -374,11 +374,12 @@ final class Recorder {
         guard AppSettings.idleStop, !isPaused else { return }
         // 即時逐字稿沒在跑時才看聲音（打字、關門也會算，只當備用，D115）。
         // 即時逐字稿在跑、但 2 分鐘沒有新的字（辨識中途沒反應）：只看電腦聲音，線上會議別人說話不會被當成沒人；
-        // 打字、關門在麥克風那一聲道，不會讓錄音停不下來
+        // 打字、關門在麥克風那一聲道，不會讓錄音停不下來。只錄電腦聲音時電腦聲音在第 0 聲道
+        let systemChannel = source == "both" ? 1 : source == "system" ? 0 : nil
         if !liveActive {
             if soundsLikeSpeech(writer) { markSpeech() }
-        } else if source == "both" && elapsed - lastLiveTextAt >= Self.liveStallSeconds
-                    && soundsLikeSpeech(writer, channels: [1]) {
+        } else if let systemChannel, elapsed - lastLiveTextAt >= Self.liveStallSeconds,
+                  soundsLikeSpeech(writer, channels: [systemChannel]) {
             markSpeech()
         }
         let idle = elapsed - lastSpeechAt

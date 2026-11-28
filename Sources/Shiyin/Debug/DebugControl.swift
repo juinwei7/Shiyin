@@ -890,10 +890,11 @@ enum DebugControl {
             model.setStopTimer(args.count > 1 && args[1] != "off" ? Date().addingTimeInterval(Double(args[1]) ?? 0) : nil)
         case "record-sim":
             // record-sim <音檔> <倍速> <both: 1/0/2/3>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）；
-            // 3 是雙聲道的音檔左邊送麥克風、右邊送電腦聲音（喇叭的回音，design §97.5）
+            // 3 是雙聲道的音檔左邊送麥克風、右邊送電腦聲音（喇叭的回音，design §97.5）；4 是只錄電腦聲音（一個聲道，design §35.1）
             let channels = args.count > 3 ? args[3] : "0"
             model.startSimulatedRecording(file: URL(fileURLWithPath: args[1]), speed: Double(args[2]) ?? 1,
-                                          both: ["1", "2", "3"].contains(channels), systemSilent: channels == "2", stereo: channels == "3")
+                                          both: ["1", "2", "3"].contains(channels), systemSilent: channels == "2", stereo: channels == "3",
+                                          systemOnly: channels == "4")
         case "reminders": model.selection = id; model.addActionItemsToReminders()   // reminders <會議 id>：等於按「加到提醒事項」（design §52.2）
         case "reminderdone":   // reminderdone <會議 id> <第幾項，0 開始>：假的提醒事項裡把那場會議的第幾項設成完成
             let matching = FakeReminders.shared.entries.indices.filter { Reminders.meetingAndKey(FakeReminders.shared.entries[$0].item.url)?.meetingId == id }
