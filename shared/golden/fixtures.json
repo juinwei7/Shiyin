@@ -3343,5 +3343,1772 @@
    {"folder": "只有條件", "keywords": "[\"站會\"]", "people": "[]", "template_id": null, "created_at": "2026-10-09T01:00:00Z"},
    {"folder": "專案 A", "keywords": "[]", "people": "[\"王大明\"]", "template_id": "general", "created_at": "2026-10-10T01:00:00Z"}
   ]
+ },
+ "shares": {
+  "create": [
+   {
+    "meeting": {
+     "title": "週會",
+     "meetingDate": "2026-11-20T09:00:00+08:00",
+     "durationSeconds": 3600,
+     "language": "zh"
+    },
+    "contents": {
+     "audio": true,
+     "userNotes": false,
+     "documents": true
+    },
+    "bytes": 123456789,
+    "sha256": "abababababababababababababababababababababababababababababababab",
+    "expiresInDays": 30
+   },
+   {
+    "meeting": {
+     "title": "Planning",
+     "meetingDate": "2026-11-21T14:00:00Z",
+     "language": "en"
+    },
+    "contents": {
+     "audio": false,
+     "userNotes": true,
+     "documents": false
+    },
+    "bytes": 2048,
+    "sha256": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"
+   }
+  ],
+  "sharing": [
+   {
+    "enabled": true,
+    "publicLinks": true,
+    "maxDays": 30,
+    "maxBytes": 2147483648
+   },
+   {
+    "enabled": true
+   },
+   {
+    "enabled": false,
+    "publicLinks": true,
+    "maxDays": 30
+   },
+   {
+    "enabled": "true"
+   },
+   {
+    "enabled": true,
+    "publicLinks": "yes",
+    "maxDays": 0,
+    "maxBytes": -5
+   },
+   {
+    "enabled": true,
+    "maxDays": 7.5,
+    "maxBytes": true
+   },
+   null,
+   "on"
+  ],
+  "detail": [
+   {
+    "id": "a5e7e310b4ea9ff95109b5b46dab6b74",
+    "status": "ready",
+    "version": 3,
+    "expiresAt": "2026-12-04T05:01:50.971Z",
+    "meeting": {
+     "title": "Lumio 下一版進度",
+     "meetingDate": "2026-11-27",
+     "durationSeconds": 79,
+     "language": "zh"
+    },
+    "contents": {
+     "audio": true,
+     "userNotes": false,
+     "documents": true
+    },
+    "bytes": 234123,
+    "uploading": false,
+    "recipients": [
+     {
+      "email": "bob@example.com",
+      "name": "Bob",
+      "openedAt": "2026-11-27T05:03:00Z",
+      "importedAt": "2026-11-27T05:04:00Z",
+      "importedVersion": 1
+     },
+     {
+      "email": "carol@example.com"
+     },
+     {
+      "name": "沒有信箱"
+     },
+     {
+      "email": ""
+     }
+    ],
+    "link": {
+     "url": "https://shiyin.example.com/s/bcnu09ilcvISEpiTA8jtIA",
+     "access": "company"
+    }
+   },
+   {
+    "id": "b5e7e310b4ea9ff95109b5b46dab6b74",
+    "status": "uploading",
+    "version": "2",
+    "bytes": "many",
+    "uploading": true,
+    "expiresAt": null,
+    "meeting": "週會",
+    "contents": {
+     "audio": "no"
+    },
+    "recipients": "bob@example.com",
+    "link": {
+     "url": "ftp://x/s/1",
+     "access": "company"
+    }
+   },
+   {
+    "id": "c5e7e310b4ea9ff95109b5b46dab6b74",
+    "status": "ready",
+    "version": -1,
+    "bytes": 1.5,
+    "link": {
+     "url": "https://x/s/1",
+     "access": "everyone"
+    },
+    "recipients": [
+     {
+      "email": "p0@example.com"
+     },
+     {
+      "email": "p1@example.com"
+     },
+     {
+      "email": "p2@example.com"
+     },
+     {
+      "email": "p3@example.com"
+     },
+     {
+      "email": "p4@example.com"
+     },
+     {
+      "email": "p5@example.com"
+     },
+     {
+      "email": "p6@example.com"
+     },
+     {
+      "email": "p7@example.com"
+     },
+     {
+      "email": "p8@example.com"
+     },
+     {
+      "email": "p9@example.com"
+     },
+     {
+      "email": "p10@example.com"
+     },
+     {
+      "email": "p11@example.com"
+     },
+     {
+      "email": "p12@example.com"
+     },
+     {
+      "email": "p13@example.com"
+     },
+     {
+      "email": "p14@example.com"
+     },
+     {
+      "email": "p15@example.com"
+     },
+     {
+      "email": "p16@example.com"
+     },
+     {
+      "email": "p17@example.com"
+     },
+     {
+      "email": "p18@example.com"
+     },
+     {
+      "email": "p19@example.com"
+     },
+     {
+      "email": "p20@example.com"
+     },
+     {
+      "email": "p21@example.com"
+     },
+     {
+      "email": "p22@example.com"
+     },
+     {
+      "email": "p23@example.com"
+     },
+     {
+      "email": "p24@example.com"
+     },
+     {
+      "email": "p25@example.com"
+     },
+     {
+      "email": "p26@example.com"
+     },
+     {
+      "email": "p27@example.com"
+     },
+     {
+      "email": "p28@example.com"
+     },
+     {
+      "email": "p29@example.com"
+     },
+     {
+      "email": "p30@example.com"
+     },
+     {
+      "email": "p31@example.com"
+     },
+     {
+      "email": "p32@example.com"
+     },
+     {
+      "email": "p33@example.com"
+     },
+     {
+      "email": "p34@example.com"
+     },
+     {
+      "email": "p35@example.com"
+     },
+     {
+      "email": "p36@example.com"
+     },
+     {
+      "email": "p37@example.com"
+     },
+     {
+      "email": "p38@example.com"
+     },
+     {
+      "email": "p39@example.com"
+     },
+     {
+      "email": "p40@example.com"
+     },
+     {
+      "email": "p41@example.com"
+     },
+     {
+      "email": "p42@example.com"
+     },
+     {
+      "email": "p43@example.com"
+     },
+     {
+      "email": "p44@example.com"
+     },
+     {
+      "email": "p45@example.com"
+     },
+     {
+      "email": "p46@example.com"
+     },
+     {
+      "email": "p47@example.com"
+     },
+     {
+      "email": "p48@example.com"
+     },
+     {
+      "email": "p49@example.com"
+     },
+     {
+      "email": "p50@example.com"
+     },
+     {
+      "email": "p51@example.com"
+     },
+     {
+      "email": "p52@example.com"
+     },
+     {
+      "email": "p53@example.com"
+     },
+     {
+      "email": "p54@example.com"
+     },
+     {
+      "email": "p55@example.com"
+     },
+     {
+      "email": "p56@example.com"
+     },
+     {
+      "email": "p57@example.com"
+     },
+     {
+      "email": "p58@example.com"
+     },
+     {
+      "email": "p59@example.com"
+     },
+     {
+      "email": "p60@example.com"
+     },
+     {
+      "email": "p61@example.com"
+     },
+     {
+      "email": "p62@example.com"
+     },
+     {
+      "email": "p63@example.com"
+     },
+     {
+      "email": "p64@example.com"
+     },
+     {
+      "email": "p65@example.com"
+     },
+     {
+      "email": "p66@example.com"
+     },
+     {
+      "email": "p67@example.com"
+     },
+     {
+      "email": "p68@example.com"
+     },
+     {
+      "email": "p69@example.com"
+     },
+     {
+      "email": "p70@example.com"
+     },
+     {
+      "email": "p71@example.com"
+     },
+     {
+      "email": "p72@example.com"
+     },
+     {
+      "email": "p73@example.com"
+     },
+     {
+      "email": "p74@example.com"
+     },
+     {
+      "email": "p75@example.com"
+     },
+     {
+      "email": "p76@example.com"
+     },
+     {
+      "email": "p77@example.com"
+     },
+     {
+      "email": "p78@example.com"
+     },
+     {
+      "email": "p79@example.com"
+     },
+     {
+      "email": "p80@example.com"
+     },
+     {
+      "email": "p81@example.com"
+     },
+     {
+      "email": "p82@example.com"
+     },
+     {
+      "email": "p83@example.com"
+     },
+     {
+      "email": "p84@example.com"
+     },
+     {
+      "email": "p85@example.com"
+     },
+     {
+      "email": "p86@example.com"
+     },
+     {
+      "email": "p87@example.com"
+     },
+     {
+      "email": "p88@example.com"
+     },
+     {
+      "email": "p89@example.com"
+     },
+     {
+      "email": "p90@example.com"
+     },
+     {
+      "email": "p91@example.com"
+     },
+     {
+      "email": "p92@example.com"
+     },
+     {
+      "email": "p93@example.com"
+     },
+     {
+      "email": "p94@example.com"
+     },
+     {
+      "email": "p95@example.com"
+     },
+     {
+      "email": "p96@example.com"
+     },
+     {
+      "email": "p97@example.com"
+     },
+     {
+      "email": "p98@example.com"
+     },
+     {
+      "email": "p99@example.com"
+     },
+     {
+      "email": "p100@example.com"
+     },
+     {
+      "email": "p101@example.com"
+     },
+     {
+      "email": "p102@example.com"
+     },
+     {
+      "email": "p103@example.com"
+     },
+     {
+      "email": "p104@example.com"
+     },
+     {
+      "email": "p105@example.com"
+     },
+     {
+      "email": "p106@example.com"
+     },
+     {
+      "email": "p107@example.com"
+     },
+     {
+      "email": "p108@example.com"
+     },
+     {
+      "email": "p109@example.com"
+     },
+     {
+      "email": "p110@example.com"
+     },
+     {
+      "email": "p111@example.com"
+     },
+     {
+      "email": "p112@example.com"
+     },
+     {
+      "email": "p113@example.com"
+     },
+     {
+      "email": "p114@example.com"
+     },
+     {
+      "email": "p115@example.com"
+     },
+     {
+      "email": "p116@example.com"
+     },
+     {
+      "email": "p117@example.com"
+     },
+     {
+      "email": "p118@example.com"
+     },
+     {
+      "email": "p119@example.com"
+     },
+     {
+      "email": "p120@example.com"
+     },
+     {
+      "email": "p121@example.com"
+     },
+     {
+      "email": "p122@example.com"
+     },
+     {
+      "email": "p123@example.com"
+     },
+     {
+      "email": "p124@example.com"
+     },
+     {
+      "email": "p125@example.com"
+     },
+     {
+      "email": "p126@example.com"
+     },
+     {
+      "email": "p127@example.com"
+     },
+     {
+      "email": "p128@example.com"
+     },
+     {
+      "email": "p129@example.com"
+     },
+     {
+      "email": "p130@example.com"
+     },
+     {
+      "email": "p131@example.com"
+     },
+     {
+      "email": "p132@example.com"
+     },
+     {
+      "email": "p133@example.com"
+     },
+     {
+      "email": "p134@example.com"
+     },
+     {
+      "email": "p135@example.com"
+     },
+     {
+      "email": "p136@example.com"
+     },
+     {
+      "email": "p137@example.com"
+     },
+     {
+      "email": "p138@example.com"
+     },
+     {
+      "email": "p139@example.com"
+     },
+     {
+      "email": "p140@example.com"
+     },
+     {
+      "email": "p141@example.com"
+     },
+     {
+      "email": "p142@example.com"
+     },
+     {
+      "email": "p143@example.com"
+     },
+     {
+      "email": "p144@example.com"
+     },
+     {
+      "email": "p145@example.com"
+     },
+     {
+      "email": "p146@example.com"
+     },
+     {
+      "email": "p147@example.com"
+     },
+     {
+      "email": "p148@example.com"
+     },
+     {
+      "email": "p149@example.com"
+     },
+     {
+      "email": "p150@example.com"
+     },
+     {
+      "email": "p151@example.com"
+     },
+     {
+      "email": "p152@example.com"
+     },
+     {
+      "email": "p153@example.com"
+     },
+     {
+      "email": "p154@example.com"
+     },
+     {
+      "email": "p155@example.com"
+     },
+     {
+      "email": "p156@example.com"
+     },
+     {
+      "email": "p157@example.com"
+     },
+     {
+      "email": "p158@example.com"
+     },
+     {
+      "email": "p159@example.com"
+     },
+     {
+      "email": "p160@example.com"
+     },
+     {
+      "email": "p161@example.com"
+     },
+     {
+      "email": "p162@example.com"
+     },
+     {
+      "email": "p163@example.com"
+     },
+     {
+      "email": "p164@example.com"
+     },
+     {
+      "email": "p165@example.com"
+     },
+     {
+      "email": "p166@example.com"
+     },
+     {
+      "email": "p167@example.com"
+     },
+     {
+      "email": "p168@example.com"
+     },
+     {
+      "email": "p169@example.com"
+     },
+     {
+      "email": "p170@example.com"
+     },
+     {
+      "email": "p171@example.com"
+     },
+     {
+      "email": "p172@example.com"
+     },
+     {
+      "email": "p173@example.com"
+     },
+     {
+      "email": "p174@example.com"
+     },
+     {
+      "email": "p175@example.com"
+     },
+     {
+      "email": "p176@example.com"
+     },
+     {
+      "email": "p177@example.com"
+     },
+     {
+      "email": "p178@example.com"
+     },
+     {
+      "email": "p179@example.com"
+     },
+     {
+      "email": "p180@example.com"
+     },
+     {
+      "email": "p181@example.com"
+     },
+     {
+      "email": "p182@example.com"
+     },
+     {
+      "email": "p183@example.com"
+     },
+     {
+      "email": "p184@example.com"
+     },
+     {
+      "email": "p185@example.com"
+     },
+     {
+      "email": "p186@example.com"
+     },
+     {
+      "email": "p187@example.com"
+     },
+     {
+      "email": "p188@example.com"
+     },
+     {
+      "email": "p189@example.com"
+     },
+     {
+      "email": "p190@example.com"
+     },
+     {
+      "email": "p191@example.com"
+     },
+     {
+      "email": "p192@example.com"
+     },
+     {
+      "email": "p193@example.com"
+     },
+     {
+      "email": "p194@example.com"
+     },
+     {
+      "email": "p195@example.com"
+     },
+     {
+      "email": "p196@example.com"
+     },
+     {
+      "email": "p197@example.com"
+     },
+     {
+      "email": "p198@example.com"
+     },
+     {
+      "email": "p199@example.com"
+     },
+     {
+      "email": "p200@example.com"
+     },
+     {
+      "email": "p201@example.com"
+     },
+     {
+      "email": "p202@example.com"
+     },
+     {
+      "email": "p203@example.com"
+     },
+     {
+      "email": "p204@example.com"
+     },
+     {
+      "email": "p205@example.com"
+     },
+     {
+      "email": "p206@example.com"
+     },
+     {
+      "email": "p207@example.com"
+     },
+     {
+      "email": "p208@example.com"
+     },
+     {
+      "email": "p209@example.com"
+     },
+     {
+      "email": "p210@example.com"
+     },
+     {
+      "email": "p211@example.com"
+     },
+     {
+      "email": "p212@example.com"
+     },
+     {
+      "email": "p213@example.com"
+     },
+     {
+      "email": "p214@example.com"
+     },
+     {
+      "email": "p215@example.com"
+     },
+     {
+      "email": "p216@example.com"
+     },
+     {
+      "email": "p217@example.com"
+     },
+     {
+      "email": "p218@example.com"
+     },
+     {
+      "email": "p219@example.com"
+     },
+     {
+      "email": "p220@example.com"
+     },
+     {
+      "email": "p221@example.com"
+     },
+     {
+      "email": "p222@example.com"
+     },
+     {
+      "email": "p223@example.com"
+     },
+     {
+      "email": "p224@example.com"
+     },
+     {
+      "email": "p225@example.com"
+     },
+     {
+      "email": "p226@example.com"
+     },
+     {
+      "email": "p227@example.com"
+     },
+     {
+      "email": "p228@example.com"
+     },
+     {
+      "email": "p229@example.com"
+     },
+     {
+      "email": "p230@example.com"
+     },
+     {
+      "email": "p231@example.com"
+     },
+     {
+      "email": "p232@example.com"
+     },
+     {
+      "email": "p233@example.com"
+     },
+     {
+      "email": "p234@example.com"
+     },
+     {
+      "email": "p235@example.com"
+     },
+     {
+      "email": "p236@example.com"
+     },
+     {
+      "email": "p237@example.com"
+     },
+     {
+      "email": "p238@example.com"
+     },
+     {
+      "email": "p239@example.com"
+     },
+     {
+      "email": "p240@example.com"
+     },
+     {
+      "email": "p241@example.com"
+     },
+     {
+      "email": "p242@example.com"
+     },
+     {
+      "email": "p243@example.com"
+     },
+     {
+      "email": "p244@example.com"
+     },
+     {
+      "email": "p245@example.com"
+     },
+     {
+      "email": "p246@example.com"
+     },
+     {
+      "email": "p247@example.com"
+     },
+     {
+      "email": "p248@example.com"
+     },
+     {
+      "email": "p249@example.com"
+     },
+     {
+      "email": "p250@example.com"
+     },
+     {
+      "email": "p251@example.com"
+     },
+     {
+      "email": "p252@example.com"
+     },
+     {
+      "email": "p253@example.com"
+     },
+     {
+      "email": "p254@example.com"
+     },
+     {
+      "email": "p255@example.com"
+     },
+     {
+      "email": "p256@example.com"
+     },
+     {
+      "email": "p257@example.com"
+     },
+     {
+      "email": "p258@example.com"
+     },
+     {
+      "email": "p259@example.com"
+     },
+     {
+      "email": "p260@example.com"
+     },
+     {
+      "email": "p261@example.com"
+     },
+     {
+      "email": "p262@example.com"
+     },
+     {
+      "email": "p263@example.com"
+     },
+     {
+      "email": "p264@example.com"
+     },
+     {
+      "email": "p265@example.com"
+     },
+     {
+      "email": "p266@example.com"
+     },
+     {
+      "email": "p267@example.com"
+     },
+     {
+      "email": "p268@example.com"
+     },
+     {
+      "email": "p269@example.com"
+     },
+     {
+      "email": "p270@example.com"
+     },
+     {
+      "email": "p271@example.com"
+     },
+     {
+      "email": "p272@example.com"
+     },
+     {
+      "email": "p273@example.com"
+     },
+     {
+      "email": "p274@example.com"
+     },
+     {
+      "email": "p275@example.com"
+     },
+     {
+      "email": "p276@example.com"
+     },
+     {
+      "email": "p277@example.com"
+     },
+     {
+      "email": "p278@example.com"
+     },
+     {
+      "email": "p279@example.com"
+     },
+     {
+      "email": "p280@example.com"
+     },
+     {
+      "email": "p281@example.com"
+     },
+     {
+      "email": "p282@example.com"
+     },
+     {
+      "email": "p283@example.com"
+     },
+     {
+      "email": "p284@example.com"
+     },
+     {
+      "email": "p285@example.com"
+     },
+     {
+      "email": "p286@example.com"
+     },
+     {
+      "email": "p287@example.com"
+     },
+     {
+      "email": "p288@example.com"
+     },
+     {
+      "email": "p289@example.com"
+     },
+     {
+      "email": "p290@example.com"
+     },
+     {
+      "email": "p291@example.com"
+     },
+     {
+      "email": "p292@example.com"
+     },
+     {
+      "email": "p293@example.com"
+     },
+     {
+      "email": "p294@example.com"
+     },
+     {
+      "email": "p295@example.com"
+     },
+     {
+      "email": "p296@example.com"
+     },
+     {
+      "email": "p297@example.com"
+     },
+     {
+      "email": "p298@example.com"
+     },
+     {
+      "email": "p299@example.com"
+     },
+     {
+      "email": "p300@example.com"
+     },
+     {
+      "email": "p301@example.com"
+     },
+     {
+      "email": "p302@example.com"
+     },
+     {
+      "email": "p303@example.com"
+     },
+     {
+      "email": "p304@example.com"
+     },
+     {
+      "email": "p305@example.com"
+     },
+     {
+      "email": "p306@example.com"
+     },
+     {
+      "email": "p307@example.com"
+     },
+     {
+      "email": "p308@example.com"
+     },
+     {
+      "email": "p309@example.com"
+     },
+     {
+      "email": "p310@example.com"
+     },
+     {
+      "email": "p311@example.com"
+     },
+     {
+      "email": "p312@example.com"
+     },
+     {
+      "email": "p313@example.com"
+     },
+     {
+      "email": "p314@example.com"
+     },
+     {
+      "email": "p315@example.com"
+     },
+     {
+      "email": "p316@example.com"
+     },
+     {
+      "email": "p317@example.com"
+     },
+     {
+      "email": "p318@example.com"
+     },
+     {
+      "email": "p319@example.com"
+     },
+     {
+      "email": "p320@example.com"
+     },
+     {
+      "email": "p321@example.com"
+     },
+     {
+      "email": "p322@example.com"
+     },
+     {
+      "email": "p323@example.com"
+     },
+     {
+      "email": "p324@example.com"
+     },
+     {
+      "email": "p325@example.com"
+     },
+     {
+      "email": "p326@example.com"
+     },
+     {
+      "email": "p327@example.com"
+     },
+     {
+      "email": "p328@example.com"
+     },
+     {
+      "email": "p329@example.com"
+     },
+     {
+      "email": "p330@example.com"
+     },
+     {
+      "email": "p331@example.com"
+     },
+     {
+      "email": "p332@example.com"
+     },
+     {
+      "email": "p333@example.com"
+     },
+     {
+      "email": "p334@example.com"
+     },
+     {
+      "email": "p335@example.com"
+     },
+     {
+      "email": "p336@example.com"
+     },
+     {
+      "email": "p337@example.com"
+     },
+     {
+      "email": "p338@example.com"
+     },
+     {
+      "email": "p339@example.com"
+     },
+     {
+      "email": "p340@example.com"
+     },
+     {
+      "email": "p341@example.com"
+     },
+     {
+      "email": "p342@example.com"
+     },
+     {
+      "email": "p343@example.com"
+     },
+     {
+      "email": "p344@example.com"
+     },
+     {
+      "email": "p345@example.com"
+     },
+     {
+      "email": "p346@example.com"
+     },
+     {
+      "email": "p347@example.com"
+     },
+     {
+      "email": "p348@example.com"
+     },
+     {
+      "email": "p349@example.com"
+     },
+     {
+      "email": "p350@example.com"
+     },
+     {
+      "email": "p351@example.com"
+     },
+     {
+      "email": "p352@example.com"
+     },
+     {
+      "email": "p353@example.com"
+     },
+     {
+      "email": "p354@example.com"
+     },
+     {
+      "email": "p355@example.com"
+     },
+     {
+      "email": "p356@example.com"
+     },
+     {
+      "email": "p357@example.com"
+     },
+     {
+      "email": "p358@example.com"
+     },
+     {
+      "email": "p359@example.com"
+     },
+     {
+      "email": "p360@example.com"
+     },
+     {
+      "email": "p361@example.com"
+     },
+     {
+      "email": "p362@example.com"
+     },
+     {
+      "email": "p363@example.com"
+     },
+     {
+      "email": "p364@example.com"
+     },
+     {
+      "email": "p365@example.com"
+     },
+     {
+      "email": "p366@example.com"
+     },
+     {
+      "email": "p367@example.com"
+     },
+     {
+      "email": "p368@example.com"
+     },
+     {
+      "email": "p369@example.com"
+     },
+     {
+      "email": "p370@example.com"
+     },
+     {
+      "email": "p371@example.com"
+     },
+     {
+      "email": "p372@example.com"
+     },
+     {
+      "email": "p373@example.com"
+     },
+     {
+      "email": "p374@example.com"
+     },
+     {
+      "email": "p375@example.com"
+     },
+     {
+      "email": "p376@example.com"
+     },
+     {
+      "email": "p377@example.com"
+     },
+     {
+      "email": "p378@example.com"
+     },
+     {
+      "email": "p379@example.com"
+     },
+     {
+      "email": "p380@example.com"
+     },
+     {
+      "email": "p381@example.com"
+     },
+     {
+      "email": "p382@example.com"
+     },
+     {
+      "email": "p383@example.com"
+     },
+     {
+      "email": "p384@example.com"
+     },
+     {
+      "email": "p385@example.com"
+     },
+     {
+      "email": "p386@example.com"
+     },
+     {
+      "email": "p387@example.com"
+     },
+     {
+      "email": "p388@example.com"
+     },
+     {
+      "email": "p389@example.com"
+     },
+     {
+      "email": "p390@example.com"
+     },
+     {
+      "email": "p391@example.com"
+     },
+     {
+      "email": "p392@example.com"
+     },
+     {
+      "email": "p393@example.com"
+     },
+     {
+      "email": "p394@example.com"
+     },
+     {
+      "email": "p395@example.com"
+     },
+     {
+      "email": "p396@example.com"
+     },
+     {
+      "email": "p397@example.com"
+     },
+     {
+      "email": "p398@example.com"
+     },
+     {
+      "email": "p399@example.com"
+     },
+     {
+      "email": "p400@example.com"
+     },
+     {
+      "email": "p401@example.com"
+     },
+     {
+      "email": "p402@example.com"
+     },
+     {
+      "email": "p403@example.com"
+     },
+     {
+      "email": "p404@example.com"
+     },
+     {
+      "email": "p405@example.com"
+     },
+     {
+      "email": "p406@example.com"
+     },
+     {
+      "email": "p407@example.com"
+     },
+     {
+      "email": "p408@example.com"
+     },
+     {
+      "email": "p409@example.com"
+     },
+     {
+      "email": "p410@example.com"
+     },
+     {
+      "email": "p411@example.com"
+     },
+     {
+      "email": "p412@example.com"
+     },
+     {
+      "email": "p413@example.com"
+     },
+     {
+      "email": "p414@example.com"
+     },
+     {
+      "email": "p415@example.com"
+     },
+     {
+      "email": "p416@example.com"
+     },
+     {
+      "email": "p417@example.com"
+     },
+     {
+      "email": "p418@example.com"
+     },
+     {
+      "email": "p419@example.com"
+     },
+     {
+      "email": "p420@example.com"
+     },
+     {
+      "email": "p421@example.com"
+     },
+     {
+      "email": "p422@example.com"
+     },
+     {
+      "email": "p423@example.com"
+     },
+     {
+      "email": "p424@example.com"
+     },
+     {
+      "email": "p425@example.com"
+     },
+     {
+      "email": "p426@example.com"
+     },
+     {
+      "email": "p427@example.com"
+     },
+     {
+      "email": "p428@example.com"
+     },
+     {
+      "email": "p429@example.com"
+     },
+     {
+      "email": "p430@example.com"
+     },
+     {
+      "email": "p431@example.com"
+     },
+     {
+      "email": "p432@example.com"
+     },
+     {
+      "email": "p433@example.com"
+     },
+     {
+      "email": "p434@example.com"
+     },
+     {
+      "email": "p435@example.com"
+     },
+     {
+      "email": "p436@example.com"
+     },
+     {
+      "email": "p437@example.com"
+     },
+     {
+      "email": "p438@example.com"
+     },
+     {
+      "email": "p439@example.com"
+     },
+     {
+      "email": "p440@example.com"
+     },
+     {
+      "email": "p441@example.com"
+     },
+     {
+      "email": "p442@example.com"
+     },
+     {
+      "email": "p443@example.com"
+     },
+     {
+      "email": "p444@example.com"
+     },
+     {
+      "email": "p445@example.com"
+     },
+     {
+      "email": "p446@example.com"
+     },
+     {
+      "email": "p447@example.com"
+     },
+     {
+      "email": "p448@example.com"
+     },
+     {
+      "email": "p449@example.com"
+     },
+     {
+      "email": "p450@example.com"
+     },
+     {
+      "email": "p451@example.com"
+     },
+     {
+      "email": "p452@example.com"
+     },
+     {
+      "email": "p453@example.com"
+     },
+     {
+      "email": "p454@example.com"
+     },
+     {
+      "email": "p455@example.com"
+     },
+     {
+      "email": "p456@example.com"
+     },
+     {
+      "email": "p457@example.com"
+     },
+     {
+      "email": "p458@example.com"
+     },
+     {
+      "email": "p459@example.com"
+     },
+     {
+      "email": "p460@example.com"
+     },
+     {
+      "email": "p461@example.com"
+     },
+     {
+      "email": "p462@example.com"
+     },
+     {
+      "email": "p463@example.com"
+     },
+     {
+      "email": "p464@example.com"
+     },
+     {
+      "email": "p465@example.com"
+     },
+     {
+      "email": "p466@example.com"
+     },
+     {
+      "email": "p467@example.com"
+     },
+     {
+      "email": "p468@example.com"
+     },
+     {
+      "email": "p469@example.com"
+     },
+     {
+      "email": "p470@example.com"
+     },
+     {
+      "email": "p471@example.com"
+     },
+     {
+      "email": "p472@example.com"
+     },
+     {
+      "email": "p473@example.com"
+     },
+     {
+      "email": "p474@example.com"
+     },
+     {
+      "email": "p475@example.com"
+     },
+     {
+      "email": "p476@example.com"
+     },
+     {
+      "email": "p477@example.com"
+     },
+     {
+      "email": "p478@example.com"
+     },
+     {
+      "email": "p479@example.com"
+     },
+     {
+      "email": "p480@example.com"
+     },
+     {
+      "email": "p481@example.com"
+     },
+     {
+      "email": "p482@example.com"
+     },
+     {
+      "email": "p483@example.com"
+     },
+     {
+      "email": "p484@example.com"
+     },
+     {
+      "email": "p485@example.com"
+     },
+     {
+      "email": "p486@example.com"
+     },
+     {
+      "email": "p487@example.com"
+     },
+     {
+      "email": "p488@example.com"
+     },
+     {
+      "email": "p489@example.com"
+     },
+     {
+      "email": "p490@example.com"
+     },
+     {
+      "email": "p491@example.com"
+     },
+     {
+      "email": "p492@example.com"
+     },
+     {
+      "email": "p493@example.com"
+     },
+     {
+      "email": "p494@example.com"
+     },
+     {
+      "email": "p495@example.com"
+     },
+     {
+      "email": "p496@example.com"
+     },
+     {
+      "email": "p497@example.com"
+     },
+     {
+      "email": "p498@example.com"
+     },
+     {
+      "email": "p499@example.com"
+     },
+     {
+      "email": "p500@example.com"
+     },
+     {
+      "email": "p501@example.com"
+     },
+     {
+      "email": "p502@example.com"
+     }
+    ]
+   },
+   {
+    "id": "d5e7e310b4ea9ff95109b5b46dab6b74",
+    "status": "deleted"
+   },
+   {
+    "status": "ready"
+   },
+   []
+  ],
+  "sharedWithMe": [
+   {
+    "shares": [
+     {
+      "id": "a5e7e310b4ea9ff95109b5b46dab6b74",
+      "from": {
+       "email": "amy@example.com",
+       "name": "Amy"
+      },
+      "meeting": {
+       "title": "週會",
+       "meetingDate": "2026-11-20",
+       "durationSeconds": 3600,
+       "language": "zh"
+      },
+      "contents": {
+       "audio": true,
+       "userNotes": true,
+       "documents": false
+      },
+      "bytes": 5000,
+      "version": 2,
+      "updatedAt": "2026-11-27T05:10:00Z",
+      "expiresAt": "2026-12-04T05:01:50Z",
+      "importedVersion": 1
+     },
+     {
+      "id": "b5e7e310b4ea9ff95109b5b46dab6b74",
+      "from": {
+       "email": "amy@example.com"
+      },
+      "meeting": {
+       "title": "",
+       "meetingDate": "2026-11-21",
+       "language": "en"
+      },
+      "version": 1,
+      "updatedAt": "2026-11-27T05:00:00Z",
+      "importedVersion": 1
+     },
+     {
+      "id": "c5e7e310b4ea9ff95109b5b46dab6b74",
+      "from": {
+       "email": "amy@example.com",
+       "name": ""
+      },
+      "version": "x",
+      "importedVersion": null
+     },
+     {
+      "id": "d5e7e310b4ea9ff95109b5b46dab6b74",
+      "from": {
+       "name": "沒有信箱"
+      }
+     },
+     {
+      "from": {
+       "email": "amy@example.com"
+      }
+     },
+     "壞掉的一列"
+    ]
+   },
+   {
+    "shares": "none"
+   },
+   {}
+  ],
+  "summary": [
+   {
+    "from": {
+     "email": "amy@example.com",
+     "name": "Amy"
+    },
+    "meeting": {
+     "title": "週會",
+     "meetingDate": "2026-11-20",
+     "durationSeconds": 3600,
+     "language": "zh"
+    },
+    "contents": {
+     "audio": false
+    },
+    "bytes": 5000,
+    "version": 2,
+    "expiresAt": null
+   },
+   {
+    "from": {
+     "email": ""
+    },
+    "meeting": {
+     "title": "週會"
+    }
+   },
+   {
+    "meeting": {
+     "title": "週會"
+    }
+   }
+  ],
+  "links": [
+   "shiyin://share?server=https://shiyin.example.com&id=A5E7E310B4EA9FF95109B5B46DAB6B74&t=bcnu09ilcvISEpiTA8jtIA",
+   "shiyin://share?server=https%3A%2F%2Fshiyin.example.com%2F&id=a5e7e310b4ea9ff95109b5b46dab6b74",
+   "shiyin://share?server=https://shiyin.example.com&id=a5e7e310b4ea9ff95109b5b46dab6b74&t=",
+   "shiyin://share?server=http://evil.example.com&id=a5e7e310b4ea9ff95109b5b46dab6b74",
+   "shiyin://share?server=https://shiyin.example.com&id=a5e7e310",
+   "shiyin://share?server=https://shiyin.example.com&id=g5e7e310b4ea9ff95109b5b46dab6b74",
+   "shiyin://share?id=a5e7e310b4ea9ff95109b5b46dab6b74",
+   "shiyin://join?server=https://shiyin.example.com&id=a5e7e310b4ea9ff95109b5b46dab6b74",
+   "SHIYIN://SHARE?server=https://shiyin.example.com&id=a5e7e310b4ea9ff95109b5b46dab6b74"
+  ]
  }
 }

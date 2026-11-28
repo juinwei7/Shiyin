@@ -56,6 +56,11 @@ struct EnterpriseServerSettings: View {
             }
             Text("轉錄：錄音會送到 \(server.host)（公司的伺服器），轉完就刪。說話者辨識和聲紋在這台 Mac 上做，聲紋、筆記、會議紀錄不會因為轉錄送出。伺服器用的轉錄引擎：\(engineName(account.engine))。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            // 分享（R125.8、design §99.5）：公司有開時
+            if account.sharing != nil {
+                Text("分享：你分享的會議（封包）存在 \(server.host)，直到你停止分享或到期；收到的人匯入後是他自己的一份。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             Button("登出", role: .destructive) {
                 Task {
                     await server.signOut()

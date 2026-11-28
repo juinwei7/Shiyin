@@ -3583,9 +3583,9 @@ CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 - `sharing`：`EnterpriseServer.refreshInfo()` 一起記下（同 `llm`、`mcp`）。
 - **分享視窗**（`ShareSheet`，sheet；樣子照 §80 的彈窗、輸入框規則）：
   - 沒有 `sharing`：只有說明「整場會議（錄音、逐字稿、紀錄…）存成 .shiyin，傳給同事後點兩下就能匯入」和「用檔案分享…」（同匯出對話框的封包＋分享選單）。
-  - 有 `sharing`、這場還沒分享：「傳給同事」（信箱欄位，打字時 `GET /api/v1/people` 補完，Return 或逗號變成一顆、可以刪；不允許的網域當場標紅並說明）、「連結」（開關「同時建立連結」，誰打得開的選單，`publicLinks` 是 false 時沒有「知道連結的任何人」）、有效期限、「要帶的內容」三個勾選（錄音寫大小）、按鈕「分享」。第一次按時先跳 R125.3 的說明（記在 `AppSettings.shareNoticeShown`）。
-  - 送出時視窗裡顯示進度（打包、上傳的百分比、可以取消，同 §94 的匯出進度）；完成後切到「已分享」的樣子。
-  - 已經分享：名單（每人一列：名字、信箱、「已匯入」「已打開」「還沒打開」，右邊「移除」）、加人的欄位、連結（網址、拷貝、權限、停止連結）、期限、「更新分享的內容」、「停止分享…」（確認對話框，紅字）。
+  - 有 `sharing`、這場還沒分享：「傳給同事」（信箱欄位，打字時 `GET /api/v1/people` 補完，Return 或逗號變成一顆、可以刪；伺服器拒絕時（公司以外的信箱）顯示伺服器的訊息，信箱放回欄位可以改）、「連結」（開關「同時建立連結」，誰打得開的選單，`publicLinks` 是 false 時沒有「知道連結的任何人」）、有效期限、「要帶的內容」三個勾選（錄音寫大小）、按鈕「分享」。第一次按時先跳 R125.3 的說明（記在 `AppSettings.shareNoticeShown`）。
+  - 送出時視窗裡顯示進度（上傳的百分比、「取消」）；完成後切到「已分享」的樣子。取消或失敗時請伺服器刪掉建到一半的分享（`DELETE`），不記進 `meeting_shares`；檔案傳完、加名單失敗時分享留著，信箱放回欄位。
+  - 已經分享：名單（每人一列：名字、信箱、「已匯入」「已打開」「還沒打開」，右邊「移除」）、加人的欄位（「加入名單」）、連結（網址、拷貝、權限、停止連結；沒有連結時權限選單＋「建立連結」）、期限（「到期：日期」＋「改期限」選單：從今天起 7／30 天、不限期，受 `maxDays` 限制）。下面一排：左邊「用檔案分享…」「停止分享…」（紅字，確認對話框），右邊「更新內容」（滑過說明：改過會議之後重新上傳，名單、連結不變）、「完成」。
 - **會議頁**：標題下的動作列加「分享」（`square.and.arrow.up`）；這場在 `meeting_shares` 裡時，資訊列加「已分享給 N 人・連結」，點了打開分享視窗（打開會議頁時問一次伺服器，失敗時不顯示人數、只寫「已分享」）。匯入的分享在資訊列寫「來自 王小明 的分享」。
 - **側欄「與我分享」**：在資料夾那一段的下面；`sharedWithMe` 有東西時才出現，每列是標題、分享者、日期，沒匯入過或已更新的有圓點。點一列在右邊顯示預覽（標題、分享者、日期、長度、大小、帶了哪些內容、到期日，按鈕「匯入」「從清單移除」）；匯入完跳到那場會議。右鍵、「⋯」同一份選單（匯入、從清單移除）。
 - **查新的分享**：登入了、`sharing` 開著時，啟動、從背景回到前景、每 15 分鐘 `GET /api/v1/shared-with-me`；新的（id 沒看過、或 `version` 比上次看到的大）送系統通知「%@分享了「%@」給你」，點了打開那一列。看過的 id、版本記在 `AppSettings.seenShares`（只有 id 和版本）。
@@ -3600,8 +3600,8 @@ CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 
 ### 99.6 DEBUG、驗證
 
-- `shiyinctl share <會議 id> <JSON 選項> <輸出.json>`（不開視窗，同按「分享」）、`shareinfo <會議 id> <輸出.json>`、`sharedwithme <輸出.json>`、`shareimport <分享 id>`、`shareopen <shiyin://share?…>`（等於點網頁的按鈕，會跳確認）、`preview share`（分享視窗三種樣子）。
-- 標準答案：`server/shares.json`（app 送的請求本體、解析伺服器回應的規則、不合理的回應怎麼處理：`bytes`、`version` 不是數字、`expiresAt` 不是日期、名單超過 500 人時截斷）；`package/contents-*.shiyin` 的內容（不帶錄音、筆記、文件各一）。
+- `shiyinctl share <會議 id> <JSON 選項> <輸出.json>`（不開視窗，同按「分享」；輸出有 `notAdded`：沒加進名單的信箱）、`sharecancel`（同進度旁的「取消」）、`shareinfo <會議 id> <輸出.json>`、`shareupdate <會議 id>`、`sharestop <會議 id>`、`sharedwithme <輸出.json>`、`shareselect <分享 id>`（側欄點那一列）、`shareimport <分享 id>`、`shareopen <shiyin://share?…>`（等於點網頁的按鈕，會跳確認）、`shareopensheet <會議 id>`（打開分享視窗）。
+- 標準答案：`server/shares.json`（建分享送的本體；`info.sharing`、詳情、與我分享、摘要的解析：`bytes`、`version` 不是正整數、`status` 不認得、連結不是 http(s) 或權限不認得、名單超過 500 人時截斷；`shiyin://share` 連結）。「要帶的內容」只是把封包的錄音、我的筆記、參考文件和畫面拿掉（`AppModel.apply(_:to:)`），不另外產生封包的標準答案。
 - 驗證要私人伺服器專案的開發環境（§36.7）：Mac DEBUG 兩個帳號（兩個暫存的 `SHIYIN_HOME`、兩個 `SHIYIN_DEBUG_CHANNEL`）分享、收到、匯入、更新、停止分享；連結在瀏覽器打開（公司、公開各一次）；Windows 虛擬機收 Mac 分享的、反過來也一次。
 
 ## 100. 詞彙表的群組和排序（R126，D213；GitHub #31）

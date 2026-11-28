@@ -33,6 +33,8 @@ final class EnterpriseServer {
         var llm: Bool
         /// 公司讓不讓 AI 工具讀取會議（本地 MCP，R69.6）；沒有 = 允許
         var mcp: Bool?
+        /// 分享會議（R125、design §99.2）：關著、舊的伺服器沒有這段
+        var sharing: EnterpriseShares.Sharing?
     }
 
     /// 登入的帳號（不含密鑰）
@@ -46,6 +48,8 @@ final class EnterpriseServer {
         var serverVersion: String?
         /// 公司關掉本地 MCP 時是 false（R69.6）；沒有 = 允許
         var mcp: Bool?
+        /// 分享會議（R125）：伺服器沒開是 nil
+        var sharing: EnterpriseShares.Sharing?
     }
 
     /// 公司的企業伺服器關掉了「讓 AI 工具讀取會議」（R69.6、design §44.1）。直接讀存著的帳號：`Shiyin --mcp` 不建 EnterpriseServer
@@ -198,6 +202,7 @@ final class EnterpriseServer {
         updated.llm = info.llm
         updated.serverVersion = info.version
         updated.mcp = info.mcp
+        updated.sharing = info.sharing?.enabled == true ? info.sharing : nil
         if updated != current {
             save(updated)
             NotificationCenter.default.post(name: .summarizerStateChanged, object: nil)
@@ -282,7 +287,7 @@ final class EnterpriseServer {
         UserDefaults.standard.set(attempt.base.absoluteString, forKey: Self.urlKey)
         let account = Account(email: tokens.email, name: tokens.name, serverName: attempt.info.name,
                               engine: attempt.info.transcription.engine, llm: attempt.info.llm, serverVersion: attempt.info.version,
-                              mcp: attempt.info.mcp)
+                              mcp: attempt.info.mcp, sharing: attempt.info.sharing?.enabled == true ? attempt.info.sharing : nil)
         save(account)
         accessToken = tokens.accessToken
         accessExpires = Date().addingTimeInterval(TimeInterval(tokens.expiresIn) - 60)
@@ -412,9 +417,10 @@ final class EnterpriseServer {
 
     // MARK: API
 
-    /// 呼叫 API：帶 access token，401 時換一次 token 再送（R49.4）
+    /// 呼叫 API：帶 access token，401 時換一次 token 再送（R49.4）。
+    /// expireOnForbidden 是 false 時 403 不當成登入失效（分享的 403 是「公司關掉了分享」這類，design §99.2）
     func call(_ method: String, _ path: String, json: Any? = nil, body: Data? = nil, headers: [String: String] = [:],
-              timeout: TimeInterval = 60) async throws -> (Data, HTTPURLResponse) {
+              timeout: TimeInterval = 60, expireOnForbidden: Bool = true) async throws -> (Data, HTTPURLResponse) {
         guard let base = savedURL else { throw Failure.loginExpired }
         // 中途換了伺服器（加入連結，design §36.2）：新伺服器的 token 不能送到舊的伺服器、舊伺服器的回應不能動到新的登入；
         // 當成工作不在了（轉錄在新的伺服器重建）
@@ -422,7 +428,7 @@ final class EnterpriseServer {
         for attempt in 0..<2 {
             let token = try await validAccessToken()
             if switched() { throw Failure.server(kind: "not_found", message: "") }
-            var request = URLRequest(url: base.appending(path: path))
+            var request = URLRequest(url: Self.url(base, path))
             request.httpMethod = method
             request.timeoutInterval = timeout
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -442,7 +448,7 @@ final class EnterpriseServer {
                 continue
             }
             if response.statusCode == 401 { markExpired(nil); throw Failure.loginExpired }
-            if response.statusCode == 403 {
+            if response.statusCode == 403 && expireOnForbidden {
                 let failure = Self.failure(data, response)
                 markExpired(failure.errorDescription)
                 throw failure
@@ -450,6 +456,15 @@ final class EnterpriseServer {
             return (data, response)
         }
         throw Failure.loginExpired
+    }
+
+    /// 伺服器網址＋路徑；路徑裡的「?」後面當成查詢字串（appending(path:) 會把「?」編碼掉，分享的 people?q=、?t= 要用）
+    nonisolated static func url(_ base: URL, _ path: String) -> URL {
+        let parts = path.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2, var components = URLComponents(url: base.appending(path: String(parts[0])), resolvingAgainstBaseURL: false)
+        else { return base.appending(path: path) }
+        components.percentEncodedQuery = String(parts[1])
+        return components.url ?? base.appending(path: String(parts[0]))
     }
 
     /// 企業伺服器專用的連線（design §36.2、D126）：不跟著轉址。URLSession.shared 會跟著 307、308 轉到別的主機，

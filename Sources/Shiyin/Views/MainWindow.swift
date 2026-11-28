@@ -27,6 +27,7 @@ struct RootView: View {
             }
             .sheet(isPresented: $model.showImportSheet) { ImportSheet(urls: model.pendingImport) }
             .sheet(isPresented: $model.showExportSheet) { ExportSheet() }
+            .sheet(item: $model.shareTarget) { ShareSheet(meetingId: $0.meetingId) }
             .sheet(isPresented: $model.showRediarizeSheet) { RediarizeSheet() }
             .sheet(isPresented: $model.showStopTimerSheet) { StopTimerSheet() }
             .alert("出了一點問題", isPresented: Binding(get: { model.errorMessage != nil },
@@ -130,6 +131,9 @@ struct MainView: View {
             }
         } else if model.multiSelected.count > 1 {
             MultiSelectionView(ids: model.multiSelected).toolbar { SettingsToolbarItem() }
+        } else if model.selection == nil, let id = model.selectedShared, let item = model.sharedWithMe.first(where: { $0.id == id }) {
+            // 與我分享的預覽（R125.5、design §99.4）
+            SharedPreview(item: item).id(item.id).toolbar { SettingsToolbarItem() }
         } else if let detail = model.detail {
             MeetingDetailView(detail: detail)
                 .id(detail.meeting.id)
@@ -362,6 +366,24 @@ struct SidebarView: View {
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(Text("新資料夾"))
                     .accessibilityAction { model.renameTarget = .newFolder([]) }
+            }
+        }
+        // 與我分享（R125.5、design §99.4）：有東西時才出現
+        if !model.sharedWithMe.isEmpty {
+            Section {
+                if model.isSectionExpanded("shared") {
+                    ForEach(model.sharedWithMe) { item in
+                        let selected = model.selection == nil && model.selectedShared == item.id
+                        SharedRow(item: item)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .sidebarClick { model.selectShared(item.id) }
+                            .floatingRowMenu(selected: selected) { model.sharedMenu(item) }
+                            .sidebarSelectableRow(selected: selected)
+                    }
+                }
+            } header: {
+                SidebarSectionHeader(title: String(localized: "與我分享"), key: "shared")
             }
         }
     }

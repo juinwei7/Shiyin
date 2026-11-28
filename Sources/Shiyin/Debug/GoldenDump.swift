@@ -33,6 +33,7 @@ enum GoldenDump {
             organize(&dump)
             pipeline(fixtures, &dump)
             server(fixtures, &dump)
+            shares(fixtures, &dump)
             try database(fixtures, &dump)
             try migrateV18(fixtures, &dump)
             try mcp(fixtures, &dump)
@@ -890,6 +891,59 @@ enum GoldenDump {
                 return ["error": error is WhisperError ? "empty" : "\(error)"]
             }
         })
+    }
+
+    /// 分享會議（design §99.6）：建分享送的本體、伺服器回應的檢查（不合理的數字、日期、名單超過 500 人）、shiyin://share 連結
+    private static func shares(_ f: Fixtures, _ w: inout Writer) {
+        guard let c = f["shares"] as? Object else { return }
+        func optional(_ value: Any?) -> Any { value ?? NSNull() }
+        func meeting(_ m: EnterpriseShares.MeetingInfo?) -> Any {
+            guard let m else { return NSNull() }
+            return ["title": m.title, "meetingDate": m.meetingDate, "durationSeconds": optional(m.durationSeconds), "language": m.language] as Object
+        }
+        func contents(_ c: EnterpriseShares.Contents) -> Object { ["audio": c.audio, "userNotes": c.userNotes, "documents": c.documents] }
+        func person(_ p: EnterpriseShares.Person) -> Object { ["email": p.email, "name": optional(p.name), "display": p.display] }
+        w.json("server/shares.json", [
+            "create": (c["create"] as? [Object] ?? []).map { item -> Object in
+                let m = item["meeting"] as? Object ?? [:], k = item["contents"] as? [String: Bool] ?? [:]
+                let info = EnterpriseShares.MeetingInfo(title: m["title"] as? String ?? "", meetingDate: m["meetingDate"] as? String ?? "",
+                                                        durationSeconds: m["durationSeconds"] as? Int, language: m["language"] as? String ?? "zh")
+                let body = EnterpriseShares.createBody(meeting: info, contents: .init(audio: k["audio"] ?? true, userNotes: k["userNotes"] ?? true, documents: k["documents"] ?? true),
+                                                       bytes: Int64(item["bytes"] as? Int ?? 0), sha256: item["sha256"] as? String ?? "", expiresInDays: item["expiresInDays"] as? Int)
+                return ["input": item, "body": body]
+            },
+            "sharing": (c["sharing"] as? [Any] ?? []).map { input -> Object in
+                let s = EnterpriseShares.parseSharing(input)
+                return ["input": input, "sharing": s.map { ["publicLinks": $0.publicLinks, "maxDays": optional($0.maxDays), "maxBytes": optional($0.maxBytes)] as Object } ?? NSNull()]
+            },
+            "detail": (c["detail"] as? [Any] ?? []).map { input -> Object in
+                guard let d = EnterpriseShares.parseDetail(input) else { return ["input": input, "detail": NSNull()] }
+                return ["input": input, "detail": [
+                    "id": d.id, "status": d.status, "version": d.version, "expiresAt": optional(d.expiresAt), "meeting": meeting(d.meeting),
+                    "contents": contents(d.contents), "bytes": d.bytes, "uploading": d.uploading,
+                    "recipientCount": d.recipients.count,
+                    "recipients": d.recipients.prefix(3).map { ["email": $0.email, "name": optional($0.name), "openedAt": optional($0.openedAt),
+                                                                "importedAt": optional($0.importedAt), "importedVersion": optional($0.importedVersion)] as Object },
+                    "link": d.link.map { ["url": $0.url, "access": $0.access] as Object } ?? NSNull(),
+                ] as Object]
+            },
+            "sharedWithMe": (c["sharedWithMe"] as? [Any] ?? []).map { input -> Object in
+                ["input": input, "items": EnterpriseShares.parseSharedWithMe(input).map { i -> Object in
+                    ["id": i.id, "from": person(i.from), "meeting": meeting(i.meeting), "contents": contents(i.contents), "bytes": i.bytes,
+                     "version": i.version, "updatedAt": i.updatedAt, "expiresAt": optional(i.expiresAt), "importedVersion": optional(i.importedVersion),
+                     "isNew": i.isNew, "title": i.title]
+                }]
+            },
+            "summary": (c["summary"] as? [Any] ?? []).map { input -> Object in
+                guard let s = EnterpriseShares.parseSummary(input) else { return ["input": input, "summary": NSNull()] }
+                return ["input": input, "summary": ["from": person(s.from), "meeting": meeting(s.meeting), "contents": contents(s.contents),
+                                                    "bytes": s.bytes, "version": s.version, "expiresAt": optional(s.expiresAt)] as Object]
+            },
+            "links": (c["links"] as? [String] ?? []).map { input -> Object in
+                let link = URL(string: input).flatMap(EnterpriseShares.parseShareLink)
+                return ["input": input, "link": link.map { ["server": $0.server.absoluteString, "id": $0.id, "token": optional($0.token)] as Object } ?? NSNull()]
+            },
+        ] as Object)
     }
 
     private static func pipeline(_ f: Fixtures, _ w: inout Writer) {

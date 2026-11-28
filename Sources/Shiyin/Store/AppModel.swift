@@ -220,6 +220,8 @@ final class AppModel {
             // 程式換到多選以外的會議（還原、錄音停止後跳到那場）時，多選換成那一場
             if selectedMeetings.count > 1, selection.map({ !selectedMeetings.contains($0) }) ?? true { selectedMeetings = [] }
             if oldValue != selection {
+                // 選了會議就不是看「與我分享」的預覽（design §99.4）
+                if selection != nil { selectedShared = nil }
                 reviewExpanded = false
                 userNotesExpanded = false
                 reviewFinished = []
@@ -349,6 +351,17 @@ final class AppModel {
     /// 設定的詞彙表看哪一組（不記住；DEBUG 的 glossaryfilter 也改這裡）
     var glossaryFilter: GlossaryFilter = .all
     var glossarySuggestions: [GlossarySuggestion] = []
+    /// 分享會議（design §99.4、R125）：與我分享、側欄選到的那一場、分享視窗開著的會議、會議頁的「已分享給 N 人」、上傳下載的進度
+    var sharedWithMe: [EnterpriseShares.SharedItem] = []
+    var selectedShared: String?
+    var shareTarget: ShareTarget?
+    var shareDetails: [Int64: EnterpriseShares.Detail] = [:]
+    var shareProgress: Double?
+    var shareBusy = false
+    /// 分享、更新內容的上傳（分享視窗的「取消」停掉它）
+    var shareTask: Task<Void, Never>?
+    /// 匯出對話框打開時先選好的項目（分享視窗的「用檔案分享…」選封包）
+    var exportInitialItem: ExportItem?
     /// 公司詞彙表（R53）：設定頁顯示、建議的新詞要排除
     var companyGlossary: [String] = CompanyGlossary.terms
     var templates: [TemplateRecord] = []
@@ -470,6 +483,8 @@ final class AppModel {
         guard !started else { return }
         started = true
         notifier.activate()
+        // 與我分享（design §99.4）：啟動、回到前景、每 15 分鐘查一次
+        startSharePolling()
         // 偵測線上會議、提醒錄音（design §21.7、R19.4）
         meetingDetector.isRecording = { [weak self] in self?.recorder.isRecording ?? false }
         meetingDetector.onPrompt = { [weak self] in self?.showMeetingPrompt($0) }

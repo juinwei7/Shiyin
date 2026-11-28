@@ -403,8 +403,25 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("v20") { db in
             try db.execute(sql: Self.glossaryGroupsSQL)
         }
+        // 透過企業伺服器分享會議（design §99.3、R125）：匯入的分享是誰分享的、這場分享過的 id
+        migrator.registerMigration("v21") { db in
+            try db.execute(sql: Self.meetingSharesSQL)
+        }
         return migrator
     }
+
+    /// migration v21 的 SQL（design §99.3；Windows 的 MigrationSql.V21 逐字相同）
+    nonisolated static let meetingSharesSQL = """
+        ALTER TABLE meetings ADD COLUMN shared_from TEXT;
+        CREATE TABLE meeting_shares (
+          meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+          server     TEXT NOT NULL,
+          share_id   TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (server, share_id)
+        );
+        CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
+        """
 
     /// migration v20 的 SQL（design §100.1；Windows 的 MigrationSql.V20 逐字相同）
     nonisolated static let glossaryGroupsSQL = """
@@ -1660,6 +1677,32 @@ final class AppDatabase: @unchecked Sendable {
     /// 批次刪除（R94.3）
     func deleteTerms(_ ids: [Int64]) throws {
         _ = try pool.write { db in try GlossaryTerm.deleteAll(db, keys: ids) }
+    }
+
+    // MARK: 分享會議（design §99.3、R125）：名單、連結、期限以伺服器為準，這裡只記「這場分享過」
+
+    func recordShare(_ meetingId: Int64, server: String, shareId: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "INSERT OR REPLACE INTO meeting_shares (meeting_id, server, share_id, created_at) VALUES (?, ?, ?, ?)",
+                           arguments: [meetingId, server, shareId, Clock.now()])
+        }
+    }
+
+    /// 這場在這台伺服器分享過的（新的在前）
+    func shareIds(_ meetingId: Int64, server: String) throws -> [String] {
+        try pool.read { db in
+            try String.fetchAll(db, sql: "SELECT share_id FROM meeting_shares WHERE meeting_id = ? AND server = ? ORDER BY created_at DESC, rowid DESC",
+                                arguments: [meetingId, server])
+        }
+    }
+
+    func forgetShare(server: String, shareId: String) throws {
+        try pool.write { db in try db.execute(sql: "DELETE FROM meeting_shares WHERE server = ? AND share_id = ?", arguments: [server, shareId]) }
+    }
+
+    /// 匯入的分享是誰分享的（顯示用）
+    func setSharedFrom(_ meetingId: Int64, _ name: String) throws {
+        try pool.write { db in try db.execute(sql: "UPDATE meetings SET shared_from = ? WHERE id = ?", arguments: [name, meetingId]) }
     }
 
     // MARK: 詞彙表的群組（design §100.1、R126）

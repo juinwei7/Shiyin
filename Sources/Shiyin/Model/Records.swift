@@ -51,6 +51,8 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var speakerHintDismissed: Bool = false
     // v12（design §72）：資料夾已經決定了（自動放過、自己移過、建議按了不用）。定期會議的 series_id 欄位留著不用（D177）
     var folderDecided: Bool = false
+    // v21（design §99.3）：匯入的分享是誰分享的（顯示用）；不是分享來的是 nil
+    var sharedFrom: String?
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
 

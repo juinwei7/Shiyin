@@ -20,6 +20,8 @@ extension AppModel {
             entries.append(.action(String(localized: "重新命名…"), icon: "pencil", shortcut: "↩") { self.requestRenameMeeting(id) })
             // 編輯會議（R107.1）；編輯過的會議多一項還原，寫還剩幾天（R107.8）
             entries.append(.action(String(localized: "編輯會議…"), icon: "scissors") { self.requestEditMeeting(id) })
+            // 分享（R125.1）
+            entries.append(.action(String(localized: "分享…"), icon: "square.and.arrow.up") { self.shareTarget = ShareTarget(meetingId: id) })
             if let record = try? db.editRecord(id) {
                 entries.append(.action(String(localized: "還原成編輯前的樣子…"), icon: "arrow.uturn.backward",
                                        shortcut: String(localized: "還有 \(record.daysLeft()) 天")) { self.requestRestoreEdit(id) })

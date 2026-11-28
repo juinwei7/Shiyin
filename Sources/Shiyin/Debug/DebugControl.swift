@@ -1021,6 +1021,40 @@ enum DebugControl {
             if let which = ModelStore.Model(rawValue: args[1]) { model.models.debugURLs[which] = args[2] == "-" ? nil : URL(string: args[2]) }
         case "llmurl":     // llmurl <anthropic|openai|gemini|openaiCompatible> <網址>：API 改送到本機的假伺服器；網址給 - 就改回原本的
             if let provider = LLMProvider(rawValue: args[1]) { LLMClient.debugBaseURLs[provider] = args[2] == "-" ? nil : args[2] }
+        // 分享會議（design §99.6）：share <會議 id> <JSON 選項> <輸出.json>（JSON：emails、link、days、contents；同按「分享」）、
+        // shareinfo <會議 id> <輸出.json>、sharedwithme <輸出.json>、shareimport <分享 id>、shareopen <shiyin://share?…>（會跳確認）、
+        // shareupdate <會議 id>、sharecancel（同分享視窗進度旁的「取消」）、sharestop <會議 id>、shareselect <分享 id>（側欄點那一場）、shareopensheet <會議 id>
+        case "share":
+            guard let id, args.count > 3, let data = args[2].data(using: .utf8), let options = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { break }
+            let c = options["contents"] as? [String: Bool] ?? [:]
+            let contents = EnterpriseShares.Contents(audio: c["audio"] ?? true, userNotes: c["userNotes"] ?? true, documents: c["documents"] ?? true)
+            model.errorMessage = nil
+            model.shareTask = Task {
+                let back = await model.shareMeeting(id, emails: options["emails"] as? [String] ?? [], link: options["link"] as? String,
+                                                    days: options["days"] as? Int, contents: contents)
+                write(["ok": model.shareId(id) != nil, "error": model.errorMessage ?? "", "shareId": model.shareId(id) ?? "", "notAdded": back], to: args[3])
+            }
+        case "sharecancel": model.shareTask?.cancel()
+        case "shareinfo":
+            guard let id, args.count > 2 else { break }
+            Task {
+                await model.loadShareDetail(id)
+                let d = model.shareDetails[id]
+                write(["shareId": model.shareId(id) ?? "", "version": d?.version ?? 0, "recipients": d?.recipients.map { ["email": $0.email, "opened": $0.openedAt != nil, "imported": $0.importedAt != nil] } ?? [],
+                       "link": d?.link?.url ?? "", "access": d?.link?.access ?? "", "expiresAt": d?.expiresAt ?? "", "uploading": d?.uploading ?? false,
+                       "contents": ["audio": d?.contents.audio ?? false, "userNotes": d?.contents.userNotes ?? false, "documents": d?.contents.documents ?? false]], to: args[2])
+            }
+        case "sharedwithme":
+            Task {
+                await model.refreshSharedWithMe()
+                write(["items": model.sharedWithMe.map { ["id": $0.id, "title": $0.title, "from": $0.from.email, "version": $0.version, "importedVersion": $0.importedVersion ?? 0, "isNew": $0.isNew] }], to: args[1])
+            }
+        case "shareimport": if let item = model.sharedWithMe.first(where: { $0.id == args[1] }) { Task { await model.importShared(item) } }
+        case "shareopen": if let url = URL(string: args[1]) { Task { await model.openShareLink(url) } }
+        case "shareupdate": if let id { model.shareTask = Task { await model.updateShareContents(id) } }
+        case "sharestop": if let id { Task { await model.stopSharing(id) } }
+        case "shareselect": model.selectShared(args[1])
+        case "shareopensheet": if let id { model.shareTarget = ShareTarget(meetingId: id) }
         case "enterprise":
             // 企業伺服器（design §36.7）：login <網址> <信箱> <輸出.json>（伺服器開發用的登入，不經過瀏覽器）、logout、expire（access token 立刻過期）、
             // local <會議 id>（等於按「改在這台電腦轉錄」）。登入會寫進共用的設定（網址、帳號），測完用 defaults delete 清掉

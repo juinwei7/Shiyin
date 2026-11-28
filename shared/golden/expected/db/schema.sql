@@ -3,6 +3,7 @@ CREATE INDEX documents_meeting ON documents(meeting_id, id);
 CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
 CREATE INDEX jobs_meeting ON jobs(meeting_id, id);
 CREATE INDEX jobs_status ON jobs(status, id);
+CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
 CREATE INDEX meetings_folder ON meetings(folder_id);
 CREATE INDEX meetings_series ON meetings(series_id);
 CREATE INDEX questions_meeting ON questions(meeting_id, id);
@@ -95,6 +96,13 @@ CREATE TABLE meeting_edits (
   created_at  TEXT NOT NULL,
   edited_at   TEXT NOT NULL
 );
+CREATE TABLE meeting_shares (
+  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  server     TEXT NOT NULL,
+  share_id   TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (server, share_id)
+);
 CREATE TABLE meetings (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   title            TEXT NOT NULL DEFAULT '',
@@ -108,7 +116,7 @@ CREATE TABLE meetings (
   notes_by         TEXT,
   created_at       TEXT NOT NULL,
   updated_at       TEXT NOT NULL
-, template_id TEXT NOT NULL DEFAULT 'general', user_notes  TEXT NOT NULL DEFAULT '', source      TEXT NOT NULL DEFAULT 'import', channels    TEXT NOT NULL DEFAULT 'mic', deleted_at  TEXT, language TEXT NOT NULL DEFAULT 'zh', notes_draft INTEGER NOT NULL DEFAULT 0, transcribed_with TEXT NOT NULL DEFAULT '', min_speakers INTEGER, speaker_check REAL, speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0, folder_decided INTEGER NOT NULL DEFAULT 0, series_id INTEGER REFERENCES series(id) ON DELETE SET NULL, notes_template TEXT, folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL);
+, template_id TEXT NOT NULL DEFAULT 'general', user_notes  TEXT NOT NULL DEFAULT '', source      TEXT NOT NULL DEFAULT 'import', channels    TEXT NOT NULL DEFAULT 'mic', deleted_at  TEXT, language TEXT NOT NULL DEFAULT 'zh', notes_draft INTEGER NOT NULL DEFAULT 0, transcribed_with TEXT NOT NULL DEFAULT '', min_speakers INTEGER, speaker_check REAL, speaker_hint_dismissed INTEGER NOT NULL DEFAULT 0, folder_decided INTEGER NOT NULL DEFAULT 0, series_id INTEGER REFERENCES series(id) ON DELETE SET NULL, notes_template TEXT, folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL, shared_from TEXT);
 CREATE TABLE notes_versions (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,

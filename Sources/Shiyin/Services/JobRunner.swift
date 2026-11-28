@@ -38,6 +38,8 @@ enum AppSettings {
     static let recordingIslandKey = "recordingIsland"   // 在螢幕上方顯示錄音島，預設開（design §57.2）
     static let autoStopOnMeetingEndKey = "autoStopOnMeetingEnd"   // 會議結束時倒數後自動停止錄音，預設開（design §69）
     static let transcriptViewKey = "transcriptView"   // 逐字稿：original（原文）／clean（精簡，design §70）
+    static let seenSharesKey = "seenShares"            // 看過的「與我分享」：id → 版本（新的、更新過的才通知，design §99.4）
+    static let shareNoticeShown = "shareNoticeShown"   // 第一次透過伺服器分享時的說明看過了（R125.3）
     static let glossarySortKey = "glossarySort"       // 詞彙表的排序：added（加入順序）／recent（最近加入）／alpha（字母順序，design §100.3）
     static let meetingSortKey = "meetingSort"   // 會議列表的排序（design §71）
     static let meetingGroupingKey = "meetingGrouping"   // 會議列表的分組（design §71）

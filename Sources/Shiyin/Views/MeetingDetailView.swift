@@ -85,8 +85,16 @@ struct MeetingHeader: View {
                     .sheet(isPresented: $editing) {
                         EditInfoForm(meeting: meeting) { editing = false }
                     }
+                // 分享（R125.1）：透過企業伺服器或用檔案
+                Button("分享") { model.shareTarget = ShareTarget(meetingId: meeting.id!) }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.celadon)
+                    .font(.callout)
+                    .help("傳給同事、建立連結，或存成 .shiyin 用 AirDrop、Mail 傳")
                 Spacer(minLength: 0)
             }
+            // 分享的狀態（D212）：打開會議頁時問一次伺服器；沒分享過不會連網
+            Color.clear.frame(height: 0).task(id: meeting.id) { if let id = meeting.id { await model.loadShareDetail(id) } }
             // 範本和語言選單放在資訊列右邊，標題才能用整行的寬度（英文標題比較長，design §16.3）；
             // 資訊列放不下時（說話者多、英文字比較長），選單改到下一行，說話者名字才不會被截斷
             ViewThatFits(in: .horizontal) {
@@ -107,6 +115,19 @@ struct MeetingHeader: View {
         HStack(spacing: 16) {
             if meeting.folderId != nil {
                 Label(model.folderName(meeting.folderId), systemImage: "folder").help("這場會議所在的資料夾")
+            }
+            // 分享（R125.4、R125.5）：分享出去的寫幾個人、有沒有連結（點了打開分享視窗）；匯入的分享寫是誰分享的
+            if let share = model.shareDetails[meeting.id ?? -1] {
+                Button { model.shareTarget = ShareTarget(meetingId: meeting.id!) } label: {
+                    Label(share.recipients.isEmpty ? String(localized: "已建立連結")
+                          : share.link == nil ? String(localized: "已分享給 \(share.recipients.count) 人")
+                          : String(localized: "已分享給 \(share.recipients.count) 人・連結"), systemImage: "person.2")
+                }
+                .buttonStyle(.plain)
+                .help("看名單、連結，或停止分享")
+            }
+            if let from = meeting.sharedFrom, !from.isEmpty {
+                Label("來自 \(from) 的分享", systemImage: "tray.and.arrow.down")
             }
             Text("\(meeting.meetingDate) \(DateText.weekday(meeting.meetingDate))")
             if meeting.durationSeconds != nil { Text(TimeFormat.duration(meeting.durationSeconds)) }

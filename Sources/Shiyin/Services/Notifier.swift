@@ -144,6 +144,21 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(content)
     }
 
+    /// 有人透過企業伺服器分享了會議（R125.5）：點了打開「與我分享」的那一場
+    var onOpenShare: ((String) -> Void)?
+
+    func sharedMeeting(_ item: EnterpriseShares.SharedItem) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "\(item.from.display)分享了「\(item.title)」給你")
+        content.body = item.importedVersion == nil ? String(localized: "在側欄的「與我分享」匯入") : String(localized: "分享的內容更新了，可以再匯入一次")
+        content.sound = .default
+        content.userInfo = ["shareId": item.id]
+        #if DEBUG
+        recent = Array(([["title": content.title, "body": content.body, "shareId": item.id]] + recent).prefix(10))
+        #endif
+        post(content)
+    }
+
     /// 企業伺服器連不上太久，自動改在這台電腦轉錄（R93、design §67）
     func serverFallback(meeting: Meeting) {
         let content = UNMutableNotificationContent()
@@ -205,6 +220,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let bundle = response.notification.request.content.userInfo["bundle"] as? String
         let idle = response.notification.request.content.userInfo["idle"] as? Bool ?? false
         let stopTimer = response.notification.request.content.userInfo["stopTimer"] as? Bool ?? false
+        let shareId = response.notification.request.content.userInfo["shareId"] as? String
         let action = response.actionIdentifier
         Task { @MainActor in
             let button = action != UNNotificationDefaultActionIdentifier && action != UNNotificationDismissActionIdentifier
@@ -214,6 +230,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                 self.onIdleAction?(action)
             } else if stopTimer, button {
                 self.onStopTimerAction?(action)
+            } else if let shareId {
+                self.onOpenShare?(shareId)
             } else if let id, id > 0 { self.onOpen?(id) }
             completionHandler()
         }

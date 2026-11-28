@@ -7,6 +7,7 @@ struct ExportSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var item: ExportItem = .notes
+    @State private var appliedInitial = false
     @State private var format = "md"
     @State private var times = true
     @State private var speakers = true
@@ -92,6 +93,11 @@ struct ExportSheet: View {
         .onAppear {
             bundle = model.exportMeetingId.flatMap { try? model.exportBundle(meetingId: $0) }
             if !hasNotes { item = .transcript }
+            // 分享視窗的「用檔案分享…」：直接選封包（design §99.4）
+            if let initial = model.exportInitialItem {
+                item = initial
+                model.exportInitialItem = nil
+            }
             #if DEBUG
             if let (debugItem, debugFormat) = Self.debugChoice { item = debugItem; format = debugFormat }
             #endif

@@ -58,6 +58,9 @@
     "%@ %@": {
       "extractionState": "manual"
     },
+    "%@ · %@": {
+      "extractionState": "manual"
+    },
     "%@ 停止": {
       "extractionState": "manual",
       "localizations": {
@@ -418,6 +421,23 @@
         }
       }
     },
+    "%@分享了「%@」給你": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@分享了“%@”给你"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ shared “%@” with you"
+          }
+        }
+      }
+    },
     "%@失敗（錯誤代碼 %d）。請確認已允許拾音「錄製系統音訊」": {
       "extractionState": "manual",
       "localizations": {
@@ -533,6 +553,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@（%@）"
+          }
+        }
+      }
+    },
+    "%@（%@）分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（%@）分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared by %@ (%@)"
           }
         }
       }
@@ -1057,6 +1094,23 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld 天": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 天"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld days"
           }
         }
       }
@@ -3613,6 +3667,23 @@
         }
       }
     },
+    "不限期": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不限期"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No expiry"
+          }
+        }
+      }
+    },
     "不需要另外安裝任何工具。要整理會議紀錄的話，安裝並登入 claude、codex 或 agy，或準備 Anthropic、OpenAI 的 API key": {
       "extractionState": "manual",
       "localizations": {
@@ -4021,6 +4092,23 @@
         }
       }
     },
+    "企業伺服器的回應不對": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "企业服务器的回应不对"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The enterprise server sent an unexpected response"
+          }
+        }
+      }
+    },
     "企業伺服器的憑證不受這台 Mac 信任，請公司的管理者協助安裝憑證": {
       "extractionState": "manual",
       "localizations": {
@@ -4272,6 +4360,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用说明"
+          }
+        }
+      }
+    },
+    "來自 %@ 的分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@ 的分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared by %@"
+          }
+        }
+      }
+    },
+    "來自 %@。匯入後是你自己的一份，可以編輯、重新整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@。导入后是你自己的一份，可以编辑、重新整理。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@. Once imported, it’s your own copy to edit and re-summarize."
           }
         }
       }
@@ -4674,6 +4796,57 @@
         }
       }
     },
+    "停止分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Sharing"
+          }
+        }
+      }
+    },
+    "停止分享…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止分享…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Sharing…"
+          }
+        }
+      }
+    },
+    "停止分享這場會議？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止分享这场会议？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop sharing this meeting?"
+          }
+        }
+      }
+    },
     "停止的時間": {
       "extractionState": "manual",
       "localizations": {
@@ -4687,6 +4860,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stop at"
+          }
+        }
+      }
+    },
+    "停止連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Link"
           }
         }
       }
@@ -4806,6 +4996,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "检测到线上会议时提醒录音"
+          }
+        }
+      }
+    },
+    "傳給同事": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传给同事"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send to colleagues"
+          }
+        }
+      }
+    },
+    "傳給同事、建立連結，或存成 .shiyin 用 AirDrop、Mail 傳": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传给同事、建立链接，或存成 .shiyin 用 AirDrop、Mail 传"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send to colleagues, create a link, or save as .shiyin to send with AirDrop or Mail"
           }
         }
       }
@@ -5407,6 +5631,23 @@
         }
       }
     },
+    "公司的伺服器會刪掉這場，名單上的人和連結都打不開；別人已經匯入的那份不受影響。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公司的服务器会删掉这场，名单上的人和链接都打不开；别人已经导入的那份不受影响。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The company server will delete it, and people on the list and the link can no longer open it. Copies others have already imported aren’t affected."
+          }
+        }
+      }
+    },
     "公司的伺服器還沒有提供整理用的模型，請通知管理者": {
       "extractionState": "manual",
       "localizations": {
@@ -5555,6 +5796,23 @@
         }
       }
     },
+    "公司裡登入的人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公司里登录的人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People signed in at your company"
+          }
+        }
+      }
+    },
     "公司（%@）": {
       "extractionState": "manual",
       "localizations": {
@@ -5674,6 +5932,23 @@
         }
       }
     },
+    "再匯入一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再导入一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Again"
+          }
+        }
+      }
+    },
     "再多唸一點：有聲音的部分要 10 秒以上。": {
       "extractionState": "manual",
       "localizations": {
@@ -5759,6 +6034,23 @@
         }
       }
     },
+    "分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        }
+      }
+    },
     "分享…": {
       "extractionState": "manual",
       "localizations": {
@@ -5772,6 +6064,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享…"
+          }
+        }
+      }
+    },
+    "分享「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share “%@”"
           }
         }
       }
@@ -5806,6 +6115,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hide Shiyin's windows when sharing the screen"
+          }
+        }
+      }
+    },
+    "分享的內容更新了，可以再匯入一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享的内容更新了，可以再导入一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The shared meeting was updated. You can import it again."
+          }
+        }
+      }
+    },
+    "分享者更新過，可以再匯入一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享者更新过，可以再导入一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated by the sender. You can import it again."
+          }
+        }
+      }
+    },
+    "分享：你分享的會議（封包）存在 %@，直到你停止分享或到期；收到的人匯入後是他自己的一份。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享：你分享的会议（文件包）存在 %@，直到你停止分享或到期；收到的人导入后是他自己的一份。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharing: meetings you share (as packages) are stored on %@ until you stop sharing or they expire. People who import them get their own copy."
           }
         }
       }
@@ -6601,6 +6961,40 @@
         }
       }
     },
+    "到期": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到期"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expires"
+          }
+        }
+      }
+    },
+    "到期：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到期：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expires: %@"
+          }
+        }
+      }
+    },
     "到設定的「模型與空間」下載": {
       "extractionState": "manual",
       "localizations": {
@@ -6796,6 +7190,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入 %@ 的企业服务器？"
+          }
+        }
+      }
+    },
+    "加入名單": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入名单"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to List"
           }
         }
       }
@@ -7067,6 +7478,23 @@
         }
       }
     },
+    "匯入%@分享的「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入%@分享的“%@”？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import “%2$@” shared by %1$@?"
+          }
+        }
+      }
+    },
     "匯入…": {
       "extractionState": "manual",
       "localizations": {
@@ -7097,6 +7525,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "导入并开始转录"
+          }
+        }
+      }
+    },
+    "匯入後是你自己的一份，可以編輯、重新整理，跟分享者那份無關。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入后是你自己的一份，可以编辑、重新整理，跟分享者那份无关。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once imported, it’s your own copy to edit and re-summarize, separate from the sender’s."
           }
         }
       }
@@ -7432,6 +7877,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "参考了 %lld 场会议"
+          }
+        }
+      }
+    },
+    "參考文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参考文档"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents"
+          }
+        }
+      }
+    },
+    "參考文件和會議中的畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参考文档和会议中的画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents and screen captures"
           }
         }
       }
@@ -8048,6 +8527,40 @@
         }
       }
     },
+    "同事的信箱": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同事的信箱"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colleague’s email"
+          }
+        }
+      }
+    },
+    "同時建立連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同时建立链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also create a link"
+          }
+        }
+      }
+    },
     "名字": {
       "extractionState": "manual",
       "localizations": {
@@ -8439,6 +8952,23 @@
         }
       }
     },
+    "在側欄的「與我分享」匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在侧边栏的“与我分享”导入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import it from “Shared with Me” in the sidebar"
+          }
+        }
+      }
+    },
     "在其他 app 裡也能開始或停止錄音（可以在設定 → 錄音關掉）": {
       "extractionState": "manual",
       "localizations": {
@@ -8748,6 +9278,23 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "大小": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大小"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Size"
           }
         }
       }
@@ -9262,6 +9809,40 @@
         }
       }
     },
+    "已停止分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已停止分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped sharing"
+          }
+        }
+      }
+    },
+    "已傳給 %lld 人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已传给 %lld 人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent to %lld people"
+          }
+        }
+      }
+    },
     "已儲存剛才編輯的會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -9326,6 +9907,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "已允许"
+          }
+        }
+      }
+    },
+    "已分享給 %lld 人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已分享给 %lld 人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared with %lld people"
+          }
+        }
+      }
+    },
+    "已分享給 %lld 人・連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已分享给 %lld 人・链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared with %lld people · Link"
           }
         }
       }
@@ -9752,6 +10367,23 @@
         }
       }
     },
+    "已匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported"
+          }
+        }
+      }
+    },
     "已匯入「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -9939,6 +10571,23 @@
         }
       }
     },
+    "已建立連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已建立链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link created"
+          }
+        }
+      }
+    },
     "已從檔案加入 %lld 個詞彙": {
       "extractionState": "manual",
       "localizations": {
@@ -10037,6 +10686,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Captured"
+          }
+        }
+      }
+    },
+    "已打開": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opened"
           }
         }
       }
@@ -10204,6 +10870,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已拆成两句。要撤销的话，在逐字稿按右键选“撤销”。"
+          }
+        }
+      }
+    },
+    "已拷貝連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已拷贝链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link copied"
           }
         }
       }
@@ -10408,6 +11091,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暂停，点一下打开录音中的会议"
+          }
+        }
+      }
+    },
+    "已更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated"
+          }
+        }
+      }
+    },
+    "已更新分享的內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新分享的内容"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared meeting updated"
           }
         }
       }
@@ -11048,6 +11765,23 @@
         }
       }
     },
+    "建立連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建立链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Link"
+          }
+        }
+      }
+    },
     "建議加入：從參加者、說話者名字、校正過的字、會議標題找到的": {
       "extractionState": "manual",
       "localizations": {
@@ -11298,6 +12032,40 @@
         }
       }
     },
+    "從今天起 %lld 天": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从今天起 %lld 天"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld days from today"
+          }
+        }
+      }
+    },
+    "從名單移除 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从名单移除 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@ from the list"
+          }
+        }
+      }
+    },
     "從左邊選一場會議": {
       "extractionState": "manual",
       "localizations": {
@@ -11328,6 +12096,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Import from File…"
+          }
+        }
+      }
+    },
+    "從清單移除": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从列表移除"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from List"
           }
         }
       }
@@ -13995,6 +14780,23 @@
         }
       }
     },
+    "改期限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改期限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Expiry"
+          }
+        }
+      }
+    },
     "改用 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -14059,6 +14861,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change the Time of This Screen"
+          }
+        }
+      }
+    },
+    "改過會議之後重新上傳（名單、連結不變），收到的人會看到「已更新」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改过会议之后重新上传（名单、链接不变），收到的人会看到“已更新”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload again after editing the meeting (the list and link stay the same). Recipients will see “Updated”."
           }
         }
       }
@@ -14212,6 +15031,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "整场会议（.shiyin）"
+          }
+        }
+      }
+    },
+    "整場會議（錄音、逐字稿、說話者、紀錄、筆記）存成 .shiyin，傳給同事後點兩下就能匯入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整场会议（录音、逐字稿、说话者、记录、笔记）存成 .shiyin，传给同事后点两下就能导入。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save the whole meeting (audio, transcript, speakers, notes) as a .shiyin file. Colleagues can double-click it to import."
           }
         }
       }
@@ -15185,6 +16021,23 @@
         }
       }
     },
+    "日期": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
     "日期（新到舊）": {
       "extractionState": "manual",
       "localizations": {
@@ -15593,6 +16446,23 @@
         }
       }
     },
+    "更新內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新内容"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update"
+          }
+        }
+      }
+    },
     "更新失敗：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -15950,6 +16820,23 @@
         }
       }
     },
+    "會議一直沒辦法完整傳到企業伺服器": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议一直没办法完整传到企业服务器"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting couldn’t be fully uploaded to the enterprise server"
+          }
+        }
+      }
+    },
     "會議中一起討論的文件（簡報、規格書、報價單…）。整理會議紀錄、提問時會一起參考；也可以把文件拖進視窗": {
       "extractionState": "manual",
       "localizations": {
@@ -16179,6 +17066,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议标题"
+          }
+        }
+      }
+    },
+    "會議沒辦法完整下載": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议没办法完整下载"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The meeting couldn’t be fully downloaded"
           }
         }
       }
@@ -16455,6 +17359,23 @@
         }
       }
     },
+    "會議資訊、逐字稿、說話者名字、會議紀錄、重點標記一定會帶。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议信息、逐字稿、说话者名字、会议记录、重点标记一定会带。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting info, transcript, speaker names, notes and highlights are always included."
+          }
+        }
+      }
+    },
     "有 %lld 則建議的段落已經改過，沒有套用": {
       "extractionState": "manual",
       "localizations": {
@@ -16620,6 +17541,23 @@
         }
       }
     },
+    "有效期限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效期限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expires after"
+          }
+        }
+      }
+    },
     "有新版本 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -16684,6 +17622,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ungrouped"
+          }
+        }
+      }
+    },
+    "未命名的會議": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未命名的会议"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Untitled Meeting"
           }
         }
       }
@@ -19485,6 +20440,23 @@
         }
       }
     },
+    "用檔案分享…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用文件分享…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share as File…"
+          }
+        }
+      }
+    },
     "用目前播放的位置": {
       "extractionState": "manual",
       "localizations": {
@@ -19871,6 +20843,23 @@
         }
       }
     },
+    "登入企業伺服器、公司有開分享時，也可以直接傳給同事或建立連結。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录企业服务器、公司有开分享时，也可以直接传给同事或建立链接。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you’re signed in to an enterprise server with sharing turned on, you can also send it to colleagues or create a link."
+          }
+        }
+      }
+    },
     "登入公司的企業伺服器時：錄音會上傳到公司自己的伺服器轉錄，不經過其他雲端服務，轉完就刪；選「公司」整理時，逐字稿送到公司的伺服器，由公司選的模型整理（公司機房裡的模型，或公司接的 AI 服務）。說話者在這台 Mac 辨識，聲紋不會上傳。公司的後台只看得到用量的數字（幾分鐘、幾次），看不到會議內容。": {
       "extractionState": "manual",
       "localizations": {
@@ -20126,6 +21115,23 @@
         }
       }
     },
+    "看名單、連結，或停止分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看名单、链接，或停止分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View the list and link, or stop sharing"
+          }
+        }
+      }
+    },
     "看會議紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -20156,6 +21162,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "知道了"
+          }
+        }
+      }
+    },
+    "知道連結的任何人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "知道链接的任何人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with the link"
           }
         }
       }
@@ -20338,6 +21361,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除"
+          }
+        }
+      }
+    },
+    "移除 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
           }
         }
       }
@@ -21906,6 +22946,23 @@
         }
       }
     },
+    "與我分享": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与我分享"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared with Me"
+          }
+        }
+      }
+    },
     "與會者": {
       "extractionState": "manual",
       "localizations": {
@@ -22390,6 +23447,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "要写什么"
+          }
+        }
+      }
+    },
+    "要帶的內容": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要带的内容"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include"
           }
         }
       }
@@ -23082,6 +24156,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speakers: %@"
+          }
+        }
+      }
+    },
+    "誰打得開": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "谁打得开"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who can open"
           }
         }
       }
@@ -24118,6 +25209,40 @@
         }
       }
     },
+    "透過 %@（公司的伺服器）分享，收到的人匯入成自己的一份。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透过 %@（公司的服务器）分享，收到的人导入成自己的一份。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared through %@ (your company server). Recipients import their own copy."
+          }
+        }
+      }
+    },
+    "透過公司的伺服器分享？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透过公司的服务器分享？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share through your company server?"
+          }
+        }
+      }
+    },
     "逐字稿": {
       "extractionState": "manual",
       "localizations": {
@@ -24131,6 +25256,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "逐字稿"
+          }
+        }
+      }
+    },
+    "逐字稿、紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐字稿、记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcript, notes"
           }
         }
       }
@@ -24376,6 +25518,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "None of these meetings are in a folder"
+          }
+        }
+      }
+    },
+    "這個分享只有公司裡的人打得開，請先在「設定 → 企業伺服器」登入 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个分享只有公司里的人打得开，请先在“设置 → 企业服务器”登录 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only people at the company can open this. Sign in to %@ under Settings → Enterprise server first."
+          }
+        }
+      }
+    },
+    "這個分享的連結不對": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个分享的链接不对"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This share link isn’t valid"
           }
         }
       }
@@ -24890,6 +26066,23 @@
         }
       }
     },
+    "這場會議會存在 %@（公司的伺服器），直到你停止分享或到期。收到的人匯入後是他自己的一份，停止分享不會刪掉別人已經匯入的。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场会议会存在 %@（公司的服务器），直到你停止分享或到期。收到的人导入后是他自己的一份，停止分享不会删掉别人已经导入的。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting will be stored on %@ (your company server) until you stop sharing or it expires. Recipients import their own copy, and stopping sharing doesn’t delete copies already imported."
+          }
+        }
+      }
+    },
     "這場會議沒有在任何資料夾裡": {
       "extractionState": "manual",
       "localizations": {
@@ -24988,6 +26181,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这场会议没有录音，没办法重新识别说话者"
+          }
+        }
+      }
+    },
+    "這場會議超過公司的伺服器一場的上限（%@），可以不帶錄音再試": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场会议超过公司的服务器一场的上限（%@），可以不带录音再试"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting is over the company server’s limit per meeting (%@). Try again without the audio."
           }
         }
       }
@@ -25306,6 +26516,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "连不到企业服务器（%@）。请确认网址，在公司外面要先连 VPN。"
+          }
+        }
+      }
+    },
+    "連結": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link"
           }
         }
       }
@@ -25754,6 +26981,23 @@
         }
       }
     },
+    "還沒匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没导入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not imported yet"
+          }
+        }
+      }
+    },
     "還沒回答的題目都標成略過，送出後直接移除": {
       "extractionState": "manual",
       "localizations": {
@@ -25767,6 +27011,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没回答的题目都标成略过，送出后直接移除"
+          }
+        }
+      }
+    },
+    "還沒打開": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没打开"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not opened yet"
           }
         }
       }
@@ -25801,6 +27062,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有下载转录模型，请到设置 → 模型与空间下载"
+          }
+        }
+      }
+    },
+    "還沒有傳給任何人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有传给任何人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not sent to anyone yet"
           }
         }
       }
@@ -27556,6 +28834,23 @@
         }
       }
     },
+    "錄音（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音（%@）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio (%@)"
+          }
+        }
+      }
+    },
     "錯誤代碼 %d": {
       "extractionState": "manual",
       "localizations": {
@@ -27603,6 +28898,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "钥匙串里已经有旧的 key，macOS 没有让拾音取代它。请打开“钥匙串访问”，删除“拾音 API key（%@）”后再存一次。"
+          }
+        }
+      }
+    },
+    "長度": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "长度"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Length"
           }
         }
       }
