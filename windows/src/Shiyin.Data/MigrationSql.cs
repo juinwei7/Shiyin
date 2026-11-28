@@ -335,4 +335,17 @@ static class MigrationSql
         );
         CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
         """;
+
+    /// <summary>透過企業伺服器分享會議（R125、M§99.3、D212）：匯入的分享是誰分享的、這場分享過的 id（同 Mac 的 AppDatabase.meetingSharesSQL）</summary>
+    public const string V21 = """
+        ALTER TABLE meetings ADD COLUMN shared_from TEXT;
+        CREATE TABLE meeting_shares (
+          meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+          server     TEXT NOT NULL,
+          share_id   TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (server, share_id)
+        );
+        CREATE INDEX meeting_shares_meeting ON meeting_shares(meeting_id);
+        """;
 }

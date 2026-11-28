@@ -15,10 +15,10 @@ namespace Shiyin.Tests;
 /// 企業伺服器（R49～R51、M§36、design-windows §12.11）：用本機的假伺服器（照 M§36.2 的 API）測登入、換 token、
 /// 上傳續傳、等伺服器、改在這台電腦轉錄、整理
 /// </summary>
-public sealed class EnterpriseTests : IDisposable
+public sealed partial class EnterpriseTests : IDisposable
 {
     /// <summary>照 M§36.2 的假伺服器：一個工作、一個帳號，可以設定失敗</summary>
-    sealed class FakeEnterprise : IDisposable
+    sealed partial class FakeEnterprise : IDisposable
     {
         public readonly TestServer Server = new();
         public readonly List<string> Requests = [];
@@ -97,6 +97,7 @@ public sealed class EnterpriseTests : IDisposable
                         ["maxAudioSeconds"] = 28800, ["transcription"] = new JsonObject { ["engine"] = "breeze" }, ["llm"] = Llm,
                     };
                     if (Mcp is bool mcp) info["mcp"] = mcp;
+                    if (Sharing is not null) info["sharing"] = Sharing.DeepClone();
                     await Json(c, 200, info);
                     return;
                 case ("GET", "/login"):
@@ -139,6 +140,8 @@ public sealed class EnterpriseTests : IDisposable
                     c.Response.Close();
                     return;
             }
+            // 分享會議（M§99.2）：用連結打開的不用登入
+            if (await HandleShare(c, method, path, body, Authorized())) return;
             if (!Authorized()) { await Error(c, Disabled ? 403 : 401, Disabled ? "forbidden" : "unauthorized"); return; }
             if (Busy) { await Error(c, 503, "busy", "伺服器忙"); return; }
             if (ServerError) { await Error(c, 500, "server_error", "伺服器出錯"); return; }

@@ -45,6 +45,8 @@ public sealed class Meeting
     public bool SpeakerHintDismissed { get; set; }
     /// <summary>v12（M§72）：資料夾已經決定了（自動放過、自己移過、建議按了不用）。定期會議的 series_id 欄位留著不用（D177）</summary>
     public bool FolderDecided { get; set; }
+    /// <summary>v21（R125、M§99.3）：匯入的分享是誰分享的（名字，沒有名字時是信箱），顯示用；不是分享來的是 null</summary>
+    public string? SharedFrom { get; set; }
 
     public MeetingLanguage MeetingLanguage => MeetingLanguages.Parse(Language) ?? MeetingLanguage.Zh;
 

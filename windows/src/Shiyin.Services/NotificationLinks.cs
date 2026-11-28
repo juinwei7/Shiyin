@@ -16,6 +16,8 @@ public sealed class NotificationLinks
         public sealed record Open(long? MeetingId, double? Seconds = null) : Link;
         /// <summary>偵測會議的按鈕：start、mute、stop、continue</summary>
         public sealed record Prompt(string Action, string App) : Link;
+        /// <summary>有人透過企業伺服器分享了會議（R125.5）：打開「與我分享」的那一場</summary>
+        public sealed record OpenShare(string Id) : Link;
     }
 
     static readonly string[] Actions = ["start", "mute", "stop", "continue"];
@@ -26,6 +28,8 @@ public sealed class NotificationLinks
     public static bool IsLink(string argument) => argument.StartsWith(Scheme + ":", StringComparison.OrdinalIgnoreCase);
 
     public static string OpenMeeting(long meetingId) => $"{Scheme}:open?meeting={meetingId}";
+
+    public static string OpenShare(string shareId) => $"{Scheme}:open?share={Uri.EscapeDataString(shareId)}";
 
     public string Prompt(string action, string app) =>
         $"{Scheme}:prompt?action={Uri.EscapeDataString(action)}&app={Uri.EscapeDataString(app)}&token={Token}";
@@ -40,6 +44,8 @@ public sealed class NotificationLinks
         if (path.Length == 0) path = uri.Host;
         switch (path.ToLowerInvariant())
         {
+            case "open" when query.TryGetValue("share", out var share) && share.Length == 32 && share.All(Uri.IsHexDigit):
+                return new Link.OpenShare(share.ToLowerInvariant());
             case "open":
                 long? meeting = query.TryGetValue("meeting", out var id) && long.TryParse(id, out var meetingId) && meetingId > 0 ? meetingId : null;
                 double? seconds = meeting is not null && query.TryGetValue("t", out var t)

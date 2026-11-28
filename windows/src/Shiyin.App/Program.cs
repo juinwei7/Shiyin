@@ -123,6 +123,12 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             host.Player.Seek(seconds, play: false);
         };
         host.ShowMeetingPrompt = ShowMeetingPrompt;
+        // 點了分享的通知（R125.5）：打開「與我分享」的那一場
+        host.ShowShared = id =>
+        {
+            ShowMain();
+            main?.ShowShared(id);
+        };
         // 倒數收起了（時間到、錄音先停了）：島上、小視窗的「會議好像結束了」跟著收起（R95）
         host.MeetingEnd.Ended += () => host.Post(() =>
         {
@@ -193,6 +199,12 @@ public sealed class App : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataPro
             // 企業伺服器的登入回呼（shiyin://auth，design-windows §12.11）、加入連結（shiyin://join，R49.7）
             if (EnterpriseServer.IsCallback(link)) _ = host.CompleteEnterpriseSignIn(link);
             else if (EnterpriseServer.IsJoin(link)) Join(EnterpriseServer.JoinServer(link));
+            // 分享的網頁上的「用拾音打開」（shiyin:share，R125.6）：先問再匯入
+            else if (EnterpriseShares.IsShareLink(link))
+            {
+                ShowMain();
+                main?.OpenShareLink(link);
+            }
             else host.Notifier.Open(link);
         }
     }

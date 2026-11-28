@@ -56,6 +56,8 @@ public sealed class AppHost
 
     /// <summary>熱鍵、通知、偵測會議要開主視窗、提醒時呼叫（App 設定）</summary>
     public Action<long?>? ShowMain { get; set; }
+    /// <summary>打開「與我分享」的那一場（點了分享的通知，R125.5）</summary>
+    public Action<string>? ShowShared { get; set; }
     /// <summary>打開那場會議的逐字稿、從這個秒數開始（本地 MCP 的會議連結，M§44.5）</summary>
     public Action<long, double>? ShowMeetingAt { get; set; }
     public Action<MeetingDetector.Prompt>? ShowMeetingPrompt { get; set; }
@@ -153,7 +155,10 @@ public sealed class AppHost
             if (double.TryParse(Settings.String("stopTimerCountdownSeconds"), System.Globalization.CultureInfo.InvariantCulture, out var stopCountdown) && stopCountdown > 0)
                 Recorder.StopCountdownSeconds = stopCountdown;
         }
-        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version) { Usage = Usage, Ocr = new WindowsOcr(), AudioEditor = new MediaFoundationAudioEditor() };
+        Controller = new AppController(Db, Settings, Paths, Models, Runner, Recorder, Decoder, new ExportPlatform(this), Version)
+        {
+            Usage = Usage, Ocr = new WindowsOcr(), AudioEditor = new MediaFoundationAudioEditor(), Enterprise = Enterprise,
+        };
         Detector = new MeetingDetector(new ConsentStoreMicrophoneUsage(), Settings) { IsRecording = () => Recorder.IsRecording };
         // 會議結束的倒數（R95）：時間到時停止錄音，通知「會議結束，已自動停止錄音」（內文是會議標題，停止前先拿）
         MeetingEnd = new MeetingEndCountdown(() => Recorder.IsRecording ? Recorder.MeetingId : null, () => Detector.MeetingAppActive, id =>
@@ -324,6 +329,8 @@ public sealed class AppHost
         Runner.Finished += (job, error) => Post(() => Notifier.JobFinished(job, error));
         // 企業伺服器連不上太久，自動改在這台電腦轉錄了（R93）
         Runner.ServerFallback += id => Post(() => Notifier.ServerFallback(id));
+        // 有人分享了會議、分享者更新過（R125.5）
+        Controller.SharedMeetingArrived += item => Post(() => Notifier.SharedMeeting(item));
         // claude、codex、agy 的登入狀態（M§34.1）：沒登入時不自動整理
         Post(() => _ = CliLogin.RefreshIfStale());
         // 企業伺服器：公司在後台加了模型、改了設定，不用重新登入（R51.5）

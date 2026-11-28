@@ -1822,6 +1822,9 @@ public sealed class SettingsWindow : Window
                 }));
             column.Children.Add(Note(L.F("轉錄：錄音會送到 %@（公司的伺服器），轉完就刪。說話者辨識也在伺服器上做，聲紋只存在這台電腦；筆記、會議紀錄不會因為轉錄送出。伺服器用的轉錄引擎：%@。",
                 server.Host, account.Engine == "qwen" ? L.T("Qwen3-ASR（阿里巴巴開源）") : L.T("Breeze ASR 25（聯發科）"))));
+            // 分享（R125.8、M§99.5）：公司有開時
+            if (account.Sharing is not null)
+                column.Children.Add(Note(L.F("分享：你分享的會議（封包）存在 %@，直到你停止分享或到期；收到的人匯入後是他自己的一份。", server.Host)));
             column.Children.Add(Ui.Button(L.T("登出"), SignOut));
         }
         else

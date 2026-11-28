@@ -72,6 +72,8 @@ public sealed class MainWindow : Window
     readonly InfoBar toast = new() { IsClosable = true, Severity = InfoBarSeverity.Informational, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 80), MaxWidth = 560 };
     readonly DispatcherTimer toastTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     readonly DispatcherTimer progressTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    /// <summary>查新的分享（R125.5）：每 15 分鐘（還有打開時、回到前景）</summary>
+    readonly DispatcherTimer shareTimer = new() { Interval = TimeSpan.FromMinutes(15) };
     bool wasBusy;
     readonly DetailView detailView;
     /// <summary>待確認的回答（M§31.2）：DEBUG 的控制通道用</summary>
@@ -161,7 +163,11 @@ public sealed class MainWindow : Window
             IsForeground = e.WindowActivationState != WindowActivationState.Deactivated;
             // 回到前景時更新 claude、codex、agy 的登入狀態（使用者可能剛在終端機登入，M§34.1）
             if (IsForeground) _ = CliLogin.RefreshIfStale();
+            // 回到前景時查新的分享（R125.5、M§99.4）
+            if (IsForeground) _ = host.Controller.RefreshSharedWithMe();
         };
+        shareTimer.Tick += (_, _) => _ = host.Controller.RefreshSharedWithMe();
+        shareTimer.Start();
         // 整理工具準備好了沒變了（登入狀態、key、暫停、設定）：會議頁的提示和失敗橫幅跟著變（M§34.2）
         host.Settings.SummarizerChanged += () => host.Post(Refresh);
         host.Settings.Changed += key =>
@@ -202,6 +208,7 @@ public sealed class MainWindow : Window
         Ui.SetTheme(root.ActualTheme);
         restyle.ForEach(a => a());
         State.Reload();
+        _ = host.Controller.RefreshSharedWithMe();
     }
 
     public XamlRoot? XamlRoot => root.XamlRoot;
@@ -578,6 +585,14 @@ public sealed class MainWindow : Window
             return;
         }
         multiPane = null;
+        // 「與我分享」選到的一場（R125.5）：右邊是預覽
+        if (State.Detail is null && !State.SearchActive && State.SelectedShared is { } sharedId
+            && host.Controller.SharedWithMe.FirstOrDefault(i => i.Id == sharedId) is { } shared)
+        {
+            detailView.Clear();
+            detailHost.Child = SharedPreview(shared);
+            return;
+        }
         if (State.Detail is { } detail) detailView.Show(detail);
         else detailView.Clear();
         detailHost.Child = State.Detail is null ? EmptyDetail() : detailView.Root;
@@ -742,7 +757,8 @@ public sealed class MainWindow : Window
         var order = SidebarKeys();
         var signature = string.Join('\u001F', [State.Meetings.Count.ToString(), State.People.Count.ToString(), Ui.ThemeKey, "order", .. order,
             .. all.Select(f => $"{f.Id}\u001E{f.Name}\u001E{f.Count}\u001E{(State.RuleFor(f.Id) is { } rule ? RuleTip(rule) : "")}"),
-            "collapsed", collapsed.Contains("folders").ToString(),
+            "collapsed", collapsed.Contains("folders").ToString(), collapsed.Contains("shared").ToString(),
+            .. host.Controller.SharedWithMe.Select(i => $"{i.Id}\u001E{i.Title}\u001E{i.From.Display}\u001E{i.Meeting?.MeetingDate}\u001E{i.IsNew}\u001E{i.ImportedVersion}"),
             .. peeks.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "\u001E" + p.Value.Count + "\u001E" + string.Join('\u001E',
                 p.Value.Take(SidebarCollapse.PeekCount).Select(r => $"{r.Id}\u001D{r.Meeting.DisplayTitle}\u001D{r.Meeting.MeetingDate}\u001D{r.Meeting.Language}")))]);
         if (signature != scopesSignature)
@@ -751,6 +767,7 @@ public sealed class MainWindow : Window
             updatingSelection = true;
             scopes.Items.Clear();
             peekViews.Clear();
+            sharedViews.Clear();
             scopes.Items.Add(ScopeRow(L.T("所有會議"), State.Meetings.Count, new Scope(false, null), new SymbolIcon(Symbol.AllApps)));
             scopes.Items.Add(ScopeRow(L.T("人物"), State.People.Count, new Scope(true, null), new SymbolIcon(Symbol.People)));
             // 「資料夾」一段（R101.3）：一直顯示，標題右邊「+」建空的資料夾（R104）
@@ -790,6 +807,13 @@ public sealed class MainWindow : Window
                         }
                     }
                 }
+            }
+            // 「與我分享」（R125.5、M§99.4）：資料夾那一段下面，有東西時才出現
+            if (host.Controller.SharedWithMe.Count > 0)
+            {
+                var open = !collapsed.Contains("shared");
+                scopes.Items.Add(SectionItem("shared", L.T("與我分享"), open, top: 12));
+                if (open) foreach (var item in host.Controller.SharedWithMe) scopes.Items.Add(SharedRow(item));
             }
             updatingSelection = false;
         }
@@ -885,6 +909,12 @@ public sealed class MainWindow : Window
     }
 
     readonly List<PeekView> peekViews = [];
+    /// <summary>「與我分享」的列：分享的 id、那一列、「⋯」重新判斷要不要顯示</summary>
+    sealed record SharedView(string Id, SidebarItem Item, Action UpdateMore)
+    {
+        public bool? Selected { get; set; }
+    }
+    readonly List<SharedView> sharedViews = [];
     /// <summary>用鍵盤收合、展開時焦點所在那一列的 AutomationId 和焦點的樣子：清單重建、選取換了之後找回來</summary>
     string? pendingFocus;
     FocusState pendingFocusState = FocusState.Keyboard;
@@ -1371,6 +1401,136 @@ public sealed class MainWindow : Window
             else peek.Item.Backplate(selected ? SidebarLook.Selected : null);
             peek.UpdateMore();
         }
+        foreach (var view in sharedViews)
+        {
+            var selected = SharedSelected(view.Id);
+            if (view.Selected == selected) continue;
+            view.Selected = selected;
+            view.Item.Backplate(selected && !Ui.HighContrast ? SidebarLook.Selected : null);
+            view.UpdateMore();
+        }
+    }
+
+    bool SharedSelected(string id) => State.Selection is null && State.SelectedShared == id && !State.ShowTrash;
+
+    /// <summary>
+    /// 「與我分享」的一列（R125.5，同 Mac 的 SharedRow）：圖示、標題、分享者・日期；沒匯入過或已更新的有圓點。
+    /// 點了右邊顯示預覽；右鍵和「⋯」同一份（匯入、從清單移除）
+    /// </summary>
+    SidebarItem SharedRow(EnterpriseShares.SharedItem item)
+    {
+        var id = item.Id;
+        var icon = new FontIcon { Glyph = "\uE896", FontSize = 16, Foreground = Ui.Secondary, Width = IconWidth, VerticalAlignment = VerticalAlignment.Center };
+        var title = Ui.Text(item.Title, 14, wrap: false);
+        var caption = Ui.Text($"{item.From.Display} · {item.Meeting?.MeetingDate ?? ""}", 12, color: Ui.Secondary, wrap: false);
+        var more = RowMore.Button(menu => FillSharedMenu(menu, id));
+        FrameworkElement right = more;
+        if (item.IsNew)
+        {
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse { Width = 7, Height = 7, Fill = Ui.Celadon, VerticalAlignment = VerticalAlignment.Center };
+            ToolTipService.SetToolTip(dot, item.ImportedVersion is null ? L.T("還沒匯入") : L.T("已更新"));
+            right = Ui.Row(6, dot, more);
+        }
+        var bar = Ui.Bar(icon, Ui.Column(1, title, caption), right, 10);
+        bar.VerticalAlignment = VerticalAlignment.Center;
+        var row = SidebarLook.Row(new SidebarItem(() => { detailView.FlushDrafts(); State.SelectShared(id); })
+        {
+            Content = Ui.FollowForeground(bar), MinHeight = 44,
+        });
+        AutomationProperties.SetName(row, item.Title);
+        AutomationProperties.SetAutomationId(row, "shared:" + id);
+        AutomationProperties.SetHelpText(row, $"{item.From.Display} · {item.Meeting?.MeetingDate ?? ""}");
+        if (item.IsNew) AutomationProperties.SetItemStatus(row, item.ImportedVersion is null ? L.T("還沒匯入") : L.T("已更新"));
+        row.ContextFlyout = RowMore.Context(menu => FillSharedMenu(menu, id));
+        var update = RowMore.Attach(row, more, () => SharedSelected(id));
+        sharedViews.Add(new SharedView(id, row, update));
+        return row;
+    }
+
+    /// <summary>「與我分享」的右鍵和「⋯」（R125.5，同 Mac 的 sharedMenu）</summary>
+    void FillSharedMenu(MenuFlyout menu, string id)
+    {
+        menu.Items.Clear();
+        if (host.Controller.SharedWithMe.FirstOrDefault(i => i.Id == id) is not { } item) return;
+        menu.Items.Add(Ui.Item(item.ImportedVersion is null ? L.T("匯入") : L.T("再匯入一次"), () => _ = host.Controller.ImportShared(item, State.CurrentFolder), glyph: "\uE896"));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Ui.Item(L.T("從清單移除"), () => _ = host.Controller.HideShared(id), icon: Symbol.Remove));
+    }
+
+    /// <summary>
+    /// 選到「與我分享」的一場時右邊的預覽（R125.5，同 Mac 的 SharedPreview）：標題、分享者、日期、長度、大小、帶了哪些內容、到期日；匯入、從清單移除
+    /// </summary>
+    FrameworkElement SharedPreview(EnterpriseShares.SharedItem item)
+    {
+        var controller = host.Controller;
+        var language = MeetingLanguages.Parse(item.Meeting?.Language) ?? MeetingLanguage.Zh;
+        var title = Ui.Heading(item.Title, language, 26);
+        title.IsTextSelectionEnabled = true;
+        var from = Ui.Text(L.F("%@（%@）分享", item.From.Display, item.From.Email), 14, color: Ui.Secondary);
+        var grid = new Grid { ColumnSpacing = 16, RowSpacing = 6 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        void Row(string name, string value)
+        {
+            var label = Ui.Text(name, 13, color: Ui.Secondary, wrap: false);
+            var text = Ui.Text(value, 13);
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(label, grid.RowDefinitions.Count - 1);
+            Grid.SetRow(text, grid.RowDefinitions.Count - 1);
+            Grid.SetColumn(text, 1);
+            grid.Children.Add(label);
+            grid.Children.Add(text);
+        }
+        if (item.Meeting?.MeetingDate is { Length: > 0 } date) Row(L.T("日期"), date);
+        if (item.Meeting?.DurationSeconds is int seconds) Row(L.T("長度"), L.Ui(TimeFormat.Duration(seconds, MeetingLanguages.Interface)));
+        Row(L.T("大小"), Shiyin.Services.Capture.Recorder.ByteCount(item.Bytes));
+        var parts = new List<string> { L.T("逐字稿、紀錄") };
+        if (item.Contents.Audio) parts.Add(L.T("錄音"));
+        if (item.Contents.UserNotes) parts.Add(L.T("我的筆記"));
+        if (item.Contents.Documents) parts.Add(L.T("參考文件"));
+        Row(L.T("內容"), string.Join(MeetingLanguages.Ui("、", ", "), parts));
+        Row(L.T("到期"), item.ExpiresAt is { } stamp ? ShareDialog.Day(stamp) : L.T("不限期"));
+        if (item.ImportedVersion is not null) Row(L.T("狀態"), item.IsNew ? L.T("分享者更新過，可以再匯入一次") : L.T("已匯入"));
+        var note = Ui.Text(L.T("匯入後是你自己的一份，可以編輯、重新整理，跟分享者那份無關。"), 12, color: Ui.Secondary);
+        var import = Sheet.Pill(item.ImportedVersion is null ? L.T("匯入") : L.T("再匯入一次"), Sheet.Kind.Primary,
+            click: () => _ = controller.ImportShared(item, State.CurrentFolder));
+        var hide = Sheet.Pill(L.T("從清單移除"), click: () => _ = controller.HideShared(item.Id));
+        import.IsEnabled = hide.IsEnabled = !controller.ShareBusy;
+        var buttons = Ui.Row(10, import, hide);
+        if (controller.ShareBusy && controller.ShareProgress is double progress)
+            buttons.Children.Add(new ProgressBar { Value = progress * 100, Maximum = 100, Width = 160, VerticalAlignment = VerticalAlignment.Center });
+        var content = Ui.Column(14, title, from, grid, note, buttons);
+        content.Padding = new Thickness(28);
+        AutomationProperties.SetName(content, item.Title);
+        return new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    /// <summary>點了分享的通知（R125.5）：重新查一次，選到那一場</summary>
+    public async void ShowShared(string id)
+    {
+        await host.Controller.RefreshSharedWithMe(notify: false);
+        if (host.Controller.SharedWithMe.Any(i => i.Id == id)) State.SelectShared(id);
+    }
+
+    /// <summary>shiyin:share（網頁的「用拾音打開」，R125.6）：先拿標題、分享者，問過再匯入</summary>
+    public async void OpenShareLink(string url)
+    {
+        if (EnterpriseShares.ParseShareLink(url, host.Enterprise.AllowLocalHttp) is not { } link)
+        {
+            ShowError(L.T("這個分享的連結不對"));
+            return;
+        }
+        EnterpriseShares.Summary summary;
+        try { summary = await host.Controller.ShareSummary(link); }
+        catch (Exception e) when (e is EnterpriseException or HttpRequestException)
+        {
+            ShowError(e.Message);
+            return;
+        }
+        var title = summary.Meeting is { Title.Length: > 0 } m ? m.Title : L.T("未命名的會議");
+        var ok = await Dialogs.Confirm(this, L.F("匯入%@分享的「%@」？", summary.From.Display, title),
+            L.F("來自 %@。匯入後是你自己的一份，可以編輯、重新整理。", EnterpriseServer.DisplayHost(link.Server)), L.T("匯入"));
+        if (ok) await host.Controller.ImportShare(link, summary.From.Display, summary.Bytes, State.CurrentFolder);
     }
 
     /// <summary>
@@ -1823,7 +1983,12 @@ public sealed class MainWindow : Window
     /// <summary>「編輯會議…」、編輯過的會議多「還原成編輯前的樣子…」（右邊「還有 N 天」）：右鍵、「⋯」、會議頁的「更多」共用</summary>
     public List<MenuFlyoutItem> EditMenuItems(long id)
     {
-        var items = new List<MenuFlyoutItem> { Ui.Item(L.T("編輯會議…"), () => OpenEditor(id), icon: Symbol.Cut) };
+        var items = new List<MenuFlyoutItem>
+        {
+            Ui.Item(L.T("編輯會議…"), () => OpenEditor(id), icon: Symbol.Cut),
+            // 分享（R125.1）：透過企業伺服器或用檔案
+            Ui.Item(L.T("分享…"), () => _ = ShareDialog.Show(this, id), icon: Symbol.Share),
+        };
         if (host.Db.EditRecord(id) is { } record)
             items.Add(MenuLook.Hint(Ui.Item(L.T("還原成編輯前的樣子…"), () => _ = ConfirmRestoreEdit(id), icon: Symbol.Undo), L.F("還有 %lld 天", record.DaysLeft())));
         return items;
@@ -2323,6 +2488,15 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>WinRT 的例外會把同一句錯誤描述再接在訊息後面一次：重複的行只留一行</summary>
-    public void ShowError(string message) => _ = Dialogs.Alert(this, L.T("出了一點問題"),
-        string.Join("\n", message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct()));
+    public void ShowError(string message)
+    {
+        // 分享對話框開著時寫在對話框裡（同時只能開一個 ContentDialog）
+        if (ShareDialog.Current is { } share)
+        {
+            share.ShowError(message);
+            return;
+        }
+        _ = Dialogs.Alert(this, L.T("出了一點問題"),
+            string.Join("\n", message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct()));
+    }
 }

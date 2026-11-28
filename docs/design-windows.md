@@ -1013,12 +1013,18 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 
 ### 11.58 透過企業伺服器分享會議（R125，M§99、D209～D212）
 
-- **Core／Data**：`Package.Export` 的內容選擇（不帶錄音、筆記、文件），規則同 Mac §99.3；migration 同 Mac（`meetings.shared_from`、`meeting_shares`，SQL 逐字相同）。
-- **Services**：`EnterpriseShares`（`EnterpriseServer.NoRedirectClient()`、換 token、錯誤同 §12.11），端點同 M§99.2；上傳、下載的續傳跟轉錄上傳共用。查新的分享的時機同 Mac（啟動、回到前景、每 15 分鐘），通知走 §12.2 的 `ToastNotificationManager`，點了是 `shiyin:open?share=<id>`。
-- **App**：分享對話框（`ContentDialog`；同時只開一個，開之前收起別的）的三種樣子、會議頁的「分享」和資訊列、側欄「與我分享」、右鍵和「⋯」，字和 Mac 一樣。`shiyin:share?server=…&id=…&t=…` 走 §12.1 的單一執行個體轉給開著的拾音，確認對話框同 Mac。
-- **控制通道**：`share`、`shareinfo`、`sharedwithme`、`shareimport`、`shareopen`，同 Mac §99.6（直接回 JSON）。
-- **測試**：標準答案 `server/shares.json`、`package/contents-*`；`EnterpriseTests` 的假伺服器照 M§99.2 回應：建分享、續傳、更新版本、名單、連結、過期、伺服器關掉分享、不合理的回應。
-- **驗證**：`dotnet test`；虛擬機登入開發用的伺服器，收 Mac 分享的會議、匯入；分享一場給 Mac；連結在 Mac 的瀏覽器打開（虛擬機沒有瀏覽器）。
+- **Data**：`MigrationSql.V21` 同 Mac 的 `meetingSharesSQL`（逐字相同：`meetings.shared_from`、`meeting_shares`）；`AppDatabase.Shares.cs` 的 `RecordShare`、`ShareIds`、`ForgetShare`、`SetSharedFrom`；`Meeting.SharedFrom` 跟著整列寫入（同 Mac 的 GRDB 記錄）。
+- **Services**：`EnterpriseShares`（同 Mac 的同名檔）：純函式 `CreateBody`、`ParseSharing`、`Positive`、`AsBool`（true／false，數字 0、1 也算，同 Mac 的 `NSNumber as? Bool`）、`ParseMeeting`／`Contents`／`Person`／`Recipients`（500 截斷）／`Link`／`Detail`／`SharedWithMe`／`Summary`、`ParseShareLink`；API 同 M§99.2，8 MB 續傳上傳（400 從頭傳一次）、Range 下載。`EnterpriseServer` 加：`EnterpriseInfo`／`EnterpriseAccount` 的 `Sharing`（帳號 JSON 存 `sharing`，公司開了才有）、`Call` 的 `expireOnForbidden`（分享的 403 不當成登入失效）、`CallRaw`（位元組、攤平的標頭，含 Content-Range）、`SendRaw`（不帶 token：用公開連結打開的分享）。
+  - `AppController.Shares.cs`（同 Mac 的 Store/Shares.swift）：`ShareMeeting`（回傳沒加進名單的信箱；取消、失敗時 `DELETE` 半套的分享）、`UpdateShareContents`、名單、連結、期限、`StopSharing`、`RefreshSharedWithMe`（看過的版本存 `settings.json` 的 `seenShares`）、`ImportShared`／`ImportShare`（下載到 `tmp/shared-<id>.shiyin`，下載到一半的留著接著下載）、`HideShared`、`ShareSummary`；`CancelShare`。事件 `SharesChanged`（只重畫）、`SharedMeetingArrived`（通知）、`SharedItemGone`。第一次分享的說明記在 `shareNoticeShown`。統計（M§99.4 最後一條）同 Mac 還沒做（SH4）。
+- **App**：
+  - 分享對話框（`ShareDialog`，照 Sheet 的樣子，內容寬 472）：三種樣子、按鈕、字同 Mac 的 ShareSheet。同時只能開一個 `ContentDialog`：第一次分享的說明、停止分享的確認在同一個對話框裡換頁；開著時的錯誤寫在對話框裡（`MainWindow.ShowError` 轉過去）。信箱欄位 Enter 或逗號變成一顆（欄位空的時 Enter 是「分享」），打字停 0.25 秒問員工名單；重建時焦點留在欄位。
+  - 會議頁：標題旁「編輯」後面「分享」（垃圾桶、錄音中的不放；滑過說明改成「傳給同事、建立連結，或存成 .shiyin 檔案傳給別人」，Windows 沒有 AirDrop）；資訊列在資料夾後面寫「已分享給 N 人・連結」（點了打開對話框）、「來自 X 的分享」。打開會議頁時問一次伺服器（沒分享過不連網）。會議的右鍵、「⋯」、「更多」在「編輯會議…」後面加「分享…」。
+  - 側欄「與我分享」：資料夾那一段下面，有東西時才出現（可以收起，鍵 `shared`）；每列圖示、標題、分享者・日期，沒匯入過或已更新的有圓點；點了右邊預覽（同 Mac 的 SharedPreview），右鍵和「⋯」：匯入（再匯入一次）、從清單移除。
+  - 查新的分享：打開主視窗、主視窗回到前景（`Activated`）、每 15 分鐘；新的送 Toast，點了是 `shiyin:open?share=<id>`（`NotificationLinks.Link.OpenShare`）打開那一列。`shiyin:share?…`（`shiyin://share/?…` 也認得）走 §12.1 的單一執行個體，確認用 `Dialogs.Confirm`（同 Mac 的文字）。
+  - 設定「企業伺服器」：公司開了分享時加分享的隱私說明（同 Mac）。
+- **控制通道**（`ControlPipe.Shares.cs`，同 Mac §99.6，直接回 JSON；要等網路的等做完才回）：`share <會議 id> <JSON> [nowait]`（nowait 馬上回，結果用 `shareresult`）、`sharecancel`、`shareinfo <會議 id>`、`shareupdate <會議 id>`、`sharestop <會議 id>`、`sharedwithme`、`shareselect <分享 id>`、`shareimport <分享 id>`（回傳匯入的會議 id）、`shareopen <shiyin://share?…>`（會跳確認）、`shareopensheet <會議 id>`、`shareui add <信箱,…>|share|close`（對話框裡填信箱、按「分享」、關掉）；`state` 加 `shareDialog`（樣子：file／loading／new／shared／confirm:標題）、`selectedShared`、`sharedWithMe`、`shareBusy`、`shareProgress`。
+- **測試**：標準答案 `server/shares.json`（`EnterpriseTests.SharesMatchMac`）、`db/*`；`EnterpriseTests.Shares.cs` 的假伺服器照 M§99.2：分享（409 接著傳、不帶錄音和筆記的封包）、名單（公司以外的放回欄位）、連結、期限、更新版本、停止分享、取消時刪掉半套、與我分享（只通知一次、更新過再通知）、匯入（shared_from、回報版本、tmp 清掉）、公開連結沒登入也能拿摘要和下載、只有公司的連結說明要先登入、公司關掉分享（403）不登出、不合理的回應；`NotificationLinksTests.OpensSharedMeeting`。
+- **驗證**：`dotnet test`；虛擬機登入開發用的伺服器，收 Mac 分享的會議、匯入；分享一場給 Mac；UI Automation 點分享對話框、側欄右鍵；淺色、深色截圖。連結在 Mac 的瀏覽器打開（虛擬機沒有瀏覽器）。
 
 ### 11.59 詞彙表的群組和排序（R126，M§100、D213）
 

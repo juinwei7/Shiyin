@@ -12,13 +12,22 @@ using Shiyin.Model;
 namespace Shiyin.Services;
 
 /// <summary>伺服器的 /api/v1/info（M§36.2）</summary>
-/// <summary>Mcp：公司讓不讓 AI 工具讀取會議（本地 MCP，R69.6）；沒有 = 允許</summary>
-public sealed record EnterpriseInfo(string Name, string Version, int ApiVersion, int MinAppApi, int? MaxAudioSeconds, string Engine, bool Llm, bool? Mcp = null);
+/// <summary>Mcp：公司讓不讓 AI 工具讀取會議（本地 MCP，R69.6）；沒有 = 允許。Sharing：分享會議（R125、M§99.2），關著、舊的伺服器是 null</summary>
+public sealed record EnterpriseInfo(string Name, string Version, int ApiVersion, int MinAppApi, int? MaxAudioSeconds, string Engine, bool Llm, bool? Mcp = null,
+    EnterpriseShares.Sharing? Sharing = null);
 
 /// <summary>登入的帳號（不含密鑰），存在 settings.json</summary>
 /// <summary>登入的帳號（不含密鑰）；ServerVersion 是伺服器的版本（回報問題用，R52.3），4.2 以前存的帳號沒有</summary>
-/// Mcp 是公司關掉本地 MCP 時的 false（R69.6）
-public sealed record EnterpriseAccount(string Email, string Name, string ServerName, string Engine, bool Llm, string? ServerVersion = null, bool? Mcp = null);
+/// Mcp 是公司關掉本地 MCP 時的 false（R69.6）；Sharing 是公司開了分享會議（R125），沒開是 null
+public sealed record EnterpriseAccount(string Email, string Name, string ServerName, string Engine, bool Llm, string? ServerVersion = null, bool? Mcp = null,
+    EnterpriseShares.Sharing? Sharing = null);
+
+/// <summary>企業伺服器的回應：內容是位元組，標頭（含內容的標頭，例如 Content-Range）攤平成不分大小寫的字典（分享的上傳、下載用，M§99.2）</summary>
+public sealed record EnterpriseResponse(int Status, byte[] Body, IReadOnlyDictionary<string, string> Headers)
+{
+    public string Text => Encoding.UTF8.GetString(Body);
+    public string? Header(string name) => Headers.TryGetValue(name, out var value) ? value : null;
+}
 
 /// <summary>轉錄交給企業伺服器時，畫面上進度後面的說明（排隊第幾、為什麼在等）；有值就顯示「改在這台電腦轉錄」（R50.3、R50.5）</summary>
 public sealed record ServerNote(string Text, bool Waiting = false);
@@ -122,7 +131,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             {
                 var o = JsonNode.Parse(json) as JsonObject;
                 return o is null ? null : new EnterpriseAccount(Str(o, "email"), Str(o, "name"), Str(o, "serverName"), Str(o, "engine"),
-                    o["llm"]?.GetValue<bool>() ?? false, o["serverVersion"]?.GetValue<string>(), OptionalBool(o["mcp"]));
+                    o["llm"]?.GetValue<bool>() ?? false, o["serverVersion"]?.GetValue<string>(), OptionalBool(o["mcp"]), EnterpriseShares.ParseSharing(o["sharing"]));
             }
             catch (JsonException) { return null; }
         }
@@ -203,7 +212,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
                 if (JsonNode.Parse(body) is JsonObject o && o["server"]?.GetValue<string>() == "shiyin")
                     info = new EnterpriseInfo(Str(o, "name"), Str(o, "version"), o["apiVersion"]?.GetValue<int>() ?? 0, o["minAppApi"]?.GetValue<int>() ?? 0,
                         o["maxAudioSeconds"]?.GetValue<int>(), o["transcription"]?["engine"]?.GetValue<string>() ?? "breeze", o["llm"]?.GetValue<bool>() ?? false,
-                        OptionalBool(o["mcp"]));
+                        OptionalBool(o["mcp"]), EnterpriseShares.ParseSharing(o["sharing"]));
             }
             catch (Exception e) when (IsMalformed(e)) { }
         }
@@ -310,7 +319,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
         // 讀的時候登出、換了帳號或伺服器：不要蓋掉
         if (Account is not { } current || current.Email != before.Email || SavedUrl is not { } saved || !SameServer(saved, url)) return;
         if (current.ServerName != info.Name || current.Engine != info.Engine || current.Llm != info.Llm || current.ServerVersion != info.Version
-            || current.Mcp != info.Mcp)
+            || current.Mcp != info.Mcp || current.Sharing != info.Sharing)
         {
             SaveAccount(current.Email, current.Name, info);
             Changed?.Invoke();
@@ -352,6 +361,13 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             ["serverVersion"] = info.Version,
         };
         if (info.Mcp is bool mcp) account["mcp"] = mcp;
+        // 分享會議（R125）：公司開了才記（同 Mac 的 Account.sharing）
+        if (info.Sharing is { Enabled: true } sharing)
+            account["sharing"] = new JsonObject
+            {
+                ["enabled"] = true, ["publicLinks"] = sharing.PublicLinks,
+                ["maxDays"] = sharing.MaxDays is int days ? days : null, ["maxBytes"] = sharing.MaxBytes is long bytes ? bytes : null,
+            };
         settings.Set(AccountKey, account.ToJsonString(new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
     }
 
@@ -501,9 +517,28 @@ public sealed class EnterpriseServer : IEnterpriseAccess
 
     // MARK: API
 
-    /// <summary>呼叫 API：帶 access token，401 時換一次 token 再送（R49.4）。回傳狀態碼、內容、回應的標頭</summary>
+    /// <summary>
+    /// 呼叫 API：帶 access token，401 時換一次 token 再送（R49.4）。回傳狀態碼、內容、回應的標頭。
+    /// expireOnForbidden 是 false 時 403 不當成登入失效（分享的 403 是「公司關掉了分享」這類，M§99.2）
+    /// </summary>
     public async Task<(int Status, string Body, HttpResponseHeaders Headers)> Call(HttpMethod method, string path, HttpContent? content = null,
-        IReadOnlyDictionary<string, string>? headers = null, TimeSpan? timeout = null, CancellationToken cancel = default)
+        IReadOnlyDictionary<string, string>? headers = null, TimeSpan? timeout = null, CancellationToken cancel = default, bool expireOnForbidden = true)
+    {
+        var (status, body, responseHeaders) = await CallCore(method, path, content, headers, timeout, cancel, expireOnForbidden, ReadText, text => text);
+        return (status, body, responseHeaders);
+    }
+
+    /// <summary>同 Call，內容是位元組、標頭攤平（分享的上傳、下載，M§99.2）</summary>
+    public async Task<EnterpriseResponse> CallRaw(HttpMethod method, string path, HttpContent? content = null,
+        IReadOnlyDictionary<string, string>? headers = null, TimeSpan? timeout = null, CancellationToken cancel = default, bool expireOnForbidden = true)
+    {
+        var (status, raw, _) = await CallCore(method, path, content, headers, timeout, cancel, expireOnForbidden, ReadRaw, r => Encoding.UTF8.GetString(r.Body));
+        return new EnterpriseResponse(status, raw.Body, raw.Headers);
+    }
+
+    async Task<(int Status, T Body, HttpResponseHeaders Headers)> CallCore<T>(HttpMethod method, string path, HttpContent? content,
+        IReadOnlyDictionary<string, string>? headers, TimeSpan? timeout, CancellationToken cancel, bool expireOnForbidden,
+        Func<HttpRequestMessage, HttpResponseMessage, CancellationToken, Task<T>> read, Func<T, string> text)
     {
         if (SavedUrl is not { } url) throw EnterpriseException.Of(EnterpriseFailure.LoginExpired);
         // 中途換了伺服器（加入連結，M§36.2）：新伺服器的 token 不能送到舊的伺服器、舊伺服器的回應不能動到新的登入；
@@ -518,19 +553,40 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             request.Headers.AcceptLanguage.ParseAdd(Language);
             foreach (var (name, value) in headers ?? new Dictionary<string, string>()) request.Headers.TryAddWithoutValidation(name, value);
             if (content is not null) request.Content = attempt == 0 ? content : await Clone(content);
-            var (status, body, responseHeaders) = await Send(request, timeout ?? TimeSpan.FromSeconds(60), cancel);
+            var (status, body, responseHeaders) = await Send(request, timeout ?? TimeSpan.FromSeconds(60), cancel, read);
             if (Switched()) throw new EnterpriseException(EnterpriseFailure.Server, "", "not_found");
             if (status == 401 && attempt == 0) { InvalidateAccess(); continue; }
             if (status == 401) { MarkExpired(null, forget: true); throw EnterpriseException.Of(EnterpriseFailure.LoginExpired); }
-            if (status == 403)
+            if (status == 403 && expireOnForbidden)
             {
-                var failure = Failure(status, body);
+                var failure = Failure(status, text(body));
                 MarkExpired(failure.Message, forget: true);
                 throw failure;
             }
             return (status, body, responseHeaders);
         }
         throw EnterpriseException.Of(EnterpriseFailure.LoginExpired);
+    }
+
+    static async Task<string> ReadText(HttpRequestMessage request, HttpResponseMessage response, CancellationToken cancel) =>
+        request.Method == HttpMethod.Head ? "" : await response.Content.ReadAsStringAsync(cancel);
+
+    /// <summary>位元組和攤平的標頭：內容的標頭要在回應放掉之前讀</summary>
+    static async Task<(byte[] Body, Dictionary<string, string> Headers)> ReadRaw(HttpRequestMessage request, HttpResponseMessage response, CancellationToken cancel)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, values) in response.Headers) headers[name] = string.Join(", ", values);
+        foreach (var (name, values) in response.Content.Headers) headers[name] = string.Join(", ", values);
+        var body = request.Method == HttpMethod.Head ? [] : await response.Content.ReadAsByteArrayAsync(cancel);
+        return (body, headers);
+    }
+
+    /// <summary>不帶 token 送出（用連結打開的分享：公開的連結不用登入，M§99.2）；錯誤同 Call 的連線錯誤</summary>
+    public async Task<EnterpriseResponse> SendRaw(HttpRequestMessage request, TimeSpan timeout, CancellationToken cancel = default)
+    {
+        request.Headers.AcceptLanguage.ParseAdd(Language);
+        var (status, raw, _) = await Send(request, timeout, cancel, ReadRaw);
+        return new EnterpriseResponse(status, raw.Body, raw.Headers);
     }
 
     static async Task<HttpContent> Clone(HttpContent content)
@@ -542,7 +598,10 @@ public sealed class EnterpriseServer : IEnterpriseAccess
     }
 
     /// <summary>送出請求；連不上、逾時、憑證不受信任換成 EnterpriseException；伺服器要轉址（3xx）是錯誤（D126）</summary>
-    async Task<(int, string, HttpResponseHeaders)> Send(HttpRequestMessage request, TimeSpan timeout, CancellationToken cancel)
+    Task<(int, string, HttpResponseHeaders)> Send(HttpRequestMessage request, TimeSpan timeout, CancellationToken cancel) => Send(request, timeout, cancel, ReadText);
+
+    async Task<(int, T, HttpResponseHeaders)> Send<T>(HttpRequestMessage request, TimeSpan timeout, CancellationToken cancel,
+        Func<HttpRequestMessage, HttpResponseMessage, CancellationToken, Task<T>> read)
     {
         using var limit = new CancellationTokenSource(timeout);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, limit.Token);
@@ -552,7 +611,7 @@ public sealed class EnterpriseServer : IEnterpriseAccess
             using var response = await http.SendAsync(request, linked.Token);
             // 轉址：NoRedirectClient 會原樣交回 3xx；給錯 HttpClient、已經跟著轉了的（RequestUri 換了）也當成錯誤
             if ((int)response.StatusCode is >= 300 and < 400 || request.RequestUri != target) throw Redirected((int)response.StatusCode);
-            var body = request.Method == HttpMethod.Head ? "" : await response.Content.ReadAsStringAsync(linked.Token);
+            var body = await read(request, response, linked.Token);
             return ((int)response.StatusCode, body, response.Headers);
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested) { throw; }

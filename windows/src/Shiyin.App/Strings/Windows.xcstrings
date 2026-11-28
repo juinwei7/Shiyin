@@ -1140,6 +1140,23 @@
         }
       }
     },
+    "傳給同事、建立連結，或存成 .shiyin 檔案傳給別人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send to colleagues, create a link, or save as a .shiyin file to send"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传给同事、建立链接，或存成 .shiyin 文件传给别人"
+          }
+        }
+      }
+    },
     "全域快捷鍵 Ctrl+Alt+Shift+R：在其他 app 裡也能開始或停止錄音": {
       "extractionState": "manual",
       "localizations": {

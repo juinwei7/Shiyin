@@ -23,6 +23,17 @@ public sealed class NotificationLinksTests
         Assert.Equal(new Link.Open(null), links.Parse("shiyin://open?t=5"));
     }
 
+    /// <summary>分享的通知（R125.5）：打開「與我分享」的那一場；id 不是 32 個十六進位字時只打開主視窗</summary>
+    [Fact]
+    public void OpensSharedMeeting()
+    {
+        var links = new NotificationLinks();
+        Assert.Equal(new Link.OpenShare("a5e7e310b4ea9ff95109b5b46dab6b74"), links.Parse(NotificationLinks.OpenShare("a5e7e310b4ea9ff95109b5b46dab6b74")));
+        Assert.Equal(new Link.OpenShare("a5e7e310b4ea9ff95109b5b46dab6b74"), links.Parse("shiyin:open?share=A5E7E310B4EA9FF95109B5B46DAB6B74"));
+        Assert.Equal(new Link.Open(null), links.Parse("shiyin:open?share=a5e7"));
+        Assert.Equal(new Link.Open(12), links.Parse("shiyin:open?share=x&meeting=12"));
+    }
+
     [Fact]
     public void PromptNeedsThisRunsToken()
     {

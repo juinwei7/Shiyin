@@ -100,6 +100,8 @@ public sealed class DetailView
         // 心智圖的縮放：換一場會議、切到逐字稿或提問時回到預設（R91.3）
         if (changed || window.State.Tab != DetailTab.Summary) notes.ResetMindMapZoom();
         detail = value;
+        // 分享的狀態（D212）：打開會議頁時問一次伺服器；沒分享過不會連網
+        if (changed && value.Meeting.Id is long shared) _ = host.Controller.LoadShareDetail(shared);
         ReviewDraft.Sync(value);
         BuildTop();
         if (IsRecordingThis)
@@ -207,9 +209,17 @@ public sealed class DetailView
         var edit = Ui.Link(L.T("編輯"), () => _ = Dialogs.EditInfo(window, meeting));
         // 「匯出」在「更多」左邊（R60.1）；垃圾桶、錄音中的那場都不顯示（R60.3）
         var actions = IsTrashed || IsRecordingThis ? null : Ui.Row(8, ExportMenu(), MoreMenu());
+        // 分享（R125.1）：透過企業伺服器或用檔案；垃圾桶、錄音中的那場不放
+        FrameworkElement links = edit;
+        if (!IsTrashed && !IsRecordingThis)
+        {
+            var share = Ui.Link(L.T("分享"), () => _ = ShareDialog.Show(window, meeting.Id!.Value));
+            ToolTipService.SetToolTip(share, L.T("傳給同事、建立連結，或存成 .shiyin 檔案傳給別人"));
+            links = Ui.Row(12, edit, share);
+        }
         // 標題長的時候換行（最多兩行），「編輯」接在後面：放在橫的 StackPanel 裡不會換行，視窗窄時「編輯」會被切掉
-        edit.Margin = new Thickness(0, 9, 0, 0);   // 對齊標題的第一行（26 號字的行高約 35）
-        top.Children.Add(Ui.Bar(null, Ui.Inline(title, edit, 12), actions));
+        links.Margin = new Thickness(0, 9, 0, 0);   // 對齊標題的第一行（26 號字的行高約 35）
+        top.Children.Add(Ui.Bar(null, Ui.Inline(title, links, 12), actions));
         top.Children.Add(InfoRow());
         if (IsTrashed) top.Children.Add(TrashBanner());
         else
@@ -230,6 +240,23 @@ public sealed class DetailView
         var info = new FlowPanel { Spacing = 16, LineSpacing = 6 };
         if (window.State.FolderName(meeting.FolderId) is { Length: > 0 } folderName)
             info.Children.Add(Ui.Row(4, new SymbolIcon(Symbol.Folder) { Foreground = Ui.Secondary }, Ui.Text(folderName, 13, color: Ui.Secondary, wrap: false)));
+        // 分享（R125.4、R125.5）：分享出去的寫幾個人、有沒有連結（點了打開分享對話框）；匯入的分享寫是誰分享的
+        if (meeting.Id is long meetingId && host.Controller.ShareDetail(meetingId) is { } share)
+        {
+            var text = share.Recipients.Count == 0 ? L.T("已建立連結")
+                : share.Link is null ? L.F("已分享給 %lld 人", share.Recipients.Count) : L.F("已分享給 %lld 人・連結", share.Recipients.Count);
+            var shared = new HyperlinkButton
+            {
+                Content = Ui.FollowForeground(Ui.Row(4, new FontIcon { Glyph = "\uE716", FontSize = 14 }, Ui.Text(text, 13, wrap: false))),
+                Padding = new Thickness(0), MinHeight = 0, Foreground = Ui.Secondary,
+            };
+            shared.Click += (_, _) => _ = ShareDialog.Show(window, meetingId);
+            ToolTipService.SetToolTip(shared, L.T("看名單、連結，或停止分享"));
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(shared, text);
+            info.Children.Add(shared);
+        }
+        if (meeting.SharedFrom is { Length: > 0 } from)
+            info.Children.Add(Ui.Row(4, new FontIcon { Glyph = "\uE896", FontSize = 14, Foreground = Ui.Secondary }, Ui.Text(L.F("來自 %@ 的分享", from), 13, color: Ui.Secondary, wrap: false)));
         info.Children.Add(Ui.Text($"{meeting.MeetingDate} {DateText.Weekday(meeting.MeetingDate, MeetingLanguages.Interface)}", 13, color: Ui.Secondary, wrap: false));
         if (meeting.DurationSeconds is not null) info.Children.Add(Ui.Text(L.Ui(TimeFormat.Duration(meeting.DurationSeconds, MeetingLanguages.Interface)), 13, color: Ui.Secondary, wrap: false));
         if (Detail.UntranscribedMinutes is int minutes)

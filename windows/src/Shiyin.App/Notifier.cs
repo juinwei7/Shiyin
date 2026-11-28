@@ -166,6 +166,11 @@ public sealed class Notifier
         return true;
     }
 
+    /// <summary>有人透過企業伺服器分享了會議（R125.5）：點了打開「與我分享」的那一場</summary>
+    public void SharedMeeting(EnterpriseShares.SharedItem item) =>
+        Show(NotificationLinks.OpenShare(item.Id), L.F("%@分享了「%@」給你", item.From.Display, item.Title),
+            item.ImportedVersion is null ? L.T("在側欄的「與我分享」匯入") : L.T("分享的內容更新了，可以再匯入一次"));
+
     /// <summary>點了通知或按鈕（第二個拾音轉過來的 shiyin: 網址，或拾音沒開時啟動參數裡的網址）</summary>
     public void Open(string url)
     {
@@ -181,6 +186,7 @@ public sealed class Notifier
             case NotificationLinks.Link.Prompt { Action: "continue", App: "idle" }: host.Recorder.ContinueAfterIdle(); break;   // 忘了停止錄音（R48.1）
             case NotificationLinks.Link.Prompt { Action: "continue" }: host.MeetingEnd.Cancel(); break;   // 繼續錄
             case NotificationLinks.Link.Prompt: break;
+            case NotificationLinks.Link.OpenShare { Id: var share }: host.ShowShared?.Invoke(share); break;
             // AI 工具給的會議連結有時間點（M§44.5）：切到逐字稿、從那裡開始
             case NotificationLinks.Link.Open { MeetingId: long id, Seconds: double at } when host.ShowMeetingAt is { } show: show(id, at); break;
             case NotificationLinks.Link.Open { MeetingId: var id }: host.ShowMain?.Invoke(id); break;

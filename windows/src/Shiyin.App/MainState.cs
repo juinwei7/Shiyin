@@ -23,6 +23,8 @@ public sealed class MainState
     /// <summary>排隊等轉錄的會議 id，照轉錄的順序（M§96.2）</summary>
     public List<long> TranscribeQueue { get; private set; } = [];
     public long? Selection { get; private set; }
+    /// <summary>側欄「與我分享」選到的那一場（分享的 id，R125.5）：右邊是預覽；選了會議就清掉</summary>
+    public string? SelectedShared { get; private set; }
     /// <summary>
     /// 會議列表的多選（R88、M§62）：兩場以上時右邊顯示「已選取 N 場會議」；Selection 照舊是目前這場（會議頁、播放）。
     /// 換資料夾、進出垃圾桶、搜尋時清掉；重讀列表時拿掉已經不在列表裡的
@@ -97,6 +99,14 @@ public sealed class MainState
             var done = new ManualResetEventSlim();
             if (dispatcher.TryEnqueue(() => { try { Ui.Guard(Release); } finally { done.Set(); } })) done.Wait(TimeSpan.FromSeconds(5));
         };
+        // 分享的狀態（名單、連結、進度、與我分享，R125）：只重畫，不重讀資料庫
+        host.Controller.SharesChanged += () => host.Post(() => Changed?.Invoke());
+        host.Controller.SharedItemGone += id => host.Post(() =>
+        {
+            if (SelectedShared != id) return;
+            SelectedShared = null;
+            Changed?.Invoke();
+        });
         // 分割會議換好錄音檔：重新載入播放器（檔名可能沒變，要強制重新載入）
         host.Controller.AudioReplaced += id => host.Post(() =>
         {
@@ -292,9 +302,12 @@ public sealed class MainState
             multiSelection.Clear();
             clearedMulti = true;
         }
+        // 選了會議：「與我分享」的預覽收起來
+        var clearedShared = id is not null && SelectedShared is not null;
+        if (clearedShared) SelectedShared = null;
         if (Selection == id)
         {
-            if (clearedMulti) Changed?.Invoke();
+            if (clearedMulti || clearedShared) Changed?.Invoke();
             return;
         }
         Selection = id;
@@ -320,6 +333,17 @@ public sealed class MainState
         }
         multiSelection.Clear();
         Select(ids.Count == 1 ? ids.First() : null);
+    }
+
+    /// <summary>側欄點「與我分享」的一場（R125.5）：右邊換成預覽</summary>
+    public void SelectShared(string id)
+    {
+        Sidebar = SidebarMode.Meetings;
+        multiSelection.Clear();
+        Selection = null;
+        SelectedShared = id;
+        ReloadDetail();
+        Changed?.Invoke();
     }
 
     public void Reveal(long id)
@@ -409,6 +433,7 @@ public sealed class MainState
         if (ShowTrash == trash) return;
         ShowTrash = trash;
         Selection = null;
+        SelectedShared = null;
         multiSelection.Clear();
         ReloadDetail();
         Changed?.Invoke();

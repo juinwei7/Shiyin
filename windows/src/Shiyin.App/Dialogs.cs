@@ -178,7 +178,8 @@ public static partial class Dialogs
     /// 匯出對話框：打開時就決定是哪一場會議（M§20.9）；存檔或分享（R7.5）。同 Mac 的 ExportSheet：項目、格式兩欄，左下「分享…」（次要），
     /// 右下「取消」「存檔…」（主要、Enter）
     /// </summary>
-    public static async Task Export(MainWindow window, long meetingId)
+    /// <param name="initial">先選好的項目（分享對話框的「用檔案分享…」選封包，M§99.4）</param>
+    public static async Task Export(MainWindow window, long meetingId, ExportItem? initial = null)
     {
         if (window.XamlRoot is null) return;
         // 同時只匯出一個（R120、design-windows §11.53）：進度、取消都在側欄下方同一條
@@ -191,9 +192,10 @@ public static partial class Dialogs
         var hasAudio = host.Paths.HasAudio(bundle.Meeting);
         // 還沒有會議紀錄（整理中或整理失敗）時，預設改匯出逐字稿
         var item = hasNotes ? ExportItem.Notes : ExportItem.Transcript;
-        var format = item.Formats()[0];
         var hasMindMap = bundle.Notes is { IsEmpty: false };
         var items = Enum.GetValues<ExportItem>().Where(i => (i != ExportItem.Audio || hasAudio) && (i != ExportItem.MindMap || hasMindMap)).ToList();
+        if (initial is { } wanted && items.Contains(wanted)) item = wanted;
+        var format = item.Formats()[0];
         var itemBox = Sheet.Combo(Ui.Combo(items.Select(i => (i, i.Label())), item, _ => { }));
         var formatBox = Sheet.Combo(new ComboBox());
         var times = new CheckBox { Content = L.T("包含時間點"), IsChecked = true };

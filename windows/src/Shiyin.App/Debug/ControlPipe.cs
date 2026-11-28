@@ -55,7 +55,14 @@ public static partial class ControlPipe
                     try { done.SetResult(Run(host, app, args)); }
                     catch (Exception e) { done.SetResult(new JsonObject { ["error"] = e.Message }); }
                 });
-                writer.WriteLine((done.Task.Wait(TimeSpan.FromSeconds(30)) ? done.Task.Result : new JsonObject { ["error"] = "timeout" }).ToJsonString());
+                var result = done.Task.Wait(TimeSpan.FromSeconds(30)) ? done.Task.Result : new JsonObject { ["error"] = "timeout" };
+                // 要等網路的指令（分享，M§99.6）：在 UI 執行緒開始，這裡等它做完（UI 執行緒不卡住）
+                if (result is JsonObject marker && marker.ContainsKey(LaterKey) && later is { } work)
+                {
+                    later = null;
+                    result = work.Wait(TimeSpan.FromMinutes(10)) ? work.Result : new JsonObject { ["error"] = "timeout" };
+                }
+                writer.WriteLine(result.ToJsonString());
             }
             catch (IOException) { }
         }
@@ -63,11 +70,23 @@ public static partial class ControlPipe
 
     static JsonNode Ok => new JsonObject { ["ok"] = true };
 
+    const string LaterKey = "__later";
+    static Task<JsonNode>? later;
+
+    /// <summary>回傳要等的工作：控制通道的執行緒等它做完再回（同一時間只有一個指令）</summary>
+    static JsonNode Later(Func<Task<JsonNode>> work)
+    {
+        later = work();
+        return new JsonObject { [LaterKey] = true };
+    }
+
     static JsonNode Run(AppHost host, App app, string[] args)
     {
         var main = (MainWindow?)typeof(App).GetField("main", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(app);
         // 會議列表的排序、分組、篩選，資料夾自動歸類，定期會議（M§71～§73、design-windows §11.30～§11.32）
         if (Organize(host, main, args) is { } organized) return organized;
+        // 分享會議（M§99.6、design-windows §11.58）
+        if (Shares(host, main, args) is { } shared) return shared;
         switch (args.FirstOrDefault())
         {
             case "state": return State(host, main);
@@ -639,6 +658,15 @@ public static partial class ControlPipe
             // 排隊等轉錄的會議，照轉錄的順序（M§96.4）
             ["transcribeQueue"] = new JsonArray([.. host.Controller.TranscribeQueue().Select(x => (JsonNode)x)]),
             ["glossaryGroups"] = GlossaryGroupsJson(host),
+            // 分享會議（M§99.6）：分享對話框的樣子、選到的「與我分享」、與我分享的場數、上傳下載中
+            ["shareDialog"] = ShareDialog.Current is { } shareDialog ? new JsonObject
+            {
+                ["meetingId"] = shareDialog.MeetingId, ["mode"] = shareDialog.Mode, ["emails"] = new JsonArray([.. shareDialog.Emails.Select(e => (JsonNode)e)]),
+            } : null,
+            ["selectedShared"] = main?.State.SelectedShared,
+            ["sharedWithMe"] = host.Controller.SharedWithMe.Count,
+            ["shareBusy"] = host.Controller.ShareBusy,
+            ["shareProgress"] = host.Controller.ShareProgress,
             ["showTrash"] = main?.State.ShowTrash,
             ["trashCount"] = main?.State.Trash.Count,
             ["confirmDelete"] = main?.DeleteTargets.Count > 0,
