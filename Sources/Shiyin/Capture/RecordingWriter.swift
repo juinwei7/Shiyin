@@ -26,6 +26,11 @@ final class RecordingWriter: @unchecked Sendable {
     private var frameEnergy: [Float]
     private var frameSamples: [Int]
     private var recent: [[Float]]
+    #if DEBUG
+    /// 驗證用：各聲道收到的取樣數（含暫停），state 的 recorder.capture 拿來算實際的取樣速度（design §50.4）
+    private var received: [Int]
+    var debugReceived: [Int] { lock.withLock { received } }
+    #endif
 
     init(url: URL, channels: Int) throws {
         self.url = url
@@ -38,6 +43,9 @@ final class RecordingWriter: @unchecked Sendable {
         frameEnergy = Array(repeating: 0, count: channels)
         frameSamples = Array(repeating: 0, count: channels)
         recent = Array(repeating: [], count: channels)
+        #if DEBUG
+        received = Array(repeating: 0, count: channels)
+        #endif
         lastReceived = Array(repeating: ProcessInfo.processInfo.systemUptime, count: channels)
         file = try AVAudioFile(forWriting: url, settings: [
             AVFormatIDKey: kAudioFormatLinearPCM,
@@ -66,6 +74,9 @@ final class RecordingWriter: @unchecked Sendable {
         let rms = (sum / Float(samples.count)).squareRoot()
         let now = ProcessInfo.processInfo.systemUptime
         lock.withLock {
+            #if DEBUG
+            received[channel] += samples.count
+            #endif
             lastReceived[channel] = now
             // 暫停麥克風：照樣收（看門狗用），寫進去的是同樣長度的 0，音量、無聲的秒數、最近的音量都不算
             let muted = micMuted && channel == 0

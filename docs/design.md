@@ -2360,7 +2360,7 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：tap 記下處理過的取樣數、混音後兩個聲道的峰值（state 的 `player.mix`）；`shiyinctl playvolume <0～1>`（AVPlayer 的音量，在 tap 之後，設 0 時 tap 照樣處理、使用者聽不到）。
 - 暫存的 `SHIYIN_HOME` 匯入一個左聲道有聲音、右聲道靜音的 WAV，用 sqlite3 把那場的 `channels` 改成 `both`（等於「麥克風＋電腦聲音」錄到的）：播放後 `player.mix` 兩個聲道的峰值相同、≈ 原本左聲道 × 0.71；改回 `mic` 時沒有混音。匯出 m4a 後讀兩個聲道，兩邊相同、≈ 原本左聲道 × 0.71。
 
-## 50. 錄音中麥克風一直重新連接（R74，D159、D160；GitHub #8）
+## 50. 錄音中麥克風一直重新連接（R74，D159、D160、D214；GitHub #8、#33、#34）
 
 ### 50.1 重新連接的節奏（Mac、Windows 的 `Recorder` 同一套）
 
@@ -2387,6 +2387,21 @@ id 42 · shiyin://open?meeting=42 · transcript: get_transcript(meeting_id: 42)
 - DEBUG：`shiyinctl recordflap <次數> [秒數]`：模擬錄音的麥克風（`FileSource`）接下來 N 次開始收音後 0.5 秒送出「裝置變了」，每次開始收音花 <秒數>（模擬藍牙），state 的 `recorder.restarts`（每個聲道 60 秒內重新連接的秒數）。驗證：重新連接的間隔照 50.1 拉長、提示換成「一直在重新連接」、停止後再開始恢復；開始收音花 3 秒時 `metrics` 的 `maxMainGapMs` 不到 0.5 秒（畫面不卡）、錄音沒停。
 - 真的裝置：內建麥克風錄音、錄音中換到別的麥克風再換回來（格式不同），錄音照常；AirPods 要回報的人或使用者實測。
 - Windows：`RecorderTests` 用會一直送通知、開始收音很慢的假音源，驗證同樣的節奏和提示。
+- 輸出裝置變了（§50.5）：DEBUG 的 state 有 `recorder.capture`（各聲道收到的取樣數和 `uptime`，兩次相減就是每秒的取樣數，應該是 16000；電腦聲音正在用的取樣率 `system.rate`）。用「麥克風＋電腦聲音」、跟系統預設的麥克風錄音，中途把內建揚聲器的取樣率（`kAudioDevicePropertyNominalSampleRate`）改成 44.1k 再改回 48k：兩個聲道都要維持約 16000／秒、`recorder.restarts` 沒有記到次數、沒有提示；log 有「system audio format changed」。
+
+### 50.5 Mac：輸出裝置變了（R74.7、R74.8，D214；GitHub #33、#34）
+
+2026-11-29 在這台 Mac 實測（錄音中把內建揚聲器從 48k 改成 44.1k）：
+
+- 電腦聲音：聚合裝置跟著輸出裝置換成 44.1k，送來的資料也是 44.1k，但 tap 的格式（`kAudioTapPropertyFormat`）一直回報 48k。原本只在開始時讀一次 tap 的格式，資料被當成 48k 轉換，每秒只剩 14697 個取樣（16000 × 44.1 / 48），寫檔時又補靜音對齊，電腦聲音播起來變快、一段一段的。藍牙耳機切換成通話模式時輸出是 16k 或 24k，會快 2～3 倍（#33 的「快轉」）。
+- 麥克風：跟系統預設時，AVAudioEngine 收音的是它自己建的「預設輸入＋預設輸出」聚合裝置（`CADefaultDeviceAggregate`），輸出一變就停下來、送 `AVAudioEngineConfigurationChange`，要重新開始。輸出一直切換時就算成一直重新連接，提示叫使用者換成內建麥克風（#34 用的就是內建麥克風），第 3 次起還要等 2、4、8、16 秒才重開，這段時間麥克風沒錄到。
+
+做法：
+
+- `SystemAudioSource`：IO 收到的資料照「tap 的格式、取樣率換成聚合裝置的 `kAudioDevicePropertyNominalSampleRate`」解讀，開始時這樣讀，之後聽聚合裝置的取樣率和 tap 的格式，變了就在 IO 的佇列上換掉格式（`OSAllocatedUnfairLock`），`StreamConverter` 看到 buffer 的格式不同自己重建。不重新連接，錄音不中斷。
+- `MicrophoneSource`：開始時記下真的在收音的麥克風（指定的在就是它，不然是系統預設的輸入）和它的取樣率；收到 `AVAudioEngineConfigurationChange` 時，麥克風還是同一支、取樣率也沒變，就是輸出那邊變了。`onInterruption` 帶 `counted`：這種是 false，`Recorder.scheduleRestart` 照樣 0.3 秒後重新開始，但不記進 `restarts`、等待不拉長，也就不會出現「一直在重新連接」。同一陣通知裡有一個要算就算（`pendingCounted`）。電腦聲音換了預設輸出、看門狗、DEBUG 的模擬照舊算。
+- 實測（§50.4 的做法）：改成 44.1k 時電腦聲音 15998／秒、麥克風重新接上兩次（輸出改兩次），`restarts` 沒有記錄、沒有提示。只改麥克風自己的取樣率時聚合裝置直接處理，連重新開始都不需要。
+- Windows 不用改：WASAPI 的麥克風和輸出各自開，系統直接轉成 16 kHz（`AutoConvertPcm`），裝置格式變了串流會失效、本來就會重新開始。
 
 ## 51. 錄不到電腦聲音時說清楚（R75，D161）
 
@@ -3822,3 +3837,4 @@ CREATE INDEX glossary_group_terms_term ON glossary_group_terms(term_id);
 | D211 | 網頁版唯讀檢視第一階段就做，由伺服器從同一份封包畫出紀錄、逐字稿、錄音（§99.1；2026-11-27 使用者選的） | 第二階段再做：連結只能「用拾音打開」，沒裝拾音的人（主管、其他部門）點了什麼都看不到，連結分享的用處少一半 |
 | D212 | 分享名單、連結、期限只存在伺服器，app 只記「這場分享過」的 id（`meeting_shares`）（§99.3） | app 也存一份名單：別人匯入、管理者撤銷、過期都在伺服器發生，兩份會對不上；會議頁打開時問一次就好 |
 | D213 | 詞彙表的群組像標籤（一個詞可以在好幾組），只用來整理和當轉錄排序的線索，不在每場會議選（§100、R126；2026-11-27 GitHub #31，使用者選的） | 像資料夾一個詞一組：同一個詞常常屬於好幾個專案、部門（提案的人舉的例子），只能放一組就要複製一份。一個固定的「通用」群組每場都用：只有每場要選群組時才需要，自動排序（§98）不用選，沒有群組的就是「未分類」 |
+| D214 | 輸出裝置變了：電腦聲音照聚合裝置的取樣率解讀、當場換格式；麥克風照舊用系統的聚合裝置，只有輸出那邊變了時重新開始但不算次數（§50.5、R74.7、R74.8；GitHub #33、#34） | 麥克風指定那一支、不用系統的聚合裝置：輸出變了 engine 不會停（實測），但麥克風和輸出取樣率不同時開不起來（-10868，`InitializeActiveNodesInInputChain`），藍牙耳機通話模式正是這樣，改格式也不行（-10865）。麥克風改用 AUHAL 或 IO proc 自己收：輸出完全不影響，但整個收音路徑換掉，藍牙麥克風（#8 修過的那些情況）在這台沒辦法驗。電腦聲音在格式變了時重新連接：會斷一下、一直切換時又變成「一直在重新連接」；只看 tap 的格式：實測 tap 一直回報 48k |

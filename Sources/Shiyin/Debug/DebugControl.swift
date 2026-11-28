@@ -1453,6 +1453,7 @@ enum DebugControl {
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? "",
                          "restarts": model.recorder.restartInfo,   // 重新連接的節奏（design §50.4）
+                         "capture": model.recorder.captureInfo,   // 各聲道實際的取樣速度、電腦聲音的格式（design §50.4）
                          // 麥克風（design §38.7）
                          "micDevice": model.recorder.micDevice.map { ["name": $0.name, "uid": $0.uid, "bluetooth": $0.isBluetooth] } as Any,
                          "micHint": model.recorder.micHint.map { ["text": $0.text, "builtIn": $0.builtIn?.name ?? ""] } as Any],

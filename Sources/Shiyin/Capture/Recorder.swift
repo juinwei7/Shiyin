@@ -194,6 +194,8 @@ final class Recorder {
     @ObservationIgnored private var reconnecting: [Int: Date] = [:]
     @ObservationIgnored private var reconnectErrors: [Int: String] = [:]
     @ObservationIgnored private var pendingRestarts: [Int: DispatchWorkItem] = [:]
+    /// 排著的重新開始裡有要算次數的（同一陣通知裡有一個算就算，design §50.5）
+    @ObservationIgnored private var pendingCounted: Set<Int> = []
     /// 重新連接的節奏（design §50.1）：每個聲道 60 秒內重新連接的時間、上次重新連接完的時間
     @ObservationIgnored private var restarts: [Int: [Date]] = [:]
     @ObservationIgnored private var restartedAt: [Int: Date] = [:]
@@ -286,12 +288,19 @@ final class Recorder {
 
     /// 只在 DEBUG：recordinterrupt，等於音源發現裝置變了。連續送幾次，驗證只會重新開始一次
     func simulateInterruption(channel: Int, times: Int = 3) {
-        for _ in 0..<times { sources[channel]?.onInterruption?() }
+        for _ in 0..<times { sources[channel]?.onInterruption?(true) }
     }
 
     /// 只在 DEBUG：recordflap，麥克風一直說裝置變了、重新開始很慢（design §50.4）
     func simulateFlapping(times: Int, seconds: Double) {
         (sources[0] as? FileSource)?.flap(times: times, seconds: seconds)
+    }
+
+    /// state 的 recorder.capture：各聲道收到的取樣數和時間（兩次相減就是實際的取樣速度）、電腦聲音擷取的格式（design §50.4）
+    var captureInfo: [String: Any] {
+        var info: [String: Any] = ["received": writer?.debugReceived ?? [], "uptime": ProcessInfo.processInfo.systemUptime]
+        if let system = sources.values.compactMap({ $0 as? SystemAudioSource }).first { info["system"] = system.debugFormat }
+        return info
     }
 
     /// state 的 recorder.restarts：每個聲道 60 秒內重新連接的時間（錄音開始後的秒數）、正在重新連接的聲道
@@ -485,8 +494,8 @@ final class Recorder {
             var warnings: [String] = []
             for (channel, audioSource) in makeSources() {
                 audioSource.onSamples = { [weak writer] samples in writer?.append(channel: channel, samples) }
-                audioSource.onInterruption = { [weak self] in
-                    Task { @MainActor in self?.scheduleRestart(channel) }
+                audioSource.onInterruption = { [weak self] counted in
+                    Task { @MainActor in self?.scheduleRestart(channel, counted: counted) }
                 }
                 do {
                     try audioSource.start()
@@ -817,18 +826,22 @@ final class Recorder {
         return restarts[channel]?.count ?? 0
     }
 
-    /// 裝置切換時通知會連續來好幾次，等一下沒有新的通知再重新開始；一直重新連接時等久一點
-    private func scheduleRestart(_ channel: Int) {
+    /// 裝置切換時通知會連續來好幾次，等一下沒有新的通知再重新開始；一直重新連接時等久一點。
+    /// counted 是 false（麥克風只是因為輸出那邊變了要重開，design §50.5）：不算次數、不拉長等待，也不會出現「一直在重新連接」
+    private func scheduleRestart(_ channel: Int, counted: Bool = true) {
         guard isRecording else { return }
         pendingRestarts[channel]?.cancel()
+        if counted { pendingCounted.insert(channel) }
+        let counted = pendingCounted.contains(channel)
         let item = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 self?.pendingRestarts[channel] = nil
-                self?.restartSource(channel)
+                self?.pendingCounted.remove(channel)
+                self?.restartSource(channel, counted: counted)
             }
         }
         pendingRestarts[channel] = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.restartDelay(recentRestarts(channel)), execute: item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.restartDelay(counted ? recentRestarts(channel) : 0), execute: item)
     }
 
     /// 在背景佇列重新開始（design §50.2）：藍牙裝置開始收音要好幾秒，不能卡住畫面。
@@ -954,6 +967,7 @@ final class Recorder {
         meterTimer = nil
         pendingRestarts.values.forEach { $0.cancel() }
         pendingRestarts = [:]
+        pendingCounted = []
         restarts = [:]
         restartedAt = [:]
         restarting = []

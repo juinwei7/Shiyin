@@ -44,8 +44,9 @@ enum SystemAudioPermission: String {
 /// 音源：把收到的音訊轉成 16 kHz 單聲道後交給 `onSamples`。callback 在音訊執行緒上，不能做重的事。
 protocol AudioSource: AnyObject {
     var onSamples: (([Float]) -> Void)? { get set }
-    /// 音源發現裝置變了（design §20.2），任何執行緒都可能呼叫；Recorder 收到後會 `restart()`
-    var onInterruption: (() -> Void)? { get set }
+    /// 音源發現裝置變了（design §20.2），任何執行緒都可能呼叫；Recorder 收到後會 `restart()`。
+    /// counted：算進重新連接的次數（R74.2、R74.3）；麥克風只是因為輸出那邊變了而要重新開始時是 false（design §50.5）
+    var onInterruption: ((_ counted: Bool) -> Void)? { get set }
     func start() throws
     func stop()
     func restart() throws
@@ -111,9 +112,11 @@ final class StreamConverter {
 /// 麥克風（AVAudioEngine）。可以指定輸入裝置的 UID，空字串表示系統預設。
 final class MicrophoneSource: MicrophoneInput {
     var onSamples: (([Float]) -> Void)?
-    var onInterruption: (() -> Void)?
+    var onInterruption: ((_ counted: Bool) -> Void)?
     private var engine = AVAudioEngine()
     private var observer: NSObjectProtocol?
+    /// 開始時真的在收音的那支麥克風和它的取樣率（design §50.5）
+    private var startedInput: (id: AudioDeviceID, rate: Double)?
     var deviceUID: String
     private(set) var current: AudioDevices.Device?
 
@@ -145,10 +148,12 @@ final class MicrophoneSource: MicrophoneInput {
                 }
                 // 接上或拔掉耳機、藍牙換協定、取樣率改變時，engine 會自己停下來並送出這個通知
                 observer = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
-                    self?.onInterruption?()
+                    guard let self else { return }
+                    self.onInterruption?(!self.onlyOutputChanged())
                 }
                 engine.prepare()
                 try engine.start()
+                startedInput = inputDevice().map { ($0, AudioDevices.nominalRate($0) ?? 0) }
                 // 用系統預設時，engine 收音的可能是它自己建的聚合裝置（CADefaultDeviceAggregate-<pid>-0）：
                 // 名字、藍牙的判斷（R58.3）要看真的那支麥克風，也就是系統預設的輸入（2026-11-15 真的錄音時發現）
                 let device = AudioDevices.device(id: input.auAudioUnit.deviceID)
@@ -177,16 +182,36 @@ final class MicrophoneSource: MicrophoneInput {
             engine.stop()
         }
     }
+
+    /// 真的在收音的那支：指定的在就是它，不然是系統預設的輸入（engine 收音的是它自己建的聚合裝置時也一樣）
+    private func inputDevice() -> AudioDeviceID? {
+        (deviceUID.isEmpty ? nil : AudioDevices.deviceID(forUID: deviceUID)) ?? AudioDevices.defaultInputID()
+    }
+
+    /// engine 停下來時，麥克風還是同一支、取樣率也沒變：是輸出那邊變了（藍牙耳機切換成通話模式、輸出換了取樣率）。
+    /// 跟系統預設時 engine 收音的是「預設輸入＋預設輸出」的聚合裝置，輸出一變它就停（design §50.5；GitHub #34）
+    private func onlyOutputChanged() -> Bool {
+        guard let started = startedInput, let id = inputDevice(), id == started.id else { return false }
+        return AudioDevices.nominalRate(id) == started.rate
+    }
 }
 
 /// 電腦播放的聲音（Core Audio process tap，macOS 14.4+，design §5.1）
 final class SystemAudioSource: AudioSource {
     var onSamples: (([Float]) -> Void)?
-    var onInterruption: (() -> Void)?
+    var onInterruption: ((_ counted: Bool) -> Void)?
     private var tapID = AudioObjectID(kAudioObjectUnknown)
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var procID: AudioDeviceIOProcID?
     private var outputListener: AudioObjectPropertyListenerBlock?
+    /// IO 收到的資料照這個格式解讀。輸出裝置換了取樣率（藍牙耳機切換成通話模式、在「音訊 MIDI 設定」改）時 tap 的格式跟著變，
+    /// `formatListener` 換成新的；不換的話資料被當成舊的取樣率，電腦聲音錄起來會變快或變慢（design §50.5；GitHub #33）
+    private let format = OSAllocatedUnfairLock<AVAudioFormat?>(initialState: nil)
+    private var formatListener: AudioObjectPropertyListenerBlock?
+    private static var tapFormatAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioTapPropertyFormat, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+    private static var nominalRateAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyNominalSampleRate, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
     private let queue = DispatchQueue(label: "com.weiwei.shiyin.systemaudio", qos: .userInitiated)
     private static var defaultOutputAddress = AudioObjectPropertyAddress(
         mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal,
@@ -220,20 +245,63 @@ final class SystemAudioSource: AudioSource {
         var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat, mScope: kAudioObjectPropertyScopeGlobal,
                                                  mElement: kAudioObjectPropertyElementMain)
         try check(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &asbd), String(localized: "讀取系統聲音格式"))
+        let tapRate = asbd.mSampleRate
+        // 資料照聚合裝置的取樣率送來（跟著輸出裝置），tap 的格式不一定跟著變（design §50.5）
+        if let rate = AudioDevices.nominalRate(aggregateID), rate > 0 { asbd.mSampleRate = rate }
         guard let format = AVAudioFormat(streamDescription: &asbd), let converter = StreamConverter(from: format) else {
             throw CaptureError.unsupportedFormat
         }
+        log.info("system audio format: tap \(Int(tapRate)) Hz, device \(Int(asbd.mSampleRate)) Hz")
+        self.format.withLock { $0 = format }
+        let current = self.format
         try check(AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, queue) { [weak self] _, input, _, _, _ in
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: input, deallocator: nil) else { return }
+            // 格式換了時 converter 自己重建（StreamConverter 看每個 buffer 的格式）
+            guard let format = current.withLock({ $0 }),
+                  let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: input, deallocator: nil) else { return }
             let samples = converter.convert(buffer)
             if !samples.isEmpty { self?.onSamples?(samples) }
         }, String(localized: "建立系統聲音的 IO"))
         try check(AudioDeviceStart(aggregateID, procID), String(localized: "開始擷取系統聲音"))
         // 預設輸出換了（接上耳機、換成藍牙喇叭）：聚合裝置還綁著舊的輸出，要用新的重建（design §20.2）
-        let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in self?.onInterruption?() }
+        let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in self?.onInterruption?(true) }
         if AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &Self.defaultOutputAddress, queue, listener) == noErr {
             outputListener = listener
         }
+        // 輸出裝置換了取樣率：聚合裝置的取樣率跟著變，照新的取樣率解讀（不用重新連接，錄音不中斷）。tap 的格式也聽，哪個先到都一樣
+        let (tap, device) = (tapID, aggregateID)
+        let formatListener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in self?.refreshFormat(tap: tap, aggregate: device) }
+        AudioObjectAddPropertyListenerBlock(tapID, &Self.tapFormatAddress, queue, formatListener)
+        AudioObjectAddPropertyListenerBlock(aggregateID, &Self.nominalRateAddress, queue, formatListener)
+        self.formatListener = formatListener
+    }
+
+    /// 在 IO 的佇列上：tap 的格式配上聚合裝置現在的取樣率，跟正在用的不同就換掉
+    private func refreshFormat(tap: AudioObjectID, aggregate: AudioObjectID) {
+        guard var asbd = Self.tapFormat(tap) else { return }
+        let tapRate = asbd.mSampleRate
+        if let rate = AudioDevices.nominalRate(aggregate), rate > 0 { asbd.mSampleRate = rate }
+        guard let updated = AVAudioFormat(streamDescription: &asbd) else { return }
+        let previous = format.withLock { (current: inout AVAudioFormat?) -> Double? in
+            guard current != updated else { return nil }
+            defer { current = updated }
+            return current?.sampleRate ?? 0
+        }
+        if let previous { log.info("system audio format changed: \(Int(previous)) Hz → \(Int(updated.sampleRate)) Hz (tap \(Int(tapRate)) Hz)") }
+    }
+
+    #if DEBUG
+    /// 驗證用（design §50.4）：正在用的取樣率。不在主執行緒讀 HAL 的屬性（重新連接時會等很久）
+    var debugFormat: [String: Double] { ["rate": format.withLock { $0?.sampleRate } ?? 0] }
+    #endif
+
+    /// tap 現在的格式
+    private static func tapFormat(_ tap: AudioObjectID) -> AudioStreamBasicDescription? {
+        guard tap != kAudioObjectUnknown else { return nil }
+        var asbd = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat, mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        return AudioObjectGetPropertyData(tap, &address, 0, nil, &size, &asbd) == noErr ? asbd : nil
     }
 
     /// 一定要依序清乾淨，否則 HAL 可能卡住（design §5.1）
@@ -242,6 +310,11 @@ final class SystemAudioSource: AudioSource {
             AudioObjectRemovePropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &Self.defaultOutputAddress, queue, outputListener)
         }
         outputListener = nil
+        if let formatListener {
+            AudioObjectRemovePropertyListenerBlock(tapID, &Self.tapFormatAddress, queue, formatListener)
+            AudioObjectRemovePropertyListenerBlock(aggregateID, &Self.nominalRateAddress, queue, formatListener)
+        }
+        formatListener = nil
         if aggregateID != kAudioObjectUnknown {
             if let procID {
                 AudioDeviceStop(aggregateID, procID)
@@ -267,7 +340,7 @@ final class SystemAudioSource: AudioSource {
 /// 只在 DEBUG：用音訊檔模擬音源，speed 是播放倍速（驗證錄音流程用，見 design §13 of v2）
 final class FileSource: MicrophoneInput {
     var onSamples: (([Float]) -> Void)?
-    var onInterruption: (() -> Void)?
+    var onInterruption: ((_ counted: Bool) -> Void)?
     /// 模擬錄音的麥克風（design §38.7）：照 `MicrophoneMonitor` 的清單（含 `fakemic` 的假裝置）決定是哪一支
     var deviceUID = ""
     private(set) var current: AudioDevices.Device?
@@ -310,7 +383,7 @@ final class FileSource: MicrophoneInput {
         }
         if slow > 0 && !Thread.isMainThread { Thread.sleep(forTimeInterval: slow) }
         if flap {
-            DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.onInterruption?() }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.onInterruption?(true) }
         }
         let url = url, speed = speed, stereo = stereo
         task = Task.detached { [weak self] in
@@ -368,7 +441,7 @@ final class FileSource: MicrophoneInput {
     /// recordflap：接下來 times 次開始收音後都送出「裝置變了」，每次在背景重新開始花 seconds 秒；馬上先送一次（design §50.4）
     func flap(times: Int, seconds: Double) {
         lock.withLock { (flapsLeft, slowStart) = (times, seconds) }
-        onInterruption?()
+        onInterruption?(true)
     }
 }
 
@@ -377,7 +450,7 @@ final class MirroredSource: AudioSource {
     var onSamples: (([Float]) -> Void)?
     /// 送全是 0 的音訊（record-sim 的第三個參數 2）
     var silent = false
-    var onInterruption: (() -> Void)?
+    var onInterruption: ((_ counted: Bool) -> Void)?
     func start() throws {}
     func stop() {}
 }
@@ -446,12 +519,27 @@ enum AudioDevices {
 
     /// 系統預設的輸入裝置
     static func defaultInput() -> Device? {
+        defaultInputID().flatMap(device(id:))
+    }
+
+    /// 裝置現在的取樣率
+    static func nominalRate(_ id: AudioObjectID) -> Double? {
+        guard id != kAudioObjectUnknown else { return nil }
+        var rate = Float64(0)
+        var size = UInt32(MemoryLayout<Float64>.size)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyNominalSampleRate, mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        return AudioObjectGetPropertyData(id, &address, 0, nil, &size, &rate) == noErr ? rate : nil
+    }
+
+    static func defaultInputID() -> AudioDeviceID? {
         var id = AudioDeviceID(0)
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice,
                                                  mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &id) == noErr else { return nil }
-        return device(id: id)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &id) == noErr,
+              id != kAudioObjectUnknown else { return nil }
+        return id
     }
 
     static func deviceID(forUID uid: String) -> AudioDeviceID? {
